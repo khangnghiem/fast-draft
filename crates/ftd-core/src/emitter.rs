@@ -8,6 +8,7 @@ use petgraph::graph::NodeIndex;
 use std::fmt::Write;
 
 /// Emit a `SceneGraph` as an FTD text document.
+#[must_use]
 pub fn emit_document(graph: &SceneGraph) -> String {
     let mut out = String::with_capacity(1024);
     out.push_str("# FTD v1\n\n");

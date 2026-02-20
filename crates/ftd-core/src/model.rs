@@ -361,6 +361,7 @@ pub struct SceneGraph {
 
 impl SceneGraph {
     /// Create a new empty scene graph with a root node.
+    #[must_use]
     pub fn new() -> Self {
         let mut graph = DiGraph::new();
         let root_node = SceneNode::new(NodeId::intern("root"), NodeKind::Root);

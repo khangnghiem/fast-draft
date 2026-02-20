@@ -14,6 +14,7 @@ use winnow::prelude::*;
 use winnow::token::{take_till, take_while};
 
 /// Parse an FTD document string into a `SceneGraph`.
+#[must_use = "parsing result should be used"]
 pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
     let mut graph = SceneGraph::new();
     let mut rest = input;
