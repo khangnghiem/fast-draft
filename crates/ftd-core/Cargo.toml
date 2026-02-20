@@ -1,0 +1,19 @@
+[package]
+name = "ftd-core"
+description = "FTD (Fast Draft) — core data model, parser, emitter, and layout solver"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+petgraph = { workspace = true }
+lasso = { workspace = true, features = ["multi-threaded"] }
+smallvec = { workspace = true }
+serde = { workspace = true }
+rmp-serde = { workspace = true }
+winnow = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

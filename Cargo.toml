@@ -1,0 +1,43 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/ftd-core",
+    "crates/ftd-render",
+    "crates/ftd-editor",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["Khang Nghiêm"]
+
+[workspace.dependencies]
+# Core
+petgraph = "0.7"
+lasso = "0.7"
+smallvec = { version = "1.13", features = ["serde"] }
+
+# Serialization
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive"] }
+
+# Parsing
+winnow = "0.7"
+
+# Rendering
+vello = "0.4"
+wgpu = "24"
+peniko = "0.3"
+
+# WASM
+wasm-bindgen = "0.2"
+web-sys = "0.3"
+js-sys = "0.3"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# Testing
+pretty_assertions = "1.4"

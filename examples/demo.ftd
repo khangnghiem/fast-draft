@@ -1,0 +1,62 @@
+# FTD v1
+# A login form mockup — demonstrates the FTD format
+
+style base_text {
+  font: "Inter" 14
+  fill: #333333
+}
+
+style accent {
+  fill: #6C5CE7
+}
+
+group @login_form {
+  layout: column gap=16 pad=32
+
+  text @title "Welcome Back" {
+    use: base_text
+    font: "Inter" 600 24
+    fill: #1A1A2E
+  }
+
+  rect @email_field {
+    w: 280 h: 44
+    corner: 8
+    stroke: #DDDDDD 1
+
+    text @email_hint "Email" {
+      use: base_text
+      fill: #999999
+    }
+  }
+
+  rect @pass_field {
+    w: 280 h: 44
+    corner: 8
+    stroke: #DDDDDD 1
+
+    text @pass_hint "Password" {
+      use: base_text
+      fill: #999999
+    }
+  }
+
+  rect @login_btn {
+    w: 280 h: 48
+    corner: 10
+    use: accent
+
+    text @btn_label "Sign In" {
+      font: "Inter" 600 16
+      fill: #FFFFFF
+    }
+
+    anim :hover {
+      fill: #5A4BD1
+      scale: 1.02
+      ease: spring 300ms
+    }
+  }
+}
+
+@login_form -> center_in: canvas
