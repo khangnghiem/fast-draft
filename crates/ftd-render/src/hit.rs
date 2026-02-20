@@ -92,7 +92,7 @@ rect @b {
         }
 
         // Test miss
-        let result = hit_test(&graph, &bounds, 799.0, 599.0);
+        let _result = hit_test(&graph, &bounds, 799.0, 599.0);
         // Should miss both or hit canvas boundary node
         // (depending on layout — the exact position depends on constraint resolution)
     }

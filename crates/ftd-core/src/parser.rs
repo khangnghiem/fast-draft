@@ -741,4 +741,108 @@ rect @box {
             _ => panic!("expected Rect"),
         }
     }
+
+    #[test]
+    fn parse_empty_document() {
+        let input = "";
+        let graph = parse_document(input).expect("empty doc should parse");
+        assert_eq!(graph.children(graph.root).len(), 0);
+    }
+
+    #[test]
+    fn parse_comments_only() {
+        let input = "# This is a comment\n# Another comment\n";
+        let graph = parse_document(input).expect("comments-only should parse");
+        assert_eq!(graph.children(graph.root).len(), 0);
+    }
+
+    #[test]
+    fn parse_anonymous_node() {
+        let input = "rect { w: 50 h: 50 }";
+        let graph = parse_document(input).expect("anonymous node should parse");
+        assert_eq!(graph.children(graph.root).len(), 1);
+    }
+
+    #[test]
+    fn parse_ellipse() {
+        let input = r#"
+ellipse @dot {
+  w: 30 h: 30
+  fill: #FF5733
+}
+"#;
+        let graph = parse_document(input).expect("ellipse should parse");
+        let dot = graph.get_by_id(NodeId::intern("dot")).unwrap();
+        match &dot.kind {
+            NodeKind::Ellipse { rx, ry } => {
+                assert_eq!(*rx, 30.0);
+                assert_eq!(*ry, 30.0);
+            }
+            _ => panic!("expected Ellipse"),
+        }
+    }
+
+    #[test]
+    fn parse_text_with_content() {
+        let input = r#"
+text @greeting "Hello World" {
+  font: "Inter" 600 24
+  fill: #1A1A2E
+}
+"#;
+        let graph = parse_document(input).expect("text should parse");
+        let node = graph.get_by_id(NodeId::intern("greeting")).unwrap();
+        match &node.kind {
+            NodeKind::Text { content } => {
+                assert_eq!(content, "Hello World");
+            }
+            _ => panic!("expected Text"),
+        }
+        assert!(node.style.font.is_some());
+        let font = node.style.font.as_ref().unwrap();
+        assert_eq!(font.family, "Inter");
+        assert_eq!(font.weight, 600);
+        assert_eq!(font.size, 24.0);
+    }
+
+    #[test]
+    fn parse_stroke_property() {
+        let input = r#"
+rect @bordered {
+  w: 100 h: 100
+  stroke: #DDDDDD 2
+}
+"#;
+        let graph = parse_document(input).expect("stroke should parse");
+        let node = graph.get_by_id(NodeId::intern("bordered")).unwrap();
+        assert!(node.style.stroke.is_some());
+        let stroke = node.style.stroke.as_ref().unwrap();
+        assert_eq!(stroke.width, 2.0);
+    }
+
+    #[test]
+    fn parse_multiple_constraints() {
+        let input = r#"
+rect @a { w: 100 h: 100 }
+rect @b { w: 50 h: 50 }
+@a -> center_in: canvas
+@a -> absolute: 10, 20
+"#;
+        let graph = parse_document(input).expect("multiple constraints should parse");
+        let node = graph.get_by_id(NodeId::intern("a")).unwrap();
+        // The last constraint wins in layout, but both should be stored
+        assert_eq!(node.constraints.len(), 2);
+    }
+
+    #[test]
+    fn parse_comments_between_nodes() {
+        let input = r#"
+# First node
+rect @a { w: 100 h: 100 }
+# Second node
+rect @b { w: 200 h: 200 }
+"#;
+        let graph = parse_document(input).expect("interleaved comments should parse");
+        assert_eq!(graph.children(graph.root).len(), 2);
+    }
 }

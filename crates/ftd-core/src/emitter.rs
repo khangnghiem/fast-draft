@@ -344,4 +344,114 @@ rect @box {
             _ => panic!("expected Rect"),
         }
     }
+
+    #[test]
+    fn roundtrip_ellipse() {
+        let input = r#"
+ellipse @dot {
+  w: 40 h: 40
+  fill: #00FF00
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of ellipse failed");
+        let node = graph2.get_by_id(NodeId::intern("dot")).unwrap();
+        match &node.kind {
+            NodeKind::Ellipse { rx, ry } => {
+                assert_eq!(*rx, 40.0);
+                assert_eq!(*ry, 40.0);
+            }
+            _ => panic!("expected Ellipse"),
+        }
+    }
+
+    #[test]
+    fn roundtrip_text_with_font() {
+        let input = r#"
+text @title "Hello" {
+  font: "Inter" 700 32
+  fill: #1A1A2E
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of text failed");
+        let node = graph2.get_by_id(NodeId::intern("title")).unwrap();
+        match &node.kind {
+            NodeKind::Text { content } => assert_eq!(content, "Hello"),
+            _ => panic!("expected Text"),
+        }
+        let font = node.style.font.as_ref().expect("font missing");
+        assert_eq!(font.family, "Inter");
+        assert_eq!(font.weight, 700);
+        assert_eq!(font.size, 32.0);
+    }
+
+    #[test]
+    fn roundtrip_nested_group() {
+        let input = r#"
+group @card {
+  layout: column gap=16 pad=24
+
+  text @heading "Title" {
+    font: "Inter" 600 20
+    fill: #333333
+  }
+
+  rect @body {
+    w: 300 h: 200
+    fill: #F5F5F5
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of nested group failed");
+        let card_idx = graph2.index_of(NodeId::intern("card")).unwrap();
+        assert_eq!(graph2.children(card_idx).len(), 2);
+    }
+
+    #[test]
+    fn roundtrip_animation() {
+        let input = r#"
+rect @btn {
+  w: 200 h: 48
+  fill: #6C5CE7
+
+  anim :hover {
+    fill: #5A4BD1
+    scale: 1.02
+    ease: spring 300ms
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of animation failed");
+        let btn = graph2.get_by_id(NodeId::intern("btn")).unwrap();
+        assert_eq!(btn.animations.len(), 1);
+        assert_eq!(btn.animations[0].trigger, AnimTrigger::Hover);
+    }
+
+    #[test]
+    fn roundtrip_style_and_use() {
+        let input = r#"
+style accent {
+  fill: #6C5CE7
+  corner: 10
+}
+
+rect @btn {
+  w: 200 h: 48
+  use: accent
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of style+use failed");
+        assert!(graph2.styles.contains_key(&NodeId::intern("accent")));
+        let btn = graph2.get_by_id(NodeId::intern("btn")).unwrap();
+        assert_eq!(btn.use_styles.len(), 1);
+    }
 }
