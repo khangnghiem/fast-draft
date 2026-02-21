@@ -1,4 +1,4 @@
-//! Bidirectional sync engine: canvas ↔ FTD text.
+//! Bidirectional sync engine: canvas ↔ FD text.
 //!
 //! The sync engine is the heart of bidirectional editing:
 //!
@@ -43,7 +43,7 @@ pub struct SyncEngine {
 }
 
 impl SyncEngine {
-    /// Create a new sync engine from FTD source text.
+    /// Create a new sync engine from FD source text.
     pub fn from_text(text: &str, viewport: Viewport) -> Result<Self, String> {
         let graph = parse_document(text)?;
         let bounds = resolve_layout(&graph, viewport);

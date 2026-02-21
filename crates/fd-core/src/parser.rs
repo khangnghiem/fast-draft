@@ -1,4 +1,4 @@
-//! Parser for the FTD text format → SceneGraph.
+//! Parser for the FD text format → SceneGraph.
 //!
 //! Built on `winnow` 0.7 for efficient, streaming parsing.
 //! Handles: comments, style definitions, node declarations
@@ -13,7 +13,7 @@ use winnow::error::ContextError;
 use winnow::prelude::*;
 use winnow::token::{take_till, take_while};
 
-/// Parse an FTD document string into a `SceneGraph`.
+/// Parse an FD document string into a `SceneGraph`.
 #[must_use = "parsing result should be used"]
 pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
     let mut graph = SceneGraph::new();

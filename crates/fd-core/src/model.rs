@@ -1,4 +1,4 @@
-//! Core scene-graph data model for FTD documents.
+//! Core scene-graph data model for FD documents.
 //!
 //! The document is a DAG (Directed Acyclic Graph) where nodes represent
 //! visual elements (shapes, text, groups) and edges represent parent→child
@@ -248,7 +248,7 @@ pub struct AnimProperties {
 // ─── Annotations ─────────────────────────────────────────────────────────
 
 /// Structured annotation attached to a scene node.
-/// Parsed from `##` lines in the FTD format.
+/// Parsed from `##` lines in the FD format.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Annotation {
     /// Freeform description: `## "User auth entry point"`
@@ -362,7 +362,7 @@ impl SceneNode {
 
 // ─── Scene Graph ─────────────────────────────────────────────────────────
 
-/// The complete FTD document — a DAG of `SceneNode` values.
+/// The complete FD document — a DAG of `SceneNode` values.
 ///
 /// Edges go from parent → child. Style definitions are stored separately
 /// in a hashmap for lookup by name.

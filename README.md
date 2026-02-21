@@ -2,9 +2,9 @@
 
 > A token-efficient file format and interactive canvas for drawing, design, and animation. Built in Rust + WASM. Bidirectional: edit the code or the canvas, both stay in sync.
 
-## What is FTD?
+## What is FD?
 
-FTD is two things:
+FD is two things:
 
 1. **A file format** (`.fd`) — a compact text DSL for describing 2D graphics, layouts, and animations. Designed to be 5× more token-efficient than SVG while remaining human-readable and AI-friendly.
 
@@ -13,7 +13,7 @@ FTD is two things:
 ### Example `.fd` File
 
 ```
-# FTD v1
+# FD v1
 
 style accent {
   fill: #6C5CE7

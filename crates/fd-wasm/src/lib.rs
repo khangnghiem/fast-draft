@@ -1,4 +1,4 @@
-//! WASM bridge for FTD — exposes the Rust document engine to JavaScript.
+//! WASM bridge for FD — exposes the Rust document engine to JavaScript.
 //!
 //! Compiled via `wasm-pack build --target web` and loaded in VS Code webview.
 
@@ -56,7 +56,7 @@ impl FdCanvas {
         }
     }
 
-    /// Set the FTD source text, re-parsing into the scene graph.
+    /// Set the FD source text, re-parsing into the scene graph.
     /// Returns `true` on success, `false` on parse error.
     pub fn set_text(&mut self, text: &str) -> bool {
         self.suppress_sync = true;
@@ -66,7 +66,7 @@ impl FdCanvas {
         result.is_ok()
     }
 
-    /// Get the current FTD source text (synced from graph).
+    /// Get the current FD source text (synced from graph).
     pub fn get_text(&mut self) -> String {
         self.engine.current_text().to_string()
     }
@@ -210,7 +210,7 @@ fn console_error_panic_hook_setup() {
         static SET_HOOK: Once = Once::new();
         SET_HOOK.call_once(|| {
             std::panic::set_hook(Box::new(|info| {
-                let msg = format!("FTD WASM panic: {info}");
+                let msg = format!("FD WASM panic: {info}");
                 web_sys::console::error_1(&msg.into());
             }));
         });
@@ -219,7 +219,7 @@ fn console_error_panic_hook_setup() {
 
 // ─── Standalone validation functions (no canvas needed) ──────────────────
 
-/// Validate FTD source text. Returns JSON: `{"ok":true}` or `{"ok":false,"error":"..."}`.
+/// Validate FD source text. Returns JSON: `{"ok":true}` or `{"ok":false,"error":"..."}`.
 #[wasm_bindgen]
 pub fn validate(source: &str) -> String {
     match fd_core::parser::parse_document(source) {
@@ -231,7 +231,7 @@ pub fn validate(source: &str) -> String {
     }
 }
 
-/// Parse FTD source and return the scene graph as JSON for the tree preview.
+/// Parse FD source and return the scene graph as JSON for the tree preview.
 /// Returns JSON `{"ok":true,"nodes":[...]}` or `{"ok":false,"error":"..."}`.
 #[wasm_bindgen]
 pub fn parse_to_json(source: &str) -> String {

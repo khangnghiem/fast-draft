@@ -2,7 +2,7 @@
 trigger: always_on
 ---
 
-# GEMINI.md - FTD Project Configuration
+# GEMINI.md - FD Project Configuration
 
 > AI behavior rules for FD (Fast Draft) — a Rust/WASM file format and interactive canvas for drawing, design, and animation.
 
@@ -67,7 +67,7 @@ main ← PR ← feature-branch ← your commits
 
 ---
 
-## TIER 1: FTD STACK RULES
+## TIER 1: FD STACK RULES
 
 ### 🦀 Rust Patterns
 

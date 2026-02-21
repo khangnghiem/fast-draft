@@ -1,4 +1,4 @@
-//! Emitter: SceneGraph → FTD text format.
+//! Emitter: SceneGraph → FD text format.
 //!
 //! Produces minimal, token-efficient output that round-trips through the parser.
 
@@ -7,11 +7,11 @@ use crate::model::*;
 use petgraph::graph::NodeIndex;
 use std::fmt::Write;
 
-/// Emit a `SceneGraph` as an FTD text document.
+/// Emit a `SceneGraph` as an FD text document.
 #[must_use]
 pub fn emit_document(graph: &SceneGraph) -> String {
     let mut out = String::with_capacity(1024);
-    out.push_str("# FTD v1\n\n");
+    out.push_str("# FD v1\n\n");
 
     // Emit style definitions first
     let mut styles: Vec<_> = graph.styles.iter().collect();

@@ -1,4 +1,4 @@
-# FTD — Fast Draft
+# Fast Draft
 
 > A token-efficient file format and interactive canvas for drawing, design, and animation. Built in Rust + WASM.
 
@@ -51,7 +51,7 @@ A live-rendering canvas powered by Rust/WASM:
 
 View the parsed scene graph as a structural tree:
 
-- Open via **Command Palette** → `FTD: Show Tree Preview`
+- Open via **Command Palette** → `FD: Show Tree Preview`
 - Shows node hierarchy: groups → children → properties
 - Updates live as you edit
 
@@ -62,7 +62,7 @@ View the parsed scene graph as a structural tree:
 ### 1. Create a new `.fd` file
 
 ```fd
-# FTD v1
+# FD v1
 # My first design
 
 rect @hero {
@@ -78,8 +78,8 @@ Save as `hello.fd` — syntax highlighting activates automatically.
 
 ### 2. Open the Canvas Editor
 
-- **Right-click** the file → `Open With...` → `FTD Canvas`
-- Or use **Command Palette** → `FTD: Open Canvas Editor`
+- **Right-click** the file → `Open With...` → `FD Canvas`
+- Or use **Command Palette** → `FD: Open Canvas Editor`
 
 The canvas renders your design. Edit the text on the left; see changes on the right.
 
@@ -94,11 +94,11 @@ Switch tools with keyboard shortcuts:
 | `Cmd+Z`       | Undo   | Undo last action                |
 | `Cmd+Shift+Z` | Redo   | Redo last undone action         |
 
-When you draw a rectangle on canvas, the corresponding FTD code is **automatically generated** in the text editor.
+When you draw a rectangle on canvas, the corresponding FD code is **automatically generated** in the text editor.
 
 ### 4. Inspect the Scene Graph
 
-Open **Command Palette** → `FTD: Show Tree Preview` to see:
+Open **Command Palette** → `FD: Show Tree Preview` to see:
 
 ```
 Scene Graph
@@ -131,7 +131,7 @@ rect @broken {
 ## Example: Login Form
 
 ```fd
-# FTD v1
+# FD v1
 # A login form mockup
 
 style base_text {
@@ -193,7 +193,7 @@ group @login_form {
 
 ---
 
-## Why FTD?
+## Why FD?
 
 | vs. SVG                                         | vs. Figma                                         | vs. HTML/CSS                                            |
 | ----------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------- |
