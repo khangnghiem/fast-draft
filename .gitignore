@@ -24,7 +24,10 @@ target
 ftd-vscode/node_modules/
 ftd-vscode/out/
 ftd-vscode/wasm/
+ftd-extension/node_modules/
+ftd-extension/out/
 *.vsix
 
 # Environment secrets
 .env
+cd

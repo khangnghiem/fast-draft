@@ -1,8 +1,8 @@
 {
-  "name": "ftd-vscode",
+  "name": "ftd",
   "displayName": "FTD — Fast Draft",
   "description": "Syntax highlighting, live parser validation, and interactive canvas editor for .ftd (Fast Draft) files",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "KhangNghiem",
   "license": "MIT",
   "icon": "icon.png",

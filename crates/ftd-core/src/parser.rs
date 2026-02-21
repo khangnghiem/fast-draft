@@ -1239,4 +1239,205 @@ rect @b { w: 200 h: 200 }
         let graph = parse_document(input).expect("interleaved comments should parse");
         assert_eq!(graph.children(graph.root).len(), 2);
     }
+
+    // ─── Clone/repeat tests ──────────────────────────────────────────────
+
+    #[test]
+    fn parse_clone_basic() {
+        let input = r#"
+rect @source {
+  w: 200 h: 100
+  fill: #FF0000
+  corner: 8
+}
+
+@copy = clone @source
+"#;
+        let graph = parse_document(input).expect("clone should parse");
+        let copy = graph
+            .get_by_id(NodeId::intern("copy"))
+            .expect("cloned node not found");
+
+        match &copy.kind {
+            NodeKind::Rect { width, height } => {
+                assert_eq!(*width, 200.0, "width should clone");
+                assert_eq!(*height, 100.0, "height should clone");
+            }
+            _ => panic!("expected Rect from clone"),
+        }
+        assert!(copy.style.fill.is_some(), "fill should clone");
+        assert_eq!(copy.style.corner_radius, Some(8.0), "corner should clone");
+    }
+
+    #[test]
+    fn parse_clone_with_overrides() {
+        let input = r#"
+rect @btn {
+  w: 200 h: 48
+  fill: #6C5CE7
+  corner: 10
+}
+
+@btn_alt = clone @btn {
+  fill: #00FF00
+}
+"#;
+        let graph = parse_document(input).expect("clone with overrides should parse");
+        let alt = graph
+            .get_by_id(NodeId::intern("btn_alt"))
+            .expect("cloned node not found");
+
+        // Dimensions should be inherited
+        match &alt.kind {
+            NodeKind::Rect { width, height } => {
+                assert_eq!(*width, 200.0);
+                assert_eq!(*height, 48.0);
+            }
+            _ => panic!("expected Rect"),
+        }
+
+        // Fill should be overridden to green
+        if let Some(Paint::Solid(c)) = &alt.style.fill {
+            assert_eq!(c.to_hex(), "#00FF00");
+        } else {
+            panic!("expected solid fill override");
+        }
+
+        // Corner should be inherited
+        assert_eq!(alt.style.corner_radius, Some(10.0));
+    }
+
+    #[test]
+    fn parse_clone_with_child_override() {
+        let input = r#"
+rect @card {
+  w: 300 h: 200
+  fill: #FFFFFF
+
+  text @label "Original" {
+    fill: #333333
+  }
+}
+
+@card2 = clone @card {
+  text @label2 "Overridden" {
+    fill: #FF0000
+  }
+}
+"#;
+        let graph = parse_document(input).expect("clone with child override should parse");
+        let card2_idx = graph
+            .index_of(NodeId::intern("card2"))
+            .expect("cloned card not found");
+        let children = graph.children(card2_idx);
+        assert!(!children.is_empty(), "cloned node should have children");
+    }
+
+    // ─── Braceless leaf node tests ───────────────────────────────────────
+
+    #[test]
+    fn parse_braceless_rect() {
+        let input = "rect @divider w: 100 h: 2 fill: #CCC\n";
+        let graph = parse_document(input).expect("braceless rect should parse");
+        let node = graph
+            .get_by_id(NodeId::intern("divider"))
+            .expect("braceless node not found");
+
+        match &node.kind {
+            NodeKind::Rect { width, height } => {
+                assert_eq!(*width, 100.0);
+                assert_eq!(*height, 2.0);
+            }
+            _ => panic!("expected Rect"),
+        }
+        assert!(node.style.fill.is_some(), "fill should parse inline");
+    }
+
+    #[test]
+    fn parse_braceless_text() {
+        let input = "text @lbl \"Hello\" fill: #333\n";
+        let graph = parse_document(input).expect("braceless text should parse");
+        let node = graph
+            .get_by_id(NodeId::intern("lbl"))
+            .expect("braceless text not found");
+
+        match &node.kind {
+            NodeKind::Text { content } => {
+                assert_eq!(content, "Hello");
+            }
+            _ => panic!("expected Text"),
+        }
+        assert!(node.style.fill.is_some());
+    }
+
+    #[test]
+    fn parse_braceless_with_use() {
+        let input = r#"
+style base { fill: #FF0000 }
+
+rect @box use: base w: 50 h: 50
+"#;
+        let graph = parse_document(input).expect("braceless with use should parse");
+        let node = graph.get_by_id(NodeId::intern("box")).unwrap();
+        assert_eq!(node.use_styles.len(), 1);
+        assert_eq!(node.use_styles[0].as_str(), "base");
+    }
+
+    // ─── Property table tests ────────────────────────────────────────────
+
+    #[test]
+    fn parse_property_table() {
+        let input = r#"
+table rect {
+  id     w   h  fill
+  box1   100 50 #FF0000
+  box2   200 80 #00FF00
+}
+"#;
+        let graph = parse_document(input).expect("table should parse");
+
+        let box1 = graph
+            .get_by_id(NodeId::intern("box1"))
+            .expect("box1 not found");
+        match &box1.kind {
+            NodeKind::Rect { width, height } => {
+                assert_eq!(*width, 100.0);
+                assert_eq!(*height, 50.0);
+            }
+            _ => panic!("expected Rect for box1"),
+        }
+        assert!(box1.style.fill.is_some(), "box1 should have fill");
+
+        let box2 = graph
+            .get_by_id(NodeId::intern("box2"))
+            .expect("box2 not found");
+        match &box2.kind {
+            NodeKind::Rect { width, height } => {
+                assert_eq!(*width, 200.0);
+                assert_eq!(*height, 80.0);
+            }
+            _ => panic!("expected Rect for box2"),
+        }
+    }
+
+    #[test]
+    fn parse_table_ellipse() {
+        let input = r#"
+table ellipse {
+  id     w   h   fill
+  dot1   30  30  #FF0000
+  dot2   60  40  #00FF00
+}
+"#;
+        let graph = parse_document(input).expect("ellipse table should parse");
+        let dot1 = graph.get_by_id(NodeId::intern("dot1")).unwrap();
+        match &dot1.kind {
+            NodeKind::Ellipse { rx, ry } => {
+                assert_eq!(*rx, 30.0);
+                assert_eq!(*ry, 30.0);
+            }
+            _ => panic!("expected Ellipse"),
+        }
+        assert_eq!(graph.children(graph.root).len(), 2);
+    }
 }
