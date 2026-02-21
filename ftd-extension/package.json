@@ -86,13 +86,16 @@
     "watch": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
     "lint": "tsc --noEmit",
     "package": "vsce package --no-dependencies",
-    "publish": "vsce publish --no-dependencies"
+    "publish": "vsce publish --no-dependencies",
+    "publish:ovsx": "ovsx publish --no-dependencies",
+    "publish:all": "npm run publish && npm run publish:ovsx"
   },
   "devDependencies": {
     "@types/vscode": "^1.85.0",
     "@types/node": "^20.0.0",
     "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.24.0",
+    "ovsx": "^0.10.0",
     "typescript": "^5.5.0"
   }
 }

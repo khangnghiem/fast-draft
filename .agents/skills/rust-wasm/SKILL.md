@@ -14,7 +14,7 @@ ftd/
 │   ├── ftd-core/       # Data model, parser, emitter, layout
 │   ├── ftd-render/     # Vello/wgpu renderer, hit testing
 │   └── ftd-editor/     # Sync engine, tools, undo/redo, input
-├── ftd-vscode/         # VS Code extension (TypeScript + WASM)
+├── ftd-extension/      # Editor extension (TypeScript + WASM)
 └── examples/
     └── demo.ftd
 ```

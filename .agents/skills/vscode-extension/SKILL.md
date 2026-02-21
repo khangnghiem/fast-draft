@@ -7,7 +7,7 @@ description: How to build and debug the VS Code custom editor extension for .ftd
 
 ## Overview
 
-The `ftd-vscode` extension provides a custom editor for `.ftd` files — a side-by-side view with a text editor and a WASM-powered canvas. All rendering and editing logic runs in Rust/WASM; TypeScript is minimal glue code.
+The `ftd-extension` extension provides a custom editor for `.ftd` files — a side-by-side view with a text editor and a WASM-powered canvas. All rendering and editing logic runs in Rust/WASM; TypeScript is minimal glue code.
 
 ## Architecture
 
@@ -29,7 +29,7 @@ VS Code
 ## Directory Structure (planned)
 
 ```
-ftd-vscode/
+ftd-extension/
 ├── package.json          # Extension manifest
 ├── src/
 │   └── extension.ts      # CustomTextEditorProvider
@@ -46,10 +46,10 @@ ftd-vscode/
 
 ```bash
 # 1. Build WASM from Rust
-wasm-pack build crates/ftd-render --target web --out-dir ../../ftd-vscode/webview/wasm
+wasm-pack build crates/ftd-render --target web --out-dir ../../ftd-extension/webview/wasm
 
 # 2. Install extension deps
-cd ftd-vscode && pnpm install
+cd ftd-extension && pnpm install
 
 # 3. Compile TypeScript
 pnpm run compile

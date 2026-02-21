@@ -209,7 +209,8 @@ group @login_form {
 
 - [GitHub Repository](https://github.com/khangnghiem/ftd)
 - [FTD Format Specification](https://github.com/khangnghiem/ftd/blob/main/REQUIREMENTS.md)
-- [Marketplace](https://marketplace.visualstudio.com/items?itemName=KhangNghiem.ftd-vscode)
+- [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=KhangNghiem.ftd-vscode)
+- [Open VSX Registry](https://open-vsx.org/extension/KhangNghiem/ftd-vscode)
 
 ## License
 

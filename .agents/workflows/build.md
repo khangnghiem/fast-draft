@@ -29,13 +29,13 @@ description: How to build, test, and develop the FTD workspace
 4. Build for WASM (when ready):
 
    ```bash
-   wasm-pack build crates/ftd-render --target web --out-dir ../../ftd-vscode/webview/wasm
+   wasm-pack build crates/ftd-render --target web --out-dir ../../ftd-extension/webview/wasm
    ```
 
 5. Build the VS Code extension (when ready):
 
    ```bash
-   cd ftd-vscode && npm install && npm run compile
+   cd ftd-extension && npm install && npm run compile
    ```
 
 6. Lint:

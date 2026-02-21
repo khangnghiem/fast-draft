@@ -134,6 +134,19 @@ crates/
 > [!CAUTION]
 > **NEVER use npm for VS Code extension. Always use pnpm if possible, npm only as fallback.**
 
+### 📤 Extension Publishing (MANDATORY)
+
+> [!IMPORTANT]
+> **ALWAYS publish to BOTH marketplaces. Never publish to only one.**
+
+| Marketplace      | Command                 | Registry                     |
+| ---------------- | ----------------------- | ---------------------------- |
+| **VS Code**      | `pnpm run publish`      | marketplace.visualstudio.com |
+| **Open VSX**     | `pnpm run publish:ovsx` | open-vsx.org                 |
+| **Both at once** | `pnpm run publish:all`  | Both registries              |
+
+Tokens are stored in `.env` (`AZURE_DEVOPS_PAT` for vsce, `VSX_PAT` for ovsx).
+
 ---
 
 ## TIER 2: WORKFLOWS (Slash Commands)

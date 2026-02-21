@@ -60,18 +60,18 @@ group @card {
 │                Tools (select, rect, pen, text)        │
 │                Undo/redo command stack                │
 ├─────────────────────────────────────────────────────┤
-│  ftd-vscode    VS Code Custom Editor (WASM webview)  │
+│  ftd-extension  Editor Extension (WASM webview)       │
 └─────────────────────────────────────────────────────┘
 ```
 
 ## Crate Structure
 
-| Crate        | Purpose                                               |
-| ------------ | ----------------------------------------------------- |
-| `ftd-core`   | Data model, parser, emitter, constraint layout solver |
-| `ftd-render` | Vello/wgpu 2D renderer + hit testing                  |
-| `ftd-editor` | Bidirectional sync, tool system, undo/redo, input     |
-| `ftd-vscode` | VS Code extension (custom editor provider)            |
+| Crate           | Purpose                                               |
+| --------------- | ----------------------------------------------------- |
+| `ftd-core`      | Data model, parser, emitter, constraint layout solver |
+| `ftd-render`    | Vello/wgpu 2D renderer + hit testing                  |
+| `ftd-editor`    | Bidirectional sync, tool system, undo/redo, input     |
+| `ftd-extension` | Editor extension (VS Code, Open VSX, Antigravity)     |
 
 ## Quick Start
 
@@ -95,7 +95,7 @@ cargo test --workspace
 wasm-pack build crates/ftd-render --target web
 
 # Build VS Code extension
-cd ftd-vscode && npm install && npm run compile
+cd ftd-extension && npm install && npm run compile
 ```
 
 ### Development
@@ -108,7 +108,7 @@ cargo test --workspace -- --nocapture
 cargo watch -x 'test --workspace'
 
 # Test VS Code extension
-cd ftd-vscode && code --extensionDevelopmentPath=.
+cd ftd-extension && code --extensionDevelopmentPath=.
 ```
 
 ## Key Design Decisions
