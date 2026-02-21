@@ -212,6 +212,7 @@ fd-core → fd-lsp → tree-sitter-fd → fd-vscode (Marketplace + Open VSX)
 
 **Before publishing:**
 
+- [ ] Read `.env` for registry tokens (`CARGO_REGISTRY_TOKEN`, `NPM_TOKEN`, `VSCE_PAT`, `VSX_PAT`)
 - [ ] All CI checks pass
 - [ ] Version bumped in all affected `Cargo.toml` / `package.json`
 - [ ] CHANGELOG updated
