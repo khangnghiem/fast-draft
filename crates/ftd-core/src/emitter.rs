@@ -87,6 +87,9 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
 
     out.push_str(" {\n");
 
+    // Annotations (## lines)
+    emit_annotations(out, &node.annotations, depth + 1);
+
     // Layout mode (for groups)
     if let NodeKind::Group { layout } = &node.kind {
         match layout {
@@ -181,6 +184,19 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
 
     indent(out, depth);
     out.push_str("}\n");
+}
+
+fn emit_annotations(out: &mut String, annotations: &[Annotation], depth: usize) {
+    for ann in annotations {
+        indent(out, depth);
+        match ann {
+            Annotation::Description(s) => writeln!(out, "## \"{s}\"").unwrap(),
+            Annotation::Accept(s) => writeln!(out, "## accept: \"{s}\"").unwrap(),
+            Annotation::Status(s) => writeln!(out, "## status: {s}").unwrap(),
+            Annotation::Priority(s) => writeln!(out, "## priority: {s}").unwrap(),
+            Annotation::Tag(s) => writeln!(out, "## tag: {s}").unwrap(),
+        }
+    }
 }
 
 fn emit_paint_prop(out: &mut String, name: &str, paint: &Paint, depth: usize) {
@@ -454,5 +470,136 @@ rect @btn {
         assert!(graph2.styles.contains_key(&NodeId::intern("accent")));
         let btn = graph2.get_by_id(NodeId::intern("btn")).unwrap();
         assert_eq!(btn.use_styles.len(), 1);
+    }
+
+    #[test]
+    fn roundtrip_annotation_description() {
+        let input = r#"
+rect @box {
+  ## "Primary container for content"
+  w: 100 h: 50
+  fill: #FF0000
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let node = graph.get_by_id(NodeId::intern("box")).unwrap();
+        assert_eq!(node.annotations.len(), 1);
+        assert_eq!(
+            node.annotations[0],
+            Annotation::Description("Primary container for content".into())
+        );
+
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of annotation failed");
+        let node2 = graph2.get_by_id(NodeId::intern("box")).unwrap();
+        assert_eq!(node2.annotations.len(), 1);
+        assert_eq!(node2.annotations[0], node.annotations[0]);
+    }
+
+    #[test]
+    fn roundtrip_annotation_accept() {
+        let input = r#"
+rect @login_btn {
+  ## accept: "disabled state when fields empty"
+  ## accept: "loading spinner during auth"
+  w: 280 h: 48
+  fill: #6C5CE7
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let btn = graph.get_by_id(NodeId::intern("login_btn")).unwrap();
+        assert_eq!(btn.annotations.len(), 2);
+        assert_eq!(
+            btn.annotations[0],
+            Annotation::Accept("disabled state when fields empty".into())
+        );
+        assert_eq!(
+            btn.annotations[1],
+            Annotation::Accept("loading spinner during auth".into())
+        );
+
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of accept annotation failed");
+        let btn2 = graph2.get_by_id(NodeId::intern("login_btn")).unwrap();
+        assert_eq!(btn2.annotations, btn.annotations);
+    }
+
+    #[test]
+    fn roundtrip_annotation_status_priority() {
+        let input = r#"
+rect @card {
+  ## status: in_progress
+  ## priority: high
+  ## tag: mvp
+  w: 300 h: 200
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let card = graph.get_by_id(NodeId::intern("card")).unwrap();
+        assert_eq!(card.annotations.len(), 3);
+        assert_eq!(
+            card.annotations[0],
+            Annotation::Status("in_progress".into())
+        );
+        assert_eq!(card.annotations[1], Annotation::Priority("high".into()));
+        assert_eq!(card.annotations[2], Annotation::Tag("mvp".into()));
+
+        let output = emit_document(&graph);
+        let graph2 =
+            parse_document(&output).expect("re-parse of status/priority/tag annotation failed");
+        let card2 = graph2.get_by_id(NodeId::intern("card")).unwrap();
+        assert_eq!(card2.annotations, card.annotations);
+    }
+
+    #[test]
+    fn roundtrip_annotation_nested() {
+        let input = r#"
+group @form {
+  layout: column gap=16 pad=32
+  ## "User authentication entry point"
+
+  rect @email {
+    ## accept: "validates email format"
+    w: 280 h: 44
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let form = graph.get_by_id(NodeId::intern("form")).unwrap();
+        assert_eq!(form.annotations.len(), 1);
+        let email = graph.get_by_id(NodeId::intern("email")).unwrap();
+        assert_eq!(email.annotations.len(), 1);
+
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of nested annotation failed");
+        let form2 = graph2.get_by_id(NodeId::intern("form")).unwrap();
+        assert_eq!(form2.annotations, form.annotations);
+        let email2 = graph2.get_by_id(NodeId::intern("email")).unwrap();
+        assert_eq!(email2.annotations, email.annotations);
+    }
+
+    #[test]
+    fn parse_annotation_freeform() {
+        let input = r#"
+rect @widget {
+  ## "Description line"
+  ## accept: "criterion one"
+  ## status: done
+  ## priority: low
+  ## tag: design
+  w: 100 h: 100
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let w = graph.get_by_id(NodeId::intern("widget")).unwrap();
+        assert_eq!(w.annotations.len(), 5);
+        assert_eq!(
+            w.annotations[0],
+            Annotation::Description("Description line".into())
+        );
+        assert_eq!(w.annotations[1], Annotation::Accept("criterion one".into()));
+        assert_eq!(w.annotations[2], Annotation::Status("done".into()));
+        assert_eq!(w.annotations[3], Annotation::Priority("low".into()));
+        assert_eq!(w.annotations[4], Annotation::Tag("design".into()));
     }
 }

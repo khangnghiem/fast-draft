@@ -27,6 +27,12 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
                 .parse_next(&mut rest)
                 .map_err(|e| format!("Style parse error: {e}"))?;
             graph.define_style(name, style);
+        } else if rest.starts_with("##") {
+            // Top-level annotations are ignored (they only apply inside nodes)
+            let _ = take_till::<_, _, ContextError>(0.., '\n').parse_next(&mut rest);
+            if rest.starts_with('\n') {
+                rest = &rest[1..];
+            }
         } else if rest.starts_with('@') {
             let (node_id, constraint) = parse_constraint_line
                 .parse_next(&mut rest)
@@ -71,6 +77,7 @@ struct ParsedNode {
     use_styles: Vec<NodeId>,
     constraints: Vec<Constraint>,
     animations: Vec<AnimKeyframe>,
+    annotations: Vec<Annotation>,
     children: Vec<ParsedNode>,
 }
 
@@ -84,6 +91,7 @@ fn insert_node_recursive(
     node.use_styles.extend(parsed.use_styles);
     node.constraints.extend(parsed.constraints);
     node.animations.extend(parsed.animations);
+    node.annotations = parsed.annotations;
 
     let idx = graph.add_node(parent, node);
 
@@ -100,7 +108,11 @@ fn skip_ws_and_comments(input: &mut &str) {
         // Skip whitespace manually
         *input = input.trim_start();
         if input.starts_with('#') {
-            // Skip to end of line
+            // ## is an annotation — don't skip it
+            if input.starts_with("##") {
+                break;
+            }
+            // Regular comment — skip to end of line
             if let Some(pos) = input.find('\n') {
                 *input = &input[pos + 1..];
             } else {
@@ -162,6 +174,61 @@ fn skip_opt_separator(input: &mut &str) {
     if input.starts_with(';') || input.starts_with('\n') {
         *input = &input[1..];
     }
+}
+
+// ─── Annotation parser ──────────────────────────────────────────────────
+
+/// Parse a `##` annotation line into an `Annotation`.
+fn parse_annotation(input: &mut &str) -> ModalResult<Annotation> {
+    let _ = "##".parse_next(input)?;
+    skip_space(input);
+
+    // Try typed annotations: `keyword: value`
+    let checkpoint = *input;
+    if let Ok(keyword) = parse_identifier.parse_next(input) {
+        skip_space(input);
+        if input.starts_with(':') {
+            let _ = ':'.parse_next(input)?;
+            skip_space(input);
+
+            let value = if input.starts_with('"') {
+                parse_quoted_string
+                    .map(|s| s.to_string())
+                    .parse_next(input)?
+            } else {
+                let v: &str = take_till(0.., |c: char| c == '\n' || c == ';').parse_next(input)?;
+                v.trim().to_string()
+            };
+
+            let ann = match keyword {
+                "accept" => Annotation::Accept(value),
+                "status" => Annotation::Status(value),
+                "priority" => Annotation::Priority(value),
+                "tag" => Annotation::Tag(value),
+                _ => Annotation::Description(format!("{keyword}: {value}")),
+            };
+
+            skip_opt_separator(input);
+            return Ok(ann);
+        }
+        *input = checkpoint;
+    } else {
+        *input = checkpoint;
+    }
+
+    // Freeform description: `## "text"` or `## bare text`
+    skip_space(input);
+    let desc = if input.starts_with('"') {
+        parse_quoted_string
+            .map(|s| s.to_string())
+            .parse_next(input)?
+    } else {
+        let v: &str = take_till(0.., |c: char| c == '\n').parse_next(input)?;
+        v.trim().to_string()
+    };
+
+    skip_opt_separator(input);
+    Ok(Annotation::Description(desc))
 }
 
 // ─── Style block parser ─────────────────────────────────────────────────
@@ -277,6 +344,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let mut use_styles = Vec::new();
     let mut constraints = Vec::new();
     let mut animations = Vec::new();
+    let mut annotations = Vec::new();
     let mut children = Vec::new();
     let mut width: Option<f32> = None;
     let mut height: Option<f32> = None;
@@ -285,7 +353,9 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     skip_ws_and_comments(input);
 
     while !input.starts_with('}') {
-        if starts_with_child_node(input) {
+        if input.starts_with("##") {
+            annotations.push(parse_annotation.parse_next(input)?);
+        } else if starts_with_child_node(input) {
             children.push(parse_node.parse_next(input)?);
         } else if input.starts_with("anim") {
             animations.push(parse_anim_block.parse_next(input)?);
@@ -331,6 +401,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
         use_styles,
         constraints,
         animations,
+        annotations,
         children,
     })
 }

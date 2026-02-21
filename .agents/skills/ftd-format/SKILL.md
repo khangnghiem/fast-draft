@@ -108,6 +108,29 @@ Easing: `linear`, `ease_in`, `ease_out`, `ease_in_out`, `spring`
 @node_id -> fill_parent: 16
 ```
 
+### Annotations
+
+Structured metadata attached to nodes via `##` lines. Unlike `#` comments (which are discarded), annotations are parsed, stored on the scene graph, and survive round-trips.
+
+```
+rect @login_btn {
+  ## "Primary CTA — triggers login API call"
+  ## accept: "disabled state when fields empty"
+  ## status: in_progress
+  ## priority: high
+  ## tag: auth, mvp
+  w: 280 h: 48
+}
+```
+
+| Syntax               | Kind        | Purpose                        |
+| -------------------- | ----------- | ------------------------------ |
+| `## "text"`          | Description | What this node is/does         |
+| `## accept: "text"`  | Accept      | Acceptance criterion           |
+| `## status: value`   | Status      | `draft`, `in_progress`, `done` |
+| `## priority: value` | Priority    | `high`, `medium`, `low`        |
+| `## tag: value`      | Tag         | Categorization labels          |
+
 ## Token Efficiency Tips
 
 1. Use `w:` / `h:` shorthand, not `width:` / `height:`

@@ -245,6 +245,24 @@ pub struct AnimProperties {
     pub translate: Option<(f32, f32)>,
 }
 
+// ─── Annotations ─────────────────────────────────────────────────────────
+
+/// Structured annotation attached to a scene node.
+/// Parsed from `##` lines in the FTD format.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Annotation {
+    /// Freeform description: `## "User auth entry point"`
+    Description(String),
+    /// Acceptance criterion: `## accept: "validates email on blur"`
+    Accept(String),
+    /// Status: `## status: draft`
+    Status(String),
+    /// Priority: `## priority: high`
+    Priority(String),
+    /// Tag: `## tag: auth`
+    Tag(String),
+}
+
 // ─── Layout Constraints ──────────────────────────────────────────────────
 
 /// Constraint-based layout — no absolute coordinates in the format.
@@ -323,6 +341,9 @@ pub struct SceneNode {
 
     /// Animations attached to this node.
     pub animations: SmallVec<[AnimKeyframe; 2]>,
+
+    /// Structured annotations (`##` lines).
+    pub annotations: Vec<Annotation>,
 }
 
 impl SceneNode {
@@ -334,6 +355,7 @@ impl SceneNode {
             use_styles: SmallVec::new(),
             constraints: SmallVec::new(),
             animations: SmallVec::new(),
+            annotations: Vec::new(),
         }
     }
 }
