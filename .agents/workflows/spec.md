@@ -31,7 +31,7 @@ description: Define requirements and acceptance criteria for a feature
    - <Other requirements this depends on>
    ```
 
-3. **Identify affected crates**: Which of `ftd-core`, `ftd-render`, `ftd-editor`, `ftd-vscode` need changes?
+3. **Identify affected crates**: Which of `fd-core`, `fd-render`, `fd-editor`, `fd-vscode` need changes?
 
 4. **Add to REQUIREMENTS.md**:
    - Append the new requirement section

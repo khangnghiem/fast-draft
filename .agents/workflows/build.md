@@ -1,5 +1,5 @@
 ---
-description: How to build, test, and develop the FTD workspace
+description: How to build, test, and develop the FD workspace
 ---
 
 # Build Workflow
@@ -21,21 +21,21 @@ description: How to build, test, and develop the FTD workspace
 3. Run a specific crate's tests:
 
    ```bash
-   cargo test -p ftd-core
-   cargo test -p ftd-render
-   cargo test -p ftd-editor
+   cargo test -p fd-core
+   cargo test -p fd-render
+   cargo test -p fd-editor
    ```
 
 4. Build for WASM (when ready):
 
    ```bash
-   wasm-pack build crates/ftd-render --target web --out-dir ../../ftd-vscode/webview/wasm
+   wasm-pack build crates/fd-render --target web --out-dir ../../fd-vscode/webview/wasm
    ```
 
 5. Build the VS Code extension (when ready):
 
    ```bash
-   cd ftd-vscode && npm install && npm run compile
+   cd fd-vscode && npm install && npm run compile
    ```
 
 6. Lint:

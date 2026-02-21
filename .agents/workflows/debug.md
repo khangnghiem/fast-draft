@@ -13,13 +13,13 @@ description: Systematic debugging methodology for problem investigation
 2. **Isolate**: Narrow down to the specific crate:
 
    ```bash
-   cargo test -p ftd-core    # or ftd-render, ftd-editor
+   cargo test -p fd-core    # or fd-render, fd-editor
    ```
 
 3. **Read the error**: Parse the compiler/runtime error carefully. For Rust:
    - Type errors → check function signatures and trait bounds
    - Borrow errors → check lifetimes and ownership flow
-   - Parse errors → test with minimal `.ftd` input first
+   - Parse errors → test with minimal `.fd` input first
 
 4. **Trace**: Add `log::trace!()` or `dbg!()` at key points, then run:
 

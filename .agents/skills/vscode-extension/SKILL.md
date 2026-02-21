@@ -1,13 +1,13 @@
 ---
 name: vscode-extension
-description: How to build and debug the VS Code custom editor extension for .ftd files
+description: How to build and debug the VS Code custom editor extension for .fd files
 ---
 
 # VS Code Extension Skill
 
 ## Overview
 
-The `ftd-vscode` extension provides a custom editor for `.ftd` files — a side-by-side view with a text editor and a WASM-powered canvas. All rendering and editing logic runs in Rust/WASM; TypeScript is minimal glue code.
+The `fd-vscode` extension provides a custom editor for `.fd` files — a side-by-side view with a text editor and a WASM-powered canvas. All rendering and editing logic runs in Rust/WASM; TypeScript is minimal glue code.
 
 ## Architecture
 
@@ -19,9 +19,9 @@ VS Code
 │   │   └── Loads WASM canvas in <canvas> element
 │   ├── onDidChangeTextDocument → posts text to WASM
 │   └── WASM → postMessage → updates text document
-└── ftd-wasm.js (wasm-pack output)
+└── fd-wasm.js (wasm-pack output)
     ├── init_canvas(canvas_element)
-    ├── set_text(ftd_source)     → text→canvas
+    ├── set_text(fd_source)     → text→canvas
     ├── get_text() → string      → canvas→text
     └── handle_event(type, x, y, pressure)
 ```
@@ -29,7 +29,7 @@ VS Code
 ## Directory Structure (planned)
 
 ```
-ftd-vscode/
+fd-vscode/
 ├── package.json          # Extension manifest
 ├── src/
 │   └── extension.ts      # CustomTextEditorProvider
@@ -37,8 +37,8 @@ ftd-vscode/
 │   ├── index.html        # Canvas webview
 │   ├── main.js           # WASM loader + message bridge
 │   └── wasm/             # wasm-pack build output
-│       ├── ftd_render.js
-│       └── ftd_render_bg.wasm
+│       ├── fd_render.js
+│       └── fd_render_bg.wasm
 └── tsconfig.json
 ```
 
@@ -46,10 +46,10 @@ ftd-vscode/
 
 ```bash
 # 1. Build WASM from Rust
-wasm-pack build crates/ftd-render --target web --out-dir ../../ftd-vscode/webview/wasm
+wasm-pack build crates/fd-render --target web --out-dir ../../fd-vscode/webview/wasm
 
 # 2. Install extension deps
-cd ftd-vscode && pnpm install
+cd fd-vscode && pnpm install
 
 # 3. Compile TypeScript
 pnpm run compile
@@ -67,9 +67,9 @@ In `package.json`:
   "contributes": {
     "customEditors": [
       {
-        "viewType": "ftd.canvas",
-        "displayName": "FTD Canvas",
-        "selector": [{ "filenamePattern": "*.ftd" }],
+        "viewType": "fd.canvas",
+        "displayName": "FD Canvas",
+        "selector": [{ "filenamePattern": "*.fd" }],
         "priority": "default"
       }
     ]

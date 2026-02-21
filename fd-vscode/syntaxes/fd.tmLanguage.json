@@ -1,0 +1,118 @@
+{
+  "name": "fd",
+  "scopeName": "source.fd",
+  "fileTypes": [
+    "fd"
+  ],
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#style-block"
+    },
+    {
+      "include": "#node-declaration"
+    },
+    {
+      "include": "#constraint-line"
+    },
+    {
+      "include": "#property"
+    },
+    {
+      "include": "#string"
+    },
+    {
+      "include": "#hex-color"
+    },
+    {
+      "include": "#number"
+    },
+    {
+      "include": "#node-id"
+    },
+    {
+      "include": "#keywords"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "match": "^\\s*#.*$",
+      "name": "comment.line.number-sign.fd"
+    },
+    "style-block": {
+      "begin": "\\b(style)\\s+(\\w+)\\s*\\{",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.declaration.style.fd"
+        },
+        "2": {
+          "name": "entity.name.type.style.fd"
+        }
+      },
+      "end": "\\}",
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#property"
+        },
+        {
+          "include": "#hex-color"
+        },
+        {
+          "include": "#string"
+        },
+        {
+          "include": "#number"
+        }
+      ]
+    },
+    "node-declaration": {
+      "match": "\\b(group|rect|ellipse|path|text)\\b",
+      "name": "keyword.declaration.node.fd"
+    },
+    "constraint-line": {
+      "match": "(@\\w+)\\s*(->)",
+      "captures": {
+        "1": {
+          "name": "variable.other.node-id.fd"
+        },
+        "2": {
+          "name": "keyword.operator.constraint-arrow.fd"
+        }
+      }
+    },
+    "property": {
+      "match": "\\b(w|h|x|y|fill|stroke|font|corner|opacity|shadow|bg|layout|use|center_in|offset|gap|pad|scale|rotate|translate|ease|duration|cols)\\s*:",
+      "captures": {
+        "1": {
+          "name": "support.type.property-name.fd"
+        }
+      }
+    },
+    "node-id": {
+      "match": "@\\w+",
+      "name": "variable.other.node-id.fd"
+    },
+    "hex-color": {
+      "match": "#[0-9A-Fa-f]{3,8}\\b",
+      "name": "constant.other.color.hex.fd"
+    },
+    "string": {
+      "begin": "\"",
+      "end": "\"",
+      "name": "string.quoted.double.fd"
+    },
+    "number": {
+      "match": "\\b\\d+(\\.\\d+)?\\b",
+      "name": "constant.numeric.fd"
+    },
+    "keywords": {
+      "match": "\\b(anim|column|row|grid|free|spring|linear|ease_in|ease_out|ease_in_out|canvas)\\b",
+      "name": "keyword.other.fd"
+    }
+  }
+}

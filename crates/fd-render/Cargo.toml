@@ -1,0 +1,17 @@
+[package]
+name = "fd-render"
+description = "FD (Fast Draft) — Vello/wgpu 2D renderer with hit testing"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+fd-core = { path = "../fd-core" }
+vello = { workspace = true }
+wgpu = { workspace = true }
+peniko = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

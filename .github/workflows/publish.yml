@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ftd-vscode
+        working-directory: fd-vscode
     steps:
       - uses: actions/checkout@v4
 
@@ -42,5 +42,5 @@ jobs:
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ftd-vscode.vsix
-          path: ftd-vscode/*.vsix
+          name: fd-vscode.vsix
+          path: fd-vscode/*.vsix

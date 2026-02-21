@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ftd-vscode
+        working-directory: fd-vscode
     steps:
       - uses: actions/checkout@v4
 

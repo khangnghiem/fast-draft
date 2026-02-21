@@ -30,11 +30,11 @@ description: Create a Pull Request to merge feature branch into main
 
 5. Create the PR using GitKraken MCP tool:
    - `provider`: github
-   - `repository_name`: ftd
+   - `repository_name`: fast-draft
    - `repository_organization`: <org from git remote>
    - `source_branch`: current branch
    - `target_branch`: main
-   - `title`: conventional format like "feat(core): add FTD parser"
+   - `title`: conventional format like "feat(core): add FD parser"
    - `body`: summary of changes, what was tested
 
 6. Report the PR URL to the user.

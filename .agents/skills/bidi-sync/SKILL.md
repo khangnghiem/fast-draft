@@ -1,20 +1,20 @@
 ---
 name: bidi-sync
-description: How the bidirectional sync engine works between FTD text and canvas
+description: How the bidirectional sync engine works between FD text and canvas
 ---
 
 # Bidirectional Sync Skill
 
 ## Overview
 
-The sync engine is the heart of FTD — it keeps the `.ftd` text source and the visual canvas in lock-step. Every edit, whether from text or canvas, flows through a single authoritative `SceneGraph`.
+The sync engine is the heart of FD — it keeps the `.fd` text source and the visual canvas in lock-step. Every edit, whether from text or canvas, flows through a single authoritative `SceneGraph`.
 
 ## Architecture
 
 ```
   Text Editor              Sync Engine              Canvas
   ┌─────────┐         ┌─────────────────┐         ┌─────────┐
-  │  .ftd   │ ──────► │  Parser         │         │  Vello  │
+  │  .fd   │ ──────► │  Parser         │         │  Vello  │
   │  source │         │       ↓         │         │  wgpu   │
   │         │         │  SceneGraph ◄───┼─────── │  render │
   │         │ ◄────── │       ↓         │         │         │
@@ -24,7 +24,7 @@ The sync engine is the heart of FTD — it keeps the `.ftd` text source and the 
 
 ## Data Flow
 
-### Text → Canvas (user edits `.ftd` source)
+### Text → Canvas (user edits `.fd` source)
 
 1. Text editor sends new/changed text to `SyncEngine::set_text()` or `update_text_range()`
 2. Parser re-parses text into a new `SceneGraph`
@@ -42,11 +42,11 @@ The sync engine is the heart of FTD — it keeps the `.ftd` text source and the 
 
 | Type            | Location                     | Purpose                                                       |
 | --------------- | ---------------------------- | ------------------------------------------------------------- |
-| `SyncEngine`    | `ftd-editor/src/sync.rs`     | Holds graph, text, bounds; handles both directions            |
-| `GraphMutation` | `ftd-editor/src/sync.rs`     | Enum of mutations (move, resize, add, remove, set style/text) |
-| `Tool` trait    | `ftd-editor/src/tools.rs`    | Converts input events → mutations                             |
-| `CommandStack`  | `ftd-editor/src/commands.rs` | Undo/redo with inverse computation                            |
-| `InputEvent`    | `ftd-editor/src/input.rs`    | Normalized mouse/touch/stylus events                          |
+| `SyncEngine`    | `fd-editor/src/sync.rs`     | Holds graph, text, bounds; handles both directions            |
+| `GraphMutation` | `fd-editor/src/sync.rs`     | Enum of mutations (move, resize, add, remove, set style/text) |
+| `Tool` trait    | `fd-editor/src/tools.rs`    | Converts input events → mutations                             |
+| `CommandStack`  | `fd-editor/src/commands.rs` | Undo/redo with inverse computation                            |
+| `InputEvent`    | `fd-editor/src/input.rs`    | Normalized mouse/touch/stylus events                          |
 
 ## Adding a New Mutation Type
 

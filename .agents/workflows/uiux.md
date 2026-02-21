@@ -8,14 +8,14 @@ description: UI/UX design workflow with professional standards and best practice
    - Read relevant requirements from `REQUIREMENTS.md`
    - Identify the user flow this design supports
 
-2. **Design the `.ftd` mockup**: Create or modify an `.ftd` file in `examples/`:
+2. **Design the `.fd` mockup**: Create or modify an `.fd` file in `examples/`:
 
    ```bash
    # Create a new mockup
-   touch examples/<feature_name>.ftd
+   touch examples/<feature_name>.fd
    ```
 
-3. **Follow FTD design conventions**:
+3. **Follow FD design conventions**:
    - Use semantic `@id` names that describe purpose
    - Use `style` blocks for design tokens (colors, typography)
    - Use `layout: column/row` for structure, not absolute positioning
@@ -38,6 +38,6 @@ description: UI/UX design workflow with professional standards and best practice
    - Groups should use `layout: column/row` with `gap` and `pad`
    - Avoid hardcoded sizes > 400px without `fill_parent`
 
-6. **Present to user**: Show the `.ftd` file and describe the design rationale.
+6. **Present to user**: Show the `.fd` file and describe the design rationale.
 
 7. **Iterate**: Modify based on feedback, re-present until approved.
