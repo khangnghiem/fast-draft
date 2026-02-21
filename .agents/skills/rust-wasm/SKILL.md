@@ -1,6 +1,6 @@
 ---
 name: rust-wasm
-description: Rust development patterns for the FTD workspace (crate structure, testing, WASM)
+description: Rust development patterns for the FD workspace (crate structure, testing, WASM)
 ---
 
 # Rust + WASM Development Skill
@@ -8,15 +8,15 @@ description: Rust development patterns for the FTD workspace (crate structure, t
 ## Workspace Layout
 
 ```
-ftd/
+fast-draft/
 ├── Cargo.toml          # Workspace root
 ├── crates/
-│   ├── ftd-core/       # Data model, parser, emitter, layout
-│   ├── ftd-render/     # Vello/wgpu renderer, hit testing
-│   └── ftd-editor/     # Sync engine, tools, undo/redo, input
-├── ftd-vscode/         # VS Code extension (TypeScript + WASM)
+│   ├── fd-core/       # Data model, parser, emitter, layout
+│   ├── fd-render/     # Vello/wgpu renderer, hit testing
+│   └── fd-editor/     # Sync engine, tools, undo/redo, input
+├── fd-vscode/         # VS Code extension (TypeScript + WASM)
 └── examples/
-    └── demo.ftd
+    └── demo.fd
 ```
 
 ## Common Commands
@@ -26,7 +26,7 @@ ftd/
 ```bash
 cargo check --workspace        # Fast type check
 cargo test --workspace         # Run all tests
-cargo test -p ftd-core         # Test one crate
+cargo test -p fd-core         # Test one crate
 cargo test -- --nocapture      # See println!/dbg! output
 cargo clippy --workspace       # Lint
 cargo fmt --all                # Format
@@ -39,22 +39,22 @@ cargo fmt --all                # Format
 cargo install wasm-pack
 
 # Build for web target
-wasm-pack build crates/ftd-render --target web
+wasm-pack build crates/fd-render --target web
 
 # Build with specific features
-wasm-pack build crates/ftd-render --target web -- --features wasm
+wasm-pack build crates/fd-render --target web -- --features wasm
 ```
 
 ## Coding Patterns
 
 ### Adding a New Node Type
 
-1. Add variant to `NodeKind` enum in `crates/ftd-core/src/model.rs`
-2. Add parsing logic in `parse_node()` in `crates/ftd-core/src/parser.rs`
-3. Add emission logic in `emit_node()` in `crates/ftd-core/src/emitter.rs`
-4. Add intrinsic size in `intrinsic_size()` in `crates/ftd-core/src/layout.rs`
-5. Add rendering in `paint_node()` in `crates/ftd-render/src/paint.rs`
-6. Add hit testing in `hit_test_node()` in `crates/ftd-render/src/hit.rs`
+1. Add variant to `NodeKind` enum in `crates/fd-core/src/model.rs`
+2. Add parsing logic in `parse_node()` in `crates/fd-core/src/parser.rs`
+3. Add emission logic in `emit_node()` in `crates/fd-core/src/emitter.rs`
+4. Add intrinsic size in `intrinsic_size()` in `crates/fd-core/src/layout.rs`
+5. Add rendering in `paint_node()` in `crates/fd-render/src/paint.rs`
+6. Add hit testing in `hit_test_node()` in `crates/fd-render/src/hit.rs`
 7. Write tests for round-trip: parse → emit → re-parse
 
 ### Adding a New Style Property
@@ -67,7 +67,7 @@ wasm-pack build crates/ftd-render --target web -- --features wasm
 
 ### Adding a New Tool
 
-1. Implement the `Tool` trait in `crates/ftd-editor/src/tools.rs`
+1. Implement the `Tool` trait in `crates/fd-editor/src/tools.rs`
 2. Handle input events → produce `GraphMutation` values
 3. Register in tool selection (future: toolbar UI)
 
@@ -93,6 +93,6 @@ wasm-pack build crates/ftd-render --target web -- --features wasm
 ## Testing Conventions
 
 - Every new parser feature must have a round-trip test
-- Test files go in `examples/` as `.ftd` files
+- Test files go in `examples/` as `.fd` files
 - Use `pretty_assertions` for diff-friendly assertions
 - Test names: `parse_<feature>`, `emit_<feature>`, `roundtrip_<feature>`, `layout_<feature>`

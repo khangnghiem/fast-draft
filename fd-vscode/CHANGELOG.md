@@ -4,7 +4,7 @@
 
 ### Added
 
-- Syntax highlighting for `.ftd` files via TextMate grammar
+- Syntax highlighting for `.fd` files via TextMate grammar
 - Live parser validation with error diagnostics
 - Interactive canvas editor (WASM-powered Canvas2D rendering)
 - Tree preview command (`FTD: Show Tree Preview`)

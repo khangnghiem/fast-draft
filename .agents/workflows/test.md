@@ -9,11 +9,11 @@ description: Write tests before implementation (TDD)
 1. **Identify what to test**: Read the acceptance criteria from the spec or PR description.
 
 2. **Write tests FIRST** in the relevant crate:
-   - Parser features → `crates/ftd-core/src/parser.rs` (in `mod tests`)
-   - Emitter features → `crates/ftd-core/src/emitter.rs` (in `mod tests`)
-   - Layout features → `crates/ftd-core/src/layout.rs` (in `mod tests`)
-   - Sync features → `crates/ftd-editor/src/sync.rs` (in `mod tests`)
-   - Hit testing → `crates/ftd-render/src/hit.rs` (in `mod tests`)
+   - Parser features → `crates/fd-core/src/parser.rs` (in `mod tests`)
+   - Emitter features → `crates/fd-core/src/emitter.rs` (in `mod tests`)
+   - Layout features → `crates/fd-core/src/layout.rs` (in `mod tests`)
+   - Sync features → `crates/fd-editor/src/sync.rs` (in `mod tests`)
+   - Hit testing → `crates/fd-render/src/hit.rs` (in `mod tests`)
 
 3. **Test naming convention**:
 

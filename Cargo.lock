@@ -245,6 +245,59 @@ dependencies = [
 ]
 
 [[package]]
+name = "fd-core"
+version = "0.1.0"
+dependencies = [
+ "lasso",
+ "log",
+ "petgraph",
+ "pretty_assertions",
+ "rmp-serde",
+ "serde",
+ "smallvec",
+ "winnow",
+]
+
+[[package]]
+name = "fd-editor"
+version = "0.1.0"
+dependencies = [
+ "fd-core",
+ "fd-render",
+ "log",
+ "pretty_assertions",
+ "smallvec",
+]
+
+[[package]]
+name = "fd-render"
+version = "0.1.0"
+dependencies = [
+ "fd-core",
+ "log",
+ "peniko 0.3.2",
+ "pretty_assertions",
+ "vello",
+ "wgpu 24.0.5",
+]
+
+[[package]]
+name = "fd-wasm"
+version = "0.1.0"
+dependencies = [
+ "fd-core",
+ "fd-editor",
+ "fd-render",
+ "js-sys",
+ "log",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "fdeflate"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -310,59 +363,6 @@ name = "foreign-types-shared"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aa9a19cbb55df58761df49b23516a86d432839add4af60fc256da840f66ed35b"
-
-[[package]]
-name = "ftd-core"
-version = "0.1.0"
-dependencies = [
- "lasso",
- "log",
- "petgraph",
- "pretty_assertions",
- "rmp-serde",
- "serde",
- "smallvec",
- "winnow",
-]
-
-[[package]]
-name = "ftd-editor"
-version = "0.1.0"
-dependencies = [
- "ftd-core",
- "ftd-render",
- "log",
- "pretty_assertions",
- "smallvec",
-]
-
-[[package]]
-name = "ftd-render"
-version = "0.1.0"
-dependencies = [
- "ftd-core",
- "log",
- "peniko 0.3.2",
- "pretty_assertions",
- "vello",
- "wgpu 24.0.5",
-]
-
-[[package]]
-name = "ftd-wasm"
-version = "0.1.0"
-dependencies = [
- "ftd-core",
- "ftd-editor",
- "ftd-render",
- "js-sys",
- "log",
- "pretty_assertions",
- "serde",
- "serde_json",
- "wasm-bindgen",
- "web-sys",
-]
 
 [[package]]
 name = "futures-core"

@@ -7,17 +7,17 @@
 //!   incrementally re-emits only the affected text region. This avoids
 //!   re-serializing the entire document on every drag frame.
 //!
-//! - **Text → Canvas**: When the user edits the `.ftd` source text, the engine
+//! - **Text → Canvas**: When the user edits the `.fd` source text, the engine
 //!   incrementally re-parses only the changed lines, diffs against the current
 //!   graph, and applies minimal mutations. This avoids a full re-parse on every
 //!   keystroke.
 
-use ftd_core::NodeIndex;
-use ftd_core::emitter::emit_document;
-use ftd_core::id::NodeId;
-use ftd_core::model::*;
-use ftd_core::parser::parse_document;
-use ftd_core::{ResolvedBounds, Viewport, resolve_layout};
+use fd_core::NodeIndex;
+use fd_core::emitter::emit_document;
+use fd_core::id::NodeId;
+use fd_core::model::*;
+use fd_core::parser::parse_document;
+use fd_core::{ResolvedBounds, Viewport, resolve_layout};
 use std::collections::HashMap;
 
 /// The sync engine holds the authoritative scene graph and keeps text + canvas

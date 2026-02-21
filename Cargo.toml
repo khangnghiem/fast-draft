@@ -1,10 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/ftd-core",
-    "crates/ftd-render",
-    "crates/ftd-editor",
-    "crates/ftd-wasm",
+    "crates/fd-core",
+    "crates/fd-render",
+    "crates/fd-editor",
+    "crates/fd-wasm",
 ]
 
 [workspace.package]

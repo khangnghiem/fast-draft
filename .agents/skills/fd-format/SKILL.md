@@ -1,13 +1,13 @@
 ---
-name: ftd-format
-description: How to read, write, and modify .ftd (Fast Draft) files
+name: fd-format
+description: How to read, write, and modify .fd (Fast Draft) files
 ---
 
-# FTD Format Skill
+# FD Format Skill
 
 ## Overview
 
-The `.ftd` format is a token-efficient text DSL for 2D graphics, layout, and animation. This skill explains how to read and write valid `.ftd` files.
+The `.fd` format is a token-efficient text DSL for 2D graphics, layout, and animation. This skill explains how to read and write valid `.fd` files.
 
 ## Grammar Reference
 
@@ -166,7 +166,7 @@ group @card {
 
 ## Crate Locations
 
-- Parser: `crates/ftd-core/src/parser.rs`
-- Emitter: `crates/ftd-core/src/emitter.rs`
-- Data model: `crates/ftd-core/src/model.rs`
-- Layout solver: `crates/ftd-core/src/layout.rs`
+- Parser: `crates/fd-core/src/parser.rs`
+- Emitter: `crates/fd-core/src/emitter.rs`
+- Data model: `crates/fd-core/src/model.rs`
+- Layout solver: `crates/fd-core/src/layout.rs`

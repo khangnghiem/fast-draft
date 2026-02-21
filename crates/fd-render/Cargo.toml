@@ -1,13 +1,13 @@
 [package]
-name = "ftd-render"
-description = "FTD (Fast Draft) — Vello/wgpu 2D renderer with hit testing"
+name = "fd-render"
+description = "FD (Fast Draft) — Vello/wgpu 2D renderer with hit testing"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 
 [dependencies]
-ftd-core = { path = "../ftd-core" }
+fd-core = { path = "../fd-core" }
 vello = { workspace = true }
 wgpu = { workspace = true }
 peniko = { workspace = true }

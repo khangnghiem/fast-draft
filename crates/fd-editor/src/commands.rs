@@ -4,7 +4,7 @@
 //! Commands are pushed to a stack; undo pops and applies the inverse.
 
 use crate::sync::{GraphMutation, SyncEngine};
-use ftd_core::id::NodeId;
+use fd_core::id::NodeId;
 
 /// A command that captures both a forward mutation and its inverse.
 #[derive(Debug, Clone)]
@@ -99,8 +99,8 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
                 .graph
                 .get_by_id(*id)
                 .map(|n| match &n.kind {
-                    ftd_core::model::NodeKind::Rect { width, height } => (*width, *height),
-                    ftd_core::model::NodeKind::Ellipse { rx, ry } => (*rx * 2.0, *ry * 2.0),
+                    fd_core::model::NodeKind::Rect { width, height } => (*width, *height),
+                    fd_core::model::NodeKind::Ellipse { rx, ry } => (*rx * 2.0, *ry * 2.0),
                     _ => (0.0, 0.0),
                 })
                 .unwrap_or((0.0, 0.0));
@@ -139,7 +139,7 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
                 .graph
                 .get_by_id(*id)
                 .and_then(|n| match &n.kind {
-                    ftd_core::model::NodeKind::Text { content } => Some(content.clone()),
+                    fd_core::model::NodeKind::Text { content } => Some(content.clone()),
                     _ => None,
                 })
                 .unwrap_or_default();
@@ -154,7 +154,7 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ftd_core::layout::Viewport;
+    use fd_core::layout::Viewport;
 
     #[test]
     fn undo_redo_move() {

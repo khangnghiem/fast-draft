@@ -1,14 +1,14 @@
 [package]
-name = "ftd-editor"
-description = "FTD (Fast Draft) — bidirectional editor engine, tools, and undo/redo"
+name = "fd-editor"
+description = "FD (Fast Draft) — bidirectional editor engine, tools, and undo/redo"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 
 [dependencies]
-ftd-core = { path = "../ftd-core" }
-ftd-render = { path = "../ftd-render" }
+fd-core = { path = "../fd-core" }
+fd-render = { path = "../fd-render" }
 smallvec = { workspace = true }
 log = { workspace = true }
 

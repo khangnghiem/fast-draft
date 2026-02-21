@@ -5,8 +5,8 @@
 
 use crate::input::InputEvent;
 use crate::sync::GraphMutation;
-use ftd_core::id::NodeId;
-use ftd_core::model::*;
+use fd_core::id::NodeId;
+use fd_core::model::*;
 
 /// The active tool determines how input events are interpreted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

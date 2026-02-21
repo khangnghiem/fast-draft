@@ -1,15 +1,15 @@
 import * as vscode from "vscode";
 
 /**
- * FTD Custom Editor Provider.
+ * FD Custom Editor Provider.
  *
  * Creates a side-by-side experience: VS Code's built-in text editor +
- * a WASM-powered canvas webview that renders the .ftd scene graph.
+ * a WASM-powered canvas webview that renders the .fd scene graph.
  *
  * TypeScript is ONLY glue — all rendering and parsing happens in Rust/WASM.
  */
-class FtdEditorProvider implements vscode.CustomTextEditorProvider {
-  public static readonly viewType = "ftd.canvas";
+class FdEditorProvider implements vscode.CustomTextEditorProvider {
+  public static readonly viewType = "fd.canvas";
 
   constructor(private readonly context: vscode.ExtensionContext) { }
 
@@ -87,7 +87,7 @@ class FtdEditorProvider implements vscode.CustomTextEditorProvider {
         this.context.extensionUri,
         "webview",
         "wasm",
-        "ftd_wasm.js"
+        "fd_wasm.js"
       )
     );
     const mainJsUri = webview.asWebviewUri(
@@ -183,8 +183,8 @@ class FtdEditorProvider implements vscode.CustomTextEditorProvider {
     <span id="status">Loading WASM…</span>
   </div>
   <div id="canvas-container">
-    <canvas id="ftd-canvas"></canvas>
-    <div id="loading">Loading FTD engine…</div>
+    <canvas id="fd-canvas"></canvas>
+    <div id="loading">Loading FD engine…</div>
   </div>
 
   <script nonce="${nonce}">
@@ -198,25 +198,25 @@ class FtdEditorProvider implements vscode.CustomTextEditorProvider {
 
 // ─── Diagnostics Provider ────────────────────────────────────────────────
 
-class FtdDiagnosticsProvider {
+class FdDiagnosticsProvider {
   private diagnosticCollection: vscode.DiagnosticCollection;
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
     this.diagnosticCollection =
-      vscode.languages.createDiagnosticCollection("ftd");
+      vscode.languages.createDiagnosticCollection("fd");
   }
 
   public activate(context: vscode.ExtensionContext): void {
     // Validate on open
-    if (vscode.window.activeTextEditor?.document.languageId === "ftd") {
+    if (vscode.window.activeTextEditor?.document.languageId === "fd") {
       this.validateDocument(vscode.window.activeTextEditor.document);
     }
 
     // Validate on change (debounced)
     context.subscriptions.push(
       vscode.workspace.onDidChangeTextDocument((e: vscode.TextDocumentChangeEvent) => {
-        if (e.document.languageId === "ftd") {
+        if (e.document.languageId === "fd") {
           this.scheduleValidation(e.document);
         }
       })
@@ -225,7 +225,7 @@ class FtdDiagnosticsProvider {
     // Validate on open
     context.subscriptions.push(
       vscode.workspace.onDidOpenTextDocument((doc: vscode.TextDocument) => {
-        if (doc.languageId === "ftd") {
+        if (doc.languageId === "fd") {
           this.validateDocument(doc);
         }
       })
@@ -321,8 +321,8 @@ class FtdDiagnosticsProvider {
 
 // ─── Tree Preview Panel ──────────────────────────────────────────────────
 
-class FtdTreePreviewPanel {
-  public static currentPanel: FtdTreePreviewPanel | undefined;
+class FdTreePreviewPanel {
+  public static currentPanel: FdTreePreviewPanel | undefined;
   private readonly panel: vscode.WebviewPanel;
   private readonly context: vscode.ExtensionContext;
   private disposables: vscode.Disposable[] = [];
@@ -342,7 +342,7 @@ class FtdTreePreviewPanel {
         if (
           vscode.window.activeTextEditor &&
           e.document === vscode.window.activeTextEditor.document &&
-          e.document.languageId === "ftd"
+          e.document.languageId === "fd"
         ) {
           this.update();
         }
@@ -358,30 +358,30 @@ class FtdTreePreviewPanel {
     this.disposables.push(editorSubscription);
 
     this.panel.onDidDispose(() => {
-      FtdTreePreviewPanel.currentPanel = undefined;
+      FdTreePreviewPanel.currentPanel = undefined;
       for (const d of this.disposables) d.dispose();
     });
   }
 
   public static show(context: vscode.ExtensionContext): void {
-    if (FtdTreePreviewPanel.currentPanel) {
-      FtdTreePreviewPanel.currentPanel.panel.reveal(vscode.ViewColumn.Beside);
+    if (FdTreePreviewPanel.currentPanel) {
+      FdTreePreviewPanel.currentPanel.panel.reveal(vscode.ViewColumn.Beside);
       return;
     }
 
     const panel = vscode.window.createWebviewPanel(
-      "ftd.treePreview",
-      "FTD Tree Preview",
+      "fd.treePreview",
+      "FD Tree Preview",
       vscode.ViewColumn.Beside,
       { enableScripts: true }
     );
 
-    FtdTreePreviewPanel.currentPanel = new FtdTreePreviewPanel(panel, context);
+    FdTreePreviewPanel.currentPanel = new FdTreePreviewPanel(panel, context);
   }
 
   private update(): void {
     const editor = vscode.window.activeTextEditor;
-    if (!editor || editor.document.languageId !== "ftd") return;
+    if (!editor || editor.document.languageId !== "fd") return;
 
     const text = editor.document.getText();
     const treeHtml = this.buildTreeHtml(text);
@@ -389,7 +389,7 @@ class FtdTreePreviewPanel {
   }
 
   private buildTreeHtml(source: string): string {
-    // Parse the FTD source into a simple tree representation
+    // Parse the FD source into a simple tree representation
     const tree = this.parseToTree(source);
     const nonce = getNonce();
 
@@ -530,10 +530,10 @@ function getNonce(): string {
 
 export function activate(context: vscode.ExtensionContext) {
   // Register custom editor provider
-  const editorProvider = new FtdEditorProvider(context);
+  const editorProvider = new FdEditorProvider(context);
   context.subscriptions.push(
     vscode.window.registerCustomEditorProvider(
-      FtdEditorProvider.viewType,
+      FdEditorProvider.viewType,
       editorProvider,
       {
         webviewOptions: { retainContextWhenHidden: true },
@@ -543,29 +543,29 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   // Register diagnostics
-  const diagnostics = new FtdDiagnosticsProvider();
+  const diagnostics = new FdDiagnosticsProvider();
   diagnostics.activate(context);
 
   // Register tree preview command
   context.subscriptions.push(
-    vscode.commands.registerCommand("ftd.showPreview", () => {
-      FtdTreePreviewPanel.show(context);
+    vscode.commands.registerCommand("fd.showPreview", () => {
+      FdTreePreviewPanel.show(context);
     })
   );
 
   // Register open canvas command
   context.subscriptions.push(
-    vscode.commands.registerCommand("ftd.openCanvas", async () => {
+    vscode.commands.registerCommand("fd.openCanvas", async () => {
       const editor = vscode.window.activeTextEditor;
-      if (editor && editor.document.languageId === "ftd") {
+      if (editor && editor.document.languageId === "fd") {
         await vscode.commands.executeCommand(
           "vscode.openWith",
           editor.document.uri,
-          "ftd.canvas"
+          "fd.canvas"
         );
       } else {
         vscode.window.showInformationMessage(
-          "Open a .ftd file first to use the canvas editor."
+          "Open a .fd file first to use the canvas editor."
         );
       }
     })

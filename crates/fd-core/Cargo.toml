@@ -1,6 +1,6 @@
 [package]
-name = "ftd-core"
-description = "FTD (Fast Draft) — core data model, parser, emitter, and layout solver"
+name = "fd-core"
+description = "FD (Fast Draft) — core data model, parser, emitter, and layout solver"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

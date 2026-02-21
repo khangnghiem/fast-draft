@@ -4,7 +4,7 @@ trigger: always_on
 
 # GEMINI.md - FTD Project Configuration
 
-> AI behavior rules for FTD (Fast Draft) — a Rust/WASM file format and interactive canvas for drawing, design, and animation.
+> AI behavior rules for FD (Fast Draft) — a Rust/WASM file format and interactive canvas for drawing, design, and animation.
 
 ---
 
@@ -83,19 +83,19 @@ main ← PR ← feature-branch ← your commits
 
 ```
 crates/
-├── ftd-core/       # Data model, parser, emitter, layout solver
+├── fd-core/       # Data model, parser, emitter, layout solver
 │   └── src/
 │       ├── model.rs    # SceneGraph, NodeKind, Style, Animation
-│       ├── parser.rs   # winnow-based .ftd → SceneGraph
-│       ├── emitter.rs  # SceneGraph → .ftd text
+│       ├── parser.rs   # winnow-based .fd → SceneGraph
+│       ├── emitter.rs  # SceneGraph → .fd text
 │       ├── layout.rs   # Constraint solver
 │       └── id.rs       # NodeId interning via lasso
-├── ftd-render/     # Vello/wgpu 2D renderer
+├── fd-render/     # Vello/wgpu 2D renderer
 │   └── src/
 │       ├── canvas.rs   # GPU surface setup
 │       ├── paint.rs    # Graph → draw commands
 │       └── hit.rs      # Point → node lookup
-└── ftd-editor/     # Bidirectional editor engine
+└── fd-editor/     # Bidirectional editor engine
     └── src/
         ├── sync.rs     # Canvas ↔ Text sync engine
         ├── tools.rs    # Select, Rect, Pen tools
@@ -110,7 +110,7 @@ crates/
 - Use `assert_eq!` with descriptive messages
 - Test edge cases: empty input, missing optional fields, nested structures
 
-### 📝 FTD Format Rules
+### 📝 FD Format Rules
 
 | Rule                        | Description                                            |
 | --------------------------- | ------------------------------------------------------ |

@@ -2,11 +2,11 @@
 
 ## Vision
 
-FTD (Fast Draft) is a file format and interactive canvas for drawing, design, and animation — built for both humans and AI agents. The `.ftd` file is the single source of truth, bidirectionally synced with a visual canvas in real-time.
+FD (Fast Draft) is a file format and interactive canvas for drawing, design, and animation — built for both humans and AI agents. The `.fd` file is the single source of truth, bidirectionally synced with a visual canvas in real-time.
 
 ## Core Requirements
 
-### R1: File Format (`.ftd`)
+### R1: File Format (`.fd`)
 
 - **R1.1**: Token-efficient text DSL — ~5× fewer tokens than SVG for equivalent content
 - **R1.2**: Graph-based document model (DAG) — nodes reference by `@id`, not coordinates
@@ -19,7 +19,7 @@ FTD (Fast Draft) is a file format and interactive canvas for drawing, design, an
 
 ### R2: Bidirectional Sync
 
-- **R2.1**: Canvas → Text: Visual edits (drag, resize, draw) update the `.ftd` source in <16ms
+- **R2.1**: Canvas → Text: Visual edits (drag, resize, draw) update the `.fd` source in <16ms
 - **R2.2**: Text → Canvas: Source edits re-render the canvas in <16ms
 - **R2.3**: Incremental: Only re-parse/re-emit changed regions, not the entire document
 - **R2.4**: Conflict-free: Both directions funnel through a single authoritative `SceneGraph`
@@ -36,7 +36,7 @@ FTD (Fast Draft) is a file format and interactive canvas for drawing, design, an
 
 ### R4: AI Editing (Text)
 
-- **R4.1**: AI reads/writes `.ftd` text directly — no binary format needed
+- **R4.1**: AI reads/writes `.fd` text directly — no binary format needed
 - **R4.2**: Semantic node names (`@login_form`, `@submit_btn`) help AI understand intent
 - **R4.3**: Style inheritance reduces repetition — AI only specifies overrides
 - **R4.4**: Constraints describe relationships ("center in canvas") not pixel positions
@@ -61,7 +61,7 @@ FTD (Fast Draft) is a file format and interactive canvas for drawing, design, an
 
 | Requirement        | Target                                    |
 | ------------------ | ----------------------------------------- |
-| Parse throughput   | >10 MB/s of `.ftd` text                   |
+| Parse throughput   | >10 MB/s of `.fd` text                   |
 | Render latency     | <16ms per frame (60 FPS)                  |
 | Bidirectional sync | <16ms round-trip                          |
 | File size          | ~5× smaller than SVG equivalent           |

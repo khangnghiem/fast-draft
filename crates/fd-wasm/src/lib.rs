@@ -4,12 +4,12 @@
 
 mod render2d;
 
-use ftd_core::id::NodeId;
-use ftd_core::layout::Viewport;
-use ftd_editor::commands::CommandStack;
-use ftd_editor::input::InputEvent;
-use ftd_editor::sync::{GraphMutation, SyncEngine};
-use ftd_editor::tools::{RectTool, SelectTool, Tool, ToolKind};
+use fd_core::id::NodeId;
+use fd_core::layout::Viewport;
+use fd_editor::commands::CommandStack;
+use fd_editor::input::InputEvent;
+use fd_editor::sync::{GraphMutation, SyncEngine};
+use fd_editor::tools::{RectTool, SelectTool, Tool, ToolKind};
 use wasm_bindgen::prelude::*;
 use web_sys::CanvasRenderingContext2d;
 
@@ -18,7 +18,7 @@ use web_sys::CanvasRenderingContext2d;
 /// Holds the sync engine, command stack, and active tool. All interaction
 /// from the webview JS goes through this struct.
 #[wasm_bindgen]
-pub struct FtdCanvas {
+pub struct FdCanvas {
     engine: SyncEngine,
     commands: CommandStack,
     active_tool: ToolKind,
@@ -31,7 +31,7 @@ pub struct FtdCanvas {
 }
 
 #[wasm_bindgen]
-impl FtdCanvas {
+impl FdCanvas {
     /// Create a new canvas controller with the given dimensions.
     #[wasm_bindgen(constructor)]
     pub fn new(width: f64, height: f64) -> Self {
@@ -183,9 +183,9 @@ impl FtdCanvas {
 
 // ─── Private helpers ─────────────────────────────────────────────────────
 
-impl FtdCanvas {
+impl FdCanvas {
     fn hit_test(&self, x: f32, y: f32) -> Option<NodeId> {
-        ftd_render::hit::hit_test(&self.engine.graph, self.engine.current_bounds(), x, y)
+        fd_render::hit::hit_test(&self.engine.graph, self.engine.current_bounds(), x, y)
     }
 
     fn apply_mutations(&mut self, mutations: Vec<GraphMutation>) -> bool {
@@ -222,7 +222,7 @@ fn console_error_panic_hook_setup() {
 /// Validate FTD source text. Returns JSON: `{"ok":true}` or `{"ok":false,"error":"..."}`.
 #[wasm_bindgen]
 pub fn validate(source: &str) -> String {
-    match ftd_core::parser::parse_document(source) {
+    match fd_core::parser::parse_document(source) {
         Ok(_) => r#"{"ok":true}"#.to_string(),
         Err(e) => {
             let escaped = e.replace('\\', "\\\\").replace('"', "\\\"");
@@ -235,7 +235,7 @@ pub fn validate(source: &str) -> String {
 /// Returns JSON `{"ok":true,"nodes":[...]}` or `{"ok":false,"error":"..."}`.
 #[wasm_bindgen]
 pub fn parse_to_json(source: &str) -> String {
-    match ftd_core::parser::parse_document(source) {
+    match fd_core::parser::parse_document(source) {
         Ok(graph) => {
             let nodes = collect_node_tree(&graph, graph.root);
             match serde_json::to_string(&nodes) {
@@ -251,15 +251,15 @@ pub fn parse_to_json(source: &str) -> String {
 }
 
 /// Recursively collect nodes into a serializable tree structure.
-fn collect_node_tree(graph: &ftd_core::SceneGraph, idx: ftd_core::NodeIndex) -> serde_json::Value {
+fn collect_node_tree(graph: &fd_core::SceneGraph, idx: fd_core::NodeIndex) -> serde_json::Value {
     let node = &graph.graph[idx];
     let kind_str = match &node.kind {
-        ftd_core::NodeKind::Root => "root",
-        ftd_core::NodeKind::Group { .. } => "group",
-        ftd_core::NodeKind::Rect { .. } => "rect",
-        ftd_core::NodeKind::Ellipse { .. } => "ellipse",
-        ftd_core::NodeKind::Path { .. } => "path",
-        ftd_core::NodeKind::Text { .. } => "text",
+        fd_core::NodeKind::Root => "root",
+        fd_core::NodeKind::Group { .. } => "group",
+        fd_core::NodeKind::Rect { .. } => "rect",
+        fd_core::NodeKind::Ellipse { .. } => "ellipse",
+        fd_core::NodeKind::Path { .. } => "path",
+        fd_core::NodeKind::Text { .. } => "text",
     };
     let children: Vec<serde_json::Value> = graph
         .children(idx)
@@ -271,10 +271,10 @@ fn collect_node_tree(graph: &ftd_core::SceneGraph, idx: ftd_core::NodeIndex) -> 
         "id": node.id.as_str(),
         "kind": kind_str,
     });
-    if let ftd_core::NodeKind::Text { content } = &node.kind {
+    if let fd_core::NodeKind::Text { content } = &node.kind {
         obj["text"] = serde_json::Value::String(content.clone());
     }
-    if let ftd_core::NodeKind::Rect { width, height } = &node.kind {
+    if let fd_core::NodeKind::Rect { width, height } = &node.kind {
         obj["width"] = serde_json::json!(width);
         obj["height"] = serde_json::json!(height);
     }

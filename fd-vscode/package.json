@@ -1,21 +1,22 @@
 {
-  "name": "ftd-vscode",
-  "displayName": "FTD — Fast Draft",
-  "description": "Syntax highlighting, live parser validation, and interactive canvas editor for .ftd (Fast Draft) files",
-  "version": "0.1.1",
+  "name": "fast-draft",
+  "displayName": "Fast Draft",
+  "description": "Syntax highlighting, live parser validation, and interactive canvas editor for .fd (Fast Draft) files",
+  "version": "0.3.0",
   "publisher": "KhangNghiem",
   "license": "MIT",
   "icon": "icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/khangnghiem/ftd"
+    "url": "https://github.com/khangnghiem/fast-draft"
   },
   "categories": [
     "Programming Languages",
     "Visualization"
   ],
   "keywords": [
-    "ftd",
+    "fd",
+    "fast-draft",
     "design",
     "canvas",
     "drawing",
@@ -29,31 +30,31 @@
   "contributes": {
     "languages": [
       {
-        "id": "ftd",
+        "id": "fd",
         "aliases": [
-          "FTD",
+          "FD",
           "Fast Draft"
         ],
         "extensions": [
-          ".ftd"
+          ".fd"
         ],
         "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "ftd",
-        "scopeName": "source.ftd",
-        "path": "./syntaxes/ftd.tmLanguage.json"
+        "language": "fd",
+        "scopeName": "source.fd",
+        "path": "./syntaxes/fd.tmLanguage.json"
       }
     ],
     "customEditors": [
       {
-        "viewType": "ftd.canvas",
-        "displayName": "FTD Canvas",
+        "viewType": "fd.canvas",
+        "displayName": "FD Canvas",
         "selector": [
           {
-            "filenamePattern": "*.ftd"
+            "filenamePattern": "*.fd"
           }
         ],
         "priority": "option"
@@ -61,21 +62,21 @@
     ],
     "commands": [
       {
-        "command": "ftd.showPreview",
-        "title": "FTD: Show Tree Preview",
+        "command": "fd.showPreview",
+        "title": "FD: Show Tree Preview",
         "icon": "$(list-tree)"
       },
       {
-        "command": "ftd.openCanvas",
-        "title": "FTD: Open Canvas Editor",
+        "command": "fd.openCanvas",
+        "title": "FD: Open Canvas Editor",
         "icon": "$(paintcan)"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "ftd.showPreview",
-          "when": "resourceLangId == ftd",
+          "command": "fd.showPreview",
+          "when": "resourceLangId == fd",
           "group": "navigation"
         }
       ]

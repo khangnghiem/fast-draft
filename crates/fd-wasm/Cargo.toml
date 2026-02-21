@@ -1,6 +1,6 @@
 [package]
-name = "ftd-wasm"
-description = "FTD (Fast Draft) — WASM bridge for VS Code extension"
+name = "fd-wasm"
+description = "FD (Fast Draft) — WASM bridge for VS Code extension"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,9 +10,9 @@ authors.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-ftd-core = { path = "../ftd-core" }
-ftd-editor = { path = "../ftd-editor" }
-ftd-render = { path = "../ftd-render" }
+fd-core = { path = "../fd-core" }
+fd-editor = { path = "../fd-editor" }
+fd-render = { path = "../fd-render" }
 wasm-bindgen = { workspace = true }
 serde_json = { workspace = true }
 serde = { workspace = true }

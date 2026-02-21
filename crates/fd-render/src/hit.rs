@@ -3,11 +3,11 @@
 //! Reverse-walks the render tree (front-to-back) to find which node
 //! is at a given (x, y) canvas position.
 
-use ftd_core::NodeIndex;
-use ftd_core::ResolvedBounds;
-use ftd_core::SceneGraph;
-use ftd_core::id::NodeId;
-use ftd_core::model::*;
+use fd_core::NodeIndex;
+use fd_core::ResolvedBounds;
+use fd_core::SceneGraph;
+use fd_core::id::NodeId;
+use fd_core::model::*;
 use std::collections::HashMap;
 
 /// Find the topmost node at position (px, py).
@@ -56,8 +56,8 @@ fn hit_test_node(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ftd_core::parser::parse_document;
-    use ftd_core::{Viewport, resolve_layout};
+    use fd_core::parser::parse_document;
+    use fd_core::{Viewport, resolve_layout};
 
     #[test]
     fn hit_test_basic() {

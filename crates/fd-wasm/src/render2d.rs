@@ -3,8 +3,8 @@
 //! Walks the resolved scene graph and draws to an HTML `<canvas>` via
 //! `CanvasRenderingContext2d`. Used as MVP renderer before Vello/wgpu.
 
-use ftd_core::model::*;
-use ftd_core::{NodeIndex, ResolvedBounds, SceneGraph};
+use fd_core::model::*;
+use fd_core::{NodeIndex, ResolvedBounds, SceneGraph};
 use std::collections::HashMap;
 use web_sys::CanvasRenderingContext2d;
 

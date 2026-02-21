@@ -3,10 +3,10 @@
 //! Walks the resolved scene graph and emits Vello paint operations:
 //! fills, strokes, paths, text glyphs, gradients.
 
-use ftd_core::NodeIndex;
-use ftd_core::ResolvedBounds;
-use ftd_core::SceneGraph;
-use ftd_core::model::*;
+use fd_core::NodeIndex;
+use fd_core::ResolvedBounds;
+use fd_core::SceneGraph;
+use fd_core::model::*;
 use std::collections::HashMap;
 
 /// Paint the entire scene graph to a Vello scene.

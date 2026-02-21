@@ -1,5 +1,5 @@
 ---
-description: Design the visual design and interaction patterns for FTD canvas UI
+description: Design the visual design and interaction patterns for FD canvas UI
 ---
 
 # Design Workflow
@@ -9,7 +9,7 @@ description: Design the visual design and interaction patterns for FTD canvas UI
    - What interactions are supported (click, drag, hover)?
    - What state transitions occur?
 
-2. **Sketch the layout** using FTD format:
+2. **Sketch the layout** using FD format:
 
    ```
    # Component: <Name>
@@ -37,8 +37,8 @@ description: Design the visual design and interaction patterns for FTD canvas UI
 5. **Save to examples/**:
 
    ```bash
-   # Save mockup as .ftd file
-   cat > examples/design_<feature>.ftd << 'EOF'
+   # Save mockup as .fd file
+   cat > examples/design_<feature>.fd << 'EOF'
    # Mockup content
    EOF
    ```

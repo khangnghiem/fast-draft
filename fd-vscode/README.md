@@ -4,7 +4,7 @@
 
 ## What You Get
 
-Install this extension and **every `.ftd` file lights up** — syntax colors, instant error detection, and a visual canvas that renders your design in real time. Think Figma meets code.
+Install this extension and **every `.fd` file lights up** — syntax colors, instant error detection, and a visual canvas that renders your design in real time. Think Figma meets code.
 
 | You write this...                              | ...and get this                |
 | ---------------------------------------------- | ------------------------------ |
@@ -19,7 +19,7 @@ Install this extension and **every `.ftd` file lights up** — syntax colors, in
 
 ### 🎨 Syntax Highlighting
 
-Rich TextMate-based syntax highlighting for `.ftd` files:
+Rich TextMate-based syntax highlighting for `.fd` files:
 
 - **Node keywords** — `group`, `rect`, `ellipse`, `text`, `path`
 - **Style blocks** — `style accent { fill: #6C5CE7 }`
@@ -59,9 +59,9 @@ View the parsed scene graph as a structural tree:
 
 ## Interactive Usage Guide
 
-### 1. Create a new `.ftd` file
+### 1. Create a new `.fd` file
 
-```ftd
+```fd
 # FTD v1
 # My first design
 
@@ -74,7 +74,7 @@ rect @hero {
 @hero -> center_in: canvas
 ```
 
-Save as `hello.ftd` — syntax highlighting activates automatically.
+Save as `hello.fd` — syntax highlighting activates automatically.
 
 ### 2. Open the Canvas Editor
 
@@ -118,7 +118,7 @@ Scene Graph
 
 Try typing an invalid color:
 
-```ftd
+```fd
 rect @broken {
   fill: #GGG     # ← red squiggle: "Invalid hex color"
   w: 100 h: 50
@@ -130,7 +130,7 @@ rect @broken {
 
 ## Example: Login Form
 
-```ftd
+```fd
 # FTD v1
 # A login form mockup
 
@@ -207,9 +207,9 @@ group @login_form {
 
 ## Links
 
-- [GitHub Repository](https://github.com/khangnghiem/ftd)
-- [FTD Format Specification](https://github.com/khangnghiem/ftd/blob/main/REQUIREMENTS.md)
-- [Marketplace](https://marketplace.visualstudio.com/items?itemName=KhangNghiem.ftd-vscode)
+- [GitHub Repository](https://github.com/khangnghiem/fast-draft)
+- [FD Format Specification](https://github.com/khangnghiem/fast-draft/blob/main/REQUIREMENTS.md)
+- [Marketplace](https://marketplace.visualstudio.com/items?itemName=KhangNghiem.fd-vscode)
 
 ## License
 
