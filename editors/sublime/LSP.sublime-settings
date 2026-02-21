@@ -1,0 +1,9 @@
+{
+  "clients": {
+    "fd-lsp": {
+      "command": ["fd-lsp"],
+      "selector": "source.fd",
+      "initializationOptions": {}
+    }
+  }
+}
