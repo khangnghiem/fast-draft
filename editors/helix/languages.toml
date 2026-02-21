@@ -1,0 +1,30 @@
+# FD (Fast Draft) — Helix Editor Configuration
+#
+# Installation:
+#   1. Install fd-lsp: cargo install --path crates/fd-lsp
+#   2. Copy this to ~/.config/helix/languages.toml
+#   3. Copy tree-sitter-fd/queries/ to ~/.config/helix/runtime/queries/fd/
+#   4. Restart Helix and open a .fd file
+
+[[language]]
+name = "fd"
+scope = "source.fd"
+injection-regex = "^fd$"
+file-types = ["fd"]
+comment-token = "#"
+indent = { tab-width = 2, unit = "  " }
+auto-format = false
+language-servers = ["fd-lsp"]
+roots = [".git", "Cargo.toml"]
+
+[language.auto-pairs]
+'{' = '}'
+'(' = ')'
+'"' = '"'
+
+[language-server.fd-lsp]
+command = "fd-lsp"
+
+[[grammar]]
+name = "fd"
+source = { git = "https://github.com/khangnghiem/fast-draft", subpath = "tree-sitter-fd", rev = "main" }

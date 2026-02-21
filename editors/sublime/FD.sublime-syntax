@@ -1,0 +1,101 @@
+%YAML 1.2
+---
+# FD (Fast Draft) — Sublime Text syntax definition
+# Install: copy to Packages/User/FD.sublime-syntax
+
+name: FD
+file_extensions:
+  - fd
+scope: source.fd
+
+contexts:
+  main:
+    - include: comments
+    - include: annotations
+    - include: style-block
+    - include: node-declaration
+    - include: constraint-line
+
+  comments:
+    - match: '#[^#].*$'
+      scope: comment.line.fd
+
+  annotations:
+    - match: '##.*$'
+      scope: meta.preprocessor.fd
+
+  style-block:
+    - match: '\b(style)\b'
+      scope: keyword.other.fd
+      push:
+        - match: '\b([a-zA-Z_][a-zA-Z0-9_]*)\b'
+          scope: entity.name.class.fd
+        - match: '\{'
+          scope: punctuation.section.block.begin.fd
+          push: properties
+        - match: ''
+          pop: true
+
+  node-declaration:
+    - match: '\b(group|rect|ellipse|path|text)\b'
+      scope: keyword.other.fd
+    - match: '@[a-zA-Z_][a-zA-Z0-9_]*'
+      scope: variable.other.fd
+    - match: '\{'
+      scope: punctuation.section.block.begin.fd
+      push: node-body
+    - match: '\}'
+      scope: punctuation.section.block.end.fd
+
+  node-body:
+    - include: annotations
+    - include: comments
+    - include: anim-block
+    - include: node-declaration
+    - include: properties
+    - match: '\}'
+      scope: punctuation.section.block.end.fd
+      pop: true
+
+  properties:
+    - match: '\b(w|h|width|height|fill|stroke|corner|opacity|font|bg|use|layout|shadow|scale|rotate|translate|center_in|offset|ease|duration)\b(?=\s*:)'
+      scope: support.type.property-name.fd
+    - match: ':'
+      scope: punctuation.separator.key-value.fd
+    - include: values
+    - match: '\}'
+      scope: punctuation.section.block.end.fd
+      pop: true
+
+  values:
+    - match: '#[0-9A-Fa-f]{3,8}'
+      scope: constant.other.color.fd
+    - match: '"[^"]*"'
+      scope: string.quoted.double.fd
+    - match: '-?\d+(\.\d+)?(ms)?'
+      scope: constant.numeric.fd
+    - match: '\b(column|row|grid|free|spring|linear|ease_in|ease_out|ease_in_out)\b'
+      scope: constant.language.fd
+    - match: '='
+      scope: keyword.operator.assignment.fd
+    - match: '->'
+      scope: keyword.operator.arrow.fd
+
+  anim-block:
+    - match: '\b(anim)\b'
+      scope: keyword.other.fd
+      push:
+        - match: ':([a-zA-Z_][a-zA-Z0-9_]*)'
+          captures:
+            1: entity.name.tag.fd
+        - match: '\{'
+          scope: punctuation.section.block.begin.fd
+          push: properties
+        - match: ''
+          pop: true
+
+  constraint-line:
+    - match: '(@[a-zA-Z_][a-zA-Z0-9_]*)\s*(->)'
+      captures:
+        1: variable.other.fd
+        2: keyword.operator.arrow.fd

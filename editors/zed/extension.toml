@@ -1,0 +1,12 @@
+[package]
+id = "fd"
+name = "FD (Fast Draft)"
+description = "Language support for FD (Fast Draft) files — syntax highlighting, LSP diagnostics, completions, and hover"
+version = "0.1.0"
+schema_version = 1
+authors = ["Khang Nghiêm <khang@fastdraft.dev>"]
+repository = "https://github.com/khangnghiem/fast-draft"
+
+[grammars.fd]
+repository = "https://github.com/khangnghiem/fast-draft"
+path = "tree-sitter-fd"
