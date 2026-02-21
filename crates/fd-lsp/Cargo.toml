@@ -1,0 +1,19 @@
+[package]
+name = "fd-lsp"
+description = "FD (Fast Draft) Language Server — diagnostics, completions, hover, symbols"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "fd-lsp"
+path = "src/main.rs"
+
+[dependencies]
+fd-core = { path = "../fd-core" }
+tower-lsp = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+ropey = { workspace = true }

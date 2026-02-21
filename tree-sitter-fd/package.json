@@ -1,0 +1,37 @@
+{
+  "name": "tree-sitter-fd",
+  "version": "0.1.0",
+  "description": "Tree-sitter grammar for FD (Fast Draft) files",
+  "license": "MIT",
+  "author": "Khang Nghiêm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/khangnghiem/fast-draft"
+  },
+  "main": "bindings/node",
+  "keywords": [
+    "tree-sitter",
+    "fd",
+    "fast-draft",
+    "parser"
+  ],
+  "files": [
+    "grammar.js",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**"
+  ],
+  "dependencies": {
+    "nan": "^2.18.0"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.24.0"
+  },
+  "scripts": {
+    "build": "tree-sitter generate && node-gyp build",
+    "test": "tree-sitter test",
+    "parse": "tree-sitter parse"
+  }
+}

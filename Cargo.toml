@@ -5,6 +5,7 @@ members = [
     "crates/fd-render",
     "crates/fd-editor",
     "crates/fd-wasm",
+    "crates/fd-lsp",
 ]
 
 [workspace.package]
@@ -40,6 +41,11 @@ js-sys = "0.3"
 # Logging
 log = "0.4"
 env_logger = "0.11"
+
+# LSP
+tower-lsp = "0.20"
+tokio = { version = "1", features = ["full"] }
+ropey = "1.6"
 
 # Testing
 pretty_assertions = "1.4"
