@@ -1,5 +1,7 @@
 # FTD v1
-# A login form mockup — demonstrates the FTD format
+# A login form mockup — demonstrates all FTD format features
+
+# ─── Reusable Styles ──────────────────────────────────────────
 
 style base_text {
   font: "Inter" 14
@@ -9,6 +11,8 @@ style base_text {
 style accent {
   fill: #6C5CE7
 }
+
+# ─── Main Login Form (group with column layout) ──────────────
 
 group @login_form {
   layout: column gap=16 pad=32
@@ -60,3 +64,26 @@ group @login_form {
 }
 
 @login_form -> center_in: canvas
+
+# ─── Braceless Leaf Nodes (compact one-liners) ───────────────
+
+rect @divider w: 280 h: 1 fill: #EEE
+rect @spacer w: 280 h: 16
+
+# ─── Clone/Repeat (reuse with overrides) ─────────────────────
+
+@signup_btn = clone @login_btn {
+  text @signup_label "Create Account" {
+    font: "Inter" 600 16
+    fill: #FFFFFF
+  }
+}
+
+# ─── Property Table (batch creation) ─────────────────────────
+
+table ellipse {
+  id       w   h   fill
+  dot_1    8   8   #6C5CE7
+  dot_2    8   8   #A8A8A8
+  dot_3    8   8   #A8A8A8
+}
