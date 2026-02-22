@@ -114,17 +114,16 @@ crates/
 
 > [!IMPORTANT]
 > **Code mode prioritizes AI-agent readability and accuracy over token efficiency.**
-> Use full, explicit property names so LLMs and code tools parse `.fd` files without ambiguity.
+> Use semantic names, constraints, and comments so LLMs understand intent, not just pixels.
 > Token efficiency remains a secondary goal — keep files concise where it doesn't hurt clarity.
 
 | Rule                        | Description                                                      |
 | --------------------------- | ---------------------------------------------------------------- |
-| **Explicit names**          | Use `width:` not `w:`, `height:` not `h:` — clarity over brevity |
-| **Full hex colors**         | Use `#FFFFFF` not `#FFF` — unambiguous for parsers and agents    |
-| **Constraints over coords** | `center_in: canvas` not `x: 400 y: 300`                          |
+| **Semantic IDs**            | `@login_form` not `@rect_17` — intent over auto-generated names  |
+| **Constraints over coords** | `center_in: canvas` not `x: 400 y: 300` — relationships > pixels |
 | **Style reuse**             | Define `style` blocks, reference with `use:`                     |
-| **Semantic IDs**            | `@login_form` not `@rect_17`                                     |
-| **Comments**                | `#` prefix for documentation                                     |
+| **Comments**                | `#` prefix for documentation — context helps agents              |
+| **Shorthand OK**            | `w:` / `h:` / `#FFF` are fine — unambiguous in context           |
 
 ### 🎨 Rendering Rules
 

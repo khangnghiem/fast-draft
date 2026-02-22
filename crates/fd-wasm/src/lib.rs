@@ -452,12 +452,19 @@ impl FdCanvas {
                 self.set_tool("text");
                 (false, true)
             }
+            // Screenbrush: Tab toggles between two most-used tools
+            ShortcutAction::ToggleLastTool => {
+                std::mem::swap(&mut self.prev_tool, &mut self.active_tool);
+                (false, true)
+            }
 
             // Edit
             ShortcutAction::Undo => (self.undo(), false),
             ShortcutAction::Redo => (self.redo(), false),
             ShortcutAction::Delete => (self.delete_selected(), false),
             ShortcutAction::Duplicate => (self.duplicate_selected(), false),
+            // Screenbrush: ⌘Delete = clear selected
+            ShortcutAction::ClearAll => (self.delete_selected(), false),
             ShortcutAction::Deselect => {
                 self.select_tool.selected = None;
                 (false, false)
@@ -500,6 +507,7 @@ fn action_to_name(action: ShortcutAction) -> &'static str {
         ShortcutAction::ToolEllipse => "toolEllipse",
         ShortcutAction::ToolPen => "toolPen",
         ShortcutAction::ToolText => "toolText",
+        ShortcutAction::ToggleLastTool => "toggleLastTool",
         ShortcutAction::Undo => "undo",
         ShortcutAction::Redo => "redo",
         ShortcutAction::Delete => "delete",
@@ -508,6 +516,7 @@ fn action_to_name(action: ShortcutAction) -> &'static str {
         ShortcutAction::Copy => "copy",
         ShortcutAction::Cut => "cut",
         ShortcutAction::Paste => "paste",
+        ShortcutAction::ClearAll => "clearAll",
         ShortcutAction::ZoomIn => "zoomIn",
         ShortcutAction::ZoomOut => "zoomOut",
         ShortcutAction::ZoomToFit => "zoomToFit",

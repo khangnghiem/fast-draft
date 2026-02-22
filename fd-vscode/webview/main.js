@@ -315,16 +315,37 @@ document.addEventListener("keydown", (e) => {
       isPanning = true;
       canvas.style.cursor = "grab";
       break;
+    case "toggleLastTool":
+      updateToolbarActive(result.tool);
+      break;
+    case "clearAll":
+      render();
+      syncTextToExtension();
+      break;
     case "showHelp":
       toggleShortcutHelp();
       break;
   }
 });
 
+/** Whether we're holding ⌘ for temporary hand tool (Screenbrush-style) */
+let isCmdHold = false;
+let toolBeforeCmdHold = null;
+
 document.addEventListener("keyup", (e) => {
   if (e.key === " " && isPanning) {
     isPanning = false;
     canvas.style.cursor = "";
+  }
+  // Screenbrush: Release ⌘ → restore previous tool
+  if ((e.key === "Meta" || e.key === "Control") && isCmdHold && fdCanvas) {
+    isCmdHold = false;
+    canvas.style.cursor = "";
+    if (toolBeforeCmdHold) {
+      fdCanvas.set_tool(toolBeforeCmdHold);
+      updateToolbarActive(toolBeforeCmdHold);
+      toolBeforeCmdHold = null;
+    }
   }
 });
 
@@ -398,6 +419,7 @@ function buildShortcutHelpHtml() {
         ["O", "Ellipse"],
         ["P", "Pen (freehand)"],
         ["T", "Text"],
+        ["Tab", "Toggle last two tools"],
       ],
     },
     {
@@ -406,6 +428,7 @@ function buildShortcutHelpHtml() {
         [`${cmd}Z`, "Undo"],
         [`${cmd}⇧Z`, "Redo"],
         ["Delete", "Delete selected"],
+        [`${cmd}Delete`, "Clear selected"],
         [`${cmd}D`, "Duplicate"],
         [`${cmd}A`, "Select all"],
       ],
@@ -425,6 +448,7 @@ function buildShortcutHelpHtml() {
         [`${cmd}−`, "Zoom out"],
         [`${cmd}0`, "Zoom to fit"],
         ["Space (hold)", "Pan / hand tool"],
+        [`${cmd} (hold)`, "Temp. hand tool"],
       ],
     },
     {
@@ -434,6 +458,14 @@ function buildShortcutHelpHtml() {
         [`${cmd}]`, "Bring forward"],
         [`${cmd}⇧[`, "Send to back"],
         [`${cmd}⇧]`, "Bring to front"],
+      ],
+    },
+    {
+      title: "Modifiers (while dragging)",
+      shortcuts: [
+        ["Shift", "Constrain axis / square"],
+        ["Alt / ⌥", "Duplicate on click"],
+        [`⌥${cmd}`, "Copy while moving"],
       ],
     },
     {

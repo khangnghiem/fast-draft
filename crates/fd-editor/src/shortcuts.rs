@@ -2,6 +2,13 @@
 //!
 //! Maps key + modifier combos to semantic `ShortcutAction`s.
 //! The shortcut map lives in Rust so it's shared across WASM and native.
+//!
+//! Inspired by Screenbrush conventions where applicable:
+//! - Tab toggles between two most‑used tools
+//! - ⌘ hold = temporary hand/move tool
+//! - ⌥⌘ = copy/duplicate while moving
+//! - Shift = constrain (straight lines, square shapes)
+//! - ⌘Delete = clear selected
 
 /// Actions that keyboard shortcuts can trigger.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -12,6 +19,8 @@ pub enum ShortcutAction {
     ToolEllipse,
     ToolPen,
     ToolText,
+    /// Toggle between current and previous tool (Screenbrush: Tab).
+    ToggleLastTool,
 
     // ── Edit ──
     Undo,
@@ -22,6 +31,8 @@ pub enum ShortcutAction {
     Copy,
     Cut,
     Paste,
+    /// Clear all selected (Screenbrush: ⌘Delete).
+    ClearAll,
 
     // ── View ──
     ZoomIn,
@@ -44,8 +55,13 @@ pub enum ShortcutAction {
 /// Resolves key events into shortcut actions.
 ///
 /// Uses platform-aware modifier detection: on macOS `meta` is ⌘,
-/// on other platforms `ctrl` serves the same role. The `cmd` parameter
-/// should be `meta` on macOS and `ctrl` elsewhere.
+/// on other platforms `ctrl` serves the same role.
+///
+/// Shortcut philosophy follows Screenbrush where applicable:
+/// - Tab = toggle last two tools
+/// - Hold ⌘ during pointer = temporary hand/move mode (handled in JS)
+/// - ⌥⌘ during pointer = copy while moving (handled via Modifiers)
+/// - Shift = constrain (axis lock, square)
 pub struct ShortcutMap;
 
 impl ShortcutMap {
@@ -87,6 +103,8 @@ impl ShortcutMap {
                 "0" => Some(ShortcutAction::ZoomToFit),
                 "[" => Some(ShortcutAction::SendBackward),
                 "]" => Some(ShortcutAction::BringForward),
+                // Screenbrush: ⌘Delete = clear all
+                "Delete" | "Backspace" => Some(ShortcutAction::ClearAll),
                 _ => None,
             };
         }
@@ -105,6 +123,8 @@ impl ShortcutMap {
             "o" | "O" => Some(ShortcutAction::ToolEllipse),
             "p" | "P" => Some(ShortcutAction::ToolPen),
             "t" | "T" => Some(ShortcutAction::ToolText),
+            // Screenbrush: Tab = toggle between two most-used tools
+            "Tab" => Some(ShortcutAction::ToggleLastTool),
             "Delete" | "Backspace" => Some(ShortcutAction::Delete),
             "Escape" => Some(ShortcutAction::Deselect),
             " " => Some(ShortcutAction::PanStart),
@@ -138,6 +158,14 @@ mod tests {
         assert_eq!(
             ShortcutMap::resolve("t", false, false, false, false),
             Some(ShortcutAction::ToolText)
+        );
+    }
+
+    #[test]
+    fn resolve_tab_toggles_tool() {
+        assert_eq!(
+            ShortcutMap::resolve("Tab", false, false, false, false),
+            Some(ShortcutAction::ToggleLastTool)
         );
     }
 
@@ -178,23 +206,32 @@ mod tests {
     }
 
     #[test]
+    fn resolve_cmd_delete_clears_all() {
+        // Screenbrush: ⌘Delete = clear
+        assert_eq!(
+            ShortcutMap::resolve("Delete", false, false, false, true),
+            Some(ShortcutAction::ClearAll)
+        );
+        assert_eq!(
+            ShortcutMap::resolve("Backspace", true, false, false, false),
+            Some(ShortcutAction::ClearAll)
+        );
+    }
+
+    #[test]
     fn resolve_z_order() {
-        // [ → Send backward
         assert_eq!(
             ShortcutMap::resolve("[", false, false, false, true),
             Some(ShortcutAction::SendBackward)
         );
-        // ] → Bring forward
         assert_eq!(
             ShortcutMap::resolve("]", false, false, false, true),
             Some(ShortcutAction::BringForward)
         );
-        // Cmd+Shift+[ → Send to back
         assert_eq!(
             ShortcutMap::resolve("[", false, true, false, true),
             Some(ShortcutAction::SendToBack)
         );
-        // Cmd+Shift+] → Bring to front
         assert_eq!(
             ShortcutMap::resolve("]", false, true, false, true),
             Some(ShortcutAction::BringToFront)
@@ -225,9 +262,7 @@ mod tests {
 
     #[test]
     fn resolve_modifier_precedence() {
-        // Plain Z → no action (not a tool key)
         assert_eq!(ShortcutMap::resolve("z", false, false, false, false), None);
-        // Cmd+Z → Undo (modifier takes precedence)
         assert_eq!(
             ShortcutMap::resolve("z", false, false, false, true),
             Some(ShortcutAction::Undo)

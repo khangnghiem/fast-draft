@@ -7,7 +7,7 @@ description: How to read, write, and modify .fd (Fast Draft) files
 
 ## Overview
 
-The `.fd` format is a human- and AI-readable text DSL for 2D graphics, layout, and animation. In **Code mode**, prefer explicit property names for accuracy over shorthand for token savings. This skill explains how to read and write valid `.fd` files.
+The `.fd` format is a human- and AI-readable text DSL for 2D graphics, layout, and animation. It prioritizes clarity of intent (semantic IDs, constraints, comments) so both humans and AI agents can understand the design. This skill explains how to read and write valid `.fd` files.
 
 ## Grammar Reference
 
@@ -36,7 +36,7 @@ Every visual element is a node with an optional `@id`:
 
 ```
 rect @my_rect {
-  width: <width> height: <height>
+  w: <width> h: <height>
   fill: <color>
   stroke: <color> <width>
   corner: <radius>
@@ -44,7 +44,7 @@ rect @my_rect {
 }
 
 ellipse @my_circle {
-  width: <rx> height: <ry>
+  w: <rx> h: <ry>
   fill: <color>
 }
 
@@ -133,32 +133,32 @@ rect @login_btn {
 
 ## Code Mode — Readability Tips
 
-> In Code mode, prefer clarity and AI-agent accuracy over token savings.
+> Prioritize AI-agent readability and accuracy. Token efficiency is a secondary goal.
 
-1. Use `width:` / `height:` — explicit names reduce parsing ambiguity for AI agents
-2. Use full hex colors: `#FFFFFF` not `#FFF` — unambiguous for tooling
-3. Use `style` blocks for shared properties — reference with `use:`
-4. Use constraints instead of absolute coordinates
-5. One property per line when possible — easier for diffs and LLM context
+1. **Semantic IDs** — `@login_form` not `@rect_17`; intent matters most for agents
+2. **Constraints over coords** — `center_in: canvas` tells agents _why_, not just _where_
+3. **Comments** — `#` lines give agents context about purpose and requirements
+4. **Style reuse** — `use:` references reduce duplication and help agents track shared styles
+5. **Shorthand is fine** — `w:` / `h:` / `#FFF` are unambiguous in context, no need to expand
 
 ## Example: Complete Card
 
 ```
-style body { font: "Inter" 14; fill: #333333 }
+style body { font: "Inter" 14; fill: #333 }
 style accent { fill: #6C5CE7 }
 
 group @card {
   layout: column gap=12 pad=20
-  bg: #FFFFFF corner=8 shadow=(0,2,8,#00000011)
+  bg: #FFF corner=8 shadow=(0,2,8,#0001)
 
-  text @heading "Dashboard" { font: "Inter" 600 20; fill: #111111 }
+  text @heading "Dashboard" { font: "Inter" 600 20; fill: #111 }
   text @desc "Overview of metrics" { use: body }
 
   rect @cta {
-    width: 180 height: 40
+    w: 180 h: 40
     corner: 8
     use: accent
-    text "View Details" { font: "Inter" 500 14; fill: #FFFFFF }
+    text "View Details" { font: "Inter" 500 14; fill: #FFF }
     anim :hover { scale: 1.03; ease: spring 200ms }
   }
 }
