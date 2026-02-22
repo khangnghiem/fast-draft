@@ -8,8 +8,8 @@
 // Import WASM module (built by wasm-pack)
 import init, { FdCanvas } from "./wasm/fd_wasm.js";
 
-// VS Code API
-const vscode = acquireVsCodeApi();
+// VS Code API (shared — already acquired in inline script)
+const vscode = window.vscodeApi;
 
 /** @type {FdCanvas | null} */
 let fdCanvas = null;
@@ -37,8 +37,9 @@ async function main() {
   const status = document.getElementById("status");
 
   try {
-    // Initialize WASM
-    await init();
+    // Initialize WASM — pass explicit URL so it works in VS Code webviews
+    // (import.meta.url resolution fails under vscode-webview:// scheme)
+    await init(window.wasmBinaryUrl || undefined);
 
     // Set up canvas
     const container = document.getElementById("canvas-container");

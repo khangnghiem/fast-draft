@@ -172,6 +172,14 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
         "fd_wasm.js"
       )
     );
+    const wasmBinaryUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        this.context.extensionUri,
+        "webview",
+        "wasm",
+        "fd_wasm_bg.wasm"
+      )
+    );
     const mainJsUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, "webview", "main.js")
     );
@@ -778,11 +786,14 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
 
   <script nonce="${nonce}">
     window.initialText = \`${initialText}\`;
+    window.wasmBinaryUrl = "${wasmBinaryUri}";
+    window.wasmJsUrl = "${wasmJsUri}";
+    window.vscodeApi = acquireVsCodeApi();
   </script>
   <script nonce="${nonce}">
     // ─── AI Refine toolbar + context menu handlers ─────────
     (function() {
-      const vscodeApi = acquireVsCodeApi();
+      const vscodeApi = window.vscodeApi;
       let selectedNodeId = null;
 
       // Listen for selection changes from canvas
