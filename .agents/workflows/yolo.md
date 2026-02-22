@@ -92,7 +92,7 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 
 13. **Build & Publish VS Code extension** (if `fd-vscode/` was changed):
 
-    > ⚠️ **MANDATORY**: Read `.env` for `VSCE_PAT` and `VSX_PAT` BEFORE publishing.
+    > ⚠️ **MANDATORY**: Read `.env` for `VSCE_PAT`, `VSX_PAT`, and `GEMINI_API_KEY` BEFORE publishing.
     > Never rely on interactive prompts — always pass tokens via flags.
 
     ```bash
