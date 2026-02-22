@@ -9,6 +9,8 @@
 //! |----------|-------------|-----------|----------|
 //! | **Shift** | Axis-constrain drag | Square constraint | — |
 //! | **Alt** | Duplicate on drag start | Draw from center | — |
+//!
+//! Click-without-drag creates a shape with default size (100×100 rect, 50 radius ellipse).
 
 use crate::input::InputEvent;
 use crate::sync::GraphMutation;
@@ -185,6 +187,7 @@ impl Tool for SelectTool {
 
 pub struct RectTool {
     drawing: bool,
+    dragged: bool,
     start_x: f32,
     start_y: f32,
     current_id: Option<NodeId>,
@@ -200,6 +203,7 @@ impl RectTool {
     pub fn new() -> Self {
         Self {
             drawing: false,
+            dragged: false,
             start_x: 0.0,
             start_y: 0.0,
             current_id: None,
@@ -216,9 +220,10 @@ impl Tool for RectTool {
         match event {
             InputEvent::PointerDown { x, y, .. } => {
                 self.drawing = true;
+                self.dragged = false;
                 self.start_x = *x;
                 self.start_y = *y;
-                let id = NodeId::anonymous();
+                let id = NodeId::with_prefix("rect");
                 self.current_id = Some(id);
 
                 let mut node = SceneNode::new(
@@ -240,6 +245,7 @@ impl Tool for RectTool {
                 if self.drawing
                     && let Some(id) = self.current_id
                 {
+                    self.dragged = true;
                     let mut w = (x - self.start_x).abs();
                     let mut h = (y - self.start_y).abs();
 
@@ -260,8 +266,21 @@ impl Tool for RectTool {
             }
             InputEvent::PointerUp { .. } => {
                 self.drawing = false;
-                self.current_id = None;
-                vec![]
+                if !self.dragged {
+                    if let Some(id) = self.current_id.take() {
+                        // Click without drag → default 100×100
+                        vec![GraphMutation::ResizeNode {
+                            id,
+                            width: 100.0,
+                            height: 100.0,
+                        }]
+                    } else {
+                        vec![]
+                    }
+                } else {
+                    self.current_id = None;
+                    vec![]
+                }
             }
             _ => vec![],
         }
@@ -303,7 +322,7 @@ impl Tool for PenTool {
                 self.drawing = true;
                 self.points.clear();
                 self.points.push((*x, *y));
-                let id = NodeId::anonymous();
+                let id = NodeId::with_prefix("path");
                 self.current_id = Some(id);
 
                 let path = NodeKind::Path {
@@ -339,6 +358,7 @@ impl Tool for PenTool {
 
 pub struct EllipseTool {
     drawing: bool,
+    dragged: bool,
     start_x: f32,
     start_y: f32,
     current_id: Option<NodeId>,
@@ -354,6 +374,7 @@ impl EllipseTool {
     pub fn new() -> Self {
         Self {
             drawing: false,
+            dragged: false,
             start_x: 0.0,
             start_y: 0.0,
             current_id: None,
@@ -370,9 +391,10 @@ impl Tool for EllipseTool {
         match event {
             InputEvent::PointerDown { x, y, .. } => {
                 self.drawing = true;
+                self.dragged = false;
                 self.start_x = *x;
                 self.start_y = *y;
-                let id = NodeId::anonymous();
+                let id = NodeId::with_prefix("ellipse");
                 self.current_id = Some(id);
 
                 let mut node = SceneNode::new(id, NodeKind::Ellipse { rx: 0.0, ry: 0.0 });
@@ -388,6 +410,7 @@ impl Tool for EllipseTool {
                 if self.drawing
                     && let Some(id) = self.current_id
                 {
+                    self.dragged = true;
                     let mut w = (x - self.start_x).abs();
                     let mut h = (y - self.start_y).abs();
 
@@ -408,8 +431,21 @@ impl Tool for EllipseTool {
             }
             InputEvent::PointerUp { .. } => {
                 self.drawing = false;
-                self.current_id = None;
-                vec![]
+                if !self.dragged {
+                    if let Some(id) = self.current_id.take() {
+                        // Click without drag → default 100×100
+                        vec![GraphMutation::ResizeNode {
+                            id,
+                            width: 100.0,
+                            height: 100.0,
+                        }]
+                    } else {
+                        vec![]
+                    }
+                } else {
+                    self.current_id = None;
+                    vec![]
+                }
             }
             _ => vec![],
         }
@@ -446,7 +482,7 @@ impl Tool for TextTool {
                     return vec![];
                 }
                 self.placed = true;
-                let id = NodeId::anonymous();
+                let id = NodeId::with_prefix("text");
                 let mut node = SceneNode::new(
                     id,
                     NodeKind::Text {

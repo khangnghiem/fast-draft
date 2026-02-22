@@ -24,10 +24,15 @@ impl NodeId {
 
     /// Generate a unique anonymous ID (for nodes without explicit @id).
     pub fn anonymous() -> Self {
+        Self::with_prefix("_anon")
+    }
+
+    /// Generate a unique ID with a type prefix (e.g. `rect_1`, `ellipse_2`).
+    pub fn with_prefix(prefix: &str) -> Self {
         use std::sync::atomic::{AtomicU64, Ordering};
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-        Self::intern(&format!("_anon_{n}"))
+        Self::intern(&format!("{prefix}_{n}"))
     }
 }
 
