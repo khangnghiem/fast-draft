@@ -143,48 +143,79 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       background: var(--vscode-editor-background, #1E1E2E);
       display: flex;
       flex-direction: column;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
     }
+    /* ── Toolbar ─────────────────── */
     #toolbar {
       display: flex;
-      gap: 4px;
-      padding: 6px 10px;
+      gap: 2px;
+      padding: 5px 10px;
       background: var(--vscode-editorGroupHeader-tabsBackground, #181825);
       border-bottom: 1px solid var(--vscode-editorGroupHeader-tabsBorder, #313244);
       flex-shrink: 0;
+      align-items: center;
     }
     .tool-btn {
-      padding: 4px 10px;
-      border: 1px solid var(--vscode-button-border, #45475a);
-      background: var(--vscode-button-secondaryBackground, #313244);
+      padding: 5px 10px;
+      border: 1px solid transparent;
+      background: transparent;
       color: var(--vscode-button-secondaryForeground, #CDD6F4);
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
       font-size: 12px;
-      font-family: var(--vscode-font-family, 'Segoe UI', sans-serif);
+      font-family: inherit;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tool-btn:hover {
+      background: rgba(255,255,255,0.06);
     }
     .tool-btn.active {
       background: var(--vscode-button-background, #89B4FA);
       color: var(--vscode-button-foreground, #1E1E2E);
-      border-color: var(--vscode-button-background, #89B4FA);
+      border-color: transparent;
     }
-    .tool-btn:hover {
-      opacity: 0.85;
+    .tool-icon { font-size: 14px; }
+    .tool-key {
+      font-size: 9px;
+      opacity: 0.5;
+      padding: 1px 3px;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 3px;
+      font-family: var(--vscode-editor-font-family, monospace);
+    }
+    .active .tool-key {
+      border-color: rgba(0,0,0,0.2);
+      opacity: 0.6;
+    }
+    .tool-sep {
+      width: 1px;
+      height: 18px;
+      background: var(--vscode-editorGroupHeader-tabsBorder, #313244);
+      margin: 0 4px;
+    }
+    #tool-help-btn {
+      margin-left: auto;
+      padding: 4px 8px;
+      font-size: 12px;
     }
     #status {
-      margin-left: auto;
       color: var(--vscode-descriptionForeground, #6C7086);
       font-size: 11px;
-      align-self: center;
+      margin-left: 8px;
     }
+    /* ── Canvas ──────────────────── */
     #canvas-container {
       flex: 1;
       position: relative;
       overflow: hidden;
+      display: flex;
     }
     canvas {
       display: block;
-      width: 100%;
-      height: 100%;
+      flex: 1;
     }
     #loading {
       position: absolute;
@@ -193,23 +224,198 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       align-items: center;
       justify-content: center;
       color: var(--vscode-descriptionForeground, #6C7086);
-      font-family: var(--vscode-font-family, 'Segoe UI', sans-serif);
       font-size: 14px;
     }
-    /* Annotation card overlay */
+    /* ── Cursor per tool ─────────── */
+    canvas.tool-select { cursor: default; }
+    canvas.tool-rect,
+    canvas.tool-ellipse { cursor: crosshair; }
+    canvas.tool-pen { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="3" fill="white" stroke="black"/></svg>') 10 10, crosshair; }
+    canvas.tool-text { cursor: text; }
+    /* ── Properties Panel (Apple-style) ── */
+    #props-panel {
+      width: 0;
+      overflow: hidden;
+      background: rgba(30, 30, 46, 0.85);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-left: 1px solid rgba(255,255,255,0.08);
+      font-size: 11px;
+      color: var(--vscode-foreground, #CDD6F4);
+      transition: width 0.2s ease;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
+    #props-panel.visible {
+      width: 240px;
+    }
+    .props-inner {
+      padding: 14px 12px;
+      min-width: 240px;
+    }
+    .props-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--vscode-foreground, #CDD6F4);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .props-title .kind-badge {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(137, 180, 250, 0.15);
+      color: #89B4FA;
+      font-weight: 500;
+    }
+    .props-section {
+      margin-bottom: 12px;
+    }
+    .props-section-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--vscode-descriptionForeground, #6C7086);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+    .props-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 8px;
+    }
+    .props-field {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .props-field.full {
+      grid-column: 1 / -1;
+    }
+    .props-field label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--vscode-descriptionForeground, #6C7086);
+    }
+    .props-field input,
+    .props-field select {
+      padding: 4px 6px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 5px;
+      background: rgba(255,255,255,0.04);
+      color: var(--vscode-input-foreground, #CDD6F4);
+      font-family: var(--vscode-editor-font-family, monospace);
+      font-size: 11px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+    .props-field input:focus {
+      border-color: rgba(137, 180, 250, 0.4);
+    }
+    .props-field input[type="color"] {
+      height: 28px;
+      padding: 2px;
+      cursor: pointer;
+    }
+    .props-slider {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .props-slider input[type="range"] {
+      flex: 1;
+      height: 4px;
+      -webkit-appearance: none;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+      outline: none;
+    }
+    .props-slider input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #89B4FA;
+      cursor: pointer;
+      border: 2px solid rgba(30,30,46,0.8);
+    }
+    .props-slider .slider-val {
+      font-size: 10px;
+      color: var(--vscode-descriptionForeground, #A6ADC8);
+      min-width: 28px;
+      text-align: right;
+      font-family: var(--vscode-editor-font-family, monospace);
+    }
+    /* ── Drag & Drop Palette ────── */
+    #shape-palette {
+      position: absolute;
+      top: 50%;
+      left: 10px;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 50;
+      background: rgba(30, 30, 46, 0.75);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 6px;
+    }
+    .palette-item {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 7px;
+      cursor: grab;
+      color: var(--vscode-foreground, #CDD6F4);
+      font-size: 18px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .palette-item:hover {
+      background: rgba(255,255,255,0.08);
+    }
+    .palette-item:active {
+      cursor: grabbing;
+      transform: scale(0.92);
+    }
+    .palette-item .palette-label {
+      display: none;
+      position: absolute;
+      left: 48px;
+      background: rgba(30,30,46,0.9);
+      padding: 3px 8px;
+      border-radius: 5px;
+      font-size: 11px;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .palette-item:hover .palette-label {
+      display: block;
+    }
+    /* ── Annotation card overlay ── */
     #annotation-card {
       display: none;
       position: absolute;
       z-index: 100;
       width: 280px;
-      background: var(--vscode-editorWidget-background, #1E1E2E);
-      border: 1px solid var(--vscode-editorWidget-border, #45475a);
-      border-radius: 8px;
+      background: rgba(30, 30, 46, 0.9);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
       padding: 12px;
-      font-family: var(--vscode-font-family, 'Segoe UI', sans-serif);
       font-size: 12px;
       color: var(--vscode-foreground, #CDD6F4);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     }
     #annotation-card.visible { display: block; }
     #annotation-card .card-header {
@@ -229,9 +435,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       color: inherit;
     }
     #annotation-card .card-close:hover { opacity: 1; }
-    #annotation-card .field-group {
-      margin-bottom: 8px;
-    }
+    #annotation-card .field-group { margin-bottom: 8px; }
     #annotation-card .field-label {
       font-size: 10px;
       text-transform: uppercase;
@@ -244,9 +448,9 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     #annotation-card select {
       width: 100%;
       padding: 4px 6px;
-      border: 1px solid var(--vscode-input-border, #45475a);
-      border-radius: 4px;
-      background: var(--vscode-input-background, #313244);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 5px;
+      background: rgba(255,255,255,0.04);
       color: var(--vscode-input-foreground, #CDD6F4);
       font-family: inherit;
       font-size: 12px;
@@ -259,16 +463,11 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       gap: 6px;
       margin-bottom: 4px;
     }
-    #annotation-card .accept-item input[type="checkbox"] {
-      flex-shrink: 0;
-    }
-    #annotation-card .accept-item input[type="text"] {
-      flex: 1;
-    }
+    #annotation-card .accept-item input[type="text"] { flex: 1; }
     #annotation-card .add-btn {
       cursor: pointer;
       font-size: 11px;
-      color: var(--vscode-textLink-foreground, #89B4FA);
+      color: #89B4FA;
       background: none;
       border: none;
       padding: 2px 0;
@@ -279,31 +478,17 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       gap: 6px;
     }
     #annotation-card .status-row select { flex: 1; }
-    #annotation-card .tag-input {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-    }
-    #annotation-card .tag-chip {
-      display: inline-flex;
-      align-items: center;
-      padding: 2px 6px;
-      border-radius: 10px;
-      font-size: 10px;
-      background: var(--vscode-badge-background, #45475a);
-      color: var(--vscode-badge-foreground, #CDD6F4);
-    }
-    /* Context menu */
+    /* ── Context menu ────────────── */
     #context-menu {
       display: none;
       position: absolute;
       z-index: 200;
-      background: var(--vscode-menu-background, #1E1E2E);
-      border: 1px solid var(--vscode-menu-border, #45475a);
-      border-radius: 6px;
+      background: rgba(30, 30, 46, 0.9);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
       padding: 4px 0;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      font-family: var(--vscode-font-family, 'Segoe UI', sans-serif);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
       font-size: 12px;
       min-width: 160px;
     }
@@ -312,11 +497,12 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       padding: 6px 14px;
       cursor: pointer;
       color: var(--vscode-menu-foreground, #CDD6F4);
+      transition: background 0.1s ease;
     }
     #context-menu .menu-item:hover {
-      background: var(--vscode-menu-selectionBackground, #45475a);
+      background: rgba(255,255,255,0.06);
     }
-    /* Shortcut help overlay */
+    /* ── Shortcut help overlay ──── */
     #shortcut-help {
       display: none;
       position: absolute;
@@ -329,14 +515,14 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     }
     #shortcut-help.visible { display: flex; }
     .help-panel {
-      background: var(--vscode-editorWidget-background, #1E1E2E);
-      border: 1px solid var(--vscode-editorWidget-border, #45475a);
-      border-radius: 12px;
+      background: rgba(30, 30, 46, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
       width: 560px;
       max-height: 80vh;
       overflow-y: auto;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-      font-family: var(--vscode-font-family, 'Segoe UI', sans-serif);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
       color: var(--vscode-foreground, #CDD6F4);
     }
     .help-header {
@@ -344,7 +530,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       justify-content: space-between;
       align-items: center;
       padding: 14px 18px;
-      border-bottom: 1px solid var(--vscode-editorWidget-border, #45475a);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
     }
     .help-header h3 { font-size: 15px; font-weight: 600; margin: 0; }
     .help-close {
@@ -383,9 +569,9 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     kbd {
       display: inline-block;
       padding: 1px 5px;
-      border: 1px solid var(--vscode-editorWidget-border, #45475a);
-      border-radius: 3px;
-      background: var(--vscode-input-background, #313244);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px;
+      background: rgba(255,255,255,0.04);
       font-family: var(--vscode-editor-font-family, monospace);
       font-size: 11px;
       line-height: 1.4;
@@ -395,19 +581,93 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       padding: 8px;
       font-size: 11px;
       color: var(--vscode-descriptionForeground, #6C7086);
-      border-top: 1px solid var(--vscode-editorWidget-border, #45475a);
+      border-top: 1px solid rgba(255,255,255,0.06);
     }
   </style>
 </head>
 <body>
   <div id="toolbar">
-    <button class="tool-btn active" data-tool="select">▸ Select</button>
-    <button class="tool-btn" data-tool="rect">▢ Rect</button>
+    <button class="tool-btn active" data-tool="select"><span class="tool-icon">▸</span>Select<span class="tool-key">V</span></button>
+    <button class="tool-btn" data-tool="rect"><span class="tool-icon">▢</span>Rect<span class="tool-key">R</span></button>
+    <button class="tool-btn" data-tool="ellipse"><span class="tool-icon">◯</span>Ellipse<span class="tool-key">O</span></button>
+    <button class="tool-btn" data-tool="pen"><span class="tool-icon">✎</span>Pen<span class="tool-key">P</span></button>
+    <button class="tool-btn" data-tool="text"><span class="tool-icon">T</span>Text<span class="tool-key">T</span></button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" id="tool-help-btn">?</button>
     <span id="status">Loading WASM…</span>
   </div>
   <div id="canvas-container">
-    <canvas id="fd-canvas"></canvas>
+    <div id="shape-palette">
+      <div class="palette-item" draggable="true" data-shape="rect">▢<span class="palette-label">Rectangle</span></div>
+      <div class="palette-item" draggable="true" data-shape="ellipse">◯<span class="palette-label">Ellipse</span></div>
+      <div class="palette-item" draggable="true" data-shape="text">T<span class="palette-label">Text</span></div>
+    </div>
+    <canvas id="fd-canvas" class="tool-select"></canvas>
     <div id="loading">Loading FD engine…</div>
+    <!-- Properties Panel (Apple-style) -->
+    <div id="props-panel">
+      <div class="props-inner">
+        <div class="props-title">
+          <span id="props-node-id">Node</span>
+          <span class="kind-badge" id="props-kind">rect</span>
+        </div>
+        <div class="props-section">
+          <div class="props-section-label">Position & Size</div>
+          <div class="props-grid">
+            <div class="props-field">
+              <label>X</label>
+              <input type="number" id="prop-x" step="1">
+            </div>
+            <div class="props-field">
+              <label>Y</label>
+              <input type="number" id="prop-y" step="1">
+            </div>
+            <div class="props-field">
+              <label>W</label>
+              <input type="number" id="prop-w" step="1" min="0">
+            </div>
+            <div class="props-field">
+              <label>H</label>
+              <input type="number" id="prop-h" step="1" min="0">
+            </div>
+          </div>
+        </div>
+        <div class="props-section" id="props-appearance">
+          <div class="props-section-label">Appearance</div>
+          <div class="props-grid">
+            <div class="props-field">
+              <label>Fill</label>
+              <input type="color" id="prop-fill" value="#CCCCCC">
+            </div>
+            <div class="props-field">
+              <label>Corner</label>
+              <input type="number" id="prop-corner" step="1" min="0" value="0">
+            </div>
+            <div class="props-field">
+              <label>Stroke</label>
+              <input type="color" id="prop-stroke-color" value="#000000">
+            </div>
+            <div class="props-field">
+              <label>Width</label>
+              <input type="number" id="prop-stroke-w" step="0.5" min="0" value="0">
+            </div>
+          </div>
+        </div>
+        <div class="props-section">
+          <div class="props-section-label">Opacity</div>
+          <div class="props-slider">
+            <input type="range" id="prop-opacity" min="0" max="1" step="0.01" value="1">
+            <span class="slider-val" id="prop-opacity-val">100%</span>
+          </div>
+        </div>
+        <div class="props-section" id="props-text-section" style="display:none">
+          <div class="props-section-label">Content</div>
+          <div class="props-field full">
+            <input type="text" id="prop-text-content" placeholder="Text content">
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <div id="annotation-card">
     <div class="card-header">

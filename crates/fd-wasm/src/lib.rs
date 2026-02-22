@@ -6,12 +6,12 @@ mod render2d;
 
 use fd_core::id::NodeId;
 use fd_core::layout::Viewport;
-use fd_core::model::Annotation;
+use fd_core::model::{Annotation, Color, Constraint, NodeKind, Paint, SceneNode};
 use fd_editor::commands::CommandStack;
 use fd_editor::input::{InputEvent, Modifiers};
 use fd_editor::shortcuts::{ShortcutAction, ShortcutMap};
 use fd_editor::sync::{GraphMutation, SyncEngine};
-use fd_editor::tools::{RectTool, SelectTool, Tool, ToolKind};
+use fd_editor::tools::{EllipseTool, PenTool, RectTool, SelectTool, TextTool, Tool, ToolKind};
 use wasm_bindgen::prelude::*;
 use web_sys::CanvasRenderingContext2d;
 
@@ -28,6 +28,9 @@ pub struct FdCanvas {
     prev_tool: ToolKind,
     select_tool: SelectTool,
     rect_tool: RectTool,
+    ellipse_tool: EllipseTool,
+    pen_tool: PenTool,
+    text_tool: TextTool,
     width: f64,
     height: f64,
     /// Suppress text-changed messages during programmatic updates.
@@ -55,6 +58,9 @@ impl FdCanvas {
             prev_tool: ToolKind::Select,
             select_tool: SelectTool::new(),
             rect_tool: RectTool::new(),
+            ellipse_tool: EllipseTool::new(),
+            pen_tool: PenTool::new(),
+            text_tool: TextTool::new(),
             width,
             height,
             suppress_sync: false,
@@ -123,7 +129,9 @@ impl FdCanvas {
         let mutations = match self.active_tool {
             ToolKind::Select => self.select_tool.handle(&event, hit),
             ToolKind::Rect => self.rect_tool.handle(&event, hit),
-            _ => vec![],
+            ToolKind::Ellipse => self.ellipse_tool.handle(&event, hit),
+            ToolKind::Pen => self.pen_tool.handle(&event, hit),
+            ToolKind::Text => self.text_tool.handle(&event, hit),
         };
         self.apply_mutations(mutations)
     }
@@ -151,7 +159,9 @@ impl FdCanvas {
         let mutations = match self.active_tool {
             ToolKind::Select => self.select_tool.handle(&event, hit),
             ToolKind::Rect => self.rect_tool.handle(&event, hit),
-            _ => vec![],
+            ToolKind::Ellipse => self.ellipse_tool.handle(&event, hit),
+            ToolKind::Pen => self.pen_tool.handle(&event, hit),
+            ToolKind::Text => self.text_tool.handle(&event, hit),
         };
         self.apply_mutations(mutations)
     }
@@ -176,7 +186,9 @@ impl FdCanvas {
         let mutations = match self.active_tool {
             ToolKind::Select => self.select_tool.handle(&event, None),
             ToolKind::Rect => self.rect_tool.handle(&event, None),
-            _ => vec![],
+            ToolKind::Ellipse => self.ellipse_tool.handle(&event, None),
+            ToolKind::Pen => self.pen_tool.handle(&event, None),
+            ToolKind::Text => self.text_tool.handle(&event, None),
         };
         let changed = self.apply_mutations(mutations);
         // Flush text after gesture ends
@@ -406,6 +418,256 @@ impl FdCanvas {
             }
         }
         String::new()
+    }
+
+    // ─── Properties Panel API ────────────────────────────────────────────
+
+    /// Get properties of the currently selected node as JSON.
+    /// Returns `{}` if no node is selected.
+    pub fn get_selected_node_props(&self) -> String {
+        let id = match self.select_tool.selected {
+            Some(id) => id,
+            None => return "{}".to_string(),
+        };
+        let node = match self.engine.graph.get_by_id(id) {
+            Some(n) => n,
+            None => return "{}".to_string(),
+        };
+        let style = self.engine.graph.resolve_style(node);
+        let mut props = serde_json::Map::new();
+
+        props.insert(
+            "id".into(),
+            serde_json::Value::String(id.as_str().to_string()),
+        );
+
+        // Kind + dimensions
+        match &node.kind {
+            NodeKind::Rect { width, height } => {
+                props.insert("kind".into(), "rect".into());
+                props.insert("width".into(), serde_json::json!(width));
+                props.insert("height".into(), serde_json::json!(height));
+            }
+            NodeKind::Ellipse { rx, ry } => {
+                props.insert("kind".into(), "ellipse".into());
+                props.insert("width".into(), serde_json::json!(rx * 2.0));
+                props.insert("height".into(), serde_json::json!(ry * 2.0));
+            }
+            NodeKind::Text { content } => {
+                props.insert("kind".into(), "text".into());
+                props.insert("content".into(), serde_json::Value::String(content.clone()));
+            }
+            NodeKind::Group { .. } => {
+                props.insert("kind".into(), "group".into());
+            }
+            NodeKind::Path { .. } => {
+                props.insert("kind".into(), "path".into());
+            }
+            NodeKind::Root => {
+                props.insert("kind".into(), "root".into());
+            }
+        }
+
+        // Fill
+        if let Some(Paint::Solid(c)) = &style.fill {
+            props.insert("fill".into(), serde_json::Value::String(c.to_hex()));
+        }
+
+        // Stroke
+        if let Some(ref stroke) = style.stroke {
+            if let Paint::Solid(c) = &stroke.paint {
+                props.insert("strokeColor".into(), serde_json::Value::String(c.to_hex()));
+            }
+            props.insert("strokeWidth".into(), serde_json::json!(stroke.width));
+        }
+
+        // Corner radius
+        if let Some(r) = style.corner_radius {
+            props.insert("cornerRadius".into(), serde_json::json!(r));
+        }
+
+        // Opacity
+        if let Some(o) = style.opacity {
+            props.insert("opacity".into(), serde_json::json!(o));
+        }
+
+        // Position from bounds
+        if let Some(idx) = self.engine.graph.index_of(id)
+            && let Some(bounds) = self.engine.current_bounds().get(&idx)
+        {
+            props.insert("x".into(), serde_json::json!(bounds.x));
+            props.insert("y".into(), serde_json::json!(bounds.y));
+        }
+
+        // Font
+        if let Some(ref font) = style.font {
+            props.insert(
+                "fontFamily".into(),
+                serde_json::Value::String(font.family.clone()),
+            );
+            props.insert("fontSize".into(), serde_json::json!(font.size));
+            props.insert("fontWeight".into(), serde_json::json!(font.weight));
+        }
+
+        serde_json::Value::Object(props).to_string()
+    }
+
+    /// Set a property on the currently selected node.
+    /// Returns `true` if the property was set.
+    pub fn set_node_prop(&mut self, key: &str, value: &str) -> bool {
+        let id = match self.select_tool.selected {
+            Some(id) => id,
+            None => return false,
+        };
+
+        let mutation = match key {
+            "fill" => {
+                if let Some(color) = Color::from_hex(value) {
+                    let mut style = self
+                        .engine
+                        .graph
+                        .get_by_id(id)
+                        .map(|n| self.engine.graph.resolve_style(n))
+                        .unwrap_or_default();
+                    style.fill = Some(Paint::Solid(color));
+                    GraphMutation::SetStyle { id, style }
+                } else {
+                    return false;
+                }
+            }
+            "strokeColor" => {
+                if let Some(color) = Color::from_hex(value) {
+                    let mut style = self
+                        .engine
+                        .graph
+                        .get_by_id(id)
+                        .map(|n| self.engine.graph.resolve_style(n))
+                        .unwrap_or_default();
+                    let mut stroke = style.stroke.unwrap_or_default();
+                    stroke.paint = Paint::Solid(color);
+                    style.stroke = Some(stroke);
+                    GraphMutation::SetStyle { id, style }
+                } else {
+                    return false;
+                }
+            }
+            "strokeWidth" => {
+                if let Ok(w) = value.parse::<f32>() {
+                    let mut style = self
+                        .engine
+                        .graph
+                        .get_by_id(id)
+                        .map(|n| self.engine.graph.resolve_style(n))
+                        .unwrap_or_default();
+                    let mut stroke = style.stroke.unwrap_or_default();
+                    stroke.width = w;
+                    style.stroke = Some(stroke);
+                    GraphMutation::SetStyle { id, style }
+                } else {
+                    return false;
+                }
+            }
+            "cornerRadius" => {
+                if let Ok(r) = value.parse::<f32>() {
+                    let mut style = self
+                        .engine
+                        .graph
+                        .get_by_id(id)
+                        .map(|n| self.engine.graph.resolve_style(n))
+                        .unwrap_or_default();
+                    style.corner_radius = Some(r);
+                    GraphMutation::SetStyle { id, style }
+                } else {
+                    return false;
+                }
+            }
+            "opacity" => {
+                if let Ok(o) = value.parse::<f32>() {
+                    let mut style = self
+                        .engine
+                        .graph
+                        .get_by_id(id)
+                        .map(|n| self.engine.graph.resolve_style(n))
+                        .unwrap_or_default();
+                    style.opacity = Some(o);
+                    GraphMutation::SetStyle { id, style }
+                } else {
+                    return false;
+                }
+            }
+            "width" | "height" => {
+                let v = match value.parse::<f32>() {
+                    Ok(v) => v,
+                    Err(_) => return false,
+                };
+                if let Some(node) = self.engine.graph.get_by_id(id) {
+                    let (cur_w, cur_h) = match &node.kind {
+                        NodeKind::Rect { width, height } => (*width, *height),
+                        NodeKind::Ellipse { rx, ry } => (*rx * 2.0, *ry * 2.0),
+                        _ => return false,
+                    };
+                    let (new_w, new_h) = if key == "width" {
+                        (v, cur_h)
+                    } else {
+                        (cur_w, v)
+                    };
+                    GraphMutation::ResizeNode {
+                        id,
+                        width: new_w,
+                        height: new_h,
+                    }
+                } else {
+                    return false;
+                }
+            }
+            "content" => GraphMutation::SetText {
+                id,
+                content: value.to_string(),
+            },
+            _ => return false,
+        };
+
+        let changed = self.apply_mutations(vec![mutation]);
+        if changed {
+            self.engine.flush_to_text();
+        }
+        changed
+    }
+
+    /// Create a node at a specific position (for drag-and-drop).
+    /// `kind` is "rect", "ellipse", or "text".
+    /// Returns `true` if the node was created.
+    pub fn create_node_at(&mut self, kind: &str, x: f32, y: f32) -> bool {
+        let id = NodeId::anonymous();
+        let node_kind = match kind {
+            "rect" => NodeKind::Rect {
+                width: 100.0,
+                height: 80.0,
+            },
+            "ellipse" => NodeKind::Ellipse { rx: 50.0, ry: 40.0 },
+            "text" => NodeKind::Text {
+                content: "Text".to_string(),
+            },
+            _ => return false,
+        };
+        let mut node = SceneNode::new(id, node_kind);
+        node.constraints.push(Constraint::Absolute { x, y });
+
+        // Set a default fill for shapes
+        if kind != "text" {
+            node.style.fill = Some(Paint::Solid(Color::rgba(0.8, 0.8, 0.85, 1.0)));
+        }
+
+        let mutation = GraphMutation::AddNode {
+            parent_id: NodeId::intern("root"),
+            node: Box::new(node),
+        };
+        let changed = self.apply_mutations(vec![mutation]);
+        if changed {
+            self.select_tool.selected = Some(id);
+            self.engine.flush_to_text();
+        }
+        changed
     }
 }
 
