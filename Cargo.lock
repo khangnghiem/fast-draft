@@ -327,6 +327,7 @@ dependencies = [
  "fd-core",
  "fd-render",
  "log",
+ "petgraph",
  "pretty_assertions",
  "smallvec",
 ]

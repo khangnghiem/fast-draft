@@ -4,7 +4,6 @@
 //! Commands are pushed to a stack; undo pops and applies the inverse.
 
 use crate::sync::{GraphMutation, SyncEngine};
-use fd_core::id::NodeId;
 
 /// A command that captures both a forward mutation and its inverse.
 #[derive(Debug, Clone)]
@@ -112,10 +111,11 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
             }
         }
         GraphMutation::RemoveNode { id } => {
-            // Capture the node before removal for undo
+            // Capture the node and its actual parent before removal for undo
             if let Some(node) = engine.graph.get_by_id(*id) {
+                let parent_id = engine.parent_of(*id);
                 GraphMutation::AddNode {
-                    parent_id: NodeId::intern("root"), // TODO: capture actual parent
+                    parent_id,
                     node: Box::new(node.clone()),
                 }
             } else {
@@ -163,6 +163,21 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
         // ID until after execution, so we RemoveNode with the original ID.
         // The actual undo logic removes the last child of the parent.
         GraphMutation::DuplicateNode { id } => GraphMutation::RemoveNode { id: *id },
+        // UpdatePath: capture current commands before overwriting.
+        GraphMutation::UpdatePath { id, commands: _ } => {
+            let old_commands = engine
+                .graph
+                .get_by_id(*id)
+                .and_then(|n| match &n.kind {
+                    fd_core::model::NodeKind::Path { commands } => Some(commands.clone()),
+                    _ => None,
+                })
+                .unwrap_or_default();
+            GraphMutation::UpdatePath {
+                id: *id,
+                commands: old_commands,
+            }
+        }
     }
 }
 

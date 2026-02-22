@@ -184,6 +184,15 @@ impl SyncEngine {
                     self.graph.add_node(self.graph.root, cloned);
                 }
             }
+            GraphMutation::UpdatePath { id, commands } => {
+                if let Some(node) = self.graph.get_by_id_mut(id)
+                    && let NodeKind::Path {
+                        commands: ref mut cmds,
+                    } = node.kind
+                {
+                    *cmds = commands;
+                }
+            }
         }
 
         self.text_dirty = true;
@@ -243,6 +252,22 @@ impl SyncEngine {
     pub fn current_bounds(&self) -> &HashMap<NodeIndex, ResolvedBounds> {
         &self.bounds
     }
+
+    /// Look up the parent NodeId of a given node. Returns root if not found.
+    pub fn parent_of(&self, id: NodeId) -> NodeId {
+        use petgraph::Direction;
+        self.graph
+            .index_of(id)
+            .and_then(|idx| {
+                self.graph
+                    .graph
+                    .neighbors_directed(idx, Direction::Incoming)
+                    .next()
+            })
+            .and_then(|pidx| self.graph.graph.node_weight(pidx))
+            .map(|n| n.id)
+            .unwrap_or_else(|| NodeId::intern("root"))
+    }
 }
 
 /// A mutation that can be applied to the scene graph from canvas interactions.
@@ -280,6 +305,12 @@ pub enum GraphMutation {
     /// Duplicate a node (clone with offset). Used by Alt+drag.
     DuplicateNode {
         id: NodeId,
+    },
+    /// Replace a path node's commands with new ones.
+    /// Used by the pen tool to update the live path during drawing.
+    UpdatePath {
+        id: NodeId,
+        commands: Vec<PathCmd>,
     },
 }
 

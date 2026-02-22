@@ -9,6 +9,7 @@ authors.workspace = true
 [dependencies]
 fd-core = { path = "../fd-core" }
 fd-render = { path = "../fd-render" }
+petgraph = { workspace = true }
 smallvec = { workspace = true }
 log = { workspace = true }
 

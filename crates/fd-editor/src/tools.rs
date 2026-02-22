@@ -335,23 +335,104 @@ impl Tool for PenTool {
                 }]
             }
             InputEvent::PointerMove { x, y, .. } => {
-                if self.drawing {
+                if self.drawing
+                    && let Some(id) = self.current_id
+                {
                     self.points.push((*x, *y));
-                    // TODO: Convert accumulated points to smooth path commands
-                    // and update the node. For now, just collect points.
+                    // Emit a live LineTo so the path is visible during drawing.
+                    // On PointerUp, these are replaced with smooth bezier curves.
+                    let cmds = raw_points_to_lineto(&self.points);
+                    return vec![GraphMutation::UpdatePath { id, commands: cmds }];
                 }
                 vec![]
             }
             InputEvent::PointerUp { .. } => {
                 self.drawing = false;
-                // TODO: Finalize path — simplify points, create bezier curves
+                if let Some(id) = self.current_id.take() {
+                    // Smooth the raw pointer samples into Catmull-Rom cubic bezier curves.
+                    let cmds = points_to_smooth_bezier(&self.points);
+                    self.points.clear();
+                    return vec![GraphMutation::UpdatePath { id, commands: cmds }];
+                }
                 self.points.clear();
-                self.current_id = None;
                 vec![]
             }
             _ => vec![],
         }
     }
+}
+
+// ─── Path smoothing helpers ───────────────────────────────────────────────
+
+/// Build a simple MoveTo + LineTo chain from raw points (used during live drawing).
+fn raw_points_to_lineto(points: &[(f32, f32)]) -> Vec<PathCmd> {
+    if points.is_empty() {
+        return vec![];
+    }
+    let mut cmds = Vec::with_capacity(points.len());
+    cmds.push(PathCmd::MoveTo(points[0].0, points[0].1));
+    for &(x, y) in points.iter().skip(1) {
+        cmds.push(PathCmd::LineTo(x, y));
+    }
+    cmds
+}
+
+/// Convert raw pointer points to a smooth cubic bezier spline using
+/// Catmull-Rom → cubic Bézier conversion.
+///
+/// For each segment between point[i] and point[i+1], the two control
+/// points are derived from the neighboring points, producing a C1-continuous
+/// (tangent-smooth) spline. Tension is fixed at 1/6 (the classic value).
+fn points_to_smooth_bezier(points: &[(f32, f32)]) -> Vec<PathCmd> {
+    if points.len() < 2 {
+        return raw_points_to_lineto(points);
+    }
+    if points.len() == 2 {
+        return vec![
+            PathCmd::MoveTo(points[0].0, points[0].1),
+            PathCmd::LineTo(points[1].0, points[1].1),
+        ];
+    }
+
+    let pts = subsample_points(points, 64);
+    let n = pts.len();
+    let mut cmds = Vec::with_capacity(n);
+    cmds.push(PathCmd::MoveTo(pts[0].0, pts[0].1));
+
+    for i in 0..(n - 1) {
+        // Catmull-Rom: p[i-1], p[i], p[i+1], p[i+2]
+        let p0 = if i == 0 { pts[0] } else { pts[i - 1] };
+        let p1 = pts[i];
+        let p2 = pts[i + 1];
+        let p3 = if i + 2 < n { pts[i + 2] } else { pts[n - 1] };
+
+        // Tangent at p1 = (p2 - p0) / 6
+        let c1x = p1.0 + (p2.0 - p0.0) / 6.0;
+        let c1y = p1.1 + (p2.1 - p0.1) / 6.0;
+
+        // Tangent at p2 = (p3 - p1) / 6
+        let c2x = p2.0 - (p3.0 - p1.0) / 6.0;
+        let c2y = p2.1 - (p3.1 - p1.1) / 6.0;
+
+        cmds.push(PathCmd::CubicTo(c1x, c1y, c2x, c2y, p2.0, p2.1));
+    }
+
+    cmds
+}
+
+/// Reduce a point cloud to at most `max_pts` evenly-spaced samples.
+/// This keeps generated `.fd` path commands concise for typical strokes.
+fn subsample_points(pts: &[(f32, f32)], max_pts: usize) -> Vec<(f32, f32)> {
+    if pts.len() <= max_pts {
+        return pts.to_vec();
+    }
+    let step = pts.len() as f32 / max_pts as f32;
+    (0..max_pts)
+        .map(|i| {
+            let idx = ((i as f32 * step).round() as usize).min(pts.len() - 1);
+            pts[idx]
+        })
+        .collect()
 }
 
 // ─── Ellipse Tool ────────────────────────────────────────────────────────
