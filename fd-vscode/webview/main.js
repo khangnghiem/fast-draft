@@ -6,7 +6,7 @@
  */
 
 // Import WASM module (built by wasm-pack)
-import init, { FdCanvas } from "./wasm/ftd_wasm.js";
+import init, { FdCanvas } from "./wasm/fd_wasm.js";
 
 // VS Code API
 const vscode = acquireVsCodeApi();

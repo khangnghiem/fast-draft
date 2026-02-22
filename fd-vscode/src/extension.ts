@@ -704,6 +704,31 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
+  // ─── Auto-open canvas alongside text editor for .fd files ────────
+  const openedUris = new Set<string>();
+  context.subscriptions.push(
+    vscode.workspace.onDidOpenTextDocument(async (doc: vscode.TextDocument) => {
+      if (doc.languageId !== "fd") return;
+      const key = doc.uri.toString();
+      if (openedUris.has(key)) return;
+      openedUris.add(key);
+
+      // Small delay so the text editor settles first
+      await new Promise((r) => setTimeout(r, 300));
+      await vscode.commands.executeCommand(
+        "vscode.openWith",
+        doc.uri,
+        "fd.canvas",
+        vscode.ViewColumn.Beside
+      );
+    })
+  );
+  context.subscriptions.push(
+    vscode.workspace.onDidCloseTextDocument((doc: vscode.TextDocument) => {
+      openedUris.delete(doc.uri.toString());
+    })
+  );
+
   // Register diagnostics
   const diagnostics = new FdDiagnosticsProvider();
   diagnostics.activate(context);

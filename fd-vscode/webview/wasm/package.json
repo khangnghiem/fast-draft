@@ -1,0 +1,20 @@
+{
+  "name": "fd-wasm",
+  "type": "module",
+  "collaborators": [
+    "Khang Nghiêm"
+  ],
+  "description": "FD (Fast Draft) — WASM bridge for VS Code extension",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "fd_wasm_bg.wasm",
+    "fd_wasm.js",
+    "fd_wasm.d.ts"
+  ],
+  "main": "fd_wasm.js",
+  "types": "fd_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
