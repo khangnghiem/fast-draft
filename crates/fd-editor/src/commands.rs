@@ -184,6 +184,7 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fd_core::id::NodeId;
     use fd_core::layout::Viewport;
 
     #[test]
