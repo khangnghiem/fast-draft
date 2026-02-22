@@ -445,6 +445,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       font-family: inherit;
       font-size: 13px;
       line-height: 1.7;
+      z-index: 5;
     }
     .spec-node {
       margin-bottom: 12px;
@@ -2242,17 +2243,133 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Register view mode toggle command (Design ↔ Spec in canvas toolbar)
+  // ─── Code-mode Spec View (editor decorations) ────────────────────
+  // When spec mode is active, hide style/animation/layout details from
+  // the text editor, showing only #, ##, node/edge declarations, and braces.
+  let codeSpecMode: "design" | "spec" = "design";
+
+  const specHideDecoration = vscode.window.createTextEditorDecorationType({
+    opacity: "0",
+    letterSpacing: "-9999px",
+    textDecoration: "none; font-size: 0; line-height: 0; overflow: hidden; max-height: 0",
+  });
+  context.subscriptions.push(specHideDecoration);
+
+  /** Return ranges of lines to hide for spec view. */
+  function computeSpecHideRanges(doc: vscode.TextDocument): vscode.Range[] {
+    const ranges: vscode.Range[] = [];
+    let insideStyleBlock = false;
+    let insideAnimBlock = false;
+    let styleDepth = 0;
+    let animDepth = 0;
+
+    // Patterns for lines to KEEP in spec mode
+    const keepPatterns = [
+      /^\s*#/,                              // Single-line comments and annotations
+      /^\s*(group|rect|ellipse|path|text)\s+@/, // Typed node declarations
+      /^\s*@\w+\s*\{/,                      // Generic node declarations
+      /^\s*edge\s+@/,                        // Edge declarations
+      /^\s*from:\s*@/,                       // Edge from
+      /^\s*to:\s*@/,                          // Edge to
+      /^\s*label:\s*"/,                       // Edge label
+      /^\s*\}/,                              // Closing braces
+      /^\s*$/,                               // Blank lines
+    ];
+
+    for (let i = 0; i < doc.lineCount; i++) {
+      const line = doc.lineAt(i);
+      const text = line.text;
+      const trimmed = text.trim();
+
+      // Track style blocks: style <name> { ... }
+      if (/^\s*style\s+\w+\s*\{/.test(text)) {
+        insideStyleBlock = true;
+        styleDepth = 1;
+        ranges.push(line.range);
+        continue;
+      }
+      if (insideStyleBlock) {
+        styleDepth += (trimmed.match(/\{/g) || []).length;
+        styleDepth -= (trimmed.match(/\}/g) || []).length;
+        ranges.push(line.range);
+        if (styleDepth <= 0) insideStyleBlock = false;
+        continue;
+      }
+
+      // Track anim blocks: anim :<trigger> { ... }
+      if (/^\s*anim\s+:/.test(text)) {
+        insideAnimBlock = true;
+        animDepth = (trimmed.match(/\{/g) || []).length;
+        animDepth -= (trimmed.match(/\}/g) || []).length;
+        ranges.push(line.range);
+        if (animDepth <= 0) insideAnimBlock = false;
+        continue;
+      }
+      if (insideAnimBlock) {
+        animDepth += (trimmed.match(/\{/g) || []).length;
+        animDepth -= (trimmed.match(/\}/g) || []).length;
+        ranges.push(line.range);
+        if (animDepth <= 0) insideAnimBlock = false;
+        continue;
+      }
+
+      // Check if line matches any keep pattern
+      const shouldKeep = keepPatterns.some((p) => p.test(text));
+      if (!shouldKeep && trimmed.length > 0) {
+        ranges.push(line.range);
+      }
+    }
+    return ranges;
+  }
+
+  function applyCodeSpecView() {
+    for (const editor of vscode.window.visibleTextEditors) {
+      if (editor.document.languageId !== "fd") continue;
+      if (codeSpecMode === "spec") {
+        const ranges = computeSpecHideRanges(editor.document);
+        editor.setDecorations(specHideDecoration, ranges);
+      } else {
+        editor.setDecorations(specHideDecoration, []);
+      }
+    }
+  }
+
+  // Re-apply spec decorations when text changes
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeTextDocument((e) => {
+      if (codeSpecMode !== "spec") return;
+      if (e.document.languageId !== "fd") return;
+      applyCodeSpecView();
+    })
+  );
+
+  // Re-apply when visible editors change
+  context.subscriptions.push(
+    vscode.window.onDidChangeVisibleTextEditors(() => {
+      if (codeSpecMode !== "spec") return;
+      applyCodeSpecView();
+    })
+  );
+
+  // Register view mode toggle command (Design ↔ Spec in both canvas + code)
   context.subscriptions.push(
     vscode.commands.registerCommand("fd.toggleViewMode", () => {
-      const panel = FdEditorProvider.activePanel;
-      if (!panel) {
-        vscode.window.showInformationMessage("Open an FD canvas editor first.");
-        return;
-      }
       const next = FdEditorProvider.activeViewMode === "design" ? "spec" : "design";
       FdEditorProvider.activeViewMode = next;
-      panel.webview.postMessage({ type: "setViewMode", mode: next });
+      codeSpecMode = next;
+
+      // Send to canvas webview if active
+      const panel = FdEditorProvider.activePanel;
+      if (panel) {
+        panel.webview.postMessage({ type: "setViewMode", mode: next });
+      }
+
+      // Apply/remove code-mode decorations
+      applyCodeSpecView();
+
+      vscode.window.showInformationMessage(
+        `FD View: ${next === "spec" ? "Spec" : "Design"} Mode`
+      );
     })
   );
 

@@ -868,3 +868,196 @@ fn apply_opacity(ctx: &CanvasRenderingContext2d, style: &Style) {
         ctx.set_global_alpha(opacity as f64);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fd_core::model::{Color, GradientStop, Paint, Style};
+
+    // ─── CanvasTheme ─────────────────────────────────────────────────────
+
+    #[test]
+    fn light_theme_fields_non_empty() {
+        let t = CanvasTheme::light();
+        assert!(!t.bg.is_empty());
+        assert!(!t.grid.is_empty());
+        assert!(!t.badge_border.is_empty());
+        assert!(!t.placeholder_border.is_empty());
+        assert!(!t.placeholder_bg.is_empty());
+        assert!(!t.placeholder_text.is_empty());
+    }
+
+    #[test]
+    fn dark_theme_fields_non_empty() {
+        let t = CanvasTheme::dark();
+        assert!(!t.bg.is_empty());
+        assert!(!t.grid.is_empty());
+        assert!(!t.badge_border.is_empty());
+    }
+
+    #[test]
+    fn light_dark_themes_differ() {
+        let l = CanvasTheme::light();
+        let d = CanvasTheme::dark();
+        assert_ne!(l.bg, d.bg, "light and dark bg should differ");
+    }
+
+    // ─── pick_label_color ────────────────────────────────────────────────
+
+    #[test]
+    fn label_color_dark_fill_returns_white() {
+        let style = Style {
+            fill: Some(Paint::Solid(Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            })),
+            ..Style::default()
+        };
+        assert_eq!(pick_label_color(&style), "#FFFFFF");
+    }
+
+    #[test]
+    fn label_color_light_fill_returns_dark() {
+        let style = Style {
+            fill: Some(Paint::Solid(Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            })),
+            ..Style::default()
+        };
+        assert_eq!(pick_label_color(&style), "#1C1C1E");
+    }
+
+    #[test]
+    fn label_color_no_fill_returns_dark() {
+        let style = Style::default();
+        assert_eq!(pick_label_color(&style), "#1C1C1E");
+    }
+
+    #[test]
+    fn label_color_gradient_fill_returns_dark() {
+        let style = Style {
+            fill: Some(Paint::LinearGradient {
+                angle: 90.0,
+                stops: vec![],
+            }),
+            ..Style::default()
+        };
+        // Gradient doesn't match Solid branch → falls through to default
+        assert_eq!(pick_label_color(&style), "#1C1C1E");
+    }
+
+    // ─── resolve_fill_color ──────────────────────────────────────────────
+
+    #[test]
+    fn fill_color_solid() {
+        let style = Style {
+            fill: Some(Paint::Solid(Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            })),
+            ..Style::default()
+        };
+        assert_eq!(resolve_fill_color(&style), "#FF0000");
+    }
+
+    #[test]
+    fn fill_color_none_returns_default() {
+        let style = Style::default();
+        assert_eq!(resolve_fill_color(&style), "#CCCCCC");
+    }
+
+    #[test]
+    fn fill_color_gradient_uses_first_stop() {
+        let style = Style {
+            fill: Some(Paint::LinearGradient {
+                angle: 0.0,
+                stops: vec![GradientStop {
+                    offset: 0.0,
+                    color: Color {
+                        r: 0.0,
+                        g: 1.0,
+                        b: 0.0,
+                        a: 1.0,
+                    },
+                }],
+            }),
+            ..Style::default()
+        };
+        assert_eq!(resolve_fill_color(&style), "#00FF00");
+    }
+
+    // ─── resolve_paint_color ─────────────────────────────────────────────
+
+    #[test]
+    fn paint_color_solid_hex() {
+        let paint = Paint::Solid(Color {
+            r: 0.0,
+            g: 0.0,
+            b: 1.0,
+            a: 1.0,
+        });
+        assert_eq!(resolve_paint_color(&paint), "#0000FF");
+    }
+
+    #[test]
+    fn paint_color_linear_gradient_fallback() {
+        let paint = Paint::LinearGradient {
+            angle: 45.0,
+            stops: vec![
+                GradientStop {
+                    offset: 0.0,
+                    color: Color {
+                        r: 1.0,
+                        g: 0.5,
+                        b: 0.0,
+                        a: 1.0,
+                    },
+                },
+                GradientStop {
+                    offset: 1.0,
+                    color: Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 1.0,
+                        a: 1.0,
+                    },
+                },
+            ],
+        };
+        // Should return the first stop color
+        assert_eq!(resolve_paint_color(&paint), "#FF8000");
+    }
+
+    #[test]
+    fn paint_color_radial_gradient_fallback() {
+        let paint = Paint::RadialGradient {
+            stops: vec![GradientStop {
+                offset: 0.0,
+                color: Color {
+                    r: 0.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
+                },
+            }],
+        };
+        assert_eq!(resolve_paint_color(&paint), "#00FFFF");
+    }
+
+    #[test]
+    fn paint_color_empty_gradient_returns_default() {
+        let paint = Paint::LinearGradient {
+            angle: 0.0,
+            stops: vec![],
+        };
+        assert_eq!(resolve_paint_color(&paint), "#CCCCCC");
+    }
+}
+
