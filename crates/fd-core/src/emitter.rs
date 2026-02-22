@@ -75,6 +75,18 @@ fn emit_style_block(out: &mut String, name: &NodeId, style: &Style, depth: usize
         indent(out, depth + 1);
         writeln!(out, "opacity: {}", format_num(opacity)).unwrap();
     }
+    if let Some(ref shadow) = style.shadow {
+        indent(out, depth + 1);
+        writeln!(
+            out,
+            "shadow: ({},{},{},{})",
+            format_num(shadow.offset_x),
+            format_num(shadow.offset_y),
+            format_num(shadow.blur),
+            shadow.color.to_hex()
+        )
+        .unwrap();
+    }
 
     indent(out, depth);
     out.push_str("}\n");
@@ -188,6 +200,18 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
     if let Some(opacity) = node.style.opacity {
         indent(out, depth + 1);
         writeln!(out, "opacity: {}", format_num(opacity)).unwrap();
+    }
+    if let Some(ref shadow) = node.style.shadow {
+        indent(out, depth + 1);
+        writeln!(
+            out,
+            "shadow: ({},{},{},{})",
+            format_num(shadow.offset_x),
+            format_num(shadow.offset_y),
+            format_num(shadow.blur),
+            shadow.color.to_hex()
+        )
+        .unwrap();
     }
     if let Some(ref label) = node.style.label {
         indent(out, depth + 1);

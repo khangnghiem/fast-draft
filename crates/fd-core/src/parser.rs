@@ -339,7 +339,7 @@ fn parse_style_property(input: &mut &str, style: &mut Style) -> ModalResult<()> 
 
     match prop_name {
         "fill" => {
-            style.fill = Some(Paint::Solid(parse_hex_color.parse_next(input)?));
+            style.fill = Some(parse_paint(input)?);
         }
         "font" => {
             parse_font_value(input, style)?;
@@ -528,6 +528,53 @@ fn starts_with_child_node(input: &str) -> bool {
     false
 }
 
+/// Parse a `Paint` value: `#HEX`, `linear(Ndeg, ...)`, or `radial(...)`.
+fn parse_paint(input: &mut &str) -> ModalResult<Paint> {
+    if input.starts_with("linear(") {
+        let _ = "linear(".parse_next(input)?;
+        let angle = parse_number.parse_next(input)?;
+        let _ = "deg".parse_next(input)?;
+        let stops = parse_gradient_stops(input)?;
+        let _ = ')'.parse_next(input)?;
+        Ok(Paint::LinearGradient { angle, stops })
+    } else if input.starts_with("radial(") {
+        let _ = "radial(".parse_next(input)?;
+        let stops = parse_gradient_stops(input)?;
+        let _ = ')'.parse_next(input)?;
+        Ok(Paint::RadialGradient { stops })
+    } else {
+        parse_hex_color.map(Paint::Solid).parse_next(input)
+    }
+}
+
+/// Parse gradient stops: optional leading comma, then `#HEX offset` pairs separated by commas.
+///
+/// Handles both `linear(90deg, #HEX N, #HEX N)` (comma before first stop)
+/// and `radial(#HEX N, #HEX N)` (no comma before first stop).
+fn parse_gradient_stops(input: &mut &str) -> ModalResult<Vec<GradientStop>> {
+    let mut stops = Vec::new();
+    loop {
+        skip_space(input);
+        // Consume comma separator (required between stops, optional before first)
+        if input.starts_with(',') {
+            let _ = ','.parse_next(input)?;
+            skip_space(input);
+        }
+        // Stop if we hit the closing paren or end of input
+        if input.is_empty() || input.starts_with(')') {
+            break;
+        }
+        // Try to parse a color; if it fails, we're done
+        let Ok(color) = parse_hex_color.parse_next(input) else {
+            break;
+        };
+        skip_space(input);
+        let offset = parse_number.parse_next(input)?;
+        stops.push(GradientStop { color, offset });
+    }
+    Ok(stops)
+}
+
 fn parse_node_property(
     input: &mut &str,
     style: &mut Style,
@@ -558,7 +605,7 @@ fn parse_node_property(
             *height = Some(parse_number.parse_next(input)?);
         }
         "fill" => {
-            style.fill = Some(Paint::Solid(parse_hex_color.parse_next(input)?));
+            style.fill = Some(parse_paint(input)?);
         }
         "bg" => {
             style.fill = Some(Paint::Solid(parse_hex_color.parse_next(input)?));
@@ -603,6 +650,27 @@ fn parse_node_property(
         }
         "opacity" => {
             style.opacity = Some(parse_number.parse_next(input)?);
+        }
+        "shadow" => {
+            // shadow: (ox,oy,blur,#COLOR)  — colon already consumed by property parser
+            skip_space(input);
+            if input.starts_with('(') {
+                let _ = '('.parse_next(input)?;
+                let ox = parse_number.parse_next(input)?;
+                let _ = ','.parse_next(input)?;
+                let oy = parse_number.parse_next(input)?;
+                let _ = ','.parse_next(input)?;
+                let blur = parse_number.parse_next(input)?;
+                let _ = ','.parse_next(input)?;
+                let color = parse_hex_color.parse_next(input)?;
+                let _ = ')'.parse_next(input)?;
+                style.shadow = Some(Shadow {
+                    offset_x: ox,
+                    offset_y: oy,
+                    blur,
+                    color,
+                });
+            }
         }
         "label" => {
             let s = if input.starts_with('"') {

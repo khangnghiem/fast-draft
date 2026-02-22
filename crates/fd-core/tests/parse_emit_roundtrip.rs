@@ -201,3 +201,109 @@ fn roundtrip_rect_dimensions_exact() {
         other => panic!("expected Rect, got {other:?}"),
     }
 }
+// ─── Paint / Shadow preservation ────────────────────────────────────────
+
+#[test]
+fn roundtrip_linear_gradient_fill() {
+    let input = r#"
+rect @hero {
+  w: 400
+  h: 200
+  fill: linear(90deg, #FF6B6B 0, #4ECDC4 1)
+}
+"#;
+    let graph1 = parse_document(input).unwrap();
+    let emitted = emit_document(&graph1);
+    let graph2 = parse_document(&emitted).unwrap();
+
+    let id = NodeId::intern("hero");
+    let n2 = graph2.get_by_id(id).unwrap();
+    assert!(
+        matches!(&n2.style.fill, Some(Paint::LinearGradient { .. })),
+        "LinearGradient fill lost after round-trip.\nEmitted:\n{emitted}"
+    );
+}
+
+#[test]
+fn roundtrip_radial_gradient_fill() {
+    let input = r#"
+ellipse @glow {
+  w: 160 h: 160
+  fill: radial(#FFFFFF 0, #6C5CE7 1)
+}
+"#;
+    let graph1 = parse_document(input).unwrap();
+    let emitted = emit_document(&graph1);
+    let graph2 = parse_document(&emitted).unwrap();
+
+    let id = NodeId::intern("glow");
+    let n2 = graph2.get_by_id(id).unwrap();
+    assert!(
+        matches!(&n2.style.fill, Some(Paint::RadialGradient { .. })),
+        "RadialGradient fill lost after round-trip.\nEmitted:\n{emitted}"
+    );
+}
+
+#[test]
+fn roundtrip_shadow() {
+    // Shadow is set via bg: ... shadow=(...) — the established inline modifier syntax
+    let input = r#"
+rect @card {
+  w: 200 h: 120
+  bg: #FFFFFF shadow=(0,4,12,#00000033)
+}
+"#;
+    let graph1 = parse_document(input).unwrap();
+    let emitted = emit_document(&graph1);
+    let graph2 = parse_document(&emitted).unwrap();
+
+    let id = NodeId::intern("card");
+    let n2 = graph2.get_by_id(id).unwrap();
+    let shadow = n2
+        .style
+        .shadow
+        .as_ref()
+        .unwrap_or_else(|| panic!("shadow lost after round-trip.\nEmitted:\n{emitted}"));
+    assert_eq!(shadow.offset_y, 4.0);
+    assert_eq!(shadow.blur, 12.0);
+}
+
+#[test]
+fn roundtrip_path_kind() {
+    // Path commands are drawn programmatically, not persisted in text.
+    // Verify that a path node round-trips as NodeKind::Path.
+    let input = r#"
+path @line {
+  stroke: #5E5CE6 1.5
+}
+"#;
+    let graph1 = parse_document(input).unwrap();
+    let emitted = emit_document(&graph1);
+    let graph2 = parse_document(&emitted).unwrap();
+
+    let id = NodeId::intern("line");
+    let n2 = graph2.get_by_id(id).unwrap();
+    assert!(
+        matches!(&n2.kind, NodeKind::Path { .. }),
+        "Path node kind lost after round-trip.\nEmitted:\n{emitted}"
+    );
+}
+
+#[test]
+fn roundtrip_gradient_in_named_style() {
+    let input = r#"
+style brand {
+  fill: linear(135deg, #6C5CE7 0, #A29BFE 1)
+}
+
+rect @hero {
+  w: 320 h: 180
+  use: brand
+}
+"#;
+    let graph1 = parse_document(input).unwrap();
+    let emitted = emit_document(&graph1);
+    let _graph2 = parse_document(&emitted).unwrap_or_else(|e| {
+        panic!("re-parse failed for gradient in named style.\nError: {e}\nEmitted:\n{emitted}")
+    });
+}
