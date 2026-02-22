@@ -123,6 +123,8 @@ impl SyncEngine {
             GraphMutation::AddNode { parent_id, node } => {
                 let parent_idx = self.graph.index_of(parent_id).unwrap_or(self.graph.root);
                 self.graph.add_node(parent_idx, *node);
+                // Re-resolve layout so the new node's Absolute constraint is applied
+                self.bounds = resolve_layout(&self.graph, self.viewport);
             }
             GraphMutation::RemoveNode { id } => {
                 if let Some(idx) = self.graph.index_of(id) {

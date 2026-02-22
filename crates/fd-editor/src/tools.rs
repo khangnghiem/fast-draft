@@ -221,13 +221,14 @@ impl Tool for RectTool {
                 let id = NodeId::anonymous();
                 self.current_id = Some(id);
 
-                let node = SceneNode::new(
+                let mut node = SceneNode::new(
                     id,
                     NodeKind::Rect {
                         width: 0.0,
                         height: 0.0,
                     },
                 );
+                node.constraints.push(Constraint::Absolute { x: *x, y: *y });
                 vec![GraphMutation::AddNode {
                     parent_id: NodeId::intern("root"),
                     node: Box::new(node),
@@ -374,7 +375,8 @@ impl Tool for EllipseTool {
                 let id = NodeId::anonymous();
                 self.current_id = Some(id);
 
-                let node = SceneNode::new(id, NodeKind::Ellipse { rx: 0.0, ry: 0.0 });
+                let mut node = SceneNode::new(id, NodeKind::Ellipse { rx: 0.0, ry: 0.0 });
+                node.constraints.push(Constraint::Absolute { x: *x, y: *y });
                 vec![GraphMutation::AddNode {
                     parent_id: NodeId::intern("root"),
                     node: Box::new(node),
