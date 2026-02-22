@@ -1,7 +1,7 @@
 /**
- * FTD Webview — WASM loader + message bridge.
+ * FD Webview — WASM loader + message bridge.
  *
- * Loads the Rust WASM module, initializes the FtdCanvas, and bridges
+ * Loads the Rust WASM module, initializes the FdCanvas, and bridges
  * between the VS Code extension (postMessage) and the WASM engine.
  */
 
@@ -32,7 +32,7 @@ let contextMenuNodeId = null;
 // ─── Initialization ──────────────────────────────────────────────────────
 
 async function main() {
-  canvas = document.getElementById("ftd-canvas");
+  canvas = document.getElementById("fd-canvas");
   const loading = document.getElementById("loading");
   const status = document.getElementById("status");
 
@@ -79,8 +79,8 @@ async function main() {
     // Tell extension we're ready
     vscode.postMessage({ type: "ready" });
   } catch (err) {
-    console.error("FTD WASM init failed:", err);
-    if (loading) loading.textContent = "Failed to load FTD engine: " + err;
+    console.error("FD WASM init failed:", err);
+    if (loading) loading.textContent = "Failed to load FD engine: " + err;
   }
 }
 
