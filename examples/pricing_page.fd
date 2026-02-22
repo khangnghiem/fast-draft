@@ -1,169 +1,253 @@
-# FD v1
-# SaaS pricing page — three-tier cards with feature lists
+style check {
+  fill: #00B894
+}
 
-style heading { font: "Inter" 700 32; fill: #1A1A2E }
-style subhead { font: "Inter" 16; fill: #6B7280 }
-style price { font: "Inter" 800 48; fill: #1A1A2E }
-style feature { font: "Inter" 14; fill: #333 }
-style check { fill: #00B894 }
+style feature {
+  fill: #333333
+  font: "Inter" 400 14
+}
+
+style heading {
+  fill: #1A1A2E
+  font: "Inter" 700 32
+}
+
+style price {
+  fill: #1A1A2E
+  font: "Inter" 800 48
+}
+
+style subhead {
+  fill: #6B7280
+  font: "Inter" 400 16
+}
 
 group @pricing {
-  layout: column gap=40 pad=48
-
   ## "Pricing section — conversion-critical"
   ## accept: "A/B test popular badge placement"
   ## accept: "annual toggle saves 20%"
   ## priority: high
   ## tag: conversion, revenue
-
-  # ─── Header ────────────────────────────────────────────────────────
-
+  layout: column gap=40 pad=48
   group @header {
     layout: column gap=8 pad=0
-
-    text @title "Simple, transparent pricing" { use: heading }
-    text @subtitle "No hidden fees. Cancel anytime." { use: subhead }
+    text @title "Simple, transparent pricing" {
+      use: heading
+    }
+    text @subtitle "No hidden fees. Cancel anytime." {
+      use: subhead
+    }
   }
-
-  # ─── Cards row ─────────────────────────────────────────────────────
-
   group @cards {
-    layout: row gap=24 pad=0
-
-    # ─── Free tier ─────────────────────────────────────────────────
-
+    layout: row gap=23 pad=0
     rect @tier_free {
-      w: 300 h: 480
-      corner: 16
-      fill: #FFF
-      stroke: #E8E8EC 1
-      bg: #FFF corner=16 shadow=(0,2,12,#0001)
       ## "Free tier — acquisition funnel entry"
       ## accept: "no credit card required"
       ## status: done
-
-      group { layout: column gap=16 pad=28
-        text "Starter" { font: "Inter" 600 20; fill: #6B7280 }
-        text "$0" { use: price }
-        text "per month" { font: "Inter" 14; fill: #9CA3AF }
-
-        rect @divider_free { w: 244 h: 1; fill: #E8E8EC }
-
-        text "✓ 3 projects" { use: feature }
-        text "✓ Basic canvas" { use: feature }
-        text "✓ Community support" { use: feature }
-        text "✗ Animations" { font: "Inter" 14; fill: #CCC }
-        text "✗ Team sharing" { font: "Inter" 14; fill: #CCC }
-
+      w: 300 h: 480
+      fill: #FFFFFF
+      stroke: #E8E8EC 1
+      corner: 16
+      shadow: (0,2,12,#00000011)
+      group @_anon_31 {
+        layout: column gap=16 pad=28
+        text @_anon_32 "Starter" {
+          fill: #6B7280
+          font: "Inter" 600 20
+        }
+        text @_anon_33 "$0" {
+          use: price
+        }
+        text @_anon_34 "per month" {
+          fill: #9CA3AF
+          font: "Inter" 400 14
+        }
+        rect @divider_free {
+          w: 244 h: 1
+          fill: #E8E8EC
+        }
+        text @_anon_35 "✓ 3 projects" {
+          use: feature
+        }
+        text @_anon_36 "✓ Basic canvas" {
+          use: feature
+        }
+        text @_anon_37 "✓ Community support" {
+          use: feature
+        }
+        text @_anon_38 "✗ Animations" {
+          fill: #CCCCCC
+          font: "Inter" 400 14
+        }
+        text @_anon_39 "✗ Team sharing" {
+          fill: #CCCCCC
+          font: "Inter" 400 14
+        }
         rect @btn_free {
           w: 244 h: 48
-          corner: 10
           fill: #F5F5F7
-
-          text "Get Started" { font: "Inter" 600 15; fill: #333 }
-
-          anim :hover { fill: #EDEDF0; ease: ease_out 150ms }
+          corner: 10
+          text @_anon_40 "Get Started" {
+            fill: #333333
+            font: "Inter" 600 15
+          }
+          anim :hover {
+            fill: #EDEDF0
+            ease: ease_out 150ms
+          }
         }
       }
-
-      anim :hover { scale: 1.02; ease: spring 300ms }
+      anim :hover {
+        scale: 1.02
+        ease: spring 300ms
+      }
     }
-
-    # ─── Pro tier (popular) ────────────────────────────────────────
-
     rect @tier_pro {
-      w: 320 h: 520
-      corner: 16
-      fill: #FFF
-      stroke: #6C5CE7 2
-      bg: #FFF corner=16 shadow=(0,8,32,#6C5CE730)
       ## "Pro tier — primary conversion target"
       ## accept: "most popular badge visible"
       ## accept: "pre-selected on page load"
       ## priority: high
       ## status: in_progress
-
-      group { layout: column gap=16 pad=28
-
+      w: 320 h: 520
+      fill: #FFFFFF
+      stroke: #6C5CE7 2
+      corner: 16
+      shadow: (0,8,32,#6C5CE730)
+      group @_anon_41 {
+        layout: column gap=16 pad=28
         group @popular_badge {
           layout: row gap=0 pad=0
-
           rect @badge {
             w: 100 h: 28
-            corner: 14
             fill: #6C5CE7
-
-            text "Popular" { font: "Inter" 600 12; fill: #FFF }
+            corner: 14
+            text @_anon_42 "Popular" {
+              fill: #FFFFFF
+              font: "Inter" 600 12
+            }
           }
         }
-
-        text "Pro" { font: "Inter" 600 20; fill: #6C5CE7 }
-        text "$29" { use: price }
-        text "per month" { font: "Inter" 14; fill: #9CA3AF }
-
-        rect @divider_pro { w: 264 h: 1; fill: #E8E8EC }
-
-        text "✓ Unlimited projects" { use: feature }
-        text "✓ Full canvas + pen tool" { use: feature }
-        text "✓ All animations" { use: feature }
-        text "✓ Team sharing (5 seats)" { use: feature }
-        text "✓ Priority support" { use: feature }
-
+        text @_anon_43 "Pro" {
+          fill: #6C5CE7
+          font: "Inter" 600 20
+        }
+        text @_anon_44 "$29" {
+          use: price
+        }
+        text @_anon_45 "per month" {
+          fill: #9CA3AF
+          font: "Inter" 400 14
+        }
+        rect @divider_pro {
+          w: 264 h: 1
+          fill: #E8E8EC
+        }
+        text @_anon_46 "✓ Unlimited projects" {
+          use: feature
+        }
+        text @_anon_47 "✓ Full canvas + pen tool" {
+          use: feature
+        }
+        text @_anon_48 "✓ All animations" {
+          use: feature
+        }
+        text @_anon_49 "✓ Team sharing (5 seats)" {
+          use: feature
+        }
+        text @_anon_50 "✓ Priority support" {
+          use: feature
+        }
         rect @btn_pro {
           w: 264 h: 48
-          corner: 10
           fill: #6C5CE7
-
-          text "Start Free Trial" { font: "Inter" 600 15; fill: #FFF }
-
-          anim :hover { fill: #5A4BD1; scale: 1.03; ease: spring 200ms }
-          anim :press { scale: 0.97; ease: ease_out 100ms }
+          corner: 10
+          text @_anon_51 "Start Free Trial" {
+            fill: #FFFFFF
+            font: "Inter" 600 15
+          }
+          anim :hover {
+            fill: #5A4BD1
+            scale: 1.03
+            ease: spring 200ms
+          }
+          anim :press {
+            scale: 0.97
+            ease: ease_out 100ms
+          }
         }
       }
-
-      anim :hover { scale: 1.02; ease: spring 300ms }
+      anim :hover {
+        scale: 1.02
+        ease: spring 300ms
+      }
     }
-
-    # ─── Enterprise tier ───────────────────────────────────────────
-
     rect @tier_enterprise {
-      w: 300 h: 480
-      corner: 16
-      fill: #FFF
-      stroke: #E8E8EC 1
-      bg: #FFF corner=16 shadow=(0,2,12,#0001)
       ## "Enterprise tier — high-value leads"
       ## accept: "custom quote form"
       ## status: draft
       ## tag: sales
-
-      group { layout: column gap=16 pad=28
-        text "Enterprise" { font: "Inter" 600 20; fill: #6B7280 }
-        text "Custom" { font: "Inter" 800 40; fill: #1A1A2E }
-        text "contact sales" { font: "Inter" 14; fill: #9CA3AF }
-
-        rect @divider_ent { w: 244 h: 1; fill: #E8E8EC }
-
-        text "✓ Everything in Pro" { use: feature }
-        text "✓ Unlimited seats" { use: feature }
-        text "✓ SSO & SAML" { use: feature }
-        text "✓ Dedicated support" { use: feature }
-        text "✓ Custom integrations" { use: feature }
-
+      w: 300 h: 480
+      fill: #FFFFFF
+      stroke: #E8E8EC 1
+      corner: 16
+      shadow: (0,2,12,#00000011)
+      group @_anon_52 {
+        ## "???"
+        layout: column gap=16 pad=28
+        text @_anon_53 "Enterprise" {
+          fill: #6B7280
+          font: "Inter" 600 20
+        }
+        text @_anon_54 "Custom" {
+          fill: #1A1A2E
+          font: "Inter" 800 40
+        }
+        text @_anon_55 "contact sales" {
+          fill: #9CA3AF
+          font: "Inter" 400 14
+        }
+        rect @divider_ent {
+          w: 244 h: 1
+          fill: #E8E8EC
+        }
+        text @_anon_56 "✓ Everything in Pro" {
+          use: feature
+        }
+        text @_anon_57 "✓ Unlimited seats" {
+          use: feature
+        }
+        text @_anon_58 "✓ SSO & SAML" {
+          use: feature
+        }
+        text @_anon_59 "✓ Dedicated support" {
+          use: feature
+        }
+        text @_anon_60 "✓ Custom integrations" {
+          use: feature
+        }
         rect @btn_enterprise {
           w: 244 h: 48
-          corner: 10
           fill: #1A1A2E
-
-          text "Contact Sales" { font: "Inter" 600 15; fill: #FFF }
-
-          anim :hover { fill: #2D2D44; scale: 1.03; ease: spring 200ms }
+          corner: 10
+          text @_anon_61 "Contact Sales" {
+            fill: #FFFFFF
+            font: "Inter" 600 15
+          }
+          anim :hover {
+            fill: #2D2D44
+            scale: 1.03
+            ease: spring 200ms
+          }
         }
       }
-
-      anim :hover { scale: 1.02; ease: spring 300ms }
+      anim :hover {
+        scale: 1.02
+        ease: spring 300ms
+      }
     }
   }
 }
 
 @pricing -> center_in: canvas
+@_anon_52 -> absolute: 248.07, 699.97
+@_anon_59 -> absolute: 76.34, 179.57

@@ -116,6 +116,12 @@ async function main() {
 function render() {
   if (!fdCanvas || !ctx) return;
   const dpr = window.devicePixelRatio || 1;
+  // Clear the entire canvas buffer before drawing to prevent trails
+  // when panning or dragging outside the original viewport.
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
   ctx.save();
   ctx.setTransform(dpr, 0, 0, dpr, panX * dpr, panY * dpr);
   fdCanvas.render(ctx, performance.now());
