@@ -454,6 +454,9 @@ function __wbg_get_imports() {
         __wbg___wbindgen_throw_be289d5034ed271b: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
+        __wbg_addColorStop_2f80f11dfad35dec: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            arg0.addColorStop(arg1, getStringFromWasm0(arg2, arg3));
+        }, arguments); },
         __wbg_arcTo_ddf6b8adf3bf5084: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5) {
             arg0.arcTo(arg1, arg2, arg3, arg4, arg5);
         }, arguments); },
@@ -463,9 +466,20 @@ function __wbg_get_imports() {
         __wbg_beginPath_9873f939d695759c: function(arg0) {
             arg0.beginPath();
         },
+        __wbg_bezierCurveTo_38509204f815cfd5: function(arg0, arg1, arg2, arg3, arg4, arg5, arg6) {
+            arg0.bezierCurveTo(arg1, arg2, arg3, arg4, arg5, arg6);
+        },
         __wbg_closePath_de4e48859360b1b1: function(arg0) {
             arg0.closePath();
         },
+        __wbg_createLinearGradient_b3d3d1a53abe5362: function(arg0, arg1, arg2, arg3, arg4) {
+            const ret = arg0.createLinearGradient(arg1, arg2, arg3, arg4);
+            return ret;
+        },
+        __wbg_createRadialGradient_b43c38d4bed3b571: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6) {
+            const ret = arg0.createRadialGradient(arg1, arg2, arg3, arg4, arg5, arg6);
+            return ret;
+        }, arguments); },
         __wbg_ellipse_3343f79b255f83a4: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
             arg0.ellipse(arg1, arg2, arg3, arg4, arg5, arg6, arg7);
         }, arguments); },
@@ -506,6 +520,9 @@ function __wbg_get_imports() {
         __wbg_set_fillStyle_783d3f7489475421: function(arg0, arg1, arg2) {
             arg0.fillStyle = getStringFromWasm0(arg1, arg2);
         },
+        __wbg_set_fillStyle_9bd3ccbe7ecf6c2a: function(arg0, arg1) {
+            arg0.fillStyle = arg1;
+        },
         __wbg_set_font_575685c8f7e56957: function(arg0, arg1, arg2) {
             arg0.font = getStringFromWasm0(arg1, arg2);
         },
@@ -514,6 +531,18 @@ function __wbg_get_imports() {
         },
         __wbg_set_lineWidth_89fa506592f5b994: function(arg0, arg1) {
             arg0.lineWidth = arg1;
+        },
+        __wbg_set_shadowBlur_8aa041f690cac8d0: function(arg0, arg1) {
+            arg0.shadowBlur = arg1;
+        },
+        __wbg_set_shadowColor_cd8db5e06be21e95: function(arg0, arg1, arg2) {
+            arg0.shadowColor = getStringFromWasm0(arg1, arg2);
+        },
+        __wbg_set_shadowOffsetX_b7f3141c508230dc: function(arg0, arg1) {
+            arg0.shadowOffsetX = arg1;
+        },
+        __wbg_set_shadowOffsetY_beb753d9e6d4a3ea: function(arg0, arg1) {
+            arg0.shadowOffsetY = arg1;
         },
         __wbg_set_strokeStyle_087121ed5350b038: function(arg0, arg1, arg2) {
             arg0.strokeStyle = getStringFromWasm0(arg1, arg2);
