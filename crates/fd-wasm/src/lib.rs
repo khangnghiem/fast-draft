@@ -541,6 +541,11 @@ impl FdCanvas {
             }
         }
 
+        // Label (for rect/ellipse — optional text centered inside shape)
+        if let Some(ref label) = style.label {
+            props.insert("label".into(), serde_json::Value::String(label.clone()));
+        }
+
         // Fill
         if let Some(Paint::Solid(c)) = &style.fill {
             props.insert("fill".into(), serde_json::Value::String(c.to_hex()));
@@ -697,6 +702,19 @@ impl FdCanvas {
                 id,
                 content: value.to_string(),
             },
+            "label" => {
+                if let Some(node) = self.engine.graph.get_by_id(id) {
+                    let mut style = self.engine.graph.resolve_style(node);
+                    style.label = if value.is_empty() {
+                        None
+                    } else {
+                        Some(value.to_string())
+                    };
+                    GraphMutation::SetStyle { id, style }
+                } else {
+                    return false;
+                }
+            }
             _ => return false,
         };
 
@@ -707,8 +725,23 @@ impl FdCanvas {
         changed
     }
 
+    /// Get the scene-space bounds of a node by its ID.
+    /// Returns `{}` if the node is not found.
+    pub fn get_node_bounds(&self, node_id: &str) -> String {
+        let id = fd_core::id::NodeId::intern(node_id);
+        if let Some(idx) = self.engine.graph.index_of(id)
+            && let Some(bounds) = self.engine.current_bounds().get(&idx)
+        {
+            return format!(
+                r#"{{"x":{},"y":{},"width":{},"height":{}}}"#,
+                bounds.x, bounds.y, bounds.width, bounds.height
+            );
+        }
+        "{}".to_string()
+    }
+
     /// Create a node at a specific position (for drag-and-drop).
-    /// `kind` is "rect", "ellipse", or "text".
+    /// `kind` is \"rect\", \"ellipse\", or \"text\".
     /// Returns `true` if the node was created.
     pub fn create_node_at(&mut self, kind: &str, x: f32, y: f32) -> bool {
         let id = NodeId::anonymous();

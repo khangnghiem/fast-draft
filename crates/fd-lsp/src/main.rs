@@ -145,6 +145,30 @@ impl LanguageServer for FdLanguageServer {
 
 #[tokio::main]
 async fn main() {
+    // ── `fd-lsp --format` mode ──────────────────────────────────────────
+    // Reads FD source from stdin, emits formatted output on stdout, then exits.
+    // Used by the VS Code extension's DocumentFormattingEditProvider so that
+    // `Option+Shift+F` works without a full LSP handshake.
+    let args: Vec<String> = std::env::args().collect();
+    if args.get(1).map(|s| s.as_str()) == Some("--format") {
+        use std::io::Read;
+        let mut text = String::new();
+        std::io::stdin()
+            .read_to_string(&mut text)
+            .expect("failed to read stdin");
+
+        let config = fd_core::FormatConfig::default();
+        match fd_core::format_document(&text, &config) {
+            Ok(formatted) => print!("{formatted}"),
+            Err(e) => {
+                eprintln!("fd-lsp --format error: {e}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+
+    // ── Standard LSP server mode ─────────────────────────────────────────
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 

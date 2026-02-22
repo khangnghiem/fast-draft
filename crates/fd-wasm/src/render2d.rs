@@ -99,9 +99,15 @@ fn render_node(
         }
         NodeKind::Rect { .. } => {
             draw_rect(ctx, node_bounds, &style, is_selected);
+            if let Some(ref label) = style.label {
+                draw_shape_label(ctx, node_bounds, label, &style);
+            }
         }
         NodeKind::Ellipse { .. } => {
             draw_ellipse(ctx, node_bounds, &style, is_selected);
+            if let Some(ref label) = style.label {
+                draw_shape_label(ctx, node_bounds, label, &style);
+            }
         }
         NodeKind::Text { content } => {
             draw_text(ctx, node_bounds, content, &style);
@@ -221,6 +227,52 @@ fn draw_text(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, content: &str, 
     let _ = ctx.fill_text(content, b.x as f64, b.y as f64 + 2.0);
 
     ctx.restore();
+}
+
+/// Draw a label centered inside a shape (rect or ellipse).
+fn draw_shape_label(
+    ctx: &CanvasRenderingContext2d,
+    b: &ResolvedBounds,
+    label: &str,
+    style: &Style,
+) {
+    ctx.save();
+    apply_opacity(ctx, style);
+
+    let font_spec = style.font.as_ref();
+    let family = font_spec.map_or("Inter, sans-serif", |f| f.family.as_str());
+    let size = font_spec.map_or(13.0, |f| f.size);
+    let weight = font_spec.map_or(500, |f| f.weight);
+
+    ctx.set_font(&format!("{weight} {size}px {family}"));
+
+    // Use contrasting color: if fill is dark use white, else use a dark color
+    let text_color = pick_label_color(style);
+    ctx.set_fill_style_str(&text_color);
+    ctx.set_text_align("center");
+    ctx.set_text_baseline("middle");
+
+    let cx = b.x as f64 + b.width as f64 / 2.0;
+    let cy = b.y as f64 + b.height as f64 / 2.0;
+    let _ = ctx.fill_text(label, cx, cy);
+
+    ctx.restore();
+}
+
+/// Pick a readable label color based on the shape's fill luminance.
+fn pick_label_color(style: &Style) -> String {
+    match &style.fill {
+        Some(Paint::Solid(c)) => {
+            // Perceived luminance (sRGB)
+            let lum = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
+            if lum > 0.5 {
+                "#1C1C1E".to_string()
+            } else {
+                "#FFFFFF".to_string()
+            }
+        }
+        _ => "#1C1C1E".to_string(),
+    }
 }
 
 fn draw_group_bg(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, style: &Style) {

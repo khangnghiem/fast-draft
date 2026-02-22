@@ -893,6 +893,12 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
             <input type="text" id="prop-text-content" placeholder="Text content">
           </div>
         </div>
+        <div class="props-section" id="props-label-section" style="display:none">
+          <div class="props-section-label">Label</div>
+          <div class="props-field full">
+            <input type="text" id="prop-label" placeholder="Shape label (optional)">
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -2108,6 +2114,46 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.window.showInformationMessage(
         `AI Refine All: ${nodeIds.length} node(s) refined.`
       );
+    })
+  );
+  // ─── Format Document Provider (Option+Shift+F) ──────────────────────
+  // Spawns `fd-lsp --format` as a one-shot formatter: reads FD text from
+  // stdin and writes the canonical formatted output to stdout.
+  context.subscriptions.push(
+    vscode.languages.registerDocumentFormattingEditProvider("fd", {
+      provideDocumentFormattingEdits(
+        document: vscode.TextDocument
+      ): vscode.TextEdit[] {
+        const { spawnSync } = require("child_process") as typeof import("child_process");
+        const path = require("path") as typeof import("path");
+
+        // Resolve the bundled fd-lsp binary path
+        const binName = process.platform === "win32" ? "fd-lsp.exe" : "fd-lsp";
+        const binPath = path.join(context.extensionPath, "bin", binName);
+
+        const result = spawnSync(binPath, ["--format"], {
+          input: document.getText(),
+          encoding: "utf8",
+          timeout: 5000,
+        });
+
+        if (result.error || result.status !== 0) {
+          // Don't mutate the document on failure — silently return no edits
+          return [];
+        }
+
+        const formatted: string = result.stdout as string;
+        if (!formatted || formatted === document.getText()) {
+          return [];
+        }
+
+        // Replace the entire document with the formatted text
+        const fullRange = new vscode.Range(
+          document.positionAt(0),
+          document.positionAt(document.getText().length)
+        );
+        return [vscode.TextEdit.replace(fullRange, formatted)];
+      },
     })
   );
 }

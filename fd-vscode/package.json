@@ -211,6 +211,16 @@
     "package": "vsce package --no-dependencies",
     "publish": "vsce publish --no-dependencies"
   },
+  "files": [
+    "out/**",
+    "webview/**",
+    "syntaxes/**",
+    "language-configuration.json",
+    "icon.png",
+    "readme.md",
+    "changelog.md",
+    "bin/**"
+  ],
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",

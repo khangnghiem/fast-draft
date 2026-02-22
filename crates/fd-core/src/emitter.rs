@@ -189,6 +189,10 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         indent(out, depth + 1);
         writeln!(out, "opacity: {}", format_num(opacity)).unwrap();
     }
+    if let Some(ref label) = node.style.label {
+        indent(out, depth + 1);
+        writeln!(out, "label: \"{label}\"").unwrap();
+    }
 
     // Children
     let children = graph.children(idx);
