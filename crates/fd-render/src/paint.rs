@@ -7,7 +7,10 @@ use fd_core::NodeIndex;
 use fd_core::ResolvedBounds;
 use fd_core::SceneGraph;
 use fd_core::model::{NodeKind, Paint, PathCmd, StrokeCap, StrokeJoin, Style};
-use kurbo::{Affine, BezPath, Cap, Ellipse as KurboEllipse, Join, Point, Rect, RoundedRect, Stroke as KurboStroke};
+use kurbo::{
+    Affine, BezPath, Cap, Ellipse as KurboEllipse, Join, Point, Rect, RoundedRect,
+    Stroke as KurboStroke,
+};
 use peniko::{Color, Fill};
 use std::collections::HashMap;
 use vello::Scene;
@@ -16,7 +19,11 @@ use vello::Scene;
 ///
 /// Call once per frame with a freshly-cleared `Scene`.
 /// The caller presents the scene via wgpu.
-pub fn paint_scene(scene: &mut Scene, graph: &SceneGraph, bounds: &HashMap<NodeIndex, ResolvedBounds>) {
+pub fn paint_scene(
+    scene: &mut Scene,
+    graph: &SceneGraph,
+    bounds: &HashMap<NodeIndex, ResolvedBounds>,
+) {
     paint_node(scene, graph, graph.root, bounds);
 }
 
@@ -75,9 +82,7 @@ fn paint_rect(scene: &mut Scene, nb: &ResolvedBounds, style: &Style) {
         (nb.x + nb.width) as f64,
         (nb.y + nb.height) as f64,
     );
-    let shape: RoundedRect = kurbo_rect.to_rounded_rect(
-        style.corner_radius.unwrap_or(0.0) as f64,
-    );
+    let shape: RoundedRect = kurbo_rect.to_rounded_rect(style.corner_radius.unwrap_or(0.0) as f64);
     fill_shape(scene, &shape, style);
     stroke_shape(scene, &shape, style);
 }
@@ -158,11 +163,21 @@ fn map_cap(cap: StrokeCap) -> Cap {
 fn paint_to_color(paint: &Paint, opacity: Option<f32>) -> Color {
     let alpha = opacity.unwrap_or(1.0).clamp(0.0, 1.0);
     match paint {
-        Paint::Solid(c) => Color::from_rgba8(c.r, c.g, c.b, (c.a as f32 * alpha) as u8),
+        Paint::Solid(c) => Color::from_rgba8(
+            (c.r * 255.0) as u8,
+            (c.g * 255.0) as u8,
+            (c.b * 255.0) as u8,
+            (c.a * alpha * 255.0) as u8,
+        ),
         Paint::LinearGradient { stops, .. } | Paint::RadialGradient { stops } => stops
             .first()
             .map(|s| {
-                Color::from_rgba8(s.color.r, s.color.g, s.color.b, (s.color.a as f32 * alpha) as u8)
+                Color::from_rgba8(
+                    (s.color.r * 255.0) as u8,
+                    (s.color.g * 255.0) as u8,
+                    (s.color.b * 255.0) as u8,
+                    (s.color.a * alpha * 255.0) as u8,
+                )
             })
             .unwrap_or(Color::from_rgb8(0, 0, 0)),
     }
