@@ -33,7 +33,7 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
-     * Delete the currently selected node. Returns true if a node was deleted.
+     * Delete the currently selected node(s). Returns true if any was deleted.
      * @returns {boolean}
      */
     delete_selected() {
@@ -41,7 +41,7 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
-     * Duplicate the currently selected node. Returns true if duplicated.
+     * Duplicate the currently selected node(s). Returns true if duplicated.
      * @returns {boolean}
      */
     duplicate_selected() {
@@ -70,6 +70,7 @@ export class FdCanvas {
     }
     /**
      * Get the currently selected node ID, or empty string if none.
+     * Returns the first selected node for backward compatibility.
      * @returns {string}
      */
     get_selected_id() {
@@ -77,6 +78,22 @@ export class FdCanvas {
         let deferred1_1;
         try {
             const ret = wasm.fdcanvas_get_selected_id(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Get all selected node IDs as a JSON array.
+     * @returns {string}
+     */
+    get_selected_ids() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_selected_ids(this.__wbg_ptr);
             deferred1_0 = ret[0];
             deferred1_1 = ret[1];
             return getStringFromWasm0(ret[0], ret[1]);
@@ -337,6 +354,13 @@ export class FdCanvas {
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.fdcanvas_set_text(this.__wbg_ptr, ptr0, len0);
         return ret !== 0;
+    }
+    /**
+     * Set the canvas theme.
+     * @param {boolean} is_dark
+     */
+    set_theme(is_dark) {
+        wasm.fdcanvas_set_theme(this.__wbg_ptr, is_dark);
     }
     /**
      * Switch the active tool, remembering the previous one.
