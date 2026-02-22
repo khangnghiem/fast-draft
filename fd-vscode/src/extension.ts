@@ -71,9 +71,31 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       }
     });
 
+    // ─── Text editor cursor → Canvas selection ──────────────────────
+    let suppressCursorSync = false;
+    const cursorSubscription =
+      vscode.window.onDidChangeTextEditorSelection(
+        (e: vscode.TextEditorSelectionChangeEvent) => {
+          if (suppressCursorSync) return;
+          // Only respond to the text editor for this document
+          if (e.textEditor.document.uri.toString() !== document.uri.toString()) return;
+          const line = e.textEditor.document.lineAt(
+            e.selections[0].active.line
+          ).text;
+          const nodeMatch = line.match(/@(\w+)/);
+          if (nodeMatch) {
+            webviewPanel.webview.postMessage({
+              type: "selectNode",
+              nodeId: nodeMatch[1],
+            });
+          }
+        }
+      );
+
     // Cleanup
     webviewPanel.onDidDispose(() => {
       changeDocumentSubscription.dispose();
+      cursorSubscription.dispose();
     });
   }
 

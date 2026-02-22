@@ -156,6 +156,22 @@ impl FdCanvas {
             .unwrap_or_default()
     }
 
+    /// Select a node by its ID (e.g. from text editor cursor).
+    /// Returns `true` if the node was found and selected.
+    pub fn select_by_id(&mut self, node_id: &str) -> bool {
+        if node_id.is_empty() {
+            self.select_tool.selected = None;
+            return true;
+        }
+        let id = NodeId::intern(node_id);
+        if self.engine.graph.get_by_id(id).is_some() {
+            self.select_tool.selected = Some(id);
+            true
+        } else {
+            false
+        }
+    }
+
     /// Undo the last action.
     pub fn undo(&mut self) -> bool {
         let result = self.commands.undo(&mut self.engine);

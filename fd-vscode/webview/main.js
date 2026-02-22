@@ -201,6 +201,13 @@ window.addEventListener("message", (event) => {
       suppressTextSync = false;
       break;
     }
+    case "selectNode": {
+      if (!fdCanvas) return;
+      if (fdCanvas.select_by_id(message.nodeId || "")) {
+        render();
+      }
+      break;
+    }
     case "toolChanged": {
       if (!fdCanvas) return;
       fdCanvas.set_tool(message.tool);
