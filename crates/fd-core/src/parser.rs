@@ -34,11 +34,19 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
                 rest = &rest[1..];
             }
         } else if rest.starts_with('@') {
-            let (node_id, constraint) = parse_constraint_line
-                .parse_next(&mut rest)
-                .map_err(|e| format!("Constraint parse error: {e}"))?;
-            if let Some(node) = graph.get_by_id_mut(node_id) {
-                node.constraints.push(constraint);
+            if is_generic_node_start(rest) {
+                let node_data = parse_node
+                    .parse_next(&mut rest)
+                    .map_err(|e| format!("Node parse error: {e}"))?;
+                let root = graph.root;
+                insert_node_recursive(&mut graph, root, node_data);
+            } else {
+                let (node_id, constraint) = parse_constraint_line
+                    .parse_next(&mut rest)
+                    .map_err(|e| format!("Constraint parse error: {e}"))?;
+                if let Some(node) = graph.get_by_id_mut(node_id) {
+                    node.constraints.push(constraint);
+                }
             }
         } else if rest.starts_with("edge ") {
             let edge = parse_edge_block
@@ -71,6 +79,21 @@ fn starts_with_node_keyword(s: &str) -> bool {
         || s.starts_with("ellipse")
         || s.starts_with("path")
         || s.starts_with("text")
+}
+
+/// Check if input starts with `@identifier` followed by whitespace then `{`.
+/// Distinguishes generic nodes (`@id { }`) from constraint lines (`@id -> ...`).
+fn is_generic_node_start(s: &str) -> bool {
+    let rest = match s.strip_prefix('@') {
+        Some(r) => r,
+        None => return false,
+    };
+    let after_id = rest.trim_start_matches(|c: char| c.is_alphanumeric() || c == '_');
+    // Must have consumed at least one identifier char
+    if after_id.len() == rest.len() {
+        return false;
+    }
+    after_id.trim_start().starts_with('{')
 }
 
 /// Internal representation during parsing before inserting into graph.
@@ -313,14 +336,19 @@ fn parse_font_value(input: &mut &str, style: &mut Style) -> ModalResult<()> {
 // ─── Node parser ─────────────────────────────────────────────────────────
 
 fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
-    let kind_str = alt((
-        "group".value("group"),
-        "rect".value("rect"),
-        "ellipse".value("ellipse"),
-        "path".value("path"),
-        "text".value("text"),
-    ))
-    .parse_next(input)?;
+    // Type keyword is optional — `@id { }` creates a Generic node
+    let kind_str = if input.starts_with('@') {
+        "generic"
+    } else {
+        alt((
+            "group".value("group"),
+            "rect".value("rect"),
+            "ellipse".value("ellipse"),
+            "path".value("path"),
+            "text".value("text"),
+        ))
+        .parse_next(input)?
+    };
 
     skip_space(input);
 
@@ -396,6 +424,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
         "path" => NodeKind::Path {
             commands: Vec::new(),
         },
+        "generic" => NodeKind::Generic,
         _ => unreachable!(),
     };
 
@@ -414,6 +443,10 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
 /// Check if the current position starts a child node keyword followed by
 /// a space, @, {, or " (not a property name that happens to start with a keyword).
 fn starts_with_child_node(input: &str) -> bool {
+    // Generic nodes start with @id {
+    if is_generic_node_start(input) {
+        return true;
+    }
     let keywords = &[
         ("group", 5),
         ("rect", 4),
@@ -663,12 +696,16 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<Edge> {
     let mut arrow = ArrowKind::None;
     let mut curve = CurveKind::Straight;
     let mut annotations = Vec::new();
+    let mut animations = Vec::new();
+    let mut flow = None;
 
     skip_ws_and_comments(input);
 
     while !input.starts_with('}') {
         if input.starts_with("##") {
             annotations.push(parse_annotation.parse_next(input)?);
+        } else if input.starts_with("anim") {
+            animations.push(parse_anim_block.parse_next(input)?);
         } else {
             let prop = parse_identifier.parse_next(input)?;
             skip_space(input);
@@ -724,6 +761,23 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<Edge> {
                 "opacity" => {
                     style.opacity = Some(parse_number.parse_next(input)?);
                 }
+                "flow" => {
+                    let kind_str = parse_identifier.parse_next(input)?;
+                    let kind = match kind_str {
+                        "pulse" => FlowKind::Pulse,
+                        "dash" => FlowKind::Dash,
+                        _ => FlowKind::Pulse,
+                    };
+                    skip_space(input);
+                    let dur = parse_number.parse_next(input).unwrap_or(800.0) as u32;
+                    if input.starts_with("ms") {
+                        *input = &input[2..];
+                    }
+                    flow = Some(FlowAnim {
+                        kind,
+                        duration_ms: dur,
+                    });
+                }
                 _ => {
                     let _ = take_till::<_, _, ContextError>(0.., |c: char| {
                         c == '\n' || c == ';' || c == '}'
@@ -758,6 +812,8 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<Edge> {
         arrow,
         curve,
         annotations,
+        animations: animations.into(),
+        flow,
     })
 }
 

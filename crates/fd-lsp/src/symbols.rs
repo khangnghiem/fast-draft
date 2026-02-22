@@ -41,6 +41,7 @@ pub fn compute_symbols(text: &str, graph: Option<&SceneGraph>) -> Vec<SymbolInfo
             if let Some(node) = graph.get_by_id(fd_core::NodeId::intern(id_str)) {
                 let kind_name = match &node.kind {
                     fd_core::NodeKind::Root => continue,
+                    fd_core::NodeKind::Generic => "",
                     fd_core::NodeKind::Group { .. } => "group",
                     fd_core::NodeKind::Rect { .. } => "rect",
                     fd_core::NodeKind::Ellipse { .. } => "ellipse",
@@ -51,7 +52,11 @@ pub fn compute_symbols(text: &str, graph: Option<&SceneGraph>) -> Vec<SymbolInfo
                 let line = text.lines().nth(*line_num).unwrap_or("");
 
                 symbols.push(SymbolInformation {
-                    name: format!("{} @{}", kind_name, id_str),
+                    name: if kind_name.is_empty() {
+                        format!("@{}", id_str)
+                    } else {
+                        format!("{} @{}", kind_name, id_str)
+                    },
                     kind: match kind_name {
                         "group" => SymbolKind::NAMESPACE,
                         "text" => SymbolKind::STRING,
@@ -82,6 +87,23 @@ fn find_node_lines(text: &str) -> Vec<(String, usize)> {
 
     for (i, line) in text.lines().enumerate() {
         let trimmed = line.trim();
+
+        // Generic node: line starts with @id {
+        if let Some(after_at) = trimmed.strip_prefix('@') {
+            let id: String = after_at
+                .chars()
+                .take_while(|c| c.is_alphanumeric() || *c == '_')
+                .collect();
+            if !id.is_empty() && !id.starts_with("_anon_") {
+                let rest = after_at[id.len()..].trim_start();
+                if rest.starts_with('{') {
+                    results.push((id, i));
+                    continue;
+                }
+            }
+        }
+
+        // Typed node: keyword @id {
         for keyword in &node_keywords {
             if trimmed.starts_with(keyword)
                 && let Some(at_pos) = trimmed.find('@')

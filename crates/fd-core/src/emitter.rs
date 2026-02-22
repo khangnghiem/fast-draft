@@ -81,6 +81,7 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
     // Node kind keyword + optional @id + optional inline text
     match &node.kind {
         NodeKind::Root => return,
+        NodeKind::Generic => write!(out, "@{}", node.id.as_str()).unwrap(),
         NodeKind::Group { .. } => write!(out, "group @{}", node.id.as_str()).unwrap(),
         NodeKind::Rect { .. } => write!(out, "rect @{}", node.id.as_str()).unwrap(),
         NodeKind::Ellipse { .. } => write!(out, "ellipse @{}", node.id.as_str()).unwrap(),
@@ -381,6 +382,20 @@ fn emit_edge(out: &mut String, edge: &Edge) {
             CurveKind::Step => "step",
         };
         writeln!(out, "  curve: {name}").unwrap();
+    }
+
+    // Flow animation
+    if let Some(ref flow) = edge.flow {
+        let kind = match flow.kind {
+            FlowKind::Pulse => "pulse",
+            FlowKind::Dash => "dash",
+        };
+        writeln!(out, "  flow: {} {}ms", kind, flow.duration_ms).unwrap();
+    }
+
+    // Trigger animations
+    for anim in &edge.animations {
+        emit_anim(out, anim, 1);
     }
 
     out.push_str("}\n");
@@ -766,5 +781,169 @@ edge @login_flow {
         let graph2 = parse_document(&output).expect("annotated edge roundtrip failed");
         let edge2 = &graph2.edges[0];
         assert_eq!(edge2.annotations, edge.annotations);
+    }
+
+    #[test]
+    fn roundtrip_generic_node() {
+        let input = r#"
+@login_btn {
+  ## "Primary CTA — triggers login API call"
+  ## accept: "disabled when fields empty"
+  ## status: in_progress
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let node = graph.get_by_id(NodeId::intern("login_btn")).unwrap();
+        assert!(matches!(node.kind, NodeKind::Generic));
+        assert_eq!(node.annotations.len(), 3);
+
+        let output = emit_document(&graph);
+        assert!(output.contains("@login_btn {"));
+        // Should NOT have a type prefix
+        assert!(!output.contains("rect @login_btn"));
+        assert!(!output.contains("group @login_btn"));
+
+        let graph2 = parse_document(&output).expect("re-parse of generic node failed");
+        let node2 = graph2.get_by_id(NodeId::intern("login_btn")).unwrap();
+        assert!(matches!(node2.kind, NodeKind::Generic));
+        assert_eq!(node2.annotations, node.annotations);
+    }
+
+    #[test]
+    fn roundtrip_generic_nested() {
+        let input = r#"
+group @form {
+  layout: column gap=16 pad=32
+
+  @email_input {
+    ## "Email field"
+    ## accept: "validates format on blur"
+  }
+
+  @password_input {
+    ## "Password field"
+    ## accept: "min 8 chars"
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let form_idx = graph.index_of(NodeId::intern("form")).unwrap();
+        assert_eq!(graph.children(form_idx).len(), 2);
+
+        let email = graph.get_by_id(NodeId::intern("email_input")).unwrap();
+        assert!(matches!(email.kind, NodeKind::Generic));
+        assert_eq!(email.annotations.len(), 2);
+
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of nested generic failed");
+        let email2 = graph2.get_by_id(NodeId::intern("email_input")).unwrap();
+        assert!(matches!(email2.kind, NodeKind::Generic));
+        assert_eq!(email2.annotations, email.annotations);
+    }
+
+    #[test]
+    fn parse_generic_with_properties() {
+        let input = r#"
+@card {
+  fill: #FFFFFF
+  corner: 8
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let card = graph.get_by_id(NodeId::intern("card")).unwrap();
+        assert!(matches!(card.kind, NodeKind::Generic));
+        assert!(card.style.fill.is_some());
+        assert_eq!(card.style.corner_radius, Some(8.0));
+    }
+
+    #[test]
+    fn roundtrip_edge_with_trigger_anim() {
+        let input = r#"
+rect @a { w: 50 h: 50 }
+rect @b { w: 50 h: 50 }
+
+edge @hover_edge {
+  from: @a
+  to: @b
+  stroke: #6C5CE7 2
+  arrow: end
+
+  anim :hover {
+    opacity: 0.5
+    ease: ease_out 200ms
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        assert_eq!(graph.edges.len(), 1);
+        let edge = &graph.edges[0];
+        assert_eq!(edge.animations.len(), 1);
+        assert_eq!(edge.animations[0].trigger, AnimTrigger::Hover);
+        assert_eq!(edge.animations[0].duration_ms, 200);
+
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("trigger anim roundtrip failed");
+        let edge2 = &graph2.edges[0];
+        assert_eq!(edge2.animations.len(), 1);
+        assert_eq!(edge2.animations[0].trigger, AnimTrigger::Hover);
+    }
+
+    #[test]
+    fn roundtrip_edge_with_flow() {
+        let input = r#"
+rect @src { w: 50 h: 50 }
+rect @dst { w: 50 h: 50 }
+
+edge @data {
+  from: @src
+  to: @dst
+  arrow: end
+  flow: pulse 800ms
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let edge = &graph.edges[0];
+        assert!(edge.flow.is_some());
+        let flow = edge.flow.unwrap();
+        assert_eq!(flow.kind, FlowKind::Pulse);
+        assert_eq!(flow.duration_ms, 800);
+
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("flow roundtrip failed");
+        let edge2 = &graph2.edges[0];
+        let flow2 = edge2.flow.unwrap();
+        assert_eq!(flow2.kind, FlowKind::Pulse);
+        assert_eq!(flow2.duration_ms, 800);
+    }
+
+    #[test]
+    fn roundtrip_edge_dash_flow() {
+        let input = r#"
+rect @x { w: 50 h: 50 }
+rect @y { w: 50 h: 50 }
+
+edge @dashed {
+  from: @x
+  to: @y
+  stroke: #EF4444 1
+  flow: dash 400ms
+  arrow: both
+  curve: step
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let edge = &graph.edges[0];
+        let flow = edge.flow.unwrap();
+        assert_eq!(flow.kind, FlowKind::Dash);
+        assert_eq!(flow.duration_ms, 400);
+        assert_eq!(edge.arrow, ArrowKind::Both);
+        assert_eq!(edge.curve, CurveKind::Step);
+
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("dash flow roundtrip failed");
+        let edge2 = &graph2.edges[0];
+        let flow2 = edge2.flow.unwrap();
+        assert_eq!(flow2.kind, FlowKind::Dash);
+        assert_eq!(flow2.duration_ms, 400);
     }
 }

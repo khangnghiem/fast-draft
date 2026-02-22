@@ -176,6 +176,7 @@ fn intrinsic_size(node: &SceneNode) -> (f32, f32) {
         }
         NodeKind::Group { .. } => (200.0, 200.0), // Groups size to content eventually
         NodeKind::Path { .. } => (100.0, 100.0),  // Computed from path bounds
+        NodeKind::Generic => (120.0, 40.0),       // Placeholder label box
         NodeKind::Root => (0.0, 0.0),
     }
 }

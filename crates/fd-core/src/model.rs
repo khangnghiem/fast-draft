@@ -311,6 +311,24 @@ pub struct Edge {
     pub arrow: ArrowKind,
     pub curve: CurveKind,
     pub annotations: Vec<Annotation>,
+    pub animations: SmallVec<[AnimKeyframe; 2]>,
+    pub flow: Option<FlowAnim>,
+}
+
+/// Flow animation kind — continuous motion along the edge path.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FlowKind {
+    /// A glowing dot traveling from → to on a loop.
+    Pulse,
+    /// Marching dashes along the edge (stroke-dashoffset animation).
+    Dash,
+}
+
+/// A flow animation attached to an edge.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct FlowAnim {
+    pub kind: FlowKind,
+    pub duration_ms: u32,
 }
 
 /// Group layout mode (for children arrangement).
@@ -334,6 +352,10 @@ pub enum LayoutMode {
 pub enum NodeKind {
     /// Root of the document.
     Root,
+
+    /// Generic placeholder — no visual shape assigned yet.
+    /// Used for spec-only nodes: `@login_btn { ## "CTA" }`
+    Generic,
 
     /// Group / frame — contains children.
     Group { layout: LayoutMode },
