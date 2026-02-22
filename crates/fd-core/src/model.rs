@@ -517,8 +517,8 @@ impl SceneGraph {
         self.styles.insert(name, style);
     }
 
-    /// Resolve a node's effective style (merging `use` references + inline overrides).
-    pub fn resolve_style(&self, node: &SceneNode) -> Style {
+    /// Resolve a node's effective style (merging `use` references + inline overrides + active animations).
+    pub fn resolve_style(&self, node: &SceneNode, active_triggers: &[AnimTrigger]) -> Style {
         let mut resolved = Style::default();
 
         // Apply referenced styles in order
@@ -530,6 +530,18 @@ impl SceneGraph {
 
         // Apply inline overrides (take precedence)
         merge_style(&mut resolved, &node.style);
+
+        // Apply active animation state overrides
+        for anim in &node.animations {
+            if active_triggers.contains(&anim.trigger) {
+                if anim.properties.fill.is_some() {
+                    resolved.fill = anim.properties.fill.clone();
+                }
+                if anim.properties.opacity.is_some() {
+                    resolved.opacity = anim.properties.opacity;
+                }
+            }
+        }
 
         resolved
     }
@@ -543,8 +555,8 @@ impl SceneGraph {
         }
     }
 
-    /// Resolve an edge's effective style (merging `use` references + inline overrides).
-    pub fn resolve_style_for_edge(&self, edge: &Edge) -> Style {
+    /// Resolve an edge's effective style (merging `use` references + inline overrides + active animations).
+    pub fn resolve_style_for_edge(&self, edge: &Edge, active_triggers: &[AnimTrigger]) -> Style {
         let mut resolved = Style::default();
         for style_id in &edge.use_styles {
             if let Some(base) = self.styles.get(style_id) {
@@ -552,6 +564,18 @@ impl SceneGraph {
             }
         }
         merge_style(&mut resolved, &edge.style);
+
+        for anim in &edge.animations {
+            if active_triggers.contains(&anim.trigger) {
+                if anim.properties.fill.is_some() {
+                    resolved.fill = anim.properties.fill.clone();
+                }
+                if anim.properties.opacity.is_some() {
+                    resolved.opacity = anim.properties.opacity;
+                }
+            }
+        }
+
         resolved
     }
 }
@@ -676,7 +700,7 @@ mod tests {
             size: 24.0,
         });
 
-        let resolved = sg.resolve_style(&node);
+        let resolved = sg.resolve_style(&node, &[]);
         // Fill comes from base style
         assert!(resolved.fill.is_some());
         // Font comes from inline override
