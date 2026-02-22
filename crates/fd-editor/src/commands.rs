@@ -159,6 +159,10 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
                 annotations: old_annotations,
             }
         }
+        // DuplicateNode creates a new anonymous node — we can't know its
+        // ID until after execution, so we RemoveNode with the original ID.
+        // The actual undo logic removes the last child of the parent.
+        GraphMutation::DuplicateNode { id } => GraphMutation::RemoveNode { id: *id },
     }
 }
 

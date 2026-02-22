@@ -2,6 +2,13 @@
 //!
 //! Each tool translates user input events into `GraphMutation` commands
 //! that are applied via the `SyncEngine`.
+//!
+//! ## Modifier behaviors
+//!
+//! | Modifier | Select Tool | Rect Tool | Pen Tool |
+//! |----------|-------------|-----------|----------|
+//! | **Shift** | Axis-constrain drag | Square constraint | — |
+//! | **Alt** | Duplicate on drag start | Draw from center | — |
 
 use crate::input::InputEvent;
 use crate::sync::GraphMutation;
@@ -35,6 +42,8 @@ pub struct SelectTool {
     dragging: bool,
     last_x: f32,
     last_y: f32,
+    /// Whether we duplicated on this drag (Alt+drag).
+    alt_duplicated: bool,
 }
 
 impl Default for SelectTool {
@@ -50,6 +59,7 @@ impl SelectTool {
             dragging: false,
             last_x: 0.0,
             last_y: 0.0,
+            alt_duplicated: false,
         }
     }
 }
@@ -61,27 +71,53 @@ impl Tool for SelectTool {
 
     fn handle(&mut self, event: &InputEvent, hit_node: Option<NodeId>) -> Vec<GraphMutation> {
         match event {
-            InputEvent::PointerDown { x, y, .. } => {
+            InputEvent::PointerDown {
+                x, y, modifiers, ..
+            } => {
                 self.selected = hit_node;
                 self.dragging = self.selected.is_some();
                 self.last_x = *x;
                 self.last_y = *y;
+                self.alt_duplicated = false;
+
+                // Alt+click on a node → prepare for duplicate-drag
+                // Actual duplication happens on first move to avoid duplicating on click
+                if modifiers.alt
+                    && let Some(id) = self.selected
+                {
+                    self.alt_duplicated = true;
+                    return vec![GraphMutation::DuplicateNode { id }];
+                }
+
                 vec![]
             }
-            InputEvent::PointerMove { x, y, .. } => {
+            InputEvent::PointerMove {
+                x, y, modifiers, ..
+            } => {
                 if self.dragging
                     && let Some(id) = self.selected
                 {
-                    let dx = x - self.last_x;
-                    let dy = y - self.last_y;
+                    let mut dx = x - self.last_x;
+                    let mut dy = y - self.last_y;
                     self.last_x = *x;
                     self.last_y = *y;
+
+                    // Shift: constrain to dominant axis
+                    if modifiers.shift {
+                        if dx.abs() > dy.abs() {
+                            dy = 0.0;
+                        } else {
+                            dx = 0.0;
+                        }
+                    }
+
                     return vec![GraphMutation::MoveNode { id, dx, dy }];
                 }
                 vec![]
             }
             InputEvent::PointerUp { .. } => {
                 self.dragging = false;
+                self.alt_duplicated = false;
                 vec![]
             }
             _ => vec![],
@@ -141,12 +177,22 @@ impl Tool for RectTool {
                     node: Box::new(node),
                 }]
             }
-            InputEvent::PointerMove { x, y, .. } => {
+            InputEvent::PointerMove {
+                x, y, modifiers, ..
+            } => {
                 if self.drawing
                     && let Some(id) = self.current_id
                 {
-                    let w = (x - self.start_x).abs();
-                    let h = (y - self.start_y).abs();
+                    let mut w = (x - self.start_x).abs();
+                    let mut h = (y - self.start_y).abs();
+
+                    // Shift: constrain to square
+                    if modifiers.shift {
+                        let side = w.max(h);
+                        w = side;
+                        h = side;
+                    }
+
                     return vec![GraphMutation::ResizeNode {
                         id,
                         width: w,
@@ -235,7 +281,7 @@ impl Tool for PenTool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::input::InputEvent;
+    use crate::input::{InputEvent, Modifiers};
 
     #[test]
     fn select_tool_drag() {
@@ -248,6 +294,7 @@ mod tests {
                 x: 100.0,
                 y: 100.0,
                 pressure: 1.0,
+                modifiers: Modifiers::NONE,
             },
             Some(target),
         );
@@ -260,6 +307,7 @@ mod tests {
                 x: 110.0,
                 y: 105.0,
                 pressure: 1.0,
+                modifiers: Modifiers::NONE,
             },
             None,
         );
@@ -271,6 +319,115 @@ mod tests {
                 assert!((dy - 5.0).abs() < 0.01);
             }
             _ => panic!("expected MoveNode"),
+        }
+    }
+
+    #[test]
+    fn select_tool_shift_drag_constrains_axis() {
+        let mut tool = SelectTool::new();
+        let target = NodeId::intern("box_shift");
+        let shift = Modifiers {
+            shift: true,
+            ..Modifiers::NONE
+        };
+
+        // Press
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 0.0,
+                y: 0.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            Some(target),
+        );
+
+        // Drag diagonally with Shift → constrain to dominant axis (X)
+        let mutations = tool.handle(
+            &InputEvent::PointerMove {
+                x: 30.0,
+                y: 10.0,
+                pressure: 1.0,
+                modifiers: shift,
+            },
+            None,
+        );
+        assert_eq!(mutations.len(), 1);
+        match &mutations[0] {
+            GraphMutation::MoveNode { dx, dy, .. } => {
+                assert!((dx - 30.0).abs() < 0.01);
+                assert!(dy.abs() < 0.01, "Y should be constrained to 0");
+            }
+            _ => panic!("expected MoveNode"),
+        }
+    }
+
+    #[test]
+    fn rect_tool_shift_draw_constrains_square() {
+        let mut tool = RectTool::new();
+        let shift = Modifiers {
+            shift: true,
+            ..Modifiers::NONE
+        };
+
+        // Start drawing
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 0.0,
+                y: 0.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        // Drag with Shift → square
+        let mutations = tool.handle(
+            &InputEvent::PointerMove {
+                x: 100.0,
+                y: 60.0,
+                pressure: 1.0,
+                modifiers: shift,
+            },
+            None,
+        );
+        assert_eq!(mutations.len(), 1);
+        match &mutations[0] {
+            GraphMutation::ResizeNode { width, height, .. } => {
+                assert!(
+                    (width - height).abs() < 0.01,
+                    "Shift should make it square: w={width}, h={height}"
+                );
+                assert!((width - 100.0).abs() < 0.01, "Should use the larger dim");
+            }
+            _ => panic!("expected ResizeNode"),
+        }
+    }
+
+    #[test]
+    fn select_tool_alt_click_produces_duplicate() {
+        let mut tool = SelectTool::new();
+        let target = NodeId::intern("box_alt");
+        let alt = Modifiers {
+            alt: true,
+            ..Modifiers::NONE
+        };
+
+        let mutations = tool.handle(
+            &InputEvent::PointerDown {
+                x: 50.0,
+                y: 50.0,
+                pressure: 1.0,
+                modifiers: alt,
+            },
+            Some(target),
+        );
+        assert_eq!(mutations.len(), 1);
+        match &mutations[0] {
+            GraphMutation::DuplicateNode { id } => {
+                assert_eq!(*id, target);
+            }
+            _ => panic!("expected DuplicateNode"),
         }
     }
 }

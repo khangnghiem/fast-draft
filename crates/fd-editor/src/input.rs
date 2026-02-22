@@ -3,6 +3,29 @@
 //! Normalizes mouse, touch, and stylus (Apple Pencil Pro) events
 //! into a unified `InputEvent` enum consumed by tools.
 
+/// Keyboard modifier state captured alongside any input event.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Modifiers {
+    pub shift: bool,
+    pub ctrl: bool,
+    pub alt: bool,
+    pub meta: bool,
+}
+
+impl Modifiers {
+    pub const NONE: Self = Self {
+        shift: false,
+        ctrl: false,
+        alt: false,
+        meta: false,
+    };
+
+    /// True if the platform "command" key is held (Cmd on macOS, Ctrl elsewhere).
+    pub fn cmd(&self) -> bool {
+        self.ctrl || self.meta
+    }
+}
+
 /// A normalized input event from any pointing device.
 #[derive(Debug, Clone)]
 pub enum InputEvent {
@@ -12,13 +35,23 @@ pub enum InputEvent {
         y: f32,
         /// Pressure from 0.0 (none) to 1.0 (max). Mouse is always 1.0.
         pressure: f32,
+        modifiers: Modifiers,
     },
 
     /// Pointer moved (mouse move, touch move, pencil move).
-    PointerMove { x: f32, y: f32, pressure: f32 },
+    PointerMove {
+        x: f32,
+        y: f32,
+        pressure: f32,
+        modifiers: Modifiers,
+    },
 
     /// Pointer released.
-    PointerUp { x: f32, y: f32 },
+    PointerUp {
+        x: f32,
+        y: f32,
+        modifiers: Modifiers,
+    },
 
     /// Scroll / pinch-zoom.
     Scroll {
@@ -41,6 +74,7 @@ pub enum InputEvent {
     StylusGesture {
         gesture: StylusGestureKind,
         stylus: StylusData,
+        modifiers: Modifiers,
     },
 }
 
@@ -72,16 +106,26 @@ pub struct StylusData {
 impl InputEvent {
     /// Create a PointerDown from a web PointerEvent.
     /// (Used when bridging from JS via wasm-bindgen.)
-    pub fn from_pointer_down(x: f32, y: f32, pressure: f32) -> Self {
-        Self::PointerDown { x, y, pressure }
+    pub fn from_pointer_down(x: f32, y: f32, pressure: f32, modifiers: Modifiers) -> Self {
+        Self::PointerDown {
+            x,
+            y,
+            pressure,
+            modifiers,
+        }
     }
 
-    pub fn from_pointer_move(x: f32, y: f32, pressure: f32) -> Self {
-        Self::PointerMove { x, y, pressure }
+    pub fn from_pointer_move(x: f32, y: f32, pressure: f32, modifiers: Modifiers) -> Self {
+        Self::PointerMove {
+            x,
+            y,
+            pressure,
+            modifiers,
+        }
     }
 
-    pub fn from_pointer_up(x: f32, y: f32) -> Self {
-        Self::PointerUp { x, y }
+    pub fn from_pointer_up(x: f32, y: f32, modifiers: Modifiers) -> Self {
+        Self::PointerUp { x, y, modifiers }
     }
 
     /// Create a Key event from JS keyboard event fields.
@@ -100,8 +144,31 @@ impl InputEvent {
         match self {
             Self::PointerDown { x, y, .. }
             | Self::PointerMove { x, y, .. }
-            | Self::PointerUp { x, y } => Some((*x, *y)),
+            | Self::PointerUp { x, y, .. } => Some((*x, *y)),
             _ => None,
+        }
+    }
+
+    /// Extract modifiers if this is a pointer or stylus event.
+    pub fn modifiers(&self) -> Modifiers {
+        match self {
+            Self::PointerDown { modifiers, .. }
+            | Self::PointerMove { modifiers, .. }
+            | Self::PointerUp { modifiers, .. }
+            | Self::StylusGesture { modifiers, .. } => *modifiers,
+            Self::Key {
+                ctrl,
+                shift,
+                alt,
+                meta,
+                ..
+            } => Modifiers {
+                ctrl: *ctrl,
+                shift: *shift,
+                alt: *alt,
+                meta: *meta,
+            },
+            _ => Modifiers::NONE,
         }
     }
 }
