@@ -82,8 +82,8 @@ async function main() {
       fdCanvas.set_text(window.initialText);
     }
 
-    // Initial render
-    render();
+    // Start animation loop (covers flow animation + initial render)
+    startAnimLoop();
 
     // Hide loading overlay
     if (loading) loading.style.display = "none";
@@ -118,8 +118,29 @@ function render() {
   const dpr = window.devicePixelRatio || 1;
   ctx.save();
   ctx.setTransform(dpr, 0, 0, dpr, panX * dpr, panY * dpr);
-  fdCanvas.render(ctx);
+  fdCanvas.render(ctx, performance.now());
   ctx.restore();
+}
+
+/** Animation loop ID for flow animations (pulse/dash edges). */
+let animFrameId = null;
+
+/** Start the animation loop for continuous flow animation rendering. */
+function startAnimLoop() {
+  if (animFrameId !== null) return; // already running
+  function loop() {
+    render();
+    animFrameId = requestAnimationFrame(loop);
+  }
+  animFrameId = requestAnimationFrame(loop);
+}
+
+/** Stop the animation loop (e.g. when canvas is hidden). */
+function stopAnimLoop() {
+  if (animFrameId !== null) {
+    cancelAnimationFrame(animFrameId);
+    animFrameId = null;
+  }
 }
 
 // ─── Pointer Events ──────────────────────────────────────────────────────

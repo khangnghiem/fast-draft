@@ -55,6 +55,7 @@ pub fn render_scene(
     selected_ids: &[String],
     theme: &CanvasTheme,
     marquee_rect: Option<(f32, f32, f32, f32)>,
+    time_ms: f64,
 ) {
     // Clear canvas
     ctx.set_fill_style_str(theme.bg);
@@ -67,7 +68,7 @@ pub fn render_scene(
     render_node(ctx, graph, graph.root, bounds, selected_ids, theme);
 
     // Draw edges between nodes
-    draw_edges(ctx, graph, bounds);
+    draw_edges(ctx, graph, bounds, time_ms);
 
     // Draw marquee selection rectangle (on top of everything)
     if let Some((rx, ry, rw, rh)) = marquee_rect {
@@ -539,6 +540,7 @@ fn draw_edges(
     ctx: &CanvasRenderingContext2d,
     graph: &SceneGraph,
     bounds: &HashMap<NodeIndex, ResolvedBounds>,
+    time_ms: f64,
 ) {
     use fd_core::model::{ArrowKind, CurveKind};
 
@@ -609,6 +611,11 @@ fn draw_edges(
             draw_arrowhead(ctx, x2, y2, x1, y1, &stroke_color, stroke_width);
         }
 
+        // Flow animation (pulse dot or marching dashes)
+        if let Some(ref flow) = edge.flow {
+            draw_flow_animation(ctx, x1, y1, x2, y2, flow, &stroke_color, time_ms);
+        }
+
         // Label at midpoint
         if let Some(ref label) = edge.label {
             let mx = ((x1 + x2) / 2.0) as f64;
@@ -621,6 +628,71 @@ fn draw_edges(
         }
 
         ctx.restore();
+    }
+}
+
+/// Draw a flow animation (pulse dot or marching dashes) along a straight edge segment.
+///
+/// `phase` ∈ [0, 1) driven by `time_ms / duration_ms mod 1`.
+#[allow(clippy::too_many_arguments)]
+fn draw_flow_animation(
+    ctx: &CanvasRenderingContext2d,
+    x1: f32,
+    y1: f32,
+    x2: f32,
+    y2: f32,
+    flow: &fd_core::model::FlowAnim,
+    color: &str,
+    time_ms: f64,
+) {
+    use fd_core::model::FlowKind;
+
+    let dur = flow.duration_ms.max(1) as f64;
+    let phase = (time_ms % dur) / dur; // 0.0 → 1.0 per cycle
+
+    let x1d = x1 as f64;
+    let y1d = y1 as f64;
+    let x2d = x2 as f64;
+    let y2d = y2 as f64;
+
+    match flow.kind {
+        FlowKind::Pulse => {
+            // A single dot travelling from source to target
+            let px = x1d + (x2d - x1d) * phase;
+            let py = y1d + (y2d - y1d) * phase;
+            ctx.save();
+            ctx.begin_path();
+            ctx.set_fill_style_str(color);
+            ctx.arc(px, py, 4.5, 0.0, std::f64::consts::TAU)
+                .unwrap_or(());
+            ctx.fill();
+            ctx.restore();
+        }
+        FlowKind::Dash => {
+            // Marching dashes: offset the dash pattern by `phase * pattern_len`
+            let dash_len = 12.0_f64;
+            let gap_len = 6.0_f64;
+            let pattern_len = dash_len + gap_len;
+            let offset = phase * pattern_len;
+
+            ctx.save();
+            ctx.set_stroke_style_str(color);
+            ctx.set_line_width(2.5);
+            let arr = js_sys::Array::of2(
+                &wasm_bindgen::JsValue::from_f64(dash_len),
+                &wasm_bindgen::JsValue::from_f64(gap_len),
+            );
+            let _ = ctx.set_line_dash(&arr);
+            ctx.set_line_dash_offset(-offset);
+            ctx.begin_path();
+            ctx.move_to(x1d, y1d);
+            ctx.line_to(x2d, y2d);
+            ctx.stroke();
+            // Reset dash
+            let _ = ctx.set_line_dash(&js_sys::Array::new());
+            ctx.set_line_dash_offset(0.0);
+            ctx.restore();
+        }
     }
 }
 

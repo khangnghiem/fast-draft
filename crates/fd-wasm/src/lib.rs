@@ -87,7 +87,7 @@ impl FdCanvas {
     }
 
     /// Render the scene to a Canvas2D context.
-    pub fn render(&self, ctx: &CanvasRenderingContext2d) {
+    pub fn render(&self, ctx: &CanvasRenderingContext2d, time_ms: f64) {
         let selected_ids: Vec<String> = self
             .select_tool
             .selected
@@ -108,6 +108,7 @@ impl FdCanvas {
             &selected_ids,
             &theme,
             self.select_tool.marquee_rect,
+            time_ms,
         );
     }
 
