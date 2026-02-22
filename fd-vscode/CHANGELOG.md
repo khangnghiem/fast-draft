@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.13] — 2026-02-22
+
+### Added
+
+- **Edge flow animations**: Unlocks R5.8 requirement `flow:` properties on edges (`flow: pulse Nms` and `flow: dash Nms`). Pulse renders a traveling dot from start to finish. Dash renders marching dashes along the stroke. Driven by real-time `requestAnimationFrame` loop in the Webview.
+
+## [0.6.12] — 2026-02-22
+
+### Fixed
+
+- **Command stack undo tests**: Added 5 comprehensive integration tests covering `ResizeNode`, `SetStyle`, redo stack eviction logic, and max depth capping for the frontend `SyncEngine` transaction system. 146 workspace tests passing.
+
 ## [0.6.11] — 2026-02-22
 
 ### Fixed
