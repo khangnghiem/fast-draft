@@ -75,6 +75,9 @@ async function main() {
     setupToolbar();
     setupAnnotationCard();
     setupContextMenu();
+    setupPropertiesPanel();
+    setupDragAndDrop();
+    setupHelpButton();
 
     // Tell extension we're ready
     vscode.postMessage({ type: "ready" });
@@ -161,6 +164,8 @@ function setupPointerEvents() {
       syncTextToExtension();
     }
     canvas.releasePointerCapture(e.pointerId);
+    // Update properties panel after interaction ends
+    updatePropertiesPanel();
   });
 }
 
@@ -193,11 +198,11 @@ function setupResizeObserver(container) {
 // ─── Toolbar ─────────────────────────────────────────────────────────────
 
 function setupToolbar() {
-  document.querySelectorAll(".tool-btn").forEach((btn) => {
+  document.querySelectorAll(".tool-btn[data-tool]").forEach((btn) => {
     btn.addEventListener("click", () => {
       // Update active state
       document
-        .querySelectorAll(".tool-btn")
+        .querySelectorAll(".tool-btn[data-tool]")
         .forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
 
@@ -205,6 +210,7 @@ function setupToolbar() {
       const tool = btn.getAttribute("data-tool");
       if (fdCanvas && tool) {
         fdCanvas.set_tool(tool);
+        updateCanvasCursor(tool);
       }
     });
   });
@@ -326,6 +332,11 @@ document.addEventListener("keydown", (e) => {
       toggleShortcutHelp();
       break;
   }
+
+  // Update cursor when tool changes via shortcut
+  if (result.toolSwitched) {
+    updateCanvasCursor(result.tool);
+  }
 });
 
 /** Whether we're holding ⌘ for temporary hand tool (Screenbrush-style) */
@@ -369,9 +380,15 @@ canvas.addEventListener("pointerdown", (e) => {
 });
 
 function updateToolbarActive(tool) {
-  document.querySelectorAll(".tool-btn").forEach((btn) => {
+  document.querySelectorAll(".tool-btn[data-tool]").forEach((btn) => {
     btn.classList.toggle("active", btn.getAttribute("data-tool") === tool);
   });
+  updateCanvasCursor(tool);
+}
+
+function updateCanvasCursor(tool) {
+  canvas.className = canvas.className.replace(/tool-\w+/g, "").trim();
+  canvas.classList.add(`tool-${tool || "select"}`);
 }
 
 // ─── Shortcut Help Overlay ───────────────────────────────────────────────
@@ -715,6 +732,181 @@ function setupContextMenu() {
 function closeContextMenu() {
   document.getElementById("context-menu").classList.remove("visible");
   contextMenuNodeId = null;
+}
+
+// ─── Properties Panel ────────────────────────────────────────────────────
+
+let propsSuppressSync = false;
+
+function setupPropertiesPanel() {
+  const fields = [
+    { id: "prop-fill", key: "fill" },
+    { id: "prop-stroke-color", key: "strokeColor" },
+    { id: "prop-stroke-w", key: "strokeWidth" },
+    { id: "prop-corner", key: "cornerRadius" },
+    { id: "prop-w", key: "width" },
+    { id: "prop-h", key: "height" },
+    { id: "prop-text-content", key: "content" },
+  ];
+
+  let debounceTimer = null;
+
+  for (const { id, key } of fields) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.addEventListener("input", () => {
+      if (propsSuppressSync || !fdCanvas) return;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        const changed = fdCanvas.set_node_prop(key, el.value);
+        if (changed) {
+          render();
+          syncTextToExtension();
+        }
+      }, 100);
+    });
+  }
+
+  // Opacity slider
+  const opacitySlider = document.getElementById("prop-opacity");
+  const opacityVal = document.getElementById("prop-opacity-val");
+  if (opacitySlider) {
+    opacitySlider.addEventListener("input", () => {
+      if (propsSuppressSync || !fdCanvas) return;
+      const v = parseFloat(opacitySlider.value);
+      if (opacityVal) opacityVal.textContent = Math.round(v * 100) + "%";
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        const changed = fdCanvas.set_node_prop("opacity", String(v));
+        if (changed) {
+          render();
+          syncTextToExtension();
+        }
+      }, 100);
+    });
+  }
+}
+
+function updatePropertiesPanel() {
+  if (!fdCanvas) return;
+  const json = fdCanvas.get_selected_node_props();
+  const props = JSON.parse(json);
+  const panel = document.getElementById("props-panel");
+
+  if (!props.id) {
+    panel.classList.remove("visible");
+    return;
+  }
+
+  propsSuppressSync = true;
+  panel.classList.add("visible");
+
+  // Title
+  document.getElementById("props-node-id").textContent = `@${props.id}`;
+  document.getElementById("props-kind").textContent = props.kind || "";
+
+  // Position & Size
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val !== undefined ? Math.round(val) : "";
+  };
+  setVal("prop-x", props.x);
+  setVal("prop-y", props.y);
+  setVal("prop-w", props.width);
+  setVal("prop-h", props.height);
+
+  // Fill color
+  const fillEl = document.getElementById("prop-fill");
+  if (fillEl && props.fill) {
+    // Ensure 6-digit hex for color input
+    let hex = props.fill;
+    if (hex.length === 4) hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+    fillEl.value = hex.substring(0, 7);
+  }
+
+  // Stroke
+  const strokeEl = document.getElementById("prop-stroke-color");
+  if (strokeEl && props.strokeColor) {
+    let hex = props.strokeColor;
+    if (hex.length === 4) hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+    strokeEl.value = hex.substring(0, 7);
+  }
+  setVal("prop-stroke-w", props.strokeWidth);
+
+  // Corner radius
+  setVal("prop-corner", props.cornerRadius);
+
+  // Opacity
+  const opacitySlider = document.getElementById("prop-opacity");
+  const opacityVal = document.getElementById("prop-opacity-val");
+  const opacity = props.opacity !== undefined ? props.opacity : 1;
+  if (opacitySlider) opacitySlider.value = opacity;
+  if (opacityVal) opacityVal.textContent = Math.round(opacity * 100) + "%";
+
+  // Text content
+  const textSection = document.getElementById("props-text-section");
+  const textInput = document.getElementById("prop-text-content");
+  if (props.kind === "text") {
+    textSection.style.display = "";
+    if (textInput) textInput.value = props.content || "";
+  } else {
+    textSection.style.display = "none";
+  }
+
+  // Show/hide appearance section based on kind
+  const appearance = document.getElementById("props-appearance");
+  if (appearance) {
+    appearance.style.display = (props.kind === "root" || props.kind === "group") ? "none" : "";
+  }
+
+  propsSuppressSync = false;
+}
+
+// ─── Drag & Drop ─────────────────────────────────────────────────────────
+
+function setupDragAndDrop() {
+  // Palette items
+  document.querySelectorAll(".palette-item[data-shape]").forEach((item) => {
+    item.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", item.getAttribute("data-shape"));
+      e.dataTransfer.effectAllowed = "copy";
+    });
+  });
+
+  // Canvas drop target
+  canvas.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  });
+
+  canvas.addEventListener("drop", (e) => {
+    e.preventDefault();
+    if (!fdCanvas) return;
+    const shape = e.dataTransfer.getData("text/plain");
+    if (!shape) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const changed = fdCanvas.create_node_at(shape, x, y);
+    if (changed) {
+      render();
+      syncTextToExtension();
+      updatePropertiesPanel();
+    }
+  });
+}
+
+// ─── Help Button ─────────────────────────────────────────────────────────
+
+function setupHelpButton() {
+  const helpBtn = document.getElementById("tool-help-btn");
+  if (helpBtn) {
+    helpBtn.addEventListener("click", () => {
+      toggleShortcutHelp();
+    });
+  }
 }
 
 // ─── Start ───────────────────────────────────────────────────────────────

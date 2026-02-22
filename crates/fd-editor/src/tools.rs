@@ -278,6 +278,138 @@ impl Tool for PenTool {
     }
 }
 
+// ─── Ellipse Tool ────────────────────────────────────────────────────────
+
+pub struct EllipseTool {
+    drawing: bool,
+    start_x: f32,
+    start_y: f32,
+    current_id: Option<NodeId>,
+}
+
+impl Default for EllipseTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl EllipseTool {
+    pub fn new() -> Self {
+        Self {
+            drawing: false,
+            start_x: 0.0,
+            start_y: 0.0,
+            current_id: None,
+        }
+    }
+}
+
+impl Tool for EllipseTool {
+    fn kind(&self) -> ToolKind {
+        ToolKind::Ellipse
+    }
+
+    fn handle(&mut self, event: &InputEvent, _hit_node: Option<NodeId>) -> Vec<GraphMutation> {
+        match event {
+            InputEvent::PointerDown { x, y, .. } => {
+                self.drawing = true;
+                self.start_x = *x;
+                self.start_y = *y;
+                let id = NodeId::anonymous();
+                self.current_id = Some(id);
+
+                let node = SceneNode::new(id, NodeKind::Ellipse { rx: 0.0, ry: 0.0 });
+                vec![GraphMutation::AddNode {
+                    parent_id: NodeId::intern("root"),
+                    node: Box::new(node),
+                }]
+            }
+            InputEvent::PointerMove {
+                x, y, modifiers, ..
+            } => {
+                if self.drawing
+                    && let Some(id) = self.current_id
+                {
+                    let mut w = (x - self.start_x).abs();
+                    let mut h = (y - self.start_y).abs();
+
+                    // Shift: constrain to circle
+                    if modifiers.shift {
+                        let side = w.max(h);
+                        w = side;
+                        h = side;
+                    }
+
+                    return vec![GraphMutation::ResizeNode {
+                        id,
+                        width: w,
+                        height: h,
+                    }];
+                }
+                vec![]
+            }
+            InputEvent::PointerUp { .. } => {
+                self.drawing = false;
+                self.current_id = None;
+                vec![]
+            }
+            _ => vec![],
+        }
+    }
+}
+
+// ─── Text Tool ───────────────────────────────────────────────────────────
+
+pub struct TextTool {
+    placed: bool,
+}
+
+impl Default for TextTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl TextTool {
+    pub fn new() -> Self {
+        Self { placed: false }
+    }
+}
+
+impl Tool for TextTool {
+    fn kind(&self) -> ToolKind {
+        ToolKind::Text
+    }
+
+    fn handle(&mut self, event: &InputEvent, _hit_node: Option<NodeId>) -> Vec<GraphMutation> {
+        match event {
+            InputEvent::PointerDown { x, y, .. } => {
+                if self.placed {
+                    return vec![];
+                }
+                self.placed = true;
+                let id = NodeId::anonymous();
+                let mut node = SceneNode::new(
+                    id,
+                    NodeKind::Text {
+                        content: "Text".to_string(),
+                    },
+                );
+                node.constraints.push(Constraint::Absolute { x: *x, y: *y });
+                vec![GraphMutation::AddNode {
+                    parent_id: NodeId::intern("root"),
+                    node: Box::new(node),
+                }]
+            }
+            InputEvent::PointerUp { .. } => {
+                self.placed = false;
+                vec![]
+            }
+            _ => vec![],
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -429,5 +561,156 @@ mod tests {
             }
             _ => panic!("expected DuplicateNode"),
         }
+    }
+
+    #[test]
+    fn ellipse_tool_draw() {
+        let mut tool = EllipseTool::new();
+
+        // Start drawing
+        let mutations = tool.handle(
+            &InputEvent::PointerDown {
+                x: 50.0,
+                y: 50.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        assert_eq!(mutations.len(), 1);
+        match &mutations[0] {
+            GraphMutation::AddNode { node, .. } => {
+                assert!(matches!(node.kind, NodeKind::Ellipse { .. }));
+            }
+            _ => panic!("expected AddNode with Ellipse"),
+        }
+
+        // Drag to size
+        let mutations = tool.handle(
+            &InputEvent::PointerMove {
+                x: 150.0,
+                y: 100.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        assert_eq!(mutations.len(), 1);
+        match &mutations[0] {
+            GraphMutation::ResizeNode { width, height, .. } => {
+                assert!((width - 100.0).abs() < 0.01);
+                assert!((height - 50.0).abs() < 0.01);
+            }
+            _ => panic!("expected ResizeNode"),
+        }
+    }
+
+    #[test]
+    fn ellipse_tool_shift_constrains_circle() {
+        let mut tool = EllipseTool::new();
+        let shift = Modifiers {
+            shift: true,
+            ..Modifiers::NONE
+        };
+
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 0.0,
+                y: 0.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        let mutations = tool.handle(
+            &InputEvent::PointerMove {
+                x: 100.0,
+                y: 60.0,
+                pressure: 1.0,
+                modifiers: shift,
+            },
+            None,
+        );
+        assert_eq!(mutations.len(), 1);
+        match &mutations[0] {
+            GraphMutation::ResizeNode { width, height, .. } => {
+                assert!(
+                    (width - height).abs() < 0.01,
+                    "Shift should make it a circle: w={width}, h={height}"
+                );
+            }
+            _ => panic!("expected ResizeNode"),
+        }
+    }
+
+    #[test]
+    fn text_tool_click_creates_text() {
+        let mut tool = TextTool::new();
+
+        let mutations = tool.handle(
+            &InputEvent::PointerDown {
+                x: 200.0,
+                y: 150.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        assert_eq!(mutations.len(), 1);
+        match &mutations[0] {
+            GraphMutation::AddNode { node, .. } => {
+                match &node.kind {
+                    NodeKind::Text { content } => {
+                        assert_eq!(content, "Text");
+                    }
+                    _ => panic!("expected Text node"),
+                }
+                // Should have an Absolute constraint for positioning
+                assert!(
+                    node.constraints
+                        .iter()
+                        .any(|c| matches!(c, Constraint::Absolute { .. }))
+                );
+            }
+            _ => panic!("expected AddNode"),
+        }
+
+        // Second click without releasing should not create another node
+        let mutations = tool.handle(
+            &InputEvent::PointerDown {
+                x: 300.0,
+                y: 200.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        assert!(
+            mutations.is_empty(),
+            "should not create duplicate on second click without release"
+        );
+
+        // Release resets the tool
+        tool.handle(
+            &InputEvent::PointerUp {
+                x: 200.0,
+                y: 150.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        // Now a new click should create another text
+        let mutations = tool.handle(
+            &InputEvent::PointerDown {
+                x: 400.0,
+                y: 300.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        assert_eq!(mutations.len(), 1);
     }
 }
