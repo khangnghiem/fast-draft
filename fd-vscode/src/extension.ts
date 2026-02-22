@@ -205,50 +205,72 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     font-src ${webview.cspSource};
   ">
   <style nonce="${nonce}">
-    /* ── Theme tokens ────────────── */
+    /* ── Apple Design Tokens ─────── */
     :root {
-      --fd-bg: #F8F9FA;
-      --fd-toolbar-bg: #EBEDF0;
-      --fd-border: #D1D5DB;
-      --fd-surface: rgba(255, 255, 255, 0.85);
+      --fd-bg: #F5F5F7;
+      --fd-toolbar-bg: rgba(246, 246, 248, 0.72);
+      --fd-toolbar-border: rgba(0, 0, 0, 0.09);
+      --fd-border: rgba(0, 0, 0, 0.08);
+      --fd-surface: rgba(255, 255, 255, 0.82);
+      --fd-surface-solid: #FFFFFF;
       --fd-surface-hover: rgba(0, 0, 0, 0.04);
-      --fd-text: #1F2937;
-      --fd-text-muted: #6B7280;
-      --fd-text-dim: #9CA3AF;
-      --fd-input-bg: rgba(0, 0, 0, 0.03);
-      --fd-input-border: rgba(0, 0, 0, 0.1);
-      --fd-accent: #3B82F6;
+      --fd-surface-active: rgba(0, 0, 0, 0.06);
+      --fd-text: #1D1D1F;
+      --fd-text-secondary: #86868B;
+      --fd-text-tertiary: #AEAEB2;
+      --fd-input-bg: rgba(142, 142, 147, 0.08);
+      --fd-input-border: rgba(0, 0, 0, 0.06);
+      --fd-input-focus: rgba(0, 122, 255, 0.3);
+      --fd-accent: #007AFF;
       --fd-accent-fg: #FFFFFF;
-      --fd-accent-dim: rgba(59, 130, 246, 0.15);
-      --fd-accent-border: rgba(59, 130, 246, 0.4);
-      --fd-slider-bg: rgba(0, 0, 0, 0.1);
-      --fd-slider-thumb-border: rgba(255, 255, 255, 0.8);
-      --fd-overlay-bg: rgba(0, 0, 0, 0.3);
-      --fd-key-border: rgba(0, 0, 0, 0.12);
+      --fd-accent-dim: rgba(0, 122, 255, 0.1);
+      --fd-accent-border: rgba(0, 122, 255, 0.35);
+      --fd-accent-hover: #0071EB;
+      --fd-segment-bg: rgba(142, 142, 147, 0.12);
+      --fd-segment-active: #FFFFFF;
+      --fd-segment-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 1px rgba(0, 0, 0, 0.04);
+      --fd-slider-bg: rgba(142, 142, 147, 0.2);
+      --fd-slider-thumb-border: rgba(255, 255, 255, 0.9);
+      --fd-overlay-bg: rgba(0, 0, 0, 0.4);
+      --fd-key-border: rgba(0, 0, 0, 0.1);
       --fd-key-bg: rgba(0, 0, 0, 0.03);
-      --fd-shadow: rgba(0, 0, 0, 0.15);
+      --fd-shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
+      --fd-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+      --fd-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+      --fd-radius: 10px;
+      --fd-radius-sm: 7px;
     }
     body.dark-theme {
-      --fd-bg: #1E1E2E;
-      --fd-toolbar-bg: #181825;
-      --fd-border: #313244;
-      --fd-surface: rgba(30, 30, 46, 0.85);
+      --fd-bg: #1C1C1E;
+      --fd-toolbar-bg: rgba(28, 28, 30, 0.72);
+      --fd-toolbar-border: rgba(255, 255, 255, 0.06);
+      --fd-border: rgba(255, 255, 255, 0.06);
+      --fd-surface: rgba(44, 44, 46, 0.82);
+      --fd-surface-solid: #2C2C2E;
       --fd-surface-hover: rgba(255, 255, 255, 0.06);
-      --fd-text: #CDD6F4;
-      --fd-text-muted: #6C7086;
-      --fd-text-dim: #A6ADC8;
-      --fd-input-bg: rgba(255, 255, 255, 0.04);
-      --fd-input-border: rgba(255, 255, 255, 0.08);
-      --fd-accent: #89B4FA;
-      --fd-accent-fg: #1E1E2E;
-      --fd-accent-dim: rgba(137, 180, 250, 0.15);
-      --fd-accent-border: rgba(137, 180, 250, 0.4);
-      --fd-slider-bg: rgba(255, 255, 255, 0.1);
-      --fd-slider-thumb-border: rgba(30, 30, 46, 0.8);
+      --fd-surface-active: rgba(255, 255, 255, 0.08);
+      --fd-text: #F5F5F7;
+      --fd-text-secondary: #98989D;
+      --fd-text-tertiary: #636366;
+      --fd-input-bg: rgba(142, 142, 147, 0.12);
+      --fd-input-border: rgba(255, 255, 255, 0.06);
+      --fd-input-focus: rgba(10, 132, 255, 0.4);
+      --fd-accent: #0A84FF;
+      --fd-accent-fg: #FFFFFF;
+      --fd-accent-dim: rgba(10, 132, 255, 0.15);
+      --fd-accent-border: rgba(10, 132, 255, 0.4);
+      --fd-accent-hover: #409CFF;
+      --fd-segment-bg: rgba(142, 142, 147, 0.16);
+      --fd-segment-active: rgba(99, 99, 102, 0.6);
+      --fd-segment-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 1px rgba(0, 0, 0, 0.1);
+      --fd-slider-bg: rgba(142, 142, 147, 0.25);
+      --fd-slider-thumb-border: rgba(44, 44, 46, 0.8);
       --fd-overlay-bg: rgba(0, 0, 0, 0.6);
       --fd-key-border: rgba(255, 255, 255, 0.1);
       --fd-key-bg: rgba(255, 255, 255, 0.04);
-      --fd-shadow: rgba(0, 0, 0, 0.4);
+      --fd-shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.15);
+      --fd-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
+      --fd-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.35);
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; }
@@ -256,82 +278,121 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       background: var(--fd-bg);
       display: flex;
       flex-direction: column;
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    /* ── Toolbar ─────────────────── */
+
+    /* ── Toolbar (Apple frosted bar) ── */
     #toolbar {
       display: flex;
-      gap: 2px;
-      padding: 5px 10px;
+      gap: 3px;
+      padding: 6px 12px;
       background: var(--fd-toolbar-bg);
-      border-bottom: 1px solid var(--fd-border);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 0.5px solid var(--fd-toolbar-border);
       flex-shrink: 0;
       align-items: center;
+      z-index: 10;
     }
+
+    /* ── Tool Buttons (segmented control) ── */
     .tool-btn {
       padding: 5px 10px;
-      border: 1px solid transparent;
+      border: none;
       background: transparent;
-      color: var(--fd-text);
-      border-radius: 6px;
+      color: var(--fd-text-secondary);
+      border-radius: var(--fd-radius-sm);
       cursor: pointer;
       font-size: 12px;
+      font-weight: 500;
       font-family: inherit;
-      transition: all 0.15s ease;
+      transition: all 0.18s cubic-bezier(0.25, 0.1, 0.25, 1);
       display: flex;
       align-items: center;
       gap: 4px;
+      position: relative;
+      letter-spacing: -0.01em;
     }
     .tool-btn:hover {
+      color: var(--fd-text);
       background: var(--fd-surface-hover);
     }
-    .tool-btn.active {
-      background: var(--fd-accent);
-      color: var(--fd-accent-fg);
-      border-color: transparent;
+    .tool-btn:active {
+      background: var(--fd-surface-active);
+      transform: scale(0.97);
     }
-    .tool-icon { font-size: 14px; }
+    .tool-btn.active {
+      background: var(--fd-segment-active);
+      color: var(--fd-text);
+      box-shadow: var(--fd-segment-shadow);
+      font-weight: 600;
+    }
+    .tool-icon { font-size: 13px; }
     .tool-key {
       font-size: 9px;
-      opacity: 0.5;
-      padding: 1px 3px;
-      border: 1px solid var(--fd-input-border);
+      opacity: 0.4;
+      padding: 1px 4px;
+      border: 1px solid var(--fd-key-border);
       border-radius: 3px;
-      font-family: var(--vscode-editor-font-family, monospace);
+      background: var(--fd-key-bg);
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+      font-weight: 500;
+      line-height: 1.2;
     }
     .active .tool-key {
-      border-color: rgba(0,0,0,0.2);
-      opacity: 0.6;
+      opacity: 0.55;
+      border-color: rgba(0, 0, 0, 0.1);
     }
     .tool-sep {
       width: 1px;
-      height: 18px;
+      height: 16px;
       background: var(--fd-border);
-      margin: 0 4px;
+      margin: 0 5px;
+      opacity: 0.6;
     }
-    #tool-help-btn {
-      margin-left: auto;
-      padding: 4px 8px;
-      font-size: 12px;
-    }
+
+    /* ── Theme Toggle (Apple pill) ── */
     #theme-toggle-btn {
       font-size: 14px;
-      padding: 4px 10px;
-      border: 1px solid var(--fd-border);
-      border-radius: 8px;
-      background: var(--fd-input-bg);
-      min-width: 36px;
+      padding: 4px 12px;
+      border: 1px solid var(--fd-border) !important;
+      border-radius: 20px;
+      background: var(--fd-segment-bg);
+      min-width: 38px;
       justify-content: center;
+      color: var(--fd-text);
+      transition: all 0.2s ease;
     }
     #theme-toggle-btn:hover {
       background: var(--fd-accent-dim);
-      border-color: var(--fd-accent-border);
+      border-color: var(--fd-accent-border) !important;
+      transform: scale(1.04);
+    }
+
+    /* ── Help & Status ── */
+    #tool-help-btn {
+      margin-left: auto;
+      padding: 4px 9px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--fd-text-secondary);
+      border-radius: 20px;
+      border: 1px solid var(--fd-border) !important;
+      background: var(--fd-segment-bg);
+    }
+    #tool-help-btn:hover {
+      background: var(--fd-surface-hover);
+      color: var(--fd-text);
     }
     #status {
-      color: var(--fd-text-muted);
+      color: var(--fd-text-tertiary);
       font-size: 11px;
       margin-left: 8px;
+      font-weight: 400;
     }
+
     /* ── Canvas ──────────────────── */
     #canvas-container {
       flex: 1;
@@ -349,8 +410,10 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--fd-text-muted);
-      font-size: 14px;
+      color: var(--fd-text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
     }
     /* ── Cursor per tool ─────────── */
     canvas.tool-select { cursor: default; }
@@ -358,66 +421,68 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     canvas.tool-ellipse { cursor: crosshair; }
     canvas.tool-pen { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="3" fill="white" stroke="black"/></svg>') 10 10, crosshair; }
     canvas.tool-text { cursor: text; }
-    /* ── Properties Panel (Apple-style) ── */
+
+    /* ── Properties Panel (Keynote inspector) ── */
     #props-panel {
       width: 0;
       overflow: hidden;
       background: var(--fd-surface);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border-left: 1px solid var(--fd-input-border);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border-left: 0.5px solid var(--fd-border);
       font-size: 11px;
       color: var(--fd-text);
-      transition: width 0.2s ease;
+      transition: width 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
       flex-shrink: 0;
       overflow-y: auto;
     }
     #props-panel.visible {
-      width: 240px;
+      width: 244px;
     }
     .props-inner {
-      padding: 14px 12px;
-      min-width: 240px;
+      padding: 16px 14px;
+      min-width: 244px;
     }
     .props-title {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 600;
       color: var(--fd-text);
-      margin-bottom: 12px;
+      margin-bottom: 14px;
       display: flex;
       align-items: center;
       gap: 6px;
+      letter-spacing: -0.01em;
     }
     .props-title .kind-badge {
       font-size: 9px;
       text-transform: uppercase;
-      letter-spacing: 0.6px;
-      padding: 2px 6px;
-      border-radius: 4px;
+      letter-spacing: 0.5px;
+      padding: 2px 7px;
+      border-radius: 5px;
       background: var(--fd-accent-dim);
       color: var(--fd-accent);
-      font-weight: 500;
+      font-weight: 600;
     }
     .props-section {
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
     .props-section-label {
       font-size: 10px;
       text-transform: uppercase;
-      letter-spacing: 0.6px;
-      color: var(--fd-text-muted);
-      margin-bottom: 6px;
-      font-weight: 500;
+      letter-spacing: 0.5px;
+      color: var(--fd-text-secondary);
+      margin-bottom: 7px;
+      font-weight: 600;
     }
     .props-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 4px 8px;
+      gap: 5px 8px;
     }
     .props-field {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 3px;
     }
     .props-field.full {
       grid-column: 1 / -1;
@@ -426,32 +491,35 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       font-size: 9px;
       text-transform: uppercase;
       letter-spacing: 0.4px;
-      color: var(--fd-text-muted);
+      color: var(--fd-text-secondary);
+      font-weight: 500;
     }
     .props-field input,
     .props-field select {
-      padding: 4px 6px;
+      padding: 5px 7px;
       border: 1px solid var(--fd-input-border);
-      border-radius: 5px;
+      border-radius: 6px;
       background: var(--fd-input-bg);
       color: var(--fd-text);
-      font-family: var(--vscode-editor-font-family, monospace);
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
       font-size: 11px;
       outline: none;
-      transition: border-color 0.15s ease;
+      transition: all 0.15s ease;
     }
     .props-field input:focus {
-      border-color: var(--fd-accent-border);
+      border-color: var(--fd-accent);
+      box-shadow: 0 0 0 3px var(--fd-input-focus);
     }
     .props-field input[type="color"] {
-      height: 28px;
-      padding: 2px;
+      height: 30px;
+      padding: 3px;
       cursor: pointer;
+      border-radius: 6px;
     }
     .props-slider {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
     .props-slider input[type="range"] {
       flex: 1;
@@ -463,124 +531,143 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     }
     .props-slider input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 14px; height: 14px;
+      width: 16px; height: 16px;
       border-radius: 50%;
       background: var(--fd-accent);
       cursor: pointer;
       border: 2px solid var(--fd-slider-thumb-border);
+      box-shadow: var(--fd-shadow-sm);
     }
     .props-slider .slider-val {
       font-size: 10px;
-      color: var(--fd-text-dim);
-      min-width: 28px;
+      color: var(--fd-text-secondary);
+      min-width: 30px;
       text-align: right;
-      font-family: var(--vscode-editor-font-family, monospace);
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+      font-weight: 500;
     }
-    /* ── Drag & Drop Palette ────── */
+
+    /* ── Shape Palette (Freeform-style) ── */
     #shape-palette {
       position: absolute;
       top: 50%;
-      left: 10px;
+      left: 12px;
       transform: translateY(-50%);
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;
       z-index: 50;
       background: var(--fd-surface);
-      backdrop-filter: blur(16px) saturate(180%);
-      -webkit-backdrop-filter: blur(16px) saturate(180%);
-      border: 1px solid var(--fd-input-border);
-      border-radius: 10px;
-      padding: 6px;
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 12px;
+      padding: 5px;
+      box-shadow: var(--fd-shadow-md);
     }
     .palette-item {
-      width: 36px;
-      height: 36px;
+      width: 38px;
+      height: 38px;
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 7px;
+      border-radius: 9px;
       cursor: grab;
-      color: var(--fd-text);
+      color: var(--fd-text-secondary);
       font-size: 18px;
-      transition: all 0.15s ease;
+      transition: all 0.18s cubic-bezier(0.25, 0.1, 0.25, 1);
       user-select: none;
     }
     .palette-item:hover {
       background: var(--fd-surface-hover);
+      color: var(--fd-text);
     }
     .palette-item:active {
       cursor: grabbing;
-      transform: scale(0.92);
+      transform: scale(0.90);
+      background: var(--fd-surface-active);
     }
     .palette-item .palette-label {
       display: none;
       position: absolute;
-      left: 48px;
-      background: var(--fd-surface);
-      padding: 3px 8px;
-      border-radius: 5px;
+      left: 52px;
+      background: var(--fd-surface-solid);
+      padding: 4px 10px;
+      border-radius: 6px;
       font-size: 11px;
+      font-weight: 500;
       white-space: nowrap;
       pointer-events: none;
+      box-shadow: var(--fd-shadow-sm);
+      color: var(--fd-text);
     }
     .palette-item:hover .palette-label {
       display: block;
     }
-    /* ── Annotation card overlay ── */
+
+    /* ── Annotation Card ── */
     #annotation-card {
       display: none;
       position: absolute;
       z-index: 100;
       width: 280px;
       background: var(--fd-surface);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--fd-input-border);
-      border-radius: 10px;
-      padding: 12px;
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 12px;
+      padding: 14px;
       font-size: 12px;
       color: var(--fd-text);
-      box-shadow: 0 8px 32px var(--fd-shadow);
+      box-shadow: var(--fd-shadow-lg);
     }
     #annotation-card.visible { display: block; }
     #annotation-card .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       font-weight: 600;
       font-size: 13px;
     }
     #annotation-card .card-close {
       cursor: pointer;
-      opacity: 0.6;
+      opacity: 0.5;
       font-size: 16px;
       background: none;
       border: none;
       color: inherit;
+      transition: opacity 0.15s;
     }
     #annotation-card .card-close:hover { opacity: 1; }
-    #annotation-card .field-group { margin-bottom: 8px; }
+    #annotation-card .field-group { margin-bottom: 10px; }
     #annotation-card .field-label {
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: var(--fd-text-muted);
-      margin-bottom: 3px;
+      color: var(--fd-text-secondary);
+      margin-bottom: 4px;
+      font-weight: 600;
     }
     #annotation-card textarea,
     #annotation-card input[type="text"],
     #annotation-card select {
       width: 100%;
-      padding: 4px 6px;
+      padding: 5px 7px;
       border: 1px solid var(--fd-input-border);
-      border-radius: 5px;
+      border-radius: 6px;
       background: var(--fd-input-bg);
       color: var(--fd-text);
       font-family: inherit;
       font-size: 12px;
       resize: vertical;
+      transition: all 0.15s ease;
+    }
+    #annotation-card textarea:focus,
+    #annotation-card input[type="text"]:focus {
+      border-color: var(--fd-accent);
+      box-shadow: 0 0 0 3px var(--fd-input-focus);
+      outline: none;
     }
     #annotation-card textarea { min-height: 40px; }
     #annotation-card .accept-item {
@@ -597,6 +684,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       background: none;
       border: none;
       padding: 2px 0;
+      font-weight: 500;
     }
     #annotation-card .add-btn:hover { text-decoration: underline; }
     #annotation-card .status-row {
@@ -604,110 +692,119 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       gap: 6px;
     }
     #annotation-card .status-row select { flex: 1; }
-    /* ── Context menu ────────────── */
+
+    /* ── Context Menu (macOS-style) ── */
     #context-menu {
       display: none;
       position: absolute;
       z-index: 200;
       background: var(--fd-surface);
-      backdrop-filter: blur(16px);
-      border: 1px solid var(--fd-input-border);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
       border-radius: 8px;
       padding: 4px 0;
-      box-shadow: 0 8px 24px var(--fd-shadow);
-      font-size: 12px;
-      min-width: 160px;
+      box-shadow: var(--fd-shadow-lg);
+      font-size: 13px;
+      min-width: 180px;
     }
     #context-menu.visible { display: block; }
     #context-menu .menu-item {
-      padding: 6px 14px;
+      padding: 5px 14px;
       cursor: pointer;
       color: var(--fd-text);
-      transition: background 0.1s ease;
+      transition: all 0.08s ease;
+      border-radius: 4px;
+      margin: 0 4px;
     }
     #context-menu .menu-item:hover {
-      background: var(--fd-surface-hover);
+      background: var(--fd-accent);
+      color: var(--fd-accent-fg);
     }
-    /* ── Shortcut help overlay ──── */
+
+    /* ── Shortcut Help (Apple sheet) ── */
     #shortcut-help {
       display: none;
       position: absolute;
       inset: 0;
       z-index: 300;
       background: var(--fd-overlay-bg);
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(8px);
       align-items: center;
       justify-content: center;
     }
     #shortcut-help.visible { display: flex; }
     .help-panel {
-      background: var(--fd-surface);
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--fd-input-border);
+      background: var(--fd-surface-solid);
+      backdrop-filter: blur(24px);
+      border: 0.5px solid var(--fd-border);
       border-radius: 14px;
       width: 560px;
       max-height: 80vh;
       overflow-y: auto;
-      box-shadow: 0 16px 48px var(--fd-shadow);
+      box-shadow: var(--fd-shadow-lg);
       color: var(--fd-text);
     }
     .help-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 14px 18px;
-      border-bottom: 1px solid var(--fd-input-border);
+      padding: 16px 20px;
+      border-bottom: 0.5px solid var(--fd-border);
     }
-    .help-header h3 { font-size: 15px; font-weight: 600; margin: 0; }
+    .help-header h3 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
     .help-close {
       cursor: pointer;
       font-size: 18px;
       background: none;
       border: none;
-      color: inherit;
-      opacity: 0.6;
+      color: var(--fd-text-secondary);
+      opacity: 0.7;
+      transition: opacity 0.15s;
     }
     .help-close:hover { opacity: 1; }
     .help-body {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 0;
-      padding: 8px 18px 12px;
+      padding: 10px 20px 14px;
     }
     .help-section { padding: 8px 0; }
     .help-section h4 {
-      font-size: 11px;
+      font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.8px;
-      color: var(--fd-text-muted);
+      color: var(--fd-text-secondary);
       margin: 0 0 6px;
+      font-weight: 600;
     }
     .help-section dl { margin: 0; padding: 0; }
     .help-row {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 2px 0;
+      padding: 3px 0;
       font-size: 12px;
     }
     .help-row dt { width: 80px; text-align: right; }
-    .help-row dd { margin: 0; color: var(--fd-text-dim); }
+    .help-row dd { margin: 0; color: var(--fd-text-secondary); }
     kbd {
       display: inline-block;
-      padding: 1px 5px;
+      padding: 2px 6px;
       border: 1px solid var(--fd-key-border);
-      border-radius: 4px;
+      border-radius: 5px;
       background: var(--fd-key-bg);
-      font-family: var(--vscode-editor-font-family, monospace);
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
       font-size: 11px;
-      line-height: 1.4;
+      line-height: 1.3;
+      font-weight: 500;
     }
     .help-footer {
       text-align: center;
-      padding: 8px;
+      padding: 10px;
       font-size: 11px;
-      color: var(--fd-text-muted);
-      border-top: 1px solid var(--fd-input-border);
+      color: var(--fd-text-secondary);
+      border-top: 0.5px solid var(--fd-border);
     }
   </style>
 </head>
