@@ -646,6 +646,30 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       color: var(--fd-accent);
     }
 
+    /* ── Dimension Tooltip (R3.18) ── */
+    #dimension-tooltip {
+      display: none;
+      position: absolute;
+      z-index: 200;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+      letter-spacing: -0.02em;
+      pointer-events: none;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    .dark-theme #dimension-tooltip {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+    }
+
     /* ── Help & Status ── */
     #tool-help-btn {
       margin-left: auto;
@@ -1111,6 +1135,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       <div class="palette-item" draggable="true" data-shape="text">T<span class="palette-label">Text</span></div>
     </div>
     <canvas id="fd-canvas" class="tool-select"></canvas>
+    <div id="dimension-tooltip"></div>
     <div id="spec-overlay"></div>
     <div id="loading">Loading FD engine…</div>
     <!-- Properties Panel (Apple-style) -->

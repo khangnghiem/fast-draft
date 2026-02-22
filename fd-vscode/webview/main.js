@@ -49,6 +49,12 @@ let contextMenuNodeId = null;
 /** Current view mode: "design" | "spec" */
 let viewMode = "design";
 
+/** Pointer interaction tracking for dimension tooltip */
+let pointerIsDown = false;
+let pointerDownSceneX = 0;
+let pointerDownSceneY = 0;
+let currentToolAtPointerDown = "select";
+
 // ─── Initialization ──────────────────────────────────────────────────────
 
 async function main() {
@@ -208,6 +214,12 @@ function setupPointerEvents() {
     );
     if (changed) render();
     canvas.setPointerCapture(e.pointerId);
+
+    // Track interaction start for dimension tooltip
+    pointerIsDown = true;
+    pointerDownSceneX = x;
+    pointerDownSceneY = y;
+    currentToolAtPointerDown = fdCanvas.get_tool_name();
   });
 
   canvas.addEventListener("pointermove", (e) => {
@@ -234,6 +246,30 @@ function setupPointerEvents() {
       e.metaKey
     );
     if (changed) render();
+
+    // Show dimension tooltip during drag
+    if (pointerIsDown) {
+      const tool = currentToolAtPointerDown;
+      if (tool === "rect" || tool === "ellipse" || tool === "text") {
+        // Drawing: show W × H
+        const w = Math.abs(x - pointerDownSceneX);
+        const h = Math.abs(y - pointerDownSceneY);
+        if (w > 2 || h > 2) {
+          showDimensionTooltip(e.clientX, e.clientY, `${Math.round(w)} × ${Math.round(h)}`);
+        }
+      } else if (tool === "select") {
+        // Moving: show (X, Y) of selected node
+        const selectedId = fdCanvas.get_selected_id();
+        if (selectedId && changed) {
+          try {
+            const b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
+            if (b.x !== undefined) {
+              showDimensionTooltip(e.clientX, e.clientY, `(${Math.round(b.x)}, ${Math.round(b.y)})`);
+            }
+          } catch (_) { /* skip */ }
+        }
+      }
+    }
   });
 
   canvas.addEventListener("pointerup", (e) => {
@@ -273,6 +309,10 @@ function setupPointerEvents() {
     // Notify extension of canvas selection change (for Code ↔ Canvas sync)
     const selectedId = fdCanvas.get_selected_id();
     vscode.postMessage({ type: "nodeSelected", id: selectedId });
+
+    // Hide dimension tooltip
+    pointerIsDown = false;
+    hideDimensionTooltip();
   });
 
   // ── Wheel / Trackpad → Pan or Zoom ──
@@ -1469,6 +1509,27 @@ function applyTheme(isDark) {
     fdCanvas.set_theme(isDark);
     render();
   }
+}
+
+// ─── Dimension Tooltip (R3.18) ────────────────────────────────────────────────
+
+/** Show a floating dimension tooltip near the cursor. */
+function showDimensionTooltip(clientX, clientY, text) {
+  const el = document.getElementById("dimension-tooltip");
+  if (!el) return;
+  const container = document.getElementById("canvas-container");
+  const containerRect = container.getBoundingClientRect();
+  el.textContent = text;
+  el.style.display = "block";
+  // Position slightly below and right of cursor
+  el.style.left = (clientX - containerRect.left + 12) + "px";
+  el.style.top = (clientY - containerRect.top + 18) + "px";
+}
+
+/** Hide the dimension tooltip. */
+function hideDimensionTooltip() {
+  const el = document.getElementById("dimension-tooltip");
+  if (el) el.style.display = "none";
 }
 
 // ─── Zoom Helpers ─────────────────────────────────────────────────────────────
