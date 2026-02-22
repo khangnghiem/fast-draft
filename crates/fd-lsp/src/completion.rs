@@ -60,6 +60,11 @@ fn compute_brace_depth(text: &str, pos: Position) -> usize {
 fn top_level_completions() -> Vec<CompletionItem> {
     let keywords = [
         (
+            "import",
+            "Import another .fd file",
+            "import \"${1:path.fd}\" as ${2:name}",
+        ),
+        (
             "group",
             "Group container for child nodes",
             "group @${1:name} {\n  $0\n}",

@@ -263,6 +263,17 @@ pub enum Annotation {
     Tag(String),
 }
 
+// ─── Imports ─────────────────────────────────────────────────────────────
+
+/// A file import declaration: `import "path.fd" as namespace`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Import {
+    /// Relative file path, e.g. "components/buttons.fd".
+    pub path: String,
+    /// Namespace alias, e.g. "buttons".
+    pub namespace: String,
+}
+
 // ─── Layout Constraints ──────────────────────────────────────────────────
 
 /// Constraint-based layout — no absolute coordinates in the format.
@@ -434,6 +445,9 @@ pub struct SceneGraph {
 
     /// Visual edges (connections between nodes).
     pub edges: Vec<Edge>,
+
+    /// File imports with namespace aliases.
+    pub imports: Vec<Import>,
 }
 
 impl SceneGraph {
@@ -453,6 +467,7 @@ impl SceneGraph {
             styles: HashMap::new(),
             id_index,
             edges: Vec::new(),
+            imports: Vec::new(),
         }
     }
 

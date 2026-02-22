@@ -13,6 +13,14 @@ pub fn emit_document(graph: &SceneGraph) -> String {
     let mut out = String::with_capacity(1024);
     out.push_str("# FD v1\n\n");
 
+    // Emit imports
+    for import in &graph.imports {
+        let _ = writeln!(out, "import \"{}\" as {}", import.path, import.namespace);
+    }
+    if !graph.imports.is_empty() {
+        out.push('\n');
+    }
+
     // Emit style definitions first
     let mut styles: Vec<_> = graph.styles.iter().collect();
     styles.sort_by_key(|(id, _)| id.as_str().to_string());
@@ -1135,5 +1143,45 @@ edge @auth_flow {
         assert!(md.contains("on success"));
         assert!(md.contains("> Authentication flow"));
         assert!(md.contains("- [ ] redirect within 2s"));
+    }
+
+    #[test]
+    fn roundtrip_import_basic() {
+        let input = "import \"components/buttons.fd\" as btn\nrect @hero { w: 200 h: 100 }\n";
+        let graph = parse_document(input).unwrap();
+        assert_eq!(graph.imports.len(), 1);
+        assert_eq!(graph.imports[0].path, "components/buttons.fd");
+        assert_eq!(graph.imports[0].namespace, "btn");
+
+        let output = emit_document(&graph);
+        assert!(output.contains("import \"components/buttons.fd\" as btn"));
+
+        let graph2 = parse_document(&output).expect("re-parse of import failed");
+        assert_eq!(graph2.imports.len(), 1);
+        assert_eq!(graph2.imports[0].path, "components/buttons.fd");
+        assert_eq!(graph2.imports[0].namespace, "btn");
+    }
+
+    #[test]
+    fn roundtrip_import_multiple() {
+        let input = "import \"tokens.fd\" as tokens\nimport \"buttons.fd\" as btn\nrect @box { w: 50 h: 50 }\n";
+        let graph = parse_document(input).unwrap();
+        assert_eq!(graph.imports.len(), 2);
+        assert_eq!(graph.imports[0].namespace, "tokens");
+        assert_eq!(graph.imports[1].namespace, "btn");
+
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of multiple imports failed");
+        assert_eq!(graph2.imports.len(), 2);
+        assert_eq!(graph2.imports[0].namespace, "tokens");
+        assert_eq!(graph2.imports[1].namespace, "btn");
+    }
+
+    #[test]
+    fn parse_import_without_alias_errors() {
+        let input = "import \"missing_alias.fd\"\nrect @box { w: 50 h: 50 }\n";
+        // This should fail because "as namespace" is missing
+        let result = parse_document(input);
+        assert!(result.is_err());
     }
 }
