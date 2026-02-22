@@ -64,6 +64,12 @@ Before modifying ANY file:
 > **NEVER stage or commit `.env`, `.env.*`, or any file containing secrets, tokens, or API keys.**
 > These are always git-ignored. If accidentally staged, run `git rm --cached .env` immediately.
 
+> [!CAUTION]
+> **Direct pushes to `main` are blocked by a pre-push git hook** (`.githooks/pre-push`).
+> This is enforced mechanically — not just advisory. You CANNOT push to `main` directly.
+> The `git config core.hooksPath .githooks` setting activates this for all clones that run it.
+> On a fresh clone, run: `git config core.hooksPath .githooks` to activate.
+
 **Branch Flow:**
 
 ```
@@ -157,7 +163,8 @@ crates/
 | `/test`   | Test generation                          | Write tests before code (TDD) |
 | `/build`  | Build + test workspace                   | Implementation + verification |
 | `/commit` | Stage + commit changes                   | After successful build        |
-| `/pr`     | Create Pull Request                      | Ready to merge to main        |
+| `/pr`     | Create PR + merge into main              | Ready to merge to main        |
+| `/merge`  | Merge an existing PR into main           | After PR is approved          |
 | `/debug`  | Systematic debugging                     | Bug investigation             |
 | `/yolo`   | Full pipeline (test→build→commit→pr)     | Small changes, feeling lucky  |
 

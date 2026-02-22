@@ -51,55 +51,61 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 
 > Use this after `/yolo local` has passed.
 
-5. **Check branch** (never commit to main):
+5. **Activate pre-push hook** (one-time per clone — blocks accidental pushes to `main`):
+
+   ```bash
+   git config core.hooksPath .githooks
+   ```
+
+6. **Check branch** (never commit to main):
 
    ```bash
    git branch --show-current
    ```
 
-6. If on `main`, create a feature branch:
+7. If on `main`, create a feature branch:
 
    ```bash
    git checkout -b feat/<descriptive-name>
    ```
 
-7. **Bump Version** (if `fd-vscode/` was changed):
+8. **Bump Version** (if `fd-vscode/` was changed):
    - Bump the `version` field in `fd-vscode/package.json` appropriately (patch/minor/major).
 
-8. **Stage and commit**:
+9. **Stage and commit**:
 
    ```bash
    git add -A
    git commit -m "<type>(<scope>): <description>"
    ```
 
-9. **Push**:
+10. **Push**:
 
-   ```bash
-   git push -u origin HEAD
-   ```
+    ```bash
+    git push -u origin HEAD
+    ```
 
-10. **Create PR** using GitKraken MCP:
+11. **Create PR** using GitKraken MCP:
     - `provider`: github
     - `source_branch`: current branch
     - `target_branch`: main
     - Title in conventional format
     - Body summarizing changes + test results
 
-11. **Merge PR** and clean up:
+12. **Merge PR** and clean up:
 
     ```bash
     gh pr merge <PR_NUMBER> --merge --delete-branch
     ```
 
-12. **Sync main**:
+13. **Sync main**:
 
     ```bash
     git checkout main
     git pull origin main
     ```
 
-13. **Build & Publish VS Code extension** (if `fd-vscode/` was changed):
+14. **Build & Publish VS Code extension** (if `fd-vscode/` was changed):
 
     > ⚠️ **MANDATORY**: Read `.env` for `VSCE_PAT`, `VSX_PAT`, and `GEMINI_API_KEY` BEFORE publishing.
     > Never rely on interactive prompts — always pass tokens via flags.
@@ -121,7 +127,7 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
     > Skip publish if the change is local-only or version wasn't bumped.
     > **NEVER** publish to only one registry — both Marketplace AND Open VSX are required.
 
-14. Report PR URL, merge status, and publish results to user.
+15. Report PR URL, merge status, and publish results to user.
 
 ---
 

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# pre-push hook: block direct pushes to main
+# Part of FD project git safety rules (see GEMINI.md)
+
+protected_branch="main"
+
+while read local_ref local_sha remote_ref remote_sha; do
+  if [[ "$remote_ref" == "refs/heads/$protected_branch" ]]; then
+    echo ""
+    echo "❌  Direct push to '$protected_branch' is not allowed."
+    echo "    Create a feature branch and open a Pull Request instead."
+    echo ""
+    echo "    git checkout -b feat/your-feature"
+    echo "    git push origin feat/your-feature"
+    echo ""
+    exit 1
+  fi
+done
+
+exit 0
