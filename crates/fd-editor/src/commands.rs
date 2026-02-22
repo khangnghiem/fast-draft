@@ -230,7 +230,10 @@ rect @box {
     #[test]
     fn undo_resize_restores_original_size() {
         let input = "rect @panel {\n  w: 200 h: 100\n}\n";
-        let viewport = Viewport { width: 800.0, height: 600.0 };
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
         let mut engine = SyncEngine::from_text(input, viewport).unwrap();
         let mut stack = CommandStack::new(100);
 
@@ -260,12 +263,20 @@ rect @box {
     fn undo_set_style_restores_original_fill() {
         use fd_core::model::{Color, Paint, Style};
         let input = "rect @btn {\n  w: 80 h: 40\n  fill: #FF0000\n}\n";
-        let viewport = Viewport { width: 800.0, height: 600.0 };
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
         let mut engine = SyncEngine::from_text(input, viewport).unwrap();
         let mut stack = CommandStack::new(100);
 
         let new_style = Style {
-            fill: Some(Paint::Solid(Color { r: 0.0, g: 0.0, b: 1.0, a: 1.0 })),
+            fill: Some(Paint::Solid(Color {
+                r: 0.0,
+                g: 0.0,
+                b: 1.0,
+                a: 1.0,
+            })),
             ..Style::default()
         };
 
@@ -281,7 +292,13 @@ rect @box {
         // After undo fill should be back to red (#FF0000)
         stack.undo(&mut engine);
         let node = engine.graph.get_by_id(NodeId::intern("btn")).unwrap();
-        match node.style.fill.as_ref().and_then(|p| if let Paint::Solid(c) = p { Some(c) } else { None }) {
+        match node.style.fill.as_ref().and_then(|p| {
+            if let Paint::Solid(c) = p {
+                Some(c)
+            } else {
+                None
+            }
+        }) {
             Some(c) => assert_eq!(c.r, 1.0, "red channel should be 1.0 (original red fill)"),
             None => panic!("fill should be Some(Solid) after undo"),
         }
@@ -290,7 +307,10 @@ rect @box {
     #[test]
     fn new_execute_clears_redo_stack() {
         let input = "rect @box {\n  w: 100 h: 50\n}\n";
-        let viewport = Viewport { width: 800.0, height: 600.0 };
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
         let mut engine = SyncEngine::from_text(input, viewport).unwrap();
         let mut stack = CommandStack::new(100);
 
@@ -307,13 +327,19 @@ rect @box {
 
         // New action should clear redo stack
         stack.execute(&mut engine, move_box(), "Move 2");
-        assert!(!stack.can_redo(), "redo stack should be cleared after new execute");
+        assert!(
+            !stack.can_redo(),
+            "redo stack should be cleared after new execute"
+        );
     }
 
     #[test]
     fn stack_respects_max_depth() {
         let input = "rect @box {\n  w: 100 h: 50\n}\n";
-        let viewport = Viewport { width: 800.0, height: 600.0 };
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
         let mut engine = SyncEngine::from_text(input, viewport).unwrap();
         let max = 3;
         let mut stack = CommandStack::new(max);
@@ -340,4 +366,3 @@ rect @box {
         assert_eq!(undo_count, max, "undo depth should be capped at max_depth");
     }
 }
-
