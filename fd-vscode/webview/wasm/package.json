@@ -9,11 +9,9 @@
   "license": "MIT",
   "files": [
     "fd_wasm_bg.wasm",
-    "fd_wasm.js",
-    "fd_wasm.d.ts"
+    "fd_wasm.js"
   ],
   "main": "fd_wasm.js",
-  "types": "fd_wasm.d.ts",
   "sideEffects": [
     "./snippets/*"
   ]

@@ -1,5 +1,3 @@
-/* @ts-self-types="./fd_wasm.d.ts" */
-
 /**
  * The main WASM-facing canvas controller.
  *
@@ -19,7 +17,7 @@ export class FdCanvas {
     }
     /**
      * Create a node at a specific position (for drag-and-drop).
-     * `kind` is "rect", "ellipse", or "text".
+     * `kind` is \"rect\", \"ellipse\", or \"text\".
      * Returns `true` if the node was created.
      * @param {string} kind
      * @param {number} x
@@ -61,6 +59,26 @@ export class FdCanvas {
             const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
             const len0 = WASM_VECTOR_LEN;
             const ret = wasm.fdcanvas_get_annotations_json(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * Get the scene-space bounds of a node by its ID.
+     * Returns `{}` if the node is not found.
+     * @param {string} node_id
+     * @returns {string}
+     */
+    get_node_bounds(node_id) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_get_node_bounds(this.__wbg_ptr, ptr0, len0);
             deferred2_0 = ret[0];
             deferred2_1 = ret[1];
             return getStringFromWasm0(ret[0], ret[1]);
@@ -220,7 +238,14 @@ export class FdCanvas {
     }
     /**
      * Handle Apple Pencil Pro squeeze: toggles between current and previous tool.
-     * Accepts modifier keys for future modifier+squeeze combos.
+     *
+     * Modifier combos:
+     * - **No modifier**: toggle current ↔ previous tool (original behavior)
+     * - **Shift**: switch to Pen tool
+     * - **Ctrl / Meta**: switch to Select tool
+     * - **Alt**: switch to Rect tool
+     * - **Ctrl+Shift**: switch to Ellipse tool
+     *
      * Returns the name of the new active tool.
      * @param {boolean} shift
      * @param {boolean} ctrl
