@@ -1060,4 +1060,3 @@ mod tests {
         assert_eq!(resolve_paint_color(&paint), "#CCCCCC");
     }
 }
-

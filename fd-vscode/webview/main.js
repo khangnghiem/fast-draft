@@ -126,6 +126,8 @@ function render() {
   ctx.setTransform(dpr, 0, 0, dpr, panX * dpr, panY * dpr);
   fdCanvas.render(ctx, performance.now());
   ctx.restore();
+  // Reposition spec badges when canvas re-renders (node moved, panned, etc.)
+  if (viewMode === "spec") refreshSpecView();
 }
 
 /** Animation loop ID for flow animations (pulse/dash edges). */
@@ -1183,69 +1185,92 @@ function setupViewToggle() {
 
 function setViewMode(mode) {
   viewMode = mode;
-  const canvas = document.getElementById("fd-canvas");
-  const overlay = document.getElementById("spec-overlay");
   const isSpec = mode === "spec";
 
   document.getElementById("view-design")?.classList.toggle("active", !isSpec);
   document.getElementById("view-spec")?.classList.toggle("active", isSpec);
 
-  if (canvas) canvas.style.display = isSpec ? "none" : "";
+  // Canvas stays visible — spec view keeps full interactivity
+  const overlay = document.getElementById("spec-overlay");
   if (overlay) overlay.style.display = isSpec ? "" : "none";
 
-  // Show/hide tool buttons that don't apply in spec view
-  document.querySelectorAll(".tool-btn[data-tool]").forEach((btn) => {
-    btn.style.display = isSpec ? "none" : "";
-  });
-  document.querySelectorAll(".tool-sep").forEach((sep) => {
-    sep.style.display = isSpec ? "none" : "";
-  });
-  // Hide shape palette and properties panel in spec view
-  const palette = document.getElementById("shape-palette");
+  // Hide properties panel in spec view (annotation card replaces it)
   const props = document.getElementById("props-panel");
-  if (palette) palette.style.display = isSpec ? "none" : "";
-  if (props) props.style.display = isSpec ? "none" : "";
+  if (props && isSpec) props.classList.remove("visible");
 
-  if (isSpec) refreshSpecView();
+  // Notify extension to apply/remove code-mode spec hiding
+  vscode.postMessage({ type: "viewModeChanged", mode });
+
+  if (isSpec) {
+    refreshSpecView();
+  } else {
+    // Clear badges when leaving spec view
+    if (overlay) overlay.innerHTML = "";
+  }
 }
 
 function refreshSpecView() {
   const overlay = document.getElementById("spec-overlay");
   if (!overlay || !fdCanvas) return;
+
+  // Parse source to find annotated nodes
   const source = fdCanvas.get_text();
-  overlay.innerHTML = buildSpecView(source);
-}
+  const nodesWithAnnotations = parseAnnotatedNodes(source);
 
-// ─── Spec View Parser (client-side) ──────────────────────────────────────
+  let html = "";
+  for (const node of nodesWithAnnotations) {
+    const boundsJson = fdCanvas.get_node_bounds(node.id);
+    const b = JSON.parse(boundsJson);
+    if (!b.width) continue;
 
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    // Position badge at top-right corner of node, adjusted for pan
+    const bx = b.x + b.width + panX - 6;
+    const by = b.y + panY - 6;
+
+    const annCount = node.annotations.length;
+    const descriptions = node.annotations.filter(a => a.type === "description");
+    const tooltip = descriptions.length > 0
+      ? escapeAttr(descriptions[0].value)
+      : `${annCount} annotation(s)`;
+
+    html += `<div class="spec-badge-pin" style="left:${bx}px;top:${by}px" `;
+    html += `data-node-id="${escapeAttr(node.id)}" title="${tooltip}">`;
+    html += `<span class="spec-badge-count">${annCount}</span>`;
+    html += `</div>`;
+  }
+
+  overlay.innerHTML = html;
+
+  // Attach click handlers to badges to open annotation card
+  overlay.querySelectorAll(".spec-badge-pin").forEach(pin => {
+    pin.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const nodeId = pin.getAttribute("data-node-id");
+      if (nodeId) {
+        // Select the node on canvas
+        if (fdCanvas.select_by_id(nodeId)) render();
+        // Open annotation card near the badge
+        const rect = pin.getBoundingClientRect();
+        openAnnotationCard(nodeId, rect.left, rect.bottom + 4);
+      }
+    });
+  });
 }
 
 /**
- * Parse .fd source and render a spec HTML string showing only
- * node/edge IDs and their ## annotations (requirements, ACs, status, etc).
+ * Parse .fd source to find nodes that have ## annotations.
+ * Returns array of { id, kind, annotations[] }.
  */
-function buildSpecView(source) {
+function parseAnnotatedNodes(source) {
   const lines = source.split("\n");
-  let html = "";
+  const result = [];
   let pendingAnnotations = [];
   let currentNodeId = "";
   let currentNodeKind = "";
   let insideNode = false;
   let braceDepth = 0;
-
-  // Collect edges
-  const edges = [];
-  let currentEdge = null;
   let insideEdge = false;
-
-  // Also collect ALL nodes (for Design View node list in spec)
-  const allNodes = [];
+  let currentEdge = null;
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -1254,10 +1279,8 @@ function buildSpecView(source) {
     const openBraces = (trimmed.match(/\{/g) || []).length;
     const closeBraces = (trimmed.match(/\}/g) || []).length;
 
-    // Regular comment — skip
     if (trimmed.startsWith("#") && !trimmed.startsWith("##")) continue;
 
-    // Annotation line
     if (trimmed.startsWith("##")) {
       const ann = parseSpecAnnotation(trimmed);
       if (ann) {
@@ -1270,57 +1293,43 @@ function buildSpecView(source) {
       continue;
     }
 
-    // Edge block
     const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s*\{/);
     if (edgeMatch) {
       insideEdge = true;
-      currentEdge = { id: edgeMatch[1], from: "", to: "", label: "", annotations: [] };
+      currentEdge = { id: edgeMatch[1], annotations: [] };
       braceDepth += openBraces - closeBraces;
       continue;
     }
 
     if (insideEdge && currentEdge) {
-      const fromMatch = trimmed.match(/^from:\s*@(\w+)/);
-      const toMatch = trimmed.match(/^to:\s*@(\w+)/);
-      const labelMatch = trimmed.match(/^label:\s*"([^"]*)"/);
-      if (fromMatch) currentEdge.from = fromMatch[1];
-      if (toMatch) currentEdge.to = toMatch[1];
-      if (labelMatch) currentEdge.label = labelMatch[1];
       braceDepth += openBraces - closeBraces;
       if (trimmed === "}") {
         insideEdge = false;
-        if (currentEdge.from && currentEdge.to) edges.push(currentEdge);
         currentEdge = null;
       }
       continue;
     }
 
-    // Closing brace
     if (trimmed === "}") {
       braceDepth -= 1;
-      if (insideNode) {
-        if (currentNodeId) {
-          allNodes.push({ id: currentNodeId, kind: currentNodeKind, annotations: pendingAnnotations });
-          if (pendingAnnotations.length > 0) {
-            html += renderSpecNode(currentNodeId, currentNodeKind, pendingAnnotations);
-          }
-          pendingAnnotations = [];
-          currentNodeId = "";
-          currentNodeKind = "";
+      if (insideNode && currentNodeId) {
+        if (pendingAnnotations.length > 0) {
+          result.push({ id: currentNodeId, kind: currentNodeKind, annotations: [...pendingAnnotations] });
         }
+        pendingAnnotations = [];
+        currentNodeId = "";
+        currentNodeKind = "";
         insideNode = braceDepth > 0;
       }
       continue;
     }
 
-    // Typed node: rect @foo { / group @foo {
     const nodeMatch = trimmed.match(
       /^(group|rect|ellipse|path|text)\s+@(\w+)(?:\s+"[^"]*")?\s*\{?/
     );
     if (nodeMatch) {
       if (currentNodeId && pendingAnnotations.length > 0) {
-        allNodes.push({ id: currentNodeId, kind: currentNodeKind, annotations: pendingAnnotations });
-        html += renderSpecNode(currentNodeId, currentNodeKind, pendingAnnotations);
+        result.push({ id: currentNodeId, kind: currentNodeKind, annotations: [...pendingAnnotations] });
         pendingAnnotations = [];
       }
       currentNodeKind = nodeMatch[1];
@@ -1330,12 +1339,10 @@ function buildSpecView(source) {
       continue;
     }
 
-    // Generic node: @foo {
     const genericMatch = trimmed.match(/^@(\w+)\s*\{/);
     if (genericMatch) {
       if (currentNodeId && pendingAnnotations.length > 0) {
-        allNodes.push({ id: currentNodeId, kind: currentNodeKind, annotations: pendingAnnotations });
-        html += renderSpecNode(currentNodeId, currentNodeKind, pendingAnnotations);
+        result.push({ id: currentNodeId, kind: currentNodeKind, annotations: [...pendingAnnotations] });
         pendingAnnotations = [];
       }
       currentNodeKind = "spec";
@@ -1348,42 +1355,21 @@ function buildSpecView(source) {
     braceDepth += openBraces - closeBraces;
   }
 
-  // Flush last node
   if (currentNodeId && pendingAnnotations.length > 0) {
-    allNodes.push({ id: currentNodeId, kind: currentNodeKind, annotations: pendingAnnotations });
-    html += renderSpecNode(currentNodeId, currentNodeKind, pendingAnnotations);
+    result.push({ id: currentNodeId, kind: currentNodeKind, annotations: [...pendingAnnotations] });
   }
 
-  // Nodes with no annotations — show as a compact list
-  const annotatedIds = new Set(allNodes.filter(n => n.annotations.length > 0).map(n => n.id));
-  const unannotated = allNodes.filter(n => n.annotations.length === 0);
-  if (unannotated.length > 0) {
-    html += `<div class="spec-section-header">Nodes without annotations</div>`;
-    html += `<div class="spec-node-list">`;
-    for (const n of unannotated) {
-      html += `<span class="spec-node-chip"><span class="spec-chip-kind">${escapeHtml(n.kind)}</span> @${escapeHtml(n.id)}</span>`;
-    }
-    html += `</div>`;
-  }
+  return result;
+}
 
-  // Edges
-  if (edges.length > 0) {
-    html += `<div class="spec-section-header">Flows &amp; Edges</div>`;
-    for (const edge of edges) {
-      html += `<div class="spec-edge">`;
-      html += `<span class="edge-arrow"><strong>@${escapeHtml(edge.from)}</strong> → <strong>@${escapeHtml(edge.to)}</strong></span>`;
-      if (edge.label) html += ` <span class="edge-label">— ${escapeHtml(edge.label)}</span>`;
-      for (const ann of edge.annotations) {
-        if (ann.type === "description") {
-          html += `<div class="spec-description">${escapeHtml(ann.value)}</div>`;
-        }
-      }
-      html += `</div>`;
-    }
-  }
+// ─── Spec View Parser (client-side) ──────────────────────────────────────
 
-  if (!html) return `<div class="spec-empty">No nodes found in this document.</div>`;
-  return html;
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function parseSpecAnnotation(line) {
@@ -1399,39 +1385,6 @@ function parseSpecAnnotation(line) {
   const descMatch = trimmed.match(/^"([^"]*)"/);
   if (descMatch) return { type: "description", value: descMatch[1] };
   return null;
-}
-
-function renderSpecNode(id, kind, annotations) {
-  const isGeneric = kind === "spec" || kind === "";
-  let h = `<div class="spec-node${isGeneric ? " generic" : ""}">`;
-  h += `<div class="spec-node-header">`;
-  h += `<span class="spec-node-id">@${escapeHtml(id)}</span>`;
-  h += `<span class="spec-kind-badge${isGeneric ? " spec" : ""}">${escapeHtml(kind || "spec")}</span>`;
-  h += `</div>`;
-
-  const descriptions = annotations.filter((a) => a.type === "description");
-  const accepts = annotations.filter((a) => a.type === "accept");
-  const statuses = annotations.filter((a) => a.type === "status");
-  const priorities = annotations.filter((a) => a.type === "priority");
-  const tags = annotations.filter((a) => a.type === "tag");
-
-  for (const d of descriptions) h += `<div class="spec-description">${escapeHtml(d.value)}</div>`;
-  for (const a of accepts) h += `<div class="spec-accept-item">${escapeHtml(a.value)}</div>`;
-
-  if (statuses.length || priorities.length || tags.length) {
-    h += `<div class="spec-meta-row">`;
-    for (const s of statuses) h += `<span class="spec-badge status-${escapeHtml(s.value)}">${escapeHtml(s.value)}</span>`;
-    for (const p of priorities) h += `<span class="spec-badge priority-${escapeHtml(p.value)}">${escapeHtml(p.value)}</span>`;
-    for (const t of tags) {
-      for (const tag of t.value.split(",")) {
-        h += `<span class="spec-badge tag">${escapeHtml(tag.trim())}</span>`;
-      }
-    }
-    h += `</div>`;
-  }
-
-  h += `</div>`;
-  return h;
 }
 
 // ─── Help Button ─────────────────────────────────────────────────────────

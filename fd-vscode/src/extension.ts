@@ -20,6 +20,8 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
   public static activePanel: vscode.WebviewPanel | undefined;
   /** Current view mode of the active panel. */
   public static activeViewMode: "design" | "spec" = "design";
+  /** Callback invoked when canvas webview changes view mode. */
+  public static onViewModeChanged: ((mode: "design" | "spec") => void) | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) { }
 
@@ -120,6 +122,12 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
         case "aiRefineAll": {
           const allAnon = findAnonNodeIds(document.getText());
           await this.handleAiRefine(document, webviewPanel, allAnon);
+          break;
+        }
+        case "viewModeChanged": {
+          const mode = (message as { type: string; mode?: string }).mode === "spec" ? "spec" : "design";
+          FdEditorProvider.activeViewMode = mode;
+          FdEditorProvider.onViewModeChanged?.(mode);
           break;
         }
       }
@@ -438,19 +446,39 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       font-weight: 600;
     }
 
-    /* ── Spec Overlay ── */
+    /* ── Spec Overlay (transparent badge layer over canvas) ── */
     #spec-overlay {
       display: none;
       position: absolute;
       inset: 0;
-      overflow-y: auto;
-      padding: 20px 24px;
-      background: var(--fd-bg);
-      color: var(--fd-text);
+      pointer-events: none;
+      z-index: 8;
+    }
+    .spec-badge-pin {
+      position: absolute;
+      pointer-events: auto;
+      cursor: pointer;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--fd-accent);
+      color: var(--fd-accent-fg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
       font-family: inherit;
-      font-size: 13px;
-      line-height: 1.7;
-      z-index: 5;
+      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.35);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      z-index: 9;
+    }
+    .spec-badge-pin:hover {
+      transform: scale(1.18);
+      box-shadow: 0 3px 12px rgba(0, 122, 255, 0.5);
+    }
+    .spec-badge-count {
+      line-height: 1;
     }
     .spec-node {
       margin-bottom: 12px;
@@ -2235,6 +2263,12 @@ export function activate(context: vscode.ExtensionContext) {
   // When spec mode is active, hide style/animation/layout details from
   // the text editor, showing only #, ##, node/edge declarations, and braces.
   let codeSpecMode: "design" | "spec" = "design";
+
+  // Wire up canvas → code-mode spec sync
+  FdEditorProvider.onViewModeChanged = (mode) => {
+    codeSpecMode = mode;
+    applyCodeSpecView();
+  };
 
   const specHideDecoration = vscode.window.createTextEditorDecorationType({
     opacity: "0",
