@@ -49,6 +49,9 @@ fn render_node(
 
     match &node.kind {
         NodeKind::Root => {}
+        NodeKind::Generic => {
+            draw_generic_placeholder(ctx, node_bounds, node.id.as_str());
+        }
         NodeKind::Rect { .. } => {
             draw_rect(ctx, node_bounds, &style, is_selected);
         }
@@ -216,6 +219,36 @@ fn draw_path_placeholder(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, sty
         &wasm_bindgen::JsValue::from_f64(4.0),
     ));
     ctx.stroke_rect(x, y, w, h);
+    ctx.restore();
+}
+
+/// Draw a generic placeholder node — dashed border with @id label.
+fn draw_generic_placeholder(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, id: &str) {
+    let (x, y, w, h) = (b.x as f64, b.y as f64, b.width as f64, b.height as f64);
+    ctx.save();
+
+    // Dashed border
+    ctx.set_stroke_style_str("#6B7280");
+    ctx.set_line_width(1.0);
+    let _ = ctx.set_line_dash(&js_sys::Array::of2(
+        &wasm_bindgen::JsValue::from_f64(4.0),
+        &wasm_bindgen::JsValue::from_f64(4.0),
+    ));
+    rounded_rect_path(ctx, x, y, w, h, 6.0);
+    ctx.stroke();
+
+    // Background fill (subtle)
+    ctx.set_fill_style_str("rgba(107, 114, 128, 0.08)");
+    ctx.fill();
+
+    // @id label centered
+    ctx.set_font("11px Inter, system-ui, sans-serif");
+    ctx.set_fill_style_str("#9CA3AF");
+    ctx.set_text_align("center");
+    ctx.set_text_baseline("middle");
+    let label = format!("@{}", id);
+    let _ = ctx.fill_text(&label, x + w / 2.0, y + h / 2.0);
+
     ctx.restore();
 }
 

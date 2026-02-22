@@ -57,6 +57,7 @@ fn hover_node_id(id: &str, graph: Option<&SceneGraph>) -> Option<Hover> {
 
     let kind_str = match &node.kind {
         fd_core::NodeKind::Root => "Root",
+        fd_core::NodeKind::Generic => "Generic (placeholder)",
         fd_core::NodeKind::Group { .. } => "Group",
         fd_core::NodeKind::Rect { width, height } => {
             let desc = format!("**Rect** — {}×{}", width, height);

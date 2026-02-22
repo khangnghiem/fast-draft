@@ -28,6 +28,9 @@ fn paint_node(graph: &SceneGraph, idx: NodeIndex, bounds: &HashMap<NodeIndex, Re
 
     match &node.kind {
         NodeKind::Root => {}
+        NodeKind::Generic => {
+            // Placeholder nodes have no visual shape to paint
+        }
         NodeKind::Rect { .. } => {
             log::trace!(
                 "PAINT rect @{} at ({}, {}) {}x{}",

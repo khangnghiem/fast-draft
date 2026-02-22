@@ -463,6 +463,9 @@ impl FdCanvas {
             NodeKind::Path { .. } => {
                 props.insert("kind".into(), "path".into());
             }
+            NodeKind::Generic => {
+                props.insert("kind".into(), "generic".into());
+            }
             NodeKind::Root => {
                 props.insert("kind".into(), "root".into());
             }
@@ -847,6 +850,7 @@ fn collect_node_tree(graph: &fd_core::SceneGraph, idx: fd_core::NodeIndex) -> se
     let node = &graph.graph[idx];
     let kind_str = match &node.kind {
         fd_core::NodeKind::Root => "root",
+        fd_core::NodeKind::Generic => "generic",
         fd_core::NodeKind::Group { .. } => "group",
         fd_core::NodeKind::Rect { .. } => "rect",
         fd_core::NodeKind::Ellipse { .. } => "ellipse",
