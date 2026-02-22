@@ -18,6 +18,37 @@ export class FdCanvas {
         wasm.__wbg_fdcanvas_free(ptr, 0);
     }
     /**
+     * Create a node at a specific position (for drag-and-drop).
+     * `kind` is "rect", "ellipse", or "text".
+     * Returns `true` if the node was created.
+     * @param {string} kind
+     * @param {number} x
+     * @param {number} y
+     * @returns {boolean}
+     */
+    create_node_at(kind, x, y) {
+        const ptr0 = passStringToWasm0(kind, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_create_node_at(this.__wbg_ptr, ptr0, len0, x, y);
+        return ret !== 0;
+    }
+    /**
+     * Delete the currently selected node. Returns true if a node was deleted.
+     * @returns {boolean}
+     */
+    delete_selected() {
+        const ret = wasm.fdcanvas_delete_selected(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * Duplicate the currently selected node. Returns true if duplicated.
+     * @returns {boolean}
+     */
+    duplicate_selected() {
+        const ret = wasm.fdcanvas_duplicate_selected(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Get annotations for a node as JSON array.
      * Returns `[]` if node not found or has no annotations.
      * @param {string} node_id
@@ -54,6 +85,23 @@ export class FdCanvas {
         }
     }
     /**
+     * Get properties of the currently selected node as JSON.
+     * Returns `{}` if no node is selected.
+     * @returns {string}
+     */
+    get_selected_node_props() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_selected_node_props(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Get the current FD source text (synced from graph).
      * @returns {string}
      */
@@ -70,14 +118,58 @@ export class FdCanvas {
         }
     }
     /**
+     * Get the current tool name.
+     * @returns {string}
+     */
+    get_tool_name() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_tool_name(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Handle a keyboard event. Returns a JSON string:
+     * `{"changed":bool, "action":"<action_name>", "tool":"<tool_name>"}`
+     * @param {string} key
+     * @param {boolean} ctrl
+     * @param {boolean} shift
+     * @param {boolean} alt
+     * @param {boolean} meta
+     * @returns {string}
+     */
+    handle_key(key, ctrl, shift, alt, meta) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(key, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_handle_key(this.__wbg_ptr, ptr0, len0, ctrl, shift, alt, meta);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * Handle pointer down event. Returns true if the graph changed.
      * @param {number} x
      * @param {number} y
      * @param {number} pressure
+     * @param {boolean} shift
+     * @param {boolean} ctrl
+     * @param {boolean} alt
+     * @param {boolean} meta
      * @returns {boolean}
      */
-    handle_pointer_down(x, y, pressure) {
-        const ret = wasm.fdcanvas_handle_pointer_down(this.__wbg_ptr, x, y, pressure);
+    handle_pointer_down(x, y, pressure, shift, ctrl, alt, meta) {
+        const ret = wasm.fdcanvas_handle_pointer_down(this.__wbg_ptr, x, y, pressure, shift, ctrl, alt, meta);
         return ret !== 0;
     }
     /**
@@ -85,21 +177,51 @@ export class FdCanvas {
      * @param {number} x
      * @param {number} y
      * @param {number} pressure
+     * @param {boolean} shift
+     * @param {boolean} ctrl
+     * @param {boolean} alt
+     * @param {boolean} meta
      * @returns {boolean}
      */
-    handle_pointer_move(x, y, pressure) {
-        const ret = wasm.fdcanvas_handle_pointer_move(this.__wbg_ptr, x, y, pressure);
+    handle_pointer_move(x, y, pressure, shift, ctrl, alt, meta) {
+        const ret = wasm.fdcanvas_handle_pointer_move(this.__wbg_ptr, x, y, pressure, shift, ctrl, alt, meta);
         return ret !== 0;
     }
     /**
      * Handle pointer up event. Returns true if the graph changed.
      * @param {number} x
      * @param {number} y
+     * @param {boolean} shift
+     * @param {boolean} ctrl
+     * @param {boolean} alt
+     * @param {boolean} meta
      * @returns {boolean}
      */
-    handle_pointer_up(x, y) {
-        const ret = wasm.fdcanvas_handle_pointer_up(this.__wbg_ptr, x, y);
+    handle_pointer_up(x, y, shift, ctrl, alt, meta) {
+        const ret = wasm.fdcanvas_handle_pointer_up(this.__wbg_ptr, x, y, shift, ctrl, alt, meta);
         return ret !== 0;
+    }
+    /**
+     * Handle Apple Pencil Pro squeeze: toggles between current and previous tool.
+     * Accepts modifier keys for future modifier+squeeze combos.
+     * Returns the name of the new active tool.
+     * @param {boolean} shift
+     * @param {boolean} ctrl
+     * @param {boolean} alt
+     * @param {boolean} meta
+     * @returns {string}
+     */
+    handle_stylus_squeeze(shift, ctrl, alt, meta) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_handle_stylus_squeeze(this.__wbg_ptr, shift, ctrl, alt, meta);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
     }
     /**
      * Check if text changed due to canvas interaction (for sync back to editor).
@@ -163,6 +285,18 @@ export class FdCanvas {
         wasm.fdcanvas_resize(this.__wbg_ptr, width, height);
     }
     /**
+     * Select a node by its ID (e.g. from text editor cursor).
+     * Returns `true` if the node was found and selected.
+     * @param {string} node_id
+     * @returns {boolean}
+     */
+    select_by_id(node_id) {
+        const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_select_by_id(this.__wbg_ptr, ptr0, len0);
+        return ret !== 0;
+    }
+    /**
      * Set annotations for a node from a JSON array.
      * Returns `true` on success.
      * @param {string} node_id
@@ -178,6 +312,21 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Set a property on the currently selected node.
+     * Returns `true` if the property was set.
+     * @param {string} key
+     * @param {string} value
+     * @returns {boolean}
+     */
+    set_node_prop(key, value) {
+        const ptr0 = passStringToWasm0(key, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(value, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_set_node_prop(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return ret !== 0;
+    }
+    /**
      * Set the FD source text, re-parsing into the scene graph.
      * Returns `true` on success, `false` on parse error.
      * @param {string} text
@@ -190,7 +339,7 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
-     * Switch the active tool.
+     * Switch the active tool, remembering the previous one.
      * @param {string} name
      */
     set_tool(name) {
@@ -292,6 +441,9 @@ function __wbg_get_imports() {
         __wbg_of_9ab14f9d4bfb5040: function(arg0, arg1) {
             const ret = Array.of(arg0, arg1);
             return ret;
+        },
+        __wbg_quadraticCurveTo_b39b7adc73767cc0: function(arg0, arg1, arg2, arg3, arg4) {
+            arg0.quadraticCurveTo(arg1, arg2, arg3, arg4);
         },
         __wbg_restore_0d233789d098ba64: function(arg0) {
             arg0.restore();

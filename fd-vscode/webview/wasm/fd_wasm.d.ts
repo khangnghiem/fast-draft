@@ -11,6 +11,20 @@ export class FdCanvas {
     free(): void;
     [Symbol.dispose](): void;
     /**
+     * Create a node at a specific position (for drag-and-drop).
+     * `kind` is "rect", "ellipse", or "text".
+     * Returns `true` if the node was created.
+     */
+    create_node_at(kind: string, x: number, y: number): boolean;
+    /**
+     * Delete the currently selected node. Returns true if a node was deleted.
+     */
+    delete_selected(): boolean;
+    /**
+     * Duplicate the currently selected node. Returns true if duplicated.
+     */
+    duplicate_selected(): boolean;
+    /**
      * Get annotations for a node as JSON array.
      * Returns `[]` if node not found or has no annotations.
      */
@@ -20,21 +34,41 @@ export class FdCanvas {
      */
     get_selected_id(): string;
     /**
+     * Get properties of the currently selected node as JSON.
+     * Returns `{}` if no node is selected.
+     */
+    get_selected_node_props(): string;
+    /**
      * Get the current FD source text (synced from graph).
      */
     get_text(): string;
     /**
+     * Get the current tool name.
+     */
+    get_tool_name(): string;
+    /**
+     * Handle a keyboard event. Returns a JSON string:
+     * `{"changed":bool, "action":"<action_name>", "tool":"<tool_name>"}`
+     */
+    handle_key(key: string, ctrl: boolean, shift: boolean, alt: boolean, meta: boolean): string;
+    /**
      * Handle pointer down event. Returns true if the graph changed.
      */
-    handle_pointer_down(x: number, y: number, pressure: number): boolean;
+    handle_pointer_down(x: number, y: number, pressure: number, shift: boolean, ctrl: boolean, alt: boolean, meta: boolean): boolean;
     /**
      * Handle pointer move event. Returns true if the graph changed.
      */
-    handle_pointer_move(x: number, y: number, pressure: number): boolean;
+    handle_pointer_move(x: number, y: number, pressure: number, shift: boolean, ctrl: boolean, alt: boolean, meta: boolean): boolean;
     /**
      * Handle pointer up event. Returns true if the graph changed.
      */
-    handle_pointer_up(x: number, y: number): boolean;
+    handle_pointer_up(x: number, y: number, shift: boolean, ctrl: boolean, alt: boolean, meta: boolean): boolean;
+    /**
+     * Handle Apple Pencil Pro squeeze: toggles between current and previous tool.
+     * Accepts modifier keys for future modifier+squeeze combos.
+     * Returns the name of the new active tool.
+     */
+    handle_stylus_squeeze(shift: boolean, ctrl: boolean, alt: boolean, meta: boolean): string;
     /**
      * Check if text changed due to canvas interaction (for sync back to editor).
      */
@@ -61,17 +95,27 @@ export class FdCanvas {
      */
     resize(width: number, height: number): void;
     /**
+     * Select a node by its ID (e.g. from text editor cursor).
+     * Returns `true` if the node was found and selected.
+     */
+    select_by_id(node_id: string): boolean;
+    /**
      * Set annotations for a node from a JSON array.
      * Returns `true` on success.
      */
     set_annotations_json(node_id: string, json: string): boolean;
+    /**
+     * Set a property on the currently selected node.
+     * Returns `true` if the property was set.
+     */
+    set_node_prop(key: string, value: string): boolean;
     /**
      * Set the FD source text, re-parsing into the scene graph.
      * Returns `true` on success, `false` on parse error.
      */
     set_text(text: string): boolean;
     /**
-     * Switch the active tool.
+     * Switch the active tool, remembering the previous one.
      */
     set_tool(name: string): void;
     /**
@@ -96,19 +140,28 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_fdcanvas_free: (a: number, b: number) => void;
+    readonly fdcanvas_create_node_at: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly fdcanvas_delete_selected: (a: number) => number;
+    readonly fdcanvas_duplicate_selected: (a: number) => number;
     readonly fdcanvas_get_annotations_json: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_selected_id: (a: number) => [number, number];
+    readonly fdcanvas_get_selected_node_props: (a: number) => [number, number];
     readonly fdcanvas_get_text: (a: number) => [number, number];
-    readonly fdcanvas_handle_pointer_down: (a: number, b: number, c: number, d: number) => number;
-    readonly fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number) => number;
-    readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_get_tool_name: (a: number) => [number, number];
+    readonly fdcanvas_handle_key: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+    readonly fdcanvas_handle_pointer_down: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
+    readonly fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
+    readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly fdcanvas_handle_stylus_squeeze: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_has_pending_text_change: (a: number) => number;
     readonly fdcanvas_hit_test_badge: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_new: (a: number, b: number) => number;
     readonly fdcanvas_redo: (a: number) => number;
     readonly fdcanvas_render: (a: number, b: any) => void;
     readonly fdcanvas_resize: (a: number, b: number, c: number) => void;
+    readonly fdcanvas_select_by_id: (a: number, b: number, c: number) => number;
     readonly fdcanvas_set_annotations_json: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly fdcanvas_set_node_prop: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly fdcanvas_set_text: (a: number, b: number, c: number) => number;
     readonly fdcanvas_set_tool: (a: number, b: number, c: number) => void;
     readonly fdcanvas_undo: (a: number) => number;

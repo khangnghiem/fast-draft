@@ -78,6 +78,7 @@ async function main() {
     setupPropertiesPanel();
     setupDragAndDrop();
     setupHelpButton();
+    setupApplePencilPro();
 
     // Tell extension we're ready
     vscode.postMessage({ type: "ready" });
@@ -366,18 +367,21 @@ document.addEventListener("keyup", (e) => {
  * Apple Pencil Pro squeeze detection.
  * On iPad Safari / Catalyst, the squeeze fires as a button=5 pointer event.
  * In VS Code webview (Electron), we listen for stylus button changes.
+ * NOTE: Must be called after canvas is assigned (inside main()).
  */
-canvas.addEventListener("pointerdown", (e) => {
-  if (e.pointerType === "pen" && e.button === 5 && fdCanvas) {
-    const newTool = fdCanvas.handle_stylus_squeeze(
-      e.shiftKey,
-      e.ctrlKey,
-      e.altKey,
-      e.metaKey
-    );
-    updateToolbarActive(newTool);
-  }
-});
+function setupApplePencilPro() {
+  canvas.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "pen" && e.button === 5 && fdCanvas) {
+      const newTool = fdCanvas.handle_stylus_squeeze(
+        e.shiftKey,
+        e.ctrlKey,
+        e.altKey,
+        e.metaKey
+      );
+      updateToolbarActive(newTool);
+    }
+  });
+}
 
 function updateToolbarActive(tool) {
   document.querySelectorAll(".tool-btn[data-tool]").forEach((btn) => {

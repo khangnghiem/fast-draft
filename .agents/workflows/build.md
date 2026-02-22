@@ -29,7 +29,7 @@ description: How to build, test, and develop the FD workspace
 4. Build for WASM (when ready):
 
    ```bash
-   wasm-pack build crates/fd-render --target web --out-dir ../../fd-vscode/webview/wasm
+   wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm
    ```
 
 5. Build the VS Code extension (when ready):
