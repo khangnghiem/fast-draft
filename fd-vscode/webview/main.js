@@ -232,53 +232,90 @@ function syncTextToExtension() {
   });
 }
 
-// ─── Keyboard shortcuts ──────────────────────────────────────────────────
+// ─── Keyboard shortcuts (delegated to WASM) ─────────────────────────────
+
+/** Whether we're in pan mode (Space held) */
+let isPanning = false;
 
 document.addEventListener("keydown", (e) => {
   if (!fdCanvas) return;
 
-  // Escape: close annotation card / context menu
-  if (e.key === "Escape") {
-    closeAnnotationCard();
-    closeContextMenu();
+  // Don't intercept if an input/textarea is focused
+  if (
+    document.activeElement &&
+    (document.activeElement.tagName === "INPUT" ||
+      document.activeElement.tagName === "TEXTAREA")
+  ) {
     return;
   }
 
-  // Undo: Ctrl/Cmd+Z
-  if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
-    e.preventDefault();
-    if (fdCanvas.undo()) {
-      render();
-      syncTextToExtension();
-    }
+  // Close annotation card / context menu on Escape (before WASM)
+  if (e.key === "Escape") {
+    closeAnnotationCard();
+    closeContextMenu();
+    closeShortcutHelp();
   }
 
-  // Redo: Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y
-  if (
-    ((e.ctrlKey || e.metaKey) && e.key === "z" && e.shiftKey) ||
-    ((e.ctrlKey || e.metaKey) && e.key === "y")
-  ) {
-    e.preventDefault();
-    if (fdCanvas.redo()) {
-      render();
-      syncTextToExtension();
-    }
+  // Delegate to WASM shortcut resolver
+  const resultJson = fdCanvas.handle_key(
+    e.key,
+    e.ctrlKey,
+    e.shiftKey,
+    e.altKey,
+    e.metaKey
+  );
+  const result = JSON.parse(resultJson);
+
+  if (result.action === "none") return;
+
+  e.preventDefault();
+
+  // Handle graph changes
+  if (result.changed) {
+    render();
+    syncTextToExtension();
   }
 
-  // Tool shortcuts
-  if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-    switch (e.key) {
-      case "v":
-      case "V":
-        fdCanvas.set_tool("select");
-        updateToolbarActive("select");
-        break;
-      case "r":
-      case "R":
-        fdCanvas.set_tool("rect");
-        updateToolbarActive("rect");
-        break;
-    }
+  // Handle tool switches
+  if (result.toolSwitched) {
+    updateToolbarActive(result.tool);
+  }
+
+  // Handle JS-side actions
+  switch (result.action) {
+    case "deselect":
+      closeAnnotationCard();
+      closeContextMenu();
+      render();
+      break;
+    case "panStart":
+      isPanning = true;
+      canvas.style.cursor = "grab";
+      break;
+    case "showHelp":
+      toggleShortcutHelp();
+      break;
+  }
+});
+
+document.addEventListener("keyup", (e) => {
+  if (e.key === " " && isPanning) {
+    isPanning = false;
+    canvas.style.cursor = "";
+  }
+});
+
+// ─── Apple Pencil Pro ────────────────────────────────────────────────────
+
+/**
+ * Apple Pencil Pro squeeze detection.
+ * On iPad Safari / Catalyst, the squeeze fires as a button=5 pointer event.
+ * In VS Code webview (Electron), we listen for stylus button changes.
+ */
+canvas.addEventListener("pointerdown", (e) => {
+  if (e.pointerType === "pen" && e.button === 5 && fdCanvas) {
+    const newTool = fdCanvas.handle_stylus_squeeze();
+    updateToolbarActive(newTool);
   }
 });
 
@@ -286,6 +323,124 @@ function updateToolbarActive(tool) {
   document.querySelectorAll(".tool-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.getAttribute("data-tool") === tool);
   });
+}
+
+// ─── Shortcut Help Overlay ───────────────────────────────────────────────
+
+let shortcutHelpVisible = false;
+
+function toggleShortcutHelp() {
+  shortcutHelpVisible ? closeShortcutHelp() : openShortcutHelp();
+}
+
+function openShortcutHelp() {
+  let overlay = document.getElementById("shortcut-help");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "shortcut-help";
+    overlay.innerHTML = buildShortcutHelpHtml();
+    document.getElementById("canvas-container").appendChild(overlay);
+
+    overlay.querySelector(".help-close").addEventListener("click", () => {
+      closeShortcutHelp();
+    });
+  }
+  overlay.classList.add("visible");
+  shortcutHelpVisible = true;
+}
+
+function closeShortcutHelp() {
+  const overlay = document.getElementById("shortcut-help");
+  if (overlay) {
+    overlay.classList.remove("visible");
+  }
+  shortcutHelpVisible = false;
+}
+
+function buildShortcutHelpHtml() {
+  const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+  const cmd = isMac ? "⌘" : "Ctrl+";
+
+  const sections = [
+    {
+      title: "Tools",
+      shortcuts: [
+        ["V", "Select / Move"],
+        ["R", "Rectangle"],
+        ["O", "Ellipse"],
+        ["P", "Pen (freehand)"],
+        ["T", "Text"],
+      ],
+    },
+    {
+      title: "Edit",
+      shortcuts: [
+        [`${cmd}Z`, "Undo"],
+        [`${cmd}⇧Z`, "Redo"],
+        ["Delete", "Delete selected"],
+        [`${cmd}D`, "Duplicate"],
+        [`${cmd}A`, "Select all"],
+      ],
+    },
+    {
+      title: "Clipboard",
+      shortcuts: [
+        [`${cmd}C`, "Copy"],
+        [`${cmd}X`, "Cut"],
+        [`${cmd}V`, "Paste"],
+      ],
+    },
+    {
+      title: "View",
+      shortcuts: [
+        [`${cmd}+`, "Zoom in"],
+        [`${cmd}−`, "Zoom out"],
+        [`${cmd}0`, "Zoom to fit"],
+        ["Space (hold)", "Pan / hand tool"],
+      ],
+    },
+    {
+      title: "Z-Order",
+      shortcuts: [
+        [`${cmd}[`, "Send backward"],
+        [`${cmd}]`, "Bring forward"],
+        [`${cmd}⇧[`, "Send to back"],
+        [`${cmd}⇧]`, "Bring to front"],
+      ],
+    },
+    {
+      title: "Apple Pencil Pro",
+      shortcuts: [
+        ["Squeeze", "Toggle last two tools"],
+        ["Barrel Roll", "Rotate brush angle"],
+      ],
+    },
+  ];
+
+  let html = `
+    <div class="help-panel">
+      <div class="help-header">
+        <h3>Keyboard Shortcuts</h3>
+        <button class="help-close">×</button>
+      </div>
+      <div class="help-body">
+  `;
+
+  for (const section of sections) {
+    html += `<div class="help-section"><h4>${section.title}</h4><dl>`;
+    for (const [key, desc] of section.shortcuts) {
+      html += `<div class="help-row"><dt><kbd>${key}</kbd></dt><dd>${desc}</dd></div>`;
+    }
+    html += `</dl></div>`;
+  }
+
+  html += `
+      </div>
+      <div class="help-footer">Press <kbd>?</kbd> to close</div>
+    </div>
+  `;
+
+  return html;
 }
 
 // ─── Annotation Card ───────────────────────────────────────────────────────

@@ -36,6 +36,21 @@ pub enum InputEvent {
         alt: bool,
         meta: bool,
     },
+
+    /// Apple Pencil Pro stylus gesture.
+    StylusGesture {
+        gesture: StylusGestureKind,
+        stylus: StylusData,
+    },
+}
+
+/// Apple Pencil Pro gesture types.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum StylusGestureKind {
+    /// Squeeze gesture (Apple Pencil Pro barrel squeeze).
+    Squeeze,
+    /// Barrel roll — angle in radians.
+    BarrelRoll { angle: f32 },
 }
 
 /// Stylus-specific data (Apple Pencil Pro).
@@ -67,6 +82,17 @@ impl InputEvent {
 
     pub fn from_pointer_up(x: f32, y: f32) -> Self {
         Self::PointerUp { x, y }
+    }
+
+    /// Create a Key event from JS keyboard event fields.
+    pub fn from_key(key: String, ctrl: bool, shift: bool, alt: bool, meta: bool) -> Self {
+        Self::Key {
+            key,
+            ctrl,
+            shift,
+            alt,
+            meta,
+        }
     }
 
     /// Extract position if this is a pointer event.

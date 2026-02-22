@@ -316,6 +316,87 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     #context-menu .menu-item:hover {
       background: var(--vscode-menu-selectionBackground, #45475a);
     }
+    /* Shortcut help overlay */
+    #shortcut-help {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 300;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+    }
+    #shortcut-help.visible { display: flex; }
+    .help-panel {
+      background: var(--vscode-editorWidget-background, #1E1E2E);
+      border: 1px solid var(--vscode-editorWidget-border, #45475a);
+      border-radius: 12px;
+      width: 560px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      font-family: var(--vscode-font-family, 'Segoe UI', sans-serif);
+      color: var(--vscode-foreground, #CDD6F4);
+    }
+    .help-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--vscode-editorWidget-border, #45475a);
+    }
+    .help-header h3 { font-size: 15px; font-weight: 600; margin: 0; }
+    .help-close {
+      cursor: pointer;
+      font-size: 18px;
+      background: none;
+      border: none;
+      color: inherit;
+      opacity: 0.6;
+    }
+    .help-close:hover { opacity: 1; }
+    .help-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      padding: 8px 18px 12px;
+    }
+    .help-section { padding: 8px 0; }
+    .help-section h4 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--vscode-descriptionForeground, #6C7086);
+      margin: 0 0 6px;
+    }
+    .help-section dl { margin: 0; padding: 0; }
+    .help-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 2px 0;
+      font-size: 12px;
+    }
+    .help-row dt { width: 80px; text-align: right; }
+    .help-row dd { margin: 0; color: var(--vscode-descriptionForeground, #A6ADC8); }
+    kbd {
+      display: inline-block;
+      padding: 1px 5px;
+      border: 1px solid var(--vscode-editorWidget-border, #45475a);
+      border-radius: 3px;
+      background: var(--vscode-input-background, #313244);
+      font-family: var(--vscode-editor-font-family, monospace);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .help-footer {
+      text-align: center;
+      padding: 8px;
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground, #6C7086);
+      border-top: 1px solid var(--vscode-editorWidget-border, #45475a);
+    }
   </style>
 </head>
 <body>

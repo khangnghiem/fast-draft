@@ -9,6 +9,7 @@ use fd_core::layout::Viewport;
 use fd_core::model::Annotation;
 use fd_editor::commands::CommandStack;
 use fd_editor::input::InputEvent;
+use fd_editor::shortcuts::{ShortcutAction, ShortcutMap};
 use fd_editor::sync::{GraphMutation, SyncEngine};
 use fd_editor::tools::{RectTool, SelectTool, Tool, ToolKind};
 use wasm_bindgen::prelude::*;
@@ -23,6 +24,8 @@ pub struct FdCanvas {
     engine: SyncEngine,
     commands: CommandStack,
     active_tool: ToolKind,
+    /// Previous tool — used for Apple Pencil Pro squeeze toggle.
+    prev_tool: ToolKind,
     select_tool: SelectTool,
     rect_tool: RectTool,
     width: f64,
@@ -49,6 +52,7 @@ impl FdCanvas {
             engine,
             commands: CommandStack::new(200),
             active_tool: ToolKind::Select,
+            prev_tool: ToolKind::Select,
             select_tool: SelectTool::new(),
             rect_tool: RectTool::new(),
             width,
@@ -136,9 +140,9 @@ impl FdCanvas {
         changed
     }
 
-    /// Switch the active tool.
+    /// Switch the active tool, remembering the previous one.
     pub fn set_tool(&mut self, name: &str) {
-        self.active_tool = match name {
+        let new_tool = match name {
             "select" => ToolKind::Select,
             "rect" => ToolKind::Rect,
             "ellipse" => ToolKind::Ellipse,
@@ -146,6 +150,15 @@ impl FdCanvas {
             "text" => ToolKind::Text,
             _ => ToolKind::Select,
         };
+        if new_tool != self.active_tool {
+            self.prev_tool = self.active_tool;
+            self.active_tool = new_tool;
+        }
+    }
+
+    /// Get the current tool name.
+    pub fn get_tool_name(&self) -> String {
+        tool_kind_to_name(self.active_tool).to_string()
     }
 
     /// Get the currently selected node ID, or empty string if none.
@@ -195,6 +208,89 @@ impl FdCanvas {
     /// Check if text changed due to canvas interaction (for sync back to editor).
     pub fn has_pending_text_change(&self) -> bool {
         !self.suppress_sync
+    }
+
+    // ─── Keyboard Shortcut API ───────────────────────────────────────────
+
+    /// Handle a keyboard event. Returns a JSON string:
+    /// `{"changed":bool, "action":"<action_name>", "tool":"<tool_name>"}`
+    pub fn handle_key(
+        &mut self,
+        key: &str,
+        ctrl: bool,
+        shift: bool,
+        alt: bool,
+        meta: bool,
+    ) -> String {
+        let action = match ShortcutMap::resolve(key, ctrl, shift, alt, meta) {
+            Some(a) => a,
+            None => return r#"{"changed":false,"action":"none","tool":""}"#.to_string(),
+        };
+
+        let (changed, tool_switched) = self.dispatch_action(action);
+
+        let action_name = action_to_name(action);
+        let tool_name = tool_kind_to_name(self.active_tool);
+        let sync = if changed { "true" } else { "false" };
+        let ts = if tool_switched { "true" } else { "false" };
+
+        format!(
+            r#"{{"changed":{sync},"action":"{action_name}","tool":"{tool_name}","toolSwitched":{ts}}}"#
+        )
+    }
+
+    /// Handle Apple Pencil Pro squeeze: toggles between current and previous tool.
+    /// Returns the name of the new active tool.
+    pub fn handle_stylus_squeeze(&mut self) -> String {
+        std::mem::swap(&mut self.prev_tool, &mut self.active_tool);
+        tool_kind_to_name(self.active_tool).to_string()
+    }
+
+    /// Delete the currently selected node. Returns true if a node was deleted.
+    pub fn delete_selected(&mut self) -> bool {
+        let id = match self.select_tool.selected {
+            Some(id) => id,
+            None => return false,
+        };
+        let mutation = GraphMutation::RemoveNode { id };
+        let changed = self.apply_mutations(vec![mutation]);
+        if changed {
+            self.select_tool.selected = None;
+            self.engine.flush_to_text();
+        }
+        changed
+    }
+
+    /// Duplicate the currently selected node. Returns true if duplicated.
+    pub fn duplicate_selected(&mut self) -> bool {
+        let id = match self.select_tool.selected {
+            Some(id) => id,
+            None => return false,
+        };
+        let original = match self.engine.graph.get_by_id(id) {
+            Some(node) => node.clone(),
+            None => return false,
+        };
+        let mut cloned = original;
+        let new_id = NodeId::anonymous();
+        cloned.id = new_id;
+        // Offset the duplicate 20px right and down from the original
+        cloned.constraints.push(fd_core::model::Constraint::Offset {
+            from: id,
+            dx: 20.0,
+            dy: 20.0,
+        });
+
+        let mutation = GraphMutation::AddNode {
+            parent_id: NodeId::intern("root"),
+            node: Box::new(cloned),
+        };
+        let changed = self.apply_mutations(vec![mutation]);
+        if changed {
+            self.select_tool.selected = Some(new_id);
+            self.engine.flush_to_text();
+        }
+        changed
     }
 
     // ─── Annotation APIs ─────────────────────────────────────────────────
@@ -270,6 +366,99 @@ impl FdCanvas {
         }
         self.engine.resolve();
         true
+    }
+
+    /// Dispatch a shortcut action. Returns (graph_changed, tool_switched).
+    fn dispatch_action(&mut self, action: ShortcutAction) -> (bool, bool) {
+        match action {
+            // Tool switching
+            ShortcutAction::ToolSelect => {
+                self.set_tool("select");
+                (false, true)
+            }
+            ShortcutAction::ToolRect => {
+                self.set_tool("rect");
+                (false, true)
+            }
+            ShortcutAction::ToolEllipse => {
+                self.set_tool("ellipse");
+                (false, true)
+            }
+            ShortcutAction::ToolPen => {
+                self.set_tool("pen");
+                (false, true)
+            }
+            ShortcutAction::ToolText => {
+                self.set_tool("text");
+                (false, true)
+            }
+
+            // Edit
+            ShortcutAction::Undo => (self.undo(), false),
+            ShortcutAction::Redo => (self.redo(), false),
+            ShortcutAction::Delete => (self.delete_selected(), false),
+            ShortcutAction::Duplicate => (self.duplicate_selected(), false),
+            ShortcutAction::Deselect => {
+                self.select_tool.selected = None;
+                (false, false)
+            }
+
+            // Currently handled by JS (clipboard, zoom, z-order, help)
+            // These return (false, false) so JS can handle them
+            ShortcutAction::SelectAll
+            | ShortcutAction::Copy
+            | ShortcutAction::Cut
+            | ShortcutAction::Paste
+            | ShortcutAction::ZoomIn
+            | ShortcutAction::ZoomOut
+            | ShortcutAction::ZoomToFit
+            | ShortcutAction::PanStart
+            | ShortcutAction::PanEnd
+            | ShortcutAction::SendBackward
+            | ShortcutAction::BringForward
+            | ShortcutAction::SendToBack
+            | ShortcutAction::BringToFront
+            | ShortcutAction::ShowHelp => (false, false),
+        }
+    }
+}
+
+fn tool_kind_to_name(kind: ToolKind) -> &'static str {
+    match kind {
+        ToolKind::Select => "select",
+        ToolKind::Rect => "rect",
+        ToolKind::Ellipse => "ellipse",
+        ToolKind::Pen => "pen",
+        ToolKind::Text => "text",
+    }
+}
+
+fn action_to_name(action: ShortcutAction) -> &'static str {
+    match action {
+        ShortcutAction::ToolSelect => "toolSelect",
+        ShortcutAction::ToolRect => "toolRect",
+        ShortcutAction::ToolEllipse => "toolEllipse",
+        ShortcutAction::ToolPen => "toolPen",
+        ShortcutAction::ToolText => "toolText",
+        ShortcutAction::Undo => "undo",
+        ShortcutAction::Redo => "redo",
+        ShortcutAction::Delete => "delete",
+        ShortcutAction::SelectAll => "selectAll",
+        ShortcutAction::Duplicate => "duplicate",
+        ShortcutAction::Copy => "copy",
+        ShortcutAction::Cut => "cut",
+        ShortcutAction::Paste => "paste",
+        ShortcutAction::ZoomIn => "zoomIn",
+        ShortcutAction::ZoomOut => "zoomOut",
+        ShortcutAction::ZoomToFit => "zoomToFit",
+        ShortcutAction::PanStart => "panStart",
+        ShortcutAction::PanEnd => "panEnd",
+        ShortcutAction::SendBackward => "sendBackward",
+        ShortcutAction::BringForward => "bringForward",
+        ShortcutAction::SendToBack => "sendToBack",
+        ShortcutAction::BringToFront => "bringToFront",
+        ShortcutAction::Deselect => "deselect",
+        ShortcutAction::ShowHelp => "showHelp",
     }
 }
 
