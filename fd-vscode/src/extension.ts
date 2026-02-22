@@ -1807,11 +1807,23 @@ export function activate(context: vscode.ExtensionContext) {
 
       // Small delay so the text editor settles first
       await new Promise((r) => setTimeout(r, 300));
+
+      // Find a reusable editor group: prefer an existing non-active column
+      // so we don't keep creating new Beside panels
+      const activeColumn = vscode.window.activeTextEditor?.viewColumn;
+      const visibleColumns = vscode.window.visibleTextEditors
+        .map((e) => e.viewColumn)
+        .filter((c): c is vscode.ViewColumn => c !== undefined);
+      const otherColumn = visibleColumns.find((c) => c !== activeColumn);
+
+      // Reuse the other group if it exists, otherwise open beside (creates one)
+      const targetColumn = otherColumn ?? vscode.ViewColumn.Beside;
+
       await vscode.commands.executeCommand(
         "vscode.openWith",
         doc.uri,
         "fd.canvas",
-        vscode.ViewColumn.Beside
+        targetColumn
       );
     })
   );
