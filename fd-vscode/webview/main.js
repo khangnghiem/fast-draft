@@ -93,6 +93,7 @@ async function main() {
     setupAnnotationCard();
     setupContextMenu();
     setupPropertiesPanel();
+    setupInlineEditor();
     setupDragAndDrop();
     setupHelpButton();
     setupApplePencilPro();
@@ -815,6 +816,7 @@ function setupPropertiesPanel() {
     { id: "prop-w", key: "width" },
     { id: "prop-h", key: "height" },
     { id: "prop-text-content", key: "content" },
+    { id: "prop-label", key: "label" },
   ];
 
   let debounceTimer = null;
@@ -911,14 +913,23 @@ function updatePropertiesPanel() {
   if (opacitySlider) opacitySlider.value = opacity;
   if (opacityVal) opacityVal.textContent = Math.round(opacity * 100) + "%";
 
-  // Text content
+  // Text content (for text nodes) and label (for rect/ellipse)
   const textSection = document.getElementById("props-text-section");
   const textInput = document.getElementById("prop-text-content");
+  const labelSection = document.getElementById("props-label-section");
+  const labelInput = document.getElementById("prop-label");
+
   if (props.kind === "text") {
-    textSection.style.display = "";
+    if (textSection) textSection.style.display = "";
+    if (labelSection) labelSection.style.display = "none";
     if (textInput) textInput.value = props.content || "";
+  } else if (props.kind === "rect" || props.kind === "ellipse") {
+    if (textSection) textSection.style.display = "none";
+    if (labelSection) labelSection.style.display = "";
+    if (labelInput) labelInput.value = props.label || "";
   } else {
-    textSection.style.display = "none";
+    if (textSection) textSection.style.display = "none";
+    if (labelSection) labelSection.style.display = "none";
   }
 
   // Show/hide appearance section based on kind
@@ -928,6 +939,117 @@ function updatePropertiesPanel() {
   }
 
   propsSuppressSync = false;
+}
+
+// ─── Inline Text Editor ────────────────────────────────────────────────────
+
+/** Inline textarea for editing text nodes and shape labels directly on canvas. */
+let inlineEditorActive = false;
+
+function setupInlineEditor() {
+  canvas.addEventListener("dblclick", (e) => {
+    if (!fdCanvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) - panX;
+    const y = (e.clientY - rect.top) - panY;
+
+    // Hit-test the scene to find the clicked node
+    const nodeId = fdCanvas.get_selected_id();
+    if (!nodeId) return;
+
+    // Get node props to know kind and current content
+    const propsJson = fdCanvas.get_selected_node_props();
+    const props = JSON.parse(propsJson);
+    if (!props.id) return;
+
+    const isText = props.kind === "text";
+    const isShape = props.kind === "rect" || props.kind === "ellipse";
+    if (!isText && !isShape) return;
+
+    const propKey = isText ? "content" : "label";
+    const currentValue = isText ? (props.content || "") : (props.label || "");
+
+    openInlineEditor(props.id, propKey, currentValue);
+    e.preventDefault();
+  });
+}
+
+/**
+ * Show a floating textarea over the node for in-place text editing.
+ */
+function openInlineEditor(nodeId, propKey, currentValue) {
+  if (inlineEditorActive) return;
+
+  const boundsJson = fdCanvas.get_node_bounds(nodeId);
+  const b = JSON.parse(boundsJson);
+  if (!b.width) return;
+
+  inlineEditorActive = true;
+
+  const container = document.getElementById("canvas-container");
+  const containerRect = container.getBoundingClientRect();
+
+  // Convert scene-space bounds to screen-space
+  const sx = b.x + panX;
+  const sy = b.y + panY;
+  const sw = Math.max(b.width, 80);
+  const sh = Math.max(b.height, 28);
+
+  const textarea = document.createElement("textarea");
+  textarea.value = currentValue;
+  textarea.style.cssText = [
+    `position:absolute`,
+    `left:${sx}px`,
+    `top:${sy}px`,
+    `width:${sw}px`,
+    `height:${sh}px`,
+    `padding:4px 6px`,
+    `font:14px Inter,system-ui,sans-serif`,
+    `border:2px solid #4FC3F7`,
+    `border-radius:4px`,
+    `background:rgba(255,255,255,0.95)`,
+    `color:#1C1C1E`,
+    `resize:none`,
+    `outline:none`,
+    `z-index:100`,
+    `box-shadow:0 4px 16px rgba(0,0,0,0.18)`,
+    `line-height:1.4`,
+    `overflow:hidden`,
+  ].join(";");
+
+  container.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+
+  const commit = () => {
+    if (!inlineEditorActive) return;
+    inlineEditorActive = false;
+    const newVal = textarea.value;
+    if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
+    if (!fdCanvas) return;
+    const changed = fdCanvas.set_node_prop(propKey, newVal);
+    if (changed) {
+      render();
+      syncTextToExtension();
+      updatePropertiesPanel();
+    }
+  };
+
+  textarea.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      inlineEditorActive = false;
+      if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
+      e.stopPropagation();
+      return;
+    }
+    // Shift+Enter = newline; plain Enter = commit
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      commit();
+    }
+  });
+
+  textarea.addEventListener("blur", commit);
 }
 
 // ─── Drag & Drop ─────────────────────────────────────────────────────────

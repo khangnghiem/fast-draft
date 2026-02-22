@@ -9,7 +9,7 @@ use crate::id::NodeId;
 use crate::model::*;
 use winnow::ascii::space1;
 use winnow::combinator::{alt, delimited, opt, preceded};
-use winnow::error::ContextError;
+use winnow::error::{ContextError, ErrMode};
 use winnow::prelude::*;
 use winnow::token::{take_till, take_while};
 
@@ -603,6 +603,21 @@ fn parse_node_property(
         }
         "opacity" => {
             style.opacity = Some(parse_number.parse_next(input)?);
+        }
+        "label" => {
+            let s = if input.starts_with('"') {
+                parse_quoted_string
+                    .map(|s: &str| s.to_string())
+                    .parse_next(input)?
+            } else {
+                let v: &str = take_till::<_, _, ContextError>(0.., |c: char| {
+                    c == '\n' || c == ';' || c == '}'
+                })
+                .parse_next(input)
+                .map_err(ErrMode::Cut)?;
+                v.trim().to_string()
+            };
+            style.label = Some(s);
         }
         "use" => {
             use_styles.push(parse_identifier.map(NodeId::intern).parse_next(input)?);
