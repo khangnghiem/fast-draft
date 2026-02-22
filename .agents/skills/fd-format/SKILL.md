@@ -69,6 +69,24 @@ path @drawing {
 }
 ```
 
+### Edges (Connections)
+
+Visual connections between nodes with styled lines, arrowheads, and labels:
+
+```
+edge @login_to_dashboard {
+  from: @login_screen
+  to: @dashboard
+  label: "on success"
+  stroke: #10B981 2
+  arrow: end            # none | start | end | both
+  curve: smooth         # straight | smooth | step
+  use: flow_style       # style references work too
+}
+```
+
+Edges support `##` annotations and `use:` style references, just like nodes.
+
 ### Colors
 
 Hex format: `#RGB`, `#RGBA`, `#RRGGBB`, `#RRGGBBAA`

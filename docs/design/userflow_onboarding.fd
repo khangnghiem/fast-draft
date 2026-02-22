@@ -1,0 +1,179 @@
+# FD v1
+# Onboarding User Flow — multi-step with error paths
+
+style screen {
+  fill: #FFFFFF
+  corner: 16
+}
+
+style screen_title {
+  fill: #1A1A2E
+  font: "Inter" 700 20
+}
+
+style flow_edge {
+  stroke: #6C5CE7 2
+}
+
+# ─── Screens ────────────────────────────────────────────────
+
+rect @landing {
+  ## "Marketing landing page"
+  ## status: done
+  ## tag: marketing
+  w: 200 h: 120
+  use: screen
+  text @landing_t "Landing Page" { use: screen_title }
+}
+
+rect @signup {
+  ## "Registration form"
+  ## accept: "collects name, email, password"
+  ## accept: "OAuth buttons for Google + GitHub"
+  ## status: done
+  w: 200 h: 120
+  use: screen
+  text @signup_t "Sign Up" { use: screen_title }
+}
+
+rect @verify_email {
+  ## "Email verification step"
+  ## accept: "shows 6-digit OTP input"
+  ## accept: "resend link after 60s cooldown"
+  ## status: in_progress
+  w: 200 h: 120
+  use: screen
+  text @verify_t "Verify Email" { use: screen_title }
+}
+
+rect @setup_profile {
+  ## "Profile setup — avatar, bio, preferences"
+  ## accept: "avatar upload with crop"
+  ## status: draft
+  w: 200 h: 120
+  use: screen
+  text @setup_t "Setup Profile" { use: screen_title }
+}
+
+rect @dashboard {
+  ## "Main application dashboard"
+  ## status: draft
+  ## tag: core
+  w: 200 h: 120
+  use: screen
+  text @dash_t "Dashboard" { use: screen_title }
+}
+
+rect @error_screen {
+  ## "Generic error state"
+  w: 160 h: 100
+  fill: #FEF2F2
+  corner: 12
+  text @error_t "Error" {
+    fill: #B91C1C
+    font: "Inter" 600 16
+  }
+}
+
+rect @resend_screen {
+  ## "Resend verification email"
+  w: 160 h: 100
+  fill: #FFFBEB
+  corner: 12
+  text @resend_t "Resend Email" {
+    fill: #92400E
+    font: "Inter" 600 14
+  }
+}
+
+# ─── Happy path ───────────────────────────────────────────────
+
+edge @cta_click {
+  ## "Primary CTA on landing"
+  from: @landing
+  to: @signup
+  label: "Get Started"
+  stroke: #6C5CE7 2
+  arrow: end
+}
+
+edge @signup_submit {
+  ## "Form submission"
+  ## accept: "validates all fields client-side first"
+  from: @signup
+  to: @verify_email
+  label: "submit"
+  stroke: #6C5CE7 2
+  arrow: end
+}
+
+edge @email_verified {
+  ## "OTP validated"
+  from: @verify_email
+  to: @setup_profile
+  label: "verified"
+  stroke: #10B981 2
+  arrow: end
+  curve: smooth
+}
+
+edge @profile_done {
+  ## "Profile setup complete"
+  from: @setup_profile
+  to: @dashboard
+  label: "complete"
+  stroke: #10B981 2
+  arrow: end
+  curve: smooth
+}
+
+# ─── Error paths ──────────────────────────────────────────────
+
+edge @signup_error {
+  ## "Registration failure"
+  ## accept: "shows inline field errors"
+  from: @signup
+  to: @error_screen
+  label: "validation fail"
+  stroke: #EF4444 1
+  arrow: end
+  curve: step
+}
+
+edge @verify_timeout {
+  ## "OTP expired or invalid"
+  from: @verify_email
+  to: @resend_screen
+  label: "expired"
+  stroke: #F59E0B 1
+  arrow: end
+  curve: step
+}
+
+edge @resend_retry {
+  ## "User requests new OTP"
+  from: @resend_screen
+  to: @verify_email
+  label: "resend"
+  stroke: #F59E0B 1
+  arrow: end
+}
+
+edge @error_retry {
+  ## "User corrects errors and resubmits"
+  from: @error_screen
+  to: @signup
+  label: "retry"
+  stroke: #6B7280 1
+  arrow: end
+}
+
+# ─── Layout ───────────────────────────────────────────────────
+
+@landing -> absolute: 40, 200
+@signup -> absolute: 300, 200
+@verify_email -> absolute: 560, 200
+@setup_profile -> absolute: 820, 200
+@dashboard -> absolute: 1080, 200
+@error_screen -> absolute: 300, 420
+@resend_screen -> absolute: 560, 420

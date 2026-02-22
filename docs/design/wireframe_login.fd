@@ -1,0 +1,149 @@
+# FD v1
+# Login Page Wireframe — with edge connections
+
+style bg_surface {
+  fill: #FFFFFF
+  corner: 12
+}
+
+style input_style {
+  fill: #F8F9FA
+  corner: 8
+}
+
+style label_style {
+  fill: #1A1A2E
+  font: "Inter" 500 14
+}
+
+# ─── Wireframe screens ────────────────────────────────────────
+
+group @login_page {
+  ## "Login page — main entry point"
+  ## status: done
+  layout: column gap=16 pad=32
+
+  text @title "Welcome Back" {
+    fill: #1A1A2E
+    font: "Inter" 700 28
+  }
+
+  rect @email_field {
+    ## "Email input field"
+    ## accept: "validates email format on blur"
+    w: 320 h: 48
+    use: input_style
+    text @email_placeholder "Email address" {
+      fill: #9CA3AF
+      font: "Inter" 400 14
+    }
+  }
+
+  rect @password_field {
+    ## "Password input field"
+    ## accept: "minimum 8 characters"
+    w: 320 h: 48
+    use: input_style
+    text @pw_placeholder "Password" {
+      fill: #9CA3AF
+      font: "Inter" 400 14
+    }
+  }
+
+  rect @login_btn {
+    ## "Primary login CTA"
+    ## accept: "disabled when fields empty"
+    ## accept: "shows loading spinner during auth"
+    w: 320 h: 48
+    fill: #6C5CE7
+    corner: 10
+    text @login_label "Sign In" {
+      fill: #FFFFFF
+      font: "Inter" 600 16
+    }
+    anim :hover {
+      fill: #5A4BD1
+      scale: 1.02
+      ease: spring 200ms
+    }
+  }
+
+  text @forgot "Forgot password?" {
+    fill: #6C5CE7
+    font: "Inter" 400 13
+  }
+}
+
+rect @error_toast {
+  ## "Error notification toast"
+  ## accept: "shows within 200ms of failed auth"
+  ## accept: "auto-dismiss after 5s"
+  w: 320 h: 56
+  fill: #FEF2F2
+  stroke: #EF4444 1
+  corner: 8
+  text @error_msg "Invalid credentials" {
+    fill: #B91C1C
+    font: "Inter" 500 14
+  }
+}
+
+rect @dashboard {
+  ## "Main dashboard — post-login"
+  ## status: in_progress
+  w: 400 h: 300
+  use: bg_surface
+  text @dash_title "Dashboard" {
+    fill: #1A1A2E
+    font: "Inter" 700 24
+  }
+}
+
+rect @reset_page {
+  ## "Password reset flow"
+  ## status: draft
+  w: 320 h: 200
+  use: bg_surface
+  text @reset_title "Reset Password" {
+    fill: #1A1A2E
+    font: "Inter" 700 20
+  }
+}
+
+# ─── Edges (data flow) ─────────────────────────────────────────
+
+edge @submit_flow {
+  ## "Form submission → API validation"
+  ## accept: "must complete within 3s"
+  from: @login_btn
+  to: @dashboard
+  label: "on success"
+  stroke: #10B981 2
+  arrow: end
+  curve: smooth
+}
+
+edge @error_flow {
+  ## "Failed authentication path"
+  from: @login_btn
+  to: @error_toast
+  label: "on failure"
+  stroke: #EF4444 2
+  arrow: end
+  curve: step
+}
+
+edge @forgot_flow {
+  from: @forgot
+  to: @reset_page
+  label: "click"
+  stroke: #6C5CE7 1
+  arrow: end
+}
+
+# ─── Layout ───────────────────────────────────────────────────
+
+@login_page -> center_in: canvas
+@error_toast -> absolute: 500, 80
+@dashboard -> absolute: 500, 200
+@reset_page -> absolute: 500, 540

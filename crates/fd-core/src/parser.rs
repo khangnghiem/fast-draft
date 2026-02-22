@@ -719,17 +719,15 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<Edge> {
                     };
                 }
                 "use" => {
-                    use_styles
-                        .push(parse_identifier.map(NodeId::intern).parse_next(input)?);
+                    use_styles.push(parse_identifier.map(NodeId::intern).parse_next(input)?);
                 }
                 "opacity" => {
                     style.opacity = Some(parse_number.parse_next(input)?);
                 }
                 _ => {
-                    let _ = take_till::<_, _, ContextError>(
-                        0..,
-                        |c: char| c == '\n' || c == ';' || c == '}',
-                    )
+                    let _ = take_till::<_, _, ContextError>(0.., |c: char| {
+                        c == '\n' || c == ';' || c == '}'
+                    })
                     .parse_next(input);
                 }
             }
