@@ -19,27 +19,27 @@ pub struct CanvasTheme {
 }
 
 impl CanvasTheme {
-    /// Light theme — white background, subtle gray grid.
+    /// Light theme — Apple-style warm white canvas.
     pub fn light() -> Self {
         Self {
-            bg: "#F8F9FA",
-            grid: "rgba(0, 0, 0, 0.06)",
-            badge_border: "#F8F9FA",
-            placeholder_border: "#9CA3AF",
-            placeholder_bg: "rgba(156, 163, 175, 0.08)",
-            placeholder_text: "#6B7280",
+            bg: "#F5F5F7",
+            grid: "rgba(0, 0, 0, 0.05)",
+            badge_border: "#F5F5F7",
+            placeholder_border: "#86868B",
+            placeholder_bg: "rgba(142, 142, 147, 0.06)",
+            placeholder_text: "#86868B",
         }
     }
 
-    /// Dark theme — Catppuccin Mocha.
+    /// Dark theme — macOS dark mode.
     pub fn dark() -> Self {
         Self {
-            bg: "#1E1E2E",
-            grid: "rgba(255, 255, 255, 0.05)",
-            badge_border: "#1E1E2E",
-            placeholder_border: "#6B7280",
-            placeholder_bg: "rgba(107, 114, 128, 0.08)",
-            placeholder_text: "#9CA3AF",
+            bg: "#1C1C1E",
+            grid: "rgba(255, 255, 255, 0.04)",
+            badge_border: "#1C1C1E",
+            placeholder_border: "#636366",
+            placeholder_bg: "rgba(99, 99, 102, 0.08)",
+            placeholder_text: "#98989D",
         }
     }
 }
