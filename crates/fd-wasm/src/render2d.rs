@@ -26,6 +26,9 @@ pub fn render_scene(
 
     // Paint nodes recursively from root
     render_node(ctx, graph, graph.root, bounds, selected_id);
+
+    // Draw edges between nodes
+    draw_edges(ctx, graph, bounds);
 }
 
 fn render_node(
@@ -309,6 +312,128 @@ fn draw_annotation_badge(
         let _ = ctx.fill_text(&count.to_string(), cx, cy);
     }
 
+    ctx.restore();
+}
+
+// ─── Edge rendering ─────────────────────────────────────────────────────────
+
+fn draw_edges(
+    ctx: &CanvasRenderingContext2d,
+    graph: &SceneGraph,
+    bounds: &HashMap<NodeIndex, ResolvedBounds>,
+) {
+    use fd_core::model::{ArrowKind, CurveKind};
+
+    for edge in &graph.edges {
+        let from_idx = match graph.index_of(edge.from) {
+            Some(i) => i,
+            None => continue,
+        };
+        let to_idx = match graph.index_of(edge.to) {
+            Some(i) => i,
+            None => continue,
+        };
+        let from_b = match bounds.get(&from_idx) {
+            Some(b) => b,
+            None => continue,
+        };
+        let to_b = match bounds.get(&to_idx) {
+            Some(b) => b,
+            None => continue,
+        };
+
+        let (x1, y1) = from_b.center();
+        let (x2, y2) = to_b.center();
+
+        // Resolve stroke
+        let resolved = graph.resolve_style_for_edge(edge);
+        let (stroke_color, stroke_width) = if let Some(ref stroke) = resolved.stroke {
+            (resolve_paint_color(&stroke.paint), stroke.width as f64)
+        } else {
+            ("#6B7080".to_string(), 1.5)
+        };
+
+        ctx.save();
+        apply_opacity(ctx, &resolved);
+        ctx.set_stroke_style_str(&stroke_color);
+        ctx.set_line_width(stroke_width);
+
+        ctx.begin_path();
+        match edge.curve {
+            CurveKind::Straight => {
+                ctx.move_to(x1 as f64, y1 as f64);
+                ctx.line_to(x2 as f64, y2 as f64);
+            }
+            CurveKind::Smooth => {
+                let mx = ((x1 + x2) / 2.0) as f64;
+                let my = ((y1 + y2) / 2.0) as f64;
+                let dx = (x2 - x1).abs();
+                let dy = (y2 - y1).abs();
+                let offset = (dx.max(dy) * 0.3) as f64;
+                ctx.move_to(x1 as f64, y1 as f64);
+                ctx.quadratic_curve_to(mx, my - offset, x2 as f64, y2 as f64);
+            }
+            CurveKind::Step => {
+                let mx = ((x1 + x2) / 2.0) as f64;
+                ctx.move_to(x1 as f64, y1 as f64);
+                ctx.line_to(mx, y1 as f64);
+                ctx.line_to(mx, y2 as f64);
+                ctx.line_to(x2 as f64, y2 as f64);
+            }
+        }
+        ctx.stroke();
+
+        // Arrowheads
+        if matches!(edge.arrow, ArrowKind::End | ArrowKind::Both) {
+            draw_arrowhead(ctx, x1, y1, x2, y2, &stroke_color, stroke_width);
+        }
+        if matches!(edge.arrow, ArrowKind::Start | ArrowKind::Both) {
+            draw_arrowhead(ctx, x2, y2, x1, y1, &stroke_color, stroke_width);
+        }
+
+        // Label at midpoint
+        if let Some(ref label) = edge.label {
+            let mx = ((x1 + x2) / 2.0) as f64;
+            let my = ((y1 + y2) / 2.0) as f64;
+            ctx.set_font("11px Inter, system-ui, sans-serif");
+            ctx.set_fill_style_str(&stroke_color);
+            ctx.set_text_align("center");
+            ctx.set_text_baseline("bottom");
+            let _ = ctx.fill_text(label, mx, my - 6.0);
+        }
+
+        ctx.restore();
+    }
+}
+
+fn draw_arrowhead(
+    ctx: &CanvasRenderingContext2d,
+    x1: f32,
+    y1: f32,
+    x2: f32,
+    y2: f32,
+    color: &str,
+    line_width: f64,
+) {
+    let angle = ((y2 - y1) as f64).atan2((x2 - x1) as f64);
+    let size = 8.0 + line_width * 1.5;
+    let x2d = x2 as f64;
+    let y2d = y2 as f64;
+
+    ctx.save();
+    ctx.set_fill_style_str(color);
+    ctx.begin_path();
+    ctx.move_to(x2d, y2d);
+    ctx.line_to(
+        x2d - size * (angle - 0.4).cos(),
+        y2d - size * (angle - 0.4).sin(),
+    );
+    ctx.line_to(
+        x2d - size * (angle + 0.4).cos(),
+        y2d - size * (angle + 0.4).sin(),
+    );
+    ctx.close_path();
+    ctx.fill();
     ctx.restore();
 }
 

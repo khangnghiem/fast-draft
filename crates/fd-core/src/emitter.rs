@@ -36,6 +36,11 @@ pub fn emit_document(graph: &SceneGraph) -> String {
         }
     }
 
+    // Emit edges
+    for edge in &graph.edges {
+        emit_edge(&mut out, edge);
+    }
+
     out
 }
 
@@ -320,6 +325,67 @@ fn emit_constraint(out: &mut String, node_id: &NodeId, constraint: &Constraint) 
     }
 }
 
+fn emit_edge(out: &mut String, edge: &Edge) {
+    writeln!(out, "edge @{} {{", edge.id.as_str()).unwrap();
+
+    // Annotations
+    emit_annotations(out, &edge.annotations, 1);
+
+    // from / to
+    writeln!(out, "  from: @{}", edge.from.as_str()).unwrap();
+    writeln!(out, "  to: @{}", edge.to.as_str()).unwrap();
+
+    // Label
+    if let Some(ref label) = edge.label {
+        writeln!(out, "  label: \"{label}\"").unwrap();
+    }
+
+    // Style references
+    for style_ref in &edge.use_styles {
+        writeln!(out, "  use: {}", style_ref.as_str()).unwrap();
+    }
+
+    // Stroke
+    if let Some(ref stroke) = edge.style.stroke {
+        match &stroke.paint {
+            Paint::Solid(c) => {
+                writeln!(out, "  stroke: {} {}", c.to_hex(), format_num(stroke.width)).unwrap();
+            }
+            _ => {
+                writeln!(out, "  stroke: #000 {}", format_num(stroke.width)).unwrap();
+            }
+        }
+    }
+
+    // Opacity
+    if let Some(opacity) = edge.style.opacity {
+        writeln!(out, "  opacity: {}", format_num(opacity)).unwrap();
+    }
+
+    // Arrow
+    if edge.arrow != ArrowKind::None {
+        let name = match edge.arrow {
+            ArrowKind::None => "none",
+            ArrowKind::Start => "start",
+            ArrowKind::End => "end",
+            ArrowKind::Both => "both",
+        };
+        writeln!(out, "  arrow: {name}").unwrap();
+    }
+
+    // Curve
+    if edge.curve != CurveKind::Straight {
+        let name = match edge.curve {
+            CurveKind::Straight => "straight",
+            CurveKind::Smooth => "smooth",
+            CurveKind::Step => "step",
+        };
+        writeln!(out, "  curve: {name}").unwrap();
+    }
+
+    out.push_str("}\n");
+}
+
 /// Format a float without trailing zeros for compact output.
 fn format_num(n: f32) -> String {
     if n == n.floor() {
@@ -601,5 +667,104 @@ rect @widget {
         assert_eq!(w.annotations[2], Annotation::Status("done".into()));
         assert_eq!(w.annotations[3], Annotation::Priority("low".into()));
         assert_eq!(w.annotations[4], Annotation::Tag("design".into()));
+    }
+
+    #[test]
+    fn roundtrip_edge_basic() {
+        let input = r#"
+rect @box_a {
+  w: 100 h: 50
+}
+
+rect @box_b {
+  w: 100 h: 50
+}
+
+edge @a_to_b {
+  from: @box_a
+  to: @box_b
+  label: "next step"
+  arrow: end
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        assert_eq!(graph.edges.len(), 1);
+        let edge = &graph.edges[0];
+        assert_eq!(edge.id.as_str(), "a_to_b");
+        assert_eq!(edge.from.as_str(), "box_a");
+        assert_eq!(edge.to.as_str(), "box_b");
+        assert_eq!(edge.label.as_deref(), Some("next step"));
+        assert_eq!(edge.arrow, ArrowKind::End);
+
+        // Re-parse roundtrip
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("roundtrip failed");
+        assert_eq!(graph2.edges.len(), 1);
+        let edge2 = &graph2.edges[0];
+        assert_eq!(edge2.from.as_str(), "box_a");
+        assert_eq!(edge2.to.as_str(), "box_b");
+        assert_eq!(edge2.label.as_deref(), Some("next step"));
+        assert_eq!(edge2.arrow, ArrowKind::End);
+    }
+
+    #[test]
+    fn roundtrip_edge_styled() {
+        let input = r#"
+rect @s1 { w: 50 h: 50 }
+rect @s2 { w: 50 h: 50 }
+
+edge @flow {
+  from: @s1
+  to: @s2
+  stroke: #6C5CE7 2
+  arrow: both
+  curve: smooth
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        assert_eq!(graph.edges.len(), 1);
+        let edge = &graph.edges[0];
+        assert_eq!(edge.arrow, ArrowKind::Both);
+        assert_eq!(edge.curve, CurveKind::Smooth);
+        assert!(edge.style.stroke.is_some());
+
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("styled edge roundtrip failed");
+        let edge2 = &graph2.edges[0];
+        assert_eq!(edge2.arrow, ArrowKind::Both);
+        assert_eq!(edge2.curve, CurveKind::Smooth);
+    }
+
+    #[test]
+    fn roundtrip_edge_with_annotations() {
+        let input = r#"
+rect @login { w: 200 h: 100 }
+rect @dashboard { w: 200 h: 100 }
+
+edge @login_flow {
+  ## "Main authentication flow"
+  ## accept: "must redirect within 2s"
+  from: @login
+  to: @dashboard
+  label: "on success"
+  arrow: end
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let edge = &graph.edges[0];
+        assert_eq!(edge.annotations.len(), 2);
+        assert_eq!(
+            edge.annotations[0],
+            Annotation::Description("Main authentication flow".into())
+        );
+        assert_eq!(
+            edge.annotations[1],
+            Annotation::Accept("must redirect within 2s".into())
+        );
+
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("annotated edge roundtrip failed");
+        let edge2 = &graph2.edges[0];
+        assert_eq!(edge2.annotations, edge.annotations);
     }
 }

@@ -278,6 +278,41 @@ pub enum Constraint {
     Absolute { x: f32, y: f32 },
 }
 
+// ─── Edges (connections between nodes) ───────────────────────────────────
+
+/// Arrow head placement on an edge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum ArrowKind {
+    #[default]
+    None,
+    Start,
+    End,
+    Both,
+}
+
+/// How the edge path is drawn between two nodes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum CurveKind {
+    #[default]
+    Straight,
+    Smooth,
+    Step,
+}
+
+/// A visual connection between two nodes.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Edge {
+    pub id: NodeId,
+    pub from: NodeId,
+    pub to: NodeId,
+    pub label: Option<String>,
+    pub style: Style,
+    pub use_styles: SmallVec<[NodeId; 2]>,
+    pub arrow: ArrowKind,
+    pub curve: CurveKind,
+    pub annotations: Vec<Annotation>,
+}
+
 /// Group layout mode (for children arrangement).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub enum LayoutMode {
@@ -374,6 +409,9 @@ pub struct SceneGraph {
 
     /// Index from NodeId → NodeIndex for fast lookup.
     pub id_index: HashMap<NodeId, NodeIndex>,
+
+    /// Visual edges (connections between nodes).
+    pub edges: Vec<Edge>,
 }
 
 impl SceneGraph {
@@ -392,6 +430,7 @@ impl SceneGraph {
             root,
             styles: HashMap::new(),
             id_index,
+            edges: Vec::new(),
         }
     }
 
@@ -458,6 +497,18 @@ impl SceneGraph {
             let id = self.graph[idx].id;
             self.id_index.insert(id, idx);
         }
+    }
+
+    /// Resolve an edge's effective style (merging `use` references + inline overrides).
+    pub fn resolve_style_for_edge(&self, edge: &Edge) -> Style {
+        let mut resolved = Style::default();
+        for style_id in &edge.use_styles {
+            if let Some(base) = self.styles.get(style_id) {
+                merge_style(&mut resolved, base);
+            }
+        }
+        merge_style(&mut resolved, &edge.style);
+        resolved
     }
 }
 

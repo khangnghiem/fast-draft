@@ -92,17 +92,25 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 
 13. **Build & Publish VS Code extension** (if `fd-vscode/` was changed):
 
+    > ⚠️ **MANDATORY**: Read `.env` for `VSCE_PAT` and `VSX_PAT` BEFORE publishing.
+    > Never rely on interactive prompts — always pass tokens via flags.
+
     ```bash
     cd fd-vscode && pnpm run compile
     ```
 
-    Then publish to both registries:
+    Then publish to **BOTH** registries (read tokens from `.env`):
 
     ```bash
-    cd fd-vscode && pnpm vsce publish && pnpm ovsx publish
+    cd fd-vscode && pnpm vsce publish
+    ```
+
+    ```bash
+    cd fd-vscode && pnpm ovsx publish -p <VSX_PAT from .env>
     ```
 
     > Skip publish if the change is local-only or version wasn't bumped.
+    > **NEVER** publish to only one registry — both Marketplace AND Open VSX are required.
 
 14. Report PR URL, merge status, and publish results to user.
 

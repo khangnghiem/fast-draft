@@ -40,6 +40,11 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
             if let Some(node) = graph.get_by_id_mut(node_id) {
                 node.constraints.push(constraint);
             }
+        } else if rest.starts_with("edge ") {
+            let edge = parse_edge_block
+                .parse_next(&mut rest)
+                .map_err(|e| format!("Edge parse error: {e}"))?;
+            graph.edges.push(edge);
         } else if starts_with_node_keyword(rest) {
             let node_data = parse_node
                 .parse_next(&mut rest)
@@ -632,6 +637,129 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
         duration_ms,
         easing,
         properties: props,
+    })
+}
+
+// ─── Edge block parser ─────────────────────────────────────────────────
+
+fn parse_edge_block(input: &mut &str) -> ModalResult<Edge> {
+    let _ = "edge".parse_next(input)?;
+    let _ = space1.parse_next(input)?;
+
+    let id = if input.starts_with('@') {
+        parse_node_id.parse_next(input)?
+    } else {
+        NodeId::anonymous()
+    };
+
+    skip_space(input);
+    let _ = '{'.parse_next(input)?;
+
+    let mut from = None;
+    let mut to = None;
+    let mut label = None;
+    let mut style = Style::default();
+    let mut use_styles = Vec::new();
+    let mut arrow = ArrowKind::None;
+    let mut curve = CurveKind::Straight;
+    let mut annotations = Vec::new();
+
+    skip_ws_and_comments(input);
+
+    while !input.starts_with('}') {
+        if input.starts_with("##") {
+            annotations.push(parse_annotation.parse_next(input)?);
+        } else {
+            let prop = parse_identifier.parse_next(input)?;
+            skip_space(input);
+            let _ = ':'.parse_next(input)?;
+            skip_space(input);
+
+            match prop {
+                "from" => {
+                    from = Some(parse_node_id.parse_next(input)?);
+                }
+                "to" => {
+                    to = Some(parse_node_id.parse_next(input)?);
+                }
+                "label" => {
+                    label = Some(
+                        parse_quoted_string
+                            .map(|s| s.to_string())
+                            .parse_next(input)?,
+                    );
+                }
+                "stroke" => {
+                    let color = parse_hex_color.parse_next(input)?;
+                    skip_space(input);
+                    let w = parse_number.parse_next(input).unwrap_or(1.0);
+                    style.stroke = Some(Stroke {
+                        paint: Paint::Solid(color),
+                        width: w,
+                        ..Stroke::default()
+                    });
+                }
+                "arrow" => {
+                    let kind = parse_identifier.parse_next(input)?;
+                    arrow = match kind {
+                        "none" => ArrowKind::None,
+                        "start" => ArrowKind::Start,
+                        "end" => ArrowKind::End,
+                        "both" => ArrowKind::Both,
+                        _ => ArrowKind::None,
+                    };
+                }
+                "curve" => {
+                    let kind = parse_identifier.parse_next(input)?;
+                    curve = match kind {
+                        "straight" => CurveKind::Straight,
+                        "smooth" => CurveKind::Smooth,
+                        "step" => CurveKind::Step,
+                        _ => CurveKind::Straight,
+                    };
+                }
+                "use" => {
+                    use_styles
+                        .push(parse_identifier.map(NodeId::intern).parse_next(input)?);
+                }
+                "opacity" => {
+                    style.opacity = Some(parse_number.parse_next(input)?);
+                }
+                _ => {
+                    let _ = take_till::<_, _, ContextError>(
+                        0..,
+                        |c: char| c == '\n' || c == ';' || c == '}',
+                    )
+                    .parse_next(input);
+                }
+            }
+
+            skip_opt_separator(input);
+        }
+        skip_ws_and_comments(input);
+    }
+
+    let _ = '}'.parse_next(input)?;
+
+    // Default stroke if none provided
+    if style.stroke.is_none() {
+        style.stroke = Some(Stroke {
+            paint: Paint::Solid(Color::rgba(0.42, 0.44, 0.5, 1.0)),
+            width: 1.5,
+            ..Stroke::default()
+        });
+    }
+
+    Ok(Edge {
+        id,
+        from: from.unwrap_or_else(|| NodeId::intern("_missing")),
+        to: to.unwrap_or_else(|| NodeId::intern("_missing")),
+        label,
+        style,
+        use_styles: use_styles.into(),
+        arrow,
+        curve,
+        annotations,
     })
 }
 
