@@ -365,7 +365,14 @@ impl FdCanvas {
     }
 
     /// Handle Apple Pencil Pro squeeze: toggles between current and previous tool.
-    /// Accepts modifier keys for future modifier+squeeze combos.
+    ///
+    /// Modifier combos:
+    /// - **No modifier**: toggle current ↔ previous tool (original behavior)
+    /// - **Shift**: switch to Pen tool
+    /// - **Ctrl / Meta**: switch to Select tool
+    /// - **Alt**: switch to Rect tool
+    /// - **Ctrl+Shift**: switch to Ellipse tool
+    ///
     /// Returns the name of the new active tool.
     pub fn handle_stylus_squeeze(
         &mut self,
@@ -374,14 +381,27 @@ impl FdCanvas {
         alt: bool,
         meta: bool,
     ) -> String {
-        let _mods = Modifiers {
-            shift,
-            ctrl,
-            alt,
-            meta,
+        let target = if ctrl && shift {
+            Some(ToolKind::Ellipse)
+        } else if shift {
+            Some(ToolKind::Pen)
+        } else if ctrl || meta {
+            Some(ToolKind::Select)
+        } else if alt {
+            Some(ToolKind::Rect)
+        } else {
+            None // plain squeeze: toggle
         };
-        // TODO: modifier+squeeze combos (e.g. Shift+squeeze = specific tool)
-        std::mem::swap(&mut self.prev_tool, &mut self.active_tool);
+
+        if let Some(tool) = target {
+            if tool != self.active_tool {
+                self.prev_tool = self.active_tool;
+                self.active_tool = tool;
+            }
+        } else {
+            std::mem::swap(&mut self.prev_tool, &mut self.active_tool);
+        }
+
         tool_kind_to_name(self.active_tool).to_string()
     }
 
