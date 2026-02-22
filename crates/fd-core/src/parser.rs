@@ -1,7 +1,7 @@
 //! Parser for the FD text format → SceneGraph.
 //!
 //! Built on `winnow` 0.7 for efficient, streaming parsing.
-//! Handles: comments, style definitions, node declarations
+//! Handles: comments, style definitions, imports, node declarations
 //! (group, rect, ellipse, path, text), inline properties, animations,
 //! and top-level constraints.
 
@@ -22,7 +22,12 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
     skip_ws_and_comments(&mut rest);
 
     while !rest.is_empty() {
-        if rest.starts_with("style ") {
+        if rest.starts_with("import ") {
+            let import = parse_import_line
+                .parse_next(&mut rest)
+                .map_err(|e| format!("Import parse error: {e}"))?;
+            graph.imports.push(import);
+        } else if rest.starts_with("style ") {
             let (name, style) = parse_style_block
                 .parse_next(&mut rest)
                 .map_err(|e| format!("Style parse error: {e}"))?;
@@ -126,6 +131,23 @@ fn insert_node_recursive(
     for child in parsed.children {
         insert_node_recursive(graph, idx, child);
     }
+}
+
+// ─── Import parser ──────────────────────────────────────────────────────
+
+/// Parse `import "path.fd" as namespace`.
+fn parse_import_line(input: &mut &str) -> ModalResult<Import> {
+    let _ = "import".parse_next(input)?;
+    let _ = space1.parse_next(input)?;
+    let path = parse_quoted_string
+        .map(|s| s.to_string())
+        .parse_next(input)?;
+    let _ = space1.parse_next(input)?;
+    let _ = "as".parse_next(input)?;
+    let _ = space1.parse_next(input)?;
+    let namespace = parse_identifier.map(|s| s.to_string()).parse_next(input)?;
+    skip_opt_separator(input);
+    Ok(Import { path, namespace })
 }
 
 // ─── Low-level parsers ──────────────────────────────────────────────────

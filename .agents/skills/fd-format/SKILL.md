@@ -17,6 +17,21 @@ The `.fd` format is a human- and AI-readable text DSL for 2D graphics, layout, a
 # This is a comment
 ```
 
+### Imports
+
+Reference other `.fd` files with namespaced access:
+
+```
+import "components/buttons.fd" as btn
+import "shared/tokens.fd" as tokens
+
+rect @hero {
+  use: tokens.accent
+}
+```
+
+Imported styles and node IDs are prefixed: `btn.primary`, `tokens.accent`.
+
 ### Style Definitions
 
 Named, reusable sets of visual properties:

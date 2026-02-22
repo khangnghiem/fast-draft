@@ -3,6 +3,7 @@ pub mod id;
 pub mod layout;
 pub mod model;
 pub mod parser;
+pub mod resolve;
 
 pub use id::NodeId;
 pub use layout::{Viewport, resolve_layout};
