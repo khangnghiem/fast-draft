@@ -2,7 +2,7 @@
   "name": "fast-draft",
   "displayName": "Fast Draft",
   "description": "Syntax highlighting, live parser validation, and interactive canvas editor for .fd (Fast Draft) files",
-  "version": "0.6.19",
+  "version": "0.6.20",
   "publisher": "KhangNghiem",
   "license": "MIT",
   "icon": "icon.png",
@@ -215,6 +215,7 @@
     }
   },
   "scripts": {
+    "test": "vitest run",
     "compile": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
     "watch": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
     "lint": "tsc --noEmit",
@@ -227,6 +228,7 @@
     "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.24.0",
     "ovsx": "^0.10.9",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.9"
   }
 }

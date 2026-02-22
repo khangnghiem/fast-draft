@@ -7,6 +7,10 @@
  */
 
 import * as vscode from "vscode";
+import {
+  findAnonNodeIds as _findAnonNodeIds,
+  stripMarkdownFences as _stripMarkdownFences,
+} from "./fd-parse";
 
 // ─── Types ───────────────────────────────────────────────────────────────
 
@@ -380,22 +384,15 @@ export async function refineSelectedNodes(
 
 /**
  * Find all _anon_ node IDs in an FD document.
+ * Delegates to fd-parse; re-exported for backward-compatible imports.
  */
 export function findAnonNodeIds(fdText: string): string[] {
-  const matches = fdText.matchAll(/@(_anon_\d+)/g);
-  const ids = new Set<string>();
-  for (const m of matches) {
-    ids.add(m[1]);
-  }
-  return [...ids];
+  return _findAnonNodeIds(fdText);
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
-/** Strip \`\`\`fd or \`\`\`text fences from LLM output. */
+/** Strip ```fd or ```text fences from LLM output. */
 function stripMarkdownFences(text: string): string {
-  let result = text;
-  result = result.replace(/^\`\`\`(?:fd|text|plaintext)?\s*\n?/, "");
-  result = result.replace(/\n?\`\`\`\s*$/, "");
-  return result.trim();
+  return _stripMarkdownFences(text);
 }

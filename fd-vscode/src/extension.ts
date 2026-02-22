@@ -1,5 +1,10 @@
 import * as vscode from "vscode";
 import { refineSelectedNodes, findAnonNodeIds } from "./ai-refine";
+import {
+  parseAnnotation as fdParseAnnotation,
+  computeSpecHideLines,
+  escapeHtml,
+} from "./fd-parse";
 
 /**
  * FD Custom Editor Provider.
@@ -1901,18 +1906,7 @@ class FdSpecViewPanel {
   }
 
   private parseAnnotation(line: string): { type: string; value: string } | null {
-    const trimmed = line.replace(/^##\s*/, "");
-    const acceptMatch = trimmed.match(/^accept:\s*"([^"]*)"/);
-    if (acceptMatch) return { type: "accept", value: acceptMatch[1] };
-    const statusMatch = trimmed.match(/^status:\s*(\S+)/);
-    if (statusMatch) return { type: "status", value: statusMatch[1] };
-    const priorityMatch = trimmed.match(/^priority:\s*(\S+)/);
-    if (priorityMatch) return { type: "priority", value: priorityMatch[1] };
-    const tagMatch = trimmed.match(/^tag:\s*(.+)/);
-    if (tagMatch) return { type: "tag", value: tagMatch[1].trim() };
-    const descMatch = trimmed.match(/^"([^"]*)"/);
-    if (descMatch) return { type: "description", value: descMatch[1] };
-    return null;
+    return fdParseAnnotation(line);
   }
 
   private renderSpecNode(
@@ -2152,13 +2146,7 @@ function exportSpecMarkdown(): void {
   });
 }
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+// escapeHtml is imported from fd-parse.ts
 
 // ─── Utilities ───────────────────────────────────────────────────────────
 
@@ -2257,69 +2245,13 @@ export function activate(context: vscode.ExtensionContext) {
 
   /** Return ranges of lines to hide for spec view. */
   function computeSpecHideRanges(doc: vscode.TextDocument): vscode.Range[] {
-    const ranges: vscode.Range[] = [];
-    let insideStyleBlock = false;
-    let insideAnimBlock = false;
-    let styleDepth = 0;
-    let animDepth = 0;
-
-    // Patterns for lines to KEEP in spec mode
-    const keepPatterns = [
-      /^\s*#/,                              // Single-line comments and annotations
-      /^\s*(group|rect|ellipse|path|text)\s+@/, // Typed node declarations
-      /^\s*@\w+\s*\{/,                      // Generic node declarations
-      /^\s*edge\s+@/,                        // Edge declarations
-      /^\s*from:\s*@/,                       // Edge from
-      /^\s*to:\s*@/,                          // Edge to
-      /^\s*label:\s*"/,                       // Edge label
-      /^\s*\}/,                              // Closing braces
-      /^\s*$/,                               // Blank lines
-    ];
-
+    const lines: string[] = [];
     for (let i = 0; i < doc.lineCount; i++) {
-      const line = doc.lineAt(i);
-      const text = line.text;
-      const trimmed = text.trim();
-
-      // Track style blocks: style <name> { ... }
-      if (/^\s*style\s+\w+\s*\{/.test(text)) {
-        insideStyleBlock = true;
-        styleDepth = 1;
-        ranges.push(line.range);
-        continue;
-      }
-      if (insideStyleBlock) {
-        styleDepth += (trimmed.match(/\{/g) || []).length;
-        styleDepth -= (trimmed.match(/\}/g) || []).length;
-        ranges.push(line.range);
-        if (styleDepth <= 0) insideStyleBlock = false;
-        continue;
-      }
-
-      // Track anim blocks: anim :<trigger> { ... }
-      if (/^\s*anim\s+:/.test(text)) {
-        insideAnimBlock = true;
-        animDepth = (trimmed.match(/\{/g) || []).length;
-        animDepth -= (trimmed.match(/\}/g) || []).length;
-        ranges.push(line.range);
-        if (animDepth <= 0) insideAnimBlock = false;
-        continue;
-      }
-      if (insideAnimBlock) {
-        animDepth += (trimmed.match(/\{/g) || []).length;
-        animDepth -= (trimmed.match(/\}/g) || []).length;
-        ranges.push(line.range);
-        if (animDepth <= 0) insideAnimBlock = false;
-        continue;
-      }
-
-      // Check if line matches any keep pattern
-      const shouldKeep = keepPatterns.some((p) => p.test(text));
-      if (!shouldKeep && trimmed.length > 0) {
-        ranges.push(line.range);
-      }
+      lines.push(doc.lineAt(i).text);
     }
-    return ranges;
+    return computeSpecHideLines(lines).map(
+      (i) => doc.lineAt(i).range
+    );
   }
 
   function applyCodeSpecView() {

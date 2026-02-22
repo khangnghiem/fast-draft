@@ -43,7 +43,13 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
    >
    > Requires `gh auth refresh -h github.com -s codespace` (one-time setup).
 
-4. **Report** results to user. **STOP HERE.**
+4. **TypeScript tests** (if `fd-vscode/` changed):
+
+   ```bash
+   cd fd-vscode && pnpm test
+   ```
+
+5. **Report** results to user. **STOP HERE.**
 
 ---
 
