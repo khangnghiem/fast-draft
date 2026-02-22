@@ -8,7 +8,7 @@ use fd_core::id::NodeId;
 use fd_core::layout::Viewport;
 use fd_core::model::Annotation;
 use fd_editor::commands::CommandStack;
-use fd_editor::input::InputEvent;
+use fd_editor::input::{InputEvent, Modifiers};
 use fd_editor::shortcuts::{ShortcutAction, ShortcutMap};
 use fd_editor::sync::{GraphMutation, SyncEngine};
 use fd_editor::tools::{RectTool, SelectTool, Tool, ToolKind};
@@ -101,8 +101,24 @@ impl FdCanvas {
     }
 
     /// Handle pointer down event. Returns true if the graph changed.
-    pub fn handle_pointer_down(&mut self, x: f32, y: f32, pressure: f32) -> bool {
-        let event = InputEvent::from_pointer_down(x, y, pressure);
+    #[allow(clippy::too_many_arguments)]
+    pub fn handle_pointer_down(
+        &mut self,
+        x: f32,
+        y: f32,
+        pressure: f32,
+        shift: bool,
+        ctrl: bool,
+        alt: bool,
+        meta: bool,
+    ) -> bool {
+        let mods = Modifiers {
+            shift,
+            ctrl,
+            alt,
+            meta,
+        };
+        let event = InputEvent::from_pointer_down(x, y, pressure, mods);
         let hit = self.hit_test(x, y);
         let mutations = match self.active_tool {
             ToolKind::Select => self.select_tool.handle(&event, hit),
@@ -113,8 +129,24 @@ impl FdCanvas {
     }
 
     /// Handle pointer move event. Returns true if the graph changed.
-    pub fn handle_pointer_move(&mut self, x: f32, y: f32, pressure: f32) -> bool {
-        let event = InputEvent::from_pointer_move(x, y, pressure);
+    #[allow(clippy::too_many_arguments)]
+    pub fn handle_pointer_move(
+        &mut self,
+        x: f32,
+        y: f32,
+        pressure: f32,
+        shift: bool,
+        ctrl: bool,
+        alt: bool,
+        meta: bool,
+    ) -> bool {
+        let mods = Modifiers {
+            shift,
+            ctrl,
+            alt,
+            meta,
+        };
+        let event = InputEvent::from_pointer_move(x, y, pressure, mods);
         let hit = self.hit_test(x, y);
         let mutations = match self.active_tool {
             ToolKind::Select => self.select_tool.handle(&event, hit),
@@ -125,8 +157,22 @@ impl FdCanvas {
     }
 
     /// Handle pointer up event. Returns true if the graph changed.
-    pub fn handle_pointer_up(&mut self, x: f32, y: f32) -> bool {
-        let event = InputEvent::from_pointer_up(x, y);
+    pub fn handle_pointer_up(
+        &mut self,
+        x: f32,
+        y: f32,
+        shift: bool,
+        ctrl: bool,
+        alt: bool,
+        meta: bool,
+    ) -> bool {
+        let mods = Modifiers {
+            shift,
+            ctrl,
+            alt,
+            meta,
+        };
+        let event = InputEvent::from_pointer_up(x, y, mods);
         let mutations = match self.active_tool {
             ToolKind::Select => self.select_tool.handle(&event, None),
             ToolKind::Rect => self.rect_tool.handle(&event, None),
@@ -240,8 +286,22 @@ impl FdCanvas {
     }
 
     /// Handle Apple Pencil Pro squeeze: toggles between current and previous tool.
+    /// Accepts modifier keys for future modifier+squeeze combos.
     /// Returns the name of the new active tool.
-    pub fn handle_stylus_squeeze(&mut self) -> String {
+    pub fn handle_stylus_squeeze(
+        &mut self,
+        shift: bool,
+        ctrl: bool,
+        alt: bool,
+        meta: bool,
+    ) -> String {
+        let _mods = Modifiers {
+            shift,
+            ctrl,
+            alt,
+            meta,
+        };
+        // TODO: modifier+squeeze combos (e.g. Shift+squeeze = specific tool)
         std::mem::swap(&mut self.prev_tool, &mut self.active_tool);
         tool_kind_to_name(self.active_tool).to_string()
     }

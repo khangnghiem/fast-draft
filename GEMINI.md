@@ -112,13 +112,19 @@ crates/
 
 ### 📝 FD Format Rules
 
-| Rule                        | Description                                            |
-| --------------------------- | ------------------------------------------------------ |
-| **Token efficiency**        | Use shorthand: `w:` not `width:`, `#FFF` not `#FFFFFF` |
-| **Constraints over coords** | `center_in: canvas` not `x: 400 y: 300`                |
-| **Style reuse**             | Define `style` blocks, reference with `use:`           |
-| **Semantic IDs**            | `@login_form` not `@rect_17`                           |
-| **Comments**                | `#` prefix for documentation                           |
+> [!IMPORTANT]
+> **Code mode prioritizes AI-agent readability and accuracy over token efficiency.**
+> Use full, explicit property names so LLMs and code tools parse `.fd` files without ambiguity.
+> Token efficiency remains a secondary goal — keep files concise where it doesn't hurt clarity.
+
+| Rule                        | Description                                                      |
+| --------------------------- | ---------------------------------------------------------------- |
+| **Explicit names**          | Use `width:` not `w:`, `height:` not `h:` — clarity over brevity |
+| **Full hex colors**         | Use `#FFFFFF` not `#FFF` — unambiguous for parsers and agents    |
+| **Constraints over coords** | `center_in: canvas` not `x: 400 y: 300`                          |
+| **Style reuse**             | Define `style` blocks, reference with `use:`                     |
+| **Semantic IDs**            | `@login_form` not `@rect_17`                                     |
+| **Comments**                | `#` prefix for documentation                                     |
 
 ### 🎨 Rendering Rules
 

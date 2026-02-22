@@ -113,7 +113,15 @@ function setupPointerEvents() {
     closeAnnotationCard();
     closeContextMenu();
 
-    const changed = fdCanvas.handle_pointer_down(x, y, e.pressure || 1.0);
+    const changed = fdCanvas.handle_pointer_down(
+      x,
+      y,
+      e.pressure || 1.0,
+      e.shiftKey,
+      e.ctrlKey,
+      e.altKey,
+      e.metaKey
+    );
     if (changed) render();
     canvas.setPointerCapture(e.pointerId);
   });
@@ -123,7 +131,15 @@ function setupPointerEvents() {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const changed = fdCanvas.handle_pointer_move(x, y, e.pressure || 1.0);
+    const changed = fdCanvas.handle_pointer_move(
+      x,
+      y,
+      e.pressure || 1.0,
+      e.shiftKey,
+      e.ctrlKey,
+      e.altKey,
+      e.metaKey
+    );
     if (changed) render();
   });
 
@@ -132,7 +148,14 @@ function setupPointerEvents() {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const changed = fdCanvas.handle_pointer_up(x, y);
+    const changed = fdCanvas.handle_pointer_up(
+      x,
+      y,
+      e.shiftKey,
+      e.ctrlKey,
+      e.altKey,
+      e.metaKey
+    );
     if (changed) {
       render();
       syncTextToExtension();
@@ -314,7 +337,12 @@ document.addEventListener("keyup", (e) => {
  */
 canvas.addEventListener("pointerdown", (e) => {
   if (e.pointerType === "pen" && e.button === 5 && fdCanvas) {
-    const newTool = fdCanvas.handle_stylus_squeeze();
+    const newTool = fdCanvas.handle_stylus_squeeze(
+      e.shiftKey,
+      e.ctrlKey,
+      e.altKey,
+      e.metaKey
+    );
     updateToolbarActive(newTool);
   }
 });

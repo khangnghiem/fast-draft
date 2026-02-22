@@ -7,7 +7,7 @@ description: How to read, write, and modify .fd (Fast Draft) files
 
 ## Overview
 
-The `.fd` format is a token-efficient text DSL for 2D graphics, layout, and animation. This skill explains how to read and write valid `.fd` files.
+The `.fd` format is a human- and AI-readable text DSL for 2D graphics, layout, and animation. In **Code mode**, prefer explicit property names for accuracy over shorthand for token savings. This skill explains how to read and write valid `.fd` files.
 
 ## Grammar Reference
 
@@ -36,7 +36,7 @@ Every visual element is a node with an optional `@id`:
 
 ```
 rect @my_rect {
-  w: <width> h: <height>
+  width: <width> height: <height>
   fill: <color>
   stroke: <color> <width>
   corner: <radius>
@@ -44,7 +44,7 @@ rect @my_rect {
 }
 
 ellipse @my_circle {
-  w: <rx> h: <ry>
+  width: <rx> height: <ry>
   fill: <color>
 }
 
@@ -131,32 +131,34 @@ rect @login_btn {
 | `## priority: value` | Priority    | `high`, `medium`, `low`        |
 | `## tag: value`      | Tag         | Categorization labels          |
 
-## Token Efficiency Tips
+## Code Mode — Readability Tips
 
-1. Use `w:` / `h:` shorthand, not `width:` / `height:`
-2. Use `style` blocks for shared properties — reference with `use:`
-3. Short hex colors: `#FFF` not `#FFFFFF`
-4. Inline `w: 100 h: 50` on one line
-5. Use constraints instead of absolute coordinates
+> In Code mode, prefer clarity and AI-agent accuracy over token savings.
+
+1. Use `width:` / `height:` — explicit names reduce parsing ambiguity for AI agents
+2. Use full hex colors: `#FFFFFF` not `#FFF` — unambiguous for tooling
+3. Use `style` blocks for shared properties — reference with `use:`
+4. Use constraints instead of absolute coordinates
+5. One property per line when possible — easier for diffs and LLM context
 
 ## Example: Complete Card
 
 ```
-style body { font: "Inter" 14; fill: #333 }
+style body { font: "Inter" 14; fill: #333333 }
 style accent { fill: #6C5CE7 }
 
 group @card {
   layout: column gap=12 pad=20
-  bg: #FFF corner=8 shadow=(0,2,8,#0001)
+  bg: #FFFFFF corner=8 shadow=(0,2,8,#00000011)
 
-  text @heading "Dashboard" { font: "Inter" 600 20; fill: #111 }
+  text @heading "Dashboard" { font: "Inter" 600 20; fill: #111111 }
   text @desc "Overview of metrics" { use: body }
 
   rect @cta {
-    w: 180 h: 40
+    width: 180 height: 40
     corner: 8
     use: accent
-    text "View Details" { font: "Inter" 500 14; fill: #FFF }
+    text "View Details" { font: "Inter" 500 14; fill: #FFFFFF }
     anim :hover { scale: 1.03; ease: spring 200ms }
   }
 }

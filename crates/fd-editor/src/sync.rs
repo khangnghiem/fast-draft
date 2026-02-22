@@ -148,6 +148,20 @@ impl SyncEngine {
                     node.annotations = annotations;
                 }
             }
+            GraphMutation::DuplicateNode { id } => {
+                if let Some(original) = self.graph.get_by_id(id).cloned() {
+                    let new_id = NodeId::anonymous();
+                    let mut cloned = original;
+                    cloned.id = new_id;
+                    // Offset via constraint
+                    cloned.constraints.push(Constraint::Offset {
+                        from: id,
+                        dx: 20.0,
+                        dy: 20.0,
+                    });
+                    self.graph.add_node(self.graph.root, cloned);
+                }
+            }
         }
 
         self.text_dirty = true;
@@ -240,6 +254,10 @@ pub enum GraphMutation {
     SetAnnotations {
         id: NodeId,
         annotations: Vec<Annotation>,
+    },
+    /// Duplicate a node (clone with offset). Used by Alt+drag.
+    DuplicateNode {
+        id: NodeId,
     },
 }
 
