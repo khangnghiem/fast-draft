@@ -190,6 +190,9 @@ pub struct RectTool {
     dragged: bool,
     start_x: f32,
     start_y: f32,
+    /// Track last computed top-left for Alt-from-center delta positioning.
+    last_cx: f32,
+    last_cy: f32,
     current_id: Option<NodeId>,
 }
 
@@ -206,6 +209,8 @@ impl RectTool {
             dragged: false,
             start_x: 0.0,
             start_y: 0.0,
+            last_cx: 0.0,
+            last_cy: 0.0,
             current_id: None,
         }
     }
@@ -223,6 +228,8 @@ impl Tool for RectTool {
                 self.dragged = false;
                 self.start_x = *x;
                 self.start_y = *y;
+                self.last_cx = *x;
+                self.last_cy = *y;
                 let id = NodeId::with_prefix("rect");
                 self.current_id = Some(id);
 
@@ -254,6 +261,26 @@ impl Tool for RectTool {
                         let side = w.max(h);
                         w = side;
                         h = side;
+                    }
+
+                    // Alt: draw from center (start point = center, not corner)
+                    if modifiers.alt {
+                        w *= 2.0;
+                        h *= 2.0;
+                        let new_cx = self.start_x - w / 2.0;
+                        let new_cy = self.start_y - h / 2.0;
+                        let dx = new_cx - self.last_cx;
+                        let dy = new_cy - self.last_cy;
+                        self.last_cx = new_cx;
+                        self.last_cy = new_cy;
+                        return vec![
+                            GraphMutation::MoveNode { id, dx, dy },
+                            GraphMutation::ResizeNode {
+                                id,
+                                width: w,
+                                height: h,
+                            },
+                        ];
                     }
 
                     return vec![GraphMutation::ResizeNode {
@@ -442,6 +469,9 @@ pub struct EllipseTool {
     dragged: bool,
     start_x: f32,
     start_y: f32,
+    /// Track last computed top-left for Alt-from-center delta positioning.
+    last_cx: f32,
+    last_cy: f32,
     current_id: Option<NodeId>,
 }
 
@@ -458,6 +488,8 @@ impl EllipseTool {
             dragged: false,
             start_x: 0.0,
             start_y: 0.0,
+            last_cx: 0.0,
+            last_cy: 0.0,
             current_id: None,
         }
     }
@@ -475,6 +507,8 @@ impl Tool for EllipseTool {
                 self.dragged = false;
                 self.start_x = *x;
                 self.start_y = *y;
+                self.last_cx = *x;
+                self.last_cy = *y;
                 let id = NodeId::with_prefix("ellipse");
                 self.current_id = Some(id);
 
@@ -500,6 +534,26 @@ impl Tool for EllipseTool {
                         let side = w.max(h);
                         w = side;
                         h = side;
+                    }
+
+                    // Alt: draw from center (start point = center, not corner)
+                    if modifiers.alt {
+                        w *= 2.0;
+                        h *= 2.0;
+                        let new_cx = self.start_x - w / 2.0;
+                        let new_cy = self.start_y - h / 2.0;
+                        let dx = new_cx - self.last_cx;
+                        let dy = new_cy - self.last_cy;
+                        self.last_cx = new_cx;
+                        self.last_cy = new_cy;
+                        return vec![
+                            GraphMutation::MoveNode { id, dx, dy },
+                            GraphMutation::ResizeNode {
+                                id,
+                                width: w,
+                                height: h,
+                            },
+                        ];
                     }
 
                     return vec![GraphMutation::ResizeNode {
@@ -814,6 +868,96 @@ mod tests {
                     (width - height).abs() < 0.01,
                     "Shift should make it a circle: w={width}, h={height}"
                 );
+            }
+            _ => panic!("expected ResizeNode"),
+        }
+    }
+
+    #[test]
+    fn rect_tool_alt_draws_from_center() {
+        let mut tool = RectTool::new();
+        let alt = Modifiers {
+            alt: true,
+            ..Modifiers::NONE
+        };
+
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 100.0,
+                y: 100.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        // Drag to (150, 130) with Alt → from center: w=100, h=60
+        let mutations = tool.handle(
+            &InputEvent::PointerMove {
+                x: 150.0,
+                y: 130.0,
+                pressure: 1.0,
+                modifiers: alt,
+            },
+            None,
+        );
+        assert_eq!(
+            mutations.len(),
+            2,
+            "Alt-draw should emit MoveNode + ResizeNode"
+        );
+        match &mutations[0] {
+            GraphMutation::MoveNode { dx, dy, .. } => {
+                assert!((dx - (-50.0)).abs() < 0.01, "dx={dx}");
+                assert!((dy - (-30.0)).abs() < 0.01, "dy={dy}");
+            }
+            _ => panic!("expected MoveNode first"),
+        }
+        match &mutations[1] {
+            GraphMutation::ResizeNode { width, height, .. } => {
+                assert!((width - 100.0).abs() < 0.01, "w={width}");
+                assert!((height - 60.0).abs() < 0.01, "h={height}");
+            }
+            _ => panic!("expected ResizeNode second"),
+        }
+    }
+
+    #[test]
+    fn ellipse_tool_alt_draws_from_center() {
+        let mut tool = EllipseTool::new();
+        let alt = Modifiers {
+            alt: true,
+            ..Modifiers::NONE
+        };
+
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 200.0,
+                y: 200.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        let mutations = tool.handle(
+            &InputEvent::PointerMove {
+                x: 250.0,
+                y: 240.0,
+                pressure: 1.0,
+                modifiers: alt,
+            },
+            None,
+        );
+        assert_eq!(
+            mutations.len(),
+            2,
+            "Alt-draw should emit MoveNode + ResizeNode"
+        );
+        match &mutations[1] {
+            GraphMutation::ResizeNode { width, height, .. } => {
+                assert!((width - 100.0).abs() < 0.01, "w={width}");
+                assert!((height - 80.0).abs() < 0.01, "h={height}");
             }
             _ => panic!("expected ResizeNode"),
         }
