@@ -1,3 +1,5 @@
+/* @ts-self-types="./fd_wasm.d.ts" */
+
 /**
  * The main WASM-facing canvas controller.
  *
@@ -223,18 +225,30 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
-     * Handle pointer up event. Returns true if the graph changed.
+     * Handle pointer up event. Returns a JSON string:
+     * `{"changed":bool, "toolSwitched":bool, "tool":"<name>"}`
+     *
+     * After a drawing gesture (Rect/Ellipse/Pen/Text) completes,
+     * the tool automatically switches back to Select.
      * @param {number} x
      * @param {number} y
      * @param {boolean} shift
      * @param {boolean} ctrl
      * @param {boolean} alt
      * @param {boolean} meta
-     * @returns {boolean}
+     * @returns {string}
      */
     handle_pointer_up(x, y, shift, ctrl, alt, meta) {
-        const ret = wasm.fdcanvas_handle_pointer_up(this.__wbg_ptr, x, y, shift, ctrl, alt, meta);
-        return ret !== 0;
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_handle_pointer_up(this.__wbg_ptr, x, y, shift, ctrl, alt, meta);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
     }
     /**
      * Handle Apple Pencil Pro squeeze: toggles between current and previous tool.

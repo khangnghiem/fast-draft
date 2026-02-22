@@ -12,7 +12,7 @@ export class FdCanvas {
     [Symbol.dispose](): void;
     /**
      * Create a node at a specific position (for drag-and-drop).
-     * `kind` is "rect", "ellipse", or "text".
+     * `kind` is \"rect\", \"ellipse\", or \"text\".
      * Returns `true` if the node was created.
      */
     create_node_at(kind: string, x: number, y: number): boolean;
@@ -29,6 +29,11 @@ export class FdCanvas {
      * Returns `[]` if node not found or has no annotations.
      */
     get_annotations_json(node_id: string): string;
+    /**
+     * Get the scene-space bounds of a node by its ID.
+     * Returns `{}` if the node is not found.
+     */
+    get_node_bounds(node_id: string): string;
     /**
      * Get the currently selected node ID, or empty string if none.
      * Returns the first selected node for backward compatibility.
@@ -65,12 +70,23 @@ export class FdCanvas {
      */
     handle_pointer_move(x: number, y: number, pressure: number, shift: boolean, ctrl: boolean, alt: boolean, meta: boolean): boolean;
     /**
-     * Handle pointer up event. Returns true if the graph changed.
+     * Handle pointer up event. Returns a JSON string:
+     * `{"changed":bool, "toolSwitched":bool, "tool":"<name>"}`
+     *
+     * After a drawing gesture (Rect/Ellipse/Pen/Text) completes,
+     * the tool automatically switches back to Select.
      */
-    handle_pointer_up(x: number, y: number, shift: boolean, ctrl: boolean, alt: boolean, meta: boolean): boolean;
+    handle_pointer_up(x: number, y: number, shift: boolean, ctrl: boolean, alt: boolean, meta: boolean): string;
     /**
      * Handle Apple Pencil Pro squeeze: toggles between current and previous tool.
-     * Accepts modifier keys for future modifier+squeeze combos.
+     *
+     * Modifier combos:
+     * - **No modifier**: toggle current ↔ previous tool (original behavior)
+     * - **Shift**: switch to Pen tool
+     * - **Ctrl / Meta**: switch to Select tool
+     * - **Alt**: switch to Rect tool
+     * - **Ctrl+Shift**: switch to Ellipse tool
+     *
      * Returns the name of the new active tool.
      */
     handle_stylus_squeeze(shift: boolean, ctrl: boolean, alt: boolean, meta: boolean): string;
@@ -94,7 +110,7 @@ export class FdCanvas {
     /**
      * Render the scene to a Canvas2D context.
      */
-    render(ctx: CanvasRenderingContext2D): void;
+    render(ctx: CanvasRenderingContext2D, time_ms: number): void;
     /**
      * Resize the canvas.
      */
@@ -153,6 +169,7 @@ export interface InitOutput {
     readonly fdcanvas_delete_selected: (a: number) => number;
     readonly fdcanvas_duplicate_selected: (a: number) => number;
     readonly fdcanvas_get_annotations_json: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_get_node_bounds: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_selected_id: (a: number) => [number, number];
     readonly fdcanvas_get_selected_ids: (a: number) => [number, number];
     readonly fdcanvas_get_selected_node_props: (a: number) => [number, number];
@@ -161,13 +178,13 @@ export interface InitOutput {
     readonly fdcanvas_handle_key: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly fdcanvas_handle_pointer_down: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
     readonly fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
-    readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly fdcanvas_handle_stylus_squeeze: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_has_pending_text_change: (a: number) => number;
     readonly fdcanvas_hit_test_badge: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_new: (a: number, b: number) => number;
     readonly fdcanvas_redo: (a: number) => number;
-    readonly fdcanvas_render: (a: number, b: any) => void;
+    readonly fdcanvas_render: (a: number, b: any, c: number) => void;
     readonly fdcanvas_resize: (a: number, b: number, c: number) => void;
     readonly fdcanvas_select_by_id: (a: number, b: number, c: number) => number;
     readonly fdcanvas_set_annotations_json: (a: number, b: number, c: number, d: number, e: number) => number;
