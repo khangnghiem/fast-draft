@@ -18,6 +18,9 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R1.8**: Human-readable and AI-writable without special tooling
 - **R1.9**: Structured annotations (`##`) — description, accept criteria, status, priority, tags — parsed and round-tripped as first-class metadata
 - **R1.10**: First-class edges — `edge @id { from: @a to: @b }` with arrow, curve, label, stroke, and `##` annotations for user flows, wireframes, and state machines
+- **R1.11**: Edge trigger animations — edges support `anim :hover { ... }` blocks identical to nodes
+- **R1.12**: Edge flow animations — `flow: pulse Nms` (traveling dot) and `flow: dash Nms` (marching dashes) for visualizing data flow direction
+- **R1.13**: Generic nodes — `@id { ... }` without explicit kind keyword for abstract/placeholder elements
 
 ### R2: Bidirectional Sync
 
@@ -59,6 +62,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R5.5**: Styling: fill, stroke, gradients, shadows, corner radius, opacity
 - **R5.6**: Animation: keyframe transitions with easing functions
 - **R5.7**: Edge rendering: lines, smooth curves, step routing with arrowheads and midpoint labels
+- **R5.8**: Edge animation rendering: trigger-based hover/press effects and continuous flow animations (pulse dots, marching dashes)
 
 ### R6: Platform Targets
 
