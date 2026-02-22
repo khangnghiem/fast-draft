@@ -17,11 +17,11 @@ export class FdCanvas {
      */
     create_node_at(kind: string, x: number, y: number): boolean;
     /**
-     * Delete the currently selected node. Returns true if a node was deleted.
+     * Delete the currently selected node(s). Returns true if any was deleted.
      */
     delete_selected(): boolean;
     /**
-     * Duplicate the currently selected node. Returns true if duplicated.
+     * Duplicate the currently selected node(s). Returns true if duplicated.
      */
     duplicate_selected(): boolean;
     /**
@@ -31,8 +31,13 @@ export class FdCanvas {
     get_annotations_json(node_id: string): string;
     /**
      * Get the currently selected node ID, or empty string if none.
+     * Returns the first selected node for backward compatibility.
      */
     get_selected_id(): string;
+    /**
+     * Get all selected node IDs as a JSON array.
+     */
+    get_selected_ids(): string;
     /**
      * Get properties of the currently selected node as JSON.
      * Returns `{}` if no node is selected.
@@ -115,6 +120,10 @@ export class FdCanvas {
      */
     set_text(text: string): boolean;
     /**
+     * Set the canvas theme.
+     */
+    set_theme(is_dark: boolean): void;
+    /**
      * Switch the active tool, remembering the previous one.
      */
     set_tool(name: string): void;
@@ -145,6 +154,7 @@ export interface InitOutput {
     readonly fdcanvas_duplicate_selected: (a: number) => number;
     readonly fdcanvas_get_annotations_json: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_selected_id: (a: number) => [number, number];
+    readonly fdcanvas_get_selected_ids: (a: number) => [number, number];
     readonly fdcanvas_get_selected_node_props: (a: number) => [number, number];
     readonly fdcanvas_get_text: (a: number) => [number, number];
     readonly fdcanvas_get_tool_name: (a: number) => [number, number];
@@ -163,6 +173,7 @@ export interface InitOutput {
     readonly fdcanvas_set_annotations_json: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly fdcanvas_set_node_prop: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly fdcanvas_set_text: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_set_theme: (a: number, b: number) => void;
     readonly fdcanvas_set_tool: (a: number, b: number, c: number) => void;
     readonly fdcanvas_undo: (a: number) => number;
     readonly parse_to_json: (a: number, b: number) => [number, number];

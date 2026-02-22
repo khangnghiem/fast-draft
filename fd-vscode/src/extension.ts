@@ -314,6 +314,19 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       padding: 4px 8px;
       font-size: 12px;
     }
+    #theme-toggle-btn {
+      font-size: 14px;
+      padding: 4px 10px;
+      border: 1px solid var(--fd-border);
+      border-radius: 8px;
+      background: var(--fd-input-bg);
+      min-width: 36px;
+      justify-content: center;
+    }
+    #theme-toggle-btn:hover {
+      background: var(--fd-accent-dim);
+      border-color: var(--fd-accent-border);
+    }
     #status {
       color: var(--fd-text-muted);
       font-size: 11px;
@@ -709,8 +722,8 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     <button class="tool-btn" id="ai-refine-btn" title="AI Refine selected node (rename + restyle)">✨ Refine</button>
     <button class="tool-btn" id="ai-refine-all-btn" title="AI Refine all anonymous nodes">✨ All</button>
     <div class="tool-sep"></div>
-    <button class="tool-btn" id="theme-toggle-btn" title="Toggle light/dark theme">☀️</button>
-    <button class="tool-btn" id="tool-help-btn">?</button>
+    <button class="tool-btn" id="theme-toggle-btn" title="Toggle light/dark canvas theme">☀️</button>
+    <button class="tool-btn" id="tool-help-btn" title="Keyboard shortcuts">?</button>
     <span id="status">Loading WASM…</span>
   </div>
   <div id="canvas-container">
