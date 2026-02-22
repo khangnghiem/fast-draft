@@ -47,6 +47,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.11**: Per-tool cursor feedback (crosshair for drawing, text cursor for text, default for select)
 - **R3.12**: Annotation pins: Visual badge dots on annotated nodes with inline edit card
 - **R3.13**: Light/dark theme toggle — canvas defaults to light mode with a toolbar toggle button (🌙 in light → switch to dark, ☀️ in dark → switch to light); preference persists across sessions via VS Code state
+- **R3.14**: View mode toggle — **Design | Spec** segmented control in the canvas toolbar (Design default); Spec View hides the canvas and shows a scrollable overlay of node IDs, `##` annotations, acceptance criteria, status/priority/tag badges, unannotated node chips, and edges; overlay updates live as the `.fd` source changes; also accessible via `FD: Toggle Design/Spec View` command in the editor title bar and Command Palette
 
 ### R4: AI Editing (Text)
 
@@ -60,6 +61,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R4.8**: AI node refinement — restyle selected nodes and replace anonymous IDs (`_anon_N`) with semantic names via configurable AI provider
 - **R4.9**: Multi-provider AI — per-provider API keys (`fd.ai.geminiApiKey`, `fd.ai.openaiApiKey`, `fd.ai.anthropicApiKey`), custom model selection per provider, and support for Gemini, OpenAI, Anthropic, Ollama (local), and OpenRouter (multi-model gateway)
 - **R4.10**: Auto-format pipeline — `format_document` via LSP; lint diagnostics (anonymous IDs, duplicate `use:`, unused styles) + configurable dedup/hoist transforms via `fd.format.*` settings
+- **R4.11**: Inline Spec View — canvas-embedded spec overlay (client-side parser, no roundtrip) showing node structure + annotations; complements the separate `FD: Show Spec View` sidebar panel and `FD: Export Spec to Markdown` export command
 
 ### R5: Rendering
 
