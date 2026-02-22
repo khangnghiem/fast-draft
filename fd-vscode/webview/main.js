@@ -25,6 +25,12 @@ let panStartX = 0;
 let panStartY = 0;
 let panDragging = false;
 
+/** Zoom level (1.0 = 100%, range 0.1–10) */
+let zoomLevel = 1.0;
+const ZOOM_MIN = 0.1;
+const ZOOM_MAX = 10;
+const ZOOM_STEP = 1.25; // Each ⌘+/⌘− multiplies by this
+
 /** @type {CanvasRenderingContext2D | null} */
 let ctx = null;
 
@@ -102,6 +108,7 @@ async function main() {
     setupHelpButton();
     setupApplePencilPro();
     setupThemeToggle();
+    setupZoomIndicator();
 
     // Tell extension we're ready
     vscode.postMessage({ type: "ready" });
@@ -123,7 +130,9 @@ function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.restore();
   ctx.save();
-  ctx.setTransform(dpr, 0, 0, dpr, panX * dpr, panY * dpr);
+  // Apply zoom + pan: scale by zoom, then translate by pan
+  const z = zoomLevel * dpr;
+  ctx.setTransform(z, 0, 0, z, panX * dpr, panY * dpr);
   fdCanvas.render(ctx, performance.now());
   ctx.restore();
   // Reposition spec badges when canvas re-renders (node moved, panned, etc.)
@@ -173,9 +182,9 @@ function setupPointerEvents() {
       return;
     }
 
-    // Adjust for pan offset
-    const x = rawX - panX;
-    const y = rawY - panY;
+    // Adjust for pan offset and zoom level → scene-space coords
+    const x = (rawX - panX) / zoomLevel;
+    const y = (rawY - panY) / zoomLevel;
 
     // Check if clicking an annotation badge (scene-space coords)
     const badgeHit = fdCanvas.hit_test_badge(x, y);
@@ -213,8 +222,8 @@ function setupPointerEvents() {
     }
 
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) - panX;
-    const y = (e.clientY - rect.top) - panY;
+    const x = ((e.clientX - rect.left) - panX) / zoomLevel;
+    const y = ((e.clientY - rect.top) - panY) / zoomLevel;
     const changed = fdCanvas.handle_pointer_move(
       x,
       y,
@@ -239,8 +248,8 @@ function setupPointerEvents() {
     }
 
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) - panX;
-    const y = (e.clientY - rect.top) - panY;
+    const x = ((e.clientX - rect.left) - panX) / zoomLevel;
+    const y = ((e.clientY - rect.top) - panY) / zoomLevel;
     const resultJson = fdCanvas.handle_pointer_up(
       x,
       y,
@@ -266,12 +275,20 @@ function setupPointerEvents() {
     vscode.postMessage({ type: "nodeSelected", id: selectedId });
   });
 
-  // ── Wheel / Trackpad scroll → pan ──
+  // ── Wheel / Trackpad → Pan or Zoom ──
   canvas.addEventListener("wheel", (e) => {
     e.preventDefault();
-    panX -= e.deltaX;
-    panY -= e.deltaY;
-    render();
+    // Pinch-to-zoom on trackpad fires as wheel with ctrlKey
+    if (e.ctrlKey || e.metaKey) {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      zoomAtPoint(mx, my, e.deltaY < 0 ? 1.03 : 1 / 1.03);
+    } else {
+      panX -= e.deltaX;
+      panY -= e.deltaY;
+      render();
+    }
   }, { passive: false });
 }
 
@@ -394,6 +411,23 @@ document.addEventListener("keydown", (e) => {
     closeAnnotationCard();
     closeContextMenu();
     closeShortcutHelp();
+  }
+
+  // ── Zoom shortcuts (JS-side, before WASM) ──
+  if ((e.metaKey || e.ctrlKey) && (e.key === "=" || e.key === "+")) {
+    e.preventDefault();
+    zoomBy(ZOOM_STEP);
+    return;
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === "-") {
+    e.preventDefault();
+    zoomBy(1 / ZOOM_STEP);
+    return;
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === "0") {
+    e.preventDefault();
+    zoomToFit();
+    return;
   }
 
   // Delegate to WASM shortcut resolver
@@ -584,8 +618,10 @@ function buildShortcutHelpHtml() {
         [`${cmd}+`, "Zoom in"],
         [`${cmd}−`, "Zoom out"],
         [`${cmd}0`, "Zoom to fit"],
+        ["Pinch", "Trackpad zoom"],
         ["Space (hold)", "Pan / hand tool"],
         [`${cmd} (hold)`, "Temp. hand tool"],
+        ["Click %", "Reset zoom to 100%"],
       ],
     },
     {
@@ -807,8 +843,8 @@ function setupContextMenu() {
 
     const rect = canvas.getBoundingClientRect();
     // Adjust for pan offset to get scene-space coords
-    const x = (e.clientX - rect.left) - panX;
-    const y = (e.clientY - rect.top) - panY;
+    const x = ((e.clientX - rect.left) - panX) / zoomLevel;
+    const y = ((e.clientY - rect.top) - panY) / zoomLevel;
 
     // Hit-test for a node
     const selectedId = fdCanvas.get_selected_id();
@@ -1002,8 +1038,8 @@ function setupInlineEditor() {
   canvas.addEventListener("dblclick", (e) => {
     if (!fdCanvas) return;
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) - panX;
-    const y = (e.clientY - rect.top) - panY;
+    const x = ((e.clientX - rect.left) - panX) / zoomLevel;
+    const y = ((e.clientY - rect.top) - panY) / zoomLevel;
 
     // Hit-test the scene to find the clicked node
     const nodeId = fdCanvas.get_selected_id();
@@ -1042,10 +1078,10 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   const containerRect = container.getBoundingClientRect();
 
   // Convert scene-space bounds to screen-space
-  const sx = b.x + panX;
-  const sy = b.y + panY;
-  const sw = Math.max(b.width, 80);
-  const sh = Math.max(b.height, 28);
+  const sx = b.x * zoomLevel + panX;
+  const sy = b.y * zoomLevel + panY;
+  const sw = Math.max(b.width * zoomLevel, 80);
+  const sh = Math.max(b.height * zoomLevel, 28);
 
   const textarea = document.createElement("textarea");
   textarea.value = currentValue;
@@ -1164,8 +1200,8 @@ function setupDragAndDrop() {
 
     const rect = canvas.getBoundingClientRect();
     // Adjust for pan offset to place node in scene-space coords
-    const x = (e.clientX - rect.left) - panX;
-    const y = (e.clientY - rect.top) - panY;
+    const x = ((e.clientX - rect.left) - panX) / zoomLevel;
+    const y = ((e.clientY - rect.top) - panY) / zoomLevel;
 
     const changed = fdCanvas.create_node_at(shape, x, y);
     if (changed) {
@@ -1433,6 +1469,123 @@ function applyTheme(isDark) {
     fdCanvas.set_theme(isDark);
     render();
   }
+}
+
+// ─── Zoom Helpers ─────────────────────────────────────────────────────────────
+
+/** Zoom by a multiplier, centered on the canvas middle. */
+function zoomBy(factor) {
+  const container = document.getElementById("canvas-container");
+  const cx = container.clientWidth / 2;
+  const cy = container.clientHeight / 2;
+  zoomAtPoint(cx, cy, factor);
+}
+
+/** Zoom by a multiplier, anchored at a screen-space point (mx, my). */
+function zoomAtPoint(mx, my, factor) {
+  const oldZoom = zoomLevel;
+  zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomLevel * factor));
+  // Adjust pan so the point under the cursor stays fixed
+  panX = mx - (mx - panX) * (zoomLevel / oldZoom);
+  panY = my - (my - panY) * (zoomLevel / oldZoom);
+  render();
+  updateZoomIndicator();
+}
+
+/** Zoom to fit all nodes in the viewport with padding. */
+function zoomToFit() {
+  if (!fdCanvas) return;
+  const container = document.getElementById("canvas-container");
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+
+  // Get all node bounds from the WASM engine
+  const text = fdCanvas.get_text();
+  if (!text || text.trim().length === 0) {
+    // Empty document — reset to 100%
+    zoomLevel = 1;
+    panX = 0;
+    panY = 0;
+    render();
+    updateZoomIndicator();
+    return;
+  }
+
+  // Use the WASM scene to compute bounding box
+  // Walk all node IDs and compute union of bounds
+  const idsJson = fdCanvas.get_selected_ids ? fdCanvas.get_selected_ids() : "[]";
+  // We need to compute the scene bounding box — iterate through known nodes
+  // For now, use a simpler approach: try all nodes via parse_to_json
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let foundAny = false;
+
+  // Parse the text to find node IDs, then get bounds for each
+  const nodeIdPattern = /@(\w+)/g;
+  let match;
+  const seenIds = new Set();
+  while ((match = nodeIdPattern.exec(text)) !== null) {
+    const id = match[1];
+    if (seenIds.has(id)) continue;
+    seenIds.add(id);
+    try {
+      const boundsJson = fdCanvas.get_node_bounds(id);
+      const b = JSON.parse(boundsJson);
+      if (b.width && b.width > 0) {
+        minX = Math.min(minX, b.x);
+        minY = Math.min(minY, b.y);
+        maxX = Math.max(maxX, b.x + b.width);
+        maxY = Math.max(maxY, b.y + b.height);
+        foundAny = true;
+      }
+    } catch (_) { /* skip */ }
+  }
+
+  if (!foundAny) {
+    zoomLevel = 1;
+    panX = 0;
+    panY = 0;
+  } else {
+    const padding = 40;
+    const sceneW = maxX - minX;
+    const sceneH = maxY - minY;
+    const fitZoom = Math.min(
+      (cw - padding * 2) / Math.max(sceneW, 1),
+      (ch - padding * 2) / Math.max(sceneH, 1)
+    );
+    zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, fitZoom));
+    // Center the scene
+    panX = (cw - sceneW * zoomLevel) / 2 - minX * zoomLevel;
+    panY = (ch - sceneH * zoomLevel) / 2 - minY * zoomLevel;
+  }
+
+  render();
+  updateZoomIndicator();
+}
+
+/** Update the zoom level indicator in the toolbar. */
+function updateZoomIndicator() {
+  const el = document.getElementById("zoom-level");
+  if (el) {
+    el.textContent = Math.round(zoomLevel * 100) + "%";
+  }
+}
+
+/** Set up click-to-reset on zoom indicator. */
+function setupZoomIndicator() {
+  const el = document.getElementById("zoom-level");
+  if (!el) return;
+  el.addEventListener("click", () => {
+    // Reset to 100% centered
+    const container = document.getElementById("canvas-container");
+    const cx = container.clientWidth / 2;
+    const cy = container.clientHeight / 2;
+    const oldZoom = zoomLevel;
+    zoomLevel = 1.0;
+    panX = cx - (cx - panX) * (1.0 / oldZoom);
+    panY = cy - (cy - panY) * (1.0 / oldZoom);
+    render();
+    updateZoomIndicator();
+  });
 }
 
 // ─── Start ───────────────────────────────────────────────────────────────────

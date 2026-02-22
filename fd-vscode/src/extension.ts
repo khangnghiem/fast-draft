@@ -624,6 +624,28 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       transform: scale(1.04);
     }
 
+    /* ── Zoom Indicator (Apple pill) ── */
+    #zoom-level {
+      padding: 3px 9px;
+      border: 1px solid var(--fd-border) !important;
+      border-radius: 20px;
+      background: var(--fd-segment-bg);
+      color: var(--fd-text-secondary);
+      font-size: 10px;
+      font-weight: 600;
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+      letter-spacing: -0.02em;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      min-width: 42px;
+      text-align: center;
+    }
+    #zoom-level:hover {
+      background: var(--fd-accent-dim);
+      border-color: var(--fd-accent-border) !important;
+      color: var(--fd-accent);
+    }
+
     /* ── Help & Status ── */
     #tool-help-btn {
       margin-left: auto;
@@ -1078,6 +1100,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     </div>
     <div class="tool-sep"></div>
     <button class="tool-btn" id="theme-toggle-btn" title="Toggle light/dark canvas theme">🌙</button>
+    <button id="zoom-level" title="Zoom level (click to reset to 100%)">100%</button>
     <button class="tool-btn" id="tool-help-btn" title="Keyboard shortcuts">?</button>
     <span id="status">Loading WASM…</span>
   </div>
