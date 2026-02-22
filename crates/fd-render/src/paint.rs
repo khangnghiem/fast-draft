@@ -39,7 +39,7 @@ fn paint_node(
         None => return,
     };
 
-    let style = graph.resolve_style(node);
+    let style = graph.resolve_style(node, &[]);
 
     match &node.kind {
         NodeKind::Root | NodeKind::Generic => {}

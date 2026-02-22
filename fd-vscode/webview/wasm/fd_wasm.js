@@ -314,9 +314,10 @@ export class FdCanvas {
     /**
      * Render the scene to a Canvas2D context.
      * @param {CanvasRenderingContext2D} ctx
+     * @param {number} time_ms
      */
-    render(ctx) {
-        wasm.fdcanvas_render(this.__wbg_ptr, ctx);
+    render(ctx, time_ms) {
+        wasm.fdcanvas_render(this.__wbg_ptr, ctx, time_ms);
     }
     /**
      * Resize the canvas.
@@ -501,6 +502,10 @@ function __wbg_get_imports() {
         __wbg_moveTo_e9190fc700d55b40: function(arg0, arg1, arg2) {
             arg0.moveTo(arg1, arg2);
         },
+        __wbg_new_3eb36ae241fe6f44: function() {
+            const ret = new Array();
+            return ret;
+        },
         __wbg_of_9ab14f9d4bfb5040: function(arg0, arg1) {
             const ret = Array.of(arg0, arg1);
             return ret;
@@ -528,6 +533,9 @@ function __wbg_get_imports() {
         },
         __wbg_set_globalAlpha_c32898c5532572f4: function(arg0, arg1) {
             arg0.globalAlpha = arg1;
+        },
+        __wbg_set_lineDashOffset_ce4b3678fdd4e226: function(arg0, arg1) {
+            arg0.lineDashOffset = arg1;
         },
         __wbg_set_lineWidth_89fa506592f5b994: function(arg0, arg1) {
             arg0.lineWidth = arg1;

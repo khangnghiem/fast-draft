@@ -38,6 +38,8 @@ pub struct FdCanvas {
     suppress_sync: bool,
     /// Dark mode flag — `false` = light (default), `true` = dark.
     dark_mode: bool,
+    hovered_id: Option<fd_core::id::NodeId>,
+    pressed_id: Option<fd_core::id::NodeId>,
 }
 
 #[wasm_bindgen]
@@ -68,6 +70,8 @@ impl FdCanvas {
             height,
             suppress_sync: false,
             dark_mode: false,
+            hovered_id: None,
+            pressed_id: None,
         }
     }
 
@@ -109,6 +113,8 @@ impl FdCanvas {
             &theme,
             self.select_tool.marquee_rect,
             time_ms,
+            self.hovered_id.as_ref().map(|id| id.as_str()),
+            self.pressed_id.as_ref().map(|id| id.as_str()),
         );
     }
 
@@ -148,6 +154,15 @@ impl FdCanvas {
         };
         let event = InputEvent::from_pointer_down(x, y, pressure, mods);
         let hit = self.hit_test(x, y);
+
+        let prev_pressed = self.pressed_id;
+        self.pressed_id = hit;
+        let pressed_changed = prev_pressed != self.pressed_id;
+
+        let prev_hovered = self.hovered_id;
+        self.hovered_id = hit;
+        let hovered_changed = prev_hovered != self.hovered_id;
+
         let mutations = match self.active_tool {
             ToolKind::Select => self.select_tool.handle(&event, hit),
             ToolKind::Rect => self.rect_tool.handle(&event, hit),
@@ -157,7 +172,7 @@ impl FdCanvas {
         };
         let changed = self.apply_mutations(mutations);
         // Marquee start also counts as a visual change (need re-render)
-        changed || self.select_tool.marquee_start.is_some()
+        changed || self.select_tool.marquee_start.is_some() || pressed_changed || hovered_changed
     }
 
     /// Handle pointer move event. Returns true if the graph changed.
@@ -180,6 +195,11 @@ impl FdCanvas {
         };
         let event = InputEvent::from_pointer_move(x, y, pressure, mods);
         let hit = self.hit_test(x, y);
+
+        let prev_hovered = self.hovered_id;
+        self.hovered_id = hit;
+        let hovered_changed = prev_hovered != self.hovered_id;
+
         let mutations = match self.active_tool {
             ToolKind::Select => self.select_tool.handle(&event, hit),
             ToolKind::Rect => self.rect_tool.handle(&event, hit),
@@ -189,7 +209,7 @@ impl FdCanvas {
         };
         let changed = self.apply_mutations(mutations);
         // Marquee drag also counts as visual change
-        changed || self.select_tool.marquee_rect.is_some()
+        changed || self.select_tool.marquee_rect.is_some() || hovered_changed
     }
 
     /// Handle pointer up event. Returns true if the graph changed.
@@ -239,19 +259,30 @@ impl FdCanvas {
         };
 
         let event = InputEvent::from_pointer_up(x, y, mods);
+
+        let prev_pressed = self.pressed_id;
+        self.pressed_id = None;
+        let pressed_changed = prev_pressed != self.pressed_id;
+
+        let hit = self.hit_test(x, y);
+        let prev_hovered = self.hovered_id;
+        self.hovered_id = hit;
+        let hovered_changed = prev_hovered != self.hovered_id;
+
         let mutations = match self.active_tool {
-            ToolKind::Select => self.select_tool.handle(&event, None),
-            ToolKind::Rect => self.rect_tool.handle(&event, None),
-            ToolKind::Ellipse => self.ellipse_tool.handle(&event, None),
-            ToolKind::Pen => self.pen_tool.handle(&event, None),
-            ToolKind::Text => self.text_tool.handle(&event, None),
+            ToolKind::Select => self.select_tool.handle(&event, hit),
+            ToolKind::Rect => self.rect_tool.handle(&event, hit),
+            ToolKind::Ellipse => self.ellipse_tool.handle(&event, hit),
+            ToolKind::Pen => self.pen_tool.handle(&event, hit),
+            ToolKind::Text => self.text_tool.handle(&event, hit),
         };
         let changed = self.apply_mutations(mutations);
         // Flush text after gesture ends
+        // Also fire render if hover/press changed
         if changed {
             self.engine.flush_to_text();
         }
-        changed || marquee_changed
+        changed || marquee_changed || pressed_changed || hovered_changed
     }
 
     /// Switch the active tool, remembering the previous one.
@@ -524,7 +555,7 @@ impl FdCanvas {
             Some(n) => n,
             None => return "{}".to_string(),
         };
-        let style = self.engine.graph.resolve_style(node);
+        let style = self.engine.graph.resolve_style(node, &[]);
         let mut props = serde_json::Map::new();
 
         props.insert(
@@ -626,7 +657,7 @@ impl FdCanvas {
                         .engine
                         .graph
                         .get_by_id(id)
-                        .map(|n| self.engine.graph.resolve_style(n))
+                        .map(|n| self.engine.graph.resolve_style(n, &[]))
                         .unwrap_or_default();
                     style.fill = Some(Paint::Solid(color));
                     GraphMutation::SetStyle { id, style }
@@ -640,7 +671,7 @@ impl FdCanvas {
                         .engine
                         .graph
                         .get_by_id(id)
-                        .map(|n| self.engine.graph.resolve_style(n))
+                        .map(|n| self.engine.graph.resolve_style(n, &[]))
                         .unwrap_or_default();
                     let mut stroke = style.stroke.unwrap_or_default();
                     stroke.paint = Paint::Solid(color);
@@ -656,7 +687,7 @@ impl FdCanvas {
                         .engine
                         .graph
                         .get_by_id(id)
-                        .map(|n| self.engine.graph.resolve_style(n))
+                        .map(|n| self.engine.graph.resolve_style(n, &[]))
                         .unwrap_or_default();
                     let mut stroke = style.stroke.unwrap_or_default();
                     stroke.width = w;
@@ -672,7 +703,7 @@ impl FdCanvas {
                         .engine
                         .graph
                         .get_by_id(id)
-                        .map(|n| self.engine.graph.resolve_style(n))
+                        .map(|n| self.engine.graph.resolve_style(n, &[]))
                         .unwrap_or_default();
                     style.corner_radius = Some(r);
                     GraphMutation::SetStyle { id, style }
@@ -686,7 +717,7 @@ impl FdCanvas {
                         .engine
                         .graph
                         .get_by_id(id)
-                        .map(|n| self.engine.graph.resolve_style(n))
+                        .map(|n| self.engine.graph.resolve_style(n, &[]))
                         .unwrap_or_default();
                     style.opacity = Some(o);
                     GraphMutation::SetStyle { id, style }
@@ -725,7 +756,7 @@ impl FdCanvas {
             },
             "label" => {
                 if let Some(node) = self.engine.graph.get_by_id(id) {
-                    let mut style = self.engine.graph.resolve_style(node);
+                    let mut style = self.engine.graph.resolve_style(node, &[]);
                     style.label = if value.is_empty() {
                         None
                     } else {

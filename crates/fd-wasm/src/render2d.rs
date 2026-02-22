@@ -56,6 +56,8 @@ pub fn render_scene(
     theme: &CanvasTheme,
     marquee_rect: Option<(f32, f32, f32, f32)>,
     time_ms: f64,
+    hovered_id: Option<&str>,
+    pressed_id: Option<&str>,
 ) {
     // Clear canvas
     ctx.set_fill_style_str(theme.bg);
@@ -65,10 +67,10 @@ pub fn render_scene(
     draw_grid(ctx, canvas_width, canvas_height, theme);
 
     // Paint nodes recursively from root
-    render_node(ctx, graph, graph.root, bounds, selected_ids, theme);
+    render_node(ctx, graph, graph.root, bounds, selected_ids, theme, hovered_id, pressed_id);
 
     // Draw edges between nodes
-    draw_edges(ctx, graph, bounds, time_ms);
+    draw_edges(ctx, graph, bounds, time_ms, hovered_id, pressed_id);
 
     // Draw marquee selection rectangle (on top of everything)
     if let Some((rx, ry, rw, rh)) = marquee_rect {
@@ -83,6 +85,8 @@ fn render_node(
     bounds: &HashMap<NodeIndex, ResolvedBounds>,
     selected_ids: &[String],
     theme: &CanvasTheme,
+    hovered_id: Option<&str>,
+    pressed_id: Option<&str>,
 ) {
     let node = &graph.graph[idx];
     let node_bounds = match bounds.get(&idx) {
@@ -90,7 +94,14 @@ fn render_node(
         None => return,
     };
 
-    let style = graph.resolve_style(node);
+    let mut triggers = Vec::new();
+    if Some(node.id.as_str()) == hovered_id {
+        triggers.push(fd_core::model::AnimTrigger::Hover);
+    }
+    if Some(node.id.as_str()) == pressed_id {
+        triggers.push(fd_core::model::AnimTrigger::Press);
+    }
+    let style = graph.resolve_style(node, &triggers);
     let is_selected = selected_ids.iter().any(|sel| sel == node.id.as_str());
 
     match &node.kind {
@@ -123,7 +134,7 @@ fn render_node(
 
     // Paint children
     for child_idx in graph.children(idx) {
-        render_node(ctx, graph, child_idx, bounds, selected_ids, theme);
+        render_node(ctx, graph, child_idx, bounds, selected_ids, theme, hovered_id, pressed_id);
     }
 
     // Annotation badge (drawn after children so it's on top)
@@ -541,6 +552,8 @@ fn draw_edges(
     graph: &SceneGraph,
     bounds: &HashMap<NodeIndex, ResolvedBounds>,
     time_ms: f64,
+    hovered_id: Option<&str>,
+    pressed_id: Option<&str>,
 ) {
     use fd_core::model::{ArrowKind, CurveKind};
 
@@ -566,7 +579,14 @@ fn draw_edges(
         let (x2, y2) = to_b.center();
 
         // Resolve stroke
-        let resolved = graph.resolve_style_for_edge(edge);
+        let mut triggers = Vec::new();
+        if Some(edge.id.as_str()) == hovered_id {
+            triggers.push(fd_core::model::AnimTrigger::Hover);
+        }
+        if Some(edge.id.as_str()) == pressed_id {
+            triggers.push(fd_core::model::AnimTrigger::Press);
+        }
+        let resolved = graph.resolve_style_for_edge(edge, &triggers);
         let (stroke_color, stroke_width) = if let Some(ref stroke) = resolved.stroke {
             (resolve_paint_color(&stroke.paint), stroke.width as f64)
         } else {
