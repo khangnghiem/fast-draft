@@ -1,5 +1,6 @@
 # FD v1
 # Onboarding User Flow — multi-step with error paths
+import "../../examples/design_system.fd" as ds
 
 style screen {
   fill: #FFFFFF
