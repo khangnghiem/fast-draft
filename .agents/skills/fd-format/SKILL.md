@@ -134,12 +134,14 @@ rect @login_btn {
 ## Code Mode — Readability Tips
 
 > Prioritize AI-agent readability and accuracy. Token efficiency is a secondary goal.
+> Research shows semantic naming has 2× more impact on AI accuracy than any other factor.
 
-1. **Semantic IDs** — `@login_form` not `@rect_17`; intent matters most for agents
-2. **Constraints over coords** — `center_in: canvas` tells agents _why_, not just _where_
-3. **Comments** — `#` lines give agents context about purpose and requirements
-4. **Style reuse** — `use:` references reduce duplication and help agents track shared styles
-5. **Shorthand is fine** — `w:` / `h:` / `#FFF` are unambiguous in context, no need to expand
+1. **Semantic IDs** — `@login_form` not `@rect_17`; the #1 factor for AI comprehension
+2. **Constraints over coords** — `center_in: canvas` tells agents _why_, not just _where_; LLMs reason better with relationships than absolute positions
+3. **Accurate comments** — `#` lines help, but wrong comments actively hurt AI; keep them correct or remove them
+4. **Annotations** — `## status: in_progress` gives AI structured metadata it can reliably parse, unlike freeform comments
+5. **Style reuse** — `use:` references enforce consistency; consistent codebases produce better AI-generated code
+6. **Shorthand is fine** — `w:` / `h:` / `#FFF` are unambiguous in context, no need to expand
 
 ## Example: Complete Card
 

@@ -44,6 +44,38 @@ group @card {
 @card -> center_in: canvas
 ```
 
+### Comments vs Annotations
+
+FD has a two-tier metadata system:
+
+- **`#` Comments** — throwaway notes. Discarded on parse, never stored in the scene graph. Use for scratch notes, TODOs, or temporary explanations.
+
+- **`##` Annotations** — persistent, structured metadata attached to nodes. Stored in the scene graph, survive round-trips (parse → emit), and are accessible to the canvas, AI agents, and tooling.
+
+```
+# This is a comment (discarded on parse)
+
+rect @login_btn {
+  ## "Primary CTA — triggers login API call"
+  ## accept: "disabled state when fields empty"
+  ## status: in_progress
+  ## priority: high
+  ## tag: auth, mvp
+  w: 280 h: 48
+  use: accent
+}
+```
+
+| Syntax               | Kind        | Purpose                        |
+| -------------------- | ----------- | ------------------------------ |
+| `## "text"`          | Description | What this node is/does         |
+| `## accept: "text"`  | Accept      | Acceptance criterion           |
+| `## status: value`   | Status      | `draft`, `in_progress`, `done` |
+| `## priority: value` | Priority    | `high`, `medium`, `low`        |
+| `## tag: value`      | Tag         | Categorization labels          |
+
+**Why the distinction?** Comments (`#`) are cheap and safe to be messy — they won't pollute your data model. Annotations (`##`) are the structured layer that AI agents, CI pipelines, and the canvas UI can reliably read and act on.
+
 ## Architecture
 
 ```
@@ -66,8 +98,8 @@ group @card {
 
 ## Crate Structure
 
-| Crate        | Purpose                                               |
-| ------------ | ----------------------------------------------------- |
+| Crate       | Purpose                                               |
+| ----------- | ----------------------------------------------------- |
 | `fd-core`   | Data model, parser, emitter, constraint layout solver |
 | `fd-render` | Vello/wgpu 2D renderer + hit testing                  |
 | `fd-editor` | Bidirectional sync, tool system, undo/redo, input     |

@@ -114,16 +114,17 @@ crates/
 
 > [!IMPORTANT]
 > **Code mode prioritizes AI-agent readability and accuracy over token efficiency.**
-> Use semantic names, constraints, and comments so LLMs understand intent, not just pixels.
+> Semantic naming is the single highest-impact factor for AI comprehension (arXiv 2510.02268).
 > Token efficiency remains a secondary goal — keep files concise where it doesn't hurt clarity.
 
-| Rule                        | Description                                                      |
-| --------------------------- | ---------------------------------------------------------------- |
-| **Semantic IDs**            | `@login_form` not `@rect_17` — intent over auto-generated names  |
-| **Constraints over coords** | `center_in: canvas` not `x: 400 y: 300` — relationships > pixels |
-| **Style reuse**             | Define `style` blocks, reference with `use:`                     |
-| **Comments**                | `#` prefix for documentation — context helps agents              |
-| **Shorthand OK**            | `w:` / `h:` / `#FFF` are fine — unambiguous in context           |
+| Rule                        | Description                                                         |
+| --------------------------- | ------------------------------------------------------------------- |
+| **Semantic IDs**            | `@login_form` not `@rect_17` — intent over auto-generated names     |
+| **Constraints over coords** | `center_in: canvas` not `x: 400 y: 300` — relationships > pixels    |
+| **Accurate comments**       | `#` for context — wrong comments hurt more than no comments         |
+| **Style reuse**             | Define `style` blocks, reference with `use:` — consistency > ad-hoc |
+| **Annotations for intent**  | `##` metadata (status, priority, accept) — structured > freeform    |
+| **Shorthand OK**            | `w:` / `h:` / `#FFF` are fine — unambiguous in context              |
 
 ### 🎨 Rendering Rules
 

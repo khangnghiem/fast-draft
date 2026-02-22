@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { refineSelectedNodes, findAnonNodeIds } from "./ai-refine";
 
 /**
  * FD Custom Editor Provider.
@@ -44,7 +45,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       });
 
     // ─── Webview → Extension: canvas mutations ─────────────────────
-    webviewPanel.webview.onDidReceiveMessage((message: { type: string; text?: string; id?: string }) => {
+    webviewPanel.webview.onDidReceiveMessage(async (message: { type: string; text?: string; id?: string; nodeIds?: string[] }) => {
       switch (message.type) {
         case "textChanged": {
           const edit = new vscode.WorkspaceEdit();
@@ -66,6 +67,16 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
             type: "setText",
             text: document.getText(),
           });
+          break;
+        }
+        case "aiRefine": {
+          const nodeIds = message.nodeIds ?? [];
+          await this.handleAiRefine(document, webviewPanel, nodeIds);
+          break;
+        }
+        case "aiRefineAll": {
+          const allAnon = findAnonNodeIds(document.getText());
+          await this.handleAiRefine(document, webviewPanel, allAnon);
           break;
         }
       }
@@ -97,6 +108,55 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       changeDocumentSubscription.dispose();
       cursorSubscription.dispose();
     });
+  }
+
+  // ─── AI Refine Handler ─────────────────────────────────────────────
+
+  private async handleAiRefine(
+    document: vscode.TextDocument,
+    webviewPanel: vscode.WebviewPanel,
+    nodeIds: string[]
+  ): Promise<void> {
+    if (nodeIds.length === 0) {
+      // If no specific nodes, find all _anon_ nodes
+      const allAnon = findAnonNodeIds(document.getText());
+      if (allAnon.length === 0) {
+        webviewPanel.webview.postMessage({
+          type: "aiRefineComplete",
+          error: "No anonymous nodes to refine.",
+        });
+        return;
+      }
+      nodeIds = allAnon;
+    }
+
+    // Notify webview that refine started
+    webviewPanel.webview.postMessage({ type: "aiRefineStarted" });
+
+    const result = await refineSelectedNodes(document.getText(), nodeIds);
+
+    if (result.error) {
+      vscode.window.showWarningMessage(`AI Refine: ${result.error}`);
+      webviewPanel.webview.postMessage({
+        type: "aiRefineComplete",
+        error: result.error,
+      });
+      return;
+    }
+
+    // Apply refined text to the document
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(
+      document.uri,
+      new vscode.Range(0, 0, document.lineCount, 0),
+      result.refinedText
+    );
+    await vscode.workspace.applyEdit(edit);
+
+    webviewPanel.webview.postMessage({ type: "aiRefineComplete" });
+    vscode.window.showInformationMessage(
+      `AI Refine: ${nodeIds.length} node(s) refined.`
+    );
   }
 
   private getHtmlForWebview(
@@ -593,6 +653,9 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     <button class="tool-btn" data-tool="pen"><span class="tool-icon">✎</span>Pen<span class="tool-key">P</span></button>
     <button class="tool-btn" data-tool="text"><span class="tool-icon">T</span>Text<span class="tool-key">T</span></button>
     <div class="tool-sep"></div>
+    <button class="tool-btn" id="ai-refine-btn" title="AI Refine selected node (rename + restyle)">✨ Refine</button>
+    <button class="tool-btn" id="ai-refine-all-btn" title="AI Refine all anonymous nodes">✨ All</button>
+    <div class="tool-sep"></div>
     <button class="tool-btn" id="tool-help-btn">?</button>
     <span id="status">Loading WASM…</span>
   </div>
@@ -710,10 +773,60 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
   </div>
   <div id="context-menu">
     <div class="menu-item" id="ctx-add-annotation">📌 Add Annotation</div>
+    <div class="menu-item" id="ctx-ai-refine">✨ AI Refine</div>
   </div>
 
   <script nonce="${nonce}">
     window.initialText = \`${initialText}\`;
+  </script>
+  <script nonce="${nonce}">
+    // ─── AI Refine toolbar + context menu handlers ─────────
+    (function() {
+      const vscodeApi = acquireVsCodeApi();
+      let selectedNodeId = null;
+
+      // Listen for selection changes from canvas
+      window.addEventListener('message', (e) => {
+        if (e.data.type === 'nodeSelected') {
+          selectedNodeId = e.data.id || null;
+        }
+        if (e.data.type === 'aiRefineStarted') {
+          const btn = document.getElementById('ai-refine-btn');
+          const allBtn = document.getElementById('ai-refine-all-btn');
+          if (btn) { btn.textContent = '⏳ Refining…'; btn.disabled = true; }
+          if (allBtn) { allBtn.disabled = true; }
+        }
+        if (e.data.type === 'aiRefineComplete') {
+          const btn = document.getElementById('ai-refine-btn');
+          const allBtn = document.getElementById('ai-refine-all-btn');
+          if (btn) { btn.textContent = '✨ Refine'; btn.disabled = false; }
+          if (allBtn) { allBtn.disabled = false; }
+        }
+      });
+
+      // Refine selected node
+      document.getElementById('ai-refine-btn')?.addEventListener('click', () => {
+        if (selectedNodeId) {
+          vscodeApi.postMessage({ type: 'aiRefine', nodeIds: [selectedNodeId] });
+        } else {
+          // No selection — refine all anon nodes
+          vscodeApi.postMessage({ type: 'aiRefineAll' });
+        }
+      });
+
+      // Refine all anonymous nodes
+      document.getElementById('ai-refine-all-btn')?.addEventListener('click', () => {
+        vscodeApi.postMessage({ type: 'aiRefineAll' });
+      });
+
+      // Context menu: AI Refine
+      document.getElementById('ctx-ai-refine')?.addEventListener('click', () => {
+        if (selectedNodeId) {
+          vscodeApi.postMessage({ type: 'aiRefine', nodeIds: [selectedNodeId] });
+        }
+        document.getElementById('context-menu')?.classList.remove('visible');
+      });
+    })();
   </script>
   <script nonce="${nonce}" type="module" src="${mainJsUri}"></script>
 </body>
@@ -1118,6 +1231,74 @@ export function activate(context: vscode.ExtensionContext) {
           "Open a .fd file first to use the canvas editor."
         );
       }
+    })
+  );
+
+  // Register AI Refine command (selected nodes via cursor position)
+  context.subscriptions.push(
+    vscode.commands.registerCommand("fd.aiRefine", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor || editor.document.languageId !== "fd") {
+        vscode.window.showInformationMessage(
+          "Open a .fd file first to use AI Refine."
+        );
+        return;
+      }
+      const line = editor.document.lineAt(editor.selection.active.line).text;
+      const match = line.match(/@(\w+)/);
+      const nodeIds = match ? [match[1]] : findAnonNodeIds(editor.document.getText());
+      if (nodeIds.length === 0) {
+        vscode.window.showInformationMessage("No nodes to refine.");
+        return;
+      }
+      const result = await refineSelectedNodes(editor.document.getText(), nodeIds);
+      if (result.error) {
+        vscode.window.showWarningMessage(`AI Refine: ${result.error}`);
+        return;
+      }
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(
+        editor.document.uri,
+        new vscode.Range(0, 0, editor.document.lineCount, 0),
+        result.refinedText
+      );
+      await vscode.workspace.applyEdit(edit);
+      vscode.window.showInformationMessage(
+        `AI Refine: ${nodeIds.length} node(s) refined.`
+      );
+    })
+  );
+
+  // Register AI Refine All command (all _anon_ nodes)
+  context.subscriptions.push(
+    vscode.commands.registerCommand("fd.aiRefineAll", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor || editor.document.languageId !== "fd") {
+        vscode.window.showInformationMessage(
+          "Open a .fd file first to use AI Refine All."
+        );
+        return;
+      }
+      const nodeIds = findAnonNodeIds(editor.document.getText());
+      if (nodeIds.length === 0) {
+        vscode.window.showInformationMessage("No anonymous nodes to refine.");
+        return;
+      }
+      const result = await refineSelectedNodes(editor.document.getText(), nodeIds);
+      if (result.error) {
+        vscode.window.showWarningMessage(`AI Refine: ${result.error}`);
+        return;
+      }
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(
+        editor.document.uri,
+        new vscode.Range(0, 0, editor.document.lineCount, 0),
+        result.refinedText
+      );
+      await vscode.workspace.applyEdit(edit);
+      vscode.window.showInformationMessage(
+        `AI Refine All: ${nodeIds.length} node(s) refined.`
+      );
     })
   );
 }

@@ -2,7 +2,7 @@
   "name": "fast-draft",
   "displayName": "Fast Draft",
   "description": "Syntax highlighting, live parser validation, and interactive canvas editor for .fd (Fast Draft) files",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "publisher": "KhangNghiem",
   "license": "MIT",
   "icon": "icon.png",
@@ -60,6 +60,31 @@
         "priority": "option"
       }
     ],
+    "configuration": {
+      "title": "Fast Draft",
+      "properties": {
+        "fd.ai.provider": {
+          "type": "string",
+          "default": "gemini-free",
+          "enum": [
+            "gemini-free",
+            "gemini",
+            "openai"
+          ],
+          "enumDescriptions": [
+            "Gemini free tier (rate-limited, no key needed)",
+            "Gemini with your own API key",
+            "OpenAI with your own API key"
+          ],
+          "description": "AI provider for the Refine feature"
+        },
+        "fd.ai.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for AI provider (leave empty for free tier)"
+        }
+      }
+    },
     "commands": [
       {
         "command": "fd.showPreview",
@@ -70,6 +95,16 @@
         "command": "fd.openCanvas",
         "title": "FD: Open Canvas Editor",
         "icon": "$(paintcan)"
+      },
+      {
+        "command": "fd.aiRefine",
+        "title": "FD: AI Refine Selection",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "fd.aiRefineAll",
+        "title": "FD: AI Refine All Anonymous Nodes",
+        "icon": "$(wand)"
       }
     ],
     "menus": {
