@@ -105,7 +105,7 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
     git pull origin main
     ```
 
-14. **Build & Publish VS Code extension** (if `fd-vscode/` was changed):
+14. **Build & Publish VS Code extension** (if `fd-vscode/`, `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `tree-sitter-fd/` were changed):
 
     > ⚠️ **MANDATORY**: Read `.env` for `VSCE_PAT`, `VSX_PAT`, and `GEMINI_API_KEY` BEFORE publishing.
     > Never rely on interactive prompts — always pass tokens via flags.
