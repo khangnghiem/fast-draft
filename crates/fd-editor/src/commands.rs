@@ -226,4 +226,118 @@ rect @box {
         assert!(stack.can_undo());
         assert!(!stack.can_redo());
     }
+
+    #[test]
+    fn undo_resize_restores_original_size() {
+        let input = "rect @panel {\n  w: 200 h: 100\n}\n";
+        let viewport = Viewport { width: 800.0, height: 600.0 };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let mut stack = CommandStack::new(100);
+
+        stack.execute(
+            &mut engine,
+            GraphMutation::ResizeNode {
+                id: NodeId::intern("panel"),
+                width: 400.0,
+                height: 200.0,
+            },
+            "Resize panel",
+        );
+
+        // After undo the node should have its original dimensions
+        stack.undo(&mut engine);
+        let node = engine.graph.get_by_id(NodeId::intern("panel")).unwrap();
+        match &node.kind {
+            fd_core::model::NodeKind::Rect { width, height } => {
+                assert_eq!(*width, 200.0, "width should revert to 200");
+                assert_eq!(*height, 100.0, "height should revert to 100");
+            }
+            other => panic!("expected Rect, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn undo_set_style_restores_original_fill() {
+        use fd_core::model::{Color, Paint, Style};
+        let input = "rect @btn {\n  w: 80 h: 40\n  fill: #FF0000\n}\n";
+        let viewport = Viewport { width: 800.0, height: 600.0 };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let mut stack = CommandStack::new(100);
+
+        let new_style = Style {
+            fill: Some(Paint::Solid(Color { r: 0.0, g: 0.0, b: 1.0, a: 1.0 })),
+            ..Style::default()
+        };
+
+        stack.execute(
+            &mut engine,
+            GraphMutation::SetStyle {
+                id: NodeId::intern("btn"),
+                style: new_style,
+            },
+            "Restyle btn",
+        );
+
+        // After undo fill should be back to red (#FF0000)
+        stack.undo(&mut engine);
+        let node = engine.graph.get_by_id(NodeId::intern("btn")).unwrap();
+        match node.style.fill.as_ref().and_then(|p| if let Paint::Solid(c) = p { Some(c) } else { None }) {
+            Some(c) => assert_eq!(c.r, 1.0, "red channel should be 1.0 (original red fill)"),
+            None => panic!("fill should be Some(Solid) after undo"),
+        }
+    }
+
+    #[test]
+    fn new_execute_clears_redo_stack() {
+        let input = "rect @box {\n  w: 100 h: 50\n}\n";
+        let viewport = Viewport { width: 800.0, height: 600.0 };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let mut stack = CommandStack::new(100);
+
+        let move_box = || GraphMutation::MoveNode {
+            id: NodeId::intern("box"),
+            dx: 10.0,
+            dy: 0.0,
+        };
+
+        stack.execute(&mut engine, move_box(), "Move 1");
+        stack.undo(&mut engine); // populate redo stack
+
+        assert!(stack.can_redo(), "redo should be available after undo");
+
+        // New action should clear redo stack
+        stack.execute(&mut engine, move_box(), "Move 2");
+        assert!(!stack.can_redo(), "redo stack should be cleared after new execute");
+    }
+
+    #[test]
+    fn stack_respects_max_depth() {
+        let input = "rect @box {\n  w: 100 h: 50\n}\n";
+        let viewport = Viewport { width: 800.0, height: 600.0 };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let max = 3;
+        let mut stack = CommandStack::new(max);
+
+        // Execute more commands than max_depth
+        for i in 0..5u32 {
+            stack.execute(
+                &mut engine,
+                GraphMutation::MoveNode {
+                    id: NodeId::intern("box"),
+                    dx: i as f32,
+                    dy: 0.0,
+                },
+                &format!("Move {i}"),
+            );
+        }
+
+        // Can undo at most max times
+        let mut undo_count = 0;
+        while stack.can_undo() {
+            stack.undo(&mut engine);
+            undo_count += 1;
+        }
+        assert_eq!(undo_count, max, "undo depth should be capped at max_depth");
+    }
 }
+
