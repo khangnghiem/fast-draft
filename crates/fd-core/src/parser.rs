@@ -92,6 +92,7 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
 
 fn starts_with_node_keyword(s: &str) -> bool {
     s.starts_with("group")
+        || s.starts_with("frame")
         || s.starts_with("rect")
         || s.starts_with("ellipse")
         || s.starts_with("path")
@@ -393,6 +394,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     } else {
         alt((
             "group".value("group"),
+            "frame".value("frame"),
             "rect".value("rect"),
             "ellipse".value("ellipse"),
             "path".value("path"),
@@ -433,6 +435,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let mut width: Option<f32> = None;
     let mut height: Option<f32> = None;
     let mut layout = LayoutMode::Free;
+    let mut clip = false;
 
     skip_ws_and_comments(input);
 
@@ -456,6 +459,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
                 &mut width,
                 &mut height,
                 &mut layout,
+                &mut clip,
             )?;
         }
         // Collect comments between items; they'll be attached to the *next* child node
@@ -466,6 +470,12 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
 
     let kind = match kind_str {
         "group" => NodeKind::Group { layout },
+        "frame" => NodeKind::Frame {
+            width: width.unwrap_or(200.0),
+            height: height.unwrap_or(200.0),
+            clip,
+            layout,
+        },
         "rect" => NodeKind::Rect {
             width: width.unwrap_or(100.0),
             height: height.unwrap_or(100.0),
@@ -506,6 +516,7 @@ fn starts_with_child_node(input: &str) -> bool {
     }
     let keywords = &[
         ("group", 5),
+        ("frame", 5),
         ("rect", 4),
         ("ellipse", 7),
         ("path", 4),
@@ -575,6 +586,7 @@ fn parse_gradient_stops(input: &mut &str) -> ModalResult<Vec<GradientStop>> {
     Ok(stops)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn parse_node_property(
     input: &mut &str,
     style: &mut Style,
@@ -583,6 +595,7 @@ fn parse_node_property(
     width: &mut Option<f32>,
     height: &mut Option<f32>,
     layout: &mut LayoutMode,
+    clip: &mut bool,
 ) -> ModalResult<()> {
     let prop_name = parse_identifier.parse_next(input)?;
     skip_space(input);
@@ -719,6 +732,10 @@ fn parse_node_property(
                 "grid" => LayoutMode::Grid { cols: 2, gap, pad },
                 _ => LayoutMode::Free,
             };
+        }
+        "clip" => {
+            let val = parse_identifier.parse_next(input)?;
+            *clip = val == "true";
         }
         _ => {
             let _ =
@@ -1238,5 +1255,77 @@ rect @b { w: 200 h: 200 }
 "#;
         let graph = parse_document(input).expect("interleaved comments should parse");
         assert_eq!(graph.children(graph.root).len(), 2);
+    }
+    #[test]
+    fn parse_frame() {
+        let input = r#"
+frame @card {
+  w: 400 h: 300
+  clip: true
+  fill: #FFFFFF
+  corner: 16
+  layout: column gap=12 pad=20
+}
+"#;
+        let graph = parse_document(input).expect("parse failed");
+        let node = graph
+            .get_by_id(crate::id::NodeId::intern("card"))
+            .expect("card not found");
+        match &node.kind {
+            NodeKind::Frame {
+                width,
+                height,
+                clip,
+                layout,
+            } => {
+                assert_eq!(*width, 400.0);
+                assert_eq!(*height, 300.0);
+                assert!(*clip);
+                assert!(matches!(layout, LayoutMode::Column { .. }));
+            }
+            other => panic!("expected Frame, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn roundtrip_frame() {
+        let input = r#"
+frame @panel {
+  w: 200 h: 150
+  clip: true
+  fill: #F0F0F0
+  layout: row gap=8 pad=10
+
+  rect @child {
+    w: 50 h: 50
+    fill: #FF0000
+  }
+}
+"#;
+        let graph = parse_document(input).expect("parse failed");
+        let emitted = crate::emitter::emit_document(&graph);
+        let reparsed = parse_document(&emitted).expect("re-parse failed");
+        let node = reparsed
+            .get_by_id(crate::id::NodeId::intern("panel"))
+            .expect("panel not found");
+        match &node.kind {
+            NodeKind::Frame {
+                width,
+                height,
+                clip,
+                layout,
+            } => {
+                assert_eq!(*width, 200.0);
+                assert_eq!(*height, 150.0);
+                assert!(*clip);
+                assert!(matches!(layout, LayoutMode::Row { .. }));
+            }
+            other => panic!("expected Frame, got {other:?}"),
+        }
+        // Verify child is present
+        let child = reparsed
+            .get_by_id(crate::id::NodeId::intern("child"))
+            .expect("child not found");
+        assert!(matches!(child.kind, NodeKind::Rect { .. }));
     }
 }

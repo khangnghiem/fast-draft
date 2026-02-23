@@ -100,6 +100,7 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
                 .map(|n| match &n.kind {
                     fd_core::model::NodeKind::Rect { width, height } => (*width, *height),
                     fd_core::model::NodeKind::Ellipse { rx, ry } => (*rx * 2.0, *ry * 2.0),
+                    fd_core::model::NodeKind::Frame { width, height, .. } => (*width, *height),
                     _ => (0.0, 0.0),
                 })
                 .unwrap_or((0.0, 0.0));

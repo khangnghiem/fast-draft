@@ -1432,7 +1432,7 @@ function parseAnnotatedNodes(source) {
     }
 
     const nodeMatch = trimmed.match(
-      /^(group|rect|ellipse|path|text)\s+@(\w+)(?:\s+"[^"]*")?\s*\{?/
+      /^(group|frame|rect|ellipse|path|text)\s+@(\w+)(?:\s+"[^"]*")?\s*\{?/
     );
     if (nodeMatch) {
       if (currentNodeId && pendingAnnotations.length > 0) {
@@ -1473,6 +1473,7 @@ function parseAnnotatedNodes(source) {
 
 const LAYER_ICONS = {
   group: "◫",
+  frame: "▣",
   rect: "▢",
   ellipse: "○",
   path: "〜",
@@ -1523,7 +1524,7 @@ function parseLayerTree(source) {
 
     // Typed node
     const nodeMatch = trimmed.match(
-      /^(group|rect|ellipse|path|text)\s+@(\w+)(?:\s+"([^"]*)")?\s*\{?/
+      /^(group|frame|rect|ellipse|path|text)\s+@(\w+)(?:\s+"([^"]*)")?\s*\{?/
     );
     if (nodeMatch) {
       const node = {

@@ -43,6 +43,7 @@ pub fn compute_symbols(text: &str, graph: Option<&SceneGraph>) -> Vec<SymbolInfo
                     fd_core::NodeKind::Root => continue,
                     fd_core::NodeKind::Generic => "",
                     fd_core::NodeKind::Group { .. } => "group",
+                    fd_core::NodeKind::Frame { .. } => "frame",
                     fd_core::NodeKind::Rect { .. } => "rect",
                     fd_core::NodeKind::Ellipse { .. } => "ellipse",
                     fd_core::NodeKind::Path { .. } => "path",
@@ -58,7 +59,7 @@ pub fn compute_symbols(text: &str, graph: Option<&SceneGraph>) -> Vec<SymbolInfo
                         format!("{} @{}", kind_name, id_str)
                     },
                     kind: match kind_name {
-                        "group" => SymbolKind::NAMESPACE,
+                        "group" | "frame" => SymbolKind::NAMESPACE,
                         "text" => SymbolKind::STRING,
                         _ => SymbolKind::OBJECT,
                     },
@@ -83,7 +84,7 @@ pub fn compute_symbols(text: &str, graph: Option<&SceneGraph>) -> Vec<SymbolInfo
 /// Find all `@id` declarations and their line numbers.
 fn find_node_lines(text: &str) -> Vec<(String, usize)> {
     let mut results = Vec::new();
-    let node_keywords = ["group", "rect", "ellipse", "path", "text"];
+    let node_keywords = ["group", "frame", "rect", "ellipse", "path", "text"];
 
     for (i, line) in text.lines().enumerate() {
         let trimmed = line.trim();

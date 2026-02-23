@@ -116,6 +116,14 @@ impl SyncEngine {
                             *rx = width / 2.0;
                             *ry = height / 2.0;
                         }
+                        NodeKind::Frame {
+                            width: w,
+                            height: h,
+                            ..
+                        } => {
+                            *w = width;
+                            *h = height;
+                        }
                         _ => {}
                     }
                 }
@@ -130,6 +138,7 @@ impl SyncEngine {
                 let (w, h) = match &node.kind {
                     NodeKind::Rect { width, height } => (*width, *height),
                     NodeKind::Ellipse { rx, ry } => (rx * 2.0, ry * 2.0),
+                    NodeKind::Frame { width, height, .. } => (*width, *height),
                     _ => (0.0, 0.0),
                 };
                 let idx = self.graph.add_node(parent_idx, *node);

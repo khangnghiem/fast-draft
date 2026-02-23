@@ -108,6 +108,7 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         NodeKind::Root => return,
         NodeKind::Generic => write!(out, "@{}", node.id.as_str()).unwrap(),
         NodeKind::Group { .. } => write!(out, "group @{}", node.id.as_str()).unwrap(),
+        NodeKind::Frame { .. } => write!(out, "frame @{}", node.id.as_str()).unwrap(),
         NodeKind::Rect { .. } => write!(out, "rect @{}", node.id.as_str()).unwrap(),
         NodeKind::Ellipse { .. } => write!(out, "ellipse @{}", node.id.as_str()).unwrap(),
         NodeKind::Path { .. } => write!(out, "path @{}", node.id.as_str()).unwrap(),
@@ -158,9 +159,50 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         }
     }
 
+    // Layout mode (for frames)
+    if let NodeKind::Frame { layout, .. } = &node.kind {
+        match layout {
+            LayoutMode::Free => {}
+            LayoutMode::Column { gap, pad } => {
+                indent(out, depth + 1);
+                writeln!(
+                    out,
+                    "layout: column gap={} pad={}",
+                    format_num(*gap),
+                    format_num(*pad)
+                )
+                .unwrap();
+            }
+            LayoutMode::Row { gap, pad } => {
+                indent(out, depth + 1);
+                writeln!(
+                    out,
+                    "layout: row gap={} pad={}",
+                    format_num(*gap),
+                    format_num(*pad)
+                )
+                .unwrap();
+            }
+            LayoutMode::Grid { cols, gap, pad } => {
+                indent(out, depth + 1);
+                writeln!(
+                    out,
+                    "layout: grid cols={cols} gap={} pad={}",
+                    format_num(*gap),
+                    format_num(*pad)
+                )
+                .unwrap();
+            }
+        }
+    }
+
     // Dimensions
     match &node.kind {
         NodeKind::Rect { width, height } => {
+            indent(out, depth + 1);
+            writeln!(out, "w: {} h: {}", format_num(*width), format_num(*height)).unwrap();
+        }
+        NodeKind::Frame { width, height, .. } => {
             indent(out, depth + 1);
             writeln!(out, "w: {} h: {}", format_num(*width), format_num(*height)).unwrap();
         }
@@ -169,6 +211,12 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
             writeln!(out, "w: {} h: {}", format_num(*rx), format_num(*ry)).unwrap();
         }
         _ => {}
+    }
+
+    // Clip property (for frames only)
+    if let NodeKind::Frame { clip: true, .. } = &node.kind {
+        indent(out, depth + 1);
+        writeln!(out, "clip: true").unwrap();
     }
 
     // Style references
@@ -502,6 +550,7 @@ fn emit_spec_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, heading_
         NodeKind::Root => return,
         NodeKind::Generic => "spec",
         NodeKind::Group { .. } => "group",
+        NodeKind::Frame { .. } => "frame",
         NodeKind::Rect { .. } => "rect",
         NodeKind::Ellipse { .. } => "ellipse",
         NodeKind::Path { .. } => "path",

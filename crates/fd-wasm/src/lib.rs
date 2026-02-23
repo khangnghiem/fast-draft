@@ -595,6 +595,11 @@ impl FdCanvas {
             NodeKind::Group { .. } => {
                 props.insert("kind".into(), "group".into());
             }
+            NodeKind::Frame { width, height, .. } => {
+                props.insert("kind".into(), "frame".into());
+                props.insert("width".into(), serde_json::json!(width));
+                props.insert("height".into(), serde_json::json!(height));
+            }
             NodeKind::Path { .. } => {
                 props.insert("kind".into(), "path".into());
             }
@@ -747,6 +752,7 @@ impl FdCanvas {
                     let (cur_w, cur_h) = match &node.kind {
                         NodeKind::Rect { width, height } => (*width, *height),
                         NodeKind::Ellipse { rx, ry } => (*rx * 2.0, *ry * 2.0),
+                        NodeKind::Frame { width, height, .. } => (*width, *height),
                         _ => return false,
                     };
                     let (new_w, new_h) = if key == "width" {
@@ -1020,6 +1026,7 @@ fn collect_node_tree(graph: &fd_core::SceneGraph, idx: fd_core::NodeIndex) -> se
         fd_core::NodeKind::Root => "root",
         fd_core::NodeKind::Generic => "generic",
         fd_core::NodeKind::Group { .. } => "group",
+        fd_core::NodeKind::Frame { .. } => "frame",
         fd_core::NodeKind::Rect { .. } => "rect",
         fd_core::NodeKind::Ellipse { .. } => "ellipse",
         fd_core::NodeKind::Path { .. } => "path",
