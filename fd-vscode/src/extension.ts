@@ -2594,6 +2594,7 @@ export function activate(context: vscode.ExtensionContext) {
         const targetColumn =
           resolved === "beside" ? vscode.ViewColumn.Beside : resolved;
 
+        let didOpen = false;
         if (canvasTab && canvasGroup) {
           if (canvasGroup.viewColumn === editorColumn) {
             // Canvas is in the SAME column as text editor — move it
@@ -2603,6 +2604,7 @@ export function activate(context: vscode.ExtensionContext) {
               "fd.canvas",
               { viewColumn: targetColumn, preserveFocus: true }
             );
+            didOpen = true;
           } else if (!canvasTab.isActive) {
             // Canvas is in a different column but hidden behind another tab
             await vscode.commands.executeCommand(
@@ -2611,6 +2613,7 @@ export function activate(context: vscode.ExtensionContext) {
               "fd.canvas",
               { viewColumn: canvasGroup.viewColumn, preserveFocus: true }
             );
+            didOpen = true;
           }
           // else: canvas is already active in the other column — nothing to do
         } else {
@@ -2621,6 +2624,22 @@ export function activate(context: vscode.ExtensionContext) {
             "fd.canvas",
             { viewColumn: targetColumn, preserveFocus: true }
           );
+          didOpen = true;
+        }
+
+        // Refocus Code Mode — canvas webviews can steal focus despite preserveFocus
+        if (didOpen) {
+          await new Promise((r) => setTimeout(r, 120));
+          const textEditor = vscode.window.visibleTextEditors.find(
+            (e) => e.document.uri.toString() === key
+          );
+          if (textEditor) {
+            await vscode.window.showTextDocument(
+              textEditor.document,
+              textEditor.viewColumn,
+              false
+            );
+          }
         }
       }, 200);
     })
