@@ -46,7 +46,7 @@ let annotationCardNodeId = null;
 /** Node ID from right-click context menu */
 let contextMenuNodeId = null;
 
-/** Current view mode: "design" | "spec" | "tree" */
+/** Current view mode: "design" | "spec" */
 let viewMode = "design";
 
 /** Pointer interaction tracking for dimension tooltip */
@@ -143,6 +143,7 @@ function render() {
   ctx.restore();
   // Reposition spec badges when canvas re-renders (node moved, panned, etc.)
   if (viewMode === "spec") refreshSpecView();
+  refreshLayersPanel();
 }
 
 /** Animation loop ID for flow animations (pulse/dash edges). */
@@ -392,7 +393,7 @@ window.addEventListener("message", (event) => {
       render();
       suppressTextSync = false;
       if (viewMode === "spec") refreshSpecView();
-      if (viewMode === "tree") refreshLayersPanel();
+      refreshLayersPanel();
       break;
     }
     case "selectNode": {
@@ -1258,31 +1259,24 @@ function setupDragAndDrop() {
 function setupViewToggle() {
   document.getElementById("view-design")?.addEventListener("click", () => setViewMode("design"));
   document.getElementById("view-spec")?.addEventListener("click", () => setViewMode("spec"));
-  document.getElementById("view-tree")?.addEventListener("click", () => setViewMode("tree"));
 }
 
 function setViewMode(mode) {
   viewMode = mode;
   const isSpec = mode === "spec";
-  const isTree = mode === "tree";
 
   document.getElementById("view-design")?.classList.toggle("active", mode === "design");
   document.getElementById("view-spec")?.classList.toggle("active", isSpec);
-  document.getElementById("view-tree")?.classList.toggle("active", isTree);
 
   // Canvas stays visible — spec view keeps full interactivity
   const overlay = document.getElementById("spec-overlay");
   if (overlay) overlay.style.display = isSpec ? "" : "none";
 
-  // Show/hide layers panel
-  const layers = document.getElementById("layers-panel");
-  if (layers) layers.classList.toggle("visible", isTree);
-
-  // Hide properties panel in spec/tree view
+  // Hide properties panel in spec view
   const props = document.getElementById("props-panel");
-  if (props && (isSpec || isTree)) props.classList.remove("visible");
+  if (props && isSpec) props.classList.remove("visible");
 
-  // Notify extension to apply/remove code-mode spec hiding
+  // Notify extension to apply/remove code-mode spec folding
   vscode.postMessage({ type: "viewModeChanged", mode });
 
   if (isSpec) {
@@ -1292,9 +1286,8 @@ function setViewMode(mode) {
     if (overlay) overlay.innerHTML = "";
   }
 
-  if (isTree) {
-    refreshLayersPanel();
-  }
+  // Always refresh layers (it's always visible)
+  refreshLayersPanel();
 }
 
 function refreshSpecView() {

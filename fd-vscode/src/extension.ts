@@ -22,9 +22,9 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
   /** The most recently focused canvas webview panel, for command routing. */
   public static activePanel: vscode.WebviewPanel | undefined;
   /** Current view mode of the active panel. */
-  public static activeViewMode: "design" | "spec" | "tree" = "design";
+  public static activeViewMode: "design" | "spec" = "design";
   /** Callback invoked when canvas webview changes view mode. */
-  public static onViewModeChanged: ((mode: "design" | "spec" | "tree") => void) | undefined;
+  public static onViewModeChanged: ((mode: "design" | "spec") => void) | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) { }
 
@@ -128,7 +128,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
           break;
         }
         case "viewModeChanged": {
-          const mode = (message as { type: string; mode?: string }).mode === "spec" ? "spec" : "design";
+          const mode: "design" | "spec" = (message as { type: string; mode?: string }).mode === "spec" ? "spec" : "design";
           FdEditorProvider.activeViewMode = mode;
           FdEditorProvider.onViewModeChanged?.(mode);
           break;
@@ -451,7 +451,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
 
     /* ── Layers Panel (Tree View sidebar) ── */
     #layers-panel {
-      display: none;
+      display: block;
       position: absolute;
       left: 0;
       top: 0;
@@ -466,7 +466,6 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
     }
-    #layers-panel.visible { display: block; }
     .layers-title {
       font-size: 10px;
       text-transform: uppercase;
@@ -1190,7 +1189,6 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     <div class="view-toggle" id="view-toggle">
       <button class="view-btn active" id="view-design" title="Design View — full canvas">Design</button>
       <button class="view-btn" id="view-spec" title="Spec View — requirements and structure">Spec</button>
-      <button class="view-btn" id="view-tree" title="Tree View — layers panel">Tree</button>
     </div>
     <div class="tool-sep"></div>
     <button class="tool-btn" id="theme-toggle-btn" title="Toggle light/dark canvas theme">🌙</button>
@@ -2447,7 +2445,7 @@ export function activate(context: vscode.ExtensionContext) {
   // ─── Code-mode Spec View (editor decorations) ────────────────────
   // When spec mode is active, hide style/animation/layout details from
   // the text editor, showing only #, ##, node/edge declarations, and braces.
-  let codeSpecMode: "design" | "spec" | "tree" = "design";
+  let codeSpecMode: "design" | "spec" = "design";
 
   // Wire up canvas → code-mode spec sync
   FdEditorProvider.onViewModeChanged = (mode) => {
@@ -2521,12 +2519,10 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Register view mode toggle command (Design → Spec → Tree cycle)
+  // Register view mode toggle command (Design ↔ Spec)
   context.subscriptions.push(
     vscode.commands.registerCommand("fd.toggleViewMode", () => {
-      const modes: Array<"design" | "spec" | "tree"> = ["design", "spec", "tree"];
-      const idx = modes.indexOf(FdEditorProvider.activeViewMode);
-      const next = modes[(idx + 1) % modes.length];
+      const next: "design" | "spec" = FdEditorProvider.activeViewMode === "design" ? "spec" : "design";
       FdEditorProvider.activeViewMode = next;
       codeSpecMode = next;
 
@@ -2536,10 +2532,10 @@ export function activate(context: vscode.ExtensionContext) {
         panel.webview.postMessage({ type: "setViewMode", mode: next });
       }
 
-      // Apply/remove code-mode decorations
+      // Apply/remove code-mode folding
       applyCodeSpecView();
 
-      const labels: Record<string, string> = { design: "Design", spec: "Spec", tree: "Tree" };
+      const labels: Record<string, string> = { design: "Design", spec: "Spec" };
       vscode.window.showInformationMessage(
         `FD View: ${labels[next]} Mode`
       );
