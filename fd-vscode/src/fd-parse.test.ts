@@ -9,6 +9,7 @@ import {
   escapeHtml,
   resolveTargetColumn,
   parseDocumentSymbols,
+  findSymbolAtLine,
 } from "./fd-parse";
 
 // ─── parseAnnotation ─────────────────────────────────────────────────────
@@ -581,5 +582,80 @@ describe("parseDocumentSymbols", () => {
     expect(result[0].children).toHaveLength(1);
     expect(result[0].children[0].children).toHaveLength(1);
     expect(result[0].children[0].children[0].name).toBe("@c");
+  });
+});
+
+// ─── findSymbolAtLine ────────────────────────────────────────────────────
+
+describe("findSymbolAtLine", () => {
+  const lines = [
+    "group @outer {",     // 0
+    "  rect @inner {",    // 1
+    "    fill: #FFF",     // 2
+    "    w: 100 h: 100",  // 3
+    "  }",                // 4
+    "  text @label \"Hi\" {", // 5
+    "    font: Inter 14", // 6
+    "  }",                // 7
+    "}",                  // 8
+    "",                   // 9
+    "@outer -> center_in: canvas", // 10
+  ];
+  const symbols = parseDocumentSymbols(lines);
+
+  it("returns the node when cursor is on its declaration line", () => {
+    const sym = findSymbolAtLine(symbols, 1);
+    expect(sym).toBeDefined();
+    expect(sym!.name).toBe("@inner");
+  });
+
+  it("returns the enclosing node when cursor is on a property line", () => {
+    const sym = findSymbolAtLine(symbols, 2);
+    expect(sym).toBeDefined();
+    expect(sym!.name).toBe("@inner");
+  });
+
+  it("returns the enclosing node for another property line", () => {
+    const sym = findSymbolAtLine(symbols, 3);
+    expect(sym).toBeDefined();
+    expect(sym!.name).toBe("@inner");
+  });
+
+  it("returns the innermost child, not the parent", () => {
+    const sym = findSymbolAtLine(symbols, 6);
+    expect(sym).toBeDefined();
+    expect(sym!.name).toBe("@label");
+  });
+
+  it("returns the parent when cursor is between children", () => {
+    // Line 0 is the group declaration itself
+    const sym = findSymbolAtLine(symbols, 0);
+    expect(sym).toBeDefined();
+    expect(sym!.name).toBe("@outer");
+  });
+
+  it("returns undefined when cursor is outside all nodes", () => {
+    const sym = findSymbolAtLine(symbols, 9);
+    expect(sym).toBeUndefined();
+  });
+
+  it("returns constraint symbol when cursor is on constraint line", () => {
+    const sym = findSymbolAtLine(symbols, 10);
+    expect(sym).toBeDefined();
+    expect(sym!.name).toBe("@outer");
+    expect(sym!.kind).toBe("constraint");
+  });
+
+  it("returns undefined for empty symbol list", () => {
+    expect(findSymbolAtLine([], 0)).toBeUndefined();
+  });
+
+  it("handles style blocks (non-@ symbols)", () => {
+    const styleLines = ["style heading {", "  fill: #333", "}"];
+    const styleSymbols = parseDocumentSymbols(styleLines);
+    const sym = findSymbolAtLine(styleSymbols, 1);
+    expect(sym).toBeDefined();
+    expect(sym!.name).toBe("heading");
+    expect(sym!.kind).toBe("style");
   });
 });

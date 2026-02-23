@@ -484,6 +484,26 @@ function pushSymbol(
   }
 }
 
+// ─── Symbol Lookup ───────────────────────────────────────────────────────
+
+/**
+ * Find the deepest (most specific) symbol whose line range contains `line`.
+ * Returns `undefined` if the cursor is outside all symbols.
+ */
+export function findSymbolAtLine(
+  symbols: FdSymbol[],
+  line: number
+): FdSymbol | undefined {
+  for (const sym of symbols) {
+    if (line >= sym.startLine && line <= sym.endLine) {
+      // Drill into children for a more specific match
+      const child = findSymbolAtLine(sym.children, line);
+      return child ?? sym;
+    }
+  }
+  return undefined;
+}
+
 // ─── HTML Escaping ───────────────────────────────────────────────────────
 
 /** Escape HTML special characters. */

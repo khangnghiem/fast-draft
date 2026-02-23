@@ -919,6 +919,32 @@ function setupContextMenu() {
     closeContextMenu();
   });
 
+  // Duplicate via context menu
+  document.getElementById("ctx-duplicate").addEventListener("click", () => {
+    if (fdCanvas && contextMenuNodeId) {
+      fdCanvas.select_by_id(contextMenuNodeId);
+      const changed = fdCanvas.duplicate_selected();
+      if (changed) {
+        render();
+        syncTextToExtension();
+      }
+    }
+    closeContextMenu();
+  });
+
+  // Delete via context menu
+  document.getElementById("ctx-delete").addEventListener("click", () => {
+    if (fdCanvas && contextMenuNodeId) {
+      fdCanvas.select_by_id(contextMenuNodeId);
+      const changed = fdCanvas.delete_selected();
+      if (changed) {
+        render();
+        syncTextToExtension();
+      }
+    }
+    closeContextMenu();
+  });
+
   // Close menu on any click
   document.addEventListener("click", (e) => {
     const menu = document.getElementById("context-menu");
@@ -1446,14 +1472,14 @@ function parseAnnotatedNodes(source) {
 // ─── Layers Panel (Tree View) ────────────────────────────────────────────
 
 const LAYER_ICONS = {
-  group: "📦",
+  group: "◫",
   rect: "▢",
-  ellipse: "◯",
-  path: "✎",
-  text: "📝",
-  style: "🎨",
-  edge: "→",
-  spec: "📋",
+  ellipse: "○",
+  path: "〜",
+  text: "T",
+  style: "◆",
+  edge: "⟶",
+  spec: "◇",
 };
 
 /**
@@ -1541,21 +1567,35 @@ function parseLayerTree(source) {
   return root;
 }
 
-/** Render a layer tree node as HTML. */
-function renderLayerNode(node, selectedId) {
+/** Render a layer tree node as HTML with Figma-style indentation. */
+function renderLayerNode(node, selectedId, depth = 0) {
   const icon = LAYER_ICONS[node.kind] || "•";
   const isSelected = node.id === selectedId;
-  const label = node.text ? `${node.id} "${node.text}"` : node.id;
+  const hasChildren = node.children.length > 0;
+  const textPreview = node.text ? `<span class="layer-text-preview">"${escapeHtml(node.text)}"</span>` : "";
+
+  // Indent guides for depth
+  let indent = "";
+  for (let i = 0; i < depth; i++) {
+    indent += `<span class="layer-indent-guide"></span>`;
+  }
+
+  // Disclosure chevron
+  const chevronClass = hasChildren ? "layer-chevron expanded" : "layer-chevron empty";
+  const chevron = `<span class="${chevronClass}" data-toggle-id="${escapeAttr(node.id)}">▶</span>`;
+
   let html = `<div class="layer-item${isSelected ? " selected" : ""}" data-node-id="${escapeAttr(node.id)}">`;
+  html += `<span class="layer-indent">${indent}</span>`;
+  html += chevron;
   html += `<span class="layer-icon">${icon}</span>`;
-  html += `<span class="layer-name">${escapeHtml(label)}</span>`;
+  html += `<span class="layer-name">${escapeHtml(node.id)}${textPreview}</span>`;
   html += `<span class="layer-kind">${escapeHtml(node.kind)}</span>`;
   html += `</div>`;
 
-  if (node.children.length > 0) {
-    html += `<div class="layer-children">`;
+  if (hasChildren) {
+    html += `<div class="layer-children" data-parent-id="${escapeAttr(node.id)}">`;
     for (const child of node.children) {
-      html += renderLayerNode(child, selectedId);
+      html += renderLayerNode(child, selectedId, depth + 1);
     }
     html += `</div>`;
   }
@@ -1571,16 +1611,27 @@ function refreshLayersPanel() {
   const tree = parseLayerTree(source);
   const selectedId = fdCanvas.get_selected_id() || "";
 
-  let html = '<div class="layers-title">Layers</div>';
+  // Count total nodes
+  const countNodes = (nodes) => nodes.reduce((sum, n) => sum + 1 + countNodes(n.children), 0);
+  const totalCount = countNodes(tree);
+
+  let html = `<div class="layers-header">`;
+  html += `<span class="layers-title">Layers</span>`;
+  html += `<span class="layers-count">${totalCount}</span>`;
+  html += `</div>`;
+  html += `<div class="layers-body">`;
   for (const node of tree) {
     html += renderLayerNode(node, selectedId);
   }
+  html += `</div>`;
 
   panel.innerHTML = html;
 
-  // Wire click handlers
+  // Wire click handlers for layer items (selection)
   panel.querySelectorAll(".layer-item").forEach((item) => {
     item.addEventListener("click", (e) => {
+      // Don't select when clicking chevron
+      if (e.target.closest(".layer-chevron")) return;
       e.stopPropagation();
       const nodeId = item.getAttribute("data-node-id");
       if (nodeId && fdCanvas) {
@@ -1593,6 +1644,19 @@ function refreshLayersPanel() {
           // Notify extension of selection
           vscode.postMessage({ type: "nodeSelected", id: nodeId });
         }
+      }
+    });
+  });
+
+  // Wire chevron toggle for expand/collapse
+  panel.querySelectorAll(".layer-chevron:not(.empty)").forEach((chevron) => {
+    chevron.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const toggleId = chevron.getAttribute("data-toggle-id");
+      const childrenContainer = panel.querySelector(`.layer-children[data-parent-id="${toggleId}"]`);
+      if (childrenContainer) {
+        const isCollapsed = childrenContainer.classList.toggle("collapsed");
+        chevron.classList.toggle("expanded", !isCollapsed);
       }
     });
   });

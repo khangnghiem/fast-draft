@@ -1,5 +1,3 @@
-# FD v1
-
 style border {
   fill: #E8E8EC
 }
@@ -49,45 +47,102 @@ style warning {
 
 group @color_palette {
   layout: column gap=24 pad=32
-  group @inputs {
-    layout: column gap=12 pad=0
-    rect @input_error {
-      ## "Error input state"
-      ## accept: "red border + error message below"
-      w: 320 h: 48
-      fill: #FFF6F4
-      stroke: #E17055 2
-      corner: 8
-      text @_anon_13 "invalid@" {
-        fill: #E17055
-        font: "Inter" 400 14
-      }
+  text @palette_title "Color Palette" {
+    fill: #1A1A2E
+    font: "Inter" 700 28
+  }
+  group @primary_row {
+    ## "Primary brand colors"
+    layout: row gap=12 pad=0
+    rect @swatch_primary {
+      w: 80 h: 80
+      use: primary
+      corner: 12
     }
-    rect @input_focus {
-      ## "Focused input state"
-      ## status: done
-      w: 320 h: 48
-      fill: #FFFFFF
-      stroke: #6C5CE7 2
-      corner: 8
-      text @_anon_12 "Typing here..." {
-        fill: #1A1A2E
-        font: "Inter" 400 14
-      }
+    rect @swatch_primary_dark {
+      w: 80 h: 80
+      use: primary_dark
+      corner: 12
     }
-    rect @input_default {
-      ## "Default text input"
-      w: 320 h: 48
-      fill: #FFFFFF
-      stroke: #E8E8EC 1
-      corner: 8
-      text @_anon_11 "Placeholder text..." {
-        fill: #9CA3AF
-        font: "Inter" 400 14
-      }
+    rect @swatch_secondary {
+      w: 80 h: 80
+      use: secondary
+      corner: 12
+    }
+    rect @swatch_danger {
+      w: 80 h: 80
+      use: danger
+      corner: 12
+    }
+    rect @swatch_warning {
+      w: 80 h: 80
+      use: warning
+      corner: 12
     }
   }
-  text @input_title "Inputs" {
+  group @neutral_row {
+    ## "Neutral & surface colors"
+    layout: row gap=12 pad=0
+    rect @swatch_white {
+      w: 80 h: 80
+      fill: #FFFFFF
+      stroke: #E8E8EC 1
+      corner: 12
+    }
+    rect @swatch_gray_100 {
+      w: 80 h: 80
+      fill: #F8F9FA
+      corner: 12
+    }
+    rect @swatch_gray_200 {
+      w: 80 h: 80
+      fill: #E8E8EC
+      corner: 12
+    }
+    rect @swatch_gray_500 {
+      w: 80 h: 80
+      fill: #6B7280
+      corner: 12
+    }
+    rect @swatch_gray_900 {
+      w: 80 h: 80
+      fill: #1A1A2E
+      corner: 12
+    }
+  }
+  text @type_title "Typography" {
+    fill: #1A1A2E
+    font: "Inter" 700 28
+  }
+  group @type_scale {
+    layout: column gap=16 pad=0
+    text @t_display "Display — 48px Bold" {
+      fill: #1A1A2E
+      font: "Inter" 700 48
+    }
+    text @t_h1 "Heading 1 — 32px Semibold" {
+      fill: #1A1A2E
+      font: "Inter" 600 32
+    }
+    text @t_h2 "Heading 2 — 24px Semibold" {
+      fill: #1A1A2E
+      font: "Inter" 600 24
+    }
+    text @t_h3 "Heading 3 — 20px Medium" {
+      fill: #1A1A2E
+      font: "Inter" 500 20
+    }
+    text @t_body "Body — 16px Regular" {
+      use: text_primary
+    }
+    text @t_small "Small — 14px Regular" {
+      use: text_secondary
+    }
+    text @t_caption "Caption — 12px Regular" {
+      use: text_muted
+    }
+  }
+  text @btn_title "Buttons" {
     fill: #1A1A2E
     font: "Inter" 700 28
   }
@@ -97,33 +152,23 @@ group @color_palette {
     ## accept: "minimum 44px touch target"
     ## tag: a11y, components
     layout: row gap=16 pad=0
-    rect @btn_danger {
-      ## "Destructive action button"
+    rect @btn_primary {
+      ## "Primary action button"
       w: 160 h: 48
-      use: danger
+      use: primary
       corner: 10
-      text @_anon_10 "Delete" {
+      text @_anon_7 "Get Started" {
         fill: #FFFFFF
         font: "Inter" 600 15
       }
       anim :hover {
-        fill: #D63031
+        fill: #5A4BD1
         scale: 1.02
         ease: spring 200ms
       }
-    }
-    rect @btn_ghost {
-      ## "Ghost / text-only button"
-      w: 160 h: 48
-      fill: #00000000
-      corner: 10
-      text @_anon_9 "Cancel" {
-        fill: #6B7280
-        font: "Inter" 500 15
-      }
-      anim :hover {
-        fill: #F5F5F7
-        ease: ease_out 150ms
+      anim :press {
+        scale: 0.97
+        ease: ease_out 100ms
       }
     }
     rect @btn_secondary {
@@ -146,128 +191,83 @@ group @color_palette {
         ease: ease_out 100ms
       }
     }
-    rect @btn_primary {
-      ## "Primary action button"
+    rect @btn_ghost {
+      ## "Ghost / text-only button"
       w: 160 h: 48
-      use: primary
+      fill: #00000000
       corner: 10
-      text @_anon_7 "Get Started" {
+      text @_anon_9 "Cancel" {
+        fill: #6B7280
+        font: "Inter" 500 15
+      }
+      anim :hover {
+        fill: #F5F5F7
+        ease: ease_out 150ms
+      }
+    }
+    rect @btn_danger {
+      ## "Destructive action button"
+      w: 160 h: 48
+      use: danger
+      corner: 10
+      text @_anon_10 "Delete" {
         fill: #FFFFFF
         font: "Inter" 600 15
       }
       anim :hover {
-        fill: #5A4BD1
+        fill: #D63031
         scale: 1.02
         ease: spring 200ms
       }
-      anim :press {
-        scale: 0.97
-        ease: ease_out 100ms
-      }
     }
   }
-  text @btn_title "Buttons" {
+  text @input_title "Inputs" {
     fill: #1A1A2E
     font: "Inter" 700 28
   }
-  group @type_scale {
-    layout: column gap=16 pad=0
-    text @t_caption "Caption — 12px Regular" {
-      use: text_muted
-    }
-    text @t_small "Small — 14px Regular" {
-      use: text_secondary
-    }
-    text @t_body "Body — 16px Regular" {
-      use: text_primary
-    }
-    text @t_h3 "Heading 3 — 20px Medium" {
-      fill: #1A1A2E
-      font: "Inter" 500 20
-    }
-    text @t_h2 "Heading 2 — 24px Semibold" {
-      fill: #1A1A2E
-      font: "Inter" 600 24
-    }
-    text @t_h1 "Heading 1 — 32px Semibold" {
-      fill: #1A1A2E
-      font: "Inter" 600 32
-    }
-    text @t_display "Display — 48px Bold" {
-      fill: #1A1A2E
-      font: "Inter" 700 48
-    }
-  }
-  text @type_title "Typography" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
-  }
-  group @neutral_row {
-    ## "Neutral & surface colors"
-    layout: row gap=12 pad=0
-    rect @swatch_gray_900 {
-      w: 80 h: 80
-      fill: #1A1A2E
-      corner: 12
-    }
-    rect @swatch_gray_500 {
-      w: 80 h: 80
-      fill: #6B7280
-      corner: 12
-    }
-    rect @swatch_gray_200 {
-      w: 80 h: 80
-      fill: #E8E8EC
-      corner: 12
-    }
-    rect @swatch_gray_100 {
-      w: 80 h: 80
-      fill: #F8F9FA
-      corner: 12
-    }
-    rect @swatch_white {
-      w: 80 h: 80
+  group @inputs {
+    layout: column gap=12 pad=0
+    rect @input_default {
+      ## "Default text input"
+      w: 320 h: 48
       fill: #FFFFFF
       stroke: #E8E8EC 1
-      corner: 12
+      corner: 8
+      text @_anon_11 "Placeholder text..." {
+        fill: #9CA3AF
+        font: "Inter" 400 14
+      }
     }
-  }
-  group @primary_row {
-    ## "Primary brand colors"
-    layout: row gap=12 pad=0
-    rect @swatch_warning {
-      w: 80 h: 80
-      use: warning
-      corner: 12
+    rect @input_focus {
+      ## "Focused input state"
+      ## status: done
+      w: 320 h: 48
+      fill: #FFFFFF
+      stroke: #6C5CE7 2
+      corner: 8
+      text @_anon_12 "Typing here..." {
+        fill: #1A1A2E
+        font: "Inter" 400 14
+      }
     }
-    rect @swatch_danger {
-      w: 80 h: 80
-      use: danger
-      corner: 12
+    rect @input_error {
+      ## "Error input state"
+      ## accept: "red border + error message below"
+      w: 320 h: 48
+      fill: #FFF6F4
+      stroke: #E17055 2
+      corner: 8
+      text @_anon_13 "invalid@" {
+        fill: #E17055
+        font: "Inter" 400 14
+      }
     }
-    rect @swatch_secondary {
-      w: 80 h: 80
-      use: secondary
-      corner: 12
-    }
-    rect @swatch_primary_dark {
-      w: 80 h: 80
-      use: primary_dark
-      corner: 12
-    }
-    rect @swatch_primary {
-      w: 80 h: 80
-      use: primary
-      corner: 12
-    }
-  }
-  text @palette_title "Color Palette" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
   }
 }
 
 @color_palette -> center_in: canvas
-@swatch_gray_500 -> absolute: 64.55, 775.32
 @inputs -> absolute: 39.44, 30.53
-@input_focus -> absolute: 32.31, 90.38
+@input_focus -> absolute: 428.47, 213.61
+@btn_secondary -> absolute: 359.83, 246.74
+@_anon_8 -> absolute: 458.83, 317.71
+@swatch_gray_500 -> absolute: 64.55, 775.32

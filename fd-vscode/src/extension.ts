@@ -6,6 +6,7 @@ import {
   escapeHtml,
   resolveTargetColumn,
   parseDocumentSymbols,
+  findSymbolAtLine,
   FdSymbol,
 } from "./fd-parse";
 
@@ -48,9 +49,16 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     );
 
     // ─── Extension → Webview: text changes ─────────────────────────
+    // Guard flag: suppress echo-back when we ourselves applied a canvas edit.
+    // Without this, canvas→text sync triggers onDidChangeTextDocument which
+    // echoes the text back to the webview, causing a full re-parse +
+    // resolve_layout that resets all node positions.
+    let suppressEchoBack = false;
+
     const changeDocumentSubscription =
       vscode.workspace.onDidChangeTextDocument((e: vscode.TextDocumentChangeEvent) => {
         if (e.document.uri.toString() === document.uri.toString()) {
+          if (suppressEchoBack) return;
           webviewPanel.webview.postMessage({
             type: "setText",
             text: document.getText(),
@@ -62,13 +70,15 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     webviewPanel.webview.onDidReceiveMessage(async (message: { type: string; text?: string; id?: string; nodeIds?: string[] }) => {
       switch (message.type) {
         case "textChanged": {
+          suppressEchoBack = true;
           const edit = new vscode.WorkspaceEdit();
           edit.replace(
             document.uri,
             new vscode.Range(0, 0, document.lineCount, 0),
             message.text ?? ""
           );
-          vscode.workspace.applyEdit(edit);
+          await vscode.workspace.applyEdit(edit);
+          suppressEchoBack = false;
           break;
         }
         case "nodeSelected": {
@@ -144,14 +154,20 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
           if (suppressCursorSync) return;
           // Only respond to the text editor for this document
           if (e.textEditor.document.uri.toString() !== document.uri.toString()) return;
-          const line = e.textEditor.document.lineAt(
-            e.selections[0].active.line
-          ).text;
-          const nodeMatch = line.match(/@(\w+)/);
-          if (nodeMatch) {
+          const cursorLine = e.selections[0].active.line;
+          const lines = e.textEditor.document.getText().split("\n");
+          const symbols = parseDocumentSymbols(lines);
+          const sym = findSymbolAtLine(symbols, cursorLine);
+          if (sym && sym.name.startsWith("@")) {
             webviewPanel.webview.postMessage({
               type: "selectNode",
-              nodeId: nodeMatch[1],
+              nodeId: sym.name.slice(1),
+            });
+          } else {
+            // Cursor outside any node — deselect canvas
+            webviewPanel.webview.postMessage({
+              type: "selectNode",
+              nodeId: "",
             });
           }
         }
@@ -449,69 +465,173 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       font-weight: 600;
     }
 
-    /* ── Layers Panel (Tree View sidebar) ── */
+    /* ── Layers Panel (Figma / Sketch sidebar) ── */
     #layers-panel {
       display: block;
       position: absolute;
       left: 0;
       top: 0;
       bottom: 0;
-      width: 220px;
+      width: 232px;
       background: var(--fd-surface);
       border-right: 0.5px solid var(--fd-border);
       overflow-y: auto;
+      overflow-x: hidden;
       z-index: 10;
       font-size: 12px;
-      padding: 8px 0;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      padding: 0;
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+    }
+    #layers-panel::-webkit-scrollbar { width: 6px; }
+    #layers-panel::-webkit-scrollbar-track { background: transparent; }
+    #layers-panel::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.12);
+      border-radius: 3px;
+    }
+    .dark-theme #layers-panel::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.12);
+    }
+    .layers-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px 8px;
+      border-bottom: 0.5px solid var(--fd-border);
+      position: sticky;
+      top: 0;
+      background: var(--fd-surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      z-index: 1;
     }
     .layers-title {
-      font-size: 10px;
+      font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
+      letter-spacing: 0.6px;
       color: var(--fd-text-secondary);
-      padding: 4px 12px 8px;
+      padding: 0;
       font-weight: 600;
+    }
+    .layers-count {
+      font-size: 10px;
+      color: var(--fd-text-tertiary);
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+    .layers-body {
+      padding: 4px 0;
     }
     .layer-item {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 3px 8px 3px 0;
-      cursor: pointer;
-      border-radius: 6px;
-      margin: 0 4px;
-      transition: background 0.1s ease;
+      gap: 0;
+      padding: 0 8px 0 0;
+      height: 28px;
+      cursor: default;
+      border-radius: 0;
+      margin: 0;
+      transition: background 0.06s ease;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      position: relative;
     }
-    .layer-item:hover { background: var(--fd-hover); }
+    .layer-item:hover {
+      background: var(--fd-surface-hover);
+    }
     .layer-item.selected {
-      background: var(--fd-segment-active);
-      font-weight: 600;
+      background: var(--fd-accent);
+      color: var(--fd-accent-fg);
+    }
+    .layer-item.selected .layer-name { color: var(--fd-accent-fg); }
+    .layer-item.selected .layer-kind { color: rgba(255,255,255,0.6); }
+    .layer-item.selected .layer-icon { color: rgba(255,255,255,0.75); opacity: 1; }
+    .layer-indent {
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .layer-indent-guide {
+      width: 12px;
+      height: 28px;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .layer-indent-guide::before {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: var(--fd-border);
+    }
+    .layer-chevron {
+      width: 16px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      cursor: pointer;
+      color: var(--fd-text-tertiary);
+      font-size: 8px;
+      transition: transform 0.15s ease;
+      user-select: none;
+    }
+    .layer-chevron.expanded {
+      transform: rotate(90deg);
+    }
+    .layer-chevron.empty {
+      visibility: hidden;
     }
     .layer-icon {
       flex-shrink: 0;
       width: 16px;
-      text-align: center;
-      font-size: 11px;
-      opacity: 0.7;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: var(--fd-text-secondary);
+      opacity: 0.8;
+      margin-right: 6px;
     }
     .layer-name {
       color: var(--fd-text);
-      font-size: 12px;
+      font-size: 11px;
+      font-weight: 400;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: -0.01em;
+    }
+    .layer-name .layer-text-preview {
+      color: var(--fd-text-tertiary);
+      font-style: italic;
+      margin-left: 4px;
+    }
+    .layer-item.selected .layer-text-preview {
+      color: rgba(255,255,255,0.5);
     }
     .layer-kind {
-      color: var(--fd-text-secondary);
-      font-size: 10px;
+      color: var(--fd-text-tertiary);
+      font-size: 9px;
       margin-left: auto;
       padding-right: 4px;
+      padding-left: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      font-weight: 500;
+      flex-shrink: 0;
     }
     .layer-children {
-      margin-left: 12px;
-      border-left: 1px solid var(--fd-border);
+      overflow: hidden;
+    }
+    .layer-children.collapsed {
+      display: none;
     }
 
     /* ── Spec Overlay (transparent badge layer over canvas) ── */
@@ -775,12 +895,25 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       position: absolute;
       inset: 0;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 12px;
       color: var(--fd-text-secondary);
       font-size: 13px;
       font-weight: 500;
       letter-spacing: -0.01em;
+    }
+    @keyframes fd-spin {
+      to { transform: rotate(360deg); }
+    }
+    .loading-spinner {
+      width: 24px;
+      height: 24px;
+      border: 2.5px solid var(--fd-border);
+      border-top-color: var(--fd-accent);
+      border-radius: 50%;
+      animation: fd-spin 0.8s linear infinite;
     }
     /* ── Cursor per tool ─────────── */
     canvas.tool-select { cursor: default; }
@@ -1070,23 +1203,55 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       -webkit-backdrop-filter: blur(24px) saturate(180%);
       border: 0.5px solid var(--fd-border);
       border-radius: 8px;
-      padding: 4px 0;
-      box-shadow: var(--fd-shadow-lg);
+      padding: 4px;
+      box-shadow: 0 10px 38px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.06);
       font-size: 13px;
-      min-width: 180px;
+      min-width: 200px;
+    }
+    .dark-theme #context-menu {
+      box-shadow: 0 10px 38px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.2);
     }
     #context-menu.visible { display: block; }
     #context-menu .menu-item {
-      padding: 5px 14px;
-      cursor: pointer;
+      padding: 4px 10px;
+      cursor: default;
       color: var(--fd-text);
-      transition: all 0.08s ease;
-      border-radius: 4px;
-      margin: 0 4px;
+      transition: none;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 26px;
+      font-size: 13px;
+      letter-spacing: -0.01em;
     }
     #context-menu .menu-item:hover {
       background: var(--fd-accent);
       color: var(--fd-accent-fg);
+    }
+    #context-menu .menu-item:hover .menu-shortcut {
+      color: rgba(255,255,255,0.55);
+    }
+    #context-menu .menu-item .menu-icon {
+      width: 16px;
+      text-align: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    #context-menu .menu-item .menu-label {
+      flex: 1;
+    }
+    #context-menu .menu-shortcut {
+      font-size: 11px;
+      color: var(--fd-text-tertiary);
+      margin-left: auto;
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+      letter-spacing: 0;
+    }
+    #context-menu .menu-separator {
+      height: 1px;
+      background: var(--fd-border);
+      margin: 4px 8px;
     }
 
     /* ── Shortcut Help (Apple sheet) ── */
@@ -1206,7 +1371,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     <div id="dimension-tooltip"></div>
     <div id="spec-overlay"></div>
     <div id="layers-panel"></div>
-    <div id="loading">Loading FD engine…</div>
+    <div id="loading"><div class="loading-spinner"></div>Loading FD engine…</div>
     <!-- Properties Panel (Apple-style) -->
     <div id="props-panel">
       <div class="props-inner">
@@ -1318,8 +1483,11 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     </div>
   </div>
   <div id="context-menu">
-    <div class="menu-item" id="ctx-add-annotation">📌 Add Annotation</div>
-    <div class="menu-item" id="ctx-ai-refine">✨ AI Refine</div>
+    <div class="menu-item" id="ctx-add-annotation"><span class="menu-icon">◇</span><span class="menu-label">Add Annotation</span></div>
+    <div class="menu-item" id="ctx-ai-refine"><span class="menu-icon">✦</span><span class="menu-label">AI Refine</span></div>
+    <div class="menu-separator"></div>
+    <div class="menu-item" id="ctx-duplicate" data-action="duplicate"><span class="menu-icon">⊕</span><span class="menu-label">Duplicate</span><span class="menu-shortcut">⌘D</span></div>
+    <div class="menu-item" id="ctx-delete" data-action="delete"><span class="menu-icon">⊖</span><span class="menu-label">Delete</span><span class="menu-shortcut">⌫</span></div>
   </div>
 
   <script nonce="${nonce}">
