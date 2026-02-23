@@ -514,6 +514,22 @@ impl SceneGraph {
         self.id_index.get(&id).copied()
     }
 
+    /// Get the parent index of a node.
+    pub fn parent(&self, idx: NodeIndex) -> Option<NodeIndex> {
+        self.graph
+            .neighbors_directed(idx, petgraph::Direction::Incoming)
+            .next()
+    }
+
+    /// Reparent a node to a new parent.
+    pub fn reparent_node(&mut self, child: NodeIndex, new_parent: NodeIndex) {
+        if let Some(old_parent) = self.parent(child)
+            && let Some(edge) = self.graph.find_edge(old_parent, child) {
+                self.graph.remove_edge(edge);
+            }
+        self.graph.add_edge(new_parent, child, ());
+    }
+
     /// Get children of a node in insertion order.
     pub fn children(&self, idx: NodeIndex) -> Vec<NodeIndex> {
         self.graph

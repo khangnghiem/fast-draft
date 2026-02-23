@@ -286,12 +286,17 @@ fn apply_constraint(
             }
         }
         Constraint::Absolute { x, y } => {
+            let (px, py) = match graph.parent(node_idx).and_then(|p| bounds.get(&p)) {
+                Some(p_bounds) => (p_bounds.x, p_bounds.y),
+                None => (0.0, 0.0),
+            };
             bounds.insert(
                 node_idx,
                 ResolvedBounds {
-                    x: *x,
-                    y: *y,
-                    ..node_bounds
+                    x: px + *x,
+                    y: py + *y,
+                    width: node_bounds.width,
+                    height: node_bounds.height,
                 },
             );
         }

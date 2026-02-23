@@ -202,6 +202,93 @@ impl SyncEngine {
                     *cmds = commands;
                 }
             }
+            GraphMutation::GroupNodes { ids, new_group_id } => {
+                if ids.is_empty() { return; }
+                
+                let first_idx = match self.graph.index_of(ids[0]) {
+                    Some(idx) => idx,
+                    None => return,
+                };
+                let parent_idx = self.graph.parent(first_idx).unwrap_or(self.graph.root);
+
+                // Compute min bounding box of all selected nodes
+                let mut min_x = f32::MAX;
+                let mut min_y = f32::MAX;
+                for &id in &ids {
+                    if let Some(idx) = self.graph.index_of(id) {
+                        if let Some(b) = self.bounds.get(&idx) {
+                            min_x = min_x.min(b.x);
+                            min_y = min_y.min(b.y);
+                        }
+                    }
+                }
+                
+                let parent_offset = if let Some(p_bounds) = self.bounds.get(&parent_idx) {
+                    (p_bounds.x, p_bounds.y)
+                } else {
+                    (0.0, 0.0)
+                };
+
+                // The group's relative origin within its parent
+                let rel_group_x = min_x - parent_offset.0;
+                let rel_group_y = min_y - parent_offset.1;
+
+                // Create the new group node
+                let mut group_node = SceneNode::new(new_group_id, NodeKind::Group {
+                    layout: LayoutMode::Free,
+                });
+                group_node.constraints.push(Constraint::Absolute { x: rel_group_x, y: rel_group_y });
+                
+                let group_idx = self.graph.add_node(parent_idx, group_node);
+
+                for &id in &ids {
+                    if let Some(idx) = self.graph.index_of(id) {
+                        self.graph.reparent_node(idx, group_idx);
+                        
+                        // Shift Absolute constraints to be relative to the group
+                        if let Some(node) = self.graph.get_by_id_mut(id) {
+                            for c in &mut node.constraints {
+                                if let Constraint::Absolute { x, y } = c {
+                                    *x -= rel_group_x;
+                                    *y -= rel_group_y;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            GraphMutation::UngroupNode { id } => {
+                if let Some(group_idx) = self.graph.index_of(id) {
+                    let parent_idx = self.graph.parent(group_idx).unwrap_or(self.graph.root);
+                    
+                    let (group_rel_x, group_rel_y) = if let Some(group) = self.graph.get_by_id(id) {
+                        group.constraints.iter().find_map(|c| match c {
+                            Constraint::Absolute { x, y } => Some((*x, *y)),
+                            _ => None,
+                        }).unwrap_or((0.0, 0.0))
+                    } else {
+                        (0.0, 0.0)
+                    };
+
+                    let children = self.graph.children(group_idx);
+                    for child_idx in children {
+                        self.graph.reparent_node(child_idx, parent_idx);
+                        let child_id = self.graph.graph[child_idx].id;
+                        if let Some(child_node) = self.graph.get_by_id_mut(child_id) {
+                            for c in &mut child_node.constraints {
+                                if let Constraint::Absolute { x, y } = c {
+                                    *x += group_rel_x;
+                                    *y += group_rel_y;
+                                }
+                            }
+                        }
+                    }
+                    
+                    self.graph.graph.remove_node(group_idx);
+                    self.graph.id_index.remove(&id);
+                    self.bounds.remove(&group_idx);
+                }
+            }
         }
 
         self.text_dirty = true;
@@ -320,6 +407,15 @@ pub enum GraphMutation {
     UpdatePath {
         id: NodeId,
         commands: Vec<PathCmd>,
+    },
+    /// Group selected nodes.
+    GroupNodes {
+        ids: Vec<NodeId>,
+        new_group_id: NodeId,
+    },
+    /// Ungroup a node, extracting its children to the parent.
+    UngroupNode {
+        id: NodeId,
     },
 }
 
