@@ -120,6 +120,14 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
     > ⚠️ **MANDATORY**: Read `.env` for `VSCE_PAT`, `VSX_PAT`, and `GEMINI_API_KEY` BEFORE publishing.
     > Never rely on interactive prompts — always pass tokens via flags.
 
+    **Rebuild WASM** (MANDATORY if any Rust crate changed):
+
+    ```bash
+    wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm
+    ```
+
+    Then compile TypeScript:
+
     ```bash
     cd fd-vscode && pnpm run compile
     ```
