@@ -171,6 +171,14 @@ export class FdCanvas {
         }
     }
     /**
+     * Group the currently selected nodes. Returns true if grouped.
+     * @returns {boolean}
+     */
+    group_selected() {
+        const ret = wasm.fdcanvas_group_selected(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Handle a keyboard event. Returns a JSON string:
      * `{"changed":bool, "action":"<action_name>", "tool":"<tool_name>"}`
      * @param {string} key
@@ -417,6 +425,14 @@ export class FdCanvas {
      */
     undo() {
         const ret = wasm.fdcanvas_undo(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * Ungroup the currently selected group. Returns true if ungrouped.
+     * @returns {boolean}
+     */
+    ungroup_selected() {
+        const ret = wasm.fdcanvas_ungroup_selected(this.__wbg_ptr);
         return ret !== 0;
     }
 }

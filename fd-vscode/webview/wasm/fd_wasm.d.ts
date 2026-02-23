@@ -57,6 +57,10 @@ export class FdCanvas {
      */
     get_tool_name(): string;
     /**
+     * Group the currently selected nodes. Returns true if grouped.
+     */
+    group_selected(): boolean;
+    /**
      * Handle a keyboard event. Returns a JSON string:
      * `{"changed":bool, "action":"<action_name>", "tool":"<tool_name>"}`
      */
@@ -147,6 +151,10 @@ export class FdCanvas {
      * Undo the last action.
      */
     undo(): boolean;
+    /**
+     * Ungroup the currently selected group. Returns true if ungrouped.
+     */
+    ungroup_selected(): boolean;
 }
 
 /**
@@ -175,6 +183,7 @@ export interface InitOutput {
     readonly fdcanvas_get_selected_node_props: (a: number) => [number, number];
     readonly fdcanvas_get_text: (a: number) => [number, number];
     readonly fdcanvas_get_tool_name: (a: number) => [number, number];
+    readonly fdcanvas_group_selected: (a: number) => number;
     readonly fdcanvas_handle_key: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly fdcanvas_handle_pointer_down: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
     readonly fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
@@ -193,6 +202,7 @@ export interface InitOutput {
     readonly fdcanvas_set_theme: (a: number, b: number) => void;
     readonly fdcanvas_set_tool: (a: number, b: number, c: number) => void;
     readonly fdcanvas_undo: (a: number) => number;
+    readonly fdcanvas_ungroup_selected: (a: number) => number;
     readonly parse_to_json: (a: number, b: number) => [number, number];
     readonly validate: (a: number, b: number) => [number, number];
     readonly __wbindgen_exn_store: (a: number) => void;
