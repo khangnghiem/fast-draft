@@ -5,6 +5,14 @@
 
 ## Completed Requirements
 
+### v0.7.4
+
+- **R3.21**: Grid overlay — toggleable dot grid (becomes line grid at high zoom) with adaptive spacing; keyboard shortcut `G` and toolbar ⊞ button; state persists across sessions
+- **NEW**: PNG export — export canvas as high-quality 2× PNG with save dialog; toolbar 📥 button
+- **NEW**: Minimap navigation — thumbnail in bottom-right showing full scene with draggable viewport rectangle for pan navigation (Figma/Miro-style)
+- **NEW**: Arrow-key nudge — arrow keys move selected node 1px (Shift+arrow = 10px), matching Figma/Sketch standard UX
+- **NEW**: Layer rename — double-click a layer name in the layers panel for inline rename (renames `@id` across the entire document)
+
 ### v0.7.3
 
 - **R1.1 fix**: Fixed node/edge drag jitter and reverse-direction movement — `MoveNode` now correctly converts absolute screen coords to parent-relative before storing in `Constraint::Absolute`, and strips conflicting positioning constraints (`CenterIn`, `Offset`, `FillParent`). Skips full layout re-resolve for move-only batches to prevent constraint values from overwriting in-place bounds updates.
@@ -104,7 +112,7 @@
 - [ ] **R3.18**: Dimension tooltip
 - [ ] **R3.19**: Alt-draw-from-center
 - [ ] **R3.20**: Zoom (⌘+/−, pinch, fit)
-- [ ] **R3.21**: Grid overlay
+- [x] **R3.21**: Grid overlay
 - [ ] **R3.22**: Pressure-sensitive stroke width
 - [ ] **R3.23**: Freehand shape recognition
 

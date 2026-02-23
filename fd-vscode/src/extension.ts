@@ -149,6 +149,22 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
           FdEditorProvider.onViewModeChanged?.(mode);
           break;
         }
+        case "exportPng": {
+          const dataUrl = (message as { type: string; dataUrl?: string }).dataUrl;
+          if (!dataUrl) break;
+          const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
+          const buffer = Buffer.from(base64, "base64");
+          const defaultName = document.fileName.replace(/\.fd$/, ".png");
+          const uri = await vscode.window.showSaveDialog({
+            defaultUri: vscode.Uri.file(defaultName),
+            filters: { "PNG Image": ["png"] },
+          });
+          if (uri) {
+            await vscode.workspace.fs.writeFile(uri, buffer);
+            vscode.window.showInformationMessage(`Exported to ${uri.fsPath}`);
+          }
+          break;
+        }
       }
     });
 
@@ -864,6 +880,51 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       color: #fff;
     }
 
+    /* ── Grid Toggle Button ── */
+    #grid-toggle-btn {
+      font-size: 13px;
+      min-width: 32px;
+      justify-content: center;
+    }
+    #grid-toggle-btn.grid-on {
+      color: var(--fd-accent);
+      background: var(--fd-accent-dim);
+    }
+
+    /* ── Export Button ── */
+    #export-btn {
+      font-size: 13px;
+      min-width: 32px;
+      justify-content: center;
+    }
+
+    /* ── Minimap ── */
+    #minimap-container {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      width: 180px;
+      height: 120px;
+      background: var(--fd-surface);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: var(--fd-radius);
+      box-shadow: var(--fd-shadow-md);
+      z-index: 15;
+      overflow: hidden;
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+    #minimap-container:hover {
+      box-shadow: var(--fd-shadow-lg);
+    }
+    #minimap-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
     /* ── Help & Status ── */
     #tool-help-btn {
       margin-left: auto;
@@ -1362,6 +1423,9 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       <button class="view-btn" id="view-spec" title="Spec View — requirements and structure">Spec</button>
     </div>
     <div class="tool-sep"></div>
+    <button class="tool-btn" id="grid-toggle-btn" title="Toggle grid overlay (G)">⊞</button>
+    <button class="tool-btn" id="export-btn" title="Export canvas as PNG">📥</button>
+    <div class="tool-sep"></div>
     <button class="tool-btn" id="theme-toggle-btn" title="Toggle light/dark canvas theme">🌙</button>
     <button id="zoom-level" title="Zoom level (click to reset to 100%)">100%</button>
     <button class="tool-btn" id="tool-help-btn" title="Keyboard shortcuts">?</button>
@@ -1377,6 +1441,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     <div id="dimension-tooltip"></div>
     <div id="spec-overlay"></div>
     <div id="layers-panel"></div>
+    <div id="minimap-container"><canvas id="minimap-canvas"></canvas></div>
     <div id="loading"><div class="loading-spinner"></div>Loading FD engine…</div>
     <!-- Properties Panel (Apple-style) -->
     <div id="props-panel">

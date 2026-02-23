@@ -52,6 +52,10 @@ let contextMenuNodeId = null;
 /** Current view mode: "design" | "spec" */
 let viewMode = "design";
 
+/** Grid overlay state */
+let gridEnabled = false;
+const GRID_BASE_SPACING = 20;
+
 /** Pointer interaction tracking for dimension tooltip */
 let pointerIsDown = false;
 let pointerDownSceneX = 0;
@@ -118,6 +122,9 @@ async function main() {
     setupApplePencilPro();
     setupThemeToggle();
     setupZoomIndicator();
+    setupGridToggle();
+    setupExportButton();
+    setupMinimap();
 
     // Tell extension we're ready
     vscode.postMessage({ type: "ready" });
@@ -142,11 +149,14 @@ function render() {
   // Apply zoom + pan: scale by zoom, then translate by pan
   const z = zoomLevel * dpr;
   ctx.setTransform(z, 0, 0, z, panX * dpr, panY * dpr);
+  // Draw grid below shapes
+  if (gridEnabled) drawGrid();
   fdCanvas.render(ctx, performance.now());
   ctx.restore();
   // Reposition spec badges when canvas re-renders (node moved, panned, etc.)
   if (viewMode === "spec") refreshSpecView();
   refreshLayersPanel();
+  renderMinimap();
 }
 
 /** Animation loop ID for flow animations (pulse/dash edges). */
@@ -471,6 +481,26 @@ document.addEventListener("keydown", (e) => {
     closeShortcutHelp();
   }
 
+  // ── Grid toggle shortcut ──
+  if (e.key === "g" || e.key === "G") {
+    if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+      e.preventDefault();
+      toggleGrid();
+      return;
+    }
+  }
+
+  // ── Arrow-key nudge (Figma/Sketch standard) ──
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+    const selectedId = fdCanvas.get_selected_id();
+    if (selectedId && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      const step = e.shiftKey ? 10 : 1;
+      nudgeSelected(e.key, step);
+      return;
+    }
+  }
+
   // ── Zoom shortcuts (JS-side, before WASM) ──
   if ((e.metaKey || e.ctrlKey) && (e.key === "=" || e.key === "+")) {
     e.preventDefault();
@@ -680,6 +710,7 @@ function buildShortcutHelpHtml() {
         ["Space (hold)", "Pan / hand tool"],
         [`${cmd} (hold)`, "Temp. hand tool"],
         ["Click %", "Reset zoom to 100%"],
+        ["G", "Toggle grid overlay"],
       ],
     },
     {
@@ -697,6 +728,8 @@ function buildShortcutHelpHtml() {
         ["Shift", "Constrain axis / square"],
         ["Alt / ⌥", "Duplicate on click"],
         [`⌥${cmd}`, "Copy while moving"],
+        ["Arrow keys", "Nudge 1px"],
+        ["Shift+Arrow", "Nudge 10px"],
       ],
     },
     {
@@ -1742,6 +1775,68 @@ function refreshLayersPanel() {
       }
     });
   });
+
+  // Wire double-click on layer name for inline rename (Figma/Sketch)
+  panel.querySelectorAll(".layer-name").forEach((nameEl) => {
+    nameEl.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      const item = nameEl.closest(".layer-item");
+      if (!item) return;
+      const oldId = item.getAttribute("data-node-id");
+      if (!oldId) return;
+
+      // Create inline input
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = oldId;
+      input.style.cssText = [
+        "font-size:11px",
+        "font-family:inherit",
+        "padding:1px 4px",
+        "border:1px solid var(--fd-accent)",
+        "border-radius:4px",
+        "background:var(--fd-input-bg)",
+        "color:var(--fd-text)",
+        "outline:none",
+        "width:100%",
+        "box-shadow:0 0 0 2px var(--fd-input-focus)",
+      ].join(";");
+
+      // Replace name span with input
+      nameEl.textContent = "";
+      nameEl.appendChild(input);
+      input.focus();
+      input.select();
+
+      const commit = () => {
+        const newId = input.value.trim().replace(/[^a-zA-Z0-9_]/g, "_");
+        if (input.parentNode) input.parentNode.removeChild(input);
+        if (!newId || newId === oldId || !fdCanvas) {
+          refreshLayersPanel();
+          return;
+        }
+        // Rename in the FD source: replace all @old_id references
+        const text = fdCanvas.get_text();
+        const renamed = text.replace(
+          new RegExp(`@${oldId}\\b`, "g"),
+          `@${newId}`
+        );
+        if (renamed !== text) {
+          fdCanvas.set_text(renamed);
+          render();
+          syncTextToExtension();
+        }
+        refreshLayersPanel();
+      };
+
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") { ev.preventDefault(); commit(); }
+        if (ev.key === "Escape") { ev.preventDefault(); refreshLayersPanel(); }
+        ev.stopPropagation();
+      });
+      input.addEventListener("blur", () => setTimeout(commit, 100));
+    });
+  });
 }
 
 // ─── Spec View Parser (client-side) ──────────────────────────────────────
@@ -1954,6 +2049,357 @@ function setupZoomIndicator() {
     render();
     updateZoomIndicator();
   });
+}
+
+// ─── Grid Overlay (R3.21 — Figma/Sketch/draw.io) ─────────────────────────────
+
+/** Draw a dot grid behind shapes. Grid adapts to zoom level. */
+function drawGrid() {
+  if (!ctx) return;
+  const container = document.getElementById("canvas-container");
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+
+  // Compute spacing: double grid spacing when dots get too close
+  let spacing = GRID_BASE_SPACING;
+  while (spacing * zoomLevel < 10) spacing *= 2;
+
+  // Determine visible scene-space bounds
+  const sceneLeft = -panX / zoomLevel;
+  const sceneTop = -panY / zoomLevel;
+  const sceneRight = (cw - panX) / zoomLevel;
+  const sceneBottom = (ch - panY) / zoomLevel;
+
+  // Snap start to grid
+  const startX = Math.floor(sceneLeft / spacing) * spacing;
+  const startY = Math.floor(sceneTop / spacing) * spacing;
+
+  // Choose dot vs line based on zoom
+  const isDark = document.body.classList.contains("dark-theme");
+  if (zoomLevel >= 3) {
+    // Line grid at high zoom
+    ctx.strokeStyle = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)";
+    ctx.lineWidth = 0.5 / zoomLevel;
+    ctx.beginPath();
+    for (let x = startX; x <= sceneRight; x += spacing) {
+      ctx.moveTo(x, sceneTop);
+      ctx.lineTo(x, sceneBottom);
+    }
+    for (let y = startY; y <= sceneBottom; y += spacing) {
+      ctx.moveTo(sceneLeft, y);
+      ctx.lineTo(sceneRight, y);
+    }
+    ctx.stroke();
+  } else {
+    // Dot grid
+    const dotSize = Math.max(0.8, 1 / zoomLevel);
+    ctx.fillStyle = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)";
+    for (let x = startX; x <= sceneRight; x += spacing) {
+      for (let y = startY; y <= sceneBottom; y += spacing) {
+        ctx.fillRect(x - dotSize / 2, y - dotSize / 2, dotSize, dotSize);
+      }
+    }
+  }
+}
+
+/** Toggle grid overlay on/off. */
+function toggleGrid() {
+  gridEnabled = !gridEnabled;
+  const btn = document.getElementById("grid-toggle-btn");
+  if (btn) btn.classList.toggle("grid-on", gridEnabled);
+  // Persist grid state
+  vscode.setState({ ...(vscode.getState() || {}), gridEnabled });
+  render();
+}
+
+/** Set up grid toggle button and restore persisted state. */
+function setupGridToggle() {
+  const btn = document.getElementById("grid-toggle-btn");
+  if (!btn) return;
+
+  // Restore persisted state
+  const savedState = vscode.getState();
+  if (savedState && savedState.gridEnabled) {
+    gridEnabled = true;
+    btn.classList.add("grid-on");
+  }
+
+  btn.addEventListener("click", toggleGrid);
+}
+
+// ─── Arrow-Key Nudge (Figma/Sketch standard) ─────────────────────────────────
+
+/** Nudge the selected node by step pixels in the arrow direction. */
+function nudgeSelected(arrowKey, step) {
+  if (!fdCanvas) return;
+  const selectedId = fdCanvas.get_selected_id();
+  if (!selectedId) return;
+
+  try {
+    const boundsJson = fdCanvas.get_node_bounds(selectedId);
+    const b = JSON.parse(boundsJson);
+    if (b.x === undefined) return;
+
+    let newX = b.x;
+    let newY = b.y;
+
+    switch (arrowKey) {
+      case "ArrowUp": newY -= step; break;
+      case "ArrowDown": newY += step; break;
+      case "ArrowLeft": newX -= step; break;
+      case "ArrowRight": newX += step; break;
+    }
+
+    // Use handle_pointer sequence to move the node to the new position
+    // This correctly updates constraints and triggers bidi sync
+    const cx = b.x + b.width / 2;
+    const cy = b.y + b.height / 2;
+    const dx = newX - b.x;
+    const dy = newY - b.y;
+    fdCanvas.handle_pointer_down(cx, cy, 1.0, false, false, false, false);
+    const changed = fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false);
+    const upResult = JSON.parse(fdCanvas.handle_pointer_up(cx + dx, cy + dy, false, false, false, false));
+    if (upResult.changed || changed) {
+      render();
+      syncTextToExtension();
+      updatePropertiesPanel();
+    }
+  } catch (_) { /* skip */ }
+}
+
+// ─── Export PNG (Figma/Sketch) ────────────────────────────────────────────────
+
+/** Export the current canvas as a PNG image. */
+function exportToPng() {
+  if (!fdCanvas || !ctx || !canvas) return;
+
+  // Compute scene bounding box
+  const text = fdCanvas.get_text();
+  if (!text || text.trim().length === 0) return;
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let foundAny = false;
+  const nodeIdPattern = /@(\w+)/g;
+  let match;
+  const seenIds = new Set();
+  while ((match = nodeIdPattern.exec(text)) !== null) {
+    const id = match[1];
+    if (seenIds.has(id)) continue;
+    seenIds.add(id);
+    try {
+      const b = JSON.parse(fdCanvas.get_node_bounds(id));
+      if (b.width && b.width > 0) {
+        minX = Math.min(minX, b.x);
+        minY = Math.min(minY, b.y);
+        maxX = Math.max(maxX, b.x + b.width);
+        maxY = Math.max(maxY, b.y + b.height);
+        foundAny = true;
+      }
+    } catch (_) { /* skip */ }
+  }
+
+  if (!foundAny) return;
+
+  // Add padding
+  const padding = 40;
+  const sceneW = maxX - minX + padding * 2;
+  const sceneH = maxY - minY + padding * 2;
+
+  // Create an offscreen canvas for the export
+  const exportCanvas = document.createElement("canvas");
+  const dpr = 2; // Export at 2x resolution for high-quality
+  exportCanvas.width = sceneW * dpr;
+  exportCanvas.height = sceneH * dpr;
+  const exportCtx = exportCanvas.getContext("2d");
+
+  // White background
+  const isDark = document.body.classList.contains("dark-theme");
+  exportCtx.fillStyle = isDark ? "#1C1C1E" : "#FFFFFF";
+  exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+  // Render scene centered in export canvas
+  exportCtx.setTransform(dpr, 0, 0, dpr, (padding - minX) * dpr, (padding - minY) * dpr);
+  fdCanvas.render(exportCtx, performance.now());
+
+  // Send to extension for save dialog
+  const dataUrl = exportCanvas.toDataURL("image/png");
+  vscode.postMessage({ type: "exportPng", dataUrl });
+}
+
+/** Set up the export button. */
+function setupExportButton() {
+  const btn = document.getElementById("export-btn");
+  if (!btn) return;
+  btn.addEventListener("click", exportToPng);
+}
+
+// ─── Minimap (Figma/Miro) ─────────────────────────────────────────────────────
+
+let minimapCtx = null;
+let minimapDragging = false;
+
+/** Set up the minimap canvas and mouse events. */
+function setupMinimap() {
+  const minimapCanvas = document.getElementById("minimap-canvas");
+  const minimapContainer = document.getElementById("minimap-container");
+  if (!minimapCanvas || !minimapContainer) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  minimapCanvas.width = 180 * dpr;
+  minimapCanvas.height = 120 * dpr;
+  minimapCtx = minimapCanvas.getContext("2d");
+  minimapCtx.scale(dpr, dpr);
+
+  // Click/drag on minimap → pan main canvas
+  minimapContainer.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    minimapDragging = true;
+    minimapContainer.setPointerCapture(e.pointerId);
+    panFromMinimap(e);
+  });
+
+  minimapContainer.addEventListener("pointermove", (e) => {
+    if (!minimapDragging) return;
+    panFromMinimap(e);
+  });
+
+  minimapContainer.addEventListener("pointerup", (e) => {
+    minimapDragging = false;
+    minimapContainer.releasePointerCapture(e.pointerId);
+  });
+}
+
+/** Pan the main canvas based on click position on minimap. */
+function panFromMinimap(e) {
+  if (!fdCanvas) return;
+  const minimapContainer = document.getElementById("minimap-container");
+  const rect = minimapContainer.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  // Get scene bounding box
+  const bounds = getSceneBounds();
+  if (!bounds) return;
+
+  const mw = 180;
+  const mh = 120;
+  const padding = 20;
+
+  const sceneW = bounds.maxX - bounds.minX;
+  const sceneH = bounds.maxY - bounds.minY;
+  if (sceneW <= 0 || sceneH <= 0) return;
+
+  const scale = Math.min((mw - padding * 2) / sceneW, (mh - padding * 2) / sceneH);
+  const offsetX = (mw - sceneW * scale) / 2;
+  const offsetY = (mh - sceneH * scale) / 2;
+
+  // Convert minimap click to scene-space
+  const sceneX = (mx - offsetX) / scale + bounds.minX;
+  const sceneY = (my - offsetY) / scale + bounds.minY;
+
+  // Center the main canvas viewport on this scene point
+  const container = document.getElementById("canvas-container");
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+  panX = cw / 2 - sceneX * zoomLevel;
+  panY = ch / 2 - sceneY * zoomLevel;
+  render();
+}
+
+/** Get the scene bounding box (reused by minimap and export). */
+function getSceneBounds() {
+  if (!fdCanvas) return null;
+  const text = fdCanvas.get_text();
+  if (!text || text.trim().length === 0) return null;
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let foundAny = false;
+  const nodeIdPattern = /@(\w+)/g;
+  let match;
+  const seenIds = new Set();
+  while ((match = nodeIdPattern.exec(text)) !== null) {
+    const id = match[1];
+    if (seenIds.has(id)) continue;
+    seenIds.add(id);
+    try {
+      const b = JSON.parse(fdCanvas.get_node_bounds(id));
+      if (b.width && b.width > 0) {
+        minX = Math.min(minX, b.x);
+        minY = Math.min(minY, b.y);
+        maxX = Math.max(maxX, b.x + b.width);
+        maxY = Math.max(maxY, b.y + b.height);
+        foundAny = true;
+      }
+    } catch (_) { /* skip */ }
+  }
+  return foundAny ? { minX, minY, maxX, maxY } : null;
+}
+
+/** Render the minimap thumbnail with viewport indicator. */
+function renderMinimap() {
+  if (!minimapCtx || !fdCanvas) return;
+  const mw = 180;
+  const mh = 120;
+  const dpr = window.devicePixelRatio || 1;
+
+  // Clear
+  minimapCtx.save();
+  minimapCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const isDark = document.body.classList.contains("dark-theme");
+  minimapCtx.fillStyle = isDark ? "rgba(28,28,30,0.9)" : "rgba(245,245,247,0.9)";
+  minimapCtx.fillRect(0, 0, mw, mh);
+
+  const bounds = getSceneBounds();
+  if (!bounds) {
+    minimapCtx.restore();
+    return;
+  }
+
+  const padding = 20;
+  const sceneW = bounds.maxX - bounds.minX;
+  const sceneH = bounds.maxY - bounds.minY;
+  if (sceneW <= 0 || sceneH <= 0) {
+    minimapCtx.restore();
+    return;
+  }
+
+  const scale = Math.min((mw - padding * 2) / sceneW, (mh - padding * 2) / sceneH);
+  const offsetX = (mw - sceneW * scale) / 2;
+  const offsetY = (mh - sceneH * scale) / 2;
+
+  // Render scene scaled into minimap
+  minimapCtx.save();
+  minimapCtx.translate(offsetX, offsetY);
+  minimapCtx.scale(scale, scale);
+  minimapCtx.translate(-bounds.minX, -bounds.minY);
+  fdCanvas.render(minimapCtx, performance.now());
+  minimapCtx.restore();
+
+  // Draw viewport rectangle
+  const container = document.getElementById("canvas-container");
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+
+  // Viewport in scene-space
+  const vpLeft = -panX / zoomLevel;
+  const vpTop = -panY / zoomLevel;
+  const vpW = cw / zoomLevel;
+  const vpH = ch / zoomLevel;
+
+  // Convert to minimap coordinates
+  const rx = offsetX + (vpLeft - bounds.minX) * scale;
+  const ry = offsetY + (vpTop - bounds.minY) * scale;
+  const rw = vpW * scale;
+  const rh = vpH * scale;
+
+  minimapCtx.strokeStyle = isDark ? "rgba(10, 132, 255, 0.6)" : "rgba(0, 122, 255, 0.5)";
+  minimapCtx.lineWidth = 1.5;
+  minimapCtx.strokeRect(rx, ry, rw, rh);
+  minimapCtx.fillStyle = isDark ? "rgba(10, 132, 255, 0.08)" : "rgba(0, 122, 255, 0.06)";
+  minimapCtx.fillRect(rx, ry, rw, rh);
+
+  minimapCtx.restore();
 }
 
 // ─── Start ───────────────────────────────────────────────────────────────────

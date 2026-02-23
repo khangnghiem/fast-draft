@@ -131,6 +131,10 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 | cursor             | R3.11, R3.16                          |
 | resize             | R3.2, R3.16                           |
 | feedback / tooltip | R3.15, R3.18                          |
+| export             | R3.24                                 |
+| minimap            | R3.25                                 |
+| nudge              | R3.26                                 |
+| rename             | R3.27                                 |
 | undo / redo        | R3.7                                  |
 | properties         | R3.8                                  |
 | drag-drop          | R3.9                                  |
