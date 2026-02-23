@@ -2584,6 +2584,64 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
+  // ─── Reveal canvas when switching to an .fd tab ─────────────────────
+  // When the user selects a different .fd file in the text editor, ensure
+  // its Canvas Mode panel is visible in the other column (without focus).
+  let revealDebounce: ReturnType<typeof setTimeout> | undefined;
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor((editor) => {
+      clearTimeout(revealDebounce);
+      if (!editor || editor.document.languageId !== "fd") return;
+      const key = editor.document.uri.toString();
+
+      revealDebounce = setTimeout(async () => {
+        // Check if a canvas tab already exists for this URI
+        const canvasTabExists = vscode.window.tabGroups.all.some((group) =>
+          group.tabs.some((tab) => {
+            const input = tab.input;
+            return (
+              input &&
+              typeof input === "object" &&
+              "viewType" in input &&
+              (input as { viewType: string }).viewType === "fd.canvas" &&
+              "uri" in input &&
+              (input as { uri: vscode.Uri }).uri.toString() === key
+            );
+          })
+        );
+
+        if (canvasTabExists) {
+          // Canvas exists — bring it to front in its column without focus.
+          // preserveFocus=true keeps the text editor focused.
+          await vscode.commands.executeCommand(
+            "vscode.openWith",
+            editor.document.uri,
+            "fd.canvas",
+            { preserveFocus: true }
+          );
+        } else if (!openedUris.has(key)) {
+          // No canvas yet — open one in the other column (same logic as
+          // the onDidOpenTextDocument handler above).
+          openedUris.add(key);
+          const activeColumn = editor.viewColumn;
+          const allGroupColumns = vscode.window.tabGroups.all.map(
+            (g) => g.viewColumn
+          );
+          const resolved = resolveTargetColumn(activeColumn, allGroupColumns);
+          const targetColumn =
+            resolved === "beside" ? vscode.ViewColumn.Beside : resolved;
+
+          await vscode.commands.executeCommand(
+            "vscode.openWith",
+            editor.document.uri,
+            "fd.canvas",
+            { viewColumn: targetColumn, preserveFocus: true }
+          );
+        }
+      }, 150);
+    })
+  );
+
   // Register diagnostics
   const diagnostics = new FdDiagnosticsProvider();
   diagnostics.activate(context);
