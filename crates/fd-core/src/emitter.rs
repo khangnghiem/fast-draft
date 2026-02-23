@@ -119,7 +119,7 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
 
     out.push_str(" {\n");
 
-    // Annotations (## lines)
+    // Annotations (spec block)
     emit_annotations(out, &node.annotations, depth + 1);
 
     // Layout mode (for groups)
@@ -282,16 +282,34 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
 }
 
 fn emit_annotations(out: &mut String, annotations: &[Annotation], depth: usize) {
-    for ann in annotations {
+    if annotations.is_empty() {
+        return;
+    }
+
+    // Single description → inline shorthand: `spec "desc"`
+    if annotations.len() == 1
+        && let Annotation::Description(s) = &annotations[0]
+    {
         indent(out, depth);
+        writeln!(out, "spec \"{s}\"").unwrap();
+        return;
+    }
+
+    // Multiple annotations → block form: `spec { ... }`
+    indent(out, depth);
+    out.push_str("spec {\n");
+    for ann in annotations {
+        indent(out, depth + 1);
         match ann {
-            Annotation::Description(s) => writeln!(out, "## \"{s}\"").unwrap(),
-            Annotation::Accept(s) => writeln!(out, "## accept: \"{s}\"").unwrap(),
-            Annotation::Status(s) => writeln!(out, "## status: {s}").unwrap(),
-            Annotation::Priority(s) => writeln!(out, "## priority: {s}").unwrap(),
-            Annotation::Tag(s) => writeln!(out, "## tag: {s}").unwrap(),
+            Annotation::Description(s) => writeln!(out, "\"{s}\"").unwrap(),
+            Annotation::Accept(s) => writeln!(out, "accept: \"{s}\"").unwrap(),
+            Annotation::Status(s) => writeln!(out, "status: {s}").unwrap(),
+            Annotation::Priority(s) => writeln!(out, "priority: {s}").unwrap(),
+            Annotation::Tag(s) => writeln!(out, "tag: {s}").unwrap(),
         }
     }
+    indent(out, depth);
+    out.push_str("}\n");
 }
 
 fn emit_paint_prop(out: &mut String, name: &str, paint: &Paint, depth: usize) {
@@ -494,7 +512,7 @@ fn emit_edge(out: &mut String, edge: &Edge) {
 
 /// Emit a `SceneGraph` as a markdown spec document.
 ///
-/// Extracts only `@id` names, `##` annotations, hierarchy, and edges —
+/// Extracts only `@id` names, `spec { ... }` annotations, hierarchy, and edges —
 /// all visual properties (fill, stroke, dimensions, animations) are omitted.
 /// Intended for PM-facing spec reports.
 #[must_use]
@@ -749,7 +767,7 @@ rect @btn {
     fn roundtrip_annotation_description() {
         let input = r#"
 rect @box {
-  ## "Primary container for content"
+  spec "Primary container for content"
   w: 100 h: 50
   fill: #FF0000
 }
@@ -773,8 +791,10 @@ rect @box {
     fn roundtrip_annotation_accept() {
         let input = r#"
 rect @login_btn {
-  ## accept: "disabled state when fields empty"
-  ## accept: "loading spinner during auth"
+  spec {
+    accept: "disabled state when fields empty"
+    accept: "loading spinner during auth"
+  }
   w: 280 h: 48
   fill: #6C5CE7
 }
@@ -801,9 +821,11 @@ rect @login_btn {
     fn roundtrip_annotation_status_priority() {
         let input = r#"
 rect @card {
-  ## status: in_progress
-  ## priority: high
-  ## tag: mvp
+  spec {
+    status: in_progress
+    priority: high
+    tag: mvp
+  }
   w: 300 h: 200
 }
 "#;
@@ -829,10 +851,12 @@ rect @card {
         let input = r#"
 group @form {
   layout: column gap=16 pad=32
-  ## "User authentication entry point"
+  spec "User authentication entry point"
 
   rect @email {
-    ## accept: "validates email format"
+    spec {
+      accept: "validates email format"
+    }
     w: 280 h: 44
   }
 }
@@ -855,11 +879,13 @@ group @form {
     fn parse_annotation_freeform() {
         let input = r#"
 rect @widget {
-  ## "Description line"
-  ## accept: "criterion one"
-  ## status: done
-  ## priority: low
-  ## tag: design
+  spec {
+    "Description line"
+    accept: "criterion one"
+    status: done
+    priority: low
+    tag: design
+  }
   w: 100 h: 100
 }
 "#;
@@ -949,8 +975,10 @@ rect @login { w: 200 h: 100 }
 rect @dashboard { w: 200 h: 100 }
 
 edge @login_flow {
-  ## "Main authentication flow"
-  ## accept: "must redirect within 2s"
+  spec {
+    "Main authentication flow"
+    accept: "must redirect within 2s"
+  }
   from: @login
   to: @dashboard
   label: "on success"
@@ -979,9 +1007,11 @@ edge @login_flow {
     fn roundtrip_generic_node() {
         let input = r#"
 @login_btn {
-  ## "Primary CTA — triggers login API call"
-  ## accept: "disabled when fields empty"
-  ## status: in_progress
+  spec {
+    "Primary CTA — triggers login API call"
+    accept: "disabled when fields empty"
+    status: in_progress
+  }
 }
 "#;
         let graph = parse_document(input).unwrap();
@@ -1008,13 +1038,17 @@ group @form {
   layout: column gap=16 pad=32
 
   @email_input {
-    ## "Email field"
-    ## accept: "validates format on blur"
+    spec {
+      "Email field"
+      accept: "validates format on blur"
+    }
   }
 
   @password_input {
-    ## "Password field"
-    ## accept: "min 8 chars"
+    spec {
+      "Password field"
+      accept: "min 8 chars"
+    }
   }
 }
 "#;
@@ -1143,11 +1177,13 @@ edge @dashed {
     fn test_spec_markdown_basic() {
         let input = r#"
 rect @login_btn {
-  ## "Primary CTA for login"
-  ## accept: "disabled when fields empty"
-  ## status: in_progress
-  ## priority: high
-  ## tag: auth
+  spec {
+    "Primary CTA for login"
+    accept: "disabled when fields empty"
+    status: in_progress
+    priority: high
+    tag: auth
+  }
   w: 280 h: 48
   fill: #6C5CE7
 }
@@ -1172,12 +1208,16 @@ rect @login_btn {
         let input = r#"
 group @form {
   layout: column gap=16 pad=32
-  ## "Shipping address form"
-  ## accept: "autofill from saved addresses"
+  spec {
+    "Shipping address form"
+    accept: "autofill from saved addresses"
+  }
 
   rect @email {
-    ## "Email input"
-    ## accept: "validates email format"
+    spec {
+      "Email input"
+      accept: "validates email format"
+    }
     w: 280 h: 44
   }
 
@@ -1204,13 +1244,15 @@ group @form {
         let input = r#"
 rect @login { w: 200 h: 100 }
 rect @dashboard {
-  ## "Main dashboard"
+  spec "Main dashboard"
   w: 200 h: 100
 }
 
 edge @auth_flow {
-  ## "Authentication flow"
-  ## accept: "redirect within 2s"
+  spec {
+    "Authentication flow"
+    accept: "redirect within 2s"
+  }
   from: @login
   to: @dashboard
   label: "on success"

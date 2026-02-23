@@ -544,8 +544,10 @@ rect @box {
 rect @box {
   w: 100
   h: 50
-  ## "A test box"
-  ## status: draft
+  spec {
+    "A test box"
+    status: draft
+  }
 }
 "#;
         let viewport = Viewport {
@@ -577,10 +579,10 @@ rect @box {
             Annotation::Description("Updated description".into())
         );
 
-        // Verify text re-emitted with new ## lines
-        assert!(engine.text.contains("## \"Updated description\""));
-        assert!(engine.text.contains("## status: done"));
-        assert!(engine.text.contains("## accept: \"all tests pass\""));
+        // Verify text re-emitted with spec blocks
+        assert!(engine.text.contains("\"Updated description\""));
+        assert!(engine.text.contains("status: done"));
+        assert!(engine.text.contains("accept: \"all tests pass\""));
     }
 
     #[test]
@@ -589,8 +591,10 @@ rect @box {
 rect @card {
   w: 200
   h: 100
-  ## "Card component"
-  ## priority: high
+  spec {
+    "Card component"
+    priority: high
+  }
 }
 "#;
         let viewport = Viewport {

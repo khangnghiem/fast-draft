@@ -17,9 +17,9 @@
 ; ─── Properties ────────────────────────────────────────────
 (property_name) @property
 
-; ─── Annotations ───────────────────────────────────────────
-"##" @attribute
-(annotation_keyword) @attribute
+; ─── Spec Blocks ───────────────────────────────────────────
+"spec" @keyword
+(spec_keyword) @attribute
 
 ; ─── Animation trigger ─────────────────────────────────────
 (anim_trigger

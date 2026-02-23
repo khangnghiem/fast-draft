@@ -32,11 +32,12 @@ export interface SpecResult {
 
 // ─── Annotation Parsing ──────────────────────────────────────────────────
 
-/** Parse a `## ...` annotation line into a typed annotation. */
+/** Parse a single line inside a `spec { ... }` block into a typed annotation. */
 export function parseAnnotation(
   line: string
 ): Annotation | null {
-  const trimmed = line.replace(/^##\s*/, "");
+  const trimmed = line.trim();
+  if (trimmed.length === 0) return null;
   const acceptMatch = trimmed.match(/^accept:\s*"([^"]*)"/);
   if (acceptMatch) return { type: "accept", value: acceptMatch[1] };
   const statusMatch = trimmed.match(/^status:\s*(\S+)/);
@@ -77,16 +78,49 @@ export function parseSpecNodes(source: string): SpecResult {
     const closeBraces = (trimmed.match(/\}/g) || []).length;
 
     // Regular comment — skip
-    if (trimmed.startsWith("#") && !trimmed.startsWith("##")) continue;
+    if (trimmed.startsWith("#")) continue;
 
-    // Annotation line
-    if (trimmed.startsWith("##")) {
-      const ann = parseAnnotation(trimmed);
-      if (ann) {
+    // Spec block (inline or block form)
+    if (trimmed.startsWith("spec ") || trimmed.startsWith("spec{")) {
+      // Inline form: spec "description"
+      const inlineMatch = trimmed.match(/^spec\s+"([^"]*)"/);
+      if (inlineMatch) {
+        const ann: Annotation = { type: "description", value: inlineMatch[1] };
         if (insideEdge && currentEdge) {
           currentEdge.annotations.push(ann);
         } else {
           pendingAnnotations.push(ann);
+        }
+        continue;
+      }
+      // Block form: spec { ... } — track with brace depth
+      if (trimmed.includes("{")) {
+        let specDepth = (trimmed.match(/\{/g) || []).length;
+        specDepth -= (trimmed.match(/\}/g) || []).length;
+        // Read lines until we close the spec block
+        const specLines: string[] = [];
+        const lineIdx = lines.indexOf(line);
+        let j = lineIdx + 1;
+        while (j < lines.length && specDepth > 0) {
+          const specLine = lines[j].trim();
+          specDepth += (specLine.match(/\{/g) || []).length;
+          specDepth -= (specLine.match(/\}/g) || []).length;
+          if (specDepth > 0 || (specDepth === 0 && specLine !== "}")) {
+            if (specLine !== "}" && specLine.length > 0) {
+              specLines.push(specLine);
+            }
+          }
+          j++;
+        }
+        for (const sl of specLines) {
+          const ann = parseAnnotation(sl);
+          if (ann) {
+            if (insideEdge && currentEdge) {
+              currentEdge.annotations.push(ann);
+            } else {
+              pendingAnnotations.push(ann);
+            }
+          }
         }
       }
       continue;
@@ -203,7 +237,8 @@ export function computeSpecHideLines(lines: string[]): number[] {
   let nodeDepth = 0;
 
   const keepPatterns = [
-    /^\s*#/,                              // Comments and annotations
+    /^\s*#/,                              // Comments
+    /^\s*spec[\s{]/,                       // Spec blocks
     /^\s*(group|frame|rect|ellipse|path|text)\s+@/, // Typed node declarations
     /^\s*@\w+\s*\{/,                      // Generic node declarations
     /^\s*edge\s+@/,                        // Edge declarations
@@ -212,6 +247,8 @@ export function computeSpecHideLines(lines: string[]): number[] {
     /^\s*label:\s*"/,                       // Edge label
     /^\s*\}/,                              // Closing braces
     /^\s*$/,                               // Blank lines
+    /^\s*"[^"]*"/,                         // Quoted strings (inside spec)
+    /^\s*(accept|status|priority|tag):/,   // Spec typed entries
   ];
 
   for (let i = 0; i < lines.length; i++) {

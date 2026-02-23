@@ -10,13 +10,15 @@ style step_title {
 
 # ─── Wizard container ───────────────────────────────────────────────────
 group @wizard {
-  ## "Onboarding wizard — 4-step flow"
-  ## accept: "skip button on every step"
-  ## accept: "progress dots show current step"
-  ## accept: "swipe gestures on mobile"
-  ## status: in_progress
-  ## priority: high
-  ## tag: onboarding, ux, retention
+  spec {
+    "Onboarding wizard — 4-step flow"
+    accept: "skip button on every step"
+    accept: "progress dots show current step"
+    accept: "swipe gestures on mobile"
+    status: in_progress
+    priority: high
+    tag: onboarding, ux, retention
+  }
   layout: column gap=0 pad=0
   rect @step_card {
     w: 480 h: 520
@@ -26,8 +28,10 @@ group @wizard {
     group @_anon_3 {
       layout: column gap=24 pad=40
       rect @illustration {
-        ## "Step illustration — animated SVG"
-        ## accept: "subtle loop animation"
+        spec {
+          "Step illustration — animated SVG"
+          accept: "subtle loop animation"
+        }
         w: 400 h: 240
         fill: #F0EDFC
         corner: 16

@@ -15,10 +15,12 @@ style caption {
 
 # ─── Bottom navigation ──────────────────────────────────────────────────
 group @bottom_nav {
-  ## "Bottom tab bar — iOS-style"
-  ## accept: "haptic feedback on tap"
-  ## status: done
-  ## tag: navigation
+  spec {
+    "Bottom tab bar — iOS-style"
+    accept: "haptic feedback on tap"
+    status: done
+    tag: navigation
+  }
   layout: row gap=0 pad=12
   rect @tab_profile {
     w: 75 h: 44
@@ -85,10 +87,12 @@ group @bottom_nav {
 
 # ─── Feed post ───────────────────────────────────────────────────────────
 group @post_1 {
-  ## "Social feed post card"
-  ## accept: "double-tap to like"
-  ## accept: "swipe right for actions"
-  ## tag: feed, engagement
+  spec {
+    "Social feed post card"
+    accept: "double-tap to like"
+    accept: "swipe right for actions"
+    tag: feed, engagement
+  }
   layout: column gap=8 pad=0
   group @post_text {
     layout: column gap=4 pad=16
@@ -124,9 +128,11 @@ group @post_1 {
     }
   }
   rect @post_image {
-    ## "Post image — loaded from CDN"
-    ## accept: "lazy-loaded with blur placeholder"
-    ## priority: high
+    spec {
+      "Post image — loaded from CDN"
+      accept: "lazy-loaded with blur placeholder"
+      priority: high
+    }
     w: 375 h: 375
     fill: #F0F0F5
   }
@@ -151,10 +157,12 @@ group @post_1 {
 
 # ─── Story bubbles ───────────────────────────────────────────────────────
 group @stories {
-  ## "Horizontal story carousel"
-  ## accept: "scrollable beyond viewport"
-  ## status: in_progress
-  ## priority: medium
+  spec {
+    "Horizontal story carousel"
+    accept: "scrollable beyond viewport"
+    status: in_progress
+    priority: medium
+  }
   layout: row gap=12 pad=16
   ellipse @story_4 {
     w: 64 h: 64
@@ -202,9 +210,11 @@ group @stories {
 group @header {
   layout: row gap=0 pad=16
   ellipse @avatar {
-    ## "User profile picture"
-    ## accept: "tapping opens profile sheet"
-    ## tag: navigation
+    spec {
+      "User profile picture"
+      accept: "tapping opens profile sheet"
+      tag: navigation
+    }
     w: 36 h: 36
     fill: #6C5CE7
     anim :press {

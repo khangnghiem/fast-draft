@@ -16,42 +16,42 @@ import {
 
 describe("parseAnnotation", () => {
   it("parses accept annotation", () => {
-    expect(parseAnnotation('## accept: "user can log in"')).toEqual({
+    expect(parseAnnotation('accept: "user can log in"')).toEqual({
       type: "accept",
       value: "user can log in",
     });
   });
 
   it("parses status annotation", () => {
-    expect(parseAnnotation("## status: done")).toEqual({
+    expect(parseAnnotation("status: done")).toEqual({
       type: "status",
       value: "done",
     });
   });
 
   it("parses priority annotation", () => {
-    expect(parseAnnotation("## priority: high")).toEqual({
+    expect(parseAnnotation("priority: high")).toEqual({
       type: "priority",
       value: "high",
     });
   });
 
   it("parses tag annotation", () => {
-    expect(parseAnnotation("## tag: conversion, revenue")).toEqual({
+    expect(parseAnnotation("tag: conversion, revenue")).toEqual({
       type: "tag",
       value: "conversion, revenue",
     });
   });
 
   it("parses description annotation", () => {
-    expect(parseAnnotation('## "Login form — main CTA"')).toEqual({
+    expect(parseAnnotation('"Login form — main CTA"')).toEqual({
       type: "description",
       value: "Login form — main CTA",
     });
   });
 
   it("returns null for unrecognized annotations", () => {
-    expect(parseAnnotation("## some random text")).toBeNull();
+    expect(parseAnnotation("some random text")).toBeNull();
   });
 
   it("returns null for regular comments", () => {
@@ -86,7 +86,7 @@ describe("parseSpecNodes", () => {
   });
 
   it("extracts a typed node with annotations", () => {
-    const source = `rect @card {\n  ## "Main card"\n  ## accept: "visible on load"\n  ## status: done\n  fill: #FFF\n}`;
+    const source = `rect @card {\n  spec {\n    "Main card"\n    accept: "visible on load"\n    status: done\n  }\n  fill: #FFF\n}`;
     const result = parseSpecNodes(source);
     expect(result.nodes).toHaveLength(1);
     expect(result.nodes[0].id).toBe("card");
@@ -106,7 +106,7 @@ describe("parseSpecNodes", () => {
   });
 
   it("extracts a generic node", () => {
-    const source = `@login_flow {\n  ## "User login flow"\n  ## priority: high\n}`;
+    const source = `@login_flow {\n  spec {\n    "User login flow"\n    priority: high\n  }\n}`;
     const result = parseSpecNodes(source);
     expect(result.nodes).toHaveLength(1);
     expect(result.nodes[0]).toEqual({
@@ -132,7 +132,7 @@ describe("parseSpecNodes", () => {
   });
 
   it("extracts edges with annotations", () => {
-    const source = `edge @flow1 {\n  ## "Critical path"\n  from: @a\n  to: @b\n}`;
+    const source = `edge @flow1 {\n  spec "Critical path"\n  from: @a\n  to: @b\n}`;
     const result = parseSpecNodes(source);
     expect(result.edges).toHaveLength(1);
     expect(result.edges[0].annotations).toEqual([
@@ -143,7 +143,7 @@ describe("parseSpecNodes", () => {
   it("handles multiple nodes and edges together", () => {
     const source = [
       "rect @btn {\n  fill: #333\n}",
-      "text @label \"Hello\" {\n  ## \"Primary label\"\n}",
+      "text @label \"Hello\" {\n  spec \"Primary label\"\n}",
       "edge @flow {\n  from: @btn\n  to: @label\n}",
     ].join("\n");
     const result = parseSpecNodes(source);
@@ -209,9 +209,11 @@ describe("computeSpecHideLines", () => {
   it("keeps comments and annotations", () => {
     const lines = [
       "# This is a comment",
-      '## "Description"',
-      '## accept: "criterion"',
-      "## status: done",
+      'spec {',
+      '  "Description"',
+      '  accept: "criterion"',
+      "  status: done",
+      '}',
     ];
     expect(computeSpecHideLines(lines)).toEqual([]);
   });
@@ -325,7 +327,7 @@ describe("computeSpecFoldRanges", () => {
   it("handles realistic multi-node structure", () => {
     const lines = [
       "group @nav {",        // 0 - kept
-      "  ## \"Navigation\"",  // 1 - kept
+      "  spec \"Navigation\"",  // 1 - kept
       "  layout: row gap=8", // 2 - hidden
       "  rect @btn1 {",      // 3 - kept
       "    w: 50 h: 30",     // 4 - hidden
@@ -533,7 +535,7 @@ describe("parseDocumentSymbols", () => {
   });
 
   it("parses generic node", () => {
-    const lines = ["@login_flow {", "  ## \"User login\"", "}"];
+    const lines = ["@login_flow {", '  spec "User login"', "}"];
     const result = parseDocumentSymbols(lines);
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe("@login_flow");

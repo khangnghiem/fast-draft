@@ -15,12 +15,14 @@ group @gallery {
     font: "Inter" 400 16
   }
   group @grid {
-    ## "Responsive image grid"
-    ## accept: "images lazy-load with blur-up"
-    ## tag: layout, grid
+    spec {
+      "Responsive image grid"
+      accept: "images lazy-load with blur-up"
+      tag: layout, grid
+    }
     layout: grid cols=2 gap=16 pad=0
     rect @photo_1 {
-      ## "Sunset landscape"
+      spec "Sunset landscape"
       w: 260 h: 200
       fill: #FF6B6B
       corner: 12
@@ -34,7 +36,7 @@ group @gallery {
       }
     }
     rect @photo_2 {
-      ## "Ocean view"
+      spec "Ocean view"
       w: 260 h: 200
       fill: #4ECDC4
       corner: 12
@@ -48,7 +50,7 @@ group @gallery {
       }
     }
     rect @photo_3 {
-      ## "Mountain trail"
+      spec "Mountain trail"
       w: 260 h: 200
       fill: #6C5CE7
       corner: 12
@@ -62,7 +64,7 @@ group @gallery {
       }
     }
     rect @photo_4 {
-      ## "Desert dunes"
+      spec "Desert dunes"
       w: 260 h: 200
       fill: #FFE66D
       corner: 12
@@ -77,7 +79,7 @@ group @gallery {
       }
     }
     rect @photo_5 {
-      ## "City skyline"
+      spec "City skyline"
       w: 260 h: 200
       fill: #A29BFE
       corner: 12
@@ -91,7 +93,7 @@ group @gallery {
       }
     }
     rect @photo_6 {
-      ## "Cherry blossoms"
+      spec "Cherry blossoms"
       w: 260 h: 200
       fill: #FD79A8
       corner: 12
@@ -105,7 +107,7 @@ group @gallery {
       }
     }
     rect @photo_7 {
-      ## "Forest canopy"
+      spec "Forest canopy"
       w: 260 h: 200
       fill: #00B894
       corner: 12
@@ -119,7 +121,7 @@ group @gallery {
       }
     }
     rect @photo_8 {
-      ## "Autumn leaves"
+      spec "Autumn leaves"
       w: 260 h: 200
       fill: #E17055
       corner: 12
@@ -133,7 +135,7 @@ group @gallery {
       }
     }
     rect @photo_9 {
-      ## "Starry night"
+      spec "Starry night"
       w: 260 h: 200
       fill: #74B9FF
       corner: 12

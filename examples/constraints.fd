@@ -6,7 +6,7 @@
 group @hero {
   layout: column gap=16 pad=40
 
-  ## "Hero section — demonstrates center_in constraint"
+  spec "Hero section — demonstrates center_in constraint"
 
   text @hero_title "Welcome to FD" { font: "Inter" 800 48; fill: #1A1A2E }
   text @hero_sub "The token-efficient design format" {
@@ -31,7 +31,7 @@ rect @tooltip_target {
   corner: 8
   fill: #F5F5F7
   stroke: #E8E8EC 1
-  ## "Anchor element for tooltip"
+  spec "Anchor element for tooltip"
 
   text "Hover me" { font: "Inter" 500 14; fill: #333 }
 }
@@ -40,7 +40,7 @@ rect @tooltip {
   w: 200 h: 44
   corner: 8
   fill: #1A1A2E
-  ## "Tooltip — positioned via offset constraint"
+  spec "Tooltip — positioned via offset constraint"
 
   text "I'm 20px right, 60px down" { font: "Inter" 13; fill: #FFF }
 
@@ -53,7 +53,7 @@ rect @full_width_bg {
   w: 800 h: 120
   fill: #F8F9FA
   corner: 0
-  ## "Background that fills parent width with 24px padding"
+  spec "Background that fills parent width with 24px padding"
 
   group { layout: row gap=16 pad=24
     text "This panel uses fill_parent with 24px inset" {
@@ -69,8 +69,10 @@ rect @fab {
   corner: 28
   fill: #6C5CE7
   bg: #6C5CE7 corner=28 shadow=(0,4,16,#6C5CE760)
-  ## "Floating action button — fixed bottom-right"
-  ## accept: "persists across scroll"
+  spec {
+    "Floating action button — fixed bottom-right"
+    accept: "persists across scroll"
+  }
 
   text "+" { font: "Inter" 700 24; fill: #FFF }
 

@@ -23,11 +23,13 @@ style subhead {
 }
 
 group @pricing {
-  ## "Pricing section — conversion-critical"
-  ## accept: "A/B test popular badge placement"
-  ## accept: "annual toggle saves 20%"
-  ## priority: high
-  ## tag: conversion, revenue
+  spec {
+    "Pricing section — conversion-critical"
+    accept: "A/B test popular badge placement"
+    accept: "annual toggle saves 20%"
+    priority: high
+    tag: conversion, revenue
+  }
   layout: column gap=40 pad=48
   group @header {
     layout: column gap=8 pad=0
@@ -41,9 +43,11 @@ group @pricing {
   group @cards {
     layout: row gap=23 pad=0
     rect @tier_free {
-      ## "Free tier — acquisition funnel entry"
-      ## accept: "no credit card required"
-      ## status: done
+      spec {
+        "Free tier — acquisition funnel entry"
+        accept: "no credit card required"
+        status: done
+      }
       w: 300 h: 480
       fill: #FFFFFF
       stroke: #E8E8EC 1
@@ -103,11 +107,13 @@ group @pricing {
       }
     }
     rect @tier_pro {
-      ## "Pro tier — primary conversion target"
-      ## accept: "most popular badge visible"
-      ## accept: "pre-selected on page load"
-      ## priority: high
-      ## status: in_progress
+      spec {
+        "Pro tier — primary conversion target"
+        accept: "most popular badge visible"
+        accept: "pre-selected on page load"
+        priority: high
+        status: in_progress
+      }
       w: 320 h: 520
       fill: #FFFFFF
       stroke: #6C5CE7 2
@@ -182,17 +188,19 @@ group @pricing {
       }
     }
     rect @tier_enterprise {
-      ## "Enterprise tier — high-value leads"
-      ## accept: "custom quote form"
-      ## status: draft
-      ## tag: sales
+      spec {
+        "Enterprise tier — high-value leads"
+        accept: "custom quote form"
+        status: draft
+        tag: sales
+      }
       w: 300 h: 480
       fill: #FFFFFF
       stroke: #E8E8EC 1
       corner: 16
       shadow: (0,2,12,#00000011)
       group @_anon_52 {
-        ## "???"
+        spec "???"
         layout: column gap=16 pad=28
         text @_anon_53 "Enterprise" {
           fill: #6B7280

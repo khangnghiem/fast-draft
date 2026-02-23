@@ -1400,7 +1400,7 @@ function refreshSpecView() {
 }
 
 /**
- * Parse .fd source to find nodes that have ## annotations.
+ * Parse .fd source to find nodes that have spec annotations.
  * Returns array of { id, kind, annotations[] }.
  */
 function parseAnnotatedNodes(source) {
@@ -1421,15 +1421,42 @@ function parseAnnotatedNodes(source) {
     const openBraces = (trimmed.match(/\{/g) || []).length;
     const closeBraces = (trimmed.match(/\}/g) || []).length;
 
-    if (trimmed.startsWith("#") && !trimmed.startsWith("##")) continue;
+    if (trimmed.startsWith("#")) continue;
 
-    if (trimmed.startsWith("##")) {
-      const ann = parseSpecAnnotation(trimmed);
-      if (ann) {
+    // Spec block (inline or block form)
+    if (trimmed.startsWith("spec ") || trimmed.startsWith("spec{")) {
+      // Inline form: spec "description"
+      const inlineMatch = trimmed.match(/^spec\s+"([^"]*)"/);
+      if (inlineMatch) {
+        const ann = { type: "description", value: inlineMatch[1] };
         if (insideEdge && currentEdge) {
           currentEdge.annotations.push(ann);
         } else {
           pendingAnnotations.push(ann);
+        }
+        continue;
+      }
+      // Block form: spec { ... }
+      if (trimmed.includes("{")) {
+        let specDepth = (trimmed.match(/\{/g) || []).length;
+        specDepth -= (trimmed.match(/\}/g) || []).length;
+        const lineIdx = lines.indexOf(line);
+        let j = lineIdx + 1;
+        while (j < lines.length && specDepth > 0) {
+          const specLine = lines[j].trim();
+          specDepth += (specLine.match(/\{/g) || []).length;
+          specDepth -= (specLine.match(/\}/g) || []).length;
+          if (specLine !== "}" && specLine.length > 0 && specDepth >= 0) {
+            const ann = parseSpecAnnotation(specLine);
+            if (ann) {
+              if (insideEdge && currentEdge) {
+                currentEdge.annotations.push(ann);
+              } else {
+                pendingAnnotations.push(ann);
+              }
+            }
+          }
+          j++;
         }
       }
       continue;
@@ -1709,7 +1736,8 @@ function escapeHtml(s) {
 }
 
 function parseSpecAnnotation(line) {
-  const trimmed = line.replace(/^##\s*/, "");
+  const trimmed = line.trim();
+  if (!trimmed || trimmed === "}") return null;
   const acceptMatch = trimmed.match(/^accept:\s*"([^"]*)"/);
   if (acceptMatch) return { type: "accept", value: acceptMatch[1] };
   const statusMatch = trimmed.match(/^status:\s*(\S+)/);

@@ -18,7 +18,7 @@ group @hover_demos {
       w: 140 h: 100
       corner: 12
       fill: #6C5CE7
-      ## "Scale animation"
+      spec "Scale animation"
 
       text "Scale" { font: "Inter" 600 14; fill: #FFF }
 
@@ -71,7 +71,7 @@ group @hover_demos {
       w: 140 h: 100
       corner: 12
       fill: #A29BFE
-      ## "Press-down squish for tactile feedback"
+      spec "Press-down squish for tactile feedback"
 
       text "Squish" { font: "Inter" 600 14; fill: #FFF }
 
@@ -108,9 +108,11 @@ group @hover_demos {
   group @enter_row {
     layout: row gap=20 pad=0
 
-    ## "Triggered when element enters viewport"
-    ## accept: "plays once on scroll into view"
-    ## tag: animation, ux
+    spec {
+      "Triggered when element enters viewport"
+      accept: "plays once on scroll into view"
+      tag: animation, ux
+    }
 
     # Fade in on enter
     rect @fade_enter {
@@ -219,7 +221,7 @@ group @hover_demos {
       corner: 16
       fill: #6C5CE7
       bg: #6C5CE7 corner=16 shadow=(0,4,20,#6C5CE740)
-      ## "Hover: scale + color + shadow lift"
+      spec "Hover: scale + color + shadow lift"
 
       text "Lift & Glow" { font: "Inter" 600 15; fill: #FFF }
 
@@ -231,7 +233,7 @@ group @hover_demos {
       corner: 16
       fill: #00B894
       bg: #00B894 corner=16 shadow=(0,4,20,#00B89440)
-      ## "Press: squish + dim"
+      spec "Press: squish + dim"
 
       text "Squish & Dim" { font: "Inter" 600 15; fill: #FFF }
 
@@ -244,7 +246,7 @@ group @hover_demos {
       corner: 16
       fill: #FF6B6B
       bg: #FF6B6B corner=16 shadow=(0,4,20,#FF6B6B40)
-      ## "Hover + press combo"
+      spec "Hover + press combo"
 
       text "Full Feedback" { font: "Inter" 600 15; fill: #FFF }
 

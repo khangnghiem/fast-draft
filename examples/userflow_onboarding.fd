@@ -19,54 +19,64 @@ style flow_edge {
 # ─── Screens ────────────────────────────────────────────────
 
 rect @landing {
-  ## "Marketing landing page"
-  ## status: done
-  ## tag: marketing
+  spec {
+    "Marketing landing page"
+    status: done
+    tag: marketing
+  }
   w: 200 h: 120
   use: screen
   text @landing_t "Landing Page" { use: screen_title }
 }
 
 rect @signup {
-  ## "Registration form"
-  ## accept: "collects name, email, password"
-  ## accept: "OAuth buttons for Google + GitHub"
-  ## status: done
+  spec {
+    "Registration form"
+    accept: "collects name, email, password"
+    accept: "OAuth buttons for Google + GitHub"
+    status: done
+  }
   w: 200 h: 120
   use: screen
   text @signup_t "Sign Up" { use: screen_title }
 }
 
 rect @verify_email {
-  ## "Email verification step"
-  ## accept: "shows 6-digit OTP input"
-  ## accept: "resend link after 60s cooldown"
-  ## status: in_progress
+  spec {
+    "Email verification step"
+    accept: "shows 6-digit OTP input"
+    accept: "resend link after 60s cooldown"
+    status: in_progress
+  }
   w: 200 h: 120
   use: screen
   text @verify_t "Verify Email" { use: screen_title }
 }
 
 rect @setup_profile {
-  ## "Profile setup — avatar, bio, preferences"
-  ## accept: "avatar upload with crop"
-  ## status: draft
+  spec {
+    "Profile setup — avatar, bio, preferences"
+    accept: "avatar upload with crop"
+    status: draft
+  }
   w: 200 h: 120
   use: screen
   text @setup_t "Setup Profile" { use: screen_title }
 }
 
 rect @dashboard {
-  ## "Main application dashboard"
-  ## status: draft
-  ## tag: core
+  spec {
+    "Main application dashboard"
+    status: draft
+    tag: core
+  }
   w: 200 h: 120
   use: screen
   text @dash_t "Dashboard" { use: screen_title }
 }
 
 rect @error_screen {
-  ## "Generic error state"
+  spec "Generic error state"
   w: 160 h: 100
   fill: #FEF2F2
   corner: 12
@@ -77,7 +87,7 @@ rect @error_screen {
 }
 
 rect @resend_screen {
-  ## "Resend verification email"
+  spec "Resend verification email"
   w: 160 h: 100
   fill: #FFFBEB
   corner: 12
@@ -90,7 +100,7 @@ rect @resend_screen {
 # ─── Happy path ───────────────────────────────────────────────
 
 edge @cta_click {
-  ## "Primary CTA on landing"
+  spec "Primary CTA on landing"
   from: @landing
   to: @signup
   label: "Get Started"
@@ -99,8 +109,10 @@ edge @cta_click {
 }
 
 edge @signup_submit {
-  ## "Form submission"
-  ## accept: "validates all fields client-side first"
+  spec {
+    "Form submission"
+    accept: "validates all fields client-side first"
+  }
   from: @signup
   to: @verify_email
   label: "submit"
@@ -109,7 +121,7 @@ edge @signup_submit {
 }
 
 edge @email_verified {
-  ## "OTP validated"
+  spec "OTP validated"
   from: @verify_email
   to: @setup_profile
   label: "verified"
@@ -119,7 +131,7 @@ edge @email_verified {
 }
 
 edge @profile_done {
-  ## "Profile setup complete"
+  spec "Profile setup complete"
   from: @setup_profile
   to: @dashboard
   label: "complete"
@@ -131,8 +143,10 @@ edge @profile_done {
 # ─── Error paths ──────────────────────────────────────────────
 
 edge @signup_error {
-  ## "Registration failure"
-  ## accept: "shows inline field errors"
+  spec {
+    "Registration failure"
+    accept: "shows inline field errors"
+  }
   from: @signup
   to: @error_screen
   label: "validation fail"
@@ -142,7 +156,7 @@ edge @signup_error {
 }
 
 edge @verify_timeout {
-  ## "OTP expired or invalid"
+  spec "OTP expired or invalid"
   from: @verify_email
   to: @resend_screen
   label: "expired"
@@ -152,7 +166,7 @@ edge @verify_timeout {
 }
 
 edge @resend_retry {
-  ## "User requests new OTP"
+  spec "User requests new OTP"
   from: @resend_screen
   to: @verify_email
   label: "resend"
@@ -161,7 +175,7 @@ edge @resend_retry {
 }
 
 edge @error_retry {
-  ## "User corrects errors and resubmits"
+  spec "User corrects errors and resubmits"
   from: @error_screen
   to: @signup
   label: "retry"

@@ -1,7 +1,7 @@
 # FD v1
 # Product requirements document — annotated wireframe with full specs
 
-## "E-commerce checkout flow — MVP scope"
+spec "E-commerce checkout flow — MVP scope"
 
 style label { font: "Inter" 14; fill: #333 }
 style muted { font: "Inter" 12; fill: #999 }
@@ -11,43 +11,47 @@ style muted { font: "Inter" 12; fill: #999 }
 group @checkout_page {
   layout: column gap=20 pad=32
 
-  ## "Checkout flow — 3-step wizard"
-  ## accept: "cart review → shipping → payment"
-  ## accept: "back button returns to previous step"
-  ## accept: "progress indicator shows current step"
-  ## status: in_progress
-  ## priority: high
-  ## tag: checkout, mvp, revenue
+  spec {
+    "Checkout flow — 3-step wizard"
+    accept: "cart review → shipping → payment"
+    accept: "back button returns to previous step"
+    accept: "progress indicator shows current step"
+    status: in_progress
+    priority: high
+    tag: checkout, mvp, revenue
+  }
 
   # ─── Progress bar ────────────────────────────────────────────────
 
   group @progress {
     layout: row gap=0 pad=0
 
-    ## "Step indicator — 3 steps"
-    ## accept: "completed steps are highlighted"
-    ## accept: "current step shows active color"
-    ## status: draft
+    spec {
+      "Step indicator — 3 steps"
+      accept: "completed steps are highlighted"
+      accept: "current step shows active color"
+      status: draft
+    }
 
     rect @step_1 {
       w: 140 h: 4
       fill: #6C5CE7
       corner: 2
-      ## "Step 1: Cart — completed"
+      spec "Step 1: Cart — completed"
     }
 
     rect @step_2 {
       w: 140 h: 4
       fill: #6C5CE7
       corner: 2
-      ## "Step 2: Shipping — active"
+      spec "Step 2: Shipping — active"
     }
 
     rect @step_3 {
       w: 140 h: 4
       fill: #E8E8EC
       corner: 2
-      ## "Step 3: Payment — pending"
+      spec "Step 3: Payment — pending"
     }
   }
 
@@ -58,12 +62,14 @@ group @checkout_page {
   group @form {
     layout: column gap=12 pad=0
 
-    ## "Shipping address form"
-    ## accept: "autofill from saved addresses"
-    ## accept: "address validation via Google Maps API"
-    ## accept: "international address format support"
-    ## priority: high
-    ## tag: form, ux
+    spec {
+      "Shipping address form"
+      accept: "autofill from saved addresses"
+      accept: "address validation via Google Maps API"
+      accept: "international address format support"
+      priority: high
+      tag: form, ux
+    }
 
     group @name_row {
       layout: row gap=12 pad=0
@@ -72,8 +78,10 @@ group @checkout_page {
         w: 200 h: 48
         corner: 8
         stroke: #E8E8EC 1
-        ## "First name — required"
-        ## accept: "min 2 characters"
+        spec {
+          "First name — required"
+          accept: "min 2 characters"
+        }
 
         text "First name" { use: muted }
       }
@@ -82,8 +90,10 @@ group @checkout_page {
         w: 200 h: 48
         corner: 8
         stroke: #E8E8EC 1
-        ## "Last name — required"
-        ## accept: "min 2 characters"
+        spec {
+          "Last name — required"
+          accept: "min 2 characters"
+        }
 
         text "Last name" { use: muted }
       }
@@ -93,9 +103,11 @@ group @checkout_page {
       w: 412 h: 48
       corner: 8
       stroke: #E8E8EC 1
-      ## "Street address — required"
-      ## accept: "autocomplete suggestions on typing"
-      ## priority: high
+      spec {
+        "Street address — required"
+        accept: "autocomplete suggestions on typing"
+        priority: high
+      }
 
       text "Street address" { use: muted }
     }
@@ -104,7 +116,7 @@ group @checkout_page {
       w: 412 h: 48
       corner: 8
       stroke: #E8E8EC 1
-      ## "Apt/Suite — optional"
+      spec "Apt/Suite — optional"
 
       text "Apt, suite, etc. (optional)" { use: muted }
     }
@@ -116,7 +128,7 @@ group @checkout_page {
         w: 200 h: 48
         corner: 8
         stroke: #E8E8EC 1
-        ## "City — required"
+        spec "City — required"
 
         text "City" { use: muted }
       }
@@ -125,8 +137,10 @@ group @checkout_page {
         w: 96 h: 48
         corner: 8
         stroke: #E8E8EC 1
-        ## "State — dropdown"
-        ## accept: "shows state list for US addresses"
+        spec {
+          "State — dropdown"
+          accept: "shows state list for US addresses"
+        }
 
         text "State" { use: muted }
       }
@@ -135,8 +149,10 @@ group @checkout_page {
         w: 96 h: 48
         corner: 8
         stroke: #E8E8EC 1
-        ## "ZIP — required"
-        ## accept: "validates format per country"
+        spec {
+          "ZIP — required"
+          accept: "validates format per country"
+        }
 
         text "ZIP" { use: muted }
       }
@@ -150,11 +166,13 @@ group @checkout_page {
     corner: 12
     fill: #F8F9FA
     stroke: #E8E8EC 1
-    ## "Collapsible order summary panel"
-    ## accept: "shows item thumbnails, quantities, prices"
-    ## accept: "updates total on coupon apply"
-    ## priority: medium
-    ## tag: checkout
+    spec {
+      "Collapsible order summary panel"
+      accept: "shows item thumbnails, quantities, prices"
+      accept: "updates total on coupon apply"
+      priority: medium
+      tag: checkout
+    }
 
     group { layout: column gap=8 pad=20
       text "Order Summary" { font: "Inter" 600 16; fill: #1A1A2E }
@@ -176,7 +194,7 @@ group @checkout_page {
       w: 120 h: 48
       corner: 10
       stroke: #E8E8EC 1
-      ## "Back to cart"
+      spec "Back to cart"
 
       text "Back" { font: "Inter" 500 15; fill: #333 }
 
@@ -187,10 +205,12 @@ group @checkout_page {
       w: 280 h: 48
       corner: 10
       fill: #6C5CE7
-      ## "Continue to payment"
-      ## accept: "validates all fields before proceeding"
-      ## accept: "disabled when required fields incomplete"
-      ## priority: high
+      spec {
+        "Continue to payment"
+        accept: "validates all fields before proceeding"
+        accept: "disabled when required fields incomplete"
+        priority: high
+      }
 
       text "Continue to Payment" { font: "Inter" 600 15; fill: #FFF }
 

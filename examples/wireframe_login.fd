@@ -19,8 +19,10 @@ style label_style {
 # ─── Wireframe screens ────────────────────────────────────────
 
 group @login_page {
-  ## "Login page — main entry point"
-  ## status: done
+  spec {
+    "Login page — main entry point"
+    status: done
+  }
   layout: column gap=16 pad=32
 
   text @title "Welcome Back" {
@@ -29,8 +31,10 @@ group @login_page {
   }
 
   rect @email_field {
-    ## "Email input field"
-    ## accept: "validates email format on blur"
+    spec {
+      "Email input field"
+      accept: "validates email format on blur"
+    }
     w: 320 h: 48
     use: input_style
     text @email_placeholder "Email address" {
@@ -40,8 +44,10 @@ group @login_page {
   }
 
   rect @password_field {
-    ## "Password input field"
-    ## accept: "minimum 8 characters"
+    spec {
+      "Password input field"
+      accept: "minimum 8 characters"
+    }
     w: 320 h: 48
     use: input_style
     text @pw_placeholder "Password" {
@@ -51,9 +57,11 @@ group @login_page {
   }
 
   rect @login_btn {
-    ## "Primary login CTA"
-    ## accept: "disabled when fields empty"
-    ## accept: "shows loading spinner during auth"
+    spec {
+      "Primary login CTA"
+      accept: "disabled when fields empty"
+      accept: "shows loading spinner during auth"
+    }
     w: 320 h: 48
     fill: #6C5CE7
     corner: 10
@@ -75,9 +83,11 @@ group @login_page {
 }
 
 rect @error_toast {
-  ## "Error notification toast"
-  ## accept: "shows within 200ms of failed auth"
-  ## accept: "auto-dismiss after 5s"
+  spec {
+    "Error notification toast"
+    accept: "shows within 200ms of failed auth"
+    accept: "auto-dismiss after 5s"
+  }
   w: 320 h: 56
   fill: #FEF2F2
   stroke: #EF4444 1
@@ -89,8 +99,10 @@ rect @error_toast {
 }
 
 rect @dashboard {
-  ## "Main dashboard — post-login"
-  ## status: in_progress
+  spec {
+    "Main dashboard — post-login"
+    status: in_progress
+  }
   w: 400 h: 300
   use: bg_surface
   text @dash_title "Dashboard" {
@@ -100,8 +112,10 @@ rect @dashboard {
 }
 
 rect @reset_page {
-  ## "Password reset flow"
-  ## status: draft
+  spec {
+    "Password reset flow"
+    status: draft
+  }
   w: 320 h: 200
   use: bg_surface
   text @reset_title "Reset Password" {
@@ -113,8 +127,10 @@ rect @reset_page {
 # ─── Edges (data flow) ─────────────────────────────────────────
 
 edge @submit_flow {
-  ## "Form submission → API validation"
-  ## accept: "must complete within 3s"
+  spec {
+    "Form submission → API validation"
+    accept: "must complete within 3s"
+  }
   from: @login_btn
   to: @dashboard
   label: "on success"
@@ -124,7 +140,7 @@ edge @submit_flow {
 }
 
 edge @error_flow {
-  ## "Failed authentication path"
+  spec "Failed authentication path"
   from: @login_btn
   to: @error_toast
   label: "on failure"

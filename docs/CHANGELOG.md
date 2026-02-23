@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.7.0 (**BREAKING**)
+
+- **R1.9**: Replaced `##` annotation syntax with `spec` node blocks — `spec "desc"` (inline) and `spec { ... }` (block form). Updated parser, emitter, tree-sitter grammar, VS Code extension, and all 13 example files.
+- **GEMINI.md**: Updated FD Format Rules table to reflect `spec` syntax.
+
 ### v0.6.41
 
 - **R1.1 fix**: Fixed Group/Ungroup undo/redo — `GroupNodes` now initializes `ResolvedBounds` so subsequent `MoveNode` doesn't clobber constraints to `(0,0)`
@@ -57,7 +62,7 @@
 - [x] **R1.6**: Git-friendly plain text
 - [x] **R1.7**: Comments via `#` prefix
 - [x] **R1.8**: Human-readable and AI-writable
-- [x] **R1.9**: Structured annotations (`##`)
+- [x] **R1.9**: Structured annotations (`spec` blocks)
 - [x] **R1.10**: First-class edges
 - [x] **R1.11**: Edge trigger animations
 - [x] **R1.12**: Edge flow animations

@@ -52,7 +52,7 @@ group @color_palette {
     font: "Inter" 700 28
   }
   group @primary_row {
-    ## "Primary brand colors"
+    spec "Primary brand colors"
     layout: row gap=12 pad=0
     rect @swatch_primary {
       w: 80 h: 80
@@ -81,7 +81,7 @@ group @color_palette {
     }
   }
   group @neutral_row {
-    ## "Neutral & surface colors"
+    spec "Neutral & surface colors"
     layout: row gap=12 pad=0
     rect @swatch_white {
       w: 80 h: 80
@@ -147,13 +147,15 @@ group @color_palette {
     font: "Inter" 700 28
   }
   group @buttons {
-    ## "Button component variants"
-    ## accept: "all buttons must have visible focus rings"
-    ## accept: "minimum 44px touch target"
-    ## tag: a11y, components
+    spec {
+      "Button component variants"
+      accept: "all buttons must have visible focus rings"
+      accept: "minimum 44px touch target"
+      tag: a11y, components
+    }
     layout: row gap=16 pad=0
     rect @btn_primary {
-      ## "Primary action button"
+      spec "Primary action button"
       w: 160 h: 48
       use: primary
       corner: 10
@@ -172,7 +174,7 @@ group @color_palette {
       }
     }
     rect @btn_secondary {
-      ## "Secondary action button"
+      spec "Secondary action button"
       w: 160 h: 48
       fill: #FFFFFF
       stroke: #6C5CE7 2
@@ -192,7 +194,7 @@ group @color_palette {
       }
     }
     rect @btn_ghost {
-      ## "Ghost / text-only button"
+      spec "Ghost / text-only button"
       w: 160 h: 48
       fill: #00000000
       corner: 10
@@ -206,7 +208,7 @@ group @color_palette {
       }
     }
     rect @btn_danger {
-      ## "Destructive action button"
+      spec "Destructive action button"
       w: 160 h: 48
       use: danger
       corner: 10
@@ -228,7 +230,7 @@ group @color_palette {
   group @inputs {
     layout: column gap=12 pad=0
     rect @input_default {
-      ## "Default text input"
+      spec "Default text input"
       w: 320 h: 48
       fill: #FFFFFF
       stroke: #E8E8EC 1
@@ -239,8 +241,10 @@ group @color_palette {
       }
     }
     rect @input_focus {
-      ## "Focused input state"
-      ## status: done
+      spec {
+        "Focused input state"
+        status: done
+      }
       w: 320 h: 48
       fill: #FFFFFF
       stroke: #6C5CE7 2
@@ -251,8 +255,10 @@ group @color_palette {
       }
     }
     rect @input_error {
-      ## "Error input state"
-      ## accept: "red border + error message below"
+      spec {
+        "Error input state"
+        accept: "red border + error message below"
+      }
       w: 320 h: 48
       fill: #FFF6F4
       stroke: #E17055 2

@@ -250,18 +250,18 @@ pub struct AnimProperties {
 // ─── Annotations ─────────────────────────────────────────────────────────
 
 /// Structured annotation attached to a scene node.
-/// Parsed from `##` lines in the FD format.
+/// Parsed from `spec { ... }` blocks in the FD format.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Annotation {
-    /// Freeform description: `## "User auth entry point"`
+    /// Freeform description: `spec { "User auth entry point" }`
     Description(String),
-    /// Acceptance criterion: `## accept: "validates email on blur"`
+    /// Acceptance criterion: `spec { accept: "validates email on blur" }`
     Accept(String),
-    /// Status: `## status: draft`
+    /// Status: `spec { status: draft }`
     Status(String),
-    /// Priority: `## priority: high`
+    /// Priority: `spec { priority: high }`
     Priority(String),
-    /// Tag: `## tag: auth`
+    /// Tag: `spec { tag: auth }`
     Tag(String),
 }
 
@@ -367,7 +367,7 @@ pub enum NodeKind {
     Root,
 
     /// Generic placeholder — no visual shape assigned yet.
-    /// Used for spec-only nodes: `@login_btn { ## "CTA" }`
+    /// Used for spec-only nodes: `@login_btn { spec "CTA" }`
     Generic,
 
     /// Group / frame — contains children.
@@ -416,7 +416,7 @@ pub struct SceneNode {
     /// Animations attached to this node.
     pub animations: SmallVec<[AnimKeyframe; 2]>,
 
-    /// Structured annotations (`##` lines).
+    /// Structured annotations (`spec { ... }` block).
     pub annotations: Vec<Annotation>,
 
     /// Line comments (`# text`) that appeared before this node in the source.

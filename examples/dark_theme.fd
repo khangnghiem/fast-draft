@@ -51,7 +51,7 @@ group @settings {
     group @_anon_26 {
       layout: row gap=14 pad=16
       ellipse @user_avatar {
-        ## "User profile photo"
+        spec "User profile photo"
         w: 48 h: 48
         fill: #6C5CE7
       }
@@ -86,7 +86,7 @@ group @settings {
         }
       }
       rect @switch_on {
-        ## "Toggle — ON state"
+        spec "Toggle — ON state"
         w: 44 h: 24
         fill: #6C5CE7
         corner: 12
@@ -116,7 +116,7 @@ group @settings {
         }
       }
       rect @switch_off {
-        ## "Toggle — OFF state"
+        spec "Toggle — OFF state"
         w: 44 h: 24
         fill: #3D3D5C
         corner: 12
@@ -184,7 +184,7 @@ group @settings {
             corner: 2
           }
           ellipse @slider_thumb {
-            ## "Draggable thumb"
+            spec "Draggable thumb"
             w: 16 h: 16
             fill: #FFFFFF
             anim :press {
@@ -205,9 +205,11 @@ group @settings {
     font: "Inter" 600 13
   }
   rect @btn_delete {
-    ## "Destructive action — delete account"
-    ## accept: "confirmation dialog before proceeding"
-    ## priority: high
+    spec {
+      "Destructive action — delete account"
+      accept: "confirmation dialog before proceeding"
+      priority: high
+    }
     w: 344 h: 48
     fill: #E1705520
     stroke: #E17055 1

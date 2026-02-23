@@ -2095,16 +2095,40 @@ class FdSpecViewPanel {
       const closeBraces = (trimmed.match(/\}/g) || []).length;
 
       // Comment (single #)
-      if (trimmed.startsWith("#") && !trimmed.startsWith("##")) continue;
+      if (trimmed.startsWith("#")) continue;
 
-      // Annotation line
-      if (trimmed.startsWith("##")) {
-        const ann = this.parseAnnotation(trimmed);
-        if (ann) {
+      // Spec block (inline or block form)
+      if (trimmed.startsWith("spec ") || trimmed.startsWith("spec{")) {
+        const inlineMatch = trimmed.match(/^spec\s+"([^"]*)"/);
+        if (inlineMatch) {
+          const ann = { type: "description", value: inlineMatch[1] };
           if (insideEdge && currentEdge) {
             currentEdge.annotations.push(ann);
           } else {
             pendingAnnotations.push(ann);
+          }
+          continue;
+        }
+        if (trimmed.includes("{")) {
+          let specDepth = (trimmed.match(/\{/g) || []).length;
+          specDepth -= (trimmed.match(/\}/g) || []).length;
+          const lineIdx = lines.indexOf(line);
+          let j = lineIdx + 1;
+          while (j < lines.length && specDepth > 0) {
+            const specLine = lines[j].trim();
+            specDepth += (specLine.match(/\{/g) || []).length;
+            specDepth -= (specLine.match(/\}/g) || []).length;
+            if (specLine !== "}" && specLine.length > 0 && specDepth >= 0) {
+              const ann = this.parseAnnotation(specLine);
+              if (ann) {
+                if (insideEdge && currentEdge) {
+                  currentEdge.annotations.push(ann);
+                } else {
+                  pendingAnnotations.push(ann);
+                }
+              }
+            }
+            j++;
           }
         }
         continue;
@@ -2301,7 +2325,8 @@ function exportSpecMarkdown(): void {
   let edgeAnnotations: { type: string; value: string }[] = [];
 
   const parseAnn = (line: string): { type: string; value: string } | null => {
-    const trimmed = line.replace(/^##\s*/, "");
+    const trimmed = line.trim();
+    if (!trimmed || trimmed === "}") return null;
     const acceptMatch = trimmed.match(/^accept:\s*"([^"]*)"/);
     if (acceptMatch) return { type: "accept", value: acceptMatch[1] };
     const statusMatch = trimmed.match(/^status:\s*(\S+)/);
@@ -2350,15 +2375,40 @@ function exportSpecMarkdown(): void {
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
-    if (trimmed.startsWith("#") && !trimmed.startsWith("##")) continue;
+    if (trimmed.startsWith("#")) continue;
 
-    if (trimmed.startsWith("##")) {
-      const ann = parseAnn(trimmed);
-      if (ann) {
+    // Spec block
+    if (trimmed.startsWith("spec ") || trimmed.startsWith("spec{")) {
+      const inlineMatch = trimmed.match(/^spec\s+"([^"]*)"/);
+      if (inlineMatch) {
+        const ann = { type: "description", value: inlineMatch[1] };
         if (insideEdge) {
           edgeAnnotations.push(ann);
         } else {
           currentAnnotations.push(ann);
+        }
+        continue;
+      }
+      if (trimmed.includes("{")) {
+        let specDepth = (trimmed.match(/\{/g) || []).length;
+        specDepth -= (trimmed.match(/\}/g) || []).length;
+        const lineIdx = lines.indexOf(line);
+        let j = lineIdx + 1;
+        while (j < lines.length && specDepth > 0) {
+          const specLine = lines[j].trim();
+          specDepth += (specLine.match(/\{/g) || []).length;
+          specDepth -= (specLine.match(/\}/g) || []).length;
+          if (specLine !== "}" && specLine.length > 0 && specDepth >= 0) {
+            const ann = parseAnn(specLine);
+            if (ann) {
+              if (insideEdge) {
+                edgeAnnotations.push(ann);
+              } else {
+                currentAnnotations.push(ann);
+              }
+            }
+          }
+          j++;
         }
       }
       continue;
@@ -2675,7 +2725,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // ─── Code-mode Spec View (editor decorations) ────────────────────
   // When spec mode is active, hide style/animation/layout details from
-  // the text editor, showing only #, ##, node/edge declarations, and braces.
+  // the text editor, showing only #, spec blocks, node/edge declarations, and braces.
   let codeSpecMode: "design" | "spec" = "design";
 
   // Wire up canvas → code-mode spec sync

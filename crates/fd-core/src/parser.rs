@@ -35,12 +35,9 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
                 .map_err(|e| format!("Style parse error: {e}"))?;
             graph.define_style(name, style);
             pending_comments.clear();
-        } else if rest.starts_with("##") {
-            // Top-level annotations are ignored (they only apply inside nodes)
-            let _ = take_till::<_, _, ContextError>(0.., '\n').parse_next(&mut rest);
-            if rest.starts_with('\n') {
-                rest = &rest[1..];
-            }
+        } else if rest.starts_with("spec ") || rest.starts_with("spec{") {
+            // Top-level spec blocks are ignored (they only apply inside nodes)
+            let _ = parse_spec_block.parse_next(&mut rest);
             pending_comments.clear();
         } else if rest.starts_with('@') {
             if is_generic_node_start(rest) {
@@ -169,17 +166,12 @@ fn parse_import_line(input: &mut &str) -> ModalResult<Import> {
 // ─── Low-level parsers ──────────────────────────────────────────────────
 
 /// Collect leading whitespace and `# comment` lines, returning the comments.
-/// Stops at `##` annotations (which belong to nodes, not free comments).
 fn collect_leading_comments(input: &mut &str) -> Vec<String> {
     let mut comments = Vec::new();
     loop {
         // Skip pure whitespace (not newlines that separate nodes)
         let before = *input;
         *input = input.trim_start();
-        if input.starts_with("##") {
-            // `##` is an annotation — stop here, do NOT consume it
-            break;
-        }
         if input.starts_with('#') {
             // Regular `# comment` — collect it
             let end = input.find('\n').unwrap_or(input.len());
@@ -256,59 +248,80 @@ fn skip_opt_separator(input: &mut &str) {
     }
 }
 
-// ─── Annotation parser ──────────────────────────────────────────────────
+// ─── Spec block parser ──────────────────────────────────────────────────
 
-/// Parse a `##` annotation line into an `Annotation`.
-fn parse_annotation(input: &mut &str) -> ModalResult<Annotation> {
-    let _ = "##".parse_next(input)?;
+/// Parse a `spec { ... }` block or inline `spec "description"` into annotations.
+fn parse_spec_block(input: &mut &str) -> ModalResult<Vec<Annotation>> {
+    let _ = "spec".parse_next(input)?;
     skip_space(input);
 
-    // Try typed annotations: `keyword: value`
-    let checkpoint = *input;
-    if let Ok(keyword) = parse_identifier.parse_next(input) {
-        skip_space(input);
-        if input.starts_with(':') {
-            let _ = ':'.parse_next(input)?;
-            skip_space(input);
-
-            let value = if input.starts_with('"') {
-                parse_quoted_string
-                    .map(|s| s.to_string())
-                    .parse_next(input)?
-            } else {
-                let v: &str = take_till(0.., |c: char| c == '\n' || c == ';').parse_next(input)?;
-                v.trim().to_string()
-            };
-
-            let ann = match keyword {
-                "accept" => Annotation::Accept(value),
-                "status" => Annotation::Status(value),
-                "priority" => Annotation::Priority(value),
-                "tag" => Annotation::Tag(value),
-                _ => Annotation::Description(format!("{keyword}: {value}")),
-            };
-
-            skip_opt_separator(input);
-            return Ok(ann);
-        }
-        *input = checkpoint;
-    } else {
-        *input = checkpoint;
+    // Inline shorthand: `spec "description"`
+    if input.starts_with('"') {
+        let desc = parse_quoted_string
+            .map(|s| s.to_string())
+            .parse_next(input)?;
+        skip_opt_separator(input);
+        return Ok(vec![Annotation::Description(desc)]);
     }
 
-    // Freeform description: `## "text"` or `## bare text`
+    // Block form: `spec { ... }`
+    let _ = '{'.parse_next(input)?;
+    let mut annotations = Vec::new();
+    skip_ws_and_comments(input);
+
+    while !input.starts_with('}') {
+        annotations.push(parse_spec_item.parse_next(input)?);
+        skip_ws_and_comments(input);
+    }
+
+    let _ = '}'.parse_next(input)?;
+    Ok(annotations)
+}
+
+/// Parse a single item inside a `spec { ... }` block.
+///
+/// Handles:
+/// - `"description text"` → Description
+/// - `accept: "criterion"` → Accept
+/// - `status: value` → Status
+/// - `priority: value` → Priority
+/// - `tag: value` → Tag
+fn parse_spec_item(input: &mut &str) -> ModalResult<Annotation> {
+    // Freeform description: `"text"`
+    if input.starts_with('"') {
+        let desc = parse_quoted_string
+            .map(|s| s.to_string())
+            .parse_next(input)?;
+        skip_opt_separator(input);
+        return Ok(Annotation::Description(desc));
+    }
+
+    // Typed annotation: `keyword: value`
+    let keyword = parse_identifier.parse_next(input)?;
     skip_space(input);
-    let desc = if input.starts_with('"') {
+    let _ = ':'.parse_next(input)?;
+    skip_space(input);
+
+    let value = if input.starts_with('"') {
         parse_quoted_string
             .map(|s| s.to_string())
             .parse_next(input)?
     } else {
-        let v: &str = take_till(0.., |c: char| c == '\n').parse_next(input)?;
+        let v: &str =
+            take_till(0.., |c: char| c == '\n' || c == ';' || c == '}').parse_next(input)?;
         v.trim().to_string()
     };
 
+    let ann = match keyword {
+        "accept" => Annotation::Accept(value),
+        "status" => Annotation::Status(value),
+        "priority" => Annotation::Priority(value),
+        "tag" => Annotation::Tag(value),
+        _ => Annotation::Description(format!("{keyword}: {value}")),
+    };
+
     skip_opt_separator(input);
-    Ok(Annotation::Description(desc))
+    Ok(ann)
 }
 
 // ─── Style block parser ─────────────────────────────────────────────────
@@ -440,8 +453,8 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     skip_ws_and_comments(input);
 
     while !input.starts_with('}') {
-        if input.starts_with("##") {
-            annotations.push(parse_annotation.parse_next(input)?);
+        if input.starts_with("spec ") || input.starts_with("spec{") {
+            annotations.extend(parse_spec_block.parse_next(input)?);
         } else if starts_with_child_node(input) {
             let mut child = parse_node.parse_next(input)?;
             // Any comments collected before this child are attached to it
@@ -882,8 +895,8 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<Edge> {
     skip_ws_and_comments(input);
 
     while !input.starts_with('}') {
-        if input.starts_with("##") {
-            annotations.push(parse_annotation.parse_next(input)?);
+        if input.starts_with("spec ") || input.starts_with("spec{") {
+            annotations.extend(parse_spec_block.parse_next(input)?);
         } else if input.starts_with("anim") {
             animations.push(parse_anim_block.parse_next(input)?);
         } else {

@@ -20,32 +20,39 @@ module.exports = grammar({
                     $.style_block,
                     $.node_declaration,
                     $.constraint_line,
-                    $.annotation,
+                    $.spec_block,
                 ),
             ),
 
         // ─── Comments ────────────────────────────────────────────
         comment: (_$) => token(prec(-1, seq("#", /[^#\n][^\n]*/))),
 
-        // ─── Annotations ─────────────────────────────────────────
-        annotation: ($) =>
+        // ─── Spec Block ─────────────────────────────────────────
+        spec_block: ($) =>
             seq(
-                "##",
-                optional(
-                    choice($.annotation_typed, $.string, $.annotation_text),
+                "spec",
+                choice(
+                    $.string, // Inline: spec "description"
+                    seq("{", repeat($.spec_item), "}"), // Block: spec { ... }
                 ),
             ),
 
-        annotation_typed: ($) =>
-            seq(
-                field("key", $.annotation_keyword),
-                ":",
-                field("value", choice($.string, $.annotation_text)),
+        spec_item: ($) =>
+            choice(
+                $.spec_typed,
+                $.string,
             ),
 
-        annotation_text: (_$) => /[^\n]+/,
+        spec_typed: ($) =>
+            seq(
+                field("key", $.spec_keyword),
+                ":",
+                field("value", choice($.string, $.spec_text)),
+            ),
 
-        annotation_keyword: (_$) =>
+        spec_text: (_$) => /[^\n}]+/,
+
+        spec_keyword: (_$) =>
             choice("accept", "status", "priority", "tag"),
 
         // ─── Style Block ─────────────────────────────────────────
@@ -76,7 +83,7 @@ module.exports = grammar({
                 $.property,
                 $.node_declaration,
                 $.anim_block,
-                $.annotation,
+                $.spec_block,
             ),
 
         // ─── Properties ──────────────────────────────────────────
