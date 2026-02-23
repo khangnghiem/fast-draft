@@ -5,6 +5,10 @@
 
 ## Completed Requirements
 
+### v0.6.40
+
+- **R4.11 fix**: Fixed a bug where properties like `fill` or `font` were incorrectly displayed inside nodes in Code Spec View instead of being hidden.
+
 ### v0.6.39
 
 - **R1.1**: New `frame` node type — visible container with declared `w:`/`h:`, optional `clip: true`, fill/stroke/corner, layout modes (column/row/grid)
