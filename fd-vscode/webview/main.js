@@ -514,6 +514,27 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
+  // ── Select all (⌘A / Ctrl+A) ──
+  if ((e.metaKey || e.ctrlKey) && (e.key === "a" || e.key === "A") && !e.shiftKey) {
+    e.preventDefault();
+    selectAllNodes();
+    return;
+  }
+
+  // ── Copy selected node (⌘C / Ctrl+C) ──
+  if ((e.metaKey || e.ctrlKey) && (e.key === "c" || e.key === "C") && !e.shiftKey) {
+    copySelectedAsFd();
+    // Don't preventDefault — allow native copy to also work
+    return;
+  }
+
+  // ── Paste from clipboard (⌘V / Ctrl+V) ──
+  if ((e.metaKey || e.ctrlKey) && (e.key === "v" || e.key === "V") && !e.shiftKey) {
+    e.preventDefault();
+    pasteFromClipboard();
+    return;
+  }
+
   // ── Zoom shortcuts (JS-side, before WASM) ──
   if ((e.metaKey || e.ctrlKey) && (e.key === "=" || e.key === "+")) {
     e.preventDefault();
@@ -744,6 +765,7 @@ function buildShortcutHelpHtml() {
         [`⌥${cmd}`, "Copy while moving"],
         ["Arrow keys", "Nudge 1px"],
         ["Shift+Arrow", "Nudge 10px"],
+        ["Double-click", "Create text / edit label"],
       ],
     },
     {
@@ -1209,7 +1231,22 @@ function setupInlineEditor() {
 
     // Hit-test the scene to find the clicked node
     const nodeId = fdCanvas.get_selected_id();
-    if (!nodeId) return;
+
+    // If nothing selected, create a new text node at click position (Figma behavior)
+    if (!nodeId) {
+      const created = fdCanvas.create_node_at("text", x, y);
+      if (created) {
+        render();
+        syncTextToExtension();
+        // Open inline editor on the newly created text node
+        const newId = fdCanvas.get_selected_id();
+        if (newId) {
+          setTimeout(() => openInlineEditor(newId, "content", ""), 50);
+        }
+      }
+      e.preventDefault();
+      return;
+    }
 
     // Get node props to know kind and current content
     const propsJson = fdCanvas.get_selected_node_props();
@@ -2596,6 +2633,116 @@ function toggleNodeVisibility(nodeId) {
     render();
   }
   refreshLayersPanel();
+}
+
+// ─── Copy / Paste / Select All (Figma/Sketch standard) ───────────────────────
+
+/** Clipboard buffer for FD node text */
+let fdClipboard = "";
+
+/** Copy the selected node's .fd block to the clipboard. */
+function copySelectedAsFd() {
+  if (!fdCanvas) return;
+  const selectedId = fdCanvas.get_selected_id();
+  if (!selectedId) return;
+
+  const text = fdCanvas.get_text();
+  const lines = text.split("\n");
+
+  // Find the line that starts the node declaration
+  const startPattern = new RegExp(`^\\s*(\\w+)\\s+@${selectedId}\\b`);
+  let startIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (startPattern.test(lines[i])) {
+      startIdx = i;
+      break;
+    }
+  }
+  if (startIdx < 0) return;
+
+  // Determine the indentation of the start line
+  const startIndent = lines[startIdx].match(/^\s*/)[0].length;
+
+  // Collect all lines belonging to this block (same or deeper indentation)
+  let endIdx = startIdx + 1;
+  while (endIdx < lines.length) {
+    const line = lines[endIdx];
+    if (line.trim().length === 0) { endIdx++; continue; }
+    const indent = line.match(/^\s*/)[0].length;
+    if (indent <= startIndent) break;
+    endIdx++;
+  }
+
+  fdClipboard = lines.slice(startIdx, endIdx).join("\n");
+
+  // Also copy to system clipboard
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(fdClipboard).catch(() => { });
+  }
+}
+
+/** Paste a node from the FD clipboard. */
+async function pasteFromClipboard() {
+  if (!fdCanvas) return;
+
+  // Try reading from system clipboard first
+  let clipText = fdClipboard;
+  try {
+    if (navigator.clipboard) {
+      const sysText = await navigator.clipboard.readText();
+      if (sysText && sysText.includes("@")) {
+        clipText = sysText;
+      }
+    }
+  } catch (_) { /* permission denied, use internal clipboard */ }
+
+  if (!clipText.trim()) return;
+
+  // Generate a new unique ID to avoid conflicts
+  const idMatch = clipText.match(/@(\w+)/);
+  if (!idMatch) return;
+  const oldId = idMatch[1];
+  const newId = oldId + "_copy" + Math.floor(Math.random() * 1000);
+  const pasteText = clipText.replace(new RegExp(`@${oldId}\\b`, "g"), `@${newId}`);
+
+  // Append to current text
+  const currentText = fdCanvas.get_text();
+  const updatedText = currentText.trimEnd() + "\n\n" + pasteText + "\n";
+  fdCanvas.set_text(updatedText);
+  render();
+  syncTextToExtension();
+
+  // Select the newly pasted node
+  fdCanvas.select_by_id(newId);
+  render();
+  updatePropertiesPanel();
+}
+
+/** Select all nodes in the scene. */
+function selectAllNodes() {
+  if (!fdCanvas) return;
+  const text = fdCanvas.get_text();
+  if (!text) return;
+
+  // Find all node IDs
+  const nodeIdPattern = /@(\w+)/g;
+  let match;
+  const ids = [];
+  const seen = new Set();
+  while ((match = nodeIdPattern.exec(text)) !== null) {
+    if (!seen.has(match[1])) {
+      ids.push(match[1]);
+      seen.add(match[1]);
+    }
+  }
+
+  if (ids.length === 0) return;
+
+  // Select the first node (multi-select would need WASM API support)
+  // For now, select the first node
+  fdCanvas.select_by_id(ids[0]);
+  render();
+  updatePropertiesPanel();
 }
 
 // ─── Start ───────────────────────────────────────────────────────────────────

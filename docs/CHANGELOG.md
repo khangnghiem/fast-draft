@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.7.6
+
+- **NEW**: Double-click canvas creates text node — clicking empty space creates a text node and opens inline editor immediately (Figma behavior)
+- **NEW**: Copy/paste nodes — `⌘C` copies selected node's `.fd` block to clipboard, `⌘V` pastes with auto-generated unique ID
+- **NEW**: Select all — `⌘A` selects first node (multi-select needs WASM API extension)
+- **UX**: Updated keyboard shortcuts help panel with new entries
+
 ### v0.7.5
 
 - **NEW**: Zoom to selection — `⌘1` / `Ctrl+1` centers and zooms to fit the selected node
