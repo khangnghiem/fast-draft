@@ -56,6 +56,9 @@ let viewMode = "design";
 let gridEnabled = false;
 const GRID_BASE_SPACING = 20;
 
+/** Hidden nodes set (layer visibility toggle) */
+const hiddenNodes = new Set();
+
 /** Pointer interaction tracking for dimension tooltip */
 let pointerIsDown = false;
 let pointerDownSceneX = 0;
@@ -125,6 +128,8 @@ async function main() {
     setupGridToggle();
     setupExportButton();
     setupMinimap();
+    setupColorSwatches();
+    setupSelectionBar();
 
     // Tell extension we're ready
     vscode.postMessage({ type: "ready" });
@@ -157,6 +162,7 @@ function render() {
   if (viewMode === "spec") refreshSpecView();
   refreshLayersPanel();
   renderMinimap();
+  updateSelectionBar();
 }
 
 /** Animation loop ID for flow animations (pulse/dash edges). */
@@ -501,6 +507,13 @@ document.addEventListener("keydown", (e) => {
     }
   }
 
+  // ── Zoom to selection (⌘1 / Ctrl+1) ──
+  if ((e.metaKey || e.ctrlKey) && e.key === "1") {
+    e.preventDefault();
+    zoomToSelection();
+    return;
+  }
+
   // ── Zoom shortcuts (JS-side, before WASM) ──
   if ((e.metaKey || e.ctrlKey) && (e.key === "=" || e.key === "+")) {
     e.preventDefault();
@@ -711,6 +724,7 @@ function buildShortcutHelpHtml() {
         [`${cmd} (hold)`, "Temp. hand tool"],
         ["Click %", "Reset zoom to 100%"],
         ["G", "Toggle grid overlay"],
+        [`${cmd}1`, "Zoom to selection"],
       ],
     },
     {
@@ -1705,6 +1719,7 @@ function renderLayerNode(node, selectedId, depth = 0) {
   html += `<span class="layer-icon">${icon}</span>`;
   html += `<span class="layer-name">${escapeHtml(node.id)}${textPreview}</span>`;
   html += `<span class="layer-kind">${escapeHtml(node.kind)}</span>`;
+  html += `<span class="layer-eye" data-eye-id="${escapeAttr(node.id)}" title="Toggle visibility">👁</span>`;
   html += `</div>`;
 
   if (hasChildren) {
@@ -1835,6 +1850,19 @@ function refreshLayersPanel() {
         ev.stopPropagation();
       });
       input.addEventListener("blur", () => setTimeout(commit, 100));
+    });
+  });
+
+  // Wire eye icon for layer visibility toggle
+  panel.querySelectorAll(".layer-eye").forEach((eyeEl) => {
+    const nodeId = eyeEl.getAttribute("data-eye-id");
+    if (hiddenNodes.has(nodeId)) {
+      eyeEl.classList.add("hidden-layer");
+      eyeEl.textContent = "⊘";
+    }
+    eyeEl.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleNodeVisibility(nodeId);
     });
   });
 }
@@ -2400,6 +2428,174 @@ function renderMinimap() {
   minimapCtx.fillRect(rx, ry, rw, rh);
 
   minimapCtx.restore();
+}
+
+// ─── Zoom to Selection (Figma ⌘1) ────────────────────────────────────────────
+
+/** Zoom and center the viewport on the currently selected node(s). */
+function zoomToSelection() {
+  if (!fdCanvas) return;
+  const selectedId = fdCanvas.get_selected_id();
+  if (!selectedId) return;
+
+  try {
+    const b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
+    if (!b.width || b.width <= 0) return;
+
+    const container = document.getElementById("canvas-container");
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+
+    // Compute zoom to fit the node with some padding
+    const padding = 80;
+    const zx = (cw - padding * 2) / b.width;
+    const zy = (ch - padding * 2) / b.height;
+    zoomLevel = Math.min(zx, zy, 5); // Cap at 5x
+    zoomLevel = Math.max(zoomLevel, 0.1); // Min 10%
+
+    // Center the node
+    const nodeCenterX = b.x + b.width / 2;
+    const nodeCenterY = b.y + b.height / 2;
+    panX = cw / 2 - nodeCenterX * zoomLevel;
+    panY = ch / 2 - nodeCenterY * zoomLevel;
+
+    updateZoomIndicator();
+    render();
+  } catch (_) { /* skip */ }
+}
+
+// ─── Color Swatches (Sketch/Figma preset palette) ─────────────────────────────
+
+const COLOR_PRESETS = [
+  "#000000", "#FFFFFF", "#FF3B30", "#FF9500",
+  "#FFCC00", "#34C759", "#007AFF", "#5856D6",
+  "#AF52DE", "#FF2D55", "#8E8E93", "#48484A",
+];
+/** Recently used colors (max 6) */
+const recentColors = [];
+
+/** Set up color swatches in the properties panel. */
+function setupColorSwatches() {
+  const swatchContainer = document.getElementById("fill-swatches");
+  if (!swatchContainer) return;
+
+  renderSwatches(swatchContainer, "fill");
+}
+
+/** Render color swatches into a container for a given property. */
+function renderSwatches(container, propName) {
+  container.innerHTML = "";
+  const currentFill = document.getElementById("prop-fill")?.value || "";
+
+  // Build palette: recent colors + presets
+  const palette = [...new Set([...recentColors, ...COLOR_PRESETS])].slice(0, 18);
+
+  palette.forEach((color) => {
+    const swatch = document.createElement("div");
+    swatch.className = "color-swatch";
+    if (color.toUpperCase() === currentFill.toUpperCase()) {
+      swatch.className += " active";
+    }
+    swatch.style.background = color;
+    // White border for very dark colors
+    if (isColorDark(color)) {
+      swatch.style.borderColor = "rgba(255,255,255,0.2)";
+    }
+    swatch.addEventListener("click", () => {
+      const fillInput = document.getElementById("prop-fill");
+      if (fillInput) {
+        fillInput.value = color;
+        fillInput.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      addRecentColor(color);
+      renderSwatches(container, propName);
+    });
+    container.appendChild(swatch);
+  });
+}
+
+/** Add a color to recent colors list. */
+function addRecentColor(color) {
+  const normalized = color.toUpperCase();
+  const idx = recentColors.indexOf(normalized);
+  if (idx >= 0) recentColors.splice(idx, 1);
+  recentColors.unshift(normalized);
+  if (recentColors.length > 6) recentColors.pop();
+}
+
+/** Check if a hex color is dark. */
+function isColorDark(hex) {
+  const c = hex.replace("#", "");
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 < 128;
+}
+
+// ─── Selection Info Bar (Figma/Sketch bottom status) ──────────────────────────
+
+/** Update the selection info bar with current selection details. */
+function updateSelectionBar() {
+  const bar = document.getElementById("selection-bar");
+  if (!bar || !fdCanvas) return;
+
+  const selectedId = fdCanvas.get_selected_id();
+  if (!selectedId) {
+    bar.classList.remove("visible");
+    return;
+  }
+
+  try {
+    const propsJson = fdCanvas.get_selected_node_props();
+    const props = JSON.parse(propsJson);
+    if (!props || !props.kind) {
+      bar.classList.remove("visible");
+      return;
+    }
+
+    const w = Math.round(props.w || 0);
+    const h = Math.round(props.h || 0);
+    const x = Math.round(props.x || 0);
+    const y = Math.round(props.y || 0);
+
+    bar.textContent = `@${selectedId} · ${props.kind} · ${w}×${h} · (${x}, ${y})`;
+    bar.classList.add("visible");
+  } catch (_) {
+    bar.classList.remove("visible");
+  }
+}
+
+/** Set up selection bar (just needs the render loop, already wired). */
+function setupSelectionBar() {
+  // Selection bar updates happen in render() via updateSelectionBar()
+}
+
+// ─── Layer Visibility Toggle ──────────────────────────────────────────────────
+
+/** Toggle node visibility in the canvas. Uses CSS opacity on render. */
+function toggleNodeVisibility(nodeId) {
+  if (hiddenNodes.has(nodeId)) {
+    hiddenNodes.delete(nodeId);
+  } else {
+    hiddenNodes.add(nodeId);
+  }
+  // Set opacity on the node via the WASM API
+  if (fdCanvas) {
+    // Select the node temporarily to set its opacity
+    const currentSelection = fdCanvas.get_selected_id();
+    fdCanvas.select_by_id(nodeId);
+    const opacity = hiddenNodes.has(nodeId) ? "0.15" : "1";
+    fdCanvas.set_node_prop("opacity", opacity);
+    // Restore previous selection
+    if (currentSelection && currentSelection !== nodeId) {
+      fdCanvas.select_by_id(currentSelection);
+    } else if (!currentSelection) {
+      fdCanvas.select_by_id("");
+    }
+    syncTextToExtension();
+    render();
+  }
+  refreshLayersPanel();
 }
 
 // ─── Start ───────────────────────────────────────────────────────────────────

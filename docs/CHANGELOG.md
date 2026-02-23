@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.7.5
+
+- **NEW**: Zoom to selection — `⌘1` / `Ctrl+1` centers and zooms to fit the selected node
+- **NEW**: Color swatches palette — 12 preset colors + recent colors in properties panel (click to apply fill)
+- **NEW**: Selection info bar — bottom-center pill showing `@id · kind · W×H · (X, Y)` when a node is selected
+- **NEW**: Layer visibility toggle — eye icon (👁) on hover in layers panel, click to dim node to 15% opacity
+
 ### v0.7.4
 
 - **R3.21**: Grid overlay — toggleable dot grid (becomes line grid at high zoom) with adaptive spacing; keyboard shortcut `G` and toolbar ⊞ button; state persists across sessions

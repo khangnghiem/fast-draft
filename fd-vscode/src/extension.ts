@@ -925,6 +925,81 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       display: block;
     }
 
+    /* ── Color Swatches (Sketch/Figma) ── */
+    .color-swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .color-swatch {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      border: 1.5px solid var(--fd-border);
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .color-swatch:hover {
+      transform: scale(1.15);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .color-swatch:active {
+      transform: scale(0.95);
+    }
+    .color-swatch.active {
+      border-color: var(--fd-accent);
+      box-shadow: 0 0 0 2px var(--fd-input-focus);
+    }
+
+    /* ── Layer Visibility (Eye Icon) ── */
+    .layer-eye {
+      width: 20px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      cursor: pointer;
+      font-size: 10px;
+      color: var(--fd-text-tertiary);
+      opacity: 0;
+      transition: opacity 0.12s ease, color 0.12s ease;
+    }
+    .layer-item:hover .layer-eye,
+    .layer-eye.hidden-layer {
+      opacity: 1;
+    }
+    .layer-eye.hidden-layer {
+      color: var(--fd-accent);
+    }
+
+    /* ── Selection Info Bar ── */
+    #selection-bar {
+      display: none;
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 5px 14px;
+      background: var(--fd-surface);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 20px;
+      box-shadow: var(--fd-shadow-md);
+      z-index: 15;
+      font-size: 11px;
+      color: var(--fd-text-secondary);
+      font-weight: 500;
+      white-space: nowrap;
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+      letter-spacing: -0.02em;
+    }
+    #selection-bar.visible {
+      display: block;
+    }
+
     /* ── Help & Status ── */
     #tool-help-btn {
       margin-left: auto;
@@ -1442,6 +1517,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     <div id="spec-overlay"></div>
     <div id="layers-panel"></div>
     <div id="minimap-container"><canvas id="minimap-canvas"></canvas></div>
+    <div id="selection-bar"></div>
     <div id="loading"><div class="loading-spinner"></div>Loading FD engine…</div>
     <!-- Properties Panel (Apple-style) -->
     <div id="props-panel">
@@ -1477,6 +1553,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
             <div class="props-field">
               <label>Fill</label>
               <input type="color" id="prop-fill" value="#CCCCCC">
+              <div class="color-swatches" id="fill-swatches"></div>
             </div>
             <div class="props-field">
               <label>Corner</label>
