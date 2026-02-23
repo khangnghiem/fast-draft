@@ -500,6 +500,60 @@ impl FdCanvas {
         changed
     }
 
+    /// Group the currently selected nodes. Returns true if grouped.
+    pub fn group_selected(&mut self) -> bool {
+        if self.select_tool.selected.is_empty() {
+            return false;
+        }
+        let ids: Vec<NodeId> = self.select_tool.selected.clone();
+        let new_group_id = NodeId::anonymous();
+        let mutation = GraphMutation::GroupNodes { ids, new_group_id };
+        let changed = self.apply_mutations(vec![mutation]);
+        if changed {
+            self.select_tool.selected = vec![new_group_id];
+            self.engine.flush_to_text();
+        }
+        changed
+    }
+
+    /// Ungroup the currently selected group. Returns true if ungrouped.
+    pub fn ungroup_selected(&mut self) -> bool {
+        let first_id = match self.select_tool.first_selected() {
+            Some(id) => id,
+            None => return false,
+        };
+        let is_group = self
+            .engine
+            .graph
+            .get_by_id(first_id)
+            .is_some_and(|n| matches!(n.kind, fd_core::model::NodeKind::Group { .. }));
+        if !is_group {
+            return false;
+        }
+
+        let children_ids = self
+            .engine
+            .graph
+            .index_of(first_id)
+            .map(|idx| {
+                self.engine
+                    .graph
+                    .children(idx)
+                    .iter()
+                    .map(|c| self.engine.graph.graph[*c].id)
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
+        let mutation = GraphMutation::UngroupNode { id: first_id };
+        let changed = self.apply_mutations(vec![mutation]);
+        if changed {
+            self.select_tool.selected = children_ids;
+            self.engine.flush_to_text();
+        }
+        changed
+    }
+
     // ─── Annotation APIs ─────────────────────────────────────────────────
 
     /// Get annotations for a node as JSON array.
@@ -902,6 +956,8 @@ impl FdCanvas {
             ShortcutAction::Redo => (self.redo(), false),
             ShortcutAction::Delete => (self.delete_selected(), false),
             ShortcutAction::Duplicate => (self.duplicate_selected(), false),
+            ShortcutAction::Group => (self.group_selected(), false),
+            ShortcutAction::Ungroup => (self.ungroup_selected(), false),
             // Screenbrush: ⌘Delete = clear selected
             ShortcutAction::ClearAll => (self.delete_selected(), false),
             ShortcutAction::Deselect => {
@@ -952,6 +1008,8 @@ fn action_to_name(action: ShortcutAction) -> &'static str {
         ShortcutAction::Delete => "delete",
         ShortcutAction::SelectAll => "selectAll",
         ShortcutAction::Duplicate => "duplicate",
+        ShortcutAction::Group => "group",
+        ShortcutAction::Ungroup => "ungroup",
         ShortcutAction::Copy => "copy",
         ShortcutAction::Cut => "cut",
         ShortcutAction::Paste => "paste",

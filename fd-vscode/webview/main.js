@@ -922,8 +922,43 @@ function setupContextMenu() {
   // Duplicate via context menu
   document.getElementById("ctx-duplicate").addEventListener("click", () => {
     if (fdCanvas && contextMenuNodeId) {
-      fdCanvas.select_by_id(contextMenuNodeId);
+      const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      if (!selectedIds.includes(contextMenuNodeId)) {
+        fdCanvas.select_by_id(contextMenuNodeId);
+      }
       const changed = fdCanvas.duplicate_selected();
+      if (changed) {
+        render();
+        syncTextToExtension();
+      }
+    }
+    closeContextMenu();
+  });
+
+  // Group via context menu
+  document.getElementById("ctx-group").addEventListener("click", () => {
+    if (fdCanvas && contextMenuNodeId) {
+      const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      if (!selectedIds.includes(contextMenuNodeId)) {
+        fdCanvas.select_by_id(contextMenuNodeId);
+      }
+      const changed = fdCanvas.group_selected();
+      if (changed) {
+        render();
+        syncTextToExtension();
+      }
+    }
+    closeContextMenu();
+  });
+
+  // Ungroup via context menu
+  document.getElementById("ctx-ungroup").addEventListener("click", () => {
+    if (fdCanvas && contextMenuNodeId) {
+      const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      if (!selectedIds.includes(contextMenuNodeId)) {
+        fdCanvas.select_by_id(contextMenuNodeId);
+      }
+      const changed = fdCanvas.ungroup_selected();
       if (changed) {
         render();
         syncTextToExtension();

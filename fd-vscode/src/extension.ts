@@ -1487,6 +1487,8 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     <div class="menu-item" id="ctx-ai-refine"><span class="menu-icon">✦</span><span class="menu-label">AI Refine</span></div>
     <div class="menu-separator"></div>
     <div class="menu-item" id="ctx-duplicate" data-action="duplicate"><span class="menu-icon">⊕</span><span class="menu-label">Duplicate</span><span class="menu-shortcut">⌘D</span></div>
+    <div class="menu-item" id="ctx-group" data-action="group"><span class="menu-icon">◫</span><span class="menu-label">Group</span><span class="menu-shortcut">⌘G</span></div>
+    <div class="menu-item" id="ctx-ungroup" data-action="ungroup"><span class="menu-icon">◻</span><span class="menu-label">Ungroup</span><span class="menu-shortcut">⇧⌘G</span></div>
     <div class="menu-item" id="ctx-delete" data-action="delete"><span class="menu-icon">⊖</span><span class="menu-label">Delete</span><span class="menu-shortcut">⌫</span></div>
   </div>
 

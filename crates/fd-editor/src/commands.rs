@@ -179,6 +179,23 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
                 commands: old_commands,
             }
         }
+        GraphMutation::GroupNodes { new_group_id, .. } => {
+            GraphMutation::UngroupNode { id: *new_group_id }
+        }
+        GraphMutation::UngroupNode { id } => {
+            // To properly undo an Ungroup, we re-group the nodes
+            // that were children of the ungrouped node.
+            let mut children_ids = vec![];
+            if let Some(group_idx) = engine.graph.index_of(*id) {
+                for child_idx in engine.graph.children(group_idx) {
+                    children_ids.push(engine.graph.graph[child_idx].id);
+                }
+            }
+            GraphMutation::GroupNodes {
+                ids: children_ids,
+                new_group_id: *id,
+            }
+        }
     }
 }
 
@@ -226,6 +243,74 @@ rect @box {
         stack.redo(&mut engine);
         assert!(stack.can_undo());
         assert!(!stack.can_redo());
+    }
+
+    #[test]
+    fn undo_redo_group_move() {
+        let input = r#"
+rect @b1 {
+  x: 10
+  y: 10
+  w: 20
+  h: 20
+}
+rect @b2 {
+  x: 50
+  y: 50
+  w: 20
+  h: 20
+}
+"#;
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let mut stack = CommandStack::new(10);
+
+        let group_id = NodeId::intern("my_group");
+        stack.execute(
+            &mut engine,
+            GraphMutation::GroupNodes {
+                ids: vec![NodeId::intern("b1"), NodeId::intern("b2")],
+                new_group_id: group_id,
+            },
+            "Group nodes",
+        );
+
+        assert!(engine.current_text().contains("group @my_group"));
+        let root = engine.graph.index_of(NodeId::intern("root")).unwrap();
+        assert_eq!(engine.graph.children(root).len(), 1); // Only the group
+
+        stack.undo(&mut engine);
+        assert!(!engine.current_text().contains("group @my_group"));
+        assert_eq!(engine.graph.children(root).len(), 2); // Unpacked back to root
+
+        stack.redo(&mut engine);
+        assert!(engine.current_text().contains("group @my_group"));
+        assert_eq!(engine.graph.children(root).len(), 1); // Grouped again
+
+        stack.execute(
+            &mut engine,
+            GraphMutation::MoveNode {
+                id: group_id,
+                dx: 50.0,
+                dy: 50.0,
+            },
+            "Move group",
+        );
+
+        assert!(stack.can_undo());
+
+        // Undo Move
+        stack.undo(&mut engine);
+        // Undo Group
+        stack.undo(&mut engine);
+
+        let text = engine.current_text();
+        assert!(!text.contains("group @my_group"));
+        assert!(text.contains("rect @b1"));
+        assert!(text.contains("-> absolute: 10, 10"));
     }
 
     #[test]

@@ -157,9 +157,8 @@ impl SyncEngine {
             }
             GraphMutation::RemoveNode { id } => {
                 if let Some(idx) = self.graph.index_of(id) {
-                    self.graph.graph.remove_node(idx);
-                    self.graph.id_index.remove(&id);
                     self.bounds.remove(&idx);
+                    self.graph.remove_node(idx);
                 }
             }
             GraphMutation::SetStyle { id, style } => {
@@ -203,8 +202,10 @@ impl SyncEngine {
                 }
             }
             GraphMutation::GroupNodes { ids, new_group_id } => {
-                if ids.is_empty() { return; }
-                
+                if ids.is_empty() {
+                    return;
+                }
+
                 let first_idx = match self.graph.index_of(ids[0]) {
                     Some(idx) => idx,
                     None => return,
@@ -215,14 +216,14 @@ impl SyncEngine {
                 let mut min_x = f32::MAX;
                 let mut min_y = f32::MAX;
                 for &id in &ids {
-                    if let Some(idx) = self.graph.index_of(id) {
-                        if let Some(b) = self.bounds.get(&idx) {
-                            min_x = min_x.min(b.x);
-                            min_y = min_y.min(b.y);
-                        }
+                    if let Some(idx) = self.graph.index_of(id)
+                        && let Some(b) = self.bounds.get(&idx)
+                    {
+                        min_x = min_x.min(b.x);
+                        min_y = min_y.min(b.y);
                     }
                 }
-                
+
                 let parent_offset = if let Some(p_bounds) = self.bounds.get(&parent_idx) {
                     (p_bounds.x, p_bounds.y)
                 } else {
@@ -234,17 +235,45 @@ impl SyncEngine {
                 let rel_group_y = min_y - parent_offset.1;
 
                 // Create the new group node
-                let mut group_node = SceneNode::new(new_group_id, NodeKind::Group {
-                    layout: LayoutMode::Free,
+                let mut group_node = SceneNode::new(
+                    new_group_id,
+                    NodeKind::Group {
+                        layout: LayoutMode::Free,
+                    },
+                );
+                group_node.constraints.push(Constraint::Absolute {
+                    x: rel_group_x,
+                    y: rel_group_y,
                 });
-                group_node.constraints.push(Constraint::Absolute { x: rel_group_x, y: rel_group_y });
-                
+
                 let group_idx = self.graph.add_node(parent_idx, group_node);
+
+                // Compute group bounds from children
+                let mut max_x: f32 = f32::MIN;
+                let mut max_y: f32 = f32::MIN;
+                for &id in &ids {
+                    if let Some(idx) = self.graph.index_of(id)
+                        && let Some(b) = self.bounds.get(&idx)
+                    {
+                        max_x = max_x.max(b.x + b.width);
+                        max_y = max_y.max(b.y + b.height);
+                    }
+                }
+                // Initialize bounds for the group so MoveNode can find them
+                self.bounds.insert(
+                    group_idx,
+                    ResolvedBounds {
+                        x: min_x,
+                        y: min_y,
+                        width: if max_x > min_x { max_x - min_x } else { 0.0 },
+                        height: if max_y > min_y { max_y - min_y } else { 0.0 },
+                    },
+                );
 
                 for &id in &ids {
                     if let Some(idx) = self.graph.index_of(id) {
                         self.graph.reparent_node(idx, group_idx);
-                        
+
                         // Shift Absolute constraints to be relative to the group
                         if let Some(node) = self.graph.get_by_id_mut(id) {
                             for c in &mut node.constraints {
@@ -260,12 +289,16 @@ impl SyncEngine {
             GraphMutation::UngroupNode { id } => {
                 if let Some(group_idx) = self.graph.index_of(id) {
                     let parent_idx = self.graph.parent(group_idx).unwrap_or(self.graph.root);
-                    
+
                     let (group_rel_x, group_rel_y) = if let Some(group) = self.graph.get_by_id(id) {
-                        group.constraints.iter().find_map(|c| match c {
-                            Constraint::Absolute { x, y } => Some((*x, *y)),
-                            _ => None,
-                        }).unwrap_or((0.0, 0.0))
+                        group
+                            .constraints
+                            .iter()
+                            .find_map(|c| match c {
+                                Constraint::Absolute { x, y } => Some((*x, *y)),
+                                _ => None,
+                            })
+                            .unwrap_or((0.0, 0.0))
                     } else {
                         (0.0, 0.0)
                     };
@@ -283,9 +316,8 @@ impl SyncEngine {
                             }
                         }
                     }
-                    
-                    self.graph.graph.remove_node(group_idx);
-                    self.graph.id_index.remove(&id);
+
+                    self.graph.remove_node(group_idx);
                     self.bounds.remove(&group_idx);
                 }
             }

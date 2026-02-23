@@ -50,6 +50,10 @@ pub enum ShortcutAction {
     // ── UI ──
     Deselect,
     ShowHelp,
+
+    // ── Hierarchy ──
+    Group,
+    Ungroup,
 }
 
 /// Resolves key events into shortcut actions.
@@ -85,6 +89,7 @@ impl ShortcutMap {
                 "[" => Some(ShortcutAction::SendToBack),
                 "]" => Some(ShortcutAction::BringToFront),
                 "?" => Some(ShortcutAction::ShowHelp),
+                "g" | "G" => Some(ShortcutAction::Ungroup),
                 _ => None,
             };
         }
@@ -101,6 +106,7 @@ impl ShortcutMap {
                 "=" | "+" => Some(ShortcutAction::ZoomIn),
                 "-" => Some(ShortcutAction::ZoomOut),
                 "0" => Some(ShortcutAction::ZoomToFit),
+                "g" | "G" => Some(ShortcutAction::Group),
                 "[" => Some(ShortcutAction::SendBackward),
                 "]" => Some(ShortcutAction::BringForward),
                 // Screenbrush: ⌘Delete = clear all

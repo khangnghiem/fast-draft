@@ -591,7 +591,7 @@ fn parse_node_property(
     input: &mut &str,
     style: &mut Style,
     use_styles: &mut Vec<NodeId>,
-    _constraints: &mut [Constraint],
+    constraints: &mut Vec<Constraint>,
     width: &mut Option<f32>,
     height: &mut Option<f32>,
     layout: &mut LayoutMode,
@@ -603,6 +603,29 @@ fn parse_node_property(
     skip_space(input);
 
     match prop_name {
+        "x" => {
+            let x_val = parse_number.parse_next(input)?;
+            // Replace existing Absolute constraint if present, else push new
+            if let Some(Constraint::Absolute { x, .. }) = constraints
+                .iter_mut()
+                .find(|c| matches!(c, Constraint::Absolute { .. }))
+            {
+                *x = x_val;
+            } else {
+                constraints.push(Constraint::Absolute { x: x_val, y: 0.0 });
+            }
+        }
+        "y" => {
+            let y_val = parse_number.parse_next(input)?;
+            if let Some(Constraint::Absolute { y, .. }) = constraints
+                .iter_mut()
+                .find(|c| matches!(c, Constraint::Absolute { .. }))
+            {
+                *y = y_val;
+            } else {
+                constraints.push(Constraint::Absolute { x: 0.0, y: y_val });
+            }
+        }
         "w" | "width" => {
             *width = Some(parse_number.parse_next(input)?);
             skip_space(input);

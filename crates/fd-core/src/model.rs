@@ -496,6 +496,25 @@ impl SceneGraph {
         idx
     }
 
+    /// Remove a node safely, keeping the `id_index` synchronized if petgraph
+    /// swaps the last node into the removed node's position.
+    pub fn remove_node(&mut self, idx: NodeIndex) -> Option<SceneNode> {
+        let last_idx = NodeIndex::new(self.graph.node_count() - 1);
+        let last_id = self.graph[last_idx].id;
+
+        let removed = self.graph.remove_node(idx);
+
+        if let Some(removed_node) = &removed {
+            self.id_index.remove(&removed_node.id);
+            // If it wasn't the last node, the last node was swapped into `idx`
+            if idx != last_idx {
+                self.id_index.insert(last_id, idx);
+            }
+        }
+
+        removed
+    }
+
     /// Look up a node by its `@id`.
     pub fn get_by_id(&self, id: NodeId) -> Option<&SceneNode> {
         self.id_index.get(&id).map(|idx| &self.graph[*idx])
@@ -524,9 +543,10 @@ impl SceneGraph {
     /// Reparent a node to a new parent.
     pub fn reparent_node(&mut self, child: NodeIndex, new_parent: NodeIndex) {
         if let Some(old_parent) = self.parent(child)
-            && let Some(edge) = self.graph.find_edge(old_parent, child) {
-                self.graph.remove_edge(edge);
-            }
+            && let Some(edge) = self.graph.find_edge(old_parent, child)
+        {
+            self.graph.remove_edge(edge);
+        }
         self.graph.add_edge(new_parent, child, ());
     }
 

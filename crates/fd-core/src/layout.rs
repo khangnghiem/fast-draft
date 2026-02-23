@@ -48,14 +48,26 @@ pub fn resolve_layout(
     resolve_children(graph, graph.root, &mut bounds, viewport);
 
     // Apply top-level constraints (may override layout-computed positions)
-    for idx in graph.graph.node_indices() {
-        let node = &graph.graph[idx];
-        for constraint in &node.constraints {
-            apply_constraint(graph, idx, constraint, &mut bounds, viewport);
-        }
-    }
+    // We do this by traversing top-down to ensure parent constraints are resolved before children.
+    resolve_constraints_top_down(graph, graph.root, &mut bounds, viewport);
 
     bounds
+}
+
+fn resolve_constraints_top_down(
+    graph: &SceneGraph,
+    node_idx: NodeIndex,
+    bounds: &mut HashMap<NodeIndex, ResolvedBounds>,
+    viewport: Viewport,
+) {
+    let node = &graph.graph[node_idx];
+    for constraint in &node.constraints {
+        apply_constraint(graph, node_idx, constraint, bounds, viewport);
+    }
+
+    for child_idx in graph.children(node_idx) {
+        resolve_constraints_top_down(graph, child_idx, bounds, viewport);
+    }
 }
 
 #[allow(clippy::only_used_in_recursion)]
@@ -173,11 +185,24 @@ fn resolve_children(
         let mut max_y = f32::MIN;
 
         for &child_idx in &children {
+            let child_node = &graph.graph[child_idx];
+            let mut rel_x = 0.0;
+            let mut rel_y = 0.0;
+            for c in &child_node.constraints {
+                if let Constraint::Absolute { x, y } = c {
+                    rel_x = *x;
+                    rel_y = *y;
+                }
+            }
+
             if let Some(cb) = bounds.get(&child_idx) {
-                min_x = min_x.min(cb.x);
-                min_y = min_y.min(cb.y);
-                max_x = max_x.max(cb.x + cb.width);
-                max_y = max_y.max(cb.y + cb.height);
+                // Here cb.x and cb.y are parent's coords, we add rel_x and rel_y for size calculation
+                let abs_x = cb.x + rel_x;
+                let abs_y = cb.y + rel_y;
+                min_x = min_x.min(abs_x);
+                min_y = min_y.min(abs_y);
+                max_x = max_x.max(abs_x + cb.width);
+                max_y = max_y.max(abs_y + cb.height);
             }
         }
 
