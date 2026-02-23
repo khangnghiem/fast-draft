@@ -6,6 +6,7 @@ import {
   findAnonNodeIds,
   stripMarkdownFences,
   escapeHtml,
+  resolveTargetColumn,
 } from "./fd-parse";
 
 // ─── parseAnnotation ─────────────────────────────────────────────────────
@@ -353,5 +354,37 @@ describe("escapeHtml", () => {
     expect(escapeHtml('<a href="x">&')).toBe(
       "&lt;a href=&quot;x&quot;&gt;&amp;"
     );
+  });
+});
+
+// ─── resolveTargetColumn ─────────────────────────────────────────────────
+
+describe("resolveTargetColumn", () => {
+  it("returns beside when only one group matches active column", () => {
+    expect(resolveTargetColumn(1, [1])).toBe("beside");
+  });
+
+  it("returns the other column when two groups exist", () => {
+    expect(resolveTargetColumn(1, [1, 2])).toBe(2);
+  });
+
+  it("returns column 1 when active is column 2", () => {
+    expect(resolveTargetColumn(2, [1, 2])).toBe(1);
+  });
+
+  it("returns first non-active column with three groups", () => {
+    expect(resolveTargetColumn(1, [1, 2, 3])).toBe(2);
+  });
+
+  it("returns beside when active column is undefined and single group", () => {
+    expect(resolveTargetColumn(undefined, [1])).toBe(1);
+  });
+
+  it("returns beside when no groups exist", () => {
+    expect(resolveTargetColumn(undefined, [])).toBe("beside");
+  });
+
+  it("returns the group column when active column is not in groups", () => {
+    expect(resolveTargetColumn(1, [2])).toBe(2);
   });
 });

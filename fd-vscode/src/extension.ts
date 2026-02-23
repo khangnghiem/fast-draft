@@ -4,6 +4,7 @@ import {
   parseAnnotation as fdParseAnnotation,
   computeSpecHideLines,
   escapeHtml,
+  resolveTargetColumn,
 } from "./fd-parse";
 
 /**
@@ -2265,15 +2266,15 @@ export function activate(context: vscode.ExtensionContext) {
       await new Promise((r) => setTimeout(r, 300));
 
       // Find a reusable editor group: prefer an existing non-active column
-      // so we don't keep creating new Beside panels
+      // so we don't keep creating new Beside panels.
+      // Use tabGroups.all (not visibleTextEditors) to include webview panels.
       const activeColumn = vscode.window.activeTextEditor?.viewColumn;
-      const visibleColumns = vscode.window.visibleTextEditors
-        .map((e) => e.viewColumn)
-        .filter((c): c is vscode.ViewColumn => c !== undefined);
-      const otherColumn = visibleColumns.find((c) => c !== activeColumn);
-
-      // Reuse the other group if it exists, otherwise open beside (creates one)
-      const targetColumn = otherColumn ?? vscode.ViewColumn.Beside;
+      const allGroupColumns = vscode.window.tabGroups.all.map(
+        (g) => g.viewColumn
+      );
+      const resolved = resolveTargetColumn(activeColumn, allGroupColumns);
+      const targetColumn =
+        resolved === "beside" ? vscode.ViewColumn.Beside : resolved;
 
       await vscode.commands.executeCommand(
         "vscode.openWith",

@@ -284,6 +284,26 @@ export function stripMarkdownFences(text: string): string {
   return result.trim();
 }
 
+// ─── Panel Column Resolution ─────────────────────────────────────────────
+
+/**
+ * Determine which ViewColumn to open the canvas panel in.
+ *
+ * When two editor groups already exist, returns the column of the
+ * non-active group so the canvas reuses it instead of creating a 3rd panel.
+ *
+ * @param activeColumn  The ViewColumn of the active text editor (may be undefined).
+ * @param allGroupColumns  ViewColumns of ALL editor groups (from `tabGroups.all`).
+ * @returns A numeric column to reuse, or `"beside"` to create a new panel.
+ */
+export function resolveTargetColumn(
+  activeColumn: number | undefined,
+  allGroupColumns: number[]
+): number | "beside" {
+  const otherColumn = allGroupColumns.find((c) => c !== activeColumn);
+  return otherColumn ?? "beside";
+}
+
 // ─── HTML Escaping ───────────────────────────────────────────────────────
 
 /** Escape HTML special characters. */
