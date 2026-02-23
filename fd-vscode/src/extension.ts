@@ -2282,6 +2282,19 @@ export function activate(context: vscode.ExtensionContext) {
         "fd.canvas",
         targetColumn
       );
+
+      // Refocus the text editor so Code Mode has focus by default
+      await new Promise((r) => setTimeout(r, 100));
+      const textEditor = vscode.window.visibleTextEditors.find(
+        (e) => e.document.uri.toString() === key
+      );
+      if (textEditor) {
+        await vscode.window.showTextDocument(
+          textEditor.document,
+          textEditor.viewColumn,
+          false
+        );
+      }
     })
   );
   context.subscriptions.push(
