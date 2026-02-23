@@ -70,12 +70,15 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     webviewPanel.webview.onDidReceiveMessage(async (message: { type: string; text?: string; id?: string; nodeIds?: string[] }) => {
       switch (message.type) {
         case "textChanged": {
+          const incoming = message.text ?? "";
+          // Skip if text is identical — avoids full document replacement that disrupts cursor
+          if (incoming === document.getText()) break;
           suppressEchoBack = true;
           const edit = new vscode.WorkspaceEdit();
           edit.replace(
             document.uri,
             new vscode.Range(0, 0, document.lineCount, 0),
-            message.text ?? ""
+            incoming
           );
           await vscode.workspace.applyEdit(edit);
           suppressEchoBack = false;
@@ -89,12 +92,15 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
           for (let i = 0; i < document.lineCount; i++) {
             const line = document.lineAt(i);
             if (pattern.test(line.text)) {
-              // Suppress cursor→canvas sync to prevent feedback loop
-              suppressCursorSync = true;
               const editor = vscode.window.visibleTextEditors.find(
                 (e) => e.document.uri.toString() === document.uri.toString()
               );
               if (editor) {
+                const cursorLine = editor.selection.active.line;
+                // Skip if cursor is already on this line (prevents jump on re-click)
+                if (cursorLine === i) break;
+                // Suppress cursor→canvas sync to prevent feedback loop
+                suppressCursorSync = true;
                 const pos = new vscode.Position(i, 0);
                 editor.selection = new vscode.Selection(pos, pos);
                 editor.revealRange(
@@ -113,7 +119,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
               }
               setTimeout(() => {
                 suppressCursorSync = false;
-              }, 100);
+              }, 200);
               break;
             }
           }

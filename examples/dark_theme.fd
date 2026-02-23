@@ -235,6 +235,7 @@ group @settings {
 @slider_track -> absolute: 3401.04, 11038.97
 @toggle_sound -> absolute: 28.51, 340.51
 @toggle_notif -> absolute: 376.84, 708.79
-@toggle_dark -> absolute: 237.5, 834.9
+@toggle_dark -> absolute: 238.09, 834.82
 @_anon_34 -> absolute: 3129.49, 15512.29
+@profile_card -> absolute: 30.12, 527.12
 @_anon_29 -> absolute: 159.45, 287.16

@@ -18,6 +18,9 @@ let FdCanvas = null;
 /** @type {any} */
 let fdCanvas = null;
 
+/** Last selection ID sent to extension — avoids redundant nodeSelected messages */
+let lastNotifiedSelectedId = "";
+
 /** Canvas pan offset (JS-side, applied via ctx.translate) */
 let panX = 0;
 let panY = 0;
@@ -308,8 +311,14 @@ function setupPointerEvents() {
     // Update properties panel after interaction ends
     updatePropertiesPanel();
     // Notify extension of canvas selection change (for Code ↔ Canvas sync)
-    const selectedId = fdCanvas.get_selected_id();
-    vscode.postMessage({ type: "nodeSelected", id: selectedId });
+    // Skip during inline editing — prevents focus stealing that kills the textarea
+    if (!inlineEditorActive) {
+      const selectedId = fdCanvas.get_selected_id();
+      if (selectedId !== lastNotifiedSelectedId) {
+        lastNotifiedSelectedId = selectedId;
+        vscode.postMessage({ type: "nodeSelected", id: selectedId });
+      }
+    }
 
     // Hide dimension tooltip
     pointerIsDown = false;
@@ -390,6 +399,7 @@ window.addEventListener("message", (event) => {
       if (!fdCanvas) return;
       suppressTextSync = true;
       fdCanvas.set_text(message.text);
+      lastSyncedText = message.text; // Keep dedup in sync
       render();
       suppressTextSync = false;
       if (viewMode === "spec") refreshSpecView();
@@ -422,9 +432,15 @@ window.addEventListener("message", (event) => {
   }
 });
 
+/** Last text sent to extension — skip sync if unchanged */
+let lastSyncedText = "";
+
 function syncTextToExtension() {
   if (!fdCanvas || suppressTextSync) return;
   const text = fdCanvas.get_text();
+  // Skip if text hasn't changed — avoids full document replacement that destroys cursor
+  if (text === lastSyncedText) return;
+  lastSyncedText = text;
   vscode.postMessage({
     type: "textChanged",
     text: text,
@@ -1240,7 +1256,10 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     }
   });
 
-  textarea.addEventListener("blur", commit);
+  // Delay blur→commit to avoid premature removal from focus-stealing
+  textarea.addEventListener("blur", () => {
+    setTimeout(commit, 150);
+  });
 }
 
 // ─── Drag & Drop ─────────────────────────────────────────────────────────
