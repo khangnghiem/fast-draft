@@ -140,7 +140,7 @@ export function parseSpecNodes(source: string): SpecResult {
 
     // Typed node: rect @foo { / group @foo {
     const nodeMatch = trimmed.match(
-      /^(group|rect|ellipse|path|text)\s+@(\w+)(?:\s+"[^"]*")?\s*\{?/
+      /^(group|frame|rect|ellipse|path|text)\s+@(\w+)(?:\s+"[^"]*")?\s*\{?/
     );
     if (nodeMatch) {
       if (currentNodeId && pendingAnnotations.length > 0) {
@@ -207,7 +207,7 @@ export function computeSpecHideLines(lines: string[]): number[] {
 
   const keepPatterns = [
     /^\s*#/,                              // Comments and annotations
-    /^\s*(group|rect|ellipse|path|text)\s+@/, // Typed node declarations
+    /^\s*(group|frame|rect|ellipse|path|text)\s+@/, // Typed node declarations
     /^\s*@\w+\s*\{/,                      // Generic node declarations
     /^\s*edge\s+@/,                        // Edge declarations
     /^\s*from:\s*@/,                       // Edge from
@@ -396,7 +396,7 @@ export function parseDocumentSymbols(lines: string[]): FdSymbol[] {
 
     // Typed node: group/rect/ellipse/path/text @name ["label"] {
     const nodeMatch = trimmed.match(
-      /^(group|rect|ellipse|path|text)\s+@(\w+)(?:\s+"([^"]*)")?\s*\{?/
+      /^(group|frame|rect|ellipse|path|text)\s+@(\w+)(?:\s+"([^"]*)")?\s*\{?/
     );
     if (nodeMatch) {
       const sym: FdSymbol = {

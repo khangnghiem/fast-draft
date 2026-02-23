@@ -76,6 +76,7 @@ fn resolve_children(
     // Determine layout mode
     let layout = match &parent_node.kind {
         NodeKind::Group { layout } => layout.clone(),
+        NodeKind::Frame { layout, .. } => layout.clone(),
         _ => LayoutMode::Free,
     };
 
@@ -163,6 +164,35 @@ fn resolve_children(
     for &child_idx in &children {
         resolve_children(graph, child_idx, bounds, viewport);
     }
+
+    // Auto-size groups to the union bounding box of their children
+    if matches!(parent_node.kind, NodeKind::Group { .. }) && !children.is_empty() {
+        let mut min_x = f32::MAX;
+        let mut min_y = f32::MAX;
+        let mut max_x = f32::MIN;
+        let mut max_y = f32::MIN;
+
+        for &child_idx in &children {
+            if let Some(cb) = bounds.get(&child_idx) {
+                min_x = min_x.min(cb.x);
+                min_y = min_y.min(cb.y);
+                max_x = max_x.max(cb.x + cb.width);
+                max_y = max_y.max(cb.y + cb.height);
+            }
+        }
+
+        if min_x < f32::MAX {
+            bounds.insert(
+                parent_idx,
+                ResolvedBounds {
+                    x: min_x,
+                    y: min_y,
+                    width: max_x - min_x,
+                    height: max_y - min_y,
+                },
+            );
+        }
+    }
 }
 
 /// Get the intrinsic (declared) size of a node.
@@ -174,9 +204,10 @@ fn intrinsic_size(node: &SceneNode) -> (f32, f32) {
             // Rough estimate: 8px per char, 20px height. Real text layout comes later.
             (content.len() as f32 * 8.0, 20.0)
         }
-        NodeKind::Group { .. } => (200.0, 200.0), // Groups size to content eventually
-        NodeKind::Path { .. } => (100.0, 100.0),  // Computed from path bounds
-        NodeKind::Generic => (120.0, 40.0),       // Placeholder label box
+        NodeKind::Group { .. } => (0.0, 0.0), // Auto-sized: computed after children resolve
+        NodeKind::Frame { width, height, .. } => (*width, *height),
+        NodeKind::Path { .. } => (100.0, 100.0), // Computed from path bounds
+        NodeKind::Generic => (120.0, 40.0),      // Placeholder label box
         NodeKind::Root => (0.0, 0.0),
     }
 }
@@ -339,5 +370,63 @@ rect @box {
 
         assert!((b.x - 300.0).abs() < 0.01); // (800 - 200) / 2
         assert!((b.y - 250.0).abs() < 0.01); // (600 - 100) / 2
+    }
+
+    #[test]
+    fn layout_group_auto_bounds() {
+        let input = r#"
+group @container {
+  layout: column gap=10 pad=0
+
+  rect @a { w: 100 h: 40 }
+  rect @b { w: 80 h: 30 }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let container_idx = graph.index_of(NodeId::intern("container")).unwrap();
+        let cb = &bounds[&container_idx];
+
+        // Group should auto-size to cover both children (not hardcoded 200x200)
+        assert!(cb.width > 0.0, "group width should be positive");
+        assert!(cb.height > 0.0, "group height should be positive");
+        // Width should be at least the wider child (100px)
+        assert!(
+            cb.width >= 100.0,
+            "group width ({}) should be >= 100",
+            cb.width
+        );
+        // Height should cover both children + gap (40 + 10 + 30 = 80)
+        assert!(
+            cb.height >= 80.0,
+            "group height ({}) should be >= 80 (children + gap)",
+            cb.height
+        );
+    }
+
+    #[test]
+    fn layout_frame_declared_size() {
+        let input = r#"
+frame @card {
+  w: 480 h: 320
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let idx = graph.index_of(NodeId::intern("card")).unwrap();
+        let b = &bounds[&idx];
+
+        assert_eq!(b.width, 480.0, "frame should use declared width");
+        assert_eq!(b.height, 320.0, "frame should use declared height");
     }
 }

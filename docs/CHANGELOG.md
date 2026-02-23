@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.6.39
+
+- **R1.1**: New `frame` node type — visible container with declared `w:`/`h:`, optional `clip: true`, fill/stroke/corner, layout modes (column/row/grid)
+- **R1.1**: `group` nodes now auto-size to the union bounding box of their children (was hardcoded 200×200)
+- **R3.1**: Groups skip self-hit-testing (only children are clickable); frames are clickable via background
+
 ### v0.6.38
 
 - **R6.1**: Code Mode now always regains focus after canvas reveal — refocuses text editor after `vscode.openWith` since webview panels can steal focus despite `preserveFocus: true`

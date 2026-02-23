@@ -66,6 +66,11 @@ fn paint_node(
                 paint_rect(scene, nb, &style);
             }
         }
+
+        NodeKind::Frame { .. } => {
+            // Frames always render their background (like a visible container)
+            paint_rect(scene, nb, &style);
+        }
     }
 
     for child_idx in graph.children(idx) {

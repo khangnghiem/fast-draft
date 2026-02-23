@@ -373,6 +373,15 @@ pub enum NodeKind {
     /// Group / frame — contains children.
     Group { layout: LayoutMode },
 
+    /// Frame — visible container with explicit size and optional clipping.
+    /// Like a Figma frame: has fill/stroke, declared dimensions, clips overflow.
+    Frame {
+        width: f32,
+        height: f32,
+        clip: bool,
+        layout: LayoutMode,
+    },
+
     /// Rectangle.
     Rect { width: f32, height: f32 },
 

@@ -137,6 +137,12 @@ fn render_node(
         NodeKind::Group { .. } => {
             draw_group_bg(ctx, node_bounds, &style);
         }
+        NodeKind::Frame { .. } => {
+            draw_rect(ctx, node_bounds, &style, is_selected);
+            if let Some(ref label) = style.label {
+                draw_shape_label(ctx, node_bounds, label, &style);
+            }
+        }
         NodeKind::Path { commands } => {
             draw_path(ctx, node_bounds, commands, &style, is_selected);
         }

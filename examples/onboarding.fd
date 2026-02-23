@@ -8,11 +8,6 @@ style step_title {
   font: "Inter" 700 28
 }
 
-rect @_anon_6 {
-  w: 100 h: 80
-  fill: #CCCCD9
-}
-
 # ─── Wizard container ───────────────────────────────────────────────────
 group @wizard {
   ## "Onboarding wizard — 4-step flow"
@@ -30,8 +25,79 @@ group @wizard {
     shadow: (0,8,40,#00000022)
     group @_anon_3 {
       layout: column gap=24 pad=40
+      rect @illustration {
+        ## "Step illustration — animated SVG"
+        ## accept: "subtle loop animation"
+        w: 400 h: 240
+        fill: #F0EDFC
+        corner: 16
+        ellipse @shape_1 {
+          w: 80 h: 80
+          fill: #6C5CE740
+          anim :enter {
+            opacity: 1
+            scale: 1
+            ease: spring 800ms
+          }
+        }
+        rect @shape_2 {
+          w: 100 h: 60
+          fill: #A29BFE40
+          corner: 12
+          anim :enter {
+            opacity: 1
+            ease: ease_out 600ms
+          }
+        }
+        ellipse @shape_3 {
+          w: 60 h: 60
+          fill: #00B89440
+          anim :enter {
+            opacity: 1
+            scale: 1
+            ease: spring 1000ms
+          }
+        }
+      }
+      text @s_title "Create your first draft" {
+        use: step_title
+      }
+      text @s_desc "Start with a blank canvas or choose from our templates to kickstart your design." {
+        use: step_desc
+      }
+      group @dots {
+        layout: row gap=8 pad=0
+        ellipse @dot_1 {
+          w: 10 h: 10
+          fill: #6C5CE7
+        }
+        ellipse @dot_2 {
+          w: 10 h: 10
+          fill: #E8E8EC
+        }
+        ellipse @dot_3 {
+          w: 10 h: 10
+          fill: #E8E8EC
+        }
+        ellipse @dot_4 {
+          w: 10 h: 10
+          fill: #E8E8EC
+        }
+      }
       group @buttons {
         layout: row gap=12 pad=0
+        rect @btn_skip {
+          w: 100 h: 48
+          corner: 10
+          text @_anon_4 "Skip" {
+            fill: #999999
+            font: "Inter" 500 15
+          }
+          anim :hover {
+            fill: #F5F5F7
+            ease: ease_out 150ms
+          }
+        }
         rect @btn_next {
           w: 280 h: 48
           fill: #6C5CE7
@@ -51,81 +117,16 @@ group @wizard {
             ease: ease_out 100ms
           }
         }
-        rect @btn_skip {
-          w: 100 h: 48
-          corner: 10
-          text @_anon_4 "Skip" {
-            fill: #999999
-            font: "Inter" 500 15
-          }
-          anim :hover {
-            fill: #F5F5F7
-            ease: ease_out 150ms
-          }
-        }
-      }
-      group @dots {
-        layout: row gap=8 pad=0
-        ellipse @dot_4 {
-          w: 10 h: 10
-          fill: #E8E8EC
-        }
-        ellipse @dot_3 {
-          w: 10 h: 10
-          fill: #E8E8EC
-        }
-        ellipse @dot_2 {
-          w: 10 h: 10
-          fill: #E8E8EC
-        }
-        ellipse @dot_1 {
-          w: 10 h: 10
-          fill: #6C5CE7
-        }
-      }
-      text @s_desc "Start with a blank canvas or choose from our templates to kickstart your design." {
-        use: step_desc
-      }
-      text @s_title "Create your first draft" {
-        use: step_title
-      }
-      rect @illustration {
-        ## "Step illustration — animated SVG"
-        ## accept: "subtle loop animation"
-        w: 400 h: 240
-        fill: #F0EDFC
-        corner: 16
-        ellipse @shape_3 {
-          w: 60 h: 60
-          fill: #00B89440
-          anim :enter {
-            opacity: 1
-            scale: 1
-            ease: spring 1000ms
-          }
-        }
-        rect @shape_2 {
-          w: 100 h: 60
-          fill: #A29BFE40
-          corner: 12
-          anim :enter {
-            opacity: 1
-            ease: ease_out 600ms
-          }
-        }
-        ellipse @shape_1 {
-          w: 80 h: 80
-          fill: #6C5CE740
-          anim :enter {
-            opacity: 1
-            scale: 1
-            ease: spring 800ms
-          }
-        }
       }
     }
   }
 }
 
-@wizard -> center_in: canvas
+rect @_anon_6 {
+  w: 100 h: 80
+  fill: #CCCCD9
+}
+
 @_anon_6 -> absolute: 486, 1140.92
+@wizard -> center_in: canvas
+@dots -> absolute: 370.85, 498.43

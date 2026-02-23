@@ -44,6 +44,12 @@ fn hit_test_node(
         return None;
     }
 
+    // Groups are invisible — only their children are clickable, not the group itself.
+    // (Group bounds auto-size to children, so clicking "empty space" should not select the group.)
+    if matches!(node.kind, NodeKind::Group { .. }) {
+        return None;
+    }
+
     if let Some(b) = bounds.get(&idx)
         && b.contains(px, py)
     {

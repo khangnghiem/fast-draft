@@ -79,6 +79,17 @@ group @container {
   text @child2 "..." { ... }
 }
 
+frame @card {
+  w: <width> h: <height>
+  fill: <color>
+  corner: <radius>
+  clip: true          # optional — clips children to frame bounds
+  layout: column gap=<px> pad=<px>
+
+  # Children go here (nested nodes)
+  rect @child { ... }
+}
+
 path @drawing {
   # Path data (SVG-like commands) — future
 }
