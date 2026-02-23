@@ -2621,7 +2621,23 @@ export function activate(context: vscode.ExtensionContext) {
             return; // Found it — done
           }
         }
-        // No canvas tab exists — onDidOpenTextDocument will handle first opens
+
+        // No canvas tab exists — open one in the other column
+        const activeColumn = editor.viewColumn;
+        const allGroupColumns = vscode.window.tabGroups.all.map(
+          (g) => g.viewColumn
+        );
+        const resolved = resolveTargetColumn(activeColumn, allGroupColumns);
+        const targetColumn =
+          resolved === "beside" ? vscode.ViewColumn.Beside : resolved;
+
+        openedUris.add(key); // Mark so onDidOpenTextDocument won't duplicate
+        await vscode.commands.executeCommand(
+          "vscode.openWith",
+          editor.document.uri,
+          "fd.canvas",
+          { viewColumn: targetColumn, preserveFocus: true }
+        );
       }, 150);
     })
   );

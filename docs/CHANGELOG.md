@@ -5,6 +5,10 @@
 
 ## Completed Requirements
 
+### v0.6.36
+
+- **R6.1**: Canvas is now always revealed when switching `.fd` tabs — opens a new canvas in the other column if none exists (previously only revealed existing canvas tabs)
+
 ### v0.6.35
 
 - **R6.1 fix**: Fixed canvas duplication bug where auto-reveal opened a second Canvas Mode in the text editor's column; now correctly finds the canvas tab's actual column and only reveals if not already active
