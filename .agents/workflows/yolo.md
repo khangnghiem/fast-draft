@@ -126,6 +126,8 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
     wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm
     ```
 
+    > 🛑 **If WASM was rebuilt**: Run `/e2e` in a Codespace to verify canvas renders before publishing.
+
     Then compile TypeScript:
 
     ```bash
