@@ -265,9 +265,38 @@ fn draw_text(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, content: &str, 
 
     let fill_color = resolve_fill_color(style);
     ctx.set_fill_style_str(&fill_color);
-    ctx.set_text_baseline("top");
 
-    let _ = ctx.fill_text(content, b.x as f64, b.y as f64 + 2.0);
+    // Apply horizontal alignment
+    let halign = style.text_align.unwrap_or(TextAlign::Center);
+    let text_align_str = match halign {
+        TextAlign::Left => "left",
+        TextAlign::Center => "center",
+        TextAlign::Right => "right",
+    };
+    ctx.set_text_align(text_align_str);
+
+    // Apply vertical alignment
+    let valign = style.text_valign.unwrap_or(TextVAlign::Middle);
+    let text_baseline_str = match valign {
+        TextVAlign::Top => "top",
+        TextVAlign::Middle => "middle",
+        TextVAlign::Bottom => "bottom",
+    };
+    ctx.set_text_baseline(text_baseline_str);
+
+    // Calculate position based on alignment
+    let x = match halign {
+        TextAlign::Left => b.x as f64,
+        TextAlign::Center => b.x as f64 + b.width as f64 / 2.0,
+        TextAlign::Right => b.x as f64 + b.width as f64,
+    };
+    let y = match valign {
+        TextVAlign::Top => b.y as f64 + 2.0,
+        TextVAlign::Middle => b.y as f64 + b.height as f64 / 2.0,
+        TextVAlign::Bottom => b.y as f64 + b.height as f64 - 2.0,
+    };
+
+    let _ = ctx.fill_text(content, x, y);
 
     ctx.restore();
 }

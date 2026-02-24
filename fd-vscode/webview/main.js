@@ -181,6 +181,7 @@ async function main() {
     setupContextMenu();
     setupPropertiesPanel();
     setupInlineEditor();
+    setupAlignGrid();
     setupDragAndDrop();
     setupAnimPicker();
     setupHelpButton();
@@ -1375,6 +1376,22 @@ function updatePropertiesPanel() {
     if (labelSection) labelSection.style.display = "none";
   }
 
+  // Alignment grid — show for text/rect/ellipse nodes
+  const alignSection = document.getElementById("props-align-section");
+  if (alignSection) {
+    const showAlign = props.kind === "text" || props.kind === "rect" || props.kind === "ellipse";
+    alignSection.style.display = showAlign ? "" : "none";
+    if (showAlign) {
+      const h = props.textAlign || "center";
+      const v = props.textVAlign || "middle";
+      document.querySelectorAll(".align-cell").forEach(cell => {
+        const cellH = cell.dataset.h;
+        const cellV = cell.dataset.v;
+        cell.classList.toggle("active", cellH === h && cellV === v);
+      });
+    }
+  }
+
   // Show/hide appearance section based on kind
   const appearance = document.getElementById("props-appearance");
   if (appearance) {
@@ -1382,6 +1399,24 @@ function updatePropertiesPanel() {
   }
 
   propsSuppressSync = false;
+}
+
+// ─── Alignment Grid Picker ─────────────────────────────────────────────────
+
+function setupAlignGrid() {
+  const grid = document.getElementById("align-grid");
+  if (!grid) return;
+  grid.addEventListener("click", (e) => {
+    const cell = e.target.closest(".align-cell");
+    if (!cell || !fdCanvas) return;
+    const h = cell.dataset.h;
+    const v = cell.dataset.v;
+    fdCanvas.set_node_prop("textAlign", h);
+    fdCanvas.set_node_prop("textVAlign", v);
+    render();
+    syncTextToExtension();
+    updatePropertiesPanel();
+  });
 }
 
 // ─── Inline Text Editor ────────────────────────────────────────────────────
@@ -1509,6 +1544,9 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   const fontFamily = props.fontFamily || "Inter";
   const fontWeight = props.fontWeight || 400;
 
+  // Get text alignment (default: center/middle)
+  const hAlign = props.textAlign || "center";
+
   // Store original value for Esc rollback
   const originalValue = currentValue;
 
@@ -1532,6 +1570,7 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     `box-shadow:0 2px 8px rgba(0,0,0,0.12)`,
     `line-height:1.4`,
     `overflow:hidden`,
+    `text-align:${hAlign}`,
   ].join(";");
 
   container.appendChild(textarea);

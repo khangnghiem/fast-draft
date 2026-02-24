@@ -5,6 +5,16 @@
 
 ## Completed Requirements
 
+### v0.8.9
+
+- **NEW — R3.28**: 3×3 text alignment system — `align: left|center|right top|middle|bottom` property in `.fd` format
+- **NEW**: Text nodes default to `center middle` alignment (matching Figma) instead of top-left
+- **NEW**: 3×3 alignment grid picker in the properties panel — click a cell to set text alignment, active cell highlighted with accent
+- **NEW**: Inline editor textarea respects node's horizontal text alignment via CSS `text-align`
+- **WASM**: `textAlign`/`textVAlign` exposed in node props and settable via `set_node_prop`
+- **Parser/Emitter**: Full `align:` round-trip support with test
+- **Renderer**: `draw_text` uses 9-position alignment based on `TextAlign × TextVAlign`
+
 ### v0.8.8
 
 - **UX fix**: Inline editor background now matches node context — shape nodes use their fill color, text nodes use themed background (`#1E1E2E` dark / `#FFFFFF` light), shapes without fill use themed fallback; eliminates the white-over-dark-node bug

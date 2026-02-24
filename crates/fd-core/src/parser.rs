@@ -364,6 +364,9 @@ fn parse_style_property(input: &mut &str, style: &mut Style) -> ModalResult<()> 
         "opacity" => {
             style.opacity = Some(parse_number.parse_next(input)?);
         }
+        "align" | "text_align" => {
+            parse_align_value(input, style)?;
+        }
         _ => {
             let _ =
                 take_till::<_, _, ContextError>(0.., |c: char| c == '\n' || c == ';' || c == '}')
@@ -700,6 +703,9 @@ fn parse_node_property(
         "opacity" => {
             style.opacity = Some(parse_number.parse_next(input)?);
         }
+        "align" | "text_align" => {
+            parse_align_value(input, style)?;
+        }
         "shadow" => {
             // shadow: (ox,oy,blur,#COLOR)  — colon already consumed by property parser
             skip_space(input);
@@ -781,6 +787,37 @@ fn parse_node_property(
     }
 
     skip_opt_separator(input);
+    Ok(())
+}
+
+// ─── Alignment value parser ──────────────────────────────────────────────
+
+fn parse_align_value(input: &mut &str, style: &mut Style) -> ModalResult<()> {
+    use crate::model::{TextAlign, TextVAlign};
+
+    let first = parse_identifier.parse_next(input)?;
+    style.text_align = Some(match first {
+        "left" => TextAlign::Left,
+        "right" => TextAlign::Right,
+        _ => TextAlign::Center, // "center" or unknown
+    });
+
+    // Check for optional vertical alignment
+    skip_space(input);
+    let at_end = input.is_empty()
+        || input.starts_with('\n')
+        || input.starts_with(';')
+        || input.starts_with('}');
+    if !at_end
+        && let Ok(second) = parse_identifier.parse_next(input)
+    {
+        style.text_valign = Some(match second {
+            "top" => TextVAlign::Top,
+            "bottom" => TextVAlign::Bottom,
+            _ => TextVAlign::Middle,
+        });
+    }
+
     Ok(())
 }
 
@@ -1363,5 +1400,45 @@ frame @panel {
             .get_by_id(crate::id::NodeId::intern("child"))
             .expect("child not found");
         assert!(matches!(child.kind, NodeKind::Rect { .. }));
+    }
+
+    #[test]
+    fn roundtrip_align() {
+        let src = r#"
+text @title "Hello" {
+  fill: #FFFFFF
+  font: "Inter" 600 24
+  align: right bottom
+}
+"#;
+        let graph = parse_document(src).unwrap();
+        let node = graph
+            .get_by_id(crate::id::NodeId::intern("title"))
+            .expect("node not found");
+        assert_eq!(
+            node.style.text_align,
+            Some(crate::model::TextAlign::Right)
+        );
+        assert_eq!(
+            node.style.text_valign,
+            Some(crate::model::TextVAlign::Bottom)
+        );
+
+        // Emit and re-parse
+        let emitted = crate::emitter::emit_document(&graph);
+        assert!(emitted.contains("align: right bottom"));
+
+        let reparsed = parse_document(&emitted).unwrap();
+        let node2 = reparsed
+            .get_by_id(crate::id::NodeId::intern("title"))
+            .expect("node not found after roundtrip");
+        assert_eq!(
+            node2.style.text_align,
+            Some(crate::model::TextAlign::Right)
+        );
+        assert_eq!(
+            node2.style.text_valign,
+            Some(crate::model::TextVAlign::Bottom)
+        );
     }
 }

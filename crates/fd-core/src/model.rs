@@ -193,6 +193,24 @@ pub struct Shadow {
 
 // ─── Styling ─────────────────────────────────────────────────────────────
 
+/// Horizontal text alignment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum TextAlign {
+    Left,
+    #[default]
+    Center,
+    Right,
+}
+
+/// Vertical text alignment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum TextVAlign {
+    Top,
+    #[default]
+    Middle,
+    Bottom,
+}
+
 /// A reusable style set that nodes can reference via `use: style_name`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Style {
@@ -204,6 +222,10 @@ pub struct Style {
     pub shadow: Option<Shadow>,
     /// Optional label text rendered centered inside the shape (for rect/ellipse).
     pub label: Option<String>,
+    /// Horizontal text alignment (default: Center).
+    pub text_align: Option<TextAlign>,
+    /// Vertical text alignment (default: Middle).
+    pub text_valign: Option<TextVAlign>,
 }
 
 // ─── Animation ───────────────────────────────────────────────────────────
@@ -653,6 +675,12 @@ fn merge_style(dst: &mut Style, src: &Style) {
     }
     if src.label.is_some() {
         dst.label = src.label.clone();
+    }
+    if src.text_align.is_some() {
+        dst.text_align = src.text_align;
+    }
+    if src.text_valign.is_some() {
+        dst.text_valign = src.text_valign;
     }
 }
 

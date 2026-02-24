@@ -1270,6 +1270,47 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       grid-template-columns: 1fr 1fr;
       gap: 5px 8px;
     }
+    /* 3×3 text alignment grid picker */
+    .align-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 26px);
+      grid-template-rows: repeat(3, 26px);
+      gap: 0;
+      border: 1px solid var(--fd-input-border);
+      border-radius: 8px;
+      overflow: hidden;
+      width: fit-content;
+    }
+    .align-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--fd-input-bg);
+      border: none;
+      border-right: 1px solid var(--fd-input-border);
+      border-bottom: 1px solid var(--fd-input-border);
+      cursor: pointer;
+      padding: 0;
+      transition: background 0.12s ease;
+    }
+    .align-cell:nth-child(3n) { border-right: none; }
+    .align-cell:nth-child(n+7) { border-bottom: none; }
+    .align-cell:hover { background: rgba(79,195,247,0.15); }
+    .align-cell.active {
+      background: rgba(79,195,247,0.25);
+    }
+    .align-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--fd-text-secondary);
+      transition: all 0.12s ease;
+    }
+    .align-cell.active .align-dot {
+      background: #4FC3F7;
+      width: 8px;
+      height: 8px;
+    }
     .props-field {
       display: flex;
       flex-direction: column;
@@ -1837,6 +1878,20 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
           <div class="props-section-label">Content</div>
           <div class="props-field full">
             <input type="text" id="prop-text-content" placeholder="Text content">
+          </div>
+        </div>
+        <div class="props-section" id="props-align-section" style="display:none">
+          <div class="props-section-label">Alignment</div>
+          <div class="align-grid" id="align-grid">
+            <button class="align-cell" data-h="left"   data-v="top"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="center" data-v="top"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="right"  data-v="top"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="left"   data-v="middle"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="center" data-v="middle"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="right"  data-v="middle"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="left"   data-v="bottom"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="center" data-v="bottom"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="right"  data-v="bottom"><span class="align-dot"></span></button>
           </div>
         </div>
         <div class="props-section" id="props-label-section" style="display:none">

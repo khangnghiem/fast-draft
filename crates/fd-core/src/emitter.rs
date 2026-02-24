@@ -265,6 +265,21 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         indent(out, depth + 1);
         writeln!(out, "label: \"{label}\"").unwrap();
     }
+    // Text alignment
+    if node.style.text_align.is_some() || node.style.text_valign.is_some() {
+        let h = match node.style.text_align {
+            Some(TextAlign::Left) => "left",
+            Some(TextAlign::Right) => "right",
+            _ => "center",
+        };
+        let v = match node.style.text_valign {
+            Some(TextVAlign::Top) => "top",
+            Some(TextVAlign::Bottom) => "bottom",
+            _ => "middle",
+        };
+        indent(out, depth + 1);
+        writeln!(out, "align: {h} {v}").unwrap();
+    }
 
     // Children
     let children = graph.children(idx);

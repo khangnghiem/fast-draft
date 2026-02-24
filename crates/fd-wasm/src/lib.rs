@@ -6,7 +6,7 @@ mod render2d;
 
 use fd_core::id::NodeId;
 use fd_core::layout::Viewport;
-use fd_core::model::{Annotation, Color, Constraint, NodeKind, Paint, SceneNode};
+use fd_core::model::{Annotation, Color, Constraint, NodeKind, Paint, SceneNode, TextAlign, TextVAlign};
 use fd_editor::commands::CommandStack;
 use fd_editor::input::{InputEvent, Modifiers};
 use fd_editor::shortcuts::{ShortcutAction, ShortcutMap};
@@ -878,6 +878,24 @@ impl FdCanvas {
             props.insert("fontWeight".into(), serde_json::json!(font.weight));
         }
 
+        // Text alignment
+        if let Some(ref ta) = style.text_align {
+            let ta_str = match ta {
+                TextAlign::Left => "left",
+                TextAlign::Center => "center",
+                TextAlign::Right => "right",
+            };
+            props.insert("textAlign".into(), serde_json::Value::String(ta_str.to_string()));
+        }
+        if let Some(ref tv) = style.text_valign {
+            let tv_str = match tv {
+                TextVAlign::Top => "top",
+                TextVAlign::Middle => "middle",
+                TextVAlign::Bottom => "bottom",
+            };
+            props.insert("textVAlign".into(), serde_json::Value::String(tv_str.to_string()));
+        }
+
         serde_json::Value::Object(props).to_string()
     }
 
@@ -963,6 +981,36 @@ impl FdCanvas {
                 } else {
                     return false;
                 }
+            }
+            "textAlign" => {
+                let align = match value {
+                    "left" => TextAlign::Left,
+                    "right" => TextAlign::Right,
+                    _ => TextAlign::Center,
+                };
+                let mut style = self
+                    .engine
+                    .graph
+                    .get_by_id(id)
+                    .map(|n| self.engine.graph.resolve_style(n, &[]))
+                    .unwrap_or_default();
+                style.text_align = Some(align);
+                GraphMutation::SetStyle { id, style }
+            }
+            "textVAlign" => {
+                let valign = match value {
+                    "top" => TextVAlign::Top,
+                    "bottom" => TextVAlign::Bottom,
+                    _ => TextVAlign::Middle,
+                };
+                let mut style = self
+                    .engine
+                    .graph
+                    .get_by_id(id)
+                    .map(|n| self.engine.graph.resolve_style(n, &[]))
+                    .unwrap_or_default();
+                style.text_valign = Some(valign);
+                GraphMutation::SetStyle { id, style }
             }
             "width" | "height" => {
                 let v = match value.parse::<f32>() {
