@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.8.6
+
+- **UX fix**: Inline text editor now uses the node's fill color as background with auto-contrasting text color (was hardcoded white overlay that hid the node)
+- **UX fix**: Double-clicking empty canvas to create text now works — text nodes get proper initial bounds (80×24) so the inline editor opens correctly
+- **UX**: Editor font now matches the node's font family, weight, and size scaled to zoom level
+- **INFRA**: WASM rebuild with text node bounds fix in `AddNode` mutation
+
 ### v0.8.5
 
 - **BREAKING**: Removed all `##` annotation syntax from `.fd` files — unified under `spec` blocks (`spec "desc"` inline / `spec { ... }` block form). The parser already treated `##` as plain comments, so annotations using `##` were silently lost during parsing. All 7 affected `.fd` files (2 test fixtures + 5 design docs) migrated.

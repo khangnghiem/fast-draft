@@ -1312,6 +1312,29 @@ function setupInlineEditor() {
 }
 
 /**
+ * Compute relative luminance of a hex color for contrast calculation.
+ * Returns 0 (black) to 1 (white).
+ */
+function hexLuminance(hex) {
+  if (!hex || hex.length < 4) return 1;
+  let r, g, b;
+  if (hex.length <= 5) {
+    // #RGB or #RGBA
+    r = parseInt(hex[1] + hex[1], 16) / 255;
+    g = parseInt(hex[2] + hex[2], 16) / 255;
+    b = parseInt(hex[3] + hex[3], 16) / 255;
+  } else {
+    // #RRGGBB or #RRGGBBAA
+    r = parseInt(hex.slice(1, 3), 16) / 255;
+    g = parseInt(hex.slice(3, 5), 16) / 255;
+    b = parseInt(hex.slice(5, 7), 16) / 255;
+  }
+  // sRGB to linear
+  const lin = (c) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+/**
  * Show a floating textarea over the node for in-place text editing.
  */
 function openInlineEditor(nodeId, propKey, currentValue) {
@@ -1319,18 +1342,38 @@ function openInlineEditor(nodeId, propKey, currentValue) {
 
   const boundsJson = fdCanvas.get_node_bounds(nodeId);
   const b = JSON.parse(boundsJson);
-  if (!b.width) return;
+  // Use minimum size for zero-width nodes (e.g. new text nodes)
+  const bw = b.width || 80;
+  const bh = b.height || 24;
 
   inlineEditorActive = true;
 
   const container = document.getElementById("canvas-container");
-  const containerRect = container.getBoundingClientRect();
 
   // Convert scene-space bounds to screen-space
-  const sx = b.x * zoomLevel + panX;
-  const sy = b.y * zoomLevel + panY;
-  const sw = Math.max(b.width * zoomLevel, 80);
-  const sh = Math.max(b.height * zoomLevel, 28);
+  const sx = (b.x || 0) * zoomLevel + panX;
+  const sy = (b.y || 0) * zoomLevel + panY;
+  const sw = Math.max(bw * zoomLevel, 80);
+  const sh = Math.max(bh * zoomLevel, 28);
+
+  // Read node fill color for background matching
+  fdCanvas.select_by_id(nodeId);
+  const propsJson = fdCanvas.get_selected_node_props();
+  const props = JSON.parse(propsJson);
+  let bgColor = "transparent";
+  let textColor = "#1C1C1E";
+
+  if (props.fill) {
+    bgColor = props.fill;
+    // Use white text on dark backgrounds, black on light
+    const lum = hexLuminance(props.fill);
+    textColor = lum < 0.4 ? "#FFFFFF" : "#1C1C1E";
+  }
+
+  // Get font info from node props
+  const fontSize = props.fontSize ? Math.round(props.fontSize * zoomLevel) : Math.round(14 * zoomLevel);
+  const fontFamily = props.fontFamily || "Inter";
+  const fontWeight = props.fontWeight || 400;
 
   const textarea = document.createElement("textarea");
   textarea.value = currentValue;
@@ -1341,15 +1384,15 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     `width:${sw}px`,
     `height:${sh}px`,
     `padding:4px 6px`,
-    `font:14px Inter,system-ui,sans-serif`,
+    `font:${fontWeight} ${fontSize}px ${fontFamily},system-ui,sans-serif`,
     `border:2px solid #4FC3F7`,
     `border-radius:4px`,
-    `background:rgba(255,255,255,0.95)`,
-    `color:#1C1C1E`,
+    `background:${bgColor}`,
+    `color:${textColor}`,
     `resize:none`,
     `outline:none`,
     `z-index:100`,
-    `box-shadow:0 4px 16px rgba(0,0,0,0.18)`,
+    `box-shadow:0 2px 8px rgba(0,0,0,0.12)`,
     `line-height:1.4`,
     `overflow:hidden`,
   ].join(";");
@@ -1364,6 +1407,8 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     const newVal = textarea.value;
     if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
     if (!fdCanvas) return;
+    // Re-select the node in case selection was lost
+    fdCanvas.select_by_id(nodeId);
     const changed = fdCanvas.set_node_prop(propKey, newVal);
     if (changed) {
       render();
