@@ -450,22 +450,28 @@ fn draw_generic_placeholder(
 
 fn draw_selection_handles(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds) {
     let (x, y, w, h) = (b.x as f64, b.y as f64, b.width as f64, b.height as f64);
-    let handle_size = 6.0;
+    let handle_size = 7.0;
     let half = handle_size / 2.0;
 
     ctx.set_fill_style_str("#FFFFFF");
     ctx.set_stroke_style_str("#4FC3F7");
     ctx.set_line_width(1.5);
 
-    // Corner handles
-    let corners = [
-        (x - half, y - half),
-        (x + w - half, y - half),
-        (x - half, y + h - half),
-        (x + w - half, y + h - half),
+    // 8-point handles: corners + midpoints (Figma/Sketch style)
+    let handles = [
+        // Corners
+        (x - half, y - half),                       // TopLeft
+        (x + w - half, y - half),                   // TopRight
+        (x - half, y + h - half),                   // BottomLeft
+        (x + w - half, y + h - half),               // BottomRight
+        // Midpoints
+        (x + w / 2.0 - half, y - half),             // TopCenter
+        (x + w / 2.0 - half, y + h - half),         // BottomCenter
+        (x - half, y + h / 2.0 - half),             // MiddleLeft
+        (x + w - half, y + h / 2.0 - half),         // MiddleRight
     ];
 
-    for (hx, hy) in corners {
+    for (hx, hy) in handles {
         ctx.fill_rect(hx, hy, handle_size, handle_size);
         ctx.stroke_rect(hx, hy, handle_size, handle_size);
     }

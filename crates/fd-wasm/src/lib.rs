@@ -11,7 +11,7 @@ use fd_editor::commands::CommandStack;
 use fd_editor::input::{InputEvent, Modifiers};
 use fd_editor::shortcuts::{ShortcutAction, ShortcutMap};
 use fd_editor::sync::{GraphMutation, SyncEngine};
-use fd_editor::tools::{EllipseTool, PenTool, RectTool, SelectTool, TextTool, Tool, ToolKind};
+use fd_editor::tools::{EllipseTool, PenTool, RectTool, ResizeHandle, SelectTool, TextTool, Tool, ToolKind};
 use fd_render::hit::hit_test_rect;
 use wasm_bindgen::prelude::*;
 use web_sys::CanvasRenderingContext2d;
@@ -162,6 +162,21 @@ impl FdCanvas {
         let prev_hovered = self.hovered_id;
         self.hovered_id = hit;
         let hovered_changed = prev_hovered != self.hovered_id;
+
+        // Check for resize handle hit on currently selected node
+        if self.active_tool == ToolKind::Select
+            && let Some(handle) = self.hit_test_resize_handle(x, y)
+            && let Some(id) = self.select_tool.first_selected()
+            && let Some(idx) = self.engine.graph.index_of(id)
+            && let Some(b) = self.engine.current_bounds().get(&idx)
+        {
+            self.select_tool
+                .start_resize(handle, (b.x, b.y, b.width, b.height));
+            // Forward the event so PointerMove/Up flow works
+            let mutations = self.select_tool.handle(&event, hit);
+            self.apply_mutations(mutations);
+            return true;
+        }
 
         let mutations = match self.active_tool {
             ToolKind::Select => self.select_tool.handle(&event, hit),
@@ -926,6 +941,40 @@ impl FdCanvas {
             self.engine.resolve();
         }
         true
+    }
+
+    /// Check if the pointer hits a resize handle for the currently selected node.
+    /// Returns the ResizeHandle variant if within 5px of a handle center.
+    fn hit_test_resize_handle(&self, x: f32, y: f32) -> Option<ResizeHandle> {
+        let id = self.select_tool.first_selected()?;
+        let idx = self.engine.graph.index_of(id)?;
+        let b = self.engine.current_bounds().get(&idx)?;
+
+        let bx = b.x;
+        let by = b.y;
+        let bw = b.width;
+        let bh = b.height;
+        let radius = 5.0_f32; // Hit radius in scene-space pixels
+
+        let handles = [
+            (bx, by, ResizeHandle::TopLeft),
+            (bx + bw / 2.0, by, ResizeHandle::TopCenter),
+            (bx + bw, by, ResizeHandle::TopRight),
+            (bx, by + bh / 2.0, ResizeHandle::MiddleLeft),
+            (bx + bw, by + bh / 2.0, ResizeHandle::MiddleRight),
+            (bx, by + bh, ResizeHandle::BottomLeft),
+            (bx + bw / 2.0, by + bh, ResizeHandle::BottomCenter),
+            (bx + bw, by + bh, ResizeHandle::BottomRight),
+        ];
+
+        for (hx, hy, handle) in handles {
+            let dx = x - hx;
+            let dy = y - hy;
+            if dx * dx + dy * dy <= radius * radius {
+                return Some(handle);
+            }
+        }
+        None
     }
 
     /// Dispatch a shortcut action. Returns (graph_changed, tool_switched).

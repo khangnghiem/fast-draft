@@ -35,6 +35,21 @@ pub trait Tool {
     fn handle(&mut self, event: &InputEvent, hit_node: Option<NodeId>) -> Vec<GraphMutation>;
 }
 
+// ─── Resize Handle Positions ─────────────────────────────────────────────
+
+/// Positions of the 8-point resize handles around a selected node.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResizeHandle {
+    TopLeft,
+    TopCenter,
+    TopRight,
+    MiddleLeft,
+    MiddleRight,
+    BottomLeft,
+    BottomCenter,
+    BottomRight,
+}
+
 // ─── Select Tool ─────────────────────────────────────────────────────────
 
 pub struct SelectTool {
@@ -51,6 +66,12 @@ pub struct SelectTool {
     pub marquee_start: Option<(f32, f32)>,
     /// Current marquee rectangle (normalized: x, y, w, h). Updated during drag.
     pub marquee_rect: Option<(f32, f32, f32, f32)>,
+    /// Resize handle being dragged (None = not resizing).
+    pub resize_handle: Option<ResizeHandle>,
+    /// Original bounds at resize start (x, y, w, h).
+    resize_origin: (f32, f32, f32, f32),
+    /// Fixed anchor point during resize (opposite corner/edge).
+    resize_anchor: (f32, f32),
 }
 
 impl Default for SelectTool {
@@ -69,7 +90,29 @@ impl SelectTool {
             alt_duplicated: false,
             marquee_start: None,
             marquee_rect: None,
+            resize_handle: None,
+            resize_origin: (0.0, 0.0, 0.0, 0.0),
+            resize_anchor: (0.0, 0.0),
         }
+    }
+
+    /// Start a resize interaction on a specific handle.
+    /// Called by FdCanvas when pointer-down hits a handle.
+    pub fn start_resize(&mut self, handle: ResizeHandle, bounds: (f32, f32, f32, f32)) {
+        let (x, y, w, h) = bounds;
+        self.resize_handle = Some(handle);
+        self.resize_origin = bounds;
+        // Anchor is the opposite corner/edge that stays fixed
+        self.resize_anchor = match handle {
+            ResizeHandle::TopLeft => (x + w, y + h),
+            ResizeHandle::TopCenter => (x + w / 2.0, y + h),
+            ResizeHandle::TopRight => (x, y + h),
+            ResizeHandle::MiddleLeft => (x + w, y + h / 2.0),
+            ResizeHandle::MiddleRight => (x, y + h / 2.0),
+            ResizeHandle::BottomLeft => (x + w, y),
+            ResizeHandle::BottomCenter => (x + w / 2.0, y),
+            ResizeHandle::BottomRight => (x, y),
+        };
     }
 
     /// Get the first selected node (backward compatibility).
@@ -99,6 +142,11 @@ impl Tool for SelectTool {
             } => {
                 self.marquee_start = None;
                 self.marquee_rect = None;
+
+                // If resize_handle is set (by FdCanvas), skip normal selection
+                if self.resize_handle.is_some() {
+                    return vec![];
+                }
 
                 if let Some(hit_id) = hit_node {
                     // Shift+click: toggle node in/out of selection
@@ -140,6 +188,73 @@ impl Tool for SelectTool {
             InputEvent::PointerMove {
                 x, y, modifiers, ..
             } => {
+                // Resize drag
+                if let Some(handle) = self.resize_handle
+                    && let Some(id) = self.first_selected()
+                {
+                    let (ax, ay) = self.resize_anchor;
+                    let mut mx = *x;
+                    let mut my = *y;
+
+                    // Shift: constrain to square
+                    if modifiers.shift {
+                        let dw = (mx - ax).abs();
+                        let dh = (my - ay).abs();
+                        let side = dw.max(dh);
+                        mx = if mx > ax { ax + side } else { ax - side };
+                        my = if my > ay { ay + side } else { ay - side };
+                    }
+
+                    // Compute new bounds from anchor + cursor
+                    let (new_x, new_w) = match handle {
+                        ResizeHandle::TopLeft | ResizeHandle::MiddleLeft | ResizeHandle::BottomLeft => {
+                            let nx = mx.min(ax);
+                            (nx, (mx - ax).abs())
+                        }
+                        ResizeHandle::TopRight | ResizeHandle::MiddleRight | ResizeHandle::BottomRight => {
+                            let nx = mx.min(ax);
+                            (nx, (mx - ax).abs())
+                        }
+                        ResizeHandle::TopCenter | ResizeHandle::BottomCenter => {
+                            (self.resize_origin.0, self.resize_origin.2)
+                        }
+                    };
+                    let (new_y, new_h) = match handle {
+                        ResizeHandle::TopLeft | ResizeHandle::TopCenter | ResizeHandle::TopRight => {
+                            let ny = my.min(ay);
+                            (ny, (my - ay).abs())
+                        }
+                        ResizeHandle::BottomLeft | ResizeHandle::BottomCenter | ResizeHandle::BottomRight => {
+                            let ny = my.min(ay);
+                            (ny, (my - ay).abs())
+                        }
+                        ResizeHandle::MiddleLeft | ResizeHandle::MiddleRight => {
+                            (self.resize_origin.1, self.resize_origin.3)
+                        }
+                    };
+
+                    // Min size
+                    let final_w = new_w.max(4.0);
+                    let final_h = new_h.max(4.0);
+
+                    // Compute position delta from original
+                    let dx = new_x - self.resize_origin.0;
+                    let dy = new_y - self.resize_origin.1;
+                    self.resize_origin = (new_x, new_y, final_w, final_h);
+
+                    let mut mutations = vec![
+                        GraphMutation::ResizeNode {
+                            id,
+                            width: final_w,
+                            height: final_h,
+                        },
+                    ];
+                    if dx.abs() > 0.001 || dy.abs() > 0.001 {
+                        mutations.push(GraphMutation::MoveNode { id, dx, dy });
+                    }
+                    return mutations;
+                }
+
                 // Marquee drag
                 if let Some((sx, sy)) = self.marquee_start {
                     self.marquee_rect = Some(Self::normalize_rect(sx, sy, *x, *y));
@@ -176,6 +291,7 @@ impl Tool for SelectTool {
                 // Marquee end is handled by FdCanvas (it calls hit_test_rect)
                 self.dragging = false;
                 self.alt_duplicated = false;
+                self.resize_handle = None;
                 vec![]
             }
             _ => vec![],
