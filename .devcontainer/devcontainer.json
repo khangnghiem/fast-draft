@@ -1,0 +1,10 @@
+{
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "gitlens.currentLine.enabled": false,
+        "gitlens.codeLens.enabled": false
+      }
+    }
+  }
+}
