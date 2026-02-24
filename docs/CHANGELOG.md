@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.7.9
+
+- **NEW**: Spec Summary Panel — layers panel becomes requirements overview in Spec mode, showing all annotated nodes as cards with description, status/priority badges, accept criteria, and tags
+- **NEW**: Click-to-select in spec summary navigates to node on canvas + opens annotation editing card
+- **NEW**: Empty state guidance ("No spec annotations yet — Right-click a node → Add Annotation")
+- **UX**: Apple-style color-coded badges: draft=grey, in_progress=yellow, done=green, priority high=red/medium=orange/low=green
+
 ### v0.7.8
 
 - **NEW**: Smart alignment guides (R3.17) — magenta dashed guide lines appear during drag/resize when node edges or centers align with other nodes (Figma/Sketch behavior)

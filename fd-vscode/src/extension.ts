@@ -815,6 +815,95 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       padding: 48px 0;
       font-size: 14px;
     }
+    .spec-empty-state {
+      text-align: center;
+      padding: 36px 16px;
+      color: var(--fd-text-secondary);
+    }
+    .spec-summary-card {
+      padding: 10px 12px;
+      margin: 4px 8px;
+      border-radius: 8px;
+      background: var(--fd-surface);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .spec-summary-card:hover {
+      background: var(--fd-surface-hover);
+      border-color: var(--fd-border);
+    }
+    .spec-summary-card.selected {
+      border-color: var(--fd-accent);
+      background: var(--fd-accent-dim);
+    }
+    .spec-card-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .spec-card-id {
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--fd-accent);
+    }
+    .spec-card-kind {
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: var(--fd-surface-hover);
+      color: var(--fd-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .spec-card-desc {
+      font-size: 12px;
+      color: var(--fd-text-primary);
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+    .spec-card-badges {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+    .spec-card-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .spec-card-badge.status-draft { background: rgba(142,142,147,0.15); color: #8E8E93; }
+    .spec-card-badge.status-in_progress { background: rgba(255,159,10,0.15); color: #FF9F0A; }
+    .spec-card-badge.status-done { background: rgba(52,199,89,0.15); color: #34C759; }
+    .spec-card-badge.priority-high { background: rgba(255,59,48,0.15); color: #FF3B30; }
+    .spec-card-badge.priority-medium { background: rgba(255,159,10,0.15); color: #FF9F0A; }
+    .spec-card-badge.priority-low { background: rgba(52,199,89,0.15); color: #34C759; }
+    .spec-card-accepts {
+      margin-top: 4px;
+      padding-left: 2px;
+    }
+    .spec-card-accept-item {
+      font-size: 11px;
+      color: var(--fd-text-secondary);
+      padding: 1px 0;
+      line-height: 1.4;
+    }
+    .spec-card-tags {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .spec-card-tag {
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: var(--fd-accent-dim);
+      color: var(--fd-accent);
+    }
 
     /* ── Theme Toggle (Apple pill) ── */
     #theme-toggle-btn {

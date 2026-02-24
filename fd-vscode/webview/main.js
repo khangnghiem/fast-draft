@@ -1770,9 +1770,116 @@ function renderLayerNode(node, selectedId, depth = 0) {
 }
 
 /** Refresh the layers panel content. */
+// ─── Spec Summary Panel (replaces layers in Spec mode) ──────────────────
+
+function refreshSpecSummary(panel) {
+  if (!fdCanvas) return;
+  const source = fdCanvas.get_text();
+  const annotated = parseAnnotatedNodes(source);
+  const selectedId = fdCanvas.get_selected_id() || "";
+
+  let html = `<div class="layers-header">`;
+  html += `<span class="layers-title">Requirements</span>`;
+  html += `<span class="layers-count">${annotated.length}</span>`;
+  html += `</div>`;
+
+  if (annotated.length === 0) {
+    html += `<div class="spec-empty-state">`;
+    html += `<div style="font-size:24px;margin-bottom:8px;opacity:0.4">◇</div>`;
+    html += `<div style="opacity:0.5;font-size:12px">No spec annotations yet</div>`;
+    html += `<div style="opacity:0.35;font-size:11px;margin-top:4px">Right-click a node → Add Annotation</div>`;
+    html += `</div>`;
+    panel.innerHTML = html;
+    return;
+  }
+
+  html += `<div class="layers-body">`;
+  for (const node of annotated) {
+    const isSelected = node.id === selectedId;
+    const descriptions = node.annotations.filter(a => a.type === "description");
+    const statuses = node.annotations.filter(a => a.type === "status");
+    const priorities = node.annotations.filter(a => a.type === "priority");
+    const accepts = node.annotations.filter(a => a.type === "accept");
+    const tags = node.annotations.filter(a => a.type === "tag");
+
+    html += `<div class="spec-summary-card${isSelected ? ' selected' : ''}" data-spec-id="${escapeAttr(node.id)}">`;
+    // Header row: @id + kind
+    html += `<div class="spec-card-header">`;
+    html += `<span class="spec-card-id">@${escapeHtml(node.id)}</span>`;
+    if (node.kind) {
+      html += `<span class="spec-card-kind">${escapeHtml(node.kind)}</span>`;
+    }
+    html += `</div>`;
+
+    // Description
+    if (descriptions.length > 0) {
+      html += `<div class="spec-card-desc">${escapeHtml(descriptions[0].value)}</div>`;
+    }
+
+    // Status + Priority badges
+    if (statuses.length > 0 || priorities.length > 0) {
+      html += `<div class="spec-card-badges">`;
+      for (const s of statuses) {
+        html += `<span class="spec-card-badge status-${escapeAttr(s.value)}">${escapeHtml(s.value)}</span>`;
+      }
+      for (const p of priorities) {
+        html += `<span class="spec-card-badge priority-${escapeAttr(p.value)}">⚡ ${escapeHtml(p.value)}</span>`;
+      }
+      html += `</div>`;
+    }
+
+    // Accept criteria
+    if (accepts.length > 0) {
+      html += `<div class="spec-card-accepts">`;
+      for (const a of accepts) {
+        html += `<div class="spec-card-accept-item">✓ ${escapeHtml(a.value)}</div>`;
+      }
+      html += `</div>`;
+    }
+
+    // Tags
+    if (tags.length > 0) {
+      html += `<div class="spec-card-tags">`;
+      for (const t of tags) {
+        html += `<span class="spec-card-tag">${escapeHtml(t.value)}</span>`;
+      }
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+  }
+  html += `</div>`;
+
+  panel.innerHTML = html;
+
+  // Wire click handlers
+  panel.querySelectorAll(".spec-summary-card").forEach(card => {
+    card.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const nodeId = card.getAttribute("data-spec-id");
+      if (nodeId && fdCanvas) {
+        if (fdCanvas.select_by_id(nodeId)) render();
+        // Open annotation card near the card
+        const rect = card.getBoundingClientRect();
+        openAnnotationCard(nodeId, rect.right + 8, rect.top);
+        // Highlight
+        panel.querySelectorAll(".spec-summary-card").forEach(c =>
+          c.classList.toggle("selected", c.getAttribute("data-spec-id") === nodeId)
+        );
+      }
+    });
+  });
+}
+
 function refreshLayersPanel() {
   const panel = document.getElementById("layers-panel");
   if (!panel || !fdCanvas) return;
+
+  // In Spec mode, show requirements summary instead of layers
+  if (viewMode === "spec") {
+    refreshSpecSummary(panel);
+    return;
+  }
 
   const source = fdCanvas.get_text();
   const tree = parseLayerTree(source);
