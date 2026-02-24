@@ -105,6 +105,7 @@ group @settings {
         ellipse @switch_knob_s {
           w: 20 h: 20
           fill: #FFFFFF
+          label: "ehe"
         }
       }
       group @_anon_40 {
@@ -232,6 +233,7 @@ group @settings {
 
 @settings -> center_in: canvas
 @profile_card -> absolute: 30.12, 527.12
+@user_avatar -> absolute: 178.49, -630.04
 @_anon_29 -> absolute: 159.45, 287.16
 @toggle_dark -> absolute: 238.09, 834.82
 @_anon_31 -> absolute: -414.78, -1405.56
@@ -239,6 +241,7 @@ group @settings {
 @_anon_34 -> absolute: 3129.49, 15512.29
 @toggle_notif -> absolute: 376.84, 708.79
 @toggle_sound -> absolute: 28.51, 340.51
+@switch_knob_s -> absolute: -146.24, 32.3
 @slider_card -> absolute: 353.91, 189.09
 @_anon_44 -> absolute: -3117.15, -10280.47
 @_anon_46 -> absolute: 0, 0

@@ -5,6 +5,10 @@
 
 ## Completed Requirements
 
+### v0.8.12
+
+- **UX fix**: Inline editor on ellipse nodes now uses `border-radius: 50%` instead of `4px` — the textarea overlay matches the circular shape instead of appearing as a rectangle
+
 ### v0.8.11
 
 - **REFACTOR**: Renamed `Constraint::Absolute` → `Constraint::Position` — clarifies parent-relative semantics (was misleadingly named "absolute")

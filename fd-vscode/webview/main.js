@@ -1574,7 +1574,7 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     `padding:${padTop}px 6px 4px 6px`,
     `font:${fontWeight} ${fontSize}px ${fontFamily},system-ui,sans-serif`,
     `border:2px solid #4FC3F7`,
-    `border-radius:4px`,
+    `border-radius:${props.kind === 'ellipse' ? '50%' : '4px'}`,
     `background:${bgColor}`,
     `color:${textColor}`,
     `resize:none`,
