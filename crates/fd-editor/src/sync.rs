@@ -157,6 +157,7 @@ impl SyncEngine {
                     NodeKind::Rect { width, height } => (*width, *height),
                     NodeKind::Ellipse { rx, ry } => (rx * 2.0, ry * 2.0),
                     NodeKind::Frame { width, height, .. } => (*width, *height),
+                    NodeKind::Text { .. } => (80.0, 24.0),
                     _ => (0.0, 0.0),
                 };
                 let idx = self.graph.add_node(parent_idx, *node);
