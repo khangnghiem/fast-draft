@@ -5,6 +5,10 @@
 
 ## Completed Requirements
 
+### v0.8.3
+
+- **UX**: Group/Ungroup context menu items are now context-sensitive — Group disabled with <2 items selected, Ungroup disabled when selected node isn't a group (matches Figma/Sketch)
+
 ### v0.8.2
 
 - **UX fix**: Canvas content now centers in the visible area to the right of the layers panel, instead of behind it — `zoomToFit`, `zoomToSelection`, and initial load all account for the 232px overlay

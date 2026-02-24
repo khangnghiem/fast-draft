@@ -1012,6 +1012,26 @@ function setupContextMenu() {
     const containerRect = container.getBoundingClientRect();
     menu.style.left = (e.clientX - containerRect.left) + "px";
     menu.style.top = (e.clientY - containerRect.top) + "px";
+
+    // Enable/disable Group and Ungroup based on selection
+    const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+    const groupBtn = document.getElementById("ctx-group");
+    const ungroupBtn = document.getElementById("ctx-ungroup");
+
+    // Group requires 2+ items selected
+    const canGroup = selectedIds.length >= 2;
+    groupBtn.classList.toggle("disabled", !canGroup);
+
+    // Ungroup requires exactly 1 selected item that is a group
+    let canUngroup = false;
+    if (selectedIds.length === 1) {
+      try {
+        const props = JSON.parse(fdCanvas.get_selected_node_props());
+        canUngroup = props.kind === "group";
+      } catch (_) { /* skip */ }
+    }
+    ungroupBtn.classList.toggle("disabled", !canUngroup);
+
     menu.classList.add("visible");
   });
 

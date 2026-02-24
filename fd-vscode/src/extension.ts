@@ -1520,6 +1520,10 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       background: var(--fd-accent);
       color: var(--fd-accent-fg);
     }
+    #context-menu .menu-item.disabled {
+      opacity: 0.35;
+      pointer-events: none;
+    }
     #context-menu .menu-item:hover .menu-shortcut {
       color: rgba(255,255,255,0.55);
     }
