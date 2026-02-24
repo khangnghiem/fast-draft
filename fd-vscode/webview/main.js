@@ -110,6 +110,9 @@ async function main() {
     // Start animation loop (covers flow animation + initial render)
     startAnimLoop();
 
+    // Center content accounting for layers panel overlay
+    zoomToFit();
+
     // Hide loading overlay
     if (loading) loading.style.display = "none";
     if (status) status.textContent = "Ready";
@@ -2275,33 +2278,37 @@ function zoomAtPoint(mx, my, factor) {
 }
 
 /** Zoom to fit all nodes in the viewport with padding. */
+/** Get the width of the layers panel overlay to offset viewport centering. */
+function getLayersPanelWidth() {
+  const panel = document.getElementById("layers-panel");
+  return panel ? panel.offsetWidth : 0;
+}
+
 function zoomToFit() {
   if (!fdCanvas) return;
   const container = document.getElementById("canvas-container");
   const cw = container.clientWidth;
   const ch = container.clientHeight;
+  const panelW = getLayersPanelWidth();
+
+  // Usable viewport = full width minus the layers panel overlay
+  const usableW = cw - panelW;
 
   // Get all node bounds from the WASM engine
   const text = fdCanvas.get_text();
   if (!text || text.trim().length === 0) {
-    // Empty document — reset to 100%
+    // Empty document — reset to 100%, offset by panel
     zoomLevel = 1;
-    panX = 0;
+    panX = panelW;
     panY = 0;
     render();
     updateZoomIndicator();
     return;
   }
 
-  // Use the WASM scene to compute bounding box
-  // Walk all node IDs and compute union of bounds
-  const idsJson = fdCanvas.get_selected_ids ? fdCanvas.get_selected_ids() : "[]";
-  // We need to compute the scene bounding box — iterate through known nodes
-  // For now, use a simpler approach: try all nodes via parse_to_json
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   let foundAny = false;
 
-  // Parse the text to find node IDs, then get bounds for each
   const nodeIdPattern = /@(\w+)/g;
   let match;
   const seenIds = new Set();
@@ -2324,19 +2331,19 @@ function zoomToFit() {
 
   if (!foundAny) {
     zoomLevel = 1;
-    panX = 0;
+    panX = panelW;
     panY = 0;
   } else {
     const padding = 40;
     const sceneW = maxX - minX;
     const sceneH = maxY - minY;
     const fitZoom = Math.min(
-      (cw - padding * 2) / Math.max(sceneW, 1),
+      (usableW - padding * 2) / Math.max(sceneW, 1),
       (ch - padding * 2) / Math.max(sceneH, 1)
     );
     zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, fitZoom));
-    // Center the scene
-    panX = (cw - sceneW * zoomLevel) / 2 - minX * zoomLevel;
+    // Center the scene in the usable area (right of layers panel)
+    panX = panelW + (usableW - sceneW * zoomLevel) / 2 - minX * zoomLevel;
     panY = (ch - sceneH * zoomLevel) / 2 - minY * zoomLevel;
   }
 
@@ -2744,10 +2751,12 @@ function zoomToSelection() {
     zoomLevel = Math.min(zx, zy, 5); // Cap at 5x
     zoomLevel = Math.max(zoomLevel, 0.1); // Min 10%
 
-    // Center the node
+    // Center the node in the usable area (right of layers panel)
+    const panelW = getLayersPanelWidth();
+    const usableW = cw - panelW;
     const nodeCenterX = b.x + b.width / 2;
     const nodeCenterY = b.y + b.height / 2;
-    panX = cw / 2 - nodeCenterX * zoomLevel;
+    panX = panelW + usableW / 2 - nodeCenterX * zoomLevel;
     panY = ch / 2 - nodeCenterY * zoomLevel;
 
     updateZoomIndicator();

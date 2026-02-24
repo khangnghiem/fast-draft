@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.8.2
+
+- **UX fix**: Canvas content now centers in the visible area to the right of the layers panel, instead of behind it — `zoomToFit`, `zoomToSelection`, and initial load all account for the 232px overlay
+- **UX**: Initial load now auto-centers content via `zoomToFit()` instead of starting at origin
+
 ### v0.8.1
 
 - **UX**: Spec View now strips type keywords (`group`, `rect`, `text`, `ellipse`, `path`, `frame`) from node declarations — `group @checkout_page {` renders as `@checkout_page {` in Code Mode when Spec View is active
