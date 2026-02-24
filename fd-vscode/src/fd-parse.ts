@@ -579,3 +579,22 @@ export function escapeHtml(text: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
+
+// ─── Spec View Line Transform ────────────────────────────────────────────
+
+/**
+ * Transform a line for Spec View display by stripping the type keyword
+ * from typed node declarations.
+ *
+ * `group @checkout_page {` → `@checkout_page {`
+ * `  text @title "Hello" {` → `  @title "Hello" {`
+ * `  rect @card {` → `  @card {`
+ *
+ * Non-node lines are returned unchanged.
+ */
+export function transformSpecViewLine(line: string): string {
+  return line.replace(
+    /^(\s*)(group|frame|rect|ellipse|path|text)\s+(@\w+)/,
+    "$1$3"
+  );
+}

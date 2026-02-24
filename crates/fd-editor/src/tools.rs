@@ -207,11 +207,15 @@ impl Tool for SelectTool {
 
                     // Compute new bounds from anchor + cursor
                     let (new_x, new_w) = match handle {
-                        ResizeHandle::TopLeft | ResizeHandle::MiddleLeft | ResizeHandle::BottomLeft => {
+                        ResizeHandle::TopLeft
+                        | ResizeHandle::MiddleLeft
+                        | ResizeHandle::BottomLeft => {
                             let nx = mx.min(ax);
                             (nx, (mx - ax).abs())
                         }
-                        ResizeHandle::TopRight | ResizeHandle::MiddleRight | ResizeHandle::BottomRight => {
+                        ResizeHandle::TopRight
+                        | ResizeHandle::MiddleRight
+                        | ResizeHandle::BottomRight => {
                             let nx = mx.min(ax);
                             (nx, (mx - ax).abs())
                         }
@@ -220,11 +224,15 @@ impl Tool for SelectTool {
                         }
                     };
                     let (new_y, new_h) = match handle {
-                        ResizeHandle::TopLeft | ResizeHandle::TopCenter | ResizeHandle::TopRight => {
+                        ResizeHandle::TopLeft
+                        | ResizeHandle::TopCenter
+                        | ResizeHandle::TopRight => {
                             let ny = my.min(ay);
                             (ny, (my - ay).abs())
                         }
-                        ResizeHandle::BottomLeft | ResizeHandle::BottomCenter | ResizeHandle::BottomRight => {
+                        ResizeHandle::BottomLeft
+                        | ResizeHandle::BottomCenter
+                        | ResizeHandle::BottomRight => {
                             let ny = my.min(ay);
                             (ny, (my - ay).abs())
                         }
@@ -242,13 +250,11 @@ impl Tool for SelectTool {
                     let dy = new_y - self.resize_origin.1;
                     self.resize_origin = (new_x, new_y, final_w, final_h);
 
-                    let mut mutations = vec![
-                        GraphMutation::ResizeNode {
-                            id,
-                            width: final_w,
-                            height: final_h,
-                        },
-                    ];
+                    let mut mutations = vec![GraphMutation::ResizeNode {
+                        id,
+                        width: final_w,
+                        height: final_h,
+                    }];
                     if dx.abs() > 0.001 || dy.abs() > 0.001 {
                         mutations.push(GraphMutation::MoveNode { id, dx, dy });
                     }

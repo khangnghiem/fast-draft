@@ -10,6 +10,7 @@ import {
   resolveTargetColumn,
   parseDocumentSymbols,
   findSymbolAtLine,
+  transformSpecViewLine,
 } from "./fd-parse";
 
 // ─── parseAnnotation ─────────────────────────────────────────────────────
@@ -659,5 +660,73 @@ describe("findSymbolAtLine", () => {
     expect(sym).toBeDefined();
     expect(sym!.name).toBe("heading");
     expect(sym!.kind).toBe("style");
+  });
+});
+
+// ─── transformSpecViewLine ───────────────────────────────────────────────
+
+describe("transformSpecViewLine", () => {
+  it("strips 'group' keyword", () => {
+    expect(transformSpecViewLine("group @checkout_page {")).toBe("@checkout_page {");
+  });
+
+  it("strips 'rect' keyword", () => {
+    expect(transformSpecViewLine("rect @card {")).toBe("@card {");
+  });
+
+  it("strips 'ellipse' keyword", () => {
+    expect(transformSpecViewLine("ellipse @avatar {")).toBe("@avatar {");
+  });
+
+  it("strips 'text' keyword", () => {
+    expect(transformSpecViewLine('text @title "Hello" {')).toBe('@title "Hello" {');
+  });
+
+  it("strips 'path' keyword", () => {
+    expect(transformSpecViewLine("path @icon {")).toBe("@icon {");
+  });
+
+  it("strips 'frame' keyword", () => {
+    expect(transformSpecViewLine("frame @screen {")).toBe("@screen {");
+  });
+
+  it("preserves leading whitespace", () => {
+    expect(transformSpecViewLine("  rect @inner {")).toBe("  @inner {");
+    expect(transformSpecViewLine("    text @label \"Hi\" {")).toBe('    @label "Hi" {');
+  });
+
+  it("does not transform style lines", () => {
+    expect(transformSpecViewLine("style heading {")).toBe("style heading {");
+  });
+
+  it("does not transform edge lines", () => {
+    expect(transformSpecViewLine("edge @flow1 {")).toBe("edge @flow1 {");
+  });
+
+  it("does not transform spec lines", () => {
+    expect(transformSpecViewLine('spec "Description"')).toBe('spec "Description"');
+  });
+
+  it("does not transform property lines", () => {
+    expect(transformSpecViewLine("  fill: #FFF")).toBe("  fill: #FFF");
+    expect(transformSpecViewLine("  w: 100 h: 200")).toBe("  w: 100 h: 200");
+  });
+
+  it("does not transform comment lines", () => {
+    expect(transformSpecViewLine("# comment")).toBe("# comment");
+  });
+
+  it("does not transform blank lines", () => {
+    expect(transformSpecViewLine("")).toBe("");
+    expect(transformSpecViewLine("   ")).toBe("   ");
+  });
+
+  it("does not transform closing braces", () => {
+    expect(transformSpecViewLine("}")).toBe("}");
+    expect(transformSpecViewLine("  }")).toBe("  }");
+  });
+
+  it("does not transform constraint lines", () => {
+    expect(transformSpecViewLine("@hero -> center_in: canvas")).toBe("@hero -> center_in: canvas");
   });
 });

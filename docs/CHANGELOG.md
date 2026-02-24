@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.8.1
+
+- **UX**: Spec View now strips type keywords (`group`, `rect`, `text`, `ellipse`, `path`, `frame`) from node declarations — `group @checkout_page {` renders as `@checkout_page {` in Code Mode when Spec View is active
+- **UX**: Uses non-destructive VS Code editor decorations to visually hide keywords without modifying document text
+- **NEW**: `transformSpecViewLine()` utility function for programmatic line transforms
+
 ### v0.8.0
 
 - **NEW**: ⌘I / Ctrl+I keyboard shortcut to add/edit spec annotation on selected node

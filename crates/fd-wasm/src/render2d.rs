@@ -464,15 +464,15 @@ fn draw_selection_handles(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds) {
     // 8-point handles: corners + midpoints (Figma/Sketch style)
     let handles = [
         // Corners
-        (x - half, y - half),                       // TopLeft
-        (x + w - half, y - half),                   // TopRight
-        (x - half, y + h - half),                   // BottomLeft
-        (x + w - half, y + h - half),               // BottomRight
+        (x - half, y - half),         // TopLeft
+        (x + w - half, y - half),     // TopRight
+        (x - half, y + h - half),     // BottomLeft
+        (x + w - half, y + h - half), // BottomRight
         // Midpoints
-        (x + w / 2.0 - half, y - half),             // TopCenter
-        (x + w / 2.0 - half, y + h - half),         // BottomCenter
-        (x - half, y + h / 2.0 - half),             // MiddleLeft
-        (x + w - half, y + h / 2.0 - half),         // MiddleRight
+        (x + w / 2.0 - half, y - half),     // TopCenter
+        (x + w / 2.0 - half, y + h - half), // BottomCenter
+        (x - half, y + h / 2.0 - half),     // MiddleLeft
+        (x + w - half, y + h / 2.0 - half), // MiddleRight
     ];
 
     for (hx, hy) in handles {

@@ -11,7 +11,9 @@ use fd_editor::commands::CommandStack;
 use fd_editor::input::{InputEvent, Modifiers};
 use fd_editor::shortcuts::{ShortcutAction, ShortcutMap};
 use fd_editor::sync::{GraphMutation, SyncEngine};
-use fd_editor::tools::{EllipseTool, PenTool, RectTool, ResizeHandle, SelectTool, TextTool, Tool, ToolKind};
+use fd_editor::tools::{
+    EllipseTool, PenTool, RectTool, ResizeHandle, SelectTool, TextTool, Tool, ToolKind,
+};
 use fd_render::hit::hit_test_rect;
 use wasm_bindgen::prelude::*;
 use web_sys::CanvasRenderingContext2d;
@@ -1034,9 +1036,15 @@ impl FdCanvas {
 
             // Check X-axis alignments
             let x_refs = [
-                (s_left, o_left), (s_left, o_cx), (s_left, o_right),
-                (s_cx, o_left), (s_cx, o_cx), (s_cx, o_right),
-                (s_right, o_left), (s_right, o_cx), (s_right, o_right),
+                (s_left, o_left),
+                (s_left, o_cx),
+                (s_left, o_right),
+                (s_cx, o_left),
+                (s_cx, o_cx),
+                (s_cx, o_right),
+                (s_right, o_left),
+                (s_right, o_cx),
+                (s_right, o_right),
             ];
             for (sv, ov) in x_refs {
                 if (sv - ov).abs() < snap_threshold {
@@ -1046,9 +1054,15 @@ impl FdCanvas {
 
             // Check Y-axis alignments
             let y_refs = [
-                (s_top, o_top), (s_top, o_cy), (s_top, o_bottom),
-                (s_cy, o_top), (s_cy, o_cy), (s_cy, o_bottom),
-                (s_bottom, o_top), (s_bottom, o_cy), (s_bottom, o_bottom),
+                (s_top, o_top),
+                (s_top, o_cy),
+                (s_top, o_bottom),
+                (s_cy, o_top),
+                (s_cy, o_cy),
+                (s_cy, o_bottom),
+                (s_bottom, o_top),
+                (s_bottom, o_cy),
+                (s_bottom, o_bottom),
             ];
             for (sv, ov) in y_refs {
                 if (sv - ov).abs() < snap_threshold {

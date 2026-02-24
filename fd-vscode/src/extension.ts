@@ -7,6 +7,7 @@ import {
   resolveTargetColumn,
   parseDocumentSymbols,
   findSymbolAtLine,
+  transformSpecViewLine,
   FdSymbol,
 } from "./fd-parse";
 
@@ -3057,6 +3058,15 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerFoldingRangeProvider("fd", foldingProvider)
   );
 
+  // Decoration type that visually collapses type keywords (group, rect, etc.)
+  // in Spec View without modifying the document text.
+  const specKeywordHideDecoration = vscode.window.createTextEditorDecorationType({
+    textDecoration: "none; font-size: 0",
+    letterSpacing: "-100em",
+    color: "transparent",
+  });
+  context.subscriptions.push(specKeywordHideDecoration);
+
   /** Fold or unfold all spec regions in visible FD editors. */
   async function applyCodeSpecView() {
     // Notify VS Code that fold ranges changed
@@ -3071,10 +3081,31 @@ export function activate(context: vscode.ExtensionContext) {
       await vscode.window.showTextDocument(editor.document, editor.viewColumn, false);
       if (codeSpecMode === "spec") {
         await vscode.commands.executeCommand("editor.foldAll");
+        applySpecKeywordDecorations(editor);
       } else {
         await vscode.commands.executeCommand("editor.unfoldAll");
+        editor.setDecorations(specKeywordHideDecoration, []);
       }
     }
+  }
+
+  /** Apply decorations to hide type keywords from node declarations. */
+  function applySpecKeywordDecorations(editor: vscode.TextEditor): void {
+    const typeKeywordRe = /^(\s*)(group|frame|rect|ellipse|path|text)(\s+)(?=@\w+)/;
+    const ranges: vscode.DecorationOptions[] = [];
+    for (let i = 0; i < editor.document.lineCount; i++) {
+      const lineText = editor.document.lineAt(i).text;
+      const match = lineText.match(typeKeywordRe);
+      if (match) {
+        // Hide the type keyword + trailing space (e.g. "group " from "group @foo {")
+        const startCol = match[1].length; // after leading whitespace
+        const endCol = startCol + match[2].length + match[3].length;
+        ranges.push({
+          range: new vscode.Range(i, startCol, i, endCol),
+        });
+      }
+    }
+    editor.setDecorations(specKeywordHideDecoration, ranges);
   }
 
   // Re-fold when text changes in spec mode
