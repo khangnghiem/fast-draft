@@ -58,6 +58,7 @@ pub fn render_scene(
     time_ms: f64,
     hovered_id: Option<&str>,
     pressed_id: Option<&str>,
+    smart_guides: &[(f64, f64, f64, f64)],
 ) {
     // Clear canvas
     ctx.set_fill_style_str(theme.bg);
@@ -80,6 +81,9 @@ pub fn render_scene(
 
     // Draw edges between nodes
     draw_edges(ctx, graph, bounds, time_ms, hovered_id, pressed_id);
+
+    // Draw smart guides (alignment lines)
+    draw_smart_guides(ctx, smart_guides);
 
     // Draw marquee selection rectangle (on top of everything)
     if let Some((rx, ry, rw, rh)) = marquee_rect {
@@ -512,6 +516,29 @@ fn draw_marquee_rect(ctx: &CanvasRenderingContext2d, x: f32, y: f32, w: f32, h: 
         &wasm_bindgen::JsValue::from_f64(4.0),
     ));
     ctx.stroke_rect(x, y, w, h);
+
+    ctx.restore();
+}
+
+/// Draw smart alignment guide lines (Figma/Sketch snap guides).
+fn draw_smart_guides(ctx: &CanvasRenderingContext2d, guides: &[(f64, f64, f64, f64)]) {
+    if guides.is_empty() {
+        return;
+    }
+    ctx.save();
+    ctx.set_stroke_style_str("#FF6B8A"); // Figma-style magenta-pink
+    ctx.set_line_width(0.5);
+    let _ = ctx.set_line_dash(&js_sys::Array::of2(
+        &wasm_bindgen::JsValue::from_f64(4.0),
+        &wasm_bindgen::JsValue::from_f64(3.0),
+    ));
+
+    for &(x1, y1, x2, y2) in guides {
+        ctx.begin_path();
+        ctx.move_to(x1, y1);
+        ctx.line_to(x2, y2);
+        ctx.stroke();
+    }
 
     ctx.restore();
 }

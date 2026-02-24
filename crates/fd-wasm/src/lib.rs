@@ -103,6 +103,10 @@ impl FdCanvas {
         } else {
             render2d::CanvasTheme::light()
         };
+
+        // Compute smart alignment guides when dragging/resizing
+        let guides = self.compute_smart_guides();
+
         render2d::render_scene(
             ctx,
             &self.engine.graph,
@@ -115,6 +119,7 @@ impl FdCanvas {
             time_ms,
             self.hovered_id.as_ref().map(|id| id.as_str()),
             self.pressed_id.as_ref().map(|id| id.as_str()),
+            &guides,
         );
     }
 
@@ -975,6 +980,92 @@ impl FdCanvas {
             }
         }
         None
+    }
+
+    /// Compute smart alignment guides during drag/resize.
+    /// Returns guide lines as (x1, y1, x2, y2) in scene-space.
+    fn compute_smart_guides(&self) -> Vec<(f64, f64, f64, f64)> {
+        // Only produce guides while actively dragging or resizing
+        let is_dragging = self.select_tool.resize_handle.is_some()
+            || (self.active_tool == ToolKind::Select && self.pressed_id.is_some());
+
+        if !is_dragging {
+            return vec![];
+        }
+
+        let selected_id = match self.select_tool.first_selected() {
+            Some(id) => id,
+            None => return vec![],
+        };
+        let selected_idx = match self.engine.graph.index_of(selected_id) {
+            Some(idx) => idx,
+            None => return vec![],
+        };
+        let sb = match self.engine.current_bounds().get(&selected_idx) {
+            Some(b) => b,
+            None => return vec![],
+        };
+
+        let snap_threshold = 1.0_f32;
+        let mut guides = Vec::new();
+
+        // Selected node reference points
+        let s_left = sb.x;
+        let s_cx = sb.x + sb.width / 2.0;
+        let s_right = sb.x + sb.width;
+        let s_top = sb.y;
+        let s_cy = sb.y + sb.height / 2.0;
+        let s_bottom = sb.y + sb.height;
+
+        let w = self.width;
+        let h = self.height;
+
+        for (&idx, b) in self.engine.current_bounds() {
+            if idx == selected_idx || idx == self.engine.graph.root {
+                continue;
+            }
+
+            let o_left = b.x;
+            let o_cx = b.x + b.width / 2.0;
+            let o_right = b.x + b.width;
+            let o_top = b.y;
+            let o_cy = b.y + b.height / 2.0;
+            let o_bottom = b.y + b.height;
+
+            // Check X-axis alignments
+            let x_refs = [
+                (s_left, o_left), (s_left, o_cx), (s_left, o_right),
+                (s_cx, o_left), (s_cx, o_cx), (s_cx, o_right),
+                (s_right, o_left), (s_right, o_cx), (s_right, o_right),
+            ];
+            for (sv, ov) in x_refs {
+                if (sv - ov).abs() < snap_threshold {
+                    guides.push((ov as f64, 0.0, ov as f64, h));
+                }
+            }
+
+            // Check Y-axis alignments
+            let y_refs = [
+                (s_top, o_top), (s_top, o_cy), (s_top, o_bottom),
+                (s_cy, o_top), (s_cy, o_cy), (s_cy, o_bottom),
+                (s_bottom, o_top), (s_bottom, o_cy), (s_bottom, o_bottom),
+            ];
+            for (sv, ov) in y_refs {
+                if (sv - ov).abs() < snap_threshold {
+                    guides.push((0.0, ov as f64, w, ov as f64));
+                }
+            }
+        }
+
+        // Deduplicate guides (same position within tolerance)
+        guides.sort_by(|a, b| {
+            a.0.partial_cmp(&b.0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then(a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+        });
+        guides.dedup_by(|a, b| (a.0 - b.0).abs() < 0.5 && (a.1 - b.1).abs() < 0.5);
+
+        guides
     }
 
     /// Dispatch a shortcut action. Returns (graph_changed, tool_switched).

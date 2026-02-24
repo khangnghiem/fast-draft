@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.7.8
+
+- **NEW**: Smart alignment guides (R3.17) — magenta dashed guide lines appear during drag/resize when node edges or centers align with other nodes (Figma/Sketch behavior)
+- **NEW**: Alignment detection across 9 reference point pairs per axis (left/center/right × top/center/bottom)
+- **INFRA**: WASM rebuild with smart guide computation in Rust
+
 ### v0.7.7
 
 - **NEW**: Interactive resize handles (R3.16) — 8-point resize grips (4 corners + 4 midpoints) on selected nodes, drag to resize with opposite corner anchored
