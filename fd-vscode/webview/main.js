@@ -1022,13 +1022,19 @@ function setupContextMenu() {
     const canGroup = selectedIds.length >= 2;
     groupBtn.classList.toggle("disabled", !canGroup);
 
-    // Ungroup requires exactly 1 selected item that is a group
+    // Ungroup requires at least one selected item to be a group
     let canUngroup = false;
-    if (selectedIds.length === 1) {
-      try {
-        const props = JSON.parse(fdCanvas.get_selected_node_props());
-        canUngroup = props.kind === "group";
-      } catch (_) { /* skip */ }
+    if (selectedIds.length >= 1) {
+      // Check each selected node's kind via the FD source text
+      const source = fdCanvas.get_text();
+      for (const id of selectedIds) {
+        // Match "group @id" in source — if found, this node is a group
+        const groupRe = new RegExp(`(?:^|\\n)\\s*group\\s+@${id}\\b`);
+        if (groupRe.test(source)) {
+          canUngroup = true;
+          break;
+        }
+      }
     }
     ungroupBtn.classList.toggle("disabled", !canUngroup);
 

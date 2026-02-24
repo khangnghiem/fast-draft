@@ -152,7 +152,7 @@ export class FdCanvas {
      */
     undo(): boolean;
     /**
-     * Ungroup the currently selected group. Returns true if ungrouped.
+     * Ungroup all selected groups. Returns true if any were ungrouped.
      */
     ungroup_selected(): boolean;
 }

@@ -538,39 +538,67 @@ impl FdCanvas {
         changed
     }
 
-    /// Ungroup the currently selected group. Returns true if ungrouped.
+    /// Ungroup all selected groups. Returns true if any were ungrouped.
     pub fn ungroup_selected(&mut self) -> bool {
-        let first_id = match self.select_tool.first_selected() {
-            Some(id) => id,
-            None => return false,
-        };
-        let is_group = self
-            .engine
-            .graph
-            .get_by_id(first_id)
-            .is_some_and(|n| matches!(n.kind, fd_core::model::NodeKind::Group { .. }));
-        if !is_group {
+        if self.select_tool.selected.is_empty() {
             return false;
         }
 
-        let children_ids = self
-            .engine
-            .graph
-            .index_of(first_id)
-            .map(|idx| {
+        // Collect all selected nodes that are groups
+        let group_ids: Vec<NodeId> = self
+            .select_tool
+            .selected
+            .iter()
+            .copied()
+            .filter(|id| {
                 self.engine
+                    .graph
+                    .get_by_id(*id)
+                    .is_some_and(|n| matches!(n.kind, fd_core::model::NodeKind::Group { .. }))
+            })
+            .collect();
+
+        if group_ids.is_empty() {
+            return false;
+        }
+
+        // Collect children of all groups (for post-ungroup selection)
+        let mut all_children: Vec<NodeId> = Vec::new();
+        // Also keep non-group selected nodes in the selection
+        let non_group_selected: Vec<NodeId> = self
+            .select_tool
+            .selected
+            .iter()
+            .copied()
+            .filter(|id| !group_ids.contains(id))
+            .collect();
+
+        for &gid in &group_ids {
+            if let Some(idx) = self.engine.graph.index_of(gid) {
+                let children: Vec<NodeId> = self
+                    .engine
                     .graph
                     .children(idx)
                     .iter()
                     .map(|c| self.engine.graph.graph[*c].id)
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default();
+                    .collect();
+                all_children.extend(children);
+            }
+        }
 
-        let mutation = GraphMutation::UngroupNode { id: first_id };
-        let changed = self.apply_mutations(vec![mutation]);
+        // Apply ungroup mutations
+        let mut changed = false;
+        for gid in group_ids {
+            let mutation = GraphMutation::UngroupNode { id: gid };
+            if self.apply_mutations(vec![mutation]) {
+                changed = true;
+            }
+        }
+
         if changed {
-            self.select_tool.selected = children_ids;
+            // Select the promoted children + any non-group items that were selected
+            self.select_tool.selected = non_group_selected;
+            self.select_tool.selected.extend(all_children);
             self.engine.flush_to_text();
         }
         changed
