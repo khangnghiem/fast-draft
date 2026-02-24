@@ -8,6 +8,8 @@
 ### v0.8.10
 
 - **UX**: Zoom-to-fit now caps at 200% — small designs (single icon, one button) no longer blow up to 1000% on initial load or ⌘0; large designs still zoom out to fit as before
+- **UX fix**: Inline editor text now vertically centered inside textarea — dynamic `padding-top` based on textarea height vs text height; respects `textVAlign` (top/middle/bottom)
+- **UX**: Zoom while panning — scrolling the wheel during Space+drag now zooms instead of scrolling, matching Figma behavior
 
 ### v0.8.9
 

@@ -473,7 +473,8 @@ function setupPointerEvents() {
   canvas.addEventListener("wheel", (e) => {
     e.preventDefault();
     // Pinch-to-zoom on trackpad fires as wheel with ctrlKey
-    if (e.ctrlKey || e.metaKey) {
+    // Also allow zoom while panning (Space held)
+    if (e.ctrlKey || e.metaKey || isPanning) {
       const rect = canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
@@ -1546,9 +1547,21 @@ function openInlineEditor(nodeId, propKey, currentValue) {
 
   // Get text alignment (default: center/middle)
   const hAlign = props.textAlign || "center";
+  const vAlign = props.textVAlign || "middle";
 
   // Store original value for Esc rollback
   const originalValue = currentValue;
+
+  // Calculate vertical padding for alignment
+  const lineHeight = Math.round(fontSize * 1.4);
+  const lines = (currentValue.match(/\n/g) || []).length + 1;
+  const textHeight = lineHeight * lines;
+  let padTop = 4;
+  if (vAlign === "middle") {
+    padTop = Math.max(4, Math.round((sh - textHeight) / 2));
+  } else if (vAlign === "bottom") {
+    padTop = Math.max(4, sh - textHeight - 4);
+  }
 
   const textarea = document.createElement("textarea");
   textarea.value = currentValue;
@@ -1558,7 +1571,7 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     `top:${sy}px`,
     `width:${sw}px`,
     `height:${sh}px`,
-    `padding:4px 6px`,
+    `padding:${padTop}px 6px 4px 6px`,
     `font:${fontWeight} ${fontSize}px ${fontFamily},system-ui,sans-serif`,
     `border:2px solid #4FC3F7`,
     `border-radius:4px`,
@@ -1568,9 +1581,10 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     `outline:none`,
     `z-index:100`,
     `box-shadow:0 2px 8px rgba(0,0,0,0.12)`,
-    `line-height:1.4`,
+    `line-height:${lineHeight}px`,
     `overflow:hidden`,
     `text-align:${hAlign}`,
+    `box-sizing:border-box`,
   ].join(";");
 
   container.appendChild(textarea);
