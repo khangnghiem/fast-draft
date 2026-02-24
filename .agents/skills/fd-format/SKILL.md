@@ -101,9 +101,11 @@ Nodes without a shape type — for spec-only requirements, wireframing, and prog
 
 ```
 @login_btn {
-  ## "Primary CTA — triggers login API call"
-  ## accept: "disabled when fields empty"
-  ## status: in_progress
+  spec {
+    "Primary CTA — triggers login API call"
+    accept: "disabled when fields empty"
+    status: in_progress
+  }
   fill: #FFFFFF
   corner: 8
 }
@@ -114,8 +116,8 @@ Generic nodes can be nested inside groups:
 ```
 group @form {
   layout: column gap=16 pad=32
-  @email_input { ## "Email field" }
-  @password_input { ## "Password field" }
+  @email_input { spec "Email field" }
+  @password_input { spec "Password field" }
 }
 ```
 
@@ -137,7 +139,7 @@ edge @login_to_dashboard {
 }
 ```
 
-Edges support `##` annotations and `use:` style references, just like nodes.
+Edges support `spec` annotations and `use:` style references, just like nodes.
 
 ### Colors
 
@@ -178,28 +180,41 @@ Easing: `linear`, `ease_in`, `ease_out`, `ease_in_out`, `spring`
 @node_id -> fill_parent: 16
 ```
 
-### Annotations
+### Annotations (spec)
 
-Structured metadata attached to nodes via `##` lines. Unlike `#` comments (which are discarded), annotations are parsed, stored on the scene graph, and survive round-trips.
+Structured metadata attached to nodes and edges via `spec` blocks. Unlike `#` comments (which are discarded), annotations are parsed, stored on the scene graph, and survive round-trips.
+
+**Inline form** (single description):
 
 ```
 rect @login_btn {
-  ## "Primary CTA — triggers login API call"
-  ## accept: "disabled state when fields empty"
-  ## status: in_progress
-  ## priority: high
-  ## tag: auth, mvp
+  spec "Primary CTA — triggers login API call"
   w: 280 h: 48
 }
 ```
 
-| Syntax               | Kind        | Purpose                        |
-| -------------------- | ----------- | ------------------------------ |
-| `## "text"`          | Description | What this node is/does         |
-| `## accept: "text"`  | Accept      | Acceptance criterion           |
-| `## status: value`   | Status      | `draft`, `in_progress`, `done` |
-| `## priority: value` | Priority    | `high`, `medium`, `low`        |
-| `## tag: value`      | Tag         | Categorization labels          |
+**Block form** (multiple annotations):
+
+```
+rect @login_btn {
+  spec {
+    "Primary CTA — triggers login API call"
+    accept: "disabled state when fields empty"
+    status: in_progress
+    priority: high
+    tag: auth, mvp
+  }
+  w: 280 h: 48
+}
+```
+
+| Syntax            | Kind        | Purpose                        |
+| ----------------- | ----------- | ------------------------------ |
+| `"text"`          | Description | What this node is/does         |
+| `accept: "text"`  | Accept      | Acceptance criterion           |
+| `status: value`   | Status      | `draft`, `in_progress`, `done` |
+| `priority: value` | Priority    | `high`, `medium`, `low`        |
+| `tag: value`      | Tag         | Categorization labels          |
 
 ## Code Mode — Readability Tips
 
@@ -209,7 +224,7 @@ rect @login_btn {
 1. **Semantic IDs** — `@login_form` not `@rect_17`; the #1 factor for AI comprehension
 2. **Constraints over coords** — `center_in: canvas` tells agents _why_, not just _where_; LLMs reason better with relationships than absolute positions
 3. **Accurate comments** — `#` lines help, but wrong comments actively hurt AI; keep them correct or remove them
-4. **Annotations** — `## status: in_progress` gives AI structured metadata it can reliably parse, unlike freeform comments
+4. **Spec blocks** — `spec { status: in_progress }` gives AI structured metadata it can reliably parse, unlike freeform comments
 5. **Style reuse** — `use:` references enforce consistency; consistent codebases produce better AI-generated code
 6. **Shorthand is fine** — `w:` / `h:` / `#FFF` are unambiguous in context, no need to expand
 

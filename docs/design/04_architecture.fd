@@ -31,10 +31,12 @@ text @subtitle "Layered crate architecture — Rust core, WASM bridge, platform 
 # ─── Layer 1: fd-core ────────────────────────────────────────────────────
 
 rect @core {
-  ## "fd-core — data model, parser, emitter, layout solver"
-  ## status: done
-  ## priority: high
-  ## tag: core
+  spec {
+    "fd-core — data model, parser, emitter, layout solver"
+    status: done
+    priority: high
+    tag: core
+  }
   w: 400 h: 180
   use: crate_box
   bg: #1A1A2E corner=16 shadow=(0,4,24,#00000040)
@@ -72,9 +74,11 @@ rect @core {
 # ─── Layer 2: fd-render ──────────────────────────────────────────────────
 
 rect @render {
-  ## "fd-render — GPU 2D renderer + hit testing"
-  ## accept: "R5.1: Vello + wgpu, 60 FPS target"
-  ## status: done
+  spec {
+    "fd-render — GPU 2D renderer + hit testing"
+    accept: "R5.1: Vello + wgpu, 60 FPS target"
+    status: done
+  }
   w: 400 h: 140
   use: crate_box
   bg: #1A1A2E corner=16 shadow=(0,4,24,#00000040)
@@ -106,8 +110,10 @@ rect @render {
 # ─── Layer 3: fd-editor ──────────────────────────────────────────────────
 
 rect @editor {
-  ## "fd-editor — bidi sync, tools, undo/redo"
-  ## status: done
+  spec {
+    "fd-editor — bidi sync, tools, undo/redo"
+    status: done
+  }
   w: 400 h: 140
   use: crate_box
   bg: #1A1A2E corner=16 shadow=(0,4,24,#00000040)
@@ -134,13 +140,17 @@ rect @editor {
 # ─── Layer 4: Platform shells ────────────────────────────────────────────
 
 group @platforms {
-  ## "R6: Platform targets — VS Code now, desktop/mobile/web future"
-  ## tag: platform
+  spec {
+    "R6: Platform targets — VS Code now, desktop/mobile/web future"
+    tag: platform
+  }
   layout: row gap=16 pad=0
 
   rect @vscode {
-    ## "R6.1: VS Code / Cursor IDE custom editor (this repo)"
-    ## status: in_progress
+    spec {
+      "R6.1: VS Code / Cursor IDE custom editor (this repo)"
+      status: in_progress
+    }
     w: 160 h: 100
     fill: #007ACC
     corner: 12
@@ -153,8 +163,10 @@ group @platforms {
   }
 
   rect @desktop {
-    ## "R6.2: Desktop via Tauri (future)"
-    ## status: draft
+    spec {
+      "R6.2: Desktop via Tauri (future)"
+      status: draft
+    }
     w: 140 h: 100
     use: platform_box
     stroke: #E8E8EC 1
@@ -166,8 +178,10 @@ group @platforms {
   }
 
   rect @mobile {
-    ## "R6.3: Mobile iOS/Android (future)"
-    ## status: draft
+    spec {
+      "R6.3: Mobile iOS/Android (future)"
+      status: draft
+    }
     w: 140 h: 100
     use: platform_box
     stroke: #E8E8EC 1
@@ -179,8 +193,10 @@ group @platforms {
   }
 
   rect @webapp {
-    ## "R6.4: Web app (future)"
-    ## status: draft
+    spec {
+      "R6.4: Web app (future)"
+      status: draft
+    }
     w: 140 h: 100
     use: platform_box
     stroke: #E8E8EC 1
@@ -195,7 +211,7 @@ group @platforms {
 # ─── Dependency edges ────────────────────────────────────────────────────
 
 edge @core_to_render {
-  ## "fd-render depends on fd-core for SceneGraph + model types"
+  spec "fd-render depends on fd-core for SceneGraph + model types"
   from: @core
   to: @render
   label: "depends"
@@ -205,7 +221,7 @@ edge @core_to_render {
 }
 
 edge @core_to_editor {
-  ## "fd-editor depends on fd-core for parse/emit"
+  spec "fd-editor depends on fd-core for parse/emit"
   from: @core
   to: @editor
   stroke: #6C5CE7 2
@@ -214,7 +230,7 @@ edge @core_to_editor {
 }
 
 edge @render_to_editor {
-  ## "fd-editor depends on fd-render for canvas output"
+  spec "fd-editor depends on fd-render for canvas output"
   from: @render
   to: @editor
   label: "depends"
@@ -224,7 +240,7 @@ edge @render_to_editor {
 }
 
 edge @editor_to_vscode {
-  ## "fd-vscode wraps fd-editor via WASM bridge"
+  spec "fd-vscode wraps fd-editor via WASM bridge"
   from: @editor
   to: @vscode
   label: "WASM"

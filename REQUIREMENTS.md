@@ -16,8 +16,8 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R1.6**: Git-friendly plain text — line-oriented diffs work well
 - **R1.7**: Comments via `#` prefix
 - **R1.8**: Human-readable and AI-writable without special tooling
-- **R1.9**: Structured annotations (`##`) — description, accept criteria, status, priority, tags — parsed and round-tripped as first-class metadata
-- **R1.10**: First-class edges — `edge @id { from: @a to: @b }` with arrow, curve, label, stroke, and `##` annotations for user flows, wireframes, and state machines
+- **R1.9**: Structured annotations (`spec` blocks) — description, accept criteria, status, priority, tags — parsed and round-tripped as first-class metadata
+- **R1.10**: First-class edges — `edge @id { from: @a to: @b }` with arrow, curve, label, stroke, and `spec` annotations for user flows, wireframes, and state machines
 - **R1.11**: Edge trigger animations — edges support `anim :hover { ... }` blocks identical to nodes
 - **R1.12**: Edge flow animations — `flow: pulse Nms` (traveling dot) and `flow: dash Nms` (marching dashes) for visualizing data flow direction
 - **R1.13**: Generic nodes — `@id { ... }` without explicit kind keyword for abstract/placeholder elements
@@ -48,7 +48,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.11**: Per-tool cursor feedback (crosshair for drawing, text cursor for text, default for select)
 - **R3.12**: Annotation pins: Visual badge dots on annotated nodes with inline edit card
 - **R3.13**: Light/dark theme toggle — canvas defaults to light mode with a toolbar toggle button (🌙 in light → switch to dark, ☀️ in dark → switch to light); preference persists across sessions via VS Code state
-- **R3.14**: View mode toggle — **Design | Spec** segmented control in the canvas toolbar (Design default); Spec View hides the canvas and shows a scrollable overlay of node IDs, `##` annotations, acceptance criteria, status/priority/tag badges, unannotated node chips, and edges; overlay updates live as the `.fd` source changes; also accessible via `FD: Toggle Design/Spec View` command in the editor title bar and Command Palette
+- **R3.14**: View mode toggle — **Design | Spec** segmented control in the canvas toolbar (Design default); Spec View hides the canvas and shows a scrollable overlay of node IDs, `spec` annotations, acceptance criteria, status/priority/tag badges, unannotated node chips, and edges; overlay updates live as the `.fd` source changes; also accessible via `FD: Toggle Design/Spec View` command in the editor title bar and Command Palette
 - **R3.15**: Live preview: Dashed outline ghost of shape during drag-to-create (rect, ellipse); live smooth curve during pen draw (no jagged LineTo visible to user)
 - **R3.16**: Resize handles: 8-point resize grips (4 corners + 4 edge midpoints) on selected shapes; directional cursors (`nwse-resize`, `nesw-resize`, `ew-resize`, `ns-resize`) on hover
 - **R3.17**: Smart guides: Alignment snapping with visual guide lines — snap to center, edges, and equal spacing of nearby nodes; hold Ctrl/⌘ to temporarily disable snapping
@@ -65,9 +65,9 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R4.2**: Semantic node names (`@login_form`, `@submit_btn`) help AI understand intent
 - **R4.3**: Style inheritance reduces repetition — AI only specifies overrides
 - **R4.4**: Constraints describe relationships ("center in canvas") not pixel positions
-- **R4.5**: Annotations (`##`) give AI structured metadata — acceptance criteria, status, priority, tags — on the visual element itself
+- **R4.5**: Annotations (`spec` blocks) give AI structured metadata — acceptance criteria, status, priority, tags — on the visual element itself
 - **R4.6**: Edges let AI reason about flows and transitions between screens
-- **R4.7**: Spec-view export — generate markdown report of `##` annotations (requirements, status, acceptance criteria) from any `.fd` file
+- **R4.7**: Spec-view export — generate markdown report of `spec` annotations (requirements, status, acceptance criteria) from any `.fd` file
 - **R4.8**: AI node refinement — restyle selected nodes and replace anonymous IDs (`_anon_N`) with semantic names via configurable AI provider
 - **R4.9**: Multi-provider AI — per-provider API keys (`fd.ai.geminiApiKey`, `fd.ai.openaiApiKey`, `fd.ai.anthropicApiKey`), custom model selection per provider, and support for Gemini, OpenAI, Anthropic, Ollama (local), and OpenRouter (multi-model gateway)
 - **R4.10**: Auto-format pipeline — `format_document` via LSP; lint diagnostics (anonymous IDs, duplicate `use:`, unused styles) + configurable dedup/hoist transforms via `fd.format.*` settings

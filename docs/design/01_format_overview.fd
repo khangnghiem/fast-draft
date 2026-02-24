@@ -31,9 +31,11 @@ style tag_chip {
 # ─── Section 1: Node Types (R1.2, R1.13) ────────────────────────────────
 
 group @node_types {
-  ## "All supported node types in FD"
-  ## status: done
-  ## tag: format, core
+  spec {
+    "All supported node types in FD"
+    status: done
+    tag: format, core
+  }
   layout: column gap=24 pad=32
 
   text @sec1_title "Node Types" { font: "Inter" 800 28; fill: #1A1A2E }
@@ -43,7 +45,7 @@ group @node_types {
 
     # Rectangle node
     rect @demo_rect {
-      ## "rect — rectangular shape with fill, stroke, corner"
+      spec "rect — rectangular shape with fill, stroke, corner"
       w: 200 h: 120
       use: card_bg
       stroke: #E8E8EC 1
@@ -59,7 +61,7 @@ group @node_types {
 
     # Ellipse node
     rect @demo_ellipse_card {
-      ## "ellipse — circular/oval shape"
+      spec "ellipse — circular/oval shape"
       w: 200 h: 120
       use: card_bg
       stroke: #E8E8EC 1
@@ -76,7 +78,7 @@ group @node_types {
 
     # Text node
     rect @demo_text_card {
-      ## "text — inline text label with font control"
+      spec "text — inline text label with font control"
       w: 200 h: 120
       use: card_bg
       stroke: #E8E8EC 1
@@ -92,7 +94,7 @@ group @node_types {
 
     # Group node
     rect @demo_group_card {
-      ## "group — container with layout (column/row/grid)"
+      spec "group — container with layout (column/row/grid)"
       w: 200 h: 120
       use: card_bg
       stroke: #E8E8EC 1
@@ -108,8 +110,10 @@ group @node_types {
 
     # Path node
     rect @demo_path_card {
-      ## "path — freeform vector drawing (future)"
-      ## status: draft
+      spec {
+        "path — freeform vector drawing (future)"
+        status: draft
+      }
       w: 200 h: 120
       use: card_bg
       stroke: #E8E8EC 1
@@ -124,7 +128,7 @@ group @node_types {
 
     # Generic node (R1.13)
     rect @demo_generic_card {
-      ## "generic — @id { } without shape keyword"
+      spec "generic — @id { } without shape keyword"
       w: 200 h: 120
       fill: #FFFFFF
       stroke: #6C5CE7 2
@@ -143,11 +147,13 @@ group @node_types {
 # ─── Section 2: Annotations (R1.9) ──────────────────────────────────────
 
 group @annotations_section {
-  ## "Structured metadata via ## syntax"
-  ## status: done
+  spec {
+    "Structured metadata via spec blocks"
+    status: done
+  }
   layout: column gap=16 pad=32
 
-  text @sec2_title "Annotations (##)" { font: "Inter" 800 28; fill: #1A1A2E }
+  text @sec2_title "Annotations (spec)" { font: "Inter" 800 28; fill: #1A1A2E }
 
   group @anno_examples {
     layout: column gap=12 pad=0
@@ -156,35 +162,35 @@ group @annotations_section {
       w: 420 h: 44
       fill: #F8F9FA
       corner: 8
-      text "## \"description text\"" { font: "JetBrains Mono" 400 13; fill: #6C5CE7 }
+      text "spec \"description text\"" { font: "JetBrains Mono" 400 13; fill: #6C5CE7 }
     }
 
     rect @anno_accept {
       w: 420 h: 44
       fill: #F8F9FA
       corner: 8
-      text "## accept: \"validation criterion\"" { font: "JetBrains Mono" 400 13; fill: #10B981 }
+      text "accept: \"validation criterion\"" { font: "JetBrains Mono" 400 13; fill: #10B981 }
     }
 
     rect @anno_status {
       w: 420 h: 44
       fill: #F8F9FA
       corner: 8
-      text "## status: draft | in_progress | done" { font: "JetBrains Mono" 400 13; fill: #F59E0B }
+      text "status: draft | in_progress | done" { font: "JetBrains Mono" 400 13; fill: #F59E0B }
     }
 
     rect @anno_priority {
       w: 420 h: 44
       fill: #F8F9FA
       corner: 8
-      text "## priority: high | medium | low" { font: "JetBrains Mono" 400 13; fill: #EF4444 }
+      text "priority: high | medium | low" { font: "JetBrains Mono" 400 13; fill: #EF4444 }
     }
 
     rect @anno_tag {
       w: 420 h: 44
       fill: #F8F9FA
       corner: 8
-      text "## tag: auth, mvp, a11y" { font: "JetBrains Mono" 400 13; fill: #8B5CF6 }
+      text "tag: auth, mvp, a11y" { font: "JetBrains Mono" 400 13; fill: #8B5CF6 }
     }
   }
 }
@@ -192,8 +198,10 @@ group @annotations_section {
 # ─── Section 3: Animations (R1.5) ───────────────────────────────────────
 
 group @animations_section {
-  ## "Trigger-based property animations"
-  ## status: done
+  spec {
+    "Trigger-based property animations"
+    status: done
+  }
   layout: column gap=16 pad=32
 
   text @sec3_title "Animations" { font: "Inter" 800 28; fill: #1A1A2E }
@@ -231,8 +239,10 @@ group @animations_section {
 # ─── Section 4: Constraints (R1.3) ──────────────────────────────────────
 
 group @constraints_section {
-  ## "Layout via constraints, not coordinates"
-  ## status: done
+  spec {
+    "Layout via constraints, not coordinates"
+    status: done
+  }
   layout: column gap=12 pad=32
 
   text @sec4_title "Constraints" { font: "Inter" 800 28; fill: #1A1A2E }

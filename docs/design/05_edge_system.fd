@@ -31,7 +31,7 @@ text @sec1_title "Arrow Variants" {
 }
 
 rect @arrow_none_from {
-  ## "Source node for arrow: none"
+  spec "Source node for arrow: none"
   w: 120 h: 64
   use: screen
   fill: #FFFFFF
@@ -168,7 +168,7 @@ text @sec3_title "Flow Animations" {
 }
 
 rect @flow_pulse_src {
-  ## "Data source node"
+  spec "Data source node"
   w: 140 h: 80
   fill: #6C5CE7
   corner: 14
@@ -179,7 +179,7 @@ rect @flow_pulse_src {
 }
 
 rect @flow_pulse_dst {
-  ## "Data destination"
+  spec "Data destination"
   w: 140 h: 80
   fill: #00B894
   corner: 14
@@ -190,7 +190,7 @@ rect @flow_pulse_dst {
 }
 
 rect @flow_dash_src {
-  ## "Pipeline stage 1"
+  spec "Pipeline stage 1"
   w: 140 h: 80
   fill: #F59E0B
   corner: 14
@@ -201,7 +201,7 @@ rect @flow_dash_src {
 }
 
 rect @flow_dash_dst {
-  ## "Pipeline stage 2"
+  spec "Pipeline stage 2"
   w: 140 h: 80
   fill: #EF4444
   corner: 14
@@ -217,8 +217,10 @@ text @sec4_title "Annotated Edge Example" {
 }
 
 rect @login_screen {
-  ## "Login screen"
-  ## status: done
+  spec {
+    "Login screen"
+    status: done
+  }
   w: 160 h: 100
   use: screen
   fill: #FFFFFF
@@ -230,8 +232,10 @@ rect @login_screen {
 }
 
 rect @dashboard_screen {
-  ## "Main dashboard"
-  ## status: in_progress
+  spec {
+    "Main dashboard"
+    status: in_progress
+  }
   w: 160 h: 100
   use: screen
   fill: #FFFFFF
@@ -282,14 +286,14 @@ rect @dashboard_screen {
 @subtitle -> offset: @title 0, 50
 @title -> center_in: canvas
 edge @edge_no_arrow {
-  ## "arrow: none — no arrowheads"
+  spec "arrow: none — no arrowheads"
   from: @arrow_none_from
   to: @arrow_none_to
   label: "none"
   stroke: #6B7280 2
 }
 edge @edge_end_arrow {
-  ## "arrow: end — standard directional arrow"
+  spec "arrow: end — standard directional arrow"
   from: @arrow_end_from
   to: @arrow_end_to
   label: "end →"
@@ -297,7 +301,7 @@ edge @edge_end_arrow {
   arrow: end
 }
 edge @edge_both_arrow {
-  ## "arrow: both — bidirectional relationship"
+  spec "arrow: both — bidirectional relationship"
   from: @arrow_both_from
   to: @arrow_both_to
   label: "← both →"
@@ -305,7 +309,7 @@ edge @edge_both_arrow {
   arrow: both
 }
 edge @edge_straight {
-  ## "curve: straight — direct line (default)"
+  spec "curve: straight — direct line (default)"
   from: @curve_straight_a
   to: @curve_straight_b
   label: "straight"
@@ -313,7 +317,7 @@ edge @edge_straight {
   arrow: end
 }
 edge @edge_smooth {
-  ## "curve: smooth — bezier curve"
+  spec "curve: smooth — bezier curve"
   from: @curve_smooth_a
   to: @curve_smooth_b
   label: "smooth"
@@ -322,7 +326,7 @@ edge @edge_smooth {
   curve: smooth
 }
 edge @edge_step {
-  ## "curve: step — right-angle routing"
+  spec "curve: step — right-angle routing"
   from: @curve_step_a
   to: @curve_step_b
   label: "step"
@@ -331,8 +335,10 @@ edge @edge_step {
   curve: step
 }
 edge @edge_pulse_flow {
-  ## "R1.12: flow: pulse — traveling dot showing data direction"
-  ## accept: "dot moves from source to destination on loop"
+  spec {
+    "R1.12: flow: pulse — traveling dot showing data direction"
+    accept: "dot moves from source to destination on loop"
+  }
   from: @flow_pulse_src
   to: @flow_pulse_dst
   label: "data stream"
@@ -342,8 +348,10 @@ edge @edge_pulse_flow {
   flow: pulse 1200ms
 }
 edge @edge_dash_flow {
-  ## "R1.12: flow: dash — marching dashes for pipeline visualization"
-  ## accept: "dashes animate along edge path continuously"
+  spec {
+    "R1.12: flow: dash — marching dashes for pipeline visualization"
+    accept: "dashes animate along edge path continuously"
+  }
   from: @flow_dash_src
   to: @flow_dash_dst
   label: "pipeline"
@@ -353,12 +361,14 @@ edge @edge_dash_flow {
   flow: dash 800ms
 }
 edge @login_to_dash {
-  ## "Authentication flow — happy path"
-  ## accept: "complete within 3s including API call"
-  ## accept: "show loading spinner during auth"
-  ## status: in_progress
-  ## priority: high
-  ## tag: auth, flow
+  spec {
+    "Authentication flow — happy path"
+    accept: "complete within 3s including API call"
+    accept: "show loading spinner during auth"
+    status: in_progress
+    priority: high
+    tag: auth, flow
+  }
   from: @login_screen
   to: @dashboard_screen
   label: "on success"

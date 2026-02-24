@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.8.5
+
+- **BREAKING**: Removed all `##` annotation syntax from `.fd` files — unified under `spec` blocks (`spec "desc"` inline / `spec { ... }` block form). The parser already treated `##` as plain comments, so annotations using `##` were silently lost during parsing. All 7 affected `.fd` files (2 test fixtures + 5 design docs) migrated.
+- **DOCS**: Updated `REQUIREMENTS.md`, `SKILL.md` to reference `spec` blocks instead of `##`
+
 ### v0.8.4
 
 - **NEW**: Multi-ungroup — selecting 2+ items where some are groups now enables Ungroup, which dissolves all selected groups at once (Figma behavior)

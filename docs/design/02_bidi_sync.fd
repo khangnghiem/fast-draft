@@ -31,7 +31,7 @@ rect @_anon_30 {
 }
 
 group @perf_badges {
-  ## "Non-functional requirements for sync latency"
+  spec "Non-functional requirements for sync latency"
   layout: row gap=16 pad=0
   rect @badge_roundtrip {
     w: 200 h: 48
@@ -63,9 +63,11 @@ group @perf_badges {
 }
 
 rect @canvas {
-  ## "Canvas — GPU-rendered interactive view"
-  ## accept: "R5.1: Vello + wgpu, 60 FPS"
-  ## status: done
+  spec {
+    "Canvas — GPU-rendered interactive view"
+    accept: "R5.1: Vello + wgpu, 60 FPS"
+    status: done
+  }
   w: 260 h: 140
   use: box_orange
   fill: #F59E0B
@@ -92,10 +94,12 @@ rect @canvas {
 }
 
 rect @scene_graph {
-  ## "SceneGraph — single source of truth (DAG)"
-  ## accept: "R2.4: conflict-free single authoritative graph"
-  ## status: done
-  ## priority: high
+  spec {
+    "SceneGraph — single source of truth (DAG)"
+    accept: "R2.4: conflict-free single authoritative graph"
+    status: done
+    priority: high
+  }
   w: 260 h: 140
   use: box_green
   fill: #10B981
@@ -122,10 +126,12 @@ rect @scene_graph {
 }
 
 rect @fd_text {
-  ## "FD Text — the .fd source file"
-  ## accept: "line-oriented, git-friendly diffs"
-  ## status: done
-  ## tag: core
+  spec {
+    "FD Text — the .fd source file"
+    accept: "line-oriented, git-friendly diffs"
+    status: done
+    tag: core
+  }
   w: 260 h: 140
   use: box_primary
   fill: #6C5CE7
@@ -177,8 +183,10 @@ text @title "Bidirectional Sync Architecture" {
 @_anon_29 -> absolute: 694.32, 234.5
 @_anon_30 -> absolute: 694.77, 460.38
 edge @text_to_graph {
-  ## "R2.2: Text → Canvas: source edits re-render in <16ms"
-  ## accept: "incremental re-parse, not full document"
+  spec {
+    "R2.2: Text → Canvas: source edits re-render in <16ms"
+    accept: "incremental re-parse, not full document"
+  }
   from: @fd_text
   to: @scene_graph
   label: "parse()"
@@ -187,7 +195,7 @@ edge @text_to_graph {
   curve: smooth
 }
 edge @graph_to_text {
-  ## "R2.1: Canvas → Text: visual edits update source in <16ms"
+  spec "R2.1: Canvas → Text: visual edits update source in <16ms"
   from: @scene_graph
   to: @fd_text
   label: "emit()"
@@ -196,7 +204,7 @@ edge @graph_to_text {
   curve: smooth
 }
 edge @graph_to_canvas {
-  ## "Layout solver resolves constraints → absolute coords"
+  spec "Layout solver resolves constraints → absolute coords"
   from: @scene_graph
   to: @canvas
   label: "layout() + paint()"
@@ -205,7 +213,7 @@ edge @graph_to_canvas {
   curve: smooth
 }
 edge @canvas_to_graph {
-  ## "User interactions (drag, resize) mutate graph directly"
+  spec "User interactions (drag, resize) mutate graph directly"
   from: @canvas
   to: @scene_graph
   label: "tool events"

@@ -31,9 +31,11 @@ text @subtitle "R3: Human editing via direct manipulation on GPU canvas" {
 # ─── Tool Palette ────────────────────────────────────────────────────────
 
 group @tool_palette {
-  ## "R3.3: Creation tools with keyboard shortcuts"
-  ## status: done
-  ## tag: canvas, interaction
+  spec {
+    "R3.3: Creation tools with keyboard shortcuts"
+    status: done
+    tag: canvas, interaction
+  }
   layout: column gap=12 pad=24
   bg: #F8F9FA corner=16 shadow=(0,2,12,#0001)
 
@@ -44,8 +46,10 @@ group @tool_palette {
 
     # Select tool
     rect @tool_select {
-      ## "R3.1: Click to select, multi-select, lasso"
-      ## status: done
+      spec {
+        "R3.1: Click to select, multi-select, lasso"
+        status: done
+      }
       w: 260 h: 52
       use: tool_card
       stroke: #6C5CE7 2
@@ -62,7 +66,7 @@ group @tool_palette {
 
     # Rectangle tool
     rect @tool_rect {
-      ## "R3.3: Rectangle creation tool"
+      spec "R3.3: Rectangle creation tool"
       w: 260 h: 52
       use: tool_card
       stroke: #E8E8EC 1
@@ -79,7 +83,7 @@ group @tool_palette {
 
     # Ellipse tool
     rect @tool_ellipse {
-      ## "R3.3: Ellipse/circle creation tool"
+      spec "R3.3: Ellipse/circle creation tool"
       w: 260 h: 52
       use: tool_card
       stroke: #E8E8EC 1
@@ -96,9 +100,11 @@ group @tool_palette {
 
     # Pen tool
     rect @tool_pen {
-      ## "R3.4: Freehand pen with pressure sensitivity"
-      ## accept: "Apple Pencil Pro support"
-      ## status: in_progress
+      spec {
+        "R3.4: Freehand pen with pressure sensitivity"
+        accept: "Apple Pencil Pro support"
+        status: in_progress
+      }
       w: 260 h: 52
       use: tool_card
       stroke: #E8E8EC 1
@@ -115,7 +121,7 @@ group @tool_palette {
 
     # Text tool
     rect @tool_text {
-      ## "R3.3: Text insertion tool"
+      spec "R3.3: Text insertion tool"
       w: 260 h: 52
       use: tool_card
       stroke: #E8E8EC 1
@@ -135,8 +141,10 @@ group @tool_palette {
 # ─── Manipulation capabilities ───────────────────────────────────────────
 
 group @manipulation {
-  ## "R3.2: Drag, resize, rotate with modifiers"
-  ## status: done
+  spec {
+    "R3.2: Drag, resize, rotate with modifiers"
+    status: done
+  }
   layout: column gap=16 pad=24
   bg: #FFF corner=16 shadow=(0,2,12,#0001)
 
@@ -190,8 +198,10 @@ group @manipulation {
 # ─── Canvas controls ────────────────────────────────────────────────────
 
 group @canvas_controls {
-  ## "R3.6: Pan, zoom, grid snap"
-  ## status: done
+  spec {
+    "R3.6: Pan, zoom, grid snap"
+    status: done
+  }
   layout: column gap=12 pad=24
   bg: #FFF corner=16 shadow=(0,2,12,#0001)
 
@@ -226,9 +236,11 @@ group @canvas_controls {
 # ─── Undo/Redo ──────────────────────────────────────────────────────────
 
 group @undo_redo {
-  ## "R3.7: Full command stack across text + canvas"
-  ## status: done
-  ## priority: high
+  spec {
+    "R3.7: Full command stack across text + canvas"
+    status: done
+    priority: high
+  }
   layout: row gap=16 pad=24
   bg: #FFF corner=16 shadow=(0,2,12,#0001)
 
