@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.7.7
+
+- **NEW**: Interactive resize handles (R3.16) — 8-point resize grips (4 corners + 4 midpoints) on selected nodes, drag to resize with opposite corner anchored
+- **NEW**: Shift+resize constrains to square proportions
+- **NEW**: Min size 4px prevents nodes from collapsing to zero
+- **INFRA**: WASM rebuild with resize handle hit-testing in Rust
+
 ### v0.7.6
 
 - **NEW**: Double-click canvas creates text node — clicking empty space creates a text node and opens inline editor immediately (Figma behavior)
