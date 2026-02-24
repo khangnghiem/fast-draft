@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.8.4
+
+- **NEW**: Multi-ungroup — selecting 2+ items where some are groups now enables Ungroup, which dissolves all selected groups at once (Figma behavior)
+- **INFRA**: WASM rebuild with multi-group `ungroup_selected()` in Rust
+
 ### v0.8.3
 
 - **UX**: Group/Ungroup context menu items are now context-sensitive — Group disabled with <2 items selected, Ungroup disabled when selected node isn't a group (matches Figma/Sketch)
