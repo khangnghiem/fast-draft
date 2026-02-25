@@ -7,7 +7,8 @@
 //! `Position { x, y }` is the escape hatch for drag-placed or pinned nodes.
 
 use crate::id::NodeId;
-use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::graph::NodeIndex;
+use petgraph::stable_graph::StableDiGraph;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::collections::HashMap;
@@ -472,7 +473,7 @@ impl SceneNode {
 #[derive(Debug, Clone)]
 pub struct SceneGraph {
     /// The underlying directed graph.
-    pub graph: DiGraph<SceneNode, ()>,
+    pub graph: StableDiGraph<SceneNode, ()>,
 
     /// The root node index.
     pub root: NodeIndex,
@@ -494,7 +495,7 @@ impl SceneGraph {
     /// Create a new empty scene graph with a root node.
     #[must_use]
     pub fn new() -> Self {
-        let mut graph = DiGraph::new();
+        let mut graph = StableDiGraph::new();
         let root_node = SceneNode::new(NodeId::intern("root"), NodeKind::Root);
         let root = graph.add_node(root_node);
 
@@ -520,22 +521,12 @@ impl SceneGraph {
         idx
     }
 
-    /// Remove a node safely, keeping the `id_index` synchronized if petgraph
-    /// swaps the last node into the removed node's position.
+    /// Remove a node safely, keeping the `id_index` synchronized.
     pub fn remove_node(&mut self, idx: NodeIndex) -> Option<SceneNode> {
-        let last_idx = NodeIndex::new(self.graph.node_count() - 1);
-        let last_id = self.graph[last_idx].id;
-
         let removed = self.graph.remove_node(idx);
-
         if let Some(removed_node) = &removed {
             self.id_index.remove(&removed_node.id);
-            // If it wasn't the last node, the last node was swapped into `idx`
-            if idx != last_idx {
-                self.id_index.insert(last_id, idx);
-            }
         }
-
         removed
     }
 
