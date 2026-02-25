@@ -15,7 +15,7 @@ use fd_editor::input::{InputEvent, Modifiers};
 use fd_editor::shortcuts::{ShortcutAction, ShortcutMap};
 use fd_editor::sync::{GraphMutation, SyncEngine};
 use fd_editor::tools::{
-    EllipseTool, PenTool, RectTool, ResizeHandle, SelectTool, TextTool, Tool, ToolKind,
+    ArrowTool, EllipseTool, PenTool, RectTool, ResizeHandle, SelectTool, TextTool, Tool, ToolKind,
 };
 use fd_render::hit::hit_test_rect;
 use wasm_bindgen::prelude::*;
@@ -37,6 +37,7 @@ pub struct FdCanvas {
     ellipse_tool: EllipseTool,
     pen_tool: PenTool,
     text_tool: TextTool,
+    arrow_tool: ArrowTool,
     width: f64,
     height: f64,
     /// Suppress text-changed messages during programmatic updates.
@@ -77,6 +78,7 @@ impl FdCanvas {
             ellipse_tool: EllipseTool::new(),
             pen_tool: PenTool::new(),
             text_tool: TextTool::new(),
+            arrow_tool: ArrowTool::new(),
             width,
             height,
             suppress_sync: false,
@@ -228,6 +230,7 @@ impl FdCanvas {
             ToolKind::Ellipse => self.ellipse_tool.handle(&event, hit),
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
+            ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
         };
         let changed = self.apply_mutations(mutations);
         // Marquee start also counts as a visual change (need re-render)
@@ -270,6 +273,7 @@ impl FdCanvas {
             ToolKind::Ellipse => self.ellipse_tool.handle(&event, hit),
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
+            ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
         };
         let changed = self.apply_mutations(mutations);
         // Marquee drag also counts as visual change
@@ -360,6 +364,7 @@ impl FdCanvas {
             ToolKind::Ellipse => self.ellipse_tool.handle(&event, hit),
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
+            ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
         };
         let changed = self.apply_mutations(mutations);
         // Flush text after gesture ends
@@ -406,11 +411,26 @@ impl FdCanvas {
             "ellipse" => ToolKind::Ellipse,
             "pen" => ToolKind::Pen,
             "text" => ToolKind::Text,
+            "arrow" => ToolKind::Arrow,
             _ => ToolKind::Select,
         };
         if new_tool != self.active_tool {
             self.prev_tool = self.active_tool;
             self.active_tool = new_tool;
+        }
+    }
+
+    /// Get the arrow tool's live preview line during drag.
+    /// Returns JSON `{"x1":..,"y1":..,"x2":..,"y2":..}` or `""` if not dragging.
+    pub fn get_arrow_preview(&self) -> String {
+        if self.active_tool != ToolKind::Arrow {
+            return String::new();
+        }
+        match self.arrow_tool.preview_line() {
+            Some((x1, y1, x2, y2)) => {
+                format!(r#"{{"x1":{},"y1":{},"x2":{},"y2":{}}}"#, x1, y1, x2, y2)
+            }
+            None => String::new(),
         }
     }
 
@@ -1449,6 +1469,10 @@ impl FdCanvas {
                 self.set_tool("text");
                 (false, true)
             }
+            ShortcutAction::ToolArrow => {
+                self.set_tool("arrow");
+                (false, true)
+            }
             // Screenbrush: Tab toggles between two most-used tools
             ShortcutAction::ToggleLastTool => {
                 std::mem::swap(&mut self.prev_tool, &mut self.active_tool);
@@ -1496,6 +1520,7 @@ fn tool_kind_to_name(kind: ToolKind) -> &'static str {
         ToolKind::Ellipse => "ellipse",
         ToolKind::Pen => "pen",
         ToolKind::Text => "text",
+        ToolKind::Arrow => "arrow",
     }
 }
 
@@ -1506,6 +1531,7 @@ fn action_to_name(action: ShortcutAction) -> &'static str {
         ShortcutAction::ToolEllipse => "toolEllipse",
         ShortcutAction::ToolPen => "toolPen",
         ShortcutAction::ToolText => "toolText",
+        ShortcutAction::ToolArrow => "toolArrow",
         ShortcutAction::ToggleLastTool => "toggleLastTool",
         ShortcutAction::Undo => "undo",
         ShortcutAction::Redo => "redo",

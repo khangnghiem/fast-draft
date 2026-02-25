@@ -354,6 +354,12 @@ impl SyncEngine {
                     self.bounds.remove(&group_idx);
                 }
             }
+            GraphMutation::AddEdge { edge } => {
+                self.graph.edges.push(*edge);
+            }
+            GraphMutation::RemoveEdge { id } => {
+                self.graph.edges.retain(|e| e.id != id);
+            }
         }
 
         self.text_dirty = true;
@@ -499,6 +505,14 @@ pub enum GraphMutation {
     SetAnimations {
         id: NodeId,
         animations: smallvec::SmallVec<[AnimKeyframe; 2]>,
+    },
+    /// Add an edge (arrow/connector) between two nodes.
+    AddEdge {
+        edge: Box<Edge>,
+    },
+    /// Remove an edge by its ID.
+    RemoveEdge {
+        id: NodeId,
     },
 }
 

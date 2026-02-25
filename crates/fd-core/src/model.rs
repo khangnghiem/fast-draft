@@ -227,6 +227,9 @@ pub struct Style {
     pub text_align: Option<TextAlign>,
     /// Vertical text alignment (default: Middle).
     pub text_valign: Option<TextVAlign>,
+
+    /// Scale factor applied during rendering (from animations).
+    pub scale: Option<f32>,
 }
 
 // ─── Animation ───────────────────────────────────────────────────────────
@@ -599,6 +602,9 @@ impl SceneGraph {
                 if anim.properties.opacity.is_some() {
                     resolved.opacity = anim.properties.opacity;
                 }
+                if anim.properties.scale.is_some() {
+                    resolved.scale = anim.properties.scale;
+                }
             }
         }
 
@@ -631,6 +637,9 @@ impl SceneGraph {
                 }
                 if anim.properties.opacity.is_some() {
                     resolved.opacity = anim.properties.opacity;
+                }
+                if anim.properties.scale.is_some() {
+                    resolved.scale = anim.properties.scale;
                 }
             }
         }
@@ -727,6 +736,9 @@ fn merge_style(dst: &mut Style, src: &Style) {
     }
     if src.text_valign.is_some() {
         dst.text_valign = src.text_valign;
+    }
+    if src.scale.is_some() {
+        dst.scale = src.scale;
     }
 }
 
@@ -989,5 +1001,38 @@ mod tests {
         assert!(!sg.is_ancestor_of(group_id, group_id));
         // Other is not ancestor of rect (sibling)
         assert!(!sg.is_ancestor_of(other_id, rect_id));
+    }
+
+    #[test]
+    fn test_resolve_style_scale_animation() {
+        let sg = SceneGraph::new();
+
+        let mut node = SceneNode::new(
+            NodeId::intern("btn"),
+            NodeKind::Rect {
+                width: 100.0,
+                height: 40.0,
+            },
+        );
+        node.style.fill = Some(Paint::Solid(Color::rgba(1.0, 0.0, 0.0, 1.0)));
+        node.animations.push(AnimKeyframe {
+            trigger: AnimTrigger::Press,
+            duration_ms: 100,
+            easing: Easing::EaseOut,
+            properties: AnimProperties {
+                scale: Some(0.97),
+                ..Default::default()
+            },
+        });
+
+        // Without press trigger: scale should be None
+        let resolved = sg.resolve_style(&node, &[]);
+        assert!(resolved.scale.is_none());
+
+        // With press trigger: scale should be 0.97
+        let resolved = sg.resolve_style(&node, &[AnimTrigger::Press]);
+        assert_eq!(resolved.scale, Some(0.97));
+        // Fill should still be present
+        assert!(resolved.fill.is_some());
     }
 }

@@ -25,6 +25,7 @@ pub enum ToolKind {
     Ellipse,
     Pen,
     Text,
+    Arrow,
 }
 
 /// Trait for tools that handle input and produce mutations.
@@ -779,6 +780,105 @@ impl Tool for TextTool {
     }
 }
 
+// ─── Arrow Tool (edge/connector) ─────────────────────────────────────────
+
+pub struct ArrowTool {
+    /// Start position of the drag (scene-space).
+    start_pos: Option<(f32, f32)>,
+    /// Source node the arrow originates from.
+    source_node: Option<NodeId>,
+    /// Current drag position for live preview.
+    current_pos: Option<(f32, f32)>,
+    /// Whether a drag is in progress.
+    drawing: bool,
+}
+
+impl Default for ArrowTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ArrowTool {
+    pub fn new() -> Self {
+        Self {
+            start_pos: None,
+            source_node: None,
+            current_pos: None,
+            drawing: false,
+        }
+    }
+
+    /// Get the current preview line endpoints for rendering.
+    /// Returns `Some((x1, y1, x2, y2))` during drag, `None` otherwise.
+    pub fn preview_line(&self) -> Option<(f32, f32, f32, f32)> {
+        if !self.drawing {
+            return None;
+        }
+        let (x1, y1) = self.start_pos?;
+        let (x2, y2) = self.current_pos?;
+        Some((x1, y1, x2, y2))
+    }
+}
+
+impl Tool for ArrowTool {
+    fn kind(&self) -> ToolKind {
+        ToolKind::Arrow
+    }
+
+    fn handle(&mut self, event: &InputEvent, hit_node: Option<NodeId>) -> Vec<GraphMutation> {
+        use fd_core::model::{ArrowKind, CurveKind, Edge, Style};
+
+        match event {
+            InputEvent::PointerDown { x, y, .. } => {
+                self.drawing = true;
+                self.start_pos = Some((*x, *y));
+                self.current_pos = Some((*x, *y));
+                self.source_node = hit_node;
+                vec![]
+            }
+            InputEvent::PointerMove { x, y, .. } => {
+                if self.drawing {
+                    self.current_pos = Some((*x, *y));
+                }
+                vec![]
+            }
+            InputEvent::PointerUp { .. } => {
+                self.drawing = false;
+                let source = self.source_node.take();
+                self.start_pos = None;
+                self.current_pos = None;
+
+                // Require both source and target nodes to create a connected edge
+                let target = hit_node;
+                match (source, target) {
+                    (Some(from), Some(to)) if from != to => {
+                        let edge_id = NodeId::with_prefix("edge");
+                        let edge = Edge {
+                            id: edge_id,
+                            from,
+                            to,
+                            label: None,
+                            style: Style::default(),
+                            use_styles: Default::default(),
+                            arrow: ArrowKind::End,
+                            curve: CurveKind::Smooth,
+                            annotations: Vec::new(),
+                            animations: Default::default(),
+                            flow: None,
+                        };
+                        vec![GraphMutation::AddEdge {
+                            edge: Box::new(edge),
+                        }]
+                    }
+                    _ => vec![],
+                }
+            }
+            _ => vec![],
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1302,5 +1402,156 @@ mod tests {
             mutations.is_empty(),
             "drag-to-create should not emit extra mutations on up"
         );
+    }
+
+    #[test]
+    fn arrow_tool_creates_edge_between_nodes() {
+        let mut tool = ArrowTool::new();
+        let source = NodeId::intern("box_a");
+        let target = NodeId::intern("box_b");
+
+        // Press on source node
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 100.0,
+                y: 100.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            Some(source),
+        );
+
+        // Drag to target
+        tool.handle(
+            &InputEvent::PointerMove {
+                x: 300.0,
+                y: 200.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        // Release on target node
+        let mutations = tool.handle(
+            &InputEvent::PointerUp {
+                x: 300.0,
+                y: 200.0,
+                modifiers: Modifiers::NONE,
+            },
+            Some(target),
+        );
+        assert_eq!(mutations.len(), 1, "should emit AddEdge");
+        match &mutations[0] {
+            GraphMutation::AddEdge { edge } => {
+                assert_eq!(edge.from, source);
+                assert_eq!(edge.to, target);
+            }
+            _ => panic!("expected AddEdge mutation"),
+        }
+    }
+
+    #[test]
+    fn arrow_tool_same_node_no_edge() {
+        let mut tool = ArrowTool::new();
+        let node = NodeId::intern("box_same");
+
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 100.0,
+                y: 100.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            Some(node),
+        );
+
+        // Release on the same node
+        let mutations = tool.handle(
+            &InputEvent::PointerUp {
+                x: 100.0,
+                y: 100.0,
+                modifiers: Modifiers::NONE,
+            },
+            Some(node),
+        );
+        assert!(mutations.is_empty(), "should not create edge to same node");
+    }
+
+    #[test]
+    fn arrow_tool_no_source_no_edge() {
+        let mut tool = ArrowTool::new();
+
+        // Press on empty canvas
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 100.0,
+                y: 100.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        // Release on a target node
+        let mutations = tool.handle(
+            &InputEvent::PointerUp {
+                x: 300.0,
+                y: 200.0,
+                modifiers: Modifiers::NONE,
+            },
+            Some(NodeId::intern("target")),
+        );
+        assert!(
+            mutations.is_empty(),
+            "should not create edge without source"
+        );
+    }
+
+    #[test]
+    fn arrow_tool_preview_line_during_drag() {
+        let mut tool = ArrowTool::new();
+
+        assert!(tool.preview_line().is_none(), "no preview before drag");
+
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 50.0,
+                y: 60.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        // After down, preview should start at click point
+        let preview = tool.preview_line().expect("preview during drag");
+        assert!((preview.0 - 50.0).abs() < 0.01);
+        assert!((preview.1 - 60.0).abs() < 0.01);
+
+        // After move, preview end should update
+        tool.handle(
+            &InputEvent::PointerMove {
+                x: 200.0,
+                y: 300.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        let preview = tool.preview_line().expect("preview after move");
+        assert!((preview.2 - 200.0).abs() < 0.01);
+        assert!((preview.3 - 300.0).abs() < 0.01);
+
+        // After up, preview should clear
+        tool.handle(
+            &InputEvent::PointerUp {
+                x: 200.0,
+                y: 300.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        assert!(tool.preview_line().is_none(), "no preview after up");
     }
 }

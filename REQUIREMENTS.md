@@ -25,6 +25,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R1.15**: Background shorthand — `bg: #FFF corner=12 shadow=(0,4,20,#0002)` for combined fill, corner, and shadow in one line
 - **R1.16**: Comment preservation — `# text` lines attached to the following node survive all parse/emit round-trips and format passes
 - **R1.17**: Text alignment — `align: left|center|right [top|middle|bottom]` property on text and shape nodes; defaults to `center middle`; reusable via `style` blocks and `use:` inheritance
+- **R1.18**: Mermaid import — parse Mermaid diagram syntax (`flowchart`, `sequenceDiagram`, `stateDiagram`) into equivalent FD nodes + edges; enables importing existing diagrams from Markdown docs
 
 ### R2: Bidirectional Sync
 
@@ -66,6 +67,9 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.26**: Arrow-key nudge: Arrow keys move selected node 1px (Shift+arrow = 10px); matches Figma/Sketch standard UX
 - **R3.27**: Layer rename: Double-click a layer name in the Layers panel for inline rename; renames `@id` across the entire document (word-boundary safe)
 - **R3.30**: Layer navigation: Clicking a layer item in the Layers panel selects the node and smoothly pans the camera to center it (250ms ease-out); auto-zooms in if both dimensions are < 20px on screen (truly invisible); auto-zooms out if the node overflows the viewport (15% padding); skips pan if the node center is already within 20% of the viewport center; thin shapes (lines, dividers) keep current zoom unless overflowing
+- **R3.31**: Export — PNG (2× resolution), SVG, and clipboard export of the full canvas or selected elements; configurable background (transparent or themed); accessible via toolbar button + keyboard shortcut (⌘⇧E)
+- **R3.32**: Image embedding — drag-and-drop or paste raster images (PNG, JPG, WebP) onto the canvas as `image` nodes; images stored inline (base64) or as external file references; resizable with aspect-ratio lock by default
+- **R3.33**: Component libraries — reusable collections of nodes/groups that can be dragged onto the canvas from a library panel; user-created and community-shared libraries; stored as `.fd` files with `export` markers
 
 ### R4: AI Editing (Text)
 
@@ -98,6 +102,11 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R6.2** (future): Desktop app via Tauri (macOS, Windows, Linux)
 - **R6.3** (future): Mobile app (iOS, Android) via native wgpu
 - **R6.4** (future): Web app (standalone browser app)
+
+### R7: Collaboration
+
+- **R7.1** (future): Real-time multiplayer — concurrent editing with cursor presence, CRDT-based conflict resolution, and live sync across connected clients
+- **R7.2** (future): Shareable links — generate a URL to share a read-only or editable view of an `.fd` document without requiring IDE installation
 
 ## Non-Functional Requirements
 
@@ -139,7 +148,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 | cursor              | R3.11, R3.16                          |
 | resize              | R3.2, R3.16                           |
 | feedback / tooltip  | R3.15, R3.18                          |
-| export              | R3.24                                 |
+| export              | R3.31, R4.7                           |
 | minimap             | R3.25                                 |
 | nudge               | R3.26                                 |
 | rename              | R3.27                                 |
@@ -152,7 +161,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 | pressure / pencil   | R3.4, R3.10, R3.22                    |
 | ai / refinement     | R4.7, R4.8, R4.9, R4.10               |
 | edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8 |
-| import              | R1.14                                 |
+| import              | R1.14, R1.18                          |
 | style               | R1.4, R4.3                            |
 | animation           | R1.5, R1.11, R1.12, R3.29, R5.6, R5.8 |
 | rendering           | R5.1, R5.2, R5.4, R5.5                |
@@ -161,3 +170,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 | text alignment      | R1.17, R3.28                          |
 | layers / navigation | R3.30                                 |
 | group / drill-down  | R3.24                                 |
+| image               | R3.32                                 |
+| library             | R3.33                                 |
+| collaboration       | R7.1, R7.2                            |
+| mermaid             | R1.18                                 |

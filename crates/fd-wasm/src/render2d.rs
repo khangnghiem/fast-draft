@@ -118,6 +118,18 @@ fn render_node(
     let style = graph.resolve_style(node, &triggers);
     let is_selected = selected_ids.iter().any(|sel| sel == node.id.as_str());
 
+    // Apply scale transform from node center if animation set it
+    let has_scale = style.scale.is_some_and(|s| (s - 1.0).abs() > f32::EPSILON);
+    if has_scale {
+        let cx = node_bounds.x as f64 + node_bounds.width as f64 / 2.0;
+        let cy = node_bounds.y as f64 + node_bounds.height as f64 / 2.0;
+        let s = style.scale.unwrap_or(1.0) as f64;
+        ctx.save();
+        ctx.translate(cx, cy).unwrap_or(());
+        ctx.scale(s, s).unwrap_or(());
+        ctx.translate(-cx, -cy).unwrap_or(());
+    }
+
     match &node.kind {
         NodeKind::Root => {}
         NodeKind::Generic => {
@@ -217,6 +229,11 @@ fn render_node(
     // Selection overlay (drawn after children so it's on top)
     if is_selected {
         draw_selection_handles(ctx, node_bounds);
+    }
+
+    // Restore scale transform
+    if has_scale {
+        ctx.restore();
     }
 }
 

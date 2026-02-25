@@ -1810,6 +1810,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     <button class="tool-btn" data-tool="rect"><span class="tool-icon">▢</span>Rect<span class="tool-key">R</span></button>
     <button class="tool-btn" data-tool="ellipse"><span class="tool-icon">◯</span>Ellipse<span class="tool-key">O</span></button>
     <button class="tool-btn" data-tool="pen"><span class="tool-icon">✎</span>Pen<span class="tool-key">P</span></button>
+    <button class="tool-btn" data-tool="arrow"><span class="tool-icon">→</span>Arrow<span class="tool-key">A</span></button>
     <button class="tool-btn" data-tool="text"><span class="tool-icon">T</span>Text<span class="tool-key">T</span></button>
     <div class="tool-sep"></div>
     <button class="tool-btn" id="ai-refine-btn" title="AI Refine selected node (rename + restyle)">&#x2728; Refine</button>

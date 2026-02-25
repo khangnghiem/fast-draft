@@ -207,6 +207,16 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
                 animations: old_animations,
             }
         }
+        GraphMutation::AddEdge { edge } => GraphMutation::RemoveEdge { id: edge.id },
+        GraphMutation::RemoveEdge { id } => {
+            if let Some(edge) = engine.graph.edges.iter().find(|e| e.id == *id) {
+                GraphMutation::AddEdge {
+                    edge: Box::new(edge.clone()),
+                }
+            } else {
+                GraphMutation::RemoveEdge { id: *id }
+            }
+        }
     }
 }
 

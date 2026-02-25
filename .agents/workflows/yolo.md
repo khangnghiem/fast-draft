@@ -6,9 +6,9 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 
 > Runs the full pipeline automatically. Supports three modes:
 >
-> `/yolo local` — 🧪 TDD → 🔨 Build → ✅ Verify Local **(STOP)**
+> `/yolo local` — 🧪 TDD → 🔨 Build → 🌐 E2E UX → ✅ Verify Local **(STOP)**
 > `/yolo deploy` — 📝 Commit → 📝 PR → 🔀 Merge → 📦 Publish Extension **(use after `/yolo local`)**
-> `/yolo` — 🧪 TDD → 🔨 Build → 📝 Commit → 📝 PR → 🔀 Merge → 📦 Publish Extension
+> `/yolo` — 🧪 TDD → 🔨 Build → 🌐 E2E UX → 📝 Commit → 📝 PR → 🔀 Merge → 📦 Publish Extension
 
 // turbo-all
 
@@ -65,7 +65,23 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
    cd fd-vscode && pnpm test
    ```
 
-6. **Report** results to user. **STOP HERE.**
+6. **E2E UX browser testing** (if `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `fd-vscode/webview/` changed):
+
+   Run the full `/e2e-ux` workflow using the browser subagent:
+   - Build WASM first if Rust crates changed:
+
+     ```bash
+     wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm
+     ```
+
+   - Open the Codespace in browser via `gh codespace code -c <codespace-name> --web`
+   - Execute all 8 phases from `/e2e-ux` (Canvas Load, Drawing Tools, Selection, Inline Editing, Navigation, Panels, Bidi Sync, Keyboard Shortcuts)
+   - Screenshot and report results per phase
+   - **If any phase fails**: Fix the issue before proceeding to deploy
+
+   > **Skip only if** the change is purely Rust internals with no canvas/UI impact (e.g., parser refactors covered by unit tests).
+
+7. **Report** results to user. **STOP HERE.**
 
 ---
 
@@ -73,28 +89,28 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 
 > Use this after `/yolo local` has passed.
 
-7. **Activate pre-push hook** (one-time per clone — blocks accidental pushes to `main`):
+8. **Activate pre-push hook** (one-time per clone — blocks accidental pushes to `main`):
 
    ```bash
    git config core.hooksPath .githooks
    ```
 
-8. **Check branch** (never commit to main):
+9. **Check branch** (never commit to main):
 
    ```bash
    git branch --show-current
    ```
 
-9. If on `main`, create a feature branch:
+10. If on `main`, create a feature branch:
 
-   ```bash
-   git checkout -b feat/<descriptive-name>
-   ```
+```bash
+git checkout -b feat/<descriptive-name>
+```
 
-10. **Bump Version** (if `fd-vscode/` was changed):
+11. **Bump Version** (if `fd-vscode/` was changed):
     - Bump the `version` field in `fd-vscode/package.json` appropriately (patch/minor/major).
 
-11. **Update docs** (MANDATORY — both files, every time):
+12. **Update docs** (MANDATORY — both files, every time):
     - `docs/CHANGELOG.md` — add entry under the current version section for each meaningful change
     - `REQUIREMENTS.md` — for **every** CHANGELOG entry, check if it introduces, extends, or modifies a requirement:
       - New feature → add a new `R*.N` entry and update the Requirement Index
@@ -102,40 +118,40 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
       - Bug fix on an existing requirement → no change needed (already documented)
       - Search the Requirement Index for overlap before adding new entries
 
-12. **Stage and commit**:
+13. **Stage and commit**:
 
     ```bash
     git add -A
     git commit -m "<type>(<scope>): <description>"
     ```
 
-13. **Push**:
+14. **Push**:
 
     ```bash
     git push -u origin HEAD
     ```
 
-14. **Create PR** using GitKraken MCP:
+15. **Create PR** using GitKraken MCP:
     - `provider`: github
     - `source_branch`: current branch
     - `target_branch`: main
     - Title in conventional format
     - Body summarizing changes + test results
 
-15. **Merge PR** and clean up:
+16. **Merge PR** and clean up:
 
     ```bash
     gh pr merge <PR_NUMBER> --merge --delete-branch
     ```
 
-16. **Sync main**:
+17. **Sync main**:
 
     ```bash
     git checkout main
     git pull origin main
     ```
 
-17. **Build & Publish VS Code extension** (if `fd-vscode/`, `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `tree-sitter-fd/` were changed):
+18. **Build & Publish VS Code extension** (if `fd-vscode/`, `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `tree-sitter-fd/` were changed):
 
     > ⚠️ **MANDATORY**: Read `.env` for `VSCE_PAT`, `VSX_PAT`, and `GEMINI_API_KEY` BEFORE publishing.
     > Never rely on interactive prompts — always pass tokens via flags.
@@ -145,8 +161,6 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
     ```bash
     wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm
     ```
-
-    > 🛑 **If WASM was rebuilt**: Run `/e2e` in a Codespace to verify canvas renders before publishing.
 
     Then compile TypeScript:
 
@@ -167,10 +181,10 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
     > Skip publish if the change is local-only or version wasn't bumped.
     > **NEVER** publish to only one registry — both Marketplace AND Open VSX are required.
 
-18. Report PR URL, merge status, and publish results to user.
+19. Report PR URL, merge status, and publish results to user.
 
 ---
 
 ## `/yolo` — Full Pipeline
 
-Runs **all steps 1–18** in sequence (local + deploy).
+Runs **all steps 1–19** in sequence (local + deploy).

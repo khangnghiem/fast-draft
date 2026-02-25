@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.8.33
+
+- **FEATURE**: Arrow/Connector drawing tool — press `A` to activate, click-drag from one node to another to draw an edge (smooth curve with arrowhead); live dashed preview line during drag; auto-switch back to Select after drawing
+- **CORE**: `AddEdge`/`RemoveEdge` mutations with full undo/redo support
+- **TESTING**: 5 new tests — `arrow_tool_creates_edge_between_nodes`, `arrow_tool_same_node_no_edge`, `arrow_tool_no_source_no_edge`, `arrow_tool_preview_line_during_drag`, `resolve_arrow_shortcut`
+
 ### v0.8.32
 
 - **UX**: Single-click shape creation now centers the shape at the click point (Excalidraw behavior) — previously the top-left corner was placed at click; rect default size changed from 100×100 to 120×80; ellipse default remains 100×100 centered

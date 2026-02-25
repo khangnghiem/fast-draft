@@ -224,6 +224,39 @@ function render() {
   if (gridEnabled) drawGrid();
   fdCanvas.render(ctx, performance.now());
 
+  // ── Arrow tool: draw live preview line during drag ──
+  const arrowPreviewJson = fdCanvas.get_arrow_preview();
+  if (arrowPreviewJson) {
+    try {
+      const ap = JSON.parse(arrowPreviewJson);
+      ctx.save();
+      ctx.strokeStyle = "#6B7080";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(ap.x1, ap.y1);
+      ctx.lineTo(ap.x2, ap.y2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Arrowhead
+      const angle = Math.atan2(ap.y2 - ap.y1, ap.x2 - ap.x1);
+      const headLen = 10;
+      ctx.beginPath();
+      ctx.moveTo(ap.x2, ap.y2);
+      ctx.lineTo(
+        ap.x2 - headLen * Math.cos(angle - Math.PI / 6),
+        ap.y2 - headLen * Math.sin(angle - Math.PI / 6)
+      );
+      ctx.moveTo(ap.x2, ap.y2);
+      ctx.lineTo(
+        ap.x2 - headLen * Math.cos(angle + Math.PI / 6),
+        ap.y2 - headLen * Math.sin(angle + Math.PI / 6)
+      );
+      ctx.stroke();
+      ctx.restore();
+    } catch (_) { /* ignore parse errors */ }
+  }
+
   // ── Draw animation drop-zone glow ring ──
   if (animDropTargetId && animDropTargetBounds) {
     const b = animDropTargetBounds;
@@ -366,6 +399,8 @@ function setupPointerEvents() {
       e.metaKey
     );
     if (changed) render();
+    // Arrow tool: always re-render during drag for live preview line
+    else if (pointerIsDown && currentToolAtPointerDown === "arrow") render();
 
     // ── Resize handle cursor feedback (hover only, not during drag) ──
     if (!pointerIsDown && !isPanning) {
@@ -1620,10 +1655,10 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   textarea.value = currentValue;
   textarea.style.cssText = [
     `position:absolute`,
-    `left:${sx}px`,
-    `top:${sy}px`,
-    `width:${sw}px`,
-    `height:${sh}px`,
+    `left:${sx - 2}px`,
+    `top:${sy - 2}px`,
+    `width:${sw + 4}px`,
+    `height:${sh + 4}px`,
     `padding:${padTop}px 6px 4px 6px`,
     `font:${fontWeight} ${fontSize}px ${fontFamily},system-ui,sans-serif`,
     `border:2px solid #4FC3F7`,
