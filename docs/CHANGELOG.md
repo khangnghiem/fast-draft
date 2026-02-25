@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.8.35
+
+- **FEATURE**: Zen Mode — minimal Excalidraw-like toolbar layout; floating pill bar at bottom center with 6 drawing tools (Select, Rect, Ellipse, Pen, Arrow, Text); hides Layers, Properties, Minimap, Shape Palette panels
+- **UX**: 🧘 Zen / 🔧 Full toggle button in top-right corner; state persists across sessions
+- **SHORTCUT**: `L` key toggles Layers panel on demand (works in both Zen and Full modes)
+- **UI**: Toolbar items marked `zen-full-only` hide cleanly in Zen mode; sketchy toggle stays visible in both modes
+
 ### v0.8.34
 
 - **FEATURE**: Sketchy / hand-drawn rendering mode — toggle via ✏️ toolbar button; rects get wobbly corners with double-stroke, ellipses use overlapping jittery arcs, straight edges get midpoint displacement; deterministic jitter seeded by position (shapes don't dance on re-render); cosmetic only — underlying geometry stays precise

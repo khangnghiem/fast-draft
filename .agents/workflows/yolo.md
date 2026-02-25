@@ -6,9 +6,9 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 
 > Runs the full pipeline automatically. Supports three modes:
 >
-> `/yolo local` — 🧪 TDD → 🔨 Build → 🌐 E2E UX → ✅ Verify Local **(STOP)**
+> `/yolo local` — 🧪 TDD → 🔨 Build → 🌐 E2E Smoke → ✅ Verify Local **(STOP)**
 > `/yolo deploy` — 📝 Commit → 📝 PR → 🔀 Merge → 📦 Publish Extension **(use after `/yolo local`)**
-> `/yolo` — 🧪 TDD → 🔨 Build → 🌐 E2E UX → 📝 Commit → 📝 PR → 🔀 Merge → 📦 Publish Extension
+> `/yolo` — 🧪 TDD → 🔨 Build → 🌐 E2E Smoke → 📝 Commit → 📝 PR → 🔀 Merge → 📦 Publish Extension
 
 // turbo-all
 
@@ -65,9 +65,9 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
    cd fd-vscode && pnpm test
    ```
 
-6. **E2E UX browser testing** (if `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `fd-vscode/webview/` changed):
+6. **E2E smoke test** (if `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `fd-vscode/webview/` changed):
 
-   Run the full `/e2e-ux` workflow using the browser subagent:
+   Quick browser smoke test via subagent — 3 checks to verify canvas isn't broken:
    - Build WASM first if Rust crates changed:
 
      ```bash
@@ -75,11 +75,19 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
      ```
 
    - Open the Codespace in browser via `gh codespace code -c <codespace-name> --web`
-   - Execute all 8 phases from `/e2e-ux` (Canvas Load, Drawing Tools, Selection, Inline Editing, Navigation, Panels, Bidi Sync, Keyboard Shortcuts)
-   - Screenshot and report results per phase
-   - **If any phase fails**: Fix the issue before proceeding to deploy
+   - Run these 3 smoke checks:
 
-   > **Skip only if** the change is purely Rust internals with no canvas/UI impact (e.g., parser refactors covered by unit tests).
+     | #   | Action                               | Expected                                          |
+     | --- | ------------------------------------ | ------------------------------------------------- |
+     | 1   | Open `.fd` file → toggle Design View | Canvas renders with shapes visible                |
+     | 2   | Press R → drag on canvas             | Rectangle appears, tool switches back to Select   |
+     | 3   | Edit FD code → check canvas          | Canvas updates to reflect code change (bidi sync) |
+
+   - Screenshot and report PASS/FAIL
+   - **If any check fails**: Fix before proceeding
+
+   > **Skip only if** the change is purely Rust internals with no canvas/UI impact.
+   > For full UX testing (all 8 phases), run `/e2e-ux` separately or via `/nonstop`.
 
 7. **Report** results to user. **STOP HERE.**
 
