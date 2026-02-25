@@ -2627,6 +2627,8 @@ function refreshLayersPanel() {
           panel.querySelectorAll(".layer-item").forEach((el) => {
             el.classList.toggle("selected", el.getAttribute("data-node-id") === nodeId);
           });
+          // Smart focus: pan/zoom to the selected node if needed
+          focusOnNode(nodeId);
           // Notify extension of selection
           vscode.postMessage({ type: "nodeSelected", id: nodeId });
           updatePropertiesPanel();
@@ -3295,6 +3297,117 @@ function renderMinimap() {
   minimapCtx.fillRect(rx, ry, rw, rh);
 
   minimapCtx.restore();
+}
+
+// ─── Smart Focus on Node (Layer Click) ───────────────────────────────────────
+
+/** Active focus animation ID (for cancellation). */
+let focusAnimId = null;
+
+/**
+ * Smoothly pan (and optionally zoom) the viewport to focus on a node.
+ * - Pans to center only if the node center is far from viewport center (>20%).
+ * - Auto-zooms in if BOTH dimensions are < 20px on screen (truly invisible).
+ * - Auto-zooms out if max(w,h) overflows the viewport (with 15% padding).
+ * - Skips zoom for thin shapes (small in one dimension only) unless overflowing.
+ * - 250ms ease-out animation.
+ */
+function focusOnNode(nodeId) {
+  if (!fdCanvas) return;
+  let bounds;
+  try {
+    bounds = JSON.parse(fdCanvas.get_node_bounds(nodeId));
+    if (!bounds || (bounds.width <= 0 && bounds.height <= 0)) return;
+  } catch (_) { return; }
+
+  const container = document.getElementById("canvas-container");
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+  const panelW = getLayersPanelWidth();
+  const usableW = cw - panelW;
+
+  // Node center in scene space
+  const nodeCX = bounds.x + bounds.width / 2;
+  const nodeCY = bounds.y + bounds.height / 2;
+
+  // Current viewport center in scene space
+  const vpCenterX = (panelW + usableW / 2 - panX) / zoomLevel;
+  const vpCenterY = (ch / 2 - panY) / zoomLevel;
+
+  // Target zoom (start with current)
+  let targetZoom = zoomLevel;
+
+  // Screen-space size of the node at current zoom
+  const screenW = bounds.width * zoomLevel;
+  const screenH = bounds.height * zoomLevel;
+  const maxScreenDim = Math.max(screenW, screenH);
+
+  const MIN_VISIBLE_PX = 20;
+  const FIT_PADDING_RATIO = 0.15;
+  const FIT_TARGET_RATIO = 0.25;
+
+  // Auto-zoom in: both dimensions < 20px (truly invisible, not just thin)
+  if (screenW < MIN_VISIBLE_PX && screenH < MIN_VISIBLE_PX) {
+    // Zoom so the larger dimension becomes ~25% of usable viewport
+    const maxDim = Math.max(bounds.width, bounds.height, 1);
+    targetZoom = (usableW * FIT_TARGET_RATIO) / maxDim;
+    targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, targetZoom));
+  }
+  // Auto-zoom out: largest screen dimension overflows viewport
+  else if (maxScreenDim > Math.max(usableW, ch)) {
+    const padding = Math.min(usableW, ch) * FIT_PADDING_RATIO;
+    const fitZoom = Math.min(
+      (usableW - padding * 2) / Math.max(bounds.width, 1),
+      (ch - padding * 2) / Math.max(bounds.height, 1)
+    );
+    targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, fitZoom));
+  }
+
+  // Check if we need to pan: is node center within 20% of viewport center?
+  const thresholdX = usableW * 0.2 / zoomLevel;
+  const thresholdY = ch * 0.2 / zoomLevel;
+  const dx = Math.abs(nodeCX - vpCenterX);
+  const dy = Math.abs(nodeCY - vpCenterY);
+  const needsPan = dx > thresholdX || dy > thresholdY;
+  const needsZoom = Math.abs(targetZoom - zoomLevel) / zoomLevel > 0.05;
+
+  if (!needsPan && !needsZoom) return; // Already in view, skip
+
+  // Target pan: center the node in the usable viewport at the target zoom
+  const finalTargetPanX = panelW + usableW / 2 - nodeCX * targetZoom;
+  const finalTargetPanY = ch / 2 - nodeCY * targetZoom;
+
+  // Animate with ease-out
+  const startPanX = panX;
+  const startPanY = panY;
+  const startZoom = zoomLevel;
+  const duration = 250;
+  const startTime = performance.now();
+
+  // Cancel any running focus animation
+  if (focusAnimId) cancelAnimationFrame(focusAnimId);
+
+  function step(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    // Ease-out cubic: 1 - (1 - t)^3
+    const ease = 1 - Math.pow(1 - t, 3);
+
+    panX = startPanX + (finalTargetPanX - startPanX) * ease;
+    panY = startPanY + (finalTargetPanY - startPanY) * ease;
+    zoomLevel = startZoom + (targetZoom - startZoom) * ease;
+
+    render();
+    updateZoomIndicator();
+
+    if (t < 1) {
+      focusAnimId = requestAnimationFrame(step);
+    } else {
+      focusAnimId = null;
+    }
+  }
+
+  focusAnimId = requestAnimationFrame(step);
 }
 
 // ─── Zoom to Selection (Figma ⌘1) ────────────────────────────────────────────
