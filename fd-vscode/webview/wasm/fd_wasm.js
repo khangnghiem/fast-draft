@@ -205,6 +205,14 @@ export class FdCanvas {
         }
     }
     /**
+     * Check if sketchy rendering mode is enabled.
+     * @returns {boolean}
+     */
+    get_sketchy_mode() {
+        const ret = wasm.fdcanvas_get_sketchy_mode(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Get the current FD source text (synced from graph).
      * @returns {string}
      */
@@ -487,6 +495,13 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Enable or disable sketchy (hand-drawn) rendering mode.
+     * @param {boolean} enabled
+     */
+    set_sketchy_mode(enabled) {
+        wasm.fdcanvas_set_sketchy_mode(this.__wbg_ptr, enabled);
+    }
+    /**
      * Set the FD source text, re-parsing into the scene graph.
      * Returns `true` on success, `false` on parse error.
      * @param {string} text
@@ -628,6 +643,10 @@ function __wbg_get_imports() {
         __wbg_fill_1eb35c386c8676aa: function(arg0) {
             arg0.fill();
         },
+        __wbg_globalAlpha_b7066dce190ba988: function(arg0) {
+            const ret = arg0.globalAlpha;
+            return ret;
+        },
         __wbg_lineTo_c584cff6c760c4a5: function(arg0, arg1, arg2) {
             arg0.lineTo(arg1, arg2);
         },
@@ -675,6 +694,9 @@ function __wbg_get_imports() {
         },
         __wbg_set_lineDashOffset_ce4b3678fdd4e226: function(arg0, arg1) {
             arg0.lineDashOffset = arg1;
+        },
+        __wbg_set_lineJoin_9b9f1aaa283be35a: function(arg0, arg1, arg2) {
+            arg0.lineJoin = getStringFromWasm0(arg1, arg2);
         },
         __wbg_set_lineWidth_89fa506592f5b994: function(arg0, arg1) {
             arg0.lineWidth = arg1;

@@ -73,6 +73,10 @@ export class FdCanvas {
      */
     get_selected_node_props(): string;
     /**
+     * Check if sketchy rendering mode is enabled.
+     */
+    get_sketchy_mode(): boolean;
+    /**
      * Get the current FD source text (synced from graph).
      */
     get_text(): string;
@@ -167,6 +171,10 @@ export class FdCanvas {
      */
     set_node_prop(key: string, value: string): boolean;
     /**
+     * Enable or disable sketchy (hand-drawn) rendering mode.
+     */
+    set_sketchy_mode(enabled: boolean): void;
+    /**
      * Set the FD source text, re-parsing into the scene graph.
      * Returns `true` on success, `false` on parse error.
      */
@@ -217,6 +225,7 @@ export interface InitOutput {
     readonly fdcanvas_get_selected_id: (a: number) => [number, number];
     readonly fdcanvas_get_selected_ids: (a: number) => [number, number];
     readonly fdcanvas_get_selected_node_props: (a: number) => [number, number];
+    readonly fdcanvas_get_sketchy_mode: (a: number) => number;
     readonly fdcanvas_get_text: (a: number) => [number, number];
     readonly fdcanvas_get_tool_name: (a: number) => [number, number];
     readonly fdcanvas_group_selected: (a: number) => number;
@@ -236,6 +245,7 @@ export interface InitOutput {
     readonly fdcanvas_select_by_id: (a: number, b: number, c: number) => number;
     readonly fdcanvas_set_annotations_json: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly fdcanvas_set_node_prop: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly fdcanvas_set_sketchy_mode: (a: number, b: number) => void;
     readonly fdcanvas_set_text: (a: number, b: number, c: number) => number;
     readonly fdcanvas_set_theme: (a: number, b: number) => void;
     readonly fdcanvas_set_tool: (a: number, b: number, c: number) => void;
