@@ -240,7 +240,7 @@ impl FdCanvas {
 
         let mutations = match self.active_tool {
             ToolKind::Select => self.select_tool.handle(&event, hit),
-            ToolKind::Rect => self.rect_tool.handle(&event, hit),
+            ToolKind::Rect | ToolKind::Frame => self.rect_tool.handle(&event, hit),
             ToolKind::Ellipse => self.ellipse_tool.handle(&event, hit),
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
@@ -283,7 +283,7 @@ impl FdCanvas {
 
         let mutations = match self.active_tool {
             ToolKind::Select => self.select_tool.handle(&event, hit),
-            ToolKind::Rect => self.rect_tool.handle(&event, hit),
+            ToolKind::Rect | ToolKind::Frame => self.rect_tool.handle(&event, hit),
             ToolKind::Ellipse => self.ellipse_tool.handle(&event, hit),
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
@@ -374,7 +374,7 @@ impl FdCanvas {
 
         let mutations = match self.active_tool {
             ToolKind::Select => self.select_tool.handle(&event, hit),
-            ToolKind::Rect => self.rect_tool.handle(&event, hit),
+            ToolKind::Rect | ToolKind::Frame => self.rect_tool.handle(&event, hit),
             ToolKind::Ellipse => self.ellipse_tool.handle(&event, hit),
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
@@ -426,6 +426,7 @@ impl FdCanvas {
             "pen" => ToolKind::Pen,
             "text" => ToolKind::Text,
             "arrow" => ToolKind::Arrow,
+            "frame" => ToolKind::Frame,
             _ => ToolKind::Select,
         };
         if new_tool != self.active_tool {
@@ -1487,6 +1488,10 @@ impl FdCanvas {
                 self.set_tool("arrow");
                 (false, true)
             }
+            ShortcutAction::ToolFrame => {
+                self.set_tool("frame");
+                (false, true)
+            }
             // Screenbrush: Tab toggles between two most-used tools
             ShortcutAction::ToggleLastTool => {
                 std::mem::swap(&mut self.prev_tool, &mut self.active_tool);
@@ -1507,7 +1512,57 @@ impl FdCanvas {
                 (false, false)
             }
 
-            // Currently handled by JS (clipboard, zoom, z-order, help)
+            // Z-order (now handled in Rust)
+            ShortcutAction::SendBackward => {
+                if let Some(id) = self.select_tool.first_selected() {
+                    if let Some(idx) = self.engine.graph.index_of(id) {
+                        let changed = self.engine.graph.send_backward(idx);
+                        (changed, false)
+                    } else {
+                        (false, false)
+                    }
+                } else {
+                    (false, false)
+                }
+            }
+            ShortcutAction::BringForward => {
+                if let Some(id) = self.select_tool.first_selected() {
+                    if let Some(idx) = self.engine.graph.index_of(id) {
+                        let changed = self.engine.graph.bring_forward(idx);
+                        (changed, false)
+                    } else {
+                        (false, false)
+                    }
+                } else {
+                    (false, false)
+                }
+            }
+            ShortcutAction::SendToBack => {
+                if let Some(id) = self.select_tool.first_selected() {
+                    if let Some(idx) = self.engine.graph.index_of(id) {
+                        let changed = self.engine.graph.send_to_back(idx);
+                        (changed, false)
+                    } else {
+                        (false, false)
+                    }
+                } else {
+                    (false, false)
+                }
+            }
+            ShortcutAction::BringToFront => {
+                if let Some(id) = self.select_tool.first_selected() {
+                    if let Some(idx) = self.engine.graph.index_of(id) {
+                        let changed = self.engine.graph.bring_to_front(idx);
+                        (changed, false)
+                    } else {
+                        (false, false)
+                    }
+                } else {
+                    (false, false)
+                }
+            }
+
+            // Currently handled by JS (clipboard, zoom, help)
             // These return (false, false) so JS can handle them
             ShortcutAction::SelectAll
             | ShortcutAction::Copy
@@ -1518,10 +1573,6 @@ impl FdCanvas {
             | ShortcutAction::ZoomToFit
             | ShortcutAction::PanStart
             | ShortcutAction::PanEnd
-            | ShortcutAction::SendBackward
-            | ShortcutAction::BringForward
-            | ShortcutAction::SendToBack
-            | ShortcutAction::BringToFront
             | ShortcutAction::ShowHelp => (false, false),
         }
     }
@@ -1535,6 +1586,7 @@ fn tool_kind_to_name(kind: ToolKind) -> &'static str {
         ToolKind::Pen => "pen",
         ToolKind::Text => "text",
         ToolKind::Arrow => "arrow",
+        ToolKind::Frame => "frame",
     }
 }
 
@@ -1546,6 +1598,7 @@ fn action_to_name(action: ShortcutAction) -> &'static str {
         ShortcutAction::ToolPen => "toolPen",
         ShortcutAction::ToolText => "toolText",
         ShortcutAction::ToolArrow => "toolArrow",
+        ShortcutAction::ToolFrame => "toolFrame",
         ShortcutAction::ToggleLastTool => "toggleLastTool",
         ShortcutAction::Undo => "undo",
         ShortcutAction::Redo => "redo",

@@ -820,6 +820,20 @@ document.addEventListener("keydown", (e) => {
       return;
     }
   }
+
+  // ── 0 key: reset zoom to 100% ──
+  if (e.key === "0" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    const active = document.activeElement;
+    const isTextInput = active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT");
+    if (!isTextInput) {
+      e.preventDefault();
+      cameraZoom = 1.0;
+      updateZoomIndicator();
+      render();
+      return;
+    }
+  }
+
   // ── V key or Escape: unlock tool if locked ──
   if ((e.key === "v" || e.key === "V" || e.key === "Escape") && !e.metaKey && !e.ctrlKey) {
     if (lockedTool) {
@@ -830,7 +844,7 @@ document.addEventListener("keydown", (e) => {
   }
 
   // ── Double-press detection for tool locking (RR, OO, PP, AA, TT) ──
-  const toolShortcuts = { r: "rect", o: "ellipse", p: "pen", a: "arrow", t: "text" };
+  const toolShortcuts = { r: "rect", o: "ellipse", p: "pen", a: "arrow", t: "text", f: "frame" };
   const lowerKey = e.key.toLowerCase();
   if (toolShortcuts[lowerKey] && !e.metaKey && !e.ctrlKey && !e.altKey) {
     const now = Date.now();
@@ -1053,8 +1067,12 @@ function buildShortcutHelpHtml() {
         ["R", "Rectangle"],
         ["O", "Ellipse"],
         ["P", "Pen (freehand)"],
+        ["A", "Arrow"],
         ["T", "Text"],
+        ["F", "Frame"],
         ["Tab", "Toggle last two tools"],
+        ["R R", "Lock tool (stays active)"],
+        ["Escape", "Unlock tool / Deselect"],
       ],
     },
     {
@@ -1062,18 +1080,25 @@ function buildShortcutHelpHtml() {
       shortcuts: [
         [`${cmd}Z`, "Undo"],
         [`${cmd}⇧Z`, "Redo"],
-        ["Delete", "Delete selected"],
-        [`${cmd}Delete`, "Clear selected"],
-        [`${cmd}D`, "Duplicate"],
+        ["Del / ⌫", "Delete selected"],
+        [`${cmd}D`, "Duplicate (+10,+10)"],
         [`${cmd}A`, "Select all"],
-      ],
-    },
-    {
-      title: "Clipboard",
-      shortcuts: [
+        [`${cmd}G`, "Group selected"],
+        [`${cmd}⇧G`, "Ungroup"],
         [`${cmd}C`, "Copy"],
         [`${cmd}X`, "Cut"],
         [`${cmd}V`, "Paste"],
+      ],
+    },
+    {
+      title: "Transform",
+      shortcuts: [
+        [`${cmd}[`, "Send backward"],
+        [`${cmd}]`, "Bring forward"],
+        [`${cmd}⇧[`, "Send to back"],
+        [`${cmd}⇧]`, "Bring to front"],
+        ["Arrow keys", "Nudge 1px"],
+        ["Shift+Arrow", "Nudge 10px"],
       ],
     },
     {
@@ -1081,33 +1106,23 @@ function buildShortcutHelpHtml() {
       shortcuts: [
         [`${cmd}+`, "Zoom in"],
         [`${cmd}−`, "Zoom out"],
+        ["0", "Reset zoom to 100%"],
         [`${cmd}0`, "Zoom to fit"],
-        ["Pinch", "Trackpad zoom"],
+        [`${cmd}1`, "Zoom to selection"],
+        ["L", "Toggle Layers panel"],
+        ["G", "Toggle grid overlay"],
         ["Space (hold)", "Pan / hand tool"],
         [`${cmd} (hold)`, "Temp. hand tool"],
-        ["Click %", "Reset zoom to 100%"],
-        ["G", "Toggle grid overlay"],
-        [`${cmd}1`, "Zoom to selection"],
-      ],
-    },
-    {
-      title: "Z-Order",
-      shortcuts: [
-        [`${cmd}[`, "Send backward"],
-        [`${cmd}]`, "Bring forward"],
-        [`${cmd}⇧[`, "Send to back"],
-        [`${cmd}⇧]`, "Bring to front"],
+        ["Pinch", "Trackpad zoom"],
       ],
     },
     {
       title: "Modifiers (while dragging)",
       shortcuts: [
         ["Shift", "Constrain axis / square"],
-        ["Alt / ⌥", "Duplicate on click"],
-        [`⌥${cmd}`, "Copy while moving"],
-        ["Arrow keys", "Nudge 1px"],
-        ["Shift+Arrow", "Nudge 10px"],
-        ["Double-click", "Create text / edit text"],
+        ["Alt+drag", "Duplicate while moving"],
+        ["Double-click", "Edit text / create text"],
+        ["Dbl-click tool", "Lock tool (🔒)"],
       ],
     },
     {

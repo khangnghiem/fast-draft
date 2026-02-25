@@ -574,6 +574,103 @@ impl SceneGraph {
             .collect()
     }
 
+    /// Move a child one step backward in z-order (swap with previous sibling).
+    /// Returns true if the z-order changed.
+    pub fn send_backward(&mut self, child: NodeIndex) -> bool {
+        let parent = match self.parent(child) {
+            Some(p) => p,
+            None => return false,
+        };
+        let siblings = self.children(parent);
+        let pos = match siblings.iter().position(|&s| s == child) {
+            Some(p) => p,
+            None => return false,
+        };
+        if pos == 0 {
+            return false; // already at back
+        }
+        // Rebuild edges in swapped order
+        self.rebuild_child_order(parent, &siblings, pos, pos - 1)
+    }
+
+    /// Move a child one step forward in z-order (swap with next sibling).
+    /// Returns true if the z-order changed.
+    pub fn bring_forward(&mut self, child: NodeIndex) -> bool {
+        let parent = match self.parent(child) {
+            Some(p) => p,
+            None => return false,
+        };
+        let siblings = self.children(parent);
+        let pos = match siblings.iter().position(|&s| s == child) {
+            Some(p) => p,
+            None => return false,
+        };
+        if pos >= siblings.len() - 1 {
+            return false; // already at front
+        }
+        self.rebuild_child_order(parent, &siblings, pos, pos + 1)
+    }
+
+    /// Move a child to the back of z-order (first child).
+    pub fn send_to_back(&mut self, child: NodeIndex) -> bool {
+        let parent = match self.parent(child) {
+            Some(p) => p,
+            None => return false,
+        };
+        let siblings = self.children(parent);
+        let pos = match siblings.iter().position(|&s| s == child) {
+            Some(p) => p,
+            None => return false,
+        };
+        if pos == 0 {
+            return false;
+        }
+        self.rebuild_child_order(parent, &siblings, pos, 0)
+    }
+
+    /// Move a child to the front of z-order (last child).
+    pub fn bring_to_front(&mut self, child: NodeIndex) -> bool {
+        let parent = match self.parent(child) {
+            Some(p) => p,
+            None => return false,
+        };
+        let siblings = self.children(parent);
+        let pos = match siblings.iter().position(|&s| s == child) {
+            Some(p) => p,
+            None => return false,
+        };
+        let last = siblings.len() - 1;
+        if pos == last {
+            return false;
+        }
+        self.rebuild_child_order(parent, &siblings, pos, last)
+    }
+
+    /// Rebuild child edges, moving child at `from` to `to` position.
+    fn rebuild_child_order(
+        &mut self,
+        parent: NodeIndex,
+        siblings: &[NodeIndex],
+        from: usize,
+        to: usize,
+    ) -> bool {
+        // Remove all edges from parent to children
+        for &sib in siblings {
+            if let Some(edge) = self.graph.find_edge(parent, sib) {
+                self.graph.remove_edge(edge);
+            }
+        }
+        // Build new order
+        let mut new_order: Vec<NodeIndex> = siblings.to_vec();
+        let child = new_order.remove(from);
+        new_order.insert(to, child);
+        // Re-add edges in new order
+        for &sib in &new_order {
+            self.graph.add_edge(parent, sib, ());
+        }
+        true
+    }
+
     /// Define a named style.
     pub fn define_style(&mut self, name: NodeId, style: Style) {
         self.styles.insert(name, style);

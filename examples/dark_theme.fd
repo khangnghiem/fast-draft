@@ -21,168 +21,28 @@ style dark_text {
   font: "Inter" 400 14
 }
 
+ellipse @_anon_1 {
+  w: 50 h: 40
+  fill: #CCCCD9
+  x: -64.9
+  y: 1207.21
+}
+
+rect @_anon_0 {
+  w: 118.35 h: 32.5
+  fill: #000000
+  corner: 0
+  x: -185
+  y: 653.31
+  text @_anon_0_label "gaga" {
+  }
+}
+
 group @settings {
   layout: column gap=20 pad=28
   opacity: 1
-  x: 483.11
-  y: -1120.04
-  group @header {
-    layout: row gap=0 pad=0
-    text @title "Settings" {
-      fill: #FFFFFF
-      font: "Inter" 700 24
-      opacity: 1
-    }
-    rect @close_btn {
-      w: 36 h: 36
-      fill: #2D2D44
-      corner: 18
-      text @_anon_25 "×" {
-        fill: #999999
-        font: "Inter" 400 20
-      }
-      anim :hover {
-        fill: #3D3D5C
-        ease: ease_out 150ms
-      }
-    }
-  }
-  rect @profile_card {
-    w: 344 h: 80
-    use: dark_card
-    x: -656.58
-    y: 860.46
-    group @_anon_26 {
-      layout: row gap=14 pad=16
-      ellipse @user_avatar {
-        spec "User profile photo"
-        w: 48 h: 48
-        fill: #6C5CE7
-        x: 178.49
-        y: -630.04
-      }
-      group @_anon_27 {
-        layout: column gap=4 pad=0
-        text @_anon_28 "Khang Nghiem" {
-          fill: #FFFFFF
-          font: "Inter" 600 16
-          x: -140.44
-          y: -8.39
-        }
-        text @_anon_29 "khang@fastdraft.io" {
-          use: dark_muted
-          x: 159.45
-          y: 287.16
-        }
-      }
-    }
-  }
-  text @_anon_30 "Preferences" {
-    fill: #6B7280
-    font: "Inter" 600 13
-  }
-  rect @toggle_dark {
-    w: 344 h: 56
-    use: dark_card
-    x: 238.09
-    y: 834.82
-    anim :hover {
-      fill: #353550
-      ease: ease_out 150ms
-    }
-  }
-  rect @toggle_notif {
-    w: 344 h: 56
-    use: dark_card
-    x: 376.84
-    y: 708.79
-    group @_anon_35 {
-      layout: row gap=0 pad=16
-      group @_anon_36 {
-        layout: column gap=2 pad=0
-        text @_anon_37 "Notifications" {
-          use: dark_text
-        }
-        text @_anon_38 "Push and email alerts" {
-          use: dark_muted
-        }
-      }
-      rect @switch_off {
-        spec "Toggle — OFF state"
-        w: 44 h: 24
-        fill: #3D3D5C
-        corner: 12
-        ellipse @switch_knob_off {
-          w: 20 h: 20
-          fill: #6B7280
-        }
-      }
-    }
-    anim :hover {
-      fill: #353550
-      ease: ease_out 150ms
-    }
-  }
-  rect @toggle_sound {
-    w: 344 h: 56
-    use: dark_card
-    x: 28.51
-    y: 340.51
-    group @_anon_39 {
-      layout: row gap=0 pad=16
-      x: 72.88
-      y: 605.77
-      group @_anon_40 {
-        layout: column gap=2 pad=0
-        text @_anon_41 "Sound Effects" {
-          use: dark_text
-          fill: #E0E0E0
-          font: "Inter" 400 14
-          opacity: 1
-        }
-        text @_anon_42 "UI interaction sounds" {
-          use: dark_muted
-        }
-      }
-      rect @switch_sound {
-        w: 44 h: 24
-        fill: #6C5CE7
-        corner: 12
-        x: -19.14
-        y: 83.42
-        ellipse @switch_knob_s {
-          w: 20 h: 20
-          fill: #FFFFFF
-          x: -146.24
-          y: 32.3
-          text @switch_knob_s_label "ehe" {
-          }
-        }
-      }
-    }
-    anim :hover {
-      fill: #353550
-      ease: ease_out 150ms
-    }
-  }
-  text @_anon_43 "Display" {
-    fill: #6B7280
-    font: "Inter" 600 13
-  }
-  rect @slider_card {
-    w: 344 h: 72
-    use: dark_card
-    fill: #2D2D44
-    corner: 12
-    x: 184.69
-    y: 144.81
-    text @slider_card_label "gaga" {
-    }
-  }
-  text @_anon_48 "Danger Zone" {
-    fill: #E17055
-    font: "Inter" 600 13
-  }
+  x: 586.58
+  y: -1062.95
   rect @btn_delete {
     spec {
       "Destructive action — delete account"
@@ -208,22 +68,162 @@ group @settings {
       ease: ease_out 100ms
     }
   }
-}
-
-rect @_anon_0 {
-  w: 118.35 h: 32.5
-  fill: #000000
-  corner: 0
-  x: -185
-  y: 653.31
-  text @_anon_0_label "gaga" {
+  text @_anon_48 "Danger Zone" {
+    fill: #E17055
+    font: "Inter" 600 13
   }
-}
-
-ellipse @_anon_1 {
-  w: 50 h: 40
-  fill: #CCCCD9
-  x: -64.9
-  y: 1207.21
+  rect @slider_card {
+    w: 344 h: 72
+    use: dark_card
+    fill: #2D2D44
+    corner: 12
+    x: 184.69
+    y: 144.81
+    text @slider_card_label "gaga" {
+    }
+  }
+  text @_anon_43 "Display" {
+    fill: #6B7280
+    font: "Inter" 600 13
+  }
+  rect @toggle_sound {
+    w: 344 h: 56
+    use: dark_card
+    x: 28.51
+    y: 340.51
+    group @_anon_39 {
+      layout: row gap=0 pad=16
+      x: 72.88
+      y: 605.77
+      rect @switch_sound {
+        w: 44 h: 24
+        fill: #6C5CE7
+        corner: 12
+        x: -19.14
+        y: 83.42
+        ellipse @switch_knob_s {
+          w: 20 h: 20
+          fill: #FFFFFF
+          x: -146.24
+          y: 32.3
+          text @switch_knob_s_label "ehe" {
+          }
+        }
+      }
+      group @_anon_40 {
+        layout: column gap=2 pad=0
+        text @_anon_42 "UI interaction sounds" {
+          use: dark_muted
+        }
+        text @_anon_41 "Sound Effects" {
+          use: dark_text
+          fill: #E0E0E0
+          font: "Inter" 400 14
+          opacity: 1
+        }
+      }
+    }
+    anim :hover {
+      fill: #353550
+      ease: ease_out 150ms
+    }
+  }
+  rect @toggle_notif {
+    w: 344 h: 56
+    use: dark_card
+    x: 376.84
+    y: 708.79
+    group @_anon_35 {
+      layout: row gap=0 pad=16
+      rect @switch_off {
+        spec "Toggle — OFF state"
+        w: 44 h: 24
+        fill: #3D3D5C
+        corner: 12
+        ellipse @switch_knob_off {
+          w: 20 h: 20
+          fill: #6B7280
+        }
+      }
+      group @_anon_36 {
+        layout: column gap=2 pad=0
+        text @_anon_38 "Push and email alerts" {
+          use: dark_muted
+        }
+        text @_anon_37 "Notifications" {
+          use: dark_text
+        }
+      }
+    }
+    anim :hover {
+      fill: #353550
+      ease: ease_out 150ms
+    }
+  }
+  rect @toggle_dark {
+    w: 344 h: 56
+    use: dark_card
+    x: 238.09
+    y: 834.82
+    anim :hover {
+      fill: #353550
+      ease: ease_out 150ms
+    }
+  }
+  text @_anon_30 "Preferences" {
+    fill: #6B7280
+    font: "Inter" 600 13
+  }
+  rect @profile_card {
+    w: 344 h: 80
+    use: dark_card
+    x: -656.58
+    y: 860.46
+    group @_anon_26 {
+      layout: row gap=14 pad=16
+      group @_anon_27 {
+        layout: column gap=4 pad=0
+        text @_anon_29 "khang@fastdraft.io" {
+          use: dark_muted
+          x: 159.45
+          y: 287.16
+        }
+        text @_anon_28 "Khang Nghiem" {
+          fill: #FFFFFF
+          font: "Inter" 600 16
+          x: -140.44
+          y: -8.39
+        }
+      }
+      ellipse @user_avatar {
+        spec "User profile photo"
+        w: 48 h: 48
+        fill: #6C5CE7
+        x: 178.49
+        y: -630.04
+      }
+    }
+  }
+  group @header {
+    layout: row gap=0 pad=0
+    rect @close_btn {
+      w: 36 h: 36
+      fill: #2D2D44
+      corner: 18
+      text @_anon_25 "×" {
+        fill: #999999
+        font: "Inter" 400 20
+      }
+      anim :hover {
+        fill: #3D3D5C
+        ease: ease_out 150ms
+      }
+    }
+    text @title "Settings" {
+      fill: #FFFFFF
+      font: "Inter" 700 24
+      opacity: 1
+    }
+  }
 }
 

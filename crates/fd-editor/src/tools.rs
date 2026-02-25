@@ -26,6 +26,7 @@ pub enum ToolKind {
     Pen,
     Text,
     Arrow,
+    Frame,
 }
 
 /// Trait for tools that handle input and produce mutations.

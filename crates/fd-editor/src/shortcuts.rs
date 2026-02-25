@@ -20,6 +20,7 @@ pub enum ShortcutAction {
     ToolPen,
     ToolText,
     ToolArrow,
+    ToolFrame,
     /// Toggle between current and previous tool (Screenbrush: Tab).
     ToggleLastTool,
 
@@ -131,6 +132,7 @@ impl ShortcutMap {
             "p" | "P" => Some(ShortcutAction::ToolPen),
             "t" | "T" => Some(ShortcutAction::ToolText),
             "a" | "A" => Some(ShortcutAction::ToolArrow),
+            "f" | "F" => Some(ShortcutAction::ToolFrame),
             // Screenbrush: Tab = toggle between two most-used tools
             "Tab" => Some(ShortcutAction::ToggleLastTool),
             "Delete" | "Backspace" => Some(ShortcutAction::Delete),
@@ -170,6 +172,10 @@ mod tests {
         assert_eq!(
             ShortcutMap::resolve("a", false, false, false, false),
             Some(ShortcutAction::ToolArrow)
+        );
+        assert_eq!(
+            ShortcutMap::resolve("f", false, false, false, false),
+            Some(ShortcutAction::ToolFrame)
         );
     }
 

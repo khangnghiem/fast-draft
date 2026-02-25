@@ -5,6 +5,15 @@
 
 ## Completed Requirements
 
+### v0.8.37
+
+- **FEATURE**: Z-order shortcuts — ⌘[ send backward, ⌘] bring forward, ⌘⇧[ send to back, ⌘⇧] bring to front (implemented in Rust SceneGraph)
+- **FEATURE**: Frame tool — F key, toolbar button, reuses RectTool with frame semantics
+- **FEATURE**: 0 key resets zoom to 100%
+- **SHORTCUT**: ⌘D duplicate, ⌘G group, ⌘⇧G ungroup, Del/Backspace delete — all already mapped, now documented
+- **SHORTCUT**: F key added to double-press tool lock (FF locks Frame tool)
+- **UI**: Comprehensive help dialog (?) with 6 categories: Tools, Edit, Transform, View, Modifiers, Apple Pencil Pro
+
 ### v0.8.36
 
 - **FEATURE**: Sticky Tool Mode — double-click a tool icon or press its shortcut twice (RR, OO, PP, AA, TT) to lock the tool; it stays active after placing shapes. 🔒 badge appears on locked tool button. Single-click or press V/Escape to unlock.
