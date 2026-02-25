@@ -13,6 +13,10 @@
 
 - **NEW**: Smart focus on layer click — clicking a layer item in the Layers panel now smoothly pans the camera to center the node (250ms ease-out animation); auto-zooms in if both dimensions are < 20px on screen (truly invisible), auto-zooms out if the node overflows the viewport (15% padding); skips pan if the node center is already within 20% of the viewport center; thin shapes (lines) are left at current zoom unless they overflow
 
+### v0.8.21
+
+- **BUG FIX**: `set_node_prop` no longer flattens inherited styles — all style property handlers now modify `node.style` directly instead of calling `resolve_style()`, which was baking `use:` referenced properties into inline styles and corrupting the emitted text
+
 ### v0.8.18
 
 - **BUG FIX**: Node name no longer disappears after double-click → click outside — inline editor `commit()` now skips `set_node_prop` when value is unchanged, preventing `SetStyle` from flattening inherited styles and `SetText` from triggering unnecessary re-emission

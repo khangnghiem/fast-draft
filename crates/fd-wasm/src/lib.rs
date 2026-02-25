@@ -919,74 +919,71 @@ impl FdCanvas {
         let mutation = match key {
             "fill" => {
                 if let Some(color) = Color::from_hex(value) {
-                    let mut style = self
-                        .engine
-                        .graph
-                        .get_by_id(id)
-                        .map(|n| self.engine.graph.resolve_style(n, &[]))
-                        .unwrap_or_default();
-                    style.fill = Some(Paint::Solid(color));
-                    GraphMutation::SetStyle { id, style }
+                    if let Some(node) = self.engine.graph.get_by_id(id) {
+                        let mut style = node.style.clone();
+                        style.fill = Some(Paint::Solid(color));
+                        GraphMutation::SetStyle { id, style }
+                    } else {
+                        return false;
+                    }
                 } else {
                     return false;
                 }
             }
             "strokeColor" => {
                 if let Some(color) = Color::from_hex(value) {
-                    let mut style = self
-                        .engine
-                        .graph
-                        .get_by_id(id)
-                        .map(|n| self.engine.graph.resolve_style(n, &[]))
-                        .unwrap_or_default();
-                    let mut stroke = style.stroke.unwrap_or_default();
-                    stroke.paint = Paint::Solid(color);
-                    style.stroke = Some(stroke);
-                    GraphMutation::SetStyle { id, style }
+                    if let Some(node) = self.engine.graph.get_by_id(id) {
+                        let mut style = node.style.clone();
+                        let resolved = self.engine.graph.resolve_style(node, &[]);
+                        let mut stroke = style.stroke.or(resolved.stroke).unwrap_or_default();
+                        stroke.paint = Paint::Solid(color);
+                        style.stroke = Some(stroke);
+                        GraphMutation::SetStyle { id, style }
+                    } else {
+                        return false;
+                    }
                 } else {
                     return false;
                 }
             }
             "strokeWidth" => {
                 if let Ok(w) = value.parse::<f32>() {
-                    let mut style = self
-                        .engine
-                        .graph
-                        .get_by_id(id)
-                        .map(|n| self.engine.graph.resolve_style(n, &[]))
-                        .unwrap_or_default();
-                    let mut stroke = style.stroke.unwrap_or_default();
-                    stroke.width = w;
-                    style.stroke = Some(stroke);
-                    GraphMutation::SetStyle { id, style }
+                    if let Some(node) = self.engine.graph.get_by_id(id) {
+                        let mut style = node.style.clone();
+                        let resolved = self.engine.graph.resolve_style(node, &[]);
+                        let mut stroke = style.stroke.or(resolved.stroke).unwrap_or_default();
+                        stroke.width = w;
+                        style.stroke = Some(stroke);
+                        GraphMutation::SetStyle { id, style }
+                    } else {
+                        return false;
+                    }
                 } else {
                     return false;
                 }
             }
             "cornerRadius" => {
                 if let Ok(r) = value.parse::<f32>() {
-                    let mut style = self
-                        .engine
-                        .graph
-                        .get_by_id(id)
-                        .map(|n| self.engine.graph.resolve_style(n, &[]))
-                        .unwrap_or_default();
-                    style.corner_radius = Some(r);
-                    GraphMutation::SetStyle { id, style }
+                    if let Some(node) = self.engine.graph.get_by_id(id) {
+                        let mut style = node.style.clone();
+                        style.corner_radius = Some(r);
+                        GraphMutation::SetStyle { id, style }
+                    } else {
+                        return false;
+                    }
                 } else {
                     return false;
                 }
             }
             "opacity" => {
                 if let Ok(o) = value.parse::<f32>() {
-                    let mut style = self
-                        .engine
-                        .graph
-                        .get_by_id(id)
-                        .map(|n| self.engine.graph.resolve_style(n, &[]))
-                        .unwrap_or_default();
-                    style.opacity = Some(o);
-                    GraphMutation::SetStyle { id, style }
+                    if let Some(node) = self.engine.graph.get_by_id(id) {
+                        let mut style = node.style.clone();
+                        style.opacity = Some(o);
+                        GraphMutation::SetStyle { id, style }
+                    } else {
+                        return false;
+                    }
                 } else {
                     return false;
                 }
@@ -997,14 +994,13 @@ impl FdCanvas {
                     "right" => TextAlign::Right,
                     _ => TextAlign::Center,
                 };
-                let mut style = self
-                    .engine
-                    .graph
-                    .get_by_id(id)
-                    .map(|n| self.engine.graph.resolve_style(n, &[]))
-                    .unwrap_or_default();
-                style.text_align = Some(align);
-                GraphMutation::SetStyle { id, style }
+                if let Some(node) = self.engine.graph.get_by_id(id) {
+                    let mut style = node.style.clone();
+                    style.text_align = Some(align);
+                    GraphMutation::SetStyle { id, style }
+                } else {
+                    return false;
+                }
             }
             "textVAlign" => {
                 let valign = match value {
@@ -1012,14 +1008,13 @@ impl FdCanvas {
                     "bottom" => TextVAlign::Bottom,
                     _ => TextVAlign::Middle,
                 };
-                let mut style = self
-                    .engine
-                    .graph
-                    .get_by_id(id)
-                    .map(|n| self.engine.graph.resolve_style(n, &[]))
-                    .unwrap_or_default();
-                style.text_valign = Some(valign);
-                GraphMutation::SetStyle { id, style }
+                if let Some(node) = self.engine.graph.get_by_id(id) {
+                    let mut style = node.style.clone();
+                    style.text_valign = Some(valign);
+                    GraphMutation::SetStyle { id, style }
+                } else {
+                    return false;
+                }
             }
             "width" | "height" => {
                 let v = match value.parse::<f32>() {
@@ -1053,7 +1048,7 @@ impl FdCanvas {
             },
             "label" => {
                 if let Some(node) = self.engine.graph.get_by_id(id) {
-                    let mut style = self.engine.graph.resolve_style(node, &[]);
+                    let mut style = node.style.clone();
                     style.label = if value.is_empty() {
                         None
                     } else {
