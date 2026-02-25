@@ -5,6 +5,10 @@
 
 ## Completed Requirements
 
+### v0.8.17
+
+- **BUG FIX**: Layer rename now syncs to Code Mode — added a `committed` guard flag to prevent double invocation of the `commit()` closure (Enter removes the input from DOM, triggering blur's `setTimeout(commit, 100)` which could race and skip `syncTextToExtension()`); also checks `set_text()` return value so parse errors don't silently swallow the rename
+
 ### v0.8.16
 
 - **UX**: Resize handle cursor feedback — hovering over the 8 resize handles now shows the appropriate directional cursor (`nwse-resize`, `nesw-resize`, `ns-resize`, `ew-resize`) instead of the default pointer, matching Figma/Sketch behavior

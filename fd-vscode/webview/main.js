@@ -2675,7 +2675,10 @@ function refreshLayersPanel() {
       input.focus();
       input.select();
 
+      let committed = false;
       const commit = () => {
+        if (committed) return;
+        committed = true;
         const newId = input.value.trim().replace(/[^a-zA-Z0-9_]/g, "_");
         if (input.parentNode) input.parentNode.removeChild(input);
         if (!newId || newId === oldId || !fdCanvas) {
@@ -2689,9 +2692,11 @@ function refreshLayersPanel() {
           `@${newId}`
         );
         if (renamed !== text) {
-          fdCanvas.set_text(renamed);
-          render();
-          syncTextToExtension();
+          const ok = fdCanvas.set_text(renamed);
+          if (ok) {
+            render();
+            syncTextToExtension();
+          }
         }
         refreshLayersPanel();
       };

@@ -87,6 +87,15 @@ impl SyncEngine {
                         bounds.x += dx;
                         bounds.y += dy;
                     }
+                    // Propagate movement to all descendants' cached bounds
+                    // so children move together with their parent (e.g. group drag).
+                    let descendants = Self::collect_descendants(&self.graph, idx);
+                    for child_idx in descendants {
+                        if let Some(child_bounds) = self.bounds.get_mut(&child_idx) {
+                            child_bounds.x += dx;
+                            child_bounds.y += dy;
+                        }
+                    }
                     // Pin moved node to Position constraint with parent-relative coords.
                     // Position { x, y } is interpreted by resolve_layout as
                     // (parent.x + x, parent.y + y), so we must subtract parent offset.
@@ -419,6 +428,19 @@ impl SyncEngine {
             .and_then(|pidx| self.graph.graph.node_weight(pidx))
             .map(|n| n.id)
             .unwrap_or_else(|| NodeId::intern("root"))
+    }
+
+    /// Collect all descendant NodeIndex values (children, grandchildren, etc.).
+    fn collect_descendants(graph: &SceneGraph, idx: NodeIndex) -> Vec<NodeIndex> {
+        let mut result = Vec::new();
+        let mut stack = vec![idx];
+        while let Some(current) = stack.pop() {
+            for child in graph.children(current) {
+                result.push(child);
+                stack.push(child);
+            }
+        }
+        result
     }
 }
 
@@ -898,5 +920,81 @@ text @heading "Hello" {
         let node2 = engine2.graph.get_by_id(NodeId::intern("heading")).unwrap();
         assert_eq!(node2.style.text_align, Some(TextAlign::Right));
         assert_eq!(node2.style.text_valign, Some(TextVAlign::Bottom));
+    }
+
+    #[test]
+    fn sync_move_group_moves_children() {
+        let input = r#"
+group @box {
+  x: 10 y: 10
+
+  rect @child_a { x: 0 y: 0 w: 40 h: 20 }
+  rect @child_b { x: 50 y: 30 w: 40 h: 20 }
+}
+"#;
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+        let group_idx = engine.graph.index_of(NodeId::intern("box")).unwrap();
+        let a_idx = engine.graph.index_of(NodeId::intern("child_a")).unwrap();
+        let b_idx = engine.graph.index_of(NodeId::intern("child_b")).unwrap();
+
+        let group_before = engine.bounds[&group_idx];
+        let a_before = engine.bounds[&a_idx];
+        let b_before = engine.bounds[&b_idx];
+
+        // Move the group by (100, 50)
+        engine.apply_mutation(GraphMutation::MoveNode {
+            id: NodeId::intern("box"),
+            dx: 100.0,
+            dy: 50.0,
+        });
+
+        // Group bounds should have shifted
+        let group_after = engine.bounds[&group_idx];
+        assert!(
+            (group_after.x - (group_before.x + 100.0)).abs() < 0.01,
+            "group x: expected {}, got {}",
+            group_before.x + 100.0,
+            group_after.x
+        );
+        assert!(
+            (group_after.y - (group_before.y + 50.0)).abs() < 0.01,
+            "group y: expected {}, got {}",
+            group_before.y + 50.0,
+            group_after.y
+        );
+
+        // Children bounds should have shifted by the same delta
+        let a_after = engine.bounds[&a_idx];
+        assert!(
+            (a_after.x - (a_before.x + 100.0)).abs() < 0.01,
+            "child_a x: expected {}, got {}",
+            a_before.x + 100.0,
+            a_after.x
+        );
+        assert!(
+            (a_after.y - (a_before.y + 50.0)).abs() < 0.01,
+            "child_a y: expected {}, got {}",
+            a_before.y + 50.0,
+            a_after.y
+        );
+
+        let b_after = engine.bounds[&b_idx];
+        assert!(
+            (b_after.x - (b_before.x + 100.0)).abs() < 0.01,
+            "child_b x: expected {}, got {}",
+            b_before.x + 100.0,
+            b_after.x
+        );
+        assert!(
+            (b_after.y - (b_before.y + 50.0)).abs() < 0.01,
+            "child_b y: expected {}, got {}",
+            b_before.y + 50.0,
+            b_after.y
+        );
     }
 }
