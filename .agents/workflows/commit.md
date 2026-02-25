@@ -24,9 +24,13 @@ description: Stage and commit changes to a feature branch (never main)
    git checkout -b feat/<descriptive-name>
    ```
 
-4. **Update docs** (MANDATORY):
+4. **Update docs** (MANDATORY — both files, every time):
    - `docs/CHANGELOG.md` — add entry for each meaningful change
-   - `REQUIREMENTS.md` — update if behavior changed or new feature added (check Requirement Index first)
+   - `REQUIREMENTS.md` — for **every** CHANGELOG entry, check if it introduces, extends, or modifies a requirement:
+     - New feature → add a new `R*.N` entry and update the Requirement Index
+     - Behavior change → update the existing requirement's wording
+     - Bug fix on an existing requirement → no change needed
+     - Search the Requirement Index for overlap before adding new entries
 
 5. Stage all changes:
 

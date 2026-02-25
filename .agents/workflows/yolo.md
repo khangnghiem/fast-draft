@@ -78,9 +78,13 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 8. **Bump Version** (if `fd-vscode/` was changed):
    - Bump the `version` field in `fd-vscode/package.json` appropriately (patch/minor/major).
 
-9. **Update docs** (MANDATORY):
+9. **Update docs** (MANDATORY — both files, every time):
    - `docs/CHANGELOG.md` — add entry under the current version section for each meaningful change
-   - `REQUIREMENTS.md` — update if behavior changed, new feature added, or requirement wording needs refinement (check the Requirement Index for overlap first)
+   - `REQUIREMENTS.md` — for **every** CHANGELOG entry, check if it introduces, extends, or modifies a requirement:
+     - New feature → add a new `R*.N` entry and update the Requirement Index
+     - Behavior change → update the existing requirement's wording
+     - Bug fix on an existing requirement → no change needed (already documented)
+     - Search the Requirement Index for overlap before adding new entries
 
 10. **Stage and commit**:
 
