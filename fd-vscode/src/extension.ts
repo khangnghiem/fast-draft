@@ -241,7 +241,14 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     const result = await refineSelectedNodes(document.getText(), nodeIds);
 
     if (result.error) {
-      vscode.window.showWarningMessage(`AI Refine: ${result.error}`);
+      const action = result.needsSettings ? "Open Settings" : undefined;
+      const chosen = await vscode.window.showWarningMessage(
+        `AI Refine: ${result.error}`,
+        ...(action ? [action] : [])
+      );
+      if (chosen === "Open Settings") {
+        vscode.commands.executeCommand("workbench.action.openSettings", "fd.ai");
+      }
       webviewPanel.webview.postMessage({
         type: "aiRefineComplete",
         error: result.error,
@@ -3374,7 +3381,14 @@ export function activate(context: vscode.ExtensionContext) {
       }
       const result = await refineSelectedNodes(editor.document.getText(), nodeIds);
       if (result.error) {
-        vscode.window.showWarningMessage(`AI Refine: ${result.error}`);
+        const action = result.needsSettings ? "Open Settings" : undefined;
+        const chosen = await vscode.window.showWarningMessage(
+          `AI Refine: ${result.error}`,
+          ...(action ? [action] : [])
+        );
+        if (chosen === "Open Settings") {
+          vscode.commands.executeCommand("workbench.action.openSettings", "fd.ai");
+        }
         return;
       }
       const edit = new vscode.WorkspaceEdit();
@@ -3407,7 +3421,14 @@ export function activate(context: vscode.ExtensionContext) {
       }
       const result = await refineSelectedNodes(editor.document.getText(), nodeIds);
       if (result.error) {
-        vscode.window.showWarningMessage(`AI Refine: ${result.error}`);
+        const action = result.needsSettings ? "Open Settings" : undefined;
+        const chosen = await vscode.window.showWarningMessage(
+          `AI Refine: ${result.error}`,
+          ...(action ? [action] : [])
+        );
+        if (chosen === "Open Settings") {
+          vscode.commands.executeCommand("workbench.action.openSettings", "fd.ai");
+        }
         return;
       }
       const edit = new vscode.WorkspaceEdit();

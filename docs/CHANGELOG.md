@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.8.15
+
+- **UX**: AI Refine error messages now include an **"Open Settings"** action button — clicking it opens VS Code settings filtered to `fd.ai` for quick API key configuration or provider switching
+- **UX**: Error messages are now provider-agnostic — each warns which key is missing and reminds users they can switch to any of the 5 supported providers (Gemini, OpenAI, Anthropic, Ollama, OpenRouter)
+
 ### v0.8.14
 
 - **BUG FIX**: Layer selection now works — click handler pre-sets `lastLayerHash` before calling `render()`, so `refreshLayersPanel()` skips DOM rebuild and preserves the click handler's DOM references for visual highlight update

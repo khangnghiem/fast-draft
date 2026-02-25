@@ -26,6 +26,8 @@ interface AiConfig {
 interface RefineResult {
   refinedText: string;
   error?: string;
+  /** When true, the caller should offer an "Open Settings" action. */
+  needsSettings?: boolean;
 }
 
 // ─── Configuration ───────────────────────────────────────────────────────
@@ -316,7 +318,8 @@ export async function refineSelectedNodes(
           return {
             refinedText: fdText,
             error:
-              "Gemini API key not configured. Get a FREE key at https://aistudio.google.com/ and set 'fd.ai.geminiApiKey' in settings.",
+              "Gemini API key not configured. Get a FREE key at aistudio.google.com and set 'fd.ai.geminiApiKey' in Settings. (You can also switch to OpenAI, Anthropic, Ollama, or OpenRouter.)",
+            needsSettings: true,
           };
         }
         refined = await callGemini(prompt, config.apiKey, config.model);
@@ -326,7 +329,9 @@ export async function refineSelectedNodes(
         if (!config.apiKey) {
           return {
             refinedText: fdText,
-            error: "OpenAI API key not configured. Set 'fd.ai.openaiApiKey' in settings.",
+            error:
+              "OpenAI API key not configured. Set 'fd.ai.openaiApiKey' in Settings. (You can also switch to Gemini, Anthropic, Ollama, or OpenRouter.)",
+            needsSettings: true,
           };
         }
         refined = await callOpenAi(prompt, config.apiKey, config.model);
@@ -336,7 +341,9 @@ export async function refineSelectedNodes(
         if (!config.apiKey) {
           return {
             refinedText: fdText,
-            error: "Anthropic API key not configured. Set 'fd.ai.anthropicApiKey' in settings.",
+            error:
+              "Anthropic API key not configured. Set 'fd.ai.anthropicApiKey' in Settings. (You can also switch to Gemini, OpenAI, Ollama, or OpenRouter.)",
+            needsSettings: true,
           };
         }
         refined = await callAnthropic(prompt, config.apiKey, config.model);
@@ -351,7 +358,8 @@ export async function refineSelectedNodes(
           return {
             refinedText: fdText,
             error:
-              "OpenRouter API key not configured. Get one at https://openrouter.ai/ and set 'fd.ai.openrouterApiKey' in settings.",
+              "OpenRouter API key not configured. Get one at openrouter.ai and set 'fd.ai.openrouterApiKey' in Settings. (You can also switch to Gemini, OpenAI, Anthropic, or Ollama.)",
+            needsSettings: true,
           };
         }
         refined = await callOpenRouter(prompt, config.apiKey, config.model);
