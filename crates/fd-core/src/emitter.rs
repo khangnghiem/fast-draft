@@ -279,10 +279,7 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         )
         .unwrap();
     }
-    if let Some(ref label) = node.style.label {
-        indent(out, depth + 1);
-        writeln!(out, "label: \"{label}\"").unwrap();
-    }
+
     // Text alignment
     if node.style.text_align.is_some() || node.style.text_valign.is_some() {
         let h = match node.style.text_align {

@@ -956,7 +956,7 @@ function buildShortcutHelpHtml() {
         [`⌥${cmd}`, "Copy while moving"],
         ["Arrow keys", "Nudge 1px"],
         ["Shift+Arrow", "Nudge 10px"],
-        ["Double-click", "Create text / edit label"],
+        ["Double-click", "Create text / edit text"],
       ],
     },
     {
@@ -1309,7 +1309,7 @@ function setupPropertiesPanel() {
     { id: "prop-w", key: "width" },
     { id: "prop-h", key: "height" },
     { id: "prop-text-content", key: "content" },
-    { id: "prop-label", key: "label" },
+
   ];
 
   let debounceTimer = null;
@@ -1406,23 +1406,15 @@ function updatePropertiesPanel() {
   if (opacitySlider) opacitySlider.value = opacity;
   if (opacityVal) opacityVal.textContent = Math.round(opacity * 100) + "%";
 
-  // Text content (for text nodes) and label (for rect/ellipse)
+  // Text content (for text nodes)
   const textSection = document.getElementById("props-text-section");
   const textInput = document.getElementById("prop-text-content");
-  const labelSection = document.getElementById("props-label-section");
-  const labelInput = document.getElementById("prop-label");
 
   if (props.kind === "text") {
     if (textSection) textSection.style.display = "";
-    if (labelSection) labelSection.style.display = "none";
     if (textInput) textInput.value = props.content || "";
-  } else if (props.kind === "rect" || props.kind === "ellipse") {
-    if (textSection) textSection.style.display = "none";
-    if (labelSection) labelSection.style.display = "";
-    if (labelInput) labelInput.value = props.label || "";
   } else {
     if (textSection) textSection.style.display = "none";
-    if (labelSection) labelSection.style.display = "none";
   }
 
   // Alignment grid — show for text/rect/ellipse nodes

@@ -222,8 +222,7 @@ pub struct Style {
     pub corner_radius: Option<f32>,
     pub opacity: Option<f32>,
     pub shadow: Option<Shadow>,
-    /// Optional label text rendered centered inside the shape (for rect/ellipse).
-    pub label: Option<String>,
+
     /// Horizontal text alignment (default: Center).
     pub text_align: Option<TextAlign>,
     /// Vertical text alignment (default: Middle).
@@ -722,9 +721,7 @@ fn merge_style(dst: &mut Style, src: &Style) {
     if src.shadow.is_some() {
         dst.shadow = src.shadow.clone();
     }
-    if src.label.is_some() {
-        dst.label = src.label.clone();
-    }
+
     if src.text_align.is_some() {
         dst.text_align = src.text_align;
     }

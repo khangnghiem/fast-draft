@@ -5,6 +5,14 @@
 
 ## Completed Requirements
 
+### v0.8.29
+
+- **BREAKING**: Deprecated `label` style property on shapes — inline text on rect/ellipse/frame is now represented as a `text` child node instead of a `label:` property; parser silently ignores `label:` in old files for backwards compatibility
+- **WASM**: `get_selected_node_props` now returns text child content as `label` prop; `set_node_prop("label")` creates/updates/removes a `text` child node
+- **Renderer**: Removed `draw_shape_label` calls from shape rendering — text children render themselves as normal `Text` nodes
+- **UI**: Removed Label section from properties panel — shapes' text is edited via double-click inline editor (creates text child automatically)
+- **Examples**: Converted all `label: "..."` usage in `dark_theme.fd` to `text` child nodes
+
 ### v0.8.28
 
 - **BUG FIX**: Dragging a selected child node within a group now moves only the child, not the whole group — if the raw hit node is already selected (user drilled in), `effective_target` is skipped to preserve the child selection for drag

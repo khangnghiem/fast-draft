@@ -1922,13 +1922,6 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
             <button class="align-cell" data-h="right"  data-v="bottom"><span class="align-dot"></span></button>
           </div>
         </div>
-        <div class="props-section" id="props-label-section" style="display:none">
-          <div class="props-section-label">Label</div>
-          <div class="props-field full">
-            <input type="text" id="prop-label" placeholder="Shape label (optional)">
-          </div>
-        </div>
-      </div>
     </div>
   </div>
   <div id="annotation-card">
