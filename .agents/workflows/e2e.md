@@ -52,6 +52,14 @@ description: E2E browser testing via GitHub Codespace
 
 6. **Report** any bugs or visual issues found.
 
+## AI Automation (Browser Subagent)
+
+Instead of manual testing, you can ask the AI agent to test this automatically using its Browser Subagent.
+
+Prompt the agent with:
+
+> "Run the /e2e tests using the browser subagent. Navigate to https://github.com/codespaces, open the active codespace, ensure the UI renders correctly, and run `pnpm test` inside the `fd-vscode` terminal."
+
 ## Tips
 
 - The Codespace needs ~30s to start if stopped
