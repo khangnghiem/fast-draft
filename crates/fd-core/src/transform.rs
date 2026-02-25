@@ -13,7 +13,8 @@ use std::collections::HashMap;
 ///
 /// Preserves the first occurrence and relative order. Semantics are unchanged.
 pub fn dedup_use_styles(graph: &mut SceneGraph) {
-    for idx in graph.graph.node_indices() {
+    let indices: Vec<_> = graph.graph.node_indices().collect();
+    for idx in indices {
         let node = &mut graph.graph[idx];
         dedup_use_on_node(node);
     }
