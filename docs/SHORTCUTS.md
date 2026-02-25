@@ -92,13 +92,32 @@
 
 ### When Select Tool is active (V)
 
-| Modifier       | On Object        | On Empty Space |
-| -------------- | ---------------- | -------------- |
-| None           | Move / select    | Marquee select |
-| `Alt`          | **Clone + drag** | Marquee select |
-| `Shift`        | Add to selection | Add to marquee |
-| `⌘` (hold)     | Pan              | Pan            |
-| `Space` (hold) | Pan              | Pan            |
+| Modifier           | On Object                                                 | On Empty Space |
+| ------------------ | --------------------------------------------------------- | -------------- |
+| None               | Move / select                                             | Marquee select |
+| `Alt`              | **Clone + drag**                                          | Marquee select |
+| `Alt` (click only) | **Style picker** — copies fill/stroke/opacity as defaults | —              |
+| `Shift`            | Add to selection                                          | Add to marquee |
+| `⌘` (hold)         | Pan                                                       | Pan            |
+| `Space` (hold)     | Pan                                                       | Pan            |
+
+---
+
+## Smart Defaults (Sticky Styles)
+
+Per-tool session memory for style properties. When you change a shape's style, the next shape you create uses those same styles.
+
+| Tracked Property | Applies To          |
+| ---------------- | ------------------- |
+| Fill color       | rect, ellipse, text |
+| Stroke color     | All tools           |
+| Stroke width     | All tools           |
+| Opacity          | All tools           |
+| Font size        | text only           |
+
+Defaults are **captured** from both the Floating Action Bar and the Properties panel.
+Defaults are **applied** automatically when a new shape is drawn.
+Defaults **reset** on page reload (session only, not saved to `.fd` file).
 
 ---
 

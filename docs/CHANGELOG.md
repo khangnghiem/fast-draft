@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.8.40
+
+- **FEATURE**: Smart Defaults (Sticky Styles) — changing fill/stroke/strokeWidth/opacity/fontSize on any node stores it as the default for future shapes of that tool (Excalidraw-style)
+- **FEATURE**: Style Picker — Alt+click a node to copy its entire style (fill, stroke, opacity, font) as defaults for all tools (eyedropper for styles, not just colors)
+- **UX**: Defaults captured from both Floating Action Bar and Properties panel changes; applied automatically on new shape creation
+- **UX**: Per-tool session memory — rect remembers rect defaults, text remembers text defaults, etc. Resets on reload
+
 ### v0.8.39
 
 - **FEATURE**: Contextual Floating Toolbar — glassmorphism pill bar appears above selected nodes with: fill color swatch, stroke color swatch, stroke width input, opacity slider, font size (text nodes only), and ⋯ overflow menu (Group, Ungroup, Duplicate, Delete)

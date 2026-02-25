@@ -78,7 +78,82 @@ let cmdTempSelectOriginalTool = null;
 /** Alt+drag clone-and-drag active */
 let altCloneActive = false;
 
-// ─── Animation Drop State ────────────────────────────────────────────────
+// ─── Smart Defaults (Sticky Styles Per Tool) ─────────────────────────────
+/** Session-only style defaults per tool type (Excalidraw-style) */
+const toolDefaults = {
+  rect: { fill: "#4A90D9", stroke: "#333333", strokeWidth: 1, opacity: 1 },
+  ellipse: { fill: "#4A90D9", stroke: "#333333", strokeWidth: 1, opacity: 1 },
+  pen: { stroke: "#333333", strokeWidth: 2, opacity: 1 },
+  arrow: { stroke: "#333333", strokeWidth: 2, opacity: 1 },
+  text: { fill: "#333333", fontSize: 16, opacity: 1 },
+  frame: { stroke: "#6B7280", strokeWidth: 1, opacity: 1 },
+};
+
+/** Style picker: Alt+click a node → copies its style as defaults */
+let stylePickerActive = false;
+
+/** Capture a property change into the current tool's defaults */
+function captureDefault(prop, value) {
+  const toolName = fdCanvas ? fdCanvas.get_tool_name() : "select";
+  // Also capture for the last-used drawing tool (for "select" mode edits)
+  const targets = [toolName, lastDrawingTool].filter(Boolean);
+  for (const t of targets) {
+    if (toolDefaults[t]) {
+      const map = {
+        fill: "fill", stroke: "stroke", stroke_width: "strokeWidth",
+        opacity: "opacity", font_size: "fontSize"
+      };
+      const key = map[prop] || prop;
+      if (key in toolDefaults[t]) {
+        toolDefaults[t][key] = isNaN(Number(value)) ? value : Number(value);
+      }
+    }
+  }
+}
+
+/** Store the last drawing tool used for default capturing from Select mode */
+let lastDrawingTool = "rect";
+
+/** Apply stored defaults to the currently selected (newly created) node */
+function applyDefaultsToNewNode(toolName) {
+  if (!fdCanvas) return;
+  const defaults = toolDefaults[toolName];
+  if (!defaults) return;
+  const selectedId = fdCanvas.get_selected_id();
+  if (!selectedId) return;
+  if (defaults.fill) fdCanvas.set_node_prop("fill", defaults.fill);
+  if (defaults.stroke) fdCanvas.set_node_prop("stroke", defaults.stroke);
+  if (defaults.strokeWidth !== undefined) fdCanvas.set_node_prop("stroke_width", String(defaults.strokeWidth));
+  if (defaults.opacity !== undefined && defaults.opacity !== 1) fdCanvas.set_node_prop("opacity", String(defaults.opacity));
+  if (defaults.fontSize !== undefined) fdCanvas.set_node_prop("font_size", String(defaults.fontSize));
+}
+
+/** Copy all style properties from the currently selected node into tool defaults (style picker) */
+function pickStyleFromSelectedNode() {
+  if (!fdCanvas) return;
+  const propsJson = fdCanvas.get_selected_node_props();
+  let props;
+  try { props = JSON.parse(propsJson); } catch (_) { return; }
+  if (!props || !props.kind) return;
+  // Determine which tool default to update based on node kind
+  const kindToTool = {
+    rect: "rect", ellipse: "ellipse", pen: "pen",
+    arrow: "arrow", text: "text", frame: "frame"
+  };
+  const toolName = kindToTool[props.kind] || "rect";
+  const defaults = toolDefaults[toolName] || toolDefaults.rect;
+  if (props.fill) defaults.fill = props.fill;
+  if (props.strokeColor) defaults.stroke = props.strokeColor;
+  if (props.strokeWidth !== undefined) defaults.strokeWidth = props.strokeWidth;
+  if (props.opacity !== undefined) defaults.opacity = props.opacity;
+  if (props.fontSize !== undefined) defaults.fontSize = props.fontSize;
+  // Also set as global "all tools" hint
+  for (const t of Object.keys(toolDefaults)) {
+    if (props.fill && toolDefaults[t].fill !== undefined) toolDefaults[t].fill = props.fill;
+    if (props.strokeColor && toolDefaults[t].stroke !== undefined) toolDefaults[t].stroke = props.strokeColor;
+    if (props.opacity !== undefined) toolDefaults[t].opacity = props.opacity;
+  }
+}
 /** Node ID of the drag-over drop target (for animation assignment) */
 let animDropTargetId = null;
 /** Cached bounds of the drop target node */
@@ -526,6 +601,13 @@ function setupPointerEvents() {
     }
     // Auto-switch toolbar/cursor when tool changes (e.g. after drawing)
     if (result.toolSwitched) {
+      // ── Apply smart defaults to newly created node ──
+      if (result.changed && currentToolAtPointerDown) {
+        lastDrawingTool = currentToolAtPointerDown;
+        applyDefaultsToNewNode(currentToolAtPointerDown);
+        render();
+        syncTextToExtension();
+      }
       if (lockedTool) {
         // Override: re-activate locked tool instead of switching to Select
         fdCanvas.set_tool(lockedTool);
@@ -535,6 +617,18 @@ function setupPointerEvents() {
         updateToolbarActive(result.tool);
       }
     }
+
+    // ── Alt+click style picker (eyedropper for styles) ──
+    if (e.altKey && !altCloneActive && !cmdTempSelectActive && result.changed) {
+      const selectedId = fdCanvas.get_selected_id();
+      if (selectedId) {
+        pickStyleFromSelectedNode();
+        stylePickerActive = true;
+        // Brief visual feedback — could add a toast here
+        setTimeout(() => { stylePickerActive = false; }, 100);
+      }
+    }
+
     canvas.releasePointerCapture(e.pointerId);
     // Update properties panel after interaction ends
     updatePropertiesPanel();
@@ -1316,6 +1410,7 @@ function setupFloatingBar() {
   document.getElementById("fab-fill").addEventListener("input", (e) => {
     if (!fdCanvas) return;
     fdCanvas.set_node_prop("fill", e.target.value);
+    captureDefault("fill", e.target.value);
     render();
     syncTextToExtension();
     updatePropertiesPanel();
@@ -1325,6 +1420,7 @@ function setupFloatingBar() {
   document.getElementById("fab-stroke").addEventListener("input", (e) => {
     if (!fdCanvas) return;
     fdCanvas.set_node_prop("stroke", e.target.value);
+    captureDefault("stroke", e.target.value);
     render();
     syncTextToExtension();
     updatePropertiesPanel();
@@ -1334,6 +1430,7 @@ function setupFloatingBar() {
   document.getElementById("fab-stroke-w").addEventListener("change", (e) => {
     if (!fdCanvas) return;
     fdCanvas.set_node_prop("stroke_width", e.target.value);
+    captureDefault("stroke_width", e.target.value);
     render();
     syncTextToExtension();
     updatePropertiesPanel();
@@ -1346,6 +1443,7 @@ function setupFloatingBar() {
     if (!fdCanvas) return;
     opVal.textContent = `${Math.round(e.target.value * 100)}%`;
     fdCanvas.set_node_prop("opacity", e.target.value);
+    captureDefault("opacity", e.target.value);
     render();
     syncTextToExtension();
     updatePropertiesPanel();
@@ -1355,6 +1453,7 @@ function setupFloatingBar() {
   document.getElementById("fab-font-size").addEventListener("change", (e) => {
     if (!fdCanvas) return;
     fdCanvas.set_node_prop("font_size", e.target.value);
+    captureDefault("font_size", e.target.value);
     render();
     syncTextToExtension();
     updatePropertiesPanel();
@@ -1729,6 +1828,7 @@ function setupPropertiesPanel() {
       debounceTimer = setTimeout(() => {
         const changed = fdCanvas.set_node_prop(key, el.value);
         if (changed) {
+          captureDefault(key, el.value);
           render();
           syncTextToExtension();
         }
@@ -1748,6 +1848,7 @@ function setupPropertiesPanel() {
       debounceTimer = setTimeout(() => {
         const changed = fdCanvas.set_node_prop("opacity", String(v));
         if (changed) {
+          captureDefault("opacity", String(v));
           render();
           syncTextToExtension();
         }
