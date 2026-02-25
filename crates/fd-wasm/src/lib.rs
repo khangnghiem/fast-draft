@@ -44,6 +44,8 @@ pub struct FdCanvas {
     suppress_sync: bool,
     /// Dark mode flag — `false` = light (default), `true` = dark.
     dark_mode: bool,
+    /// Sketchy hand-drawn rendering mode.
+    sketchy_mode: bool,
     hovered_id: Option<fd_core::id::NodeId>,
     pressed_id: Option<fd_core::id::NodeId>,
     /// Deferred drill-down target: when pointer-down on a child of a selected
@@ -83,6 +85,7 @@ impl FdCanvas {
             height,
             suppress_sync: false,
             dark_mode: false,
+            sketchy_mode: false,
             hovered_id: None,
             pressed_id: None,
             pending_drill_target: None,
@@ -135,12 +138,23 @@ impl FdCanvas {
             self.hovered_id.as_ref().map(|id| id.as_str()),
             self.pressed_id.as_ref().map(|id| id.as_str()),
             &guides,
+            self.sketchy_mode,
         );
     }
 
     /// Set the canvas theme.
     pub fn set_theme(&mut self, is_dark: bool) {
         self.dark_mode = is_dark;
+    }
+
+    /// Enable or disable sketchy (hand-drawn) rendering mode.
+    pub fn set_sketchy_mode(&mut self, enabled: bool) {
+        self.sketchy_mode = enabled;
+    }
+
+    /// Check if sketchy rendering mode is enabled.
+    pub fn get_sketchy_mode(&self) -> bool {
+        self.sketchy_mode
     }
 
     /// Resize the canvas.

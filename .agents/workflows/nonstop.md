@@ -64,7 +64,23 @@ description: Continuous autonomous agent — work until all tasks are done, then
 
 9. **Fix any failures** before proceeding. If a check fails, fix and re-run.
 
-10. **Commit and push**:
+10. **E2E UX browser testing** (if `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `fd-vscode/webview/` changed):
+
+    Run the full `/e2e-ux` workflow using the browser subagent:
+    - Build WASM first if Rust crates changed:
+
+      ```bash
+      wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm
+      ```
+
+    - Open the Codespace in browser via `gh codespace code -c <codespace-name> --web`
+    - Execute all 8 phases from `/e2e-ux` (Canvas Load, Drawing Tools, Selection, Inline Editing, Navigation, Panels, Bidi Sync, Keyboard Shortcuts)
+    - Screenshot and report results per phase
+    - **If any phase fails**: Fix the issue before proceeding
+
+    > **Skip only if** the change is purely Rust internals with no canvas/UI impact (e.g., parser refactors covered by unit tests).
+
+11. **Commit and push**:
 
     ```bash
     git add -A
@@ -72,34 +88,34 @@ description: Continuous autonomous agent — work until all tasks are done, then
     git push -u origin HEAD
     ```
 
-11. **Create a PR** using GitKraken MCP:
+12. **Create a PR** using GitKraken MCP:
     - `provider`: github
     - `source_branch`: current branch
     - `target_branch`: main
     - Title in conventional commit format
     - Body with summary + verification results
 
-12. **Mark task `[x]`** in `task.md` and return to step 5.
+13. **Mark task `[x]`** in `task.md` and return to step 5.
 
 ## Phase 3: Proactive Discovery
 
 > When all known tasks are done, look for more work.
 
-13. **Re-scan** for new TODOs, untested code, or missing docs:
+14. **Re-scan** for new TODOs, untested code, or missing docs:
 
     ```bash
     rg -n "TODO|FIXME|HACK|XXX" --type rust --type ts || true
     ```
 
-14. **Check test coverage gaps** — look for public functions without tests:
+15. **Check test coverage gaps** — look for public functions without tests:
 
     ```bash
     cargo test --workspace -- --list 2>&1 | head -50
     ```
 
-15. If new work is found, add to `task.md` and return to **Phase 2**.
+16. If new work is found, add to `task.md` and return to **Phase 2**.
 
-16. If no more work is found, **report summary** to user:
+17. If no more work is found, **report summary** to user:
     - Total tasks completed
     - PRs created (with URLs)
     - Remaining known issues (if any)

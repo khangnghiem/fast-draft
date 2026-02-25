@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.8.34
+
+- **FEATURE**: Sketchy / hand-drawn rendering mode — toggle via ✏️ toolbar button; rects get wobbly corners with double-stroke, ellipses use overlapping jittery arcs, straight edges get midpoint displacement; deterministic jitter seeded by position (shapes don't dance on re-render); cosmetic only — underlying geometry stays precise
+- **UX**: State persists across sessions via webview state
+- **TESTING**: 3 new tests — `sketchy_jitter_deterministic`, `sketchy_jitter_bounded`, `sketchy_jitter_varies_with_index`
+
 ### v0.8.33
 
 - **FEATURE**: Arrow/Connector drawing tool — press `A` to activate, click-drag from one node to another to draw an edge (smooth curve with arrowhead); live dashed preview line during drag; auto-switch back to Select after drawing

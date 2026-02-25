@@ -1824,6 +1824,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     <button class="tool-btn" id="grid-toggle-btn" title="Toggle grid overlay (G)">⊞</button>
     <button class="tool-btn" id="export-btn" title="Export canvas as PNG">📥</button>
     <div class="tool-sep"></div>
+    <button class="tool-btn" id="sketchy-toggle-btn" title="Toggle sketchy hand-drawn mode">✏️</button>
     <button class="tool-btn" id="theme-toggle-btn" title="Toggle light/dark canvas theme">🌙</button>
     <button id="zoom-level" title="Zoom level (click to reset to 100%)">100%</button>
     <button class="tool-btn" id="tool-help-btn" title="Keyboard shortcuts">?</button>

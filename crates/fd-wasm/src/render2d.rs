@@ -59,6 +59,7 @@ pub fn render_scene(
     hovered_id: Option<&str>,
     pressed_id: Option<&str>,
     smart_guides: &[(f64, f64, f64, f64)],
+    sketchy: bool,
 ) {
     // Clear canvas
     ctx.set_fill_style_str(theme.bg);
@@ -77,10 +78,11 @@ pub fn render_scene(
         theme,
         hovered_id,
         pressed_id,
+        sketchy,
     );
 
     // Draw edges between nodes
-    draw_edges(ctx, graph, bounds, time_ms, hovered_id, pressed_id);
+    draw_edges(ctx, graph, bounds, time_ms, hovered_id, pressed_id, sketchy);
 
     // Draw smart guides (alignment lines)
     draw_smart_guides(ctx, smart_guides);
@@ -101,6 +103,7 @@ fn render_node(
     theme: &CanvasTheme,
     hovered_id: Option<&str>,
     pressed_id: Option<&str>,
+    sketchy: bool,
 ) {
     let node = &graph.graph[idx];
     let node_bounds = match bounds.get(&idx) {
@@ -136,10 +139,18 @@ fn render_node(
             draw_generic_placeholder(ctx, node_bounds, node.id.as_str(), theme);
         }
         NodeKind::Rect { .. } => {
-            draw_rect(ctx, node_bounds, &style, is_selected);
+            if sketchy {
+                draw_rect_sketchy(ctx, node_bounds, &style, is_selected);
+            } else {
+                draw_rect(ctx, node_bounds, &style, is_selected);
+            }
         }
         NodeKind::Ellipse { .. } => {
-            draw_ellipse(ctx, node_bounds, &style, is_selected);
+            if sketchy {
+                draw_ellipse_sketchy(ctx, node_bounds, &style, is_selected);
+            } else {
+                draw_ellipse(ctx, node_bounds, &style, is_selected);
+            }
         }
         NodeKind::Text { content } => {
             draw_text(ctx, node_bounds, content, &style);
@@ -218,6 +229,7 @@ fn render_node(
             theme,
             hovered_id,
             pressed_id,
+            sketchy,
         );
     }
 
@@ -703,6 +715,7 @@ fn draw_edges(
     time_ms: f64,
     hovered_id: Option<&str>,
     pressed_id: Option<&str>,
+    sketchy: bool,
 ) {
     use fd_core::model::{ArrowKind, CurveKind};
 
@@ -750,8 +763,12 @@ fn draw_edges(
         ctx.begin_path();
         match edge.curve {
             CurveKind::Straight => {
-                ctx.move_to(x1 as f64, y1 as f64);
-                ctx.line_to(x2 as f64, y2 as f64);
+                if sketchy {
+                    sketchy_line(ctx, x1 as f64, y1 as f64, x2 as f64, y2 as f64);
+                } else {
+                    ctx.move_to(x1 as f64, y1 as f64);
+                    ctx.line_to(x2 as f64, y2 as f64);
+                }
             }
             CurveKind::Smooth => {
                 let mx = ((x1 + x2) / 2.0) as f64;
@@ -999,6 +1016,200 @@ fn apply_opacity(ctx: &CanvasRenderingContext2d, style: &Style) {
     }
 }
 
+// ─── Sketchy / hand-drawn rendering ──────────────────────────────────────
+
+/// Deterministic pseudo-random jitter seeded by position.
+/// Returns a value in `[-amplitude, +amplitude]`.
+fn sketchy_jitter(seed: f64, index: u32, amplitude: f64) -> f64 {
+    // Simple hash: mix seed + index with large primes, take fractional part
+    let h = (seed * 127.1 + index as f64 * 311.7).sin().abs().fract();
+    (h - 0.5) * 2.0 * amplitude
+}
+
+/// Draw a wobbly line using midpoint displacement (hand-drawn feel).
+fn sketchy_line(ctx: &CanvasRenderingContext2d, x1: f64, y1: f64, x2: f64, y2: f64) {
+    let seed = x1 * 0.37 + y1 * 0.73 + x2 * 0.51 + y2 * 0.19;
+    let jitter = 1.8;
+    // Split into 3 segments with displaced midpoints
+    let mx1 = x1 + (x2 - x1) * 0.33 + sketchy_jitter(seed, 0, jitter);
+    let my1 = y1 + (y2 - y1) * 0.33 + sketchy_jitter(seed, 1, jitter);
+    let mx2 = x1 + (x2 - x1) * 0.66 + sketchy_jitter(seed, 2, jitter);
+    let my2 = y1 + (y2 - y1) * 0.66 + sketchy_jitter(seed, 3, jitter);
+
+    ctx.move_to(x1, y1);
+    ctx.quadratic_curve_to(mx1, my1, (mx1 + mx2) / 2.0, (my1 + my2) / 2.0);
+    ctx.quadratic_curve_to(mx2, my2, x2, y2);
+}
+
+/// Draw a hand-drawn rectangle with wobbly edges.
+fn draw_rect_sketchy(
+    ctx: &CanvasRenderingContext2d,
+    b: &ResolvedBounds,
+    style: &Style,
+    is_selected: bool,
+) {
+    let (x, y, w, h) = (b.x as f64, b.y as f64, b.width as f64, b.height as f64);
+    let seed = x * 0.31 + y * 0.79;
+    let jitter = 1.5; // px wobble
+
+    ctx.save();
+    apply_opacity(ctx, style);
+    apply_shadow(ctx, style);
+
+    // Build a wobbly rect path
+    let wobble_rect = |ctx: &CanvasRenderingContext2d, pass: u32| {
+        let s = seed + pass as f64 * 17.0;
+        let corners = [
+            (
+                x + sketchy_jitter(s, 0, jitter),
+                y + sketchy_jitter(s, 1, jitter),
+            ),
+            (
+                x + w + sketchy_jitter(s, 2, jitter),
+                y + sketchy_jitter(s, 3, jitter),
+            ),
+            (
+                x + w + sketchy_jitter(s, 4, jitter),
+                y + h + sketchy_jitter(s, 5, jitter),
+            ),
+            (
+                x + sketchy_jitter(s, 6, jitter),
+                y + h + sketchy_jitter(s, 7, jitter),
+            ),
+        ];
+        ctx.begin_path();
+        ctx.move_to(corners[0].0, corners[0].1);
+        for i in 0..4 {
+            let (cx, cy) = corners[i];
+            let (nx, ny) = corners[(i + 1) % 4];
+            // Add a tiny midpoint wobble to each edge
+            let mx = (cx + nx) / 2.0 + sketchy_jitter(s, 8 + i as u32, jitter * 0.6);
+            let my = (cy + ny) / 2.0 + sketchy_jitter(s, 12 + i as u32, jitter * 0.6);
+            ctx.quadratic_curve_to(mx, my, nx, ny);
+        }
+        ctx.close_path();
+    };
+
+    // Fill with first pass
+    wobble_rect(ctx, 0);
+    apply_fill(ctx, style, x, y, w, h);
+    ctx.fill();
+    clear_shadow(ctx);
+
+    // Stroke — draw two passes with slight offset for hand-drawn feel
+    let stroke_color = style
+        .stroke
+        .as_ref()
+        .map(|s| resolve_paint_color(&s.paint))
+        .unwrap_or_else(|| "#1C1C1E".to_string());
+    let stroke_width = style.stroke.as_ref().map_or(1.0, |s| s.width as f64);
+
+    ctx.set_stroke_style_str(&stroke_color);
+    ctx.set_line_width(stroke_width);
+    ctx.set_line_join("round");
+
+    // Pass 1
+    wobble_rect(ctx, 0);
+    ctx.stroke();
+
+    // Pass 2 (slightly different wobble for hand-drawn double-stroke)
+    ctx.set_global_alpha(ctx.global_alpha() * 0.3);
+    wobble_rect(ctx, 1);
+    ctx.stroke();
+    ctx.set_global_alpha(ctx.global_alpha() / 0.3);
+
+    if is_selected {
+        ctx.set_stroke_style_str("#4FC3F7");
+        ctx.set_line_width(2.0);
+        rounded_rect_path(ctx, x - 1.0, y - 1.0, w + 2.0, h + 2.0, 0.0);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+/// Draw a hand-drawn ellipse with multiple jittery overlapping arcs.
+fn draw_ellipse_sketchy(
+    ctx: &CanvasRenderingContext2d,
+    b: &ResolvedBounds,
+    style: &Style,
+    is_selected: bool,
+) {
+    let cx = b.x as f64 + b.width as f64 / 2.0;
+    let cy = b.y as f64 + b.height as f64 / 2.0;
+    let rx = b.width as f64 / 2.0;
+    let ry = b.height as f64 / 2.0;
+    let seed = cx * 0.43 + cy * 0.67;
+
+    ctx.save();
+    apply_opacity(ctx, style);
+    apply_shadow(ctx, style);
+
+    // Approximate ellipse with multiple cubic bezier segments + jitter
+    let draw_wobbly_ellipse = |ctx: &CanvasRenderingContext2d, pass: u32| {
+        let s = seed + pass as f64 * 23.0;
+        let jitter = 2.0;
+        let segments = 8;
+        ctx.begin_path();
+        for i in 0..segments {
+            let angle0 = (i as f64) * std::f64::consts::TAU / segments as f64;
+            let angle1 = ((i + 1) as f64) * std::f64::consts::TAU / segments as f64;
+            let px0 = cx + rx * angle0.cos() + sketchy_jitter(s, i * 4, jitter);
+            let py0 = cy + ry * angle0.sin() + sketchy_jitter(s, i * 4 + 1, jitter);
+            let px1 = cx + rx * angle1.cos() + sketchy_jitter(s, i * 4 + 2, jitter);
+            let py1 = cy + ry * angle1.sin() + sketchy_jitter(s, i * 4 + 3, jitter);
+
+            if i == 0 {
+                ctx.move_to(px0, py0);
+            }
+            // Use a control point slightly outside the ellipse for curvature
+            let mid_angle = (angle0 + angle1) / 2.0;
+            let cpx = cx + rx * 1.12 * mid_angle.cos() + sketchy_jitter(s, 32 + i, jitter * 0.5);
+            let cpy = cy + ry * 1.12 * mid_angle.sin() + sketchy_jitter(s, 40 + i, jitter * 0.5);
+            ctx.quadratic_curve_to(cpx, cpy, px1, py1);
+        }
+        ctx.close_path();
+    };
+
+    // Fill
+    draw_wobbly_ellipse(ctx, 0);
+    apply_fill(ctx, style, cx - rx, cy - ry, rx * 2.0, ry * 2.0);
+    ctx.fill();
+    clear_shadow(ctx);
+
+    // Stroke
+    let stroke_color = style
+        .stroke
+        .as_ref()
+        .map(|s| resolve_paint_color(&s.paint))
+        .unwrap_or_else(|| "#1C1C1E".to_string());
+    let stroke_width = style.stroke.as_ref().map_or(1.0, |s| s.width as f64);
+
+    ctx.set_stroke_style_str(&stroke_color);
+    ctx.set_line_width(stroke_width);
+    ctx.set_line_join("round");
+
+    // Pass 1
+    draw_wobbly_ellipse(ctx, 0);
+    ctx.stroke();
+
+    // Pass 2 (overlapping for hand-drawn look)
+    ctx.set_global_alpha(ctx.global_alpha() * 0.3);
+    draw_wobbly_ellipse(ctx, 1);
+    ctx.stroke();
+    ctx.set_global_alpha(ctx.global_alpha() / 0.3);
+
+    if is_selected {
+        ctx.set_stroke_style_str("#4FC3F7");
+        ctx.set_line_width(2.0);
+        ctx.begin_path();
+        let _ = ctx.ellipse(cx, cy, rx + 1.0, ry + 1.0, 0.0, 0.0, std::f64::consts::TAU);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1188,5 +1399,35 @@ mod tests {
             stops: vec![],
         };
         assert_eq!(resolve_paint_color(&paint), "#CCCCCC");
+    }
+
+    // ─── Sketchy rendering ──────────────────────────────────────────────
+
+    #[test]
+    fn sketchy_jitter_deterministic() {
+        let a = sketchy_jitter(42.0, 3, 2.0);
+        let b = sketchy_jitter(42.0, 3, 2.0);
+        assert!(
+            (a - b).abs() < f64::EPSILON,
+            "same seed+index must be deterministic"
+        );
+    }
+
+    #[test]
+    fn sketchy_jitter_bounded() {
+        for seed in [0.0, 1.0, 100.0, -50.0, 999.99] {
+            for idx in 0..20 {
+                let v = sketchy_jitter(seed, idx, 3.0);
+                assert!(v >= -3.0 && v <= 3.0, "jitter {} out of [-3, 3]", v);
+            }
+        }
+    }
+
+    #[test]
+    fn sketchy_jitter_varies_with_index() {
+        let a = sketchy_jitter(42.0, 0, 2.0);
+        let b = sketchy_jitter(42.0, 1, 2.0);
+        // Different indices should (very likely) produce different values
+        assert!((a - b).abs() > 0.001, "different indices should vary");
     }
 }

@@ -190,6 +190,7 @@ async function main() {
     setupHelpButton();
     setupApplePencilPro();
     setupThemeToggle();
+    setupSketchyToggle();
     setupZoomIndicator();
     setupGridToggle();
     setupExportButton();
@@ -2843,6 +2844,32 @@ function applyTheme(isDark) {
     fdCanvas.set_theme(isDark);
     render();
   }
+}
+
+// ─── Sketchy Mode Toggle ──────────────────────────────────────────────────────
+
+function setupSketchyToggle() {
+  const btn = document.getElementById("sketchy-toggle-btn");
+  if (!btn) return;
+
+  // Restore persisted state
+  const savedState = vscode.getState();
+  if (savedState && savedState.sketchyMode) {
+    btn.classList.add("active");
+    if (fdCanvas) {
+      fdCanvas.set_sketchy_mode(true);
+      render();
+    }
+  }
+
+  btn.addEventListener("click", () => {
+    if (!fdCanvas) return;
+    const enabled = !fdCanvas.get_sketchy_mode();
+    fdCanvas.set_sketchy_mode(enabled);
+    btn.classList.toggle("active", enabled);
+    vscode.setState({ ...(vscode.getState() || {}), sketchyMode: enabled });
+    render();
+  });
 }
 
 // ─── Dimension Tooltip (R3.18) ────────────────────────────────────────────────
