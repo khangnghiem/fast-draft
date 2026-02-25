@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.8.32
+
+- **UX**: Single-click shape creation now centers the shape at the click point (Excalidraw behavior) — previously the top-left corner was placed at click; rect default size changed from 100×100 to 120×80; ellipse default remains 100×100 centered
+- **TESTING**: 3 new unit tests — `rect_tool_click_creates_centered`, `ellipse_tool_click_creates_centered`, `rect_tool_drag_still_works`
+
 ### v0.8.31
 
 - **TESTING**: Added 3-level nested group drill-down tests — `test_effective_target_3_level_drill_down` in `model.rs` (verifies click 1→outer, click 2→inner, click 3→leaf), `hit_test_nested_groups` in `hit.rs` (verifies deepest node returned through nested groups), and drill-down simulation + `findSymbolAtLine` resolution tests in `e2e-ux.test.ts`

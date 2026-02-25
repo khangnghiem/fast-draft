@@ -417,12 +417,21 @@ impl Tool for RectTool {
                 self.drawing = false;
                 if !self.dragged {
                     if let Some(id) = self.current_id.take() {
-                        // Click without drag → default 100×100
-                        vec![GraphMutation::ResizeNode {
-                            id,
-                            width: 100.0,
-                            height: 100.0,
-                        }]
+                        // Click without drag → default 120×80 centered at click point
+                        let w = 120.0_f32;
+                        let h = 80.0_f32;
+                        vec![
+                            GraphMutation::ResizeNode {
+                                id,
+                                width: w,
+                                height: h,
+                            },
+                            GraphMutation::MoveNode {
+                                id,
+                                dx: -w / 2.0,
+                                dy: -h / 2.0,
+                            },
+                        ]
                     } else {
                         vec![]
                     }
@@ -690,12 +699,21 @@ impl Tool for EllipseTool {
                 self.drawing = false;
                 if !self.dragged {
                     if let Some(id) = self.current_id.take() {
-                        // Click without drag → default 100×100
-                        vec![GraphMutation::ResizeNode {
-                            id,
-                            width: 100.0,
-                            height: 100.0,
-                        }]
+                        // Click without drag → default 100×100 centered at click point
+                        let w = 100.0_f32;
+                        let h = 100.0_f32;
+                        vec![
+                            GraphMutation::ResizeNode {
+                                id,
+                                width: w,
+                                height: h,
+                            },
+                            GraphMutation::MoveNode {
+                                id,
+                                dx: -w / 2.0,
+                                dy: -h / 2.0,
+                            },
+                        ]
                     } else {
                         vec![]
                     }
@@ -1153,5 +1171,136 @@ mod tests {
             None,
         );
         assert_eq!(mutations.len(), 1);
+    }
+
+    #[test]
+    fn rect_tool_click_creates_centered() {
+        let mut tool = RectTool::new();
+
+        // Press at (200, 150)
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 200.0,
+                y: 150.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        // Release immediately (no drag) → should create 120×80 centered
+        let mutations = tool.handle(
+            &InputEvent::PointerUp {
+                x: 200.0,
+                y: 150.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        assert_eq!(mutations.len(), 2, "click should emit Resize + Move");
+        match &mutations[0] {
+            GraphMutation::ResizeNode { width, height, .. } => {
+                assert!((width - 120.0).abs() < 0.01, "w={width}");
+                assert!((height - 80.0).abs() < 0.01, "h={height}");
+            }
+            _ => panic!("expected ResizeNode first"),
+        }
+        match &mutations[1] {
+            GraphMutation::MoveNode { dx, dy, .. } => {
+                assert!((dx - (-60.0)).abs() < 0.01, "dx={dx}");
+                assert!((dy - (-40.0)).abs() < 0.01, "dy={dy}");
+            }
+            _ => panic!("expected MoveNode second"),
+        }
+    }
+
+    #[test]
+    fn ellipse_tool_click_creates_centered() {
+        let mut tool = EllipseTool::new();
+
+        // Press at (300, 250)
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 300.0,
+                y: 250.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        // Release immediately (no drag) → should create 100×100 centered
+        let mutations = tool.handle(
+            &InputEvent::PointerUp {
+                x: 300.0,
+                y: 250.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        assert_eq!(mutations.len(), 2, "click should emit Resize + Move");
+        match &mutations[0] {
+            GraphMutation::ResizeNode { width, height, .. } => {
+                assert!((width - 100.0).abs() < 0.01, "w={width}");
+                assert!((height - 100.0).abs() < 0.01, "h={height}");
+            }
+            _ => panic!("expected ResizeNode first"),
+        }
+        match &mutations[1] {
+            GraphMutation::MoveNode { dx, dy, .. } => {
+                assert!((dx - (-50.0)).abs() < 0.01, "dx={dx}");
+                assert!((dy - (-50.0)).abs() < 0.01, "dy={dy}");
+            }
+            _ => panic!("expected MoveNode second"),
+        }
+    }
+
+    #[test]
+    fn rect_tool_drag_still_works() {
+        let mut tool = RectTool::new();
+
+        // Press at (100, 100)
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 100.0,
+                y: 100.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        // Drag to (250, 200)
+        let mutations = tool.handle(
+            &InputEvent::PointerMove {
+                x: 250.0,
+                y: 200.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        assert_eq!(mutations.len(), 1);
+        match &mutations[0] {
+            GraphMutation::ResizeNode { width, height, .. } => {
+                assert!((width - 150.0).abs() < 0.01);
+                assert!((height - 100.0).abs() < 0.01);
+            }
+            _ => panic!("expected ResizeNode"),
+        }
+
+        // Release → no centering (user defined the size)
+        let mutations = tool.handle(
+            &InputEvent::PointerUp {
+                x: 250.0,
+                y: 200.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        assert!(
+            mutations.is_empty(),
+            "drag-to-create should not emit extra mutations on up"
+        );
     }
 }
