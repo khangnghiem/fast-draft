@@ -191,6 +191,7 @@ async function main() {
     setupApplePencilPro();
     setupThemeToggle();
     setupSketchyToggle();
+    setupZenModeToggle();
     setupZoomIndicator();
     setupGridToggle();
     setupExportButton();
@@ -743,6 +744,20 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     zoomToFit();
     return;
+  }
+
+  // ── L key: toggle Layers panel (always works, crucial in Zen mode) ──
+  if (e.key === "l" || e.key === "L") {
+    const active = document.activeElement;
+    const isTextInput = active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT");
+    if (!e.metaKey && !e.ctrlKey && !e.altKey && !isTextInput) {
+      e.preventDefault();
+      const layersPanel = document.getElementById("layers-panel");
+      if (layersPanel) {
+        layersPanel.classList.toggle("zen-visible");
+      }
+      return;
+    }
   }
 
   // Delegate to WASM shortcut resolver
@@ -2870,6 +2885,39 @@ function setupSketchyToggle() {
     vscode.setState({ ...(vscode.getState() || {}), sketchyMode: enabled });
     render();
   });
+}
+
+// ─── Zen Mode Toggle ──────────────────────────────────────────────────────────
+
+function setupZenModeToggle() {
+  const btn = document.getElementById("zen-toggle-btn");
+  if (!btn) return;
+
+  // Restore persisted state
+  const savedState = vscode.getState();
+  if (savedState && savedState.zenMode) {
+    applyZenMode(true);
+  }
+
+  btn.addEventListener("click", () => {
+    const isZen = document.body.classList.contains("zen-mode");
+    applyZenMode(!isZen);
+    vscode.setState({ ...(vscode.getState() || {}), zenMode: !isZen });
+  });
+}
+
+function applyZenMode(isZen) {
+  const btn = document.getElementById("zen-toggle-btn");
+  if (isZen) {
+    document.body.classList.add("zen-mode");
+    if (btn) btn.innerHTML = '<span class="zen-icon">🔧</span> Full';
+  } else {
+    document.body.classList.remove("zen-mode");
+    if (btn) btn.innerHTML = '<span class="zen-icon">🧘</span> Zen';
+    // Clear any zen-visible overrides when leaving zen mode
+    document.getElementById("layers-panel")?.classList.remove("zen-visible");
+    document.getElementById("props-panel")?.classList.remove("zen-visible");
+  }
 }
 
 // ─── Dimension Tooltip (R3.18) ────────────────────────────────────────────────

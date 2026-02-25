@@ -1802,9 +1802,77 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       color: var(--fd-text-secondary);
       border-top: 0.5px solid var(--fd-border);
     }
+
+    /* ── Zen Mode Toggle Button (top-right floating) ── */
+    #zen-toggle-btn {
+      position: fixed;
+      top: 52px;
+      right: 14px;
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      border: 0.5px solid var(--fd-border);
+      border-radius: 20px;
+      background: var(--fd-surface);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      color: var(--fd-text-secondary);
+      font-size: 11px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: var(--fd-shadow-sm);
+      transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+      letter-spacing: -0.01em;
+    }
+    #zen-toggle-btn:hover {
+      background: var(--fd-surface-hover);
+      color: var(--fd-text);
+      box-shadow: var(--fd-shadow-md);
+      transform: translateY(-1px);
+    }
+    #zen-toggle-btn .zen-icon { font-size: 13px; }
+
+    /* ── Zen Mode overrides ── */
+    .zen-mode #toolbar {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      top: auto;
+      border: 0.5px solid var(--fd-border);
+      border-radius: 16px;
+      border-bottom: 0.5px solid var(--fd-border);
+      padding: 6px 10px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+      gap: 2px;
+      z-index: 50;
+    }
+    .dark-theme.zen-mode #toolbar {
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .zen-mode .zen-full-only { display: none !important; }
+    .zen-mode #layers-panel { display: none !important; }
+    .zen-mode #props-panel { display: none !important; }
+    .zen-mode #minimap-container { display: none !important; }
+    .zen-mode #shape-palette { display: none !important; }
+    .zen-mode #selection-bar { display: none !important; }
+    .zen-mode #spec-overlay { display: none !important; }
+
+    /* Panel toggle via keyboard in zen mode */
+    .zen-mode #layers-panel.zen-visible {
+      display: block !important;
+    }
+    .zen-mode #props-panel.zen-visible {
+      display: block !important;
+    }
+
   </style>
 </head>
 <body>
+  <button id="zen-toggle-btn" title="Switch between Zen and Full layout"><span class="zen-icon">🧘</span> Zen</button>
   <div id="toolbar">
     <button class="tool-btn active" data-tool="select"><span class="tool-icon">▸</span>Select<span class="tool-key">V</span></button>
     <button class="tool-btn" data-tool="rect"><span class="tool-icon">▢</span>Rect<span class="tool-key">R</span></button>
@@ -1812,23 +1880,23 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     <button class="tool-btn" data-tool="pen"><span class="tool-icon">✎</span>Pen<span class="tool-key">P</span></button>
     <button class="tool-btn" data-tool="arrow"><span class="tool-icon">→</span>Arrow<span class="tool-key">A</span></button>
     <button class="tool-btn" data-tool="text"><span class="tool-icon">T</span>Text<span class="tool-key">T</span></button>
-    <div class="tool-sep"></div>
-    <button class="tool-btn" id="ai-refine-btn" title="AI Refine selected node (rename + restyle)">&#x2728; Refine</button>
-    <button class="tool-btn" id="ai-refine-all-btn" title="AI Refine all anonymous nodes">&#x2728; All</button>
-    <div class="tool-sep"></div>
-    <div class="view-toggle" id="view-toggle">
+    <div class="tool-sep zen-full-only"></div>
+    <button class="tool-btn zen-full-only" id="ai-refine-btn" title="AI Refine selected node (rename + restyle)">&#x2728; Refine</button>
+    <button class="tool-btn zen-full-only" id="ai-refine-all-btn" title="AI Refine all anonymous nodes">&#x2728; All</button>
+    <div class="tool-sep zen-full-only"></div>
+    <div class="view-toggle zen-full-only" id="view-toggle">
       <button class="view-btn active" id="view-design" title="Design View — full canvas">Design</button>
       <button class="view-btn" id="view-spec" title="Spec View — requirements and structure">Spec</button>
     </div>
-    <div class="tool-sep"></div>
-    <button class="tool-btn" id="grid-toggle-btn" title="Toggle grid overlay (G)">⊞</button>
-    <button class="tool-btn" id="export-btn" title="Export canvas as PNG">📥</button>
-    <div class="tool-sep"></div>
+    <div class="tool-sep zen-full-only"></div>
+    <button class="tool-btn zen-full-only" id="grid-toggle-btn" title="Toggle grid overlay (G)">⊞</button>
+    <button class="tool-btn zen-full-only" id="export-btn" title="Export canvas as PNG">📥</button>
+    <div class="tool-sep zen-full-only"></div>
     <button class="tool-btn" id="sketchy-toggle-btn" title="Toggle sketchy hand-drawn mode">✏️</button>
-    <button class="tool-btn" id="theme-toggle-btn" title="Toggle light/dark canvas theme">🌙</button>
-    <button id="zoom-level" title="Zoom level (click to reset to 100%)">100%</button>
-    <button class="tool-btn" id="tool-help-btn" title="Keyboard shortcuts">?</button>
-    <span id="status">Loading WASM…</span>
+    <button class="tool-btn zen-full-only" id="theme-toggle-btn" title="Toggle light/dark canvas theme">🌙</button>
+    <button class="zen-full-only" id="zoom-level" title="Zoom level (click to reset to 100%)">100%</button>
+    <button class="tool-btn zen-full-only" id="tool-help-btn" title="Keyboard shortcuts">?</button>
+    <span class="zen-full-only" id="status">Loading WASM…</span>
   </div>
   <div id="canvas-container">
     <div id="shape-palette">
