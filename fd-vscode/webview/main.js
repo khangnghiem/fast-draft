@@ -487,7 +487,14 @@ function setupPointerEvents() {
     }
     // Auto-switch toolbar/cursor when tool changes (e.g. after drawing)
     if (result.toolSwitched) {
-      updateToolbarActive(result.tool);
+      if (lockedTool) {
+        // Override: re-activate locked tool instead of switching to Select
+        fdCanvas.set_tool(lockedTool);
+        updateToolbarActive(lockedTool);
+        updateLockedIndicator(lockedTool);
+      } else {
+        updateToolbarActive(result.tool);
+      }
     }
     canvas.releasePointerCapture(e.pointerId);
     // Update properties panel after interaction ends
@@ -566,22 +573,76 @@ function setupResizeObserver(container) {
 
 // ─── Toolbar ─────────────────────────────────────────────────────────────
 
+/** Currently locked tool (null = no lock, e.g. "rect", "ellipse") */
+let lockedTool = null;
+
+/** Track last shortcut press for double-press detection */
+let lastShortcutKey = null;
+let lastShortcutTime = 0;
+const DOUBLE_PRESS_MS = 400;
+
 function setupToolbar() {
   document.querySelectorAll(".tool-btn[data-tool]").forEach((btn) => {
     btn.addEventListener("click", () => {
+      const tool = btn.getAttribute("data-tool");
+      if (!fdCanvas || !tool) return;
+
+      // If clicking the already-active & already-locked tool → unlock
+      if (lockedTool === tool) {
+        unlockTool();
+        return;
+      }
+
+      // Clicking Select always unlocks
+      if (tool === "select") {
+        unlockTool();
+      }
+
       // Update active state
       document
         .querySelectorAll(".tool-btn[data-tool]")
-        .forEach((b) => b.classList.remove("active"));
+        .forEach((b) => { b.classList.remove("active"); b.classList.remove("locked"); });
       btn.classList.add("active");
 
-      // Switch tool in WASM
-      const tool = btn.getAttribute("data-tool");
-      if (fdCanvas && tool) {
-        fdCanvas.set_tool(tool);
-        updateCanvasCursor(tool);
-      }
+      fdCanvas.set_tool(tool);
+      updateCanvasCursor(tool);
     });
+
+    // Double-click to lock
+    btn.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      const tool = btn.getAttribute("data-tool");
+      if (!tool || tool === "select") return;
+      lockTool(tool);
+    });
+  });
+}
+
+/** Lock the given tool — it stays active after shape creation. */
+function lockTool(tool) {
+  lockedTool = tool;
+  if (fdCanvas) {
+    fdCanvas.set_tool(tool);
+  }
+  updateToolbarActive(tool);
+  updateLockedIndicator(tool);
+}
+
+/** Unlock tool and switch back to Select. */
+function unlockTool() {
+  lockedTool = null;
+  document.querySelectorAll(".tool-btn[data-tool]").forEach((b) => b.classList.remove("locked"));
+  if (fdCanvas) {
+    fdCanvas.set_tool("select");
+  }
+  updateToolbarActive("select");
+}
+
+/** Show lock indicator on the correct toolbar button. */
+function updateLockedIndicator(tool) {
+  document.querySelectorAll(".tool-btn[data-tool]").forEach((btn) => {
+    btn.classList.toggle("locked", btn.getAttribute("data-tool") === tool);
+    btn.classList.toggle("active", btn.getAttribute("data-tool") === tool);
   });
 }
 
@@ -759,6 +820,35 @@ document.addEventListener("keydown", (e) => {
       return;
     }
   }
+  // ── V key or Escape: unlock tool if locked ──
+  if ((e.key === "v" || e.key === "V" || e.key === "Escape") && !e.metaKey && !e.ctrlKey) {
+    if (lockedTool) {
+      e.preventDefault();
+      unlockTool();
+      return;
+    }
+  }
+
+  // ── Double-press detection for tool locking (RR, OO, PP, AA, TT) ──
+  const toolShortcuts = { r: "rect", o: "ellipse", p: "pen", a: "arrow", t: "text" };
+  const lowerKey = e.key.toLowerCase();
+  if (toolShortcuts[lowerKey] && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    const now = Date.now();
+    if (lastShortcutKey === lowerKey && (now - lastShortcutTime) < DOUBLE_PRESS_MS) {
+      // Double-press detected — lock this tool
+      e.preventDefault();
+      lockTool(toolShortcuts[lowerKey]);
+      lastShortcutKey = null;
+      lastShortcutTime = 0;
+      return;
+    }
+    lastShortcutKey = lowerKey;
+    lastShortcutTime = now;
+  } else {
+    // Reset double-press tracker on non-tool keys
+    lastShortcutKey = null;
+    lastShortcutTime = 0;
+  }
 
   // Delegate to WASM shortcut resolver
   const resultJson = fdCanvas.handle_key(
@@ -780,9 +870,19 @@ document.addEventListener("keydown", (e) => {
     syncTextToExtension();
   }
 
-  // Handle tool switches
+  // Handle tool switches from keyboard
   if (result.toolSwitched) {
-    updateToolbarActive(result.tool);
+    if (lockedTool && result.tool === "select") {
+      // Don't switch to select if a tool is locked — this shouldn't normally happen
+      // from keyboard, but guard anyway
+    } else {
+      // Switching to a new tool via keyboard clears previous lock
+      if (lockedTool && result.tool !== lockedTool) {
+        lockedTool = null;
+        document.querySelectorAll(".tool-btn[data-tool]").forEach((b) => b.classList.remove("locked"));
+      }
+      updateToolbarActive(result.tool);
+    }
   }
 
   // Handle JS-side actions

@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.8.36
+
+- **FEATURE**: Sticky Tool Mode — double-click a tool icon or press its shortcut twice (RR, OO, PP, AA, TT) to lock the tool; it stays active after placing shapes. 🔒 badge appears on locked tool button. Single-click or press V/Escape to unlock.
+- **UX**: Excalidraw-style rapid shape placement without re-selecting the tool each time
+
 ### v0.8.35
 
 - **FEATURE**: Zen Mode — minimal Excalidraw-like toolbar layout; floating pill bar at bottom center with 6 drawing tools (Select, Rect, Ellipse, Pen, Arrow, Text); hides Layers, Properties, Minimap, Shape Palette panels
