@@ -449,6 +449,20 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       box-shadow: var(--fd-segment-shadow);
       font-weight: 600;
     }
+    .tool-btn.locked {
+      background: var(--fd-segment-active);
+      color: var(--fd-text);
+      box-shadow: var(--fd-segment-shadow), 0 0 0 1.5px var(--fd-accent);
+      font-weight: 600;
+    }
+    .tool-btn.locked::after {
+      content: '🔒';
+      font-size: 8px;
+      position: absolute;
+      top: -3px;
+      right: -3px;
+      line-height: 1;
+    }
     .tool-icon { font-size: 13px; }
     .tool-key {
       font-size: 9px;
