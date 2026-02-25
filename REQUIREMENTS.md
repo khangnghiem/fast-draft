@@ -127,7 +127,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 
 | Tag                 | Requirements                          |
 | ------------------- | ------------------------------------- |
-| selection           | R2.5, R3.1, R3.16                     |
+| selection           | R2.5, R3.1, R3.16, R3.24              |
 | drawing             | R3.3, R3.15, R3.19                    |
 | pen / freehand      | R3.4, R3.22, R3.23                    |
 | pan                 | R3.6, R3.10                           |
