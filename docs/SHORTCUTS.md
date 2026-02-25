@@ -1,0 +1,145 @@
+# FD Canvas Keyboard Shortcuts
+
+> Complete reference for all keyboard shortcuts and modifier behaviors in the FD canvas editor.
+> Source of truth: [`crates/fd-editor/src/shortcuts.rs`](../crates/fd-editor/src/shortcuts.rs)
+
+---
+
+## Tools
+
+| Key   | Action                | Notes                                 |
+| ----- | --------------------- | ------------------------------------- |
+| `V`   | Select / Move         | Default tool                          |
+| `R`   | Rectangle             |                                       |
+| `O`   | Ellipse               |                                       |
+| `P`   | Pen (freehand)        |                                       |
+| `A`   | Arrow / Connector     | Click-drag between nodes              |
+| `T`   | Text                  | Click to create, double-click to edit |
+| `F`   | Frame                 | Container for grouping visually       |
+| `Tab` | Toggle last two tools | Screenbrush-style                     |
+
+### Tool Locking (Sticky Mode)
+
+| Action                             | Effect                                           |
+| ---------------------------------- | ------------------------------------------------ |
+| Double-press shortcut (e.g. `R R`) | 🔒 Lock tool — stays active after placing shapes |
+| Double-click tool button           | 🔒 Lock tool                                     |
+| `V` or `Escape`                    | Unlock tool → back to Select                     |
+| Single-click locked button         | Unlock tool                                      |
+| Switch to different tool           | Clears lock                                      |
+
+---
+
+## Edit
+
+| Shortcut               | Action                   |
+| ---------------------- | ------------------------ |
+| `⌘Z` / `Ctrl+Z`        | Undo                     |
+| `⌘⇧Z` / `Ctrl+Y`       | Redo                     |
+| `Delete` / `Backspace` | Delete selected          |
+| `⌘D`                   | Duplicate (+20px offset) |
+| `⌘A`                   | Select all               |
+| `⌘G`                   | Group selected           |
+| `⌘⇧G`                  | Ungroup                  |
+| `⌘C`                   | Copy                     |
+| `⌘X`                   | Cut                      |
+| `⌘V`                   | Paste                    |
+
+---
+
+## Transform (Z-Order)
+
+| Shortcut             | Action                   |
+| -------------------- | ------------------------ |
+| `⌘[`                 | Send backward (one step) |
+| `⌘]`                 | Bring forward (one step) |
+| `⌘⇧[`                | Send to back             |
+| `⌘⇧]`                | Bring to front           |
+| Arrow keys           | Nudge 1px                |
+| `Shift` + Arrow keys | Nudge 10px               |
+
+---
+
+## View
+
+| Shortcut          | Action                            |
+| ----------------- | --------------------------------- |
+| `⌘+` / `⌘=`       | Zoom in                           |
+| `⌘-`              | Zoom out                          |
+| `0`               | Reset zoom to 100%                |
+| `⌘0`              | Zoom to fit                       |
+| `⌘1`              | Zoom to selection                 |
+| `L`               | Toggle Layers panel               |
+| `G`               | Toggle grid overlay               |
+| `Space` (hold)    | Pan / hand tool                   |
+| `⌘` (hold)        | Temporary hand tool (Select mode) |
+| Pinch             | Trackpad zoom                     |
+| Middle-click drag | Pan                               |
+
+---
+
+## Modifier Behaviors (During Pointer Interaction)
+
+### When a Drawing Tool is active (R, O, P, A, T, F)
+
+| Modifier       | On Object                     | On Empty Space                   |
+| -------------- | ----------------------------- | -------------------------------- |
+| None           | Draw new shape                | Draw new shape                   |
+| `⌘`            | **Move object** (temp Select) | **Marquee select** (temp Select) |
+| `Alt`          | **Clone + drag**              | Draw new shape                   |
+| `Shift`        | Constrain (square/axis)       | Constrain                        |
+| `Space` (hold) | Pan                           | Pan                              |
+
+### When Select Tool is active (V)
+
+| Modifier       | On Object        | On Empty Space |
+| -------------- | ---------------- | -------------- |
+| None           | Move / select    | Marquee select |
+| `Alt`          | **Clone + drag** | Marquee select |
+| `Shift`        | Add to selection | Add to marquee |
+| `⌘` (hold)     | Pan              | Pan            |
+| `Space` (hold) | Pan              | Pan            |
+
+---
+
+## Zen Mode
+
+| Action                         | Effect                                  |
+| ------------------------------ | --------------------------------------- |
+| Click 🧘/🔧 toggle (top-right) | Switch between Zen ↔ Full mode          |
+| `L`                            | Toggle Layers panel (works in Zen mode) |
+
+Zen mode hides: Layers, Properties, Minimap, AI Refine, Grid, Export, Theme, Zoom, Help, Status.
+Zen mode keeps: 6 core tools (Select, Rect, Ellipse, Pen, Arrow, Text), Sketchy toggle.
+
+---
+
+## Apple Pencil Pro
+
+| Gesture              | Action                |
+| -------------------- | --------------------- |
+| Squeeze              | Toggle last two tools |
+| Squeeze + Shift      | Switch to Pen         |
+| Squeeze + Ctrl       | Switch to Rect        |
+| Squeeze + Alt        | Switch to Ellipse     |
+| Squeeze + Ctrl+Shift | Switch to Ellipse     |
+| Barrel Roll          | Rotate brush angle    |
+
+---
+
+## Help
+
+| Shortcut      | Action                           |
+| ------------- | -------------------------------- |
+| `?` (Shift+/) | Toggle keyboard shortcuts dialog |
+
+---
+
+## Implementation Notes (for AI agents)
+
+- All shortcut bindings are defined in [`shortcuts.rs`](../crates/fd-editor/src/shortcuts.rs) → `ShortcutMap::resolve()`
+- Actions dispatch from [`lib.rs`](../crates/fd-wasm/src/lib.rs) → `FdCanvas::dispatch_action()`
+- Modifier drag (⌘/Alt) is handled in JS ([`main.js`](../fd-vscode/webview/main.js)) before WASM delegation
+- Z-order operations use `SceneGraph::send_backward/bring_forward/send_to_back/bring_to_front`
+- `duplicate_selected_at(dx, dy)` supports custom offset (0,0 for clone-in-place)
+- Tool locking state is JS-only (`lockedTool` variable)

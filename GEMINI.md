@@ -85,6 +85,8 @@ crates/
 
 **Testing:** Every parser feature gets a round-trip test (`parse_<feature>`, `emit_<feature>`, `roundtrip_<feature>`). Test edge cases: empty input, missing optional fields, nested structures.
 
+**Keyboard Shortcuts:** Complete reference in [`docs/SHORTCUTS.md`](docs/SHORTCUTS.md) — tools, edit, z-order, modifiers (⌘+drag, Alt+drag), Zen mode, Apple Pencil Pro. Source of truth: `crates/fd-editor/src/shortcuts.rs`.
+
 ### 📝 FD Format Rules
 
 > [!IMPORTANT]
