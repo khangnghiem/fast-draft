@@ -900,6 +900,52 @@ mod tests {
     }
 
     #[test]
+    fn test_effective_target_3_level_drill_down() {
+        let mut sg = SceneGraph::new();
+
+        // Root -> group_outer -> group_inner -> rect_leaf
+        let outer_id = NodeId::intern("group_outer");
+        let inner_id = NodeId::intern("group_inner");
+        let leaf_id = NodeId::intern("rect_leaf");
+
+        let outer = SceneNode::new(
+            outer_id,
+            NodeKind::Group {
+                layout: LayoutMode::Free,
+            },
+        );
+        let inner = SceneNode::new(
+            inner_id,
+            NodeKind::Group {
+                layout: LayoutMode::Free,
+            },
+        );
+        let leaf = SceneNode::new(
+            leaf_id,
+            NodeKind::Rect {
+                width: 50.0,
+                height: 50.0,
+            },
+        );
+
+        let outer_idx = sg.add_node(sg.root, outer);
+        let inner_idx = sg.add_node(outer_idx, inner);
+        sg.add_node(inner_idx, leaf);
+
+        // Click 1: nothing selected → bubbles to highest group = group_outer
+        let t1 = sg.effective_target(leaf_id, &[]);
+        assert_eq!(t1, outer_id);
+
+        // Click 2: group_outer selected → next unselected group = group_inner
+        let t2 = sg.effective_target(leaf_id, &[outer_id]);
+        assert_eq!(t2, inner_id);
+
+        // Click 3: both groups selected → drills to leaf
+        let t3 = sg.effective_target(leaf_id, &[outer_id, inner_id]);
+        assert_eq!(t3, leaf_id);
+    }
+
+    #[test]
     fn test_is_ancestor_of() {
         let mut sg = SceneGraph::new();
 

@@ -136,4 +136,39 @@ rect @b {
         // Should miss both or hit canvas boundary node
         // (depending on layout — the exact position depends on constraint resolution)
     }
+
+    #[test]
+    fn hit_test_nested_groups() {
+        let input = r#"
+group @outer {
+  group @inner {
+    rect @leaf {
+      w: 100
+      h: 100
+    }
+  }
+}
+
+@outer -> absolute: 10, 10
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        // Hit-test inside the leaf's area — should return the deepest node
+        let leaf_idx = graph.index_of(NodeId::intern("leaf")).unwrap();
+        if let Some(leaf_bounds) = bounds.get(&leaf_idx) {
+            let cx = leaf_bounds.x + leaf_bounds.width / 2.0;
+            let cy = leaf_bounds.y + leaf_bounds.height / 2.0;
+            let result = hit_test(&graph, &bounds, cx, cy);
+            assert_eq!(result, Some(NodeId::intern("leaf")));
+        }
+
+        // Hit-test far outside — should miss
+        let result = hit_test(&graph, &bounds, 700.0, 500.0);
+        assert_eq!(result, None);
+    }
 }

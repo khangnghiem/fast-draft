@@ -7,6 +7,7 @@
 
 ### v0.8.31
 
+- **TESTING**: Added 3-level nested group drill-down tests — `test_effective_target_3_level_drill_down` in `model.rs` (verifies click 1→outer, click 2→inner, click 3→leaf), `hit_test_nested_groups` in `hit.rs` (verifies deepest node returned through nested groups), and drill-down simulation + `findSymbolAtLine` resolution tests in `e2e-ux.test.ts`
 - **TESTING**: Expanded E2E UX test suite from 52 to 71 tests (+19) — added coverage for complex card document parsing, Drawio-style edge annotations, frame nodes, 3-level nested groups, spec fold ranges, panel column resolution, layer ordering, and rename sanitization edge cases
 - **TESTING**: Browser E2E validation of 6 real-world scenarios (Figma card build, Drawio rapid shapes, Sketch multi-select, Figma duplicate, Excalidraw rapid draw, Miro navigation) via Codespace
 

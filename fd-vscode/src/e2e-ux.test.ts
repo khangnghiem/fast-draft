@@ -1109,5 +1109,97 @@ describe("Deep nesting — 3+ levels of hierarchy", () => {
         expect(deepest).toBeDefined();
         expect(deepest!.name).toBe("@l3");
     });
+
+    it("drill-down selection through 3 levels (Figma behavior simulation)", () => {
+        // Simulates the effective_target logic from Rust:
+        // - Find highest unselected group ancestor
+        // - If all group ancestors are selected, return the leaf
+        const lines = [
+            "group @outer {",      // 0
+            "  group @middle {",   // 1
+            "    rect @inner {",   // 2
+            "      w: 80 h: 60",   // 3
+            "    }",               // 4
+            "  }",                 // 5
+            "}",                   // 6
+        ];
+        const symbols = parseDocumentSymbols(lines);
+
+        // Verify hierarchy is correct
+        expect(symbols).toHaveLength(1);
+        const outer = symbols[0];
+        expect(outer.name).toBe("@outer");
+        expect(outer.children).toHaveLength(1);
+        const middle = outer.children[0];
+        expect(middle.name).toBe("@middle");
+        expect(middle.children).toHaveLength(1);
+        const inner = middle.children[0];
+        expect(inner.name).toBe("@inner");
+
+        // Simulate effective_target: find highest unselected group ancestor
+        const effectiveTarget = (
+            leafName: string,
+            selected: string[],
+            syms: typeof symbols,
+        ): string => {
+            // Walk up from leaf, collecting group ancestors
+            const ancestors: string[] = [];
+            const findAncestors = (
+                nodes: typeof symbols,
+                target: string,
+                path: string[],
+            ): string[] | null => {
+                for (const node of nodes) {
+                    const currentPath = [...path, node.name];
+                    if (node.name === target) return currentPath;
+                    if (node.children?.length) {
+                        const found = findAncestors(node.children, target, currentPath);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+            const chain = findAncestors(syms, leafName, []);
+            if (!chain) return leafName;
+
+            // Find highest unselected group in the chain (excluding leaf)
+            for (const ancestor of chain.slice(0, -1)) {
+                if (!selected.includes(ancestor)) return ancestor;
+            }
+            return leafName;
+        };
+
+        // Click 1: nothing selected → selects @outer (highest unselected group)
+        expect(effectiveTarget("@inner", [], symbols)).toBe("@outer");
+
+        // Click 2: @outer selected → drills to @middle
+        expect(effectiveTarget("@inner", ["@outer"], symbols)).toBe("@middle");
+
+        // Click 3: both groups selected → drills to @inner (leaf)
+        expect(effectiveTarget("@inner", ["@outer", "@middle"], symbols)).toBe("@inner");
+    });
+
+    it("findSymbolAtLine resolves each level independently in 3-level nesting", () => {
+        const lines = [
+            "group @page {",           // 0
+            "  group @sidebar {",      // 1
+            "    rect @nav_item {",    // 2
+            "      fill: #333",        // 3
+            "      w: 200 h: 40",      // 4
+            "    }",                    // 5
+            "  }",                      // 6
+            "}",                        // 7
+        ];
+        const symbols = parseDocumentSymbols(lines);
+
+        // Line 0 → @page (outermost group declaration)
+        expect(findSymbolAtLine(symbols, 0)!.name).toBe("@page");
+        // Line 1 → @sidebar (middle group declaration)
+        expect(findSymbolAtLine(symbols, 1)!.name).toBe("@sidebar");
+        // Line 2 → @nav_item (leaf declaration)
+        expect(findSymbolAtLine(symbols, 2)!.name).toBe("@nav_item");
+        // Line 3 → @nav_item (property inside leaf)
+        expect(findSymbolAtLine(symbols, 3)!.name).toBe("@nav_item");
+    });
 });
 
