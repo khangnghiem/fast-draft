@@ -40,6 +40,8 @@ rect @_anon_0 {
 group @settings {
   layout: column gap=20 pad=28
   opacity: 1
+  x: -123.57
+  y: -715.82
   rect @btn_delete {
     spec {
       "Destructive action — delete account"
@@ -89,6 +91,8 @@ group @settings {
     y: 340.51
     group @_anon_39 {
       layout: row gap=0 pad=16
+      x: 72.88
+      y: 605.77
       rect @switch_sound {
         w: 44 h: 24
         fill: #6C5CE7
@@ -170,8 +174,8 @@ group @settings {
   rect @profile_card {
     w: 344 h: 80
     use: dark_card
-    x: -134.67
-    y: 661.32
+    x: -396.39
+    y: 1018.76
     group @_anon_26 {
       layout: row gap=14 pad=16
       group @_anon_27 {
@@ -220,4 +224,3 @@ group @settings {
   }
 }
 
-@settings -> center_in: canvas

@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.8.26
+
+- **BUG FIX**: Moving a selected group now correctly moves the entire group instead of drilling into a child — pointer-down on a child of an already-selected group keeps the group selected for dragging; pointer-up without drag (click) drills into the child for sub-selection (Figma-standard click-vs-drag distinction)
+- **CORE**: New `SceneGraph::is_ancestor_of` helper for parent-chain traversal
+- **Tests**: New `test_is_ancestor_of` covering direct parent, grandparent, non-ancestor, and self cases
+
 ### v0.8.25
 
 - **BUG FIX**: Double-clicking a node with `:press` animations no longer causes a visual shape jump — the inline editor now calls `clear_pressed()` to suppress the press animation state before opening the textarea overlay

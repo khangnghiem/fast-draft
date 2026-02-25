@@ -673,6 +673,27 @@ impl SceneGraph {
 
         highest_unselected_group.unwrap_or(leaf_id)
     }
+
+    /// Check if `ancestor_id` is a parent/grandparent/etc. of `descendant_id`.
+    pub fn is_ancestor_of(&self, ancestor_id: NodeId, descendant_id: NodeId) -> bool {
+        if ancestor_id == descendant_id {
+            return false;
+        }
+        let mut current_idx = match self.index_of(descendant_id) {
+            Some(idx) => idx,
+            None => return false,
+        };
+        while let Some(parent_idx) = self.parent(current_idx) {
+            if self.graph[parent_idx].id == ancestor_id {
+                return true;
+            }
+            if matches!(self.graph[parent_idx].kind, NodeKind::Root) {
+                break;
+            }
+            current_idx = parent_idx;
+        }
+        false
+    }
 }
 
 impl Default for SceneGraph {
@@ -879,5 +900,51 @@ mod tests {
         // selects the group, even if the child was somehow already selected.
         let target3 = sg.effective_target(rect_id, &[rect_id]);
         assert_eq!(target3, group_id);
+    }
+
+    #[test]
+    fn test_is_ancestor_of() {
+        let mut sg = SceneGraph::new();
+
+        // Root -> Group -> Rect
+        let group_id = NodeId::intern("grp");
+        let rect_id = NodeId::intern("r1");
+        let other_id = NodeId::intern("other");
+
+        let group = SceneNode::new(
+            group_id,
+            NodeKind::Group {
+                layout: LayoutMode::Free,
+            },
+        );
+        let rect = SceneNode::new(
+            rect_id,
+            NodeKind::Rect {
+                width: 10.0,
+                height: 10.0,
+            },
+        );
+        let other = SceneNode::new(
+            other_id,
+            NodeKind::Rect {
+                width: 5.0,
+                height: 5.0,
+            },
+        );
+
+        let group_idx = sg.add_node(sg.root, group);
+        sg.add_node(group_idx, rect);
+        sg.add_node(sg.root, other);
+
+        // Group is ancestor of rect
+        assert!(sg.is_ancestor_of(group_id, rect_id));
+        // Root is ancestor of rect (grandparent)
+        assert!(sg.is_ancestor_of(NodeId::intern("root"), rect_id));
+        // Rect is NOT ancestor of group
+        assert!(!sg.is_ancestor_of(rect_id, group_id));
+        // Self is NOT ancestor of self
+        assert!(!sg.is_ancestor_of(group_id, group_id));
+        // Other is not ancestor of rect (sibling)
+        assert!(!sg.is_ancestor_of(other_id, rect_id));
     }
 }
