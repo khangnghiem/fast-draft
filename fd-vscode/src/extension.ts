@@ -463,6 +463,122 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       right: -3px;
       line-height: 1;
     }
+
+    /* ── Floating Action Bar (contextual toolbar) ── */
+    #floating-action-bar {
+      position: absolute;
+      z-index: 900;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      background: rgba(30,30,30,0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2);
+      pointer-events: auto;
+      transform: translateX(-50%);
+      transition: opacity 0.15s ease, top 0.08s ease, left 0.08s ease;
+      font-size: 11px;
+      color: #ccc;
+      white-space: nowrap;
+    }
+    #floating-action-bar.visible { display: flex; }
+    .fab-sep {
+      width: 1px;
+      height: 18px;
+      background: rgba(255,255,255,0.15);
+      margin: 0 2px;
+    }
+    .fab-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.2);
+      padding: 0;
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+    }
+    .fab-color::-webkit-color-swatch-wrapper { padding: 0; }
+    .fab-color::-webkit-color-swatch { border-radius: 50%; border: none; }
+    .fab-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      opacity: 0.5;
+      letter-spacing: 0.5px;
+      margin-right: -2px;
+    }
+    .fab-input {
+      width: 38px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 4px;
+      color: #ddd;
+      font-size: 11px;
+      padding: 2px 4px;
+      text-align: center;
+    }
+    .fab-input:focus { border-color: var(--fd-accent); outline: none; }
+    .fab-slider {
+      width: 50px;
+      height: 3px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255,255,255,0.15);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    .fab-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--fd-accent);
+      cursor: pointer;
+    }
+    .fab-btn {
+      background: transparent;
+      border: none;
+      color: #aaa;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 4px;
+      line-height: 1;
+    }
+    .fab-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    /* Overflow menu */
+    #fab-overflow-menu {
+      position: absolute;
+      bottom: calc(100% + 4px);
+      right: 0;
+      background: rgba(30,30,30,0.95);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 4px;
+      display: none;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 120px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    #fab-overflow-menu.visible { display: flex; }
+    .fab-menu-item {
+      background: transparent;
+      border: none;
+      color: #ccc;
+      font-size: 11px;
+      padding: 6px 10px;
+      text-align: left;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .fab-menu-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
     .tool-icon { font-size: 13px; }
     .tool-key {
       font-size: 9px;
@@ -1922,6 +2038,29 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       <div class="palette-item" draggable="true" data-shape="frame">▣<span class="palette-label">Frame</span></div>
       <div class="palette-item" draggable="true" data-shape="line">━<span class="palette-label">Line</span></div>
       <div class="palette-item" draggable="true" data-shape="arrow">→<span class="palette-label">Arrow</span></div>
+    </div>
+    <div id="floating-action-bar">
+      <span class="fab-label">Fill</span>
+      <input type="color" id="fab-fill" class="fab-color" value="#4A90D9" title="Fill color">
+      <div class="fab-sep"></div>
+      <span class="fab-label">Stroke</span>
+      <input type="color" id="fab-stroke" class="fab-color" value="#333333" title="Stroke color">
+      <input type="number" id="fab-stroke-w" class="fab-input" min="0" max="20" step="1" value="1" title="Stroke width">
+      <div class="fab-sep"></div>
+      <span class="fab-label">Opacity</span>
+      <input type="range" id="fab-opacity" class="fab-slider" min="0" max="1" step="0.05" value="1" title="Opacity">
+      <span id="fab-opacity-val" style="font-size:10px;min-width:24px">100%</span>
+      <div class="fab-sep fab-text-only"></div>
+      <span class="fab-label fab-text-only">Size</span>
+      <input type="number" id="fab-font-size" class="fab-input fab-text-only" min="8" max="200" step="1" value="16" title="Font size">
+      <div class="fab-sep"></div>
+      <button class="fab-btn" id="fab-more-btn" title="More actions">⋯</button>
+      <div id="fab-overflow-menu">
+        <button class="fab-menu-item" data-action="group">⌘G Group</button>
+        <button class="fab-menu-item" data-action="ungroup">⌘⇧G Ungroup</button>
+        <button class="fab-menu-item" data-action="duplicate">⌘D Duplicate</button>
+        <button class="fab-menu-item" data-action="delete" style="color:#e57373">⌫ Delete</button>
+      </div>
     </div>
     <canvas id="fd-canvas" class="tool-select"></canvas>
     <div id="dimension-tooltip"></div>

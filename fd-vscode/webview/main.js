@@ -195,6 +195,7 @@ async function main() {
     setupDragAndDrop();
     setupAnimPicker();
     setupHelpButton();
+    setupFloatingBar();
     setupApplePencilPro();
     setupThemeToggle();
     setupSketchyToggle();
@@ -400,6 +401,7 @@ function setupPointerEvents() {
 
     // Track interaction start for dimension tooltip
     pointerIsDown = true;
+    hideFloatingBar();
     pointerDownSceneX = x;
     pointerDownSceneY = y;
     currentToolAtPointerDown = fdCanvas.get_tool_name();
@@ -536,6 +538,7 @@ function setupPointerEvents() {
     canvas.releasePointerCapture(e.pointerId);
     // Update properties panel after interaction ends
     updatePropertiesPanel();
+    updateFloatingBar();
     // Notify extension of canvas selection change (for Code ↔ Canvas sync)
     // Skip during inline editing — prevents focus stealing that kills the textarea
     if (!inlineEditorActive) {
@@ -974,6 +977,7 @@ document.addEventListener("keydown", (e) => {
   if (result.changed || result.action === "deselect") {
     const selectedId = fdCanvas.get_selected_id();
     vscode.postMessage({ type: "nodeSelected", id: selectedId });
+    updateFloatingBar();
   }
 
   // Update cursor when tool changes via shortcut
@@ -1209,6 +1213,194 @@ function buildShortcutHelpHtml() {
 }
 
 // ─── Annotation Card ───────────────────────────────────────────────────────
+
+// ─── Floating Action Bar (Contextual Toolbar) ──────────────────────────────
+
+/** Position the floating action bar above the selected node's bounds */
+function updateFloatingBar() {
+  const fab = document.getElementById("floating-action-bar");
+  if (!fab || !fdCanvas) return;
+
+  const selectedId = fdCanvas.get_selected_id();
+  if (!selectedId || pointerIsDown || inlineEditorActive) {
+    fab.classList.remove("visible");
+    return;
+  }
+
+  // Get node bounds in scene space
+  let bounds;
+  try {
+    bounds = JSON.parse(fdCanvas.get_node_bounds(selectedId));
+  } catch (_) {
+    fab.classList.remove("visible");
+    return;
+  }
+  if (bounds.x === undefined) {
+    fab.classList.remove("visible");
+    return;
+  }
+
+  // Scene → screen coords (apply pan + zoom)
+  const canvas = document.getElementById("fd-canvas");
+  const rect = canvas.getBoundingClientRect();
+  const screenX = bounds.x * zoomLevel + panX + rect.left;
+  const screenY = bounds.y * zoomLevel + panY + rect.top;
+  const screenW = bounds.w * zoomLevel;
+
+  // Position bar centered above node, 36px gap
+  const barX = screenX + screenW / 2;
+  const barY = screenY - 36;
+
+  // Clamp to stay within canvas bounds
+  const containerRect = document.getElementById("canvas-container").getBoundingClientRect();
+  const clampedY = Math.max(containerRect.top + 4, barY);
+
+  fab.style.left = `${barX - containerRect.left}px`;
+  fab.style.top = `${clampedY - containerRect.top}px`;
+  fab.classList.add("visible");
+
+  // Read current node props for the controls
+  const propsJson = fdCanvas.get_selected_node_props();
+  const props = JSON.parse(propsJson);
+
+  // Update fill color
+  const fillEl = document.getElementById("fab-fill");
+  if (fillEl && props.fill) {
+    let hex = props.fill;
+    if (hex.length === 4) hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+    fillEl.value = hex.substring(0, 7);
+  }
+
+  // Update stroke color
+  const strokeEl = document.getElementById("fab-stroke");
+  if (strokeEl && props.strokeColor) {
+    let hex = props.strokeColor;
+    if (hex.length === 4) hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+    strokeEl.value = hex.substring(0, 7);
+  }
+
+  // Stroke width
+  const strokeW = document.getElementById("fab-stroke-w");
+  if (strokeW) strokeW.value = props.strokeWidth !== undefined ? props.strokeWidth : 1;
+
+  // Opacity
+  const opSlider = document.getElementById("fab-opacity");
+  const opVal = document.getElementById("fab-opacity-val");
+  const op = props.opacity !== undefined ? props.opacity : 1;
+  if (opSlider) opSlider.value = op;
+  if (opVal) opVal.textContent = `${Math.round(op * 100)}%`;
+
+  // Font size — show only for text nodes
+  const isText = props.kind === "text";
+  document.querySelectorAll(".fab-text-only").forEach(el => {
+    el.style.display = isText ? "" : "none";
+  });
+  if (isText) {
+    const fsEl = document.getElementById("fab-font-size");
+    if (fsEl && props.fontSize) fsEl.value = props.fontSize;
+  }
+}
+
+function hideFloatingBar() {
+  const fab = document.getElementById("floating-action-bar");
+  if (fab) fab.classList.remove("visible");
+  const menu = document.getElementById("fab-overflow-menu");
+  if (menu) menu.classList.remove("visible");
+}
+
+function setupFloatingBar() {
+  const fab = document.getElementById("floating-action-bar");
+  if (!fab) return;
+
+  // ── Fill color change ──
+  document.getElementById("fab-fill").addEventListener("input", (e) => {
+    if (!fdCanvas) return;
+    fdCanvas.set_node_prop("fill", e.target.value);
+    render();
+    syncTextToExtension();
+    updatePropertiesPanel();
+  });
+
+  // ── Stroke color change ──
+  document.getElementById("fab-stroke").addEventListener("input", (e) => {
+    if (!fdCanvas) return;
+    fdCanvas.set_node_prop("stroke", e.target.value);
+    render();
+    syncTextToExtension();
+    updatePropertiesPanel();
+  });
+
+  // ── Stroke width change ──
+  document.getElementById("fab-stroke-w").addEventListener("change", (e) => {
+    if (!fdCanvas) return;
+    fdCanvas.set_node_prop("stroke_width", e.target.value);
+    render();
+    syncTextToExtension();
+    updatePropertiesPanel();
+  });
+
+  // ── Opacity slider ──
+  const opSlider = document.getElementById("fab-opacity");
+  const opVal = document.getElementById("fab-opacity-val");
+  opSlider.addEventListener("input", (e) => {
+    if (!fdCanvas) return;
+    opVal.textContent = `${Math.round(e.target.value * 100)}%`;
+    fdCanvas.set_node_prop("opacity", e.target.value);
+    render();
+    syncTextToExtension();
+    updatePropertiesPanel();
+  });
+
+  // ── Font size change ──
+  document.getElementById("fab-font-size").addEventListener("change", (e) => {
+    if (!fdCanvas) return;
+    fdCanvas.set_node_prop("font_size", e.target.value);
+    render();
+    syncTextToExtension();
+    updatePropertiesPanel();
+  });
+
+  // ── Overflow menu toggle ──
+  document.getElementById("fab-more-btn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const menu = document.getElementById("fab-overflow-menu");
+    menu.classList.toggle("visible");
+  });
+
+  // ── Overflow menu actions ──
+  document.querySelectorAll("#fab-overflow-menu .fab-menu-item").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!fdCanvas) return;
+      const action = btn.dataset.action;
+      let changed = false;
+      switch (action) {
+        case "group": changed = fdCanvas.group_selected(); break;
+        case "ungroup": changed = fdCanvas.ungroup_selected(); break;
+        case "duplicate": changed = fdCanvas.duplicate_selected(); break;
+        case "delete": changed = fdCanvas.delete_selected(); break;
+      }
+      if (changed) {
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+        updateFloatingBar();
+      }
+      document.getElementById("fab-overflow-menu").classList.remove("visible");
+    });
+  });
+
+  // Close overflow menu when clicking elsewhere
+  document.addEventListener("click", () => {
+    const menu = document.getElementById("fab-overflow-menu");
+    if (menu) menu.classList.remove("visible");
+  });
+
+  // Prevent FAB clicks from deselecting the node
+  fab.addEventListener("pointerdown", (e) => {
+    e.stopPropagation();
+  });
+}
 
 function setupAnnotationCard() {
   document.getElementById("card-close-btn").addEventListener("click", () => {

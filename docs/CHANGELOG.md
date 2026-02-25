@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.8.39
+
+- **FEATURE**: Contextual Floating Toolbar — glassmorphism pill bar appears above selected nodes with: fill color swatch, stroke color swatch, stroke width input, opacity slider, font size (text nodes only), and ⋯ overflow menu (Group, Ungroup, Duplicate, Delete)
+- **UX**: Bar follows selection position in scene→screen coords, hides during drag, auto-shows on selection
+- **UX**: Overflow menu closes on external click; FAB pointerdown stops propagation to prevent deselection
+- **DOCS**: `docs/SHORTCUTS.md` — comprehensive 8-section keyboard shortcut reference for AI agents
+
 ### v0.8.38
 
 - **FEATURE**: ⌘+drag on drawing tools = temporary Select (Screenbrush-style) — move objects or marquee select without leaving the drawing tool; auto-restores on pointer up
