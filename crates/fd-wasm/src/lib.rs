@@ -613,6 +613,12 @@ impl FdCanvas {
 
     /// Duplicate the currently selected node(s). Returns true if duplicated.
     pub fn duplicate_selected(&mut self) -> bool {
+        self.duplicate_selected_at(20.0, 20.0)
+    }
+
+    /// Duplicate selected node(s) with a custom offset. Returns true if duplicated.
+    /// Use (0, 0) for Alt+drag clone-in-place.
+    pub fn duplicate_selected_at(&mut self, dx: f32, dy: f32) -> bool {
         let first_id = match self.select_tool.first_selected() {
             Some(id) => id,
             None => return false,
@@ -624,12 +630,16 @@ impl FdCanvas {
         let mut cloned = original;
         let new_id = NodeId::anonymous();
         cloned.id = new_id;
-        // Offset the duplicate 20px right and down from the original
-        cloned.constraints.push(fd_core::model::Constraint::Offset {
-            from: first_id,
-            dx: 20.0,
-            dy: 20.0,
-        });
+        if dx != 0.0 || dy != 0.0 {
+            cloned.constraints.push(fd_core::model::Constraint::Offset {
+                from: first_id,
+                dx,
+                dy,
+            });
+        } else {
+            // Clone in-place: copy the original's position constraints
+            // (no offset needed — constraints are already cloned)
+        }
 
         let mutation = GraphMutation::AddNode {
             parent_id: NodeId::intern("root"),

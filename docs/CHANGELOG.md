@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.8.38
+
+- **FEATURE**: ⌘+drag on drawing tools = temporary Select (Screenbrush-style) — move objects or marquee select without leaving the drawing tool; auto-restores on pointer up
+- **FEATURE**: Alt+drag = clone and drag — duplicates the node in-place then drags the clone (original stays put)
+- **API**: `duplicate_selected_at(dx, dy)` — parameterized duplication with custom offset (0,0 for clone-in-place, 20,20 for ⌘D)
+- **SHORTCUT**: ⌘+A select all already working (documented)
+
 ### v0.8.37
 
 - **FEATURE**: Z-order shortcuts — ⌘[ send backward, ⌘] bring forward, ⌘⇧[ send to back, ⌘⇧] bring to front (implemented in Rust SceneGraph)

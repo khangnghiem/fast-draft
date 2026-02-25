@@ -71,6 +71,13 @@ let pointerDownSceneX = 0;
 let pointerDownSceneY = 0;
 let currentToolAtPointerDown = "select";
 
+// ─── Modifier Drag State ─────────────────────────────────────────────────
+/** ⌘+drag on drawing tool → temporary Select mode (Screenbrush) */
+let cmdTempSelectActive = false;
+let cmdTempSelectOriginalTool = null;
+/** Alt+drag clone-and-drag active */
+let altCloneActive = false;
+
 // ─── Animation Drop State ────────────────────────────────────────────────
 /** Node ID of the drag-over drop target (for animation assignment) */
 let animDropTargetId = null;
@@ -349,6 +356,36 @@ function setupPointerEvents() {
     closeAnnotationCard();
     closeContextMenu();
 
+    // ── ⌘+drag on drawing tool = temporary Select (Screenbrush) ──
+    const currentTool = fdCanvas.get_tool_name();
+    const drawingTools = ["rect", "ellipse", "pen", "arrow", "text", "frame"];
+    const isDrawingTool = drawingTools.includes(currentTool);
+    if (isDrawingTool && (e.metaKey || e.ctrlKey)) {
+      cmdTempSelectActive = true;
+      cmdTempSelectOriginalTool = currentTool;
+      fdCanvas.set_tool("select");
+    }
+
+    // ── Alt+drag = clone and drag ──
+    if (e.altKey && !e.metaKey && !e.ctrlKey) {
+      const hitId = fdCanvas.hit_test_at(x, y);
+      if (hitId) {
+        // Ensure the node is selected first
+        fdCanvas.select_by_id(hitId);
+        // Duplicate in-place (0,0 offset), new clone becomes selected
+        fdCanvas.duplicate_selected_at(0.0, 0.0);
+        render();
+        syncTextToExtension();
+        altCloneActive = true;
+        // Now switch to select to drag the clone
+        if (isDrawingTool) {
+          cmdTempSelectActive = true;
+          cmdTempSelectOriginalTool = currentTool;
+          fdCanvas.set_tool("select");
+        }
+      }
+    }
+
     const changed = fdCanvas.handle_pointer_down(
       x,
       y,
@@ -525,6 +562,17 @@ function setupPointerEvents() {
     draggedNodeId = null;
     animDropTargetId = null;
     animDropTargetBounds = null;
+
+    // ── Restore tool after ⌘+drag temp Select or Alt+drag clone ──
+    if (cmdTempSelectActive && cmdTempSelectOriginalTool) {
+      fdCanvas.set_tool(cmdTempSelectOriginalTool);
+      updateToolbarActive(lockedTool || cmdTempSelectOriginalTool);
+      if (lockedTool) updateLockedIndicator(lockedTool);
+      updateCanvasCursor(cmdTempSelectOriginalTool);
+    }
+    cmdTempSelectActive = false;
+    cmdTempSelectOriginalTool = null;
+    altCloneActive = false;
   });
 
   // ── Wheel / Trackpad → Pan or Zoom ──
