@@ -98,6 +98,23 @@ export class FdCanvas {
         }
     }
     /**
+     * Get the arrow tool's live preview line during drag.
+     * Returns JSON `{"x1":..,"y1":..,"x2":..,"y2":..}` or `""` if not dragging.
+     * @returns {string}
+     */
+    get_arrow_preview() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_arrow_preview(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Get animations for a node as a JSON array.
      * Returns `[]` if node not found or has no animations.
      * @param {string} node_id

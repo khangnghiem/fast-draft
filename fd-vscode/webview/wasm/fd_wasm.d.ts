@@ -44,6 +44,11 @@ export class FdCanvas {
      */
     get_annotations_json(node_id: string): string;
     /**
+     * Get the arrow tool's live preview line during drag.
+     * Returns JSON `{"x1":..,"y1":..,"x2":..,"y2":..}` or `""` if not dragging.
+     */
+    get_arrow_preview(): string;
+    /**
      * Get animations for a node as a JSON array.
      * Returns `[]` if node not found or has no animations.
      */
@@ -206,6 +211,7 @@ export interface InitOutput {
     readonly fdcanvas_delete_selected: (a: number) => number;
     readonly fdcanvas_duplicate_selected: (a: number) => number;
     readonly fdcanvas_get_annotations_json: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_get_arrow_preview: (a: number) => [number, number];
     readonly fdcanvas_get_node_animations_json: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_node_bounds: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_selected_id: (a: number) => [number, number];
