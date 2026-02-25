@@ -92,6 +92,7 @@ group @settings {
     group @_anon_39 {
       layout: row gap=0 pad=16
       x: 72.88
+      
       y: 605.77
       rect @switch_sound {
         w: 44 h: 24

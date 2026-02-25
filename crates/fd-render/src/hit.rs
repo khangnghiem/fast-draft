@@ -38,15 +38,9 @@ fn hit_test_node(
         }
     }
 
-    // Check self
+    // Check self (skip Root — it covers the whole viewport)
     let node = &graph.graph[idx];
     if matches!(node.kind, NodeKind::Root) {
-        return None;
-    }
-
-    // Groups are invisible — only their children are clickable, not the group itself.
-    // (Group bounds auto-size to children, so clicking "empty space" should not select the group.)
-    if matches!(node.kind, NodeKind::Group { .. }) {
         return None;
     }
 
