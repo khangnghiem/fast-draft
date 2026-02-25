@@ -62,6 +62,9 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.24**: Group Visibility & Drill-down: Group nodes render a dashed blue border on hover and a solid blue border with a "Group @id" badge when selected. Clicking a child of an unselected group selects the parent group. Clicking the child again (when the group is selected) drills down to select the child (Figma/Sketch behavior).
 - **R3.28**: Inline text editing: Double-click a text node or shape to open a floating textarea overlay; background matches the node's fill (shape) or uses themed default (text node); live sync — every keystroke updates Code Mode in real-time; Enter confirms, Esc reverts to original value, click-outside commits; 3×3 alignment grid picker in properties panel for `align:` (R1.17)
 - **R3.29**: Animation drop: Drag a node onto another to assign animations — magnetic glow ring on hover, release opens a glassmorphism Animation Picker popover with preset groups (Hover/Press/Enter), live preview on hover, click to commit `anim` block to Code Mode
+- **R3.25**: Minimap navigation: Thumbnail overview in bottom-right showing full scene with draggable viewport rectangle; click-to-pan navigation (Figma/Miro-style)
+- **R3.26**: Arrow-key nudge: Arrow keys move selected node 1px (Shift+arrow = 10px); matches Figma/Sketch standard UX
+- **R3.27**: Layer rename: Double-click a layer name in the Layers panel for inline rename; renames `@id` across the entire document (word-boundary safe)
 - **R3.30**: Layer navigation: Clicking a layer item in the Layers panel selects the node and smoothly pans the camera to center it (250ms ease-out); auto-zooms in if both dimensions are < 20px on screen (truly invisible); auto-zooms out if the node overflows the viewport (15% padding); skips pan if the node center is already within 20% of the viewport center; thin shapes (lines, dividers) keep current zoom unless overflowing
 
 ### R4: AI Editing (Text)
@@ -157,3 +160,4 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 | inline editing      | R3.28                                 |
 | text alignment      | R1.17, R3.28                          |
 | layers / navigation | R3.30                                 |
+| group / drill-down  | R3.24                                 |

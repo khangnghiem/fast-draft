@@ -324,14 +324,21 @@
 - [x] **R3.13**: Light/dark theme toggle
 - [x] **R3.14**: View mode toggle (Design | Spec)
 - [ ] **R3.15**: Live preview outlines
-- [ ] **R3.16**: Resize handles (8-point grips)
-- [ ] **R3.17**: Smart guides (alignment snapping)
-- [ ] **R3.18**: Dimension tooltip
+- [x] **R3.16**: Resize handles (8-point grips)
+- [x] **R3.17**: Smart guides (alignment snapping)
+- [x] **R3.18**: Dimension tooltip
 - [ ] **R3.19**: Alt-draw-from-center
-- [ ] **R3.20**: Zoom (⌘+/−, pinch, fit)
+- [x] **R3.20**: Zoom (⌘+/−, pinch, fit)
 - [x] **R3.21**: Grid overlay
 - [ ] **R3.22**: Pressure-sensitive stroke width
 - [ ] **R3.23**: Freehand shape recognition
+- [x] **R3.24**: Group visibility & drill-down
+- [x] **R3.25**: Minimap navigation
+- [x] **R3.26**: Arrow-key nudge
+- [x] **R3.27**: Layer rename
+- [x] **R3.28**: Inline text editing
+- [x] **R3.29**: Animation drop
+- [x] **R3.30**: Layer navigation
 
 ### R4: AI Editing (Text)
 
@@ -369,27 +376,41 @@
 
 <!-- Maps each requirement to its test functions. If a row is empty, the requirement lacks test coverage. -->
 
-| Requirement | Test Functions                                                    | Coverage                    |
-| ----------- | ----------------------------------------------------------------- | --------------------------- |
-| R1.1–R1.8   | `parser::tests::parse_*`, `emitter::tests::emit_*`, `roundtrip_*` | ✅ 42 tests                 |
-| R1.9        | `emit_annotations_*`, `roundtrip_preserves_annotations`           | ✅                          |
-| R1.10       | `parse_edge_*`, `emit_edge_*`, `roundtrip_edge_*`                 | ✅                          |
-| R1.11       | `emit_edge_with_trigger_anim`, `roundtrip_edge_hover_anim`        | ✅                          |
-| R1.12       | `emit_edge_flow_*`, `roundtrip_edge_flow_*`                       | ✅                          |
-| R1.13       | `emit_generic_node`, `roundtrip_generic_*`                        | ✅                          |
-| R1.14       | `parse_import`, `emit_import`, `roundtrip_import`                 | ✅                          |
-| R1.15       | `emit_bg_shorthand`, `roundtrip_bg_shorthand`                     | ✅                          |
-| R1.16       | `roundtrip_comment_*`                                             | ✅                          |
-| R2.1–R2.4   | `sync::tests::sync_*`, `bidi_sync::*`                             | ⚠️ 5 unit + 2 integration   |
-| R3.1        | `tools::tests::select_tool_*`                                     | ⚠️ 3 tests, missing marquee |
-| R3.2        | `tools::tests::select_tool_drag`, `select_tool_shift_drag_*`      | ⚠️ Missing resize           |
-| R3.3        | `tools::tests::rect_tool_*`, `ellipse_tool_*`                     | ⚠️ Missing text tool test   |
-| R3.4        | _(none)_                                                          | ❌ No pen tool tests        |
-| R3.5        | _(future)_                                                        | —                           |
-| R3.6        | _(JS-only, no test)_                                              | ❌                          |
-| R3.7        | `commands::tests::*`, `undo_redo::*`                              | ✅ 5 unit + 4 integration   |
-| R3.8–R3.14  | _(JS-only, no test)_                                              | ❌                          |
-| R3.15–R3.23 | _(not yet implemented)_                                           | —                           |
-| R4.1–R4.6   | Covered by R1/R2 tests                                            | ✅                          |
-| R4.7–R4.11  | _(extension-side, no test)_                                       | ❌                          |
-| R5.1–R5.8   | `hit::tests::*`, `resolve::tests::*`                              | ⚠️ 6 tests                  |
+| Requirement | Test Functions                                                    | Coverage                       |
+| ----------- | ----------------------------------------------------------------- | ------------------------------ |
+| R1.1–R1.8   | `parser::tests::parse_*`, `emitter::tests::emit_*`, `roundtrip_*` | ✅ 76 fd-core + 18 integration |
+| R1.9        | `emit_annotations_*`, `roundtrip_preserves_annotations`           | ✅                             |
+| R1.10       | `parse_edge_*`, `emit_edge_*`, `roundtrip_edge_*`                 | ✅                             |
+| R1.11       | `emit_edge_with_trigger_anim`, `roundtrip_edge_hover_anim`        | ✅                             |
+| R1.12       | `emit_edge_flow_*`, `roundtrip_edge_flow_*`                       | ✅                             |
+| R1.13       | `emit_generic_node`, `roundtrip_generic_*`                        | ✅                             |
+| R1.14       | `parse_import`, `emit_import`, `roundtrip_import`                 | ✅                             |
+| R1.15       | `emit_bg_shorthand`, `roundtrip_bg_shorthand`                     | ✅                             |
+| R1.16       | `roundtrip_comment_*`                                             | ✅                             |
+| R1.17       | `parse_align_*`, `roundtrip_align*`, `style_merging_align`        | ✅                             |
+| R2.1–R2.4   | `sync::tests::sync_*`, `bidi_sync::*`                             | ✅ 12 sync + 9 integration     |
+| R3.1        | `tools::tests::select_tool_*`, `hit::tests::*`                    | ✅ 5 tests + 3 hit tests       |
+| R3.2        | `select_tool_drag`, `select_tool_shift_drag_*`, resize integ.     | ✅ 3 tests                     |
+| R3.3        | `rect_tool_*`, `ellipse_tool_*`, `text_tool_*`                    | ✅ 7 tests                     |
+| R3.4        | _(pen tool — captures pressure, no unit test)_                    | ⚠️ No pen tool tests           |
+| R3.5        | _(future)_                                                        | —                              |
+| R3.6        | E2E UX: zoom/pan/pinch tests in `e2e-ux.test.ts`                  | ✅ 4 E2E tests                 |
+| R3.7        | `commands::tests::*`, `undo_redo::*`                              | ✅ 5 unit + 7 integration      |
+| R3.8–R3.14  | E2E UX: properties, color, theme, view mode in `e2e-ux.test.ts`   | ✅ 12 E2E tests                |
+| R3.16       | `hit_test_resize_handle` (WASM), E2E UX cursor tests              | ⚠️ WASM-side only              |
+| R3.17       | E2E UX: grid/snap tests                                           | ⚠️ JS-only                     |
+| R3.18       | E2E UX: dimension tooltip tests                                   | ⚠️ JS-only                     |
+| R3.20       | E2E UX: zoom calculations, pinch clamp                            | ✅ 4 E2E tests                 |
+| R3.21       | E2E UX: grid spacing adaptation                                   | ✅ 3 E2E tests                 |
+| R3.24       | `effective_target_*`, `is_ancestor_of`, `hit_test_nested_groups`  | ✅ 4 Rust + 4 E2E tests        |
+| R3.25       | E2E UX: minimap scale, click-to-navigate                          | ✅ 2 E2E tests                 |
+| R3.26       | E2E UX: arrow nudge 1px/10px                                      | ✅ 2 E2E tests                 |
+| R3.27       | E2E UX: rename sanitization, word-boundary                        | ✅ 3 E2E tests                 |
+| R3.28       | E2E UX: inline text editing, hex luminance                        | ✅ 3 E2E tests                 |
+| R3.29       | E2E UX: animation tween engine                                    | ✅ 2 E2E tests                 |
+| R3.30       | _(JS-only, camera animation)_                                     | ⚠️ JS-only                     |
+| R4.1–R4.6   | Covered by R1/R2 tests                                            | ✅                             |
+| R4.7–R4.11  | _(extension-side, no test)_                                       | ❌                             |
+| R5.1–R5.8   | `hit::tests::*`, `resolve::tests::*`, `render2d::tests::*`        | ✅ 3 hit + 6 layout + 3 render |
+
+**Total**: 154 Rust tests + 162 TypeScript tests = **316 tests**
