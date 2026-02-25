@@ -638,6 +638,9 @@ function __wbg_get_imports() {
         __wbg_save_e0cc2e58b36d33c9: function(arg0) {
             arg0.save();
         },
+        __wbg_scale_543277ecf8cf836b: function() { return handleError(function (arg0, arg1, arg2) {
+            arg0.scale(arg1, arg2);
+        }, arguments); },
         __wbg_setLineDash_ecf27050368658c9: function() { return handleError(function (arg0, arg1) {
             arg0.setLineDash(arg1);
         }, arguments); },
@@ -686,6 +689,9 @@ function __wbg_get_imports() {
         __wbg_stroke_240ea7f2407d73c0: function(arg0) {
             arg0.stroke();
         },
+        __wbg_translate_3aa10730376a8c06: function() { return handleError(function (arg0, arg1, arg2) {
+            arg0.translate(arg1, arg2);
+        }, arguments); },
         __wbg_width_9bbf873307a2ac4e: function(arg0) {
             const ret = arg0.width;
             return ret;
