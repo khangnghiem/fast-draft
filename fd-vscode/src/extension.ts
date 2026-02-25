@@ -75,10 +75,14 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
           // Skip if text is identical — avoids full document replacement that disrupts cursor
           if (incoming === document.getText()) break;
           suppressEchoBack = true;
+          const lastLine = document.lineCount - 1;
+          const lastLineRange = document.lineAt(lastLine).range;
+          const fullRange = new vscode.Range(0, 0, lastLine, lastLineRange.end.character);
+
           const edit = new vscode.WorkspaceEdit();
           edit.replace(
             document.uri,
-            new vscode.Range(0, 0, document.lineCount, 0),
+            fullRange,
             incoming
           );
           await vscode.workspace.applyEdit(edit);
@@ -257,10 +261,14 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     }
 
     // Apply refined text to the document
+    const lastLine = document.lineCount - 1;
+    const lastLineRange = document.lineAt(lastLine).range;
+    const fullRange = new vscode.Range(0, 0, lastLine, lastLineRange.end.character);
+
     const edit = new vscode.WorkspaceEdit();
     edit.replace(
       document.uri,
-      new vscode.Range(0, 0, document.lineCount, 0),
+      fullRange,
       result.refinedText
     );
     await vscode.workspace.applyEdit(edit);
@@ -3391,10 +3399,14 @@ export function activate(context: vscode.ExtensionContext) {
         }
         return;
       }
+      const lastLine = editor.document.lineCount - 1;
+      const lastLineRange = editor.document.lineAt(lastLine).range;
+      const fullRange = new vscode.Range(0, 0, lastLine, lastLineRange.end.character);
+
       const edit = new vscode.WorkspaceEdit();
       edit.replace(
         editor.document.uri,
-        new vscode.Range(0, 0, editor.document.lineCount, 0),
+        fullRange,
         result.refinedText
       );
       await vscode.workspace.applyEdit(edit);
@@ -3431,10 +3443,14 @@ export function activate(context: vscode.ExtensionContext) {
         }
         return;
       }
+      const lastLine = editor.document.lineCount - 1;
+      const lastLineRange = editor.document.lineAt(lastLine).range;
+      const fullRange = new vscode.Range(0, 0, lastLine, lastLineRange.end.character);
+
       const edit = new vscode.WorkspaceEdit();
       edit.replace(
         editor.document.uri,
-        new vscode.Range(0, 0, editor.document.lineCount, 0),
+        fullRange,
         result.refinedText
       );
       await vscode.workspace.applyEdit(edit);

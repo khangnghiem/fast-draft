@@ -998,3 +998,26 @@ group @box {
         );
     }
 }
+
+#[test]
+fn sync_delete_node() {
+    let input = r#"
+rect @box {
+  w: 100
+  h: 50
+}
+rect @other {
+  w: 10
+  h: 10
+}
+"#;
+    let viewport = fd_core::Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    engine.apply_mutation(GraphMutation::RemoveNode { id: NodeId::intern("box") });
+    let text = engine.current_text();
+    assert!(!text.contains("rect @box"));
+    assert!(text.contains("rect @other"));
+}
