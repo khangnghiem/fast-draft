@@ -125,15 +125,9 @@ fn render_node(
         }
         NodeKind::Rect { .. } => {
             draw_rect(ctx, node_bounds, &style, is_selected);
-            if let Some(ref label) = style.label {
-                draw_shape_label(ctx, node_bounds, label, &style);
-            }
         }
         NodeKind::Ellipse { .. } => {
             draw_ellipse(ctx, node_bounds, &style, is_selected);
-            if let Some(ref label) = style.label {
-                draw_shape_label(ctx, node_bounds, label, &style);
-            }
         }
         NodeKind::Text { content } => {
             draw_text(ctx, node_bounds, content, &style);
@@ -195,9 +189,6 @@ fn render_node(
         }
         NodeKind::Frame { .. } => {
             draw_rect(ctx, node_bounds, &style, is_selected);
-            if let Some(ref label) = style.label {
-                draw_shape_label(ctx, node_bounds, label, &style);
-            }
         }
         NodeKind::Path { commands } => {
             draw_path(ctx, node_bounds, commands, &style, is_selected);
@@ -354,6 +345,7 @@ fn draw_text(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, content: &str, 
 }
 
 /// Draw a label centered inside a shape (rect or ellipse).
+#[allow(dead_code)]
 fn draw_shape_label(
     ctx: &CanvasRenderingContext2d,
     b: &ResolvedBounds,
@@ -384,6 +376,7 @@ fn draw_shape_label(
 }
 
 /// Pick a readable label color based on the shape's fill luminance.
+#[allow(dead_code)]
 fn pick_label_color(style: &Style) -> String {
     match &style.fill {
         Some(Paint::Solid(c)) => {

@@ -9,7 +9,7 @@ use crate::id::NodeId;
 use crate::model::*;
 use winnow::ascii::space1;
 use winnow::combinator::{alt, delimited, opt, preceded};
-use winnow::error::{ContextError, ErrMode};
+use winnow::error::ContextError;
 use winnow::prelude::*;
 use winnow::token::{take_till, take_while};
 
@@ -728,19 +728,16 @@ fn parse_node_property(
             }
         }
         "label" => {
-            let s = if input.starts_with('"') {
-                parse_quoted_string
-                    .map(|s: &str| s.to_string())
-                    .parse_next(input)?
+            // Deprecated: label is now a text child node.
+            // Skip the value to maintain backwards compatibility with old .fd files.
+            if input.starts_with('"') {
+                let _ = parse_quoted_string.parse_next(input)?;
             } else {
-                let v: &str = take_till::<_, _, ContextError>(0.., |c: char| {
+                let _ = take_till::<_, _, ContextError>(0.., |c: char| {
                     c == '\n' || c == ';' || c == '}'
                 })
-                .parse_next(input)
-                .map_err(ErrMode::Cut)?;
-                v.trim().to_string()
-            };
-            style.label = Some(s);
+                .parse_next(input);
+            }
         }
         "use" => {
             use_styles.push(parse_identifier.map(NodeId::intern).parse_next(input)?);

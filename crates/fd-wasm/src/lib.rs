@@ -918,9 +918,18 @@ impl FdCanvas {
             }
         }
 
-        // Label (for rect/ellipse — optional text centered inside shape)
-        if let Some(ref label) = style.label {
-            props.insert("label".into(), serde_json::Value::String(label.clone()));
+        // Text child content (for rect/ellipse — find first Text child)
+        if matches!(
+            node.kind,
+            NodeKind::Rect { .. } | NodeKind::Ellipse { .. } | NodeKind::Frame { .. }
+        ) && let Some(idx) = self.engine.graph.index_of(id)
+        {
+            for child_idx in self.engine.graph.children(idx) {
+                if let NodeKind::Text { ref content } = self.engine.graph.graph[child_idx].kind {
+                    props.insert("label".into(), serde_json::Value::String(content.clone()));
+                    break;
+                }
+            }
         }
 
         // Fill
@@ -1130,14 +1139,47 @@ impl FdCanvas {
                 content: value.to_string(),
             },
             "label" => {
-                if let Some(node) = self.engine.graph.get_by_id(id) {
-                    let mut style = node.style.clone();
-                    style.label = if value.is_empty() {
-                        None
+                // Find or create a text child node for the shape
+                if let Some(parent_idx) = self.engine.graph.index_of(id) {
+                    // Find existing text child
+                    let existing_text_child = self
+                        .engine
+                        .graph
+                        .children(parent_idx)
+                        .into_iter()
+                        .find(|&ci| {
+                            matches!(self.engine.graph.graph[ci].kind, NodeKind::Text { .. })
+                        });
+
+                    if value.is_empty() {
+                        // Remove text child if value is empty
+                        if let Some(child_idx) = existing_text_child {
+                            let child_id = self.engine.graph.graph[child_idx].id;
+                            GraphMutation::RemoveNode { id: child_id }
+                        } else {
+                            return false;
+                        }
+                    } else if let Some(child_idx) = existing_text_child {
+                        // Update existing text child
+                        let child_id = self.engine.graph.graph[child_idx].id;
+                        GraphMutation::SetText {
+                            id: child_id,
+                            content: value.to_string(),
+                        }
                     } else {
-                        Some(value.to_string())
-                    };
-                    GraphMutation::SetStyle { id, style }
+                        // Create new text child node
+                        let child_id = NodeId::anonymous();
+                        let node = SceneNode::new(
+                            child_id,
+                            NodeKind::Text {
+                                content: value.to_string(),
+                            },
+                        );
+                        GraphMutation::AddNode {
+                            parent_id: id,
+                            node: Box::new(node),
+                        }
+                    }
                 } else {
                     return false;
                 }
