@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### Docs Restructure
+
+- **DOCS**: Moved `REQUIREMENTS.md` and `EDITORS.md` from project root into `docs/` directory
+- **DOCS**: Added `docs/ARCHITECTURE.md` — crate map, dependency graph, data flow, key types, rendering pipeline
+- **DOCS**: Updated all cross-references in workflows (`commit.md`, `yolo.md`, `uiux.md`, `spec.md`), `fd-vscode/README.md`, and zed-extensions submodule
+- **DOCS**: Noted Chrome browser subagent availability in `.agents/workflows/e2e.md`
+
 ### v0.8.49
 
 - **BUG FIX**: Groups are now draggable again when selected — restored deferred drill-down logic so clicking inside a selected group keeps the group selected for drag; only drills into the child on click-without-drag (pointer-up at same position)

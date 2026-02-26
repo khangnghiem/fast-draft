@@ -208,7 +208,7 @@ group @login_form {
 ## Links
 
 - [GitHub Repository](https://github.com/khangnghiem/fast-draft)
-- [FD Format Specification](https://github.com/khangnghiem/fast-draft/blob/main/REQUIREMENTS.md)
+- [FD Format Specification](https://github.com/khangnghiem/fast-draft/blob/main/docs/REQUIREMENTS.md)
 - [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=KhangNghiem.fast-draft)
 - [Open VSX Registry](https://open-vsx.org/extension/KhangNghiem/fast-draft)
 

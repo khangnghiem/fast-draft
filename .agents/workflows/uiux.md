@@ -5,7 +5,7 @@ description: UI/UX design workflow with professional standards and best practice
 # UI/UX Design Workflow
 
 1. **Understand the target**: What screen/component is being designed?
-   - Read relevant requirements from `REQUIREMENTS.md`
+   - Read relevant requirements from `docs/REQUIREMENTS.md`
    - Identify the user flow this design supports
 
 2. **Design the `.fd` mockup**: Create or modify an `.fd` file in `examples/`:

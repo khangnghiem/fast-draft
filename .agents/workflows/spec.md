@@ -4,10 +4,10 @@ description: Define requirements and acceptance criteria for a feature
 
 # Spec Workflow
 
-1. **Gather context**: Read `REQUIREMENTS.md` to understand existing requirements:
+1. **Gather context**: Read `docs/REQUIREMENTS.md` to understand existing requirements:
 
    ```bash
-   cat REQUIREMENTS.md
+   cat docs/REQUIREMENTS.md
    ```
 
 2. **Define the feature requirement** using this template:
@@ -33,7 +33,7 @@ description: Define requirements and acceptance criteria for a feature
 
 3. **Identify affected crates**: Which of `fd-core`, `fd-render`, `fd-editor`, `fd-vscode` need changes?
 
-4. **Add to REQUIREMENTS.md**:
+4. **Add to docs/REQUIREMENTS.md**:
    - Append the new requirement section
    - Assign the next FR-XX number
 
