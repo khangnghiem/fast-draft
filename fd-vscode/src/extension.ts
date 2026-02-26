@@ -1297,8 +1297,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       color: #D4D4D4; font-size: 12px; cursor: pointer; text-align: left;
       border-radius: 4px; display: flex; align-items: center; gap: 8px;
     }
-    .export-menu-item:hover:not(.disabled) { background: #007FD4; color: #FFF; }
-    .export-menu-item.disabled { opacity: 0.5; cursor: not-allowed; }
+    .export-menu-item:hover { background: #007FD4; color: #FFF; }
     .export-menu-sep { height: 1px; background: #404040; margin: 4px 0; }
 
     /* ── Minimap ── */
@@ -2143,7 +2142,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
         <button class="export-menu-item" data-export="svg-file">✨ Save as SVG</button>
         <div class="export-menu-sep"></div>
         <button class="export-menu-item" data-export="fd-clip">📝 Copy as .fd text</button>
-        <button class="export-menu-item disabled" title="Coming soon">🔗 Copy as link</button>
+
       </div>
     </div>
     <div class="tool-sep zen-full-only"></div>
