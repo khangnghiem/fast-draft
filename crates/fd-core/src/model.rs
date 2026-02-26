@@ -754,7 +754,7 @@ impl SceneGraph {
             None => return leaf_id,
         };
 
-        let mut highest_unselected_group: Option<NodeId> = None;
+        let mut lowest_unselected_group: Option<NodeId> = None;
 
         while let Some(parent_idx) = self.parent(current_idx) {
             let parent_node = &self.graph[parent_idx];
@@ -768,15 +768,18 @@ impl SceneGraph {
             if matches!(
                 parent_node.kind,
                 NodeKind::Group { .. } | NodeKind::Frame { .. }
-            ) && !selected.contains(&parent_node.id)
-            {
-                highest_unselected_group = Some(parent_node.id);
+            ) {
+                if selected.contains(&parent_node.id) {
+                    // Selected group = container boundary, stop bubbling
+                    break;
+                }
+                lowest_unselected_group = Some(parent_node.id);
             }
 
             current_idx = parent_idx;
         }
 
-        highest_unselected_group.unwrap_or(leaf_id)
+        lowest_unselected_group.unwrap_or(leaf_id)
     }
 
     /// Check if `ancestor_id` is a parent/grandparent/etc. of `descendant_id`.
@@ -1052,6 +1055,56 @@ mod tests {
         // Click 3: both groups selected → drills to leaf
         let t3 = sg.effective_target(leaf_id, &[outer_id, inner_id]);
         assert_eq!(t3, leaf_id);
+    }
+
+    /// Regression: selecting a child group then clicking its children should
+    /// drill into that child, NOT bubble up past the selected group to the parent.
+    #[test]
+    fn test_effective_target_child_group_drag() {
+        let mut sg = SceneGraph::new();
+
+        // Root → @outer → @inner → @leaf
+        let outer_id = NodeId::intern("outer_g");
+        let inner_id = NodeId::intern("inner_g");
+        let leaf_id = NodeId::intern("leaf_r");
+
+        let outer = SceneNode::new(
+            outer_id,
+            NodeKind::Group {
+                layout: LayoutMode::Free,
+            },
+        );
+        let inner = SceneNode::new(
+            inner_id,
+            NodeKind::Group {
+                layout: LayoutMode::Free,
+            },
+        );
+        let leaf = SceneNode::new(
+            leaf_id,
+            NodeKind::Rect {
+                width: 30.0,
+                height: 30.0,
+            },
+        );
+
+        let outer_idx = sg.add_node(sg.root, outer);
+        let inner_idx = sg.add_node(outer_idx, inner);
+        sg.add_node(inner_idx, leaf);
+
+        // Only @inner selected → clicking leaf should return leaf, not @outer
+        let t = sg.effective_target(leaf_id, &[inner_id]);
+        assert_eq!(
+            t, leaf_id,
+            "should drill into child of selected group, not bubble to parent"
+        );
+
+        // Only @outer selected → clicking leaf should return @inner (lowest unselected group below boundary)
+        let t2 = sg.effective_target(leaf_id, &[outer_id]);
+        assert_eq!(
+            t2, inner_id,
+            "should return lowest unselected group under selected boundary"
+        );
     }
 
     #[test]

@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.8.47
+
+- **BUG FIX**: Dragging a child group no longer moves its parent group — `effective_target()` now stops bubbling at selected group boundaries (returns the **lowest** unselected group instead of the highest), enabling correct Figma-style nested group drill-down and drag
+- **TESTING**: New regression test `test_effective_target_child_group_drag`
+
 ### v0.8.46
 
 - **FEATURE**: Touch & Gesture Optimization for tablet/iPad input.
@@ -496,7 +501,7 @@
 | R3.18       | E2E UX: dimension tooltip tests                                   | ⚠️ JS-only                     |
 | R3.20       | E2E UX: zoom calculations, pinch clamp                            | ✅ 4 E2E tests                 |
 | R3.21       | E2E UX: grid spacing adaptation                                   | ✅ 3 E2E tests                 |
-| R3.24       | `effective_target_*`, `is_ancestor_of`, `hit_test_nested_groups`  | ✅ 4 Rust + 4 E2E tests        |
+| R3.24       | `effective_target_*`, `is_ancestor_of`, `hit_test_nested_groups`  | ✅ 5 Rust + 4 E2E tests        |
 | R3.25       | E2E UX: minimap scale, click-to-navigate                          | ✅ 2 E2E tests                 |
 | R3.26       | E2E UX: arrow nudge 1px/10px                                      | ✅ 2 E2E tests                 |
 | R3.27       | E2E UX: rename sanitization, word-boundary                        | ✅ 3 E2E tests                 |

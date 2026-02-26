@@ -1,31 +1,38 @@
-use std::collections::HashMap;
-use fd_core::model::{NodeKind, SceneGraph};
-use fd_core::model::ResolvedBounds;
-use fd_core::NodeIndex;
 use crate::render2d::CanvasTheme;
+use fd_core::NodeIndex;
+use fd_core::model::ResolvedBounds;
+use fd_core::model::{NodeKind, SceneGraph};
+use std::collections::HashMap;
 
 fn paint_to_svg_color(p: &fd_core::model::Paint) -> String {
     match p {
         fd_core::model::Paint::Solid(c) => {
             if (c.a - 1.0).abs() < f32::EPSILON {
-                format!("#{:02X}{:02X}{:02X}", 
-                    (c.r * 255.0) as u8, 
-                    (c.g * 255.0) as u8, 
-                    (c.b * 255.0) as u8)
+                format!(
+                    "#{:02X}{:02X}{:02X}",
+                    (c.r * 255.0) as u8,
+                    (c.g * 255.0) as u8,
+                    (c.b * 255.0) as u8
+                )
             } else {
-                format!("rgba({}, {}, {}, {})", 
-                    (c.r * 255.0) as u8, 
-                    (c.g * 255.0) as u8, 
-                    (c.b * 255.0) as u8, 
-                    c.a)
+                format!(
+                    "rgba({}, {}, {}, {})",
+                    (c.r * 255.0) as u8,
+                    (c.g * 255.0) as u8,
+                    (c.b * 255.0) as u8,
+                    c.a
+                )
             }
         }
-        fd_core::model::Paint::LinearGradient { stops, .. } | fd_core::model::Paint::RadialGradient { stops } => {
+        fd_core::model::Paint::LinearGradient { stops, .. }
+        | fd_core::model::Paint::RadialGradient { stops } => {
             if let Some(first) = stops.first() {
-                format!("#{:02X}{:02X}{:02X}", 
-                    (first.color.r * 255.0) as u8, 
-                    (first.color.g * 255.0) as u8, 
-                    (first.color.b * 255.0) as u8)
+                format!(
+                    "#{:02X}{:02X}{:02X}",
+                    (first.color.r * 255.0) as u8,
+                    (first.color.g * 255.0) as u8,
+                    (first.color.b * 255.0) as u8
+                )
             } else {
                 "#000000".to_string()
             }
@@ -54,8 +61,8 @@ pub fn render_svg(
                 let has_selected_ancestor = selected_ids.iter().any(|other_id| {
                     other_id != id && {
                         graph.is_ancestor_of(
-                            fd_core::id::NodeId::intern(other_id), 
-                            fd_core::id::NodeId::intern(id)
+                            fd_core::id::NodeId::intern(other_id),
+                            fd_core::id::NodeId::intern(id),
                         )
                     }
                 });
@@ -97,7 +104,9 @@ pub fn render_svg(
     }
 
     for &idx in &root_selection {
-        expand_bounds(graph, bounds, idx, &mut min_x, &mut min_y, &mut max_x, &mut max_y, &mut found);
+        expand_bounds(
+            graph, bounds, idx, &mut min_x, &mut min_y, &mut max_x, &mut max_y, &mut found,
+        );
     }
 
     if !found {
@@ -117,14 +126,17 @@ pub fn render_svg(
     svg.push_str(&format!(
         "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\">\n"
     ));
-    
+
     // SVG defs can go here if needed (e.g., fonts or global styles)
     svg.push_str("<style>\n");
     svg.push_str("  text { font-family: Inter, system-ui, sans-serif; }\n");
     svg.push_str("</style>\n");
 
     // Group to handle the global offset/translation
-    svg.push_str(&format!("<g transform=\"translate({}, {})\">\n", -offset_x, -offset_y));
+    svg.push_str(&format!(
+        "<g transform=\"translate({}, {})\">\n",
+        -offset_x, -offset_y
+    ));
 
     for &idx in &root_selection {
         render_node_svg(&mut svg, graph, idx, bounds, theme);
@@ -150,8 +162,16 @@ fn render_node_svg(
 
     let style = graph.resolve_style(node, &[]);
     let opacity = style.opacity.unwrap_or(1.0);
-    let fill = style.fill.as_ref().map(paint_to_svg_color).unwrap_or_else(|| "none".to_string());
-    let stroke = style.stroke.as_ref().map(|s| paint_to_svg_color(&s.paint)).unwrap_or_else(|| "none".to_string());
+    let fill = style
+        .fill
+        .as_ref()
+        .map(paint_to_svg_color)
+        .unwrap_or_else(|| "none".to_string());
+    let stroke = style
+        .stroke
+        .as_ref()
+        .map(|s| paint_to_svg_color(&s.paint))
+        .unwrap_or_else(|| "none".to_string());
     let stroke_width = style.stroke.as_ref().map(|s| s.width).unwrap_or(2.0);
 
     // Apply scale transform if needed
@@ -186,35 +206,46 @@ fn render_node_svg(
         }
         NodeKind::Text { content } => {
             let font_size = style.font.as_ref().map(|f| f.size).unwrap_or(16.0);
-            let text_fill = style.fill.as_ref().map(paint_to_svg_color).unwrap_or_else(|| "#000000".to_string());
+            let text_fill = style
+                .fill
+                .as_ref()
+                .map(paint_to_svg_color)
+                .unwrap_or_else(|| "#000000".to_string());
             let align = match style.text_align {
                 Some(fd_core::model::TextAlign::Center) => "middle",
                 Some(fd_core::model::TextAlign::Right) => "end",
                 _ => "start",
             };
-            
+
             // X position depends on text-anchor
             let x = match style.text_align {
                 Some(fd_core::model::TextAlign::Center) => b.x + b.width / 2.0,
                 Some(fd_core::model::TextAlign::Right) => b.x + b.width,
                 _ => b.x,
             };
-            
+
             // Simple text rendering (single line for now, to perfectly wrap would need split)
             let lines: Vec<&str> = content.split('\\').collect();
             let line_height = font_size * 1.2;
             let total_height = lines.len() as f32 * line_height;
-            
+
             // Y position depends on vertical align
             let mut y = match style.text_valign {
-                Some(fd_core::model::TextVAlign::Middle) => b.y + (b.height - total_height) / 2.0 + font_size * 0.8,
-                Some(fd_core::model::TextVAlign::Bottom) => b.y + b.height - total_height + font_size * 0.8,
+                Some(fd_core::model::TextVAlign::Middle) => {
+                    b.y + (b.height - total_height) / 2.0 + font_size * 0.8
+                }
+                Some(fd_core::model::TextVAlign::Bottom) => {
+                    b.y + b.height - total_height + font_size * 0.8
+                }
                 _ => b.y + font_size * 0.9,
             };
 
             for line in lines {
                 // Escape HTML chars
-                let clean = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+                let clean = line
+                    .replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;");
                 out.push_str(&format!(
                     "  <text x=\"{}\" y=\"{}\" font-size=\"{}\" fill=\"{}\" text-anchor=\"{}\">{}</text>\n",
                     x, y, font_size, text_fill, align, clean
@@ -227,10 +258,30 @@ fn render_node_svg(
             let mut d = String::new();
             for cmd in commands {
                 match cmd {
-                    fd_core::model::PathCmd::MoveTo(px, py) => d.push_str(&format!("M {} {} ", b.x + px, b.y + py)),
-                    fd_core::model::PathCmd::LineTo(px, py) => d.push_str(&format!("L {} {} ", b.x + px, b.y + py)),
-                    fd_core::model::PathCmd::QuadTo(cpx, cpy, px, py) => d.push_str(&format!("Q {} {} {} {} ", b.x + cpx, b.y + cpy, b.x + px, b.y + py)),
-                    fd_core::model::PathCmd::CubicTo(c1x, c1y, c2x, c2y, px, py) => d.push_str(&format!("C {} {} {} {} {} {} ", b.x + c1x, b.y + c1y, b.x + c2x, b.y + c2y, b.x + px, b.y + py)),
+                    fd_core::model::PathCmd::MoveTo(px, py) => {
+                        d.push_str(&format!("M {} {} ", b.x + px, b.y + py))
+                    }
+                    fd_core::model::PathCmd::LineTo(px, py) => {
+                        d.push_str(&format!("L {} {} ", b.x + px, b.y + py))
+                    }
+                    fd_core::model::PathCmd::QuadTo(cpx, cpy, px, py) => d.push_str(&format!(
+                        "Q {} {} {} {} ",
+                        b.x + cpx,
+                        b.y + cpy,
+                        b.x + px,
+                        b.y + py
+                    )),
+                    fd_core::model::PathCmd::CubicTo(c1x, c1y, c2x, c2y, px, py) => {
+                        d.push_str(&format!(
+                            "C {} {} {} {} {} {} ",
+                            b.x + c1x,
+                            b.y + c1y,
+                            b.x + c2x,
+                            b.y + c2y,
+                            b.x + px,
+                            b.y + py
+                        ))
+                    }
                     fd_core::model::PathCmd::Close => d.push_str("Z "),
                 }
             }
