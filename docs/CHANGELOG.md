@@ -5,6 +5,10 @@
 
 ## Completed Requirements
 
+### Remove R7 Collaboration
+
+- **REMOVED**: R7 (Collaboration) — removed `R7.1` (real-time multiplayer) and `R7.2` (shareable links) from requirements; deleted 👥 Share button, shareDialog handler, collaborative cursor CSS/JS placeholder from `extension.ts` and `main.js`; removed R7 section + index entry from `REQUIREMENTS.md`
+
 ### Requirements Overhaul
 
 - **DOCS**: Restructured `REQUIREMENTS.md` — inline status tags on all 60+ requirements, R3 reorganized into 5 sub-categories (R3a–R3e: Selection, Drawing, Navigation, Panels, Export)
@@ -39,11 +43,6 @@
 - **UX**: Two-finger pan (no Space key needed), pinch-to-zoom with smooth inertia, long-press opens context menu.
 - **UX**: Three-finger swipe left/right for undo/redo.
 - **UX**: Palm rejection when Apple Pencil is detected.
-
-### v0.8.45
-
-- **FEATURE**: Collaborative Cursors Placeholder — colored cursor dot with workspace name label follows the mouse, signaling collaboration-readiness.
-- **UX**: Added 👥 Share button in the toolbar. Shows a "Real-time collaboration is coming!" dialog with Git sharing guidance.
 
 ### v0.8.44
 

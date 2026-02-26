@@ -117,11 +117,6 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R6.3** _(future)_: Mobile app (iOS, Android) via native wgpu
 - **R6.4** _(future)_: Web app (standalone browser app)
 
-### R7: Collaboration
-
-- **R7.1** _(future)_: Real-time multiplayer — CRDT-based conflict resolution, cursor presence, live sync
-- **R7.2** _(future)_: Shareable links — URL to share read-only or editable view without IDE
-
 ## Non-Functional Requirements
 
 | Requirement        | Target                                    |
@@ -231,5 +226,5 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | group / drill-down  | R3.24                                 |
 | image               | R3.32                                 |
 | library             | R3.33                                 |
-| collaboration       | R7.1, R7.2                            |
-| mermaid             | R1.18                                 |
+
+| mermaid | R1.18 |

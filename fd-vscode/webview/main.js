@@ -1083,10 +1083,6 @@ window.addEventListener("message", (event) => {
       render();
       suppressTextSync = false;
 
-      // Handle collaborative cursor setup if present
-      if (message.workspaceName) {
-        setupCollaborativeCursor(message.workspaceName);
-      }
       break;
     }
     case "selectNode": {
@@ -4756,46 +4752,7 @@ async function copySelectionAsPng() {
   }, "image/png");
 }
 
-// ─── Collaborative Cursor Placeholder ──────────────────────────────────────
 
-let collabCursorEl = null;
-
-function setupCollaborativeCursor(name) {
-  if (!collabCursorEl) {
-    collabCursorEl = document.createElement("div");
-    collabCursorEl.id = "collab-cursor";
-    collabCursorEl.className = "collab-cursor";
-
-    const arrow = document.createElement("div");
-    arrow.className = "cursor-arrow";
-
-    const label = document.createElement("div");
-    label.className = "cursor-label";
-
-    collabCursorEl.appendChild(arrow);
-    collabCursorEl.appendChild(label);
-
-    document.body.appendChild(collabCursorEl);
-
-    // Track mouse
-    document.addEventListener("pointermove", (e) => {
-      // Small offset to simulate network latency / other user
-      collabCursorEl.style.left = e.clientX + "px";
-      collabCursorEl.style.top = e.clientY + "px";
-    });
-  }
-
-  collabCursorEl.querySelector(".cursor-label").textContent = name;
-}
-
-// ─── Share Button ──────────────────────────────────────────────────────────
-
-const shareBtn = document.getElementById("share-btn");
-if (shareBtn) {
-  shareBtn.addEventListener("click", () => {
-    vscode.postMessage({ type: "shareDialog" });
-  });
-}
 // ─── Start ───────────────────────────────────────────────────────────────────
 
 main();
