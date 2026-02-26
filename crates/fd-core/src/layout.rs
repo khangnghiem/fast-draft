@@ -213,8 +213,15 @@ fn resolve_children(
         }
     }
 
-    // Auto-size groups to the union bounding box of their children
+    // Auto-size groups to the union bounding box of their children + padding
     if matches!(parent_node.kind, NodeKind::Group { .. }) && !children.is_empty() {
+        let pad = match &layout {
+            LayoutMode::Column { pad, .. }
+            | LayoutMode::Row { pad, .. }
+            | LayoutMode::Grid { pad, .. } => *pad,
+            LayoutMode::Free => 0.0,
+        };
+
         let mut min_x = f32::MAX;
         let mut min_y = f32::MAX;
         let mut max_x = f32::MIN;
@@ -232,7 +239,6 @@ fn resolve_children(
             }
 
             if let Some(cb) = bounds.get(&child_idx) {
-                // Here cb.x and cb.y are parent's coords, we add rel_x and rel_y for size calculation
                 let abs_x = cb.x + rel_x;
                 let abs_y = cb.y + rel_y;
                 min_x = min_x.min(abs_x);
@@ -243,13 +249,15 @@ fn resolve_children(
         }
 
         if min_x < f32::MAX {
+            // Include padding on all sides: origin moves back by pad,
+            // size grows by pad on the trailing edge
             bounds.insert(
                 parent_idx,
                 ResolvedBounds {
-                    x: min_x,
-                    y: min_y,
-                    width: max_x - min_x,
-                    height: max_y - min_y,
+                    x: min_x - pad,
+                    y: min_y - pad,
+                    width: (max_x - min_x) + 2.0 * pad,
+                    height: (max_y - min_y) + 2.0 * pad,
                 },
             );
         }
@@ -286,8 +294,9 @@ fn intrinsic_size(node: &SceneNode) -> (f32, f32) {
         NodeKind::Rect { width, height } => (*width, *height),
         NodeKind::Ellipse { rx, ry } => (*rx * 2.0, *ry * 2.0),
         NodeKind::Text { content } => {
-            // Rough estimate: 8px per char, 20px height. Real text layout comes later.
-            (content.len() as f32 * 8.0, 20.0)
+            let font_size = node.style.font.as_ref().map_or(14.0, |f| f.size);
+            let char_width = font_size * 0.6;
+            (content.len() as f32 * char_width, font_size)
         }
         NodeKind::Group { .. } => (0.0, 0.0), // Auto-sized: computed after children resolve
         NodeKind::Frame { width, height, .. } => (*width, *height),
@@ -327,29 +336,22 @@ fn apply_constraint(
 
             let cx = container.x + (container.width - node_bounds.width) / 2.0;
             let cy = container.y + (container.height - node_bounds.height) / 2.0;
+            let dx = cx - node_bounds.x;
+            let dy = cy - node_bounds.y;
 
-            bounds.insert(
-                node_idx,
-                ResolvedBounds {
-                    x: cx,
-                    y: cy,
-                    ..node_bounds
-                },
-            );
+            shift_subtree(graph, node_idx, dx, dy, bounds);
         }
         Constraint::Offset { from, dx, dy } => {
             let from_bounds = match graph.index_of(*from).and_then(|i| bounds.get(&i)) {
                 Some(b) => *b,
                 None => return,
             };
-            bounds.insert(
-                node_idx,
-                ResolvedBounds {
-                    x: from_bounds.x + dx,
-                    y: from_bounds.y + dy,
-                    ..node_bounds
-                },
-            );
+            let target_x = from_bounds.x + dx;
+            let target_y = from_bounds.y + dy;
+            let sdx = target_x - node_bounds.x;
+            let sdy = target_y - node_bounds.y;
+
+            shift_subtree(graph, node_idx, sdx, sdy, bounds);
         }
         Constraint::FillParent { pad } => {
             // Find parent in graph
@@ -358,16 +360,22 @@ fn apply_constraint(
                 .neighbors_directed(node_idx, petgraph::Direction::Incoming)
                 .next();
 
-            if let Some(parent) = parent_idx.and_then(|p| bounds.get(&p)) {
-                bounds.insert(
-                    node_idx,
-                    ResolvedBounds {
-                        x: parent.x + pad,
-                        y: parent.y + pad,
-                        width: parent.width - 2.0 * pad,
-                        height: parent.height - 2.0 * pad,
-                    },
-                );
+            if let Some(parent) = parent_idx.and_then(|p| bounds.get(&p).copied()) {
+                let target_x = parent.x + pad;
+                let target_y = parent.y + pad;
+                let new_w = parent.width - 2.0 * pad;
+                let new_h = parent.height - 2.0 * pad;
+                let dx = target_x - node_bounds.x;
+                let dy = target_y - node_bounds.y;
+
+                // Move children with the position shift
+                shift_subtree(graph, node_idx, dx, dy, bounds);
+
+                // Apply the resize to the node itself (children keep their sizes)
+                if let Some(nb) = bounds.get_mut(&node_idx) {
+                    nb.width = new_w;
+                    nb.height = new_h;
+                }
             }
         }
         Constraint::Position { x, y } => {
@@ -375,15 +383,12 @@ fn apply_constraint(
                 Some(p_bounds) => (p_bounds.x, p_bounds.y),
                 None => (0.0, 0.0),
             };
-            bounds.insert(
-                node_idx,
-                ResolvedBounds {
-                    x: px + *x,
-                    y: py + *y,
-                    width: node_bounds.width,
-                    height: node_bounds.height,
-                },
-            );
+            let target_x = px + *x;
+            let target_y = py + *y;
+            let dx = target_x - node_bounds.x;
+            let dy = target_y - node_bounds.y;
+
+            shift_subtree(graph, node_idx, dx, dy, bounds);
         }
     }
 }
@@ -635,6 +640,58 @@ group @wizard {
         assert!(
             wizard_bottom >= content_bottom,
             "wizard ({wizard_bottom}) should contain content ({content_bottom})"
+        );
+    }
+
+    #[test]
+    fn layout_column_preserves_document_order() {
+        let input = r#"
+group @card {
+  layout: column gap=12 pad=24
+
+  text @heading "Monthly Revenue" {
+    font: "Inter" 600 18
+  }
+  text @amount "$48,250" {
+    font: "Inter" 700 36
+  }
+  rect @button { w: 320 h: 44 }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let heading = bounds[&graph.index_of(NodeId::intern("heading")).unwrap()];
+        let amount = bounds[&graph.index_of(NodeId::intern("amount")).unwrap()];
+        let button = bounds[&graph.index_of(NodeId::intern("button")).unwrap()];
+
+        assert!(
+            heading.y < amount.y,
+            "heading (y={}) must be above amount (y={})",
+            heading.y,
+            amount.y
+        );
+        assert!(
+            amount.y < button.y,
+            "amount (y={}) must be above button (y={})",
+            amount.y,
+            button.y
+        );
+        // Heading height should use font size (18), not hardcoded 20
+        assert!(
+            (heading.height - 18.0).abs() < 0.01,
+            "heading height should be 18 (font size), got {}",
+            heading.height
+        );
+        // Amount height should use font size (36)
+        assert!(
+            (amount.height - 36.0).abs() < 0.01,
+            "amount height should be 36 (font size), got {}",
+            amount.height
         );
     }
 }

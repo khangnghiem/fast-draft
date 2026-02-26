@@ -568,10 +568,16 @@ impl SceneGraph {
     }
 
     /// Get children of a node in insertion order.
+    ///
+    /// `petgraph` returns outgoing neighbors in reverse insertion order,
+    /// so we reverse the collected vec to restore document order.
     pub fn children(&self, idx: NodeIndex) -> Vec<NodeIndex> {
-        self.graph
+        let mut children: Vec<NodeIndex> = self
+            .graph
             .neighbors_directed(idx, petgraph::Direction::Outgoing)
-            .collect()
+            .collect();
+        children.reverse();
+        children
     }
 
     /// Move a child one step backward in z-order (swap with previous sibling).
