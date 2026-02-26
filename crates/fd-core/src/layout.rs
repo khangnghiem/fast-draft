@@ -646,4 +646,56 @@ group @wizard {
             "wizard ({wizard_bottom}) should contain content ({content_bottom})"
         );
     }
+
+    #[test]
+    fn layout_column_preserves_document_order() {
+        let input = r#"
+group @card {
+  layout: column gap=12 pad=24
+
+  text @heading "Monthly Revenue" {
+    font: "Inter" 600 18
+  }
+  text @amount "$48,250" {
+    font: "Inter" 700 36
+  }
+  rect @button { w: 320 h: 44 }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let heading = bounds[&graph.index_of(NodeId::intern("heading")).unwrap()];
+        let amount = bounds[&graph.index_of(NodeId::intern("amount")).unwrap()];
+        let button = bounds[&graph.index_of(NodeId::intern("button")).unwrap()];
+
+        assert!(
+            heading.y < amount.y,
+            "heading (y={}) must be above amount (y={})",
+            heading.y,
+            amount.y
+        );
+        assert!(
+            amount.y < button.y,
+            "amount (y={}) must be above button (y={})",
+            amount.y,
+            button.y
+        );
+        // Heading height should use font size (18), not hardcoded 20
+        assert!(
+            (heading.height - 18.0).abs() < 0.01,
+            "heading height should be 18 (font size), got {}",
+            heading.height
+        );
+        // Amount height should use font size (36)
+        assert!(
+            (amount.height - 36.0).abs() < 0.01,
+            "amount height should be 36 (font size), got {}",
+            amount.height
+        );
+    }
 }
