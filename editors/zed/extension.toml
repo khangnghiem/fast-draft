@@ -1,4 +1,3 @@
-[package]
 id = "fast-draft"
 name = "FD (Fast Draft)"
 description = "Language support for FD (Fast Draft) files — syntax highlighting, diagnostics, completions, hover, and outline"
