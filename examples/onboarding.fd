@@ -20,6 +20,8 @@ group @wizard {
     tag: onboarding, ux, retention
   }
   layout: column gap=0 pad=0
+  x: 457.98
+  y: 165.41
   rect @step_card {
     w: 480 h: 520
     fill: #FFFFFF
@@ -71,6 +73,8 @@ group @wizard {
       }
       group @dots {
         layout: row gap=8 pad=0
+        x: 370.85
+        y: 498.43
         ellipse @dot_1 {
           w: 10 h: 10
           fill: #6C5CE7
@@ -129,8 +133,7 @@ group @wizard {
 rect @_anon_6 {
   w: 100 h: 80
   fill: #CCCCD9
+  x: 486
+  y: 1140.92
 }
 
-@_anon_6 -> absolute: 486, 1140.92
-@wizard -> center_in: canvas
-@dots -> absolute: 370.85, 498.43

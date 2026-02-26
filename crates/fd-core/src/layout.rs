@@ -94,56 +94,90 @@ fn resolve_children(
 
     match layout {
         LayoutMode::Column { gap, pad } => {
-            let mut y = parent_bounds.y + pad;
+            // Pass 1: initialize children at parent origin + pad, recurse to resolve nested groups
             for &child_idx in &children {
                 let child_size = intrinsic_size(&graph.graph[child_idx]);
                 bounds.insert(
                     child_idx,
                     ResolvedBounds {
                         x: parent_bounds.x + pad,
-                        y,
-                        width: child_size.0,
-                        height: child_size.1,
-                    },
-                );
-                y += child_size.1 + gap;
-            }
-        }
-        LayoutMode::Row { gap, pad } => {
-            let mut x = parent_bounds.x + pad;
-            for &child_idx in &children {
-                let child_size = intrinsic_size(&graph.graph[child_idx]);
-                bounds.insert(
-                    child_idx,
-                    ResolvedBounds {
-                        x,
                         y: parent_bounds.y + pad,
                         width: child_size.0,
                         height: child_size.1,
                     },
                 );
-                x += child_size.0 + gap;
+                resolve_children(graph, child_idx, bounds, viewport);
+            }
+            // Pass 2: reposition using resolved sizes, shifting entire subtrees
+            let mut y = parent_bounds.y + pad;
+            for &child_idx in &children {
+                let resolved = bounds[&child_idx];
+                let dx = (parent_bounds.x + pad) - resolved.x;
+                let dy = y - resolved.y;
+                if dx.abs() > 0.001 || dy.abs() > 0.001 {
+                    shift_subtree(graph, child_idx, dx, dy, bounds);
+                }
+                y += bounds[&child_idx].height + gap;
+            }
+        }
+        LayoutMode::Row { gap, pad } => {
+            // Pass 1: initialize and recurse
+            for &child_idx in &children {
+                let child_size = intrinsic_size(&graph.graph[child_idx]);
+                bounds.insert(
+                    child_idx,
+                    ResolvedBounds {
+                        x: parent_bounds.x + pad,
+                        y: parent_bounds.y + pad,
+                        width: child_size.0,
+                        height: child_size.1,
+                    },
+                );
+                resolve_children(graph, child_idx, bounds, viewport);
+            }
+            // Pass 2: reposition using resolved widths, shifting subtrees
+            let mut x = parent_bounds.x + pad;
+            for &child_idx in &children {
+                let resolved = bounds[&child_idx];
+                let dx = x - resolved.x;
+                let dy = (parent_bounds.y + pad) - resolved.y;
+                if dx.abs() > 0.001 || dy.abs() > 0.001 {
+                    shift_subtree(graph, child_idx, dx, dy, bounds);
+                }
+                x += bounds[&child_idx].width + gap;
             }
         }
         LayoutMode::Grid { cols, gap, pad } => {
+            // Pass 1: initialize and recurse
+            for &child_idx in &children {
+                let child_size = intrinsic_size(&graph.graph[child_idx]);
+                bounds.insert(
+                    child_idx,
+                    ResolvedBounds {
+                        x: parent_bounds.x + pad,
+                        y: parent_bounds.y + pad,
+                        width: child_size.0,
+                        height: child_size.1,
+                    },
+                );
+                resolve_children(graph, child_idx, bounds, viewport);
+            }
+            // Pass 2: reposition using resolved sizes, shifting subtrees
             let mut x = parent_bounds.x + pad;
             let mut y = parent_bounds.y + pad;
             let mut col = 0u32;
             let mut row_height = 0.0f32;
 
             for &child_idx in &children {
-                let child_size = intrinsic_size(&graph.graph[child_idx]);
-                bounds.insert(
-                    child_idx,
-                    ResolvedBounds {
-                        x,
-                        y,
-                        width: child_size.0,
-                        height: child_size.1,
-                    },
-                );
+                let resolved = bounds[&child_idx];
+                let dx = x - resolved.x;
+                let dy = y - resolved.y;
+                if dx.abs() > 0.001 || dy.abs() > 0.001 {
+                    shift_subtree(graph, child_idx, dx, dy, bounds);
+                }
 
-                row_height = row_height.max(child_size.1);
+                let resolved = bounds[&child_idx];
+                row_height = row_height.max(resolved.height);
                 col += 1;
                 if col >= cols {
                     col = 0;
@@ -151,7 +185,7 @@ fn resolve_children(
                     y += row_height + gap;
                     row_height = 0.0;
                 } else {
-                    x += child_size.0 + gap;
+                    x += resolved.width + gap;
                 }
             }
         }
@@ -172,9 +206,11 @@ fn resolve_children(
         }
     }
 
-    // Recurse into children
-    for &child_idx in &children {
-        resolve_children(graph, child_idx, bounds, viewport);
+    // Recurse into children (only for Free mode — Column/Row/Grid already recursed in pass 1)
+    if matches!(layout, LayoutMode::Free) {
+        for &child_idx in &children {
+            resolve_children(graph, child_idx, bounds, viewport);
+        }
     }
 
     // Auto-size groups to the union bounding box of their children
@@ -217,6 +253,30 @@ fn resolve_children(
                 },
             );
         }
+    }
+}
+
+/// Recursively shift a node and all its descendants by (dx, dy).
+/// Used after pass 2 repositioning to keep subtree positions consistent.
+fn shift_subtree(
+    graph: &SceneGraph,
+    node_idx: NodeIndex,
+    dx: f32,
+    dy: f32,
+    bounds: &mut HashMap<NodeIndex, ResolvedBounds>,
+) {
+    if let Some(b) = bounds.get(&node_idx).copied() {
+        bounds.insert(
+            node_idx,
+            ResolvedBounds {
+                x: b.x + dx,
+                y: b.y + dy,
+                ..b
+            },
+        );
+    }
+    for child_idx in graph.children(node_idx) {
+        shift_subtree(graph, child_idx, dx, dy, bounds);
     }
 }
 
@@ -458,5 +518,123 @@ frame @card {
 
         assert_eq!(b.width, 480.0, "frame should use declared width");
         assert_eq!(b.height, 320.0, "frame should use declared height");
+    }
+
+    #[test]
+    fn layout_nested_group_auto_size() {
+        let input = r#"
+group @outer {
+  layout: column gap=10 pad=0
+
+  group @inner {
+    layout: column gap=5 pad=0
+
+    rect @a { w: 100 h: 40 }
+    rect @b { w: 80 h: 30 }
+  }
+  rect @c { w: 120 h: 50 }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let inner_idx = graph.index_of(NodeId::intern("inner")).unwrap();
+        let outer_idx = graph.index_of(NodeId::intern("outer")).unwrap();
+        let c_idx = graph.index_of(NodeId::intern("c")).unwrap();
+
+        let inner = bounds[&inner_idx];
+        let outer = bounds[&outer_idx];
+        let c = bounds[&c_idx];
+
+        // Inner group: height = 40 + 5 + 30 = 75
+        assert!(
+            inner.height >= 75.0,
+            "inner group height ({}) should be >= 75 (children + gap)",
+            inner.height
+        );
+
+        // @c and @inner should NOT overlap (regardless of order)
+        let c_range = c.y..(c.y + c.height);
+        let inner_range = inner.y..(inner.y + inner.height);
+        assert!(
+            c_range.end <= inner_range.start || inner_range.end <= c_range.start,
+            "@c [{}, {}] and @inner [{}, {}] should not overlap",
+            c.y,
+            c.y + c.height,
+            inner.y,
+            inner.y + inner.height
+        );
+
+        // Gap between siblings should be 10
+        let gap = if c.y < inner.y {
+            inner.y - (c.y + c.height)
+        } else {
+            c.y - (inner.y + inner.height)
+        };
+        assert!(
+            (gap - 10.0).abs() < 0.01,
+            "gap between siblings should be 10, got {gap}"
+        );
+
+        // Outer group should contain both @inner and @c
+        let outer_bottom = outer.y + outer.height;
+        let c_bottom = c.y + c.height;
+        let inner_bottom = inner.y + inner.height;
+        assert!(
+            outer_bottom >= c_bottom && outer_bottom >= inner_bottom,
+            "outer bottom ({outer_bottom}) should contain @c ({c_bottom}) and @inner ({inner_bottom})"
+        );
+    }
+
+    #[test]
+    fn layout_group_child_inside_column_parent() {
+        let input = r#"
+group @wizard {
+  layout: column gap=0 pad=0
+
+  rect @card {
+    w: 480 h: 520
+
+    group @content {
+      layout: column gap=24 pad=40
+
+      rect @illustration { w: 400 h: 240 }
+      rect @title { w: 400 h: 20 }
+      rect @desc { w: 400 h: 20 }
+    }
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let content_idx = graph.index_of(NodeId::intern("content")).unwrap();
+        let wizard_idx = graph.index_of(NodeId::intern("wizard")).unwrap();
+
+        let content = bounds[&content_idx];
+        let wizard = bounds[&wizard_idx];
+
+        // Content group should auto-size to fit: pad(40) + 240 + gap(24) + 20 + gap(24) + 20 + pad(40) = 408
+        assert!(
+            content.height >= 280.0,
+            "content group height ({}) should be >= 280 (children + gaps)",
+            content.height
+        );
+
+        // Wizard should contain the content
+        let wizard_bottom = wizard.y + wizard.height;
+        let content_bottom = content.y + content.height;
+        assert!(
+            wizard_bottom >= content_bottom,
+            "wizard ({wizard_bottom}) should contain content ({content_bottom})"
+        );
     }
 }

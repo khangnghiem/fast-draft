@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### Fix Nested Group Auto-Sizing
+
+- **BUG FIX**: Groups inside Column/Row/Grid layouts now take up their correct resolved size — previously `intrinsic_size()` returned `(0,0)` for groups, causing siblings to overlap. Layout solver now uses a two-pass approach: pass 1 recurses to resolve nested group sizes bottom-up, pass 2 repositions children using their actual dimensions with `shift_subtree` to maintain correct absolute positions for all descendants.
+- **TESTING**: New regression tests `layout_nested_group_auto_size` and `layout_group_child_inside_column_parent` in `layout.rs`
+
 ### Remove R7 Collaboration
 
 - **REMOVED**: R7 (Collaboration) — removed `R7.1` (real-time multiplayer) and `R7.2` (shareable links) from requirements; deleted 👥 Share button, shareDialog handler, collaborative cursor CSS/JS placeholder from `extension.ts` and `main.js`; removed R7 section + index entry from `REQUIREMENTS.md`
