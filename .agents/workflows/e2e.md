@@ -54,7 +54,7 @@ description: E2E browser testing via GitHub Codespace
 
 ## AI Automation (Browser Subagent)
 
-Instead of manual testing, you can ask the AI agent to test this automatically using its Browser Subagent.
+Antigravity can use **Chrome browser subagents** to run E2E tests automatically — no manual browser interaction needed.
 
 Prompt the agent with:
 

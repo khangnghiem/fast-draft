@@ -120,7 +120,7 @@ git checkout -b feat/<descriptive-name>
 
 12. **Update docs** (MANDATORY — both files, every time):
     - `docs/CHANGELOG.md` — add entry under the current version section for each meaningful change
-    - `REQUIREMENTS.md` — for **every** CHANGELOG entry, check if it introduces, extends, or modifies a requirement:
+    - `docs/REQUIREMENTS.md` — for **every** CHANGELOG entry, check if it introduces, extends, or modifies a requirement:
       - New feature → add a new `R*.N` entry and update the Requirement Index
       - Behavior change → update the existing requirement's wording
       - Bug fix on an existing requirement → no change needed (already documented)
