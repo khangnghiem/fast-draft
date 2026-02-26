@@ -259,6 +259,11 @@ async function main() {
     // Load initial text if available
     if (window.initialText) {
       fdCanvas.set_text(window.initialText);
+      // DEBUG: dump bounds to see actual Y positions
+      try {
+        const db = fdCanvas.debug_bounds();
+        console.log('DEBUG_BOUNDS after initial set_text:', db);
+      } catch (e) { console.error('debug_bounds error:', e); }
     }
 
     // Start animation loop (covers flow animation + initial render)
@@ -1080,6 +1085,11 @@ window.addEventListener("message", (event) => {
       fdCanvas.set_text(message.text);
       lastSyncedText = message.text; // Keep dedup in sync
       bumpGeneration(); // External text change — invalidate caches
+      // DEBUG: dump bounds after setText
+      try {
+        const db = fdCanvas.debug_bounds();
+        console.log('DEBUG_BOUNDS after setText message:', db);
+      } catch (e) { console.error('debug_bounds error:', e); }
       render();
       suppressTextSync = false;
 
