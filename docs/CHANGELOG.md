@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.8.48
+
+- **BUG FIX**: Clicking a child node now selects the child directly instead of its parent group — removed `effective_target` bubble-up behavior and drill-down state machine (`pending_drill_target`); groups are still selectable by clicking their own unoccupied area or via marquee selection
+- **TESTING**: Updated `test_effective_target_returns_leaf` and `test_effective_target_nested_returns_leaf` to verify direct child selection
+
 ### v0.8.47
 
 - **BUG FIX**: Dragging a child group no longer moves its parent group — `effective_target()` now stops bubbling at selected group boundaries (returns the **lowest** unselected group instead of the highest), enabling correct Figma-style nested group drill-down and drag

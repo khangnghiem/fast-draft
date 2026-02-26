@@ -744,42 +744,11 @@ impl SceneGraph {
         resolved
     }
 
-    /// Find the highest `Group` or `Frame` ancestor that is NOT currently selected.
-    /// If all ancestors are selected (or it has no group ancestor), returns `leaf_id`.
-    /// This enables "drill-down" selection: clicking a child of an unselected group
-    /// selects the group. Clicking again (when the group is selected) selects the child.
-    pub fn effective_target(&self, leaf_id: NodeId, selected: &[NodeId]) -> NodeId {
-        let mut current_idx = match self.index_of(leaf_id) {
-            Some(idx) => idx,
-            None => return leaf_id,
-        };
-
-        let mut lowest_unselected_group: Option<NodeId> = None;
-
-        while let Some(parent_idx) = self.parent(current_idx) {
-            let parent_node = &self.graph[parent_idx];
-
-            // Stop at root
-            if matches!(parent_node.kind, NodeKind::Root) {
-                break;
-            }
-
-            // If the parent is a Group or Frame, check if it's selected
-            if matches!(
-                parent_node.kind,
-                NodeKind::Group { .. } | NodeKind::Frame { .. }
-            ) {
-                if selected.contains(&parent_node.id) {
-                    // Selected group = container boundary, stop bubbling
-                    break;
-                }
-                lowest_unselected_group = Some(parent_node.id);
-            }
-
-            current_idx = parent_idx;
-        }
-
-        lowest_unselected_group.unwrap_or(leaf_id)
+    /// Return the leaf node directly — children are always selectable first.
+    /// Groups can still be selected by clicking their own area (not covered by children)
+    /// or via marquee selection.
+    pub fn effective_target(&self, leaf_id: NodeId, _selected: &[NodeId]) -> NodeId {
+        leaf_id
     }
 
     /// Check if `ancestor_id` is a parent/grandparent/etc. of `descendant_id`.
@@ -970,7 +939,7 @@ mod tests {
     }
 
     #[test]
-    fn test_effective_target_drill_down() {
+    fn test_effective_target_returns_leaf() {
         let mut sg = SceneGraph::new();
 
         // Root -> Group -> Rect
@@ -994,25 +963,14 @@ mod tests {
         let group_idx = sg.add_node(sg.root, group);
         sg.add_node(group_idx, rect);
 
-        // 1. Nothing selected. Hitting rect should bubble up to group.
-        let target1 = sg.effective_target(rect_id, &[]);
-        assert_eq!(target1, group_id);
-
-        // 2. Group is selected. Hitting rect should drill down to rect itself.
-        let target2 = sg.effective_target(rect_id, &[group_id]);
-        assert_eq!(target2, rect_id);
-
-        // 3. Rect is selected (somehow). Hitting rect should still return rect
-        // (because the rule says if ALL group ancestors are selected... wait,
-        // the rect is selected, but the group is NOT. So it bubbles to group!)
-        // This is correct Figma behavior: clicking a child of an unselected group
-        // selects the group, even if the child was somehow already selected.
-        let target3 = sg.effective_target(rect_id, &[rect_id]);
-        assert_eq!(target3, group_id);
+        // Always returns leaf directly, regardless of selection state
+        assert_eq!(sg.effective_target(rect_id, &[]), rect_id);
+        assert_eq!(sg.effective_target(rect_id, &[group_id]), rect_id);
+        assert_eq!(sg.effective_target(rect_id, &[rect_id]), rect_id);
     }
 
     #[test]
-    fn test_effective_target_3_level_drill_down() {
+    fn test_effective_target_nested_returns_leaf() {
         let mut sg = SceneGraph::new();
 
         // Root -> group_outer -> group_inner -> rect_leaf
@@ -1044,67 +1002,10 @@ mod tests {
         let inner_idx = sg.add_node(outer_idx, inner);
         sg.add_node(inner_idx, leaf);
 
-        // Click 1: nothing selected → bubbles to highest group = group_outer
-        let t1 = sg.effective_target(leaf_id, &[]);
-        assert_eq!(t1, outer_id);
-
-        // Click 2: group_outer selected → next unselected group = group_inner
-        let t2 = sg.effective_target(leaf_id, &[outer_id]);
-        assert_eq!(t2, inner_id);
-
-        // Click 3: both groups selected → drills to leaf
-        let t3 = sg.effective_target(leaf_id, &[outer_id, inner_id]);
-        assert_eq!(t3, leaf_id);
-    }
-
-    /// Regression: selecting a child group then clicking its children should
-    /// drill into that child, NOT bubble up past the selected group to the parent.
-    #[test]
-    fn test_effective_target_child_group_drag() {
-        let mut sg = SceneGraph::new();
-
-        // Root → @outer → @inner → @leaf
-        let outer_id = NodeId::intern("outer_g");
-        let inner_id = NodeId::intern("inner_g");
-        let leaf_id = NodeId::intern("leaf_r");
-
-        let outer = SceneNode::new(
-            outer_id,
-            NodeKind::Group {
-                layout: LayoutMode::Free,
-            },
-        );
-        let inner = SceneNode::new(
-            inner_id,
-            NodeKind::Group {
-                layout: LayoutMode::Free,
-            },
-        );
-        let leaf = SceneNode::new(
-            leaf_id,
-            NodeKind::Rect {
-                width: 30.0,
-                height: 30.0,
-            },
-        );
-
-        let outer_idx = sg.add_node(sg.root, outer);
-        let inner_idx = sg.add_node(outer_idx, inner);
-        sg.add_node(inner_idx, leaf);
-
-        // Only @inner selected → clicking leaf should return leaf, not @outer
-        let t = sg.effective_target(leaf_id, &[inner_id]);
-        assert_eq!(
-            t, leaf_id,
-            "should drill into child of selected group, not bubble to parent"
-        );
-
-        // Only @outer selected → clicking leaf should return @inner (lowest unselected group below boundary)
-        let t2 = sg.effective_target(leaf_id, &[outer_id]);
-        assert_eq!(
-            t2, inner_id,
-            "should return lowest unselected group under selected boundary"
-        );
+        // Always returns leaf directly, regardless of selection state
+        assert_eq!(sg.effective_target(leaf_id, &[]), leaf_id);
+        assert_eq!(sg.effective_target(leaf_id, &[outer_id]), leaf_id);
+        assert_eq!(sg.effective_target(leaf_id, &[outer_id, inner_id]), leaf_id);
     }
 
     #[test]
