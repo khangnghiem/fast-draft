@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.8.41
+
+- **FIX**: Paste now recursively renames ALL `@ids` in the pasted block (not just the root) — prevents ID collisions when pasting groups with children
+- **UX**: Pasted nodes share a consistent `_cpXXXX` suffix for traceability
+
 ### v0.8.40
 
 - **FEATURE**: Smart Defaults (Sticky Styles) — changing fill/stroke/strokeWidth/opacity/fontSize on any node stores it as the default for future shapes of that tool (Excalidraw-style)

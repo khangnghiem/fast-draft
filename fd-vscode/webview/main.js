@@ -4223,15 +4223,25 @@ async function pasteFromClipboard() {
 
   if (!clipText.trim()) return;
 
-  // Generate a new unique ID to avoid conflicts
-  // TODO: recursively rename ALL @ids inside the pasted block, not just the root.
-  // Currently, pasting a group only renames @group_id but child IDs like @bg
-  // keep their original names, which can cause ID collisions.
-  const idMatch = clipText.match(/@(\w+)/);
-  if (!idMatch) return;
-  const oldId = idMatch[1];
-  const newId = oldId + "_copy" + Math.floor(Math.random() * 1000);
-  const pasteText = clipText.replace(new RegExp(`@${oldId}\\b`, "g"), `@${newId}`);
+  // Recursively rename ALL @ids inside the pasted block to avoid collisions
+  const suffix = "_cp" + Math.floor(Math.random() * 9000 + 1000);
+  const idPattern = /@(\w+)\s*\{/g;
+  const allIds = new Set();
+  let m;
+  while ((m = idPattern.exec(clipText)) !== null) {
+    allIds.add(m[1]);
+  }
+  if (allIds.size === 0) return;
+
+  // Build renamed text: replace each @oldId with @oldId_cpXXXX everywhere
+  let pasteText = clipText;
+  const rootId = [...allIds][0]; // First ID = root node for selection
+  for (const oldId of allIds) {
+    const newId = oldId + suffix;
+    // Replace @id declarations and all references (use:, center_in:, etc.)
+    pasteText = pasteText.replace(new RegExp(`@${oldId}\\b`, "g"), `@${newId}`);
+  }
+  const newRootId = rootId + suffix;
 
   // Append to current text
   const currentText = fdCanvas.get_text();
@@ -4240,8 +4250,8 @@ async function pasteFromClipboard() {
   render();
   syncTextToExtension();
 
-  // Select the newly pasted node
-  fdCanvas.select_by_id(newId);
+  // Select the newly pasted root node
+  fdCanvas.select_by_id(newRootId);
   render();
   updatePropertiesPanel();
 }
