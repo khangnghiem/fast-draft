@@ -8,105 +8,119 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 
 ### R1: File Format (`.fd`)
 
-- **R1.1**: Token-efficient text DSL — ~5× fewer tokens than SVG for equivalent content
-- **R1.2**: Graph-based document model (DAG) — nodes reference by `@id`, not coordinates
-- **R1.3**: Constraint-based layout (`center_in`, `offset`, `fill_parent`) — no absolute coordinates until render time
-- **R1.4**: Reusable styles via `style` blocks and `use:` references
-- **R1.5**: Animation declarations with triggers (`:hover`, `:press`, `:enter`) and easing
-- **R1.6**: Git-friendly plain text — line-oriented diffs work well
-- **R1.7**: Comments via `#` prefix
-- **R1.8**: Human-readable and AI-writable without special tooling
-- **R1.9**: Structured annotations (`spec` blocks) — description, accept criteria, status, priority, tags — parsed and round-tripped as first-class metadata
-- **R1.10**: First-class edges — `edge @id { from: @a to: @b }` with arrow, curve, label, stroke, and `spec` annotations for user flows, wireframes, and state machines
-- **R1.11**: Edge trigger animations — edges support `anim :hover { ... }` blocks identical to nodes
-- **R1.12**: Edge flow animations — `flow: pulse Nms` (traveling dot) and `flow: dash Nms` (marching dashes) for visualizing data flow direction
-- **R1.13**: Generic nodes — `@id { ... }` without explicit kind keyword for abstract/placeholder elements
-- **R1.14**: Namespaced imports — `import "path.fd" as ns` for cross-file style/node reuse with `ns.style_name` references
-- **R1.15**: Background shorthand — `bg: #FFF corner=12 shadow=(0,4,20,#0002)` for combined fill, corner, and shadow in one line
-- **R1.16**: Comment preservation — `# text` lines attached to the following node survive all parse/emit round-trips and format passes
-- **R1.17**: Text alignment — `align: left|center|right [top|middle|bottom]` property on text and shape nodes; defaults to `center middle`; reusable via `style` blocks and `use:` inheritance
-- **R1.18**: Mermaid import — parse Mermaid diagram syntax (`flowchart`, `sequenceDiagram`, `stateDiagram`) into equivalent FD nodes + edges; enables importing existing diagrams from Markdown docs
+- **R1.1** _(done)_: Token-efficient text DSL — ~5× fewer tokens than SVG for equivalent content
+- **R1.2** _(done)_: Graph-based document model (DAG) — nodes reference by `@id`, not coordinates
+- **R1.3** _(done)_: Constraint-based layout (`center_in`, `offset`, `fill_parent`) — no absolute coordinates until render time
+- **R1.4** _(done)_: Reusable styles via `style` blocks and `use:` references
+- **R1.5** _(done)_: Animation declarations with triggers (`:hover`, `:press`, `:enter`) and easing → [spec](specs/animation-system.md)
+- **R1.6** _(done)_: Git-friendly plain text — line-oriented diffs work well
+- **R1.7** _(done)_: Comments via `#` prefix
+- **R1.8** _(done)_: Human-readable and AI-writable without special tooling
+- **R1.9** _(done)_: Structured annotations (`spec` blocks) — description, accept criteria, status, priority, tags — parsed and round-tripped as first-class metadata
+- **R1.10** _(done)_: First-class edges — `edge @id { from: @a to: @b }` with arrow, curve, label, stroke, and `spec` annotations → [spec](specs/edge-system.md)
+- **R1.11** _(done)_: Edge trigger animations — edges support `anim :hover { ... }` blocks identical to nodes → [spec](specs/edge-system.md)
+- **R1.12** _(done)_: Edge flow animations — `flow: pulse Nms` (traveling dot) and `flow: dash Nms` (marching dashes) → [spec](specs/edge-system.md)
+- **R1.13** _(done)_: Generic nodes — `@id { ... }` without explicit kind keyword for abstract/placeholder elements
+- **R1.14** _(done)_: Namespaced imports — `import "path.fd" as ns` for cross-file style/node reuse with `ns.style_name` references
+- **R1.15** _(done)_: Background shorthand — `bg: #FFF corner=12 shadow=(0,4,20,#0002)` for combined fill, corner, and shadow in one line
+- **R1.16** _(done)_: Comment preservation — `# text` lines attached to the following node survive all parse/emit round-trips and format passes
+- **R1.17** _(done)_: Text alignment — `align: left|center|right [top|middle|bottom]` property; defaults to `center middle`; reusable via `style` blocks and `use:` inheritance
+- **R1.18** _(planned)_: Mermaid import — parse Mermaid diagram syntax (`flowchart`, `sequenceDiagram`, `stateDiagram`) into equivalent FD nodes + edges
 
 ### R2: Bidirectional Sync
 
-- **R2.1**: Canvas → Text: Visual edits (drag, resize, draw) update the `.fd` source in <16ms
-- **R2.2**: Text → Canvas: Source edits re-render the canvas in <16ms
-- **R2.3**: Incremental: Only re-parse/re-emit changed regions, not the entire document
-- **R2.4**: Conflict-free: Both directions funnel through a single authoritative `SceneGraph`
-- **R2.5**: Selection sync — clicking anywhere inside a node block in the text editor (not just the `@id` declaration line) selects it on canvas; clicking a node on canvas reveals and highlights its `@id` line in the text editor
+- **R2.1** _(done)_: Canvas → Text: Visual edits (drag, resize, draw) update the `.fd` source in <16ms
+- **R2.2** _(done)_: Text → Canvas: Source edits re-render the canvas in <16ms
+- **R2.3** _(planned)_: Incremental: Only re-parse/re-emit changed regions, not the entire document
+- **R2.4** _(done)_: Conflict-free: Both directions funnel through a single authoritative `SceneGraph`
+- **R2.5** _(done)_: Selection sync — clicking anywhere inside a node block in the text editor selects it on canvas; clicking a node on canvas reveals its `@id` line in the text editor
 
 ### R3: Human Editing (Canvas)
 
-- **R3.1**: Selection: Click to select, Shift+click to toggle multi-select, marquee drag-to-select (rubber-band box selection on empty canvas) with Shift+marquee additive mode
-- **R3.2**: Manipulation: Drag, resize, rotate; shift-constrain to axis
-- **R3.3**: Creation: Rectangle, ellipse, text, group tools with keyboard shortcuts (V/R/O/P/T)
-- **R3.4**: Freehand: Pen/pencil tool with pressure sensitivity (Apple Pencil Pro)
-- **R3.5**: Path editing: Node manipulation, curve handles, boolean operations (future)
-- **R3.6**: Canvas controls: Pan (Space+drag, middle-click drag, ⌘-hold hand tool), zoom (see R3.20), grid (see R3.21)
-- **R3.7**: Undo/redo: Full command stack, works across both text and canvas edits
-- **R3.8**: Properties panel: Apple-style frosted glass inspector for position, size, fill, stroke, corner radius, opacity, and text content — edits propagate bidirectionally
-- **R3.9**: Drag-and-drop: Shape palette for dropping Rect, Ellipse, or Text onto canvas
-- **R3.10**: Apple Pencil Pro squeeze: Toggle between last two tools
-- **R3.11**: Per-tool cursor feedback (crosshair for drawing, text cursor for text, default for select)
-- **R3.12**: Annotation pins: Visual badge dots on annotated nodes with inline edit card
-- **R3.13**: Light/dark theme toggle — canvas defaults to light mode with a toolbar toggle button (🌙 in light → switch to dark, ☀️ in dark → switch to light); preference persists across sessions via VS Code state
-- **R3.14**: View mode toggle — **Design | Spec** segmented control in the canvas toolbar (Design default); Spec View hides the canvas and shows a scrollable overlay of node IDs, `spec` annotations, acceptance criteria, status/priority/tag badges, unannotated node chips, and edges; overlay updates live as the `.fd` source changes; also accessible via `FD: Toggle Design/Spec View` command in the editor title bar and Command Palette
-- **R3.15**: Live preview: Dashed outline ghost of shape during drag-to-create (rect, ellipse); live smooth curve during pen draw (no jagged LineTo visible to user)
-- **R3.16**: Resize handles: 8-point resize grips (4 corners + 4 edge midpoints) on selected shapes; directional cursors (`nwse-resize`, `nesw-resize`, `ew-resize`, `ns-resize`) on hover
-- **R3.17**: Smart guides: Alignment snapping with visual guide lines — snap to center, edges, and equal spacing of nearby nodes; hold Ctrl/⌘ to temporarily disable snapping
-- **R3.18**: Dimension tooltip: Floating `W × H` badge near cursor during draw and resize; absolute position `(X, Y)` badge during move
-- **R3.19**: Alt-draw-from-center: Hold Alt/⌥ while creating rect/ellipse to anchor the starting point as center (not top-left corner)
-- **R3.20**: Zoom: ⌘+/⌘− to step-zoom, ⌘0 to zoom-to-fit, pinch-to-zoom on trackpad; zoom level indicator in toolbar (e.g. "100%")
-- **R3.21**: Grid overlay: Toggleable dot/line grid with configurable spacing; shapes snap to grid when enabled
-- **R3.22**: Pressure-sensitive stroke width: Pen tool maps pointer pressure to stroke thickness in real-time (Apple Pencil + Wacom); width range configurable
-- **R3.23**: Freehand shape recognition: After pen stroke completes, detect near-rectangular/elliptical/linear shapes and offer a one-click "Snap to Shape" action — converting freehand to a clean geometric node
-- **R3.24**: Group Visibility & Drill-down: Group nodes render a dashed blue border on hover and a solid blue border with a "Group @id" badge when selected. Clicking a child of an unselected group selects the parent group. Clicking the child again (when the group is selected) drills down to select the child (Figma/Sketch behavior).
-- **R3.28**: Inline text editing: Double-click a text node or shape to open a floating textarea overlay; background matches the node's fill (shape) or uses themed default (text node); live sync — every keystroke updates Code Mode in real-time; Enter confirms, Esc reverts to original value, click-outside commits; 3×3 alignment grid picker in properties panel for `align:` (R1.17)
-- **R3.29**: Animation drop: Drag a node onto another to assign animations — magnetic glow ring on hover, release opens a glassmorphism Animation Picker popover with preset groups (Hover/Press/Enter), live preview on hover, click to commit `anim` block to Code Mode
-- **R3.25**: Minimap navigation: Thumbnail overview in bottom-right showing full scene with draggable viewport rectangle; click-to-pan navigation (Figma/Miro-style)
-- **R3.26**: Arrow-key nudge: Arrow keys move selected node 1px (Shift+arrow = 10px); matches Figma/Sketch standard UX
-- **R3.27**: Layer rename: Double-click a layer name in the Layers panel for inline rename; renames `@id` across the entire document (word-boundary safe)
-- **R3.30**: Layer navigation: Clicking a layer item in the Layers panel selects the node and smoothly pans the camera to center it (250ms ease-out); auto-zooms in if both dimensions are < 20px on screen (truly invisible); auto-zooms out if the node overflows the viewport (15% padding); skips pan if the node center is already within 20% of the viewport center; thin shapes (lines, dividers) keep current zoom unless overflowing
-- **R3.31**: Export — PNG (2× resolution), SVG, and clipboard export of the full canvas or selected elements; configurable background (transparent or themed); accessible via toolbar button + keyboard shortcut (⌘⇧E)
-- **R3.32**: Image embedding — drag-and-drop or paste raster images (PNG, JPG, WebP) onto the canvas as `image` nodes; images stored inline (base64) or as external file references; resizable with aspect-ratio lock by default
-- **R3.33**: Component libraries — reusable collections of nodes/groups that can be dragged onto the canvas from a library panel; user-created and community-shared libraries; stored as `.fd` files with `export` markers
+#### R3a: Selection & Manipulation
+
+- **R3.1** _(done)_: Click to select, Shift+click multi-select, marquee drag-to-select with Shift+marquee additive mode → [spec](specs/selection.md)
+- **R3.2** _(done)_: Drag, resize, rotate; Shift-constrain to axis → [spec](specs/selection.md)
+- **R3.16** _(done)_: 8-point resize grips (4 corners + 4 midpoints); directional cursors on hover → [spec](specs/selection.md)
+- **R3.24** _(done)_: Group drill-down — click child of unselected group → selects parent; click again → drills to child (Figma/Sketch) → [spec](specs/selection.md)
+- **R3.26** _(done)_: Arrow-key nudge — 1px (Shift = 10px); matches Figma/Sketch standard
+
+#### R3b: Drawing Tools
+
+- **R3.3** _(done)_: Rectangle, ellipse, text, group tools with keyboard shortcuts (V/R/O/P/T) → [spec](specs/drawing-tools.md)
+- **R3.4** _(partial)_: Freehand pen/pencil tool — Catmull-Rom smoothing done, pressure captured but not yet mapped to stroke width → [spec](specs/drawing-tools.md)
+- **R3.5** _(planned)_: Path editing — node manipulation, curve handles, boolean operations
+- **R3.15** _(planned)_: Live preview — dashed outline ghost during drag-to-create; smooth curve during pen draw → [spec](specs/drawing-tools.md)
+- **R3.19** _(planned)_: Alt-draw-from-center — Alt/⌥ anchors start point as center (not top-left)
+- **R3.22** _(planned)_: Pressure-sensitive stroke width — pen maps pressure to thickness in real-time → [spec](specs/drawing-tools.md)
+- **R3.23** _(planned)_: Freehand shape recognition — detect near-geometric shapes, offer "Snap to Shape" action → [spec](specs/drawing-tools.md)
+
+#### R3c: Navigation & View
+
+- **R3.6** _(done)_: Pan (Space+drag, middle-click, ⌘-hold), zoom (see R3.20), grid (see R3.21)
+- **R3.13** _(done)_: Light/dark theme toggle — toolbar button, preference persists via VS Code state
+- **R3.14** _(done)_: Design | Spec view toggle — segmented control; Spec View shows annotations overlay
+- **R3.20** _(done)_: Zoom — ⌘+/⌘−, ⌘0 zoom-to-fit, pinch-to-zoom; zoom indicator in toolbar
+- **R3.21** _(done)_: Grid overlay — toggleable dot/line grid with adaptive spacing; keyboard shortcut `G`
+- **R3.25** _(done)_: Minimap — thumbnail in bottom-right with draggable viewport rectangle (Figma/Miro-style)
+- **R3.30** _(done)_: Layer navigation — click layer item → smooth pan to center node (250ms ease-out); auto-zoom for tiny/overflow nodes
+
+#### R3d: Panels & UI
+
+- **R3.7** _(done)_: Undo/redo — full command stack, works across text and canvas edits
+- **R3.8** _(done)_: Properties panel — frosted glass inspector for position, size, fill, stroke, corner, opacity
+- **R3.9** _(done)_: Shape palette — drag-and-drop for Rect, Ellipse, Text, Frame, Line, Arrow
+- **R3.10** _(done)_: Apple Pencil Pro squeeze — toggle between last two tools
+- **R3.11** _(done)_: Per-tool cursor feedback (crosshair, text cursor, default)
+- **R3.12** _(done)_: Annotation pins — badge dots on annotated nodes with inline edit card
+- **R3.17** _(done)_: Smart guides — alignment snapping with visual guide lines; Ctrl/⌘ to disable
+- **R3.18** _(done)_: Dimension tooltip — floating `W × H` badge during draw/resize; `(X, Y)` during move
+- **R3.27** _(done)_: Layer rename — double-click layer name for inline rename; renames `@id` document-wide → [spec](specs/inline-editing.md)
+- **R3.28** _(done)_: Inline text editing — double-click to edit; Enter confirms, Esc reverts; live sync → [spec](specs/inline-editing.md)
+- **R3.29** _(done)_: Animation drop — drag node onto another to assign animations via picker → [spec](specs/animation-system.md)
+
+#### R3e: Export & Media
+
+- **R3.31** _(done)_: Export — PNG (2×), SVG, clipboard; configurable background; ⌘⇧E shortcut
+- **R3.32** _(planned)_: Image embedding — drag-and-drop raster images as `image` nodes; base64 or file reference
+- **R3.33** _(planned)_: Component libraries — reusable node collections from a library panel; stored as `.fd` files
 
 ### R4: AI Editing (Text)
 
-- **R4.1**: AI reads/writes `.fd` text directly — no binary format needed
-- **R4.2**: Semantic node names (`@login_form`, `@submit_btn`) help AI understand intent
-- **R4.3**: Style inheritance reduces repetition — AI only specifies overrides
-- **R4.4**: Constraints describe relationships ("center in canvas") not pixel positions
-- **R4.5**: Annotations (`spec` blocks) give AI structured metadata — acceptance criteria, status, priority, tags — on the visual element itself
-- **R4.6**: Edges let AI reason about flows and transitions between screens
-- **R4.7**: Spec-view export — generate markdown report of `spec` annotations (requirements, status, acceptance criteria) from any `.fd` file
-- **R4.8**: AI node refinement — restyle selected nodes and replace anonymous IDs (`_anon_N`) with semantic names via configurable AI provider
-- **R4.9**: Multi-provider AI — per-provider API keys (`fd.ai.geminiApiKey`, `fd.ai.openaiApiKey`, `fd.ai.anthropicApiKey`), custom model selection per provider, and support for Gemini, OpenAI, Anthropic, Ollama (local), and OpenRouter (multi-model gateway)
-- **R4.10**: Auto-format pipeline — `format_document` via LSP; lint diagnostics (anonymous IDs, duplicate `use:`, unused styles) + configurable dedup/hoist transforms via `fd.format.*` settings
-- **R4.11**: Inline Spec View — canvas-embedded spec overlay (client-side parser, no roundtrip) showing node structure + annotations; complements the separate `FD: Show Spec View` sidebar panel and `FD: Export Spec to Markdown` export command
+- **R4.1** _(done)_: AI reads/writes `.fd` text directly — no binary format needed
+- **R4.2** _(done)_: Semantic node names (`@login_form`, `@submit_btn`) help AI understand intent
+- **R4.3** _(done)_: Style inheritance reduces repetition — AI only specifies overrides
+- **R4.4** _(done)_: Constraints describe relationships ("center in canvas") not pixel positions
+- **R4.5** _(done)_: Annotations (`spec` blocks) give AI structured metadata on visual elements
+- **R4.6** _(done)_: Edges let AI reason about flows and transitions between screens
+- **R4.7** _(done)_: Spec-view export — generate markdown report of `spec` annotations from any `.fd` file
+- **R4.8** _(done)_: AI node refinement — restyle selected nodes, replace anonymous IDs via configurable provider
+- **R4.9** _(done)_: Multi-provider AI — Gemini, OpenAI, Anthropic, Ollama, OpenRouter with per-provider API keys
+- **R4.10** _(done)_: Auto-format pipeline — `format_document` via LSP; lint diagnostics + configurable transforms
+- **R4.11** _(done)_: Inline Spec View — canvas-embedded spec overlay with node structure + annotations
 
 ### R5: Rendering
 
-- **R5.1**: GPU-accelerated 2D rendering via Vello + wgpu
-- **R5.2**: WASM-compatible for web/IDE deployment
-- **R5.3**: Native-compatible for desktop/mobile (same Rust code)
-- **R5.4**: Shapes: rect, ellipse, path, text
-- **R5.5**: Styling: fill, stroke, gradients, shadows, corner radius, opacity
-- **R5.6**: Animation: keyframe transitions with easing functions
-- **R5.7**: Edge rendering: lines, smooth curves, step routing with arrowheads and midpoint labels
-- **R5.8**: Edge animation rendering: trigger-based hover/press effects and continuous flow animations (pulse dots, marching dashes)
+- **R5.1** _(done)_: GPU-accelerated 2D rendering via Vello + wgpu (webview currently uses Canvas2D fallback)
+- **R5.2** _(done)_: WASM-compatible for web/IDE deployment
+- **R5.3** _(future)_: Native-compatible for desktop/mobile (same Rust code)
+- **R5.4** _(done)_: Shapes: rect, ellipse, path, text, frame, generic
+- **R5.5** _(done)_: Styling: fill, stroke, gradients, shadows, corner radius, opacity
+- **R5.6** _(done)_: Animation: keyframe transitions with easing functions → [spec](specs/animation-system.md)
+- **R5.7** _(done)_: Edge rendering: lines, smooth curves, step routing with arrowheads and labels → [spec](specs/edge-system.md)
+- **R5.8** _(done)_: Edge animation rendering: trigger effects + flow animations → [spec](specs/edge-system.md)
 
 ### R6: Platform Targets
 
-- **R6.1** (this repo): VS Code / Cursor IDE custom editor extension
-- **R6.2** (future): Desktop app via Tauri (macOS, Windows, Linux)
-- **R6.3** (future): Mobile app (iOS, Android) via native wgpu
-- **R6.4** (future): Web app (standalone browser app)
+- **R6.1** _(done)_: VS Code / Cursor IDE custom editor extension (published)
+- **R6.2** _(future)_: Desktop app via Tauri (macOS, Windows, Linux)
+- **R6.3** _(future)_: Mobile app (iOS, Android) via native wgpu
+- **R6.4** _(future)_: Web app (standalone browser app)
 
 ### R7: Collaboration
 
-- **R7.1** (future): Real-time multiplayer — concurrent editing with cursor presence, CRDT-based conflict resolution, and live sync across connected clients
-- **R7.2** (future): Shareable links — generate a URL to share a read-only or editable view of an `.fd` document without requiring IDE installation
+- **R7.1** _(future)_: Real-time multiplayer — CRDT-based conflict resolution, cursor presence, live sync
+- **R7.2** _(future)_: Shareable links — URL to share read-only or editable view without IDE
 
 ## Non-Functional Requirements
 
@@ -122,20 +136,65 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 
 ## Tech Stack
 
+See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, data flow, and rendering pipeline.
+
 | Layer            | Technology                            |
 | ---------------- | ------------------------------------- |
 | Language         | Rust (edition 2024)                   |
-| Rendering        | Vello + wgpu                          |
+| Rendering        | Vello + wgpu (Canvas2D fallback)      |
 | Parsing          | winnow                                |
-| Graph            | petgraph (DAG)                        |
+| Graph            | petgraph `StableDiGraph`              |
 | String interning | lasso                                 |
 | WASM             | wasm-pack + wasm-bindgen              |
 | IDE glue         | TypeScript (minimal VS Code API shim) |
 | Desktop (future) | Tauri                                 |
 
+## Test Matrix
+
+<!-- Maps each requirement to its test functions. If a row is empty, the requirement lacks test coverage. -->
+
+| Requirement | Test Functions                                                    | Coverage                       |
+| ----------- | ----------------------------------------------------------------- | ------------------------------ |
+| R1.1–R1.8   | `parser::tests::parse_*`, `emitter::tests::emit_*`, `roundtrip_*` | ✅ 76 fd-core + 18 integration |
+| R1.9        | `emit_annotations_*`, `roundtrip_preserves_annotations`           | ✅                             |
+| R1.10       | `parse_edge_*`, `emit_edge_*`, `roundtrip_edge_*`                 | ✅                             |
+| R1.11       | `emit_edge_with_trigger_anim`, `roundtrip_edge_hover_anim`        | ✅                             |
+| R1.12       | `emit_edge_flow_*`, `roundtrip_edge_flow_*`                       | ✅                             |
+| R1.13       | `emit_generic_node`, `roundtrip_generic_*`                        | ✅                             |
+| R1.14       | `parse_import`, `emit_import`, `roundtrip_import`                 | ✅                             |
+| R1.15       | `emit_bg_shorthand`, `roundtrip_bg_shorthand`                     | ✅                             |
+| R1.16       | `roundtrip_comment_*`                                             | ✅                             |
+| R1.17       | `parse_align_*`, `roundtrip_align*`, `style_merging_align`        | ✅                             |
+| R2.1–R2.4   | `sync::tests::sync_*`, `bidi_sync::*`                             | ✅ 12 sync + 9 integration     |
+| R3.1        | `tools::tests::select_tool_*`, `hit::tests::*`                    | ✅ 5 tests + 3 hit tests       |
+| R3.2        | `select_tool_drag`, `select_tool_shift_drag_*`, resize integ.     | ✅ 3 tests                     |
+| R3.3        | `rect_tool_*`, `ellipse_tool_*`, `text_tool_*`                    | ✅ 7 tests                     |
+| R3.4        | _(pen tool — captures pressure, no unit test)_                    | ⚠️ No pen tool tests           |
+| R3.5        | _(planned)_                                                       | —                              |
+| R3.6        | E2E UX: zoom/pan/pinch tests in `e2e-ux.test.ts`                  | ✅ 4 E2E tests                 |
+| R3.7        | `commands::tests::*`, `undo_redo::*`                              | ✅ 5 unit + 7 integration      |
+| R3.8–R3.14  | E2E UX: properties, color, theme, view mode in `e2e-ux.test.ts`   | ✅ 12 E2E tests                |
+| R3.16       | `hit_test_resize_handle` (WASM), E2E UX cursor tests              | ⚠️ WASM-side only              |
+| R3.17       | E2E UX: grid/snap tests                                           | ⚠️ JS-only                     |
+| R3.18       | E2E UX: dimension tooltip tests                                   | ⚠️ JS-only                     |
+| R3.20       | E2E UX: zoom calculations, pinch clamp                            | ✅ 4 E2E tests                 |
+| R3.21       | E2E UX: grid spacing adaptation                                   | ✅ 3 E2E tests                 |
+| R3.24       | `effective_target_*`, `is_ancestor_of`, `hit_test_nested_groups`  | ✅ 5 Rust + 4 E2E tests        |
+| R3.25       | E2E UX: minimap scale, click-to-navigate                          | ✅ 2 E2E tests                 |
+| R3.26       | E2E UX: arrow nudge 1px/10px                                      | ✅ 2 E2E tests                 |
+| R3.27       | E2E UX: rename sanitization, word-boundary                        | ✅ 3 E2E tests                 |
+| R3.28       | E2E UX: inline text editing, hex luminance                        | ✅ 3 E2E tests                 |
+| R3.29       | E2E UX: animation tween engine                                    | ✅ 2 E2E tests                 |
+| R3.30       | _(JS-only, camera animation)_                                     | ⚠️ JS-only                     |
+| R4.1–R4.6   | Covered by R1/R2 tests                                            | ✅                             |
+| R4.7–R4.11  | _(extension-side, no test)_                                       | ❌                             |
+| R5.1–R5.8   | `hit::tests::*`, `resolve::tests::*`, `render2d::tests::*`        | ✅ 3 hit + 6 layout + 3 render |
+
+**Total**: 154 Rust tests + 162 TypeScript tests = **316 tests**
+
 ## Requirement Index
 
-<!-- AI: Search this index BEFORE proposing new requirements. If a similar tag already exists, extend the existing requirement instead of creating a duplicate. -->
+<!-- AI: Search this index BEFORE proposing new requirements. If a similar tag already exists, extend the existing requirement instead of creating a duplicate. Also check docs/specs/ for detailed spec docs. -->
 
 | Tag                 | Requirements                          |
 | ------------------- | ------------------------------------- |

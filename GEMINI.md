@@ -30,7 +30,7 @@ Before modifying ANY file:
 
 ### 📋 Requirement Deduplication
 
-Before proposing any new requirement, search the **Requirement Index** at the bottom of `REQUIREMENTS.md` and check `docs/CHANGELOG.md` for overlapping keywords. If a similar requirement exists, **extend it** instead of creating a duplicate. Always update the index when adding new requirements.
+Before proposing any new requirement, search the **Requirement Index** at the bottom of `docs/REQUIREMENTS.md` and check `docs/CHANGELOG.md` for overlapping keywords. If a similar requirement exists, **extend it** instead of creating a duplicate. Always update the index when adding new requirements. For complex features, check `docs/specs/` for detailed behavior specifications.
 
 ### 🔀 Git Workflow (MANDATORY)
 
