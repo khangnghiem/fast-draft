@@ -283,6 +283,7 @@ async function main() {
     setupMinimap();
     setupColorSwatches();
     setupSelectionBar();
+    setupTouchGestures();
 
     // Tell extension we're ready
     vscode.postMessage({ type: "ready" });
@@ -690,6 +691,248 @@ function setupPointerEvents() {
       render();
     }
   }, { passive: false });
+}
+
+// ─── Touch & Gesture Support ───────────────────────────────────────────────
+
+function setupTouchGestures() {
+  let activeTouches = new Map();
+  let lastPinchDist = 0;
+  let lastPinchCenter = { x: 0, y: 0 };
+  let longPressTimer = null;
+  let longPressPos = null;
+  let isGesturing = false;
+  let threeFingerStartX = 0;
+  let threeFingerHandled = false;
+  let pencilActive = false;
+
+  // Inertia state
+  let inertiaVx = 0;
+  let inertiaVy = 0;
+  let lastPanTime = 0;
+  let inertiaRaf = null;
+
+  function pinchDistance(t1, t2) {
+    const dx = t1.clientX - t2.clientX;
+    const dy = t1.clientY - t2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function pinchCenter(t1, t2) {
+    return {
+      x: (t1.clientX + t2.clientX) / 2,
+      y: (t1.clientY + t2.clientY) / 2
+    };
+  }
+
+  function clearLongPress() {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  }
+
+  function cancelInertia() {
+    if (inertiaRaf) {
+      cancelAnimationFrame(inertiaRaf);
+      inertiaRaf = null;
+    }
+  }
+
+  function applyInertia() {
+    const friction = 0.92;
+    inertiaVx *= friction;
+    inertiaVy *= friction;
+    if (Math.abs(inertiaVx) < 0.5 && Math.abs(inertiaVy) < 0.5) {
+      inertiaRaf = null;
+      return;
+    }
+    panX += inertiaVx;
+    panY += inertiaVy;
+    render();
+    inertiaRaf = requestAnimationFrame(applyInertia);
+  }
+
+  canvas.addEventListener("touchstart", (e) => {
+    // Store all active touches
+    for (const t of e.changedTouches) {
+      activeTouches.set(t.identifier, t);
+    }
+
+    const count = activeTouches.size;
+    cancelInertia();
+
+    // Palm rejection: if Apple Pencil is active and a finger appears, ignore fingers
+    if (pencilActive && count > 0) {
+      // Only let pencil touches through
+      const hasPencil = [...e.touches].some(t => t.touchType === "stylus");
+      if (!hasPencil) {
+        e.preventDefault();
+        return;
+      }
+    }
+
+    // Detect Apple Pencil
+    for (const t of e.changedTouches) {
+      if (t.touchType === "stylus") {
+        pencilActive = true;
+      }
+    }
+
+    if (count === 1) {
+      // Single finger — start long-press timer
+      const t = [...activeTouches.values()][0];
+      longPressPos = { x: t.clientX, y: t.clientY };
+      longPressTimer = setTimeout(() => {
+        // Simulate right-click context menu at this position
+        const rect = canvas.getBoundingClientRect();
+        const fakeEvent = new MouseEvent("contextmenu", {
+          clientX: longPressPos.x,
+          clientY: longPressPos.y,
+          bubbles: true,
+        });
+        canvas.dispatchEvent(fakeEvent);
+        isGesturing = true;
+        longPressTimer = null;
+      }, 500);
+    } else {
+      clearLongPress();
+    }
+
+    if (count === 2) {
+      // Start pinch / two-finger pan
+      isGesturing = true;
+      const touches = [...activeTouches.values()];
+      lastPinchDist = pinchDistance(touches[0], touches[1]);
+      lastPinchCenter = pinchCenter(touches[0], touches[1]);
+      e.preventDefault();
+    }
+
+    if (count === 3) {
+      // Start three-finger swipe detection
+      isGesturing = true;
+      threeFingerHandled = false;
+      const touches = [...activeTouches.values()];
+      threeFingerStartX = touches.reduce((s, t) => s + t.clientX, 0) / 3;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener("touchmove", (e) => {
+    // Update all tracked touches
+    for (const t of e.changedTouches) {
+      activeTouches.set(t.identifier, t);
+    }
+
+    const count = activeTouches.size;
+
+    // Cancel long-press if moved too far
+    if (count === 1 && longPressTimer && longPressPos) {
+      const t = [...activeTouches.values()][0];
+      const dx = t.clientX - longPressPos.x;
+      const dy = t.clientY - longPressPos.y;
+      if (dx * dx + dy * dy > 100) {
+        clearLongPress();
+      }
+    }
+
+    if (count === 2) {
+      const touches = [...activeTouches.values()];
+      const dist = pinchDistance(touches[0], touches[1]);
+      const center = pinchCenter(touches[0], touches[1]);
+
+      // Pinch-to-zoom
+      if (lastPinchDist > 0) {
+        const scale = dist / lastPinchDist;
+        const rect = canvas.getBoundingClientRect();
+        const mx = center.x - rect.left;
+        const my = center.y - rect.top;
+        zoomAtPoint(mx, my, scale);
+      }
+
+      // Two-finger pan
+      const dx = center.x - lastPinchCenter.x;
+      const dy = center.y - lastPinchCenter.y;
+      panX += dx;
+      panY += dy;
+
+      // Track velocity for inertia
+      const now = performance.now();
+      const dt = now - lastPanTime || 16;
+      inertiaVx = dx * (16 / dt);
+      inertiaVy = dy * (16 / dt);
+      lastPanTime = now;
+
+      lastPinchDist = dist;
+      lastPinchCenter = center;
+      render();
+      e.preventDefault();
+    }
+
+    if (count === 3 && !threeFingerHandled) {
+      const touches = [...activeTouches.values()];
+      const avgX = touches.reduce((s, t) => s + t.clientX, 0) / 3;
+      const swipeDist = avgX - threeFingerStartX;
+
+      // Require significant horizontal swipe
+      if (Math.abs(swipeDist) > 50) {
+        threeFingerHandled = true;
+        if (fdCanvas) {
+          if (swipeDist < 0) {
+            // Swipe left = undo
+            const resultJson = fdCanvas.handle_key("z", false, false, false, true);
+            const result = JSON.parse(resultJson);
+            if (result.changed) {
+              render();
+              syncTextToExtension();
+            }
+          } else {
+            // Swipe right = redo
+            const resultJson = fdCanvas.handle_key("z", false, true, false, true);
+            const result = JSON.parse(resultJson);
+            if (result.changed) {
+              render();
+              syncTextToExtension();
+            }
+          }
+        }
+        e.preventDefault();
+      }
+    }
+  }, { passive: false });
+
+  canvas.addEventListener("touchend", (e) => {
+    for (const t of e.changedTouches) {
+      activeTouches.delete(t.identifier);
+    }
+
+    clearLongPress();
+
+    // Check if pencil lifted
+    for (const t of e.changedTouches) {
+      if (t.touchType === "stylus") {
+        pencilActive = false;
+      }
+    }
+
+    // Start inertia if two-finger gesture just ended
+    if (activeTouches.size === 0 && isGesturing) {
+      isGesturing = false;
+      lastPinchDist = 0;
+      if (Math.abs(inertiaVx) > 1 || Math.abs(inertiaVy) > 1) {
+        inertiaRaf = requestAnimationFrame(applyInertia);
+      }
+    }
+  });
+
+  canvas.addEventListener("touchcancel", (e) => {
+    for (const t of e.changedTouches) {
+      activeTouches.delete(t.identifier);
+    }
+    clearLongPress();
+    isGesturing = false;
+    pencilActive = false;
+  });
 }
 
 // ─── Resize ──────────────────────────────────────────────────────────────
