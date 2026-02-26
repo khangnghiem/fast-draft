@@ -39,6 +39,11 @@ export class FdCanvas {
      */
     duplicate_selected(): boolean;
     /**
+     * Duplicate selected node(s) with a custom offset. Returns true if duplicated.
+     * Use (0, 0) for Alt+drag clone-in-place.
+     */
+    duplicate_selected_at(dx: number, dy: number): boolean;
+    /**
      * Get annotations for a node as JSON array.
      * Returns `[]` if node not found or has no annotations.
      */
@@ -72,6 +77,11 @@ export class FdCanvas {
      * Returns `{}` if no node is selected.
      */
     get_selected_node_props(): string;
+    /**
+     * Get the union bounding box of all currently selected nodes (including children).
+     * Returns `[x, y, width, height]` array, or `None` if selection is empty.
+     */
+    get_selection_bounds(): Float64Array | undefined;
     /**
      * Check if sketchy rendering mode is enabled.
      */
@@ -152,6 +162,11 @@ export class FdCanvas {
      */
     render(ctx: CanvasRenderingContext2D, time_ms: number): void;
     /**
+     * Render only the selected nodes (and their children) to the given context.
+     * Used for "Copy as PNG" exports. Translates context by `offset_x, offset_y`.
+     */
+    render_export(ctx: CanvasRenderingContext2D, offset_x: number, offset_y: number): void;
+    /**
      * Resize the canvas.
      */
     resize(width: number, height: number): void;
@@ -218,6 +233,7 @@ export interface InitOutput {
     readonly fdcanvas_create_node_at: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly fdcanvas_delete_selected: (a: number) => number;
     readonly fdcanvas_duplicate_selected: (a: number) => number;
+    readonly fdcanvas_duplicate_selected_at: (a: number, b: number, c: number) => number;
     readonly fdcanvas_get_annotations_json: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_arrow_preview: (a: number) => [number, number];
     readonly fdcanvas_get_node_animations_json: (a: number, b: number, c: number) => [number, number];
@@ -225,6 +241,7 @@ export interface InitOutput {
     readonly fdcanvas_get_selected_id: (a: number) => [number, number];
     readonly fdcanvas_get_selected_ids: (a: number) => [number, number];
     readonly fdcanvas_get_selected_node_props: (a: number) => [number, number];
+    readonly fdcanvas_get_selection_bounds: (a: number) => any;
     readonly fdcanvas_get_sketchy_mode: (a: number) => number;
     readonly fdcanvas_get_text: (a: number) => [number, number];
     readonly fdcanvas_get_tool_name: (a: number) => [number, number];
@@ -241,6 +258,7 @@ export interface InitOutput {
     readonly fdcanvas_redo: (a: number) => number;
     readonly fdcanvas_remove_node_animations: (a: number, b: number, c: number) => number;
     readonly fdcanvas_render: (a: number, b: any, c: number) => void;
+    readonly fdcanvas_render_export: (a: number, b: any, c: number, d: number) => void;
     readonly fdcanvas_resize: (a: number, b: number, c: number) => void;
     readonly fdcanvas_select_by_id: (a: number, b: number, c: number) => number;
     readonly fdcanvas_set_annotations_json: (a: number, b: number, c: number, d: number, e: number) => number;

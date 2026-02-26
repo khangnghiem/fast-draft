@@ -2160,6 +2160,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
         <button class="fab-menu-item" data-action="group">⌘G Group</button>
         <button class="fab-menu-item" data-action="ungroup">⌘⇧G Ungroup</button>
         <button class="fab-menu-item" data-action="duplicate">⌘D Duplicate</button>
+        <button class="fab-menu-item" data-action="copy-png">⌘⇧C Copy as PNG</button>
         <button class="fab-menu-item" data-action="delete" style="color:#e57373">⌫ Delete</button>
       </div>
     </div>

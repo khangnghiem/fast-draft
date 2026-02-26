@@ -907,6 +907,106 @@ impl FdCanvas {
         changed
     }
 
+    // ─── Export API ──────────────────────────────────────────────────────
+
+    /// Get the union bounding box of all currently selected nodes (including children).
+    /// Returns `[x, y, width, height]` array, or `None` if selection is empty.
+    pub fn get_selection_bounds(&self) -> Option<js_sys::Float64Array> {
+        if self.select_tool.selected.is_empty() {
+            return None;
+        }
+
+        let mut min_x = f32::MAX;
+        let mut min_y = f32::MAX;
+        let mut max_x = f32::MIN;
+        let mut max_y = f32::MIN;
+        let mut found = false;
+
+        let bounds = self.engine.current_bounds();
+
+        // Recursively find bounds for a node and its children
+        #[allow(clippy::too_many_arguments)]
+        fn expand_bounds(
+            graph: &fd_core::model::SceneGraph,
+            bounds_map: &std::collections::HashMap<fd_core::NodeIndex, fd_core::ResolvedBounds>,
+            idx: fd_core::NodeIndex,
+            min_x: &mut f32,
+            min_y: &mut f32,
+            max_x: &mut f32,
+            max_y: &mut f32,
+            found: &mut bool,
+        ) {
+            if let Some(b) = bounds_map.get(&idx) {
+                *min_x = (*min_x).min(b.x);
+                *min_y = (*min_y).min(b.y);
+                *max_x = (*max_x).max(b.x + b.width);
+                *max_y = (*max_y).max(b.y + b.height);
+                *found = true;
+            }
+            for child in graph.children(idx) {
+                expand_bounds(graph, bounds_map, child, min_x, min_y, max_x, max_y, found);
+            }
+        }
+
+        for id in &self.select_tool.selected {
+            if let Some(idx) = self.engine.graph.index_of(*id) {
+                expand_bounds(
+                    &self.engine.graph,
+                    bounds,
+                    idx,
+                    &mut min_x,
+                    &mut min_y,
+                    &mut max_x,
+                    &mut max_y,
+                    &mut found,
+                );
+            }
+        }
+
+        if !found {
+            return None;
+        }
+
+        let arr = js_sys::Float64Array::new_with_length(4);
+        arr.set_index(0, min_x as f64);
+        arr.set_index(1, min_y as f64);
+        arr.set_index(2, (max_x - min_x) as f64);
+        arr.set_index(3, (max_y - min_y) as f64);
+        Some(arr)
+    }
+
+    /// Render only the selected nodes (and their children) to the given context.
+    /// Used for "Copy as PNG" exports. Translates context by `offset_x, offset_y`.
+    pub fn render_export(&self, ctx: &CanvasRenderingContext2d, offset_x: f64, offset_y: f64) {
+        if self.select_tool.selected.is_empty() {
+            return;
+        }
+
+        let theme = if self.dark_mode {
+            render2d::CanvasTheme::dark()
+        } else {
+            render2d::CanvasTheme::light()
+        };
+
+        let selected_ids: Vec<String> = self
+            .select_tool
+            .selected
+            .iter()
+            .map(|id| id.as_str().to_string())
+            .collect();
+
+        render2d::render_export(
+            ctx,
+            &self.engine.graph,
+            self.engine.current_bounds(),
+            &selected_ids,
+            &theme,
+            offset_x,
+            offset_y,
+            self.sketchy_mode,
+        );
+    }
+
     // ─── Properties Panel API ────────────────────────────────────────────
 
     /// Get properties of the currently selected node as JSON.

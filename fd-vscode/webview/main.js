@@ -909,6 +909,13 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
+  // ── Copy as PNG (⌘⇧C / Ctrl+Shift+C) ──
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "c" || e.key === "C")) {
+    e.preventDefault();
+    copySelectionAsPng();
+    return;
+  }
+
   // ── Add/Edit spec annotation (⌘I / Ctrl+I) ──
   if ((e.metaKey || e.ctrlKey) && (e.key === "i" || e.key === "I") && !e.shiftKey) {
     e.preventDefault();
@@ -1537,6 +1544,7 @@ function setupFloatingBar() {
         case "group": changed = fdCanvas.group_selected(); break;
         case "ungroup": changed = fdCanvas.ungroup_selected(); break;
         case "duplicate": changed = fdCanvas.duplicate_selected(); break;
+        case "copy-png": copySelectionAsPng(); break;
         case "delete": changed = fdCanvas.delete_selected(); break;
       }
       if (changed) {
@@ -4337,12 +4345,70 @@ function selectAllNodes() {
   if (ids.length === 0) return;
 
   // Select the first node (multi-select would need WASM API support)
-  // For now, select the first node
-  fdCanvas.select_by_id(ids[0]);
-  render();
-  updatePropertiesPanel();
+  // Select the first node
+  if (ids.length > 0) {
+    fdCanvas.select_by_id(ids[0]);
+    render();
+    updatePropertiesPanel();
+  }
 }
 
+/** Copy the selected node(s) as a transparent PNG to the system clipboard. */
+async function copySelectionAsPng() {
+  if (!fdCanvas) return;
+
+  const boundsArr = fdCanvas.get_selection_bounds();
+  if (!boundsArr) return; // No selection
+
+  // boundsArr is Float64Array[x, y, width, height]
+  const bx = boundsArr[0];
+  const by = boundsArr[1];
+  const bw = boundsArr[2];
+  const bh = boundsArr[3];
+
+  // Add a small transparent padding
+  const padding = 16;
+  const exportW = bw + padding * 2;
+  const exportH = bh + padding * 2;
+  const offsetX = bx - padding;
+  const offsetY = by - padding;
+
+  // Create an offscreen canvas
+  const offscreen = document.createElement("canvas");
+  const dpr = window.devicePixelRatio || 2; // Default to retina
+
+  offscreen.width = exportW * dpr;
+  offscreen.height = exportH * dpr;
+
+  const offCtx = offscreen.getContext("2d");
+  offCtx.scale(dpr, dpr);
+  // Canvas defaults to transparent background
+
+  // Draw exactly the selected nodes with correct translation
+  fdCanvas.render_export(offCtx, offsetX, offsetY);
+
+  // Helper inside toBlob
+  offscreen.toBlob(blob => {
+    if (!blob) {
+      vscode.postMessage({ type: "error", text: "Failed to generate PNG blob." });
+      return;
+    }
+
+    // Write blob to os clipboard
+    try {
+      const item = new ClipboardItem({ "image/png": blob });
+      navigator.clipboard.write([item]).then(() => {
+        vscode.postMessage({ type: "info", text: "Selection copied as PNG!" });
+      }).catch(err => {
+        console.error("Clipboard write error:", err);
+        vscode.postMessage({ type: "error", text: "Failed to copy image to clipboard. Check permissions." });
+      });
+    } catch (err) {
+      console.error(err);
+      vscode.postMessage({ type: "error", text: "Clipboard image API not supported in this environment." });
+    }
+  }, "image/png");
+}
 // ─── Start ───────────────────────────────────────────────────────────────────
 
 main();

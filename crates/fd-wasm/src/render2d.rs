@@ -93,6 +93,59 @@ pub fn render_scene(
     }
 }
 
+/// Render only specific nodes (and their children) to an offscreen canvas for PNG export.
+#[allow(clippy::too_many_arguments)]
+pub fn render_export(
+    ctx: &CanvasRenderingContext2d,
+    graph: &SceneGraph,
+    bounds: &HashMap<NodeIndex, ResolvedBounds>,
+    selected_ids: &[String],
+    _theme: &CanvasTheme,
+    offset_x: f64,
+    offset_y: f64,
+    sketchy: bool,
+) {
+    // We don't fill the background here so the PNG is transparent!
+
+    ctx.save();
+    ctx.translate(-offset_x, -offset_y).unwrap_or(());
+
+    // We only want to draw the selected distinct subtrees.
+    // If a parent and child are BOTH selected, drawing the parent will draw the child anyway.
+    let mut root_selection = Vec::new();
+    for id_str in selected_ids {
+        let id = fd_core::id::NodeId::intern(id_str);
+        if let Some(idx) = graph.index_of(id) {
+            // Check if any ancestor is also in selected_ids
+            let has_selected_ancestor = selected_ids.iter().any(|other_id_str| {
+                other_id_str != id_str && {
+                    let other_id = fd_core::id::NodeId::intern(other_id_str);
+                    graph.is_ancestor_of(other_id, id)
+                }
+            });
+            if !has_selected_ancestor {
+                root_selection.push(idx);
+            }
+        }
+    }
+
+    for idx in root_selection {
+        render_node(
+            ctx,
+            graph,
+            idx,
+            bounds,
+            &[], // Pass empty array so it doesn't draw selection handles/borders
+            _theme,
+            None,
+            None,
+            sketchy,
+        );
+    }
+
+    ctx.restore();
+}
+
 #[allow(clippy::too_many_arguments)]
 fn render_node(
     ctx: &CanvasRenderingContext2d,

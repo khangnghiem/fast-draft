@@ -78,6 +78,17 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Duplicate selected node(s) with a custom offset. Returns true if duplicated.
+     * Use (0, 0) for Alt+drag clone-in-place.
+     * @param {number} dx
+     * @param {number} dy
+     * @returns {boolean}
+     */
+    duplicate_selected_at(dx, dy) {
+        const ret = wasm.fdcanvas_duplicate_selected_at(this.__wbg_ptr, dx, dy);
+        return ret !== 0;
+    }
+    /**
      * Get annotations for a node as JSON array.
      * Returns `[]` if node not found or has no annotations.
      * @param {string} node_id
@@ -203,6 +214,15 @@ export class FdCanvas {
         } finally {
             wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
         }
+    }
+    /**
+     * Get the union bounding box of all currently selected nodes (including children).
+     * Returns `[x, y, width, height]` array, or `None` if selection is empty.
+     * @returns {Float64Array | undefined}
+     */
+    get_selection_bounds() {
+        const ret = wasm.fdcanvas_get_selection_bounds(this.__wbg_ptr);
+        return ret;
     }
     /**
      * Check if sketchy rendering mode is enabled.
@@ -445,6 +465,16 @@ export class FdCanvas {
         wasm.fdcanvas_render(this.__wbg_ptr, ctx, time_ms);
     }
     /**
+     * Render only the selected nodes (and their children) to the given context.
+     * Used for "Copy as PNG" exports. Translates context by `offset_x, offset_y`.
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {number} offset_x
+     * @param {number} offset_y
+     */
+    render_export(ctx, offset_x, offset_y) {
+        wasm.fdcanvas_render_export(this.__wbg_ptr, ctx, offset_x, offset_y);
+    }
+    /**
      * Resize the canvas.
      * @param {number} width
      * @param {number} height
@@ -661,6 +691,10 @@ function __wbg_get_imports() {
             const ret = new Array();
             return ret;
         },
+        __wbg_new_with_length_6523745c0bd32809: function(arg0) {
+            const ret = new Float64Array(arg0 >>> 0);
+            return ret;
+        },
         __wbg_of_9ab14f9d4bfb5040: function(arg0, arg1) {
             const ret = Array.of(arg0, arg1);
             return ret;
@@ -691,6 +725,9 @@ function __wbg_get_imports() {
         },
         __wbg_set_globalAlpha_c32898c5532572f4: function(arg0, arg1) {
             arg0.globalAlpha = arg1;
+        },
+        __wbg_set_index_78a85f2e336ce120: function(arg0, arg1, arg2) {
+            arg0[arg1 >>> 0] = arg2;
         },
         __wbg_set_lineDashOffset_ce4b3678fdd4e226: function(arg0, arg1) {
             arg0.lineDashOffset = arg1;

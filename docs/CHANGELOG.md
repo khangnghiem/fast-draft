@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.8.43
+
+- **FEATURE**: Copy Selection as PNG — instantly export selected components to the system clipboard as a transparent PNG.
+- **UX**: Trigger via `Cmd+Shift+C` (Mac) / `Ctrl+Shift+C` (Win/Linux) or the "⋯" overflow menu in the Floating Action Bar.
+
 ### v0.8.42
 
 - **FEATURE**: Empty-state onboarding overlay — appears on empty canvas with "Start drawing" animated heading, 3 quick-start cards (📐 Shapes, ✏️ Sketch, 📝 Text), and `?` shortcut hint
