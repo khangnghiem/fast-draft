@@ -135,6 +135,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
           webviewPanel.webview.postMessage({
             type: "setText",
             text: document.getText(),
+            workspaceName: vscode.workspace.name || "Collaborator",
           });
           break;
         }
@@ -183,6 +184,10 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
             await vscode.workspace.fs.writeFile(uri, buffer);
             vscode.window.showInformationMessage(`Exported to ${uri.fsPath}`);
           }
+          break;
+        }
+        case "shareDialog": {
+          vscode.window.showInformationMessage("Real-time collaboration is coming! For now, share the .fd file via Git.");
           break;
         }
       }
@@ -1447,6 +1452,39 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       font-weight: 500;
       letter-spacing: -0.01em;
     }
+
+    /* ── Collaborative Cursors ── */
+    #collab-cursor {
+      position: absolute;
+      pointer-events: none;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      transform: translate(12px, 12px); /* Offset from true mouse pos */
+    }
+    .cursor-arrow {
+      width: 0; 
+      height: 0; 
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-bottom: 12px solid #E91E63;
+      transform: rotate(-30deg);
+      margin-left: -2px;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+    }
+    .cursor-label {
+      background: #E91E63;
+      color: white;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+      margin-top: -2px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
     @keyframes fd-spin {
       to { transform: rotate(360deg); }
     }
@@ -2142,6 +2180,8 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
         <button class="export-menu-item disabled" title="Coming soon">🔗 Copy as link</button>
       </div>
     </div>
+    <div class="tool-sep zen-full-only"></div>
+    <button class="tool-btn zen-full-only" id="share-btn" title="Share and collaborate">👥 Share</button>
     <div class="tool-sep zen-full-only"></div>
     <button class="tool-btn" id="sketchy-toggle-btn" title="Toggle sketchy hand-drawn mode">✏️</button>
     <button class="tool-btn zen-full-only" id="theme-toggle-btn" title="Toggle light/dark canvas theme">🌙</button>

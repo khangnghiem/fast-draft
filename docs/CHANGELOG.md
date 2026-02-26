@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.8.45
+
+- **FEATURE**: Collaborative Cursors Placeholder — colored cursor dot with workspace name label follows the mouse, signaling collaboration-readiness.
+- **UX**: Added 👥 Share button in the toolbar. Shows a "Real-time collaboration is coming!" dialog with Git sharing guidance.
+
 ### v0.8.44
 
 - **FEATURE**: One-Click Export Menu — replaced the single PNG export button with a multi-format dropdown.
