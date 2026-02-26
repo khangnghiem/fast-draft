@@ -271,6 +271,8 @@ async function main() {
     setupAnimPicker();
     setupHelpButton();
     setupFloatingBar();
+    setupOnboarding();
+    checkOnboarding();
     setupApplePencilPro();
     setupThemeToggle();
     setupSketchyToggle();
@@ -1400,6 +1402,64 @@ function hideFloatingBar() {
   if (fab) fab.classList.remove("visible");
   const menu = document.getElementById("fab-overflow-menu");
   if (menu) menu.classList.remove("visible");
+}
+
+// ─── Onboarding Overlay ────────────────────────────────────────────────────
+
+/** Show onboarding overlay if the canvas is empty (no nodes) */
+function checkOnboarding() {
+  const overlay = document.getElementById("onboarding-overlay");
+  if (!overlay || !fdCanvas) return;
+  const text = fdCanvas.get_text().trim();
+  // Show overlay if canvas text is empty or only whitespace/comments
+  const hasNodes = /\b(rect|ellipse|text|group|frame|pen|arrow|path)\s+@/.test(text);
+  if (!hasNodes) {
+    overlay.classList.remove("hidden");
+  } else {
+    overlay.classList.add("hidden");
+  }
+}
+
+/** Dismiss onboarding overlay with fade-out */
+function dismissOnboarding() {
+  const overlay = document.getElementById("onboarding-overlay");
+  if (!overlay) return;
+  if (!overlay.classList.contains("hidden")) {
+    overlay.classList.add("hidden");
+    // Remove from DOM after transition to free up resources
+    setTimeout(() => { overlay.remove(); }, 500);
+  }
+}
+
+/** Wire onboarding card clicks + auto-dismiss */
+function setupOnboarding() {
+  const overlay = document.getElementById("onboarding-overlay");
+  if (!overlay) return;
+
+  // Card clicks → activate tool + dismiss
+  overlay.querySelectorAll(".onboard-card").forEach(card => {
+    card.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const tool = card.dataset.tool;
+      if (tool && fdCanvas) {
+        fdCanvas.set_tool(tool);
+        updateToolbarActive(tool);
+        updateCanvasCursor(tool);
+      }
+      dismissOnboarding();
+    });
+  });
+
+  // Dismiss on any canvas interaction
+  const canvas = document.getElementById("fd-canvas");
+  if (canvas) {
+    canvas.addEventListener("pointerdown", dismissOnboarding, { once: true });
+  }
+  document.addEventListener("keydown", (e) => {
+    // Don't dismiss on modifier-only keys
+    if (["Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
+    dismissOnboarding();
+  }, { once: true });
 }
 
 function setupFloatingBar() {

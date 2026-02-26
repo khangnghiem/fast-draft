@@ -1,0 +1,110 @@
+# Welcome to Fast Draft!
+# Click any shape to select it. Try moving, resizing, and editing.
+
+style accent { fill: #6C5CE7 }
+style soft { fill: #DFE6E9; corner: 12 }
+style label_style { font: "Inter" 500 14; fill: #2D3436 }
+
+# ── Title ──
+text @welcome_title "Welcome to Fast Draft ✨" {
+  x: 180  y: 40
+  font: "Inter" 700 28
+  fill: #2D3436
+}
+
+text @welcome_sub "Click, move, and edit these shapes to learn the basics" {
+  x: 180  y: 80
+  font: "Inter" 400 14
+  fill: #636E72
+}
+
+# ── Step 1: Shapes ──
+rect @step1_bg {
+  x: 60  y: 140
+  w: 200  h: 140
+  use: soft
+}
+
+text @step1_title "1. Draw Shapes" {
+  x: 80  y: 160
+  use: label_style
+}
+
+text @step1_desc "Press R for rectangles\nPress O for ellipses\nPress F for frames" {
+  x: 80  y: 190
+  font: "Inter" 400 12
+  fill: #636E72
+}
+
+rect @step1_demo {
+  x: 220  y: 200
+  w: 30  h: 30
+  use: accent
+  corner: 6
+  anim :hover { scale: 1.1; ease: spring 200ms }
+}
+
+# ── Step 2: Text ──
+rect @step2_bg {
+  x: 300  y: 140
+  w: 200  h: 140
+  use: soft
+}
+
+text @step2_title "2. Add Text" {
+  x: 320  y: 160
+  use: label_style
+}
+
+text @step2_desc "Press T for text tool\nDouble-click to edit\nTry changing this!" {
+  x: 320  y: 190
+  font: "Inter" 400 12
+  fill: #636E72
+}
+
+# ── Step 3: Styles ──
+rect @step3_bg {
+  x: 540  y: 140
+  w: 200  h: 140
+  use: soft
+}
+
+text @step3_title "3. Style It" {
+  x: 560  y: 160
+  use: label_style
+}
+
+text @step3_desc "Select a shape\nUse the floating bar\nto change fill & stroke" {
+  x: 560  y: 190
+  font: "Inter" 400 12
+  fill: #636E72
+}
+
+ellipse @step3_demo {
+  x: 700  y: 200
+  w: 20  h: 20
+  fill: #E17055
+  anim :hover { fill: #00B894; ease: ease_out 300ms }
+}
+
+# ── Interactive Demo Area ──
+text @playground_label "Playground — try drawing below!" {
+  x: 180  y: 330
+  font: "Inter" 600 16
+  fill: #2D3436
+}
+
+rect @playground {
+  x: 60  y: 360
+  w: 680  h: 240
+  fill: #FAFAFA
+  stroke: #DFE6E9 2
+  corner: 16
+}
+
+# ── Shortcut Hint ──
+text @shortcut_hint "Press ? for all keyboard shortcuts" {
+  x: 260  y: 640
+  font: "Inter" 400 12
+  fill: #B2BEC3
+}

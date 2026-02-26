@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.8.42
+
+- **FEATURE**: Empty-state onboarding overlay — appears on empty canvas with "Start drawing" animated heading, 3 quick-start cards (📐 Shapes, ✏️ Sketch, 📝 Text), and `?` shortcut hint
+- **UX**: Cards activate the corresponding tool and dismiss the overlay; also dismissed on any canvas click or keypress
+- **FEATURE**: `examples/welcome.fd` — interactive tutorial with 3 step cards, hover animations, playground area; auto-opens on first-ever extension activation
+- **UX**: First-activation detection via globalState `fd.welcomed` flag — only shows once
+
 ### v0.8.41
 
 - **FIX**: Paste now recursively renames ALL `@ids` in the pasted block (not just the root) — prevents ID collisions when pasting groups with children

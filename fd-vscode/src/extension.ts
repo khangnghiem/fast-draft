@@ -579,6 +579,85 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       border-radius: 4px;
     }
     .fab-menu-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+    /* ── Onboarding Overlay ── */
+    #onboarding-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 950;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at center, rgba(20,20,30,0.92) 0%, rgba(10,10,18,0.97) 100%);
+      backdrop-filter: blur(8px);
+      pointer-events: auto;
+      opacity: 1;
+      transition: opacity 0.4s ease;
+    }
+    #onboarding-overlay.hidden { opacity: 0; pointer-events: none; }
+    .onboard-heading {
+      font-size: 28px;
+      font-weight: 300;
+      color: #eee;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      animation: onboardFloat 3s ease-in-out infinite;
+    }
+    .onboard-sub {
+      font-size: 13px;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 32px;
+    }
+    @keyframes onboardFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    .onboard-cards {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+    .onboard-card {
+      width: 140px;
+      padding: 20px 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .onboard-card:hover {
+      background: rgba(255,255,255,0.12);
+      border-color: var(--fd-accent);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .onboard-card-icon { font-size: 28px; display: block; margin-bottom: 10px; }
+    .onboard-card-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: #ddd;
+    }
+    .onboard-card-desc {
+      font-size: 10px;
+      color: rgba(255,255,255,0.35);
+      margin-top: 4px;
+    }
+    .onboard-hint {
+      font-size: 11px;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 0.5px;
+    }
+    .onboard-hint kbd {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: inherit;
+      font-size: 11px;
+    }
     .tool-icon { font-size: 13px; }
     .tool-key {
       font-size: 9px;
@@ -2039,6 +2118,28 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       <div class="palette-item" draggable="true" data-shape="line">━<span class="palette-label">Line</span></div>
       <div class="palette-item" draggable="true" data-shape="arrow">→<span class="palette-label">Arrow</span></div>
     </div>
+    <div id="onboarding-overlay">
+      <div class="onboard-heading">Start drawing</div>
+      <div class="onboard-sub">Create something beautiful</div>
+      <div class="onboard-cards">
+        <div class="onboard-card" data-tool="rect">
+          <span class="onboard-card-icon">📐</span>
+          <div class="onboard-card-title">Draw shapes</div>
+          <div class="onboard-card-desc">Rectangles, ellipses, frames</div>
+        </div>
+        <div class="onboard-card" data-tool="pen">
+          <span class="onboard-card-icon">✏️</span>
+          <div class="onboard-card-title">Sketch freely</div>
+          <div class="onboard-card-desc">Freehand pen drawings</div>
+        </div>
+        <div class="onboard-card" data-tool="text">
+          <span class="onboard-card-icon">📝</span>
+          <div class="onboard-card-title">Type text</div>
+          <div class="onboard-card-desc">Labels, headings, notes</div>
+        </div>
+      </div>
+      <div class="onboard-hint">Press <kbd>?</kbd> for all shortcuts</div>
+    </div>
     <div id="floating-action-bar">
       <span class="fab-label">Fill</span>
       <input type="color" id="fab-fill" class="fab-color" value="#4A90D9" title="Fill color">
@@ -3294,6 +3395,22 @@ export function activate(context: vscode.ExtensionContext) {
       }
     )
   );
+
+  // ─── Auto-open welcome.fd on first activation ───────────────────────
+  const welcomed = context.globalState.get<boolean>("fd.welcomed", false);
+  if (!welcomed) {
+    context.globalState.update("fd.welcomed", true);
+    // Find welcome.fd in workspace examples folder
+    vscode.workspace.findFiles("**/examples/welcome.fd", null, 1).then(files => {
+      if (files.length > 0) {
+        vscode.commands.executeCommand(
+          "vscode.openWith",
+          files[0],
+          FdEditorProvider.viewType
+        );
+      }
+    });
+  }
 
   // ─── Track opened .fd documents ──────────────────────────────────────
   const openedUris = new Set<string>();
