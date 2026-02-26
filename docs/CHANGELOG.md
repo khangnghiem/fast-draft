@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.8.46
+
+- **FEATURE**: Touch & Gesture Optimization for tablet/iPad input.
+- **UX**: Two-finger pan (no Space key needed), pinch-to-zoom with smooth inertia, long-press opens context menu.
+- **UX**: Three-finger swipe left/right for undo/redo.
+- **UX**: Palm rejection when Apple Pencil is detected.
+
 ### v0.8.45
 
 - **FEATURE**: Collaborative Cursors Placeholder — colored cursor dot with workspace name label follows the mouse, signaling collaboration-readiness.
