@@ -49,10 +49,7 @@ pub struct FdCanvas {
     sketchy_mode: bool,
     hovered_id: Option<fd_core::id::NodeId>,
     pressed_id: Option<fd_core::id::NodeId>,
-    /// Deferred drill-down target: when pointer-down on a child of a selected
-    /// group, we keep the group selected for dragging and store the child here.
-    /// On pointer-up without drag, we drill into this child.
-    pending_drill_target: Option<fd_core::id::NodeId>,
+
     /// Pointer-down scene position — used to detect click vs drag.
     pointer_down_pos: Option<(f32, f32)>,
 }
@@ -89,7 +86,7 @@ impl FdCanvas {
             sketchy_mode: false,
             hovered_id: None,
             pressed_id: None,
-            pending_drill_target: None,
+
             pointer_down_pos: None,
         }
     }
@@ -192,28 +189,15 @@ impl FdCanvas {
 
         // Track pointer-down position for click-vs-drag detection
         self.pointer_down_pos = Some((x, y));
-        self.pending_drill_target = None;
 
         let hit = raw_hit.map(|id| {
-            // If the raw hit is already selected, keep it — the user drilled in
-            // and wants to interact with this specific node (e.g. drag a child).
+            // If the raw hit is already selected, keep it
             if self.select_tool.selected.contains(&id) {
                 return id;
             }
-            let target = self
-                .engine
+            self.engine
                 .graph
-                .effective_target(id, &self.select_tool.selected);
-            // If drill-down resolved to a child of an already-selected group,
-            // keep the group as hit target so dragging moves the whole group.
-            // Store the child as a pending drill target for click-without-drag.
-            for &sel_id in &self.select_tool.selected {
-                if self.engine.graph.is_ancestor_of(sel_id, target) {
-                    self.pending_drill_target = Some(target);
-                    return sel_id;
-                }
-            }
-            target
+                .effective_target(id, &self.select_tool.selected)
         });
 
         let prev_pressed = self.pressed_id;
@@ -387,25 +371,9 @@ impl FdCanvas {
             self.engine.flush_to_text();
         }
 
-        // Deferred drill-down: if pointer-up without drag, drill into child
-        let drill_changed = if let Some(drill_id) = self.pending_drill_target.take() {
-            let was_click = self
-                .pointer_down_pos
-                .map(|(dx, dy)| (x - dx).abs() < 3.0 && (y - dy).abs() < 3.0)
-                .unwrap_or(false);
-            if was_click {
-                self.select_tool.selected = vec![drill_id];
-                true
-            } else {
-                false
-            }
-        } else {
-            false
-        };
         self.pointer_down_pos = None;
 
-        let visual_changed =
-            changed || marquee_changed || pressed_changed || hovered_changed || drill_changed;
+        let visual_changed = changed || marquee_changed || pressed_changed || hovered_changed;
 
         // Auto-switch back to Select after drawing gesture completes
         let tool_switched = self.active_tool != ToolKind::Select;

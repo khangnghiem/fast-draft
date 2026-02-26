@@ -55,8 +55,22 @@ let viewMode = "design";
 /** Current spec filter: "all" | "draft" | "in_progress" | "done" */
 let specFilter = "all";
 
-/** Hash of the last rendered layer tree, used to skip redundant DOM rebuilds */
-let lastLayerHash = "";
+
+// ─── Performance: Dirty Flag & Generation Counter ────────────────────────
+/** Dirty flag — when true, the next animation frame will re-render */
+let renderDirty = true;
+/** Monotonic generation counter — bumped on every scene mutation */
+let sceneGeneration = 0;
+/** Side-effect throttle timer (layers, minimap, selection bar) */
+let sideEffectTimer = null;
+/** Cached scene bounds + generation for minimap */
+let cachedSceneBounds = null;
+let sceneBoundsGeneration = -1;
+
+/** Mark the canvas as needing a re-render on the next animation frame. */
+function markDirty() { renderDirty = true; }
+/** Bump the scene generation counter (call on any data mutation). */
+function bumpGeneration() { sceneGeneration++; markDirty(); }
 
 /** Grid overlay state */
 let gridEnabled = false;
@@ -364,27 +378,29 @@ function render() {
     ctx.restore();
   }
 
-  // ── Tween-driven re-render loop ──
-  if (activeTweens.length > 0) {
-    requestAnimationFrame(() => render());
-  }
-
   ctx.restore();
-  // Reposition spec badges when canvas re-renders (node moved, panned, etc.)
-  if (viewMode === "spec") refreshSpecView();
-  refreshLayersPanel();
-  renderMinimap();
-  updateSelectionBar();
+
+  // Schedule side-effects at lower frequency (~10fps) to avoid DOM/WASM thrashing
+  scheduleSideEffects();
 }
 
 /** Animation loop ID for flow animations (pulse/dash edges). */
 let animFrameId = null;
 
-/** Start the animation loop for continuous flow animation rendering. */
+/**
+ * Start the dirty-checked animation loop.
+ * The loop keeps running via rAF but only calls render() when:
+ *   - renderDirty is true (user interaction, text change, resize, etc.)
+ *   - activeTweens are in progress (spring/ease animations)
+ * When idle, this loop is essentially free (no WASM calls, no DOM work).
+ */
 function startAnimLoop() {
   if (animFrameId !== null) return; // already running
   function loop() {
-    render();
+    if (renderDirty || activeTweens.length > 0) {
+      renderDirty = false;
+      render();
+    }
     animFrameId = requestAnimationFrame(loop);
   }
   animFrameId = requestAnimationFrame(loop);
@@ -396,6 +412,22 @@ function stopAnimLoop() {
     cancelAnimationFrame(animFrameId);
     animFrameId = null;
   }
+}
+
+/**
+ * Schedule side-effects (layers panel, minimap, selection bar) at ~10fps.
+ * These cross the WASM boundary and touch the DOM, so we throttle them
+ * to avoid dominating frame time during rapid interactions.
+ */
+function scheduleSideEffects() {
+  if (sideEffectTimer) return; // already scheduled
+  sideEffectTimer = setTimeout(() => {
+    sideEffectTimer = null;
+    if (viewMode === "spec") refreshSpecView();
+    refreshLayersPanel();
+    renderMinimap();
+    updateSelectionBar();
+  }, 100);
 }
 
 // ─── Pointer Events ──────────────────────────────────────────────────────
@@ -1047,6 +1079,7 @@ window.addEventListener("message", (event) => {
       suppressTextSync = true;
       fdCanvas.set_text(message.text);
       lastSyncedText = message.text; // Keep dedup in sync
+      bumpGeneration(); // External text change — invalidate caches
       render();
       suppressTextSync = false;
 
@@ -1054,8 +1087,6 @@ window.addEventListener("message", (event) => {
       if (message.workspaceName) {
         setupCollaborativeCursor(message.workspaceName);
       }
-      if (viewMode === "spec") refreshSpecView();
-      refreshLayersPanel();
       break;
     }
     case "selectNode": {
@@ -1093,6 +1124,7 @@ function syncTextToExtension() {
   // Skip if text hasn't changed — avoids full document replacement that destroys cursor
   if (text === lastSyncedText) return;
   lastSyncedText = text;
+  bumpGeneration(); // Scene data changed — invalidate caches
   vscode.postMessage({
     type: "textChanged",
     text: text,
@@ -3400,24 +3432,29 @@ function bulkSetStatus(annotated, newStatus) {
   if (panel) refreshSpecSummary(panel);
 }
 
+/** Last layer generation + selection — skip rebuild when unchanged */
+let lastLayerGeneration = -1;
+let lastLayerSelectedId = "";
+
 function refreshLayersPanel() {
   const panel = document.getElementById("layers-panel");
   if (!panel || !fdCanvas) return;
 
   // In Spec mode, show requirements summary instead of layers
   if (viewMode === "spec") {
-    lastLayerHash = "";
+    lastLayerGeneration = -1;
     refreshSpecSummary(panel);
     return;
   }
 
-  const source = fdCanvas.get_text();
   const selectedId = fdCanvas.get_selected_id() || "";
 
-  // Skip DOM rebuild if nothing changed (prevents destroying click handlers mid-interaction)
-  const hash = source + "||" + selectedId;
-  if (hash === lastLayerHash) return;
-  lastLayerHash = hash;
+  // Skip DOM rebuild if nothing changed (uses generation counter instead of full-text hash)
+  if (sceneGeneration === lastLayerGeneration && selectedId === lastLayerSelectedId) return;
+  lastLayerGeneration = sceneGeneration;
+  lastLayerSelectedId = selectedId;
+
+  const source = fdCanvas.get_text();
 
   const tree = parseLayerTree(source);
 
@@ -3446,10 +3483,10 @@ function refreshLayersPanel() {
       const nodeId = item.getAttribute("data-node-id");
       if (nodeId && fdCanvas) {
         if (fdCanvas.select_by_id(nodeId)) {
-          // Pre-set the hash so that render() → refreshLayersPanel() skips the DOM rebuild.
+          // Pre-set generation so that scheduleSideEffects() → refreshLayersPanel() skips DOM rebuild.
           // This keeps our DOM references valid for the highlight update below.
-          const source = fdCanvas.get_text();
-          lastLayerHash = source + "||" + nodeId;
+          lastLayerGeneration = sceneGeneration;
+          lastLayerSelectedId = nodeId;
           render();
           // Update selection highlight in layers (DOM still intact because rebuild was skipped)
           panel.querySelectorAll(".layer-item").forEach((el) => {
@@ -4142,7 +4179,8 @@ function panFromMinimap(e) {
 }
 
 /** Get the scene bounding box (reused by minimap and export). */
-function getSceneBounds() {
+/** Compute scene bounds (expensive — O(N) WASM calls). Use getSceneBoundsCached() instead. */
+function getSceneBoundsInner() {
   if (!fdCanvas) return null;
   const text = fdCanvas.get_text();
   if (!text || text.trim().length === 0) return null;
@@ -4168,6 +4206,16 @@ function getSceneBounds() {
     } catch (_) { /* skip */ }
   }
   return foundAny ? { minX, minY, maxX, maxY } : null;
+}
+
+/** Cached version — only recomputes when scene generation changes. */
+function getSceneBounds() {
+  if (sceneBoundsGeneration === sceneGeneration && cachedSceneBounds !== undefined) {
+    return cachedSceneBounds;
+  }
+  sceneBoundsGeneration = sceneGeneration;
+  cachedSceneBounds = getSceneBoundsInner();
+  return cachedSceneBounds;
 }
 
 /** Render the minimap thumbnail with viewport indicator. */
