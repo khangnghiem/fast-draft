@@ -12,6 +12,16 @@ import {
   stripMarkdownFences as _stripMarkdownFences,
 } from "./fd-parse";
 
+// ─── Constants ───────────────────────────────────────────────────────────
+
+const CONFIG_SECTION = "fd.ai";
+const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
+const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
+const DEFAULT_OLLAMA_MODEL = "llama3.2";
+const DEFAULT_OLLAMA_URL = "http://localhost:11434";
+const DEFAULT_OPENROUTER_MODEL = "google/gemini-2.0-flash-exp:free";
+
 // ─── Types ───────────────────────────────────────────────────────────────
 
 type Provider = "gemini" | "openai" | "anthropic" | "ollama" | "openrouter";
@@ -34,7 +44,7 @@ interface RefineResult {
 
 /** Read AI settings from VS Code configuration. */
 export function getAiConfig(): AiConfig {
-  const config = vscode.workspace.getConfiguration("fd.ai");
+  const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
   const provider = (config.get<string>("provider") ?? "gemini") as Provider;
 
   // Per-provider API keys and models
@@ -47,18 +57,18 @@ export function getAiConfig(): AiConfig {
   };
 
   const modelMap: Record<Provider, string> = {
-    gemini: config.get<string>("geminiModel") ?? "gemini-2.0-flash",
-    openai: config.get<string>("openaiModel") ?? "gpt-4o-mini",
-    anthropic: config.get<string>("anthropicModel") ?? "claude-sonnet-4-20250514",
-    ollama: config.get<string>("ollamaModel") ?? "llama3.2",
-    openrouter: config.get<string>("openrouterModel") ?? "google/gemini-2.0-flash-exp:free",
+    gemini: config.get<string>("geminiModel") ?? DEFAULT_GEMINI_MODEL,
+    openai: config.get<string>("openaiModel") ?? DEFAULT_OPENAI_MODEL,
+    anthropic: config.get<string>("anthropicModel") ?? DEFAULT_ANTHROPIC_MODEL,
+    ollama: config.get<string>("ollamaModel") ?? DEFAULT_OLLAMA_MODEL,
+    openrouter: config.get<string>("openrouterModel") ?? DEFAULT_OPENROUTER_MODEL,
   };
 
   return {
     provider,
     apiKey: keyMap[provider],
     model: modelMap[provider],
-    ollamaUrl: config.get<string>("ollamaUrl") ?? "http://localhost:11434",
+    ollamaUrl: config.get<string>("ollamaUrl") ?? DEFAULT_OLLAMA_URL,
   };
 }
 
@@ -89,6 +99,21 @@ ${fdText}`;
 
 // ─── API Calls ───────────────────────────────────────────────────────────
 
+async function callAiApi(url: string, body: any, headers: Record<string, string>): Promise<any> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API error (${response.status}): ${errorText}`);
+  }
+
+  return response.json();
+}
+
 async function callGemini(
   prompt: string,
   apiKey: string,
@@ -104,20 +129,7 @@ async function callGemini(
     },
   };
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API error (${response.status}): ${errorText}`);
-  }
-
-  const data = (await response.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
+  const data = await callAiApi(url, body, {});
 
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) {
@@ -141,23 +153,9 @@ async function callOpenAi(
     max_tokens: 8192,
   };
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(body),
+  const data = await callAiApi(url, body, {
+    Authorization: `Bearer ${apiKey}`,
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI API error (${response.status}): ${errorText}`);
-  }
-
-  const data = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
 
   const text = data.choices?.[0]?.message?.content;
   if (!text) {
@@ -180,26 +178,12 @@ async function callAnthropic(
     messages: [{ role: "user", content: prompt }],
   };
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify(body),
+  const data = await callAiApi(url, body, {
+    "x-api-key": apiKey,
+    "anthropic-version": "2023-06-01",
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Anthropic API error (${response.status}): ${errorText}`);
-  }
-
-  const data = (await response.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-
-  const text = data.content?.find((c) => c.type === "text")?.text;
+  const text = data.content?.find((c: any) => c.type === "text")?.text;
   if (!text) {
     throw new Error("Anthropic returned empty response");
   }
@@ -221,25 +205,18 @@ async function callOllama(
     options: { temperature: 0.3 },
   };
 
-  let response;
+  let data;
   try {
-    response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  } catch {
+    data = await callAiApi(url, body, {});
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("API error")) {
+        throw error;
+    }
     throw new Error(
       `Could not connect to Ollama at ${baseUrl}. Make sure Ollama is running.`
     );
   }
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Ollama API error (${response.status}): ${errorText}`);
-  }
-
-  const data = (await response.json()) as { response?: string };
   if (!data?.response) {
     throw new Error("Ollama returned empty response");
   }
@@ -261,25 +238,11 @@ async function callOpenRouter(
     max_tokens: 8192,
   };
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      "HTTP-Referer": "https://github.com/khangnghiem/fast-draft",
-      "X-Title": "Fast Draft",
-    },
-    body: JSON.stringify(body),
+  const data = await callAiApi(url, body, {
+    Authorization: `Bearer ${apiKey}`,
+    "HTTP-Referer": "https://github.com/khangnghiem/fast-draft",
+    "X-Title": "Fast Draft",
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenRouter API error (${response.status}): ${errorText}`);
-  }
-
-  const data = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
 
   const text = data.choices?.[0]?.message?.content;
   if (!text) {

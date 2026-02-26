@@ -23,21 +23,42 @@ import {
     resolveTargetColumn,
 } from "./fd-parse";
 
+// ─── Constants ───────────────────────────────────────────────────────────
+
+const SHAPES = {
+    RECT: "rect",
+    ELLIPSE: "ellipse",
+    TEXT: "text",
+    FRAME: "frame",
+    LINE: "line",
+    ARROW: "arrow",
+    GROUP: "group",
+};
+
+const COLORS = {
+    BLUE: "#007AFF",
+    WHITE: "#FFFFFF",
+    BLACK: "#000000",
+    RED: "#FF0000",
+    GREEN: "#34C759",
+    DARK_BG: "#1A1A2E",
+};
+
 // ─── Figma: Select & Move ────────────────────────────────────────────────
 // In Figma, clicking a node selects it and shows its properties.
 // Nodes are identified by their @id in the layer tree.
 
 describe("Figma: Select & Move — Layer tree reflects node hierarchy", () => {
     it("parses a single node for selection", () => {
-        const lines = ["rect @button {", "  fill: #007AFF", "  w: 120 h: 40", "}"];
+        const lines = [`${SHAPES.RECT} @button {`, `  fill: ${COLORS.BLUE}`, "  w: 120 h: 40", "}"];
         const symbols = parseDocumentSymbols(lines);
         expect(symbols).toHaveLength(1);
         expect(symbols[0].name).toBe("@button");
-        expect(symbols[0].kind).toBe("rect");
+        expect(symbols[0].kind).toBe(SHAPES.RECT);
     });
 
     it("clicking on a property line resolves to the parent node (Figma behavior)", () => {
-        const lines = ["rect @card {", "  fill: #FFFFFF", "  w: 300 h: 200", "  corner: 16", "}"];
+        const lines = [`${SHAPES.RECT} @card {`, `  fill: ${COLORS.WHITE}`, "  w: 300 h: 200", "  corner: 16", "}"];
         const symbols = parseDocumentSymbols(lines);
         // In Figma, clicking anywhere inside a node selects the node
         expect(findSymbolAtLine(symbols, 2)).toBeDefined();
@@ -46,11 +67,11 @@ describe("Figma: Select & Move — Layer tree reflects node hierarchy", () => {
 
     it("selecting nested children drills into groups (Figma double-click)", () => {
         const lines = [
-            "group @toolbar {",
-            "  rect @btn_save {",
-            "    fill: #34C759",
+            `${SHAPES.GROUP} @toolbar {`,
+            `  ${SHAPES.RECT} @btn_save {`,
+            `    fill: ${COLORS.GREEN}`,
             "  }",
-            "  rect @btn_cancel {",
+            `  ${SHAPES.RECT} @btn_cancel {`,
             "    fill: #FF3B30",
             "  }",
             "}",
@@ -66,9 +87,9 @@ describe("Figma: Select & Move — Layer tree reflects node hierarchy", () => {
 
     it("multi-level nesting correctly resolves deepest symbol", () => {
         const lines = [
-            "group @page {",
-            "  group @header {",
-            "    text @logo \"Logo\" {",
+            `${SHAPES.GROUP} @page {`,
+            `  ${SHAPES.GROUP} @header {`,
+            `    ${SHAPES.TEXT} @logo "Logo" {`,
             "      font: Inter 700 24",
             "    }",
             "  }",
@@ -89,12 +110,12 @@ describe("Figma: Select & Move — Layer tree reflects node hierarchy", () => {
 describe("Figma/Sketch: Copy & Paste — ID uniqueness", () => {
     it("copy extracts the correct node block from FD source", () => {
         const source = [
-            "rect @hero {",
-            "  fill: #FF0000",
+            `${SHAPES.RECT} @hero {`,
+            `  fill: ${COLORS.RED}`,
             "  w: 300 h: 200",
             "}",
             "",
-            "text @title \"Hello\" {",
+            `${SHAPES.TEXT} @title "Hello" {`,
             "  font: Inter 700 32",
             "}",
         ].join("\n");
@@ -120,13 +141,13 @@ describe("Figma/Sketch: Copy & Paste — ID uniqueness", () => {
             endIdx++;
         }
         const block = lines.slice(startIdx, endIdx).join("\n");
-        expect(block).toContain("fill: #FF0000");
+        expect(block).toContain(`fill: ${COLORS.RED}`);
         expect(block).toContain("w: 300 h: 200");
         expect(block).not.toContain("@title");
     });
 
     it("paste generates a unique ID to avoid duplicates", () => {
-        const clipText = "rect @hero {\n  fill: #FF0000\n  w: 300 h: 200\n}";
+        const clipText = `${SHAPES.RECT} @hero {\n  fill: ${COLORS.RED}\n  w: 300 h: 200\n}`;
         const idMatch = clipText.match(/@(\w+)/);
         expect(idMatch).toBeTruthy();
         const oldId = idMatch![1];
@@ -146,8 +167,8 @@ describe("Figma/Sketch: Copy & Paste — ID uniqueness", () => {
 
     it("paste of group with children renames all internal @ids", () => {
         const clipText = [
-            "group @panel {",
-            "  rect @bg {",
+            `${SHAPES.GROUP} @panel {`,
+            `  ${SHAPES.RECT} @bg {`,
             "    fill: #FFF",
             "  }",
             "}",
@@ -172,11 +193,11 @@ describe("Figma/Sketch: Copy & Paste — ID uniqueness", () => {
 describe("Figma/Sketch: Group & Ungroup — hierarchy parsing", () => {
     it("group wrapping creates a parent-child relationship", () => {
         const lines = [
-            "group @card_group {",
-            "  rect @card1 {",
+            `${SHAPES.GROUP} @card_group {`,
+            `  ${SHAPES.RECT} @card1 {`,
             "    fill: #FFF",
             "  }",
-            "  rect @card2 {",
+            `  ${SHAPES.RECT} @card2 {`,
             "    fill: #EEE",
             "  }",
             "}",
@@ -184,7 +205,7 @@ describe("Figma/Sketch: Group & Ungroup — hierarchy parsing", () => {
         const symbols = parseDocumentSymbols(lines);
         expect(symbols).toHaveLength(1);
         expect(symbols[0].name).toBe("@card_group");
-        expect(symbols[0].kind).toBe("group");
+        expect(symbols[0].kind).toBe(SHAPES.GROUP);
         expect(symbols[0].children).toHaveLength(2);
         expect(symbols[0].children[0].name).toBe("@card1");
         expect(symbols[0].children[1].name).toBe("@card2");
@@ -192,16 +213,16 @@ describe("Figma/Sketch: Group & Ungroup — hierarchy parsing", () => {
 
     it("nested groups correctly build hierarchy", () => {
         const lines = [
-            "group @page {",
-            "  group @header {",
-            "    rect @logo {",
+            `${SHAPES.GROUP} @page {`,
+            `  ${SHAPES.GROUP} @header {`,
+            `    ${SHAPES.RECT} @logo {`,
             "      fill: #000",
             "    }",
-            "    text @nav \"Menu\" {",
+            `    ${SHAPES.TEXT} @nav "Menu" {`,
             "    }",
             "  }",
-            "  group @body {",
-            "    rect @content {",
+            `  ${SHAPES.GROUP} @body {`,
+            `    ${SHAPES.RECT} @content {`,
             "      fill: #FFF",
             "    }",
             "  }",
@@ -218,12 +239,12 @@ describe("Figma/Sketch: Group & Ungroup — hierarchy parsing", () => {
     });
 
     it("ungroup detection via regex (used in context menu)", () => {
-        const source = "group @cards {\n  rect @a {\n    fill: #F00\n  }\n}";
+        const source = `${SHAPES.GROUP} @cards {\n  ${SHAPES.RECT} @a {\n    fill: #F00\n  }\n}`;
         const id = "cards";
-        const groupRe = new RegExp(`(?:^|\\n)\\s*group\\s+@${id}\\b`);
+        const groupRe = new RegExp(`(?:^|\\n)\\s*${SHAPES.GROUP}\\s+@${id}\\b`);
         expect(groupRe.test(source)).toBe(true);
         // Non-group node should not match
-        expect(groupRe.test(source.replace("group", "rect"))).toBe(false);
+        expect(groupRe.test(source.replace(SHAPES.GROUP, SHAPES.RECT))).toBe(false);
     });
 });
 
@@ -234,7 +255,7 @@ describe("Figma/Sketch: Group & Ungroup — hierarchy parsing", () => {
 describe("Figma/Sketch: Layer Rename — global ID replacement", () => {
     it("renaming an ID updates all references", () => {
         const text = [
-            "rect @hero {",
+            `${SHAPES.RECT} @hero {`,
             "  fill: #F00",
             "}",
             "@hero -> center_in: canvas",
@@ -258,7 +279,7 @@ describe("Figma/Sketch: Layer Rename — global ID replacement", () => {
     });
 
     it("rename does not affect similar-prefix IDs", () => {
-        const text = "rect @btn {\n}\nrect @btn_large {\n}\n@btn -> center_in: canvas";
+        const text = `${SHAPES.RECT} @btn {\n}\n${SHAPES.RECT} @btn_large {\n}\n@btn -> center_in: canvas`;
         const renamed = text.replace(new RegExp(`@btn\\b`, "g"), "@button");
         expect(renamed).toContain("@button {");
         expect(renamed).toContain("@btn_large"); // Should NOT be renamed
@@ -298,11 +319,11 @@ describe("Drawio/Miro: Layer Tree & Visibility toggle", () => {
             "style card_style {",
             "  fill: #FFF",
             "}",
-            "group @page {",
-            "  rect @header {",
-            "    fill: #007AFF",
+            `${SHAPES.GROUP} @page {`,
+            `  ${SHAPES.RECT} @header {`,
+            `    fill: ${COLORS.BLUE}`,
             "  }",
-            "  text @title \"Hello\" {",
+            `  ${SHAPES.TEXT} @title "Hello" {`,
             "  }",
             "}",
             "edge @flow {",
@@ -427,7 +448,7 @@ describe("Drawio/Miro: Grid overlay — spacing adaptation", () => {
 
 describe("Figma: Inline Text Editing — text node handling", () => {
     it("text node with content is parsed correctly", () => {
-        const lines = ['text @title "Hello World" {', "  font: Inter 700 32", "}"];
+        const lines = [`${SHAPES.TEXT} @title "Hello World" {`, "  font: Inter 700 32", "}"];
         const symbols = parseDocumentSymbols(lines);
         expect(symbols).toHaveLength(1);
         expect(symbols[0].name).toBe("@title");
@@ -438,7 +459,7 @@ describe("Figma: Inline Text Editing — text node handling", () => {
         // When nothing is selected and you double-click, Figma creates a text node
         // This is handled by create_node_at("text", x, y) in the WASM API
         // We verify the parse side: a text node with empty content
-        const source = 'text @_anon_1 "" {\n  x: 100 y: 200\n}';
+        const source = `${SHAPES.TEXT} @_anon_1 "" {\n  x: 100 y: 200\n}`;
         const anons = findAnonNodeIds(source);
         expect(anons).toContain("_anon_1");
     });
@@ -453,8 +474,8 @@ describe("Figma: Inline Text Editing — text node handling", () => {
             return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
         };
 
-        expect(hexLuminance("#FFFFFF")).toBeCloseTo(1.0, 1);
-        expect(hexLuminance("#000000")).toBeCloseTo(0.0, 1);
+        expect(hexLuminance(COLORS.WHITE)).toBeCloseTo(1.0, 1);
+        expect(hexLuminance(COLORS.BLACK)).toBeCloseTo(0.0, 1);
         // Dark fill → white text (luminance < 0.4)
         expect(hexLuminance("#1C1C1E")).toBeLessThan(0.4);
         // Light fill → dark text (luminance >= 0.4)
@@ -471,13 +492,13 @@ describe("Figma: Properties Panel — hex color handling", () => {
         const expanded = hex.length === 4
             ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
             : hex;
-        expect(expanded).toBe("#FFFFFF");
+        expect(expanded).toBe(COLORS.WHITE);
     });
 
     it("6-digit hex truncates to 7 chars (drops alpha)", () => {
         const hex = "#FF000088";
         const truncated = hex.substring(0, 7);
-        expect(truncated).toBe("#FF0000");
+        expect(truncated).toBe(COLORS.RED);
     });
 
     it("opacity slider range is 0 to 1", () => {
@@ -493,12 +514,12 @@ describe("Figma: Properties Panel — hex color handling", () => {
 describe("Drawio: Drag & Drop — default shape dimensions", () => {
     it("rect default size is 100×80", () => {
         const DEFAULT_SHAPE_SIZES: Record<string, [number, number]> = {
-            rect: [100, 80], ellipse: [100, 80], text: [80, 24],
-            frame: [200, 150], line: [120, 4], arrow: [120, 4],
+            [SHAPES.RECT]: [100, 80], [SHAPES.ELLIPSE]: [100, 80], [SHAPES.TEXT]: [80, 24],
+            [SHAPES.FRAME]: [200, 150], [SHAPES.LINE]: [120, 4], [SHAPES.ARROW]: [120, 4],
         };
-        expect(DEFAULT_SHAPE_SIZES.rect).toEqual([100, 80]);
-        expect(DEFAULT_SHAPE_SIZES.text).toEqual([80, 24]);
-        expect(DEFAULT_SHAPE_SIZES.frame).toEqual([200, 150]);
+        expect(DEFAULT_SHAPE_SIZES[SHAPES.RECT]).toEqual([100, 80]);
+        expect(DEFAULT_SHAPE_SIZES[SHAPES.TEXT]).toEqual([80, 24]);
+        expect(DEFAULT_SHAPE_SIZES[SHAPES.FRAME]).toEqual([200, 150]);
     });
 
     it("drop position converts screen to scene coords", () => {
@@ -543,7 +564,7 @@ describe("Excalidraw/Figma: Arrow-key nudge", () => {
 describe("Figma: Selection Bar — status display", () => {
     it("formats selection info correctly", () => {
         const selectedId = "hero";
-        const kind = "rect";
+        const kind = SHAPES.RECT;
         const w = 300;
         const h = 200;
         const x = 50;
@@ -565,8 +586,8 @@ describe("Sketch: Color Swatches — dark color detection", () => {
             const b = parseInt(c.substring(4, 6), 16);
             return (r * 299 + g * 587 + b * 114) / 1000 < 128;
         };
-        expect(isColorDark("#000000")).toBe(true);
-        expect(isColorDark("#FFFFFF")).toBe(false);
+        expect(isColorDark(COLORS.BLACK)).toBe(true);
+        expect(isColorDark(COLORS.WHITE)).toBe(false);
         expect(isColorDark("#1C1C1E")).toBe(true);
         // #FF3B30 is actually dark by weighted avg: (255*299+59*587+48*114)/1000 ≈ 116 < 128
         expect(isColorDark("#FF3B30")).toBe(true);
@@ -598,7 +619,7 @@ describe("Sketch: Color Swatches — dark color detection", () => {
 describe("FD-Specific: Spec View — annotation parsing and filtering", () => {
     it("complex document with mixed annotations", () => {
         const source = [
-            "rect @login_btn {",
+            `${SHAPES.RECT} @login_btn {`,
             '  spec {',
             '    "Primary login CTA"',
             '    accept: "visible on page load"',
@@ -607,7 +628,7 @@ describe("FD-Specific: Spec View — annotation parsing and filtering", () => {
             "    priority: high",
             "    tag: auth, conversion",
             "  }",
-            "  fill: #007AFF",
+            `  fill: ${COLORS.BLUE}`,
             "}",
         ].join("\n");
         const result = parseSpecNodes(source);
@@ -621,8 +642,8 @@ describe("FD-Specific: Spec View — annotation parsing and filtering", () => {
 
     it("spec view hides properties but keeps annotations", () => {
         const lines = [
-            "rect @card {",
-            "  fill: #FFFFFF",
+            `${SHAPES.RECT} @card {`,
+            `  fill: ${COLORS.WHITE}`,
             "  stroke: #E8E8EC 1",
             "  corner: 16",
             '  spec {',
@@ -645,19 +666,19 @@ describe("FD-Specific: Spec View — annotation parsing and filtering", () => {
         // Previously, parseSpecNodes used lines.indexOf() which caused annotation
         // bleed between nodes with identical spec blocks. Now fixed with indexed loop.
         const source = [
-            "rect @a {",
+            `${SHAPES.RECT} @a {`,
             "  spec {",
             "    status: done",
             "  }",
             "}",
             "",
-            "rect @b {",
+            `${SHAPES.RECT} @b {`,
             "  spec {",
             "    status: draft",
             "  }",
             "}",
             "",
-            "rect @c {",
+            `${SHAPES.RECT} @c {`,
             "  spec {",
             "    status: done",
             "  }",
@@ -785,7 +806,7 @@ describe("Figma: Export PNG — bounds calculation", () => {
 
 describe("Edge Cases: Error resilience", () => {
     it("parseDocumentSymbols handles unclosed braces", () => {
-        const lines = ["rect @broken {", "  fill: #FFF"];
+        const lines = [`${SHAPES.RECT} @broken {`, "  fill: #FFF"];
         // Should not throw
         const symbols = parseDocumentSymbols(lines);
         expect(symbols).toHaveLength(1);
@@ -802,7 +823,7 @@ describe("Edge Cases: Error resilience", () => {
     });
 
     it("findSymbolAtLine returns undefined for lines outside all nodes", () => {
-        const lines = ["rect @a {", "}", "", "# comment"];
+        const lines = [`${SHAPES.RECT} @a {`, "}", "", "# comment"];
         const symbols = parseDocumentSymbols(lines);
         expect(findSymbolAtLine(symbols, 3)).toBeUndefined();
     });
@@ -814,12 +835,12 @@ describe("Edge Cases: Error resilience", () => {
     });
 
     it("transformSpecViewLine handles all node types", () => {
-        expect(transformSpecViewLine("group @a {")).toBe("@a {");
-        expect(transformSpecViewLine("frame @b {")).toBe("@b {");
-        expect(transformSpecViewLine("rect @c {")).toBe("@c {");
-        expect(transformSpecViewLine("ellipse @d {")).toBe("@d {");
+        expect(transformSpecViewLine(`${SHAPES.GROUP} @a {`)).toBe("@a {");
+        expect(transformSpecViewLine(`${SHAPES.FRAME} @b {`)).toBe("@b {");
+        expect(transformSpecViewLine(`${SHAPES.RECT} @c {`)).toBe("@c {");
+        expect(transformSpecViewLine(`${SHAPES.ELLIPSE} @d {`)).toBe("@d {");
         expect(transformSpecViewLine("path @e {")).toBe("@e {");
-        expect(transformSpecViewLine('text @f "hi" {')).toBe('@f "hi" {');
+        expect(transformSpecViewLine(`${SHAPES.TEXT} @f "hi" {`)).toBe('@f "hi" {');
         // Non-node lines unchanged
         expect(transformSpecViewLine("  fill: #FFF")).toBe("  fill: #FFF");
         expect(transformSpecViewLine("style foo {")).toBe("style foo {");
@@ -831,22 +852,22 @@ describe("Edge Cases: Error resilience", () => {
 describe("Figma: Card component build — complex FD documents", () => {
     const cardDoc = [
         "style card_bg {",
-        "  fill: #1A1A2E",
+        `  fill: ${COLORS.DARK_BG}`,
         "  corner: 12",
         "}",
         "",
-        'text @card_title "Dashboard" {',
-        "  fill: #FFFFFF",
+        `${SHAPES.TEXT} @card_title "Dashboard" {`,
+        `  fill: ${COLORS.WHITE}`,
         '  font: "Inter" 700 24',
         "}",
         "",
-        "group @card_container {",
+        `${SHAPES.GROUP} @card_container {`,
         "  layout: column gap=12 pad=16",
-        "  rect @card_bg {",
+        `  ${SHAPES.RECT} @card_bg {`,
         "    w: 320 h: 200",
         "    use: card_bg",
         "  }",
-        '  text @card_label "Revenue" {',
+        `  ${SHAPES.TEXT} @card_label "Revenue" {`,
         "    fill: #888",
         "  }",
         "}",
@@ -858,7 +879,7 @@ describe("Figma: Card component build — complex FD documents", () => {
         expect(symbols.length).toBeGreaterThanOrEqual(3);
         const group = symbols.find((s) => s.name === "@card_container");
         expect(group).toBeDefined();
-        expect(group!.kind).toBe("group");
+        expect(group!.kind).toBe(SHAPES.GROUP);
         expect(group!.children.length).toBe(2); // card_bg + card_label
     });
 
@@ -882,9 +903,9 @@ describe("Figma: Card component build — complex FD documents", () => {
 describe("Drawio: Rapid shape creation — parsing reliability", () => {
     it("parses consecutive shapes without blank lines between them", () => {
         const source = [
-            "rect @box1 { w: 80 h: 40 }",
-            "ellipse @circle1 { w: 60 h: 60 }",
-            "rect @box2 { w: 80 h: 40 }",
+            `${SHAPES.RECT} @box1 { w: 80 h: 40 }`,
+            `${SHAPES.ELLIPSE} @circle1 { w: 60 h: 60 }`,
+            `${SHAPES.RECT} @box2 { w: 80 h: 40 }`,
         ].join("\n");
         const symbols = parseDocumentSymbols(source.split("\n"));
         expect(symbols).toHaveLength(3);
@@ -895,11 +916,11 @@ describe("Drawio: Rapid shape creation — parsing reliability", () => {
 
     it("parses edges connecting shapes", () => {
         const source = [
-            "rect @start {",
+            `${SHAPES.RECT} @start {`,
             "  w: 100 h: 50",
             "}",
             "",
-            "rect @end {",
+            `${SHAPES.RECT} @end {`,
             "  w: 100 h: 50",
             "}",
             "",
@@ -923,12 +944,12 @@ describe("Drawio: Rapid shape creation — parsing reliability", () => {
 describe("Sketch: Multi-select — symbol hierarchy for selection", () => {
     it("parseDocumentSymbols preserves order matching layers panel order", () => {
         const source = [
-            "rect @first { w: 100 h: 50 }",
-            "ellipse @second { w: 60 h: 60 }",
-            'text @third "Hello" {',
+            `${SHAPES.RECT} @first { w: 100 h: 50 }`,
+            `${SHAPES.ELLIPSE} @second { w: 60 h: 60 }`,
+            `${SHAPES.TEXT} @third "Hello" {`,
             "  fill: #000",
             "}",
-            "rect @fourth { w: 80 h: 40 }",
+            `${SHAPES.RECT} @fourth { w: 80 h: 40 }`,
         ].join("\n");
         const symbols = parseDocumentSymbols(source.split("\n"));
         expect(symbols.map((s) => s.name)).toEqual([
@@ -941,12 +962,12 @@ describe("Sketch: Multi-select — symbol hierarchy for selection", () => {
 
     it("findSymbolAtLine correctly identifies nodes for click-to-select", () => {
         const lines = [
-            "rect @a {",
+            `${SHAPES.RECT} @a {`,
             "  w: 100",
             "  h: 50",
             "}",
             "",
-            "ellipse @b {",
+            `${SHAPES.ELLIPSE} @b {`,
             "  w: 60",
             "}",
         ];
@@ -963,7 +984,7 @@ describe("Sketch: Multi-select — symbol hierarchy for selection", () => {
 describe("Figma: Rename workflow — advanced edge cases", () => {
     it("rename regex respects word boundaries in nested contexts", () => {
         // Simulates renaming @btn to @button — must not affect @btn_label
-        const source = 'group @card {\n  rect @btn {\n    w: 100\n  }\n  rect @btn_label {\n    w: 80\n  }\n}';
+        const source = `${SHAPES.GROUP} @card {\n  ${SHAPES.RECT} @btn {\n    w: 100\n  }\n  ${SHAPES.RECT} @btn_label {\n    w: 80\n  }\n}`;
         const renamed = source.replace(
             new RegExp(`@btn\\b`, "g"),
             "@button",
@@ -988,7 +1009,7 @@ describe("Figma: Rename workflow — advanced edge cases", () => {
 describe("Spec View: Fold ranges computation", () => {
     it("groups consecutive hidden lines into single fold range", () => {
         const lines = [
-            "rect @a {",       // 0 — node decl, shown
+            `${SHAPES.RECT} @a {`,       // 0 — node decl, shown
             "  w: 100",        // 1 — hidden
             "  h: 50",         // 2 — hidden
             "  fill: #FFF",    // 3 — hidden
@@ -1002,12 +1023,12 @@ describe("Spec View: Fold ranges computation", () => {
 
     it("multiple non-contiguous blocks produce separate fold ranges", () => {
         const lines = [
-            "rect @a {",       // 0
+            `${SHAPES.RECT} @a {`,       // 0
             "  w: 100",        // 1 — hidden
             '  spec "A"',      // 2 — shown
             "}",               // 3
             "",                // 4
-            "rect @b {",       // 5
+            `${SHAPES.RECT} @b {`,       // 5
             "  h: 200",        // 6 — hidden
             '  spec "B"',      // 7 — shown
             "}",               // 8
@@ -1046,12 +1067,12 @@ describe("Panel column resolution for canvas placement", () => {
 describe("Frame nodes — auto-layout container parsing", () => {
     it("parseDocumentSymbols correctly parses frame nodes", () => {
         const lines = [
-            "frame @page {",
+            `${SHAPES.FRAME} @page {`,
             "  layout: column gap=16",
-            "  rect @hero {",
+            `  ${SHAPES.RECT} @hero {`,
             "    w: 800 h: 400",
             "  }",
-            '  text @heading "Welcome" {',
+            `  ${SHAPES.TEXT} @heading "Welcome" {`,
             "    fill: #000",
             "  }",
             "}",
@@ -1059,15 +1080,15 @@ describe("Frame nodes — auto-layout container parsing", () => {
         const symbols = parseDocumentSymbols(lines);
         expect(symbols).toHaveLength(1);
         expect(symbols[0].name).toBe("@page");
-        expect(symbols[0].kind).toBe("frame");
+        expect(symbols[0].kind).toBe(SHAPES.FRAME);
         expect(symbols[0].children).toHaveLength(2);
     });
 
     it("parseSpecNodes includes frame nodes", () => {
-        const source = "frame @layout {\n  spec {\n    status: done\n  }\n}";
+        const source = `${SHAPES.FRAME} @layout {\n  spec {\n    status: done\n  }\n}`;
         const result = parseSpecNodes(source);
         expect(result.nodes).toHaveLength(1);
-        expect(result.nodes[0].kind).toBe("frame");
+        expect(result.nodes[0].kind).toBe(SHAPES.FRAME);
         expect(result.nodes[0].annotations[0].value).toBe("done");
     });
 });
@@ -1077,9 +1098,9 @@ describe("Frame nodes — auto-layout container parsing", () => {
 describe("Deep nesting — 3+ levels of hierarchy", () => {
     it("parseDocumentSymbols handles 3-level nesting", () => {
         const lines = [
-            "group @level1 {",
-            "  group @level2 {",
-            "    rect @level3 {",
+            `${SHAPES.GROUP} @level1 {`,
+            `  ${SHAPES.GROUP} @level2 {`,
+            `    ${SHAPES.RECT} @level3 {`,
             "      w: 50 h: 50",
             "    }",
             "  }",
@@ -1096,9 +1117,9 @@ describe("Deep nesting — 3+ levels of hierarchy", () => {
 
     it("findSymbolAtLine finds deepest node in 3-level nesting", () => {
         const lines = [
-            "group @l1 {",    // 0
-            "  group @l2 {",  // 1
-            "    rect @l3 {", // 2
+            `${SHAPES.GROUP} @l1 {`,    // 0
+            `  ${SHAPES.GROUP} @l2 {`,  // 1
+            `    ${SHAPES.RECT} @l3 {`, // 2
             "      w: 50",    // 3
             "    }",          // 4
             "  }",            // 5
@@ -1115,9 +1136,9 @@ describe("Deep nesting — 3+ levels of hierarchy", () => {
         // - Find highest unselected group ancestor
         // - If all group ancestors are selected, return the leaf
         const lines = [
-            "group @outer {",      // 0
-            "  group @middle {",   // 1
-            "    rect @inner {",   // 2
+            `${SHAPES.GROUP} @outer {`,      // 0
+            `  ${SHAPES.GROUP} @middle {`,   // 1
+            `    ${SHAPES.RECT} @inner {`,   // 2
             "      w: 80 h: 60",   // 3
             "    }",               // 4
             "  }",                 // 5
@@ -1181,9 +1202,9 @@ describe("Deep nesting — 3+ levels of hierarchy", () => {
 
     it("findSymbolAtLine resolves each level independently in 3-level nesting", () => {
         const lines = [
-            "group @page {",           // 0
-            "  group @sidebar {",      // 1
-            "    rect @nav_item {",    // 2
+            `${SHAPES.GROUP} @page {`,           // 0
+            `  ${SHAPES.GROUP} @sidebar {`,      // 1
+            `    ${SHAPES.RECT} @nav_item {`,    // 2
             "      fill: #333",        // 3
             "      w: 200 h: 40",      // 4
             "    }",                    // 5
@@ -1202,4 +1223,3 @@ describe("Deep nesting — 3+ levels of hierarchy", () => {
         expect(findSymbolAtLine(symbols, 3)!.name).toBe("@nav_item");
     });
 });
-
