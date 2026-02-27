@@ -1113,4 +1113,83 @@ rect @card {
             card.width
         );
     }
+
+    #[test]
+    fn layout_text_centered_in_rect_inside_column() {
+        // Reproduces demo.fd: text inside rect inside column group
+        let input = r#"
+group @form {
+  layout: column gap=16 pad=32
+
+  rect @email_field {
+    w: 280 h: 44
+    text @email_hint "Email" { }
+  }
+
+  rect @login_btn {
+    w: 280 h: 48
+    text @btn_label "Sign In" { }
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let email_field = bounds[&graph.index_of(NodeId::intern("email_field")).unwrap()];
+        let email_hint = bounds[&graph.index_of(NodeId::intern("email_hint")).unwrap()];
+        let login_btn = bounds[&graph.index_of(NodeId::intern("login_btn")).unwrap()];
+        let btn_label = bounds[&graph.index_of(NodeId::intern("btn_label")).unwrap()];
+
+        // Text bounds must match parent rect for centering to work
+        eprintln!("email_field: x={:.1} y={:.1} w={:.1} h={:.1}", email_field.x, email_field.y, email_field.width, email_field.height);
+        eprintln!("email_hint:  x={:.1} y={:.1} w={:.1} h={:.1}", email_hint.x, email_hint.y, email_hint.width, email_hint.height);
+        eprintln!("login_btn:   x={:.1} y={:.1} w={:.1} h={:.1}", login_btn.x, login_btn.y, login_btn.width, login_btn.height);
+        eprintln!("btn_label:   x={:.1} y={:.1} w={:.1} h={:.1}", btn_label.x, btn_label.y, btn_label.width, btn_label.height);
+
+        assert!(
+            (email_hint.x - email_field.x).abs() < 0.01,
+            "email_hint x ({}) should match email_field x ({})",
+            email_hint.x, email_field.x
+        );
+        assert!(
+            (email_hint.y - email_field.y).abs() < 0.01,
+            "email_hint y ({}) should match email_field y ({})",
+            email_hint.y, email_field.y
+        );
+        assert!(
+            (email_hint.width - email_field.width).abs() < 0.01,
+            "email_hint width ({}) should match email_field width ({})",
+            email_hint.width, email_field.width
+        );
+        assert!(
+            (email_hint.height - email_field.height).abs() < 0.01,
+            "email_hint height ({}) should match email_field height ({})",
+            email_hint.height, email_field.height
+        );
+
+        assert!(
+            (btn_label.x - login_btn.x).abs() < 0.01,
+            "btn_label x ({}) should match login_btn x ({})",
+            btn_label.x, login_btn.x
+        );
+        assert!(
+            (btn_label.y - login_btn.y).abs() < 0.01,
+            "btn_label y ({}) should match login_btn y ({})",
+            btn_label.y, login_btn.y
+        );
+        assert!(
+            (btn_label.width - login_btn.width).abs() < 0.01,
+            "btn_label width ({}) should match login_btn width ({})",
+            btn_label.width, login_btn.width
+        );
+        assert!(
+            (btn_label.height - login_btn.height).abs() < 0.01,
+            "btn_label height ({}) should match login_btn height ({})",
+            btn_label.height, login_btn.height
+        );
+    }
 }

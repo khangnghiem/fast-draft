@@ -11,6 +11,11 @@
 - **DOCS**: Benchmark README with metrics table, FD feature matrix, and `compare.sh` auto-metrics script
 - **DOCS**: Feature coverage improvements — added named colors to kanban/org_chart, ellipse avatars + opacity to org_chart, property aliases + import + opacity to design_system; all Excalidraw JSONs normalized to pretty-printed format
 
+### v0.8.60
+
+- **FIX**: Text centering in nested layouts — text nodes without explicit coordinates now correctly center within their parent shapes (rect, ellipse, frame) even when nested inside column/row/grid groups
+- **TESTING**: Added `layout_text_centered_in_rect_inside_column` regression test
+
 ### v0.8.59
 
 - **UX (R4.12)**: Content-first emitter ordering — children now appear before appearance properties (fill, stroke, corner, font) inside node blocks, so non-tech users see content structure first and styling details second
