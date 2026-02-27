@@ -5,6 +5,22 @@
 
 ## Completed Requirements
 
+### v0.8.59
+
+- **UX (R4.12)**: Content-first emitter ordering — children now appear before appearance properties (fill, stroke, corner, font) inside node blocks, so non-tech users see content structure first and styling details second
+- **UX (R4.12)**: Section separators — complex documents with ≥2 sections now get `# ─── Styles ───`, `# ─── Layout ───`, `# ─── Constraints ───`, `# ─── Flows ───` comment headers for visual scannability
+- **UX (R4.13)**: Font weight names — parser accepts `bold`, `semibold`, `regular`, etc.; emitter outputs human-readable names instead of numeric codes (700→bold)
+- **UX (R4.14)**: Color hint comments — emitter appends `# purple`, `# red`, etc. after hex colors for instant recognition
+- **UX (R4.15)**: Named colors — `fill: purple`, `fill: blue`, etc. accepted by parser (17 colors: Tailwind palette)
+- **UX (R4.16)**: Property aliases — `background:`/`color:` → fill, `rounded:`/`radius:` → corner; parser accepts all, emitter uses canonical names
+- **UX (R4.17)**: Dimension units — `w: 320px`, `corner: 10px` accepted; `px` suffix stripped by parser
+- **TESTING**: 16 new tests — font weight names, named colors, property aliases, dimension units, roundtrip variants
+
+### v0.8.58
+
+- **BUG FIX (R3.36)**: Text auto-centering in shapes — single text child inside rect/ellipse/frame now auto-expands bounds to match parent, letting the renderer's center/middle alignment visually center the label; previously text appeared at the parent's top-left corner
+- **TESTING**: New `layout_text_centered_in_rect`, `layout_text_in_ellipse_centered`, `layout_text_explicit_position_not_expanded`, `layout_text_multiple_children_not_expanded` tests
+
 ### v0.8.57
 
 - **FEATURE (R3.34)**: Group reparent on drag-out — dragging a child fully outside its parent group now detaches it and reparents to the nearest containing ancestor (or root canvas); partial overlap still expands the group to contain the child. Replaced `expand_parent_group_bounds` with `handle_child_group_relationship` (expand vs detach), `expand_group_to_children`, `detach_child_from_group`, and `bboxes_overlap` helpers

@@ -12,15 +12,33 @@ use std::fmt::Write;
 pub fn emit_document(graph: &SceneGraph) -> String {
     let mut out = String::with_capacity(1024);
 
+    // Count sections to decide if separators add value
+    let has_imports = !graph.imports.is_empty();
+    let has_styles = !graph.styles.is_empty();
+    let children = graph.children(graph.root);
+    let has_constraints = graph.graph.node_indices().any(|idx| {
+        graph.graph[idx]
+            .constraints
+            .iter()
+            .any(|c| !matches!(c, Constraint::Position { .. }))
+    });
+    let has_edges = !graph.edges.is_empty();
+    let section_count =
+        has_imports as u8 + has_styles as u8 + has_constraints as u8 + has_edges as u8;
+    let use_separators = section_count >= 2;
+
     // Emit imports
     for import in &graph.imports {
         let _ = writeln!(out, "import \"{}\" as {}", import.path, import.namespace);
     }
-    if !graph.imports.is_empty() {
+    if has_imports {
         out.push('\n');
     }
 
-    // Emit style definitions first
+    // Emit style definitions
+    if use_separators && has_styles {
+        out.push_str("# ─── Styles ───\n\n");
+    }
     let mut styles: Vec<_> = graph.styles.iter().collect();
     styles.sort_by_key(|(id, _)| id.as_str().to_string());
     for (name, style) in &styles {
@@ -28,14 +46,19 @@ pub fn emit_document(graph: &SceneGraph) -> String {
         out.push('\n');
     }
 
-    // Emit root's children
-    let children = graph.children(graph.root);
+    // Emit root's children (node tree)
+    if use_separators && !children.is_empty() {
+        out.push_str("# ─── Layout ───\n\n");
+    }
     for child_idx in &children {
         emit_node(&mut out, graph, *child_idx, 0);
         out.push('\n');
     }
 
     // Emit top-level constraints (skip Position — emitted inline as x:/y:)
+    if use_separators && has_constraints {
+        out.push_str("# ─── Constraints ───\n\n");
+    }
     for idx in graph.graph.node_indices() {
         let node = &graph.graph[idx];
         for constraint in &node.constraints {
@@ -47,6 +70,12 @@ pub fn emit_document(graph: &SceneGraph) -> String {
     }
 
     // Emit edges
+    if use_separators && has_edges {
+        if has_constraints {
+            out.push('\n');
+        }
+        out.push_str("# ─── Flows ───\n\n");
+    }
     for edge in &graph.edges {
         emit_edge(&mut out, edge);
     }
@@ -237,6 +266,13 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         writeln!(out, "clip: true").unwrap();
     }
 
+    // Children — emitted before appearance properties so non-tech users
+    // see content structure first, styling details second.
+    let children = graph.children(idx);
+    for child_idx in &children {
+        emit_node(out, graph, *child_idx, depth + 1);
+    }
+
     // Style references
     for style_ref in &node.use_styles {
         indent(out, depth + 1);
@@ -310,12 +346,6 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         }
     }
 
-    // Children
-    let children = graph.children(idx);
-    for child_idx in &children {
-        emit_node(out, graph, *child_idx, depth + 1);
-    }
-
     // Animations
     for anim in &node.animations {
         emit_anim(out, anim, depth + 1);
@@ -359,7 +389,15 @@ fn emit_annotations(out: &mut String, annotations: &[Annotation], depth: usize) 
 fn emit_paint_prop(out: &mut String, name: &str, paint: &Paint, depth: usize) {
     indent(out, depth);
     match paint {
-        Paint::Solid(c) => writeln!(out, "{name}: {}", c.to_hex()).unwrap(),
+        Paint::Solid(c) => {
+            let hex = c.to_hex();
+            let hint = color_hint(&hex);
+            if hint.is_empty() {
+                writeln!(out, "{name}: {hex}").unwrap();
+            } else {
+                writeln!(out, "{name}: {hex}  # {hint}").unwrap();
+            }
+        }
         Paint::LinearGradient { angle, stops } => {
             write!(out, "{name}: linear({}deg", format_num(*angle)).unwrap();
             for stop in stops {
@@ -382,14 +420,93 @@ fn emit_paint_prop(out: &mut String, name: &str, paint: &Paint, depth: usize) {
 
 fn emit_font_prop(out: &mut String, font: &FontSpec, depth: usize) {
     indent(out, depth);
+    let weight_str = weight_number_to_name(font.weight);
     writeln!(
         out,
         "font: \"{}\" {} {}",
         font.family,
-        font.weight,
+        weight_str,
         format_num(font.size)
     )
     .unwrap();
+}
+
+/// Map numeric font weight to human-readable name.
+fn weight_number_to_name(weight: u16) -> &'static str {
+    match weight {
+        100 => "thin",
+        200 => "extralight",
+        300 => "light",
+        400 => "regular",
+        500 => "medium",
+        600 => "semibold",
+        700 => "bold",
+        800 => "extrabold",
+        900 => "black",
+        _ => "400", // fallback
+    }
+}
+
+/// Classify a hex color into a human-readable hue name.
+fn color_hint(hex: &str) -> &'static str {
+    let hex = hex.trim_start_matches('#');
+    let Some((r, g, b)) = (match hex.len() {
+        3 | 4 => {
+            let r = u8::from_str_radix(&hex[0..1], 16).unwrap_or(0) * 17;
+            let g = u8::from_str_radix(&hex[1..2], 16).unwrap_or(0) * 17;
+            let b = u8::from_str_radix(&hex[2..3], 16).unwrap_or(0) * 17;
+            Some((r, g, b))
+        }
+        6 | 8 => {
+            let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
+            let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
+            let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
+            Some((r, g, b))
+        }
+        _ => None,
+    }) else {
+        return "";
+    };
+
+    // Achromatic check
+    let max = r.max(g).max(b);
+    let min = r.min(g).min(b);
+    let diff = max - min;
+    if diff < 15 {
+        return match max {
+            0..=30 => "black",
+            31..=200 => "gray",
+            _ => "white",
+        };
+    }
+
+    // Hue classification
+    let rf = r as f32;
+    let gf = g as f32;
+    let bf = b as f32;
+    let hue = if max == r {
+        60.0 * (((gf - bf) / diff as f32) % 6.0)
+    } else if max == g {
+        60.0 * (((bf - rf) / diff as f32) + 2.0)
+    } else {
+        60.0 * (((rf - gf) / diff as f32) + 4.0)
+    };
+    let hue = if hue < 0.0 { hue + 360.0 } else { hue };
+
+    match hue as u16 {
+        0..=14 | 346..=360 => "red",
+        15..=39 => "orange",
+        40..=64 => "yellow",
+        65..=79 => "lime",
+        80..=159 => "green",
+        160..=179 => "teal",
+        180..=199 => "cyan",
+        200..=259 => "blue",
+        260..=279 => "purple",
+        280..=319 => "pink",
+        320..=345 => "rose",
+        _ => "",
+    }
 }
 
 fn emit_anim(out: &mut String, anim: &AnimKeyframe, depth: usize) {
@@ -1432,5 +1549,121 @@ rect @placed {
             })
             .expect("Position constraint missing after roundtrip");
         assert_eq!(pos, (100.0, 200.0));
+    }
+
+    #[test]
+    fn emit_children_before_styles() {
+        let input = r#"
+rect @box {
+  w: 200 h: 100
+  fill: #FF0000
+  corner: 10
+  text @label "Hello" {
+    fill: #FFFFFF
+    font: "Inter" 600 14
+  }
+  anim :hover {
+    fill: #CC0000
+    ease: ease_out 200ms
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+
+        // Children should appear before inline appearance properties
+        let child_pos = output.find("text @label").expect("child missing");
+        let fill_pos = output.find("fill: #FF0000").expect("fill missing");
+        let corner_pos = output.find("corner: 10").expect("corner missing");
+        let anim_pos = output.find("anim :hover").expect("anim missing");
+
+        assert!(
+            child_pos < fill_pos,
+            "children should appear before fill: child_pos={child_pos} fill_pos={fill_pos}"
+        );
+        assert!(
+            child_pos < corner_pos,
+            "children should appear before corner"
+        );
+        assert!(fill_pos < anim_pos, "fill should appear before animations");
+    }
+
+    #[test]
+    fn emit_section_separators() {
+        let input = r#"
+style accent {
+  fill: #6C5CE7
+}
+
+rect @a {
+  w: 100 h: 50
+}
+
+rect @b {
+  w: 100 h: 50
+}
+
+edge @flow {
+  from: @a
+  to: @b
+  arrow: end
+}
+
+@a -> center_in: canvas
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+
+        assert!(
+            output.contains("# ─── Styles ───"),
+            "should have Styles separator"
+        );
+        assert!(
+            output.contains("# ─── Layout ───"),
+            "should have Layout separator"
+        );
+        assert!(
+            output.contains("# ─── Flows ───"),
+            "should have Flows separator"
+        );
+    }
+
+    #[test]
+    fn roundtrip_children_before_styles() {
+        let input = r#"
+group @card {
+  layout: column gap=12 pad=20
+  text @title "Dashboard" {
+    font: "Inter" 600 20
+    fill: #111111
+  }
+  rect @body {
+    w: 300 h: 200
+    fill: #F5F5F5
+  }
+  fill: #FFFFFF
+  corner: 8
+  shadow: (0,2,8,#00000011)
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+
+        // Re-parse the re-ordered output
+        let graph2 = parse_document(&output).expect("re-parse of reordered output failed");
+        let card_idx = graph2.index_of(NodeId::intern("card")).unwrap();
+        assert_eq!(
+            graph2.children(card_idx).len(),
+            2,
+            "card should still have 2 children after roundtrip"
+        );
+
+        // Verify children appear before appearance
+        let child_pos = output.find("text @title").expect("child missing");
+        let fill_pos = output.find("fill: #FFFFFF").expect("card fill missing");
+        assert!(
+            child_pos < fill_pos,
+            "children should appear before parent fill"
+        );
     }
 }

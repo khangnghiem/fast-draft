@@ -296,6 +296,25 @@ fn resolve_children(
                     },
                 );
             }
+
+            // Auto-center: if parent is a shape with a single text child (no
+            // explicit position), expand text bounds to fill parent so the
+            // renderer's center/middle alignment visually centers the label.
+            let parent_is_shape = matches!(
+                parent_node.kind,
+                NodeKind::Rect { .. } | NodeKind::Ellipse { .. } | NodeKind::Frame { .. }
+            );
+            if parent_is_shape && children.len() == 1 {
+                let child_idx = children[0];
+                let child_node = &graph.graph[child_idx];
+                let has_position = child_node
+                    .constraints
+                    .iter()
+                    .any(|c| matches!(c, Constraint::Position { .. }));
+                if matches!(child_node.kind, NodeKind::Text { .. }) && !has_position {
+                    bounds.insert(child_idx, parent_bounds);
+                }
+            }
         }
     }
 
@@ -948,6 +967,150 @@ group @panel {
             "panel bottom ({}) must contain b bottom ({})",
             panel.y + panel.height,
             b.y + b.height
+        );
+    }
+
+    #[test]
+    fn layout_text_centered_in_rect() {
+        let input = r#"
+rect @btn {
+  w: 320 h: 44
+  text @label "View Details" {
+    font: "Inter" 600 14
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let btn = bounds[&graph.index_of(NodeId::intern("btn")).unwrap()];
+        let label = bounds[&graph.index_of(NodeId::intern("label")).unwrap()];
+
+        // Text bounds should match parent rect (renderer handles visual centering)
+        assert!(
+            (label.x - btn.x).abs() < 0.01,
+            "text x ({}) should match parent ({})",
+            label.x,
+            btn.x
+        );
+        assert!(
+            (label.y - btn.y).abs() < 0.01,
+            "text y ({}) should match parent ({})",
+            label.y,
+            btn.y
+        );
+        assert!(
+            (label.width - btn.width).abs() < 0.01,
+            "text width ({}) should match parent ({})",
+            label.width,
+            btn.width
+        );
+        assert!(
+            (label.height - btn.height).abs() < 0.01,
+            "text height ({}) should match parent ({})",
+            label.height,
+            btn.height
+        );
+    }
+
+    #[test]
+    fn layout_text_in_ellipse_centered() {
+        let input = r#"
+ellipse @badge {
+  rx: 60 ry: 30
+  text @count "42" {
+    font: "Inter" 700 20
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let badge = bounds[&graph.index_of(NodeId::intern("badge")).unwrap()];
+        let count = bounds[&graph.index_of(NodeId::intern("count")).unwrap()];
+
+        // Text bounds should fill the ellipse bounding box
+        assert!(
+            (count.width - badge.width).abs() < 0.01,
+            "text width ({}) should match ellipse ({})",
+            count.width,
+            badge.width
+        );
+        assert!(
+            (count.height - badge.height).abs() < 0.01,
+            "text height ({}) should match ellipse ({})",
+            count.height,
+            badge.height
+        );
+    }
+
+    #[test]
+    fn layout_text_explicit_position_not_expanded() {
+        let input = r#"
+rect @btn {
+  w: 320 h: 44
+  text @label "OK" {
+    font: "Inter" 600 14
+    x: 10 y: 5
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let btn = bounds[&graph.index_of(NodeId::intern("btn")).unwrap()];
+        let label = bounds[&graph.index_of(NodeId::intern("label")).unwrap()];
+
+        // Text with explicit position should NOT be expanded to parent
+        assert!(
+            label.width < btn.width,
+            "text width ({}) should be < parent ({}) when explicit position is set",
+            label.width,
+            btn.width
+        );
+    }
+
+    #[test]
+    fn layout_text_multiple_children_not_expanded() {
+        let input = r#"
+rect @card {
+  w: 200 h: 100
+  text @title "Title" {
+    font: "Inter" 600 16
+  }
+  text @subtitle "Sub" {
+    font: "Inter" 400 12
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let card = bounds[&graph.index_of(NodeId::intern("card")).unwrap()];
+        let title = bounds[&graph.index_of(NodeId::intern("title")).unwrap()];
+
+        // Multiple children: text should NOT be expanded to parent
+        assert!(
+            title.width < card.width,
+            "text width ({}) should be < parent ({}) with multiple children",
+            title.width,
+            card.width
         );
     }
 }

@@ -71,3 +71,22 @@ new_rel_y = child_abs_y - new_parent_abs_y
 | `sync_move_detaches_child_from_group`      | Child fully outside → reparented to root |
 | `sync_move_detaches_through_nested_groups` | Multi-level jump                         |
 | `sync_move_within_group_no_detach`         | Small move inside → no change            |
+
+## Visual Feedback (R3.35 — planned)
+
+### Near-Detach (overlap < 25% of child area)
+
+| Visual                                                | Duration      |
+| ----------------------------------------------------- | ------------- |
+| Group border → purple glow                            | 100ms ease-in |
+| Dashed rubber-band line (child center → group center) | Real-time     |
+
+### On Detach (zero overlap)
+
+| Visual                                 | Duration       |
+| -------------------------------------- | -------------- |
+| Group shrink to fit remaining children | 120ms ease-out |
+| Child scale pop (105% → 100%)          | 80ms spring    |
+| Child cyan/green glow fade-out         | 180ms ease-out |
+
+Total perceived snap: ~120ms (shrink + pop run in parallel).
