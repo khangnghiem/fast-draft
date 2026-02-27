@@ -633,6 +633,8 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       margin-bottom: 40px;
     }
     .onboard-card {
+      appearance: none;
+      display: block;
       width: 140px;
       padding: 20px 16px;
       background: rgba(255,255,255,0.06);
@@ -641,12 +643,18 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       text-align: center;
       cursor: pointer;
       transition: all 0.2s ease;
+      font-family: inherit;
+      color: inherit;
     }
     .onboard-card:hover {
       background: rgba(255,255,255,0.12);
       border-color: var(--fd-accent);
       transform: translateY(-4px);
       box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .onboard-card:focus-visible {
+      outline: 2px solid var(--fd-accent);
+      outline-offset: 2px;
     }
     .onboard-card-icon { font-size: 28px; display: block; margin-bottom: 10px; }
     .onboard-card-title {
@@ -2164,21 +2172,21 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       <div class="onboard-heading">Start drawing</div>
       <div class="onboard-sub">Create something beautiful</div>
       <div class="onboard-cards">
-        <div class="onboard-card" data-tool="rect">
+        <button class="onboard-card" type="button" data-tool="rect">
           <span class="onboard-card-icon">📐</span>
           <div class="onboard-card-title">Draw shapes</div>
           <div class="onboard-card-desc">Rectangles, ellipses, frames</div>
-        </div>
-        <div class="onboard-card" data-tool="pen">
+        </button>
+        <button class="onboard-card" type="button" data-tool="pen">
           <span class="onboard-card-icon">✏️</span>
           <div class="onboard-card-title">Sketch freely</div>
           <div class="onboard-card-desc">Freehand pen drawings</div>
-        </div>
-        <div class="onboard-card" data-tool="text">
+        </button>
+        <button class="onboard-card" type="button" data-tool="text">
           <span class="onboard-card-icon">📝</span>
           <div class="onboard-card-title">Type text</div>
           <div class="onboard-card-desc">Labels, headings, notes</div>
-        </div>
+        </button>
       </div>
       <div class="onboard-hint">Press <kbd>?</kbd> for all shortcuts</div>
     </div>
