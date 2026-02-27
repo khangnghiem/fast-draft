@@ -206,7 +206,15 @@ fn render_node(
             }
         }
         NodeKind::Text { content } => {
-            draw_text(ctx, node_bounds, content, &style);
+            // Check if text is inside a shape (Rect/Ellipse) for alignment defaults
+            let parent_is_shape = graph.parent(idx).is_some_and(|pid| {
+                let pk = &graph.graph[pid].kind;
+                matches!(
+                    pk,
+                    NodeKind::Rect { .. } | NodeKind::Ellipse { .. } | NodeKind::Frame { .. }
+                )
+            });
+            draw_text(ctx, node_bounds, content, &style, parent_is_shape);
         }
         NodeKind::Group { .. } => {
             draw_group_bg(ctx, node_bounds, &style);
@@ -377,7 +385,13 @@ fn draw_ellipse(
     ctx.restore();
 }
 
-fn draw_text(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, content: &str, style: &Style) {
+fn draw_text(
+    ctx: &CanvasRenderingContext2d,
+    b: &ResolvedBounds,
+    content: &str,
+    style: &Style,
+    in_shape: bool,
+) {
     ctx.save();
     apply_opacity(ctx, style);
 
@@ -392,7 +406,12 @@ fn draw_text(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, content: &str, 
     ctx.set_fill_style_str(&fill_color);
 
     // Apply horizontal alignment
-    let halign = style.text_align.unwrap_or(TextAlign::Center);
+    let default_halign = if in_shape {
+        TextAlign::Center
+    } else {
+        TextAlign::Left
+    };
+    let halign = style.text_align.unwrap_or(default_halign);
     let text_align_str = match halign {
         TextAlign::Left => "left",
         TextAlign::Center => "center",
@@ -401,7 +420,12 @@ fn draw_text(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, content: &str, 
     ctx.set_text_align(text_align_str);
 
     // Apply vertical alignment
-    let valign = style.text_valign.unwrap_or(TextVAlign::Middle);
+    let default_valign = if in_shape {
+        TextVAlign::Middle
+    } else {
+        TextVAlign::Top
+    };
+    let valign = style.text_valign.unwrap_or(default_valign);
     let text_baseline_str = match valign {
         TextVAlign::Top => "top",
         TextVAlign::Middle => "middle",

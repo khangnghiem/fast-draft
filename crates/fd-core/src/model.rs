@@ -567,16 +567,17 @@ impl SceneGraph {
         self.graph.add_edge(new_parent, child, ());
     }
 
-    /// Get children of a node in insertion order.
+    /// Get children of a node in document (insertion) order.
     ///
-    /// `petgraph` returns outgoing neighbors in reverse insertion order,
-    /// so we reverse the collected vec to restore document order.
+    /// Sorts by `NodeIndex` so the result is deterministic regardless of
+    /// how `petgraph` iterates its adjacency list on different targets
+    /// (native vs WASM).
     pub fn children(&self, idx: NodeIndex) -> Vec<NodeIndex> {
         let mut children: Vec<NodeIndex> = self
             .graph
             .neighbors_directed(idx, petgraph::Direction::Outgoing)
             .collect();
-        children.reverse();
+        children.sort();
         children
     }
 

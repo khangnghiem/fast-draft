@@ -94,15 +94,23 @@ fn resolve_children(
 
     match layout {
         LayoutMode::Column { gap, pad } => {
+            let content_width = parent_bounds.width - 2.0 * pad;
             // Pass 1: initialize children at parent origin + pad, recurse to resolve nested groups
             for &child_idx in &children {
-                let child_size = intrinsic_size(&graph.graph[child_idx]);
+                let child_node = &graph.graph[child_idx];
+                let child_size = intrinsic_size(child_node);
+                // Stretch text nodes to fill column width (like CSS align-items: stretch)
+                let w = if matches!(child_node.kind, NodeKind::Text { .. }) {
+                    content_width.max(child_size.0)
+                } else {
+                    child_size.0
+                };
                 bounds.insert(
                     child_idx,
                     ResolvedBounds {
                         x: parent_bounds.x + pad,
                         y: parent_bounds.y + pad,
-                        width: child_size.0,
+                        width: w,
                         height: child_size.1,
                     },
                 );
@@ -692,6 +700,85 @@ group @card {
             (amount.height - 36.0).abs() < 0.01,
             "amount height should be 36 (font size), got {}",
             amount.height
+        );
+    }
+
+    #[test]
+    fn layout_dashboard_card_with_center_in() {
+        let input = r#"
+group @card {
+  layout: column gap=12 pad=24
+  text @heading "Monthly Revenue" { font: "Inter" 600 18 }
+  text @amount "$48,250" { font: "Inter" 700 36 }
+  text @change "+12.5% from last month" { font: "Inter" 400 14 }
+  rect @chart { w: 320 h: 160 }
+  rect @button { w: 320 h: 44 }
+}
+@card -> center_in: canvas
+"#;
+        let graph = parse_document(input).unwrap();
+        let card_idx = graph.index_of(NodeId::intern("card")).unwrap();
+
+        // graph.children() must return document order regardless of platform
+        let children: Vec<_> = graph
+            .children(card_idx)
+            .iter()
+            .map(|idx| graph.graph[*idx].id.as_str().to_string())
+            .collect();
+        assert_eq!(children[0], "heading", "First child must be heading");
+        assert_eq!(children[4], "button", "Last child must be button");
+
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let heading = bounds[&graph.index_of(NodeId::intern("heading")).unwrap()];
+        let amount = bounds[&graph.index_of(NodeId::intern("amount")).unwrap()];
+        let change = bounds[&graph.index_of(NodeId::intern("change")).unwrap()];
+        let chart = bounds[&graph.index_of(NodeId::intern("chart")).unwrap()];
+        let button = bounds[&graph.index_of(NodeId::intern("button")).unwrap()];
+        let card = bounds[&graph.index_of(NodeId::intern("card")).unwrap()];
+
+        // All children must be INSIDE the card
+        assert!(
+            heading.y >= card.y,
+            "heading.y({}) must be >= card.y({})",
+            heading.y,
+            card.y
+        );
+        assert!(
+            button.y + button.height <= card.y + card.height + 0.1,
+            "button bottom({}) must be <= card bottom({})",
+            button.y + button.height,
+            card.y + card.height
+        );
+
+        // Document order preserved after center_in shift
+        assert!(
+            heading.y < amount.y,
+            "heading.y({}) < amount.y({})",
+            heading.y,
+            amount.y
+        );
+        assert!(
+            amount.y < change.y,
+            "amount.y({}) < change.y({})",
+            amount.y,
+            change.y
+        );
+        assert!(
+            change.y < chart.y,
+            "change.y({}) < chart.y({})",
+            change.y,
+            chart.y
+        );
+        assert!(
+            chart.y < button.y,
+            "chart.y({}) < button.y({})",
+            chart.y,
+            button.y
         );
     }
 }
