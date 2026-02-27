@@ -29,7 +29,7 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
                 .map_err(|e| format!("Import parse error: {e}"))?;
             graph.imports.push(import);
             pending_comments.clear();
-        } else if rest.starts_with("style ") {
+        } else if rest.starts_with("style ") || rest.starts_with("theme ") {
             let (name, style) = parse_style_block
                 .parse_next(&mut rest)
                 .map_err(|e| format!("Style parse error: {e}"))?;
@@ -334,7 +334,7 @@ fn parse_spec_item(input: &mut &str) -> ModalResult<Annotation> {
 // ─── Style block parser ─────────────────────────────────────────────────
 
 fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Style)> {
-    let _ = "style".parse_next(input)?;
+    let _ = alt(("theme", "style")).parse_next(input)?;
     let _ = space1.parse_next(input)?;
     let name = parse_identifier.map(NodeId::intern).parse_next(input)?;
     skip_space(input);
@@ -508,7 +508,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
             // (they were consumed by the preceding skip_ws_and_comments/collect call)
             child.comments = Vec::new(); // placeholder; child attaches its own leading comments
             children.push(child);
-        } else if input.starts_with("anim") {
+        } else if input.starts_with("when") || input.starts_with("anim") {
             animations.push(parse_anim_block.parse_next(input)?);
         } else {
             parse_node_property(
@@ -900,7 +900,7 @@ fn parse_align_value(input: &mut &str, style: &mut Style) -> ModalResult<()> {
 // ─── Animation block parser ─────────────────────────────────────────────
 
 fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
-    let _ = "anim".parse_next(input)?;
+    let _ = alt(("when", "anim")).parse_next(input)?;
     let _ = space1.parse_next(input)?;
     let _ = ':'.parse_next(input)?;
     let trigger_str = parse_identifier.parse_next(input)?;
@@ -1010,7 +1010,7 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<Edge> {
     while !input.starts_with('}') {
         if input.starts_with("spec ") || input.starts_with("spec{") {
             annotations.extend(parse_spec_block.parse_next(input)?);
-        } else if input.starts_with("anim") {
+        } else if input.starts_with("when") || input.starts_with("anim") {
             animations.push(parse_anim_block.parse_next(input)?);
         } else {
             let prop = parse_identifier.parse_next(input)?;

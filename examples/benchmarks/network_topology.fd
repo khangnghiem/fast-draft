@@ -1,22 +1,22 @@
 # Network Topology — Systems Architect use case
 # Demonstrates: 12 edges with labels, multiple curve types, spec blocks, named colors
 
-style server_box {
+theme server_box {
   fill: #EFF6FF
   corner: 8
 }
 
-style db_box {
+theme db_box {
   fill: #FEF3C7
   corner: 8
 }
 
-style cache_box {
+theme cache_box {
   fill: #D1FAE5
   corner: 8
 }
 
-style ext_box {
+theme ext_box {
   fill: #F3E8FF
   corner: 8
 }

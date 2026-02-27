@@ -5,6 +5,15 @@
 
 ## Completed Requirements
 
+### Theme/When Rename + Emitter Reorder
+
+- **BREAKING**: Renamed `style` → `theme` for top-level reusable definitions, `anim` → `when` for animation/interaction blocks — both old keywords still accepted by parser for backward compatibility, emitter always outputs new keywords
+- **UX (R4.18)**: Emitter reorder — node content now emits `spec → children → style properties → when blocks`, putting all visual/interaction properties at the tail for clean Spec View folding
+- **TREE-SITTER**: Grammar updated to accept both `theme`/`style` and `when`/`anim` keywords
+- **VS CODE**: `fd-parse.ts` regexes, `computeSpecHideLines`, `parseDocumentSymbols`, and `tree-preview.ts` all updated for both keywords
+- **EXAMPLES**: All 25 `.fd` files updated to use `theme` and `when` keywords
+- **TESTING**: Updated 9 test string groups in `fd-parse.test.ts`, 2 in `format.rs`; all 166 TS tests pass
+
 ### Benchmark Examples
 
 - **DOCS**: 11 benchmark pairs in `examples/benchmarks/` — each pair contains an `.fd` file and equivalent `.excalidraw.json` to demonstrate FD's conciseness advantage (avg 6.5× fewer bytes, 3.2× fewer tokens). Covers 9 user personas: Product Designer (login_form, dashboard_card), Project Manager (kanban_board), HR/Manager (org_chart), Software Engineer (api_flowchart), Mobile Designer (mobile_onboarding), Marketing (pricing_table), UX Researcher (wireframe_ecommerce), Data Analyst (data_dashboard), Systems Architect (network_topology), Brand Designer (design_system)

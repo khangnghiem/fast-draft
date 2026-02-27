@@ -1,22 +1,22 @@
-style dark_accent {
+theme dark_accent {
   fill: #A29BFE
 }
 
-style dark_bg {
+theme dark_bg {
   fill: #1A1A2E
 }
 
-style dark_card {
+theme dark_card {
   fill: #2D2D44
   corner: 12
 }
 
-style dark_muted {
+theme dark_muted {
   fill: #6B7280
   font: "Inter" 400 12
 }
 
-style dark_text {
+theme dark_text {
   fill: #E0E0E0
   font: "Inter" 400 14
 }
@@ -41,7 +41,7 @@ group @settings {
         fill: #999999
         font: "Inter" 400 20
       }
-      anim :hover {
+      when :hover {
         fill: #3D3D5C
         ease: ease_out 150ms
       }
@@ -86,7 +86,7 @@ group @settings {
     use: dark_card
     x: 238.09
     y: 834.82
-    anim :hover {
+    when :hover {
       fill: #353550
       ease: ease_out 150ms
     }
@@ -118,7 +118,7 @@ group @settings {
         }
       }
     }
-    anim :hover {
+    when :hover {
       fill: #353550
       ease: ease_out 150ms
     }
@@ -160,7 +160,7 @@ group @settings {
         }
       }
     }
-    anim :hover {
+    when :hover {
       fill: #353550
       ease: ease_out 150ms
     }
@@ -199,11 +199,11 @@ group @settings {
       fill: #E17055
       font: "Inter" 600 14
     }
-    anim :hover {
+    when :hover {
       fill: #E1705540
       ease: ease_out 150ms
     }
-    anim :press {
+    when :press {
       scale: 0.97
       ease: ease_out 100ms
     }

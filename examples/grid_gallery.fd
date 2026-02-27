@@ -1,4 +1,4 @@
-style card_text {
+theme card_text {
   fill: #FFFFFF
   font: "Inter" 400 14
 }
@@ -25,7 +25,7 @@ group @gallery {
       text @Alo "Stars" {
         use: card_text
       }
-      anim :hover {
+      when :hover {
         opacity: 0.9
         scale: 1.04
         ease: spring 300ms
@@ -43,7 +43,7 @@ group @gallery {
         x: 387.91
         y: 996.24
       }
-      anim :hover {
+      when :hover {
         opacity: 0.9
         scale: 1.04
         ease: spring 300ms
@@ -57,7 +57,7 @@ group @gallery {
       text @_anon_15 "Forest" {
         use: card_text
       }
-      anim :hover {
+      when :hover {
         opacity: 0.9
         scale: 1.04
         ease: spring 300ms
@@ -73,7 +73,7 @@ group @gallery {
       text @_anon_14 "Blossoms" {
         use: card_text
       }
-      anim :hover {
+      when :hover {
         opacity: 0.9
         scale: 1.04
         ease: spring 300ms
@@ -87,7 +87,7 @@ group @gallery {
       text @_anon_13 "City" {
         use: card_text
       }
-      anim :hover {
+      when :hover {
         opacity: 0.9
         scale: 1.04
         ease: spring 300ms
@@ -104,7 +104,7 @@ group @gallery {
         fill: #333333
         font: "Inter" 400 14
       }
-      anim :hover {
+      when :hover {
         opacity: 0.9
         scale: 1.04
         ease: spring 300ms
@@ -118,7 +118,7 @@ group @gallery {
       text @_anon_11 "Mountain" {
         use: card_text
       }
-      anim :hover {
+      when :hover {
         opacity: 0.9
         scale: 1.04
         ease: spring 300ms
@@ -136,7 +136,7 @@ group @gallery {
         x: 317.43
         y: 684.07
       }
-      anim :hover {
+      when :hover {
         opacity: 0.9
         scale: 1.04
         ease: spring 300ms
@@ -150,7 +150,7 @@ group @gallery {
       text @sunset "Sunset" {
         use: card_text
       }
-      anim :hover {
+      when :hover {
         opacity: 0.9
         scale: 1.04
         ease: spring 300ms

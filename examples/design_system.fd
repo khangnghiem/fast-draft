@@ -1,47 +1,47 @@
-style border {
+theme border {
   fill: #E8E8EC
 }
 
-style danger {
+theme danger {
   fill: #E17055
 }
 
-style primary {
+theme primary {
   fill: #6C5CE7
 }
 
-style primary_dark {
+theme primary_dark {
   fill: #5A4BD1
 }
 
-style secondary {
+theme secondary {
   fill: #00B894
 }
 
-style surface {
+theme surface {
   fill: #FFFFFF
 }
 
-style surface_alt {
+theme surface_alt {
   fill: #F8F9FA
 }
 
-style text_muted {
+theme text_muted {
   fill: #9CA3AF
   font: "Inter" 400 12
 }
 
-style text_primary {
+theme text_primary {
   fill: #1A1A2E
   font: "Inter" 400 16
 }
 
-style text_secondary {
+theme text_secondary {
   fill: #6B7280
   font: "Inter" 400 14
 }
 
-style warning {
+theme warning {
   fill: #FDCB6E
 }
 
@@ -163,12 +163,12 @@ group @color_palette {
         fill: #FFFFFF
         font: "Inter" 600 15
       }
-      anim :hover {
+      when :hover {
         fill: #5A4BD1
         scale: 1.02
         ease: spring 200ms
       }
-      anim :press {
+      when :press {
         scale: 0.97
         ease: ease_out 100ms
       }
@@ -183,12 +183,12 @@ group @color_palette {
         fill: #6C5CE7
         font: "Inter" 600 15
       }
-      anim :hover {
+      when :hover {
         fill: #F0EDFC
         scale: 1.02
         ease: spring 200ms
       }
-      anim :press {
+      when :press {
         scale: 0.97
         ease: ease_out 100ms
       }
@@ -202,7 +202,7 @@ group @color_palette {
         fill: #6B7280
         font: "Inter" 500 15
       }
-      anim :hover {
+      when :hover {
         fill: #F5F5F7
         ease: ease_out 150ms
       }
@@ -216,7 +216,7 @@ group @color_palette {
         fill: #FFFFFF
         font: "Inter" 600 15
       }
-      anim :hover {
+      when :hover {
         fill: #D63031
         scale: 1.02
         ease: spring 200ms

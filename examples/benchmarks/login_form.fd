@@ -1,22 +1,22 @@
 # Login Form — Product Designer use case
 # Demonstrates: nested groups, style reuse, spec annotations, animations
 
-style card_bg {
+theme card_bg {
   fill: #FFFFFF
   corner: 16
 }
 
-style input_field {
+theme input_field {
   fill: #F8F9FA
   corner: 8
 }
 
-style primary_btn {
+theme primary_btn {
   fill: #6C5CE7
   corner: 10
 }
 
-style secondary_btn {
+theme secondary_btn {
   fill: #F0F0F5
   corner: 10
 }
@@ -91,7 +91,7 @@ group @login_form {
       font: "Inter" semibold 15
       fill: #FFFFFF
     }
-    anim :hover {
+    when :hover {
       fill: #5A4BD1
       scale: 1.02
       ease: spring 200ms
@@ -113,7 +113,7 @@ group @login_form {
       font: "Inter" medium 14
       fill: #374151
     }
-    anim :hover {
+    when :hover {
       fill: #E8E8ED
       ease: ease_out 150ms
     }

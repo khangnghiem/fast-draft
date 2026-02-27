@@ -2,17 +2,17 @@
 # Onboarding User Flow — multi-step with error paths
 import "../../examples/design_system.fd" as ds
 
-style screen {
+theme screen {
   fill: #FFFFFF
   corner: 16
 }
 
-style screen_title {
+theme screen_title {
   fill: #1A1A2E
   font: "Inter" 700 20
 }
 
-style flow_edge {
+theme flow_edge {
   stroke: #6C5CE7 2
 }
 

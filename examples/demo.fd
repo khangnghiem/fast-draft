@@ -1,86 +1,88 @@
-# FD v1
-# A login form mockup — demonstrates the FD format
+# ─── Styles ───
 
-style base_text {
-  font: "Inter" 14
-  fill: #333333
+theme accent {
+  fill: #6C5CE7  # blue
 }
 
-style accent {
-  fill: #6C5CE7
+theme base_text {
+  fill: #333333  # gray
+  font: "Inter" regular 14
 }
 
+# ─── Layout ───
+
+# ─── Layout ───
+# ─── Layout ───
+# ─── Layout ───
+# ─── Layout ───
+# ─── Layout ───
+# ─── Layout ───
 group @login_form {
-  layout: column gap=16 pad=32
-
   spec {
     "User authentication entry point"
     accept: "email + password fields visible"
     accept: "sign-in button triggers auth flow"
     status: draft
   }
-
+  layout: column gap=16 pad=32
   text @title "Welcome Back" {
-    use: base_text
-    font: "Inter" 600 24
-    fill: #1A1A2E
     spec "Brand greeting — sets emotional tone"
+    use: base_text
+    fill: #1A1A2E  # blue
+    font: "Inter" semibold 24
   }
-
   rect @email_field {
-    w: 280 h: 44
-    corner: 8
-    stroke: #DDDDDD 1
     spec {
       "Email input field"
       accept: "validates email format on blur"
       accept: "shows error state with red border"
       priority: high
     }
-
+    w: 280 h: 44
     text @email_hint "Email" {
       use: base_text
-      fill: #999999
+      fill: #999999  # gray
     }
-  }
-
-  rect @pass_field {
-    w: 280 h: 44
-    corner: 8
     stroke: #DDDDDD 1
+    corner: 8
+  }
+  rect @pass_field {
     spec {
       "Password input field"
       accept: "minimum 8 characters"
+      priority: high
     }
-
+    w: 280 h: 44
     text @pass_hint "Password" {
       use: base_text
-      fill: #999999
+      fill: #999999  # gray
     }
+    stroke: #DDDDDD 1
+    corner: 8
   }
-
   rect @login_btn {
-    w: 280 h: 48
-    corner: 10
-    use: accent
     spec {
       "Primary CTA — triggers login API call"
       accept: "disabled state when fields empty"
       accept: "loading spinner during auth"
-      status: in_progress
+      status: done
+      priority: high
     }
-
+    w: 280 h: 48
     text @btn_label "Sign In" {
-      font: "Inter" 600 16
-      fill: #FFFFFF
+      fill: #FFFFFF  # white
+      font: "Inter" semibold 16
     }
-
-    anim :hover {
-      fill: #5A4BD1
+    use: accent
+    corner: 10
+    when :hover {
+      fill: #5A4BD1  # blue
       scale: 1.02
       ease: spring 300ms
     }
   }
 }
+
+# ─── Constraints ───
 
 @login_form -> center_in: canvas
