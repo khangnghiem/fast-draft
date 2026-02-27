@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.8.58
+
+- **BUG FIX (R3.36)**: Text auto-centering in shapes — single text child inside rect/ellipse/frame now auto-expands bounds to match parent, letting the renderer's center/middle alignment visually center the label; previously text appeared at the parent's top-left corner
+- **TESTING**: New `layout_text_centered_in_rect`, `layout_text_in_ellipse_centered`, `layout_text_explicit_position_not_expanded`, `layout_text_multiple_children_not_expanded` tests
+
 ### v0.8.57
 
 - **FEATURE (R3.34)**: Group reparent on drag-out — dragging a child fully outside its parent group now detaches it and reparents to the nearest containing ancestor (or root canvas); partial overlap still expands the group to contain the child. Replaced `expand_parent_group_bounds` with `handle_child_group_relationship` (expand vs detach), `expand_group_to_children`, `detach_child_from_group`, and `bboxes_overlap` helpers

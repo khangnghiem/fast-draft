@@ -45,6 +45,8 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.24** _(done)_: Group drill-down — click child of unselected group → selects parent; click again → drills to child (Figma/Sketch) → [spec](specs/selection.md)
 - **R3.26** _(done)_: Arrow-key nudge — 1px (Shift = 10px); matches Figma/Sketch standard
 - **R3.34** _(done)_: Group reparent on drag-out — child fully outside group bounds detaches to nearest containing ancestor; partial overlap expands group → [spec](specs/group-reparent.md)
+- **R3.35** _(planned)_: Detach snap animation — purple glow on near-detach, rubber-band line, scale pop + glow on detach; all animations <200ms → [spec](specs/group-reparent.md)
+- **R3.36** _(done)_: Auto-center text in shapes — single text child inside rect/ellipse/frame auto-expands bounds to parent; renderer's center/middle alignment visually centers the label
 
 #### R3b: Drawing Tools
 
@@ -149,42 +151,43 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 
 <!-- Maps each requirement to its test functions. If a row is empty, the requirement lacks test coverage. -->
 
-| Requirement | Test Functions                                                    | Coverage                       |
-| ----------- | ----------------------------------------------------------------- | ------------------------------ |
-| R1.1–R1.8   | `parser::tests::parse_*`, `emitter::tests::emit_*`, `roundtrip_*` | ✅ 76 fd-core + 18 integration |
-| R1.9        | `emit_annotations_*`, `roundtrip_preserves_annotations`           | ✅                             |
-| R1.10       | `parse_edge_*`, `emit_edge_*`, `roundtrip_edge_*`                 | ✅                             |
-| R1.11       | `emit_edge_with_trigger_anim`, `roundtrip_edge_hover_anim`        | ✅                             |
-| R1.12       | `emit_edge_flow_*`, `roundtrip_edge_flow_*`                       | ✅                             |
-| R1.13       | `emit_generic_node`, `roundtrip_generic_*`                        | ✅                             |
-| R1.14       | `parse_import`, `emit_import`, `roundtrip_import`                 | ✅                             |
-| R1.15       | `emit_bg_shorthand`, `roundtrip_bg_shorthand`                     | ✅                             |
-| R1.16       | `roundtrip_comment_*`                                             | ✅                             |
-| R1.17       | `parse_align_*`, `roundtrip_align*`, `style_merging_align`        | ✅                             |
-| R2.1–R2.5   | `sync::tests::sync_*`, `bidi_sync::*`, `e2e-ux: Canvas→Code`      | ✅ 12 sync + 9 integ + 4 E2E   |
-| R3.1        | `tools::tests::select_tool_*`, `hit::tests::*`                    | ✅ 5 tests + 3 hit tests       |
-| R3.2        | `select_tool_drag`, `select_tool_shift_drag_*`, resize integ.     | ✅ 3 tests                     |
-| R3.3        | `rect_tool_*`, `ellipse_tool_*`, `text_tool_*`                    | ✅ 7 tests                     |
-| R3.4        | _(pen tool — captures pressure, no unit test)_                    | ⚠️ No pen tool tests           |
-| R3.5        | _(planned)_                                                       | —                              |
-| R3.6        | E2E UX: zoom/pan/pinch tests in `e2e-ux.test.ts`                  | ✅ 4 E2E tests                 |
-| R3.7        | `commands::tests::*`, `undo_redo::*`                              | ✅ 5 unit + 7 integration      |
-| R3.8–R3.14  | E2E UX: properties, color, theme, view mode in `e2e-ux.test.ts`   | ✅ 12 E2E tests                |
-| R3.16       | `hit_test_resize_handle` (WASM), E2E UX cursor tests              | ⚠️ WASM-side only              |
-| R3.17       | E2E UX: grid/snap tests                                           | ⚠️ JS-only                     |
-| R3.18       | E2E UX: dimension tooltip tests                                   | ⚠️ JS-only                     |
-| R3.20       | E2E UX: zoom calculations, pinch clamp                            | ✅ 4 E2E tests                 |
-| R3.21       | E2E UX: grid spacing adaptation                                   | ✅ 3 E2E tests                 |
-| R3.24       | `effective_target_*`, `is_ancestor_of`, `hit_test_nested_groups`  | ✅ 5 Rust + 4 E2E tests        |
-| R3.25       | E2E UX: minimap scale, click-to-navigate                          | ✅ 2 E2E tests                 |
-| R3.26       | E2E UX: arrow nudge 1px/10px                                      | ✅ 2 E2E tests                 |
-| R3.27       | E2E UX: rename sanitization, word-boundary                        | ✅ 3 E2E tests                 |
-| R3.28       | E2E UX: inline text editing, hex luminance                        | ✅ 3 E2E tests                 |
-| R3.29       | E2E UX: animation tween engine                                    | ✅ 2 E2E tests                 |
-| R3.30       | _(JS-only, camera animation)_                                     | ⚠️ JS-only                     |
-| R4.1–R4.6   | Covered by R1/R2 tests                                            | ✅                             |
-| R4.7–R4.11  | _(extension-side, no test)_                                       | ❌                             |
-| R5.1–R5.8   | `hit::tests::*`, `resolve::tests::*`, `render2d::tests::*`        | ✅ 3 hit + 6 layout + 3 render |
+| Requirement | Test Functions                                                                           | Coverage                       |
+| ----------- | ---------------------------------------------------------------------------------------- | ------------------------------ |
+| R1.1–R1.8   | `parser::tests::parse_*`, `emitter::tests::emit_*`, `roundtrip_*`                        | ✅ 76 fd-core + 18 integration |
+| R1.9        | `emit_annotations_*`, `roundtrip_preserves_annotations`                                  | ✅                             |
+| R1.10       | `parse_edge_*`, `emit_edge_*`, `roundtrip_edge_*`                                        | ✅                             |
+| R1.11       | `emit_edge_with_trigger_anim`, `roundtrip_edge_hover_anim`                               | ✅                             |
+| R1.12       | `emit_edge_flow_*`, `roundtrip_edge_flow_*`                                              | ✅                             |
+| R1.13       | `emit_generic_node`, `roundtrip_generic_*`                                               | ✅                             |
+| R1.14       | `parse_import`, `emit_import`, `roundtrip_import`                                        | ✅                             |
+| R1.15       | `emit_bg_shorthand`, `roundtrip_bg_shorthand`                                            | ✅                             |
+| R1.16       | `roundtrip_comment_*`                                                                    | ✅                             |
+| R1.17       | `parse_align_*`, `roundtrip_align*`, `style_merging_align`                               | ✅                             |
+| R2.1–R2.5   | `sync::tests::sync_*`, `bidi_sync::*`, `e2e-ux: Canvas→Code`                             | ✅ 12 sync + 9 integ + 4 E2E   |
+| R3.1        | `tools::tests::select_tool_*`, `hit::tests::*`                                           | ✅ 5 tests + 3 hit tests       |
+| R3.2        | `select_tool_drag`, `select_tool_shift_drag_*`, resize integ.                            | ✅ 3 tests                     |
+| R3.3        | `rect_tool_*`, `ellipse_tool_*`, `text_tool_*`                                           | ✅ 7 tests                     |
+| R3.4        | _(pen tool — captures pressure, no unit test)_                                           | ⚠️ No pen tool tests           |
+| R3.5        | _(planned)_                                                                              | —                              |
+| R3.6        | E2E UX: zoom/pan/pinch tests in `e2e-ux.test.ts`                                         | ✅ 4 E2E tests                 |
+| R3.7        | `commands::tests::*`, `undo_redo::*`                                                     | ✅ 5 unit + 7 integration      |
+| R3.8–R3.14  | E2E UX: properties, color, theme, view mode in `e2e-ux.test.ts`                          | ✅ 12 E2E tests                |
+| R3.16       | `hit_test_resize_handle` (WASM), E2E UX cursor tests                                     | ⚠️ WASM-side only              |
+| R3.17       | E2E UX: grid/snap tests                                                                  | ⚠️ JS-only                     |
+| R3.18       | E2E UX: dimension tooltip tests                                                          | ⚠️ JS-only                     |
+| R3.20       | E2E UX: zoom calculations, pinch clamp                                                   | ✅ 4 E2E tests                 |
+| R3.21       | E2E UX: grid spacing adaptation                                                          | ✅ 3 E2E tests                 |
+| R3.24       | `effective_target_*`, `is_ancestor_of`, `hit_test_nested_groups`                         | ✅ 5 Rust + 4 E2E tests        |
+| R3.25       | E2E UX: minimap scale, click-to-navigate                                                 | ✅ 2 E2E tests                 |
+| R3.26       | E2E UX: arrow nudge 1px/10px                                                             | ✅ 2 E2E tests                 |
+| R3.27       | E2E UX: rename sanitization, word-boundary                                               | ✅ 3 E2E tests                 |
+| R3.28       | E2E UX: inline text editing, hex luminance                                               | ✅ 3 E2E tests                 |
+| R3.29       | E2E UX: animation tween engine                                                           | ✅ 2 E2E tests                 |
+| R3.30       | _(JS-only, camera animation)_                                                            | ⚠️ JS-only                     |
+| R4.1–R4.6   | Covered by R1/R2 tests                                                                   | ✅                             |
+| R4.7–R4.11  | _(extension-side, no test)_                                                              | ❌                             |
+| R3.36       | `layout_text_centered_in_rect`, `layout_text_in_ellipse_*`, `layout_text_explicit_pos_*` | ✅ 4 tests                     |
+| R5.1–R5.8   | `hit::tests::*`, `resolve::tests::*`, `render2d::tests::*`                               | ✅ 3 hit + 6 layout + 3 render |
 
 **Total**: 154 Rust tests + 162 TypeScript tests = **316 tests**
 
@@ -222,10 +225,11 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | rendering           | R5.1, R5.2, R5.4, R5.5                |
 | platform            | R6.1, R6.2, R6.3, R6.4                |
 | inline editing      | R3.28                                 |
-| text alignment      | R1.17, R3.28                          |
+| text alignment      | R1.17, R3.28, R3.36                   |
+| layout / centering  | R3.36                                 |
 | layers / navigation | R3.30                                 |
 | group / drill-down  | R3.24, R3.34                          |
-| group / reparent    | R3.34                                 |
+| group / reparent    | R3.34, R3.35                          |
 | image               | R3.32                                 |
 | library             | R3.33                                 |
 

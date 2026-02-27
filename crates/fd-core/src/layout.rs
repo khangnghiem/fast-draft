@@ -1016,4 +1016,101 @@ rect @btn {
             btn.height
         );
     }
+
+    #[test]
+    fn layout_text_in_ellipse_centered() {
+        let input = r#"
+ellipse @badge {
+  rx: 60 ry: 30
+  text @count "42" {
+    font: "Inter" 700 20
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let badge = bounds[&graph.index_of(NodeId::intern("badge")).unwrap()];
+        let count = bounds[&graph.index_of(NodeId::intern("count")).unwrap()];
+
+        // Text bounds should fill the ellipse bounding box
+        assert!(
+            (count.width - badge.width).abs() < 0.01,
+            "text width ({}) should match ellipse ({})",
+            count.width,
+            badge.width
+        );
+        assert!(
+            (count.height - badge.height).abs() < 0.01,
+            "text height ({}) should match ellipse ({})",
+            count.height,
+            badge.height
+        );
+    }
+
+    #[test]
+    fn layout_text_explicit_position_not_expanded() {
+        let input = r#"
+rect @btn {
+  w: 320 h: 44
+  text @label "OK" {
+    font: "Inter" 600 14
+    x: 10 y: 5
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let btn = bounds[&graph.index_of(NodeId::intern("btn")).unwrap()];
+        let label = bounds[&graph.index_of(NodeId::intern("label")).unwrap()];
+
+        // Text with explicit position should NOT be expanded to parent
+        assert!(
+            label.width < btn.width,
+            "text width ({}) should be < parent ({}) when explicit position is set",
+            label.width,
+            btn.width
+        );
+    }
+
+    #[test]
+    fn layout_text_multiple_children_not_expanded() {
+        let input = r#"
+rect @card {
+  w: 200 h: 100
+  text @title "Title" {
+    font: "Inter" 600 16
+  }
+  text @subtitle "Sub" {
+    font: "Inter" 400 12
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let card = bounds[&graph.index_of(NodeId::intern("card")).unwrap()];
+        let title = bounds[&graph.index_of(NodeId::intern("title")).unwrap()];
+
+        // Multiple children: text should NOT be expanded to parent
+        assert!(
+            title.width < card.width,
+            "text width ({}) should be < parent ({}) with multiple children",
+            title.width,
+            card.width
+        );
+    }
 }
