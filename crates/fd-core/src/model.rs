@@ -24,24 +24,26 @@ pub struct Color {
     pub a: f32,
 }
 
+/// Helper to parse a single hex digit.
+pub fn hex_val(c: u8) -> Option<u8> {
+    match c {
+        b'0'..=b'9' => Some(c - b'0'),
+        b'a'..=b'f' => Some(c - b'a' + 10),
+        b'A'..=b'F' => Some(c - b'A' + 10),
+        _ => None,
+    }
+}
+
 impl Color {
     pub const fn rgba(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
 
     /// Parse a hex color string: `#RGB`, `#RGBA`, `#RRGGBB`, `#RRGGBBAA`.
+    /// The string may optionally start with `#`.
     pub fn from_hex(hex: &str) -> Option<Self> {
-        let hex = hex.strip_prefix('#')?;
+        let hex = hex.strip_prefix('#').unwrap_or(hex);
         let bytes = hex.as_bytes();
-
-        fn hex_val(c: u8) -> Option<u8> {
-            match c {
-                b'0'..=b'9' => Some(c - b'0'),
-                b'a'..=b'f' => Some(c - b'a' + 10),
-                b'A'..=b'F' => Some(c - b'A' + 10),
-                _ => None,
-            }
-        }
 
         match bytes.len() {
             3 => {

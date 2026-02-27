@@ -450,17 +450,18 @@ fn weight_number_to_name(weight: u16) -> &'static str {
 /// Classify a hex color into a human-readable hue name.
 fn color_hint(hex: &str) -> &'static str {
     let hex = hex.trim_start_matches('#');
-    let Some((r, g, b)) = (match hex.len() {
+    let bytes = hex.as_bytes();
+    let Some((r, g, b)) = (match bytes.len() {
         3 | 4 => {
-            let r = u8::from_str_radix(&hex[0..1], 16).unwrap_or(0) * 17;
-            let g = u8::from_str_radix(&hex[1..2], 16).unwrap_or(0) * 17;
-            let b = u8::from_str_radix(&hex[2..3], 16).unwrap_or(0) * 17;
+            let r = crate::model::hex_val(bytes[0]).unwrap_or(0) * 17;
+            let g = crate::model::hex_val(bytes[1]).unwrap_or(0) * 17;
+            let b = crate::model::hex_val(bytes[2]).unwrap_or(0) * 17;
             Some((r, g, b))
         }
         6 | 8 => {
-            let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
-            let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
-            let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
+            let r = (crate::model::hex_val(bytes[0]).unwrap_or(0) << 4) | crate::model::hex_val(bytes[1]).unwrap_or(0);
+            let g = (crate::model::hex_val(bytes[2]).unwrap_or(0) << 4) | crate::model::hex_val(bytes[3]).unwrap_or(0);
+            let b = (crate::model::hex_val(bytes[4]).unwrap_or(0) << 4) | crate::model::hex_val(bytes[5]).unwrap_or(0);
             Some((r, g, b))
         }
         _ => None,
