@@ -104,3 +104,18 @@ Nudge applies to all selected nodes. Updates `x:` / `y:` in FD source.
 | `effective_target_*` | `model.rs`       | Group drill-down, 3-level nesting (5 tests)         |
 | `select_tool_drag`   | `tools.rs`       | Drag moves selection                                |
 | E2E: nudge, resize   | `e2e-ux.test.ts` | Arrow-key 1px/10px, resize proportions (4 tests)    |
+
+### Code ↔ Canvas Selection Sync (R2.5)
+
+The bidirectional sync keeps canvas and text editor selections aligned:
+
+| Direction     | Trigger                          | Handler                       | Invariant                                                       |
+| ------------- | -------------------------------- | ----------------------------- | --------------------------------------------------------------- |
+| Canvas → Code | `nodeSelected` message           | `extension.ts` regex `@id\b`  | Always highlights `@id` line, even if cursor already there      |
+| Code → Canvas | `onDidChangeTextEditorSelection` | `extension.ts` → `selectNode` | Must update `lastNotifiedSelectedId` to prevent dedup staleness |
+
+Key rules:
+
+- `suppressCursorSync` prevents feedback loops (200ms window)
+- `lastNotifiedSelectedId` dedup must be updated by **both** canvas clicks and extension `selectNode` messages
+- Highlight decoration fires unconditionally (1500ms auto-dispose)

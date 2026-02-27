@@ -1088,6 +1088,8 @@ window.addEventListener("message", (event) => {
     case "selectNode": {
       if (!fdCanvas) return;
       if (fdCanvas.select_by_id(message.nodeId || "")) {
+        // Sync dedup state so next canvas click sends nodeSelected correctly
+        lastNotifiedSelectedId = message.nodeId || "";
         render();
       }
       break;

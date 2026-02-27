@@ -117,17 +117,17 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
               );
               if (editor) {
                 const cursorLine = editor.selection.active.line;
-                // Skip if cursor is already on this line (prevents jump on re-click)
-                if (cursorLine === i) break;
-                // Suppress cursor→canvas sync to prevent feedback loop
-                suppressCursorSync = true;
-                const pos = new vscode.Position(i, 0);
-                editor.selection = new vscode.Selection(pos, pos);
-                editor.revealRange(
-                  line.range,
-                  vscode.TextEditorRevealType.InCenterIfOutsideViewport
-                );
-                // Briefly highlight the node declaration line
+                // Only move cursor if not already on this line
+                if (cursorLine !== i) {
+                  suppressCursorSync = true;
+                  const pos = new vscode.Position(i, 0);
+                  editor.selection = new vscode.Selection(pos, pos);
+                  editor.revealRange(
+                    line.range,
+                    vscode.TextEditorRevealType.InCenterIfOutsideViewport
+                  );
+                }
+                // Always highlight the node declaration line
                 const decoration = vscode.window.createTextEditorDecorationType({
                   backgroundColor: new vscode.ThemeColor(
                     "editor.findMatchHighlightBackground"

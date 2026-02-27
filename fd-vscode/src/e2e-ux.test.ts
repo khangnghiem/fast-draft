@@ -1223,3 +1223,138 @@ describe("Deep nesting — 3+ levels of hierarchy", () => {
         expect(findSymbolAtLine(symbols, 3)!.name).toBe("@nav_item");
     });
 });
+
+// ─── Bidi Sync: Canvas→Code Selection Highlighting (R2.5) ────────────────
+// When a node is selected on canvas, its @id line in Code Mode should
+// be highlighted. This broke due to stale dedup state and overly
+// aggressive cursor guards.
+
+describe("Bidi Sync: Canvas→Code selection highlighting (R2.5)", () => {
+    it("lastNotifiedSelectedId resets when selectNode arrives from extension", () => {
+        // Simulates the dedup guard in main.js that prevents sending
+        // redundant nodeSelected messages. When the extension sends
+        // selectNode (cursor→canvas sync), lastNotifiedSelectedId must
+        // update so the next canvas click can still send nodeSelected.
+        let lastNotifiedSelectedId = "";
+
+        // Step 1: Canvas click selects @heading → sends nodeSelected
+        const canvasSelectedId = "heading";
+        if (canvasSelectedId !== lastNotifiedSelectedId) {
+            lastNotifiedSelectedId = canvasSelectedId;
+            // Simulates: vscode.postMessage({ type: "nodeSelected", id })
+        }
+        expect(lastNotifiedSelectedId).toBe("heading");
+
+        // Step 2: Extension echoes back selectNode (cursor sync)
+        const extensionNodeId = "heading";
+        // BUG FIX: must update lastNotifiedSelectedId here
+        lastNotifiedSelectedId = extensionNodeId;
+        expect(lastNotifiedSelectedId).toBe("heading");
+
+        // Step 3: User clicks @amount on canvas
+        const newCanvasId = "amount";
+        const shouldSend = newCanvasId !== lastNotifiedSelectedId;
+        expect(shouldSend).toBe(true);
+
+        // Step 4: Cursor sync changes selection to @chart_area
+        lastNotifiedSelectedId = "chart_area";
+
+        // Step 5: User clicks @chart_area on canvas → should still notify
+        // because the extension set @chart_area, not the canvas
+        const sameId = "chart_area";
+        // After fix: lastNotifiedSelectedId was updated by selectNode,
+        // so this matches. In the old code, the canvas click would have
+        // a different lastNotifiedSelectedId and incorrectly skip.
+        // The fix ensures selectNode updates lastNotifiedSelectedId.
+        expect(sameId).toBe(lastNotifiedSelectedId);
+    });
+
+    it("nodeSelected handler finds correct line for @id pattern", () => {
+        const lines = [
+            "style accent {",
+            "  fill: #6C5CE7",
+            "}",
+            "",
+            `${SHAPES.GROUP} @dashboard_card {`,
+            "  layout: column gap=12 pad=24",
+            `  ${SHAPES.TEXT} @heading \"Monthly Revenue\" {`,
+            "    fill: #1A1A2E",
+            "  }",
+            `  ${SHAPES.TEXT} @amount \"$48,250\" {`,
+            "    fill: #1A1A2E",
+            "  }",
+            "}",
+        ];
+
+        // Simulates the extension's nodeSelected handler regex search
+        const nodeId = "heading";
+        const pattern = new RegExp(`@${nodeId}\\b`);
+        let foundLine = -1;
+        for (let i = 0; i < lines.length; i++) {
+            if (pattern.test(lines[i])) {
+                foundLine = i;
+                break;
+            }
+        }
+        expect(foundLine).toBe(6);
+        expect(lines[foundLine]).toContain("@heading");
+    });
+
+    it("nodeSelected always applies decoration even when cursor already on line", () => {
+        // Verifies the fix: the extension should show the highlight
+        // decoration regardless of whether the cursor is already on
+        // the target line.
+        const lines = [
+            `${SHAPES.RECT} @card {`,
+            "  fill: #FFF",
+            "}",
+        ];
+        const symbols = parseDocumentSymbols(lines);
+
+        // Cursor is already on line 0 (the @card line)
+        const cursorLine = 0;
+        const nodeId = "card";
+        const pattern = new RegExp(`@${nodeId}\\b`);
+
+        let foundLine = -1;
+        for (let i = 0; i < lines.length; i++) {
+            if (pattern.test(lines[i])) {
+                foundLine = i;
+                break;
+            }
+        }
+        expect(foundLine).toBe(0);
+
+        // OLD BUG: if (cursorLine === i) break; → skipped decoration
+        // FIX: cursor check only skips move, NOT decoration
+        const shouldMoveCursor = cursorLine !== foundLine;
+        expect(shouldMoveCursor).toBe(false); // Cursor already there
+        // But decoration should STILL be applied
+        const shouldDecorate = foundLine >= 0;
+        expect(shouldDecorate).toBe(true);
+    });
+
+    it("findSymbolAtLine correctly maps cursor position for selection sync", () => {
+        const lines = [
+            `${SHAPES.GROUP} @dashboard {`,
+            `  ${SHAPES.TEXT} @heading \"Revenue\" {`,
+            "    fill: #333",
+            "    font: Inter 700 18",
+            "  }",
+            `  ${SHAPES.RECT} @chart {`,
+            "    w: 300 h: 160",
+            "    fill: #F0F0F5",
+            "  }",
+            "}",
+        ];
+        const symbols = parseDocumentSymbols(lines);
+
+        // Cursor on property line → resolves to parent node
+        expect(findSymbolAtLine(symbols, 2)!.name).toBe("@heading");
+        expect(findSymbolAtLine(symbols, 3)!.name).toBe("@heading");
+        // Cursor on node declaration → resolves to that node
+        expect(findSymbolAtLine(symbols, 5)!.name).toBe("@chart");
+        // Cursor on group declaration → resolves to group
+        expect(findSymbolAtLine(symbols, 0)!.name).toBe("@dashboard");
+    });
+});

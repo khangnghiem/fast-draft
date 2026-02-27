@@ -7,6 +7,7 @@
 
 ### v0.8.56
 
+- **BUG FIX**: Canvas→Code selection sync restored — clicking a node on canvas once again highlights its `@id` line in Code Mode; fixed stale `lastNotifiedSelectedId` dedup guard that blocked `nodeSelected` messages after cursor-sync round-trips, and restructured `cursorLine === i` guard to only skip cursor move (not decoration)
 - **BUG FIX**: Children inside Column/Row/Grid layouts no longer overflow their parent group — layout solver now skips `Position` constraints for children in managed layouts (the layout mode owns positioning)
 - **BUG FIX**: Group auto-sizing now uses resolved bounds directly instead of adding stale Position offsets, fixing incorrect bounding boxes after constraints shift children
 - **BUG FIX**: Moving a child outside its parent group now expands the group to contain it — `MoveNode` handler recomputes parent group bounds after every move

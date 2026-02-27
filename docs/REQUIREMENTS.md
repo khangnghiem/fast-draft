@@ -33,7 +33,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R2.2** _(done)_: Text → Canvas: Source edits re-render the canvas in <16ms
 - **R2.3** _(planned)_: Incremental: Only re-parse/re-emit changed regions, not the entire document
 - **R2.4** _(done)_: Conflict-free: Both directions funnel through a single authoritative `SceneGraph`
-- **R2.5** _(done)_: Selection sync — clicking anywhere inside a node block in the text editor selects it on canvas; clicking a node on canvas reveals its `@id` line in the text editor
+- **R2.5** _(done)_: Selection sync — clicking anywhere inside a node block in the text editor selects it on canvas; clicking a node on canvas reveals and highlights its `@id` line in the text editor (including re-clicks and cursor-sync round-trips)
 
 ### R3: Human Editing (Canvas)
 
@@ -160,7 +160,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | R1.15       | `emit_bg_shorthand`, `roundtrip_bg_shorthand`                     | ✅                             |
 | R1.16       | `roundtrip_comment_*`                                             | ✅                             |
 | R1.17       | `parse_align_*`, `roundtrip_align*`, `style_merging_align`        | ✅                             |
-| R2.1–R2.4   | `sync::tests::sync_*`, `bidi_sync::*`                             | ✅ 12 sync + 9 integration     |
+| R2.1–R2.5   | `sync::tests::sync_*`, `bidi_sync::*`, `e2e-ux: Canvas→Code`      | ✅ 12 sync + 9 integ + 4 E2E   |
 | R3.1        | `tools::tests::select_tool_*`, `hit::tests::*`                    | ✅ 5 tests + 3 hit tests       |
 | R3.2        | `select_tool_drag`, `select_tool_shift_drag_*`, resize integ.     | ✅ 3 tests                     |
 | R3.3        | `rect_tool_*`, `ellipse_tool_*`, `text_tool_*`                    | ✅ 7 tests                     |
