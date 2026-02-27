@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.8.53
+
+- **SECURITY**: Fixed Stored XSS vulnerability in webview initialization — replaced manual backtick escaping with `JSON.stringify` + unicode escaping for `initialText`, preventing injection via crafted `.fd` file content
+- **PERF**: Optimized `Color::from_hex` parser — zero-allocation byte parsing with `r * 17` hex digit expansion, replacing regex-based approach
+- **A11Y**: Onboarding cards now use semantic `<button>` elements instead of `<div>` — adds keyboard navigation, focus-visible outline, and screen reader support
+- **REFACTOR**: Modularized `extension.ts` (3882 → 1026 lines) — extracted HTML/CSS template into `webview-html.ts`, diagnostics into `diagnostics.ts`, document symbols into `document-symbol.ts`, panels into `panels/spec-view.ts` and `panels/tree-preview.ts`; consolidated API calls into reusable `callAiApi` helper; extracted magic numbers into named constants
+
 ### v0.8.52
 
 - **BUG FIX**: Column layout elements no longer render in reversed order on the WASM canvas — replaced platform-dependent `petgraph` neighbor order hack (`.reverse()`) with deterministic `NodeIndex` sorting (`.sort()`), which is insertion-order-stable across both native x86_64 and wasm32 targets
