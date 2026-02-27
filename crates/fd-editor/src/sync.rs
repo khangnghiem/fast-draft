@@ -1036,8 +1036,8 @@ rect @box {
         assert_eq!(node.animations.len(), 1);
         assert_eq!(node.animations[0].trigger, AnimTrigger::Hover);
 
-        // Verify text contains anim block
-        assert!(engine.text.contains("anim :hover"));
+        // Verify text contains when block
+        assert!(engine.text.contains("when :hover"));
         assert!(engine.text.contains("scale:"));
 
         // Verify round-trip: re-parse from text

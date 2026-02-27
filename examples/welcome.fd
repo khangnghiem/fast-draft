@@ -1,9 +1,9 @@
 # Welcome to Fast Draft!
 # Click any shape to select it. Try moving, resizing, and editing.
 
-style accent { fill: #6C5CE7 }
-style soft { fill: #DFE6E9; corner: 12 }
-style label_style { font: "Inter" 500 14; fill: #2D3436 }
+theme accent { fill: #6C5CE7 }
+theme soft { fill: #DFE6E9; corner: 12 }
+theme label_style { font: "Inter" 500 14; fill: #2D3436 }
 
 # ── Title ──
 text @welcome_title "Welcome to Fast Draft ✨" {
@@ -41,7 +41,7 @@ rect @step1_demo {
   w: 30  h: 30
   use: accent
   corner: 6
-  anim :hover { scale: 1.1; ease: spring 200ms }
+  when :hover { scale: 1.1; ease: spring 200ms }
 }
 
 # ── Step 2: Text ──
@@ -84,7 +84,7 @@ ellipse @step3_demo {
   x: 700  y: 200
   w: 20  h: 20
   fill: #E17055
-  anim :hover { fill: #00B894; ease: ease_out 300ms }
+  when :hover { fill: #00B894; ease: ease_out 300ms }
 }
 
 # ── Interactive Demo Area ──

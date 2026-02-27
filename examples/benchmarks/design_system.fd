@@ -4,33 +4,33 @@
 import "tokens.fd" as tokens
 
 # Typography scale — uses named colors for quick scanning
-style display {
+theme display {
   font: "Inter" bold 48
   fill: slate
 }
 
-style heading {
+theme heading {
   font: "Inter" semibold 24
   fill: slate
 }
 
-style body {
+theme body {
   font: "Inter" regular 16
   fill: gray
 }
 
-style caption {
+theme caption {
   font: "Inter" medium 12
   fill: gray
 }
 
 # Shared component styles
-style swatch_card {
+theme swatch_card {
   fill: white
   corner: 12
 }
 
-style section_label {
+theme section_label {
   font: "Inter" semibold 11
   fill: gray
   opacity: 0.6
@@ -133,18 +133,18 @@ group @design_system {
       text "Buttons" { use: heading }
       rect @btn_primary { w: 200 h: 44; fill: purple; corner: 10
         text "Primary Action" { font: "Inter" semibold 14; fill: white }
-        anim :hover { fill: #5A4BD1; scale: 1.02; ease: spring 200ms }
+        when :hover { fill: #5A4BD1; scale: 1.02; ease: spring 200ms }
       }
       rect @btn_secondary { w: 200 h: 44; background: #F3F4F6; rounded: 10
         text "Secondary" { font: "Inter" medium 14; fill: slate }
-        anim :hover { fill: #E5E7EB; ease: ease_out 150ms }
+        when :hover { fill: #E5E7EB; ease: ease_out 150ms }
       }
       rect @btn_outline { w: 200 h: 44; fill: white; stroke: #D1D5DB 1; corner: 10
         text "Outlined" { font: "Inter" medium 14; fill: slate }
       }
       rect @btn_ghost { w: 200 h: 44; fill: #00000000; corner: 10; opacity: 0.8
         text "Ghost" { font: "Inter" medium 14; fill: purple }
-        anim :hover { opacity: 1; ease: ease_out 100ms }
+        when :hover { opacity: 1; ease: ease_out 100ms }
       }
     }
 

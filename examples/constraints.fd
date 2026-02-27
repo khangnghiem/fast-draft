@@ -20,7 +20,7 @@ group @hero {
 
     text "Try It Now" { font: "Inter" 600 16; fill: #FFF }
 
-    anim :hover { fill: #5A4BD1; scale: 1.04; ease: spring 250ms }
+    when :hover { fill: #5A4BD1; scale: 1.04; ease: spring 250ms }
   }
 }
 
@@ -44,7 +44,7 @@ rect @tooltip {
 
   text "I'm 20px right, 60px down" { font: "Inter" 13; fill: #FFF }
 
-  anim :enter { opacity: 1; ease: ease_out 300ms }
+  when :enter { opacity: 1; ease: ease_out 300ms }
 }
 
 # ─── Fill-parent panel ───────────────────────────────────────────────────
@@ -76,8 +76,8 @@ rect @fab {
 
   text "+" { font: "Inter" 700 24; fill: #FFF }
 
-  anim :hover { scale: 1.1; ease: spring 300ms }
-  anim :press { scale: 0.9; ease: spring 150ms }
+  when :hover { scale: 1.1; ease: spring 300ms }
+  when :press { scale: 0.9; ease: spring 150ms }
 }
 
 # ─── Constraints ─────────────────────────────────────────────────────────

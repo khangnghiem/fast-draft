@@ -55,10 +55,10 @@ module.exports = grammar({
         spec_keyword: (_$) =>
             choice("accept", "status", "priority", "tag"),
 
-        // ─── Style Block ─────────────────────────────────────────
+        // ─── Style/Theme Block ──────────────────────────────────
         style_block: ($) =>
             seq(
-                "style",
+                choice("theme", "style"),
                 field("name", $.identifier),
                 "{",
                 repeat($.property),
@@ -116,10 +116,10 @@ module.exports = grammar({
         key_value_pair: ($) =>
             prec(1, seq($.identifier, "=", choice($.number, $.hex_color, $.string, $.identifier))),
 
-        // ─── Animation Block ─────────────────────────────────────
+        // ─── When/Animation Block ────────────────────────────────
         anim_block: ($) =>
             seq(
-                "anim",
+                choice("when", "anim"),
                 field("trigger", $.anim_trigger),
                 "{",
                 repeat($.property),

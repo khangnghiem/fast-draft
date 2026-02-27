@@ -1,23 +1,23 @@
-style check {
+theme check {
   fill: #00B894
 }
 
-style feature {
+theme feature {
   fill: #333333
   font: "Inter" 400 14
 }
 
-style heading {
+theme heading {
   fill: #1A1A2E
   font: "Inter" 700 32
 }
 
-style price {
+theme price {
   fill: #1A1A2E
   font: "Inter" 800 48
 }
 
-style subhead {
+theme subhead {
   fill: #6B7280
   font: "Inter" 400 16
 }
@@ -95,13 +95,13 @@ group @pricing {
             fill: #333333
             font: "Inter" 600 15
           }
-          anim :hover {
+          when :hover {
             fill: #EDEDF0
             ease: ease_out 150ms
           }
         }
       }
-      anim :hover {
+      when :hover {
         scale: 1.02
         ease: spring 300ms
       }
@@ -171,18 +171,18 @@ group @pricing {
             fill: #FFFFFF
             font: "Inter" 600 15
           }
-          anim :hover {
+          when :hover {
             fill: #5A4BD1
             scale: 1.03
             ease: spring 200ms
           }
-          anim :press {
+          when :press {
             scale: 0.97
             ease: ease_out 100ms
           }
         }
       }
-      anim :hover {
+      when :hover {
         scale: 1.02
         ease: spring 300ms
       }
@@ -241,14 +241,14 @@ group @pricing {
             fill: #FFFFFF
             font: "Inter" 600 15
           }
-          anim :hover {
+          when :hover {
             fill: #2D2D44
             scale: 1.03
             ease: spring 200ms
           }
         }
       }
-      anim :hover {
+      when :hover {
         scale: 1.02
         ease: spring 300ms
       }

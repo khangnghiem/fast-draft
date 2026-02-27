@@ -32,8 +32,8 @@ const NODE_REGEX = {
   GENERIC: /^\s*@(\w+)\s*\{/,
 };
 
-const STYLE_REGEX = /^\s*style\s+(\w+)\s*\{/;
-const ANIM_REGEX = /^\s*anim\s+:(\w+)\s*\{/;
+const STYLE_REGEX = /^\s*(theme|style)\s+(\w+)\s*\{/;
+const ANIM_REGEX = /^\s*(when|anim)\s+:(\w+)\s*\{/;
 const CONSTRAINT_REGEX = /^\s*@(\w+)\s*->\s*(.+)/;
 
 // ─── Types ───────────────────────────────────────────────────────────────
@@ -325,8 +325,8 @@ export function computeSpecHideLines(lines: string[]): number[] {
       continue;
     }
 
-    // Track anim blocks
-    if (/^\s*anim\s+[:\w]+\s*\{/.test(text)) {
+    // Track when/anim blocks
+    if (/^\s*(when|anim)\s+[:\w]+\s*\{/.test(text)) {
       insideAnimBlock = true;
       animDepth = (trimmed.match(/\{/g) || []).length;
       animDepth -= (trimmed.match(/\}/g) || []).length;
@@ -535,7 +535,7 @@ export function parseDocumentSymbols(lines: string[]): FdSymbol[] {
     const styleMatch = trimmed.match(STYLE_REGEX);
     if (styleMatch) {
       const sym: FdSymbol = {
-        name: styleMatch[1],
+        name: styleMatch[2],
         kind: "style",
         startLine: i,
         endLine: i,

@@ -1,4 +1,4 @@
-style card {
+theme card {
   fill: #FFFFFF
   corner: 16
 }
@@ -79,7 +79,7 @@ rect @_anon_0 {
   corner: 10
   x: 705.16
   y: -120.53
-  anim :hover {
+  when :hover {
     scale: 1.15
     ease: linear 300ms
   }
@@ -104,12 +104,12 @@ group @hover_demos {
         fill: #FFFFFF
         font: "Inter" 600 15
       }
-      anim :hover {
+      when :hover {
         fill: #E55050
         scale: 1.05
         ease: spring 300ms
       }
-      anim :press {
+      when :press {
         scale: 0.9
         rotate: -2
         ease: spring 200ms
@@ -129,11 +129,11 @@ group @hover_demos {
         x: -259.47
         y: -194.2
       }
-      anim :hover {
+      when :hover {
         scale: 1.04
         ease: ease_out 200ms
       }
-      anim :press {
+      when :press {
         opacity: 0.7
         scale: 0.92
         ease: spring 150ms
@@ -151,7 +151,7 @@ group @hover_demos {
         fill: #FFFFFF
         font: "Inter" 600 15
       }
-      anim :hover {
+      when :hover {
         fill: #5A4BD1
         scale: 1.06
         ease: spring 400ms
@@ -174,7 +174,7 @@ group @hover_demos {
         fill: #333333
         font: "Inter" 500 12
       }
-      anim :hover {
+      when :hover {
         scale: 1.15
         ease: spring 300ms
       }
@@ -187,7 +187,7 @@ group @hover_demos {
         fill: #333333
         font: "Inter" 500 12
       }
-      anim :hover {
+      when :hover {
         scale: 1.15
         ease: ease_in_out 300ms
       }
@@ -200,7 +200,7 @@ group @hover_demos {
         fill: #333333
         font: "Inter" 500 12
       }
-      anim :hover {
+      when :hover {
         scale: 1.15
         ease: ease_out 300ms
       }
@@ -213,7 +213,7 @@ group @hover_demos {
         fill: #333333
         font: "Inter" 500 12
       }
-      anim :hover {
+      when :hover {
         scale: 1.15
         ease: ease_in 300ms
       }
@@ -228,7 +228,7 @@ group @hover_demos {
         fill: #333333
         font: "Inter" 500 12
       }
-      anim :hover {
+      when :hover {
         scale: 1.15
         ease: linear 300ms
       }
@@ -254,7 +254,7 @@ group @hover_demos {
         fill: #FFFFFF
         font: "Inter" 600 14
       }
-      anim :enter {
+      when :enter {
         opacity: 1
         ease: ease_in_out 400ms
       }
@@ -268,7 +268,7 @@ group @hover_demos {
         fill: #FFFFFF
         font: "Inter" 600 14
       }
-      anim :enter {
+      when :enter {
         opacity: 1
         scale: 1
         ease: spring 600ms
@@ -283,7 +283,7 @@ group @hover_demos {
         fill: #FFFFFF
         font: "Inter" 600 14
       }
-      anim :enter {
+      when :enter {
         opacity: 1
         ease: ease_out 500ms
       }
@@ -305,7 +305,7 @@ group @hover_demos {
         fill: #FFFFFF
         font: "Inter" 600 14
       }
-      anim :press {
+      when :press {
         fill: #FFFFFF
         ease: linear 80ms
       }
@@ -318,7 +318,7 @@ group @hover_demos {
         fill: #FFFFFF
         font: "Inter" 600 14
       }
-      anim :press {
+      when :press {
         opacity: 0.5
         ease: ease_out 100ms
       }
@@ -334,7 +334,7 @@ group @hover_demos {
         fill: #FFFFFF
         font: "Inter" 600 14
       }
-      anim :press {
+      when :press {
         scale: 0.88
         ease: spring 150ms
       }
@@ -356,7 +356,7 @@ group @hover_demos {
         fill: #333333
         font: "Inter" 600 14
       }
-      anim :hover {
+      when :hover {
         rotate: 5
         ease: spring 400ms
       }
@@ -371,7 +371,7 @@ group @hover_demos {
         fill: #FFFFFF
         font: "Inter" 600 14
       }
-      anim :hover {
+      when :hover {
         fill: #D63031
         ease: ease_out 250ms
       }
@@ -388,7 +388,7 @@ group @hover_demos {
         x: -0.35
         y: 1.35
       }
-      anim :hover {
+      when :hover {
         opacity: 0.6
         ease: ease_in_out 200ms
       }
@@ -404,7 +404,7 @@ group @hover_demos {
         fill: #FFFFFF
         font: "Inter" 600 14
       }
-      anim :hover {
+      when :hover {
         scale: 1.1
         ease: spring 300ms
       }

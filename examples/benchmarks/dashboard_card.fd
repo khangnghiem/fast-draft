@@ -1,8 +1,8 @@
-style accent {
+theme accent {
   fill: #6C5CE7
 }
 
-style subtle {
+theme subtle {
   fill: #F0F0F5
   corner: 8
 }
@@ -38,7 +38,7 @@ group @dashboard_card {
       fill: #FFFFFF
       font: "Inter" 600 14
     }
-    anim :hover {
+    when :hover {
       fill: #5A4BD1
       scale: 1.02
       ease: spring 300ms

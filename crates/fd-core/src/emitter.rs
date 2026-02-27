@@ -37,7 +37,7 @@ pub fn emit_document(graph: &SceneGraph) -> String {
 
     // Emit style definitions
     if use_separators && has_styles {
-        out.push_str("# ─── Styles ───\n\n");
+        out.push_str("# ─── Themes ───\n\n");
     }
     let mut styles: Vec<_> = graph.styles.iter().collect();
     styles.sort_by_key(|(id, _)| id.as_str().to_string());
@@ -91,7 +91,7 @@ fn indent(out: &mut String, depth: usize) {
 
 fn emit_style_block(out: &mut String, name: &NodeId, style: &Style, depth: usize) {
     indent(out, depth);
-    writeln!(out, "style {} {{", name.as_str()).unwrap();
+    writeln!(out, "theme {} {{", name.as_str()).unwrap();
 
     if let Some(ref fill) = style.fill {
         emit_paint_prop(out, "fill", fill, depth + 1);
@@ -168,6 +168,13 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
 
     // Annotations (spec block)
     emit_annotations(out, &node.annotations, depth + 1);
+
+    // Children — emitted right after spec so the structural skeleton
+    // is visible first. Visual styling comes at the tail for clean folding.
+    let children = graph.children(idx);
+    for child_idx in &children {
+        emit_node(out, graph, *child_idx, depth + 1);
+    }
 
     // Layout mode (for groups)
     if let NodeKind::Group { layout } = &node.kind {
@@ -266,13 +273,6 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         writeln!(out, "clip: true").unwrap();
     }
 
-    // Children — emitted before appearance properties so non-tech users
-    // see content structure first, styling details second.
-    let children = graph.children(idx);
-    for child_idx in &children {
-        emit_node(out, graph, *child_idx, depth + 1);
-    }
-
     // Style references
     for style_ref in &node.use_styles {
         indent(out, depth + 1);
@@ -346,7 +346,7 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         }
     }
 
-    // Animations
+    // Animations (when blocks)
     for anim in &node.animations {
         emit_anim(out, anim, depth + 1);
     }
@@ -517,7 +517,7 @@ fn emit_anim(out: &mut String, anim: &AnimKeyframe, depth: usize) {
         AnimTrigger::Enter => "enter",
         AnimTrigger::Custom(s) => s.as_str(),
     };
-    writeln!(out, "anim :{trigger} {{").unwrap();
+    writeln!(out, "when :{trigger} {{").unwrap();
 
     if let Some(ref fill) = anim.properties.fill {
         emit_paint_prop(out, "fill", fill, depth + 1);
@@ -1575,7 +1575,7 @@ rect @box {
         let child_pos = output.find("text @label").expect("child missing");
         let fill_pos = output.find("fill: #FF0000").expect("fill missing");
         let corner_pos = output.find("corner: 10").expect("corner missing");
-        let anim_pos = output.find("anim :hover").expect("anim missing");
+        let anim_pos = output.find("when :hover").expect("when missing");
 
         assert!(
             child_pos < fill_pos,
@@ -1615,8 +1615,8 @@ edge @flow {
         let output = emit_document(&graph);
 
         assert!(
-            output.contains("# ─── Styles ───"),
-            "should have Styles separator"
+            output.contains("# ─── Themes ───"),
+            "should have Themes separator"
         );
         assert!(
             output.contains("# ─── Layout ───"),

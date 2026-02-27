@@ -1,17 +1,17 @@
 # FD v1
 # Login Page Wireframe — with edge connections
 
-style bg_surface {
+theme bg_surface {
   fill: #FFFFFF
   corner: 12
 }
 
-style input_style {
+theme input_style {
   fill: #F8F9FA
   corner: 8
 }
 
-style label_style {
+theme label_style {
   fill: #1A1A2E
   font: "Inter" 500 14
 }
@@ -69,7 +69,7 @@ group @login_page {
       fill: #FFFFFF
       font: "Inter" 600 16
     }
-    anim :hover {
+    when :hover {
       fill: #5A4BD1
       scale: 1.02
       ease: spring 200ms
