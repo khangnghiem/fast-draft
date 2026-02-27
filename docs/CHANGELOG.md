@@ -5,6 +5,15 @@
 
 ## Completed Requirements
 
+### v0.8.56
+
+- **BUG FIX**: Children inside Column/Row/Grid layouts no longer overflow their parent group — layout solver now skips `Position` constraints for children in managed layouts (the layout mode owns positioning)
+- **BUG FIX**: Group auto-sizing now uses resolved bounds directly instead of adding stale Position offsets, fixing incorrect bounding boxes after constraints shift children
+- **BUG FIX**: Moving a child outside its parent group now expands the group to contain it — `MoveNode` handler recomputes parent group bounds after every move
+- **LAYOUT**: Added `recompute_group_auto_sizes` final pass in `resolve_layout` — ensures free-layout groups correctly contain children with Position constraints
+- **TESTING**: 3 new regression tests — `layout_column_ignores_position_constraint`, `layout_group_auto_size_contains_all_children`, `sync_move_expands_parent_group`
+- **EXAMPLES**: Cleaned stale `x`/`y` coordinates from `dashboard_card.fd` children inside column layout
+
 ### v0.8.55
 
 - **BUG FIX**: Drag actions (move, resize, draw) now undo/redo as a single step — rewrote batch undo to use text-snapshot approach: `begin_batch()` captures full FD text before gesture, `end_batch()` captures after, undo restores the before-snapshot atomically via `set_text()` instead of replaying per-mutation inverses which could drift

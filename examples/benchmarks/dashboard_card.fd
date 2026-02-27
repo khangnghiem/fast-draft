@@ -12,6 +12,8 @@ group @dashboard_card {
   fill: #FFFFFF
   corner: 16
   shadow: (0,4,20,#00000022)
+  x: 288.23
+  y: 276.57
   text @heading "Monthly Revenue" {
     fill: #1A1A2E
     font: "Inter" 600 18
@@ -35,8 +37,6 @@ group @dashboard_card {
     text @cta_label "View Details" {
       fill: #FFFFFF
       font: "Inter" 600 14
-      x: 5.87
-      y: 3.32
     }
     anim :hover {
       fill: #5A4BD1
@@ -46,4 +46,3 @@ group @dashboard_card {
   }
 }
 
-@dashboard_card -> center_in: canvas

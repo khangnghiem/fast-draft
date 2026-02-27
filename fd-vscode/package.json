@@ -2,7 +2,7 @@
   "name": "fast-draft",
   "displayName": "Fast Draft",
   "description": "Syntax highlighting, live parser validation, and interactive canvas editor for .fd (Fast Draft) files",
-  "version": "0.8.55",
+  "version": "0.8.56",
   "publisher": "KhangNghiem",
   "license": "MIT",
   "icon": "icon.png",

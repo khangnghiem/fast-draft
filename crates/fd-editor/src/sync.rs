@@ -128,6 +128,8 @@ impl SyncEngine {
                         let ry = (rel_y * 100.0).round() / 100.0;
                         node.constraints.push(Constraint::Position { x: rx, y: ry });
                     }
+                    // Expand parent group if child moved outside its bounds
+                    expand_parent_group_bounds(&self.graph, idx, &mut self.bounds);
                 }
             }
             GraphMutation::ResizeNode { id, width, height } => {
@@ -450,6 +452,66 @@ impl SyncEngine {
             }
         }
         result
+    }
+}
+
+/// Expand a parent group's bounds to contain all its children.
+/// Called after a child is moved to ensure the group auto-sizes correctly.
+fn expand_parent_group_bounds(
+    graph: &SceneGraph,
+    child_idx: NodeIndex,
+    bounds: &mut HashMap<NodeIndex, fd_core::ResolvedBounds>,
+) {
+    let parent_idx = match graph.parent(child_idx) {
+        Some(p) => p,
+        None => return,
+    };
+    let parent_node = &graph.graph[parent_idx];
+    let pad = match &parent_node.kind {
+        NodeKind::Group {
+            layout: LayoutMode::Column { pad, .. },
+        }
+        | NodeKind::Group {
+            layout: LayoutMode::Row { pad, .. },
+        }
+        | NodeKind::Group {
+            layout: LayoutMode::Grid { pad, .. },
+        } => *pad,
+        NodeKind::Group {
+            layout: LayoutMode::Free,
+        } => 0.0,
+        _ => return, // not a group — skip
+    };
+
+    let children = graph.children(parent_idx);
+    if children.is_empty() {
+        return;
+    }
+
+    let mut min_x = f32::MAX;
+    let mut min_y = f32::MAX;
+    let mut max_x = f32::MIN;
+    let mut max_y = f32::MIN;
+
+    for &ci in &children {
+        if let Some(cb) = bounds.get(&ci) {
+            min_x = min_x.min(cb.x);
+            min_y = min_y.min(cb.y);
+            max_x = max_x.max(cb.x + cb.width);
+            max_y = max_y.max(cb.y + cb.height);
+        }
+    }
+
+    if min_x < f32::MAX {
+        bounds.insert(
+            parent_idx,
+            fd_core::ResolvedBounds {
+                x: min_x - pad,
+                y: min_y - pad,
+                width: (max_x - min_x) + 2.0 * pad,
+                height: (max_y - min_y) + 2.0 * pad,
+            },
+        );
     }
 }
 
@@ -1012,6 +1074,65 @@ group @box {
             "child_b y: expected {}, got {}",
             b_before.y + 50.0,
             b_after.y
+        );
+    }
+
+    #[test]
+    fn sync_move_expands_parent_group() {
+        // Moving a child outside its parent group should expand the group.
+        let input = r#"
+group @container {
+  rect @a { w: 100 h: 50 }
+  rect @b { w: 80 h: 40 }
+}
+"#;
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let b_id = NodeId::intern("b");
+        let container_id = NodeId::intern("container");
+
+        let container_idx = engine.graph.index_of(container_id).unwrap();
+        let initial_right = engine.bounds[&container_idx].x + engine.bounds[&container_idx].width;
+        let initial_bottom = engine.bounds[&container_idx].y + engine.bounds[&container_idx].height;
+
+        // Move @b far to the right and down
+        engine.apply_mutation(GraphMutation::MoveNode {
+            id: b_id,
+            dx: 300.0,
+            dy: 200.0,
+        });
+
+        let container_bounds = engine.bounds[&container_idx];
+        let new_right = container_bounds.x + container_bounds.width;
+        let new_bottom = container_bounds.y + container_bounds.height;
+
+        // Container should have expanded to contain the moved child
+        assert!(
+            new_right > initial_right,
+            "container right ({new_right}) should be > initial ({initial_right})"
+        );
+        assert!(
+            new_bottom > initial_bottom,
+            "container bottom ({new_bottom}) should be > initial ({initial_bottom})"
+        );
+
+        // The moved child should be inside the container
+        let b_idx = engine.graph.index_of(b_id).unwrap();
+        let b = engine.bounds[&b_idx];
+        assert!(
+            b.x + b.width <= container_bounds.x + container_bounds.width + 0.1,
+            "b right ({}) must be <= container right ({})",
+            b.x + b.width,
+            container_bounds.x + container_bounds.width
+        );
+        assert!(
+            b.y + b.height <= container_bounds.y + container_bounds.height + 0.1,
+            "b bottom ({}) must be <= container bottom ({})",
+            b.y + b.height,
+            container_bounds.y + container_bounds.height
         );
     }
 }

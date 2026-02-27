@@ -51,6 +51,10 @@ pub fn resolve_layout(
     // We do this by traversing top-down to ensure parent constraints are resolved before children.
     resolve_constraints_top_down(graph, graph.root, &mut bounds, viewport);
 
+    // Final pass: re-compute group auto-sizes after constraints shifted children.
+    // This ensures free-layout groups correctly contain children with Position constraints.
+    recompute_group_auto_sizes(graph, graph.root, &mut bounds);
+
     bounds
 }
 
@@ -61,12 +65,93 @@ fn resolve_constraints_top_down(
     viewport: Viewport,
 ) {
     let node = &graph.graph[node_idx];
+    let parent_managed = is_parent_managed(graph, node_idx);
     for constraint in &node.constraints {
+        // Skip Position constraints for children inside managed layouts —
+        // the Column/Row/Grid layout mode owns child positioning.
+        if parent_managed && matches!(constraint, Constraint::Position { .. }) {
+            continue;
+        }
         apply_constraint(graph, node_idx, constraint, bounds, viewport);
     }
 
     for child_idx in graph.children(node_idx) {
         resolve_constraints_top_down(graph, child_idx, bounds, viewport);
+    }
+}
+
+/// Check whether a node's parent uses a managed layout (Column/Row/Grid).
+fn is_parent_managed(graph: &SceneGraph, node_idx: NodeIndex) -> bool {
+    let parent_idx = match graph.parent(node_idx) {
+        Some(p) => p,
+        None => return false,
+    };
+    let parent_node = &graph.graph[parent_idx];
+    match &parent_node.kind {
+        NodeKind::Group { layout } | NodeKind::Frame { layout, .. } => {
+            !matches!(layout, LayoutMode::Free)
+        }
+        _ => false,
+    }
+}
+
+/// Bottom-up re-computation of group auto-sizes after all constraints are applied.
+fn recompute_group_auto_sizes(
+    graph: &SceneGraph,
+    node_idx: NodeIndex,
+    bounds: &mut HashMap<NodeIndex, ResolvedBounds>,
+) {
+    // Recurse into children first (bottom-up)
+    for child_idx in graph.children(node_idx) {
+        recompute_group_auto_sizes(graph, child_idx, bounds);
+    }
+
+    let node = &graph.graph[node_idx];
+    let pad = match &node.kind {
+        NodeKind::Group {
+            layout: LayoutMode::Column { pad, .. },
+        }
+        | NodeKind::Group {
+            layout: LayoutMode::Row { pad, .. },
+        }
+        | NodeKind::Group {
+            layout: LayoutMode::Grid { pad, .. },
+        } => *pad,
+        NodeKind::Group {
+            layout: LayoutMode::Free,
+        } => 0.0,
+        _ => return, // not a group
+    };
+
+    let children = graph.children(node_idx);
+    if children.is_empty() {
+        return;
+    }
+
+    let mut min_x = f32::MAX;
+    let mut min_y = f32::MAX;
+    let mut max_x = f32::MIN;
+    let mut max_y = f32::MIN;
+
+    for &child_idx in &children {
+        if let Some(cb) = bounds.get(&child_idx) {
+            min_x = min_x.min(cb.x);
+            min_y = min_y.min(cb.y);
+            max_x = max_x.max(cb.x + cb.width);
+            max_y = max_y.max(cb.y + cb.height);
+        }
+    }
+
+    if min_x < f32::MAX {
+        bounds.insert(
+            node_idx,
+            ResolvedBounds {
+                x: min_x - pad,
+                y: min_y - pad,
+                width: (max_x - min_x) + 2.0 * pad,
+                height: (max_y - min_y) + 2.0 * pad,
+            },
+        );
     }
 }
 
@@ -236,23 +321,13 @@ fn resolve_children(
         let mut max_y = f32::MIN;
 
         for &child_idx in &children {
-            let child_node = &graph.graph[child_idx];
-            let mut rel_x = 0.0;
-            let mut rel_y = 0.0;
-            for c in &child_node.constraints {
-                if let Constraint::Position { x, y } = c {
-                    rel_x = *x;
-                    rel_y = *y;
-                }
-            }
-
             if let Some(cb) = bounds.get(&child_idx) {
-                let abs_x = cb.x + rel_x;
-                let abs_y = cb.y + rel_y;
-                min_x = min_x.min(abs_x);
-                min_y = min_y.min(abs_y);
-                max_x = max_x.max(abs_x + cb.width);
-                max_y = max_y.max(abs_y + cb.height);
+                // Use resolved absolute positions directly — by this point,
+                // bounds already hold correct positions from the layout pass.
+                min_x = min_x.min(cb.x);
+                min_y = min_y.min(cb.y);
+                max_x = max_x.max(cb.x + cb.width);
+                max_y = max_y.max(cb.y + cb.height);
             }
         }
 
@@ -779,6 +854,100 @@ group @card {
             "chart.y({}) < button.y({})",
             chart.y,
             button.y
+        );
+    }
+
+    #[test]
+    fn layout_column_ignores_position_constraint() {
+        // Children with stale Position constraints inside a column layout
+        // should be positioned by the column, not by their Position.
+        let input = r#"
+group @card {
+  layout: column gap=10 pad=20
+
+  rect @a { w: 100 h: 40 }
+  rect @b {
+    w: 100 h: 30
+    x: 500 y: 500
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let a_idx = graph.index_of(NodeId::intern("a")).unwrap();
+        let b_idx = graph.index_of(NodeId::intern("b")).unwrap();
+        let card_idx = graph.index_of(NodeId::intern("card")).unwrap();
+
+        let a = bounds[&a_idx];
+        let b = bounds[&b_idx];
+        let card = bounds[&card_idx];
+
+        // Both children should be at column x = pad (20), NOT at x=500
+        assert!(
+            (a.x - b.x).abs() < 0.01,
+            "a.x ({}) and b.x ({}) should be equal (column aligns them)",
+            a.x,
+            b.x
+        );
+        // b should be below a by height + gap (40 + 10 = 50)
+        assert!(
+            (b.y - a.y - 50.0).abs() < 0.01,
+            "b.y ({}) should be a.y + 50, got diff = {}",
+            b.y,
+            b.y - a.y
+        );
+        // Both children should be inside the card
+        assert!(
+            b.y + b.height <= card.y + card.height + 0.1,
+            "b bottom ({}) must be inside card bottom ({})",
+            b.y + b.height,
+            card.y + card.height
+        );
+    }
+
+    #[test]
+    fn layout_group_auto_size_contains_all_children() {
+        // A free-layout group should auto-size to contain all children,
+        // even those with Position constraints that extend beyond others.
+        let input = r#"
+group @panel {
+  rect @a { w: 100 h: 40 }
+  rect @b {
+    w: 80 h: 30
+    x: 200 y: 150
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let panel_idx = graph.index_of(NodeId::intern("panel")).unwrap();
+        let b_idx = graph.index_of(NodeId::intern("b")).unwrap();
+
+        let panel = bounds[&panel_idx];
+        let b = bounds[&b_idx];
+
+        // Panel must contain @b entirely
+        assert!(
+            panel.x + panel.width >= b.x + b.width,
+            "panel right ({}) must contain b right ({})",
+            panel.x + panel.width,
+            b.x + b.width
+        );
+        assert!(
+            panel.y + panel.height >= b.y + b.height,
+            "panel bottom ({}) must contain b bottom ({})",
+            panel.y + panel.height,
+            b.y + b.height
         );
     }
 }
