@@ -1651,6 +1651,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       color: var(--fd-text-secondary);
       margin-bottom: 4px;
       font-weight: 600;
+      display: block;
     }
     #annotation-card textarea,
     #annotation-card input[type="text"],
@@ -2444,20 +2445,28 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <div class="onboard-hint">Press <kbd>?</kbd> for all shortcuts</div>
     </div>
     <div id="floating-action-bar">
-      <span class="fab-label">Fill</span>
+      <label class="fab-label" for="fab-fill">Fill</label>
       <input type="color" id="fab-fill" class="fab-color" value="#4A90D9" title="Fill color">
       <div class="fab-sep"></div>
-      <span class="fab-label">Stroke</span>
+      <label class="fab-label" for="fab-stroke">Stroke</label>
       <input type="color" id="fab-stroke" class="fab-color" value="#333333" title="Stroke color">
-      <input type="number" id="fab-stroke-w" class="fab-input" min="0" max="20" step="1" value="1" title="Stroke width">
+      <input type="number" id="fab-stroke-w" aria-label="Stroke width" class="fab-input" min="0" max="20" step="1" value="1" title="Stroke width">
       <div class="fab-sep"></div>
-      <span class="fab-label">Opacity</span>
-      <input type="range" id="fab-opacity" class="fab-slider" min="0" max="1" step="0.05" value="1" title="Opacity">
+      <label class="fab-label" for="fab-opacity">Opacity</label>
+      <input type="range" id="fab-opacity" aria-label="Opacity" class="fab-slider" min="0" max="1" step="0.05" value="1" title="Opacity">
       <span id="fab-opacity-val" style="font-size:10px;min-width:24px">100%</span>
       <div class="fab-sep fab-text-only"></div>
-      <span class="fab-label fab-text-only">Size</span>
+      <label class="fab-label fab-text-only" for="fab-font-size">Size</label>
       <input type="number" id="fab-font-size" class="fab-input fab-text-only" min="8" max="200" step="1" value="16" title="Font size">
-
+      <div class="fab-sep"></div>
+      <button class="fab-btn" id="fab-more-btn" aria-label="More actions" title="More actions">⋯</button>
+      <div id="fab-overflow-menu">
+        <button class="fab-menu-item" data-action="group">⌘G Group</button>
+        <button class="fab-menu-item" data-action="ungroup">⌘⇧G Ungroup</button>
+        <button class="fab-menu-item" data-action="duplicate">⌘D Duplicate</button>
+        <button class="fab-menu-item" data-action="copy-png">⌘⇧C Copy as PNG</button>
+        <button class="fab-menu-item" data-action="delete" style="color:#e57373">⌫ Delete</button>
+      </div>
     </div>
     <canvas id="fd-canvas" class="tool-select"></canvas>
     <div id="dimension-tooltip"></div>
@@ -2515,19 +2524,19 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
           <div class="props-section-label">Position & Size</div>
           <div class="props-grid">
             <div class="props-field">
-              <label>X</label>
+              <label for="prop-x">X</label>
               <input type="number" id="prop-x" step="1">
             </div>
             <div class="props-field">
-              <label>Y</label>
+              <label for="prop-y">Y</label>
               <input type="number" id="prop-y" step="1">
             </div>
             <div class="props-field">
-              <label>W</label>
+              <label for="prop-w">W</label>
               <input type="number" id="prop-w" step="1" min="0">
             </div>
             <div class="props-field">
-              <label>H</label>
+              <label for="prop-h">H</label>
               <input type="number" id="prop-h" step="1" min="0">
             </div>
           </div>
@@ -2536,20 +2545,20 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
           <div class="props-section-label">Appearance</div>
           <div class="props-grid">
             <div class="props-field">
-              <label>Fill</label>
+              <label for="prop-fill">Fill</label>
               <input type="color" id="prop-fill" value="#CCCCCC">
               <div class="color-swatches" id="fill-swatches"></div>
             </div>
             <div class="props-field">
-              <label>Corner</label>
+              <label for="prop-corner">Corner</label>
               <input type="number" id="prop-corner" step="1" min="0" value="0">
             </div>
             <div class="props-field">
-              <label>Stroke</label>
+              <label for="prop-stroke-color">Stroke</label>
               <input type="color" id="prop-stroke-color" value="#000000">
             </div>
             <div class="props-field">
-              <label>Width</label>
+              <label for="prop-stroke-w">Width</label>
               <input type="number" id="prop-stroke-w" step="0.5" min="0" value="0">
             </div>
           </div>
@@ -2589,7 +2598,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <button class="card-close" id="card-close-btn">×</button>
     </div>
     <div class="field-group">
-      <div class="field-label">Description</div>
+      <label class="field-label" for="ann-description">Description</label>
       <textarea id="ann-description" placeholder="What this node is/does…"></textarea>
     </div>
     <div class="field-group">
@@ -2599,7 +2608,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
     <div class="field-group status-row">
       <div style="flex:1">
-        <div class="field-label">Status</div>
+        <label class="field-label" for="ann-status">Status</label>
         <select id="ann-status">
           <option value="">None</option>
           <option value="todo">To Do</option>
@@ -2609,7 +2618,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         </select>
       </div>
       <div style="flex:1">
-        <div class="field-label">Priority</div>
+        <label class="field-label" for="ann-priority">Priority</label>
         <select id="ann-priority">
           <option value="">None</option>
           <option value="high">High</option>
@@ -2619,7 +2628,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       </div>
     </div>
     <div class="field-group">
-      <div class="field-label">Tags</div>
+      <label class="field-label" for="ann-tags">Tags</label>
       <input type="text" id="ann-tags" placeholder="comma-separated tags">
     </div>
   </div>
