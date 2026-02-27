@@ -1,0 +1,214 @@
+# Org Chart — HR / Manager use case
+# Demonstrates: edges with labels, nested groups, hierarchical layout
+
+style person_card {
+  fill: #FFFFFF
+  corner: 12
+}
+
+style role_badge {
+  corner: 4
+}
+
+# CEO level
+group @ceo_card {
+  layout: column gap=4 pad=16
+  use: person_card
+  shadow: (0,2,8,#0000001A)
+  x: 380 y: 40
+  text @ceo_name "Sarah Chen" {
+    font: "Inter" semibold 16
+    fill: #111827
+  }
+  rect @ceo_role {
+    w: 140 h: 24
+    use: role_badge
+    fill: #6C5CE7
+    text "Chief Executive Officer" {
+      font: "Inter" medium 11
+      fill: #FFFFFF
+    }
+  }
+}
+
+# VP level
+group @vp_eng_card {
+  layout: column gap=4 pad=16
+  use: person_card
+  shadow: (0,2,8,#0000001A)
+  x: 120 y: 200
+  text @vp_eng_name "Marcus Johnson" {
+    font: "Inter" semibold 14
+    fill: #111827
+  }
+  rect @vp_eng_role {
+    w: 120 h: 22
+    use: role_badge
+    fill: #3B82F6
+    text "VP Engineering" {
+      font: "Inter" medium 11
+      fill: #FFFFFF
+    }
+  }
+}
+
+group @vp_design_card {
+  layout: column gap=4 pad=16
+  use: person_card
+  shadow: (0,2,8,#0000001A)
+  x: 380 y: 200
+  text @vp_design_name "Aisha Patel" {
+    font: "Inter" semibold 14
+    fill: #111827
+  }
+  rect @vp_design_role {
+    w: 100 h: 22
+    use: role_badge
+    fill: #8B5CF6
+    text "VP Design" {
+      font: "Inter" medium 11
+      fill: #FFFFFF
+    }
+  }
+}
+
+group @vp_product_card {
+  layout: column gap=4 pad=16
+  use: person_card
+  shadow: (0,2,8,#0000001A)
+  x: 620 y: 200
+  text @vp_product_name "David Kim" {
+    font: "Inter" semibold 14
+    fill: #111827
+  }
+  rect @vp_product_role {
+    w: 100 h: 22
+    use: role_badge
+    fill: #10B981
+    text "VP Product" {
+      font: "Inter" medium 11
+      fill: #FFFFFF
+    }
+  }
+}
+
+# Engineering team
+group @eng_lead_card {
+  layout: column gap=4 pad=12
+  use: person_card
+  shadow: (0,1,4,#00000012)
+  x: 40 y: 380
+  text @eng_lead_name "Lisa Wang" {
+    font: "Inter" medium 13
+    fill: #111827
+  }
+  text @eng_lead_title "Tech Lead" {
+    font: "Inter" regular 11
+    fill: #6B7280
+  }
+}
+
+group @eng_sr_card {
+  layout: column gap=4 pad=12
+  use: person_card
+  shadow: (0,1,4,#00000012)
+  x: 220 y: 380
+  text @eng_sr_name "James Okafor" {
+    font: "Inter" medium 13
+    fill: #111827
+  }
+  text @eng_sr_title "Sr. Engineer" {
+    font: "Inter" regular 11
+    fill: #6B7280
+  }
+}
+
+# Design team
+group @design_lead_card {
+  layout: column gap=4 pad=12
+  use: person_card
+  shadow: (0,1,4,#00000012)
+  x: 380 y: 380
+  text @design_lead_name "Emma Rossi" {
+    font: "Inter" medium 13
+    fill: #111827
+  }
+  text @design_lead_title "Design Lead" {
+    font: "Inter" regular 11
+    fill: #6B7280
+  }
+}
+
+# Product team
+group @pm_card {
+  layout: column gap=4 pad=12
+  use: person_card
+  shadow: (0,1,4,#00000012)
+  x: 600 y: 380
+  text @pm_name "Rio Tanaka" {
+    font: "Inter" medium 13
+    fill: #111827
+  }
+  text @pm_title "Product Manager" {
+    font: "Inter" regular 11
+    fill: #6B7280
+  }
+}
+
+# Connections — CEO to VPs
+edge @ceo_to_eng {
+  from: @ceo_card
+  to: @vp_eng_card
+  stroke: #D1D5DB 2
+  arrow: end
+  curve: step
+}
+
+edge @ceo_to_design {
+  from: @ceo_card
+  to: @vp_design_card
+  stroke: #D1D5DB 2
+  arrow: end
+  curve: step
+}
+
+edge @ceo_to_product {
+  from: @ceo_card
+  to: @vp_product_card
+  stroke: #D1D5DB 2
+  arrow: end
+  curve: step
+}
+
+# VP to team leads
+edge @eng_to_lead {
+  from: @vp_eng_card
+  to: @eng_lead_card
+  stroke: #BFDBFE 2
+  arrow: end
+  curve: step
+}
+
+edge @eng_to_sr {
+  from: @vp_eng_card
+  to: @eng_sr_card
+  stroke: #BFDBFE 2
+  arrow: end
+  curve: step
+}
+
+edge @design_to_lead {
+  from: @vp_design_card
+  to: @design_lead_card
+  stroke: #DDD6FE 2
+  arrow: end
+  curve: step
+}
+
+edge @product_to_pm {
+  from: @vp_product_card
+  to: @pm_card
+  stroke: #A7F3D0 2
+  arrow: end
+  curve: step
+}

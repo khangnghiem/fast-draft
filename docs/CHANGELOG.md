@@ -5,6 +5,10 @@
 
 ## Completed Requirements
 
+### Benchmark Examples
+
+- **DOCS**: 8 new benchmark pairs in `examples/benchmarks/` — each pair contains an `.fd` file and equivalent `.excalidraw.json` to demonstrate FD's conciseness advantage for different user personas: Product Designer (login_form), Project Manager (kanban_board), HR/Manager (org_chart), Software Engineer (api_flowchart), Mobile Designer (mobile_onboarding), Marketing (pricing_table), UX Researcher (wireframe_ecommerce), Data Analyst (data_dashboard)
+
 ### v0.8.59
 
 - **UX (R4.12)**: Content-first emitter ordering — children now appear before appearance properties (fill, stroke, corner, font) inside node blocks, so non-tech users see content structure first and styling details second

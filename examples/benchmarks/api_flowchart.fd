@@ -1,0 +1,212 @@
+# API Flowchart — Software Engineer use case
+# Demonstrates: edges with labels/arrows, spec blocks, decision flow
+
+style process_box {
+  fill: #EFF6FF
+  corner: 8
+}
+
+style decision_box {
+  fill: #FEF3C7
+  corner: 4
+}
+
+style success_box {
+  fill: #D1FAE5
+  corner: 8
+}
+
+style error_box {
+  fill: #FEE2E2
+  corner: 8
+}
+
+style io_box {
+  fill: #F3E8FF
+  corner: 12
+}
+
+# Start point
+rect @client_request {
+  spec {
+    "HTTP request entry point"
+    tag: api, v2
+  }
+  w: 200 h: 48
+  use: io_box
+  x: 300 y: 40
+  text "Client Request" {
+    font: "Inter" semibold 14
+    fill: #7C3AED
+  }
+}
+
+# API Gateway
+rect @api_gateway {
+  spec "Rate limiting + request validation"
+  w: 200 h: 48
+  use: process_box
+  x: 300 y: 140
+  text "API Gateway" {
+    font: "Inter" medium 14
+    fill: #1D4ED8
+  }
+}
+
+# Auth check
+rect @auth_check {
+  spec {
+    "JWT token validation"
+    accept: "reject expired tokens within 5s"
+    status: done
+  }
+  w: 200 h: 48
+  use: decision_box
+  x: 300 y: 240
+  text "Authenticate?" {
+    font: "Inter" semibold 14
+    fill: #92400E
+  }
+}
+
+# Auth failure
+rect @auth_failure {
+  w: 160 h: 44
+  use: error_box
+  x: 600 y: 240
+  text "401 Unauthorized" {
+    font: "Inter" medium 13
+    fill: #DC2626
+  }
+}
+
+# Route handler
+rect @route_handler {
+  spec "Match endpoint to controller"
+  w: 200 h: 48
+  use: process_box
+  x: 300 y: 340
+  text "Route Handler" {
+    font: "Inter" medium 14
+    fill: #1D4ED8
+  }
+}
+
+# Business logic
+rect @business_logic {
+  spec "Core domain logic execution"
+  w: 200 h: 48
+  use: process_box
+  x: 300 y: 440
+  text "Business Logic" {
+    font: "Inter" medium 14
+    fill: #1D4ED8
+  }
+}
+
+# DB query
+rect @db_query {
+  spec {
+    "Database read/write operations"
+    accept: "queries < 100ms p95"
+    status: in_progress
+  }
+  w: 200 h: 48
+  use: process_box
+  x: 300 y: 540
+  text "Database Query" {
+    font: "Inter" medium 14
+    fill: #1D4ED8
+  }
+}
+
+# Success response
+rect @success_response {
+  w: 200 h: 48
+  use: success_box
+  x: 300 y: 660
+  text "200 OK + JSON" {
+    font: "Inter" semibold 14
+    fill: #059669
+  }
+}
+
+# Error response
+rect @error_response {
+  w: 160 h: 44
+  use: error_box
+  x: 600 y: 540
+  text "500 Server Error" {
+    font: "Inter" medium 13
+    fill: #DC2626
+  }
+}
+
+# Flow edges
+edge @req_to_gateway {
+  from: @client_request
+  to: @api_gateway
+  stroke: #6B7280 2
+  arrow: end
+  curve: straight
+}
+
+edge @gateway_to_auth {
+  from: @api_gateway
+  to: @auth_check
+  stroke: #6B7280 2
+  arrow: end
+  curve: straight
+}
+
+edge @auth_yes {
+  from: @auth_check
+  to: @route_handler
+  label: "valid token"
+  stroke: #10B981 2
+  arrow: end
+  curve: straight
+}
+
+edge @auth_no {
+  from: @auth_check
+  to: @auth_failure
+  label: "invalid / expired"
+  stroke: #EF4444 2
+  arrow: end
+  curve: straight
+}
+
+edge @route_to_logic {
+  from: @route_handler
+  to: @business_logic
+  stroke: #6B7280 2
+  arrow: end
+  curve: straight
+}
+
+edge @logic_to_db {
+  from: @business_logic
+  to: @db_query
+  stroke: #6B7280 2
+  arrow: end
+  curve: straight
+}
+
+edge @db_success {
+  from: @db_query
+  to: @success_response
+  label: "query OK"
+  stroke: #10B981 2
+  arrow: end
+  curve: straight
+}
+
+edge @db_error {
+  from: @db_query
+  to: @error_response
+  label: "query failed"
+  stroke: #EF4444 2
+  arrow: end
+  curve: straight
+}

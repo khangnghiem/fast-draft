@@ -1,0 +1,68 @@
+# E-Commerce Wireframe — UX Researcher use case
+# Demonstrates: generic nodes (placeholders), grid layout, spec annotations
+
+group @ecommerce_page {
+  layout: column gap=0
+  w: 960
+  fill: #FAFAFA
+
+  # Navigation bar
+  group @nav_bar {
+    layout: row gap=24 pad=16
+    fill: #FFFFFF
+    shadow: (0,1,3,#0000000D)
+    @logo { spec "Brand logo"; w: 120 h: 32; fill: #E5E7EB }
+    @search_bar {
+      spec { "Product search"; accept: "autocomplete < 200ms"; status: in_progress }
+      w: 400 h: 36; fill: #F3F4F6; corner: 8
+    }
+    @cart_icon { spec "Cart with badge"; w: 36 h: 36; fill: #E5E7EB }
+    @user_avatar { spec "Profile menu"; w: 36 h: 36; fill: #E5E7EB; corner: 18 }
+  }
+
+  # Content
+  group @main_content {
+    layout: row gap=24 pad=16
+
+    # Sidebar filters
+    group @filters {
+      layout: column gap=16 pad=16
+      w: 220; fill: #FFFFFF; corner: 8
+      text "Filters" { font: "Inter" semibold 16; fill: #111827 }
+      @price_filter { spec "Price range slider $0-$500"; w: 188 h: 60; fill: #F3F4F6 }
+      @brand_filter { spec "Brand checkboxes"; w: 188 h: 80; fill: #F3F4F6 }
+      @rating_filter { spec "Star rating 1-5"; w: 188 h: 40; fill: #F3F4F6 }
+    }
+
+    # Product grid
+    group @products {
+      layout: grid cols=3 gap=16
+
+      group @product_1 {
+        layout: column gap=8 pad=12
+        fill: #FFFFFF; corner: 8; shadow: (0,1,3,#0000000D)
+        @img_1 { spec "Product image"; w: 200 h: 200; fill: #F3F4F6 }
+        text "Wireless Pro X" { font: "Inter" medium 14; fill: #111827 }
+        text "$249.99" { font: "Inter" semibold 16; fill: #111827 }
+      }
+
+      group @product_2 {
+        layout: column gap=8 pad=12
+        fill: #FFFFFF; corner: 8; shadow: (0,1,3,#0000000D)
+        @img_2 { spec "Product image"; w: 200 h: 200; fill: #F3F4F6 }
+        text "Studio Monitor" { font: "Inter" medium 14; fill: #111827 }
+        text "$179.99" { font: "Inter" semibold 16; fill: #111827 }
+      }
+
+      group @product_3 {
+        layout: column gap=8 pad=12
+        fill: #FFFFFF; corner: 8; shadow: (0,1,3,#0000000D)
+        @img_3 { spec "Product image"; w: 200 h: 200; fill: #F3F4F6 }
+        text "Sport Earbuds" { font: "Inter" medium 14; fill: #111827 }
+        text "$129.99" { font: "Inter" semibold 16; fill: #111827 }
+      }
+    }
+  }
+}
+
+@ecommerce_page -> center_in: canvas

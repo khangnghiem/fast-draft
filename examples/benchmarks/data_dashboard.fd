@@ -1,0 +1,187 @@
+# Data Dashboard — Data Analyst use case
+# Demonstrates: grid layout, nested groups, style tokens, KPI cards
+
+style kpi_card {
+  fill: #FFFFFF
+  corner: 12
+}
+
+style chart_area {
+  fill: #F8FAFC
+  corner: 8
+}
+
+style metric_value {
+  font: "Inter" bold 28
+  fill: #0F172A
+}
+
+style metric_label {
+  font: "Inter" medium 12
+  fill: #64748B
+}
+
+style metric_delta_up {
+  font: "Inter" semibold 13
+  fill: #10B981
+}
+
+style metric_delta_down {
+  font: "Inter" semibold 13
+  fill: #EF4444
+}
+
+group @analytics_dashboard {
+  layout: column gap=20 pad=24
+  fill: #F1F5F9
+  corner: 16
+
+  # Header
+  group @dash_header {
+    layout: row gap=16
+    text @dash_title "Analytics Overview" {
+      font: "Inter" bold 24
+      fill: #0F172A
+    }
+    text @dash_period "Last 30 days" {
+      font: "Inter" regular 14
+      fill: #94A3B8
+    }
+  }
+
+  # KPI row
+  group @kpi_row {
+    layout: row gap=16
+
+    group @kpi_users {
+      layout: column gap=4 pad=20
+      w: 220
+      use: kpi_card
+      shadow: (0,1,3,#0000000A)
+      text "Total Users" { use: metric_label }
+      text "24,521" { use: metric_value }
+      text "+14.2%" { use: metric_delta_up }
+    }
+
+    group @kpi_revenue {
+      layout: column gap=4 pad=20
+      w: 220
+      use: kpi_card
+      shadow: (0,1,3,#0000000A)
+      text "Revenue" { use: metric_label }
+      text "$89,430" { use: metric_value }
+      text "+8.7%" { use: metric_delta_up }
+    }
+
+    group @kpi_conversion {
+      layout: column gap=4 pad=20
+      w: 220
+      use: kpi_card
+      shadow: (0,1,3,#0000000A)
+      text "Conversion" { use: metric_label }
+      text "3.24%" { use: metric_value }
+      text "-0.8%" { use: metric_delta_down }
+    }
+
+    group @kpi_bounce {
+      layout: column gap=4 pad=20
+      w: 220
+      use: kpi_card
+      shadow: (0,1,3,#0000000A)
+      text "Bounce Rate" { use: metric_label }
+      text "42.1%" { use: metric_value }
+      text "-2.3%" { use: metric_delta_up }
+    }
+  }
+
+  # Charts row
+  group @charts_row {
+    layout: row gap=16
+
+    # Main chart
+    group @traffic_chart {
+      layout: column gap=12 pad=20
+      use: kpi_card
+      shadow: (0,1,3,#0000000A)
+      text "Traffic Over Time" {
+        font: "Inter" semibold 16
+        fill: #0F172A
+      }
+      rect @traffic_graph {
+        w: 560 h: 240
+        use: chart_area
+      }
+    }
+
+    # Side chart
+    group @sources_chart {
+      layout: column gap=12 pad=20
+      use: kpi_card
+      shadow: (0,1,3,#0000000A)
+      text "Traffic Sources" {
+        font: "Inter" semibold 16
+        fill: #0F172A
+      }
+      rect @sources_graph {
+        w: 280 h: 240
+        use: chart_area
+      }
+    }
+  }
+
+  # Table section
+  group @recent_table {
+    layout: column gap=12 pad=20
+    use: kpi_card
+    shadow: (0,1,3,#0000000A)
+
+    text "Recent Transactions" {
+      font: "Inter" semibold 16
+      fill: #0F172A
+    }
+
+    # Table header
+    group @table_header {
+      layout: row gap=16
+      text "Customer" { font: "Inter" semibold 12; fill: #64748B; w: 200 }
+      text "Amount" { font: "Inter" semibold 12; fill: #64748B; w: 100 }
+      text "Status" { font: "Inter" semibold 12; fill: #64748B; w: 100 }
+      text "Date" { font: "Inter" semibold 12; fill: #64748B; w: 120 }
+    }
+
+    rect @table_divider { w: 840 h: 1; fill: #E2E8F0 }
+
+    # Table rows
+    group @row_1 {
+      layout: row gap=16
+      text "Alice Johnson" { font: "Inter" regular 13; fill: #334155; w: 200 }
+      text "$1,250.00" { font: "Inter" medium 13; fill: #0F172A; w: 100 }
+      rect @status_1 { w: 72 h: 22; fill: #D1FAE5; corner: 4
+        text "Completed" { font: "Inter" medium 11; fill: #059669 }
+      }
+      text "Feb 27, 2026" { font: "Inter" regular 13; fill: #64748B; w: 120 }
+    }
+
+    group @row_2 {
+      layout: row gap=16
+      text "Bob Martinez" { font: "Inter" regular 13; fill: #334155; w: 200 }
+      text "$890.00" { font: "Inter" medium 13; fill: #0F172A; w: 100 }
+      rect @status_2 { w: 60 h: 22; fill: #FEF3C7; corner: 4
+        text "Pending" { font: "Inter" medium 11; fill: #D97706 }
+      }
+      text "Feb 26, 2026" { font: "Inter" regular 13; fill: #64748B; w: 120 }
+    }
+
+    group @row_3 {
+      layout: row gap=16
+      text "Carol Nguyen" { font: "Inter" regular 13; fill: #334155; w: 200 }
+      text "$2,100.00" { font: "Inter" medium 13; fill: #0F172A; w: 100 }
+      rect @status_3 { w: 72 h: 22; fill: #D1FAE5; corner: 4
+        text "Completed" { font: "Inter" medium 11; fill: #059669 }
+      }
+      text "Feb 25, 2026" { font: "Inter" regular 13; fill: #64748B; w: 120 }
+    }
+  }
+}
+
+@analytics_dashboard -> center_in: canvas

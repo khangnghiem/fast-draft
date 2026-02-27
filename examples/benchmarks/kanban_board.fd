@@ -1,0 +1,181 @@
+# Kanban Board — Project Manager use case
+# Demonstrates: row/column layouts, semantic IDs, color-coded statuses, style reuse
+
+style card {
+  fill: #FFFFFF
+  corner: 8
+}
+
+style column_bg {
+  fill: #F4F5F7
+  corner: 12
+}
+
+style tag_urgent {
+  fill: #FEE2E2
+  corner: 4
+}
+
+style tag_feature {
+  fill: #DBEAFE
+  corner: 4
+}
+
+style tag_bug {
+  fill: #FEF3C7
+  corner: 4
+}
+
+group @kanban_board {
+  layout: row gap=20 pad=24
+  fill: #ECEDF0
+  corner: 16
+
+  # To Do column
+  group @todo_column {
+    layout: column gap=12 pad=16
+    w: 280
+    use: column_bg
+
+    text @todo_header "To Do" {
+      font: "Inter" semibold 16
+      fill: #1F2937
+    }
+
+    group @task_auth {
+      layout: column gap=8 pad=12
+      use: card
+      shadow: (0,1,3,#0000000D)
+      rect @tag_auth_urgent {
+        w: 56 h: 22
+        use: tag_urgent
+        text "Urgent" {
+          font: "Inter" medium 11
+          fill: #DC2626
+        }
+      }
+      text @task_auth_title "Fix authentication timeout" {
+        font: "Inter" medium 14
+        fill: #111827
+      }
+      text @task_auth_desc "Users getting logged out after 5 min" {
+        font: "Inter" regular 12
+        fill: #6B7280
+      }
+    }
+
+    group @task_search {
+      layout: column gap=8 pad=12
+      use: card
+      shadow: (0,1,3,#0000000D)
+      rect @tag_search_feature {
+        w: 64 h: 22
+        use: tag_feature
+        text "Feature" {
+          font: "Inter" medium 11
+          fill: #2563EB
+        }
+      }
+      text @task_search_title "Add global search" {
+        font: "Inter" medium 14
+        fill: #111827
+      }
+      text @task_search_desc "Full-text search across projects" {
+        font: "Inter" regular 12
+        fill: #6B7280
+      }
+    }
+  }
+
+  # In Progress column
+  group @progress_column {
+    layout: column gap=12 pad=16
+    w: 280
+    use: column_bg
+
+    text @progress_header "In Progress" {
+      font: "Inter" semibold 16
+      fill: #1F2937
+    }
+
+    group @task_api {
+      layout: column gap=8 pad=12
+      use: card
+      shadow: (0,1,3,#0000000D)
+      rect @tag_api_feature {
+        w: 64 h: 22
+        use: tag_feature
+        text "Feature" {
+          font: "Inter" medium 11
+          fill: #2563EB
+        }
+      }
+      text @task_api_title "REST API v2 migration" {
+        font: "Inter" medium 14
+        fill: #111827
+      }
+      text @task_api_desc "Migrate endpoints to new schema" {
+        font: "Inter" regular 12
+        fill: #6B7280
+      }
+    }
+
+    group @task_perf {
+      layout: column gap=8 pad=12
+      use: card
+      shadow: (0,1,3,#0000000D)
+      rect @tag_perf_bug {
+        w: 40 h: 22
+        use: tag_bug
+        text "Bug" {
+          font: "Inter" medium 11
+          fill: #D97706
+        }
+      }
+      text @task_perf_title "Dashboard slow on mobile" {
+        font: "Inter" medium 14
+        fill: #111827
+      }
+      text @task_perf_desc "LCP > 4s on 3G connections" {
+        font: "Inter" regular 12
+        fill: #6B7280
+      }
+    }
+  }
+
+  # Done column
+  group @done_column {
+    layout: column gap=12 pad=16
+    w: 280
+    use: column_bg
+
+    text @done_header "Done" {
+      font: "Inter" semibold 16
+      fill: #1F2937
+    }
+
+    group @task_dark {
+      layout: column gap=8 pad=12
+      use: card
+      shadow: (0,1,3,#0000000D)
+      rect @tag_dark_feature {
+        w: 64 h: 22
+        use: tag_feature
+        text "Feature" {
+          font: "Inter" medium 11
+          fill: #2563EB
+        }
+      }
+      text @task_dark_title "Dark mode support" {
+        font: "Inter" medium 14
+        fill: #111827
+      }
+      text @task_dark_desc "Theme toggle in settings" {
+        font: "Inter" regular 12
+        fill: #6B7280
+      }
+    }
+  }
+}
+
+@kanban_board -> center_in: canvas

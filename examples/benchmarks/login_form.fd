@@ -1,0 +1,128 @@
+# Login Form — Product Designer use case
+# Demonstrates: nested groups, style reuse, spec annotations, animations
+
+style card_bg {
+  fill: #FFFFFF
+  corner: 16
+}
+
+style input_field {
+  fill: #F8F9FA
+  corner: 8
+}
+
+style primary_btn {
+  fill: #6C5CE7
+  corner: 10
+}
+
+style secondary_btn {
+  fill: #F0F0F5
+  corner: 10
+}
+
+group @login_form {
+  layout: column gap=16 pad=32
+  w: 400
+  use: card_bg
+  shadow: (0,4,24,#00000018)
+
+  text @title "Sign In" {
+    font: "Inter" bold 28
+    fill: #1A1A2E
+  }
+
+  text @subtitle "Welcome back! Please enter your details." {
+    font: "Inter" regular 14
+    fill: #6B7280
+  }
+
+  # Email field
+  group @email_group {
+    layout: column gap=6
+    text @email_label "Email" {
+      font: "Inter" medium 13
+      fill: #374151
+    }
+    rect @email_input {
+      w: 336 h: 44
+      use: input_field
+      stroke: #E5E7EB 1
+      text @email_placeholder "enter@example.com" {
+        font: "Inter" regular 14
+        fill: #9CA3AF
+      }
+    }
+  }
+
+  # Password field
+  group @password_group {
+    layout: column gap=6
+    text @password_label "Password" {
+      font: "Inter" medium 13
+      fill: #374151
+    }
+    rect @password_input {
+      w: 336 h: 44
+      use: input_field
+      stroke: #E5E7EB 1
+      text @password_placeholder "••••••••" {
+        font: "Inter" regular 14
+        fill: #9CA3AF
+      }
+    }
+  }
+
+  text @forgot_link "Forgot password?" {
+    font: "Inter" medium 13
+    fill: #6C5CE7
+  }
+
+  # Primary CTA
+  rect @sign_in_btn {
+    spec {
+      "Primary CTA — triggers authentication flow"
+      accept: "disabled when fields empty"
+      status: done
+    }
+    w: 336 h: 48
+    use: primary_btn
+    text @sign_in_label "Sign In" {
+      font: "Inter" semibold 15
+      fill: #FFFFFF
+    }
+    anim :hover {
+      fill: #5A4BD1
+      scale: 1.02
+      ease: spring 200ms
+    }
+  }
+
+  # Divider
+  rect @divider {
+    w: 336 h: 1
+    fill: #E5E7EB
+  }
+
+  # Social login
+  rect @google_btn {
+    w: 336 h: 44
+    use: secondary_btn
+    stroke: #E5E7EB 1
+    text @google_label "Continue with Google" {
+      font: "Inter" medium 14
+      fill: #374151
+    }
+    anim :hover {
+      fill: #E8E8ED
+      ease: ease_out 150ms
+    }
+  }
+
+  text @signup_prompt "Don't have an account? Sign up" {
+    font: "Inter" regular 13
+    fill: #6B7280
+  }
+}
+
+@login_form -> center_in: canvas

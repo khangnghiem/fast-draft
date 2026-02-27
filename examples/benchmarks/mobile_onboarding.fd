@@ -1,0 +1,184 @@
+# Mobile Onboarding — Mobile Designer use case
+# Demonstrates: frames with clip, column layouts, animations, style reuse
+
+style phone_frame {
+  fill: #1A1A2E
+  corner: 40
+}
+
+style screen_bg {
+  fill: #FFFFFF
+  corner: 32
+}
+
+style dot_active {
+  fill: #6C5CE7
+  corner: 6
+}
+
+style dot_inactive {
+  fill: #D1D5DB
+  corner: 6
+}
+
+style cta_primary {
+  fill: #6C5CE7
+  corner: 12
+}
+
+# Screen 1 — Welcome
+frame @screen_welcome {
+  w: 280 h: 520
+  use: phone_frame
+  clip: true
+  x: 60 y: 60
+
+  group @welcome_content {
+    layout: column gap=24 pad=32
+    use: screen_bg
+
+    rect @welcome_illustration {
+      w: 216 h: 180
+      fill: #EDE9FE
+      corner: 16
+      text "🎨" {
+        font: "Inter" regular 64
+        fill: #6C5CE7
+      }
+    }
+
+    text @welcome_title "Design Anywhere" {
+      font: "Inter" bold 22
+      fill: #1A1A2E
+    }
+
+    text @welcome_desc "Create beautiful designs on the go with an intuitive canvas experience." {
+      font: "Inter" regular 14
+      fill: #6B7280
+    }
+
+    # Page dots
+    group @dots_1 {
+      layout: row gap=8
+      rect { w: 24 h: 6; use: dot_active }
+      rect { w: 6 h: 6; use: dot_inactive }
+      rect { w: 6 h: 6; use: dot_inactive }
+    }
+
+    rect @welcome_cta {
+      w: 216 h: 48
+      use: cta_primary
+      text "Get Started" {
+        font: "Inter" semibold 15
+        fill: #FFFFFF
+      }
+      anim :hover {
+        scale: 1.03
+        ease: spring 200ms
+      }
+    }
+  }
+}
+
+# Screen 2 — Collaborate
+frame @screen_collab {
+  w: 280 h: 520
+  use: phone_frame
+  clip: true
+  x: 380 y: 60
+
+  group @collab_content {
+    layout: column gap=24 pad=32
+    use: screen_bg
+
+    rect @collab_illustration {
+      w: 216 h: 180
+      fill: #DBEAFE
+      corner: 16
+      text "👥" {
+        font: "Inter" regular 64
+        fill: #3B82F6
+      }
+    }
+
+    text @collab_title "Work Together" {
+      font: "Inter" bold 22
+      fill: #1A1A2E
+    }
+
+    text @collab_desc "Share your canvas with teammates and iterate in real time." {
+      font: "Inter" regular 14
+      fill: #6B7280
+    }
+
+    group @dots_2 {
+      layout: row gap=8
+      rect { w: 6 h: 6; use: dot_inactive }
+      rect { w: 24 h: 6; use: dot_active }
+      rect { w: 6 h: 6; use: dot_inactive }
+    }
+
+    rect @collab_cta {
+      w: 216 h: 48
+      use: cta_primary
+      text "Continue" {
+        font: "Inter" semibold 15
+        fill: #FFFFFF
+      }
+    }
+  }
+}
+
+# Screen 3 — Export
+frame @screen_export {
+  w: 280 h: 520
+  use: phone_frame
+  clip: true
+  x: 700 y: 60
+
+  group @export_content {
+    layout: column gap=24 pad=32
+    use: screen_bg
+
+    rect @export_illustration {
+      w: 216 h: 180
+      fill: #D1FAE5
+      corner: 16
+      text "🚀" {
+        font: "Inter" regular 64
+        fill: #10B981
+      }
+    }
+
+    text @export_title "Ship It" {
+      font: "Inter" bold 22
+      fill: #1A1A2E
+    }
+
+    text @export_desc "Export to PNG, SVG, or generate production-ready code instantly." {
+      font: "Inter" regular 14
+      fill: #6B7280
+    }
+
+    group @dots_3 {
+      layout: row gap=8
+      rect { w: 6 h: 6; use: dot_inactive }
+      rect { w: 6 h: 6; use: dot_inactive }
+      rect { w: 24 h: 6; use: dot_active }
+    }
+
+    rect @export_cta {
+      w: 216 h: 48
+      fill: #10B981
+      corner: 12
+      text "Start Designing" {
+        font: "Inter" semibold 15
+        fill: #FFFFFF
+      }
+      anim :hover {
+        scale: 1.03
+        ease: spring 200ms
+      }
+    }
+  }
+}

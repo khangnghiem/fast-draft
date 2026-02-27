@@ -1,0 +1,209 @@
+# Pricing Table — Marketing use case
+# Demonstrates: row layout, style reuse, highlighted tier, animations
+
+style tier_card {
+  fill: #FFFFFF
+  corner: 16
+}
+
+style tier_highlighted {
+  fill: #6C5CE7
+  corner: 16
+}
+
+style feature_text {
+  font: "Inter" regular 14
+  fill: #4B5563
+}
+
+style price_text {
+  font: "Inter" bold 40
+  fill: #111827
+}
+
+style tier_name {
+  font: "Inter" semibold 20
+  fill: #111827
+}
+
+group @pricing_section {
+  layout: column gap=32 pad=40
+
+  # Header
+  group @pricing_header {
+    layout: column gap=8
+    text @pricing_title "Simple, Transparent Pricing" {
+      font: "Inter" bold 32
+      fill: #111827
+    }
+    text @pricing_subtitle "No hidden fees. Cancel anytime." {
+      font: "Inter" regular 16
+      fill: #6B7280
+    }
+  }
+
+  # Pricing tiers
+  group @pricing_tiers {
+    layout: row gap=24
+
+    # Free tier
+    group @free_tier {
+      layout: column gap=16 pad=28
+      w: 300
+      use: tier_card
+      shadow: (0,2,12,#00000012)
+
+      text @free_name "Free" {
+        use: tier_name
+      }
+
+      group @free_price {
+        layout: row gap=4
+        text "$0" { use: price_text }
+        text "/month" {
+          font: "Inter" regular 14
+          fill: #9CA3AF
+        }
+      }
+
+      rect @free_divider { w: 244 h: 1; fill: #E5E7EB }
+
+      text "5 projects" { use: feature_text }
+      text "1 GB storage" { use: feature_text }
+      text "Basic export (PNG)" { use: feature_text }
+      text "Community support" { use: feature_text }
+
+      rect @free_cta {
+        w: 244 h: 44
+        fill: #F3F4F6
+        corner: 10
+        text "Get Started" {
+          font: "Inter" semibold 14
+          fill: #374151
+        }
+        anim :hover {
+          fill: #E5E7EB
+          ease: ease_out 150ms
+        }
+      }
+    }
+
+    # Pro tier (highlighted)
+    group @pro_tier {
+      layout: column gap=16 pad=28
+      w: 300
+      use: tier_highlighted
+      shadow: (0,8,32,#6C5CE740)
+
+      rect @pro_badge {
+        w: 80 h: 24
+        fill: #FFFFFF33
+        corner: 12
+        text "Popular" {
+          font: "Inter" semibold 11
+          fill: #FFFFFF
+        }
+      }
+
+      text @pro_name "Pro" {
+        font: "Inter" semibold 20
+        fill: #FFFFFF
+      }
+
+      group @pro_price {
+        layout: row gap=4
+        text "$19" {
+          font: "Inter" bold 40
+          fill: #FFFFFF
+        }
+        text "/month" {
+          font: "Inter" regular 14
+          fill: #FFFFFFB3
+        }
+      }
+
+      rect @pro_divider { w: 244 h: 1; fill: #FFFFFF33 }
+
+      text "Unlimited projects" {
+        font: "Inter" regular 14
+        fill: #FFFFFFCC
+      }
+      text "50 GB storage" {
+        font: "Inter" regular 14
+        fill: #FFFFFFCC
+      }
+      text "SVG + PDF export" {
+        font: "Inter" regular 14
+        fill: #FFFFFFCC
+      }
+      text "Priority support" {
+        font: "Inter" regular 14
+        fill: #FFFFFFCC
+      }
+      text "Version history" {
+        font: "Inter" regular 14
+        fill: #FFFFFFCC
+      }
+
+      rect @pro_cta {
+        w: 244 h: 44
+        fill: #FFFFFF
+        corner: 10
+        text "Upgrade to Pro" {
+          font: "Inter" semibold 14
+          fill: #6C5CE7
+        }
+        anim :hover {
+          scale: 1.03
+          ease: spring 200ms
+        }
+      }
+    }
+
+    # Enterprise tier
+    group @enterprise_tier {
+      layout: column gap=16 pad=28
+      w: 300
+      use: tier_card
+      shadow: (0,2,12,#00000012)
+
+      text @enterprise_name "Enterprise" {
+        use: tier_name
+      }
+
+      group @enterprise_price {
+        layout: row gap=4
+        text "$79" { use: price_text }
+        text "/month" {
+          font: "Inter" regular 14
+          fill: #9CA3AF
+        }
+      }
+
+      rect @ent_divider { w: 244 h: 1; fill: #E5E7EB }
+
+      text "Everything in Pro" { use: feature_text }
+      text "Unlimited storage" { use: feature_text }
+      text "SSO & SAML" { use: feature_text }
+      text "Custom branding" { use: feature_text }
+      text "Dedicated support" { use: feature_text }
+      text "SLA guarantee" { use: feature_text }
+
+      rect @enterprise_cta {
+        w: 244 h: 44
+        fill: #111827
+        corner: 10
+        text "Contact Sales" {
+          font: "Inter" semibold 14
+          fill: #FFFFFF
+        }
+        anim :hover {
+          fill: #1F2937
+          ease: ease_out 150ms
+        }
+      }
+    }
+  }
+}
+
+@pricing_section -> center_in: canvas
