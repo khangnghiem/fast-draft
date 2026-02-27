@@ -101,6 +101,12 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R4.9** _(done)_: Multi-provider AI — Gemini, OpenAI, Anthropic, Ollama, OpenRouter with per-provider API keys
 - **R4.10** _(done)_: Auto-format pipeline — `format_document` via LSP; lint diagnostics + configurable transforms
 - **R4.11** _(done)_: Inline Spec View — canvas-embedded spec overlay with node structure + annotations
+- **R4.12** _(done)_: Content-first ordering — emitter outputs children before appearance properties inside node blocks; complex documents get `# ─── Section ───` separators (Styles, Layout, Constraints, Flows)
+- **R4.13** _(done)_: Font weight names — parser/emitter use `bold`, `semibold`, `regular` etc. instead of numeric codes
+- **R4.14** _(done)_: Color hint comments — emitter appends `# red`, `# purple` etc. after hex colors
+- **R4.15** _(done)_: Named colors — `fill: purple` etc. accepted (17 Tailwind palette colors)
+- **R4.16** _(done)_: Property aliases — `background:`/`color:` → fill, `rounded:`/`radius:` → corner
+- **R4.17** _(done)_: Dimension units — `w: 320px` accepted, `px` stripped by parser
 
 ### R5: Rendering
 
@@ -189,48 +195,50 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | R3.36       | `layout_text_centered_in_rect`, `layout_text_in_ellipse_*`, `layout_text_explicit_pos_*` | ✅ 4 tests                     |
 | R5.1–R5.8   | `hit::tests::*`, `resolve::tests::*`, `render2d::tests::*`                               | ✅ 3 hit + 6 layout + 3 render |
 
-**Total**: 154 Rust tests + 162 TypeScript tests = **316 tests**
+**Total**: 169 Rust tests + 162 TypeScript tests = **331 tests**
 
 ## Requirement Index
 
 <!-- AI: Search this index BEFORE proposing new requirements. If a similar tag already exists, extend the existing requirement instead of creating a duplicate. Also check docs/specs/ for detailed spec docs. -->
 
-| Tag                 | Requirements                          |
-| ------------------- | ------------------------------------- |
-| selection           | R2.5, R3.1, R3.16, R3.24              |
-| drawing             | R3.3, R3.15, R3.19                    |
-| pen / freehand      | R3.4, R3.22, R3.23                    |
-| pan                 | R3.6, R3.10                           |
-| zoom                | R3.6, R3.20                           |
-| grid / snap         | R3.17, R3.21                          |
-| cursor              | R3.11, R3.16                          |
-| resize              | R3.2, R3.16                           |
-| feedback / tooltip  | R3.15, R3.18                          |
-| export              | R3.31, R4.7                           |
-| minimap             | R3.25                                 |
-| nudge               | R3.26                                 |
-| rename              | R3.27                                 |
-| undo / redo         | R3.7                                  |
-| properties          | R3.8                                  |
-| drag-drop           | R3.9                                  |
-| annotation          | R1.9, R3.12, R4.5                     |
-| theme               | R3.13                                 |
-| view mode           | R3.14, R4.11                          |
-| pressure / pencil   | R3.4, R3.10, R3.22                    |
-| ai / refinement     | R4.7, R4.8, R4.9, R4.10               |
-| edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8 |
-| import              | R1.14, R1.18                          |
-| style               | R1.4, R4.3                            |
-| animation           | R1.5, R1.11, R1.12, R3.29, R5.6, R5.8 |
-| rendering           | R5.1, R5.2, R5.4, R5.5                |
-| platform            | R6.1, R6.2, R6.3, R6.4                |
-| inline editing      | R3.28                                 |
-| text alignment      | R1.17, R3.28, R3.36                   |
-| layout / centering  | R3.36                                 |
-| layers / navigation | R3.30                                 |
-| group / drill-down  | R3.24, R3.34                          |
-| group / reparent    | R3.34, R3.35                          |
-| image               | R3.32                                 |
-| library             | R3.33                                 |
+| Tag                 | Requirements                                                      |
+| ------------------- | ----------------------------------------------------------------- |
+| selection           | R2.5, R3.1, R3.16, R3.24                                          |
+| drawing             | R3.3, R3.15, R3.19                                                |
+| pen / freehand      | R3.4, R3.22, R3.23                                                |
+| pan                 | R3.6, R3.10                                                       |
+| zoom                | R3.6, R3.20                                                       |
+| grid / snap         | R3.17, R3.21                                                      |
+| cursor              | R3.11, R3.16                                                      |
+| resize              | R3.2, R3.16                                                       |
+| feedback / tooltip  | R3.15, R3.18                                                      |
+| export              | R3.31, R4.7                                                       |
+| minimap             | R3.25                                                             |
+| nudge               | R3.26                                                             |
+| rename              | R3.27                                                             |
+| undo / redo         | R3.7                                                              |
+| properties          | R3.8                                                              |
+| drag-drop           | R3.9                                                              |
+| annotation          | R1.9, R3.12, R4.5                                                 |
+| theme               | R3.13                                                             |
+| view mode           | R3.14, R4.11                                                      |
+| pressure / pencil   | R3.4, R3.10, R3.22                                                |
+| ai / refinement     | R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17 |
+| edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8                             |
+| import              | R1.14, R1.18                                                      |
+| style               | R1.4, R4.3                                                        |
+| animation           | R1.5, R1.11, R1.12, R3.29, R5.6, R5.8                             |
+| rendering           | R5.1, R5.2, R5.4, R5.5                                            |
+| platform            | R6.1, R6.2, R6.3, R6.4                                            |
+| inline editing      | R3.28                                                             |
+| text alignment      | R1.17, R3.28, R3.36                                               |
+| layout / centering  | R3.36                                                             |
+| layers / navigation | R3.30                                                             |
+| group / drill-down  | R3.24, R3.34                                                      |
+| group / reparent    | R3.34, R3.35                                                      |
+| image               | R3.32                                                             |
+| library             | R3.33                                                             |
+
+| content-first | R4.12 |
 
 | mermaid | R1.18 |

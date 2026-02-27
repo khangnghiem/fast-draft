@@ -248,6 +248,13 @@ fn skip_opt_separator(input: &mut &str) {
     }
 }
 
+/// Strip an optional trailing `px` unit suffix (e.g. `320px` → `320`).
+fn skip_px_suffix(input: &mut &str) {
+    if input.starts_with("px") {
+        *input = &input[2..];
+    }
+}
+
 // ─── Spec block parser ──────────────────────────────────────────────────
 
 /// Parse a `spec { ... }` block or inline `spec "description"` into annotations.
@@ -352,14 +359,15 @@ fn parse_style_property(input: &mut &str, style: &mut Style) -> ModalResult<()> 
     skip_space(input);
 
     match prop_name {
-        "fill" => {
+        "fill" | "background" | "color" => {
             style.fill = Some(parse_paint(input)?);
         }
         "font" => {
             parse_font_value(input, style)?;
         }
-        "corner" => {
+        "corner" | "rounded" | "radius" => {
             style.corner_radius = Some(parse_number.parse_next(input)?);
+            skip_px_suffix(input);
         }
         "opacity" => {
             style.opacity = Some(parse_number.parse_next(input)?);
@@ -378,6 +386,22 @@ fn parse_style_property(input: &mut &str, style: &mut Style) -> ModalResult<()> 
     Ok(())
 }
 
+/// Map human-readable weight names to numeric values.
+fn weight_name_to_number(name: &str) -> Option<u16> {
+    match name {
+        "thin" => Some(100),
+        "extralight" | "extra_light" => Some(200),
+        "light" => Some(300),
+        "regular" | "normal" => Some(400),
+        "medium" => Some(500),
+        "semibold" | "semi_bold" => Some(600),
+        "bold" => Some(700),
+        "extrabold" | "extra_bold" => Some(800),
+        "black" | "heavy" => Some(900),
+        _ => None,
+    }
+}
+
 fn parse_font_value(input: &mut &str, style: &mut Style) -> ModalResult<()> {
     let mut font = style.font.clone().unwrap_or_default();
 
@@ -387,13 +411,33 @@ fn parse_font_value(input: &mut &str, style: &mut Style) -> ModalResult<()> {
         skip_space(input);
     }
 
-    if let Ok(n1) = parse_number.parse_next(input) {
+    // Try named weight first (e.g. bold, semibold), then numeric
+    let saved = *input;
+    if let Ok(name) = parse_identifier.parse_next(input) {
+        if let Some(w) = weight_name_to_number(name) {
+            font.weight = w;
+            skip_space(input);
+            if let Ok(size) = parse_number.parse_next(input) {
+                font.size = size;
+                skip_px_suffix(input);
+            }
+        } else {
+            *input = saved; // not a weight name, restore
+        }
+    }
+
+    // Fallback: numeric weight + size
+    if *input == saved
+        && let Ok(n1) = parse_number.parse_next(input)
+    {
         skip_space(input);
         if let Ok(n2) = parse_number.parse_next(input) {
             font.weight = n1 as u16;
             font.size = n2;
+            skip_px_suffix(input);
         } else {
             font.size = n1;
+            skip_px_suffix(input);
         }
     }
 
@@ -555,7 +599,30 @@ fn starts_with_child_node(input: &str) -> bool {
     false
 }
 
-/// Parse a `Paint` value: `#HEX`, `linear(Ndeg, ...)`, or `radial(...)`.
+/// Map named colors to hex values.
+fn named_color_to_hex(name: &str) -> Option<Color> {
+    match name {
+        "red" => Color::from_hex("#EF4444"),
+        "orange" => Color::from_hex("#F97316"),
+        "amber" | "yellow" => Color::from_hex("#F59E0B"),
+        "lime" => Color::from_hex("#84CC16"),
+        "green" => Color::from_hex("#22C55E"),
+        "teal" => Color::from_hex("#14B8A6"),
+        "cyan" => Color::from_hex("#06B6D4"),
+        "blue" => Color::from_hex("#3B82F6"),
+        "indigo" => Color::from_hex("#6366F1"),
+        "purple" | "violet" => Color::from_hex("#8B5CF6"),
+        "pink" => Color::from_hex("#EC4899"),
+        "rose" => Color::from_hex("#F43F5E"),
+        "white" => Color::from_hex("#FFFFFF"),
+        "black" => Color::from_hex("#000000"),
+        "gray" | "grey" => Color::from_hex("#6B7280"),
+        "slate" => Color::from_hex("#64748B"),
+        _ => None,
+    }
+}
+
+/// Parse a `Paint` value: `#HEX`, named color, `linear(...)`, or `radial(...)`.
 fn parse_paint(input: &mut &str) -> ModalResult<Paint> {
     if input.starts_with("linear(") {
         let _ = "linear(".parse_next(input)?;
@@ -569,7 +636,17 @@ fn parse_paint(input: &mut &str) -> ModalResult<Paint> {
         let stops = parse_gradient_stops(input)?;
         let _ = ')'.parse_next(input)?;
         Ok(Paint::RadialGradient { stops })
+    } else if input.starts_with('#') {
+        parse_hex_color.map(Paint::Solid).parse_next(input)
     } else {
+        // Try named color (e.g. purple, red, blue)
+        let saved = *input;
+        if let Ok(name) = parse_identifier.parse_next(input) {
+            if let Some(color) = named_color_to_hex(name) {
+                return Ok(Paint::Solid(color));
+            }
+            *input = saved;
+        }
         parse_hex_color.map(Paint::Solid).parse_next(input)
     }
 }
@@ -644,6 +721,7 @@ fn parse_node_property(
         }
         "w" | "width" => {
             *width = Some(parse_number.parse_next(input)?);
+            skip_px_suffix(input);
             skip_space(input);
             if input.starts_with("h:") || input.starts_with("h :") {
                 let _ = "h".parse_next(input)?;
@@ -651,12 +729,14 @@ fn parse_node_property(
                 let _ = ':'.parse_next(input)?;
                 skip_space(input);
                 *height = Some(parse_number.parse_next(input)?);
+                skip_px_suffix(input);
             }
         }
         "h" | "height" => {
             *height = Some(parse_number.parse_next(input)?);
+            skip_px_suffix(input);
         }
-        "fill" => {
+        "fill" | "background" | "color" => {
             style.fill = Some(parse_paint(input)?);
         }
         "bg" => {
@@ -697,8 +777,9 @@ fn parse_node_property(
                 ..Stroke::default()
             });
         }
-        "corner" => {
+        "corner" | "rounded" | "radius" => {
             style.corner_radius = Some(parse_number.parse_next(input)?);
+            skip_px_suffix(input);
         }
         "opacity" => {
             style.opacity = Some(parse_number.parse_next(input)?);
@@ -1488,5 +1569,162 @@ text @main_title "Hello" {
             .expect("style not found after roundtrip");
         assert_eq!(style2.text_align, Some(crate::model::TextAlign::Left));
         assert_eq!(style2.text_valign, Some(crate::model::TextVAlign::Top));
+    }
+
+    #[test]
+    fn parse_font_weight_names() {
+        let src = r#"
+text @heading "Hello" {
+  font: "Inter" bold 24
+}
+"#;
+        let graph = parse_document(src).unwrap();
+        let node = graph
+            .get_by_id(crate::id::NodeId::intern("heading"))
+            .unwrap();
+        let font = node.style.font.as_ref().unwrap();
+        assert_eq!(font.weight, 700);
+        assert_eq!(font.size, 24.0);
+    }
+
+    #[test]
+    fn parse_font_weight_semibold() {
+        let src = r#"text @t "Hi" { font: "Inter" semibold 16 }"#;
+        let graph = parse_document(src).unwrap();
+        let font = graph
+            .get_by_id(crate::id::NodeId::intern("t"))
+            .unwrap()
+            .style
+            .font
+            .as_ref()
+            .unwrap();
+        assert_eq!(font.weight, 600);
+        assert_eq!(font.size, 16.0);
+    }
+
+    #[test]
+    fn parse_named_color() {
+        let src = r#"rect @r { w: 100 h: 50 fill: purple }"#;
+        let graph = parse_document(src).unwrap();
+        let node = graph.get_by_id(crate::id::NodeId::intern("r")).unwrap();
+        assert!(
+            node.style.fill.is_some(),
+            "fill should be set from named color"
+        );
+    }
+
+    #[test]
+    fn parse_named_color_blue() {
+        let src = r#"rect @box { w: 50 h: 50 fill: blue }"#;
+        let graph = parse_document(src).unwrap();
+        let node = graph.get_by_id(crate::id::NodeId::intern("box")).unwrap();
+        if let Some(crate::model::Paint::Solid(c)) = &node.style.fill {
+            assert_eq!(c.to_hex(), "#3B82F6");
+        } else {
+            panic!("expected solid fill from named color");
+        }
+    }
+
+    #[test]
+    fn parse_property_alias_background() {
+        let src = r#"rect @r { w: 100 h: 50 background: #FF0000 }"#;
+        let graph = parse_document(src).unwrap();
+        let node = graph.get_by_id(crate::id::NodeId::intern("r")).unwrap();
+        assert!(node.style.fill.is_some(), "background: should map to fill");
+    }
+
+    #[test]
+    fn parse_property_alias_rounded() {
+        let src = r#"rect @r { w: 100 h: 50 rounded: 12 }"#;
+        let graph = parse_document(src).unwrap();
+        let node = graph.get_by_id(crate::id::NodeId::intern("r")).unwrap();
+        assert_eq!(node.style.corner_radius, Some(12.0));
+    }
+
+    #[test]
+    fn parse_property_alias_radius() {
+        let src = r#"rect @r { w: 100 h: 50 radius: 8 }"#;
+        let graph = parse_document(src).unwrap();
+        let node = graph.get_by_id(crate::id::NodeId::intern("r")).unwrap();
+        assert_eq!(node.style.corner_radius, Some(8.0));
+    }
+
+    #[test]
+    fn parse_dimension_px_suffix() {
+        let src = r#"rect @r { w: 320px h: 200px }"#;
+        let graph = parse_document(src).unwrap();
+        let node = graph.get_by_id(crate::id::NodeId::intern("r")).unwrap();
+        if let crate::model::NodeKind::Rect { width, height } = &node.kind {
+            assert_eq!(*width, 320.0);
+            assert_eq!(*height, 200.0);
+        } else {
+            panic!("expected rect");
+        }
+    }
+
+    #[test]
+    fn parse_corner_px_suffix() {
+        let src = r#"rect @r { w: 100 h: 50 corner: 10px }"#;
+        let graph = parse_document(src).unwrap();
+        let node = graph.get_by_id(crate::id::NodeId::intern("r")).unwrap();
+        assert_eq!(node.style.corner_radius, Some(10.0));
+    }
+
+    #[test]
+    fn roundtrip_font_weight_name() {
+        let src = r#"text @t "Hello" { font: "Inter" bold 18 }"#;
+        let graph = parse_document(src).unwrap();
+        let emitted = crate::emitter::emit_document(&graph);
+        assert!(
+            emitted.contains("bold"),
+            "emitted output should use 'bold' not '700'"
+        );
+        let reparsed = parse_document(&emitted).unwrap();
+        let font = reparsed
+            .get_by_id(crate::id::NodeId::intern("t"))
+            .unwrap()
+            .style
+            .font
+            .as_ref()
+            .unwrap();
+        assert_eq!(font.weight, 700);
+    }
+
+    #[test]
+    fn roundtrip_named_color() {
+        let src = r#"rect @r { w: 100 h: 50 fill: purple }"#;
+        let graph = parse_document(src).unwrap();
+        let emitted = crate::emitter::emit_document(&graph);
+        // Named color gets emitted as hex with hint comment
+        assert!(emitted.contains("#8B5CF6"), "purple should emit as #8B5CF6");
+        let reparsed = parse_document(&emitted).unwrap();
+        assert!(
+            reparsed
+                .get_by_id(crate::id::NodeId::intern("r"))
+                .unwrap()
+                .style
+                .fill
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn roundtrip_property_aliases() {
+        let src = r#"rect @r { w: 200 h: 100 background: #FF0000 rounded: 12 }"#;
+        let graph = parse_document(src).unwrap();
+        let emitted = crate::emitter::emit_document(&graph);
+        // Emitter uses canonical names
+        assert!(
+            emitted.contains("fill:"),
+            "background: should emit as fill:"
+        );
+        assert!(
+            emitted.contains("corner:"),
+            "rounded: should emit as corner:"
+        );
+        let reparsed = parse_document(&emitted).unwrap();
+        let node = reparsed.get_by_id(crate::id::NodeId::intern("r")).unwrap();
+        assert!(node.style.fill.is_some());
+        assert_eq!(node.style.corner_radius, Some(12.0));
     }
 }

@@ -241,6 +241,11 @@ w: 280 h: 48
 4. **Spec blocks** — `spec { status: in_progress }` gives AI structured metadata it can reliably parse, unlike freeform comments
 5. **Style reuse** — `use:` references enforce consistency; consistent codebases produce better AI-generated code
 6. **Shorthand is fine** — `w:` / `h:` / `#FFF` are unambiguous in context, no need to expand
+7. **Content-first ordering** — inside node blocks, the emitter outputs properties in this order: spec → structure (layout, dimensions) → children → appearance (fill, stroke, corner, font) → position (x/y) → animations. This lets non-tech users scan the content tree before styling details.
+8. **Font weight names** — `font: "Inter" bold 18` instead of `font: "Inter" 700 18`; the parser accepts both forms
+9. **Named colors** — `fill: purple`, `fill: blue` etc. are accepted (17 Tailwind palette colors); hex always works too
+10. **Property aliases** — `background:` / `color:` → fill, `rounded:` / `radius:` → corner; the emitter uses canonical names
+11. **Dimension units** — `w: 320px` is accepted; the `px` suffix is cosmetic and stripped by the parser
 
 ## Example: Complete Card
 
