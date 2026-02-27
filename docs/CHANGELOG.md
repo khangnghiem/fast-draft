@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.8.57
+
+- **FEATURE (R3.34)**: Group reparent on drag-out — dragging a child fully outside its parent group now detaches it and reparents to the nearest containing ancestor (or root canvas); partial overlap still expands the group to contain the child. Replaced `expand_parent_group_bounds` with `handle_child_group_relationship` (expand vs detach), `expand_group_to_children`, `detach_child_from_group`, and `bboxes_overlap` helpers
+- **SPEC**: New `docs/specs/group-reparent.md` — documents detach algorithm, multi-level reparenting, constraint fixup, and edge cases
+- **TESTING**: 4 new tests replacing 1 — `sync_move_detaches_child_from_group`, `sync_move_partial_overlap_expands_group`, `sync_move_detaches_through_nested_groups`, `sync_move_within_group_no_detach`
+
 ### v0.8.56
 
 - **BUG FIX**: Canvas→Code selection sync restored — clicking a node on canvas once again highlights its `@id` line in Code Mode; fixed stale `lastNotifiedSelectedId` dedup guard that blocked `nodeSelected` messages after cursor-sync round-trips, and restructured `cursorLine === i` guard to only skip cursor move (not decoration)

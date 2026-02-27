@@ -128,8 +128,9 @@ impl SyncEngine {
                         let ry = (rel_y * 100.0).round() / 100.0;
                         node.constraints.push(Constraint::Position { x: rx, y: ry });
                     }
-                    // Expand parent group if child moved outside its bounds
-                    expand_parent_group_bounds(&self.graph, idx, &mut self.bounds);
+                    // Handle group relationship: expand if partially outside,
+                    // detach (reparent) if fully outside the parent group.
+                    handle_child_group_relationship(&mut self.graph, idx, &mut self.bounds);
                 }
             }
             GraphMutation::ResizeNode { id, width, height } => {
@@ -455,10 +456,18 @@ impl SyncEngine {
     }
 }
 
-/// Expand a parent group's bounds to contain all its children.
-/// Called after a child is moved to ensure the group auto-sizes correctly.
-fn expand_parent_group_bounds(
-    graph: &SceneGraph,
+/// Returns true if two axis-aligned bounding boxes overlap (non-zero area).
+fn bboxes_overlap(a: &fd_core::ResolvedBounds, b: &fd_core::ResolvedBounds) -> bool {
+    a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+}
+
+/// Handle the relationship between a moved child and its parent group.
+///
+/// - **Partial overlap**: expand the parent group to contain all children.
+/// - **Zero overlap**: detach the child — reparent it to the nearest ancestor
+///   whose bounds contain the child, or to root if none does.
+fn handle_child_group_relationship(
+    graph: &mut SceneGraph,
     child_idx: NodeIndex,
     bounds: &mut HashMap<NodeIndex, fd_core::ResolvedBounds>,
 ) {
@@ -466,8 +475,41 @@ fn expand_parent_group_bounds(
         Some(p) => p,
         None => return,
     };
-    let parent_node = &graph.graph[parent_idx];
-    let pad = match &parent_node.kind {
+
+    // Only act on group/frame parents
+    let is_group_parent = matches!(
+        &graph.graph[parent_idx].kind,
+        NodeKind::Group { .. } | NodeKind::Frame { .. }
+    );
+    if !is_group_parent {
+        return;
+    }
+
+    let child_b = match bounds.get(&child_idx) {
+        Some(b) => *b,
+        None => return,
+    };
+    let parent_b = match bounds.get(&parent_idx) {
+        Some(b) => *b,
+        None => return,
+    };
+
+    if bboxes_overlap(&child_b, &parent_b) {
+        // Partial overlap → expand parent to contain all children
+        expand_group_to_children(graph, parent_idx, bounds);
+    } else {
+        // Zero overlap → detach child, reparent to nearest containing ancestor
+        detach_child_from_group(graph, child_idx, parent_idx, bounds);
+    }
+}
+
+/// Expand a group's bounds to contain all its children.
+fn expand_group_to_children(
+    graph: &SceneGraph,
+    group_idx: NodeIndex,
+    bounds: &mut HashMap<NodeIndex, fd_core::ResolvedBounds>,
+) {
+    let pad = match &graph.graph[group_idx].kind {
         NodeKind::Group {
             layout: LayoutMode::Column { pad, .. },
         }
@@ -480,10 +522,10 @@ fn expand_parent_group_bounds(
         NodeKind::Group {
             layout: LayoutMode::Free,
         } => 0.0,
-        _ => return, // not a group — skip
+        _ => return,
     };
 
-    let children = graph.children(parent_idx);
+    let children = graph.children(group_idx);
     if children.is_empty() {
         return;
     }
@@ -504,7 +546,7 @@ fn expand_parent_group_bounds(
 
     if min_x < f32::MAX {
         bounds.insert(
-            parent_idx,
+            group_idx,
             fd_core::ResolvedBounds {
                 x: min_x - pad,
                 y: min_y - pad,
@@ -513,6 +555,61 @@ fn expand_parent_group_bounds(
             },
         );
     }
+}
+
+/// Detach a child from its parent group and reparent to the nearest
+/// ancestor whose bounds contain the child, or root if none does.
+fn detach_child_from_group(
+    graph: &mut SceneGraph,
+    child_idx: NodeIndex,
+    old_parent_idx: NodeIndex,
+    bounds: &mut HashMap<NodeIndex, fd_core::ResolvedBounds>,
+) {
+    let child_b = match bounds.get(&child_idx) {
+        Some(b) => *b,
+        None => return,
+    };
+
+    // Walk up ancestor chain to find a containing group
+    let mut new_parent_idx = graph.root;
+    let mut cursor = graph.parent(old_parent_idx);
+    while let Some(ancestor_idx) = cursor {
+        if let Some(ab) = bounds.get(&ancestor_idx) {
+            let contains = ab.x <= child_b.x
+                && ab.y <= child_b.y
+                && ab.x + ab.width >= child_b.x + child_b.width
+                && ab.y + ab.height >= child_b.y + child_b.height;
+            if contains {
+                new_parent_idx = ancestor_idx;
+                break;
+            }
+        }
+        cursor = graph.parent(ancestor_idx);
+    }
+
+    // Reparent the child node
+    graph.reparent_node(child_idx, new_parent_idx);
+
+    // Fix Position constraint to be relative to new parent
+    let new_parent_offset = bounds
+        .get(&new_parent_idx)
+        .map(|b| (b.x, b.y))
+        .unwrap_or((0.0, 0.0));
+    let new_rel_x = ((child_b.x - new_parent_offset.0) * 100.0).round() / 100.0;
+    let new_rel_y = ((child_b.y - new_parent_offset.1) * 100.0).round() / 100.0;
+
+    let child_id = graph.graph[child_idx].id;
+    if let Some(node) = graph.get_by_id_mut(child_id) {
+        node.constraints
+            .retain(|c| !matches!(c, Constraint::Position { .. }));
+        node.constraints.push(Constraint::Position {
+            x: new_rel_x,
+            y: new_rel_y,
+        });
+    }
+
+    // Shrink old parent group to fit remaining children
+    expand_group_to_children(graph, old_parent_idx, bounds);
 }
 
 /// A mutation that can be applied to the scene graph from canvas interactions.
@@ -1078,8 +1175,9 @@ group @box {
     }
 
     #[test]
-    fn sync_move_expands_parent_group() {
-        // Moving a child outside its parent group should expand the group.
+    fn sync_move_detaches_child_from_group() {
+        // Moving a child fully outside its parent group should detach it
+        // and reparent to root.
         let input = r#"
 group @container {
   rect @a { w: 100 h: 50 }
@@ -1094,45 +1192,147 @@ group @container {
         let b_id = NodeId::intern("b");
         let container_id = NodeId::intern("container");
 
+        // Verify @b is a child of @container before move
+        let b_idx = engine.graph.index_of(b_id).unwrap();
+        let parent_before = engine.graph.parent(b_idx).unwrap();
         let container_idx = engine.graph.index_of(container_id).unwrap();
-        let initial_right = engine.bounds[&container_idx].x + engine.bounds[&container_idx].width;
-        let initial_bottom = engine.bounds[&container_idx].y + engine.bounds[&container_idx].height;
+        assert_eq!(
+            parent_before, container_idx,
+            "@b should be child of @container before move"
+        );
 
-        // Move @b far to the right and down
+        // Move @b far away (fully outside the group)
         engine.apply_mutation(GraphMutation::MoveNode {
             id: b_id,
-            dx: 300.0,
-            dy: 200.0,
+            dx: 500.0,
+            dy: 400.0,
         });
 
-        let container_bounds = engine.bounds[&container_idx];
-        let new_right = container_bounds.x + container_bounds.width;
-        let new_bottom = container_bounds.y + container_bounds.height;
-
-        // Container should have expanded to contain the moved child
-        assert!(
-            new_right > initial_right,
-            "container right ({new_right}) should be > initial ({initial_right})"
-        );
-        assert!(
-            new_bottom > initial_bottom,
-            "container bottom ({new_bottom}) should be > initial ({initial_bottom})"
-        );
-
-        // The moved child should be inside the container
+        // @b should now be reparented to root
         let b_idx = engine.graph.index_of(b_id).unwrap();
-        let b = engine.bounds[&b_idx];
-        assert!(
-            b.x + b.width <= container_bounds.x + container_bounds.width + 0.1,
-            "b right ({}) must be <= container right ({})",
-            b.x + b.width,
-            container_bounds.x + container_bounds.width
+        let parent_after = engine.graph.parent(b_idx).unwrap();
+        assert_eq!(
+            parent_after, engine.graph.root,
+            "@b should be reparented to root after dragging fully outside"
         );
+
+        // @container should only contain @a now
+        let children = engine.graph.children(container_idx);
+        assert_eq!(children.len(), 1, "container should have 1 child remaining");
+    }
+
+    #[test]
+    fn sync_move_partial_overlap_expands_group() {
+        // Moving a child partially outside should expand the group (not detach).
+        let input = r#"
+group @container {
+  rect @a { w: 100 h: 50 }
+  rect @b { x: 0 y: 60 w: 80 h: 40 }
+}
+"#;
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let b_id = NodeId::intern("b");
+        let container_id = NodeId::intern("container");
+        let container_idx = engine.graph.index_of(container_id).unwrap();
+
+        let initial_width = engine.bounds[&container_idx].width;
+
+        // Move @b a small amount right (still overlapping with container)
+        engine.apply_mutation(GraphMutation::MoveNode {
+            id: b_id,
+            dx: 50.0,
+            dy: 0.0,
+        });
+
+        // @b should still be a child of @container
+        let b_idx = engine.graph.index_of(b_id).unwrap();
+        let parent_after = engine.graph.parent(b_idx).unwrap();
+        assert_eq!(
+            parent_after, container_idx,
+            "@b should remain child of @container with partial overlap"
+        );
+
+        // Container should have expanded
+        let new_width = engine.bounds[&container_idx].width;
         assert!(
-            b.y + b.height <= container_bounds.y + container_bounds.height + 0.1,
-            "b bottom ({}) must be <= container bottom ({})",
-            b.y + b.height,
-            container_bounds.y + container_bounds.height
+            new_width > initial_width,
+            "container should expand ({new_width} > {initial_width})"
+        );
+    }
+
+    #[test]
+    fn sync_move_detaches_through_nested_groups() {
+        // Moving a deeply nested child fully outside all groups should
+        // reparent to root.
+        let input = r#"
+group @outer {
+  x: 0 y: 0
+
+  group @inner {
+    x: 0 y: 0
+
+    rect @leaf { w: 40 h: 30 }
+  }
+}
+"#;
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let leaf_id = NodeId::intern("leaf");
+
+        // Move @leaf far outside both groups
+        engine.apply_mutation(GraphMutation::MoveNode {
+            id: leaf_id,
+            dx: 600.0,
+            dy: 500.0,
+        });
+
+        // @leaf should be reparented to root (jumped 2 levels)
+        let leaf_idx = engine.graph.index_of(leaf_id).unwrap();
+        let parent = engine.graph.parent(leaf_idx).unwrap();
+        assert_eq!(
+            parent, engine.graph.root,
+            "@leaf should be at root after dragging outside all groups"
+        );
+    }
+
+    #[test]
+    fn sync_move_within_group_no_detach() {
+        // Small move within a group should not detach.
+        let input = r#"
+group @container {
+  rect @a { w: 100 h: 50 }
+  rect @b { x: 0 y: 60 w: 80 h: 40 }
+}
+"#;
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let b_id = NodeId::intern("b");
+        let container_id = NodeId::intern("container");
+        let container_idx = engine.graph.index_of(container_id).unwrap();
+
+        // Move @b a tiny amount (well within group)
+        engine.apply_mutation(GraphMutation::MoveNode {
+            id: b_id,
+            dx: 5.0,
+            dy: 3.0,
+        });
+
+        // @b should still be a child of @container
+        let b_idx = engine.graph.index_of(b_id).unwrap();
+        let parent = engine.graph.parent(b_idx).unwrap();
+        assert_eq!(
+            parent, container_idx,
+            "@b should remain in @container after small move"
         );
     }
 }

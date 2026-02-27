@@ -44,6 +44,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.16** _(done)_: 8-point resize grips (4 corners + 4 midpoints); directional cursors on hover → [spec](specs/selection.md)
 - **R3.24** _(done)_: Group drill-down — click child of unselected group → selects parent; click again → drills to child (Figma/Sketch) → [spec](specs/selection.md)
 - **R3.26** _(done)_: Arrow-key nudge — 1px (Shift = 10px); matches Figma/Sketch standard
+- **R3.34** _(done)_: Group reparent on drag-out — child fully outside group bounds detaches to nearest containing ancestor; partial overlap expands group → [spec](specs/group-reparent.md)
 
 #### R3b: Drawing Tools
 
@@ -223,7 +224,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | inline editing      | R3.28                                 |
 | text alignment      | R1.17, R3.28                          |
 | layers / navigation | R3.30                                 |
-| group / drill-down  | R3.24                                 |
+| group / drill-down  | R3.24, R3.34                          |
+| group / reparent    | R3.34                                 |
 | image               | R3.32                                 |
 | library             | R3.33                                 |
 
