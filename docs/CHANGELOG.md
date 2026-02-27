@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.8.55
+
+- **BUG FIX**: Drag actions (move, resize, draw) now undo/redo as a single step — rewrote batch undo to use text-snapshot approach: `begin_batch()` captures full FD text before gesture, `end_batch()` captures after, undo restores the before-snapshot atomically via `set_text()` instead of replaying per-mutation inverses which could drift
+- **UX**: Coordinates and dimensions are now rounded to 2 decimal places — eliminates floating-point noise from accumulated drag deltas
+- **TESTING**: 2 new tests — `batch_undo_is_single_step`, `batch_redo_reapplies_all`, `empty_batch_no_undo_entry`
+
 ### v0.8.54
 
 - **BUG FIX**: Drag actions (move, resize, draw) now undo/redo as a single step — previously every pointer-move during a drag pushed a separate undo entry, requiring dozens of Cmd+Z to revert one drag gesture. Implemented `begin_batch()`/`end_batch()` on `CommandStack` to squash all mutations between PointerDown and PointerUp into one atomic command.

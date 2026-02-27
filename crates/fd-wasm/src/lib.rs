@@ -182,7 +182,7 @@ impl FdCanvas {
         meta: bool,
     ) -> bool {
         // Start batch so all drag mutations become one undo step
-        self.commands.begin_batch();
+        self.commands.begin_batch(&mut self.engine);
 
         let mods = Modifiers {
             shift,
@@ -319,7 +319,7 @@ impl FdCanvas {
         };
 
         // End batch — squash all drag mutations into one undo step
-        self.commands.end_batch();
+        self.commands.end_batch(&mut self.engine);
 
         // Finalize marquee selection before handling pointer-up
         let marquee_changed = if let Some((rx, ry, rw, rh)) = self.select_tool.marquee_rect {

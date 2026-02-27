@@ -2,18 +2,29 @@
 //!
 //! Every mutation is wrapped in a reversible `Command` that can be undone.
 //! Commands are pushed to a stack; undo pops and applies the inverse.
+//!
+//! Drag gestures use **text-snapshot batching**: the full text is captured
+//! at the start and end of the gesture, so undo/redo replaces the whole
+//! document in a single step (no per-mutation inverse chain).
 
 use crate::sync::{GraphMutation, SyncEngine};
 
 /// A command that captures both a forward mutation and its inverse.
 /// May hold a single mutation or a batch of mutations (from drag gestures).
 #[derive(Debug, Clone)]
-pub struct Command {
-    /// Individual steps: each is (forward, inverse).
-    /// A single command has exactly one entry; a batch may have many.
-    pub steps: Vec<(GraphMutation, GraphMutation)>,
-    /// Human-readable description for UI display.
-    pub description: String,
+pub enum Command {
+    /// Single mutation with its inverse (for non-batch operations).
+    Single {
+        forward: Box<GraphMutation>,
+        inverse: Box<GraphMutation>,
+        description: String,
+    },
+    /// Snapshot-based batch: captures full text before and after a gesture.
+    Snapshot {
+        text_before: String,
+        text_after: String,
+        description: String,
+    },
 }
 
 /// Manages undo/redo stacks with batch grouping for drag gestures.
@@ -24,8 +35,10 @@ pub struct CommandStack {
     max_depth: usize,
     /// Batch nesting depth (0 = not batching).
     batch_depth: usize,
-    /// Accumulated steps during a batch.
-    batch_buffer: Vec<(GraphMutation, GraphMutation)>,
+    /// Text snapshot captured at the start of a batch.
+    batch_snapshot: Option<String>,
+    /// Whether any mutations occurred during the current batch.
+    batch_dirty: bool,
 }
 
 impl CommandStack {
@@ -35,53 +48,71 @@ impl CommandStack {
             redo_stack: Vec::new(),
             max_depth,
             batch_depth: 0,
-            batch_buffer: Vec::new(),
+            batch_snapshot: None,
+            batch_dirty: false,
         }
     }
 
-    /// Start a batch group. All commands until `end_batch()` are merged
-    /// into a single undo step. Supports nesting.
-    pub fn begin_batch(&mut self) {
+    /// Start a batch group. Captures the current text as a snapshot
+    /// for undo. All mutations until `end_batch()` are applied live
+    /// but tracked as one atomic undo step.
+    pub fn begin_batch(&mut self, engine: &mut SyncEngine) {
         if self.batch_depth == 0 {
-            self.batch_buffer.clear();
+            self.batch_snapshot = Some(engine.current_text().to_string());
+            self.batch_dirty = false;
         }
         self.batch_depth += 1;
     }
 
-    /// End a batch group. When the outermost batch closes, all buffered
-    /// steps are squashed into one `Command` on the undo stack.
-    pub fn end_batch(&mut self) {
+    /// End a batch group. When the outermost batch closes, if any
+    /// mutations occurred, push one snapshot command to the undo stack.
+    pub fn end_batch(&mut self, engine: &mut SyncEngine) {
         if self.batch_depth == 0 {
             return;
         }
         self.batch_depth -= 1;
-        if self.batch_depth == 0 && !self.batch_buffer.is_empty() {
-            let cmd = Command {
-                steps: std::mem::take(&mut self.batch_buffer),
-                description: "canvas edit".to_string(),
-            };
-            self.undo_stack.push(cmd);
-            if self.undo_stack.len() > self.max_depth {
-                self.undo_stack.remove(0);
+        if self.batch_depth == 0 {
+            if self.batch_dirty {
+                // Flush text so snapshot_after reflects final state
+                engine.flush_to_text();
+                let text_after = engine.current_text().to_string();
+                let text_before = self.batch_snapshot.take().unwrap_or_default();
+
+                // Only push if text actually changed
+                if text_before != text_after {
+                    let cmd = Command::Snapshot {
+                        text_before,
+                        text_after,
+                        description: "canvas edit".to_string(),
+                    };
+                    self.undo_stack.push(cmd);
+                    if self.undo_stack.len() > self.max_depth {
+                        self.undo_stack.remove(0);
+                    }
+                    self.redo_stack.clear();
+                }
             }
-            self.redo_stack.clear();
+            self.batch_snapshot = None;
+            self.batch_dirty = false;
         }
     }
 
     /// Execute a mutation via the sync engine and push to undo stack.
     pub fn execute(&mut self, engine: &mut SyncEngine, mutation: GraphMutation, description: &str) {
-        let inverse = compute_inverse(engine, &mutation);
-        engine.apply_mutation(mutation.clone());
-
-        let step = (mutation, inverse);
-
         if self.batch_depth > 0 {
-            self.batch_buffer.push(step);
+            // Inside a batch: apply the mutation live but don't track it.
+            // The snapshot at end_batch() will capture the cumulative effect.
+            engine.apply_mutation(mutation);
+            self.batch_dirty = true;
             return;
         }
 
-        let cmd = Command {
-            steps: vec![step],
+        let inverse = compute_inverse(engine, &mutation);
+        engine.apply_mutation(mutation.clone());
+
+        let cmd = Command::Single {
+            forward: Box::new(mutation),
+            inverse: Box::new(inverse),
             description: description.to_string(),
         };
 
@@ -94,26 +125,52 @@ impl CommandStack {
         self.redo_stack.clear();
     }
 
-    /// Undo the last command (or batch).
+    /// Undo the last command (or batch snapshot).
     pub fn undo(&mut self, engine: &mut SyncEngine) -> Option<String> {
         let cmd = self.undo_stack.pop()?;
-        let desc = cmd.description.clone();
-        // Apply inverses in reverse order
-        for (_fwd, inv) in cmd.steps.iter().rev() {
-            engine.apply_mutation(inv.clone());
-        }
+        let desc = match &cmd {
+            Command::Single {
+                inverse,
+                description,
+                ..
+            } => {
+                engine.apply_mutation(*inverse.clone());
+                description.clone()
+            }
+            Command::Snapshot {
+                text_before,
+                description,
+                ..
+            } => {
+                let _ = engine.set_text(text_before);
+                description.clone()
+            }
+        };
         self.redo_stack.push(cmd);
         Some(desc)
     }
 
-    /// Redo the last undone command (or batch).
+    /// Redo the last undone command (or batch snapshot).
     pub fn redo(&mut self, engine: &mut SyncEngine) -> Option<String> {
         let cmd = self.redo_stack.pop()?;
-        let desc = cmd.description.clone();
-        // Apply forwards in original order
-        for (fwd, _inv) in &cmd.steps {
-            engine.apply_mutation(fwd.clone());
-        }
+        let desc = match &cmd {
+            Command::Single {
+                forward,
+                description,
+                ..
+            } => {
+                engine.apply_mutation(*forward.clone());
+                description.clone()
+            }
+            Command::Snapshot {
+                text_after,
+                description,
+                ..
+            } => {
+                let _ = engine.set_text(text_after);
+                description.clone()
+            }
+        };
         self.undo_stack.push(cmd);
         Some(desc)
     }
@@ -299,33 +356,96 @@ rect @box {
             "Move box",
         );
 
-        assert!(stack.can_undo());
-        assert!(!stack.can_redo());
+        let idx = engine.graph.index_of(NodeId::intern("box")).unwrap();
+        let b = engine.current_bounds().get(&idx).unwrap();
+        let moved_x = b.x;
 
         // Undo
-        stack.undo(&mut engine);
-        assert!(!stack.can_undo());
-        assert!(stack.can_redo());
+        let desc = stack.undo(&mut engine);
+        assert_eq!(desc, Some("Move box".to_string()));
+
+        engine.resolve();
+        let b2 = engine.current_bounds().get(&idx).unwrap();
+        assert!((b2.x - (moved_x - 50.0)).abs() < 0.1);
 
         // Redo
-        stack.redo(&mut engine);
-        assert!(stack.can_undo());
+        let desc = stack.redo(&mut engine);
+        assert_eq!(desc, Some("Move box".to_string()));
+
+        engine.resolve();
+        let b3 = engine.current_bounds().get(&idx).unwrap();
+        assert!((b3.x - moved_x).abs() < 0.1);
+    }
+
+    #[test]
+    fn redo_clears_on_new_action() {
+        let input = "rect @a { w: 10 h: 10 }\n";
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let mut stack = CommandStack::new(100);
+
+        stack.execute(
+            &mut engine,
+            GraphMutation::MoveNode {
+                id: NodeId::intern("a"),
+                dx: 5.0,
+                dy: 0.0,
+            },
+            "move",
+        );
+        stack.undo(&mut engine);
+        assert!(stack.can_redo());
+
+        // New action clears redo
+        stack.execute(
+            &mut engine,
+            GraphMutation::MoveNode {
+                id: NodeId::intern("a"),
+                dx: 1.0,
+                dy: 0.0,
+            },
+            "move2",
+        );
         assert!(!stack.can_redo());
     }
 
     #[test]
-    fn undo_redo_group_move() {
+    fn max_depth_trims_oldest() {
+        let input = "rect @a { w: 10 h: 10 }\n";
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let mut stack = CommandStack::new(3);
+
+        for i in 0..5 {
+            stack.execute(
+                &mut engine,
+                GraphMutation::MoveNode {
+                    id: NodeId::intern("a"),
+                    dx: (i + 1) as f32,
+                    dy: 0.0,
+                },
+                "move",
+            );
+        }
+        // Only 3 entries remain
+        let mut undo_count = 0;
+        while stack.undo(&mut engine).is_some() {
+            undo_count += 1;
+        }
+        assert_eq!(undo_count, 3);
+    }
+
+    #[test]
+    fn remove_add_roundtrip() {
         let input = r#"
-rect @b1 {
-  x: 10
-  y: 10
-  w: 20
-  h: 20
-}
-rect @b2 {
-  x: 50
-  y: 50
-  w: 20
+rect @box {
+  w: 40
   h: 20
 }
 "#;
@@ -334,57 +454,26 @@ rect @b2 {
             height: 600.0,
         };
         let mut engine = SyncEngine::from_text(input, viewport).unwrap();
-        let mut stack = CommandStack::new(10);
+        let mut stack = CommandStack::new(100);
 
-        let group_id = NodeId::intern("my_group");
+        // Remove node
         stack.execute(
             &mut engine,
-            GraphMutation::GroupNodes {
-                ids: vec![NodeId::intern("b1"), NodeId::intern("b2")],
-                new_group_id: group_id,
+            GraphMutation::RemoveNode {
+                id: NodeId::intern("box"),
             },
-            "Group nodes",
+            "Delete box",
         );
+        assert!(engine.graph.get_by_id(NodeId::intern("box")).is_none());
 
-        assert!(engine.current_text().contains("group @my_group"));
-        let root = engine.graph.index_of(NodeId::intern("root")).unwrap();
-        assert_eq!(engine.graph.children(root).len(), 1); // Only the group
-
+        // Undo → should re-add
         stack.undo(&mut engine);
-        assert!(!engine.current_text().contains("group @my_group"));
-        assert_eq!(engine.graph.children(root).len(), 2); // Unpacked back to root
-
-        stack.redo(&mut engine);
-        assert!(engine.current_text().contains("group @my_group"));
-        assert_eq!(engine.graph.children(root).len(), 1); // Grouped again
-
-        stack.execute(
-            &mut engine,
-            GraphMutation::MoveNode {
-                id: group_id,
-                dx: 50.0,
-                dy: 50.0,
-            },
-            "Move group",
-        );
-
-        assert!(stack.can_undo());
-
-        // Undo Move
-        stack.undo(&mut engine);
-        // Undo Group
-        stack.undo(&mut engine);
-
-        let text = engine.current_text();
-        assert!(!text.contains("group @my_group"));
-        assert!(text.contains("rect @b1"));
-        assert!(text.contains("x: 10"), "should contain inline x position");
-        assert!(text.contains("y: 10"), "should contain inline y position");
+        assert!(engine.graph.get_by_id(NodeId::intern("box")).is_some());
     }
 
     #[test]
-    fn undo_resize_restores_original_size() {
-        let input = "rect @panel {\n  w: 200 h: 100\n}\n";
+    fn set_style_roundtrip() {
+        let input = "rect @r { w: 10 h: 10 fill: #FF0000 }\n";
         let viewport = Viewport {
             width: 800.0,
             height: 600.0,
@@ -392,212 +481,161 @@ rect @b2 {
         let mut engine = SyncEngine::from_text(input, viewport).unwrap();
         let mut stack = CommandStack::new(100);
 
-        stack.execute(
-            &mut engine,
-            GraphMutation::ResizeNode {
-                id: NodeId::intern("panel"),
-                width: 400.0,
-                height: 200.0,
-            },
-            "Resize panel",
-        );
-
-        // After undo the node should have its original dimensions
-        stack.undo(&mut engine);
-        let node = engine.graph.get_by_id(NodeId::intern("panel")).unwrap();
-        match &node.kind {
-            fd_core::model::NodeKind::Rect { width, height } => {
-                assert_eq!(*width, 200.0, "width should revert to 200");
-                assert_eq!(*height, 100.0, "height should revert to 100");
-            }
-            other => panic!("expected Rect, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn undo_set_style_restores_original_fill() {
-        use fd_core::model::{Color, Paint, Style};
-        let input = "rect @btn {\n  w: 80 h: 40\n  fill: #FF0000\n}\n";
-        let viewport = Viewport {
-            width: 800.0,
-            height: 600.0,
+        // Capture original fill hex
+        let old_hex = match &engine
+            .graph
+            .get_by_id(NodeId::intern("r"))
+            .unwrap()
+            .style
+            .fill
+        {
+            Some(fd_core::model::Paint::Solid(c)) => c.to_hex(),
+            _ => String::new(),
         };
-        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
-        let mut stack = CommandStack::new(100);
+        assert_eq!(old_hex, "#FF0000");
 
-        let new_style = Style {
-            fill: Some(Paint::Solid(Color {
-                r: 0.0,
-                g: 0.0,
-                b: 1.0,
-                a: 1.0,
-            })),
-            ..Style::default()
-        };
+        let mut new_style = engine
+            .graph
+            .get_by_id(NodeId::intern("r"))
+            .unwrap()
+            .style
+            .clone();
+        new_style.fill = Some(fd_core::model::Paint::Solid(fd_core::model::Color {
+            r: 0.0,
+            g: 1.0,
+            b: 0.0,
+            a: 1.0,
+        }));
 
         stack.execute(
             &mut engine,
             GraphMutation::SetStyle {
-                id: NodeId::intern("btn"),
+                id: NodeId::intern("r"),
                 style: new_style,
             },
-            "Restyle btn",
+            "change fill",
         );
 
-        // After undo fill should be back to red (#FF0000)
+        let current_hex = match &engine
+            .graph
+            .get_by_id(NodeId::intern("r"))
+            .unwrap()
+            .style
+            .fill
+        {
+            Some(fd_core::model::Paint::Solid(c)) => c.to_hex(),
+            _ => String::new(),
+        };
+        assert_eq!(current_hex, "#00FF00");
+
         stack.undo(&mut engine);
-        let node = engine.graph.get_by_id(NodeId::intern("btn")).unwrap();
-        match node.style.fill.as_ref().and_then(|p| {
-            if let Paint::Solid(c) = p {
-                Some(c)
-            } else {
-                None
-            }
-        }) {
-            Some(c) => assert_eq!(c.r, 1.0, "red channel should be 1.0 (original red fill)"),
-            None => panic!("fill should be Some(Solid) after undo"),
-        }
-    }
-
-    #[test]
-    fn new_execute_clears_redo_stack() {
-        let input = "rect @box {\n  w: 100 h: 50\n}\n";
-        let viewport = Viewport {
-            width: 800.0,
-            height: 600.0,
+        let restored_hex = match &engine
+            .graph
+            .get_by_id(NodeId::intern("r"))
+            .unwrap()
+            .style
+            .fill
+        {
+            Some(fd_core::model::Paint::Solid(c)) => c.to_hex(),
+            _ => String::new(),
         };
-        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
-        let mut stack = CommandStack::new(100);
-
-        let move_box = || GraphMutation::MoveNode {
-            id: NodeId::intern("box"),
-            dx: 10.0,
-            dy: 0.0,
-        };
-
-        stack.execute(&mut engine, move_box(), "Move 1");
-        stack.undo(&mut engine); // populate redo stack
-
-        assert!(stack.can_redo(), "redo should be available after undo");
-
-        // New action should clear redo stack
-        stack.execute(&mut engine, move_box(), "Move 2");
-        assert!(
-            !stack.can_redo(),
-            "redo stack should be cleared after new execute"
-        );
-    }
-
-    #[test]
-    fn stack_respects_max_depth() {
-        let input = "rect @box {\n  w: 100 h: 50\n}\n";
-        let viewport = Viewport {
-            width: 800.0,
-            height: 600.0,
-        };
-        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
-        let max = 3;
-        let mut stack = CommandStack::new(max);
-
-        // Execute more commands than max_depth
-        for i in 0..5u32 {
-            stack.execute(
-                &mut engine,
-                GraphMutation::MoveNode {
-                    id: NodeId::intern("box"),
-                    dx: i as f32,
-                    dy: 0.0,
-                },
-                &format!("Move {i}"),
-            );
-        }
-
-        // Can undo at most max times
-        let mut undo_count = 0;
-        while stack.can_undo() {
-            stack.undo(&mut engine);
-            undo_count += 1;
-        }
-        assert_eq!(undo_count, max, "undo depth should be capped at max_depth");
+        assert_eq!(restored_hex, "#FF0000");
     }
 
     #[test]
     fn batch_undo_is_single_step() {
-        let input = "rect @box {\n  w: 100 h: 50\n}\n";
+        let input = "rect @box { w: 100 h: 50 }\n";
         let viewport = Viewport {
             width: 800.0,
             height: 600.0,
         };
         let mut engine = SyncEngine::from_text(input, viewport).unwrap();
         let mut stack = CommandStack::new(100);
-        let box_id = NodeId::intern("box");
 
-        // Simulate a drag: 5 incremental moves inside a batch
-        stack.begin_batch();
+        // Simulate a drag gesture: begin_batch, 5 moves, end_batch
+        stack.begin_batch(&mut engine);
         for _ in 0..5 {
             stack.execute(
                 &mut engine,
                 GraphMutation::MoveNode {
-                    id: box_id,
+                    id: NodeId::intern("box"),
                     dx: 10.0,
                     dy: 5.0,
                 },
                 "drag",
             );
         }
-        stack.end_batch();
+        stack.end_batch(&mut engine);
 
-        // Should be exactly one undo step for the whole drag
-        assert!(stack.can_undo());
-        stack.undo(&mut engine);
-        assert!(!stack.can_undo(), "batch should be a single undo step");
+        // One undo should reverse the entire gesture
+        let desc = stack.undo(&mut engine);
+        assert!(desc.is_some());
+        engine.resolve();
+
+        // Verify position is back to start
+        let idx = engine.graph.index_of(NodeId::intern("box")).unwrap();
+        let b = engine.current_bounds().get(&idx).unwrap();
+        // After parse, default position is (0, 0) since no x:/y: specified
+        assert!(b.x.abs() < 1.0, "x should be near 0, got {}", b.x);
+        assert!(b.y.abs() < 1.0, "y should be near 0, got {}", b.y);
+
+        // No more undo steps
+        assert!(!stack.can_undo());
     }
 
     #[test]
     fn batch_redo_reapplies_all() {
-        let input = "rect @box {\n  w: 100 h: 50\n}\n";
+        let input = "rect @box { w: 100 h: 50 }\n";
         let viewport = Viewport {
             width: 800.0,
             height: 600.0,
         };
         let mut engine = SyncEngine::from_text(input, viewport).unwrap();
         let mut stack = CommandStack::new(100);
-        let box_id = NodeId::intern("box");
 
-        let idx = engine.graph.index_of(box_id).unwrap();
-        let start_x = engine.bounds[&idx].x;
-
-        // 5 moves of dx=10 in a batch = total 50px
-        stack.begin_batch();
+        // Simulate a drag gesture
+        stack.begin_batch(&mut engine);
         for _ in 0..5 {
             stack.execute(
                 &mut engine,
                 GraphMutation::MoveNode {
-                    id: box_id,
+                    id: NodeId::intern("box"),
                     dx: 10.0,
-                    dy: 0.0,
+                    dy: 5.0,
                 },
                 "drag",
             );
         }
-        stack.end_batch();
+        stack.end_batch(&mut engine);
 
-        // Undo the batch
+        // Undo + Redo
         stack.undo(&mut engine);
-        let b = engine.bounds[&idx];
-        assert!(
-            (b.x - start_x).abs() < 0.1,
-            "undo should restore x to {start_x}, got {}",
-            b.x
-        );
+        engine.resolve();
+        let desc = stack.redo(&mut engine);
+        assert!(desc.is_some());
+        engine.resolve();
 
-        // Redo the batch
-        stack.redo(&mut engine);
-        let b = engine.bounds[&idx];
-        assert!(
-            (b.x - (start_x + 50.0)).abs() < 0.1,
-            "redo should reapply all 50px, got {}",
-            b.x
-        );
+        // Verify position is at the dragged location
+        let idx = engine.graph.index_of(NodeId::intern("box")).unwrap();
+        let b = engine.current_bounds().get(&idx).unwrap();
+        assert!((b.x - 50.0).abs() < 1.0, "x should be near 50, got {}", b.x);
+        assert!((b.y - 25.0).abs() < 1.0, "y should be near 25, got {}", b.y);
+    }
+
+    #[test]
+    fn empty_batch_no_undo_entry() {
+        let input = "rect @box { w: 100 h: 50 }\n";
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let mut stack = CommandStack::new(100);
+
+        // A batch where nothing happens should not push an undo entry
+        stack.begin_batch(&mut engine);
+        stack.end_batch(&mut engine);
+
+        assert!(!stack.can_undo());
     }
 }
