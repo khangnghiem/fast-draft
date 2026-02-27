@@ -9,6 +9,7 @@
 use crate::id::NodeId;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
+use petgraph::visit::EdgeRef;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::collections::HashMap;
@@ -585,15 +586,17 @@ impl SceneGraph {
 
     /// Get children of a node in document (insertion) order.
     ///
-    /// Sorts by `NodeIndex` so the result is deterministic regardless of
-    /// how `petgraph` iterates its adjacency list on different targets
-    /// (native vs WASM).
+    /// Returns children in the order edges were added to the graph.
+    /// This is crucial for `sort_nodes` and z-ordering to work.
     pub fn children(&self, idx: NodeIndex) -> Vec<NodeIndex> {
         let mut children: Vec<NodeIndex> = self
             .graph
-            .neighbors_directed(idx, petgraph::Direction::Outgoing)
+            .edges_directed(idx, petgraph::Direction::Outgoing)
+            .map(|e| e.target())
             .collect();
-        children.sort();
+        // StableGraph stores edges in LIFO order (stack-like freelist and allocation),
+        // so we reverse to get insertion order (FIFO).
+        children.reverse();
         children
     }
 
