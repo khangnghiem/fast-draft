@@ -99,7 +99,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R4.7** _(done)_: Spec-view export — generate markdown report of `spec` annotations from any `.fd` file
 - **R4.8** _(done)_: AI node refinement — restyle selected nodes, replace anonymous IDs via configurable provider
 - **R4.9** _(done)_: Multi-provider AI — Gemini, OpenAI, Anthropic, Ollama, OpenRouter with per-provider API keys
-- **R4.10** _(done)_: Auto-format pipeline — `format_document` via LSP; lint diagnostics + configurable transforms
+- **R4.10** _(done)_: Auto-format pipeline — `format_document` via LSP; lint diagnostics + configurable transforms; canonical node ordering (Group/Frame → Rect → Ellipse → Text → Path → Generic)
 - **R4.11** _(done)_: Inline Spec View — canvas-embedded spec overlay with node structure + annotations
 - **R4.12** _(done)_: Content-first ordering — emitter outputs children before appearance properties inside node blocks; complex documents get `# ─── Section ───` separators (Styles, Layout, Constraints, Flows)
 - **R4.13** _(done)_: Font weight names — parser/emitter use `bold`, `semibold`, `regular` etc. instead of numeric codes

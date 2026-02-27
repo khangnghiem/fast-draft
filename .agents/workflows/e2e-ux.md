@@ -156,3 +156,16 @@ For any failures:
 - Take a screenshot
 - Document expected vs actual behavior
 - File as a bug to fix before deploying
+
+---
+
+## Cleanup
+
+After all phases complete and results are reported:
+
+1. Switch back to main and sync:
+
+   ```bash
+   git checkout main
+   git pull origin main
+   ```

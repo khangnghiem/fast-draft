@@ -11,6 +11,12 @@
 - **DOCS**: Benchmark README with metrics table, FD feature matrix, and `compare.sh` auto-metrics script
 - **DOCS**: Feature coverage improvements — added named colors to kanban/org_chart, ellipse avatars + opacity to org_chart, property aliases + import + opacity to design_system; all Excalidraw JSONs normalized to pretty-printed format
 
+### Autoformat: Canonical Node Ordering
+
+- **FEATURE (R4.10)**: Canonical node ordering in autoformat pipeline — `format_document` now reorders top-level nodes by kind priority: Group/Frame → Rect → Ellipse → Text → Path → Generic. Relative order within each kind is preserved (stable sort). Configurable via `FormatConfig.sort_nodes` (default: true)
+- **TESTING**: 5 new tests — `sort_nodes_reorders_by_kind`, `sort_nodes_preserves_relative_order`, `sort_nodes_only_top_level`, `format_document_sorts_nodes_by_kind`, `format_document_sort_is_idempotent`
+- **WORKFLOW**: Updated `/e2e-ux` workflow to switch back to `main` after testing completes
+
 ### v0.8.60
 
 - **FIX**: Text centering in nested layouts — text nodes without explicit coordinates now correctly center within their parent shapes (rect, ellipse, frame) even when nested inside column/row/grid groups

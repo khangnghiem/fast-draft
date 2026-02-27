@@ -4,7 +4,7 @@
 //! Passes are applied by `format_document` in `format.rs` based on `FormatConfig`.
 
 use crate::id::NodeId;
-use crate::model::{Paint, SceneGraph, SceneNode, Style};
+use crate::model::{NodeKind, Paint, SceneGraph, SceneNode, Style};
 use std::collections::HashMap;
 
 // ─── Dedup use-styles ─────────────────────────────────────────────────────
@@ -147,6 +147,51 @@ fn is_style_empty(style: &Style) -> bool {
         && style.shadow.is_none()
 }
 
+// ─── Sort nodes by kind ───────────────────────────────────────────────────
+
+/// Canonical kind priority for top-level node ordering.
+/// Lower values sort first: containers → shapes → text → paths → generic.
+fn kind_priority(kind: &NodeKind) -> u8 {
+    match kind {
+        NodeKind::Root => 0,
+        NodeKind::Group { .. } | NodeKind::Frame { .. } => 1,
+        NodeKind::Rect { .. } => 2,
+        NodeKind::Ellipse { .. } => 3,
+        NodeKind::Text { .. } => 4,
+        NodeKind::Path { .. } => 5,
+        NodeKind::Generic => 6,
+    }
+}
+
+/// Reorder the root's top-level children into canonical kind order.
+///
+/// Priority: Group/Frame → Rect → Ellipse → Text → Path → Generic.
+/// Relative order within each kind group is preserved (stable sort).
+/// Only affects root-level children — nested children stay in document order.
+pub fn sort_nodes(graph: &mut SceneGraph) {
+    let root = graph.root;
+    let mut children = graph.children(root);
+
+    if children.len() < 2 {
+        return;
+    }
+
+    // Stable sort by kind priority
+    children.sort_by_key(|&idx| kind_priority(&graph.graph[idx].kind));
+
+    // Remove all edges from root to children
+    for &child in &children {
+        if let Some(edge) = graph.graph.find_edge(root, child) {
+            graph.graph.remove_edge(edge);
+        }
+    }
+
+    // Re-add edges in sorted order
+    for &child in &children {
+        graph.graph.add_edge(root, child, ());
+    }
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -241,6 +286,89 @@ rect @box_b {
         assert!(
             box_b.style.fill.is_none(),
             "inline fill should be cleared after hoist"
+        );
+    }
+
+    #[test]
+    fn sort_nodes_reorders_by_kind() {
+        let input = r#"
+text @label "Hello" {
+  font: "Inter" regular 14
+}
+rect @box {
+  w: 100 h: 50
+}
+group @container {
+  rect @inner {
+    w: 50 h: 50
+  }
+}
+"#;
+        let mut graph = parse_document(input).unwrap();
+        sort_nodes(&mut graph);
+        let children = graph.children(graph.root);
+        // Group should come first, then rect, then text
+        assert_eq!(
+            graph.graph[children[0]].id.as_str(),
+            "container",
+            "group should be first"
+        );
+        assert_eq!(
+            graph.graph[children[1]].id.as_str(),
+            "box",
+            "rect should be second"
+        );
+        assert_eq!(
+            graph.graph[children[2]].id.as_str(),
+            "label",
+            "text should be third"
+        );
+    }
+
+    #[test]
+    fn sort_nodes_preserves_relative_order() {
+        let input = r#"
+rect @second {
+  w: 200 h: 100
+}
+rect @first {
+  w: 100 h: 50
+}
+"#;
+        let mut graph = parse_document(input).unwrap();
+        sort_nodes(&mut graph);
+        let children = graph.children(graph.root);
+        // Both rects — original order preserved
+        assert_eq!(graph.graph[children[0]].id.as_str(), "second");
+        assert_eq!(graph.graph[children[1]].id.as_str(), "first");
+    }
+
+    #[test]
+    fn sort_nodes_only_top_level() {
+        let input = r#"
+group @outer {
+  text @label "Hi" {
+    font: "Inter" regular 14
+  }
+  rect @inner {
+    w: 50 h: 50
+  }
+}
+"#;
+        let mut graph = parse_document(input).unwrap();
+        sort_nodes(&mut graph);
+        let outer_idx = graph.index_of(NodeId::intern("outer")).unwrap();
+        let children = graph.children(outer_idx);
+        // Nested children should stay in document order (text before rect)
+        assert_eq!(
+            graph.graph[children[0]].id.as_str(),
+            "label",
+            "nested text should stay first"
+        );
+        assert_eq!(
+            graph.graph[children[1]].id.as_str(),
+            "inner",
+            "nested rect should stay second"
         );
     }
 }
