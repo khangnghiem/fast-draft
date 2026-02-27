@@ -459,9 +459,12 @@ fn color_hint(hex: &str) -> &'static str {
             Some((r, g, b))
         }
         6 | 8 => {
-            let r = (crate::model::hex_val(bytes[0]).unwrap_or(0) << 4) | crate::model::hex_val(bytes[1]).unwrap_or(0);
-            let g = (crate::model::hex_val(bytes[2]).unwrap_or(0) << 4) | crate::model::hex_val(bytes[3]).unwrap_or(0);
-            let b = (crate::model::hex_val(bytes[4]).unwrap_or(0) << 4) | crate::model::hex_val(bytes[5]).unwrap_or(0);
+            let r = (crate::model::hex_val(bytes[0]).unwrap_or(0) << 4)
+                | crate::model::hex_val(bytes[1]).unwrap_or(0);
+            let g = (crate::model::hex_val(bytes[2]).unwrap_or(0) << 4)
+                | crate::model::hex_val(bytes[3]).unwrap_or(0);
+            let b = (crate::model::hex_val(bytes[4]).unwrap_or(0) << 4)
+                | crate::model::hex_val(bytes[5]).unwrap_or(0);
             Some((r, g, b))
         }
         _ => None,

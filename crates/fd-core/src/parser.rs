@@ -217,7 +217,8 @@ fn parse_node_id(input: &mut &str) -> ModalResult<NodeId> {
 fn parse_hex_color(input: &mut &str) -> ModalResult<Color> {
     let _ = '#'.parse_next(input)?;
     let hex_digits: &str = take_while(1..=8, |c: char| c.is_ascii_hexdigit()).parse_next(input)?;
-    Color::from_hex(hex_digits).ok_or_else(|| winnow::error::ErrMode::Backtrack(ContextError::new()))
+    Color::from_hex(hex_digits)
+        .ok_or_else(|| winnow::error::ErrMode::Backtrack(ContextError::new()))
 }
 
 fn parse_number(input: &mut &str) -> ModalResult<f32> {
