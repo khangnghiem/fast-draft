@@ -2063,11 +2063,12 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
 <body>
   <button id="zen-toggle-btn" title="Switch between Zen and Full layout"><span class="zen-icon">🧘</span> Zen</button>
   <div id="toolbar">
-    <button class="tool-btn zen-full-only" id="ai-refine-btn" title="AI Assist selected node (rename + restyle)">&#x2728; Assist</button>
-    <button class="tool-btn zen-full-only" id="ai-refine-all-btn" title="AI Assist all anonymous nodes">&#x2728; All</button>
+    <button class="tool-btn zen-full-only" id="ai-refine-btn" title="AI Touch selected node">&#x2728; Touch</button>
+    <button class="tool-btn zen-full-only" id="ai-refine-all-btn" title="AI Touch all anonymous nodes">&#x2728; All</button>
     <div class="tool-sep zen-full-only"></div>
     <div class="view-toggle zen-full-only" id="view-toggle">
-      <button class="view-btn active" id="view-design" title="Design View — full canvas">Design</button>
+      <button class="view-btn active" id="view-all" title="All View — full details">All</button>
+      <button class="view-btn" id="view-design" title="Design View — visual properties">Design</button>
       <button class="view-btn" id="view-spec" title="Spec View — requirements and structure">Spec</button>
     </div>
     <div style="flex:1"></div>
@@ -2286,7 +2287,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
   </div>
   <div id="context-menu">
-    <div class="menu-item" id="ctx-ai-refine"><span class="menu-icon">✦</span><span class="menu-label">AI Assist</span></div>
+    <div class="menu-item" id="ctx-ai-refine"><span class="menu-icon">✦</span><span class="menu-label">AI Touch</span></div>
     <div class="menu-item" id="ctx-add-annotation"><span class="menu-icon">◇</span><span class="menu-label">Add Spec</span></div>
     <div class="menu-item" id="ctx-view-spec" style="display:none"><span class="menu-icon">◈</span><span class="menu-label">View Spec</span><span class="menu-shortcut">⌘I</span></div>
 
@@ -2319,7 +2320,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     window.vscodeApi = acquireVsCodeApi();
   </script>
   <script nonce="{nonce}">
-    // ─── AI Assist toolbar + context menu handlers ─────────
+    // ─── AI Touch toolbar + context menu handlers ─────────
     (function() {
       const vscodeApi = window.vscodeApi;
       let selectedNodeId = null;
@@ -2338,12 +2339,12 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         if (e.data.type === 'aiRefineComplete') {
           const btn = document.getElementById('ai-refine-btn');
           const allBtn = document.getElementById('ai-refine-all-btn');
-          if (btn) { btn.textContent = '✨ Assist'; btn.disabled = false; }
+          if (btn) { btn.textContent = '✨ Touch'; btn.disabled = false; }
           if (allBtn) { allBtn.disabled = false; }
         }
       });
 
-      // Assist selected node
+      // Touch selected node
       document.getElementById('ai-refine-btn')?.addEventListener('click', () => {
         if (selectedNodeId) {
           vscodeApi.postMessage({ type: 'aiRefine', nodeIds: [selectedNodeId] });
@@ -2353,12 +2354,12 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         }
       });
 
-      // Assist all anonymous nodes
+      // Touch all anonymous nodes
       document.getElementById('ai-refine-all-btn')?.addEventListener('click', () => {
         vscodeApi.postMessage({ type: 'aiRefineAll' });
       });
 
-      // Context menu: AI Assist
+      // Context menu: AI Touch
       document.getElementById('ctx-ai-refine')?.addEventListener('click', () => {
         if (selectedNodeId) {
           vscodeApi.postMessage({ type: 'aiRefine', nodeIds: [selectedNodeId] });

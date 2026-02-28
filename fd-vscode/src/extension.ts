@@ -40,9 +40,9 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
   /** The most recently focused canvas webview panel, for command routing. */
   public static activePanel: vscode.WebviewPanel | undefined;
   /** Current view mode of the active panel. */
-  public static activeViewMode: "design" | "spec" = "design";
+  public static activeViewMode: "all" | "design" | "spec" = "all";
   /** Callback invoked when canvas webview changes view mode. */
-  public static onViewModeChanged: ((mode: "design" | "spec") => void) | undefined;
+  public static onViewModeChanged: ((mode: "all" | "design" | "spec") => void) | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) { }
 
@@ -165,7 +165,8 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
           break;
         }
         case "viewModeChanged": {
-          const mode: "design" | "spec" = (message as { type: string; mode?: string }).mode === "spec" ? "spec" : "design";
+          const rawMode = (message as { type: string; mode?: string }).mode;
+          const mode: "all" | "design" | "spec" = rawMode === "spec" ? "spec" : rawMode === "design" ? "design" : "all";
           FdEditorProvider.activeViewMode = mode;
           FdEditorProvider.onViewModeChanged?.(mode);
           break;
@@ -960,7 +961,7 @@ export function activate(context: vscode.ExtensionContext) {
   // ─── Code-mode Spec View (editor decorations) ────────────────────
   // When spec mode is active, hide style/animation/layout details from
   // the text editor, showing only #, spec blocks, node/edge declarations, and braces.
-  let codeSpecMode: "design" | "spec" = "design";
+  let codeSpecMode: "all" | "design" | "spec" = "all";
 
   // Wire up canvas → code-mode spec sync
   FdEditorProvider.onViewModeChanged = (mode) => {
@@ -1064,10 +1065,15 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Register view mode toggle command (Design ↔ Spec)
+  // Register view mode toggle command (All → Design → Spec → All)
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMAND_TOGGLE_VIEW_MODE, () => {
-      const next: "design" | "spec" = FdEditorProvider.activeViewMode === "design" ? "spec" : "design";
+      const cycle: Record<string, "all" | "design" | "spec"> = {
+        all: "design",
+        design: "spec",
+        spec: "all",
+      };
+      const next = cycle[FdEditorProvider.activeViewMode];
       FdEditorProvider.activeViewMode = next;
       codeSpecMode = next;
 
@@ -1080,7 +1086,7 @@ export function activate(context: vscode.ExtensionContext) {
       // Apply/remove code-mode folding
       applyCodeSpecView();
 
-      const labels: Record<string, string> = { design: "Design", spec: "Spec" };
+      const labels: Record<string, string> = { all: "All", design: "Design", spec: "Spec" };
       vscode.window.showInformationMessage(
         `FD View: ${labels[next]} Mode`
       );
