@@ -1666,4 +1666,175 @@ group @card {
             "children should appear before parent fill"
         );
     }
+
+    #[test]
+    fn roundtrip_theme_keyword() {
+        // Verify that `theme` keyword parses and emits correctly
+        let input = r#"
+theme accent {
+  fill: #6C5CE7
+  corner: 12
+}
+
+rect @btn {
+  w: 120 h: 40
+  use: accent
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+
+        // Emitter should output `theme`, not `style`
+        assert!(
+            output.contains("theme accent"),
+            "should emit `theme` keyword"
+        );
+        assert!(
+            !output.contains("style accent"),
+            "should NOT emit `style` keyword"
+        );
+
+        // Round-trip: re-parse emitted output
+        let graph2 = parse_document(&output).expect("re-parse of theme output failed");
+        assert!(
+            graph2.styles.contains_key(&NodeId::intern("accent")),
+            "theme definition should survive roundtrip"
+        );
+    }
+
+    #[test]
+    fn roundtrip_when_keyword() {
+        // Verify that `when` keyword parses and emits correctly
+        let input = r#"
+rect @btn {
+  w: 120 h: 40
+  fill: #6C5CE7
+  when :hover {
+    fill: #5A4BD1
+    ease: ease_out 200ms
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+
+        // Emitter should output `when`, not `anim`
+        assert!(
+            output.contains("when :hover"),
+            "should emit `when` keyword"
+        );
+        assert!(
+            !output.contains("anim :hover"),
+            "should NOT emit `anim` keyword"
+        );
+
+        // Round-trip: re-parse emitted output
+        let graph2 = parse_document(&output).expect("re-parse of when output failed");
+        let node = graph2.get_by_id(NodeId::intern("btn")).unwrap();
+        assert_eq!(node.animations.len(), 1, "animation should survive roundtrip");
+        assert_eq!(
+            node.animations[0].trigger,
+            AnimTrigger::Hover,
+            "trigger should be Hover"
+        );
+    }
+
+    #[test]
+    fn parse_old_style_keyword_compat() {
+        // Old `style` keyword must still be accepted by the parser
+        let input = r#"
+style accent {
+  fill: #6C5CE7
+}
+
+rect @btn {
+  w: 120 h: 40
+  use: accent
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        assert!(
+            graph.styles.contains_key(&NodeId::intern("accent")),
+            "old `style` keyword should parse into a theme definition"
+        );
+
+        // Emitter should upgrade to `theme`
+        let output = emit_document(&graph);
+        assert!(
+            output.contains("theme accent"),
+            "emitter should upgrade `style` to `theme`"
+        );
+    }
+
+    #[test]
+    fn parse_old_anim_keyword_compat() {
+        // Old `anim` keyword must still be accepted by the parser
+        let input = r#"
+rect @btn {
+  w: 120 h: 40
+  fill: #6C5CE7
+  anim :press {
+    scale: 0.95
+    ease: spring 150ms
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let node = graph.get_by_id(NodeId::intern("btn")).unwrap();
+        assert_eq!(
+            node.animations.len(),
+            1,
+            "old `anim` keyword should parse into animation"
+        );
+        assert_eq!(
+            node.animations[0].trigger,
+            AnimTrigger::Press,
+            "trigger should be Press"
+        );
+
+        // Emitter should upgrade to `when`
+        let output = emit_document(&graph);
+        assert!(
+            output.contains("when :press"),
+            "emitter should upgrade `anim` to `when`"
+        );
+    }
+
+    #[test]
+    fn roundtrip_theme_import() {
+        // Verify that import + theme references work together
+        let input = r#"
+import "tokens.fd" as tokens
+
+theme card_base {
+  fill: #FFFFFF
+  corner: 16
+}
+
+rect @card {
+  w: 300 h: 200
+  use: card_base
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+
+        // Both import and theme should appear in output
+        assert!(
+            output.contains("import \"tokens.fd\" as tokens"),
+            "import should survive roundtrip"
+        );
+        assert!(
+            output.contains("theme card_base"),
+            "theme should survive roundtrip"
+        );
+
+        // Re-parse
+        let graph2 = parse_document(&output).expect("re-parse failed");
+        assert_eq!(graph2.imports.len(), 1, "import count should survive");
+        assert!(
+            graph2.styles.contains_key(&NodeId::intern("card_base")),
+            "theme def should survive"
+        );
+    }
 }
