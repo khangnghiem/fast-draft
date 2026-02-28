@@ -585,14 +585,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       transform: scale(1.18);
       box-shadow: 0 3px 12px rgba(0, 122, 255, 0.5);
     }
-    .spec-badge-pin.faint {
-      opacity: 0.25;
-      transform: scale(0.8);
-    }
-    .spec-badge-pin.faint:hover {
-      opacity: 0.6;
-      transform: scale(1.0);
-    }
+
     .spec-badge-pin.active {
       opacity: 1;
       transform: scale(1.1);
@@ -1034,7 +1027,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       z-index: 15;
       overflow: hidden;
       cursor: pointer;
-      transition: opacity 0.2s ease;
+      transition: opacity 0.2s ease, box-shadow 0.2s ease;
     }
     #minimap-container:hover {
       box-shadow: var(--fd-shadow-lg);
@@ -1611,6 +1604,202 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     }
     .picker-existing .pe-remove:hover { opacity: 1; color: var(--fd-accent); }
 
+    /* ── Settings Hamburger Menu ── */
+    .settings-dropdown-container { position: relative; display: inline-block; }
+    .settings-menu {
+      display: none; position: absolute; top: 100%; right: 0; margin-top: 4px;
+      background: var(--fd-surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 8px;
+      box-shadow: var(--fd-shadow-lg);
+      flex-direction: column;
+      z-index: 1000; min-width: 200px; padding: 4px;
+    }
+    .settings-menu.visible { display: flex; }
+    .settings-menu-item {
+      background: none; border: none; padding: 5px 12px;
+      color: var(--fd-text); font-size: 12px; cursor: pointer; text-align: left;
+      border-radius: 5px; display: flex; align-items: center; gap: 8px;
+      transition: none; font-family: inherit;
+    }
+    .settings-menu-item:hover { background: var(--fd-accent); color: var(--fd-accent-fg); }
+    .settings-menu-item .sm-icon { width: 18px; text-align: center; flex-shrink: 0; }
+    .settings-menu-item .sm-label { flex: 1; }
+    .settings-menu-item .sm-shortcut {
+      font-size: 10px; color: var(--fd-text-tertiary);
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+    }
+    .settings-menu-item:hover .sm-shortcut { color: rgba(255,255,255,0.55); }
+    .settings-menu-sep { height: 1px; background: var(--fd-border); margin: 3px 8px; }
+    .settings-menu-item.toggle-on .sm-icon { color: var(--fd-accent); }
+
+    /* ── Bottom-Left Zoom & Undo/Redo Controls (Excalidraw-style) ── */
+    #bottom-left-controls {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .bl-control-group {
+      display: flex;
+      align-items: center;
+      background: var(--fd-surface);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 8px;
+      box-shadow: var(--fd-shadow-sm);
+      overflow: hidden;
+    }
+    .bl-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: var(--fd-text-secondary);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    .bl-btn:hover {
+      background: var(--fd-surface-hover);
+      color: var(--fd-text);
+    }
+    .bl-btn:active {
+      background: var(--fd-surface-active);
+      transform: scale(0.95);
+    }
+    .bl-btn.disabled {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    #zoom-reset-btn {
+      width: auto;
+      min-width: 48px;
+      padding: 0 6px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+    }
+    .bl-sep {
+      width: 0.5px;
+      height: 20px;
+      background: var(--fd-border);
+    }
+
+    /* ── Floating Bottom Toolbar (iPad UX) ── */
+    #floating-toolbar {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      z-index: 25;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 4px 6px;
+      background: var(--fd-surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.10), 0 1px 6px rgba(0,0,0,0.06);
+      transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+      cursor: default;
+    }
+    .dark-theme #floating-toolbar {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.35), 0 1px 6px rgba(0,0,0,0.2);
+    }
+    #floating-toolbar.collapsed {
+      padding: 4px;
+      border-radius: 50%;
+      gap: 0;
+    }
+    #floating-toolbar.collapsed .ft-tool-btn:not(.active) {
+      display: none;
+    }
+    #floating-toolbar.collapsed .ft-sep {
+      display: none;
+    }
+    #floating-toolbar.collapsed .ft-tool-btn.active {
+      padding: 6px;
+      border-radius: 50%;
+    }
+    #floating-toolbar.at-top {
+      bottom: auto;
+      top: 52px;
+    }
+    .ft-tool-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border: none;
+      background: transparent;
+      color: var(--fd-text-secondary);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+    .ft-tool-btn:hover {
+      background: var(--fd-surface-hover);
+      color: var(--fd-text);
+    }
+    .ft-tool-btn:active {
+      transform: scale(0.92);
+    }
+    .ft-tool-btn.active {
+      background: var(--fd-segment-active);
+      color: var(--fd-text);
+      box-shadow: var(--fd-segment-shadow);
+    }
+    .ft-tool-btn.locked::after {
+      content: '🔒';
+      font-size: 7px;
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      line-height: 1;
+    }
+    .ft-tool-btn .ft-key {
+      display: none;
+    }
+    .ft-sep {
+      width: 0.5px;
+      height: 20px;
+      background: var(--fd-border);
+      margin: 0 2px;
+      opacity: 0.6;
+    }
+    .ft-drag-handle {
+      width: 4px;
+      height: 16px;
+      border-radius: 2px;
+      background: var(--fd-text-tertiary);
+      opacity: 0.4;
+      cursor: grab;
+      margin: 0 4px;
+      transition: opacity 0.15s;
+    }
+    .ft-drag-handle:hover {
+      opacity: 0.8;
+    }
+    .ft-drag-handle:active {
+      cursor: grabbing;
+    }
+
     /* ── Shortcut Help (Apple sheet) ── */
     #shortcut-help {
       display: none;
@@ -1730,21 +1919,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
 
     /* ── Zen Mode overrides ── */
     .zen-mode #toolbar {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      top: auto;
-      border: 0.5px solid var(--fd-border);
-      border-radius: 16px;
-      border-bottom: 0.5px solid var(--fd-border);
-      padding: 6px 10px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+      padding: 4px 8px;
       gap: 2px;
-      z-index: 50;
-    }
-    .dark-theme.zen-mode #toolbar {
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2);
     }
     .zen-mode .zen-full-only { display: none !important; }
     .zen-mode #layers-panel { display: none !important; }
@@ -1752,16 +1928,6 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .zen-mode #minimap-container { display: none !important; }
     .zen-mode #selection-bar { display: none !important; }
     .zen-mode #spec-overlay { display: none !important; }
-
-    /* ── Zen mode: icon-only toolbar ── */
-    .zen-mode .tool-btn > .tool-key { display: none; }
-    .zen-mode .tool-btn {
-      padding: 5px 8px;
-      font-size: 0; /* hides text labels */
-    }
-    .zen-mode .tool-btn > .tool-icon {
-      font-size: 14px;
-    }
 
     /* Panel toggle via keyboard in zen mode */
     .zen-mode #layers-panel.zen-visible {
@@ -1776,28 +1942,6 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
 <body>
   <button id="zen-toggle-btn" title="Switch between Zen and Full layout"><span class="zen-icon">🧘</span> Zen</button>
   <div id="toolbar">
-    <button class="tool-btn active" data-tool="select"><span class="tool-icon">▸</span>Select<span class="tool-key">V</span></button>
-    <button class="tool-btn" data-tool="rect"><span class="tool-icon">▢</span>Rect<span class="tool-key">R</span></button>
-    <button class="tool-btn" data-tool="ellipse"><span class="tool-icon">◯</span>Ellipse<span class="tool-key">O</span></button>
-    <button class="tool-btn" data-tool="pen"><span class="tool-icon">✎</span>Pen<span class="tool-key">P</span></button>
-    <button class="tool-btn" data-tool="arrow"><span class="tool-icon">→</span>Arrow<span class="tool-key">A</span></button>
-    <button class="tool-btn" data-tool="text"><span class="tool-icon">T</span>Text<span class="tool-key">T</span></button>
-    <button class="tool-btn" data-tool="frame"><span class="tool-icon">⊞</span>Frame<span class="tool-key">F</span></button>
-    <div class="tool-sep zen-full-only"></div>
-    <div class="insert-dropdown-container zen-full-only" id="insert-dropdown-container">
-      <button class="tool-btn" id="insert-menu-btn" title="Insert shape or element"><span class="tool-icon">＋</span>Insert</button>
-      <div class="insert-menu" id="insert-menu">
-        <div class="insert-section-label">Shapes</div>
-        <button class="insert-menu-item" data-insert="rect">▢ Rectangle</button>
-        <button class="insert-menu-item" data-insert="ellipse">◯ Ellipse</button>
-        <button class="insert-menu-item" data-insert="line">━ Line</button>
-        <button class="insert-menu-item" data-insert="arrow">→ Arrow</button>
-        <div class="insert-menu-sep"></div>
-        <div class="insert-section-label">Layout</div>
-        <button class="insert-menu-item" data-insert="frame">⊞ Frame</button>
-        <button class="insert-menu-item" data-insert="text">T Text</button>
-      </div>
-    </div>
     <button class="tool-btn zen-full-only" id="ai-refine-btn" title="AI Assist selected node (rename + restyle)">&#x2728; Assist</button>
     <button class="tool-btn zen-full-only" id="ai-refine-all-btn" title="AI Assist all anonymous nodes">&#x2728; All</button>
     <div class="tool-sep zen-full-only"></div>
@@ -1805,28 +1949,25 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <button class="view-btn active" id="view-design" title="Design View — full canvas">Design</button>
       <button class="view-btn" id="view-spec" title="Spec View — requirements and structure">Spec</button>
     </div>
-    <div class="tool-sep zen-full-only"></div>
-    <button class="tool-btn zen-full-only" id="grid-toggle-btn" title="Toggle grid overlay (G)">⊞</button>
-    <button class="tool-btn zen-full-only" id="spec-badge-toggle-btn" title="Toggle spec badges on canvas">◇</button>
-
-    <!-- Export Dropdown -->
-    <div class="export-dropdown-container zen-full-only" id="export-dropdown-container">
-      <button class="tool-btn" id="export-menu-btn" title="Export options">📥</button>
-      <div class="export-menu" id="export-menu">
-        <button class="export-menu-item" data-export="png-clip">📋 Copy as PNG (⌘⇧C)</button>
-        <button class="export-menu-item" data-export="png-file">🖼️ Save as PNG (2x)</button>
-        <button class="export-menu-item" data-export="svg-file">✨ Save as SVG</button>
-        <div class="export-menu-sep"></div>
-        <button class="export-menu-item" data-export="fd-clip">📝 Copy as .fd text</button>
-
+    <div style="flex:1"></div>
+    <span class="zen-full-only" id="status">Loading WASM…</span>
+    <!-- Settings Hamburger ☰ -->
+    <div class="settings-dropdown-container zen-full-only" id="settings-dropdown-container">
+      <button class="tool-btn" id="settings-menu-btn" title="Settings & tools">☰</button>
+      <div class="settings-menu" id="settings-menu">
+        <button class="settings-menu-item" id="sm-grid-toggle"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span><span class="sm-shortcut">G</span></button>
+        <button class="settings-menu-item" id="sm-spec-badge-toggle"><span class="sm-icon">◇</span><span class="sm-label">Spec Badges</span></button>
+        <button class="settings-menu-item" id="sm-sketchy-toggle"><span class="sm-icon">✏️</span><span class="sm-label">Sketchy Mode</span></button>
+        <button class="settings-menu-item" id="sm-theme-toggle"><span class="sm-icon">🌙</span><span class="sm-label">Dark Theme</span></button>
+        <div class="settings-menu-sep"></div>
+        <button class="settings-menu-item" data-export="png-clip"><span class="sm-icon">📋</span><span class="sm-label">Copy as PNG</span><span class="sm-shortcut">⌘⇧C</span></button>
+        <button class="settings-menu-item" data-export="png-file"><span class="sm-icon">🖼️</span><span class="sm-label">Save as PNG</span></button>
+        <button class="settings-menu-item" data-export="svg-file"><span class="sm-icon">✨</span><span class="sm-label">Save as SVG</span></button>
+        <button class="settings-menu-item" data-export="fd-clip"><span class="sm-icon">📝</span><span class="sm-label">Copy as .fd</span></button>
+        <div class="settings-menu-sep"></div>
+        <button class="settings-menu-item" id="sm-shortcuts"><span class="sm-icon">⌨️</span><span class="sm-label">Keyboard Shortcuts</span><span class="sm-shortcut">?</span></button>
       </div>
     </div>
-    <div class="tool-sep zen-full-only"></div>
-    <button class="tool-btn" id="sketchy-toggle-btn" title="Toggle sketchy hand-drawn mode">✏️</button>
-    <button class="tool-btn zen-full-only" id="theme-toggle-btn" title="Toggle light/dark canvas theme">🌙</button>
-    <button class="zen-full-only" id="zoom-level" title="Zoom level (click to reset to 100%)">100%</button>
-    <button class="tool-btn zen-full-only" id="tool-help-btn" title="Keyboard shortcuts">⌨️ Shortcuts</button>
-    <span class="zen-full-only" id="status">Loading WASM…</span>
   </div>
   <div id="canvas-container">
 
@@ -1874,6 +2015,33 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div id="layers-panel"></div>
     <div id="minimap-container"><canvas id="minimap-canvas"></canvas></div>
     <div id="selection-bar"></div>
+    <!-- Bottom-left Zoom & Undo/Redo controls (Excalidraw-style) -->
+    <div id="bottom-left-controls">
+      <div class="bl-control-group">
+        <button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button>
+        <div class="bl-sep"></div>
+        <button class="bl-btn" id="zoom-reset-btn" title="Reset zoom (click)">100%</button>
+        <div class="bl-sep"></div>
+        <button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button>
+      </div>
+      <div class="bl-control-group">
+        <button class="bl-btn" id="undo-btn" title="Undo (⌘Z)">↩</button>
+        <div class="bl-sep"></div>
+        <button class="bl-btn" id="redo-btn" title="Redo (⌘⇧Z)">↪</button>
+      </div>
+    </div>
+    <!-- Floating Bottom Toolbar (iPad UX) -->
+    <div id="floating-toolbar">
+      <div class="ft-drag-handle" id="ft-drag-handle" title="Drag to move toolbar"></div>
+      <button class="ft-tool-btn active" data-tool="select" title="Select (V)">▸</button>
+      <div class="ft-sep"></div>
+      <button class="ft-tool-btn" data-tool="rect" title="Rectangle (R)">▢</button>
+      <button class="ft-tool-btn" data-tool="ellipse" title="Ellipse (O)">◯</button>
+      <button class="ft-tool-btn" data-tool="pen" title="Pen (P)">✎</button>
+      <button class="ft-tool-btn" data-tool="arrow" title="Arrow (A)">→</button>
+      <button class="ft-tool-btn" data-tool="text" title="Text (T)">T</button>
+      <button class="ft-tool-btn" data-tool="frame" title="Frame (F)">⊞</button>
+    </div>
     <div id="loading"><div class="loading-spinner"></div>Loading FD engine…</div>
     <!-- Properties Panel (Apple-style) -->
     <div id="props-panel">
@@ -1998,7 +2166,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div class="menu-item" id="ctx-ai-refine"><span class="menu-icon">✦</span><span class="menu-label">AI Assist</span></div>
     <div class="menu-item" id="ctx-add-annotation"><span class="menu-icon">◇</span><span class="menu-label">Add Spec</span></div>
     <div class="menu-item" id="ctx-view-spec" style="display:none"><span class="menu-icon">◈</span><span class="menu-label">View Spec</span><span class="menu-shortcut">⌘I</span></div>
-    <div class="menu-item" id="ctx-remove-spec" style="display:none"><span class="menu-icon">◇</span><span class="menu-label">Remove Spec</span></div>
+
     <div class="menu-separator"></div>
     <div class="menu-item" id="ctx-cut" data-action="cut"><span class="menu-icon">✂</span><span class="menu-label">Cut</span><span class="menu-shortcut">⌘X</span></div>
     <div class="menu-item" id="ctx-copy" data-action="copy"><span class="menu-icon">⎘</span><span class="menu-label">Copy</span><span class="menu-shortcut">⌘C</span></div>
