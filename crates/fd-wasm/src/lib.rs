@@ -796,6 +796,24 @@ impl FdCanvas {
         String::new()
     }
 
+    // ─── Detach Info API ─────────────────────────────────────────────────
+
+    /// Get last detach event info. Returns JSON:
+    /// `{"detached":true,"nodeId":"...","fromGroupId":"..."}` or `""` if none.
+    /// Clears the event after reading (one-shot).
+    pub fn get_last_detach_info(&mut self) -> String {
+        match self.engine.last_detach.take() {
+            Some((child_id, parent_id)) => {
+                format!(
+                    r#"{{"detached":true,"nodeId":"{}","fromGroupId":"{}"}}"#,
+                    child_id.as_str(),
+                    parent_id.as_str()
+                )
+            }
+            None => String::new(),
+        }
+    }
+
     // ─── Animation APIs ──────────────────────────────────────────────────
 
     /// Add an animation to a node by ID.

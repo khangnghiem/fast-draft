@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.8.72 — Fix Group Detach on Drag Out
+
+- **BUG FIX (R3.34)**: Fixed "chasing envelope" bug — dragging a child incrementally outside a group now correctly detaches it. Previously, `expand_group_to_children` grew the parent to contain the moving child on every drag frame, making escape impossible. Fix: skip group expansion during continuous drag; only detach or keep in-place
+- **UX**: Snappy detach animation — teal glow ring (250ms pop) appears on the detached node when it leaves a group, giving visual feedback that reparenting occurred
+- **WASM**: New `get_last_detach_info()` API — returns `{detached, nodeId, fromGroupId}` one-shot event for JS animation trigger
+- **TESTING**: New `sync_incremental_drag_detaches_child` regression test — simulates 30 small moves proving detach works with real drag gestures; renamed `sync_move_partial_overlap_expands_group` → `sync_move_partial_overlap_keeps_child` (group no longer expands during drag)
+
 ### v0.8.71 — ✦ Renamify (Batch AI Rename)
 
 - **NEW (R4.20)**: ✦ Renamify — batch AI rename for anonymous node IDs (`@rect_1`, `@ellipse_3`, etc.) → semantic names (`@login_button`, `@hero_card`); toolbar button + command palette
