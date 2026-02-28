@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### Component Libraries (R3.33)
+
+- **FEATURE (R3.33)**: Component libraries — reusable `.fd` files with themes and node groups; 3 built-in libraries: **UI Kit** (buttons, inputs, cards, badges, avatars), **Flowchart** (process, decision, start/end, connectors), **Wireframe** (navbar, sidebar, content, footer, layouts)
+- **FEATURE (R3.33)**: Library Panel — right sidebar (⇧L) with search and click-to-insert; scans workspace `libraries/` directory for `.fd` files; auto-parses themes and components
+- **DOCS**: `docs/LIBRARIES.md` — convention guide for creating, structuring, and sharing library files
+- **FUTURE (R3.34)**: Community library directory (planned)
+
 ### GitHub Pages — Live Playground
 
 - **FEATURE (R6.5)**: GitHub Pages landing site at `khangnghiem.github.io/fast-draft` with premium dark-theme design — hero section, feature cards, benchmark comparison table (11 FD vs Excalidraw pairs), architecture diagram, and editor support matrix

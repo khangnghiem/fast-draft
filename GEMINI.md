@@ -28,6 +28,10 @@ Before modifying ANY file:
 3. Never leave broken imports or trait bounds
 4. Run `cargo check --workspace` after cross-crate changes
 
+### 🧠 Lessons Learned
+
+Before starting any task, scan `docs/LESSONS.md` for relevant pitfalls. After encountering a repeated mistake, run `/learn` to document it. Critical lessons get promoted to GEMINI.md rules.
+
 ### 📋 Requirement Deduplication
 
 Before proposing any new requirement, search the **Requirement Index** at the bottom of `docs/REQUIREMENTS.md` and check `docs/CHANGELOG.md` for overlapping keywords. If a similar requirement exists, **extend it** instead of creating a duplicate. Always update the index when adding new requirements. For complex features, check `docs/specs/` for detailed behavior specifications.

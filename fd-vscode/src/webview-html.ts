@@ -412,6 +412,125 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .dark-theme #layers-panel::-webkit-scrollbar-thumb {
       background: rgba(255,255,255,0.12);
     }
+
+    /* ── Library Panel (right sidebar) ── */
+    #library-panel {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 260px;
+      background: var(--fd-surface);
+      border-left: 0.5px solid var(--fd-border);
+      overflow-y: auto;
+      overflow-x: hidden;
+      z-index: 10;
+      font-size: 12px;
+      padding: 0;
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+    }
+    #library-panel.visible { display: block; }
+    #library-panel::-webkit-scrollbar { width: 6px; }
+    #library-panel::-webkit-scrollbar-track { background: transparent; }
+    #library-panel::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.12);
+      border-radius: 3px;
+    }
+    .dark-theme #library-panel::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.12);
+    }
+    .lib-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px 8px;
+      border-bottom: 0.5px solid var(--fd-border);
+      position: sticky;
+      top: 0;
+      background: var(--fd-surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      z-index: 2;
+    }
+    .lib-title {
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: -0.01em;
+    }
+    .lib-close {
+      background: none;
+      border: none;
+      color: var(--fd-text-secondary);
+      font-size: 16px;
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 0.15s;
+      padding: 0 2px;
+    }
+    .lib-close:hover { opacity: 1; }
+    .lib-search {
+      display: block;
+      width: calc(100% - 24px);
+      margin: 8px 12px;
+      padding: 6px 10px;
+      border: 1px solid var(--fd-border);
+      border-radius: 6px;
+      background: var(--fd-input-bg);
+      color: var(--fd-text);
+      font-size: 12px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .lib-search:focus { border-color: var(--fd-accent); }
+    .lib-group-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--fd-text-secondary);
+      padding: 10px 12px 4px;
+      font-weight: 600;
+    }
+    .lib-component {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      border-radius: 6px;
+      margin: 1px 4px;
+      transition: background 0.1s;
+    }
+    .lib-component:hover {
+      background: var(--fd-accent);
+      color: var(--fd-accent-fg);
+    }
+    .lib-component .lib-icon {
+      width: 20px;
+      text-align: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .lib-component .lib-name {
+      flex: 1;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .lib-component .lib-kind {
+      font-size: 10px;
+      color: var(--fd-text-tertiary);
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+    }
+    .lib-component:hover .lib-kind { color: rgba(255,255,255,0.55); }
+    .lib-empty {
+      text-align: center;
+      padding: 24px 12px;
+      color: var(--fd-text-secondary);
+      font-size: 12px;
+    }
+    .lib-empty-icon { font-size: 24px; opacity: 0.4; margin-bottom: 8px; }
+    .zen-mode #library-panel { display: none !important; }
     .layers-header {
       display: flex;
       align-items: center;
@@ -1957,6 +2076,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <div class="settings-menu" id="settings-menu">
         <button class="settings-menu-item" id="sm-grid-toggle"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span><span class="sm-shortcut">G</span></button>
         <button class="settings-menu-item" id="sm-spec-badge-toggle"><span class="sm-icon">◇</span><span class="sm-label">Spec Badges</span></button>
+        <button class="settings-menu-item" id="sm-library-toggle"><span class="sm-icon">📦</span><span class="sm-label">Libraries</span><span class="sm-shortcut">⇧L</span></button>
         <button class="settings-menu-item" id="sm-sketchy-toggle"><span class="sm-icon">✏️</span><span class="sm-label">Sketchy Mode</span></button>
         <button class="settings-menu-item" id="sm-theme-toggle"><span class="sm-icon">🌙</span><span class="sm-label">Dark Theme</span></button>
         <div class="settings-menu-sep"></div>
@@ -2013,6 +2133,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div id="dimension-tooltip"></div>
     <div id="spec-overlay"></div>
     <div id="layers-panel"></div>
+    <div id="library-panel"></div>
     <div id="minimap-container"><canvas id="minimap-canvas"></canvas></div>
     <div id="selection-bar"></div>
     <!-- Bottom-left Zoom & Undo/Redo controls (Excalidraw-style) -->

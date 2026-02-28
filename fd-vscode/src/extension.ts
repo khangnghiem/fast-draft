@@ -200,6 +200,14 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
           }
           break;
         }
+        case "requestLibraries": {
+          const libraries = await scanLibraryFiles();
+          webviewPanel.webview.postMessage({
+            type: "libraryData",
+            libraries,
+          });
+          break;
+        }
 
       }
     });
@@ -564,6 +572,109 @@ function exportSpecMarkdown(): void {
     });
     vscode.window.showInformationMessage(`Spec exported to ${specPath.split("/").pop()}`);
   });
+}
+
+// ─── Library Scanning ────────────────────────────────────────────────────────
+
+interface LibraryComponent {
+  name: string;
+  kind: string;
+  code: string;
+}
+
+interface LibraryFile {
+  name: string;
+  path: string;
+  components: LibraryComponent[];
+}
+
+/**
+ * Scan workspace `libraries/` directories for .fd files.
+ * Parse each file to extract reusable components (themes, groups, nodes).
+ */
+async function scanLibraryFiles(): Promise<LibraryFile[]> {
+  const results: LibraryFile[] = [];
+  const files = await vscode.workspace.findFiles("**/libraries/**/*.fd", null, 50);
+
+  for (const fileUri of files) {
+    try {
+      const content = await vscode.workspace.fs.readFile(fileUri);
+      const text = new TextDecoder().decode(content);
+      const components = parseLibraryComponents(text);
+      // Extract library name from header comment or filename
+      const nameMatch = text.match(/^#\s*@library\s+"([^"]+)"/m);
+      const fileName = fileUri.path.split("/").pop()?.replace(/\.fd$/, "") ?? "Unknown";
+      const libName = nameMatch ? nameMatch[1] : fileName;
+
+      if (components.length > 0) {
+        results.push({ name: libName, path: fileUri.fsPath, components });
+      }
+    } catch {
+      // Skip files that can't be read
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Parse a library .fd file to extract component definitions.
+ * Extracts themes and top-level nodes (group, rect, ellipse, etc.) with their full code.
+ */
+function parseLibraryComponents(text: string): LibraryComponent[] {
+  const components: LibraryComponent[] = [];
+  const lines = text.split("\n");
+  let i = 0;
+
+  while (i < lines.length) {
+    const trimmed = lines[i].trim();
+
+    // Skip comments, empty lines, imports
+    if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("import ")) {
+      i++;
+      continue;
+    }
+
+    // Theme definition: theme name { ... }
+    const themeMatch = trimmed.match(/^theme\s+(\w+)\s*\{/);
+    if (themeMatch) {
+      const startLine = i;
+      let depth = 1;
+      i++;
+      while (i < lines.length && depth > 0) {
+        depth += (lines[i].match(/\{/g) || []).length;
+        depth -= (lines[i].match(/\}/g) || []).length;
+        i++;
+      }
+      const code = lines.slice(startLine, i).join("\n");
+      components.push({ name: themeMatch[1], kind: "theme", code });
+      continue;
+    }
+
+    // Node definition: (group|rect|ellipse|path|text|frame) @id ... { }
+    const nodeMatch = trimmed.match(/^(group|rect|ellipse|path|text|frame)\s+@(\w+)/);
+    if (nodeMatch) {
+      const startLine = i;
+      if (trimmed.includes("{")) {
+        let depth = (trimmed.match(/\{/g) || []).length - (trimmed.match(/\}/g) || []).length;
+        i++;
+        while (i < lines.length && depth > 0) {
+          depth += (lines[i].match(/\{/g) || []).length;
+          depth -= (lines[i].match(/\}/g) || []).length;
+          i++;
+        }
+      } else {
+        i++;
+      }
+      const code = lines.slice(startLine, i).join("\n");
+      components.push({ name: nodeMatch[2], kind: nodeMatch[1], code });
+      continue;
+    }
+
+    i++;
+  }
+
+  return components;
 }
 
 // ─── Extension Entry Points ────────────────────────────────────────────────────

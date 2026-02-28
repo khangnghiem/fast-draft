@@ -70,6 +70,7 @@
 | `⌘0`              | Zoom to fit                       |
 | `⌘1`              | Zoom to selection                 |
 | `L`               | Toggle Layers panel               |
+| `⇧L`              | Toggle Library panel              |
 | `G`               | Toggle grid overlay               |
 | `Space` (hold)    | Pan / hand tool                   |
 | `⌘` (hold)        | Temporary hand tool (Select mode) |

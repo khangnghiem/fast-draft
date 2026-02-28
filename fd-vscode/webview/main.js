@@ -1126,6 +1126,12 @@ window.addEventListener("message", (event) => {
       }
       break;
     }
+    case "libraryData": {
+      // Library data received from extension host
+      libraryComponents = message.libraries || [];
+      refreshLibraryPanel();
+      break;
+    }
     case "toolChanged": {
       if (!fdCanvas) return;
       fdCanvas.set_tool(message.tool);
@@ -1190,6 +1196,15 @@ document.addEventListener("keydown", (e) => {
     if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
       e.preventDefault();
       toggleGrid();
+      return;
+    }
+  }
+
+  // ── Library panel toggle shortcut ──
+  if ((e.key === "l" || e.key === "L") && e.shiftKey) {
+    if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      toggleLibraryPanel();
       return;
     }
   }
@@ -4101,6 +4116,13 @@ function setupSettingsMenu() {
     updateSettingsToggleStates();
   });
 
+  // Library panel toggle
+  document.getElementById("sm-library-toggle")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleLibraryPanel();
+    updateSettingsToggleStates();
+  });
+
   // Sketchy mode toggle
   document.getElementById("sm-sketchy-toggle")?.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -4166,6 +4188,9 @@ function updateSettingsToggleStates() {
   if (specItem) specItem.classList.toggle("toggle-on", specBadgesVisible);
   if (sketchyItem) sketchyItem.classList.toggle("toggle-on", fdCanvas ? fdCanvas.get_sketchy_mode() : false);
   if (themeItem) themeItem.classList.toggle("toggle-on", isDarkTheme);
+  const libItem = document.getElementById("sm-library-toggle");
+  const libPanel = document.getElementById("library-panel");
+  if (libItem) libItem.classList.toggle("toggle-on", libPanel && libPanel.classList.contains("visible"));
 }
 
 /** Set up floating toolbar drag handle (move between top and bottom). */
@@ -5024,6 +5049,114 @@ function toggleNodeVisibility(nodeId) {
     render();
   }
   refreshLayersPanel();
+}
+
+// ─── Library Panel ───────────────────────────────────────────────────────
+
+/** Library component data from extension host */
+let libraryComponents = [];
+let librarySearchQuery = "";
+
+/** Toggle library panel visibility */
+function toggleLibraryPanel() {
+  const panel = document.getElementById("library-panel");
+  if (!panel) return;
+  const isVisible = panel.classList.toggle("visible");
+  if (isVisible) {
+    // Request library data from extension on first open
+    vscode.postMessage({ type: "requestLibraries" });
+    refreshLibraryPanel();
+  }
+}
+
+/** Render library panel contents */
+function refreshLibraryPanel() {
+  const panel = document.getElementById("library-panel");
+  if (!panel) return;
+
+  let html = `<div class="lib-header">`;
+  html += `<span class="lib-title">📦 Libraries</span>`;
+  html += `<button class="lib-close" id="lib-close-btn" title="Close">×</button>`;
+  html += `</div>`;
+  html += `<input class="lib-search" id="lib-search" type="text" placeholder="Search components…" value="${escapeAttr(librarySearchQuery)}">`;
+
+  if (libraryComponents.length === 0) {
+    html += `<div class="lib-empty">`;
+    html += `<div class="lib-empty-icon">📦</div>`;
+    html += `<div>No libraries found</div>`;
+    html += `<div style="margin-top:4px;opacity:0.6">Add .fd files to a <code>libraries/</code> folder</div>`;
+    html += `</div>`;
+    panel.innerHTML = html;
+    wireLibraryHandlers(panel);
+    return;
+  }
+
+  const query = librarySearchQuery.toLowerCase();
+
+  for (const lib of libraryComponents) {
+    const filtered = lib.components.filter(c =>
+      !query || c.name.toLowerCase().includes(query) || c.kind.toLowerCase().includes(query)
+    );
+    if (filtered.length === 0) continue;
+
+    html += `<div class="lib-group-label">${escapeHtml(lib.name)} (${filtered.length})</div>`;
+    for (const comp of filtered) {
+      const icon = comp.kind === "theme" ? "◆" : (comp.kind === "group" ? "◻" : LAYER_ICONS[comp.kind] || "•");
+      html += `<div class="lib-component" data-lib-name="${escapeAttr(lib.name)}" data-comp-name="${escapeAttr(comp.name)}" data-comp-code="${escapeAttr(comp.code)}">`;
+      html += `<span class="lib-icon">${icon}</span>`;
+      html += `<span class="lib-name">${escapeHtml(comp.name)}</span>`;
+      html += `<span class="lib-kind">${escapeHtml(comp.kind)}</span>`;
+      html += `</div>`;
+    }
+  }
+
+  panel.innerHTML = html;
+  wireLibraryHandlers(panel);
+}
+
+/** Wire event handlers for library panel */
+function wireLibraryHandlers(panel) {
+  // Close button
+  document.getElementById("lib-close-btn")?.addEventListener("click", () => {
+    panel.classList.remove("visible");
+    updateSettingsToggleStates();
+  });
+
+  // Search input
+  document.getElementById("lib-search")?.addEventListener("input", (e) => {
+    librarySearchQuery = e.target.value;
+    refreshLibraryPanel();
+    // Re-focus search input after re-render
+    const searchInput = document.getElementById("lib-search");
+    if (searchInput) {
+      searchInput.focus();
+      searchInput.selectionStart = searchInput.selectionEnd = searchInput.value.length;
+    }
+  });
+
+  // Component click — insert into document
+  panel.querySelectorAll(".lib-component").forEach(item => {
+    item.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const code = item.getAttribute("data-comp-code");
+      if (!code || !fdCanvas) return;
+      // Append component code to current document text
+      const currentText = fdCanvas.get_text();
+      const separator = currentText.endsWith("\n") ? "\n" : "\n\n";
+      const newText = currentText + separator + code + "\n";
+      fdCanvas.set_text(newText);
+      bumpGeneration();
+      render();
+      syncTextToExtension();
+      // Brief visual feedback
+      item.style.background = "var(--fd-accent)";
+      item.style.color = "var(--fd-accent-fg)";
+      setTimeout(() => {
+        item.style.background = "";
+        item.style.color = "";
+      }, 300);
+    });
+  });
 }
 
 // ─── Copy / Paste / Select All (Figma/Sketch standard) ───────────────────────

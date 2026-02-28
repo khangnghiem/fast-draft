@@ -1,0 +1,252 @@
+# @library "UI Kit"
+# Reusable UI components — buttons, inputs, cards, badges, avatars.
+# Usage: import "libraries/ui-kit.fd" as ui
+
+# ─── Themes ───
+
+theme primary {
+  fill: #6C5CE7
+  corner: 8
+}
+
+theme primary_hover {
+  fill: #5A4BD1
+  corner: 8
+}
+
+theme secondary {
+  fill: #DFE6E9
+  corner: 8
+}
+
+theme danger {
+  fill: #E17055
+  corner: 8
+}
+
+theme success {
+  fill: #00B894
+  corner: 8
+}
+
+theme input_style {
+  stroke: #DDDDDD 1
+  corner: 8
+}
+
+theme label_text {
+  fill: #2D3436
+  font: "Inter" 500 14
+}
+
+theme hint_text {
+  fill: #999999
+  font: "Inter" 400 13
+}
+
+theme heading {
+  fill: #1A1A2E
+  font: "Inter" 700 24
+}
+
+theme subheading {
+  fill: #2D3436
+  font: "Inter" 600 16
+}
+
+# ─── Buttons ───
+
+group @btn_primary {
+  text @btn_primary_label "Button" {
+    fill: #FFFFFF
+    font: "Inter" 600 14
+  }
+  w: 160 h: 44
+  use: primary
+  when :hover {
+    fill: #5A4BD1
+    scale: 1.02
+    ease: spring 200ms
+  }
+  when :press {
+    scale: 0.97
+    ease: ease_out 100ms
+  }
+}
+
+group @btn_secondary {
+  text @btn_secondary_label "Secondary" {
+    fill: #2D3436
+    font: "Inter" 600 14
+  }
+  w: 160 h: 44
+  use: secondary
+  when :hover {
+    fill: #B2BEC3
+    scale: 1.02
+    ease: spring 200ms
+  }
+}
+
+group @btn_danger {
+  text @btn_danger_label "Delete" {
+    fill: #FFFFFF
+    font: "Inter" 600 14
+  }
+  w: 160 h: 44
+  use: danger
+  when :hover {
+    fill: #D63031
+    scale: 1.02
+    ease: spring 200ms
+  }
+}
+
+group @btn_ghost {
+  text @btn_ghost_label "Ghost" {
+    fill: #6C5CE7
+    font: "Inter" 600 14
+  }
+  w: 160 h: 44
+  fill: transparent
+  stroke: #6C5CE7 1
+  corner: 8
+  when :hover {
+    fill: #F3F0FF
+    ease: ease_out 150ms
+  }
+}
+
+# ─── Inputs ───
+
+group @text_input {
+  rect @text_input_field {
+    text @text_input_hint "Enter text..." {
+      use: hint_text
+    }
+    w: 280 h: 44
+    use: input_style
+    fill: #FFFFFF
+  }
+}
+
+group @text_input_labeled {
+  text @input_label "Label" {
+    use: label_text
+  }
+  rect @input_field {
+    text @input_placeholder "Enter value..." {
+      use: hint_text
+    }
+    w: 280 h: 44
+    use: input_style
+    fill: #FFFFFF
+  }
+  layout: column gap=6
+}
+
+group @search_input {
+  rect @search_field {
+    text @search_icon "🔍" {
+      font: "Inter" 400 14
+    }
+    text @search_hint "Search..." {
+      use: hint_text
+    }
+    w: 280 h: 44
+    use: input_style
+    fill: #FFFFFF
+    corner: 22
+  }
+}
+
+# ─── Cards ───
+
+group @card_basic {
+  text @card_title "Card Title" {
+    use: subheading
+  }
+  text @card_body "Card description goes here. This is a basic content card." {
+    fill: #636E72
+    font: "Inter" 400 14
+  }
+  layout: column gap=8 pad=24
+  fill: #FFFFFF
+  corner: 12
+  stroke: #F0F0F0 1
+}
+
+group @card_image {
+  rect @card_img_placeholder {
+    w: 300 h: 160
+    fill: #DFE6E9
+    corner: 12
+  }
+  text @card_img_title "Image Card" {
+    use: subheading
+  }
+  text @card_img_desc "A card with an image placeholder area." {
+    fill: #636E72
+    font: "Inter" 400 14
+  }
+  layout: column gap=12 pad=16
+  fill: #FFFFFF
+  corner: 12
+  stroke: #F0F0F0 1
+}
+
+# ─── Badges ───
+
+group @badge_default {
+  text @badge_label "Badge" {
+    fill: #6C5CE7
+    font: "Inter" 600 11
+  }
+  fill: #F3F0FF
+  corner: 100
+  layout: column pad=6
+}
+
+group @badge_success {
+  text @badge_success_label "Active" {
+    fill: #00B894
+    font: "Inter" 600 11
+  }
+  fill: #E6FFF9
+  corner: 100
+  layout: column pad=6
+}
+
+group @badge_danger {
+  text @badge_danger_label "Error" {
+    fill: #E17055
+    font: "Inter" 600 11
+  }
+  fill: #FFF0EC
+  corner: 100
+  layout: column pad=6
+}
+
+# ─── Avatars ───
+
+group @avatar_circle {
+  ellipse @avatar_bg {
+    w: 40 h: 40
+    fill: #6C5CE7
+  }
+  text @avatar_initials "KN" {
+    fill: #FFFFFF
+    font: "Inter" 700 16
+  }
+}
+
+group @avatar_large {
+  ellipse @avatar_large_bg {
+    w: 64 h: 64
+    fill: #0984E3
+  }
+  text @avatar_large_initials "FD" {
+    fill: #FFFFFF
+    font: "Inter" 700 24
+  }
+}

@@ -86,7 +86,8 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 
 - **R3.31** _(done)_: Export — PNG (2×), SVG, clipboard; configurable background; ⌘⇧E shortcut
 - **R3.32** _(planned)_: Image embedding — drag-and-drop raster images as `image` nodes; base64 or file reference
-- **R3.33** _(planned)_: Component libraries — reusable node collections from a library panel; stored as `.fd` files
+- **R3.33** _(done)_: Component libraries — reusable node collections from a library panel; stored as `.fd` files; 3 built-in libraries (UI Kit, Flowchart, Wireframe)
+- **R3.34** _(planned)_: Community library directory — searchable gallery for publishing and discovering shared libraries
 
 ### R4: AI Editing (Text)
 
@@ -239,7 +240,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | group / drill-down  | R3.24, R3.34                                                      |
 | group / reparent    | R3.34, R3.35                                                      |
 | image               | R3.32                                                             |
-| library             | R3.33                                                             |
+| library             | R3.33, R3.34                                                      |
 
 | content-first | R4.12 |
 
