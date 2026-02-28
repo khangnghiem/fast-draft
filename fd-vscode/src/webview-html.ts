@@ -843,6 +843,65 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .spec-tip-badge.status-doing { background: rgba(255,159,10,0.15); color: #FF9F0A; }
     .spec-tip-badge.status-done { background: rgba(52,199,89,0.15); color: #34C759; }
     .spec-tip-badge.status-blocked { background: rgba(255,59,48,0.15); color: #FF3B30; }
+
+    /* ── Edge Context Menu (frosted glass popover) ── */
+    #edge-context-menu {
+      display: none;
+      position: fixed;
+      z-index: 500;
+      min-width: 200px;
+      padding: 10px 12px;
+      background: var(--fd-surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.06);
+      font-size: 11px;
+      color: var(--fd-text);
+    }
+    .dark-theme #edge-context-menu {
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
+    }
+    #edge-context-menu.visible { display: block; }
+    .ecm-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+      gap: 8px;
+    }
+    .ecm-label {
+      font-weight: 500;
+      color: var(--fd-text-secondary);
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+    .ecm-select, .ecm-input {
+      background: var(--fd-surface-hover);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 6px;
+      color: var(--fd-text);
+      font-size: 11px;
+      padding: 3px 6px;
+      outline: none;
+    }
+    .ecm-select { min-width: 80px; }
+    .ecm-input { width: 48px; text-align: center; }
+    .ecm-color {
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 0;
+      background: none;
+    }
+    .ecm-sep {
+      border: none;
+      border-top: 0.5px solid var(--fd-border);
+      margin: 4px 0;
+    }
     .spec-tip-badge.priority-high { background: rgba(255,59,48,0.15); color: #FF3B30; }
     .spec-tip-badge.priority-medium { background: rgba(255,159,10,0.15); color: #FF9F0A; }
     .spec-tip-badge.priority-low { background: rgba(52,199,89,0.15); color: #34C759; }
@@ -2393,6 +2452,14 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div id="dimension-tooltip"></div>
     <div id="spec-overlay"></div>
     <div id="spec-hover-tooltip"></div>
+    <div id="edge-context-menu">
+      <div class="ecm-row"><span class="ecm-label">Arrow</span><select class="ecm-select" id="ecm-arrow"><option value="end">End →</option><option value="start">← Start</option><option value="both">← Both →</option><option value="none">None</option></select></div>
+      <div class="ecm-row"><span class="ecm-label">Curve</span><select class="ecm-select" id="ecm-curve"><option value="smooth">Smooth</option><option value="straight">Straight</option><option value="step">Step</option></select></div>
+      <hr class="ecm-sep">
+      <div class="ecm-row"><span class="ecm-label">Stroke</span><input type="color" class="ecm-color" id="ecm-stroke-color" value="#999999"><input type="number" class="ecm-input" id="ecm-stroke-width" value="1" min="0.5" max="10" step="0.5"></div>
+      <hr class="ecm-sep">
+      <div class="ecm-row"><span class="ecm-label">Flow</span><select class="ecm-select" id="ecm-flow"><option value="none">None</option><option value="pulse">Pulse</option><option value="dash">Dash</option></select><input type="number" class="ecm-input" id="ecm-flow-dur" value="800" min="100" max="5000" step="100" style="display:none"></div>
+    </div>
     <div id="center-snap-guides"></div>
     <div id="layers-panel"></div>
     <div id="library-panel"></div>

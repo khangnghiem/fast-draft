@@ -373,6 +373,7 @@ async function main() {
     setupUndoRedoControls();
     setupSettingsMenu();
     setupFloatingToolbar();
+    setupEdgeContextMenu();
 
     // Tell extension we're ready
     vscode.postMessage({ type: "ready" });
@@ -4654,38 +4655,56 @@ function setupFloatingToolbar() {
           const cy = e.clientY;
           if (cx >= rect.left && cx <= rect.right
             && cy >= rect.top && cy <= rect.bottom) {
-            // Convert screen → scene coordinates
-            const sceneX = ((cx - rect.left) - panX) / zoomLevel;
-            const sceneY = ((cy - rect.top) - panY) / zoomLevel;
+            const rawX = ((cx - rect.left) - panX) / zoomLevel;
+            const rawY = ((cy - rect.top) - panY) / zoomLevel;
+
+            // ── Snap-to-node detection ──
+            const snap = dtcFindSnapTarget(rawX, rawY, dtcTool);
+            const sceneX = snap ? snap.x : rawX;
+            const sceneY = snap ? snap.y : rawY;
+
             const created = fdCanvas.create_node_at(dtcTool, sceneX, sceneY);
             if (created) {
               lastDrawingTool = dtcTool;
               applyDefaultsToNewNode(dtcTool);
               bumpGeneration();
+
+              // ── Auto-create edge if snapped ──
+              if (snap && snap.targetId) {
+                const newNodeId = fdCanvas.get_selected_id();
+                if (newNodeId) {
+                  const edgeId = fdCanvas.create_edge(snap.targetId, newNodeId);
+                  if (edgeId) {
+                    bumpGeneration();
+                    const midSX = (cx + ((snap.targetCx * zoomLevel + panX) + rect.left)) / 2;
+                    const midSY = (cy + ((snap.targetCy * zoomLevel + panY) + rect.top)) / 2;
+                    showEdgeContextMenu(edgeId, midSX, midSY);
+                  }
+                }
+              }
+
               render();
               syncTextToExtension();
               updatePropertiesPanel();
             }
           }
         }
-        // Suppress the following click event so tool doesn't activate
         dtcActive = false;
         dtcTool = null;
         btn._dtcSuppressClick = true;
       } else {
-        // Normal click (< threshold) — let the existing click handler fire
         dtcTool = null;
       }
     });
 
-    // Suppress click after drag-to-create (click fires after pointerup)
+    // Suppress click after drag-to-create
     btn.addEventListener("click", (e) => {
       if (btn._dtcSuppressClick) {
         btn._dtcSuppressClick = false;
         e.stopImmediatePropagation();
         e.preventDefault();
       }
-    }, true); // capture phase to run before setupToolbar's click handler
+    }, true);
 
     btn.addEventListener("pointercancel", () => {
       removeGhost();
@@ -4693,9 +4712,145 @@ function setupFloatingToolbar() {
       dtcTool = null;
     });
   });
+
+  // ── Snap-to-node helper ──
+  const DTC_SNAP_THRESHOLD = 40;
+  const DTC_SNAP_GAP = 20;
+
+  function dtcFindSnapTarget(dropX, dropY, toolKind) {
+    if (!fdCanvas) return null;
+    const newW = toolKind === "ellipse" ? 100 : toolKind === "frame" ? 200 : 120;
+    const newH = toolKind === "ellipse" ? 100 : toolKind === "frame" ? 150 : 80;
+    const offsets = [
+      [0, 0], [DTC_SNAP_THRESHOLD, 0], [-DTC_SNAP_THRESHOLD, 0],
+      [0, DTC_SNAP_THRESHOLD], [0, -DTC_SNAP_THRESHOLD],
+      [DTC_SNAP_THRESHOLD, DTC_SNAP_THRESHOLD], [-DTC_SNAP_THRESHOLD, -DTC_SNAP_THRESHOLD],
+      [DTC_SNAP_THRESHOLD * 2, 0], [-DTC_SNAP_THRESHOLD * 2, 0],
+      [0, DTC_SNAP_THRESHOLD * 2], [0, -DTC_SNAP_THRESHOLD * 2],
+    ];
+    let nearestId = null;
+    for (const [ox, oy] of offsets) {
+      const hitId = fdCanvas.hit_test_at(dropX + ox, dropY + oy);
+      if (hitId) { nearestId = hitId; break; }
+    }
+    if (!nearestId) return null;
+    let tb;
+    try { tb = JSON.parse(fdCanvas.get_node_bounds(nearestId)); } catch (_) { return null; }
+    if (!tb || !tb.width) return null;
+    const tRight = tb.x + tb.width;
+    const tBottom = tb.y + tb.height;
+    const targetCx = tb.x + tb.width / 2;
+    const targetCy = tb.y + tb.height / 2;
+    const candidates = [
+      { x: tRight + DTC_SNAP_GAP, y: targetCy - newH / 2, dist: Math.abs(dropX - tRight), dir: "right" },
+      { x: tb.x - DTC_SNAP_GAP - newW, y: targetCy - newH / 2, dist: Math.abs(dropX - tb.x), dir: "left" },
+      { x: targetCx - newW / 2, y: tBottom + DTC_SNAP_GAP, dist: Math.abs(dropY - tBottom), dir: "bottom" },
+      { x: targetCx - newW / 2, y: tb.y - DTC_SNAP_GAP - newH, dist: Math.abs(dropY - tb.y), dir: "top" },
+    ];
+    candidates.sort((a, b) => a.dist - b.dist);
+    const best = candidates[0];
+    if (best.dist > DTC_SNAP_THRESHOLD * 3) return null;
+    return { x: best.x, y: best.y, targetId: nearestId, targetCx, targetCy, dir: best.dir };
+  }
 }
 
-// ─── Grid Overlay (R3.21 — Figma/Sketch/draw.io) ─────────────────────────────
+// ─── Edge Context Menu ──────────────────────────────────────────────────
+
+let ecmEdgeId = null;
+
+function showEdgeContextMenu(edgeId, screenX, screenY) {
+  const menu = document.getElementById("edge-context-menu");
+  if (!menu) return;
+  ecmEdgeId = edgeId;
+  document.getElementById("ecm-arrow").value = "end";
+  document.getElementById("ecm-curve").value = "smooth";
+  document.getElementById("ecm-stroke-color").value = "#999999";
+  document.getElementById("ecm-stroke-width").value = "1";
+  document.getElementById("ecm-flow").value = "none";
+  document.getElementById("ecm-flow-dur").style.display = "none";
+  menu.style.left = (screenX + 12) + "px";
+  menu.style.top = (screenY - 60) + "px";
+  menu.classList.add("visible");
+  setTimeout(() => {
+    document.addEventListener("pointerdown", ecmClickOutside, true);
+    document.addEventListener("keydown", ecmEscHandler, true);
+  }, 50);
+}
+
+function closeEdgeContextMenu() {
+  const menu = document.getElementById("edge-context-menu");
+  if (menu) menu.classList.remove("visible");
+  ecmEdgeId = null;
+  document.removeEventListener("pointerdown", ecmClickOutside, true);
+  document.removeEventListener("keydown", ecmEscHandler, true);
+}
+
+function ecmClickOutside(e) {
+  const menu = document.getElementById("edge-context-menu");
+  if (menu && !menu.contains(e.target)) closeEdgeContextMenu();
+}
+
+function ecmEscHandler(e) {
+  if (e.key === "Escape") { closeEdgeContextMenu(); e.preventDefault(); }
+}
+
+function setupEdgeContextMenu() {
+  const arrowSel = document.getElementById("ecm-arrow");
+  const curveSel = document.getElementById("ecm-curve");
+  const strokeColor = document.getElementById("ecm-stroke-color");
+  const strokeWidth = document.getElementById("ecm-stroke-width");
+  const flowSel = document.getElementById("ecm-flow");
+  const flowDur = document.getElementById("ecm-flow-dur");
+  if (!arrowSel) return;
+
+  function applyEdgeChange() {
+    if (!fdCanvas || !ecmEdgeId) return;
+    const text = fdCanvas.get_text();
+    const esc = ecmEdgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(edge\\s+@${esc}\\s*\\{[^}]*?)\\}`, "s");
+    const m = text.match(re);
+    if (!m) return;
+    let block = m[1];
+    // Arrow
+    block = block.replace(/arrow:\s*\S+/, `arrow: ${arrowSel.value}`);
+    if (!block.includes("arrow:")) block += `\n  arrow: ${arrowSel.value}`;
+    // Curve
+    block = block.replace(/curve:\s*\S+/, `curve: ${curveSel.value}`);
+    if (!block.includes("curve:")) block += `\n  curve: ${curveSel.value}`;
+    // Stroke
+    const sw = strokeWidth.value || "1";
+    const sc = strokeColor.value || "#999";
+    block = block.replace(/stroke:\s*#?\w+\s*[\d.]*/, `stroke: ${sc} ${sw}`);
+    if (!block.includes("stroke:")) block += `\n  stroke: ${sc} ${sw}`;
+    // Flow
+    if (flowSel.value !== "none") {
+      const dur = flowDur.value || "800";
+      const flowLine = `flow: ${flowSel.value} ${dur}ms`;
+      if (block.includes("flow:")) {
+        block = block.replace(/flow:\s*\S+\s*\d*m?s?/, flowLine);
+      } else {
+        block += `\n  ${flowLine}`;
+      }
+    } else {
+      block = block.replace(/\n\s*flow:\s*\S+\s*\d*m?s?/, "");
+    }
+    const newText = text.replace(re, block + "\n}");
+    fdCanvas.set_text(newText);
+    bumpGeneration();
+    render();
+    syncTextToExtension();
+  }
+
+  arrowSel.addEventListener("change", applyEdgeChange);
+  curveSel.addEventListener("change", applyEdgeChange);
+  strokeColor.addEventListener("input", applyEdgeChange);
+  strokeWidth.addEventListener("change", applyEdgeChange);
+  flowSel.addEventListener("change", () => {
+    flowDur.style.display = flowSel.value !== "none" ? "" : "none";
+    applyEdgeChange();
+  });
+  flowDur.addEventListener("change", applyEdgeChange);
+}
 
 /** Draw a dot grid behind shapes. Grid adapts to zoom level. */
 function drawGrid() {
