@@ -62,7 +62,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 
 - **R3.6** _(done)_: Pan (Space+drag, middle-click, ⌘-hold), zoom (see R3.20), grid (see R3.21)
 - **R3.13** _(done)_: Light/dark theme toggle — toolbar button, preference persists via VS Code state
-- **R3.14** _(done)_: Design | Spec view toggle — segmented control; Spec View shows annotations overlay
+- **R3.14** _(done)_: Design | Spec view toggle — segmented control; Spec View shows annotations overlay; spec badge toggle button (◇) for persistent badge visibility in Design mode; context menu shows View Spec / Remove Spec for annotated nodes; badges use faint/active states based on selection
 - **R3.20** _(done)_: Zoom — ⌘+/⌘−, ⌘0 zoom-to-fit, pinch-to-zoom; zoom indicator in toolbar
 - **R3.21** _(done)_: Grid overlay — toggleable dot/line grid with adaptive spacing; keyboard shortcut `G`
 - **R3.25** _(done)_: Minimap — thumbnail in bottom-right with draggable viewport rectangle (Figma/Miro-style)

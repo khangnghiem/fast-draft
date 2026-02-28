@@ -55,6 +55,9 @@ let viewMode = "design";
 /** Current spec filter: "all" | "draft" | "in_progress" | "done" */
 let specFilter = "all";
 
+/** Spec badge toggle — independent of view mode */
+let specBadgesVisible = false;
+
 
 // ─── Performance: Dirty Flag & Generation Counter ────────────────────────
 /** Dirty flag — when true, the next animation frame will re-render */
@@ -293,6 +296,7 @@ async function main() {
     setupZenModeToggle();
     setupZoomIndicator();
     setupGridToggle();
+    setupSpecBadgeToggle();
     setupExportButton();
     setupMinimap();
     setupColorSwatches();
@@ -423,6 +427,7 @@ function scheduleSideEffects() {
   if (sideEffectTimer) return; // already scheduled
   sideEffectTimer = setTimeout(() => {
     sideEffectTimer = null;
+    if (viewMode === "spec" || specBadgesVisible) refreshSpecBadges();
     if (viewMode === "spec") refreshSpecView();
     refreshLayersPanel();
     renderMinimap();
@@ -2003,6 +2008,76 @@ function escapeAttr(s) {
   return s.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+/**
+ * Check if a node has a spec annotation block.
+ * Uses parseAnnotatedNodes to detect matching spec data.
+ */
+function nodeHasSpec(nodeId) {
+  if (!fdCanvas || !nodeId) return false;
+  const source = fdCanvas.get_text();
+  const nodes = parseAnnotatedNodes(source);
+  return nodes.some(n => n.id === nodeId);
+}
+
+/**
+ * Remove spec block(s) from a node's FD source via text manipulation.
+ * Handles both inline `spec "..."` and block `spec { ... }` forms.
+ */
+function removeNodeSpec(nodeId) {
+  if (!fdCanvas || !nodeId) return;
+  let source = fdCanvas.get_text();
+  const lines = source.split("\n");
+  const result = [];
+  let insideTargetNode = false;
+  let nodeDepth = 0;
+  let skipSpecBlock = false;
+  let specBlockDepth = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+
+    // Detect target node start
+    const nodeRe = new RegExp(`^(?:group|frame|rect|ellipse|path|text)\\s+@${nodeId}(?:\\s|\\{)`);
+    if (nodeRe.test(trimmed)) {
+      insideTargetNode = true;
+      nodeDepth = 0;
+    }
+
+    if (insideTargetNode) {
+      const opens = (trimmed.match(/\{/g) || []).length;
+      const closes = (trimmed.match(/\}/g) || []).length;
+
+      // Skip inline spec line
+      if (trimmed.match(/^spec\s+"/)) {
+        continue; // drop this line
+      }
+
+      // Skip block spec start
+      if (trimmed.match(/^spec\s*\{/) || trimmed === "spec{") {
+        skipSpecBlock = true;
+        specBlockDepth = opens - closes;
+        continue;
+      }
+
+      if (skipSpecBlock) {
+        specBlockDepth += opens - closes;
+        if (specBlockDepth <= 0) skipSpecBlock = false;
+        continue;
+      }
+
+      nodeDepth += opens - closes;
+      if (trimmed === "}" && nodeDepth < 0) {
+        insideTargetNode = false;
+      }
+    }
+
+    result.push(lines[i]);
+  }
+
+  const newSource = result.join("\n");
+  fdCanvas.set_text(newSource);
+}
+
 // ─── Context Menu (Right-Click) ─────────────────────────────────────────
 
 function setupContextMenu() {
@@ -2060,6 +2135,12 @@ function setupContextMenu() {
     }
     ungroupBtn.classList.toggle("disabled", !canUngroup);
 
+    // Show/hide spec-related menu items based on whether node has a spec
+    const hasSpec = nodeHasSpec(contextMenuNodeId);
+    document.getElementById("ctx-add-annotation").style.display = hasSpec ? "none" : "";
+    document.getElementById("ctx-view-spec").style.display = hasSpec ? "" : "none";
+    document.getElementById("ctx-remove-spec").style.display = hasSpec ? "" : "none";
+
     menu.classList.add("visible");
   });
 
@@ -2068,6 +2149,29 @@ function setupContextMenu() {
       const menu = document.getElementById("context-menu");
       const menuRect = menu.getBoundingClientRect();
       openAnnotationCard(contextMenuNodeId, menuRect.left, menuRect.top);
+    }
+    closeContextMenu();
+  });
+
+  // View Spec via context menu
+  document.getElementById("ctx-view-spec")?.addEventListener("click", () => {
+    if (contextMenuNodeId) {
+      if (fdCanvas) fdCanvas.select_by_id(contextMenuNodeId);
+      render();
+      const menu = document.getElementById("context-menu");
+      const menuRect = menu.getBoundingClientRect();
+      openAnnotationCard(contextMenuNodeId, menuRect.left, menuRect.top);
+    }
+    closeContextMenu();
+  });
+
+  // Remove Spec via context menu
+  document.getElementById("ctx-remove-spec")?.addEventListener("click", () => {
+    if (contextMenuNodeId && fdCanvas) {
+      removeNodeSpec(contextMenuNodeId);
+      render();
+      syncTextToExtension();
+      if (specBadgesVisible || viewMode === "spec") refreshSpecBadges();
     }
     closeContextMenu();
   });
@@ -2940,7 +3044,7 @@ function setViewMode(mode) {
 
   // Canvas stays visible — spec view keeps full interactivity
   const overlay = document.getElementById("spec-overlay");
-  if (overlay) overlay.style.display = isSpec ? "" : "none";
+  if (overlay) overlay.style.display = (isSpec || specBadgesVisible) ? "" : "none";
 
   // Hide properties panel in spec view
   const props = document.getElementById("props-panel");
@@ -2949,24 +3053,37 @@ function setViewMode(mode) {
   // Notify extension to apply/remove code-mode spec folding
   vscode.postMessage({ type: "viewModeChanged", mode });
 
+  if (isSpec || specBadgesVisible) {
+    refreshSpecBadges();
+  } else {
+    // Clear badges when leaving spec view with toggle OFF
+    if (overlay) overlay.innerHTML = "";
+  }
+
   if (isSpec) {
     refreshSpecView();
-  } else {
-    // Clear badges when leaving spec view
-    if (overlay) overlay.innerHTML = "";
   }
 
   // Always refresh layers (it's always visible)
   refreshLayersPanel();
 }
 
-function refreshSpecView() {
+/**
+ * Render spec badge pins on the canvas overlay.
+ * Called from scheduleSideEffects when spec view or badge toggle is active.
+ * Badges are "faint" by default, "active" for the selected node.
+ */
+function refreshSpecBadges() {
   const overlay = document.getElementById("spec-overlay");
   if (!overlay || !fdCanvas) return;
+
+  // Ensure overlay is visible
+  overlay.style.display = "";
 
   // Parse source to find annotated nodes
   const source = fdCanvas.get_text();
   const nodesWithAnnotations = parseAnnotatedNodes(source);
+  const selectedId = fdCanvas.get_selected_id() || "";
 
   let html = "";
   for (const node of nodesWithAnnotations) {
@@ -2974,9 +3091,9 @@ function refreshSpecView() {
     const b = JSON.parse(boundsJson);
     if (!b.width) continue;
 
-    // Position badge at top-right corner of node, adjusted for pan
-    const bx = b.x + b.width + panX - 6;
-    const by = b.y + panY - 6;
+    // Position badge at top-right corner of node, adjusted for pan and zoom
+    const bx = (b.x + b.width) * zoomLevel + panX - 6;
+    const by = b.y * zoomLevel + panY - 6;
 
     const annCount = node.annotations.length;
     const descriptions = node.annotations.filter(a => a.type === "description");
@@ -2984,7 +3101,10 @@ function refreshSpecView() {
       ? escapeAttr(descriptions[0].value)
       : `${annCount} annotation(s)`;
 
-    html += `<div class="spec-badge-pin" style="left:${bx}px;top:${by}px" `;
+    // Apply faint/active class based on selection
+    const badgeClass = node.id === selectedId ? "active" : "faint";
+
+    html += `<div class="spec-badge-pin ${badgeClass}" style="left:${bx}px;top:${by}px" `;
     html += `data-node-id="${escapeAttr(node.id)}" title="${tooltip}">`;
     html += `<span class="spec-badge-count">${annCount}</span>`;
     html += `</div>`;
@@ -3000,12 +3120,19 @@ function refreshSpecView() {
       if (nodeId) {
         // Select the node on canvas
         if (fdCanvas.select_by_id(nodeId)) render();
+        // Refresh badges to update active state
+        refreshSpecBadges();
         // Open annotation card near the badge
         const rect = pin.getBoundingClientRect();
         openAnnotationCard(nodeId, rect.left, rect.bottom + 4);
       }
     });
   });
+}
+
+function refreshSpecView() {
+  // Badges are now handled by refreshSpecBadges()
+  refreshSpecBadges();
 }
 
 /**
@@ -4021,6 +4148,38 @@ function setupGridToggle() {
   }
 
   btn.addEventListener("click", toggleGrid);
+}
+
+/** Toggle spec badge overlay on/off (independent of Spec View mode). */
+function toggleSpecBadges() {
+  specBadgesVisible = !specBadgesVisible;
+  const btn = document.getElementById("spec-badge-toggle-btn");
+  if (btn) btn.classList.toggle("spec-on", specBadgesVisible);
+  vscode.setState({ ...(vscode.getState() || {}), specBadgesVisible });
+
+  const overlay = document.getElementById("spec-overlay");
+  if (specBadgesVisible || viewMode === "spec") {
+    refreshSpecBadges();
+  } else {
+    if (overlay) { overlay.innerHTML = ""; overlay.style.display = "none"; }
+  }
+}
+
+/** Set up spec badge toggle button and restore persisted state. */
+function setupSpecBadgeToggle() {
+  const btn = document.getElementById("spec-badge-toggle-btn");
+  if (!btn) return;
+
+  // Restore persisted state
+  const savedState = vscode.getState();
+  if (savedState && savedState.specBadgesVisible) {
+    specBadgesVisible = true;
+    btn.classList.add("spec-on");
+    // Deferred badge refresh after WASM init
+    setTimeout(() => { if (fdCanvas) refreshSpecBadges(); }, 500);
+  }
+
+  btn.addEventListener("click", toggleSpecBadges);
 }
 
 // ─── Arrow-Key Nudge (Figma/Sketch standard) ─────────────────────────────────
