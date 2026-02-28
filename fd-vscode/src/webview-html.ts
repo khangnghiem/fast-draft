@@ -615,11 +615,24 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       font-weight: 700;
       font-family: inherit;
       box-shadow: 0 2px 8px rgba(0, 122, 255, 0.35);
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.2s ease;
       z-index: 9;
     }
     .spec-badge-pin:hover {
       transform: scale(1.18);
+      box-shadow: 0 3px 12px rgba(0, 122, 255, 0.5);
+    }
+    .spec-badge-pin.faint {
+      opacity: 0.25;
+      transform: scale(0.8);
+    }
+    .spec-badge-pin.faint:hover {
+      opacity: 0.6;
+      transform: scale(1.0);
+    }
+    .spec-badge-pin.active {
+      opacity: 1;
+      transform: scale(1.1);
       box-shadow: 0 3px 12px rgba(0, 122, 255, 0.5);
     }
     .spec-badge-count {
@@ -970,6 +983,17 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       justify-content: center;
     }
     #grid-toggle-btn.grid-on {
+      color: var(--fd-accent);
+      background: var(--fd-accent-dim);
+    }
+
+    /* ── Spec Badge Toggle Button ── */
+    #spec-badge-toggle-btn {
+      font-size: 13px;
+      min-width: 32px;
+      justify-content: center;
+    }
+    #spec-badge-toggle-btn.spec-on {
       color: var(--fd-accent);
       background: var(--fd-accent-dim);
     }
@@ -1826,6 +1850,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
     <div class="tool-sep zen-full-only"></div>
     <button class="tool-btn zen-full-only" id="grid-toggle-btn" title="Toggle grid overlay (G)">⊞</button>
+    <button class="tool-btn zen-full-only" id="spec-badge-toggle-btn" title="Toggle spec badges on canvas">◇</button>
 
     <!-- Export Dropdown -->
     <div class="export-dropdown-container zen-full-only" id="export-dropdown-container">
@@ -2030,6 +2055,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
   <div id="context-menu">
     <div class="menu-item" id="ctx-ai-refine"><span class="menu-icon">✦</span><span class="menu-label">AI Assist</span></div>
     <div class="menu-item" id="ctx-add-annotation"><span class="menu-icon">◇</span><span class="menu-label">Add Spec</span></div>
+    <div class="menu-item" id="ctx-view-spec" style="display:none"><span class="menu-icon">◈</span><span class="menu-label">View Spec</span><span class="menu-shortcut">⌘I</span></div>
+    <div class="menu-item" id="ctx-remove-spec" style="display:none"><span class="menu-icon">◇</span><span class="menu-label">Remove Spec</span></div>
     <div class="menu-separator"></div>
     <div class="menu-item" id="ctx-cut" data-action="cut"><span class="menu-icon">✂</span><span class="menu-label">Cut</span><span class="menu-shortcut">⌘X</span></div>
     <div class="menu-item" id="ctx-copy" data-action="copy"><span class="menu-icon">⎘</span><span class="menu-label">Copy</span><span class="menu-shortcut">⌘C</span></div>

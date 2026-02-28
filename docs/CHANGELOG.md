@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.8.64 — Spec Badge Improvements
+
+- **UX (R3.14)**: Spec badge toggle button (◇) in toolbar — show/hide annotation badges on canvas independently of Spec View mode; state persists via webview state
+- **UX (R3.14)**: Spec badges use faint/active visibility pattern — unselected nodes show badges at 25% opacity, selected node's badge is bright and scaled; reduces visual clutter while preserving coverage overview
+- **UX (R3.14)**: Context menu adapts to spec state — nodes without specs show "Add Spec"; nodes with specs show "View Spec" (opens annotation card) and "Remove Spec" (deletes spec block from source)
+- **UX**: Badge positioning now accounts for zoom level — badges stay pinned to node corners at all zoom levels
+
 ### v0.8.62 — Sort Fix + LSP Theme/When + Tree-sitter Regen
 
 - **FIX (R4.10)**: Fixed `sort_nodes` which was a silent no-op — `children()` sorts by `NodeIndex` (insertion order) making edge remove/re-add ineffective. Added `sorted_child_order` field to `SceneGraph` for clean override
