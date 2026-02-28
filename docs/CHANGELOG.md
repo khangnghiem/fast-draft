@@ -5,6 +5,10 @@
 
 ## Completed Requirements
 
+### v0.8.77 — Drag-to-Create from Toolbar
+
+- **UX**: Drag a tool button from the floating toolbar onto the canvas to create a shape at the drop location — ghost preview (dashed outline matching shape type) follows cursor during drag; 5px threshold disambiguates click vs drag; screen→scene coordinate conversion respects zoom+pan; applies sticky smart defaults on creation; capture-phase click suppression prevents tool activation after drag
+
 ### v0.8.76 — ScreenBrush Default Styles
 
 - **UX**: New shapes default to ScreenBrush-style transparent fill + thick bezeled stroke (#333333, width 2.5, round caps/joins); rects also get 8px corner radius. Cascade: sticky defaults (per-tool) take priority → WASM fallbacks only when no sticky style exists. Hit-testing unaffected — uses bounding-box containment

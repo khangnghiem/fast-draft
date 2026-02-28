@@ -4544,6 +4544,155 @@ function setupFloatingToolbar() {
   handle.addEventListener("pointerup", () => {
     isDragging = false;
   });
+
+  // ── Drag-to-Create: drag a tool button onto the canvas ──
+  const DRAG_THRESHOLD = 5;
+  let dtcActive = false;
+  let dtcTool = null;
+  let dtcStartX = 0;
+  let dtcStartY = 0;
+  let dtcGhost = null;
+
+  const ghostShapes = {
+    rect: { w: 120, h: 80, css: "border-radius:8px;" },
+    ellipse: { w: 100, h: 100, css: "border-radius:50%;" },
+    pen: { w: 80, h: 60, css: "border-radius:4px;" },
+    arrow: { w: 120, h: 2, css: "" },
+    text: { w: 60, h: 28, css: "border-radius:4px;" },
+    frame: { w: 140, h: 100, css: "border-radius:4px;" },
+  };
+
+  function createGhost(tool) {
+    const shape = ghostShapes[tool] || ghostShapes.rect;
+    const el = document.createElement("div");
+    el.className = "dtc-ghost";
+    const isDark = document.body.classList.contains("dark-theme");
+    const borderColor = isDark ? "rgba(255,255,255,0.5)" : "rgba(51,51,51,0.5)";
+    const bg = isDark ? "rgba(255,255,255,0.06)" : "rgba(51,51,51,0.06)";
+    let content = "";
+    if (tool === "text") {
+      content = `<span style="font-size:14px;color:${borderColor};font-weight:500;">T</span>`;
+    }
+    if (tool === "arrow") {
+      // Diagonal line ghost
+      el.style.cssText = `
+        position:fixed;pointer-events:none;z-index:10000;
+        width:${shape.w}px;height:${shape.w}px;
+        transform:translate(-50%,-50%);
+        opacity:0.7;
+      `;
+      el.innerHTML = `<svg width="${shape.w}" height="${shape.w}" viewBox="0 0 ${shape.w} ${shape.w}" fill="none">
+        <line x1="10" y1="${shape.w - 10}" x2="${shape.w - 10}" y2="10"
+          stroke="${borderColor}" stroke-width="2" stroke-dasharray="6 4"/>
+        <path d="M${shape.w - 30},10 L${shape.w - 10},10 L${shape.w - 10},30"
+          stroke="${borderColor}" stroke-width="2" fill="none"/>
+      </svg>`;
+    } else {
+      el.style.cssText = `
+        position:fixed;pointer-events:none;z-index:10000;
+        width:${shape.w}px;height:${shape.h}px;
+        border:2px dashed ${borderColor};
+        background:${bg};
+        ${shape.css}
+        transform:translate(-50%,-50%);
+        display:flex;align-items:center;justify-content:center;
+        opacity:0.7;
+        box-shadow:0 2px 12px rgba(0,0,0,0.08);
+      `;
+      el.innerHTML = content;
+    }
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function moveGhost(el, x, y) {
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+  }
+
+  function removeGhost() {
+    if (dtcGhost) { dtcGhost.remove(); dtcGhost = null; }
+  }
+
+  // Attach to each tool button (except select — can't drag-to-create with select)
+  toolbar.querySelectorAll(".ft-tool-btn[data-tool]").forEach((btn) => {
+    const tool = btn.getAttribute("data-tool");
+    if (tool === "select") return;
+
+    btn.addEventListener("pointerdown", (e) => {
+      dtcTool = tool;
+      dtcStartX = e.clientX;
+      dtcStartY = e.clientY;
+      dtcActive = false;
+      btn.setPointerCapture(e.pointerId);
+    });
+
+    btn.addEventListener("pointermove", (e) => {
+      if (!dtcTool) return;
+      const dx = e.clientX - dtcStartX;
+      const dy = e.clientY - dtcStartY;
+      if (!dtcActive && (dx * dx + dy * dy) >= DRAG_THRESHOLD * DRAG_THRESHOLD) {
+        dtcActive = true;
+        dtcGhost = createGhost(dtcTool);
+      }
+      if (dtcActive && dtcGhost) {
+        moveGhost(dtcGhost, e.clientX, e.clientY);
+      }
+    });
+
+    btn.addEventListener("pointerup", (e) => {
+      btn.releasePointerCapture(e.pointerId);
+      if (!dtcTool) return;
+
+      if (dtcActive) {
+        // Drag-to-create: check if drop is over the canvas
+        removeGhost();
+        const canvasEl = document.getElementById("fd-canvas");
+        if (canvasEl && fdCanvas) {
+          const rect = canvasEl.getBoundingClientRect();
+          const cx = e.clientX;
+          const cy = e.clientY;
+          if (cx >= rect.left && cx <= rect.right
+            && cy >= rect.top && cy <= rect.bottom) {
+            // Convert screen → scene coordinates
+            const sceneX = ((cx - rect.left) - panX) / zoomLevel;
+            const sceneY = ((cy - rect.top) - panY) / zoomLevel;
+            const created = fdCanvas.create_node_at(dtcTool, sceneX, sceneY);
+            if (created) {
+              lastDrawingTool = dtcTool;
+              applyDefaultsToNewNode(dtcTool);
+              bumpGeneration();
+              render();
+              syncTextToExtension();
+              updatePropertiesPanel();
+            }
+          }
+        }
+        // Suppress the following click event so tool doesn't activate
+        dtcActive = false;
+        dtcTool = null;
+        btn._dtcSuppressClick = true;
+      } else {
+        // Normal click (< threshold) — let the existing click handler fire
+        dtcTool = null;
+      }
+    });
+
+    // Suppress click after drag-to-create (click fires after pointerup)
+    btn.addEventListener("click", (e) => {
+      if (btn._dtcSuppressClick) {
+        btn._dtcSuppressClick = false;
+        e.stopImmediatePropagation();
+        e.preventDefault();
+      }
+    }, true); // capture phase to run before setupToolbar's click handler
+
+    btn.addEventListener("pointercancel", () => {
+      removeGhost();
+      dtcActive = false;
+      dtcTool = null;
+    });
+  });
 }
 
 // ─── Grid Overlay (R3.21 — Figma/Sketch/draw.io) ─────────────────────────────
