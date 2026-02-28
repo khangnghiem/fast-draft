@@ -1463,7 +1463,7 @@ impl FdCanvas {
         let mut node = SceneNode::new(id, node_kind);
         node.constraints.push(Constraint::Position { x, y });
 
-        // Set a default fill for shapes
+        // ScreenBrush-style defaults: transparent fill + bezeled stroke
         if kind == "frame" {
             node.style.fill = Some(Paint::Solid(Color::rgba(0.95, 0.95, 0.97, 1.0)));
             node.style.stroke = Some(Stroke {
@@ -1472,8 +1472,21 @@ impl FdCanvas {
                 cap: StrokeCap::Butt,
                 join: StrokeJoin::Miter,
             });
-        } else if kind != "text" {
-            node.style.fill = Some(Paint::Solid(Color::rgba(0.8, 0.8, 0.85, 1.0)));
+        } else if kind == "rect" {
+            node.style.stroke = Some(Stroke {
+                paint: Paint::Solid(Color::rgba(0.2, 0.2, 0.2, 1.0)),
+                width: 2.5,
+                cap: StrokeCap::Round,
+                join: StrokeJoin::Round,
+            });
+            node.style.corner_radius = Some(8.0);
+        } else if kind == "ellipse" {
+            node.style.stroke = Some(Stroke {
+                paint: Paint::Solid(Color::rgba(0.2, 0.2, 0.2, 1.0)),
+                width: 2.5,
+                cap: StrokeCap::Round,
+                join: StrokeJoin::Round,
+            });
         }
 
         let mutation = GraphMutation::AddNode {

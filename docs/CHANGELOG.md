@@ -5,6 +5,10 @@
 
 ## Completed Requirements
 
+### v0.8.76 — ScreenBrush Default Styles
+
+- **UX**: New shapes default to ScreenBrush-style transparent fill + thick bezeled stroke (#333333, width 2.5, round caps/joins); rects also get 8px corner radius. Cascade: sticky defaults (per-tool) take priority → WASM fallbacks only when no sticky style exists. Hit-testing unaffected — uses bounding-box containment
+
 ### v0.8.75 — SVG Toolbar Icons
 
 - **UX**: Replaced all 7 Unicode glyph icons in floating toolbar with clean inline SVGs (18×18 viewBox, stroke-based, `currentColor`) — cursor arrow (Select), rounded rect (Rectangle), circle (Ellipse), pencil (Pen), diagonal arrow (Arrow), T-bar (Text), nested rects (Frame); fixes cross-platform rendering issues (⊞ displayed incorrectly on some systems)

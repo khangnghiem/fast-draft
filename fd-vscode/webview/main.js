@@ -98,8 +98,8 @@ let altCloneActive = false;
 // ─── Smart Defaults (Sticky Styles Per Tool) ─────────────────────────────
 /** Session-only style defaults per tool type (Excalidraw-style) */
 const toolDefaults = {
-  rect: { fill: "#4A90D9", stroke: "#333333", strokeWidth: 1, opacity: 1 },
-  ellipse: { fill: "#4A90D9", stroke: "#333333", strokeWidth: 1, opacity: 1 },
+  rect: { fill: "none", stroke: "#333333", strokeWidth: 2.5, opacity: 1 },
+  ellipse: { fill: "none", stroke: "#333333", strokeWidth: 2.5, opacity: 1 },
   pen: { stroke: "#333333", strokeWidth: 2, opacity: 1 },
   arrow: { stroke: "#333333", strokeWidth: 2, opacity: 1 },
   text: { fill: "#333333", fontSize: 16, opacity: 1 },
