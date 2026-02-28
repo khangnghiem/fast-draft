@@ -121,7 +121,7 @@ rect @login_btn { ... }
 - 👆 **Touch & gestures** — two-finger pan, pinch-to-zoom, Apple Pencil support
 - 🎬 **Drag-and-drop animations** — drag a shape onto another to add hover/press effects
 - 📤 **Export** — PNG, SVG, clipboard copy, or raw `.fd` source
-- 🤖 **AI Refine** — press ⌘I to improve designs with AI (supports 5 providers)
+- 🤖 **AI Assist** — press ⌘I to improve designs with AI (supports 5 providers)
 - 📋 **Spec View** — requirements dashboard with status filters and coverage tracking
 - 🎯 **Sticky styles** — your last-used colors and fonts are remembered per tool
 - ↗️ **Arrows & connectors** — draw connections between shapes with smooth curves

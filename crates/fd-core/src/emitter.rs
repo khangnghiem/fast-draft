@@ -1719,10 +1719,7 @@ rect @btn {
         let output = emit_document(&graph);
 
         // Emitter should output `when`, not `anim`
-        assert!(
-            output.contains("when :hover"),
-            "should emit `when` keyword"
-        );
+        assert!(output.contains("when :hover"), "should emit `when` keyword");
         assert!(
             !output.contains("anim :hover"),
             "should NOT emit `anim` keyword"
@@ -1731,7 +1728,11 @@ rect @btn {
         // Round-trip: re-parse emitted output
         let graph2 = parse_document(&output).expect("re-parse of when output failed");
         let node = graph2.get_by_id(NodeId::intern("btn")).unwrap();
-        assert_eq!(node.animations.len(), 1, "animation should survive roundtrip");
+        assert_eq!(
+            node.animations.len(),
+            1,
+            "animation should survive roundtrip"
+        );
         assert_eq!(
             node.animations[0].trigger,
             AnimTrigger::Hover,

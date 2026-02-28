@@ -2120,8 +2120,85 @@ function setupContextMenu() {
     closeContextMenu();
   });
 
+  // Cut via context menu
+  document.getElementById("ctx-cut")?.addEventListener("click", () => {
+    if (fdCanvas && contextMenuNodeId) {
+      copySelectedAsFd();
+      const changed = fdCanvas.delete_selected();
+      if (changed) {
+        render();
+        syncTextToExtension();
+      }
+    }
+    closeContextMenu();
+  });
+
+  // Copy via context menu
+  document.getElementById("ctx-copy")?.addEventListener("click", () => {
+    if (fdCanvas) {
+      copySelectedAsFd();
+    }
+    closeContextMenu();
+  });
+
+  // Paste via context menu
+  document.getElementById("ctx-paste")?.addEventListener("click", () => {
+    if (fdCanvas) {
+      pasteFromClipboard();
+    }
+    closeContextMenu();
+  });
+
+  // Copy as PNG via context menu
+  document.getElementById("ctx-copy-png")?.addEventListener("click", () => {
+    if (fdCanvas) {
+      copySelectionAsPng();
+    }
+    closeContextMenu();
+  });
+
+  // Frame Selection via context menu
+  document.getElementById("ctx-frame")?.addEventListener("click", () => {
+    if (fdCanvas && contextMenuNodeId) {
+      // Simulate ⌘+frame by wrapping selected nodes in a frame via handle_key
+      const resultJson = fdCanvas.handle_key("f", false, false, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) {
+        render();
+        syncTextToExtension();
+      }
+    }
+    closeContextMenu();
+  });
+
+  // Bring to Front via context menu
+  document.getElementById("ctx-bring-front")?.addEventListener("click", () => {
+    if (fdCanvas && contextMenuNodeId) {
+      const resultJson = fdCanvas.handle_key("]", false, true, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) {
+        render();
+        syncTextToExtension();
+      }
+    }
+    closeContextMenu();
+  });
+
+  // Send to Back via context menu
+  document.getElementById("ctx-send-back")?.addEventListener("click", () => {
+    if (fdCanvas && contextMenuNodeId) {
+      const resultJson = fdCanvas.handle_key("[", false, true, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) {
+        render();
+        syncTextToExtension();
+      }
+    }
+    closeContextMenu();
+  });
+
   // Delete via context menu
-  document.getElementById("ctx-delete").addEventListener("click", () => {
+  document.getElementById("ctx-delete")?.addEventListener("click", () => {
     if (fdCanvas && contextMenuNodeId) {
       fdCanvas.select_by_id(contextMenuNodeId);
       const changed = fdCanvas.delete_selected();
@@ -3066,7 +3143,7 @@ function parseAnnotatedNodes(source) {
 // ─── Layers Panel (Tree View) ────────────────────────────────────────────
 
 const LAYER_ICONS = {
-  group: "◫",
+  group: "◻",
   frame: "▣",
   rect: "▢",
   ellipse: "○",
@@ -3262,7 +3339,7 @@ function refreshSpecSummary(panel) {
     html += `<div class="spec-empty-state">`;
     html += `<div style="font-size:24px;margin-bottom:8px;opacity:0.4">◇</div>`;
     html += `<div style="opacity:0.5;font-size:12px">No spec annotations yet</div>`;
-    html += `<div style="opacity:0.35;font-size:11px;margin-top:4px">Right-click a node → Add Annotation, or press ⌘I</div>`;
+    html += `<div style="opacity:0.35;font-size:11px;margin-top:4px">Right-click a node → Add Spec, or press ⌘I</div>`;
     html += `</div>`;
     panel.innerHTML = html;
     return;

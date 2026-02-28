@@ -1,284 +1,244 @@
-# FD v1
-# Animation showcase — demonstrates all trigger types and easing functions
-
-theme card {
-  fill: #FFFFFF
-  corner: 16
-}
-
 # ─── Animation Catalog ────────────────────────────────────────────────────
-
 group @hover_demos {
   layout: column gap=24 pad=32
-
   text @section_hover "Hover Effects" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
+    fill: #1A1A2E  # blue
+    font: "Inter" bold 28
   }
-
   group @hover_row {
     layout: row gap=20 pad=0
-
     rect @scale_hover {
       spec "Scale animation"
       w: 140 h: 100
-      fill: #6C5CE7
-      corner: 12
       text @scale_label "Scale" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
+        fill: #FFFFFF  # white
+        font: "Inter" semibold 14
       }
-      when :hover { scale: 1.1; ease: spring 300ms }
-    }
-
-    rect @fade_hover {
-      w: 140 h: 100
-      fill: #00B894
+      fill: #6C5CE7  # blue
       corner: 12
-      text @fade_label "Opacity" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      when :hover { opacity: 0.6; ease: ease_in_out 200ms }
-    }
-
-    rect @color_hover {
-      w: 140 h: 100
-      fill: #E17055
-      corner: 12
-      text @color_label "Color" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      when :hover { fill: #D63031; ease: ease_out 250ms }
-    }
-
-    rect @rotate_hover {
-      w: 140 h: 100
-      fill: #FDCB6E
-      corner: 12
-      text @rotate_label "Rotate" {
-        fill: #333333
-        font: "Inter" 600 14
-      }
-      when :hover { rotate: 5; ease: spring 400ms }
     }
   }
-
-  # ── Press / Tap Effects ──
-
-  text @section_press "Press / Tap Effects" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
+  rect @fade_hover {
+    w: 140 h: 100
+    text @fade_label "Opacity" {
+      fill: #FFFFFF  # white
+      font: "Inter" semibold 14
+    }
+    fill: #00B894  # teal
+    corner: 12
   }
+}
 
-  group @press_row {
-    layout: row gap=20 pad=0
-
-    rect @squish_press {
-      spec "Press-down squish for tactile feedback"
-      w: 140 h: 100
-      fill: #A29BFE
-      corner: 12
-      text @squish_label "Squish" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      when :press { scale: 0.88; ease: spring 150ms }
-    }
-
-    rect @dim_press {
-      w: 140 h: 100
-      fill: #74B9FF
-      corner: 12
-      text @dim_label "Dim" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      when :press { opacity: 0.5; ease: ease_out 100ms }
-    }
-
-    rect @flash_press {
-      w: 140 h: 100
-      fill: #FF6B6B
-      corner: 12
-      text @flash_label "Flash" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      when :press { fill: #FFFFFF; ease: linear 80ms }
-    }
+rect @color_hover {
+  w: 140 h: 100
+  text @color_label "Color" {
+    fill: #FFFFFF  # white
+    font: "Inter" semibold 14
   }
+  fill: #E17055  # red
+  corner: 12
+}
 
-  # ── Entrance Animations ──
-
-  text @section_enter "Entrance Animations" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
+rect @rotate_hover {
+  w: 140 h: 100
+  text @rotate_label "Rotate" {
+    fill: #333333  # gray
+    font: "Inter" semibold 14
   }
+  fill: #FDCB6E  # orange
+  corner: 12
+}
 
-  group @enter_row {
-    spec {
-      "Triggered when element enters viewport"
-      accept: "plays once on scroll into view"
-      tag: animation, ux
-    }
-    layout: row gap=20 pad=0
+# ── Press / Tap Effects ──
+text @section_press "Press / Tap Effects" {
+  fill: #1A1A2E  # blue
+  font: "Inter" bold 28
+}
 
-    rect @fade_enter {
-      w: 140 h: 100
-      fill: #6C5CE7
-      corner: 12
-      opacity: 0
-      text @fade_enter_label "Fade In" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      when :enter { opacity: 1; ease: ease_out 500ms }
+group @press_row {
+  layout: row gap=20 pad=0
+  rect @squish_press {
+    spec "Press-down squish for tactile feedback"
+    w: 140 h: 100
+    text @squish_label "Squish" {
+      fill: #FFFFFF  # white
+      font: "Inter" semibold 14
     }
-
-    rect @scale_enter {
-      w: 140 h: 100
-      fill: #00B894
-      corner: 12
-      opacity: 0
-      text @scale_enter_label "Pop In" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      when :enter { opacity: 1; scale: 1; ease: spring 600ms }
-    }
-
-    rect @slide_enter {
-      w: 140 h: 100
-      fill: #E17055
-      corner: 12
-      opacity: 0
-      text @slide_enter_label "Slide Up" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      when :enter { opacity: 1; ease: ease_in_out 400ms }
-    }
+    fill: #A29BFE  # blue
+    corner: 12
   }
+}
 
-  # ── Easing Functions ──
-
-  text @section_easing "Easing Functions" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
+rect @dim_press {
+  w: 140 h: 100
+  text @dim_label "Dim" {
+    fill: #FFFFFF  # white
+    font: "Inter" semibold 14
   }
+  fill: #74B9FF  # blue
+  corner: 12
+}
 
-  group @easing_row {
-    layout: row gap=16 pad=0
-
-    rect @ease_linear {
-      w: 120 h: 80
-      fill: #DFE6E9
-      corner: 10
-      text @linear_label "Linear" {
-        fill: #333333
-        font: "Inter" 500 12
-      }
-      when :hover { scale: 1.15; ease: linear 300ms }
-    }
-
-    rect @ease_in {
-      w: 120 h: 80
-      fill: #DFE6E9
-      corner: 10
-      text @in_label "Ease In" {
-        fill: #333333
-        font: "Inter" 500 12
-      }
-      when :hover { scale: 1.15; ease: ease_in 300ms }
-    }
-
-    rect @ease_out {
-      w: 120 h: 80
-      fill: #DFE6E9
-      corner: 10
-      text @out_label "Ease Out" {
-        fill: #333333
-        font: "Inter" 500 12
-      }
-      when :hover { scale: 1.15; ease: ease_out 300ms }
-    }
-
-    rect @ease_in_out {
-      w: 120 h: 80
-      fill: #DFE6E9
-      corner: 10
-      text @inout_label "Ease In/Out" {
-        fill: #333333
-        font: "Inter" 500 12
-      }
-      when :hover { scale: 1.15; ease: ease_in_out 300ms }
-    }
-
-    rect @ease_spring {
-      w: 120 h: 80
-      fill: #DFE6E9
-      corner: 10
-      text @spring_label "Spring" {
-        fill: #333333
-        font: "Inter" 500 12
-      }
-      when :hover { scale: 1.15; ease: spring 300ms }
-    }
+rect @flash_press {
+  w: 140 h: 100
+  text @flash_label "Flash" {
+    fill: #FFFFFF  # white
+    font: "Inter" semibold 14
   }
+  fill: #FF6B6B  # red
+  corner: 12
+}
 
-  # ── Combined Animations ──
+# ── Entrance Animations ──
+text @section_enter "Entrance Animations" {
+  fill: #1A1A2E  # blue
+  font: "Inter" bold 28
+}
 
-  text @section_combined "Combined Animations" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
+group @enter_row {
+  spec {
+    "Triggered when element enters viewport"
+    accept: "plays once on scroll into view"
+    tag: animation, ux
   }
-
-  group @combined_row {
-    layout: row gap=20 pad=0
-
-    rect @combo_1 {
-      spec "Hover: scale + color + shadow lift"
-      w: 180 h: 120
-      fill: #6C5CE7
-      corner: 16
-      shadow: (0,4,20,#6C5CE740)
-      text @combo1_label "Lift & Glow" {
-        fill: #FFFFFF
-        font: "Inter" 600 15
-      }
-      when :hover { fill: #5A4BD1; scale: 1.06; ease: spring 400ms }
+  layout: row gap=20 pad=0
+  rect @fade_enter {
+    w: 140 h: 100
+    text @fade_enter_label "Fade In" {
+      fill: #FFFFFF  # white
+      font: "Inter" semibold 14
     }
-
-    rect @combo_2 {
-      spec "Press: squish + dim"
-      w: 180 h: 120
-      fill: #00B894
-      corner: 16
-      shadow: (0,4,20,#00B89440)
-      text @combo2_label "Squish & Dim" {
-        fill: #FFFFFF
-        font: "Inter" 600 15
-      }
-      when :hover { scale: 1.04; ease: ease_out 200ms }
-      when :press { opacity: 0.7; scale: 0.92; ease: spring 150ms }
-    }
-
-    rect @combo_3 {
-      spec "Hover + press combo"
-      w: 180 h: 120
-      fill: #FF6B6B
-      corner: 16
-      shadow: (0,4,20,#FF6B6B40)
-      text @combo3_label "Full Feedback" {
-        fill: #FFFFFF
-        font: "Inter" 600 15
-      }
-      when :hover { fill: #E55050; scale: 1.05; ease: spring 300ms }
-      when :press { scale: 0.9; rotate: -2; ease: spring 200ms }
-    }
+    fill: #6C5CE7  # blue
+    corner: 12
+    opacity: 0
   }
+}
+
+rect @scale_enter {
+  w: 140 h: 100
+  text @scale_enter_label "Pop In" {
+    fill: #FFFFFF  # white
+    font: "Inter" semibold 14
+  }
+  fill: #00B894  # teal
+  corner: 12
+  opacity: 0
+}
+
+rect @slide_enter {
+  w: 140 h: 100
+  text @slide_enter_label "Slide Up" {
+    fill: #FFFFFF  # white
+    font: "Inter" semibold 14
+  }
+  fill: #E17055  # red
+  corner: 12
+  opacity: 0
+}
+
+# ── Easing Functions ──
+text @section_easing "Easing Functions" {
+  fill: #1A1A2E  # blue
+  font: "Inter" bold 28
+}
+
+group @easing_row {
+  layout: row gap=16 pad=0
+  rect @ease_linear {
+    w: 120 h: 80
+    text @linear_label "Linear" {
+      fill: #333333  # gray
+      font: "Inter" medium 12
+    }
+    fill: #DFE6E9  # white
+    corner: 10
+  }
+}
+
+rect @ease_in {
+  w: 120 h: 80
+  text @in_label "Ease In" {
+    fill: #333333  # gray
+    font: "Inter" medium 12
+  }
+  fill: #DFE6E9  # white
+  corner: 10
+}
+
+rect @ease_out {
+  w: 120 h: 80
+  text @out_label "Ease Out" {
+    fill: #333333  # gray
+    font: "Inter" medium 12
+  }
+  fill: #DFE6E9  # white
+  corner: 10
+}
+
+rect @ease_in_out {
+  w: 120 h: 80
+  text @inout_label "Ease In/Out" {
+    fill: #333333  # gray
+    font: "Inter" medium 12
+  }
+  fill: #DFE6E9  # white
+  corner: 10
+}
+
+rect @ease_spring {
+  w: 120 h: 80
+  text @spring_label "Spring" {
+    fill: #333333  # gray
+    font: "Inter" medium 12
+  }
+  fill: #DFE6E9  # white
+  corner: 10
+}
+
+# ── Combined Animations ──
+text @section_combined "Combined Animations" {
+  fill: #1A1A2E  # blue
+  font: "Inter" bold 28
+}
+
+group @combined_row {
+  layout: row gap=20 pad=0
+  rect @combo_1 {
+    spec "Hover: scale + color + shadow lift"
+    w: 180 h: 120
+    text @combo1_label "Lift & Glow" {
+      fill: #FFFFFF  # white
+      font: "Inter" semibold 15
+    }
+    fill: #6C5CE7  # blue
+    corner: 16
+    shadow: (0,4,20,#6C5CE740)
+  }
+}
+
+rect @combo_2 {
+  spec "Press: squish + dim"
+  w: 180 h: 120
+  text @combo2_label "Squish & Dim" {
+    fill: #FFFFFF  # white
+    font: "Inter" semibold 15
+  }
+  fill: #00B894  # teal
+  corner: 16
+  shadow: (0,4,20,#00B89440)
+}
+
+rect @combo_3 {
+  spec "Hover + press combo"
+  w: 180 h: 120
+  text @combo3_label "Full Feedback" {
+    fill: #FFFFFF  # white
+    font: "Inter" semibold 15
+    y: -2.01
+  }
+  fill: #FF6B6B  # red
+  corner: 16
+  shadow: (0,4,20,#FF6B6B40)
 }
 
 @hover_demos -> center_in: canvas
