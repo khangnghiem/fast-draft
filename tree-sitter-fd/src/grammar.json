@@ -21,7 +21,7 @@
           },
           {
             "type": "SYMBOL",
-            "name": "annotation"
+            "name": "spec_block"
           }
         ]
       }
@@ -46,41 +46,58 @@
         }
       }
     },
-    "annotation": {
+    "spec_block": {
       "type": "SEQ",
       "members": [
         {
           "type": "STRING",
-          "value": "##"
+          "value": "spec"
         },
         {
           "type": "CHOICE",
           "members": [
             {
-              "type": "CHOICE",
-              "members": [
-                {
-                  "type": "SYMBOL",
-                  "name": "annotation_typed"
-                },
-                {
-                  "type": "SYMBOL",
-                  "name": "string"
-                },
-                {
-                  "type": "SYMBOL",
-                  "name": "annotation_text"
-                }
-              ]
+              "type": "SYMBOL",
+              "name": "string"
             },
             {
-              "type": "BLANK"
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": "{"
+                },
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "spec_item"
+                  }
+                },
+                {
+                  "type": "STRING",
+                  "value": "}"
+                }
+              ]
             }
           ]
         }
       ]
     },
-    "annotation_typed": {
+    "spec_item": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "spec_typed"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "string"
+        }
+      ]
+    },
+    "spec_typed": {
       "type": "SEQ",
       "members": [
         {
@@ -88,7 +105,7 @@
           "name": "key",
           "content": {
             "type": "SYMBOL",
-            "name": "annotation_keyword"
+            "name": "spec_keyword"
           }
         },
         {
@@ -107,18 +124,18 @@
               },
               {
                 "type": "SYMBOL",
-                "name": "annotation_text"
+                "name": "spec_text"
               }
             ]
           }
         }
       ]
     },
-    "annotation_text": {
+    "spec_text": {
       "type": "PATTERN",
-      "value": "[^\\n]+"
+      "value": "[^\\n}]+"
     },
-    "annotation_keyword": {
+    "spec_keyword": {
       "type": "CHOICE",
       "members": [
         {
@@ -143,8 +160,17 @@
       "type": "SEQ",
       "members": [
         {
-          "type": "STRING",
-          "value": "style"
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "theme"
+            },
+            {
+              "type": "STRING",
+              "value": "style"
+            }
+          ]
         },
         {
           "type": "FIELD",
@@ -273,7 +299,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "annotation"
+          "name": "spec_block"
         }
       ]
     },
@@ -461,8 +487,17 @@
       "type": "SEQ",
       "members": [
         {
-          "type": "STRING",
-          "value": "anim"
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "when"
+            },
+            {
+              "type": "STRING",
+              "value": "anim"
+            }
+          ]
         },
         {
           "type": "FIELD",
@@ -599,5 +634,6 @@
   "precedences": [],
   "externals": [],
   "inline": [],
-  "supertypes": []
+  "supertypes": [],
+  "reserved": {}
 }
