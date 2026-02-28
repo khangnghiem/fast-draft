@@ -318,6 +318,9 @@ impl FdCanvas {
             meta,
         };
 
+        // Snapshot previous selection for fresh-select detection
+        let prev_selected = self.select_tool.selected.clone();
+
         // End batch — squash all drag mutations into one undo step
         self.commands.end_batch(&mut self.engine);
 
@@ -407,10 +410,37 @@ impl FdCanvas {
         } else {
             false
         };
+
+        // Auto bring-forward on fresh click-select (not drag, not re-select)
+        let was_click = self
+            .pointer_down_pos
+            .map(|(dx, dy)| (x - dx).abs() < 5.0 && (y - dy).abs() < 5.0)
+            .unwrap_or(false);
+        let zorder_changed = if was_click
+            && self.select_tool.selected.len() == 1
+            && !prev_selected.contains(&self.select_tool.selected[0])
+        {
+            if let Some(idx) = self.engine.graph.index_of(self.select_tool.selected[0]) {
+                let raised = self.engine.graph.bring_forward(idx);
+                if raised {
+                    self.engine.flush_to_text();
+                }
+                raised
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
         self.pointer_down_pos = None;
 
-        let visual_changed =
-            changed || marquee_changed || pressed_changed || hovered_changed || drill_changed;
+        let visual_changed = changed
+            || marquee_changed
+            || pressed_changed
+            || hovered_changed
+            || drill_changed
+            || zorder_changed;
 
         // Auto-switch back to Select after drawing gesture completes
         let tool_switched = self.active_tool != ToolKind::Select;

@@ -5,6 +5,10 @@
 
 ## Completed Requirements
 
+### v0.8.74 — Auto Bring Forward on Select
+
+- **UX**: Clicking to select a node automatically brings it forward one z-level — reuses existing `bring_forward` from ⌘]; only triggers on fresh click-select (<5px movement), not on re-click of already-selected nodes or drag operations; prevents z-fighting by skipping if already selected
+
 ### v0.8.73 — Frosted Glass Tooltips
 
 - **UX**: Apple-style frosted glass tooltips on all 7 floating toolbar buttons — `backdrop-filter: blur(12px)`, glassmorphic pill with 400ms hover delay, monospace shortcut key badge; replaces ugly native `title` tooltips; hidden in collapsed mode and during click
