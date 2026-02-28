@@ -2132,8 +2132,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
 <body>
   <button id="zen-toggle-btn" title="Switch between Zen and Full layout"><span class="zen-icon">🧘</span> Zen</button>
   <div id="toolbar">
-    <button class="tool-btn zen-full-only" id="ai-refine-btn" title="AI Touch selected node">✦ AI Touch</button>
-    <button class="tool-btn zen-full-only" id="ai-refine-all-btn" title="AI Touch all anonymous nodes">✦✦ AI Touch All</button>
+    <button class="tool-btn zen-full-only" id="ai-refine-btn" title="AI Touch selected node (select a node first)">✦ AI Touch</button>
     <div class="tool-sep zen-full-only"></div>
     <div class="view-toggle zen-full-only" id="view-toggle">
       <button class="view-btn active" id="view-all" title="All View — full details">All</button>
@@ -2404,31 +2403,18 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         }
         if (e.data.type === 'aiRefineStarted') {
           const btn = document.getElementById('ai-refine-btn');
-          const allBtn = document.getElementById('ai-refine-all-btn');
           if (btn) { btn.textContent = '⏳ Refining…'; btn.disabled = true; }
-          if (allBtn) { allBtn.disabled = true; }
         }
         if (e.data.type === 'aiRefineComplete') {
           const btn = document.getElementById('ai-refine-btn');
-          const allBtn = document.getElementById('ai-refine-all-btn');
           if (btn) { btn.textContent = '✦ AI Touch'; btn.disabled = false; }
-          if (allBtn) { allBtn.textContent = '✦✦ AI Touch All'; allBtn.disabled = false; }
         }
       });
 
       // Touch selected node
       document.getElementById('ai-refine-btn')?.addEventListener('click', () => {
-        if (selectedNodeId) {
-          vscodeApi.postMessage({ type: 'aiRefine', nodeIds: [selectedNodeId] });
-        } else {
-          // No selection — assist all anon nodes
-          vscodeApi.postMessage({ type: 'aiRefineAll' });
-        }
-      });
-
-      // Touch all anonymous nodes
-      document.getElementById('ai-refine-all-btn')?.addEventListener('click', () => {
-        vscodeApi.postMessage({ type: 'aiRefineAll' });
+        const ids = selectedNodeId ? [selectedNodeId] : [];
+        vscodeApi.postMessage({ type: 'aiRefine', nodeIds: ids });
       });
 
       // Context menu: AI Touch

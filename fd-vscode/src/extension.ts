@@ -159,11 +159,6 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
           await this.handleAiRefine(document, webviewPanel, nodeIds);
           break;
         }
-        case "aiRefineAll": {
-          const allAnon = findAnonNodeIds(document.getText());
-          await this.handleAiRefine(document, webviewPanel, allAnon);
-          break;
-        }
         case "viewModeChanged": {
           const rawMode = (message as { type: string; mode?: string }).mode;
           const mode: "all" | "design" | "spec" = rawMode === "spec" ? "spec" : rawMode === "design" ? "design" : "all";
@@ -268,16 +263,11 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     nodeIds: string[]
   ): Promise<void> {
     if (nodeIds.length === 0) {
-      // If no specific nodes, find all _anon_ nodes
-      const allAnon = findAnonNodeIds(document.getText());
-      if (allAnon.length === 0) {
-        webviewPanel.webview.postMessage({
-          type: "aiRefineComplete",
-          error: "No anonymous nodes to refine.",
-        });
-        return;
-      }
-      nodeIds = allAnon;
+      webviewPanel.webview.postMessage({
+        type: "aiRefineComplete",
+        error: "Select a node first.",
+      });
+      return;
     }
 
     // Notify webview that refine started
