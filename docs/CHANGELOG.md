@@ -5,6 +5,10 @@
 
 ## Completed Requirements
 
+### v0.8.75 — SVG Toolbar Icons
+
+- **UX**: Replaced all 7 Unicode glyph icons in floating toolbar with clean inline SVGs (18×18 viewBox, stroke-based, `currentColor`) — cursor arrow (Select), rounded rect (Rectangle), circle (Ellipse), pencil (Pen), diagonal arrow (Arrow), T-bar (Text), nested rects (Frame); fixes cross-platform rendering issues (⊞ displayed incorrectly on some systems)
+
 ### v0.8.74 — Auto Bring Forward on Select
 
 - **UX**: Clicking to select a node automatically brings it forward one z-level — reuses existing `bring_forward` from ⌘]; only triggers on fresh click-select (<5px movement), not on re-click of already-selected nodes or drag operations; prevents z-fighting by skipping if already selected
