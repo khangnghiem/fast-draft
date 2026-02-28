@@ -135,8 +135,11 @@ impl SyncEngine {
                     }
                     // Handle group relationship: expand if partially outside,
                     // detach (reparent) if fully outside the parent group.
-                    self.last_detach =
-                        handle_child_group_relationship(&mut self.graph, idx, &mut self.bounds);
+                    if let Some(info) =
+                        handle_child_group_relationship(&mut self.graph, idx, &mut self.bounds)
+                    {
+                        self.last_detach = Some(info);
+                    }
                 }
             }
             GraphMutation::ResizeNode { id, width, height } => {
