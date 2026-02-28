@@ -168,6 +168,9 @@ fn kind_priority(kind: &NodeKind) -> u8 {
 /// Priority: Group/Frame → Rect → Ellipse → Text → Path → Generic.
 /// Relative order within each kind group is preserved (stable sort).
 /// Only affects root-level children — nested children stay in document order.
+///
+/// Stores the sorted order in `graph.sorted_child_order` so that
+/// `children()` can return nodes in the canonical order.
 pub fn sort_nodes(graph: &mut SceneGraph) {
     let root = graph.root;
     let mut children = graph.children(root);
@@ -179,17 +182,8 @@ pub fn sort_nodes(graph: &mut SceneGraph) {
     // Stable sort by kind priority
     children.sort_by_key(|&idx| kind_priority(&graph.graph[idx].kind));
 
-    // Remove all edges from root to children
-    for &child in &children {
-        if let Some(edge) = graph.graph.find_edge(root, child) {
-            graph.graph.remove_edge(edge);
-        }
-    }
-
-    // Re-add edges in sorted order
-    for &child in &children {
-        graph.graph.add_edge(root, child, ());
-    }
+    // Store the sorted order for root's children
+    graph.sorted_child_order.insert(root, children);
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────
@@ -289,10 +283,6 @@ rect @box_b {
         );
     }
 
-    // TODO: sort_nodes is currently a no-op because children() sorts by NodeIndex
-    // (immutable), not edge insertion order. Fix requires swapping graph node slots.
-    // This test was already failing on main before the theme/when rename.
-    #[ignore]
     #[test]
     fn sort_nodes_reorders_by_kind() {
         let input = r#"

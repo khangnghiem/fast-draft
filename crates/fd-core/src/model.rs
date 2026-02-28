@@ -502,6 +502,11 @@ pub struct SceneGraph {
 
     /// File imports with namespace aliases.
     pub imports: Vec<Import>,
+
+    /// Explicit child ordering set by `sort_nodes`.
+    /// When present for a parent, `children()` returns this order
+    /// instead of the default `NodeIndex` sort.
+    pub sorted_child_order: HashMap<NodeIndex, Vec<NodeIndex>>,
 }
 
 impl SceneGraph {
@@ -522,6 +527,7 @@ impl SceneGraph {
             id_index,
             edges: Vec::new(),
             imports: Vec::new(),
+            sorted_child_order: HashMap::new(),
         }
     }
 
@@ -584,6 +590,11 @@ impl SceneGraph {
     /// how `petgraph` iterates its adjacency list on different targets
     /// (native vs WASM).
     pub fn children(&self, idx: NodeIndex) -> Vec<NodeIndex> {
+        // If an explicit sort order was set (by sort_nodes), use it
+        if let Some(order) = self.sorted_child_order.get(&idx) {
+            return order.clone();
+        }
+
         let mut children: Vec<NodeIndex> = self
             .graph
             .neighbors_directed(idx, petgraph::Direction::Outgoing)
