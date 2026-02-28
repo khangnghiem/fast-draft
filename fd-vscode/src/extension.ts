@@ -16,17 +16,7 @@ import { FdTreePreviewPanel } from "./panels/tree-preview";
 import { FdSpecViewPanel } from "./panels/spec-view";
 import { FdDocumentSymbolProvider } from "./document-symbol";
 import { FdReadOnlyProvider, FD_READONLY_SCHEME, VIEW_MODE_LABELS, FdViewMode } from "./panels/readonly-provider";
-import { HTML_TEMPLATE, VIEW_TYPE_CANVAS, COMMAND_AI_REFINE, COMMAND_AI_REFINE_ALL, COMMAND_EXPORT_SPEC, COMMAND_OPEN_CANVAS, COMMAND_SHOW_PREVIEW, COMMAND_SHOW_SPEC_VIEW, COMMAND_TOGGLE_VIEW_MODE, COMMAND_OPEN_READONLY_VIEW, COMMAND_CHANGE_VIEW_MODE, COMMAND_RENAMIFY } from "./webview-html";
-
-function getNonce(): string {
-  let text = "";
-  const possible =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
-}
+import { getNonce, HTML_TEMPLATE, VIEW_TYPE_CANVAS, COMMAND_AI_REFINE, COMMAND_AI_REFINE_ALL, COMMAND_EXPORT_SPEC, COMMAND_OPEN_CANVAS, COMMAND_SHOW_PREVIEW, COMMAND_SHOW_SPEC_VIEW, COMMAND_TOGGLE_VIEW_MODE, COMMAND_OPEN_READONLY_VIEW, COMMAND_CHANGE_VIEW_MODE, COMMAND_RENAMIFY } from "./webview-html";
 
 /**
  * FD Custom Editor Provider.

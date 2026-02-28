@@ -1,3 +1,5 @@
+import * as crypto from "crypto";
+
 // ─── Constants ───────────────────────────────────────────────────────────
 
 export const VIEW_TYPE_CANVAS = "fd.canvas";
@@ -16,6 +18,10 @@ export const COMMAND_TOGGLE_VIEW_MODE = "fd.toggleViewMode";
 export const COMMAND_OPEN_READONLY_VIEW = "fd.openReadOnlyView";
 export const COMMAND_CHANGE_VIEW_MODE = "fd.changeViewMode";
 export const COMMAND_RENAMIFY = "fd.renamify";
+
+export function getNonce(): string {
+  return crypto.randomBytes(16).toString("hex");
+}
 
 export const HTML_TEMPLATE = `<!DOCTYPE html>
 <html lang="en">
