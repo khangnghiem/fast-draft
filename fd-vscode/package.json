@@ -2,7 +2,7 @@
   "name": "fast-draft",
   "displayName": "Fast Draft",
   "description": "Design Specs as Code",
-  "version": "0.8.67",
+  "version": "0.8.68",
   "publisher": "KhangNghiem",
   "license": "MIT",
   "icon": "icon.png",
@@ -173,12 +173,12 @@
       },
       {
         "command": "fd.aiRefine",
-        "title": "FD: AI Assist Selection",
+        "title": "FD: AI Touch Selection",
         "icon": "$(sparkle)"
       },
       {
         "command": "fd.aiRefineAll",
-        "title": "FD: AI Assist All",
+        "title": "FD: AI Touch All",
         "icon": "$(wand)"
       },
       {
@@ -193,7 +193,7 @@
       },
       {
         "command": "fd.toggleViewMode",
-        "title": "FD: Toggle Design/Spec/Tree View",
+        "title": "FD: Toggle All/Design/Spec View",
         "icon": "$(list-unordered)"
       },
       {

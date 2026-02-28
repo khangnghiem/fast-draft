@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.8.68 — AI Touch + 3-Mode View Toggle
+
+- **UX**: Renamed "AI Assist" → **AI Touch** in toolbar buttons, context menu, and command palette — clearer branding for the AI design assistance feature
+- **UX**: Extended view toggle from `[Design | Spec]` to `[All | Design | Spec]` — **All** shows full document, **Design** shows visual properties, **Spec** shows annotations; mode determines what AI Touch sends to the LLM for token-efficient context
+- **UX**: Toggle cycles All → Design → Spec → All via keyboard shortcut or command palette
+
 ### v0.8.67 — ReadMode Filtered Views + Read-Only Code View
 
 - **FEATURE (R4.19)**: ReadMode filtered views — `emit_filtered(graph, mode)` with 8 modes: Full, Structure, Layout, Design, Spec, Visual (layout+design+when combined), When (animations), Edges (flows). Each mode selectively emits only relevant properties, saving 50-80% tokens for AI agents

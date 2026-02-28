@@ -49,8 +49,8 @@ let annotationCardNodeId = null;
 /** Node ID from right-click context menu */
 let contextMenuNodeId = null;
 
-/** Current view mode: "design" | "spec" */
-let viewMode = "design";
+/** Current view mode: "all" | "design" | "spec" */
+let viewMode = "all";
 
 /** Current spec filter: "all" | "todo" | "doing" | "done" | "blocked" */
 let specFilter = "all";
@@ -2969,6 +2969,7 @@ function openAnimPicker(targetNodeId, clientX, clientY) {
 // ─── View Mode Toggle ────────────────────────────────────────────────────
 
 function setupViewToggle() {
+  document.getElementById("view-all")?.addEventListener("click", () => setViewMode("all"));
   document.getElementById("view-design")?.addEventListener("click", () => setViewMode("design"));
   document.getElementById("view-spec")?.addEventListener("click", () => setViewMode("spec"));
 }
@@ -2977,6 +2978,7 @@ function setViewMode(mode) {
   viewMode = mode;
   const isSpec = mode === "spec";
 
+  document.getElementById("view-all")?.classList.toggle("active", mode === "all");
   document.getElementById("view-design")?.classList.toggle("active", mode === "design");
   document.getElementById("view-spec")?.classList.toggle("active", isSpec);
 
