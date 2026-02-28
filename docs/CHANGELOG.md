@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.8.80 / v0.1.2 — Drag-and-Drop Detach Fix
+
+- **BUG FIX**: Fixed an issue where text nodes inside shapes would not detach when dragged out. The overlap test now uses intrinsic visual bounds.
+- **DOCS**: Added `LESSONS.md` entry on "Invisible Bounding Boxes".
+- **TESTING**: Playwright E2E-UX tests passed perfectly.
+
 ### v0.8.79 — Text Drop-to-Consume on Shapes & Edges
 
 - **UX**: Dragging Text tool onto a shape (rect/ellipse/frame) reparents it as a child node inside the shape using existing R3.38 logic — auto-centers, strips position constraints

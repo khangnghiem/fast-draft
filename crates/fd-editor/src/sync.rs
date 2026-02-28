@@ -420,14 +420,13 @@ impl SyncEngine {
     /// Evaluate if a dropped node should structurally detach from its parent.
     /// Returns true if the graph changed (node was detached).
     pub fn evaluate_drop(&mut self, node_id: NodeId) -> bool {
-        if let Some(idx) = self.graph.index_of(node_id) {
-            if let Some(info) =
+        if let Some(idx) = self.graph.index_of(node_id)
+            && let Some(info) =
                 handle_child_group_relationship(&mut self.graph, idx, &mut self.bounds)
-            {
-                self.last_detach = Some(info);
-                self.text_dirty = true;
-                return true;
-            }
+        {
+            self.last_detach = Some(info);
+            self.text_dirty = true;
+            return true;
         }
         false
     }
