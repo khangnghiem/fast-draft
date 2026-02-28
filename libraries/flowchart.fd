@@ -1,0 +1,174 @@
+# @library "Flowchart"
+# Flowchart components — process, decision, start/end, connectors.
+# Usage: import "libraries/flowchart.fd" as flow
+
+# ─── Themes ───
+
+theme flow_process {
+  fill: #FFFFFF
+  stroke: #2D3436 2
+  corner: 8
+}
+
+theme flow_decision {
+  fill: #FFF3E0
+  stroke: #E17055 2
+}
+
+theme flow_start_end {
+  fill: #E8F5E9
+  stroke: #00B894 2
+  corner: 24
+}
+
+theme flow_label {
+  fill: #2D3436
+  font: "Inter" 500 13
+}
+
+theme flow_sublabel {
+  fill: #636E72
+  font: "Inter" 400 11
+}
+
+# ─── Start / End ───
+
+group @start_node {
+  text @start_label "Start" {
+    use: flow_label
+    fill: #00B894
+  }
+  w: 120 h: 48
+  use: flow_start_end
+}
+
+group @end_node {
+  text @end_label "End" {
+    use: flow_label
+    fill: #E17055
+  }
+  w: 120 h: 48
+  fill: #FFEBEE
+  stroke: #E17055 2
+  corner: 24
+}
+
+# ─── Process ───
+
+group @process_box {
+  text @process_label "Process" {
+    use: flow_label
+  }
+  w: 160 h: 56
+  use: flow_process
+}
+
+group @process_detailed {
+  text @process_title "Process Name" {
+    use: flow_label
+  }
+  text @process_desc "Description of this step" {
+    use: flow_sublabel
+  }
+  w: 200 h: 72
+  use: flow_process
+  layout: column gap=4 pad=12
+}
+
+# ─── Decision ───
+
+group @decision_diamond {
+  text @decision_label "Condition?" {
+    use: flow_label
+    fill: #E17055
+  }
+  w: 140 h: 80
+  use: flow_decision
+  corner: 4
+}
+
+# ─── I/O ───
+
+group @io_box {
+  text @io_label "Input / Output" {
+    use: flow_label
+    fill: #0984E3
+  }
+  w: 160 h: 56
+  fill: #E3F2FD
+  stroke: #0984E3 2
+  corner: 4
+}
+
+# ─── Connector Labels ───
+
+group @yes_label {
+  text @yes_text "Yes" {
+    fill: #00B894
+    font: "Inter" 600 11
+  }
+  fill: #E6FFF9
+  corner: 4
+  layout: column pad=4
+}
+
+group @no_label {
+  text @no_text "No" {
+    fill: #E17055
+    font: "Inter" 600 11
+  }
+  fill: #FFF0EC
+  corner: 4
+  layout: column pad=4
+}
+
+# ─── Pre-built Flow ───
+
+group @simple_flow {
+  spec {
+    "A basic yes/no flowchart template"
+    accept: "start → process → decision → yes/no → end"
+  }
+
+  group @flow_start {
+    text @fs_label "Start" {
+      fill: #00B894
+      font: "Inter" 500 13
+    }
+    x: 0 y: 0
+    w: 100 h: 40
+    use: flow_start_end
+  }
+
+  group @flow_step1 {
+    text @fp_label "Process" {
+      use: flow_label
+    }
+    x: 0 y: 80
+    w: 140 h: 50
+    use: flow_process
+  }
+
+  group @flow_check {
+    text @fc_label "OK?" {
+      fill: #E17055
+      font: "Inter" 500 13
+    }
+    x: 0 y: 170
+    w: 120 h: 60
+    use: flow_decision
+    corner: 4
+  }
+
+  group @flow_end {
+    text @fe_label "Done" {
+      fill: #E17055
+      font: "Inter" 500 13
+    }
+    x: 0 y: 280
+    w: 100 h: 40
+    fill: #FFEBEE
+    stroke: #E17055 2
+    corner: 24
+  }
+}

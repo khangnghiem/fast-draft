@@ -1,86 +1,110 @@
-# FD v1
-# A login form mockup — demonstrates the FD format
-
-style base_text {
-  font: "Inter" 14
-  fill: #333333
+theme accent {
+  fill: #6C5CE7  # blue
+  corner: 10
 }
 
-style accent {
-  fill: #6C5CE7
+theme base_text {
+  fill: #333333  # gray
+  font: "Inter" regular 14
 }
 
+# ─── Layout ───
+# ─── Layout ───
+# ─── Layout ───
+# ─── Layout ───
+# ─── Layout ───
+# ─── Layout ───
+# ─── Layout ───
 group @login_form {
-  layout: column gap=16 pad=32
-
   spec {
     "User authentication entry point"
     accept: "email + password fields visible"
     accept: "sign-in button triggers auth flow"
-    status: draft
+    status: todo
   }
-
-  text @title "Welcome Back" {
-    use: base_text
-    font: "Inter" 600 24
-    fill: #1A1A2E
-    spec "Brand greeting — sets emotional tone"
-  }
-
   rect @email_field {
-    w: 280 h: 44
-    corner: 8
-    stroke: #DDDDDD 1
     spec {
       "Email input field"
       accept: "validates email format on blur"
       accept: "shows error state with red border"
       priority: high
     }
-
+    text @title "Welcome Back" {
+      spec "Brand greeting — sets emotional tone"
+      fill: #1A1A2E  # blue
+      font: "Inter" bold 24
+      x: 9.15
+      y: -49.96
+    }
     text @email_hint "Email" {
       use: base_text
-      fill: #999999
+      fill: #999999  # gray
+      x: 128.57
+      y: 14.63
     }
-  }
-
-  rect @pass_field {
     w: 280 h: 44
-    corner: 8
     stroke: #DDDDDD 1
+    corner: 8
+    x: 31.68
+    y: 68.31
+  }
+  rect @pass_field {
     spec {
       "Password input field"
       accept: "minimum 8 characters"
+      priority: high
     }
-
     text @pass_hint "Password" {
       use: base_text
-      fill: #999999
+      fill: #999999  # gray
+      x: 0.3
+      y: -0.04
     }
+    w: 280 h: 44
+    stroke: #DDDDDD 1
+    corner: 8
   }
-
   rect @login_btn {
-    w: 280 h: 48
-    corner: 10
-    use: accent
     spec {
       "Primary CTA — triggers login API call"
       accept: "disabled state when fields empty"
       accept: "loading spinner during auth"
-      status: in_progress
+      status: done
+      priority: high
     }
-
     text @btn_label "Sign In" {
-      font: "Inter" 600 16
-      fill: #FFFFFF
+      fill: #FFFFFF  # white
+      font: "Inter" semibold 16
+      x: 4.3
+      y: 0.84
     }
-
-    anim :hover {
-      fill: #5A4BD1
+    w: 280 h: 48
+    use: accent
+    fill: #5A4BD1  # blue
+    when :hover {
+      fill: #4A3BC1  # blue
       scale: 1.02
-      ease: spring 300ms
+      ease: spring 200ms
+    }
+    when :press {
+      scale: 0.97
+      ease: ease_out 100ms
     }
   }
+  layout: column gap=16 pad=32
+  x: 316.65
+  y: 377.78
 }
 
-@login_form -> center_in: canvas
+rect @rect_0 {
+  w: 0.21 h: 0.65
+  x: 345.86
+  y: 704.14
+}
+
+rect @rect_1 {
+  w: 82.84 h: 82.84
+  x: 317.93
+  y: 631.19
+}
+

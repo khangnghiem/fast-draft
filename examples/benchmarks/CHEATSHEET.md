@@ -121,7 +121,7 @@ rect @btn {
   spec {
     "Primary CTA — triggers login"
     accept: "disabled when fields empty"
-    status: in_progress        # draft | in_progress | done
+    status: doing              # todo | doing | done | blocked
     priority: high             # low | medium | high
   }
 }

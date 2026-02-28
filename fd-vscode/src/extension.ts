@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { refineSelectedNodes, findAnonNodeIds } from "./ai-refine";
+import { callRenamifyAi, applyGlobalRenames, RenameProposal } from "./ai-renamify";
 import {
   parseAnnotation as fdParseAnnotation,
   computeSpecFoldRanges,
@@ -14,7 +15,8 @@ import { FdDiagnosticsProvider } from "./diagnostics";
 import { FdTreePreviewPanel } from "./panels/tree-preview";
 import { FdSpecViewPanel } from "./panels/spec-view";
 import { FdDocumentSymbolProvider } from "./document-symbol";
-import { HTML_TEMPLATE, VIEW_TYPE_CANVAS, COMMAND_AI_REFINE, COMMAND_AI_REFINE_ALL, COMMAND_EXPORT_SPEC, COMMAND_OPEN_CANVAS, COMMAND_SHOW_PREVIEW, COMMAND_SHOW_SPEC_VIEW, COMMAND_TOGGLE_VIEW_MODE } from "./webview-html";
+import { FdReadOnlyProvider, FD_READONLY_SCHEME, VIEW_MODE_LABELS, FdViewMode } from "./panels/readonly-provider";
+import { HTML_TEMPLATE, VIEW_TYPE_CANVAS, COMMAND_AI_REFINE, COMMAND_AI_REFINE_ALL, COMMAND_EXPORT_SPEC, COMMAND_OPEN_CANVAS, COMMAND_SHOW_PREVIEW, COMMAND_SHOW_SPEC_VIEW, COMMAND_TOGGLE_VIEW_MODE, COMMAND_OPEN_READONLY_VIEW, COMMAND_CHANGE_VIEW_MODE, COMMAND_RENAMIFY } from "./webview-html";
 
 function getNonce(): string {
   let text = "";
@@ -39,9 +41,9 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
   /** The most recently focused canvas webview panel, for command routing. */
   public static activePanel: vscode.WebviewPanel | undefined;
   /** Current view mode of the active panel. */
-  public static activeViewMode: "design" | "spec" = "design";
+  public static activeViewMode: "all" | "design" | "spec" = "all";
   /** Callback invoked when canvas webview changes view mode. */
-  public static onViewModeChanged: ((mode: "design" | "spec") => void) | undefined;
+  public static onViewModeChanged: ((mode: "all" | "design" | "spec") => void) | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) { }
 
@@ -158,13 +160,18 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
           await this.handleAiRefine(document, webviewPanel, nodeIds);
           break;
         }
-        case "aiRefineAll": {
-          const allAnon = findAnonNodeIds(document.getText());
-          await this.handleAiRefine(document, webviewPanel, allAnon);
+        case "renamify": {
+          await this.handleRenamify(document, webviewPanel);
+          break;
+        }
+        case "renamifyAccepted": {
+          const renames = (message as any).renames as RenameProposal[] ?? [];
+          await this.handleRenamifyAccepted(document, webviewPanel, renames);
           break;
         }
         case "viewModeChanged": {
-          const mode: "design" | "spec" = (message as { type: string; mode?: string }).mode === "spec" ? "spec" : "design";
+          const rawMode = (message as { type: string; mode?: string }).mode;
+          const mode: "all" | "design" | "spec" = rawMode === "spec" ? "spec" : rawMode === "design" ? "design" : "all";
           FdEditorProvider.activeViewMode = mode;
           FdEditorProvider.onViewModeChanged?.(mode);
           break;
@@ -198,6 +205,14 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
             await vscode.workspace.fs.writeFile(uri, buffer);
             vscode.window.showInformationMessage(`Exported to ${uri.fsPath}`);
           }
+          break;
+        }
+        case "requestLibraries": {
+          const libraries = await scanLibraryFiles();
+          webviewPanel.webview.postMessage({
+            type: "libraryData",
+            libraries,
+          });
           break;
         }
 
@@ -250,7 +265,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     });
   }
 
-  // ─── AI Refine Handler ─────────────────────────────────────────────
+  // ─── AI Assist Handler ─────────────────────────────────────────────
 
   private async handleAiRefine(
     document: vscode.TextDocument,
@@ -258,16 +273,11 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     nodeIds: string[]
   ): Promise<void> {
     if (nodeIds.length === 0) {
-      // If no specific nodes, find all _anon_ nodes
-      const allAnon = findAnonNodeIds(document.getText());
-      if (allAnon.length === 0) {
-        webviewPanel.webview.postMessage({
-          type: "aiRefineComplete",
-          error: "No anonymous nodes to refine.",
-        });
-        return;
-      }
-      nodeIds = allAnon;
+      webviewPanel.webview.postMessage({
+        type: "aiRefineComplete",
+        error: "Select a node first.",
+      });
+      return;
     }
 
     // Notify webview that refine started
@@ -278,7 +288,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     if (result.error) {
       const action = result.needsSettings ? "Open Settings" : undefined;
       const chosen = await vscode.window.showWarningMessage(
-        `AI Refine: ${result.error}`,
+        `AI Assist: ${result.error}`,
         ...(action ? [action] : [])
       );
       if (chosen === "Open Settings") {
@@ -306,7 +316,69 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
 
     webviewPanel.webview.postMessage({ type: "aiRefineComplete" });
     vscode.window.showInformationMessage(
-      `AI Refine: ${nodeIds.length} node(s) refined.`
+      `AI Assist: ${nodeIds.length} node(s) refined.`
+    );
+  }
+
+  // ─── Renamify Handler ─────────────────────────────────────────────────
+
+  private async handleRenamify(
+    document: vscode.TextDocument,
+    webviewPanel: vscode.WebviewPanel
+  ): Promise<void> {
+    webviewPanel.webview.postMessage({ type: "renamifyStarted" });
+
+    const result = await callRenamifyAi(document.getText());
+
+    if (result.error) {
+      const action = result.needsSettings ? "Open Settings" : undefined;
+      const chosen = await vscode.window.showWarningMessage(
+        `Renamify: ${result.error}`,
+        ...(action ? [action] : [])
+      );
+      if (chosen === "Open Settings") {
+        vscode.commands.executeCommand("workbench.action.openSettings", "fd.ai");
+      }
+      webviewPanel.webview.postMessage({
+        type: "renamifyComplete",
+        error: result.error,
+      });
+      return;
+    }
+
+    webviewPanel.webview.postMessage({
+      type: "renamifyProposals",
+      proposals: result.proposals,
+    });
+  }
+
+  private async handleRenamifyAccepted(
+    document: vscode.TextDocument,
+    webviewPanel: vscode.WebviewPanel,
+    renames: RenameProposal[]
+  ): Promise<void> {
+    if (renames.length === 0) {
+      webviewPanel.webview.postMessage({ type: "renamifyComplete" });
+      return;
+    }
+
+    // Re-validate against current document text (may have changed)
+    const currentText = document.getText();
+    const renamed = applyGlobalRenames(currentText, renames);
+
+    const lastLine = document.lineCount - 1;
+    const lastLineRange = document.lineAt(lastLine).range;
+    const fullRange = new vscode.Range(
+      0, 0, lastLine, lastLineRange.end.character
+    );
+
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(document.uri, fullRange, renamed);
+    await vscode.workspace.applyEdit(edit);
+
+    webviewPanel.webview.postMessage({ type: "renamifyComplete" });
+    vscode.window.showInformationMessage(
+      `✦ Renamify: ${renames.length} node(s) renamed.`
     );
   }
 
@@ -566,6 +638,109 @@ function exportSpecMarkdown(): void {
   });
 }
 
+// ─── Library Scanning ────────────────────────────────────────────────────────
+
+interface LibraryComponent {
+  name: string;
+  kind: string;
+  code: string;
+}
+
+interface LibraryFile {
+  name: string;
+  path: string;
+  components: LibraryComponent[];
+}
+
+/**
+ * Scan workspace `libraries/` directories for .fd files.
+ * Parse each file to extract reusable components (themes, groups, nodes).
+ */
+async function scanLibraryFiles(): Promise<LibraryFile[]> {
+  const results: LibraryFile[] = [];
+  const files = await vscode.workspace.findFiles("**/libraries/**/*.fd", null, 50);
+
+  for (const fileUri of files) {
+    try {
+      const content = await vscode.workspace.fs.readFile(fileUri);
+      const text = new TextDecoder().decode(content);
+      const components = parseLibraryComponents(text);
+      // Extract library name from header comment or filename
+      const nameMatch = text.match(/^#\s*@library\s+"([^"]+)"/m);
+      const fileName = fileUri.path.split("/").pop()?.replace(/\.fd$/, "") ?? "Unknown";
+      const libName = nameMatch ? nameMatch[1] : fileName;
+
+      if (components.length > 0) {
+        results.push({ name: libName, path: fileUri.fsPath, components });
+      }
+    } catch {
+      // Skip files that can't be read
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Parse a library .fd file to extract component definitions.
+ * Extracts themes and top-level nodes (group, rect, ellipse, etc.) with their full code.
+ */
+function parseLibraryComponents(text: string): LibraryComponent[] {
+  const components: LibraryComponent[] = [];
+  const lines = text.split("\n");
+  let i = 0;
+
+  while (i < lines.length) {
+    const trimmed = lines[i].trim();
+
+    // Skip comments, empty lines, imports
+    if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("import ")) {
+      i++;
+      continue;
+    }
+
+    // Theme definition: theme name { ... }
+    const themeMatch = trimmed.match(/^theme\s+(\w+)\s*\{/);
+    if (themeMatch) {
+      const startLine = i;
+      let depth = 1;
+      i++;
+      while (i < lines.length && depth > 0) {
+        depth += (lines[i].match(/\{/g) || []).length;
+        depth -= (lines[i].match(/\}/g) || []).length;
+        i++;
+      }
+      const code = lines.slice(startLine, i).join("\n");
+      components.push({ name: themeMatch[1], kind: "theme", code });
+      continue;
+    }
+
+    // Node definition: (group|rect|ellipse|path|text|frame) @id ... { }
+    const nodeMatch = trimmed.match(/^(group|rect|ellipse|path|text|frame)\s+@(\w+)/);
+    if (nodeMatch) {
+      const startLine = i;
+      if (trimmed.includes("{")) {
+        let depth = (trimmed.match(/\{/g) || []).length - (trimmed.match(/\}/g) || []).length;
+        i++;
+        while (i < lines.length && depth > 0) {
+          depth += (lines[i].match(/\{/g) || []).length;
+          depth -= (lines[i].match(/\}/g) || []).length;
+          i++;
+        }
+      } else {
+        i++;
+      }
+      const code = lines.slice(startLine, i).join("\n");
+      components.push({ name: nodeMatch[2], kind: nodeMatch[1], code });
+      continue;
+    }
+
+    i++;
+  }
+
+  return components;
+}
+
 // ─── Extension Entry Points ────────────────────────────────────────────────────
 
 export function activate(context: vscode.ExtensionContext) {
@@ -580,6 +755,116 @@ export function activate(context: vscode.ExtensionContext) {
         supportsMultipleEditorsPerDocument: false,
       }
     )
+  );
+
+  // ─── Read-Only Virtual Document Provider ─────────────────────────────
+  const readOnlyProvider = new FdReadOnlyProvider(context.extensionPath);
+  context.subscriptions.push(
+    vscode.workspace.registerTextDocumentContentProvider(
+      FD_READONLY_SCHEME,
+      readOnlyProvider
+    )
+  );
+
+  // Status bar item showing active view mode
+  const viewModeStatusBar = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Right,
+    90
+  );
+  viewModeStatusBar.command = COMMAND_CHANGE_VIEW_MODE;
+  viewModeStatusBar.tooltip = "FD: Change view mode";
+  viewModeStatusBar.hide();
+  context.subscriptions.push(viewModeStatusBar);
+
+  // Show/hide status bar based on active editor
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor((editor) => {
+      if (
+        editor &&
+        editor.document.uri.scheme === FD_READONLY_SCHEME
+      ) {
+        const sourceKey = editor.document.uri.query;
+        const sourceUri = vscode.Uri.parse(sourceKey);
+        const mode = readOnlyProvider.getMode(sourceUri);
+        viewModeStatusBar.text = `$(eye) ${mode.toUpperCase()}`;
+        viewModeStatusBar.show();
+      } else {
+        viewModeStatusBar.hide();
+      }
+    })
+  );
+
+  // Command: open read-only view for the active .fd document
+  context.subscriptions.push(
+    vscode.commands.registerCommand(COMMAND_OPEN_READONLY_VIEW, async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor || editor.document.languageId !== "fd") {
+        vscode.window.showWarningMessage("Open an .fd file first");
+        return;
+      }
+
+      const sourceUri = editor.document.uri;
+      const sourceText = editor.document.getText();
+      const mode = readOnlyProvider.getMode(sourceUri);
+
+      await readOnlyProvider.setMode(sourceUri, mode, sourceText);
+
+      const virtualUri = FdReadOnlyProvider.buildUri(sourceUri, mode);
+      const doc = await vscode.workspace.openTextDocument(virtualUri);
+      await vscode.window.showTextDocument(doc, {
+        viewColumn: vscode.ViewColumn.Beside,
+        preview: true,
+        preserveFocus: true,
+      });
+
+      viewModeStatusBar.text = `$(eye) ${mode.toUpperCase()}`;
+      viewModeStatusBar.show();
+    })
+  );
+
+  // Command: change the view mode via quick pick
+  context.subscriptions.push(
+    vscode.commands.registerCommand(COMMAND_CHANGE_VIEW_MODE, async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) return;
+
+      // Find the source URI (works from both source and virtual tabs)
+      let sourceUri: vscode.Uri;
+      if (editor.document.uri.scheme === FD_READONLY_SCHEME) {
+        sourceUri = vscode.Uri.parse(editor.document.uri.query);
+      } else if (editor.document.languageId === "fd") {
+        sourceUri = editor.document.uri;
+      } else {
+        return;
+      }
+
+      const items = (Object.entries(VIEW_MODE_LABELS) as [FdViewMode, string][]).map(
+        ([value, label]) => ({ label, value })
+      );
+
+      const picked = await vscode.window.showQuickPick(items, {
+        placeHolder: "Select view mode",
+      });
+      if (!picked) return;
+
+      // Get source text
+      const sourceDoc = await vscode.workspace.openTextDocument(sourceUri);
+      const sourceText = sourceDoc.getText();
+
+      await readOnlyProvider.setMode(sourceUri, picked.value, sourceText);
+
+      // Open or refresh the virtual document
+      const virtualUri = FdReadOnlyProvider.buildUri(sourceUri, picked.value);
+      const doc = await vscode.workspace.openTextDocument(virtualUri);
+      await vscode.window.showTextDocument(doc, {
+        viewColumn: vscode.ViewColumn.Beside,
+        preview: true,
+        preserveFocus: false,
+      });
+
+      viewModeStatusBar.text = `$(eye) ${picked.value.toUpperCase()}`;
+      viewModeStatusBar.show();
+    })
   );
 
   // ─── Auto-open welcome.fd on first activation ───────────────────────
@@ -738,7 +1023,7 @@ export function activate(context: vscode.ExtensionContext) {
   // ─── Code-mode Spec View (editor decorations) ────────────────────
   // When spec mode is active, hide style/animation/layout details from
   // the text editor, showing only #, spec blocks, node/edge declarations, and braces.
-  let codeSpecMode: "design" | "spec" = "design";
+  let codeSpecMode: "all" | "design" | "spec" = "all";
 
   // Wire up canvas → code-mode spec sync
   FdEditorProvider.onViewModeChanged = (mode) => {
@@ -842,10 +1127,15 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Register view mode toggle command (Design ↔ Spec)
+  // Register view mode toggle command (All → Design → Spec → All)
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMAND_TOGGLE_VIEW_MODE, () => {
-      const next: "design" | "spec" = FdEditorProvider.activeViewMode === "design" ? "spec" : "design";
+      const cycle: Record<string, "all" | "design" | "spec"> = {
+        all: "design",
+        design: "spec",
+        spec: "all",
+      };
+      const next = cycle[FdEditorProvider.activeViewMode];
       FdEditorProvider.activeViewMode = next;
       codeSpecMode = next;
 
@@ -858,7 +1148,7 @@ export function activate(context: vscode.ExtensionContext) {
       // Apply/remove code-mode folding
       applyCodeSpecView();
 
-      const labels: Record<string, string> = { design: "Design", spec: "Spec" };
+      const labels: Record<string, string> = { all: "All", design: "Design", spec: "Spec" };
       vscode.window.showInformationMessage(
         `FD View: ${labels[next]} Mode`
       );
@@ -890,13 +1180,13 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Register AI Refine command (selected nodes via cursor position)
+  // Register AI Assist command (selected nodes via cursor position)
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMAND_AI_REFINE, async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || editor.document.languageId !== "fd") {
         vscode.window.showInformationMessage(
-          "Open a .fd file first to use AI Refine."
+          "Open a .fd file first to use AI Assist."
         );
         return;
       }
@@ -911,7 +1201,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (result.error) {
         const action = result.needsSettings ? "Open Settings" : undefined;
         const chosen = await vscode.window.showWarningMessage(
-          `AI Refine: ${result.error}`,
+          `AI Assist: ${result.error}`,
           ...(action ? [action] : [])
         );
         if (chosen === "Open Settings") {
@@ -931,18 +1221,18 @@ export function activate(context: vscode.ExtensionContext) {
       );
       await vscode.workspace.applyEdit(edit);
       vscode.window.showInformationMessage(
-        `AI Refine: ${nodeIds.length} node(s) refined.`
+        `AI Assist: ${nodeIds.length} node(s) refined.`
       );
     })
   );
 
-  // Register AI Refine All command (all _anon_ nodes)
+  // Register AI Assist All command (all _anon_ nodes)
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMAND_AI_REFINE_ALL, async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || editor.document.languageId !== "fd") {
         vscode.window.showInformationMessage(
-          "Open a .fd file first to use AI Refine All."
+          "Open a .fd file first to use AI Assist All."
         );
         return;
       }
@@ -955,7 +1245,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (result.error) {
         const action = result.needsSettings ? "Open Settings" : undefined;
         const chosen = await vscode.window.showWarningMessage(
-          `AI Refine: ${result.error}`,
+          `AI Assist: ${result.error}`,
           ...(action ? [action] : [])
         );
         if (chosen === "Open Settings") {
@@ -975,10 +1265,24 @@ export function activate(context: vscode.ExtensionContext) {
       );
       await vscode.workspace.applyEdit(edit);
       vscode.window.showInformationMessage(
-        `AI Refine All: ${nodeIds.length} node(s) refined.`
+        `AI Assist All: ${nodeIds.length} node(s) refined.`
       );
     })
   );
+
+  // Register Renamify command (batch AI rename via command palette)
+  context.subscriptions.push(
+    vscode.commands.registerCommand(COMMAND_RENAMIFY, () => {
+      if (FdEditorProvider.activePanel) {
+        FdEditorProvider.activePanel.webview.postMessage({ type: "triggerRenamify" });
+      } else {
+        vscode.window.showInformationMessage(
+          "Open the FD Canvas editor first to use Renamify."
+        );
+      }
+    })
+  );
+
   // ─── Format Document Provider (Option+Shift+F) ──────────────────────
   // Spawns `fd-lsp --format` as a one-shot formatter: reads FD text from
   // stdin and writes the canonical formatted output to stdout.

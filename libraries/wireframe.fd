@@ -1,0 +1,271 @@
+# @library "Wireframe"
+# Wireframe components — navbar, sidebar, content, footer, placeholders.
+# Usage: import "libraries/wireframe.fd" as wire
+
+# ─── Themes ───
+
+theme wire_bg {
+  fill: #FAFAFA
+  corner: 0
+}
+
+theme wire_panel {
+  fill: #FFFFFF
+  stroke: #E0E0E0 1
+}
+
+theme wire_accent {
+  fill: #6C5CE7
+  corner: 4
+}
+
+theme wire_heading {
+  fill: #2D3436
+  font: "Inter" 700 16
+}
+
+theme wire_text {
+  fill: #636E72
+  font: "Inter" 400 13
+}
+
+theme wire_muted {
+  fill: #B2BEC3
+  font: "Inter" 400 12
+}
+
+# ─── Navbar ───
+
+group @navbar {
+  rect @navbar_bg {
+    w: 800 h: 56
+    fill: #FFFFFF
+    stroke: #E0E0E0 1
+  }
+  text @navbar_logo "⚡ AppName" {
+    x: 16 y: 18
+    fill: #2D3436
+    font: "Inter" 700 16
+  }
+  text @navbar_nav "Home    Features    Pricing    About" {
+    x: 280 y: 20
+    use: wire_text
+  }
+  rect @navbar_cta {
+    x: 680 y: 12
+    w: 100 h: 32
+    use: wire_accent
+    text @navbar_cta_label "Sign Up" {
+      fill: #FFFFFF
+      font: "Inter" 600 13
+    }
+  }
+}
+
+# ─── Sidebar ───
+
+group @sidebar {
+  rect @sidebar_bg {
+    w: 220 h: 500
+    use: wire_panel
+  }
+  text @sidebar_title "Navigation" {
+    x: 16 y: 16
+    use: wire_heading
+    font: "Inter" 600 14
+  }
+  text @sidebar_items "Dashboard\nAnalytics\nUsers\nSettings\nHelp" {
+    x: 16 y: 48
+    use: wire_text
+    font: "Inter" 400 14
+  }
+}
+
+# ─── Content Area ───
+
+group @content_section {
+  text @content_heading "Page Title" {
+    use: wire_heading
+  }
+  text @content_body "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt." {
+    use: wire_text
+    font: "Inter" 400 14
+  }
+  layout: column gap=12 pad=24
+}
+
+# ─── Image Placeholder ───
+
+group @image_placeholder {
+  rect @img_bg {
+    w: 300 h: 200
+    fill: #F0F0F0
+    corner: 8
+  }
+  text @img_icon "🖼️" {
+    font: "Inter" 400 32
+  }
+  text @img_label "300 × 200" {
+    use: wire_muted
+  }
+}
+
+group @image_placeholder_sm {
+  rect @img_sm_bg {
+    w: 120 h: 80
+    fill: #F0F0F0
+    corner: 6
+  }
+  text @img_sm_icon "🖼️" {
+    font: "Inter" 400 16
+  }
+}
+
+# ─── Footer ───
+
+group @footer {
+  rect @footer_bg {
+    w: 800 h: 80
+    fill: #2D3436
+    corner: 0
+  }
+  text @footer_text "© 2026 AppName. All rights reserved." {
+    fill: #B2BEC3
+    font: "Inter" 400 12
+  }
+  text @footer_links "Privacy · Terms · Contact" {
+    fill: #636E72
+    font: "Inter" 400 12
+  }
+}
+
+# ─── Card Grid ───
+
+group @card_grid {
+  spec {
+    "3-column card grid for dashboards and listing pages"
+  }
+
+  group @grid_card_1 {
+    rect @gc1_bg {
+      x: 0 y: 0
+      w: 240 h: 160
+      use: wire_panel
+      corner: 8
+    }
+    rect @gc1_img {
+      x: 0 y: 0
+      w: 240 h: 80
+      fill: #DFE6E9
+      corner: 8
+    }
+    text @gc1_title "Card One" {
+      x: 12 y: 92
+      use: wire_heading
+      font: "Inter" 600 14
+    }
+    text @gc1_desc "Short description" {
+      x: 12 y: 114
+      use: wire_muted
+    }
+  }
+
+  group @grid_card_2 {
+    rect @gc2_bg {
+      x: 260 y: 0
+      w: 240 h: 160
+      use: wire_panel
+      corner: 8
+    }
+    rect @gc2_img {
+      x: 260 y: 0
+      w: 240 h: 80
+      fill: #DFE6E9
+      corner: 8
+    }
+    text @gc2_title "Card Two" {
+      x: 272 y: 92
+      use: wire_heading
+      font: "Inter" 600 14
+    }
+    text @gc2_desc "Short description" {
+      x: 272 y: 114
+      use: wire_muted
+    }
+  }
+
+  group @grid_card_3 {
+    rect @gc3_bg {
+      x: 520 y: 0
+      w: 240 h: 160
+      use: wire_panel
+      corner: 8
+    }
+    rect @gc3_img {
+      x: 520 y: 0
+      w: 240 h: 80
+      fill: #DFE6E9
+      corner: 8
+    }
+    text @gc3_title "Card Three" {
+      x: 532 y: 92
+      use: wire_heading
+      font: "Inter" 600 14
+    }
+    text @gc3_desc "Short description" {
+      x: 532 y: 114
+      use: wire_muted
+    }
+  }
+}
+
+# ─── Full Page Layout ───
+
+group @page_layout {
+  spec {
+    "Complete page wireframe with navbar, sidebar, and content area"
+    accept: "responsive skeleton for any web app"
+  }
+
+  group @pl_navbar {
+    rect @pl_nav_bg {
+      x: 0 y: 0
+      w: 800 h: 48
+      fill: #FFFFFF
+      stroke: #E0E0E0 1
+    }
+    text @pl_nav_logo "⚡ App" {
+      x: 12 y: 14
+      fill: #2D3436
+      font: "Inter" 700 14
+    }
+  }
+
+  group @pl_sidebar {
+    rect @pl_side_bg {
+      x: 0 y: 48
+      w: 200 h: 400
+      use: wire_panel
+    }
+    text @pl_side_nav "Menu Item 1\nMenu Item 2\nMenu Item 3" {
+      x: 16 y: 68
+      use: wire_text
+    }
+  }
+
+  group @pl_content {
+    rect @pl_content_bg {
+      x: 200 y: 48
+      w: 600 h: 400
+      fill: #FAFAFA
+    }
+    text @pl_content_title "Dashboard" {
+      x: 224 y: 72
+      use: wire_heading
+    }
+    text @pl_content_body "Your content goes here" {
+      x: 224 y: 100
+      use: wire_text
+    }
+  }
+}

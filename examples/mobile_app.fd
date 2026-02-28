@@ -1,250 +1,158 @@
-style body {
+# FD v1
+# Social media app — Instagram-style mobile UI
+
+theme body {
   fill: #333333
   font: "Inter" 400 14
 }
 
-style bold {
+theme bold {
   fill: #1A1A2E
   font: "Inter" 600 16
 }
 
-style caption {
+theme caption {
   fill: #999999
   font: "Inter" 400 12
 }
 
-# ─── Status bar ──────────────────────────────────────────────────────────
-group @status_bar {
-  layout: row gap=0 pad=16
-  text @time "9:41" {
-    fill: #000000
-    font: "Inter" 600 15
-  }
-}
+# ─── Phone frame ─────────────────────────────────────────────────────────
 
-# ─── Header ──────────────────────────────────────────────────────────────
-group @header {
-  layout: row gap=0 pad=16
-  text @app_name "Discover" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
+group @phone {
+  layout: column gap=0 pad=0
+
+  # Status bar
+  group @status_bar {
+    layout: row gap=0 pad=16
+    text @time "9:41" {
+      fill: #000000
+      font: "Inter" 600 15
+    }
   }
-  ellipse @avatar {
+
+  # Header
+  group @header {
+    layout: row gap=0 pad=16
+    text @app_name "Discover" {
+      fill: #1A1A2E
+      font: "Inter" 700 28
+    }
+    ellipse @avatar {
+      spec {
+        "User profile picture"
+        accept: "tapping opens profile sheet"
+        tag: navigation
+      }
+      w: 36 h: 36
+      fill: #6C5CE7
+      when :press { scale: 0.92; ease: spring 200ms }
+    }
+  }
+
+  # Story bubbles
+  group @stories {
     spec {
-      "User profile picture"
-      accept: "tapping opens profile sheet"
+      "Horizontal story carousel"
+      accept: "scrollable beyond viewport"
+      status: doing
+      priority: medium
+    }
+    layout: row gap=12 pad=16
+    ellipse @story_1 { w: 64 h: 64; fill: #FF6B6B; stroke: #6C5CE7 3
+      when :press { opacity: 0.8; scale: 0.9; ease: spring 200ms }
+    }
+    ellipse @story_2 { w: 64 h: 64; fill: #4ECDC4; stroke: #6C5CE7 3
+      when :press { opacity: 0.8; scale: 0.9; ease: spring 200ms }
+    }
+    ellipse @story_3 { w: 64 h: 64; fill: #FFE66D; stroke: #E0E0E0 2
+      when :press { opacity: 0.8; scale: 0.9; ease: spring 200ms }
+    }
+    ellipse @story_4 { w: 64 h: 64; fill: #A29BFE; stroke: #E0E0E0 2
+      when :press { opacity: 0.8; scale: 0.9; ease: spring 200ms }
+    }
+  }
+
+  # Feed post
+  group @post_1 {
+    spec {
+      "Social feed post card"
+      accept: "double-tap to like"
+      accept: "swipe right for actions"
+      tag: feed, engagement
+    }
+    layout: column gap=8 pad=0
+
+    group @post_header {
+      layout: row gap=10 pad=16
+      ellipse @post_avatar { w: 40 h: 40; fill: #FF6B6B }
+      group @post_user_info {
+        layout: column gap=2 pad=0
+        text @post_user "sarah.design" {
+          use: bold
+          font: "Inter" 600 14
+        }
+        text @post_location "San Francisco, CA" { use: caption }
+      }
+    }
+
+    rect @post_image {
+      spec {
+        "Post image — loaded from CDN"
+        accept: "lazy-loaded with blur placeholder"
+        priority: high
+      }
+      w: 375 h: 375
+      fill: #F0F0F5
+    }
+
+    group @post_actions {
+      layout: row gap=16 pad=16
+      ellipse @btn_like { w: 28 h: 28; fill: #FF6B6B; stroke: #FF6B6B 2
+        when :press { scale: 1.3; ease: spring 300ms }
+      }
+      ellipse @btn_comment { w: 28 h: 28; stroke: #333333 2 }
+      ellipse @btn_share { w: 28 h: 28; stroke: #333333 2 }
+    }
+
+    group @post_text {
+      layout: column gap=4 pad=16
+      text @likes "1,284 likes" { use: bold; font: "Inter" 600 14 }
+      text @caption_text "Golden hour at the bridge 🌅" { use: body }
+      text @timestamp "2 hours ago" { use: caption }
+    }
+  }
+
+  # Bottom navigation
+  group @bottom_nav {
+    spec {
+      "Bottom tab bar — iOS-style"
+      accept: "haptic feedback on tap"
+      status: done
       tag: navigation
     }
-    w: 36 h: 36
-    fill: #6C5CE7
-    anim :press {
-      scale: 0.92
-      ease: spring 200ms
+    layout: row gap=0 pad=12
+
+    rect @tab_home { w: 75 h: 44; corner: 0
+      ellipse @icon_home { w: 24 h: 24; fill: #6C5CE7 }
+      when :press { scale: 0.85; ease: spring 200ms }
+    }
+    rect @tab_search { w: 75 h: 44; corner: 0
+      ellipse @icon_search { w: 24 h: 24; fill: #999999 }
+      when :press { scale: 0.85; ease: spring 200ms }
+    }
+    rect @tab_add { w: 75 h: 44; corner: 0
+      rect @icon_add { w: 28 h: 28; fill: #6C5CE7; corner: 8 }
+      when :press { scale: 0.85; ease: spring 200ms }
+    }
+    rect @tab_notifications { w: 75 h: 44; corner: 0
+      ellipse @icon_notif { w: 24 h: 24; fill: #999999 }
+      when :press { scale: 0.85; ease: spring 200ms }
+    }
+    rect @tab_profile { w: 75 h: 44; corner: 0
+      ellipse @icon_profile { w: 24 h: 24; fill: #999999 }
+      when :press { scale: 0.85; ease: spring 200ms }
     }
   }
 }
 
-# ─── Story bubbles ───────────────────────────────────────────────────────
-group @stories {
-  spec {
-    "Horizontal story carousel"
-    accept: "scrollable beyond viewport"
-    status: in_progress
-    priority: medium
-  }
-  layout: row gap=12 pad=16
-  ellipse @story_1 {
-    w: 64 h: 64
-    fill: #FF6B6B
-    stroke: #6C5CE7 3
-    anim :press {
-      opacity: 0.8
-      scale: 0.9
-      ease: spring 200ms
-    }
-  }
-  ellipse @story_2 {
-    w: 64 h: 64
-    fill: #4ECDC4
-    stroke: #6C5CE7 3
-    x: 463.64
-    y: 161.1
-    anim :press {
-      opacity: 0.8
-      scale: 0.9
-      ease: spring 200ms
-    }
-  }
-  ellipse @story_3 {
-    w: 64 h: 64
-    fill: #FFE66D
-    stroke: #E0E0E0 2
-    anim :press {
-      opacity: 0.8
-      scale: 0.9
-      ease: spring 200ms
-    }
-  }
-  ellipse @story_4 {
-    w: 64 h: 64
-    fill: #A29BFE
-    stroke: #E0E0E0 2
-    anim :press {
-      opacity: 0.8
-      scale: 0.9
-      ease: spring 200ms
-    }
-  }
-}
-
-# ─── Feed post ───────────────────────────────────────────────────────────
-group @post_1 {
-  spec {
-    "Social feed post card"
-    accept: "double-tap to like"
-    accept: "swipe right for actions"
-    tag: feed, engagement
-  }
-  layout: column gap=8 pad=0
-  group @post_header {
-    layout: row gap=10 pad=16
-    ellipse @post_avatar {
-      w: 40 h: 40
-      fill: #FF6B6B
-    }
-    group @_anon_1 {
-      layout: column gap=2 pad=0
-      text @post_user "sarah.design" {
-        use: bold
-        font: "Inter" 600 14
-      }
-      text @post_location "San Francisco, CA" {
-        use: caption
-      }
-    }
-  }
-  rect @post_image {
-    spec {
-      "Post image — loaded from CDN"
-      accept: "lazy-loaded with blur placeholder"
-      priority: high
-    }
-    w: 375 h: 375
-    fill: #F0F0F5
-  }
-  group @post_actions {
-    layout: row gap=16 pad=16
-    ellipse @btn_like {
-      w: 28 h: 28
-      fill: #FF6B6B
-      stroke: #FF6B6B 2
-      anim :press {
-        scale: 1.3
-        ease: spring 300ms
-      }
-    }
-    ellipse @btn_comment {
-      w: 28 h: 28
-      stroke: #333333 2
-    }
-    ellipse @btn_share {
-      w: 28 h: 28
-      stroke: #333333 2
-    }
-  }
-  group @post_text {
-    layout: column gap=4 pad=16
-    text @likes "1,284 likes" {
-      use: bold
-      font: "Inter" 600 14
-    }
-    text @caption_text "Golden hour at the bridge 🌅" {
-      use: body
-    }
-    text @timestamp "2 hours ago" {
-      use: caption
-    }
-  }
-}
-
-# ─── Bottom navigation ──────────────────────────────────────────────────
-group @bottom_nav {
-  spec {
-    "Bottom tab bar — iOS-style"
-    accept: "haptic feedback on tap"
-    status: done
-    tag: navigation
-  }
-  layout: row gap=0 pad=12
-  x: 66.95
-  y: -99.72
-  rect @tab_home {
-    w: 75 h: 44
-    corner: 0
-    ellipse @icon_home {
-      w: 24 h: 24
-      fill: #6C5CE7
-    }
-    anim :press {
-      scale: 0.85
-      ease: spring 200ms
-    }
-  }
-  rect @tab_search {
-    w: 75 h: 44
-    corner: 0
-    ellipse @icon_search {
-      w: 24 h: 24
-      fill: #999999
-    }
-    anim :press {
-      scale: 0.85
-      ease: spring 200ms
-    }
-  }
-  rect @tab_add {
-    w: 75 h: 44
-    corner: 0
-    rect @icon_add {
-      w: 28 h: 28
-      fill: #6C5CE7
-      corner: 8
-      x: 200.9
-      y: -37.74
-    }
-    anim :press {
-      scale: 0.85
-      ease: spring 200ms
-    }
-  }
-  rect @tab_notifications {
-    w: 75 h: 44
-    corner: 0
-    x: 224.88
-    y: -1.99
-    ellipse @icon_notif {
-      w: 24 h: 24
-      fill: #999999
-      x: -31.06
-      y: 47.69
-    }
-    anim :press {
-      scale: 0.85
-      ease: spring 200ms
-    }
-  }
-  rect @tab_profile {
-    w: 75 h: 44
-    corner: 0
-    ellipse @icon_profile {
-      w: 24 h: 24
-      fill: #999999
-    }
-    anim :press {
-      scale: 0.85
-      ease: spring 200ms
-    }
-  }
-}
-
-@status_bar -> center_in: canvas
+@phone -> center_in: canvas

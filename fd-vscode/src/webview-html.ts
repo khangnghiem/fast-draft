@@ -13,6 +13,9 @@ export const COMMAND_AI_REFINE_ALL = "fd.aiRefineAll";
 export const COMMAND_SHOW_SPEC_VIEW = "fd.showSpecView";
 export const COMMAND_EXPORT_SPEC = "fd.exportSpec";
 export const COMMAND_TOGGLE_VIEW_MODE = "fd.toggleViewMode";
+export const COMMAND_OPEN_READONLY_VIEW = "fd.openReadOnlyView";
+export const COMMAND_CHANGE_VIEW_MODE = "fd.changeViewMode";
+export const COMMAND_RENAMIFY = "fd.renamify";
 
 export const HTML_TEMPLATE = `<!DOCTYPE html>
 <html lang="en">
@@ -244,44 +247,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       background: var(--fd-accent);
       cursor: pointer;
     }
-    .fab-btn {
-      background: transparent;
-      border: none;
-      color: #aaa;
-      font-size: 13px;
-      cursor: pointer;
-      padding: 2px 4px;
-      border-radius: 4px;
-      line-height: 1;
-    }
-    .fab-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
-    /* Overflow menu */
-    #fab-overflow-menu {
-      position: absolute;
-      bottom: calc(100% + 4px);
-      right: 0;
-      background: rgba(30,30,30,0.95);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 8px;
-      padding: 4px;
-      display: none;
-      flex-direction: column;
-      gap: 1px;
-      min-width: 120px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-    }
-    #fab-overflow-menu.visible { display: flex; }
-    .fab-menu-item {
-      background: transparent;
-      border: none;
-      color: #ccc;
-      font-size: 11px;
-      padding: 6px 10px;
-      text-align: left;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .fab-menu-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
 
     /* ── Onboarding Overlay ── */
     #onboarding-overlay {
@@ -449,6 +415,125 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .dark-theme #layers-panel::-webkit-scrollbar-thumb {
       background: rgba(255,255,255,0.12);
     }
+
+    /* ── Library Panel (right sidebar) ── */
+    #library-panel {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 260px;
+      background: var(--fd-surface);
+      border-left: 0.5px solid var(--fd-border);
+      overflow-y: auto;
+      overflow-x: hidden;
+      z-index: 10;
+      font-size: 12px;
+      padding: 0;
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+    }
+    #library-panel.visible { display: block; }
+    #library-panel::-webkit-scrollbar { width: 6px; }
+    #library-panel::-webkit-scrollbar-track { background: transparent; }
+    #library-panel::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.12);
+      border-radius: 3px;
+    }
+    .dark-theme #library-panel::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.12);
+    }
+    .lib-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px 8px;
+      border-bottom: 0.5px solid var(--fd-border);
+      position: sticky;
+      top: 0;
+      background: var(--fd-surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      z-index: 2;
+    }
+    .lib-title {
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: -0.01em;
+    }
+    .lib-close {
+      background: none;
+      border: none;
+      color: var(--fd-text-secondary);
+      font-size: 16px;
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 0.15s;
+      padding: 0 2px;
+    }
+    .lib-close:hover { opacity: 1; }
+    .lib-search {
+      display: block;
+      width: calc(100% - 24px);
+      margin: 8px 12px;
+      padding: 6px 10px;
+      border: 1px solid var(--fd-border);
+      border-radius: 6px;
+      background: var(--fd-input-bg);
+      color: var(--fd-text);
+      font-size: 12px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .lib-search:focus { border-color: var(--fd-accent); }
+    .lib-group-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--fd-text-secondary);
+      padding: 10px 12px 4px;
+      font-weight: 600;
+    }
+    .lib-component {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      border-radius: 6px;
+      margin: 1px 4px;
+      transition: background 0.1s;
+    }
+    .lib-component:hover {
+      background: var(--fd-accent);
+      color: var(--fd-accent-fg);
+    }
+    .lib-component .lib-icon {
+      width: 20px;
+      text-align: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .lib-component .lib-name {
+      flex: 1;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .lib-component .lib-kind {
+      font-size: 10px;
+      color: var(--fd-text-tertiary);
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+    }
+    .lib-component:hover .lib-kind { color: rgba(255,255,255,0.55); }
+    .lib-empty {
+      text-align: center;
+      padding: 24px 12px;
+      color: var(--fd-text-secondary);
+      font-size: 12px;
+    }
+    .lib-empty-icon { font-size: 24px; opacity: 0.4; margin-bottom: 8px; }
+    .zen-mode #library-panel { display: none !important; }
     .layers-header {
       display: flex;
       align-items: center;
@@ -615,11 +700,17 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       font-weight: 700;
       font-family: inherit;
       box-shadow: 0 2px 8px rgba(0, 122, 255, 0.35);
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.2s ease;
       z-index: 9;
     }
     .spec-badge-pin:hover {
       transform: scale(1.18);
+      box-shadow: 0 3px 12px rgba(0, 122, 255, 0.5);
+    }
+
+    .spec-badge-pin.active {
+      opacity: 1;
+      transform: scale(1.1);
       box-shadow: 0 3px 12px rgba(0, 122, 255, 0.5);
     }
     .spec-badge-count {
@@ -692,13 +783,144 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       font-size: 10px;
       font-weight: 600;
     }
-    .spec-badge.status-draft   { background: rgba(142,142,147,0.15); color: var(--fd-text-secondary); }
+    .spec-badge.status-todo    { background: rgba(142,142,147,0.15); color: var(--fd-text-secondary); }
+    .spec-badge.status-draft    { background: rgba(142,142,147,0.15); color: var(--fd-text-secondary); }
+    .spec-badge.status-doing    { background: rgba(255,159,10,0.15); color: #FF9F0A; }
     .spec-badge.status-in_progress { background: rgba(255,159,10,0.15); color: #FF9F0A; }
     .spec-badge.status-done    { background: rgba(52,199,89,0.15); color: #34C759; }
+    .spec-badge.status-blocked { background: rgba(255,59,48,0.15); color: #FF3B30; }
     .spec-badge.priority-high  { background: rgba(255,59,48,0.15); color: #FF3B30; }
     .spec-badge.priority-medium { background: rgba(255,159,10,0.15); color: #FF9F0A; }
     .spec-badge.priority-low   { background: rgba(52,199,89,0.15); color: #34C759; }
     .spec-badge.tag            { background: var(--fd-accent-dim); color: var(--fd-accent); }
+
+    /* ── Spec Hover Tooltip (replaces badge pins) ── */
+    #spec-hover-tooltip {
+      display: none;
+      position: absolute;
+      z-index: 200;
+      max-width: 260px;
+      padding: 8px 12px;
+      background: var(--fd-surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06);
+      font-size: 11px;
+      color: var(--fd-text);
+      pointer-events: none;
+      transition: opacity 0.12s ease;
+    }
+    .dark-theme #spec-hover-tooltip {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 1px 4px rgba(0,0,0,0.2);
+    }
+    #spec-hover-tooltip.visible { display: block; }
+    .spec-tip-id {
+      font-weight: 600;
+      font-size: 12px;
+      margin-bottom: 4px;
+      letter-spacing: -0.01em;
+    }
+    .spec-tip-desc {
+      color: var(--fd-text-secondary);
+      line-height: 1.4;
+      margin-bottom: 4px;
+    }
+    .spec-tip-badges {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .spec-tip-badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 8px;
+      font-size: 9px;
+      font-weight: 600;
+    }
+    .spec-tip-badge.status-todo { background: rgba(142,142,147,0.15); color: #8E8E93; }
+    .spec-tip-badge.status-doing { background: rgba(255,159,10,0.15); color: #FF9F0A; }
+    .spec-tip-badge.status-done { background: rgba(52,199,89,0.15); color: #34C759; }
+    .spec-tip-badge.status-blocked { background: rgba(255,59,48,0.15); color: #FF3B30; }
+
+    /* ── Edge Context Menu (frosted glass popover) ── */
+    #edge-context-menu {
+      display: none;
+      position: fixed;
+      z-index: 500;
+      min-width: 200px;
+      padding: 10px 12px;
+      background: var(--fd-surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.06);
+      font-size: 11px;
+      color: var(--fd-text);
+    }
+    .dark-theme #edge-context-menu {
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
+    }
+    #edge-context-menu.visible { display: block; }
+    .ecm-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+      gap: 8px;
+    }
+    .ecm-label {
+      font-weight: 500;
+      color: var(--fd-text-secondary);
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+    .ecm-select, .ecm-input {
+      background: var(--fd-surface-hover);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 6px;
+      color: var(--fd-text);
+      font-size: 11px;
+      padding: 3px 6px;
+      outline: none;
+    }
+    .ecm-select { min-width: 80px; }
+    .ecm-input { width: 48px; text-align: center; }
+    .ecm-color {
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 0;
+      background: none;
+    }
+    .ecm-sep {
+      border: none;
+      border-top: 0.5px solid var(--fd-border);
+      margin: 4px 0;
+    }
+    .spec-tip-badge.priority-high { background: rgba(255,59,48,0.15); color: #FF3B30; }
+    .spec-tip-badge.priority-medium { background: rgba(255,159,10,0.15); color: #FF9F0A; }
+    .spec-tip-badge.priority-low { background: rgba(52,199,89,0.15); color: #34C759; }
+
+    /* ── Center-Snap Guide Lines ── */
+    .center-snap-guide {
+      position: absolute;
+      background: rgba(108, 92, 231, 0.6);
+      pointer-events: none;
+      z-index: 15;
+    }
+    .center-snap-guide.vertical {
+      width: 1px;
+      top: 0; bottom: 0;
+    }
+    .center-snap-guide.horizontal {
+      height: 1px;
+      left: 0; right: 0;
+    }
     .spec-section-header {
       font-size: 10px;
       text-transform: uppercase;
@@ -810,9 +1032,12 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       border-radius: 4px;
       font-weight: 600;
     }
+    .spec-card-badge.status-todo { background: rgba(142,142,147,0.15); color: #8E8E93; }
     .spec-card-badge.status-draft { background: rgba(142,142,147,0.15); color: #8E8E93; }
+    .spec-card-badge.status-doing { background: rgba(255,159,10,0.15); color: #FF9F0A; }
     .spec-card-badge.status-in_progress { background: rgba(255,159,10,0.15); color: #FF9F0A; }
     .spec-card-badge.status-done { background: rgba(52,199,89,0.15); color: #34C759; }
+    .spec-card-badge.status-blocked { background: rgba(255,59,48,0.15); color: #FF3B30; }
     .spec-card-badge.priority-high { background: rgba(255,59,48,0.15); color: #FF3B30; }
     .spec-card-badge.priority-medium { background: rgba(255,159,10,0.15); color: #FF9F0A; }
     .spec-card-badge.priority-low { background: rgba(52,199,89,0.15); color: #34C759; }
@@ -994,6 +1219,37 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .export-menu-item:hover { background: #007FD4; color: #FFF; }
     .export-menu-sep { height: 1px; background: #404040; margin: 4px 0; }
 
+    /* ── Insert Dropdown (shape/element insertion) ── */
+    .insert-dropdown-container { position: relative; display: inline-block; }
+    .insert-menu {
+      display: none; position: absolute; top: 100%; left: 0; margin-top: 4px;
+      background: var(--fd-surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 8px;
+      box-shadow: var(--fd-shadow-lg);
+      flex-direction: column;
+      z-index: 1000; min-width: 160px; padding: 4px;
+    }
+    .insert-menu.visible { display: flex; }
+    .insert-section-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--fd-text-secondary);
+      padding: 6px 10px 3px;
+      font-weight: 600;
+    }
+    .insert-menu-item {
+      background: none; border: none; padding: 5px 10px;
+      color: var(--fd-text); font-size: 12px; cursor: pointer; text-align: left;
+      border-radius: 5px; display: flex; align-items: center; gap: 8px;
+      transition: none;
+    }
+    .insert-menu-item:hover { background: var(--fd-accent); color: var(--fd-accent-fg); }
+    .insert-menu-sep { height: 1px; background: var(--fd-border); margin: 3px 8px; }
+
     /* ── Minimap ── */
     #minimap-container {
       position: absolute;
@@ -1010,7 +1266,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       z-index: 15;
       overflow: hidden;
       cursor: pointer;
-      transition: opacity 0.2s ease;
+      transition: opacity 0.2s ease, box-shadow 0.2s ease;
     }
     #minimap-container:hover {
       box-shadow: var(--fd-shadow-lg);
@@ -1046,6 +1302,28 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .color-swatch.active {
       border-color: var(--fd-accent);
       box-shadow: 0 0 0 2px var(--fd-input-focus);
+    }
+
+    /* ── Layer Actions (⋮ Menu Button) ── */
+    .layer-actions {
+      width: 18px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: bold;
+      color: var(--fd-text-tertiary);
+      opacity: 0;
+      transition: opacity 0.12s ease, color 0.12s ease;
+      border-radius: 4px;
+    }
+    .layer-item:hover .layer-actions { opacity: 1; }
+    .layer-actions:hover {
+      color: var(--fd-text-primary);
+      background: var(--fd-hover);
     }
 
     /* ── Layer Visibility (Eye Icon) ── */
@@ -1328,73 +1606,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       font-weight: 500;
     }
 
-    /* ── Shape Palette (Freeform-style) ── */
-    #shape-palette {
-      position: absolute;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      flex-direction: row;
-      gap: 2px;
-      z-index: 50;
-      background: var(--fd-surface);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      border: 0.5px solid var(--fd-border);
-      border-radius: 12px;
-      padding: 5px;
-      box-shadow: var(--fd-shadow-md);
-      align-items: center;
-    }
-    .palette-sep {
-      width: 1px;
-      height: 24px;
-      background: var(--fd-border);
-      margin: 0 3px;
-      opacity: 0.6;
-      flex-shrink: 0;
-    }
-    .palette-item {
-      width: 38px;
-      height: 38px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 9px;
-      cursor: grab;
-      color: var(--fd-text-secondary);
-      font-size: 18px;
-      transition: all 0.18s cubic-bezier(0.25, 0.1, 0.25, 1);
-      user-select: none;
-      position: relative;
-    }
-    .palette-item:hover {
-      background: var(--fd-surface-hover);
-      color: var(--fd-text);
-    }
-    .palette-item:active {
-      cursor: grabbing;
-      transform: scale(0.90);
-      background: var(--fd-surface-active);
-    }
-    .palette-item .palette-label {
-      display: none;
-      position: absolute;
-      bottom: 46px;
-      background: var(--fd-surface-solid);
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 500;
-      white-space: nowrap;
-      pointer-events: none;
-      box-shadow: var(--fd-shadow-sm);
-      color: var(--fd-text);
-    }
-    .palette-item:hover .palette-label {
-      display: block;
-    }
+
 
     /* ── Annotation Card ── */
     #annotation-card {
@@ -1439,6 +1651,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       color: var(--fd-text-secondary);
       margin-bottom: 4px;
       font-weight: 600;
+      display: block;
     }
     #annotation-card textarea,
     #annotation-card input[type="text"],
@@ -1653,6 +1866,255 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     }
     .picker-existing .pe-remove:hover { opacity: 1; color: var(--fd-accent); }
 
+    /* ── Settings Hamburger Menu ── */
+    .settings-dropdown-container { position: relative; display: inline-block; }
+    .settings-menu {
+      display: none; position: absolute; top: 100%; right: 0; margin-top: 4px;
+      background: var(--fd-surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 8px;
+      box-shadow: var(--fd-shadow-lg);
+      flex-direction: column;
+      z-index: 1000; min-width: 200px; padding: 4px;
+    }
+    .settings-menu.visible { display: flex; }
+    .settings-menu-item {
+      background: none; border: none; padding: 5px 12px;
+      color: var(--fd-text); font-size: 12px; cursor: pointer; text-align: left;
+      border-radius: 5px; display: flex; align-items: center; gap: 8px;
+      transition: none; font-family: inherit;
+    }
+    .settings-menu-item:hover { background: var(--fd-accent); color: var(--fd-accent-fg); }
+    .settings-menu-item .sm-icon { width: 18px; text-align: center; flex-shrink: 0; }
+    .settings-menu-item .sm-label { flex: 1; }
+    .settings-menu-item .sm-shortcut {
+      font-size: 10px; color: var(--fd-text-tertiary);
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+    }
+    .settings-menu-item:hover .sm-shortcut { color: rgba(255,255,255,0.55); }
+    .settings-menu-sep { height: 1px; background: var(--fd-border); margin: 3px 8px; }
+    .settings-menu-item.toggle-on .sm-icon { color: var(--fd-accent); }
+
+    /* ── Bottom-Left Zoom & Undo/Redo Controls (Excalidraw-style) ── */
+    #bottom-left-controls {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .bl-control-group {
+      display: flex;
+      align-items: center;
+      background: var(--fd-surface);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 8px;
+      box-shadow: var(--fd-shadow-sm);
+      overflow: hidden;
+    }
+    .bl-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: var(--fd-text-secondary);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    .bl-btn:hover {
+      background: var(--fd-surface-hover);
+      color: var(--fd-text);
+    }
+    .bl-btn:active {
+      background: var(--fd-surface-active);
+      transform: scale(0.95);
+    }
+    .bl-btn.disabled {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    #zoom-reset-btn {
+      width: auto;
+      min-width: 48px;
+      padding: 0 6px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+    }
+    .bl-sep {
+      width: 0.5px;
+      height: 20px;
+      background: var(--fd-border);
+    }
+
+    /* ── Floating Bottom Toolbar (iPad UX) ── */
+    #floating-toolbar {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      z-index: 25;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 4px 6px;
+      background: var(--fd-surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.10), 0 1px 6px rgba(0,0,0,0.06);
+      transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+      cursor: default;
+    }
+    .dark-theme #floating-toolbar {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.35), 0 1px 6px rgba(0,0,0,0.2);
+    }
+    #floating-toolbar.collapsed {
+      padding: 4px;
+      border-radius: 50%;
+      gap: 0;
+    }
+    #floating-toolbar.collapsed .ft-tool-btn:not(.active) {
+      display: none;
+    }
+    #floating-toolbar.collapsed .ft-sep {
+      display: none;
+    }
+    #floating-toolbar.collapsed .ft-drag-handle {
+      display: none;
+    }
+    #floating-toolbar.collapsed .ft-tool-btn.active {
+      padding: 6px;
+      border-radius: 50%;
+    }
+    #floating-toolbar.at-top {
+      bottom: auto;
+      top: 52px;
+    }
+    .ft-tool-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border: none;
+      background: transparent;
+      color: var(--fd-text-secondary);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+    .ft-tool-btn svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+    .ft-tool-btn:hover {
+      background: var(--fd-surface-hover);
+      color: var(--fd-text);
+    }
+    .ft-tool-btn:active {
+      transform: scale(0.92);
+    }
+    .ft-tool-btn.active {
+      background: var(--fd-segment-active);
+      color: var(--fd-text);
+      box-shadow: var(--fd-segment-shadow);
+    }
+    .ft-tool-btn.locked::after {
+      content: '🔒';
+      font-size: 7px;
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      line-height: 1;
+    }
+    .ft-tool-btn .ft-key {
+      display: none;
+    }
+    .ft-tooltip {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 4px 10px;
+      background: var(--fd-surface);
+      backdrop-filter: blur(12px) saturate(180%);
+      -webkit-backdrop-filter: blur(12px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--fd-text);
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.15s ease, visibility 0.15s ease;
+      transition-delay: 0s;
+      z-index: 100;
+      letter-spacing: -0.01em;
+    }
+    .dark-theme .ft-tooltip {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.30), 0 1px 4px rgba(0,0,0,0.15);
+    }
+    .ft-tooltip .tt-shortcut {
+      color: var(--fd-text-tertiary);
+      margin-left: 4px;
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+    }
+    .ft-tool-btn:hover .ft-tooltip {
+      opacity: 1;
+      visibility: visible;
+      transition-delay: 0.4s;
+    }
+    .ft-tool-btn:active .ft-tooltip {
+      opacity: 0;
+      visibility: hidden;
+      transition-delay: 0s;
+    }
+    #floating-toolbar.collapsed .ft-tooltip {
+      display: none;
+    }
+    .ft-sep {
+      width: 0.5px;
+      height: 20px;
+      background: var(--fd-border);
+      margin: 0 2px;
+      opacity: 0.6;
+    }
+    .ft-drag-handle {
+      width: 4px;
+      height: 16px;
+      border-radius: 2px;
+      background: var(--fd-text-tertiary);
+      opacity: 0.4;
+      cursor: grab;
+      margin: 0 4px;
+      transition: opacity 0.15s;
+    }
+    .ft-drag-handle:hover {
+      opacity: 0.8;
+    }
+    .ft-drag-handle:active {
+      cursor: grabbing;
+    }
+
     /* ── Shortcut Help (Apple sheet) ── */
     #shortcut-help {
       display: none;
@@ -1772,27 +2234,13 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
 
     /* ── Zen Mode overrides ── */
     .zen-mode #toolbar {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      top: auto;
-      border: 0.5px solid var(--fd-border);
-      border-radius: 16px;
-      border-bottom: 0.5px solid var(--fd-border);
-      padding: 6px 10px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+      padding: 4px 8px;
       gap: 2px;
-      z-index: 50;
-    }
-    .dark-theme.zen-mode #toolbar {
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2);
     }
     .zen-mode .zen-full-only { display: none !important; }
     .zen-mode #layers-panel { display: none !important; }
     .zen-mode #props-panel { display: none !important; }
     .zen-mode #minimap-container { display: none !important; }
-    .zen-mode #shape-palette { display: none !important; }
     .zen-mode #selection-bar { display: none !important; }
     .zen-mode #spec-overlay { display: none !important; }
 
@@ -1804,58 +2252,176 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       display: block !important;
     }
 
+    /* ── Renamify Panel (diff-preview overlay) ── */
+    #renamify-panel {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 420px;
+      max-height: 70vh;
+      background: var(--fd-surface);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 14px;
+      box-shadow: var(--fd-shadow-lg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      z-index: 950;
+      overflow: hidden;
+      animation: renamifySlideIn 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+    #renamify-panel.visible { display: flex; flex-direction: column; }
+    @keyframes renamifySlideIn {
+      from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+    .renamify-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 10px;
+      border-bottom: 0.5px solid var(--fd-border);
+    }
+    .renamify-title {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: -0.02em;
+    }
+    .renamify-close {
+      background: none;
+      border: none;
+      color: var(--fd-text-secondary);
+      font-size: 18px;
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 0.15s;
+      padding: 0 2px;
+    }
+    .renamify-close:hover { opacity: 1; }
+    .renamify-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+    .renamify-body::-webkit-scrollbar { width: 6px; }
+    .renamify-body::-webkit-scrollbar-track { background: transparent; }
+    .renamify-body::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.12);
+      border-radius: 3px;
+    }
+    .dark-theme .renamify-body::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.12);
+    }
+    .renamify-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      transition: background 0.1s;
+    }
+    .renamify-row:hover { background: var(--fd-surface-hover); }
+    .renamify-row input[type="checkbox"] {
+      accent-color: var(--fd-accent);
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+    }
+    .renamify-old {
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+      font-size: 12px;
+      color: #FF453A;
+      text-decoration: line-through;
+      opacity: 0.7;
+      min-width: 100px;
+    }
+    .renamify-arrow {
+      color: var(--fd-text-tertiary);
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+    .renamify-new {
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+      font-size: 12px;
+      color: #30D158;
+      font-weight: 600;
+    }
+    .renamify-footer {
+      display: flex;
+      gap: 8px;
+      padding: 10px 16px 14px;
+      border-top: 0.5px solid var(--fd-border);
+      justify-content: flex-end;
+    }
+    .renamify-btn {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .renamify-btn.cancel {
+      background: var(--fd-surface-hover);
+      color: var(--fd-text-secondary);
+    }
+    .renamify-btn.cancel:hover { background: var(--fd-surface-active); }
+    .renamify-btn.accept {
+      background: var(--fd-accent);
+      color: var(--fd-accent-fg);
+    }
+    .renamify-btn.accept:hover { background: var(--fd-accent-hover); }
+    .renamify-btn:active { transform: scale(0.97); }
+    .renamify-empty {
+      text-align: center;
+      padding: 24px 16px;
+      color: var(--fd-text-secondary);
+      font-size: 13px;
+    }
+    .renamify-count {
+      font-size: 11px;
+      color: var(--fd-text-tertiary);
+      padding: 0 16px 4px;
+    }
+
   </style>
 </head>
 <body>
   <button id="zen-toggle-btn" title="Switch between Zen and Full layout"><span class="zen-icon">🧘</span> Zen</button>
   <div id="toolbar">
-    <button class="tool-btn active" data-tool="select"><span class="tool-icon">▸</span>Select<span class="tool-key">V</span></button>
-    <button class="tool-btn" data-tool="rect"><span class="tool-icon">▢</span>Rect<span class="tool-key">R</span></button>
-    <button class="tool-btn" data-tool="ellipse"><span class="tool-icon">◯</span>Ellipse<span class="tool-key">O</span></button>
-    <button class="tool-btn" data-tool="pen"><span class="tool-icon">✎</span>Pen<span class="tool-key">P</span></button>
-    <button class="tool-btn" data-tool="arrow"><span class="tool-icon">→</span>Arrow<span class="tool-key">A</span></button>
-    <button class="tool-btn" data-tool="text"><span class="tool-icon">T</span>Text<span class="tool-key">T</span></button>
-    <button class="tool-btn" data-tool="frame"><span class="tool-icon">⊞</span>Frame<span class="tool-key">F</span></button>
-    <div class="tool-sep zen-full-only"></div>
-    <button class="tool-btn zen-full-only" id="ai-refine-btn" title="AI Refine selected node (rename + restyle)">&#x2728; Refine</button>
-    <button class="tool-btn zen-full-only" id="ai-refine-all-btn" title="AI Refine all anonymous nodes">&#x2728; All</button>
+    <button class="tool-btn zen-full-only" id="ai-refine-btn" title="AI Touch selected node (select a node first)">✦ AI Touch</button>
+    <button class="tool-btn zen-full-only" id="renamify-btn" title="Renamify — batch AI rename anonymous node IDs">✦ Renamify</button>
     <div class="tool-sep zen-full-only"></div>
     <div class="view-toggle zen-full-only" id="view-toggle">
-      <button class="view-btn active" id="view-design" title="Design View — full canvas">Design</button>
+      <button class="view-btn active" id="view-all" title="All View — full details">All</button>
+      <button class="view-btn" id="view-design" title="Design View — visual properties">Design</button>
       <button class="view-btn" id="view-spec" title="Spec View — requirements and structure">Spec</button>
     </div>
-    <div class="tool-sep zen-full-only"></div>
-    <button class="tool-btn zen-full-only" id="grid-toggle-btn" title="Toggle grid overlay (G)">⊞</button>
-
-    <!-- Export Dropdown -->
-    <div class="export-dropdown-container zen-full-only" id="export-dropdown-container">
-      <button class="tool-btn" id="export-menu-btn" title="Export options">📥</button>
-      <div class="export-menu" id="export-menu">
-        <button class="export-menu-item" data-export="png-clip">📋 Copy as PNG (⌘⇧C)</button>
-        <button class="export-menu-item" data-export="png-file">🖼️ Save as PNG (2x)</button>
-        <button class="export-menu-item" data-export="svg-file">✨ Save as SVG</button>
-        <div class="export-menu-sep"></div>
-        <button class="export-menu-item" data-export="fd-clip">📝 Copy as .fd text</button>
-
+    <div style="flex:1"></div>
+    <span class="zen-full-only" id="status">Loading WASM…</span>
+    <!-- Settings Hamburger ☰ -->
+    <div class="settings-dropdown-container zen-full-only" id="settings-dropdown-container">
+      <button class="tool-btn" id="settings-menu-btn" title="Settings & tools">☰</button>
+      <div class="settings-menu" id="settings-menu">
+        <button class="settings-menu-item" id="sm-grid-toggle"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span><span class="sm-shortcut">G</span></button>
+        <button class="settings-menu-item" id="sm-spec-badge-toggle"><span class="sm-icon">◇</span><span class="sm-label">Spec Badges</span></button>
+        <button class="settings-menu-item" id="sm-library-toggle"><span class="sm-icon">📦</span><span class="sm-label">Libraries</span><span class="sm-shortcut">⇧L</span></button>
+        <button class="settings-menu-item" id="sm-sketchy-toggle"><span class="sm-icon">✏️</span><span class="sm-label">Sketchy Mode</span></button>
+        <button class="settings-menu-item" id="sm-theme-toggle"><span class="sm-icon">🌙</span><span class="sm-label">Dark Theme</span></button>
+        <div class="settings-menu-sep"></div>
+        <button class="settings-menu-item" data-export="png-clip"><span class="sm-icon">📋</span><span class="sm-label">Copy as PNG</span><span class="sm-shortcut">⌘⇧C</span></button>
+        <button class="settings-menu-item" data-export="png-file"><span class="sm-icon">🖼️</span><span class="sm-label">Save as PNG</span></button>
+        <button class="settings-menu-item" data-export="svg-file"><span class="sm-icon">✨</span><span class="sm-label">Save as SVG</span></button>
+        <button class="settings-menu-item" data-export="fd-clip"><span class="sm-icon">📝</span><span class="sm-label">Copy as .fd</span></button>
+        <div class="settings-menu-sep"></div>
+        <button class="settings-menu-item" id="sm-shortcuts"><span class="sm-icon">⌨️</span><span class="sm-label">Keyboard Shortcuts</span><span class="sm-shortcut">?</span></button>
       </div>
     </div>
-    <div class="tool-sep zen-full-only"></div>
-    <button class="tool-btn" id="sketchy-toggle-btn" title="Toggle sketchy hand-drawn mode">✏️</button>
-    <button class="tool-btn zen-full-only" id="theme-toggle-btn" title="Toggle light/dark canvas theme">🌙</button>
-    <button class="zen-full-only" id="zoom-level" title="Zoom level (click to reset to 100%)">100%</button>
-    <button class="tool-btn zen-full-only" id="tool-help-btn" title="Keyboard shortcuts">?</button>
-    <span class="zen-full-only" id="status">Loading WASM…</span>
   </div>
   <div id="canvas-container">
-    <div id="shape-palette">
-      <div class="palette-item" draggable="true" data-shape="rect">▢<span class="palette-label">Rectangle</span></div>
-      <div class="palette-item" draggable="true" data-shape="ellipse">◯<span class="palette-label">Ellipse</span></div>
-      <div class="palette-item" draggable="true" data-shape="text">T<span class="palette-label">Text</span></div>
-      <div class="palette-sep"></div>
-      <div class="palette-item" draggable="true" data-shape="frame">▣<span class="palette-label">Frame</span></div>
-      <div class="palette-item" draggable="true" data-shape="line">━<span class="palette-label">Line</span></div>
-      <div class="palette-item" draggable="true" data-shape="arrow">→<span class="palette-label">Arrow</span></div>
-    </div>
+
     <div id="onboarding-overlay">
       <div class="onboard-heading">Start drawing</div>
       <div class="onboard-sub">Create something beautiful</div>
@@ -1879,21 +2445,21 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <div class="onboard-hint">Press <kbd>?</kbd> for all shortcuts</div>
     </div>
     <div id="floating-action-bar">
-      <span class="fab-label">Fill</span>
+      <label class="fab-label" for="fab-fill">Fill</label>
       <input type="color" id="fab-fill" class="fab-color" value="#4A90D9" title="Fill color">
       <div class="fab-sep"></div>
-      <span class="fab-label">Stroke</span>
+      <label class="fab-label" for="fab-stroke">Stroke</label>
       <input type="color" id="fab-stroke" class="fab-color" value="#333333" title="Stroke color">
-      <input type="number" id="fab-stroke-w" class="fab-input" min="0" max="20" step="1" value="1" title="Stroke width">
+      <input type="number" id="fab-stroke-w" aria-label="Stroke width" class="fab-input" min="0" max="20" step="1" value="1" title="Stroke width">
       <div class="fab-sep"></div>
-      <span class="fab-label">Opacity</span>
-      <input type="range" id="fab-opacity" class="fab-slider" min="0" max="1" step="0.05" value="1" title="Opacity">
+      <label class="fab-label" for="fab-opacity">Opacity</label>
+      <input type="range" id="fab-opacity" aria-label="Opacity" class="fab-slider" min="0" max="1" step="0.05" value="1" title="Opacity">
       <span id="fab-opacity-val" style="font-size:10px;min-width:24px">100%</span>
       <div class="fab-sep fab-text-only"></div>
-      <span class="fab-label fab-text-only">Size</span>
+      <label class="fab-label fab-text-only" for="fab-font-size">Size</label>
       <input type="number" id="fab-font-size" class="fab-input fab-text-only" min="8" max="200" step="1" value="16" title="Font size">
       <div class="fab-sep"></div>
-      <button class="fab-btn" id="fab-more-btn" title="More actions">⋯</button>
+      <button class="fab-btn" id="fab-more-btn" aria-label="More actions" title="More actions">⋯</button>
       <div id="fab-overflow-menu">
         <button class="fab-menu-item" data-action="group">⌘G Group</button>
         <button class="fab-menu-item" data-action="ungroup">⌘⇧G Ungroup</button>
@@ -1905,9 +2471,47 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <canvas id="fd-canvas" class="tool-select"></canvas>
     <div id="dimension-tooltip"></div>
     <div id="spec-overlay"></div>
+    <div id="spec-hover-tooltip"></div>
+    <div id="edge-context-menu">
+      <div class="ecm-row"><span class="ecm-label">Arrow</span><select class="ecm-select" id="ecm-arrow"><option value="end">End →</option><option value="start">← Start</option><option value="both">← Both →</option><option value="none">None</option></select></div>
+      <div class="ecm-row"><span class="ecm-label">Curve</span><select class="ecm-select" id="ecm-curve"><option value="smooth">Smooth</option><option value="straight">Straight</option><option value="step">Step</option></select></div>
+      <hr class="ecm-sep">
+      <div class="ecm-row"><span class="ecm-label">Stroke</span><input type="color" class="ecm-color" id="ecm-stroke-color" value="#999999"><input type="number" class="ecm-input" id="ecm-stroke-width" value="1" min="0.5" max="10" step="0.5"></div>
+      <hr class="ecm-sep">
+      <div class="ecm-row"><span class="ecm-label">Flow</span><select class="ecm-select" id="ecm-flow"><option value="none">None</option><option value="pulse">Pulse</option><option value="dash">Dash</option></select><input type="number" class="ecm-input" id="ecm-flow-dur" value="800" min="100" max="5000" step="100" style="display:none"></div>
+    </div>
+    <div id="center-snap-guides"></div>
     <div id="layers-panel"></div>
+    <div id="library-panel"></div>
     <div id="minimap-container"><canvas id="minimap-canvas"></canvas></div>
     <div id="selection-bar"></div>
+    <!-- Bottom-left Zoom & Undo/Redo controls (Excalidraw-style) -->
+    <div id="bottom-left-controls">
+      <div class="bl-control-group">
+        <button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button>
+        <div class="bl-sep"></div>
+        <button class="bl-btn" id="zoom-reset-btn" title="Reset zoom (click)">100%</button>
+        <div class="bl-sep"></div>
+        <button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button>
+      </div>
+      <div class="bl-control-group">
+        <button class="bl-btn" id="undo-btn" title="Undo (⌘Z)">↩</button>
+        <div class="bl-sep"></div>
+        <button class="bl-btn" id="redo-btn" title="Redo (⌘⇧Z)">↪</button>
+      </div>
+    </div>
+    <!-- Floating Bottom Toolbar (iPad UX) -->
+    <div id="floating-toolbar">
+      <div class="ft-drag-handle" id="ft-drag-handle" title="Drag to move toolbar"></div>
+      <button class="ft-tool-btn active" data-tool="select"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2L3.5 13.5L7 10L11.5 14.5L13 13L9 8.5L13 8.5Z"/></svg><span class="ft-tooltip">Select<span class="tt-shortcut">V</span></span></button>
+      <div class="ft-sep"></div>
+      <button class="ft-tool-btn" data-tool="rect"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="12" height="10" rx="2"/></svg><span class="ft-tooltip">Rectangle<span class="tt-shortcut">R</span></span></button>
+      <button class="ft-tool-btn" data-tool="ellipse"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/></svg><span class="ft-tooltip">Ellipse<span class="tt-shortcut">O</span></span></button>
+      <button class="ft-tool-btn" data-tool="pen"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5L14.5 7.5L6.5 15.5H2.5V11.5Z"/><path d="M10.5 3.5L14.5 7.5" /><path d="M8.5 5.5L12.5 9.5"/></svg><span class="ft-tooltip">Pen<span class="tt-shortcut">P</span></span></button>
+      <button class="ft-tool-btn" data-tool="arrow"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14L14 4"/><path d="M7 4H14V11"/></svg><span class="ft-tooltip">Arrow<span class="tt-shortcut">A</span></span></button>
+      <button class="ft-tool-btn" data-tool="text"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4H14"/><path d="M9 4V15"/><path d="M6 15H12"/></svg><span class="ft-tooltip">Text<span class="tt-shortcut">T</span></span></button>
+      <button class="ft-tool-btn" data-tool="frame"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="14" height="14" rx="2"/><rect x="5.5" y="5.5" width="7" height="7" rx="1"/></svg><span class="ft-tooltip">Frame<span class="tt-shortcut">F</span></span></button>
+    </div>
     <div id="loading"><div class="loading-spinner"></div>Loading FD engine…</div>
     <!-- Properties Panel (Apple-style) -->
     <div id="props-panel">
@@ -1920,19 +2524,19 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
           <div class="props-section-label">Position & Size</div>
           <div class="props-grid">
             <div class="props-field">
-              <label>X</label>
+              <label for="prop-x">X</label>
               <input type="number" id="prop-x" step="1">
             </div>
             <div class="props-field">
-              <label>Y</label>
+              <label for="prop-y">Y</label>
               <input type="number" id="prop-y" step="1">
             </div>
             <div class="props-field">
-              <label>W</label>
+              <label for="prop-w">W</label>
               <input type="number" id="prop-w" step="1" min="0">
             </div>
             <div class="props-field">
-              <label>H</label>
+              <label for="prop-h">H</label>
               <input type="number" id="prop-h" step="1" min="0">
             </div>
           </div>
@@ -1941,20 +2545,20 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
           <div class="props-section-label">Appearance</div>
           <div class="props-grid">
             <div class="props-field">
-              <label>Fill</label>
+              <label for="prop-fill">Fill</label>
               <input type="color" id="prop-fill" value="#CCCCCC">
               <div class="color-swatches" id="fill-swatches"></div>
             </div>
             <div class="props-field">
-              <label>Corner</label>
+              <label for="prop-corner">Corner</label>
               <input type="number" id="prop-corner" step="1" min="0" value="0">
             </div>
             <div class="props-field">
-              <label>Stroke</label>
+              <label for="prop-stroke-color">Stroke</label>
               <input type="color" id="prop-stroke-color" value="#000000">
             </div>
             <div class="props-field">
-              <label>Width</label>
+              <label for="prop-stroke-w">Width</label>
               <input type="number" id="prop-stroke-w" step="0.5" min="0" value="0">
             </div>
           </div>
@@ -1990,30 +2594,31 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
   </div>
   <div id="annotation-card">
     <div class="card-header">
-      <span id="card-title">Annotations</span>
+      <span id="card-title">Spec</span>
       <button class="card-close" id="card-close-btn">×</button>
     </div>
     <div class="field-group">
-      <div class="field-label">Description</div>
+      <label class="field-label" for="ann-description">Description</label>
       <textarea id="ann-description" placeholder="What this node is/does…"></textarea>
     </div>
     <div class="field-group">
       <div class="field-label">Acceptance Criteria</div>
       <div id="ann-accept-list"></div>
-      <button class="add-btn" id="ann-add-accept">+ Add criterion</button>
+      <button class="add-btn" id="ann-add-accept">+ Add</button>
     </div>
     <div class="field-group status-row">
       <div style="flex:1">
-        <div class="field-label">Status</div>
+        <label class="field-label" for="ann-status">Status</label>
         <select id="ann-status">
           <option value="">None</option>
-          <option value="draft">Draft</option>
-          <option value="in_progress">In Progress</option>
+          <option value="todo">To Do</option>
+          <option value="doing">Doing</option>
           <option value="done">Done</option>
+          <option value="blocked">Blocked</option>
         </select>
       </div>
       <div style="flex:1">
-        <div class="field-label">Priority</div>
+        <label class="field-label" for="ann-priority">Priority</label>
         <select id="ann-priority">
           <option value="">None</option>
           <option value="high">High</option>
@@ -2023,18 +2628,44 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       </div>
     </div>
     <div class="field-group">
-      <div class="field-label">Tags</div>
+      <label class="field-label" for="ann-tags">Tags</label>
       <input type="text" id="ann-tags" placeholder="comma-separated tags">
     </div>
   </div>
   <div id="context-menu">
-    <div class="menu-item" id="ctx-add-annotation"><span class="menu-icon">◇</span><span class="menu-label">Add Annotation</span></div>
-    <div class="menu-item" id="ctx-ai-refine"><span class="menu-icon">✦</span><span class="menu-label">AI Refine</span></div>
+    <div class="menu-item" id="ctx-ai-refine"><span class="menu-icon">✦</span><span class="menu-label">AI Touch</span></div>
+    <div class="menu-item" id="ctx-add-annotation"><span class="menu-icon">◇</span><span class="menu-label">Add Spec</span></div>
+    <div class="menu-item" id="ctx-view-spec" style="display:none"><span class="menu-icon">◈</span><span class="menu-label">View Spec</span><span class="menu-shortcut">⌘I</span></div>
+    <div class="menu-item" id="ctx-show-specs" style="display:none"><span class="menu-icon">◇</span><span class="menu-label">Show Specs</span></div>
+
+    <div class="menu-separator"></div>
+    <div class="menu-item" id="ctx-cut" data-action="cut"><span class="menu-icon">✂</span><span class="menu-label">Cut</span><span class="menu-shortcut">⌘X</span></div>
+    <div class="menu-item" id="ctx-copy" data-action="copy"><span class="menu-icon">⎘</span><span class="menu-label">Copy</span><span class="menu-shortcut">⌘C</span></div>
+    <div class="menu-item" id="ctx-paste" data-action="paste"><span class="menu-icon">📋</span><span class="menu-label">Paste</span><span class="menu-shortcut">⌘V</span></div>
+    <div class="menu-item" id="ctx-copy-png" data-action="copy-png"><span class="menu-icon">🖼</span><span class="menu-label">Copy as PNG</span><span class="menu-shortcut">⌘⇧C</span></div>
     <div class="menu-separator"></div>
     <div class="menu-item" id="ctx-duplicate" data-action="duplicate"><span class="menu-icon">⊕</span><span class="menu-label">Duplicate</span><span class="menu-shortcut">⌘D</span></div>
-    <div class="menu-item" id="ctx-group" data-action="group"><span class="menu-icon">◫</span><span class="menu-label">Group</span><span class="menu-shortcut">⌘G</span></div>
-    <div class="menu-item" id="ctx-ungroup" data-action="ungroup"><span class="menu-icon">◻</span><span class="menu-label">Ungroup</span><span class="menu-shortcut">⇧⌘G</span></div>
+    <div class="menu-item" id="ctx-group" data-action="group"><span class="menu-icon">◻</span><span class="menu-label">Group</span><span class="menu-shortcut">⌘G</span></div>
+    <div class="menu-item" id="ctx-ungroup" data-action="ungroup"><span class="menu-icon">◫</span><span class="menu-label">Ungroup</span><span class="menu-shortcut">⇧⌘G</span></div>
+    <div class="menu-item" id="ctx-frame" data-action="frame-selection"><span class="menu-icon">⊞</span><span class="menu-label">Frame Selection</span></div>
+    <div class="menu-separator"></div>
+    <div class="menu-item" id="ctx-bring-front" data-action="bring-front"><span class="menu-icon">↑</span><span class="menu-label">Bring to Front</span><span class="menu-shortcut">⌘⇧]</span></div>
+    <div class="menu-item" id="ctx-send-back" data-action="send-back"><span class="menu-icon">↓</span><span class="menu-label">Send to Back</span><span class="menu-shortcut">⌘⇧[</span></div>
+    <div class="menu-item disabled" id="ctx-lock" data-action="lock"><span class="menu-icon">🔒</span><span class="menu-label">Lock</span></div>
+    <div class="menu-separator"></div>
     <div class="menu-item" id="ctx-delete" data-action="delete"><span class="menu-icon">⊖</span><span class="menu-label">Delete</span><span class="menu-shortcut">⌫</span></div>
+  </div>
+  <div id="renamify-panel">
+    <div class="renamify-header">
+      <span class="renamify-title">✦ Renamify</span>
+      <button class="renamify-close" id="renamify-close">×</button>
+    </div>
+    <div class="renamify-body" id="renamify-body"></div>
+    <div class="renamify-footer" id="renamify-footer" style="display:none">
+      <button class="renamify-btn cancel" id="renamify-cancel">Cancel</button>
+      <button class="renamify-btn accept" id="renamify-accept-selected">Accept Selected</button>
+      <button class="renamify-btn accept" id="renamify-accept-all">Accept All</button>
+    </div>
   </div>
   <div id="anim-picker">
     <div class="picker-header"><span class="picker-icon">⚡</span> Add Animation <button class="picker-close" id="anim-picker-close">×</button></div>
@@ -2048,7 +2679,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     window.vscodeApi = acquireVsCodeApi();
   </script>
   <script nonce="{nonce}">
-    // ─── AI Refine toolbar + context menu handlers ─────────
+    // ─── AI Touch toolbar + context menu handlers ─────────
     (function() {
       const vscodeApi = window.vscodeApi;
       let selectedNodeId = null;
@@ -2060,40 +2691,223 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         }
         if (e.data.type === 'aiRefineStarted') {
           const btn = document.getElementById('ai-refine-btn');
-          const allBtn = document.getElementById('ai-refine-all-btn');
           if (btn) { btn.textContent = '⏳ Refining…'; btn.disabled = true; }
-          if (allBtn) { allBtn.disabled = true; }
         }
         if (e.data.type === 'aiRefineComplete') {
           const btn = document.getElementById('ai-refine-btn');
-          const allBtn = document.getElementById('ai-refine-all-btn');
-          if (btn) { btn.textContent = '✨ Refine'; btn.disabled = false; }
-          if (allBtn) { allBtn.disabled = false; }
+          if (btn) { btn.textContent = '✦ AI Touch'; btn.disabled = false; }
         }
       });
 
-      // Refine selected node
+      // Touch selected node
       document.getElementById('ai-refine-btn')?.addEventListener('click', () => {
-        if (selectedNodeId) {
-          vscodeApi.postMessage({ type: 'aiRefine', nodeIds: [selectedNodeId] });
-        } else {
-          // No selection — refine all anon nodes
-          vscodeApi.postMessage({ type: 'aiRefineAll' });
-        }
+        const ids = selectedNodeId ? [selectedNodeId] : [];
+        vscodeApi.postMessage({ type: 'aiRefine', nodeIds: ids });
       });
 
-      // Refine all anonymous nodes
-      document.getElementById('ai-refine-all-btn')?.addEventListener('click', () => {
-        vscodeApi.postMessage({ type: 'aiRefineAll' });
-      });
-
-      // Context menu: AI Refine
+      // Context menu: AI Touch
       document.getElementById('ctx-ai-refine')?.addEventListener('click', () => {
         if (selectedNodeId) {
           vscodeApi.postMessage({ type: 'aiRefine', nodeIds: [selectedNodeId] });
         }
         document.getElementById('context-menu')?.classList.remove('visible');
       });
+    })();
+  </script>
+  <script nonce="{nonce}">
+    // ─── Renamify panel handlers ─────────
+    (function() {
+      const vscodeApi = window.vscodeApi;
+      const panel = document.getElementById('renamify-panel');
+      const body = document.getElementById('renamify-body');
+      const footer = document.getElementById('renamify-footer');
+      const btn = document.getElementById('renamify-btn');
+      let proposals = [];
+
+      function closePanel() {
+        panel.classList.remove('visible');
+        body.innerHTML = '';
+        footer.style.display = 'none';
+        proposals = [];
+      }
+
+      function renderProposals(items) {
+        proposals = items;
+        body.innerHTML = '';
+        if (items.length === 0) {
+          body.innerHTML = '<div class="renamify-empty">No renames proposed.</div>';
+          footer.style.display = 'none';
+          return;
+        }
+        const count = document.createElement('div');
+        count.className = 'renamify-count';
+        count.textContent = items.length + ' rename' + (items.length > 1 ? 's' : '') + ' proposed';
+        body.appendChild(count);
+        items.forEach((p, i) => {
+          const row = document.createElement('div');
+          row.className = 'renamify-row';
+          row.innerHTML =
+            '<input type="checkbox" checked data-idx="' + i + '">' +
+            '<span class="renamify-old">@' + p.oldId + '</span>' +
+            '<span class="renamify-arrow">→</span>' +
+            '<span class="renamify-new">@' + p.newId + '</span>';
+          body.appendChild(row);
+        });
+        footer.style.display = 'flex';
+      }
+
+      function getSelected() {
+        const checks = body.querySelectorAll('input[type=checkbox]');
+        const selected = [];
+        checks.forEach(cb => {
+          if (cb.checked) selected.push(proposals[parseInt(cb.dataset.idx)]);
+        });
+        return selected;
+      }
+
+      // Button click
+      btn?.addEventListener('click', () => {
+        vscodeApi.postMessage({ type: 'renamify' });
+      });
+
+      // Messages from extension
+      window.addEventListener('message', (e) => {
+        if (e.data.type === 'triggerRenamify') {
+          vscodeApi.postMessage({ type: 'renamify' });
+        }
+        if (e.data.type === 'renamifyStarted') {
+          if (btn) { btn.textContent = '⏳ Analyzing…'; btn.disabled = true; }
+        }
+        if (e.data.type === 'renamifyProposals') {
+          if (btn) { btn.textContent = '✦ Renamify'; btn.disabled = false; }
+          renderProposals(e.data.proposals || []);
+          panel.classList.add('visible');
+        }
+        if (e.data.type === 'renamifyComplete') {
+          if (btn) { btn.textContent = '✦ Renamify'; btn.disabled = false; }
+          closePanel();
+        }
+      });
+
+      // Cancel
+      document.getElementById('renamify-cancel')?.addEventListener('click', closePanel);
+      document.getElementById('renamify-close')?.addEventListener('click', closePanel);
+
+      // Accept selected
+      document.getElementById('renamify-accept-selected')?.addEventListener('click', () => {
+        const renames = getSelected();
+        if (renames.length > 0) {
+          vscodeApi.postMessage({ type: 'renamifyAccepted', renames });
+        }
+        closePanel();
+      });
+
+      // Accept all
+      document.getElementById('renamify-accept-all')?.addEventListener('click', () => {
+        if (proposals.length > 0) {
+          vscodeApi.postMessage({ type: 'renamifyAccepted', renames: proposals });
+        }
+        closePanel();
+      });
+    })();
+  </script>
+  <script nonce="{nonce}">
+    // ─── Floating toolbar: drag handle + collapse toggle ─────────
+    (function() {
+      const toolbar = document.getElementById('floating-toolbar');
+      const handle = document.getElementById('ft-drag-handle');
+      if (!toolbar || !handle) return;
+
+      const vscodeApi = window.vscodeApi;
+      const DRAG_THRESHOLD = 5;
+      let dragging = false;
+      let startX = 0;
+      let startY = 0;
+      let offsetX = 0;
+      let offsetY = 0;
+      let movedPastThreshold = false;
+      let positioned = false;
+
+      function saveState() {
+        const prev = vscodeApi.getState() || {};
+        vscodeApi.setState(Object.assign({}, prev, {
+          ftLeft: toolbar.style.left,
+          ftBottom: toolbar.style.bottom,
+          ftPositioned: positioned,
+          ftCollapsed: toolbar.classList.contains('collapsed'),
+        }));
+      }
+
+      function restoreState() {
+        const state = vscodeApi.getState();
+        if (!state) return;
+        if (state.ftCollapsed) {
+          toolbar.classList.add('collapsed');
+        }
+        if (state.ftPositioned && state.ftLeft != null && state.ftBottom != null) {
+          toolbar.style.left = state.ftLeft;
+          toolbar.style.bottom = state.ftBottom;
+          toolbar.style.transform = 'none';
+          positioned = true;
+        }
+      }
+
+      handle.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        dragging = true;
+        movedPastThreshold = false;
+        startX = e.clientX;
+        startY = e.clientY;
+
+        const rect = toolbar.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+
+        handle.setPointerCapture(e.pointerId);
+      });
+
+      handle.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        if (!movedPastThreshold) {
+          if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+          movedPastThreshold = true;
+          toolbar.style.transform = 'none';
+          positioned = true;
+        }
+
+        const container = toolbar.parentElement;
+        const cRect = container.getBoundingClientRect();
+        const tRect = toolbar.getBoundingClientRect();
+
+        let newLeft = e.clientX - cRect.left - offsetX;
+        let newBottom = cRect.bottom - e.clientY - (tRect.height - offsetY);
+
+        // Clamp within container
+        newLeft = Math.max(0, Math.min(newLeft, cRect.width - tRect.width));
+        newBottom = Math.max(0, Math.min(newBottom, cRect.height - tRect.height));
+
+        toolbar.style.left = newLeft + 'px';
+        toolbar.style.bottom = newBottom + 'px';
+      });
+
+      handle.addEventListener('pointerup', (e) => {
+        if (!dragging) return;
+        dragging = false;
+
+        if (!movedPastThreshold) {
+          // Treated as click — toggle collapsed
+          toolbar.classList.toggle('collapsed');
+        }
+
+        saveState();
+      });
+
+      // Restore saved position and collapsed state on load
+      restoreState();
     })();
   </script>
   <script nonce="{nonce}" type="module" src="{mainJsUri}"></script>

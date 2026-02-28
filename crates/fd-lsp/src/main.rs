@@ -168,6 +168,43 @@ async fn main() {
         return;
     }
 
+    // ── `fd-lsp --view <mode>` mode ─────────────────────────────────────
+    // Reads FD source from stdin, emits a filtered view on stdout.
+    if args.get(1).map(|s| s.as_str()) == Some("--view") {
+        use std::io::Read;
+        let mode_str = args.get(2).map(|s| s.as_str()).unwrap_or("full");
+        let mode = match mode_str {
+            "full" => fd_core::ReadMode::Full,
+            "structure" => fd_core::ReadMode::Structure,
+            "layout" => fd_core::ReadMode::Layout,
+            "design" => fd_core::ReadMode::Design,
+            "spec" => fd_core::ReadMode::Spec,
+            "visual" => fd_core::ReadMode::Visual,
+            "when" => fd_core::ReadMode::When,
+            "edges" => fd_core::ReadMode::Edges,
+            other => {
+                eprintln!("fd-lsp --view error: unknown mode '{other}'");
+                eprintln!(
+                    "valid modes: full, structure, layout, design, spec, visual, when, edges"
+                );
+                std::process::exit(1);
+            }
+        };
+        let mut text = String::new();
+        std::io::stdin()
+            .read_to_string(&mut text)
+            .expect("failed to read stdin");
+
+        match fd_core::parser::parse_document(&text) {
+            Ok(graph) => print!("{}", fd_core::emit_filtered(&graph, mode)),
+            Err(e) => {
+                eprintln!("fd-lsp --view error: {e}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+
     // ── Standard LSP server mode ─────────────────────────────────────────
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();

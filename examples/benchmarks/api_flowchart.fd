@@ -1,27 +1,27 @@
 # API Flowchart — Software Engineer use case
 # Demonstrates: edges with labels/arrows, spec blocks, decision flow
 
-style process_box {
+theme process_box {
   fill: #EFF6FF
   corner: 8
 }
 
-style decision_box {
+theme decision_box {
   fill: #FEF3C7
   corner: 4
 }
 
-style success_box {
+theme success_box {
   fill: #D1FAE5
   corner: 8
 }
 
-style error_box {
+theme error_box {
   fill: #FEE2E2
   corner: 8
 }
 
-style io_box {
+theme io_box {
   fill: #F3E8FF
   corner: 12
 }
@@ -109,7 +109,7 @@ rect @db_query {
   spec {
     "Database read/write operations"
     accept: "queries < 100ms p95"
-    status: in_progress
+    status: doing
   }
   w: 200 h: 48
   use: process_box

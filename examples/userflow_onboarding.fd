@@ -2,17 +2,17 @@
 # Onboarding User Flow — multi-step with error paths
 import "../../examples/design_system.fd" as ds
 
-style screen {
+theme screen {
   fill: #FFFFFF
   corner: 16
 }
 
-style screen_title {
+theme screen_title {
   fill: #1A1A2E
   font: "Inter" 700 20
 }
 
-style flow_edge {
+theme flow_edge {
   stroke: #6C5CE7 2
 }
 
@@ -46,7 +46,7 @@ rect @verify_email {
     "Email verification step"
     accept: "shows 6-digit OTP input"
     accept: "resend link after 60s cooldown"
-    status: in_progress
+    status: doing
   }
   w: 200 h: 120
   use: screen
@@ -57,7 +57,7 @@ rect @setup_profile {
   spec {
     "Profile setup — avatar, bio, preferences"
     accept: "avatar upload with crop"
-    status: draft
+    status: todo
   }
   w: 200 h: 120
   use: screen
@@ -67,7 +67,7 @@ rect @setup_profile {
 rect @dashboard {
   spec {
     "Main application dashboard"
-    status: draft
+    status: todo
     tag: core
   }
   w: 200 h: 120

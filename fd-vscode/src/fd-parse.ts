@@ -32,8 +32,8 @@ const NODE_REGEX = {
   GENERIC: /^\s*@(\w+)\s*\{/,
 };
 
-const STYLE_REGEX = /^\s*style\s+(\w+)\s*\{/;
-const ANIM_REGEX = /^\s*anim\s+:(\w+)\s*\{/;
+const STYLE_REGEX = /^\s*(theme|style)\s+(\w+)\s*\{/;
+const ANIM_REGEX = /^\s*(when|anim)\s+:(\w+)\s*\{/;
 const CONSTRAINT_REGEX = /^\s*@(\w+)\s*->\s*(.+)/;
 
 // ─── Types ───────────────────────────────────────────────────────────────
@@ -325,8 +325,8 @@ export function computeSpecHideLines(lines: string[]): number[] {
       continue;
     }
 
-    // Track anim blocks
-    if (/^\s*anim\s+[:\w]+\s*\{/.test(text)) {
+    // Track when/anim blocks
+    if (/^\s*(when|anim)\s+[:\w]+\s*\{/.test(text)) {
       insideAnimBlock = true;
       animDepth = (trimmed.match(/\{/g) || []).length;
       animDepth -= (trimmed.match(/\}/g) || []).length;
@@ -473,6 +473,50 @@ export function findAnonNodeIds(fdText: string): string[] {
   return [...ids];
 }
 
+// ─── Anonymous Node Detection (Renamify) ─────────────────────────────────
+
+/** Pattern for auto-generated anonymous node IDs: @kind_N or @_anon_N */
+const ANONYMOUS_ID_REGEX = /^(?:rect|ellipse|text|group|path|frame|generic|_anon)_\d+$/;
+
+/**
+ * Find all anonymous node IDs in an FD document.
+ * Matches patterns like @rect_1, @ellipse_3, @group_2, @_anon_0, etc.
+ */
+export function findAnonymousNodeIds(fdText: string): string[] {
+  const allIds = findAllNodeIds(fdText);
+  return allIds.filter((id) => ANONYMOUS_ID_REGEX.test(id));
+}
+
+/**
+ * Collect every @id reference in an FD document.
+ * Used for conflict detection when proposing renames.
+ */
+export function findAllNodeIds(fdText: string): string[] {
+  const matches = fdText.matchAll(/@(\w+)/g);
+  const ids = new Set<string>();
+  for (const m of matches) {
+    ids.add(m[1]);
+  }
+  return [...ids];
+}
+
+/**
+ * Sanitize a proposed name into a valid FD identifier (snake_case).
+ * Lowercases, replaces spaces/hyphens/dots with underscores, strips
+ * invalid characters, collapses consecutive underscores, and truncates
+ * to 30 characters.
+ */
+export function sanitizeToFdId(name: string): string {
+  let result = name.toLowerCase().trim();
+  result = result.replace(/[\s\-./]+/g, "_");
+  result = result.replace(/[^a-z0-9_]/g, "");
+  result = result.replace(/_+/g, "_");
+  result = result.replace(/^_|_$/g, "");
+  if (result.length > 30) result = result.slice(0, 30);
+  if (!result || /^\d/.test(result)) result = `node_${result}`;
+  return result;
+}
+
 // ─── Markdown Fence Stripping ────────────────────────────────────────────
 
 /** Strip ` ```fd ` or ` ```text ` fences from LLM output. */
@@ -535,7 +579,7 @@ export function parseDocumentSymbols(lines: string[]): FdSymbol[] {
     const styleMatch = trimmed.match(STYLE_REGEX);
     if (styleMatch) {
       const sym: FdSymbol = {
-        name: styleMatch[1],
+        name: styleMatch[2],
         kind: "style",
         startLine: i,
         endLine: i,

@@ -13,7 +13,7 @@ group @ecommerce_page {
     shadow: (0,1,3,#0000000D)
     @logo { spec "Brand logo"; w: 120 h: 32; fill: #E5E7EB }
     @search_bar {
-      spec { "Product search"; accept: "autocomplete < 200ms"; status: in_progress }
+      spec { "Product search"; accept: "autocomplete < 200ms"; status: doing }
       w: 400 h: 36; fill: #F3F4F6; corner: 8
     }
     @cart_icon { spec "Cart with badge"; w: 36 h: 36; fill: #E5E7EB }

@@ -9,7 +9,6 @@
 use crate::id::NodeId;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
-use petgraph::visit::EdgeRef;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::collections::HashMap;
@@ -25,29 +24,26 @@ pub struct Color {
     pub a: f32,
 }
 
+/// Helper to parse a single hex digit.
+pub fn hex_val(c: u8) -> Option<u8> {
+    match c {
+        b'0'..=b'9' => Some(c - b'0'),
+        b'a'..=b'f' => Some(c - b'a' + 10),
+        b'A'..=b'F' => Some(c - b'A' + 10),
+        _ => None,
+    }
+}
+
 impl Color {
     pub const fn rgba(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
 
     /// Parse a hex color string: `#RGB`, `#RGBA`, `#RRGGBB`, `#RRGGBBAA`.
+    /// The string may optionally start with `#`.
     pub fn from_hex(hex: &str) -> Option<Self> {
-        let hex = hex.strip_prefix('#')?;
-        Self::from_hex_digits(hex)
-    }
-
-    /// Parse a hex color string without prefix: `RGB`, `RGBA`, `RRGGBB`, `RRGGBBAA`.
-    pub fn from_hex_digits(digits: &str) -> Option<Self> {
-        let bytes = digits.as_bytes();
-
-        fn hex_val(c: u8) -> Option<u8> {
-            match c {
-                b'0'..=b'9' => Some(c - b'0'),
-                b'a'..=b'f' => Some(c - b'a' + 10),
-                b'A'..=b'F' => Some(c - b'A' + 10),
-                _ => None,
-            }
-        }
+        let hex = hex.strip_prefix('#').unwrap_or(hex);
+        let bytes = hex.as_bytes();
 
         match bytes.len() {
             3 => {
@@ -230,7 +226,7 @@ pub enum TextVAlign {
     Bottom,
 }
 
-/// A reusable style set that nodes can reference via `use: style_name`.
+/// A reusable theme set that nodes can reference via `use: theme_name`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Style {
     pub fill: Option<Paint>,
@@ -300,7 +296,7 @@ pub enum Annotation {
     Description(String),
     /// Acceptance criterion: `spec { accept: "validates email on blur" }`
     Accept(String),
-    /// Status: `spec { status: draft }`
+    /// Status: `spec { status: todo }` (values: todo, doing, done, blocked)
     Status(String),
     /// Priority: `spec { priority: high }`
     Priority(String),
@@ -451,7 +447,7 @@ pub struct SceneNode {
     /// Inline style overrides on this node.
     pub style: Style,
 
-    /// Named style references (`use: base_text`).
+    /// Named theme references (`use: base_text`).
     pub use_styles: SmallVec<[NodeId; 2]>,
 
     /// Constraint-based positioning.
@@ -497,7 +493,7 @@ pub struct SceneGraph {
     /// The root node index.
     pub root: NodeIndex,
 
-    /// Named style definitions (`style base_text { ... }`).
+    /// Named theme definitions (`theme base_text { ... }`).
     pub styles: HashMap<NodeId, Style>,
 
     /// Index from NodeId → NodeIndex for fast lookup.
@@ -508,6 +504,11 @@ pub struct SceneGraph {
 
     /// File imports with namespace aliases.
     pub imports: Vec<Import>,
+
+    /// Explicit child ordering set by `sort_nodes`.
+    /// When present for a parent, `children()` returns this order
+    /// instead of the default `NodeIndex` sort.
+    pub sorted_child_order: HashMap<NodeIndex, Vec<NodeIndex>>,
 }
 
 impl SceneGraph {
@@ -528,6 +529,7 @@ impl SceneGraph {
             id_index,
             edges: Vec::new(),
             imports: Vec::new(),
+            sorted_child_order: HashMap::new(),
         }
     }
 
@@ -586,17 +588,20 @@ impl SceneGraph {
 
     /// Get children of a node in document (insertion) order.
     ///
-    /// Returns children in the order edges were added to the graph.
-    /// This is crucial for `sort_nodes` and z-ordering to work.
+    /// Sorts by `NodeIndex` so the result is deterministic regardless of
+    /// how `petgraph` iterates its adjacency list on different targets
+    /// (native vs WASM).
     pub fn children(&self, idx: NodeIndex) -> Vec<NodeIndex> {
+        // If an explicit sort order was set (by sort_nodes), use it
+        if let Some(order) = self.sorted_child_order.get(&idx) {
+            return order.clone();
+        }
+
         let mut children: Vec<NodeIndex> = self
             .graph
-            .edges_directed(idx, petgraph::Direction::Outgoing)
-            .map(|e| e.target())
+            .neighbors_directed(idx, petgraph::Direction::Outgoing)
             .collect();
-        // StableGraph stores edges in LIFO order (stack-like freelist and allocation),
-        // so we reverse to get insertion order (FIFO).
-        children.reverse();
+        children.sort();
         children
     }
 

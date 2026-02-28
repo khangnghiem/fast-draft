@@ -40,6 +40,9 @@ pub struct SyncEngine {
 
     /// Dirty flag: set when text changes and graph needs re-parse.
     graph_dirty: bool,
+
+    /// Last detach event: (child_id, old_parent_id). Reset on flush.
+    pub last_detach: Option<(fd_core::id::NodeId, fd_core::id::NodeId)>,
 }
 
 impl SyncEngine {
@@ -56,6 +59,7 @@ impl SyncEngine {
             viewport,
             text_dirty: false,
             graph_dirty: false,
+            last_detach: None,
         })
     }
 
@@ -72,6 +76,7 @@ impl SyncEngine {
             viewport,
             text_dirty: false,
             graph_dirty: false,
+            last_detach: None,
         }
     }
 
@@ -128,9 +133,6 @@ impl SyncEngine {
                         let ry = (rel_y * 100.0).round() / 100.0;
                         node.constraints.push(Constraint::Position { x: rx, y: ry });
                     }
-                    // Handle group relationship: expand if partially outside,
-                    // detach (reparent) if fully outside the parent group.
-                    handle_child_group_relationship(&mut self.graph, idx, &mut self.bounds);
                 }
             }
             GraphMutation::ResizeNode { id, width, height } => {
@@ -415,6 +417,20 @@ impl SyncEngine {
 
     // ─── Queries ─────────────────────────────────────────────────────────
 
+    /// Evaluate if a dropped node should structurally detach from its parent.
+    /// Returns true if the graph changed (node was detached).
+    pub fn evaluate_drop(&mut self, node_id: NodeId) -> bool {
+        if let Some(idx) = self.graph.index_of(node_id)
+            && let Some(info) =
+                handle_child_group_relationship(&mut self.graph, idx, &mut self.bounds)
+        {
+            self.last_detach = Some(info);
+            self.text_dirty = true;
+            return true;
+        }
+        false
+    }
+
     /// Get current text (synced).
     pub fn current_text(&mut self) -> &str {
         self.flush_to_text();
@@ -463,53 +479,73 @@ fn bboxes_overlap(a: &fd_core::ResolvedBounds, b: &fd_core::ResolvedBounds) -> b
 
 /// Handle the relationship between a moved child and its parent group.
 ///
-/// - **Partial overlap**: expand the parent group to contain all children.
-/// - **Zero overlap**: detach the child — reparent it to the nearest ancestor
-///   whose bounds contain the child, or to root if none does.
+/// To avoid the "chasing envelope" bug (where the group expanded on every
+/// drag frame to follow the child, preventing detach), we check overlap
+/// against the parent's **current** stored bounds and do NOT expand them
+/// during drag. The group bounds remain stable — only the child's bounds
+/// move. When the child fully leaves the parent's area, it detaches.
+///
+/// - **Child overlaps current parent bounds**: keep child, no expansion.
+/// - **No overlap**: detach the child — reparent to nearest ancestor.
 fn handle_child_group_relationship(
     graph: &mut SceneGraph,
     child_idx: NodeIndex,
     bounds: &mut HashMap<NodeIndex, fd_core::ResolvedBounds>,
-) {
-    let parent_idx = match graph.parent(child_idx) {
-        Some(p) => p,
-        None => return,
-    };
+) -> Option<(fd_core::id::NodeId, fd_core::id::NodeId)> {
+    let parent_idx = graph.parent(child_idx)?;
 
-    // Only act on group/frame parents
-    let is_group_parent = matches!(
-        &graph.graph[parent_idx].kind,
-        NodeKind::Group { .. } | NodeKind::Frame { .. }
-    );
-    if !is_group_parent {
-        return;
+    let parent_kind = &graph.graph[parent_idx].kind;
+    let child_kind = &graph.graph[child_idx].kind;
+
+    // Only act on container parents (Group/Frame) or shape parents (Rect/Ellipse) if the child is Text.
+    let is_container_parent = match parent_kind {
+        NodeKind::Group { .. } | NodeKind::Frame { .. } => true,
+        NodeKind::Rect { .. } | NodeKind::Ellipse { .. } => {
+            matches!(child_kind, NodeKind::Text { .. })
+        }
+        _ => false,
+    };
+    if !is_container_parent {
+        return None;
     }
 
-    let child_b = match bounds.get(&child_idx) {
-        Some(b) => *b,
-        None => return,
-    };
-    let parent_b = match bounds.get(&parent_idx) {
-        Some(b) => *b,
-        None => return,
-    };
+    let mut child_b = *bounds.get(&child_idx)?;
+    let parent_b = *bounds.get(&parent_idx)?;
+
+    // If the child is a Text node inside a shape, its layout bounds might have been
+    // inflated to match the parent's size (from CenterIn or default layout).
+    // For drag-to-detach, we want to test the actual visual text bounds.
+    if let NodeKind::Text { content } = child_kind {
+        // Naive intrinsic text size matching what layout.rs uses
+        let text_w = (content.len() as f32) * 8.0;
+        let text_h = 16.0;
+
+        // If the box is massive, the text is actually drawn at the center.
+        // We shrink the overlap test box to the visual text area.
+        let cx = child_b.x + child_b.width / 2.0;
+        let cy = child_b.y + child_b.height / 2.0;
+        child_b.width = text_w;
+        child_b.height = text_h;
+        child_b.x = cx - text_w / 2.0;
+        child_b.y = cy - text_h / 2.0;
+    }
 
     if bboxes_overlap(&child_b, &parent_b) {
-        // Partial overlap → expand parent to contain all children
-        expand_group_to_children(graph, parent_idx, bounds);
+        // Child still overlaps the parent's current bounds — stay in group.
+        // Deliberately NOT expanding the group here to prevent the chase.
+        None
     } else {
         // Zero overlap → detach child, reparent to nearest containing ancestor
+        let child_id = graph.graph[child_idx].id;
+        let parent_id = graph.graph[parent_idx].id;
         detach_child_from_group(graph, child_idx, parent_idx, bounds);
+        Some((child_id, parent_id))
     }
 }
 
-/// Expand a group's bounds to contain all its children.
-fn expand_group_to_children(
-    graph: &SceneGraph,
-    group_idx: NodeIndex,
-    bounds: &mut HashMap<NodeIndex, fd_core::ResolvedBounds>,
-) {
-    let pad = match &graph.graph[group_idx].kind {
+/// Extract padding from a group's layout mode.
+fn group_padding(graph: &SceneGraph, group_idx: NodeIndex) -> f32 {
+    match &graph.graph[group_idx].kind {
         NodeKind::Group {
             layout: LayoutMode::Column { pad, .. },
         }
@@ -522,9 +558,19 @@ fn expand_group_to_children(
         NodeKind::Group {
             layout: LayoutMode::Free,
         } => 0.0,
-        _ => return,
-    };
+        _ => 0.0,
+    }
+}
 
+/// Expand a group's bounds to contain all its children.
+/// If `exclude_idx` is provided, skip that child in the calculation.
+fn expand_group_to_children(
+    graph: &SceneGraph,
+    group_idx: NodeIndex,
+    bounds: &mut HashMap<NodeIndex, fd_core::ResolvedBounds>,
+    exclude_idx: Option<NodeIndex>,
+) {
+    let pad = group_padding(graph, group_idx);
     let children = graph.children(group_idx);
     if children.is_empty() {
         return;
@@ -536,6 +582,9 @@ fn expand_group_to_children(
     let mut max_y = f32::MIN;
 
     for &ci in &children {
+        if exclude_idx == Some(ci) {
+            continue;
+        }
         if let Some(cb) = bounds.get(&ci) {
             min_x = min_x.min(cb.x);
             min_y = min_y.min(cb.y);
@@ -609,7 +658,7 @@ fn detach_child_from_group(
     }
 
     // Shrink old parent group to fit remaining children
-    expand_group_to_children(graph, old_parent_idx, bounds);
+    expand_group_to_children(graph, old_parent_idx, bounds, None);
 }
 
 /// A mutation that can be applied to the scene graph from canvas interactions.
@@ -1036,8 +1085,8 @@ rect @box {
         assert_eq!(node.animations.len(), 1);
         assert_eq!(node.animations[0].trigger, AnimTrigger::Hover);
 
-        // Verify text contains anim block
-        assert!(engine.text.contains("anim :hover"));
+        // Verify text contains when block
+        assert!(engine.text.contains("when :hover"));
         assert!(engine.text.contains("scale:"));
 
         // Verify round-trip: re-parse from text
@@ -1207,6 +1256,7 @@ group @container {
             dx: 500.0,
             dy: 400.0,
         });
+        engine.evaluate_drop(b_id);
 
         // @b should now be reparented to root
         let b_idx = engine.graph.index_of(b_id).unwrap();
@@ -1222,8 +1272,9 @@ group @container {
     }
 
     #[test]
-    fn sync_move_partial_overlap_expands_group() {
-        // Moving a child partially outside should expand the group (not detach).
+    fn sync_move_partial_overlap_keeps_child() {
+        // Moving a child partially outside should keep it in the group
+        // without expanding the group (expansion was the "chasing envelope" bug).
         let input = r#"
 group @container {
   rect @a { w: 100 h: 50 }
@@ -1247,6 +1298,7 @@ group @container {
             dx: 50.0,
             dy: 0.0,
         });
+        engine.evaluate_drop(b_id);
 
         // @b should still be a child of @container
         let b_idx = engine.graph.index_of(b_id).unwrap();
@@ -1256,11 +1308,11 @@ group @container {
             "@b should remain child of @container with partial overlap"
         );
 
-        // Container should have expanded
+        // Container should NOT expand during drag (prevents chasing envelope)
         let new_width = engine.bounds[&container_idx].width;
-        assert!(
-            new_width > initial_width,
-            "container should expand ({new_width} > {initial_width})"
+        assert_eq!(
+            new_width, initial_width,
+            "container should NOT expand during drag ({new_width} == {initial_width})"
         );
     }
 
@@ -1292,6 +1344,7 @@ group @outer {
             dx: 600.0,
             dy: 500.0,
         });
+        engine.evaluate_drop(leaf_id);
 
         // @leaf should be reparented to root (jumped 2 levels)
         let leaf_idx = engine.graph.index_of(leaf_id).unwrap();
@@ -1299,6 +1352,54 @@ group @outer {
         assert_eq!(
             parent, engine.graph.root,
             "@leaf should be at root after dragging outside all groups"
+        );
+    }
+
+    /// Regression test: incremental drag (many small moves) must eventually
+    /// detach. Before the fix, `expand_group_to_children` grew the parent on
+    /// every frame, preventing the child from ever escaping ("chasing envelope").
+    #[test]
+    fn sync_incremental_drag_detaches_child() {
+        let input = r#"
+group @container {
+  rect @a { w: 100 h: 50 }
+  rect @b { x: 0 y: 60 w: 80 h: 40 }
+}
+"#;
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let b_id = NodeId::intern("b");
+        let container_id = NodeId::intern("container");
+        let container_idx = engine.graph.index_of(container_id).unwrap();
+
+        // Simulate a real drag gesture: 30 small incremental moves (10px each)
+        // that should eventually move @b fully outside the sibling envelope.
+        for _ in 0..30 {
+            engine.apply_mutation(GraphMutation::MoveNode {
+                id: b_id,
+                dx: 10.0,
+                dy: 10.0,
+            });
+        }
+        engine.evaluate_drop(b_id);
+
+        // @b should now be reparented to root
+        let b_idx = engine.graph.index_of(b_id).unwrap();
+        let parent = engine.graph.parent(b_idx).unwrap();
+        assert_eq!(
+            parent, engine.graph.root,
+            "@b should detach after incremental drag (was: chasing envelope bug)"
+        );
+
+        // @container should still exist with @a
+        let remaining = engine.graph.children(container_idx);
+        assert_eq!(
+            remaining.len(),
+            1,
+            "container should keep 1 child after detach"
         );
     }
 

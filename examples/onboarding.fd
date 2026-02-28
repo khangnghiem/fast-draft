@@ -1,34 +1,40 @@
-style step_desc {
+# FD v1
+# Onboarding wizard — 4-step flow with animations
+
+theme step_desc {
   fill: #6B7280
   font: "Inter" 400 16
 }
 
-style step_title {
+theme step_title {
   fill: #1A1A2E
   font: "Inter" 700 28
 }
 
 # ─── Wizard container ───────────────────────────────────────────────────
+
 group @wizard {
   spec {
     "Onboarding wizard — 4-step flow"
     accept: "skip button on every step"
     accept: "progress dots show current step"
     accept: "swipe gestures on mobile"
-    status: in_progress
+    status: doing
     priority: high
     tag: onboarding, ux, retention
   }
   layout: column gap=0 pad=0
-  x: 457.98
-  y: 165.41
+
   rect @step_card {
     w: 480 h: 520
     fill: #FFFFFF
     corner: 24
     shadow: (0,8,40,#00000022)
-    group @_anon_3 {
+
+    group @card_content {
       layout: column gap=24 pad=40
+
+      # Illustration area
       rect @illustration {
         spec {
           "Step illustration — animated SVG"
@@ -37,103 +43,73 @@ group @wizard {
         w: 400 h: 240
         fill: #F0EDFC
         corner: 16
+
         ellipse @shape_1 {
           w: 80 h: 80
           fill: #6C5CE740
-          anim :enter {
-            opacity: 1
-            scale: 1
-            ease: spring 800ms
-          }
+          when :enter { opacity: 1; scale: 1; ease: spring 800ms }
         }
+
         rect @shape_2 {
           w: 100 h: 60
           fill: #A29BFE40
           corner: 12
-          anim :enter {
-            opacity: 1
-            ease: ease_out 600ms
-          }
+          when :enter { opacity: 1; ease: ease_out 600ms }
         }
+
         ellipse @shape_3 {
           w: 60 h: 60
           fill: #00B89440
-          anim :enter {
-            opacity: 1
-            scale: 1
-            ease: spring 1000ms
-          }
+          when :enter { opacity: 1; scale: 1; ease: spring 1000ms }
         }
       }
-      text @s_title "Create your first draft" {
+
+      text @step_heading "Create your first draft" {
         use: step_title
       }
-      text @s_desc "Start with a blank canvas or choose from our templates to kickstart your design." {
+
+      text @step_body "Start with a blank canvas or choose from our templates to kickstart your design." {
         use: step_desc
       }
+
+      # Progress dots
       group @dots {
         layout: row gap=8 pad=0
-        x: 370.85
-        y: 498.43
-        ellipse @dot_1 {
-          w: 10 h: 10
-          fill: #6C5CE7
-        }
-        ellipse @dot_2 {
-          w: 10 h: 10
-          fill: #E8E8EC
-        }
-        ellipse @dot_3 {
-          w: 10 h: 10
-          fill: #E8E8EC
-        }
-        ellipse @dot_4 {
-          w: 10 h: 10
-          fill: #E8E8EC
-        }
+        ellipse @dot_1 { w: 10 h: 10; fill: #6C5CE7 }
+        ellipse @dot_2 { w: 10 h: 10; fill: #E8E8EC }
+        ellipse @dot_3 { w: 10 h: 10; fill: #E8E8EC }
+        ellipse @dot_4 { w: 10 h: 10; fill: #E8E8EC }
       }
+
+      # Action buttons
       group @buttons {
         layout: row gap=12 pad=0
+
         rect @btn_skip {
           w: 100 h: 48
           corner: 10
-          text @_anon_4 "Skip" {
+          text @skip_label "Skip" {
             fill: #999999
             font: "Inter" 500 15
           }
-          anim :hover {
-            fill: #F5F5F7
-            ease: ease_out 150ms
-          }
+          when :hover { fill: #F5F5F7; ease: ease_out 150ms }
         }
+
         rect @btn_next {
           w: 280 h: 48
           fill: #6C5CE7
           corner: 10
           shadow: (0,4,16,#6C5CE740)
-          text @_anon_5 "Next" {
+          text @next_label "Next" {
             fill: #FFFFFF
             font: "Inter" 600 15
           }
-          anim :hover {
-            fill: #5A4BD1
-            scale: 1.03
-            ease: spring 200ms
-          }
-          anim :press {
-            scale: 0.96
-            ease: ease_out 100ms
-          }
+          when :hover { fill: #5A4BD1; scale: 1.03; ease: spring 200ms }
+          when :press { scale: 0.96; ease: ease_out 100ms }
         }
       }
     }
   }
 }
 
-rect @_anon_6 {
-  w: 100 h: 80
-  fill: #CCCCD9
-  x: 486
-  y: 1140.92
-}
-
+@wizard -> center_in: canvas

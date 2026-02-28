@@ -1,0 +1,205 @@
+# Design tokens / design system file
+# Demonstrates theme reuse and component patterns
+
+# ─── Color Tokens ───
+
+theme primary {
+  fill: #6C5CE7
+}
+
+theme primary_hover {
+  fill: #5A4BD1
+}
+
+theme secondary {
+  fill: #A29BFE
+}
+
+theme surface {
+  fill: #FFFFFF
+  corner: 12
+}
+
+theme surface_elevated {
+  fill: #FFFFFF
+  corner: 16
+}
+
+theme danger {
+  fill: #EF4444
+}
+
+theme success {
+  fill: #22C55E
+}
+
+# ─── Typography Tokens ───
+
+theme h1 {
+  font: "Inter" bold 32
+  fill: #111827
+}
+
+theme h2 {
+  font: "Inter" semibold 24
+  fill: #1F2937
+}
+
+theme h3 {
+  font: "Inter" semibold 18
+  fill: #374151
+}
+
+theme body {
+  font: "Inter" regular 16
+  fill: #4B5563
+}
+
+theme caption {
+  font: "Inter" regular 12
+  fill: #9CA3AF
+}
+
+# ─── Component: Button ───
+
+rect @btn_primary {
+  spec {
+    "Primary action button"
+    accept: "hover lifts, press shrinks"
+    status: done
+    priority: high
+  }
+  w: 180 h: 48
+  use: primary
+  corner: 10
+
+  text @btn_primary_label "Primary Action" {
+    font: "Inter" semibold 15
+    fill: #FFFFFF
+  }
+
+  when :hover {
+    fill: #5A4BD1
+    scale: 1.03
+    ease: ease_out 200ms
+  }
+
+  when :press {
+    scale: 0.97
+    ease: spring 100ms
+  }
+}
+
+rect @btn_secondary {
+  spec "Secondary / outline button"
+  w: 180 h: 48
+  use: surface
+  stroke: #6C5CE7 2
+
+  text @btn_secondary_label "Secondary" {
+    font: "Inter" semibold 15
+    fill: #6C5CE7
+  }
+
+  when :hover {
+    fill: #F0EDFF
+    ease: ease_out 200ms
+  }
+}
+
+rect @btn_danger {
+  spec "Destructive action button"
+  w: 180 h: 48
+  use: danger
+  corner: 10
+
+  text @btn_danger_label "Delete" {
+    font: "Inter" semibold 15
+    fill: #FFFFFF
+  }
+
+  when :hover {
+    fill: #DC2626
+    ease: ease_out 200ms
+  }
+}
+
+# ─── Component: Card ───
+
+frame @card_example {
+  spec {
+    "Card container with shadow"
+    status: done
+  }
+  w: 320 h: 200
+  use: surface_elevated
+  shadow: (0,4,20,#00000011)
+  clip: true
+
+  text @card_heading "Card Title" {
+    use: h3
+  }
+
+  text @card_body "Card body text demonstrating the body typography token applied via use: reference." {
+    use: body
+  }
+
+  rect @card_action {
+    w: 120 h: 36
+    use: primary
+    corner: 8
+
+    text @card_action_label "Action" {
+      font: "Inter" medium 14
+      fill: #FFFFFF
+    }
+  }
+}
+
+# ─── Component: Badge ───
+
+rect @badge_success {
+  w: 80 h: 28
+  use: success
+  corner: 14
+
+  text @badge_success_label "Active" {
+    font: "Inter" semibold 12
+    fill: #FFFFFF
+  }
+}
+
+rect @badge_danger {
+  w: 80 h: 28
+  use: danger
+  corner: 14
+
+  text @badge_danger_label "Error" {
+    font: "Inter" semibold 12
+    fill: #FFFFFF
+  }
+}
+
+# ─── Component: Input Field ───
+
+frame @input_field {
+  spec "Text input with label"
+  w: 280 h: 72
+  fill: #F9FAFB
+  corner: 8
+  stroke: #D1D5DB 1
+
+  text @input_label "Email Address" {
+    use: caption
+  }
+
+  text @input_placeholder "you@example.com" {
+    use: body
+    opacity: 0.5
+  }
+
+  when :hover {
+    stroke: #6C5CE7 2
+    ease: ease_out 150ms
+  }
+}

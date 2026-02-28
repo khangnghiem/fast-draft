@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fast Draft — Design as Code</title>
+  <meta name="description" content="Fast Draft is a file format and canvas for drawing, design, and animation — right inside your code editor. Draw it or code it? Both." />
+  <meta name="keywords" content="design tool, code editor, AI-friendly, WASM, canvas, VS Code, design as code" />
+  <meta property="og:title" content="Fast Draft — Design as Code" />
+  <meta property="og:description" content="A file format and canvas for drawing, design, and animation — right inside your code editor." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ─── Navigation ─── -->
+  <nav id="navbar">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">Fast Draft</span>
+      </a>
+      <div class="nav-links">
+        <a href="#playground">Playground</a>
+        <a href="#features">Features</a>
+        <a href="#benchmarks">Benchmarks</a>
+        <a href="#architecture">Architecture</a>
+        <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener" class="btn-nav">Install Extension</a>
+      </div>
+      <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ─── Hero ─── -->
+  <header id="hero">
+    <div class="hero-bg">
+      <div class="hero-gradient"></div>
+      <div class="hero-grid"></div>
+    </div>
+    <div class="hero-content">
+      <div class="hero-badge">Open Source · MIT License</div>
+      <h1>Design as <span class="gradient-text">Code</span></h1>
+      <p class="hero-sub">A file format and canvas for drawing, design, and animation — right inside your code editor. Draw it or code it? <strong>Both.</strong></p>
+      <div class="hero-cta">
+        <a href="#playground" class="btn btn-primary">
+          <span class="btn-icon">▶</span> Try Playground
+        </a>
+        <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener" class="btn btn-ghost">
+          <span class="btn-icon">★</span> View on GitHub
+        </a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="stat-value">5×</span>
+          <span class="stat-label">fewer tokens than SVG</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-value">6.5×</span>
+          <span class="stat-label">smaller than Excalidraw</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-value">331</span>
+          <span class="stat-label">tests passing</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── Code Preview ─── -->
+  <section id="code-preview" class="section">
+    <div class="container">
+      <div class="code-window">
+        <div class="code-titlebar">
+          <div class="code-dots">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <span class="code-filename">hello.fd</span>
+        </div>
+        <pre class="code-content"><code><span class="c-comment"># A card with a hover button</span>
+
+<span class="c-keyword">theme</span> <span class="c-id">accent</span> {
+  <span class="c-prop">fill:</span> <span class="c-color">#6C5CE7</span>
+}
+
+<span class="c-keyword">group</span> <span class="c-id">@card</span> {
+  <span class="c-prop">layout:</span> column gap=16 pad=24
+  <span class="c-prop">bg:</span> <span class="c-color">#FFF</span> corner=12 shadow=(0,4,20,<span class="c-color">#0002</span>)
+
+  <span class="c-keyword">text</span> <span class="c-id">@title</span> <span class="c-string">"Hello World"</span> {
+    <span class="c-prop">font:</span> <span class="c-string">"Inter"</span> bold 24
+    <span class="c-prop">fill:</span> <span class="c-color">#1A1A2E</span>
+  }
+
+  <span class="c-keyword">rect</span> <span class="c-id">@button</span> {
+    <span class="c-prop">w:</span> <span class="c-num">200</span> <span class="c-prop">h:</span> <span class="c-num">48</span>
+    <span class="c-prop">use:</span> accent
+    <span class="c-keyword">when</span> <span class="c-trigger">:hover</span> {
+      <span class="c-prop">fill:</span> <span class="c-color">#5A4BD1</span>
+      <span class="c-prop">scale:</span> <span class="c-num">1.02</span>
+      <span class="c-prop">ease:</span> spring 300ms
+    }
+  }
+}
+
+<span class="c-id">@card</span> -> <span class="c-prop">center_in:</span> canvas</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Live Playground ─── -->
+  <section id="playground" class="section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Live <span class="gradient-text">Playground</span></h2>
+        <p>Edit the code below and watch the canvas update in real-time — powered by Rust + WebAssembly.</p>
+      </div>
+      <div class="playground-toolbar">
+        <div class="toolbar-left">
+          <label for="example-select" class="toolbar-label">Example:</label>
+          <select id="example-select" class="toolbar-select">
+            <option value="card">Card Component</option>
+            <option value="login">Login Form</option>
+            <option value="welcome">Welcome Screen</option>
+          </select>
+        </div>
+        <div class="toolbar-right">
+          <button id="sketchy-toggle" class="toolbar-btn" title="Toggle sketchy mode">
+            ✏️ Sketchy
+          </button>
+          <button id="theme-toggle" class="toolbar-btn" title="Toggle theme">
+            🌙 Dark
+          </button>
+        </div>
+      </div>
+      <div id="playground-container" class="playground-split">
+        <div class="playground-editor">
+          <div class="editor-header">
+            <span class="editor-dot"></span> Code Mode
+          </div>
+          <textarea id="fd-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+        </div>
+        <div class="playground-canvas">
+          <div class="editor-header">
+            <span class="editor-dot canvas-dot"></span> Canvas Mode
+          </div>
+          <div id="canvas-wrapper">
+            <canvas id="fd-canvas"></canvas>
+            <div id="canvas-loading" class="canvas-loading">
+              <div class="loading-spinner"></div>
+              <p>Loading WASM engine…</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Features ─── -->
+  <section id="features" class="section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Why <span class="gradient-text">Fast Draft</span>?</h2>
+        <p>Built for both humans and AI agents — design and code in perfect sync.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🤖</div>
+          <h3>AI-Friendly</h3>
+          <p>Compact text DSL — ~5× fewer tokens than SVG. LLMs read, write, and reason about entire UIs in a single prompt.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">↔️</div>
+          <h3>Two-Way Sync</h3>
+          <p>Edit code or canvas — the other updates instantly in &lt;16ms. One source of truth, zero conflicts.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📋</div>
+          <h3>Specs Built In</h3>
+          <p>Attach requirements, status, and acceptance criteria directly to visual elements with <code>spec</code> blocks.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎨</div>
+          <h3>GPU Canvas</h3>
+          <p>Vello + wgpu rendering engine. Smart guides, resize handles, sketchy mode, animations — Figma-grade tools.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔀</div>
+          <h3>Git-Friendly</h3>
+          <p>Plain text format — <code>git diff</code>, <code>git merge</code>, and code review all work naturally.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>6 Editors</h3>
+          <p>VS Code, Cursor, Zed, Neovim, Sublime, Helix, Emacs. Canvas in VS Code, syntax highlighting everywhere.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Two Modes ─── -->
+  <section id="modes" class="section section-dark">
+    <div class="container">
+      <div class="section-header">
+        <h2>Two Modes, <span class="gradient-text">One File</span></h2>
+        <p>Each mode is designed for a different audience — but they edit the same file.</p>
+      </div>
+      <div class="modes-grid">
+        <div class="mode-card">
+          <div class="mode-badge">🤖 Code Mode</div>
+          <h3>The AI Interface</h3>
+          <p>LLMs and coding agents read, write, and reason about <code>.fd</code> text directly. Uses ~5× fewer tokens than Excalidraw JSON.</p>
+          <ul class="mode-list">
+            <li>Semantic node names (<code>@login_form</code>)</li>
+            <li>Constraint-based layout (no pixel coords)</li>
+            <li>Structured spec blocks</li>
+            <li>Named colors and property aliases</li>
+          </ul>
+        </div>
+        <div class="mode-card">
+          <div class="mode-badge">🎨 Canvas Mode</div>
+          <h3>The Human Interface</h3>
+          <p>Designers draw, drag, and resize on a fast, GPU-powered canvas inside VS Code. No code knowledge needed.</p>
+          <ul class="mode-list">
+            <li>Smart guides and resize handles</li>
+            <li>Drag-and-drop animations</li>
+            <li>Floating toolbar and properties panel</li>
+            <li>Touch and Apple Pencil support</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Benchmarks ─── -->
+  <section id="benchmarks" class="section">
+    <div class="container">
+      <div class="section-header">
+        <h2>The <span class="gradient-text">Numbers</span></h2>
+        <p>Real designs compared: FD vs Excalidraw JSON. Measured across 11 benchmark pairs.</p>
+      </div>
+      <div class="benchmark-table-wrap">
+        <table class="benchmark-table">
+          <thead>
+            <tr>
+              <th>Design</th>
+              <th>FD Size</th>
+              <th>Excalidraw Size</th>
+              <th>Ratio</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Login Form</td><td>2.4 KB</td><td>15.8 KB</td><td><span class="ratio">6.6×</span></td></tr>
+            <tr><td>Dashboard Card</td><td>0.8 KB</td><td>7.3 KB</td><td><span class="ratio">9.1×</span></td></tr>
+            <tr><td>Kanban Board</td><td>3.7 KB</td><td>18.9 KB</td><td><span class="ratio">5.1×</span></td></tr>
+            <tr><td>Org Chart</td><td>4.1 KB</td><td>15.5 KB</td><td><span class="ratio">3.8×</span></td></tr>
+            <tr><td>API Flowchart</td><td>3.3 KB</td><td>27.9 KB</td><td><span class="ratio">8.5×</span></td></tr>
+            <tr><td>Mobile Onboarding</td><td>3.5 KB</td><td>18.7 KB</td><td><span class="ratio">5.3×</span></td></tr>
+            <tr><td>Pricing Table</td><td>4.4 KB</td><td>24.5 KB</td><td><span class="ratio">5.6×</span></td></tr>
+            <tr><td>Network Topology</td><td>4.6 KB</td><td>28.6 KB</td><td><span class="ratio">6.2×</span></td></tr>
+            <tr><td>Data Dashboard</td><td>4.6 KB</td><td>36.0 KB</td><td><span class="ratio">7.8×</span></td></tr>
+            <tr><td>Design System</td><td>5.7 KB</td><td>28.4 KB</td><td><span class="ratio">5.0×</span></td></tr>
+            <tr><td>Wireframe eCommerce</td><td>2.3 KB</td><td>19.0 KB</td><td><span class="ratio">8.3×</span></td></tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td><strong>Average</strong></td>
+              <td></td>
+              <td></td>
+              <td><span class="ratio ratio-avg">6.5×</span></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Architecture ─── -->
+  <section id="architecture" class="section section-dark">
+    <div class="container">
+      <div class="section-header">
+        <h2>Under the <span class="gradient-text">Hood</span></h2>
+        <p>Five Rust crates, one TypeScript extension, zero compromises.</p>
+      </div>
+      <div class="arch-diagram">
+        <pre class="arch-ascii">┌─────────────────────────────────────────────────────┐
+│  .fd file (text DSL)                                │
+├─────────────────────────────────────────────────────┤
+│  fd-core        Parser ↔ SceneGraph (DAG) ↔ Emitter │
+│                  Layout solver (constraints → coords) │
+├─────────────────────────────────────────────────────┤
+│  fd-render      Vello + wgpu → GPU canvas           │
+│                  Hit testing (point → node)           │
+├─────────────────────────────────────────────────────┤
+│  fd-editor      Bidi sync engine                    │
+│                  Tools (select, rect, pen, text)      │
+│                  Undo/redo command stack               │
+├─────────────────────────────────────────────────────┤
+│  tree-sitter-fd Tree-sitter grammar for editors     │
+├─────────────────────────────────────────────────────┤
+│  fd-vscode      VS Code Custom Editor (WASM webview)│
+│  editors/       Zed, Neovim, Sublime, Helix, Emacs  │
+└─────────────────────────────────────────────────────┘</pre>
+      </div>
+      <div class="crate-grid">
+        <div class="crate-card">
+          <h4>fd-core</h4>
+          <p>Data model, winnow parser, emitter, constraint layout solver</p>
+        </div>
+        <div class="crate-card">
+          <h4>fd-render</h4>
+          <p>Vello/wgpu 2D renderer + hit testing</p>
+        </div>
+        <div class="crate-card">
+          <h4>fd-editor</h4>
+          <p>Bidirectional sync, tool system, undo/redo, input abstraction</p>
+        </div>
+        <div class="crate-card">
+          <h4>fd-wasm</h4>
+          <p>WASM bridge — powers this playground and the VS Code extension</p>
+        </div>
+        <div class="crate-card">
+          <h4>fd-lsp</h4>
+          <p>Language server — hover, completions, format, diagnostics</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Editor Support ─── -->
+  <section id="editors" class="section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Editor <span class="gradient-text">Support</span></h2>
+        <p>Syntax highlighting everywhere, full canvas in VS Code.</p>
+      </div>
+      <div class="editor-table-wrap">
+        <table class="editor-table">
+          <thead>
+            <tr>
+              <th>Editor</th>
+              <th>Syntax</th>
+              <th>LSP</th>
+              <th>Canvas</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>VS Code / Cursor</td><td>✅</td><td>—</td><td>✅</td></tr>
+            <tr><td>Zed</td><td>✅</td><td>✅</td><td>—</td></tr>
+            <tr><td>Neovim</td><td>✅</td><td>—</td><td>—</td></tr>
+            <tr><td>Sublime Text</td><td>✅</td><td>—</td><td>—</td></tr>
+            <tr><td>Helix</td><td>✅</td><td>—</td><td>—</td></tr>
+            <tr><td>Emacs</td><td>✅</td><td>—</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── CTA ─── -->
+  <section id="cta" class="section section-dark">
+    <div class="container cta-container">
+      <h2>Ready to <span class="gradient-text">design as code</span>?</h2>
+      <p>Install the VS Code extension and start drawing in 30 seconds.</p>
+      <div class="hero-cta">
+        <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener" class="btn btn-primary">
+          Install Extension
+        </a>
+        <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener" class="btn btn-ghost">
+          Star on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Footer ─── -->
+  <footer id="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">Fast Draft</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener">VS Code Marketplace</a>
+        <a href="https://github.com/khangnghiem/fast-draft/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+      </div>
+      <p class="footer-copy">Made with Rust, WASM, and ❤️ by <a href="https://github.com/khangnghiem" target="_blank" rel="noopener">Khang Nghiêm</a></p>
+    </div>
+  </footer>
+
+  <script type="module" src="playground.js"></script>
+  <script>
+    // Mobile menu toggle
+    document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+      document.querySelector('.nav-links').classList.toggle('open');
+      this.classList.toggle('open');
+    });
+
+    // Navbar scroll effect
+    window.addEventListener('scroll', function() {
+      document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
+    });
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          document.querySelector('.nav-links').classList.remove('open');
+          document.getElementById('mobile-menu-btn').classList.remove('open');
+        }
+      });
+    });
+
+    // Animate elements on scroll
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.feature-card, .mode-card, .crate-card, .section-header, .code-window').forEach(el => {
+      el.classList.add('animate-in');
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>

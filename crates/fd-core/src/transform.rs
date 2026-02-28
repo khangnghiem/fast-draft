@@ -168,6 +168,9 @@ fn kind_priority(kind: &NodeKind) -> u8 {
 /// Priority: Group/Frame → Rect → Ellipse → Text → Path → Generic.
 /// Relative order within each kind group is preserved (stable sort).
 /// Only affects root-level children — nested children stay in document order.
+///
+/// Stores the sorted order in `graph.sorted_child_order` so that
+/// `children()` can return nodes in the canonical order.
 pub fn sort_nodes(graph: &mut SceneGraph) {
     let root = graph.root;
     let mut children = graph.children(root);
@@ -179,33 +182,8 @@ pub fn sort_nodes(graph: &mut SceneGraph) {
     // Stable sort by kind priority
     children.sort_by_key(|&idx| kind_priority(&graph.graph[idx].kind));
 
-    // Remove all edges from root to children.
-    // Count them so we can burn the recycling freelist slots.
-    let mut count = 0;
-    for &child in &children {
-        if let Some(edge) = graph.graph.find_edge(root, child) {
-            graph.graph.remove_edge(edge);
-            count += 1;
-        }
-    }
-
-    // `StableGraph` reuses edge indices in LIFO order (stack).
-    // To ensure our new edges appear in the desired iteration order (fresh indices),
-    // we must consume the recycled slots with dummy edges.
-    let mut dummies = Vec::with_capacity(count);
-    for _ in 0..count {
-        dummies.push(graph.graph.add_edge(root, root, ()));
-    }
-
-    // Add edges in sorted order (allocating fresh indices)
-    for &child in &children {
-        graph.graph.add_edge(root, child, ());
-    }
-
-    // Clean up dummy edges (creating holes again, but after our real edges)
-    for edge in dummies {
-        graph.graph.remove_edge(edge);
-    }
+    // Store the sorted order for root's children
+    graph.sorted_child_order.insert(root, children);
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────

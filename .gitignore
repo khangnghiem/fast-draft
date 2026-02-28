@@ -26,5 +26,8 @@ ftd-vscode/out/
 ftd-vscode/wasm/
 *.vsix
 
+# GitHub Pages WASM build output (built by CI)
+site/wasm/
+
 # Environment secrets
 .env

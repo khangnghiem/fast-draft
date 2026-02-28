@@ -155,9 +155,9 @@ export class FdTreePreviewPanel {
       if (!trimmed || trimmed.startsWith("#")) continue;
 
       // Style definition
-      const styleMatch = trimmed.match(/^style\s+(\w+)\s*\{/);
+      const styleMatch = trimmed.match(/^(theme|style)\s+(\w+)\s*\{/);
       if (styleMatch) {
-        html += `<div class="node"><span class="style-def">style</span> <span class="node-id">${escapeHtml(styleMatch[1])}</span></div>`;
+        html += `<div class="node"><span class="style-def">${escapeHtml(styleMatch[1])}</span> <span class="node-id">${escapeHtml(styleMatch[2])}</span></div>`;
         continue;
       }
 

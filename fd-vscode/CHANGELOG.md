@@ -39,7 +39,7 @@
 - **Apple Pencil Pro modifier+squeeze combos**: `Shift+squeeze` → Pen, `Ctrl+squeeze` → Select, `Alt+squeeze` → Rect, `Ctrl+Shift+squeeze` → Ellipse.
 - **Comment preservation** (`R1.16`): `#` comment lines are now round-tripped through parse and emit, preserving them in the `.fd` file.
 - **Lint diagnostics** (`R4.10`): `lint_document` checks for anonymous IDs, duplicate `use:` references, and unused `style {}` blocks.
-- **AI Refine** (`fd.aiRefine` / `fd.aiRefineAll`): AI-powered node restyling and semantic ID assignment via Gemini, OpenAI, Anthropic, Ollama, or OpenRouter.
+- **AI Assist** (`fd.aiRefine` / `fd.aiRefineAll`): AI-powered node restyling and semantic ID assignment via Gemini, OpenAI, Anthropic, Ollama, or OpenRouter.
 - **Spec View** (`FD: Show Spec View`): displays structured annotations (`## description / status / priority / accept / tag`).
 - **Export Spec** (`FD: Export Spec to Markdown`): generates a markdown requirements report from `##` annotations.
 - **Annotation pins**: interactive badge dots on canvas nodes for viewing/editing annotations inline.

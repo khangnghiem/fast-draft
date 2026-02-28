@@ -1,55 +1,8 @@
-style border {
-  fill: #E8E8EC
-}
-
-style danger {
-  fill: #E17055
-}
-
-style primary {
-  fill: #6C5CE7
-}
-
-style primary_dark {
-  fill: #5A4BD1
-}
-
-style secondary {
-  fill: #00B894
-}
-
-style surface {
-  fill: #FFFFFF
-}
-
-style surface_alt {
-  fill: #F8F9FA
-}
-
-style text_muted {
-  fill: #9CA3AF
-  font: "Inter" 400 12
-}
-
-style text_primary {
-  fill: #1A1A2E
-  font: "Inter" 400 16
-}
-
-style text_secondary {
-  fill: #6B7280
-  font: "Inter" 400 14
-}
-
-style warning {
-  fill: #FDCB6E
-}
-
 group @color_palette {
   layout: column gap=24 pad=32
   text @palette_title "Color Palette" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
+    fill: #1A1A2E  # blue
+    font: "Inter" bold 28
   }
   group @primary_row {
     spec "Primary brand colors"
@@ -85,52 +38,52 @@ group @color_palette {
     layout: row gap=12 pad=0
     rect @swatch_white {
       w: 80 h: 80
-      fill: #FFFFFF
+      fill: #FFFFFF  # white
       stroke: #E8E8EC 1
       corner: 12
     }
     rect @swatch_gray_100 {
       w: 80 h: 80
-      fill: #F8F9FA
+      fill: #F8F9FA  # white
       corner: 12
     }
     rect @swatch_gray_200 {
       w: 80 h: 80
-      fill: #E8E8EC
+      fill: #E8E8EC  # white
       corner: 12
     }
     rect @swatch_gray_500 {
       w: 80 h: 80
-      fill: #6B7280
+      fill: #6B7280  # blue
       corner: 12
     }
     rect @swatch_gray_900 {
       w: 80 h: 80
-      fill: #1A1A2E
+      fill: #1A1A2E  # blue
       corner: 12
     }
   }
   text @type_title "Typography" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
+    fill: #1A1A2E  # blue
+    font: "Inter" bold 28
   }
   group @type_scale {
     layout: column gap=16 pad=0
     text @t_display "Display — 48px Bold" {
-      fill: #1A1A2E
-      font: "Inter" 700 48
+      fill: #1A1A2E  # blue
+      font: "Inter" bold 48
     }
     text @t_h1 "Heading 1 — 32px Semibold" {
-      fill: #1A1A2E
-      font: "Inter" 600 32
+      fill: #1A1A2E  # blue
+      font: "Inter" semibold 32
     }
     text @t_h2 "Heading 2 — 24px Semibold" {
-      fill: #1A1A2E
-      font: "Inter" 600 24
+      fill: #1A1A2E  # blue
+      font: "Inter" semibold 24
     }
     text @t_h3 "Heading 3 — 20px Medium" {
-      fill: #1A1A2E
-      font: "Inter" 500 20
+      fill: #1A1A2E  # blue
+      font: "Inter" medium 20
     }
     text @t_body "Body — 16px Regular" {
       use: text_primary
@@ -143,8 +96,8 @@ group @color_palette {
     }
   }
   text @btn_title "Buttons" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
+    fill: #1A1A2E  # blue
+    font: "Inter" bold 28
   }
   group @buttons {
     spec {
@@ -157,123 +110,98 @@ group @color_palette {
     rect @btn_primary {
       spec "Primary action button"
       w: 160 h: 48
-      use: primary
-      corner: 10
       text @_anon_7 "Get Started" {
-        fill: #FFFFFF
-        font: "Inter" 600 15
+        fill: #FFFFFF  # white
+        font: "Inter" semibold 15
       }
-      anim :hover {
-        fill: #5A4BD1
-        scale: 1.02
-        ease: spring 200ms
-      }
-      anim :press {
-        scale: 0.97
-        ease: ease_out 100ms
-      }
-    }
-    rect @btn_secondary {
-      spec "Secondary action button"
-      w: 160 h: 48
-      fill: #FFFFFF
-      stroke: #6C5CE7 2
+      use: primary
+      fill: #5A4BD1  # blue
       corner: 10
-      text @_anon_8 "Learn More" {
-        fill: #6C5CE7
-        font: "Inter" 600 15
-      }
-      anim :hover {
-        fill: #F0EDFC
-        scale: 1.02
-        ease: spring 200ms
-      }
-      anim :press {
-        scale: 0.97
-        ease: ease_out 100ms
-      }
-    }
-    rect @btn_ghost {
-      spec "Ghost / text-only button"
-      w: 160 h: 48
-      fill: #00000000
-      corner: 10
-      text @_anon_9 "Cancel" {
-        fill: #6B7280
-        font: "Inter" 500 15
-      }
-      anim :hover {
-        fill: #F5F5F7
-        ease: ease_out 150ms
-      }
-    }
-    rect @btn_danger {
-      spec "Destructive action button"
-      w: 160 h: 48
-      use: danger
-      corner: 10
-      text @_anon_10 "Delete" {
-        fill: #FFFFFF
-        font: "Inter" 600 15
-      }
-      anim :hover {
-        fill: #D63031
-        scale: 1.02
-        ease: spring 200ms
-      }
-    }
-  }
-  text @input_title "Inputs" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
-  }
-  group @inputs {
-    layout: column gap=12 pad=0
-    rect @input_default {
-      spec "Default text input"
-      w: 320 h: 48
-      fill: #FFFFFF
-      stroke: #E8E8EC 1
-      corner: 8
-      text @_anon_11 "Placeholder text..." {
-        fill: #9CA3AF
-        font: "Inter" 400 14
-      }
-    }
-    rect @input_focus {
-      spec {
-        "Focused input state"
-        status: done
-      }
-      w: 320 h: 48
-      fill: #FFFFFF
-      stroke: #6C5CE7 2
-      corner: 8
-      text @_anon_12 "Typing here..." {
-        fill: #1A1A2E
-        font: "Inter" 400 14
-      }
-    }
-    rect @input_error {
-      spec {
-        "Error input state"
-        accept: "red border + error message below"
-      }
-      w: 320 h: 48
-      fill: #FFF6F4
-      stroke: #E17055 2
-      corner: 8
-      text @_anon_13 "invalid@" {
-        fill: #E17055
-        font: "Inter" 400 14
-      }
     }
   }
 }
 
+rect @btn_secondary {
+  spec "Secondary action button"
+  w: 160 h: 48
+  text @_anon_8 "Learn More" {
+    fill: #6C5CE7  # blue
+    font: "Inter" semibold 15
+  }
+  fill: #F0EDFC  # blue
+  stroke: #6C5CE7 2
+  corner: 10
+}
+
+rect @btn_ghost {
+  spec "Ghost / text-only button"
+  w: 160 h: 48
+  text @_anon_9 "Cancel" {
+    fill: #6B7280  # blue
+    font: "Inter" medium 15
+  }
+  fill: #F5F5F7  # white
+  corner: 10
+}
+
+rect @btn_danger {
+  spec "Destructive action button"
+  w: 160 h: 48
+  text @_anon_10 "Delete" {
+    fill: #FFFFFF  # white
+    font: "Inter" semibold 15
+  }
+  use: danger
+  fill: #D63031  # red
+  corner: 10
+}
+
+text @input_title "Inputs" {
+  fill: #1A1A2E  # blue
+  font: "Inter" bold 28
+}
+
+group @inputs {
+  layout: column gap=12 pad=0
+  rect @input_default {
+    spec "Default text input"
+    w: 320 h: 48
+    text @_anon_11 "Placeholder text..." {
+      fill: #9CA3AF  # blue
+      font: "Inter" regular 14
+    }
+    fill: #FFFFFF  # white
+    stroke: #E8E8EC 1
+    corner: 8
+  }
+  rect @input_focus {
+    spec {
+      "Focused input state"
+      status: done
+    }
+    w: 320 h: 48
+    text @_anon_12 "Typing here..." {
+      fill: #1A1A2E  # blue
+      font: "Inter" regular 14
+    }
+    fill: #FFFFFF  # white
+    stroke: #6C5CE7 2
+    corner: 8
+  }
+  rect @input_error {
+    spec {
+      "Error input state"
+      accept: "red border + error message below"
+    }
+    w: 320 h: 48
+    text @_anon_13 "invalid@" {
+      fill: #E17055  # red
+      font: "Inter" regular 14
+    }
+    fill: #FFF6F4  # white
+    stroke: #E17055 2
+    corner: 8
+  }
+}
+
 @color_palette -> center_in: canvas
-@inputs -> absolute: 39.44, 30.53
-@input_focus -> absolute: 428.47, 213.61
-@btn_secondary -> absolute: 359.83, 246.74
-@_anon_8 -> absolute: 458.83, 317.71
-@swatch_gray_500 -> absolute: 64.55, 775.32

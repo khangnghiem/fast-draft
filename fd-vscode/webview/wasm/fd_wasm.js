@@ -47,6 +47,29 @@ export class FdCanvas {
         wasm.fdcanvas_clear_pressed(this.__wbg_ptr);
     }
     /**
+     * Create an edge between two nodes.
+     * Returns the new edge ID, or empty string on failure.
+     * @param {string} from_id
+     * @param {string} to_id
+     * @returns {string}
+     */
+    create_edge(from_id, to_id) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(from_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(to_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_create_edge(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+            deferred3_0 = ret[0];
+            deferred3_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    /**
      * Create a node at a specific position (for drag-and-drop).
      * `kind` is "rect", "ellipse", "text", or "frame".
      * Returns `true` if the node was created.
@@ -87,6 +110,29 @@ export class FdCanvas {
     duplicate_selected_at(dx, dy) {
         const ret = wasm.fdcanvas_duplicate_selected_at(this.__wbg_ptr, dx, dy);
         return ret !== 0;
+    }
+    /**
+     * Get last detach event info. Returns JSON:
+     * `{"detached":true,"nodeId":"...","fromGroupId":"..."}` or `""` if none.
+     * Clears the event after reading (one-shot).
+     * Evaluate a drop for structural detach. Returns JSON if detached, empty otherwise.
+     * Clears the event after reading (one-shot).
+     * @param {string} node_id
+     * @returns {string}
+     */
+    evaluate_drop(node_id) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_evaluate_drop(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
     }
     /**
      * Export the current selection (or entire canvas if empty) as an SVG string.

@@ -37,7 +37,7 @@ pub fn emit_document(graph: &SceneGraph) -> String {
 
     // Emit style definitions
     if use_separators && has_styles {
-        out.push_str("# ─── Styles ───\n\n");
+        out.push_str("# ─── Themes ───\n\n");
     }
     let mut styles: Vec<_> = graph.styles.iter().collect();
     styles.sort_by_key(|(id, _)| id.as_str().to_string());
@@ -91,7 +91,7 @@ fn indent(out: &mut String, depth: usize) {
 
 fn emit_style_block(out: &mut String, name: &NodeId, style: &Style, depth: usize) {
     indent(out, depth);
-    writeln!(out, "style {} {{", name.as_str()).unwrap();
+    writeln!(out, "theme {} {{", name.as_str()).unwrap();
 
     if let Some(ref fill) = style.fill {
         emit_paint_prop(out, "fill", fill, depth + 1);
@@ -168,6 +168,13 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
 
     // Annotations (spec block)
     emit_annotations(out, &node.annotations, depth + 1);
+
+    // Children — emitted right after spec so the structural skeleton
+    // is visible first. Visual styling comes at the tail for clean folding.
+    let children = graph.children(idx);
+    for child_idx in &children {
+        emit_node(out, graph, *child_idx, depth + 1);
+    }
 
     // Layout mode (for groups)
     if let NodeKind::Group { layout } = &node.kind {
@@ -266,13 +273,6 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         writeln!(out, "clip: true").unwrap();
     }
 
-    // Children — emitted before appearance properties so non-tech users
-    // see content structure first, styling details second.
-    let children = graph.children(idx);
-    for child_idx in &children {
-        emit_node(out, graph, *child_idx, depth + 1);
-    }
-
     // Style references
     for style_ref in &node.use_styles {
         indent(out, depth + 1);
@@ -346,7 +346,7 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         }
     }
 
-    // Animations
+    // Animations (when blocks)
     for anim in &node.animations {
         emit_anim(out, anim, depth + 1);
     }
@@ -450,17 +450,21 @@ fn weight_number_to_name(weight: u16) -> &'static str {
 /// Classify a hex color into a human-readable hue name.
 fn color_hint(hex: &str) -> &'static str {
     let hex = hex.trim_start_matches('#');
-    let Some((r, g, b)) = (match hex.len() {
+    let bytes = hex.as_bytes();
+    let Some((r, g, b)) = (match bytes.len() {
         3 | 4 => {
-            let r = u8::from_str_radix(&hex[0..1], 16).unwrap_or(0) * 17;
-            let g = u8::from_str_radix(&hex[1..2], 16).unwrap_or(0) * 17;
-            let b = u8::from_str_radix(&hex[2..3], 16).unwrap_or(0) * 17;
+            let r = crate::model::hex_val(bytes[0]).unwrap_or(0) * 17;
+            let g = crate::model::hex_val(bytes[1]).unwrap_or(0) * 17;
+            let b = crate::model::hex_val(bytes[2]).unwrap_or(0) * 17;
             Some((r, g, b))
         }
         6 | 8 => {
-            let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
-            let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
-            let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
+            let r = (crate::model::hex_val(bytes[0]).unwrap_or(0) << 4)
+                | crate::model::hex_val(bytes[1]).unwrap_or(0);
+            let g = (crate::model::hex_val(bytes[2]).unwrap_or(0) << 4)
+                | crate::model::hex_val(bytes[3]).unwrap_or(0);
+            let b = (crate::model::hex_val(bytes[4]).unwrap_or(0) << 4)
+                | crate::model::hex_val(bytes[5]).unwrap_or(0);
             Some((r, g, b))
         }
         _ => None,
@@ -517,7 +521,7 @@ fn emit_anim(out: &mut String, anim: &AnimKeyframe, depth: usize) {
         AnimTrigger::Enter => "enter",
         AnimTrigger::Custom(s) => s.as_str(),
     };
-    writeln!(out, "anim :{trigger} {{").unwrap();
+    writeln!(out, "when :{trigger} {{").unwrap();
 
     if let Some(ref fill) = anim.properties.fill {
         emit_paint_prop(out, "fill", fill, depth + 1);
@@ -660,6 +664,262 @@ fn emit_edge(out: &mut String, edge: &Edge) {
     }
 
     out.push_str("}\n");
+}
+
+// ─── Read Modes (filtered emit for AI agents) ────────────────────────────
+
+/// What an AI agent wants to read from the document.
+///
+/// Each mode selectively emits only the properties relevant to a specific
+/// concern, saving 50-80% tokens while preserving structural understanding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReadMode {
+    /// Full file — no filtering (identical to `emit_document`).
+    Full,
+    /// Node types, `@id`s, parent-child nesting only.
+    Structure,
+    /// Structure + dimensions (`w:`/`h:`) + `layout:` directives + constraints.
+    Layout,
+    /// Structure + themes/styles + `fill:`/`stroke:`/`font:`/`corner:`/`use:` refs.
+    Design,
+    /// Structure + `spec {}` blocks + annotations.
+    Spec,
+    /// Layout + Design + When combined — the full visual story.
+    Visual,
+    /// Structure + `when :trigger { ... }` animation blocks only.
+    When,
+    /// Structure + `edge @id { ... }` blocks.
+    Edges,
+}
+
+/// Emit a `SceneGraph` filtered to show only the properties relevant to `mode`.
+///
+/// - `Full`: identical to `emit_document`.
+/// - `Structure`: node kind + `@id` + children. No styles, dims, anims, specs.
+/// - `Layout`: structure + `w:`/`h:` + `layout:` + constraints (`->`).
+/// - `Design`: structure + themes + `fill:`/`stroke:`/`font:`/`corner:`/`use:`.
+/// - `Spec`: structure + `spec {}` blocks.
+/// - `Visual`: layout + design + when combined.
+/// - `When`: structure + `when :trigger { ... }` blocks.
+/// - `Edges`: structure + `edge @id { ... }` blocks.
+#[must_use]
+pub fn emit_filtered(graph: &SceneGraph, mode: ReadMode) -> String {
+    if mode == ReadMode::Full {
+        return emit_document(graph);
+    }
+
+    let mut out = String::with_capacity(1024);
+
+    let children = graph.children(graph.root);
+    let include_themes = matches!(mode, ReadMode::Design | ReadMode::Visual);
+    let include_constraints = matches!(mode, ReadMode::Layout | ReadMode::Visual);
+    let include_edges = matches!(mode, ReadMode::Edges | ReadMode::Visual);
+
+    // Themes (Design and Visual modes)
+    if include_themes && !graph.styles.is_empty() {
+        let mut styles: Vec<_> = graph.styles.iter().collect();
+        styles.sort_by_key(|(id, _)| id.as_str().to_string());
+        for (name, style) in &styles {
+            emit_style_block(&mut out, name, style, 0);
+            out.push('\n');
+        }
+    }
+
+    // Node tree (always emitted, but with per-mode filtering)
+    for child_idx in &children {
+        emit_node_filtered(&mut out, graph, *child_idx, 0, mode);
+        out.push('\n');
+    }
+
+    // Constraints (Layout and Visual modes)
+    if include_constraints {
+        for idx in graph.graph.node_indices() {
+            let node = &graph.graph[idx];
+            for constraint in &node.constraints {
+                if matches!(constraint, Constraint::Position { .. }) {
+                    continue;
+                }
+                emit_constraint(&mut out, &node.id, constraint);
+            }
+        }
+    }
+
+    // Edges (Edges and Visual modes)
+    if include_edges {
+        for edge in &graph.edges {
+            emit_edge(&mut out, edge);
+            out.push('\n');
+        }
+    }
+
+    out
+}
+
+/// Emit a single node with mode-based property filtering.
+fn emit_node_filtered(
+    out: &mut String,
+    graph: &SceneGraph,
+    idx: NodeIndex,
+    depth: usize,
+    mode: ReadMode,
+) {
+    let node = &graph.graph[idx];
+
+    if matches!(node.kind, NodeKind::Root) {
+        return;
+    }
+
+    indent(out, depth);
+
+    // Node kind + @id (always emitted)
+    match &node.kind {
+        NodeKind::Root => return,
+        NodeKind::Generic => write!(out, "@{}", node.id.as_str()).unwrap(),
+        NodeKind::Group { .. } => write!(out, "group @{}", node.id.as_str()).unwrap(),
+        NodeKind::Frame { .. } => write!(out, "frame @{}", node.id.as_str()).unwrap(),
+        NodeKind::Rect { .. } => write!(out, "rect @{}", node.id.as_str()).unwrap(),
+        NodeKind::Ellipse { .. } => write!(out, "ellipse @{}", node.id.as_str()).unwrap(),
+        NodeKind::Path { .. } => write!(out, "path @{}", node.id.as_str()).unwrap(),
+        NodeKind::Text { content } => {
+            write!(out, "text @{} \"{}\"", node.id.as_str(), content).unwrap();
+        }
+    }
+
+    out.push_str(" {\n");
+
+    // Spec annotations (Spec mode only)
+    if mode == ReadMode::Spec {
+        emit_annotations(out, &node.annotations, depth + 1);
+    }
+
+    // Children (always recurse)
+    let children = graph.children(idx);
+    for child_idx in &children {
+        emit_node_filtered(out, graph, *child_idx, depth + 1, mode);
+    }
+
+    // Layout directives (Layout and Visual modes)
+    if matches!(mode, ReadMode::Layout | ReadMode::Visual) {
+        emit_layout_mode_filtered(out, &node.kind, depth + 1);
+    }
+
+    // Dimensions (Layout and Visual modes)
+    if matches!(mode, ReadMode::Layout | ReadMode::Visual) {
+        emit_dimensions_filtered(out, &node.kind, depth + 1);
+    }
+
+    // Style properties (Design and Visual modes)
+    if matches!(mode, ReadMode::Design | ReadMode::Visual) {
+        for style_ref in &node.use_styles {
+            indent(out, depth + 1);
+            writeln!(out, "use: {}", style_ref.as_str()).unwrap();
+        }
+        if let Some(ref fill) = node.style.fill {
+            emit_paint_prop(out, "fill", fill, depth + 1);
+        }
+        if let Some(ref stroke) = node.style.stroke {
+            indent(out, depth + 1);
+            match &stroke.paint {
+                Paint::Solid(c) => {
+                    writeln!(out, "stroke: {} {}", c.to_hex(), format_num(stroke.width)).unwrap();
+                }
+                _ => writeln!(out, "stroke: #000 {}", format_num(stroke.width)).unwrap(),
+            }
+        }
+        if let Some(radius) = node.style.corner_radius {
+            indent(out, depth + 1);
+            writeln!(out, "corner: {}", format_num(radius)).unwrap();
+        }
+        if let Some(ref font) = node.style.font {
+            emit_font_prop(out, font, depth + 1);
+        }
+        if let Some(opacity) = node.style.opacity {
+            indent(out, depth + 1);
+            writeln!(out, "opacity: {}", format_num(opacity)).unwrap();
+        }
+    }
+
+    // Inline position (Layout and Visual modes)
+    if matches!(mode, ReadMode::Layout | ReadMode::Visual) {
+        for constraint in &node.constraints {
+            if let Constraint::Position { x, y } = constraint {
+                if *x != 0.0 {
+                    indent(out, depth + 1);
+                    writeln!(out, "x: {}", format_num(*x)).unwrap();
+                }
+                if *y != 0.0 {
+                    indent(out, depth + 1);
+                    writeln!(out, "y: {}", format_num(*y)).unwrap();
+                }
+            }
+        }
+    }
+
+    // Animations / when blocks (When and Visual modes)
+    if matches!(mode, ReadMode::When | ReadMode::Visual) {
+        for anim in &node.animations {
+            emit_anim(out, anim, depth + 1);
+        }
+    }
+
+    indent(out, depth);
+    out.push_str("}\n");
+}
+
+/// Emit layout mode directive for groups and frames (filtered path).
+fn emit_layout_mode_filtered(out: &mut String, kind: &NodeKind, depth: usize) {
+    let layout = match kind {
+        NodeKind::Group { layout } | NodeKind::Frame { layout, .. } => layout,
+        _ => return,
+    };
+    match layout {
+        LayoutMode::Free => {}
+        LayoutMode::Column { gap, pad } => {
+            indent(out, depth);
+            writeln!(
+                out,
+                "layout: column gap={} pad={}",
+                format_num(*gap),
+                format_num(*pad)
+            )
+            .unwrap();
+        }
+        LayoutMode::Row { gap, pad } => {
+            indent(out, depth);
+            writeln!(
+                out,
+                "layout: row gap={} pad={}",
+                format_num(*gap),
+                format_num(*pad)
+            )
+            .unwrap();
+        }
+        LayoutMode::Grid { cols, gap, pad } => {
+            indent(out, depth);
+            writeln!(
+                out,
+                "layout: grid cols={cols} gap={} pad={}",
+                format_num(*gap),
+                format_num(*pad)
+            )
+            .unwrap();
+        }
+    }
+}
+
+/// Emit dimension properties (w/h) for sized nodes (filtered path).
+fn emit_dimensions_filtered(out: &mut String, kind: &NodeKind, depth: usize) {
+    match kind {
+        NodeKind::Rect { width, height } | NodeKind::Frame { width, height, .. } => {
+            indent(out, depth);
+            writeln!(out, "w: {} h: {}", format_num(*width), format_num(*height)).unwrap();
+        }
+        NodeKind::Ellipse { rx, ry } => {
+            indent(out, depth);
+            writeln!(out, "w: {} h: {}", format_num(*rx), format_num(*ry)).unwrap();
+        }
+        _ => {}
+    }
 }
 
 // ─── Spec Markdown Export ─────────────────────────────────────────────────
@@ -976,7 +1236,7 @@ rect @login_btn {
         let input = r#"
 rect @card {
   spec {
-    status: in_progress
+    status: doing
     priority: high
     tag: mvp
   }
@@ -986,10 +1246,7 @@ rect @card {
         let graph = parse_document(input).unwrap();
         let card = graph.get_by_id(NodeId::intern("card")).unwrap();
         assert_eq!(card.annotations.len(), 3);
-        assert_eq!(
-            card.annotations[0],
-            Annotation::Status("in_progress".into())
-        );
+        assert_eq!(card.annotations[0], Annotation::Status("doing".into()));
         assert_eq!(card.annotations[1], Annotation::Priority("high".into()));
         assert_eq!(card.annotations[2], Annotation::Tag("mvp".into()));
 
@@ -1164,7 +1421,7 @@ edge @login_flow {
   spec {
     "Primary CTA — triggers login API call"
     accept: "disabled when fields empty"
-    status: in_progress
+    status: doing
   }
 }
 "#;
@@ -1334,7 +1591,7 @@ rect @login_btn {
   spec {
     "Primary CTA for login"
     accept: "disabled when fields empty"
-    status: in_progress
+    status: doing
     priority: high
     tag: auth
   }
@@ -1349,7 +1606,7 @@ rect @login_btn {
         assert!(md.contains("## @login_btn `rect`"));
         assert!(md.contains("> Primary CTA for login"));
         assert!(md.contains("- [ ] disabled when fields empty"));
-        assert!(md.contains("- **Status:** in_progress"));
+        assert!(md.contains("- **Status:** doing"));
         assert!(md.contains("- **Priority:** high"));
         assert!(md.contains("- **Tag:** auth"));
         // Visual props must NOT appear
@@ -1575,7 +1832,7 @@ rect @box {
         let child_pos = output.find("text @label").expect("child missing");
         let fill_pos = output.find("fill: #FF0000").expect("fill missing");
         let corner_pos = output.find("corner: 10").expect("corner missing");
-        let anim_pos = output.find("anim :hover").expect("anim missing");
+        let anim_pos = output.find("when :hover").expect("when missing");
 
         assert!(
             child_pos < fill_pos,
@@ -1615,8 +1872,8 @@ edge @flow {
         let output = emit_document(&graph);
 
         assert!(
-            output.contains("# ─── Styles ───"),
-            "should have Styles separator"
+            output.contains("# ─── Themes ───"),
+            "should have Themes separator"
         );
         assert!(
             output.contains("# ─── Layout ───"),
@@ -1665,5 +1922,644 @@ group @card {
             child_pos < fill_pos,
             "children should appear before parent fill"
         );
+    }
+
+    #[test]
+    fn roundtrip_theme_keyword() {
+        // Verify that `theme` keyword parses and emits correctly
+        let input = r#"
+theme accent {
+  fill: #6C5CE7
+  corner: 12
+}
+
+rect @btn {
+  w: 120 h: 40
+  use: accent
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+
+        // Emitter should output `theme`, not `style`
+        assert!(
+            output.contains("theme accent"),
+            "should emit `theme` keyword"
+        );
+        assert!(
+            !output.contains("style accent"),
+            "should NOT emit `style` keyword"
+        );
+
+        // Round-trip: re-parse emitted output
+        let graph2 = parse_document(&output).expect("re-parse of theme output failed");
+        assert!(
+            graph2.styles.contains_key(&NodeId::intern("accent")),
+            "theme definition should survive roundtrip"
+        );
+    }
+
+    #[test]
+    fn roundtrip_when_keyword() {
+        // Verify that `when` keyword parses and emits correctly
+        let input = r#"
+rect @btn {
+  w: 120 h: 40
+  fill: #6C5CE7
+  when :hover {
+    fill: #5A4BD1
+    ease: ease_out 200ms
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+
+        // Emitter should output `when`, not `anim`
+        assert!(output.contains("when :hover"), "should emit `when` keyword");
+        assert!(
+            !output.contains("anim :hover"),
+            "should NOT emit `anim` keyword"
+        );
+
+        // Round-trip: re-parse emitted output
+        let graph2 = parse_document(&output).expect("re-parse of when output failed");
+        let node = graph2.get_by_id(NodeId::intern("btn")).unwrap();
+        assert_eq!(
+            node.animations.len(),
+            1,
+            "animation should survive roundtrip"
+        );
+        assert_eq!(
+            node.animations[0].trigger,
+            AnimTrigger::Hover,
+            "trigger should be Hover"
+        );
+    }
+
+    #[test]
+    fn parse_old_style_keyword_compat() {
+        // Old `style` keyword must still be accepted by the parser
+        let input = r#"
+style accent {
+  fill: #6C5CE7
+}
+
+rect @btn {
+  w: 120 h: 40
+  use: accent
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        assert!(
+            graph.styles.contains_key(&NodeId::intern("accent")),
+            "old `style` keyword should parse into a theme definition"
+        );
+
+        // Emitter should upgrade to `theme`
+        let output = emit_document(&graph);
+        assert!(
+            output.contains("theme accent"),
+            "emitter should upgrade `style` to `theme`"
+        );
+    }
+
+    #[test]
+    fn parse_old_anim_keyword_compat() {
+        // Old `anim` keyword must still be accepted by the parser
+        let input = r#"
+rect @btn {
+  w: 120 h: 40
+  fill: #6C5CE7
+  anim :press {
+    scale: 0.95
+    ease: spring 150ms
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let node = graph.get_by_id(NodeId::intern("btn")).unwrap();
+        assert_eq!(
+            node.animations.len(),
+            1,
+            "old `anim` keyword should parse into animation"
+        );
+        assert_eq!(
+            node.animations[0].trigger,
+            AnimTrigger::Press,
+            "trigger should be Press"
+        );
+
+        // Emitter should upgrade to `when`
+        let output = emit_document(&graph);
+        assert!(
+            output.contains("when :press"),
+            "emitter should upgrade `anim` to `when`"
+        );
+    }
+
+    #[test]
+    fn roundtrip_theme_import() {
+        // Verify that import + theme references work together
+        let input = r#"
+import "tokens.fd" as tokens
+
+theme card_base {
+  fill: #FFFFFF
+  corner: 16
+}
+
+rect @card {
+  w: 300 h: 200
+  use: card_base
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+
+        // Both import and theme should appear in output
+        assert!(
+            output.contains("import \"tokens.fd\" as tokens"),
+            "import should survive roundtrip"
+        );
+        assert!(
+            output.contains("theme card_base"),
+            "theme should survive roundtrip"
+        );
+
+        // Re-parse
+        let graph2 = parse_document(&output).expect("re-parse failed");
+        assert_eq!(graph2.imports.len(), 1, "import count should survive");
+        assert!(
+            graph2.styles.contains_key(&NodeId::intern("card_base")),
+            "theme def should survive"
+        );
+    }
+
+    // ─── Hardening: edge-case round-trip tests ─────────────────────────────
+
+    #[test]
+    fn roundtrip_empty_group() {
+        let input = "group @empty {\n}\n";
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of empty group failed");
+        let node = graph2.get_by_id(NodeId::intern("empty")).unwrap();
+        assert!(matches!(node.kind, NodeKind::Group { .. }));
+    }
+
+    #[test]
+    fn roundtrip_deeply_nested_groups() {
+        let input = r#"
+group @outer {
+  group @middle {
+    group @inner {
+      rect @leaf {
+        w: 40 h: 20
+        fill: #FF0000
+      }
+    }
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of nested groups failed");
+        let leaf = graph2.get_by_id(NodeId::intern("leaf")).unwrap();
+        assert!(matches!(leaf.kind, NodeKind::Rect { .. }));
+        // Verify 3-level nesting preserved
+        let inner_idx = graph2.index_of(NodeId::intern("inner")).unwrap();
+        assert_eq!(graph2.children(inner_idx).len(), 1);
+        let middle_idx = graph2.index_of(NodeId::intern("middle")).unwrap();
+        assert_eq!(graph2.children(middle_idx).len(), 1);
+    }
+
+    #[test]
+    fn roundtrip_unicode_text() {
+        let input = "text @emoji \"Hello 🎨 café 日本語\" {\n  fill: #333333\n}\n";
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+        assert!(
+            output.contains("Hello 🎨 café 日本語"),
+            "unicode should survive emit"
+        );
+        let graph2 = parse_document(&output).expect("re-parse of unicode failed");
+        let node = graph2.get_by_id(NodeId::intern("emoji")).unwrap();
+        match &node.kind {
+            NodeKind::Text { content } => {
+                assert!(content.contains("🎨"));
+                assert!(content.contains("café"));
+                assert!(content.contains("日本語"));
+            }
+            _ => panic!("expected Text node"),
+        }
+    }
+
+    #[test]
+    fn roundtrip_spec_all_fields() {
+        let input = r#"
+rect @full_spec {
+  spec {
+    "Full specification node"
+    accept: "all fields present"
+    status: doing
+    priority: high
+    tag: mvp, auth
+  }
+  w: 100 h: 50
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let node = graph.get_by_id(NodeId::intern("full_spec")).unwrap();
+        assert_eq!(node.annotations.len(), 5, "should have 5 annotations");
+
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of full spec failed");
+        let node2 = graph2.get_by_id(NodeId::intern("full_spec")).unwrap();
+        assert_eq!(node2.annotations.len(), 5);
+        assert_eq!(node2.annotations, node.annotations);
+    }
+
+    #[test]
+    fn roundtrip_path_node() {
+        let input = "path @sketch {\n}\n";
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of path failed");
+        let node = graph2.get_by_id(NodeId::intern("sketch")).unwrap();
+        assert!(matches!(node.kind, NodeKind::Path { .. }));
+    }
+
+    #[test]
+    fn roundtrip_gradient_linear() {
+        let input = r#"
+rect @grad {
+  w: 200 h: 100
+  fill: linear(90deg, #FF0000 0, #0000FF 1)
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let node = graph.get_by_id(NodeId::intern("grad")).unwrap();
+        assert!(matches!(
+            node.style.fill,
+            Some(Paint::LinearGradient { .. })
+        ));
+
+        let output = emit_document(&graph);
+        assert!(output.contains("linear("), "should emit linear gradient");
+        let graph2 = parse_document(&output).expect("re-parse of linear gradient failed");
+        let node2 = graph2.get_by_id(NodeId::intern("grad")).unwrap();
+        assert!(matches!(
+            node2.style.fill,
+            Some(Paint::LinearGradient { .. })
+        ));
+    }
+
+    #[test]
+    fn roundtrip_gradient_radial() {
+        let input = r#"
+rect @radial_box {
+  w: 100 h: 100
+  fill: radial(#FFFFFF 0, #000000 1)
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let node = graph.get_by_id(NodeId::intern("radial_box")).unwrap();
+        assert!(matches!(
+            node.style.fill,
+            Some(Paint::RadialGradient { .. })
+        ));
+
+        let output = emit_document(&graph);
+        assert!(output.contains("radial("), "should emit radial gradient");
+        let graph2 = parse_document(&output).expect("re-parse of radial gradient failed");
+        let node2 = graph2.get_by_id(NodeId::intern("radial_box")).unwrap();
+        assert!(matches!(
+            node2.style.fill,
+            Some(Paint::RadialGradient { .. })
+        ));
+    }
+
+    #[test]
+    fn roundtrip_shadow_property() {
+        let input = r#"
+rect @shadowed {
+  w: 200 h: 100
+  shadow: (0,4,20,#000000)
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let node = graph.get_by_id(NodeId::intern("shadowed")).unwrap();
+        let shadow = node.style.shadow.as_ref().expect("shadow should exist");
+        assert_eq!(shadow.blur, 20.0);
+
+        let output = emit_document(&graph);
+        assert!(output.contains("shadow:"), "should emit shadow");
+        let graph2 = parse_document(&output).expect("re-parse of shadow failed");
+        let node2 = graph2.get_by_id(NodeId::intern("shadowed")).unwrap();
+        let shadow2 = node2.style.shadow.as_ref().expect("shadow should survive");
+        assert_eq!(shadow2.offset_y, 4.0);
+        assert_eq!(shadow2.blur, 20.0);
+    }
+
+    #[test]
+    fn roundtrip_opacity() {
+        let input = r#"
+rect @faded {
+  w: 100 h: 100
+  fill: #6C5CE7
+  opacity: 0.5
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let node = graph.get_by_id(NodeId::intern("faded")).unwrap();
+        assert_eq!(node.style.opacity, Some(0.5));
+
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of opacity failed");
+        let node2 = graph2.get_by_id(NodeId::intern("faded")).unwrap();
+        assert_eq!(node2.style.opacity, Some(0.5));
+    }
+
+    #[test]
+    fn roundtrip_clip_frame() {
+        let input = r#"
+frame @clipped {
+  w: 300 h: 200
+  clip: true
+  fill: #FFFFFF
+  corner: 12
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+        assert!(output.contains("clip: true"), "should emit clip");
+        let graph2 = parse_document(&output).expect("re-parse of clip frame failed");
+        let node = graph2.get_by_id(NodeId::intern("clipped")).unwrap();
+        match &node.kind {
+            NodeKind::Frame { clip, .. } => assert!(clip, "clip should be true"),
+            _ => panic!("expected Frame node"),
+        }
+    }
+
+    #[test]
+    fn roundtrip_multiple_animations() {
+        let input = r#"
+rect @animated {
+  w: 120 h: 40
+  fill: #6C5CE7
+  when :hover {
+    fill: #5A4BD1
+    scale: 1.05
+    ease: ease_out 200ms
+  }
+  when :press {
+    scale: 0.95
+    ease: spring 150ms
+  }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let node = graph.get_by_id(NodeId::intern("animated")).unwrap();
+        assert_eq!(node.animations.len(), 2, "should have 2 animations");
+
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of multi-anim failed");
+        let node2 = graph2.get_by_id(NodeId::intern("animated")).unwrap();
+        assert_eq!(node2.animations.len(), 2);
+        assert_eq!(node2.animations[0].trigger, AnimTrigger::Hover);
+        assert_eq!(node2.animations[1].trigger, AnimTrigger::Press);
+    }
+
+    #[test]
+    fn roundtrip_inline_spec_shorthand() {
+        let input = r#"
+rect @btn {
+  spec "Primary action button"
+  w: 180 h: 48
+  fill: #6C5CE7
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let node = graph.get_by_id(NodeId::intern("btn")).unwrap();
+        assert_eq!(node.annotations.len(), 1);
+        assert!(matches!(
+            &node.annotations[0],
+            Annotation::Description(d) if d == "Primary action button"
+        ));
+
+        let output = emit_document(&graph);
+        let graph2 = parse_document(&output).expect("re-parse of inline spec failed");
+        let node2 = graph2.get_by_id(NodeId::intern("btn")).unwrap();
+        assert_eq!(node2.annotations, node.annotations);
+    }
+
+    #[test]
+    fn roundtrip_layout_modes() {
+        let input = r#"
+group @col {
+  layout: column gap=16 pad=24
+  rect @c1 { w: 100 h: 50 }
+}
+
+group @rw {
+  layout: row gap=8 pad=12
+  rect @r1 { w: 50 h: 50 }
+}
+
+group @grd {
+  layout: grid cols=2 gap=10 pad=20
+  rect @g1 { w: 80 h: 80 }
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+        assert!(output.contains("layout: column gap=16 pad=24"));
+        assert!(output.contains("layout: row gap=8 pad=12"));
+        assert!(output.contains("layout: grid cols=2 gap=10 pad=20"));
+
+        let graph2 = parse_document(&output).expect("re-parse of layout modes failed");
+        let col = graph2.get_by_id(NodeId::intern("col")).unwrap();
+        assert!(matches!(
+            col.kind,
+            NodeKind::Group {
+                layout: LayoutMode::Column { .. }
+            }
+        ));
+        let rw = graph2.get_by_id(NodeId::intern("rw")).unwrap();
+        assert!(matches!(
+            rw.kind,
+            NodeKind::Group {
+                layout: LayoutMode::Row { .. }
+            }
+        ));
+        let grd = graph2.get_by_id(NodeId::intern("grd")).unwrap();
+        assert!(matches!(
+            grd.kind,
+            NodeKind::Group {
+                layout: LayoutMode::Grid { .. }
+            }
+        ));
+    }
+
+    // ─── emit_filtered tests ─────────────────────────────────────────────
+
+    fn make_test_graph() -> SceneGraph {
+        // A rich document with styles, layout, anims, specs, and edges
+        let input = r#"
+theme accent {
+  fill: #6C5CE7
+  font: "Inter" bold 16
+}
+
+group @container {
+  layout: column gap=16 pad=24
+
+  rect @card {
+    w: 200 h: 100
+    use: accent
+    fill: #FFFFFF
+    corner: 12
+    spec {
+      "Main card component"
+      status: done
+    }
+    when :hover {
+      fill: #F0EDFF
+      scale: 1.05
+      ease: ease_out 200ms
+    }
+  }
+
+  text @label "Hello" {
+    font: "Inter" regular 14
+    fill: #333333
+    x: 20
+    y: 40
+  }
+}
+
+edge @card_to_label {
+  from: @card
+  to: @label
+  label: "displays"
+}
+"#;
+        parse_document(input).unwrap()
+    }
+
+    #[test]
+    fn emit_filtered_full_matches_emit_document() {
+        let graph = make_test_graph();
+        let full = emit_filtered(&graph, ReadMode::Full);
+        let doc = emit_document(&graph);
+        assert_eq!(full, doc, "Full mode should be identical to emit_document");
+    }
+
+    #[test]
+    fn emit_filtered_structure() {
+        let graph = make_test_graph();
+        let out = emit_filtered(&graph, ReadMode::Structure);
+        // Should have node declarations
+        assert!(out.contains("group @container"), "should include group");
+        assert!(out.contains("rect @card"), "should include rect");
+        assert!(out.contains("text @label"), "should include text");
+        // Should NOT have styles, dimensions, specs, or anims
+        assert!(!out.contains("fill:"), "no fill in structure mode");
+        assert!(!out.contains("w:"), "no dimensions in structure mode");
+        assert!(!out.contains("spec"), "no spec in structure mode");
+        assert!(!out.contains("when"), "no when in structure mode");
+        assert!(!out.contains("theme"), "no theme in structure mode");
+        assert!(!out.contains("edge"), "no edges in structure mode");
+    }
+
+    #[test]
+    fn emit_filtered_layout() {
+        let graph = make_test_graph();
+        let out = emit_filtered(&graph, ReadMode::Layout);
+        // Should have layout + dimensions
+        assert!(out.contains("layout: column"), "should include layout");
+        assert!(out.contains("w: 200 h: 100"), "should include dims");
+        assert!(out.contains("x: 20"), "should include position");
+        // Should NOT have styles or anims
+        assert!(!out.contains("fill:"), "no fill in layout mode");
+        assert!(!out.contains("theme"), "no theme in layout mode");
+        assert!(!out.contains("when :hover"), "no when in layout mode");
+    }
+
+    #[test]
+    fn emit_filtered_design() {
+        let graph = make_test_graph();
+        let out = emit_filtered(&graph, ReadMode::Design);
+        // Should have themes + styles
+        assert!(out.contains("theme accent"), "should include theme");
+        assert!(out.contains("use: accent"), "should include use ref");
+        assert!(out.contains("fill:"), "should include fill");
+        assert!(out.contains("corner: 12"), "should include corner");
+        // Should NOT have layout or anims
+        assert!(!out.contains("layout:"), "no layout in design mode");
+        assert!(!out.contains("w: 200"), "no dims in design mode");
+        assert!(!out.contains("when :hover"), "no when in design mode");
+    }
+
+    #[test]
+    fn emit_filtered_spec() {
+        let graph = make_test_graph();
+        let out = emit_filtered(&graph, ReadMode::Spec);
+        // Should have spec blocks
+        assert!(out.contains("spec"), "should include spec");
+        assert!(out.contains("Main card component"), "should include desc");
+        assert!(out.contains("status: done"), "should include status");
+        // Should NOT have styles or anims
+        assert!(!out.contains("fill:"), "no fill in spec mode");
+        assert!(!out.contains("when"), "no when in spec mode");
+    }
+
+    #[test]
+    fn emit_filtered_visual() {
+        let graph = make_test_graph();
+        let out = emit_filtered(&graph, ReadMode::Visual);
+        // Visual = Layout + Design + When
+        assert!(out.contains("theme accent"), "should include theme");
+        assert!(out.contains("layout: column"), "should include layout");
+        assert!(out.contains("w: 200 h: 100"), "should include dims");
+        assert!(out.contains("fill:"), "should include fill");
+        assert!(out.contains("corner: 12"), "should include corner");
+        assert!(out.contains("when :hover"), "should include when");
+        assert!(out.contains("scale: 1.05"), "should include anim props");
+        assert!(out.contains("edge @card_to_label"), "should include edges");
+        // Should NOT have spec blocks
+        assert!(
+            !out.contains("Main card component"),
+            "no spec desc in visual mode"
+        );
+    }
+
+    #[test]
+    fn emit_filtered_when() {
+        let graph = make_test_graph();
+        let out = emit_filtered(&graph, ReadMode::When);
+        // Should have when blocks
+        assert!(out.contains("when :hover"), "should include when");
+        assert!(out.contains("scale: 1.05"), "should include anim props");
+        // Should NOT have node-level styles, layout, or spec
+        assert!(!out.contains("corner:"), "no corner in when mode");
+        assert!(!out.contains("w: 200"), "no dims in when mode");
+        assert!(!out.contains("theme"), "no theme in when mode");
+        assert!(!out.contains("spec"), "no spec in when mode");
+    }
+
+    #[test]
+    fn emit_filtered_edges() {
+        let graph = make_test_graph();
+        let out = emit_filtered(&graph, ReadMode::Edges);
+        // Should have edges
+        assert!(out.contains("edge @card_to_label"), "should include edge");
+        assert!(out.contains("from: @card"), "should include from");
+        assert!(out.contains("to: @label"), "should include to");
+        assert!(out.contains("label: \"displays\""), "should include label");
+        // Should NOT have styles or anims
+        assert!(!out.contains("fill:"), "no fill in edges mode");
+        assert!(!out.contains("when"), "no when in edges mode");
     }
 }

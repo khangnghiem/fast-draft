@@ -1,439 +1,289 @@
-style card {
-  fill: #FFFFFF
-  corner: 16
-}
-
-# ─── Hover effects ───────────────────────────────────────────────────────
-group @_anon_11 {
-  layout: column gap=24 pad=32
-  x: 544.72
-  y: 115.89
-}
-
-# ─── Hover effects ───────────────────────────────────────────────────────
-group @_anon_10 {
-  layout: column gap=24 pad=32
-  x: 544.72
-  y: 115.89
-}
-
-# ─── Hover effects ───────────────────────────────────────────────────────
-group @_anon_9 {
-  layout: column gap=24 pad=32
-  x: 544.72
-  y: 115.89
-}
-
-# ─── Hover effects ───────────────────────────────────────────────────────
-group @_anon_8 {
-  layout: column gap=24 pad=32
-  x: 544.72
-  y: 115.89
-}
-
-# ─── Hover effects ───────────────────────────────────────────────────────
-group @_anon_7 {
-  layout: column gap=24 pad=32
-  x: 544.72
-  y: 115.89
-}
-
-# ─── Hover effects ───────────────────────────────────────────────────────
-group @_anon_6 {
-  layout: column gap=24 pad=32
-  x: 544.72
-  y: 115.89
-}
-
-group @_anon_5 {
-  layout: row gap=16 pad=0
-  x: -526.98
-  y: -133.26
-}
-
-group @_anon_4 {
-  layout: row gap=16 pad=0
-  x: -526.98
-  y: -133.26
-}
-
-group @_anon_3 {
-  layout: row gap=20 pad=0
-  x: -281.7
-  y: -583.23
-}
-
-group @_anon_2 {
-  layout: row gap=20 pad=0
-  x: -281.7
-  y: -583.23
-}
-
-group @_anon_1 {
-  layout: row gap=16 pad=0
-}
-
-rect @_anon_0 {
-  w: 120 h: 80
-  fill: #DFE6E9
-  corner: 10
-  x: 705.16
-  y: -120.53
-  anim :hover {
-    scale: 1.15
-    ease: linear 300ms
-  }
-}
-
-# ─── Hover effects ───────────────────────────────────────────────────────
+# ─── Animation Catalog ────────────────────────────────────────────────────
 group @hover_demos {
-  layout: column gap=24 pad=32
-  x: 258.75
-  y: 40.41
-  group @combined_row {
-    layout: row gap=20 pad=0
-    x: -281.7
-    y: -583.23
-    rect @combo_3 {
-      spec "Hover + press combo"
-      w: 180 h: 120
-      fill: #FF6B6B
-      corner: 16
-      shadow: (0,4,20,#FF6B6B40)
-      text @_anon_35 "Full Feedback" {
-        fill: #FFFFFF
-        font: "Inter" 600 15
-      }
-      anim :hover {
-        fill: #E55050
-        scale: 1.05
-        ease: spring 300ms
-      }
-      anim :press {
-        scale: 0.9
-        rotate: -2
-        ease: spring 200ms
-      }
-    }
-    rect @combo_2 {
-      spec "Press: squish + dim"
-      w: 180 h: 120
-      fill: #00B894
-      corner: 16
-      shadow: (0,4,20,#00B89440)
-      x: 564.67
-      y: -488.56
-      text @_anon_34 "Squish & Dim" {
-        fill: #FFFFFF
-        font: "Inter" 600 15
-        x: -259.47
-        y: -194.2
-      }
-      anim :hover {
-        scale: 1.04
-        ease: ease_out 200ms
-      }
-      anim :press {
-        opacity: 0.7
-        scale: 0.92
-        ease: spring 150ms
-      }
-    }
-    rect @combo_1 {
-      spec "Hover: scale + color + shadow lift"
-      w: 180 h: 120
-      fill: #6C5CE7
-      corner: 16
-      shadow: (0,4,20,#6C5CE740)
-      x: 398.11
-      y: -0.17
-      text @_anon_33 "Lift & Glow" {
-        fill: #FFFFFF
-        font: "Inter" 600 15
-      }
-      anim :hover {
-        fill: #5A4BD1
-        scale: 1.06
-        ease: spring 400ms
-      }
-    }
-  }
-  text @section_combined "Combined Animations" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
-  }
-  group @easing_row {
-    layout: row gap=16 pad=0
-    x: -526.98
-    y: -133.26
-    rect @ease_spring {
-      w: 120 h: 80
-      fill: #DFE6E9
-      corner: 10
-      text @_anon_32 "Spring" {
-        fill: #333333
-        font: "Inter" 500 12
-      }
-      anim :hover {
-        scale: 1.15
-        ease: spring 300ms
-      }
-    }
-    rect @ease_in_out {
-      w: 120 h: 80
-      fill: #DFE6E9
-      corner: 10
-      text @_anon_31 "Ease In/Out" {
-        fill: #333333
-        font: "Inter" 500 12
-      }
-      anim :hover {
-        scale: 1.15
-        ease: ease_in_out 300ms
-      }
-    }
-    rect @ease_out {
-      w: 120 h: 80
-      fill: #DFE6E9
-      corner: 10
-      text @_anon_30 "Ease Out" {
-        fill: #333333
-        font: "Inter" 500 12
-      }
-      anim :hover {
-        scale: 1.15
-        ease: ease_out 300ms
-      }
-    }
-    rect @ease_in {
-      w: 120 h: 80
-      fill: #DFE6E9
-      corner: 10
-      text @_anon_29 "Ease In" {
-        fill: #333333
-        font: "Inter" 500 12
-      }
-      anim :hover {
-        scale: 1.15
-        ease: ease_in 300ms
-      }
-    }
-    rect @ease_linear {
-      w: 120 h: 80
-      fill: #DFE6E9
-      corner: 10
-      x: 705.16
-      y: -120.53
-      text @_anon_28 "Linear" {
-        fill: #333333
-        font: "Inter" 500 12
-      }
-      anim :hover {
-        scale: 1.15
-        ease: linear 300ms
-      }
-    }
-  }
-  text @section_easing "Easing Functions" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
-  }
-  group @enter_row {
-    spec {
-      "Triggered when element enters viewport"
-      accept: "plays once on scroll into view"
-      tag: animation, ux
-    }
-    layout: row gap=20 pad=0
-    rect @slide_enter {
-      w: 140 h: 100
-      fill: #E17055
-      corner: 12
-      opacity: 0
-      text @_anon_27 "Slide Up" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      anim :enter {
-        opacity: 1
-        ease: ease_in_out 400ms
-      }
-    }
-    rect @scale_enter {
-      w: 140 h: 100
-      fill: #00B894
-      corner: 12
-      opacity: 0
-      text @_anon_26 "Pop In" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      anim :enter {
-        opacity: 1
-        scale: 1
-        ease: spring 600ms
-      }
-    }
-    rect @fade_enter {
-      w: 140 h: 100
-      fill: #6C5CE7
-      corner: 12
-      opacity: 0
-      text @_anon_25 "Fade In" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      anim :enter {
-        opacity: 1
-        ease: ease_out 500ms
-      }
-    }
-  }
-  text @section_enter "Entrance Animations" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
-  }
-  group @press_row {
-    layout: row gap=20 pad=0
-    x: -513.07
-    y: 121.46
-    rect @flash_press {
-      w: 140 h: 100
-      fill: #FF6B6B
-      corner: 12
-      text @_anon_24 "Flash" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      anim :press {
-        fill: #FFFFFF
-        ease: linear 80ms
-      }
-    }
-    rect @dim_press {
-      w: 140 h: 100
-      fill: #74B9FF
-      corner: 12
-      text @_anon_23 "Dim" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      anim :press {
-        opacity: 0.5
-        ease: ease_out 100ms
-      }
-    }
-    rect @squish_press {
-      spec "Press-down squish for tactile feedback"
-      w: 140 h: 100
-      fill: #A29BFE
-      corner: 12
-      x: 319.65
-      y: 1.35
-      text @_anon_22 "Squish" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      anim :press {
-        scale: 0.88
-        ease: spring 150ms
-      }
-    }
-  }
-  text @section_press "Press / Tap Effects" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
+  text @section_hover "Hover Effects" {
+    fill: #1A1A2E  # blue
+    font: "Inter" bold 28
   }
   group @hover_row {
-    layout: row gap=20 pad=0
-    x: -471.1
-    y: 246.33
-    rect @rotate_hover {
-      w: 140 h: 100
-      fill: #FDCB6E
-      corner: 12
-      text @_anon_21 "Rotate" {
-        fill: #333333
-        font: "Inter" 600 14
-      }
-      anim :hover {
-        rotate: 5
-        ease: spring 400ms
-      }
-    }
-    rect @color_hover {
-      w: 140 h: 100
-      fill: #E17055
-      corner: 12
-      x: -219.87
-      y: 55.37
-      text @_anon_20 "Color" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      anim :hover {
-        fill: #D63031
-        ease: ease_out 250ms
-      }
-    }
-    rect @fade_hover {
-      w: 140 h: 100
-      fill: #00B894
-      corner: 12
-      x: -33.74
-      y: 229.89
-      text @_anon_19 "Opacity" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-        x: -0.35
-        y: 1.35
-      }
-      anim :hover {
-        opacity: 0.6
-        ease: ease_in_out 200ms
-      }
-    }
     rect @scale_hover {
       spec "Scale animation"
+      text @scale_label "Scale" {
+        fill: #FFFFFF  # white
+        font: "Inter" semibold 14
+        x: -31.66
+        y: -8.71
+      }
       w: 140 h: 100
-      fill: #6C5CE7
+      fill: #6C5CE7  # blue
       corner: 12
-      x: 197.84
-      y: 108.62
-      text @_anon_18 "Scale" {
-        fill: #FFFFFF
-        font: "Inter" 600 14
-      }
-      anim :hover {
-        scale: 1.1
-        ease: spring 300ms
-      }
+      y: 0.37
     }
+    layout: row gap=20 pad=0
+    x: 150
+    y: 31.89
   }
-  text @section_hover "Hover Effects" {
-    fill: #1A1A2E
-    font: "Inter" 700 28
+  rect @fade_hover {
+    text @fade_label "Opacity" {
+      fill: #FFFFFF  # white
+      font: "Inter" semibold 14
+      x: -0.16
+      y: -0.81
+    }
+    w: 140 h: 100
+    fill: #00B894  # teal
+    corner: 12
   }
+  layout: column gap=24 pad=32
+  x: 447.01
+  y: 201.07
 }
 
-text @_anon_36 "Text" {
-  x: 16.78
-  y: 49.66
+rect @color_hover {
+  text @color_label "Color" {
+    fill: #FFFFFF  # white
+    font: "Inter" semibold 14
+  }
+  w: 140 h: 100
+  fill: #E17055  # red
+  corner: 12
 }
 
-text @_anon_37 "Text" {
-  x: 278.83
-  y: -29.78
+rect @rotate_hover {
+  text @rotate_label "Rotate" {
+    fill: #333333  # gray
+    font: "Inter" semibold 14
+  }
+  w: 140 h: 100
+  fill: #FDCB6E  # orange
+  corner: 12
 }
 
-text @_anon_38 "Text" {
-  x: 223.49
-  y: -153.89
+# ── Press / Tap Effects ──
+text @section_press "Press / Tap Effects" {
+  fill: #1A1A2E  # blue
+  font: "Inter" bold 28
+  x: 250.61
+  y: 8.22
 }
 
-@_anon_1 -> offset: @easing_row 20, 20
-@_anon_3 -> offset: @combined_row 20, 20
-@_anon_5 -> offset: @easing_row 20, 20
-@_anon_7 -> offset: @hover_demos 20, 20
-@_anon_9 -> offset: @hover_demos 20, 20
-@_anon_11 -> offset: @hover_demos 20, 20
+group @press_row {
+  rect @squish_press {
+    spec "Press-down squish for tactile feedback"
+    text @squish_label "Squish" {
+      fill: #FFFFFF  # white
+      font: "Inter" semibold 14
+    }
+    w: 140 h: 100
+    fill: #A29BFE  # blue
+    corner: 12
+  }
+  layout: row gap=20 pad=0
+}
+
+rect @dim_press {
+  text @dim_label "Dim" {
+    fill: #FFFFFF  # white
+    font: "Inter" semibold 14
+  }
+  w: 140 h: 100
+  fill: #74B9FF  # blue
+  corner: 12
+}
+
+rect @flash_press {
+  text @flash_label "Flash" {
+    fill: #FFFFFF  # white
+    font: "Inter" semibold 14
+  }
+  w: 140 h: 100
+  fill: #FF6B6B  # red
+  corner: 12
+}
+
+# ── Entrance Animations ──
+text @section_enter "Entrance Animations" {
+  fill: #1A1A2E  # blue
+  font: "Inter" bold 28
+  x: -111.89
+  y: -46.81
+}
+
+group @enter_row {
+  spec {
+    "Triggered when element enters viewport"
+    accept: "plays once on scroll into view"
+    tag: animation, ux
+  }
+  rect @fade_enter {
+    text @fade_enter_label "Fade In" {
+      fill: #FFFFFF  # white
+      font: "Inter" semibold 14
+    }
+    w: 140 h: 100
+    fill: #6C5CE7  # blue
+    corner: 12
+    opacity: 0
+  }
+  layout: row gap=20 pad=0
+}
+
+rect @scale_enter {
+  text @scale_enter_label "Pop In" {
+    fill: #FFFFFF  # white
+    font: "Inter" semibold 14
+  }
+  w: 140 h: 100
+  fill: #00B894  # teal
+  corner: 12
+  opacity: 0
+}
+
+rect @slide_enter {
+  text @slide_enter_label "Slide Up" {
+    fill: #FFFFFF  # white
+    font: "Inter" semibold 14
+  }
+  w: 140 h: 100
+  fill: #E17055  # red
+  corner: 12
+  opacity: 0
+}
+
+# ── Easing Functions ──
+text @section_easing "Easing Functions" {
+  fill: #1A1A2E  # blue
+  font: "Inter" bold 28
+  x: 327.38
+  y: 58.16
+}
+
+group @easing_row {
+  rect @ease_linear {
+    text @linear_label "Linear" {
+      fill: #333333  # gray
+      font: "Inter" medium 12
+    }
+    w: 120 h: 80
+    fill: #DFE6E9  # white
+    corner: 10
+  }
+  layout: row gap=16 pad=0
+}
+
+rect @ease_in {
+  text @in_label "Ease In" {
+    fill: #333333  # gray
+    font: "Inter" medium 12
+  }
+  w: 120 h: 80
+  fill: #DFE6E9  # white
+  corner: 10
+}
+
+rect @ease_out {
+  text @out_label "Ease Out" {
+    fill: #333333  # gray
+    font: "Inter" medium 12
+  }
+  w: 120 h: 80
+  fill: #DFE6E9  # white
+  corner: 10
+}
+
+rect @ease_in_out {
+  text @inout_label "Ease In/Out" {
+    fill: #333333  # gray
+    font: "Inter" medium 12
+  }
+  w: 120 h: 80
+  fill: #DFE6E9  # white
+  corner: 10
+}
+
+rect @ease_spring {
+  text @spring_label "Spring" {
+    fill: #333333  # gray
+    font: "Inter" medium 12
+    x: 153.45
+    y: 212.34
+  }
+  w: 120 h: 80
+  fill: #DFE6E9  # white
+  corner: 10
+}
+
+# ── Combined Animations ──
+text @section_combined "Combined Animations" {
+  fill: #1A1A2E  # blue
+  font: "Inter" bold 28
+  x: 114.27
+  y: -105.57
+}
+
+group @combined_row {
+  rect @combo_1 {
+    spec "Hover: scale + color + shadow lift"
+    text @combo1_label "Lift & Glow" {
+      fill: #FFFFFF  # white
+      font: "Inter" semibold 15
+      x: 43.84
+      y: 55.22
+    }
+    w: 180 h: 120
+    fill: #6C5CE7  # blue
+    corner: 16
+    shadow: (0,4,20,#6C5CE740)
+    x: 3.45
+    y: 2.3
+  }
+  layout: row gap=20 pad=0
+}
+
+rect @combo_2 {
+  spec "Press: squish + dim"
+  text @combo2_label "Squish & Dim" {
+    fill: #FFFFFF  # white
+    font: "Inter" semibold 15
+    x: 40.51
+    y: 46.82
+  }
+  w: 180 h: 120
+  fill: #00B894  # teal
+  corner: 16
+  shadow: (0,4,20,#00B89440)
+  x: 103.09
+  y: 368.49
+}
+
+rect @combo_3 {
+  spec "Hover + press combo"
+  text @combo3_label "Full Feedback" {
+    fill: #FFFFFF  # white
+    font: "Inter" semibold 15
+    y: -2.01
+  }
+  w: 180 h: 120
+  fill: #FF6B6B  # red
+  corner: 16
+  shadow: (0,4,20,#FF6B6B40)
+  x: 270.82
+  y: 131.46
+}
+
+rect @rect_0 {
+  w: 155.6 h: 86.23
+  x: 97.91
+  y: 612.56
+}
+
+text @text_1 "Text" {
+  x: 266.27
+  y: 615.12
+}
+
+rect @rect_2 {
+  w: 139.51 h: 159.64
+  x: 430.3
+  y: 573.84
+}
+

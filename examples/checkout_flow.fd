@@ -3,8 +3,8 @@
 
 spec "E-commerce checkout flow — MVP scope"
 
-style label { font: "Inter" 14; fill: #333 }
-style muted { font: "Inter" 12; fill: #999 }
+theme label { font: "Inter" 14; fill: #333 }
+theme muted { font: "Inter" 12; fill: #999 }
 
 # ─── Checkout page ───────────────────────────────────────────────────────
 
@@ -16,7 +16,7 @@ group @checkout_page {
     accept: "cart review → shipping → payment"
     accept: "back button returns to previous step"
     accept: "progress indicator shows current step"
-    status: in_progress
+    status: doing
     priority: high
     tag: checkout, mvp, revenue
   }
@@ -30,7 +30,7 @@ group @checkout_page {
       "Step indicator — 3 steps"
       accept: "completed steps are highlighted"
       accept: "current step shows active color"
-      status: draft
+      status: todo
     }
 
     rect @step_1 {
@@ -198,7 +198,7 @@ group @checkout_page {
 
       text "Back" { font: "Inter" 500 15; fill: #333 }
 
-      anim :hover { fill: #F5F5F7; ease: ease_out 150ms }
+      when :hover { fill: #F5F5F7; ease: ease_out 150ms }
     }
 
     rect @btn_continue {
@@ -214,8 +214,8 @@ group @checkout_page {
 
       text "Continue to Payment" { font: "Inter" 600 15; fill: #FFF }
 
-      anim :hover { fill: #5A4BD1; scale: 1.02; ease: spring 200ms }
-      anim :press { scale: 0.97; ease: ease_out 100ms }
+      when :hover { fill: #5A4BD1; scale: 1.02; ease: spring 200ms }
+      when :press { scale: 0.97; ease: ease_out 100ms }
     }
   }
 }

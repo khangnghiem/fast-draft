@@ -11,20 +11,20 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R1.1** _(done)_: Token-efficient text DSL — ~5× fewer tokens than SVG for equivalent content
 - **R1.2** _(done)_: Graph-based document model (DAG) — nodes reference by `@id`, not coordinates
 - **R1.3** _(done)_: Constraint-based layout (`center_in`, `offset`, `fill_parent`) — no absolute coordinates until render time
-- **R1.4** _(done)_: Reusable styles via `style` blocks and `use:` references
+- **R1.4** _(done)_: Reusable themes via `theme` blocks and `use:` references (parser also accepts legacy `style` keyword)
 - **R1.5** _(done)_: Animation declarations with triggers (`:hover`, `:press`, `:enter`) and easing → [spec](specs/animation-system.md)
 - **R1.6** _(done)_: Git-friendly plain text — line-oriented diffs work well
 - **R1.7** _(done)_: Comments via `#` prefix
 - **R1.8** _(done)_: Human-readable and AI-writable without special tooling
-- **R1.9** _(done)_: Structured annotations (`spec` blocks) — description, accept criteria, status, priority, tags — parsed and round-tripped as first-class metadata
+- **R1.9** _(done)_: Structured annotations (`spec` blocks) — description, accept criteria, status (todo/doing/done/blocked), priority, tags — parsed and round-tripped as first-class metadata
 - **R1.10** _(done)_: First-class edges — `edge @id { from: @a to: @b }` with arrow, curve, label, stroke, and `spec` annotations → [spec](specs/edge-system.md)
-- **R1.11** _(done)_: Edge trigger animations — edges support `anim :hover { ... }` blocks identical to nodes → [spec](specs/edge-system.md)
+- **R1.11** _(done)_: Edge trigger animations — edges support `when :hover { ... }` blocks identical to nodes (parser also accepts legacy `anim` keyword) → [spec](specs/edge-system.md)
 - **R1.12** _(done)_: Edge flow animations — `flow: pulse Nms` (traveling dot) and `flow: dash Nms` (marching dashes) → [spec](specs/edge-system.md)
 - **R1.13** _(done)_: Generic nodes — `@id { ... }` without explicit kind keyword for abstract/placeholder elements
 - **R1.14** _(done)_: Namespaced imports — `import "path.fd" as ns` for cross-file style/node reuse with `ns.style_name` references
 - **R1.15** _(done)_: Background shorthand — `bg: #FFF corner=12 shadow=(0,4,20,#0002)` for combined fill, corner, and shadow in one line
 - **R1.16** _(done)_: Comment preservation — `# text` lines attached to the following node survive all parse/emit round-trips and format passes
-- **R1.17** _(done)_: Text alignment — `align: left|center|right [top|middle|bottom]` property; defaults to `center middle`; reusable via `style` blocks and `use:` inheritance
+- **R1.17** _(done)_: Text alignment — `align: left|center|right [top|middle|bottom]` property; defaults to `center middle`; reusable via `theme` blocks and `use:` inheritance
 - **R1.18** _(planned)_: Mermaid import — parse Mermaid diagram syntax (`flowchart`, `sequenceDiagram`, `stateDiagram`) into equivalent FD nodes + edges
 
 ### R2: Bidirectional Sync
@@ -47,6 +47,14 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.34** _(done)_: Group reparent on drag-out — child fully outside group bounds detaches to nearest containing ancestor; partial overlap expands group → [spec](specs/group-reparent.md)
 - **R3.35** _(planned)_: Detach snap animation — purple glow on near-detach, rubber-band line, scale pop + glow on detach; all animations <200ms → [spec](specs/group-reparent.md)
 - **R3.36** _(done)_: Auto-center text in shapes — single text child inside rect/ellipse/frame auto-expands bounds to parent; renderer's center/middle alignment visually centers the label
+- **R3.37** _(done)_: Center-snap for text nodes — dragging text near a shape's center shows purple crosshair guides (12px threshold); releasing snaps text to exact center; multiple centered texts stack vertically
+- **R3.38** _(done)_: Text drag-to-consume — dragging a text node onto a rect/ellipse/frame reparents it as a child inside the shape, auto-centered; position constraints stripped on reparent
+- **R3.39** _(done)_: Floating toolbar — draggable bottom toolbar with 7 tool buttons (SVG icons); drag handle toggles top/bottom position (80px threshold); double-click collapses to circle; state persists via VS Code webview state → [spec](specs/floating-toolbar.md)
+- **R3.40** _(done)_: Toolbar tooltips — Apple-style frosted glass tooltips on hover (400ms delay); pill shape with backdrop-filter blur; shows tool name + shortcut; replaces native title attributes → [spec](specs/floating-toolbar.md)
+- **R3.41** _(done)_: Click-to-raise — selecting a node via fresh click automatically brings it forward one z-level (reuses ⌘] bring_forward); no-op on already-selected or drag interactions (5px threshold)
+- **R3.42** _(done)_: Drag-to-create — drag a tool button from floating toolbar onto canvas creates shape at drop position; ghost preview (dashed outline matching shape type) follows cursor; ScreenBrush-style defaults (transparent fill, #333 stroke 2.5); smart defaults cascade applied → [spec](specs/floating-toolbar.md)
+- **R3.43** _(done)_: Snap-to-node — dropping near existing node (40px threshold) snaps to adjacent position (20px gap, 4 cardinal dirs); auto-creates edge from existing→new node (arrow:end, curve:smooth); shows frosted-glass edge context menu with arrow/curve/stroke/flow controls → [spec](specs/floating-toolbar.md)
+- **R3.44** _(done)_: Text consume on drag — Text tool dropped on shape reparents inside (R3.38 reuse); dropped near edge (≤30px) inserts child text node in edge block; hit priority: shape > edge > empty canvas → [spec](specs/floating-toolbar.md)
 
 #### R3b: Drawing Tools
 
@@ -62,7 +70,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 
 - **R3.6** _(done)_: Pan (Space+drag, middle-click, ⌘-hold), zoom (see R3.20), grid (see R3.21)
 - **R3.13** _(done)_: Light/dark theme toggle — toolbar button, preference persists via VS Code state
-- **R3.14** _(done)_: Design | Spec view toggle — segmented control; Spec View shows annotations overlay
+- **R3.14** _(done)_: Design | Spec view toggle — segmented control; Spec View shows annotations overlay; spec badge toggle button (◇) for persistent badge visibility in Design mode; context menu shows View Spec / Remove Spec for annotated nodes; badges use faint/active states based on selection
 - **R3.20** _(done)_: Zoom — ⌘+/⌘−, ⌘0 zoom-to-fit, pinch-to-zoom; zoom indicator in toolbar
 - **R3.21** _(done)_: Grid overlay — toggleable dot/line grid with adaptive spacing; keyboard shortcut `G`
 - **R3.25** _(done)_: Minimap — thumbnail in bottom-right with draggable viewport rectangle (Figma/Miro-style)
@@ -72,7 +80,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 
 - **R3.7** _(done)_: Undo/redo — full command stack, works across text and canvas edits
 - **R3.8** _(done)_: Properties panel — frosted glass inspector for position, size, fill, stroke, corner, opacity
-- **R3.9** _(done)_: Shape palette — drag-and-drop for Rect, Ellipse, Text, Frame, Line, Arrow
+- **R3.9** _(done)_: Insert dropdown — `＋ Insert` button in top bar with shape/layout popover; replaces bottom shape palette
 - **R3.10** _(done)_: Apple Pencil Pro squeeze — toggle between last two tools
 - **R3.11** _(done)_: Per-tool cursor feedback (crosshair, text cursor, default)
 - **R3.12** _(done)_: Annotation pins — badge dots on annotated nodes with inline edit card
@@ -86,7 +94,8 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 
 - **R3.31** _(done)_: Export — PNG (2×), SVG, clipboard; configurable background; ⌘⇧E shortcut
 - **R3.32** _(planned)_: Image embedding — drag-and-drop raster images as `image` nodes; base64 or file reference
-- **R3.33** _(planned)_: Component libraries — reusable node collections from a library panel; stored as `.fd` files
+- **R3.33** _(done)_: Component libraries — reusable node collections from a library panel; stored as `.fd` files; 3 built-in libraries (UI Kit, Flowchart, Wireframe)
+- **R3.34** _(planned)_: Community library directory — searchable gallery for publishing and discovering shared libraries
 
 ### R4: AI Editing (Text)
 
@@ -107,6 +116,8 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R4.15** _(done)_: Named colors — `fill: purple` etc. accepted (17 Tailwind palette colors)
 - **R4.16** _(done)_: Property aliases — `background:`/`color:` → fill, `rounded:`/`radius:` → corner
 - **R4.17** _(done)_: Dimension units — `w: 320px` accepted, `px` stripped by parser
+- **R4.18** _(done)_: Theme/When rename + emitter reorder — `style` → `theme`, `anim` → `when` for clarity; emitter order: spec → children → style → when; old keywords accepted for backward compatibility
+- **R4.19** _(done)_: ReadMode filtered views — `emit_filtered(graph, mode)` with 8 modes (Full/Structure/Layout/Design/Spec/Visual/When/Edges); CLI `fd-lsp --view <mode>` for AI token savings; VS Code read-only virtual document provider with status bar mode selector
 
 ### R5: Rendering
 
@@ -125,6 +136,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R6.2** _(future)_: Desktop app via Tauri (macOS, Windows, Linux)
 - **R6.3** _(future)_: Mobile app (iOS, Android) via native wgpu
 - **R6.4** _(future)_: Web app (standalone browser app)
+- **R6.5** _(done)_: GitHub Pages landing site with live WASM playground and auto-deploy via GitHub Actions
 
 ## Non-Functional Requirements
 
@@ -193,9 +205,10 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | R4.1–R4.6   | Covered by R1/R2 tests                                                                   | ✅                             |
 | R4.7–R4.11  | _(extension-side, no test)_                                                              | ❌                             |
 | R3.36       | `layout_text_centered_in_rect`, `layout_text_in_ellipse_*`, `layout_text_explicit_pos_*` | ✅ 4 tests                     |
+| R3.39–R3.44 | _(JS-only; floating toolbar, snap, edge context menu — no WASM-side tests)_              | ⚠️ JS-only                     |
 | R5.1–R5.8   | `hit::tests::*`, `resolve::tests::*`, `render2d::tests::*`                               | ✅ 3 hit + 6 layout + 3 render |
 
-**Total**: 169 Rust tests + 162 TypeScript tests = **331 tests**
+**Total**: 169 Rust tests + 188 TypeScript tests = **357 tests**
 
 ## Requirement Index
 
@@ -226,19 +239,25 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | ai / refinement     | R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17 |
 | edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8                             |
 | import              | R1.14, R1.18                                                      |
-| style               | R1.4, R4.3                                                        |
-| animation           | R1.5, R1.11, R1.12, R3.29, R5.6, R5.8                             |
+| style / theme       | R1.4, R4.3, R4.18                                                 |
+| animation           | R1.5, R1.11, R1.12, R3.29, R4.18, R5.6, R5.8                      |
 | rendering           | R5.1, R5.2, R5.4, R5.5                                            |
-| platform            | R6.1, R6.2, R6.3, R6.4                                            |
+| platform            | R6.1, R6.2, R6.3, R6.4, R6.5                                      |
 | inline editing      | R3.28                                                             |
-| text alignment      | R1.17, R3.28, R3.36                                               |
-| layout / centering  | R3.36                                                             |
+| text alignment      | R1.17, R3.28, R3.36, R3.37                                        |
+| layout / centering  | R3.36, R3.37                                                      |
 | layers / navigation | R3.30                                                             |
 | group / drill-down  | R3.24, R3.34                                                      |
-| group / reparent    | R3.34, R3.35                                                      |
+| group / reparent    | R3.34, R3.35, R3.38                                               |
 | image               | R3.32                                                             |
-| library             | R3.33                                                             |
+| library             | R3.33, R3.34                                                      |
 
 | content-first | R4.12 |
-
 | mermaid | R1.18 |
+| floating toolbar | R3.39, R3.40, R3.42, R3.43, R3.44 |
+| tooltip | R3.18, R3.40 |
+| z-order / raise | R3.41 |
+| drag-to-create | R3.42, R3.44 |
+| snap / auto-edge | R3.43 |
+| text consume | R3.38, R3.44 |
+| default styles | R3.42 |

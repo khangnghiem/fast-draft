@@ -1,111 +1,118 @@
-style dark_accent {
+# FD v1
+# Dark theme settings panel — demonstrates theme system and dark mode design
+
+theme dark_accent {
   fill: #A29BFE
 }
 
-style dark_bg {
+theme dark_bg {
   fill: #1A1A2E
 }
 
-style dark_card {
+theme dark_card {
   fill: #2D2D44
   corner: 12
 }
 
-style dark_muted {
+theme dark_muted {
   fill: #6B7280
   font: "Inter" 400 12
 }
 
-style dark_text {
+theme dark_text {
   fill: #E0E0E0
   font: "Inter" 400 14
 }
 
+# ─── Settings panel ───────────────────────────────────────────────────────
+
 group @settings {
   layout: column gap=20 pad=28
-  opacity: 1
-  x: 585.04
-  y: -1057.86
+
+  # Header
   group @header {
     layout: row gap=0 pad=0
     text @title "Settings" {
       fill: #FFFFFF
       font: "Inter" 700 24
-      opacity: 1
     }
     rect @close_btn {
       w: 36 h: 36
       fill: #2D2D44
       corner: 18
-      text @_anon_25 "×" {
+      text @close_icon "×" {
         fill: #999999
         font: "Inter" 400 20
       }
-      anim :hover {
-        fill: #3D3D5C
-        ease: ease_out 150ms
-      }
+      when :hover { fill: #3D3D5C; ease: ease_out 150ms }
     }
   }
+
+  # Profile card
   rect @profile_card {
     w: 344 h: 80
     use: dark_card
-    x: -656.58
-    y: 860.46
-    group @_anon_26 {
+    group @profile_row {
       layout: row gap=14 pad=16
       ellipse @user_avatar {
         spec "User profile photo"
         w: 48 h: 48
         fill: #6C5CE7
-        x: 178.49
-        y: -630.04
       }
-      group @_anon_27 {
+      group @user_info {
         layout: column gap=4 pad=0
-        text @_anon_28 "Khang Nghiem" {
+        text @user_name "Khang Nghiem" {
           fill: #FFFFFF
           font: "Inter" 600 16
-          x: -140.44
-          y: -8.39
         }
-        text @_anon_29 "khang@fastdraft.io" {
+        text @user_email "khang@fastdraft.io" {
           use: dark_muted
-          x: 159.45
-          y: 287.16
         }
       }
     }
   }
-  text @_anon_30 "Preferences" {
+
+  # Preferences section
+  text @pref_label "Preferences" {
     fill: #6B7280
     font: "Inter" 600 13
   }
+
+  # Dark Mode toggle
   rect @toggle_dark {
     w: 344 h: 56
     use: dark_card
-    x: 238.09
-    y: 834.82
-    anim :hover {
-      fill: #353550
-      ease: ease_out 150ms
+    group @dark_row {
+      layout: row gap=0 pad=16
+      group @dark_info {
+        layout: column gap=2 pad=0
+        text @dark_label "Dark Mode" { use: dark_text }
+        text @dark_desc "Reduce eye strain" { use: dark_muted }
+      }
+      rect @switch_on {
+        spec "Toggle — ON state"
+        w: 44 h: 24
+        fill: #6C5CE7
+        corner: 12
+        ellipse @switch_knob_on {
+          w: 20 h: 20
+          fill: #FFFFFF
+        }
+      }
     }
+    when :hover { fill: #353550; ease: ease_out 150ms }
   }
+
+  # Notifications toggle
   rect @toggle_notif {
     w: 344 h: 56
     use: dark_card
-    x: 376.84
-    y: 708.79
-    group @_anon_35 {
+    group @notif_row {
       layout: row gap=0 pad=16
-      group @_anon_36 {
+      group @notif_info {
         layout: column gap=2 pad=0
-        text @_anon_37 "Notifications" {
-          use: dark_text
-        }
-        text @_anon_38 "Push and email alerts" {
-          use: dark_muted
-        }
+        text @notif_label "Notifications" { use: dark_text }
+        text @notif_desc "Push and email alerts" { use: dark_muted }
       }
       rect @switch_off {
         spec "Toggle — OFF state"
@@ -118,71 +125,64 @@ group @settings {
         }
       }
     }
-    anim :hover {
-      fill: #353550
-      ease: ease_out 150ms
-    }
+    when :hover { fill: #353550; ease: ease_out 150ms }
   }
+
+  # Sound toggle
   rect @toggle_sound {
     w: 344 h: 56
     use: dark_card
-    x: 28.51
-    y: 340.51
-    group @_anon_39 {
+    group @sound_row {
       layout: row gap=0 pad=16
-      x: 72.88
-      y: 605.77
-      group @_anon_40 {
+      group @sound_info {
         layout: column gap=2 pad=0
-        text @_anon_41 "Sound Effects" {
-          use: dark_text
-          fill: #E0E0E0
-          font: "Inter" 400 14
-          opacity: 1
-        }
-        text @_anon_42 "UI interaction sounds" {
-          use: dark_muted
-        }
+        text @sound_label "Sound Effects" { use: dark_text }
+        text @sound_desc "UI interaction sounds" { use: dark_muted }
       }
-      rect @switch_sound {
+      rect @switch_sound_on {
+        spec "Toggle — ON state"
         w: 44 h: 24
         fill: #6C5CE7
         corner: 12
-        x: -19.14
-        y: 83.42
-        ellipse @switch_knob_s {
+        ellipse @switch_knob_sound {
           w: 20 h: 20
           fill: #FFFFFF
-          x: -146.24
-          y: 32.3
-          text @switch_knob_s_label "ehe" {
-          }
         }
       }
     }
-    anim :hover {
-      fill: #353550
-      ease: ease_out 150ms
-    }
+    when :hover { fill: #353550; ease: ease_out 150ms }
   }
-  text @_anon_43 "Display" {
+
+  # Display section
+  text @display_label "Display" {
     fill: #6B7280
     font: "Inter" 600 13
   }
-  rect @slider_card {
+
+  rect @brightness_card {
     w: 344 h: 72
     use: dark_card
-    fill: #2D2D44
-    corner: 12
-    x: 184.69
-    y: 144.81
-    text @slider_card_label "gaga" {
+    group @brightness_row {
+      layout: column gap=8 pad=16
+      text @brightness_label "Brightness" { use: dark_text }
+      rect @slider_track {
+        w: 312 h: 4
+        fill: #3D3D5C
+        corner: 2
+        ellipse @slider_thumb {
+          w: 16 h: 16
+          fill: #A29BFE
+        }
+      }
     }
   }
-  text @_anon_48 "Danger Zone" {
+
+  # Danger zone
+  text @danger_label "Danger Zone" {
     fill: #E17055
     font: "Inter" 600 13
   }
+
   rect @btn_delete {
     spec {
       "Destructive action — delete account"
@@ -193,37 +193,13 @@ group @settings {
     fill: #E1705520
     stroke: #E17055 1
     corner: 10
-    x: 686.46
-    y: -362.54
-    text @_anon_49 "Delete Account" {
+    text @delete_label "Delete Account" {
       fill: #E17055
       font: "Inter" 600 14
     }
-    anim :hover {
-      fill: #E1705540
-      ease: ease_out 150ms
-    }
-    anim :press {
-      scale: 0.97
-      ease: ease_out 100ms
-    }
+    when :hover { fill: #E1705540; ease: ease_out 150ms }
+    when :press { scale: 0.97; ease: ease_out 100ms }
   }
 }
 
-rect @_anon_0 {
-  w: 118.35 h: 32.5
-  fill: #000000
-  corner: 0
-  x: -185
-  y: 653.31
-  text @_anon_0_label "gaga" {
-  }
-}
-
-ellipse @_anon_1 {
-  w: 50 h: 40
-  fill: #CCCCD9
-  x: -64.9
-  y: 1207.21
-}
-
+@settings -> center_in: canvas

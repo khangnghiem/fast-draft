@@ -5,6 +5,9 @@ import {
   computeSpecHideLines,
   computeSpecFoldRanges,
   findAnonNodeIds,
+  findAnonymousNodeIds,
+  findAllNodeIds,
+  sanitizeToFdId,
   stripMarkdownFences,
   escapeHtml,
   resolveTargetColumn,
@@ -176,18 +179,18 @@ describe("computeSpecHideLines", () => {
     expect(computeSpecHideLines([])).toEqual([]);
   });
 
-  it("hides style blocks entirely", () => {
-    const lines = ["style heading {", "  fill: #333", "  font: Inter 700 32", "}"];
+  it("hides theme blocks entirely", () => {
+    const lines = ["theme heading {", "  fill: #333", "  font: Inter 700 32", "}"];
     const hidden = computeSpecHideLines(lines);
-    // All 4 lines should be hidden (style block + closing brace of style)
+    // All 4 lines should be hidden (theme block + closing brace of theme)
     expect(hidden).toEqual([0, 1, 2, 3]);
   });
 
-  it("hides anim blocks entirely", () => {
+  it("hides when blocks entirely", () => {
     const lines = [
       "rect @btn {",
       "  fill: #333",
-      '  anim :hover {',
+      '  when :hover {',
       '    fill: #555',
       "    scale: 1.02",
       "  }",
@@ -196,13 +199,13 @@ describe("computeSpecHideLines", () => {
     const hidden = computeSpecHideLines(lines);
     // Line 0 (rect @btn {) → kept (node declaration)
     // Line 1 (fill: #333) → hidden (property)
-    // Lines 2-5 (anim block) → hidden
+    // Lines 2-5 (when block) → hidden
     // Line 6 (}) → kept (closing brace)
     expect(hidden).toContain(1); // fill property
-    expect(hidden).toContain(2); // anim :hover {
+    expect(hidden).toContain(2); // when :hover {
     expect(hidden).toContain(3); // fill: #555
     expect(hidden).toContain(4); // scale: 1.02
-    expect(hidden).toContain(5); // }  (inside anim)
+    expect(hidden).toContain(5); // }  (inside when)
     expect(hidden).not.toContain(0); // rect @btn kept
     expect(hidden).not.toContain(6); // } kept
   });
@@ -290,7 +293,7 @@ describe("computeSpecFoldRanges", () => {
   });
 
   it("returns one range for a single contiguous hidden block", () => {
-    const lines = ["style heading {", "  fill: #333", "  font: Inter 700 32", "}"];
+    const lines = ["theme heading {", "  fill: #333", "  font: Inter 700 32", "}"];
     const ranges = computeSpecFoldRanges(lines);
     expect(ranges).toEqual([{ start: 0, end: 3 }]);
   });
@@ -299,10 +302,10 @@ describe("computeSpecFoldRanges", () => {
     const lines = [
       "rect @btn {",       // 0 - kept
       "  fill: #333",      // 1 - hidden
-      '  anim :hover {',   // 2 - hidden
+      '  when :hover {',   // 2 - hidden
       '    fill: #555',    // 3 - hidden
       "    scale: 1.02",   // 4 - hidden
-      "  }",               // 5 - hidden (inside anim closing brace)
+      "  }",               // 5 - hidden (inside when closing brace)
       "}",                 // 6 - kept
     ];
     const ranges = computeSpecFoldRanges(lines);
@@ -311,7 +314,7 @@ describe("computeSpecFoldRanges", () => {
 
   it("returns multiple ranges when hidden blocks are separated by kept lines", () => {
     const lines = [
-      "style body {",      // 0 - hidden
+      "theme body {",      // 0 - hidden
       "  fill: #333",      // 1 - hidden
       "}",                 // 2 - hidden
       "",                  // 3 - blank (kept)
@@ -517,8 +520,8 @@ describe("parseDocumentSymbols", () => {
     expect(result[0].children[0].endLine).toBe(3);
   });
 
-  it("parses style definition", () => {
-    const lines = ["style card_text {", "  font: Inter 14", "  fill: #FFF", "}"];
+  it("parses theme definition", () => {
+    const lines = ["theme card_text {", "  font: Inter 14", "  fill: #FFF", "}"];
     const result = parseDocumentSymbols(lines);
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe("card_text");
@@ -554,7 +557,7 @@ describe("parseDocumentSymbols", () => {
 
   it("handles multiple top-level symbols", () => {
     const lines = [
-      "style heading {",
+      "theme heading {",
       "  fill: #333",
       "}",
       "rect @hero {",
@@ -653,8 +656,8 @@ describe("findSymbolAtLine", () => {
     expect(findSymbolAtLine([], 0)).toBeUndefined();
   });
 
-  it("handles style blocks (non-@ symbols)", () => {
-    const styleLines = ["style heading {", "  fill: #333", "}"];
+  it("handles theme blocks (non-@ symbols)", () => {
+    const styleLines = ["theme heading {", "  fill: #333", "}"];
     const styleSymbols = parseDocumentSymbols(styleLines);
     const sym = findSymbolAtLine(styleSymbols, 1);
     expect(sym).toBeDefined();
@@ -695,8 +698,8 @@ describe("transformSpecViewLine", () => {
     expect(transformSpecViewLine("    text @label \"Hi\" {")).toBe('    @label "Hi" {');
   });
 
-  it("does not transform style lines", () => {
-    expect(transformSpecViewLine("style heading {")).toBe("style heading {");
+  it("does not transform theme lines", () => {
+    expect(transformSpecViewLine("theme heading {")).toBe("theme heading {");
   });
 
   it("does not transform edge lines", () => {
@@ -728,5 +731,127 @@ describe("transformSpecViewLine", () => {
 
   it("does not transform constraint lines", () => {
     expect(transformSpecViewLine("@hero -> center_in: canvas")).toBe("@hero -> center_in: canvas");
+  });
+});
+
+// ─── findAnonymousNodeIds ────────────────────────────────────────────────
+
+describe("findAnonymousNodeIds", () => {
+  it("returns empty for no anonymous IDs", () => {
+    expect(findAnonymousNodeIds("rect @hero {\n  fill: #FFF\n}")).toEqual([]);
+  });
+
+  it("finds @rect_1 pattern", () => {
+    const result = findAnonymousNodeIds("rect @rect_1 {\n  fill: #FFF\n}");
+    expect(result).toContain("rect_1");
+  });
+
+  it("finds @ellipse_3 and @text_7 patterns", () => {
+    const source = "ellipse @ellipse_3 {\n}\ntext @text_7 {\n}";
+    const result = findAnonymousNodeIds(source);
+    expect(result).toContain("ellipse_3");
+    expect(result).toContain("text_7");
+  });
+
+  it("finds @_anon_0 (backward compat)", () => {
+    const result = findAnonymousNodeIds("rect @_anon_0 {\n}");
+    expect(result).toContain("_anon_0");
+  });
+
+  it("finds @group_2 and @frame_4", () => {
+    const source = "group @group_2 {\n  frame @frame_4 {\n  }\n}";
+    const result = findAnonymousNodeIds(source);
+    expect(result).toContain("group_2");
+    expect(result).toContain("frame_4");
+  });
+
+  it("does not match semantic names like @login_form", () => {
+    const source = "rect @login_form {\n}\ntext @submit_btn {\n}";
+    expect(findAnonymousNodeIds(source)).toEqual([]);
+  });
+
+  it("does not match partial patterns like @rect_abc", () => {
+    const source = "rect @rect_abc {\n}";
+    expect(findAnonymousNodeIds(source)).toEqual([]);
+  });
+
+  it("returns empty for empty document", () => {
+    expect(findAnonymousNodeIds("")).toEqual([]);
+  });
+
+  it("deduplicates IDs appearing multiple times", () => {
+    const source = "rect @rect_1 {\n}\n@rect_1 -> center_in: canvas";
+    const result = findAnonymousNodeIds(source);
+    expect(result).toEqual(["rect_1"]);
+  });
+});
+
+// ─── findAllNodeIds ──────────────────────────────────────────────────────
+
+describe("findAllNodeIds", () => {
+  it("finds all @id references", () => {
+    const source = "rect @hero {\n  fill: #FFF\n}\n@hero -> center_in: canvas";
+    const result = findAllNodeIds(source);
+    expect(result).toContain("hero");
+  });
+
+  it("includes IDs from from:/to: references", () => {
+    const source = "edge @flow {\n  from: @login\n  to: @dashboard\n}";
+    const result = findAllNodeIds(source);
+    expect(result).toContain("flow");
+    expect(result).toContain("login");
+    expect(result).toContain("dashboard");
+  });
+
+  it("deduplicates", () => {
+    const source = "rect @a {\n}\ntext @a {\n}";
+    const result = findAllNodeIds(source);
+    const count = result.filter((id) => id === "a").length;
+    expect(count).toBe(1);
+  });
+});
+
+// ─── sanitizeToFdId ──────────────────────────────────────────────────────
+
+describe("sanitizeToFdId", () => {
+  it("lowercases", () => {
+    expect(sanitizeToFdId("LoginButton")).toBe("loginbutton");
+  });
+
+  it("replaces spaces with underscores", () => {
+    expect(sanitizeToFdId("login button")).toBe("login_button");
+  });
+
+  it("replaces hyphens with underscores", () => {
+    expect(sanitizeToFdId("hero-card")).toBe("hero_card");
+  });
+
+  it("strips invalid characters", () => {
+    expect(sanitizeToFdId("he!!o@world")).toBe("heoworld");
+  });
+
+  it("collapses multiple underscores", () => {
+    expect(sanitizeToFdId("a___b")).toBe("a_b");
+  });
+
+  it("strips leading/trailing underscores", () => {
+    expect(sanitizeToFdId("_foo_")).toBe("foo");
+  });
+
+  it("truncates to 30 characters", () => {
+    const long = "a".repeat(50);
+    expect(sanitizeToFdId(long).length).toBeLessThanOrEqual(30);
+  });
+
+  it("prefixes with node_ if starts with digit", () => {
+    expect(sanitizeToFdId("123abc")).toBe("node_123abc");
+  });
+
+  it("handles empty input", () => {
+    expect(sanitizeToFdId("")).toBe("node_");
+  });
+
+  it("handles dots and slashes", () => {
+    expect(sanitizeToFdId("path.to/file")).toBe("path_to_file");
   });
 });

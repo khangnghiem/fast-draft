@@ -8,6 +8,7 @@ pub mod parser;
 pub mod resolve;
 pub mod transform;
 
+pub use emitter::{ReadMode, emit_filtered};
 pub use format::{FormatConfig, format_document};
 pub use id::NodeId;
 pub use layout::{Viewport, resolve_layout};

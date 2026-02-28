@@ -8,8 +8,8 @@ mod svg;
 use fd_core::id::NodeId;
 use fd_core::layout::Viewport;
 use fd_core::model::{
-    Annotation, Color, Constraint, LayoutMode, NodeKind, Paint, SceneNode, Stroke, StrokeCap,
-    StrokeJoin, TextAlign, TextVAlign,
+    Annotation, ArrowKind, Color, Constraint, CurveKind, Edge, LayoutMode, NodeKind, Paint,
+    SceneNode, Stroke, StrokeCap, StrokeJoin, TextAlign, TextVAlign,
 };
 use fd_editor::commands::CommandStack;
 use fd_editor::input::{InputEvent, Modifiers};
@@ -318,6 +318,9 @@ impl FdCanvas {
             meta,
         };
 
+        // Snapshot previous selection for fresh-select detection
+        let prev_selected = self.select_tool.selected.clone();
+
         // End batch — squash all drag mutations into one undo step
         self.commands.end_batch(&mut self.engine);
 
@@ -407,10 +410,37 @@ impl FdCanvas {
         } else {
             false
         };
+
+        // Auto bring-forward on fresh click-select (not drag, not re-select)
+        let was_click = self
+            .pointer_down_pos
+            .map(|(dx, dy)| (x - dx).abs() < 5.0 && (y - dy).abs() < 5.0)
+            .unwrap_or(false);
+        let zorder_changed = if was_click
+            && self.select_tool.selected.len() == 1
+            && !prev_selected.contains(&self.select_tool.selected[0])
+        {
+            if let Some(idx) = self.engine.graph.index_of(self.select_tool.selected[0]) {
+                let raised = self.engine.graph.bring_forward(idx);
+                if raised {
+                    self.engine.flush_to_text();
+                }
+                raised
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
         self.pointer_down_pos = None;
 
-        let visual_changed =
-            changed || marquee_changed || pressed_changed || hovered_changed || drill_changed;
+        let visual_changed = changed
+            || marquee_changed
+            || pressed_changed
+            || hovered_changed
+            || drill_changed
+            || zorder_changed;
 
         // Auto-switch back to Select after drawing gesture completes
         let tool_switched = self.active_tool != ToolKind::Select;
@@ -794,6 +824,31 @@ impl FdCanvas {
             }
         }
         String::new()
+    }
+
+    // ─── Detach Info API ─────────────────────────────────────────────────
+
+    /// Get last detach event info. Returns JSON:
+    /// `{"detached":true,"nodeId":"...","fromGroupId":"..."}` or `""` if none.
+    /// Clears the event after reading (one-shot).
+    /// Evaluate a drop for structural detach. Returns JSON if detached, empty otherwise.
+    /// Clears the event after reading (one-shot).
+    pub fn evaluate_drop(&mut self, node_id: &str) -> String {
+        let id = NodeId::intern(node_id);
+        if self.engine.evaluate_drop(id) {
+            match self.engine.last_detach.take() {
+                Some((child_id, parent_id)) => {
+                    format!(
+                        r#"{{"detached":true,"nodeId":"{}","fromGroupId":"{}"}}"#,
+                        child_id.as_str(),
+                        parent_id.as_str()
+                    )
+                }
+                None => String::new(),
+            }
+        } else {
+            String::new()
+        }
     }
 
     // ─── Animation APIs ──────────────────────────────────────────────────
@@ -1415,7 +1470,7 @@ impl FdCanvas {
         let mut node = SceneNode::new(id, node_kind);
         node.constraints.push(Constraint::Position { x, y });
 
-        // Set a default fill for shapes
+        // ScreenBrush-style defaults: transparent fill + bezeled stroke
         if kind == "frame" {
             node.style.fill = Some(Paint::Solid(Color::rgba(0.95, 0.95, 0.97, 1.0)));
             node.style.stroke = Some(Stroke {
@@ -1424,8 +1479,21 @@ impl FdCanvas {
                 cap: StrokeCap::Butt,
                 join: StrokeJoin::Miter,
             });
-        } else if kind != "text" {
-            node.style.fill = Some(Paint::Solid(Color::rgba(0.8, 0.8, 0.85, 1.0)));
+        } else if kind == "rect" {
+            node.style.stroke = Some(Stroke {
+                paint: Paint::Solid(Color::rgba(0.2, 0.2, 0.2, 1.0)),
+                width: 2.5,
+                cap: StrokeCap::Round,
+                join: StrokeJoin::Round,
+            });
+            node.style.corner_radius = Some(8.0);
+        } else if kind == "ellipse" {
+            node.style.stroke = Some(Stroke {
+                paint: Paint::Solid(Color::rgba(0.2, 0.2, 0.2, 1.0)),
+                width: 2.5,
+                cap: StrokeCap::Round,
+                join: StrokeJoin::Round,
+            });
         }
 
         let mutation = GraphMutation::AddNode {
@@ -1438,6 +1506,44 @@ impl FdCanvas {
             self.engine.flush_to_text();
         }
         changed
+    }
+
+    /// Create an edge between two nodes.
+    /// Returns the new edge ID, or empty string on failure.
+    pub fn create_edge(&mut self, from_id: &str, to_id: &str) -> String {
+        let from = NodeId::intern(from_id);
+        let to = NodeId::intern(to_id);
+        if from == to {
+            return String::new();
+        }
+        // Verify both nodes exist
+        if self.engine.graph.index_of(from).is_none() || self.engine.graph.index_of(to).is_none() {
+            return String::new();
+        }
+        let edge_id = NodeId::with_prefix("edge");
+        let edge = Edge {
+            id: edge_id,
+            from,
+            to,
+            label: None,
+            style: fd_core::model::Style::default(),
+            use_styles: Default::default(),
+            arrow: ArrowKind::End,
+            curve: CurveKind::Smooth,
+            annotations: Vec::new(),
+            animations: Default::default(),
+            flow: None,
+        };
+        let mutation = GraphMutation::AddEdge {
+            edge: Box::new(edge),
+        };
+        let changed = self.apply_mutations(vec![mutation]);
+        if changed {
+            self.engine.flush_to_text();
+            edge_id.as_str().to_string()
+        } else {
+            String::new()
+        }
     }
 }
 
@@ -1525,7 +1631,7 @@ impl FdCanvas {
             None => return vec![],
         };
 
-        let snap_threshold = 1.0_f32;
+        let snap_threshold = 5.0_f32;
         let mut guides = Vec::new();
 
         // Selected node reference points

@@ -1,169 +1,118 @@
-style card_text {
+# FD v1
+# Photo gallery — grid layout showcase with hover interactions
+
+theme card_text {
   fill: #FFFFFF
   font: "Inter" 400 14
 }
 
 # ─── Gallery ─────────────────────────────────────────────────────────────
+
 group @gallery {
   layout: column gap=24 pad=32
-  x: -69.44
-  y: -213.37
+
+  text @title "Photo Gallery" {
+    fill: #1A1A2E
+    font: "Inter" 700 32
+  }
+
+  text @subtitle "A grid layout showcase with hover interactions" {
+    fill: #6B7280
+    font: "Inter" 400 16
+  }
+
   group @grid {
     spec {
       "Responsive image grid"
       accept: "images lazy-load with blur-up"
       tag: layout, grid
     }
-    layout: grid cols=2 gap=16 pad=0
-    x: 17.97
-    y: 253.62
-    rect @photo_9 {
-      spec "Starry night"
-      w: 260 h: 200
-      fill: #74B9FF
+    layout: grid cols=3 gap=16 pad=0
+
+    rect @photo_1 {
+      spec "Sunset landscape"
+      w: 200 h: 160
+      fill: #FF6B6B
       corner: 12
-      text @Alo "Stars" {
-        use: card_text
-      }
-      anim :hover {
-        opacity: 0.9
-        scale: 1.04
-        ease: spring 300ms
-      }
+      text @p1_label "Sunset" { use: card_text }
+      when :hover { opacity: 0.9; scale: 1.04; ease: spring 300ms }
     }
-    rect @photo_8 {
-      spec "Autumn leaves"
-      w: 260 h: 200
-      fill: #E17055
+
+    rect @photo_2 {
+      spec "Ocean view"
+      w: 200 h: 160
+      fill: #4ECDC4
       corner: 12
-      x: 351.18
-      y: 971.82
-      text @_anon_16 "Autumn" {
-        use: card_text
-        x: 387.91
-        y: 996.24
-      }
-      anim :hover {
-        opacity: 0.9
-        scale: 1.04
-        ease: spring 300ms
-      }
+      text @p2_label "Ocean" { use: card_text }
+      when :hover { opacity: 0.9; scale: 1.04; ease: spring 300ms }
     }
-    rect @photo_7 {
-      spec "Forest canopy"
-      w: 260 h: 200
-      fill: #00B894
+
+    rect @photo_3 {
+      spec "Mountain trail"
+      w: 200 h: 160
+      fill: #6C5CE7
       corner: 12
-      text @_anon_15 "Forest" {
-        use: card_text
-      }
-      anim :hover {
-        opacity: 0.9
-        scale: 1.04
-        ease: spring 300ms
-      }
+      text @p3_label "Mountain" { use: card_text }
+      when :hover { opacity: 0.9; scale: 1.04; ease: spring 300ms }
     }
-    rect @photo_6 {
-      spec "Cherry blossoms"
-      w: 260 h: 200
-      fill: #FD79A8
-      corner: 12
-      x: 299.94
-      y: 258.27
-      text @_anon_14 "Blossoms" {
-        use: card_text
-      }
-      anim :hover {
-        opacity: 0.9
-        scale: 1.04
-        ease: spring 300ms
-      }
-    }
-    rect @photo_5 {
-      spec "City skyline"
-      w: 260 h: 200
-      fill: #A29BFE
-      corner: 12
-      text @_anon_13 "City" {
-        use: card_text
-      }
-      anim :hover {
-        opacity: 0.9
-        scale: 1.04
-        ease: spring 300ms
-      }
-    }
+
     rect @photo_4 {
       spec "Desert dunes"
-      w: 260 h: 200
+      w: 200 h: 160
       fill: #FFE66D
       corner: 12
-      x: 308.3
-      y: 463.03
-      text @_anon_12 "Desert" {
+      text @p4_label "Desert" {
         fill: #333333
         font: "Inter" 400 14
       }
-      anim :hover {
-        opacity: 0.9
-        scale: 1.04
-        ease: spring 300ms
-      }
+      when :hover { opacity: 0.9; scale: 1.04; ease: spring 300ms }
     }
-    rect @photo_3 {
-      spec "Mountain trail"
-      w: 260 h: 200
-      fill: #6C5CE7
+
+    rect @photo_5 {
+      spec "City skyline"
+      w: 200 h: 160
+      fill: #A29BFE
       corner: 12
-      text @_anon_11 "Mountain" {
-        use: card_text
-      }
-      anim :hover {
-        opacity: 0.9
-        scale: 1.04
-        ease: spring 300ms
-      }
+      text @p5_label "City" { use: card_text }
+      when :hover { opacity: 0.9; scale: 1.04; ease: spring 300ms }
     }
-    rect @photo_2 {
-      spec "Ocean view"
-      w: 260 h: 200
-      fill: #4ECDC4
+
+    rect @photo_6 {
+      spec "Cherry blossoms"
+      w: 200 h: 160
+      fill: #FD79A8
       corner: 12
-      x: 341.5
-      y: 647.82
-      text @_anon_10 "Ocean" {
-        use: card_text
-        x: 317.43
-        y: 684.07
-      }
-      anim :hover {
-        opacity: 0.9
-        scale: 1.04
-        ease: spring 300ms
-      }
+      text @p6_label "Blossoms" { use: card_text }
+      when :hover { opacity: 0.9; scale: 1.04; ease: spring 300ms }
     }
-    rect @photo_1 {
-      spec "Sunset landscape"
-      w: 260 h: 200
-      fill: #FF6B6B
+
+    rect @photo_7 {
+      spec "Forest canopy"
+      w: 200 h: 160
+      fill: #00B894
       corner: 12
-      text @sunset "Sunset" {
-        use: card_text
-      }
-      anim :hover {
-        opacity: 0.9
-        scale: 1.04
-        ease: spring 300ms
-      }
+      text @p7_label "Forest" { use: card_text }
+      when :hover { opacity: 0.9; scale: 1.04; ease: spring 300ms }
     }
-  }
-  text @subtitle "A grid layout showcase with hover interactions" {
-    fill: #6B7280
-    font: "Inter" 400 16
-  }
-  text @title "Photo Gallery" {
-    fill: #1A1A2E
-    font: "Inter" 700 32
+
+    rect @photo_8 {
+      spec "Autumn leaves"
+      w: 200 h: 160
+      fill: #E17055
+      corner: 12
+      text @p8_label "Autumn" { use: card_text }
+      when :hover { opacity: 0.9; scale: 1.04; ease: spring 300ms }
+    }
+
+    rect @photo_9 {
+      spec "Starry night"
+      w: 200 h: 160
+      fill: #74B9FF
+      corner: 12
+      text @p9_label "Stars" { use: card_text }
+      when :hover { opacity: 0.9; scale: 1.04; ease: spring 300ms }
+    }
   }
 }
 
+@gallery -> center_in: canvas

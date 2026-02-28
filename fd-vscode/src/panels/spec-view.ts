@@ -169,9 +169,12 @@ export class FdSpecViewPanel {
       font-size: 10px;
       font-weight: 600;
     }
+    .status-todo { background: rgba(108,112,134,0.2); color: #6C7086; }
     .status-draft { background: rgba(108,112,134,0.2); color: #6C7086; }
+    .status-doing { background: rgba(249,226,175,0.15); color: #F9E2AF; }
     .status-in_progress { background: rgba(249,226,175,0.15); color: #F9E2AF; }
     .status-done { background: rgba(166,227,161,0.15); color: #A6E3A1; }
+    .status-blocked { background: rgba(243,139,168,0.15); color: #F38BA8; }
     .priority-badge {
       display: inline-block;
       padding: 1px 8px;

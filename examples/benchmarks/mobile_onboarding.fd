@@ -1,27 +1,27 @@
 # Mobile Onboarding — Mobile Designer use case
 # Demonstrates: frames with clip, column layouts, animations, style reuse
 
-style phone_frame {
+theme phone_frame {
   fill: #1A1A2E
   corner: 40
 }
 
-style screen_bg {
+theme screen_bg {
   fill: #FFFFFF
   corner: 32
 }
 
-style dot_active {
+theme dot_active {
   fill: #6C5CE7
   corner: 6
 }
 
-style dot_inactive {
+theme dot_inactive {
   fill: #D1D5DB
   corner: 6
 }
 
-style cta_primary {
+theme cta_primary {
   fill: #6C5CE7
   corner: 12
 }
@@ -72,7 +72,7 @@ frame @screen_welcome {
         font: "Inter" semibold 15
         fill: #FFFFFF
       }
-      anim :hover {
+      when :hover {
         scale: 1.03
         ease: spring 200ms
       }
@@ -175,7 +175,7 @@ frame @screen_export {
         font: "Inter" semibold 15
         fill: #FFFFFF
       }
-      anim :hover {
+      when :hover {
         scale: 1.03
         ease: spring 200ms
       }

@@ -1,0 +1,177 @@
+# Dashboard layout using constraints and themes
+# Demonstrates responsive patterns with column/row/grid
+
+import "tokens.fd" as tokens
+
+theme card_bg {
+  fill: #FFFFFF
+  corner: 12
+  opacity: 0.95
+}
+
+theme label {
+  font: "Inter" regular 14
+  fill: #6B7280
+}
+
+theme heading {
+  font: "Inter" bold 20
+  fill: #111827
+}
+
+theme metric_value {
+  font: "Inter" semibold 32
+  fill: #6C5CE7
+}
+
+# ─── Header ───
+
+group @header {
+  layout: row gap=16 pad=0
+
+  text @title "Analytics Dashboard" {
+    use: heading
+  }
+
+  text @subtitle "Real-time metrics overview" {
+    use: label
+  }
+}
+
+# ─── Metric Cards ───
+
+group @metrics {
+  layout: row gap=16 pad=0
+
+  rect @revenue_card {
+    w: 220 h: 120
+    use: card_bg
+    shadow: (0,2,12,#00000011)
+
+    text @revenue_label "Revenue" {
+      use: label
+    }
+
+    text @revenue_value "$24,500" {
+      use: metric_value
+    }
+
+    when :hover {
+      scale: 1.02
+      ease: ease_out 200ms
+    }
+  }
+
+  rect @users_card {
+    w: 220 h: 120
+    use: card_bg
+    shadow: (0,2,12,#00000011)
+
+    text @users_label "Active Users" {
+      use: label
+    }
+
+    text @users_value "1,284" {
+      use: metric_value
+    }
+
+    when :hover {
+      scale: 1.02
+      ease: ease_out 200ms
+    }
+  }
+
+  rect @orders_card {
+    w: 220 h: 120
+    use: card_bg
+    shadow: (0,2,12,#00000011)
+
+    text @orders_label "Orders" {
+      use: label
+    }
+
+    text @orders_value "356" {
+      use: metric_value
+    }
+
+    when :hover {
+      scale: 1.02
+      ease: ease_out 200ms
+    }
+  }
+}
+
+# ─── Content Grid ───
+
+group @content {
+  layout: row gap=24 pad=0
+
+  frame @chart_panel {
+    w: 480 h: 300
+    use: card_bg
+    shadow: (0,2,12,#00000011)
+
+    text @chart_title "Revenue Over Time" {
+      use: heading
+    }
+
+    rect @chart_area {
+      w: 440 h: 220
+      fill: #F9FAFB
+      corner: 8
+    }
+  }
+
+  group @sidebar {
+    layout: column gap=12 pad=0
+
+    frame @recent {
+      w: 240 h: 140
+      use: card_bg
+      shadow: (0,2,12,#00000011)
+
+      text @recent_title "Recent Activity" {
+        font: "Inter" semibold 16
+        fill: #111827
+      }
+
+      text @activity_1 "New signup: Alice Cooper" {
+        use: label
+      }
+
+      text @activity_2 "Order #1284 completed" {
+        use: label
+      }
+    }
+
+    frame @status {
+      w: 240 h: 140
+      use: card_bg
+      shadow: (0,2,12,#00000011)
+
+      text @status_title "System Status" {
+        font: "Inter" semibold 16
+        fill: #111827
+      }
+
+      rect @health_indicator {
+        w: 12 h: 12
+        fill: #22C55E
+        corner: 6
+      }
+
+      text @health_label "All systems operational" {
+        use: label
+      }
+    }
+  }
+}
+
+# ─── Layout ───
+
+group @page {
+  layout: column gap=24 pad=32
+}
+
+@page -> fill_parent: 0
+@header -> center_in: canvas

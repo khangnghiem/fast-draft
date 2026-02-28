@@ -49,11 +49,14 @@ let annotationCardNodeId = null;
 /** Node ID from right-click context menu */
 let contextMenuNodeId = null;
 
-/** Current view mode: "design" | "spec" */
-let viewMode = "design";
+/** Current view mode: "all" | "design" | "spec" */
+let viewMode = "all";
 
-/** Current spec filter: "all" | "draft" | "in_progress" | "done" */
+/** Current spec filter: "all" | "todo" | "doing" | "done" | "blocked" */
 let specFilter = "all";
+
+/** Spec badge toggle — independent of view mode */
+let specBadgesVisible = false;
 
 
 // ─── Performance: Dirty Flag & Generation Counter ────────────────────────
@@ -95,8 +98,8 @@ let altCloneActive = false;
 // ─── Smart Defaults (Sticky Styles Per Tool) ─────────────────────────────
 /** Session-only style defaults per tool type (Excalidraw-style) */
 const toolDefaults = {
-  rect: { fill: "#4A90D9", stroke: "#333333", strokeWidth: 1, opacity: 1 },
-  ellipse: { fill: "#4A90D9", stroke: "#333333", strokeWidth: 1, opacity: 1 },
+  rect: { fill: "none", stroke: "#333333", strokeWidth: 2.5, opacity: 1 },
+  ellipse: { fill: "none", stroke: "#333333", strokeWidth: 2.5, opacity: 1 },
   pen: { stroke: "#333333", strokeWidth: 2, opacity: 1 },
   arrow: { stroke: "#333333", strokeWidth: 2, opacity: 1 },
   text: { fill: "#333333", fontSize: 16, opacity: 1 },
@@ -222,6 +225,72 @@ function evalTweens(now) {
   return overrides;
 }
 
+/**
+ * Play a snappy "detach pop" animation when a node is reparented out of a group.
+ * Uses a brief scale-pop tween (105% → 100%) and a glow pulse overlay.
+ */
+function playDetachAnimation(nodeId) {
+  if (!fdCanvas || !nodeId) return;
+
+  // Inject @keyframes on first use
+  if (!document.getElementById("detach-anim-style")) {
+    const style = document.createElement("style");
+    style.id = "detach-anim-style";
+    style.textContent = `
+      @keyframes detachPop {
+        0%   { opacity: 1; transform: scale(1.08); }
+        60%  { opacity: 0.7; transform: scale(1.0); }
+        100% { opacity: 0; transform: scale(0.98); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Create a temporary glow overlay on the canvas for the detached node
+  try {
+    const boundsJson = fdCanvas.get_node_bounds(nodeId);
+    if (!boundsJson) return;
+    const b = JSON.parse(boundsJson);
+    if (!b.width) return;
+
+    // Draw a brief glow ring around the detached node
+    const glowOverlay = document.createElement("div");
+    glowOverlay.className = "detach-glow";
+
+    // Position in screen space (account for zoom + pan)
+    const screenX = b.x * zoomLevel + panX;
+    const screenY = b.y * zoomLevel + panY;
+    const screenW = b.width * zoomLevel;
+    const screenH = b.height * zoomLevel;
+
+    const pad = 6;
+    glowOverlay.style.cssText = `
+      position: absolute;
+      left: ${screenX - pad}px;
+      top: ${screenY - pad}px;
+      width: ${screenW + pad * 2}px;
+      height: ${screenH + pad * 2}px;
+      border: 2px solid #00D2B4;
+      border-radius: 6px;
+      box-shadow: 0 0 12px #00D2B480, inset 0 0 8px #00D2B420;
+      pointer-events: none;
+      animation: detachPop 250ms ease-out forwards;
+      z-index: 9999;
+    `;
+
+    const container = canvas.parentElement || document.body;
+    container.appendChild(glowOverlay);
+
+    // Clean up after animation
+    setTimeout(() => {
+      glowOverlay.remove();
+    }, 300);
+  } catch (_) { /* skip if bounds unavailable */ }
+
+  // Force re-render to reflect tree structure change
+  renderDirty = true;
+}
+
 // ─── Initialization ──────────────────────────────────────────────────────
 
 async function main() {
@@ -293,11 +362,18 @@ async function main() {
     setupZenModeToggle();
     setupZoomIndicator();
     setupGridToggle();
+    setupSpecBadgeToggle();
     setupExportButton();
+    setupInsertMenu();
     setupMinimap();
     setupColorSwatches();
     setupSelectionBar();
     setupTouchGestures();
+    setupZoomControls();
+    setupUndoRedoControls();
+    setupSettingsMenu();
+    setupFloatingToolbar();
+    setupEdgeContextMenu();
 
     // Tell extension we're ready
     vscode.postMessage({ type: "ready" });
@@ -380,6 +456,9 @@ function render() {
 
   ctx.restore();
 
+  // Update minimap viewport indicator smoothly (scene re-renders at lower frequency)
+  renderMinimapViewport();
+
   // Schedule side-effects at lower frequency (~10fps) to avoid DOM/WASM thrashing
   scheduleSideEffects();
 }
@@ -423,6 +502,7 @@ function scheduleSideEffects() {
   if (sideEffectTimer) return; // already scheduled
   sideEffectTimer = setTimeout(() => {
     sideEffectTimer = null;
+    if (viewMode === "spec" || specBadgesVisible) refreshSpecBadges();
     if (viewMode === "spec") refreshSpecView();
     refreshLayersPanel();
     renderMinimap();
@@ -562,6 +642,14 @@ function setupPointerEvents() {
         // Clear resize cursor when no longer over a handle
         canvas.style.cursor = "";
       }
+
+      // ── Spec hover tooltip (show spec on node hover) ──
+      const hoveredId = fdCanvas.hit_test_at(x, y);
+      if (hoveredId) {
+        showSpecTooltip(hoveredId, e.clientX, e.clientY);
+      } else {
+        hideSpecTooltip();
+      }
     }
 
     // Show dimension tooltip during drag
@@ -604,6 +692,22 @@ function setupPointerEvents() {
         animDropTargetId = null;
         animDropTargetBounds = null;
       }
+
+      // ── Center-snap detection for text nodes ──
+      const snap = detectCenterSnap(draggedNodeId, x, y);
+      if (snap) {
+        centerSnapTarget = snap;
+        showCenterSnapGuides(snap.cx, snap.cy);
+      } else {
+        hideCenterSnapGuides();
+      }
+
+      // ── Text drag-to-consume detection ──
+      const dropTarget = detectTextDropTarget(draggedNodeId, x, y);
+      textDropTarget = dropTarget;
+    } else if (!isDraggingNode) {
+      hideCenterSnapGuides();
+      textDropTarget = null;
     }
   });
 
@@ -690,10 +794,51 @@ function setupPointerEvents() {
       render(); // Clear glow ring
       openAnimPicker(targetId, e.clientX, e.clientY);
     }
+
+    // ── Center-snap commit: snap text to shape center on release ──
+    if (isDraggingNode && centerSnapTarget && draggedNodeId) {
+      const snap = centerSnapTarget;
+      try {
+        const db = JSON.parse(fdCanvas.get_node_bounds(draggedNodeId));
+        if (db.width) {
+          // Move text center to shape center
+          const newX = snap.cx - db.width / 2;
+          const newY = snap.cy - db.height / 2;
+          fdCanvas.set_node_prop("x", String(Math.round(newX)));
+          fdCanvas.set_node_prop("y", String(Math.round(newY)));
+          render();
+          syncTextToExtension();
+        }
+      } catch (_) { /* skip */ }
+    }
+    hideCenterSnapGuides();
+
+    // ── Text drag-to-consume: reparent text into target shape ──
+    if (isDraggingNode && textDropTarget && draggedNodeId) {
+      reparentTextIntoShape(draggedNodeId, textDropTarget.targetId);
+      textDropTarget = null;
+    }
+
+    // ── Detach snap feedback: scale pop + glow on group detach ──
+    if (isDraggingNode && fdCanvas && draggedNodeId) {
+      const detachJson = fdCanvas.evaluate_drop(draggedNodeId);
+      if (detachJson) {
+        try {
+          const detach = JSON.parse(detachJson);
+          if (detach.detached) {
+            playDetachAnimation(detach.nodeId);
+            // Sync text since the graph changed (structural detach)
+            syncTextToExtension();
+          }
+        } catch (_) { /* ignore parse errors */ }
+      }
+    }
+
     isDraggingNode = false;
     draggedNodeId = null;
     animDropTargetId = null;
     animDropTargetBounds = null;
+    textDropTarget = null;
 
     // ── Restore tool after ⌘+drag temp Select or Alt+drag clone ──
     if (cmdTempSelectActive && cmdTempSelectOriginalTool) {
@@ -1004,7 +1149,10 @@ let lastShortcutTime = 0;
 const DOUBLE_PRESS_MS = 400;
 
 function setupToolbar() {
-  document.querySelectorAll(".tool-btn[data-tool]").forEach((btn) => {
+  // Top toolbar no longer has tool buttons — they moved to floating toolbar.
+  // This now handles both .tool-btn[data-tool] (if any remain) and .ft-tool-btn[data-tool].
+  const allToolBtns = document.querySelectorAll(".tool-btn[data-tool], .ft-tool-btn[data-tool]");
+  allToolBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
       const tool = btn.getAttribute("data-tool");
       if (!fdCanvas || !tool) return;
@@ -1020,11 +1168,15 @@ function setupToolbar() {
         unlockTool();
       }
 
-      // Update active state
-      document
-        .querySelectorAll(".tool-btn[data-tool]")
-        .forEach((b) => { b.classList.remove("active"); b.classList.remove("locked"); });
-      btn.classList.add("active");
+      // Update active state across all tool buttons
+      allToolBtns.forEach((b) => {
+        b.classList.remove("active");
+        b.classList.remove("locked");
+      });
+      // Activate the matching tool in both toolbars
+      document.querySelectorAll(`[data-tool="${tool}"]`).forEach((b) => {
+        b.classList.add("active");
+      });
 
       fdCanvas.set_tool(tool);
       updateCanvasCursor(tool);
@@ -1038,6 +1190,18 @@ function setupToolbar() {
       lockTool(tool);
     });
   });
+
+  // Floating toolbar collapse/expand: click active tool icon to toggle
+  const floatingToolbar = document.getElementById("floating-toolbar");
+  if (floatingToolbar) {
+    floatingToolbar.addEventListener("dblclick", (e) => {
+      // Double-click the toolbar background (not a button) = toggle collapse
+      if (e.target === floatingToolbar || e.target.classList.contains("ft-drag-handle")) {
+        floatingToolbar.classList.toggle("collapsed");
+        vscode.setState({ ...(vscode.getState() || {}), ftCollapsed: floatingToolbar.classList.contains("collapsed") });
+      }
+    });
+  }
 }
 
 /** Lock the given tool — it stays active after shape creation. */
@@ -1053,7 +1217,7 @@ function lockTool(tool) {
 /** Unlock tool and switch back to Select. */
 function unlockTool() {
   lockedTool = null;
-  document.querySelectorAll(".tool-btn[data-tool]").forEach((b) => b.classList.remove("locked"));
+  document.querySelectorAll(".tool-btn[data-tool], .ft-tool-btn[data-tool]").forEach((b) => b.classList.remove("locked"));
   if (fdCanvas) {
     fdCanvas.set_tool("select");
   }
@@ -1062,7 +1226,7 @@ function unlockTool() {
 
 /** Show lock indicator on the correct toolbar button. */
 function updateLockedIndicator(tool) {
-  document.querySelectorAll(".tool-btn[data-tool]").forEach((btn) => {
+  document.querySelectorAll(".tool-btn[data-tool], .ft-tool-btn[data-tool]").forEach((btn) => {
     btn.classList.toggle("locked", btn.getAttribute("data-tool") === tool);
     btn.classList.toggle("active", btn.getAttribute("data-tool") === tool);
   });
@@ -1094,11 +1258,17 @@ window.addEventListener("message", (event) => {
       }
       break;
     }
+    case "libraryData": {
+      // Library data received from extension host
+      libraryComponents = message.libraries || [];
+      refreshLibraryPanel();
+      break;
+    }
     case "toolChanged": {
       if (!fdCanvas) return;
       fdCanvas.set_tool(message.tool);
-      // Update toolbar UI
-      document.querySelectorAll(".tool-btn").forEach((btn) => {
+      // Update toolbar UI (both top and floating)
+      document.querySelectorAll(".tool-btn[data-tool], .ft-tool-btn[data-tool]").forEach((btn) => {
         btn.classList.toggle(
           "active",
           btn.getAttribute("data-tool") === message.tool
@@ -1158,6 +1328,15 @@ document.addEventListener("keydown", (e) => {
     if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
       e.preventDefault();
       toggleGrid();
+      return;
+    }
+  }
+
+  // ── Library panel toggle shortcut ──
+  if ((e.key === "l" || e.key === "L") && e.shiftKey) {
+    if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      toggleLibraryPanel();
       return;
     }
   }
@@ -1411,7 +1590,7 @@ function setupApplePencilPro() {
 }
 
 function updateToolbarActive(tool) {
-  document.querySelectorAll(".tool-btn[data-tool]").forEach((btn) => {
+  document.querySelectorAll(".tool-btn[data-tool], .ft-tool-btn[data-tool]").forEach((btn) => {
     btn.classList.toggle("active", btn.getAttribute("data-tool") === tool);
   });
   updateCanvasCursor(tool);
@@ -1804,42 +1983,6 @@ function setupFloatingBar() {
     updatePropertiesPanel();
   });
 
-  // ── Overflow menu toggle ──
-  document.getElementById("fab-more-btn").addEventListener("click", (e) => {
-    e.stopPropagation();
-    const menu = document.getElementById("fab-overflow-menu");
-    menu.classList.toggle("visible");
-  });
-
-  // ── Overflow menu actions ──
-  document.querySelectorAll("#fab-overflow-menu .fab-menu-item").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (!fdCanvas) return;
-      const action = btn.dataset.action;
-      let changed = false;
-      switch (action) {
-        case "group": changed = fdCanvas.group_selected(); break;
-        case "ungroup": changed = fdCanvas.ungroup_selected(); break;
-        case "duplicate": changed = fdCanvas.duplicate_selected(); break;
-        case "copy-png": copySelectionAsPng(); break;
-        case "delete": changed = fdCanvas.delete_selected(); break;
-      }
-      if (changed) {
-        render();
-        syncTextToExtension();
-        updatePropertiesPanel();
-        updateFloatingBar();
-      }
-      document.getElementById("fab-overflow-menu").classList.remove("visible");
-    });
-  });
-
-  // Close overflow menu when clicking elsewhere
-  document.addEventListener("click", () => {
-    const menu = document.getElementById("fab-overflow-menu");
-    if (menu) menu.classList.remove("visible");
-  });
 
   // Prevent FAB clicks from deselecting the node
   fab.addEventListener("pointerdown", (e) => {
@@ -2003,6 +2146,76 @@ function escapeAttr(s) {
   return s.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+/**
+ * Check if a node has a spec annotation block.
+ * Uses parseAnnotatedNodes to detect matching spec data.
+ */
+function nodeHasSpec(nodeId) {
+  if (!fdCanvas || !nodeId) return false;
+  const source = fdCanvas.get_text();
+  const nodes = parseAnnotatedNodes(source);
+  return nodes.some(n => n.id === nodeId);
+}
+
+/**
+ * Remove spec block(s) from a node's FD source via text manipulation.
+ * Handles both inline `spec "..."` and block `spec { ... }` forms.
+ */
+function removeNodeSpec(nodeId) {
+  if (!fdCanvas || !nodeId) return;
+  let source = fdCanvas.get_text();
+  const lines = source.split("\n");
+  const result = [];
+  let insideTargetNode = false;
+  let nodeDepth = 0;
+  let skipSpecBlock = false;
+  let specBlockDepth = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+
+    // Detect target node start
+    const nodeRe = new RegExp(`^(?:group|frame|rect|ellipse|path|text)\\s+@${nodeId}(?:\\s|\\{)`);
+    if (nodeRe.test(trimmed)) {
+      insideTargetNode = true;
+      nodeDepth = 0;
+    }
+
+    if (insideTargetNode) {
+      const opens = (trimmed.match(/\{/g) || []).length;
+      const closes = (trimmed.match(/\}/g) || []).length;
+
+      // Skip inline spec line
+      if (trimmed.match(/^spec\s+"/)) {
+        continue; // drop this line
+      }
+
+      // Skip block spec start
+      if (trimmed.match(/^spec\s*\{/) || trimmed === "spec{") {
+        skipSpecBlock = true;
+        specBlockDepth = opens - closes;
+        continue;
+      }
+
+      if (skipSpecBlock) {
+        specBlockDepth += opens - closes;
+        if (specBlockDepth <= 0) skipSpecBlock = false;
+        continue;
+      }
+
+      nodeDepth += opens - closes;
+      if (trimmed === "}" && nodeDepth < 0) {
+        insideTargetNode = false;
+      }
+    }
+
+    result.push(lines[i]);
+  }
+
+  const newSource = result.join("\n");
+  fdCanvas.set_text(newSource);
+}
+
 // ─── Context Menu (Right-Click) ─────────────────────────────────────────
 
 function setupContextMenu() {
@@ -2060,6 +2273,14 @@ function setupContextMenu() {
     }
     ungroupBtn.classList.toggle("disabled", !canUngroup);
 
+    // Show/hide spec-related menu items based on whether node has a spec
+    const hasSpec = nodeHasSpec(contextMenuNodeId);
+    document.getElementById("ctx-add-annotation").style.display = hasSpec ? "none" : "";
+    document.getElementById("ctx-view-spec").style.display = hasSpec ? "" : "none";
+    document.getElementById("ctx-show-specs")?.style && (
+      document.getElementById("ctx-show-specs").style.display = hasSpec ? "" : "none"
+    );
+
     menu.classList.add("visible");
   });
 
@@ -2071,6 +2292,32 @@ function setupContextMenu() {
     }
     closeContextMenu();
   });
+
+  // View Spec via context menu
+  document.getElementById("ctx-view-spec")?.addEventListener("click", () => {
+    if (contextMenuNodeId) {
+      if (fdCanvas) fdCanvas.select_by_id(contextMenuNodeId);
+      render();
+      const menu = document.getElementById("context-menu");
+      const menuRect = menu.getBoundingClientRect();
+      openAnnotationCard(contextMenuNodeId, menuRect.left, menuRect.top);
+    }
+    closeContextMenu();
+  });
+
+  // Show Specs via context menu — opens spec annotation card
+  document.getElementById("ctx-show-specs")?.addEventListener("click", () => {
+    if (contextMenuNodeId) {
+      if (fdCanvas) fdCanvas.select_by_id(contextMenuNodeId);
+      render();
+      const menu = document.getElementById("context-menu");
+      const menuRect = menu.getBoundingClientRect();
+      openAnnotationCard(contextMenuNodeId, menuRect.left, menuRect.top);
+    }
+    closeContextMenu();
+  });
+
+
 
   // Duplicate via context menu
   document.getElementById("ctx-duplicate").addEventListener("click", () => {
@@ -2120,8 +2367,85 @@ function setupContextMenu() {
     closeContextMenu();
   });
 
+  // Cut via context menu
+  document.getElementById("ctx-cut")?.addEventListener("click", () => {
+    if (fdCanvas && contextMenuNodeId) {
+      copySelectedAsFd();
+      const changed = fdCanvas.delete_selected();
+      if (changed) {
+        render();
+        syncTextToExtension();
+      }
+    }
+    closeContextMenu();
+  });
+
+  // Copy via context menu
+  document.getElementById("ctx-copy")?.addEventListener("click", () => {
+    if (fdCanvas) {
+      copySelectedAsFd();
+    }
+    closeContextMenu();
+  });
+
+  // Paste via context menu
+  document.getElementById("ctx-paste")?.addEventListener("click", () => {
+    if (fdCanvas) {
+      pasteFromClipboard();
+    }
+    closeContextMenu();
+  });
+
+  // Copy as PNG via context menu
+  document.getElementById("ctx-copy-png")?.addEventListener("click", () => {
+    if (fdCanvas) {
+      copySelectionAsPng();
+    }
+    closeContextMenu();
+  });
+
+  // Frame Selection via context menu
+  document.getElementById("ctx-frame")?.addEventListener("click", () => {
+    if (fdCanvas && contextMenuNodeId) {
+      // Simulate ⌘+frame by wrapping selected nodes in a frame via handle_key
+      const resultJson = fdCanvas.handle_key("f", false, false, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) {
+        render();
+        syncTextToExtension();
+      }
+    }
+    closeContextMenu();
+  });
+
+  // Bring to Front via context menu
+  document.getElementById("ctx-bring-front")?.addEventListener("click", () => {
+    if (fdCanvas && contextMenuNodeId) {
+      const resultJson = fdCanvas.handle_key("]", false, true, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) {
+        render();
+        syncTextToExtension();
+      }
+    }
+    closeContextMenu();
+  });
+
+  // Send to Back via context menu
+  document.getElementById("ctx-send-back")?.addEventListener("click", () => {
+    if (fdCanvas && contextMenuNodeId) {
+      const resultJson = fdCanvas.handle_key("[", false, true, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) {
+        render();
+        syncTextToExtension();
+      }
+    }
+    closeContextMenu();
+  });
+
   // Delete via context menu
-  document.getElementById("ctx-delete").addEventListener("click", () => {
+  document.getElementById("ctx-delete")?.addEventListener("click", () => {
     if (fdCanvas && contextMenuNodeId) {
       fdCanvas.select_by_id(contextMenuNodeId);
       const changed = fdCanvas.delete_selected();
@@ -2140,6 +2464,44 @@ function setupContextMenu() {
       closeContextMenu();
     }
   });
+  // ── Layers panel: ⋮ button → open context menu (VS Code webview blocks contextmenu events) ──
+  const layersPanel = document.getElementById("layers-panel");
+  if (layersPanel) {
+    layersPanel.addEventListener("click", (e) => {
+      const actionsBtn = e.target.closest(".layer-actions");
+      if (!actionsBtn || !fdCanvas) return;
+      e.stopPropagation();
+      const nodeId = actionsBtn.getAttribute("data-actions-id");
+      if (!nodeId) return;
+      fdCanvas.select_by_id(nodeId);
+      render();
+      contextMenuNodeId = nodeId;
+      const menu = document.getElementById("context-menu");
+      const container = document.getElementById("canvas-container");
+      const containerRect = container.getBoundingClientRect();
+      menu.style.left = (e.clientX - containerRect.left) + "px";
+      menu.style.top = (e.clientY - containerRect.top) + "px";
+      const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      const groupBtn = document.getElementById("ctx-group");
+      const ungroupBtn = document.getElementById("ctx-ungroup");
+      groupBtn.classList.toggle("disabled", selectedIds.length < 2);
+      let canUngroup = false;
+      const source = fdCanvas.get_text();
+      for (const id of selectedIds) {
+        if (new RegExp(`(?:^|\\n)\\s*group\\s+@${id}\\b`).test(source)) {
+          canUngroup = true;
+          break;
+        }
+      }
+      ungroupBtn.classList.toggle("disabled", !canUngroup);
+      const hasSpec = nodeHasSpec(nodeId);
+      document.getElementById("ctx-add-annotation").style.display = hasSpec ? "none" : "";
+      document.getElementById("ctx-view-spec").style.display = hasSpec ? "" : "none";
+      const showSpecsEl = document.getElementById("ctx-show-specs");
+      if (showSpecsEl) showSpecsEl.style.display = hasSpec ? "" : "none";
+      menu.classList.add("visible");
+    });
+  }
 }
 
 function closeContextMenu() {
@@ -2422,7 +2784,7 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   if (isTextNode) {
     // Text node: fill = text color, not background
     // Use themed background, and the node's fill as text color
-    bgColor = isDark ? "#1E1E2E" : "#FFFFFF";
+    bgColor = "transparent";
     textColor = props.fill || (isDark ? "#E0E0E0" : "#1C1C1E");
   } else if (props.fill) {
   // Shape node with fill: use as background
@@ -2570,65 +2932,7 @@ const DEFAULT_SHAPE_SIZES = {
 };
 
 function setupDragAndDrop() {
-  // Palette items — create custom drag images sized to default node dimensions
-  document.querySelectorAll(".palette-item[data-shape]").forEach((item) => {
-    item.addEventListener("dragstart", (e) => {
-      const shape = item.getAttribute("data-shape");
-      e.dataTransfer.setData("text/plain", shape);
-      e.dataTransfer.effectAllowed = "copy";
-
-      // Build an offscreen drag ghost at default node size
-      const [w, h] = DEFAULT_SHAPE_SIZES[shape] || [100, 80];
-      const ghost = document.createElement("canvas");
-      ghost.width = w;
-      ghost.height = h;
-      const gc = ghost.getContext("2d");
-      gc.fillStyle = "rgba(200, 200, 215, 0.6)";
-      gc.strokeStyle = "rgba(100, 100, 120, 0.8)";
-      gc.lineWidth = 1.5;
-      if (shape === "ellipse") {
-        gc.beginPath();
-        gc.ellipse(w / 2, h / 2, w / 2 - 1, h / 2 - 1, 0, 0, Math.PI * 2);
-        gc.fill();
-        gc.stroke();
-      } else if (shape === "text") {
-        gc.font = "14px -apple-system, BlinkMacSystemFont, sans-serif";
-        gc.fillStyle = "rgba(80, 80, 90, 0.9)";
-        gc.fillText("Text", 8, h / 2 + 5);
-      } else if (shape === "frame") {
-        gc.strokeStyle = "rgba(120, 120, 140, 0.8)";
-        gc.setLineDash([4, 3]);
-        gc.strokeRect(1, 1, w - 2, h - 2);
-      } else if (shape === "line" || shape === "arrow") {
-        gc.strokeStyle = "rgba(80, 80, 100, 0.9)";
-        gc.lineWidth = 2;
-        gc.beginPath();
-        gc.moveTo(4, h / 2);
-        gc.lineTo(w - 4, h / 2);
-        gc.stroke();
-        if (shape === "arrow") {
-          gc.beginPath();
-          gc.moveTo(w - 12, h / 2 - 5);
-          gc.lineTo(w - 4, h / 2);
-          gc.lineTo(w - 12, h / 2 + 5);
-          gc.stroke();
-        }
-      } else {
-        gc.beginPath();
-        gc.roundRect(1, 1, w - 2, h - 2, 6);
-        gc.fill();
-        gc.stroke();
-      }
-      ghost.style.position = "absolute";
-      ghost.style.top = "-9999px";
-      document.body.appendChild(ghost);
-      e.dataTransfer.setDragImage(ghost, w / 2, h / 2);
-      // Clean up after drag starts
-      requestAnimationFrame(() => ghost.remove());
-    });
-  });
-
-  // Canvas drop target
+  // Canvas drop target (kept for future drag-from-insert support)
   canvas.addEventListener("dragover", (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
@@ -2850,6 +3154,7 @@ function openAnimPicker(targetNodeId, clientX, clientY) {
 // ─── View Mode Toggle ────────────────────────────────────────────────────
 
 function setupViewToggle() {
+  document.getElementById("view-all")?.addEventListener("click", () => setViewMode("all"));
   document.getElementById("view-design")?.addEventListener("click", () => setViewMode("design"));
   document.getElementById("view-spec")?.addEventListener("click", () => setViewMode("spec"));
 }
@@ -2858,12 +3163,13 @@ function setViewMode(mode) {
   viewMode = mode;
   const isSpec = mode === "spec";
 
+  document.getElementById("view-all")?.classList.toggle("active", mode === "all");
   document.getElementById("view-design")?.classList.toggle("active", mode === "design");
   document.getElementById("view-spec")?.classList.toggle("active", isSpec);
 
   // Canvas stays visible — spec view keeps full interactivity
   const overlay = document.getElementById("spec-overlay");
-  if (overlay) overlay.style.display = isSpec ? "" : "none";
+  if (overlay) overlay.style.display = (isSpec || specBadgesVisible) ? "" : "none";
 
   // Hide properties panel in spec view
   const props = document.getElementById("props-panel");
@@ -2872,63 +3178,97 @@ function setViewMode(mode) {
   // Notify extension to apply/remove code-mode spec folding
   vscode.postMessage({ type: "viewModeChanged", mode });
 
+  if (isSpec || specBadgesVisible) {
+    refreshSpecBadges();
+  } else {
+    // Clear badges when leaving spec view with toggle OFF
+    if (overlay) overlay.innerHTML = "";
+  }
+
   if (isSpec) {
     refreshSpecView();
-  } else {
-    // Clear badges when leaving spec view
-    if (overlay) overlay.innerHTML = "";
   }
 
   // Always refresh layers (it's always visible)
   refreshLayersPanel();
 }
 
-function refreshSpecView() {
+/**
+ * Render spec info for the selected node in the spec overlay.
+ * In Design/All view: only show spec details for the currently selected node.
+ * Badge pins are removed; specs appear on hover via tooltip.
+ */
+function refreshSpecBadges() {
   const overlay = document.getElementById("spec-overlay");
   if (!overlay || !fdCanvas) return;
 
-  // Parse source to find annotated nodes
+  // In design/all modes, hide the overlay (tooltip handles hover display)
+  overlay.style.display = "none";
+  overlay.innerHTML = "";
+}
+
+/** Cached annotated nodes for hover tooltip lookups. */
+let cachedAnnotatedNodes = [];
+let cachedAnnotatedSource = "";
+
+/** Refresh the annotated nodes cache if source changed. */
+function refreshAnnotatedCache() {
+  if (!fdCanvas) return;
   const source = fdCanvas.get_text();
-  const nodesWithAnnotations = parseAnnotatedNodes(source);
+  if (source !== cachedAnnotatedSource) {
+    cachedAnnotatedSource = source;
+    cachedAnnotatedNodes = parseAnnotatedNodes(source);
+  }
+}
 
-  let html = "";
-  for (const node of nodesWithAnnotations) {
-    const boundsJson = fdCanvas.get_node_bounds(node.id);
-    const b = JSON.parse(boundsJson);
-    if (!b.width) continue;
+/** Show spec hover tooltip at screen position for a given node. */
+function showSpecTooltip(nodeId, clientX, clientY) {
+  const tooltip = document.getElementById("spec-hover-tooltip");
+  if (!tooltip) return;
 
-    // Position badge at top-right corner of node, adjusted for pan
-    const bx = b.x + b.width + panX - 6;
-    const by = b.y + panY - 6;
+  refreshAnnotatedCache();
+  const node = cachedAnnotatedNodes.find(n => n.id === nodeId);
+  if (!node || node.annotations.length === 0) {
+    hideSpecTooltip();
+    return;
+  }
 
-    const annCount = node.annotations.length;
-    const descriptions = node.annotations.filter(a => a.type === "description");
-    const tooltip = descriptions.length > 0
-      ? escapeAttr(descriptions[0].value)
-      : `${annCount} annotation(s)`;
+  const descs = node.annotations.filter(a => a.type === "description");
+  const statuses = node.annotations.filter(a => a.type === "status");
+  const priorities = node.annotations.filter(a => a.type === "priority");
 
-    html += `<div class="spec-badge-pin" style="left:${bx}px;top:${by}px" `;
-    html += `data-node-id="${escapeAttr(node.id)}" title="${tooltip}">`;
-    html += `<span class="spec-badge-count">${annCount}</span>`;
+  let html = `<div class="spec-tip-id">◇ @${escapeHtml(node.id)}</div>`;
+  if (descs.length > 0) {
+    html += `<div class="spec-tip-desc">${escapeHtml(descs[0].value)}</div>`;
+  }
+  if (statuses.length > 0 || priorities.length > 0) {
+    html += `<div class="spec-tip-badges">`;
+    for (const s of statuses) {
+      html += `<span class="spec-tip-badge status-${escapeAttr(s.value)}">${escapeHtml(s.value)}</span>`;
+    }
+    for (const p of priorities) {
+      html += `<span class="spec-tip-badge priority-${escapeAttr(p.value)}">⚡ ${escapeHtml(p.value)}</span>`;
+    }
     html += `</div>`;
   }
 
-  overlay.innerHTML = html;
+  tooltip.innerHTML = html;
+  const container = document.getElementById("canvas-container");
+  const containerRect = container.getBoundingClientRect();
+  tooltip.style.left = (clientX - containerRect.left + 14) + "px";
+  tooltip.style.top = (clientY - containerRect.top - 10) + "px";
+  tooltip.classList.add("visible");
+}
 
-  // Attach click handlers to badges to open annotation card
-  overlay.querySelectorAll(".spec-badge-pin").forEach(pin => {
-    pin.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const nodeId = pin.getAttribute("data-node-id");
-      if (nodeId) {
-        // Select the node on canvas
-        if (fdCanvas.select_by_id(nodeId)) render();
-        // Open annotation card near the badge
-        const rect = pin.getBoundingClientRect();
-        openAnnotationCard(nodeId, rect.left, rect.bottom + 4);
-      }
-    });
-  });
+/** Hide the spec hover tooltip. */
+function hideSpecTooltip() {
+  const tooltip = document.getElementById("spec-hover-tooltip");
+  if (tooltip) tooltip.classList.remove("visible");
+}
+
+function refreshSpecView() {
+  // Badges are now handled by refreshSpecBadges()
+  refreshSpecBadges();
 }
 
 /**
@@ -3066,7 +3406,7 @@ function parseAnnotatedNodes(source) {
 // ─── Layers Panel (Tree View) ────────────────────────────────────────────
 
 const LAYER_ICONS = {
-  group: "◫",
+  group: "◻",
   frame: "▣",
   rect: "▢",
   ellipse: "○",
@@ -3185,6 +3525,7 @@ function renderLayerNode(node, selectedId, depth = 0) {
   html += `<span class="layer-icon">${icon}</span>`;
   html += `<span class="layer-name">${escapeHtml(node.id)}${textPreview}</span>`;
   html += `<span class="layer-kind">${escapeHtml(node.kind)}</span>`;
+  html += `<span class="layer-actions" data-actions-id="${escapeAttr(node.id)}" title="More actions">⋮</span>`;
   html += `<span class="layer-eye" data-eye-id="${escapeAttr(node.id)}" title="Toggle visibility">👁</span>`;
   html += `</div>`;
 
@@ -3221,9 +3562,10 @@ function refreshSpecSummary(panel) {
   html += `<button class="spec-action-btn" id="spec-export-btn" title="Export spec report (copies markdown to clipboard)">↗</button>`;
   html += `<select class="spec-bulk-status" id="spec-bulk-status" title="Set status on all visible specs">`;
   html += `<option value="">Bulk…</option>`;
-  html += `<option value="draft">→ Draft</option>`;
-  html += `<option value="in_progress">→ In Progress</option>`;
+  html += `<option value="todo">→ To Do</option>`;
+  html += `<option value="doing">→ Doing</option>`;
   html += `<option value="done">→ Done</option>`;
+  html += `<option value="blocked">→ Blocked</option>`;
   html += `</select>`;
   html += `</div>`;
   html += `</div>`;
@@ -3231,9 +3573,10 @@ function refreshSpecSummary(panel) {
   // Filter tabs
   const filters = [
     { key: "all", label: "All" },
-    { key: "draft", label: "Draft" },
-    { key: "in_progress", label: "In Prog" },
+    { key: "todo", label: "To Do" },
+    { key: "doing", label: "Doing" },
     { key: "done", label: "Done" },
+    { key: "blocked", label: "Blocked" },
   ];
   html += `<div class="spec-filter-tabs">`;
   for (const f of filters) {
@@ -3262,7 +3605,7 @@ function refreshSpecSummary(panel) {
     html += `<div class="spec-empty-state">`;
     html += `<div style="font-size:24px;margin-bottom:8px;opacity:0.4">◇</div>`;
     html += `<div style="opacity:0.5;font-size:12px">No spec annotations yet</div>`;
-    html += `<div style="opacity:0.35;font-size:11px;margin-top:4px">Right-click a node → Add Annotation, or press ⌘I</div>`;
+    html += `<div style="opacity:0.35;font-size:11px;margin-top:4px">Right-click a node → Add Spec, or press ⌘I</div>`;
     html += `</div>`;
     panel.innerHTML = html;
     return;
@@ -3449,6 +3792,16 @@ function refreshLayersPanel() {
 
   // Skip DOM rebuild if nothing changed (uses generation counter instead of full-text hash)
   if (sceneGeneration === lastLayerGeneration && selectedId === lastLayerSelectedId) return;
+
+  // Selection-only change: update highlight on existing DOM without full rebuild
+  if (sceneGeneration === lastLayerGeneration && selectedId !== lastLayerSelectedId) {
+    lastLayerSelectedId = selectedId;
+    panel.querySelectorAll(".layer-item").forEach(el =>
+      el.classList.toggle("selected", el.getAttribute("data-node-id") === selectedId)
+    );
+    return;
+  }
+
   lastLayerGeneration = sceneGeneration;
   lastLayerSelectedId = selectedId;
 
@@ -3748,6 +4101,145 @@ function hideDimensionTooltip() {
   if (el) el.style.display = "none";
 }
 
+// ─── Center-Snap for Text Nodes (Fix 6) ──────────────────────────────────────
+
+const CENTER_SNAP_THRESHOLD = 30; // px in scene-space
+
+/** State for center-snap guides. */
+let centerSnapTarget = null;
+
+/**
+ * Check if a dragged text node is near the center of any shape node.
+ * Returns { targetId, cx, cy } if within snap threshold, null otherwise.
+ */
+function detectCenterSnap(draggedId, sceneX, sceneY) {
+  if (!fdCanvas) return null;
+
+  const source = fdCanvas.get_text();
+  const nodeIdPattern = /@(\w+)/g;
+  let match;
+  const seenIds = new Set();
+
+  while ((match = nodeIdPattern.exec(source)) !== null) {
+    const id = match[1];
+    if (seenIds.has(id) || id === draggedId) continue;
+    seenIds.add(id);
+    try {
+      const b = JSON.parse(fdCanvas.get_node_bounds(id));
+      if (!b.width || b.width <= 0) continue;
+
+      // Check if this is a shape node (not text/edge/style)
+      const kindMatch = source.match(new RegExp(`(?:rect|ellipse|frame|group)\\s+@${id}\\b`));
+      if (!kindMatch) continue;
+
+      const cx = b.x + b.width / 2;
+      const cy = b.y + b.height / 2;
+      const dx = Math.abs(sceneX - cx);
+      const dy = Math.abs(sceneY - cy);
+
+      if (dx < CENTER_SNAP_THRESHOLD && dy < CENTER_SNAP_THRESHOLD) {
+        return { targetId: id, cx, cy, bounds: b };
+      }
+    } catch (_) { /* skip */ }
+  }
+  return null;
+}
+
+/** Show center-snap crosshair guide lines. */
+function showCenterSnapGuides(cx, cy) {
+  const container = document.getElementById("center-snap-guides");
+  if (!container) return;
+  const screenX = cx * zoomLevel + panX;
+  const screenY = cy * zoomLevel + panY;
+  container.innerHTML = `
+    <div class="center-snap-guide vertical" style="left:${screenX}px"></div>
+    <div class="center-snap-guide horizontal" style="top:${screenY}px"></div>
+  `;
+}
+
+/** Hide center-snap guide lines. */
+function hideCenterSnapGuides() {
+  const container = document.getElementById("center-snap-guides");
+  if (container) container.innerHTML = "";
+  centerSnapTarget = null;
+}
+
+// ─── Text Drag-to-Consume / Reparent (Fix 7) ────────────────────────────────
+
+/** State for text drag-to-consume. */
+let textDropTarget = null;
+
+/**
+ * Detect if a dragged text node is hovered over a shape node that can consume it.
+ * Shows a glow ring on the target shape.
+ */
+function detectTextDropTarget(draggedId, sceneX, sceneY) {
+  if (!fdCanvas) return null;
+
+  const hitId = fdCanvas.hit_test_at(sceneX, sceneY);
+  if (!hitId || hitId === draggedId) return null;
+
+  // Check if the hit target is a shape (not text, edge, etc.)
+  const source = fdCanvas.get_text();
+  const shapeMatch = source.match(new RegExp(`(?:rect|ellipse|frame)\\s+@${hitId}\\b`));
+  if (!shapeMatch) return null;
+
+  // Check if dragged node is a text node
+  const textMatch = source.match(new RegExp(`text\\s+@${draggedId}\\b`));
+  if (!textMatch) return null;
+
+  try {
+    const bounds = JSON.parse(fdCanvas.get_node_bounds(hitId));
+    return { targetId: hitId, bounds };
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Reparent a text node inside a target shape node by rewriting FD source.
+ * Centers the text inside the shape using auto-center logic (R3.36).
+ */
+function reparentTextIntoShape(textId, targetShapeId) {
+  if (!fdCanvas) return false;
+  let source = fdCanvas.get_text();
+
+  // Extract text node block from source
+  const textBlockRe = new RegExp(`(^|\\n)(\\s*text\\s+@${textId}\\s+"[^"]*"\\s*\\{[^}]*\\}|\\s*text\\s+@${textId}\\s+"[^"]*")`, 'm');
+  const textLineRe = new RegExp(`(^|\\n)(\\s*text\\s+@${textId}\\b[^\\n]*)`, 'm');
+
+  let textBlock = "";
+  let textMatch = source.match(textBlockRe) || source.match(textLineRe);
+  if (!textMatch) return false;
+
+  textBlock = textMatch[2].trim();
+  // Remove the text block from its current position
+  source = source.replace(textMatch[2], "");
+
+  // Remove position constraints from the text block (it will auto-center)
+  textBlock = textBlock.replace(/\s*x:\s*\d+(\.\d+)?/g, "");
+  textBlock = textBlock.replace(/\s*y:\s*\d+(\.\d+)?/g, "");
+
+  // Find the target shape's closing brace and insert text before it
+  const shapeBlockRe = new RegExp(`(@${targetShapeId}\\s*\\{)`);
+  const shapeMatch = source.match(shapeBlockRe);
+  if (!shapeMatch) return false;
+
+  // Insert the text node right after the opening brace of the shape
+  const insertPos = source.indexOf(shapeMatch[0]) + shapeMatch[0].length;
+  source = source.slice(0, insertPos) + "\n  " + textBlock + source.slice(insertPos);
+
+  // Clean up double newlines
+  source = source.replace(/\n{3,}/g, "\n\n");
+
+  const ok = fdCanvas.set_text(source);
+  if (ok) {
+    render();
+    syncTextToExtension();
+  }
+  return ok;
+}
+
 // ─── Zoom Helpers ─────────────────────────────────────────────────────────────
 
 /** Zoom by a multiplier, centered on the canvas middle. */
@@ -3844,33 +4336,673 @@ function zoomToFit() {
   updateZoomIndicator();
 }
 
-/** Update the zoom level indicator in the toolbar. */
+/** Update the zoom level indicator in both toolbar and bottom-left controls. */
 function updateZoomIndicator() {
+  const pct = Math.round(zoomLevel * 100) + "%";
+  const el = document.getElementById("zoom-level");
+  if (el) el.textContent = pct;
+  const blEl = document.getElementById("zoom-reset-btn");
+  if (blEl) blEl.textContent = pct;
+}
+
+function setupZoomIndicator() {
   const el = document.getElementById("zoom-level");
   if (el) {
-    el.textContent = Math.round(zoomLevel * 100) + "%";
+    el.addEventListener("click", () => {
+      resetZoomToCenter();
+    });
   }
 }
 
-/** Set up click-to-reset on zoom indicator. */
-function setupZoomIndicator() {
-  const el = document.getElementById("zoom-level");
-  if (!el) return;
-  el.addEventListener("click", () => {
-    // Reset to 100% centered
-    const container = document.getElementById("canvas-container");
-    const cx = container.clientWidth / 2;
-    const cy = container.clientHeight / 2;
-    const oldZoom = zoomLevel;
-    zoomLevel = 1.0;
-    panX = cx - (cx - panX) * (1.0 / oldZoom);
-    panY = cy - (cy - panY) * (1.0 / oldZoom);
+/** Reset zoom to 100% centered on current viewport center. */
+function resetZoomToCenter() {
+  const container = document.getElementById("canvas-container");
+  const cx = container.clientWidth / 2;
+  const cy = container.clientHeight / 2;
+  const oldZoom = zoomLevel;
+  zoomLevel = 1.0;
+  panX = cx - (cx - panX) * (1.0 / oldZoom);
+  panY = cy - (cy - panY) * (1.0 / oldZoom);
+  render();
+  updateZoomIndicator();
+}
+
+/** Set up bottom-left zoom controls (Excalidraw-style +/−/reset). */
+function setupZoomControls() {
+  const zoomIn = document.getElementById("zoom-in-btn");
+  const zoomOut = document.getElementById("zoom-out-btn");
+  const zoomReset = document.getElementById("zoom-reset-btn");
+
+  if (zoomIn) {
+    zoomIn.addEventListener("click", () => {
+      const container = document.getElementById("canvas-container");
+      const cx = container.clientWidth / 2;
+      const cy = container.clientHeight / 2;
+      const oldZoom = zoomLevel;
+      zoomLevel = Math.min(ZOOM_MAX, zoomLevel * 1.25);
+      panX = cx - (cx - panX) * (zoomLevel / oldZoom);
+      panY = cy - (cy - panY) * (zoomLevel / oldZoom);
+      render();
+      updateZoomIndicator();
+    });
+  }
+
+  if (zoomOut) {
+    zoomOut.addEventListener("click", () => {
+      const container = document.getElementById("canvas-container");
+      const cx = container.clientWidth / 2;
+      const cy = container.clientHeight / 2;
+      const oldZoom = zoomLevel;
+      zoomLevel = Math.max(ZOOM_MIN, zoomLevel / 1.25);
+      panX = cx - (cx - panX) * (zoomLevel / oldZoom);
+      panY = cy - (cy - panY) * (zoomLevel / oldZoom);
+      render();
+      updateZoomIndicator();
+    });
+  }
+
+  if (zoomReset) {
+    zoomReset.addEventListener("click", () => {
+      resetZoomToCenter();
+    });
+  }
+}
+
+/** Set up bottom-left undo/redo buttons (Excalidraw-style). */
+function setupUndoRedoControls() {
+  const undoBtn = document.getElementById("undo-btn");
+  const redoBtn = document.getElementById("redo-btn");
+
+  if (undoBtn) {
+    undoBtn.addEventListener("click", () => {
+      if (!fdCanvas) return;
+      const resultJson = fdCanvas.handle_key("z", false, false, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) {
+        render();
+        syncTextToExtension();
+      }
+    });
+  }
+
+  if (redoBtn) {
+    redoBtn.addEventListener("click", () => {
+      if (!fdCanvas) return;
+      const resultJson = fdCanvas.handle_key("z", false, true, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) {
+        render();
+        syncTextToExtension();
+      }
+    });
+  }
+}
+
+/** Set up settings hamburger menu (☰). */
+function setupSettingsMenu() {
+  const btn = document.getElementById("settings-menu-btn");
+  const menu = document.getElementById("settings-menu");
+  if (!btn || !menu) return;
+
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.classList.toggle("visible");
+    updateSettingsToggleStates();
+  });
+
+  // Grid toggle
+  document.getElementById("sm-grid-toggle")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleGrid();
+    updateSettingsToggleStates();
+  });
+
+  // Spec badges toggle
+  document.getElementById("sm-spec-badge-toggle")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleSpecBadges();
+    updateSettingsToggleStates();
+  });
+
+  // Library panel toggle
+  document.getElementById("sm-library-toggle")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleLibraryPanel();
+    updateSettingsToggleStates();
+  });
+
+  // Sketchy mode toggle
+  document.getElementById("sm-sketchy-toggle")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!fdCanvas) return;
+    const enabled = !fdCanvas.get_sketchy_mode();
+    fdCanvas.set_sketchy_mode(enabled);
+    const sketchyBtn = document.getElementById("sketchy-toggle-btn");
+    if (sketchyBtn) sketchyBtn.classList.toggle("active", enabled);
+    vscode.setState({ ...(vscode.getState() || {}), sketchyMode: enabled });
     render();
-    updateZoomIndicator();
+    updateSettingsToggleStates();
+  });
+
+  // Theme toggle
+  document.getElementById("sm-theme-toggle")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    isDarkTheme = !isDarkTheme;
+    applyTheme(isDarkTheme);
+    vscode.setState({ ...(vscode.getState() || {}), darkTheme: isDarkTheme });
+    updateSettingsToggleStates();
+  });
+
+  // Export actions
+  menu.querySelectorAll(".settings-menu-item[data-export]").forEach(item => {
+    item.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      menu.classList.remove("visible");
+      const action = item.dataset.export;
+      switch (action) {
+        case "png-clip": await copySelectionAsPng(); break;
+        case "png-file": exportToPng(); break;
+        case "svg-file": exportToSvg(); break;
+        case "fd-clip":
+          copySelectedAsFd();
+          vscode.postMessage({ type: "info", text: "Copied .fd text to clipboard!" });
+          break;
+      }
+    });
+  });
+
+  // Shortcuts
+  document.getElementById("sm-shortcuts")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.classList.remove("visible");
+    toggleShortcutHelp();
+  });
+
+  // Close when clicking outside
+  document.addEventListener("pointerdown", (e) => {
+    if (menu.classList.contains("visible") && !menu.contains(e.target) && !btn.contains(e.target)) {
+      menu.classList.remove("visible");
+    }
   });
 }
 
-// ─── Grid Overlay (R3.21 — Figma/Sketch/draw.io) ─────────────────────────────
+/** Update toggle-on class for settings menu items. */
+function updateSettingsToggleStates() {
+  const gridItem = document.getElementById("sm-grid-toggle");
+  const specItem = document.getElementById("sm-spec-badge-toggle");
+  const sketchyItem = document.getElementById("sm-sketchy-toggle");
+  const themeItem = document.getElementById("sm-theme-toggle");
+  if (gridItem) gridItem.classList.toggle("toggle-on", gridEnabled);
+  if (specItem) specItem.classList.toggle("toggle-on", specBadgesVisible);
+  if (sketchyItem) sketchyItem.classList.toggle("toggle-on", fdCanvas ? fdCanvas.get_sketchy_mode() : false);
+  if (themeItem) themeItem.classList.toggle("toggle-on", isDarkTheme);
+  const libItem = document.getElementById("sm-library-toggle");
+  const libPanel = document.getElementById("library-panel");
+  if (libItem) libItem.classList.toggle("toggle-on", libPanel && libPanel.classList.contains("visible"));
+}
+
+/** Set up floating toolbar drag handle (move between top and bottom). */
+function setupFloatingToolbar() {
+  const toolbar = document.getElementById("floating-toolbar");
+  const handle = document.getElementById("ft-drag-handle");
+  if (!toolbar || !handle) return;
+
+  // Restore persisted state
+  const savedState = vscode.getState();
+  if (savedState && savedState.ftCollapsed) {
+    toolbar.classList.add("collapsed");
+  }
+  if (savedState && savedState.ftPosition === "top") {
+    toolbar.classList.add("at-top");
+  }
+
+  let isDragging = false;
+  let dragStartY = 0;
+
+  handle.addEventListener("pointerdown", (e) => {
+    isDragging = true;
+    dragStartY = e.clientY;
+    handle.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  handle.addEventListener("pointermove", (e) => {
+    if (!isDragging) return;
+    const dy = e.clientY - dragStartY;
+    // If dragged more than 80px, toggle position
+    if (Math.abs(dy) > 80) {
+      const container = document.getElementById("canvas-container");
+      const midY = container.clientHeight / 2;
+      const atTop = e.clientY < midY;
+      toolbar.classList.toggle("at-top", atTop);
+      vscode.setState({ ...(vscode.getState() || {}), ftPosition: atTop ? "top" : "bottom" });
+      isDragging = false;
+    }
+  });
+
+  handle.addEventListener("pointerup", () => {
+    isDragging = false;
+  });
+
+  // ── Drag-to-Create: drag a tool button onto the canvas ──
+  const DRAG_THRESHOLD = 5;
+  let dtcActive = false;
+  let dtcTool = null;
+  let dtcStartX = 0;
+  let dtcStartY = 0;
+  let dtcGhost = null;
+
+  const ghostShapes = {
+    rect: { w: 120, h: 80, css: "border-radius:8px;" },
+    ellipse: { w: 100, h: 100, css: "border-radius:50%;" },
+    pen: { w: 80, h: 60, css: "border-radius:4px;" },
+    arrow: { w: 120, h: 2, css: "" },
+    text: { w: 60, h: 28, css: "border-radius:4px;" },
+    frame: { w: 140, h: 100, css: "border-radius:4px;" },
+  };
+
+  function createGhost(tool) {
+    const shape = ghostShapes[tool] || ghostShapes.rect;
+    const el = document.createElement("div");
+    el.className = "dtc-ghost";
+    const isDark = document.body.classList.contains("dark-theme");
+    const borderColor = isDark ? "rgba(255,255,255,0.5)" : "rgba(51,51,51,0.5)";
+    const bg = isDark ? "rgba(255,255,255,0.06)" : "rgba(51,51,51,0.06)";
+    let content = "";
+    if (tool === "text") {
+      content = `<span style="font-size:14px;color:${borderColor};font-weight:500;">T</span>`;
+    }
+    if (tool === "arrow") {
+      // Diagonal line ghost
+      el.style.cssText = `
+        position:fixed;pointer-events:none;z-index:10000;
+        width:${shape.w}px;height:${shape.w}px;
+        transform:translate(-50%,-50%);
+        opacity:0.7;
+      `;
+      el.innerHTML = `<svg width="${shape.w}" height="${shape.w}" viewBox="0 0 ${shape.w} ${shape.w}" fill="none">
+        <line x1="10" y1="${shape.w - 10}" x2="${shape.w - 10}" y2="10"
+          stroke="${borderColor}" stroke-width="2" stroke-dasharray="6 4"/>
+        <path d="M${shape.w - 30},10 L${shape.w - 10},10 L${shape.w - 10},30"
+          stroke="${borderColor}" stroke-width="2" fill="none"/>
+      </svg>`;
+    } else {
+      el.style.cssText = `
+        position:fixed;pointer-events:none;z-index:10000;
+        width:${shape.w}px;height:${shape.h}px;
+        border:2px dashed ${borderColor};
+        background:${bg};
+        ${shape.css}
+        transform:translate(-50%,-50%);
+        display:flex;align-items:center;justify-content:center;
+        opacity:0.7;
+        box-shadow:0 2px 12px rgba(0,0,0,0.08);
+      `;
+      el.innerHTML = content;
+    }
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function moveGhost(el, x, y) {
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+  }
+
+  function removeGhost() {
+    if (dtcGhost) { dtcGhost.remove(); dtcGhost = null; }
+  }
+
+  // Attach to each tool button (except select — can't drag-to-create with select)
+  toolbar.querySelectorAll(".ft-tool-btn[data-tool]").forEach((btn) => {
+    const tool = btn.getAttribute("data-tool");
+    if (tool === "select") return;
+
+    btn.addEventListener("pointerdown", (e) => {
+      dtcTool = tool;
+      dtcStartX = e.clientX;
+      dtcStartY = e.clientY;
+      dtcActive = false;
+      btn.setPointerCapture(e.pointerId);
+    });
+
+    btn.addEventListener("pointermove", (e) => {
+      if (!dtcTool) return;
+      const dx = e.clientX - dtcStartX;
+      const dy = e.clientY - dtcStartY;
+      if (!dtcActive && (dx * dx + dy * dy) >= DRAG_THRESHOLD * DRAG_THRESHOLD) {
+        dtcActive = true;
+        dtcGhost = createGhost(dtcTool);
+      }
+      if (dtcActive && dtcGhost) {
+        moveGhost(dtcGhost, e.clientX, e.clientY);
+      }
+    });
+
+    btn.addEventListener("pointerup", (e) => {
+      btn.releasePointerCapture(e.pointerId);
+      if (!dtcTool) return;
+
+      if (dtcActive) {
+        // Drag-to-create: check if drop is over the canvas
+        removeGhost();
+        const canvasEl = document.getElementById("fd-canvas");
+        if (canvasEl && fdCanvas) {
+          const rect = canvasEl.getBoundingClientRect();
+          const cx = e.clientX;
+          const cy = e.clientY;
+          if (cx >= rect.left && cx <= rect.right
+            && cy >= rect.top && cy <= rect.bottom) {
+            const rawX = ((cx - rect.left) - panX) / zoomLevel;
+            const rawY = ((cy - rect.top) - panY) / zoomLevel;
+
+            // ── Text drop-to-consume: text on shape or edge ──
+            if (dtcTool === "text") {
+              const consumed = dtcTextConsume(rawX, rawY, cx, cy, rect);
+              if (consumed) {
+                dtcActive = false;
+                dtcTool = null;
+                btn._dtcSuppressClick = true;
+                return;
+              }
+            }
+
+            // ── Snap-to-node detection (non-text tools) ──
+            const snap = dtcFindSnapTarget(rawX, rawY, dtcTool);
+            const sceneX = snap ? snap.x : rawX;
+            const sceneY = snap ? snap.y : rawY;
+
+            const created = fdCanvas.create_node_at(dtcTool, sceneX, sceneY);
+            if (created) {
+              lastDrawingTool = dtcTool;
+              applyDefaultsToNewNode(dtcTool);
+              bumpGeneration();
+
+              // ── Auto-create edge if snapped ──
+              if (snap && snap.targetId) {
+                const newNodeId = fdCanvas.get_selected_id();
+                if (newNodeId) {
+                  const edgeId = fdCanvas.create_edge(snap.targetId, newNodeId);
+                  if (edgeId) {
+                    bumpGeneration();
+                    const midSX = (cx + ((snap.targetCx * zoomLevel + panX) + rect.left)) / 2;
+                    const midSY = (cy + ((snap.targetCy * zoomLevel + panY) + rect.top)) / 2;
+                    showEdgeContextMenu(edgeId, midSX, midSY);
+                  }
+                }
+              }
+
+              render();
+              syncTextToExtension();
+              updatePropertiesPanel();
+            }
+          }
+        }
+        dtcActive = false;
+        dtcTool = null;
+        btn._dtcSuppressClick = true;
+      } else {
+        dtcTool = null;
+      }
+    });
+
+    // Suppress click after drag-to-create
+    btn.addEventListener("click", (e) => {
+      if (btn._dtcSuppressClick) {
+        btn._dtcSuppressClick = false;
+        e.stopImmediatePropagation();
+        e.preventDefault();
+      }
+    }, true);
+
+    btn.addEventListener("pointercancel", () => {
+      removeGhost();
+      dtcActive = false;
+      dtcTool = null;
+    });
+  });
+  // ── Text drop-to-consume helper ──
+  function dtcTextConsume(sceneX, sceneY, screenX, screenY, canvasRect) {
+    if (!fdCanvas) return false;
+    const source = fdCanvas.get_text();
+
+    // PRIORITY 1: Drop on a shape → create text then reparent inside
+    const hitId = fdCanvas.hit_test_at(sceneX, sceneY);
+    if (hitId) {
+      const shapeMatch = source.match(new RegExp(`(?:rect|ellipse|frame)\\s+@${hitId}\\b`));
+      if (shapeMatch) {
+        // Create text node at drop position
+        const created = fdCanvas.create_node_at("text", sceneX, sceneY);
+        if (created) {
+          const textId = fdCanvas.get_selected_id();
+          if (textId) {
+            reparentTextIntoShape(textId, hitId);
+            bumpGeneration();
+            render();
+            syncTextToExtension();
+            updatePropertiesPanel();
+            return true;
+          }
+        }
+      }
+    }
+
+    // PRIORITY 2: Drop near an edge → add text as child inside edge block
+    const edgeTarget = dtcFindNearestEdge(sceneX, sceneY);
+    if (edgeTarget) {
+      const consumed = dtcAddTextToEdge(edgeTarget.edgeId, sceneX, sceneY);
+      if (consumed) return true;
+    }
+
+    // PRIORITY 3: Empty canvas — return false, let normal create flow handle it
+    return false;
+  }
+
+  /** Find the nearest edge within 30px of a scene point. */
+  function dtcFindNearestEdge(sceneX, sceneY) {
+    if (!fdCanvas) return null;
+    const source = fdCanvas.get_text();
+    // Find all edge blocks and check distance to their from→to line
+    const edgeRe = /edge\s+@(\S+)\s*\{[^}]*from:\s*@(\S+)[^}]*to:\s*@(\S+)/g;
+    let closest = null;
+    let closestDist = 30; // 30px threshold
+    let match;
+    while ((match = edgeRe.exec(source)) !== null) {
+      const edgeId = match[1];
+      const fromId = match[2];
+      const toId = match[3];
+      let fromBounds, toBounds;
+      try {
+        fromBounds = JSON.parse(fdCanvas.get_node_bounds(fromId));
+        toBounds = JSON.parse(fdCanvas.get_node_bounds(toId));
+      } catch (_) { continue; }
+      if (!fromBounds || !toBounds) continue;
+      const fx = fromBounds.x + fromBounds.width / 2;
+      const fy = fromBounds.y + fromBounds.height / 2;
+      const tx = toBounds.x + toBounds.width / 2;
+      const ty = toBounds.y + toBounds.height / 2;
+      const dist = pointToSegmentDist(sceneX, sceneY, fx, fy, tx, ty);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = { edgeId, fromId, toId, midX: (fx + tx) / 2, midY: (fy + ty) / 2 };
+      }
+    }
+    return closest;
+  }
+
+  /** Distance from point (px,py) to line segment (ax,ay)-(bx,by). */
+  function pointToSegmentDist(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return Math.hypot(px - ax, py - ay);
+    let t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+  }
+
+  /** Add a child text node inside an edge block in the FD source. */
+  function dtcAddTextToEdge(edgeId, sceneX, sceneY) {
+    if (!fdCanvas) return false;
+    let source = fdCanvas.get_text();
+    const esc = edgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(edge\\s+@${esc}\\s*\\{)`, "s");
+    const m = source.match(re);
+    if (!m) return false;
+    // Generate a text node ID
+    const textId = "text_" + Math.random().toString(36).slice(2, 8);
+    const textBlock = `\n  text @${textId} "Text"`;
+    // Insert after the edge opening brace
+    const insertPos = source.indexOf(m[0]) + m[0].length;
+    source = source.slice(0, insertPos) + textBlock + source.slice(insertPos);
+    const ok = fdCanvas.set_text(source);
+    if (ok) {
+      bumpGeneration();
+      render();
+      syncTextToExtension();
+      updatePropertiesPanel();
+    }
+    return ok;
+  }
+
+  // ── Snap-to-node helper ──
+  const DTC_SNAP_THRESHOLD = 40;
+  const DTC_SNAP_GAP = 20;
+
+  function dtcFindSnapTarget(dropX, dropY, toolKind) {
+    if (!fdCanvas) return null;
+    const newW = toolKind === "ellipse" ? 100 : toolKind === "frame" ? 200 : 120;
+    const newH = toolKind === "ellipse" ? 100 : toolKind === "frame" ? 150 : 80;
+    const offsets = [
+      [0, 0], [DTC_SNAP_THRESHOLD, 0], [-DTC_SNAP_THRESHOLD, 0],
+      [0, DTC_SNAP_THRESHOLD], [0, -DTC_SNAP_THRESHOLD],
+      [DTC_SNAP_THRESHOLD, DTC_SNAP_THRESHOLD], [-DTC_SNAP_THRESHOLD, -DTC_SNAP_THRESHOLD],
+      [DTC_SNAP_THRESHOLD * 2, 0], [-DTC_SNAP_THRESHOLD * 2, 0],
+      [0, DTC_SNAP_THRESHOLD * 2], [0, -DTC_SNAP_THRESHOLD * 2],
+    ];
+    let nearestId = null;
+    for (const [ox, oy] of offsets) {
+      const hitId = fdCanvas.hit_test_at(dropX + ox, dropY + oy);
+      if (hitId) { nearestId = hitId; break; }
+    }
+    if (!nearestId) return null;
+    let tb;
+    try { tb = JSON.parse(fdCanvas.get_node_bounds(nearestId)); } catch (_) { return null; }
+    if (!tb || !tb.width) return null;
+    const tRight = tb.x + tb.width;
+    const tBottom = tb.y + tb.height;
+    const targetCx = tb.x + tb.width / 2;
+    const targetCy = tb.y + tb.height / 2;
+    const candidates = [
+      { x: tRight + DTC_SNAP_GAP, y: targetCy - newH / 2, dist: Math.abs(dropX - tRight), dir: "right" },
+      { x: tb.x - DTC_SNAP_GAP - newW, y: targetCy - newH / 2, dist: Math.abs(dropX - tb.x), dir: "left" },
+      { x: targetCx - newW / 2, y: tBottom + DTC_SNAP_GAP, dist: Math.abs(dropY - tBottom), dir: "bottom" },
+      { x: targetCx - newW / 2, y: tb.y - DTC_SNAP_GAP - newH, dist: Math.abs(dropY - tb.y), dir: "top" },
+    ];
+    candidates.sort((a, b) => a.dist - b.dist);
+    const best = candidates[0];
+    if (best.dist > DTC_SNAP_THRESHOLD * 3) return null;
+    return { x: best.x, y: best.y, targetId: nearestId, targetCx, targetCy, dir: best.dir };
+  }
+}
+
+// ─── Edge Context Menu ──────────────────────────────────────────────────
+
+let ecmEdgeId = null;
+
+function showEdgeContextMenu(edgeId, screenX, screenY) {
+  const menu = document.getElementById("edge-context-menu");
+  if (!menu) return;
+  ecmEdgeId = edgeId;
+  document.getElementById("ecm-arrow").value = "end";
+  document.getElementById("ecm-curve").value = "smooth";
+  document.getElementById("ecm-stroke-color").value = "#999999";
+  document.getElementById("ecm-stroke-width").value = "1";
+  document.getElementById("ecm-flow").value = "none";
+  document.getElementById("ecm-flow-dur").style.display = "none";
+  menu.style.left = (screenX + 12) + "px";
+  menu.style.top = (screenY - 60) + "px";
+  menu.classList.add("visible");
+  setTimeout(() => {
+    document.addEventListener("pointerdown", ecmClickOutside, true);
+    document.addEventListener("keydown", ecmEscHandler, true);
+  }, 50);
+}
+
+function closeEdgeContextMenu() {
+  const menu = document.getElementById("edge-context-menu");
+  if (menu) menu.classList.remove("visible");
+  ecmEdgeId = null;
+  document.removeEventListener("pointerdown", ecmClickOutside, true);
+  document.removeEventListener("keydown", ecmEscHandler, true);
+}
+
+function ecmClickOutside(e) {
+  const menu = document.getElementById("edge-context-menu");
+  if (menu && !menu.contains(e.target)) closeEdgeContextMenu();
+}
+
+function ecmEscHandler(e) {
+  if (e.key === "Escape") { closeEdgeContextMenu(); e.preventDefault(); }
+}
+
+function setupEdgeContextMenu() {
+  const arrowSel = document.getElementById("ecm-arrow");
+  const curveSel = document.getElementById("ecm-curve");
+  const strokeColor = document.getElementById("ecm-stroke-color");
+  const strokeWidth = document.getElementById("ecm-stroke-width");
+  const flowSel = document.getElementById("ecm-flow");
+  const flowDur = document.getElementById("ecm-flow-dur");
+  if (!arrowSel) return;
+
+  function applyEdgeChange() {
+    if (!fdCanvas || !ecmEdgeId) return;
+    const text = fdCanvas.get_text();
+    const esc = ecmEdgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(edge\\s+@${esc}\\s*\\{[^}]*?)\\}`, "s");
+    const m = text.match(re);
+    if (!m) return;
+    let block = m[1];
+    // Arrow
+    block = block.replace(/arrow:\s*\S+/, `arrow: ${arrowSel.value}`);
+    if (!block.includes("arrow:")) block += `\n  arrow: ${arrowSel.value}`;
+    // Curve
+    block = block.replace(/curve:\s*\S+/, `curve: ${curveSel.value}`);
+    if (!block.includes("curve:")) block += `\n  curve: ${curveSel.value}`;
+    // Stroke
+    const sw = strokeWidth.value || "1";
+    const sc = strokeColor.value || "#999";
+    block = block.replace(/stroke:\s*#?\w+\s*[\d.]*/, `stroke: ${sc} ${sw}`);
+    if (!block.includes("stroke:")) block += `\n  stroke: ${sc} ${sw}`;
+    // Flow
+    if (flowSel.value !== "none") {
+      const dur = flowDur.value || "800";
+      const flowLine = `flow: ${flowSel.value} ${dur}ms`;
+      if (block.includes("flow:")) {
+        block = block.replace(/flow:\s*\S+\s*\d*m?s?/, flowLine);
+      } else {
+        block += `\n  ${flowLine}`;
+      }
+    } else {
+      block = block.replace(/\n\s*flow:\s*\S+\s*\d*m?s?/, "");
+    }
+    const newText = text.replace(re, block + "\n}");
+    fdCanvas.set_text(newText);
+    bumpGeneration();
+    render();
+    syncTextToExtension();
+  }
+
+  arrowSel.addEventListener("change", applyEdgeChange);
+  curveSel.addEventListener("change", applyEdgeChange);
+  strokeColor.addEventListener("input", applyEdgeChange);
+  strokeWidth.addEventListener("change", applyEdgeChange);
+  flowSel.addEventListener("change", () => {
+    flowDur.style.display = flowSel.value !== "none" ? "" : "none";
+    applyEdgeChange();
+  });
+  flowDur.addEventListener("change", applyEdgeChange);
+}
 
 /** Draw a dot grid behind shapes. Grid adapts to zoom level. */
 function drawGrid() {
@@ -3944,6 +5076,37 @@ function setupGridToggle() {
   }
 
   btn.addEventListener("click", toggleGrid);
+}
+
+/** Toggle spec badge overlay on/off (independent of Spec View mode). */
+function toggleSpecBadges() {
+  specBadgesVisible = !specBadgesVisible;
+  const btn = document.getElementById("sm-spec-badge-toggle");
+  if (btn) btn.classList.toggle("active", specBadgesVisible);
+  vscode.setState({ ...(vscode.getState() || {}), specBadgesVisible });
+
+  const overlay = document.getElementById("spec-overlay");
+  if (specBadgesVisible || viewMode === "spec") {
+    refreshSpecBadges();
+  } else {
+    if (overlay) { overlay.innerHTML = ""; overlay.style.display = "none"; }
+  }
+}
+
+/** Set up spec badge toggle button and restore persisted state. */
+function setupSpecBadgeToggle() {
+  const btn = document.getElementById("sm-spec-badge-toggle");
+  if (!btn) return;
+
+  // Restore persisted state
+  const savedState = vscode.getState();
+  if (savedState && savedState.specBadgesVisible) {
+    specBadgesVisible = true;
+    btn.classList.add("active");
+    setTimeout(() => { if (fdCanvas) refreshSpecBadges(); }, 500);
+  }
+
+  btn.addEventListener("click", toggleSpecBadges);
 }
 
 // ─── Arrow-Key Nudge (Figma/Sketch standard) ─────────────────────────────────
@@ -4091,6 +5254,42 @@ function setupExportButton() {
   });
 }
 
+/** Set up the insert dropdown menu (Insert button in top bar). */
+function setupInsertMenu() {
+  const btn = document.getElementById("insert-menu-btn");
+  const menu = document.getElementById("insert-menu");
+  if (!btn || !menu) return;
+
+  // Toggle menu
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.classList.toggle("visible");
+  });
+
+  // Handle insert actions — activate the tool (same as top bar tool buttons)
+  document.querySelectorAll(".insert-menu-item").forEach(item => {
+    item.addEventListener("click", (e) => {
+      e.stopPropagation();
+      menu.classList.remove("visible");
+      const shape = item.dataset.insert;
+      if (!shape) return;
+
+      // Activate the corresponding tool button in the toolbar
+      const toolBtn = document.querySelector(`.tool-btn[data-tool="${shape}"]`);
+      if (toolBtn) {
+        toolBtn.click();
+      }
+    });
+  });
+
+  // Close when clicking outside
+  document.addEventListener("pointerdown", (e) => {
+    if (menu.classList.contains("visible") && !menu.contains(e.target) && !btn.contains(e.target)) {
+      menu.classList.remove("visible");
+    }
+  });
+}
+
 /** Save selection (or full canvas) as an SVG file. */
 function exportToSvg() {
   if (!fdCanvas) return;
@@ -4106,6 +5305,10 @@ function exportToSvg() {
 
 let minimapCtx = null;
 let minimapDragging = false;
+/** Cached minimap scene image for smooth viewport overlay. */
+let minimapSceneImageData = null;
+/** Cached minimap transform params for viewport overlay. */
+let minimapCachedParams = null;
 
 /** Set up the minimap canvas and mouse events. */
 function setupMinimap() {
@@ -4216,7 +5419,10 @@ function getSceneBounds() {
   return cachedSceneBounds;
 }
 
-/** Render the minimap thumbnail with viewport indicator. */
+/**
+ * Full minimap render: re-renders the scene + caches the image.
+ * Called from scheduleSideEffects (100ms throttle).
+ */
 function renderMinimap() {
   if (!minimapCtx || !fdCanvas) return;
   const mw = 180;
@@ -4232,6 +5438,8 @@ function renderMinimap() {
 
   const bounds = getSceneBounds();
   if (!bounds) {
+    minimapCachedParams = null;
+    minimapSceneImageData = null;
     minimapCtx.restore();
     return;
   }
@@ -4240,6 +5448,8 @@ function renderMinimap() {
   const sceneW = bounds.maxX - bounds.minX;
   const sceneH = bounds.maxY - bounds.minY;
   if (sceneW <= 0 || sceneH <= 0) {
+    minimapCachedParams = null;
+    minimapSceneImageData = null;
     minimapCtx.restore();
     return;
   }
@@ -4256,18 +5466,52 @@ function renderMinimap() {
   fdCanvas.render(minimapCtx, performance.now());
   minimapCtx.restore();
 
-  // Draw viewport rectangle
+  // Cache the scene image (without viewport rect) for smooth overlay
+  minimapSceneImageData = minimapCtx.getImageData(0, 0, mw * dpr, mh * dpr);
+  minimapCachedParams = { mw, mh, dpr, isDark, bounds, scale, offsetX, offsetY };
+
+  // Draw viewport rectangle on top
+  drawMinimapViewport();
+
+  minimapCtx.restore();
+}
+
+/**
+ * Lightweight minimap viewport overlay: restores cached scene image
+ * and draws only the viewport rectangle. Called from render() on every
+ * frame for smooth pan/zoom tracking.
+ */
+function renderMinimapViewport() {
+  if (!minimapCtx || !minimapSceneImageData || !minimapCachedParams) return;
+  const { mw, mh, dpr, isDark, bounds, scale, offsetX, offsetY } = minimapCachedParams;
+
+  // Restore cached scene image (clears previous viewport rect)
+  minimapCtx.save();
+  minimapCtx.setTransform(1, 0, 0, 1, 0, 0);
+  minimapCtx.putImageData(minimapSceneImageData, 0, 0);
+  minimapCtx.restore();
+
+  // Redraw viewport in DPR-aware space
+  minimapCtx.save();
+  minimapCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawMinimapViewport();
+  minimapCtx.restore();
+}
+
+/** Draw the viewport indicator rectangle on the minimap (assumes DPR transform). */
+function drawMinimapViewport() {
+  if (!minimapCachedParams) return;
+  const { isDark, bounds, scale, offsetX, offsetY } = minimapCachedParams;
+
   const container = document.getElementById("canvas-container");
   const cw = container.clientWidth;
   const ch = container.clientHeight;
 
-  // Viewport in scene-space
   const vpLeft = -panX / zoomLevel;
   const vpTop = -panY / zoomLevel;
   const vpW = cw / zoomLevel;
   const vpH = ch / zoomLevel;
 
-  // Convert to minimap coordinates
   const rx = offsetX + (vpLeft - bounds.minX) * scale;
   const ry = offsetY + (vpTop - bounds.minY) * scale;
   const rw = vpW * scale;
@@ -4278,8 +5522,6 @@ function renderMinimap() {
   minimapCtx.strokeRect(rx, ry, rw, rh);
   minimapCtx.fillStyle = isDark ? "rgba(10, 132, 255, 0.08)" : "rgba(0, 122, 255, 0.06)";
   minimapCtx.fillRect(rx, ry, rw, rh);
-
-  minimapCtx.restore();
 }
 
 // ─── Smart Focus on Node (Layer Click) ───────────────────────────────────────
@@ -4570,6 +5812,114 @@ function toggleNodeVisibility(nodeId) {
     render();
   }
   refreshLayersPanel();
+}
+
+// ─── Library Panel ───────────────────────────────────────────────────────
+
+/** Library component data from extension host */
+let libraryComponents = [];
+let librarySearchQuery = "";
+
+/** Toggle library panel visibility */
+function toggleLibraryPanel() {
+  const panel = document.getElementById("library-panel");
+  if (!panel) return;
+  const isVisible = panel.classList.toggle("visible");
+  if (isVisible) {
+    // Request library data from extension on first open
+    vscode.postMessage({ type: "requestLibraries" });
+    refreshLibraryPanel();
+  }
+}
+
+/** Render library panel contents */
+function refreshLibraryPanel() {
+  const panel = document.getElementById("library-panel");
+  if (!panel) return;
+
+  let html = `<div class="lib-header">`;
+  html += `<span class="lib-title">📦 Libraries</span>`;
+  html += `<button class="lib-close" id="lib-close-btn" title="Close">×</button>`;
+  html += `</div>`;
+  html += `<input class="lib-search" id="lib-search" type="text" placeholder="Search components…" value="${escapeAttr(librarySearchQuery)}">`;
+
+  if (libraryComponents.length === 0) {
+    html += `<div class="lib-empty">`;
+    html += `<div class="lib-empty-icon">📦</div>`;
+    html += `<div>No libraries found</div>`;
+    html += `<div style="margin-top:4px;opacity:0.6">Add .fd files to a <code>libraries/</code> folder</div>`;
+    html += `</div>`;
+    panel.innerHTML = html;
+    wireLibraryHandlers(panel);
+    return;
+  }
+
+  const query = librarySearchQuery.toLowerCase();
+
+  for (const lib of libraryComponents) {
+    const filtered = lib.components.filter(c =>
+      !query || c.name.toLowerCase().includes(query) || c.kind.toLowerCase().includes(query)
+    );
+    if (filtered.length === 0) continue;
+
+    html += `<div class="lib-group-label">${escapeHtml(lib.name)} (${filtered.length})</div>`;
+    for (const comp of filtered) {
+      const icon = comp.kind === "theme" ? "◆" : (comp.kind === "group" ? "◻" : LAYER_ICONS[comp.kind] || "•");
+      html += `<div class="lib-component" data-lib-name="${escapeAttr(lib.name)}" data-comp-name="${escapeAttr(comp.name)}" data-comp-code="${escapeAttr(comp.code)}">`;
+      html += `<span class="lib-icon">${icon}</span>`;
+      html += `<span class="lib-name">${escapeHtml(comp.name)}</span>`;
+      html += `<span class="lib-kind">${escapeHtml(comp.kind)}</span>`;
+      html += `</div>`;
+    }
+  }
+
+  panel.innerHTML = html;
+  wireLibraryHandlers(panel);
+}
+
+/** Wire event handlers for library panel */
+function wireLibraryHandlers(panel) {
+  // Close button
+  document.getElementById("lib-close-btn")?.addEventListener("click", () => {
+    panel.classList.remove("visible");
+    updateSettingsToggleStates();
+  });
+
+  // Search input
+  document.getElementById("lib-search")?.addEventListener("input", (e) => {
+    librarySearchQuery = e.target.value;
+    refreshLibraryPanel();
+    // Re-focus search input after re-render
+    const searchInput = document.getElementById("lib-search");
+    if (searchInput) {
+      searchInput.focus();
+      searchInput.selectionStart = searchInput.selectionEnd = searchInput.value.length;
+    }
+  });
+
+  // Component click — insert into document
+  panel.querySelectorAll(".lib-component").forEach(item => {
+    item.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const code = item.getAttribute("data-comp-code");
+      if (!code || !fdCanvas) return;
+      // Append component code to current document text
+      const currentText = fdCanvas.get_text();
+      const separator = currentText.endsWith("\n") ? "\n" : "\n\n";
+      const newText = currentText + separator + code + "\n";
+      fdCanvas.set_text(newText);
+      bumpGeneration();
+      render();
+      syncTextToExtension();
+      // Brief visual feedback
+      item.style.background = "var(--fd-accent)";
+      item.style.color = "var(--fd-accent-fg)";
+      setTimeout(() => {
+        item.style.background = "";
+        item.style.color = "";
+      }, 300);
+    });
+  });
 }
 
 // ─── Copy / Paste / Select All (Figma/Sketch standard) ───────────────────────

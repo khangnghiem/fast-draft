@@ -25,6 +25,11 @@ export class FdCanvas {
      */
     clear_pressed(): void;
     /**
+     * Create an edge between two nodes.
+     * Returns the new edge ID, or empty string on failure.
+     */
+    create_edge(from_id: string, to_id: string): string;
+    /**
      * Create a node at a specific position (for drag-and-drop).
      * `kind` is "rect", "ellipse", "text", or "frame".
      * Returns `true` if the node was created.
@@ -43,6 +48,14 @@ export class FdCanvas {
      * Use (0, 0) for Alt+drag clone-in-place.
      */
     duplicate_selected_at(dx: number, dy: number): boolean;
+    /**
+     * Get last detach event info. Returns JSON:
+     * `{"detached":true,"nodeId":"...","fromGroupId":"..."}` or `""` if none.
+     * Clears the event after reading (one-shot).
+     * Evaluate a drop for structural detach. Returns JSON if detached, empty otherwise.
+     * Clears the event after reading (one-shot).
+     */
+    evaluate_drop(node_id: string): string;
     /**
      * Export the current selection (or entire canvas if empty) as an SVG string.
      */
@@ -234,10 +247,12 @@ export interface InitOutput {
     readonly __wbg_fdcanvas_free: (a: number, b: number) => void;
     readonly fdcanvas_add_animation_to_node: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly fdcanvas_clear_pressed: (a: number) => void;
+    readonly fdcanvas_create_edge: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_create_node_at: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly fdcanvas_delete_selected: (a: number) => number;
     readonly fdcanvas_duplicate_selected: (a: number) => number;
     readonly fdcanvas_duplicate_selected_at: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_evaluate_drop: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_export_svg: (a: number) => [number, number];
     readonly fdcanvas_get_annotations_json: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_arrow_preview: (a: number) => [number, number];

@@ -104,8 +104,8 @@ fn hover_keyword(word: &str) -> Option<Hover> {
             "**text** — Text label node.\n\nInline content: `text @id \"content\" { ... }`\nProperties: `font:` `fill:` `opacity:`"
         }
         "path" => "**path** — Freeform vector path.\n\nSupports SVG-like path commands.",
-        "style" => {
-            "**style** — Reusable style definition.\n\nDefine once, apply to nodes with `use: style_name`."
+        "style" | "theme" => {
+            "**theme** — Reusable style definition.\n\nDefine once, apply to nodes with `use: theme_name`.\n(Legacy keyword `style` also accepted.)"
         }
         // Properties
         "w" | "width" => "**w:** — Width of the element in pixels.",
@@ -129,8 +129,8 @@ fn hover_keyword(word: &str) -> Option<Hover> {
         "row" => "**row** — Horizontal stack layout.\n\nModifiers: `gap=N` `pad=N`",
         "grid" => "**grid** — Grid layout.\n\nModifiers: `cols=N` `gap=N` `pad=N`",
         // Animation
-        "anim" => {
-            "**anim** — Animation block.\n\nFormat: `anim :trigger { props }`\nTriggers: `:hover`, `:press`, `:enter`"
+        "anim" | "when" => {
+            "**when** — Animation block.\n\nFormat: `when :trigger { props }`\nTriggers: `:hover`, `:press`, `:enter`\n(Legacy keyword `anim` also accepted.)"
         }
         "ease" => {
             "**ease:** — Easing function.\n\nValues: `linear`, `ease_in`, `ease_out`, `ease_in_out`, `spring`\nFormat: `ease: spring 300ms`"
@@ -141,7 +141,7 @@ fn hover_keyword(word: &str) -> Option<Hover> {
             "**## accept:** — Acceptance criterion annotation.\n\nFormat: `## accept: \"description\"`"
         }
         "status" => {
-            "**## status:** — Status annotation.\n\nValues: `draft`, `in_progress`, `review`, `done`"
+            "**## status:** — Status annotation.\n\nValues: `todo`, `doing`, `done`, `blocked`\n(Legacy: `draft` → todo, `in_progress` → doing)"
         }
         "priority" => {
             "**## priority:** — Priority annotation.\n\nValues: `low`, `medium`, `high`, `critical`"
@@ -192,5 +192,17 @@ mod tests {
         let graph = fd_core::parser::parse_document(text).ok();
         let result = compute_hover(text, Position::new(0, 6), graph.as_ref());
         assert!(result.is_some());
+    }
+
+    #[test]
+    fn hover_on_theme_keyword() {
+        let result = hover_keyword("theme");
+        assert!(result.is_some(), "should have hover info for `theme`");
+    }
+
+    #[test]
+    fn hover_on_when_keyword() {
+        let result = hover_keyword("when");
+        assert!(result.is_some(), "should have hover info for `when`");
     }
 }

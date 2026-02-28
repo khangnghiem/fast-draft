@@ -5,6 +5,139 @@
 
 ## Completed Requirements
 
+### v0.8.80 / v0.1.2 — Drag-and-Drop Detach Fix
+
+- **BUG FIX**: Fixed an issue where text nodes inside shapes would not detach when dragged out. The overlap test now uses intrinsic visual bounds.
+- **DOCS**: Added `LESSONS.md` entry on "Invisible Bounding Boxes".
+- **TESTING**: Playwright E2E-UX tests passed perfectly.
+
+### v0.8.79 — Text Drop-to-Consume on Shapes & Edges
+
+- **UX**: Dragging Text tool onto a shape (rect/ellipse/frame) reparents it as a child node inside the shape using existing R3.38 logic — auto-centers, strips position constraints
+- **UX**: Dragging Text tool near an edge (≤30px) inserts a child text node inside the edge block in FD source — uses point-to-segment distance for edge detection
+- **UX**: Hit priority: Shape > Edge > Empty canvas
+
+### v0.8.78 — Snap-to-Node + Auto-Edge on Drag-to-Create
+
+- **UX**: Dragging a shape from toolbar near an existing node snaps to adjacent position (20px gap, 40px threshold, 4 cardinal dirs); auto-creates edge from existing→new node with arrow:end + curve:smooth; shows frosted-glass edge context menu at edge midpoint with Arrow/Curve/Stroke/Flow controls; Esc or click-outside dismisses
+- **WASM**: New `create_edge(from_id, to_id)` API creates edges programmatically with auto-generated ID
+
+### v0.8.77 — Drag-to-Create from Toolbar
+
+- **UX**: Drag a tool button from the floating toolbar onto the canvas to create a shape at the drop location — ghost preview (dashed outline matching shape type) follows cursor during drag; 5px threshold disambiguates click vs drag; screen→scene coordinate conversion respects zoom+pan; applies sticky smart defaults on creation; capture-phase click suppression prevents tool activation after drag
+
+### v0.8.76 — ScreenBrush Default Styles
+
+- **UX**: New shapes default to ScreenBrush-style transparent fill + thick bezeled stroke (#333333, width 2.5, round caps/joins); rects also get 8px corner radius. Cascade: sticky defaults (per-tool) take priority → WASM fallbacks only when no sticky style exists. Hit-testing unaffected — uses bounding-box containment
+
+### v0.8.75 — SVG Toolbar Icons
+
+- **UX**: Replaced all 7 Unicode glyph icons in floating toolbar with clean inline SVGs (18×18 viewBox, stroke-based, `currentColor`) — cursor arrow (Select), rounded rect (Rectangle), circle (Ellipse), pencil (Pen), diagonal arrow (Arrow), T-bar (Text), nested rects (Frame); fixes cross-platform rendering issues (⊞ displayed incorrectly on some systems)
+
+### v0.8.74 — Auto Bring Forward on Select
+
+- **UX**: Clicking to select a node automatically brings it forward one z-level — reuses existing `bring_forward` from ⌘]; only triggers on fresh click-select (<5px movement), not on re-click of already-selected nodes or drag operations; prevents z-fighting by skipping if already selected
+
+### v0.8.73 — Frosted Glass Tooltips
+
+- **UX**: Apple-style frosted glass tooltips on all 7 floating toolbar buttons — `backdrop-filter: blur(12px)`, glassmorphic pill with 400ms hover delay, monospace shortcut key badge; replaces ugly native `title` tooltips; hidden in collapsed mode and during click
+
+### v0.8.72 — Fix Group Detach on Drag Out
+
+- **BUG FIX (R3.34)**: Fixed "chasing envelope" bug — dragging a child incrementally outside a group now correctly detaches it. Previously, `expand_group_to_children` grew the parent to contain the moving child on every drag frame, making escape impossible. Fix: skip group expansion during continuous drag; only detach or keep in-place
+- **UX**: Snappy detach animation — teal glow ring (250ms pop) appears on the detached node when it leaves a group, giving visual feedback that reparenting occurred
+- **WASM**: New `get_last_detach_info()` API — returns `{detached, nodeId, fromGroupId}` one-shot event for JS animation trigger
+- **TESTING**: New `sync_incremental_drag_detaches_child` regression test — simulates 30 small moves proving detach works with real drag gestures; renamed `sync_move_partial_overlap_expands_group` → `sync_move_partial_overlap_keeps_child` (group no longer expands during drag)
+- **BUG FIX**: Floating toolbar drag handle (#ft-drag-handle) now functional — pointerdown/pointermove/pointerup handlers with 5px threshold disambiguate click vs drag; position saved via `vscodeApi.setState()` and restored on load
+- **UX**: Floating toolbar collapse toggle — single-click on drag handle toggles `.collapsed` class (iPad-style minimize to active-tool circle); collapsed state persists to webview state
+
+### v0.8.71 — ✦ Renamify (Batch AI Rename)
+
+- **NEW (R4.20)**: ✦ Renamify — batch AI rename for anonymous node IDs (`@rect_1`, `@ellipse_3`, etc.) → semantic names (`@login_button`, `@hero_card`); toolbar button + command palette
+- **UX**: Diff-preview panel with frosted-glass overlay — shows `@old → @new` with checkboxes; Accept All / Accept Selected / Cancel
+- **UX**: Button shows "⏳ Analyzing…" while AI is working; single ⌘Z undoes all renames atomically
+- **CORE**: `findAnonymousNodeIds` detects `@kind_N` + `@_anon_N` patterns; `sanitizeToFdId` normalizes AI-proposed names to valid snake_case; `applyGlobalRenames` updates all `@id` references
+- **AI**: Focused rename-only JSON prompt (no full document rewrite) — faster and more reliable than refine-all approach
+- **TESTING**: 22 new tests — `findAnonymousNodeIds` (9), `findAllNodeIds` (3), `sanitizeToFdId` (10); 188 total TS tests pass
+
+### v0.8.70 — Canvas UX Overhaul
+
+- **FIX (R2.5)**: Layer–canvas selection sync — clicking a node on canvas now always highlights it in the Layers panel; fixed generation-counter optimization that skipped `.selected` CSS class update when only selection changed (no structural edit)
+- **FIX (R3.17)**: Smart guides snap threshold increased from 1px to 5px — guides now appear at usable distances during drag, matching industry-standard (Figma ~5px) behavior
+- **UX (R4.8)**: AI Touch toolbar icons changed from ✨ to ✦ (4-point star) for "AI Touch" and ✦✦ (double star) for "AI Touch All" — clearer visual distinction
+- **UX (R3.14)**: Spec badge pins removed — spec info now appears as a hover tooltip on annotated nodes with glassmorphic styling showing status, priority, and description
+- **UX (R3.14)**: "Show Specs" added to right-click context menu for nodes with spec annotations
+- **NEW (R3.37)**: Center-snap for text nodes — dragging text near a shape's center shows purple crosshair guides; releasing snaps text to exact center with coordinate update
+- **NEW (R3.38)**: Text drag-to-consume — dragging a text node onto a shape reparents it as a child, auto-centered inside the shape; position constraints stripped automatically
+- **DOCS**: Added 2 lessons to `LESSONS.md` — layer panel selection sync, smart guide threshold
+
+- **Parser hardening**: Added 13 new round-trip tests covering empty groups, 3-level nesting, unicode text (emoji/CJK), spec blocks with all fields, path nodes, linear/radial gradients, shadow, opacity, clip frames, multiple animations, inline spec shorthand, and all layout modes (column/row/grid)
+- **LSP completions**: Overhauled `completion.rs` — added `frame`, `edge`, `import`, `spec` snippets to top-level; `shadow:`, `clip:`, `x:`, `y:`, `align:` properties to node body; value completions for `fill` (named colors + hex palette), `align`, `clip`, `arrow`, `curve`; 9 total tests
+- **Error recovery**: All 6 parser error sites now include 1-based line numbers and 40-char context snippets (UTF-8 safe) — e.g. `line 12: node error — expected 'kind @id { ... }', got '...'`
+- **Example files**: Created 3 new showcase examples: `responsive_dashboard.fd` (constraint-based dashboard), `animated_onboarding.fd` (3-step flow with edge/pulse animations), `design_tokens.fd` (design system with 7 themes + component patterns)
+
+### v0.8.68 — AI Touch + 3-Mode View Toggle
+
+- **UX**: Renamed "AI Assist" → **AI Touch** in toolbar buttons, context menu, and command palette — clearer branding for the AI design assistance feature
+- **UX**: Extended view toggle from `[Design | Spec]` to `[All | Design | Spec]` — **All** shows full document, **Design** shows visual properties, **Spec** shows annotations; mode determines what AI Touch sends to the LLM for token-efficient context
+- **UX**: Toggle cycles All → Design → Spec → All via keyboard shortcut or command palette
+
+### v0.8.67 — ReadMode Filtered Views + Read-Only Code View
+
+- **FEATURE (R4.19)**: ReadMode filtered views — `emit_filtered(graph, mode)` with 8 modes: Full, Structure, Layout, Design, Spec, Visual (layout+design+when combined), When (animations), Edges (flows). Each mode selectively emits only relevant properties, saving 50-80% tokens for AI agents
+- **FEATURE (R4.19)**: CLI `fd-lsp --view <mode>` — pipe FD source through stdin, get filtered output on stdout (e.g. `cat file.fd | fd-lsp --view structure`)
+- **FEATURE (R4.19)**: VS Code read-only virtual document provider — `FD: Open Read-Only Code View` command opens a synced, read-only tab filtered by the active ReadMode; status bar dropdown (`FD: Change View Mode`) switches between modes
+- **TESTING**: 8 new emit_filtered tests (one per mode) + 121 unit tests + 18 integration tests all pass
+
+### Component Libraries (R3.33)
+
+- **FEATURE (R3.33)**: Component libraries — reusable `.fd` files with themes and node groups; 3 built-in libraries: **UI Kit** (buttons, inputs, cards, badges, avatars), **Flowchart** (process, decision, start/end, connectors), **Wireframe** (navbar, sidebar, content, footer, layouts)
+- **FEATURE (R3.33)**: Library Panel — right sidebar (⇧L) with search and click-to-insert; scans workspace `libraries/` directory for `.fd` files; auto-parses themes and components
+- **DOCS**: `docs/LIBRARIES.md` — convention guide for creating, structuring, and sharing library files
+- **FUTURE (R3.34)**: Community library directory (planned)
+
+### GitHub Pages — Live Playground
+
+- **FEATURE (R6.5)**: GitHub Pages landing site at `khangnghiem.github.io/fast-draft` with premium dark-theme design — hero section, feature cards, benchmark comparison table (11 FD vs Excalidraw pairs), architecture diagram, and editor support matrix
+- **FEATURE (R6.5)**: Live WASM playground — embedded split-pane editor + canvas powered by `fd-wasm`; 3 pre-loaded examples (Card, Login Form, Welcome), theme toggle (dark/light), sketchy mode toggle, real-time rendering on keystroke
+- **CI**: GitHub Actions workflow `pages.yml` — auto-builds WASM via `wasm-pack` and deploys `site/` to GitHub Pages on every push to `main`
+
+### v0.8.66 — Toolbar Consolidation
+
+- **UX**: Replaced bottom shape palette with `＋ Insert` dropdown in top bar — glassmorphism popover with Shapes (Rect, Ellipse, Line, Arrow) and Layout (Frame, Text) sections; clicking activates the tool; hidden in Zen mode
+- **UX**: Zen mode toolbar now icon-only — text labels and keyboard hint badges hidden, compact 8px padding, tooltips on hover
+- **UX**: Removed floating action bar overflow menu (⋯) — Group/Ungroup/Duplicate/Delete remain via context menu and shortcuts; floating bar is now purely a property editor (Fill, Stroke, Opacity, Font Size)
+- **CLEANUP**: Removed ~170 lines of dead CSS/HTML/JS (shape palette, fab overflow, palette drag handlers)
+
+### v0.8.65 — Status Rename
+
+- **BREAKING (R1.9)**: Renamed spec status values: `draft` → `todo`, `in_progress` → `doing`; added `blocked` (red badge). Parser accepts both old and new values for backward compatibility. LSP completions, hover docs, annotation card, filter tabs, bulk dropdown, and all 12+ example files updated
+- **UX**: Spec filter tabs now show: All | To Do | Doing | Done | Blocked
+
+### v0.8.64 — Spec Badge Improvements
+
+- **UX (R3.14)**: Spec badge toggle button (◇) in toolbar — show/hide annotation badges on canvas independently of Spec View mode; state persists via webview state
+- **UX (R3.14)**: Spec badges use faint/active visibility pattern — unselected nodes show badges at 25% opacity, selected node's badge is bright and scaled; reduces visual clutter while preserving coverage overview
+- **UX (R3.14)**: Context menu adapts to spec state — nodes without specs show "Add Spec"; nodes with specs show "View Spec" (opens annotation card) and "Remove Spec" (deletes spec block from source)
+- **UX**: Badge positioning now accounts for zoom level — badges stay pinned to node corners at all zoom levels
+
+### v0.8.62 — Sort Fix + LSP Theme/When + Tree-sitter Regen
+
+- **FIX (R4.10)**: Fixed `sort_nodes` which was a silent no-op — `children()` sorts by `NodeIndex` (insertion order) making edge remove/re-add ineffective. Added `sorted_child_order` field to `SceneGraph` for clean override
+- **FIX (LSP)**: Updated hover/completion providers — `theme`/`when` keywords now return hover info and completions (alongside legacy `style`/`anim`)
+- **BUILD**: Regenerated tree-sitter parser from updated grammar supporting `theme`/`when` keywords
+- **DOCS**: Updated all documentation references from `style`/`anim` to `theme`/`when` across GEMINI.md, REQUIREMENTS.md, ARCHITECTURE.md, model.rs doc-strings
+- **TESTING**: 7 new tests — 5 backward-compat roundtrip tests in emitter.rs, 2 hover tests in fd-lsp. 236 Rust tests total (0 ignored)
+
+### Theme/When Rename + Emitter Reorder
+
+- **BREAKING**: Renamed `style` → `theme` for top-level reusable definitions, `anim` → `when` for animation/interaction blocks — both old keywords still accepted by parser for backward compatibility, emitter always outputs new keywords
+- **UX (R4.18)**: Emitter reorder — node content now emits `spec → children → style properties → when blocks`, putting all visual/interaction properties at the tail for clean Spec View folding
+- **TREE-SITTER**: Grammar updated to accept both `theme`/`style` and `when`/`anim` keywords
+- **VS CODE**: `fd-parse.ts` regexes, `computeSpecHideLines`, `parseDocumentSymbols`, and `tree-preview.ts` all updated for both keywords
+- **EXAMPLES**: All 25 `.fd` files updated to use `theme` and `when` keywords
+- **TESTING**: Updated 9 test string groups in `fd-parse.test.ts`, 2 in `format.rs`; all 166 TS tests pass
+
 ### Benchmark Examples
 
 - **DOCS**: 11 benchmark pairs in `examples/benchmarks/` — each pair contains an `.fd` file and equivalent `.excalidraw.json` to demonstrate FD's conciseness advantage (avg 6.5× fewer bytes, 3.2× fewer tokens). Covers 9 user personas: Product Designer (login_form, dashboard_card), Project Manager (kanban_board), HR/Manager (org_chart), Software Engineer (api_flowchart), Mobile Designer (mobile_onboarding), Marketing (pricing_table), UX Researcher (wireframe_ecommerce), Data Analyst (data_dashboard), Systems Architect (network_topology), Brand Designer (design_system)
@@ -286,7 +419,7 @@
 
 ### v0.8.15
 
-- **UX**: AI Refine error messages now include an **"Open Settings"** action button — clicking it opens VS Code settings filtered to `fd.ai` for quick API key configuration or provider switching
+- **UX**: AI Assist error messages now include an **"Open Settings"** action button — clicking it opens VS Code settings filtered to `fd.ai` for quick API key configuration or provider switching
 - **UX**: Error messages are now provider-agnostic — each warns which key is missing and reminds users they can switch to any of the 5 supported providers (Gemini, OpenAI, Anthropic, Ollama, OpenRouter)
 
 ### v0.8.14

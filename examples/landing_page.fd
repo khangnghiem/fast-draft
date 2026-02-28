@@ -1,0 +1,170 @@
+# FD v1
+# SaaS landing page — hero section with CTA, features, and social proof
+
+theme heading {
+  fill: #1A1A2E
+  font: "Inter" 700 32
+}
+
+theme body {
+  fill: #6B7280
+  font: "Inter" 400 16
+}
+
+theme card {
+  fill: #FFFFFF
+  corner: 16
+}
+
+# ─── Hero section ──────────────────────────────────────────────────────────
+
+group @hero {
+  layout: column gap=20 pad=48
+
+  text @hero_tag "✨ Introducing Fast Draft" {
+    fill: #6C5CE7
+    font: "Inter" 600 14
+  }
+
+  text @hero_title "Design at the speed\nof thought" {
+    use: heading
+    font: "Inter" 800 48
+  }
+
+  text @hero_desc "A token-efficient design format that bridges code and canvas.\nWrite once, render everywhere." {
+    use: body
+  }
+
+  group @cta_row {
+    layout: row gap=12 pad=0
+
+    rect @btn_primary {
+      spec {
+        "Primary CTA — starts free trial"
+        accept: "no credit card required"
+        priority: high
+      }
+      w: 180 h: 52
+      fill: #6C5CE7
+      corner: 12
+      text @btn_primary_label "Start Free" {
+        fill: #FFFFFF
+        font: "Inter" 600 16
+      }
+      when :hover { fill: #5A4BD1; scale: 1.03; ease: spring 200ms }
+      when :press { scale: 0.97; ease: ease_out 100ms }
+    }
+
+    rect @btn_secondary {
+      w: 180 h: 52
+      fill: #FFFFFF
+      stroke: #E8E8EC 1
+      corner: 12
+      text @btn_secondary_label "View Demo" {
+        fill: #333333
+        font: "Inter" 500 16
+      }
+      when :hover { fill: #F8F9FA; ease: ease_out 150ms }
+    }
+  }
+}
+
+# ─── Feature cards ─────────────────────────────────────────────────────────
+
+group @features {
+  layout: row gap=20 pad=0
+
+  rect @feature_1 {
+    spec "Code-first design — write .fd, see canvas"
+    w: 240 h: 180
+    use: card
+    shadow: (0,2,12,#00000008)
+    group @f1_content {
+      layout: column gap=12 pad=24
+      ellipse @f1_icon {
+        w: 40 h: 40
+        fill: #6C5CE720
+      }
+      text @f1_title "Code-First" {
+        fill: #1A1A2E
+        font: "Inter" 600 18
+      }
+      text @f1_desc "Write in .fd format, see live canvas updates" {
+        use: body
+        font: "Inter" 400 13
+      }
+    }
+    when :hover { scale: 1.02; ease: spring 300ms }
+  }
+
+  rect @feature_2 {
+    spec "Bidirectional sync between text and canvas"
+    w: 240 h: 180
+    use: card
+    shadow: (0,2,12,#00000008)
+    group @f2_content {
+      layout: column gap=12 pad=24
+      ellipse @f2_icon {
+        w: 40 h: 40
+        fill: #00B89420
+      }
+      text @f2_title "Bidi Sync" {
+        fill: #1A1A2E
+        font: "Inter" 600 18
+      }
+      text @f2_desc "Edit code or canvas — both stay in sync" {
+        use: body
+        font: "Inter" 400 13
+      }
+    }
+    when :hover { scale: 1.02; ease: spring 300ms }
+  }
+
+  rect @feature_3 {
+    spec "6.5x smaller than Excalidraw JSON"
+    w: 240 h: 180
+    use: card
+    shadow: (0,2,12,#00000008)
+    group @f3_content {
+      layout: column gap=12 pad=24
+      ellipse @f3_icon {
+        w: 40 h: 40
+        fill: #FF6B6B20
+      }
+      text @f3_title "Compact" {
+        fill: #1A1A2E
+        font: "Inter" 600 18
+      }
+      text @f3_desc "6.5× fewer bytes than Excalidraw JSON" {
+        use: body
+        font: "Inter" 400 13
+      }
+    }
+    when :hover { scale: 1.02; ease: spring 300ms }
+  }
+}
+
+# ─── Social proof ──────────────────────────────────────────────────────────
+
+group @social_proof {
+  layout: column gap=16 pad=0
+
+  text @used_by "Trusted by designers worldwide" {
+    fill: #9CA3AF
+    font: "Inter" 500 14
+  }
+
+  group @logos {
+    layout: row gap=32 pad=0
+    rect @logo_1 { w: 80 h: 32; fill: #E8E8EC; corner: 6 }
+    rect @logo_2 { w: 80 h: 32; fill: #E8E8EC; corner: 6 }
+    rect @logo_3 { w: 80 h: 32; fill: #E8E8EC; corner: 6 }
+    rect @logo_4 { w: 80 h: 32; fill: #E8E8EC; corner: 6 }
+  }
+}
+
+# ─── Layout ────────────────────────────────────────────────────────────────
+
+@hero -> center_in: canvas
+@features -> offset: @hero 0, 80
+@social_proof -> offset: @features 0, 60

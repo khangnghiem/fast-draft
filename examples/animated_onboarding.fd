@@ -1,0 +1,163 @@
+# Animated onboarding flow with step transitions
+# Demonstrates when/anim blocks, edges, and flow animations
+
+theme step_bg {
+  fill: #FFFFFF
+  corner: 16
+}
+
+theme step_title {
+  font: "Inter" bold 24
+  fill: #1F2937
+}
+
+theme step_body {
+  font: "Inter" regular 16
+  fill: #6B7280
+}
+
+theme cta {
+  fill: #6C5CE7
+  corner: 12
+}
+
+theme cta_text {
+  font: "Inter" semibold 16
+  fill: #FFFFFF
+}
+
+# ─── Steps ───
+
+frame @step_1 {
+  w: 360 h: 280
+  use: step_bg
+  shadow: (0,4,24,#00000015)
+
+  text @welcome_title "Welcome to FastDraft 🎨" {
+    use: step_title
+  }
+
+  text @welcome_body "Design at the speed of thought. Write .fd files and watch your ideas come to life." {
+    use: step_body
+  }
+
+  rect @start_btn {
+    w: 200 h: 48
+    use: cta
+
+    text @start_text "Get Started" {
+      use: cta_text
+    }
+
+    when :hover {
+      fill: #5A4BD1
+      scale: 1.05
+      ease: spring 200ms
+    }
+
+    when :press {
+      scale: 0.97
+      ease: ease_out 100ms
+    }
+  }
+
+  when :enter {
+    opacity: 1
+    ease: ease_out 600ms
+  }
+}
+
+frame @step_2 {
+  w: 360 h: 280
+  use: step_bg
+  shadow: (0,4,24,#00000015)
+
+  text @tools_title "Powerful Tools 🛠️" {
+    use: step_title
+  }
+
+  text @tools_body "Draw shapes, add animations, and build responsive layouts — all from a simple text file." {
+    use: step_body
+  }
+
+  rect @tools_btn {
+    w: 200 h: 48
+    use: cta
+
+    text @tools_text "Try Drawing" {
+      use: cta_text
+    }
+
+    when :hover {
+      fill: #5A4BD1
+      scale: 1.05
+      ease: spring 200ms
+    }
+  }
+
+  when :enter {
+    opacity: 1
+    ease: ease_out 600ms
+  }
+}
+
+frame @step_3 {
+  w: 360 h: 280
+  use: step_bg
+  shadow: (0,4,24,#00000015)
+
+  text @collab_title "AI-Native Design ✨" {
+    use: step_title
+  }
+
+  text @collab_body "Your AI assistant reads .fd files natively. Describe what you want and let AI build it." {
+    use: step_body
+  }
+
+  rect @done_btn {
+    w: 200 h: 48
+    fill: #22C55E
+    corner: 12
+
+    text @done_text "Start Creating" {
+      use: cta_text
+    }
+
+    when :hover {
+      fill: #16A34A
+      scale: 1.05
+      ease: spring 200ms
+    }
+  }
+
+  when :enter {
+    opacity: 1
+    ease: ease_out 600ms
+  }
+}
+
+# ─── Flows ───
+
+edge @step_1_to_2 {
+  from: @step_1
+  to: @step_2
+  label: "next"
+  stroke: #6C5CE7 2
+  arrow: end
+  curve: smooth
+  flow: pulse 1200ms
+}
+
+edge @step_2_to_3 {
+  from: @step_2
+  to: @step_3
+  label: "next"
+  stroke: #6C5CE7 2
+  arrow: end
+  curve: smooth
+  flow: pulse 1200ms
+}
+
+# ─── Layout ───
+
+@step_1 -> center_in: canvas

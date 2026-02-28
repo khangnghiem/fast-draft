@@ -624,7 +624,7 @@ describe("FD-Specific: Spec View — annotation parsing and filtering", () => {
             '    "Primary login CTA"',
             '    accept: "visible on page load"',
             '    accept: "triggers auth flow"',
-            "    status: in_progress",
+            "    status: doing",
             "    priority: high",
             "    tag: auth, conversion",
             "  }",
@@ -636,7 +636,7 @@ describe("FD-Specific: Spec View — annotation parsing and filtering", () => {
         const node = result.nodes[0];
         expect(node.annotations).toHaveLength(6);
         expect(node.annotations.filter((a) => a.type === "accept")).toHaveLength(2);
-        expect(node.annotations.find((a) => a.type === "status")?.value).toBe("in_progress");
+        expect(node.annotations.find((a) => a.type === "status")?.value).toBe("doing");
         expect(node.annotations.find((a) => a.type === "priority")?.value).toBe("high");
     });
 
@@ -674,7 +674,7 @@ describe("FD-Specific: Spec View — annotation parsing and filtering", () => {
             "",
             `${SHAPES.RECT} @b {`,
             "  spec {",
-            "    status: draft",
+            "    status: todo",
             "  }",
             "}",
             "",
@@ -693,7 +693,7 @@ describe("FD-Specific: Spec View — annotation parsing and filtering", () => {
         expect(doneNodes[0].id).toBe("a");
         expect(doneNodes[1].id).toBe("c");
         const draftNodes = result.nodes.filter((n) =>
-            n.annotations.some((a) => a.type === "status" && a.value === "draft"),
+            n.annotations.some((a) => a.type === "status" && a.value === "todo"),
         );
         expect(draftNodes).toHaveLength(1);
         expect(draftNodes[0].id).toBe("b");
