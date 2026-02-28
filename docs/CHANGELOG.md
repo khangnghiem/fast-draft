@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.8.78 — Snap-to-Node + Auto-Edge on Drag-to-Create
+
+- **UX**: Dragging a shape from toolbar near an existing node snaps to adjacent position (20px gap, 40px threshold, 4 cardinal dirs); auto-creates edge from existing→new node with arrow:end + curve:smooth; shows frosted-glass edge context menu at edge midpoint with Arrow/Curve/Stroke/Flow controls; Esc or click-outside dismisses
+- **WASM**: New `create_edge(from_id, to_id)` API creates edges programmatically with auto-generated ID
+
 ### v0.8.77 — Drag-to-Create from Toolbar
 
 - **UX**: Drag a tool button from the floating toolbar onto the canvas to create a shape at the drop location — ghost preview (dashed outline matching shape type) follows cursor during drag; 5px threshold disambiguates click vs drag; screen→scene coordinate conversion respects zoom+pan; applies sticky smart defaults on creation; capture-phase click suppression prevents tool activation after drag

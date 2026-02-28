@@ -8,8 +8,8 @@ mod svg;
 use fd_core::id::NodeId;
 use fd_core::layout::Viewport;
 use fd_core::model::{
-    Annotation, Color, Constraint, LayoutMode, NodeKind, Paint, SceneNode, Stroke, StrokeCap,
-    StrokeJoin, TextAlign, TextVAlign,
+    Annotation, ArrowKind, Color, Constraint, CurveKind, Edge, LayoutMode, NodeKind, Paint,
+    SceneNode, Stroke, StrokeCap, StrokeJoin, TextAlign, TextVAlign,
 };
 use fd_editor::commands::CommandStack;
 use fd_editor::input::{InputEvent, Modifiers};
@@ -1499,6 +1499,44 @@ impl FdCanvas {
             self.engine.flush_to_text();
         }
         changed
+    }
+
+    /// Create an edge between two nodes.
+    /// Returns the new edge ID, or empty string on failure.
+    pub fn create_edge(&mut self, from_id: &str, to_id: &str) -> String {
+        let from = NodeId::intern(from_id);
+        let to = NodeId::intern(to_id);
+        if from == to {
+            return String::new();
+        }
+        // Verify both nodes exist
+        if self.engine.graph.index_of(from).is_none() || self.engine.graph.index_of(to).is_none() {
+            return String::new();
+        }
+        let edge_id = NodeId::with_prefix("edge");
+        let edge = Edge {
+            id: edge_id,
+            from,
+            to,
+            label: None,
+            style: fd_core::model::Style::default(),
+            use_styles: Default::default(),
+            arrow: ArrowKind::End,
+            curve: CurveKind::Smooth,
+            annotations: Vec::new(),
+            animations: Default::default(),
+            flow: None,
+        };
+        let mutation = GraphMutation::AddEdge {
+            edge: Box::new(edge),
+        };
+        let changed = self.apply_mutations(vec![mutation]);
+        if changed {
+            self.engine.flush_to_text();
+            edge_id.as_str().to_string()
+        } else {
+            String::new()
+        }
     }
 }
 
