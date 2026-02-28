@@ -20,6 +20,8 @@ use fd_core::parser::parse_document;
 use fd_core::{ResolvedBounds, Viewport, resolve_layout};
 use std::collections::HashMap;
 
+pub type NearDetachResult = (NodeId, (f32, f32), (f32, f32));
+
 /// The sync engine holds the authoritative scene graph and keeps text + canvas
 /// in sync.
 pub struct SyncEngine {
@@ -445,7 +447,7 @@ impl SyncEngine {
     /// Evaluate if a dragging node is near detaching from its parent group.
     /// Returns the parent NodeId and the center coordinates of both the child and parent
     /// if the overlap is less than 25% of the child's area.
-    pub fn evaluate_near_detach(&self, node_id: NodeId) -> Option<(NodeId, (f32, f32), (f32, f32))> {
+    pub fn evaluate_near_detach(&self, node_id: NodeId) -> Option<NearDetachResult> {
         let child_idx = self.graph.index_of(node_id)?;
         let parent_idx = self.graph.parent(child_idx)?;
 
@@ -477,9 +479,13 @@ impl SyncEngine {
             child_b.y = cy - text_h / 2.0;
         }
 
-        let overlap_w = ((child_b.x + child_b.width).min(parent_b.x + parent_b.width) - child_b.x.max(parent_b.x)).max(0.0);
-        let overlap_h = ((child_b.y + child_b.height).min(parent_b.y + parent_b.height) - child_b.y.max(parent_b.y)).max(0.0);
-        
+        let overlap_w = ((child_b.x + child_b.width).min(parent_b.x + parent_b.width)
+            - child_b.x.max(parent_b.x))
+        .max(0.0);
+        let overlap_h = ((child_b.y + child_b.height).min(parent_b.y + parent_b.height)
+            - child_b.y.max(parent_b.y))
+        .max(0.0);
+
         let overlap_area = overlap_w * overlap_h;
         let child_area = child_b.width * child_b.height;
 
@@ -488,7 +494,11 @@ impl SyncEngine {
             let child_cy = child_b.y + child_b.height / 2.0;
             let parent_cx = parent_b.x + parent_b.width / 2.0;
             let parent_cy = parent_b.y + parent_b.height / 2.0;
-            Some((self.graph.graph[parent_idx].id, (child_cx, child_cy), (parent_cx, parent_cy)))
+            Some((
+                self.graph.graph[parent_idx].id,
+                (child_cx, child_cy),
+                (parent_cx, parent_cy),
+            ))
         } else {
             None
         }
@@ -571,7 +581,7 @@ fn handle_child_group_relationship(
         // Naive intrinsic text size matching what layout.rs uses
         let text_w = (content.len() as f32) * 8.0;
         let text_h = 16.0;
-        
+
         // If the box is massive, the text is actually drawn at the center.
         // We shrink the overlap test box to the visual text area.
         let cx = child_b.x + child_b.width / 2.0;
