@@ -142,6 +142,24 @@ export class FdCanvas {
         }
     }
     /**
+     * Get last detach event info. Returns JSON:
+     * `{"detached":true,"nodeId":"...","fromGroupId":"..."}` or `""` if none.
+     * Clears the event after reading (one-shot).
+     * @returns {string}
+     */
+    get_last_detach_info() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_last_detach_info(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Get animations for a node as a JSON array.
      * Returns `[]` if node not found or has no animations.
      * @param {string} node_id
