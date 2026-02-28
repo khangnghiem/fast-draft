@@ -128,8 +128,6 @@ rect @box {
         );
     }
 
-    // TODO: depends on sort_nodes which is currently a no-op (see transform.rs)
-    #[ignore]
     #[test]
     fn format_document_sorts_nodes_by_kind() {
         let input = r#"
