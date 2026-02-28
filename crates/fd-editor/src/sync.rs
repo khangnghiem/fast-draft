@@ -487,12 +487,18 @@ fn handle_child_group_relationship(
 ) -> Option<(fd_core::id::NodeId, fd_core::id::NodeId)> {
     let parent_idx = graph.parent(child_idx)?;
 
-    // Only act on group/frame parents
-    let is_group_parent = matches!(
-        &graph.graph[parent_idx].kind,
-        NodeKind::Group { .. } | NodeKind::Frame { .. }
-    );
-    if !is_group_parent {
+    let parent_kind = &graph.graph[parent_idx].kind;
+    let child_kind = &graph.graph[child_idx].kind;
+
+    // Only act on container parents (Group/Frame) or shape parents (Rect/Ellipse) if the child is Text.
+    let is_container_parent = match parent_kind {
+        NodeKind::Group { .. } | NodeKind::Frame { .. } => true,
+        NodeKind::Rect { .. } | NodeKind::Ellipse { .. } => {
+            matches!(child_kind, NodeKind::Text { .. })
+        }
+        _ => false,
+    };
+    if !is_container_parent {
         return None;
     }
 
