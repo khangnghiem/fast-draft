@@ -250,7 +250,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     });
   }
 
-  // ─── AI Refine Handler ─────────────────────────────────────────────
+  // ─── AI Assist Handler ─────────────────────────────────────────────
 
   private async handleAiRefine(
     document: vscode.TextDocument,
@@ -278,7 +278,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     if (result.error) {
       const action = result.needsSettings ? "Open Settings" : undefined;
       const chosen = await vscode.window.showWarningMessage(
-        `AI Refine: ${result.error}`,
+        `AI Assist: ${result.error}`,
         ...(action ? [action] : [])
       );
       if (chosen === "Open Settings") {
@@ -306,7 +306,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
 
     webviewPanel.webview.postMessage({ type: "aiRefineComplete" });
     vscode.window.showInformationMessage(
-      `AI Refine: ${nodeIds.length} node(s) refined.`
+      `AI Assist: ${nodeIds.length} node(s) refined.`
     );
   }
 
@@ -890,13 +890,13 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Register AI Refine command (selected nodes via cursor position)
+  // Register AI Assist command (selected nodes via cursor position)
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMAND_AI_REFINE, async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || editor.document.languageId !== "fd") {
         vscode.window.showInformationMessage(
-          "Open a .fd file first to use AI Refine."
+          "Open a .fd file first to use AI Assist."
         );
         return;
       }
@@ -911,7 +911,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (result.error) {
         const action = result.needsSettings ? "Open Settings" : undefined;
         const chosen = await vscode.window.showWarningMessage(
-          `AI Refine: ${result.error}`,
+          `AI Assist: ${result.error}`,
           ...(action ? [action] : [])
         );
         if (chosen === "Open Settings") {
@@ -931,18 +931,18 @@ export function activate(context: vscode.ExtensionContext) {
       );
       await vscode.workspace.applyEdit(edit);
       vscode.window.showInformationMessage(
-        `AI Refine: ${nodeIds.length} node(s) refined.`
+        `AI Assist: ${nodeIds.length} node(s) refined.`
       );
     })
   );
 
-  // Register AI Refine All command (all _anon_ nodes)
+  // Register AI Assist All command (all _anon_ nodes)
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMAND_AI_REFINE_ALL, async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || editor.document.languageId !== "fd") {
         vscode.window.showInformationMessage(
-          "Open a .fd file first to use AI Refine All."
+          "Open a .fd file first to use AI Assist All."
         );
         return;
       }
@@ -955,7 +955,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (result.error) {
         const action = result.needsSettings ? "Open Settings" : undefined;
         const chosen = await vscode.window.showWarningMessage(
-          `AI Refine: ${result.error}`,
+          `AI Assist: ${result.error}`,
           ...(action ? [action] : [])
         );
         if (chosen === "Open Settings") {
@@ -975,7 +975,7 @@ export function activate(context: vscode.ExtensionContext) {
       );
       await vscode.workspace.applyEdit(edit);
       vscode.window.showInformationMessage(
-        `AI Refine All: ${nodeIds.length} node(s) refined.`
+        `AI Assist All: ${nodeIds.length} node(s) refined.`
       );
     })
   );

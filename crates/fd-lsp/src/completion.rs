@@ -246,7 +246,10 @@ mod tests {
         let labels: Vec<&str> = items.iter().map(|i| i.label.as_str()).collect();
         assert!(labels.contains(&"rect"));
         assert!(labels.contains(&"group"));
-        assert!(labels.contains(&"theme"), "should suggest `theme` not `style`");
+        assert!(
+            labels.contains(&"theme"),
+            "should suggest `theme` not `style`"
+        );
     }
 
     #[test]

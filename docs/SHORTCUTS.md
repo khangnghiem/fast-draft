@@ -128,7 +128,7 @@ Defaults **reset** on page reload (session only, not saved to `.fd` file).
 | Click 🧘/🔧 toggle (top-right) | Switch between Zen ↔ Full mode          |
 | `L`                            | Toggle Layers panel (works in Zen mode) |
 
-Zen mode hides: Layers, Properties, Minimap, AI Refine, Grid, Export, Theme, Zoom, Help, Status.
+Zen mode hides: Layers, Properties, Minimap, AI Assist, Grid, Export, Theme, Zoom, Help, Status.
 Zen mode keeps: 6 core tools (Select, Rect, Ellipse, Pen, Arrow, Text), Sketchy toggle.
 
 ---

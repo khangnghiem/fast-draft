@@ -173,12 +173,12 @@
       },
       {
         "command": "fd.aiRefine",
-        "title": "FD: AI Refine Selection",
+        "title": "FD: AI Assist Selection",
         "icon": "$(sparkle)"
       },
       {
         "command": "fd.aiRefineAll",
-        "title": "FD: AI Refine All Anonymous Nodes",
+        "title": "FD: AI Assist All",
         "icon": "$(wand)"
       },
       {

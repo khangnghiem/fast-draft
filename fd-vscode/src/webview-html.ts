@@ -1817,8 +1817,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <button class="tool-btn" data-tool="text"><span class="tool-icon">T</span>Text<span class="tool-key">T</span></button>
     <button class="tool-btn" data-tool="frame"><span class="tool-icon">⊞</span>Frame<span class="tool-key">F</span></button>
     <div class="tool-sep zen-full-only"></div>
-    <button class="tool-btn zen-full-only" id="ai-refine-btn" title="AI Refine selected node (rename + restyle)">&#x2728; Refine</button>
-    <button class="tool-btn zen-full-only" id="ai-refine-all-btn" title="AI Refine all anonymous nodes">&#x2728; All</button>
+    <button class="tool-btn zen-full-only" id="ai-refine-btn" title="AI Assist selected node (rename + restyle)">&#x2728; Assist</button>
+    <button class="tool-btn zen-full-only" id="ai-refine-all-btn" title="AI Assist all anonymous nodes">&#x2728; All</button>
     <div class="tool-sep zen-full-only"></div>
     <div class="view-toggle zen-full-only" id="view-toggle">
       <button class="view-btn active" id="view-design" title="Design View — full canvas">Design</button>
@@ -1895,8 +1895,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <div class="fab-sep"></div>
       <button class="fab-btn" id="fab-more-btn" title="More actions">⋯</button>
       <div id="fab-overflow-menu">
-        <button class="fab-menu-item" data-action="group">⌘G Group</button>
-        <button class="fab-menu-item" data-action="ungroup">⌘⇧G Ungroup</button>
+        <button class="fab-menu-item" data-action="group">⌘G ◻ Group</button>
+        <button class="fab-menu-item" data-action="ungroup">⌘⇧G ◫ Ungroup</button>
         <button class="fab-menu-item" data-action="duplicate">⌘D Duplicate</button>
         <button class="fab-menu-item" data-action="copy-png">⌘⇧C Copy as PNG</button>
         <button class="fab-menu-item" data-action="delete" style="color:#e57373">⌫ Delete</button>
@@ -2028,12 +2028,23 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
   </div>
   <div id="context-menu">
+    <div class="menu-item" id="ctx-ai-refine"><span class="menu-icon">✦</span><span class="menu-label">AI Assist</span></div>
     <div class="menu-item" id="ctx-add-annotation"><span class="menu-icon">◇</span><span class="menu-label">Add Spec</span></div>
-    <div class="menu-item" id="ctx-ai-refine"><span class="menu-icon">✦</span><span class="menu-label">AI Refine</span></div>
+    <div class="menu-separator"></div>
+    <div class="menu-item" id="ctx-cut" data-action="cut"><span class="menu-icon">✂</span><span class="menu-label">Cut</span><span class="menu-shortcut">⌘X</span></div>
+    <div class="menu-item" id="ctx-copy" data-action="copy"><span class="menu-icon">⎘</span><span class="menu-label">Copy</span><span class="menu-shortcut">⌘C</span></div>
+    <div class="menu-item" id="ctx-paste" data-action="paste"><span class="menu-icon">📋</span><span class="menu-label">Paste</span><span class="menu-shortcut">⌘V</span></div>
+    <div class="menu-item" id="ctx-copy-png" data-action="copy-png"><span class="menu-icon">🖼</span><span class="menu-label">Copy as PNG</span><span class="menu-shortcut">⌘⇧C</span></div>
     <div class="menu-separator"></div>
     <div class="menu-item" id="ctx-duplicate" data-action="duplicate"><span class="menu-icon">⊕</span><span class="menu-label">Duplicate</span><span class="menu-shortcut">⌘D</span></div>
-    <div class="menu-item" id="ctx-group" data-action="group"><span class="menu-icon">◫</span><span class="menu-label">Group</span><span class="menu-shortcut">⌘G</span></div>
-    <div class="menu-item" id="ctx-ungroup" data-action="ungroup"><span class="menu-icon">◻</span><span class="menu-label">Ungroup</span><span class="menu-shortcut">⇧⌘G</span></div>
+    <div class="menu-item" id="ctx-group" data-action="group"><span class="menu-icon">◻</span><span class="menu-label">Group</span><span class="menu-shortcut">⌘G</span></div>
+    <div class="menu-item" id="ctx-ungroup" data-action="ungroup"><span class="menu-icon">◫</span><span class="menu-label">Ungroup</span><span class="menu-shortcut">⇧⌘G</span></div>
+    <div class="menu-item" id="ctx-frame" data-action="frame-selection"><span class="menu-icon">⊞</span><span class="menu-label">Frame Selection</span></div>
+    <div class="menu-separator"></div>
+    <div class="menu-item" id="ctx-bring-front" data-action="bring-front"><span class="menu-icon">↑</span><span class="menu-label">Bring to Front</span><span class="menu-shortcut">⌘⇧]</span></div>
+    <div class="menu-item" id="ctx-send-back" data-action="send-back"><span class="menu-icon">↓</span><span class="menu-label">Send to Back</span><span class="menu-shortcut">⌘⇧[</span></div>
+    <div class="menu-item disabled" id="ctx-lock" data-action="lock"><span class="menu-icon">🔒</span><span class="menu-label">Lock</span></div>
+    <div class="menu-separator"></div>
     <div class="menu-item" id="ctx-delete" data-action="delete"><span class="menu-icon">⊖</span><span class="menu-label">Delete</span><span class="menu-shortcut">⌫</span></div>
   </div>
   <div id="anim-picker">
@@ -2048,7 +2059,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     window.vscodeApi = acquireVsCodeApi();
   </script>
   <script nonce="{nonce}">
-    // ─── AI Refine toolbar + context menu handlers ─────────
+    // ─── AI Assist toolbar + context menu handlers ─────────
     (function() {
       const vscodeApi = window.vscodeApi;
       let selectedNodeId = null;
@@ -2067,27 +2078,27 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         if (e.data.type === 'aiRefineComplete') {
           const btn = document.getElementById('ai-refine-btn');
           const allBtn = document.getElementById('ai-refine-all-btn');
-          if (btn) { btn.textContent = '✨ Refine'; btn.disabled = false; }
+          if (btn) { btn.textContent = '✨ Assist'; btn.disabled = false; }
           if (allBtn) { allBtn.disabled = false; }
         }
       });
 
-      // Refine selected node
+      // Assist selected node
       document.getElementById('ai-refine-btn')?.addEventListener('click', () => {
         if (selectedNodeId) {
           vscodeApi.postMessage({ type: 'aiRefine', nodeIds: [selectedNodeId] });
         } else {
-          // No selection — refine all anon nodes
+          // No selection — assist all anon nodes
           vscodeApi.postMessage({ type: 'aiRefineAll' });
         }
       });
 
-      // Refine all anonymous nodes
+      // Assist all anonymous nodes
       document.getElementById('ai-refine-all-btn')?.addEventListener('click', () => {
         vscodeApi.postMessage({ type: 'aiRefineAll' });
       });
 
-      // Context menu: AI Refine
+      // Context menu: AI Assist
       document.getElementById('ctx-ai-refine')?.addEventListener('click', () => {
         if (selectedNodeId) {
           vscodeApi.postMessage({ type: 'aiRefine', nodeIds: [selectedNodeId] });
