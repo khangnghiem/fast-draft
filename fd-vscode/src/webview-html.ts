@@ -2000,7 +2000,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div class="field-group">
       <div class="field-label">Acceptance Criteria</div>
       <div id="ann-accept-list"></div>
-      <button class="add-btn" id="ann-add-accept">+ Add criterion</button>
+      <button class="add-btn" id="ann-add-accept">+ Add</button>
     </div>
     <div class="field-group status-row">
       <div style="flex:1">

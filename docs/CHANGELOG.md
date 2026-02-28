@@ -5,6 +5,14 @@
 
 ## Completed Requirements
 
+### v0.8.62 — Sort Fix + LSP Theme/When + Tree-sitter Regen
+
+- **FIX (R4.10)**: Fixed `sort_nodes` which was a silent no-op — `children()` sorts by `NodeIndex` (insertion order) making edge remove/re-add ineffective. Added `sorted_child_order` field to `SceneGraph` for clean override
+- **FIX (LSP)**: Updated hover/completion providers — `theme`/`when` keywords now return hover info and completions (alongside legacy `style`/`anim`)
+- **BUILD**: Regenerated tree-sitter parser from updated grammar supporting `theme`/`when` keywords
+- **DOCS**: Updated all documentation references from `style`/`anim` to `theme`/`when` across GEMINI.md, REQUIREMENTS.md, ARCHITECTURE.md, model.rs doc-strings
+- **TESTING**: 7 new tests — 5 backward-compat roundtrip tests in emitter.rs, 2 hover tests in fd-lsp. 236 Rust tests total (0 ignored)
+
 ### Theme/When Rename + Emitter Reorder
 
 - **BREAKING**: Renamed `style` → `theme` for top-level reusable definitions, `anim` → `when` for animation/interaction blocks — both old keywords still accepted by parser for backward compatibility, emitter always outputs new keywords

@@ -1,21 +1,3 @@
-# ─── Themes ───
-
-theme accent {
-  fill: #6C5CE7  # blue
-}
-
-theme base_text {
-  fill: #333333  # gray
-  font: "Inter" regular 14
-}
-
-# ─── Layout ───
-
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
 # ─── Layout ───
 group @login_form {
   spec {
@@ -74,15 +56,9 @@ group @login_form {
       font: "Inter" semibold 16
     }
     use: accent
+    fill: #5A4BD1  # blue
     corner: 10
-    when :hover {
-      fill: #5A4BD1  # blue
-      scale: 1.02
-      ease: spring 300ms
-    }
   }
 }
-
-# ─── Constraints ───
 
 @login_form -> center_in: canvas
