@@ -856,7 +856,9 @@ impl FdCanvas {
     /// if the overlap is less than 25%. Otherwise returns an empty string.
     pub fn evaluate_near_detach(&self, node_id: &str) -> String {
         let id = NodeId::intern(node_id);
-        if let Some((parent_id, (child_cx, child_cy), (parent_cx, parent_cy))) = self.engine.evaluate_near_detach(id) {
+        if let Some((parent_id, (child_cx, child_cy), (parent_cx, parent_cy))) =
+            self.engine.evaluate_near_detach(id)
+        {
             format!(
                 r#"{{"parentId":"{}","childCx":{},"childCy":{},"parentCx":{},"parentCy":{}}}"#,
                 parent_id.as_str(),
