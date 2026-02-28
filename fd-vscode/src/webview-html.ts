@@ -2494,29 +2494,29 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <!-- Bottom-left Zoom & Undo/Redo controls (Excalidraw-style) -->
     <div id="bottom-left-controls">
       <div class="bl-control-group">
-        <button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button>
+        <button class="bl-btn" id="zoom-out-btn" title="Zoom out" aria-label="Zoom out">−</button>
         <div class="bl-sep"></div>
-        <button class="bl-btn" id="zoom-reset-btn" title="Reset zoom (click)">100%</button>
+        <button class="bl-btn" id="zoom-reset-btn" title="Reset zoom (click)" aria-label="Reset zoom">100%</button>
         <div class="bl-sep"></div>
-        <button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button>
+        <button class="bl-btn" id="zoom-in-btn" title="Zoom in" aria-label="Zoom in">+</button>
       </div>
       <div class="bl-control-group">
-        <button class="bl-btn" id="undo-btn" title="Undo (⌘Z)">↩</button>
+        <button class="bl-btn" id="undo-btn" title="Undo (⌘Z)" aria-label="Undo">↩</button>
         <div class="bl-sep"></div>
-        <button class="bl-btn" id="redo-btn" title="Redo (⌘⇧Z)">↪</button>
+        <button class="bl-btn" id="redo-btn" title="Redo (⌘⇧Z)" aria-label="Redo">↪</button>
       </div>
     </div>
     <!-- Floating Bottom Toolbar (iPad UX) -->
     <div id="floating-toolbar">
       <div class="ft-drag-handle" id="ft-drag-handle" title="Drag to move toolbar"></div>
-      <button class="ft-tool-btn active" data-tool="select"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2L3.5 13.5L7 10L11.5 14.5L13 13L9 8.5L13 8.5Z"/></svg><span class="ft-tooltip">Select<span class="tt-shortcut">V</span></span></button>
+      <button class="ft-tool-btn active" data-tool="select" aria-label="Select tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2L3.5 13.5L7 10L11.5 14.5L13 13L9 8.5L13 8.5Z"/></svg><span class="ft-tooltip">Select<span class="tt-shortcut">V</span></span></button>
       <div class="ft-sep"></div>
-      <button class="ft-tool-btn" data-tool="rect"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="12" height="10" rx="2"/></svg><span class="ft-tooltip">Rectangle<span class="tt-shortcut">R</span></span></button>
-      <button class="ft-tool-btn" data-tool="ellipse"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/></svg><span class="ft-tooltip">Ellipse<span class="tt-shortcut">O</span></span></button>
-      <button class="ft-tool-btn" data-tool="pen"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5L14.5 7.5L6.5 15.5H2.5V11.5Z"/><path d="M10.5 3.5L14.5 7.5" /><path d="M8.5 5.5L12.5 9.5"/></svg><span class="ft-tooltip">Pen<span class="tt-shortcut">P</span></span></button>
-      <button class="ft-tool-btn" data-tool="arrow"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14L14 4"/><path d="M7 4H14V11"/></svg><span class="ft-tooltip">Arrow<span class="tt-shortcut">A</span></span></button>
-      <button class="ft-tool-btn" data-tool="text"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4H14"/><path d="M9 4V15"/><path d="M6 15H12"/></svg><span class="ft-tooltip">Text<span class="tt-shortcut">T</span></span></button>
-      <button class="ft-tool-btn" data-tool="frame"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="14" height="14" rx="2"/><rect x="5.5" y="5.5" width="7" height="7" rx="1"/></svg><span class="ft-tooltip">Frame<span class="tt-shortcut">F</span></span></button>
+      <button class="ft-tool-btn" data-tool="rect" aria-label="Rectangle tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="12" height="10" rx="2"/></svg><span class="ft-tooltip">Rectangle<span class="tt-shortcut">R</span></span></button>
+      <button class="ft-tool-btn" data-tool="ellipse" aria-label="Ellipse tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/></svg><span class="ft-tooltip">Ellipse<span class="tt-shortcut">O</span></span></button>
+      <button class="ft-tool-btn" data-tool="pen" aria-label="Pen tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5L14.5 7.5L6.5 15.5H2.5V11.5Z"/><path d="M10.5 3.5L14.5 7.5" /><path d="M8.5 5.5L12.5 9.5"/></svg><span class="ft-tooltip">Pen<span class="tt-shortcut">P</span></span></button>
+      <button class="ft-tool-btn" data-tool="arrow" aria-label="Arrow tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14L14 4"/><path d="M7 4H14V11"/></svg><span class="ft-tooltip">Arrow<span class="tt-shortcut">A</span></span></button>
+      <button class="ft-tool-btn" data-tool="text" aria-label="Text tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4H14"/><path d="M9 4V15"/><path d="M6 15H12"/></svg><span class="ft-tooltip">Text<span class="tt-shortcut">T</span></span></button>
+      <button class="ft-tool-btn" data-tool="frame" aria-label="Frame tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="14" height="14" rx="2"/><rect x="5.5" y="5.5" width="7" height="7" rx="1"/></svg><span class="ft-tooltip">Frame<span class="tt-shortcut">F</span></span></button>
     </div>
     <div id="loading"><div class="loading-spinner"></div>Loading FD engine…</div>
     <!-- Properties Panel (Apple-style) -->
