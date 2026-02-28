@@ -442,6 +442,59 @@ impl SyncEngine {
         &self.bounds
     }
 
+    /// Evaluate if a dragging node is near detaching from its parent group.
+    /// Returns the parent NodeId and the center coordinates of both the child and parent
+    /// if the overlap is less than 25% of the child's area.
+    #[allow(clippy::type_complexity)]
+    pub fn evaluate_near_detach(&self, node_id: NodeId) -> Option<(NodeId, (f32, f32), (f32, f32))> {
+        let child_idx = self.graph.index_of(node_id)?;
+        let parent_idx = self.graph.parent(child_idx)?;
+
+        let parent_kind = &self.graph.graph[parent_idx].kind;
+        let child_kind = &self.graph.graph[child_idx].kind;
+
+        let is_container_parent = match parent_kind {
+            NodeKind::Group { .. } | NodeKind::Frame { .. } => true,
+            NodeKind::Rect { .. } | NodeKind::Ellipse { .. } => {
+                matches!(child_kind, NodeKind::Text { .. })
+            }
+            _ => false,
+        };
+        if !is_container_parent {
+            return None;
+        }
+
+        let mut child_b = *self.bounds.get(&child_idx)?;
+        let parent_b = *self.bounds.get(&parent_idx)?;
+
+        if let NodeKind::Text { content } = child_kind {
+            let text_w = (content.len() as f32) * 8.0;
+            let text_h = 16.0;
+            let cx = child_b.x + child_b.width / 2.0;
+            let cy = child_b.y + child_b.height / 2.0;
+            child_b.width = text_w;
+            child_b.height = text_h;
+            child_b.x = cx - text_w / 2.0;
+            child_b.y = cy - text_h / 2.0;
+        }
+
+        let overlap_w = ((child_b.x + child_b.width).min(parent_b.x + parent_b.width) - child_b.x.max(parent_b.x)).max(0.0);
+        let overlap_h = ((child_b.y + child_b.height).min(parent_b.y + parent_b.height) - child_b.y.max(parent_b.y)).max(0.0);
+
+        let overlap_area = overlap_w * overlap_h;
+        let child_area = child_b.width * child_b.height;
+
+        if child_area > 0.0 && overlap_area > 0.0 && overlap_area < child_area * 0.25 {
+            let child_cx = child_b.x + child_b.width / 2.0;
+            let child_cy = child_b.y + child_b.height / 2.0;
+            let parent_cx = parent_b.x + parent_b.width / 2.0;
+            let parent_cy = parent_b.y + parent_b.height / 2.0;
+            Some((self.graph.graph[parent_idx].id, (child_cx, child_cy), (parent_cx, parent_cy)))
+        } else {
+            None
+        }
+    }
+
     /// Look up the parent NodeId of a given node. Returns root if not found.
     pub fn parent_of(&self, id: NodeId) -> NodeId {
         use petgraph::Direction;
