@@ -303,6 +303,10 @@ async function main() {
     setupColorSwatches();
     setupSelectionBar();
     setupTouchGestures();
+    setupZoomControls();
+    setupUndoRedoControls();
+    setupSettingsMenu();
+    setupFloatingToolbar();
 
     // Tell extension we're ready
     vscode.postMessage({ type: "ready" });
@@ -384,6 +388,9 @@ function render() {
   }
 
   ctx.restore();
+
+  // Update minimap viewport indicator smoothly (scene re-renders at lower frequency)
+  renderMinimapViewport();
 
   // Schedule side-effects at lower frequency (~10fps) to avoid DOM/WASM thrashing
   scheduleSideEffects();
@@ -1010,7 +1017,10 @@ let lastShortcutTime = 0;
 const DOUBLE_PRESS_MS = 400;
 
 function setupToolbar() {
-  document.querySelectorAll(".tool-btn[data-tool]").forEach((btn) => {
+  // Top toolbar no longer has tool buttons — they moved to floating toolbar.
+  // This now handles both .tool-btn[data-tool] (if any remain) and .ft-tool-btn[data-tool].
+  const allToolBtns = document.querySelectorAll(".tool-btn[data-tool], .ft-tool-btn[data-tool]");
+  allToolBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
       const tool = btn.getAttribute("data-tool");
       if (!fdCanvas || !tool) return;
@@ -1026,11 +1036,15 @@ function setupToolbar() {
         unlockTool();
       }
 
-      // Update active state
-      document
-        .querySelectorAll(".tool-btn[data-tool]")
-        .forEach((b) => { b.classList.remove("active"); b.classList.remove("locked"); });
-      btn.classList.add("active");
+      // Update active state across all tool buttons
+      allToolBtns.forEach((b) => {
+        b.classList.remove("active");
+        b.classList.remove("locked");
+      });
+      // Activate the matching tool in both toolbars
+      document.querySelectorAll(`[data-tool="${tool}"]`).forEach((b) => {
+        b.classList.add("active");
+      });
 
       fdCanvas.set_tool(tool);
       updateCanvasCursor(tool);
@@ -1044,6 +1058,18 @@ function setupToolbar() {
       lockTool(tool);
     });
   });
+
+  // Floating toolbar collapse/expand: click active tool icon to toggle
+  const floatingToolbar = document.getElementById("floating-toolbar");
+  if (floatingToolbar) {
+    floatingToolbar.addEventListener("dblclick", (e) => {
+      // Double-click the toolbar background (not a button) = toggle collapse
+      if (e.target === floatingToolbar || e.target.classList.contains("ft-drag-handle")) {
+        floatingToolbar.classList.toggle("collapsed");
+        vscode.setState({ ...(vscode.getState() || {}), ftCollapsed: floatingToolbar.classList.contains("collapsed") });
+      }
+    });
+  }
 }
 
 /** Lock the given tool — it stays active after shape creation. */
@@ -1059,7 +1085,7 @@ function lockTool(tool) {
 /** Unlock tool and switch back to Select. */
 function unlockTool() {
   lockedTool = null;
-  document.querySelectorAll(".tool-btn[data-tool]").forEach((b) => b.classList.remove("locked"));
+  document.querySelectorAll(".tool-btn[data-tool], .ft-tool-btn[data-tool]").forEach((b) => b.classList.remove("locked"));
   if (fdCanvas) {
     fdCanvas.set_tool("select");
   }
@@ -1068,7 +1094,7 @@ function unlockTool() {
 
 /** Show lock indicator on the correct toolbar button. */
 function updateLockedIndicator(tool) {
-  document.querySelectorAll(".tool-btn[data-tool]").forEach((btn) => {
+  document.querySelectorAll(".tool-btn[data-tool], .ft-tool-btn[data-tool]").forEach((btn) => {
     btn.classList.toggle("locked", btn.getAttribute("data-tool") === tool);
     btn.classList.toggle("active", btn.getAttribute("data-tool") === tool);
   });
@@ -1103,8 +1129,8 @@ window.addEventListener("message", (event) => {
     case "toolChanged": {
       if (!fdCanvas) return;
       fdCanvas.set_tool(message.tool);
-      // Update toolbar UI
-      document.querySelectorAll(".tool-btn").forEach((btn) => {
+      // Update toolbar UI (both top and floating)
+      document.querySelectorAll(".tool-btn[data-tool], .ft-tool-btn[data-tool]").forEach((btn) => {
         btn.classList.toggle(
           "active",
           btn.getAttribute("data-tool") === message.tool
@@ -1417,7 +1443,7 @@ function setupApplePencilPro() {
 }
 
 function updateToolbarActive(tool) {
-  document.querySelectorAll(".tool-btn[data-tool]").forEach((btn) => {
+  document.querySelectorAll(".tool-btn[data-tool], .ft-tool-btn[data-tool]").forEach((btn) => {
     btn.classList.toggle("active", btn.getAttribute("data-tool") === tool);
   });
   updateCanvasCursor(tool);
@@ -2104,7 +2130,6 @@ function setupContextMenu() {
     const hasSpec = nodeHasSpec(contextMenuNodeId);
     document.getElementById("ctx-add-annotation").style.display = hasSpec ? "none" : "";
     document.getElementById("ctx-view-spec").style.display = hasSpec ? "" : "none";
-    document.getElementById("ctx-remove-spec").style.display = hasSpec ? "" : "none";
 
     menu.classList.add("visible");
   });
@@ -2130,16 +2155,7 @@ function setupContextMenu() {
     closeContextMenu();
   });
 
-  // Remove Spec via context menu
-  document.getElementById("ctx-remove-spec")?.addEventListener("click", () => {
-    if (contextMenuNodeId && fdCanvas) {
-      removeNodeSpec(contextMenuNodeId);
-      render();
-      syncTextToExtension();
-      if (specBadgesVisible || viewMode === "spec") refreshSpecBadges();
-    }
-    closeContextMenu();
-  });
+
 
   // Duplicate via context menu
   document.getElementById("ctx-duplicate").addEventListener("click", () => {
@@ -2568,7 +2584,7 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   if (isTextNode) {
     // Text node: fill = text color, not background
     // Use themed background, and the node's fill as text color
-    bgColor = isDark ? "#1E1E2E" : "#FFFFFF";
+    bgColor = "transparent";
     textColor = props.fill || (isDark ? "#E0E0E0" : "#1C1C1E");
   } else if (props.fill) {
   // Shape node with fill: use as background
@@ -2994,6 +3010,9 @@ function refreshSpecBadges() {
 
   let html = "";
   for (const node of nodesWithAnnotations) {
+    // Only show badge for the currently selected node
+    if (node.id !== selectedId) continue;
+
     const boundsJson = fdCanvas.get_node_bounds(node.id);
     const b = JSON.parse(boundsJson);
     if (!b.width) continue;
@@ -3008,10 +3027,7 @@ function refreshSpecBadges() {
       ? escapeAttr(descriptions[0].value)
       : `${annCount} annotation(s)`;
 
-    // Apply faint/active class based on selection
-    const badgeClass = node.id === selectedId ? "active" : "faint";
-
-    html += `<div class="spec-badge-pin ${badgeClass}" style="left:${bx}px;top:${by}px" `;
+    html += `<div class="spec-badge-pin active" style="left:${bx}px;top:${by}px" `;
     html += `data-node-id="${escapeAttr(node.id)}" title="${tooltip}">`;
     html += `<span class="spec-badge-count">${annCount}</span>`;
     html += `</div>`;
@@ -3957,29 +3973,243 @@ function zoomToFit() {
   updateZoomIndicator();
 }
 
-/** Update the zoom level indicator in the toolbar. */
+/** Update the zoom level indicator in both toolbar and bottom-left controls. */
 function updateZoomIndicator() {
+  const pct = Math.round(zoomLevel * 100) + "%";
+  const el = document.getElementById("zoom-level");
+  if (el) el.textContent = pct;
+  const blEl = document.getElementById("zoom-reset-btn");
+  if (blEl) blEl.textContent = pct;
+}
+
+function setupZoomIndicator() {
   const el = document.getElementById("zoom-level");
   if (el) {
-    el.textContent = Math.round(zoomLevel * 100) + "%";
+    el.addEventListener("click", () => {
+      resetZoomToCenter();
+    });
   }
 }
 
-/** Set up click-to-reset on zoom indicator. */
-function setupZoomIndicator() {
-  const el = document.getElementById("zoom-level");
-  if (!el) return;
-  el.addEventListener("click", () => {
-    // Reset to 100% centered
-    const container = document.getElementById("canvas-container");
-    const cx = container.clientWidth / 2;
-    const cy = container.clientHeight / 2;
-    const oldZoom = zoomLevel;
-    zoomLevel = 1.0;
-    panX = cx - (cx - panX) * (1.0 / oldZoom);
-    panY = cy - (cy - panY) * (1.0 / oldZoom);
+/** Reset zoom to 100% centered on current viewport center. */
+function resetZoomToCenter() {
+  const container = document.getElementById("canvas-container");
+  const cx = container.clientWidth / 2;
+  const cy = container.clientHeight / 2;
+  const oldZoom = zoomLevel;
+  zoomLevel = 1.0;
+  panX = cx - (cx - panX) * (1.0 / oldZoom);
+  panY = cy - (cy - panY) * (1.0 / oldZoom);
+  render();
+  updateZoomIndicator();
+}
+
+/** Set up bottom-left zoom controls (Excalidraw-style +/−/reset). */
+function setupZoomControls() {
+  const zoomIn = document.getElementById("zoom-in-btn");
+  const zoomOut = document.getElementById("zoom-out-btn");
+  const zoomReset = document.getElementById("zoom-reset-btn");
+
+  if (zoomIn) {
+    zoomIn.addEventListener("click", () => {
+      const container = document.getElementById("canvas-container");
+      const cx = container.clientWidth / 2;
+      const cy = container.clientHeight / 2;
+      const oldZoom = zoomLevel;
+      zoomLevel = Math.min(ZOOM_MAX, zoomLevel * 1.25);
+      panX = cx - (cx - panX) * (zoomLevel / oldZoom);
+      panY = cy - (cy - panY) * (zoomLevel / oldZoom);
+      render();
+      updateZoomIndicator();
+    });
+  }
+
+  if (zoomOut) {
+    zoomOut.addEventListener("click", () => {
+      const container = document.getElementById("canvas-container");
+      const cx = container.clientWidth / 2;
+      const cy = container.clientHeight / 2;
+      const oldZoom = zoomLevel;
+      zoomLevel = Math.max(ZOOM_MIN, zoomLevel / 1.25);
+      panX = cx - (cx - panX) * (zoomLevel / oldZoom);
+      panY = cy - (cy - panY) * (zoomLevel / oldZoom);
+      render();
+      updateZoomIndicator();
+    });
+  }
+
+  if (zoomReset) {
+    zoomReset.addEventListener("click", () => {
+      resetZoomToCenter();
+    });
+  }
+}
+
+/** Set up bottom-left undo/redo buttons (Excalidraw-style). */
+function setupUndoRedoControls() {
+  const undoBtn = document.getElementById("undo-btn");
+  const redoBtn = document.getElementById("redo-btn");
+
+  if (undoBtn) {
+    undoBtn.addEventListener("click", () => {
+      if (!fdCanvas) return;
+      const resultJson = fdCanvas.handle_key("z", false, false, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) {
+        render();
+        syncTextToExtension();
+      }
+    });
+  }
+
+  if (redoBtn) {
+    redoBtn.addEventListener("click", () => {
+      if (!fdCanvas) return;
+      const resultJson = fdCanvas.handle_key("z", false, true, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) {
+        render();
+        syncTextToExtension();
+      }
+    });
+  }
+}
+
+/** Set up settings hamburger menu (☰). */
+function setupSettingsMenu() {
+  const btn = document.getElementById("settings-menu-btn");
+  const menu = document.getElementById("settings-menu");
+  if (!btn || !menu) return;
+
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.classList.toggle("visible");
+    updateSettingsToggleStates();
+  });
+
+  // Grid toggle
+  document.getElementById("sm-grid-toggle")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleGrid();
+    updateSettingsToggleStates();
+  });
+
+  // Spec badges toggle
+  document.getElementById("sm-spec-badge-toggle")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleSpecBadges();
+    updateSettingsToggleStates();
+  });
+
+  // Sketchy mode toggle
+  document.getElementById("sm-sketchy-toggle")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!fdCanvas) return;
+    const enabled = !fdCanvas.get_sketchy_mode();
+    fdCanvas.set_sketchy_mode(enabled);
+    const sketchyBtn = document.getElementById("sketchy-toggle-btn");
+    if (sketchyBtn) sketchyBtn.classList.toggle("active", enabled);
+    vscode.setState({ ...(vscode.getState() || {}), sketchyMode: enabled });
     render();
-    updateZoomIndicator();
+    updateSettingsToggleStates();
+  });
+
+  // Theme toggle
+  document.getElementById("sm-theme-toggle")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    isDarkTheme = !isDarkTheme;
+    applyTheme(isDarkTheme);
+    vscode.setState({ ...(vscode.getState() || {}), darkTheme: isDarkTheme });
+    updateSettingsToggleStates();
+  });
+
+  // Export actions
+  menu.querySelectorAll(".settings-menu-item[data-export]").forEach(item => {
+    item.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      menu.classList.remove("visible");
+      const action = item.dataset.export;
+      switch (action) {
+        case "png-clip": await copySelectionAsPng(); break;
+        case "png-file": exportToPng(); break;
+        case "svg-file": exportToSvg(); break;
+        case "fd-clip":
+          copySelectedAsFd();
+          vscode.postMessage({ type: "info", text: "Copied .fd text to clipboard!" });
+          break;
+      }
+    });
+  });
+
+  // Shortcuts
+  document.getElementById("sm-shortcuts")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.classList.remove("visible");
+    toggleShortcutHelp();
+  });
+
+  // Close when clicking outside
+  document.addEventListener("pointerdown", (e) => {
+    if (menu.classList.contains("visible") && !menu.contains(e.target) && !btn.contains(e.target)) {
+      menu.classList.remove("visible");
+    }
+  });
+}
+
+/** Update toggle-on class for settings menu items. */
+function updateSettingsToggleStates() {
+  const gridItem = document.getElementById("sm-grid-toggle");
+  const specItem = document.getElementById("sm-spec-badge-toggle");
+  const sketchyItem = document.getElementById("sm-sketchy-toggle");
+  const themeItem = document.getElementById("sm-theme-toggle");
+  if (gridItem) gridItem.classList.toggle("toggle-on", gridEnabled);
+  if (specItem) specItem.classList.toggle("toggle-on", specBadgesVisible);
+  if (sketchyItem) sketchyItem.classList.toggle("toggle-on", fdCanvas ? fdCanvas.get_sketchy_mode() : false);
+  if (themeItem) themeItem.classList.toggle("toggle-on", isDarkTheme);
+}
+
+/** Set up floating toolbar drag handle (move between top and bottom). */
+function setupFloatingToolbar() {
+  const toolbar = document.getElementById("floating-toolbar");
+  const handle = document.getElementById("ft-drag-handle");
+  if (!toolbar || !handle) return;
+
+  // Restore persisted state
+  const savedState = vscode.getState();
+  if (savedState && savedState.ftCollapsed) {
+    toolbar.classList.add("collapsed");
+  }
+  if (savedState && savedState.ftPosition === "top") {
+    toolbar.classList.add("at-top");
+  }
+
+  let isDragging = false;
+  let dragStartY = 0;
+
+  handle.addEventListener("pointerdown", (e) => {
+    isDragging = true;
+    dragStartY = e.clientY;
+    handle.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  handle.addEventListener("pointermove", (e) => {
+    if (!isDragging) return;
+    const dy = e.clientY - dragStartY;
+    // If dragged more than 80px, toggle position
+    if (Math.abs(dy) > 80) {
+      const container = document.getElementById("canvas-container");
+      const midY = container.clientHeight / 2;
+      const atTop = e.clientY < midY;
+      toolbar.classList.toggle("at-top", atTop);
+      vscode.setState({ ...(vscode.getState() || {}), ftPosition: atTop ? "top" : "bottom" });
+      isDragging = false;
+    }
+  });
+
+  handle.addEventListener("pointerup", () => {
+    isDragging = false;
   });
 }
 
@@ -4287,6 +4517,10 @@ function exportToSvg() {
 
 let minimapCtx = null;
 let minimapDragging = false;
+/** Cached minimap scene image for smooth viewport overlay. */
+let minimapSceneImageData = null;
+/** Cached minimap transform params for viewport overlay. */
+let minimapCachedParams = null;
 
 /** Set up the minimap canvas and mouse events. */
 function setupMinimap() {
@@ -4397,7 +4631,10 @@ function getSceneBounds() {
   return cachedSceneBounds;
 }
 
-/** Render the minimap thumbnail with viewport indicator. */
+/**
+ * Full minimap render: re-renders the scene + caches the image.
+ * Called from scheduleSideEffects (100ms throttle).
+ */
 function renderMinimap() {
   if (!minimapCtx || !fdCanvas) return;
   const mw = 180;
@@ -4413,6 +4650,8 @@ function renderMinimap() {
 
   const bounds = getSceneBounds();
   if (!bounds) {
+    minimapCachedParams = null;
+    minimapSceneImageData = null;
     minimapCtx.restore();
     return;
   }
@@ -4421,6 +4660,8 @@ function renderMinimap() {
   const sceneW = bounds.maxX - bounds.minX;
   const sceneH = bounds.maxY - bounds.minY;
   if (sceneW <= 0 || sceneH <= 0) {
+    minimapCachedParams = null;
+    minimapSceneImageData = null;
     minimapCtx.restore();
     return;
   }
@@ -4437,18 +4678,52 @@ function renderMinimap() {
   fdCanvas.render(minimapCtx, performance.now());
   minimapCtx.restore();
 
-  // Draw viewport rectangle
+  // Cache the scene image (without viewport rect) for smooth overlay
+  minimapSceneImageData = minimapCtx.getImageData(0, 0, mw * dpr, mh * dpr);
+  minimapCachedParams = { mw, mh, dpr, isDark, bounds, scale, offsetX, offsetY };
+
+  // Draw viewport rectangle on top
+  drawMinimapViewport();
+
+  minimapCtx.restore();
+}
+
+/**
+ * Lightweight minimap viewport overlay: restores cached scene image
+ * and draws only the viewport rectangle. Called from render() on every
+ * frame for smooth pan/zoom tracking.
+ */
+function renderMinimapViewport() {
+  if (!minimapCtx || !minimapSceneImageData || !minimapCachedParams) return;
+  const { mw, mh, dpr, isDark, bounds, scale, offsetX, offsetY } = minimapCachedParams;
+
+  // Restore cached scene image (clears previous viewport rect)
+  minimapCtx.save();
+  minimapCtx.setTransform(1, 0, 0, 1, 0, 0);
+  minimapCtx.putImageData(minimapSceneImageData, 0, 0);
+  minimapCtx.restore();
+
+  // Redraw viewport in DPR-aware space
+  minimapCtx.save();
+  minimapCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawMinimapViewport();
+  minimapCtx.restore();
+}
+
+/** Draw the viewport indicator rectangle on the minimap (assumes DPR transform). */
+function drawMinimapViewport() {
+  if (!minimapCachedParams) return;
+  const { isDark, bounds, scale, offsetX, offsetY } = minimapCachedParams;
+
   const container = document.getElementById("canvas-container");
   const cw = container.clientWidth;
   const ch = container.clientHeight;
 
-  // Viewport in scene-space
   const vpLeft = -panX / zoomLevel;
   const vpTop = -panY / zoomLevel;
   const vpW = cw / zoomLevel;
   const vpH = ch / zoomLevel;
 
-  // Convert to minimap coordinates
   const rx = offsetX + (vpLeft - bounds.minX) * scale;
   const ry = offsetY + (vpTop - bounds.minY) * scale;
   const rw = vpW * scale;
@@ -4459,8 +4734,6 @@ function renderMinimap() {
   minimapCtx.strokeRect(rx, ry, rw, rh);
   minimapCtx.fillStyle = isDark ? "rgba(10, 132, 255, 0.08)" : "rgba(0, 122, 255, 0.06)";
   minimapCtx.fillRect(rx, ry, rw, rh);
-
-  minimapCtx.restore();
 }
 
 // ─── Smart Focus on Node (Layer Click) ───────────────────────────────────────

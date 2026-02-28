@@ -1,15 +1,16 @@
-# FD v1
-# Login form — demonstrates themes, spec annotations, and animations
-
-theme base_text {
-  fill: #333333
-  font: "Inter" 400 14
-}
+# ─── Themes ───
 
 theme accent {
-  fill: #6C5CE7
+  fill: #6C5CE7  # blue
   corner: 10
 }
+
+theme base_text {
+  fill: #333333  # gray
+  font: "Inter" regular 14
+}
+
+# ─── Layout ───
 
 # ─── Layout ───
 group @login_form {
@@ -19,14 +20,11 @@ group @login_form {
     accept: "sign-in button triggers auth flow"
     status: todo
   }
-  layout: column gap=16 pad=32
-
   text @title "Welcome Back" {
     spec "Brand greeting — sets emotional tone"
-    font: "Inter" 700 24
-    fill: #1A1A2E
+    fill: #1A1A2E  # blue
+    font: "Inter" bold 24
   }
-
   rect @email_field {
     spec {
       "Email input field"
@@ -34,30 +32,28 @@ group @login_form {
       accept: "shows error state with red border"
       priority: high
     }
+    text @email_hint "Email" {
+      use: base_text
+      fill: #999999  # gray
+    }
     w: 280 h: 44
     stroke: #DDDDDD 1
     corner: 8
-    text @email_hint "Email" {
-      use: base_text
-      fill: #999999
-    }
   }
-
   rect @pass_field {
     spec {
       "Password input field"
       accept: "minimum 8 characters"
       priority: high
     }
+    text @pass_hint "Password" {
+      use: base_text
+      fill: #999999  # gray
+    }
     w: 280 h: 44
     stroke: #DDDDDD 1
     corner: 8
-    text @pass_hint "Password" {
-      use: base_text
-      fill: #999999
-    }
   }
-
   rect @login_btn {
     spec {
       "Primary CTA — triggers login API call"
@@ -66,16 +62,26 @@ group @login_form {
       status: done
       priority: high
     }
+    text @btn_label "Sign In" {
+      fill: #FFFFFF  # white
+      font: "Inter" semibold 16
+    }
     w: 280 h: 48
     use: accent
-    fill: #5A4BD1
-    text @btn_label "Sign In" {
-      fill: #FFFFFF
-      font: "Inter" 600 16
+    fill: #5A4BD1  # blue
+    when :hover {
+      fill: #4A3BC1  # blue
+      scale: 1.02
+      ease: spring 200ms
     }
-    when :hover { fill: #4A3BC1; scale: 1.02; ease: spring 200ms }
-    when :press { scale: 0.97; ease: ease_out 100ms }
+    when :press {
+      scale: 0.97
+      ease: ease_out 100ms
+    }
   }
+  layout: column gap=16 pad=32
 }
+
+# ─── Constraints ───
 
 @login_form -> center_in: canvas
