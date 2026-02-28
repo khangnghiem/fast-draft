@@ -11,20 +11,20 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R1.1** _(done)_: Token-efficient text DSL — ~5× fewer tokens than SVG for equivalent content
 - **R1.2** _(done)_: Graph-based document model (DAG) — nodes reference by `@id`, not coordinates
 - **R1.3** _(done)_: Constraint-based layout (`center_in`, `offset`, `fill_parent`) — no absolute coordinates until render time
-- **R1.4** _(done)_: Reusable styles via `style` blocks and `use:` references
+- **R1.4** _(done)_: Reusable themes via `theme` blocks and `use:` references (parser also accepts legacy `style` keyword)
 - **R1.5** _(done)_: Animation declarations with triggers (`:hover`, `:press`, `:enter`) and easing → [spec](specs/animation-system.md)
 - **R1.6** _(done)_: Git-friendly plain text — line-oriented diffs work well
 - **R1.7** _(done)_: Comments via `#` prefix
 - **R1.8** _(done)_: Human-readable and AI-writable without special tooling
 - **R1.9** _(done)_: Structured annotations (`spec` blocks) — description, accept criteria, status, priority, tags — parsed and round-tripped as first-class metadata
 - **R1.10** _(done)_: First-class edges — `edge @id { from: @a to: @b }` with arrow, curve, label, stroke, and `spec` annotations → [spec](specs/edge-system.md)
-- **R1.11** _(done)_: Edge trigger animations — edges support `anim :hover { ... }` blocks identical to nodes → [spec](specs/edge-system.md)
+- **R1.11** _(done)_: Edge trigger animations — edges support `when :hover { ... }` blocks identical to nodes (parser also accepts legacy `anim` keyword) → [spec](specs/edge-system.md)
 - **R1.12** _(done)_: Edge flow animations — `flow: pulse Nms` (traveling dot) and `flow: dash Nms` (marching dashes) → [spec](specs/edge-system.md)
 - **R1.13** _(done)_: Generic nodes — `@id { ... }` without explicit kind keyword for abstract/placeholder elements
 - **R1.14** _(done)_: Namespaced imports — `import "path.fd" as ns` for cross-file style/node reuse with `ns.style_name` references
 - **R1.15** _(done)_: Background shorthand — `bg: #FFF corner=12 shadow=(0,4,20,#0002)` for combined fill, corner, and shadow in one line
 - **R1.16** _(done)_: Comment preservation — `# text` lines attached to the following node survive all parse/emit round-trips and format passes
-- **R1.17** _(done)_: Text alignment — `align: left|center|right [top|middle|bottom]` property; defaults to `center middle`; reusable via `style` blocks and `use:` inheritance
+- **R1.17** _(done)_: Text alignment — `align: left|center|right [top|middle|bottom]` property; defaults to `center middle`; reusable via `theme` blocks and `use:` inheritance
 - **R1.18** _(planned)_: Mermaid import — parse Mermaid diagram syntax (`flowchart`, `sequenceDiagram`, `stateDiagram`) into equivalent FD nodes + edges
 
 ### R2: Bidirectional Sync
@@ -107,6 +107,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R4.15** _(done)_: Named colors — `fill: purple` etc. accepted (17 Tailwind palette colors)
 - **R4.16** _(done)_: Property aliases — `background:`/`color:` → fill, `rounded:`/`radius:` → corner
 - **R4.17** _(done)_: Dimension units — `w: 320px` accepted, `px` stripped by parser
+- **R4.18** _(done)_: Theme/When rename + emitter reorder — `style` → `theme`, `anim` → `when` for clarity; emitter order: spec → children → style → when; old keywords accepted for backward compatibility
 
 ### R5: Rendering
 
@@ -226,8 +227,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | ai / refinement     | R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17 |
 | edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8                             |
 | import              | R1.14, R1.18                                                      |
-| style               | R1.4, R4.3                                                        |
-| animation           | R1.5, R1.11, R1.12, R3.29, R5.6, R5.8                             |
+| style / theme       | R1.4, R4.3, R4.18                                                 |
+| animation           | R1.5, R1.11, R1.12, R3.29, R4.18, R5.6, R5.8                      |
 | rendering           | R5.1, R5.2, R5.4, R5.5                                            |
 | platform            | R6.1, R6.2, R6.3, R6.4                                            |
 | inline editing      | R3.28                                                             |

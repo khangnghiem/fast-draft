@@ -98,7 +98,7 @@ crates/
 | **Semantic IDs**            | `@login_form` not `@rect_17` — intent over auto-generated names            |
 | **Constraints over coords** | `center_in: canvas` not `x: 400 y: 300` — relationships > pixels           |
 | **Accurate comments**       | `#` for context — wrong comments hurt more than no comments                |
-| **Style reuse**             | Define `style` blocks, reference with `use:` — consistency > ad-hoc        |
+| **Theme reuse**             | Define `theme` blocks, reference with `use:` — consistency > ad-hoc        |
 | **Spec for intent**         | `spec { ... }` metadata (status, priority, accept) — structured > freeform |
 | **Shorthand OK**            | `w:` / `h:` / `#FFF` are fine — unambiguous in context                     |
 
