@@ -49,6 +49,12 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.36** _(done)_: Auto-center text in shapes — single text child inside rect/ellipse/frame auto-expands bounds to parent; renderer's center/middle alignment visually centers the label
 - **R3.37** _(done)_: Center-snap for text nodes — dragging text near a shape's center shows purple crosshair guides (12px threshold); releasing snaps text to exact center; multiple centered texts stack vertically
 - **R3.38** _(done)_: Text drag-to-consume — dragging a text node onto a rect/ellipse/frame reparents it as a child inside the shape, auto-centered; position constraints stripped on reparent
+- **R3.39** _(done)_: Floating toolbar — draggable bottom toolbar with 7 tool buttons (SVG icons); drag handle toggles top/bottom position (80px threshold); double-click collapses to circle; state persists via VS Code webview state → [spec](specs/floating-toolbar.md)
+- **R3.40** _(done)_: Toolbar tooltips — Apple-style frosted glass tooltips on hover (400ms delay); pill shape with backdrop-filter blur; shows tool name + shortcut; replaces native title attributes → [spec](specs/floating-toolbar.md)
+- **R3.41** _(done)_: Click-to-raise — selecting a node via fresh click automatically brings it forward one z-level (reuses ⌘] bring_forward); no-op on already-selected or drag interactions (5px threshold)
+- **R3.42** _(done)_: Drag-to-create — drag a tool button from floating toolbar onto canvas creates shape at drop position; ghost preview (dashed outline matching shape type) follows cursor; ScreenBrush-style defaults (transparent fill, #333 stroke 2.5); smart defaults cascade applied → [spec](specs/floating-toolbar.md)
+- **R3.43** _(done)_: Snap-to-node — dropping near existing node (40px threshold) snaps to adjacent position (20px gap, 4 cardinal dirs); auto-creates edge from existing→new node (arrow:end, curve:smooth); shows frosted-glass edge context menu with arrow/curve/stroke/flow controls → [spec](specs/floating-toolbar.md)
+- **R3.44** _(done)_: Text consume on drag — Text tool dropped on shape reparents inside (R3.38 reuse); dropped near edge (≤30px) inserts child text node in edge block; hit priority: shape > edge > empty canvas → [spec](specs/floating-toolbar.md)
 
 #### R3b: Drawing Tools
 
@@ -199,9 +205,10 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | R4.1–R4.6   | Covered by R1/R2 tests                                                                   | ✅                             |
 | R4.7–R4.11  | _(extension-side, no test)_                                                              | ❌                             |
 | R3.36       | `layout_text_centered_in_rect`, `layout_text_in_ellipse_*`, `layout_text_explicit_pos_*` | ✅ 4 tests                     |
+| R3.39–R3.44 | _(JS-only; floating toolbar, snap, edge context menu — no WASM-side tests)_              | ⚠️ JS-only                     |
 | R5.1–R5.8   | `hit::tests::*`, `resolve::tests::*`, `render2d::tests::*`                               | ✅ 3 hit + 6 layout + 3 render |
 
-**Total**: 169 Rust tests + 162 TypeScript tests = **331 tests**
+**Total**: 169 Rust tests + 188 TypeScript tests = **357 tests**
 
 ## Requirement Index
 
@@ -246,5 +253,11 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | library             | R3.33, R3.34                                                      |
 
 | content-first | R4.12 |
-
 | mermaid | R1.18 |
+| floating toolbar | R3.39, R3.40, R3.42, R3.43, R3.44 |
+| tooltip | R3.18, R3.40 |
+| z-order / raise | R3.41 |
+| drag-to-create | R3.42, R3.44 |
+| snap / auto-edge | R3.43 |
+| text consume | R3.38, R3.44 |
+| default styles | R3.42 |

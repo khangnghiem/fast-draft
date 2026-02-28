@@ -147,6 +147,22 @@ Zen mode keeps: 6 core tools (Select, Rect, Ellipse, Pen, Arrow, Text), Sketchy 
 
 ---
 
+## Floating Toolbar
+
+| Interaction                     | Action                                                                   |
+| ------------------------------- | ------------------------------------------------------------------------ |
+| Click tool button               | Activate tool (Select/Rect/Ellipse/Pen/Arrow/Text/Frame)                 |
+| Double-click tool button        | Lock tool (sticky mode)                                                  |
+| Drag tool button onto canvas    | **Drag-to-create** — ghost preview follows cursor, creates shape at drop |
+| Drag Text onto shape            | **Text consume** — reparents text inside shape, auto-centers             |
+| Drag Text near edge (≤30px)     | **Edge label** — inserts child text node in edge block                   |
+| Drop near existing node (≤40px) | **Snap** — adjacent position (20px gap) + auto-creates edge              |
+| Drag handle (⋮⋮) up/down        | Move toolbar between top/bottom (80px threshold)                         |
+| Double-click toolbar background | Collapse/expand toolbar                                                  |
+| Hover tool button (400ms)       | Frosted glass tooltip with tool name + shortcut                          |
+
+---
+
 ## Help
 
 | Shortcut      | Action                           |
