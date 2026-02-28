@@ -4658,7 +4658,18 @@ function setupFloatingToolbar() {
             const rawX = ((cx - rect.left) - panX) / zoomLevel;
             const rawY = ((cy - rect.top) - panY) / zoomLevel;
 
-            // ── Snap-to-node detection ──
+            // ── Text drop-to-consume: text on shape or edge ──
+            if (dtcTool === "text") {
+              const consumed = dtcTextConsume(rawX, rawY, cx, cy, rect);
+              if (consumed) {
+                dtcActive = false;
+                dtcTool = null;
+                btn._dtcSuppressClick = true;
+                return;
+              }
+            }
+
+            // ── Snap-to-node detection (non-text tools) ──
             const snap = dtcFindSnapTarget(rawX, rawY, dtcTool);
             const sceneX = snap ? snap.x : rawX;
             const sceneY = snap ? snap.y : rawY;
@@ -4712,6 +4723,108 @@ function setupFloatingToolbar() {
       dtcTool = null;
     });
   });
+  // ── Text drop-to-consume helper ──
+  function dtcTextConsume(sceneX, sceneY, screenX, screenY, canvasRect) {
+    if (!fdCanvas) return false;
+    const source = fdCanvas.get_text();
+
+    // PRIORITY 1: Drop on a shape → create text then reparent inside
+    const hitId = fdCanvas.hit_test_at(sceneX, sceneY);
+    if (hitId) {
+      const shapeMatch = source.match(new RegExp(`(?:rect|ellipse|frame)\\s+@${hitId}\\b`));
+      if (shapeMatch) {
+        // Create text node at drop position
+        const created = fdCanvas.create_node_at("text", sceneX, sceneY);
+        if (created) {
+          const textId = fdCanvas.get_selected_id();
+          if (textId) {
+            reparentTextIntoShape(textId, hitId);
+            bumpGeneration();
+            render();
+            syncTextToExtension();
+            updatePropertiesPanel();
+            return true;
+          }
+        }
+      }
+    }
+
+    // PRIORITY 2: Drop near an edge → add text as child inside edge block
+    const edgeTarget = dtcFindNearestEdge(sceneX, sceneY);
+    if (edgeTarget) {
+      const consumed = dtcAddTextToEdge(edgeTarget.edgeId, sceneX, sceneY);
+      if (consumed) return true;
+    }
+
+    // PRIORITY 3: Empty canvas — return false, let normal create flow handle it
+    return false;
+  }
+
+  /** Find the nearest edge within 30px of a scene point. */
+  function dtcFindNearestEdge(sceneX, sceneY) {
+    if (!fdCanvas) return null;
+    const source = fdCanvas.get_text();
+    // Find all edge blocks and check distance to their from→to line
+    const edgeRe = /edge\s+@(\S+)\s*\{[^}]*from:\s*@(\S+)[^}]*to:\s*@(\S+)/g;
+    let closest = null;
+    let closestDist = 30; // 30px threshold
+    let match;
+    while ((match = edgeRe.exec(source)) !== null) {
+      const edgeId = match[1];
+      const fromId = match[2];
+      const toId = match[3];
+      let fromBounds, toBounds;
+      try {
+        fromBounds = JSON.parse(fdCanvas.get_node_bounds(fromId));
+        toBounds = JSON.parse(fdCanvas.get_node_bounds(toId));
+      } catch (_) { continue; }
+      if (!fromBounds || !toBounds) continue;
+      const fx = fromBounds.x + fromBounds.width / 2;
+      const fy = fromBounds.y + fromBounds.height / 2;
+      const tx = toBounds.x + toBounds.width / 2;
+      const ty = toBounds.y + toBounds.height / 2;
+      const dist = pointToSegmentDist(sceneX, sceneY, fx, fy, tx, ty);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = { edgeId, fromId, toId, midX: (fx + tx) / 2, midY: (fy + ty) / 2 };
+      }
+    }
+    return closest;
+  }
+
+  /** Distance from point (px,py) to line segment (ax,ay)-(bx,by). */
+  function pointToSegmentDist(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return Math.hypot(px - ax, py - ay);
+    let t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+  }
+
+  /** Add a child text node inside an edge block in the FD source. */
+  function dtcAddTextToEdge(edgeId, sceneX, sceneY) {
+    if (!fdCanvas) return false;
+    let source = fdCanvas.get_text();
+    const esc = edgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(edge\\s+@${esc}\\s*\\{)`, "s");
+    const m = source.match(re);
+    if (!m) return false;
+    // Generate a text node ID
+    const textId = "text_" + Math.random().toString(36).slice(2, 8);
+    const textBlock = `\n  text @${textId} "Text"`;
+    // Insert after the edge opening brace
+    const insertPos = source.indexOf(m[0]) + m[0].length;
+    source = source.slice(0, insertPos) + textBlock + source.slice(insertPos);
+    const ok = fdCanvas.set_text(source);
+    if (ok) {
+      bumpGeneration();
+      render();
+      syncTextToExtension();
+      updatePropertiesPanel();
+    }
+    return ok;
+  }
 
   // ── Snap-to-node helper ──
   const DTC_SNAP_THRESHOLD = 40;

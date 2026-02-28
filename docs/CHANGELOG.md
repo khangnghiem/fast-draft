@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.8.79 — Text Drop-to-Consume on Shapes & Edges
+
+- **UX**: Dragging Text tool onto a shape (rect/ellipse/frame) reparents it as a child node inside the shape using existing R3.38 logic — auto-centers, strips position constraints
+- **UX**: Dragging Text tool near an edge (≤30px) inserts a child text node inside the edge block in FD source — uses point-to-segment distance for edge detection
+- **UX**: Hit priority: Shape > Edge > Empty canvas
+
 ### v0.8.78 — Snap-to-Node + Auto-Edge on Drag-to-Create
 
 - **UX**: Dragging a shape from toolbar near an existing node snaps to adjacent position (20px gap, 40px threshold, 4 cardinal dirs); auto-creates edge from existing→new node with arrow:end + curve:smooth; shows frosted-glass edge context menu at edge midpoint with Arrow/Curve/Stroke/Flow controls; Esc or click-outside dismisses
