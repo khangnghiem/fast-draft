@@ -20,6 +20,8 @@ use fd_core::parser::parse_document;
 use fd_core::{ResolvedBounds, Viewport, resolve_layout};
 use std::collections::HashMap;
 
+pub type DetachInfo = (NodeId, (f32, f32), (f32, f32));
+
 /// The sync engine holds the authoritative scene graph and keeps text + canvas
 /// in sync.
 pub struct SyncEngine {
@@ -445,7 +447,7 @@ impl SyncEngine {
     /// Evaluate if a dragging node is near detaching from its parent group.
     /// Returns the parent NodeId and the center coordinates of both the child and parent
     /// if the overlap is less than 25% of the child's area.
-    pub fn evaluate_near_detach(&self, node_id: NodeId) -> Option<(NodeId, (f32, f32), (f32, f32))> {
+    pub fn evaluate_near_detach(&self, node_id: NodeId) -> Option<DetachInfo> {
         let child_idx = self.graph.index_of(node_id)?;
         let parent_idx = self.graph.parent(child_idx)?;
 
