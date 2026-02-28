@@ -298,6 +298,7 @@ async function main() {
     setupGridToggle();
     setupSpecBadgeToggle();
     setupExportButton();
+    setupInsertMenu();
     setupMinimap();
     setupColorSwatches();
     setupSelectionBar();
@@ -1809,42 +1810,6 @@ function setupFloatingBar() {
     updatePropertiesPanel();
   });
 
-  // ── Overflow menu toggle ──
-  document.getElementById("fab-more-btn").addEventListener("click", (e) => {
-    e.stopPropagation();
-    const menu = document.getElementById("fab-overflow-menu");
-    menu.classList.toggle("visible");
-  });
-
-  // ── Overflow menu actions ──
-  document.querySelectorAll("#fab-overflow-menu .fab-menu-item").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (!fdCanvas) return;
-      const action = btn.dataset.action;
-      let changed = false;
-      switch (action) {
-        case "group": changed = fdCanvas.group_selected(); break;
-        case "ungroup": changed = fdCanvas.ungroup_selected(); break;
-        case "duplicate": changed = fdCanvas.duplicate_selected(); break;
-        case "copy-png": copySelectionAsPng(); break;
-        case "delete": changed = fdCanvas.delete_selected(); break;
-      }
-      if (changed) {
-        render();
-        syncTextToExtension();
-        updatePropertiesPanel();
-        updateFloatingBar();
-      }
-      document.getElementById("fab-overflow-menu").classList.remove("visible");
-    });
-  });
-
-  // Close overflow menu when clicking elsewhere
-  document.addEventListener("click", () => {
-    const menu = document.getElementById("fab-overflow-menu");
-    if (menu) menu.classList.remove("visible");
-  });
 
   // Prevent FAB clicks from deselecting the node
   fab.addEventListener("pointerdown", (e) => {
@@ -2751,65 +2716,7 @@ const DEFAULT_SHAPE_SIZES = {
 };
 
 function setupDragAndDrop() {
-  // Palette items — create custom drag images sized to default node dimensions
-  document.querySelectorAll(".palette-item[data-shape]").forEach((item) => {
-    item.addEventListener("dragstart", (e) => {
-      const shape = item.getAttribute("data-shape");
-      e.dataTransfer.setData("text/plain", shape);
-      e.dataTransfer.effectAllowed = "copy";
-
-      // Build an offscreen drag ghost at default node size
-      const [w, h] = DEFAULT_SHAPE_SIZES[shape] || [100, 80];
-      const ghost = document.createElement("canvas");
-      ghost.width = w;
-      ghost.height = h;
-      const gc = ghost.getContext("2d");
-      gc.fillStyle = "rgba(200, 200, 215, 0.6)";
-      gc.strokeStyle = "rgba(100, 100, 120, 0.8)";
-      gc.lineWidth = 1.5;
-      if (shape === "ellipse") {
-        gc.beginPath();
-        gc.ellipse(w / 2, h / 2, w / 2 - 1, h / 2 - 1, 0, 0, Math.PI * 2);
-        gc.fill();
-        gc.stroke();
-      } else if (shape === "text") {
-        gc.font = "14px -apple-system, BlinkMacSystemFont, sans-serif";
-        gc.fillStyle = "rgba(80, 80, 90, 0.9)";
-        gc.fillText("Text", 8, h / 2 + 5);
-      } else if (shape === "frame") {
-        gc.strokeStyle = "rgba(120, 120, 140, 0.8)";
-        gc.setLineDash([4, 3]);
-        gc.strokeRect(1, 1, w - 2, h - 2);
-      } else if (shape === "line" || shape === "arrow") {
-        gc.strokeStyle = "rgba(80, 80, 100, 0.9)";
-        gc.lineWidth = 2;
-        gc.beginPath();
-        gc.moveTo(4, h / 2);
-        gc.lineTo(w - 4, h / 2);
-        gc.stroke();
-        if (shape === "arrow") {
-          gc.beginPath();
-          gc.moveTo(w - 12, h / 2 - 5);
-          gc.lineTo(w - 4, h / 2);
-          gc.lineTo(w - 12, h / 2 + 5);
-          gc.stroke();
-        }
-      } else {
-        gc.beginPath();
-        gc.roundRect(1, 1, w - 2, h - 2, 6);
-        gc.fill();
-        gc.stroke();
-      }
-      ghost.style.position = "absolute";
-      ghost.style.top = "-9999px";
-      document.body.appendChild(ghost);
-      e.dataTransfer.setDragImage(ghost, w / 2, h / 2);
-      // Clean up after drag starts
-      requestAnimationFrame(() => ghost.remove());
-    });
-  });
-
-  // Canvas drop target
+  // Canvas drop target (kept for future drag-from-insert support)
   canvas.addEventListener("dragover", (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
@@ -4317,6 +4224,42 @@ function setupExportButton() {
           copySelectedAsFd();
           vscode.postMessage({ type: "info", text: "Copied .fd text to clipboard!" });
           break;
+      }
+    });
+  });
+
+  // Close when clicking outside
+  document.addEventListener("pointerdown", (e) => {
+    if (menu.classList.contains("visible") && !menu.contains(e.target) && !btn.contains(e.target)) {
+      menu.classList.remove("visible");
+    }
+  });
+}
+
+/** Set up the insert dropdown menu (Insert button in top bar). */
+function setupInsertMenu() {
+  const btn = document.getElementById("insert-menu-btn");
+  const menu = document.getElementById("insert-menu");
+  if (!btn || !menu) return;
+
+  // Toggle menu
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.classList.toggle("visible");
+  });
+
+  // Handle insert actions — activate the tool (same as top bar tool buttons)
+  document.querySelectorAll(".insert-menu-item").forEach(item => {
+    item.addEventListener("click", (e) => {
+      e.stopPropagation();
+      menu.classList.remove("visible");
+      const shape = item.dataset.insert;
+      if (!shape) return;
+
+      // Activate the corresponding tool button in the toolbar
+      const toolBtn = document.querySelector(`.tool-btn[data-tool="${shape}"]`);
+      if (toolBtn) {
+        toolBtn.click();
       }
     });
   });

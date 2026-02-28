@@ -244,44 +244,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       background: var(--fd-accent);
       cursor: pointer;
     }
-    .fab-btn {
-      background: transparent;
-      border: none;
-      color: #aaa;
-      font-size: 13px;
-      cursor: pointer;
-      padding: 2px 4px;
-      border-radius: 4px;
-      line-height: 1;
-    }
-    .fab-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
-    /* Overflow menu */
-    #fab-overflow-menu {
-      position: absolute;
-      bottom: calc(100% + 4px);
-      right: 0;
-      background: rgba(30,30,30,0.95);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 8px;
-      padding: 4px;
-      display: none;
-      flex-direction: column;
-      gap: 1px;
-      min-width: 120px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-    }
-    #fab-overflow-menu.visible { display: flex; }
-    .fab-menu-item {
-      background: transparent;
-      border: none;
-      color: #ccc;
-      font-size: 11px;
-      padding: 6px 10px;
-      text-align: left;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .fab-menu-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
 
     /* ── Onboarding Overlay ── */
     #onboarding-overlay {
@@ -1024,6 +987,37 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .export-menu-item:hover { background: #007FD4; color: #FFF; }
     .export-menu-sep { height: 1px; background: #404040; margin: 4px 0; }
 
+    /* ── Insert Dropdown (shape/element insertion) ── */
+    .insert-dropdown-container { position: relative; display: inline-block; }
+    .insert-menu {
+      display: none; position: absolute; top: 100%; left: 0; margin-top: 4px;
+      background: var(--fd-surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 8px;
+      box-shadow: var(--fd-shadow-lg);
+      flex-direction: column;
+      z-index: 1000; min-width: 160px; padding: 4px;
+    }
+    .insert-menu.visible { display: flex; }
+    .insert-section-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--fd-text-secondary);
+      padding: 6px 10px 3px;
+      font-weight: 600;
+    }
+    .insert-menu-item {
+      background: none; border: none; padding: 5px 10px;
+      color: var(--fd-text); font-size: 12px; cursor: pointer; text-align: left;
+      border-radius: 5px; display: flex; align-items: center; gap: 8px;
+      transition: none;
+    }
+    .insert-menu-item:hover { background: var(--fd-accent); color: var(--fd-accent-fg); }
+    .insert-menu-sep { height: 1px; background: var(--fd-border); margin: 3px 8px; }
+
     /* ── Minimap ── */
     #minimap-container {
       position: absolute;
@@ -1358,73 +1352,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       font-weight: 500;
     }
 
-    /* ── Shape Palette (Freeform-style) ── */
-    #shape-palette {
-      position: absolute;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      flex-direction: row;
-      gap: 2px;
-      z-index: 50;
-      background: var(--fd-surface);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      border: 0.5px solid var(--fd-border);
-      border-radius: 12px;
-      padding: 5px;
-      box-shadow: var(--fd-shadow-md);
-      align-items: center;
-    }
-    .palette-sep {
-      width: 1px;
-      height: 24px;
-      background: var(--fd-border);
-      margin: 0 3px;
-      opacity: 0.6;
-      flex-shrink: 0;
-    }
-    .palette-item {
-      width: 38px;
-      height: 38px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 9px;
-      cursor: grab;
-      color: var(--fd-text-secondary);
-      font-size: 18px;
-      transition: all 0.18s cubic-bezier(0.25, 0.1, 0.25, 1);
-      user-select: none;
-      position: relative;
-    }
-    .palette-item:hover {
-      background: var(--fd-surface-hover);
-      color: var(--fd-text);
-    }
-    .palette-item:active {
-      cursor: grabbing;
-      transform: scale(0.90);
-      background: var(--fd-surface-active);
-    }
-    .palette-item .palette-label {
-      display: none;
-      position: absolute;
-      bottom: 46px;
-      background: var(--fd-surface-solid);
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 500;
-      white-space: nowrap;
-      pointer-events: none;
-      box-shadow: var(--fd-shadow-sm);
-      color: var(--fd-text);
-    }
-    .palette-item:hover .palette-label {
-      display: block;
-    }
+
 
     /* ── Annotation Card ── */
     #annotation-card {
@@ -1822,9 +1750,18 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .zen-mode #layers-panel { display: none !important; }
     .zen-mode #props-panel { display: none !important; }
     .zen-mode #minimap-container { display: none !important; }
-    .zen-mode #shape-palette { display: none !important; }
     .zen-mode #selection-bar { display: none !important; }
     .zen-mode #spec-overlay { display: none !important; }
+
+    /* ── Zen mode: icon-only toolbar ── */
+    .zen-mode .tool-btn > .tool-key { display: none; }
+    .zen-mode .tool-btn {
+      padding: 5px 8px;
+      font-size: 0; /* hides text labels */
+    }
+    .zen-mode .tool-btn > .tool-icon {
+      font-size: 14px;
+    }
 
     /* Panel toggle via keyboard in zen mode */
     .zen-mode #layers-panel.zen-visible {
@@ -1847,6 +1784,20 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <button class="tool-btn" data-tool="text"><span class="tool-icon">T</span>Text<span class="tool-key">T</span></button>
     <button class="tool-btn" data-tool="frame"><span class="tool-icon">⊞</span>Frame<span class="tool-key">F</span></button>
     <div class="tool-sep zen-full-only"></div>
+    <div class="insert-dropdown-container zen-full-only" id="insert-dropdown-container">
+      <button class="tool-btn" id="insert-menu-btn" title="Insert shape or element"><span class="tool-icon">＋</span>Insert</button>
+      <div class="insert-menu" id="insert-menu">
+        <div class="insert-section-label">Shapes</div>
+        <button class="insert-menu-item" data-insert="rect">▢ Rectangle</button>
+        <button class="insert-menu-item" data-insert="ellipse">◯ Ellipse</button>
+        <button class="insert-menu-item" data-insert="line">━ Line</button>
+        <button class="insert-menu-item" data-insert="arrow">→ Arrow</button>
+        <div class="insert-menu-sep"></div>
+        <div class="insert-section-label">Layout</div>
+        <button class="insert-menu-item" data-insert="frame">⊞ Frame</button>
+        <button class="insert-menu-item" data-insert="text">T Text</button>
+      </div>
+    </div>
     <button class="tool-btn zen-full-only" id="ai-refine-btn" title="AI Assist selected node (rename + restyle)">&#x2728; Assist</button>
     <button class="tool-btn zen-full-only" id="ai-refine-all-btn" title="AI Assist all anonymous nodes">&#x2728; All</button>
     <div class="tool-sep zen-full-only"></div>
@@ -1874,19 +1825,11 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <button class="tool-btn" id="sketchy-toggle-btn" title="Toggle sketchy hand-drawn mode">✏️</button>
     <button class="tool-btn zen-full-only" id="theme-toggle-btn" title="Toggle light/dark canvas theme">🌙</button>
     <button class="zen-full-only" id="zoom-level" title="Zoom level (click to reset to 100%)">100%</button>
-    <button class="tool-btn zen-full-only" id="tool-help-btn" title="Keyboard shortcuts">?</button>
+    <button class="tool-btn zen-full-only" id="tool-help-btn" title="Keyboard shortcuts">⌨️ Shortcuts</button>
     <span class="zen-full-only" id="status">Loading WASM…</span>
   </div>
   <div id="canvas-container">
-    <div id="shape-palette">
-      <div class="palette-item" draggable="true" data-shape="rect">▢<span class="palette-label">Rectangle</span></div>
-      <div class="palette-item" draggable="true" data-shape="ellipse">◯<span class="palette-label">Ellipse</span></div>
-      <div class="palette-item" draggable="true" data-shape="text">T<span class="palette-label">Text</span></div>
-      <div class="palette-sep"></div>
-      <div class="palette-item" draggable="true" data-shape="frame">▣<span class="palette-label">Frame</span></div>
-      <div class="palette-item" draggable="true" data-shape="line">━<span class="palette-label">Line</span></div>
-      <div class="palette-item" draggable="true" data-shape="arrow">→<span class="palette-label">Arrow</span></div>
-    </div>
+
     <div id="onboarding-overlay">
       <div class="onboard-heading">Start drawing</div>
       <div class="onboard-sub">Create something beautiful</div>
@@ -1923,15 +1866,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <div class="fab-sep fab-text-only"></div>
       <span class="fab-label fab-text-only">Size</span>
       <input type="number" id="fab-font-size" class="fab-input fab-text-only" min="8" max="200" step="1" value="16" title="Font size">
-      <div class="fab-sep"></div>
-      <button class="fab-btn" id="fab-more-btn" title="More actions">⋯</button>
-      <div id="fab-overflow-menu">
-        <button class="fab-menu-item" data-action="group">⌘G ◻ Group</button>
-        <button class="fab-menu-item" data-action="ungroup">⌘⇧G ◫ Ungroup</button>
-        <button class="fab-menu-item" data-action="duplicate">⌘D Duplicate</button>
-        <button class="fab-menu-item" data-action="copy-png">⌘⇧C Copy as PNG</button>
-        <button class="fab-menu-item" data-action="delete" style="color:#e57373">⌫ Delete</button>
-      </div>
+
     </div>
     <canvas id="fd-canvas" class="tool-select"></canvas>
     <div id="dimension-tooltip"></div>
