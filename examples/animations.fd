@@ -16,19 +16,26 @@ group @hover_demos {
       w: 140 h: 100
       fill: #6C5CE7  # blue
       corner: 12
+      y: 0.37
     }
     layout: row gap=20 pad=0
+    x: 150
+    y: 31.89
   }
   rect @fade_hover {
     text @fade_label "Opacity" {
       fill: #FFFFFF  # white
       font: "Inter" semibold 14
+      x: -0.16
+      y: -0.81
     }
     w: 140 h: 100
     fill: #00B894  # teal
     corner: 12
   }
   layout: column gap=24 pad=32
+  x: 447.01
+  y: 201.07
 }
 
 rect @color_hover {
@@ -55,8 +62,8 @@ rect @rotate_hover {
 text @section_press "Press / Tap Effects" {
   fill: #1A1A2E  # blue
   font: "Inter" bold 28
-  x: 38
-  y: 60.01
+  x: 250.61
+  y: 8.22
 }
 
 group @press_row {
@@ -146,8 +153,8 @@ rect @slide_enter {
 text @section_easing "Easing Functions" {
   fill: #1A1A2E  # blue
   font: "Inter" bold 28
-  x: 240.59
-  y: -59.6
+  x: 327.38
+  y: 58.16
 }
 
 group @easing_row {
@@ -197,6 +204,8 @@ rect @ease_spring {
   text @spring_label "Spring" {
     fill: #333333  # gray
     font: "Inter" medium 12
+    x: 153.45
+    y: 212.34
   }
   w: 120 h: 80
   fill: #DFE6E9  # white
@@ -224,6 +233,8 @@ group @combined_row {
     fill: #6C5CE7  # blue
     corner: 16
     shadow: (0,4,20,#6C5CE740)
+    x: 3.45
+    y: 2.3
   }
   layout: row gap=20 pad=0
 }
@@ -233,15 +244,15 @@ rect @combo_2 {
   text @combo2_label "Squish & Dim" {
     fill: #FFFFFF  # white
     font: "Inter" semibold 15
-    x: 49.29
-    y: 22.48
+    x: 40.51
+    y: 46.82
   }
   w: 180 h: 120
   fill: #00B894  # teal
   corner: 16
   shadow: (0,4,20,#00B89440)
-  x: -16.86
-  y: 434.55
+  x: 103.09
+  y: 368.49
 }
 
 rect @combo_3 {
@@ -255,8 +266,24 @@ rect @combo_3 {
   fill: #FF6B6B  # red
   corner: 16
   shadow: (0,4,20,#FF6B6B40)
-  x: 62.09
-  y: 178.7
+  x: 270.82
+  y: 131.46
 }
 
-@hover_demos -> center_in: canvas
+rect @rect_0 {
+  w: 155.6 h: 86.23
+  x: 97.91
+  y: 612.56
+}
+
+text @text_1 "Text" {
+  x: 266.27
+  y: 615.12
+}
+
+rect @rect_2 {
+  w: 139.51 h: 159.64
+  x: 430.3
+  y: 573.84
+}
+
