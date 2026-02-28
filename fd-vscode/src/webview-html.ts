@@ -1921,6 +1921,9 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     #floating-toolbar.collapsed .ft-sep {
       display: none;
     }
+    #floating-toolbar.collapsed .ft-drag-handle {
+      display: none;
+    }
     #floating-toolbar.collapsed .ft-tool-btn.active {
       padding: 6px;
       border-radius: 50%;
@@ -2669,6 +2672,105 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         }
         closePanel();
       });
+    })();
+  </script>
+  <script nonce="{nonce}">
+    // ─── Floating toolbar: drag handle + collapse toggle ─────────
+    (function() {
+      const toolbar = document.getElementById('floating-toolbar');
+      const handle = document.getElementById('ft-drag-handle');
+      if (!toolbar || !handle) return;
+
+      const vscodeApi = window.vscodeApi;
+      const DRAG_THRESHOLD = 5;
+      let dragging = false;
+      let startX = 0;
+      let startY = 0;
+      let offsetX = 0;
+      let offsetY = 0;
+      let movedPastThreshold = false;
+      let positioned = false;
+
+      function saveState() {
+        const prev = vscodeApi.getState() || {};
+        vscodeApi.setState(Object.assign({}, prev, {
+          ftLeft: toolbar.style.left,
+          ftBottom: toolbar.style.bottom,
+          ftPositioned: positioned,
+          ftCollapsed: toolbar.classList.contains('collapsed'),
+        }));
+      }
+
+      function restoreState() {
+        const state = vscodeApi.getState();
+        if (!state) return;
+        if (state.ftCollapsed) {
+          toolbar.classList.add('collapsed');
+        }
+        if (state.ftPositioned && state.ftLeft != null && state.ftBottom != null) {
+          toolbar.style.left = state.ftLeft;
+          toolbar.style.bottom = state.ftBottom;
+          toolbar.style.transform = 'none';
+          positioned = true;
+        }
+      }
+
+      handle.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        dragging = true;
+        movedPastThreshold = false;
+        startX = e.clientX;
+        startY = e.clientY;
+
+        const rect = toolbar.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+
+        handle.setPointerCapture(e.pointerId);
+      });
+
+      handle.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        if (!movedPastThreshold) {
+          if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+          movedPastThreshold = true;
+          toolbar.style.transform = 'none';
+          positioned = true;
+        }
+
+        const container = toolbar.parentElement;
+        const cRect = container.getBoundingClientRect();
+        const tRect = toolbar.getBoundingClientRect();
+
+        let newLeft = e.clientX - cRect.left - offsetX;
+        let newBottom = cRect.bottom - e.clientY - (tRect.height - offsetY);
+
+        // Clamp within container
+        newLeft = Math.max(0, Math.min(newLeft, cRect.width - tRect.width));
+        newBottom = Math.max(0, Math.min(newBottom, cRect.height - tRect.height));
+
+        toolbar.style.left = newLeft + 'px';
+        toolbar.style.bottom = newBottom + 'px';
+      });
+
+      handle.addEventListener('pointerup', (e) => {
+        if (!dragging) return;
+        dragging = false;
+
+        if (!movedPastThreshold) {
+          // Treated as click — toggle collapsed
+          toolbar.classList.toggle('collapsed');
+        }
+
+        saveState();
+      });
+
+      // Restore saved position and collapsed state on load
+      restoreState();
     })();
   </script>
   <script nonce="{nonce}" type="module" src="{mainJsUri}"></script>

@@ -11,6 +11,8 @@
 - **UX**: Snappy detach animation — teal glow ring (250ms pop) appears on the detached node when it leaves a group, giving visual feedback that reparenting occurred
 - **WASM**: New `get_last_detach_info()` API — returns `{detached, nodeId, fromGroupId}` one-shot event for JS animation trigger
 - **TESTING**: New `sync_incremental_drag_detaches_child` regression test — simulates 30 small moves proving detach works with real drag gestures; renamed `sync_move_partial_overlap_expands_group` → `sync_move_partial_overlap_keeps_child` (group no longer expands during drag)
+- **BUG FIX**: Floating toolbar drag handle (#ft-drag-handle) now functional — pointerdown/pointermove/pointerup handlers with 5px threshold disambiguate click vs drag; position saved via `vscodeApi.setState()` and restored on load
+- **UX**: Floating toolbar collapse toggle — single-click on drag handle toggles `.collapsed` class (iPad-style minimize to active-tool circle); collapsed state persists to webview state
 
 ### v0.8.71 — ✦ Renamify (Batch AI Rename)
 
