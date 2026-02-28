@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.8.66 — Toolbar Consolidation
+
+- **UX**: Replaced bottom shape palette with `＋ Insert` dropdown in top bar — glassmorphism popover with Shapes (Rect, Ellipse, Line, Arrow) and Layout (Frame, Text) sections; clicking activates the tool; hidden in Zen mode
+- **UX**: Zen mode toolbar now icon-only — text labels and keyboard hint badges hidden, compact 8px padding, tooltips on hover
+- **UX**: Removed floating action bar overflow menu (⋯) — Group/Ungroup/Duplicate/Delete remain via context menu and shortcuts; floating bar is now purely a property editor (Fill, Stroke, Opacity, Font Size)
+- **CLEANUP**: Removed ~170 lines of dead CSS/HTML/JS (shape palette, fab overflow, palette drag handlers)
+
 ### v0.8.65 — Status Rename
 
 - **BREAKING (R1.9)**: Renamed spec status values: `draft` → `todo`, `in_progress` → `doing`; added `blocked` (red badge). Parser accepts both old and new values for backward compatibility. LSP completions, hover docs, annotation card, filter tabs, bulk dropdown, and all 12+ example files updated

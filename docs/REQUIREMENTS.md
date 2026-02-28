@@ -72,7 +72,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 
 - **R3.7** _(done)_: Undo/redo — full command stack, works across text and canvas edits
 - **R3.8** _(done)_: Properties panel — frosted glass inspector for position, size, fill, stroke, corner, opacity
-- **R3.9** _(done)_: Shape palette — drag-and-drop for Rect, Ellipse, Text, Frame, Line, Arrow
+- **R3.9** _(done)_: Insert dropdown — `＋ Insert` button in top bar with shape/layout popover; replaces bottom shape palette
 - **R3.10** _(done)_: Apple Pencil Pro squeeze — toggle between last two tools
 - **R3.11** _(done)_: Per-tool cursor feedback (crosshair, text cursor, default)
 - **R3.12** _(done)_: Annotation pins — badge dots on annotated nodes with inline edit card

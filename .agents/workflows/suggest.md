@@ -2,47 +2,137 @@
 description: Structured suggestions with analysis, tradeoffs, and priorities
 ---
 
-# Suggest Workflow
+# /suggest - Smart Suggestions
 
-When the user asks for suggestions, follow this structured approach:
+$ARGUMENTS
 
-1. **Understand scope**: Determine what area the user wants suggestions for:
-   - A specific file or feature (narrow)
-   - A crate or subsystem (medium)
-   - The whole project (broad)
+---
 
-2. **Research**: Before suggesting anything, gather context:
-   - Read relevant source files, docs, and specs
-   - Check `docs/REQUIREMENTS.md` for planned vs completed features
-   - Check `docs/CHANGELOG.md` for recent changes
-   - Check open issues/PRs for in-flight work
-   - Review `examples/` for current usage patterns
+## Purpose
 
-3. **Categorize suggestions** using these buckets:
+Research the codebase thoroughly, then provide structured, prioritized suggestions. Never auto-implement — present options and wait for the user's pick.
 
-   | Category        | Icon | Description                                   |
-   | --------------- | ---- | --------------------------------------------- |
-   | **Quick Win**   | 🎯   | Low effort, high impact — do it now           |
-   | **Enhancement** | ✨   | Medium effort improvement to existing feature |
-   | **New Feature** | 🚀   | Significant new capability                    |
-   | **Refactor**    | 🔧   | Code quality / architecture improvement       |
-   | **Bug Risk**    | ⚠️   | Potential issue worth investigating           |
-   | **DX**          | 🛠️   | Developer experience improvement              |
+---
 
-4. **Format each suggestion** as:
+## Workflow
 
-   ```markdown
-   ### <Icon> <Title>
+### 1. Research First
 
-   **Effort:** Low/Medium/High · **Impact:** Low/Medium/High
+// turbo-all
 
-   <1-2 sentence description of what and why>
+Before suggesting anything, read relevant context:
 
-   **Tradeoff:** <What you'd give up or risk>
-   ```
+```bash
+# Recent changes
+git log --oneline -20
 
-5. **Prioritize**: Order suggestions within each category by impact-to-effort ratio (best ROI first).
+# Open issues / TODOs
+grep -rn "TODO\|FIXME\|HACK\|XXX" crates/ fd-vscode/src/ --include="*.rs" --include="*.ts" | head -30
+```
 
-6. **Limit scope**: Max 10 suggestions per invocation. If there are more, mention "there are more — ask me to go deeper on any area."
+Also read:
 
-7. **Present to user** and ask which ones to act on. Do NOT start implementing unless asked.
+- Relevant source files related to `$ARGUMENTS`
+- `docs/REQUIREMENTS.md` for planned features and coverage gaps (⚠️ / ❌ rows)
+- `docs/CHANGELOG.md` for recent changes
+- `docs/LESSONS.md` for known pitfalls
+- Any related test files for coverage gaps
+- Open issues/PRs for in-flight work
+- `examples/` for current usage patterns
+
+### 2. Categorize Suggestions
+
+Use these categories:
+
+| Emoji | Category        | Description                            |
+| ----- | --------------- | -------------------------------------- |
+| 🎯    | **Quick Win**   | Low effort, immediate value            |
+| ✨    | **Enhancement** | Improve existing feature               |
+| 🚀    | **New Feature** | Something that doesn't exist yet       |
+| 🔧    | **Refactor**    | Better code structure, no new behavior |
+| ⚠️    | **Bug Risk**    | Potential issue before it bites        |
+| 🛠️    | **DX**          | Developer experience improvement       |
+
+### 3. Structure Each Suggestion
+
+For each suggestion, provide:
+
+```markdown
+### [Emoji] [Title]
+
+**Effort:** 🟢 Low / 🟡 Medium / 🔴 High
+**Impact:** 🟢 Low / 🟡 Medium / 🔴 High
+**ROI:** ⭐⭐⭐⭐⭐ (impact ÷ effort)
+
+[2-3 sentence description of what and why]
+
+**Tradeoffs:**
+
+- ✅ Pro: [benefit]
+- ⚠️ Con: [risk or cost]
+```
+
+### 4. Prioritize by ROI
+
+- Rank suggestions by ROI (impact-to-effort ratio)
+- 🎯 Quick Wins with high impact go first
+- ⚠️ Bug Risks get priority regardless of effort
+- Cap at **10 suggestions max** to avoid overwhelm
+
+### 5. Present and Wait
+
+Format the final output as:
+
+```markdown
+## 💡 Suggestions for [Topic]
+
+Based on analysis of [what was reviewed].
+
+[Ranked list of suggestions]
+
+---
+
+**Want to go deeper on any of these?** Pick a number and I'll:
+
+- Create a detailed spec (`/spec`)
+- Design the UI (`/design`)
+- Jump straight to building (`/build`)
+```
+
+---
+
+## Rules
+
+| Rule                     | Description                                             |
+| ------------------------ | ------------------------------------------------------- |
+| **Research first**       | Never suggest without reading relevant code             |
+| **No auto-implement**    | Present and wait for user's pick                        |
+| **Max 10**               | Cap suggestions to avoid overwhelm                      |
+| **Be specific**          | Reference actual file paths and line numbers            |
+| **Consider stack**       | Suggestions must fit Rust/WASM + VS Code extension arch |
+| **Respect requirements** | Check `REQUIREMENTS.md` before suggesting duplicates    |
+
+---
+
+## Scope Modifiers
+
+The user can narrow scope with keywords:
+
+| Modifier             | Focus                                       |
+| -------------------- | ------------------------------------------- |
+| `/suggest parser`    | fd-core parser, emitter, round-trips        |
+| `/suggest renderer`  | fd-render, fd-wasm, canvas rendering        |
+| `/suggest editor`    | fd-editor tools, sync, commands             |
+| `/suggest extension` | fd-vscode TypeScript, webview, panels       |
+| `/suggest tests`     | Test coverage gaps, test quality            |
+| `/suggest perf`      | Performance bottlenecks, 16ms budget        |
+| `/suggest dx`        | Developer experience, tooling, CI, workflow |
+| `/suggest [feature]` | Specific feature area (e.g., `edges`, `ai`) |
+
+---
+
+## Integration
+
+```
+/suggest → pick suggestion → /spec → /design → /build → /pr
+```
