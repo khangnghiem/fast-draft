@@ -98,14 +98,38 @@ impl Color {
 
     /// Emit as shortest valid hex string.
     pub fn to_hex(&self) -> String {
+        const HEX_CHARS: &[u8; 16] = b"0123456789ABCDEF";
         let r = (self.r * 255.0).round() as u8;
         let g = (self.g * 255.0).round() as u8;
         let b = (self.b * 255.0).round() as u8;
         let a = (self.a * 255.0).round() as u8;
+
         if a == 255 {
-            format!("#{r:02X}{g:02X}{b:02X}")
+            let buf = [
+                b'#',
+                HEX_CHARS[(r >> 4) as usize],
+                HEX_CHARS[(r & 0xF) as usize],
+                HEX_CHARS[(g >> 4) as usize],
+                HEX_CHARS[(g & 0xF) as usize],
+                HEX_CHARS[(b >> 4) as usize],
+                HEX_CHARS[(b & 0xF) as usize],
+            ];
+            // SAFETY: buffer only contains valid ASCII hex characters and '#'
+            unsafe { String::from_utf8_unchecked(buf.to_vec()) }
         } else {
-            format!("#{r:02X}{g:02X}{b:02X}{a:02X}")
+            let buf = [
+                b'#',
+                HEX_CHARS[(r >> 4) as usize],
+                HEX_CHARS[(r & 0xF) as usize],
+                HEX_CHARS[(g >> 4) as usize],
+                HEX_CHARS[(g & 0xF) as usize],
+                HEX_CHARS[(b >> 4) as usize],
+                HEX_CHARS[(b & 0xF) as usize],
+                HEX_CHARS[(a >> 4) as usize],
+                HEX_CHARS[(a & 0xF) as usize],
+            ];
+            // SAFETY: buffer only contains valid ASCII hex characters and '#'
+            unsafe { String::from_utf8_unchecked(buf.to_vec()) }
         }
     }
 }
