@@ -15,6 +15,7 @@ export const COMMAND_EXPORT_SPEC = "fd.exportSpec";
 export const COMMAND_TOGGLE_VIEW_MODE = "fd.toggleViewMode";
 export const COMMAND_OPEN_READONLY_VIEW = "fd.openReadOnlyView";
 export const COMMAND_CHANGE_VIEW_MODE = "fd.changeViewMode";
+export const COMMAND_RENAMIFY = "fd.renamify";
 
 export const HTML_TEMPLATE = `<!DOCTYPE html>
 <html lang="en">
@@ -2127,12 +2128,147 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       display: block !important;
     }
 
+    /* ── Renamify Panel (diff-preview overlay) ── */
+    #renamify-panel {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 420px;
+      max-height: 70vh;
+      background: var(--fd-surface);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 14px;
+      box-shadow: var(--fd-shadow-lg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      z-index: 950;
+      overflow: hidden;
+      animation: renamifySlideIn 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+    #renamify-panel.visible { display: flex; flex-direction: column; }
+    @keyframes renamifySlideIn {
+      from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+    .renamify-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 10px;
+      border-bottom: 0.5px solid var(--fd-border);
+    }
+    .renamify-title {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: -0.02em;
+    }
+    .renamify-close {
+      background: none;
+      border: none;
+      color: var(--fd-text-secondary);
+      font-size: 18px;
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 0.15s;
+      padding: 0 2px;
+    }
+    .renamify-close:hover { opacity: 1; }
+    .renamify-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+    .renamify-body::-webkit-scrollbar { width: 6px; }
+    .renamify-body::-webkit-scrollbar-track { background: transparent; }
+    .renamify-body::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.12);
+      border-radius: 3px;
+    }
+    .dark-theme .renamify-body::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.12);
+    }
+    .renamify-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      transition: background 0.1s;
+    }
+    .renamify-row:hover { background: var(--fd-surface-hover); }
+    .renamify-row input[type="checkbox"] {
+      accent-color: var(--fd-accent);
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+    }
+    .renamify-old {
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+      font-size: 12px;
+      color: #FF453A;
+      text-decoration: line-through;
+      opacity: 0.7;
+      min-width: 100px;
+    }
+    .renamify-arrow {
+      color: var(--fd-text-tertiary);
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+    .renamify-new {
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+      font-size: 12px;
+      color: #30D158;
+      font-weight: 600;
+    }
+    .renamify-footer {
+      display: flex;
+      gap: 8px;
+      padding: 10px 16px 14px;
+      border-top: 0.5px solid var(--fd-border);
+      justify-content: flex-end;
+    }
+    .renamify-btn {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .renamify-btn.cancel {
+      background: var(--fd-surface-hover);
+      color: var(--fd-text-secondary);
+    }
+    .renamify-btn.cancel:hover { background: var(--fd-surface-active); }
+    .renamify-btn.accept {
+      background: var(--fd-accent);
+      color: var(--fd-accent-fg);
+    }
+    .renamify-btn.accept:hover { background: var(--fd-accent-hover); }
+    .renamify-btn:active { transform: scale(0.97); }
+    .renamify-empty {
+      text-align: center;
+      padding: 24px 16px;
+      color: var(--fd-text-secondary);
+      font-size: 13px;
+    }
+    .renamify-count {
+      font-size: 11px;
+      color: var(--fd-text-tertiary);
+      padding: 0 16px 4px;
+    }
+
   </style>
 </head>
 <body>
   <button id="zen-toggle-btn" title="Switch between Zen and Full layout"><span class="zen-icon">🧘</span> Zen</button>
   <div id="toolbar">
     <button class="tool-btn zen-full-only" id="ai-refine-btn" title="AI Touch selected node (select a node first)">✦ AI Touch</button>
+    <button class="tool-btn zen-full-only" id="renamify-btn" title="Renamify — batch AI rename anonymous node IDs">✦ Renamify</button>
     <div class="tool-sep zen-full-only"></div>
     <div class="view-toggle zen-full-only" id="view-toggle">
       <button class="view-btn active" id="view-all" title="All View — full details">All</button>
@@ -2379,6 +2515,18 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div class="menu-separator"></div>
     <div class="menu-item" id="ctx-delete" data-action="delete"><span class="menu-icon">⊖</span><span class="menu-label">Delete</span><span class="menu-shortcut">⌫</span></div>
   </div>
+  <div id="renamify-panel">
+    <div class="renamify-header">
+      <span class="renamify-title">✦ Renamify</span>
+      <button class="renamify-close" id="renamify-close">×</button>
+    </div>
+    <div class="renamify-body" id="renamify-body"></div>
+    <div class="renamify-footer" id="renamify-footer" style="display:none">
+      <button class="renamify-btn cancel" id="renamify-cancel">Cancel</button>
+      <button class="renamify-btn accept" id="renamify-accept-selected">Accept Selected</button>
+      <button class="renamify-btn accept" id="renamify-accept-all">Accept All</button>
+    </div>
+  </div>
   <div id="anim-picker">
     <div class="picker-header"><span class="picker-icon">⚡</span> Add Animation <button class="picker-close" id="anim-picker-close">×</button></div>
     <div class="picker-body" id="anim-picker-body"></div>
@@ -2423,6 +2571,103 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
           vscodeApi.postMessage({ type: 'aiRefine', nodeIds: [selectedNodeId] });
         }
         document.getElementById('context-menu')?.classList.remove('visible');
+      });
+    })();
+  </script>
+  <script nonce="{nonce}">
+    // ─── Renamify panel handlers ─────────
+    (function() {
+      const vscodeApi = window.vscodeApi;
+      const panel = document.getElementById('renamify-panel');
+      const body = document.getElementById('renamify-body');
+      const footer = document.getElementById('renamify-footer');
+      const btn = document.getElementById('renamify-btn');
+      let proposals = [];
+
+      function closePanel() {
+        panel.classList.remove('visible');
+        body.innerHTML = '';
+        footer.style.display = 'none';
+        proposals = [];
+      }
+
+      function renderProposals(items) {
+        proposals = items;
+        body.innerHTML = '';
+        if (items.length === 0) {
+          body.innerHTML = '<div class="renamify-empty">No renames proposed.</div>';
+          footer.style.display = 'none';
+          return;
+        }
+        const count = document.createElement('div');
+        count.className = 'renamify-count';
+        count.textContent = items.length + ' rename' + (items.length > 1 ? 's' : '') + ' proposed';
+        body.appendChild(count);
+        items.forEach((p, i) => {
+          const row = document.createElement('div');
+          row.className = 'renamify-row';
+          row.innerHTML =
+            '<input type="checkbox" checked data-idx="' + i + '">' +
+            '<span class="renamify-old">@' + p.oldId + '</span>' +
+            '<span class="renamify-arrow">→</span>' +
+            '<span class="renamify-new">@' + p.newId + '</span>';
+          body.appendChild(row);
+        });
+        footer.style.display = 'flex';
+      }
+
+      function getSelected() {
+        const checks = body.querySelectorAll('input[type=checkbox]');
+        const selected = [];
+        checks.forEach(cb => {
+          if (cb.checked) selected.push(proposals[parseInt(cb.dataset.idx)]);
+        });
+        return selected;
+      }
+
+      // Button click
+      btn?.addEventListener('click', () => {
+        vscodeApi.postMessage({ type: 'renamify' });
+      });
+
+      // Messages from extension
+      window.addEventListener('message', (e) => {
+        if (e.data.type === 'triggerRenamify') {
+          vscodeApi.postMessage({ type: 'renamify' });
+        }
+        if (e.data.type === 'renamifyStarted') {
+          if (btn) { btn.textContent = '⏳ Analyzing…'; btn.disabled = true; }
+        }
+        if (e.data.type === 'renamifyProposals') {
+          if (btn) { btn.textContent = '✦ Renamify'; btn.disabled = false; }
+          renderProposals(e.data.proposals || []);
+          panel.classList.add('visible');
+        }
+        if (e.data.type === 'renamifyComplete') {
+          if (btn) { btn.textContent = '✦ Renamify'; btn.disabled = false; }
+          closePanel();
+        }
+      });
+
+      // Cancel
+      document.getElementById('renamify-cancel')?.addEventListener('click', closePanel);
+      document.getElementById('renamify-close')?.addEventListener('click', closePanel);
+
+      // Accept selected
+      document.getElementById('renamify-accept-selected')?.addEventListener('click', () => {
+        const renames = getSelected();
+        if (renames.length > 0) {
+          vscodeApi.postMessage({ type: 'renamifyAccepted', renames });
+        }
+        closePanel();
+      });
+
+      // Accept all
+      document.getElementById('renamify-accept-all')?.addEventListener('click', () => {
+        if (proposals.length > 0) {
+          vscodeApi.postMessage({ type: 'renamifyAccepted', renames: proposals });
+        }
+        closePanel();
       });
     })();
   </script>

@@ -5,6 +5,15 @@
 
 ## Completed Requirements
 
+### v0.8.71 — ✦ Renamify (Batch AI Rename)
+
+- **NEW (R4.20)**: ✦ Renamify — batch AI rename for anonymous node IDs (`@rect_1`, `@ellipse_3`, etc.) → semantic names (`@login_button`, `@hero_card`); toolbar button + command palette
+- **UX**: Diff-preview panel with frosted-glass overlay — shows `@old → @new` with checkboxes; Accept All / Accept Selected / Cancel
+- **UX**: Button shows "⏳ Analyzing…" while AI is working; single ⌘Z undoes all renames atomically
+- **CORE**: `findAnonymousNodeIds` detects `@kind_N` + `@_anon_N` patterns; `sanitizeToFdId` normalizes AI-proposed names to valid snake_case; `applyGlobalRenames` updates all `@id` references
+- **AI**: Focused rename-only JSON prompt (no full document rewrite) — faster and more reliable than refine-all approach
+- **TESTING**: 22 new tests — `findAnonymousNodeIds` (9), `findAllNodeIds` (3), `sanitizeToFdId` (10); 188 total TS tests pass
+
 ### v0.8.70 — Canvas UX Overhaul
 
 - **FIX (R2.5)**: Layer–canvas selection sync — clicking a node on canvas now always highlights it in the Layers panel; fixed generation-counter optimization that skipped `.selected` CSS class update when only selection changed (no structural edit)

@@ -5,6 +5,9 @@ import {
   computeSpecHideLines,
   computeSpecFoldRanges,
   findAnonNodeIds,
+  findAnonymousNodeIds,
+  findAllNodeIds,
+  sanitizeToFdId,
   stripMarkdownFences,
   escapeHtml,
   resolveTargetColumn,
@@ -728,5 +731,127 @@ describe("transformSpecViewLine", () => {
 
   it("does not transform constraint lines", () => {
     expect(transformSpecViewLine("@hero -> center_in: canvas")).toBe("@hero -> center_in: canvas");
+  });
+});
+
+// ─── findAnonymousNodeIds ────────────────────────────────────────────────
+
+describe("findAnonymousNodeIds", () => {
+  it("returns empty for no anonymous IDs", () => {
+    expect(findAnonymousNodeIds("rect @hero {\n  fill: #FFF\n}")).toEqual([]);
+  });
+
+  it("finds @rect_1 pattern", () => {
+    const result = findAnonymousNodeIds("rect @rect_1 {\n  fill: #FFF\n}");
+    expect(result).toContain("rect_1");
+  });
+
+  it("finds @ellipse_3 and @text_7 patterns", () => {
+    const source = "ellipse @ellipse_3 {\n}\ntext @text_7 {\n}";
+    const result = findAnonymousNodeIds(source);
+    expect(result).toContain("ellipse_3");
+    expect(result).toContain("text_7");
+  });
+
+  it("finds @_anon_0 (backward compat)", () => {
+    const result = findAnonymousNodeIds("rect @_anon_0 {\n}");
+    expect(result).toContain("_anon_0");
+  });
+
+  it("finds @group_2 and @frame_4", () => {
+    const source = "group @group_2 {\n  frame @frame_4 {\n  }\n}";
+    const result = findAnonymousNodeIds(source);
+    expect(result).toContain("group_2");
+    expect(result).toContain("frame_4");
+  });
+
+  it("does not match semantic names like @login_form", () => {
+    const source = "rect @login_form {\n}\ntext @submit_btn {\n}";
+    expect(findAnonymousNodeIds(source)).toEqual([]);
+  });
+
+  it("does not match partial patterns like @rect_abc", () => {
+    const source = "rect @rect_abc {\n}";
+    expect(findAnonymousNodeIds(source)).toEqual([]);
+  });
+
+  it("returns empty for empty document", () => {
+    expect(findAnonymousNodeIds("")).toEqual([]);
+  });
+
+  it("deduplicates IDs appearing multiple times", () => {
+    const source = "rect @rect_1 {\n}\n@rect_1 -> center_in: canvas";
+    const result = findAnonymousNodeIds(source);
+    expect(result).toEqual(["rect_1"]);
+  });
+});
+
+// ─── findAllNodeIds ──────────────────────────────────────────────────────
+
+describe("findAllNodeIds", () => {
+  it("finds all @id references", () => {
+    const source = "rect @hero {\n  fill: #FFF\n}\n@hero -> center_in: canvas";
+    const result = findAllNodeIds(source);
+    expect(result).toContain("hero");
+  });
+
+  it("includes IDs from from:/to: references", () => {
+    const source = "edge @flow {\n  from: @login\n  to: @dashboard\n}";
+    const result = findAllNodeIds(source);
+    expect(result).toContain("flow");
+    expect(result).toContain("login");
+    expect(result).toContain("dashboard");
+  });
+
+  it("deduplicates", () => {
+    const source = "rect @a {\n}\ntext @a {\n}";
+    const result = findAllNodeIds(source);
+    const count = result.filter((id) => id === "a").length;
+    expect(count).toBe(1);
+  });
+});
+
+// ─── sanitizeToFdId ──────────────────────────────────────────────────────
+
+describe("sanitizeToFdId", () => {
+  it("lowercases", () => {
+    expect(sanitizeToFdId("LoginButton")).toBe("loginbutton");
+  });
+
+  it("replaces spaces with underscores", () => {
+    expect(sanitizeToFdId("login button")).toBe("login_button");
+  });
+
+  it("replaces hyphens with underscores", () => {
+    expect(sanitizeToFdId("hero-card")).toBe("hero_card");
+  });
+
+  it("strips invalid characters", () => {
+    expect(sanitizeToFdId("he!!o@world")).toBe("heoworld");
+  });
+
+  it("collapses multiple underscores", () => {
+    expect(sanitizeToFdId("a___b")).toBe("a_b");
+  });
+
+  it("strips leading/trailing underscores", () => {
+    expect(sanitizeToFdId("_foo_")).toBe("foo");
+  });
+
+  it("truncates to 30 characters", () => {
+    const long = "a".repeat(50);
+    expect(sanitizeToFdId(long).length).toBeLessThanOrEqual(30);
+  });
+
+  it("prefixes with node_ if starts with digit", () => {
+    expect(sanitizeToFdId("123abc")).toBe("node_123abc");
+  });
+
+  it("handles empty input", () => {
+    expect(sanitizeToFdId("")).toBe("node_");
+  });
+
+  it("handles dots and slashes", () => {
+    expect(sanitizeToFdId("path.to/file")).toBe("path_to_file");
   });
 });

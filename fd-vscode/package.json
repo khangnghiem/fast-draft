@@ -2,7 +2,7 @@
   "name": "fast-draft",
   "displayName": "Fast Draft",
   "description": "Design Specs as Code",
-  "version": "0.8.70",
+  "version": "0.8.71",
   "publisher": "KhangNghiem",
   "license": "MIT",
   "icon": "icon.png",
@@ -205,6 +205,11 @@
         "command": "fd.changeViewMode",
         "title": "FD: Change View Mode",
         "icon": "$(filter)"
+      },
+      {
+        "command": "fd.renamify",
+        "title": "FD: ✦ Renamify — Batch AI Rename",
+        "icon": "$(replace-all)"
       }
     ],
     "menus": {
