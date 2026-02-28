@@ -18,6 +18,14 @@ import { FdDocumentSymbolProvider } from "./document-symbol";
 import { FdReadOnlyProvider, FD_READONLY_SCHEME, VIEW_MODE_LABELS, FdViewMode } from "./panels/readonly-provider";
 import { getNonce, HTML_TEMPLATE, VIEW_TYPE_CANVAS, COMMAND_AI_REFINE, COMMAND_AI_REFINE_ALL, COMMAND_EXPORT_SPEC, COMMAND_OPEN_CANVAS, COMMAND_SHOW_PREVIEW, COMMAND_SHOW_SPEC_VIEW, COMMAND_TOGGLE_VIEW_MODE, COMMAND_OPEN_READONLY_VIEW, COMMAND_CHANGE_VIEW_MODE, COMMAND_RENAMIFY } from "./webview-html";
 
+// ─── Magic Number Constants ──────────────────────────────────────────────────
+const HIGHLIGHT_DURATION_MS = 1500;
+const CURSOR_SYNC_DELAY_MS = 200;
+const CANVAS_REVEAL_DELAY_MS = 200;
+const CANVAS_FOCUS_DELAY_MS = 120;
+const SPEC_VIEW_FOLD_DELAY_MS = 100;
+const SPEC_VIEW_DEBOUNCE_MS = 300;
+
 /**
  * FD Custom Editor Provider.
  *
@@ -127,11 +135,11 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
                   isWholeLine: true,
                 });
                 editor.setDecorations(decoration, [line.range]);
-                setTimeout(() => decoration.dispose(), 1500);
+                setTimeout(() => decoration.dispose(), HIGHLIGHT_DURATION_MS);
               }
               setTimeout(() => {
                 suppressCursorSync = false;
-              }, 200);
+              }, CURSOR_SYNC_DELAY_MS);
               break;
             }
           }
@@ -968,7 +976,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         // Refocus Code Mode — canvas webviews can steal focus despite preserveFocus
         if (didOpen) {
-          await new Promise((r) => setTimeout(r, 120));
+          await new Promise((r) => setTimeout(r, CANVAS_FOCUS_DELAY_MS));
           const textEditor = vscode.window.visibleTextEditors.find(
             (e) => e.document.uri.toString() === key
           );
@@ -980,7 +988,7 @@ export function activate(context: vscode.ExtensionContext) {
             );
           }
         }
-      }, 200);
+      }, CANVAS_REVEAL_DELAY_MS);
     })
   );
 
@@ -1063,7 +1071,7 @@ export function activate(context: vscode.ExtensionContext) {
     foldChangeEmitter.fire();
 
     // Small delay so VS Code processes the new fold ranges first
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, SPEC_VIEW_FOLD_DELAY_MS));
 
     for (const editor of vscode.window.visibleTextEditors) {
       if (editor.document.languageId !== "fd") continue;
@@ -1105,7 +1113,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (codeSpecMode !== "spec") return;
       if (e.document.languageId !== "fd") return;
       clearTimeout(foldDebounce);
-      foldDebounce = setTimeout(() => applyCodeSpecView(), 300);
+      foldDebounce = setTimeout(() => applyCodeSpecView(), SPEC_VIEW_DEBOUNCE_MS);
     })
   );
 
