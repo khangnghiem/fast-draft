@@ -109,6 +109,9 @@ const toolDefaults = {
 /** Style picker: Alt+click a node → copies its style as defaults */
 let stylePickerActive = false;
 
+// Interaction state for Near-Detach feedback
+let nearDetachState = null;
+
 /** Capture a property change into the current tool's defaults */
 function captureDefault(prop, value) {
   const toolName = fdCanvas ? fdCanvas.get_tool_name() : "select";
@@ -449,8 +452,50 @@ function render() {
     ctx.stroke();
     // Double-draw for extra glow intensity
     ctx.shadowBlur = 24;
-    ctx.globalAlpha = 0.4;
     ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── Draw near-detach rubber-band and glow ──
+  if (nearDetachState) {
+    const { parentId, childCx, childCy, parentCx, parentCy } = nearDetachState;
+    ctx.save();
+
+    // Draw rubber-band line
+    ctx.beginPath();
+    ctx.moveTo(childCx, childCy);
+    ctx.lineTo(parentCx, parentCy);
+    ctx.strokeStyle = "#8A2BE2"; // Purple
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 6]);
+    ctx.stroke();
+
+    // Draw parent group glow
+    try {
+      const parentBoundsJson = fdCanvas.get_node_bounds(parentId);
+      if (parentBoundsJson) {
+        const pb = JSON.parse(parentBoundsJson);
+        const pad = 4;
+        ctx.beginPath();
+        ctx.roundRect(pb.x - pad, pb.y - pad, pb.width + pad * 2, pb.height + pad * 2, 8);
+        ctx.strokeStyle = "#8A2BE2";
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = "#8A2BE2";
+        ctx.shadowBlur = 12;
+        ctx.stroke();
+        // Inner/extra glow
+        ctx.globalAlpha = 0.5;
+        ctx.shadowBlur = 24;
+        ctx.stroke();
+      }
+    } catch (_) {
+      // Fallback dot if bounds fail
+      ctx.beginPath();
+      ctx.arc(parentCx, parentCy, 4, 0, Math.PI * 2);
+      ctx.fillStyle = "#8A2BE2";
+      ctx.fill();
+    }
+
     ctx.restore();
   }
 
@@ -705,9 +750,20 @@ function setupPointerEvents() {
       // ── Text drag-to-consume detection ──
       const dropTarget = detectTextDropTarget(draggedNodeId, x, y);
       textDropTarget = dropTarget;
+
+      // ── Near-Detach detection ──
+      const ndJson = fdCanvas.evaluate_near_detach(draggedNodeId);
+      if (ndJson) {
+        try {
+          nearDetachState = JSON.parse(ndJson);
+        } catch (_) { nearDetachState = null; }
+      } else {
+        nearDetachState = null;
+      }
     } else if (!isDraggingNode) {
       hideCenterSnapGuides();
       textDropTarget = null;
+      nearDetachState = null;
     }
   });
 
@@ -839,6 +895,7 @@ function setupPointerEvents() {
     animDropTargetId = null;
     animDropTargetBounds = null;
     textDropTarget = null;
+    nearDetachState = null;
 
     // ── Restore tool after ⌘+drag temp Select or Alt+drag clone ──
     if (cmdTempSelectActive && cmdTempSelectOriginalTool) {

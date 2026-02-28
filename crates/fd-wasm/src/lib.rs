@@ -851,6 +851,25 @@ impl FdCanvas {
         }
     }
 
+    /// Evaluate if a dragging node is near detaching from its parent group.
+    /// Returns JSON `{"parentId":"...","childCx":...,"childCy":...,"parentCx":...,"parentCy":...}`
+    /// if the overlap is less than 25%. Otherwise returns an empty string.
+    pub fn evaluate_near_detach(&self, node_id: &str) -> String {
+        let id = NodeId::intern(node_id);
+        if let Some((parent_id, (child_cx, child_cy), (parent_cx, parent_cy))) = self.engine.evaluate_near_detach(id) {
+            format!(
+                r#"{{"parentId":"{}","childCx":{},"childCy":{},"parentCx":{},"parentCy":{}}}"#,
+                parent_id.as_str(),
+                child_cx,
+                child_cy,
+                parent_cx,
+                parent_cy
+            )
+        } else {
+            String::new()
+        }
+    }
+
     // ─── Animation APIs ──────────────────────────────────────────────────
 
     /// Add an animation to a node by ID.
