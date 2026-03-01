@@ -4409,14 +4409,23 @@ function resetZoomToCenter() {
   updateZoomIndicator();
 }
 
-/** Set up bottom-left zoom controls (Excalidraw-style +/−/reset). */
+/** Set up zoom controls inside the minimap overlay (Google Maps-style). */
 function setupZoomControls() {
   const zoomIn = document.getElementById("zoom-in-btn");
   const zoomOut = document.getElementById("zoom-out-btn");
   const zoomReset = document.getElementById("zoom-reset-btn");
 
+  // Prevent zoom button clicks from bubbling to minimap pan handler
+  const zoomContainer = document.getElementById("minimap-zoom-controls");
+  if (zoomContainer) {
+    zoomContainer.addEventListener("pointerdown", (e) => e.stopPropagation());
+    zoomContainer.addEventListener("pointermove", (e) => e.stopPropagation());
+    zoomContainer.addEventListener("pointerup", (e) => e.stopPropagation());
+  }
+
   if (zoomIn) {
-    zoomIn.addEventListener("click", () => {
+    zoomIn.addEventListener("click", (e) => {
+      e.stopPropagation();
       const container = document.getElementById("canvas-container");
       const cx = container.clientWidth / 2;
       const cy = container.clientHeight / 2;
@@ -4430,7 +4439,8 @@ function setupZoomControls() {
   }
 
   if (zoomOut) {
-    zoomOut.addEventListener("click", () => {
+    zoomOut.addEventListener("click", (e) => {
+      e.stopPropagation();
       const container = document.getElementById("canvas-container");
       const cx = container.clientWidth / 2;
       const cy = container.clientHeight / 2;
@@ -4444,7 +4454,8 @@ function setupZoomControls() {
   }
 
   if (zoomReset) {
-    zoomReset.addEventListener("click", () => {
+    zoomReset.addEventListener("click", (e) => {
+      e.stopPropagation();
       resetZoomToCenter();
     });
   }

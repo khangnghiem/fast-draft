@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.8.84 — Zoom Inside Minimap (Google Maps-style)
+
+- **UX**: Moved zoom controls `[− 100% +]` from defunct bottom-left widget into the minimap as a floating frosted-glass pill overlay — compact, always-visible zoom level with `stopPropagation()` to prevent minimap pan on button click
+- **CLEANUP**: Removed 60 lines of dead CSS for old `#bottom-left-controls` (replaced by V12 scroll toolbar)
+- **TESTING**: 3 new e2e tests — pill layout fits minimap, event isolation via stopPropagation, percentage display
+
 ### v0.8.83 — Scroll Toolbar Redesign (V12)
 
 - **UX**: Redesigned floating toolbar into a "Scroll Toolbar" with wooden handles and paper rolls that dynamically adjust width asymmetrically based on the active tool

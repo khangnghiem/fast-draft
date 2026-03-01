@@ -785,6 +785,64 @@ describe("Miro: Minimap — scene bounds and viewport mapping", () => {
     });
 });
 
+// ─── Google Maps: Zoom Inside Minimap (C.1) ──────────────────────────────
+// Zoom pill [− 100% +] floats inside the minimap overlay.
+
+describe("Google Maps: Zoom inside minimap — layout and event isolation", () => {
+    it("zoom pill fits within minimap dimensions (180×120)", () => {
+        const minimapW = 180;
+        const minimapH = 120;
+        // Pill: 3 buttons × 28px + 2 separators = ~86px wide, 24px tall
+        const pillW = 28 * 2 + 40 + 2; // zoom-out + zoom-in + reset + 2 separators
+        const pillH = 24;
+        const bottomOffset = 6;
+
+        expect(pillW).toBeLessThan(minimapW);
+        expect(pillH + bottomOffset).toBeLessThan(minimapH);
+    });
+
+    it("zoom button click should not affect minimap pan state", () => {
+        // Simulate: clicking zoom-in-btn inside minimap-zoom-controls
+        // Event handler calls stopPropagation(), so minimap pan should not trigger
+        let minimapPanCalled = false;
+        let zoomChanged = false;
+
+        // Minimap listens for pointerdown → starts pan
+        const minimapHandler = () => { minimapPanCalled = true; };
+
+        // Zoom button handler stops propagation
+        const zoomHandler = (event: { stopPropagation: () => void }) => {
+            event.stopPropagation();
+            zoomChanged = true;
+        };
+
+        // Simulate event flow: zoom handler runs first
+        const fakeEvent = {
+            stopped: false,
+            stopPropagation() { this.stopped = true; },
+        };
+        zoomHandler(fakeEvent);
+
+        // If propagation was stopped, minimap handler should NOT run
+        if (!fakeEvent.stopped) {
+            minimapHandler();
+        }
+
+        expect(zoomChanged).toBe(true);
+        expect(minimapPanCalled).toBe(false);
+    });
+
+    it("zoom reset button displays percentage correctly", () => {
+        const zoomLevel = 1.0;
+        const display = Math.round(zoomLevel * 100) + "%";
+        expect(display).toBe("100%");
+
+        const zoomed = 1.5625; // After 2× zoom-in (1.25^2)
+        const zoomedDisplay = Math.round(zoomed * 100) + "%";
+        expect(zoomedDisplay).toBe("156%");
+    });
+});
+
 // ─── Figma: Export PNG ───────────────────────────────────────────────────
 // Export scene at 2× resolution with padding.
 

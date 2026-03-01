@@ -1283,6 +1283,60 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       display: block;
     }
 
+    /* ── Minimap Zoom Overlay (Google Maps-style pill) ── */
+    #minimap-zoom-controls {
+      position: absolute;
+      bottom: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      background: var(--fd-surface);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 8px;
+      box-shadow: var(--fd-shadow-sm);
+      overflow: hidden;
+      z-index: 16;
+      pointer-events: auto;
+    }
+    #minimap-zoom-controls .bl-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      color: var(--fd-text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    #minimap-zoom-controls .bl-btn:hover {
+      background: var(--fd-surface-hover);
+      color: var(--fd-text);
+    }
+    #minimap-zoom-controls .bl-btn:active {
+      background: var(--fd-surface-active);
+      transform: scale(0.95);
+    }
+    #minimap-zoom-controls #zoom-reset-btn {
+      width: auto;
+      min-width: 40px;
+      padding: 0 4px;
+      font-size: 10px;
+      font-weight: 600;
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+    }
+    #minimap-zoom-controls .bl-sep {
+      width: 0.5px;
+      height: 14px;
+      background: var(--fd-border);
+    }
+
     /* ── Color Swatches (Sketch/Figma) ── */
     .color-swatches {
       display: flex;
@@ -1880,66 +1934,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .settings-menu-sep { height: 1px; background: var(--fd-border); margin: 3px 8px; }
     .settings-menu-item.toggle-on .sm-icon { color: var(--fd-accent); }
 
-    /* ── Bottom-Left Zoom & Undo/Redo Controls (Excalidraw-style) ── */
-    #bottom-left-controls {
-      position: absolute;
-      left: 12px;
-      bottom: 12px;
-      z-index: 20;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .bl-control-group {
-      display: flex;
-      align-items: center;
-      background: var(--fd-surface);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border: 0.5px solid var(--fd-border);
-      border-radius: 8px;
-      box-shadow: var(--fd-shadow-sm);
-      overflow: hidden;
-    }
-    .bl-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
-      border: none;
-      background: transparent;
-      color: var(--fd-text-secondary);
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      font-family: inherit;
-    }
-    .bl-btn:hover {
-      background: var(--fd-surface-hover);
-      color: var(--fd-text);
-    }
-    .bl-btn:active {
-      background: var(--fd-surface-active);
-      transform: scale(0.95);
-    }
-    .bl-btn.disabled {
-      opacity: 0.3;
-      pointer-events: none;
-    }
-    #zoom-reset-btn {
-      width: auto;
-      min-width: 48px;
-      padding: 0 6px;
-      font-size: 11px;
-      font-weight: 600;
-      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
-    }
-    .bl-sep {
-      width: 0.5px;
-      height: 20px;
-      background: var(--fd-border);
-    }
+
 
     /* ── Floating Scroll Toolbar (V12) ── */
     #floating-toolbar {
@@ -2494,7 +2489,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div id="center-snap-guides"></div>
     <div id="layers-panel"></div>
     <div id="library-panel"></div>
-    <div id="minimap-container"><canvas id="minimap-canvas"></canvas></div>
+    <div id="minimap-container"><canvas id="minimap-canvas"></canvas><div id="minimap-zoom-controls"><button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-reset-btn" title="Reset zoom (click)">100%</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button></div></div>
     <!-- Floating Bottom Toolbar (Scroll UX) -->
     <div id="floating-toolbar" class="scroll-toolbar horizontal unrolled">
       <div class="scroll-handle handle-start" title="Drag to move, click to roll">

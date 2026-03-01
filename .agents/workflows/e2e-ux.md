@@ -20,14 +20,16 @@ description: Systematic UX behavior testing via browser — simulates Figma/Sket
    gh codespace list
    ```
 
-2. Open the Codespace in the browser via browser subagent:
+2. Open the Codespace in the browser via browser subagent (If the browser subagent already has a tab open with the same link / URL, reuse and refresh that tab instead of opening a new one):
 
    ```
    Navigate to: https://github.com/codespaces
    Click on the available codespace for khangnghiem/fast-draft
    ```
 
-3. Open an `.fd` file (e.g., `examples/dark_theme.fd`) and activate Design View.
+3. Maintain a maximum of two editor panels open in the Codespace. If there are more than 2, close the third/extra editor panels.
+
+4. Open an `.fd` file (e.g., `examples/dark_theme.fd`) and activate Design View.
 
 ---
 
