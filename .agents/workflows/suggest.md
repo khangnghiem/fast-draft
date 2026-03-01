@@ -66,6 +66,11 @@ For each suggestion, provide:
 
 [2-3 sentence description of what and why]
 
+**Mockup:** (required for UI-facing suggestions)
+
+- ASCII sketch, Mermaid diagram, or `generate_image` mockup
+- Keep it rough — intent over polish
+
 **Tradeoffs:**
 
 - ✅ Pro: [benefit]
@@ -103,14 +108,15 @@ Based on analysis of [what was reviewed].
 
 ## Rules
 
-| Rule                     | Description                                             |
-| ------------------------ | ------------------------------------------------------- |
-| **Research first**       | Never suggest without reading relevant code             |
-| **No auto-implement**    | Present and wait for user's pick                        |
-| **Max 10**               | Cap suggestions to avoid overwhelm                      |
-| **Be specific**          | Reference actual file paths and line numbers            |
-| **Consider stack**       | Suggestions must fit Rust/WASM + VS Code extension arch |
-| **Respect requirements** | Check `REQUIREMENTS.md` before suggesting duplicates    |
+| Rule                     | Description                                              |
+| ------------------------ | -------------------------------------------------------- |
+| **Research first**       | Never suggest without reading relevant code              |
+| **No auto-implement**    | Present and wait for user's pick                         |
+| **Max 10**               | Cap suggestions to avoid overwhelm                       |
+| **Be specific**          | Reference actual file paths and line numbers             |
+| **Consider stack**       | Suggestions must fit Rust/WASM + VS Code extension arch  |
+| **Respect requirements** | Check `REQUIREMENTS.md` before suggesting duplicates     |
+| **Mockup for UI**        | UI-facing suggestions must include a quick visual mockup |
 
 ---
 

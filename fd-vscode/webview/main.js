@@ -551,7 +551,6 @@ function scheduleSideEffects() {
     if (viewMode === "spec") refreshSpecView();
     refreshLayersPanel();
     renderMinimap();
-    updateSelectionBar();
   }, 100);
 }
 
@@ -4585,47 +4584,170 @@ function updateSettingsToggleStates() {
 }
 
 /** Set up floating toolbar drag handle (move between top and bottom). */
+/** Set up floating toolbar drag handle and roll animation. */
 function setupFloatingToolbar() {
   const toolbar = document.getElementById("floating-toolbar");
-  const handle = document.getElementById("ft-drag-handle");
-  if (!toolbar || !handle) return;
+  if (!toolbar) return;
+  const handles = toolbar.querySelectorAll(".scroll-handle");
 
   // Restore persisted state
-  const savedState = vscode.getState();
-  if (savedState && savedState.ftCollapsed) {
-    toolbar.classList.add("collapsed");
+  const savedState = vscode.getState() || {};
+  if (savedState.ftRolledUp) {
+    toolbar.classList.add("rolled-up");
+  } else {
+    toolbar.classList.add("unrolled");
   }
-  if (savedState && savedState.ftPosition === "top") {
-    toolbar.classList.add("at-top");
+
+  // Restore orientation and position
+  const orientation = savedState.ftOrientation || "horizontal";
+  toolbar.classList.remove("horizontal", "vertical");
+  toolbar.classList.add(orientation);
+
+  if (savedState.ftPosition) {
+    toolbar.style.left = savedState.ftPosition.left || "auto";
+    toolbar.style.right = savedState.ftPosition.right || "auto";
+    toolbar.style.top = savedState.ftPosition.top || "auto";
+    toolbar.style.bottom = savedState.ftPosition.bottom || "auto";
   }
 
-  let isDragging = false;
-  let dragStartY = 0;
+  function updateRollWidths() {
+    const buttons = Array.from(toolbar.querySelectorAll(".ft-tool-btn"));
+    const activeIndex = buttons.findIndex(btn => btn.classList.contains("active"));
+    const total = buttons.length;
 
-  handle.addEventListener("pointerdown", (e) => {
-    isDragging = true;
-    dragStartY = e.clientY;
-    handle.setPointerCapture(e.pointerId);
-    e.preventDefault();
-    e.stopPropagation();
-  });
+    // Limits
+    const minW = 12;
+    const maxW = 26;
 
-  handle.addEventListener("pointermove", (e) => {
-    if (!isDragging) return;
-    const dy = e.clientY - dragStartY;
-    // If dragged more than 80px, toggle position
-    if (Math.abs(dy) > 80) {
-      const container = document.getElementById("canvas-container");
-      const midY = container.clientHeight / 2;
-      const atTop = e.clientY < midY;
-      toolbar.classList.toggle("at-top", atTop);
-      vscode.setState({ ...(vscode.getState() || {}), ftPosition: atTop ? "top" : "bottom" });
-      isDragging = false;
+    if (activeIndex === -1 || total < 2) {
+      toolbar.style.setProperty("--left-roll-width", "18px");
+      toolbar.style.setProperty("--right-roll-width", "18px");
+      return;
+    }
+
+    const prop = activeIndex / (total - 1);
+    const leftW = minW + (prop * (maxW - minW));
+    const rightW = minW + ((1 - prop) * (maxW - minW));
+
+    toolbar.style.setProperty("--left-roll-width", `${leftW}px`);
+    toolbar.style.setProperty("--right-roll-width", `${rightW}px`);
+  }
+
+  // Check roll initially
+  if (savedState.ftRolledUp) {
+    updateRollWidths();
+  }
+
+  // Observe active class to update asymmetric roll
+  const observer = new MutationObserver(() => {
+    if (toolbar.classList.contains("rolled-up")) {
+      updateRollWidths();
     }
   });
+  toolbar.querySelectorAll(".ft-tool-btn").forEach(btn => {
+    observer.observe(btn, { attributes: true, attributeFilter: ["class"] });
+  });
 
-  handle.addEventListener("pointerup", () => {
-    isDragging = false;
+  let isDragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let dragStartTime = 0;
+  let initialLeft = 0;
+  let initialTop = 0;
+
+  handles.forEach(handle => {
+    handle.addEventListener("pointerdown", (e) => {
+      isDragging = true;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      dragStartTime = Date.now();
+
+      const rect = toolbar.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+
+      handle.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    handle.addEventListener("pointermove", (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+
+      // Temporary drag visual (disable transition)
+      toolbar.style.transition = "none";
+      toolbar.style.transform = `translate(${dx}px, ${dy}px)`;
+    });
+
+    handle.addEventListener("pointerup", (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      handle.releasePointerCapture(e.pointerId);
+
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const timeElapsed = Date.now() - dragStartTime;
+
+      toolbar.style.transform = "";
+      toolbar.style.transition = "";
+
+      // Handle Click (Roll/Unroll)
+      if (dist < 5 && timeElapsed < 300) {
+        const isRolled = toolbar.classList.toggle("rolled-up");
+        toolbar.classList.toggle("unrolled", !isRolled);
+        vscode.setState({ ...(vscode.getState() || {}), ftRolledUp: isRolled });
+        if (isRolled) updateRollWidths();
+        return;
+      }
+
+      // Handle Drag & Snap
+      const snapThreshold = 60;
+      const finalX = initialLeft + dx;
+      const finalY = initialTop + dy;
+
+      const viewW = window.innerWidth;
+      const viewH = window.innerHeight;
+
+      const distTop = finalY;
+      const distBottom = viewH - (finalY + toolbar.offsetHeight);
+      const distLeft = finalX;
+      const distRight = viewW - (finalX + toolbar.offsetWidth);
+
+      let newPos = {};
+      let newOrientation = "horizontal";
+
+      if (distRight < snapThreshold) {
+        newOrientation = "vertical";
+        newPos = { right: "2vw", top: Math.max(2, (finalY / viewH) * 100) + "vh" };
+      } else if (distLeft < snapThreshold) {
+        newOrientation = "vertical";
+        newPos = { left: "calc(232px + 2vw)", top: Math.max(2, (finalY / viewH) * 100) + "vh" };
+      } else if (distTop < snapThreshold) {
+        newOrientation = "horizontal";
+        newPos = { top: "2vh", left: Math.max(2, (finalX / viewW) * 100) + "vw" };
+      } else {
+        newOrientation = "horizontal";
+        // Default relative position
+        newPos = { bottom: "4vh", left: Math.max(2, (finalX / viewW) * 100) + "vw" };
+      }
+
+      toolbar.classList.remove("horizontal", "vertical");
+      toolbar.classList.add(newOrientation);
+
+      toolbar.style.left = newPos.left || "auto";
+      toolbar.style.right = newPos.right || "auto";
+      toolbar.style.top = newPos.top || "auto";
+      toolbar.style.bottom = newPos.bottom || "auto";
+
+      vscode.setState({ ...(vscode.getState() || {}), ftPosition: newPos, ftOrientation: newOrientation });
+
+      if (toolbar.classList.contains("rolled-up")) {
+        updateRollWidths();
+      }
+    });
   });
 
   // ── Drag-to-Create: drag a tool button onto the canvas ──
@@ -5782,52 +5904,7 @@ function isColorDark(hex) {
   return (r * 299 + g * 587 + b * 114) / 1000 < 128;
 }
 
-// ─── Selection Info Bar (Figma/Sketch bottom status) ──────────────────────────
 
-/** Update the selection info bar with current selection details. */
-function updateSelectionBar() {
-  const bar = document.getElementById("selection-bar");
-  if (!bar || !fdCanvas) return;
-
-  const selectedId = fdCanvas.get_selected_id();
-  if (!selectedId) {
-    bar.classList.remove("visible");
-    return;
-  }
-
-  try {
-    const propsJson = fdCanvas.get_selected_node_props();
-    const props = JSON.parse(propsJson);
-    if (!props || !props.kind) {
-      bar.classList.remove("visible");
-      return;
-    }
-
-    // Use intrinsic width/height; fallback to bounds for groups/text/path
-    let w = Math.round(props.width || 0);
-    let h = Math.round(props.height || 0);
-    if (w === 0 && h === 0) {
-      try {
-        const boundsJson = fdCanvas.get_node_bounds(selectedId);
-        const b = JSON.parse(boundsJson);
-        w = Math.round(b.width || 0);
-        h = Math.round(b.height || 0);
-      } catch (_) { /* no bounds */ }
-    }
-    const x = Math.round(props.x || 0);
-    const y = Math.round(props.y || 0);
-
-    bar.textContent = `@${selectedId} · ${props.kind} · ${w}×${h} · (${x}, ${y})`;
-    bar.classList.add("visible");
-  } catch (_) {
-    bar.classList.remove("visible");
-  }
-}
-
-/** Set up selection bar (just needs the render loop, already wired). */
-function setupSelectionBar() {
-  // Selection bar updates happen in render() via updateSelectionBar()
-}
 
 // ─── Layer Visibility Toggle ──────────────────────────────────────────────────
 
