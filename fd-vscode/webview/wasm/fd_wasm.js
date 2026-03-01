@@ -473,6 +473,18 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Check if a node has any direct Text children.
+     * Used by the JS webview to decide whether to auto-center a dropped text.
+     * @param {string} node_id
+     * @returns {boolean}
+     */
+    has_text_child(node_id) {
+        const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_has_text_child(this.__wbg_ptr, ptr0, len0);
+        return ret !== 0;
+    }
+    /**
      * Hit-test at scene-space coordinates. Returns the topmost node ID, or empty string.
      * @param {number} x
      * @param {number} y
@@ -519,6 +531,25 @@ export class FdCanvas {
         this.__wbg_ptr = ret >>> 0;
         FdCanvasFinalization.register(this, this.__wbg_ptr, this);
         return this;
+    }
+    /**
+     * Get the parent ID of a node. Returns empty string for root-level nodes.
+     * @param {string} node_id
+     * @returns {string}
+     */
+    parent_of(node_id) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_parent_of(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
     }
     /**
      * Redo the last undone action.

@@ -5,6 +5,15 @@
 
 ## Completed Requirements
 
+### v0.8.82 — Text Snap/Reparent Redesign
+
+- **UX (R3.37, R3.38)**: Unified center-snap and text-drop-target into single `evaluateTextAdoption()` system — eliminates race between centering and reparenting; one decision point for visual feedback
+- **BUG FIX**: Fixed detach-after-reparent race condition — `evaluate_drop()` is now skipped when a text reparent already happened in the same pointer-up, preventing immediate re-detach of just-adopted nodes
+- **UX**: Conditional auto-centering — text dropped on a shape with no existing text child auto-centers (position stripped); text dropped on a shape _with_ existing text children keeps its explicit position
+- **UX**: Group nodes now work as drop targets for text reparenting (was previously limited to rect/ellipse/frame only)
+- **WASM**: New `has_text_child(node_id)` API — checks if a node has text children (used for conditional centering); new `parent_of(node_id)` API — returns parent ID (used to skip self-parent adoption)
+- **TESTING**: 2 new sync tests — `sync_text_detach_from_shape`, `sync_text_stays_when_overlapping`
+
 ### v0.8.81 — Arrow Head Tangent Alignment
 
 - **BUG FIX (R5.7)**: Fixed arrowhead misalignment on Smooth and Step edge curves — arrowheads now follow the curve's tangent direction at the endpoint instead of the straight-line center-to-center angle; Smooth uses quadratic bezier control point tangent, Step uses horizontal last-segment direction

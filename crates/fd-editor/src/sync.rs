@@ -1500,6 +1500,94 @@ group @container {
             "@b should remain in @container after small move"
         );
     }
+
+    #[test]
+    fn sync_text_detach_from_shape() {
+        // Dragging a text child fully outside a rect shape should detach it.
+        let input = r#"
+rect @card {
+  w: 200 h: 100
+
+  text @label "Hello" { }
+}
+"#;
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let label_id = NodeId::intern("label");
+        let card_id = NodeId::intern("card");
+        let card_idx = engine.graph.index_of(card_id).unwrap();
+
+        // Verify text is initially a child of rect
+        let label_idx = engine.graph.index_of(label_id).unwrap();
+        let parent_before = engine.graph.parent(label_idx).unwrap();
+        assert_eq!(
+            parent_before, card_idx,
+            "@label should be child of @card before drag"
+        );
+
+        // Move text far outside the rect
+        engine.apply_mutation(GraphMutation::MoveNode {
+            id: label_id,
+            dx: 500.0,
+            dy: 400.0,
+        });
+        engine.evaluate_drop(label_id);
+
+        // Text should be detached to root
+        let label_idx = engine.graph.index_of(label_id).unwrap();
+        let parent_after = engine.graph.parent(label_idx).unwrap();
+        assert_eq!(
+            parent_after, engine.graph.root,
+            "@label should be reparented to root after dragging outside @card"
+        );
+
+        // Card should have no children
+        let children = engine.graph.children(card_idx);
+        assert_eq!(
+            children.len(),
+            0,
+            "@card should have no children after text detach"
+        );
+    }
+
+    #[test]
+    fn sync_text_stays_when_overlapping() {
+        // Partially moving a text child should keep it in the shape.
+        let input = r#"
+rect @card {
+  w: 200 h: 100
+
+  text @label "Hello" { }
+}
+"#;
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let label_id = NodeId::intern("label");
+        let card_id = NodeId::intern("card");
+        let card_idx = engine.graph.index_of(card_id).unwrap();
+
+        // Move text a small amount (still overlapping)
+        engine.apply_mutation(GraphMutation::MoveNode {
+            id: label_id,
+            dx: 10.0,
+            dy: 5.0,
+        });
+        engine.evaluate_drop(label_id);
+
+        // Text should remain a child of the rect
+        let label_idx = engine.graph.index_of(label_id).unwrap();
+        let parent_after = engine.graph.parent(label_idx).unwrap();
+        assert_eq!(
+            parent_after, card_idx,
+            "@label should remain in @card with partial overlap"
+        );
+    }
 }
 
 #[test]

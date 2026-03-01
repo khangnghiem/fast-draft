@@ -738,18 +738,22 @@ function setupPointerEvents() {
         animDropTargetBounds = null;
       }
 
-      // ── Center-snap detection for text nodes ──
-      const snap = detectCenterSnap(draggedNodeId, x, y);
-      if (snap) {
-        centerSnapTarget = snap;
-        showCenterSnapGuides(snap.cx, snap.cy);
+      // ── Unified text adoption detection (replaces dual center-snap + text-drop-target) ──
+      const adoption = evaluateTextAdoption(draggedNodeId, x, y);
+      if (adoption) {
+        textDropTarget = adoption;
+        if (adoption.willCenter) {
+          centerSnapTarget = adoption;
+          showCenterSnapGuides(adoption.cx, adoption.cy);
+        } else {
+          hideCenterSnapGuides();
+          centerSnapTarget = null;
+        }
       } else {
+        textDropTarget = null;
+        centerSnapTarget = null;
         hideCenterSnapGuides();
       }
-
-      // ── Text drag-to-consume detection ──
-      const dropTarget = detectTextDropTarget(draggedNodeId, x, y);
-      textDropTarget = dropTarget;
 
       // ── Near-Detach detection ──
       const ndJson = fdCanvas.evaluate_near_detach(draggedNodeId);
@@ -851,32 +855,21 @@ function setupPointerEvents() {
       openAnimPicker(targetId, e.clientX, e.clientY);
     }
 
-    // ── Center-snap commit: snap text to shape center on release ──
-    if (isDraggingNode && centerSnapTarget && draggedNodeId) {
-      const snap = centerSnapTarget;
-      try {
-        const db = JSON.parse(fdCanvas.get_node_bounds(draggedNodeId));
-        if (db.width) {
-          // Move text center to shape center
-          const newX = snap.cx - db.width / 2;
-          const newY = snap.cy - db.height / 2;
-          fdCanvas.set_node_prop("x", String(Math.round(newX)));
-          fdCanvas.set_node_prop("y", String(Math.round(newY)));
-          render();
-          syncTextToExtension();
-        }
-      } catch (_) { /* skip */ }
-    }
-    hideCenterSnapGuides();
-
-    // ── Text drag-to-consume: reparent text into target shape ──
+    // ── Unified text reparent on release ──
+    // When textDropTarget is set, reparent text into target. Skip evaluate_drop
+    // afterwards to avoid the detach-after-reparent race condition.
+    let didReparent = false;
     if (isDraggingNode && textDropTarget && draggedNodeId) {
-      reparentTextIntoShape(draggedNodeId, textDropTarget.targetId);
+      const willCenter = textDropTarget.willCenter;
+      didReparent = reparentTextIntoShape(draggedNodeId, textDropTarget.targetId, willCenter);
       textDropTarget = null;
     }
+    hideCenterSnapGuides();
+    centerSnapTarget = null;
 
     // ── Detach snap feedback: scale pop + glow on group detach ──
-    if (isDraggingNode && fdCanvas && draggedNodeId) {
+    // Skip if we already reparented (would race: detach the just-adopted node)
+    if (isDraggingNode && fdCanvas && draggedNodeId && !didReparent) {
       const detachJson = fdCanvas.evaluate_drop(draggedNodeId);
       if (detachJson) {
         try {
@@ -4158,48 +4151,71 @@ function hideDimensionTooltip() {
   if (el) el.style.display = "none";
 }
 
-// ─── Center-Snap for Text Nodes (Fix 6) ──────────────────────────────────────
+// ─── Unified Text Adoption System ─────────────────────────────────────────────
+//
+// Replaces two independent systems (center-snap + text-drop-target) with a
+// single evaluateTextAdoption() function. This ensures:
+// 1. No race between centering and reparenting
+// 2. One decision point for visual feedback
+// 3. Conditional centering: only when target has no text child
 
 const CENTER_SNAP_THRESHOLD = 30; // px in scene-space
 
 /** State for center-snap guides. */
 let centerSnapTarget = null;
 
+/** State for text drag-to-consume. */
+let textDropTarget = null;
+
 /**
- * Check if a dragged text node is near the center of any shape node.
- * Returns { targetId, cx, cy } if within snap threshold, null otherwise.
+ * Unified text adoption detection. Checks if a dragged text node should
+ * be adopted by a shape/group under the cursor.
+ *
+ * Returns { targetId, cx, cy, bounds, willCenter } or null.
+ * - willCenter: true if the target has no existing text child (text will auto-center)
  */
-function detectCenterSnap(draggedId, sceneX, sceneY) {
+function evaluateTextAdoption(draggedId, sceneX, sceneY) {
   if (!fdCanvas) return null;
 
+  // Check if dragged node is a text node
   const source = fdCanvas.get_text();
-  const nodeIdPattern = /@(\w+)/g;
-  let match;
-  const seenIds = new Set();
+  const textMatch = source.match(new RegExp(`text\\s+@${draggedId}\\b`));
+  if (!textMatch) return null;
 
-  while ((match = nodeIdPattern.exec(source)) !== null) {
-    const id = match[1];
-    if (seenIds.has(id) || id === draggedId) continue;
-    seenIds.add(id);
-    try {
-      const b = JSON.parse(fdCanvas.get_node_bounds(id));
-      if (!b.width || b.width <= 0) continue;
+  // Get current parent of the dragged text
+  const currentParent = fdCanvas.parent_of(draggedId);
 
-      // Check if this is a shape node (not text/edge/style)
-      const kindMatch = source.match(new RegExp(`(?:rect|ellipse|frame|group)\\s+@${id}\\b`));
-      if (!kindMatch) continue;
+  // Hit-test to find a shape/group under the cursor
+  const hitId = fdCanvas.hit_test_at(sceneX, sceneY);
+  if (!hitId || hitId === draggedId) return null;
 
-      const cx = b.x + b.width / 2;
-      const cy = b.y + b.height / 2;
-      const dx = Math.abs(sceneX - cx);
-      const dy = Math.abs(sceneY - cy);
+  // Skip if target is already the current parent
+  if (hitId === currentParent) return null;
 
-      if (dx < CENTER_SNAP_THRESHOLD && dy < CENTER_SNAP_THRESHOLD) {
-        return { targetId: id, cx, cy, bounds: b };
-      }
-    } catch (_) { /* skip */ }
+  // Check if the hit target is a container (rect, ellipse, frame, or group)
+  const containerMatch = source.match(new RegExp(`(?:rect|ellipse|frame|group)\\s+@${hitId}\\b`));
+  if (!containerMatch) return null;
+
+  try {
+    const bounds = JSON.parse(fdCanvas.get_node_bounds(hitId));
+    if (!bounds.width || bounds.width <= 0) return null;
+
+    const cx = bounds.x + bounds.width / 2;
+    const cy = bounds.y + bounds.height / 2;
+
+    // Check if cursor is near enough to the center for snap guides
+    const dx = Math.abs(sceneX - cx);
+    const dy = Math.abs(sceneY - cy);
+    const nearCenter = dx < CENTER_SNAP_THRESHOLD && dy < CENTER_SNAP_THRESHOLD;
+
+    // Determine if text will be centered (target has no existing text child)
+    const hasText = fdCanvas.has_text_child(hitId);
+    const willCenter = !hasText && nearCenter;
+
+    return { targetId: hitId, cx, cy, bounds, willCenter };
+  } catch (_) {
+    return null;
   }
-  return null;
 }
 
 /** Show center-snap crosshair guide lines. */
@@ -4218,46 +4234,14 @@ function showCenterSnapGuides(cx, cy) {
 function hideCenterSnapGuides() {
   const container = document.getElementById("center-snap-guides");
   if (container) container.innerHTML = "";
-  centerSnapTarget = null;
-}
-
-// ─── Text Drag-to-Consume / Reparent (Fix 7) ────────────────────────────────
-
-/** State for text drag-to-consume. */
-let textDropTarget = null;
-
-/**
- * Detect if a dragged text node is hovered over a shape node that can consume it.
- * Shows a glow ring on the target shape.
- */
-function detectTextDropTarget(draggedId, sceneX, sceneY) {
-  if (!fdCanvas) return null;
-
-  const hitId = fdCanvas.hit_test_at(sceneX, sceneY);
-  if (!hitId || hitId === draggedId) return null;
-
-  // Check if the hit target is a shape (not text, edge, etc.)
-  const source = fdCanvas.get_text();
-  const shapeMatch = source.match(new RegExp(`(?:rect|ellipse|frame)\\s+@${hitId}\\b`));
-  if (!shapeMatch) return null;
-
-  // Check if dragged node is a text node
-  const textMatch = source.match(new RegExp(`text\\s+@${draggedId}\\b`));
-  if (!textMatch) return null;
-
-  try {
-    const bounds = JSON.parse(fdCanvas.get_node_bounds(hitId));
-    return { targetId: hitId, bounds };
-  } catch (_) {
-    return null;
-  }
 }
 
 /**
- * Reparent a text node inside a target shape node by rewriting FD source.
- * Centers the text inside the shape using auto-center logic (R3.36).
+ * Reparent a text node inside a target shape/group by rewriting FD source.
+ * If willCenter is true, strips position constraints (layout auto-centers).
+ * If willCenter is false, keeps position relative to new parent.
  */
-function reparentTextIntoShape(textId, targetShapeId) {
+function reparentTextIntoShape(textId, targetShapeId, willCenter) {
   if (!fdCanvas) return false;
   let source = fdCanvas.get_text();
 
@@ -4273,11 +4257,13 @@ function reparentTextIntoShape(textId, targetShapeId) {
   // Remove the text block from its current position
   source = source.replace(textMatch[2], "");
 
-  // Remove position constraints from the text block (it will auto-center)
-  textBlock = textBlock.replace(/\s*x:\s*\d+(\.\d+)?/g, "");
-  textBlock = textBlock.replace(/\s*y:\s*\d+(\.\d+)?/g, "");
+  // Only strip position constraints if the text will be auto-centered
+  if (willCenter) {
+    textBlock = textBlock.replace(/\s*x:\s*-?\d+(\.\d+)?/g, "");
+    textBlock = textBlock.replace(/\s*y:\s*-?\d+(\.\d+)?/g, "");
+  }
 
-  // Find the target shape's closing brace and insert text before it
+  // Find the target shape's opening brace and insert text after it
   const shapeBlockRe = new RegExp(`(@${targetShapeId}\\s*\\{)`);
   const shapeMatch = source.match(shapeBlockRe);
   if (!shapeMatch) return false;

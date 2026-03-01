@@ -15,6 +15,7 @@ theme base_text {
 # ─── Layout ───
 # ─── Layout ───
 # ─── Layout ───
+# ─── Layout ───
 group @login_form {
   spec {
     "User authentication entry point"
@@ -56,6 +57,8 @@ group @login_form {
     w: 280 h: 44
     stroke: #DDDDDD 1
     corner: 8
+    x: 28.33
+    y: 106.06
   }
   rect @login_btn {
     spec {
@@ -68,8 +71,8 @@ group @login_form {
     w: 280 h: 48
     use: accent
     fill: #5A4BD1  # blue
-    x: 28.11
-    y: 170.17
+    x: 27.69
+    y: 169.03
     when :hover {
       fill: #4A3BC1  # blue
       scale: 1.02
@@ -81,8 +84,8 @@ group @login_form {
     }
   }
   layout: column gap=16 pad=32
-  x: 316.65
-  y: 378.93
+  x: 316.56
+  y: 379.28
 }
 
 text @title "Welcome Back" {
