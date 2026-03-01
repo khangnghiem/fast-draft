@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.8.83 — Scroll Toolbar Redesign (V12)
+
+- **UX**: Redesigned floating toolbar into a "Scroll Toolbar" with wooden handles and paper rolls that dynamically adjust width asymmetrically based on the active tool
+- **UX**: Dual orientation — toolbar defaults to horizontal at bottom-left, but snaps vertically when dragged to the left or right edges
+- **UX**: Drag-and-snap — dragging the wooden handles snaps the toolbar to canvas edges using relative positioning
+- **CLEANUP**: Removed the old `#selection-bar` entirely
+
 ### v0.8.82 — Text Snap/Reparent Redesign
 
 - **UX (R3.37, R3.38)**: Unified center-snap and text-drop-target into single `evaluateTextAdoption()` system — eliminates race between centering and reparenting; one decision point for visual feedback

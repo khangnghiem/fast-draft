@@ -1354,30 +1354,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       color: var(--fd-accent);
     }
 
-    /* ── Selection Info Bar ── */
-    #selection-bar {
-      display: none;
-      position: absolute;
-      top: 8px;
-      right: 16px;
-      padding: 5px 14px;
-      background: var(--fd-surface);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border: 0.5px solid var(--fd-border);
-      border-radius: 20px;
-      box-shadow: var(--fd-shadow-md);
-      z-index: 15;
-      font-size: 11px;
-      color: var(--fd-text-secondary);
-      font-weight: 500;
-      white-space: nowrap;
-      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
-      letter-spacing: -0.02em;
-    }
-    #selection-bar.visible {
-      display: block;
-    }
+
 
     /* ── Help & Status ── */
     #tool-help-btn {
@@ -1964,94 +1941,145 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       background: var(--fd-border);
     }
 
-    /* ── Floating Bottom Toolbar (iPad UX) ── */
+    /* ── Floating Scroll Toolbar (V12) ── */
     #floating-toolbar {
       position: absolute;
-      left: 50%;
-      bottom: 16px;
-      transform: translateX(-50%);
+      left: 244px;
+      bottom: 56px;
       z-index: 25;
+      display: flex;
+      align-items: stretch;
+      --left-roll-width: 12px;
+      --right-roll-width: 12px;
+    }
+    #floating-toolbar.horizontal { flex-direction: row; }
+    #floating-toolbar.vertical { flex-direction: column; }
+
+    /* Scroll Handles & Rolls */
+    .scroll-handle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      position: relative;
+    }
+    .scroll-handle:active { cursor: grabbing; }
+
+    .horizontal .handle-start { flex-direction: row; }
+    .horizontal .handle-end { flex-direction: row; }
+    .vertical .handle-start { flex-direction: column; }
+    .vertical .handle-end { flex-direction: column; }
+
+    /* Wooden Core */
+    .wood-core {
+      background: linear-gradient(90deg, #5c3a21 0%, #8b5a33 30%, #a06b3f 50%, #8b5a33 70%, #5c3a21 100%);
+      position: absolute;
+      box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+    }
+    .horizontal .wood-core {
+      width: 6px;
+      top: -4px;
+      bottom: -4px;
+      border-radius: 3px;
+    }
+    .vertical .wood-core {
+      height: 6px;
+      left: -4px;
+      right: -4px;
+      border-radius: 3px;
+      background: linear-gradient(180deg, #5c3a21 0%, #8b5a33 30%, #a06b3f 50%, #8b5a33 70%, #5c3a21 100%);
+    }
+
+    /* Finials (knobs) */
+    .finial-top, .finial-bottom {
+      position: absolute;
+      background: radial-gradient(circle at 30% 30%, #a06b3f, #5c3a21);
+      border-radius: 50%;
+      width: 8px;
+      height: 8px;
+      left: -1px;
+    }
+    .horizontal .finial-top { top: -4px; }
+    .horizontal .finial-bottom { bottom: -4px; }
+    .vertical .finial-top { top: -1px; left: -4px; }
+    .vertical .finial-bottom { top: -1px; right: -4px; left: auto; }
+
+    /* Paper Rolls */
+    .paper-roll {
+      background: linear-gradient(90deg, #e0e0e0 0%, #ffffff 20%, #f4f4f4 80%, #cccccc 100%);
+      box-shadow: inset 2px 0 4px rgba(0,0,0,0.05), inset -2px 0 4px rgba(0,0,0,0.1), 2px 2px 8px rgba(0,0,0,0.2);
+      z-index: 2;
+      transition: width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), height 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+    .dark-theme .paper-roll {
+      background: linear-gradient(90deg, #3a3a3c 0%, #4a4a4c 20%, #404042 80%, #2c2c2e 100%);
+      box-shadow: inset 2px 0 4px rgba(0,0,0,0.2), inset -2px 0 4px rgba(0,0,0,0.4), 2px 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .horizontal .left-roll { width: var(--left-roll-width); height: 38px; border-radius: 8px; }
+    .horizontal .right-roll { width: var(--right-roll-width); height: 38px; border-radius: 8px; }
+
+    .vertical .paper-roll { background: linear-gradient(180deg, #e0e0e0 0%, #ffffff 20%, #f4f4f4 80%, #cccccc 100%); }
+    .dark-theme .vertical .paper-roll { background: linear-gradient(180deg, #3a3a3c 0%, #4a4a4c 20%, #404042 80%, #2c2c2e 100%); }
+    .vertical .left-roll { height: var(--left-roll-width); width: 38px; border-radius: 8px; }
+    .vertical .right-roll { height: var(--right-roll-width); width: 38px; border-radius: 8px; }
+
+    /* Paper Body */
+    .scroll-paper-body {
+      background: linear-gradient(to bottom, #F8F8F8, #E8E8E8);
       display: flex;
       align-items: center;
       gap: 2px;
-      padding: 4px 6px;
-      background: var(--fd-surface);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      border: 0.5px solid var(--fd-border);
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.10), 0 1px 6px rgba(0,0,0,0.06);
-      transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
-      cursor: default;
+      padding: 0 4px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1;
+      overflow: hidden;
+      transition: padding 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
     }
-    .dark-theme #floating-toolbar {
-      box-shadow: 0 4px 20px rgba(0,0,0,0.35), 0 1px 6px rgba(0,0,0,0.2);
+    .dark-theme .scroll-paper-body {
+      background: linear-gradient(to bottom, #3a3a3c, #2c2c2e);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.4);
     }
-    #floating-toolbar.collapsed {
-      padding: 4px;
-      border-radius: 50%;
-      gap: 0;
-    }
-    #floating-toolbar.collapsed .ft-tool-btn:not(.active) {
-      display: none;
-    }
-    #floating-toolbar.collapsed .ft-sep {
-      display: none;
-    }
-    #floating-toolbar.collapsed .ft-drag-handle {
-      display: none;
-    }
-    #floating-toolbar.collapsed .ft-tool-btn.active {
-      padding: 6px;
-      border-radius: 50%;
-    }
-    #floating-toolbar.at-top {
-      bottom: auto;
-      top: 52px;
-    }
+    .horizontal .scroll-paper-body { height: 38px; flex-direction: row; }
+    .vertical .scroll-paper-body { width: 38px; flex-direction: column; padding: 4px 0; }
+
+    #floating-toolbar.rolled-up .scroll-paper-body { padding: 0; }
+    #floating-toolbar.vertical.rolled-up .scroll-paper-body { padding: 0; }
+
+    /* Tool Buttons */
     .ft-tool-btn {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 34px;
-      height: 34px;
+      width: 32px;
+      height: 32px;
       border: none;
       background: transparent;
       color: var(--fd-text-secondary);
-      border-radius: 8px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 15px;
-      transition: all 0.15s ease;
+      transition: all 0.2s ease, opacity 0.2s ease, margin 0.3s ease, width 0.3s ease, height 0.3s ease;
       position: relative;
-    }
-    .ft-tool-btn svg {
-      width: 18px;
-      height: 18px;
       flex-shrink: 0;
+      opacity: 1;
     }
-    .ft-tool-btn:hover {
-      background: var(--fd-surface-hover);
-      color: var(--fd-text);
-    }
-    .ft-tool-btn:active {
-      transform: scale(0.92);
-    }
+    /* Hide inactive tools when rolled up */
+    .horizontal.rolled-up .ft-tool-btn:not(.active) { width: 0; margin-left: -2px; opacity: 0; pointer-events: none; overflow: hidden; }
+    .vertical.rolled-up .ft-tool-btn:not(.active) { height: 0; margin-top: -2px; opacity: 0; pointer-events: none; overflow: hidden; }
+
+    .horizontal .ft-tool-btn { height: 32px; }
+    .vertical .ft-tool-btn { width: 32px; }
+
+    .ft-tool-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .ft-tool-btn:hover { background: rgba(0,0,0,0.06); color: var(--fd-text); }
+    .dark-theme .ft-tool-btn:hover { background: rgba(255,255,255,0.1); }
+    .ft-tool-btn:active { transform: scale(0.92); }
     .ft-tool-btn.active {
-      background: var(--fd-segment-active);
-      color: var(--fd-text);
-      box-shadow: var(--fd-segment-shadow);
+      background: var(--fd-accent);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(42, 110, 240, 0.3);
     }
-    .ft-tool-btn.locked::after {
-      content: '🔒';
-      font-size: 7px;
-      position: absolute;
-      top: -2px;
-      right: -2px;
-      line-height: 1;
-    }
-    .ft-tool-btn .ft-key {
-      display: none;
-    }
+    .dark-theme .ft-tool-btn.active { box-shadow: 0 2px 6px rgba(58, 130, 246, 0.4); }
     .ft-tooltip {
       position: absolute;
       bottom: calc(100% + 8px);
@@ -2094,31 +2122,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       visibility: hidden;
       transition-delay: 0s;
     }
-    #floating-toolbar.collapsed .ft-tooltip {
+    #floating-toolbar.rolled-up .ft-tooltip {
       display: none;
-    }
-    .ft-sep {
-      width: 0.5px;
-      height: 20px;
-      background: var(--fd-border);
-      margin: 0 2px;
-      opacity: 0.6;
-    }
-    .ft-drag-handle {
-      width: 4px;
-      height: 16px;
-      border-radius: 2px;
-      background: var(--fd-text-tertiary);
-      opacity: 0.4;
-      cursor: grab;
-      margin: 0 4px;
-      transition: opacity 0.15s;
-    }
-    .ft-drag-handle:hover {
-      opacity: 0.8;
-    }
-    .ft-drag-handle:active {
-      cursor: grabbing;
     }
 
     /* ── Shortcut Help (Apple sheet) ── */
@@ -2247,7 +2252,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .zen-mode #layers-panel { display: none !important; }
     .zen-mode #props-panel { display: none !important; }
     .zen-mode #minimap-container { display: none !important; }
-    .zen-mode #selection-bar { display: none !important; }
+    .zen-mode #spec-overlay { display: none !important; }
     .zen-mode #spec-overlay { display: none !important; }
 
     /* Panel toggle via keyboard in zen mode */
@@ -2490,33 +2495,25 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div id="layers-panel"></div>
     <div id="library-panel"></div>
     <div id="minimap-container"><canvas id="minimap-canvas"></canvas></div>
-    <div id="selection-bar"></div>
-    <!-- Bottom-left Zoom & Undo/Redo controls (Excalidraw-style) -->
-    <div id="bottom-left-controls">
-      <div class="bl-control-group">
-        <button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button>
-        <div class="bl-sep"></div>
-        <button class="bl-btn" id="zoom-reset-btn" title="Reset zoom (click)">100%</button>
-        <div class="bl-sep"></div>
-        <button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button>
+    <!-- Floating Bottom Toolbar (Scroll UX) -->
+    <div id="floating-toolbar" class="scroll-toolbar horizontal unrolled">
+      <div class="scroll-handle handle-start" title="Drag to move, click to roll">
+        <div class="wood-core"><div class="finial-top"></div><div class="finial-bottom"></div></div>
+        <div class="paper-roll left-roll"></div>
       </div>
-      <div class="bl-control-group">
-        <button class="bl-btn" id="undo-btn" title="Undo (⌘Z)">↩</button>
-        <div class="bl-sep"></div>
-        <button class="bl-btn" id="redo-btn" title="Redo (⌘⇧Z)">↪</button>
+      <div class="scroll-paper-body">
+        <button class="ft-tool-btn active" data-tool="select"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2L3.5 13.5L7 10L11.5 14.5L13 13L9 8.5L13 8.5Z"/></svg><span class="ft-tooltip">Select<span class="tt-shortcut">V</span></span></button>
+        <button class="ft-tool-btn" data-tool="rect"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="12" height="10" rx="2"/></svg><span class="ft-tooltip">Rectangle<span class="tt-shortcut">R</span></span></button>
+        <button class="ft-tool-btn" data-tool="ellipse"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/></svg><span class="ft-tooltip">Ellipse<span class="tt-shortcut">O</span></span></button>
+        <button class="ft-tool-btn" data-tool="pen"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5L14.5 7.5L6.5 15.5H2.5V11.5Z"/><path d="M10.5 3.5L14.5 7.5" /><path d="M8.5 5.5L12.5 9.5"/></svg><span class="ft-tooltip">Pen<span class="tt-shortcut">P</span></span></button>
+        <button class="ft-tool-btn" data-tool="arrow"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14L14 4"/><path d="M7 4H14V11"/></svg><span class="ft-tooltip">Arrow<span class="tt-shortcut">A</span></span></button>
+        <button class="ft-tool-btn" data-tool="text"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4H14"/><path d="M9 4V15"/><path d="M6 15H12"/></svg><span class="ft-tooltip">Text<span class="tt-shortcut">T</span></span></button>
+        <button class="ft-tool-btn" data-tool="frame"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="14" height="14" rx="2"/><rect x="5.5" y="5.5" width="7" height="7" rx="1"/></svg><span class="ft-tooltip">Frame<span class="tt-shortcut">F</span></span></button>
       </div>
-    </div>
-    <!-- Floating Bottom Toolbar (iPad UX) -->
-    <div id="floating-toolbar">
-      <div class="ft-drag-handle" id="ft-drag-handle" title="Drag to move toolbar"></div>
-      <button class="ft-tool-btn active" data-tool="select"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2L3.5 13.5L7 10L11.5 14.5L13 13L9 8.5L13 8.5Z"/></svg><span class="ft-tooltip">Select<span class="tt-shortcut">V</span></span></button>
-      <div class="ft-sep"></div>
-      <button class="ft-tool-btn" data-tool="rect"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="12" height="10" rx="2"/></svg><span class="ft-tooltip">Rectangle<span class="tt-shortcut">R</span></span></button>
-      <button class="ft-tool-btn" data-tool="ellipse"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/></svg><span class="ft-tooltip">Ellipse<span class="tt-shortcut">O</span></span></button>
-      <button class="ft-tool-btn" data-tool="pen"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5L14.5 7.5L6.5 15.5H2.5V11.5Z"/><path d="M10.5 3.5L14.5 7.5" /><path d="M8.5 5.5L12.5 9.5"/></svg><span class="ft-tooltip">Pen<span class="tt-shortcut">P</span></span></button>
-      <button class="ft-tool-btn" data-tool="arrow"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14L14 4"/><path d="M7 4H14V11"/></svg><span class="ft-tooltip">Arrow<span class="tt-shortcut">A</span></span></button>
-      <button class="ft-tool-btn" data-tool="text"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4H14"/><path d="M9 4V15"/><path d="M6 15H12"/></svg><span class="ft-tooltip">Text<span class="tt-shortcut">T</span></span></button>
-      <button class="ft-tool-btn" data-tool="frame"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="14" height="14" rx="2"/><rect x="5.5" y="5.5" width="7" height="7" rx="1"/></svg><span class="ft-tooltip">Frame<span class="tt-shortcut">F</span></span></button>
+      <div class="scroll-handle handle-end" title="Drag to move, click to roll">
+        <div class="paper-roll right-roll"></div>
+        <div class="wood-core"><div class="finial-top"></div><div class="finial-bottom"></div></div>
+      </div>
     </div>
     <div id="loading"><div class="loading-spinner"></div>Loading FD engine…</div>
     <!-- Properties Panel (Apple-style) -->
