@@ -135,6 +135,27 @@ export class FdCanvas {
         }
     }
     /**
+     * Evaluate if a dragging node is near detaching from its parent group.
+     * Returns JSON `{"parentId":"...","childCx":...,"childCy":...,"parentCx":...,"parentCy":...}`
+     * if the overlap is less than 25%. Otherwise returns an empty string.
+     * @param {string} node_id
+     * @returns {string}
+     */
+    evaluate_near_detach(node_id) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_evaluate_near_detach(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * Export the current selection (or entire canvas if empty) as an SVG string.
      * @returns {string}
      */

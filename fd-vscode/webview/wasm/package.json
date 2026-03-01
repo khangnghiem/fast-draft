@@ -5,7 +5,7 @@
     "Khang Nghiêm"
   ],
   "description": "FD (Fast Draft) — WASM bridge for VS Code extension",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "MIT",
   "files": [
     "fd_wasm_bg.wasm",

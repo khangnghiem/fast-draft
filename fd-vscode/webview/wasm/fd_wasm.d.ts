@@ -57,6 +57,12 @@ export class FdCanvas {
      */
     evaluate_drop(node_id: string): string;
     /**
+     * Evaluate if a dragging node is near detaching from its parent group.
+     * Returns JSON `{"parentId":"...","childCx":...,"childCy":...,"parentCx":...,"parentCy":...}`
+     * if the overlap is less than 25%. Otherwise returns an empty string.
+     */
+    evaluate_near_detach(node_id: string): string;
+    /**
      * Export the current selection (or entire canvas if empty) as an SVG string.
      */
     export_svg(): string;
@@ -253,6 +259,7 @@ export interface InitOutput {
     readonly fdcanvas_duplicate_selected: (a: number) => number;
     readonly fdcanvas_duplicate_selected_at: (a: number, b: number, c: number) => number;
     readonly fdcanvas_evaluate_drop: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_evaluate_near_detach: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_export_svg: (a: number) => [number, number];
     readonly fdcanvas_get_annotations_json: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_arrow_preview: (a: number) => [number, number];
