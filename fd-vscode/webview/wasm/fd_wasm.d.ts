@@ -160,6 +160,11 @@ export class FdCanvas {
      */
     has_pending_text_change(): boolean;
     /**
+     * Check if a node has any direct Text children.
+     * Used by the JS webview to decide whether to auto-center a dropped text.
+     */
+    has_text_child(node_id: string): boolean;
+    /**
      * Hit-test at scene-space coordinates. Returns the topmost node ID, or empty string.
      */
     hit_test_at(x: number, y: number): string;
@@ -172,6 +177,10 @@ export class FdCanvas {
      * Create a new canvas controller with the given dimensions.
      */
     constructor(width: number, height: number);
+    /**
+     * Get the parent ID of a node. Returns empty string for root-level nodes.
+     */
+    parent_of(node_id: string): string;
     /**
      * Redo the last undone action.
      */
@@ -279,9 +288,11 @@ export interface InitOutput {
     readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly fdcanvas_handle_stylus_squeeze: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_has_pending_text_change: (a: number) => number;
+    readonly fdcanvas_has_text_child: (a: number, b: number, c: number) => number;
     readonly fdcanvas_hit_test_at: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_hit_test_badge: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_new: (a: number, b: number) => number;
+    readonly fdcanvas_parent_of: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_redo: (a: number) => number;
     readonly fdcanvas_remove_node_animations: (a: number, b: number, c: number) => number;
     readonly fdcanvas_render: (a: number, b: any, c: number) => void;

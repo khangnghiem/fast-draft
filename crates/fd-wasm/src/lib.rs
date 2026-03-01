@@ -872,6 +872,31 @@ impl FdCanvas {
         }
     }
 
+    /// Check if a node has any direct Text children.
+    /// Used by the JS webview to decide whether to auto-center a dropped text.
+    pub fn has_text_child(&self, node_id: &str) -> bool {
+        let id = NodeId::intern(node_id);
+        let Some(idx) = self.engine.graph.index_of(id) else {
+            return false;
+        };
+        self.engine
+            .graph
+            .children(idx)
+            .iter()
+            .any(|ci| matches!(self.engine.graph.graph[*ci].kind, NodeKind::Text { .. }))
+    }
+
+    /// Get the parent ID of a node. Returns empty string for root-level nodes.
+    pub fn parent_of(&self, node_id: &str) -> String {
+        let id = NodeId::intern(node_id);
+        let parent_id = self.engine.parent_of(id);
+        if parent_id.as_str() == "root" {
+            String::new()
+        } else {
+            parent_id.as_str().to_string()
+        }
+    }
+
     // ─── Animation APIs ──────────────────────────────────────────────────
 
     /// Add an animation to a node by ID.
