@@ -25,9 +25,6 @@ theme dark_text {
 
 # ─── Layout ───
 
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
 # ─── Settings panel ───────────────────────────────────────────────────────
 group @settings {
   group @header {
