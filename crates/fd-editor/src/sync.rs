@@ -228,7 +228,10 @@ impl SyncEngine {
             }
             GraphMutation::DuplicateNode { id } => {
                 if let Some(original) = self.graph.get_by_id(id).cloned() {
-                    let new_id = NodeId::anonymous(original.kind.kind_name());
+                    // Derive name from original — strip existing _copy_N suffix
+                    let base = id.as_str();
+                    let stem = base.rfind("_copy_").map_or(base, |pos| &base[..pos]);
+                    let new_id = NodeId::with_prefix(&format!("{stem}_copy"));
                     let mut cloned = original;
                     cloned.id = new_id;
                     // Offset via constraint
@@ -1931,4 +1934,31 @@ rect @other {
     let text = engine.current_text();
     assert!(!text.contains("rect @box"));
     assert!(text.contains("rect @other"));
+}
+
+#[test]
+fn sync_duplicate_derives_name_from_original() {
+    let input = r#"
+rect @login_button {
+  w: 100
+  h: 50
+}
+"#;
+    let viewport = fd_core::Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    engine.apply_mutation(GraphMutation::DuplicateNode {
+        id: NodeId::intern("login_button"),
+    });
+    engine.flush_to_text();
+    let text = engine.current_text();
+    // The duplicate should have a name derived from the original
+    assert!(
+        text.contains("login_button_copy_"),
+        "expected derived name in: {text}"
+    );
+    // Original should still be present
+    assert!(text.contains("@login_button"));
 }

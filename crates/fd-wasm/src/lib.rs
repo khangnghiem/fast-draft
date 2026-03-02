@@ -692,7 +692,11 @@ impl FdCanvas {
             None => return false,
         };
         let mut cloned = original;
-        let new_id = NodeId::anonymous(cloned.kind.kind_name());
+        // Derive name from original — strip existing _copy_N suffix to avoid
+        // recursive growth (e.g. btn_copy_7_copy_8), then append fresh _copy_N.
+        let base = first_id.as_str();
+        let stem = base.rfind("_copy_").map_or(base, |pos| &base[..pos]);
+        let new_id = NodeId::with_prefix(&format!("{stem}_copy"));
         cloned.id = new_id;
         if dx != 0.0 || dy != 0.0 {
             cloned.constraints.push(fd_core::model::Constraint::Offset {
