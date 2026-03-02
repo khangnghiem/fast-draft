@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.10.0] — 2026-03-02
+
+### Added
+
+- **Eraser tool** (`E`): Click to erase single nodes, drag to erase multiple. Red poof fade animation on deletion. Eraser toolbar button with custom circle-X cursor.
+- **Delete button**: Visible ✕ button in floating action bar when nodes are selected. Click to delete selection.
+- **Group-aware deletion**: Erasing a child detaches it from the group first. Empty groups auto-cascade delete up the ancestor chain.
+- **Ctrl+click temporary eraser**: Hold Ctrl from any tool to temporarily switch to eraser; release Ctrl to return.
+- **Duplicate naming**: Duplicated objects get derived names from the original (e.g., `rect_1` → `rect_1_copy`).
+- **Figma-style group selection**: Click selects group, double-click drills into children.
+
 ## [0.6.13] — 2026-02-22
 
 ### Added
