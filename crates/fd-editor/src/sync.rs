@@ -1956,3 +1956,111 @@ rect @login_button {
     // Original should still be present
     assert!(text.contains("@login_button"));
 }
+
+// ─── Group-Aware Eraser Tests ────────────────────────────────────────────
+
+/// Removing a child from a group leaves the group and other children intact.
+#[test]
+fn erase_child_preserves_group() {
+    let input = r#"
+group @g {
+  rect @child1 { w: 40 h: 40 x: 0 y: 0 }
+  rect @child2 { w: 40 h: 40 x: 50 y: 0 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let child1_id = NodeId::intern("child1");
+
+    // Simulate eraser: reparent child to root, then remove
+    let child_idx = engine.graph.index_of(child1_id).unwrap();
+    let parent_idx = engine.graph.parent(child_idx).unwrap();
+    let root = engine.graph.root;
+    engine.graph.reparent_node(child_idx, root);
+    expand_group_to_children(&engine.graph, parent_idx, &mut engine.bounds, None);
+
+    engine.apply_mutation(GraphMutation::RemoveNode { id: child1_id });
+    engine.resolve();
+
+    // child1 gone
+    assert!(engine.graph.get_by_id(child1_id).is_none());
+    // group and child2 survive
+    assert!(engine.graph.get_by_id(NodeId::intern("g")).is_some());
+    assert!(engine.graph.get_by_id(NodeId::intern("child2")).is_some());
+}
+
+/// Removing all children from a group leaves the group empty (detectable for cascade).
+#[test]
+fn erase_last_child_leaves_empty_group() {
+    let input = r#"
+group @g {
+  rect @only_child { w: 40 h: 40 x: 0 y: 0 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let child_id = NodeId::intern("only_child");
+    let group_id = NodeId::intern("g");
+
+    // Simulate eraser: reparent + remove child
+    let child_idx = engine.graph.index_of(child_id).unwrap();
+    let group_idx = engine.graph.index_of(group_id).unwrap();
+    let root = engine.graph.root;
+    engine.graph.reparent_node(child_idx, root);
+    engine.apply_mutation(GraphMutation::RemoveNode { id: child_id });
+
+    // Group is now empty — cascade should remove it
+    assert!(engine.graph.children(group_idx).is_empty());
+    engine.apply_mutation(GraphMutation::RemoveNode { id: group_id });
+    assert!(engine.graph.get_by_id(child_id).is_none());
+    assert!(engine.graph.get_by_id(group_id).is_none());
+}
+
+/// Nested empty groups cascade correctly: outer > inner > rect.
+/// Removing rect leaves inner empty → cascade removes inner → outer empty → cascade removes outer.
+#[test]
+fn erase_nested_cascade() {
+    let input = r#"
+group @outer {
+  group @inner {
+    rect @leaf { w: 20 h: 20 x: 0 y: 0 }
+  }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let leaf_id = NodeId::intern("leaf");
+    let inner_id = NodeId::intern("inner");
+    let outer_id = NodeId::intern("outer");
+
+    // Simulate eraser: reparent leaf to root, remove leaf
+    let leaf_idx = engine.graph.index_of(leaf_id).unwrap();
+    let inner_idx = engine.graph.index_of(inner_id).unwrap();
+    let outer_idx = engine.graph.index_of(outer_id).unwrap();
+    let root = engine.graph.root;
+    engine.graph.reparent_node(leaf_idx, root);
+    expand_group_to_children(&engine.graph, inner_idx, &mut engine.bounds, None);
+    engine.apply_mutation(GraphMutation::RemoveNode { id: leaf_id });
+
+    // Inner is now empty → remove
+    assert!(engine.graph.children(inner_idx).is_empty());
+    engine.apply_mutation(GraphMutation::RemoveNode { id: inner_id });
+
+    // Outer is now empty → remove
+    assert!(engine.graph.children(outer_idx).is_empty());
+    engine.apply_mutation(GraphMutation::RemoveNode { id: outer_id });
+
+    // All three are gone
+    assert!(engine.graph.get_by_id(leaf_id).is_none());
+    assert!(engine.graph.get_by_id(inner_id).is_none());
+    assert!(engine.graph.get_by_id(outer_id).is_none());
+}

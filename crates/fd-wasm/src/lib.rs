@@ -14,7 +14,7 @@ use fd_core::model::{
 use fd_editor::commands::CommandStack;
 use fd_editor::input::{InputEvent, Modifiers};
 use fd_editor::shortcuts::{ShortcutAction, ShortcutMap};
-use fd_editor::sync::{GraphMutation, SyncEngine};
+use fd_editor::sync::{GraphMutation, SyncEngine, expand_group_to_children};
 use fd_editor::tools::{
     ArrowTool, EllipseTool, EraserTool, PenTool, RectTool, ResizeHandle, SelectTool, TextTool,
     Tool, ToolKind,
@@ -1805,21 +1805,86 @@ impl FdCanvas {
         true
     }
 
-    /// Remove a single node immediately during eraser gesture.
+    /// Immediately erase a single node from the scene graph.
     ///
-    /// Applies the mutation via the command stack (for undo support),
-    /// re-resolves layout, and tracks the erased ID. Text flush is
-    /// deferred to pointer-up so we only re-emit once per gesture.
+    /// If the node is a child of a container (Group/Frame/Rect/Ellipse),
+    /// it is detached first so `RemoveNode` only removes the child —
+    /// not the entire container. After deletion, any resulting empty
+    /// containers are cascade-deleted up the ancestor chain.
     fn erase_node_immediately(&mut self, id: NodeId) {
-        if self.engine.graph.index_of(id).is_none() {
+        let Some(idx) = self.engine.graph.index_of(id) else {
             return;
+        };
+        let parent_idx = self.engine.graph.parent(idx);
+
+        // Pre-detach: if parent is a container (not root), reparent to root
+        // so RemoveNode only affects this child.
+        if let Some(p_idx) = parent_idx
+            && p_idx != self.engine.graph.root
+        {
+            let is_container = matches!(
+                self.engine.graph.graph[p_idx].kind,
+                NodeKind::Group
+                    | NodeKind::Frame { .. }
+                    | NodeKind::Rect { .. }
+                    | NodeKind::Ellipse { .. }
+            );
+            if is_container {
+                let root = self.engine.graph.root;
+                self.engine.graph.reparent_node(idx, root);
+                expand_group_to_children(&self.engine.graph, p_idx, &mut self.engine.bounds, None);
+            }
         }
+
+        // Delete the (now root-level) node
         let mutation = GraphMutation::RemoveNode { id };
         self.commands
             .execute(&mut self.engine, mutation, "eraser delete");
         self.engine.resolve();
         self.eraser_tool.erased_ids.push(id);
         self.erase_pending_flush = true;
+
+        // Cascade: remove empty container ancestors
+        if let Some(p_idx) = parent_idx {
+            self.cascade_empty_groups(p_idx);
+        }
+    }
+
+    /// Walk up from `start_idx`, deleting empty Group/Frame containers.
+    /// Stops at root, non-container nodes, or containers with children.
+    fn cascade_empty_groups(&mut self, start_idx: fd_core::NodeIndex) {
+        let mut cursor = start_idx;
+        loop {
+            if cursor == self.engine.graph.root {
+                break;
+            }
+            if self.engine.graph.graph.node_weight(cursor).is_none() {
+                break;
+            }
+            let is_container = matches!(
+                self.engine.graph.graph[cursor].kind,
+                NodeKind::Group | NodeKind::Frame { .. }
+            );
+            if !is_container {
+                break;
+            }
+            if !self.engine.graph.children(cursor).is_empty() {
+                break;
+            }
+
+            let id = self.engine.graph.graph[cursor].id;
+            let next_parent = self.engine.graph.parent(cursor);
+            let mutation = GraphMutation::RemoveNode { id };
+            self.commands
+                .execute(&mut self.engine, mutation, "eraser cascade");
+            self.engine.resolve();
+            self.eraser_tool.erased_ids.push(id);
+
+            match next_parent {
+                Some(p) => cursor = p,
+                None => break,
+            }
+        }
     }
 
     /// Check if the pointer hits a resize handle for the currently selected node.
