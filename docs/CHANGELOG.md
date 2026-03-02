@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.10.5 — Fix Duplicate Section Separators
+
+- **FIX (R4.12)**: Section separator comments (`# ─── Layout ───`, `# ─── Themes ───`, etc.) no longer duplicate on each parse→emit round-trip — parser now skips emitter-generated separators via `is_section_separator()` check in `collect_leading_comments`; user comments are preserved
+- **TESTING**: 2 new regression tests — `roundtrip_no_duplicate_separators` (3 round-trips verifying exactly 1 separator each), `roundtrip_user_comments_not_stripped`
+
 ### v0.10.4 — Visual Child Highlight
 
 - **UX (R3.24)**: Clicking a child inside a group now highlights the **child** visually (blue border + resize handles) while logically selecting the **group** for operations (drag, delete, duplicate) — gives immediate visual feedback about the clicked element without breaking group behavior

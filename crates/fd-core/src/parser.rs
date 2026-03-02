@@ -201,7 +201,22 @@ fn parse_import_line(input: &mut &str) -> ModalResult<Import> {
 
 // ─── Low-level parsers ──────────────────────────────────────────────────
 
+/// Section separators emitted automatically by the emitter.
+/// These are skipped during parsing to avoid duplication on round-trip.
+const SECTION_SEPARATORS: &[&str] = &[
+    "─── Themes ───",
+    "─── Layout ───",
+    "─── Constraints ───",
+    "─── Flows ───",
+];
+
+/// Check if a comment body matches an emitter-generated section separator.
+fn is_section_separator(text: &str) -> bool {
+    SECTION_SEPARATORS.iter().any(|sep| text.contains(sep))
+}
+
 /// Collect leading whitespace and `# comment` lines, returning the comments.
+/// Skips emitter-generated section separators to prevent duplication.
 fn collect_leading_comments(input: &mut &str) -> Vec<String> {
     let mut comments = Vec::new();
     loop {
@@ -209,15 +224,16 @@ fn collect_leading_comments(input: &mut &str) -> Vec<String> {
         let before = *input;
         *input = input.trim_start();
         if input.starts_with('#') {
-            // Regular `# comment` — collect it
+            // Consume the comment line
             let end = input.find('\n').unwrap_or(input.len());
             let text = input[1..end].trim().to_string();
-            if !text.is_empty() {
-                comments.push(text);
-            }
             *input = &input[end.min(input.len())..];
             if input.starts_with('\n') {
                 *input = &input[1..];
+            }
+            // Skip section separators; collect everything else
+            if !text.is_empty() && !is_section_separator(&text) {
+                comments.push(text);
             }
             continue;
         }
