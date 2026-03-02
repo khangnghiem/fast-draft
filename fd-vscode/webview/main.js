@@ -94,6 +94,9 @@ let cmdTempSelectActive = false;
 let cmdTempSelectOriginalTool = null;
 /** Alt+drag clone-and-drag active */
 let altCloneActive = false;
+/** Ctrl+click on any tool → temporary eraser mode */
+let tempEraserMode = false;
+let tempEraserPrevTool = null;
 
 // ─── Eraser Poof Animation ───────────────────────────────────────────────
 /** Entries: { x, y, width, height, startTime } — brief red fade on erase */
@@ -612,10 +615,18 @@ function setupPointerEvents() {
     const currentTool = fdCanvas.get_tool_name();
     const drawingTools = ["rect", "ellipse", "pen", "arrow", "text", "frame"];
     const isDrawingTool = drawingTools.includes(currentTool);
-    if (isDrawingTool && (e.metaKey || e.ctrlKey)) {
+    if (isDrawingTool && e.metaKey && !e.ctrlKey) {
       cmdTempSelectActive = true;
       cmdTempSelectOriginalTool = currentTool;
       fdCanvas.set_tool("select");
+    }
+
+    // ── Ctrl+click = temporary Eraser (from any non-eraser tool) ──
+    if (e.ctrlKey && !e.metaKey && currentTool !== "eraser") {
+      tempEraserMode = true;
+      tempEraserPrevTool = currentTool;
+      fdCanvas.set_tool("eraser");
+      updateToolbarActive("eraser");
     }
 
     // ── Alt+drag = clone and drag ──
@@ -925,6 +936,15 @@ function setupPointerEvents() {
     cmdTempSelectActive = false;
     cmdTempSelectOriginalTool = null;
     altCloneActive = false;
+
+    // ── Restore tool after Ctrl temp Eraser ──
+    if (tempEraserMode && tempEraserPrevTool && fdCanvas) {
+      fdCanvas.set_tool(tempEraserPrevTool);
+      updateToolbarActive(lockedTool || tempEraserPrevTool);
+      updateCanvasCursor(tempEraserPrevTool);
+    }
+    tempEraserMode = false;
+    tempEraserPrevTool = null;
   });
 
   // ── Wheel / Trackpad → Pan or Zoom ──
@@ -1632,7 +1652,7 @@ document.addEventListener("keyup", (e) => {
     canvas.style.cursor = "";
   }
   // Screenbrush: Release ⌘ → restore previous tool
-  if ((e.key === "Meta" || e.key === "Control") && isCmdHold && fdCanvas) {
+  if (e.key === "Meta" && isCmdHold && fdCanvas) {
     isCmdHold = false;
     canvas.style.cursor = "";
     if (toolBeforeCmdHold) {
@@ -1640,6 +1660,16 @@ document.addEventListener("keyup", (e) => {
       updateToolbarActive(toolBeforeCmdHold);
       toolBeforeCmdHold = null;
     }
+  }
+  // Release Ctrl → restore from temporary eraser mode
+  if (e.key === "Control" && tempEraserMode && fdCanvas) {
+    if (tempEraserPrevTool) {
+      fdCanvas.set_tool(tempEraserPrevTool);
+      updateToolbarActive(lockedTool || tempEraserPrevTool);
+      updateCanvasCursor(tempEraserPrevTool);
+    }
+    tempEraserMode = false;
+    tempEraserPrevTool = null;
   }
 });
 

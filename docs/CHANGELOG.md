@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.9.8 — Ctrl → Temporary Eraser Override
+
+- **UX (R3.48)**: Hold Ctrl + click/drag from any tool to temporarily switch to eraser; release Ctrl or pointer-up restores original tool
+- **FIX**: Split `e.ctrlKey` from `e.metaKey` in pointerdown — Cmd=temp-select (Screenbrush), Ctrl=temp-eraser (new). Previously both triggered temp-select.
+- **Keyup**: Control keyup now restores from temp eraser; Meta keyup handles Cmd-hold separately
+
 ### v0.9.7 — Eraser Poof Animation
 
 - **UX (R3.48)**: Erasing a node now shows a brief red "poof" animation — a fading red rounded rect (150ms, 30% alpha → 0, slight scale-up) at the deleted node's position
