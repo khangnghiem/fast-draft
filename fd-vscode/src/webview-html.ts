@@ -2833,11 +2833,29 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         items.forEach((p, i) => {
           const row = document.createElement('div');
           row.className = 'renamify-row';
-          row.innerHTML =
-            '<input type="checkbox" checked data-idx="' + i + '">' +
-            '<span class="renamify-old">@' + p.oldId + '</span>' +
-            '<span class="renamify-arrow">→</span>' +
-            '<span class="renamify-new">@' + p.newId + '</span>';
+
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = true;
+          cb.dataset.idx = i.toString();
+
+          const oldSpan = document.createElement('span');
+          oldSpan.className = 'renamify-old';
+          oldSpan.textContent = '@' + p.oldId;
+
+          const arrow = document.createElement('span');
+          arrow.className = 'renamify-arrow';
+          arrow.textContent = '→';
+
+          const newSpan = document.createElement('span');
+          newSpan.className = 'renamify-new';
+          newSpan.textContent = '@' + p.newId;
+
+          row.appendChild(cb);
+          row.appendChild(oldSpan);
+          row.appendChild(arrow);
+          row.appendChild(newSpan);
+
           body.appendChild(row);
         });
         footer.style.display = 'flex';
