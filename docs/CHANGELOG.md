@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.10.2 — Group Render + Text Bounds Fix
+
+- **FIX (R5.4)**: Groups no longer appear as solid rectangles — selected groups now show dashed border instead of solid stroke + 8-point resize handles; matches Figma behavior where groups are purely organizational
+- **FIX (R3.28)**: Inline text editor now preserves text style on double-click — WASM `get_selected_node_props` always returns resolved font properties (fontSize, fontFamily, fontWeight) including defaults, preventing mismatched rendering
+- **FIX (R3.46)**: Text boundary tighter — WASM padding reduced from 4px→2px per side; JS `measureAndUpdateTextBounds` uses precise Canvas2D glyph metrics (`actualBoundingBoxAscent + Descent`) instead of `fontSize * 1.4` approximation
+
 ### v0.10.1 — Empty Parent Cleanup on Detach
 
 - **FIX (R3.34)**: Detaching the last child from a Group/Frame now auto-removes the empty container — `remove_empty_ancestors()` in `sync.rs` cascade-deletes all now-childless Group/Frame ancestors up the chain (matches eraser's `cascade_empty_groups` behavior)
