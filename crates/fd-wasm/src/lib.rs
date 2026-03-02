@@ -500,14 +500,21 @@ impl FdCanvas {
     }
 
     /// Get the arrow tool's live preview line during drag.
-    /// Returns JSON `{"x1":..,"y1":..,"x2":..,"y2":..}` or `""` if not dragging.
+    /// Returns JSON with target_id when hovering a node, or `""` if not dragging.
     pub fn get_arrow_preview(&self) -> String {
         if self.active_tool != ToolKind::Arrow {
             return String::new();
         }
         match self.arrow_tool.preview_line() {
             Some((x1, y1, x2, y2)) => {
-                format!(r#"{{"x1":{},"y1":{},"x2":{},"y2":{}}}"#, x1, y1, x2, y2)
+                let target_part = match self.arrow_tool.preview_target() {
+                    Some(id) => format!(r#","target_id":"{}""#, id.as_str()),
+                    None => String::new(),
+                };
+                format!(
+                    r#"{{"x1":{},"y1":{},"x2":{},"y2":{}{}}}"#,
+                    x1, y1, x2, y2, target_part
+                )
             }
             None => String::new(),
         }
@@ -1910,6 +1917,12 @@ impl FdCanvas {
     fn hit_test_resize_handle(&self, x: f32, y: f32) -> Option<ResizeHandle> {
         let id = self.select_tool.first_selected()?;
         let idx = self.engine.graph.index_of(id)?;
+
+        // Groups don't have resize handles — size derives from children
+        if matches!(self.engine.graph.graph[idx].kind, NodeKind::Group) {
+            return None;
+        }
+
         let b = self.engine.current_bounds().get(&idx)?;
 
         let bx = b.x;

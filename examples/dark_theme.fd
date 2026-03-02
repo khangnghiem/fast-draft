@@ -1,3 +1,5 @@
+# ─── Themes ───
+
 theme dark_accent {
   fill: #A29BFE  # blue
 }
@@ -21,6 +23,15 @@ theme dark_text {
   font: "Inter" regular 14
 }
 
+# ─── Layout ───
+
+# ─── Layout ───
+# ─── Layout ───
+# ─── Layout ───
+# ─── Layout ───
+# ─── Layout ───
+# ─── Layout ───
+# ─── Layout ───
 # ─── Layout ───
 # ─── Layout ───
 # ─── Layout ───
@@ -221,8 +232,8 @@ rect @brightness_card {
   }
   w: 344 h: 72
   use: dark_card
-  x: 324.17
-  y: 496.43
+  x: 429.45
+  y: 779.56
 }
 
 rect @btn_delete {
@@ -235,8 +246,8 @@ rect @btn_delete {
   fill: #E1705520  # red
   stroke: #E17055 1
   corner: 10
-  x: 267.35
-  y: 685.85
+  x: 292.75
+  y: 650.21
   when :hover {
     fill: #E1705540  # red
     ease: ease_out 150ms
@@ -336,3 +347,41 @@ text @_text_0 "Text" {
   y: -91.5
 }
 
+rect @rect_10 {
+  w: 23.77 h: 7.15
+  x: 609.71
+  y: 920.09
+}
+
+group @_group_12 {
+  ellipse @ellipse_11 {
+    w: 54.17 h: 51.24
+    x: 73.16
+    y: -389.31
+  }
+  x: 734.33
+  y: 1091.12
+}
+
+rect @rect_9 {
+  w: 158.28 h: 126.27
+  x: 889.24
+  y: 765.45
+}
+
+# ─── Flows ───
+
+edge @edge_4 {
+  from: @btn_delete
+  to: @brightness_card
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}
+edge @edge_8 {
+  from: @btn_delete
+  to: @brightness_row
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}

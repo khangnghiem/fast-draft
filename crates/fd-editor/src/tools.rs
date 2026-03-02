@@ -408,11 +408,24 @@ impl Tool for RectTool {
                         ];
                     }
 
-                    return vec![GraphMutation::ResizeNode {
+                    // Reposition origin to top-left corner so drawing
+                    // works in all directions (north, west, etc.)
+                    let origin_x = x.min(self.start_x);
+                    let origin_y = y.min(self.start_y);
+                    let dx = origin_x - self.last_cx;
+                    let dy = origin_y - self.last_cy;
+                    self.last_cx = origin_x;
+                    self.last_cy = origin_y;
+
+                    let mut mutations = vec![GraphMutation::ResizeNode {
                         id,
                         width: w,
                         height: h,
                     }];
+                    if dx.abs() > 0.001 || dy.abs() > 0.001 {
+                        mutations.insert(0, GraphMutation::MoveNode { id, dx, dy });
+                    }
+                    return mutations;
                 }
                 vec![]
             }
@@ -690,11 +703,24 @@ impl Tool for EllipseTool {
                         ];
                     }
 
-                    return vec![GraphMutation::ResizeNode {
+                    // Reposition origin to top-left corner so drawing
+                    // works in all directions (north, west, etc.)
+                    let origin_x = x.min(self.start_x);
+                    let origin_y = y.min(self.start_y);
+                    let dx = origin_x - self.last_cx;
+                    let dy = origin_y - self.last_cy;
+                    self.last_cx = origin_x;
+                    self.last_cy = origin_y;
+
+                    let mut mutations = vec![GraphMutation::ResizeNode {
                         id,
                         width: w,
                         height: h,
                     }];
+                    if dx.abs() > 0.001 || dy.abs() > 0.001 {
+                        mutations.insert(0, GraphMutation::MoveNode { id, dx, dy });
+                    }
+                    return mutations;
                 }
                 vec![]
             }
@@ -791,6 +817,8 @@ pub struct ArrowTool {
     source_node: Option<NodeId>,
     /// Current drag position for live preview.
     current_pos: Option<(f32, f32)>,
+    /// Target node currently hovered during arrow drag.
+    pub target_node: Option<NodeId>,
     /// Whether a drag is in progress.
     drawing: bool,
 }
@@ -807,6 +835,7 @@ impl ArrowTool {
             start_pos: None,
             source_node: None,
             current_pos: None,
+            target_node: None,
             drawing: false,
         }
     }
@@ -820,6 +849,11 @@ impl ArrowTool {
         let (x1, y1) = self.start_pos?;
         let (x2, y2) = self.current_pos?;
         Some((x1, y1, x2, y2))
+    }
+
+    /// Get the target node currently hovered during arrow drag.
+    pub fn preview_target(&self) -> Option<NodeId> {
+        if self.drawing { self.target_node } else { None }
     }
 }
 
@@ -842,40 +876,69 @@ impl Tool for ArrowTool {
             InputEvent::PointerMove { x, y, .. } => {
                 if self.drawing {
                     self.current_pos = Some((*x, *y));
+                    self.target_node = hit_node;
                 }
                 vec![]
             }
-            InputEvent::PointerUp { .. } => {
+            InputEvent::PointerUp { x, y, .. } => {
                 self.drawing = false;
                 let source = self.source_node.take();
-                self.start_pos = None;
+                let start = self.start_pos.take();
                 self.current_pos = None;
 
-                // Require both source and target nodes to create a connected edge
                 let target = hit_node;
-                match (source, target) {
-                    (Some(from), Some(to)) if from != to => {
-                        let edge_id = NodeId::with_prefix("edge");
-                        let edge = Edge {
-                            id: edge_id,
-                            from: EdgeAnchor::Node(from),
-                            to: EdgeAnchor::Node(to),
-                            text_child: None,
-                            style: Style::default(),
-                            use_styles: Default::default(),
-                            arrow: ArrowKind::End,
-                            curve: CurveKind::Smooth,
-                            annotations: Vec::new(),
-                            animations: Default::default(),
-                            flow: None,
-                            label_offset: None,
-                        };
-                        vec![GraphMutation::AddEdge {
-                            edge: Box::new(edge),
-                        }]
+
+                // Determine anchor endpoints
+                let from_anchor = match source {
+                    Some(id) => EdgeAnchor::Node(id),
+                    None => {
+                        if let Some((sx, sy)) = start {
+                            EdgeAnchor::Point(sx, sy)
+                        } else {
+                            return vec![];
+                        }
                     }
-                    _ => vec![],
+                };
+                let to_anchor = match target {
+                    Some(id) => EdgeAnchor::Node(id),
+                    None => EdgeAnchor::Point(*x, *y),
+                };
+
+                // Prevent self-loops
+                if let (EdgeAnchor::Node(a), EdgeAnchor::Node(b)) = (&from_anchor, &to_anchor)
+                    && a == b
+                {
+                    return vec![];
                 }
+
+                // Require minimum drag distance (10px) for standalone arrows
+                let (sx, sy) = start.unwrap_or(match &from_anchor {
+                    EdgeAnchor::Point(px, py) => (*px, *py),
+                    _ => (0.0, 0.0),
+                });
+                let dist = ((x - sx).powi(2) + (y - sy).powi(2)).sqrt();
+                if dist < 10.0 {
+                    return vec![];
+                }
+
+                let edge_id = NodeId::with_prefix("edge");
+                let edge = Edge {
+                    id: edge_id,
+                    from: from_anchor,
+                    to: to_anchor,
+                    text_child: None,
+                    style: Style::default(),
+                    use_styles: Default::default(),
+                    arrow: ArrowKind::End,
+                    curve: CurveKind::Smooth,
+                    annotations: Vec::new(),
+                    animations: Default::default(),
+                    flow: None,
+                    label_offset: None,
+                };
+                vec![GraphMutation::AddEdge {
+                    edge: Box::new(edge),
+                }]
             }
             _ => vec![],
         }
@@ -1542,10 +1605,10 @@ mod tests {
     }
 
     #[test]
-    fn arrow_tool_no_source_no_edge() {
+    fn arrow_tool_half_connected_point_to_node() {
         let mut tool = ArrowTool::new();
 
-        // Press on empty canvas
+        // Press on empty canvas (no source node)
         tool.handle(
             &InputEvent::PointerDown {
                 x: 100.0,
@@ -1556,7 +1619,7 @@ mod tests {
             None,
         );
 
-        // Release on a target node
+        // Release on a target node (sufficient distance)
         let mutations = tool.handle(
             &InputEvent::PointerUp {
                 x: 300.0,
@@ -1565,10 +1628,17 @@ mod tests {
             },
             Some(NodeId::intern("target")),
         );
-        assert!(
-            mutations.is_empty(),
-            "should not create edge without source"
-        );
+        // Now creates a half-connected edge: Point → Node
+        assert_eq!(mutations.len(), 1, "should create half-connected edge");
+        match &mutations[0] {
+            GraphMutation::AddEdge { edge } => {
+                assert!(
+                    matches!(edge.from, EdgeAnchor::Point(x, y) if (x - 100.0).abs() < 0.01 && (y - 100.0).abs() < 0.01)
+                );
+                assert!(matches!(edge.to, EdgeAnchor::Node(id) if id == NodeId::intern("target")));
+            }
+            _ => panic!("expected AddEdge"),
+        }
     }
 
     #[test]
@@ -1691,5 +1761,253 @@ mod tests {
         );
         assert!(tool.erased_ids.is_empty());
         assert!(tool.dragging);
+    }
+
+    #[test]
+    fn rect_tool_draw_northwest_emits_move() {
+        let mut tool = RectTool::new();
+
+        // Start at (200, 200)
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 200.0,
+                y: 200.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        // Drag to (100, 120) — northwest direction
+        let mutations = tool.handle(
+            &InputEvent::PointerMove {
+                x: 100.0,
+                y: 120.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        assert_eq!(
+            mutations.len(),
+            2,
+            "NW drag should emit MoveNode + ResizeNode"
+        );
+        match &mutations[0] {
+            GraphMutation::MoveNode { dx, dy, .. } => {
+                assert!((dx - (-100.0)).abs() < 0.01, "dx={dx} should be -100");
+                assert!((dy - (-80.0)).abs() < 0.01, "dy={dy} should be -80");
+            }
+            _ => panic!("expected MoveNode first"),
+        }
+        match &mutations[1] {
+            GraphMutation::ResizeNode { width, height, .. } => {
+                assert!((width - 100.0).abs() < 0.01, "w={width}");
+                assert!((height - 80.0).abs() < 0.01, "h={height}");
+            }
+            _ => panic!("expected ResizeNode second"),
+        }
+    }
+
+    #[test]
+    fn ellipse_tool_draw_northwest_emits_move() {
+        let mut tool = EllipseTool::new();
+
+        // Start at (300, 300)
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 300.0,
+                y: 300.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        // Drag to (200, 250) — northwest direction
+        let mutations = tool.handle(
+            &InputEvent::PointerMove {
+                x: 200.0,
+                y: 250.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        assert_eq!(
+            mutations.len(),
+            2,
+            "NW drag should emit MoveNode + ResizeNode"
+        );
+        match &mutations[0] {
+            GraphMutation::MoveNode { dx, dy, .. } => {
+                assert!((dx - (-100.0)).abs() < 0.01, "dx={dx} should be -100");
+                assert!((dy - (-50.0)).abs() < 0.01, "dy={dy} should be -50");
+            }
+            _ => panic!("expected MoveNode first"),
+        }
+        match &mutations[1] {
+            GraphMutation::ResizeNode { width, height, .. } => {
+                assert!((width - 100.0).abs() < 0.01, "w={width}");
+                assert!((height - 50.0).abs() < 0.01, "h={height}");
+            }
+            _ => panic!("expected ResizeNode second"),
+        }
+    }
+
+    #[test]
+    fn rect_tool_draw_southeast_no_extra_move() {
+        let mut tool = RectTool::new();
+
+        // Start at (100, 100)
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 100.0,
+                y: 100.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        // Drag southeast (200, 180) — origin stays at (100, 100)
+        let mutations = tool.handle(
+            &InputEvent::PointerMove {
+                x: 200.0,
+                y: 180.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        // SE drawing should only emit ResizeNode (origin unchanged)
+        assert_eq!(mutations.len(), 1, "SE drag should emit only ResizeNode");
+        match &mutations[0] {
+            GraphMutation::ResizeNode { width, height, .. } => {
+                assert!((width - 100.0).abs() < 0.01);
+                assert!((height - 80.0).abs() < 0.01);
+            }
+            _ => panic!("expected ResizeNode"),
+        }
+    }
+
+    #[test]
+    fn arrow_tool_standalone_creates_edge() {
+        let mut tool = ArrowTool::new();
+
+        // Start in empty space (no hit node)
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 100.0,
+                y: 100.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        // Drag to (300, 200) — more than 10px distance
+        tool.handle(
+            &InputEvent::PointerMove {
+                x: 300.0,
+                y: 200.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        // Release in empty space
+        let mutations = tool.handle(
+            &InputEvent::PointerUp {
+                x: 300.0,
+                y: 200.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        assert_eq!(mutations.len(), 1, "Standalone arrow should create an edge");
+        match &mutations[0] {
+            GraphMutation::AddEdge { edge } => {
+                assert!(
+                    matches!(edge.from, EdgeAnchor::Point(x, y) if (x - 100.0).abs() < 0.01 && (y - 100.0).abs() < 0.01)
+                );
+                assert!(
+                    matches!(edge.to, EdgeAnchor::Point(x, y) if (x - 300.0).abs() < 0.01 && (y - 200.0).abs() < 0.01)
+                );
+            }
+            _ => panic!("expected AddEdge"),
+        }
+    }
+
+    #[test]
+    fn arrow_tool_too_short_creates_nothing() {
+        let mut tool = ArrowTool::new();
+
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 100.0,
+                y: 100.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+
+        // Drag only 5px — below threshold
+        let mutations = tool.handle(
+            &InputEvent::PointerUp {
+                x: 103.0,
+                y: 104.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        assert!(
+            mutations.is_empty(),
+            "Too-short arrow should create nothing"
+        );
+    }
+
+    #[test]
+    fn arrow_tool_connected_still_works() {
+        let mut tool = ArrowTool::new();
+        let from_node = NodeId::intern("node_a");
+        let to_node = NodeId::intern("node_b");
+
+        tool.handle(
+            &InputEvent::PointerDown {
+                x: 50.0,
+                y: 50.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            Some(from_node),
+        );
+        tool.handle(
+            &InputEvent::PointerMove {
+                x: 200.0,
+                y: 200.0,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+        let mutations = tool.handle(
+            &InputEvent::PointerUp {
+                x: 200.0,
+                y: 200.0,
+                modifiers: Modifiers::NONE,
+            },
+            Some(to_node),
+        );
+        assert_eq!(mutations.len(), 1);
+        match &mutations[0] {
+            GraphMutation::AddEdge { edge } => {
+                assert!(matches!(edge.from, EdgeAnchor::Node(id) if id == from_node));
+                assert!(matches!(edge.to, EdgeAnchor::Node(id) if id == to_node));
+            }
+            _ => panic!("expected AddEdge with Node anchors"),
+        }
     }
 }
