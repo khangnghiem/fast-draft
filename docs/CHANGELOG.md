@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.10.7 — Eraser Context Menu Fix + Lock Icon + Undo Dismissal
+
+- **FIX (R3.48)**: Ctrl+click eraser no longer opens context menu on macOS — `contextmenu` event is now suppressed when eraser tool is active (temp or permanent)
+- **UX (R3.49)**: Floating toolbar tool buttons now show 🔒 lock badge at top-right when tool is locked (double-press) — matches existing top toolbar behavior
+- **FIX (R3.50)**: Undo/redo now dismisses open context menus and annotation cards — prevents stale popups after graph state changes
+
 ### v0.10.6 — Fix Eraser Tool Crash
 
 - **FIX (R3.48)**: Pressing E (eraser tool) no longer crashes/freezes the canvas — `handle_pointer_move` in WASM had `unreachable!()` for eraser when not dragging; replaced with `vec![]` no-op for hover state

@@ -1607,6 +1607,8 @@ document.addEventListener("keydown", (e) => {
   if (result.changed) {
     render();
     syncTextToExtension();
+    closeContextMenu();
+    closeAnnotationCard();
   }
 
   // Handle tool switches from keyboard
@@ -2358,6 +2360,9 @@ function setupContextMenu() {
   canvas.addEventListener("contextmenu", (e) => {
     e.preventDefault();
     if (!fdCanvas) return;
+    // On macOS, Ctrl+click fires contextmenu alongside the eraser pointerdown.
+    // Suppress the context menu when eraser is active (temp or permanent).
+    if (tempEraserMode || fdCanvas.get_tool_name() === "eraser") return;
 
     const rect = canvas.getBoundingClientRect();
     // Adjust for pan offset to get scene-space coords

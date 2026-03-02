@@ -2154,6 +2154,38 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       box-shadow: 0 2px 6px rgba(42, 110, 240, 0.3);
     }
     .dark-theme .ft-tool-btn.active { box-shadow: 0 2px 6px rgba(58, 130, 246, 0.4); }
+    .ft-tool-btn.locked {
+      background: var(--fd-accent);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(42, 110, 240, 0.3), 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    .dark-theme .ft-tool-btn.locked {
+      box-shadow: 0 2px 6px rgba(58, 130, 246, 0.4), 0 0 0 1.5px rgba(255,255,255,0.25);
+    }
+    .ft-tool-btn.locked::after {
+      content: '';
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 10px;
+      height: 10px;
+      background: var(--fd-surface-solid);
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      /* Lock SVG as mask */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ft-tool-btn.locked::before {
+      content: '🔒';
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      font-size: 8px;
+      line-height: 1;
+      z-index: 1;
+    }
     .ft-tooltip {
       position: absolute;
       bottom: calc(100% + 8px);
