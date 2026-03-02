@@ -466,13 +466,7 @@ impl SyncEngine {
         let parent_kind = &self.graph.graph[parent_idx].kind;
         let child_kind = &self.graph.graph[child_idx].kind;
 
-        let is_container_parent = match parent_kind {
-            NodeKind::Group | NodeKind::Frame { .. } => true,
-            NodeKind::Rect { .. } | NodeKind::Ellipse { .. } => {
-                matches!(child_kind, NodeKind::Text { .. })
-            }
-            _ => false,
-        };
+        let is_container_parent = matches!(parent_kind, NodeKind::Group | NodeKind::Frame { .. });
         if !is_container_parent {
             return None;
         }
