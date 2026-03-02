@@ -5,6 +5,15 @@
 
 ## Completed Requirements
 
+### v0.10.3 — Canvas Interaction Fixes
+
+- **FIX (R3.16)**: Shapes (rect, ellipse) can now be drawn in all directions — dragging north or west now correctly repositions the origin via `MoveNode` alongside `ResizeNode`; previously shapes only drew toward south-east
+- **FIX (R1.19)**: Standalone arrows — arrows can now be drawn without connecting to a source or target node; uses `EdgeAnchor::Point` for unconnected endpoints; minimum 10px drag distance required to create
+- **FIX (R1.19)**: Arrow preview line is now solid — removed dashed `setLineDash` from arrow preview rendering in `main.js`
+- **UX (R3.24)**: Arrow target highlight — hovering over a node during arrow drag now shows a blue glow ring (#4FC3F7) around the potential target; WASM `get_arrow_preview` now includes `target_id` in JSON response
+- **FIX (R3.24)**: Groups no longer have resize handles — `hit_test_resize_handle` returns `None` for Group nodes; group size derives purely from children
+- **TESTING**: 6 new tests — `rect_tool_draw_northwest_emits_move`, `ellipse_tool_draw_northwest_emits_move`, `rect_tool_draw_southeast_no_extra_move`, `arrow_tool_standalone_creates_edge`, `arrow_tool_too_short_creates_nothing`, `arrow_tool_connected_still_works`; updated `arrow_tool_no_source_no_edge` → `arrow_tool_half_connected_point_to_node`
+
 ### v0.10.2 — Group Render + Text Bounds Fix
 
 - **FIX (R5.4)**: Groups no longer appear as solid rectangles — selected groups now show dashed border instead of solid stroke + 8-point resize handles; matches Figma behavior where groups are purely organizational
