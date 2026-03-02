@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.9.9 — Visible Delete Button
+
+- **UX (R3.48)**: Added visible delete button (✕ icon) to the floating action bar — appears when a node is selected, red hover feedback (#FF3B30), calls `delete_selected()` on click
+- **Tests**: All eraser/shortcut/sync tests confirmed passing (eraser_tool_lifecycle, erase_child_preserves_group, erase_nested_cascade, etc.)
+
 ### v0.9.8 — Ctrl → Temporary Eraser Override
 
 - **UX (R3.48)**: Hold Ctrl + click/drag from any tool to temporarily switch to eraser; release Ctrl or pointer-up restores original tool
