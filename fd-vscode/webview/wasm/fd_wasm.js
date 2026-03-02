@@ -321,6 +321,27 @@ export class FdCanvas {
         }
     }
     /**
+     * Get the resolved bounds of a node by its `@id` as JSON.
+     * Returns `{"x":N,"y":N,"width":N,"height":N}` or `"{}"` if not found.
+     * Used by JS to capture bounds BEFORE the eraser deletes the node.
+     * @param {string} id_str
+     * @returns {string}
+     */
+    get_node_bounds_json(id_str) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(id_str, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_get_node_bounds_json(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * Get basic properties of a node by its ID (without selecting it).
      * Returns JSON with `text`, `fontSize`, `fontFamily`, `fontWeight`.
      * Returns `{}` if the node is not found.

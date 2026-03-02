@@ -1627,6 +1627,22 @@ impl FdCanvas {
         "{}".to_string()
     }
 
+    /// Get the resolved bounds of a node by its `@id` as JSON.
+    /// Returns `{"x":N,"y":N,"width":N,"height":N}` or `"{}"` if not found.
+    /// Used by JS to capture bounds BEFORE the eraser deletes the node.
+    pub fn get_node_bounds_json(&self, id_str: &str) -> String {
+        let id = NodeId::intern(id_str);
+        if let Some(idx) = self.engine.graph.index_of(id)
+            && let Some(b) = self.engine.current_bounds().get(&idx)
+        {
+            return format!(
+                "{{\"x\":{},\"y\":{},\"width\":{},\"height\":{}}}",
+                b.x, b.y, b.width, b.height
+            );
+        }
+        "{}".to_string()
+    }
+
     /// Hit-test at scene-space coordinates. Returns the topmost node ID, or empty string.
     pub fn hit_test_at(&self, x: f32, y: f32) -> String {
         self.hit_test(x, y)

@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.9.7 — Eraser Poof Animation
+
+- **UX (R3.48)**: Erasing a node now shows a brief red "poof" animation — a fading red rounded rect (150ms, 30% alpha → 0, slight scale-up) at the deleted node's position
+- **WASM API**: `get_node_bounds_json(id)` — returns node bounds as JSON for JS to capture BEFORE eraser deletion
+- **JS**: `erasePoofs[]` state array, capture on pointerdown + pointermove, render loop draws overlays respecting pan+zoom; animation loop keeps running while poofs are active
+
 ### v0.9.6 — Group-Aware Eraser
 
 - **FIX (R3.48)**: Erasing a child inside a Group/Frame now detaches the child first, then deletes only the child — group and siblings survive; previously `RemoveNode` could leave broken groups

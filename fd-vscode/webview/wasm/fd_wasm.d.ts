@@ -109,6 +109,12 @@ export class FdCanvas {
      */
     get_node_bounds(node_id: string): string;
     /**
+     * Get the resolved bounds of a node by its `@id` as JSON.
+     * Returns `{"x":N,"y":N,"width":N,"height":N}` or `"{}"` if not found.
+     * Used by JS to capture bounds BEFORE the eraser deletes the node.
+     */
+    get_node_bounds_json(id_str: string): string;
+    /**
      * Get basic properties of a node by its ID (without selecting it).
      * Returns JSON with `text`, `fontSize`, `fontFamily`, `fontWeight`.
      * Returns `{}` if the node is not found.
@@ -343,6 +349,7 @@ export interface InitOutput {
     readonly fdcanvas_update_text_metrics: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly parse_to_json: (a: number, b: number) => [number, number];
     readonly validate: (a: number, b: number) => [number, number];
+    readonly fdcanvas_get_node_bounds_json: (a: number, b: number, c: number) => [number, number];
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;
