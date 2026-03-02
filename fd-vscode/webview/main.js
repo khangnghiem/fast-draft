@@ -95,6 +95,10 @@ let cmdTempSelectOriginalTool = null;
 /** Alt+drag clone-and-drag active */
 let altCloneActive = false;
 
+// ─── Eraser Poof Animation ───────────────────────────────────────────────
+/** Entries: { x, y, width, height, startTime } — brief red fade on erase */
+const erasePoofs = [];
+
 // ─── Smart Defaults (Sticky Styles Per Tool) ─────────────────────────────
 /** Session-only style defaults per tool type (Excalidraw-style) */
 const toolDefaults = {
@@ -486,6 +490,38 @@ function render() {
     ctx.restore();
   }
 
+  // ── Eraser poof fade-out overlays ──
+  if (erasePoofs.length > 0) {
+    const now = performance.now();
+    for (let i = erasePoofs.length - 1; i >= 0; i--) {
+      const p = erasePoofs[i];
+      const elapsed = now - p.startTime;
+      const duration = 150;
+      if (elapsed >= duration) {
+        erasePoofs.splice(i, 1);
+        continue;
+      }
+      const t = elapsed / duration;
+      const alpha = (1 - t) * 0.3;
+      const scale = 1 + t * 0.15;
+      const cx = p.x + p.width / 2;
+      const cy = p.y + p.height / 2;
+      const sw = p.width * scale;
+      const sh = p.height * scale;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#FF3B30";
+      const r = Math.min(sw, sh) * 0.08;
+      const rx = cx - sw / 2;
+      const ry = cy - sh / 2;
+      ctx.beginPath();
+      ctx.roundRect(rx, ry, sw, sh, r);
+      ctx.fill();
+      ctx.restore();
+    }
+    if (erasePoofs.length > 0) renderDirty = true;
+  }
+
   ctx.restore();
 
   // Update minimap viewport indicator smoothly (scene re-renders at lower frequency)
@@ -508,7 +544,7 @@ let animFrameId = null;
 function startAnimLoop() {
   if (animFrameId !== null) return; // already running
   function loop() {
-    if (renderDirty || activeTweens.length > 0) {
+    if (renderDirty || activeTweens.length > 0 || erasePoofs.length > 0) {
       renderDirty = false;
       render();
     }
@@ -602,6 +638,17 @@ function setupPointerEvents() {
       }
     }
 
+    // Eraser: capture poof BEFORE WASM deletes the node
+    if (fdCanvas.get_tool_name() === "eraser") {
+      const hitId = fdCanvas.hit_test_at(x, y);
+      if (hitId) {
+        try {
+          const b = JSON.parse(fdCanvas.get_node_bounds_json(hitId));
+          if (b.width) erasePoofs.push({ ...b, startTime: performance.now() });
+        } catch (_) { /* ignore */ }
+      }
+    }
+
     const changed = fdCanvas.handle_pointer_down(
       x,
       y,
@@ -645,6 +692,17 @@ function setupPointerEvents() {
     const rect = canvas.getBoundingClientRect();
     const x = ((e.clientX - rect.left) - panX) / zoomLevel;
     const y = ((e.clientY - rect.top) - panY) / zoomLevel;
+    // Eraser: capture poof BEFORE WASM deletes the node on drag
+    if (pointerIsDown && fdCanvas.get_tool_name() === "eraser") {
+      const hitId = fdCanvas.hit_test_at(x, y);
+      if (hitId) {
+        try {
+          const b = JSON.parse(fdCanvas.get_node_bounds_json(hitId));
+          if (b.width) erasePoofs.push({ ...b, startTime: performance.now() });
+        } catch (_) { /* ignore */ }
+      }
+    }
+
     const changed = fdCanvas.handle_pointer_move(
       x,
       y,

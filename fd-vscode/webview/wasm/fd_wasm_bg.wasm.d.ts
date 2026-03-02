@@ -56,6 +56,7 @@ export const fdcanvas_ungroup_selected: (a: number) => number;
 export const fdcanvas_update_text_metrics: (a: number, b: number, c: number, d: number, e: number) => number;
 export const parse_to_json: (a: number, b: number) => [number, number];
 export const validate: (a: number, b: number) => [number, number];
+export const fdcanvas_get_node_bounds_json: (a: number, b: number, c: number) => [number, number];
 export const __wbindgen_malloc: (a: number, b: number) => number;
 export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
 export const __wbindgen_exn_store: (a: number) => void;
