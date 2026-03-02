@@ -142,6 +142,20 @@ fn emit_style_block(out: &mut String, name: &NodeId, style: &Style, depth: usize
 fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize) {
     let node = &graph.graph[idx];
 
+    // Skip empty container nodes (childless Group/Frame) on format.
+    // Shapes (Rect/Ellipse/Text) are always meaningful on their own.
+    // Preserve containers that still carry annotations, styles, animations,
+    // or non-default inline styles (fill, stroke, etc.).
+    if matches!(node.kind, NodeKind::Group | NodeKind::Frame { .. })
+        && graph.children(idx).is_empty()
+        && node.annotations.is_empty()
+        && node.use_styles.is_empty()
+        && node.animations.is_empty()
+        && !has_inline_styles(&node.style)
+    {
+        return;
+    }
+
     // Emit preserved `# comment` lines before the node declaration
     for comment in &node.comments {
         indent(out, depth);
@@ -1011,6 +1025,19 @@ fn emit_spec_annotations(out: &mut String, annotations: &[Annotation], prefix: &
     if !annotations.is_empty() {
         out.push('\n');
     }
+}
+
+/// Check if a `Style` has any non-default properties set.
+fn has_inline_styles(style: &Style) -> bool {
+    style.fill.is_some()
+        || style.stroke.is_some()
+        || style.font.is_some()
+        || style.corner_radius.is_some()
+        || style.opacity.is_some()
+        || style.shadow.is_some()
+        || style.text_align.is_some()
+        || style.text_valign.is_some()
+        || style.scale.is_some()
 }
 
 /// Format a float without trailing zeros for compact output.
@@ -2165,12 +2192,50 @@ rect @card {
 
     #[test]
     fn roundtrip_empty_group() {
+        // Empty groups (no children, no styles, no annotations) are stripped on emit.
         let input = "group @empty {\n}\n";
         let graph = parse_document(input).unwrap();
         let output = emit_document(&graph);
-        let graph2 = parse_document(&output).expect("re-parse of empty group failed");
-        let node = graph2.get_by_id(NodeId::intern("empty")).unwrap();
-        assert!(matches!(node.kind, NodeKind::Group));
+        assert!(
+            !output.contains("@empty"),
+            "empty group should be stripped on emit, got: {output}"
+        );
+    }
+
+    #[test]
+    fn emit_strips_empty_frame() {
+        // Childless frame with no styles should be stripped on emit.
+        let input = "frame @lonely {\n  w: 200 h: 100\n}\n";
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+        assert!(
+            !output.contains("@lonely"),
+            "empty frame should be stripped on emit, got: {output}"
+        );
+    }
+
+    #[test]
+    fn emit_keeps_styled_empty_frame() {
+        // Childless frame WITH styles should be preserved.
+        let input = "frame @styled {\n  w: 200 h: 100\n  fill: #FF0000\n}\n";
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+        assert!(
+            output.contains("@styled"),
+            "styled empty frame should be preserved, got: {output}"
+        );
+    }
+
+    #[test]
+    fn emit_keeps_group_with_children() {
+        // Group with children must NOT be stripped.
+        let input = "group @parent {\n  rect @child {\n    w: 40 h: 20\n  }\n}\n";
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+        assert!(
+            output.contains("@parent"),
+            "group with children should be preserved, got: {output}"
+        );
     }
 
     #[test]

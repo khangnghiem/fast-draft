@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.10.1 — Empty Parent Cleanup on Detach
+
+- **FIX (R3.34)**: Detaching the last child from a Group/Frame now auto-removes the empty container — `remove_empty_ancestors()` in `sync.rs` cascade-deletes all now-childless Group/Frame ancestors up the chain (matches eraser's `cascade_empty_groups` behavior)
+- **FIX (R4.10)**: Emitter now strips childless Group/Frame nodes during format — containers with no children, no annotations, no styles, and no animations are omitted from `.fd` output; styled/annotated empty containers are preserved
+- **CORE**: New `has_inline_styles()` helper in `emitter.rs` — checks if a `Style` has any non-default properties without requiring `PartialEq` on float-containing types
+- **TESTING**: 6 new tests — `sync_detach_last_child_removes_empty_group`, `sync_detach_last_child_removes_empty_frame`, `sync_detach_nested_cascade_removes_empty_ancestors`, `emit_strips_empty_frame`, `emit_keeps_styled_empty_frame`, `emit_keeps_group_with_children`; updated `roundtrip_empty_group` to verify stripping behavior
+
 ### v0.9.9 — Visible Delete Button
 
 - **UX (R3.48)**: Added visible delete button (✕ icon) to the floating action bar — appears when a node is selected, red hover feedback (#FF3B30), calls `delete_selected()` on click

@@ -785,6 +785,46 @@ pub fn detach_child_from_group(
 
     // Shrink old parent group to fit remaining children
     expand_group_to_children(graph, old_parent_idx, bounds, None);
+
+    // Cascade-remove empty Group/Frame ancestors
+    remove_empty_ancestors(graph, old_parent_idx, bounds);
+}
+
+/// Walk up from `start_idx`, removing empty Group/Frame containers.
+/// Stops at root, non-container nodes, or containers that still have children.
+fn remove_empty_ancestors(
+    graph: &mut SceneGraph,
+    start_idx: NodeIndex,
+    bounds: &mut HashMap<NodeIndex, fd_core::ResolvedBounds>,
+) {
+    let mut cursor = start_idx;
+    loop {
+        if cursor == graph.root {
+            break;
+        }
+        if graph.graph.node_weight(cursor).is_none() {
+            break;
+        }
+        let is_removable = matches!(
+            graph.graph[cursor].kind,
+            NodeKind::Group | NodeKind::Frame { .. }
+        );
+        if !is_removable {
+            break;
+        }
+        if !graph.children(cursor).is_empty() {
+            break;
+        }
+
+        let next_parent = graph.parent(cursor);
+        bounds.remove(&cursor);
+        graph.remove_node(cursor);
+
+        match next_parent {
+            Some(p) => cursor = p,
+            None => break,
+        }
+    }
 }
 
 /// A mutation that can be applied to the scene graph from canvas interactions.
@@ -2063,4 +2103,131 @@ group @outer {
     assert!(engine.graph.get_by_id(leaf_id).is_none());
     assert!(engine.graph.get_by_id(inner_id).is_none());
     assert!(engine.graph.get_by_id(outer_id).is_none());
+}
+
+#[test]
+fn sync_detach_last_child_removes_empty_group() {
+    // Detaching the only child from a group should dissolve the group.
+    let input = r#"
+group @solo_group {
+  rect @only_child { w: 100 h: 50 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let child_id = NodeId::intern("only_child");
+    let group_id = NodeId::intern("solo_group");
+
+    // Move child far outside group
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: child_id,
+        dx: 500.0,
+        dy: 400.0,
+    });
+    engine.evaluate_drop(child_id);
+
+    // Child should be at root
+    let child_idx = engine.graph.index_of(child_id).unwrap();
+    let parent = engine.graph.parent(child_idx).unwrap();
+    assert_eq!(
+        parent, engine.graph.root,
+        "@only_child should be at root after detach"
+    );
+
+    // Group should be dissolved (removed from graph)
+    assert!(
+        engine.graph.get_by_id(group_id).is_none(),
+        "@solo_group should be removed after its only child detached"
+    );
+}
+
+#[test]
+fn sync_detach_last_child_removes_empty_frame() {
+    // Detaching the only child from a frame should dissolve the frame.
+    let input = r#"
+frame @solo_frame {
+  w: 200 h: 100
+
+  rect @only_child { w: 60 h: 30 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let child_id = NodeId::intern("only_child");
+    let frame_id = NodeId::intern("solo_frame");
+
+    // Move child far outside frame
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: child_id,
+        dx: 500.0,
+        dy: 400.0,
+    });
+    engine.evaluate_drop(child_id);
+
+    // Child should be at root
+    let child_idx = engine.graph.index_of(child_id).unwrap();
+    let parent = engine.graph.parent(child_idx).unwrap();
+    assert_eq!(
+        parent, engine.graph.root,
+        "@only_child should be at root after detaching from frame"
+    );
+
+    // Frame should be dissolved
+    assert!(
+        engine.graph.get_by_id(frame_id).is_none(),
+        "@solo_frame should be removed after its only child detached"
+    );
+}
+
+#[test]
+fn sync_detach_nested_cascade_removes_empty_ancestors() {
+    // Detaching a deeply nested sole child should cascade-remove all
+    // now-empty Group/Frame ancestors up the chain.
+    let input = r#"
+group @outer_cascade {
+  group @inner_cascade {
+    rect @deep_child { w: 40 h: 30 }
+  }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let child_id = NodeId::intern("deep_child");
+    let inner_id = NodeId::intern("inner_cascade");
+    let outer_id = NodeId::intern("outer_cascade");
+
+    // Move child far outside both groups
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: child_id,
+        dx: 600.0,
+        dy: 500.0,
+    });
+    engine.evaluate_drop(child_id);
+
+    // Child should be at root
+    let child_idx = engine.graph.index_of(child_id).unwrap();
+    let parent = engine.graph.parent(child_idx).unwrap();
+    assert_eq!(
+        parent, engine.graph.root,
+        "@deep_child should be at root after detaching through 2 levels"
+    );
+
+    // Both empty groups should be cascade-removed
+    assert!(
+        engine.graph.get_by_id(inner_id).is_none(),
+        "@inner_cascade should be removed (was only child)"
+    );
+    assert!(
+        engine.graph.get_by_id(outer_id).is_none(),
+        "@outer_cascade should be removed (cascade from inner)"
+    );
 }
