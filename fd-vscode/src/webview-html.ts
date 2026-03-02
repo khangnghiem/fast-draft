@@ -269,6 +269,23 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       background: var(--fd-accent);
       cursor: pointer;
     }
+    .fab-delete-btn {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      color: #aaa;
+      cursor: pointer;
+      padding: 3px 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .fab-delete-btn:hover {
+      background: rgba(255,59,48,0.15);
+      border-color: rgba(255,59,48,0.3);
+      color: #FF3B30;
+    }
 
 
     /* ── Onboarding Overlay ── */
@@ -2502,6 +2519,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <label class="fab-label fab-text-only" for="fab-font-size">Size</label>
       <input type="number" id="fab-font-size" class="fab-input fab-text-only" min="8" max="200" step="1" value="16" title="Font size">
       <div class="fab-sep"></div>
+      <button class="fab-delete-btn" id="deleteSelectedBtn" title="Delete (⌫)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
       <button class="fab-btn" id="fab-more-btn" aria-label="More actions" title="More actions">⋯</button>
       <div id="fab-overflow-menu">
         <button class="fab-menu-item" data-action="group">⌘G Group</button>

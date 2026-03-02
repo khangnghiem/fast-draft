@@ -1974,6 +1974,17 @@ function hideFloatingBar() {
   if (menu) menu.classList.remove("visible");
 }
 
+// ─── Delete Button (Floating Action Bar) ───────────────────────────────────
+document.getElementById("deleteSelectedBtn")?.addEventListener("click", () => {
+  if (!fdCanvas) return;
+  const changed = fdCanvas.delete_selected();
+  if (changed) {
+    render();
+    syncTextToExtension();
+    updateFloatingBar();
+  }
+});
+
 // ─── Onboarding Overlay ────────────────────────────────────────────────────
 
 /** Show onboarding overlay if the canvas is empty (no nodes) */
