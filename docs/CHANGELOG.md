@@ -5,6 +5,14 @@
 
 ## Completed Requirements
 
+### v0.9.4 — Duplicate Naming + Figma-Style Group Selection
+
+- **FIX**: Alt+drag duplicate now derives name from original — `@login_button` → `@login_button_copy_N` instead of anonymous `@_rect_N`; strips recursive `_copy_` suffixes to prevent name growth; consistent with copy/paste `_cpXXXX` convention
+- **CORE**: Both `duplicate_selected_at` (WASM) and `DuplicateNode` mutation (sync engine) use `NodeId::with_prefix` for derived naming
+- **UX (R3.24)**: Restored Figma-style group selection with progressive drill-down — first click selects topmost group ancestor, each subsequent click drills one level deeper; replaces transparent-group model from v0.8.98
+- **CORE**: `effective_target()` now walks group ancestors top-down, returning the deepest unselected group
+- **TESTING**: New `sync_duplicate_derives_name_from_original` test; updated 3 `effective_target` tests for drill-down behavior
+
 ### v0.9.2 — Eraser Tool
 
 - **NEW (R3.48)**: Eraser tool — swipe-to-delete tool that tracks drag lifecycle and erased IDs for undo grouping; `EraserTool` struct with `clear()` method; `ToolKind::Eraser` variant; FdCanvas manages actual node removal (group-aware detach); `set_tool("eraser")` and keyboard/toolbar integration ready

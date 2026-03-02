@@ -816,12 +816,41 @@ impl SceneGraph {
 
     /// Resolve the effective click target for a leaf node.
     ///
-    /// Groups are transparent (purely organizational) — clicking a child
-    /// inside a group always targets the child directly, matching Figma
-    /// behavior. The function always returns `leaf_id`.
-    pub fn effective_target(&self, leaf_id: NodeId, _selected: &[NodeId]) -> NodeId {
-        // Groups are transparent: always target the clicked leaf directly.
-        // No bubble-up to parent groups.
+    /// Figma-style group selection with progressive drill-down:
+    /// - **First click** → selects the topmost group ancestor (below root).
+    /// - **Click again** (topmost group already selected) → next-level group.
+    /// - **Click again** (all group ancestors selected) → the leaf itself.
+    pub fn effective_target(&self, leaf_id: NodeId, selected: &[NodeId]) -> NodeId {
+        let leaf_idx = match self.index_of(leaf_id) {
+            Some(idx) => idx,
+            None => return leaf_id,
+        };
+
+        // Walk up from the leaf, collecting group ancestors below root
+        // in bottom-up order.
+        let mut groups_bottom_up: Vec<NodeId> = Vec::new();
+        let mut cursor = self.parent(leaf_idx);
+        while let Some(parent_idx) = cursor {
+            if parent_idx == self.root {
+                break;
+            }
+            if matches!(self.graph[parent_idx].kind, NodeKind::Group) {
+                groups_bottom_up.push(self.graph[parent_idx].id);
+            }
+            cursor = self.parent(parent_idx);
+        }
+
+        // Reverse to get top-down order (topmost group first).
+        groups_bottom_up.reverse();
+
+        // Find the deepest unselected group in the chain.
+        for group_id in &groups_bottom_up {
+            if !selected.contains(group_id) {
+                return *group_id;
+            }
+        }
+
+        // All groups selected → drill down to the leaf.
         leaf_id
     }
 
@@ -1013,7 +1042,7 @@ mod tests {
     }
 
     #[test]
-    fn test_effective_target_group_transparent() {
+    fn test_effective_target_group_selects_group_first() {
         let mut sg = SceneGraph::new();
 
         // Root -> Group -> Rect
@@ -1032,16 +1061,16 @@ mod tests {
         let group_idx = sg.add_node(sg.root, group);
         sg.add_node(group_idx, rect);
 
-        // Groups are transparent: always returns the leaf directly
-        assert_eq!(sg.effective_target(rect_id, &[]), rect_id);
+        // Single click (nothing selected): should select the group
+        assert_eq!(sg.effective_target(rect_id, &[]), group_id);
+        // Double click (group already selected): drill down to leaf
         assert_eq!(sg.effective_target(rect_id, &[group_id]), rect_id);
-        assert_eq!(sg.effective_target(rect_id, &[rect_id]), rect_id);
         // Group itself → returns group (it IS the leaf in this call)
         assert_eq!(sg.effective_target(group_id, &[]), group_id);
     }
 
     #[test]
-    fn test_effective_target_nested_groups_transparent() {
+    fn test_effective_target_nested_groups_selects_topmost() {
         let mut sg = SceneGraph::new();
 
         // Root -> group_outer -> group_inner -> rect_leaf
@@ -1063,11 +1092,12 @@ mod tests {
         let inner_idx = sg.add_node(outer_idx, inner);
         sg.add_node(inner_idx, leaf);
 
-        // Groups are transparent: always returns the leaf directly
-        assert_eq!(sg.effective_target(leaf_id, &[]), leaf_id);
-        assert_eq!(sg.effective_target(leaf_id, &[outer_id]), leaf_id);
+        // Single click (nothing selected): topmost group
+        assert_eq!(sg.effective_target(leaf_id, &[]), outer_id);
+        // Outer selected → drill to inner group
+        assert_eq!(sg.effective_target(leaf_id, &[outer_id]), inner_id);
+        // Both outer+inner selected → drill to leaf
         assert_eq!(sg.effective_target(leaf_id, &[outer_id, inner_id]), leaf_id);
-        assert_eq!(sg.effective_target(leaf_id, &[inner_id]), leaf_id);
     }
 
     #[test]
