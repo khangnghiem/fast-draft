@@ -317,7 +317,7 @@ impl FdCanvas {
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
-            ToolKind::Eraser => unreachable!("handled above"),
+            ToolKind::Eraser => vec![], // Not dragging — no-op hover
         };
         let changed = self.apply_mutations(mutations);
         // Marquee drag also counts as visual change

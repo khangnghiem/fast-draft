@@ -1501,6 +1501,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     canvas.tool-ellipse { cursor: crosshair; }
     canvas.tool-pen { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="3" fill="white" stroke="black"/></svg>') 10 10, crosshair; }
     canvas.tool-text { cursor: text; }
+    canvas.tool-eraser { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><rect x="5" y="5" width="10" height="10" rx="2" fill="white" stroke="%23E53935" stroke-width="1.5"/><line x1="7" y1="7" x2="13" y2="13" stroke="%23E53935" stroke-width="1.5"/><line x1="13" y1="7" x2="7" y2="13" stroke="%23E53935" stroke-width="1.5"/></svg>') 10 10, crosshair; }
 
     /* ── Properties Panel (Keynote inspector) ── */
     #props-panel {
@@ -2559,6 +2560,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         <button class="ft-tool-btn" data-tool="arrow"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14L14 4"/><path d="M7 4H14V11"/></svg><span class="ft-tooltip">Arrow<span class="tt-shortcut">A</span></span></button>
         <button class="ft-tool-btn" data-tool="text"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4H14"/><path d="M9 4V15"/><path d="M6 15H12"/></svg><span class="ft-tooltip">Text<span class="tt-shortcut">T</span></span></button>
         <button class="ft-tool-btn" data-tool="frame"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="14" height="14" rx="2"/><rect x="5.5" y="5.5" width="7" height="7" rx="1"/></svg><span class="ft-tooltip">Frame<span class="tt-shortcut">F</span></span></button>
+        <button class="ft-tool-btn" data-tool="eraser"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5L8 12L5.5 14.5H2.5V12L9.5 5L12.25 2.25Z"/><path d="M8.5 6L12 9.5"/><line x1="5" y1="15" x2="15" y2="15"/></svg><span class="ft-tooltip">Eraser<span class="tt-shortcut">E</span></span></button>
       </div>
       <div class="scroll-handle handle-end" title="Drag to move, click to roll">
         <div class="paper-roll right-roll"></div>
