@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.9.6 — Group-Aware Eraser
+
+- **FIX (R3.48)**: Erasing a child inside a Group/Frame now detaches the child first, then deletes only the child — group and siblings survive; previously `RemoveNode` could leave broken groups
+- **NEW**: `cascade_empty_groups()` — after erasing the last child, empty Group/Frame containers are automatically cascade-deleted up the ancestor chain (handles nested groups)
+- **CORE**: `erase_node_immediately()` upgraded with pre-detach (reparent to root) + `expand_group_to_children()` to shrink parent bounds + post-delete cascade
+- **TESTING**: 3 new tests — `erase_child_preserves_group`, `erase_last_child_leaves_empty_group`, `erase_nested_cascade`
+
 ### v0.9.5 — Near-Detach Visual Fix
 
 - **FIX**: Removed confusing purple dashed rubber-band + glow ring when dragging text near the edge of its parent shape (rect/ellipse); near-detach preview now only shows for Group/Frame containers
