@@ -1,5 +1,3 @@
-# ─── Themes ───
-
 theme dark_accent {
   fill: #A29BFE  # blue
 }
@@ -24,7 +22,7 @@ theme dark_text {
 }
 
 # ─── Layout ───
-
+# ─── Layout ───
 # ─── Layout ───
 # ─── Layout ───
 # ─── Layout ───
@@ -85,9 +83,6 @@ group @settings {
           use: dark_muted
         }
         group @_group_0 {
-          text @dark_label "Dark Mode" {
-            use: dark_text
-          }
         }
       }
       rect @switch_on {
@@ -116,29 +111,20 @@ group @settings {
     fill: #6B7280  # blue
     font: "Inter" semibold 13
   }
-  x: 281.88
-  y: 350.68
+  x: 546.06
+  y: 361.9
+}
+
+text @dark_label "Dark Mode" {
+  use: dark_text
+  x: 526.87
+  y: -154.44
 }
 
 rect @toggle_notif {
   group @_group_0 {
-    group @notif_row {
-      group @notif_info {
-        text @notif_label "Notifications" {
-          use: dark_text
-        }
-      }
-      rect @switch_off {
-        spec "Toggle — OFF state"
-        ellipse @switch_knob_off {
-          w: 20 h: 20
-          fill: #6B7280  # blue
-        }
-        w: 44 h: 24
-        fill: #3D3D5C  # blue
-        corner: 12
-      }
-    }
+    x: 82.17
+    y: -115.96
   }
   w: 344 h: 56
   use: dark_card
@@ -150,10 +136,30 @@ rect @toggle_notif {
   }
 }
 
+group @notif_row {
+  group @notif_info {
+    text @notif_label "Notifications" {
+      use: dark_text
+    }
+  }
+  rect @switch_off {
+    spec "Toggle — OFF state"
+    ellipse @switch_knob_off {
+      w: 20 h: 20
+      fill: #6B7280  # blue
+    }
+    w: 44 h: 24
+    fill: #3D3D5C  # blue
+    corner: 12
+  }
+  x: 247.41
+  y: -60.15
+}
+
 text @notif_desc "Push and email alerts" {
   use: dark_muted
-  x: 430.48
-  y: -115.78
+  x: 494.04
+  y: -246.19
 }
 
 text @danger_label "Danger Zone" {
@@ -182,8 +188,8 @@ rect @toggle_sound {
 
 text @sound_label "Sound Effects" {
   use: dark_text
-  x: 507.85
-  y: -74.19
+  x: 439.95
+  y: -44.34
 }
 
 text @sound_desc "UI interaction sounds" {
@@ -240,8 +246,8 @@ rect @btn_delete {
   fill: #E1705520  # red
   stroke: #E17055 1
   corner: 10
-  x: 305.5
-  y: 601.84
+  x: 267.35
+  y: 685.85
   when :hover {
     fill: #E1705540  # red
     ease: ease_out 150ms
@@ -262,8 +268,8 @@ text @delete_label "Delete Account" {
 rect @_rect_0 {
   w: 344 h: 56
   use: dark_card
-  x: 257.61
-  y: -65.07
+  x: 189.76
+  y: -374.25
   when :hover {
     fill: #353550  # blue
     ease: ease_out 150ms
@@ -273,8 +279,8 @@ rect @_rect_0 {
 rect @_rect_1 {
   w: 344 h: 56
   use: dark_card
-  x: 358.85
-  y: 28.77
+  x: 15.47
+  y: -224.71
   when :hover {
     fill: #353550  # blue
     ease: ease_out 150ms
@@ -284,8 +290,8 @@ rect @_rect_1 {
 rect @_rect_2 {
   w: 344 h: 56
   use: dark_card
-  x: 582.41
-  y: -122.29
+  x: 613.86
+  y: -391.97
   when :hover {
     fill: #353550  # blue
     ease: ease_out 150ms
@@ -295,8 +301,8 @@ rect @_rect_2 {
 rect @_rect_3 {
   w: 344 h: 56
   use: dark_card
-  x: 257.61
-  y: -65.07
+  x: 482.16
+  y: -460.9
   when :hover {
     fill: #353550  # blue
     ease: ease_out 150ms
@@ -317,8 +323,8 @@ rect @_rect_4 {
 rect @_rect_5 {
   w: 328.18 h: 95.49
   use: dark_card
-  x: 541.75
-  y: 145.96
+  x: 858.4
+  y: -318.57
   when :hover {
     fill: #353550  # blue
     ease: ease_out 150ms
@@ -332,11 +338,12 @@ rect @_rect_6 {
 
 rect @rect_8 {
   w: 118.43 h: 118.43
-  x: 890.71
-  y: 262.38
+  x: 975.14
+  y: 538.19
 }
 
-# ─── Constraints ───
+text @_text_0 "Text" {
+  x: 589.52
+  y: -91.5
+}
 
-@_rect_1 -> offset: @_rect_0 20, 20
-@_rect_3 -> offset: @_rect_2 20, 20
