@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.9.5 — Near-Detach Visual Fix
+
+- **FIX**: Removed confusing purple dashed rubber-band + glow ring when dragging text near the edge of its parent shape (rect/ellipse); near-detach preview now only shows for Group/Frame containers
+- **CORE**: `evaluate_near_detach()` in `sync.rs` simplified to `matches!(parent_kind, Group | Frame)`; actual detach behavior in `handle_child_group_relationship()` unchanged
+
 ### v0.9.4 — Duplicate Naming + Figma-Style Group Selection
 
 - **FIX**: Alt+drag duplicate now derives name from original — `@login_button` → `@login_button_copy_N` instead of anonymous `@_rect_N`; strips recursive `_copy_` suffixes to prevent name growth; consistent with copy/paste `_cpXXXX` convention
