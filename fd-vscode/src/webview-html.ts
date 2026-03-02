@@ -2492,10 +2492,10 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
     <div class="tb-zone tb-right">
       <span class="zen-full-only" id="status">Loading WASM…</span>
-      <button class="tool-btn" id="zen-toggle-btn" title="Switch to Zen mode">🧘</button>
+      <button class="tool-btn" id="zen-toggle-btn" title="Switch to Zen mode" aria-label="Toggle Zen mode">🧘</button>
       <!-- Settings Hamburger ☰ -->
       <div class="settings-dropdown-container" id="settings-dropdown-container">
-      <button class="tool-btn" id="settings-menu-btn" title="Settings & tools">☰</button>
+      <button class="tool-btn" id="settings-menu-btn" title="Settings & tools" aria-label="Settings Menu">☰</button>
       <div class="settings-menu" id="settings-menu">
         <button class="settings-menu-item" id="sm-grid-toggle"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span><span class="sm-shortcut">G</span></button>
         <button class="settings-menu-item" id="sm-spec-badge-toggle"><span class="sm-icon">◇</span><span class="sm-label">Spec Badges</span></button>
@@ -2552,7 +2552,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <label class="fab-label fab-text-only" for="fab-font-size">Size</label>
       <input type="number" id="fab-font-size" class="fab-input fab-text-only" min="8" max="200" step="1" value="16" title="Font size">
       <div class="fab-sep"></div>
-      <button class="fab-delete-btn" id="deleteSelectedBtn" title="Delete (⌫)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
+      <button class="fab-delete-btn" id="deleteSelectedBtn" title="Delete (⌫)" aria-label="Delete selected"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
       <button class="fab-btn" id="fab-more-btn" aria-label="More actions" title="More actions">⋯</button>
       <div id="fab-overflow-menu">
         <button class="fab-menu-item" data-action="group">⌘G Group</button>
@@ -2577,7 +2577,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div id="center-snap-guides"></div>
     <div id="layers-panel"></div>
     <div id="library-panel"></div>
-    <div id="minimap-container"><canvas id="minimap-canvas"></canvas><div id="minimap-zoom-controls"><button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-reset-btn" title="Reset zoom (click)">100%</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button></div></div>
+    <div id="minimap-container"><canvas id="minimap-canvas"></canvas><div id="minimap-zoom-controls"><button class="bl-btn" id="zoom-out-btn" title="Zoom out" aria-label="Zoom out">−</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-reset-btn" title="Reset zoom (click)" aria-label="Reset zoom">100%</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-in-btn" title="Zoom in" aria-label="Zoom in">+</button></div></div>
     <!-- Floating Bottom Toolbar (Scroll UX) -->
     <div id="floating-toolbar" class="scroll-toolbar horizontal unrolled">
       <div class="scroll-handle handle-start" title="Drag to move, click to roll">
@@ -2585,14 +2585,14 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         <div class="paper-roll left-roll"></div>
       </div>
       <div class="scroll-paper-body">
-        <button class="ft-tool-btn active" data-tool="select"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2L3.5 13.5L7 10L11.5 14.5L13 13L9 8.5L13 8.5Z"/></svg><span class="ft-tooltip">Select<span class="tt-shortcut">V</span></span></button>
-        <button class="ft-tool-btn" data-tool="rect"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="12" height="10" rx="2"/></svg><span class="ft-tooltip">Rectangle<span class="tt-shortcut">R</span></span></button>
-        <button class="ft-tool-btn" data-tool="ellipse"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/></svg><span class="ft-tooltip">Ellipse<span class="tt-shortcut">O</span></span></button>
-        <button class="ft-tool-btn" data-tool="pen"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5L14.5 7.5L6.5 15.5H2.5V11.5Z"/><path d="M10.5 3.5L14.5 7.5" /><path d="M8.5 5.5L12.5 9.5"/></svg><span class="ft-tooltip">Pen<span class="tt-shortcut">P</span></span></button>
-        <button class="ft-tool-btn" data-tool="arrow"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14L14 4"/><path d="M7 4H14V11"/></svg><span class="ft-tooltip">Arrow<span class="tt-shortcut">A</span></span></button>
-        <button class="ft-tool-btn" data-tool="text"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4H14"/><path d="M9 4V15"/><path d="M6 15H12"/></svg><span class="ft-tooltip">Text<span class="tt-shortcut">T</span></span></button>
-        <button class="ft-tool-btn" data-tool="frame"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="14" height="14" rx="2"/><rect x="5.5" y="5.5" width="7" height="7" rx="1"/></svg><span class="ft-tooltip">Frame<span class="tt-shortcut">F</span></span></button>
-        <button class="ft-tool-btn" data-tool="eraser"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5L8 12L5.5 14.5H2.5V12L9.5 5L12.25 2.25Z"/><path d="M8.5 6L12 9.5"/><line x1="5" y1="15" x2="15" y2="15"/></svg><span class="ft-tooltip">Eraser<span class="tt-shortcut">E</span></span></button>
+        <button class="ft-tool-btn active" data-tool="select" aria-label="Select tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2L3.5 13.5L7 10L11.5 14.5L13 13L9 8.5L13 8.5Z"/></svg><span class="ft-tooltip">Select<span class="tt-shortcut">V</span></span></button>
+        <button class="ft-tool-btn" data-tool="rect" aria-label="Rectangle tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="12" height="10" rx="2"/></svg><span class="ft-tooltip">Rectangle<span class="tt-shortcut">R</span></span></button>
+        <button class="ft-tool-btn" data-tool="ellipse" aria-label="Ellipse tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/></svg><span class="ft-tooltip">Ellipse<span class="tt-shortcut">O</span></span></button>
+        <button class="ft-tool-btn" data-tool="pen" aria-label="Pen tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5L14.5 7.5L6.5 15.5H2.5V11.5Z"/><path d="M10.5 3.5L14.5 7.5" /><path d="M8.5 5.5L12.5 9.5"/></svg><span class="ft-tooltip">Pen<span class="tt-shortcut">P</span></span></button>
+        <button class="ft-tool-btn" data-tool="arrow" aria-label="Arrow tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14L14 4"/><path d="M7 4H14V11"/></svg><span class="ft-tooltip">Arrow<span class="tt-shortcut">A</span></span></button>
+        <button class="ft-tool-btn" data-tool="text" aria-label="Text tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4H14"/><path d="M9 4V15"/><path d="M6 15H12"/></svg><span class="ft-tooltip">Text<span class="tt-shortcut">T</span></span></button>
+        <button class="ft-tool-btn" data-tool="frame" aria-label="Frame tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="14" height="14" rx="2"/><rect x="5.5" y="5.5" width="7" height="7" rx="1"/></svg><span class="ft-tooltip">Frame<span class="tt-shortcut">F</span></span></button>
+        <button class="ft-tool-btn" data-tool="eraser" aria-label="Eraser tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5L8 12L5.5 14.5H2.5V12L9.5 5L12.25 2.25Z"/><path d="M8.5 6L12 9.5"/><line x1="5" y1="15" x2="15" y2="15"/></svg><span class="ft-tooltip">Eraser<span class="tt-shortcut">E</span></span></button>
       </div>
       <div class="scroll-handle handle-end" title="Drag to move, click to roll">
         <div class="paper-roll right-roll"></div>
@@ -2666,15 +2666,15 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         <div class="props-section" id="props-align-section" style="display:none">
           <div class="props-section-label">Alignment</div>
           <div class="align-grid" id="align-grid">
-            <button class="align-cell" data-h="left"   data-v="top"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="center" data-v="top"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="right"  data-v="top"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="left"   data-v="middle"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="center" data-v="middle"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="right"  data-v="middle"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="left"   data-v="bottom"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="center" data-v="bottom"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="right"  data-v="bottom"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="left"   data-v="top" aria-label="Align top left"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="center" data-v="top" aria-label="Align top center"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="right"  data-v="top" aria-label="Align top right"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="left"   data-v="middle" aria-label="Align middle left"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="center" data-v="middle" aria-label="Align middle center"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="right"  data-v="middle" aria-label="Align middle right"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="left"   data-v="bottom" aria-label="Align bottom left"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="center" data-v="bottom" aria-label="Align bottom center"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="right"  data-v="bottom" aria-label="Align bottom right"><span class="align-dot"></span></button>
           </div>
         </div>
     </div>
@@ -2682,7 +2682,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
   <div id="annotation-card">
     <div class="card-header">
       <span id="card-title">Spec</span>
-      <button class="card-close" id="card-close-btn">×</button>
+      <button class="card-close" id="card-close-btn" aria-label="Close specification">×</button>
     </div>
     <div class="field-group">
       <label class="field-label" for="ann-description">Description</label>
@@ -2745,7 +2745,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
   <div id="renamify-panel">
     <div class="renamify-header">
       <span class="renamify-title">✦ Renamify</span>
-      <button class="renamify-close" id="renamify-close">×</button>
+      <button class="renamify-close" id="renamify-close" aria-label="Close renamify panel">×</button>
     </div>
     <div class="renamify-body" id="renamify-body"></div>
     <div class="renamify-footer" id="renamify-footer" style="display:none">
@@ -2755,7 +2755,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
   </div>
   <div id="anim-picker">
-    <div class="picker-header"><span class="picker-icon">⚡</span> Add Animation <button class="picker-close" id="anim-picker-close">×</button></div>
+    <div class="picker-header"><span class="picker-icon">⚡</span> Add Animation <button class="picker-close" id="anim-picker-close" aria-label="Close animation picker">×</button></div>
     <div class="picker-body" id="anim-picker-body"></div>
   </div>
 

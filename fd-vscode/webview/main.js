@@ -1877,7 +1877,7 @@ function buildShortcutHelpHtml() {
     <div class="help-panel">
       <div class="help-header">
         <h3>Keyboard Shortcuts</h3>
-        <button class="help-close">×</button>
+        <button class="help-close" aria-label="Close shortcuts help">×</button>
       </div>
       <div class="help-body">
   `;
@@ -2267,7 +2267,7 @@ function addAcceptRow(value) {
   item.className = "accept-item";
   item.innerHTML = `
     <input type="text" value="${escapeAttr(value)}" placeholder="Acceptance criterion">
-    <button class="card-close" style="font-size:14px">×</button>
+    <button class="card-close" style="font-size:14px" aria-label="Remove acceptance criterion">×</button>
   `;
   item.querySelector("button").addEventListener("click", () => {
     item.remove();
@@ -3274,6 +3274,7 @@ function openAnimPicker(targetNodeId, clientX, clientY) {
         const removeBtn = document.createElement("button");
         removeBtn.className = "pe-remove";
         removeBtn.textContent = "✕";
+        removeBtn.setAttribute("aria-label", "Remove animation");
         removeBtn.addEventListener("click", () => {
           fdCanvas.remove_node_animations(targetNodeId);
           render();
@@ -3737,8 +3738,8 @@ function renderLayerNode(node, selectedId, depth = 0) {
   html += `<span class="layer-icon">${icon}</span>`;
   html += `<span class="layer-name">${escapeHtml(node.id)}${textPreview}</span>`;
   html += `<span class="layer-kind">${escapeHtml(node.kind)}</span>`;
-  html += `<span class="layer-actions" data-actions-id="${escapeAttr(node.id)}" title="More actions">⋮</span>`;
-  html += `<span class="layer-eye" data-eye-id="${escapeAttr(node.id)}" title="Toggle visibility">👁</span>`;
+  html += `<span class="layer-actions" data-actions-id="${escapeAttr(node.id)}" title="More actions" aria-label="More actions for ${escapeAttr(node.id)}">⋮</span>`;
+  html += `<span class="layer-eye" data-eye-id="${escapeAttr(node.id)}" title="Toggle visibility" aria-label="Toggle visibility for ${escapeAttr(node.id)}">👁</span>`;
   html += `</div>`;
 
   if (hasChildren) {
@@ -3771,7 +3772,7 @@ function refreshSpecSummary(panel) {
   html += `<span class="layers-title">Requirements</span>`;
   html += `<span class="layers-count" title="${annotated.length} of ${totalNodes} nodes have specs">${coveragePct}%</span>`;
   html += `<div class="spec-header-actions">`;
-  html += `<button class="spec-action-btn" id="spec-export-btn" title="Export spec report (copies markdown to clipboard)">↗</button>`;
+  html += `<button class="spec-action-btn" id="spec-export-btn" title="Export spec report (copies markdown to clipboard)" aria-label="Export spec report">↗</button>`;
   html += `<select class="spec-bulk-status" id="spec-bulk-status" title="Set status on all visible specs">`;
   html += `<option value="">Bulk…</option>`;
   html += `<option value="todo">→ To Do</option>`;
@@ -5985,7 +5986,7 @@ function refreshLibraryPanel() {
 
   let html = `<div class="lib-header">`;
   html += `<span class="lib-title">📦 Libraries</span>`;
-  html += `<button class="lib-close" id="lib-close-btn" title="Close">×</button>`;
+  html += `<button class="lib-close" id="lib-close-btn" title="Close" aria-label="Close libraries panel">×</button>`;
   html += `</div>`;
   html += `<input class="lib-search" id="lib-search" type="text" placeholder="Search components…" value="${escapeAttr(librarySearchQuery)}">`;
 
