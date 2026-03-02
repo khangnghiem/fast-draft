@@ -1101,6 +1101,37 @@ mod tests {
     }
 
     #[test]
+    fn test_visual_highlight_differs_from_selected() {
+        // Visual highlight contract: when effective_target returns a group,
+        // the UI should highlight the raw hit (leaf) not the group.
+        let mut sg = SceneGraph::new();
+
+        let group_id = NodeId::intern("card");
+        let child_id = NodeId::intern("card_title");
+
+        let group = SceneNode::new(group_id, NodeKind::Group);
+        let child = SceneNode::new(
+            child_id,
+            NodeKind::Text {
+                content: "Title".into(),
+            },
+        );
+
+        let group_idx = sg.add_node(sg.root, group);
+        sg.add_node(group_idx, child);
+
+        // Raw hit = child_id, nothing selected
+        let logical_target = sg.effective_target(child_id, &[]);
+        // Logical selection should be the group
+        assert_eq!(logical_target, group_id);
+        // Visual highlight should be the child (raw hit != logical_target)
+        assert_ne!(child_id, logical_target);
+        // After drilling (group selected), both converge
+        let drilled = sg.effective_target(child_id, &[group_id]);
+        assert_eq!(drilled, child_id);
+    }
+
+    #[test]
     fn test_effective_target_no_group() {
         let mut sg = SceneGraph::new();
 

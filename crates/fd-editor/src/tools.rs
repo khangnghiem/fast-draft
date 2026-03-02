@@ -56,8 +56,12 @@ pub enum ResizeHandle {
 // ─── Select Tool ─────────────────────────────────────────────────────────
 
 pub struct SelectTool {
-    /// Currently selected node(s).
+    /// Currently selected node(s) — logical selection for operations.
     pub selected: Vec<NodeId>,
+    /// Nodes to visually highlight on canvas.
+    /// Differs from `selected` when a group is selected via child click —
+    /// `selected` holds the group, `visual_highlight` holds the clicked child.
+    pub visual_highlight: Vec<NodeId>,
     /// Drag state (moving a selected node).
     dragging: bool,
     last_x: f32,
@@ -87,6 +91,7 @@ impl SelectTool {
     pub fn new() -> Self {
         Self {
             selected: Vec::new(),
+            visual_highlight: Vec::new(),
             dragging: false,
             last_x: 0.0,
             last_y: 0.0,

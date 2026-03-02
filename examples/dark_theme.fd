@@ -28,18 +28,6 @@ theme dark_text {
 # ─── Layout ───
 # ─── Layout ───
 # ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
 # ─── Settings panel ───────────────────────────────────────────────────────
 group @settings {
   group @header {
@@ -120,8 +108,8 @@ group @settings {
     fill: #6B7280  # blue
     font: "Inter" semibold 13
   }
-  x: 546.06
-  y: 361.9
+  x: 545.8
+  y: 362.89
 }
 
 text @dark_label "Dark Mode" {
@@ -227,13 +215,13 @@ rect @brightness_card {
       fill: #3D3D5C  # blue
       corner: 2
     }
-    x: 118.03
-    y: -199.92
+    x: 44.7
+    y: -268.72
   }
   w: 344 h: 72
   use: dark_card
-  x: 429.45
-  y: 779.56
+  x: 528.45
+  y: 1186.63
 }
 
 rect @btn_delete {

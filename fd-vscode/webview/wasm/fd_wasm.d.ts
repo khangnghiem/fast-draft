@@ -95,7 +95,7 @@ export class FdCanvas {
     get_annotations_json(node_id: string): string;
     /**
      * Get the arrow tool's live preview line during drag.
-     * Returns JSON `{"x1":..,"y1":..,"x2":..,"y2":..}` or `""` if not dragging.
+     * Returns JSON with target_id when hovering a node, or `""` if not dragging.
      */
     get_arrow_preview(): string;
     /**
