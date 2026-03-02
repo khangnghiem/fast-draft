@@ -117,7 +117,7 @@ impl FdCanvas {
     pub fn render(&self, ctx: &CanvasRenderingContext2d, time_ms: f64) {
         let selected_ids: Vec<String> = self
             .select_tool
-            .selected
+            .visual_highlight
             .iter()
             .map(|id| id.as_str().to_string())
             .collect();
@@ -211,6 +211,13 @@ impl FdCanvas {
                 .graph
                 .effective_target(id, &self.select_tool.selected)
         });
+
+        // Visual highlight: show the clicked child, not the group
+        self.select_tool.visual_highlight = match (raw_hit, hit) {
+            (Some(raw), Some(eff)) if raw != eff => vec![raw],
+            (_, Some(eff)) => vec![eff],
+            _ => vec![],
+        };
 
         let prev_pressed = self.pressed_id;
         self.pressed_id = hit;
@@ -364,17 +371,21 @@ impl FdCanvas {
                             .effective_target(raw_id, &self.select_tool.selected);
                         if !self.select_tool.selected.contains(&id) {
                             self.select_tool.selected.push(id);
+                            self.select_tool.visual_highlight.push(raw_id);
                         }
                     }
                 } else {
                     let mut new_selection = Vec::new();
+                    let mut new_highlight = Vec::new();
                     for raw_id in hits {
                         let id = self.engine.graph.effective_target(raw_id, &new_selection);
                         if !new_selection.contains(&id) {
                             new_selection.push(id);
+                            new_highlight.push(raw_id);
                         }
                     }
                     self.select_tool.selected = new_selection;
+                    self.select_tool.visual_highlight = new_highlight;
                 }
             }
             self.select_tool.marquee_start = None;
@@ -550,11 +561,13 @@ impl FdCanvas {
     pub fn select_by_id(&mut self, node_id: &str) -> bool {
         if node_id.is_empty() {
             self.select_tool.selected.clear();
+            self.select_tool.visual_highlight.clear();
             return true;
         }
         let id = NodeId::intern(node_id);
         if self.engine.graph.get_by_id(id).is_some() {
             self.select_tool.selected = vec![id];
+            self.select_tool.visual_highlight = vec![id];
             true
         } else {
             false
@@ -677,6 +690,7 @@ impl FdCanvas {
         let changed = self.apply_mutations(mutations);
         if changed {
             self.select_tool.selected.clear();
+            self.select_tool.visual_highlight.clear();
             self.engine.flush_to_text();
         }
         changed
@@ -723,6 +737,7 @@ impl FdCanvas {
         let changed = self.apply_mutations(vec![mutation]);
         if changed {
             self.select_tool.selected = vec![new_id];
+            self.select_tool.visual_highlight = vec![new_id];
             self.engine.flush_to_text();
         }
         changed
@@ -739,6 +754,7 @@ impl FdCanvas {
         let changed = self.apply_mutations(vec![mutation]);
         if changed {
             self.select_tool.selected = vec![new_group_id];
+            self.select_tool.visual_highlight = vec![new_group_id];
             self.engine.flush_to_text();
         }
         changed
@@ -804,7 +820,8 @@ impl FdCanvas {
         if changed {
             // Select the promoted children + any non-group items that were selected
             self.select_tool.selected = non_group_selected;
-            self.select_tool.selected.extend(all_children);
+            self.select_tool.selected.extend(all_children.iter());
+            self.select_tool.visual_highlight = self.select_tool.selected.clone();
             self.engine.flush_to_text();
         }
         changed
@@ -1719,6 +1736,7 @@ impl FdCanvas {
         let changed = self.apply_mutations(vec![mutation]);
         if changed {
             self.select_tool.selected = vec![id];
+            self.select_tool.visual_highlight = vec![id];
             self.engine.flush_to_text();
         }
         changed
@@ -2103,6 +2121,7 @@ impl FdCanvas {
             ShortcutAction::ClearAll => (self.delete_selected(), false),
             ShortcutAction::Deselect => {
                 self.select_tool.selected.clear();
+                self.select_tool.visual_highlight.clear();
                 (false, false)
             }
 

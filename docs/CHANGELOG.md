@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.10.4 — Visual Child Highlight
+
+- **UX (R3.24)**: Clicking a child inside a group now highlights the **child** visually (blue border + resize handles) while logically selecting the **group** for operations (drag, delete, duplicate) — gives immediate visual feedback about the clicked element without breaking group behavior
+- **CORE**: Added `visual_highlight: Vec<NodeId>` to `SelectTool` — tracks which nodes the renderer highlights, separate from `selected` (logical selection for operations)
+- **CORE**: `render()` now passes `visual_highlight` to `render_scene()` instead of `selected`; all callsites that modify `selected` now sync `visual_highlight` (marquee, delete, duplicate, group, ungroup, deselect, add_node, select_by_id)
+- **TESTING**: New `test_visual_highlight_differs_from_selected` — verifies the contract that `effective_target` returns the group while the raw hit (the child) is used for visual highlighting
+
 ### v0.10.3 — Canvas Interaction Fixes
 
 - **FIX (R3.16)**: Shapes (rect, ellipse) can now be drawn in all directions — dragging north or west now correctly repositions the origin via `MoveNode` alongside `ResizeNode`; previously shapes only drew toward south-east
