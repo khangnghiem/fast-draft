@@ -96,16 +96,46 @@ impl Color {
         }
     }
 
+    #[inline(always)]
+    fn byte_to_hex(b: u8) -> (u8, u8) {
+        const HEX_CHARS: &[u8; 16] = b"0123456789ABCDEF";
+        (HEX_CHARS[(b >> 4) as usize], HEX_CHARS[(b & 0x0F) as usize])
+    }
+
     /// Emit as shortest valid hex string.
     pub fn to_hex(&self) -> String {
         let r = (self.r * 255.0).round() as u8;
         let g = (self.g * 255.0).round() as u8;
         let b = (self.b * 255.0).round() as u8;
         let a = (self.a * 255.0).round() as u8;
+
+        let (r1, r2) = Self::byte_to_hex(r);
+        let (g1, g2) = Self::byte_to_hex(g);
+        let (b1, b2) = Self::byte_to_hex(b);
+
         if a == 255 {
-            format!("#{r:02X}{g:02X}{b:02X}")
+            let mut s = String::with_capacity(7);
+            s.push('#');
+            s.push(r1 as char);
+            s.push(r2 as char);
+            s.push(g1 as char);
+            s.push(g2 as char);
+            s.push(b1 as char);
+            s.push(b2 as char);
+            s
         } else {
-            format!("#{r:02X}{g:02X}{b:02X}{a:02X}")
+            let (a1, a2) = Self::byte_to_hex(a);
+            let mut s = String::with_capacity(9);
+            s.push('#');
+            s.push(r1 as char);
+            s.push(r2 as char);
+            s.push(g1 as char);
+            s.push(g2 as char);
+            s.push(b1 as char);
+            s.push(b2 as char);
+            s.push(a1 as char);
+            s.push(a2 as char);
+            s
         }
     }
 }
