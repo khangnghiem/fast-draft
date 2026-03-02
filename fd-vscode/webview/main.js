@@ -2893,7 +2893,10 @@ function measureAndUpdateTextBounds(nodeId) {
   measureCtx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
   const metrics = measureCtx.measureText(text);
   const measuredWidth = metrics.width;
-  const measuredHeight = fontSize * 1.4; // approximate line height
+  // Use precise glyph metrics when available, fallback to font-size line-height
+  const measuredHeight = (metrics.actualBoundingBoxAscent != null && metrics.actualBoundingBoxDescent != null)
+    ? metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
+    : fontSize * 1.2;
 
   // Send measured dimensions to WASM
   const changed = fdCanvas.update_text_metrics(nodeId, measuredWidth, measuredHeight);

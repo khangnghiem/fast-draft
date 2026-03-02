@@ -942,7 +942,7 @@ impl FdCanvas {
             return false;
         }
 
-        let padding = 4.0_f32;
+        let padding = 2.0_f32;
         let new_width = (measured_width as f32) + padding * 2.0;
         let new_height = (measured_height as f32) + padding * 2.0;
 
@@ -1333,15 +1333,17 @@ impl FdCanvas {
             props.insert("y".into(), serde_json::json!(bounds.y));
         }
 
-        // Font
-        if let Some(ref font) = style.font {
-            props.insert(
-                "fontFamily".into(),
-                serde_json::Value::String(font.family.clone()),
-            );
-            props.insert("fontSize".into(), serde_json::json!(font.size));
-            props.insert("fontWeight".into(), serde_json::json!(font.weight));
-        }
+        // Font — always return resolved values (including defaults)
+        let font_family = style
+            .font
+            .as_ref()
+            .map_or("Inter", |f| f.family.as_str())
+            .to_string();
+        let font_size = style.font.as_ref().map_or(14.0, |f| f.size);
+        let font_weight = style.font.as_ref().map_or(400, |f| f.weight);
+        props.insert("fontFamily".into(), serde_json::Value::String(font_family));
+        props.insert("fontSize".into(), serde_json::json!(font_size));
+        props.insert("fontWeight".into(), serde_json::json!(font_weight));
 
         // Text alignment — always include effective alignment with context-aware
         // defaults matching render2d::draw_text (standalone text = left/top,

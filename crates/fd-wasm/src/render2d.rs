@@ -265,7 +265,12 @@ fn render_node(
                 ctx.set_stroke_style_str("#4FC3F7"); // Blue selection color
 
                 if is_selected {
-                    ctx.set_line_width(2.0);
+                    // Dashed border for selected groups (no solid stroke)
+                    ctx.set_line_width(1.5);
+                    let _ = ctx.set_line_dash(&js_sys::Array::of2(
+                        &wasm_bindgen::JsValue::from_f64(6.0),
+                        &wasm_bindgen::JsValue::from_f64(4.0),
+                    ));
                     // Draw node ID badge for selected groups
                     ctx.set_font("10px Inter, system-ui, sans-serif");
                     ctx.set_fill_style_str("#4FC3F7");
@@ -331,7 +336,8 @@ fn render_node(
     // Annotation badge removed — user preference (bug #5)
 
     // Selection overlay (drawn after children so it's on top)
-    if is_selected {
+    // Groups don't get resize handles — only dashed border (drawn in Group branch above)
+    if is_selected && !matches!(&node.kind, NodeKind::Group) {
         draw_selection_handles(ctx, node_bounds);
     }
 

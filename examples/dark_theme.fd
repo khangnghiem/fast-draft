@@ -82,8 +82,6 @@ group @settings {
         text @dark_desc "Reduce eye strain" {
           use: dark_muted
         }
-        group @_group_0 {
-        }
       }
       rect @switch_on {
         spec "Toggle — ON state"
@@ -122,10 +120,6 @@ text @dark_label "Dark Mode" {
 }
 
 rect @toggle_notif {
-  group @_group_0 {
-    x: 82.17
-    y: -115.96
-  }
   w: 344 h: 56
   use: dark_card
   x: 358.85
@@ -137,11 +131,6 @@ rect @toggle_notif {
 }
 
 group @notif_row {
-  group @notif_info {
-    text @notif_label "Notifications" {
-      use: dark_text
-    }
-  }
   rect @switch_off {
     spec "Toggle — OFF state"
     ellipse @switch_knob_off {
@@ -154,6 +143,12 @@ group @notif_row {
   }
   x: 247.41
   y: -60.15
+}
+
+text @notif_label "Notifications" {
+  use: dark_text
+  x: 219.56
+  y: -94.45
 }
 
 text @notif_desc "Push and email alerts" {
@@ -170,12 +165,6 @@ text @danger_label "Danger Zone" {
 }
 
 rect @toggle_sound {
-  group @sound_row {
-    group @sound_info {
-    }
-    x: 12.4
-    y: -91.55
-  }
   w: 328.18 h: 95.49
   use: dark_card
   x: 523.24
