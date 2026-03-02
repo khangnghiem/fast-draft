@@ -2683,4 +2683,99 @@ edge @card_to_label {
         assert!(!out.contains("fill:"), "no fill in edges mode");
         assert!(!out.contains("when"), "no when in edges mode");
     }
+
+    #[test]
+    fn roundtrip_no_duplicate_separators() {
+        // Document with themes + nodes + edge triggers section separators.
+        // After multiple round-trips, separators must appear exactly once.
+        let input = r#"
+theme accent {
+  fill: #A29BFE
+}
+
+rect @a {
+  w: 100 h: 50
+  fill: #FF0000
+}
+
+rect @b {
+  w: 80 h: 40
+}
+
+edge @link {
+  from: @a
+  to: @b
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let pass1 = emit_document(&graph);
+
+        // Separators should exist
+        assert!(
+            pass1.contains("# ─── Themes ───"),
+            "pass 1 should have Themes separator: {pass1}"
+        );
+        assert!(
+            pass1.contains("# ─── Layout ───"),
+            "pass 1 should have Layout separator: {pass1}"
+        );
+
+        // Round-trip again
+        let graph2 = parse_document(&pass1).expect("re-parse failed");
+        let pass2 = emit_document(&graph2);
+
+        // Count occurrences — must be exactly 1 each
+        let themes_count = pass2.matches("# ─── Themes ───").count();
+        let layout_count = pass2.matches("# ─── Layout ───").count();
+        let flows_count = pass2.matches("# ─── Flows ───").count();
+        assert_eq!(themes_count, 1, "Themes separator duplicated: {pass2}");
+        assert_eq!(layout_count, 1, "Layout separator duplicated: {pass2}");
+        assert_eq!(flows_count, 1, "Flows separator duplicated: {pass2}");
+
+        // Third round-trip for good measure
+        let graph3 = parse_document(&pass2).expect("third parse failed");
+        let pass3 = emit_document(&graph3);
+        assert_eq!(
+            pass3.matches("# ─── Layout ───").count(),
+            1,
+            "Layout separator grew after 3 round-trips: {pass3}"
+        );
+    }
+
+    #[test]
+    fn roundtrip_user_comments_not_stripped() {
+        // User comments (non-separator) must survive even with separators present.
+        let input = r#"
+theme dark {
+  fill: #1A1A2E
+}
+
+# Settings panel
+rect @settings {
+  w: 300 h: 200
+}
+
+rect @other {
+  w: 50 h: 50
+}
+
+edge @link {
+  from: @settings
+  to: @other
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let output = emit_document(&graph);
+        assert!(
+            output.contains("# Settings panel"),
+            "user comment should survive: {output}"
+        );
+        // Separators should not be attached to nodes as comments
+        let node = graph.get_by_id(NodeId::intern("settings")).unwrap();
+        assert_eq!(
+            node.comments,
+            vec!["Settings panel"],
+            "only user comment should be attached, not separators"
+        );
+    }
 }
