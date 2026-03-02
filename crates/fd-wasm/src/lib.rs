@@ -41,6 +41,8 @@ pub struct FdCanvas {
     text_tool: TextTool,
     arrow_tool: ArrowTool,
     eraser_tool: EraserTool,
+    /// Pending text flush after eraser gesture (batched to pointer-up).
+    erase_pending_flush: bool,
     width: f64,
     height: f64,
     /// Suppress text-changed messages during programmatic updates.
@@ -83,6 +85,7 @@ impl FdCanvas {
             text_tool: TextTool::new(),
             arrow_tool: ArrowTool::new(),
             eraser_tool: EraserTool::new(),
+            erase_pending_flush: false,
             width,
             height,
             suppress_sync: false,
@@ -232,6 +235,16 @@ impl FdCanvas {
             return true;
         }
 
+        // Eraser: handle drag lifecycle + immediate delete on hit
+        if self.active_tool == ToolKind::Eraser {
+            self.eraser_tool.handle(&event, hit);
+            if let Some(hit_id) = raw_hit {
+                self.erase_node_immediately(hit_id);
+            }
+            let erased = !self.eraser_tool.erased_ids.is_empty();
+            return erased || pressed_changed || hovered_changed;
+        }
+
         let mutations = match self.active_tool {
             ToolKind::Select => self.select_tool.handle(&event, hit),
             ToolKind::Rect | ToolKind::Frame => self.rect_tool.handle(&event, hit),
@@ -239,7 +252,7 @@ impl FdCanvas {
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
-            ToolKind::Eraser => self.eraser_tool.handle(&event, hit),
+            ToolKind::Eraser => unreachable!("handled above"),
         };
         let changed = self.apply_mutations(mutations);
         // Marquee start also counts as a visual change (need re-render)
@@ -279,6 +292,17 @@ impl FdCanvas {
             self.hover_start_ms = js_sys::Date::now();
         }
 
+        // Eraser: delete nodes on drag-over
+        if self.active_tool == ToolKind::Eraser && self.eraser_tool.dragging {
+            if let Some(hit_id) = raw_hit
+                && !self.eraser_tool.erased_ids.contains(&hit_id)
+            {
+                self.erase_node_immediately(hit_id);
+                return true;
+            }
+            return hovered_changed;
+        }
+
         let mutations = match self.active_tool {
             ToolKind::Select => self.select_tool.handle(&event, hit),
             ToolKind::Rect | ToolKind::Frame => self.rect_tool.handle(&event, hit),
@@ -286,7 +310,7 @@ impl FdCanvas {
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
-            ToolKind::Eraser => self.eraser_tool.handle(&event, hit),
+            ToolKind::Eraser => unreachable!("handled above"),
         };
         let changed = self.apply_mutations(mutations);
         // Marquee drag also counts as visual change
@@ -377,6 +401,16 @@ impl FdCanvas {
         self.hovered_id = hit;
         let hovered_changed = prev_hovered != self.hovered_id;
 
+        // Eraser: end gesture — flush text once, reset state
+        if self.active_tool == ToolKind::Eraser {
+            self.eraser_tool.dragging = false;
+            if self.erase_pending_flush {
+                self.engine.flush_to_text();
+                self.erase_pending_flush = false;
+            }
+            self.eraser_tool.clear();
+        }
+
         let mutations = match self.active_tool {
             ToolKind::Select => self.select_tool.handle(&event, hit),
             ToolKind::Rect | ToolKind::Frame => self.rect_tool.handle(&event, hit),
@@ -384,7 +418,7 @@ impl FdCanvas {
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
-            ToolKind::Eraser => self.eraser_tool.handle(&event, hit),
+            ToolKind::Eraser => vec![],
         };
         let changed = self.apply_mutations(mutations);
         // Flush text after gesture ends
@@ -1765,6 +1799,23 @@ impl FdCanvas {
             self.engine.resolve();
         }
         true
+    }
+
+    /// Remove a single node immediately during eraser gesture.
+    ///
+    /// Applies the mutation via the command stack (for undo support),
+    /// re-resolves layout, and tracks the erased ID. Text flush is
+    /// deferred to pointer-up so we only re-emit once per gesture.
+    fn erase_node_immediately(&mut self, id: NodeId) {
+        if self.engine.graph.index_of(id).is_none() {
+            return;
+        }
+        let mutation = GraphMutation::RemoveNode { id };
+        self.commands
+            .execute(&mut self.engine, mutation, "eraser delete");
+        self.engine.resolve();
+        self.eraser_tool.erased_ids.push(id);
+        self.erase_pending_flush = true;
     }
 
     /// Check if the pointer hits a resize handle for the currently selected node.

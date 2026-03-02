@@ -444,6 +444,11 @@ impl SyncEngine {
         &self.bounds
     }
 
+    /// Get mutable access to resolved bounds.
+    pub fn bounds_mut(&mut self) -> &mut HashMap<NodeIndex, ResolvedBounds> {
+        &mut self.bounds
+    }
+
     /// Evaluate if a dragging node is near detaching from its parent group.
     /// Returns the parent NodeId and the center coordinates of both the child and parent
     /// if the overlap is less than 25% of the child's area.
@@ -688,7 +693,7 @@ fn group_padding(graph: &SceneGraph, group_idx: NodeIndex) -> f32 {
 
 /// Expand a group's bounds to contain all its children.
 /// If `exclude_idx` is provided, skip that child in the calculation.
-fn expand_group_to_children(
+pub fn expand_group_to_children(
     graph: &SceneGraph,
     group_idx: NodeIndex,
     bounds: &mut HashMap<NodeIndex, fd_core::ResolvedBounds>,
@@ -732,7 +737,7 @@ fn expand_group_to_children(
 
 /// Detach a child from its parent group and reparent to the nearest
 /// ancestor whose bounds contain the child, or root if none does.
-fn detach_child_from_group(
+pub fn detach_child_from_group(
     graph: &mut SceneGraph,
     child_idx: NodeIndex,
     old_parent_idx: NodeIndex,
