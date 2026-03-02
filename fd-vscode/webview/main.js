@@ -1569,7 +1569,7 @@ document.addEventListener("keydown", (e) => {
   }
 
   // ── Double-press detection for tool locking (RR, OO, PP, AA, TT) ──
-  const toolShortcuts = { r: "rect", o: "ellipse", p: "pen", a: "arrow", t: "text", f: "frame" };
+  const toolShortcuts = { r: "rect", o: "ellipse", p: "pen", a: "arrow", t: "text", f: "frame", e: "eraser" };
   const lowerKey = e.key.toLowerCase();
   if (toolShortcuts[lowerKey] && !e.metaKey && !e.ctrlKey && !e.altKey) {
     const now = Date.now();
@@ -1806,6 +1806,7 @@ function buildShortcutHelpHtml() {
         ["A", "Arrow"],
         ["T", "Text"],
         ["F", "Frame"],
+        ["E", "Eraser"],
         ["Tab", "Toggle last two tools"],
         ["R R", "Lock tool (stays active)"],
         ["Escape", "Unlock tool / Deselect"],

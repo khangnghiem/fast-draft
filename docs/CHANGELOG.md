@@ -5,6 +5,14 @@
 
 ## Completed Requirements
 
+### v0.10.6 — Fix Eraser Tool Crash
+
+- **FIX (R3.48)**: Pressing E (eraser tool) no longer crashes/freezes the canvas — `handle_pointer_move` in WASM had `unreachable!()` for eraser when not dragging; replaced with `vec![]` no-op for hover state
+- **UX (R3.48)**: Added eraser button to floating toolbar — 8th tool button with eraser SVG icon and tooltip showing shortcut `E`
+- **UX (R3.48)**: Added `e: "eraser"` to JS `toolShortcuts` map — double-press `EE` now locks the eraser tool (consistent with `RR`, `OO`, etc.)
+- **UX (R3.48)**: Added `tool-eraser` CSS cursor — red X-crosshair SVG cursor appears when eraser is active
+- **UX (R3.48)**: Added `E → Eraser` entry to keyboard shortcuts help overlay (`?`)
+
 ### v0.10.5 — Fix Duplicate Section Separators
 
 - **FIX (R4.12)**: Section separator comments (`# ─── Layout ───`, `# ─── Themes ───`, etc.) no longer duplicate on each parse→emit round-trip — parser now skips emitter-generated separators via `is_section_separator()` check in `collect_leading_comments`; user comments are preserved
