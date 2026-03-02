@@ -3,6 +3,7 @@
 //! Converts relative constraints (center_in, offset, fill_parent) into
 //! absolute `ResolvedBounds` for each node. Also handles Column/Row/Grid
 //! layout modes for groups.
+pub const LINE_HEIGHT_MULTIPLIER: f32 = 1.4;
 
 use crate::model::*;
 use petgraph::graph::NodeIndex;
@@ -388,7 +389,10 @@ fn intrinsic_size(node: &SceneNode) -> (f32, f32) {
         NodeKind::Text { content } => {
             let font_size = node.style.font.as_ref().map_or(14.0, |f| f.size);
             let char_width = font_size * 0.6;
-            (content.chars().count() as f32 * char_width, font_size * 1.4)
+            (
+                content.chars().count() as f32 * char_width,
+                font_size * LINE_HEIGHT_MULTIPLIER,
+            )
         }
         NodeKind::Group => (0.0, 0.0), // Auto-sized: computed after children resolve
         NodeKind::Frame { width, height, .. } => (*width, *height),
@@ -725,19 +729,19 @@ frame @card {
             amount.y,
             button.y
         );
-        // Heading height should use font size × 1.4 (line-height)
-        let expected_heading_h = 18.0 * 1.4;
+        // Heading height should use font size × LINE_HEIGHT_MULTIPLIER (line-height)
+        let expected_heading_h = 18.0 * LINE_HEIGHT_MULTIPLIER;
         assert!(
             (heading.height - expected_heading_h).abs() < 0.01,
-            "heading height should be {} (font size × 1.4), got {}",
+            "heading height should be {} (font size × LINE_HEIGHT_MULTIPLIER), got {}",
             expected_heading_h,
             heading.height
         );
-        // Amount height should use font size × 1.4 (line-height)
-        let expected_amount_h = 36.0 * 1.4;
+        // Amount height should use font size × LINE_HEIGHT_MULTIPLIER (line-height)
+        let expected_amount_h = 36.0 * LINE_HEIGHT_MULTIPLIER;
         assert!(
             (amount.height - expected_amount_h).abs() < 0.01,
-            "amount height should be {} (font size × 1.4), got {}",
+            "amount height should be {} (font size × LINE_HEIGHT_MULTIPLIER), got {}",
             expected_amount_h,
             amount.height
         );

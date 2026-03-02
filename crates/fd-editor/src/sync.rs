@@ -15,6 +15,7 @@
 use fd_core::NodeIndex;
 use fd_core::emitter::emit_document;
 use fd_core::id::NodeId;
+use fd_core::layout::LINE_HEIGHT_MULTIPLIER;
 use fd_core::model::*;
 use fd_core::parser::parse_document;
 use fd_core::{ResolvedBounds, Viewport, resolve_layout};
@@ -481,7 +482,7 @@ impl SyncEngine {
                 .as_ref()
                 .map_or(14.0, |f| f.size);
             let text_w = content.chars().count() as f32 * font_size * 0.6;
-            let text_h = font_size * 1.4;
+            let text_h = font_size * LINE_HEIGHT_MULTIPLIER;
             let cx = child_b.x + child_b.width / 2.0;
             let cy = child_b.y + child_b.height / 2.0;
             child_b.width = text_w;
@@ -655,7 +656,7 @@ fn handle_child_group_relationship(
             .as_ref()
             .map_or(14.0, |f| f.size);
         let text_w = content.chars().count() as f32 * font_size * 0.6;
-        let text_h = font_size * 1.4;
+        let text_h = font_size * LINE_HEIGHT_MULTIPLIER;
 
         // Shrink the overlap test box to the visual text area.
         let cx = child_b.x + child_b.width / 2.0;
