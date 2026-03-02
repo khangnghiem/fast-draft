@@ -169,16 +169,40 @@ Engineering lessons discovered through building FD.
 
 ## WASM: Text Intrinsic Sizing Padding Accumulates Visually
 
-**Date**: 2026-03-01
+**Date**: 2026-03-01 (updated 2026-03-02)
 **Context**: Users reported text node boundaries extending well beyond the visible text content. The bounding box was noticeably larger than the text.
 
 **Root cause**: `update_text_metrics()` in `lib.rs` added 8px padding per side (16px total per axis). The JS `measureText()` already returns a width that includes some internal glyph spacing. Combined with the 16px padding, the resulting bounds exceeded the visual text by ~20px — visible as an oversized selection rectangle.
 
-**Fix**: Reduced padding from 8px to 4px per side. Total overhead is now 8px per axis, which tightly wraps the text without clipping.
+**Fix**: Reduced padding from 8px→4px (v0.8.89), then 4px→2px (v0.10.2) per side. Also replaced `fontSize * 1.4` height approximation in JS with precise Canvas2D metrics (`actualBoundingBoxAscent + actualBoundingBoxDescent`), falling back to `fontSize * 1.2`.
 
-**Lesson**: When bridging text measurement across JS→WASM, account for the fact that `measureText().width` already includes glyph-level spacing. Additional padding should be minimal (2–4px per side) — it's a safety margin, not a design element. Test visual fit by selecting a text node and comparing the selection rectangle to the rendered text.
+**Lesson**: When bridging text measurement across JS→WASM, use the precise `actualBoundingBox*` metrics from Canvas2D `measureText()` instead of line-height multipliers. Additional WASM-side padding should be 2px per side max — it's a safety margin, not a design element.
 
 ---
+
+## Renderer: Group Selection Handles Make Groups Look Like Shapes
+
+**Date**: 2026-03-02
+**Context**: Users reported that groups appear as "rectangular nodes" on canvas — visually indistinguishable from rect shapes when selected.
+
+**Root cause**: `draw_selection_handles()` in `render2d.rs` drew 8-point resize handles for ALL selected nodes, including Groups. Combined with the solid 2px stroke on the group bounding box, groups looked identical to selected rectangles. Groups should be organizational-only (Figma behavior).
+
+**Fix**: Added `!matches!(&node.kind, NodeKind::Group)` guard to skip handles for groups. Changed group selection border from solid 2px to dashed 1.5px (`set_line_dash([6, 4])`).
+
+**Lesson**: When adding selection overlays, always check `NodeKind` — organizational containers (Group) need different visual treatment than shapes (Rect, Ellipse, Frame). Figma pattern: groups get dashed bounding box only, no resize handles.
+
+---
+
+## WASM API: Always Return Resolved Defaults in Props JSON
+
+**Date**: 2026-03-02
+**Context**: Double-clicking a text node to edit showed text at wrong size/style — the inline editor didn't match what the canvas rendered.
+
+**Root cause**: `get_selected_node_props()` only returned `fontSize`/`fontFamily`/`fontWeight` when `style.font.is_some()`. Text nodes using the default font (no explicit `font:` in FD source) got no font keys in the JSON. The JS fallback (`14`/`"Inter"`/`400`) happened to match the renderer defaults, but broke when themes set different sizes.
+
+**Fix**: Always return `fontSize`, `fontFamily`, `fontWeight` using `style.font.as_ref().map_or(default, |f| f.field)` — same defaults as the renderer.
+
+**Lesson**: WASM→JS property APIs should always return **resolved** values including defaults, not just explicit overrides. The JS consumer shouldn't need to know what the "right" default is — that's the WASM engine's responsibility.
 
 ## Editor: Feature Removal Requires Full Call-Chain Cleanup
 
