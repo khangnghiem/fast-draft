@@ -2715,6 +2715,15 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       const btn = document.getElementById('renamify-btn');
       let proposals = [];
 
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
       function closePanel() {
         panel.classList.remove('visible');
         body.innerHTML = '';
@@ -2739,9 +2748,9 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
           row.className = 'renamify-row';
           row.innerHTML =
             '<input type="checkbox" checked data-idx="' + i + '">' +
-            '<span class="renamify-old">@' + p.oldId + '</span>' +
+            '<span class="renamify-old">@' + escapeHtml(p.oldId) + '</span>' +
             '<span class="renamify-arrow">→</span>' +
-            '<span class="renamify-new">@' + p.newId + '</span>';
+            '<span class="renamify-new">@' + escapeHtml(p.newId) + '</span>';
           body.appendChild(row);
         });
         footer.style.display = 'flex';
