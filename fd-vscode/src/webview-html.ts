@@ -288,91 +288,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     }
 
 
-    /* ── Onboarding Overlay ── */
-    #onboarding-overlay {
-      position: absolute;
-      inset: 0;
-      z-index: 950;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: radial-gradient(ellipse at center, rgba(20,20,30,0.92) 0%, rgba(10,10,18,0.97) 100%);
-      backdrop-filter: blur(8px);
-      pointer-events: auto;
-      opacity: 1;
-      transition: opacity 0.4s ease;
-    }
-    #onboarding-overlay.hidden { opacity: 0; pointer-events: none; }
-    .onboard-heading {
-      font-size: 28px;
-      font-weight: 300;
-      color: #eee;
-      letter-spacing: 1px;
-      margin-bottom: 8px;
-      animation: onboardFloat 3s ease-in-out infinite;
-    }
-    .onboard-sub {
-      font-size: 13px;
-      color: rgba(255,255,255,0.4);
-      margin-bottom: 32px;
-    }
-    @keyframes onboardFloat {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-6px); }
-    }
-    .onboard-cards {
-      display: flex;
-      gap: 16px;
-      margin-bottom: 40px;
-    }
-    .onboard-card {
-      width: 140px;
-      padding: 20px 16px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 14px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-family: inherit;
-      font-size: inherit;
-      color: inherit;
-    }
-    .onboard-card:focus-visible {
-      outline: 2px solid var(--fd-accent);
-      outline-offset: 2px;
-    }
-    .onboard-card:hover {
-      background: rgba(255,255,255,0.12);
-      border-color: var(--fd-accent);
-      transform: translateY(-4px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-    }
-    .onboard-card-icon { font-size: 28px; display: block; margin-bottom: 10px; }
-    .onboard-card-title {
-      font-size: 13px;
-      font-weight: 500;
-      color: #ddd;
-    }
-    .onboard-card-desc {
-      font-size: 10px;
-      color: rgba(255,255,255,0.35);
-      margin-top: 4px;
-    }
-    .onboard-hint {
-      font-size: 11px;
-      color: rgba(255,255,255,0.25);
-      letter-spacing: 0.5px;
-    }
-    .onboard-hint kbd {
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 3px;
-      padding: 1px 5px;
-      font-family: inherit;
-      font-size: 11px;
-    }
+
     .tool-icon { font-size: 13px; }
     .tool-key {
       font-size: 9px;
@@ -2515,28 +2431,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
   </div>
   <div id="canvas-container">
 
-    <div id="onboarding-overlay">
-      <div class="onboard-heading">Start drawing</div>
-      <div class="onboard-sub">Create something beautiful</div>
-      <div class="onboard-cards">
-        <button class="onboard-card" data-tool="rect" type="button">
-          <span class="onboard-card-icon">📐</span>
-          <div class="onboard-card-title">Draw shapes</div>
-          <div class="onboard-card-desc">Rectangles, ellipses, frames</div>
-        </button>
-        <button class="onboard-card" data-tool="pen" type="button">
-          <span class="onboard-card-icon">✏️</span>
-          <div class="onboard-card-title">Sketch freely</div>
-          <div class="onboard-card-desc">Freehand pen drawings</div>
-        </button>
-        <button class="onboard-card" data-tool="text" type="button">
-          <span class="onboard-card-icon">📝</span>
-          <div class="onboard-card-title">Type text</div>
-          <div class="onboard-card-desc">Labels, headings, notes</div>
-        </button>
-      </div>
-      <div class="onboard-hint">Press <kbd>?</kbd> for all shortcuts</div>
-    </div>
+
     <div id="floating-action-bar">
       <label class="fab-label" for="fab-fill">Fill</label>
       <input type="color" id="fab-fill" class="fab-color" value="#4A90D9" title="Fill color">
