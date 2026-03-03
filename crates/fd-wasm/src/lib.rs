@@ -969,7 +969,7 @@ impl FdCanvas {
             return false;
         }
 
-        let padding = 2.0_f32;
+        let padding = 4.0_f32;
         let new_width = (measured_width as f32) + padding * 2.0;
         let new_height = (measured_height as f32) + padding * 2.0;
 

@@ -2894,10 +2894,14 @@ function measureAndUpdateTextBounds(nodeId) {
   measureCtx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
   const metrics = measureCtx.measureText(text);
   const measuredWidth = metrics.width;
-  // Use precise glyph metrics when available, fallback to font-size line-height
-  const measuredHeight = (metrics.actualBoundingBoxAscent != null && metrics.actualBoundingBoxDescent != null)
+  // Use precise glyph metrics when available, but ensure height is at least
+  // fontSize * 1.2 to match the renderer's effective line height. Tight glyph
+  // metrics can be smaller than the font's visual height (e.g. text without
+  // descenders like "Settings" would have a tiny ascent-only box).
+  const rawGlyphHeight = (metrics.actualBoundingBoxAscent != null && metrics.actualBoundingBoxDescent != null)
     ? metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
     : fontSize * 1.2;
+  const measuredHeight = Math.max(rawGlyphHeight, fontSize * 1.2);
 
   // Send measured dimensions to WASM
   const changed = fdCanvas.update_text_metrics(nodeId, measuredWidth, measuredHeight);
@@ -2995,14 +2999,16 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   const originalValue = currentValue;
 
   // Calculate vertical padding for alignment
-  const lineHeight = Math.round(fontSize * 1.4);
+  // Use 1.2 line-height multiplier matching the renderer's effective line height
+  const lineHeight = Math.round(fontSize * 1.2);
   const lines = (currentValue.match(/\n/g) || []).length + 1;
   const textHeight = lineHeight * lines;
-  let padTop = 4;
+  // Top padding: 2px matches draw_text's b.y + 2.0 offset for top-aligned text
+  let padTop = 2;
   if (vAlign === "middle") {
-    padTop = Math.max(4, Math.round((sh - textHeight) / 2));
+    padTop = Math.max(2, Math.round((sh - textHeight) / 2));
   } else if (vAlign === "bottom") {
-    padTop = Math.max(4, sh - textHeight - 4);
+    padTop = Math.max(2, sh - textHeight - 2);
   }
 
   // Compute border-radius matching the node's actual shape
@@ -3020,11 +3026,11 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   textarea.value = currentValue;
   textarea.style.cssText = [
     `position:absolute`,
-    `left:${sx - 2}px`,
-    `top:${sy - 2}px`,
-    `width:${sw + 4}px`,
-    `height:${sh + 4}px`,
-    `padding:${padTop}px 6px 4px 6px`,
+    `left:${sx}px`,
+    `top:${sy}px`,
+    `width:${sw}px`,
+    `height:${sh}px`,
+    `padding:${padTop}px 0px 2px 0px`,
     `font:${fontWeight} ${fontSize}px ${fontFamily},system-ui,sans-serif`,
     `border:2px solid #4FC3F7`,
     `border-radius:${borderRadius}`,
@@ -3038,6 +3044,7 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     `overflow:hidden`,
     `text-align:${hAlign}`,
     `box-sizing:border-box`,
+    `-webkit-text-size-adjust:100%`,
   ].join(";");
 
   container.appendChild(textarea);

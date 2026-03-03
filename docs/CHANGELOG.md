@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.10.13 — Fix Text Rendering Mismatch + Bounding Box Sizing
+
+- **FIX (R3.28)**: Inline text editor now visually matches canvas-rendered text — textarea positioning, padding, and line-height aligned with Canvas2D `draw_text`: line-height reduced from `fontSize*1.4` to `fontSize*1.2`, left padding removed (0px), top padding set to 2px matching renderer's `b.y+2.0` offset, textarea positioned exactly at node bounds
+- **FIX (R3.46)**: Text bounding box now fully wraps content — JS `measureAndUpdateTextBounds` uses `fontSize*1.2` as minimum height floor (tight glyph metrics can be smaller than visual font height for descender-less text); WASM `update_text_metrics` padding increased from 2px to 4px per side
+
 ### v0.10.12 — Transparent Defaults + Copy/Paste Style
 
 - **UX (R3.52)**: Newly created rect/ellipse shapes now default to transparent fill with visible stroke — removes the opaque white rectangle that previously obscured content underneath; consistent with Excalidraw/ScreenBrush behavior
