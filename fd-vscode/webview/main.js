@@ -141,6 +141,28 @@ function captureDefault(prop, value) {
 /** Store the last drawing tool used for default capturing from Select mode */
 let lastDrawingTool = "rect";
 
+/** Show a brief toast notification at the bottom of the canvas */
+function showToast(message, durationMs = 1200) {
+  const existing = document.getElementById("fd-toast");
+  if (existing) existing.remove();
+  const el = document.createElement("div");
+  el.id = "fd-toast";
+  el.textContent = message;
+  el.style.cssText = `
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    padding: 6px 16px; border-radius: 8px; font-size: 12px; font-weight: 500;
+    color: #fff; background: rgba(30,30,46,0.85); backdrop-filter: blur(8px);
+    pointer-events: none; z-index: 9999; opacity: 0;
+    transition: opacity 150ms ease;
+  `;
+  (canvas ? canvas.parentElement : document.body).appendChild(el);
+  requestAnimationFrame(() => { el.style.opacity = "1"; });
+  setTimeout(() => {
+    el.style.opacity = "0";
+    setTimeout(() => el.remove(), 200);
+  }, durationMs);
+}
+
 /** Apply stored defaults to the currently selected (newly created) node */
 function applyDefaultsToNewNode(toolName) {
   if (!fdCanvas) return;
@@ -1646,6 +1668,16 @@ document.addEventListener("keydown", (e) => {
     case "showHelp":
       toggleShortcutHelp();
       break;
+    case "copyStyle":
+      showToast("Style copied");
+      break;
+    case "pasteStyle":
+      if (result.changed) {
+        render();
+        syncTextToExtension();
+        showToast("Style pasted");
+      }
+      break;
   }
 
   // Notify extension of selection changes from keyboard actions
@@ -1826,6 +1858,8 @@ function buildShortcutHelpHtml() {
         [`${cmd}C`, "Copy"],
         [`${cmd}X`, "Cut"],
         [`${cmd}V`, "Paste"],
+        [`⌥${cmd}C`, "Copy Style"],
+        [`⌥${cmd}V`, "Paste Style"],
       ],
     },
     {

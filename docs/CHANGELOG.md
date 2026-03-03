@@ -5,6 +5,14 @@
 
 ## Completed Requirements
 
+### v0.10.12 — Transparent Defaults + Copy/Paste Style
+
+- **UX (R3.52)**: Newly created rect/ellipse shapes now default to transparent fill with visible stroke — removes the opaque white rectangle that previously obscured content underneath; consistent with Excalidraw/ScreenBrush behavior
+- **UX (R3.52)**: Stroke color is now theme-contextual — dark stroke (`#333`) on light canvas, light stroke (`#A0A0B0`) on dark canvas; adapts via `self.dark_mode` flag in WASM `create_node_at`
+- **NEW (R3.53)**: Copy Style (⌥⌘C) / Paste Style (⌥⌘V) — copies the selected node's full `Style` (fill, stroke, corner radius, opacity, font, shadow) to a clipboard, then applies it to another selected node; toast feedback "Style copied" / "Style pasted"
+- **CORE**: `style_clipboard: Option<Style>` field on `FdCanvas` for cross-node style transfer via `CopyStyle` / `PasteStyle` `ShortcutAction` dispatch
+- **TESTING**: New `resolve_copy_paste_style` test — verifies ⌥⌘C → CopyStyle, ⌥⌘V → PasteStyle, ⌘C → Copy (no alt regression)
+
 ### v0.10.11 — Fix Nested Group Drill-Down
 
 - **FIX (R3.24)**: Clicking a node nested inside multiple groups (e.g., `OuterGroup > InnerGroup > Rect`) now correctly drills down through the hierarchy — first click selects outer group, second click selects inner group, third click selects the leaf node; previously clicks oscillated between the two groups forever because `effective_target` required cumulative selection `[outer, inner]` but `SelectTool` replaced selection to `[inner]`; fixed by using `rposition` (deepest match) instead of linear scan

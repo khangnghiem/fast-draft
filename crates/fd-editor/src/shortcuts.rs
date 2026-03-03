@@ -57,6 +57,12 @@ pub enum ShortcutAction {
     // ── Hierarchy ──
     Group,
     Ungroup,
+
+    // ── Style ──
+    /// Copy selected node's style to clipboard (⌥⌘C).
+    CopyStyle,
+    /// Paste clipboard style onto selected node (⌥⌘V).
+    PasteStyle,
 }
 
 /// Resolves key events into shortcut actions.
@@ -80,10 +86,19 @@ impl ShortcutMap {
         key: &str,
         ctrl: bool,
         shift: bool,
-        _alt: bool,
+        alt: bool,
         meta: bool,
     ) -> Option<ShortcutAction> {
         let cmd = ctrl || meta;
+
+        // ── Alt+Cmd combos (style clipboard) ──
+        if alt && cmd && !shift {
+            return match key {
+                "c" | "C" => Some(ShortcutAction::CopyStyle),
+                "v" | "V" => Some(ShortcutAction::PasteStyle),
+                _ => None,
+            };
+        }
 
         // ── Modifier combos first (most specific) ──
         if cmd && shift {
@@ -326,6 +341,25 @@ mod tests {
         assert_eq!(
             ShortcutMap::resolve("?", false, true, false, false),
             Some(ShortcutAction::ShowHelp)
+        );
+    }
+
+    #[test]
+    fn resolve_copy_paste_style() {
+        // ⌥⌘C → CopyStyle
+        assert_eq!(
+            ShortcutMap::resolve("c", false, false, true, true),
+            Some(ShortcutAction::CopyStyle)
+        );
+        // ⌥⌘V → PasteStyle
+        assert_eq!(
+            ShortcutMap::resolve("v", false, false, true, true),
+            Some(ShortcutAction::PasteStyle)
+        );
+        // ⌘C without Alt → regular Copy
+        assert_eq!(
+            ShortcutMap::resolve("c", false, false, false, true),
+            Some(ShortcutAction::Copy)
         );
     }
 }

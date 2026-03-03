@@ -57,6 +57,8 @@ pub struct FdCanvas {
     hover_start_ms: f64,
     /// Pointer-down scene position — used to detect click vs drag.
     pointer_down_pos: Option<(f32, f32)>,
+    /// Style clipboard for Copy/Paste Style (⌥⌘C / ⌥⌘V).
+    style_clipboard: Option<fd_core::model::Style>,
 }
 
 #[wasm_bindgen]
@@ -95,6 +97,7 @@ impl FdCanvas {
             pressed_id: None,
             hover_start_ms: 0.0,
             pointer_down_pos: None,
+            style_clipboard: None,
         }
     }
 
@@ -1701,7 +1704,12 @@ impl FdCanvas {
         let mut node = SceneNode::new(id, node_kind);
         node.constraints.push(Constraint::Position { x, y });
 
-        // ScreenBrush-style defaults: transparent fill + bezeled stroke
+        // Transparent fill + contextual stroke (adapts to canvas theme)
+        let stroke_color = if self.dark_mode {
+            Color::rgba(0.63, 0.63, 0.69, 1.0) // #A0A0B0 — visible on dark bg
+        } else {
+            Color::rgba(0.2, 0.2, 0.2, 1.0) // #333333 — visible on light bg
+        };
         if kind == "frame" {
             node.style.fill = Some(Paint::Solid(Color::rgba(0.95, 0.95, 0.97, 1.0)));
             node.style.stroke = Some(Stroke {
@@ -1711,18 +1719,16 @@ impl FdCanvas {
                 join: StrokeJoin::Miter,
             });
         } else if kind == "rect" {
-            node.style.fill = Some(Paint::Solid(Color::rgba(1.0, 1.0, 1.0, 1.0)));
             node.style.stroke = Some(Stroke {
-                paint: Paint::Solid(Color::rgba(0.2, 0.2, 0.2, 1.0)),
+                paint: Paint::Solid(stroke_color),
                 width: 2.5,
                 cap: StrokeCap::Round,
                 join: StrokeJoin::Round,
             });
             node.style.corner_radius = Some(8.0);
         } else if kind == "ellipse" {
-            node.style.fill = Some(Paint::Solid(Color::rgba(1.0, 1.0, 1.0, 1.0)));
             node.style.stroke = Some(Stroke {
-                paint: Paint::Solid(Color::rgba(0.2, 0.2, 0.2, 1.0)),
+                paint: Paint::Solid(stroke_color),
                 width: 2.5,
                 cap: StrokeCap::Round,
                 join: StrokeJoin::Round,
@@ -2187,6 +2193,32 @@ impl FdCanvas {
             | ShortcutAction::PanStart
             | ShortcutAction::PanEnd
             | ShortcutAction::ShowHelp => (false, false),
+
+            // Style clipboard
+            ShortcutAction::CopyStyle => {
+                if let Some(id) = self.select_tool.first_selected()
+                    && let Some(node) = self.engine.graph.get_by_id(id)
+                {
+                    self.style_clipboard = Some(node.style.clone());
+                }
+                (false, false)
+            }
+            ShortcutAction::PasteStyle => {
+                if let Some(ref clipboard) = self.style_clipboard.clone()
+                    && let Some(id) = self.select_tool.first_selected()
+                {
+                    let mutation = GraphMutation::SetStyle {
+                        id,
+                        style: clipboard.clone(),
+                    };
+                    let changed = self.apply_mutations(vec![mutation]);
+                    if changed {
+                        self.engine.flush_to_text();
+                    }
+                    return (changed, false);
+                }
+                (false, false)
+            }
         }
     }
 }
@@ -2237,6 +2269,8 @@ fn action_to_name(action: ShortcutAction) -> &'static str {
         ShortcutAction::BringToFront => "bringToFront",
         ShortcutAction::Deselect => "deselect",
         ShortcutAction::ShowHelp => "showHelp",
+        ShortcutAction::CopyStyle => "copyStyle",
+        ShortcutAction::PasteStyle => "pasteStyle",
     }
 }
 
