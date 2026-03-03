@@ -1381,3 +1381,258 @@ fn sync_move_managed_layout_child_noop() {
         "no Position constraint should be added to managed-layout child"
     );
 }
+
+// ─── Parent Frame Move/Resize Regression Tests ──────────────────────────
+
+#[test]
+fn sync_resize_frame_children_reflow() {
+    // Resizing a Column-layout frame should re-stack children at new positions.
+    let input = r#"
+frame @card {
+  w: 400 h: 600
+  layout: column gap=10 pad=20
+
+  rect @a { w: 100 h: 40 }
+  rect @b { w: 100 h: 30 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let card_id = NodeId::intern("card");
+    let a_id = NodeId::intern("a");
+    let b_id = NodeId::intern("b");
+
+    let a_idx = engine.graph.index_of(a_id).unwrap();
+    let b_idx = engine.graph.index_of(b_id).unwrap();
+    let card_idx = engine.graph.index_of(card_id).unwrap();
+
+    let a_before = engine.bounds[&a_idx];
+    let b_before = engine.bounds[&b_idx];
+
+    // Children should be column-stacked initially
+    assert!(
+        (b_before.y - a_before.y - 50.0).abs() < 0.01,
+        "b should be 50px below a (40h + 10gap), got diff={}",
+        b_before.y - a_before.y
+    );
+
+    // Resize the frame (make it shorter)
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        id: card_id,
+        width: 400.0,
+        height: 300.0,
+    });
+
+    // Children should still be inside the card and properly stacked
+    let a_after = engine.bounds[&a_idx];
+    let b_after = engine.bounds[&b_idx];
+    let card_after = engine.bounds[&card_idx];
+
+    // Children should be within the card bounds
+    assert!(
+        a_after.y >= card_after.y,
+        "a.y ({}) must be >= card.y ({})",
+        a_after.y,
+        card_after.y
+    );
+    // Column gap should be preserved
+    assert!(
+        (b_after.y - a_after.y - 50.0).abs() < 0.01,
+        "column gap should be preserved after resize: diff={}",
+        b_after.y - a_after.y
+    );
+}
+
+#[test]
+fn sync_resize_frame_centered_text_recenters() {
+    // Resizing a rect with a centered text child should re-center the text.
+    let input = r#"
+rect @btn {
+  w: 320 h: 44
+  text @label "Sign In" { }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let btn_id = NodeId::intern("btn");
+    let label_id = NodeId::intern("label");
+
+    let btn_idx = engine.graph.index_of(btn_id).unwrap();
+    let label_idx = engine.graph.index_of(label_id).unwrap();
+
+    // Text should be centered in button initially
+    let btn_before = engine.bounds[&btn_idx];
+    let label_before = engine.bounds[&label_idx];
+    let btn_cx_before = btn_before.x + btn_before.width / 2.0;
+    let label_cx_before = label_before.x + label_before.width / 2.0;
+    assert!(
+        (label_cx_before - btn_cx_before).abs() < 0.1,
+        "text should be centered before resize"
+    );
+
+    // Resize the button wider
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        id: btn_id,
+        width: 600.0,
+        height: 44.0,
+    });
+
+    // Text should be re-centered in the wider button
+    let btn_after = engine.bounds[&btn_idx];
+    let label_after = engine.bounds[&label_idx];
+    let btn_cx_after = btn_after.x + btn_after.width / 2.0;
+    let label_cx_after = label_after.x + label_after.width / 2.0;
+    assert!(
+        (label_cx_after - btn_cx_after).abs() < 0.1,
+        "text center ({}) should match button center ({}) after resize",
+        label_cx_after,
+        btn_cx_after
+    );
+}
+
+#[test]
+fn sync_move_frame_flush_no_jump() {
+    // After MoveNode + flush_to_text, the bounds should not jump.
+    let input = r#"
+frame @panel {
+  w: 300 h: 200
+  layout: column gap=10 pad=20
+
+  rect @item { w: 100 h: 40 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let panel_id = NodeId::intern("panel");
+    let item_id = NodeId::intern("item");
+
+    // Move the frame
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: panel_id,
+        dx: 150.0,
+        dy: 75.0,
+    });
+
+    let panel_idx = engine.graph.index_of(panel_id).unwrap();
+    let item_idx = engine.graph.index_of(item_id).unwrap();
+    let panel_pre_flush = engine.bounds[&panel_idx];
+    let item_pre_flush = engine.bounds[&item_idx];
+
+    // Flush (re-emit text from graph)
+    engine.flush_to_text();
+    // Re-parse and re-resolve (simulates what happens in real usage)
+    let text = engine.current_text().to_string();
+    let engine2 = SyncEngine::from_text(&text, viewport).unwrap();
+
+    let panel_idx2 = engine2.graph.index_of(panel_id).unwrap();
+    let item_idx2 = engine2.graph.index_of(item_id).unwrap();
+    let panel_post = engine2.bounds[&panel_idx2];
+    let item_post = engine2.bounds[&item_idx2];
+
+    // Panel position should match pre-flush after roundtrip
+    assert!(
+        (panel_post.x - panel_pre_flush.x).abs() < 1.0,
+        "panel.x should not jump: pre={}, post={}",
+        panel_pre_flush.x,
+        panel_post.x
+    );
+    assert!(
+        (panel_post.y - panel_pre_flush.y).abs() < 1.0,
+        "panel.y should not jump: pre={}, post={}",
+        panel_pre_flush.y,
+        panel_post.y
+    );
+
+    // Child position should also match
+    assert!(
+        (item_post.x - item_pre_flush.x).abs() < 1.0,
+        "item.x should not jump: pre={}, post={}",
+        item_pre_flush.x,
+        item_post.x
+    );
+    assert!(
+        (item_post.y - item_pre_flush.y).abs() < 1.0,
+        "item.y should not jump: pre={}, post={}",
+        item_pre_flush.y,
+        item_post.y
+    );
+}
+
+#[test]
+fn sync_move_frame_children_follow_after_flush() {
+    // Moving a frame with children, then flushing, children should be at correct positions.
+    let input = r#"
+frame @form {
+  w: 400 h: 300
+  layout: column gap=16 pad=32
+
+  rect @email { w: 280 h: 44 }
+  rect @password { w: 280 h: 44 }
+  rect @submit { w: 280 h: 48 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let form_id = NodeId::intern("form");
+
+    let form_idx = engine.graph.index_of(form_id).unwrap();
+    let email_idx = engine.graph.index_of(NodeId::intern("email")).unwrap();
+    let password_idx = engine.graph.index_of(NodeId::intern("password")).unwrap();
+    let submit_idx = engine.graph.index_of(NodeId::intern("submit")).unwrap();
+
+    // Get initial relative positions (child.y - form.y)
+    let form_y0 = engine.bounds[&form_idx].y;
+    let email_rel = engine.bounds[&email_idx].y - form_y0;
+    let pass_rel = engine.bounds[&password_idx].y - form_y0;
+    let submit_rel = engine.bounds[&submit_idx].y - form_y0;
+
+    // Move the frame
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: form_id,
+        dx: 200.0,
+        dy: 100.0,
+    });
+    engine.flush_to_text();
+
+    // Re-parse
+    let text = engine.current_text().to_string();
+    let engine2 = SyncEngine::from_text(&text, viewport).unwrap();
+
+    let form_idx2 = engine2.graph.index_of(form_id).unwrap();
+    let form_y2 = engine2.bounds[&form_idx2].y;
+    let email_y2 = engine2.bounds[&engine2.graph.index_of(NodeId::intern("email")).unwrap()].y;
+    let pass_y2 = engine2.bounds[&engine2.graph.index_of(NodeId::intern("password")).unwrap()].y;
+    let submit_y2 = engine2.bounds[&engine2.graph.index_of(NodeId::intern("submit")).unwrap()].y;
+
+    // Relative positions should be preserved
+    assert!(
+        ((email_y2 - form_y2) - email_rel).abs() < 1.0,
+        "email relative position should be preserved: {} vs {}",
+        email_y2 - form_y2,
+        email_rel
+    );
+    assert!(
+        ((pass_y2 - form_y2) - pass_rel).abs() < 1.0,
+        "password relative position should be preserved: {} vs {}",
+        pass_y2 - form_y2,
+        pass_rel
+    );
+    assert!(
+        ((submit_y2 - form_y2) - submit_rel).abs() < 1.0,
+        "submit relative position should be preserved: {} vs {}",
+        submit_y2 - form_y2,
+        submit_rel
+    );
+}

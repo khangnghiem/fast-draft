@@ -175,6 +175,16 @@ impl SyncEngine {
                     bounds.width = rw;
                     bounds.height = rh;
                 }
+                // Re-resolve children so Column/Row/Grid re-flow and
+                // centered text re-centers during the resize drag.
+                if let Some(idx) = self.graph.index_of(id) {
+                    fd_core::layout::resolve_subtree(
+                        &self.graph,
+                        idx,
+                        &mut self.bounds,
+                        self.viewport,
+                    );
+                }
             }
             GraphMutation::AddNode { parent_id, node } => {
                 let parent_idx = self.graph.index_of(parent_id).unwrap_or(self.graph.root);

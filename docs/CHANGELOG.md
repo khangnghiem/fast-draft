@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.10.19 — Fix Parent Frame Resize Children
+
+- **FIX (R3.2)**: Resizing a parent frame/rect/ellipse now re-resolves children during drag — Column/Row/Grid children re-flow to fit new dimensions, centered text re-centers within resized parent; previously children stayed at old positions until pointer-up flush
+- **CORE**: New `resolve_subtree(graph, idx, bounds, viewport)` in `layout.rs` — lightweight single-subtree re-resolve (reuses `resolve_children` + `resolve_constraints_top_down` + `recompute_group_auto_sizes`) called from `ResizeNode` handler
+- **TESTING**: 4 new regression tests — `sync_resize_frame_children_reflow` (Column re-stack), `sync_resize_frame_centered_text_recenters` (text re-center), `sync_move_frame_flush_no_jump` (no visual jump on flush), `sync_move_frame_children_follow_after_flush` (children relative positions preserved)
+
 ### v0.10.18 — Modifier Key Cursor Feedback
 
 - **UX (R3.48)**: Holding a bare modifier key now shows a cursor preview — Cmd/⌘ → grab (pan), Alt/Option → copy (duplicate), Ctrl → red eraser (delete); cursor appears immediately on keydown, clears on keyup or click; handles edge cases (window blur, tab-away, active pointer interaction)

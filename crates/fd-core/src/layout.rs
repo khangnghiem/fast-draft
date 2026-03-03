@@ -58,6 +58,22 @@ pub fn resolve_layout(
     bounds
 }
 
+/// Re-resolve only the children of `parent_idx`, using its current bounds.
+///
+/// This is a lightweight version of `resolve_layout` scoped to one subtree.
+/// Used by `ResizeNode` to re-flow column/row/grid children and re-center
+/// text during drag, without re-resolving the entire graph.
+pub fn resolve_subtree(
+    graph: &SceneGraph,
+    parent_idx: NodeIndex,
+    bounds: &mut HashMap<NodeIndex, ResolvedBounds>,
+    viewport: Viewport,
+) {
+    resolve_children(graph, parent_idx, bounds, viewport);
+    resolve_constraints_top_down(graph, parent_idx, bounds, viewport);
+    recompute_group_auto_sizes(graph, parent_idx, bounds);
+}
+
 fn resolve_constraints_top_down(
     graph: &SceneGraph,
     node_idx: NodeIndex,
