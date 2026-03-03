@@ -5,6 +5,10 @@
 
 ## Completed Requirements
 
+### v0.10.14 — Inline Editor Zero-Jump Editing
+
+- **FIX (R3.28)**: Inline text editor now visually matches canvas-rendered text with zero jump — replaced `border` with `outline` (outlines don't affect layout), fixed vertical padding to match Canvas2D `text_baseline` positioning exactly (`top` → scaled 2px offset, `middle` → symmetric padding, `bottom` → bottom-anchored), matched font-family fallback chain to renderer (`"Inter, sans-serif"`)
+
 ### v0.10.13 — Fix Text Rendering Mismatch + Bounding Box Sizing
 
 - **FIX (R3.28)**: Inline text editor now visually matches canvas-rendered text — textarea positioning, padding, and line-height aligned with Canvas2D `draw_text`: line-height reduced from `fontSize*1.4` to `fontSize*1.2`, left padding removed (0px), top padding set to 2px matching renderer's `b.y+2.0` offset, textarea positioned exactly at node bounds

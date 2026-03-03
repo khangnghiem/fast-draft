@@ -2985,9 +2985,9 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     textColor = isDark ? "#E0E0E0" : "#1C1C1E";
   }
 
-  // Get font info from node props
+  // Get font info from node props — match render2d.rs draw_text() exactly
   const fontSize = props.fontSize ? Math.round(props.fontSize * zoomLevel) : Math.round(14 * zoomLevel);
-  const fontFamily = props.fontFamily || "Inter";
+  const fontFamily = props.fontFamily || "Inter, sans-serif";
   const fontWeight = props.fontWeight || 400;
 
   // Get text alignment — WASM API returns effective defaults (left/top for
@@ -2998,18 +2998,41 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   // Store original value for Esc rollback
   const originalValue = currentValue;
 
-  // Calculate vertical padding for alignment
-  // Use 1.2 line-height multiplier matching the renderer's effective line height
+  // Line-height matching the renderer's effective line height
   const lineHeight = Math.round(fontSize * 1.2);
-  const lines = (currentValue.match(/\n/g) || []).length + 1;
-  const textHeight = lineHeight * lines;
-  // Top padding: 2px matches draw_text's b.y + 2.0 offset for top-aligned text
-  let padTop = 2;
-  if (vAlign === "middle") {
-    padTop = Math.max(2, Math.round((sh - textHeight) / 2));
+
+  // Vertical padding: match Canvas2D text_baseline positioning exactly.
+  // draw_text() uses:
+  //   top    → text_baseline="top",    y = b.y + 2.0
+  //   middle → text_baseline="middle", y = b.y + h/2
+  //   bottom → text_baseline="bottom", y = b.y + h - 2.0
+  // Since we use outline (not border), the textarea content area == node bounds.
+  const topOffset = Math.round(2 * zoomLevel);
+  let padTop = 0;
+  let padBottom = 0;
+  if (vAlign === "top") {
+    padTop = topOffset;
+  } else if (vAlign === "middle") {
+  // CSS vertical centering via equal top/bottom padding
+    const lines = (currentValue.match(/\n/g) || []).length + 1;
+    const textHeight = lineHeight * lines;
+    padTop = Math.max(0, Math.round((sh - textHeight) / 2));
+    padBottom = padTop;
   } else if (vAlign === "bottom") {
-    padTop = Math.max(2, sh - textHeight - 2);
+    padBottom = topOffset;
+    const lines = (currentValue.match(/\n/g) || []).length + 1;
+    const textHeight = lineHeight * lines;
+    padTop = Math.max(0, sh - textHeight - padBottom);
   }
+
+  // Horizontal padding: match Canvas2D x-position within the bounds.
+  // draw_text() uses:
+  //   left   → x = b.x
+  //   center → x = b.x + b.width/2  (text-align:center handles this)
+  //   right  → x = b.x + b.width    (text-align:right handles this)
+  // CSS text-align handles the horizontal positioning, so no extra padding needed.
+  const padLeft = 0;
+  const padRight = 0;
 
   // Compute border-radius matching the node's actual shape
   let borderRadius = "8px";
@@ -3030,14 +3053,15 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     `top:${sy}px`,
     `width:${sw}px`,
     `height:${sh}px`,
-    `padding:${padTop}px 0px 2px 0px`,
-    `font:${fontWeight} ${fontSize}px ${fontFamily},system-ui,sans-serif`,
-    `border:2px solid #4FC3F7`,
+    `padding:${padTop}px ${padRight}px ${padBottom}px ${padLeft}px`,
+    `font:${fontWeight} ${fontSize}px ${fontFamily}`,
+    `border:none`,
+    `outline:2px solid #4FC3F7`,
+    `outline-offset:-1px`,
     `border-radius:${borderRadius}`,
     `background:${bgColor}`,
     `color:${textColor}`,
     `resize:none`,
-    `outline:none`,
     `z-index:100`,
     `box-shadow:0 2px 8px rgba(0,0,0,0.12)`,
     `line-height:${lineHeight}px`,
