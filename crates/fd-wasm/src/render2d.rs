@@ -8,6 +8,12 @@ use fd_core::{NodeIndex, ResolvedBounds, SceneGraph};
 use std::collections::HashMap;
 use web_sys::CanvasRenderingContext2d;
 
+#[inline]
+fn center_f64(b: &ResolvedBounds) -> (f64, f64) {
+    let (cx, cy) = b.center();
+    (cx as f64, cy as f64)
+}
+
 /// Theme-dependent colors for the canvas renderer.
 pub struct CanvasTheme {
     pub bg: &'static str,
@@ -209,8 +215,7 @@ fn render_node(
 
     let has_scale = (effective_scale - 1.0).abs() > f32::EPSILON;
     if has_scale {
-        let cx = node_bounds.x as f64 + node_bounds.width as f64 / 2.0;
-        let cy = node_bounds.y as f64 + node_bounds.height as f64 / 2.0;
+        let (cx, cy) = center_f64(node_bounds);
         let s = effective_scale as f64;
         ctx.save();
         ctx.translate(cx, cy).unwrap_or(());
@@ -396,8 +401,7 @@ fn draw_ellipse(
     style: &Style,
     is_selected: bool,
 ) {
-    let cx = b.x as f64 + b.width as f64 / 2.0;
-    let cy = b.y as f64 + b.height as f64 / 2.0;
+    let (cx, cy) = center_f64(b);
     let rx = b.width as f64 / 2.0;
     let ry = b.height as f64 / 2.0;
 
@@ -518,7 +522,7 @@ fn draw_text(
     // Calculate x position based on alignment
     let x = match halign {
         TextAlign::Left => b.x as f64,
-        TextAlign::Center => b.x as f64 + b.width as f64 / 2.0,
+        TextAlign::Center => center_f64(b).0,
         TextAlign::Right => b.x as f64 + b.width as f64,
     };
 
@@ -548,7 +552,7 @@ fn draw_text(
         // Single line — use original baseline positioning for backwards compatibility
         let y = match valign {
             TextVAlign::Top => b.y as f64 + 2.0,
-            TextVAlign::Middle => b.y as f64 + b.height as f64 / 2.0,
+            TextVAlign::Middle => center_f64(b).1,
             TextVAlign::Bottom => b.y as f64 + b.height as f64 - 2.0,
         };
         let _ = ctx.fill_text(content, x, y);
@@ -581,8 +585,7 @@ fn draw_shape_label(
     ctx.set_text_align("center");
     ctx.set_text_baseline("middle");
 
-    let cx = b.x as f64 + b.width as f64 / 2.0;
-    let cy = b.y as f64 + b.height as f64 / 2.0;
+    let (cx, cy) = center_f64(b);
     let _ = ctx.fill_text(label, cx, cy);
 
     ctx.restore();
@@ -1305,8 +1308,7 @@ fn draw_ellipse_sketchy(
     style: &Style,
     is_selected: bool,
 ) {
-    let cx = b.x as f64 + b.width as f64 / 2.0;
-    let cy = b.y as f64 + b.height as f64 / 2.0;
+    let (cx, cy) = center_f64(b);
     let rx = b.width as f64 / 2.0;
     let ry = b.height as f64 / 2.0;
     let seed = cx * 0.43 + cy * 0.67;
