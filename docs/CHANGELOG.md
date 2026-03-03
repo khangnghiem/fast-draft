@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.10.9 — Remove Onboarding Overlay
+
+- **REMOVED (R3.51)**: Removed the "Start drawing" / "Create something beautiful" onboarding overlay — it obstructed the canvas with a z-index 950 full-screen backdrop that flashed on every file open (even non-empty files like `dark_theme.fd`); the floating scroll toolbar with tooltips and `?` shortcut help already provide sufficient tool discovery
+- **CLEANUP**: ~85 lines CSS, 22 lines HTML, ~57 lines JS removed from `webview-html.ts` and `main.js`
+
 ### v0.10.8 — Fix Floating Toolbar Drag Handles
 
 - **FIX (R3.39)**: Floating toolbar drag handles now work reliably in VS Code webview — moved `pointermove`/`pointerup` listeners from handle elements to document level; `setPointerCapture` silently fails in VS Code webview iframes, causing drag events to stop when pointer leaves the small handle element
