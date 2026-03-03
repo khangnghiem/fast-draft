@@ -5,6 +5,10 @@
 
 ## Completed Requirements
 
+### v0.10.10 — Fix Drag-to-Create from Toolbar
+
+- **FIX (R3.39)**: Drag-to-create now works in VS Code webview — moved `pointermove`/`pointerup` listeners from button-level to document-level; same root cause as v0.10.8 (toolbar drag handles): `setPointerCapture` silently fails in VS Code webview iframes, so pointer events stopped firing when cursor left the toolbar button
+
 ### v0.10.9 — Remove Onboarding Overlay
 
 - **REMOVED (R3.51)**: Removed the "Start drawing" / "Create something beautiful" onboarding overlay — it obstructed the canvas with a z-index 950 full-screen backdrop that flashed on every file open (even non-empty files like `dark_theme.fd`); the floating scroll toolbar with tooltips and `?` shortcut help already provide sufficient tool discovery

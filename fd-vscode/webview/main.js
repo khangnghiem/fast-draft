@@ -4808,7 +4808,10 @@ function setupFloatingToolbar() {
     if (dtcGhost) { dtcGhost.remove(); dtcGhost = null; }
   }
 
-  // Attach to each tool button (except select — can't drag-to-create with select)
+  // Track which button initiated the drag for click suppression
+  let dtcBtn = null;
+
+  // Attach pointerdown to each tool button (except select)
   toolbar.querySelectorAll(".ft-tool-btn[data-tool]").forEach((btn) => {
     const tool = btn.getAttribute("data-tool");
     if (tool === "select") return;
@@ -4816,90 +4819,12 @@ function setupFloatingToolbar() {
     btn.addEventListener("pointerdown", (e) => {
       e.stopPropagation(); // Prevent scroll-handle drag from activating
       dtcTool = tool;
+      dtcBtn = btn;
       dtcStartX = e.clientX;
       dtcStartY = e.clientY;
       dtcActive = false;
-      btn.setPointerCapture(e.pointerId);
-    });
-
-    btn.addEventListener("pointermove", (e) => {
-      if (!dtcTool) return;
-      const dx = e.clientX - dtcStartX;
-      const dy = e.clientY - dtcStartY;
-      if (!dtcActive && (dx * dx + dy * dy) >= DRAG_THRESHOLD * DRAG_THRESHOLD) {
-        dtcActive = true;
-        dtcGhost = createGhost(dtcTool);
-      }
-      if (dtcActive && dtcGhost) {
-        moveGhost(dtcGhost, e.clientX, e.clientY);
-      }
-    });
-
-    btn.addEventListener("pointerup", (e) => {
-      btn.releasePointerCapture(e.pointerId);
-      if (!dtcTool) return;
-
-      if (dtcActive) {
-        // Drag-to-create: check if drop is over the canvas
-        removeGhost();
-        const canvasEl = document.getElementById("fd-canvas");
-        if (canvasEl && fdCanvas) {
-          const rect = canvasEl.getBoundingClientRect();
-          const cx = e.clientX;
-          const cy = e.clientY;
-          if (cx >= rect.left && cx <= rect.right
-            && cy >= rect.top && cy <= rect.bottom) {
-            const rawX = ((cx - rect.left) - panX) / zoomLevel;
-            const rawY = ((cy - rect.top) - panY) / zoomLevel;
-
-            // ── Text drop-to-consume: text on shape or edge ──
-            if (dtcTool === "text") {
-              const consumed = dtcTextConsume(rawX, rawY, cx, cy, rect);
-              if (consumed) {
-                dtcActive = false;
-                dtcTool = null;
-                btn._dtcSuppressClick = true;
-                return;
-              }
-            }
-
-            // ── Snap-to-node detection (non-text tools) ──
-            const snap = dtcFindSnapTarget(rawX, rawY, dtcTool);
-            const sceneX = snap ? snap.x : rawX;
-            const sceneY = snap ? snap.y : rawY;
-
-            const created = fdCanvas.create_node_at(dtcTool, sceneX, sceneY);
-            if (created) {
-              lastDrawingTool = dtcTool;
-              applyDefaultsToNewNode(dtcTool);
-              bumpGeneration();
-
-              // ── Auto-create edge if snapped ──
-              if (snap && snap.targetId) {
-                const newNodeId = fdCanvas.get_selected_id();
-                if (newNodeId) {
-                  const edgeId = fdCanvas.create_edge(snap.targetId, newNodeId);
-                  if (edgeId) {
-                    bumpGeneration();
-                    const midSX = (cx + ((snap.targetCx * zoomLevel + panX) + rect.left)) / 2;
-                    const midSY = (cy + ((snap.targetCy * zoomLevel + panY) + rect.top)) / 2;
-                    showEdgeContextMenu(edgeId, midSX, midSY);
-                  }
-                }
-              }
-
-              render();
-              syncTextToExtension();
-              updatePropertiesPanel();
-            }
-          }
-        }
-        dtcActive = false;
-        dtcTool = null;
-        btn._dtcSuppressClick = true;
-      } else {
-        dtcTool = null;
-      }
+      // NOTE: setPointerCapture intentionally omitted —
+      // it silently fails in VS Code webview iframes
     });
 
     // Suppress click after drag-to-create
@@ -4910,12 +4835,97 @@ function setupFloatingToolbar() {
         e.preventDefault();
       }
     }, true);
+  });
 
-    btn.addEventListener("pointercancel", () => {
+  // Document-level listeners — setPointerCapture fails in VS Code webview iframes
+  document.addEventListener("pointermove", (e) => {
+    if (!dtcTool) return;
+    const dx = e.clientX - dtcStartX;
+    const dy = e.clientY - dtcStartY;
+    if (!dtcActive && (dx * dx + dy * dy) >= DRAG_THRESHOLD * DRAG_THRESHOLD) {
+      dtcActive = true;
+      dtcGhost = createGhost(dtcTool);
+    }
+    if (dtcActive && dtcGhost) {
+      moveGhost(dtcGhost, e.clientX, e.clientY);
+    }
+  });
+
+  document.addEventListener("pointerup", (e) => {
+    if (!dtcTool) return;
+
+    if (dtcActive) {
+      // Drag-to-create: check if drop is over the canvas
       removeGhost();
+      const canvasEl = document.getElementById("fd-canvas");
+      if (canvasEl && fdCanvas) {
+        const rect = canvasEl.getBoundingClientRect();
+        const cx = e.clientX;
+        const cy = e.clientY;
+        if (cx >= rect.left && cx <= rect.right
+          && cy >= rect.top && cy <= rect.bottom) {
+          const rawX = ((cx - rect.left) - panX) / zoomLevel;
+          const rawY = ((cy - rect.top) - panY) / zoomLevel;
+
+          // ── Text drop-to-consume: text on shape or edge ──
+          if (dtcTool === "text") {
+            const consumed = dtcTextConsume(rawX, rawY, cx, cy, rect);
+            if (consumed) {
+              dtcActive = false;
+              dtcTool = null;
+              if (dtcBtn) dtcBtn._dtcSuppressClick = true;
+              dtcBtn = null;
+              return;
+            }
+          }
+
+          // ── Snap-to-node detection (non-text tools) ──
+          const snap = dtcFindSnapTarget(rawX, rawY, dtcTool);
+          const sceneX = snap ? snap.x : rawX;
+          const sceneY = snap ? snap.y : rawY;
+
+          const created = fdCanvas.create_node_at(dtcTool, sceneX, sceneY);
+          if (created) {
+            lastDrawingTool = dtcTool;
+            applyDefaultsToNewNode(dtcTool);
+            bumpGeneration();
+
+            // ── Auto-create edge if snapped ──
+            if (snap && snap.targetId) {
+              const newNodeId = fdCanvas.get_selected_id();
+              if (newNodeId) {
+                const edgeId = fdCanvas.create_edge(snap.targetId, newNodeId);
+                if (edgeId) {
+                  bumpGeneration();
+                  const midSX = (cx + ((snap.targetCx * zoomLevel + panX) + rect.left)) / 2;
+                  const midSY = (cy + ((snap.targetCy * zoomLevel + panY) + rect.top)) / 2;
+                  showEdgeContextMenu(edgeId, midSX, midSY);
+                }
+              }
+            }
+
+            render();
+            syncTextToExtension();
+            updatePropertiesPanel();
+          }
+        }
+      }
       dtcActive = false;
       dtcTool = null;
-    });
+      if (dtcBtn) dtcBtn._dtcSuppressClick = true;
+      dtcBtn = null;
+    } else {
+      dtcTool = null;
+      dtcBtn = null;
+    }
+  });
+
+  document.addEventListener("pointercancel", () => {
+    if (!dtcTool) return;
+    removeGhost();
+    dtcActive = false;
+    dtcTool = null;
+    dtcBtn = null;
   });
   // ── Text drop-to-consume helper ──
   function dtcTextConsume(sceneX, sceneY, screenX, screenY, canvasRect) {
