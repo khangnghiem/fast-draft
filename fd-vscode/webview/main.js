@@ -1773,7 +1773,27 @@ function getResizeHandleCursor(x, y) {
   } catch (_) { return ""; }
   if (b.x === undefined) return "";
 
+  // Check if selected node is text (horizontal-only resize)
+  const propsJson = fdCanvas.get_selected_node_props();
+  let isText = false;
+  try { isText = JSON.parse(propsJson).kind === "text"; } catch (_) { /* ignore */ }
+
   const r = 8; // hit radius in scene-space px (bug #6: increased from 5)
+
+  if (isText) {
+    // Text nodes: horizontal-only resize handles (Apple Preview style)
+    const handles = [
+      { hx: b.x, hy: b.y + b.height / 2, cursor: "ew-resize" }, // middle-left
+      { hx: b.x + b.width, hy: b.y + b.height / 2, cursor: "ew-resize" }, // middle-right
+    ];
+    for (const { hx, hy, cursor } of handles) {
+      const dx = x - hx;
+      const dy = y - hy;
+      if (dx * dx + dy * dy <= r * r) return cursor;
+    }
+    return "";
+  }
+
   const handles = [
     { hx: b.x, hy: b.y, cursor: "nwse-resize" }, // top-left
     { hx: b.x + b.width / 2, hy: b.y, cursor: "ns-resize" }, // top-center
@@ -2950,18 +2970,25 @@ function openInlineEditor(nodeId, propKey, currentValue) {
 
   const container = document.getElementById("canvas-container");
 
-  // Convert scene-space bounds to screen-space
-  const sx = (b.x || 0) * zoomLevel + panX;
-  const sy = (b.y || 0) * zoomLevel + panY;
-  const sw = Math.max(bw * zoomLevel, 80);
-  const sh = Math.max(bh * zoomLevel, 28);
-
   // Read node fill color for background matching
   fdCanvas.select_by_id(nodeId);
   // Clear press animation state to prevent visual shape jump on dblclick
   fdCanvas.clear_pressed();
   const propsJson = fdCanvas.get_selected_node_props();
   const props = JSON.parse(propsJson);
+
+  // Get font info FIRST — needed for height calculation
+  const fontSize = props.fontSize ? Math.round(props.fontSize * zoomLevel) : Math.round(14 * zoomLevel);
+  const fontFamily = props.fontFamily || "Inter, sans-serif";
+  const fontWeight = props.fontWeight || 400;
+  const lineHeight = Math.round(fontSize * 1.2);
+
+  // Convert scene-space bounds to screen-space
+  const sx = (b.x || 0) * zoomLevel + panX;
+  const sy = (b.y || 0) * zoomLevel + panY;
+  const sw = Math.max(bw * zoomLevel, 80);
+  // Tight height: use lineHeight as floor instead of arbitrary 28px
+  const sh = Math.max(bh * zoomLevel, lineHeight + 4);
 
   // Determine background & text color based on node kind
   let bgColor;
@@ -2985,11 +3012,6 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     textColor = isDark ? "#E0E0E0" : "#1C1C1E";
   }
 
-  // Get font info from node props — match render2d.rs draw_text() exactly
-  const fontSize = props.fontSize ? Math.round(props.fontSize * zoomLevel) : Math.round(14 * zoomLevel);
-  const fontFamily = props.fontFamily || "Inter, sans-serif";
-  const fontWeight = props.fontWeight || 400;
-
   // Get text alignment — WASM API returns effective defaults (left/top for
   // standalone text, center/middle for text-in-shape)
   const hAlign = props.textAlign || "left";
@@ -2997,9 +3019,6 @@ function openInlineEditor(nodeId, propKey, currentValue) {
 
   // Store original value for Esc rollback
   const originalValue = currentValue;
-
-  // Line-height matching the renderer's effective line height
-  const lineHeight = Math.round(fontSize * 1.2);
 
   // Vertical padding: match Canvas2D text_baseline positioning exactly.
   // draw_text() uses:
@@ -3042,8 +3061,13 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     const cr = props.cornerRadius !== undefined ? Math.round(props.cornerRadius * zoomLevel) : 0;
     borderRadius = `${cr}px`;
   } else if (isTextNode) {
-    borderRadius = "4px";
+    borderRadius = "0";
   }
+
+  // Text nodes: minimal Apple Preview-style editor (thin border, no shadow)
+  // Shape nodes: retain visible overlay for contrast against shape fill
+  const outlineStyle = isTextNode ? "1px solid #4FC3F7" : "2px solid #4FC3F7";
+  const boxShadow = isTextNode ? "none" : "0 2px 8px rgba(0,0,0,0.12)";
 
   const textarea = document.createElement("textarea");
   textarea.value = currentValue;
@@ -3056,14 +3080,14 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     `padding:${padTop}px ${padRight}px ${padBottom}px ${padLeft}px`,
     `font:${fontWeight} ${fontSize}px ${fontFamily}`,
     `border:none`,
-    `outline:2px solid #4FC3F7`,
+    `outline:${outlineStyle}`,
     `outline-offset:-1px`,
     `border-radius:${borderRadius}`,
     `background:${bgColor}`,
     `color:${textColor}`,
     `resize:none`,
     `z-index:100`,
-    `box-shadow:0 2px 8px rgba(0,0,0,0.12)`,
+    `box-shadow:${boxShadow}`,
     `line-height:${lineHeight}px`,
     `overflow:hidden`,
     `text-align:${hAlign}`,

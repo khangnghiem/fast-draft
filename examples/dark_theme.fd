@@ -46,30 +46,6 @@ group @settings {
       }
     }
   }
-  rect @profile_card {
-    group @profile_row {
-      ellipse @user_avatar {
-        spec "User profile photo"
-        w: 48 h: 48
-        fill: #6C5CE7  # blue
-      }
-      group @user_info {
-        text @user_name "Khang Nghiem" {
-          fill: #FFFFFF  # white
-          font: "Inter" semibold 16
-        }
-        text @user_email "khang@fastdraft.io" {
-          use: dark_muted
-        }
-      }
-      x: -241.98
-      y: 49.33
-    }
-    w: 344 h: 80
-    use: dark_card
-    x: 259.37
-    y: 69.15
-  }
   text @pref_label "Preferences" {
     fill: #6B7280  # blue
     font: "Inter" semibold 13
@@ -98,6 +74,8 @@ group @settings {
     }
     w: 344 h: 56
     use: dark_card
+    x: 452.68
+    y: 36.34
     when :hover {
       fill: #353550  # blue
       ease: ease_out 150ms
@@ -107,8 +85,36 @@ group @settings {
     fill: #6B7280  # blue
     font: "Inter" semibold 13
   }
-  x: 250.05
-  y: 385.51
+  group @_group_0 {
+    rect @profile_card {
+      group @profile_row {
+        ellipse @user_avatar {
+          spec "User profile photo"
+          w: 48 h: 48
+          fill: #6C5CE7  # blue
+          x: 77.27
+          y: -8.53
+        }
+        group @user_info {
+          text @user_name "Khang Nghiem" {
+            fill: #FFFFFF  # white
+            font: "Inter" semibold 16
+          }
+          text @user_email "khang@fastdraft.io" {
+            use: dark_muted
+          }
+        }
+        x: -145.72
+        y: 76.35
+      }
+      w: 344 h: 80
+      use: dark_card
+    }
+    x: 155.22
+    y: 157.9
+  }
+  x: 250.25
+  y: 385.77
 }
 
 text @dark_label "Dark Mode" {
@@ -120,8 +126,8 @@ text @dark_label "Dark Mode" {
 rect @toggle_notif {
   w: 344 h: 56
   use: dark_card
-  x: 358.85
-  y: 28.77
+  x: 451.31
+  y: 27.94
   when :hover {
     fill: #353550  # blue
     ease: ease_out 150ms
@@ -165,8 +171,8 @@ text @danger_label "Danger Zone" {
 rect @toggle_sound {
   w: 328.18 h: 95.49
   use: dark_card
-  x: 523.24
-  y: 120.95
+  x: 694.94
+  y: 142.61
   when :hover {
     fill: #353550  # blue
     ease: ease_out 150ms
@@ -181,8 +187,8 @@ text @sound_label "Sound Effects" {
 
 text @sound_desc "UI interaction sounds" {
   use: dark_muted
-  x: 628.05
-  y: -31.92
+  x: 804.2
+  y: -7.65
 }
 
 rect @switch_sound_on {
@@ -330,8 +336,8 @@ rect @rect_8 {
 }
 
 text @_text_0 "Text" {
-  x: 589.52
-  y: -91.5
+  x: 589.95
+  y: -59.75
 }
 
 rect @rect_10 {

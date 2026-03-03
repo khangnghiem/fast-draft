@@ -338,7 +338,7 @@ fn render_node(
     // Selection overlay (drawn after children so it's on top)
     // Groups don't get resize handles — only dashed border (drawn in Group branch above)
     if is_selected && !matches!(&node.kind, NodeKind::Group) {
-        draw_selection_handles(ctx, node_bounds);
+        draw_selection_handles(ctx, node_bounds, &node.kind);
     }
 
     // Restore scale transform
@@ -640,32 +640,51 @@ fn draw_generic_placeholder(
     ctx.restore();
 }
 
-fn draw_selection_handles(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds) {
+fn draw_selection_handles(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, kind: &NodeKind) {
     let (x, y, w, h) = (b.x as f64, b.y as f64, b.width as f64, b.height as f64);
     let handle_size = 7.0;
     let half = handle_size / 2.0;
+
+    // Text nodes: thin selection border + horizontal-only handles (Apple Preview style)
+    let is_text = matches!(kind, NodeKind::Text { .. });
+
+    // Selection border
+    ctx.set_stroke_style_str("#4FC3F7");
+    ctx.set_line_width(if is_text { 1.0 } else { 2.0 });
+    ctx.stroke_rect(x - 1.0, y - 1.0, w + 2.0, h + 2.0);
 
     ctx.set_fill_style_str("#FFFFFF");
     ctx.set_stroke_style_str("#4FC3F7");
     ctx.set_line_width(1.5);
 
-    // 8-point handles: corners + midpoints (Figma/Sketch style)
-    let handles = [
-        // Corners
-        (x - half, y - half),         // TopLeft
-        (x + w - half, y - half),     // TopRight
-        (x - half, y + h - half),     // BottomLeft
-        (x + w - half, y + h - half), // BottomRight
-        // Midpoints
-        (x + w / 2.0 - half, y - half),     // TopCenter
-        (x + w / 2.0 - half, y + h - half), // BottomCenter
-        (x - half, y + h / 2.0 - half),     // MiddleLeft
-        (x + w - half, y + h / 2.0 - half), // MiddleRight
-    ];
-
-    for (hx, hy) in handles {
-        ctx.fill_rect(hx, hy, handle_size, handle_size);
-        ctx.stroke_rect(hx, hy, handle_size, handle_size);
+    if is_text {
+        // Text nodes: only horizontal resize handles (MiddleLeft + MiddleRight)
+        let handles = [
+            (x - half, y + h / 2.0 - half),     // MiddleLeft
+            (x + w - half, y + h / 2.0 - half), // MiddleRight
+        ];
+        for (hx, hy) in handles {
+            ctx.fill_rect(hx, hy, handle_size, handle_size);
+            ctx.stroke_rect(hx, hy, handle_size, handle_size);
+        }
+    } else {
+        // 8-point handles: corners + midpoints (Figma/Sketch style)
+        let handles = [
+            // Corners
+            (x - half, y - half),         // TopLeft
+            (x + w - half, y - half),     // TopRight
+            (x - half, y + h - half),     // BottomLeft
+            (x + w - half, y + h - half), // BottomRight
+            // Midpoints
+            (x + w / 2.0 - half, y - half),     // TopCenter
+            (x + w / 2.0 - half, y + h - half), // BottomCenter
+            (x - half, y + h / 2.0 - half),     // MiddleLeft
+            (x + w - half, y + h / 2.0 - half), // MiddleRight
+        ];
+        for (hx, hy) in handles {
+            ctx.fill_rect(hx, hy, handle_size, handle_size);
+            ctx.stroke_rect(hx, hy, handle_size, handle_size);
+        }
     }
 }
 
