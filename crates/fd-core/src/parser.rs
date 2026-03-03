@@ -76,7 +76,10 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
             if let Some((text_id, content)) = text_child_data {
                 let text_node = crate::model::SceneNode {
                     id: text_id,
-                    kind: crate::model::NodeKind::Text { content },
+                    kind: crate::model::NodeKind::Text {
+                        content,
+                        max_width: None,
+                    },
                     style: crate::model::Style::default(),
                     use_styles: Default::default(),
                     constraints: Default::default(),
@@ -598,6 +601,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
         },
         "text" => NodeKind::Text {
             content: inline_text.unwrap_or_default(),
+            max_width: width,
         },
         "path" => NodeKind::Path {
             commands: Vec::new(),
@@ -1084,7 +1088,7 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
         } else if input.starts_with("text ") || input.starts_with("text@") {
             // Nested text child: text @id "content" { ... }
             let node = parse_node.parse_next(input)?;
-            if let NodeKind::Text { ref content } = node.kind {
+            if let NodeKind::Text { ref content, .. } = node.kind {
                 text_child = Some(node.id);
                 text_child_content = Some((node.id, content.clone()));
             }

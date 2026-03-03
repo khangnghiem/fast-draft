@@ -401,7 +401,7 @@ fn intrinsic_size(node: &SceneNode) -> (f32, f32) {
     match &node.kind {
         NodeKind::Rect { width, height } => (*width, *height),
         NodeKind::Ellipse { rx, ry } => (*rx * 2.0, *ry * 2.0),
-        NodeKind::Text { content } => {
+        NodeKind::Text { content, .. } => {
             let font_size = node.style.font.as_ref().map_or(14.0, |f| f.size);
             let char_width = font_size * 0.6;
             (content.chars().count() as f32 * char_width, font_size * 1.4)

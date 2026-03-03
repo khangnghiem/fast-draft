@@ -165,6 +165,10 @@ impl SyncEngine {
                             *w = rw;
                             *h = rh;
                         }
+                        NodeKind::Text { max_width, .. } => {
+                            *max_width = Some(rw);
+                            // Height is content-determined — don't set
+                        }
                         _ => {}
                     }
                 }
@@ -227,7 +231,9 @@ impl SyncEngine {
             }
             GraphMutation::SetText { id, content } => {
                 if let Some(node) = self.graph.get_by_id_mut(id)
-                    && let NodeKind::Text { content: ref mut c } = node.kind
+                    && let NodeKind::Text {
+                        content: ref mut c, ..
+                    } = node.kind
                 {
                     *c = content;
                 }
@@ -490,7 +496,7 @@ impl SyncEngine {
         let mut child_b = *self.bounds.get(&child_idx)?;
         let parent_b = *self.bounds.get(&parent_idx)?;
 
-        if let NodeKind::Text { content } = child_kind {
+        if let NodeKind::Text { content, .. } = child_kind {
             let font_size = self.graph.graph[child_idx]
                 .style
                 .font
@@ -663,7 +669,7 @@ fn handle_child_group_relationship(
     // If the child is a Text node inside a shape, its layout bounds might have been
     // inflated to match the parent's size (from CenterIn or default layout).
     // For drag-to-detach, we want to test the actual visual text bounds.
-    if let NodeKind::Text { content } = child_kind {
+    if let NodeKind::Text { content, .. } = child_kind {
         // Use same heuristic as intrinsic_size() in layout.rs
         let font_size = graph.graph[child_idx]
             .style

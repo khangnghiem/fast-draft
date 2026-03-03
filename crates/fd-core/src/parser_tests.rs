@@ -177,7 +177,7 @@ text @greeting "Hello World" {
     let graph = parse_document(input).expect("text should parse");
     let node = graph.get_by_id(NodeId::intern("greeting")).unwrap();
     match &node.kind {
-        NodeKind::Text { content } => {
+        NodeKind::Text { content, .. } => {
             assert_eq!(content, "Hello World");
         }
         _ => panic!("expected Text"),
@@ -582,4 +582,63 @@ edge @link {
     assert_eq!(reparsed.edges.len(), 1);
     let re_edge = &reparsed.edges[0];
     assert_eq!(re_edge.label_offset, Some((15.5, -8.3)));
+}
+
+#[test]
+fn roundtrip_text_max_width() {
+    let input = r#"
+text @label "Hello World" {
+  w: 120
+  font: "Inter" 400 14
+}
+"#;
+    let graph = parse_document(input).expect("parse failed");
+    let node = graph.get_by_id(NodeId::intern("label")).unwrap();
+    match &node.kind {
+        NodeKind::Text { content, max_width } => {
+            assert_eq!(content, "Hello World");
+            assert_eq!(*max_width, Some(120.0));
+        }
+        _ => panic!("expected Text"),
+    }
+
+    // Emit and re-parse
+    let emitted = crate::emitter::emit_document(&graph);
+    assert!(emitted.contains("w: 120"), "emitter should include w:");
+
+    let reparsed = parse_document(&emitted).expect("re-parse failed");
+    let node2 = reparsed.get_by_id(NodeId::intern("label")).unwrap();
+    match &node2.kind {
+        NodeKind::Text { max_width, .. } => {
+            assert_eq!(*max_width, Some(120.0));
+        }
+        _ => panic!("expected Text after roundtrip"),
+    }
+}
+
+#[test]
+fn roundtrip_text_no_max_width() {
+    let input = r#"text @t "No wrap" { font: "Inter" 400 14 }"#;
+    let graph = parse_document(input).expect("parse failed");
+    let node = graph.get_by_id(NodeId::intern("t")).unwrap();
+    match &node.kind {
+        NodeKind::Text { max_width, .. } => {
+            assert_eq!(*max_width, None, "text without w: should have no max_width");
+        }
+        _ => panic!("expected Text"),
+    }
+
+    // Emit should not contain w: for text without max_width
+    let emitted = crate::emitter::emit_document(&graph);
+    // Check that the text line doesn't have a standalone w: line
+    let lines: Vec<&str> = emitted.lines().collect();
+    for line in &lines {
+        let trimmed = line.trim();
+        if trimmed.starts_with("w:") && !trimmed.contains("h:") {
+            panic!(
+                "text without max_width should not emit w: line, got: {}",
+                trimmed
+            );
+        }
+    }
 }

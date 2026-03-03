@@ -237,7 +237,7 @@ fn render_node(
                 draw_ellipse(ctx, node_bounds, &style, is_selected);
             }
         }
-        NodeKind::Text { content } => {
+        NodeKind::Text { content, max_width } => {
             // Check if text is inside a shape (Rect/Ellipse) for alignment defaults
             let parent_is_shape = graph.parent(idx).is_some_and(|pid| {
                 let pk = &graph.graph[pid].kind;
@@ -246,7 +246,14 @@ fn render_node(
                     NodeKind::Rect { .. } | NodeKind::Ellipse { .. } | NodeKind::Frame { .. }
                 )
             });
-            draw_text(ctx, node_bounds, content, &style, parent_is_shape);
+            draw_text(
+                ctx,
+                node_bounds,
+                content,
+                &style,
+                parent_is_shape,
+                *max_width,
+            );
         }
         NodeKind::Group => {
             // Group is purely organizational — no background fill
@@ -428,6 +435,7 @@ fn draw_text(
     content: &str,
     style: &Style,
     in_shape: bool,
+    max_width: Option<f32>,
 ) {
     ctx.save();
     apply_opacity(ctx, style);
@@ -470,19 +478,81 @@ fn draw_text(
     };
     ctx.set_text_baseline(text_baseline_str);
 
-    // Calculate position based on alignment
+    let line_height = (size * 1.2) as f64;
+    let wrap_width = max_width.map(|w| w as f64);
+
+    // Build lines: split by existing newlines, then word-wrap within wrap_width
+    let lines: Vec<String> = if let Some(ww) = wrap_width {
+        let mut result = Vec::new();
+        for paragraph in content.split('\n') {
+            let words: Vec<&str> = paragraph.split_whitespace().collect();
+            if words.is_empty() {
+                result.push(String::new());
+                continue;
+            }
+            let mut current_line = String::new();
+            for word in words {
+                let test = if current_line.is_empty() {
+                    word.to_string()
+                } else {
+                    format!("{current_line} {word}")
+                };
+                let measured = ctx.measure_text(&test).map(|m| m.width()).unwrap_or(0.0);
+                if !current_line.is_empty() && measured > ww {
+                    result.push(current_line);
+                    current_line = word.to_string();
+                } else {
+                    current_line = test;
+                }
+            }
+            result.push(current_line);
+        }
+        result
+    } else {
+        content.split('\n').map(|s| s.to_string()).collect()
+    };
+
+    let num_lines = lines.len();
+    let total_text_height = num_lines as f64 * line_height;
+
+    // Calculate x position based on alignment
     let x = match halign {
         TextAlign::Left => b.x as f64,
         TextAlign::Center => b.x as f64 + b.width as f64 / 2.0,
         TextAlign::Right => b.x as f64 + b.width as f64,
     };
-    let y = match valign {
+
+    // Calculate starting y based on vertical alignment
+    let _start_y = match valign {
         TextVAlign::Top => b.y as f64 + 2.0,
-        TextVAlign::Middle => b.y as f64 + b.height as f64 / 2.0,
-        TextVAlign::Bottom => b.y as f64 + b.height as f64 - 2.0,
+        TextVAlign::Middle => {
+            b.y as f64 + (b.height as f64 - total_text_height) / 2.0 + line_height / 2.0
+        }
+        TextVAlign::Bottom => {
+            b.y as f64 + b.height as f64 - total_text_height - 2.0 + line_height / 2.0
+        }
     };
 
-    let _ = ctx.fill_text(content, x, y);
+    // Reset baseline for multi-line — use "top" and manually offset
+    if num_lines > 1 || wrap_width.is_some() {
+        ctx.set_text_baseline("top");
+        let adj_y = match valign {
+            TextVAlign::Top => b.y as f64 + 2.0,
+            TextVAlign::Middle => b.y as f64 + (b.height as f64 - total_text_height) / 2.0,
+            TextVAlign::Bottom => b.y as f64 + b.height as f64 - total_text_height - 2.0,
+        };
+        for (i, line) in lines.iter().enumerate() {
+            let _ = ctx.fill_text(line, x, adj_y + i as f64 * line_height);
+        }
+    } else {
+        // Single line — use original baseline positioning for backwards compatibility
+        let y = match valign {
+            TextVAlign::Top => b.y as f64 + 2.0,
+            TextVAlign::Middle => b.y as f64 + b.height as f64 / 2.0,
+            TextVAlign::Bottom => b.y as f64 + b.height as f64 - 2.0,
+        };
+        let _ = ctx.fill_text(content, x, y);
+    }
 
     ctx.restore();
 }
@@ -890,7 +960,7 @@ fn draw_edges(
         // Text child at midpoint (replaces old label: "string")
         if let Some(text_id) = edge.text_child
             && let Some(text_node) = graph.get_by_id(text_id)
-            && let fd_core::model::NodeKind::Text { content } = &text_node.kind
+            && let fd_core::model::NodeKind::Text { content, .. } = &text_node.kind
         {
             let mx = ((x1 + x2) / 2.0) as f64;
             let my = ((y1 + y2) / 2.0) as f64;

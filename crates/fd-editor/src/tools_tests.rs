@@ -337,7 +337,7 @@ fn text_tool_click_creates_text() {
     match &mutations[0] {
         GraphMutation::AddNode { node, .. } => {
             match &node.kind {
-                NodeKind::Text { content } => {
+                NodeKind::Text { content, .. } => {
                     assert_eq!(content, "Text");
                 }
                 _ => panic!("expected Text node"),

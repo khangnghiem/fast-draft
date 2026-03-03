@@ -75,7 +75,7 @@ fn hover_node_id(id: &str, graph: Option<&SceneGraph>) -> Option<Hover> {
             let desc = format!("**Path** — {} commands", commands.len());
             return Some(make_hover(&desc));
         }
-        fd_core::NodeKind::Text { content } => {
+        fd_core::NodeKind::Text { content, .. } => {
             let desc = format!("**Text** — \"{}\"", content);
             return Some(make_hover(&desc));
         }

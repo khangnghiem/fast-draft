@@ -60,7 +60,7 @@ text @title "Hello" {
     let graph2 = parse_document(&output).expect("re-parse of text failed");
     let node = graph2.get_by_id(NodeId::intern("title")).unwrap();
     match &node.kind {
-        NodeKind::Text { content } => assert_eq!(content, "Hello"),
+        NodeKind::Text { content, .. } => assert_eq!(content, "Hello"),
         _ => panic!("expected Text"),
     }
     let font = node.style.font.as_ref().expect("font missing");
@@ -300,7 +300,7 @@ edge @a_to_b {
     let text_id = edge.text_child.expect("text_child should be set");
     assert_eq!(text_id.as_str(), "_a_to_b_label");
     let text_node = graph.get_by_id(text_id).expect("text node should exist");
-    if let NodeKind::Text { content } = &text_node.kind {
+    if let NodeKind::Text { content, .. } = &text_node.kind {
         assert_eq!(content, "next step");
     } else {
         panic!("expected Text node");
@@ -1221,7 +1221,7 @@ fn roundtrip_unicode_text() {
     let graph2 = parse_document(&output).expect("re-parse of unicode failed");
     let node = graph2.get_by_id(NodeId::intern("emoji")).unwrap();
     match &node.kind {
-        NodeKind::Text { content } => {
+        NodeKind::Text { content, .. } => {
             assert!(content.contains("🎨"));
             assert!(content.contains("café"));
             assert!(content.contains("日本語"));

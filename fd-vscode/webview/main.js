@@ -2960,20 +2960,57 @@ function measureAndUpdateTextBounds(nodeId) {
   const fontSize = props.fontSize || 14;
   const fontFamily = props.fontFamily || "Inter, system-ui, sans-serif";
   const fontWeight = props.fontWeight || 400;
+  const maxWidth = props.maxWidth || null;
 
   // Measure using the off-screen canvas
   const measureCtx = canvas.getContext("2d");
   measureCtx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
-  const metrics = measureCtx.measureText(text);
-  const measuredWidth = metrics.width;
-  // Use precise glyph metrics when available, but ensure height is at least
-  // fontSize * 1.2 to match the renderer's effective line height. Tight glyph
-  // metrics can be smaller than the font's visual height (e.g. text without
-  // descenders like "Settings" would have a tiny ascent-only box).
-  const rawGlyphHeight = (metrics.actualBoundingBoxAscent != null && metrics.actualBoundingBoxDescent != null)
-    ? metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
-    : fontSize * 1.2;
-  const measuredHeight = Math.max(rawGlyphHeight, fontSize * 1.2);
+
+  let measuredWidth;
+  let measuredHeight;
+  const lineHeight = fontSize * 1.2;
+
+  if (maxWidth) {
+    // Word-wrap measurement: split text into lines that fit within maxWidth
+    const paragraphs = text.split("\n");
+    let totalLines = 0;
+    let maxLineWidth = 0;
+    for (const paragraph of paragraphs) {
+      const words = paragraph.split(/\s+/).filter(w => w.length > 0);
+      if (words.length === 0) {
+        totalLines++;
+        continue;
+      }
+      let currentLine = "";
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        const testWidth = measureCtx.measureText(testLine).width;
+        if (currentLine && testWidth > maxWidth) {
+          maxLineWidth = Math.max(maxLineWidth, measureCtx.measureText(currentLine).width);
+          totalLines++;
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      if (currentLine) {
+        maxLineWidth = Math.max(maxLineWidth, measureCtx.measureText(currentLine).width);
+        totalLines++;
+      }
+    }
+    measuredWidth = maxWidth; // Width stays at maxWidth
+    measuredHeight = Math.max(totalLines * lineHeight, lineHeight);
+  } else {
+  // Single-line measurement (original behavior)
+    const metrics = measureCtx.measureText(text);
+    measuredWidth = metrics.width;
+    // Use precise glyph metrics when available, but ensure height is at least
+    // fontSize * 1.2 to match the renderer's effective line height.
+    const rawGlyphHeight = (metrics.actualBoundingBoxAscent != null && metrics.actualBoundingBoxDescent != null)
+      ? metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
+      : lineHeight;
+    measuredHeight = Math.max(rawGlyphHeight, lineHeight);
+  }
 
   // Send measured dimensions to WASM
   const changed = fdCanvas.update_text_metrics(nodeId, measuredWidth, measuredHeight);
@@ -3145,6 +3182,9 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     `text-align:${hAlign}`,
     `box-sizing:border-box`,
     `-webkit-text-size-adjust:100%`,
+    `word-wrap:break-word`,
+    `white-space:pre-wrap`,
+    `overflow-wrap:break-word`,
   ].join(";");
 
   container.appendChild(textarea);

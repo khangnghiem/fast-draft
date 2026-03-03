@@ -244,7 +244,7 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
                 .graph
                 .get_by_id(*id)
                 .and_then(|n| match &n.kind {
-                    fd_core::model::NodeKind::Text { content } => Some(content.clone()),
+                    fd_core::model::NodeKind::Text { content, .. } => Some(content.clone()),
                     _ => None,
                 })
                 .unwrap_or_default();

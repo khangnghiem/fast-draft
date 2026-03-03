@@ -454,8 +454,12 @@ pub enum NodeKind {
     /// Freeform path (pen tool output).
     Path { commands: Vec<PathCmd> },
 
-    /// Text label.
-    Text { content: String },
+    /// Text label. Optional `max_width` constrains horizontal extent
+    /// for word wrapping (set via resize handle drag).
+    Text {
+        content: String,
+        max_width: Option<f32>,
+    },
 }
 
 impl NodeKind {
@@ -1008,6 +1012,7 @@ mod tests {
             NodeId::intern("txt"),
             NodeKind::Text {
                 content: "hi".into(),
+                max_width: None,
             },
         );
         node.use_styles.push(NodeId::intern("base"));
@@ -1043,6 +1048,7 @@ mod tests {
             NodeId::intern("overridden"),
             NodeKind::Text {
                 content: "hello".into(),
+                max_width: None,
             },
         );
         node.use_styles.push(NodeId::intern("centered"));
@@ -1164,6 +1170,7 @@ mod tests {
             child_id,
             NodeKind::Text {
                 content: "Title".into(),
+                max_width: None,
             },
         );
 

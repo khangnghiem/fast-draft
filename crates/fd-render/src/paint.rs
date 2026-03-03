@@ -48,7 +48,7 @@ fn paint_node(
 
         NodeKind::Ellipse { rx, ry } => paint_ellipse(scene, nb, *rx, *ry, &style),
 
-        NodeKind::Text { content } => {
+        NodeKind::Text { content, .. } => {
             log::trace!(
                 "TEXT @{} {:?} at ({}, {})",
                 node.id.as_str(),

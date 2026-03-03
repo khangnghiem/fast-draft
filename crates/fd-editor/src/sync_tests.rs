@@ -1636,3 +1636,55 @@ frame @form {
         submit_rel
     );
 }
+
+// ─── Text Resize Tests ──────────────────────────────────────────────
+
+#[test]
+fn sync_resize_text_sets_max_width() {
+    let input = r#"
+text @label "Hello World" {
+  font: "Inter" 400 14
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let label_id = NodeId::intern("label");
+    let label_idx = engine.graph.index_of(label_id).unwrap();
+
+    // Initially, text should have no max_width
+    match &engine.graph.graph[label_idx].kind {
+        NodeKind::Text { max_width, .. } => {
+            assert_eq!(*max_width, None, "initial text should have no max_width");
+        }
+        _ => panic!("expected Text"),
+    }
+
+    // Apply resize — should set max_width
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        id: label_id,
+        width: 150.0,
+        height: 40.0,
+    });
+
+    match &engine.graph.graph[label_idx].kind {
+        NodeKind::Text { max_width, .. } => {
+            assert_eq!(
+                *max_width,
+                Some(150.0),
+                "resize should set max_width to 150"
+            );
+        }
+        _ => panic!("expected Text after resize"),
+    }
+
+    // Bounds should also reflect the width
+    let bounds = engine.bounds[&label_idx];
+    assert!(
+        (bounds.width - 150.0).abs() < 0.01,
+        "bounds width should be 150: got {}",
+        bounds.width
+    );
+}

@@ -970,8 +970,19 @@ impl FdCanvas {
         }
 
         let padding = 2.0_f32; // Match draw_text y-offset (+2.0)
-        let new_width = (measured_width as f32) + padding * 2.0;
+        let content_width = (measured_width as f32) + padding * 2.0;
         let new_height = (measured_height as f32) + padding * 2.0;
+
+        // If text has max_width, clamp width to it (text wraps within)
+        let max_w = if let NodeKind::Text { max_width, .. } = &self.engine.graph.graph[idx].kind {
+            *max_width
+        } else {
+            None
+        };
+        let new_width = match max_w {
+            Some(mw) => mw, // Width stays at max_width (wrapping constraint)
+            None => content_width,
+        };
 
         // Enforce minimum bounds
         let min_width = 20.0_f32;
@@ -1292,9 +1303,12 @@ impl FdCanvas {
                 props.insert("width".into(), serde_json::json!(rx * 2.0));
                 props.insert("height".into(), serde_json::json!(ry * 2.0));
             }
-            NodeKind::Text { content } => {
+            NodeKind::Text { content, max_width } => {
                 props.insert("kind".into(), "text".into());
                 props.insert("content".into(), serde_json::Value::String(content.clone()));
+                if let Some(mw) = max_width {
+                    props.insert("maxWidth".into(), serde_json::json!(mw));
+                }
             }
             NodeKind::Group => {
                 props.insert("kind".into(), "group".into());
@@ -1322,7 +1336,8 @@ impl FdCanvas {
         ) && let Some(idx) = self.engine.graph.index_of(id)
         {
             for child_idx in self.engine.graph.children(idx) {
-                if let NodeKind::Text { ref content } = self.engine.graph.graph[child_idx].kind {
+                if let NodeKind::Text { ref content, .. } = self.engine.graph.graph[child_idx].kind
+                {
                     props.insert("label".into(), serde_json::Value::String(content.clone()));
                     break;
                 }
@@ -1431,7 +1446,7 @@ impl FdCanvas {
         let style = self.engine.graph.resolve_style(node, &[]);
         let mut props = serde_json::Map::new();
 
-        if let NodeKind::Text { ref content } = node.kind {
+        if let NodeKind::Text { ref content, .. } = node.kind {
             props.insert("text".into(), serde_json::Value::String(content.clone()));
         }
 
@@ -1620,6 +1635,7 @@ impl FdCanvas {
                             child_id,
                             NodeKind::Text {
                                 content: value.to_string(),
+                                max_width: None,
                             },
                         );
                         GraphMutation::AddNode {
@@ -1692,6 +1708,7 @@ impl FdCanvas {
             "ellipse" => NodeKind::Ellipse { rx: 50.0, ry: 40.0 },
             "text" => NodeKind::Text {
                 content: "Text".to_string(),
+                max_width: None,
             },
             "frame" => NodeKind::Frame {
                 width: 200.0,
@@ -2361,7 +2378,7 @@ fn collect_node_tree(graph: &fd_core::SceneGraph, idx: fd_core::NodeIndex) -> se
         "id": node.id.as_str(),
         "kind": kind_str,
     });
-    if let fd_core::NodeKind::Text { content } = &node.kind {
+    if let fd_core::NodeKind::Text { content, .. } = &node.kind {
         obj["text"] = serde_json::Value::String(content.clone());
     }
     if let fd_core::NodeKind::Rect { width, height } = &node.kind {
