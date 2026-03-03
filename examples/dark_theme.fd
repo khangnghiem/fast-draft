@@ -62,6 +62,8 @@ group @settings {
           use: dark_muted
         }
       }
+      x: -241.98
+      y: 49.33
     }
     w: 344 h: 80
     use: dark_card
@@ -105,8 +107,8 @@ group @settings {
     fill: #6B7280  # blue
     font: "Inter" semibold 13
   }
-  x: 545.8
-  y: 362.89
+  x: 250.05
+  y: 385.51
 }
 
 text @dark_label "Dark Mode" {
