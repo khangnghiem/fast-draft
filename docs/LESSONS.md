@@ -240,3 +240,16 @@ Engineering lessons discovered through building FD.
 **Fix**: Added a time envelope in `render_node`: 200ms ease-in (smoothstep) → 300ms hold → 200ms ease-out. After 700ms total, scale returns to 1.0 even while still hovered. `hover_start_ms` tracked in `FdCanvas` and passed to renderer.
 
 **Lesson**: Interactive animations must always have explicit time bounds. An indefinite animation on a state trigger (hover, press) feels broken because it never "finishes." Use ease-in/hold/ease-out envelopes to give animations a perceptible start and end.
+
+---
+
+## setPointerCapture Fails Silently in VS Code Webview — Use Document-Level Listeners
+
+**Date**: 2026-03-03
+**Context**: Drag-to-create from floating toolbar buttons didn't work — ghost preview never appeared, shapes never created on canvas drop. Same root cause as toolbar drag handles (PR #333, v0.10.8).
+
+**Root cause**: `btn.setPointerCapture(e.pointerId)` silently fails inside VS Code webview iframes. When `pointermove`/`pointerup` listeners are attached to the button element, they stop firing as soon as the pointer leaves the button's bounding box (because the capture never took effect). This means: no ghost preview, no drop detection, no new shapes.
+
+**Fix**: Removed `setPointerCapture` call. Moved `pointermove`, `pointerup`, and `pointercancel` from per-button listeners to `document`-level listeners. Added `dtcBtn` variable to track the originating button for click suppression after drag.
+
+**Lesson**: **Never use `setPointerCapture` in VS Code webview code.** It silently fails in iframe contexts. Always use document-level `pointermove`/`pointerup` listeners for any drag interaction that needs to track the pointer after it leaves the originating element. Pattern: attach `pointerdown` on the element (for state init), attach `pointermove`/`pointerup` on `document` (for tracking).
