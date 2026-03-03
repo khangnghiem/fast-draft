@@ -4698,10 +4698,91 @@ function setupFloatingToolbar() {
   let dragStartTime = 0;
   let initialLeft = 0;
   let initialTop = 0;
+  let activePointerId = -1;
+
+  // Use document-level listeners — setPointerCapture fails in VS Code webview iframes
+  document.addEventListener("pointermove", (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+
+    // Temporary drag visual (disable transition)
+    toolbar.style.transition = "none";
+    toolbar.style.transform = `translate(${dx}px, ${dy}px)`;
+  });
+
+  document.addEventListener("pointerup", (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    activePointerId = -1;
+
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const timeElapsed = Date.now() - dragStartTime;
+
+    toolbar.style.transform = "";
+    toolbar.style.transition = "";
+
+    // Handle Click (Roll/Unroll)
+    if (dist < 5 && timeElapsed < 300) {
+      const isRolled = toolbar.classList.toggle("rolled-up");
+      toolbar.classList.toggle("unrolled", !isRolled);
+      vscode.setState({ ...(vscode.getState() || {}), ftRolledUp: isRolled });
+      if (isRolled) updateRollWidths();
+      return;
+    }
+
+    // Handle Drag & Snap
+    const snapThreshold = 60;
+    const finalX = initialLeft + dx;
+    const finalY = initialTop + dy;
+
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+
+    const distTop = finalY;
+    const distBottom = viewH - (finalY + toolbar.offsetHeight);
+    const distLeft = finalX;
+    const distRight = viewW - (finalX + toolbar.offsetWidth);
+
+    let newPos = {};
+    let newOrientation = "horizontal";
+
+    if (distRight < snapThreshold) {
+      newOrientation = "vertical";
+      newPos = { right: "2vw", top: Math.max(2, (finalY / viewH) * 100) + "vh" };
+    } else if (distLeft < snapThreshold) {
+      newOrientation = "vertical";
+      newPos = { left: "calc(232px + 2vw)", top: Math.max(2, (finalY / viewH) * 100) + "vh" };
+    } else if (distTop < snapThreshold) {
+      newOrientation = "horizontal";
+      newPos = { top: "2vh", left: Math.max(2, (finalX / viewW) * 100) + "vw" };
+    } else {
+      newOrientation = "horizontal";
+      // Default relative position
+      newPos = { bottom: "1.5vh", left: Math.max(2, (finalX / viewW) * 100) + "vw" };
+    }
+
+    toolbar.classList.remove("horizontal", "vertical");
+    toolbar.classList.add(newOrientation);
+
+    toolbar.style.left = newPos.left || "auto";
+    toolbar.style.right = newPos.right || "auto";
+    toolbar.style.top = newPos.top || "auto";
+    toolbar.style.bottom = newPos.bottom || "auto";
+
+    vscode.setState({ ...(vscode.getState() || {}), ftPosition: newPos, ftOrientation: newOrientation });
+
+    if (toolbar.classList.contains("rolled-up")) {
+      updateRollWidths();
+    }
+  });
 
   handles.forEach(handle => {
     handle.addEventListener("pointerdown", (e) => {
       isDragging = true;
+      activePointerId = e.pointerId;
       dragStartX = e.clientX;
       dragStartY = e.clientY;
       dragStartTime = Date.now();
@@ -4710,87 +4791,8 @@ function setupFloatingToolbar() {
       initialLeft = rect.left;
       initialTop = rect.top;
 
-      handle.setPointerCapture(e.pointerId);
       e.preventDefault();
       e.stopPropagation();
-    });
-
-    handle.addEventListener("pointermove", (e) => {
-      if (!isDragging) return;
-      const dx = e.clientX - dragStartX;
-      const dy = e.clientY - dragStartY;
-
-      // Temporary drag visual (disable transition)
-      toolbar.style.transition = "none";
-      toolbar.style.transform = `translate(${dx}px, ${dy}px)`;
-    });
-
-    handle.addEventListener("pointerup", (e) => {
-      if (!isDragging) return;
-      isDragging = false;
-      handle.releasePointerCapture(e.pointerId);
-
-      const dx = e.clientX - dragStartX;
-      const dy = e.clientY - dragStartY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const timeElapsed = Date.now() - dragStartTime;
-
-      toolbar.style.transform = "";
-      toolbar.style.transition = "";
-
-      // Handle Click (Roll/Unroll)
-      if (dist < 5 && timeElapsed < 300) {
-        const isRolled = toolbar.classList.toggle("rolled-up");
-        toolbar.classList.toggle("unrolled", !isRolled);
-        vscode.setState({ ...(vscode.getState() || {}), ftRolledUp: isRolled });
-        if (isRolled) updateRollWidths();
-        return;
-      }
-
-      // Handle Drag & Snap
-      const snapThreshold = 60;
-      const finalX = initialLeft + dx;
-      const finalY = initialTop + dy;
-
-      const viewW = window.innerWidth;
-      const viewH = window.innerHeight;
-
-      const distTop = finalY;
-      const distBottom = viewH - (finalY + toolbar.offsetHeight);
-      const distLeft = finalX;
-      const distRight = viewW - (finalX + toolbar.offsetWidth);
-
-      let newPos = {};
-      let newOrientation = "horizontal";
-
-      if (distRight < snapThreshold) {
-        newOrientation = "vertical";
-        newPos = { right: "2vw", top: Math.max(2, (finalY / viewH) * 100) + "vh" };
-      } else if (distLeft < snapThreshold) {
-        newOrientation = "vertical";
-        newPos = { left: "calc(232px + 2vw)", top: Math.max(2, (finalY / viewH) * 100) + "vh" };
-      } else if (distTop < snapThreshold) {
-        newOrientation = "horizontal";
-        newPos = { top: "2vh", left: Math.max(2, (finalX / viewW) * 100) + "vw" };
-      } else {
-        newOrientation = "horizontal";
-        // Default relative position
-        newPos = { bottom: "1.5vh", left: Math.max(2, (finalX / viewW) * 100) + "vw" };
-      }
-
-      toolbar.classList.remove("horizontal", "vertical");
-      toolbar.classList.add(newOrientation);
-
-      toolbar.style.left = newPos.left || "auto";
-      toolbar.style.right = newPos.right || "auto";
-      toolbar.style.top = newPos.top || "auto";
-      toolbar.style.bottom = newPos.bottom || "auto";
-
-      vscode.setState({ ...(vscode.getState() || {}), ftPosition: newPos, ftOrientation: newOrientation });
-
-      if (toolbar.classList.contains("rolled-up")) {
-        updateRollWidths();
-      }
     });
   });
 

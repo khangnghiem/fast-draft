@@ -49,6 +49,9 @@ Before proposing any new requirement, search the **Requirement Index** at the bo
 > **Direct pushes to `main` are blocked by a pre-push git hook** (`.githooks/pre-push`).
 > On a fresh clone, run: `git config core.hooksPath .githooks` to activate.
 
+> [!CAUTION]
+> **NEVER use `git push --force` or `git push --force-with-lease`.** If there are conflicts, resolve them with `git pull --rebase` or a merge commit. To clean up commit history, use squash merge on the PR.
+
 ---
 
 ## TIER 1: FD STACK RULES

@@ -5,6 +5,10 @@
 
 ## Completed Requirements
 
+### v0.10.8 — Fix Floating Toolbar Drag Handles
+
+- **FIX (R3.39)**: Floating toolbar drag handles now work reliably in VS Code webview — moved `pointermove`/`pointerup` listeners from handle elements to document level; `setPointerCapture` silently fails in VS Code webview iframes, causing drag events to stop when pointer leaves the small handle element
+
 ### v0.10.7 — Eraser Context Menu Fix + Lock Icon + Undo Dismissal
 
 - **FIX (R3.48)**: Ctrl+click eraser no longer opens context menu on macOS — `contextmenu` event is now suppressed when eraser tool is active (temp or permanent)
