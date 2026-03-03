@@ -169,14 +169,14 @@ Engineering lessons discovered through building FD.
 
 ## WASM: Text Intrinsic Sizing Padding Accumulates Visually
 
-**Date**: 2026-03-01 (updated 2026-03-02)
-**Context**: Users reported text node boundaries extending well beyond the visible text content. The bounding box was noticeably larger than the text.
+**Date**: 2026-03-01 (updated 2026-03-03)
+**Context**: Users reported text node boundaries extending beyond visible text, and inline text editor appearing at different position/size than canvas-rendered text.
 
-**Root cause**: `update_text_metrics()` in `lib.rs` added 8px padding per side (16px total per axis). The JS `measureText()` already returns a width that includes some internal glyph spacing. Combined with the 16px padding, the resulting bounds exceeded the visual text by ~20px — visible as an oversized selection rectangle.
+**Root cause**: Three layered issues: (1) `update_text_metrics()` padding was too small — 2px didn't account for `draw_text`'s `b.y + 2.0` baseline offset. (2) JS `measureAndUpdateTextBounds` used tight glyph metrics (`actualBoundingBoxAscent + Descent`) which can be smaller than the font's visual height — e.g. "Settings" with no descenders has a tiny box. (3) Inline editor `<textarea>` used different line-height (1.4x vs renderer's effective 1.2x), 6px left padding (vs 0 in Canvas2D), and position offsets that didn't match `draw_text`.
 
-**Fix**: Reduced padding from 8px→4px (v0.8.89), then 4px→2px (v0.10.2) per side. Also replaced `fontSize * 1.4` height approximation in JS with precise Canvas2D metrics (`actualBoundingBoxAscent + actualBoundingBoxDescent`), falling back to `fontSize * 1.2`.
+**Fix**: (v0.10.13) WASM padding → 4px per side. JS height → `Math.max(glyphMetrics, fontSize * 1.2)`. Textarea: line-height → `fontSize * 1.2`, padding → `2px 0px 2px 0px`, positioned exactly at node bounds, added `-webkit-text-size-adjust: 100%`.
 
-**Lesson**: When bridging text measurement across JS→WASM, use the precise `actualBoundingBox*` metrics from Canvas2D `measureText()` instead of line-height multipliers. Additional WASM-side padding should be 2px per side max — it's a safety margin, not a design element.
+**Lesson**: The inline editor `<textarea>` CSS must **exactly mirror** the Canvas2D `draw_text` call: same line-height multiplier, same padding offsets, same position. Always use `fontSize * 1.2` as a minimum height floor for text measurement — tight glyph bounding boxes undercount for descender-less text.
 
 ---
 
