@@ -106,6 +106,21 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; }
+
+    /* ── Keyboard Accessibility ── */
+    button:focus-visible,
+    a:focus-visible,
+    [role="button"]:focus-visible,
+    input[type="checkbox"]:focus-visible,
+    input[type="radio"]:focus-visible,
+    input[type="color"]:focus-visible,
+    .color-swatch:focus-visible,
+    .layer-item:focus-visible,
+    .align-cell:focus-visible {
+      outline: 2px solid var(--fd-accent) !important;
+      outline-offset: 1px !important;
+    }
+
     body {
       background: var(--fd-bg);
       display: flex;
