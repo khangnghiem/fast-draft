@@ -1,89 +1,101 @@
 # FD v1
 # Constraint-based layout — demonstrates all positioning strategies
-
 # ─── Canvas-centered hero ────────────────────────────────────────────────
-
 frame @hero {
-  w: 400 h: 200
-  layout: column gap=16 pad=40
-
   spec "Hero section — demonstrates center_in constraint"
-
-  text @hero_title "Welcome to FD" { font: "Inter" 800 48; fill: #1A1A2E }
+  text @hero_title "Welcome to FD" {
+    fill: #1A1A2E  # blue
+    font: "Inter" extrabold 48
+  }
   text @hero_sub "The token-efficient design format" {
-    font: "Inter" 18; fill: #6B7280
+    fill: #6B7280  # blue
+    font: "Inter" regular 18
   }
-
   rect @hero_cta {
+    text @_text_0 "Try It Now" {
+      fill: #FFFFFF  # white
+      font: "Inter" semibold 16
+    }
     w: 200 h: 52
+    fill: #6C5CE7  # blue
     corner: 12
-    fill: #6C5CE7
-
-    text "Try It Now" { font: "Inter" 600 16; fill: #FFF }
-
-    when :hover { fill: #5A4BD1; scale: 1.04; ease: spring 250ms }
+    when :hover {
+      fill: #5A4BD1  # blue
+      scale: 1.04
+      ease: spring 250ms
+    }
   }
+  layout: column gap=16 pad=40
+  w: 400 h: 200
 }
 
 # ─── Offset-positioned tooltip ───────────────────────────────────────────
-
 rect @tooltip_target {
-  w: 160 h: 48
-  corner: 8
-  fill: #F5F5F7
-  stroke: #E8E8EC 1
   spec "Anchor element for tooltip"
-
-  text "Hover me" { font: "Inter" 500 14; fill: #333 }
+  text @_text_1 "Hover me" {
+    fill: #333333  # gray
+    font: "Inter" medium 14
+  }
+  w: 160 h: 48
+  fill: #F5F5F7  # white
+  stroke: #E8E8EC 1
+  corner: 8
 }
 
 rect @tooltip {
-  w: 200 h: 44
-  corner: 8
-  fill: #1A1A2E
   spec "Tooltip — positioned via offset constraint"
-
-  text "I'm 20px right, 60px down" { font: "Inter" 13; fill: #FFF }
-
-  when :enter { opacity: 1; ease: ease_out 300ms }
-}
-
-# ─── Fill-parent panel ───────────────────────────────────────────────────
-
-rect @full_width_bg {
-  w: 800 h: 120
-  fill: #F8F9FA
-  corner: 0
-  spec "Background that fills parent width with 24px padding"
-
-  frame @_panel_layout {
-    w: 752 h: 72
-    layout: row gap=16 pad=24
-    text "This panel uses fill_parent with 24px inset" {
-      font: "Inter" 14; fill: #6B7280
-    }
+  text @_text_2 "I'm 20px right, 60px down" {
+    fill: #FFFFFF  # white
+    font: "Inter" regular 13
+  }
+  w: 200 h: 44
+  fill: #1A1A2E  # blue
+  corner: 8
+  when :enter {
+    opacity: 1
+    ease: ease_out 300ms
   }
 }
 
-# ─── Floating action button ─────────────────────────────────────────────
+# ─── Fill-parent panel ───────────────────────────────────────────────────
+rect @full_width_bg {
+  spec "Background that fills parent width with 24px padding"
+  frame @_panel_layout {
+    text @_text_3 "This panel uses fill_parent with 24px inset" {
+      fill: #6B7280  # blue
+      font: "Inter" regular 14
+    }
+    layout: row gap=16 pad=24
+    w: 752 h: 72
+  }
+  w: 800 h: 120
+  fill: #F8F9FA  # white
+  corner: 0
+}
 
+# ─── Floating action button ─────────────────────────────────────────────
 rect @fab {
-  w: 56 h: 56
-  corner: 28
-  fill: #6C5CE7
-  bg: #6C5CE7 corner=28 shadow=(0,4,16,#6C5CE760)
   spec {
     "Floating action button — fixed bottom-right"
     accept: "persists across scroll"
   }
-
-  text "+" { font: "Inter" 700 24; fill: #FFF }
-
-  when :hover { scale: 1.1; ease: spring 300ms }
-  when :press { scale: 0.9; ease: spring 150ms }
+  text @_text_4 "+" {
+    fill: #FFFFFF  # white
+    font: "Inter" bold 24
+  }
+  w: 56 h: 56
+  fill: #6C5CE7  # blue
+  corner: 28
+  shadow: (0,4,16,#6C5CE760)
+  when :hover {
+    scale: 1.1
+    ease: spring 300ms
+  }
+  when :press {
+    scale: 0.9
+    ease: spring 150ms
+  }
 }
-
-# ─── Constraints ─────────────────────────────────────────────────────────
 
 @hero -> center_in: canvas
 @tooltip_target -> offset: @hero 0, 180

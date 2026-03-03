@@ -75,6 +75,8 @@
 | `G`               | Toggle grid overlay               |
 | `Space` (hold)    | Pan / hand tool                   |
 | `⌘` (hold)        | Temporary hand tool (Select mode) |
+| `Alt` (hold)      | Copy cursor preview               |
+| `Ctrl` (hold)     | Eraser cursor preview             |
 | Pinch             | Trackpad zoom                     |
 | Middle-click drag | Pan                               |
 

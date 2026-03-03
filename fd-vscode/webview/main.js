@@ -626,6 +626,7 @@ function setupPointerEvents() {
 
   canvas.addEventListener("pointerdown", (e) => {
     if (!fdCanvas) return;
+    clearModifierCursors(); // Modifier preview ends when interaction starts
     const rect = canvas.getBoundingClientRect();
     const rawX = e.clientX - rect.left;
     const rawY = e.clientY - rect.top;
@@ -1697,6 +1698,40 @@ document.addEventListener("keydown", (e) => {
 let isCmdHold = false;
 let toolBeforeCmdHold = null;
 
+// ── Modifier-hold cursor feedback ────────────────────────────────────────
+// When a bare modifier key is held (no other key pressed), show a preview
+// cursor so the user knows what action will happen before they click.
+// Cmd → grab (pan), Alt → copy (duplicate), Ctrl → red eraser (delete).
+
+/** Clear all modifier cursor classes from the canvas. */
+function clearModifierCursors() {
+  canvas.classList.remove("modifier-cmd", "modifier-alt", "modifier-ctrl");
+}
+
+document.addEventListener("keydown", (e) => {
+  // Skip if pointer is already down (active interaction handles its own cursor)
+  if (pointerIsDown) return;
+  // Skip if a text input is focused
+  const active = document.activeElement;
+  if (active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT")) return;
+
+  // Cmd/Meta held alone → grab cursor (pan preview)
+  if (e.key === "Meta" && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+    clearModifierCursors();
+    canvas.classList.add("modifier-cmd");
+  }
+  // Alt/Option held alone → copy cursor (clone preview)
+  if (e.key === "Alt" && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+    clearModifierCursors();
+    canvas.classList.add("modifier-alt");
+  }
+  // Ctrl held alone → red eraser cursor (delete preview)
+  if (e.key === "Control" && !e.metaKey && !e.altKey && !e.shiftKey) {
+    clearModifierCursors();
+    canvas.classList.add("modifier-ctrl");
+  }
+}, true);
+
 document.addEventListener("keyup", (e) => {
   if (e.key === " " && isPanning) {
     isPanning = false;
@@ -1721,6 +1756,23 @@ document.addEventListener("keyup", (e) => {
     }
     tempEraserMode = false;
     tempEraserPrevTool = null;
+  }
+  // Clear modifier cursor class on any modifier release
+  if (e.key === "Meta" || e.key === "Alt" || e.key === "Control") {
+    clearModifierCursors();
+  }
+});
+
+// Clear modifier cursors when window loses focus (handles Cmd+Tab, Alt+Tab, etc.)
+window.addEventListener("blur", () => {
+  clearModifierCursors();
+  // Also restore from temp modes if window lost focus mid-hold
+  if (isCmdHold && fdCanvas && toolBeforeCmdHold) {
+    isCmdHold = false;
+    canvas.style.cursor = "";
+    fdCanvas.set_tool(toolBeforeCmdHold);
+    updateToolbarActive(toolBeforeCmdHold);
+    toolBeforeCmdHold = null;
   }
 });
 

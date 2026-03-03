@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.10.18 — Modifier Key Cursor Feedback
+
+- **UX (R3.48)**: Holding a bare modifier key now shows a cursor preview — Cmd/⌘ → grab (pan), Alt/Option → copy (duplicate), Ctrl → red eraser (delete); cursor appears immediately on keydown, clears on keyup or click; handles edge cases (window blur, tab-away, active pointer interaction)
+- **CSS**: 3 new cursor classes (`modifier-cmd`, `modifier-alt`, `modifier-ctrl`) with `!important` to override tool-specific cursors during modifier hold
+- **DOCS**: Updated `SHORTCUTS.md` with Alt (hold) and Ctrl (hold) cursor preview entries
+
 ### v0.10.17 — Fix Text Child Movement in Managed Layouts
 
 - **FIX (R3.34)**: Moving a text child inside a frame with `layout: column/row/grid` is now a no-op — the layout solver owns child placement in managed layouts, so dragging individual children was causing snap-back, useless `x:/y:` properties, and frame expansion weirdness; matches Figma behavior where auto-layout children cannot be freely repositioned

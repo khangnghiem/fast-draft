@@ -1419,6 +1419,11 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     canvas.tool-text { cursor: text; }
     canvas.tool-eraser { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><rect x="5" y="5" width="10" height="10" rx="2" fill="white" stroke="%23E53935" stroke-width="1.5"/><line x1="7" y1="7" x2="13" y2="13" stroke="%23E53935" stroke-width="1.5"/><line x1="13" y1="7" x2="7" y2="13" stroke="%23E53935" stroke-width="1.5"/></svg>') 10 10, crosshair; }
 
+    /* ── Modifier-hold cursor feedback ── */
+    canvas.modifier-cmd { cursor: grab !important; }
+    canvas.modifier-alt { cursor: copy !important; }
+    canvas.modifier-ctrl { cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><rect x="5" y="5" width="10" height="10" rx="2" fill="white" stroke="%23E53935" stroke-width="1.5"/><line x1="7" y1="7" x2="13" y2="13" stroke="%23E53935" stroke-width="1.5"/><line x1="13" y1="7" x2="7" y2="13" stroke="%23E53935" stroke-width="1.5"/></svg>') 10 10, crosshair !important; }
+
     /* ── Properties Panel (Keynote inspector) ── */
     #props-panel {
       width: 0;
