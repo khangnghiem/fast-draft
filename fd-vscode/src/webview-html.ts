@@ -1951,7 +1951,11 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       justify-content: center;
       cursor: grab;
       position: relative;
+      min-width: 16px;
+      min-height: 16px;
+      padding: 0 4px;
     }
+    .vertical .scroll-handle { padding: 4px 0; }
     .scroll-handle:active { cursor: grabbing; }
 
     .horizontal .handle-start { flex-direction: row; }
