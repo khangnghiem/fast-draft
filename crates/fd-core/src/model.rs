@@ -843,14 +843,28 @@ impl SceneGraph {
         // Reverse to get top-down order (topmost group first).
         groups_bottom_up.reverse();
 
-        // Find the deepest unselected group in the chain.
-        for group_id in &groups_bottom_up {
-            if !selected.contains(group_id) {
-                return *group_id;
+        // Find the deepest selected group in the ancestor chain.
+        // If a selected node is in the chain, advance to the next level down.
+        let deepest_selected_pos = groups_bottom_up
+            .iter()
+            .rposition(|gid| selected.contains(gid));
+
+        match deepest_selected_pos {
+            None => {
+                // Nothing in the chain is selected → return topmost group
+                if let Some(top) = groups_bottom_up.first() {
+                    return *top;
+                }
+            }
+            Some(pos) if pos + 1 < groups_bottom_up.len() => {
+                // Selected group is not the deepest → advance one level
+                return groups_bottom_up[pos + 1];
+            }
+            Some(_) => {
+                // Deepest group is already selected → drill to leaf
             }
         }
 
-        // All groups selected → drill down to the leaf.
         leaf_id
     }
 
@@ -1098,6 +1112,42 @@ mod tests {
         assert_eq!(sg.effective_target(leaf_id, &[outer_id]), inner_id);
         // Both outer+inner selected → drill to leaf
         assert_eq!(sg.effective_target(leaf_id, &[outer_id, inner_id]), leaf_id);
+        // Non-cumulative: only inner selected (SelectTool replaces, not accumulates)
+        // Must drill to leaf — NOT loop back to outer
+        assert_eq!(sg.effective_target(leaf_id, &[inner_id]), leaf_id);
+    }
+
+    #[test]
+    fn test_effective_target_nested_drill_down_three_levels() {
+        let mut sg = SceneGraph::new();
+
+        // Root -> group_a -> group_b -> group_c -> rect_leaf
+        let a_id = NodeId::intern("group_a");
+        let b_id = NodeId::intern("group_b");
+        let c_id = NodeId::intern("group_c");
+        let leaf_id = NodeId::intern("deep_leaf");
+
+        let a = SceneNode::new(a_id, NodeKind::Group);
+        let b = SceneNode::new(b_id, NodeKind::Group);
+        let c = SceneNode::new(c_id, NodeKind::Group);
+        let leaf = SceneNode::new(
+            leaf_id,
+            NodeKind::Rect {
+                width: 10.0,
+                height: 10.0,
+            },
+        );
+
+        let a_idx = sg.add_node(sg.root, a);
+        let b_idx = sg.add_node(a_idx, b);
+        let c_idx = sg.add_node(b_idx, c);
+        sg.add_node(c_idx, leaf);
+
+        // Progressive drill-down (non-cumulative — SelectTool replaces selection)
+        assert_eq!(sg.effective_target(leaf_id, &[]), a_id);
+        assert_eq!(sg.effective_target(leaf_id, &[a_id]), b_id);
+        assert_eq!(sg.effective_target(leaf_id, &[b_id]), c_id);
+        assert_eq!(sg.effective_target(leaf_id, &[c_id]), leaf_id);
     }
 
     #[test]

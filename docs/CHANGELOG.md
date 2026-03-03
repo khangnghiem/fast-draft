@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.10.11 — Fix Nested Group Drill-Down
+
+- **FIX (R3.24)**: Clicking a node nested inside multiple groups (e.g., `OuterGroup > InnerGroup > Rect`) now correctly drills down through the hierarchy — first click selects outer group, second click selects inner group, third click selects the leaf node; previously clicks oscillated between the two groups forever because `effective_target` required cumulative selection `[outer, inner]` but `SelectTool` replaced selection to `[inner]`; fixed by using `rposition` (deepest match) instead of linear scan
+- **TESTING**: 2 new regression tests — `test_effective_target_nested_drill_down_three_levels` (4 levels: A→B→C→leaf), non-cumulative selection assertion in `test_effective_target_nested_groups_selects_topmost`
+
 ### v0.10.10 — Fix Drag-to-Create from Toolbar
 
 - **FIX (R3.39)**: Drag-to-create now works in VS Code webview — moved `pointermove`/`pointerup` listeners from button-level to document-level; same root cause as v0.10.8 (toolbar drag handles): `setPointerCapture` silently fails in VS Code webview iframes, so pointer events stopped firing when cursor left the toolbar button
