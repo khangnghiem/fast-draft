@@ -88,6 +88,12 @@ impl SyncEngine {
         match mutation {
             GraphMutation::MoveNode { id, dx, dy } => {
                 if let Some(idx) = self.graph.index_of(id) {
+                    // Children inside managed layouts (Column/Row/Grid) cannot be
+                    // freely positioned — the layout solver owns their placement.
+                    // Skip the mutation so the node stays in its layout slot.
+                    if fd_core::layout::is_parent_managed(&self.graph, idx) {
+                        return;
+                    }
                     if let Some(bounds) = self.bounds.get_mut(&idx) {
                         bounds.x += dx;
                         bounds.y += dy;
@@ -2229,5 +2235,53 @@ group @outer_cascade {
     assert!(
         engine.graph.get_by_id(outer_id).is_none(),
         "@outer_cascade should be removed (cascade from inner)"
+    );
+}
+
+#[test]
+fn sync_move_managed_layout_child_noop() {
+    // Moving a text child inside a Column-layout frame should be a no-op.
+    // The layout solver owns child placement in managed layouts.
+    let input = "frame @hero {\n  w: 400 h: 200\n  layout: column gap=16 pad=40\n\n  text @title \"Welcome to FD\" {\n    font: \"Inter\" 800 48\n  }\n  text @sub \"The token-efficient design format\" {\n    font: \"Inter\" 400 18\n  }\n}\n";
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let title_id = NodeId::intern("title");
+    let title_idx = engine.graph.index_of(title_id).unwrap();
+
+    let bounds_before = engine.bounds[&title_idx];
+
+    // Attempt to move text child — should be silently ignored
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: title_id,
+        dx: 100.0,
+        dy: 50.0,
+    });
+
+    // Bounds should be unchanged
+    let bounds_after = engine.bounds[&title_idx];
+    assert!(
+        (bounds_after.x - bounds_before.x).abs() < 0.01,
+        "x should not change: {} vs {}",
+        bounds_after.x,
+        bounds_before.x
+    );
+    assert!(
+        (bounds_after.y - bounds_before.y).abs() < 0.01,
+        "y should not change: {} vs {}",
+        bounds_after.y,
+        bounds_before.y
+    );
+
+    // No Position constraint should be added
+    let node = engine.graph.get_by_id(title_id).unwrap();
+    assert!(
+        !node
+            .constraints
+            .iter()
+            .any(|c| matches!(c, Constraint::Position { .. })),
+        "no Position constraint should be added to managed-layout child"
     );
 }
