@@ -204,7 +204,7 @@ fn render_node_svg(
                 cx, cy, rx, ry, fill, stroke, stroke_width
             ));
         }
-        NodeKind::Text { content } => {
+        NodeKind::Text { content, .. } => {
             let font_size = style.font.as_ref().map(|f| f.size).unwrap_or(16.0);
             let text_fill = style
                 .fill

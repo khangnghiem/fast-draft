@@ -796,6 +796,7 @@ impl Tool for TextTool {
                     id,
                     NodeKind::Text {
                         content: "Text".to_string(),
+                        max_width: None,
                     },
                 );
                 node.constraints.push(Constraint::Position { x: *x, y: *y });

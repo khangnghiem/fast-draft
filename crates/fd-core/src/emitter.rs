@@ -173,7 +173,7 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         NodeKind::Rect { .. } => write!(out, "rect @{}", node.id.as_str()).unwrap(),
         NodeKind::Ellipse { .. } => write!(out, "ellipse @{}", node.id.as_str()).unwrap(),
         NodeKind::Path { .. } => write!(out, "path @{}", node.id.as_str()).unwrap(),
-        NodeKind::Text { content } => {
+        NodeKind::Text { content, .. } => {
             write!(out, "text @{} \"{}\"", node.id.as_str(), content).unwrap();
         }
     }
@@ -242,6 +242,12 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         NodeKind::Ellipse { rx, ry } => {
             indent(out, depth + 1);
             writeln!(out, "w: {} h: {}", format_num(*rx), format_num(*ry)).unwrap();
+        }
+        NodeKind::Text {
+            max_width: Some(w), ..
+        } => {
+            indent(out, depth + 1);
+            writeln!(out, "w: {}", format_num(*w)).unwrap();
         }
         _ => {}
     }
@@ -579,7 +585,7 @@ fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph) {
     // Nested text child
     if let Some(text_id) = edge.text_child
         && let Some(node) = graph.get_by_id(text_id)
-        && let NodeKind::Text { content } = &node.kind
+        && let NodeKind::Text { content, .. } = &node.kind
     {
         writeln!(out, "  text @{} \"{}\" {{}}", text_id.as_str(), content).unwrap();
     }
@@ -777,7 +783,7 @@ fn emit_node_filtered(
         NodeKind::Rect { .. } => write!(out, "rect @{}", node.id.as_str()).unwrap(),
         NodeKind::Ellipse { .. } => write!(out, "ellipse @{}", node.id.as_str()).unwrap(),
         NodeKind::Path { .. } => write!(out, "path @{}", node.id.as_str()).unwrap(),
-        NodeKind::Text { content } => {
+        NodeKind::Text { content, .. } => {
             write!(out, "text @{} \"{}\"", node.id.as_str(), content).unwrap();
         }
     }
@@ -952,7 +958,7 @@ pub fn emit_spec_markdown(graph: &SceneGraph, title: &str) -> String {
             write!(out, "- **{}** → **{}**", from_str, to_str).unwrap();
             if let Some(text_id) = edge.text_child
                 && let Some(node) = graph.get_by_id(text_id)
-                && let NodeKind::Text { content } = &node.kind
+                && let NodeKind::Text { content, .. } = &node.kind
             {
                 write!(out, " — {content}").unwrap();
             }

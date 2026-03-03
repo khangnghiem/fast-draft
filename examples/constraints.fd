@@ -3,19 +3,11 @@
 # ─── Canvas-centered hero ────────────────────────────────────────────────
 frame @hero {
   spec "Hero section — demonstrates center_in constraint"
-  text @hero_title "Welcome to FD" {
-    fill: #1A1A2E  # blue
-    font: "Inter" extrabold 48
-  }
   text @hero_sub "The token-efficient design format" {
     fill: #6B7280  # blue
     font: "Inter" regular 18
   }
   rect @hero_cta {
-    text @_text_0 "Try It Now" {
-      fill: #FFFFFF  # white
-      font: "Inter" semibold 16
-    }
     w: 200 h: 52
     fill: #6C5CE7  # blue
     corner: 12
@@ -26,7 +18,23 @@ frame @hero {
     }
   }
   layout: column gap=16 pad=40
-  w: 400 h: 200
+  w: 407.93 h: 187.77
+  x: 157.7
+  y: 678.67
+}
+
+text @_text_0 "Try It Now" {
+  fill: #FFFFFF  # white
+  font: "Inter" semibold 16
+  x: 249.51
+  y: 785.35
+}
+
+text @hero_title "Welcome to FD" {
+  fill: #1A1A2E  # blue
+  font: "Inter" extrabold 48
+  x: 306.81
+  y: 449.41
 }
 
 # ─── Offset-positioned tooltip ───────────────────────────────────────────
@@ -51,6 +59,8 @@ rect @tooltip {
   w: 200 h: 44
   fill: #1A1A2E  # blue
   corner: 8
+  x: 154.92
+  y: 969.79
   when :enter {
     opacity: 1
     ease: ease_out 300ms
@@ -60,17 +70,18 @@ rect @tooltip {
 # ─── Fill-parent panel ───────────────────────────────────────────────────
 rect @full_width_bg {
   spec "Background that fills parent width with 24px padding"
-  frame @_panel_layout {
-    text @_text_3 "This panel uses fill_parent with 24px inset" {
-      fill: #6B7280  # blue
-      font: "Inter" regular 14
-    }
-    layout: row gap=16 pad=24
-    w: 752 h: 72
-  }
   w: 800 h: 120
   fill: #F8F9FA  # white
   corner: 0
+  x: 24.37
+  y: 34.27
+}
+
+text @_text_3 "This panel uses fill_parent with 24px inset" {
+  fill: #6B7280  # blue
+  font: "Inter" regular 14
+  x: 183.66
+  y: 326.51
 }
 
 # ─── Floating action button ─────────────────────────────────────────────
@@ -82,11 +93,15 @@ rect @fab {
   text @_text_4 "+" {
     fill: #FFFFFF  # white
     font: "Inter" bold 24
+    x: 20.19
+    y: 10.73
   }
   w: 56 h: 56
   fill: #6C5CE7  # blue
   corner: 28
   shadow: (0,4,16,#6C5CE760)
+  x: 145.14
+  y: 1111.11
   when :hover {
     scale: 1.1
     ease: spring 300ms
@@ -97,8 +112,4 @@ rect @fab {
   }
 }
 
-@hero -> center_in: canvas
 @tooltip_target -> offset: @hero 0, 180
-@tooltip -> offset: @tooltip_target 20, 60
-@full_width_bg -> fill_parent: 24
-@fab -> offset: @hero 360, 300
