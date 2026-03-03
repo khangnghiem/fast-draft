@@ -4734,17 +4734,19 @@ function setupFloatingToolbar() {
 
   // Use document-level listeners — setPointerCapture fails in VS Code webview iframes
   document.addEventListener("pointermove", (e) => {
-    if (!isDragging) return;
+    if (!isDragging || e.pointerId !== activePointerId) return;
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
 
-    // Temporary drag visual (disable transition)
+    // Drag visual: disable transition, apply translate + lift effect
     toolbar.style.transition = "none";
     toolbar.style.transform = `translate(${dx}px, ${dy}px)`;
+    toolbar.style.boxShadow = "0 8px 32px rgba(0,0,0,0.25)";
+    toolbar.style.opacity = "0.92";
   });
 
   document.addEventListener("pointerup", (e) => {
-    if (!isDragging) return;
+    if (!isDragging || e.pointerId !== activePointerId) return;
     isDragging = false;
     activePointerId = -1;
 
@@ -4755,6 +4757,8 @@ function setupFloatingToolbar() {
 
     toolbar.style.transform = "";
     toolbar.style.transition = "";
+    toolbar.style.boxShadow = "";
+    toolbar.style.opacity = "";
 
     // Handle Click (Roll/Unroll)
     if (dist < 5 && timeElapsed < 300) {
@@ -4819,9 +4823,14 @@ function setupFloatingToolbar() {
       dragStartY = e.clientY;
       dragStartTime = Date.now();
 
+      // Normalize to px position before drag to avoid CSS anchor conflicts
       const rect = toolbar.getBoundingClientRect();
       initialLeft = rect.left;
       initialTop = rect.top;
+      toolbar.style.left = rect.left + "px";
+      toolbar.style.top = rect.top + "px";
+      toolbar.style.right = "auto";
+      toolbar.style.bottom = "auto";
 
       e.preventDefault();
       e.stopPropagation();

@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.10.16 — Fix Floating Toolbar Drag
+
+- **FIX (R3.39)**: Floating toolbar is now draggable again — three compounding bugs fixed: (1) document-level `pointermove`/`pointerup` handlers now filter by `e.pointerId` to prevent cross-handler interference with drag-to-create; (2) `pointerdown` on scroll handles now normalizes toolbar position to absolute `px` values, eliminating CSS anchor conflicts between hardcoded `left: 244px` and JS-set `vw`/`vh` units; (3) `.scroll-handle` hit area expanded from 6px wood-core to 16px min-width with padding
+- **UX (R3.39)**: Dragging the toolbar now shows visual feedback — lifted shadow (`0 8px 32px`) and slight opacity reduction (0.92) during drag, cleared on release
+
 ### v0.10.15 — Apple Preview-Style Text Editing
 
 - **FIX (R3.28)**: Text nodes now show only 2 horizontal resize handles (MiddleLeft + MiddleRight) instead of 8-point handles — matches Apple Preview / Figma behavior where text height is intrinsic (auto-sized from font content); selection border reduced from 2px to 1px for text nodes
