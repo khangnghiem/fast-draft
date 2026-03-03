@@ -81,7 +81,7 @@ fn resolve_constraints_top_down(
 }
 
 /// Check whether a node's parent uses a managed layout (Column/Row/Grid).
-fn is_parent_managed(graph: &SceneGraph, node_idx: NodeIndex) -> bool {
+pub fn is_parent_managed(graph: &SceneGraph, node_idx: NodeIndex) -> bool {
     let parent_idx = match graph.parent(node_idx) {
         Some(p) => p,
         None => return false,

@@ -5,6 +5,12 @@
 
 ## Completed Requirements
 
+### v0.10.17 — Fix Text Child Movement in Managed Layouts
+
+- **FIX (R3.34)**: Moving a text child inside a frame with `layout: column/row/grid` is now a no-op — the layout solver owns child placement in managed layouts, so dragging individual children was causing snap-back, useless `x:/y:` properties, and frame expansion weirdness; matches Figma behavior where auto-layout children cannot be freely repositioned
+- **CORE**: Made `is_parent_managed()` public in `layout.rs` so `sync.rs` can check layout mode before applying `MoveNode`
+- **TESTING**: New `sync_move_managed_layout_child_noop` regression test — verifies bounds unchanged and no Position constraint added when moving a Column-layout child
+
 ### v0.10.16 — Fix Floating Toolbar Drag
 
 - **FIX (R3.39)**: Floating toolbar is now draggable again — three compounding bugs fixed: (1) document-level `pointermove`/`pointerup` handlers now filter by `e.pointerId` to prevent cross-handler interference with drag-to-create; (2) `pointerdown` on scroll handles now normalizes toolbar position to absolute `px` values, eliminating CSS anchor conflicts between hardcoded `left: 244px` and JS-set `vw`/`vh` units; (3) `.scroll-handle` hit area expanded from 6px wood-core to 16px min-width with padding
