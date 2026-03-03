@@ -6,6 +6,8 @@ pub mod lint;
 pub mod model;
 pub mod parser;
 pub mod resolve;
+#[cfg(test)]
+pub mod test_helpers;
 pub mod transform;
 
 pub use emitter::{ReadMode, emit_filtered};

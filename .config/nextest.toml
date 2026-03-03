@@ -1,0 +1,27 @@
+# cargo-nextest configuration for FD workspace
+# https://nexte.st/book/configuration.html
+
+[store]
+# Cache test binaries for faster re-runs
+dir = "target/nextest"
+
+[profile.default]
+# Retry flaky tests once before failing
+retries = 0
+# Use all available cores
+test-threads = "num-cpus"
+# Fail on first test failure in CI
+fail-fast = true
+# Status display
+status-level = "pass"
+final-status-level = "fail"
+
+[profile.ci]
+# CI-specific overrides
+retries = 1
+fail-fast = true
+
+[profile.smoke]
+# Lightweight smoke run — excluded tests are skipped
+test-threads = "num-cpus"
+fail-fast = true
