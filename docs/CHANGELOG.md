@@ -5,6 +5,14 @@
 
 ## Completed Requirements
 
+### v0.10.15 — Apple Preview-Style Text Editing
+
+- **FIX (R3.28)**: Text nodes now show only 2 horizontal resize handles (MiddleLeft + MiddleRight) instead of 8-point handles — matches Apple Preview / Figma behavior where text height is intrinsic (auto-sized from font content); selection border reduced from 2px to 1px for text nodes
+- **FIX (R3.28)**: Inline text editor now uses minimal Apple Preview-style overlay — thin 1px border, no box-shadow, no border-radius (was 2px outline + drop shadow + 8px radius); shape labels retain their visible styling
+- **FIX (R3.46)**: Text bounding box padding reduced from 4px to 2px per side — matches renderer's `draw_text` y-offset (+2.0), eliminating oversized height boundary that made text boxes extend well below visible content
+- **FIX (R3.28)**: Text node resize hit-test and cursor feedback now restricted to MiddleLeft/MiddleRight — `hit_test_resize_handle` (WASM), `getResizeHandleCursor` (JS), and `draw_selection_handles` (renderer) all filter handles by `NodeKind::Text`
+- **FIX (R3.28)**: Inline editor minimum height now uses `lineHeight + 4px` instead of arbitrary `28px` — font calculation moved above screen-space computation so `lineHeight` is available for tight height sizing
+
 ### v0.10.14 — Inline Editor Zero-Jump Editing
 
 - **FIX (R3.28)**: Inline text editor now visually matches canvas-rendered text with zero jump — replaced `border` with `outline` (outlines don't affect layout), fixed vertical padding to match Canvas2D `text_baseline` positioning exactly (`top` → scaled 2px offset, `middle` → symmetric padding, `bottom` → bottom-anchored), matched font-family fallback chain to renderer (`"Inter, sans-serif"`)

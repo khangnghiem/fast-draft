@@ -969,7 +969,7 @@ impl FdCanvas {
             return false;
         }
 
-        let padding = 4.0_f32;
+        let padding = 2.0_f32; // Match draw_text y-offset (+2.0)
         let new_width = (measured_width as f32) + padding * 2.0;
         let new_height = (measured_height as f32) + padding * 2.0;
 
@@ -1948,6 +1948,7 @@ impl FdCanvas {
         }
 
         let b = self.engine.current_bounds().get(&idx)?;
+        let is_text = matches!(self.engine.graph.graph[idx].kind, NodeKind::Text { .. });
 
         let bx = b.x;
         let by = b.y;
@@ -1955,22 +1956,36 @@ impl FdCanvas {
         let bh = b.height;
         let radius = 8.0_f32; // Hit radius in scene-space pixels (increased for usability)
 
-        let handles = [
-            (bx, by, ResizeHandle::TopLeft),
-            (bx + bw / 2.0, by, ResizeHandle::TopCenter),
-            (bx + bw, by, ResizeHandle::TopRight),
-            (bx, by + bh / 2.0, ResizeHandle::MiddleLeft),
-            (bx + bw, by + bh / 2.0, ResizeHandle::MiddleRight),
-            (bx, by + bh, ResizeHandle::BottomLeft),
-            (bx + bw / 2.0, by + bh, ResizeHandle::BottomCenter),
-            (bx + bw, by + bh, ResizeHandle::BottomRight),
-        ];
-
-        for (hx, hy, handle) in handles {
-            let dx = x - hx;
-            let dy = y - hy;
-            if dx * dx + dy * dy <= radius * radius {
-                return Some(handle);
+        if is_text {
+            // Text nodes: horizontal-only resize (Apple Preview / Figma style)
+            let handles = [
+                (bx, by + bh / 2.0, ResizeHandle::MiddleLeft),
+                (bx + bw, by + bh / 2.0, ResizeHandle::MiddleRight),
+            ];
+            for (hx, hy, handle) in handles {
+                let dx = x - hx;
+                let dy = y - hy;
+                if dx * dx + dy * dy <= radius * radius {
+                    return Some(handle);
+                }
+            }
+        } else {
+            let handles = [
+                (bx, by, ResizeHandle::TopLeft),
+                (bx + bw / 2.0, by, ResizeHandle::TopCenter),
+                (bx + bw, by, ResizeHandle::TopRight),
+                (bx, by + bh / 2.0, ResizeHandle::MiddleLeft),
+                (bx + bw, by + bh / 2.0, ResizeHandle::MiddleRight),
+                (bx, by + bh, ResizeHandle::BottomLeft),
+                (bx + bw / 2.0, by + bh, ResizeHandle::BottomCenter),
+                (bx + bw, by + bh, ResizeHandle::BottomRight),
+            ];
+            for (hx, hy, handle) in handles {
+                let dx = x - hx;
+                let dy = y - hy;
+                if dx * dx + dy * dy <= radius * radius {
+                    return Some(handle);
+                }
             }
         }
         None
