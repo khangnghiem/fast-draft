@@ -21,8 +21,8 @@ frame @hero {
   }
   layout: column gap=16 pad=40
   w: 335.62 h: 189.95
-  x: 131.15
-  y: 602.59
+  x: -231.89
+  y: 178.97
 }
 
 text @_text_0 "Try It Now" {
@@ -100,10 +100,11 @@ group @_group_0 {
       accept: "persists across scroll"
     }
     text @_text_4 "+" {
+      w: 26.76
       fill: #FFFFFF  # white
       font: "Inter" bold 24
-      x: 19.63
-      y: 11.92
+      x: 16.25
+      y: 9.41
     }
     w: 56 h: 56
     fill: #6C5CE7  # blue

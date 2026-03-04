@@ -10,6 +10,12 @@
 - **FIX (R3.39)**: Dragging the floating toolbar no longer triggers browser text selection ("select all") — added `user-select: none` and `touch-action: none` to `#floating-toolbar` CSS
 - **FIX (R3.39)**: Toolbar is now draggable from anywhere on its body — replaced scroll-handle-only `pointerdown` with a toolbar-wide handler that initiates drag from the toolbar background, paper body, and scroll handles (tool buttons excluded to preserve click-to-select and drag-to-create)
 
+### v0.10.26 — Absolute Positioning in Managed Layouts
+
+- **FEATURE (R3.2)**: Children inside Column/Row/Grid frames can now be freely moved — dragging a managed-layout child adds a `Position` constraint that pulls it out of the layout flow (Figma-style "Absolute Position" toggle)
+- **FIX (R3.2)**: Position constraints now apply inside managed layouts — `resolve_constraints_top_down` no longer skips Position for managed children; Column/Row/Grid layouts filter out positioned children from their flow instead
+- **TESTING**: Updated `layout_column_position_constraint_becomes_absolute` + `sync_move_managed_layout_child_converts_to_absolute` tests
+
 ### v0.10.25 — Fix Frame Resize Children Jump
 
 - **FIX (R3.2)**: Resizing a Free-layout frame/rect/ellipse no longer resets child bounds — `resolve_children` Free branch now uses `or_insert` to preserve existing cached bounds (JS-measured text sizes, explicit positions) during `resolve_subtree`; managed layouts (Column/Row/Grid) still use `insert` for correct re-flow

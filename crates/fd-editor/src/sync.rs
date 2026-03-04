@@ -88,12 +88,11 @@ impl SyncEngine {
         match mutation {
             GraphMutation::MoveNode { id, dx, dy } => {
                 if let Some(idx) = self.graph.index_of(id) {
-                    // Children inside managed layouts (Column/Row/Grid) cannot be
-                    // freely positioned — the layout solver owns their placement.
-                    // Skip the mutation so the node stays in its layout slot.
-                    if fd_core::layout::is_parent_managed(&self.graph, idx) {
-                        return;
-                    }
+                    // Moving a child inside a managed layout (Column/Row/Grid)
+                    // converts it to absolute positioning — the Position constraint
+                    // added below pulls it out of the layout flow (like Figma's
+                    // "Absolute position" toggle). Groups are unaffected since
+                    // is_parent_managed only checks Frame nodes.
                     if let Some(bounds) = self.bounds.get_mut(&idx) {
                         bounds.x += dx;
                         bounds.y += dy;
