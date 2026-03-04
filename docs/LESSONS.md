@@ -4,6 +4,25 @@ Engineering lessons discovered through building FD.
 
 ---
 
+## Resize Fight: Bounds Ownership Chain (SyncEngine ↔ Layout Engine ↔ JS)
+
+**Date**: 2026-03-04
+**Context**: Parent shape/frame resize caused children to jump, text shapes to snap back, and frames to be unresizable. Three PRs (#356, #358, #360) were needed to fully fix this.
+**Root Cause**: Three layers of bounds overwrite:
+
+1. **`apply_mutations()` called `self.engine.resolve()`** after ResizeNode, which runs `resolve_layout()` — creates a **FRESH** HashMap from scratch, discarding ALL in-place bounds updates from `resolve_subtree`.
+2. **`resolve_subtree()` used `insert` in Free layout**, which overwrote existing cached JS-measured text sizes with `intrinsic_size` heuristic every frame.
+3. **`openInlineEditor` didn't `render()` before textarea**, so canvas bounds were stale when reading for textarea positioning.
+
+**Fix**: Two-layer defense:
+
+- `lib.rs`: Skip `resolve()` for `MoveNode | ResizeNode` batches (bounds already updated in-place by `apply_mutation`)
+- `layout.rs`: `or_insert` in Free layout branch preserves cached bounds during `resolve_subtree`
+
+**Rule**: Never overwrite bounds that were explicitly set by a more authoritative source. The ownership chain is: **JS measureText > SyncEngine apply_mutation > resolve_subtree > resolve_layout (cold start only)**. Higher-authority sources must not be clobbered by lower ones.
+
+---
+
 ## Auto-Reparent on Drag Is Fragile — Use Explicit Context Menus
 
 **Date**: 2026-03-02
