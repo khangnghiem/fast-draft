@@ -5,6 +5,14 @@
 
 ## Completed Requirements
 
+### v0.10.20 — Child Placement & Auto-Center Multi-Child
+
+- **FEATURE (R3.36)**: New `place:` property — 9-position child alignment within parent (top-left, center, bottom-right, etc.); supports both compound (`top-left`) and two-arg (`left top`) syntax
+- **IMPROVEMENT (R3.36)**: Lifted single-child restriction for auto-centering — all text children in shape parents (Rect/Ellipse/Frame) without explicit Position constraint are now auto-centered
+- **LAYOUT**: Priority order: explicit `Position` constraint > `place:` > auto-center > parent origin
+- **PARSER**: `parse_place_value` with hyphenated keyword support; `place:` is distinct from `align:` (text rendering alignment)
+- **TESTING**: 9 new/updated tests — 4 parser tests + 5 layout tests
+
 ### v0.10.19 — Fix Parent Frame Resize Children
 
 - **FIX (R3.2)**: Resizing a parent frame/rect/ellipse now re-resolves children during drag — Column/Row/Grid children re-flow to fit new dimensions, centered text re-centers within resized parent; previously children stayed at old positions until pointer-up flush
