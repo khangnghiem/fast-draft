@@ -3068,6 +3068,8 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   fdCanvas.select_by_id(nodeId);
   // Clear press animation state to prevent visual shape jump on dblclick
   fdCanvas.clear_pressed();
+  // Render to show correct bounds before textarea overlay appears
+  render();
   const propsJson = fdCanvas.get_selected_node_props();
   const props = JSON.parse(propsJson);
 

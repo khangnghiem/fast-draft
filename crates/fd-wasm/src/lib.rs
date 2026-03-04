@@ -1856,16 +1856,24 @@ impl FdCanvas {
         if mutations.is_empty() {
             return false;
         }
-        let all_moves = mutations
-            .iter()
-            .all(|m| matches!(m, GraphMutation::MoveNode { .. }));
+        // Resize mutations also update bounds in-place (via resolve_subtree
+        // inside SyncEngine::apply_mutation). A full resolve() would create a
+        // fresh HashMap and discard JS-measured text sizes, causing a
+        // "resize fight" where parents/frames snap back every frame.
+        let all_drag_ops = mutations.iter().all(|m| {
+            matches!(
+                m,
+                GraphMutation::MoveNode { .. } | GraphMutation::ResizeNode { .. }
+            )
+        });
         for mutation in mutations {
             self.commands
                 .execute(&mut self.engine, mutation, "canvas edit");
         }
-        // Skip full layout resolve for move-only batches — bounds already updated in-place.
-        // Re-resolving would recalculate from constraints and fight with the in-place update.
-        if !all_moves {
+        // Skip full layout resolve for move/resize batches — bounds already
+        // updated in-place. Re-resolving would recalculate from constraints
+        // and fight with the in-place update.
+        if !all_drag_ops {
             self.engine.resolve();
         }
         true

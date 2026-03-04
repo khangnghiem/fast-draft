@@ -1,3 +1,5 @@
+# ─── Layout ───
+
 # FD v1
 # Constraint-based layout — demonstrates all positioning strategies
 # ─── Canvas-centered hero ────────────────────────────────────────────────
@@ -18,9 +20,9 @@ frame @hero {
     }
   }
   layout: column gap=16 pad=40
-  w: 326.07 h: 147.34
-  x: 229.52
-  y: 663.05
+  w: 571.55 h: 93.2
+  x: 121.07
+  y: 641.73
 }
 
 text @_text_0 "Try It Now" {
@@ -34,8 +36,8 @@ text @hero_title "Welcome to " {
   w: 388.49
   fill: #1A1A2E  # blue
   font: "Inter" extrabold 48
-  x: 108.84
-  y: 455.27
+  x: 232.76
+  y: 465.27
 }
 
 # ─── Offset-positioned tooltip ───────────────────────────────────────────
@@ -59,8 +61,8 @@ rect @tooltip {
   w: 200 h: 44
   fill: #1A1A2E  # blue
   corner: 8
-  x: 154.92
-  y: 969.79
+  x: 202.01
+  y: 982.12
   when :enter {
     opacity: 1
     ease: ease_out 300ms
@@ -87,8 +89,8 @@ rect @full_width_bg {
 text @_text_3 "This panel uses fill_parent with 24px inset" {
   fill: #6B7280  # blue
   font: "Inter" regular 14
-  x: 183.66
-  y: 326.51
+  x: 185.81
+  y: 332.85
 }
 
 group @_group_0 {
@@ -120,4 +122,23 @@ group @_group_0 {
   y: 1077.34
 }
 
+# ─── Constraints ───
+
 @tooltip_target -> offset: @hero 0, 180
+
+# ─── Flows ───
+
+edge @edge_0 {
+  from: 126.8 1463.14
+  to: 413.21 1360.45
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}
+edge @edge_1 {
+  from: 269.13 1778.93
+  to: 714.37 1615.77
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}

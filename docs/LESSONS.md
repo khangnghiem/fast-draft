@@ -253,3 +253,20 @@ Engineering lessons discovered through building FD.
 **Fix**: Removed `setPointerCapture` call. Moved `pointermove`, `pointerup`, and `pointercancel` from per-button listeners to `document`-level listeners. Added `dtcBtn` variable to track the originating button for click suppression after drag.
 
 **Lesson**: **Never use `setPointerCapture` in VS Code webview code.** It silently fails in iframe contexts. Always use document-level `pointermove`/`pointerup` listeners for any drag interaction that needs to track the pointer after it leaves the originating element. Pattern: attach `pointerdown` on the element (for state init), attach `pointermove`/`pointerup` on `document` (for tracking).
+
+---
+
+## VS Code: E2E Tests in Codespace Can Give False Positives for Webview Interactions
+
+**Date**: 2026-03-04
+**Context**: Toolbar drag fix (PR #357, v0.10.23) — CSS `user-select: none` + JS body-wide `pointerdown` handler. E2E in Codespace passed (toolbar moved, drag-to-create worked), but user reported the bug was "not fixed at all."
+
+**Root cause**: Codespace browser testing uses a remote VS Code server where the webview rendering pipeline differs from the desktop VS Code app. Pointer event handling, z-index layering, and `setPointerCapture` behavior may all behave differently in the Codespace iframe environment vs the native Electron webview. A "passing" E2E test doesn't guarantee the fix works on the user's local VS Code.
+
+**Fix**: For VS Code webview pointer/drag fixes:
+
+1. Always add `console.log` diagnostics to confirm event handlers fire in the actual local environment
+2. Never rely solely on Codespace E2E for webview interaction bugs — test locally too
+3. Check if `setPointerCapture` on sibling elements (like `canvas.setPointerCapture` at line 713 of `main.js`) interferes with document-level `pointermove` listeners used by the toolbar drag
+
+**Lesson**: **Codespace E2E tests are unreliable for VS Code webview pointer interaction bugs.** The rendering and event pipeline differs between remote/web VS Code and desktop Electron VS Code. Always verify pointer/drag fixes on the local desktop app. When a bug report says "not fixed at all," add diagnostic logging as the first debugging step.
