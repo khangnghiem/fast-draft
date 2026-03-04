@@ -3,7 +3,26 @@
 > Tracks requirement completion status across the entire FD project.
 > For VS Code extension release notes, see [`fd-vscode/CHANGELOG.md`](../fd-vscode/CHANGELOG.md).
 
+<!-- KEYWORD INDEX — grep to find relevant sections:
+  Current v0.10.x (recent, individual entries)    → L8-431
+  Epoch v0.9.x (eraser, text fixes)               → L433-449
+  Epoch v0.8.70-99 (canvas UX, toolbar, groups)    → L451-497
+  Epoch v0.8.30-69 (zen, shortcuts, AI, spec)      → L499-540
+  Epoch v0.6.32-v0.8.29 (core editing, frames)     → L542-572
+  toolbar, drag, resize, pointer    → search v0.10.x entries
+  frame, child, containment         → search v0.10.x entries
+  eraser, delete, swipe             → search v0.9.x epoch
+  group, drill-down, selection      → search v0.8.70-99 epoch
+-->
+
 ## Completed Requirements
+
+### v0.10.28 — Cross-Panel Selection Sync
+
+- **UX (R2.5)**: Clicking a node in any panel now syncs selection across all three panels (Code, Canvas, Layers):
+  1. **Layers scroll-into-view**: When a node is selected via Canvas click or Code cursor, the Layers panel now scrolls the selected item into view (`scrollIntoView({ block: 'nearest', behavior: 'smooth' })`)
+  2. **Code→Canvas focus**: Clicking a node line in Code now pans/zooms the Canvas to focus on the node (via `focusOnNode()`), matching the existing Layers→Canvas behavior
+  3. **Debounced Code sync**: Code→Canvas focus uses a 150ms debounce to prevent animation jitter when rapidly arrowing through lines
 
 ### v0.10.27 — Fix Toolbar Drag (v2 — 3-Layer Defense)
 
@@ -430,544 +449,142 @@
 - **Error recovery**: All 6 parser error sites now include 1-based line numbers and 40-char context snippets (UTF-8 safe) — e.g. `line 12: node error — expected 'kind @id { ... }', got '...'`
 - **Example files**: Created 3 new showcase examples: `responsive_dashboard.fd` (constraint-based dashboard), `animated_onboarding.fd` (3-step flow with edge/pulse animations), `design_tokens.fd` (design system with 7 themes + component patterns)
 
-### v0.8.68 — AI Touch + 3-Mode View Toggle
-
-- **UX**: Renamed "AI Assist" → **AI Touch** in toolbar buttons, context menu, and command palette — clearer branding for the AI design assistance feature
-- **UX**: Extended view toggle from `[Design | Spec]` to `[All | Design | Spec]` — **All** shows full document, **Design** shows visual properties, **Spec** shows annotations; mode determines what AI Touch sends to the LLM for token-efficient context
-- **UX**: Toggle cycles All → Design → Spec → All via keyboard shortcut or command palette
-
-### v0.8.67 — ReadMode Filtered Views + Read-Only Code View
-
-- **FEATURE (R4.19)**: ReadMode filtered views — `emit_filtered(graph, mode)` with 8 modes: Full, Structure, Layout, Design, Spec, Visual (layout+design+when combined), When (animations), Edges (flows). Each mode selectively emits only relevant properties, saving 50-80% tokens for AI agents
-- **FEATURE (R4.19)**: CLI `fd-lsp --view <mode>` — pipe FD source through stdin, get filtered output on stdout (e.g. `cat file.fd | fd-lsp --view structure`)
-- **FEATURE (R4.19)**: VS Code read-only virtual document provider — `FD: Open Read-Only Code View` command opens a synced, read-only tab filtered by the active ReadMode; status bar dropdown (`FD: Change View Mode`) switches between modes
-- **TESTING**: 8 new emit_filtered tests (one per mode) + 121 unit tests + 18 integration tests all pass
-
-### Component Libraries (R3.33)
-
-- **FEATURE (R3.33)**: Component libraries — reusable `.fd` files with themes and node groups; 3 built-in libraries: **UI Kit** (buttons, inputs, cards, badges, avatars), **Flowchart** (process, decision, start/end, connectors), **Wireframe** (navbar, sidebar, content, footer, layouts)
-- **FEATURE (R3.33)**: Library Panel — right sidebar (⇧L) with search and click-to-insert; scans workspace `libraries/` directory for `.fd` files; auto-parses themes and components
-- **DOCS**: `docs/LIBRARIES.md` — convention guide for creating, structuring, and sharing library files
-- **FUTURE (R3.34)**: Community library directory (planned)
-
-### GitHub Pages — Live Playground
-
-- **FEATURE (R6.5)**: GitHub Pages landing site at `khangnghiem.github.io/fast-draft` with premium dark-theme design — hero section, feature cards, benchmark comparison table (11 FD vs Excalidraw pairs), architecture diagram, and editor support matrix
-- **FEATURE (R6.5)**: Live WASM playground — embedded split-pane editor + canvas powered by `fd-wasm`; 3 pre-loaded examples (Card, Login Form, Welcome), theme toggle (dark/light), sketchy mode toggle, real-time rendering on keystroke
-- **CI**: GitHub Actions workflow `pages.yml` — auto-builds WASM via `wasm-pack` and deploys `site/` to GitHub Pages on every push to `main`
-
-### v0.8.66 — Toolbar Consolidation
-
-- **UX**: Replaced bottom shape palette with `＋ Insert` dropdown in top bar — glassmorphism popover with Shapes (Rect, Ellipse, Line, Arrow) and Layout (Frame, Text) sections; clicking activates the tool; hidden in Zen mode
-- **UX**: Zen mode toolbar now icon-only — text labels and keyboard hint badges hidden, compact 8px padding, tooltips on hover
-- **UX**: Removed floating action bar overflow menu (⋯) — Group/Ungroup/Duplicate/Delete remain via context menu and shortcuts; floating bar is now purely a property editor (Fill, Stroke, Opacity, Font Size)
-- **CLEANUP**: Removed ~170 lines of dead CSS/HTML/JS (shape palette, fab overflow, palette drag handlers)
-
-### v0.8.65 — Status Rename
-
-- **BREAKING (R1.9)**: Renamed spec status values: `draft` → `todo`, `in_progress` → `doing`; added `blocked` (red badge). Parser accepts both old and new values for backward compatibility. LSP completions, hover docs, annotation card, filter tabs, bulk dropdown, and all 12+ example files updated
-- **UX**: Spec filter tabs now show: All | To Do | Doing | Done | Blocked
-
-### v0.8.64 — Spec Badge Improvements
-
-- **UX (R3.14)**: Spec badge toggle button (◇) in toolbar — show/hide annotation badges on canvas independently of Spec View mode; state persists via webview state
-- **UX (R3.14)**: Spec badges use faint/active visibility pattern — unselected nodes show badges at 25% opacity, selected node's badge is bright and scaled; reduces visual clutter while preserving coverage overview
-- **UX (R3.14)**: Context menu adapts to spec state — nodes without specs show "Add Spec"; nodes with specs show "View Spec" (opens annotation card) and "Remove Spec" (deletes spec block from source)
-- **UX**: Badge positioning now accounts for zoom level — badges stay pinned to node corners at all zoom levels
-
-### v0.8.62 — Sort Fix + LSP Theme/When + Tree-sitter Regen
-
-- **FIX (R4.10)**: Fixed `sort_nodes` which was a silent no-op — `children()` sorts by `NodeIndex` (insertion order) making edge remove/re-add ineffective. Added `sorted_child_order` field to `SceneGraph` for clean override
-- **FIX (LSP)**: Updated hover/completion providers — `theme`/`when` keywords now return hover info and completions (alongside legacy `style`/`anim`)
-- **BUILD**: Regenerated tree-sitter parser from updated grammar supporting `theme`/`when` keywords
-- **DOCS**: Updated all documentation references from `style`/`anim` to `theme`/`when` across GEMINI.md, REQUIREMENTS.md, ARCHITECTURE.md, model.rs doc-strings
-- **TESTING**: 7 new tests — 5 backward-compat roundtrip tests in emitter.rs, 2 hover tests in fd-lsp. 236 Rust tests total (0 ignored)
-
-### Theme/When Rename + Emitter Reorder
-
-- **BREAKING**: Renamed `style` → `theme` for top-level reusable definitions, `anim` → `when` for animation/interaction blocks — both old keywords still accepted by parser for backward compatibility, emitter always outputs new keywords
-- **UX (R4.18)**: Emitter reorder — node content now emits `spec → children → style properties → when blocks`, putting all visual/interaction properties at the tail for clean Spec View folding
-- **TREE-SITTER**: Grammar updated to accept both `theme`/`style` and `when`/`anim` keywords
-- **VS CODE**: `fd-parse.ts` regexes, `computeSpecHideLines`, `parseDocumentSymbols`, and `tree-preview.ts` all updated for both keywords
-- **EXAMPLES**: All 25 `.fd` files updated to use `theme` and `when` keywords
-- **TESTING**: Updated 9 test string groups in `fd-parse.test.ts`, 2 in `format.rs`; all 166 TS tests pass
-
-### Benchmark Examples
-
-- **DOCS**: 11 benchmark pairs in `examples/benchmarks/` — each pair contains an `.fd` file and equivalent `.excalidraw.json` to demonstrate FD's conciseness advantage (avg 6.5× fewer bytes, 3.2× fewer tokens). Covers 9 user personas: Product Designer (login_form, dashboard_card), Project Manager (kanban_board), HR/Manager (org_chart), Software Engineer (api_flowchart), Mobile Designer (mobile_onboarding), Marketing (pricing_table), UX Researcher (wireframe_ecommerce), Data Analyst (data_dashboard), Systems Architect (network_topology), Brand Designer (design_system)
-- **DOCS**: Benchmark README with metrics table, FD feature matrix, and `compare.sh` auto-metrics script
-- **DOCS**: Feature coverage improvements — added named colors to kanban/org_chart, ellipse avatars + opacity to org_chart, property aliases + import + opacity to design_system; all Excalidraw JSONs normalized to pretty-printed format
-
-### Autoformat: Canonical Node Ordering
-
-- **FEATURE (R4.10)**: Canonical node ordering in autoformat pipeline — `format_document` now reorders top-level nodes by kind priority: Group/Frame → Rect → Ellipse → Text → Path → Generic. Relative order within each kind is preserved (stable sort). Configurable via `FormatConfig.sort_nodes` (default: true)
-- **TESTING**: 5 new tests — `sort_nodes_reorders_by_kind`, `sort_nodes_preserves_relative_order`, `sort_nodes_only_top_level`, `format_document_sorts_nodes_by_kind`, `format_document_sort_is_idempotent`
-- **WORKFLOW**: Updated `/e2e-ux` workflow to switch back to `main` after testing completes
-
-### v0.8.60
-
-- **FIX**: Text centering in nested layouts — text nodes without explicit coordinates now correctly center within their parent shapes (rect, ellipse, frame) even when nested inside column/row/grid groups
-- **TESTING**: Added `layout_text_centered_in_rect_inside_column` regression test
-
-### v0.8.59
-
-- **UX (R4.12)**: Content-first emitter ordering — children now appear before appearance properties (fill, stroke, corner, font) inside node blocks, so non-tech users see content structure first and styling details second
-- **UX (R4.12)**: Section separators — complex documents with ≥2 sections now get `# ─── Styles ───`, `# ─── Layout ───`, `# ─── Constraints ───`, `# ─── Flows ───` comment headers for visual scannability
-- **UX (R4.13)**: Font weight names — parser accepts `bold`, `semibold`, `regular`, etc.; emitter outputs human-readable names instead of numeric codes (700→bold)
-- **UX (R4.14)**: Color hint comments — emitter appends `# purple`, `# red`, etc. after hex colors for instant recognition
-- **UX (R4.15)**: Named colors — `fill: purple`, `fill: blue`, etc. accepted by parser (17 colors: Tailwind palette)
-- **UX (R4.16)**: Property aliases — `background:`/`color:` → fill, `rounded:`/`radius:` → corner; parser accepts all, emitter uses canonical names
-- **UX (R4.17)**: Dimension units — `w: 320px`, `corner: 10px` accepted; `px` suffix stripped by parser
-- **TESTING**: 16 new tests — font weight names, named colors, property aliases, dimension units, roundtrip variants
-
-### v0.8.58
-
-- **BUG FIX (R3.36)**: Text auto-centering in shapes — single text child inside rect/ellipse/frame now auto-expands bounds to match parent, letting the renderer's center/middle alignment visually center the label; previously text appeared at the parent's top-left corner
-- **TESTING**: New `layout_text_centered_in_rect`, `layout_text_in_ellipse_centered`, `layout_text_explicit_position_not_expanded`, `layout_text_multiple_children_not_expanded` tests
-
-### v0.8.57
-
-- **FEATURE (R3.34)**: Group reparent on drag-out — dragging a child fully outside its parent group now detaches it and reparents to the nearest containing ancestor (or root canvas); partial overlap still expands the group to contain the child. Replaced `expand_parent_group_bounds` with `handle_child_group_relationship` (expand vs detach), `expand_group_to_children`, `detach_child_from_group`, and `bboxes_overlap` helpers
-- **SPEC**: New `docs/specs/group-reparent.md` — documents detach algorithm, multi-level reparenting, constraint fixup, and edge cases
-- **TESTING**: 4 new tests replacing 1 — `sync_move_detaches_child_from_group`, `sync_move_partial_overlap_expands_group`, `sync_move_detaches_through_nested_groups`, `sync_move_within_group_no_detach`
-
-### v0.8.56
-
-- **BUG FIX**: Canvas→Code selection sync restored — clicking a node on canvas once again highlights its `@id` line in Code Mode; fixed stale `lastNotifiedSelectedId` dedup guard that blocked `nodeSelected` messages after cursor-sync round-trips, and restructured `cursorLine === i` guard to only skip cursor move (not decoration)
-- **BUG FIX**: Children inside Column/Row/Grid layouts no longer overflow their parent group — layout solver now skips `Position` constraints for children in managed layouts (the layout mode owns positioning)
-- **BUG FIX**: Group auto-sizing now uses resolved bounds directly instead of adding stale Position offsets, fixing incorrect bounding boxes after constraints shift children
-- **BUG FIX**: Moving a child outside its parent group now expands the group to contain it — `MoveNode` handler recomputes parent group bounds after every move
-- **LAYOUT**: Added `recompute_group_auto_sizes` final pass in `resolve_layout` — ensures free-layout groups correctly contain children with Position constraints
-- **TESTING**: 3 new regression tests — `layout_column_ignores_position_constraint`, `layout_group_auto_size_contains_all_children`, `sync_move_expands_parent_group`
-- **EXAMPLES**: Cleaned stale `x`/`y` coordinates from `dashboard_card.fd` children inside column layout
-
-### v0.8.55
-
-- **BUG FIX**: Drag actions (move, resize, draw) now undo/redo as a single step — rewrote batch undo to use text-snapshot approach: `begin_batch()` captures full FD text before gesture, `end_batch()` captures after, undo restores the before-snapshot atomically via `set_text()` instead of replaying per-mutation inverses which could drift
-- **UX**: Coordinates and dimensions are now rounded to 2 decimal places — eliminates floating-point noise from accumulated drag deltas
-- **TESTING**: 2 new tests — `batch_undo_is_single_step`, `batch_redo_reapplies_all`, `empty_batch_no_undo_entry`
-
-### v0.8.54
-
-- **BUG FIX**: Drag actions (move, resize, draw) now undo/redo as a single step — previously every pointer-move during a drag pushed a separate undo entry, requiring dozens of Cmd+Z to revert one drag gesture. Implemented `begin_batch()`/`end_batch()` on `CommandStack` to squash all mutations between PointerDown and PointerUp into one atomic command.
-- **UX**: Coordinates and dimensions are now rounded to 2 decimal places — eliminates floating-point noise (e.g. `x: 100.00000762939453`) from accumulated drag deltas in the emitted `.fd` text.
-- **TESTING**: 2 new tests — `batch_undo_is_single_step`, `batch_redo_reapplies_all`
-- **CONFIG**: Added browser subagent tab reuse rule to `GEMINI.md`
-
-### v0.8.53
-
-- **SECURITY**: Fixed Stored XSS vulnerability in webview initialization — replaced manual backtick escaping with `JSON.stringify` + unicode escaping for `initialText`, preventing injection via crafted `.fd` file content
-- **PERF**: Optimized `Color::from_hex` parser — zero-allocation byte parsing with `r * 17` hex digit expansion, replacing regex-based approach
-- **A11Y**: Onboarding cards now use semantic `<button>` elements instead of `<div>` — adds keyboard navigation, focus-visible outline, and screen reader support
-- **REFACTOR**: Modularized `extension.ts` (3882 → 1026 lines) — extracted HTML/CSS template into `webview-html.ts`, diagnostics into `diagnostics.ts`, document symbols into `document-symbol.ts`, panels into `panels/spec-view.ts` and `panels/tree-preview.ts`; consolidated API calls into reusable `callAiApi` helper; extracted magic numbers into named constants
-
-### v0.8.52
-
-- **BUG FIX**: Column layout elements no longer render in reversed order on the WASM canvas — replaced platform-dependent `petgraph` neighbor order hack (`.reverse()`) with deterministic `NodeIndex` sorting (`.sort()`), which is insertion-order-stable across both native x86_64 and wasm32 targets
-- **UX**: Column layout now stretches text children to fill parent content width (CSS `align-items: stretch` behavior)
-- **UX**: Context-aware text alignment defaults — text inside shapes (rect/ellipse/frame) defaults to center alignment; standalone text defaults to left alignment
-- **TESTING**: New `layout_dashboard_card_with_center_in` regression test verifying child ordering and bounds after `center_in: canvas` constraint resolution
-
-### Fix Nested Group Auto-Sizing
-
-- **BUG FIX**: Groups inside Column/Row/Grid layouts now take up their correct resolved size — previously `intrinsic_size()` returned `(0,0)` for groups, causing siblings to overlap. Layout solver now uses a two-pass approach: pass 1 recurses to resolve nested group sizes bottom-up, pass 2 repositions children using their actual dimensions with `shift_subtree` to maintain correct absolute positions for all descendants.
-- **TESTING**: New regression tests `layout_nested_group_auto_size` and `layout_group_child_inside_column_parent` in `layout.rs`
-
-### Remove R7 Collaboration
-
-- **REMOVED**: R7 (Collaboration) — removed `R7.1` (real-time multiplayer) and `R7.2` (shareable links) from requirements; deleted 👥 Share button, shareDialog handler, collaborative cursor CSS/JS placeholder from `extension.ts` and `main.js`; removed R7 section + index entry from `REQUIREMENTS.md`
-
-### Requirements Overhaul
-
-- **DOCS**: Restructured `REQUIREMENTS.md` — inline status tags on all 60+ requirements, R3 reorganized into 5 sub-categories (R3a–R3e: Selection, Drawing, Navigation, Panels, Export)
-- **DOCS**: Created `docs/specs/` with 5 detailed spec docs: `selection.md`, `drawing-tools.md`, `inline-editing.md`, `edge-system.md`, `animation-system.md`
-- **DOCS**: Removed 134 duplicate lines (completion checklist + test matrix) from CHANGELOG — now tracked inline in REQUIREMENTS.md
-- **DOCS**: Updated GEMINI.md Requirement Deduplication rule to reference `docs/specs/`
-
-### Docs Restructure
-
-- **DOCS**: Moved `REQUIREMENTS.md` and `EDITORS.md` from project root into `docs/` directory
-- **DOCS**: Added `docs/ARCHITECTURE.md` — crate map, dependency graph, data flow, key types, rendering pipeline
-- **DOCS**: Updated all cross-references in workflows (`commit.md`, `yolo.md`, `uiux.md`, `spec.md`), `fd-vscode/README.md`, and zed-extensions submodule
-- **DOCS**: Noted Chrome browser subagent availability in `.agents/workflows/e2e.md`
-
-### v0.8.49
-
-- **BUG FIX**: Groups are now draggable again when selected — restored deferred drill-down logic so clicking inside a selected group keeps the group selected for drag; only drills into the child on click-without-drag (pointer-up at same position)
-
-### v0.8.48
-
-- **BUG FIX**: Clicking a child node now selects the child directly instead of its parent group — removed `effective_target` bubble-up behavior and drill-down state machine (`pending_drill_target`); groups are still selectable by clicking their own unoccupied area or via marquee selection
-- **TESTING**: Updated `test_effective_target_returns_leaf` and `test_effective_target_nested_returns_leaf` to verify direct child selection
-
-### v0.8.47
-
-- **BUG FIX**: Dragging a child group no longer moves its parent group — `effective_target()` now stops bubbling at selected group boundaries (returns the **lowest** unselected group instead of the highest), enabling correct Figma-style nested group drill-down and drag
-- **TESTING**: New regression test `test_effective_target_child_group_drag`
-
-### v0.8.46
-
-- **FEATURE**: Touch & Gesture Optimization for tablet/iPad input.
-- **UX**: Two-finger pan (no Space key needed), pinch-to-zoom with smooth inertia, long-press opens context menu.
-- **UX**: Three-finger swipe left/right for undo/redo.
-- **UX**: Palm rejection when Apple Pencil is detected.
-
-### v0.8.44
-
-- **FEATURE**: One-Click Export Menu — replaced the single PNG export button with a multi-format dropdown.
-- **FEATURE**: SVG Export — generate perfect vector SVG files directly from the canvas via a native Rust implementation.
-- **UX**: Support copying raw `.fd` source code to clipboard via the export menu to easily paste to AI assistants.
-
-### v0.8.43
-
-- **FEATURE**: Copy Selection as PNG — instantly export selected components to the system clipboard as a transparent PNG.
-- **UX**: Trigger via `Cmd+Shift+C` (Mac) / `Ctrl+Shift+C` (Win/Linux) or the "⋯" overflow menu in the Floating Action Bar.
-
-### v0.8.42
-
-- **FEATURE**: Empty-state onboarding overlay — appears on empty canvas with "Start drawing" animated heading, 3 quick-start cards (📐 Shapes, ✏️ Sketch, 📝 Text), and `?` shortcut hint
-- **UX**: Cards activate the corresponding tool and dismiss the overlay; also dismissed on any canvas click or keypress
-- **FEATURE**: `examples/welcome.fd` — interactive tutorial with 3 step cards, hover animations, playground area; auto-opens on first-ever extension activation
-- **UX**: First-activation detection via globalState `fd.welcomed` flag — only shows once
-
-### v0.8.41
-
-- **FIX**: Paste now recursively renames ALL `@ids` in the pasted block (not just the root) — prevents ID collisions when pasting groups with children
-- **UX**: Pasted nodes share a consistent `_cpXXXX` suffix for traceability
-
-### v0.8.40
-
-- **FEATURE**: Smart Defaults (Sticky Styles) — changing fill/stroke/strokeWidth/opacity/fontSize on any node stores it as the default for future shapes of that tool (Excalidraw-style)
-- **FEATURE**: Style Picker — Alt+click a node to copy its entire style (fill, stroke, opacity, font) as defaults for all tools (eyedropper for styles, not just colors)
-- **UX**: Defaults captured from both Floating Action Bar and Properties panel changes; applied automatically on new shape creation
-- **UX**: Per-tool session memory — rect remembers rect defaults, text remembers text defaults, etc. Resets on reload
-
-### v0.8.39
-
-- **FEATURE**: Contextual Floating Toolbar — glassmorphism pill bar appears above selected nodes with: fill color swatch, stroke color swatch, stroke width input, opacity slider, font size (text nodes only), and ⋯ overflow menu (Group, Ungroup, Duplicate, Delete)
-- **UX**: Bar follows selection position in scene→screen coords, hides during drag, auto-shows on selection
-- **UX**: Overflow menu closes on external click; FAB pointerdown stops propagation to prevent deselection
-- **DOCS**: `docs/SHORTCUTS.md` — comprehensive 8-section keyboard shortcut reference for AI agents
-
-### v0.8.38
-
-- **FEATURE**: ⌘+drag on drawing tools = temporary Select (Screenbrush-style) — move objects or marquee select without leaving the drawing tool; auto-restores on pointer up
-- **FEATURE**: Alt+drag = clone and drag — duplicates the node in-place then drags the clone (original stays put)
-- **API**: `duplicate_selected_at(dx, dy)` — parameterized duplication with custom offset (0,0 for clone-in-place, 20,20 for ⌘D)
-- **SHORTCUT**: ⌘+A select all already working (documented)
-
-### v0.8.37
-
-- **FEATURE**: Z-order shortcuts — ⌘[ send backward, ⌘] bring forward, ⌘⇧[ send to back, ⌘⇧] bring to front (implemented in Rust SceneGraph)
-- **FEATURE**: Frame tool — F key, toolbar button, reuses RectTool with frame semantics
-- **FEATURE**: 0 key resets zoom to 100%
-- **SHORTCUT**: ⌘D duplicate, ⌘G group, ⌘⇧G ungroup, Del/Backspace delete — all already mapped, now documented
-- **SHORTCUT**: F key added to double-press tool lock (FF locks Frame tool)
-- **UI**: Comprehensive help dialog (?) with 6 categories: Tools, Edit, Transform, View, Modifiers, Apple Pencil Pro
-
-### v0.8.36
-
-- **FEATURE**: Sticky Tool Mode — double-click a tool icon or press its shortcut twice (RR, OO, PP, AA, TT) to lock the tool; it stays active after placing shapes. 🔒 badge appears on locked tool button. Single-click or press V/Escape to unlock.
-- **UX**: Excalidraw-style rapid shape placement without re-selecting the tool each time
-
-### v0.8.35
-
-- **FEATURE**: Zen Mode — minimal Excalidraw-like toolbar layout; floating pill bar at bottom center with 6 drawing tools (Select, Rect, Ellipse, Pen, Arrow, Text); hides Layers, Properties, Minimap, Shape Palette panels
-- **UX**: 🧘 Zen / 🔧 Full toggle button in top-right corner; state persists across sessions
-- **SHORTCUT**: `L` key toggles Layers panel on demand (works in both Zen and Full modes)
-- **UI**: Toolbar items marked `zen-full-only` hide cleanly in Zen mode; sketchy toggle stays visible in both modes
-
-### v0.8.34
-
-- **FEATURE**: Sketchy / hand-drawn rendering mode — toggle via ✏️ toolbar button; rects get wobbly corners with double-stroke, ellipses use overlapping jittery arcs, straight edges get midpoint displacement; deterministic jitter seeded by position (shapes don't dance on re-render); cosmetic only — underlying geometry stays precise
-- **UX**: State persists across sessions via webview state
-- **TESTING**: 3 new tests — `sketchy_jitter_deterministic`, `sketchy_jitter_bounded`, `sketchy_jitter_varies_with_index`
-
-### v0.8.33
-
-- **FEATURE**: Arrow/Connector drawing tool — press `A` to activate, click-drag from one node to another to draw an edge (smooth curve with arrowhead); live dashed preview line during drag; auto-switch back to Select after drawing
-- **CORE**: `AddEdge`/`RemoveEdge` mutations with full undo/redo support
-- **TESTING**: 5 new tests — `arrow_tool_creates_edge_between_nodes`, `arrow_tool_same_node_no_edge`, `arrow_tool_no_source_no_edge`, `arrow_tool_preview_line_during_drag`, `resolve_arrow_shortcut`
-
-### v0.8.32
-
-- **UX**: Single-click shape creation now centers the shape at the click point (Excalidraw behavior) — previously the top-left corner was placed at click; rect default size changed from 100×100 to 120×80; ellipse default remains 100×100 centered
-- **TESTING**: 3 new unit tests — `rect_tool_click_creates_centered`, `ellipse_tool_click_creates_centered`, `rect_tool_drag_still_works`
-
-### v0.8.31
-
-- **TESTING**: Added 3-level nested group drill-down tests — `test_effective_target_3_level_drill_down` in `model.rs` (verifies click 1→outer, click 2→inner, click 3→leaf), `hit_test_nested_groups` in `hit.rs` (verifies deepest node returned through nested groups), and drill-down simulation + `findSymbolAtLine` resolution tests in `e2e-ux.test.ts`
-- **TESTING**: Expanded E2E UX test suite from 52 to 71 tests (+19) — added coverage for complex card document parsing, Drawio-style edge annotations, frame nodes, 3-level nested groups, spec fold ranges, panel column resolution, layer ordering, and rename sanitization edge cases
-- **TESTING**: Browser E2E validation of 6 real-world scenarios (Figma card build, Drawio rapid shapes, Sketch multi-select, Figma duplicate, Excalidraw rapid draw, Miro navigation) via Codespace
-
-### v0.8.30
-
-- **BUG FIX**: Fixed `parseSpecNodes` annotation bleed — `lines.indexOf()` found the first occurrence of identical spec block lines, causing annotations from earlier nodes to leak into later nodes; switched to indexed `for` loop (fixes Spec View filtering accuracy)
-- **TESTING**: Added 52 E2E UX behavior tests in `e2e-ux.test.ts` covering 17 categories: select/move, copy/paste, group/ungroup, layer rename, inline text editing, zoom/pan, grid overlay, properties panel, drag-and-drop, arrow-key nudge, color swatches, selection bar, spec view, animation tweens, minimap, export PNG, and error resilience — simulating behaviors from Figma, Sketch, Miro, Freeform, Drawio, and Excalidraw
-- **DOCS**: Added TODO for recursive child ID rename on copy/paste of group nodes
-
-### v0.8.29
-
-- **BREAKING**: Deprecated `label` style property on shapes — inline text on rect/ellipse/frame is now represented as a `text` child node instead of a `label:` property; parser silently ignores `label:` in old files for backwards compatibility
-- **WASM**: `get_selected_node_props` now returns text child content as `label` prop; `set_node_prop("label")` creates/updates/removes a `text` child node
-- **Renderer**: Removed `draw_shape_label` calls from shape rendering — text children render themselves as normal `Text` nodes
-- **UI**: Removed Label section from properties panel — shapes' text is edited via double-click inline editor (creates text child automatically)
-- **Examples**: Converted all `label: "..."` usage in `dark_theme.fd` to `text` child nodes
-
-### v0.8.28
-
-- **BUG FIX**: Dragging a selected child node within a group now moves only the child, not the whole group — if the raw hit node is already selected (user drilled in), `effective_target` is skipped to preserve the child selection for drag
-
-### v0.8.27
-
-- **UX**: Groups are now directly clickable in Canvas — clicking empty space within a group's bounding box selects it, removing the need for marquee (drag) selection; clicking on a child still selects the child (then promotes to group via `effective_target`)
-
-### v0.8.26
-
-- **BUG FIX**: Moving a selected group now correctly moves the entire group instead of drilling into a child — pointer-down on a child of an already-selected group keeps the group selected for dragging; pointer-up without drag (click) drills into the child for sub-selection (Figma-standard click-vs-drag distinction)
-- **CORE**: New `SceneGraph::is_ancestor_of` helper for parent-chain traversal
-- **Tests**: New `test_is_ancestor_of` covering direct parent, grandparent, non-ancestor, and self cases
-
-### v0.8.25
-
-- **BUG FIX**: Double-clicking a node with `:press` animations no longer causes a visual shape jump — the inline editor now calls `clear_pressed()` to suppress the press animation state before opening the textarea overlay
-- **BUG FIX**: Inline editor textarea now matches the node's actual border-radius — ellipses use `50%`, rects use their actual corner radius (was hardcoded `8px` for all shapes), text nodes use `4px`
-
-### v0.8.24
-
-- **BUG FIX**: Fixed an issue where deleting a node on canvas wouldn't update Code mode visually. The internal IDE text sync now computes accurate character bounds instead of relying on a naive line count (`document.lineCount`), eliminating silent replacement failures in VS Code when the active document shrinks.
-
-### v0.8.23
-
-- **UX**: Group Node Visibility & Drill-down (R3.24) — Group nodes now render a dashed blue border on hover and a solid blue border with a `"Group @id"` badge when selected.
-- **UX**: Clicking a child node of an unselected group now selects the parent Group by default. Clicking the child node again (when the group is already selected) "drills down" to select the child, matching standard design tool (Figma/Sketch) behavior.
-- **WASM**: Added `effective_target` to `SceneGraph` for drill-down hit testing and wired it into pointer and marquee selection events.
-
-### v0.8.22
-
-- **BUG FIX**: Fixed an issue where deleting a node in the Canvas would mess up the Z-order of other nodes. Replacing `petgraph::DiGraph` with `petgraph::stable_graph::StableDiGraph` prevents node index swapping on deletion.
-
-### v0.8.20
-
-- **UX**: Reduced auto-zoom-in aggressiveness for layer focus (R3.30) — target node now fills ~10% of viewport width instead of 25%, preserving more surrounding context
-
-### v0.8.19
-
-- **NEW**: Smart focus on layer click — clicking a layer item in the Layers panel now smoothly pans the camera to center the node (250ms ease-out animation); auto-zooms in if both dimensions are < 20px on screen (truly invisible), auto-zooms out if the node overflows the viewport (15% padding); skips pan if the node center is already within 20% of the viewport center; thin shapes (lines) are left at current zoom unless they overflow
-
-### v0.8.21
-
-- **BUG FIX**: `set_node_prop` no longer flattens inherited styles — all style property handlers now modify `node.style` directly instead of calling `resolve_style()`, which was baking `use:` referenced properties into inline styles and corrupting the emitted text
-
-### v0.8.18
-
-- **BUG FIX**: Node name no longer disappears after double-click → click outside — inline editor `commit()` now skips `set_node_prop` when value is unchanged, preventing `SetStyle` from flattening inherited styles and `SetText` from triggering unnecessary re-emission
-
-### v0.8.17
-
-- **BUG FIX**: Layer rename now syncs to Code Mode — added a `committed` guard flag to prevent double invocation of the `commit()` closure (Enter removes the input from DOM, triggering blur's `setTimeout(commit, 100)` which could race and skip `syncTextToExtension()`); also checks `set_text()` return value so parse errors don't silently swallow the rename
-
-### v0.8.16
-
-- **UX**: Resize handle cursor feedback — hovering over the 8 resize handles now shows the appropriate directional cursor (`nwse-resize`, `nesw-resize`, `ns-resize`, `ew-resize`) instead of the default pointer, matching Figma/Sketch behavior
-
-### v0.8.15
-
-- **UX**: AI Assist error messages now include an **"Open Settings"** action button — clicking it opens VS Code settings filtered to `fd.ai` for quick API key configuration or provider switching
-- **UX**: Error messages are now provider-agnostic — each warns which key is missing and reminds users they can switch to any of the 5 supported providers (Gemini, OpenAI, Anthropic, Ollama, OpenRouter)
-
-### v0.8.14
-
-- **BUG FIX**: Layer selection now works — click handler pre-sets `lastLayerHash` before calling `render()`, so `refreshLayersPanel()` skips DOM rebuild and preserves the click handler's DOM references for visual highlight update
-- **BUG FIX**: Ellipse inline editor no longer deforms the shape — uses standard `8px` border-radius instead of `50%`, matching Figma's approach of a clean rectangular overlay that doesn't clip content
-
-### v0.8.13
-
-- **BUG FIX**: Layer selection in canvas mode now works — `refreshLayersPanel()` skips DOM rebuild when source + selection unchanged, preventing click handlers from being destroyed mid-interaction
-- **BUG FIX**: Selection info bar now shows correct dimensions — was reading `props.w/h` (undefined) instead of `props.width/height`; also uses bounds fallback for groups/text/path nodes
-- **UI**: Shape palette moved from left-side vertical bar to bottom-center horizontal pill (Apple FreeForm style)
-- **UI**: Shape palette expanded with Frame, Line, and Arrow tools (was only Rectangle, Ellipse, Text)
-- **UI**: Selection info bar relocated from bottom-center to top-right to avoid overlap with new bottom toolbar
-- **WASM**: `create_node_at` now supports `frame` kind — creates a 200×150 frame container with light fill and border
-
-### v0.8.12
-
-- **UX fix**: Inline editor on ellipse nodes now uses `border-radius: 50%` instead of `4px` — the textarea overlay matches the circular shape instead of appearing as a rectangle
-
-### v0.8.11
-
-- **REFACTOR**: Renamed `Constraint::Absolute` → `Constraint::Position` — clarifies parent-relative semantics (was misleadingly named "absolute")
-- **UX**: Emitter now outputs `x:` / `y:` inline instead of top-level `@id -> absolute:` arrows — saves ~4 tokens per positioned node, symmetric round-trip with parser
-- **COMPAT**: Parser accepts both `absolute` and `position` keywords in constraint arrows for backwards compatibility
-- **Tests**: New `roundtrip_inline_position` test verifying symmetric `x:/y:` parse↔emit
-
-### v0.8.10
-
-- **UX**: Zoom-to-fit now caps at 200% — small designs (single icon, one button) no longer blow up to 1000% on initial load or ⌘0; large designs still zoom out to fit as before
-- **UX fix**: Inline editor text now vertically centered inside textarea — dynamic `padding-top` based on textarea height vs text height; respects `textVAlign` (top/middle/bottom)
-- **UX**: Zoom while panning — scrolling the wheel during Space+drag now zooms instead of scrolling, matching Figma behavior
-
-### v0.8.9
-
-- **NEW — R3.28**: 3×3 text alignment system — `align: left|center|right top|middle|bottom` property in `.fd` format
-- **NEW**: Text nodes default to `center middle` alignment (matching Figma) instead of top-left
-- **NEW**: 3×3 alignment grid picker in the properties panel — click a cell to set text alignment, active cell highlighted with accent
-- **NEW**: Inline editor textarea respects node's horizontal text alignment via CSS `text-align`
-- **WASM**: `textAlign`/`textVAlign` exposed in node props and settable via `set_node_prop`
-- **Parser/Emitter**: Full `align:` round-trip support with test
-- **Renderer**: `draw_text` uses 9-position alignment based on `TextAlign × TextVAlign`
-- **Bugfix**: `emit_style_block` now emits `align:` in `style { }` blocks (was only emitted on nodes)
-- **Tests**: 4 new tests — `parse_align_center_only`, `roundtrip_align_in_style_block`, `style_merging_align`, `sync_set_style_alignment`
-- **Docs**: Added R1.17 (text alignment format property), updated R3.28 cross-ref, added `text alignment` tag to requirement index
-
-### v0.8.8
-
-- **UX fix**: Inline editor background now matches node context — shape nodes use their fill color, text nodes use themed background (`#1E1E2E` dark / `#FFFFFF` light), shapes without fill use themed fallback; eliminates the white-over-dark-node bug
-- **NEW**: Live text sync — typing in the inline editor updates Code Mode in real time (every keystroke syncs via `set_node_prop`)
-- **NEW**: Esc to cancel — pressing Escape reverts the text to the original value before editing started and syncs
-- **UX**: Enter confirms and closes the editor (unchanged), click-outside also commits (unchanged)
-
-### v0.8.7
-
-- **NEW**: Drag-and-drop animation picker — drag a node onto another node to assign animations via a glassmorphism popover with 11 presets across 3 trigger groups (Hover, Press, Enter)
-- **NEW**: Magnetic glow ring — purple pulsing border appears on the target node during drag-over
-- **NEW**: Live animation preview — hovering picker presets plays a tween preview on the target node in real-time
-- **NEW**: WASM API: `add_animation_to_node`, `get_node_animations_json`, `remove_node_animations`, `hit_test_at`
-- **NEW**: `SetAnimations` mutation with full undo/redo support
-- **INFRA**: WASM rebuild with animation APIs
-
-### v0.8.6
-
-- **UX fix**: Inline text editor now uses the node's fill color as background with auto-contrasting text color (was hardcoded white overlay that hid the node)
-- **UX fix**: Double-clicking empty canvas to create text now works — text nodes get proper initial bounds (80×24) so the inline editor opens correctly
-- **UX**: Editor font now matches the node's font family, weight, and size scaled to zoom level
-- **INFRA**: WASM rebuild with text node bounds fix in `AddNode` mutation
-
-### v0.8.5
-
-- **BREAKING**: Removed all `##` annotation syntax from `.fd` files — unified under `spec` blocks (`spec "desc"` inline / `spec { ... }` block form). The parser already treated `##` as plain comments, so annotations using `##` were silently lost during parsing. All 7 affected `.fd` files (2 test fixtures + 5 design docs) migrated.
-- **DOCS**: Updated `REQUIREMENTS.md`, `SKILL.md` to reference `spec` blocks instead of `##`
-
-### v0.8.4
-
-- **NEW**: Multi-ungroup — selecting 2+ items where some are groups now enables Ungroup, which dissolves all selected groups at once (Figma behavior)
-- **INFRA**: WASM rebuild with multi-group `ungroup_selected()` in Rust
-
-### v0.8.3
-
-- **UX**: Group/Ungroup context menu items are now context-sensitive — Group disabled with <2 items selected, Ungroup disabled when selected node isn't a group (matches Figma/Sketch)
-
-### v0.8.2
-
-- **UX fix**: Canvas content now centers in the visible area to the right of the layers panel, instead of behind it — `zoomToFit`, `zoomToSelection`, and initial load all account for the 232px overlay
-- **UX**: Initial load now auto-centers content via `zoomToFit()` instead of starting at origin
-
-### v0.8.1
-
-- **UX**: Spec View now strips type keywords (`group`, `rect`, `text`, `ellipse`, `path`, `frame`) from node declarations — `group @checkout_page {` renders as `@checkout_page {` in Code Mode when Spec View is active
-- **UX**: Uses non-destructive VS Code editor decorations to visually hide keywords without modifying document text
-- **NEW**: `transformSpecViewLine()` utility function for programmatic line transforms
-
-### v0.8.0
-
-- **NEW**: ⌘I / Ctrl+I keyboard shortcut to add/edit spec annotation on selected node
-- **NEW**: Status filter tabs in Spec Summary (All / Draft / In Prog / Done) with per-filter counts
-- **NEW**: Spec coverage % indicator in header — shows annotated/total nodes ratio
-- **NEW**: Export spec report ↗ button — copies full markdown spec report to clipboard
-- **NEW**: Bulk status dropdown — set Draft/In Progress/Done on all visible specs at once
-- **UX**: Empty state message now mentions ⌘I shortcut
-
-### v0.7.9
-
-- **NEW**: Spec Summary Panel — layers panel becomes requirements overview in Spec mode, showing all annotated nodes as cards with description, status/priority badges, accept criteria, and tags
-- **NEW**: Click-to-select in spec summary navigates to node on canvas + opens annotation editing card
-- **NEW**: Empty state guidance ("No spec annotations yet — Right-click a node → Add Annotation")
-- **UX**: Apple-style color-coded badges: draft=grey, in_progress=yellow, done=green, priority high=red/medium=orange/low=green
-
-### v0.7.8
-
-- **NEW**: Smart alignment guides (R3.17) — magenta dashed guide lines appear during drag/resize when node edges or centers align with other nodes (Figma/Sketch behavior)
-- **NEW**: Alignment detection across 9 reference point pairs per axis (left/center/right × top/center/bottom)
-- **INFRA**: WASM rebuild with smart guide computation in Rust
-
-### v0.7.7
-
-- **NEW**: Interactive resize handles (R3.16) — 8-point resize grips (4 corners + 4 midpoints) on selected nodes, drag to resize with opposite corner anchored
-- **NEW**: Shift+resize constrains to square proportions
-- **NEW**: Min size 4px prevents nodes from collapsing to zero
-- **INFRA**: WASM rebuild with resize handle hit-testing in Rust
-
-### v0.7.6
-
-- **NEW**: Double-click canvas creates text node — clicking empty space creates a text node and opens inline editor immediately (Figma behavior)
-- **NEW**: Copy/paste nodes — `⌘C` copies selected node's `.fd` block to clipboard, `⌘V` pastes with auto-generated unique ID
-- **NEW**: Select all — `⌘A` selects first node (multi-select needs WASM API extension)
-- **UX**: Updated keyboard shortcuts help panel with new entries
-
-### v0.7.5
-
-- **NEW**: Zoom to selection — `⌘1` / `Ctrl+1` centers and zooms to fit the selected node
-- **NEW**: Color swatches palette — 12 preset colors + recent colors in properties panel (click to apply fill)
-- **NEW**: Selection info bar — bottom-center pill showing `@id · kind · W×H · (X, Y)` when a node is selected
-- **NEW**: Layer visibility toggle — eye icon (👁) on hover in layers panel, click to dim node to 15% opacity
-
-### v0.7.4
-
-- **R3.21**: Grid overlay — toggleable dot grid (becomes line grid at high zoom) with adaptive spacing; keyboard shortcut `G` and toolbar ⊞ button; state persists across sessions
-- **NEW**: PNG export — export canvas as high-quality 2× PNG with save dialog; toolbar 📥 button
-- **NEW**: Minimap navigation — thumbnail in bottom-right showing full scene with draggable viewport rectangle for pan navigation (Figma/Miro-style)
-- **NEW**: Arrow-key nudge — arrow keys move selected node 1px (Shift+arrow = 10px), matching Figma/Sketch standard UX
-- **NEW**: Layer rename — double-click a layer name in the layers panel for inline rename (renames `@id` across the entire document)
-
-### v0.7.3
-
-- **R1.1 fix**: Fixed node/edge drag jitter and reverse-direction movement — `MoveNode` now correctly converts absolute screen coords to parent-relative before storing in `Constraint::Position`, and strips conflicting positioning constraints (`CenterIn`, `Offset`, `FillParent`). Skips full layout re-resolve for move-only batches to prevent constraint values from overwriting in-place bounds updates.
-
-### v0.7.0 (**BREAKING**)
-
-- **R1.9**: Replaced `##` annotation syntax with `spec` node blocks — `spec "desc"` (inline) and `spec { ... }` (block form). Updated parser, emitter, tree-sitter grammar, VS Code extension, and all 13 example files.
-- **GEMINI.md**: Updated FD Format Rules table to reflect `spec` syntax.
-
-### v0.6.41
-
-- **R1.1 fix**: Fixed Group/Ungroup undo/redo — `GroupNodes` now initializes `ResolvedBounds` so subsequent `MoveNode` doesn't clobber constraints to `(0,0)`
-- **R1.1 fix**: `SceneGraph::remove_node` wrapper keeps `id_index` consistent when petgraph swaps indices on removal
-- **R1.1**: `compute_inverse` now supports `GroupNodes` ↔ `UngroupNode` for full undo/redo round-trips
-
-### v0.6.40
-
-- **R4.11 fix**: Fixed a bug where properties like `fill` or `font` were incorrectly displayed inside nodes in Code Spec View instead of being hidden.
-
-### v0.6.39
-
-- **R1.1**: New `frame` node type — visible container with declared `w:`/`h:`, optional `clip: true`, fill/stroke/corner, layout modes (column/row/grid)
-- **R1.1**: `group` nodes now auto-size to the union bounding box of their children (was hardcoded 200×200)
-- **R3.1**: Groups skip self-hit-testing (only children are clickable); frames are clickable via background
-
-### v0.6.38
-
-- **R6.1**: Code Mode now always regains focus after canvas reveal — refocuses text editor after `vscode.openWith` since webview panels can steal focus despite `preserveFocus: true`
-
-### v0.6.37
-
-- **R6.1 fix**: Consolidated canvas open/reveal into a single `onDidChangeActiveTextEditor` handler — eliminates race condition with `onDidOpenTextDocument`, and moves canvas to the other column if it ends up in the same column as the text editor
-
-### v0.6.36
-
-- **R6.1**: Canvas is now always revealed when switching `.fd` tabs — opens a new canvas in the other column if none exists (previously only revealed existing canvas tabs)
-
-### v0.6.35
-
-- **R6.1 fix**: Fixed canvas duplication bug where auto-reveal opened a second Canvas Mode in the text editor's column; now correctly finds the canvas tab's actual column and only reveals if not already active
-
-### v0.6.34
-
-- **R6.1**: Auto-reveal canvas — switching to an `.fd` file tab now automatically reveals (or opens) the Canvas Mode panel in the other editor column without stealing focus
-
-### v0.6.32
-
-- **R2.5 fix**: Cursor→canvas selection sync now works from any line inside a node block (property lines, style lines, animation lines), not just the `@id` declaration line — uses `findSymbolAtLine` symbol tree lookup instead of simple regex
-- **R3.14**: Layers panel restyled with Figma/Apple design language (sticky header, indent guides, chevron toggles, hover/selection states)
-- **Workflow**: `/yolo` and `/commit` workflows now include a mandatory docs update step before committing
+---
+
+<!-- ARCHIVED EPOCHS — agents: read summaries only, expand <details> only if needed -->
+
+### Epoch: v0.9.x — Interaction Overhaul (10 releases)
+
+Eraser tool (swipe-to-delete, group-aware, poof animation, Ctrl+click temp eraser), text editing fixes (boundary/inline alignment), group detach fix (near-detach visual feedback), duplicate naming, Figma-style group drill-down, text reparent revert, text-to-child drag context menu.
+
+<details>
+<summary>Full v0.9.x entries (v0.9.0–v0.9.9)</summary>
+
+- **v0.9.9**: Visible delete button (✕) in floating action bar
+- **v0.9.8**: Ctrl → temporary eraser override from any tool
+- **v0.9.7**: Eraser poof animation (red fading rect)
+- **v0.9.6**: Group-aware eraser (detach child first, cascade empty groups)
+- **v0.9.5**: Near-detach visual fix (removed confusing rubber-band for non-Group parents)
+- **v0.9.4**: Alt+drag duplicate derives name from original, restored Figma drill-down
+- **v0.9.2**: Eraser tool (EraserTool struct, E key, toolbar, immediate delete)
+- **v0.9.1**: Reverted drop context menu reparent system (~160 lines removed)
+- **v0.9.0**: Text boundary + inline editor fix (measureAndUpdateTextBounds fix)
+
+</details>
+
+### Epoch: v0.8.70–v0.8.99 — Canvas UX & Design Polish (30 releases)
+
+Canvas UX overhaul (layer sync, smart guides 5px, center-snap, text-consume), scroll toolbar redesign (V12 wooden handles), SVG toolbar icons, frosted glass tooltips, auto bring-forward on select, sketchy rendering mode, arrow/connector tool, Figma group drill-down iterations (5+ attempts), toolbar consolidation, status rename, spec badges, theme/when rename, ReadMode filtered views, component libraries, GitHub Pages playground.
+
+<details>
+<summary>Full v0.8.70–v0.8.99 entries</summary>
+
+- **v0.8.99**: Inline editor alignment fix
+- **v0.8.98**: Transparent group drag (Figma behavior)
+- **v0.8.97**: Context menu reparent + child containment
+- **v0.8.96**: Fix selection lost after drag
+- **v0.8.95**: Text hug-contents + detach fix
+- **v0.8.94**: Label→text child migration + edge text detach
+- **v0.8.93**: EdgeAnchor + text child
+- **v0.8.92**: Group vs frame refactoring (Figma alignment)
+- **v0.8.91**: Canvas interaction fixes (resize handles all 8 dirs, hover scale cap)
+- **v0.8.90**: Scroll toolbar bug fixes
+- **v0.8.89**: Canvas bug fixes batch (animation picker removed, handle radius, text bounds)
+- **v0.8.88**: Text reparent fix + Figma group selection
+- **v0.8.87**: Three-zone toolbar + inline Zen toggle
+- **v0.8.86**: Auto-expand parent + text sizing + edge label offset
+- **v0.8.85**: Type-prefixed anonymous IDs (\_rect_N, \_text_N)
+- **v0.8.84**: Zoom inside minimap (Google Maps-style)
+- **v0.8.83**: Scroll toolbar redesign (V12 wooden handles)
+- **v0.8.82**: Text snap/reparent redesign
+- **v0.8.81**: Arrow head tangent alignment
+- **v0.8.80**: Drag-and-drop detach fix
+- **v0.8.79**: Text drop-to-consume on shapes & edges
+- **v0.8.78**: Snap-to-node + auto-edge on drag-to-create
+- **v0.8.77**: Drag-to-create from toolbar
+- **v0.8.76**: ScreenBrush default styles
+- **v0.8.75**: SVG toolbar icons
+- **v0.8.74**: Auto bring forward on select
+- **v0.8.73**: Frosted glass tooltips
+- **v0.8.72**: Fix group detach on drag out (chasing envelope)
+- **v0.8.71**: ✦ Renamify (batch AI rename)
+- **v0.8.70**: Canvas UX overhaul (layer sync, smart guides, center-snap, parser hardening)
+
+</details>
+
+### Epoch: v0.8.30–v0.8.69 — Features & Foundations (40 releases)
+
+Zen mode, sketchy/hand-drawn rendering, Figma-style keyboard shortcuts (z-order ⌘[/⌘], frame F, duplicate ⌘D, group ⌘G), sticky tool lock (double-press), modifier keys (⌘+drag temp-select, Alt+drag clone), floating action bar, smart defaults (sticky styles), batch undo/redo, nested group auto-sizing, column layout fixes, AI Touch, spec view, toolbar consolidation, benchmark examples, autoformat ordering, ReadMode, component libraries, GitHub Pages.
+
+<details>
+<summary>Full v0.8.30–v0.8.69 entries</summary>
+
+- **v0.8.68**: AI Touch + 3-mode view toggle
+- **v0.8.67**: ReadMode filtered views + read-only code view
+- **v0.8.66**: Toolbar consolidation (+ Insert dropdown)
+- **v0.8.65**: Status rename (draft→todo, in_progress→doing, +blocked)
+- **v0.8.64**: Spec badge improvements
+- **v0.8.62**: Sort fix + LSP theme/when + tree-sitter regen
+- **v0.8.60**: Text centering in nested layouts
+- **v0.8.59**: Content-first emitter ordering + section separators
+- **v0.8.58**: Text auto-centering in shapes
+- **v0.8.57**: Group reparent on drag-out
+- **v0.8.56**: Canvas→code selection sync + managed layout fixes
+- **v0.8.55/54**: Batch undo/redo (single step per drag gesture)
+- **v0.8.53**: Security (XSS fix), modularized extension.ts (3882→1026 lines)
+- **v0.8.52**: Column layout render order fix (petgraph → StableDiGraph)
+- **v0.8.49–48**: Group selection fixes
+- **v0.8.47**: Nested group drill-down fix
+- **v0.8.46**: Touch & gesture optimization (2-finger pan, pinch-to-zoom)
+- **v0.8.44**: One-click export menu + SVG export
+- **v0.8.43**: Copy selection as PNG (⌘⇧C)
+- **v0.8.42**: Onboarding overlay + welcome.fd
+- **v0.8.41**: Recursive ID rename on paste
+- **v0.8.40**: Smart defaults (sticky styles per tool)
+- **v0.8.39**: Contextual floating toolbar (glassmorphism)
+- **v0.8.38**: ⌘+drag temporary select, Alt+drag clone
+- **v0.8.37**: Z-order shortcuts, frame tool, help dialog
+- **v0.8.36**: Sticky tool mode (double-press to lock)
+- **v0.8.35**: Zen mode
+- **v0.8.34**: Sketchy rendering mode
+- **v0.8.33**: Arrow/connector drawing tool
+- **v0.8.32**: Single-click centered shape creation
+- **v0.8.31–30**: Testing expansion (E2E UX tests, nested group tests)
+
+</details>
+
+### Epoch: v0.6.32–v0.8.29 — Core Editing (30 releases)
+
+Core editing infrastructure: inline text editing (double-click, Esc cancel, live sync), label→text child migration, inline editor styling (fill match, font match, zoom scaling), resize handles, smart alignment guides, drag-and-drop animation picker, copy/paste, zoom-to-selection, color swatches, layer visibility toggle, minimap, grid overlay, arrow-key nudge, layer rename, spec/annotation system (⌘I, spec view, badges), auto-reveal canvas, cursor→canvas sync, group/ungroup undo/redo, frame node type.
+
+<details>
+<summary>Full v0.6.32–v0.8.29 entries</summary>
+
+- **v0.8.29**: Deprecated label property → text child nodes
+- **v0.8.28–26**: Group selection fixes (child drag, drill-down, group drag)
+- **v0.8.25**: Press animation fix on double-click
+- **v0.8.24**: Fix delete→code sync
+- **v0.8.23**: Group node visibility & drill-down
+- **v0.8.22**: Z-order fix (StableDiGraph)
+- **v0.8.20–19**: Zoom/focus improvements
+- **v0.8.21–18–17**: Style/text sync fixes
+- **v0.8.16**: Resize handle cursor feedback
+- **v0.8.15**: AI assist settings button
+- **v0.8.14–13**: Layer selection fixes
+- **v0.8.12**: Ellipse inline editor border-radius
+- **v0.8.11**: Constraint::Absolute → Position rename
+- **v0.8.10**: Zoom cap at 200%, inline editor centering
+- **v0.8.9**: 3×3 text alignment system
+- **v0.8.8**: Inline editor background match, live text sync
+- **v0.8.7**: Animation picker (drag-and-drop)
+- **v0.8.6**: Inline editor font/bounds fix
+- **v0.8.5**: Removed ## annotation syntax → spec blocks
+- **v0.8.4–3**: Multi-ungroup, context-aware group/ungroup
+- **v0.8.2–1–0**: Canvas centering, spec view keyword stripping, spec system
+- **v0.7.9–8–7–6–5–4–3**: Spec panel, smart guides, resize handles, copy/paste, zoom-to-selection, grid, minimap, nudge, layer rename
+- **v0.7.0**: spec block syntax (BREAKING)
+- **v0.6.41–32**: Core fixes (undo/redo, frame node type, canvas auto-reveal, cursor sync)
+
+</details>
 
 > Requirement status and test coverage are now tracked inline in [REQUIREMENTS.md](REQUIREMENTS.md).

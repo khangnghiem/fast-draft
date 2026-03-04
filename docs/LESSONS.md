@@ -2,7 +2,33 @@
 
 Engineering lessons discovered through building FD.
 
----
+<!-- KEYWORD INDEX — grep these keywords to find relevant sections:
+  resize, bounds, ownership     → L7-23   (Resize Fight: Bounds Ownership Chain)
+  e2e, unit-test, canvas-bug    → L26-33  (Unit Tests Can't Catch Canvas Interaction Bugs)
+  reparent, drag, context-menu  → L36-43  (Auto-Reparent on Drag Is Fragile)
+  containment, child, overlap   → L46-53  (Child Containment)
+  bidi, cursor, echo-back       → L56-66  (Bidi-Sync: Cursor Echo-Back)
+  layout, bounds, text-center   → L69-79  (Layout Solver: Bounds ≠ Visual Position)
+  defaults, renderer, multi-layer → L82-94 (Multi-Layer Defaults)
+  layer, selection, panel       → L97-107 (Layer Panel Skips Selection Highlight)
+  snap, smart-guides, threshold → L110-120 (Smart Guides: 1px Threshold)
+  group, detach, chasing        → L123-133 (Group Detach: Chasing Envelope)
+  webview, context-menu, vscode → L136-143 (VS Code Webview Context Menu)
+  drag-state, truncation, frame → L146-153 (Continuous Drag State Truncation)
+  git, push, main, hook         → L156-166 (Git: Never Push to Main)
+  text, reparent, animation     → L169-183 (Text Reparent Blocked)
+  hit-test, handle, radius      → L186-196 (Hit Radius Must Match Visual Handle Size)
+  text, padding, inline-editor  → L199-209 (Text Intrinsic Sizing Padding)
+  group, selection, handles     → L212-222 (Group Selection Handles)
+  wasm, props, defaults, json   → L225-234 (Always Return Resolved Defaults)
+  feature, removal, cleanup     → L237-246 (Feature Removal Requires Full Cleanup)
+  resize, cached-bounds, model  → L249-259 (Cached Bounds Must Track Mutations)
+  animation, time, hover        → L262-272 (Animations: Always Add Time Limits)
+  setPointerCapture, webview    → L275-284 (setPointerCapture Fails in Webview)
+  e2e, false-positive, codespace → L288-301 (E2E Tests Give False Positives)
+  codespace, cp, target, sync   → L304-318 (gh codespace cp Hangs)
+  browser, subagent, context, spiral → L320-344 (Browser Subagent Context Spiral)
+-->
 
 ## Resize Fight: Bounds Ownership Chain (SyncEngine ↔ Layout Engine ↔ JS)
 
@@ -299,3 +325,37 @@ Engineering lessons discovered through building FD.
 3. Check if `setPointerCapture` on sibling elements (like `canvas.setPointerCapture` at line 713 of `main.js`) interferes with document-level `pointermove` listeners used by the toolbar drag
 
 **Lesson**: **Codespace E2E tests are unreliable for VS Code webview pointer interaction bugs.** The rendering and event pipeline differs between remote/web VS Code and desktop Electron VS Code. Always verify pointer/drag fixes on the local desktop app. When a bug report says "not fixed at all," add diagnostic logging as the first debugging step.
+
+---
+
+## CI/CD: `gh codespace cp -r -e .` Hangs on Large Projects
+
+**Date**: 2026-03-04
+**Context**: Running `/e2e` workflow to sync local code to the Codespace before testing. The `gh codespace cp -r -e . remote:/workspaces/fast-draft` command hung for 20+ minutes with no output.
+
+**Root cause**: `gh codespace cp -r -e .` copies the **entire** working directory recursively — including `target/` (17GB of Rust build artifacts), `.git/` (85MB), `node_modules/`, and other generated files. The `gh codespace cp` command uses `scp` under the hood and has no `--exclude` flag, so there's no way to skip directories. The upload over the network becomes effectively infinite for large Rust projects.
+
+**Fix**: Never use `gh codespace cp -r -e .` on projects with build artifacts. Instead, use one of these approaches:
+
+1. **Git push + SSH pull** (preferred): Push changes to the remote, then `gh codespace ssh -- 'cd /workspaces/fast-draft && git pull origin <branch>'`
+2. **Targeted cp**: Copy only the directories that changed: `gh codespace cp -r -e crates/ fd-vscode/ examples/ remote:/workspaces/fast-draft/`
+3. **SSH rsync**: `gh codespace ssh -- rsync` with `--exclude target/ --exclude node_modules/ --exclude .git/`
+
+**Lesson**: **Never `gh codespace cp` the project root of a Rust project.** The `target/` directory alone can be 10-20GB. Always use git-based sync or targeted directory copies. The `/e2e` workflow's `gh codespace cp -r -e .` command is a trap for any project with substantial build artifacts.
+
+---
+
+## CI/CD: Browser Subagent Scratchpad Spirals on Heavy Context
+
+**Date**: 2026-03-04
+**Context**: Trying to run E2E browser testing in the same conversation that had done deep research (read CHANGELOG 800 lines, LESSONS.md, SHORTCUTS.md, `main.js` outline, `tools.rs`, multiple workflows, 20+ commands, 4 artifacts, and dozens of file edits).
+
+**Root cause**: Browser subagents inherit the **full parent conversation context**. When context is already heavy (>3000 lines of source code loaded), the subagent's internal reasoning enters an infinite spiral: "Wait, I'll do it. Actually, I'll do it. Wait, I'll also try to check..." — generating thousands of tokens of looping thought before the system crashes. This happened **twice** in the same session despite being warned after the first occurrence.
+
+**Fix**: **Never launch browser subagents in a context-heavy conversation.** Always:
+
+1. Do research/planning in one conversation
+2. Start a **new, clean conversation** for E2E browser testing
+3. The `/nonstop` Phase 4 rule already enforces this — follow it
+
+**Lesson**: **E2E browser testing MUST be done in a fresh conversation.** If you've done significant research, file reading, or code editing in the current conversation, the accumulated context will cause the browser subagent to spiral. This is a platform constraint, not a code bug. The `/nonstop` workflow's Phase 4 context-check rule exists for this reason.
