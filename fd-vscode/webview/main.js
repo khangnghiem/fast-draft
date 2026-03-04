@@ -3049,6 +3049,11 @@ function measureAllTextNodes() {
 function openInlineEditor(nodeId, propKey, currentValue) {
   if (inlineEditorActive) return;
 
+  // Force-measure text bounds BEFORE reading them — ensures the bounds
+  // reflect the actual rendered text size, not a stale intrinsic_size heuristic.
+  // This fixes both "double-click shape jump" and "editing vs non-editing mismatch".
+  measureAndUpdateTextBounds(nodeId);
+
   const boundsJson = fdCanvas.get_node_bounds(nodeId);
   const b = JSON.parse(boundsJson);
   // Use minimum size for zero-width nodes (e.g. new text nodes)
@@ -3066,17 +3071,20 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   const propsJson = fdCanvas.get_selected_node_props();
   const props = JSON.parse(propsJson);
 
-  // Get font info FIRST — needed for height calculation
-  const fontSize = props.fontSize ? Math.round(props.fontSize * zoomLevel) : Math.round(14 * zoomLevel);
+  // Get font info FIRST — needed for height calculation.
+  // Compute lineHeight from unscaled font size first, then scale — this
+  // matches how Canvas2D's draw_text() computes line_height = size * 1.2.
+  const rawFontSize = props.fontSize || 14;
+  const fontSize = Math.round(rawFontSize * zoomLevel);
   const fontFamily = props.fontFamily || "Inter, sans-serif";
   const fontWeight = props.fontWeight || 400;
-  const lineHeight = Math.round(fontSize * 1.2);
+  const lineHeight = Math.round(rawFontSize * 1.2 * zoomLevel);
 
   // Convert scene-space bounds to screen-space
   const sx = (b.x || 0) * zoomLevel + panX;
   const sy = (b.y || 0) * zoomLevel + panY;
   const sw = Math.max(bw * zoomLevel, 80);
-  // Tight height: use lineHeight as floor instead of arbitrary 28px
+  // Use actual bounds height — correctly sized for wrapped text
   const sh = Math.max(bh * zoomLevel, lineHeight + 4);
 
   // Determine background & text color based on node kind

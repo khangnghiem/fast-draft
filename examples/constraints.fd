@@ -18,9 +18,9 @@ frame @hero {
     }
   }
   layout: column gap=16 pad=40
-  w: 407.93 h: 187.77
-  x: 157.7
-  y: 678.67
+  w: 326.07 h: 147.34
+  x: 133.91
+  y: 673.86
 }
 
 text @_text_0 "Try It Now" {
@@ -30,11 +30,12 @@ text @_text_0 "Try It Now" {
   y: 785.35
 }
 
-text @hero_title "Welcome to FD" {
+text @hero_title "Welcome to " {
+  w: 388.49
   fill: #1A1A2E  # blue
   font: "Inter" extrabold 48
-  x: 306.81
-  y: 449.41
+  x: 108.84
+  y: 455.27
 }
 
 # ─── Offset-positioned tooltip ───────────────────────────────────────────
@@ -52,10 +53,6 @@ rect @tooltip_target {
 
 rect @tooltip {
   spec "Tooltip — positioned via offset constraint"
-  text @_text_2 "I'm 20px right, 60px down" {
-    fill: #FFFFFF  # white
-    font: "Inter" regular 13
-  }
   w: 200 h: 44
   fill: #1A1A2E  # blue
   corner: 8
@@ -65,6 +62,13 @@ rect @tooltip {
     opacity: 1
     ease: ease_out 300ms
   }
+}
+
+text @_text_2 "I'm 20px right, 60px down" {
+  fill: #FFFFFF  # white
+  font: "Inter" regular 13
+  x: 214.58
+  y: 995.72
 }
 
 # ─── Fill-parent panel ───────────────────────────────────────────────────
@@ -93,22 +97,22 @@ rect @fab {
   text @_text_4 "+" {
     fill: #FFFFFF  # white
     font: "Inter" bold 24
-    x: 20.19
-    y: 10.73
+    x: 19.63
+    y: 11.92
   }
   w: 56 h: 56
   fill: #6C5CE7  # blue
   corner: 28
   shadow: (0,4,16,#6C5CE760)
-  x: 145.14
-  y: 1111.11
+  x: 81.82
+  y: 1077.34
   when :hover {
-    scale: 1.1
-    ease: spring 300ms
+    scale: 1.5
+    ease: spring 1300ms
   }
   when :press {
-    scale: 0.9
-    ease: spring 150ms
+    scale: 0.5
+    ease: spring 2150ms
   }
 }
 
