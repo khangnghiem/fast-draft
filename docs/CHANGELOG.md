@@ -5,6 +5,11 @@
 
 ## Completed Requirements
 
+### v0.10.23 — Fix Toolbar Drag "Select All" + Unmovable Toolbar
+
+- **FIX (R3.39)**: Dragging the floating toolbar no longer triggers browser text selection ("select all") — added `user-select: none` and `touch-action: none` to `#floating-toolbar` CSS
+- **FIX (R3.39)**: Toolbar is now draggable from anywhere on its body — replaced scroll-handle-only `pointerdown` with a toolbar-wide handler that initiates drag from the toolbar background, paper body, and scroll handles (tool buttons excluded to preserve click-to-select and drag-to-create)
+
 ### v0.10.22 — Fix Canvas Resize + Text Editing Shape Preservation
 
 - **FIX (R3.2, R3.28)**: Resizing a parent shape (rect/ellipse/frame) no longer fights with JS-measured child bounds — `resolve_children` in `layout.rs` now uses `or_insert` instead of `insert` for Free-layout children, preserving existing cached bounds (e.g. text sizes from JS `measureAndUpdateTextBounds`) during `resolve_subtree` calls; previously each resize frame would overwrite child bounds with the `intrinsic_size` heuristic, creating a "resize fight"
