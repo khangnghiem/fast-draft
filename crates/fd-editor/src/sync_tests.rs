@@ -1335,9 +1335,10 @@ group @outer_cascade {
 }
 
 #[test]
-fn sync_move_managed_layout_child_noop() {
-    // Moving a text child inside a Column-layout frame should be a no-op.
-    // The layout solver owns child placement in managed layouts.
+fn sync_move_managed_layout_child_converts_to_absolute() {
+    // Moving a child inside a Column-layout frame converts it to
+    // absolute positioning (Figma-style). Bounds update and a Position
+    // constraint is added, pulling the child out of the layout flow.
     let input = "frame @hero {\n  w: 400 h: 200\n  layout: column gap=16 pad=40\n\n  text @title \"Welcome to FD\" {\n    font: \"Inter\" 800 48\n  }\n  text @sub \"The token-efficient design format\" {\n    font: \"Inter\" 400 18\n  }\n}\n";
     let viewport = Viewport {
         width: 800.0,
@@ -1349,36 +1350,35 @@ fn sync_move_managed_layout_child_noop() {
 
     let bounds_before = engine.bounds[&title_idx];
 
-    // Attempt to move text child — should be silently ignored
+    // Move text child — should now work (absolute positioning)
     engine.apply_mutation(GraphMutation::MoveNode {
         id: title_id,
         dx: 100.0,
         dy: 50.0,
     });
 
-    // Bounds should be unchanged
+    // Bounds should update
     let bounds_after = engine.bounds[&title_idx];
     assert!(
-        (bounds_after.x - bounds_before.x).abs() < 0.01,
-        "x should not change: {} vs {}",
-        bounds_after.x,
-        bounds_before.x
+        (bounds_after.x - bounds_before.x - 100.0).abs() < 0.01,
+        "x should shift by 100: {} → {}",
+        bounds_before.x,
+        bounds_after.x
     );
     assert!(
-        (bounds_after.y - bounds_before.y).abs() < 0.01,
-        "y should not change: {} vs {}",
-        bounds_after.y,
-        bounds_before.y
+        (bounds_after.y - bounds_before.y - 50.0).abs() < 0.01,
+        "y should shift by 50: {} → {}",
+        bounds_before.y,
+        bounds_after.y
     );
 
-    // No Position constraint should be added
+    // A Position constraint should be added
     let node = engine.graph.get_by_id(title_id).unwrap();
     assert!(
-        !node
-            .constraints
+        node.constraints
             .iter()
             .any(|c| matches!(c, Constraint::Position { .. })),
-        "no Position constraint should be added to managed-layout child"
+        "Position constraint should be added for absolute positioning"
     );
 }
 

@@ -335,9 +335,10 @@ frame @card {
 }
 
 #[test]
-fn layout_column_ignores_position_constraint() {
-    // Children with stale Position constraints inside a column layout
-    // should be positioned by the column, not by their Position.
+fn layout_column_position_constraint_becomes_absolute() {
+    // Children with Position constraints inside a column layout become
+    // absolutely positioned (Figma-style). They're pulled out of the
+    // column flow, while children without Position stay stacked.
     let input = r#"
 frame @card {
   w: 800 h: 600
@@ -365,26 +366,26 @@ x: 500 y: 500
     let b = bounds[&b_idx];
     let card = bounds[&card_idx];
 
-    // Both children should be at column x = pad (20), NOT at x=500
+    // @a stays in column flow: x = card.x + pad (20)
     assert!(
-        (a.x - b.x).abs() < 0.01,
-        "a.x ({}) and b.x ({}) should be equal (column aligns them)",
+        (a.x - (card.x + 20.0)).abs() < 0.01,
+        "a.x ({}) should be card.x + pad ({})",
         a.x,
-        b.x
+        card.x + 20.0
     );
-    // b should be below a by height + gap (40 + 10 = 50)
+
+    // @b has Position(500, 500) → absolutely positioned at card.x + 500
     assert!(
-        (b.y - a.y - 50.0).abs() < 0.01,
-        "b.y ({}) should be a.y + 50, got diff = {}",
+        (b.x - (card.x + 500.0)).abs() < 0.01,
+        "b.x ({}) should be card.x + 500 ({})",
+        b.x,
+        card.x + 500.0
+    );
+    assert!(
+        (b.y - (card.y + 500.0)).abs() < 0.01,
+        "b.y ({}) should be card.y + 500 ({})",
         b.y,
-        b.y - a.y
-    );
-    // Both children should be inside the card
-    assert!(
-        b.y + b.height <= card.y + card.height + 0.1,
-        "b bottom ({}) must be inside card bottom ({})",
-        b.y + b.height,
-        card.y + card.height
+        card.y + 500.0
     );
 }
 

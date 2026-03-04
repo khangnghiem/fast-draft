@@ -49,6 +49,10 @@ description: E2E browser testing via GitHub Codespace
    | Theme toggle       | Click 🌙 button                 | Dark/light switch                               |
    | Keyboard shortcuts | Press ?                         | Help overlay shows                              |
    | Code ↔ Canvas sync | Edit FD source, watch canvas    | Bidirectional updates                           |
+   | Frame resize       | F, draw frame, drag corner      | Frame resizes, children stay in place           |
+   | Frame child move   | Click child in frame, drag      | Child moves independently (gets Position)       |
+   | Column child move  | Move child in `layout: column`  | Child becomes absolute-positioned               |
+   | Inline edit frame  | Double-click text in frame      | Editor matches text shape and position          |
 
 6. **Report** any bugs or visual issues found.
 

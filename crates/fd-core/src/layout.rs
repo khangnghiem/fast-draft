@@ -81,13 +81,10 @@ fn resolve_constraints_top_down(
     viewport: Viewport,
 ) {
     let node = &graph.graph[node_idx];
-    let parent_managed = is_parent_managed(graph, node_idx);
     for constraint in &node.constraints {
-        // Skip Position constraints for children inside managed layouts —
-        // the Column/Row/Grid layout mode owns child positioning.
-        if parent_managed && matches!(constraint, Constraint::Position { .. }) {
-            continue;
-        }
+        // Position constraints now apply even inside managed layouts —
+        // a moved child becomes "absolutely positioned" within the frame
+        // (like Figma's Absolute Position toggle).
         apply_constraint(graph, node_idx, constraint, bounds, viewport);
     }
 
@@ -183,8 +180,20 @@ fn resolve_children(
     match layout {
         LayoutMode::Column { gap, pad } => {
             let content_width = parent_bounds.width - 2.0 * pad;
-            // Pass 1: initialize children at parent origin + pad, recurse to resolve nested groups
-            for &child_idx in &children {
+            // Filter: children with Position constraints are absolutely positioned
+            // within the frame — they don't participate in the column flow.
+            let flow_children: Vec<NodeIndex> = children
+                .iter()
+                .copied()
+                .filter(|&ci| {
+                    !graph.graph[ci]
+                        .constraints
+                        .iter()
+                        .any(|c| matches!(c, Constraint::Position { .. }))
+                })
+                .collect();
+            // Pass 1: initialize flow children at parent origin + pad
+            for &child_idx in &flow_children {
                 let child_node = &graph.graph[child_idx];
                 let child_size = intrinsic_size(child_node);
                 // Stretch text nodes to fill column width (like CSS align-items: stretch)
@@ -204,9 +213,22 @@ fn resolve_children(
                 );
                 resolve_children(graph, child_idx, bounds, viewport);
             }
-            // Pass 2: reposition using resolved sizes, shifting entire subtrees
-            let mut y = parent_bounds.y + pad;
+            // Absolutely-positioned children: initialize from intrinsic_size
             for &child_idx in &children {
+                if !flow_children.contains(&child_idx) {
+                    let child_size = intrinsic_size(&graph.graph[child_idx]);
+                    bounds.entry(child_idx).or_insert(ResolvedBounds {
+                        x: parent_bounds.x,
+                        y: parent_bounds.y,
+                        width: child_size.0,
+                        height: child_size.1,
+                    });
+                    resolve_children(graph, child_idx, bounds, viewport);
+                }
+            }
+            // Pass 2: reposition flow children using resolved sizes
+            let mut y = parent_bounds.y + pad;
+            for &child_idx in &flow_children {
                 let resolved = bounds[&child_idx];
                 let dx = (parent_bounds.x + pad) - resolved.x;
                 let dy = y - resolved.y;
@@ -217,8 +239,19 @@ fn resolve_children(
             }
         }
         LayoutMode::Row { gap, pad } => {
-            // Pass 1: initialize and recurse
-            for &child_idx in &children {
+            // Filter: absolutely-positioned children skip the row flow
+            let flow_children: Vec<NodeIndex> = children
+                .iter()
+                .copied()
+                .filter(|&ci| {
+                    !graph.graph[ci]
+                        .constraints
+                        .iter()
+                        .any(|c| matches!(c, Constraint::Position { .. }))
+                })
+                .collect();
+            // Pass 1: initialize flow children
+            for &child_idx in &flow_children {
                 let child_size = intrinsic_size(&graph.graph[child_idx]);
                 bounds.insert(
                     child_idx,
@@ -231,9 +264,22 @@ fn resolve_children(
                 );
                 resolve_children(graph, child_idx, bounds, viewport);
             }
-            // Pass 2: reposition using resolved widths, shifting subtrees
-            let mut x = parent_bounds.x + pad;
+            // Absolutely-positioned children
             for &child_idx in &children {
+                if !flow_children.contains(&child_idx) {
+                    let child_size = intrinsic_size(&graph.graph[child_idx]);
+                    bounds.entry(child_idx).or_insert(ResolvedBounds {
+                        x: parent_bounds.x,
+                        y: parent_bounds.y,
+                        width: child_size.0,
+                        height: child_size.1,
+                    });
+                    resolve_children(graph, child_idx, bounds, viewport);
+                }
+            }
+            // Pass 2: reposition flow children
+            let mut x = parent_bounds.x + pad;
+            for &child_idx in &flow_children {
                 let resolved = bounds[&child_idx];
                 let dx = x - resolved.x;
                 let dy = (parent_bounds.y + pad) - resolved.y;
@@ -244,8 +290,19 @@ fn resolve_children(
             }
         }
         LayoutMode::Grid { cols, gap, pad } => {
-            // Pass 1: initialize and recurse
-            for &child_idx in &children {
+            // Filter: absolutely-positioned children skip the grid flow
+            let flow_children: Vec<NodeIndex> = children
+                .iter()
+                .copied()
+                .filter(|&ci| {
+                    !graph.graph[ci]
+                        .constraints
+                        .iter()
+                        .any(|c| matches!(c, Constraint::Position { .. }))
+                })
+                .collect();
+            // Pass 1: initialize flow children
+            for &child_idx in &flow_children {
                 let child_size = intrinsic_size(&graph.graph[child_idx]);
                 bounds.insert(
                     child_idx,
@@ -258,13 +315,26 @@ fn resolve_children(
                 );
                 resolve_children(graph, child_idx, bounds, viewport);
             }
-            // Pass 2: reposition using resolved sizes, shifting subtrees
+            // Absolutely-positioned children
+            for &child_idx in &children {
+                if !flow_children.contains(&child_idx) {
+                    let child_size = intrinsic_size(&graph.graph[child_idx]);
+                    bounds.entry(child_idx).or_insert(ResolvedBounds {
+                        x: parent_bounds.x,
+                        y: parent_bounds.y,
+                        width: child_size.0,
+                        height: child_size.1,
+                    });
+                    resolve_children(graph, child_idx, bounds, viewport);
+                }
+            }
+            // Pass 2: reposition flow children
             let mut x = parent_bounds.x + pad;
             let mut y = parent_bounds.y + pad;
             let mut col = 0u32;
             let mut row_height = 0.0f32;
 
-            for &child_idx in &children {
+            for &child_idx in &flow_children {
                 let resolved = bounds[&child_idx];
                 let dx = x - resolved.x;
                 let dy = y - resolved.y;
