@@ -3,6 +3,8 @@
 //! Walks the resolved scene graph and emits Vello paint operations:
 //! fills, strokes, paths, text glyphs, gradients.
 
+const COLOR_MAX: f32 = 255.0;
+
 use fd_core::NodeIndex;
 use fd_core::ResolvedBounds;
 use fd_core::SceneGraph;
@@ -163,19 +165,19 @@ fn paint_to_color(paint: &Paint, opacity: Option<f32>) -> Color {
     let alpha = opacity.unwrap_or(1.0).clamp(0.0, 1.0);
     match paint {
         Paint::Solid(c) => Color::from_rgba8(
-            (c.r * 255.0) as u8,
-            (c.g * 255.0) as u8,
-            (c.b * 255.0) as u8,
-            (c.a * alpha * 255.0) as u8,
+            (c.r * COLOR_MAX) as u8,
+            (c.g * COLOR_MAX) as u8,
+            (c.b * COLOR_MAX) as u8,
+            (c.a * alpha * COLOR_MAX) as u8,
         ),
         Paint::LinearGradient { stops, .. } | Paint::RadialGradient { stops } => stops
             .first()
             .map(|s| {
                 Color::from_rgba8(
-                    (s.color.r * 255.0) as u8,
-                    (s.color.g * 255.0) as u8,
-                    (s.color.b * 255.0) as u8,
-                    (s.color.a * alpha * 255.0) as u8,
+                    (s.color.r * COLOR_MAX) as u8,
+                    (s.color.g * COLOR_MAX) as u8,
+                    (s.color.b * COLOR_MAX) as u8,
+                    (s.color.a * alpha * COLOR_MAX) as u8,
                 )
             })
             .unwrap_or(Color::from_rgb8(0, 0, 0)),

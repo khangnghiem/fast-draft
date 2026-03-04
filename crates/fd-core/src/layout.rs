@@ -6,6 +6,16 @@
 
 use crate::model::*;
 use petgraph::graph::NodeIndex;
+
+const DEFAULT_VIEWPORT_WIDTH: f32 = 800.0;
+const DEFAULT_VIEWPORT_HEIGHT: f32 = 600.0;
+const DEFAULT_FONT_SIZE: f32 = 14.0;
+const DEFAULT_GENERIC_WIDTH: f32 = 120.0;
+const DEFAULT_GENERIC_HEIGHT: f32 = 40.0;
+const DEFAULT_PATH_SIZE: f32 = 100.0;
+const CHAR_WIDTH_RATIO: f32 = 0.6;
+const LINE_HEIGHT_RATIO: f32 = 1.4;
+
 use std::collections::HashMap;
 
 /// The canvas (viewport) dimensions.
@@ -18,8 +28,8 @@ pub struct Viewport {
 impl Default for Viewport {
     fn default() -> Self {
         Self {
-            width: 800.0,
-            height: 600.0,
+            width: DEFAULT_VIEWPORT_WIDTH,
+            height: DEFAULT_VIEWPORT_HEIGHT,
         }
     }
 }
@@ -495,14 +505,21 @@ fn intrinsic_size(node: &SceneNode) -> (f32, f32) {
         NodeKind::Rect { width, height } => (*width, *height),
         NodeKind::Ellipse { rx, ry } => (*rx * 2.0, *ry * 2.0),
         NodeKind::Text { content, .. } => {
-            let font_size = node.style.font.as_ref().map_or(14.0, |f| f.size);
-            let char_width = font_size * 0.6;
-            (content.chars().count() as f32 * char_width, font_size * 1.4)
+            let font_size = node
+                .style
+                .font
+                .as_ref()
+                .map_or(DEFAULT_FONT_SIZE, |f| f.size);
+            let char_width = font_size * CHAR_WIDTH_RATIO;
+            (
+                content.chars().count() as f32 * char_width,
+                font_size * LINE_HEIGHT_RATIO,
+            )
         }
         NodeKind::Group => (0.0, 0.0), // Auto-sized: computed after children resolve
         NodeKind::Frame { width, height, .. } => (*width, *height),
-        NodeKind::Path { .. } => (100.0, 100.0), // Computed from path bounds
-        NodeKind::Generic => (120.0, 40.0),      // Placeholder label box
+        NodeKind::Path { .. } => (DEFAULT_PATH_SIZE, DEFAULT_PATH_SIZE), // Computed from path bounds
+        NodeKind::Generic => (DEFAULT_GENERIC_WIDTH, DEFAULT_GENERIC_HEIGHT), // Placeholder label box
         NodeKind::Root => (0.0, 0.0),
     }
 }

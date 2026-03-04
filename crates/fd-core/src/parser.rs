@@ -5,6 +5,10 @@
 //! (group, rect, ellipse, path, text), inline properties, animations,
 //! and top-level constraints.
 
+const DEFAULT_FRAME_SIZE: f32 = 200.0;
+const DEFAULT_RECT_SIZE: f32 = 100.0;
+const DEFAULT_ELLIPSE_RADIUS: f32 = 50.0;
+
 use crate::id::NodeId;
 use crate::model::*;
 use winnow::ascii::space1;
@@ -592,18 +596,18 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let kind = match kind_str {
         "group" => NodeKind::Group, // Group is purely organizational — layout ignored
         "frame" => NodeKind::Frame {
-            width: width.unwrap_or(200.0),
-            height: height.unwrap_or(200.0),
+            width: width.unwrap_or(DEFAULT_FRAME_SIZE),
+            height: height.unwrap_or(DEFAULT_FRAME_SIZE),
             clip,
             layout,
         },
         "rect" => NodeKind::Rect {
-            width: width.unwrap_or(100.0),
-            height: height.unwrap_or(100.0),
+            width: width.unwrap_or(DEFAULT_RECT_SIZE),
+            height: height.unwrap_or(DEFAULT_RECT_SIZE),
         },
         "ellipse" => NodeKind::Ellipse {
-            rx: width.unwrap_or(50.0),
-            ry: height.unwrap_or(50.0),
+            rx: width.unwrap_or(DEFAULT_ELLIPSE_RADIUS),
+            ry: height.unwrap_or(DEFAULT_ELLIPSE_RADIUS),
         },
         "text" => NodeKind::Text {
             content: inline_text.unwrap_or_default(),

@@ -9,6 +9,9 @@
 use crate::id::NodeId;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableDiGraph;
+
+const COLOR_MAX: f32 = 255.0;
+
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::collections::HashMap;
@@ -51,9 +54,9 @@ impl Color {
                 let g = hex_val(bytes[1])?;
                 let b = hex_val(bytes[2])?;
                 Some(Self::rgba(
-                    (r * 17) as f32 / 255.0,
-                    (g * 17) as f32 / 255.0,
-                    (b * 17) as f32 / 255.0,
+                    (r * 17) as f32 / COLOR_MAX,
+                    (g * 17) as f32 / COLOR_MAX,
+                    (b * 17) as f32 / COLOR_MAX,
                     1.0,
                 ))
             }
@@ -63,10 +66,10 @@ impl Color {
                 let b = hex_val(bytes[2])?;
                 let a = hex_val(bytes[3])?;
                 Some(Self::rgba(
-                    (r * 17) as f32 / 255.0,
-                    (g * 17) as f32 / 255.0,
-                    (b * 17) as f32 / 255.0,
-                    (a * 17) as f32 / 255.0,
+                    (r * 17) as f32 / COLOR_MAX,
+                    (g * 17) as f32 / COLOR_MAX,
+                    (b * 17) as f32 / COLOR_MAX,
+                    (a * 17) as f32 / COLOR_MAX,
                 ))
             }
             6 => {
@@ -74,9 +77,9 @@ impl Color {
                 let g = hex_val(bytes[2])? << 4 | hex_val(bytes[3])?;
                 let b = hex_val(bytes[4])? << 4 | hex_val(bytes[5])?;
                 Some(Self::rgba(
-                    r as f32 / 255.0,
-                    g as f32 / 255.0,
-                    b as f32 / 255.0,
+                    r as f32 / COLOR_MAX,
+                    g as f32 / COLOR_MAX,
+                    b as f32 / COLOR_MAX,
                     1.0,
                 ))
             }
@@ -86,10 +89,10 @@ impl Color {
                 let b = hex_val(bytes[4])? << 4 | hex_val(bytes[5])?;
                 let a = hex_val(bytes[6])? << 4 | hex_val(bytes[7])?;
                 Some(Self::rgba(
-                    r as f32 / 255.0,
-                    g as f32 / 255.0,
-                    b as f32 / 255.0,
-                    a as f32 / 255.0,
+                    r as f32 / COLOR_MAX,
+                    g as f32 / COLOR_MAX,
+                    b as f32 / COLOR_MAX,
+                    a as f32 / COLOR_MAX,
                 ))
             }
             _ => None,
@@ -98,10 +101,10 @@ impl Color {
 
     /// Emit as shortest valid hex string.
     pub fn to_hex(&self) -> String {
-        let r = (self.r * 255.0).round() as u8;
-        let g = (self.g * 255.0).round() as u8;
-        let b = (self.b * 255.0).round() as u8;
-        let a = (self.a * 255.0).round() as u8;
+        let r = (self.r * COLOR_MAX).round() as u8;
+        let g = (self.g * COLOR_MAX).round() as u8;
+        let b = (self.b * COLOR_MAX).round() as u8;
+        let a = (self.a * COLOR_MAX).round() as u8;
         if a == 255 {
             format!("#{r:02X}{g:02X}{b:02X}")
         } else {
@@ -1011,7 +1014,7 @@ mod tests {
         assert_eq!(c.to_hex(), "#6C5CE7");
 
         let c2 = Color::from_hex("#FF000080").unwrap();
-        assert!((c2.a - 128.0 / 255.0).abs() < 0.01);
+        assert!((c2.a - 128.0 / COLOR_MAX).abs() < 0.01);
         assert!(c2.to_hex().len() == 9); // #RRGGBBAA
     }
 

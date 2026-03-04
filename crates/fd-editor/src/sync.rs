@@ -17,6 +17,15 @@ use fd_core::emitter::emit_document;
 use fd_core::id::NodeId;
 use fd_core::model::*;
 use fd_core::parser::parse_document;
+
+const ROUNDING_FACTOR: f32 = 100.0;
+const DUPLICATE_OFFSET: f32 = 20.0;
+const DEFAULT_TEXT_WIDTH: f32 = 80.0;
+const DEFAULT_TEXT_HEIGHT: f32 = 24.0;
+const DEFAULT_FONT_SIZE: f32 = 14.0;
+const CHAR_WIDTH_RATIO: f32 = 0.6;
+const LINE_HEIGHT_RATIO: f32 = 1.4;
+
 use fd_core::{ResolvedBounds, Viewport, resolve_layout};
 use std::collections::HashMap;
 
@@ -134,15 +143,15 @@ impl SyncEngine {
                                     | Constraint::FillParent { .. }
                             )
                         });
-                        let rx = (rel_x * 100.0).round() / 100.0;
-                        let ry = (rel_y * 100.0).round() / 100.0;
+                        let rx = (rel_x * ROUNDING_FACTOR).round() / ROUNDING_FACTOR;
+                        let ry = (rel_y * ROUNDING_FACTOR).round() / ROUNDING_FACTOR;
                         node.constraints.push(Constraint::Position { x: rx, y: ry });
                     }
                 }
             }
             GraphMutation::ResizeNode { id, width, height } => {
-                let rw = (width * 100.0).round() / 100.0;
-                let rh = (height * 100.0).round() / 100.0;
+                let rw = (width * ROUNDING_FACTOR).round() / ROUNDING_FACTOR;
+                let rh = (height * ROUNDING_FACTOR).round() / ROUNDING_FACTOR;
                 if let Some(node) = self.graph.get_by_id_mut(id) {
                     match &mut node.kind {
                         NodeKind::Rect {
@@ -200,7 +209,7 @@ impl SyncEngine {
                     NodeKind::Rect { width, height } => (*width, *height),
                     NodeKind::Ellipse { rx, ry } => (rx * 2.0, ry * 2.0),
                     NodeKind::Frame { width, height, .. } => (*width, *height),
-                    NodeKind::Text { .. } => (80.0, 24.0),
+                    NodeKind::Text { .. } => (DEFAULT_TEXT_WIDTH, DEFAULT_TEXT_HEIGHT),
                     _ => (0.0, 0.0),
                 };
                 let idx = self.graph.add_node(parent_idx, *node);
@@ -258,8 +267,8 @@ impl SyncEngine {
                     // Offset via constraint
                     cloned.constraints.push(Constraint::Offset {
                         from: id,
-                        dx: 20.0,
-                        dy: 20.0,
+                        dx: DUPLICATE_OFFSET,
+                        dy: DUPLICATE_OFFSET,
                     });
                     self.graph.add_node(self.graph.root, cloned);
                 }
@@ -500,9 +509,9 @@ impl SyncEngine {
                 .style
                 .font
                 .as_ref()
-                .map_or(14.0, |f| f.size);
-            let text_w = content.chars().count() as f32 * font_size * 0.6;
-            let text_h = font_size * 1.4;
+                .map_or(DEFAULT_FONT_SIZE, |f| f.size);
+            let text_w = content.chars().count() as f32 * font_size * CHAR_WIDTH_RATIO;
+            let text_h = font_size * LINE_HEIGHT_RATIO;
             let cx = child_b.x + child_b.width / 2.0;
             let cy = child_b.y + child_b.height / 2.0;
             child_b.width = text_w;
@@ -674,9 +683,9 @@ fn handle_child_group_relationship(
             .style
             .font
             .as_ref()
-            .map_or(14.0, |f| f.size);
-        let text_w = content.chars().count() as f32 * font_size * 0.6;
-        let text_h = font_size * 1.4;
+            .map_or(DEFAULT_FONT_SIZE, |f| f.size);
+        let text_w = content.chars().count() as f32 * font_size * CHAR_WIDTH_RATIO;
+        let text_h = font_size * LINE_HEIGHT_RATIO;
 
         // Shrink the overlap test box to the visual text area.
         let cx = child_b.x + child_b.width / 2.0;
@@ -791,8 +800,8 @@ pub fn detach_child_from_group(
         .get(&new_parent_idx)
         .map(|b| (b.x, b.y))
         .unwrap_or((0.0, 0.0));
-    let new_rel_x = ((child_b.x - new_parent_offset.0) * 100.0).round() / 100.0;
-    let new_rel_y = ((child_b.y - new_parent_offset.1) * 100.0).round() / 100.0;
+    let new_rel_x = ((child_b.x - new_parent_offset.0) * ROUNDING_FACTOR).round() / ROUNDING_FACTOR;
+    let new_rel_y = ((child_b.y - new_parent_offset.1) * ROUNDING_FACTOR).round() / ROUNDING_FACTOR;
 
     let child_id = graph.graph[child_idx].id;
     if let Some(node) = graph.get_by_id_mut(child_id) {
