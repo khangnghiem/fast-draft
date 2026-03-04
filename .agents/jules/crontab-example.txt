@@ -1,0 +1,23 @@
+# Jules Nightly Cron Schedule
+# VN timezone = UTC+7
+# Nightly window: 1am–7am VN = 18:00–00:00 UTC
+
+# ─── Launch nightly sessions at 1:00am VN (18:00 UTC) ───
+0 18 * * * cd /Users/khangnghiem/fast-draft && .agents/jules/launch-nightly.sh >> /tmp/jules-nightly.log 2>&1
+
+# ─── Generate morning report at 6:50am VN (23:50 UTC previous day) ───
+# Squash-merges passing PRs and outputs consolidated report
+50 23 * * * cd /Users/khangnghiem/fast-draft && .agents/jules/morning-report.sh 2>&1 | tee /tmp/jules-morning-report.md
+
+# ─── Optional: Email the report (requires mail/sendmail configured) ───
+# 55 23 * * * cat /tmp/jules-morning-report-$(date +\%Y\%m\%d).md | mail -s "FD Overnight Report — $(date +\%Y-\%m-\%d)" your@email.com
+
+# ─── Installation ───
+# 1. Edit crontab: crontab -e
+# 2. Paste the active lines above (without the # prefix)
+# 3. Save and exit
+# 4. Verify: crontab -l
+#
+# Note: Make sure jules CLI is in PATH for cron:
+#   Add to top of crontab: PATH=/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin
+#   Or use full path: /usr/local/bin/jules
