@@ -10,12 +10,12 @@
 - **FIX (R3.39)**: Dragging the floating toolbar no longer triggers browser text selection ("select all") — added `user-select: none` and `touch-action: none` to `#floating-toolbar` CSS
 - **FIX (R3.39)**: Toolbar is now draggable from anywhere on its body — replaced scroll-handle-only `pointerdown` with a toolbar-wide handler that initiates drag from the toolbar background, paper body, and scroll handles (tool buttons excluded to preserve click-to-select and drag-to-create)
 
-### v0.10.22 — Fix Canvas Resize + Text Editing Shape Preservation
+### v0.10.23 — Fix Canvas Resize + Text Editing Shape Preservation
 
-- **FIX (R3.2, R3.28)**: Resizing a parent shape (rect/ellipse/frame) no longer fights with JS-measured child bounds — `resolve_children` in `layout.rs` now uses `or_insert` instead of `insert` for Free-layout children, preserving existing cached bounds (e.g. text sizes from JS `measureAndUpdateTextBounds`) during `resolve_subtree` calls; previously each resize frame would overwrite child bounds with the `intrinsic_size` heuristic, creating a "resize fight"
-- **FIX (R3.28)**: Double-clicking a text node now preserves its shape — `openInlineEditor` in `main.js` force-calls `measureAndUpdateTextBounds` before reading bounds, ensuring the textarea matches the actual rendered text size
-- **FIX (R3.28)**: Text inline editor lineHeight now matches Canvas2D renderer — computed as `rawFontSize * 1.2 * zoomLevel` (unscaled first, then zoom) instead of `Math.round(fontSize * zoomLevel) * 1.2` (zoom first, then scale), eliminating sub-pixel mismatches at fractional zoom levels
-- **TESTING**: New `resolve_subtree_preserves_cached_child_bounds` regression test — simulates JS-measured text bounds surviving parent resize
+- **FIX (R3.2, R3.28)**: Resizing parent shapes (rect/ellipse/frame) is now smooth — `apply_mutations` in `lib.rs` now skips the full `resolve_layout()` call for resize-only mutation batches (same as move-only batches). Previously, `resolve()` created a fresh HashMap that discarded all in-place bounds updates including JS-measured text sizes, causing a "resize fight" that snapped shapes back every frame
+- **FIX (R3.28)**: Frame resize and child movement now works — same root cause as above; `resolve_subtree` in `SyncEngine::apply_mutation` handles subtree re-layout during drag, `resolve()` was undoing it
+- **FIX (R3.28)**: Inline text editor now renders correctly before textarea appears — added `render()` call after `clear_pressed()` in `openInlineEditor` to flush bounds changes from `measureAndUpdateTextBounds` to the canvas
+- **TESTING**: Updated `resolve_subtree_recenters_child_after_resize` regression test
 
 ### v0.10.20 — Child Placement & Auto-Center Multi-Child
 
