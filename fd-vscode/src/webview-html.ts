@@ -1383,6 +1383,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     canvas {
       display: block;
       flex: 1;
+      position: relative;
+      z-index: 1;
     }
     #loading {
       position: absolute;

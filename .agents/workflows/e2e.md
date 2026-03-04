@@ -4,7 +4,7 @@ description: E2E browser testing via GitHub Codespace
 
 # E2E Testing Workflow
 
-> Open the project in a GitHub Codespace via Chrome and manually test the FD canvas editor.
+> Test the FD canvas editor in a GitHub Codespace via the Chrome browser subagent.
 
 ## Prerequisites
 
@@ -13,23 +13,37 @@ description: E2E browser testing via GitHub Codespace
 
 ## Steps
 
-1. **List available Codespaces**:
+// turbo
+
+1. **List available Codespaces** (terminal):
 
    ```bash
    gh codespace list
    ```
 
-2. **Open in browser** (starts if stopped):
+   Note the codespace name (e.g. `special-space-invention-j74pj54jgxv35rw7`).
 
-   ```bash
-   gh codespace code -c <codespace-name> --web
-   ```
+// turbo 2. **Sync latest code to Codespace** (terminal):
 
-3. **Open a `.fd` file** — e.g. `examples/demo.fd`
+```bash
+gh codespace cp -r -e . remote:/workspaces/fast-draft -c <codespace-name>
+```
 
-4. **Open with Canvas editor** — Command Palette → "FD: Open Canvas Editor"
+3. **Open Codespace in Chrome browser subagent**:
 
-5. **Test checklist**:
+   Navigate the browser subagent to `https://<codespace-name>.github.dev`
+   (e.g. `https://special-space-invention-j74pj54jgxv35rw7.github.dev`).
+
+   > **IMPORTANT**: Do NOT use `gh codespace code --web` in the terminal.
+   > The browser subagent must navigate to the URL directly.
+
+   Wait for VS Code to fully load (file explorer visible).
+
+4. **Open a `.fd` file** — e.g. `examples/constraints.fd` or `examples/demo.fd`
+
+5. **Open with Canvas editor** — Command Palette (Ctrl+Shift+P) → "FD: Open Canvas Editor"
+
+6. **Test checklist**:
 
    | Feature            | How to test                     | Expected                                        |
    | ------------------ | ------------------------------- | ----------------------------------------------- |
@@ -54,18 +68,11 @@ description: E2E browser testing via GitHub Codespace
    | Column child move  | Move child in `layout: column`  | Child becomes absolute-positioned               |
    | Inline edit frame  | Double-click text in frame      | Editor matches text shape and position          |
 
-6. **Report** any bugs or visual issues found.
-
-## AI Automation (Browser Subagent)
-
-Antigravity can use **Chrome browser subagents** to run E2E tests automatically — no manual browser interaction needed.
-
-Prompt the agent with:
-
-> "Run the /e2e tests using the browser subagent. Navigate to https://github.com/codespaces, open the active codespace, ensure the UI renders correctly, and run `pnpm test` inside the `fd-vscode` terminal."
+7. **Report** any bugs or visual issues found.
 
 ## Tips
 
-- The Codespace needs ~30s to start if stopped
+- If the Codespace is stopped, it needs ~30s to start — the browser will show a loading screen
+- If a tab with the Codespace URL already exists, **reuse it** instead of opening a new one
 - All keyboard shortcuts are listed in the `?` help overlay
-- Use ⌘ on Mac, Ctrl on Linux/Windows in the Codespace
+- Use Ctrl (not ⌘) in the Codespace terminal since it runs Linux

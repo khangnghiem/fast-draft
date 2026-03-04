@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.10.27 — Fix Toolbar Drag (v2 — 3-Layer Defense)
+
+- **FIX (R3.39)**: Toolbar drag now actually works — previous fix (v0.10.23) was ineffective because canvas `pointerdown` intercepted events over the toolbar area. Applied 3 defensive fixes:
+  1. Canvas `pointerdown` guard: skips events whose coordinates fall inside the toolbar bounding rect
+  2. Canvas CSS `position: relative; z-index: 1` for proper stacking context (toolbar z-index: 25)
+  3. `releasePointerCapture` on every canvas `pointerup` to prevent stale captures from blocking toolbar events
+
 ### v0.10.23 — Fix Toolbar Drag "Select All" + Unmovable Toolbar
 
 - **FIX (R3.39)**: Dragging the floating toolbar no longer triggers browser text selection ("select all") — added `user-select: none` and `touch-action: none` to `#floating-toolbar` CSS
