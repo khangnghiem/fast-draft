@@ -286,18 +286,19 @@ fn resolve_children(
             }
         }
         LayoutMode::Free => {
-            // Each child positioned at parent origin by default
+            // Each child positioned at parent origin by default.
+            // Use or_insert to preserve existing cached bounds (e.g. JS-measured
+            // text sizes, explicit positions) during resolve_subtree calls.
+            // For a fresh map (from resolve_layout), or_insert behaves
+            // identically to insert since there are no existing entries.
             for &child_idx in &children {
                 let child_size = intrinsic_size(&graph.graph[child_idx]);
-                bounds.insert(
-                    child_idx,
-                    ResolvedBounds {
-                        x: parent_bounds.x,
-                        y: parent_bounds.y,
-                        width: child_size.0,
-                        height: child_size.1,
-                    },
-                );
+                bounds.entry(child_idx).or_insert(ResolvedBounds {
+                    x: parent_bounds.x,
+                    y: parent_bounds.y,
+                    width: child_size.0,
+                    height: child_size.1,
+                });
             }
 
             let parent_is_shape = matches!(

@@ -830,12 +830,11 @@ text @btn_label "Sign In" { }
     );
 }
 
-/// Regression test: resolve_subtree must re-center text children after parent
-/// resize, even though it re-initializes child bounds from intrinsic_size.
-/// The actual resize-fight fix is in lib.rs (skip resolve() for resize batches),
-/// but this test verifies that resolve_subtree's subtree re-layout works correctly.
+/// Regression test: resolve_subtree preserves existing cached child bounds
+/// (via or_insert in Free layout) while re-centering text within new parent.
+/// The combination of or_insert + skip resolve() prevents the resize fight.
 #[test]
-fn resolve_subtree_recenters_child_after_resize() {
+fn resolve_subtree_preserves_cached_bounds_and_recenters() {
     let input = r#"
 rect @parent {
   w: 200 h: 100
@@ -854,35 +853,40 @@ rect @parent {
     let parent_idx = graph.index_of(NodeId::intern("parent")).unwrap();
     let child_idx = graph.index_of(NodeId::intern("child")).unwrap();
 
-    // Record original centering
-    let parent_before = bounds[&parent_idx];
-    let child_before = bounds[&child_idx];
-    let parent_cx_before = parent_before.x + parent_before.width / 2.0;
-    let child_cx_before = child_before.x + child_before.width / 2.0;
-    assert!(
-        (child_cx_before - parent_cx_before).abs() < 1.0,
-        "child should be centered before resize"
-    );
+    // Simulate JS-measured text metrics: override child size with specific values
+    let js_width = 85.5;
+    let js_height = 20.0;
+    if let Some(cb) = bounds.get_mut(&child_idx) {
+        cb.width = js_width;
+        cb.height = js_height;
+    }
 
-    // Simulate parent resize: update parent bounds and call resolve_subtree
+    // Resize parent from 200→300 and call resolve_subtree
     if let Some(pb) = bounds.get_mut(&parent_idx) {
-        pb.width = 300.0; // Resize parent from 200→300
+        pb.width = 300.0;
     }
     resolve_subtree(&graph, parent_idx, &mut bounds, viewport);
 
-    // Child should be re-centered within the new parent bounds (300 wide)
-    let parent_after = bounds[&parent_idx];
     let child_after = bounds[&child_idx];
-    let parent_cx_after = parent_after.x + parent_after.width / 2.0;
-    let child_cx_after = child_after.x + child_after.width / 2.0;
+    let parent_after = bounds[&parent_idx];
+
+    // or_insert preserves the JS-measured sizes
     assert!(
-        (child_cx_after - parent_cx_after).abs() < 1.0,
-        "child center ({child_cx_after}) should be ≈ new parent center ({parent_cx_after}) after resize"
+        (child_after.width - js_width).abs() < 0.01,
+        "child width ({}) should be preserved at {js_width}",
+        child_after.width
+    );
+    assert!(
+        (child_after.height - js_height).abs() < 0.01,
+        "child height ({}) should be preserved at {js_height}",
+        child_after.height
     );
 
-    // Parent should have the new width
+    // Auto-centering re-centers child within new parent bounds
+    let child_cx = child_after.x + child_after.width / 2.0;
+    let parent_cx = parent_after.x + parent_after.width / 2.0;
     assert!(
-        (parent_after.width - 300.0).abs() < 0.01,
-        "parent width should be 300 after resize"
+        (child_cx - parent_cx).abs() < 1.0,
+        "child center ({child_cx}) should be ≈ new parent center ({parent_cx})"
     );
 }
