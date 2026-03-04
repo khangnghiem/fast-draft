@@ -23,6 +23,16 @@ Engineering lessons discovered through building FD.
 
 ---
 
+## Unit Tests Can't Catch Canvas Interaction Bugs — E2E Is Required
+
+**Date**: 2026-03-04
+**Context**: Frame child movement was silently blocked by `is_parent_managed` for 3 versions (v0.10.22→v0.10.25). I ran `cargo test`, `clippy`, and `fmt` — all passed. The bug was only caught by the user manually testing.
+**Root Cause**: Canvas interaction bugs live in the **runtime flow**: pointer events → WASM mutations → bounds updates → rendering. Unit tests exercise the data structures and algorithms, but NOT the pointer event → tool → mutation → layout → render pipeline as a whole.
+**Fix**: Added frame-specific tests to `/e2e` workflow: frame resize, child move, Column child move, inline edit in frame. The `/e2e` workflow must be a required gate, not optional.
+**Rule**: For any change touching `apply_mutation`, `resolve_subtree`, `resolve_children`, or the SelectTool, **always run E2E browser tests** before publishing. `cargo test` passing is necessary but NOT sufficient.
+
+---
+
 ## Auto-Reparent on Drag Is Fragile — Use Explicit Context Menus
 
 **Date**: 2026-03-02
