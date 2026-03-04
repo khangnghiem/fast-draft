@@ -86,6 +86,7 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
                     annotations: Vec::new(),
                     animations: Default::default(),
                     comments: Vec::new(),
+                    place: None,
                 };
                 let idx = graph.graph.add_node(text_node);
                 graph.graph.add_edge(graph.root, idx, ());
@@ -163,6 +164,8 @@ struct ParsedNode {
     /// Comments that appeared before this node's opening `{` in the source.
     comments: Vec<String>,
     children: Vec<ParsedNode>,
+    /// 9-position placement within parent.
+    place: Option<(HPlace, VPlace)>,
 }
 
 fn insert_node_recursive(
@@ -177,6 +180,7 @@ fn insert_node_recursive(
     node.animations.extend(parsed.animations);
     node.annotations = parsed.annotations;
     node.comments = parsed.comments;
+    node.place = parsed.place;
 
     let idx = graph.add_node(parent, node);
 
@@ -551,6 +555,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let mut height: Option<f32> = None;
     let mut layout = LayoutMode::Free;
     let mut clip = false;
+    let mut place: Option<(HPlace, VPlace)> = None;
 
     skip_ws_and_comments(input);
 
@@ -575,6 +580,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
                 &mut height,
                 &mut layout,
                 &mut clip,
+                &mut place,
             )?;
         }
         // Collect comments between items; they'll be attached to the *next* child node
@@ -620,6 +626,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
         annotations,
         comments: Vec::new(),
         children,
+        place,
     })
 }
 
@@ -745,6 +752,7 @@ fn parse_node_property(
     height: &mut Option<f32>,
     layout: &mut LayoutMode,
     clip: &mut bool,
+    place: &mut Option<(HPlace, VPlace)>,
 ) -> ModalResult<()> {
     let prop_name = parse_identifier.parse_next(input)?;
     skip_space(input);
@@ -842,6 +850,9 @@ fn parse_node_property(
         }
         "align" | "text_align" => {
             parse_align_value(input, style)?;
+        }
+        "place" => {
+            *place = Some(parse_place_value(input)?);
         }
         "shadow" => {
             // shadow: (ox,oy,blur,#COLOR)  — colon already consumed by property parser
@@ -951,6 +962,77 @@ fn parse_align_value(input: &mut &str, style: &mut Style) -> ModalResult<()> {
     }
 
     Ok(())
+}
+
+// ─── Place value parser ──────────────────────────────────────────────────
+
+fn parse_place_value(input: &mut &str) -> ModalResult<(HPlace, VPlace)> {
+    use crate::model::{HPlace, VPlace};
+
+    let first = parse_identifier.parse_next(input)?;
+
+    // Check for compound hyphenated form: "top-left", "bottom-right", etc.
+    if input.starts_with('-') {
+        let saved = *input;
+        *input = &input[1..]; // consume '-'
+        if let Ok(second) = parse_identifier.parse_next(input) {
+            match (first, second) {
+                ("top", "left") => return Ok((HPlace::Left, VPlace::Top)),
+                ("top", "right") => return Ok((HPlace::Right, VPlace::Top)),
+                ("bottom", "left") => return Ok((HPlace::Left, VPlace::Bottom)),
+                ("bottom", "right") => return Ok((HPlace::Right, VPlace::Bottom)),
+                _ => *input = saved, // restore if unrecognized
+            }
+        } else {
+            *input = saved;
+        }
+    }
+
+    match first {
+        "center" => {
+            // Check if there's a second word (2-arg form: "center top")
+            skip_space(input);
+            let at_end = input.is_empty()
+                || input.starts_with('\n')
+                || input.starts_with(';')
+                || input.starts_with('}');
+            if !at_end && let Ok(second) = parse_identifier.parse_next(input) {
+                let v = match second {
+                    "top" => VPlace::Top,
+                    "bottom" => VPlace::Bottom,
+                    _ => VPlace::Middle,
+                };
+                return Ok((HPlace::Center, v));
+            }
+            Ok((HPlace::Center, VPlace::Middle))
+        }
+        "top" => Ok((HPlace::Center, VPlace::Top)),
+        "bottom" => Ok((HPlace::Center, VPlace::Bottom)),
+        _ => {
+            // 2-arg form: "left middle", "right top", etc.
+            let h = match first {
+                "left" => HPlace::Left,
+                "right" => HPlace::Right,
+                _ => HPlace::Center,
+            };
+
+            skip_space(input);
+            let at_end = input.is_empty()
+                || input.starts_with('\n')
+                || input.starts_with(';')
+                || input.starts_with('}');
+            if !at_end && let Ok(second) = parse_identifier.parse_next(input) {
+                let v = match second {
+                    "top" => VPlace::Top,
+                    "bottom" => VPlace::Bottom,
+                    _ => VPlace::Middle,
+                };
+                return Ok((h, v));
+            }
+
+            Ok((h, VPlace::Middle))
+        }
+    }
 }
 
 // ─── Animation block parser ─────────────────────────────────────────────

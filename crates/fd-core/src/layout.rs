@@ -300,22 +300,44 @@ fn resolve_children(
                 );
             }
 
-            // Auto-center: if parent is a shape with a single text child (no
-            // explicit position), center the text within parent bounds using
-            // its intrinsic size (hug-contents). The renderer's center/middle
-            // alignment handles visual centering within the tight bounds.
             let parent_is_shape = matches!(
                 parent_node.kind,
                 NodeKind::Rect { .. } | NodeKind::Ellipse { .. } | NodeKind::Frame { .. }
             );
-            if parent_is_shape && children.len() == 1 {
-                let child_idx = children[0];
+
+            for &child_idx in &children {
                 let child_node = &graph.graph[child_idx];
                 let has_position = child_node
                     .constraints
                     .iter()
                     .any(|c| matches!(c, Constraint::Position { .. }));
-                if matches!(child_node.kind, NodeKind::Text { .. })
+
+                // Priority 1: explicit `place:` property
+                if let Some((h, v)) = child_node.place {
+                    if !has_position && let Some(cb) = bounds.get(&child_idx).copied() {
+                        let x = match h {
+                            HPlace::Left => parent_bounds.x,
+                            HPlace::Center => {
+                                parent_bounds.x + (parent_bounds.width - cb.width) / 2.0
+                            }
+                            HPlace::Right => parent_bounds.x + parent_bounds.width - cb.width,
+                        };
+                        let y = match v {
+                            VPlace::Top => parent_bounds.y,
+                            VPlace::Middle => {
+                                parent_bounds.y + (parent_bounds.height - cb.height) / 2.0
+                            }
+                            VPlace::Bottom => parent_bounds.y + parent_bounds.height - cb.height,
+                        };
+                        bounds.insert(child_idx, ResolvedBounds { x, y, ..cb });
+                    }
+                    continue;
+                }
+
+                // Priority 2: auto-center text children in shape parents
+                // (no explicit place: and no Position constraint)
+                if parent_is_shape
+                    && matches!(child_node.kind, NodeKind::Text { .. })
                     && !has_position
                     && let Some(child_b) = bounds.get(&child_idx).copied()
                 {
