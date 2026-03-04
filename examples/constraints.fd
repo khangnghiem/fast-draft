@@ -20,9 +20,9 @@ frame @hero {
     }
   }
   layout: column gap=16 pad=40
-  w: 571.55 h: 93.2
-  x: 121.07
-  y: 641.73
+  w: 335.62 h: 189.95
+  x: 131.15
+  y: 602.59
 }
 
 text @_text_0 "Try It Now" {
@@ -61,8 +61,8 @@ rect @tooltip {
   w: 200 h: 44
   fill: #1A1A2E  # blue
   corner: 8
-  x: 202.01
-  y: 982.12
+  x: 198.14
+  y: 967.18
   when :enter {
     opacity: 1
     ease: ease_out 300ms
