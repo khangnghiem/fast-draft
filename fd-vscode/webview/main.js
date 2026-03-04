@@ -4764,7 +4764,6 @@ function updateSettingsToggleStates() {
 function setupFloatingToolbar() {
   const toolbar = document.getElementById("floating-toolbar");
   if (!toolbar) return;
-  const handles = toolbar.querySelectorAll(".scroll-handle");
 
   // Restore persisted state
   const savedState = vscode.getState() || {};
@@ -4915,26 +4914,29 @@ function setupFloatingToolbar() {
     }
   });
 
-  handles.forEach(handle => {
-    handle.addEventListener("pointerdown", (e) => {
-      isDragging = true;
-      activePointerId = e.pointerId;
-      dragStartX = e.clientX;
-      dragStartY = e.clientY;
-      dragStartTime = Date.now();
+  // Allow drag from anywhere on the toolbar except tool buttons
+  // (tool buttons have their own pointerdown for drag-to-create)
+  toolbar.addEventListener("pointerdown", (e) => {
+    // Skip if target is a tool button or inside one (handled by drag-to-create)
+    if (e.target.closest(".ft-tool-btn")) return;
 
-      // Normalize to px position before drag to avoid CSS anchor conflicts
-      const rect = toolbar.getBoundingClientRect();
-      initialLeft = rect.left;
-      initialTop = rect.top;
-      toolbar.style.left = rect.left + "px";
-      toolbar.style.top = rect.top + "px";
-      toolbar.style.right = "auto";
-      toolbar.style.bottom = "auto";
+    isDragging = true;
+    activePointerId = e.pointerId;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragStartTime = Date.now();
 
-      e.preventDefault();
-      e.stopPropagation();
-    });
+    // Normalize to px position before drag to avoid CSS anchor conflicts
+    const rect = toolbar.getBoundingClientRect();
+    initialLeft = rect.left;
+    initialTop = rect.top;
+    toolbar.style.left = rect.left + "px";
+    toolbar.style.top = rect.top + "px";
+    toolbar.style.right = "auto";
+    toolbar.style.bottom = "auto";
+
+    e.preventDefault();
+    e.stopPropagation();
   });
 
   // ── Drag-to-Create: drag a tool button onto the canvas ──

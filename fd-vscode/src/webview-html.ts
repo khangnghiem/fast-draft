@@ -1945,6 +1945,9 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       align-items: stretch;
       --left-roll-width: 12px;
       --right-roll-width: 12px;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
     }
     #floating-toolbar.horizontal { flex-direction: row; }
     #floating-toolbar.vertical { flex-direction: column; }
