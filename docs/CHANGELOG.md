@@ -5,6 +5,13 @@
 
 ## Completed Requirements
 
+### v0.10.22 — Fix Canvas Resize + Text Editing Shape Preservation
+
+- **FIX (R3.2, R3.28)**: Resizing a parent shape (rect/ellipse/frame) no longer fights with JS-measured child bounds — `resolve_children` in `layout.rs` now uses `or_insert` instead of `insert` for Free-layout children, preserving existing cached bounds (e.g. text sizes from JS `measureAndUpdateTextBounds`) during `resolve_subtree` calls; previously each resize frame would overwrite child bounds with the `intrinsic_size` heuristic, creating a "resize fight"
+- **FIX (R3.28)**: Double-clicking a text node now preserves its shape — `openInlineEditor` in `main.js` force-calls `measureAndUpdateTextBounds` before reading bounds, ensuring the textarea matches the actual rendered text size
+- **FIX (R3.28)**: Text inline editor lineHeight now matches Canvas2D renderer — computed as `rawFontSize * 1.2 * zoomLevel` (unscaled first, then zoom) instead of `Math.round(fontSize * zoomLevel) * 1.2` (zoom first, then scale), eliminating sub-pixel mismatches at fractional zoom levels
+- **TESTING**: New `resolve_subtree_preserves_cached_child_bounds` regression test — simulates JS-measured text bounds surviving parent resize
+
 ### v0.10.20 — Child Placement & Auto-Center Multi-Child
 
 - **FEATURE (R3.36)**: New `place:` property — 9-position child alignment within parent (top-left, center, bottom-right, etc.); supports both compound (`top-left`) and two-arg (`left top`) syntax

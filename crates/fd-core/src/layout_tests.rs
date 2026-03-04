@@ -829,3 +829,68 @@ text @btn_label "Sign In" { }
         login_btn.width
     );
 }
+
+/// Regression test for Bug #1+#2A: resolve_subtree must preserve existing
+/// cached bounds for children in Free layout mode. This simulates the
+/// scenario where JS-measured text bounds are already set, and resizing
+/// the parent calls resolve_subtree — child bounds must NOT be overwritten
+/// by the intrinsic_size heuristic.
+#[test]
+fn resolve_subtree_preserves_cached_child_bounds() {
+    let input = r#"
+rect @parent {
+  w: 200 h: 100
+  text @child "Hello World" {
+    font: "Inter" 400 14
+  }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut bounds = resolve_layout(&graph, viewport);
+
+    let parent_idx = graph.index_of(NodeId::intern("parent")).unwrap();
+    let child_idx = graph.index_of(NodeId::intern("child")).unwrap();
+
+    // Simulate JS-measured text metrics: set child bounds to a specific size
+    // that differs from intrinsic_size heuristic
+    let js_measured_width = 85.5;
+    let js_measured_height = 20.0;
+    if let Some(cb) = bounds.get_mut(&child_idx) {
+        cb.width = js_measured_width;
+        cb.height = js_measured_height;
+    }
+
+    // Now simulate parent resize: update parent bounds and call resolve_subtree
+    if let Some(pb) = bounds.get_mut(&parent_idx) {
+        pb.width = 300.0; // Resize parent from 200→300
+    }
+    resolve_subtree(&graph, parent_idx, &mut bounds, viewport);
+
+    let child_after = bounds[&child_idx];
+
+    // Child width must remain the JS-measured value, NOT revert to
+    // intrinsic_size's char-count heuristic
+    assert!(
+        (child_after.width - js_measured_width).abs() < 0.01,
+        "child width ({}) should be preserved JS-measured value ({js_measured_width}), not intrinsic_size",
+        child_after.width
+    );
+    assert!(
+        (child_after.height - js_measured_height).abs() < 0.01,
+        "child height ({}) should be preserved JS-measured value ({js_measured_height})",
+        child_after.height
+    );
+
+    // Child should be re-centered within the new parent bounds (300 wide)
+    let parent_after = bounds[&parent_idx];
+    let child_cx = child_after.x + child_after.width / 2.0;
+    let parent_cx = parent_after.x + parent_after.width / 2.0;
+    assert!(
+        (child_cx - parent_cx).abs() < 1.0,
+        "child center ({child_cx}) should be ≈ new parent center ({parent_cx})"
+    );
+}
