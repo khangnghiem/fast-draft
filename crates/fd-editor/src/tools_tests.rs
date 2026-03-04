@@ -1001,3 +1001,200 @@ fn arrow_tool_connected_still_works() {
         _ => panic!("expected AddEdge with Node anchors"),
     }
 }
+
+#[test]
+fn tool_pen_lifecycle() {
+    let mut tool = PenTool::new();
+    assert_eq!(tool.kind(), ToolKind::Pen);
+
+    // PointerDown creates a new path node
+    let mutations = tool.handle(
+        &InputEvent::PointerDown {
+            x: 10.0,
+            y: 20.0,
+            modifiers: Modifiers::NONE,
+            pressure: 0.5,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+    let id = match &mutations[0] {
+        GraphMutation::AddNode { node, .. } => {
+            assert!(node.id.as_str().starts_with("path"));
+            match &node.kind {
+                NodeKind::Path { commands } => {
+                    assert_eq!(commands.len(), 1);
+                    assert!(
+                        matches!(commands[0], PathCmd::MoveTo(x, y) if (x - 10.0).abs() < 0.1 && (y - 20.0).abs() < 0.1)
+                    );
+                }
+                _ => panic!("Expected Path node"),
+            }
+            node.id.clone()
+        }
+        _ => panic!("Expected AddNode mutation"),
+    };
+
+    // PointerMove appends LineTo for live preview
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 30.0,
+            y: 40.0,
+            modifiers: Modifiers::NONE,
+            pressure: 0.5,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::UpdatePath {
+            id: update_id,
+            commands,
+        } => {
+            assert_eq!(*update_id, id);
+            assert_eq!(commands.len(), 2);
+            assert!(
+                matches!(commands[0], PathCmd::MoveTo(x, y) if (x - 10.0).abs() < 0.1 && (y - 20.0).abs() < 0.1)
+            );
+            assert!(
+                matches!(commands[1], PathCmd::LineTo(x, y) if (x - 30.0).abs() < 0.1 && (y - 40.0).abs() < 0.1)
+            );
+        }
+        _ => panic!("Expected UpdatePath mutation"),
+    }
+
+    // PointerUp finalizes with bezier smoothing
+    // We add a few more points to ensure smoothing kicks in
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 50.0,
+            y: 60.0,
+            modifiers: Modifiers::NONE,
+            pressure: 0.5,
+        },
+        None,
+    );
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 70.0,
+            y: 80.0,
+            modifiers: Modifiers::NONE,
+            pressure: 0.5,
+        },
+        None,
+    );
+
+    let mutations = tool.handle(
+        &InputEvent::PointerUp {
+            x: 70.0,
+            y: 80.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::UpdatePath {
+            id: update_id,
+            commands,
+        } => {
+            assert_eq!(*update_id, id);
+            assert!(
+                matches!(commands[0], PathCmd::MoveTo(x, y) if (x - 10.0).abs() < 0.1 && (y - 20.0).abs() < 0.1)
+            );
+            // Since there are > 2 points, subsampling and Catmull-Rom smoothing should produce CubicTo commands
+            let has_cubic = commands
+                .iter()
+                .any(|cmd| matches!(cmd, PathCmd::CubicTo(..)));
+            assert!(has_cubic, "Expected smoothed CubicTo commands on PointerUp");
+        }
+        _ => panic!("Expected UpdatePath mutation"),
+    }
+}
+
+#[test]
+fn tool_pen_single_point() {
+    let mut tool = PenTool::new();
+
+    let mutations = tool.handle(
+        &InputEvent::PointerDown {
+            x: 10.0,
+            y: 20.0,
+            modifiers: Modifiers::NONE,
+            pressure: 0.5,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+
+    // Immediate PointerUp
+    let mutations = tool.handle(
+        &InputEvent::PointerUp {
+            x: 10.0,
+            y: 20.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::UpdatePath { commands, .. } => {
+            // Less than 2 points -> raw points to lineto logic
+            // But there is only 1 point, so it should just be MoveTo
+            assert_eq!(commands.len(), 1);
+            assert!(
+                matches!(commands[0], PathCmd::MoveTo(x, y) if (x - 10.0).abs() < 0.1 && (y - 20.0).abs() < 0.1)
+            );
+        }
+        _ => panic!("Expected UpdatePath"),
+    }
+}
+
+#[test]
+fn tool_pen_two_points() {
+    let mut tool = PenTool::new();
+
+    let mutations = tool.handle(
+        &InputEvent::PointerDown {
+            x: 10.0,
+            y: 20.0,
+            modifiers: Modifiers::NONE,
+            pressure: 0.5,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 30.0,
+            y: 40.0,
+            modifiers: Modifiers::NONE,
+            pressure: 0.5,
+        },
+        None,
+    );
+
+    let mutations = tool.handle(
+        &InputEvent::PointerUp {
+            x: 30.0,
+            y: 40.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::UpdatePath { commands, .. } => {
+            // Exactly 2 points -> MoveTo and LineTo
+            assert_eq!(commands.len(), 2);
+            assert!(
+                matches!(commands[0], PathCmd::MoveTo(x, y) if (x - 10.0).abs() < 0.1 && (y - 20.0).abs() < 0.1)
+            );
+            assert!(
+                matches!(commands[1], PathCmd::LineTo(x, y) if (x - 30.0).abs() < 0.1 && (y - 40.0).abs() < 0.1)
+            );
+        }
+        _ => panic!("Expected UpdatePath"),
+    }
+}
