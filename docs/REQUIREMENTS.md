@@ -102,6 +102,10 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.32** _(planned)_: Image embedding — drag-and-drop raster images as `image` nodes; base64 or file reference
 - **R3.33** _(done)_: Component libraries — reusable node collections from a library panel; stored as `.fd` files; 3 built-in libraries (UI Kit, Flowchart, Wireframe)
 - **R3.34** _(planned)_: Community library directory — searchable gallery for publishing and discovering shared libraries
+- **R3.55** _(planned)_: Export to Excalidraw JSON — `export_excalidraw(graph)` converts FD scene to Excalidraw's JSON format; rect/ellipse/text/arrow elements mapped correctly; ⌘⇧X shortcut
+- **R3.56** _(planned)_: Export to HTML+CSS+JS — `export_html(graph)` generates standalone responsive HTML page; shapes → `<div>`, text → `<p>`, constraints → flexbox, animations → CSS transitions
+- **R3.57** _(planned)_: Fine pen tools — `taper_start`, `taper_end`, `smoothing` properties on pen strokes; variable stroke width rendering; settings in properties panel
+- **R3.58** _(planned)_: Animation timeline — visual keyframe panel showing `when` blocks as timeline tracks; drag endpoints to adjust duration; scrub to preview animation state
 
 ### R4: AI Editing (Text)
 
@@ -124,6 +128,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R4.17** _(done)_: Dimension units — `w: 320px` accepted, `px` stripped by parser
 - **R4.18** _(done)_: Theme/When rename + emitter reorder — `style` → `theme`, `anim` → `when` for clarity; emitter order: spec → children → style → when; old keywords accepted for backward compatibility
 - **R4.19** _(done)_: ReadMode filtered views — `emit_filtered(graph, mode)` with 8 modes (Full/Structure/Layout/Design/Spec/Visual/When/Edges); CLI `fd-lsp --view <mode>` for AI token savings; VS Code read-only virtual document provider with status bar mode selector
+- **R4.20** _(planned)_: AI Assist on selection — select nodes on canvas → click "✦ AI Assist" → AI receives `.fd` text of selected nodes → returns redesigned `.fd` → bidi-sync renders changes live; undo reverts entire AI edit atomically
 
 ### R5: Rendering
 
@@ -225,44 +230,44 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 
 <!-- AI: Search this index BEFORE proposing new requirements. If a similar tag already exists, extend the existing requirement instead of creating a duplicate. Also check docs/specs/ for detailed spec docs. -->
 
-| Tag                 | Requirements                                                      |
-| ------------------- | ----------------------------------------------------------------- |
-| selection           | R2.5, R3.1, R3.16, R3.24                                          |
-| drawing             | R3.3, R3.15, R3.19                                                |
-| pen / freehand      | R3.4, R3.22, R3.23                                                |
-| pan                 | R3.6, R3.10                                                       |
-| zoom                | R3.6, R3.20                                                       |
-| grid / snap         | R3.17, R3.21                                                      |
-| cursor              | R3.11, R3.16                                                      |
-| resize              | R3.2, R3.16                                                       |
-| feedback / tooltip  | R3.15, R3.18                                                      |
-| export              | R3.31, R4.7                                                       |
-| minimap             | R3.25                                                             |
-| nudge               | R3.26                                                             |
-| rename              | R3.27                                                             |
-| undo / redo         | R3.7                                                              |
-| properties          | R3.8                                                              |
-| drag-drop           | R3.9                                                              |
-| annotation          | R1.9, R3.12, R4.5                                                 |
-| theme               | R3.13                                                             |
-| view mode           | R3.14, R4.11                                                      |
-| pressure / pencil   | R3.4, R3.10, R3.22                                                |
-| ai / refinement     | R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17 |
-| edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8                             |
-| import              | R1.14, R1.18                                                      |
-| style / theme       | R1.4, R4.3, R4.18                                                 |
-| animation           | R1.5, R1.11, R1.12, R3.29, R4.18, R5.6, R5.8                      |
-| rendering           | R5.1, R5.2, R5.4, R5.5                                            |
-| platform            | R6.1, R6.2, R6.3, R6.4, R6.5                                      |
-| inline editing      | R3.28                                                             |
-| text alignment      | R1.17, R3.28, R3.36, R3.37                                        |
-| layout / centering  | R3.36, R3.37                                                      |
-| layers / navigation | R3.30                                                             |
-| group / drill-down  | R3.24, R3.34                                                      |
-| group / reparent    | R3.34, R3.35, R3.38                                               |
-| image               | R3.32                                                             |
-| library             | R3.33, R3.34                                                      |
-| group / frame       | R3.24, R3.34, R1.1                                                |
+| Tag                 | Requirements                                                             |
+| ------------------- | ------------------------------------------------------------------------ |
+| selection           | R2.5, R3.1, R3.16, R3.24                                                 |
+| drawing             | R3.3, R3.15, R3.19                                                       |
+| pen / freehand      | R3.4, R3.22, R3.23                                                       |
+| pan                 | R3.6, R3.10                                                              |
+| zoom                | R3.6, R3.20                                                              |
+| grid / snap         | R3.17, R3.21                                                             |
+| cursor              | R3.11, R3.16                                                             |
+| resize              | R3.2, R3.16                                                              |
+| feedback / tooltip  | R3.15, R3.18                                                             |
+| export              | R3.31, R3.55, R3.56, R4.7                                                |
+| minimap             | R3.25                                                                    |
+| nudge               | R3.26                                                                    |
+| rename              | R3.27                                                                    |
+| undo / redo         | R3.7                                                                     |
+| properties          | R3.8                                                                     |
+| drag-drop           | R3.9                                                                     |
+| annotation          | R1.9, R3.12, R4.5                                                        |
+| theme               | R3.13                                                                    |
+| view mode           | R3.14, R4.11                                                             |
+| pressure / pencil   | R3.4, R3.10, R3.22                                                       |
+| ai / refinement     | R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17, R4.20 |
+| edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8                                    |
+| import              | R1.14, R1.18                                                             |
+| style / theme       | R1.4, R4.3, R4.18                                                        |
+| animation           | R1.5, R1.11, R1.12, R3.29, R4.18, R5.6, R5.8                             |
+| rendering           | R5.1, R5.2, R5.4, R5.5                                                   |
+| platform            | R6.1, R6.2, R6.3, R6.4, R6.5                                             |
+| inline editing      | R3.28                                                                    |
+| text alignment      | R1.17, R3.28, R3.36, R3.37                                               |
+| layout / centering  | R3.36, R3.37                                                             |
+| layers / navigation | R3.30                                                                    |
+| group / drill-down  | R3.24, R3.34                                                             |
+| group / reparent    | R3.34, R3.35, R3.38                                                      |
+| image               | R3.32                                                                    |
+| library             | R3.33, R3.34                                                             |
+| group / frame       | R3.24, R3.34, R1.1                                                       |
 
 | content-first | R4.12 |
 | mermaid | R1.18 |
@@ -279,3 +284,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | edge label | R1.10, R1.19, R1.20 |
 | edge anchor | R1.20 |
 | eraser / delete | R3.48 |
+| excalidraw export | R3.55 |
+| html export | R3.56 |
+| fine pen / taper | R3.57, R3.4, R3.22 |
+| animation timeline | R3.58, R1.5 |
+| ai assist canvas | R4.20, R4.8 |
