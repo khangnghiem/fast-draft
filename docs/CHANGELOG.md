@@ -17,6 +17,9 @@
 
 ## Completed Requirements
 
+### v0.10.29 — Excalidraw JSON Export
+- **R3.55**: Implemented Excalidraw JSON export. `export_excalidraw(graph)` natively maps FD nodes (`Rect`, `Ellipse`, `Text`, `Edge`) to corresponding Excalidraw elements (`rectangle`, `ellipse`, `text`, `arrow`). Added proper styling, color hex conversions, relative bounding box tracking, and group assignment mapping. Includes testing inside `crates/fd-core/src/excalidraw_tests.rs`.
+
 ### v0.10.28 — Cross-Panel Selection Sync
 
 - **UX (R2.5)**: Clicking a node in any panel now syncs selection across all three panels (Code, Canvas, Layers):
