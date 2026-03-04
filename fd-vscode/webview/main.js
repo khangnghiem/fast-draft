@@ -626,6 +626,17 @@ function setupPointerEvents() {
 
   canvas.addEventListener("pointerdown", (e) => {
     if (!fdCanvas) return;
+
+    // Skip if pointer is over the floating toolbar (sibling overlay)
+    const ft = document.getElementById("floating-toolbar");
+    if (ft) {
+      const tbRect = ft.getBoundingClientRect();
+      if (e.clientX >= tbRect.left && e.clientX <= tbRect.right
+        && e.clientY >= tbRect.top && e.clientY <= tbRect.bottom) {
+        return;
+      }
+    }
+
     clearModifierCursors(); // Modifier preview ends when interaction starts
     const rect = canvas.getBoundingClientRect();
     const rawX = e.clientX - rect.left;
@@ -829,6 +840,9 @@ function setupPointerEvents() {
 
   canvas.addEventListener("pointerup", (e) => {
     if (!fdCanvas) return;
+    // Always release pointer capture — prevents stale captures
+    // from blocking toolbar and other overlay pointer events
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) { }
 
     // End pan drag
     if (panDragging) {
