@@ -1,0 +1,247 @@
+# ─── Themes ───
+
+theme node_style {
+  fill: #FFFFFF
+  stroke: #333333 2
+  corner: 8
+  font: "Inter" medium 14
+}
+
+theme text_style {
+  fill: #333333
+  font: "Inter" semibold 16
+}
+
+# ─── Layout ───
+
+text @title_curves "Curve Kinds" {
+  use: text_style
+  x: 50
+  y: 50
+}
+
+rect @node_straight_a {
+  use: node_style
+  w: 120 h: 60
+  text @_anon_1 "Straight A" {}
+  x: 50
+  y: 100
+}
+
+rect @node_straight_b {
+  use: node_style
+  w: 120 h: 60
+  text @_anon_2 "Straight B" {}
+  x: 250
+  y: 150
+}
+
+rect @node_smooth_a {
+  use: node_style
+  w: 120 h: 60
+  text @_anon_3 "Smooth A" {}
+  x: 50
+  y: 250
+}
+
+rect @node_smooth_b {
+  use: node_style
+  w: 120 h: 60
+  text @_anon_4 "Smooth B" {}
+  x: 250
+  y: 300
+}
+
+rect @node_step_a {
+  use: node_style
+  w: 120 h: 60
+  text @_anon_5 "Step A" {}
+  x: 50
+  y: 400
+}
+
+rect @node_step_b {
+  use: node_style
+  w: 120 h: 60
+  text @_anon_6 "Step B" {}
+  x: 250
+  y: 450
+}
+
+text @title_arrows "Arrow Styles" {
+  use: text_style
+  x: 450
+  y: 50
+}
+
+rect @node_arrow_none_a {
+  use: node_style
+  w: 100 h: 40
+  text @_anon_7 "None A" {}
+  x: 450
+  y: 100
+}
+
+rect @node_arrow_none_b {
+  use: node_style
+  w: 100 h: 40
+  text @_anon_8 "None B" {}
+  x: 650
+  y: 100
+}
+
+rect @node_arrow_start_a {
+  use: node_style
+  w: 100 h: 40
+  text @_anon_9 "Start A" {}
+  x: 450
+  y: 200
+}
+
+rect @node_arrow_start_b {
+  use: node_style
+  w: 100 h: 40
+  text @_anon_10 "Start B" {}
+  x: 650
+  y: 200
+}
+
+rect @node_arrow_end_a {
+  use: node_style
+  w: 100 h: 40
+  text @_anon_11 "End A" {}
+  x: 450
+  y: 300
+}
+
+rect @node_arrow_end_b {
+  use: node_style
+  w: 100 h: 40
+  text @_anon_12 "End B" {}
+  x: 650
+  y: 300
+}
+
+rect @node_arrow_both_a {
+  use: node_style
+  w: 100 h: 40
+  text @_anon_13 "Both A" {}
+  x: 450
+  y: 400
+}
+
+rect @node_arrow_both_b {
+  use: node_style
+  w: 100 h: 40
+  text @_anon_14 "Both B" {}
+  x: 650
+  y: 400
+}
+
+text @title_flows "Flow Animations" {
+  use: text_style
+  x: 850
+  y: 50
+}
+
+rect @node_flow_pulse_a {
+  use: node_style
+  w: 120 h: 60
+  text @_anon_15 "Pulse A" {}
+  x: 850
+  y: 100
+}
+
+rect @node_flow_pulse_b {
+  use: node_style
+  w: 120 h: 60
+  text @_anon_16 "Pulse B" {}
+  x: 1050
+  y: 150
+}
+
+rect @node_flow_dash_a {
+  use: node_style
+  w: 120 h: 60
+  text @_anon_17 "Dash A" {}
+  x: 850
+  y: 250
+}
+
+rect @node_flow_dash_b {
+  use: node_style
+  w: 120 h: 60
+  text @_anon_18 "Dash B" {}
+  x: 1050
+  y: 300
+}
+
+# ─── Flows ───
+
+edge @edge_straight {
+  from: @node_straight_a
+  to: @node_straight_b
+  stroke: #6C5CE7 2
+  curve: straight
+  arrow: end
+}
+
+edge @edge_smooth {
+  from: @node_smooth_a
+  to: @node_smooth_b
+  stroke: #00B894 2
+  curve: smooth
+  arrow: end
+}
+
+edge @edge_step {
+  from: @node_step_a
+  to: @node_step_b
+  stroke: #E17055 2
+  curve: step
+  arrow: end
+}
+
+edge @edge_arrow_none {
+  from: @node_arrow_none_a
+  to: @node_arrow_none_b
+  stroke: #333333 2
+  arrow: none
+}
+
+edge @edge_arrow_start {
+  from: @node_arrow_start_a
+  to: @node_arrow_start_b
+  stroke: #333333 2
+  arrow: start
+}
+
+edge @edge_arrow_end {
+  from: @node_arrow_end_a
+  to: @node_arrow_end_b
+  stroke: #333333 2
+  arrow: end
+}
+
+edge @edge_arrow_both {
+  from: @node_arrow_both_a
+  to: @node_arrow_both_b
+  stroke: #333333 2
+  arrow: both
+}
+
+edge @edge_flow_pulse {
+  from: @node_flow_pulse_a
+  to: @node_flow_pulse_b
+  stroke: #6C5CE7 2
+  curve: smooth
+  flow: pulse 1500ms
+}
+
+edge @edge_flow_dash {
+  from: @node_flow_dash_a
+  to: @node_flow_dash_b
+  stroke: #00B894 2
+  curve: step
+  flow: dash 1000ms
+}
