@@ -581,13 +581,155 @@ font: "Inter" 400 12
 
     let card = bounds[&graph.index_of(NodeId::intern("card")).unwrap()];
     let title = bounds[&graph.index_of(NodeId::intern("title")).unwrap()];
+    let subtitle = bounds[&graph.index_of(NodeId::intern("subtitle")).unwrap()];
 
-    // Multiple children: text should NOT be expanded to parent
+    // Multiple children: text width should remain intrinsic (not expanded)
     assert!(
         title.width < card.width,
         "text width ({}) should be < parent ({}) with multiple children",
         title.width,
         card.width
+    );
+
+    // Both text children should be auto-centered (multi-child lift)
+    let title_cx = title.x + title.width / 2.0;
+    let card_cx = card.x + card.width / 2.0;
+    assert!(
+        (title_cx - card_cx).abs() < 1.0,
+        "title center_x ({title_cx}) should ≈ card center_x ({card_cx})"
+    );
+    let subtitle_cx = subtitle.x + subtitle.width / 2.0;
+    assert!(
+        (subtitle_cx - card_cx).abs() < 1.0,
+        "subtitle center_x ({subtitle_cx}) should ≈ card center_x ({card_cx})"
+    );
+}
+
+#[test]
+fn layout_place_center() {
+    let input = r#"
+rect @btn {
+  w: 200 h: 60
+  text @label "Click" {
+    place: center
+  }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let bounds = resolve_layout(
+        &graph,
+        Viewport {
+            width: 800.0,
+            height: 600.0,
+        },
+    );
+
+    let btn = bounds[&graph.index_of(NodeId::intern("btn")).unwrap()];
+    let label = bounds[&graph.index_of(NodeId::intern("label")).unwrap()];
+
+    let label_cx = label.x + label.width / 2.0;
+    let btn_cx = btn.x + btn.width / 2.0;
+    assert!(
+        (label_cx - btn_cx).abs() < 1.0,
+        "place:center h — label_cx={label_cx}, btn_cx={btn_cx}"
+    );
+    let label_cy = label.y + label.height / 2.0;
+    let btn_cy = btn.y + btn.height / 2.0;
+    assert!(
+        (label_cy - btn_cy).abs() < 1.0,
+        "place:center v — label_cy={label_cy}, btn_cy={btn_cy}"
+    );
+}
+
+#[test]
+fn layout_place_top_left() {
+    let input = r#"
+rect @box {
+  w: 200 h: 100
+  text @corner "X" { place: top-left }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let bounds = resolve_layout(
+        &graph,
+        Viewport {
+            width: 800.0,
+            height: 600.0,
+        },
+    );
+
+    let parent = bounds[&graph.index_of(NodeId::intern("box")).unwrap()];
+    let child = bounds[&graph.index_of(NodeId::intern("corner")).unwrap()];
+
+    assert!((child.x - parent.x).abs() < 0.01, "top-left x mismatch");
+    assert!((child.y - parent.y).abs() < 0.01, "top-left y mismatch");
+}
+
+#[test]
+fn layout_place_bottom_right() {
+    let input = r#"
+rect @box {
+  w: 200 h: 100
+  text @corner "X" { place: bottom-right }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let bounds = resolve_layout(
+        &graph,
+        Viewport {
+            width: 800.0,
+            height: 600.0,
+        },
+    );
+
+    let parent = bounds[&graph.index_of(NodeId::intern("box")).unwrap()];
+    let child = bounds[&graph.index_of(NodeId::intern("corner")).unwrap()];
+
+    let expected_x = parent.x + parent.width - child.width;
+    let expected_y = parent.y + parent.height - child.height;
+    assert!(
+        (child.x - expected_x).abs() < 0.01,
+        "bottom-right x mismatch"
+    );
+    assert!(
+        (child.y - expected_y).abs() < 0.01,
+        "bottom-right y mismatch"
+    );
+}
+
+#[test]
+fn layout_auto_center_multiple_text_children() {
+    let input = r#"
+rect @card {
+  w: 300 h: 200
+  text @heading "Hello" { font: "Inter" 700 24 }
+  text @body "World" { font: "Inter" 400 14 }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let bounds = resolve_layout(
+        &graph,
+        Viewport {
+            width: 800.0,
+            height: 600.0,
+        },
+    );
+
+    let card = bounds[&graph.index_of(NodeId::intern("card")).unwrap()];
+    let heading = bounds[&graph.index_of(NodeId::intern("heading")).unwrap()];
+    let body = bounds[&graph.index_of(NodeId::intern("body")).unwrap()];
+    let card_cx = card.x + card.width / 2.0;
+
+    let heading_cx = heading.x + heading.width / 2.0;
+    assert!(
+        (heading_cx - card_cx).abs() < 1.0,
+        "heading center ({heading_cx}) ≈ card center ({card_cx})"
+    );
+
+    let body_cx = body.x + body.width / 2.0;
+    assert!(
+        (body_cx - card_cx).abs() < 1.0,
+        "body center ({body_cx}) ≈ card center ({card_cx})"
     );
 }
 

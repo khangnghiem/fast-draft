@@ -317,6 +317,23 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         writeln!(out, "align: {h} {v}").unwrap();
     }
 
+    // Child placement within parent
+    if let Some((h, v)) = node.place {
+        indent(out, depth + 1);
+        let place_str = match (h, v) {
+            (HPlace::Center, VPlace::Middle) => "center".to_string(),
+            (HPlace::Left, VPlace::Top) => "top-left".to_string(),
+            (HPlace::Center, VPlace::Top) => "top".to_string(),
+            (HPlace::Right, VPlace::Top) => "top-right".to_string(),
+            (HPlace::Left, VPlace::Middle) => "left middle".to_string(),
+            (HPlace::Right, VPlace::Middle) => "right middle".to_string(),
+            (HPlace::Left, VPlace::Bottom) => "bottom-left".to_string(),
+            (HPlace::Center, VPlace::Bottom) => "bottom".to_string(),
+            (HPlace::Right, VPlace::Bottom) => "bottom-right".to_string(),
+        };
+        writeln!(out, "place: {place_str}").unwrap();
+    }
+
     // Inline position (x: / y:) — emitted here for token efficiency
     for constraint in &node.constraints {
         if let Constraint::Position { x, y } = constraint {

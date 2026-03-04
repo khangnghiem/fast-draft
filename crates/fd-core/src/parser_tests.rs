@@ -642,3 +642,80 @@ fn roundtrip_text_no_max_width() {
         }
     }
 }
+
+#[test]
+fn parse_place_center() {
+    let src = r#"text @label "Hello" { place: center }"#;
+    let graph = parse_document(src).unwrap();
+    let node = graph.get_by_id(crate::id::NodeId::intern("label")).unwrap();
+    assert_eq!(
+        node.place,
+        Some((crate::model::HPlace::Center, crate::model::VPlace::Middle))
+    );
+}
+
+#[test]
+fn parse_place_top_left() {
+    let src = r#"rect @icon { w: 32 h: 32 place: top-left }"#;
+    let graph = parse_document(src).unwrap();
+    let node = graph.get_by_id(crate::id::NodeId::intern("icon")).unwrap();
+    assert_eq!(
+        node.place,
+        Some((crate::model::HPlace::Left, crate::model::VPlace::Top))
+    );
+}
+
+#[test]
+fn parse_place_two_arg() {
+    let src = r#"text @t "Hello" { place: right bottom }"#;
+    let graph = parse_document(src).unwrap();
+    let node = graph.get_by_id(crate::id::NodeId::intern("t")).unwrap();
+    assert_eq!(
+        node.place,
+        Some((crate::model::HPlace::Right, crate::model::VPlace::Bottom))
+    );
+}
+
+#[test]
+fn roundtrip_place() {
+    let src = r#"
+rect @card {
+  w: 200 h: 100
+  text @title "Hello" {
+    place: top-left
+  }
+  text @sub "World" {
+    place: bottom-right
+  }
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let title = graph.get_by_id(crate::id::NodeId::intern("title")).unwrap();
+    assert_eq!(
+        title.place,
+        Some((crate::model::HPlace::Left, crate::model::VPlace::Top))
+    );
+
+    let emitted = crate::emitter::emit_document(&graph);
+    assert!(emitted.contains("place: top-left"), "emitted: {emitted}");
+    assert!(
+        emitted.contains("place: bottom-right"),
+        "emitted: {emitted}"
+    );
+
+    let reparsed = parse_document(&emitted).unwrap();
+    let title2 = reparsed
+        .get_by_id(crate::id::NodeId::intern("title"))
+        .unwrap();
+    assert_eq!(
+        title2.place,
+        Some((crate::model::HPlace::Left, crate::model::VPlace::Top))
+    );
+    let sub2 = reparsed
+        .get_by_id(crate::id::NodeId::intern("sub"))
+        .unwrap();
+    assert_eq!(
+        sub2.place,
+        Some((crate::model::HPlace::Right, crate::model::VPlace::Bottom))
+    );
+}

@@ -226,6 +226,24 @@ pub enum TextVAlign {
     Bottom,
 }
 
+/// Horizontal placement of a child within its parent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum HPlace {
+    Left,
+    #[default]
+    Center,
+    Right,
+}
+
+/// Vertical placement of a child within its parent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum VPlace {
+    Top,
+    #[default]
+    Middle,
+    Bottom,
+}
+
 /// A reusable theme set that nodes can reference via `use: theme_name`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Style {
@@ -505,6 +523,10 @@ pub struct SceneNode {
     /// Line comments (`# text`) that appeared before this node in the source.
     /// Preserved across parse/emit round-trips so format passes don't delete them.
     pub comments: Vec<String>,
+
+    /// 9-position placement of this child within its parent.
+    /// `None` = default positioning (auto-center for text, origin for others).
+    pub place: Option<(HPlace, VPlace)>,
 }
 
 impl SceneNode {
@@ -518,6 +540,7 @@ impl SceneNode {
             animations: SmallVec::new(),
             annotations: Vec::new(),
             comments: Vec::new(),
+            place: None,
         }
     }
 }
