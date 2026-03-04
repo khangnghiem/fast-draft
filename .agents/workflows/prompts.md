@@ -69,15 +69,13 @@ End with verification step.]
 After implementation prompts, always include:
 
 - [ ] **Unit/integration test prompt** — `/test` workflow (TDD: write failing tests → implement → green)
-- [ ] **E2E browser prompt** — `/e2e` workflow (Codespace canvas testing)
-- [ ] **E2E UX prompt** — `/e2e-ux` workflow (systematic 8-phase UX verification)
+- [ ] **E2E browser prompt** — `/e2e` workflow (smoke tier for routine PRs, full tier for major features)
 
 ### Post-Implementation
 
 - [ ] `/build` passes
 - [ ] `/smoke` passes
-- [ ] `/e2e` passes
-- [ ] `/e2e-ux` all 8 phases pass
+- [ ] `/e2e` passes (smoke or full tier as appropriate)
 - [ ] `/commit` + `/pr`
 ```
 
@@ -85,20 +83,20 @@ After implementation prompts, always include:
 
 ## Rules
 
-| Rule                  | Description                                                                                                                                 |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Min 3 prompts**     | We want agents to spend time doing work                                                                                                     |
-| **Max 10 prompts**    | If more needed, split into sub-features                                                                                                     |
-| **Copy-paste ready**  | Each prompt works standalone — no "see above"                                                                                               |
-| **Concrete refs**     | Actual file paths, line numbers, selectors                                                                                                  |
-| **No ambiguity**      | Agent should never guess                                                                                                                    |
-| **Test-last prompts** | Final 1–3 prompts are ALWAYS `/test`, `/e2e`, `/e2e-ux`                                                                                     |
-| **Auto-pipeline**     | Every prompt MUST end with `/yolo /nonstop /e2e-ux` so the agent runs the full build→test→commit→E2E pipeline autonomously without stopping |
+| Rule                  | Description                                                                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Min 3 prompts**     | We want agents to spend time doing work                                                                                                  |
+| **Max 10 prompts**    | If more needed, split into sub-features                                                                                                  |
+| **Copy-paste ready**  | Each prompt works standalone — no "see above"                                                                                            |
+| **Concrete refs**     | Actual file paths, line numbers, selectors                                                                                               |
+| **No ambiguity**      | Agent should never guess                                                                                                                 |
+| **Test-last prompts** | Final 1–2 prompts are ALWAYS `/test`, `/e2e`                                                                                             |
+| **Auto-pipeline**     | Every prompt MUST end with `/yolo /nonstop /e2e` so the agent runs the full build→test→commit→E2E pipeline autonomously without stopping |
 
 ---
 
 ## Integration
 
 ```
-/suggest → pick → /prompts → execute 1–N → /test → /e2e → /e2e-ux → /build → /pr
+/suggest → pick → /prompts → execute 1–N → /test → /e2e → /build → /pr
 ```

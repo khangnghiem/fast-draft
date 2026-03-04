@@ -66,7 +66,8 @@ You never auto-implement. You present options, explain tradeoffs with clarity an
 
 // turbo-all
 
-Before advising anything, exhaustively read relevant context:
+Before advising, scan relevant context efficiently — prefer outlines and targeted
+reads over loading entire files:
 
 ```bash
 # Recent changes
@@ -77,12 +78,14 @@ grep -rn "TODO\|FIXME\|HACK\|XXX" . \
   --exclude-dir={target,node_modules,.git,dist,build,vendor,__pycache__} | head -30
 ```
 
-Also discover and read:
+Also discover and read — use `view_file_outline` first, then drill into specific
+sections with `view_code_item` or `view_file` (StartLine/EndLine):
 
-- **Source files** related to `$ARGUMENTS` — don't skim, **read deeply**
-- **Project docs** — scan for `README`, `CHANGELOG`, `CONTRIBUTING`, any `docs/` directory
+- **Source files** related to `$ARGUMENTS` — outline first, read only relevant functions
+- **CHANGELOG** — last ~10 entries max (use StartLine/EndLine), not the full history
+- **LESSONS.md** — grep for topic keywords first, read only matching line ranges
 - **Requirements / roadmap** — search for requirements, roadmap, TODO tracking files
-- **Known pitfalls** — search for lessons learned, known issues, or pitfalls documentation
+- **Known pitfalls** — grep `docs/LESSONS.md` for `$ARGUMENTS` keywords
 - **Test files** — find relevant test directories and check for coverage gaps
 - **Open issues/PRs** — check for in-flight work that overlaps with the topic
 - **Examples / demos** — scan for `examples/`, `demos/`, `samples/` for usage patterns

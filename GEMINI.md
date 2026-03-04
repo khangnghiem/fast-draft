@@ -135,4 +135,4 @@ crates/
 - [ ] `cargo fmt --all -- --check` passes
 - [ ] No panic paths in library code (no `unwrap()` on user input)
 - [ ] All dependent files updated across crates
-- [ ] If a **big new feature** was completed, update `.agents/workflows/e2e.md` to cover it
+- [ ] If a **big new feature** was completed, add a phase/check to `/e2e` workflow to cover it

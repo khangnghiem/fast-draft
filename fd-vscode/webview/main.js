@@ -1,6 +1,19 @@
 /**
  * FD Webview — WASM loader + message bridge.
  *
+ * ⚠️  AUTO-GENERATED — do not edit directly.
+ * Edit source modules in webview/src/ and run: pnpm run build:webview
+ *
+ * Loads the Rust WASM module, initializes the FdCanvas, and bridges
+ * between the VS Code extension (postMessage) and the WASM engine.
+ *
+ * NOTE: We use dynamic import() instead of static `import ... from`
+ * because relative module resolution fails silently in VS Code webviews
+ * (the vscode-webview:// resource scheme doesn't support it).
+ */
+/**
+ * FD Webview — WASM loader + message bridge.
+ *
  * Loads the Rust WASM module, initializes the FdCanvas, and bridges
  * between the VS Code extension (postMessage) and the WASM engine.
  *
@@ -321,302 +334,6 @@ function playDetachAnimation(nodeId) {
 
   // Force re-render to reflect tree structure change
   renderDirty = true;
-}
-
-// ─── Initialization ──────────────────────────────────────────────────────
-
-async function main() {
-  canvas = document.getElementById("fd-canvas");
-  const loading = document.getElementById("loading");
-  const status = document.getElementById("status");
-
-  try {
-    // Dynamic import — use absolute webview URI to bypass relative path resolution
-    const wasmJsUrl = window.wasmJsUrl;
-    const wasmModule = await import(wasmJsUrl);
-    const init = wasmModule.default;
-    FdCanvas = wasmModule.FdCanvas;
-
-    // Initialize WASM — pass explicit binary URL for webview compatibility
-    await init(window.wasmBinaryUrl || undefined);
-
-    // Set up canvas
-    const container = document.getElementById("canvas-container");
-    const dpr = window.devicePixelRatio || 1;
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = width + "px";
-    canvas.style.height = height + "px";
-
-    ctx = canvas.getContext("2d");
-    ctx.scale(dpr, dpr);
-
-    // Create WASM canvas controller
-    fdCanvas = new FdCanvas(width, height);
-
-    // Load initial text if available
-    if (window.initialText) {
-      fdCanvas.set_text(window.initialText);
-    }
-
-    // Measure all text nodes for tight bounding boxes
-    measureAllTextNodes();
-
-    // Start animation loop (covers flow animation + initial render)
-    startAnimLoop();
-
-    // Center content accounting for layers panel overlay
-    zoomToFit();
-
-    // Hide loading overlay
-    if (loading) loading.style.display = "none";
-    if (status) status.textContent = "Ready";
-
-    // Set up event listeners
-    setupPointerEvents();
-    setupResizeObserver(container);
-    setupToolbar();
-    setupViewToggle();
-    setupAnnotationCard();
-    setupContextMenu();
-    setupPropertiesPanel();
-    setupInlineEditor();
-    setupAlignGrid();
-    setupDragAndDrop();
-    setupAnimPicker();
-    setupHelpButton();
-    setupFloatingBar();
-
-    setupApplePencilPro();
-    setupThemeToggle();
-    setupSketchyToggle();
-    setupZenModeToggle();
-    setupZoomIndicator();
-    setupGridToggle();
-    setupSpecBadgeToggle();
-    setupExportButton();
-    setupInsertMenu();
-    setupMinimap();
-    setupColorSwatches();
-    setupSelectionBar();
-    setupTouchGestures();
-    setupZoomControls();
-    setupUndoRedoControls();
-    setupSettingsMenu();
-    setupFloatingToolbar();
-    setupEdgeContextMenu();
-
-    // Tell extension we're ready
-    vscode.postMessage({ type: "ready" });
-  } catch (err) {
-    console.error("FD WASM init failed:", err);
-    if (loading) loading.textContent = "Failed to load FD engine: " + err;
-  }
-}
-
-// ─── Rendering ───────────────────────────────────────────────────────────
-
-function render() {
-  if (!fdCanvas || !ctx) return;
-  const dpr = window.devicePixelRatio || 1;
-  // Clear the entire canvas buffer before drawing to prevent trails
-  // when panning or dragging outside the original viewport.
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.restore();
-  ctx.save();
-  // Apply zoom + pan: scale by zoom, then translate by pan
-  const z = zoomLevel * dpr;
-  ctx.setTransform(z, 0, 0, z, panX * dpr, panY * dpr);
-  // Draw grid below shapes
-  if (gridEnabled) drawGrid();
-  fdCanvas.render(ctx, performance.now());
-
-  // ── Arrow tool: draw live preview line during drag ──
-  const arrowPreviewJson = fdCanvas.get_arrow_preview();
-  if (arrowPreviewJson) {
-    try {
-      const ap = JSON.parse(arrowPreviewJson);
-      ctx.save();
-      ctx.strokeStyle = "#6B7080";
-      ctx.lineWidth = 1.5;
-      // Solid line (not dashed)
-      ctx.beginPath();
-      ctx.moveTo(ap.x1, ap.y1);
-      ctx.lineTo(ap.x2, ap.y2);
-      ctx.stroke();
-      // Arrowhead
-      const angle = Math.atan2(ap.y2 - ap.y1, ap.x2 - ap.x1);
-      const headLen = 10;
-      ctx.beginPath();
-      ctx.moveTo(ap.x2, ap.y2);
-      ctx.lineTo(
-        ap.x2 - headLen * Math.cos(angle - Math.PI / 6),
-        ap.y2 - headLen * Math.sin(angle - Math.PI / 6)
-      );
-      ctx.moveTo(ap.x2, ap.y2);
-      ctx.lineTo(
-        ap.x2 - headLen * Math.cos(angle + Math.PI / 6),
-        ap.y2 - headLen * Math.sin(angle + Math.PI / 6)
-      );
-      ctx.stroke();
-
-      // ── Fix #3: Highlight target node under cursor during arrow drag ──
-      if (ap.target_id) {
-        try {
-          const targetBoundsJson = fdCanvas.get_node_bounds(ap.target_id);
-          if (targetBoundsJson) {
-            const tb = JSON.parse(targetBoundsJson);
-            const pad = 4;
-            ctx.beginPath();
-            ctx.roundRect(tb.x - pad, tb.y - pad, tb.width + pad * 2, tb.height + pad * 2, 6);
-            ctx.strokeStyle = "#4FC3F7";
-            ctx.lineWidth = 2.5;
-            ctx.shadowColor = "#4FC3F7";
-            ctx.shadowBlur = 8;
-            ctx.stroke();
-          }
-        } catch (_) { /* ignore */ }
-      }
-
-      ctx.restore();
-    } catch (_) { /* ignore parse errors */ }
-  }
-
-  // Animation drop-zone glow ring removed (bug #4)
-
-  // ── Draw near-detach rubber-band and glow ──
-  if (nearDetachState) {
-    const { parentId, childCx, childCy, parentCx, parentCy } = nearDetachState;
-    ctx.save();
-
-    // Draw rubber-band line
-    ctx.beginPath();
-    ctx.moveTo(childCx, childCy);
-    ctx.lineTo(parentCx, parentCy);
-    ctx.strokeStyle = "#8A2BE2"; // Purple
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 6]);
-    ctx.stroke();
-
-    // Draw parent group glow
-    try {
-      const parentBoundsJson = fdCanvas.get_node_bounds(parentId);
-      if (parentBoundsJson) {
-        const pb = JSON.parse(parentBoundsJson);
-        const pad = 4;
-        ctx.beginPath();
-        ctx.roundRect(pb.x - pad, pb.y - pad, pb.width + pad * 2, pb.height + pad * 2, 8);
-        ctx.strokeStyle = "#8A2BE2";
-        ctx.lineWidth = 2.5;
-        ctx.shadowColor = "#8A2BE2";
-        ctx.shadowBlur = 12;
-        ctx.stroke();
-        // Inner/extra glow
-        ctx.globalAlpha = 0.5;
-        ctx.shadowBlur = 24;
-        ctx.stroke();
-      }
-    } catch (_) {
-      // Fallback dot if bounds fail
-      ctx.beginPath();
-      ctx.arc(parentCx, parentCy, 4, 0, Math.PI * 2);
-      ctx.fillStyle = "#8A2BE2";
-      ctx.fill();
-    }
-
-    ctx.restore();
-  }
-
-  // ── Eraser poof fade-out overlays ──
-  if (erasePoofs.length > 0) {
-    const now = performance.now();
-    for (let i = erasePoofs.length - 1; i >= 0; i--) {
-      const p = erasePoofs[i];
-      const elapsed = now - p.startTime;
-      const duration = 150;
-      if (elapsed >= duration) {
-        erasePoofs.splice(i, 1);
-        continue;
-      }
-      const t = elapsed / duration;
-      const alpha = (1 - t) * 0.3;
-      const scale = 1 + t * 0.15;
-      const cx = p.x + p.width / 2;
-      const cy = p.y + p.height / 2;
-      const sw = p.width * scale;
-      const sh = p.height * scale;
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = "#FF3B30";
-      const r = Math.min(sw, sh) * 0.08;
-      const rx = cx - sw / 2;
-      const ry = cy - sh / 2;
-      ctx.beginPath();
-      ctx.roundRect(rx, ry, sw, sh, r);
-      ctx.fill();
-      ctx.restore();
-    }
-    if (erasePoofs.length > 0) renderDirty = true;
-  }
-
-  ctx.restore();
-
-  // Update minimap viewport indicator smoothly (scene re-renders at lower frequency)
-  renderMinimapViewport();
-
-  // Schedule side-effects at lower frequency (~10fps) to avoid DOM/WASM thrashing
-  scheduleSideEffects();
-}
-
-/** Animation loop ID for flow animations (pulse/dash edges). */
-let animFrameId = null;
-
-/**
- * Start the dirty-checked animation loop.
- * The loop keeps running via rAF but only calls render() when:
- *   - renderDirty is true (user interaction, text change, resize, etc.)
- *   - activeTweens are in progress (spring/ease animations)
- * When idle, this loop is essentially free (no WASM calls, no DOM work).
- */
-function startAnimLoop() {
-  if (animFrameId !== null) return; // already running
-  function loop() {
-    if (renderDirty || activeTweens.length > 0 || erasePoofs.length > 0) {
-      renderDirty = false;
-      render();
-    }
-    animFrameId = requestAnimationFrame(loop);
-  }
-  animFrameId = requestAnimationFrame(loop);
-}
-
-/** Stop the animation loop (e.g. when canvas is hidden). */
-function stopAnimLoop() {
-  if (animFrameId !== null) {
-    cancelAnimationFrame(animFrameId);
-    animFrameId = null;
-  }
-}
-
-/**
- * Schedule side-effects (layers panel, minimap, selection bar) at ~10fps.
- * These cross the WASM boundary and touch the DOM, so we throttle them
- * to avoid dominating frame time during rapid interactions.
- */
-function scheduleSideEffects() {
-  if (sideEffectTimer) return; // already scheduled
-  sideEffectTimer = setTimeout(() => {
-    sideEffectTimer = null;
-    if (viewMode === "spec" || specBadgesVisible) refreshSpecBadges();
-    if (viewMode === "spec") refreshSpecView();
-    refreshLayersPanel();
-    renderMinimap();
-  }, 100);
 }
 
 // ─── Pointer Events ──────────────────────────────────────────────────────
@@ -1261,6 +978,7 @@ function setupTouchGestures() {
   });
 }
 
+
 // ─── Resize ──────────────────────────────────────────────────────────────
 
 function setupResizeObserver(container) {
@@ -1383,6 +1101,10 @@ function updateLockedIndicator(tool) {
 
 // ─── Message Bridge (Extension ↔ Webview) ────────────────────────────────
 
+/** Debounce timer for Code→Canvas focusOnNode — prevents animation jitter
+ *  when rapidly arrowing through lines in the text editor. */
+let codeFocusDebounceTimer = null;
+
 window.addEventListener("message", (event) => {
   const message = event.data;
 
@@ -1401,10 +1123,18 @@ window.addEventListener("message", (event) => {
     }
     case "selectNode": {
       if (!fdCanvas) return;
-      if (fdCanvas.select_by_id(message.nodeId || "")) {
+      const nodeId = message.nodeId || "";
+      if (fdCanvas.select_by_id(nodeId)) {
         // Sync dedup state so next canvas click sends nodeSelected correctly
-        lastNotifiedSelectedId = message.nodeId || "";
+        lastNotifiedSelectedId = nodeId;
         render();
+        // Update Layers panel highlight + scroll into view
+        refreshLayersPanel();
+        // Debounced pan/zoom to the selected node on Canvas (150ms)
+        if (nodeId) {
+          clearTimeout(codeFocusDebounceTimer);
+          codeFocusDebounceTimer = setTimeout(() => focusOnNode(nodeId), 150);
+        }
       }
       break;
     }
@@ -1878,6 +1608,7 @@ function getResizeHandleCursor(x, y) {
   return "";
 }
 
+
 // ─── Shortcut Help Overlay ───────────────────────────────────────────────
 
 let shortcutHelpVisible = false;
@@ -2016,6 +1747,47 @@ function buildShortcutHelpHtml() {
   `;
 
   return html;
+}
+
+
+// ─── Arrow-Key Nudge (Figma/Sketch standard) ─────────────────────────────────
+
+/** Nudge the selected node by step pixels in the arrow direction. */
+function nudgeSelected(arrowKey, step) {
+  if (!fdCanvas) return;
+  const selectedId = fdCanvas.get_selected_id();
+  if (!selectedId) return;
+
+  try {
+    const boundsJson = fdCanvas.get_node_bounds(selectedId);
+    const b = JSON.parse(boundsJson);
+    if (b.x === undefined) return;
+
+    let newX = b.x;
+    let newY = b.y;
+
+    switch (arrowKey) {
+      case "ArrowUp": newY -= step; break;
+      case "ArrowDown": newY += step; break;
+      case "ArrowLeft": newX -= step; break;
+      case "ArrowRight": newX += step; break;
+    }
+
+    // Use handle_pointer sequence to move the node to the new position
+    // This correctly updates constraints and triggers bidi sync
+    const cx = b.x + b.width / 2;
+    const cy = b.y + b.height / 2;
+    const dx = newX - b.x;
+    const dy = newY - b.y;
+    fdCanvas.handle_pointer_down(cx, cy, 1.0, false, false, false, false);
+    const changed = fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false);
+    const upResult = JSON.parse(fdCanvas.handle_pointer_up(cx + dx, cy + dy, false, false, false, false));
+    if (upResult.changed || changed) {
+      render();
+      syncTextToExtension();
+      updatePropertiesPanel();
+    }
+  } catch (_) { /* skip */ }
 }
 
 // ─── Annotation Card ───────────────────────────────────────────────────────
@@ -2713,6 +2485,210 @@ function closeContextMenu() {
   contextMenuNodeId = null;
 }
 
+
+// ─── Edge Context Menu ──────────────────────────────────────────────────
+
+let ecmEdgeId = null;
+
+function showEdgeContextMenu(edgeId, screenX, screenY) {
+  const menu = document.getElementById("edge-context-menu");
+  if (!menu) return;
+  ecmEdgeId = edgeId;
+  document.getElementById("ecm-arrow").value = "end";
+  document.getElementById("ecm-curve").value = "smooth";
+  document.getElementById("ecm-stroke-color").value = "#999999";
+  document.getElementById("ecm-stroke-width").value = "1";
+  document.getElementById("ecm-flow").value = "none";
+  document.getElementById("ecm-flow-dur").style.display = "none";
+  menu.style.left = (screenX + 12) + "px";
+  menu.style.top = (screenY - 60) + "px";
+  menu.classList.add("visible");
+  setTimeout(() => {
+    document.addEventListener("pointerdown", ecmClickOutside, true);
+    document.addEventListener("keydown", ecmEscHandler, true);
+  }, 50);
+}
+
+function closeEdgeContextMenu() {
+  const menu = document.getElementById("edge-context-menu");
+  if (menu) menu.classList.remove("visible");
+  ecmEdgeId = null;
+  document.removeEventListener("pointerdown", ecmClickOutside, true);
+  document.removeEventListener("keydown", ecmEscHandler, true);
+}
+
+function ecmClickOutside(e) {
+  const menu = document.getElementById("edge-context-menu");
+  if (menu && !menu.contains(e.target)) closeEdgeContextMenu();
+}
+
+function ecmEscHandler(e) {
+  if (e.key === "Escape") { closeEdgeContextMenu(); e.preventDefault(); }
+}
+
+function setupEdgeContextMenu() {
+  const arrowSel = document.getElementById("ecm-arrow");
+  const curveSel = document.getElementById("ecm-curve");
+  const strokeColor = document.getElementById("ecm-stroke-color");
+  const strokeWidth = document.getElementById("ecm-stroke-width");
+  const flowSel = document.getElementById("ecm-flow");
+  const flowDur = document.getElementById("ecm-flow-dur");
+  if (!arrowSel) return;
+
+  function applyEdgeChange() {
+    if (!fdCanvas || !ecmEdgeId) return;
+    const text = fdCanvas.get_text();
+    const esc = ecmEdgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(edge\\s+@${esc}\\s*\\{[^}]*?)\\}`, "s");
+    const m = text.match(re);
+    if (!m) return;
+    let block = m[1];
+    // Arrow
+    block = block.replace(/arrow:\s*\S+/, `arrow: ${arrowSel.value}`);
+    if (!block.includes("arrow:")) block += `\n  arrow: ${arrowSel.value}`;
+    // Curve
+    block = block.replace(/curve:\s*\S+/, `curve: ${curveSel.value}`);
+    if (!block.includes("curve:")) block += `\n  curve: ${curveSel.value}`;
+    // Stroke
+    const sw = strokeWidth.value || "1";
+    const sc = strokeColor.value || "#999";
+    block = block.replace(/stroke:\s*#?\w+\s*[\d.]*/, `stroke: ${sc} ${sw}`);
+    if (!block.includes("stroke:")) block += `\n  stroke: ${sc} ${sw}`;
+    // Flow
+    if (flowSel.value !== "none") {
+      const dur = flowDur.value || "800";
+      const flowLine = `flow: ${flowSel.value} ${dur}ms`;
+      if (block.includes("flow:")) {
+        block = block.replace(/flow:\s*\S+\s*\d*m?s?/, flowLine);
+      } else {
+        block += `\n  ${flowLine}`;
+      }
+    } else {
+      block = block.replace(/\n\s*flow:\s*\S+\s*\d*m?s?/, "");
+    }
+    const newText = text.replace(re, block + "\n}");
+    fdCanvas.set_text(newText);
+    bumpGeneration();
+    render();
+    syncTextToExtension();
+  }
+
+  arrowSel.addEventListener("change", applyEdgeChange);
+  curveSel.addEventListener("change", applyEdgeChange);
+  strokeColor.addEventListener("input", applyEdgeChange);
+  strokeWidth.addEventListener("change", applyEdgeChange);
+  flowSel.addEventListener("change", () => {
+    flowDur.style.display = flowSel.value !== "none" ? "" : "none";
+    applyEdgeChange();
+  });
+  flowDur.addEventListener("change", applyEdgeChange);
+}
+
+/** Draw a dot grid behind shapes. Grid adapts to zoom level. */
+function drawGrid() {
+  if (!ctx) return;
+  const container = document.getElementById("canvas-container");
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+
+  // Compute spacing: double grid spacing when dots get too close
+  let spacing = GRID_BASE_SPACING;
+  while (spacing * zoomLevel < 10) spacing *= 2;
+
+  // Determine visible scene-space bounds
+  const sceneLeft = -panX / zoomLevel;
+  const sceneTop = -panY / zoomLevel;
+  const sceneRight = (cw - panX) / zoomLevel;
+  const sceneBottom = (ch - panY) / zoomLevel;
+
+  // Snap start to grid
+  const startX = Math.floor(sceneLeft / spacing) * spacing;
+  const startY = Math.floor(sceneTop / spacing) * spacing;
+
+  // Choose dot vs line based on zoom
+  const isDark = document.body.classList.contains("dark-theme");
+  if (zoomLevel >= 3) {
+    // Line grid at high zoom
+    ctx.strokeStyle = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)";
+    ctx.lineWidth = 0.5 / zoomLevel;
+    ctx.beginPath();
+    for (let x = startX; x <= sceneRight; x += spacing) {
+      ctx.moveTo(x, sceneTop);
+      ctx.lineTo(x, sceneBottom);
+    }
+    for (let y = startY; y <= sceneBottom; y += spacing) {
+      ctx.moveTo(sceneLeft, y);
+      ctx.lineTo(sceneRight, y);
+    }
+    ctx.stroke();
+  } else {
+    // Dot grid
+    const dotSize = Math.max(0.8, 1 / zoomLevel);
+    ctx.fillStyle = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)";
+    for (let x = startX; x <= sceneRight; x += spacing) {
+      for (let y = startY; y <= sceneBottom; y += spacing) {
+        ctx.fillRect(x - dotSize / 2, y - dotSize / 2, dotSize, dotSize);
+      }
+    }
+  }
+}
+
+/** Toggle grid overlay on/off. */
+function toggleGrid() {
+  gridEnabled = !gridEnabled;
+  const btn = document.getElementById("grid-toggle-btn");
+  if (btn) btn.classList.toggle("grid-on", gridEnabled);
+  // Persist grid state
+  vscode.setState({ ...(vscode.getState() || {}), gridEnabled });
+  render();
+}
+
+/** Set up grid toggle button and restore persisted state. */
+function setupGridToggle() {
+  const btn = document.getElementById("grid-toggle-btn");
+  if (!btn) return;
+
+  // Restore persisted state
+  const savedState = vscode.getState();
+  if (savedState && savedState.gridEnabled) {
+    gridEnabled = true;
+    btn.classList.add("grid-on");
+  }
+
+  btn.addEventListener("click", toggleGrid);
+}
+
+/** Toggle spec badge overlay on/off (independent of Spec View mode). */
+function toggleSpecBadges() {
+  specBadgesVisible = !specBadgesVisible;
+  const btn = document.getElementById("sm-spec-badge-toggle");
+  if (btn) btn.classList.toggle("active", specBadgesVisible);
+  vscode.setState({ ...(vscode.getState() || {}), specBadgesVisible });
+
+  const overlay = document.getElementById("spec-overlay");
+  if (specBadgesVisible || viewMode === "spec") {
+    refreshSpecBadges();
+  } else {
+    if (overlay) { overlay.innerHTML = ""; overlay.style.display = "none"; }
+  }
+}
+
+/** Set up spec badge toggle button and restore persisted state. */
+function setupSpecBadgeToggle() {
+  const btn = document.getElementById("sm-spec-badge-toggle");
+  if (!btn) return;
+
+  // Restore persisted state
+  const savedState = vscode.getState();
+  if (savedState && savedState.specBadgesVisible) {
+    specBadgesVisible = true;
+    btn.classList.add("active");
+    setTimeout(() => { if (fdCanvas) refreshSpecBadges(); }, 500);
+  }
+
+  btn.addEventListener("click", toggleSpecBadges);
+}
+
 // ─── Properties Panel ────────────────────────────────────────────────────
 
 let propsSuppressSync = false;
@@ -2876,6 +2852,790 @@ function setupAlignGrid() {
     render();
     syncTextToExtension();
     updatePropertiesPanel();
+  });
+}
+
+
+// ─── Layers Panel (Tree View) ────────────────────────────────────────────
+
+const LAYER_ICONS = {
+  group: "◻",
+  frame: "▣",
+  rect: "▢",
+  ellipse: "○",
+  path: "〜",
+  text: "T",
+  style: "◆",
+  edge: "⟶",
+  spec: "◇",
+};
+
+/**
+ * Parse FD source into a hierarchical layer tree.
+ * Returns array of { id, kind, text, children[] }.
+ */
+function parseLayerTree(source) {
+  const lines = source.split("\n");
+  const root = [];
+  const stack = []; // { node, depth }
+  let braceDepth = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+
+    const openBraces = (trimmed.match(/\{/g) || []).length;
+    const closeBraces = (trimmed.match(/\}/g) || []).length;
+
+    // Style definition
+    const styleMatch = trimmed.match(/^style\s+(\w+)\s*\{/);
+    if (styleMatch) {
+      const node = { id: styleMatch[1], kind: "style", text: "", children: [] };
+      if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
+      else root.push(node);
+      braceDepth += openBraces - closeBraces;
+      stack.push({ node, depth: braceDepth });
+      continue;
+    }
+
+    // Edge
+    const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s*\{/);
+    if (edgeMatch) {
+      const node = { id: edgeMatch[1], kind: "edge", text: "", children: [] };
+      if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
+      else root.push(node);
+      braceDepth += openBraces - closeBraces;
+      stack.push({ node, depth: braceDepth });
+      continue;
+    }
+
+    // Typed node
+    const nodeMatch = trimmed.match(
+      /^(group|frame|rect|ellipse|path|text)\s+@(\w+)(?:\s+"([^"]*)")?\s*\{?/
+    );
+    if (nodeMatch) {
+      const node = {
+        id: nodeMatch[2],
+        kind: nodeMatch[1],
+        text: nodeMatch[3] || "",
+        children: [],
+      };
+      if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
+      else root.push(node);
+      if (trimmed.endsWith("{")) {
+        braceDepth += 1;
+        stack.push({ node, depth: braceDepth });
+      }
+      continue;
+    }
+
+    // Generic node
+    const genericMatch = trimmed.match(/^@(\w+)\s*\{/);
+    if (genericMatch) {
+      const node = { id: genericMatch[1], kind: "spec", text: "", children: [] };
+      if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
+      else root.push(node);
+      braceDepth += openBraces - closeBraces;
+      stack.push({ node, depth: braceDepth });
+      continue;
+    }
+
+    // Closing brace
+    if (trimmed === "}") {
+      braceDepth -= 1;
+      while (stack.length > 0 && stack[stack.length - 1].depth > braceDepth) {
+        stack.pop();
+      }
+      continue;
+    }
+
+    braceDepth += openBraces - closeBraces;
+  }
+
+  return root;
+}
+
+/** Render a layer tree node as HTML with Figma-style indentation. */
+function renderLayerNode(node, selectedId, depth = 0) {
+  const icon = LAYER_ICONS[node.kind] || "•";
+  const isSelected = node.id === selectedId;
+  const hasChildren = node.children.length > 0;
+  const textPreview = node.text ? `<span class="layer-text-preview">"${escapeHtml(node.text)}"</span>` : "";
+
+  // Indent guides for depth
+  let indent = "";
+  for (let i = 0; i < depth; i++) {
+    indent += `<span class="layer-indent-guide"></span>`;
+  }
+
+  // Disclosure chevron
+  const chevronClass = hasChildren ? "layer-chevron expanded" : "layer-chevron empty";
+  const chevron = `<span class="${chevronClass}" data-toggle-id="${escapeAttr(node.id)}">▶</span>`;
+
+  let html = `<div class="layer-item${isSelected ? " selected" : ""}" data-node-id="${escapeAttr(node.id)}">`;
+  html += `<span class="layer-indent">${indent}</span>`;
+  html += chevron;
+  html += `<span class="layer-icon">${icon}</span>`;
+  html += `<span class="layer-name">${escapeHtml(node.id)}${textPreview}</span>`;
+  html += `<span class="layer-kind">${escapeHtml(node.kind)}</span>`;
+  html += `<span class="layer-actions" data-actions-id="${escapeAttr(node.id)}" title="More actions">⋮</span>`;
+  html += `<span class="layer-eye" data-eye-id="${escapeAttr(node.id)}" title="Toggle visibility">👁</span>`;
+  html += `</div>`;
+
+  if (hasChildren) {
+    html += `<div class="layer-children" data-parent-id="${escapeAttr(node.id)}">`;
+    for (const child of node.children) {
+      html += renderLayerNode(child, selectedId, depth + 1);
+    }
+    html += `</div>`;
+  }
+  return html;
+}
+
+/** Refresh the layers panel content. */
+
+// ─── Spec Summary Panel (replaces layers in Spec mode) ──────────────────
+
+function refreshSpecSummary(panel) {
+  if (!fdCanvas) return;
+  const source = fdCanvas.get_text();
+  const annotated = parseAnnotatedNodes(source);
+  const selectedId = fdCanvas.get_selected_id() || "";
+
+  // Count total meaningful nodes for coverage %
+  const tree = parseLayerTree(source);
+  const countNodes = (nodes) => nodes.reduce((sum, n) => sum + 1 + countNodes(n.children), 0);
+  const totalNodes = countNodes(tree);
+  const coveragePct = totalNodes > 0 ? Math.round((annotated.length / totalNodes) * 100) : 0;
+
+  // Header with coverage % and action buttons
+  let html = `<div class="layers-header">`;
+  html += `<span class="layers-title">Requirements</span>`;
+  html += `<span class="layers-count" title="${annotated.length} of ${totalNodes} nodes have specs">${coveragePct}%</span>`;
+  html += `<div class="spec-header-actions">`;
+  html += `<button class="spec-action-btn" id="spec-export-btn" title="Export spec report (copies markdown to clipboard)">↗</button>`;
+  html += `<select class="spec-bulk-status" id="spec-bulk-status" title="Set status on all visible specs">`;
+  html += `<option value="">Bulk…</option>`;
+  html += `<option value="todo">→ To Do</option>`;
+  html += `<option value="doing">→ Doing</option>`;
+  html += `<option value="done">→ Done</option>`;
+  html += `<option value="blocked">→ Blocked</option>`;
+  html += `</select>`;
+  html += `</div>`;
+  html += `</div>`;
+
+  // Filter tabs
+  const filters = [
+    { key: "all", label: "All" },
+    { key: "todo", label: "To Do" },
+    { key: "doing", label: "Doing" },
+    { key: "done", label: "Done" },
+    { key: "blocked", label: "Blocked" },
+  ];
+  html += `<div class="spec-filter-tabs">`;
+  for (const f of filters) {
+    const active = specFilter === f.key ? " active" : "";
+    // Count per filter
+    let count;
+    if (f.key === "all") {
+      count = annotated.length;
+    } else {
+      count = annotated.filter(n =>
+        n.annotations.some(a => a.type === "status" && a.value === f.key)
+      ).length;
+    }
+    html += `<button class="spec-filter-btn${active}" data-filter="${f.key}">${f.label} <span class="spec-filter-count">${count}</span></button>`;
+  }
+  html += `</div>`;
+
+  // Filter nodes by status
+  const filtered = specFilter === "all"
+    ? annotated
+    : annotated.filter(n =>
+      n.annotations.some(a => a.type === "status" && a.value === specFilter)
+    );
+
+  if (filtered.length === 0 && annotated.length === 0) {
+    html += `<div class="spec-empty-state">`;
+    html += `<div style="font-size:24px;margin-bottom:8px;opacity:0.4">◇</div>`;
+    html += `<div style="opacity:0.5;font-size:12px">No spec annotations yet</div>`;
+    html += `<div style="opacity:0.35;font-size:11px;margin-top:4px">Right-click a node → Add Spec, or press ⌘I</div>`;
+    html += `</div>`;
+    panel.innerHTML = html;
+    return;
+  }
+
+  if (filtered.length === 0) {
+    html += `<div class="spec-empty-state">`;
+    html += `<div style="opacity:0.5;font-size:12px">No specs with this status</div>`;
+    html += `</div>`;
+    panel.innerHTML = html;
+    wireSpecPanelHandlers(panel, annotated);
+    return;
+  }
+
+  html += `<div class="layers-body">`;
+  for (const node of filtered) {
+    const isSelected = node.id === selectedId;
+    const descriptions = node.annotations.filter(a => a.type === "description");
+    const statuses = node.annotations.filter(a => a.type === "status");
+    const priorities = node.annotations.filter(a => a.type === "priority");
+    const accepts = node.annotations.filter(a => a.type === "accept");
+    const tags = node.annotations.filter(a => a.type === "tag");
+
+    html += `<div class="spec-summary-card${isSelected ? ' selected' : ''}" data-spec-id="${escapeAttr(node.id)}">`;
+    html += `<div class="spec-card-header">`;
+    html += `<span class="spec-card-id">@${escapeHtml(node.id)}</span>`;
+    if (node.kind) {
+      html += `<span class="spec-card-kind">${escapeHtml(node.kind)}</span>`;
+    }
+    html += `</div>`;
+    if (descriptions.length > 0) {
+      html += `<div class="spec-card-desc">${escapeHtml(descriptions[0].value)}</div>`;
+    }
+    if (statuses.length > 0 || priorities.length > 0) {
+      html += `<div class="spec-card-badges">`;
+      for (const s of statuses) {
+        html += `<span class="spec-card-badge status-${escapeAttr(s.value)}">${escapeHtml(s.value)}</span>`;
+      }
+      for (const p of priorities) {
+        html += `<span class="spec-card-badge priority-${escapeAttr(p.value)}">⚡ ${escapeHtml(p.value)}</span>`;
+      }
+      html += `</div>`;
+    }
+    if (accepts.length > 0) {
+      html += `<div class="spec-card-accepts">`;
+      for (const a of accepts) {
+        html += `<div class="spec-card-accept-item">✓ ${escapeHtml(a.value)}</div>`;
+      }
+      html += `</div>`;
+    }
+    if (tags.length > 0) {
+      html += `<div class="spec-card-tags">`;
+      for (const t of tags) {
+        html += `<span class="spec-card-tag">${escapeHtml(t.value)}</span>`;
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+  html += `</div>`;
+
+  panel.innerHTML = html;
+  wireSpecPanelHandlers(panel, annotated);
+}
+
+function wireSpecPanelHandlers(panel, annotated) {
+  // Filter tab handlers
+  panel.querySelectorAll(".spec-filter-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      specFilter = btn.getAttribute("data-filter") || "all";
+      refreshSpecSummary(panel);
+    });
+  });
+
+  // Card click handlers
+  panel.querySelectorAll(".spec-summary-card").forEach(card => {
+    card.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const nodeId = card.getAttribute("data-spec-id");
+      if (nodeId && fdCanvas) {
+        if (fdCanvas.select_by_id(nodeId)) render();
+        const rect = card.getBoundingClientRect();
+        openAnnotationCard(nodeId, rect.right + 8, rect.top);
+        panel.querySelectorAll(".spec-summary-card").forEach(c =>
+          c.classList.toggle("selected", c.getAttribute("data-spec-id") === nodeId)
+        );
+      }
+    });
+  });
+
+  // Export button
+  document.getElementById("spec-export-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    exportSpecReport(annotated);
+  });
+
+  // Bulk status dropdown
+  document.getElementById("spec-bulk-status")?.addEventListener("change", (e) => {
+    e.stopPropagation();
+    const newStatus = e.target.value;
+    if (newStatus) {
+      bulkSetStatus(annotated, newStatus);
+      e.target.value = "";
+    }
+  });
+}
+
+function exportSpecReport(annotated) {
+  if (!fdCanvas) return;
+  let md = `# Spec Report\n\n`;
+  md += `> Generated from FD canvas\n\n`;
+
+  for (const node of annotated) {
+    const desc = node.annotations.find(a => a.type === "description");
+    const status = node.annotations.find(a => a.type === "status");
+    const priority = node.annotations.find(a => a.type === "priority");
+    const accepts = node.annotations.filter(a => a.type === "accept");
+    const tags = node.annotations.filter(a => a.type === "tag");
+
+    md += `## @${node.id}`;
+    if (node.kind) md += ` (${node.kind})`;
+    md += `\n\n`;
+    if (desc) md += `${desc.value}\n\n`;
+    if (status) md += `**Status:** ${status.value}\n`;
+    if (priority) md += `**Priority:** ${priority.value}\n`;
+    if (status || priority) md += `\n`;
+    if (accepts.length > 0) {
+      md += `**Acceptance Criteria:**\n`;
+      for (const a of accepts) md += `- [ ] ${a.value}\n`;
+      md += `\n`;
+    }
+    if (tags.length > 0) {
+      md += `**Tags:** ${tags.map(t => t.value).join(", ")}\n\n`;
+    }
+    md += `---\n\n`;
+  }
+
+  navigator.clipboard.writeText(md).then(() => {
+    vscode.postMessage({ type: "info", text: `Spec report copied to clipboard (${annotated.length} nodes)` });
+  });
+}
+
+function bulkSetStatus(annotated, newStatus) {
+  if (!fdCanvas) return;
+  // Apply status to currently visible (filtered) nodes
+  const targets = specFilter === "all"
+    ? annotated
+    : annotated.filter(n =>
+      n.annotations.some(a => a.type === "status" && a.value === specFilter)
+    );
+
+  for (const node of targets) {
+    const json = fdCanvas.get_annotations_json(node.id);
+    const anns = JSON.parse(json);
+    // Remove existing status, add new
+    const filtered = anns.filter(a => a.Status === undefined);
+    filtered.push({ Status: newStatus });
+    fdCanvas.set_annotations_json(node.id, JSON.stringify(filtered));
+  }
+  render();
+  syncTextToExtension();
+  // Refresh to show updated statuses
+  const panel = document.getElementById("layers-panel");
+  if (panel) refreshSpecSummary(panel);
+}
+
+/** Last layer generation + selection — skip rebuild when unchanged */
+let lastLayerGeneration = -1;
+let lastLayerSelectedId = "";
+
+function refreshLayersPanel() {
+  const panel = document.getElementById("layers-panel");
+  if (!panel || !fdCanvas) return;
+
+  // In Spec mode, show requirements summary instead of layers
+  if (viewMode === "spec") {
+    lastLayerGeneration = -1;
+    refreshSpecSummary(panel);
+    return;
+  }
+
+  const selectedId = fdCanvas.get_selected_id() || "";
+
+  // Skip DOM rebuild if nothing changed (uses generation counter instead of full-text hash)
+  if (sceneGeneration === lastLayerGeneration && selectedId === lastLayerSelectedId) return;
+
+  // Selection-only change: update highlight on existing DOM without full rebuild
+  if (sceneGeneration === lastLayerGeneration && selectedId !== lastLayerSelectedId) {
+    lastLayerSelectedId = selectedId;
+    panel.querySelectorAll(".layer-item").forEach(el =>
+      el.classList.toggle("selected", el.getAttribute("data-node-id") === selectedId)
+    );
+    // Scroll selected item into view (Canvas/Code → Layers sync)
+    const selectedEl = panel.querySelector('.layer-item.selected');
+    if (selectedEl) selectedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    return;
+  }
+
+  lastLayerGeneration = sceneGeneration;
+  lastLayerSelectedId = selectedId;
+
+  const source = fdCanvas.get_text();
+
+  const tree = parseLayerTree(source);
+
+  // Count total nodes
+  const countNodes = (nodes) => nodes.reduce((sum, n) => sum + 1 + countNodes(n.children), 0);
+  const totalCount = countNodes(tree);
+
+  let html = `<div class="layers-header">`;
+  html += `<span class="layers-title">Layers</span>`;
+  html += `<span class="layers-count">${totalCount}</span>`;
+  html += `</div>`;
+  html += `<div class="layers-body">`;
+  for (const node of tree) {
+    html += renderLayerNode(node, selectedId);
+  }
+  html += `</div>`;
+
+  panel.innerHTML = html;
+
+  // Wire click handlers for layer items (selection)
+  panel.querySelectorAll(".layer-item").forEach((item) => {
+    item.addEventListener("click", (e) => {
+      // Don't select when clicking chevron
+      if (e.target.closest(".layer-chevron")) return;
+      e.stopPropagation();
+      const nodeId = item.getAttribute("data-node-id");
+      if (nodeId && fdCanvas) {
+        if (fdCanvas.select_by_id(nodeId)) {
+          // Pre-set generation so that scheduleSideEffects() → refreshLayersPanel() skips DOM rebuild.
+          // This keeps our DOM references valid for the highlight update below.
+          lastLayerGeneration = sceneGeneration;
+          lastLayerSelectedId = nodeId;
+          render();
+          // Update selection highlight in layers (DOM still intact because rebuild was skipped)
+          panel.querySelectorAll(".layer-item").forEach((el) => {
+            el.classList.toggle("selected", el.getAttribute("data-node-id") === nodeId);
+          });
+          // Smart focus: pan/zoom to the selected node if needed
+          focusOnNode(nodeId);
+          // Notify extension of selection
+          vscode.postMessage({ type: "nodeSelected", id: nodeId });
+          updatePropertiesPanel();
+        }
+      }
+    });
+  });
+
+  // Wire chevron toggle for expand/collapse
+  panel.querySelectorAll(".layer-chevron:not(.empty)").forEach((chevron) => {
+    chevron.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const toggleId = chevron.getAttribute("data-toggle-id");
+      const childrenContainer = panel.querySelector(`.layer-children[data-parent-id="${toggleId}"]`);
+      if (childrenContainer) {
+        const isCollapsed = childrenContainer.classList.toggle("collapsed");
+        chevron.classList.toggle("expanded", !isCollapsed);
+      }
+    });
+  });
+
+  // Wire double-click on layer name for inline rename (Figma/Sketch)
+  panel.querySelectorAll(".layer-name").forEach((nameEl) => {
+    nameEl.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      const item = nameEl.closest(".layer-item");
+      if (!item) return;
+      const oldId = item.getAttribute("data-node-id");
+      if (!oldId) return;
+
+      // Create inline input
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = oldId;
+      input.style.cssText = [
+        "font-size:11px",
+        "font-family:inherit",
+        "padding:1px 4px",
+        "border:1px solid var(--fd-accent)",
+        "border-radius:4px",
+        "background:var(--fd-input-bg)",
+        "color:var(--fd-text)",
+        "outline:none",
+        "width:100%",
+        "box-shadow:0 0 0 2px var(--fd-input-focus)",
+      ].join(";");
+
+      // Replace name span with input
+      nameEl.textContent = "";
+      nameEl.appendChild(input);
+      input.focus();
+      input.select();
+
+      let committed = false;
+      const commit = () => {
+        if (committed) return;
+        committed = true;
+        const newId = input.value.trim().replace(/[^a-zA-Z0-9_]/g, "_");
+        if (input.parentNode) input.parentNode.removeChild(input);
+        if (!newId || newId === oldId || !fdCanvas) {
+          refreshLayersPanel();
+          return;
+        }
+        // Rename in the FD source: replace all @old_id references
+        const text = fdCanvas.get_text();
+        const renamed = text.replace(
+          new RegExp(`@${oldId}\\b`, "g"),
+          `@${newId}`
+        );
+        if (renamed !== text) {
+          const ok = fdCanvas.set_text(renamed);
+          if (ok) {
+            render();
+            syncTextToExtension();
+          }
+        }
+        refreshLayersPanel();
+      };
+
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") { ev.preventDefault(); commit(); }
+        if (ev.key === "Escape") { ev.preventDefault(); refreshLayersPanel(); }
+        ev.stopPropagation();
+      });
+      input.addEventListener("blur", () => setTimeout(commit, 100));
+    });
+  });
+
+  // Wire eye icon for layer visibility toggle
+  panel.querySelectorAll(".layer-eye").forEach((eyeEl) => {
+    const nodeId = eyeEl.getAttribute("data-eye-id");
+    if (hiddenNodes.has(nodeId)) {
+      eyeEl.classList.add("hidden-layer");
+      eyeEl.textContent = "⊘";
+    }
+    eyeEl.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleNodeVisibility(nodeId);
+    });
+  });
+}
+
+// ─── Spec View Parser (client-side) ──────────────────────────────────────
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function parseSpecAnnotation(line) {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed === "}") return null;
+  const acceptMatch = trimmed.match(/^accept:\s*"([^"]*)"/);
+  if (acceptMatch) return { type: "accept", value: acceptMatch[1] };
+  const statusMatch = trimmed.match(/^status:\s*(\S+)/);
+  if (statusMatch) return { type: "status", value: statusMatch[1] };
+  const priorityMatch = trimmed.match(/^priority:\s*(\S+)/);
+  if (priorityMatch) return { type: "priority", value: priorityMatch[1] };
+  const tagMatch = trimmed.match(/^tag:\s*(.+)/);
+  if (tagMatch) return { type: "tag", value: tagMatch[1].trim() };
+  const descMatch = trimmed.match(/^"([^"]*)"/);
+  if (descMatch) return { type: "description", value: descMatch[1] };
+  return null;
+}
+
+
+// ─── Color Swatches (Sketch/Figma preset palette) ─────────────────────────────
+
+const COLOR_PRESETS = [
+  "#000000", "#FFFFFF", "#FF3B30", "#FF9500",
+  "#FFCC00", "#34C759", "#007AFF", "#5856D6",
+  "#AF52DE", "#FF2D55", "#8E8E93", "#48484A",
+];
+/** Recently used colors (max 6) */
+const recentColors = [];
+
+/** Set up color swatches in the properties panel. */
+function setupColorSwatches() {
+  const swatchContainer = document.getElementById("fill-swatches");
+  if (!swatchContainer) return;
+
+  renderSwatches(swatchContainer, "fill");
+}
+
+/** Render color swatches into a container for a given property. */
+function renderSwatches(container, propName) {
+  container.innerHTML = "";
+  const currentFill = document.getElementById("prop-fill")?.value || "";
+
+  // Build palette: recent colors + presets
+  const palette = [...new Set([...recentColors, ...COLOR_PRESETS])].slice(0, 18);
+
+  palette.forEach((color) => {
+    const swatch = document.createElement("div");
+    swatch.className = "color-swatch";
+    if (color.toUpperCase() === currentFill.toUpperCase()) {
+      swatch.className += " active";
+    }
+    swatch.style.background = color;
+    // White border for very dark colors
+    if (isColorDark(color)) {
+      swatch.style.borderColor = "rgba(255,255,255,0.2)";
+    }
+    swatch.addEventListener("click", () => {
+      const fillInput = document.getElementById("prop-fill");
+      if (fillInput) {
+        fillInput.value = color;
+        fillInput.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      addRecentColor(color);
+      renderSwatches(container, propName);
+    });
+    container.appendChild(swatch);
+  });
+}
+
+/** Add a color to recent colors list. */
+function addRecentColor(color) {
+  const normalized = color.toUpperCase();
+  const idx = recentColors.indexOf(normalized);
+  if (idx >= 0) recentColors.splice(idx, 1);
+  recentColors.unshift(normalized);
+  if (recentColors.length > 6) recentColors.pop();
+}
+
+/** Check if a hex color is dark. */
+function isColorDark(hex) {
+  const c = hex.replace("#", "");
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 < 128;
+}
+
+
+
+
+// ─── Layer Visibility Toggle ──────────────────────────────────────────────────
+
+/** Toggle node visibility in the canvas. Uses CSS opacity on render. */
+function toggleNodeVisibility(nodeId) {
+  if (hiddenNodes.has(nodeId)) {
+    hiddenNodes.delete(nodeId);
+  } else {
+    hiddenNodes.add(nodeId);
+  }
+  // Set opacity on the node via the WASM API
+  if (fdCanvas) {
+    // Select the node temporarily to set its opacity
+    const currentSelection = fdCanvas.get_selected_id();
+    fdCanvas.select_by_id(nodeId);
+    const opacity = hiddenNodes.has(nodeId) ? "0.15" : "1";
+    fdCanvas.set_node_prop("opacity", opacity);
+    // Restore previous selection
+    if (currentSelection && currentSelection !== nodeId) {
+      fdCanvas.select_by_id(currentSelection);
+    } else if (!currentSelection) {
+      fdCanvas.select_by_id("");
+    }
+    syncTextToExtension();
+    render();
+  }
+  refreshLayersPanel();
+}
+
+
+// ─── Library Panel ───────────────────────────────────────────────────────
+
+/** Library component data from extension host */
+let libraryComponents = [];
+let librarySearchQuery = "";
+
+/** Toggle library panel visibility */
+function toggleLibraryPanel() {
+  const panel = document.getElementById("library-panel");
+  if (!panel) return;
+  const isVisible = panel.classList.toggle("visible");
+  if (isVisible) {
+    // Request library data from extension on first open
+    vscode.postMessage({ type: "requestLibraries" });
+    refreshLibraryPanel();
+  }
+}
+
+/** Render library panel contents */
+function refreshLibraryPanel() {
+  const panel = document.getElementById("library-panel");
+  if (!panel) return;
+
+  let html = `<div class="lib-header">`;
+  html += `<span class="lib-title">📦 Libraries</span>`;
+  html += `<button class="lib-close" id="lib-close-btn" title="Close">×</button>`;
+  html += `</div>`;
+  html += `<input class="lib-search" id="lib-search" type="text" placeholder="Search components…" value="${escapeAttr(librarySearchQuery)}">`;
+
+  if (libraryComponents.length === 0) {
+    html += `<div class="lib-empty">`;
+    html += `<div class="lib-empty-icon">📦</div>`;
+    html += `<div>No libraries found</div>`;
+    html += `<div style="margin-top:4px;opacity:0.6">Add .fd files to a <code>libraries/</code> folder</div>`;
+    html += `</div>`;
+    panel.innerHTML = html;
+    wireLibraryHandlers(panel);
+    return;
+  }
+
+  const query = librarySearchQuery.toLowerCase();
+
+  for (const lib of libraryComponents) {
+    const filtered = lib.components.filter(c =>
+      !query || c.name.toLowerCase().includes(query) || c.kind.toLowerCase().includes(query)
+    );
+    if (filtered.length === 0) continue;
+
+    html += `<div class="lib-group-label">${escapeHtml(lib.name)} (${filtered.length})</div>`;
+    for (const comp of filtered) {
+      const icon = comp.kind === "theme" ? "◆" : (comp.kind === "group" ? "◻" : LAYER_ICONS[comp.kind] || "•");
+      html += `<div class="lib-component" data-lib-name="${escapeAttr(lib.name)}" data-comp-name="${escapeAttr(comp.name)}" data-comp-code="${escapeAttr(comp.code)}">`;
+      html += `<span class="lib-icon">${icon}</span>`;
+      html += `<span class="lib-name">${escapeHtml(comp.name)}</span>`;
+      html += `<span class="lib-kind">${escapeHtml(comp.kind)}</span>`;
+      html += `</div>`;
+    }
+  }
+
+  panel.innerHTML = html;
+  wireLibraryHandlers(panel);
+}
+
+/** Wire event handlers for library panel */
+function wireLibraryHandlers(panel) {
+  // Close button
+  document.getElementById("lib-close-btn")?.addEventListener("click", () => {
+    panel.classList.remove("visible");
+    updateSettingsToggleStates();
+  });
+
+  // Search input
+  document.getElementById("lib-search")?.addEventListener("input", (e) => {
+    librarySearchQuery = e.target.value;
+    refreshLibraryPanel();
+    // Re-focus search input after re-render
+    const searchInput = document.getElementById("lib-search");
+    if (searchInput) {
+      searchInput.focus();
+      searchInput.selectionStart = searchInput.selectionEnd = searchInput.value.length;
+    }
+  });
+
+  // Component click — insert into document
+  panel.querySelectorAll(".lib-component").forEach(item => {
+    item.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const code = item.getAttribute("data-comp-code");
+      if (!code || !fdCanvas) return;
+      // Append component code to current document text
+      const currentText = fdCanvas.get_text();
+      const separator = currentText.endsWith("\n") ? "\n" : "\n\n";
+      const newText = currentText + separator + code + "\n";
+      fdCanvas.set_text(newText);
+      bumpGeneration();
+      render();
+      syncTextToExtension();
+      // Brief visual feedback
+      item.style.background = "var(--fd-accent)";
+      item.style.color = "var(--fd-accent-fg)";
+      setTimeout(() => {
+        item.style.background = "";
+        item.style.color = "";
+      }, 300);
+    });
   });
 }
 
@@ -3277,1167 +4037,6 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   textarea.addEventListener("blur", () => {
     setTimeout(commit, 150);
   });
-}
-
-// ─── Drag & Drop ─────────────────────────────────────────────────────────
-
-/** Default dimensions for shapes when dropped from palette. */
-const DEFAULT_SHAPE_SIZES = {
-  rect: [100, 80],
-  ellipse: [100, 80],
-  text: [80, 24],
-  frame: [200, 150],
-  line: [120, 4],
-  arrow: [120, 4],
-};
-
-function setupDragAndDrop() {
-  // Canvas drop target (kept for future drag-from-insert support)
-  canvas.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-  });
-
-  canvas.addEventListener("drop", (e) => {
-    e.preventDefault();
-    if (!fdCanvas) return;
-    const shape = e.dataTransfer.getData("text/plain");
-    if (!shape) return;
-
-    const rect = canvas.getBoundingClientRect();
-    // Adjust for pan offset to place node in scene-space coords
-    const x = ((e.clientX - rect.left) - panX) / zoomLevel;
-    const y = ((e.clientY - rect.top) - panY) / zoomLevel;
-
-    // Line & arrow: create as thin rect with stroke-only styling
-    if (shape === "line" || shape === "arrow") {
-      const changed = fdCanvas.create_node_at("rect", x, y);
-      if (changed) {
-        // Restyle to a thin line: narrow height, no fill, black stroke
-        const selId = fdCanvas.get_selected_id();
-        if (selId) {
-          fdCanvas.set_node_prop("width", "120");
-          fdCanvas.set_node_prop("height", "2");
-          fdCanvas.set_node_prop("fill", "#000000");
-          fdCanvas.set_node_prop("cornerRadius", "0");
-        }
-        render();
-        syncTextToExtension();
-        updatePropertiesPanel();
-      }
-      return;
-    }
-
-    const changed = fdCanvas.create_node_at(shape, x, y);
-    if (changed) {
-      render();
-      syncTextToExtension();
-      updatePropertiesPanel();
-    }
-  });
-}
-
-// ─── Animation Picker ────────────────────────────────────────────────────
-
-const ANIM_PRESETS = [
-  {
-    group: "Hover", trigger: "hover", items: [
-      { label: "Scale Up", icon: "↗", props: { scale: 1.1 }, ease: "spring", duration: 300 },
-      { label: "Fade", icon: "◐", props: { opacity: 0.6 }, ease: "ease_in_out", duration: 200 },
-      { label: "Color Shift", icon: "◆", props: { fill: "#D63031" }, ease: "ease_out", duration: 250 },
-      { label: "Rotate", icon: "↻", props: { rotate: 5 }, ease: "spring", duration: 400 },
-      { label: "Lift & Glow", icon: "✦", props: { scale: 1.06 }, ease: "spring", duration: 400 },
-    ]
-  },
-  {
-    group: "Press", trigger: "press", items: [
-      { label: "Squish", icon: "↙", props: { scale: 0.88 }, ease: "spring", duration: 150 },
-      { label: "Dim", icon: "◑", props: { opacity: 0.5 }, ease: "ease_out", duration: 100 },
-      { label: "Flash", icon: "⚡", props: { fill: "#FFF" }, ease: "linear", duration: 80 },
-    ]
-  },
-  {
-    group: "Enter", trigger: "enter", items: [
-      { label: "Fade In", icon: "▶", props: { opacity: 1.0 }, ease: "ease_out", duration: 500 },
-      { label: "Pop In", icon: "◉", props: { scale: 1.0, opacity: 1.0 }, ease: "spring", duration: 600 },
-      { label: "Slide Up", icon: "⬆", props: { opacity: 1.0 }, ease: "ease_in_out", duration: 400 },
-    ]
-  },
-];
-
-let animPickerTargetId = null;
-
-function setupAnimPicker() {
-  const picker = document.getElementById("anim-picker");
-  if (!picker) return;
-
-  // Close button
-  document.getElementById("anim-picker-close")?.addEventListener("click", closeAnimPicker);
-
-  // Close on Escape
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && picker.classList.contains("visible")) {
-      closeAnimPicker();
-    }
-  });
-
-  // Close on click outside
-  document.addEventListener("pointerdown", (e) => {
-    if (picker.classList.contains("visible") && !picker.contains(e.target)) {
-      closeAnimPicker();
-    }
-  });
-}
-
-function closeAnimPicker() {
-  const picker = document.getElementById("anim-picker");
-  if (picker) picker.classList.remove("visible");
-  animPickerTargetId = null;
-}
-
-function openAnimPicker(targetNodeId, clientX, clientY) {
-  if (!fdCanvas) return;
-  const picker = document.getElementById("anim-picker");
-  const body = document.getElementById("anim-picker-body");
-  if (!picker || !body) return;
-
-  animPickerTargetId = targetNodeId;
-  body.innerHTML = "";
-
-  // Show existing animations on this node
-  try {
-    const existing = JSON.parse(fdCanvas.get_node_animations_json(targetNodeId));
-    if (existing.length > 0) {
-      const existLabel = document.createElement("div");
-      existLabel.className = "picker-group-label";
-      existLabel.textContent = "Current Animations";
-      body.appendChild(existLabel);
-
-      for (const anim of existing) {
-        const row = document.createElement("div");
-        row.className = "picker-existing";
-        const trigger = anim.trigger?.Custom || anim.trigger || "?";
-        const triggerName = typeof trigger === "string" ? trigger : Object.keys(trigger)[0]?.toLowerCase() || "?";
-        row.innerHTML = `<span>:${triggerName}</span> <span style="flex:1;opacity:0.6">${anim.duration_ms || 300}ms</span>`;
-        const removeBtn = document.createElement("button");
-        removeBtn.className = "pe-remove";
-        removeBtn.textContent = "✕";
-        removeBtn.addEventListener("click", () => {
-          fdCanvas.remove_node_animations(targetNodeId);
-          render();
-          syncTextToExtension();
-          openAnimPicker(targetNodeId, clientX, clientY); // Refresh
-        });
-        row.appendChild(removeBtn);
-        body.appendChild(row);
-      }
-
-      const sep = document.createElement("div");
-      sep.className = "picker-sep";
-      body.appendChild(sep);
-    }
-  } catch (_) { /* no existing animations */ }
-
-  // Build preset groups
-  for (const group of ANIM_PRESETS) {
-    const groupLabel = document.createElement("div");
-    groupLabel.className = "picker-group-label";
-    groupLabel.textContent = group.group;
-    body.appendChild(groupLabel);
-
-    for (const preset of group.items) {
-      const row = document.createElement("div");
-      row.className = "picker-item";
-      row.innerHTML = `<span class="pi-icon">${preset.icon}</span><span class="pi-label">${preset.label}</span><span class="pi-meta">${preset.duration}ms</span>`;
-
-      // Live preview on hover
-      row.addEventListener("mouseenter", () => {
-        if (preset.props.scale != null) {
-          startTween(targetNodeId, "scale", 1.0, preset.props.scale, preset.duration, preset.ease);
-        }
-        if (preset.props.opacity != null) {
-          startTween(targetNodeId, "opacity", 1.0, preset.props.opacity, preset.duration, preset.ease);
-        }
-        render();
-      });
-
-      row.addEventListener("mouseleave", () => {
-        // Reset tweens back
-        if (preset.props.scale != null) {
-          startTween(targetNodeId, "scale", preset.props.scale, 1.0, 200, "ease_out");
-        }
-        if (preset.props.opacity != null) {
-          startTween(targetNodeId, "opacity", preset.props.opacity, 1.0, 200, "ease_out");
-        }
-        render();
-      });
-
-      // Commit on click
-      row.addEventListener("click", () => {
-        const propsJson = JSON.stringify({
-          ...preset.props,
-          duration: preset.duration,
-          ease: preset.ease,
-        });
-        const changed = fdCanvas.add_animation_to_node(
-          targetNodeId,
-          group.trigger,
-          propsJson
-        );
-        if (changed) {
-          render();
-          syncTextToExtension();
-          updatePropertiesPanel();
-        }
-        closeAnimPicker();
-      });
-
-      body.appendChild(row);
-    }
-  }
-
-  // Position the picker near the drop point
-  const container = document.getElementById("canvas-container");
-  const containerRect = container?.getBoundingClientRect() || { left: 0, top: 0, width: 800, height: 600 };
-  let left = clientX - containerRect.left + 12;
-  let top = clientY - containerRect.top + 12;
-  // Keep within bounds
-  const pw = 260, ph = 400;
-  if (left + pw > containerRect.width) left = containerRect.width - pw - 8;
-  if (top + ph > containerRect.height) top = Math.max(8, containerRect.height - ph - 8);
-
-  picker.style.left = `${left}px`;
-  picker.style.top = `${top}px`;
-  picker.classList.add("visible");
-}
-
-// ─── View Mode Toggle ────────────────────────────────────────────────────
-
-function setupViewToggle() {
-  document.getElementById("view-all")?.addEventListener("click", () => setViewMode("all"));
-  document.getElementById("view-design")?.addEventListener("click", () => setViewMode("design"));
-  document.getElementById("view-spec")?.addEventListener("click", () => setViewMode("spec"));
-}
-
-function setViewMode(mode) {
-  viewMode = mode;
-  const isSpec = mode === "spec";
-
-  document.getElementById("view-all")?.classList.toggle("active", mode === "all");
-  document.getElementById("view-design")?.classList.toggle("active", mode === "design");
-  document.getElementById("view-spec")?.classList.toggle("active", isSpec);
-
-  // Canvas stays visible — spec view keeps full interactivity
-  const overlay = document.getElementById("spec-overlay");
-  if (overlay) overlay.style.display = (isSpec || specBadgesVisible) ? "" : "none";
-
-  // Hide properties panel in spec view
-  const props = document.getElementById("props-panel");
-  if (props && isSpec) props.classList.remove("visible");
-
-  // Notify extension to apply/remove code-mode spec folding
-  vscode.postMessage({ type: "viewModeChanged", mode });
-
-  if (isSpec || specBadgesVisible) {
-    refreshSpecBadges();
-  } else {
-    // Clear badges when leaving spec view with toggle OFF
-    if (overlay) overlay.innerHTML = "";
-  }
-
-  if (isSpec) {
-    refreshSpecView();
-  }
-
-  // Always refresh layers (it's always visible)
-  refreshLayersPanel();
-}
-
-/**
- * Render spec info for the selected node in the spec overlay.
- * In Design/All view: only show spec details for the currently selected node.
- * Badge pins are removed; specs appear on hover via tooltip.
- */
-function refreshSpecBadges() {
-  const overlay = document.getElementById("spec-overlay");
-  if (!overlay || !fdCanvas) return;
-
-  // In design/all modes, hide the overlay (tooltip handles hover display)
-  overlay.style.display = "none";
-  overlay.innerHTML = "";
-}
-
-/** Cached annotated nodes for hover tooltip lookups. */
-let cachedAnnotatedNodes = [];
-let cachedAnnotatedSource = "";
-
-/** Refresh the annotated nodes cache if source changed. */
-function refreshAnnotatedCache() {
-  if (!fdCanvas) return;
-  const source = fdCanvas.get_text();
-  if (source !== cachedAnnotatedSource) {
-    cachedAnnotatedSource = source;
-    cachedAnnotatedNodes = parseAnnotatedNodes(source);
-  }
-}
-
-/** Show spec hover tooltip at screen position for a given node. */
-function showSpecTooltip(nodeId, clientX, clientY) {
-  const tooltip = document.getElementById("spec-hover-tooltip");
-  if (!tooltip) return;
-
-  refreshAnnotatedCache();
-  const node = cachedAnnotatedNodes.find(n => n.id === nodeId);
-  if (!node || node.annotations.length === 0) {
-    hideSpecTooltip();
-    return;
-  }
-
-  const descs = node.annotations.filter(a => a.type === "description");
-  const statuses = node.annotations.filter(a => a.type === "status");
-  const priorities = node.annotations.filter(a => a.type === "priority");
-
-  let html = `<div class="spec-tip-id">◇ @${escapeHtml(node.id)}</div>`;
-  if (descs.length > 0) {
-    html += `<div class="spec-tip-desc">${escapeHtml(descs[0].value)}</div>`;
-  }
-  if (statuses.length > 0 || priorities.length > 0) {
-    html += `<div class="spec-tip-badges">`;
-    for (const s of statuses) {
-      html += `<span class="spec-tip-badge status-${escapeAttr(s.value)}">${escapeHtml(s.value)}</span>`;
-    }
-    for (const p of priorities) {
-      html += `<span class="spec-tip-badge priority-${escapeAttr(p.value)}">⚡ ${escapeHtml(p.value)}</span>`;
-    }
-    html += `</div>`;
-  }
-
-  tooltip.innerHTML = html;
-  const container = document.getElementById("canvas-container");
-  const containerRect = container.getBoundingClientRect();
-  tooltip.style.left = (clientX - containerRect.left + 14) + "px";
-  tooltip.style.top = (clientY - containerRect.top - 10) + "px";
-  tooltip.classList.add("visible");
-}
-
-/** Hide the spec hover tooltip. */
-function hideSpecTooltip() {
-  const tooltip = document.getElementById("spec-hover-tooltip");
-  if (tooltip) tooltip.classList.remove("visible");
-}
-
-function refreshSpecView() {
-  // Badges are now handled by refreshSpecBadges()
-  refreshSpecBadges();
-}
-
-/**
- * Parse .fd source to find nodes that have spec annotations.
- * Returns array of { id, kind, annotations[] }.
- */
-function parseAnnotatedNodes(source) {
-  const lines = source.split("\n");
-  const result = [];
-  let pendingAnnotations = [];
-  let currentNodeId = "";
-  let currentNodeKind = "";
-  let insideNode = false;
-  let braceDepth = 0;
-  let insideEdge = false;
-  let currentEdge = null;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-
-    const openBraces = (trimmed.match(/\{/g) || []).length;
-    const closeBraces = (trimmed.match(/\}/g) || []).length;
-
-    if (trimmed.startsWith("#")) continue;
-
-    // Spec block (inline or block form)
-    if (trimmed.startsWith("spec ") || trimmed.startsWith("spec{")) {
-      // Inline form: spec "description"
-      const inlineMatch = trimmed.match(/^spec\s+"([^"]*)"/);
-      if (inlineMatch) {
-        const ann = { type: "description", value: inlineMatch[1] };
-        if (insideEdge && currentEdge) {
-          currentEdge.annotations.push(ann);
-        } else {
-          pendingAnnotations.push(ann);
-        }
-        continue;
-      }
-      // Block form: spec { ... }
-      if (trimmed.includes("{")) {
-        let specDepth = (trimmed.match(/\{/g) || []).length;
-        specDepth -= (trimmed.match(/\}/g) || []).length;
-        const lineIdx = lines.indexOf(line);
-        let j = lineIdx + 1;
-        while (j < lines.length && specDepth > 0) {
-          const specLine = lines[j].trim();
-          specDepth += (specLine.match(/\{/g) || []).length;
-          specDepth -= (specLine.match(/\}/g) || []).length;
-          if (specLine !== "}" && specLine.length > 0 && specDepth >= 0) {
-            const ann = parseSpecAnnotation(specLine);
-            if (ann) {
-              if (insideEdge && currentEdge) {
-                currentEdge.annotations.push(ann);
-              } else {
-                pendingAnnotations.push(ann);
-              }
-            }
-          }
-          j++;
-        }
-      }
-      continue;
-    }
-
-    const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s*\{/);
-    if (edgeMatch) {
-      insideEdge = true;
-      currentEdge = { id: edgeMatch[1], annotations: [] };
-      braceDepth += openBraces - closeBraces;
-      continue;
-    }
-
-    if (insideEdge && currentEdge) {
-      braceDepth += openBraces - closeBraces;
-      if (trimmed === "}") {
-        insideEdge = false;
-        currentEdge = null;
-      }
-      continue;
-    }
-
-    if (trimmed === "}") {
-      braceDepth -= 1;
-      if (insideNode && currentNodeId) {
-        if (pendingAnnotations.length > 0) {
-          result.push({ id: currentNodeId, kind: currentNodeKind, annotations: [...pendingAnnotations] });
-        }
-        pendingAnnotations = [];
-        currentNodeId = "";
-        currentNodeKind = "";
-        insideNode = braceDepth > 0;
-      }
-      continue;
-    }
-
-    const nodeMatch = trimmed.match(
-      /^(group|frame|rect|ellipse|path|text)\s+@(\w+)(?:\s+"[^"]*")?\s*\{?/
-    );
-    if (nodeMatch) {
-      if (currentNodeId && pendingAnnotations.length > 0) {
-        result.push({ id: currentNodeId, kind: currentNodeKind, annotations: [...pendingAnnotations] });
-        pendingAnnotations = [];
-      }
-      currentNodeKind = nodeMatch[1];
-      currentNodeId = nodeMatch[2];
-      insideNode = true;
-      if (trimmed.endsWith("{")) braceDepth += 1;
-      continue;
-    }
-
-    const genericMatch = trimmed.match(/^@(\w+)\s*\{/);
-    if (genericMatch) {
-      if (currentNodeId && pendingAnnotations.length > 0) {
-        result.push({ id: currentNodeId, kind: currentNodeKind, annotations: [...pendingAnnotations] });
-        pendingAnnotations = [];
-      }
-      currentNodeKind = "spec";
-      currentNodeId = genericMatch[1];
-      insideNode = true;
-      braceDepth += 1;
-      continue;
-    }
-
-    braceDepth += openBraces - closeBraces;
-  }
-
-  if (currentNodeId && pendingAnnotations.length > 0) {
-    result.push({ id: currentNodeId, kind: currentNodeKind, annotations: [...pendingAnnotations] });
-  }
-
-  return result;
-}
-
-// ─── Layers Panel (Tree View) ────────────────────────────────────────────
-
-const LAYER_ICONS = {
-  group: "◻",
-  frame: "▣",
-  rect: "▢",
-  ellipse: "○",
-  path: "〜",
-  text: "T",
-  style: "◆",
-  edge: "⟶",
-  spec: "◇",
-};
-
-/**
- * Parse FD source into a hierarchical layer tree.
- * Returns array of { id, kind, text, children[] }.
- */
-function parseLayerTree(source) {
-  const lines = source.split("\n");
-  const root = [];
-  const stack = []; // { node, depth }
-  let braceDepth = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    const trimmed = lines[i].trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-
-    const openBraces = (trimmed.match(/\{/g) || []).length;
-    const closeBraces = (trimmed.match(/\}/g) || []).length;
-
-    // Style definition
-    const styleMatch = trimmed.match(/^style\s+(\w+)\s*\{/);
-    if (styleMatch) {
-      const node = { id: styleMatch[1], kind: "style", text: "", children: [] };
-      if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
-      else root.push(node);
-      braceDepth += openBraces - closeBraces;
-      stack.push({ node, depth: braceDepth });
-      continue;
-    }
-
-    // Edge
-    const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s*\{/);
-    if (edgeMatch) {
-      const node = { id: edgeMatch[1], kind: "edge", text: "", children: [] };
-      if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
-      else root.push(node);
-      braceDepth += openBraces - closeBraces;
-      stack.push({ node, depth: braceDepth });
-      continue;
-    }
-
-    // Typed node
-    const nodeMatch = trimmed.match(
-      /^(group|frame|rect|ellipse|path|text)\s+@(\w+)(?:\s+"([^"]*)")?\s*\{?/
-    );
-    if (nodeMatch) {
-      const node = {
-        id: nodeMatch[2],
-        kind: nodeMatch[1],
-        text: nodeMatch[3] || "",
-        children: [],
-      };
-      if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
-      else root.push(node);
-      if (trimmed.endsWith("{")) {
-        braceDepth += 1;
-        stack.push({ node, depth: braceDepth });
-      }
-      continue;
-    }
-
-    // Generic node
-    const genericMatch = trimmed.match(/^@(\w+)\s*\{/);
-    if (genericMatch) {
-      const node = { id: genericMatch[1], kind: "spec", text: "", children: [] };
-      if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
-      else root.push(node);
-      braceDepth += openBraces - closeBraces;
-      stack.push({ node, depth: braceDepth });
-      continue;
-    }
-
-    // Closing brace
-    if (trimmed === "}") {
-      braceDepth -= 1;
-      while (stack.length > 0 && stack[stack.length - 1].depth > braceDepth) {
-        stack.pop();
-      }
-      continue;
-    }
-
-    braceDepth += openBraces - closeBraces;
-  }
-
-  return root;
-}
-
-/** Render a layer tree node as HTML with Figma-style indentation. */
-function renderLayerNode(node, selectedId, depth = 0) {
-  const icon = LAYER_ICONS[node.kind] || "•";
-  const isSelected = node.id === selectedId;
-  const hasChildren = node.children.length > 0;
-  const textPreview = node.text ? `<span class="layer-text-preview">"${escapeHtml(node.text)}"</span>` : "";
-
-  // Indent guides for depth
-  let indent = "";
-  for (let i = 0; i < depth; i++) {
-    indent += `<span class="layer-indent-guide"></span>`;
-  }
-
-  // Disclosure chevron
-  const chevronClass = hasChildren ? "layer-chevron expanded" : "layer-chevron empty";
-  const chevron = `<span class="${chevronClass}" data-toggle-id="${escapeAttr(node.id)}">▶</span>`;
-
-  let html = `<div class="layer-item${isSelected ? " selected" : ""}" data-node-id="${escapeAttr(node.id)}">`;
-  html += `<span class="layer-indent">${indent}</span>`;
-  html += chevron;
-  html += `<span class="layer-icon">${icon}</span>`;
-  html += `<span class="layer-name">${escapeHtml(node.id)}${textPreview}</span>`;
-  html += `<span class="layer-kind">${escapeHtml(node.kind)}</span>`;
-  html += `<span class="layer-actions" data-actions-id="${escapeAttr(node.id)}" title="More actions">⋮</span>`;
-  html += `<span class="layer-eye" data-eye-id="${escapeAttr(node.id)}" title="Toggle visibility">👁</span>`;
-  html += `</div>`;
-
-  if (hasChildren) {
-    html += `<div class="layer-children" data-parent-id="${escapeAttr(node.id)}">`;
-    for (const child of node.children) {
-      html += renderLayerNode(child, selectedId, depth + 1);
-    }
-    html += `</div>`;
-  }
-  return html;
-}
-
-/** Refresh the layers panel content. */
-// ─── Spec Summary Panel (replaces layers in Spec mode) ──────────────────
-
-function refreshSpecSummary(panel) {
-  if (!fdCanvas) return;
-  const source = fdCanvas.get_text();
-  const annotated = parseAnnotatedNodes(source);
-  const selectedId = fdCanvas.get_selected_id() || "";
-
-  // Count total meaningful nodes for coverage %
-  const tree = parseLayerTree(source);
-  const countNodes = (nodes) => nodes.reduce((sum, n) => sum + 1 + countNodes(n.children), 0);
-  const totalNodes = countNodes(tree);
-  const coveragePct = totalNodes > 0 ? Math.round((annotated.length / totalNodes) * 100) : 0;
-
-  // Header with coverage % and action buttons
-  let html = `<div class="layers-header">`;
-  html += `<span class="layers-title">Requirements</span>`;
-  html += `<span class="layers-count" title="${annotated.length} of ${totalNodes} nodes have specs">${coveragePct}%</span>`;
-  html += `<div class="spec-header-actions">`;
-  html += `<button class="spec-action-btn" id="spec-export-btn" title="Export spec report (copies markdown to clipboard)">↗</button>`;
-  html += `<select class="spec-bulk-status" id="spec-bulk-status" title="Set status on all visible specs">`;
-  html += `<option value="">Bulk…</option>`;
-  html += `<option value="todo">→ To Do</option>`;
-  html += `<option value="doing">→ Doing</option>`;
-  html += `<option value="done">→ Done</option>`;
-  html += `<option value="blocked">→ Blocked</option>`;
-  html += `</select>`;
-  html += `</div>`;
-  html += `</div>`;
-
-  // Filter tabs
-  const filters = [
-    { key: "all", label: "All" },
-    { key: "todo", label: "To Do" },
-    { key: "doing", label: "Doing" },
-    { key: "done", label: "Done" },
-    { key: "blocked", label: "Blocked" },
-  ];
-  html += `<div class="spec-filter-tabs">`;
-  for (const f of filters) {
-    const active = specFilter === f.key ? " active" : "";
-    // Count per filter
-    let count;
-    if (f.key === "all") {
-      count = annotated.length;
-    } else {
-      count = annotated.filter(n =>
-        n.annotations.some(a => a.type === "status" && a.value === f.key)
-      ).length;
-    }
-    html += `<button class="spec-filter-btn${active}" data-filter="${f.key}">${f.label} <span class="spec-filter-count">${count}</span></button>`;
-  }
-  html += `</div>`;
-
-  // Filter nodes by status
-  const filtered = specFilter === "all"
-    ? annotated
-    : annotated.filter(n =>
-      n.annotations.some(a => a.type === "status" && a.value === specFilter)
-    );
-
-  if (filtered.length === 0 && annotated.length === 0) {
-    html += `<div class="spec-empty-state">`;
-    html += `<div style="font-size:24px;margin-bottom:8px;opacity:0.4">◇</div>`;
-    html += `<div style="opacity:0.5;font-size:12px">No spec annotations yet</div>`;
-    html += `<div style="opacity:0.35;font-size:11px;margin-top:4px">Right-click a node → Add Spec, or press ⌘I</div>`;
-    html += `</div>`;
-    panel.innerHTML = html;
-    return;
-  }
-
-  if (filtered.length === 0) {
-    html += `<div class="spec-empty-state">`;
-    html += `<div style="opacity:0.5;font-size:12px">No specs with this status</div>`;
-    html += `</div>`;
-    panel.innerHTML = html;
-    wireSpecPanelHandlers(panel, annotated);
-    return;
-  }
-
-  html += `<div class="layers-body">`;
-  for (const node of filtered) {
-    const isSelected = node.id === selectedId;
-    const descriptions = node.annotations.filter(a => a.type === "description");
-    const statuses = node.annotations.filter(a => a.type === "status");
-    const priorities = node.annotations.filter(a => a.type === "priority");
-    const accepts = node.annotations.filter(a => a.type === "accept");
-    const tags = node.annotations.filter(a => a.type === "tag");
-
-    html += `<div class="spec-summary-card${isSelected ? ' selected' : ''}" data-spec-id="${escapeAttr(node.id)}">`;
-    html += `<div class="spec-card-header">`;
-    html += `<span class="spec-card-id">@${escapeHtml(node.id)}</span>`;
-    if (node.kind) {
-      html += `<span class="spec-card-kind">${escapeHtml(node.kind)}</span>`;
-    }
-    html += `</div>`;
-    if (descriptions.length > 0) {
-      html += `<div class="spec-card-desc">${escapeHtml(descriptions[0].value)}</div>`;
-    }
-    if (statuses.length > 0 || priorities.length > 0) {
-      html += `<div class="spec-card-badges">`;
-      for (const s of statuses) {
-        html += `<span class="spec-card-badge status-${escapeAttr(s.value)}">${escapeHtml(s.value)}</span>`;
-      }
-      for (const p of priorities) {
-        html += `<span class="spec-card-badge priority-${escapeAttr(p.value)}">⚡ ${escapeHtml(p.value)}</span>`;
-      }
-      html += `</div>`;
-    }
-    if (accepts.length > 0) {
-      html += `<div class="spec-card-accepts">`;
-      for (const a of accepts) {
-        html += `<div class="spec-card-accept-item">✓ ${escapeHtml(a.value)}</div>`;
-      }
-      html += `</div>`;
-    }
-    if (tags.length > 0) {
-      html += `<div class="spec-card-tags">`;
-      for (const t of tags) {
-        html += `<span class="spec-card-tag">${escapeHtml(t.value)}</span>`;
-      }
-      html += `</div>`;
-    }
-    html += `</div>`;
-  }
-  html += `</div>`;
-
-  panel.innerHTML = html;
-  wireSpecPanelHandlers(panel, annotated);
-}
-
-function wireSpecPanelHandlers(panel, annotated) {
-  // Filter tab handlers
-  panel.querySelectorAll(".spec-filter-btn").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      specFilter = btn.getAttribute("data-filter") || "all";
-      refreshSpecSummary(panel);
-    });
-  });
-
-  // Card click handlers
-  panel.querySelectorAll(".spec-summary-card").forEach(card => {
-    card.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const nodeId = card.getAttribute("data-spec-id");
-      if (nodeId && fdCanvas) {
-        if (fdCanvas.select_by_id(nodeId)) render();
-        const rect = card.getBoundingClientRect();
-        openAnnotationCard(nodeId, rect.right + 8, rect.top);
-        panel.querySelectorAll(".spec-summary-card").forEach(c =>
-          c.classList.toggle("selected", c.getAttribute("data-spec-id") === nodeId)
-        );
-      }
-    });
-  });
-
-  // Export button
-  document.getElementById("spec-export-btn")?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    exportSpecReport(annotated);
-  });
-
-  // Bulk status dropdown
-  document.getElementById("spec-bulk-status")?.addEventListener("change", (e) => {
-    e.stopPropagation();
-    const newStatus = e.target.value;
-    if (newStatus) {
-      bulkSetStatus(annotated, newStatus);
-      e.target.value = "";
-    }
-  });
-}
-
-function exportSpecReport(annotated) {
-  if (!fdCanvas) return;
-  let md = `# Spec Report\n\n`;
-  md += `> Generated from FD canvas\n\n`;
-
-  for (const node of annotated) {
-    const desc = node.annotations.find(a => a.type === "description");
-    const status = node.annotations.find(a => a.type === "status");
-    const priority = node.annotations.find(a => a.type === "priority");
-    const accepts = node.annotations.filter(a => a.type === "accept");
-    const tags = node.annotations.filter(a => a.type === "tag");
-
-    md += `## @${node.id}`;
-    if (node.kind) md += ` (${node.kind})`;
-    md += `\n\n`;
-    if (desc) md += `${desc.value}\n\n`;
-    if (status) md += `**Status:** ${status.value}\n`;
-    if (priority) md += `**Priority:** ${priority.value}\n`;
-    if (status || priority) md += `\n`;
-    if (accepts.length > 0) {
-      md += `**Acceptance Criteria:**\n`;
-      for (const a of accepts) md += `- [ ] ${a.value}\n`;
-      md += `\n`;
-    }
-    if (tags.length > 0) {
-      md += `**Tags:** ${tags.map(t => t.value).join(", ")}\n\n`;
-    }
-    md += `---\n\n`;
-  }
-
-  navigator.clipboard.writeText(md).then(() => {
-    vscode.postMessage({ type: "info", text: `Spec report copied to clipboard (${annotated.length} nodes)` });
-  });
-}
-
-function bulkSetStatus(annotated, newStatus) {
-  if (!fdCanvas) return;
-  // Apply status to currently visible (filtered) nodes
-  const targets = specFilter === "all"
-    ? annotated
-    : annotated.filter(n =>
-      n.annotations.some(a => a.type === "status" && a.value === specFilter)
-    );
-
-  for (const node of targets) {
-    const json = fdCanvas.get_annotations_json(node.id);
-    const anns = JSON.parse(json);
-    // Remove existing status, add new
-    const filtered = anns.filter(a => a.Status === undefined);
-    filtered.push({ Status: newStatus });
-    fdCanvas.set_annotations_json(node.id, JSON.stringify(filtered));
-  }
-  render();
-  syncTextToExtension();
-  // Refresh to show updated statuses
-  const panel = document.getElementById("layers-panel");
-  if (panel) refreshSpecSummary(panel);
-}
-
-/** Last layer generation + selection — skip rebuild when unchanged */
-let lastLayerGeneration = -1;
-let lastLayerSelectedId = "";
-
-function refreshLayersPanel() {
-  const panel = document.getElementById("layers-panel");
-  if (!panel || !fdCanvas) return;
-
-  // In Spec mode, show requirements summary instead of layers
-  if (viewMode === "spec") {
-    lastLayerGeneration = -1;
-    refreshSpecSummary(panel);
-    return;
-  }
-
-  const selectedId = fdCanvas.get_selected_id() || "";
-
-  // Skip DOM rebuild if nothing changed (uses generation counter instead of full-text hash)
-  if (sceneGeneration === lastLayerGeneration && selectedId === lastLayerSelectedId) return;
-
-  // Selection-only change: update highlight on existing DOM without full rebuild
-  if (sceneGeneration === lastLayerGeneration && selectedId !== lastLayerSelectedId) {
-    lastLayerSelectedId = selectedId;
-    panel.querySelectorAll(".layer-item").forEach(el =>
-      el.classList.toggle("selected", el.getAttribute("data-node-id") === selectedId)
-    );
-    return;
-  }
-
-  lastLayerGeneration = sceneGeneration;
-  lastLayerSelectedId = selectedId;
-
-  const source = fdCanvas.get_text();
-
-  const tree = parseLayerTree(source);
-
-  // Count total nodes
-  const countNodes = (nodes) => nodes.reduce((sum, n) => sum + 1 + countNodes(n.children), 0);
-  const totalCount = countNodes(tree);
-
-  let html = `<div class="layers-header">`;
-  html += `<span class="layers-title">Layers</span>`;
-  html += `<span class="layers-count">${totalCount}</span>`;
-  html += `</div>`;
-  html += `<div class="layers-body">`;
-  for (const node of tree) {
-    html += renderLayerNode(node, selectedId);
-  }
-  html += `</div>`;
-
-  panel.innerHTML = html;
-
-  // Wire click handlers for layer items (selection)
-  panel.querySelectorAll(".layer-item").forEach((item) => {
-    item.addEventListener("click", (e) => {
-      // Don't select when clicking chevron
-      if (e.target.closest(".layer-chevron")) return;
-      e.stopPropagation();
-      const nodeId = item.getAttribute("data-node-id");
-      if (nodeId && fdCanvas) {
-        if (fdCanvas.select_by_id(nodeId)) {
-          // Pre-set generation so that scheduleSideEffects() → refreshLayersPanel() skips DOM rebuild.
-          // This keeps our DOM references valid for the highlight update below.
-          lastLayerGeneration = sceneGeneration;
-          lastLayerSelectedId = nodeId;
-          render();
-          // Update selection highlight in layers (DOM still intact because rebuild was skipped)
-          panel.querySelectorAll(".layer-item").forEach((el) => {
-            el.classList.toggle("selected", el.getAttribute("data-node-id") === nodeId);
-          });
-          // Smart focus: pan/zoom to the selected node if needed
-          focusOnNode(nodeId);
-          // Notify extension of selection
-          vscode.postMessage({ type: "nodeSelected", id: nodeId });
-          updatePropertiesPanel();
-        }
-      }
-    });
-  });
-
-  // Wire chevron toggle for expand/collapse
-  panel.querySelectorAll(".layer-chevron:not(.empty)").forEach((chevron) => {
-    chevron.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const toggleId = chevron.getAttribute("data-toggle-id");
-      const childrenContainer = panel.querySelector(`.layer-children[data-parent-id="${toggleId}"]`);
-      if (childrenContainer) {
-        const isCollapsed = childrenContainer.classList.toggle("collapsed");
-        chevron.classList.toggle("expanded", !isCollapsed);
-      }
-    });
-  });
-
-  // Wire double-click on layer name for inline rename (Figma/Sketch)
-  panel.querySelectorAll(".layer-name").forEach((nameEl) => {
-    nameEl.addEventListener("dblclick", (e) => {
-      e.stopPropagation();
-      const item = nameEl.closest(".layer-item");
-      if (!item) return;
-      const oldId = item.getAttribute("data-node-id");
-      if (!oldId) return;
-
-      // Create inline input
-      const input = document.createElement("input");
-      input.type = "text";
-      input.value = oldId;
-      input.style.cssText = [
-        "font-size:11px",
-        "font-family:inherit",
-        "padding:1px 4px",
-        "border:1px solid var(--fd-accent)",
-        "border-radius:4px",
-        "background:var(--fd-input-bg)",
-        "color:var(--fd-text)",
-        "outline:none",
-        "width:100%",
-        "box-shadow:0 0 0 2px var(--fd-input-focus)",
-      ].join(";");
-
-      // Replace name span with input
-      nameEl.textContent = "";
-      nameEl.appendChild(input);
-      input.focus();
-      input.select();
-
-      let committed = false;
-      const commit = () => {
-        if (committed) return;
-        committed = true;
-        const newId = input.value.trim().replace(/[^a-zA-Z0-9_]/g, "_");
-        if (input.parentNode) input.parentNode.removeChild(input);
-        if (!newId || newId === oldId || !fdCanvas) {
-          refreshLayersPanel();
-          return;
-        }
-        // Rename in the FD source: replace all @old_id references
-        const text = fdCanvas.get_text();
-        const renamed = text.replace(
-          new RegExp(`@${oldId}\\b`, "g"),
-          `@${newId}`
-        );
-        if (renamed !== text) {
-          const ok = fdCanvas.set_text(renamed);
-          if (ok) {
-            render();
-            syncTextToExtension();
-          }
-        }
-        refreshLayersPanel();
-      };
-
-      input.addEventListener("keydown", (ev) => {
-        if (ev.key === "Enter") { ev.preventDefault(); commit(); }
-        if (ev.key === "Escape") { ev.preventDefault(); refreshLayersPanel(); }
-        ev.stopPropagation();
-      });
-      input.addEventListener("blur", () => setTimeout(commit, 100));
-    });
-  });
-
-  // Wire eye icon for layer visibility toggle
-  panel.querySelectorAll(".layer-eye").forEach((eyeEl) => {
-    const nodeId = eyeEl.getAttribute("data-eye-id");
-    if (hiddenNodes.has(nodeId)) {
-      eyeEl.classList.add("hidden-layer");
-      eyeEl.textContent = "⊘";
-    }
-    eyeEl.addEventListener("click", (e) => {
-      e.stopPropagation();
-      toggleNodeVisibility(nodeId);
-    });
-  });
-}
-
-// ─── Spec View Parser (client-side) ──────────────────────────────────────
-
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function parseSpecAnnotation(line) {
-  const trimmed = line.trim();
-  if (!trimmed || trimmed === "}") return null;
-  const acceptMatch = trimmed.match(/^accept:\s*"([^"]*)"/);
-  if (acceptMatch) return { type: "accept", value: acceptMatch[1] };
-  const statusMatch = trimmed.match(/^status:\s*(\S+)/);
-  if (statusMatch) return { type: "status", value: statusMatch[1] };
-  const priorityMatch = trimmed.match(/^priority:\s*(\S+)/);
-  if (priorityMatch) return { type: "priority", value: priorityMatch[1] };
-  const tagMatch = trimmed.match(/^tag:\s*(.+)/);
-  if (tagMatch) return { type: "tag", value: tagMatch[1].trim() };
-  const descMatch = trimmed.match(/^"([^"]*)"/);
-  if (descMatch) return { type: "description", value: descMatch[1] };
-  return null;
-}
-
-// ─── Help Button ─────────────────────────────────────────────────────────
-
-function setupHelpButton() {
-  const helpBtn = document.getElementById("tool-help-btn");
-  if (helpBtn) {
-    helpBtn.addEventListener("click", () => {
-      toggleShortcutHelp();
-    });
-  }
-}
-
-// ─── Theme Toggle ─────────────────────────────────────────────────────────────
-
-let isDarkTheme = false;
-
-function setupThemeToggle() {
-  const btn = document.getElementById("theme-toggle-btn");
-  if (!btn) return;
-
-  // Restore persisted theme
-  const savedState = vscode.getState();
-  if (savedState && savedState.darkTheme) {
-    isDarkTheme = true;
-    applyTheme(true);
-  }
-
-  btn.addEventListener("click", () => {
-    isDarkTheme = !isDarkTheme;
-    applyTheme(isDarkTheme);
-    vscode.setState({ ...(vscode.getState() || {}), darkTheme: isDarkTheme });
-  });
-}
-
-function applyTheme(isDark) {
-  const btn = document.getElementById("theme-toggle-btn");
-  if (isDark) {
-    document.body.classList.add("dark-theme");
-    if (btn) btn.textContent = "☀️";
-  } else {
-    document.body.classList.remove("dark-theme");
-    if (btn) btn.textContent = "🌙";
-  }
-  if (fdCanvas) {
-    fdCanvas.set_theme(isDark);
-    render();
-  }
-}
-
-// ─── Sketchy Mode Toggle ──────────────────────────────────────────────────────
-
-function setupSketchyToggle() {
-  const btn = document.getElementById("sketchy-toggle-btn");
-  if (!btn) return;
-
-  // Restore persisted state
-  const savedState = vscode.getState();
-  if (savedState && savedState.sketchyMode) {
-    btn.classList.add("active");
-    if (fdCanvas) {
-      fdCanvas.set_sketchy_mode(true);
-      render();
-    }
-  }
-
-  btn.addEventListener("click", () => {
-    if (!fdCanvas) return;
-    const enabled = !fdCanvas.get_sketchy_mode();
-    fdCanvas.set_sketchy_mode(enabled);
-    btn.classList.toggle("active", enabled);
-    vscode.setState({ ...(vscode.getState() || {}), sketchyMode: enabled });
-    render();
-  });
-}
-
-// ─── Zen Mode Toggle ──────────────────────────────────────────────────────────
-
-function setupZenModeToggle() {
-  const btn = document.getElementById("zen-toggle-btn");
-  if (!btn) return;
-
-  // Restore persisted state
-  const savedState = vscode.getState();
-  if (savedState && savedState.zenMode) {
-    applyZenMode(true);
-  }
-
-  btn.addEventListener("click", () => {
-    const isZen = document.body.classList.contains("zen-mode");
-    applyZenMode(!isZen);
-    vscode.setState({ ...(vscode.getState() || {}), zenMode: !isZen });
-  });
-}
-
-function applyZenMode(isZen) {
-  const btn = document.getElementById("zen-toggle-btn");
-  if (isZen) {
-    document.body.classList.add("zen-mode");
-    if (btn) { btn.textContent = '🔧'; btn.title = 'Switch to Full mode'; }
-  } else {
-    document.body.classList.remove("zen-mode");
-    if (btn) { btn.textContent = '🧘'; btn.title = 'Switch to Zen mode'; }
-    // Clear any zen-visible overrides when leaving zen mode
-    document.getElementById("layers-panel")?.classList.remove("zen-visible");
-    document.getElementById("props-panel")?.classList.remove("zen-visible");
-  }
 }
 
 // ─── Dimension Tooltip (R3.18) ────────────────────────────────────────────────
@@ -5268,400 +4867,6 @@ function setupFloatingToolbar() {
   }
 }
 
-// ─── Edge Context Menu ──────────────────────────────────────────────────
-
-let ecmEdgeId = null;
-
-function showEdgeContextMenu(edgeId, screenX, screenY) {
-  const menu = document.getElementById("edge-context-menu");
-  if (!menu) return;
-  ecmEdgeId = edgeId;
-  document.getElementById("ecm-arrow").value = "end";
-  document.getElementById("ecm-curve").value = "smooth";
-  document.getElementById("ecm-stroke-color").value = "#999999";
-  document.getElementById("ecm-stroke-width").value = "1";
-  document.getElementById("ecm-flow").value = "none";
-  document.getElementById("ecm-flow-dur").style.display = "none";
-  menu.style.left = (screenX + 12) + "px";
-  menu.style.top = (screenY - 60) + "px";
-  menu.classList.add("visible");
-  setTimeout(() => {
-    document.addEventListener("pointerdown", ecmClickOutside, true);
-    document.addEventListener("keydown", ecmEscHandler, true);
-  }, 50);
-}
-
-function closeEdgeContextMenu() {
-  const menu = document.getElementById("edge-context-menu");
-  if (menu) menu.classList.remove("visible");
-  ecmEdgeId = null;
-  document.removeEventListener("pointerdown", ecmClickOutside, true);
-  document.removeEventListener("keydown", ecmEscHandler, true);
-}
-
-function ecmClickOutside(e) {
-  const menu = document.getElementById("edge-context-menu");
-  if (menu && !menu.contains(e.target)) closeEdgeContextMenu();
-}
-
-function ecmEscHandler(e) {
-  if (e.key === "Escape") { closeEdgeContextMenu(); e.preventDefault(); }
-}
-
-function setupEdgeContextMenu() {
-  const arrowSel = document.getElementById("ecm-arrow");
-  const curveSel = document.getElementById("ecm-curve");
-  const strokeColor = document.getElementById("ecm-stroke-color");
-  const strokeWidth = document.getElementById("ecm-stroke-width");
-  const flowSel = document.getElementById("ecm-flow");
-  const flowDur = document.getElementById("ecm-flow-dur");
-  if (!arrowSel) return;
-
-  function applyEdgeChange() {
-    if (!fdCanvas || !ecmEdgeId) return;
-    const text = fdCanvas.get_text();
-    const esc = ecmEdgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const re = new RegExp(`(edge\\s+@${esc}\\s*\\{[^}]*?)\\}`, "s");
-    const m = text.match(re);
-    if (!m) return;
-    let block = m[1];
-    // Arrow
-    block = block.replace(/arrow:\s*\S+/, `arrow: ${arrowSel.value}`);
-    if (!block.includes("arrow:")) block += `\n  arrow: ${arrowSel.value}`;
-    // Curve
-    block = block.replace(/curve:\s*\S+/, `curve: ${curveSel.value}`);
-    if (!block.includes("curve:")) block += `\n  curve: ${curveSel.value}`;
-    // Stroke
-    const sw = strokeWidth.value || "1";
-    const sc = strokeColor.value || "#999";
-    block = block.replace(/stroke:\s*#?\w+\s*[\d.]*/, `stroke: ${sc} ${sw}`);
-    if (!block.includes("stroke:")) block += `\n  stroke: ${sc} ${sw}`;
-    // Flow
-    if (flowSel.value !== "none") {
-      const dur = flowDur.value || "800";
-      const flowLine = `flow: ${flowSel.value} ${dur}ms`;
-      if (block.includes("flow:")) {
-        block = block.replace(/flow:\s*\S+\s*\d*m?s?/, flowLine);
-      } else {
-        block += `\n  ${flowLine}`;
-      }
-    } else {
-      block = block.replace(/\n\s*flow:\s*\S+\s*\d*m?s?/, "");
-    }
-    const newText = text.replace(re, block + "\n}");
-    fdCanvas.set_text(newText);
-    bumpGeneration();
-    render();
-    syncTextToExtension();
-  }
-
-  arrowSel.addEventListener("change", applyEdgeChange);
-  curveSel.addEventListener("change", applyEdgeChange);
-  strokeColor.addEventListener("input", applyEdgeChange);
-  strokeWidth.addEventListener("change", applyEdgeChange);
-  flowSel.addEventListener("change", () => {
-    flowDur.style.display = flowSel.value !== "none" ? "" : "none";
-    applyEdgeChange();
-  });
-  flowDur.addEventListener("change", applyEdgeChange);
-}
-
-/** Draw a dot grid behind shapes. Grid adapts to zoom level. */
-function drawGrid() {
-  if (!ctx) return;
-  const container = document.getElementById("canvas-container");
-  const cw = container.clientWidth;
-  const ch = container.clientHeight;
-
-  // Compute spacing: double grid spacing when dots get too close
-  let spacing = GRID_BASE_SPACING;
-  while (spacing * zoomLevel < 10) spacing *= 2;
-
-  // Determine visible scene-space bounds
-  const sceneLeft = -panX / zoomLevel;
-  const sceneTop = -panY / zoomLevel;
-  const sceneRight = (cw - panX) / zoomLevel;
-  const sceneBottom = (ch - panY) / zoomLevel;
-
-  // Snap start to grid
-  const startX = Math.floor(sceneLeft / spacing) * spacing;
-  const startY = Math.floor(sceneTop / spacing) * spacing;
-
-  // Choose dot vs line based on zoom
-  const isDark = document.body.classList.contains("dark-theme");
-  if (zoomLevel >= 3) {
-    // Line grid at high zoom
-    ctx.strokeStyle = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)";
-    ctx.lineWidth = 0.5 / zoomLevel;
-    ctx.beginPath();
-    for (let x = startX; x <= sceneRight; x += spacing) {
-      ctx.moveTo(x, sceneTop);
-      ctx.lineTo(x, sceneBottom);
-    }
-    for (let y = startY; y <= sceneBottom; y += spacing) {
-      ctx.moveTo(sceneLeft, y);
-      ctx.lineTo(sceneRight, y);
-    }
-    ctx.stroke();
-  } else {
-    // Dot grid
-    const dotSize = Math.max(0.8, 1 / zoomLevel);
-    ctx.fillStyle = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)";
-    for (let x = startX; x <= sceneRight; x += spacing) {
-      for (let y = startY; y <= sceneBottom; y += spacing) {
-        ctx.fillRect(x - dotSize / 2, y - dotSize / 2, dotSize, dotSize);
-      }
-    }
-  }
-}
-
-/** Toggle grid overlay on/off. */
-function toggleGrid() {
-  gridEnabled = !gridEnabled;
-  const btn = document.getElementById("grid-toggle-btn");
-  if (btn) btn.classList.toggle("grid-on", gridEnabled);
-  // Persist grid state
-  vscode.setState({ ...(vscode.getState() || {}), gridEnabled });
-  render();
-}
-
-/** Set up grid toggle button and restore persisted state. */
-function setupGridToggle() {
-  const btn = document.getElementById("grid-toggle-btn");
-  if (!btn) return;
-
-  // Restore persisted state
-  const savedState = vscode.getState();
-  if (savedState && savedState.gridEnabled) {
-    gridEnabled = true;
-    btn.classList.add("grid-on");
-  }
-
-  btn.addEventListener("click", toggleGrid);
-}
-
-/** Toggle spec badge overlay on/off (independent of Spec View mode). */
-function toggleSpecBadges() {
-  specBadgesVisible = !specBadgesVisible;
-  const btn = document.getElementById("sm-spec-badge-toggle");
-  if (btn) btn.classList.toggle("active", specBadgesVisible);
-  vscode.setState({ ...(vscode.getState() || {}), specBadgesVisible });
-
-  const overlay = document.getElementById("spec-overlay");
-  if (specBadgesVisible || viewMode === "spec") {
-    refreshSpecBadges();
-  } else {
-    if (overlay) { overlay.innerHTML = ""; overlay.style.display = "none"; }
-  }
-}
-
-/** Set up spec badge toggle button and restore persisted state. */
-function setupSpecBadgeToggle() {
-  const btn = document.getElementById("sm-spec-badge-toggle");
-  if (!btn) return;
-
-  // Restore persisted state
-  const savedState = vscode.getState();
-  if (savedState && savedState.specBadgesVisible) {
-    specBadgesVisible = true;
-    btn.classList.add("active");
-    setTimeout(() => { if (fdCanvas) refreshSpecBadges(); }, 500);
-  }
-
-  btn.addEventListener("click", toggleSpecBadges);
-}
-
-// ─── Arrow-Key Nudge (Figma/Sketch standard) ─────────────────────────────────
-
-/** Nudge the selected node by step pixels in the arrow direction. */
-function nudgeSelected(arrowKey, step) {
-  if (!fdCanvas) return;
-  const selectedId = fdCanvas.get_selected_id();
-  if (!selectedId) return;
-
-  try {
-    const boundsJson = fdCanvas.get_node_bounds(selectedId);
-    const b = JSON.parse(boundsJson);
-    if (b.x === undefined) return;
-
-    let newX = b.x;
-    let newY = b.y;
-
-    switch (arrowKey) {
-      case "ArrowUp": newY -= step; break;
-      case "ArrowDown": newY += step; break;
-      case "ArrowLeft": newX -= step; break;
-      case "ArrowRight": newX += step; break;
-    }
-
-    // Use handle_pointer sequence to move the node to the new position
-    // This correctly updates constraints and triggers bidi sync
-    const cx = b.x + b.width / 2;
-    const cy = b.y + b.height / 2;
-    const dx = newX - b.x;
-    const dy = newY - b.y;
-    fdCanvas.handle_pointer_down(cx, cy, 1.0, false, false, false, false);
-    const changed = fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false);
-    const upResult = JSON.parse(fdCanvas.handle_pointer_up(cx + dx, cy + dy, false, false, false, false));
-    if (upResult.changed || changed) {
-      render();
-      syncTextToExtension();
-      updatePropertiesPanel();
-    }
-  } catch (_) { /* skip */ }
-}
-
-// ─── Export PNG (Figma/Sketch) ────────────────────────────────────────────────
-
-/** Export the current canvas as a PNG image. */
-function exportToPng() {
-  if (!fdCanvas || !ctx || !canvas) return;
-
-  // Compute scene bounding box
-  const text = fdCanvas.get_text();
-  if (!text || text.trim().length === 0) return;
-
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  let foundAny = false;
-  const nodeIdPattern = /@(\w+)/g;
-  let match;
-  const seenIds = new Set();
-  while ((match = nodeIdPattern.exec(text)) !== null) {
-    const id = match[1];
-    if (seenIds.has(id)) continue;
-    seenIds.add(id);
-    try {
-      const b = JSON.parse(fdCanvas.get_node_bounds(id));
-      if (b.width && b.width > 0) {
-        minX = Math.min(minX, b.x);
-        minY = Math.min(minY, b.y);
-        maxX = Math.max(maxX, b.x + b.width);
-        maxY = Math.max(maxY, b.y + b.height);
-        foundAny = true;
-      }
-    } catch (_) { /* skip */ }
-  }
-
-  if (!foundAny) return;
-
-  // Add padding
-  const padding = 40;
-  const sceneW = maxX - minX + padding * 2;
-  const sceneH = maxY - minY + padding * 2;
-
-  // Create an offscreen canvas for the export
-  const exportCanvas = document.createElement("canvas");
-  const dpr = 2; // Export at 2x resolution for high-quality
-  exportCanvas.width = sceneW * dpr;
-  exportCanvas.height = sceneH * dpr;
-  const exportCtx = exportCanvas.getContext("2d");
-
-  // White background
-  const isDark = document.body.classList.contains("dark-theme");
-  exportCtx.fillStyle = isDark ? "#1C1C1E" : "#FFFFFF";
-  exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-
-  // Render scene centered in export canvas
-  exportCtx.setTransform(dpr, 0, 0, dpr, (padding - minX) * dpr, (padding - minY) * dpr);
-  fdCanvas.render(exportCtx, performance.now());
-
-  // Send to extension for save dialog
-  const dataUrl = exportCanvas.toDataURL("image/png");
-  vscode.postMessage({ type: "exportPng", dataUrl });
-}
-
-/** Set up the export dropdown menu. */
-function setupExportButton() {
-  const btn = document.getElementById("export-menu-btn");
-  const menu = document.getElementById("export-menu");
-  if (!btn || !menu) return;
-
-  // Toggle menu
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    menu.classList.toggle("visible");
-  });
-
-  // Handle menu actions
-  document.querySelectorAll(".export-menu-item").forEach(item => {
-    item.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      menu.classList.remove("visible");
-      if (item.classList.contains("disabled")) return;
-
-      const action = item.dataset.export;
-      switch (action) {
-        case "png-clip":
-          await copySelectionAsPng();
-          break;
-        case "png-file":
-          exportToPng();
-          break;
-        case "svg-file":
-          exportToSvg();
-          break;
-        case "fd-clip":
-          copySelectedAsFd();
-          vscode.postMessage({ type: "info", text: "Copied .fd text to clipboard!" });
-          break;
-      }
-    });
-  });
-
-  // Close when clicking outside
-  document.addEventListener("pointerdown", (e) => {
-    if (menu.classList.contains("visible") && !menu.contains(e.target) && !btn.contains(e.target)) {
-      menu.classList.remove("visible");
-    }
-  });
-}
-
-/** Set up the insert dropdown menu (Insert button in top bar). */
-function setupInsertMenu() {
-  const btn = document.getElementById("insert-menu-btn");
-  const menu = document.getElementById("insert-menu");
-  if (!btn || !menu) return;
-
-  // Toggle menu
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    menu.classList.toggle("visible");
-  });
-
-  // Handle insert actions — activate the tool (same as top bar tool buttons)
-  document.querySelectorAll(".insert-menu-item").forEach(item => {
-    item.addEventListener("click", (e) => {
-      e.stopPropagation();
-      menu.classList.remove("visible");
-      const shape = item.dataset.insert;
-      if (!shape) return;
-
-      // Activate the corresponding tool button in the toolbar
-      const toolBtn = document.querySelector(`.tool-btn[data-tool="${shape}"]`);
-      if (toolBtn) {
-        toolBtn.click();
-      }
-    });
-  });
-
-  // Close when clicking outside
-  document.addEventListener("pointerdown", (e) => {
-    if (menu.classList.contains("visible") && !menu.contains(e.target) && !btn.contains(e.target)) {
-      menu.classList.remove("visible");
-    }
-  });
-}
-
-/** Save selection (or full canvas) as an SVG file. */
-function exportToSvg() {
-  if (!fdCanvas) return;
-  const svgStr = fdCanvas.export_svg();
-  if (!svgStr) {
-    vscode.postMessage({ type: "error", text: "Failed to generate SVG." });
-    return;
-  }
-  vscode.postMessage({ type: "exportSvg", svgStr });
-}
 
 // ─── Minimap (Figma/Miro) ─────────────────────────────────────────────────────
 
@@ -5886,6 +5091,7 @@ function drawMinimapViewport() {
   minimapCtx.fillRect(rx, ry, rw, rh);
 }
 
+
 // ─── Smart Focus on Node (Layer Click) ───────────────────────────────────────
 
 /** Active focus animation ID (for cancellation). */
@@ -6033,210 +5239,112 @@ function zoomToSelection() {
   } catch (_) { /* skip */ }
 }
 
-// ─── Color Swatches (Sketch/Figma preset palette) ─────────────────────────────
 
-const COLOR_PRESETS = [
-  "#000000", "#FFFFFF", "#FF3B30", "#FF9500",
-  "#FFCC00", "#34C759", "#007AFF", "#5856D6",
-  "#AF52DE", "#FF2D55", "#8E8E93", "#48484A",
-];
-/** Recently used colors (max 6) */
-const recentColors = [];
+// ─── Help Button ─────────────────────────────────────────────────────────
 
-/** Set up color swatches in the properties panel. */
-function setupColorSwatches() {
-  const swatchContainer = document.getElementById("fill-swatches");
-  if (!swatchContainer) return;
-
-  renderSwatches(swatchContainer, "fill");
+function setupHelpButton() {
+  const helpBtn = document.getElementById("tool-help-btn");
+  if (helpBtn) {
+    helpBtn.addEventListener("click", () => {
+      toggleShortcutHelp();
+    });
+  }
 }
 
-/** Render color swatches into a container for a given property. */
-function renderSwatches(container, propName) {
-  container.innerHTML = "";
-  const currentFill = document.getElementById("prop-fill")?.value || "";
+// ─── Theme Toggle ─────────────────────────────────────────────────────────────
 
-  // Build palette: recent colors + presets
-  const palette = [...new Set([...recentColors, ...COLOR_PRESETS])].slice(0, 18);
+let isDarkTheme = false;
 
-  palette.forEach((color) => {
-    const swatch = document.createElement("div");
-    swatch.className = "color-swatch";
-    if (color.toUpperCase() === currentFill.toUpperCase()) {
-      swatch.className += " active";
-    }
-    swatch.style.background = color;
-    // White border for very dark colors
-    if (isColorDark(color)) {
-      swatch.style.borderColor = "rgba(255,255,255,0.2)";
-    }
-    swatch.addEventListener("click", () => {
-      const fillInput = document.getElementById("prop-fill");
-      if (fillInput) {
-        fillInput.value = color;
-        fillInput.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-      addRecentColor(color);
-      renderSwatches(container, propName);
-    });
-    container.appendChild(swatch);
+function setupThemeToggle() {
+  const btn = document.getElementById("theme-toggle-btn");
+  if (!btn) return;
+
+  // Restore persisted theme
+  const savedState = vscode.getState();
+  if (savedState && savedState.darkTheme) {
+    isDarkTheme = true;
+    applyTheme(true);
+  }
+
+  btn.addEventListener("click", () => {
+    isDarkTheme = !isDarkTheme;
+    applyTheme(isDarkTheme);
+    vscode.setState({ ...(vscode.getState() || {}), darkTheme: isDarkTheme });
   });
 }
 
-/** Add a color to recent colors list. */
-function addRecentColor(color) {
-  const normalized = color.toUpperCase();
-  const idx = recentColors.indexOf(normalized);
-  if (idx >= 0) recentColors.splice(idx, 1);
-  recentColors.unshift(normalized);
-  if (recentColors.length > 6) recentColors.pop();
-}
-
-/** Check if a hex color is dark. */
-function isColorDark(hex) {
-  const c = hex.replace("#", "");
-  const r = parseInt(c.substring(0, 2), 16);
-  const g = parseInt(c.substring(2, 4), 16);
-  const b = parseInt(c.substring(4, 6), 16);
-  return (r * 299 + g * 587 + b * 114) / 1000 < 128;
-}
-
-
-
-// ─── Layer Visibility Toggle ──────────────────────────────────────────────────
-
-/** Toggle node visibility in the canvas. Uses CSS opacity on render. */
-function toggleNodeVisibility(nodeId) {
-  if (hiddenNodes.has(nodeId)) {
-    hiddenNodes.delete(nodeId);
+function applyTheme(isDark) {
+  const btn = document.getElementById("theme-toggle-btn");
+  if (isDark) {
+    document.body.classList.add("dark-theme");
+    if (btn) btn.textContent = "☀️";
   } else {
-    hiddenNodes.add(nodeId);
+    document.body.classList.remove("dark-theme");
+    if (btn) btn.textContent = "🌙";
   }
-  // Set opacity on the node via the WASM API
   if (fdCanvas) {
-    // Select the node temporarily to set its opacity
-    const currentSelection = fdCanvas.get_selected_id();
-    fdCanvas.select_by_id(nodeId);
-    const opacity = hiddenNodes.has(nodeId) ? "0.15" : "1";
-    fdCanvas.set_node_prop("opacity", opacity);
-    // Restore previous selection
-    if (currentSelection && currentSelection !== nodeId) {
-      fdCanvas.select_by_id(currentSelection);
-    } else if (!currentSelection) {
-      fdCanvas.select_by_id("");
-    }
-    syncTextToExtension();
+    fdCanvas.set_theme(isDark);
     render();
   }
-  refreshLayersPanel();
 }
 
-// ─── Library Panel ───────────────────────────────────────────────────────
+// ─── Sketchy Mode Toggle ──────────────────────────────────────────────────────
 
-/** Library component data from extension host */
-let libraryComponents = [];
-let librarySearchQuery = "";
+function setupSketchyToggle() {
+  const btn = document.getElementById("sketchy-toggle-btn");
+  if (!btn) return;
 
-/** Toggle library panel visibility */
-function toggleLibraryPanel() {
-  const panel = document.getElementById("library-panel");
-  if (!panel) return;
-  const isVisible = panel.classList.toggle("visible");
-  if (isVisible) {
-    // Request library data from extension on first open
-    vscode.postMessage({ type: "requestLibraries" });
-    refreshLibraryPanel();
-  }
-}
-
-/** Render library panel contents */
-function refreshLibraryPanel() {
-  const panel = document.getElementById("library-panel");
-  if (!panel) return;
-
-  let html = `<div class="lib-header">`;
-  html += `<span class="lib-title">📦 Libraries</span>`;
-  html += `<button class="lib-close" id="lib-close-btn" title="Close">×</button>`;
-  html += `</div>`;
-  html += `<input class="lib-search" id="lib-search" type="text" placeholder="Search components…" value="${escapeAttr(librarySearchQuery)}">`;
-
-  if (libraryComponents.length === 0) {
-    html += `<div class="lib-empty">`;
-    html += `<div class="lib-empty-icon">📦</div>`;
-    html += `<div>No libraries found</div>`;
-    html += `<div style="margin-top:4px;opacity:0.6">Add .fd files to a <code>libraries/</code> folder</div>`;
-    html += `</div>`;
-    panel.innerHTML = html;
-    wireLibraryHandlers(panel);
-    return;
-  }
-
-  const query = librarySearchQuery.toLowerCase();
-
-  for (const lib of libraryComponents) {
-    const filtered = lib.components.filter(c =>
-      !query || c.name.toLowerCase().includes(query) || c.kind.toLowerCase().includes(query)
-    );
-    if (filtered.length === 0) continue;
-
-    html += `<div class="lib-group-label">${escapeHtml(lib.name)} (${filtered.length})</div>`;
-    for (const comp of filtered) {
-      const icon = comp.kind === "theme" ? "◆" : (comp.kind === "group" ? "◻" : LAYER_ICONS[comp.kind] || "•");
-      html += `<div class="lib-component" data-lib-name="${escapeAttr(lib.name)}" data-comp-name="${escapeAttr(comp.name)}" data-comp-code="${escapeAttr(comp.code)}">`;
-      html += `<span class="lib-icon">${icon}</span>`;
-      html += `<span class="lib-name">${escapeHtml(comp.name)}</span>`;
-      html += `<span class="lib-kind">${escapeHtml(comp.kind)}</span>`;
-      html += `</div>`;
-    }
-  }
-
-  panel.innerHTML = html;
-  wireLibraryHandlers(panel);
-}
-
-/** Wire event handlers for library panel */
-function wireLibraryHandlers(panel) {
-  // Close button
-  document.getElementById("lib-close-btn")?.addEventListener("click", () => {
-    panel.classList.remove("visible");
-    updateSettingsToggleStates();
-  });
-
-  // Search input
-  document.getElementById("lib-search")?.addEventListener("input", (e) => {
-    librarySearchQuery = e.target.value;
-    refreshLibraryPanel();
-    // Re-focus search input after re-render
-    const searchInput = document.getElementById("lib-search");
-    if (searchInput) {
-      searchInput.focus();
-      searchInput.selectionStart = searchInput.selectionEnd = searchInput.value.length;
-    }
-  });
-
-  // Component click — insert into document
-  panel.querySelectorAll(".lib-component").forEach(item => {
-    item.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const code = item.getAttribute("data-comp-code");
-      if (!code || !fdCanvas) return;
-      // Append component code to current document text
-      const currentText = fdCanvas.get_text();
-      const separator = currentText.endsWith("\n") ? "\n" : "\n\n";
-      const newText = currentText + separator + code + "\n";
-      fdCanvas.set_text(newText);
-      bumpGeneration();
+  // Restore persisted state
+  const savedState = vscode.getState();
+  if (savedState && savedState.sketchyMode) {
+    btn.classList.add("active");
+    if (fdCanvas) {
+      fdCanvas.set_sketchy_mode(true);
       render();
-      syncTextToExtension();
-      // Brief visual feedback
-      item.style.background = "var(--fd-accent)";
-      item.style.color = "var(--fd-accent-fg)";
-      setTimeout(() => {
-        item.style.background = "";
-        item.style.color = "";
-      }, 300);
-    });
+    }
+  }
+
+  btn.addEventListener("click", () => {
+    if (!fdCanvas) return;
+    const enabled = !fdCanvas.get_sketchy_mode();
+    fdCanvas.set_sketchy_mode(enabled);
+    btn.classList.toggle("active", enabled);
+    vscode.setState({ ...(vscode.getState() || {}), sketchyMode: enabled });
+    render();
   });
+}
+
+// ─── Zen Mode Toggle ──────────────────────────────────────────────────────────
+
+function setupZenModeToggle() {
+  const btn = document.getElementById("zen-toggle-btn");
+  if (!btn) return;
+
+  // Restore persisted state
+  const savedState = vscode.getState();
+  if (savedState && savedState.zenMode) {
+    applyZenMode(true);
+  }
+
+  btn.addEventListener("click", () => {
+    const isZen = document.body.classList.contains("zen-mode");
+    applyZenMode(!isZen);
+    vscode.setState({ ...(vscode.getState() || {}), zenMode: !isZen });
+  });
+}
+
+function applyZenMode(isZen) {
+  const btn = document.getElementById("zen-toggle-btn");
+  if (isZen) {
+    document.body.classList.add("zen-mode");
+    if (btn) { btn.textContent = '🔧'; btn.title = 'Switch to Full mode'; }
+  } else {
+    document.body.classList.remove("zen-mode");
+    if (btn) { btn.textContent = '🧘'; btn.title = 'Switch to Zen mode'; }
+    // Clear any zen-visible overrides when leaving zen mode
+    document.getElementById("layers-panel")?.classList.remove("zen-visible");
+    document.getElementById("props-panel")?.classList.remove("zen-visible");
+  }
 }
 
 // ─── Copy / Paste / Select All (Figma/Sketch standard) ───────────────────────
@@ -6422,6 +5530,942 @@ async function copySelectionAsPng() {
 }
 
 
+
+// ─── Export PNG (Figma/Sketch) ────────────────────────────────────────────────
+
+/** Export the current canvas as a PNG image. */
+function exportToPng() {
+  if (!fdCanvas || !ctx || !canvas) return;
+
+  // Compute scene bounding box
+  const text = fdCanvas.get_text();
+  if (!text || text.trim().length === 0) return;
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let foundAny = false;
+  const nodeIdPattern = /@(\w+)/g;
+  let match;
+  const seenIds = new Set();
+  while ((match = nodeIdPattern.exec(text)) !== null) {
+    const id = match[1];
+    if (seenIds.has(id)) continue;
+    seenIds.add(id);
+    try {
+      const b = JSON.parse(fdCanvas.get_node_bounds(id));
+      if (b.width && b.width > 0) {
+        minX = Math.min(minX, b.x);
+        minY = Math.min(minY, b.y);
+        maxX = Math.max(maxX, b.x + b.width);
+        maxY = Math.max(maxY, b.y + b.height);
+        foundAny = true;
+      }
+    } catch (_) { /* skip */ }
+  }
+
+  if (!foundAny) return;
+
+  // Add padding
+  const padding = 40;
+  const sceneW = maxX - minX + padding * 2;
+  const sceneH = maxY - minY + padding * 2;
+
+  // Create an offscreen canvas for the export
+  const exportCanvas = document.createElement("canvas");
+  const dpr = 2; // Export at 2x resolution for high-quality
+  exportCanvas.width = sceneW * dpr;
+  exportCanvas.height = sceneH * dpr;
+  const exportCtx = exportCanvas.getContext("2d");
+
+  // White background
+  const isDark = document.body.classList.contains("dark-theme");
+  exportCtx.fillStyle = isDark ? "#1C1C1E" : "#FFFFFF";
+  exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+  // Render scene centered in export canvas
+  exportCtx.setTransform(dpr, 0, 0, dpr, (padding - minX) * dpr, (padding - minY) * dpr);
+  fdCanvas.render(exportCtx, performance.now());
+
+  // Send to extension for save dialog
+  const dataUrl = exportCanvas.toDataURL("image/png");
+  vscode.postMessage({ type: "exportPng", dataUrl });
+}
+
+/** Set up the export dropdown menu. */
+function setupExportButton() {
+  const btn = document.getElementById("export-menu-btn");
+  const menu = document.getElementById("export-menu");
+  if (!btn || !menu) return;
+
+  // Toggle menu
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.classList.toggle("visible");
+  });
+
+  // Handle menu actions
+  document.querySelectorAll(".export-menu-item").forEach(item => {
+    item.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      menu.classList.remove("visible");
+      if (item.classList.contains("disabled")) return;
+
+      const action = item.dataset.export;
+      switch (action) {
+        case "png-clip":
+          await copySelectionAsPng();
+          break;
+        case "png-file":
+          exportToPng();
+          break;
+        case "svg-file":
+          exportToSvg();
+          break;
+        case "fd-clip":
+          copySelectedAsFd();
+          vscode.postMessage({ type: "info", text: "Copied .fd text to clipboard!" });
+          break;
+      }
+    });
+  });
+
+  // Close when clicking outside
+  document.addEventListener("pointerdown", (e) => {
+    if (menu.classList.contains("visible") && !menu.contains(e.target) && !btn.contains(e.target)) {
+      menu.classList.remove("visible");
+    }
+  });
+}
+
+/** Set up the insert dropdown menu (Insert button in top bar). */
+function setupInsertMenu() {
+  const btn = document.getElementById("insert-menu-btn");
+  const menu = document.getElementById("insert-menu");
+  if (!btn || !menu) return;
+
+  // Toggle menu
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.classList.toggle("visible");
+  });
+
+  // Handle insert actions — activate the tool (same as top bar tool buttons)
+  document.querySelectorAll(".insert-menu-item").forEach(item => {
+    item.addEventListener("click", (e) => {
+      e.stopPropagation();
+      menu.classList.remove("visible");
+      const shape = item.dataset.insert;
+      if (!shape) return;
+
+      // Activate the corresponding tool button in the toolbar
+      const toolBtn = document.querySelector(`.tool-btn[data-tool="${shape}"]`);
+      if (toolBtn) {
+        toolBtn.click();
+      }
+    });
+  });
+
+  // Close when clicking outside
+  document.addEventListener("pointerdown", (e) => {
+    if (menu.classList.contains("visible") && !menu.contains(e.target) && !btn.contains(e.target)) {
+      menu.classList.remove("visible");
+    }
+  });
+}
+
+/** Save selection (or full canvas) as an SVG file. */
+function exportToSvg() {
+  if (!fdCanvas) return;
+  const svgStr = fdCanvas.export_svg();
+  if (!svgStr) {
+    vscode.postMessage({ type: "error", text: "Failed to generate SVG." });
+    return;
+  }
+  vscode.postMessage({ type: "exportSvg", svgStr });
+}
+
+// ─── Drag & Drop ─────────────────────────────────────────────────────────
+
+/** Default dimensions for shapes when dropped from palette. */
+const DEFAULT_SHAPE_SIZES = {
+  rect: [100, 80],
+  ellipse: [100, 80],
+  text: [80, 24],
+  frame: [200, 150],
+  line: [120, 4],
+  arrow: [120, 4],
+};
+
+function setupDragAndDrop() {
+  // Canvas drop target (kept for future drag-from-insert support)
+  canvas.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  });
+
+  canvas.addEventListener("drop", (e) => {
+    e.preventDefault();
+    if (!fdCanvas) return;
+    const shape = e.dataTransfer.getData("text/plain");
+    if (!shape) return;
+
+    const rect = canvas.getBoundingClientRect();
+    // Adjust for pan offset to place node in scene-space coords
+    const x = ((e.clientX - rect.left) - panX) / zoomLevel;
+    const y = ((e.clientY - rect.top) - panY) / zoomLevel;
+
+    // Line & arrow: create as thin rect with stroke-only styling
+    if (shape === "line" || shape === "arrow") {
+      const changed = fdCanvas.create_node_at("rect", x, y);
+      if (changed) {
+        // Restyle to a thin line: narrow height, no fill, black stroke
+        const selId = fdCanvas.get_selected_id();
+        if (selId) {
+          fdCanvas.set_node_prop("width", "120");
+          fdCanvas.set_node_prop("height", "2");
+          fdCanvas.set_node_prop("fill", "#000000");
+          fdCanvas.set_node_prop("cornerRadius", "0");
+        }
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+      }
+      return;
+    }
+
+    const changed = fdCanvas.create_node_at(shape, x, y);
+    if (changed) {
+      render();
+      syncTextToExtension();
+      updatePropertiesPanel();
+    }
+  });
+}
+
+// ─── Animation Picker ────────────────────────────────────────────────────
+
+const ANIM_PRESETS = [
+  {
+    group: "Hover", trigger: "hover", items: [
+      { label: "Scale Up", icon: "↗", props: { scale: 1.1 }, ease: "spring", duration: 300 },
+      { label: "Fade", icon: "◐", props: { opacity: 0.6 }, ease: "ease_in_out", duration: 200 },
+      { label: "Color Shift", icon: "◆", props: { fill: "#D63031" }, ease: "ease_out", duration: 250 },
+      { label: "Rotate", icon: "↻", props: { rotate: 5 }, ease: "spring", duration: 400 },
+      { label: "Lift & Glow", icon: "✦", props: { scale: 1.06 }, ease: "spring", duration: 400 },
+    ]
+  },
+  {
+    group: "Press", trigger: "press", items: [
+      { label: "Squish", icon: "↙", props: { scale: 0.88 }, ease: "spring", duration: 150 },
+      { label: "Dim", icon: "◑", props: { opacity: 0.5 }, ease: "ease_out", duration: 100 },
+      { label: "Flash", icon: "⚡", props: { fill: "#FFF" }, ease: "linear", duration: 80 },
+    ]
+  },
+  {
+    group: "Enter", trigger: "enter", items: [
+      { label: "Fade In", icon: "▶", props: { opacity: 1.0 }, ease: "ease_out", duration: 500 },
+      { label: "Pop In", icon: "◉", props: { scale: 1.0, opacity: 1.0 }, ease: "spring", duration: 600 },
+      { label: "Slide Up", icon: "⬆", props: { opacity: 1.0 }, ease: "ease_in_out", duration: 400 },
+    ]
+  },
+];
+
+let animPickerTargetId = null;
+
+function setupAnimPicker() {
+  const picker = document.getElementById("anim-picker");
+  if (!picker) return;
+
+  // Close button
+  document.getElementById("anim-picker-close")?.addEventListener("click", closeAnimPicker);
+
+  // Close on Escape
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && picker.classList.contains("visible")) {
+      closeAnimPicker();
+    }
+  });
+
+  // Close on click outside
+  document.addEventListener("pointerdown", (e) => {
+    if (picker.classList.contains("visible") && !picker.contains(e.target)) {
+      closeAnimPicker();
+    }
+  });
+}
+
+function closeAnimPicker() {
+  const picker = document.getElementById("anim-picker");
+  if (picker) picker.classList.remove("visible");
+  animPickerTargetId = null;
+}
+
+function openAnimPicker(targetNodeId, clientX, clientY) {
+  if (!fdCanvas) return;
+  const picker = document.getElementById("anim-picker");
+  const body = document.getElementById("anim-picker-body");
+  if (!picker || !body) return;
+
+  animPickerTargetId = targetNodeId;
+  body.innerHTML = "";
+
+  // Show existing animations on this node
+  try {
+    const existing = JSON.parse(fdCanvas.get_node_animations_json(targetNodeId));
+    if (existing.length > 0) {
+      const existLabel = document.createElement("div");
+      existLabel.className = "picker-group-label";
+      existLabel.textContent = "Current Animations";
+      body.appendChild(existLabel);
+
+      for (const anim of existing) {
+        const row = document.createElement("div");
+        row.className = "picker-existing";
+        const trigger = anim.trigger?.Custom || anim.trigger || "?";
+        const triggerName = typeof trigger === "string" ? trigger : Object.keys(trigger)[0]?.toLowerCase() || "?";
+        row.innerHTML = `<span>:${triggerName}</span> <span style="flex:1;opacity:0.6">${anim.duration_ms || 300}ms</span>`;
+        const removeBtn = document.createElement("button");
+        removeBtn.className = "pe-remove";
+        removeBtn.textContent = "✕";
+        removeBtn.addEventListener("click", () => {
+          fdCanvas.remove_node_animations(targetNodeId);
+          render();
+          syncTextToExtension();
+          openAnimPicker(targetNodeId, clientX, clientY); // Refresh
+        });
+        row.appendChild(removeBtn);
+        body.appendChild(row);
+      }
+
+      const sep = document.createElement("div");
+      sep.className = "picker-sep";
+      body.appendChild(sep);
+    }
+  } catch (_) { /* no existing animations */ }
+
+  // Build preset groups
+  for (const group of ANIM_PRESETS) {
+    const groupLabel = document.createElement("div");
+    groupLabel.className = "picker-group-label";
+    groupLabel.textContent = group.group;
+    body.appendChild(groupLabel);
+
+    for (const preset of group.items) {
+      const row = document.createElement("div");
+      row.className = "picker-item";
+      row.innerHTML = `<span class="pi-icon">${preset.icon}</span><span class="pi-label">${preset.label}</span><span class="pi-meta">${preset.duration}ms</span>`;
+
+      // Live preview on hover
+      row.addEventListener("mouseenter", () => {
+        if (preset.props.scale != null) {
+          startTween(targetNodeId, "scale", 1.0, preset.props.scale, preset.duration, preset.ease);
+        }
+        if (preset.props.opacity != null) {
+          startTween(targetNodeId, "opacity", 1.0, preset.props.opacity, preset.duration, preset.ease);
+        }
+        render();
+      });
+
+      row.addEventListener("mouseleave", () => {
+        // Reset tweens back
+        if (preset.props.scale != null) {
+          startTween(targetNodeId, "scale", preset.props.scale, 1.0, 200, "ease_out");
+        }
+        if (preset.props.opacity != null) {
+          startTween(targetNodeId, "opacity", preset.props.opacity, 1.0, 200, "ease_out");
+        }
+        render();
+      });
+
+      // Commit on click
+      row.addEventListener("click", () => {
+        const propsJson = JSON.stringify({
+          ...preset.props,
+          duration: preset.duration,
+          ease: preset.ease,
+        });
+        const changed = fdCanvas.add_animation_to_node(
+          targetNodeId,
+          group.trigger,
+          propsJson
+        );
+        if (changed) {
+          render();
+          syncTextToExtension();
+          updatePropertiesPanel();
+        }
+        closeAnimPicker();
+      });
+
+      body.appendChild(row);
+    }
+  }
+
+  // Position the picker near the drop point
+  const container = document.getElementById("canvas-container");
+  const containerRect = container?.getBoundingClientRect() || { left: 0, top: 0, width: 800, height: 600 };
+  let left = clientX - containerRect.left + 12;
+  let top = clientY - containerRect.top + 12;
+  // Keep within bounds
+  const pw = 260, ph = 400;
+  if (left + pw > containerRect.width) left = containerRect.width - pw - 8;
+  if (top + ph > containerRect.height) top = Math.max(8, containerRect.height - ph - 8);
+
+  picker.style.left = `${left}px`;
+  picker.style.top = `${top}px`;
+  picker.classList.add("visible");
+}
+
+
+// ─── View Mode Toggle ────────────────────────────────────────────────────
+
+function setupViewToggle() {
+  document.getElementById("view-all")?.addEventListener("click", () => setViewMode("all"));
+  document.getElementById("view-design")?.addEventListener("click", () => setViewMode("design"));
+  document.getElementById("view-spec")?.addEventListener("click", () => setViewMode("spec"));
+}
+
+function setViewMode(mode) {
+  viewMode = mode;
+  const isSpec = mode === "spec";
+
+  document.getElementById("view-all")?.classList.toggle("active", mode === "all");
+  document.getElementById("view-design")?.classList.toggle("active", mode === "design");
+  document.getElementById("view-spec")?.classList.toggle("active", isSpec);
+
+  // Canvas stays visible — spec view keeps full interactivity
+  const overlay = document.getElementById("spec-overlay");
+  if (overlay) overlay.style.display = (isSpec || specBadgesVisible) ? "" : "none";
+
+  // Hide properties panel in spec view
+  const props = document.getElementById("props-panel");
+  if (props && isSpec) props.classList.remove("visible");
+
+  // Notify extension to apply/remove code-mode spec folding
+  vscode.postMessage({ type: "viewModeChanged", mode });
+
+  if (isSpec || specBadgesVisible) {
+    refreshSpecBadges();
+  } else {
+    // Clear badges when leaving spec view with toggle OFF
+    if (overlay) overlay.innerHTML = "";
+  }
+
+  if (isSpec) {
+    refreshSpecView();
+  }
+
+  // Always refresh layers (it's always visible)
+  refreshLayersPanel();
+}
+
+/**
+ * Render spec info for the selected node in the spec overlay.
+ * In Design/All view: only show spec details for the currently selected node.
+ * Badge pins are removed; specs appear on hover via tooltip.
+ */
+function refreshSpecBadges() {
+  const overlay = document.getElementById("spec-overlay");
+  if (!overlay || !fdCanvas) return;
+
+  // In design/all modes, hide the overlay (tooltip handles hover display)
+  overlay.style.display = "none";
+  overlay.innerHTML = "";
+}
+
+/** Cached annotated nodes for hover tooltip lookups. */
+let cachedAnnotatedNodes = [];
+let cachedAnnotatedSource = "";
+
+/** Refresh the annotated nodes cache if source changed. */
+function refreshAnnotatedCache() {
+  if (!fdCanvas) return;
+  const source = fdCanvas.get_text();
+  if (source !== cachedAnnotatedSource) {
+    cachedAnnotatedSource = source;
+    cachedAnnotatedNodes = parseAnnotatedNodes(source);
+  }
+}
+
+/** Show spec hover tooltip at screen position for a given node. */
+function showSpecTooltip(nodeId, clientX, clientY) {
+  const tooltip = document.getElementById("spec-hover-tooltip");
+  if (!tooltip) return;
+
+  refreshAnnotatedCache();
+  const node = cachedAnnotatedNodes.find(n => n.id === nodeId);
+  if (!node || node.annotations.length === 0) {
+    hideSpecTooltip();
+    return;
+  }
+
+  const descs = node.annotations.filter(a => a.type === "description");
+  const statuses = node.annotations.filter(a => a.type === "status");
+  const priorities = node.annotations.filter(a => a.type === "priority");
+
+  let html = `<div class="spec-tip-id">◇ @${escapeHtml(node.id)}</div>`;
+  if (descs.length > 0) {
+    html += `<div class="spec-tip-desc">${escapeHtml(descs[0].value)}</div>`;
+  }
+  if (statuses.length > 0 || priorities.length > 0) {
+    html += `<div class="spec-tip-badges">`;
+    for (const s of statuses) {
+      html += `<span class="spec-tip-badge status-${escapeAttr(s.value)}">${escapeHtml(s.value)}</span>`;
+    }
+    for (const p of priorities) {
+      html += `<span class="spec-tip-badge priority-${escapeAttr(p.value)}">⚡ ${escapeHtml(p.value)}</span>`;
+    }
+    html += `</div>`;
+  }
+
+  tooltip.innerHTML = html;
+  const container = document.getElementById("canvas-container");
+  const containerRect = container.getBoundingClientRect();
+  tooltip.style.left = (clientX - containerRect.left + 14) + "px";
+  tooltip.style.top = (clientY - containerRect.top - 10) + "px";
+  tooltip.classList.add("visible");
+}
+
+/** Hide the spec hover tooltip. */
+function hideSpecTooltip() {
+  const tooltip = document.getElementById("spec-hover-tooltip");
+  if (tooltip) tooltip.classList.remove("visible");
+}
+
+function refreshSpecView() {
+  // Badges are now handled by refreshSpecBadges()
+  refreshSpecBadges();
+}
+
+/**
+ * Parse .fd source to find nodes that have spec annotations.
+ * Returns array of { id, kind, annotations[] }.
+ */
+function parseAnnotatedNodes(source) {
+  const lines = source.split("\n");
+  const result = [];
+  let pendingAnnotations = [];
+  let currentNodeId = "";
+  let currentNodeKind = "";
+  let insideNode = false;
+  let braceDepth = 0;
+  let insideEdge = false;
+  let currentEdge = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    const openBraces = (trimmed.match(/\{/g) || []).length;
+    const closeBraces = (trimmed.match(/\}/g) || []).length;
+
+    if (trimmed.startsWith("#")) continue;
+
+    // Spec block (inline or block form)
+    if (trimmed.startsWith("spec ") || trimmed.startsWith("spec{")) {
+      // Inline form: spec "description"
+      const inlineMatch = trimmed.match(/^spec\s+"([^"]*)"/);
+      if (inlineMatch) {
+        const ann = { type: "description", value: inlineMatch[1] };
+        if (insideEdge && currentEdge) {
+          currentEdge.annotations.push(ann);
+        } else {
+          pendingAnnotations.push(ann);
+        }
+        continue;
+      }
+      // Block form: spec { ... }
+      if (trimmed.includes("{")) {
+        let specDepth = (trimmed.match(/\{/g) || []).length;
+        specDepth -= (trimmed.match(/\}/g) || []).length;
+        const lineIdx = lines.indexOf(line);
+        let j = lineIdx + 1;
+        while (j < lines.length && specDepth > 0) {
+          const specLine = lines[j].trim();
+          specDepth += (specLine.match(/\{/g) || []).length;
+          specDepth -= (specLine.match(/\}/g) || []).length;
+          if (specLine !== "}" && specLine.length > 0 && specDepth >= 0) {
+            const ann = parseSpecAnnotation(specLine);
+            if (ann) {
+              if (insideEdge && currentEdge) {
+                currentEdge.annotations.push(ann);
+              } else {
+                pendingAnnotations.push(ann);
+              }
+            }
+          }
+          j++;
+        }
+      }
+      continue;
+    }
+
+    const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s*\{/);
+    if (edgeMatch) {
+      insideEdge = true;
+      currentEdge = { id: edgeMatch[1], annotations: [] };
+      braceDepth += openBraces - closeBraces;
+      continue;
+    }
+
+    if (insideEdge && currentEdge) {
+      braceDepth += openBraces - closeBraces;
+      if (trimmed === "}") {
+        insideEdge = false;
+        currentEdge = null;
+      }
+      continue;
+    }
+
+    if (trimmed === "}") {
+      braceDepth -= 1;
+      if (insideNode && currentNodeId) {
+        if (pendingAnnotations.length > 0) {
+          result.push({ id: currentNodeId, kind: currentNodeKind, annotations: [...pendingAnnotations] });
+        }
+        pendingAnnotations = [];
+        currentNodeId = "";
+        currentNodeKind = "";
+        insideNode = braceDepth > 0;
+      }
+      continue;
+    }
+
+    const nodeMatch = trimmed.match(
+      /^(group|frame|rect|ellipse|path|text)\s+@(\w+)(?:\s+"[^"]*")?\s*\{?/
+    );
+    if (nodeMatch) {
+      if (currentNodeId && pendingAnnotations.length > 0) {
+        result.push({ id: currentNodeId, kind: currentNodeKind, annotations: [...pendingAnnotations] });
+        pendingAnnotations = [];
+      }
+      currentNodeKind = nodeMatch[1];
+      currentNodeId = nodeMatch[2];
+      insideNode = true;
+      if (trimmed.endsWith("{")) braceDepth += 1;
+      continue;
+    }
+
+    const genericMatch = trimmed.match(/^@(\w+)\s*\{/);
+    if (genericMatch) {
+      if (currentNodeId && pendingAnnotations.length > 0) {
+        result.push({ id: currentNodeId, kind: currentNodeKind, annotations: [...pendingAnnotations] });
+        pendingAnnotations = [];
+      }
+      currentNodeKind = "spec";
+      currentNodeId = genericMatch[1];
+      insideNode = true;
+      braceDepth += 1;
+      continue;
+    }
+
+    braceDepth += openBraces - closeBraces;
+  }
+
+  if (currentNodeId && pendingAnnotations.length > 0) {
+    result.push({ id: currentNodeId, kind: currentNodeKind, annotations: [...pendingAnnotations] });
+  }
+
+  return result;
+}
+
+// ─── Initialization ──────────────────────────────────────────────────────
+
+async function main() {
+  canvas = document.getElementById("fd-canvas");
+  const loading = document.getElementById("loading");
+  const status = document.getElementById("status");
+
+  try {
+    // Dynamic import — use absolute webview URI to bypass relative path resolution
+    const wasmJsUrl = window.wasmJsUrl;
+    const wasmModule = await import(wasmJsUrl);
+    const init = wasmModule.default;
+    FdCanvas = wasmModule.FdCanvas;
+
+    // Initialize WASM — pass explicit binary URL for webview compatibility
+    await init(window.wasmBinaryUrl || undefined);
+
+    // Set up canvas
+    const container = document.getElementById("canvas-container");
+    const dpr = window.devicePixelRatio || 1;
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+
+    ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+
+    // Create WASM canvas controller
+    fdCanvas = new FdCanvas(width, height);
+
+    // Load initial text if available
+    if (window.initialText) {
+      fdCanvas.set_text(window.initialText);
+    }
+
+    // Measure all text nodes for tight bounding boxes
+    measureAllTextNodes();
+
+    // Start animation loop (covers flow animation + initial render)
+    startAnimLoop();
+
+    // Center content accounting for layers panel overlay
+    zoomToFit();
+
+    // Hide loading overlay
+    if (loading) loading.style.display = "none";
+    if (status) status.textContent = "Ready";
+
+    // Set up event listeners
+    setupPointerEvents();
+    setupResizeObserver(container);
+    setupToolbar();
+    setupViewToggle();
+    setupAnnotationCard();
+    setupContextMenu();
+    setupPropertiesPanel();
+    setupInlineEditor();
+    setupAlignGrid();
+    setupDragAndDrop();
+    setupAnimPicker();
+    setupHelpButton();
+    setupFloatingBar();
+
+    setupApplePencilPro();
+    setupThemeToggle();
+    setupSketchyToggle();
+    setupZenModeToggle();
+    setupZoomIndicator();
+    setupGridToggle();
+    setupSpecBadgeToggle();
+    setupExportButton();
+    setupInsertMenu();
+    setupMinimap();
+    setupColorSwatches();
+    setupSelectionBar();
+    setupTouchGestures();
+    setupZoomControls();
+    setupUndoRedoControls();
+    setupSettingsMenu();
+    setupFloatingToolbar();
+    setupEdgeContextMenu();
+
+    // Tell extension we're ready
+    vscode.postMessage({ type: "ready" });
+  } catch (err) {
+    console.error("FD WASM init failed:", err);
+    if (loading) loading.textContent = "Failed to load FD engine: " + err;
+  }
+}
+
+// ─── Rendering ───────────────────────────────────────────────────────────
+
+function render() {
+  if (!fdCanvas || !ctx) return;
+  const dpr = window.devicePixelRatio || 1;
+  // Clear the entire canvas buffer before drawing to prevent trails
+  // when panning or dragging outside the original viewport.
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+  ctx.save();
+  // Apply zoom + pan: scale by zoom, then translate by pan
+  const z = zoomLevel * dpr;
+  ctx.setTransform(z, 0, 0, z, panX * dpr, panY * dpr);
+  // Draw grid below shapes
+  if (gridEnabled) drawGrid();
+  fdCanvas.render(ctx, performance.now());
+
+  // ── Arrow tool: draw live preview line during drag ──
+  const arrowPreviewJson = fdCanvas.get_arrow_preview();
+  if (arrowPreviewJson) {
+    try {
+      const ap = JSON.parse(arrowPreviewJson);
+      ctx.save();
+      ctx.strokeStyle = "#6B7080";
+      ctx.lineWidth = 1.5;
+      // Solid line (not dashed)
+      ctx.beginPath();
+      ctx.moveTo(ap.x1, ap.y1);
+      ctx.lineTo(ap.x2, ap.y2);
+      ctx.stroke();
+      // Arrowhead
+      const angle = Math.atan2(ap.y2 - ap.y1, ap.x2 - ap.x1);
+      const headLen = 10;
+      ctx.beginPath();
+      ctx.moveTo(ap.x2, ap.y2);
+      ctx.lineTo(
+        ap.x2 - headLen * Math.cos(angle - Math.PI / 6),
+        ap.y2 - headLen * Math.sin(angle - Math.PI / 6)
+      );
+      ctx.moveTo(ap.x2, ap.y2);
+      ctx.lineTo(
+        ap.x2 - headLen * Math.cos(angle + Math.PI / 6),
+        ap.y2 - headLen * Math.sin(angle + Math.PI / 6)
+      );
+      ctx.stroke();
+
+      // ── Fix #3: Highlight target node under cursor during arrow drag ──
+      if (ap.target_id) {
+        try {
+          const targetBoundsJson = fdCanvas.get_node_bounds(ap.target_id);
+          if (targetBoundsJson) {
+            const tb = JSON.parse(targetBoundsJson);
+            const pad = 4;
+            ctx.beginPath();
+            ctx.roundRect(tb.x - pad, tb.y - pad, tb.width + pad * 2, tb.height + pad * 2, 6);
+            ctx.strokeStyle = "#4FC3F7";
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = "#4FC3F7";
+            ctx.shadowBlur = 8;
+            ctx.stroke();
+          }
+        } catch (_) { /* ignore */ }
+      }
+
+      ctx.restore();
+    } catch (_) { /* ignore parse errors */ }
+  }
+
+  // Animation drop-zone glow ring removed (bug #4)
+
+  // ── Draw near-detach rubber-band and glow ──
+  if (nearDetachState) {
+    const { parentId, childCx, childCy, parentCx, parentCy } = nearDetachState;
+    ctx.save();
+
+    // Draw rubber-band line
+    ctx.beginPath();
+    ctx.moveTo(childCx, childCy);
+    ctx.lineTo(parentCx, parentCy);
+    ctx.strokeStyle = "#8A2BE2"; // Purple
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 6]);
+    ctx.stroke();
+
+    // Draw parent group glow
+    try {
+      const parentBoundsJson = fdCanvas.get_node_bounds(parentId);
+      if (parentBoundsJson) {
+        const pb = JSON.parse(parentBoundsJson);
+        const pad = 4;
+        ctx.beginPath();
+        ctx.roundRect(pb.x - pad, pb.y - pad, pb.width + pad * 2, pb.height + pad * 2, 8);
+        ctx.strokeStyle = "#8A2BE2";
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = "#8A2BE2";
+        ctx.shadowBlur = 12;
+        ctx.stroke();
+        // Inner/extra glow
+        ctx.globalAlpha = 0.5;
+        ctx.shadowBlur = 24;
+        ctx.stroke();
+      }
+    } catch (_) {
+      // Fallback dot if bounds fail
+      ctx.beginPath();
+      ctx.arc(parentCx, parentCy, 4, 0, Math.PI * 2);
+      ctx.fillStyle = "#8A2BE2";
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  // ── Eraser poof fade-out overlays ──
+  if (erasePoofs.length > 0) {
+    const now = performance.now();
+    for (let i = erasePoofs.length - 1; i >= 0; i--) {
+      const p = erasePoofs[i];
+      const elapsed = now - p.startTime;
+      const duration = 150;
+      if (elapsed >= duration) {
+        erasePoofs.splice(i, 1);
+        continue;
+      }
+      const t = elapsed / duration;
+      const alpha = (1 - t) * 0.3;
+      const scale = 1 + t * 0.15;
+      const cx = p.x + p.width / 2;
+      const cy = p.y + p.height / 2;
+      const sw = p.width * scale;
+      const sh = p.height * scale;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#FF3B30";
+      const r = Math.min(sw, sh) * 0.08;
+      const rx = cx - sw / 2;
+      const ry = cy - sh / 2;
+      ctx.beginPath();
+      ctx.roundRect(rx, ry, sw, sh, r);
+      ctx.fill();
+      ctx.restore();
+    }
+    if (erasePoofs.length > 0) renderDirty = true;
+  }
+
+  ctx.restore();
+
+  // Update minimap viewport indicator smoothly (scene re-renders at lower frequency)
+  renderMinimapViewport();
+
+  // Schedule side-effects at lower frequency (~10fps) to avoid DOM/WASM thrashing
+  scheduleSideEffects();
+}
+
+/** Animation loop ID for flow animations (pulse/dash edges). */
+let animFrameId = null;
+
+/**
+ * Start the dirty-checked animation loop.
+ * The loop keeps running via rAF but only calls render() when:
+ *   - renderDirty is true (user interaction, text change, resize, etc.)
+ *   - activeTweens are in progress (spring/ease animations)
+ * When idle, this loop is essentially free (no WASM calls, no DOM work).
+ */
+function startAnimLoop() {
+  if (animFrameId !== null) return; // already running
+  function loop() {
+    if (renderDirty || activeTweens.length > 0 || erasePoofs.length > 0) {
+      renderDirty = false;
+      render();
+    }
+    animFrameId = requestAnimationFrame(loop);
+  }
+  animFrameId = requestAnimationFrame(loop);
+}
+
+/** Stop the animation loop (e.g. when canvas is hidden). */
+function stopAnimLoop() {
+  if (animFrameId !== null) {
+    cancelAnimationFrame(animFrameId);
+    animFrameId = null;
+  }
+}
+
+/**
+ * Schedule side-effects (layers panel, minimap, selection bar) at ~10fps.
+ * These cross the WASM boundary and touch the DOM, so we throttle them
+ * to avoid dominating frame time during rapid interactions.
+ */
+function scheduleSideEffects() {
+  if (sideEffectTimer) return; // already scheduled
+  sideEffectTimer = setTimeout(() => {
+    sideEffectTimer = null;
+    if (viewMode === "spec" || specBadgesVisible) refreshSpecBadges();
+    if (viewMode === "spec") refreshSpecView();
+    refreshLayersPanel();
+    renderMinimap();
+  }, 100);
+}
+
+
 // ─── Start ───────────────────────────────────────────────────────────────────
 
 main();
+

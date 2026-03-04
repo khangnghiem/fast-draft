@@ -87,7 +87,7 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
    - **If any check fails**: Fix before proceeding
 
    > **Skip only if** the change is purely Rust internals with no canvas/UI impact.
-   > For full UX testing (all 8 phases), run `/e2e-ux` separately or via `/nonstop`.
+   > For full UX testing (all 9 phases), run `/e2e` with full tier or via `/nonstop`.
 
 7. **Report** results to user. **STOP HERE.**
 
