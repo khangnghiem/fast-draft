@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.10.42 — Fix Toolbar Ghost Orientation on Cross-Side Drag
+
+- **FIX (R3.39)**: Snap guide ghost now correctly shows vertical orientation when dragging toolbar to the opposite left/right edge — previously the ghost appeared horizontal because `getSnapPosition()` used live `offsetWidth`/`offsetHeight` which flip with toolbar orientation; now captures canonical (horizontal-layout) dimensions at drag start and uses those for ghost sizing regardless of current state
+
 ### v0.10.41 — Fix Text Wrap Regressions (3 Bugs)
 
 - **FIX (R3.46)**: Text height no longer reverts on pointer release — `set_text()` now skips re-parse and `resolve()` when incoming text is identical to current text, preventing JS-measured bounds from being overwritten by heuristic (KI Lesson #9)
