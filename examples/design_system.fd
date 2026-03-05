@@ -207,4 +207,22 @@ rect @input_error {
   y: 177.55
 }
 
+ellipse @ellipse_0 {
+  w: 0.29 h: 0.04
+  x: 69.36
+  y: 692.7
+}
+
+rect @rect_1 {
+  w: 92.4 h: 72.01
+  x: 99.89
+  y: 557.42
+}
+
+ellipse @ellipse_3 {
+  w: 50 h: 50
+  x: 5.86
+  y: 592.42
+}
+
 @color_palette -> center_in: canvas

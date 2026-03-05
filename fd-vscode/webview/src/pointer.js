@@ -7,9 +7,7 @@
 function setupPointerEvents() {
   const dpr = window.devicePixelRatio || 1;
 
-  // Track canvas pointer ownership — replaces setPointerCapture
-  // (setPointerCapture silently fails in VS Code webview iframes and
-  //  steals events from toolbar's document-level drag-to-create listeners)
+  // Track canvas pointer ownership via document-level listeners
   let canvasPointerId = -1;
 
   canvas.addEventListener("pointerdown", (e) => {
@@ -286,7 +284,7 @@ function setupPointerEvents() {
       }
     }
 
-    // (setPointerCapture removed — using canvasPointerId tracking instead)
+
     // Update properties panel after interaction ends
     updatePropertiesPanel();
     updateFloatingBar();
