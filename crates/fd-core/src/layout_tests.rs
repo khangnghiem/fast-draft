@@ -894,8 +894,9 @@ rect @parent {
 
 #[test]
 fn layout_text_max_width_wraps_height() {
-    // Text with max_width should have width clamped to max_width
-    // and height increased to fit wrapped lines.
+    // Text with max_width should have width clamped to max_width.
+    // Height is a single-line placeholder — JS measureText() is the
+    // authoritative source for actual wrapped height (KI Lesson #9).
     let input = r#"
 text @long "Hello World this is a long sentence that should wrap" {
   font: "Inter" 400 14
@@ -919,11 +920,11 @@ text @long "Hello World this is a long sentence that should wrap" {
         b.width
     );
 
-    // Height should be > single line (14 * 1.4 = 19.6)
-    let single_line = 14.0 * 1.2;
+    // Height should be single-line placeholder (14 * 1.4 = 19.6)
+    let single_line = 14.0 * 1.4;
     assert!(
-        b.height > single_line,
-        "text height ({}) should be > single line ({single_line}) for wrapped text",
+        (b.height - single_line).abs() < 0.01,
+        "text height ({}) should be single-line placeholder ({single_line})",
         b.height
     );
 }

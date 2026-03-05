@@ -500,13 +500,14 @@ fn intrinsic_size(node: &SceneNode) -> (f32, f32) {
             let font_size = node.style.font.as_ref().map_or(14.0, |f| f.size);
             let char_width = font_size * 0.6;
             let total_w = content.chars().count() as f32 * char_width;
-            let line_height = font_size * 1.2;
+            let line_height = font_size * 1.4;
             match max_width {
-                Some(mw) => {
-                    let lines = (total_w / mw).ceil().max(1.0);
-                    (*mw, lines * line_height)
-                }
-                None => (total_w, font_size * 1.4),
+                // With max_width: return single-line placeholder height.
+                // The accurate wrapped height is set by JS measureText()
+                // round-trip (KI Lesson #9: heuristics must not fight
+                // high-fidelity measurements).
+                Some(mw) => (*mw, line_height),
+                None => (total_w, line_height),
             }
         }
         NodeKind::Group => (0.0, 0.0), // Auto-sized: computed after children resolve
