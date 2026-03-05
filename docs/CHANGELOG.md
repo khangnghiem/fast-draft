@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.10.39 — Fix FAB Popup on Layers/Code Selection
+
+- **FIX (R3.8)**: Floating Action Bar (fill/stroke/opacity controls) no longer pops up when selecting a node via Layers panel or Code cursor — FAB is now canvas-contextual only; Properties panel is the correct surface for non-canvas interactions
+
 ### v0.10.38 — Properties Panel Actions + FAB Cleanup
 
 - **UX (R3.8)**: Added "Actions" section to the Properties panel — 8 buttons in a 2-column grid (Group, Ungroup, Duplicate, Frame, Front, Back, Copy PNG, Delete) with keyboard shortcut hints; Group/Frame buttons auto-disable when <2 nodes selected; Ungroup auto-disables when no group is selected; matches Figma right-inspector pattern
