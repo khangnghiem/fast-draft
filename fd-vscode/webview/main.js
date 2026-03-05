@@ -624,8 +624,7 @@ function setupPointerEvents() {
     if (!inlineEditorActive) {
       const selectedId = fdCanvas.get_selected_id();
       if (selectedId !== lastNotifiedSelectedId) {
-        lastNotifiedSelectedId = selectedId;
-        vscode.postMessage({ type: "nodeSelected", id: selectedId });
+        syncSelection(selectedId, "canvas");
       }
     }
 
@@ -1105,6 +1104,46 @@ function updateLockedIndicator(tool) {
  *  when rapidly arrowing through lines in the text editor. */
 let codeFocusDebounceTimer = null;
 
+/**
+ * Central selection sync — one function, all panels.
+ * Ensures that selecting a node/edge in ANY panel updates all others.
+ *
+ * @param {string} id - Node or edge ID (from @id), or "" to deselect
+ * @param {'canvas'|'layers'|'code'|'keyboard'} source - Origin panel
+ */
+function syncSelection(id, source) {
+  if (!fdCanvas) return;
+
+  // 1. Canvas: select + render (skip if source is canvas — already selected)
+  if (source !== "canvas") {
+    fdCanvas.select_by_id(id || "");
+    // select_by_id returns false for edge IDs — that's OK, edges
+    // don't have canvas selection highlights yet
+    render();
+  }
+
+  // 2. Dedup state — prevents redundant nodeSelected round-trips
+  lastNotifiedSelectedId = id || "";
+
+  // 3. Layers: highlight + scroll into view
+  refreshLayersPanel();
+
+  // 4. Code: notify extension to highlight line (skip if source is code)
+  if (source !== "code") {
+    vscode.postMessage({ type: "nodeSelected", id: id || "" });
+  }
+
+  // 5. Canvas focus: debounced pan/zoom (only for Code→Canvas)
+  if (source === "code" && id) {
+    clearTimeout(codeFocusDebounceTimer);
+    codeFocusDebounceTimer = setTimeout(() => focusOnNode(id), 150);
+  }
+
+  // 6. Side panels
+  updatePropertiesPanel();
+  updateFloatingBar();
+}
+
 window.addEventListener("message", (event) => {
   const message = event.data;
 
@@ -1122,20 +1161,8 @@ window.addEventListener("message", (event) => {
       break;
     }
     case "selectNode": {
-      if (!fdCanvas) return;
-      const nodeId = message.nodeId || "";
-      if (fdCanvas.select_by_id(nodeId)) {
-        // Sync dedup state so next canvas click sends nodeSelected correctly
-        lastNotifiedSelectedId = nodeId;
-        render();
-        // Update Layers panel highlight + scroll into view
-        refreshLayersPanel();
-        // Debounced pan/zoom to the selected node on Canvas (150ms)
-        if (nodeId) {
-          clearTimeout(codeFocusDebounceTimer);
-          codeFocusDebounceTimer = setTimeout(() => focusOnNode(nodeId), 150);
-        }
-      }
+      // Code cursor moved to a node/edge line → sync all panels
+      syncSelection(message.nodeId || "", "code");
       break;
     }
     case "libraryData": {
@@ -1178,6 +1205,7 @@ function syncTextToExtension() {
     text: text,
   });
 }
+
 
 // ─── Keyboard shortcuts (delegated to WASM) ─────────────────────────────
 
@@ -1428,8 +1456,7 @@ document.addEventListener("keydown", (e) => {
   // Notify extension of selection changes from keyboard actions
   if (result.changed || result.action === "deselect") {
     const selectedId = fdCanvas.get_selected_id();
-    vscode.postMessage({ type: "nodeSelected", id: selectedId });
-    updateFloatingBar();
+    syncSelection(selectedId, "keyboard");
   }
 
   // Update cursor when tool changes via shortcut
@@ -3290,22 +3317,18 @@ function refreshLayersPanel() {
       e.stopPropagation();
       const nodeId = item.getAttribute("data-node-id");
       if (nodeId && fdCanvas) {
-        if (fdCanvas.select_by_id(nodeId)) {
-          // Pre-set generation so that scheduleSideEffects() → refreshLayersPanel() skips DOM rebuild.
-          // This keeps our DOM references valid for the highlight update below.
-          lastLayerGeneration = sceneGeneration;
-          lastLayerSelectedId = nodeId;
-          render();
-          // Update selection highlight in layers (DOM still intact because rebuild was skipped)
-          panel.querySelectorAll(".layer-item").forEach((el) => {
-            el.classList.toggle("selected", el.getAttribute("data-node-id") === nodeId);
-          });
-          // Smart focus: pan/zoom to the selected node if needed
-          focusOnNode(nodeId);
-          // Notify extension of selection
-          vscode.postMessage({ type: "nodeSelected", id: nodeId });
-          updatePropertiesPanel();
-        }
+        // Pre-set generation so refreshLayersPanel() inside syncSelection skips DOM rebuild.
+        // This keeps our DOM references valid for the highlight update below.
+        lastLayerGeneration = sceneGeneration;
+        lastLayerSelectedId = nodeId;
+        // Update selection highlight in layers (DOM still intact because rebuild was skipped)
+        panel.querySelectorAll(".layer-item").forEach((el) => {
+          el.classList.toggle("selected", el.getAttribute("data-node-id") === nodeId);
+        });
+        // Smart focus: pan/zoom to the selected node if needed
+        focusOnNode(nodeId);
+        // Central sync: Canvas select + Code highlight + side panels
+        syncSelection(nodeId, "layers");
       }
     });
   });

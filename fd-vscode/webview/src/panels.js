@@ -603,22 +603,18 @@ function refreshLayersPanel() {
       e.stopPropagation();
       const nodeId = item.getAttribute("data-node-id");
       if (nodeId && fdCanvas) {
-        if (fdCanvas.select_by_id(nodeId)) {
-          // Pre-set generation so that scheduleSideEffects() → refreshLayersPanel() skips DOM rebuild.
-          // This keeps our DOM references valid for the highlight update below.
-          lastLayerGeneration = sceneGeneration;
-          lastLayerSelectedId = nodeId;
-          render();
-          // Update selection highlight in layers (DOM still intact because rebuild was skipped)
-          panel.querySelectorAll(".layer-item").forEach((el) => {
-            el.classList.toggle("selected", el.getAttribute("data-node-id") === nodeId);
-          });
-          // Smart focus: pan/zoom to the selected node if needed
-          focusOnNode(nodeId);
-          // Notify extension of selection
-          vscode.postMessage({ type: "nodeSelected", id: nodeId });
-          updatePropertiesPanel();
-        }
+        // Pre-set generation so refreshLayersPanel() inside syncSelection skips DOM rebuild.
+        // This keeps our DOM references valid for the highlight update below.
+        lastLayerGeneration = sceneGeneration;
+        lastLayerSelectedId = nodeId;
+        // Update selection highlight in layers (DOM still intact because rebuild was skipped)
+        panel.querySelectorAll(".layer-item").forEach((el) => {
+          el.classList.toggle("selected", el.getAttribute("data-node-id") === nodeId);
+        });
+        // Smart focus: pan/zoom to the selected node if needed
+        focusOnNode(nodeId);
+        // Central sync: Canvas select + Code highlight + side panels
+        syncSelection(nodeId, "layers");
       }
     });
   });
