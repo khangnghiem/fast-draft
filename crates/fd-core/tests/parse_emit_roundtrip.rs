@@ -58,6 +58,16 @@ fn assert_node_kind_preserved(input: &str, node_name: &str) {
 // ─── Fixture-based tests ─────────────────────────────────────────────────
 
 #[test]
+fn roundtrip_edge_types_fixture() {
+    let input = std::fs::read_to_string("../../examples/edge_types.fd").unwrap();
+    let graph1 = parse_document(&input).expect("first parse failed");
+    let emitted1 = emit_document(&graph1);
+    let graph2 = parse_document(&emitted1).expect("second parse failed");
+    let emitted2 = emit_document(&graph2);
+    assert_eq!(emitted1, emitted2);
+}
+
+#[test]
 fn roundtrip_login_form_fixture() {
     let input = include_str!("fixtures/login_form.fd");
     assert_roundtrip_preserves(input);
