@@ -6285,6 +6285,11 @@ async function main() {
     setupFloatingToolbar();
     setupEdgeContextMenu();
 
+    // Ensure no stale menus are visible after init
+    closeContextMenu();
+    hideFloatingBar();
+    closeEdgeContextMenu();
+
     // Tell extension we're ready
     vscode.postMessage({ type: "ready" });
   } catch (err) {

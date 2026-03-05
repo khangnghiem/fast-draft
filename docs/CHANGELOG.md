@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.10.34 — Fix Context Menu Shown on Launch
+
+- **FIX**: Close context menu, floating action bar, and edge context menu at end of `main()` init to prevent stale menus appearing on canvas launch.
+
 ### v0.10.33 — Fix Init Crash: setupSelectionBar + CSP Inline Styles
 
 - **FIX (R3.42)**: Remove call to non-existent `setupSelectionBar()` in `main()` — this crashed WASM init and prevented `setupFloatingToolbar()` (including drag-to-create) from ever executing. Dead code from a prior refactor.

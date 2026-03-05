@@ -225,4 +225,19 @@ ellipse @ellipse_3 {
   y: 592.42
 }
 
+rect @_rect_0 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 109.25
+  y: 744.84
+}
+
+ellipse @_ellipse_1 {
+  w: 50 h: 40
+  stroke: #333333 2.5
+  x: 351.95
+  y: 667.47
+}
+
 @color_palette -> center_in: canvas
