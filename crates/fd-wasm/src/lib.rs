@@ -1472,7 +1472,16 @@ impl FdCanvas {
 
         let mutation = match key {
             "fill" => {
-                if let Some(color) = Color::from_hex(value) {
+                if value == "none" || value == "transparent" {
+                    // Clear fill → fully transparent
+                    if let Some(node) = self.engine.graph.get_by_id(id) {
+                        let mut style = node.style.clone();
+                        style.fill = None;
+                        GraphMutation::SetStyle { id, style }
+                    } else {
+                        return false;
+                    }
+                } else if let Some(color) = Color::from_hex(value) {
                     if let Some(node) = self.engine.graph.get_by_id(id) {
                         let mut style = node.style.clone();
                         style.fill = Some(Paint::Solid(color));
@@ -1843,8 +1852,80 @@ impl FdCanvas {
             String::new()
         }
     }
-}
 
+    /// Compute alignment guides for a hypothetical rect at (x, y, w, h).
+    /// Used by JS drag-to-create to show snap lines before the node exists.
+    /// Returns JSON: `[[x1,y1,x2,y2], ...]`
+    pub fn compute_guides_for_rect(&self, x: f32, y: f32, w: f32, h: f32) -> String {
+        let snap_threshold = 5.0_f32;
+        let mut guides = Vec::new();
+
+        let s_left = x;
+        let s_cx = x + w / 2.0;
+        let s_right = x + w;
+        let s_top = y;
+        let s_cy = y + h / 2.0;
+        let s_bottom = y + h;
+
+        let vw = self.width;
+        let vh = self.height;
+
+        for (&idx, b) in self.engine.current_bounds() {
+            if idx == self.engine.graph.root {
+                continue;
+            }
+
+            let o_left = b.x;
+            let o_cx = b.x + b.width / 2.0;
+            let o_right = b.x + b.width;
+            let o_top = b.y;
+            let o_cy = b.y + b.height / 2.0;
+            let o_bottom = b.y + b.height;
+
+            for (sv, ov) in [
+                (s_left, o_left),
+                (s_left, o_cx),
+                (s_left, o_right),
+                (s_cx, o_left),
+                (s_cx, o_cx),
+                (s_cx, o_right),
+                (s_right, o_left),
+                (s_right, o_cx),
+                (s_right, o_right),
+            ] {
+                if (sv - ov).abs() < snap_threshold {
+                    guides.push((ov as f64, 0.0, ov as f64, vh));
+                }
+            }
+
+            for (sv, ov) in [
+                (s_top, o_top),
+                (s_top, o_cy),
+                (s_top, o_bottom),
+                (s_cy, o_top),
+                (s_cy, o_cy),
+                (s_cy, o_bottom),
+                (s_bottom, o_top),
+                (s_bottom, o_cy),
+                (s_bottom, o_bottom),
+            ] {
+                if (sv - ov).abs() < snap_threshold {
+                    guides.push((0.0, ov as f64, vw, ov as f64));
+                }
+            }
+        }
+
+        guides.sort_by(|a, b| {
+            a.0.partial_cmp(&b.0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then(a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+        });
+        guides.dedup_by(|a, b| (a.0 - b.0).abs() < 0.5 && (a.1 - b.1).abs() < 0.5);
+
+        let json_guides: Vec<[f64; 4]> = guides.iter().map(|g| [g.0, g.1, g.2, g.3]).collect();
+        serde_json::to_string(&json_guides).unwrap_or_else(|_| "[]".to_string())
+    }
+}
 // ─── Private helpers ─────────────────────────────────────────────────────
 
 impl FdCanvas {

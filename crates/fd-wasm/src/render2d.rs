@@ -364,10 +364,12 @@ fn draw_rect(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, style: &Style, 
     apply_opacity(ctx, style);
     apply_shadow(ctx, style);
 
-    // Fill
+    // Fill (only if style has an explicit fill — None = transparent)
     rounded_rect_path(ctx, x, y, w, h, radius);
-    apply_fill(ctx, style, x, y, w, h);
-    ctx.fill();
+    if style.fill.is_some() {
+        apply_fill(ctx, style, x, y, w, h);
+        ctx.fill();
+    }
     clear_shadow(ctx);
 
     // Stroke
@@ -407,8 +409,10 @@ fn draw_ellipse(
 
     ctx.begin_path();
     let _ = ctx.ellipse(cx, cy, rx, ry, 0.0, 0.0, std::f64::consts::TAU);
-    apply_fill(ctx, style, cx - rx, cy - ry, rx * 2.0, ry * 2.0);
-    ctx.fill();
+    if style.fill.is_some() {
+        apply_fill(ctx, style, cx - rx, cy - ry, rx * 2.0, ry * 2.0);
+        ctx.fill();
+    }
     clear_shadow(ctx);
 
     if let Some(ref stroke) = style.stroke {
@@ -1138,7 +1142,7 @@ fn apply_fill(ctx: &CanvasRenderingContext2d, style: &Style, x: f64, y: f64, w: 
             }
         }
         Some(Paint::Solid(c)) => ctx.set_fill_style_str(&c.to_hex()),
-        None => ctx.set_fill_style_str("#CCCCCC"),
+        None => {} // No fill = transparent (do not paint)
     }
 }
 
