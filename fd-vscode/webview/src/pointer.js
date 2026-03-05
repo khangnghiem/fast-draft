@@ -60,7 +60,8 @@ function setupPointerEvents() {
     }
 
     // ── Alt+drag = clone and drag ──
-    if (e.altKey && !e.metaKey && !e.ctrlKey) {
+    const isAlt = e.altKey || modAltHeld;
+    if (isAlt && !e.metaKey && !e.ctrlKey) {
       const hitId = fdCanvas.hit_test_at(x, y);
       if (hitId) {
         // Ensure the node is selected first
@@ -94,7 +95,7 @@ function setupPointerEvents() {
       e.pressure || 1.0,
       e.shiftKey,
       e.ctrlKey,
-      e.altKey,
+      isAlt,
       e.metaKey
     );
     if (changed) render();
@@ -148,13 +149,14 @@ function setupPointerEvents() {
       }
     }
 
+    const isAltMove = e.altKey || modAltHeld;
     const changed = fdCanvas.handle_pointer_move(
       x,
       y,
       e.pressure || 1.0,
       e.shiftKey,
       e.ctrlKey,
-      e.altKey,
+      isAltMove,
       e.metaKey
     );
     if (changed) render();
@@ -239,12 +241,13 @@ function setupPointerEvents() {
     const rect = canvas.getBoundingClientRect();
     const x = ((e.clientX - rect.left) - panX) / zoomLevel;
     const y = ((e.clientY - rect.top) - panY) / zoomLevel;
+    const isAltUp = e.altKey || modAltHeld;
     const resultJson = fdCanvas.handle_pointer_up(
       x,
       y,
       e.shiftKey,
       e.ctrlKey,
-      e.altKey,
+      isAltUp,
       e.metaKey
     );
     const result = JSON.parse(resultJson);
@@ -272,7 +275,7 @@ function setupPointerEvents() {
     }
 
     // ── Alt+click style picker (eyedropper for styles) ──
-    if (e.altKey && !altCloneActive && !cmdTempSelectActive && result.changed) {
+    if (isAltUp && !altCloneActive && !cmdTempSelectActive && result.changed) {
       const selectedId = fdCanvas.get_selected_id();
       if (selectedId) {
         pickStyleFromSelectedNode();
