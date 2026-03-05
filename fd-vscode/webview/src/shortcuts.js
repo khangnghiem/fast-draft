@@ -7,6 +7,14 @@
 /** Whether we're in pan mode (Space held) */
 let isPanning = false;
 
+// ─── Global modifier key tracking ────────────────────────────────────────
+// macOS Option/Alt pressed mid-drag may not update e.altKey on pointermove
+// in Electron/VS Code webviews. Track state explicitly via keydown/keyup.
+let modAltHeld = false;
+let modCtrlHeld = false;
+let modMetaHeld = false;
+let modShiftHeld = false;
+
 document.addEventListener("keydown", (e) => {
   if (!fdCanvas) return;
 
@@ -275,7 +283,13 @@ function clearModifierCursors() {
 }
 
 document.addEventListener("keydown", (e) => {
-  // Skip if pointer is already down (active interaction handles its own cursor)
+  // Always update tracked modifier state (even mid-drag)
+  if (e.key === "Alt") modAltHeld = true;
+  if (e.key === "Control") modCtrlHeld = true;
+  if (e.key === "Meta") modMetaHeld = true;
+  if (e.key === "Shift") modShiftHeld = true;
+
+  // Skip cursor preview if pointer is already down (active interaction)
   if (pointerIsDown) return;
   // Skip if a text input is focused
   const active = document.activeElement;
@@ -299,6 +313,12 @@ document.addEventListener("keydown", (e) => {
 }, true);
 
 document.addEventListener("keyup", (e) => {
+  // Always update tracked modifier state
+  if (e.key === "Alt") modAltHeld = false;
+  if (e.key === "Control") modCtrlHeld = false;
+  if (e.key === "Meta") modMetaHeld = false;
+  if (e.key === "Shift") modShiftHeld = false;
+
   if (e.key === " " && isPanning) {
     isPanning = false;
     canvas.style.cursor = "";
@@ -329,9 +349,13 @@ document.addEventListener("keyup", (e) => {
   }
 });
 
-// Clear modifier cursors when window loses focus (handles Cmd+Tab, Alt+Tab, etc.)
+// Clear modifier cursors and tracked state when window loses focus
 window.addEventListener("blur", () => {
   clearModifierCursors();
+  modAltHeld = false;
+  modCtrlHeld = false;
+  modMetaHeld = false;
+  modShiftHeld = false;
   // Also restore from temp modes if window lost focus mid-hold
   if (isCmdHold && fdCanvas && toolBeforeCmdHold) {
     isCmdHold = false;

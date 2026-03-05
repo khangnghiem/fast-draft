@@ -394,7 +394,8 @@ function setupPointerEvents() {
     }
 
     // ── Alt+drag = clone and drag ──
-    if (e.altKey && !e.metaKey && !e.ctrlKey) {
+    const isAlt = e.altKey || modAltHeld;
+    if (isAlt && !e.metaKey && !e.ctrlKey) {
       const hitId = fdCanvas.hit_test_at(x, y);
       if (hitId) {
         // Ensure the node is selected first
@@ -428,7 +429,7 @@ function setupPointerEvents() {
       e.pressure || 1.0,
       e.shiftKey,
       e.ctrlKey,
-      e.altKey,
+      isAlt,
       e.metaKey
     );
     if (changed) render();
@@ -482,13 +483,14 @@ function setupPointerEvents() {
       }
     }
 
+    const isAltMove = e.altKey || modAltHeld;
     const changed = fdCanvas.handle_pointer_move(
       x,
       y,
       e.pressure || 1.0,
       e.shiftKey,
       e.ctrlKey,
-      e.altKey,
+      isAltMove,
       e.metaKey
     );
     if (changed) render();
@@ -573,12 +575,13 @@ function setupPointerEvents() {
     const rect = canvas.getBoundingClientRect();
     const x = ((e.clientX - rect.left) - panX) / zoomLevel;
     const y = ((e.clientY - rect.top) - panY) / zoomLevel;
+    const isAltUp = e.altKey || modAltHeld;
     const resultJson = fdCanvas.handle_pointer_up(
       x,
       y,
       e.shiftKey,
       e.ctrlKey,
-      e.altKey,
+      isAltUp,
       e.metaKey
     );
     const result = JSON.parse(resultJson);
@@ -606,7 +609,7 @@ function setupPointerEvents() {
     }
 
     // ── Alt+click style picker (eyedropper for styles) ──
-    if (e.altKey && !altCloneActive && !cmdTempSelectActive && result.changed) {
+    if (isAltUp && !altCloneActive && !cmdTempSelectActive && result.changed) {
       const selectedId = fdCanvas.get_selected_id();
       if (selectedId) {
         pickStyleFromSelectedNode();
@@ -1235,6 +1238,14 @@ function syncTextToExtension() {
 /** Whether we're in pan mode (Space held) */
 let isPanning = false;
 
+// ─── Global modifier key tracking ────────────────────────────────────────
+// macOS Option/Alt pressed mid-drag may not update e.altKey on pointermove
+// in Electron/VS Code webviews. Track state explicitly via keydown/keyup.
+let modAltHeld = false;
+let modCtrlHeld = false;
+let modMetaHeld = false;
+let modShiftHeld = false;
+
 document.addEventListener("keydown", (e) => {
   if (!fdCanvas) return;
 
@@ -1503,7 +1514,13 @@ function clearModifierCursors() {
 }
 
 document.addEventListener("keydown", (e) => {
-  // Skip if pointer is already down (active interaction handles its own cursor)
+  // Always update tracked modifier state (even mid-drag)
+  if (e.key === "Alt") modAltHeld = true;
+  if (e.key === "Control") modCtrlHeld = true;
+  if (e.key === "Meta") modMetaHeld = true;
+  if (e.key === "Shift") modShiftHeld = true;
+
+  // Skip cursor preview if pointer is already down (active interaction)
   if (pointerIsDown) return;
   // Skip if a text input is focused
   const active = document.activeElement;
@@ -1527,6 +1544,12 @@ document.addEventListener("keydown", (e) => {
 }, true);
 
 document.addEventListener("keyup", (e) => {
+  // Always update tracked modifier state
+  if (e.key === "Alt") modAltHeld = false;
+  if (e.key === "Control") modCtrlHeld = false;
+  if (e.key === "Meta") modMetaHeld = false;
+  if (e.key === "Shift") modShiftHeld = false;
+
   if (e.key === " " && isPanning) {
     isPanning = false;
     canvas.style.cursor = "";
@@ -1557,9 +1580,13 @@ document.addEventListener("keyup", (e) => {
   }
 });
 
-// Clear modifier cursors when window loses focus (handles Cmd+Tab, Alt+Tab, etc.)
+// Clear modifier cursors and tracked state when window loses focus
 window.addEventListener("blur", () => {
   clearModifierCursors();
+  modAltHeld = false;
+  modCtrlHeld = false;
+  modMetaHeld = false;
+  modShiftHeld = false;
   // Also restore from temp modes if window lost focus mid-hold
   if (isCmdHold && fdCanvas && toolBeforeCmdHold) {
     isCmdHold = false;
