@@ -494,10 +494,20 @@ fn intrinsic_size(node: &SceneNode) -> (f32, f32) {
     match &node.kind {
         NodeKind::Rect { width, height } => (*width, *height),
         NodeKind::Ellipse { rx, ry } => (*rx * 2.0, *ry * 2.0),
-        NodeKind::Text { content, .. } => {
+        NodeKind::Text {
+            content, max_width, ..
+        } => {
             let font_size = node.style.font.as_ref().map_or(14.0, |f| f.size);
             let char_width = font_size * 0.6;
-            (content.chars().count() as f32 * char_width, font_size * 1.4)
+            let total_w = content.chars().count() as f32 * char_width;
+            let line_height = font_size * 1.2;
+            match max_width {
+                Some(mw) => {
+                    let lines = (total_w / mw).ceil().max(1.0);
+                    (*mw, lines * line_height)
+                }
+                None => (total_w, font_size * 1.4),
+            }
         }
         NodeKind::Group => (0.0, 0.0), // Auto-sized: computed after children resolve
         NodeKind::Frame { width, height, .. } => (*width, *height),

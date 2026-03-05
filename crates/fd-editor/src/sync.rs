@@ -143,7 +143,9 @@ impl SyncEngine {
             GraphMutation::ResizeNode { id, width, height } => {
                 let rw = (width * 100.0).round() / 100.0;
                 let rh = (height * 100.0).round() / 100.0;
+                let is_text_node;
                 if let Some(node) = self.graph.get_by_id_mut(id) {
+                    is_text_node = matches!(node.kind, NodeKind::Text { .. });
                     match &mut node.kind {
                         NodeKind::Rect {
                             width: w,
@@ -164,20 +166,89 @@ impl SyncEngine {
                             *w = rw;
                             *h = rh;
                         }
-                        NodeKind::Text { max_width, .. } => {
+                        NodeKind::Text {
+                            max_width, content, ..
+                        } => {
                             *max_width = Some(rw);
-                            // Height is content-determined — don't set
+                            // Estimate wrapped height from content length
+                            let font_size = node.style.font.as_ref().map_or(14.0, |f| f.size);
+                            let char_w = font_size * 0.6;
+                            let total_w = content.chars().count() as f32 * char_w;
+                            let lines = (total_w / rw).ceil().max(1.0);
+                            let estimated_h = lines * font_size * 1.2;
+                            // Update cached bounds height to estimated wrap
+                            if let Some(idx) = self.graph.index_of(id)
+                                && let Some(b) = self.bounds.get_mut(&idx)
+                            {
+                                b.width = rw;
+                                b.height = estimated_h;
+                            }
                         }
                         _ => {}
                     }
+                } else {
+                    is_text_node = false;
                 }
+
                 // Keep cached bounds in sync so resize_origin tracks correctly
-                if let Some(idx) = self.graph.index_of(id)
+                // (skip for text — already handled in the Text branch above)
+                if !is_text_node
+                    && let Some(idx) = self.graph.index_of(id)
                     && let Some(bounds) = self.bounds.get_mut(&idx)
                 {
                     bounds.width = rw;
                     bounds.height = rh;
                 }
+
+                // Propagate max_width to child text nodes when parent is resized
+                // (Option A: permanently set max_width so wrapping persists)
+                if !is_text_node && let Some(idx) = self.graph.index_of(id) {
+                    let children = self.graph.children(idx);
+                    for child_idx in children {
+                        let child_node = &self.graph.graph[child_idx];
+                        // Only auto-wrap text children without explicit position
+                        let has_position = child_node
+                            .constraints
+                            .iter()
+                            .any(|c| matches!(c, Constraint::Position { .. }));
+                        if has_position {
+                            continue;
+                        }
+                        if let NodeKind::Text { .. } = &child_node.kind {
+                            let child_id = child_node.id;
+                            // Determine content width (parent width minus padding)
+                            let pad = match &self.graph.graph[idx].kind {
+                                NodeKind::Frame { layout, .. } => match layout {
+                                    LayoutMode::Column { pad, .. }
+                                    | LayoutMode::Row { pad, .. }
+                                    | LayoutMode::Grid { pad, .. } => *pad,
+                                    LayoutMode::Free => 0.0,
+                                },
+                                _ => 0.0,
+                            };
+                            let content_w = (rw - 2.0 * pad).max(20.0);
+                            if let Some(text_node) = self.graph.get_by_id_mut(child_id)
+                                && let NodeKind::Text {
+                                    max_width, content, ..
+                                } = &mut text_node.kind
+                            {
+                                *max_width = Some(content_w);
+                                // Estimate wrapped height
+                                let font_size =
+                                    text_node.style.font.as_ref().map_or(14.0, |f| f.size);
+                                let char_w = font_size * 0.6;
+                                let total_w = content.chars().count() as f32 * char_w;
+                                let lines = (total_w / content_w).ceil().max(1.0);
+                                let estimated_h = lines * font_size * 1.2;
+                                if let Some(cb) = self.bounds.get_mut(&child_idx) {
+                                    cb.width = content_w;
+                                    cb.height = estimated_h;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Re-resolve children so Column/Row/Grid re-flow and
                 // centered text re-centers during the resize drag.
                 if let Some(idx) = self.graph.index_of(id) {

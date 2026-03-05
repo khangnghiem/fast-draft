@@ -693,6 +693,26 @@ function setupPointerEvents() {
       }
     }
 
+    // ── Post-release: remeasure text bounds after resize ──
+    // When a text node is resized (sets max_width) or a parent shape is
+    // resized (propagates max_width to child text), JS measureText() gives
+    // the accurate wrapped height that the heuristic can only estimate.
+    if (result.changed && fdCanvas) {
+      const selectedId = fdCanvas.get_selected_id();
+      if (selectedId) {
+        // If selected node is text → measure it directly
+        measureAndUpdateTextBounds(selectedId);
+        // If selected node is a parent → measure all text children
+        try {
+          const childIds = JSON.parse(fdCanvas.get_text_children(selectedId));
+          for (const childId of childIds) {
+            measureAndUpdateTextBounds(childId);
+          }
+        } catch (_) { /* ignore parse errors */ }
+        render();
+      }
+    }
+
     isDraggingNode = false;
     draggedNodeId = null;
     animDropTargetId = null;
