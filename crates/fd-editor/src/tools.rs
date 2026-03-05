@@ -278,6 +278,27 @@ impl Tool for SelectTool {
 
                 // Node drag
                 if self.dragging && !self.selected.is_empty() {
+                    // Alt pressed mid-drag: clone-and-drag (Figma behavior)
+                    if modifiers.alt && !self.alt_duplicated && self.selected.len() == 1 {
+                        self.alt_duplicated = true;
+                        let id = self.selected[0];
+                        let mut dx = x - self.last_x;
+                        let mut dy = y - self.last_y;
+                        self.last_x = *x;
+                        self.last_y = *y;
+                        if modifiers.shift {
+                            if dx.abs() > dy.abs() {
+                                dy = 0.0;
+                            } else {
+                                dx = 0.0;
+                            }
+                        }
+                        return vec![
+                            GraphMutation::DuplicateNode { id },
+                            GraphMutation::MoveNode { id, dx, dy },
+                        ];
+                    }
+
                     let mut dx = x - self.last_x;
                     let mut dy = y - self.last_y;
                     self.last_x = *x;

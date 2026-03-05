@@ -150,6 +150,82 @@ fn select_tool_alt_click_produces_duplicate() {
 }
 
 #[test]
+fn select_tool_mid_drag_alt_produces_duplicate() {
+    let mut tool = SelectTool::new();
+    let target = NodeId::intern("box_mid");
+
+    // Press without Alt (normal selection)
+    let mutations = tool.handle(
+        &InputEvent::PointerDown {
+            x: 100.0,
+            y: 100.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        Some(target),
+    );
+    assert!(mutations.is_empty(), "normal press should not duplicate");
+    assert!(tool.selected.contains(&target));
+
+    let alt = Modifiers {
+        alt: true,
+        ..Modifiers::NONE
+    };
+
+    // First move with Alt → should duplicate + move
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 120.0,
+            y: 110.0,
+            pressure: 1.0,
+            modifiers: alt,
+        },
+        None,
+    );
+    assert_eq!(
+        mutations.len(),
+        2,
+        "mid-drag Alt should emit DuplicateNode + MoveNode"
+    );
+    match &mutations[0] {
+        GraphMutation::DuplicateNode { id } => {
+            assert_eq!(*id, target);
+        }
+        _ => panic!("expected DuplicateNode first"),
+    }
+    match &mutations[1] {
+        GraphMutation::MoveNode { dx, dy, .. } => {
+            assert!((dx - 20.0).abs() < 0.01, "dx={dx}");
+            assert!((dy - 10.0).abs() < 0.01, "dy={dy}");
+        }
+        _ => panic!("expected MoveNode second"),
+    }
+
+    // Second move with Alt → only MoveNode (no second duplicate)
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 130.0,
+            y: 115.0,
+            pressure: 1.0,
+            modifiers: alt,
+        },
+        None,
+    );
+    assert_eq!(
+        mutations.len(),
+        1,
+        "second Alt move should only emit MoveNode"
+    );
+    match &mutations[0] {
+        GraphMutation::MoveNode { dx, dy, .. } => {
+            assert!((dx - 10.0).abs() < 0.01, "dx={dx}");
+            assert!((dy - 5.0).abs() < 0.01, "dy={dy}");
+        }
+        _ => panic!("expected MoveNode only"),
+    }
+}
+
+#[test]
 fn ellipse_tool_draw() {
     let mut tool = EllipseTool::new();
 

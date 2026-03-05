@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.47 — Fix Alt+Drag Double-Duplicate + Mid-Drag Clone
+
+- **FIX (R3.54)**: Alt+drag no longer duplicates a node twice — removed redundant JS-side `duplicate_selected_at(0,0)` call from `pointer.js`; WASM `SelectTool::handle()` is now the single source of truth for Alt+click duplication
+- **FEATURE (R3.54)**: Pressing Alt mid-drag now triggers clone-and-drag (Figma behavior) — if you start dragging a node normally and press Alt during the drag, the original stays in place and you continue dragging a clone; `alt_duplicated` flag prevents re-duplication on subsequent move events
+- **TESTING**: New `select_tool_mid_drag_alt_produces_duplicate` test — verifies DuplicateNode + MoveNode on first Alt move, and MoveNode-only on subsequent moves
+
 ### v0.10.46 — Ghost Resizes Dynamically During Zoom
 
 - **FIX (R3.39)**: Drag-to-create ghost now resizes in real-time when zooming mid-drag — scroll-wheel zoom during a drag updates ghost width/height every frame to match the current zoom level
