@@ -7,18 +7,16 @@
 function setupPointerEvents() {
   const dpr = window.devicePixelRatio || 1;
 
+  // Track canvas pointer ownership — replaces setPointerCapture
+  // (setPointerCapture silently fails in VS Code webview iframes and
+  //  steals events from toolbar's document-level drag-to-create listeners)
+  let canvasPointerId = -1;
+
   canvas.addEventListener("pointerdown", (e) => {
     if (!fdCanvas) return;
 
-    // Skip if pointer is over the floating toolbar (sibling overlay)
-    const ft = document.getElementById("floating-toolbar");
-    if (ft) {
-      const tbRect = ft.getBoundingClientRect();
-      if (e.clientX >= tbRect.left && e.clientX <= tbRect.right
-        && e.clientY >= tbRect.top && e.clientY <= tbRect.bottom) {
-        return;
-      }
-    }
+    // Skip if pointer originated inside the floating toolbar (DOM ancestry)
+    if (e.target.closest && e.target.closest('#floating-toolbar')) return;
 
     clearModifierCursors(); // Modifier preview ends when interaction starts
     const rect = canvas.getBoundingClientRect();
@@ -31,7 +29,7 @@ function setupPointerEvents() {
       panStartX = e.clientX - panX;
       panStartY = e.clientY - panY;
       canvas.style.cursor = "grabbing";
-      canvas.setPointerCapture(e.pointerId);
+      canvasPointerId = e.pointerId;
       e.preventDefault();
       return;
     }
@@ -104,7 +102,7 @@ function setupPointerEvents() {
       e.metaKey
     );
     if (changed) render();
-    canvas.setPointerCapture(e.pointerId);
+    canvasPointerId = e.pointerId;
 
     // Track interaction start for dimension tooltip
     pointerIsDown = true;
@@ -123,8 +121,14 @@ function setupPointerEvents() {
     }
   });
 
-  canvas.addEventListener("pointermove", (e) => {
+  document.addEventListener("pointermove", (e) => {
     if (!fdCanvas) return;
+    // During active drag, only process our owned pointer
+    if (canvasPointerId !== -1 && e.pointerId !== canvasPointerId) return;
+    // Skip if a toolbar drag-to-create or toolbar drag is in progress
+    if (typeof dtcTool !== 'undefined' && dtcTool) return;
+    // During hover (no active drag), only process events over the canvas
+    if (canvasPointerId === -1 && e.target !== canvas) return;
 
     // Pan drag in progress
     if (panDragging) {
@@ -221,17 +225,18 @@ function setupPointerEvents() {
     }
   });
 
-  canvas.addEventListener("pointerup", (e) => {
+  document.addEventListener("pointerup", (e) => {
     if (!fdCanvas) return;
-    // Always release pointer capture — prevents stale captures
-    // from blocking toolbar and other overlay pointer events
-    try { canvas.releasePointerCapture(e.pointerId); } catch (_) { }
+    // Only handle events owned by the canvas
+    if (canvasPointerId !== -1 && e.pointerId !== canvasPointerId) return;
+    // Skip if a toolbar drag-to-create is in progress
+    if (typeof dtcTool !== 'undefined' && dtcTool) return;
+    canvasPointerId = -1;
 
     // End pan drag
     if (panDragging) {
       panDragging = false;
       canvas.style.cursor = isPanning ? "grab" : "";
-      canvas.releasePointerCapture(e.pointerId);
       return;
     }
 
@@ -281,7 +286,7 @@ function setupPointerEvents() {
       }
     }
 
-    canvas.releasePointerCapture(e.pointerId);
+    // (setPointerCapture removed — using canvasPointerId tracking instead)
     // Update properties panel after interaction ends
     updatePropertiesPanel();
     updateFloatingBar();

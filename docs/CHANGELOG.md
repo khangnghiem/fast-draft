@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.10.30 — Fix Drag-to-Create from Toolbar (Remove setPointerCapture)
+
+- **FIX (R3.42)**: Drag-to-create from floating toolbar now works reliably — removed all `canvas.setPointerCapture` calls from `pointer.js` which stole pointer events from the toolbar's document-level `pointermove`/`pointerup` listeners, preventing ghost preview from appearing and shapes from being created on drop
+- **REFACTOR (R3.39)**: Canvas pointer event handling now uses document-level listeners with `canvasPointerId` tracking — same pattern already proven by toolbar drag and drag-to-create handlers; eliminates entire class of "pointer capture steals events from sibling overlays" bugs
+- **FIX (R3.39)**: Toolbar guard in canvas `pointerdown` replaced from fragile `getBoundingClientRect()` comparison to robust `e.target.closest('#floating-toolbar')` DOM ancestry check — works regardless of toolbar orientation, transforms, or rolled-up state
+- **REFACTOR**: `dtcTool` and `dtcActive` hoisted from `setupFloatingToolbar()` closure to module scope in `navigation.js` — enables cross-module coordination with canvas pointer handlers
+
 ### v0.10.29 — Consolidated `syncSelection()` + Edge Sync
 
 - **REFACTOR (R2.5)**: All selection sync logic consolidated into one `syncSelection(id, source)` function in `sync.js` — previously scattered across 4 files (pointer.js, panels.js, shortcuts.js, sync.js); single source of truth for Canvas↔Layers↔Code synchronization; future panels stay in sync automatically
