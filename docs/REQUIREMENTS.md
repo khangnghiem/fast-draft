@@ -61,6 +61,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.46** _(done)_: Text intrinsic sizing — text node bounds auto-fit to content via Canvas2D `measureText()` bridge; JS measures → WASM `update_text_metrics()` → parent expansion via `finalize_bounds()`; wired into inline editor commit flow; parent resize propagates `max_width` to child text (permanent); `intrinsic_size` heuristic accounts for `max_width` wrap; post-resize JS remeasurement for accurate wrapped height
 - **R3.47** _(done)_: Child containment constraint — child nodes cannot be fully outside their parent; dragging a child completely outside detaches it and reparents to nearest ancestor (enforced by `handle_child_group_relationship` in Rust)
 - **R3.48** _(done)_: Eraser tool — swipe-to-delete tool with immediate visual feedback; `EraserTool` thin state tracker (drag lifecycle + erased IDs for undo grouping); FdCanvas manages actual node removal with group-aware detach (reparent child to root before RemoveNode) + cascade-delete empty Group/Frame containers up the ancestor chain
+- **R3.54** _(done)_: Alt+drag clone — Alt+click duplicates node in-place (single source of truth in WASM `SelectTool::handle`); Alt pressed mid-drag clones-and-drags (Figma behavior); `alt_duplicated` flag prevents re-duplication
 
 #### R3b: Drawing Tools
 
@@ -289,3 +290,4 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | fine pen / taper | R3.57, R3.4, R3.22 |
 | animation timeline | R3.58, R1.5 |
 | ai assist canvas | R4.20, R4.8 |
+| alt-drag / clone | R3.54 |

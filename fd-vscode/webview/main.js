@@ -399,10 +399,8 @@ function setupPointerEvents() {
       if (hitId) {
         // Ensure the node is selected first
         fdCanvas.select_by_id(hitId);
-        // Duplicate in-place (0,0 offset), new clone becomes selected
-        fdCanvas.duplicate_selected_at(0.0, 0.0);
-        render();
-        syncTextToExtension();
+        // WASM handle_pointer_down (below) handles the actual DuplicateNode
+        // when alt=true — we just set flags here for JS-side state management
         altCloneActive = true;
         // Now switch to select to drag the clone
         if (isDrawingTool) {
