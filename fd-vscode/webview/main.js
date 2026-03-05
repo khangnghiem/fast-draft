@@ -4801,19 +4801,23 @@ function setupFloatingToolbar() {
     const isDark = document.body.classList.contains("dark-theme");
     const borderColor = isDark ? "rgba(255,255,255,0.5)" : "rgba(51,51,51,0.5)";
     const bg = isDark ? "rgba(255,255,255,0.06)" : "rgba(51,51,51,0.06)";
+    // Scale ghost to match how the shape will appear on canvas at current zoom
+    const sw = Math.round(shape.w * zoomLevel);
+    const sh = Math.round(shape.h * zoomLevel);
     let content = "";
     if (tool === "text") {
-      content = `<span style="font-size:14px;color:${borderColor};font-weight:500;">T</span>`;
+      content = `<span style="font-size:${Math.round(14 * zoomLevel)}px;color:${borderColor};font-weight:500;">T</span>`;
     }
     if (tool === "arrow") {
       // Diagonal line ghost
+      const aw = Math.round(shape.w * zoomLevel);
       el.style.cssText = `
         position:fixed;pointer-events:none;z-index:10000;
-        width:${shape.w}px;height:${shape.w}px;
+        width:${aw}px;height:${aw}px;
         transform:translate(-50%,-50%);
         opacity:0.7;
       `;
-      el.innerHTML = `<svg width="${shape.w}" height="${shape.w}" viewBox="0 0 ${shape.w} ${shape.w}" fill="none">
+      el.innerHTML = `<svg width="${aw}" height="${aw}" viewBox="0 0 ${shape.w} ${shape.w}" fill="none">
         <line x1="10" y1="${shape.w - 10}" x2="${shape.w - 10}" y2="10"
           stroke="${borderColor}" stroke-width="2" stroke-dasharray="6 4"/>
         <path d="M${shape.w - 30},10 L${shape.w - 10},10 L${shape.w - 10},30"
@@ -4822,7 +4826,7 @@ function setupFloatingToolbar() {
     } else {
       el.style.cssText = `
         position:fixed;pointer-events:none;z-index:10000;
-        width:${shape.w}px;height:${shape.h}px;
+        width:${sw}px;height:${sh}px;
         border:2px dashed ${borderColor};
         background:${bg};
         ${shape.css}
