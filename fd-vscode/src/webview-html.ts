@@ -2064,7 +2064,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       padding: 0 4px;
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.15);
       z-index: 1;
-      overflow: hidden;
+      overflow: visible;
       transition: padding 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
     }
     .dark-theme .scroll-paper-body {
@@ -2188,6 +2188,13 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     }
     #floating-toolbar.rolled-up .ft-tooltip {
       display: none;
+    }
+    /* Vertical toolbar: show tooltip to the right instead of above */
+    .vertical .ft-tool-btn .ft-tooltip {
+      bottom: auto;
+      left: calc(100% + 8px);
+      top: 50%;
+      transform: translateY(-50%);
     }
 
     /* ── Shortcut Help (Apple sheet) ── */
