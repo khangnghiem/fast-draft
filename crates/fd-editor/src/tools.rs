@@ -63,11 +63,9 @@ pub struct SelectTool {
     /// `selected` holds the group, `visual_highlight` holds the clicked child.
     pub visual_highlight: Vec<NodeId>,
     /// Drag state (moving a selected node).
-    dragging: bool,
-    last_x: f32,
-    last_y: f32,
-    /// Whether we duplicated on this drag (Alt+drag).
-    alt_duplicated: bool,
+    pub dragging: bool,
+    pub last_x: f32,
+    pub last_y: f32,
     /// Marquee (rubber-band) selection state.
     /// Set when pointer-down hits empty space. `(start_x, start_y)`.
     pub marquee_start: Option<(f32, f32)>,
@@ -95,7 +93,6 @@ impl SelectTool {
             dragging: false,
             last_x: 0.0,
             last_y: 0.0,
-            alt_duplicated: false,
             marquee_start: None,
             marquee_rect: None,
             resize_handle: None,
@@ -173,13 +170,9 @@ impl Tool for SelectTool {
                     self.dragging = true;
                     self.last_x = *x;
                     self.last_y = *y;
-                    self.alt_duplicated = false;
 
-                    // Alt+click on a node → duplicate
-                    if modifiers.alt && self.selected.len() == 1 {
-                        self.alt_duplicated = true;
-                        return vec![GraphMutation::DuplicateNode { id: hit_id }];
-                    }
+                    // Alt+click duplication is handled by FdCanvas (not here)
+                    // so that selection can transfer to the clone properly.
 
                     vec![]
                 } else {
@@ -278,26 +271,8 @@ impl Tool for SelectTool {
 
                 // Node drag
                 if self.dragging && !self.selected.is_empty() {
-                    // Alt pressed mid-drag: clone-and-drag (Figma behavior)
-                    if modifiers.alt && !self.alt_duplicated && self.selected.len() == 1 {
-                        self.alt_duplicated = true;
-                        let id = self.selected[0];
-                        let mut dx = x - self.last_x;
-                        let mut dy = y - self.last_y;
-                        self.last_x = *x;
-                        self.last_y = *y;
-                        if modifiers.shift {
-                            if dx.abs() > dy.abs() {
-                                dy = 0.0;
-                            } else {
-                                dx = 0.0;
-                            }
-                        }
-                        return vec![
-                            GraphMutation::DuplicateNode { id },
-                            GraphMutation::MoveNode { id, dx, dy },
-                        ];
-                    }
+                    // Alt mid-drag duplication is handled by FdCanvas (not here)
+                    // so that selection can transfer to the clone properly.
 
                     let mut dx = x - self.last_x;
                     let mut dy = y - self.last_y;
@@ -325,7 +300,6 @@ impl Tool for SelectTool {
             InputEvent::PointerUp { .. } => {
                 // Marquee end is handled by FdCanvas (it calls hit_test_rect)
                 self.dragging = false;
-                self.alt_duplicated = false;
                 self.resize_handle = None;
                 vec![]
             }

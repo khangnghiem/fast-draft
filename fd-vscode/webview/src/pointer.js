@@ -59,17 +59,15 @@ function setupPointerEvents() {
       updateToolbarActive("eraser");
     }
 
-    // ── Alt+drag = clone and drag ──
+    // Alt+drag duplication is handled entirely by WASM via
+    // duplicate_selected_at(0,0) — JS only tracks altCloneActive
+    // to suppress the style-picker eyedropper on pointer-up.
     const isAlt = e.altKey || modAltHeld;
     if (isAlt && !e.metaKey && !e.ctrlKey) {
       const hitId = fdCanvas.hit_test_at(x, y);
       if (hitId) {
-        // Ensure the node is selected first
-        fdCanvas.select_by_id(hitId);
-        // WASM handle_pointer_down (below) handles the actual DuplicateNode
-        // when alt=true — we just set flags here for JS-side state management
         altCloneActive = true;
-        // Now switch to select to drag the clone
+        // Switch to select for drawing tools so WASM sees SelectTool
         if (isDrawingTool) {
           cmdTempSelectActive = true;
           cmdTempSelectOriginalTool = currentTool;
