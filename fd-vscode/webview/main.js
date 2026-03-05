@@ -4895,6 +4895,7 @@ function setupFloatingToolbar() {
         dtcCancelled = true;
         removeGhost();
         removeDtcGuideOverlay();
+        removeDtcSnapEdgePreview();
       } else if (!overToolbar && dtcCancelled) {
         // Pointer left toolbar again → re-activate
         dtcCancelled = false;
@@ -4902,10 +4903,36 @@ function setupFloatingToolbar() {
       }
 
       if (!dtcCancelled && dtcGhost) {
-        moveGhost(dtcGhost, e.clientX, e.clientY);
+        // ── Alt+drag: snap ghost to cardinal position near node ──
+        const canvasEl = document.getElementById("fd-canvas");
+        if (e.altKey && canvasEl && fdCanvas && dtcTool !== "text") {
+          const cRect = canvasEl.getBoundingClientRect();
+          const rawX = ((e.clientX - cRect.left) - panX) / zoomLevel;
+          const rawY = ((e.clientY - cRect.top) - panY) / zoomLevel;
+          const snapPreview = dtcFindSnapTarget(rawX, rawY, dtcTool);
+          if (snapPreview) {
+            // Snap ghost to cardinal position
+            const screenX = snapPreview.x * zoomLevel + panX + cRect.left
+              + (ghostShapes[dtcTool] || ghostShapes.rect).w / 2;
+            const screenY = snapPreview.y * zoomLevel + panY + cRect.top
+              + (ghostShapes[dtcTool] || ghostShapes.rect).h / 2;
+            moveGhost(dtcGhost, screenX, screenY);
+            // Dashed edge preview line from target center to ghost center
+            const shape = ghostShapes[dtcTool] || ghostShapes.rect;
+            const ghostCx = snapPreview.x + shape.w / 2;
+            const ghostCy = snapPreview.y + shape.h / 2;
+            renderDtcSnapEdgePreview(snapPreview.targetCx, snapPreview.targetCy,
+              ghostCx, ghostCy, canvasEl);
+          } else {
+            moveGhost(dtcGhost, e.clientX, e.clientY);
+            removeDtcSnapEdgePreview();
+          }
+        } else {
+          moveGhost(dtcGhost, e.clientX, e.clientY);
+          removeDtcSnapEdgePreview();
+        }
 
         // ── Alignment guides via WASM ──
-        const canvasEl = document.getElementById("fd-canvas");
         if (canvasEl && fdCanvas) {
           const cRect = canvasEl.getBoundingClientRect();
           const sceneX = ((e.clientX - cRect.left) - panX) / zoomLevel;
@@ -4935,6 +4962,7 @@ function setupFloatingToolbar() {
       // Drag-to-create: check if drop is over the canvas
       removeGhost();
       removeDtcGuideOverlay();
+      removeDtcSnapEdgePreview();
       const canvasEl = document.getElementById("fd-canvas");
       if (canvasEl && fdCanvas) {
         const rect = canvasEl.getBoundingClientRect();
@@ -4958,8 +4986,8 @@ function setupFloatingToolbar() {
             }
           }
 
-          // ── Snap-to-node detection (non-text tools) ──
-          const snap = dtcFindSnapTarget(rawX, rawY, dtcTool);
+          // ── Snap-to-node detection (non-text tools, Alt required) ──
+          const snap = e.altKey ? dtcFindSnapTarget(rawX, rawY, dtcTool) : null;
           const sceneX = snap ? snap.x : rawX;
           const sceneY = snap ? snap.y : rawY;
 
@@ -4998,6 +5026,7 @@ function setupFloatingToolbar() {
       // Cancelled or no drag — clean up
       removeGhost();
       removeDtcGuideOverlay();
+      removeDtcSnapEdgePreview();
       dtcActive = false;
       dtcCancelled = false;
       dtcTool = null;
@@ -5009,6 +5038,7 @@ function setupFloatingToolbar() {
     if (!dtcTool) return;
     removeGhost();
     removeDtcGuideOverlay();
+    removeDtcSnapEdgePreview();
     dtcActive = false;
     dtcCancelled = false;
     dtcTool = null;
@@ -5051,6 +5081,44 @@ function setupFloatingToolbar() {
   function removeDtcGuideOverlay() {
     if (dtcGuideOverlay) { dtcGuideOverlay.remove(); dtcGuideOverlay = null; }
   }
+
+  // ── Snap edge preview overlay (dashed line from target node to ghost) ──
+  let dtcSnapEdgeOverlay = null;
+
+  function renderDtcSnapEdgePreview(fromX, fromY, toX, toY, canvasEl) {
+    const cRect = canvasEl.getBoundingClientRect();
+    if (!dtcSnapEdgeOverlay) {
+      dtcSnapEdgeOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      dtcSnapEdgeOverlay.style.cssText = `
+        position:fixed;pointer-events:none;z-index:9998;
+        left:${cRect.left}px;top:${cRect.top}px;
+        width:${cRect.width}px;height:${cRect.height}px;
+      `;
+      document.body.appendChild(dtcSnapEdgeOverlay);
+    }
+    dtcSnapEdgeOverlay.style.left = cRect.left + "px";
+    dtcSnapEdgeOverlay.style.top = cRect.top + "px";
+    dtcSnapEdgeOverlay.style.width = cRect.width + "px";
+    dtcSnapEdgeOverlay.style.height = cRect.height + "px";
+    dtcSnapEdgeOverlay.setAttribute("viewBox",
+      `0 0 ${cRect.width / zoomLevel} ${cRect.height / zoomLevel}`);
+    const ox = panX / zoomLevel;
+    const oy = panY / zoomLevel;
+    const sw = 1.5 / zoomLevel;
+    const dash = `${6 / zoomLevel} ${4 / zoomLevel}`;
+    dtcSnapEdgeOverlay.innerHTML = `<g transform="translate(${ox},${oy})">
+      <line x1="${fromX}" y1="${fromY}" x2="${toX}" y2="${toY}"
+        stroke="var(--fd-accent, #4FC3F7)" stroke-width="${sw}" stroke-dasharray="${dash}"
+        stroke-linecap="round" opacity="0.7" />
+      <circle cx="${toX}" cy="${toY}" r="${4 / zoomLevel}"
+        fill="var(--fd-accent, #4FC3F7)" opacity="0.6" />
+    </g>`;
+  }
+
+  function removeDtcSnapEdgePreview() {
+    if (dtcSnapEdgeOverlay) { dtcSnapEdgeOverlay.remove(); dtcSnapEdgeOverlay = null; }
+  }
+
   // ── Text drop-to-consume helper ──
   function dtcTextConsume(sceneX, sceneY, screenX, screenY, canvasRect) {
     if (!fdCanvas) return false;

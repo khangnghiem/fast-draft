@@ -12,10 +12,6 @@ theme base_text {
 
 # ─── Layout ───
 
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
 group @login_form {
   spec {
     "User authentication entry point"
@@ -83,9 +79,8 @@ group @login_form {
       ease: ease_out 100ms
     }
   }
-  layout: column gap=16 pad=32
-  x: 316.56
-  y: 379.28
+  x: 292.44
+  y: 380.14
 }
 
 text @title "Welcome Back" {
@@ -124,8 +119,8 @@ rect @_anon_2 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 126.4
-  y: 642.36
+  x: 130.27
+  y: 639.46
 }
 
 rect @_anon_4 {
@@ -136,11 +131,301 @@ rect @_anon_4 {
   y: 790.5
 }
 
+ellipse @ellipse_3 {
+  w: 50 h: 50
+  stroke: #333333 2.5
+  x: 312.87
+  y: 865.82
+}
+
+ellipse @_ellipse_4 {
+  w: 50 h: 40
+  stroke: #333333 2.5
+  x: 335.21
+  y: 201.5
+}
+
+rect @_rect_5 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 195.21
+  y: 201.5
+}
+
+rect @_rect_7 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 382.87
+  y: 11.48
+}
+
+rect @_rect_8 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 288.35
+  y: -109.34
+}
+
+ellipse @_ellipse_9 {
+  w: 50 h: 40
+  stroke: #333333 2.5
+  x: 616.72
+  y: -6.62
+}
+
+text @_text_10 "Text" {
+  fill: #333333  # gray
+  x: 561.45
+  y: 187.55
+}
+
+frame @_frame_11 {
+  w: 200 h: 150
+  fill: #F2F2F7  # white
+  stroke: #BFBFCC 1
+  x: 439.94
+  y: -92.36
+}
+
+rect @_rect_12 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 664.17
+  y: 367.29
+}
+
+ellipse @_ellipse_13 {
+  w: 50 h: 40
+  stroke: #333333 2.5
+  x: 741.85
+  y: 224.49
+}
+
+rect @_rect_15 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 904.89
+  y: 58.83
+}
+
+ellipse @_ellipse_16 {
+  w: 50 h: 40
+  stroke: #333333 2.5
+  x: 861.85
+  y: 214.49
+}
+
+rect @_rect_18 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 1113.35
+  y: -33.13
+}
+
+rect @_rect_20 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 809.18
+  y: 470.7
+}
+
+rect @_rect_22 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 514.1
+  y: 880.69
+}
+
+ellipse @_ellipse_24 {
+  w: 50 h: 40
+  stroke: #333333 2.5
+  x: 684.88
+  y: 798.98
+}
+
+text @_text_26 "Text" {
+  fill: #333333  # gray
+  x: 715.79
+  y: 958.78
+}
+
+rect @_rect_28 {
+  w: 155.61 h: 145.15
+  stroke: #333333 2.5
+  corner: 8
+  x: 59.23
+  y: 1137.6
+}
+
+ellipse @_ellipse_30 {
+  w: 50 h: 40
+  stroke: #333333 2.5
+  x: 730.19
+  y: 1061.44
+}
+
+rect @_rect_28_copy_32 {
+  w: 155.61 h: 145.15
+  stroke: #333333 2.5
+  corner: 8
+  x: 646.72
+  y: 1246.77
+}
+
+rect @_rect_28_copy_33 {
+  w: 155.61 h: 145.15
+  stroke: #333333 2.5
+  corner: 8
+  x: 457.13
+  y: 1110.08
+}
+
+rect @_rect_28_copy_34 {
+  w: 155.61 h: 145.15
+  stroke: #333333 2.5
+  corner: 8
+  x: 425.23
+  y: 1321.27
+}
+
+rect @_rect_28_copy_35 {
+  w: 155.61 h: 145.15
+  stroke: #333333 2.5
+  corner: 8
+  x: 646.72
+  y: 1246.77
+}
+
+rect @rect_36 {
+  w: 146.95 h: 146.95
+  stroke: #333333 2.5
+  corner: 8
+  x: 531.72
+  y: 1223.67
+}
+
+rect @_rect_0 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 130.95
+  y: 1474.97
+}
+
+rect @_rect_1 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 136.2
+  y: 1674.23
+}
+
+rect @_rect_2 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 107.08
+  y: 1392.44
+}
+
+rect @_rect_3 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 355.7
+  y: 1700.92
+}
+
+rect @_rect_4 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 192.94
+  y: 2109.85
+}
+
+# ─── Constraints ───
+
+@_rect_28_copy_33 -> offset: @_rect_28_copy_32 20, 20
+@_rect_28_copy_35 -> offset: @_rect_28_copy_34 20, 20
+
 # ─── Flows ───
 
 edge @edge_3 {
   from: @rect_1
   to: @_anon_2
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}
+edge @edge_6 {
+  from: @_ellipse_4
+  to: @_rect_5
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}
+edge @edge_17 {
+  from: @_ellipse_13
+  to: @_ellipse_16
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}
+edge @edge_19 {
+  from: @_rect_15
+  to: @_rect_18
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}
+edge @edge_21 {
+  from: @_rect_12
+  to: @_rect_20
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}
+edge @edge_23 {
+  from: @ellipse_3
+  to: @_rect_22
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}
+edge @edge_25 {
+  from: @_rect_22
+  to: @_ellipse_24
+  stroke: #999999 1
+  arrow: end
+  curve: smooth
+  flow: pulse 800ms
+}
+edge @edge_27 {
+  from: @_rect_22
+  to: @_text_26
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}
+edge @edge_29 {
+  from: @_rect_22
+  to: @_rect_28
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}
+edge @edge_31 {
+  from: @_rect_28
+  to: @_ellipse_30
   stroke: #6B7080 1.5
   arrow: end
   curve: smooth
