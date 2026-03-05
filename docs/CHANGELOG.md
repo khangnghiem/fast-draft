@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.10.50 — Excalidraw JSON Export (R3.55)
+
+- **FEATURE (R3.55)**: Export to Excalidraw JSON — `export_excalidraw(graph)` converts FD scene to Excalidraw's JSON format; rect/ellipse/text/arrow elements mapped correctly.
+
 ### v0.10.49 — Fix Alt+Drag Architecture (R3.54)
 
 - **FIX (R3.54)**: Alt+drag no longer causes jumping/jittery behavior — unified duplication onto `FdCanvas::duplicate_selected_at(0,0)` which properly transfers selection to the clone; previously SelectTool emitted `DuplicateNode` but never updated selection, causing `MoveNode` to move the original instead of the clone

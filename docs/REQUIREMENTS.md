@@ -103,7 +103,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.32** _(planned)_: Image embedding — drag-and-drop raster images as `image` nodes; base64 or file reference
 - **R3.33** _(done)_: Component libraries — reusable node collections from a library panel; stored as `.fd` files; 3 built-in libraries (UI Kit, Flowchart, Wireframe)
 - **R3.34** _(planned)_: Community library directory — searchable gallery for publishing and discovering shared libraries
-- **R3.55** _(planned)_: Export to Excalidraw JSON — `export_excalidraw(graph)` converts FD scene to Excalidraw's JSON format; rect/ellipse/text/arrow elements mapped correctly; ⌘⇧X shortcut
+- **R3.55** _(done)_: Export to Excalidraw JSON — `export_excalidraw(graph)` converts FD scene to Excalidraw's JSON format; rect/ellipse/text/arrow elements mapped correctly; ⌘⇧X shortcut
 - **R3.56** _(planned)_: Export to HTML+CSS+JS — `export_html(graph)` generates standalone responsive HTML page; shapes → `<div>`, text → `<p>`, constraints → flexbox, animations → CSS transitions
 - **R3.57** _(planned)_: Fine pen tools — `taper_start`, `taper_end`, `smoothing` properties on pen strokes; variable stroke width rendering; settings in properties panel
 - **R3.58** _(planned)_: Animation timeline — visual keyframe panel showing `when` blocks as timeline tracks; drag endpoints to adjust duration; scrub to preview animation state
