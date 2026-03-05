@@ -94,8 +94,6 @@ function updateFloatingBar() {
 function hideFloatingBar() {
   const fab = document.getElementById("floating-action-bar");
   if (fab) fab.classList.remove("visible");
-  const menu = document.getElementById("fab-overflow-menu");
-  if (menu) menu.classList.remove("visible");
 }
 
 // ─── Delete Button (Floating Action Bar) ───────────────────────────────────

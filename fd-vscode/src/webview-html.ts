@@ -1592,7 +1592,35 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       font-weight: 500;
     }
 
-
+    /* ── Props Actions ── */
+    .props-actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+    }
+    .props-action-btn {
+      padding: 5px 8px;
+      border: 0.5px solid var(--fd-border);
+      border-radius: 6px;
+      background: var(--fd-input-bg);
+      color: var(--fd-text-secondary);
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: left;
+    }
+    .props-action-btn:hover {
+      background: var(--fd-surface-hover);
+      color: var(--fd-text);
+    }
+    .props-action-btn:active { transform: scale(0.97); }
+    .props-action-btn.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    .props-delete-btn { color: #FF453A; }
+    .props-delete-btn:hover { background: rgba(255,69,58,0.12); color: #FF453A; }
 
     /* ── Annotation Card ── */
     #annotation-card {
@@ -2462,14 +2490,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <input type="number" id="fab-font-size" class="fab-input fab-text-only" min="8" max="200" step="1" value="16" title="Font size">
       <div class="fab-sep"></div>
       <button class="fab-delete-btn" id="deleteSelectedBtn" title="Delete (⌫)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
-      <button class="fab-btn" id="fab-more-btn" aria-label="More actions" title="More actions">⋯</button>
-      <div id="fab-overflow-menu">
-        <button class="fab-menu-item" data-action="group">⌘G Group</button>
-        <button class="fab-menu-item" data-action="ungroup">⌘⇧G Ungroup</button>
-        <button class="fab-menu-item" data-action="duplicate">⌘D Duplicate</button>
-        <button class="fab-menu-item" data-action="copy-png">⌘⇧C Copy as PNG</button>
-        <button class="fab-menu-item" data-action="delete" style="color:#e57373">⌫ Delete</button>
-      </div>
+
     </div>
     <canvas id="fd-canvas" class="tool-select"></canvas>
     <div id="dimension-tooltip"></div>
@@ -2584,6 +2605,19 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
             <button class="align-cell" data-h="left"   data-v="bottom"><span class="align-dot"></span></button>
             <button class="align-cell" data-h="center" data-v="bottom"><span class="align-dot"></span></button>
             <button class="align-cell" data-h="right"  data-v="bottom"><span class="align-dot"></span></button>
+          </div>
+        </div>
+        <div class="props-section" id="props-actions-section">
+          <div class="props-section-label">Actions</div>
+          <div class="props-actions-grid">
+            <button class="props-action-btn" id="props-group" title="Group ⌘G">◻ Group</button>
+            <button class="props-action-btn" id="props-ungroup" title="Ungroup ⇧⌘G">◫ Ungroup</button>
+            <button class="props-action-btn" id="props-duplicate" title="Duplicate ⌘D">⊕ Duplicate</button>
+            <button class="props-action-btn" id="props-frame" title="Frame Selection">⊞ Frame</button>
+            <button class="props-action-btn" id="props-bring-front" title="Bring to Front ⌘⇧]">↑ Front</button>
+            <button class="props-action-btn" id="props-send-back" title="Send to Back ⌘⇧[">↓ Back</button>
+            <button class="props-action-btn" id="props-copy-png" title="Copy as PNG ⌘⇧C">🖼 PNG</button>
+            <button class="props-action-btn props-delete-btn" id="props-delete" title="Delete ⌫">🗑 Delete</button>
           </div>
         </div>
     </div>
