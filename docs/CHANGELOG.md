@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.36 — Snap Guide: Ghost Rectangle + Closest-Edge Detection
+
+- **IMPROVE**: Snap guide now shows a ghost rectangle matching toolbar size at exact landing position (not a thin edge line).
+- **FIX**: Snap detection uses closest-edge comparison instead of if-else chain — top snap is now reachable without dragging to the very edge.
+- **FIX**: Left snap guide accounts for Layers panel width (232px offset).
+
 ### v0.10.35 — Fix Toolbar Drag Jump + Snap Guide Preview
 
 - **FIX**: Toolbar no longer jumps on initial click — position normalization deferred from `pointerdown` to `pointerup`; uses `transform: translate()` during drag only.

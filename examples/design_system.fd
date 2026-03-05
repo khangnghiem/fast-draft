@@ -1,3 +1,5 @@
+# ─── Layout ───
+
 group @color_palette {
   text @palette_title "Color Palette" {
     fill: #1A1A2E  # blue
@@ -149,6 +151,8 @@ rect @btn_danger {
   use: danger
   fill: #D63031  # red
   corner: 10
+  x: 26.23
+  y: 86.72
 }
 
 text @input_title "Inputs" {
@@ -240,4 +244,23 @@ ellipse @_ellipse_1 {
   y: 667.47
 }
 
+rect @_rect_0 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: -134.14
+  y: 602.42
+}
+
+# ─── Constraints ───
+
 @color_palette -> center_in: canvas
+
+# ─── Flows ───
+
+edge @edge_1 {
+  from: @ellipse_3
+  to: @_rect_0
+  arrow: end
+  curve: smooth
+}

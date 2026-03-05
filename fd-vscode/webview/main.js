@@ -4477,50 +4477,82 @@ function setupFloatingToolbar() {
   let initialLeft = 0;
   let initialTop = 0;
   let activePointerId = -1;
-  const SNAP_THRESHOLD = 60;
 
-  /** Compute snap target from a projected toolbar position */
+  /** Compute snap target using closest-edge comparison */
   function computeSnap(projX, projY) {
     const viewW = window.innerWidth;
     const viewH = window.innerHeight;
     const tbW = toolbar.offsetWidth;
     const tbH = toolbar.offsetHeight;
+    const panelW = getLayersPanelWidth();
+
+    // Distance from each edge of the projected toolbar to the viewport edge
     const dTop = projY;
     const dBottom = viewH - (projY + tbH);
-    const dLeft = projX;
+    const dLeft = projX - panelW; // account for layers panel
     const dRight = viewW - (projX + tbW);
 
-    if (dRight < SNAP_THRESHOLD) return "right";
-    if (dLeft < SNAP_THRESHOLD) return "left";
-    if (dTop < SNAP_THRESHOLD) return "top";
-    return "bottom";
+    // Find the closest edge
+    const edges = [
+      { edge: "top", dist: dTop },
+      { edge: "bottom", dist: dBottom },
+      { edge: "left", dist: dLeft },
+      { edge: "right", dist: dRight },
+    ];
+    edges.sort((a, b) => a.dist - b.dist);
+    return edges[0].edge;
   }
 
-  /** Show or update the snap guide overlay */
-  function showSnapGuide(edge) {
+  /** Compute the exact landing position for each snap edge */
+  function getSnapPosition(edge, projX, projY) {
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+    const container = document.getElementById("canvas-container");
+    const cr = container.getBoundingClientRect();
+    const panelW = getLayersPanelWidth();
+    // Toolbar dimensions (approximate for the snapped orientation)
+    const tbW = toolbar.offsetWidth;
+    const tbH = toolbar.offsetHeight;
+
+    if (edge === "top") {
+      // Horizontal at top: left based on drag X, clamped
+      const left = Math.max(panelW + 8, Math.min(projX, viewW - tbW - 8)) - cr.left;
+      return { left: left + "px", top: "8px", width: tbW + "px", height: tbH + "px" };
+    }
+    if (edge === "bottom") {
+      const left = Math.max(panelW + 8, Math.min(projX, viewW - tbW - 8)) - cr.left;
+      return { left: left + "px", bottom: "8px", width: tbW + "px", height: tbH + "px" };
+    }
+    if (edge === "left") {
+      // Vertical on left: after layers panel
+      const leftPx = panelW + 8 - cr.left;
+      const top = Math.max(8, Math.min(projY - cr.top, cr.height - tbW - 8));
+      return { left: Math.max(0, leftPx) + "px", top: top + "px", width: tbH + "px", height: tbW + "px" };
+    }
+    // right
+    const top = Math.max(8, Math.min(projY - cr.top, cr.height - tbW - 8));
+    return { right: "8px", top: top + "px", width: tbH + "px", height: tbW + "px" };
+  }
+
+  /** Show snap guide as a ghost rectangle at the exact landing position */
+  function showSnapGuide(edge, projX, projY) {
     let guide = document.getElementById("ft-snap-guide");
     if (!guide) {
       guide = document.createElement("div");
       guide.id = "ft-snap-guide";
       document.getElementById("canvas-container").appendChild(guide);
     }
-    const pad = 8;
-    const guideW = 4;
-    guide.className = "ft-snap-" + edge;
-    if (edge === "top") {
-      guide.style.cssText = `position:absolute;top:${pad}px;left:${pad}px;right:${pad}px;height:${guideW}px;`;
-    } else if (edge === "bottom") {
-      guide.style.cssText = `position:absolute;bottom:${pad}px;left:${pad}px;right:${pad}px;height:${guideW}px;`;
-    } else if (edge === "left") {
-      guide.style.cssText = `position:absolute;top:${pad}px;left:${pad}px;bottom:${pad}px;width:${guideW}px;`;
-    } else {
-      guide.style.cssText = `position:absolute;top:${pad}px;right:${pad}px;bottom:${pad}px;width:${guideW}px;`;
-    }
+    const pos = getSnapPosition(edge, projX, projY);
+    guide.style.cssText = "position:absolute;pointer-events:none;z-index:9999;";
+    guide.style.left = pos.left || "auto";
+    guide.style.right = pos.right || "auto";
+    guide.style.top = pos.top || "auto";
+    guide.style.bottom = pos.bottom || "auto";
+    guide.style.width = pos.width;
+    guide.style.height = pos.height;
     guide.style.border = "2px dashed var(--fd-accent, #4FC3F7)";
-    guide.style.borderRadius = "6px";
-    guide.style.pointerEvents = "none";
-    guide.style.zIndex = "9999";
-    guide.style.opacity = "0.7";
+    guide.style.borderRadius = "10px";
+    guide.style.opacity = "0.6";
     guide.style.display = "block";
   }
 
@@ -4546,7 +4578,7 @@ function setupFloatingToolbar() {
     const projX = initialLeft + dx;
     const projY = initialTop + dy;
     const edge = computeSnap(projX, projY);
-    showSnapGuide(edge);
+    showSnapGuide(edge, projX, projY);
   });
 
   document.addEventListener("pointerup", (e) => {
