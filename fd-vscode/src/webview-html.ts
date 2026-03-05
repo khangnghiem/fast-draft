@@ -2074,7 +2074,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .horizontal .ft-tool-btn { height: 32px; }
     .vertical .ft-tool-btn { width: 32px; }
 
-    .ft-tool-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .ft-tool-btn svg { width: 18px; height: 18px; flex-shrink: 0; -webkit-user-drag: none; pointer-events: none; }
     .ft-tool-btn:hover { background: rgba(0,0,0,0.06); color: var(--fd-text); }
     .dark-theme .ft-tool-btn:hover { background: rgba(255,255,255,0.1); }
     .ft-tool-btn:active { transform: scale(0.92); }

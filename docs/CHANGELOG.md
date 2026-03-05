@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.10.32 — Fix Drag-to-Create: Prevent Native Drag Hijack on SVG Icons
+
+- **FIX (R3.42)**: Drag-to-create now works — added `e.preventDefault()` in tool button `pointerdown` handler to prevent browser-native drag-and-drop on `<svg>` icons inside `<button>` elements, which was hijacking all `pointermove` events before the drag threshold could be reached (7th fix attempt — previous 6 fixed event routing but not the native drag takeover)
+- **FIX (R3.42)**: Added CSS `pointer-events: none; -webkit-user-drag: none` on `.ft-tool-btn svg` as belt-and-suspenders protection against native SVG drag
+
 ### v0.10.31 — Fix Pointer Event Regressions (from v0.10.30)
 
 - **FIX (R3.42)**: Drag-to-create from toolbar no longer triggers context menu — canvas `pointerup` handler now skips entirely when `canvasPointerId === -1` (no canvas `pointerdown` started the interaction); previously, drag-to-create's `pointerup` handler cleared `dtcTool` before the canvas handler ran, allowing fallthrough

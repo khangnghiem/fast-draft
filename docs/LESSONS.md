@@ -24,10 +24,10 @@ Engineering lessons discovered through building FD.
   feature, removal, cleanup     → L237-246 (Feature Removal Requires Full Cleanup)
   resize, cached-bounds, model  → L249-259 (Cached Bounds Must Track Mutations)
   animation, time, hover        → L262-272 (Animations: Always Add Time Limits)
-  setPointerCapture, webview    → L275-284 (setPointerCapture Fails in Webview)
-  e2e, false-positive, codespace → L288-301 (E2E Tests Give False Positives)
+
   codespace, cp, target, sync   → L304-318 (gh codespace cp Hangs)
   browser, subagent, context, spiral → L320-344 (Browser Subagent Context Spiral)
+  native-drag, svg, preventDefault → L347-355 (Native Drag Hijacks SVG Pointerdown)
 -->
 
 ## Resize Fight: Bounds Ownership Chain (SyncEngine ↔ Layout Engine ↔ JS)
@@ -298,38 +298,6 @@ Engineering lessons discovered through building FD.
 
 ---
 
-## setPointerCapture Fails AND Steals Events in VS Code Webview — Never Use It
-
-**Date**: 2026-03-03 (updated 2026-03-05)
-**Context**: Drag-to-create from floating toolbar buttons didn't work — ghost preview never appeared, shapes never created on canvas drop. Root cause was `canvas.setPointerCapture(e.pointerId)` in `pointer.js` stealing pointer events from the toolbar's document-level `pointermove`/`pointerup` listeners. Six fix attempts across v0.10.8, v0.10.10, v0.10.16, v0.10.23, and v0.10.27 addressed symptoms (toolbar drag handles, button listeners, CSS stacking, rect guards) but not the core conflict.
-
-**Root cause**: `setPointerCapture` has a dual failure mode in VS Code webview iframes: (1) it **silently fails** — capture never takes effect, so events stop when the pointer leaves the originating element. (2) When it **does work** (desktop Electron, some VS Code versions), it **steals ALL pointer events** for that pointerId and redirects them to the capturing element, bypassing ALL other listeners including document-level ones. This inconsistency means: Codespace E2E tests pass (failure mode 1 — capture doesn't work, document handlers fire fine) but local desktop testing fails (success mode — capture steals events from toolbar handlers).
-
-**The geometry-based guard was also fragile**: `getBoundingClientRect()` comparison fails when toolbar is rolled-up (rect shrinks), has CSS transforms during drag, or buttons extend beyond padding.
-
-**Fix**: (v0.10.30) Removed ALL `setPointerCapture`/`releasePointerCapture` calls from canvas. Moved canvas `pointermove`/`pointerup` from `canvas` element to `document`-level listeners. Track ownership via `canvasPointerId` flag (set in pointerdown, cleared in pointerup). Gate idle hover to `e.target === canvas` check. Gate active drag to `e.pointerId === canvasPointerId`. Replaced toolbar rect guard with `e.target.closest('#floating-toolbar')` DOM ancestry check.
-
-**Lesson**: **Never use `setPointerCapture` anywhere in VS Code webview code — not just toolbar handlers, not just canvas.** It has inconsistent behavior across VS Code environments. Always use document-level `pointermove`/`pointerup` listeners with a pointer ownership flag. For toolbar/overlay guards, use `e.target.closest()` DOM ancestry — never `getBoundingClientRect()` geometry comparison.
-
----
-
-## VS Code: E2E Tests in Codespace Can Give False Positives for Webview Interactions
-
-**Date**: 2026-03-04
-**Context**: Toolbar drag fix (PR #357, v0.10.23) — CSS `user-select: none` + JS body-wide `pointerdown` handler. E2E in Codespace passed (toolbar moved, drag-to-create worked), but user reported the bug was "not fixed at all."
-
-**Root cause**: Codespace browser testing uses a remote VS Code server where the webview rendering pipeline differs from the desktop VS Code app. Pointer event handling, z-index layering, and `setPointerCapture` behavior may all behave differently in the Codespace iframe environment vs the native Electron webview. A "passing" E2E test doesn't guarantee the fix works on the user's local VS Code.
-
-**Fix**: For VS Code webview pointer/drag fixes:
-
-1. Always add `console.log` diagnostics to confirm event handlers fire in the actual local environment
-2. Never rely solely on Codespace E2E for webview interaction bugs — test locally too
-3. Check if `setPointerCapture` on sibling elements (like `canvas.setPointerCapture` at line 713 of `main.js`) interferes with document-level `pointermove` listeners used by the toolbar drag
-
-**Lesson**: **Codespace E2E tests are unreliable for VS Code webview pointer interaction bugs.** The rendering and event pipeline differs between remote/web VS Code and desktop Electron VS Code. Always verify pointer/drag fixes on the local desktop app. When a bug report says "not fixed at all," add diagnostic logging as the first debugging step.
-
----
-
 ## CI/CD: `gh codespace cp -r -e .` Hangs on Large Projects
 
 **Date**: 2026-03-04
@@ -361,3 +329,16 @@ Engineering lessons discovered through building FD.
 3. The `/nonstop` Phase 4 rule already enforces this — follow it
 
 **Lesson**: **E2E browser testing MUST be done in a fresh conversation.** If you've done significant research, file reading, or code editing in the current conversation, the accumulated context will cause the browser subagent to spiral. This is a platform constraint, not a code bug. The `/nonstop` workflow's Phase 4 context-check rule exists for this reason.
+
+---
+
+## Native Drag Hijacks SVG Pointerdown — Always preventDefault
+
+**Date**: 2026-03-05
+**Context**: Drag-to-create from floating toolbar buttons never worked despite 6 prior fix attempts (v0.10.8 through v0.10.31). All those fixes addressed event routing — `setPointerCapture` removal, document-level listeners, pointer ownership tracking — but the feature STILL didn't work.
+
+**Root cause**: The tool button `pointerdown` handler called `e.stopPropagation()` but NOT `e.preventDefault()`. Without `preventDefault`, the browser initiates **native HTML drag-and-drop** on the `<svg>` icons inside `<button>` elements. Native drag completely hijacks all subsequent `pointermove` events at the browser level — document-level listeners never fire, the drag threshold is never reached, the ghost preview never appears.
+
+**Fix**: (v0.10.32) Added `e.preventDefault()` in the tool button `pointerdown` handler. Also added CSS `pointer-events: none; -webkit-user-drag: none` on `.ft-tool-btn svg` as belt-and-suspenders.
+
+**Lesson**: **Any custom drag interaction on elements containing `<svg>`, `<img>`, or `<a>` MUST call `e.preventDefault()` in the `pointerdown` handler.** These elements have browser-native drag behavior that overrides pointer event tracking. `e.stopPropagation()` only prevents parent handlers from firing — it does NOT prevent the browser's default drag behavior. This is the #1 reason custom drag interactions silently fail and is nearly impossible to debug from code review alone because the code logic is correct — the browser just never delivers the events.

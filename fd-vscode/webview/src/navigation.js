@@ -415,7 +415,7 @@ function setupFloatingToolbar() {
   let initialTop = 0;
   let activePointerId = -1;
 
-  // Use document-level listeners — setPointerCapture fails in VS Code webview iframes
+  // Document-level listeners for toolbar drag
   document.addEventListener("pointermove", (e) => {
     if (!ftDragging || e.pointerId !== activePointerId) return;
     const dx = e.clientX - dragStartX;
@@ -602,13 +602,13 @@ function setupFloatingToolbar() {
 
     btn.addEventListener("pointerdown", (e) => {
       e.stopPropagation(); // Prevent scroll-handle drag from activating
+      e.preventDefault();  // Prevent native drag on SVG icons — critical for dtc
       dtcTool = tool;
       dtcBtn = btn;
       dtcStartX = e.clientX;
       dtcStartY = e.clientY;
       dtcActive = false;
-      // NOTE: setPointerCapture intentionally omitted —
-      // it silently fails in VS Code webview iframes
+
     });
 
     // Suppress click after drag-to-create
@@ -621,7 +621,7 @@ function setupFloatingToolbar() {
     }, true);
   });
 
-  // Document-level listeners — setPointerCapture fails in VS Code webview iframes
+  // Document-level listeners for drag-to-create
   document.addEventListener("pointermove", (e) => {
     if (!dtcTool) return;
     const dx = e.clientX - dtcStartX;

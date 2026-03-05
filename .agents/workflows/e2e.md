@@ -113,8 +113,6 @@ On the open FD canvas:
 Take ONE screenshot. Return PASS/FAIL per check.
 ```
 
-> ⚡ **LOCAL-ONLY** (skip in Codespace): Group/Ungroup via right-click — unreliable in webview.
-
 ### Phase 4 — Inline Editing
 
 ```
@@ -179,8 +177,6 @@ On the open FD canvas:
 (9.5) Click "Make child" — text becomes child, auto-centered, code updates.
 Take ONE screenshot. Return PASS/FAIL per check.
 ```
-
-> ⚡ **LOCAL-ONLY** (skip in Codespace): toolbar drag, drag-to-create from toolbar — pointer capture unreliable in webview iframes (see LESSONS.md).
 
 ---
 
