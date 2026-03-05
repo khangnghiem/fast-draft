@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.10.33 — Fix Init Crash: setupSelectionBar + CSP Inline Styles
+
+- **FIX (R3.42)**: Remove call to non-existent `setupSelectionBar()` in `main()` — this crashed WASM init and prevented `setupFloatingToolbar()` (including drag-to-create) from ever executing. Dead code from a prior refactor.
+- **FIX**: Add `'unsafe-inline'` to CSP `style-src` — JS-set inline styles (ghost preview, toolbar drag, minimap overlays) were being silently blocked by Content Security Policy.
+
 ### v0.10.32 — Fix Drag-to-Create: Prevent Native Drag Hijack on SVG Icons
 
 - **FIX (R3.42)**: Drag-to-create now works — added `e.preventDefault()` in tool button `pointerdown` handler to prevent browser-native drag-and-drop on `<svg>` icons inside `<button>` elements, which was hijacking all `pointermove` events before the drag threshold could be reached (7th fix attempt — previous 6 fixed event routing but not the native drag takeover)
