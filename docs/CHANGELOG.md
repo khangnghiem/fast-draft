@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.10.48 — Fix Alt+Drag Mid-Drag Activation (R3.54)
+
+- **FIX (R3.54)**: Alt+drag to duplicate now works when Alt/Option is pressed mid-drag — macOS Option key pressed during active pointer capture was not updating `e.altKey` on `pointermove` events in Electron/VS Code webviews; added global modifier state tracking via `keydown`/`keyup`/`blur` listeners and wired `(e.altKey || modAltHeld)` across all pointer event handlers (down/move/up)
+- **ROBUSTNESS**: Also tracks `modCtrlHeld`, `modMetaHeld`, `modShiftHeld` for consistent modifier detection across all pointer phases; state resets on `window.blur` to prevent stale modifiers after Alt+Tab
+
 ### v0.10.47 — Fix Alt+Drag Double-Duplicate + Mid-Drag Clone
 
 - **FIX (R3.54)**: Alt+drag no longer duplicates a node twice — removed redundant JS-side `duplicate_selected_at(0,0)` call from `pointer.js`; WASM `SelectTool::handle()` is now the single source of truth for Alt+click duplication
