@@ -216,3 +216,29 @@ let isDraggingNode = false;
 /** The ID of the node being dragged */
 let draggedNodeId = null;
 
+// ─── Security Helpers ────────────────────────────────────────────────────
+
+/**
+ * Escapes a string for safe embedding into HTML.
+ * Hardened to protect against XSS injections.
+ */
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Escapes a string for safe embedding into HTML attributes.
+ */
+function escapeAttr(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}

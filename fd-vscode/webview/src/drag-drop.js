@@ -141,7 +141,7 @@ function openAnimPicker(targetNodeId, clientX, clientY) {
         row.className = "picker-existing";
         const trigger = anim.trigger?.Custom || anim.trigger || "?";
         const triggerName = typeof trigger === "string" ? trigger : Object.keys(trigger)[0]?.toLowerCase() || "?";
-        row.innerHTML = `<span>:${triggerName}</span> <span style="flex:1;opacity:0.6">${anim.duration_ms || 300}ms</span>`;
+        row.innerHTML = `<span>:${escapeHtml(triggerName)}</span> <span style="flex:1;opacity:0.6">${escapeHtml(anim.duration_ms || 300)}ms</span>`;
         const removeBtn = document.createElement("button");
         removeBtn.className = "pe-remove";
         removeBtn.textContent = "✕";

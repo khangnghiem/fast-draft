@@ -225,6 +225,33 @@ let isDraggingNode = false;
 /** The ID of the node being dragged */
 let draggedNodeId = null;
 
+// ─── Security Helpers ────────────────────────────────────────────────────
+
+/**
+ * Escapes a string for safe embedding into HTML.
+ * Hardened to protect against XSS injections.
+ */
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Escapes a string for safe embedding into HTML attributes.
+ */
+function escapeAttr(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 // ─── Tween Engine ────────────────────────────────────────────────────────
 /** Active tweens: { nodeId, prop, from, to, startTime, duration, easeFn } */
 const activeTweens = [];
@@ -2188,10 +2215,6 @@ function addAcceptRow(value) {
   list.appendChild(item);
 }
 
-function escapeAttr(s) {
-  return s.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
 /**
  * Check if a node has a spec annotation block.
  * Uses parseAnnotatedNodes to detect matching spec data.
@@ -3559,14 +3582,6 @@ function refreshLayersPanel() {
 }
 
 // ─── Spec View Parser (client-side) ──────────────────────────────────────
-
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function parseSpecAnnotation(line) {
   const trimmed = line.trim();
@@ -6239,7 +6254,7 @@ function openAnimPicker(targetNodeId, clientX, clientY) {
         row.className = "picker-existing";
         const trigger = anim.trigger?.Custom || anim.trigger || "?";
         const triggerName = typeof trigger === "string" ? trigger : Object.keys(trigger)[0]?.toLowerCase() || "?";
-        row.innerHTML = `<span>:${triggerName}</span> <span style="flex:1;opacity:0.6">${anim.duration_ms || 300}ms</span>`;
+        row.innerHTML = `<span>:${escapeHtml(triggerName)}</span> <span style="flex:1;opacity:0.6">${escapeHtml(anim.duration_ms || 300)}ms</span>`;
         const removeBtn = document.createElement("button");
         removeBtn.className = "pe-remove";
         removeBtn.textContent = "✕";
