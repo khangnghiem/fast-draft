@@ -1131,3 +1131,181 @@ fn ellipse_tool_creates_with_default_stroke() {
         _ => panic!("expected AddNode"),
     }
 }
+
+#[test]
+fn tool_pen_pointer_down_starts_path() {
+    let mut tool = PenTool::new();
+    let mutations = tool.handle(
+        &InputEvent::PointerDown {
+            x: 10.0,
+            y: 20.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::AddNode { node, .. } => {
+            assert!(node.id.as_str().starts_with("path"));
+            match &node.kind {
+                NodeKind::Path { commands } => {
+                    assert_eq!(commands.len(), 1);
+                    assert!(
+                        matches!(commands[0], PathCmd::MoveTo(x, y) if (x - 10.0).abs() < 0.01 && (y - 20.0).abs() < 0.01)
+                    );
+                }
+                _ => panic!("Expected Path node kind"),
+            }
+        }
+        _ => panic!("Expected AddNode mutation"),
+    }
+}
+
+#[test]
+fn tool_pen_pointer_move_emits_lineto() {
+    let mut tool = PenTool::new();
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 10.0,
+            y: 20.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 30.0,
+            y: 40.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::UpdatePath { commands, .. } => {
+            assert_eq!(commands.len(), 2);
+            assert!(
+                matches!(commands[0], PathCmd::MoveTo(x, y) if (x - 10.0).abs() < 0.01 && (y - 20.0).abs() < 0.01)
+            );
+            assert!(
+                matches!(commands[1], PathCmd::LineTo(x, y) if (x - 30.0).abs() < 0.01 && (y - 40.0).abs() < 0.01)
+            );
+        }
+        _ => panic!("Expected UpdatePath mutation"),
+    }
+}
+
+#[test]
+fn tool_pen_pointer_up_emits_cubicto() {
+    let mut tool = PenTool::new();
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 0.0,
+            y: 0.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Simulate 4 points for smoothing
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 10.0,
+            y: 10.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 20.0,
+            y: 0.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    let mutations = tool.handle(
+        &InputEvent::PointerUp {
+            x: 30.0,
+            y: 10.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::UpdatePath { commands, .. } => {
+            assert!(commands.len() > 1);
+            assert!(
+                matches!(commands[0], PathCmd::MoveTo(x, y) if (x - 0.0).abs() < 0.01 && (y - 0.0).abs() < 0.01)
+            );
+
+            // Should contain CubicTo commands due to smoothing
+            let has_cubic = commands
+                .iter()
+                .any(|cmd| matches!(cmd, PathCmd::CubicTo(..)));
+            assert!(
+                has_cubic,
+                "Expected smoothed path to contain CubicTo commands"
+            );
+        }
+        _ => panic!("Expected UpdatePath mutation"),
+    }
+}
+
+#[test]
+fn tool_pen_two_points_emits_lineto() {
+    let mut tool = PenTool::new();
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 10.0,
+            y: 20.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    // Add a PointerMove so that the path has 2 points
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 30.0,
+            y: 40.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    let mutations = tool.handle(
+        &InputEvent::PointerUp {
+            x: 30.0,
+            y: 40.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::UpdatePath { commands, .. } => {
+            assert_eq!(commands.len(), 2);
+            assert!(
+                matches!(commands[0], PathCmd::MoveTo(x, y) if (x - 10.0).abs() < 0.01 && (y - 20.0).abs() < 0.01)
+            );
+            assert!(
+                matches!(commands[1], PathCmd::LineTo(x, y) if (x - 30.0).abs() < 0.01 && (y - 40.0).abs() < 0.01)
+            );
+        }
+        _ => panic!("Expected UpdatePath mutation"),
+    }
+}
