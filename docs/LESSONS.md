@@ -298,16 +298,18 @@ Engineering lessons discovered through building FD.
 
 ---
 
-## setPointerCapture Fails Silently in VS Code Webview — Use Document-Level Listeners
+## setPointerCapture Fails AND Steals Events in VS Code Webview — Never Use It
 
-**Date**: 2026-03-03
-**Context**: Drag-to-create from floating toolbar buttons didn't work — ghost preview never appeared, shapes never created on canvas drop. Same root cause as toolbar drag handles (PR #333, v0.10.8).
+**Date**: 2026-03-03 (updated 2026-03-05)
+**Context**: Drag-to-create from floating toolbar buttons didn't work — ghost preview never appeared, shapes never created on canvas drop. Root cause was `canvas.setPointerCapture(e.pointerId)` in `pointer.js` stealing pointer events from the toolbar's document-level `pointermove`/`pointerup` listeners. Six fix attempts across v0.10.8, v0.10.10, v0.10.16, v0.10.23, and v0.10.27 addressed symptoms (toolbar drag handles, button listeners, CSS stacking, rect guards) but not the core conflict.
 
-**Root cause**: `btn.setPointerCapture(e.pointerId)` silently fails inside VS Code webview iframes. When `pointermove`/`pointerup` listeners are attached to the button element, they stop firing as soon as the pointer leaves the button's bounding box (because the capture never took effect). This means: no ghost preview, no drop detection, no new shapes.
+**Root cause**: `setPointerCapture` has a dual failure mode in VS Code webview iframes: (1) it **silently fails** — capture never takes effect, so events stop when the pointer leaves the originating element. (2) When it **does work** (desktop Electron, some VS Code versions), it **steals ALL pointer events** for that pointerId and redirects them to the capturing element, bypassing ALL other listeners including document-level ones. This inconsistency means: Codespace E2E tests pass (failure mode 1 — capture doesn't work, document handlers fire fine) but local desktop testing fails (success mode — capture steals events from toolbar handlers).
 
-**Fix**: Removed `setPointerCapture` call. Moved `pointermove`, `pointerup`, and `pointercancel` from per-button listeners to `document`-level listeners. Added `dtcBtn` variable to track the originating button for click suppression after drag.
+**The geometry-based guard was also fragile**: `getBoundingClientRect()` comparison fails when toolbar is rolled-up (rect shrinks), has CSS transforms during drag, or buttons extend beyond padding.
 
-**Lesson**: **Never use `setPointerCapture` in VS Code webview code.** It silently fails in iframe contexts. Always use document-level `pointermove`/`pointerup` listeners for any drag interaction that needs to track the pointer after it leaves the originating element. Pattern: attach `pointerdown` on the element (for state init), attach `pointermove`/`pointerup` on `document` (for tracking).
+**Fix**: (v0.10.30) Removed ALL `setPointerCapture`/`releasePointerCapture` calls from canvas. Moved canvas `pointermove`/`pointerup` from `canvas` element to `document`-level listeners. Track ownership via `canvasPointerId` flag (set in pointerdown, cleared in pointerup). Gate idle hover to `e.target === canvas` check. Gate active drag to `e.pointerId === canvasPointerId`. Replaced toolbar rect guard with `e.target.closest('#floating-toolbar')` DOM ancestry check.
+
+**Lesson**: **Never use `setPointerCapture` anywhere in VS Code webview code — not just toolbar handlers, not just canvas.** It has inconsistent behavior across VS Code environments. Always use document-level `pointermove`/`pointerup` listeners with a pointer ownership flag. For toolbar/overlay guards, use `e.target.closest()` DOM ancestry — never `getBoundingClientRect()` geometry comparison.
 
 ---
 

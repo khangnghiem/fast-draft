@@ -4,6 +4,10 @@
 
 // ─── Dimension Tooltip (R3.18) ────────────────────────────────────────────────
 
+/** Module-level drag-to-create state (shared with pointer.js document listeners) */
+let dtcTool = null;
+let dtcActive = false;
+
 /** Show a floating dimension tooltip near the cursor. */
 function showDimensionTooltip(clientX, clientY, text) {
   const el = document.getElementById("dimension-tooltip");
@@ -519,8 +523,8 @@ function setupFloatingToolbar() {
 
   // ── Drag-to-Create: drag a tool button onto the canvas ──
   const DRAG_THRESHOLD = 5;
-  let dtcActive = false;
-  let dtcTool = null;
+  // dtcTool and dtcActive are declared at module scope (above) so
+  // pointer.js document-level listeners can check for active toolbar drags
   let dtcStartX = 0;
   let dtcStartY = 0;
   let dtcGhost = null;
