@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.10.49 — Fix Alt+Drag Architecture (R3.54)
+
+- **FIX (R3.54)**: Alt+drag no longer causes jumping/jittery behavior — unified duplication onto `FdCanvas::duplicate_selected_at(0,0)` which properly transfers selection to the clone; previously SelectTool emitted `DuplicateNode` but never updated selection, causing `MoveNode` to move the original instead of the clone
+- **FIX (R3.54)**: Alt pressed mid-drag now works correctly — FdCanvas intercepts Alt modifier in `handle_pointer_move` before SelectTool, calls `duplicate_selected_at(0,0)` to clone-in-place with proper selection transfer
+- **ARCH**: SelectTool no longer handles Alt duplication; FdCanvas is the single owner of Alt+dup logic since it can coordinate selection state, undo batching, and layout resolve
+- **FIX**: Removed JS-side `select_by_id(hitId)` pre-selection on Alt+click in `pointer.js`/`main.js` — was fighting with WASM SelectTool handling
+
 ### v0.10.48 — Fix Alt+Drag Mid-Drag Activation (R3.54)
 
 - **FIX (R3.54)**: Alt+drag to duplicate now works when Alt/Option is pressed mid-drag — macOS Option key pressed during active pointer capture was not updating `e.altKey` on `pointermove` events in Electron/VS Code webviews; added global modifier state tracking via `keydown`/`keyup`/`blur` listeners and wired `(e.altKey || modAltHeld)` across all pointer event handlers (down/move/up)
