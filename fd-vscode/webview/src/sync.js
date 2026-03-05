@@ -45,7 +45,9 @@ function syncSelection(id, source) {
 
   // 6. Side panels
   updatePropertiesPanel();
-  updateFloatingBar();
+  // FAB is canvas-contextual — only show when selecting via canvas click
+  if (source === "canvas") updateFloatingBar();
+  else hideFloatingBar();
 }
 
 window.addEventListener("message", (event) => {
