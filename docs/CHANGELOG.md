@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.10.29 — Consolidated `syncSelection()` + Edge Sync
+
+- **REFACTOR (R2.5)**: All selection sync logic consolidated into one `syncSelection(id, source)` function in `sync.js` — previously scattered across 4 files (pointer.js, panels.js, shortcuts.js, sync.js); single source of truth for Canvas↔Layers↔Code synchronization; future panels stay in sync automatically
+- **UX (R2.5)**: Edge selection now syncs across Layers and Code panels — clicking an edge `⟶` in Layers highlights the edge's `@id` line in Code; clicking a Code line with `edge @id` highlights it in Layers and scrolls into view; Canvas edge selection is a no-op (gracefully handled, waiting for WASM edge highlight support)
+
 ### v0.10.28 — Cross-Panel Selection Sync
 
 - **UX (R2.5)**: Clicking a node in any panel now syncs selection across all three panels (Code, Canvas, Layers):

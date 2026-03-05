@@ -290,8 +290,7 @@ function setupPointerEvents() {
     if (!inlineEditorActive) {
       const selectedId = fdCanvas.get_selected_id();
       if (selectedId !== lastNotifiedSelectedId) {
-        lastNotifiedSelectedId = selectedId;
-        vscode.postMessage({ type: "nodeSelected", id: selectedId });
+        syncSelection(selectedId, "canvas");
       }
     }
 

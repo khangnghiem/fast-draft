@@ -251,8 +251,7 @@ document.addEventListener("keydown", (e) => {
   // Notify extension of selection changes from keyboard actions
   if (result.changed || result.action === "deselect") {
     const selectedId = fdCanvas.get_selected_id();
-    vscode.postMessage({ type: "nodeSelected", id: selectedId });
-    updateFloatingBar();
+    syncSelection(selectedId, "keyboard");
   }
 
   // Update cursor when tool changes via shortcut
