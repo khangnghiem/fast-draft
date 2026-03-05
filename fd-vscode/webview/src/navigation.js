@@ -414,6 +414,10 @@ function setupFloatingToolbar() {
   let initialLeft = 0;
   let initialTop = 0;
   let activePointerId = -1;
+  // Canonical toolbar dimensions (as if horizontal) — captured on drag start
+  // so the snap ghost always reflects the target orientation, not the current one
+  let canonW = 0;
+  let canonH = 0;
 
   /** Compute snap target using closest-edge comparison */
   function computeSnap(projX, projY) {
@@ -440,35 +444,30 @@ function setupFloatingToolbar() {
     return edges[0].edge;
   }
 
-  /** Compute the exact landing position for each snap edge */
+  /** Compute the exact landing position for each snap edge.
+   *  Uses canonW/canonH (horizontal-layout dimensions) captured at drag start
+   *  so the ghost reflects the TARGET orientation, not the current one. */
   function getSnapPosition(edge, projX, projY) {
     const viewW = window.innerWidth;
-    const viewH = window.innerHeight;
     const container = document.getElementById("canvas-container");
     const cr = container.getBoundingClientRect();
     const panelW = getLayersPanelWidth();
-    // Toolbar dimensions (approximate for the snapped orientation)
-    const tbW = toolbar.offsetWidth;
-    const tbH = toolbar.offsetHeight;
 
-    if (edge === "top") {
-      // Horizontal at top: left based on drag X, clamped
-      const left = Math.max(panelW + 8, Math.min(projX, viewW - tbW - 8)) - cr.left;
-      return { left: left + "px", top: "8px", width: tbW + "px", height: tbH + "px" };
+    if (edge === "top" || edge === "bottom") {
+      // Horizontal: width = canonW (long side), height = canonH (short side)
+      const left = Math.max(panelW + 8, Math.min(projX, viewW - canonW - 8)) - cr.left;
+      const pos = { left: left + "px", width: canonW + "px", height: canonH + "px" };
+      if (edge === "top") pos.top = "8px";
+      else pos.bottom = "8px";
+      return pos;
     }
-    if (edge === "bottom") {
-      const left = Math.max(panelW + 8, Math.min(projX, viewW - tbW - 8)) - cr.left;
-      return { left: left + "px", bottom: "8px", width: tbW + "px", height: tbH + "px" };
-    }
+    // Vertical (left/right): width = canonH (short), height = canonW (long)
+    const top = Math.max(8, Math.min(projY - cr.top, cr.height - canonW - 8));
     if (edge === "left") {
-      // Vertical on left: after layers panel
       const leftPx = panelW + 8 - cr.left;
-      const top = Math.max(8, Math.min(projY - cr.top, cr.height - tbW - 8));
-      return { left: Math.max(0, leftPx) + "px", top: top + "px", width: tbH + "px", height: tbW + "px" };
+      return { left: Math.max(0, leftPx) + "px", top: top + "px", width: canonH + "px", height: canonW + "px" };
     }
-    // right
-    const top = Math.max(8, Math.min(projY - cr.top, cr.height - tbW - 8));
-    return { right: "8px", top: top + "px", width: tbH + "px", height: tbW + "px" };
+    return { right: "8px", top: top + "px", width: canonH + "px", height: canonW + "px" };
   }
 
   /** Show snap guide as a ghost rectangle at the exact landing position */
@@ -598,6 +597,12 @@ function setupFloatingToolbar() {
     const rect = toolbar.getBoundingClientRect();
     initialLeft = rect.left;
     initialTop = rect.top;
+
+    // Capture canonical (horizontal-layout) dimensions so snap ghost
+    // reflects the target orientation regardless of current state
+    const isHoriz = toolbar.classList.contains("horizontal");
+    canonW = isHoriz ? rect.width : rect.height; // long side
+    canonH = isHoriz ? rect.height : rect.width; // short side
 
     // Set ftDragging AFTER recording initial state
     ftDragging = true;
