@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.38 — Properties Panel Actions + FAB Cleanup
+
+- **UX (R3.8)**: Added "Actions" section to the Properties panel — 8 buttons in a 2-column grid (Group, Ungroup, Duplicate, Frame, Front, Back, Copy PNG, Delete) with keyboard shortcut hints; Group/Frame buttons auto-disable when <2 nodes selected; Ungroup auto-disables when no group is selected; matches Figma right-inspector pattern
+- **CLEANUP**: Removed FAB overflow menu (⋯ button + 5-item dropdown) — all actions now in Properties panel + context menu + keyboard shortcuts; declutters the Floating Action Bar to style-only controls
+- **CLEANUP**: Removed `fab-overflow-menu` reference from `hideFloatingBar()` in context-menu.js
+
 ### v0.10.37 — Fix Default Style Chain + Drag-to-Create UX
 
 - **FIX (R3.52)**: New shapes (canvas-drawn and click-to-create) now render with transparent fill + bordered stroke — previously `RectTool`/`EllipseTool` created bare nodes with no style, renderer defaulted `None` fill to grey `#CCCCCC`, and `set_node_prop("fill", "none")` silently failed because `Color::from_hex("none")` returned None.

@@ -85,7 +85,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 #### R3d: Panels & UI
 
 - **R3.7** _(done)_: Undo/redo — full command stack, works across text and canvas edits
-- **R3.8** _(done)_: Properties panel — frosted glass inspector for position, size, fill, stroke, corner, opacity
+- **R3.8** _(done)_: Properties panel — frosted glass inspector for position, size, fill, stroke, corner, opacity; includes Actions section with Group, Ungroup, Duplicate, Frame, Front, Back, Copy PNG, Delete buttons; auto-disables state-dependent actions
 - **R3.9** _(done)_: Insert dropdown — `＋ Insert` button in top bar with shape/layout popover; replaces bottom shape palette
 - **R3.10** _(done)_: Apple Pencil Pro squeeze — toggle between last two tools
 - **R3.11** _(done)_: Per-tool cursor feedback (crosshair, text cursor, default)

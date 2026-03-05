@@ -147,6 +147,9 @@ function updatePropertiesPanel() {
     appearance.style.display = (props.kind === "root" || props.kind === "group") ? "none" : "";
   }
 
+  // Actions section state
+  updatePropsActionsState();
+
   propsSuppressSync = false;
 }
 
@@ -166,6 +169,88 @@ function setupAlignGrid() {
     syncTextToExtension();
     updatePropertiesPanel();
   });
+}
+
+// ─── Props Actions (Group, Ungroup, Duplicate, etc.) ───────────────────────
+
+function setupPropsActions() {
+  const actions = {
+    "props-group": () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.group_selected();
+      if (changed) { render(); syncTextToExtension(); }
+    },
+    "props-ungroup": () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.ungroup_selected();
+      if (changed) { render(); syncTextToExtension(); }
+    },
+    "props-duplicate": () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.duplicate_selected();
+      if (changed) { render(); syncTextToExtension(); }
+    },
+    "props-frame": () => {
+      if (!fdCanvas) return;
+      const resultJson = fdCanvas.handle_key("f", false, false, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) { render(); syncTextToExtension(); }
+    },
+    "props-bring-front": () => {
+      if (!fdCanvas) return;
+      const resultJson = fdCanvas.handle_key("]", false, true, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) { render(); syncTextToExtension(); }
+    },
+    "props-send-back": () => {
+      if (!fdCanvas) return;
+      const resultJson = fdCanvas.handle_key("[", false, true, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) { render(); syncTextToExtension(); }
+    },
+    "props-copy-png": () => {
+      if (!fdCanvas) return;
+      copySelectionAsPng();
+    },
+    "props-delete": () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.delete_selected();
+      if (changed) { render(); syncTextToExtension(); }
+    },
+  };
+
+  for (const [id, handler] of Object.entries(actions)) {
+    document.getElementById(id)?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      handler();
+      updatePropertiesPanel();
+      updateFloatingBar();
+      refreshLayersPanel();
+    });
+  }
+}
+
+/** Enable/disable action buttons based on current selection state. */
+function updatePropsActionsState() {
+  if (!fdCanvas) return;
+  const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+  const canGroup = selectedIds.length >= 2;
+
+  // Check if any selected node is a group
+  let canUngroup = false;
+  if (selectedIds.length >= 1) {
+    const source = fdCanvas.get_text();
+    for (const id of selectedIds) {
+      if (new RegExp(`(?:^|\\n)\\s*group\\s+@${id}\\b`).test(source)) {
+        canUngroup = true;
+        break;
+      }
+    }
+  }
+
+  document.getElementById("props-group")?.classList.toggle("disabled", !canGroup);
+  document.getElementById("props-ungroup")?.classList.toggle("disabled", !canUngroup);
+  document.getElementById("props-frame")?.classList.toggle("disabled", !canGroup);
 }
 
 

@@ -64,6 +64,7 @@ async function main() {
     setupPropertiesPanel();
     setupInlineEditor();
     setupAlignGrid();
+    setupPropsActions();
     setupDragAndDrop();
     setupAnimPicker();
     setupHelpButton();
