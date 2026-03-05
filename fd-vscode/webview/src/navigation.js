@@ -414,6 +414,58 @@ function setupFloatingToolbar() {
   let initialLeft = 0;
   let initialTop = 0;
   let activePointerId = -1;
+  const SNAP_THRESHOLD = 60;
+
+  /** Compute snap target from a projected toolbar position */
+  function computeSnap(projX, projY) {
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+    const tbW = toolbar.offsetWidth;
+    const tbH = toolbar.offsetHeight;
+    const dTop = projY;
+    const dBottom = viewH - (projY + tbH);
+    const dLeft = projX;
+    const dRight = viewW - (projX + tbW);
+
+    if (dRight < SNAP_THRESHOLD) return "right";
+    if (dLeft < SNAP_THRESHOLD) return "left";
+    if (dTop < SNAP_THRESHOLD) return "top";
+    return "bottom";
+  }
+
+  /** Show or update the snap guide overlay */
+  function showSnapGuide(edge) {
+    let guide = document.getElementById("ft-snap-guide");
+    if (!guide) {
+      guide = document.createElement("div");
+      guide.id = "ft-snap-guide";
+      document.getElementById("canvas-container").appendChild(guide);
+    }
+    const pad = 8;
+    const guideW = 4;
+    guide.className = "ft-snap-" + edge;
+    if (edge === "top") {
+      guide.style.cssText = `position:absolute;top:${pad}px;left:${pad}px;right:${pad}px;height:${guideW}px;`;
+    } else if (edge === "bottom") {
+      guide.style.cssText = `position:absolute;bottom:${pad}px;left:${pad}px;right:${pad}px;height:${guideW}px;`;
+    } else if (edge === "left") {
+      guide.style.cssText = `position:absolute;top:${pad}px;left:${pad}px;bottom:${pad}px;width:${guideW}px;`;
+    } else {
+      guide.style.cssText = `position:absolute;top:${pad}px;right:${pad}px;bottom:${pad}px;width:${guideW}px;`;
+    }
+    guide.style.border = "2px dashed var(--fd-accent, #4FC3F7)";
+    guide.style.borderRadius = "6px";
+    guide.style.pointerEvents = "none";
+    guide.style.zIndex = "9999";
+    guide.style.opacity = "0.7";
+    guide.style.display = "block";
+  }
+
+  /** Hide the snap guide overlay */
+  function hideSnapGuide() {
+    const guide = document.getElementById("ft-snap-guide");
+    if (guide) guide.style.display = "none";
+  }
 
   // Document-level listeners for toolbar drag
   document.addEventListener("pointermove", (e) => {
@@ -421,17 +473,24 @@ function setupFloatingToolbar() {
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
 
-    // Drag visual: disable transition, apply translate + lift effect
+    // Drag visual: apply translate + lift effect (no position change)
     toolbar.style.transition = "none";
     toolbar.style.transform = `translate(${dx}px, ${dy}px)`;
     toolbar.style.boxShadow = "0 8px 32px rgba(0,0,0,0.25)";
     toolbar.style.opacity = "0.92";
+
+    // Show snap guide preview
+    const projX = initialLeft + dx;
+    const projY = initialTop + dy;
+    const edge = computeSnap(projX, projY);
+    showSnapGuide(edge);
   });
 
   document.addEventListener("pointerup", (e) => {
     if (!ftDragging || e.pointerId !== activePointerId) return;
     ftDragging = false;
     activePointerId = -1;
+    hideSnapGuide();
 
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
@@ -452,34 +511,28 @@ function setupFloatingToolbar() {
       return;
     }
 
-    // Handle Drag & Snap
-    const snapThreshold = 60;
+    // Commit final position — normalize to px now (not on pointerdown)
     const finalX = initialLeft + dx;
     const finalY = initialTop + dy;
 
     const viewW = window.innerWidth;
     const viewH = window.innerHeight;
-
-    const distTop = finalY;
-    const distBottom = viewH - (finalY + toolbar.offsetHeight);
-    const distLeft = finalX;
-    const distRight = viewW - (finalX + toolbar.offsetWidth);
+    const edge = computeSnap(finalX, finalY);
 
     let newPos = {};
     let newOrientation = "horizontal";
 
-    if (distRight < snapThreshold) {
+    if (edge === "right") {
       newOrientation = "vertical";
       newPos = { right: "2vw", top: Math.max(2, (finalY / viewH) * 100) + "vh" };
-    } else if (distLeft < snapThreshold) {
+    } else if (edge === "left") {
       newOrientation = "vertical";
       newPos = { left: "calc(232px + 2vw)", top: Math.max(2, (finalY / viewH) * 100) + "vh" };
-    } else if (distTop < snapThreshold) {
+    } else if (edge === "top") {
       newOrientation = "horizontal";
       newPos = { top: "2vh", left: Math.max(2, (finalX / viewW) * 100) + "vw" };
     } else {
       newOrientation = "horizontal";
-      // Default relative position
       newPos = { bottom: "1.5vh", left: Math.max(2, (finalX / viewW) * 100) + "vw" };
     }
 
@@ -504,20 +557,18 @@ function setupFloatingToolbar() {
     // Skip if target is a tool button or inside one (handled by drag-to-create)
     if (e.target.closest(".ft-tool-btn")) return;
 
-    ftDragging = true;
     activePointerId = e.pointerId;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
     dragStartTime = Date.now();
 
-    // Normalize to px position before drag to avoid CSS anchor conflicts
+    // Record initial position WITHOUT modifying CSS — avoids jump on click
     const rect = toolbar.getBoundingClientRect();
     initialLeft = rect.left;
     initialTop = rect.top;
-    toolbar.style.left = rect.left + "px";
-    toolbar.style.top = rect.top + "px";
-    toolbar.style.right = "auto";
-    toolbar.style.bottom = "auto";
+
+    // Set ftDragging AFTER recording initial state
+    ftDragging = true;
 
     e.preventDefault();
     e.stopPropagation();
