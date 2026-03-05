@@ -104,6 +104,14 @@ impl FdCanvas {
     /// Set the FD source text, re-parsing into the scene graph.
     /// Returns `true` on success, `false` on parse error.
     pub fn set_text(&mut self, text: &str) -> bool {
+        // Early return if text unchanged — avoids resolve() overwriting
+        // JS-measured text bounds with heuristic intrinsic_size values.
+        // This is critical for the resize flow: after resize, the text
+        // content doesn't change (only max_width does), so the round-trip
+        // from extension echoing back the same text should be a no-op.
+        if text == self.engine.current_text() {
+            return true;
+        }
         self.suppress_sync = true;
         let result = self.engine.set_text(text);
         self.engine.resolve();

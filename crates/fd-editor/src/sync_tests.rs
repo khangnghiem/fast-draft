@@ -1737,20 +1737,21 @@ rect @card {
         _ => panic!("expected Text after resize"),
     }
 
-    // Child bounds height should be > single line (text wraps)
+    // Child bounds width should match parent width
     let title_bounds = engine.bounds[&title_idx];
-    let single_line = 14.0 * 1.2;
     assert!(
-        title_bounds.height > single_line,
-        "child text height ({}) should be > single line ({single_line}) after parent shrink",
-        title_bounds.height
+        (title_bounds.width - 120.0).abs() < 0.01,
+        "child text width ({}) should match parent width 120",
+        title_bounds.width
     );
+    // Height is NOT estimated by heuristic — JS measureText() is authoritative.
+    // The test only verifies max_width propagation and width update.
 }
 
 #[test]
-fn sync_resize_text_estimates_wrapped_height() {
-    // Resizing a text node directly should estimate wrapped height
-    // from content, not use the drag height.
+fn sync_resize_text_preserves_height() {
+    // Resizing a text node directly should set max_width and update
+    // width, but NOT estimate height — JS measureText() is authoritative.
     let input = r#"
 text @paragraph "This is a fairly long paragraph of text that needs to wrap to multiple lines" {
   font: "Inter" 400 14
@@ -1764,23 +1765,32 @@ text @paragraph "This is a fairly long paragraph of text that needs to wrap to m
     let para_id = NodeId::intern("paragraph");
     let para_idx = engine.graph.index_of(para_id).unwrap();
 
-    // Resize to a narrow width — bounds height should be estimated (multi-line)
+    let original_height = engine.bounds[&para_idx].height;
+
+    // Resize to a narrow width — height should NOT change
     engine.apply_mutation(GraphMutation::ResizeNode {
         id: para_id,
         width: 100.0,
-        height: 20.0, // Deliberately small — should be overridden
+        height: 20.0, // Deliberately small — should be ignored for text
     });
 
     let bounds = engine.bounds[&para_idx];
-    let single_line = 14.0 * 1.2;
-    assert!(
-        bounds.height > single_line,
-        "text bounds height ({}) should be > single line ({single_line}) after narrow resize",
-        bounds.height
-    );
     assert!(
         (bounds.width - 100.0).abs() < 0.01,
         "text bounds width should be 100: got {}",
         bounds.width
     );
+    assert!(
+        (bounds.height - original_height).abs() < 0.01,
+        "text bounds height ({}) should be unchanged from original ({original_height})",
+        bounds.height
+    );
+
+    // max_width should be set
+    match &engine.graph.graph[para_idx].kind {
+        NodeKind::Text { max_width, .. } => {
+            assert_eq!(*max_width, Some(100.0), "max_width should be set to 100");
+        }
+        _ => panic!("expected Text"),
+    }
 }

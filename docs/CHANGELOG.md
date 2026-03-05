@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.41 — Fix Text Wrap Regressions (3 Bugs)
+
+- **FIX (R3.46)**: Text height no longer reverts on pointer release — `set_text()` now skips re-parse and `resolve()` when incoming text is identical to current text, preventing JS-measured bounds from being overwritten by heuristic (KI Lesson #9)
+- **FIX (R3.46)**: Wrap threshold no longer triggers prematurely — `intrinsic_size` with `max_width` now returns single-line placeholder height; JS `measureText()` is the sole authority for wrapped height; removed heuristic multi-line estimation from `sync.rs` ResizeNode handler
+- **TESTING**: Updated 3 tests — `layout_text_max_width_wraps_height` (single-line placeholder), `sync_resize_parent_sets_child_text_max_width` (width-only), `sync_resize_text_preserves_height` (renamed, height unchanged)
+
 ### v0.10.40 — Text Wrap Boundary Expansion + Parent Resize Propagation
 
 - **FEATURE (R3.46)**: Text nodes with `max_width` now correctly expand their bounding box vertically to enclose wrapped text — `intrinsic_size` heuristic in `layout.rs` accounts for `max_width` and estimates multi-line height

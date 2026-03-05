@@ -166,22 +166,15 @@ impl SyncEngine {
                             *w = rw;
                             *h = rh;
                         }
-                        NodeKind::Text {
-                            max_width, content, ..
-                        } => {
+                        NodeKind::Text { max_width, .. } => {
                             *max_width = Some(rw);
-                            // Estimate wrapped height from content length
-                            let font_size = node.style.font.as_ref().map_or(14.0, |f| f.size);
-                            let char_w = font_size * 0.6;
-                            let total_w = content.chars().count() as f32 * char_w;
-                            let lines = (total_w / rw).ceil().max(1.0);
-                            let estimated_h = lines * font_size * 1.2;
-                            // Update cached bounds height to estimated wrap
+                            // Only update width — JS measureText() round-trip
+                            // will set the accurate wrapped height on release
+                            // (KI Lesson #9: heuristics must not fight measurements).
                             if let Some(idx) = self.graph.index_of(id)
                                 && let Some(b) = self.bounds.get_mut(&idx)
                             {
                                 b.width = rw;
-                                b.height = estimated_h;
                             }
                         }
                         _ => {}
@@ -228,21 +221,13 @@ impl SyncEngine {
                             };
                             let content_w = (rw - 2.0 * pad).max(20.0);
                             if let Some(text_node) = self.graph.get_by_id_mut(child_id)
-                                && let NodeKind::Text {
-                                    max_width, content, ..
-                                } = &mut text_node.kind
+                                && let NodeKind::Text { max_width, .. } = &mut text_node.kind
                             {
                                 *max_width = Some(content_w);
-                                // Estimate wrapped height
-                                let font_size =
-                                    text_node.style.font.as_ref().map_or(14.0, |f| f.size);
-                                let char_w = font_size * 0.6;
-                                let total_w = content.chars().count() as f32 * char_w;
-                                let lines = (total_w / content_w).ceil().max(1.0);
-                                let estimated_h = lines * font_size * 1.2;
+                                // Only update width — JS measureText() will
+                                // set accurate wrapped height on release.
                                 if let Some(cb) = self.bounds.get_mut(&child_idx) {
                                     cb.width = content_w;
-                                    cb.height = estimated_h;
                                 }
                             }
                         }
