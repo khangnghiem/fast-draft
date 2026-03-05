@@ -25,6 +25,12 @@ export class FdCanvas {
      */
     clear_pressed(): void;
     /**
+     * Compute alignment guides for a hypothetical rect at (x, y, w, h).
+     * Used by JS drag-to-create to show snap lines before the node exists.
+     * Returns JSON: `[[x1,y1,x2,y2], ...]`
+     */
+    compute_guides_for_rect(x: number, y: number, w: number, h: number): string;
+    /**
      * Create an edge between two nodes.
      * Returns the new edge ID, or empty string on failure.
      */
@@ -297,6 +303,7 @@ export interface InitOutput {
     readonly __wbg_fdcanvas_free: (a: number, b: number) => void;
     readonly fdcanvas_add_animation_to_node: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly fdcanvas_clear_pressed: (a: number) => void;
+    readonly fdcanvas_compute_guides_for_rect: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_create_edge: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_create_edge_at: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_create_node_at: (a: number, b: number, c: number, d: number, e: number) => number;

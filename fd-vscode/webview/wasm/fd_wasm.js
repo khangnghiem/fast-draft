@@ -47,6 +47,28 @@ export class FdCanvas {
         wasm.fdcanvas_clear_pressed(this.__wbg_ptr);
     }
     /**
+     * Compute alignment guides for a hypothetical rect at (x, y, w, h).
+     * Used by JS drag-to-create to show snap lines before the node exists.
+     * Returns JSON: `[[x1,y1,x2,y2], ...]`
+     * @param {number} x
+     * @param {number} y
+     * @param {number} w
+     * @param {number} h
+     * @returns {string}
+     */
+    compute_guides_for_rect(x, y, w, h) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_compute_guides_for_rect(this.__wbg_ptr, x, y, w, h);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Create an edge between two nodes.
      * Returns the new edge ID, or empty string on failure.
      * @param {string} from_id

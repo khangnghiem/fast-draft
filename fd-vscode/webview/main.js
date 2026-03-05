@@ -4676,6 +4676,8 @@ function setupFloatingToolbar() {
   let dtcStartX = 0;
   let dtcStartY = 0;
   let dtcGhost = null;
+  let dtcCancelled = false; // true when pointer re-enters toolbar
+  let dtcGuideOverlay = null; // SVG overlay for alignment guides
 
   const ghostShapes = {
     rect: { w: 120, h: 80, css: "border-radius:8px;" },
@@ -4774,19 +4776,59 @@ function setupFloatingToolbar() {
     const dy = e.clientY - dtcStartY;
     if (!dtcActive && (dx * dx + dy * dy) >= DRAG_THRESHOLD * DRAG_THRESHOLD) {
       dtcActive = true;
+      dtcCancelled = false;
       dtcGhost = createGhost(dtcTool);
     }
-    if (dtcActive && dtcGhost) {
-      moveGhost(dtcGhost, e.clientX, e.clientY);
+    if (dtcActive) {
+      // ── Cancel/re-drag: detect pointer over toolbar ──
+      const tbRect = toolbar.getBoundingClientRect();
+      const overToolbar = e.clientX >= tbRect.left && e.clientX <= tbRect.right
+        && e.clientY >= tbRect.top && e.clientY <= tbRect.bottom;
+      if (overToolbar && !dtcCancelled) {
+        // Pointer re-entered toolbar → cancel
+        dtcCancelled = true;
+        removeGhost();
+        removeDtcGuideOverlay();
+      } else if (!overToolbar && dtcCancelled) {
+        // Pointer left toolbar again → re-activate
+        dtcCancelled = false;
+        dtcGhost = createGhost(dtcTool);
+      }
+
+      if (!dtcCancelled && dtcGhost) {
+        moveGhost(dtcGhost, e.clientX, e.clientY);
+
+        // ── Alignment guides via WASM ──
+        const canvasEl = document.getElementById("fd-canvas");
+        if (canvasEl && fdCanvas) {
+          const cRect = canvasEl.getBoundingClientRect();
+          const sceneX = ((e.clientX - cRect.left) - panX) / zoomLevel;
+          const sceneY = ((e.clientY - cRect.top) - panY) / zoomLevel;
+          const shape = ghostShapes[dtcTool] || ghostShapes.rect;
+          const gw = shape.w / zoomLevel;
+          const gh = shape.h / zoomLevel;
+          // Center the hypothetical shape at cursor
+          const gx = sceneX - gw / 2;
+          const gy = sceneY - gh / 2;
+          try {
+            const guidesJson = fdCanvas.compute_guides_for_rect(gx, gy, gw, gh);
+            const guides = JSON.parse(guidesJson);
+            renderDtcGuideOverlay(guides, canvasEl);
+          } catch (_) {
+            removeDtcGuideOverlay();
+          }
+        }
+      }
     }
   });
 
   document.addEventListener("pointerup", (e) => {
     if (!dtcTool) return;
 
-    if (dtcActive) {
+    if (dtcActive && !dtcCancelled) {
       // Drag-to-create: check if drop is over the canvas
       removeGhost();
+      removeDtcGuideOverlay();
       const canvasEl = document.getElementById("fd-canvas");
       if (canvasEl && fdCanvas) {
         const rect = canvasEl.getBoundingClientRect();
@@ -4802,6 +4844,7 @@ function setupFloatingToolbar() {
             const consumed = dtcTextConsume(rawX, rawY, cx, cy, rect);
             if (consumed) {
               dtcActive = false;
+              dtcCancelled = false;
               dtcTool = null;
               if (dtcBtn) dtcBtn._dtcSuppressClick = true;
               dtcBtn = null;
@@ -4841,10 +4884,16 @@ function setupFloatingToolbar() {
         }
       }
       dtcActive = false;
+      dtcCancelled = false;
       dtcTool = null;
       if (dtcBtn) dtcBtn._dtcSuppressClick = true;
       dtcBtn = null;
     } else {
+      // Cancelled or no drag — clean up
+      removeGhost();
+      removeDtcGuideOverlay();
+      dtcActive = false;
+      dtcCancelled = false;
       dtcTool = null;
       dtcBtn = null;
     }
@@ -4853,10 +4902,49 @@ function setupFloatingToolbar() {
   document.addEventListener("pointercancel", () => {
     if (!dtcTool) return;
     removeGhost();
+    removeDtcGuideOverlay();
     dtcActive = false;
+    dtcCancelled = false;
     dtcTool = null;
     dtcBtn = null;
   });
+
+  // ── Alignment guide overlay for drag-to-create ──
+  function renderDtcGuideOverlay(guides, canvasEl) {
+    if (!guides || guides.length === 0) { removeDtcGuideOverlay(); return; }
+    const cRect = canvasEl.getBoundingClientRect();
+    if (!dtcGuideOverlay) {
+      dtcGuideOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      dtcGuideOverlay.style.cssText = `
+        position:fixed;pointer-events:none;z-index:9999;
+        left:${cRect.left}px;top:${cRect.top}px;
+        width:${cRect.width}px;height:${cRect.height}px;
+      `;
+      document.body.appendChild(dtcGuideOverlay);
+    }
+    // Update position/size
+    dtcGuideOverlay.style.left = cRect.left + "px";
+    dtcGuideOverlay.style.top = cRect.top + "px";
+    dtcGuideOverlay.style.width = cRect.width + "px";
+    dtcGuideOverlay.style.height = cRect.height + "px";
+    dtcGuideOverlay.setAttribute("viewBox",
+      `0 0 ${cRect.width / zoomLevel} ${cRect.height / zoomLevel}`);
+
+    // Transform from scene-space to viewport-space
+    const ox = panX / zoomLevel;
+    const oy = panY / zoomLevel;
+    let inner = `<g transform="translate(${ox},${oy})">`;
+    for (const [x1, y1, x2, y2] of guides) {
+      inner += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" 
+        stroke="#FF6B8A" stroke-width="${0.5 / zoomLevel}" stroke-dasharray="${4 / zoomLevel} ${3 / zoomLevel}" />`;
+    }
+    inner += `</g>`;
+    dtcGuideOverlay.innerHTML = inner;
+  }
+
+  function removeDtcGuideOverlay() {
+    if (dtcGuideOverlay) { dtcGuideOverlay.remove(); dtcGuideOverlay = null; }
+  }
   // ── Text drop-to-consume helper ──
   function dtcTextConsume(sceneX, sceneY, screenX, screenY, canvasRect) {
     if (!fdCanvas) return false;

@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.10.37 — Fix Default Style Chain + Drag-to-Create UX
+
+- **FIX (R3.52)**: New shapes (canvas-drawn and click-to-create) now render with transparent fill + bordered stroke — previously `RectTool`/`EllipseTool` created bare nodes with no style, renderer defaulted `None` fill to grey `#CCCCCC`, and `set_node_prop("fill", "none")` silently failed because `Color::from_hex("none")` returned None.
+- **FIX**: `set_node_prop("fill")` now handles `"none"` and `"transparent"` values — clears fill to `None` instead of silently returning false.
+- **FIX**: Renderer `apply_fill()` no longer paints grey for `None` fill — `draw_rect`/`draw_ellipse` now guard `ctx.fill()` with `style.fill.is_some()`, matching `draw_path`'s existing behavior.
+- **UX**: Cancel/re-drag on toolbar re-entry — dragging a tool back over the toolbar cancels the operation (ghost removed); dragging out again reactivates it.
+- **NEW**: Alignment guides during drag-to-create — pink snap lines (Keynote/Freeform-style) appear when the ghost shape aligns with existing nodes, via new `compute_guides_for_rect()` WASM API.
+- **TESTING**: 2 new tests — `rect_tool_creates_with_default_stroke`, `ellipse_tool_creates_with_default_stroke`.
+
 ### v0.10.36 — Snap Guide: Ghost Rectangle + Closest-Edge Detection
 
 - **IMPROVE**: Snap guide now shows a ghost rectangle matching toolbar size at exact landing position (not a thin edge line).

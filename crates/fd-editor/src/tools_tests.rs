@@ -1001,3 +1001,59 @@ fn arrow_tool_connected_still_works() {
         _ => panic!("expected AddEdge with Node anchors"),
     }
 }
+
+#[test]
+fn rect_tool_creates_with_default_stroke() {
+    let mut tool = RectTool::new();
+    let mutations = tool.handle(
+        &InputEvent::PointerDown {
+            x: 100.0,
+            y: 100.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::AddNode { node, .. } => {
+            // Should have stroke (transparent fill + dark border)
+            assert!(node.style.stroke.is_some(), "rect should have default stroke");
+            let stroke = node.style.stroke.as_ref().unwrap();
+            assert!((stroke.width - 2.5).abs() < 0.01, "stroke width should be 2.5");
+            // Should have corner radius
+            assert_eq!(node.style.corner_radius, Some(8.0), "rect corner_radius=8");
+            // Fill should be None (transparent)
+            assert!(node.style.fill.is_none(), "fill should be None (transparent)");
+        }
+        _ => panic!("expected AddNode"),
+    }
+}
+
+#[test]
+fn ellipse_tool_creates_with_default_stroke() {
+    let mut tool = EllipseTool::new();
+    let mutations = tool.handle(
+        &InputEvent::PointerDown {
+            x: 200.0,
+            y: 200.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::AddNode { node, .. } => {
+            // Should have stroke (transparent fill + dark border)
+            assert!(node.style.stroke.is_some(), "ellipse should have default stroke");
+            let stroke = node.style.stroke.as_ref().unwrap();
+            assert!((stroke.width - 2.5).abs() < 0.01, "stroke width should be 2.5");
+            // No corner radius for ellipse
+            assert!(node.style.corner_radius.is_none(), "ellipse has no corner_radius");
+            // Fill should be None (transparent)
+            assert!(node.style.fill.is_none(), "fill should be None (transparent)");
+        }
+        _ => panic!("expected AddNode"),
+    }
+}
