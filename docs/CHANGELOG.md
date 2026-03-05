@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.10.46 — Ghost Resizes Dynamically During Zoom
+
+- **FIX (R3.39)**: Drag-to-create ghost now resizes in real-time when zooming mid-drag — scroll-wheel zoom during a drag updates ghost width/height every frame to match the current zoom level
+
 ### v0.10.45 — Ghost Scales with Zoom Level
 
 - **FIX (R3.39)**: Drag-to-create ghost now scales with canvas zoom — at 200% zoom the ghost is 2× larger, at 50% it's half-sized, matching how the created shape will actually appear on screen
