@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.10.45 — Ghost Scales with Zoom Level
+
+- **FIX (R3.39)**: Drag-to-create ghost now scales with canvas zoom — at 200% zoom the ghost is 2× larger, at 50% it's half-sized, matching how the created shape will actually appear on screen
+
 ### v0.10.44 — Alt-Gated Snap-to-Node + Auto-Edge
 
 - **UX (R3.43)**: Snap-to-node + auto-edge on toolbar drag-to-create now requires ⌥ Alt modifier — without Alt, shapes drop freely at the cursor position without snapping or creating edges; reduces false positives in flowchart workflows
