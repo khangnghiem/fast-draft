@@ -125,8 +125,8 @@ function setupPointerEvents() {
     if (!fdCanvas) return;
     // During active drag, only process our owned pointer
     if (canvasPointerId !== -1 && e.pointerId !== canvasPointerId) return;
-    // Skip if a toolbar drag-to-create or toolbar drag is in progress
-    if (typeof dtcTool !== 'undefined' && dtcTool) return;
+    // Skip if toolbar drag or drag-to-create is in progress
+    if (ftDragging || dtcTool) return;
     // During hover (no active drag), only process events over the canvas
     if (canvasPointerId === -1 && e.target !== canvas) return;
 
@@ -227,10 +227,10 @@ function setupPointerEvents() {
 
   document.addEventListener("pointerup", (e) => {
     if (!fdCanvas) return;
-    // Only handle events owned by the canvas
-    if (canvasPointerId !== -1 && e.pointerId !== canvasPointerId) return;
-    // Skip if a toolbar drag-to-create is in progress
-    if (typeof dtcTool !== 'undefined' && dtcTool) return;
+    // Skip entirely if no canvas pointerdown started this interaction
+    if (canvasPointerId === -1) return;
+    // Only handle events from our owned pointer
+    if (e.pointerId !== canvasPointerId) return;
     canvasPointerId = -1;
 
     // End pan drag

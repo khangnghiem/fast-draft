@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.10.31 — Fix Pointer Event Regressions (from v0.10.30)
+
+- **FIX (R3.42)**: Drag-to-create from toolbar no longer triggers context menu — canvas `pointerup` handler now skips entirely when `canvasPointerId === -1` (no canvas `pointerdown` started the interaction); previously, drag-to-create's `pointerup` handler cleared `dtcTool` before the canvas handler ran, allowing fallthrough
+- **FIX (R3.39)**: Floating toolbar is now draggable again — canvas `pointermove` handler now checks `ftDragging` (hoisted from closure to module scope) to skip processing during toolbar drag; prevents cursor interference and WASM hover calls during toolbar repositioning
+
 ### v0.10.30 — Fix Drag-to-Create from Toolbar (Remove setPointerCapture)
 
 - **FIX (R3.42)**: Drag-to-create from floating toolbar now works reliably — removed all `canvas.setPointerCapture` calls from `pointer.js` which stole pointer events from the toolbar's document-level `pointermove`/`pointerup` listeners, preventing ghost preview from appearing and shapes from being created on drop

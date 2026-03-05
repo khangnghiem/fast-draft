@@ -4,9 +4,10 @@
 
 // ─── Dimension Tooltip (R3.18) ────────────────────────────────────────────────
 
-/** Module-level drag-to-create state (shared with pointer.js document listeners) */
+/** Module-level drag state (shared with pointer.js document listeners) */
 let dtcTool = null;
 let dtcActive = false;
+let ftDragging = false;   // true while toolbar is being dragged
 
 /** Show a floating dimension tooltip near the cursor. */
 function showDimensionTooltip(clientX, clientY, text) {
@@ -405,7 +406,8 @@ function setupFloatingToolbar() {
     observer.observe(btn, { attributes: true, attributeFilter: ["class"] });
   });
 
-  let isDragging = false;
+  // ftDragging is declared at module scope (above) so
+  // pointer.js document-level listeners can check for active toolbar drags
   let dragStartX = 0;
   let dragStartY = 0;
   let dragStartTime = 0;
@@ -415,7 +417,7 @@ function setupFloatingToolbar() {
 
   // Use document-level listeners — setPointerCapture fails in VS Code webview iframes
   document.addEventListener("pointermove", (e) => {
-    if (!isDragging || e.pointerId !== activePointerId) return;
+    if (!ftDragging || e.pointerId !== activePointerId) return;
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
 
@@ -427,8 +429,8 @@ function setupFloatingToolbar() {
   });
 
   document.addEventListener("pointerup", (e) => {
-    if (!isDragging || e.pointerId !== activePointerId) return;
-    isDragging = false;
+    if (!ftDragging || e.pointerId !== activePointerId) return;
+    ftDragging = false;
     activePointerId = -1;
 
     const dx = e.clientX - dragStartX;
@@ -502,7 +504,7 @@ function setupFloatingToolbar() {
     // Skip if target is a tool button or inside one (handled by drag-to-create)
     if (e.target.closest(".ft-tool-btn")) return;
 
-    isDragging = true;
+    ftDragging = true;
     activePointerId = e.pointerId;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
