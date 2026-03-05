@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.44 — Alt-Gated Snap-to-Node + Auto-Edge
+
+- **UX (R3.43)**: Snap-to-node + auto-edge on toolbar drag-to-create now requires ⌥ Alt modifier — without Alt, shapes drop freely at the cursor position without snapping or creating edges; reduces false positives in flowchart workflows
+- **UX (R3.43)**: Alt-aware ghost preview during drag — when ⌥ Alt is held near a node, ghost snaps to the nearest cardinal position and a dashed edge preview line (accent color) renders from target node center to ghost center with endpoint indicator circle
+- **DOCS**: Updated `floating-toolbar.md` (R3.43 section) and `SHORTCUTS.md` (floating toolbar table) to document ⌥ Alt requirement
+
 ### v0.10.43 — Fix Toolbar Snap & Ghost Shape Bugs (4 Fixes)
 
 - **FIX (R3.39)**: Toolbar now lands at the exact ghost position — `pointerup` reuses `getSnapPosition()` instead of computing a separate `vw`/`vh` position that could diverge

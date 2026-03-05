@@ -93,9 +93,11 @@ sceneY = ((clientY - canvasRect.top)  - panY) / zoomLevel
 
 ---
 
-## 5. Snap-to-Node Algorithm (R3.43)
+## 5. Snap-to-Node Algorithm (R3.43) — ⌥ Alt Required
 
-When a shape is dropped near an existing node, it snaps to an adjacent position with an auto-created edge.
+When a shape is dropped near an existing node **while holding ⌥ Alt**, it snaps to an adjacent position with an auto-created edge.
+
+> Without ⌥ Alt, shapes drop at the cursor position freely — no snap, no edge.
 
 ### Detection
 
@@ -126,6 +128,16 @@ TOP:    x = target.centerX - newW/2,     y = target.top - GAP - newH
 Where `GAP = 20px`. Pick the candidate nearest to the original drop position.
 
 Reject if `best.dist > 3 × SNAP_THRESHOLD` (too far).
+
+### Alt-Aware Preview
+
+During drag, holding ⌥ Alt near a node shows:
+
+- Ghost snapped to the nearest cardinal position
+- Dashed edge preview line (accent color) from target node center to ghost center
+- Small circle indicator at the ghost endpoint
+
+Releasing ⌥ Alt returns ghost to free-follow cursor mode.
 
 ### Auto-Edge Creation
 
