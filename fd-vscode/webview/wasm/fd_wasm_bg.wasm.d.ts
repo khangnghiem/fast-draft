@@ -28,6 +28,7 @@ export const fdcanvas_get_selected_node_props: (a: number) => [number, number];
 export const fdcanvas_get_selection_bounds: (a: number) => any;
 export const fdcanvas_get_sketchy_mode: (a: number) => number;
 export const fdcanvas_get_text: (a: number) => [number, number];
+export const fdcanvas_get_text_children: (a: number, b: number, c: number) => [number, number];
 export const fdcanvas_get_tool_name: (a: number) => [number, number];
 export const fdcanvas_group_selected: (a: number) => number;
 export const fdcanvas_handle_key: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];

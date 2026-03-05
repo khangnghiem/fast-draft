@@ -1688,3 +1688,99 @@ text @label "Hello World" {
         bounds.width
     );
 }
+
+#[test]
+fn sync_resize_parent_sets_child_text_max_width() {
+    // When a rect parent is resized narrower, its child text should
+    // get max_width set to the parent's width (Option A: permanent).
+    let input = r#"
+rect @card {
+  w: 300 h: 200
+  text @title "Hello World this is a long title for testing" {
+    font: "Inter" 400 14
+  }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let card_id = NodeId::intern("card");
+    let title_id = NodeId::intern("title");
+    let title_idx = engine.graph.index_of(title_id).unwrap();
+
+    // Initially, text should have no max_width
+    match &engine.graph.graph[title_idx].kind {
+        NodeKind::Text { max_width, .. } => {
+            assert_eq!(*max_width, None, "initial text should have no max_width");
+        }
+        _ => panic!("expected Text"),
+    }
+
+    // Resize the parent narrower
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        id: card_id,
+        width: 120.0,
+        height: 200.0,
+    });
+
+    // Child text should now have max_width = parent width (120)
+    match &engine.graph.graph[title_idx].kind {
+        NodeKind::Text { max_width, .. } => {
+            assert_eq!(
+                *max_width,
+                Some(120.0),
+                "child text max_width should be set to parent width"
+            );
+        }
+        _ => panic!("expected Text after resize"),
+    }
+
+    // Child bounds height should be > single line (text wraps)
+    let title_bounds = engine.bounds[&title_idx];
+    let single_line = 14.0 * 1.2;
+    assert!(
+        title_bounds.height > single_line,
+        "child text height ({}) should be > single line ({single_line}) after parent shrink",
+        title_bounds.height
+    );
+}
+
+#[test]
+fn sync_resize_text_estimates_wrapped_height() {
+    // Resizing a text node directly should estimate wrapped height
+    // from content, not use the drag height.
+    let input = r#"
+text @paragraph "This is a fairly long paragraph of text that needs to wrap to multiple lines" {
+  font: "Inter" 400 14
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let para_id = NodeId::intern("paragraph");
+    let para_idx = engine.graph.index_of(para_id).unwrap();
+
+    // Resize to a narrow width — bounds height should be estimated (multi-line)
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        id: para_id,
+        width: 100.0,
+        height: 20.0, // Deliberately small — should be overridden
+    });
+
+    let bounds = engine.bounds[&para_idx];
+    let single_line = 14.0 * 1.2;
+    assert!(
+        bounds.height > single_line,
+        "text bounds height ({}) should be > single line ({single_line}) after narrow resize",
+        bounds.height
+    );
+    assert!(
+        (bounds.width - 100.0).abs() < 0.01,
+        "text bounds width should be 100: got {}",
+        bounds.width
+    );
+}

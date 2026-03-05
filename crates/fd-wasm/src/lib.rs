@@ -1019,6 +1019,31 @@ impl FdCanvas {
             .any(|ci| matches!(self.engine.graph.graph[*ci].kind, NodeKind::Text { .. }))
     }
 
+    /// Get IDs of all direct Text children of a node.
+    /// Returns JSON array of string IDs, e.g. `["label","subtitle"]`.
+    /// Used by JS to remeasure text bounds after parent resize.
+    pub fn get_text_children(&self, node_id: &str) -> String {
+        let id = NodeId::intern(node_id);
+        let Some(idx) = self.engine.graph.index_of(id) else {
+            return "[]".to_string();
+        };
+        let ids: Vec<String> = self
+            .engine
+            .graph
+            .children(idx)
+            .iter()
+            .filter_map(|ci| {
+                let node = &self.engine.graph.graph[*ci];
+                if matches!(node.kind, NodeKind::Text { .. }) {
+                    Some(node.id.as_str().to_string())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        serde_json::to_string(&ids).unwrap_or_else(|_| "[]".to_string())
+    }
+
     /// Get the parent ID of a node. Returns empty string for root-level nodes.
     pub fn parent_of(&self, node_id: &str) -> String {
         let id = NodeId::intern(node_id);
@@ -1446,8 +1471,15 @@ impl FdCanvas {
         let style = self.engine.graph.resolve_style(node, &[]);
         let mut props = serde_json::Map::new();
 
-        if let NodeKind::Text { ref content, .. } = node.kind {
+        if let NodeKind::Text {
+            ref content,
+            max_width,
+        } = node.kind
+        {
             props.insert("text".into(), serde_json::Value::String(content.clone()));
+            if let Some(mw) = max_width {
+                props.insert("maxWidth".into(), serde_json::json!(mw));
+            }
         }
 
         if let Some(ref font) = style.font {

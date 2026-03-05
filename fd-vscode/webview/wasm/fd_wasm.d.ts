@@ -154,6 +154,12 @@ export class FdCanvas {
      */
     get_text(): string;
     /**
+     * Get IDs of all direct Text children of a node.
+     * Returns JSON array of string IDs, e.g. `["label","subtitle"]`.
+     * Used by JS to remeasure text bounds after parent resize.
+     */
+    get_text_children(node_id: string): string;
+    /**
      * Get the current tool name.
      */
     get_tool_name(): string;
@@ -327,6 +333,7 @@ export interface InitOutput {
     readonly fdcanvas_get_selection_bounds: (a: number) => any;
     readonly fdcanvas_get_sketchy_mode: (a: number) => number;
     readonly fdcanvas_get_text: (a: number) => [number, number];
+    readonly fdcanvas_get_text_children: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_tool_name: (a: number) => [number, number];
     readonly fdcanvas_group_selected: (a: number) => number;
     readonly fdcanvas_handle_key: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];

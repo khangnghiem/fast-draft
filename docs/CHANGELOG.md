@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.10.40 — Text Wrap Boundary Expansion + Parent Resize Propagation
+
+- **FEATURE (R3.46)**: Text nodes with `max_width` now correctly expand their bounding box vertically to enclose wrapped text — `intrinsic_size` heuristic in `layout.rs` accounts for `max_width` and estimates multi-line height
+- **FEATURE (R3.46)**: Resizing a parent shape smaller than child text's bounds now auto-sets `max_width` on the child text (Option A: permanent), causing auto-wrap and vertical expansion — propagation logic in `sync.rs` handles Rect/Ellipse/Frame parents, respects layout padding, skips explicitly positioned children
+- **FEATURE (R3.46)**: Direct text node resize now estimates wrapped height from content length instead of using drag height — more accurate immediate feedback during resize
+- **WASM**: New `get_text_children(node_id)` API — returns JSON array of text child IDs for JS remeasurement after parent resize
+- **WASM**: `get_node_props` now returns `maxWidth` for text nodes — enables JS `measureAndUpdateTextBounds` to detect wrap constraints
+- **JS**: Post-resize text remeasurement — `pointer.js` now calls `measureAndUpdateTextBounds` on text nodes and text children after any interaction that changes the canvas
+- **TESTING**: 3 new regression tests — `layout_text_max_width_wraps_height`, `sync_resize_parent_sets_child_text_max_width`, `sync_resize_text_estimates_wrapped_height`
+
 ### v0.10.39 — Fix FAB Popup on Layers/Code Selection
 
 - **FIX (R3.8)**: Floating Action Bar (fill/stroke/opacity controls) no longer pops up when selecting a node via Layers panel or Code cursor — FAB is now canvas-contextual only; Properties panel is the correct surface for non-canvas interactions

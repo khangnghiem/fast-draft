@@ -891,3 +891,39 @@ rect @parent {
         "child center ({child_cx}) should be ≈ new parent center ({parent_cx})"
     );
 }
+
+#[test]
+fn layout_text_max_width_wraps_height() {
+    // Text with max_width should have width clamped to max_width
+    // and height increased to fit wrapped lines.
+    let input = r#"
+text @long "Hello World this is a long sentence that should wrap" {
+  font: "Inter" 400 14
+  w: 80
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let bounds = resolve_layout(&graph, viewport);
+
+    let idx = graph.index_of(NodeId::intern("long")).unwrap();
+    let b = &bounds[&idx];
+
+    // Width should be clamped to max_width (80)
+    assert!(
+        (b.width - 80.0).abs() < 0.01,
+        "text width ({}) should be 80 (max_width)",
+        b.width
+    );
+
+    // Height should be > single line (14 * 1.4 = 19.6)
+    let single_line = 14.0 * 1.2;
+    assert!(
+        b.height > single_line,
+        "text height ({}) should be > single line ({single_line}) for wrapped text",
+        b.height
+    );
+}
