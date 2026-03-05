@@ -4907,6 +4907,19 @@ function setupFloatingToolbar() {
       }
 
       if (!dtcCancelled && dtcGhost) {
+        // ── Keep ghost sized to current zoom (handles zoom-while-dragging) ──
+        const shape = ghostShapes[dtcTool] || ghostShapes.rect;
+        const sw = Math.round(shape.w * zoomLevel) + "px";
+        const sh = Math.round(shape.h * zoomLevel) + "px";
+        if (dtcTool === "arrow") {
+          dtcGhost.style.width = sw;
+          dtcGhost.style.height = sw;
+          const svgEl = dtcGhost.querySelector("svg");
+          if (svgEl) { svgEl.setAttribute("width", sw); svgEl.setAttribute("height", sw); }
+        } else {
+          dtcGhost.style.width = sw;
+          dtcGhost.style.height = sh;
+        }
         // ── Alt+drag: snap ghost to cardinal position near node ──
         const canvasEl = document.getElementById("fd-canvas");
         if (e.altKey && canvasEl && fdCanvas && dtcTool !== "text") {
