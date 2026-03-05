@@ -80,7 +80,6 @@ async function main() {
     setupInsertMenu();
     setupMinimap();
     setupColorSwatches();
-    setupSelectionBar();
     setupTouchGestures();
     setupZoomControls();
     setupUndoRedoControls();

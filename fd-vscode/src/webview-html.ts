@@ -31,7 +31,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'none';
     script-src 'nonce-{nonce}' 'wasm-unsafe-eval' {cspSource};
-    style-src 'nonce-{nonce}';
+    style-src 'nonce-{nonce}' 'unsafe-inline';
     img-src {cspSource};
     connect-src {cspSource};
     font-src {cspSource};
