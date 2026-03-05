@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.10.35 — Fix Toolbar Drag Jump + Snap Guide Preview
+
+- **FIX**: Toolbar no longer jumps on initial click — position normalization deferred from `pointerdown` to `pointerup`; uses `transform: translate()` during drag only.
+- **FEATURE**: Snap destination preview — dashed border guide appears at the target edge (top/bottom/left/right) while dragging the toolbar, providing visual feedback before releasing.
+
 ### v0.10.34 — Fix Context Menu Shown on Launch
 
 - **FIX**: Close context menu, floating action bar, and edge context menu at end of `main()` init to prevent stale menus appearing on canvas launch.
