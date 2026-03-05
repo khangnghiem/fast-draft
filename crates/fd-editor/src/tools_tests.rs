@@ -123,7 +123,9 @@ fn rect_tool_shift_draw_constrains_square() {
 }
 
 #[test]
-fn select_tool_alt_click_produces_duplicate() {
+fn select_tool_alt_click_no_duplicate() {
+    // Alt+click duplication is handled by FdCanvas (not SelectTool).
+    // SelectTool should just select the node without emitting DuplicateNode.
     let mut tool = SelectTool::new();
     let target = NodeId::intern("box_alt");
     let alt = Modifiers {
@@ -140,17 +142,21 @@ fn select_tool_alt_click_produces_duplicate() {
         },
         Some(target),
     );
-    assert_eq!(mutations.len(), 1);
-    match &mutations[0] {
-        GraphMutation::DuplicateNode { id } => {
-            assert_eq!(*id, target);
-        }
-        _ => panic!("expected DuplicateNode"),
-    }
+    // SelectTool no longer emits DuplicateNode — FdCanvas does that
+    assert!(
+        mutations.is_empty(),
+        "SelectTool should not emit DuplicateNode on Alt+click"
+    );
+    assert!(
+        tool.selected.contains(&target),
+        "Node should be selected for drag"
+    );
 }
 
 #[test]
-fn select_tool_mid_drag_alt_produces_duplicate() {
+fn select_tool_mid_drag_alt_no_duplicate() {
+    // Alt mid-drag duplication is handled by FdCanvas (not SelectTool).
+    // SelectTool should just emit MoveNode without DuplicateNode.
     let mut tool = SelectTool::new();
     let target = NodeId::intern("box_mid");
 
@@ -172,7 +178,7 @@ fn select_tool_mid_drag_alt_produces_duplicate() {
         ..Modifiers::NONE
     };
 
-    // First move with Alt → should duplicate + move
+    // Move with Alt → SelectTool should only produce MoveNode (no DuplicateNode)
     let mutations = tool.handle(
         &InputEvent::PointerMove {
             x: 120.0,
@@ -184,44 +190,15 @@ fn select_tool_mid_drag_alt_produces_duplicate() {
     );
     assert_eq!(
         mutations.len(),
-        2,
-        "mid-drag Alt should emit DuplicateNode + MoveNode"
+        1,
+        "SelectTool should only emit MoveNode, not DuplicateNode"
     );
     match &mutations[0] {
-        GraphMutation::DuplicateNode { id } => {
-            assert_eq!(*id, target);
-        }
-        _ => panic!("expected DuplicateNode first"),
-    }
-    match &mutations[1] {
         GraphMutation::MoveNode { dx, dy, .. } => {
             assert!((dx - 20.0).abs() < 0.01, "dx={dx}");
             assert!((dy - 10.0).abs() < 0.01, "dy={dy}");
         }
-        _ => panic!("expected MoveNode second"),
-    }
-
-    // Second move with Alt → only MoveNode (no second duplicate)
-    let mutations = tool.handle(
-        &InputEvent::PointerMove {
-            x: 130.0,
-            y: 115.0,
-            pressure: 1.0,
-            modifiers: alt,
-        },
-        None,
-    );
-    assert_eq!(
-        mutations.len(),
-        1,
-        "second Alt move should only emit MoveNode"
-    );
-    match &mutations[0] {
-        GraphMutation::MoveNode { dx, dy, .. } => {
-            assert!((dx - 10.0).abs() < 0.01, "dx={dx}");
-            assert!((dy - 5.0).abs() < 0.01, "dy={dy}");
-        }
-        _ => panic!("expected MoveNode only"),
+        _ => panic!("expected MoveNode, got {:?}", mutations[0]),
     }
 }
 

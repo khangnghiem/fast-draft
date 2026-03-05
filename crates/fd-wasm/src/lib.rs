@@ -59,6 +59,9 @@ pub struct FdCanvas {
     pointer_down_pos: Option<(f32, f32)>,
     /// Style clipboard for Copy/Paste Style (⌥⌘C / ⌥⌘V).
     style_clipboard: Option<fd_core::model::Style>,
+    /// Whether we already duplicated during this drag (Alt+drag).
+    /// Reset on pointer-up. Prevents re-duplication on subsequent move events.
+    alt_duplicated: bool,
 }
 
 #[wasm_bindgen]
@@ -98,6 +101,7 @@ impl FdCanvas {
             hover_start_ms: 0.0,
             pointer_down_pos: None,
             style_clipboard: None,
+            alt_duplicated: false,
         }
     }
 
@@ -273,8 +277,25 @@ impl FdCanvas {
             ToolKind::Eraser => unreachable!("handled above"),
         };
         let changed = self.apply_mutations(mutations);
+
+        // Alt+click on select tool: duplicate in-place, then drag the clone
+        if self.active_tool == ToolKind::Select
+            && alt
+            && !ctrl
+            && !meta
+            && hit.is_some()
+            && self.select_tool.selected.len() == 1
+        {
+            self.alt_duplicated = true;
+            self.duplicate_selected_at(0.0, 0.0);
+        }
+
         // Marquee start also counts as a visual change (need re-render)
-        changed || self.select_tool.marquee_start.is_some() || pressed_changed || hovered_changed
+        changed
+            || self.select_tool.marquee_start.is_some()
+            || pressed_changed
+            || hovered_changed
+            || self.alt_duplicated
     }
 
     /// Handle pointer move event. Returns true if the graph changed.
@@ -319,6 +340,22 @@ impl FdCanvas {
                 return true;
             }
             return hovered_changed;
+        }
+
+        // Alt pressed mid-drag: clone-and-drag (Figma behavior)
+        // Handled here in FdCanvas (not in SelectTool) so selection
+        // can transfer to the clone via duplicate_selected_at.
+        if self.active_tool == ToolKind::Select
+            && alt
+            && !self.alt_duplicated
+            && self.select_tool.dragging
+            && self.select_tool.selected.len() == 1
+        {
+            self.alt_duplicated = true;
+            self.duplicate_selected_at(0.0, 0.0);
+            // Update last_x/y so the next delta is computed from here
+            self.select_tool.last_x = x;
+            self.select_tool.last_y = y;
         }
 
         let mutations = match self.active_tool {
@@ -482,6 +519,7 @@ impl FdCanvas {
         };
 
         self.pointer_down_pos = None;
+        self.alt_duplicated = false;
 
         let visual_changed = changed
             || marquee_changed
