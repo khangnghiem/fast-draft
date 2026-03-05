@@ -542,39 +542,34 @@ function setupFloatingToolbar() {
       return;
     }
 
-    // Commit final position — normalize to px now (not on pointerdown)
+    // Commit final position — reuse getSnapPosition() for exact ghost match
     const finalX = initialLeft + dx;
     const finalY = initialTop + dy;
-
-    const viewW = window.innerWidth;
-    const viewH = window.innerHeight;
     const edge = computeSnap(finalX, finalY);
-
-    let newPos = {};
-    let newOrientation = "horizontal";
-
-    if (edge === "right") {
-      newOrientation = "vertical";
-      newPos = { right: "2vw", top: Math.max(2, (finalY / viewH) * 100) + "vh" };
-    } else if (edge === "left") {
-      newOrientation = "vertical";
-      newPos = { left: "calc(232px + 2vw)", top: Math.max(2, (finalY / viewH) * 100) + "vh" };
-    } else if (edge === "top") {
-      newOrientation = "horizontal";
-      newPos = { top: "2vh", left: Math.max(2, (finalX / viewW) * 100) + "vw" };
-    } else {
-      newOrientation = "horizontal";
-      newPos = { bottom: "1.5vh", left: Math.max(2, (finalX / viewW) * 100) + "vw" };
-    }
+    const newOrientation = (edge === "left" || edge === "right") ? "vertical" : "horizontal";
 
     toolbar.classList.remove("horizontal", "vertical");
     toolbar.classList.add(newOrientation);
 
-    toolbar.style.left = newPos.left || "auto";
-    toolbar.style.right = newPos.right || "auto";
-    toolbar.style.top = newPos.top || "auto";
-    toolbar.style.bottom = newPos.bottom || "auto";
+    // Get the exact same position the ghost showed
+    const snapPos = getSnapPosition(edge, finalX, finalY);
 
+    // Apply position: getSnapPosition returns css values relative to canvas-container,
+    // which is what the toolbar is already positioned inside of (position:absolute)
+    toolbar.style.left = snapPos.left || "auto";
+    toolbar.style.right = snapPos.right || "auto";
+    toolbar.style.top = snapPos.top || "auto";
+    toolbar.style.bottom = snapPos.bottom || "auto";
+    // Clear width/height — toolbar auto-sizes from content
+    toolbar.style.width = "";
+    toolbar.style.height = "";
+
+    const newPos = {
+      left: snapPos.left || undefined,
+      right: snapPos.right || undefined,
+      top: snapPos.top || undefined,
+      bottom: snapPos.bottom || undefined,
+    };
     vscode.setState({ ...(vscode.getState() || {}), ftPosition: newPos, ftOrientation: newOrientation });
 
     if (toolbar.classList.contains("rolled-up")) {
@@ -621,13 +616,14 @@ function setupFloatingToolbar() {
   let dtcCancelled = false; // true when pointer re-enters toolbar
   let dtcGuideOverlay = null; // SVG overlay for alignment guides
 
+  // Ghost shapes match WASM create_node_at defaults exactly
   const ghostShapes = {
-    rect: { w: 120, h: 80, css: "border-radius:8px;" },
-    ellipse: { w: 100, h: 100, css: "border-radius:50%;" },
+    rect: { w: 100, h: 80, css: "border-radius:8px;" },
+    ellipse: { w: 100, h: 80, css: "border-radius:50%;" },
     pen: { w: 80, h: 60, css: "border-radius:4px;" },
     arrow: { w: 120, h: 2, css: "" },
     text: { w: 60, h: 28, css: "border-radius:4px;" },
-    frame: { w: 140, h: 100, css: "border-radius:4px;" },
+    frame: { w: 200, h: 150, css: "border-radius:4px;" },
   };
 
   function createGhost(tool) {

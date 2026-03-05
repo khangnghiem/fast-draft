@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.10.43 — Fix Toolbar Snap & Ghost Shape Bugs (4 Fixes)
+
+- **FIX (R3.39)**: Toolbar now lands at the exact ghost position — `pointerup` reuses `getSnapPosition()` instead of computing a separate `vw`/`vh` position that could diverge
+- **FIX (R3.39)**: Ghost shapes now match WASM `create_node_at` defaults — rect: 100×80 (was 120×80), ellipse: 100×80 oval (was 100×100 circle), frame: 200×150 (was 140×100)
+- **FIX (R3.39)**: Toolbar tooltips now visible in horizontal mode — changed `.scroll-paper-body` from `overflow: hidden` to `overflow: visible`
+- **FIX (R3.39)**: Vertical toolbar tooltips now appear to the right instead of above, preventing overlap
+
 ### v0.10.42 — Fix Toolbar Ghost Orientation on Cross-Side Drag
 
 - **FIX (R3.39)**: Snap guide ghost now correctly shows vertical orientation when dragging toolbar to the opposite left/right edge — previously the ghost appeared horizontal because `getSnapPosition()` used live `offsetWidth`/`offsetHeight` which flip with toolbar orientation; now captures canonical (horizontal-layout) dimensions at drag start and uses those for ghost sizing regardless of current state
