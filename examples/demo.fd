@@ -280,14 +280,6 @@ rect @_rect_28_copy_32 {
   y: 1246.77
 }
 
-rect @_rect_28_copy_33 {
-  w: 155.61 h: 145.15
-  stroke: #333333 2.5
-  corner: 8
-  x: 457.13
-  y: 1110.08
-}
-
 rect @_rect_28_copy_34 {
   w: 155.61 h: 145.15
   stroke: #333333 2.5
@@ -380,8 +372,8 @@ rect @rect_3 {
   w: 195.36 h: 173.46
   stroke: #333333 2.5
   corner: 8
-  x: 622.09
-  y: 1613.37
+  x: 676.1
+  y: 1467.84
 }
 
 rect @rect_3_copy_7 {
@@ -407,10 +399,6 @@ rect @_rect_1_copy_11 {
   x: 223.65
   y: 2151.79
 }
-
-# ─── Constraints ───
-
-@_rect_28_copy_33 -> offset: @_rect_28_copy_32 20, 20
 
 # ─── Flows ───
 

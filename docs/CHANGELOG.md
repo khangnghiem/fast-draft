@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.10.55 — Fix Shift-Constraint Bugs (R3.54)
+
+- **FIX (R3.54)**: Shift+drag axis-lock no longer jitters during diagonal movement — constraint now uses total displacement from drag origin (Figma-style) instead of per-frame delta, which was too small (~1-3px) and caused the locked axis to flip every frame
+- **FIX (R3.54)**: Shift+draw Rect in northwest direction no longer jumps — origin (top-left corner) now computed from constrained square dimensions instead of raw cursor position; previously `x.min(start_x)` ignored the Shift-expanded size
+- **FIX (R3.54)**: Shift+draw Ellipse in northwest direction — same origin fix as Rect (identical code pattern)
+- **CORE**: Added `drag_start_x`/`drag_start_y` fields to `SelectTool` for tracking total drag displacement
+- **TESTING**: 4 new regression tests — `select_tool_shift_drag_no_jitter_on_diagonal` (3-frame multi-move), `select_tool_shift_drag_locks_vertical`, `rect_tool_shift_draw_northwest_correct_origin`, `ellipse_tool_shift_draw_northwest_correct_origin`
+
 ### v0.10.54 — Esc-to-Cancel Drag (R3.61)
 
 - **FEATURE (R3.61)**: Pressing Esc during a node drag (move/resize/draw) now cancels the gesture and restores the node to its pre-drag position — uses `abandon_batch()` on `CommandStack` to restore the text snapshot captured at `begin_batch()`, producing a pixel-perfect rollback with no undo entry
