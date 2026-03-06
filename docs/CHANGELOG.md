@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.10.53 — Click-to-Highlight Code (R2.5)
+
+- **UX (R2.5)**: Clicking an already-selected node on the canvas now re-highlights its `@id` line in the code editor — previously only the first click (selection change) triggered the highlight; re-clicks on the same node were silently ignored by the dedup guard; this implements the "show me the code" intent for spatial navigation
+- **ARCH**: Split canvas→code notification into two paths in `pointer.js`: selection-change triggers full `syncSelection()` (panels + code + dedup), re-click of same node posts `nodeSelected` directly (code highlight only, no redundant panel rebuilds)
+
 ### v0.10.52 — Renamify Tests + Heuristic Renamer (R4.20)
 
 - **TESTING (R4.20)**: 50 new unit tests for Renamify in `ai-renamify.test.ts` — `parseRenamifyResponse` (17 tests: valid/malformed JSON, conflict resolution, sanitization, order), `applyGlobalRenames` (13 tests: declarations, constraints, edges, word-boundary safety), `buildRenamifyPrompt` (7 tests: prompt structure), `heuristicRename` (13 tests: text extraction, parent context, shape detection, conflicts)
