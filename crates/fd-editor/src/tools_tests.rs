@@ -1445,8 +1445,14 @@ fn pen_tool_draw_lifecycle() {
             // n=3 points => MoveTo + (3-1=2) CubicTo
             assert_eq!(commands.len(), 3);
             assert!(matches!(commands[0], PathCmd::MoveTo(10.0, 10.0)));
-            assert!(matches!(commands[1], PathCmd::CubicTo(_, _, _, _, 20.0, 20.0)));
-            assert!(matches!(commands[2], PathCmd::CubicTo(_, _, _, _, 30.0, 20.0)));
+            assert!(matches!(
+                commands[1],
+                PathCmd::CubicTo(_, _, _, _, 20.0, 20.0)
+            ));
+            assert!(matches!(
+                commands[2],
+                PathCmd::CubicTo(_, _, _, _, 30.0, 20.0)
+            ));
         }
         _ => panic!("Expected UpdatePath"),
     }
@@ -1527,7 +1533,10 @@ fn pen_tool_cancel() {
         },
         None,
     );
-    assert!(mutations.is_empty(), "Expected empty mutations after cancel");
+    assert!(
+        mutations.is_empty(),
+        "Expected empty mutations after cancel"
+    );
 }
 
 #[test]
