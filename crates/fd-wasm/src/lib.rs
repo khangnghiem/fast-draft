@@ -744,13 +744,21 @@ impl FdCanvas {
             .iter()
             .map(|id| GraphMutation::RemoveNode { id: *id })
             .collect();
-        let changed = self.apply_mutations(mutations);
-        if changed {
-            self.select_tool.selected.clear();
-            self.select_tool.visual_highlight.clear();
-            self.engine.flush_to_text();
+
+        // Wrap in a batch so multi-delete (including edge cleanup) is
+        // a single atomic undo step via text snapshot.
+        self.commands.begin_batch(&mut self.engine);
+        for mutation in mutations {
+            self.commands
+                .execute(&mut self.engine, mutation, "delete selected");
         }
-        changed
+        self.engine.resolve();
+        self.commands.end_batch(&mut self.engine);
+
+        self.select_tool.selected.clear();
+        self.select_tool.visual_highlight.clear();
+        self.engine.flush_to_text();
+        true
     }
 
     /// Duplicate the currently selected node(s). Returns true if duplicated.

@@ -1794,3 +1794,132 @@ text @paragraph "This is a fairly long paragraph of text that needs to wrap to m
         _ => panic!("expected Text"),
     }
 }
+
+// ─── Multi-Delete Reproduction Tests ────────────────────────────────────
+
+#[test]
+fn sync_delete_multiple_siblings() {
+    // Reproduce: select 3 sibling rects, delete all at once
+    let input = r#"
+rect @a { w: 40 h: 30 }
+rect @b { w: 40 h: 30 }
+rect @c { w: 40 h: 30 }
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    // Apply three RemoveNode mutations sequentially (like delete_selected does)
+    let ids = vec![
+        NodeId::intern("a"),
+        NodeId::intern("b"),
+        NodeId::intern("c"),
+    ];
+    for id in &ids {
+        engine.apply_mutation(GraphMutation::RemoveNode { id: *id });
+    }
+    engine.resolve();
+    engine.flush_to_text();
+
+    for id in &ids {
+        assert!(
+            engine.graph.get_by_id(*id).is_none(),
+            "@{} should be deleted",
+            id.as_str()
+        );
+    }
+    let text = engine.current_text();
+    assert!(!text.contains("@a"), "text should not contain @a");
+    assert!(!text.contains("@b"), "text should not contain @b");
+    assert!(!text.contains("@c"), "text should not contain @c");
+}
+
+#[test]
+fn sync_delete_multiple_with_edges() {
+    // Reproduce: delete nodes that are connected by edges
+    let input = r#"
+rect @src { w: 40 h: 30 }
+rect @dst { w: 40 h: 30 }
+
+edge @conn {
+  from: @src
+  to: @dst
+  arrow: end
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    // Delete both nodes
+    engine.apply_mutation(GraphMutation::RemoveNode {
+        id: NodeId::intern("src"),
+    });
+    engine.apply_mutation(GraphMutation::RemoveNode {
+        id: NodeId::intern("dst"),
+    });
+    engine.resolve();
+    engine.flush_to_text();
+
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("src")).is_none(),
+        "@src should be deleted"
+    );
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("dst")).is_none(),
+        "@dst should be deleted"
+    );
+
+    let text = engine.current_text();
+    assert!(
+        !text.contains("@src"),
+        "emitted text should not reference deleted @src: {text}"
+    );
+    assert!(
+        !text.contains("@dst"),
+        "emitted text should not reference deleted @dst: {text}"
+    );
+    // Edge referencing deleted nodes should also be cleaned up
+    assert!(
+        !text.contains("edge @conn"),
+        "edge referencing deleted nodes should be removed from text: {text}"
+    );
+}
+
+#[test]
+fn sync_delete_parent_and_child() {
+    // Delete both a group and its child simultaneously
+    let input = r#"
+group @grp {
+  rect @child { w: 40 h: 30 }
+}
+rect @survivor { w: 20 h: 20 }
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    engine.apply_mutation(GraphMutation::RemoveNode {
+        id: NodeId::intern("grp"),
+    });
+    engine.apply_mutation(GraphMutation::RemoveNode {
+        id: NodeId::intern("child"),
+    });
+    engine.resolve();
+    engine.flush_to_text();
+
+    assert!(engine.graph.get_by_id(NodeId::intern("grp")).is_none());
+    assert!(engine.graph.get_by_id(NodeId::intern("child")).is_none());
+    assert!(engine.graph.get_by_id(NodeId::intern("survivor")).is_some());
+
+    let text = engine.current_text();
+    assert!(!text.contains("@grp"));
+    assert!(!text.contains("@child"));
+    assert!(text.contains("@survivor"));
+}

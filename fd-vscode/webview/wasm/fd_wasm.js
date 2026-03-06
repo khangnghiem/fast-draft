@@ -166,6 +166,8 @@ export class FdCanvas {
     }
     /**
      * Duplicate selected node(s) with a custom offset. Returns true if duplicated.
+     * Handles multi-select: clones ALL selected nodes, deep-copies Group/Frame
+     * subtrees, remaps internal references, and duplicates edges between them.
      * Use (0, 0) for Alt+drag clone-in-place.
      * @param {number} dx
      * @param {number} dy

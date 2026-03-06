@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.10.52 — Renamify Tests + Heuristic Renamer (R4.20)
+
+- **TESTING (R4.20)**: 50 new unit tests for Renamify in `ai-renamify.test.ts` — `parseRenamifyResponse` (17 tests: valid/malformed JSON, conflict resolution, sanitization, order), `applyGlobalRenames` (13 tests: declarations, constraints, edges, word-boundary safety), `buildRenamifyPrompt` (7 tests: prompt structure), `heuristicRename` (13 tests: text extraction, parent context, shape detection, conflicts)
+- **FEATURE (R4.20)**: Heuristic renamer (`heuristicRename`) — no-API fallback that generates semantic names from FD document context: text content (`"Login"` → `login_label`), parent group name (`rect` inside `@sidebar` → `sidebar_rect`), shape detection (equal w/h ellipse → `circle`, wide rect → `bar`); wired as automatic fallback when no AI API key is configured
+- **FIX**: `stripMarkdownFences` now supports `json`, `javascript`, `typescript`, `html`, `css` language tags — previously only matched `fd|text|plaintext`, causing partial stripping of ` ```json ``` ` fences that broke `parseRenamifyResponse`
+- **INFRA**: Added `__mocks__/vscode.ts` stub and `vitest.config.ts` alias for `vscode` module resolution in test environment
+
 ### v0.10.51 — Alt+Drag Multi-Select (R3.60)
 
 - **FEATURE (R3.60)**: Alt+drag now duplicates ALL selected nodes (was single-node only); `duplicate_selected_at` loops all selected with `clone_node_recursive`
