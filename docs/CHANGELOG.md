@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.59 — HTML+CSS Export (R3.56)
+
+- **NEW (R3.56)**: HTML+CSS Export — `emit_html(graph)` in `fd-core` generates a standalone responsive HTML document from the SceneGraph.
+- **FEATURE (R3.56)**: Maps FD shapes (Rect, Frame) to positioned `<div>`s and Ellipse/Path/Edges to `<svg>`.
+- **FEATURE (R3.56)**: Reusable styles and constraints map directly to CSS classes and flexbox/grid layout properties. Animations are emitted as pure CSS `@keyframes` and `transitions`.
+
 ### v0.10.58 — Mermaid Import + Detach Snap + Alt-Draw-From-Center (R1.18, R3.35, R3.19)
 
 - **NEW (R1.18)**: Mermaid flowchart import — `parse_mermaid()` in fd-core parses `flowchart TD/LR` syntax into FD nodes + edges; supports node shapes (`[rect]`, `(rounded)`, `((circle))`, `{diamond}`), edge types (`-->`, `---`, `-->|label|`), subgraphs as frames; auto-layout grid positioning; `import_mermaid()` WASM API merges into current document
