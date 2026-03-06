@@ -353,31 +353,27 @@ impl FdCanvas {
             return hovered_changed;
         }
 
-        // Alt+drag duplication with 3px threshold (Figma behavior).
-        // Phase 1: Record Alt press position when first detected mid-drag.
-        // Phase 2: Once pointer moves ≥3px from press point, clone-and-drag.
+        // Alt+drag duplication with 3px threshold.
+        // Only triggers when Alt was held at pointer-down (alt_press_pos set
+        // there). Pressing Alt mid-drag does NOT clone — prevents accidental
+        // duplication since the pointer is already moving.
         if self.active_tool == ToolKind::Select
             && alt
             && !self.alt_duplicated
             && !self.select_tool.selected.is_empty()
-            && (self.select_tool.dragging || self.alt_press_pos.is_some())
+            && let Some((ox, oy)) = self.alt_press_pos
         {
-            if let Some((ox, oy)) = self.alt_press_pos {
-                // Check 3px distance threshold before duplicating
-                let dist_sq = (x - ox) * (x - ox) + (y - oy) * (y - oy);
-                if dist_sq >= 9.0 {
-                    // Capture original bounds for ghost preview before cloning
-                    self.capture_alt_clone_origins();
-                    self.alt_duplicated = true;
-                    self.alt_press_pos = None;
-                    self.duplicate_selected_at(0.0, 0.0);
-                    // Update last_x/y so the next delta is computed from here
-                    self.select_tool.last_x = x;
-                    self.select_tool.last_y = y;
-                }
-            } else {
-                // Alt pressed mid-drag — start tracking position
-                self.alt_press_pos = Some((x, y));
+            // Check 3px distance threshold before duplicating
+            let dist_sq = (x - ox) * (x - ox) + (y - oy) * (y - oy);
+            if dist_sq >= 9.0 {
+                // Capture original bounds for ghost preview before cloning
+                self.capture_alt_clone_origins();
+                self.alt_duplicated = true;
+                self.alt_press_pos = None;
+                self.duplicate_selected_at(0.0, 0.0);
+                // Update last_x/y so the next delta is computed from here
+                self.select_tool.last_x = x;
+                self.select_tool.last_y = y;
             }
         }
 
