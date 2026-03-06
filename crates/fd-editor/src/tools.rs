@@ -17,6 +17,13 @@ use crate::sync::GraphMutation;
 use fd_core::id::NodeId;
 use fd_core::model::*;
 
+const DEFAULT_RECT_WIDTH: f32 = 120.0;
+const DEFAULT_RECT_HEIGHT: f32 = 80.0;
+const DEFAULT_ELLIPSE_SIZE: f32 = 100.0;
+const DEFAULT_CORNER_RADIUS: f32 = 8.0;
+const MIN_DRAG_DIST: f32 = 10.0;
+const MIN_RESIZE_SIZE: f32 = 4.0;
+
 /// The active tool determines how input events are interpreted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolKind {
@@ -250,8 +257,8 @@ impl Tool for SelectTool {
                     };
 
                     // Min size
-                    let final_w = new_w.max(4.0);
-                    let final_h = new_h.max(4.0);
+                    let final_w = new_w.max(MIN_RESIZE_SIZE);
+                    let final_h = new_h.max(MIN_RESIZE_SIZE);
 
                     // Compute position delta from original
                     let dx = new_x - self.resize_origin.0;
@@ -414,7 +421,7 @@ impl Tool for RectTool {
                     cap: StrokeCap::Round,
                     join: StrokeJoin::Round,
                 });
-                node.style.corner_radius = Some(8.0);
+                node.style.corner_radius = Some(DEFAULT_CORNER_RADIUS);
                 vec![GraphMutation::AddNode {
                     parent_id: NodeId::intern("root"),
                     node: Box::new(node),
@@ -493,8 +500,8 @@ impl Tool for RectTool {
                 if !self.dragged {
                     if let Some(id) = self.current_id.take() {
                         // Click without drag → default 120×80 centered at click point
-                        let w = 120.0_f32;
-                        let h = 80.0_f32;
+                        let w = DEFAULT_RECT_WIDTH;
+                        let h = DEFAULT_RECT_HEIGHT;
                         vec![
                             GraphMutation::ResizeNode {
                                 id,
@@ -829,8 +836,8 @@ impl Tool for EllipseTool {
                 if !self.dragged {
                     if let Some(id) = self.current_id.take() {
                         // Click without drag → default 100×100 centered at click point
-                        let w = 100.0_f32;
-                        let h = 100.0_f32;
+                        let w = DEFAULT_ELLIPSE_SIZE;
+                        let h = DEFAULT_ELLIPSE_SIZE;
                         vec![
                             GraphMutation::ResizeNode {
                                 id,
@@ -1018,7 +1025,7 @@ impl Tool for ArrowTool {
                     _ => (0.0, 0.0),
                 });
                 let dist = ((x - sx).powi(2) + (y - sy).powi(2)).sqrt();
-                if dist < 10.0 {
+                if dist < MIN_DRAG_DIST {
                     return vec![];
                 }
 

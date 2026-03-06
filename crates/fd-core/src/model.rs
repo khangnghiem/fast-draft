@@ -35,6 +35,7 @@ pub fn hex_val(c: u8) -> Option<u8> {
 }
 
 impl Color {
+    /// Create a new color from RGBA components.
     pub const fn rgba(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
@@ -44,6 +45,8 @@ impl Color {
     pub fn from_hex(hex: &str) -> Option<Self> {
         let hex = hex.strip_prefix('#').unwrap_or(hex);
         let bytes = hex.as_bytes();
+        let parse_short = |v| (v * 17) as f32 / 255.0;
+        let parse_long = |v| v as f32 / 255.0;
 
         match bytes.len() {
             3 => {
@@ -51,9 +54,9 @@ impl Color {
                 let g = hex_val(bytes[1])?;
                 let b = hex_val(bytes[2])?;
                 Some(Self::rgba(
-                    (r * 17) as f32 / 255.0,
-                    (g * 17) as f32 / 255.0,
-                    (b * 17) as f32 / 255.0,
+                    parse_short(r),
+                    parse_short(g),
+                    parse_short(b),
                     1.0,
                 ))
             }
@@ -63,22 +66,17 @@ impl Color {
                 let b = hex_val(bytes[2])?;
                 let a = hex_val(bytes[3])?;
                 Some(Self::rgba(
-                    (r * 17) as f32 / 255.0,
-                    (g * 17) as f32 / 255.0,
-                    (b * 17) as f32 / 255.0,
-                    (a * 17) as f32 / 255.0,
+                    parse_short(r),
+                    parse_short(g),
+                    parse_short(b),
+                    parse_short(a),
                 ))
             }
             6 => {
                 let r = hex_val(bytes[0])? << 4 | hex_val(bytes[1])?;
                 let g = hex_val(bytes[2])? << 4 | hex_val(bytes[3])?;
                 let b = hex_val(bytes[4])? << 4 | hex_val(bytes[5])?;
-                Some(Self::rgba(
-                    r as f32 / 255.0,
-                    g as f32 / 255.0,
-                    b as f32 / 255.0,
-                    1.0,
-                ))
+                Some(Self::rgba(parse_long(r), parse_long(g), parse_long(b), 1.0))
             }
             8 => {
                 let r = hex_val(bytes[0])? << 4 | hex_val(bytes[1])?;
@@ -86,10 +84,10 @@ impl Color {
                 let b = hex_val(bytes[4])? << 4 | hex_val(bytes[5])?;
                 let a = hex_val(bytes[6])? << 4 | hex_val(bytes[7])?;
                 Some(Self::rgba(
-                    r as f32 / 255.0,
-                    g as f32 / 255.0,
-                    b as f32 / 255.0,
-                    a as f32 / 255.0,
+                    parse_long(r),
+                    parse_long(g),
+                    parse_long(b),
+                    parse_long(a),
                 ))
             }
             _ => None,
@@ -530,6 +528,7 @@ pub struct SceneNode {
 }
 
 impl SceneNode {
+    /// Create a new SceneNode with a given ID and kind.
     pub fn new(id: NodeId, kind: NodeKind) -> Self {
         Self {
             id,
@@ -967,10 +966,12 @@ pub struct ResolvedBounds {
 }
 
 impl ResolvedBounds {
+    /// Check if a point (px, py) is inside these bounds.
     pub fn contains(&self, px: f32, py: f32) -> bool {
         px >= self.x && px <= self.x + self.width && py >= self.y && py <= self.y + self.height
     }
 
+    /// Return the center point of these bounds.
     pub fn center(&self) -> (f32, f32) {
         (self.x + self.width / 2.0, self.y + self.height / 2.0)
     }

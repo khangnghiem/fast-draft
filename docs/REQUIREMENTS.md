@@ -107,7 +107,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.33** _(done)_: Component libraries — reusable node collections from a library panel; stored as `.fd` files; 3 built-in libraries (UI Kit, Flowchart, Wireframe)
 - **R3.34** _(planned)_: Community library directory — searchable gallery for publishing and discovering shared libraries
 - **R3.55** _(planned)_: Export to Excalidraw JSON — `export_excalidraw(graph)` converts FD scene to Excalidraw's JSON format; rect/ellipse/text/arrow elements mapped correctly; ⌘⇧X shortcut
-- **R3.56** _(planned)_: Export to HTML+CSS+JS — `export_html(graph)` generates standalone responsive HTML page; shapes → `<div>`, text → `<p>`, constraints → flexbox, animations → CSS transitions
+- **R3.56** _(done)_: Export to HTML+CSS+JS — `export_html(graph)` generates standalone responsive HTML page; shapes → `<div>`, text → `<p>`, constraints → flexbox, animations → CSS transitions
 - **R3.57** _(planned)_: Fine pen tools — `taper_start`, `taper_end`, `smoothing` properties on pen strokes; variable stroke width rendering; settings in properties panel
 - **R3.58** _(planned)_: Animation timeline — visual keyframe panel showing `when` blocks as timeline tracks; drag endpoints to adjust duration; scrub to preview animation state
 
@@ -200,7 +200,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | R3.1        | `tools::tests::select_tool_*`, `hit::tests::*`                                                                                                                                                                                  | ✅ 5 tests + 3 hit tests       |
 | R3.2        | `select_tool_drag`, `select_tool_shift_drag_*`, resize integ., `sync_resize_frame_children_reflow`, `sync_resize_frame_centered_text_recenters`, `sync_move_frame_flush_no_jump`, `sync_move_frame_children_follow_after_flush` | ✅ 7 tests                     |
 | R3.3        | `rect_tool_*`, `ellipse_tool_*`, `text_tool_*`                                                                                                                                                                                  | ✅ 7 tests                     |
-| R3.4        | _(pen tool — captures pressure, no unit test)_                                                                                                                                                                                  | ⚠️ No pen tool tests           |
+| R3.4        | `pen_tool_*`                                                                                                                                                                                  | ✅                             |
 | R3.5        | _(planned)_                                                                                                                                                                                                                     | —                              |
 | R3.6        | E2E UX: zoom/pan/pinch tests in `e2e-ux.test.ts`                                                                                                                                                                                | ✅ 4 E2E tests                 |
 | R3.7        | `commands::tests::*`, `undo_redo::*`                                                                                                                                                                                            | ✅ 5 unit + 7 integration      |

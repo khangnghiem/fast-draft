@@ -1365,3 +1365,223 @@ fn ellipse_tool_shift_draw_northwest_correct_origin() {
     assert!(has_resize, "should have ResizeNode");
     assert!(has_move, "should have MoveNode for NW direction");
 }
+
+// ─── Pen Tool Tests ──────────────────────────────────────────────────────
+
+#[test]
+fn pen_tool_draw_lifecycle() {
+    let mut tool = PenTool::new();
+
+    // PointerDown -> AddNode with MoveTo
+    let mutations = tool.handle(
+        &InputEvent::PointerDown {
+            x: 10.0,
+            y: 10.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::AddNode { node, .. } => {
+            assert!(node.id.as_str().starts_with("path"));
+            match &node.kind {
+                NodeKind::Path { commands } => {
+                    assert_eq!(commands.len(), 1);
+                    assert!(matches!(commands[0], PathCmd::MoveTo(10.0, 10.0)));
+                }
+                _ => panic!("Expected Path node"),
+            }
+        }
+        _ => panic!("Expected AddNode"),
+    }
+    assert!(tool.is_drawing());
+
+    // PointerMove -> UpdatePath with raw LineTo
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 20.0,
+            y: 20.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::UpdatePath { commands, .. } => {
+            assert_eq!(commands.len(), 2);
+            assert!(matches!(commands[0], PathCmd::MoveTo(10.0, 10.0)));
+            assert!(matches!(commands[1], PathCmd::LineTo(20.0, 20.0)));
+        }
+        _ => panic!("Expected UpdatePath"),
+    }
+
+    // Second PointerMove -> UpdatePath with raw LineTo
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 30.0,
+            y: 20.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // PointerUp -> UpdatePath with smooth CubicTo (Catmull-Rom)
+    let mutations = tool.handle(
+        &InputEvent::PointerUp {
+            x: 30.0,
+            y: 20.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::UpdatePath { commands, .. } => {
+            // Catmull-Rom logic: 3 points => MoveTo(p0), CubicTo(c1, c2, p1), CubicTo(c1, c2, p2)
+            // n=3 points => MoveTo + (3-1=2) CubicTo
+            assert_eq!(commands.len(), 3);
+            assert!(matches!(commands[0], PathCmd::MoveTo(10.0, 10.0)));
+            assert!(matches!(
+                commands[1],
+                PathCmd::CubicTo(_, _, _, _, 20.0, 20.0)
+            ));
+            assert!(matches!(
+                commands[2],
+                PathCmd::CubicTo(_, _, _, _, 30.0, 20.0)
+            ));
+        }
+        _ => panic!("Expected UpdatePath"),
+    }
+    assert!(!tool.is_drawing());
+}
+
+#[test]
+fn pen_tool_two_points() {
+    let mut tool = PenTool::new();
+
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 50.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 100.0,
+            y: 100.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    let mutations = tool.handle(
+        &InputEvent::PointerUp {
+            x: 100.0,
+            y: 100.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::UpdatePath { commands, .. } => {
+            // Exactly 2 points => simple MoveTo + LineTo fallback
+            assert_eq!(commands.len(), 2);
+            assert!(matches!(commands[0], PathCmd::MoveTo(50.0, 50.0)));
+            assert!(matches!(commands[1], PathCmd::LineTo(100.0, 100.0)));
+        }
+        _ => panic!("Expected UpdatePath"),
+    }
+}
+
+#[test]
+fn pen_tool_cancel() {
+    let mut tool = PenTool::new();
+
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 0.0,
+            y: 0.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    assert!(tool.is_drawing());
+
+    tool.cancel();
+
+    assert!(!tool.is_drawing());
+
+    // Next move should be ignored
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 10.0,
+            y: 10.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert!(
+        mutations.is_empty(),
+        "Expected empty mutations after cancel"
+    );
+}
+
+#[test]
+fn pen_tool_subsampling() {
+    let mut tool = PenTool::new();
+
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 0.0,
+            y: 0.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Simulate 100 points
+    for i in 1..=100 {
+        tool.handle(
+            &InputEvent::PointerMove {
+                x: i as f32,
+                y: i as f32,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+    }
+
+    let mutations = tool.handle(
+        &InputEvent::PointerUp {
+            x: 100.0,
+            y: 100.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::UpdatePath { commands, .. } => {
+            // Subsampling limits to 64 points. 1 MoveTo + 63 CubicTo = 64 commands.
+            assert_eq!(commands.len(), 64);
+            assert!(matches!(commands[0], PathCmd::MoveTo(_, _)));
+            assert!(matches!(commands[63], PathCmd::CubicTo(_, _, _, _, _, _)));
+        }
+        _ => panic!("Expected UpdatePath"),
+    }
+}
