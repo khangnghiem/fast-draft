@@ -97,6 +97,21 @@ impl CommandStack {
         }
     }
 
+    /// Abandon (cancel) a batch in progress, restoring the text to the
+    /// pre-batch snapshot. No undo entry is created. Used by Esc-to-cancel
+    /// to revert a drag mid-gesture.
+    pub fn abandon_batch(&mut self, engine: &mut SyncEngine) {
+        if self.batch_depth == 0 {
+            return;
+        }
+        // Restore the pre-drag text snapshot
+        if let Some(text_before) = self.batch_snapshot.take() {
+            let _ = engine.set_text(&text_before);
+        }
+        self.batch_depth = 0;
+        self.batch_dirty = false;
+    }
+
     /// Execute a mutation via the sync engine and push to undo stack.
     pub fn execute(&mut self, engine: &mut SyncEngine, mutation: GraphMutation, description: &str) {
         if self.batch_depth > 0 {
@@ -655,6 +670,58 @@ rect @box {
         stack.begin_batch(&mut engine);
         stack.end_batch(&mut engine);
 
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn abandon_batch_restores_position() {
+        let input = "rect @box { w: 100 h: 50 }\n";
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let mut stack = CommandStack::new(100);
+
+        // Capture original position
+        let idx = engine.graph.index_of(NodeId::intern("box")).unwrap();
+        let orig_x = engine.current_bounds().get(&idx).unwrap().x;
+        let orig_y = engine.current_bounds().get(&idx).unwrap().y;
+
+        // Simulate a drag gesture: begin_batch, 3 moves
+        stack.begin_batch(&mut engine);
+        for _ in 0..3 {
+            stack.execute(
+                &mut engine,
+                GraphMutation::MoveNode {
+                    id: NodeId::intern("box"),
+                    dx: 20.0,
+                    dy: 10.0,
+                },
+                "drag",
+            );
+        }
+
+        // Abandon instead of ending — simulates Esc mid-drag
+        stack.abandon_batch(&mut engine);
+        engine.resolve();
+
+        // Position should be restored to original
+        let b = engine.current_bounds().get(&idx).unwrap();
+        assert!(
+            (b.x - orig_x).abs() < 1.0,
+            "x should be near {}, got {}",
+            orig_x,
+            b.x
+        );
+        assert!(
+            (b.y - orig_y).abs() < 1.0,
+            "y should be near {}, got {}",
+            orig_y,
+            b.y
+        );
+
+        // No undo entry should have been created
         assert!(!stack.can_undo());
     }
 }

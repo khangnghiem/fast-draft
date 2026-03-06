@@ -1260,6 +1260,42 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
+  // ── Esc cancels active drag (node move/resize/draw) ──
+  if (e.key === "Escape" && pointerIsDown && fdCanvas) {
+    const cancelled = fdCanvas.cancel_drag();
+    if (cancelled) {
+      // Reset all JS-side drag state
+      pointerIsDown = false;
+      isDraggingNode = false;
+      draggedNodeId = null;
+      nearDetachState = null;
+      altCloneActive = false;
+      hideDimensionTooltip();
+
+      // Restore tool after ⌘+drag temp Select or Alt+drag clone
+      if (cmdTempSelectActive && cmdTempSelectOriginalTool) {
+        fdCanvas.set_tool(cmdTempSelectOriginalTool);
+        updateToolbarActive(lockedTool || cmdTempSelectOriginalTool);
+        updateCanvasCursor(cmdTempSelectOriginalTool);
+      }
+      cmdTempSelectActive = false;
+      cmdTempSelectOriginalTool = null;
+
+      // Restore tool after Ctrl temp Eraser
+      if (tempEraserMode && tempEraserPrevTool) {
+        fdCanvas.set_tool(tempEraserPrevTool);
+        updateToolbarActive(lockedTool || tempEraserPrevTool);
+        updateCanvasCursor(tempEraserPrevTool);
+      }
+      tempEraserMode = false;
+      tempEraserPrevTool = null;
+
+      render();
+      e.preventDefault();
+      return;
+    }
+  }
+
   // Close annotation card / context menu on Escape (before WASM)
   if (e.key === "Escape") {
     closeAnnotationCard();
@@ -5087,6 +5123,20 @@ function setupFloatingToolbar() {
     dtcCancelled = false;
     dtcTool = null;
     dtcBtn = null;
+  });
+
+  // ── Esc cancels drag-to-create ──
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && dtcTool) {
+      removeGhost();
+      removeDtcGuideOverlay();
+      removeDtcSnapEdgePreview();
+      dtcActive = false;
+      dtcCancelled = false;
+      dtcTool = null;
+      dtcBtn = null;
+      e.preventDefault();
+    }
   });
 
   // ── Alignment guide overlay for drag-to-create ──

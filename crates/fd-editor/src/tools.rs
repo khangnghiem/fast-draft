@@ -339,6 +339,18 @@ impl RectTool {
             current_id: None,
         }
     }
+
+    /// Whether a draw gesture is in progress.
+    pub fn is_drawing(&self) -> bool {
+        self.drawing
+    }
+
+    /// Cancel the current draw gesture (reset state).
+    pub fn cancel(&mut self) {
+        self.drawing = false;
+        self.dragged = false;
+        self.current_id = None;
+    }
 }
 
 impl Tool for RectTool {
@@ -490,6 +502,18 @@ impl PenTool {
             points: Vec::new(),
             current_id: None,
         }
+    }
+
+    /// Whether a draw gesture is in progress.
+    pub fn is_drawing(&self) -> bool {
+        self.drawing
+    }
+
+    /// Cancel the current draw gesture (reset state).
+    pub fn cancel(&mut self) {
+        self.drawing = false;
+        self.points.clear();
+        self.current_id = None;
     }
 }
 
@@ -647,6 +671,18 @@ impl EllipseTool {
             last_cy: 0.0,
             current_id: None,
         }
+    }
+
+    /// Whether a draw gesture is in progress.
+    pub fn is_drawing(&self) -> bool {
+        self.drawing
+    }
+
+    /// Cancel the current draw gesture (reset state).
+    pub fn cancel(&mut self) {
+        self.drawing = false;
+        self.dragged = false;
+        self.current_id = None;
     }
 }
 
@@ -828,15 +864,15 @@ impl Tool for TextTool {
 
 pub struct ArrowTool {
     /// Start position of the drag (scene-space).
-    start_pos: Option<(f32, f32)>,
+    pub start_pos: Option<(f32, f32)>,
     /// Source node the arrow originates from.
-    source_node: Option<NodeId>,
+    pub source_node: Option<NodeId>,
     /// Current drag position for live preview.
-    current_pos: Option<(f32, f32)>,
+    pub current_pos: Option<(f32, f32)>,
     /// Target node currently hovered during arrow drag.
     pub target_node: Option<NodeId>,
     /// Whether a drag is in progress.
-    drawing: bool,
+    pub drawing: bool,
 }
 
 impl Default for ArrowTool {

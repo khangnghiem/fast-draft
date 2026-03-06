@@ -894,6 +894,20 @@ function setupFloatingToolbar() {
     dtcBtn = null;
   });
 
+  // ── Esc cancels drag-to-create ──
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && dtcTool) {
+      removeGhost();
+      removeDtcGuideOverlay();
+      removeDtcSnapEdgePreview();
+      dtcActive = false;
+      dtcCancelled = false;
+      dtcTool = null;
+      dtcBtn = null;
+      e.preventDefault();
+    }
+  });
+
   // ── Alignment guide overlay for drag-to-create ──
   function renderDtcGuideOverlay(guides, canvasEl) {
     if (!guides || guides.length === 0) { removeDtcGuideOverlay(); return; }

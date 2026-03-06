@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.10.54 — Esc-to-Cancel Drag (R3.61)
+
+- **FEATURE (R3.61)**: Pressing Esc during a node drag (move/resize/draw) now cancels the gesture and restores the node to its pre-drag position — uses `abandon_batch()` on `CommandStack` to restore the text snapshot captured at `begin_batch()`, producing a pixel-perfect rollback with no undo entry
+- **FEATURE (R3.61)**: Pressing Esc during toolbar drag-to-create cancels the gesture — ghost preview removed, all dtc state cleaned up
+- **CORE**: New `abandon_batch()` on `CommandStack` — restores `batch_snapshot` text, resets `batch_depth` and `batch_dirty`; no undo entry created for cancelled gestures
+- **WASM**: New `cancel_drag()` API — calls `abandon_batch()`, resets all tool drag states (SelectTool, RectTool, EllipseTool, PenTool, ArrowTool, EraserTool), clears interaction state, re-resolves layout
+- **CORE**: New `is_drawing()` and `cancel()` methods on `RectTool`, `EllipseTool`, `PenTool` for querying and resetting drawing state
+- **TESTING**: New `abandon_batch_restores_position` test — verifies 3 MoveNode mutations are fully reverted and no undo entry is created
+
 ### v0.10.53 — Click-to-Highlight Code (R2.5)
 
 - **UX (R2.5)**: Clicking an already-selected node on the canvas now re-highlights its `@id` line in the code editor — previously only the first click (selection change) triggered the highlight; re-clicks on the same node were silently ignored by the dedup guard; this implements the "show me the code" intent for spatial navigation

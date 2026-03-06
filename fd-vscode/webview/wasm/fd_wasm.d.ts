@@ -18,6 +18,14 @@ export class FdCanvas {
      */
     add_animation_to_node(node_id: string, trigger: string, props_json: string): boolean;
     /**
+     * Cancel an in-progress drag gesture (Esc mid-drag).
+     *
+     * Restores the scene to the pre-drag state by abandoning the batch
+     * snapshot and resetting all tool drag flags. Returns `true` if a
+     * drag was actually cancelled.
+     */
+    cancel_drag(): boolean;
+    /**
      * Clear the pressed interaction state.
      *
      * Called from JS when entering inline text editing to suppress
@@ -316,6 +324,7 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_fdcanvas_free: (a: number, b: number) => void;
     readonly fdcanvas_add_animation_to_node: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly fdcanvas_cancel_drag: (a: number) => number;
     readonly fdcanvas_clear_pressed: (a: number) => void;
     readonly fdcanvas_compute_guides_for_rect: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_create_edge: (a: number, b: number, c: number, d: number, e: number) => [number, number];
