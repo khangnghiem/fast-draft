@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.10.57 — Remove Mid-Drag Alt Duplication (R3.54)
+
+- **FIX (R3.54)**: Pressing Alt mid-drag no longer triggers node duplication — clone only activates when Alt is held at pointer-down time and the user drags ≥3px; previously pressing Alt while already dragging would clone instantly since the pointer was already in motion, exceeding the 3px threshold on the next frame
+- **CORE**: Removed mid-drag `alt_press_pos` assignment from `handle_pointer_move` — `alt_press_pos` is now exclusively set in `handle_pointer_down`
+
 ### v0.10.56 — Alt+Drag 3px Threshold + Ghost Preview (R3.54)
 
 - **FIX (R3.54)**: Alt+drag no longer clones immediately on Alt keypress — duplication is deferred until the pointer moves ≥3px from the Alt press position (Figma-style threshold); prevents accidental clones when pressing Alt during a drag or on click
