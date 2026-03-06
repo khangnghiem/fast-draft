@@ -25,7 +25,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R1.15** _(done)_: Background shorthand — `bg: #FFF corner=12 shadow=(0,4,20,#0002)` for combined fill, corner, and shadow in one line
 - **R1.16** _(done)_: Comment preservation — `# text` lines attached to the following node survive all parse/emit round-trips and format passes
 - **R1.17** _(done)_: Text alignment — `align: left|center|right [top|middle|bottom]` property; defaults to `center middle`; reusable via `theme` blocks and `use:` inheritance
-- **R1.18** _(planned)_: Mermaid import — parse Mermaid diagram syntax (`flowchart`, `sequenceDiagram`, `stateDiagram`) into equivalent FD nodes + edges
+- **R1.18** _(done)_: Mermaid import — parse Mermaid diagram syntax (`flowchart`, `sequenceDiagram`, `stateDiagram`) into equivalent FD nodes + edges; `parse_mermaid()` in fd-core + `import_mermaid()` WASM API
 - **R1.19** _(done)_: Edge label offset — `label_offset: <x> <y>` property on edges for draggable text labels; parse/emit roundtrip support
 - **R1.20** _(done)_: Edge anchors — `EdgeAnchor` enum (`@node_id` or `x y` coords) for flexible edge endpoints; `text_child: Option<NodeId>` for styled text labels; `create_edge_at()` WASM API; edge-to-edge validation
 
@@ -47,7 +47,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.24** _(done)_: Group transparency — groups are purely organizational; clicking a child inside a group always selects the child directly (Figma behavior) → [spec](specs/selection.md)
 - **R3.26** _(done)_: Arrow-key nudge — 1px (Shift = 10px); matches Figma/Sketch standard
 - **R3.34** _(done)_: Group reparent on drag-out — child fully outside group bounds detaches to nearest containing ancestor; partial overlap expands group → [spec](specs/group-reparent.md)
-- **R3.35** _(planned)_: Detach snap animation — purple glow on near-detach, rubber-band line, scale pop + glow on detach; all animations <200ms → [spec](specs/group-reparent.md)
+- **R3.35** _(done)_: Detach snap animation — purple glow on near-detach, rubber-band line, scale pop + glow on detach; all animations <200ms → [spec](specs/group-reparent.md)
 - **R3.36** _(done)_: Auto-center text in shapes — single text child inside rect/ellipse/frame auto-expands bounds to parent; renderer's center/middle alignment visually centers the label
 - **R3.37** _(removed)_: ~~Center-snap for text nodes~~ — replaced by R3.38 context menu; center-snap guides removed to reduce visual noise
 - **R3.38** _(removed)_: ~~Context-menu reparent on drop~~ — reverted; dragging a node onto a container no longer offers reparent
@@ -72,7 +72,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.4** _(partial)_: Freehand pen/pencil tool — Catmull-Rom smoothing done, pressure captured but not yet mapped to stroke width → [spec](specs/drawing-tools.md)
 - **R3.5** _(planned)_: Path editing — node manipulation, curve handles, boolean operations
 - **R3.15** _(planned)_: Live preview — dashed outline ghost during drag-to-create; smooth curve during pen draw → [spec](specs/drawing-tools.md)
-- **R3.19** _(planned)_: Alt-draw-from-center — Alt/⌥ anchors start point as center (not top-left)
+- **R3.19** _(done)_: Alt-draw-from-center — Alt/⌥ anchors start point as center (not top-left); works for RectTool and EllipseTool; combinable with Shift for square/circle from center
 - **R3.22** _(planned)_: Pressure-sensitive stroke width — pen maps pressure to thickness in real-time → [spec](specs/drawing-tools.md)
 - **R3.23** _(planned)_: Freehand shape recognition — detect near-geometric shapes, offer "Snap to Shape" action → [spec](specs/drawing-tools.md)
 
