@@ -62,6 +62,14 @@ pub struct FdCanvas {
     /// Whether we already duplicated during this drag (Alt+drag).
     /// Reset on pointer-up. Prevents re-duplication on subsequent move events.
     alt_duplicated: bool,
+    /// Scene-space position where Alt was first detected during a drag.
+    /// Duplication is deferred until the pointer moves ≥3px from this point
+    /// (Figma-style threshold to prevent accidental clones on Alt keypress).
+    alt_press_pos: Option<(f32, f32)>,
+    /// Bounds snapshots of original node(s) captured at duplication time.
+    /// JS reads this via `get_alt_drag_ghost()` to render translucent ghost
+    /// outlines at the original positions during clone-drag.
+    alt_clone_origins: Vec<(f32, f32, f32, f32)>,
 }
 
 #[wasm_bindgen]
@@ -102,6 +110,8 @@ impl FdCanvas {
             pointer_down_pos: None,
             style_clipboard: None,
             alt_duplicated: false,
+            alt_press_pos: None,
+            alt_clone_origins: Vec::new(),
         }
     }
 
@@ -278,7 +288,9 @@ impl FdCanvas {
         };
         let changed = self.apply_mutations(mutations);
 
-        // Alt+click on select tool: duplicate in-place, then drag the clone
+        // Alt+click on select tool: record position for deferred duplication.
+        // Actual clone happens in handle_pointer_move after ≥3px of movement
+        // (Figma-style threshold to prevent accidental clones on Alt keypress).
         if self.active_tool == ToolKind::Select
             && alt
             && !ctrl
@@ -286,8 +298,7 @@ impl FdCanvas {
             && hit.is_some()
             && !self.select_tool.selected.is_empty()
         {
-            self.alt_duplicated = true;
-            self.duplicate_selected_at(0.0, 0.0);
+            self.alt_press_pos = Some((x, y));
         }
 
         // Marquee start also counts as a visual change (need re-render)
@@ -295,7 +306,7 @@ impl FdCanvas {
             || self.select_tool.marquee_start.is_some()
             || pressed_changed
             || hovered_changed
-            || self.alt_duplicated
+            || self.alt_press_pos.is_some()
     }
 
     /// Handle pointer move event. Returns true if the graph changed.
@@ -342,20 +353,32 @@ impl FdCanvas {
             return hovered_changed;
         }
 
-        // Alt pressed mid-drag: clone-and-drag (Figma behavior)
-        // Handled here in FdCanvas (not in SelectTool) so selection
-        // can transfer to the clone via duplicate_selected_at.
+        // Alt+drag duplication with 3px threshold (Figma behavior).
+        // Phase 1: Record Alt press position when first detected mid-drag.
+        // Phase 2: Once pointer moves ≥3px from press point, clone-and-drag.
         if self.active_tool == ToolKind::Select
             && alt
             && !self.alt_duplicated
-            && self.select_tool.dragging
             && !self.select_tool.selected.is_empty()
+            && (self.select_tool.dragging || self.alt_press_pos.is_some())
         {
-            self.alt_duplicated = true;
-            self.duplicate_selected_at(0.0, 0.0);
-            // Update last_x/y so the next delta is computed from here
-            self.select_tool.last_x = x;
-            self.select_tool.last_y = y;
+            if let Some((ox, oy)) = self.alt_press_pos {
+                // Check 3px distance threshold before duplicating
+                let dist_sq = (x - ox) * (x - ox) + (y - oy) * (y - oy);
+                if dist_sq >= 9.0 {
+                    // Capture original bounds for ghost preview before cloning
+                    self.capture_alt_clone_origins();
+                    self.alt_duplicated = true;
+                    self.alt_press_pos = None;
+                    self.duplicate_selected_at(0.0, 0.0);
+                    // Update last_x/y so the next delta is computed from here
+                    self.select_tool.last_x = x;
+                    self.select_tool.last_y = y;
+                }
+            } else {
+                // Alt pressed mid-drag — start tracking position
+                self.alt_press_pos = Some((x, y));
+            }
         }
 
         let mutations = match self.active_tool {
@@ -520,6 +543,8 @@ impl FdCanvas {
 
         self.pointer_down_pos = None;
         self.alt_duplicated = false;
+        self.alt_press_pos = None;
+        self.alt_clone_origins.clear();
 
         let visual_changed = changed
             || marquee_changed
@@ -707,6 +732,8 @@ impl FdCanvas {
         // Reset interaction state
         self.pointer_down_pos = None;
         self.alt_duplicated = false;
+        self.alt_press_pos = None;
+        self.alt_clone_origins.clear();
         self.pressed_id = None;
         self.erase_pending_flush = false;
 
@@ -808,6 +835,35 @@ impl FdCanvas {
         self.select_tool.visual_highlight.clear();
         self.engine.flush_to_text();
         true
+    }
+
+    /// Capture bounds of currently selected nodes before Alt+drag duplication.
+    /// Called right before `duplicate_selected_at` so the ghost shows the
+    /// original positions (before selection transfers to clones).
+    fn capture_alt_clone_origins(&mut self) {
+        self.alt_clone_origins.clear();
+        for &id in &self.select_tool.selected {
+            if let Some(idx) = self.engine.graph.index_of(id)
+                && let Some(b) = self.engine.current_bounds().get(&idx)
+            {
+                self.alt_clone_origins.push((b.x, b.y, b.width, b.height));
+            }
+        }
+    }
+
+    /// Get ghost origin bounds for Alt+drag visual feedback.
+    /// Returns a JSON array of `{x, y, w, h}` objects, or empty string
+    /// if no Alt+drag clone is active.
+    pub fn get_alt_drag_ghost(&self) -> String {
+        if self.alt_clone_origins.is_empty() {
+            return String::new();
+        }
+        let entries: Vec<String> = self
+            .alt_clone_origins
+            .iter()
+            .map(|(x, y, w, h)| format!(r#"{{"x":{},"y":{},"w":{},"h":{}}}"#, x, y, w, h))
+            .collect();
+        format!("[{}]", entries.join(","))
     }
 
     /// Duplicate the currently selected node(s). Returns true if duplicated.

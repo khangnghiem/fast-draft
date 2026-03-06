@@ -158,6 +158,14 @@ function setupPointerEvents() {
       e.metaKey
     );
     if (changed) render();
+
+    // Read ghost origin bounds for Alt+drag preview
+    if (altCloneActive && fdCanvas.get_alt_drag_ghost) {
+      try {
+        const ghostJson = fdCanvas.get_alt_drag_ghost();
+        altDragGhosts = ghostJson ? JSON.parse(ghostJson) : [];
+      } catch (_) { altDragGhosts = []; }
+    }
     // Arrow tool: always re-render during drag for live preview line
     else if (pointerIsDown && currentToolAtPointerDown === "arrow") render();
 
@@ -398,6 +406,7 @@ function setupPointerEvents() {
     cmdTempSelectActive = false;
     cmdTempSelectOriginalTool = null;
     altCloneActive = false;
+    altDragGhosts = [];
 
     // ── Restore tool after Ctrl temp Eraser ──
     if (tempEraserMode && tempEraserPrevTool && fdCanvas) {

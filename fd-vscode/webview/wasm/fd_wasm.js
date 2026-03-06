@@ -280,6 +280,24 @@ export class FdCanvas {
         }
     }
     /**
+     * Get ghost origin bounds for Alt+drag visual feedback.
+     * Returns a JSON array of `{x, y, w, h}` objects, or empty string
+     * if no Alt+drag clone is active.
+     * @returns {string}
+     */
+    get_alt_drag_ghost() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_alt_drag_ghost(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Get annotations for a node as JSON array.
      * Returns `[]` if node not found or has no annotations.
      * @param {string} node_id

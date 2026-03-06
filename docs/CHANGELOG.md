@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.10.56 — Alt+Drag 3px Threshold + Ghost Preview (R3.54)
+
+- **FIX (R3.54)**: Alt+drag no longer clones immediately on Alt keypress — duplication is deferred until the pointer moves ≥3px from the Alt press position (Figma-style threshold); prevents accidental clones when pressing Alt during a drag or on click
+- **UX (R3.54)**: Ghost preview during Alt+drag — translucent dashed outlines (#4FC3F7, 30% opacity) show the original node positions while dragging clones, providing clear visual feedback that duplication occurred
+- **CORE**: New `alt_press_pos: Option<(f32, f32)>` field tracks the scene-space position where Alt was first detected; threshold check uses squared distance (≥9.0) for performance
+- **CORE**: New `alt_clone_origins: Vec<(f32, f32, f32, f32)>` captures original node bounds at duplication time; exposed to JS via `get_alt_drag_ghost()` WASM API returning JSON array
+- **JS**: Ghost state tracked in `altDragGhosts[]`; read from WASM during pointermove, rendered after scene paint, cleared on pointerup and Esc-cancel
+
 ### v0.10.55 — Fix Shift-Constraint Bugs (R3.54)
 
 - **FIX (R3.54)**: Shift+drag axis-lock no longer jitters during diagonal movement — constraint now uses total displacement from drag origin (Figma-style) instead of per-frame delta, which was too small (~1-3px) and caused the locked axis to flip every frame

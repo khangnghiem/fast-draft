@@ -105,6 +105,12 @@ export class FdCanvas {
      */
     find_edge_for_text(text_id: string): string;
     /**
+     * Get ghost origin bounds for Alt+drag visual feedback.
+     * Returns a JSON array of `{x, y, w, h}` objects, or empty string
+     * if no Alt+drag clone is active.
+     */
+    get_alt_drag_ghost(): string;
+    /**
      * Get annotations for a node as JSON array.
      * Returns `[]` if node not found or has no annotations.
      */
@@ -339,6 +345,7 @@ export interface InitOutput {
     readonly fdcanvas_export_svg: (a: number) => [number, number];
     readonly fdcanvas_finalize_bounds: (a: number) => number;
     readonly fdcanvas_find_edge_for_text: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_get_alt_drag_ghost: (a: number) => [number, number];
     readonly fdcanvas_get_annotations_json: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_arrow_preview: (a: number) => [number, number];
     readonly fdcanvas_get_node_animations_json: (a: number, b: number, c: number) => [number, number];

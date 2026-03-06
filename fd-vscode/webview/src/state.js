@@ -98,6 +98,8 @@ let cmdTempSelectActive = false;
 let cmdTempSelectOriginalTool = null;
 /** Alt+drag clone-and-drag active */
 let altCloneActive = false;
+/** Ghost bounds from WASM — original positions of nodes before Alt+drag clone */
+let altDragGhosts = [];
 /** Ctrl+click on any tool → temporary eraser mode */
 let tempEraserMode = false;
 let tempEraserPrevTool = null;

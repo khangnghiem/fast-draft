@@ -18,6 +18,7 @@ export const fdcanvas_evaluate_near_detach: (a: number, b: number, c: number) =>
 export const fdcanvas_export_svg: (a: number) => [number, number];
 export const fdcanvas_finalize_bounds: (a: number) => number;
 export const fdcanvas_find_edge_for_text: (a: number, b: number, c: number) => [number, number];
+export const fdcanvas_get_alt_drag_ghost: (a: number) => [number, number];
 export const fdcanvas_get_annotations_json: (a: number, b: number, c: number) => [number, number];
 export const fdcanvas_get_arrow_preview: (a: number) => [number, number];
 export const fdcanvas_get_node_animations_json: (a: number, b: number, c: number) => [number, number];
