@@ -35,6 +35,7 @@ pub fn hex_val(c: u8) -> Option<u8> {
 }
 
 impl Color {
+    /// Create a new color from RGBA components.
     pub const fn rgba(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
@@ -530,6 +531,7 @@ pub struct SceneNode {
 }
 
 impl SceneNode {
+    /// Create a new SceneNode with a given ID and kind.
     pub fn new(id: NodeId, kind: NodeKind) -> Self {
         Self {
             id,
@@ -967,10 +969,12 @@ pub struct ResolvedBounds {
 }
 
 impl ResolvedBounds {
+    /// Check if a point (px, py) is inside these bounds.
     pub fn contains(&self, px: f32, py: f32) -> bool {
         px >= self.x && px <= self.x + self.width && py >= self.y && py <= self.y + self.height
     }
 
+    /// Return the center point of these bounds.
     pub fn center(&self) -> (f32, f32) {
         (self.x + self.width / 2.0, self.y + self.height / 2.0)
     }

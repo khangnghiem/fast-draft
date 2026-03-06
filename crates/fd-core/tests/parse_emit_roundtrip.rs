@@ -307,3 +307,9 @@ rect @hero {
         panic!("re-parse failed for gradient in named style.\nError: {e}\nEmitted:\n{emitted}")
     });
 }
+
+#[test]
+fn roundtrip_path_drawing_example() {
+    let input = include_str!("../../../examples/path_drawing.fd");
+    assert_roundtrip_preserves(input);
+}
