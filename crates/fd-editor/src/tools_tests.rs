@@ -1131,3 +1131,237 @@ fn ellipse_tool_creates_with_default_stroke() {
         _ => panic!("expected AddNode"),
     }
 }
+
+// ─── Shift-constraint regression tests ─────────────────────────────────
+
+#[test]
+fn select_tool_shift_drag_no_jitter_on_diagonal() {
+    // Regression: per-frame axis constraint used to flip every frame when
+    // dragging diagonally, causing visible zigzag/jitter.
+    let mut tool = SelectTool::new();
+    let target = NodeId::intern("box_jitter");
+    let shift = Modifiers {
+        shift: true,
+        ..Modifiers::NONE
+    };
+
+    // Press at origin
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 100.0,
+            y: 100.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        Some(target),
+    );
+
+    // Frame 1: move mostly horizontal (dx=5, dy=3) → total: (5, 3) → lock X
+    let m1 = tool.handle(
+        &InputEvent::PointerMove {
+            x: 105.0,
+            y: 103.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    assert_eq!(m1.len(), 1);
+    match &m1[0] {
+        GraphMutation::MoveNode { dx, dy, .. } => {
+            assert!((dx - 5.0).abs() < 0.01, "frame1 dx={dx}");
+            assert!(dy.abs() < 0.01, "frame1 dy={dy} should be 0 (X-locked)");
+        }
+        _ => panic!("expected MoveNode"),
+    }
+
+    // Frame 2: continue diagonally (total: 12, 8) → still X-dominant → still lock X
+    let m2 = tool.handle(
+        &InputEvent::PointerMove {
+            x: 112.0,
+            y: 108.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    assert_eq!(m2.len(), 1);
+    match &m2[0] {
+        GraphMutation::MoveNode { dx, dy, .. } => {
+            assert!((dx - 7.0).abs() < 0.01, "frame2 dx={dx}");
+            assert!(dy.abs() < 0.01, "frame2 dy={dy} should be 0 (X-locked)");
+        }
+        _ => panic!("expected MoveNode"),
+    }
+
+    // Frame 3: even more diagonal (total: 18, 15) → still X > Y → lock X
+    let m3 = tool.handle(
+        &InputEvent::PointerMove {
+            x: 118.0,
+            y: 115.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    assert_eq!(m3.len(), 1);
+    match &m3[0] {
+        GraphMutation::MoveNode { dx, dy, .. } => {
+            assert!((dx - 6.0).abs() < 0.01, "frame3 dx={dx}");
+            assert!(dy.abs() < 0.01, "frame3 dy={dy} should be 0 (X-locked)");
+        }
+        _ => panic!("expected MoveNode"),
+    }
+}
+
+#[test]
+fn select_tool_shift_drag_locks_vertical() {
+    let mut tool = SelectTool::new();
+    let target = NodeId::intern("box_vert");
+    let shift = Modifiers {
+        shift: true,
+        ..Modifiers::NONE
+    };
+
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 50.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        Some(target),
+    );
+
+    // Move mostly vertical (total: 3, 20) → lock Y
+    let m1 = tool.handle(
+        &InputEvent::PointerMove {
+            x: 53.0,
+            y: 70.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    assert_eq!(m1.len(), 1);
+    match &m1[0] {
+        GraphMutation::MoveNode { dx, dy, .. } => {
+            assert!(dx.abs() < 0.01, "dx={dx} should be 0 (Y-locked)");
+            assert!((dy - 20.0).abs() < 0.01, "dy={dy}");
+        }
+        _ => panic!("expected MoveNode"),
+    }
+}
+
+#[test]
+fn rect_tool_shift_draw_northwest_correct_origin() {
+    // Regression: Shift+draw NW used raw cursor for origin, causing jump.
+    let mut tool = RectTool::new();
+    let shift = Modifiers {
+        shift: true,
+        ..Modifiers::NONE
+    };
+
+    // Start at (200, 200)
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 200.0,
+            y: 200.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Drag northwest to (150, 170) with Shift → w=50, h=30, square side=50
+    // Origin should be (200-50, 200-50) = (150, 150)
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 150.0,
+            y: 170.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    // Should have MoveNode + ResizeNode
+    assert!(mutations.len() >= 1, "should have mutations");
+    let mut has_resize = false;
+    let mut has_move = false;
+    for m in &mutations {
+        match m {
+            GraphMutation::ResizeNode { width, height, .. } => {
+                assert!(
+                    (width - height).abs() < 0.01,
+                    "Should be square: w={width}, h={height}"
+                );
+                assert!((width - 50.0).abs() < 0.01, "side should be 50");
+                has_resize = true;
+            }
+            GraphMutation::MoveNode { dx, dy, .. } => {
+                // Origin should move from (200, 200) to (150, 150) = delta (-50, -50)
+                assert!((dx - (-50.0)).abs() < 0.01, "dx={dx} should be -50");
+                assert!((dy - (-50.0)).abs() < 0.01, "dy={dy} should be -50");
+                has_move = true;
+            }
+            _ => {}
+        }
+    }
+    assert!(has_resize, "should have ResizeNode");
+    assert!(has_move, "should have MoveNode for NW direction");
+}
+
+#[test]
+fn ellipse_tool_shift_draw_northwest_correct_origin() {
+    // Regression: same origin bug as RectTool.
+    let mut tool = EllipseTool::new();
+    let shift = Modifiers {
+        shift: true,
+        ..Modifiers::NONE
+    };
+
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 300.0,
+            y: 300.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Drag NW to (240, 260) → w=60, h=40, circle side=60
+    // Origin should be (300-60, 300-60) = (240, 240)
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 240.0,
+            y: 260.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    assert!(mutations.len() >= 1, "should have mutations");
+    let mut has_resize = false;
+    let mut has_move = false;
+    for m in &mutations {
+        match m {
+            GraphMutation::ResizeNode { width, height, .. } => {
+                assert!(
+                    (width - height).abs() < 0.01,
+                    "Should be circle: w={width}, h={height}"
+                );
+                assert!((width - 60.0).abs() < 0.01, "side should be 60");
+                has_resize = true;
+            }
+            GraphMutation::MoveNode { dx, dy, .. } => {
+                assert!((dx - (-60.0)).abs() < 0.01, "dx={dx} should be -60");
+                assert!((dy - (-60.0)).abs() < 0.01, "dy={dy} should be -60");
+                has_move = true;
+            }
+            _ => {}
+        }
+    }
+    assert!(has_resize, "should have ResizeNode");
+    assert!(has_move, "should have MoveNode for NW direction");
+}

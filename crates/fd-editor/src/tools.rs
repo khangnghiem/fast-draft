@@ -66,6 +66,9 @@ pub struct SelectTool {
     pub dragging: bool,
     pub last_x: f32,
     pub last_y: f32,
+    /// Drag origin for Shift axis-lock (total displacement, not per-frame).
+    drag_start_x: f32,
+    drag_start_y: f32,
     /// Marquee (rubber-band) selection state.
     /// Set when pointer-down hits empty space. `(start_x, start_y)`.
     pub marquee_start: Option<(f32, f32)>,
@@ -93,6 +96,8 @@ impl SelectTool {
             dragging: false,
             last_x: 0.0,
             last_y: 0.0,
+            drag_start_x: 0.0,
+            drag_start_y: 0.0,
             marquee_start: None,
             marquee_rect: None,
             resize_handle: None,
@@ -170,6 +175,8 @@ impl Tool for SelectTool {
                     self.dragging = true;
                     self.last_x = *x;
                     self.last_y = *y;
+                    self.drag_start_x = *x;
+                    self.drag_start_y = *y;
 
                     // Alt+click duplication is handled by FdCanvas (not here)
                     // so that selection can transfer to the clone properly.
@@ -274,19 +281,41 @@ impl Tool for SelectTool {
                     // Alt mid-drag duplication is handled by FdCanvas (not here)
                     // so that selection can transfer to the clone properly.
 
-                    let mut dx = x - self.last_x;
-                    let mut dy = y - self.last_y;
+                    // Shift: constrain to dominant axis using TOTAL displacement
+                    // from drag start (Figma-style). Per-frame deltas are too
+                    // small and cause the axis to flip every frame.
+                    if modifiers.shift {
+                        let total_dx = x - self.drag_start_x;
+                        let total_dy = y - self.drag_start_y;
+                        let (dx, dy) = if total_dx.abs() >= total_dy.abs() {
+                            // Lock horizontal: move to (x, start_y)
+                            (x - self.last_x, self.drag_start_y - self.last_y)
+                        } else {
+                            // Lock vertical: move to (start_x, y)
+                            (self.drag_start_x - self.last_x, y - self.last_y)
+                        };
+                        self.last_x = if total_dx.abs() >= total_dy.abs() {
+                            *x
+                        } else {
+                            self.drag_start_x
+                        };
+                        self.last_y = if total_dx.abs() >= total_dy.abs() {
+                            self.drag_start_y
+                        } else {
+                            *y
+                        };
+
+                        return self
+                            .selected
+                            .iter()
+                            .map(|id| GraphMutation::MoveNode { id: *id, dx, dy })
+                            .collect();
+                    }
+
+                    let dx = x - self.last_x;
+                    let dy = y - self.last_y;
                     self.last_x = *x;
                     self.last_y = *y;
-
-                    // Shift: constrain to dominant axis
-                    if modifiers.shift {
-                        if dx.abs() > dy.abs() {
-                            dy = 0.0;
-                        } else {
-                            dx = 0.0;
-                        }
-                    }
 
                     // Move all selected nodes
                     return self
@@ -429,9 +458,19 @@ impl Tool for RectTool {
                     }
 
                     // Reposition origin to top-left corner so drawing
-                    // works in all directions (north, west, etc.)
-                    let origin_x = x.min(self.start_x);
-                    let origin_y = y.min(self.start_y);
+                    // works in all directions (north, west, etc.).
+                    // Use constrained dimensions for origin when Shift is held,
+                    // so the origin reflects the square constraint.
+                    let origin_x = if *x < self.start_x {
+                        self.start_x - w
+                    } else {
+                        self.start_x
+                    };
+                    let origin_y = if *y < self.start_y {
+                        self.start_y - h
+                    } else {
+                        self.start_y
+                    };
                     let dx = origin_x - self.last_cx;
                     let dy = origin_y - self.last_cy;
                     self.last_cx = origin_x;
@@ -755,9 +794,19 @@ impl Tool for EllipseTool {
                     }
 
                     // Reposition origin to top-left corner so drawing
-                    // works in all directions (north, west, etc.)
-                    let origin_x = x.min(self.start_x);
-                    let origin_y = y.min(self.start_y);
+                    // works in all directions (north, west, etc.).
+                    // Use constrained dimensions for origin when Shift is held,
+                    // so the origin reflects the circle constraint.
+                    let origin_x = if *x < self.start_x {
+                        self.start_x - w
+                    } else {
+                        self.start_x
+                    };
+                    let origin_y = if *y < self.start_y {
+                        self.start_y - h
+                    } else {
+                        self.start_y
+                    };
                     let dx = origin_x - self.last_cx;
                     let dy = origin_y - self.last_cy;
                     self.last_cx = origin_x;
