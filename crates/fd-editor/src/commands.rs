@@ -182,6 +182,25 @@ impl CommandStack {
     pub fn can_redo(&self) -> bool {
         !self.redo_stack.is_empty()
     }
+
+    /// Push a text snapshot directly for undo support.
+    /// Used by JS-driven operations (e.g., paste) that bypass the mutation
+    /// system but still need to be undoable.
+    pub fn push_snapshot(&mut self, text_before: String, text_after: String, description: &str) {
+        if text_before == text_after {
+            return;
+        }
+        let cmd = Command::Snapshot {
+            text_before,
+            text_after,
+            description: description.to_string(),
+        };
+        self.undo_stack.push(cmd);
+        if self.undo_stack.len() > self.max_depth {
+            self.undo_stack.remove(0);
+        }
+        self.redo_stack.clear();
+    }
 }
 
 /// Compute the inverse mutation needed to undo `mutation`.

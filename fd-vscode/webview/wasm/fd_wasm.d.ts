@@ -223,6 +223,12 @@ export class FdCanvas {
      */
     parent_of(node_id: string): string;
     /**
+     * Push a text snapshot for undo support.
+     * Used by JS-driven operations (e.g., paste) that bypass the mutation
+     * system but still need to be undoable.
+     */
+    push_undo_snapshot(text_before: string, text_after: string): void;
+    /**
      * Redo the last undone action.
      */
     redo(): boolean;
@@ -346,6 +352,7 @@ export interface InitOutput {
     readonly fdcanvas_hit_test_at: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_new: (a: number, b: number) => number;
     readonly fdcanvas_parent_of: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_push_undo_snapshot: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fdcanvas_redo: (a: number) => number;
     readonly fdcanvas_remove_node_animations: (a: number, b: number, c: number) => number;
     readonly fdcanvas_render: (a: number, b: any, c: number) => void;

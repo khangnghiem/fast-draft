@@ -2,22 +2,20 @@
 // This file is part of the FD webview module system.
 // Build with: pnpm run build:webview
 
-// ─── Copy / Paste / Select All (Figma/Sketch standard) ───────────────────────
+// ─── Copy / Paste / Cut / Select All (Figma/Sketch standard) ─────────────────
 
 /** Clipboard buffer for FD node text */
 let fdClipboard = "";
 
-/** Copy the selected node's .fd block to the clipboard. */
-function copySelectedAsFd() {
-  if (!fdCanvas) return;
-  const selectedId = fdCanvas.get_selected_id();
-  if (!selectedId) return;
+/** Cumulative paste offset — increments by 20 on each successive paste,
+ *  resets when a new copy is made. */
+let pasteOffsetCount = 0;
 
-  const text = fdCanvas.get_text();
+/** Extract the .fd text block for a single node by its ID.
+ *  Returns the block string, or "" if not found. */
+function extractNodeBlock(text, nodeId) {
   const lines = text.split("\n");
-
-  // Find the line that starts the node declaration
-  const startPattern = new RegExp(`^\\s*(\\w+)\\s+@${selectedId}\\b`);
+  const startPattern = new RegExp(`^\\s*(\\w+)\\s+@${nodeId}\\b`);
   let startIdx = -1;
   for (let i = 0; i < lines.length; i++) {
     if (startPattern.test(lines[i])) {
@@ -25,12 +23,9 @@ function copySelectedAsFd() {
       break;
     }
   }
-  if (startIdx < 0) return;
+  if (startIdx < 0) return "";
 
-  // Determine the indentation of the start line
   const startIndent = lines[startIdx].match(/^\s*/)[0].length;
-
-  // Collect all lines belonging to this block (same or deeper indentation)
   let endIdx = startIdx + 1;
   while (endIdx < lines.length) {
     const line = lines[endIdx];
@@ -39,8 +34,26 @@ function copySelectedAsFd() {
     if (indent <= startIndent) break;
     endIdx++;
   }
+  return lines.slice(startIdx, endIdx).join("\n");
+}
 
-  fdClipboard = lines.slice(startIdx, endIdx).join("\n");
+/** Copy the selected node(s)' .fd block(s) to the clipboard. */
+function copySelectedAsFd() {
+  if (!fdCanvas) return;
+
+  const text = fdCanvas.get_text();
+  const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+  if (selectedIds.length === 0) return;
+
+  const blocks = [];
+  for (const id of selectedIds) {
+    const block = extractNodeBlock(text, id);
+    if (block) blocks.push(block);
+  }
+  if (blocks.length === 0) return;
+
+  fdClipboard = blocks.join("\n\n");
+  pasteOffsetCount = 0; // Reset offset on new copy
 
   // Also copy to system clipboard
   if (navigator.clipboard) {
@@ -48,7 +61,18 @@ function copySelectedAsFd() {
   }
 }
 
-/** Paste a node from the FD clipboard. */
+/** Cut the selected node(s) — copy + delete. */
+function cutSelectedAsFd() {
+  if (!fdCanvas) return;
+  copySelectedAsFd();
+  const changed = fdCanvas.delete_selected();
+  if (changed) {
+    render();
+    syncTextToExtension();
+  }
+}
+
+/** Paste node(s) from the FD clipboard with a +20px offset gap. */
 async function pasteFromClipboard() {
   if (!fdCanvas) return;
 
@@ -64,6 +88,10 @@ async function pasteFromClipboard() {
   } catch (_) { /* permission denied, use internal clipboard */ }
 
   if (!clipText.trim()) return;
+
+  // Increment paste offset (cumulative: +20, +40, +60…)
+  pasteOffsetCount++;
+  const offset = pasteOffsetCount * 20;
 
   // Recursively rename ALL @ids inside the pasted block to avoid collisions
   const suffix = "_cp" + Math.floor(Math.random() * 9000 + 1000);
@@ -85,10 +113,24 @@ async function pasteFromClipboard() {
   }
   const newRootId = rootId + suffix;
 
+  // Offset coordinates: shift x: and y: values by the paste offset
+  pasteText = pasteText.replace(/\b(x:\s*)(-?\d+(?:\.\d+)?)/g, (_match, prefix, val) => {
+    return prefix + (parseFloat(val) + offset);
+  });
+  pasteText = pasteText.replace(/\b(y:\s*)(-?\d+(?:\.\d+)?)/g, (_match, prefix, val) => {
+    return prefix + (parseFloat(val) + offset);
+  });
+
+  // Capture text before for undo
+  const textBefore = fdCanvas.get_text();
+
   // Append to current text
-  const currentText = fdCanvas.get_text();
-  const updatedText = currentText.trimEnd() + "\n\n" + pasteText + "\n";
+  const updatedText = textBefore.trimEnd() + "\n\n" + pasteText + "\n";
   fdCanvas.set_text(updatedText);
+
+  // Push undo snapshot so ⌘Z reverts the paste
+  fdCanvas.push_undo_snapshot(textBefore, updatedText);
+
   render();
   syncTextToExtension();
 
@@ -97,6 +139,7 @@ async function pasteFromClipboard() {
   render();
   updatePropertiesPanel();
 }
+
 
 /** Select all nodes in the scene. */
 function selectAllNodes() {

@@ -41,6 +41,7 @@ export const fdcanvas_has_text_child: (a: number, b: number, c: number) => numbe
 export const fdcanvas_hit_test_at: (a: number, b: number, c: number) => [number, number];
 export const fdcanvas_new: (a: number, b: number) => number;
 export const fdcanvas_parent_of: (a: number, b: number, c: number) => [number, number];
+export const fdcanvas_push_undo_snapshot: (a: number, b: number, c: number, d: number, e: number) => void;
 export const fdcanvas_redo: (a: number) => number;
 export const fdcanvas_remove_node_animations: (a: number, b: number, c: number) => number;
 export const fdcanvas_render: (a: number, b: any, c: number) => void;
