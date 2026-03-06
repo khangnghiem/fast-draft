@@ -287,12 +287,16 @@ function setupPointerEvents() {
     // Update properties panel after interaction ends
     updatePropertiesPanel();
     updateFloatingBar();
-    // Notify extension of canvas selection change (for Code ↔ Canvas sync)
+    // Notify extension of canvas selection (for Code ↔ Canvas sync)
     // Skip during inline editing — prevents focus stealing that kills the textarea
     if (!inlineEditorActive) {
       const selectedId = fdCanvas.get_selected_id();
       if (selectedId !== lastNotifiedSelectedId) {
+        // Selection changed — full sync (panels + code highlight)
         syncSelection(selectedId, "canvas");
+      } else if (selectedId) {
+        // Same node re-clicked — re-highlight code ("show me the code" intent)
+        vscode.postMessage({ type: "nodeSelected", id: selectedId });
       }
     }
 
