@@ -284,7 +284,7 @@ impl FdCanvas {
             && !ctrl
             && !meta
             && hit.is_some()
-            && self.select_tool.selected.len() == 1
+            && !self.select_tool.selected.is_empty()
         {
             self.alt_duplicated = true;
             self.duplicate_selected_at(0.0, 0.0);
@@ -349,7 +349,7 @@ impl FdCanvas {
             && alt
             && !self.alt_duplicated
             && self.select_tool.dragging
-            && self.select_tool.selected.len() == 1
+            && !self.select_tool.selected.is_empty()
         {
             self.alt_duplicated = true;
             self.duplicate_selected_at(0.0, 0.0);
@@ -759,45 +759,191 @@ impl FdCanvas {
     }
 
     /// Duplicate selected node(s) with a custom offset. Returns true if duplicated.
+    /// Handles multi-select: clones ALL selected nodes, deep-copies Group/Frame
+    /// subtrees, remaps internal references, and duplicates edges between them.
     /// Use (0, 0) for Alt+drag clone-in-place.
     pub fn duplicate_selected_at(&mut self, dx: f32, dy: f32) -> bool {
-        let first_id = match self.select_tool.first_selected() {
-            Some(id) => id,
-            None => return false,
-        };
-        let original = match self.engine.graph.get_by_id(first_id) {
-            Some(node) => node.clone(),
-            None => return false,
-        };
-        let mut cloned = original;
-        // Derive name from original — strip existing _copy_N suffix to avoid
-        // recursive growth (e.g. btn_copy_7_copy_8), then append fresh _copy_N.
-        let base = first_id.as_str();
-        let stem = base.rfind("_copy_").map_or(base, |pos| &base[..pos]);
-        let new_id = NodeId::with_prefix(&format!("{stem}_copy"));
-        cloned.id = new_id;
-        if dx != 0.0 || dy != 0.0 {
-            cloned.constraints.push(fd_core::model::Constraint::Offset {
-                from: first_id,
-                dx,
-                dy,
-            });
-        } else {
-            // Clone in-place: copy the original's position constraints
-            // (no offset needed — constraints are already cloned)
+        if self.select_tool.selected.is_empty() {
+            return false;
         }
 
-        let mutation = GraphMutation::AddNode {
-            parent_id: NodeId::intern("root"),
-            node: Box::new(cloned),
-        };
-        let changed = self.apply_mutations(vec![mutation]);
+        let selected_ids: Vec<NodeId> = self.select_tool.selected.clone();
+        let mut id_map: std::collections::HashMap<NodeId, NodeId> =
+            std::collections::HashMap::new();
+        let mut mutations: Vec<GraphMutation> = Vec::new();
+
+        // Phase 1: Clone each selected node (+ descendants for Group/Frame)
+        for &orig_id in &selected_ids {
+            self.clone_node_recursive(orig_id, dx, dy, &selected_ids, &mut id_map, &mut mutations);
+        }
+
+        if mutations.is_empty() {
+            return false;
+        }
+
+        // Phase 2: Remap internal references in cloned nodes
+        // Constraints (Offset.from, CenterIn) that reference other cloned
+        // nodes should point to the clone, not the original.
+        for mutation in &mut mutations {
+            if let GraphMutation::AddNode { node, .. } = mutation {
+                for constraint in &mut node.constraints {
+                    match constraint {
+                        fd_core::model::Constraint::Offset { from, .. } => {
+                            if let Some(&new_from) = id_map.get(from) {
+                                *from = new_from;
+                            }
+                        }
+                        fd_core::model::Constraint::CenterIn(target) => {
+                            if let Some(&new_target) = id_map.get(target) {
+                                *target = new_target;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        // Phase 3: Duplicate edges where both endpoints are in the cloned set
+        let edge_mutations = self.clone_edges_between(&id_map);
+        mutations.extend(edge_mutations);
+
+        // Phase 4: Apply all mutations at once
+        let changed = self.apply_mutations(mutations);
         if changed {
-            self.select_tool.selected = vec![new_id];
-            self.select_tool.visual_highlight = vec![new_id];
+            // Transfer selection to the new clones (only top-level, not
+            // descendants — matching the original selection granularity)
+            let new_ids: Vec<NodeId> = selected_ids
+                .iter()
+                .filter_map(|old| id_map.get(old).copied())
+                .collect();
+            self.select_tool.selected = new_ids.clone();
+            self.select_tool.visual_highlight = new_ids;
             self.engine.flush_to_text();
         }
         changed
+    }
+
+    /// Clone a single node and (if Group/Frame) all its descendants.
+    /// Populates `id_map` (old→new) and appends AddNode mutations.
+    fn clone_node_recursive(
+        &self,
+        orig_id: NodeId,
+        dx: f32,
+        dy: f32,
+        selected_ids: &[NodeId],
+        id_map: &mut std::collections::HashMap<NodeId, NodeId>,
+        mutations: &mut Vec<GraphMutation>,
+    ) {
+        // Skip if already cloned (e.g. child of a previously cloned group)
+        if id_map.contains_key(&orig_id) {
+            return;
+        }
+
+        let original = match self.engine.graph.get_by_id(orig_id) {
+            Some(node) => node.clone(),
+            None => return,
+        };
+
+        // Derive clone name from original stem
+        let base = orig_id.as_str();
+        let stem = base.rfind("_copy_").map_or(base, |pos| &base[..pos]);
+        let new_id = NodeId::with_prefix(&format!("{stem}_copy"));
+        id_map.insert(orig_id, new_id);
+
+        let mut cloned = original;
+        cloned.id = new_id;
+
+        // Only add offset for top-level selected nodes (not descendants)
+        if selected_ids.contains(&orig_id) && (dx != 0.0 || dy != 0.0) {
+            cloned.constraints.push(fd_core::model::Constraint::Offset {
+                from: orig_id,
+                dx,
+                dy,
+            });
+        }
+
+        // Determine parent for the clone
+        let parent_id = if selected_ids.contains(&orig_id) {
+            NodeId::intern("root")
+        } else {
+            // This is a descendant — find its parent and use the cloned parent
+            let orig_idx = self.engine.graph.index_of(orig_id);
+            let parent_idx = orig_idx.and_then(|idx| self.engine.graph.parent(idx));
+            let parent_orig_id = parent_idx.map(|pidx| self.engine.graph.graph[pidx].id);
+            parent_orig_id
+                .and_then(|pid| id_map.get(&pid).copied())
+                .unwrap_or_else(|| NodeId::intern("root"))
+        };
+
+        mutations.push(GraphMutation::AddNode {
+            parent_id,
+            node: Box::new(cloned),
+        });
+
+        // Deep-copy children for Group/Frame nodes
+        let orig_kind = self
+            .engine
+            .graph
+            .get_by_id(orig_id)
+            .map(|n| &n.kind)
+            .cloned();
+        let is_container = matches!(
+            orig_kind.as_ref(),
+            Some(NodeKind::Group) | Some(NodeKind::Frame { .. })
+        );
+        if is_container && let Some(orig_idx) = self.engine.graph.index_of(orig_id) {
+            let children = self.engine.graph.children(orig_idx);
+            for child_idx in children {
+                let child_id = self.engine.graph.graph[child_idx].id;
+                self.clone_node_recursive(child_id, 0.0, 0.0, &[], id_map, mutations);
+            }
+        }
+    }
+
+    /// Clone edges where both endpoints are in the id_map (i.e., both
+    /// endpoints were cloned). Returns AddEdge mutations.
+    fn clone_edges_between(
+        &self,
+        id_map: &std::collections::HashMap<NodeId, NodeId>,
+    ) -> Vec<GraphMutation> {
+        let mut edge_mutations = Vec::new();
+        for edge in &self.engine.graph.edges {
+            let from_id = edge.from.node_id();
+            let to_id = edge.to.node_id();
+
+            // Only clone if both endpoints were cloned
+            let new_from = from_id.and_then(|id| id_map.get(&id).copied());
+            let new_to = to_id.and_then(|id| id_map.get(&id).copied());
+
+            if let (Some(nf), Some(nt)) = (new_from, new_to) {
+                let base = edge.id.as_str();
+                let stem = base.rfind("_copy_").map_or(base, |pos| &base[..pos]);
+                let new_edge_id = NodeId::with_prefix(&format!("{stem}_copy"));
+
+                // Remap text_child if it was also cloned
+                let new_text_child = edge.text_child.and_then(|tc| id_map.get(&tc).copied());
+
+                let cloned_edge = fd_core::model::Edge {
+                    id: new_edge_id,
+                    from: fd_core::model::EdgeAnchor::Node(nf),
+                    to: fd_core::model::EdgeAnchor::Node(nt),
+                    text_child: new_text_child,
+                    style: edge.style.clone(),
+                    use_styles: edge.use_styles.clone(),
+                    arrow: edge.arrow,
+                    curve: edge.curve,
+                    annotations: edge.annotations.clone(),
+                    animations: edge.animations.clone(),
+                    flow: edge.flow,
+                    label_offset: edge.label_offset,
+                };
+                edge_mutations.push(GraphMutation::AddEdge {
+                    edge: Box::new(cloned_edge),
+                });
+            }
+        }
+        edge_mutations
     }
 
     /// Group the currently selected nodes. Returns true if grouped.

@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.10.51 — Alt+Drag Multi-Select (R3.60)
+
+- **FEATURE (R3.60)**: Alt+drag now duplicates ALL selected nodes (was single-node only); `duplicate_selected_at` loops all selected with `clone_node_recursive`
+- **FEATURE (R3.60)**: Deep copy — Alt+drag on Group/Frame recursively clones all descendants, preserving parent–child hierarchy via `clone_node_recursive`
+- **FEATURE (R3.60)**: Internal reference remapping — cloned nodes' constraints (`Offset.from`, `CenterIn`) are remapped to point at sibling clones, not originals
+- **FEATURE (R3.60)**: Edge duplication — edges where both endpoints are in the cloned set are duplicated with remapped anchors via `clone_edges_between`
+- **WASM**: Lifted `selected.len() == 1` guards on both Alt+click (L287) and Alt+mid-drag (L352) to `!selected.is_empty()`
+
 ### v0.10.50 — Copy/Paste Improvements (R3.59)
 
 - **FEATURE (R3.59)**: Paste offset — ⌘V now places pasted nodes +20px from the original (cumulative: +20, +40, +60… per successive paste); offset resets on new ⌘C; previously pasted nodes landed directly on top of the original
