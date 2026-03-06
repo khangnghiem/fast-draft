@@ -690,6 +690,20 @@ export class FdCanvas {
         }
     }
     /**
+     * Push a text snapshot for undo support.
+     * Used by JS-driven operations (e.g., paste) that bypass the mutation
+     * system but still need to be undoable.
+     * @param {string} text_before
+     * @param {string} text_after
+     */
+    push_undo_snapshot(text_before, text_after) {
+        const ptr0 = passStringToWasm0(text_before, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(text_after, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        wasm.fdcanvas_push_undo_snapshot(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+    }
+    /**
      * Redo the last undone action.
      * @returns {boolean}
      */

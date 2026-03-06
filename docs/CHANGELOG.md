@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.10.50 — Copy/Paste Improvements (R3.59)
+
+- **FEATURE (R3.59)**: Paste offset — ⌘V now places pasted nodes +20px from the original (cumulative: +20, +40, +60… per successive paste); offset resets on new ⌘C; previously pasted nodes landed directly on top of the original
+- **FEATURE (R3.59)**: Multi-select copy — ⌘C copies all selected nodes (was single-node only); uses `get_selected_ids()` and extracts text blocks for each
+- **FEATURE (R3.59)**: ⌘X (cut) keyboard shortcut — copy + delete in one action; previously only available via context menu
+- **FEATURE (R3.59)**: Paste undo — ⌘Z now correctly reverts a paste operation via text snapshot pushed to the undo stack; new `push_undo_snapshot` WASM API
+- **WASM**: New `push_undo_snapshot(text_before, text_after)` API — allows JS-driven operations to register undoable snapshots without going through the mutation system
+- **CORE**: New `push_snapshot()` on `CommandStack` — public method for external callers to push text snapshot undo entries
+
 ### v0.10.49 — Fix Alt+Drag Architecture (R3.54)
 
 - **FIX (R3.54)**: Alt+drag no longer causes jumping/jittery behavior — unified duplication onto `FdCanvas::duplicate_selected_at(0,0)` which properly transfers selection to the clone; previously SelectTool emitted `DuplicateNode` but never updated selection, causing `MoveNode` to move the original instead of the clone

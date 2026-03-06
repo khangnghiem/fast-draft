@@ -62,6 +62,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.47** _(done)_: Child containment constraint — child nodes cannot be fully outside their parent; dragging a child completely outside detaches it and reparents to nearest ancestor (enforced by `handle_child_group_relationship` in Rust)
 - **R3.48** _(done)_: Eraser tool — swipe-to-delete tool with immediate visual feedback; `EraserTool` thin state tracker (drag lifecycle + erased IDs for undo grouping); FdCanvas manages actual node removal with group-aware detach (reparent child to root before RemoveNode) + cascade-delete empty Group/Frame containers up the ancestor chain
 - **R3.54** _(done)_: Alt+drag clone — Alt+click duplicates node in-place (single source of truth in WASM `SelectTool::handle`); Alt pressed mid-drag clones-and-drags (Figma behavior); `alt_duplicated` flag prevents re-duplication
+- **R3.59** _(done)_: Clipboard — ⌘C copies selected node(s) (multi-select supported); ⌘V pastes with +20px cumulative offset (not stacked on top); ⌘X cuts (copy + delete); paste is undoable via `push_undo_snapshot` WASM API
 
 #### R3b: Drawing Tools
 
@@ -291,3 +292,4 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | animation timeline | R3.58, R1.5 |
 | ai assist canvas | R4.20, R4.8 |
 | alt-drag / clone | R3.54 |
+| clipboard / copy-paste | R3.59 |

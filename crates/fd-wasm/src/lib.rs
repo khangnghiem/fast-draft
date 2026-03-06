@@ -656,6 +656,14 @@ impl FdCanvas {
         !self.suppress_sync
     }
 
+    /// Push a text snapshot for undo support.
+    /// Used by JS-driven operations (e.g., paste) that bypass the mutation
+    /// system but still need to be undoable.
+    pub fn push_undo_snapshot(&mut self, text_before: &str, text_after: &str) {
+        self.commands
+            .push_snapshot(text_before.to_string(), text_after.to_string(), "paste");
+    }
+
     // ─── Keyboard Shortcut API ───────────────────────────────────────────
 
     /// Handle a keyboard event. Returns a JSON string:
