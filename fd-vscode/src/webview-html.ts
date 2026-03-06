@@ -2457,10 +2457,10 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
     <div class="tb-zone tb-right">
       <span class="zen-full-only" id="status">Loading WASM…</span>
-      <button class="tool-btn" id="zen-toggle-btn" title="Switch to Zen mode">🧘</button>
+      <button class="tool-btn" id="zen-toggle-btn" title="Switch to Zen mode" aria-label="Switch to Zen mode">🧘</button>
       <!-- Settings Hamburger ☰ -->
       <div class="settings-dropdown-container" id="settings-dropdown-container">
-      <button class="tool-btn" id="settings-menu-btn" title="Settings & tools">☰</button>
+      <button class="tool-btn" id="settings-menu-btn" title="Settings & tools" aria-label="Settings and tools">☰</button>
       <div class="settings-menu" id="settings-menu">
         <button class="settings-menu-item" id="sm-grid-toggle"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span><span class="sm-shortcut">G</span></button>
         <button class="settings-menu-item" id="sm-spec-badge-toggle"><span class="sm-icon">◇</span><span class="sm-label">Spec Badges</span></button>
@@ -2603,15 +2603,15 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         <div class="props-section" id="props-align-section" style="display:none">
           <div class="props-section-label">Alignment</div>
           <div class="align-grid" id="align-grid">
-            <button class="align-cell" data-h="left"   data-v="top"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="center" data-v="top"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="right"  data-v="top"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="left"   data-v="middle"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="center" data-v="middle"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="right"  data-v="middle"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="left"   data-v="bottom"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="center" data-v="bottom"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="right"  data-v="bottom"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="left"   data-v="top" aria-label="Align left top"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="center" data-v="top" aria-label="Align center top"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="right"  data-v="top" aria-label="Align right top"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="left"   data-v="middle" aria-label="Align left middle"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="center" data-v="middle" aria-label="Align center middle"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="right"  data-v="middle" aria-label="Align right middle"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="left"   data-v="bottom" aria-label="Align left bottom"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="center" data-v="bottom" aria-label="Align center bottom"><span class="align-dot"></span></button>
+            <button class="align-cell" data-h="right"  data-v="bottom" aria-label="Align right bottom"><span class="align-dot"></span></button>
           </div>
         </div>
         <div class="props-section" id="props-actions-section">
