@@ -3,6 +3,7 @@ pub mod format;
 pub mod id;
 pub mod layout;
 pub mod lint;
+pub mod mermaid;
 pub mod model;
 pub mod parser;
 pub mod resolve;
@@ -15,6 +16,7 @@ pub use format::{FormatConfig, format_document};
 pub use id::NodeId;
 pub use layout::{Viewport, resolve_layout};
 pub use lint::{LintDiagnostic, LintSeverity, lint_document};
+pub use mermaid::parse_mermaid;
 pub use model::*;
 pub use transform::{dedup_use_styles, hoist_styles, sort_nodes};
 

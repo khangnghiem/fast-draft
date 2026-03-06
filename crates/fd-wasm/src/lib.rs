@@ -133,6 +133,34 @@ impl FdCanvas {
         result.is_ok()
     }
 
+    /// Import a Mermaid diagram, converting it to FD format.
+    /// Merges the resulting nodes and edges into the current document.
+    /// Returns `true` on success, `false` on parse error.
+    pub fn import_mermaid(&mut self, mermaid_text: &str) -> bool {
+        let imported = match fd_core::parse_mermaid(mermaid_text) {
+            Ok(g) => g,
+            Err(_) => return false,
+        };
+
+        // Emit the imported graph as FD text
+        let imported_fd = fd_core::emitter::emit_document(&imported);
+
+        // Append to current text
+        let current = self.engine.current_text().to_string();
+        let combined = if current.trim().is_empty() {
+            imported_fd
+        } else {
+            format!("{}\n\n{}", current.trim_end(), imported_fd)
+        };
+
+        // Re-parse the combined text
+        self.suppress_sync = true;
+        let result = self.engine.set_text(&combined);
+        self.engine.resolve();
+        self.suppress_sync = false;
+        result.is_ok()
+    }
+
     /// Get the current FD source text (synced from graph).
     pub fn get_text(&mut self) -> String {
         self.engine.current_text().to_string()

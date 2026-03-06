@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.58 — Mermaid Import + Detach Snap + Alt-Draw-From-Center (R1.18, R3.35, R3.19)
+
+- **NEW (R1.18)**: Mermaid flowchart import — `parse_mermaid()` in fd-core parses `flowchart TD/LR` syntax into FD nodes + edges; supports node shapes (`[rect]`, `(rounded)`, `((circle))`, `{diamond}`), edge types (`-->`, `---`, `-->|label|`), subgraphs as frames; auto-layout grid positioning; `import_mermaid()` WASM API merges into current document
+- **DONE (R3.35)**: Detach snap animation — purple glow + rubber-band line on near-detach; `playDetachAnimation()` with scale pop + glow overlay on structural detach (250ms); `evaluate_near_detach` WASM API returns parent/child centers for JS rendering
+- **DONE (R3.19)**: Alt-draw-from-center — holding Alt/⌥ during RectTool/EllipseTool draw anchors the start point as center; combinable with Shift for constrained square/circle from center
+
 ### v0.10.57 — Remove Mid-Drag Alt Duplication (R3.54)
 
 - **FIX (R3.54)**: Pressing Alt mid-drag no longer triggers node duplication — clone only activates when Alt is held at pointer-down time and the user drags ≥3px; previously pressing Alt while already dragging would clone instantly since the pointer was already in motion, exceeding the 3px threshold on the next frame
