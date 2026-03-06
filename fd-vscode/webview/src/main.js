@@ -248,6 +248,19 @@ function render() {
     if (erasePoofs.length > 0) renderDirty = true;
   }
 
+  // ── Alt+drag ghost: translucent outlines at original positions ──
+  if (altDragGhosts.length > 0) {
+    ctx.save();
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = "#4FC3F7";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    for (const g of altDragGhosts) {
+      ctx.strokeRect(g.x, g.y, g.w, g.h);
+    }
+    ctx.restore();
+  }
+
   ctx.restore();
 
   // Update minimap viewport indicator smoothly (scene re-renders at lower frequency)

@@ -107,6 +107,8 @@ let cmdTempSelectActive = false;
 let cmdTempSelectOriginalTool = null;
 /** Alt+drag clone-and-drag active */
 let altCloneActive = false;
+/** Ghost bounds from WASM — original positions of nodes before Alt+drag clone */
+let altDragGhosts = [];
 /** Ctrl+click on any tool → temporary eraser mode */
 let tempEraserMode = false;
 let tempEraserPrevTool = null;
@@ -492,6 +494,14 @@ function setupPointerEvents() {
       e.metaKey
     );
     if (changed) render();
+
+    // Read ghost origin bounds for Alt+drag preview
+    if (altCloneActive && fdCanvas.get_alt_drag_ghost) {
+      try {
+        const ghostJson = fdCanvas.get_alt_drag_ghost();
+        altDragGhosts = ghostJson ? JSON.parse(ghostJson) : [];
+      } catch (_) { altDragGhosts = []; }
+    }
     // Arrow tool: always re-render during drag for live preview line
     else if (pointerIsDown && currentToolAtPointerDown === "arrow") render();
 
@@ -732,6 +742,7 @@ function setupPointerEvents() {
     cmdTempSelectActive = false;
     cmdTempSelectOriginalTool = null;
     altCloneActive = false;
+    altDragGhosts = [];
 
     // ── Restore tool after Ctrl temp Eraser ──
     if (tempEraserMode && tempEraserPrevTool && fdCanvas) {
@@ -1270,6 +1281,7 @@ document.addEventListener("keydown", (e) => {
       draggedNodeId = null;
       nearDetachState = null;
       altCloneActive = false;
+      altDragGhosts = [];
       hideDimensionTooltip();
 
       // Restore tool after ⌘+drag temp Select or Alt+drag clone
@@ -6926,6 +6938,19 @@ function render() {
       ctx.restore();
     }
     if (erasePoofs.length > 0) renderDirty = true;
+  }
+
+  // ── Alt+drag ghost: translucent outlines at original positions ──
+  if (altDragGhosts.length > 0) {
+    ctx.save();
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = "#4FC3F7";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    for (const g of altDragGhosts) {
+      ctx.strokeRect(g.x, g.y, g.w, g.h);
+    }
+    ctx.restore();
   }
 
   ctx.restore();

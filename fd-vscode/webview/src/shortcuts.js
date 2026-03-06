@@ -37,6 +37,7 @@ document.addEventListener("keydown", (e) => {
       draggedNodeId = null;
       nearDetachState = null;
       altCloneActive = false;
+      altDragGhosts = [];
       hideDimensionTooltip();
 
       // Restore tool after ⌘+drag temp Select or Alt+drag clone
