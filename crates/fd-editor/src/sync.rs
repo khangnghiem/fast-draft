@@ -277,6 +277,26 @@ impl SyncEngine {
                 if let Some(idx) = self.graph.index_of(id) {
                     self.bounds.remove(&idx);
                     self.graph.remove_node(idx);
+
+                    // Clean up visual edges referencing the deleted node
+                    let orphaned_text_children: Vec<NodeId> = self
+                        .graph
+                        .edges
+                        .iter()
+                        .filter(|e| e.from.node_id() == Some(id) || e.to.node_id() == Some(id))
+                        .filter_map(|e| e.text_child)
+                        .collect();
+                    self.graph
+                        .edges
+                        .retain(|e| e.from.node_id() != Some(id) && e.to.node_id() != Some(id));
+
+                    // Remove orphaned edge text_child nodes
+                    for tc_id in orphaned_text_children {
+                        if let Some(tc_idx) = self.graph.index_of(tc_id) {
+                            self.bounds.remove(&tc_idx);
+                            self.graph.remove_node(tc_idx);
+                        }
+                    }
                 }
             }
             GraphMutation::SetStyle { id, style } => {

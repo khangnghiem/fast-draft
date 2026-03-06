@@ -67,23 +67,14 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 
 6. **E2E smoke test** (if `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `fd-vscode/webview/` changed):
 
-   Quick browser smoke test via subagent — 3 checks to verify canvas isn't broken:
-   - Build WASM first if Rust crates changed:
+   Build WASM first if Rust crates changed:
 
-     ```bash
-     wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm
-     ```
+   ```bash
+   wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm
+   ```
 
-   - Open the Codespace in browser via `gh codespace code -c <codespace-name> --web`
-   - Run these 3 smoke checks:
-
-     | #   | Action                               | Expected                                          |
-     | --- | ------------------------------------ | ------------------------------------------------- |
-     | 1   | Open `.fd` file → toggle Design View | Canvas renders with shapes visible                |
-     | 2   | Press R → drag on canvas             | Rectangle appears, tool switches back to Select   |
-     | 3   | Edit FD code → check canvas          | Canvas updates to reflect code change (bidi sync) |
-
-   - Screenshot and report PASS/FAIL
+   Then run the **3-check smoke** from `/e2e` (Smoke tier). If the Codespace tab is
+   already open and you pushed code earlier in this conversation, skip the sync steps.
    - **If any check fails**: Fix before proceeding
 
    > **Skip only if** the change is purely Rust internals with no canvas/UI impact.

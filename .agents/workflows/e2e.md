@@ -5,7 +5,7 @@ description: E2E browser testing via GitHub Codespace (smoke + full tiers)
 # E2E Testing Workflow
 
 > Canvas editor testing via Codespace browser subagent.
-> **Smoke** (5 checks, ~3 subagent calls) for routine PRs.
+> **Smoke** (3 checks, 1 subagent call) for routine PRs.
 > **Full** (9 phases, ~10 subagent calls) for major features / pre-release.
 
 > [!CAUTION]
@@ -19,9 +19,11 @@ description: E2E browser testing via GitHub Codespace (smoke + full tiers)
 
 ## Pre-flight
 
-1. **Check browser state.** If the Codespace tab is already open with a canvas visible, **skip to the test phases**.
+1. **Check browser state.** If the Codespace tab is already open with a canvas visible **and** you already pushed code to this branch earlier in this conversation, **skip directly to the test phases** (no sync needed).
 
-2. Otherwise, set up:
+2. If the canvas is open but you haven't pushed yet, push first, then SSH pull (step 4), then skip to test phases.
+
+3. Otherwise, full setup:
 
    ```bash
    gh codespace list
@@ -29,7 +31,7 @@ description: E2E browser testing via GitHub Codespace (smoke + full tiers)
 
    Note the codespace name (e.g. `special-space-invention-j74pj54jgxv35rw7`).
 
-3. **Ensure Codespace is running.** Check the status column from step 2. If it shows `Stopped` or `ShuttingDown`:
+4. **Ensure Codespace is running.** Check the status column from step 3. If it shows `Stopped` or `ShuttingDown`:
 
    ```bash
    gh codespace start -c <codespace-name>
@@ -37,7 +39,7 @@ description: E2E browser testing via GitHub Codespace (smoke + full tiers)
 
    Wait ~30s for it to become `Available` before proceeding.
 
-4. **Sync latest code** (git-based — never use `gh codespace cp -r -e .` on Rust projects; `target/` is 17GB+):
+5. **Sync latest code** (git-based — never use `gh codespace cp -r -e .` on Rust projects; `target/` is 17GB+):
 
    ```bash
    # Push current branch to remote
@@ -49,9 +51,9 @@ description: E2E browser testing via GitHub Codespace (smoke + full tiers)
    > If you only changed a few files and they're not committed, use targeted cp instead:
    > `gh codespace cp -r -e fd-vscode/ crates/ examples/ remote:/workspaces/fast-draft/ -c <codespace-name>`
 
-5. **Open Codespace in browser subagent** — navigate directly to `https://<codespace-name>.github.dev`. Do NOT use `gh codespace code --web`. If a tab with this URL already exists, **reuse it**.
+6. **Open Codespace in browser subagent** — navigate directly to `https://<codespace-name>.github.dev`. Do NOT use `gh codespace code --web`. If a tab with this URL already exists, **reuse it**.
 
-6. Open an `.fd` file (e.g. `examples/demo.fd`) → Command Palette (Ctrl+Shift+P) → "FD: Open Canvas Editor". Keep max 2 editor panels open.
+7. Open an `.fd` file (e.g. `examples/demo.fd`) → Command Palette (Ctrl+Shift+P) → "FD: Open Canvas Editor". Keep max 2 editor panels open.
 
 ---
 
@@ -59,20 +61,20 @@ description: E2E browser testing via GitHub Codespace (smoke + full tiers)
 
 > Run for every PR that touches WASM, JS, or canvas code.
 > **One browser subagent call — copy the task below verbatim.**
+> These 3 checks cover the three failure modes that `cargo test` cannot catch:
+> canvas render, pointer→tool→mutation pipeline, and bidi sync.
 
 ### Browser subagent task:
 
 ```
-On the open FD canvas editor, execute these 5 checks in sequence:
+On the open FD canvas editor, execute these 3 checks in sequence:
 
-1. DRAW RECT: Press R, click-drag on canvas → rect appears, tool switches to Select.
-2. SELECT & MOVE: Press V, click the rect, drag it → rect moves, FD code updates.
-3. ZOOM: Press Ctrl+0 (zoom-to-fit) → content fills viewport, zoom indicator updates.
-4. BIDI SYNC: In the code editor panel, manually add "rect @smoke_test { w: 80 h: 40 }"
+1. CANVAS RENDER: Verify shapes are visible on the canvas (not blank/black).
+2. DRAW RECT: Press R, click-drag on canvas → rect appears, tool switches to Select.
+3. BIDI SYNC: In the code editor panel, manually add "rect @smoke_test { w: 80 h: 40 }"
    on a new line → new rect appears on canvas.
-5. UNDO: Press Ctrl+Z → the added rect disappears from canvas AND code.
 
-Take ONE screenshot at the end. Return PASS/FAIL for each check (1-5) and stop.
+Take ONE screenshot at the end. Return PASS/FAIL for each check (1-3) and stop.
 ```
 
 ---
@@ -183,6 +185,14 @@ Take ONE screenshot. Return PASS/FAIL per check.
 ## Reporting
 
 > Keep report under 200 tokens total.
+
+**Smoke (3 checks):**
+
+```
+Smoke: ✅ 3/3 — canvas renders, rect draws, bidi syncs. Screenshot attached.
+```
+
+**Full (9 phases):**
 
 ```
 P1: ✅ 3/3 | P2: ✅ 5/5 | P3: ⚠️ 3/4 (3.3 no-op) | P4: ✅ 3/3

@@ -296,14 +296,6 @@ rect @_rect_28_copy_34 {
   y: 1297.2
 }
 
-rect @_rect_28_copy_35 {
-  w: 155.61 h: 145.15
-  stroke: #333333 2.5
-  corner: 8
-  x: -302.05
-  y: 1557.91
-}
-
 rect @rect_36 {
   w: 146.95 h: 146.95
   stroke: #333333 2.5
@@ -344,106 +336,6 @@ rect @_rect_3 {
   y: 1700.92
 }
 
-rect @_rect_4 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 192.94
-  y: 2109.85
-}
-
-rect @_rect_0 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 532.75
-  y: 2107.71
-}
-
-rect @_rect_1 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 258.18
-  y: 2171.02
-}
-
-rect @_rect_2 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 414.9
-  y: 2001.94
-}
-
-rect @_rect_3 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 56.14
-  y: 2340.98
-}
-
-ellipse @_ellipse_5 {
-  w: 50 h: 40
-  stroke: #333333 2.5
-  x: 530.09
-  y: 2347.6
-}
-
-ellipse @_ellipse_6 {
-  w: 50 h: 40
-  stroke: #333333 2.5
-  x: 531.07
-  y: 2341.19
-}
-
-ellipse @_ellipse_6_copy_7 {
-  w: 50 h: 40
-  stroke: #333333 2.5
-  x: 378.08
-  y: 2410.63
-}
-
-ellipse @_ellipse_6_copy_8 {
-  w: 50 h: 40
-  stroke: #333333 2.5
-  x: 531.07
-  y: 2341.19
-}
-
-rect @_rect_1_copy_9 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 258.18
-  y: 2171.02
-}
-
-rect @_rect_1_copy_10 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 437.54
-  y: 2201.32
-}
-
-rect @_rect_1_copy_11 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 321.95
-  y: 2112.61
-}
-
-rect @_rect_1_copy_12 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 258.18
-  y: 2171.02
-}
-
 rect @_rect_28_copy_0 {
   w: 155.61 h: 145.15
   stroke: #333333 2.5
@@ -452,64 +344,17 @@ rect @_rect_28_copy_0 {
   y: 1034.35
 }
 
-rect @_rect_3_copy_1 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: -38.62
-  y: 2447.25
-}
-
-rect @_rect_3_copy_2 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: -120.43
-  y: 2704.96
-}
-
-rect @_rect_3_copy_4 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 567.96
-  y: 2588.29
-}
-
-rect @_rect_3_copy_5 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 62.37
-  y: 2600.27
-}
-
 rect @_rect_3_copy_6 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 296.62
-  y: 2739.46
-}
-
-group @_group_7 {
-  rect @_rect_3_copy_3 {
-    w: 100 h: 80
-    stroke: #333333 2.5
-    corner: 8
-  }
-  x: 42.14
-  y: 2819.58
+  x: 321.37
+  y: 2215.75
 }
 
 # ─── Constraints ───
 
 @_rect_28_copy_33 -> offset: @_rect_28_copy_32 20, 20
-@_ellipse_6_copy_8 -> offset: @_ellipse_6_copy_7 20, 20
-@_rect_1_copy_12 -> offset: @_rect_1_copy_11 20, 20
-@_rect_28_copy_0 -> offset: @_rect_28 20, 20
-@_rect_3_copy_5 -> offset: @_rect_3_copy_2 20, 20
-@_rect_3_copy_6 -> offset: @_rect_3_copy_3 20, 20
 
 # ─── Flows ───
 

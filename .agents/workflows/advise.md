@@ -116,6 +116,13 @@ For each item, provide:
 
 [2-3 sentence description of what and why — be opinionated, not neutral]
 
+**Light Sketch:** (for quick demos — optional but encouraged)
+
+- Use `generate_image` to produce a rough UI sketch or concept illustration
+- Prompt style: "minimal wireframe sketch of [concept], clean lines, no color, whiteboard style"
+- One image per item max — this is a napkin sketch, not a design comp
+- Skip for purely backend/infra items
+
 **Mockup:** (required for UI-facing items)
 
 - ASCII sketch, Mermaid diagram, or `generate_image` mockup
