@@ -227,6 +227,32 @@ let isDraggingNode = false;
 /** The ID of the node being dragged */
 let draggedNodeId = null;
 
+
+// ─── Security Helpers ─────────────────────────────────────────────────────
+
+/**
+ * Escape HTML characters to prevent XSS.
+ * Hardened to escape &, <, >, ", and '.
+ */
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Escape attributes to prevent XSS.
+ */
+function escapeAttr(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
 // ─── Tween Engine ────────────────────────────────────────────────────────
 /** Active tweens: { nodeId, prop, from, to, startTime, duration, easeFn } */
 const activeTweens = [];
@@ -2240,9 +2266,6 @@ function addAcceptRow(value) {
   list.appendChild(item);
 }
 
-function escapeAttr(s) {
-  return s.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
 
 /**
  * Check if a node has a spec annotation block.
@@ -3612,13 +3635,6 @@ function refreshLayersPanel() {
 
 // ─── Spec View Parser (client-side) ──────────────────────────────────────
 
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function parseSpecAnnotation(line) {
   const trimmed = line.trim();
@@ -6348,7 +6364,7 @@ function openAnimPicker(targetNodeId, clientX, clientY) {
         row.className = "picker-existing";
         const trigger = anim.trigger?.Custom || anim.trigger || "?";
         const triggerName = typeof trigger === "string" ? trigger : Object.keys(trigger)[0]?.toLowerCase() || "?";
-        row.innerHTML = `<span>:${triggerName}</span> <span style="flex:1;opacity:0.6">${anim.duration_ms || 300}ms</span>`;
+        row.innerHTML = `<span>:${escapeHtml(triggerName)}</span> <span style="flex:1;opacity:0.6">${escapeHtml(anim.duration_ms || 300)}ms</span>`;
         const removeBtn = document.createElement("button");
         removeBtn.className = "pe-remove";
         removeBtn.textContent = "✕";
@@ -6378,7 +6394,7 @@ function openAnimPicker(targetNodeId, clientX, clientY) {
     for (const preset of group.items) {
       const row = document.createElement("div");
       row.className = "picker-item";
-      row.innerHTML = `<span class="pi-icon">${preset.icon}</span><span class="pi-label">${preset.label}</span><span class="pi-meta">${preset.duration}ms</span>`;
+      row.innerHTML = `<span class="pi-icon">${escapeHtml(preset.icon)}</span><span class="pi-label">${escapeHtml(preset.label)}</span><span class="pi-meta">${escapeHtml(preset.duration)}ms</span>`;
 
       // Live preview on hover
       row.addEventListener("mouseenter", () => {
