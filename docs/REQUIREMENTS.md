@@ -64,6 +64,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.54** _(done)_: Alt+drag clone — Alt+click duplicates node in-place (single source of truth in WASM `SelectTool::handle`); Alt pressed mid-drag clones-and-drags (Figma behavior); `alt_duplicated` flag prevents re-duplication
 - **R3.59** _(done)_: Clipboard — ⌘C copies selected node(s) (multi-select supported); ⌘V pastes with +20px cumulative offset (not stacked on top); ⌘X cuts (copy + delete); paste is undoable via `push_undo_snapshot` WASM API
 - **R3.60** _(done)_: Alt+drag multi-select — Alt+click/drag duplicates ALL selected nodes (batch clone with ID remapping); deep-copies Group/Frame subtrees; remaps internal constraint references (Offset, CenterIn); duplicates edges where both endpoints are selected
+- **R3.61** _(done)_: Esc-to-cancel drag — pressing Esc during a node drag (move/resize/draw) restores the node to its pre-drag position via `abandon_batch()` text snapshot rollback; pressing Esc during toolbar drag-to-create cancels the ghost preview; no undo entry created for cancelled gestures
 
 #### R3b: Drawing Tools
 
@@ -295,3 +296,4 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | alt-drag / clone | R3.54 |
 | clipboard / copy-paste | R3.59 |
 | alt-drag multi-select | R3.60 |
+| esc-cancel / cancel-drag | R3.61 |

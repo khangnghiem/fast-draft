@@ -664,6 +664,55 @@ impl FdCanvas {
             .push_snapshot(text_before.to_string(), text_after.to_string(), "paste");
     }
 
+    /// Cancel an in-progress drag gesture (Esc mid-drag).
+    ///
+    /// Restores the scene to the pre-drag state by abandoning the batch
+    /// snapshot and resetting all tool drag flags. Returns `true` if a
+    /// drag was actually cancelled.
+    pub fn cancel_drag(&mut self) -> bool {
+        // Check if any tool is actively dragging
+        let was_dragging = self.select_tool.dragging
+            || self.select_tool.marquee_start.is_some()
+            || self.select_tool.resize_handle.is_some()
+            || self.rect_tool.is_drawing()
+            || self.ellipse_tool.is_drawing()
+            || self.pen_tool.is_drawing()
+            || self.arrow_tool.drawing
+            || self.eraser_tool.dragging;
+
+        if !was_dragging {
+            return false;
+        }
+
+        // Abandon the batch — restores pre-drag text snapshot
+        self.commands.abandon_batch(&mut self.engine);
+        self.engine.resolve();
+
+        // Reset all tool drag states
+        self.select_tool.dragging = false;
+        self.select_tool.marquee_start = None;
+        self.select_tool.marquee_rect = None;
+        self.select_tool.resize_handle = None;
+
+        self.rect_tool.cancel();
+        self.ellipse_tool.cancel();
+        self.pen_tool.cancel();
+        self.arrow_tool.drawing = false;
+        self.arrow_tool.start_pos = None;
+        self.arrow_tool.current_pos = None;
+        self.arrow_tool.source_node = None;
+        self.arrow_tool.target_node = None;
+        self.eraser_tool.clear();
+
+        // Reset interaction state
+        self.pointer_down_pos = None;
+        self.alt_duplicated = false;
+        self.pressed_id = None;
+        self.erase_pending_flush = false;
+
+        true
+    }
+
     // ─── Keyboard Shortcut API ───────────────────────────────────────────
 
     /// Handle a keyboard event. Returns a JSON string:

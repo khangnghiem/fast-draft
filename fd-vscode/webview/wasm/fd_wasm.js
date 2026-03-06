@@ -38,6 +38,18 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Cancel an in-progress drag gesture (Esc mid-drag).
+     *
+     * Restores the scene to the pre-drag state by abandoning the batch
+     * snapshot and resetting all tool drag flags. Returns `true` if a
+     * drag was actually cancelled.
+     * @returns {boolean}
+     */
+    cancel_drag() {
+        const ret = wasm.fdcanvas_cancel_drag(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Clear the pressed interaction state.
      *
      * Called from JS when entering inline text editing to suppress
