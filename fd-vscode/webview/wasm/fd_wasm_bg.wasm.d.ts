@@ -41,6 +41,7 @@ export const fdcanvas_handle_stylus_squeeze: (a: number, b: number, c: number, d
 export const fdcanvas_has_pending_text_change: (a: number) => number;
 export const fdcanvas_has_text_child: (a: number, b: number, c: number) => number;
 export const fdcanvas_hit_test_at: (a: number, b: number, c: number) => [number, number];
+export const fdcanvas_import_mermaid: (a: number, b: number, c: number) => number;
 export const fdcanvas_new: (a: number, b: number) => number;
 export const fdcanvas_parent_of: (a: number, b: number, c: number) => [number, number];
 export const fdcanvas_push_undo_snapshot: (a: number, b: number, c: number, d: number, e: number) => void;

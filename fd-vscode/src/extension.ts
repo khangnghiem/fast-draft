@@ -16,7 +16,7 @@ import { FdTreePreviewPanel } from "./panels/tree-preview";
 import { FdSpecViewPanel } from "./panels/spec-view";
 import { FdDocumentSymbolProvider } from "./document-symbol";
 import { FdReadOnlyProvider, FD_READONLY_SCHEME, VIEW_MODE_LABELS, FdViewMode } from "./panels/readonly-provider";
-import { getNonce, HTML_TEMPLATE, VIEW_TYPE_CANVAS, COMMAND_AI_REFINE, COMMAND_AI_REFINE_ALL, COMMAND_EXPORT_SPEC, COMMAND_OPEN_CANVAS, COMMAND_SHOW_PREVIEW, COMMAND_SHOW_SPEC_VIEW, COMMAND_TOGGLE_VIEW_MODE, COMMAND_OPEN_READONLY_VIEW, COMMAND_CHANGE_VIEW_MODE, COMMAND_RENAMIFY } from "./webview-html";
+import { getNonce, HTML_TEMPLATE, VIEW_TYPE_CANVAS, COMMAND_AI_REFINE, COMMAND_AI_REFINE_ALL, COMMAND_EXPORT_SPEC, COMMAND_OPEN_CANVAS, COMMAND_SHOW_PREVIEW, COMMAND_SHOW_SPEC_VIEW, COMMAND_TOGGLE_VIEW_MODE, COMMAND_OPEN_READONLY_VIEW, COMMAND_CHANGE_VIEW_MODE, COMMAND_RENAMIFY, COMMAND_REFACTOR } from "./webview-html";
 
 /**
  * FD Custom Editor Provider.
@@ -1273,6 +1273,19 @@ export function activate(context: vscode.ExtensionContext) {
       } else {
         vscode.window.showInformationMessage(
           "Open the FD Canvas editor first to use Renamify."
+        );
+      }
+    })
+  );
+
+  // Register Refactor command (unified cleanup: rename + style hoist + round)
+  context.subscriptions.push(
+    vscode.commands.registerCommand(COMMAND_REFACTOR, () => {
+      if (FdEditorProvider.activePanel) {
+        FdEditorProvider.activePanel.webview.postMessage({ type: "triggerRefactor" });
+      } else {
+        vscode.window.showInformationMessage(
+          "Open the FD Canvas editor first to use Refactor."
         );
       }
     })

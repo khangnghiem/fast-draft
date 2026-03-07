@@ -68,6 +68,12 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
                 }
                 pending_comments.clear();
             }
+        } else if rest.starts_with("edge_defaults ") || rest.starts_with("edge_defaults{") {
+            let defaults = parse_edge_defaults_block
+                .parse_next(&mut rest)
+                .map_err(|e| format!("line {line}: edge_defaults error — expected `edge_defaults {{ props }}`, got `{ctx}…`: {e}"))?;
+            graph.edge_defaults = Some(defaults);
+            pending_comments.clear();
         } else if rest.starts_with("edge ") {
             let (edge, text_child_data) = parse_edge_block
                 .parse_next(&mut rest)
@@ -239,8 +245,8 @@ fn collect_leading_comments(input: &mut &str) -> Vec<String> {
             if input.starts_with('\n') {
                 *input = &input[1..];
             }
-            // Skip section separators; collect everything else
-            if !text.is_empty() && !is_section_separator(&text) {
+            // Skip section separators and [auto] doc-comments; collect everything else
+            if !text.is_empty() && !is_section_separator(&text) && !text.starts_with("[auto]") {
                 comments.push(text);
             }
             continue;
@@ -1234,6 +1240,70 @@ fn parse_edge_anchor(input: &mut &str) -> ModalResult<EdgeAnchor> {
         let y = parse_number.parse_next(input)?;
         Ok(EdgeAnchor::Point(x, y))
     }
+}
+
+// ─── Edge defaults parser ──────────────────────────────────────────────
+
+fn parse_edge_defaults_block(input: &mut &str) -> ModalResult<EdgeDefaults> {
+    let _ = "edge_defaults".parse_next(input)?;
+    skip_space(input);
+    let _ = '{'.parse_next(input)?;
+
+    let mut defaults = EdgeDefaults::default();
+    skip_ws_and_comments(input);
+
+    while !input.starts_with('}') {
+        let prop = parse_identifier.parse_next(input)?;
+        skip_space(input);
+        let _ = ':'.parse_next(input)?;
+        skip_space(input);
+
+        match prop {
+            "stroke" => {
+                let color = parse_hex_color.parse_next(input)?;
+                skip_space(input);
+                let w = parse_number.parse_next(input).unwrap_or(1.0);
+                defaults.style.stroke = Some(Stroke {
+                    paint: Paint::Solid(color),
+                    width: w,
+                    ..Stroke::default()
+                });
+            }
+            "arrow" => {
+                let kind = parse_identifier.parse_next(input)?;
+                defaults.arrow = Some(match kind {
+                    "none" => ArrowKind::None,
+                    "start" => ArrowKind::Start,
+                    "end" => ArrowKind::End,
+                    "both" => ArrowKind::Both,
+                    _ => ArrowKind::None,
+                });
+            }
+            "curve" => {
+                let kind = parse_identifier.parse_next(input)?;
+                defaults.curve = Some(match kind {
+                    "straight" => CurveKind::Straight,
+                    "smooth" => CurveKind::Smooth,
+                    "step" => CurveKind::Step,
+                    _ => CurveKind::Straight,
+                });
+            }
+            "opacity" => {
+                defaults.style.opacity = Some(parse_number.parse_next(input)?);
+            }
+            _ => {
+                let _ = take_till::<_, _, ContextError>(0.., |c: char| {
+                    c == '\n' || c == ';' || c == '}'
+                })
+                .parse_next(input);
+            }
+        }
+        skip_opt_separator(input);
+        skip_ws_and_comments(input);
+    }
+
+    let _ = '}'.parse_next(input)?;
+    Ok(defaults)
 }
 
 // ─── Edge block parser ─────────────────────────────────────────────────

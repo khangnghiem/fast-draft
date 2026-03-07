@@ -134,6 +134,14 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R4.18** _(done)_: Theme/When rename + emitter reorder — `style` → `theme`, `anim` → `when` for clarity; emitter order: spec → children → style → when; old keywords accepted for backward compatibility
 - **R4.19** _(done)_: ReadMode filtered views — `emit_filtered(graph, mode)` with 8 modes (Full/Structure/Layout/Design/Spec/Visual/When/Edges); CLI `fd-lsp --view <mode>` for AI token savings; VS Code read-only virtual document provider with status bar mode selector
 - **R4.20** _(planned)_: AI Assist on selection — select nodes on canvas → click "✦ AI Assist" → AI receives `.fd` text of selected nodes → returns redesigned `.fd` → bidi-sync renders changes live; undo reverts entire AI edit atomically
+- **R4.21** _(planned)_: **Comprehensibility Score** — compute a 0–100 score measuring how easily AI agents can understand an FD document. Metrics:
+  - **Semantic naming ratio**: % of non-anonymous `@id`s (target: >80%)
+  - **Inline doc-comment density**: % of nodes with `[auto]` or manual `#` comments
+  - **Theme reuse ratio**: % of styled nodes using `use:` references vs inline styles
+  - **Edge default coverage**: % of edges whose props match `edge_defaults {}`
+  - **Read token cost**: total tokens in `ReadMode::Full` vs optimal `ReadMode::Structure`
+  - Display as a badge in the Canvas toolbar (e.g. `AI: 72/100`) and in `fd-lsp --score`
+  - Provide per-metric breakdown for targeted improvement suggestions
 
 ### R5: Rendering
 
@@ -257,7 +265,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | theme               | R3.13                                                                    |
 | view mode           | R3.14, R4.11                                                             |
 | pressure / pencil   | R3.4, R3.10, R3.22                                                       |
-| ai / refinement     | R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17, R4.20 |
+| ai / refinement     | R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17, R4.20, R4.21 |
 | edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8                                    |
 | import              | R1.14, R1.18                                                             |
 | style / theme       | R1.4, R4.3, R4.18                                                        |

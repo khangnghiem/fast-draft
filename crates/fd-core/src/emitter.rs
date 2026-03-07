@@ -46,6 +46,12 @@ pub fn emit_document(graph: &SceneGraph) -> String {
         out.push('\n');
     }
 
+    // Emit edge_defaults block (if present)
+    if let Some(ref defaults) = graph.edge_defaults {
+        emit_edge_defaults_block(&mut out, defaults);
+        out.push('\n');
+    }
+
     // Emit root's children (node tree)
     if use_separators && !children.is_empty() {
         out.push_str("# ─── Layout ───\n\n");
@@ -77,7 +83,7 @@ pub fn emit_document(graph: &SceneGraph) -> String {
         out.push_str("# ─── Flows ───\n\n");
     }
     for edge in &graph.edges {
-        emit_edge(&mut out, edge, graph);
+        emit_edge(&mut out, edge, graph, graph.edge_defaults.as_ref());
     }
 
     out
@@ -161,6 +167,14 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
     for comment in &node.comments {
         indent(out, depth);
         writeln!(out, "# {comment}").unwrap();
+    }
+
+    // Auto-generate an [auto] doc-comment for AI comprehension.
+    // These are regenerated each emit and skipped by the parser.
+    let auto_comment = generate_auto_comment(node, graph, idx);
+    if let Some(comment) = auto_comment {
+        indent(out, depth);
+        writeln!(out, "# [auto] {comment}").unwrap();
     }
 
     indent(out, depth);
@@ -659,7 +673,48 @@ fn emit_constraint(out: &mut String, node_id: &NodeId, constraint: &Constraint) 
     }
 }
 
-fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph) {
+fn emit_edge_defaults_block(out: &mut String, defaults: &EdgeDefaults) {
+    out.push_str("edge_defaults {\n");
+
+    if let Some(ref stroke) = defaults.style.stroke {
+        match &stroke.paint {
+            Paint::Solid(c) => {
+                writeln!(out, "  stroke: {} {}", c.to_hex(), format_num(stroke.width)).unwrap();
+            }
+            _ => {
+                writeln!(out, "  stroke: #000 {}", format_num(stroke.width)).unwrap();
+            }
+        }
+    }
+    if let Some(opacity) = defaults.style.opacity {
+        writeln!(out, "  opacity: {}", format_num(opacity)).unwrap();
+    }
+    if let Some(arrow) = defaults.arrow
+        && arrow != ArrowKind::None
+    {
+        let name = match arrow {
+            ArrowKind::None => "none",
+            ArrowKind::Start => "start",
+            ArrowKind::End => "end",
+            ArrowKind::Both => "both",
+        };
+        writeln!(out, "  arrow: {name}").unwrap();
+    }
+    if let Some(curve) = defaults.curve
+        && curve != CurveKind::Straight
+    {
+        let name = match curve {
+            CurveKind::Straight => "straight",
+            CurveKind::Smooth => "smooth",
+            CurveKind::Step => "step",
+        };
+        writeln!(out, "  curve: {name}").unwrap();
+    }
+
+    out.push_str("}\n");
+}
+
+fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph, defaults: Option<&EdgeDefaults>) {
     writeln!(out, "edge @{} {{", edge.id.as_str()).unwrap();
 
     // Annotations
@@ -692,8 +747,16 @@ fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph) {
         writeln!(out, "  use: {}", style_ref.as_str()).unwrap();
     }
 
-    // Stroke
-    if let Some(ref stroke) = edge.style.stroke {
+    // Stroke — skip if matches edge_defaults
+    let stroke_matches_default = defaults
+        .and_then(|d| d.style.stroke.as_ref())
+        .is_some_and(|ds| {
+            edge.style
+                .stroke
+                .as_ref()
+                .is_some_and(|es| stroke_eq(es, ds))
+        });
+    if !stroke_matches_default && let Some(ref stroke) = edge.style.stroke {
         match &stroke.paint {
             Paint::Solid(c) => {
                 writeln!(out, "  stroke: {} {}", c.to_hex(), format_num(stroke.width)).unwrap();
@@ -704,13 +767,21 @@ fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph) {
         }
     }
 
-    // Opacity
-    if let Some(opacity) = edge.style.opacity {
+    // Opacity — skip if matches edge_defaults
+    let opacity_matches_default = defaults.and_then(|d| d.style.opacity).is_some_and(|do_| {
+        edge.style
+            .opacity
+            .is_some_and(|eo| (eo - do_).abs() < 0.001)
+    });
+    if !opacity_matches_default && let Some(opacity) = edge.style.opacity {
         writeln!(out, "  opacity: {}", format_num(opacity)).unwrap();
     }
 
-    // Arrow
-    if edge.arrow != ArrowKind::None {
+    // Arrow — skip if matches edge_defaults
+    let arrow_matches_default = defaults
+        .and_then(|d| d.arrow)
+        .is_some_and(|da| edge.arrow == da);
+    if !arrow_matches_default && edge.arrow != ArrowKind::None {
         let name = match edge.arrow {
             ArrowKind::None => "none",
             ArrowKind::Start => "start",
@@ -720,8 +791,11 @@ fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph) {
         writeln!(out, "  arrow: {name}").unwrap();
     }
 
-    // Curve
-    if edge.curve != CurveKind::Straight {
+    // Curve — skip if matches edge_defaults
+    let curve_matches_default = defaults
+        .and_then(|d| d.curve)
+        .is_some_and(|dc| edge.curve == dc);
+    if !curve_matches_default && edge.curve != CurveKind::Straight {
         let name = match edge.curve {
             CurveKind::Straight => "straight",
             CurveKind::Smooth => "smooth",
@@ -752,6 +826,66 @@ fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph) {
     out.push_str("}\n");
 }
 
+/// Generate an auto-comment for AI comprehension based on node heuristics.
+///
+/// Returns `None` if the node doesn't benefit from extra context.
+fn generate_auto_comment(node: &SceneNode, graph: &SceneGraph, idx: NodeIndex) -> Option<String> {
+    match &node.kind {
+        NodeKind::Root => None,
+        NodeKind::Text { content, .. } if !content.is_empty() => {
+            let truncated = if content.len() > 30 {
+                format!("{}…", &content[..27])
+            } else {
+                content.clone()
+            };
+            Some(format!("label: \"{truncated}\""))
+        }
+        NodeKind::Group => {
+            let count = graph.children(idx).len();
+            if count > 0 {
+                Some(format!("container ({count} children)"))
+            } else {
+                None
+            }
+        }
+        NodeKind::Frame { layout, .. } => {
+            let count = graph.children(idx).len();
+            let layout_str = match layout {
+                LayoutMode::Free => "free",
+                LayoutMode::Column { .. } => "column",
+                LayoutMode::Row { .. } => "row",
+                LayoutMode::Grid { .. } => "grid",
+            };
+            Some(format!("{layout_str} container ({count} children)"))
+        }
+        _ => {
+            // For shapes: mention use: style if present
+            if let Some(first_style) = node.use_styles.first() {
+                Some(format!("styled: {}", first_style.as_str()))
+            } else {
+                // Check if connected via edges
+                let edge_target_ids: Vec<NodeId> = graph
+                    .edges
+                    .iter()
+                    .filter(|e| e.from.node_id() == Some(node.id))
+                    .filter_map(|e| e.to.node_id())
+                    .collect();
+                if !edge_target_ids.is_empty() {
+                    let names: Vec<&str> = edge_target_ids.iter().map(|id| id.as_str()).collect();
+                    Some(format!("connects to {}", names.join(", ")))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+}
+
+/// Compare two stroke values for equality (using f32 approximate comparison).
+fn stroke_eq(a: &Stroke, b: &Stroke) -> bool {
+    (a.width - b.width).abs() < 0.001 && a.paint == b.paint
+}
+
 // ─── Read Modes (filtered emit for AI agents) ────────────────────────────
 
 /// What an AI agent wants to read from the document.
@@ -776,6 +910,9 @@ pub enum ReadMode {
     When,
     /// Structure + `edge @id { ... }` blocks.
     Edges,
+    /// Only shows changes since a previous snapshot.
+    /// Requires calling `snapshot_graph` first to create a baseline.
+    Diff,
 }
 
 /// Emit a `SceneGraph` filtered to show only the properties relevant to `mode`.
@@ -792,6 +929,10 @@ pub enum ReadMode {
 pub fn emit_filtered(graph: &SceneGraph, mode: ReadMode) -> String {
     if mode == ReadMode::Full {
         return emit_document(graph);
+    }
+    if mode == ReadMode::Diff {
+        // Diff mode requires a snapshot — use emit_diff() directly
+        return String::from("# Use emit_diff(graph, &snapshot) for Diff mode\n");
     }
 
     let mut out = String::with_capacity(1024);
@@ -833,7 +974,7 @@ pub fn emit_filtered(graph: &SceneGraph, mode: ReadMode) -> String {
     // Edges (Edges and Visual modes)
     if include_edges {
         for edge in &graph.edges {
-            emit_edge(&mut out, edge, graph);
+            emit_edge(&mut out, edge, graph, graph.edge_defaults.as_ref());
             out.push('\n');
         }
     }
@@ -1136,15 +1277,140 @@ fn has_inline_styles(style: &Style) -> bool {
 }
 
 /// Format a float without trailing zeros for compact output.
-fn format_num(n: f32) -> String {
+pub(crate) fn format_num(n: f32) -> String {
     if n == n.floor() {
         format!("{}", n as i32)
     } else {
-        format!("{n:.2}")
+        format!("{n:.1}")
             .trim_end_matches('0')
             .trim_end_matches('.')
             .to_string()
     }
+}
+
+// ─── Snapshot / Diff ─────────────────────────────────────────────────────
+
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+
+/// Create a hash-based snapshot of the current graph state.
+///
+/// Each node and edge is independently emitted to a string and hashed.
+/// This avoids implementing `Hash` on f32-containing types while staying
+/// memory-efficient (only stores u64 per element instead of full copies).
+#[must_use]
+pub fn snapshot_graph(graph: &SceneGraph) -> GraphSnapshot {
+    let mut snapshot = GraphSnapshot::default();
+
+    // Hash each node
+    for idx in graph.graph.node_indices() {
+        let node = &graph.graph[idx];
+        if matches!(node.kind, NodeKind::Root) {
+            continue;
+        }
+        let mut buf = String::new();
+        emit_node(&mut buf, graph, idx, 0);
+        let mut hasher = DefaultHasher::new();
+        buf.hash(&mut hasher);
+        snapshot.node_hashes.insert(node.id, hasher.finish());
+    }
+
+    // Hash each edge
+    for edge in &graph.edges {
+        let mut buf = String::new();
+        emit_edge(&mut buf, edge, graph, graph.edge_defaults.as_ref());
+        let mut hasher = DefaultHasher::new();
+        buf.hash(&mut hasher);
+        snapshot.edge_hashes.insert(edge.id, hasher.finish());
+    }
+
+    snapshot
+}
+
+/// Emit the diff between the current graph and a previous snapshot.
+///
+/// Output format:
+/// - `+ node/edge` block: added (not in snapshot)
+/// - `~ node/edge` block: modified (hash differs)
+/// - `- @id`: removed (in snapshot but not in current graph)
+#[must_use]
+pub fn emit_diff(graph: &SceneGraph, prev: &GraphSnapshot) -> String {
+    let mut out = String::with_capacity(512);
+
+    // Check nodes: added or modified
+    for idx in graph.graph.node_indices() {
+        let node = &graph.graph[idx];
+        if matches!(node.kind, NodeKind::Root) {
+            continue;
+        }
+
+        let mut buf = String::new();
+        emit_node(&mut buf, graph, idx, 0);
+        let mut hasher = DefaultHasher::new();
+        buf.hash(&mut hasher);
+        let current_hash = hasher.finish();
+
+        match prev.node_hashes.get(&node.id) {
+            None => {
+                // Added
+                out.push_str("+ ");
+                out.push_str(&buf);
+                out.push('\n');
+            }
+            Some(&prev_hash) if prev_hash != current_hash => {
+                // Modified
+                out.push_str("~ ");
+                out.push_str(&buf);
+                out.push('\n');
+            }
+            _ => {} // Unchanged
+        }
+    }
+
+    // Check edges: added or modified
+    for edge in &graph.edges {
+        let mut buf = String::new();
+        emit_edge(&mut buf, edge, graph, graph.edge_defaults.as_ref());
+        let mut hasher = DefaultHasher::new();
+        buf.hash(&mut hasher);
+        let current_hash = hasher.finish();
+
+        match prev.edge_hashes.get(&edge.id) {
+            None => {
+                out.push_str("+ ");
+                out.push_str(&buf);
+                out.push('\n');
+            }
+            Some(&prev_hash) if prev_hash != current_hash => {
+                out.push_str("~ ");
+                out.push_str(&buf);
+                out.push('\n');
+            }
+            _ => {}
+        }
+    }
+
+    // Check for removed nodes
+    for id in prev.node_hashes.keys() {
+        if graph.get_by_id(*id).is_none() {
+            writeln!(out, "- @{}", id.as_str()).unwrap();
+        }
+    }
+
+    // Check for removed edges
+    let current_edge_ids: std::collections::HashSet<NodeId> =
+        graph.edges.iter().map(|e| e.id).collect();
+    for id in prev.edge_hashes.keys() {
+        if !current_edge_ids.contains(id) {
+            writeln!(out, "- edge @{}", id.as_str()).unwrap();
+        }
+    }
+
+    if out.is_empty() {
+        out.push_str("# No changes\n");
+    }
+
+    out
 }
 
 #[cfg(test)]

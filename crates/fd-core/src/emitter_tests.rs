@@ -102,7 +102,7 @@ rect @btn {
 
   anim :hover {
 fill: #5A4BD1
-scale: 1.02
+scale: 1.2
 ease: spring 300ms
   }
 }
@@ -1069,7 +1069,7 @@ rect @btn {
   w: 120 h: 40
   fill: #6C5CE7
   anim :press {
-scale: 0.95
+scale: 0.9
 ease: spring 150ms
   }
 }
@@ -1385,11 +1385,11 @@ rect @animated {
   fill: #6C5CE7
   when :hover {
 fill: #5A4BD1
-scale: 1.05
+scale: 1.1
 ease: ease_out 200ms
   }
   when :press {
-scale: 0.95
+scale: 0.9
 ease: spring 150ms
   }
 }
@@ -1490,7 +1490,7 @@ spec {
 }
 when :hover {
   fill: #F0EDFF
-  scale: 1.05
+  scale: 1.1
   ease: ease_out 200ms
 }
   }
@@ -1589,7 +1589,7 @@ fn emit_filtered_visual() {
     assert!(out.contains("fill:"), "should include fill");
     assert!(out.contains("corner: 12"), "should include corner");
     assert!(out.contains("when :hover"), "should include when");
-    assert!(out.contains("scale: 1.05"), "should include anim props");
+    assert!(out.contains("scale: 1.1"), "should include anim props");
     assert!(out.contains("edge @card_to_label"), "should include edges");
     // Should NOT have spec blocks
     assert!(
@@ -1604,7 +1604,7 @@ fn emit_filtered_when() {
     let out = emit_filtered(&graph, ReadMode::When);
     // Should have when blocks
     assert!(out.contains("when :hover"), "should include when");
-    assert!(out.contains("scale: 1.05"), "should include anim props");
+    assert!(out.contains("scale: 1.1"), "should include anim props");
     // Should NOT have node-level styles, layout, or spec
     assert!(!out.contains("corner:"), "no corner in when mode");
     assert!(!out.contains("w: 200"), "no dims in when mode");
@@ -1968,4 +1968,265 @@ image @styled_img {
         NodeKind::Image { fit, .. } => assert_eq!(*fit, ImageFit::Fill),
         _ => panic!("expected Image"),
     }
+}
+
+// ─── F1: 1-Decimal Precision tests ──────────────────────────────────────
+
+#[test]
+fn emit_format_num_one_decimal() {
+    use crate::emitter::format_num;
+    assert_eq!(format_num(128.57), "128.6");
+    assert_eq!(format_num(100.0), "100");
+    assert_eq!(format_num(0.5), "0.5");
+    assert_eq!(format_num(3.14), "3.1");
+    assert_eq!(format_num(42.0), "42");
+}
+
+#[test]
+fn roundtrip_one_decimal_coords() {
+    let input = "rect @box {\n  w: 128.6 h: 64.3\n  x: 10.5\n  y: 20.7\n  fill: #FF0000\n}\n";
+    let graph = parse_document(input).unwrap();
+    let output = emit_document(&graph);
+    assert!(output.contains("128.6"), "w should be 128.6: {output}");
+    assert!(output.contains("64.3"), "h should be 64.3: {output}");
+    let graph2 = parse_document(&output).expect("re-parse of 1dp coords failed");
+    let node = graph2.get_by_id(NodeId::intern("box")).unwrap();
+    match &node.kind {
+        NodeKind::Rect { width, height } => {
+            assert!((width - 128.6).abs() < 0.1);
+            assert!((height - 64.3).abs() < 0.1);
+        }
+        _ => panic!("expected Rect"),
+    }
+}
+
+// ─── F2: Edge Defaults tests ────────────────────────────────────────────
+
+#[test]
+fn parse_edge_defaults() {
+    let input = r#"
+edge_defaults {
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}
+
+rect @a { w: 50 h: 50 }
+rect @b { w: 50 h: 50 }
+
+edge @link {
+  from: @a
+  to: @b
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let defaults = graph
+        .edge_defaults
+        .as_ref()
+        .expect("should have edge_defaults");
+    assert!(defaults.style.stroke.is_some());
+    assert_eq!(defaults.arrow, Some(ArrowKind::End));
+    assert_eq!(defaults.curve, Some(CurveKind::Smooth));
+}
+
+#[test]
+fn emit_edge_defaults_suppresses_matching() {
+    let input = r#"
+edge_defaults {
+  stroke: #6B7080 1.5
+  arrow: end
+}
+
+rect @a { w: 50 h: 50 }
+rect @b { w: 50 h: 50 }
+
+edge @link {
+  from: @a
+  to: @b
+  stroke: #6B7080 1.5
+  arrow: end
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let output = emit_document(&graph);
+    // edge_defaults block should be present
+    assert!(
+        output.contains("edge_defaults"),
+        "should emit edge_defaults: {output}"
+    );
+    // Individual edge should NOT have stroke or arrow (they match defaults)
+    let edge_section = output
+        .split("edge @link")
+        .nth(1)
+        .expect("edge block missing");
+    assert!(
+        !edge_section.contains("stroke:"),
+        "matching stroke should be suppressed: {edge_section}"
+    );
+    assert!(
+        !edge_section.contains("arrow:"),
+        "matching arrow should be suppressed: {edge_section}"
+    );
+}
+
+#[test]
+fn roundtrip_edge_defaults() {
+    let input = r#"
+edge_defaults {
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}
+
+rect @a { w: 50 h: 50 }
+rect @b { w: 50 h: 50 }
+rect @c { w: 50 h: 50 }
+
+edge @ab {
+  from: @a
+  to: @b
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}
+
+edge @bc {
+  from: @b
+  to: @c
+  stroke: #FF0000 2
+  arrow: both
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let output = emit_document(&graph);
+
+    // Re-parse
+    let graph2 = parse_document(&output).expect("re-parse of edge_defaults failed");
+    assert!(graph2.edge_defaults.is_some());
+    assert_eq!(graph2.edges.len(), 2);
+
+    // bc edge should still have its own stroke/arrow
+    let bc = graph2.edges.iter().find(|e| e.id.as_str() == "bc").unwrap();
+    assert_eq!(bc.arrow, ArrowKind::Both);
+    assert!(bc.style.stroke.is_some());
+}
+
+// ─── F5: ReadMode::Diff tests ───────────────────────────────────────────
+
+#[test]
+fn snapshot_and_diff_added_node() {
+    use crate::emitter::{emit_diff, snapshot_graph};
+
+    let input = "rect @a {\n  w: 100 h: 50\n  fill: #FF0000\n}\n";
+    let graph1 = parse_document(input).unwrap();
+    let snap = snapshot_graph(&graph1);
+
+    // Add a node
+    let input2 = "rect @a {\n  w: 100 h: 50\n  fill: #FF0000\n}\nrect @b {\n  w: 50 h: 50\n}\n";
+    let graph2 = parse_document(input2).unwrap();
+    let diff = emit_diff(&graph2, &snap);
+
+    assert!(diff.contains("+ "), "should show added node: {diff}");
+    assert!(diff.contains("@b"), "should mention @b: {diff}");
+    assert!(!diff.contains("- @"), "no removals expected: {diff}");
+}
+
+#[test]
+fn snapshot_and_diff_removed_node() {
+    use crate::emitter::{emit_diff, snapshot_graph};
+
+    let input = "rect @a {\n  w: 100 h: 50\n}\nrect @b {\n  w: 50 h: 50\n}\n";
+    let graph1 = parse_document(input).unwrap();
+    let snap = snapshot_graph(&graph1);
+
+    // Remove @b
+    let input2 = "rect @a {\n  w: 100 h: 50\n}\n";
+    let graph2 = parse_document(input2).unwrap();
+    let diff = emit_diff(&graph2, &snap);
+
+    assert!(diff.contains("- @b"), "should show removed node: {diff}");
+}
+
+#[test]
+fn snapshot_and_diff_modified_style() {
+    use crate::emitter::{emit_diff, snapshot_graph};
+
+    let input = "rect @a {\n  w: 100 h: 50\n  fill: #FF0000\n}\n";
+    let graph1 = parse_document(input).unwrap();
+    let snap = snapshot_graph(&graph1);
+
+    // Change fill
+    let input2 = "rect @a {\n  w: 100 h: 50\n  fill: #0000FF\n}\n";
+    let graph2 = parse_document(input2).unwrap();
+    let diff = emit_diff(&graph2, &snap);
+
+    assert!(diff.contains("~ "), "should show modified node: {diff}");
+    assert!(diff.contains("@a"), "should mention @a: {diff}");
+}
+
+#[test]
+fn snapshot_no_changes() {
+    use crate::emitter::{emit_diff, snapshot_graph};
+
+    let input = "rect @a {\n  w: 100 h: 50\n  fill: #FF0000\n}\n";
+    let graph = parse_document(input).unwrap();
+    let snap = snapshot_graph(&graph);
+    let diff = emit_diff(&graph, &snap);
+
+    assert!(diff.contains("# No changes"), "unchanged graph: {diff}");
+}
+
+// ─── F6: Inline Doc-Comments tests ──────────────────────────────────────
+
+#[test]
+fn emit_auto_comment_text_node() {
+    let input = "text @title \"Welcome Home\" {\n  fill: #333333\n}\n";
+    let graph = parse_document(input).unwrap();
+    let output = emit_document(&graph);
+    assert!(
+        output.contains("[auto] label: \"Welcome Home\""),
+        "text node should get auto-comment: {output}"
+    );
+}
+
+#[test]
+fn emit_auto_comment_group_children() {
+    let input = "group @panel {\n  rect @a { w: 50 h: 50 }\n  rect @b { w: 50 h: 50 }\n}\n";
+    let graph = parse_document(input).unwrap();
+    let output = emit_document(&graph);
+    assert!(
+        output.contains("[auto] container (2 children)"),
+        "group should get child count: {output}"
+    );
+}
+
+#[test]
+fn roundtrip_auto_comments_not_duplicated() {
+    let input = "text @label \"Hello\" {\n  fill: #333333\n}\n";
+    let graph = parse_document(input).unwrap();
+    let pass1 = emit_document(&graph);
+    assert!(pass1.contains("[auto]"), "pass1 should have auto-comment");
+
+    // Round-trip: [auto] should be skipped by parser, regenerated by emitter
+    let graph2 = parse_document(&pass1).expect("re-parse failed");
+    let pass2 = emit_document(&graph2);
+
+    // Should have exactly one [auto] comment
+    let auto_count = pass2.matches("[auto]").count();
+    assert_eq!(auto_count, 1, "auto-comments should not duplicate: {pass2}");
+}
+
+#[test]
+fn emit_auto_comment_styled_node() {
+    let input =
+        "theme accent {\n  fill: #6C5CE7\n}\nrect @btn {\n  w: 120 h: 40\n  use: accent\n}\n";
+    let graph = parse_document(input).unwrap();
+    let output = emit_document(&graph);
+    assert!(
+        output.contains("[auto] styled: accent"),
+        "node with use: should get styled comment: {output}"
+    );
 }
