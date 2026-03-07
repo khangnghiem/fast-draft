@@ -14,7 +14,7 @@ use fd_core::model::{
 use fd_editor::commands::CommandStack;
 use fd_editor::input::{InputEvent, Modifiers};
 use fd_editor::shortcuts::{ShortcutAction, ShortcutMap};
-use fd_editor::sync::{GraphMutation, SyncEngine, expand_group_to_children};
+use fd_editor::sync::{GraphMutation, SyncEngine, expand_group_to_children, next_clone_name};
 use fd_editor::tools::{
     ArrowTool, EllipseTool, EraserTool, PenTool, RectTool, ResizeHandle, SelectTool, TextTool,
     Tool, ToolKind,
@@ -982,22 +982,35 @@ impl FdCanvas {
             None => return,
         };
 
-        // Derive clone name from original stem
-        let base = orig_id.as_str();
-        let stem = base.rfind("_copy_").map_or(base, |pos| &base[..pos]);
-        let new_id = NodeId::with_prefix(&format!("{stem}_copy"));
+        // Incremental clone name: foo → foo_2, foo_2 → foo_3
+        let new_id = next_clone_name(&self.engine.graph, orig_id);
         id_map.insert(orig_id, new_id);
 
         let mut cloned = original;
         cloned.id = new_id;
 
-        // Only add offset for top-level selected nodes (not descendants)
-        if selected_ids.contains(&orig_id) && (dx != 0.0 || dy != 0.0) {
-            cloned.constraints.push(fd_core::model::Constraint::Offset {
-                from: orig_id,
-                dx,
-                dy,
+        // Top-level selected nodes get independent position from resolved bounds.
+        // Strip inherited positioning constraints so the clone doesn't overlap
+        // the original (fixes selection coupling + drag inversion bugs).
+        if selected_ids.contains(&orig_id) {
+            cloned.constraints.retain(|c| {
+                !matches!(
+                    c,
+                    Constraint::Position { .. }
+                        | Constraint::Offset { .. }
+                        | Constraint::CenterIn(_)
+                        | Constraint::FillParent { .. }
+                )
             });
+            if let Some(idx) = self.engine.graph.index_of(orig_id)
+                && let Some(b) = self.engine.current_bounds().get(&idx)
+            {
+                let rx = ((b.x + dx) * 100.0).round() / 100.0;
+                let ry = ((b.y + dy) * 100.0).round() / 100.0;
+                cloned
+                    .constraints
+                    .push(Constraint::Position { x: rx, y: ry });
+            }
         }
 
         // Determine parent for the clone
@@ -1054,9 +1067,7 @@ impl FdCanvas {
             let new_to = to_id.and_then(|id| id_map.get(&id).copied());
 
             if let (Some(nf), Some(nt)) = (new_from, new_to) {
-                let base = edge.id.as_str();
-                let stem = base.rfind("_copy_").map_or(base, |pos| &base[..pos]);
-                let new_edge_id = NodeId::with_prefix(&format!("{stem}_copy"));
+                let new_edge_id = next_clone_name(&self.engine.graph, edge.id);
 
                 // Remap text_child if it was also cloned
                 let new_text_child = edge.text_child.and_then(|tc| id_map.get(&tc).copied());

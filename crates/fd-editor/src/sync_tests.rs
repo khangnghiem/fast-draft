@@ -1090,10 +1090,10 @@ rect @login_button {
     });
     engine.flush_to_text();
     let text = engine.current_text();
-    // The duplicate should have a name derived from the original
+    // The duplicate should have an incremental name (login_button_2)
     assert!(
-        text.contains("login_button_copy_"),
-        "expected derived name in: {text}"
+        text.contains("@login_button_2"),
+        "expected incremental name login_button_2 in: {text}"
     );
     // Original should still be present
     assert!(text.contains("@login_button"));
@@ -1922,4 +1922,146 @@ rect @survivor { w: 20 h: 20 }
     assert!(!text.contains("@grp"));
     assert!(!text.contains("@child"));
     assert!(text.contains("@survivor"));
+}
+
+// ─── Clone Position Independence + Incremental Naming Tests ─────────────
+
+#[test]
+fn sync_duplicate_position_independent() {
+    // After duplicating a node, moving the original should NOT move the clone.
+    let input = r#"
+rect @card {
+  w: 100
+  h: 50
+  x: 100
+  y: 200
+}
+"#;
+    let viewport = fd_core::Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let card_id = NodeId::intern("card");
+    engine.apply_mutation(GraphMutation::DuplicateNode { id: card_id });
+    engine.resolve();
+
+    // Find the clone
+    let clone_id = NodeId::intern("card_2");
+    assert!(
+        engine.graph.get_by_id(clone_id).is_some(),
+        "clone @card_2 should exist"
+    );
+
+    let clone_idx = engine.graph.index_of(clone_id).unwrap();
+    let clone_before = engine.bounds[&clone_idx];
+
+    // Move the original far away
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: card_id,
+        dx: 500.0,
+        dy: 300.0,
+    });
+
+    // Clone should NOT have moved (independent position)
+    let clone_after = engine.bounds[&clone_idx];
+    assert!(
+        (clone_after.x - clone_before.x).abs() < 0.01,
+        "clone x should not change: {} vs {}",
+        clone_before.x,
+        clone_after.x
+    );
+    assert!(
+        (clone_after.y - clone_before.y).abs() < 0.01,
+        "clone y should not change: {} vs {}",
+        clone_before.y,
+        clone_after.y
+    );
+}
+
+#[test]
+fn sync_duplicate_incremental_naming() {
+    // Cloning the same node twice should produce _2 and _3.
+    let input = r#"
+rect @card {
+  w: 80
+  h: 40
+  x: 10
+  y: 10
+}
+"#;
+    let viewport = fd_core::Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let card_id = NodeId::intern("card");
+
+    // First clone
+    engine.apply_mutation(GraphMutation::DuplicateNode { id: card_id });
+    engine.resolve();
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("card_2")).is_some(),
+        "first clone should be card_2"
+    );
+
+    // Second clone of original
+    engine.apply_mutation(GraphMutation::DuplicateNode { id: card_id });
+    engine.resolve();
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("card_3")).is_some(),
+        "second clone should be card_3"
+    );
+
+    // Clone of clone should also increment
+    engine.apply_mutation(GraphMutation::DuplicateNode {
+        id: NodeId::intern("card_2"),
+    });
+    engine.resolve();
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("card_4")).is_some(),
+        "clone of card_2 should be card_4"
+    );
+}
+
+#[test]
+fn sync_duplicate_no_overlapping_bounds() {
+    // Clone should not occupy the exact same position as the original.
+    let input = r#"
+rect @box {
+  w: 100
+  h: 50
+  x: 50
+  y: 60
+}
+"#;
+    let viewport = fd_core::Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let box_id = NodeId::intern("box");
+    let box_idx = engine.graph.index_of(box_id).unwrap();
+    let orig_bounds = engine.bounds[&box_idx];
+
+    engine.apply_mutation(GraphMutation::DuplicateNode { id: box_id });
+    engine.resolve();
+
+    let clone_id = NodeId::intern("box_2");
+    let clone_idx = engine.graph.index_of(clone_id).unwrap();
+    let clone_bounds = engine.bounds[&clone_idx];
+
+    // Clone should be offset by 20px (not overlapping)
+    assert!(
+        (clone_bounds.x - orig_bounds.x - 20.0).abs() < 0.01,
+        "clone x should be 20px offset: orig={}, clone={}",
+        orig_bounds.x,
+        clone_bounds.x
+    );
+    assert!(
+        (clone_bounds.y - orig_bounds.y - 20.0).abs() < 0.01,
+        "clone y should be 20px offset: orig={}, clone={}",
+        orig_bounds.y,
+        clone_bounds.y
+    );
 }
