@@ -160,7 +160,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R6.2** _(future)_: Desktop app via Tauri (macOS, Windows, Linux)
 - **R6.3** _(future)_: Mobile app (iOS, Android) via native wgpu
 - **R6.4** _(future)_: Web app (standalone browser app)
-- **R6.5** _(done)_: GitHub Pages landing site with live WASM playground and auto-deploy via GitHub Actions
+- **R6.5** _(done)_: GitHub Pages landing site at [fast-draft.com](https://fast-draft.com) with live WASM playground, custom domain (Cloudflare DNS), and auto-deploy via GitHub Actions (`pages.yml`)
 
 ## Non-Functional Requirements
 
