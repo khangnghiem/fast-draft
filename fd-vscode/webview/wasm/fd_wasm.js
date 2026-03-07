@@ -692,6 +692,19 @@ export class FdCanvas {
         }
     }
     /**
+     * Import a Mermaid diagram, converting it to FD format.
+     * Merges the resulting nodes and edges into the current document.
+     * Returns `true` on success, `false` on parse error.
+     * @param {string} mermaid_text
+     * @returns {boolean}
+     */
+    import_mermaid(mermaid_text) {
+        const ptr0 = passStringToWasm0(mermaid_text, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_import_mermaid(this.__wbg_ptr, ptr0, len0);
+        return ret !== 0;
+    }
+    /**
      * Create a new canvas controller with the given dimensions.
      * @param {number} width
      * @param {number} height

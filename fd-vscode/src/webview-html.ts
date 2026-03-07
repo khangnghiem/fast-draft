@@ -18,6 +18,7 @@ export const COMMAND_TOGGLE_VIEW_MODE = "fd.toggleViewMode";
 export const COMMAND_OPEN_READONLY_VIEW = "fd.openReadOnlyView";
 export const COMMAND_CHANGE_VIEW_MODE = "fd.changeViewMode";
 export const COMMAND_RENAMIFY = "fd.renamify";
+export const COMMAND_REFACTOR = "fd.refactor";
 
 export function getNonce(): string {
   return crypto.randomBytes(16).toString("hex");

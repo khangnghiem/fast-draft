@@ -111,14 +111,14 @@ impl Color {
 }
 
 /// A gradient stop.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GradientStop {
     pub offset: f32, // 0.0 .. 1.0
     pub color: Color,
 }
 
 /// Fill or stroke paint.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Paint {
     Solid(Color),
     LinearGradient {
@@ -412,6 +412,18 @@ impl EdgeAnchor {
     }
 }
 
+/// Document-level default styles for edges.
+///
+/// When an `edge_defaults` block is present, individual edges omit
+/// properties that match the defaults — saving tokens for documents
+/// with many similarly styled edges.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct EdgeDefaults {
+    pub style: Style,
+    pub arrow: Option<ArrowKind>,
+    pub curve: Option<CurveKind>,
+}
+
 /// A visual connection between two endpoints.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Edge {
@@ -577,6 +589,20 @@ impl SceneNode {
     }
 }
 
+// ─── Graph Snapshot (for ReadMode::Diff) ─────────────────────────────────
+
+/// A lightweight snapshot of graph state for diff computation.
+///
+/// Stores per-node and per-edge hashes so that changes can be detected
+/// by comparing hashes rather than storing full copies of the graph.
+#[derive(Debug, Clone, Default)]
+pub struct GraphSnapshot {
+    /// Hash of each node's emitted text, keyed by NodeId.
+    pub node_hashes: HashMap<NodeId, u64>,
+    /// Hash of each edge's emitted text, keyed by edge id.
+    pub edge_hashes: HashMap<NodeId, u64>,
+}
+
 // ─── Scene Graph ─────────────────────────────────────────────────────────
 
 /// The complete FD document — a DAG of `SceneNode` values.
@@ -607,6 +633,10 @@ pub struct SceneGraph {
     /// When present for a parent, `children()` returns this order
     /// instead of the default `NodeIndex` sort.
     pub sorted_child_order: HashMap<NodeIndex, Vec<NodeIndex>>,
+
+    /// Document-level default styles for edges.
+    /// When present, individual edge properties matching the defaults are omitted.
+    pub edge_defaults: Option<EdgeDefaults>,
 }
 
 impl SceneGraph {
@@ -628,6 +658,7 @@ impl SceneGraph {
             edges: Vec::new(),
             imports: Vec::new(),
             sorted_child_order: HashMap::new(),
+            edge_defaults: None,
         }
     }
 
