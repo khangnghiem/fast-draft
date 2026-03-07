@@ -216,6 +216,14 @@ impl FdCanvas {
         self.sketchy_mode
     }
 
+    /// Check if any edge in the scene has a flow animation (pulse/dash).
+    ///
+    /// The JS render loop uses this to keep rendering continuously when
+    /// flow animations exist, instead of freezing when idle.
+    pub fn has_active_flows(&self) -> bool {
+        self.engine.graph.edges.iter().any(|e| e.flow.is_some())
+    }
+
     /// Resize the canvas.
     pub fn resize(&mut self, width: f64, height: f64) {
         self.width = width;

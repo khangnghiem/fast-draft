@@ -654,6 +654,17 @@ export class FdCanvas {
         }
     }
     /**
+     * Check if any edge in the scene has a flow animation (pulse/dash).
+     *
+     * The JS render loop uses this to keep rendering continuously when
+     * flow animations exist, instead of freezing when idle.
+     * @returns {boolean}
+     */
+    has_active_flows() {
+        const ret = wasm.fdcanvas_has_active_flows(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Check if text changed due to canvas interaction (for sync back to editor).
      * @returns {boolean}
      */
