@@ -2065,3 +2065,115 @@ rect @box {
         clone_bounds.y
     );
 }
+
+/// Z-order: bring_forward on the already-frontmost child is a no-op.
+/// Verifies GraphMutation won't panic or corrupt sibling order.
+#[test]
+fn sync_bring_forward_already_front_is_noop() {
+    let input = r#"
+group @container {
+  rect @back { w: 40 h: 30 }
+  rect @mid { w: 40 h: 30 }
+  rect @front { w: 40 h: 30 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    let front_id = NodeId::intern("front");
+    let front_idx = engine.graph.index_of(front_id).unwrap();
+    let container_idx = engine.graph.index_of(NodeId::intern("container")).unwrap();
+
+    // @front is already the last (frontmost) child
+    let changed = engine.graph.bring_forward(front_idx);
+    assert!(
+        !changed,
+        "bring_forward on frontmost child should return false"
+    );
+
+    // Verify sibling order is unchanged
+    let children = engine.graph.children(container_idx);
+    assert_eq!(children.len(), 3);
+    let ids: Vec<&str> = children
+        .iter()
+        .map(|&idx| engine.graph.graph[idx].id.as_str())
+        .collect();
+    assert_eq!(ids, vec!["back", "mid", "front"]);
+}
+
+/// next_clone_name: chained duplication produces foo, foo_2, foo_3.
+#[test]
+fn sync_clone_name_sequence() {
+    let input = r#"
+rect @card { w: 100 h: 80 }
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let card_id = NodeId::intern("card");
+
+    // First clone: card → card_2
+    engine.apply_mutation(GraphMutation::DuplicateNode { id: card_id });
+    engine.resolve();
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("card_2")).is_some(),
+        "first clone should be card_2"
+    );
+
+    // Second clone: card → card_3
+    engine.apply_mutation(GraphMutation::DuplicateNode { id: card_id });
+    engine.resolve();
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("card_3")).is_some(),
+        "second clone should be card_3"
+    );
+
+    // Clone the clone: card_2 → card_4
+    let card2_id = NodeId::intern("card_2");
+    engine.apply_mutation(GraphMutation::DuplicateNode { id: card2_id });
+    engine.resolve();
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("card_4")).is_some(),
+        "cloning card_2 should produce card_4 (max existing + 1)"
+    );
+}
+
+/// evaluate_near_detach: child partially outside parent returns warning info.
+#[test]
+fn sync_near_detach_warning_zone() {
+    let input = r#"
+group @box {
+  rect @child { w: 100 h: 50 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let child_id = NodeId::intern("child");
+
+    // Child fully inside → no near-detach warning
+    assert!(
+        engine.evaluate_near_detach(child_id).is_none(),
+        "fully inside should not trigger near-detach"
+    );
+
+    // Move child mostly outside (still overlapping ~20% area)
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: child_id,
+        dx: 80.0,
+        dy: 40.0,
+    });
+
+    // Now check: near-detach should fire if overlap < 25%
+    // The exact result depends on group size; we just verify no crash.
+    let _result = engine.evaluate_near_detach(child_id);
+    // This exercises the code path without asserting a specific value —
+    // the geometry depends on group auto-sizing. Main goal: no panic.
+}

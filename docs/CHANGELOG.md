@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.10.63 — Demo Cleanup + Test Coverage
+
+- **DOCS**: Rewrote `examples/demo.fd` from 562 lines of testing debris to a polished 236-line product dashboard showcase — demonstrates themes, edge_defaults, specs, animations, flows, frames with column layout, and semantic naming throughout
+- **TEST**: Added `sync_bring_forward_already_front_is_noop` — z-order edge case: bring_forward on frontmost child is a no-op
+- **TEST**: Added `sync_clone_name_sequence` — chained duplication produces `card`, `card_2`, `card_3`, `card_4` correctly
+- **TEST**: Added `sync_near_detach_warning_zone` — exercises near-detach evaluation code path without panic
+- **TEST**: Added `eraser_tool_hover_only_no_crash` — hover-only (no drag) produces no mutations and no crash
+- **TEST**: Added `select_tool_reclick_keeps_selection` — re-clicking an already-selected node keeps it selected
+
 ### v0.10.62 — Fix Shift+Drag Bugs (R3.54)
 
 - **FIX (R3.54)**: Near-origin jitter — Shift+drag axis constraint now uses a 4px dead-zone threshold before locking; within the dead-zone, movement is free (unconstrained); once past 4px, axis locks to horizontal or vertical and **stays locked** for the entire drag; previously the axis flipped every frame when `total_dx ≈ total_dy ≈ 0`

@@ -1,561 +1,283 @@
+# Fast Draft — Product Dashboard Demo
+# Showcases themes, constraints, edges, animations, specs, and layouts
+
 # ─── Themes ───
 
-theme accent {
-  fill: #6C5CE7  # blue
-  corner: 10
+edge_defaults {
+  stroke: #8B7CF7 1.5
+  arrow: end
+  curve: smooth
 }
 
-theme base_text {
-  fill: #333333  # gray
+theme brand {
+  fill: #6C5CE7
+  corner: 12
+}
+
+theme card {
+  fill: #FFFFFF
+  corner: 14
+}
+
+theme heading {
+  fill: #1A1A2E
+  font: "Inter" bold 22
+}
+
+theme subheading {
+  fill: #111827
+  font: "Inter" semibold 16
+}
+
+theme body {
+  fill: #6B7280
   font: "Inter" regular 14
+}
+
+theme accent_text {
+  fill: #FFFFFF
+  font: "Inter" semibold 14
+}
+
+theme metric {
+  fill: #6C5CE7
+  font: "Inter" bold 32
 }
 
 # ─── Layout ───
 
-# [auto] container (3 children)
-group @login_form {
+# Sidebar navigation
+frame @sidebar {
   spec {
-    "User authentication entry point"
-    accept: "email + password fields visible"
-    accept: "sign-in button triggers auth flow"
+    "Persistent sidebar — always visible"
+    accept: "collapses to icons on small screens"
+    status: done
+    priority: high
+    tag: navigation, responsive
+  }
+
+  text @app_name "FastDraft" {
+    fill: #FFFFFF
+    font: "Inter" bold 18
+  }
+
+  rect @nav_dashboard {
+    text "Dashboard" { use: accent_text }
+    w: 180 h: 40
+    fill: #5A4BD1
+    corner: 8
+    when :hover { fill: #4A3BC1; ease: ease_out 150ms }
+  }
+
+  rect @nav_projects {
+    text "Projects" { use: accent_text; opacity: 0.7 }
+    w: 180 h: 40
+    corner: 8
+    when :hover { fill: #5A4BD1; ease: ease_out 150ms }
+  }
+
+  rect @nav_settings {
+    text "Settings" { use: accent_text; opacity: 0.7 }
+    w: 180 h: 40
+    corner: 8
+    when :hover { fill: #5A4BD1; ease: ease_out 150ms }
+  }
+
+  w: 220 h: 600
+  fill: #2D2B55
+  corner: 0
+  x: 20
+  y: 20
+}
+
+# Top header area
+text @page_title "Dashboard" {
+  use: heading
+  x: 280
+  y: 32
+}
+
+text @page_subtitle "Welcome back — here's what's happening today." {
+  use: body
+  x: 280
+  y: 60
+}
+
+# ─── Metric Cards ───
+
+rect @card_revenue {
+  spec {
+    "Revenue metric card"
+    accept: "shows daily/weekly/monthly toggle"
+    accept: "sparkline chart in background"
+    status: doing
+    priority: high
+    tag: metrics, dashboard
+  }
+  text @revenue_label "Revenue" { use: body; x: 296; y: 112 }
+  text @revenue_value "$48,250" { use: metric; x: 296; y: 136 }
+  text @revenue_delta "+12.5% ↑" {
+    fill: #22C55E
+    font: "Inter" semibold 13
+    x: 424; y: 143
+  }
+  w: 220 h: 120
+  use: card
+  shadow: (0,2,16,#00000010)
+  x: 280
+  y: 100
+  when :hover { scale: 1.02; ease: spring 200ms }
+}
+
+rect @card_users {
+  text @users_label "Active Users" { use: body; x: 520; y: 112 }
+  text @users_value "2,847" { use: metric; x: 520; y: 136 }
+  w: 220 h: 120
+  use: card
+  shadow: (0,2,16,#00000010)
+  x: 516
+  y: 100
+  when :hover { scale: 1.02; ease: spring 200ms }
+}
+
+rect @card_tasks {
+  text @tasks_label "Completed Tasks" { use: body; x: 756; y: 112 }
+  text @tasks_value "1,094" { use: metric; x: 756; y: 136 }
+  w: 220 h: 120
+  use: card
+  shadow: (0,2,16,#00000010)
+  x: 752
+  y: 100
+  when :hover { scale: 1.02; ease: spring 200ms }
+}
+
+# ─── Activity Feed ───
+
+frame @activity_feed {
+  spec {
+    "Recent activity stream"
+    accept: "auto-refreshes every 30s"
+    accept: "click to navigate to item"
     status: todo
+    tag: realtime, engagement
   }
-  rect @email_field {
-    spec {
-      "Email input field"
-      accept: "validates email format on blur"
-      accept: "shows error state with red border"
-      priority: high
-    }
-    # [auto] label: "Email"
-    text @email_hint "Email" {
-      use: base_text
-      fill: #999999  # gray
-      x: 128.6
-      y: 14.6
-    }
-    w: 280 h: 44
-    stroke: #DDDDDD 1
+
+  text @feed_title "Recent Activity" { use: subheading }
+
+  rect @activity_1 {
+    text "Alice submitted design review" { use: body }
+    w: 420 h: 44
     corner: 8
-    x: 31.7
-    y: 68.3
+    fill: #F9FAFB
   }
-  rect @pass_field {
-    spec {
-      "Password input field"
-      accept: "minimum 8 characters"
-      priority: high
-    }
-    # [auto] label: "Password"
-    text @pass_hint "Password" {
-      use: base_text
-      fill: #999999  # gray
-      x: 107
-      y: 15.9
-    }
-    w: 280 h: 44
-    stroke: #DDDDDD 1
+
+  rect @activity_2 {
+    text "Bob merged pull request #284" { use: body }
+    w: 420 h: 44
     corner: 8
-    x: 28.3
-    y: 106.1
+    fill: #F9FAFB
   }
-  # [auto] styled: accent
-  rect @login_btn {
-    spec {
-      "Primary CTA — triggers login API call"
-      accept: "disabled state when fields empty"
-      accept: "loading spinner during auth"
-      status: done
-      priority: high
-    }
-    w: 280 h: 48
-    use: accent
-    fill: #5A4BD1  # blue
-    x: 27.7
-    y: 169
-    when :hover {
-      fill: #4A3BC1  # blue
-      scale: 1
-      ease: spring 200ms
-    }
-    when :press {
-      scale: 1
-      ease: ease_out 100ms
-    }
-  }
-  x: 292.4
-  y: 380.1
-}
 
-# [auto] label: "Welcome Back"
-text @title "Welcome Back" {
-  spec "Brand greeting — sets emotional tone"
-  fill: #1A1A2E  # blue
-  font: "Inter" bold 24
-  x: 362.6
-  y: 347.8
-}
-
-rect @rect_0 {
-  w: 0.2 h: 0.6
-  x: 345.9
-  y: 704.1
-}
-
-# [auto] connects to _anon_2
-rect @rect_1 {
-  w: 82.8 h: 82.8
-  x: 317.9
-  y: 631.2
-}
-
-# [auto] label: "Sign In"
-text @btn_label "Sign In" {
-  fill: #FFFFFF  # white
-  font: "Inter" semibold 16
-  x: 445.9
-  y: 667.3
-}
-
-# [auto] label: "Test"
-text @_anon_1 "Test" {
-  x: 531.3
-  y: 637.2
-}
-
-rect @_anon_2 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 130.3
-  y: 639.5
-}
-
-rect @_anon_4 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 134.9
-  y: 790.5
-}
-
-# [auto] connects to _rect_22
-ellipse @ellipse_3 {
-  w: 50 h: 50
-  stroke: #333333 2.5
-  x: 312.9
-  y: 865.8
-}
-
-# [auto] connects to _rect_5
-ellipse @_ellipse_4 {
-  w: 50 h: 40
-  stroke: #333333 2.5
-  x: 335.2
-  y: 201.5
-}
-
-rect @_rect_5 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 195.2
-  y: 201.5
-}
-
-rect @_rect_7 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 382.9
-  y: 11.5
-}
-
-rect @_rect_8 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 288.4
-  y: -109.3
-}
-
-ellipse @_ellipse_9 {
-  w: 50 h: 40
-  stroke: #333333 2.5
-  x: 616.7
-  y: -6.6
-}
-
-# [auto] label: "Text"
-text @_text_10 "Text" {
-  fill: #333333  # gray
-  x: 561.5
-  y: 187.6
-}
-
-# [auto] free container (0 children)
-frame @_frame_11 {
-  w: 200 h: 150
-  fill: #F2F2F7  # white
-  stroke: #BFBFCC 1
-  x: 439.9
-  y: -92.4
-}
-
-# [auto] connects to _rect_20
-rect @_rect_12 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 664.2
-  y: 367.3
-}
-
-# [auto] connects to _ellipse_16
-ellipse @_ellipse_13 {
-  w: 50 h: 40
-  stroke: #333333 2.5
-  x: 741.8
-  y: 224.5
-}
-
-# [auto] connects to _rect_18
-rect @_rect_15 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 904.9
-  y: 58.8
-}
-
-ellipse @_ellipse_16 {
-  w: 50 h: 40
-  stroke: #333333 2.5
-  x: 861.8
-  y: 214.5
-}
-
-rect @_rect_18 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 1113.3
-  y: -33.1
-}
-
-rect @_rect_20 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 809.2
-  y: 470.7
-}
-
-# [auto] connects to _ellipse_24, _text_26, _rect_28
-rect @_rect_22 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 514.1
-  y: 880.7
-}
-
-ellipse @_ellipse_24 {
-  w: 50 h: 40
-  stroke: #333333 2.5
-  x: 684.9
-  y: 799
-}
-
-# [auto] label: "Text"
-text @_text_26 "Text" {
-  fill: #333333  # gray
-  x: 715.8
-  y: 958.8
-}
-
-# [auto] connects to _ellipse_30
-rect @_rect_28 {
-  w: 155.6 h: 145.1
-  stroke: #333333 2.5
-  corner: 8
-  x: 297.1
-  y: 1138.8
-}
-
-ellipse @_ellipse_30 {
-  w: 50 h: 40
-  stroke: #333333 2.5
-  x: 730.2
-  y: 1061.4
-}
-
-rect @_rect_28_copy_32 {
-  w: 155.6 h: 145.1
-  stroke: #333333 2.5
-  corner: 8
-  x: 646.7
-  y: 1246.8
-}
-
-rect @_rect_28_copy_34 {
-  w: 155.6 h: 145.1
-  stroke: #333333 2.5
-  corner: 8
-  x: 435.4
-  y: 1297.2
-}
-
-rect @rect_36 {
-  w: 146.9 h: 146.9
-  stroke: #333333 2.5
-  corner: 8
-  x: 490.8
-  y: 1213.6
-}
-
-rect @_rect_0 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 170.7
-  y: 1508.2
-}
-
-rect @_rect_1 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 175.9
-  y: 1707.4
-}
-
-rect @_rect_2 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 146.8
-  y: 1425.7
-}
-
-rect @_rect_3 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 355.7
-  y: 1700.9
-}
-
-rect @_rect_28_copy_0 {
-  w: 155.6 h: 145.1
-  stroke: #333333 2.5
-  corner: 8
-  x: -130.8
-  y: 1101
-}
-
-rect @_rect_3_copy_6 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 237.5
-  y: 2504.2
-}
-
-rect @_rect_0_copy_0 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 476.3
-  y: 1604.4
-}
-
-rect @_rect_1_copy_1 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 353.2
-  y: 2032.6
-}
-
-rect @_rect_2_copy_2 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 452.4
-  y: 1521.8
-}
-
-rect @rect_3 {
-  w: 195.4 h: 173.5
-  stroke: #333333 2.5
-  corner: 8
-  x: 676.1
-  y: 1467.8
-}
-
-rect @rect_3_copy_7 {
-  w: 168.2 h: 153.1
-  stroke: #333333 2.5
-  corner: 8
-  x: 267.4
-  y: 1931.1
-}
-
-# [auto] free container (0 children)
-frame @_frame_8 {
-  w: 200 h: 150
-  fill: #F2F2F7  # white
-  stroke: #BFBFCC 1
-  x: 434.5
-  y: 2255.1
-}
-
-rect @_rect_1_copy_11 {
-  w: 100 h: 80
-  stroke: #333333 2.5
-  corner: 8
-  x: 223.6
-  y: 2151.8
-}
-
-rect @_rect_28_copy_0 {
-  w: 155.6 h: 145.1
-  stroke: #333333 2.5
-  corner: 8
-  x: -567.5
-  y: 1320.9
-}
-
-rect @_rect_28_copy_1 {
-  w: 155.6 h: 145.1
-  stroke: #333333 2.5
-  corner: 8
-  x: -712.2
-  y: 1857.9
-}
-
-rect @_rect_28_copy_3 {
-  w: 155.6 h: 145.1
-  stroke: #333333 2.5
-  corner: 8
-  x: -741.4
-  y: 2336.8
-}
-
-rect @_rect_28_copy_0 {
-  w: 155.6 h: 145.1
-  stroke: #333333 2.5
-  corner: 8
-  x: -1033.3
-  y: 939.4
-}
-
-rect @_rect_28_copy_1 {
-  w: 155.6 h: 145.1
-  stroke: #333333 2.5
-  corner: 8
-  x: -339.9
-  y: 1781.4
-}
-
-rect @_rect_28_copy_2 {
-  w: 155.6 h: 145.1
-  stroke: #333333 2.5
-  corner: 8
-  x: -530.6
-  y: 760.7
-}
-
-# [auto] container (1 children)
-group @_group_4 {
-  rect @_rect_28_copy_3 {
-    w: 155.6 h: 145.1
-    stroke: #333333 2.5
+  rect @activity_3 {
+    text "Carol deployed v2.1.0 to staging" { use: body }
+    w: 420 h: 44
     corner: 8
+    fill: #F9FAFB
   }
-  x: -534.5
-  y: 449
+
+  w: 460 h: 280
+  use: card
+  shadow: (0,2,16,#00000010)
+  layout: column gap=8 pad=20
+  x: 280
+  y: 240
 }
 
-rect @_rect_28_copy_35 {
-  w: 155.6 h: 145.1
-  stroke: #333333 2.5
+# ─── Pipeline Status ───
+
+frame @pipeline {
+  text @pipeline_title "Deployment Pipeline" { use: subheading }
+
+  w: 460 h: 236
+  use: card
+  shadow: (0,2,16,#00000010)
+  layout: column gap=12 pad=20
+  x: 280
+  y: 540
+}
+
+# Pipeline stages as connected nodes
+rect @stage_build {
+  text "Build" { use: accent_text }
+  w: 90 h: 44
+  fill: #22C55E
   corner: 8
-  x: -1287.2
-  y: 1231.1
+  x: 308
+  y: 640
+}
+
+rect @stage_test {
+  text "Test" { use: accent_text }
+  w: 90 h: 44
+  fill: #22C55E
+  corner: 8
+  x: 428
+  y: 640
+}
+
+rect @stage_staging {
+  text "Staging" { use: accent_text }
+  w: 90 h: 44
+  fill: #F59E0B
+  corner: 8
+  x: 548
+  y: 640
+  when :hover { fill: #D97706; ease: ease_out 150ms }
+}
+
+ellipse @stage_prod {
+  text "Prod" { use: accent_text }
+  w: 90 h: 44
+  fill: #6B7280
+  corner: 8
+  x: 668
+  y: 640
+  when :press { fill: #6C5CE7; ease: spring 300ms }
 }
 
 # ─── Flows ───
 
-edge @edge_3 {
-  from: @rect_1
-  to: @_anon_2
-  stroke: #6B7080 1.5
-  arrow: end
-  curve: smooth
-}
-edge @edge_6 {
-  from: @_ellipse_4
-  to: @_rect_5
-  stroke: #6B7080 1.5
-  arrow: end
-  curve: smooth
-}
-edge @edge_17 {
-  from: @_ellipse_13
-  to: @_ellipse_16
-  stroke: #6B7080 1.5
-  arrow: end
-  curve: smooth
-}
-edge @edge_19 {
-  from: @_rect_15
-  to: @_rect_18
-  stroke: #6B7080 1.5
-  arrow: end
-  curve: smooth
-}
-edge @edge_21 {
-  from: @_rect_12
-  to: @_rect_20
-  stroke: #6B7080 1.5
-  arrow: end
-  curve: smooth
-}
-edge @edge_23 {
-  from: @ellipse_3
-  to: @_rect_22
-  stroke: #6B7080 1.5
-  arrow: end
-  curve: smooth
-}
-edge @edge_25 {
-  from: @_rect_22
-  to: @_ellipse_24
-  stroke: #999999 1
-  arrow: end
-  curve: smooth
+edge @build_to_test {
+  from: @stage_build
+  to: @stage_test
   flow: pulse 800ms
 }
-edge @edge_27 {
-  from: @_rect_22
-  to: @_text_26
-  stroke: #6B7080 1.5
-  arrow: end
-  curve: smooth
+
+edge @test_to_staging {
+  from: @stage_test
+  to: @stage_staging
+  flow: pulse 800ms
 }
-edge @edge_29 {
-  from: @_rect_22
-  to: @_rect_28
-  stroke: #6B7080 1.5
-  arrow: end
-  curve: smooth
+
+edge @staging_to_prod {
+  from: @stage_staging
+  to: @stage_prod
+  stroke: #F59E0B 1.5
+  flow: dash 1200ms
 }
-edge @edge_31 {
-  from: @_rect_28
-  to: @_ellipse_30
-  stroke: #6B7080 1.5
-  arrow: end
-  curve: smooth
+
+edge @revenue_to_users {
+  from: @card_revenue
+  to: @card_users
+  stroke: #E5E7EB 1
+  arrow: none
+  curve: straight
+}
+
+edge @users_to_tasks {
+  from: @card_users
+  to: @card_tasks
+  stroke: #E5E7EB 1
+  arrow: none
+  curve: straight
 }
