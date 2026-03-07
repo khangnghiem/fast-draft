@@ -127,6 +127,21 @@ crates/
 
 ## TIER 2: CI/CD
 
+### 🌐 Site & Domain
+
+| Fact | Value |
+| ---- | ----- |
+| **Live URL** | [https://fast-draft.com](https://fast-draft.com) |
+| **Hosting** | GitHub Pages (free, static) |
+| **DNS** | Cloudflare — CNAME `@` → `khangnghiem.github.io`, proxy **OFF** |
+| **Source** | `site/` directory (index.html, style.css, playground.js, wasm/) |
+| **CNAME file** | `site/CNAME` — contains `fast-draft.com` |
+| **Deploy trigger** | Auto on push to `main` via `.github/workflows/pages.yml` |
+| **WASM build** | `wasm-pack build crates/fd-wasm --target web --out-dir ../../site/wasm` |
+
+> [!CAUTION]
+> **Never delete or modify `site/CNAME`.** Removing it breaks the custom domain binding and reverts to `khangnghiem.github.io/fast-draft/`.
+
 ### Before Completing Any Task
 
 - [ ] `cargo check --workspace` passes
