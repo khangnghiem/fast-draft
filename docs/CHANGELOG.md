@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.10.66 — Interactive Playground (R6.6)
+
+- **FEATURE (R6.6)**: Playground canvas is now fully interactive — pointer events (click to select, drag to move/resize, draw shapes) wired through WASM `handle_pointer_down/move/up` APIs; bidirectional sync with `suppressSync` echo prevention ensures canvas→code and code→canvas stay in sync
+- **UX (R6.6)**: 7-tool toolbar in canvas header — Select (↖), Rect (□), Ellipse (○), Text (T), Arrow (→), Pen (✎), Eraser (◎); active tool highlighted with accent purple; auto-switches back to Select after drawing gesture
+- **UX (R6.6)**: Floating action bar (FAB) — frosted-glass popup above selected nodes with Fill/Stroke color pickers and Delete button; positioned relative to node bounds accounting for zoom/pan
+- **UX (R6.6)**: Zoom/pan navigation — scroll wheel pans, Ctrl/⌘+scroll zooms, Space+drag for hand-tool pan, middle-click pan; zoom indicator shows current level in canvas header
+- **UX (R6.6)**: Keyboard shortcuts — V/R/O/T/A/P/E for tool switching, Delete/Backspace to remove nodes, ⌘Z/⌘⇧Z for undo/redo; focus management ensures shortcuts fire on canvas (not textarea)
+- **SITE**: Zero Rust changes — all interactivity implemented in `playground.js` (~330 lines), `index.html` (toolbar + FAB markup), `style.css` (+95 lines)
+
 ### v0.10.65 — Playground-First Landing Page (R6.5)
 
 - **UX (R6.5)**: Playground now visible on landing — embedded live playground directly in the hero section; users see code editor + canvas split-pane within the first viewport without scrolling
