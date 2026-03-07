@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.10.65 — Playground-First Landing Page (R6.5)
+
+- **UX (R6.5)**: Playground now visible on landing — embedded live playground directly in the hero section; users see code editor + canvas split-pane within the first viewport without scrolling
+- **UX (R6.5)**: Removed `100vh` hero minimum height — hero now uses content-driven height with compact padding (`80px 24px 48px`), pushing interactive content above the fold
+- **UX (R6.5)**: Removed redundant Code Preview section — the static syntax showcase (40 lines HTML + 50 lines CSS) is superseded by the live editable playground
+- **PERF (R6.5)**: Added WASM preload hints in `<head>` — `<link rel="modulepreload">` for `fd_wasm.js` and `<link rel="preload" as="fetch">` for `fd_wasm_bg.wasm`; reduces perceived playground load time by ~1–2s on typical connections
+- **UX (R6.5)**: Replaced loading spinner with animated skeleton — shimmering placeholder shapes (rect, circle, lines) mirror expected canvas content while WASM initializes; CSS-only animation, no additional JS
+- **SITE**: Updated nav links — removed "Try Playground" (playground is now hero content); kept Features, Benchmarks, Architecture, Install Extension
+
 ### v0.10.64 — Fix Edge Flow Animation Freeze
 
 - **FIX**: Edge flow animations (`flow: pulse`, `flow: dash`) now animate continuously when idle — previously froze until mouse interaction because the JS render loop's dirty-flag optimization had no knowledge of WASM-side time-dependent flow effects; added `has_active_flows()` WASM API that checks if any edge has a flow animation, cached in JS on scene change, and included in the render loop condition

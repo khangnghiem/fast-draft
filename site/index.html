@@ -14,6 +14,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- Preload WASM for instant playground -->
+  <link rel="modulepreload" href="./wasm/fd_wasm.js" />
+  <link rel="preload" href="./wasm/fd_wasm_bg.wasm" as="fetch" crossorigin />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -25,7 +28,6 @@
         <span class="logo-text">Fast Draft</span>
       </a>
       <div class="nav-links">
-        <a href="#playground">Playground</a>
         <a href="#features">Features</a>
         <a href="#benchmarks">Benchmarks</a>
         <a href="#architecture">Architecture</a>
@@ -37,7 +39,7 @@
     </div>
   </nav>
 
-  <!-- ─── Hero ─── -->
+  <!-- ─── Hero with Embedded Playground ─── -->
   <header id="hero">
     <div class="hero-bg">
       <div class="hero-gradient"></div>
@@ -48,8 +50,8 @@
       <h1>Design as <span class="gradient-text">Code</span></h1>
       <p class="hero-sub">A file format and canvas for drawing, design, and animation — right inside your code editor. Draw it or code it? <strong>Both.</strong></p>
       <div class="hero-cta">
-        <a href="#playground" class="btn btn-primary">
-          <span class="btn-icon">▶</span> Try Playground
+        <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener" class="btn btn-primary">
+          <span class="btn-icon">⚡</span> Install Extension
         </a>
         <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener" class="btn btn-ghost">
           <span class="btn-icon">★</span> View on GitHub
@@ -72,60 +74,12 @@
         </div>
       </div>
     </div>
-  </header>
 
-  <!-- ─── Code Preview ─── -->
-  <section id="code-preview" class="section">
-    <div class="container">
-      <div class="code-window">
-        <div class="code-titlebar">
-          <div class="code-dots">
-            <span class="dot red"></span>
-            <span class="dot yellow"></span>
-            <span class="dot green"></span>
-          </div>
-          <span class="code-filename">hello.fd</span>
-        </div>
-        <pre class="code-content"><code><span class="c-comment"># A card with a hover button</span>
-
-<span class="c-keyword">theme</span> <span class="c-id">accent</span> {
-  <span class="c-prop">fill:</span> <span class="c-color">#6C5CE7</span>
-}
-
-<span class="c-keyword">group</span> <span class="c-id">@card</span> {
-  <span class="c-prop">layout:</span> column gap=16 pad=24
-  <span class="c-prop">bg:</span> <span class="c-color">#FFF</span> corner=12 shadow=(0,4,20,<span class="c-color">#0002</span>)
-
-  <span class="c-keyword">text</span> <span class="c-id">@title</span> <span class="c-string">"Hello World"</span> {
-    <span class="c-prop">font:</span> <span class="c-string">"Inter"</span> bold 24
-    <span class="c-prop">fill:</span> <span class="c-color">#1A1A2E</span>
-  }
-
-  <span class="c-keyword">rect</span> <span class="c-id">@button</span> {
-    <span class="c-prop">w:</span> <span class="c-num">200</span> <span class="c-prop">h:</span> <span class="c-num">48</span>
-    <span class="c-prop">use:</span> accent
-    <span class="c-keyword">when</span> <span class="c-trigger">:hover</span> {
-      <span class="c-prop">fill:</span> <span class="c-color">#5A4BD1</span>
-      <span class="c-prop">scale:</span> <span class="c-num">1.02</span>
-      <span class="c-prop">ease:</span> spring 300ms
-    }
-  }
-}
-
-<span class="c-id">@card</span> -> <span class="c-prop">center_in:</span> canvas</code></pre>
-      </div>
-    </div>
-  </section>
-
-  <!-- ─── Live Playground ─── -->
-  <section id="playground" class="section">
-    <div class="container">
-      <div class="section-header">
-        <h2>Live <span class="gradient-text">Playground</span></h2>
-        <p>Edit the code below and watch the canvas update in real-time — powered by Rust + WebAssembly.</p>
-      </div>
+    <!-- ─── Playground Embedded in Hero ─── -->
+    <div class="hero-playground">
       <div class="playground-toolbar">
         <div class="toolbar-left">
+          <span class="playground-label">▶ Live Playground</span>
           <label for="example-select" class="toolbar-label">Example:</label>
           <select id="example-select" class="toolbar-select">
             <option value="card">Card Component</option>
@@ -156,14 +110,19 @@
           <div id="canvas-wrapper">
             <canvas id="fd-canvas"></canvas>
             <div id="canvas-loading" class="canvas-loading">
-              <div class="loading-spinner"></div>
-              <p>Loading WASM engine…</p>
+              <div class="skeleton-preview">
+                <div class="skeleton-shape skeleton-rect"></div>
+                <div class="skeleton-shape skeleton-circle"></div>
+                <div class="skeleton-shape skeleton-line"></div>
+                <div class="skeleton-shape skeleton-line skeleton-line-short"></div>
+              </div>
+              <p class="loading-text">Initializing WASM engine…</p>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </section>
+  </header>
 
   <!-- ─── Features ─── -->
   <section id="features" class="section">
@@ -433,7 +392,7 @@
       });
     }, { threshold: 0.1 });
 
-    document.querySelectorAll('.feature-card, .mode-card, .crate-card, .section-header, .code-window').forEach(el => {
+    document.querySelectorAll('.feature-card, .mode-card, .crate-card, .section-header').forEach(el => {
       el.classList.add('animate-in');
       observer.observe(el);
     });

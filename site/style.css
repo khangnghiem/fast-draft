@@ -126,11 +126,10 @@ code {
 /* ─── Hero ─── */
 #hero {
   position: relative;
-  min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 120px 24px 80px;
+  padding: 80px 24px 48px;
   overflow: hidden;
 }
 .hero-bg {
@@ -161,6 +160,7 @@ code {
   z-index: 1;
   text-align: center;
   max-width: 800px;
+  margin-bottom: 40px;
 }
 .hero-badge {
   display: inline-block;
@@ -171,14 +171,14 @@ code {
   color: var(--text-secondary);
   font-size: 0.85rem;
   font-weight: 500;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   letter-spacing: 0.02em;
 }
 #hero h1 {
-  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
   font-weight: 800;
   line-height: 1.1;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   letter-spacing: -0.03em;
 }
 .gradient-text {
@@ -188,10 +188,10 @@ code {
   background-clip: text;
 }
 .hero-sub {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: var(--text-secondary);
-  max-width: 600px;
-  margin: 0 auto 32px;
+  max-width: 580px;
+  margin: 0 auto 24px;
   line-height: 1.7;
 }
 .hero-cta {
@@ -199,7 +199,7 @@ code {
   gap: 16px;
   justify-content: center;
   flex-wrap: wrap;
-  margin-bottom: 48px;
+  margin-bottom: 32px;
 }
 .btn {
   display: inline-flex;
@@ -247,7 +247,7 @@ code {
 .stat { text-align: center; }
 .stat-value {
   display: block;
-  font-size: 2rem;
+  font-size: 1.8rem;
   font-weight: 800;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   -webkit-background-clip: text;
@@ -262,6 +262,21 @@ code {
   width: 1px;
   height: 40px;
   background: var(--border);
+}
+
+/* ─── Hero Playground ─── */
+.hero-playground {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: var(--max-width);
+  margin-top: 8px;
+}
+.playground-label {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
 }
 
 /* ─── Sections ─── */
@@ -288,62 +303,12 @@ code {
   margin: 0 auto;
 }
 
-/* ─── Code Preview ─── */
-.code-window {
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  background: var(--bg-card);
-  overflow: hidden;
-  box-shadow: var(--shadow), var(--shadow-glow);
-  max-width: 640px;
-  margin: -40px auto 0;
-}
-.code-titlebar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: rgba(22, 27, 34, 0.8);
-  border-bottom: 1px solid var(--border);
-}
-.code-dots { display: flex; gap: 6px; }
-.dot {
-  width: 12px; height: 12px;
-  border-radius: 50%;
-}
-.dot.red { background: #FF5F57; }
-.dot.yellow { background: #FEBC2E; }
-.dot.green { background: #28C840; }
-.code-filename {
-  flex: 1;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-family: var(--mono);
-}
-.code-content {
-  padding: 20px 24px;
-  font-family: var(--mono);
-  font-size: 0.85rem;
-  line-height: 1.7;
-  overflow-x: auto;
-  color: var(--text-primary);
-}
-.c-comment { color: #6A737D; }
-.c-keyword { color: #FF79C6; font-weight: 600; }
-.c-id { color: #79B8FF; }
-.c-prop { color: #B392F0; }
-.c-color { color: #FFAB70; }
-.c-string { color: #9ECBFF; }
-.c-num { color: #79B8FF; }
-.c-trigger { color: #F97583; }
-
 /* ─── Playground ─── */
 .playground-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
   gap: 12px;
 }
@@ -400,8 +365,8 @@ code {
   border: 1px solid var(--border);
   overflow: hidden;
   background: var(--border);
-  box-shadow: var(--shadow);
-  min-height: 480px;
+  box-shadow: var(--shadow), var(--shadow-glow);
+  min-height: 420px;
 }
 .playground-editor, .playground-canvas {
   background: var(--bg-card);
@@ -449,6 +414,8 @@ code {
   height: 100%;
   display: block;
 }
+
+/* ─── Skeleton Loader ─── */
 .canvas-loading {
   position: absolute;
   inset: 0;
@@ -456,20 +423,60 @@ code {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 20px;
   background: var(--bg-card);
-  color: var(--text-secondary);
-  font-size: 0.9rem;
 }
 .canvas-loading.hidden { display: none; }
-.loading-spinner {
-  width: 32px; height: 32px;
-  border: 3px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+
+.skeleton-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 160px;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+.skeleton-shape {
+  background: linear-gradient(90deg,
+    var(--border) 25%,
+    var(--bg-card-hover) 50%,
+    var(--border) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+.skeleton-rect {
+  width: 120px;
+  height: 60px;
+  border-radius: var(--radius);
+}
+.skeleton-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  animation-delay: 0.2s;
+}
+.skeleton-line {
+  width: 100%;
+  height: 10px;
+  border-radius: 5px;
+  animation-delay: 0.4s;
+}
+.skeleton-line-short {
+  width: 70%;
+  animation-delay: 0.6s;
+}
+.loading-text {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
 
 /* ─── Features ─── */
 .features-grid {
@@ -755,12 +762,16 @@ code {
   .nav-links.open { display: flex; }
   .mobile-menu-btn { display: flex; }
 
+  #hero {
+    padding: 72px 16px 32px;
+  }
+
   .playground-split {
     grid-template-columns: 1fr;
     min-height: auto;
   }
-  .playground-editor { min-height: 300px; }
-  .playground-canvas { min-height: 350px; }
+  .playground-editor { min-height: 280px; }
+  .playground-canvas { min-height: 320px; }
 
   .hero-stats { gap: 16px; }
   .stat-divider { display: none; }
@@ -769,12 +780,13 @@ code {
   .modes-grid { grid-template-columns: 1fr; }
   .crate-grid { grid-template-columns: 1fr 1fr; }
 
-  #hero h1 { font-size: 2.2rem; }
+  #hero h1 { font-size: 2rem; }
   .hero-sub { font-size: 1rem; }
+
+  .playground-label { display: none; }
 }
 
 @media (max-width: 480px) {
   .crate-grid { grid-template-columns: 1fr; }
   .section { padding: 60px 16px; }
-  .code-content { font-size: 0.75rem; padding: 16px; }
 }
