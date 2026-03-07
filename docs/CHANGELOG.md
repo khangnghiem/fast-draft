@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.10.61 — Fix Alt+Drag Clone Bugs (R3.54)
+
+- **FIX (R3.54)**: Selection coupling — cloning a node via Alt+drag no longer causes the clone and original to select together; root cause: clone inherited original's `Position` constraint, giving both identical resolved bounds → hit-test couldn't distinguish them; fix: `clone_node_recursive` now strips all positioning constraints and assigns a fresh `Position` from resolved bounds + offset
+- **FIX (R3.54)**: Drag inversion — dragging the original after cloning no longer moves only the clone; same root cause as selection coupling (overlapping bounds from shared `Position` constraint)
+- **FIX (R3.54)**: `DuplicateNode` mutation in `sync.rs` now also strips positioning constraints and uses resolved bounds + 20px offset, matching the WASM Alt+drag fix
+- **UX**: Incremental clone naming — `rect_0` → `rect_2` → `rect_3` instead of `rect_0_copy_42`; new `next_clone_name()` scans graph for existing `{stem}_N` patterns and picks `max(N)+1`
+- **TESTING**: 3 new regression tests — `sync_duplicate_position_independent` (moving original doesn't move clone), `sync_duplicate_incremental_naming` (card → card_2 → card_3 → card_4), `sync_duplicate_no_overlapping_bounds` (clone offset by 20px)
+
 ### v0.10.60 — Format Precision & AI Comprehensibility (R4.21)
 
 - **FEATURE (R4.21)**: Comprehensibility Score requirement — R4.21 documents a planned 0–100 score measuring AI comprehensibility (semantic naming ratio, comment density, theme reuse, edge default coverage, token cost)

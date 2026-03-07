@@ -12,6 +12,7 @@ theme base_text {
 
 # ─── Layout ───
 
+# [auto] container (3 children)
 group @login_form {
   spec {
     "User authentication entry point"
@@ -26,17 +27,18 @@ group @login_form {
       accept: "shows error state with red border"
       priority: high
     }
+    # [auto] label: "Email"
     text @email_hint "Email" {
       use: base_text
       fill: #999999  # gray
-      x: 128.57
-      y: 14.63
+      x: 128.6
+      y: 14.6
     }
     w: 280 h: 44
     stroke: #DDDDDD 1
     corner: 8
-    x: 31.68
-    y: 68.31
+    x: 31.7
+    y: 68.3
   }
   rect @pass_field {
     spec {
@@ -44,18 +46,20 @@ group @login_form {
       accept: "minimum 8 characters"
       priority: high
     }
+    # [auto] label: "Password"
     text @pass_hint "Password" {
       use: base_text
       fill: #999999  # gray
-      x: 106.98
-      y: 15.88
+      x: 107
+      y: 15.9
     }
     w: 280 h: 44
     stroke: #DDDDDD 1
     corner: 8
-    x: 28.33
-    y: 106.06
+    x: 28.3
+    y: 106.1
   }
+  # [auto] styled: accent
   rect @login_btn {
     spec {
       "Primary CTA — triggers login API call"
@@ -67,51 +71,55 @@ group @login_form {
     w: 280 h: 48
     use: accent
     fill: #5A4BD1  # blue
-    x: 27.69
-    y: 169.03
+    x: 27.7
+    y: 169
     when :hover {
       fill: #4A3BC1  # blue
-      scale: 1.02
+      scale: 1
       ease: spring 200ms
     }
     when :press {
-      scale: 0.97
+      scale: 1
       ease: ease_out 100ms
     }
   }
-  x: 292.44
-  y: 380.14
+  x: 292.4
+  y: 380.1
 }
 
+# [auto] label: "Welcome Back"
 text @title "Welcome Back" {
   spec "Brand greeting — sets emotional tone"
   fill: #1A1A2E  # blue
   font: "Inter" bold 24
-  x: 362.63
-  y: 347.77
+  x: 362.6
+  y: 347.8
 }
 
 rect @rect_0 {
-  w: 0.21 h: 0.65
-  x: 345.86
-  y: 704.14
+  w: 0.2 h: 0.6
+  x: 345.9
+  y: 704.1
 }
 
+# [auto] connects to _anon_2
 rect @rect_1 {
-  w: 82.84 h: 82.84
-  x: 317.93
-  y: 631.19
+  w: 82.8 h: 82.8
+  x: 317.9
+  y: 631.2
 }
 
+# [auto] label: "Sign In"
 text @btn_label "Sign In" {
   fill: #FFFFFF  # white
   font: "Inter" semibold 16
-  x: 445.88
+  x: 445.9
   y: 667.3
 }
 
+# [auto] label: "Test"
 text @_anon_1 "Test" {
-  x: 531.32
+  x: 531.3
   y: 637.2
 }
 
@@ -119,29 +127,31 @@ rect @_anon_2 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 130.27
-  y: 639.46
+  x: 130.3
+  y: 639.5
 }
 
 rect @_anon_4 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 134.91
+  x: 134.9
   y: 790.5
 }
 
+# [auto] connects to _rect_22
 ellipse @ellipse_3 {
   w: 50 h: 50
   stroke: #333333 2.5
-  x: 312.87
-  y: 865.82
+  x: 312.9
+  y: 865.8
 }
 
+# [auto] connects to _rect_5
 ellipse @_ellipse_4 {
   w: 50 h: 40
   stroke: #333333 2.5
-  x: 335.21
+  x: 335.2
   y: 201.5
 }
 
@@ -149,7 +159,7 @@ rect @_rect_5 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 195.21
+  x: 195.2
   y: 201.5
 }
 
@@ -157,167 +167,175 @@ rect @_rect_7 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 382.87
-  y: 11.48
+  x: 382.9
+  y: 11.5
 }
 
 rect @_rect_8 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 288.35
-  y: -109.34
+  x: 288.4
+  y: -109.3
 }
 
 ellipse @_ellipse_9 {
   w: 50 h: 40
   stroke: #333333 2.5
-  x: 616.72
-  y: -6.62
+  x: 616.7
+  y: -6.6
 }
 
+# [auto] label: "Text"
 text @_text_10 "Text" {
   fill: #333333  # gray
-  x: 561.45
-  y: 187.55
+  x: 561.5
+  y: 187.6
 }
 
+# [auto] free container (0 children)
 frame @_frame_11 {
   w: 200 h: 150
   fill: #F2F2F7  # white
   stroke: #BFBFCC 1
-  x: 439.94
-  y: -92.36
+  x: 439.9
+  y: -92.4
 }
 
+# [auto] connects to _rect_20
 rect @_rect_12 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 664.17
-  y: 367.29
+  x: 664.2
+  y: 367.3
 }
 
+# [auto] connects to _ellipse_16
 ellipse @_ellipse_13 {
   w: 50 h: 40
   stroke: #333333 2.5
-  x: 741.85
-  y: 224.49
+  x: 741.8
+  y: 224.5
 }
 
+# [auto] connects to _rect_18
 rect @_rect_15 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 904.89
-  y: 58.83
+  x: 904.9
+  y: 58.8
 }
 
 ellipse @_ellipse_16 {
   w: 50 h: 40
   stroke: #333333 2.5
-  x: 861.85
-  y: 214.49
+  x: 861.8
+  y: 214.5
 }
 
 rect @_rect_18 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 1113.35
-  y: -33.13
+  x: 1113.3
+  y: -33.1
 }
 
 rect @_rect_20 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 809.18
+  x: 809.2
   y: 470.7
 }
 
+# [auto] connects to _ellipse_24, _text_26, _rect_28
 rect @_rect_22 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
   x: 514.1
-  y: 880.69
+  y: 880.7
 }
 
 ellipse @_ellipse_24 {
   w: 50 h: 40
   stroke: #333333 2.5
-  x: 684.88
-  y: 798.98
+  x: 684.9
+  y: 799
 }
 
+# [auto] label: "Text"
 text @_text_26 "Text" {
   fill: #333333  # gray
-  x: 715.79
-  y: 958.78
+  x: 715.8
+  y: 958.8
 }
 
+# [auto] connects to _ellipse_30
 rect @_rect_28 {
-  w: 155.61 h: 145.15
+  w: 155.6 h: 145.1
   stroke: #333333 2.5
   corner: 8
-  x: 297.11
-  y: 1138.76
+  x: 297.1
+  y: 1138.8
 }
 
 ellipse @_ellipse_30 {
   w: 50 h: 40
   stroke: #333333 2.5
-  x: 730.19
-  y: 1061.44
+  x: 730.2
+  y: 1061.4
 }
 
 rect @_rect_28_copy_32 {
-  w: 155.61 h: 145.15
+  w: 155.6 h: 145.1
   stroke: #333333 2.5
   corner: 8
-  x: 646.72
-  y: 1246.77
+  x: 646.7
+  y: 1246.8
 }
 
 rect @_rect_28_copy_34 {
-  w: 155.61 h: 145.15
+  w: 155.6 h: 145.1
   stroke: #333333 2.5
   corner: 8
-  x: 435.38
+  x: 435.4
   y: 1297.2
 }
 
 rect @rect_36 {
-  w: 146.95 h: 146.95
+  w: 146.9 h: 146.9
   stroke: #333333 2.5
   corner: 8
-  x: 490.79
-  y: 1213.59
+  x: 490.8
+  y: 1213.6
 }
 
 rect @_rect_0 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 170.68
-  y: 1508.18
+  x: 170.7
+  y: 1508.2
 }
 
 rect @_rect_1 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 175.93
-  y: 1707.44
+  x: 175.9
+  y: 1707.4
 }
 
 rect @_rect_2 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 146.81
-  y: 1425.65
+  x: 146.8
+  y: 1425.7
 }
 
 rect @_rect_3 {
@@ -325,38 +343,38 @@ rect @_rect_3 {
   stroke: #333333 2.5
   corner: 8
   x: 355.7
-  y: 1700.92
+  y: 1700.9
 }
 
 rect @_rect_28_copy_0 {
-  w: 155.61 h: 145.15
+  w: 155.6 h: 145.1
   stroke: #333333 2.5
   corner: 8
-  x: -130.77
-  y: 1101.02
+  x: -130.8
+  y: 1101
 }
 
 rect @_rect_3_copy_6 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 237.51
-  y: 2504.21
+  x: 237.5
+  y: 2504.2
 }
 
 rect @_rect_0_copy_0 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 476.28
-  y: 1604.36
+  x: 476.3
+  y: 1604.4
 }
 
 rect @_rect_1_copy_1 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 353.16
+  x: 353.2
   y: 2032.6
 }
 
@@ -364,64 +382,97 @@ rect @_rect_2_copy_2 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 452.41
-  y: 1521.83
+  x: 452.4
+  y: 1521.8
 }
 
 rect @rect_3 {
-  w: 195.36 h: 173.46
+  w: 195.4 h: 173.5
   stroke: #333333 2.5
   corner: 8
   x: 676.1
-  y: 1467.84
+  y: 1467.8
 }
 
 rect @rect_3_copy_7 {
-  w: 168.25 h: 153.15
+  w: 168.2 h: 153.1
   stroke: #333333 2.5
   corner: 8
-  x: 267.43
-  y: 1931.14
+  x: 267.4
+  y: 1931.1
 }
 
+# [auto] free container (0 children)
 frame @_frame_8 {
   w: 200 h: 150
   fill: #F2F2F7  # white
   stroke: #BFBFCC 1
-  x: 434.46
-  y: 2255.12
+  x: 434.5
+  y: 2255.1
 }
 
 rect @_rect_1_copy_11 {
   w: 100 h: 80
   stroke: #333333 2.5
   corner: 8
-  x: 223.65
-  y: 2151.79
+  x: 223.6
+  y: 2151.8
 }
 
 rect @_rect_28_copy_0 {
-  w: 155.61 h: 145.15
+  w: 155.6 h: 145.1
   stroke: #333333 2.5
   corner: 8
-  x: -517.58
-  y: 1668.43
+  x: -567.5
+  y: 1320.9
 }
 
 rect @_rect_28_copy_1 {
-  w: 155.61 h: 145.15
+  w: 155.6 h: 145.1
   stroke: #333333 2.5
   corner: 8
-  x: -712.18
-  y: 1857.93
+  x: -712.2
+  y: 1857.9
 }
 
 rect @_rect_28_copy_3 {
-  w: 155.61 h: 145.15
+  w: 155.6 h: 145.1
   stroke: #333333 2.5
   corner: 8
-  x: -741.39
-  y: 2336.84
+  x: -741.4
+  y: 2336.8
+}
+
+rect @_rect_28_copy_0 {
+  w: 155.6 h: 145.1
+  stroke: #333333 2.5
+  corner: 8
+  x: -728.3
+  y: 523.4
+}
+
+rect @_rect_28_copy_1 {
+  w: 155.6 h: 145.1
+  stroke: #333333 2.5
+  corner: 8
+  x: -339.9
+  y: 1781.4
+}
+
+rect @_rect_28_copy_2 {
+  w: 155.6 h: 145.1
+  stroke: #333333 2.5
+  corner: 8
+  x: -530.6
+  y: 760.7
+}
+
+rect @_rect_28_copy_3 {
+  w: 155.6 h: 145.1
+  stroke: #333333 2.5
+  corner: 8
+  x: -534.5
+  y: 449
 }
 
 # ─── Flows ───

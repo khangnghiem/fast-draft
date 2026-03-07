@@ -325,18 +325,30 @@ impl SyncEngine {
             }
             GraphMutation::DuplicateNode { id } => {
                 if let Some(original) = self.graph.get_by_id(id).cloned() {
-                    // Derive name from original — strip existing _copy_N suffix
-                    let base = id.as_str();
-                    let stem = base.rfind("_copy_").map_or(base, |pos| &base[..pos]);
-                    let new_id = NodeId::with_prefix(&format!("{stem}_copy"));
+                    // Incremental clone name: foo → foo_2, foo_2 → foo_3
+                    let new_id = next_clone_name(&self.graph, id);
                     let mut cloned = original;
                     cloned.id = new_id;
-                    // Offset via constraint
-                    cloned.constraints.push(Constraint::Offset {
-                        from: id,
-                        dx: 20.0,
-                        dy: 20.0,
+                    // Strip inherited positioning — clone gets its own position
+                    cloned.constraints.retain(|c| {
+                        !matches!(
+                            c,
+                            Constraint::Position { .. }
+                                | Constraint::Offset { .. }
+                                | Constraint::CenterIn(_)
+                                | Constraint::FillParent { .. }
+                        )
                     });
+                    // Position from resolved bounds + 20px offset
+                    if let Some(idx) = self.graph.index_of(id)
+                        && let Some(b) = self.bounds.get(&idx)
+                    {
+                        let rx = ((b.x + 20.0) * 100.0).round() / 100.0;
+                        let ry = ((b.y + 20.0) * 100.0).round() / 100.0;
+                        cloned
+                            .constraints
+                            .push(Constraint::Position { x: rx, y: ry });
+                    }
                     self.graph.add_node(self.graph.root, cloned);
                 }
             }
@@ -988,6 +1000,34 @@ pub enum GraphMutation {
     RemoveEdge {
         id: NodeId,
     },
+}
+
+/// Derive an incremental clone name: `foo` → `foo_2`, `foo_2` → `foo_3`.
+///
+/// Scans the graph for existing names matching `{stem}_N` and picks `max(N)+1`.
+/// The stem is derived by stripping a trailing `_N` numeric suffix (since
+/// auto-generated IDs follow the `{kind}_{counter}` pattern).
+pub fn next_clone_name(graph: &SceneGraph, orig_id: NodeId) -> NodeId {
+    let base = orig_id.as_str();
+    // Strip trailing _N suffix to get the stem (e.g. "rect_3" → "rect")
+    let stem = base
+        .rsplit_once('_')
+        .and_then(|(prefix, suffix)| suffix.parse::<u32>().ok().map(|_| prefix))
+        .unwrap_or(base);
+    let mut max_n = 1u32;
+    for idx in graph.graph.node_indices() {
+        let name = graph.graph[idx].id.as_str();
+        if name == stem {
+            max_n = max_n.max(1);
+        }
+        if let Some(rest) = name.strip_prefix(stem)
+            && let Some(n_str) = rest.strip_prefix('_')
+            && let Ok(n) = n_str.parse::<u32>()
+        {
+            max_n = max_n.max(n);
+        }
+    }
+    NodeId::intern(&format!("{stem}_{}", max_n + 1))
 }
 
 #[cfg(test)]
