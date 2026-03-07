@@ -1,0 +1,185 @@
+# Edge Showcase
+# Demonstrates all edge types, curves, arrows, and animations in Fast Draft.
+
+theme title_text {
+  font: "Inter" bold 24
+  fill: #1E293B
+}
+
+theme label_text {
+  font: "Inter" medium 14
+  fill: #475569
+}
+
+theme node_box {
+  w: 100 h: 60
+  fill: #FFFFFF
+  stroke: #CBD5E1 1.5
+  corner: 8
+  shadow: (0, 2, 4, #00000010)
+}
+
+# ─── 1. Curve Kinds ─────────────────────────────────────────────────────────
+
+text @title_curves "Curve Types" {
+  use: title_text
+  x: 50 y: 50
+}
+
+group @curves_demo {
+  rect @c_node1 { use: node_box; x: 0 y: 0 }
+  text @c_label1 "Node A" { use: label_text; x: 22 y: 20 }
+
+  rect @c_node2 { use: node_box; x: 250 y: -40 }
+  text @c_label2 "Straight" { use: label_text; x: 270 y: -20 }
+
+  rect @c_node3 { use: node_box; x: 250 y: 40 }
+  text @c_label3 "Smooth" { use: label_text; x: 275 y: 60 }
+
+  rect @c_node4 { use: node_box; x: 250 y: 120 }
+  text @c_label4 "Step" { use: label_text; x: 280 y: 140 }
+
+  x: 50 y: 120
+}
+
+edge @curve_straight {
+  from: @c_node1
+  to: @c_node2
+  stroke: #3B82F6 2
+  curve: straight
+}
+
+edge @curve_smooth {
+  from: @c_node1
+  to: @c_node3
+  stroke: #8B5CF6 2
+  curve: smooth
+}
+
+edge @curve_step {
+  from: @c_node1
+  to: @c_node4
+  stroke: #10B981 2
+  curve: step
+}
+
+
+# ─── 2. Arrow Kinds ─────────────────────────────────────────────────────────
+
+text @title_arrows "Arrow Types" {
+  use: title_text
+  x: 500 y: 50
+}
+
+group @arrows_demo {
+  # None
+  rect @a_n1 { use: node_box; x: 0 y: 0 }
+  rect @a_n2 { use: node_box; x: 200 y: 0 }
+  text @a_t1 "None" { use: label_text; x: 30 y: 20 }
+
+  # Start
+  rect @a_s1 { use: node_box; x: 0 y: 100 }
+  rect @a_s2 { use: node_box; x: 200 y: 100 }
+  text @a_t2 "Start" { use: label_text; x: 32 y: 120 }
+
+  # End
+  rect @a_e1 { use: node_box; x: 0 y: 200 }
+  rect @a_e2 { use: node_box; x: 200 y: 200 }
+  text @a_t3 "End" { use: label_text; x: 35 y: 220 }
+
+  # Both
+  rect @a_b1 { use: node_box; x: 0 y: 300 }
+  rect @a_b2 { use: node_box; x: 200 y: 300 }
+  text @a_t4 "Both" { use: label_text; x: 35 y: 320 }
+
+  x: 500 y: 120
+}
+
+edge @arrow_none {
+  from: @a_n1
+  to: @a_n2
+  stroke: #64748B 2
+  arrow: none
+}
+
+edge @arrow_start {
+  from: @a_s1
+  to: @a_s2
+  stroke: #64748B 2
+  arrow: start
+}
+
+edge @arrow_end {
+  from: @a_e1
+  to: @a_e2
+  stroke: #64748B 2
+  arrow: end
+}
+
+edge @arrow_both {
+  from: @a_b1
+  to: @a_b2
+  stroke: #64748B 2
+  arrow: both
+}
+
+
+# ─── 3. Flow Animations ─────────────────────────────────────────────────────
+
+text @title_flows "Flow Animations" {
+  use: title_text
+  x: 50 y: 400
+}
+
+group @flows_demo {
+  # Pulse
+  rect @f_p1 { use: node_box; x: 0 y: 0 }
+  rect @f_p2 { use: node_box; x: 250 y: 0 }
+  text @f_t1 "Pulse" { use: label_text; x: 30 y: 20 }
+
+  # Dash
+  rect @f_d1 { use: node_box; x: 0 y: 100 }
+  rect @f_d2 { use: node_box; x: 250 y: 100 }
+  text @f_t2 "Dash" { use: label_text; x: 32 y: 120 }
+
+  x: 50 y: 470
+}
+
+edge @flow_pulse {
+  from: @f_p1
+  to: @f_p2
+  stroke: #EC4899 2
+  arrow: end
+  flow: pulse 1500ms
+}
+
+edge @flow_dash {
+  from: @f_d1
+  to: @f_d2
+  stroke: #F59E0B 2
+  arrow: end
+  flow: dash 1000ms
+}
+
+
+# ─── 4. Edge Labels ─────────────────────────────────────────────────────────
+
+text @title_labels "Edge Labels" {
+  use: title_text
+  x: 500 y: 400
+}
+
+group @labels_demo {
+  rect @l_n1 { use: node_box; x: 0 y: 0 }
+  rect @l_n2 { use: node_box; x: 200 y: 100 }
+  x: 500 y: 470
+}
+
+edge @edge_with_label {
+  from: @l_n1
+  to: @l_n2
+  stroke: #06B6D4 2
+  arrow: end
+  curve: step
+  label: "Processes data"
+}
