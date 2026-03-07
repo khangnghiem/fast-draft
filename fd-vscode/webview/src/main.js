@@ -41,6 +41,9 @@ async function main() {
       fdCanvas.set_text(window.initialText);
     }
 
+    // Detect flow animations for continuous render loop
+    hasFlowEdges = fdCanvas.has_active_flows();
+
     // Measure all text nodes for tight bounding boxes
     measureAllTextNodes();
 
@@ -283,7 +286,7 @@ let animFrameId = null;
 function startAnimLoop() {
   if (animFrameId !== null) return; // already running
   function loop() {
-    if (renderDirty || activeTweens.length > 0 || erasePoofs.length > 0) {
+    if (renderDirty || activeTweens.length > 0 || erasePoofs.length > 0 || hasFlowEdges) {
       renderDirty = false;
       render();
     }

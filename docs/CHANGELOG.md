@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.64 — Fix Edge Flow Animation Freeze
+
+- **FIX**: Edge flow animations (`flow: pulse`, `flow: dash`) now animate continuously when idle — previously froze until mouse interaction because the JS render loop's dirty-flag optimization had no knowledge of WASM-side time-dependent flow effects; added `has_active_flows()` WASM API that checks if any edge has a flow animation, cached in JS on scene change, and included in the render loop condition
+- **WASM**: New `has_active_flows()` on `FdCanvas` — returns `true` if any edge in the scene graph has `flow.is_some()`
+- **JS**: `hasFlowEdges` flag in `state.js` refreshed via `bumpGeneration()` and on initial load; render loop condition extended to `renderDirty || activeTweens.length > 0 || erasePoofs.length > 0 || hasFlowEdges`
+
 ### v0.10.63 — Demo Cleanup + Test Coverage
 
 - **DOCS**: Rewrote `examples/demo.fd` from 562 lines of testing debris to a polished 236-line product dashboard showcase — demonstrates themes, edge_defaults, specs, animations, flows, frames with column layout, and semantic naming throughout

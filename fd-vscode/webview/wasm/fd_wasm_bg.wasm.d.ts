@@ -38,6 +38,7 @@ export const fdcanvas_handle_pointer_down: (a: number, b: number, c: number, d: 
 export const fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
 export const fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
 export const fdcanvas_handle_stylus_squeeze: (a: number, b: number, c: number, d: number, e: number) => [number, number];
+export const fdcanvas_has_active_flows: (a: number) => number;
 export const fdcanvas_has_pending_text_change: (a: number) => number;
 export const fdcanvas_has_text_child: (a: number, b: number, c: number) => number;
 export const fdcanvas_hit_test_at: (a: number, b: number, c: number) => [number, number];

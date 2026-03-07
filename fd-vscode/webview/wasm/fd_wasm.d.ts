@@ -218,6 +218,13 @@ export class FdCanvas {
      */
     handle_stylus_squeeze(shift: boolean, ctrl: boolean, alt: boolean, meta: boolean): string;
     /**
+     * Check if any edge in the scene has a flow animation (pulse/dash).
+     *
+     * The JS render loop uses this to keep rendering continuously when
+     * flow animations exist, instead of freezing when idle.
+     */
+    has_active_flows(): boolean;
+    /**
      * Check if text changed due to canvas interaction (for sync back to editor).
      */
     has_pending_text_change(): boolean;
@@ -371,6 +378,7 @@ export interface InitOutput {
     readonly fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
     readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly fdcanvas_handle_stylus_squeeze: (a: number, b: number, c: number, d: number, e: number) => [number, number];
+    readonly fdcanvas_has_active_flows: (a: number) => number;
     readonly fdcanvas_has_pending_text_change: (a: number) => number;
     readonly fdcanvas_has_text_child: (a: number, b: number, c: number) => number;
     readonly fdcanvas_hit_test_at: (a: number, b: number, c: number) => [number, number];
