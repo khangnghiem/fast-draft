@@ -1670,3 +1670,74 @@ fn select_tool_shift_click_deselects_on_pointerup() {
     assert_eq!(tool.selected.len(), 1, "A should be deselected on Up");
     assert_eq!(tool.selected[0], b, "only B should remain");
 }
+
+/// Regression test: Eraser hover-only (no drag) must produce empty mutations
+/// and not crash. Before v0.10.40 this caused a panic on empty erased_ids.
+#[test]
+fn eraser_tool_hover_only_no_crash() {
+    let mut tool = EraserTool::new();
+    let node = NodeId::intern("hover_target");
+
+    // Move over a node WITHOUT pressing first (hover only)
+    let muts = tool.handle(
+        &InputEvent::PointerMove {
+            x: 100.0,
+            y: 100.0,
+            pressure: 0.0,
+            modifiers: Modifiers::NONE,
+        },
+        Some(node),
+    );
+    assert!(muts.is_empty(), "hover-only should produce no mutations");
+    assert!(!tool.dragging, "should not be dragging from hover");
+    assert!(
+        tool.erased_ids.is_empty(),
+        "no IDs should be collected from hover"
+    );
+}
+
+/// Clicking an already-selected node should keep it selected (no deselect).
+/// This specifically tests that re-clicking doesn't toggle off.
+#[test]
+fn select_tool_reclick_keeps_selection() {
+    let mut tool = SelectTool::new();
+    let target = NodeId::intern("reclick_node");
+
+    // First click selects
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 50.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        Some(target),
+    );
+    assert_eq!(tool.selected, vec![target]);
+
+    // Release
+    tool.handle(
+        &InputEvent::PointerUp {
+            x: 50.0,
+            y: 50.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Click again on same node
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 50.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        Some(target),
+    );
+    assert_eq!(
+        tool.selected,
+        vec![target],
+        "re-clicking should keep selection"
+    );
+}
