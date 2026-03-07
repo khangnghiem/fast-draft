@@ -742,6 +742,8 @@ impl FdCanvas {
         self.select_tool.marquee_start = None;
         self.select_tool.marquee_rect = None;
         self.select_tool.resize_handle = None;
+        self.select_tool.locked_axis = None;
+        self.select_tool.shift_toggled_off = None;
 
         self.rect_tool.cancel();
         self.ellipse_tool.cancel();

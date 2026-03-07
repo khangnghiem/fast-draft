@@ -61,6 +61,7 @@ fn select_tool_shift_drag_constrains_axis() {
     );
 
     // Drag diagonally with Shift → constrain to dominant axis (X)
+    // Displacement (30, 10) exceeds 4px threshold → locks horizontal
     let mutations = tool.handle(
         &InputEvent::PointerMove {
             x: 30.0,
@@ -78,6 +79,11 @@ fn select_tool_shift_drag_constrains_axis() {
         }
         _ => panic!("expected MoveNode"),
     }
+    assert_eq!(
+        tool.locked_axis,
+        Some(true),
+        "axis should be locked to horizontal"
+    );
 }
 
 #[test]
@@ -1364,4 +1370,303 @@ fn ellipse_tool_shift_draw_northwest_correct_origin() {
     }
     assert!(has_resize, "should have ResizeNode");
     assert!(has_move, "should have MoveNode for NW direction");
+}
+
+/// Regression: Shift+drag near origin should use dead-zone threshold.
+/// Below 4px displacement, the axis is NOT locked and movement is free.
+/// Once past 4px, the axis locks and stays locked.
+#[test]
+fn select_tool_shift_drag_dead_zone() {
+    let mut tool = SelectTool::new();
+    let target = NodeId::intern("box_dz");
+    let shift = Modifiers {
+        shift: true,
+        ..Modifiers::NONE
+    };
+
+    // Press at origin
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 100.0,
+            y: 100.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        Some(target),
+    );
+    assert!(tool.locked_axis.is_none(), "axis should start as None");
+
+    // Move (2, 1.5) — below 4px threshold → free move, no axis lock
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 102.0,
+            y: 101.5,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1, "should emit MoveNode for free move");
+    assert!(
+        tool.locked_axis.is_none(),
+        "axis should NOT be locked below threshold"
+    );
+    match &mutations[0] {
+        GraphMutation::MoveNode { dx, dy, .. } => {
+            // Free move: both dx and dy should be non-zero
+            assert!((dx - 2.0).abs() < 0.01, "dx={dx} should be 2.0");
+            assert!((dy - 1.5).abs() < 0.01, "dy={dy} should be 1.5");
+        }
+        _ => panic!("expected MoveNode"),
+    }
+
+    // Move to (110, 103) — total displacement (10, 3) exceeds 4px → locks horizontal
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 110.0,
+            y: 103.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    assert_eq!(
+        tool.locked_axis,
+        Some(true),
+        "axis should lock to horizontal"
+    );
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::MoveNode { dy, .. } => {
+            // Y should snap back to start_y (100.0) from last_y (101.5)
+            assert!(
+                dy.abs() < 2.0,
+                "Y should be constrained near 0, got dy={dy}"
+            );
+        }
+        _ => panic!("expected MoveNode"),
+    }
+
+    // Subsequent move: axis stays locked even if Y > X
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 112.0,
+            y: 120.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    assert_eq!(
+        tool.locked_axis,
+        Some(true),
+        "axis should STAY locked to horizontal"
+    );
+    match &mutations[0] {
+        GraphMutation::MoveNode { dx, dy, .. } => {
+            assert!((dx - 2.0).abs() < 0.01, "dx={dx}");
+            assert!(dy.abs() < 0.01, "Y should still be constrained, dy={dy}");
+        }
+        _ => panic!("expected MoveNode"),
+    }
+}
+
+/// Regression: Shift+drag with multiple selected nodes moves ALL of them.
+/// Previously, Shift+click on an already-selected node would deselect it
+/// in PointerDown, causing only the remaining nodes to move.
+#[test]
+fn select_tool_shift_drag_multi_select_moves_all() {
+    let mut tool = SelectTool::new();
+    let a = NodeId::intern("node_a");
+    let b = NodeId::intern("node_b");
+    let c = NodeId::intern("node_c");
+    let shift = Modifiers {
+        shift: true,
+        ..Modifiers::NONE
+    };
+
+    // Build up multi-selection: click A, Shift+click B, Shift+click C
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 50.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        Some(a),
+    );
+    tool.handle(
+        &InputEvent::PointerUp {
+            x: 50.0,
+            y: 50.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 100.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        Some(b),
+    );
+    tool.handle(
+        &InputEvent::PointerUp {
+            x: 100.0,
+            y: 50.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 150.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        Some(c),
+    );
+    tool.handle(
+        &InputEvent::PointerUp {
+            x: 150.0,
+            y: 50.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    assert_eq!(
+        tool.selected.len(),
+        3,
+        "should have 3 selected: {:?}",
+        tool.selected
+    );
+
+    // Now Shift+click on already-selected node A and drag
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 50.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        Some(a),
+    );
+    // A should still be selected (deferred deselect)
+    assert_eq!(
+        tool.selected.len(),
+        3,
+        "A should NOT be deselected on PointerDown — deferred to PointerUp"
+    );
+    assert!(
+        tool.shift_toggled_off.is_some(),
+        "shift_toggled_off should be set"
+    );
+
+    // Shift+drag moves all 3 nodes (displacement 20,5 > 4px threshold → locks X)
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 70.0,
+            y: 55.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    assert_eq!(
+        mutations.len(),
+        3,
+        "all 3 nodes should receive MoveNode, got {}",
+        mutations.len()
+    );
+    // Deferred shift toggle should be cancelled since we dragged
+    assert!(
+        tool.shift_toggled_off.is_none(),
+        "shift_toggled_off should be cleared on drag"
+    );
+    for m in &mutations {
+        match m {
+            GraphMutation::MoveNode { .. } => {}
+            _ => panic!("expected MoveNode, got {:?}", m),
+        }
+    }
+}
+
+/// Regression: Shift+click without drag should still deselect.
+#[test]
+fn select_tool_shift_click_deselects_on_pointerup() {
+    let mut tool = SelectTool::new();
+    let a = NodeId::intern("click_a");
+    let b = NodeId::intern("click_b");
+    let shift = Modifiers {
+        shift: true,
+        ..Modifiers::NONE
+    };
+
+    // Select A, then Shift+click B to add it
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 50.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        Some(a),
+    );
+    tool.handle(
+        &InputEvent::PointerUp {
+            x: 50.0,
+            y: 50.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 100.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        Some(b),
+    );
+    tool.handle(
+        &InputEvent::PointerUp {
+            x: 100.0,
+            y: 50.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    assert_eq!(tool.selected.len(), 2, "A and B should be selected");
+
+    // Shift+click on A again without dragging → should deselect A on PointerUp
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 50.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        Some(a),
+    );
+    assert_eq!(
+        tool.selected.len(),
+        2,
+        "A should still be selected before Up"
+    );
+
+    // PointerUp without drag → deferred deselect fires
+    tool.handle(
+        &InputEvent::PointerUp {
+            x: 50.0,
+            y: 50.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    assert_eq!(tool.selected.len(), 1, "A should be deselected on Up");
+    assert_eq!(tool.selected[0], b, "only B should remain");
 }
