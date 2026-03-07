@@ -133,6 +133,7 @@ fn starts_with_node_keyword(s: &str) -> bool {
         || s.starts_with("rect")
         || s.starts_with("ellipse")
         || s.starts_with("path")
+        || s.starts_with("image")
         || s.starts_with("text")
 }
 
@@ -517,6 +518,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
             "rect".value("rect"),
             "ellipse".value("ellipse"),
             "path".value("path"),
+            "image".value("image"),
             "text".value("text"),
         ))
         .parse_next(input)?
@@ -556,6 +558,9 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let mut layout = LayoutMode::Free;
     let mut clip = false;
     let mut place: Option<(HPlace, VPlace)> = None;
+    let mut path_commands: Vec<PathCmd> = Vec::new();
+    let mut image_src: Option<String> = None;
+    let mut image_fit = ImageFit::default();
 
     skip_ws_and_comments(input);
 
@@ -581,6 +586,9 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
                 &mut layout,
                 &mut clip,
                 &mut place,
+                &mut path_commands,
+                &mut image_src,
+                &mut image_fit,
             )?;
         }
         // Collect comments between items; they'll be attached to the *next* child node
@@ -610,7 +618,13 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
             max_width: width,
         },
         "path" => NodeKind::Path {
-            commands: Vec::new(),
+            commands: path_commands,
+        },
+        "image" => NodeKind::Image {
+            source: ImageSource::File(image_src.unwrap_or_default()),
+            width: width.unwrap_or(100.0),
+            height: height.unwrap_or(100.0),
+            fit: image_fit,
         },
         "generic" => NodeKind::Generic,
         _ => unreachable!(),
@@ -643,6 +657,7 @@ fn starts_with_child_node(input: &str) -> bool {
         ("rect", 4),
         ("ellipse", 7),
         ("path", 4),
+        ("image", 5),
         ("text", 4),
     ];
     for &(keyword, len) in keywords {
@@ -753,6 +768,9 @@ fn parse_node_property(
     layout: &mut LayoutMode,
     clip: &mut bool,
     place: &mut Option<(HPlace, VPlace)>,
+    path_commands: &mut Vec<PathCmd>,
+    image_src: &mut Option<String>,
+    image_fit: &mut ImageFit,
 ) -> ModalResult<()> {
     let prop_name = parse_identifier.parse_next(input)?;
     skip_space(input);
@@ -923,6 +941,92 @@ fn parse_node_property(
         "clip" => {
             let val = parse_identifier.parse_next(input)?;
             *clip = val == "true";
+        }
+        "d" => {
+            // Parse SVG-like path commands: M x y L x y C ... Z
+            loop {
+                skip_space(input);
+                let at_end = input.is_empty()
+                    || input.starts_with('\n')
+                    || input.starts_with(';')
+                    || input.starts_with('}');
+                if at_end {
+                    break;
+                }
+                let saved = *input;
+                if let Ok(cmd_char) = take_while::<_, _, ContextError>(1..=1, |c: char| {
+                    matches!(c, 'M' | 'L' | 'Q' | 'C' | 'Z')
+                })
+                .parse_next(input)
+                {
+                    skip_space(input);
+                    match cmd_char {
+                        "M" => {
+                            let x = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let y = parse_number.parse_next(input)?;
+                            path_commands.push(PathCmd::MoveTo(x, y));
+                        }
+                        "L" => {
+                            let x = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let y = parse_number.parse_next(input)?;
+                            path_commands.push(PathCmd::LineTo(x, y));
+                        }
+                        "Q" => {
+                            let cx = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let cy = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let ex = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let ey = parse_number.parse_next(input)?;
+                            path_commands.push(PathCmd::QuadTo(cx, cy, ex, ey));
+                        }
+                        "C" => {
+                            let c1x = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let c1y = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let c2x = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let c2y = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let ex = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let ey = parse_number.parse_next(input)?;
+                            path_commands.push(PathCmd::CubicTo(c1x, c1y, c2x, c2y, ex, ey));
+                        }
+                        "Z" => {
+                            path_commands.push(PathCmd::Close);
+                        }
+                        _ => {
+                            *input = saved;
+                            break;
+                        }
+                    }
+                } else {
+                    *input = saved;
+                    break;
+                }
+            }
+        }
+        "src" => {
+            *image_src = Some(
+                parse_quoted_string
+                    .map(|s| s.to_string())
+                    .parse_next(input)?,
+            );
+        }
+        "fit" => {
+            let val = parse_identifier.parse_next(input)?;
+            *image_fit = match val {
+                "cover" => ImageFit::Cover,
+                "contain" => ImageFit::Contain,
+                "fill" => ImageFit::Fill,
+                "none" => ImageFit::None,
+                _ => ImageFit::Cover,
+            };
         }
         _ => {
             let _ =

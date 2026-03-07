@@ -196,6 +196,29 @@ pub enum PathCmd {
     Close,
 }
 
+// ─── Image data ──────────────────────────────────────────────────────────
+
+/// Source for an embedded image.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ImageSource {
+    /// Relative file path: `src: "assets/hero.png"`.
+    File(String),
+}
+
+/// How an image fits within its declared dimensions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum ImageFit {
+    /// Scale to cover bounds, crop overflow.
+    #[default]
+    Cover,
+    /// Scale to fit within bounds, letterbox.
+    Contain,
+    /// Stretch to exact dimensions.
+    Fill,
+    /// Natural size, no scaling.
+    None,
+}
+
 // ─── Shadow ──────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -472,6 +495,14 @@ pub enum NodeKind {
     /// Freeform path (pen tool output).
     Path { commands: Vec<PathCmd> },
 
+    /// Embedded image (R3.32).
+    Image {
+        source: ImageSource,
+        width: f32,
+        height: f32,
+        fit: ImageFit,
+    },
+
     /// Text label. Optional `max_width` constrains horizontal extent
     /// for word wrapping (set via resize handle drag).
     Text {
@@ -491,6 +522,7 @@ impl NodeKind {
             Self::Rect { .. } => "rect",
             Self::Ellipse { .. } => "ellipse",
             Self::Path { .. } => "path",
+            Self::Image { .. } => "image",
             Self::Text { .. } => "text",
         }
     }

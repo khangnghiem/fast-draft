@@ -1683,6 +1683,27 @@ impl FdCanvas {
             NodeKind::Path { .. } => {
                 props.insert("kind".into(), "path".into());
             }
+            NodeKind::Image {
+                width,
+                height,
+                source,
+                fit,
+            } => {
+                props.insert("kind".into(), "image".into());
+                props.insert("width".into(), serde_json::json!(width));
+                props.insert("height".into(), serde_json::json!(height));
+                let src = match source {
+                    fd_core::model::ImageSource::File(p) => p.clone(),
+                };
+                props.insert("src".into(), serde_json::Value::String(src));
+                let fit_str = match fit {
+                    fd_core::model::ImageFit::Cover => "cover",
+                    fd_core::model::ImageFit::Contain => "contain",
+                    fd_core::model::ImageFit::Fill => "fill",
+                    fd_core::model::ImageFit::None => "none",
+                };
+                props.insert("fit".into(), serde_json::Value::String(fit_str.to_string()));
+            }
             NodeKind::Generic => {
                 props.insert("kind".into(), "generic".into());
             }
@@ -2824,6 +2845,7 @@ fn collect_node_tree(graph: &fd_core::SceneGraph, idx: fd_core::NodeIndex) -> se
         fd_core::NodeKind::Rect { .. } => "rect",
         fd_core::NodeKind::Ellipse { .. } => "ellipse",
         fd_core::NodeKind::Path { .. } => "path",
+        fd_core::NodeKind::Image { .. } => "image",
         fd_core::NodeKind::Text { .. } => "text",
     };
     let children: Vec<serde_json::Value> = graph

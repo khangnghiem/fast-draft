@@ -159,7 +159,8 @@ fn kind_priority(kind: &NodeKind) -> u8 {
         NodeKind::Ellipse { .. } => 3,
         NodeKind::Text { .. } => 4,
         NodeKind::Path { .. } => 5,
-        NodeKind::Generic => 6,
+        NodeKind::Image { .. } => 6,
+        NodeKind::Generic => 7,
     }
 }
 

@@ -152,6 +152,7 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         && node.use_styles.is_empty()
         && node.animations.is_empty()
         && !has_inline_styles(&node.style)
+        && !matches!(&node.kind, NodeKind::Image { .. })
     {
         return;
     }
@@ -173,6 +174,7 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         NodeKind::Rect { .. } => write!(out, "rect @{}", node.id.as_str()).unwrap(),
         NodeKind::Ellipse { .. } => write!(out, "ellipse @{}", node.id.as_str()).unwrap(),
         NodeKind::Path { .. } => write!(out, "path @{}", node.id.as_str()).unwrap(),
+        NodeKind::Image { .. } => write!(out, "image @{}", node.id.as_str()).unwrap(),
         NodeKind::Text { content, .. } => {
             write!(out, "text @{} \"{}\"", node.id.as_str(), content).unwrap();
         }
@@ -249,7 +251,71 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
             indent(out, depth + 1);
             writeln!(out, "w: {}", format_num(*w)).unwrap();
         }
+        NodeKind::Image { width, height, .. } => {
+            indent(out, depth + 1);
+            writeln!(out, "w: {} h: {}", format_num(*width), format_num(*height)).unwrap();
+        }
         _ => {}
+    }
+
+    // Path d: commands
+    if let NodeKind::Path { commands } = &node.kind
+        && !commands.is_empty()
+    {
+        indent(out, depth + 1);
+        write!(out, "d:").unwrap();
+        for cmd in commands {
+            match cmd {
+                PathCmd::MoveTo(x, y) => {
+                    write!(out, " M {} {}", format_num(*x), format_num(*y)).unwrap()
+                }
+                PathCmd::LineTo(x, y) => {
+                    write!(out, " L {} {}", format_num(*x), format_num(*y)).unwrap()
+                }
+                PathCmd::QuadTo(cx, cy, ex, ey) => write!(
+                    out,
+                    " Q {} {} {} {}",
+                    format_num(*cx),
+                    format_num(*cy),
+                    format_num(*ex),
+                    format_num(*ey)
+                )
+                .unwrap(),
+                PathCmd::CubicTo(c1x, c1y, c2x, c2y, ex, ey) => write!(
+                    out,
+                    " C {} {} {} {} {} {}",
+                    format_num(*c1x),
+                    format_num(*c1y),
+                    format_num(*c2x),
+                    format_num(*c2y),
+                    format_num(*ex),
+                    format_num(*ey)
+                )
+                .unwrap(),
+                PathCmd::Close => write!(out, " Z").unwrap(),
+            }
+        }
+        writeln!(out).unwrap();
+    }
+
+    // Image source and fit
+    if let NodeKind::Image { source, fit, .. } = &node.kind {
+        match source {
+            ImageSource::File(path) => {
+                indent(out, depth + 1);
+                writeln!(out, "src: \"{path}\"").unwrap();
+            }
+        }
+        if *fit != ImageFit::Cover {
+            indent(out, depth + 1);
+            let fit_str = match fit {
+                ImageFit::Cover => "cover",
+                ImageFit::Contain => "contain",
+                ImageFit::Fill => "fill",
+                ImageFit::None => "none",
+            };
+            writeln!(out, "fit: {fit_str}").unwrap();
+        }
     }
 
     // Clip property (for frames only)
@@ -800,6 +866,7 @@ fn emit_node_filtered(
         NodeKind::Rect { .. } => write!(out, "rect @{}", node.id.as_str()).unwrap(),
         NodeKind::Ellipse { .. } => write!(out, "ellipse @{}", node.id.as_str()).unwrap(),
         NodeKind::Path { .. } => write!(out, "path @{}", node.id.as_str()).unwrap(),
+        NodeKind::Image { .. } => write!(out, "image @{}", node.id.as_str()).unwrap(),
         NodeKind::Text { content, .. } => {
             write!(out, "text @{} \"{}\"", node.id.as_str(), content).unwrap();
         }
@@ -938,6 +1005,10 @@ fn emit_dimensions_filtered(out: &mut String, kind: &NodeKind, depth: usize) {
             indent(out, depth);
             writeln!(out, "w: {} h: {}", format_num(*rx), format_num(*ry)).unwrap();
         }
+        NodeKind::Image { width, height, .. } => {
+            indent(out, depth);
+            writeln!(out, "w: {} h: {}", format_num(*width), format_num(*height)).unwrap();
+        }
         _ => {}
     }
 }
@@ -1011,6 +1082,7 @@ fn emit_spec_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, heading_
         NodeKind::Rect { .. } => "rect",
         NodeKind::Ellipse { .. } => "ellipse",
         NodeKind::Path { .. } => "path",
+        NodeKind::Image { .. } => "image",
         NodeKind::Text { .. } => "text",
     };
     writeln!(out, "{hashes} @{} `{kind_label}`\n", node.id.as_str()).unwrap();

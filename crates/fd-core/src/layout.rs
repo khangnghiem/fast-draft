@@ -513,7 +513,8 @@ fn intrinsic_size(node: &SceneNode) -> (f32, f32) {
         NodeKind::Group => (0.0, 0.0), // Auto-sized: computed after children resolve
         NodeKind::Frame { width, height, .. } => (*width, *height),
         NodeKind::Path { .. } => (100.0, 100.0), // Computed from path bounds
-        NodeKind::Generic => (120.0, 40.0),      // Placeholder label box
+        NodeKind::Image { width, height, .. } => (*width, *height),
+        NodeKind::Generic => (120.0, 40.0), // Placeholder label box
         NodeKind::Root => (0.0, 0.0),
     }
 }
