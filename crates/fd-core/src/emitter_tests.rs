@@ -1723,3 +1723,249 @@ edge @link {
         "only user comment should be attached, not separators"
     );
 }
+
+// ─── Path d: command roundtrip tests ────────────────────────────────────
+
+#[test]
+fn roundtrip_path_with_commands() {
+    let input = r#"
+path @sketch {
+  d: M 10 20 L 100 200 L 300 400
+  stroke: #5E5CE6 2
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("sketch")).unwrap();
+    match &node.kind {
+        NodeKind::Path { commands } => {
+            assert_eq!(commands.len(), 3, "should have 3 commands");
+            assert!(matches!(commands[0], PathCmd::MoveTo(_, _)));
+            assert!(matches!(commands[1], PathCmd::LineTo(_, _)));
+        }
+        _ => panic!("expected Path node"),
+    }
+
+    let output = emit_document(&graph);
+    assert!(output.contains("d:"), "should emit d: property");
+    assert!(output.contains("M 10 20"), "should emit MoveTo");
+
+    let graph2 = parse_document(&output).expect("re-parse of path with commands failed");
+    let node2 = graph2.get_by_id(NodeId::intern("sketch")).unwrap();
+    match &node2.kind {
+        NodeKind::Path { commands } => {
+            assert_eq!(commands.len(), 3, "commands should survive roundtrip");
+        }
+        _ => panic!("expected Path node after roundtrip"),
+    }
+}
+
+#[test]
+fn roundtrip_path_cubic_and_close() {
+    let input = r#"
+path @curve {
+  d: M 0 0 C 10 20 30 40 50 60 Z
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("curve")).unwrap();
+    match &node.kind {
+        NodeKind::Path { commands } => {
+            assert_eq!(commands.len(), 3);
+            assert!(matches!(commands[1], PathCmd::CubicTo(_, _, _, _, _, _)));
+            assert!(matches!(commands[2], PathCmd::Close));
+        }
+        _ => panic!("expected Path"),
+    }
+
+    let output = emit_document(&graph);
+    let graph2 = parse_document(&output).expect("re-parse failed");
+    let node2 = graph2.get_by_id(NodeId::intern("curve")).unwrap();
+    match &node2.kind {
+        NodeKind::Path { commands } => {
+            assert_eq!(commands.len(), 3, "cubic + close should survive roundtrip");
+        }
+        _ => panic!("expected Path"),
+    }
+}
+
+#[test]
+fn roundtrip_path_quad() {
+    let input = r#"
+path @quad_stroke {
+  d: M 0 0 Q 50 100 100 0
+  stroke: #FF0000 3
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("quad_stroke")).unwrap();
+    match &node.kind {
+        NodeKind::Path { commands } => {
+            assert_eq!(commands.len(), 2);
+            assert!(matches!(commands[1], PathCmd::QuadTo(_, _, _, _)));
+        }
+        _ => panic!("expected Path"),
+    }
+
+    let output = emit_document(&graph);
+    assert!(output.contains("Q 50 100 100 0"), "should emit QuadTo");
+    let graph2 = parse_document(&output).unwrap();
+    let node2 = graph2.get_by_id(NodeId::intern("quad_stroke")).unwrap();
+    match &node2.kind {
+        NodeKind::Path { commands } => assert_eq!(commands.len(), 2),
+        _ => panic!("expected Path"),
+    }
+}
+
+#[test]
+fn roundtrip_path_empty_commands() {
+    // Path with no d: property — backward compatibility
+    let input = "path @empty_path {\n  stroke: #333333 1\n}\n";
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("empty_path")).unwrap();
+    match &node.kind {
+        NodeKind::Path { commands } => assert!(commands.is_empty()),
+        _ => panic!("expected Path"),
+    }
+    let output = emit_document(&graph);
+    assert!(!output.contains("d:"), "empty commands should not emit d:");
+    let graph2 = parse_document(&output).unwrap();
+    let node2 = graph2.get_by_id(NodeId::intern("empty_path")).unwrap();
+    assert!(matches!(node2.kind, NodeKind::Path { .. }));
+}
+
+// ─── Image node roundtrip tests ─────────────────────────────────────────
+
+#[test]
+fn roundtrip_image_basic() {
+    let input = r#"
+image @hero {
+  w: 400 h: 300
+  src: "assets/hero.png"
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("hero")).unwrap();
+    match &node.kind {
+        NodeKind::Image {
+            source,
+            width,
+            height,
+            fit,
+        } => {
+            match source {
+                ImageSource::File(p) => assert_eq!(p, "assets/hero.png"),
+            }
+            assert_eq!(*width, 400.0);
+            assert_eq!(*height, 300.0);
+            assert_eq!(*fit, ImageFit::Cover); // Default
+        }
+        _ => panic!("expected Image node"),
+    }
+
+    let output = emit_document(&graph);
+    assert!(output.contains("image @hero"), "should emit image keyword");
+    assert!(
+        output.contains("src: \"assets/hero.png\""),
+        "should emit src"
+    );
+    assert!(
+        !output.contains("fit:"),
+        "default fit should not be emitted"
+    );
+
+    let graph2 = parse_document(&output).expect("re-parse of image failed");
+    let node2 = graph2.get_by_id(NodeId::intern("hero")).unwrap();
+    assert!(matches!(node2.kind, NodeKind::Image { .. }));
+}
+
+#[test]
+fn roundtrip_image_with_fit() {
+    let input = r#"
+image @bg {
+  w: 800 h: 600
+  src: "bg.jpg"
+  fit: contain
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("bg")).unwrap();
+    match &node.kind {
+        NodeKind::Image { fit, .. } => assert_eq!(*fit, ImageFit::Contain),
+        _ => panic!("expected Image"),
+    }
+
+    let output = emit_document(&graph);
+    assert!(
+        output.contains("fit: contain"),
+        "should emit non-default fit"
+    );
+
+    let graph2 = parse_document(&output).unwrap();
+    let node2 = graph2.get_by_id(NodeId::intern("bg")).unwrap();
+    match &node2.kind {
+        NodeKind::Image { fit, .. } => assert_eq!(*fit, ImageFit::Contain),
+        _ => panic!("expected Image"),
+    }
+}
+
+#[test]
+fn roundtrip_image_in_frame() {
+    let input = r#"
+frame @card {
+  w: 400 h: 300
+  clip: true
+  image @photo {
+    w: 400 h: 200
+    src: "photo.png"
+  }
+  text @caption "Hello" {
+    font: "Inter" regular 14
+  }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let card_idx = graph.index_of(NodeId::intern("card")).unwrap();
+    assert_eq!(
+        graph.children(card_idx).len(),
+        2,
+        "card should have 2 children"
+    );
+
+    let output = emit_document(&graph);
+    let graph2 = parse_document(&output).expect("re-parse of image in frame failed");
+    let card_idx2 = graph2.index_of(NodeId::intern("card")).unwrap();
+    assert_eq!(graph2.children(card_idx2).len(), 2);
+    let photo = graph2.get_by_id(NodeId::intern("photo")).unwrap();
+    assert!(matches!(photo.kind, NodeKind::Image { .. }));
+}
+
+#[test]
+fn roundtrip_image_with_styles() {
+    let input = r#"
+image @styled_img {
+  w: 200 h: 150
+  src: "icon.svg"
+  fit: fill
+  corner: 12
+  opacity: 0.8
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("styled_img")).unwrap();
+    assert_eq!(node.style.corner_radius, Some(12.0));
+    assert_eq!(node.style.opacity, Some(0.8));
+
+    let output = emit_document(&graph);
+    assert!(output.contains("corner: 12"));
+    assert!(output.contains("opacity: 0.8"));
+    assert!(output.contains("fit: fill"));
+
+    let graph2 = parse_document(&output).unwrap();
+    let node2 = graph2.get_by_id(NodeId::intern("styled_img")).unwrap();
+    assert_eq!(node2.style.corner_radius, Some(12.0));
+    assert_eq!(node2.style.opacity, Some(0.8));
+    match &node2.kind {
+        NodeKind::Image { fit, .. } => assert_eq!(*fit, ImageFit::Fill),
+        _ => panic!("expected Image"),
+    }
+}

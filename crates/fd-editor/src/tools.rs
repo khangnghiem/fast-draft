@@ -526,6 +526,8 @@ pub struct PenTool {
     drawing: bool,
     points: Vec<(f32, f32)>,
     current_id: Option<NodeId>,
+    /// Parent node for new path nodes (default: root).
+    parent_id: NodeId,
 }
 
 impl Default for PenTool {
@@ -540,12 +542,19 @@ impl PenTool {
             drawing: false,
             points: Vec::new(),
             current_id: None,
+            parent_id: NodeId::intern("root"),
         }
     }
 
     /// Whether a draw gesture is in progress.
     pub fn is_drawing(&self) -> bool {
         self.drawing
+    }
+
+    /// Set the parent node for new path nodes.
+    /// Paths will be created as children of this node.
+    pub fn set_parent(&mut self, id: NodeId) {
+        self.parent_id = id;
     }
 
     /// Cancel the current draw gesture (reset state).
@@ -575,7 +584,7 @@ impl Tool for PenTool {
                 };
                 let node = SceneNode::new(id, path);
                 vec![GraphMutation::AddNode {
-                    parent_id: NodeId::intern("root"),
+                    parent_id: self.parent_id,
                     node: Box::new(node),
                 }]
             }

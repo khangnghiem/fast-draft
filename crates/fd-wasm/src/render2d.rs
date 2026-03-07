@@ -321,6 +321,10 @@ fn render_node(
         NodeKind::Path { commands } => {
             draw_path(ctx, node_bounds, commands, &style, is_selected);
         }
+        NodeKind::Image { .. } => {
+            // Image rendering deferred — draw placeholder rect until texture pipeline.
+            draw_rect(ctx, node_bounds, &style, is_selected);
+        }
     }
 
     // Paint children

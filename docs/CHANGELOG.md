@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.10.59 — Path Serialization + Image Embedding + Parent-Aware Pen (R3.32, R3.62)
+
+- **FEATURE (R3.62)**: Path command serialization — `d:` inline property uses SVG-like syntax (`M`, `L`, `Q`, `C`, `Z`) for pen tool path roundtrip; coordinates rounded to 2 decimals for token efficiency
+- **FEATURE (R3.32)**: Image node support — new `NodeKind::Image` with `ImageSource::File`, `ImageFit` enum (cover/contain/fill/none); parser recognizes `image` keyword with `src:` and `fit:` properties; emitter serializes image nodes; renderers draw placeholder rect until WASM texture pipeline
+- **FEATURE**: Parent-aware pen tool — `PenTool` now accepts `set_parent(id)` to create path nodes inside frames/groups instead of always at root level
+- **CORE**: `ImageSource` and `ImageFit` enums added to `model.rs`; exhaustive `NodeKind::Image` match arms across 10 files (emitter, layout, transform, paint, render2d, svg, hover, lib.rs)
+- **WASM**: Image props exposed in `get_selected_node_props` (kind, width, height, src, fit); `collect_node_tree` returns `"image"` kind; SVG export emits `<rect data-src="...">` placeholder
+- **LSP**: Hover info for `image` keyword and `@id` hover shows src/dimensions/fit
+- **TESTING**: 8 new roundtrip tests — 4 path (`roundtrip_path_with_commands`, `_cubic_and_close`, `_quad`, `_empty_commands`) + 4 image (`roundtrip_image_basic`, `_with_fit`, `_in_frame`, `_with_styles`)
+
 ### v0.10.58 — Mermaid Import + Detach Snap + Alt-Draw-From-Center (R1.18, R3.35, R3.19)
 
 - **NEW (R1.18)**: Mermaid flowchart import — `parse_mermaid()` in fd-core parses `flowchart TD/LR` syntax into FD nodes + edges; supports node shapes (`[rect]`, `(rounded)`, `((circle))`, `{diamond}`), edge types (`-->`, `---`, `-->|label|`), subgraphs as frames; auto-layout grid positioning; `import_mermaid()` WASM API merges into current document

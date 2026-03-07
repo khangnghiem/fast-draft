@@ -290,6 +290,16 @@ fn render_node_svg(
                 d, fill, stroke, stroke_width
             ));
         }
+        NodeKind::Image { source, .. } => {
+            // Emit a placeholder rect with data-src attribute
+            let src_str = match source {
+                fd_core::model::ImageSource::File(p) => p.as_str(),
+            };
+            out.push_str(&format!(
+                "  <rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{}\" data-src=\"{}\" />\n",
+                b.x, b.y, b.width, b.height, fill, stroke, stroke_width, src_str
+            ));
+        }
         NodeKind::Group | NodeKind::Root | NodeKind::Generic => {
             // Groups are purely organizational — no visual output
         }

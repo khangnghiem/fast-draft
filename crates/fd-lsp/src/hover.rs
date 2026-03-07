@@ -75,6 +75,18 @@ fn hover_node_id(id: &str, graph: Option<&SceneGraph>) -> Option<Hover> {
             let desc = format!("**Path** — {} commands", commands.len());
             return Some(make_hover(&desc));
         }
+        fd_core::NodeKind::Image {
+            source,
+            width,
+            height,
+            ..
+        } => {
+            let src = match source {
+                fd_core::model::ImageSource::File(p) => p.as_str(),
+            };
+            let desc = format!("**Image** — {}×{} src=\"{}\"", width, height, src);
+            return Some(make_hover(&desc));
+        }
         fd_core::NodeKind::Text { content, .. } => {
             let desc = format!("**Text** — \"{}\"", content);
             return Some(make_hover(&desc));
@@ -103,7 +115,12 @@ fn hover_keyword(word: &str) -> Option<Hover> {
         "text" => {
             "**text** — Text label node.\n\nInline content: `text @id \"content\" { ... }`\nProperties: `font:` `fill:` `opacity:`"
         }
-        "path" => "**path** — Freeform vector path.\n\nSupports SVG-like path commands.",
+        "path" => {
+            "**path** — Freeform vector path.\n\nSupports SVG-like path commands via `d:` property."
+        }
+        "image" => {
+            "**image** — Embedded image node.\n\nProperties: `src:` `w:` `h:` `fit:` (`cover`|`contain`|`fill`|`none`)"
+        }
         "style" | "theme" => {
             "**theme** — Reusable style definition.\n\nDefine once, apply to nodes with `use: theme_name`.\n(Legacy keyword `style` also accepted.)"
         }

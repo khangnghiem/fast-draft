@@ -61,6 +61,12 @@ fn paint_node(
 
         NodeKind::Path { commands } => paint_path(scene, commands, nb, &style),
 
+        NodeKind::Image { .. } => {
+            // Image rendering deferred — needs WASM texture pipeline.
+            // Draw a placeholder rect with the image's style (stroke/fill).
+            paint_rect(scene, nb, &style);
+        }
+
         NodeKind::Frame { .. } => {
             // Frames always render their background (like a visible container)
             paint_rect(scene, nb, &style);

@@ -75,6 +75,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.19** _(done)_: Alt-draw-from-center — Alt/⌥ anchors start point as center (not top-left); works for RectTool and EllipseTool; combinable with Shift for square/circle from center
 - **R3.22** _(planned)_: Pressure-sensitive stroke width — pen maps pressure to thickness in real-time → [spec](specs/drawing-tools.md)
 - **R3.23** _(planned)_: Freehand shape recognition — detect near-geometric shapes, offer "Snap to Shape" action → [spec](specs/drawing-tools.md)
+- **R3.62** _(done)_: Path command serialization — `d:` inline SVG-like syntax (M/L/Q/C/Z) for pen tool path roundtrip; coordinates rounded to 2 decimals for token efficiency
 
 #### R3c: Navigation & View
 
@@ -103,7 +104,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 #### R3e: Export & Media
 
 - **R3.31** _(done)_: Export — PNG (2×), SVG, clipboard; configurable background; ⌘⇧E shortcut
-- **R3.32** _(planned)_: Image embedding — drag-and-drop raster images as `image` nodes; base64 or file reference
+- **R3.32** _(done)_: Image embedding — `image` nodes with `src:` file reference; `ImageFit` enum (cover/contain/fill/none); parser/emitter roundtrip; renderer shows placeholder rect until WASM texture pipeline
 - **R3.33** _(done)_: Component libraries — reusable node collections from a library panel; stored as `.fd` files; 3 built-in libraries (UI Kit, Flowchart, Wireframe)
 - **R3.34** _(planned)_: Community library directory — searchable gallery for publishing and discovering shared libraries
 - **R3.55** _(planned)_: Export to Excalidraw JSON — `export_excalidraw(graph)` converts FD scene to Excalidraw's JSON format; rect/ellipse/text/arrow elements mapped correctly; ⌘⇧X shortcut
@@ -228,7 +229,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | R3.48       | `eraser_tool_lifecycle`, `eraser_tool_clear_resets_state`, `eraser_tool_pointerdown_clears_previous_ids`, `erase_child_preserves_group`, `erase_last_child_leaves_empty_group`, `erase_nested_cascade`                          | ✅ 6 tests                     |
 | R5.1–R5.8   | `hit::tests::*`, `resolve::tests::*`, `render2d::tests::*`                                                                                                                                                                      | ✅ 3 hit + 6 layout + 3 render |
 
-**Total**: 174 Rust tests + 188 TypeScript tests = **362 tests**
+**Total**: 182 Rust tests + 188 TypeScript tests = **370 tests**
 
 ## Requirement Index
 
@@ -297,3 +298,4 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | clipboard / copy-paste | R3.59 |
 | alt-drag multi-select | R3.60 |
 | esc-cancel / cancel-drag | R3.61 |
+| path / d: commands | R3.62, R3.4 |
