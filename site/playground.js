@@ -288,8 +288,8 @@ function getSceneBounds() {
 }
 /** Update toolbar active state */
 function updateToolbar(activeTool) {
-  document.querySelectorAll('.ft-btn').forEach(b => b.classList.remove('active'));
-  const btn = document.querySelector(`.ft-btn[data-tool="${activeTool}"]`);
+  document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`.tool-btn[data-tool="${activeTool}"]`);
   if (btn) btn.classList.add('active');
 }
 
@@ -1140,6 +1140,32 @@ async function initPlayground() {
         e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
       );
       if (changed) renderCanvas();
+
+      // Dimension tooltip — show W×H during drag
+      if (activePointerId !== -1) {
+        const selectedId = fdCanvas.get_selected_id();
+        if (selectedId) {
+          try {
+            const bj = fdCanvas.get_node_bounds(selectedId);
+            if (bj) {
+              const b = JSON.parse(bj);
+              if (b.width > 0 && b.height > 0) {
+                const tip = document.getElementById('dimension-tooltip');
+                if (tip) {
+                  tip.textContent = `${Math.round(b.width)} × ${Math.round(b.height)}`;
+                  const sx = b.x * zoomLevel + panX + (b.width * zoomLevel) / 2;
+                  const sy = (b.y + b.height) * zoomLevel + panY + 16;
+                  const wrapRect = document.getElementById('canvas-wrapper').getBoundingClientRect();
+                  tip.style.left = (sx - wrapRect.left + canvas.offsetLeft) + 'px';
+                  tip.style.top = sy + 'px';
+                  tip.style.display = 'block';
+                  tip.style.transform = 'translateX(-50%)';
+                }
+              }
+            }
+          } catch (_) {}
+        }
+      }
     });
 
     document.addEventListener('pointerup', (e) => {
@@ -1175,6 +1201,10 @@ async function initPlayground() {
       // Show FAB + Props if node selected
       updateFab(canvas);
       updatePropertiesPanel();
+
+      // Hide dimension tooltip
+      const tip = document.getElementById('dimension-tooltip');
+      if (tip) tip.style.display = 'none';
     });
 
     // ── Wheel → Pan / Zoom ────────────────────────────────────────────
@@ -1200,7 +1230,7 @@ async function initPlayground() {
     }, { passive: false });
 
     // ── Tool Toolbar ──────────────────────────────────────────────────
-    document.querySelectorAll('.ft-btn').forEach(btn => {
+    document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
       btn.addEventListener('click', () => {
         if (!fdCanvas) return;
         const tool = btn.dataset.tool;
@@ -1243,6 +1273,10 @@ async function initPlayground() {
         e.preventDefault();
         return;
       }
+
+      // Modifier cursors (⌘=grab, Alt=copy)
+      if (e.key === 'Meta') canvas.classList.add('modifier-cmd');
+      if (e.key === 'Alt') canvas.classList.add('modifier-alt');
 
       // Grid toggle (G key)
       if (!editorFocused && e.key.toLowerCase() === 'g' && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -1305,6 +1339,9 @@ async function initPlayground() {
         isPanning = false;
         if (!panDragging) canvas.style.cursor = '';
       }
+      // Clear modifier cursors
+      if (e.key === 'Meta') canvas.classList.remove('modifier-cmd');
+      if (e.key === 'Alt') canvas.classList.remove('modifier-alt');
     });
 
     // ── Resize Observer ───────────────────────────────────────────────
