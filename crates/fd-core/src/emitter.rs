@@ -837,14 +837,8 @@ fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph, defaults: Option
 fn generate_auto_comment(node: &SceneNode, graph: &SceneGraph, idx: NodeIndex) -> Option<String> {
     match &node.kind {
         NodeKind::Root => None,
-        NodeKind::Text { content, .. } if !content.is_empty() => {
-            let truncated = if content.len() > 30 {
-                format!("{}…", &content[..27])
-            } else {
-                content.clone()
-            };
-            Some(format!("label: \"{truncated}\""))
-        }
+        // Text nodes are self-documenting via inline "content" — skip auto-comment
+        NodeKind::Text { .. } => None,
         NodeKind::Group => {
             let count = graph.children(idx).len();
             if count > 0 {
