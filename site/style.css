@@ -1413,27 +1413,9 @@ code {
 }
 
 /* ─── Architecture ─── */
-.arch-diagram {
-  margin-bottom: 48px;
-  overflow-x: auto;
-}
-.arch-ascii {
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  line-height: 1.5;
-  color: var(--text-secondary);
-  padding: 32px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  background: var(--bg-primary);
-  text-align: center;
-  white-space: pre;
-  display: inline-block;
-  width: 100%;
-}
 .crate-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
 .crate-card {
@@ -1453,6 +1435,13 @@ code {
   font-weight: 600;
   color: var(--accent);
   margin-bottom: 8px;
+}
+.crate-flow {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
 }
 .crate-card p {
   color: var(--text-secondary);
