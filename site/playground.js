@@ -185,6 +185,17 @@ let zenMode = false;
 const ZOOM_MIN = 0.1, ZOOM_MAX = 5;
 let isPanning = false;
 
+/** Get current layers panel width (dynamic for resize). */
+function getLayersPanelWidth() {
+  const panel = document.getElementById('layers-panel');
+  return panel ? panel.offsetWidth : 0;
+}
+/** Get current props panel width (dynamic for resize). */
+function getPropsPanelWidth() {
+  const panel = document.getElementById('props-panel');
+  return (panel && panel.classList.contains('visible')) ? panel.offsetWidth : 0;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
 /** Convert screen (client) coords to scene coords accounting for zoom+pan */
@@ -829,6 +840,179 @@ function renderMinimap(canvas) {
   mc._minimap = { sx, sy, sw, sh, scale, ox, oy };
 }
 
+// ─── Panel Resize ────────────────────────────────────────────────────────
+
+/** Set up drag-to-resize for layers and properties panels. */
+function setupPanelResize(wrapper, resizeCanvas) {
+  const layersPanel = document.getElementById('layers-panel');
+  const layersHandle = document.getElementById('layers-resize');
+  const propsPanel = document.getElementById('props-panel');
+  const propsHandle = document.getElementById('props-resize');
+  const layersRestore = document.getElementById('layers-restore');
+  const propsRestore = document.getElementById('props-restore');
+
+  const MIN_WIDTH = 120;
+  const MAX_WIDTH = 360;
+  const DEFAULT_LAYERS_W = 180;
+  const DEFAULT_PROPS_W = 200;
+
+  // Restore persisted widths
+  const savedLayersW = parseInt(localStorage.getItem('fd-layers-width'), 10);
+  const savedPropsW = parseInt(localStorage.getItem('fd-props-width'), 10);
+  const layersCollapsed = localStorage.getItem('fd-layers-collapsed') === '1';
+  const propsCollapsed = localStorage.getItem('fd-props-collapsed') === '1';
+
+  if (savedLayersW && savedLayersW >= MIN_WIDTH && savedLayersW <= MAX_WIDTH) {
+    wrapper.style.setProperty('--layers-width', savedLayersW + 'px');
+  }
+  if (savedPropsW && savedPropsW >= MIN_WIDTH && savedPropsW <= MAX_WIDTH) {
+    wrapper.style.setProperty('--props-width', savedPropsW + 'px');
+  }
+  if (layersCollapsed && layersPanel) {
+    layersPanel.classList.add('collapsed');
+    wrapper.style.setProperty('--layers-width', '0px');
+  }
+
+  /** Position layers resize handle at panel's right edge. */
+  function positionLayersHandle() {
+    if (!layersHandle || !layersPanel) return;
+    const w = layersPanel.classList.contains('collapsed') ? 0 : layersPanel.offsetWidth;
+    layersHandle.style.left = w + 'px';
+    layersHandle.style.display = layersPanel.classList.contains('collapsed') ? 'none' : '';
+  }
+
+  /** Position props resize handle at panel's left edge. */
+  function positionPropsHandle() {
+    if (!propsHandle || !propsPanel) return;
+    if (propsPanel.classList.contains('visible') && !propsPanel.classList.contains('collapsed')) {
+      const w = propsPanel.offsetWidth;
+      propsHandle.style.right = w + 'px';
+      propsHandle.style.display = '';
+    } else {
+      propsHandle.style.display = 'none';
+    }
+  }
+
+  // Initial position
+  requestAnimationFrame(() => {
+    positionLayersHandle();
+    positionPropsHandle();
+  });
+
+  // ── Generic drag handler ──
+  function makeDraggable(handle, panel, side, defaultW) {
+    if (!handle || !panel) return;
+    let dragging = false;
+    let startX = 0;
+    let startW = 0;
+
+    handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragging = true;
+      startX = e.clientX;
+      startW = panel.offsetWidth;
+      panel.classList.add('no-transition');
+      handle.classList.add('active');
+      handle.setPointerCapture(e.pointerId);
+    });
+
+    handle.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      const newW = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, side === 'left' ? startW + dx : startW - dx));
+      const varName = side === 'left' ? '--layers-width' : '--props-width';
+      wrapper.style.setProperty(varName, newW + 'px');
+      if (side === 'left') positionLayersHandle();
+      else positionPropsHandle();
+      resizeCanvas();
+      renderCanvas();
+    });
+
+    const endDrag = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      panel.classList.remove('no-transition');
+      handle.classList.remove('active');
+      // Persist
+      const w = panel.offsetWidth;
+      const key = side === 'left' ? 'fd-layers-width' : 'fd-props-width';
+      localStorage.setItem(key, String(w));
+    };
+    handle.addEventListener('pointerup', endDrag);
+    handle.addEventListener('pointercancel', endDrag);
+
+    // Double-click to collapse
+    handle.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isCollapsed = panel.classList.toggle('collapsed');
+      const varName = side === 'left' ? '--layers-width' : '--props-width';
+      if (isCollapsed) {
+        wrapper.style.setProperty(varName, '0px');
+        localStorage.setItem(side === 'left' ? 'fd-layers-collapsed' : 'fd-props-collapsed', '1');
+      } else {
+        const savedW = parseInt(localStorage.getItem(side === 'left' ? 'fd-layers-width' : 'fd-props-width'), 10);
+        const restoreW = (savedW >= MIN_WIDTH && savedW <= MAX_WIDTH) ? savedW : defaultW;
+        wrapper.style.setProperty(varName, restoreW + 'px');
+        localStorage.removeItem(side === 'left' ? 'fd-layers-collapsed' : 'fd-props-collapsed');
+      }
+      requestAnimationFrame(() => {
+        if (side === 'left') positionLayersHandle();
+        else positionPropsHandle();
+        resizeCanvas();
+        renderCanvas();
+      });
+    });
+  }
+
+  makeDraggable(layersHandle, layersPanel, 'left', DEFAULT_LAYERS_W);
+  makeDraggable(propsHandle, propsPanel, 'right', DEFAULT_PROPS_W);
+
+  // ── Restore strips (click to uncollapse) ──
+  if (layersRestore) {
+    layersRestore.addEventListener('click', () => {
+      if (!layersPanel) return;
+      layersPanel.classList.remove('collapsed');
+      const savedW = parseInt(localStorage.getItem('fd-layers-width'), 10);
+      const restoreW = (savedW >= MIN_WIDTH && savedW <= MAX_WIDTH) ? savedW : DEFAULT_LAYERS_W;
+      wrapper.style.setProperty('--layers-width', restoreW + 'px');
+      localStorage.removeItem('fd-layers-collapsed');
+      requestAnimationFrame(() => { positionLayersHandle(); resizeCanvas(); renderCanvas(); });
+    });
+    layersRestore.addEventListener('dblclick', (e) => e.stopPropagation());
+  }
+  if (propsRestore) {
+    propsRestore.addEventListener('click', () => {
+      if (!propsPanel) return;
+      propsPanel.classList.remove('collapsed');
+      const savedW = parseInt(localStorage.getItem('fd-props-width'), 10);
+      const restoreW = (savedW >= MIN_WIDTH && savedW <= MAX_WIDTH) ? savedW : DEFAULT_PROPS_W;
+      wrapper.style.setProperty('--props-width', restoreW + 'px');
+      localStorage.removeItem('fd-props-collapsed');
+      requestAnimationFrame(() => { positionPropsHandle(); resizeCanvas(); renderCanvas(); });
+    });
+    propsRestore.addEventListener('dblclick', (e) => e.stopPropagation());
+  }
+
+  // ── Observe props panel visibility changes to reposition handle ──
+  const propsObserver = new MutationObserver(() => {
+    positionPropsHandle();
+    // Update --props-width CSS var when props becomes visible/hidden
+    if (propsPanel.classList.contains('visible') && !propsPanel.classList.contains('collapsed')) {
+      const savedW = parseInt(localStorage.getItem('fd-props-width'), 10);
+      const w = (savedW >= MIN_WIDTH && savedW <= MAX_WIDTH) ? savedW : DEFAULT_PROPS_W;
+      wrapper.style.setProperty('--props-width', w + 'px');
+    } else {
+      wrapper.style.setProperty('--props-width', '0px');
+    }
+    resizeCanvas();
+  });
+  if (propsPanel) {
+    propsObserver.observe(propsPanel, { attributes: true, attributeFilter: ['class'] });
+  }
+}
+
 // ─── Init ────────────────────────────────────────────────────────────────
 
 async function initPlayground() {
@@ -849,7 +1033,9 @@ async function initPlayground() {
     const resizeCanvas = () => {
       const rect = wrapper.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      const canvasWidth = rect.width - 180; // layers panel offset
+      const layersW = getLayersPanelWidth();
+      const propsW = getPropsPanelWidth();
+      const canvasWidth = rect.width - layersW - propsW;
       canvas.width = canvasWidth * dpr;
       canvas.height = rect.height * dpr;
       canvas.style.width = canvasWidth + 'px';
@@ -863,7 +1049,7 @@ async function initPlayground() {
 
     // Create the FdCanvas instance
     const rect = wrapper.getBoundingClientRect();
-    const canvasW = rect.width - 180;
+    const canvasW = rect.width - getLayersPanelWidth();
     fdCanvas = new wasm.FdCanvas(canvasW, rect.height);
     fdCanvas.set_theme(isDark);
     fdCanvas.set_text(editor.value);
@@ -889,6 +1075,9 @@ async function initPlayground() {
 
     // Hide loading overlay
     loading.classList.add('hidden');
+
+    // ── Panel Resize Setup ───────────────────────────────────────────
+    setupPanelResize(wrapper, resizeCanvas);
 
     // ── Text Editor → Canvas ──────────────────────────────────────────
     let debounceTimer = null;
