@@ -181,6 +181,7 @@ let panDragging = false;
 let zoomLevel = 1.0;
 let gridEnabled = false;
 const GRID_SPACING = 20;
+let zenMode = false;
 const ZOOM_MIN = 0.1, ZOOM_MAX = 5;
 let isPanning = false;
 
@@ -305,6 +306,10 @@ function updateFab(canvas) {
 
   const selectedId = fdCanvas.get_selected_id();
   if (!selectedId) { fab.classList.remove('visible'); return; }
+
+  // Hide FAB when props panel is visible
+  const propsPanel = document.getElementById('props-panel');
+  if (propsPanel?.classList.contains('visible')) { fab.classList.remove('visible'); return; }
 
   try {
     const boundsJson = fdCanvas.get_node_bounds(selectedId);
@@ -554,7 +559,16 @@ function setupContextMenu(editor) {
     if (!menu.contains(e.target)) closeContextMenu();
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeContextMenu();
+    if (e.key === 'Escape') {
+      closeContextMenu();
+      // Exit Zen mode on Escape
+      if (zenMode) {
+        zenMode = false;
+        document.querySelector('.hero-playground')?.classList.remove('zen-mode');
+        resizeCanvas();
+        renderCanvas();
+      }
+    }
   });
   canvas.addEventListener('pointerdown', closeContextMenu);
 }
@@ -1200,6 +1214,7 @@ async function initPlayground() {
       document.getElementById('sm-dark')?.classList.toggle('on', isDark);
       document.getElementById('sm-sketchy')?.classList.toggle('on', isSketchy);
       document.getElementById('sm-grid')?.classList.toggle('on', gridEnabled);
+      document.getElementById('sm-zen')?.classList.toggle('on', zenMode);
     }
 
     settingsBtn?.addEventListener('click', (e) => {
@@ -1224,6 +1239,15 @@ async function initPlayground() {
           case 'grid':
             gridEnabled = !gridEnabled;
             break;
+          case 'zen': {
+            zenMode = !zenMode;
+            document.querySelector('.hero-playground')?.classList.toggle('zen-mode', zenMode);
+            settingsMenu?.classList.remove('visible');
+            // Trigger resize after layout change
+            setTimeout(() => { resizeCanvas(); renderCanvas(); }, 50);
+            updateSettingsToggles();
+            return;
+          }
           case 'fit': {
             // Fit to content: scan all nodes, compute bounding box, set zoom+pan
             if (fdCanvas) {
