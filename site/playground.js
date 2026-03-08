@@ -206,8 +206,8 @@ function renderCanvas() {
 
 /** Update toolbar active state */
 function updateToolbar(activeTool) {
-  document.querySelectorAll('.canvas-tool').forEach(b => b.classList.remove('active'));
-  const btn = document.querySelector(`.canvas-tool[data-tool="${activeTool}"]`);
+  document.querySelectorAll('.ft-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`.ft-btn[data-tool="${activeTool}"]`);
   if (btn) btn.classList.add('active');
 }
 
@@ -428,7 +428,7 @@ async function initPlayground() {
     }, { passive: false });
 
     // ── Tool Toolbar ──────────────────────────────────────────────────
-    document.querySelectorAll('.canvas-tool').forEach(btn => {
+    document.querySelectorAll('.ft-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         if (!fdCanvas) return;
         const tool = btn.dataset.tool;
