@@ -2182,13 +2182,13 @@ fn snapshot_no_changes() {
 // ─── F6: Inline Doc-Comments tests ──────────────────────────────────────
 
 #[test]
-fn emit_auto_comment_text_node() {
+fn emit_no_auto_comment_text_node() {
     let input = "text @title \"Welcome Home\" {\n  fill: #333333\n}\n";
     let graph = parse_document(input).unwrap();
     let output = emit_document(&graph);
     assert!(
-        output.contains("[auto] label: \"Welcome Home\""),
-        "text node should get auto-comment: {output}"
+        !output.contains("[auto]"),
+        "text node should NOT get auto-comment (self-documenting): {output}"
     );
 }
 
@@ -2205,7 +2205,8 @@ fn emit_auto_comment_group_children() {
 
 #[test]
 fn roundtrip_auto_comments_not_duplicated() {
-    let input = "text @label \"Hello\" {\n  fill: #333333\n}\n";
+    // Use a group (which still gets auto-comments) to test duplication
+    let input = "group @panel {\n  rect @a { w: 50 h: 50 }\n}\n";
     let graph = parse_document(input).unwrap();
     let pass1 = emit_document(&graph);
     assert!(pass1.contains("[auto]"), "pass1 should have auto-comment");
