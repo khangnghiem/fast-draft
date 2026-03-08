@@ -465,13 +465,54 @@ code {
 .ft-btn:active {
   transform: scale(0.92);
 }
+.canvas-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+.ch-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+.ch-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.ch-btn:active {
+  transform: scale(0.92);
+}
+.ch-sep {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 4px;
+}
 .zoom-indicator {
   font-size: 10px;
   color: var(--text-muted);
   font-family: var(--mono);
   padding: 2px 6px;
-  margin-left: auto;
   user-select: none;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+}
+.zoom-indicator:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
 }
 
 /* ─── Minimap ─── */

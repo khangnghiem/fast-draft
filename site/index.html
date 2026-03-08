@@ -106,7 +106,12 @@
         <div class="playground-canvas">
           <div class="editor-header">
             <span class="editor-dot canvas-dot"></span> Canvas Mode
-            <span id="zoom-level" class="zoom-indicator">100%</span>
+            <div class="canvas-header-actions">
+              <button class="ch-btn" id="undo-btn" title="Undo (⌘Z)">↶</button>
+              <button class="ch-btn" id="redo-btn" title="Redo (⇧⌘Z)">↷</button>
+              <span class="ch-sep"></span>
+              <span id="zoom-level" class="zoom-indicator" title="Click to reset zoom">100%</span>
+            </div>
           </div>
           <div id="canvas-wrapper">
             <canvas id="fd-canvas"></canvas>

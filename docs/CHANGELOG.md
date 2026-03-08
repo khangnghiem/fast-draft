@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.72 — Undo/Redo Buttons + Canvas Header Cleanup (R6.6)
+
+- **UX (R6.6)**: Undo/redo buttons in playground canvas header — ↶ and ↷ ghost buttons with keyboard shortcut tooltips; calls `fdCanvas.undo()` / `fdCanvas.redo()` and syncs canvas + code editor
+- **UX (R6.6)**: Clickable zoom indicator — clicking the zoom percentage in the header resets to 100% and pans to origin (0,0); hover shows subtle background highlight
+- **SITE**: New `.canvas-header-actions` flex group, `.ch-btn` ghost buttons with border, `.ch-sep` vertical divider; `.zoom-indicator` now has `cursor: pointer` and hover state
+
 ### v0.10.71 — Minimap + Zoom Controls (R6.6)
 
 - **UX (R6.6)**: Minimap in playground canvas — glassmorphic 150×100px thumbnail in bottom-right showing scaled scene overview with purple node rects and blue viewport rectangle; click/drag on minimap pans the canvas to that scene position
