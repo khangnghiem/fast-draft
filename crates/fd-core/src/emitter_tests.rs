@@ -978,7 +978,7 @@ rect @btn {
     let graph = parse_document(input).unwrap();
     let output = emit_document(&graph);
 
-    // Emitter should output `style`, not `theme`
+    // Emitter should output `style`, not `theme` (legacy)
     assert!(
         output.contains("style accent"),
         "should emit `style` keyword"
@@ -1554,7 +1554,7 @@ fn emit_filtered_layout() {
 fn emit_filtered_design() {
     let graph = make_test_graph();
     let out = emit_filtered(&graph, ReadMode::Design);
-    // Should have themes + styles
+    // Should have style definitions
     assert!(out.contains("style accent"), "should include style");
     assert!(out.contains("use: accent"), "should include use ref");
     assert!(out.contains("fill:"), "should include fill");

@@ -899,7 +899,7 @@ pub enum ReadMode {
     Structure,
     /// Structure + dimensions (`w:`/`h:`) + `layout:` directives + constraints.
     Layout,
-    /// Structure + themes/styles + `fill:`/`stroke:`/`font:`/`corner:`/`use:` refs.
+    /// Structure + styles + `fill:`/`stroke:`/`font:`/`corner:`/`use:` refs.
     Design,
     /// Structure + `spec {}` blocks + annotations.
     Spec,
@@ -919,7 +919,7 @@ pub enum ReadMode {
 /// - `Full`: identical to `emit_document`.
 /// - `Structure`: node kind + `@id` + children. No styles, dims, anims, specs.
 /// - `Layout`: structure + `w:`/`h:` + `layout:` + constraints (`->`).
-/// - `Design`: structure + themes + `fill:`/`stroke:`/`font:`/`corner:`/`use:`.
+/// - `Design`: structure + styles + `fill:`/`stroke:`/`font:`/`corner:`/`use:`.
 /// - `Spec`: structure + `spec {}` blocks.
 /// - `Visual`: layout + design + when combined.
 /// - `When`: structure + `when :trigger { ... }` blocks.
@@ -937,12 +937,12 @@ pub fn emit_filtered(graph: &SceneGraph, mode: ReadMode) -> String {
     let mut out = String::with_capacity(1024);
 
     let children = graph.children(graph.root);
-    let include_themes = matches!(mode, ReadMode::Design | ReadMode::Visual);
+    let include_styles = matches!(mode, ReadMode::Design | ReadMode::Visual);
     let include_constraints = matches!(mode, ReadMode::Layout | ReadMode::Visual);
     let include_edges = matches!(mode, ReadMode::Edges | ReadMode::Visual);
 
     // Styles (Design and Visual modes)
-    if include_themes && !graph.styles.is_empty() {
+    if include_styles && !graph.styles.is_empty() {
         let mut styles: Vec<_> = graph.styles.iter().collect();
         styles.sort_by_key(|(id, _)| id.as_str().to_string());
         for (name, style) in &styles {
