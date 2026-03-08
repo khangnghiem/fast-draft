@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.10.80 — Migrate to Cloudflare Pages (R6.5)
+
+- **INFRA (R6.5)**: Migrated site hosting from GitHub Pages to Cloudflare Pages — 330+ edge PoPs (was ~10 Fastly), HTTP/3+QUIC, custom response headers, unlimited bandwidth; hybrid deploy: GitHub Actions builds WASM → `wrangler-action@v3` pushes to CF Pages
+- **PERF**: Added `site/_headers` — WASM binary cached for 1 year (`Cache-Control: immutable`); security headers (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`) on all responses
+- **CLEANUP**: Removed `site/CNAME` (not needed for CF Pages custom domain binding)
+- **DOCS**: Updated `GEMINI.md` Tier 2 table, `REQUIREMENTS.md` R6.5
+
 ### v0.10.79 — Cross-Framework Property Aliases (R4.16)
 
 - **FEATURE (R4.16)**: `border:` accepted as alias for `stroke:` — CSS/Tailwind's most common expectation for outline/border styling; emitter outputs canonical `stroke:`
