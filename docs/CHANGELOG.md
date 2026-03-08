@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.70 — Floating Toolbar on Playground Canvas (R6.6)
+
+- **UX (R6.6)**: Floating toolbar on playground canvas — vertical glassmorphic toolbar on left side of canvas with 7 SVG tool buttons (Select, Rect, Ellipse, Text, Arrow, Pen, Eraser) matching the VS Code extension's floating toolbar; replaces inline header tool buttons
+- **SITE**: Removed inline `#canvas-tools` div from `.editor-header`; added `#floating-toolbar` inside `#canvas-wrapper` with `position: absolute; left: 12px; top: 50%; transform: translateY(-50%)`; `.ft-btn` buttons styled as 32×32 rounded with accent highlight on active; SVG icons from `fd-vscode/src/webview-html.ts`
+- **SITE**: Updated `playground.js` selectors from `.canvas-tool` to `.ft-btn` in `updateToolbar()` and click handler
+
 ### v0.10.69 — Rename `theme` → `style` Keyword (R4.18)
 
 - **RENAME (R4.18)**: `theme` keyword → `style` — reusable property bundles now use the universal CSS/Figma term; emitter outputs `style` keyword and `# ─── Styles ───` section header; parser still accepts `theme` for backward compatibility

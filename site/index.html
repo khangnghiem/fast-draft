@@ -106,19 +106,19 @@
         <div class="playground-canvas">
           <div class="editor-header">
             <span class="editor-dot canvas-dot"></span> Canvas Mode
-            <div id="canvas-tools" class="canvas-tools">
-              <button class="canvas-tool active" data-tool="select" title="Select (V)">↖</button>
-              <button class="canvas-tool" data-tool="rect" title="Rectangle (R)">□</button>
-              <button class="canvas-tool" data-tool="ellipse" title="Ellipse (O)">○</button>
-              <button class="canvas-tool" data-tool="text" title="Text (T)">T</button>
-              <button class="canvas-tool" data-tool="arrow" title="Arrow (A)">→</button>
-              <button class="canvas-tool" data-tool="pen" title="Pen (P)">✎</button>
-              <button class="canvas-tool" data-tool="eraser" title="Eraser (E)">◎</button>
-            </div>
             <span id="zoom-level" class="zoom-indicator">100%</span>
           </div>
           <div id="canvas-wrapper">
             <canvas id="fd-canvas"></canvas>
+            <div id="floating-toolbar">
+              <button class="ft-btn active" data-tool="select" title="Select (V)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2L3.5 13.5L7 10L11.5 14.5L13 13L9 8.5L13 8.5Z"/></svg></button>
+              <button class="ft-btn" data-tool="rect" title="Rectangle (R)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="12" height="10" rx="2"/></svg></button>
+              <button class="ft-btn" data-tool="ellipse" title="Ellipse (O)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/></svg></button>
+              <button class="ft-btn" data-tool="text" title="Text (T)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4H14"/><path d="M9 4V15"/><path d="M6 15H12"/></svg></button>
+              <button class="ft-btn" data-tool="arrow" title="Arrow (A)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14L14 4"/><path d="M7 4H14V11"/></svg></button>
+              <button class="ft-btn" data-tool="pen" title="Pen (P)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5L14.5 7.5L6.5 15.5H2.5V11.5Z"/><path d="M10.5 3.5L14.5 7.5"/><path d="M8.5 5.5L12.5 9.5"/></svg></button>
+              <button class="ft-btn" data-tool="eraser" title="Eraser (E)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5L8 12L5.5 14.5H2.5V12L9.5 5L12.25 2.25Z"/><path d="M8.5 6L12 9.5"/><line x1="5" y1="15" x2="15" y2="15"/></svg></button>
+            </div>
             <div id="fab" class="fab">
               <label class="fab-item" title="Fill color">
                 <span class="fab-label">Fill</span>
