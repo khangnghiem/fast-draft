@@ -561,7 +561,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let mut children = Vec::new();
     let mut width: Option<f32> = None;
     let mut height: Option<f32> = None;
-    let mut layout = LayoutMode::Free;
+    let mut layout = LayoutMode::Free { pad: 0.0 };
     let mut clip = false;
     let mut place: Option<(HPlace, VPlace)> = None;
     let mut path_commands: Vec<PathCmd> = Vec::new();
@@ -941,12 +941,22 @@ fn parse_node_property(
                 "column" => LayoutMode::Column { gap, pad },
                 "row" => LayoutMode::Row { gap, pad },
                 "grid" => LayoutMode::Grid { cols: 2, gap, pad },
-                _ => LayoutMode::Free,
+                _ => LayoutMode::Free { pad: 0.0 },
             };
         }
         "clip" => {
             let val = parse_identifier.parse_next(input)?;
             *clip = val == "true";
+        }
+        "pad" | "padding" => {
+            // Standalone pad: N — sets padding on Free frames
+            let val = parse_number.parse_next(input)?;
+            match layout {
+                LayoutMode::Free { pad } => *pad = val,
+                LayoutMode::Column { pad, .. }
+                | LayoutMode::Row { pad, .. }
+                | LayoutMode::Grid { pad, .. } => *pad = val,
+            }
         }
         "d" => {
             // Parse SVG-like path commands: M x y L x y C ... Z

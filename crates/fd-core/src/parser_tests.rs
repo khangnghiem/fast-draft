@@ -719,3 +719,71 @@ rect @card {
         Some((crate::model::HPlace::Right, crate::model::VPlace::Bottom))
     );
 }
+
+#[test]
+fn parse_free_frame_pad() {
+    let src = r#"
+frame @card {
+  w: 400 h: 300
+  pad: 16
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let node = graph.get_by_id(crate::id::NodeId::intern("card")).unwrap();
+    match &node.kind {
+        NodeKind::Frame { layout, .. } => match layout {
+            crate::model::LayoutMode::Free { pad } => {
+                assert_eq!(*pad, 16.0, "pad should be 16");
+            }
+            other => panic!("expected Free layout, got {other:?}"),
+        },
+        other => panic!("expected Frame, got {other:?}"),
+    }
+}
+
+#[test]
+fn roundtrip_free_frame_pad() {
+    let src = r#"
+frame @card {
+  w: 400 h: 300
+  pad: 12
+  rect @child { w: 100 h: 50 }
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let emitted = crate::emitter::emit_document(&graph);
+    assert!(
+        emitted.contains("pad: 12"),
+        "emitted should contain pad: 12, got: {emitted}"
+    );
+
+    let reparsed = parse_document(&emitted).unwrap();
+    let node = reparsed
+        .get_by_id(crate::id::NodeId::intern("card"))
+        .unwrap();
+    match &node.kind {
+        NodeKind::Frame { layout, .. } => match layout {
+            crate::model::LayoutMode::Free { pad } => {
+                assert_eq!(*pad, 12.0, "pad should survive roundtrip");
+            }
+            other => panic!("expected Free layout after roundtrip, got {other:?}"),
+        },
+        other => panic!("expected Frame after roundtrip, got {other:?}"),
+    }
+}
+
+#[test]
+fn parse_free_frame_pad_zero_omitted() {
+    // Free frame with pad=0 should NOT emit pad: line
+    let src = r#"
+frame @card {
+  w: 400 h: 300
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let emitted = crate::emitter::emit_document(&graph);
+    assert!(
+        !emitted.contains("pad:"),
+        "pad: 0 should not appear in emitted output"
+    );
+}

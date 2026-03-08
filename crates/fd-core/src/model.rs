@@ -460,17 +460,23 @@ pub struct FlowAnim {
 }
 
 /// Group layout mode (for children arrangement).
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LayoutMode {
     /// Free / absolute positioning of children.
-    #[default]
-    Free,
+    /// Optional padding insets the content area (default 0).
+    Free { pad: f32 },
     /// Column (vertical stack).
     Column { gap: f32, pad: f32 },
     /// Row (horizontal stack).
     Row { gap: f32, pad: f32 },
     /// Grid layout.
     Grid { cols: u32, gap: f32, pad: f32 },
+}
+
+impl Default for LayoutMode {
+    fn default() -> Self {
+        LayoutMode::Free { pad: 0.0 }
+    }
 }
 
 // ─── Scene Graph Nodes ───────────────────────────────────────────────────

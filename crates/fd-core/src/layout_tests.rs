@@ -928,3 +928,111 @@ text @long "Hello World this is a long sentence that should wrap" {
         b.height
     );
 }
+
+#[test]
+fn layout_free_frame_pad_insets_children() {
+    let input = r#"
+frame @card {
+  w: 400 h: 300
+  pad: 20
+
+  rect @child { w: 100 h: 50 }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let bounds = resolve_layout(&graph, viewport);
+
+    let card = bounds[&graph.index_of(NodeId::intern("card")).unwrap()];
+    let child = bounds[&graph.index_of(NodeId::intern("child")).unwrap()];
+
+    // Child default position should be at parent origin + pad
+    assert!(
+        (child.x - (card.x + 20.0)).abs() < 0.01,
+        "child.x ({}) should be card.x + pad ({})",
+        child.x,
+        card.x + 20.0
+    );
+    assert!(
+        (child.y - (card.y + 20.0)).abs() < 0.01,
+        "child.y ({}) should be card.y + pad ({})",
+        child.y,
+        card.y + 20.0
+    );
+}
+
+#[test]
+fn layout_free_frame_pad_text_centered_in_padded_area() {
+    let input = r#"
+frame @card {
+  w: 400 h: 300
+  pad: 40
+
+  text @label "Hello" {
+    font: "Inter" 600 14
+    place: center
+  }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let bounds = resolve_layout(&graph, viewport);
+
+    let card = bounds[&graph.index_of(NodeId::intern("card")).unwrap()];
+    let label = bounds[&graph.index_of(NodeId::intern("label")).unwrap()];
+
+    // Text should be centered within padded area (400-80=320, 300-80=220)
+    let content_cx = card.x + 40.0 + (400.0 - 80.0) / 2.0;
+    let content_cy = card.y + 40.0 + (300.0 - 80.0) / 2.0;
+    let label_cx = label.x + label.width / 2.0;
+    let label_cy = label.y + label.height / 2.0;
+
+    assert!(
+        (label_cx - content_cx).abs() < 1.0,
+        "label center x ({label_cx}) should match padded content center ({content_cx})"
+    );
+    assert!(
+        (label_cy - content_cy).abs() < 1.0,
+        "label center y ({label_cy}) should match padded content center ({content_cy})"
+    );
+}
+
+#[test]
+fn layout_free_frame_pad_zero_matches_no_pad() {
+    // pad=0 should behave identically to the old Free without pad
+    let input = r#"
+frame @card {
+  w: 400 h: 300
+  rect @child { w: 100 h: 50 }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let bounds = resolve_layout(&graph, viewport);
+
+    let card = bounds[&graph.index_of(NodeId::intern("card")).unwrap()];
+    let child = bounds[&graph.index_of(NodeId::intern("child")).unwrap()];
+
+    // Child should be at parent origin (no padding)
+    assert!(
+        (child.x - card.x).abs() < 0.01,
+        "child.x ({}) should equal card.x ({})",
+        child.x,
+        card.x
+    );
+    assert!(
+        (child.y - card.y).abs() < 0.01,
+        "child.y ({}) should equal card.y ({})",
+        child.y,
+        card.y
+    );
+}
