@@ -211,7 +211,12 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
     // Layout mode (for frames)
     if let NodeKind::Frame { layout, .. } = &node.kind {
         match layout {
-            LayoutMode::Free => {}
+            LayoutMode::Free { pad } => {
+                if *pad > 0.0 {
+                    indent(out, depth + 1);
+                    writeln!(out, "pad: {}", format_num(*pad)).unwrap();
+                }
+            }
             LayoutMode::Column { gap, pad } => {
                 indent(out, depth + 1);
                 writeln!(
@@ -851,7 +856,7 @@ fn generate_auto_comment(node: &SceneNode, graph: &SceneGraph, idx: NodeIndex) -
         NodeKind::Frame { layout, .. } => {
             let count = graph.children(idx).len();
             let layout_str = match layout {
-                LayoutMode::Free => "free",
+                LayoutMode::Free { .. } => "free",
                 LayoutMode::Column { .. } => "column",
                 LayoutMode::Row { .. } => "row",
                 LayoutMode::Grid { .. } => "grid",
@@ -1101,7 +1106,12 @@ fn emit_layout_mode_filtered(out: &mut String, kind: &NodeKind, depth: usize) {
         _ => return, // Group is always Free — no layout emission
     };
     match layout {
-        LayoutMode::Free => {}
+        LayoutMode::Free { pad } => {
+            if *pad > 0.0 {
+                indent(out, depth);
+                writeln!(out, "pad: {}", format_num(*pad)).unwrap();
+            }
+        }
         LayoutMode::Column { gap, pad } => {
             indent(out, depth);
             writeln!(

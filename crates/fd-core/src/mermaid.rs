@@ -534,7 +534,7 @@ fn build_scene_graph(
                 width: 300.0,
                 height: 200.0,
                 clip: false,
-                layout: LayoutMode::Free,
+                layout: LayoutMode::Free { pad: 0.0 },
             },
             style: Style {
                 fill: Some(Paint::Solid(Color::rgba(0.95, 0.95, 0.97, 1.0))),

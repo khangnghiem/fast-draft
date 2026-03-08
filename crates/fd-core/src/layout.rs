@@ -101,7 +101,7 @@ pub fn is_parent_managed(graph: &SceneGraph, node_idx: NodeIndex) -> bool {
     };
     let parent_node = &graph.graph[parent_idx];
     match &parent_node.kind {
-        NodeKind::Frame { layout, .. } => !matches!(layout, LayoutMode::Free),
+        NodeKind::Frame { layout, .. } => !matches!(layout, LayoutMode::Free { .. }),
         _ => false,
     }
 }
@@ -172,9 +172,9 @@ fn resolve_children(
 
     // Determine layout mode
     let layout = match &parent_node.kind {
-        NodeKind::Group => LayoutMode::Free, // Group is always Free
+        NodeKind::Group => LayoutMode::Free { pad: 0.0 }, // Group is always Free
         NodeKind::Frame { layout, .. } => layout.clone(),
-        _ => LayoutMode::Free,
+        _ => LayoutMode::Free { pad: 0.0 },
     };
 
     match layout {
@@ -355,17 +355,21 @@ fn resolve_children(
                 }
             }
         }
-        LayoutMode::Free => {
-            // Each child positioned at parent origin by default.
+        LayoutMode::Free { pad } => {
+            // Compute padded content area
+            let content_x = parent_bounds.x + pad;
+            let content_y = parent_bounds.y + pad;
+            let content_w = (parent_bounds.width - 2.0 * pad).max(0.0);
+            let content_h = (parent_bounds.height - 2.0 * pad).max(0.0);
+
+            // Each child positioned at padded origin by default.
             // Use or_insert to preserve existing cached bounds (e.g. JS-measured
             // text sizes, explicit positions) during resolve_subtree calls.
-            // For a fresh map (from resolve_layout), or_insert behaves
-            // identically to insert since there are no existing entries.
             for &child_idx in &children {
                 let child_size = intrinsic_size(&graph.graph[child_idx]);
                 bounds.entry(child_idx).or_insert(ResolvedBounds {
-                    x: parent_bounds.x,
-                    y: parent_bounds.y,
+                    x: content_x,
+                    y: content_y,
                     width: child_size.0,
                     height: child_size.1,
                 });
@@ -383,22 +387,18 @@ fn resolve_children(
                     .iter()
                     .any(|c| matches!(c, Constraint::Position { .. }));
 
-                // Priority 1: explicit `place:` property
+                // Priority 1: explicit `place:` property (uses padded area)
                 if let Some((h, v)) = child_node.place {
                     if !has_position && let Some(cb) = bounds.get(&child_idx).copied() {
                         let x = match h {
-                            HPlace::Left => parent_bounds.x,
-                            HPlace::Center => {
-                                parent_bounds.x + (parent_bounds.width - cb.width) / 2.0
-                            }
-                            HPlace::Right => parent_bounds.x + parent_bounds.width - cb.width,
+                            HPlace::Left => content_x,
+                            HPlace::Center => content_x + (content_w - cb.width) / 2.0,
+                            HPlace::Right => content_x + content_w - cb.width,
                         };
                         let y = match v {
-                            VPlace::Top => parent_bounds.y,
-                            VPlace::Middle => {
-                                parent_bounds.y + (parent_bounds.height - cb.height) / 2.0
-                            }
-                            VPlace::Bottom => parent_bounds.y + parent_bounds.height - cb.height,
+                            VPlace::Top => content_y,
+                            VPlace::Middle => content_y + (content_h - cb.height) / 2.0,
+                            VPlace::Bottom => content_y + content_h - cb.height,
                         };
                         bounds.insert(child_idx, ResolvedBounds { x, y, ..cb });
                     }
@@ -407,13 +407,14 @@ fn resolve_children(
 
                 // Priority 2: auto-center text children in shape parents
                 // (no explicit place: and no Position constraint)
+                // Uses padded bounds for centering area
                 if parent_is_shape
                     && matches!(child_node.kind, NodeKind::Text { .. })
                     && !has_position
                     && let Some(child_b) = bounds.get(&child_idx).copied()
                 {
-                    let cx = parent_bounds.x + (parent_bounds.width - child_b.width) / 2.0;
-                    let cy = parent_bounds.y + (parent_bounds.height - child_b.height) / 2.0;
+                    let cx = content_x + (content_w - child_b.width) / 2.0;
+                    let cy = content_y + (content_h - child_b.height) / 2.0;
                     bounds.insert(
                         child_idx,
                         ResolvedBounds {
@@ -429,7 +430,7 @@ fn resolve_children(
     }
 
     // Recurse into children (only for Free mode — Column/Row/Grid already recursed in pass 1)
-    if matches!(layout, LayoutMode::Free) {
+    if matches!(layout, LayoutMode::Free { .. }) {
         for &child_idx in &children {
             resolve_children(graph, child_idx, bounds, viewport);
         }

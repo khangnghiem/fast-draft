@@ -28,6 +28,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R1.18** _(done)_: Mermaid import — parse Mermaid diagram syntax (`flowchart`, `sequenceDiagram`, `stateDiagram`) into equivalent FD nodes + edges; `parse_mermaid()` in fd-core + `import_mermaid()` WASM API
 - **R1.19** _(done)_: Edge label offset — `label_offset: <x> <y>` property on edges for draggable text labels; parse/emit roundtrip support
 - **R1.20** _(done)_: Edge anchors — `EdgeAnchor` enum (`@node_id` or `x y` coords) for flexible edge endpoints; `text_child: Option<NodeId>` for styled text labels; `create_edge_at()` WASM API; edge-to-edge validation
+- **R1.21** _(done)_: Free frame padding — `pad: <N>` property on Free-layout frames insets the content area; children default to padded origin, text centering and `place:` use padded bounds; also accepts `padding:` alias
 
 ### R2: Bidirectional Sync
 
@@ -308,3 +309,4 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | alt-drag multi-select | R3.60 |
 | esc-cancel / cancel-drag | R3.61 |
 | path / d: commands | R3.62, R3.4 |
+| padding / spacing | R1.21 |

@@ -215,7 +215,7 @@ impl SyncEngine {
                                     LayoutMode::Column { pad, .. }
                                     | LayoutMode::Row { pad, .. }
                                     | LayoutMode::Grid { pad, .. } => *pad,
-                                    LayoutMode::Free => 0.0,
+                                    LayoutMode::Free { pad } => *pad,
                                 },
                                 _ => 0.0,
                             };

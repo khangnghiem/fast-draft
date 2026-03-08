@@ -2134,7 +2134,7 @@ impl FdCanvas {
                 width: 200.0,
                 height: 150.0,
                 clip: false,
-                layout: LayoutMode::Free,
+                layout: LayoutMode::Free { pad: 0.0 },
             },
             _ => return false,
         };

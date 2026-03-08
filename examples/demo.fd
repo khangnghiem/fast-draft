@@ -97,6 +97,7 @@ frame @sidebar {
       ease: ease_out 150ms
     }
   }
+  layout: column gap=8 pad=16
   w: 220 h: 600
   fill: #2D2B55  # blue
   corner: 0
@@ -130,18 +131,6 @@ rect @card_revenue {
     priority: high
     tag: metrics, dashboard
   }
-  # [auto] label: "Revenue"
-  text @revenue_label "Revenue" {
-    use: body
-    x: 296
-    y: 112
-  }
-  # [auto] label: "$48,250"
-  text @revenue_value "$48,250" {
-    use: metric
-    x: 296
-    y: 136
-  }
   # [auto] label: "+12.5% ↑"
   text @revenue_delta "+12.5% ↑" {
     fill: #22C55E  # green
@@ -160,6 +149,20 @@ rect @card_revenue {
   }
 }
 
+# [auto] label: "Revenue"
+text @revenue_label "Revenue" {
+  use: body
+  x: 490.7
+  y: 183.7
+}
+
+# [auto] label: "$48,250"
+text @revenue_value "$48,250" {
+  use: metric
+  x: 594.9
+  y: 203.6
+}
+
 # [auto] styled: card
 rect @card_users {
   # [auto] label: "Active Users"
@@ -168,21 +171,22 @@ rect @card_users {
     x: 520
     y: 112
   }
-  # [auto] label: "2,847"
-  text @users_value "2,847" {
-    use: metric
-    x: 520
-    y: 136
-  }
   w: 220 h: 120
   use: card
   shadow: (0,2,16,#00000010)
-  x: 516
-  y: 100
+  x: 518.7
+  y: 98.8
   when :hover {
     scale: 1
     ease: spring 200ms
   }
+}
+
+# [auto] label: "2,847"
+text @users_value "2,847" {
+  use: metric
+  x: 1041.6
+  y: 235.9
 }
 
 # [auto] styled: card
@@ -202,8 +206,8 @@ rect @card_tasks {
   w: 220 h: 120
   use: card
   shadow: (0,2,16,#00000010)
-  x: 752
-  y: 100
+  x: 755
+  y: 98.8
   when :hover {
     scale: 1
     ease: spring 200ms
@@ -223,6 +227,8 @@ frame @activity_feed {
   # [auto] label: "Recent Activity"
   text @feed_title "Recent Activity" {
     use: subheading
+    x: 8.4
+    y: 5.8
   }
   rect @activity_1 {
     # [auto] label: "Alice submitted design review"
@@ -255,8 +261,8 @@ frame @activity_feed {
   w: 460 h: 280
   use: card
   shadow: (0,2,16,#00000010)
-  x: 280
-  y: 240
+  x: 278
+  y: 308.8
 }
 
 # ─── Pipeline Status ───
