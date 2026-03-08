@@ -140,6 +140,16 @@ crates/
 | **WASM build** | `wasm-pack build crates/fd-wasm --target web --out-dir ../../site/wasm` |
 | **Secrets** | `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` in GitHub repo secrets |
 
+### ⚙️ CI/CD Workflows
+
+| Workflow | Trigger | Purpose |
+| -------- | ------- | ------- |
+| `ci.yml` | push/PR to `main` | Rust check + test + clippy + fmt, WASM build, VS Code extension compile |
+| `pages.yml` | push to `main` | Build WASM → deploy to Cloudflare Pages |
+| `release.yml` | `v*` tag | CI gate → VS Code ext publish + fd-lsp binaries + Zed ext → GitHub Release |
+
+All workflows use `Swatinem/rust-cache@v2` with shared cache keys (`ci`, `wasm`).
+
 > [!CAUTION]
 > **Never delete or modify `site/_headers`.** It controls WASM caching and security response headers.
 

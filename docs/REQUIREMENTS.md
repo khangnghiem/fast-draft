@@ -166,6 +166,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R6.7** _(done)_: Resizable panels — layers and properties panels are drag-to-resize with accent-highlighted handles; double-click handle to collapse (0px); click restore strip to uncollapse; widths persist via `localStorage` (site) / `vscode.setState()` (extension); canvas area dynamically adjusts via CSS variables `--layers-width` / `--props-width`; floating toolbar tracks layers width
 - **R6.8** _(done)_: Apple HIG canvas parity — website playground redesigned with Apple HIG design language (frosted glass, blue accent, SF Pro font, hairline borders); horizontal toolbar with text labels + keyboard hints replacing vertical floating toolbar; enriched properties panel with section labels; layers indent guides; dimension tooltip during drag; modifier cursor feedback (⌘=grab, Alt=copy)
 - **R6.9** _(done)_: Import CSS — settings menu button triggers file picker for `.css` files; class selectors parsed and converted to FD `style` blocks (`fill`, `corner`, `opacity`, `shadow`, `stroke`, `font`); one-shot conversion with toast feedback; available on both website playground and VS Code extension
+- **R6.10** _(done)_: CI/CD hardening — WASM build check in CI (catches `wasm32-unknown-unknown` breakage before merge); `Swatinem/rust-cache@v2` for smarter cargo caching; explicit minimal `permissions` on all workflows; unified `release.yml` with CI gate → parallel extension/LSP/Zed publish → GitHub Release (atomic all-or-nothing); branch protection recommended for `main`
 
 ## Non-Functional Requirements
 
@@ -276,7 +277,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | style / theme       | R1.4, R4.3, R4.18                                                        |
 | animation           | R1.5, R1.11, R1.12, R3.29, R4.18, R5.6, R5.8                             |
 | rendering           | R5.1, R5.2, R5.4, R5.5                                                   |
-| platform            | R6.1, R6.2, R6.3, R6.4, R6.5, R6.6, R6.7, R6.8                         |
+| platform            | R6.1, R6.2, R6.3, R6.4, R6.5, R6.6, R6.7, R6.8, R6.9, R6.10           |
 | inline editing      | R3.28                                                                    |
 | text alignment      | R1.17, R3.28, R3.36, R3.37                                               |
 | layout / centering  | R3.36, R3.37                                                             |
