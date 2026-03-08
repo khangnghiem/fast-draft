@@ -165,7 +165,7 @@
 
 ### v0.10.63 — Demo Cleanup + Test Coverage
 
-- **DOCS**: Rewrote `examples/demo.fd` from 562 lines of testing debris to a polished 236-line product dashboard showcase — demonstrates themes, edge_defaults, specs, animations, flows, frames with column layout, and semantic naming throughout
+- **DOCS**: Rewrote `examples/demo.fd` from 562 lines of testing debris to a polished 236-line product dashboard showcase — demonstrates styles, edge_defaults, specs, animations, flows, frames with column layout, and semantic naming throughout
 - **TEST**: Added `sync_bring_forward_already_front_is_noop` — z-order edge case: bring_forward on frontmost child is a no-op
 - **TEST**: Added `sync_clone_name_sequence` — chained duplication produces `card`, `card_2`, `card_3`, `card_4` correctly
 - **TEST**: Added `sync_near_detach_warning_zone` — exercises near-detach evaluation code path without panic
@@ -824,7 +824,7 @@
 - **Parser hardening**: Added 13 new round-trip tests covering empty groups, 3-level nesting, unicode text (emoji/CJK), spec blocks with all fields, path nodes, linear/radial gradients, shadow, opacity, clip frames, multiple animations, inline spec shorthand, and all layout modes (column/row/grid)
 - **LSP completions**: Overhauled `completion.rs` — added `frame`, `edge`, `import`, `spec` snippets to top-level; `shadow:`, `clip:`, `x:`, `y:`, `align:` properties to node body; value completions for `fill` (named colors + hex palette), `align`, `clip`, `arrow`, `curve`; 9 total tests
 - **Error recovery**: All 6 parser error sites now include 1-based line numbers and 40-char context snippets (UTF-8 safe) — e.g. `line 12: node error — expected 'kind @id { ... }', got '...'`
-- **Example files**: Created 3 new showcase examples: `responsive_dashboard.fd` (constraint-based dashboard), `animated_onboarding.fd` (3-step flow with edge/pulse animations), `design_tokens.fd` (design system with 7 themes + component patterns)
+- **Example files**: Created 3 new showcase examples: `responsive_dashboard.fd` (constraint-based dashboard), `animated_onboarding.fd` (3-step flow with edge/pulse animations), `design_tokens.fd` (design system with 7 styles + component patterns)
 
 ---
 
@@ -851,7 +851,7 @@ Eraser tool (swipe-to-delete, group-aware, poof animation, Ctrl+click temp erase
 
 ### Epoch: v0.8.70–v0.8.99 — Canvas UX & Design Polish (30 releases)
 
-Canvas UX overhaul (layer sync, smart guides 5px, center-snap, text-consume), scroll toolbar redesign (V12 wooden handles), SVG toolbar icons, frosted glass tooltips, auto bring-forward on select, sketchy rendering mode, arrow/connector tool, Figma group drill-down iterations (5+ attempts), toolbar consolidation, status rename, spec badges, theme/when rename, ReadMode filtered views, component libraries, GitHub Pages playground.
+Canvas UX overhaul (layer sync, smart guides 5px, center-snap, text-consume), scroll toolbar redesign (V12 wooden handles), SVG toolbar icons, frosted glass tooltips, auto bring-forward on select, sketchy rendering mode, arrow/connector tool, Figma group drill-down iterations (5+ attempts), toolbar consolidation, status rename, spec badges, style/when rename, ReadMode filtered views, component libraries, GitHub Pages playground.
 
 <details>
 <summary>Full v0.8.70–v0.8.99 entries</summary>
@@ -901,7 +901,7 @@ Zen mode, sketchy/hand-drawn rendering, Figma-style keyboard shortcuts (z-order 
 - **v0.8.66**: Toolbar consolidation (+ Insert dropdown)
 - **v0.8.65**: Status rename (draft→todo, in_progress→doing, +blocked)
 - **v0.8.64**: Spec badge improvements
-- **v0.8.62**: Sort fix + LSP theme/when + tree-sitter regen
+- **v0.8.62**: Sort fix + LSP style/when + tree-sitter regen
 - **v0.8.60**: Text centering in nested layouts
 - **v0.8.59**: Content-first emitter ordering + section separators
 - **v0.8.58**: Text auto-centering in shapes
