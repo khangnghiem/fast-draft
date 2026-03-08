@@ -78,7 +78,7 @@ The document is a **DAG** (Directed Acyclic Graph) stored as `petgraph::StableDi
 | ---------- | ------------------------------ | ------------------------------------- |
 | `graph`    | `StableDiGraph<SceneNode, ()>` | Parent→child containment edges        |
 | `root`     | `NodeIndex`                    | The invisible root node               |
-| `styles`   | `HashMap<NodeId, Style>`       | Named `theme` block definitions       |
+| `styles`   | `HashMap<NodeId, Style>`       | Named `style` block definitions       |
 | `id_index` | `HashMap<NodeId, NodeIndex>`   | Fast `@id` → index lookup             |
 | `edges`    | `Vec<Edge>`                    | Visual connections between nodes      |
 | `imports`  | `Vec<Import>`                  | `import "file.fd" as ns` declarations |
@@ -92,7 +92,7 @@ A single element in the scene graph.
 | `id`          | `NodeId`                      | Interned string ID (e.g. `@login_form`)                        |
 | `kind`        | `NodeKind`                    | Root, Generic, Group, Frame, Rect, Ellipse, Path, Text         |
 | `style`       | `Style`                       | Inline fill, stroke, font, corner, opacity, shadow, text-align |
-| `use_styles`  | `SmallVec<[NodeId; 2]>`       | Named theme references (`use: base_text`)                      |
+| `use_styles`  | `SmallVec<[NodeId; 2]>`       | Named style references (`use: base_text`)                      |
 | `constraints` | `SmallVec<[Constraint; 2]>`   | CenterIn, Offset, FillParent, Position                         |
 | `animations`  | `SmallVec<[AnimKeyframe; 2]>` | `:hover`, `:press`, `:enter` animations                        |
 | `annotations` | `Vec<Annotation>`             | `spec { ... }` metadata                                        |

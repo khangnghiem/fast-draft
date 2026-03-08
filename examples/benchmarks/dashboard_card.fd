@@ -1,8 +1,8 @@
-theme accent {
+style accent {
   fill: #6C5CE7
 }
 
-theme subtle {
+style subtle {
   fill: #F0F0F5
   corner: 8
 }

@@ -3,7 +3,7 @@
 const EXAMPLES = {
   card: `# A card with a button that reacts on hover
 
-theme accent {
+style accent {
   fill: #6C5CE7
 }
 
@@ -33,12 +33,12 @@ group @card {
 
   login: `# Login form with spec annotations
 
-theme accent {
+style accent {
   fill: #6C5CE7
   corner: 10
 }
 
-theme base_text {
+style base_text {
   fill: #333333
   font: "Inter" regular 14
 }
@@ -98,9 +98,9 @@ group @login_form {
 
   welcome: `# Welcome to Fast Draft!
 
-theme accent { fill: #6C5CE7 }
-theme soft { fill: #DFE6E9; corner: 12 }
-theme label_style { font: "Inter" 500 14; fill: #2D3436 }
+style accent { fill: #6C5CE7 }
+style soft { fill: #DFE6E9; corner: 12 }
+style label_style { font: "Inter" 500 14; fill: #2D3436 }
 
 text @welcome_title "Welcome to Fast Draft" {
   x: 180  y: 40

@@ -11,7 +11,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R1.1** _(done)_: Token-efficient text DSL — ~5× fewer tokens than SVG for equivalent content
 - **R1.2** _(done)_: Graph-based document model (DAG) — nodes reference by `@id`, not coordinates
 - **R1.3** _(done)_: Constraint-based layout (`center_in`, `offset`, `fill_parent`) — no absolute coordinates until render time
-- **R1.4** _(done)_: Reusable themes via `theme` blocks and `use:` references (parser also accepts legacy `style` keyword)
+- **R1.4** _(done)_: Reusable styles via `style` blocks and `use:` references (parser also accepts legacy `theme` keyword)
 - **R1.5** _(done)_: Animation declarations with triggers (`:hover`, `:press`, `:enter`) and easing → [spec](specs/animation-system.md)
 - **R1.6** _(done)_: Git-friendly plain text — line-oriented diffs work well
 - **R1.7** _(done)_: Comments via `#` prefix
@@ -24,7 +24,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R1.14** _(done)_: Namespaced imports — `import "path.fd" as ns` for cross-file style/node reuse with `ns.style_name` references
 - **R1.15** _(done)_: Background shorthand — `bg: #FFF corner=12 shadow=(0,4,20,#0002)` for combined fill, corner, and shadow in one line
 - **R1.16** _(done)_: Comment preservation — `# text` lines attached to the following node survive all parse/emit round-trips and format passes
-- **R1.17** _(done)_: Text alignment — `align: left|center|right [top|middle|bottom]` property; defaults to `center middle`; reusable via `theme` blocks and `use:` inheritance
+- **R1.17** _(done)_: Text alignment — `align: left|center|right [top|middle|bottom]` property; defaults to `center middle`; reusable via `style` blocks and `use:` inheritance
 - **R1.18** _(done)_: Mermaid import — parse Mermaid diagram syntax (`flowchart`, `sequenceDiagram`, `stateDiagram`) into equivalent FD nodes + edges; `parse_mermaid()` in fd-core + `import_mermaid()` WASM API
 - **R1.19** _(done)_: Edge label offset — `label_offset: <x> <y>` property on edges for draggable text labels; parse/emit roundtrip support
 - **R1.20** _(done)_: Edge anchors — `EdgeAnchor` enum (`@node_id` or `x y` coords) for flexible edge endpoints; `text_child: Option<NodeId>` for styled text labels; `create_edge_at()` WASM API; edge-to-edge validation
@@ -138,7 +138,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R4.21** _(planned)_: **Comprehensibility Score** — compute a 0–100 score measuring how easily AI agents can understand an FD document. Metrics:
   - **Semantic naming ratio**: % of non-anonymous `@id`s (target: >80%)
   - **Inline doc-comment density**: % of nodes with `[auto]` or manual `#` comments
-  - **Theme reuse ratio**: % of styled nodes using `use:` references vs inline styles
+  - **Style reuse ratio**: % of styled nodes using `use:` references vs inline styles
   - **Edge default coverage**: % of edges whose props match `edge_defaults {}`
   - **Read token cost**: total tokens in `ReadMode::Full` vs optimal `ReadMode::Structure`
   - Display as a badge in the Canvas toolbar (e.g. `AI: 72/100`) and in `fd-lsp --score`
