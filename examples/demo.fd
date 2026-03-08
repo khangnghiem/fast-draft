@@ -1,36 +1,36 @@
 # ─── Themes ───
 
-theme accent_text {
+style accent_text {
   fill: #FFFFFF  # white
   font: "Inter" semibold 14
 }
 
-theme body {
+style body {
   fill: #6B7280  # blue
   font: "Inter" regular 14
 }
 
-theme brand {
+style brand {
   fill: #6C5CE7  # blue
   corner: 12
 }
 
-theme card {
+style card {
   fill: #FFFFFF  # white
   corner: 14
 }
 
-theme heading {
+style heading {
   fill: #1A1A2E  # blue
   font: "Inter" bold 22
 }
 
-theme metric {
+style metric {
   fill: #6C5CE7  # blue
   font: "Inter" bold 32
 }
 
-theme subheading {
+style subheading {
   fill: #111827  # blue
   font: "Inter" semibold 16
 }

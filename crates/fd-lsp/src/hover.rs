@@ -122,7 +122,7 @@ fn hover_keyword(word: &str) -> Option<Hover> {
             "**image** — Embedded image node.\n\nProperties: `src:` `w:` `h:` `fit:` (`cover`|`contain`|`fill`|`none`)"
         }
         "style" | "theme" => {
-            "**theme** — Reusable style definition.\n\nDefine once, apply to nodes with `use: theme_name`.\n(Legacy keyword `style` also accepted.)"
+            "**style** — Reusable style definition.\n\nDefine once, apply to nodes with `use: style_name`.\n(Legacy keyword `theme` also accepted.)"
         }
         // Properties
         "w" | "width" => "**w:** — Width of the element in pixels.",
@@ -212,9 +212,9 @@ mod tests {
     }
 
     #[test]
-    fn hover_on_theme_keyword() {
-        let result = hover_keyword("theme");
-        assert!(result.is_some(), "should have hover info for `theme`");
+    fn hover_on_style_keyword() {
+        let result = hover_keyword("style");
+        assert!(result.is_some(), "should have hover info for `style`");
     }
 
     #[test]

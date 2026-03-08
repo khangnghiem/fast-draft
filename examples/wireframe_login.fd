@@ -1,16 +1,16 @@
 # ─── Themes ───
 
-theme bg_surface {
+style bg_surface {
   fill: #FFFFFF  # white
   corner: 12
 }
 
-theme input_style {
+style input_style {
   fill: #F8F9FA  # white
   corner: 8
 }
 
-theme label_style {
+style label_style {
   fill: #1A1A2E  # blue
   font: "Inter" medium 14
 }

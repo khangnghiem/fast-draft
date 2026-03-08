@@ -91,9 +91,9 @@ fn top_level_completions() -> Vec<CompletionItem> {
             "frame @${1:name} {\n  w: ${2:300} h: ${3:200}\n  $0\n}",
         ),
         (
-            "theme",
-            "Reusable theme definition (legacy: style)",
-            "theme ${1:name} {\n  fill: #${2:6C5CE7}\n}",
+            "style",
+            "Reusable style definition (legacy: theme)",
+            "style ${1:name} {\n  fill: #${2:6C5CE7}\n}",
         ),
         (
             "edge",
@@ -333,10 +333,7 @@ mod tests {
         let labels: Vec<&str> = items.iter().map(|i| i.label.as_str()).collect();
         assert!(labels.contains(&"rect"));
         assert!(labels.contains(&"group"));
-        assert!(
-            labels.contains(&"theme"),
-            "should suggest `theme` not `style`"
-        );
+        assert!(labels.contains(&"style"), "should suggest `style` keyword");
     }
 
     #[test]

@@ -1,17 +1,17 @@
 # FD v1
 # Social media app — Instagram-style mobile UI
 
-theme body {
+style body {
   fill: #333333
   font: "Inter" 400 14
 }
 
-theme bold {
+style bold {
   fill: #1A1A2E
   font: "Inter" 600 16
 }
 
-theme caption {
+style caption {
   fill: #999999
   font: "Inter" 400 12
 }
