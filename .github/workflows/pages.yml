@@ -39,9 +39,17 @@ jobs:
       - name: Build WASM
         run: wasm-pack build crates/fd-wasm --target web --out-dir ../../site/wasm
 
+      - name: Create CF Pages project (idempotent)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages project create fast-draft --production-branch=main
+        continue-on-error: true  # OK if project already exists
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy site --project-name=fast-draft
+          command: pages deploy site --project-name=fast-draft --commit-dirty=true
