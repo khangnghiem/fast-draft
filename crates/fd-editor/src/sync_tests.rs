@@ -384,8 +384,8 @@ text @heading "Hello" {
 
     // Verify no alignment initially
     let node = engine.graph.get_by_id(NodeId::intern("heading")).unwrap();
-    assert!(node.style.text_align.is_none());
-    assert!(node.style.text_valign.is_none());
+    assert!(node.props.text_align.is_none());
+    assert!(node.props.text_valign.is_none());
 
     // Apply SetStyle mutation with alignment
     let mut style = engine.graph.resolve_style(node, &[]);
@@ -399,8 +399,8 @@ text @heading "Hello" {
 
     // Verify graph updated
     let node = engine.graph.get_by_id(NodeId::intern("heading")).unwrap();
-    assert_eq!(node.style.text_align, Some(TextAlign::Right));
-    assert_eq!(node.style.text_valign, Some(TextVAlign::Bottom));
+    assert_eq!(node.props.text_align, Some(TextAlign::Right));
+    assert_eq!(node.props.text_valign, Some(TextVAlign::Bottom));
 
     // Verify text output contains align property
     assert!(
@@ -412,8 +412,8 @@ text @heading "Hello" {
     // Verify round-trip
     let engine2 = SyncEngine::from_text(&engine.text, viewport).unwrap();
     let node2 = engine2.graph.get_by_id(NodeId::intern("heading")).unwrap();
-    assert_eq!(node2.style.text_align, Some(TextAlign::Right));
-    assert_eq!(node2.style.text_valign, Some(TextVAlign::Bottom));
+    assert_eq!(node2.props.text_align, Some(TextAlign::Right));
+    assert_eq!(node2.props.text_valign, Some(TextVAlign::Bottom));
 }
 
 #[test]

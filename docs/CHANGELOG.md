@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.10.69 — Rename `theme` → `style` Keyword (R4.18)
+
+- **RENAME (R4.18)**: `theme` keyword → `style` — reusable property bundles now use the universal CSS/Figma term; emitter outputs `style` keyword and `# ─── Styles ───` section header; parser still accepts `theme` for backward compatibility
+- **RENAME (R4.18)**: Internal Rust struct `Style` → `Properties` — better reflects the struct's role as a collection of visual properties (fill, stroke, font, etc.); field accessor `.style` → `.props` across all crates
+- **COMPAT**: Parser accepts both `theme` and `style` keywords, and both `# ─── Themes ───` and `# ─── Styles ───` section separators; existing `.fd` files parse without changes
+- **DOCS**: Updated `GEMINI.md` (style reuse rule), `REQUIREMENTS.md` (R4.18), `SKILL.md` (style grammar)
+
 ### v0.10.68 — Remove Click-to-Raise (R3.41)
 
 - **REMOVED (R3.41)**: Click-to-raise — selecting a node via click no longer auto-brings it forward one z-level; this caused surprise z-order changes and silent `.fd` text reordering, polluted undo stack, and was a recurring bug surface (3+ patches for group-raise, idempotency, and dead-zone guards); explicit ⌘] / ⌘⇧] remain for intentional z-order changes

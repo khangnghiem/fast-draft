@@ -266,7 +266,7 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
             let old_style = engine
                 .graph
                 .get_by_id(*id)
-                .map(|n| n.style.clone())
+                .map(|n| n.props.clone())
                 .unwrap_or_default();
             GraphMutation::SetStyle {
                 id: *id,
@@ -520,7 +520,7 @@ rect @box {
             .graph
             .get_by_id(NodeId::intern("r"))
             .unwrap()
-            .style
+            .props
             .fill
         {
             Some(fd_core::model::Paint::Solid(c)) => c.to_hex(),
@@ -532,7 +532,7 @@ rect @box {
             .graph
             .get_by_id(NodeId::intern("r"))
             .unwrap()
-            .style
+            .props
             .clone();
         new_style.fill = Some(fd_core::model::Paint::Solid(fd_core::model::Color {
             r: 0.0,
@@ -554,7 +554,7 @@ rect @box {
             .graph
             .get_by_id(NodeId::intern("r"))
             .unwrap()
-            .style
+            .props
             .fill
         {
             Some(fd_core::model::Paint::Solid(c)) => c.to_hex(),
@@ -567,7 +567,7 @@ rect @box {
             .graph
             .get_by_id(NodeId::intern("r"))
             .unwrap()
-            .style
+            .props
             .fill
         {
             Some(fd_core::model::Paint::Solid(c)) => c.to_hex(),

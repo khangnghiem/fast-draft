@@ -22,7 +22,7 @@ rect @box {
         }
         _ => panic!("expected Rect"),
     }
-    assert!(node.style.fill.is_some());
+    assert!(node.props.fill.is_some());
 }
 
 #[test]
@@ -182,8 +182,8 @@ text @greeting "Hello World" {
         }
         _ => panic!("expected Text"),
     }
-    assert!(node.style.font.is_some());
-    let font = node.style.font.as_ref().unwrap();
+    assert!(node.props.font.is_some());
+    let font = node.props.font.as_ref().unwrap();
     assert_eq!(font.family, "Inter");
     assert_eq!(font.weight, 600);
     assert_eq!(font.size, 24.0);
@@ -199,8 +199,8 @@ rect @bordered {
 "#;
     let graph = parse_document(input).expect("stroke should parse");
     let node = graph.get_by_id(NodeId::intern("bordered")).unwrap();
-    assert!(node.style.stroke.is_some());
-    let stroke = node.style.stroke.as_ref().unwrap();
+    assert!(node.props.stroke.is_some());
+    let stroke = node.props.stroke.as_ref().unwrap();
     assert_eq!(stroke.width, 2.0);
 }
 
@@ -315,9 +315,9 @@ text @title "Hello" {
     let node = graph
         .get_by_id(crate::id::NodeId::intern("title"))
         .expect("node not found");
-    assert_eq!(node.style.text_align, Some(crate::model::TextAlign::Right));
+    assert_eq!(node.props.text_align, Some(crate::model::TextAlign::Right));
     assert_eq!(
-        node.style.text_valign,
+        node.props.text_valign,
         Some(crate::model::TextVAlign::Bottom)
     );
 
@@ -329,9 +329,9 @@ text @title "Hello" {
     let node2 = reparsed
         .get_by_id(crate::id::NodeId::intern("title"))
         .expect("node not found after roundtrip");
-    assert_eq!(node2.style.text_align, Some(crate::model::TextAlign::Right));
+    assert_eq!(node2.props.text_align, Some(crate::model::TextAlign::Right));
     assert_eq!(
-        node2.style.text_valign,
+        node2.props.text_valign,
         Some(crate::model::TextVAlign::Bottom)
     );
 }
@@ -347,9 +347,9 @@ text @heading "Welcome" {
     let node = graph
         .get_by_id(crate::id::NodeId::intern("heading"))
         .expect("node not found");
-    assert_eq!(node.style.text_align, Some(crate::model::TextAlign::Center));
+    assert_eq!(node.props.text_align, Some(crate::model::TextAlign::Center));
     // Vertical not specified — should be None
-    assert_eq!(node.style.text_valign, None);
+    assert_eq!(node.props.text_valign, None);
 }
 
 #[test]
@@ -406,7 +406,7 @@ text @heading "Hello" {
     let node = graph
         .get_by_id(crate::id::NodeId::intern("heading"))
         .unwrap();
-    let font = node.style.font.as_ref().unwrap();
+    let font = node.props.font.as_ref().unwrap();
     assert_eq!(font.weight, 700);
     assert_eq!(font.size, 24.0);
 }
@@ -418,7 +418,7 @@ fn parse_font_weight_semibold() {
     let font = graph
         .get_by_id(crate::id::NodeId::intern("t"))
         .unwrap()
-        .style
+        .props
         .font
         .as_ref()
         .unwrap();
@@ -432,7 +432,7 @@ fn parse_named_color() {
     let graph = parse_document(src).unwrap();
     let node = graph.get_by_id(crate::id::NodeId::intern("r")).unwrap();
     assert!(
-        node.style.fill.is_some(),
+        node.props.fill.is_some(),
         "fill should be set from named color"
     );
 }
@@ -442,7 +442,7 @@ fn parse_named_color_blue() {
     let src = r#"rect @box { w: 50 h: 50 fill: blue }"#;
     let graph = parse_document(src).unwrap();
     let node = graph.get_by_id(crate::id::NodeId::intern("box")).unwrap();
-    if let Some(crate::model::Paint::Solid(c)) = &node.style.fill {
+    if let Some(crate::model::Paint::Solid(c)) = &node.props.fill {
         assert_eq!(c.to_hex(), "#3B82F6");
     } else {
         panic!("expected solid fill from named color");
@@ -454,7 +454,7 @@ fn parse_property_alias_background() {
     let src = r#"rect @r { w: 100 h: 50 background: #FF0000 }"#;
     let graph = parse_document(src).unwrap();
     let node = graph.get_by_id(crate::id::NodeId::intern("r")).unwrap();
-    assert!(node.style.fill.is_some(), "background: should map to fill");
+    assert!(node.props.fill.is_some(), "background: should map to fill");
 }
 
 #[test]
@@ -462,7 +462,7 @@ fn parse_property_alias_rounded() {
     let src = r#"rect @r { w: 100 h: 50 rounded: 12 }"#;
     let graph = parse_document(src).unwrap();
     let node = graph.get_by_id(crate::id::NodeId::intern("r")).unwrap();
-    assert_eq!(node.style.corner_radius, Some(12.0));
+    assert_eq!(node.props.corner_radius, Some(12.0));
 }
 
 #[test]
@@ -470,7 +470,7 @@ fn parse_property_alias_radius() {
     let src = r#"rect @r { w: 100 h: 50 radius: 8 }"#;
     let graph = parse_document(src).unwrap();
     let node = graph.get_by_id(crate::id::NodeId::intern("r")).unwrap();
-    assert_eq!(node.style.corner_radius, Some(8.0));
+    assert_eq!(node.props.corner_radius, Some(8.0));
 }
 
 #[test]
@@ -491,7 +491,7 @@ fn parse_corner_px_suffix() {
     let src = r#"rect @r { w: 100 h: 50 corner: 10px }"#;
     let graph = parse_document(src).unwrap();
     let node = graph.get_by_id(crate::id::NodeId::intern("r")).unwrap();
-    assert_eq!(node.style.corner_radius, Some(10.0));
+    assert_eq!(node.props.corner_radius, Some(10.0));
 }
 
 #[test]
@@ -507,7 +507,7 @@ fn roundtrip_font_weight_name() {
     let font = reparsed
         .get_by_id(crate::id::NodeId::intern("t"))
         .unwrap()
-        .style
+        .props
         .font
         .as_ref()
         .unwrap();
@@ -526,7 +526,7 @@ fn roundtrip_named_color() {
         reparsed
             .get_by_id(crate::id::NodeId::intern("r"))
             .unwrap()
-            .style
+            .props
             .fill
             .is_some()
     );
@@ -548,8 +548,8 @@ fn roundtrip_property_aliases() {
     );
     let reparsed = parse_document(&emitted).unwrap();
     let node = reparsed.get_by_id(crate::id::NodeId::intern("r")).unwrap();
-    assert!(node.style.fill.is_some());
-    assert_eq!(node.style.corner_radius, Some(12.0));
+    assert!(node.props.fill.is_some());
+    assert_eq!(node.props.corner_radius, Some(12.0));
 }
 
 #[test]

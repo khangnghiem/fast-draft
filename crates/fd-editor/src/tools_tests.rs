@@ -1078,19 +1078,19 @@ fn rect_tool_creates_with_default_stroke() {
         GraphMutation::AddNode { node, .. } => {
             // Should have stroke (transparent fill + dark border)
             assert!(
-                node.style.stroke.is_some(),
+                node.props.stroke.is_some(),
                 "rect should have default stroke"
             );
-            let stroke = node.style.stroke.as_ref().unwrap();
+            let stroke = node.props.stroke.as_ref().unwrap();
             assert!(
                 (stroke.width - 2.5).abs() < 0.01,
                 "stroke width should be 2.5"
             );
             // Should have corner radius
-            assert_eq!(node.style.corner_radius, Some(8.0), "rect corner_radius=8");
+            assert_eq!(node.props.corner_radius, Some(8.0), "rect corner_radius=8");
             // Fill should be None (transparent)
             assert!(
-                node.style.fill.is_none(),
+                node.props.fill.is_none(),
                 "fill should be None (transparent)"
             );
         }
@@ -1115,22 +1115,22 @@ fn ellipse_tool_creates_with_default_stroke() {
         GraphMutation::AddNode { node, .. } => {
             // Should have stroke (transparent fill + dark border)
             assert!(
-                node.style.stroke.is_some(),
+                node.props.stroke.is_some(),
                 "ellipse should have default stroke"
             );
-            let stroke = node.style.stroke.as_ref().unwrap();
+            let stroke = node.props.stroke.as_ref().unwrap();
             assert!(
                 (stroke.width - 2.5).abs() < 0.01,
                 "stroke width should be 2.5"
             );
             // No corner radius for ellipse
             assert!(
-                node.style.corner_radius.is_none(),
+                node.props.corner_radius.is_none(),
                 "ellipse has no corner_radius"
             );
             // Fill should be None (transparent)
             assert!(
-                node.style.fill.is_none(),
+                node.props.fill.is_none(),
                 "fill should be None (transparent)"
             );
         }

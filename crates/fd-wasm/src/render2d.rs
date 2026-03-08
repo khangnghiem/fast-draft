@@ -360,7 +360,12 @@ fn render_node(
 
 // ─── Drawing primitives ─────────────────────────────────────────────────
 
-fn draw_rect(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, style: &Style, is_selected: bool) {
+fn draw_rect(
+    ctx: &CanvasRenderingContext2d,
+    b: &ResolvedBounds,
+    style: &Properties,
+    is_selected: bool,
+) {
     let (x, y, w, h) = (b.x as f64, b.y as f64, b.width as f64, b.height as f64);
     let radius = style.corner_radius.unwrap_or(0.0) as f64;
 
@@ -399,7 +404,7 @@ fn draw_rect(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, style: &Style, 
 fn draw_ellipse(
     ctx: &CanvasRenderingContext2d,
     b: &ResolvedBounds,
-    style: &Style,
+    style: &Properties,
     is_selected: bool,
 ) {
     let cx = b.x as f64 + b.width as f64 / 2.0;
@@ -441,7 +446,7 @@ fn draw_text(
     ctx: &CanvasRenderingContext2d,
     b: &ResolvedBounds,
     content: &str,
-    style: &Style,
+    style: &Properties,
     in_shape: bool,
     max_width: Option<f32>,
 ) {
@@ -571,7 +576,7 @@ fn draw_shape_label(
     ctx: &CanvasRenderingContext2d,
     b: &ResolvedBounds,
     label: &str,
-    style: &Style,
+    style: &Properties,
 ) {
     ctx.save();
     apply_opacity(ctx, style);
@@ -598,7 +603,7 @@ fn draw_shape_label(
 
 /// Pick a readable label color based on the shape's fill luminance.
 #[allow(dead_code)]
-fn pick_label_color(style: &Style) -> String {
+fn pick_label_color(style: &Properties) -> String {
     match &style.fill {
         Some(Paint::Solid(c)) => {
             // Perceived luminance (sRGB)
@@ -618,7 +623,7 @@ fn draw_path(
     ctx: &CanvasRenderingContext2d,
     b: &ResolvedBounds,
     commands: &[PathCmd],
-    style: &Style,
+    style: &Properties,
     is_selected: bool,
 ) {
     if commands.is_empty() {
@@ -1109,7 +1114,7 @@ fn rounded_rect_path(ctx: &CanvasRenderingContext2d, x: f64, y: f64, w: f64, h: 
 }
 
 /// Set the fill style — creates a CanvasGradient for gradient paints.
-fn apply_fill(ctx: &CanvasRenderingContext2d, style: &Style, x: f64, y: f64, w: f64, h: f64) {
+fn apply_fill(ctx: &CanvasRenderingContext2d, style: &Properties, x: f64, y: f64, w: f64, h: f64) {
     match &style.fill {
         Some(Paint::LinearGradient { angle, stops }) => {
             let rad = (*angle as f64).to_radians();
@@ -1151,7 +1156,7 @@ fn apply_fill(ctx: &CanvasRenderingContext2d, style: &Style, x: f64, y: f64, w: 
 }
 
 /// Apply CSS drop-shadow from Style.shadow.
-fn apply_shadow(ctx: &CanvasRenderingContext2d, style: &Style) {
+fn apply_shadow(ctx: &CanvasRenderingContext2d, style: &Properties) {
     if let Some(ref shadow) = style.shadow {
         ctx.set_shadow_blur(shadow.blur as f64);
         ctx.set_shadow_offset_x(shadow.offset_x as f64);
@@ -1168,7 +1173,7 @@ fn clear_shadow(ctx: &CanvasRenderingContext2d) {
     ctx.set_shadow_color("transparent");
 }
 
-fn resolve_fill_color(style: &Style) -> String {
+fn resolve_fill_color(style: &Properties) -> String {
     match &style.fill {
         Some(paint) => resolve_paint_color(paint),
         None => "#CCCCCC".to_string(),
@@ -1188,7 +1193,7 @@ fn resolve_paint_color(paint: &Paint) -> String {
     }
 }
 
-fn apply_opacity(ctx: &CanvasRenderingContext2d, style: &Style) {
+fn apply_opacity(ctx: &CanvasRenderingContext2d, style: &Properties) {
     if let Some(opacity) = style.opacity {
         ctx.set_global_alpha(opacity as f64);
     }
@@ -1223,7 +1228,7 @@ fn sketchy_line(ctx: &CanvasRenderingContext2d, x1: f64, y1: f64, x2: f64, y2: f
 fn draw_rect_sketchy(
     ctx: &CanvasRenderingContext2d,
     b: &ResolvedBounds,
-    style: &Style,
+    style: &Properties,
     is_selected: bool,
 ) {
     let (x, y, w, h) = (b.x as f64, b.y as f64, b.width as f64, b.height as f64);
@@ -1310,7 +1315,7 @@ fn draw_rect_sketchy(
 fn draw_ellipse_sketchy(
     ctx: &CanvasRenderingContext2d,
     b: &ResolvedBounds,
-    style: &Style,
+    style: &Properties,
     is_selected: bool,
 ) {
     let cx = b.x as f64 + b.width as f64 / 2.0;
@@ -1391,7 +1396,7 @@ fn draw_ellipse_sketchy(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fd_core::model::{Color, GradientStop, Paint, Style};
+    use fd_core::model::{Color, GradientStop, Paint, Properties};
 
     // ─── CanvasTheme ─────────────────────────────────────────────────────
 
@@ -1424,46 +1429,46 @@ mod tests {
 
     #[test]
     fn label_color_dark_fill_returns_white() {
-        let style = Style {
+        let style = Properties {
             fill: Some(Paint::Solid(Color {
                 r: 0.0,
                 g: 0.0,
                 b: 0.0,
                 a: 1.0,
             })),
-            ..Style::default()
+            ..Properties::default()
         };
         assert_eq!(pick_label_color(&style), "#FFFFFF");
     }
 
     #[test]
     fn label_color_light_fill_returns_dark() {
-        let style = Style {
+        let style = Properties {
             fill: Some(Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 1.0,
             })),
-            ..Style::default()
+            ..Properties::default()
         };
         assert_eq!(pick_label_color(&style), "#1C1C1E");
     }
 
     #[test]
     fn label_color_no_fill_returns_dark() {
-        let style = Style::default();
+        let style = Properties::default();
         assert_eq!(pick_label_color(&style), "#1C1C1E");
     }
 
     #[test]
     fn label_color_gradient_fill_returns_dark() {
-        let style = Style {
+        let style = Properties {
             fill: Some(Paint::LinearGradient {
                 angle: 90.0,
                 stops: vec![],
             }),
-            ..Style::default()
+            ..Properties::default()
         };
         // Gradient doesn't match Solid branch → falls through to default
         assert_eq!(pick_label_color(&style), "#1C1C1E");
@@ -1473,27 +1478,27 @@ mod tests {
 
     #[test]
     fn fill_color_solid() {
-        let style = Style {
+        let style = Properties {
             fill: Some(Paint::Solid(Color {
                 r: 1.0,
                 g: 0.0,
                 b: 0.0,
                 a: 1.0,
             })),
-            ..Style::default()
+            ..Properties::default()
         };
         assert_eq!(resolve_fill_color(&style), "#FF0000");
     }
 
     #[test]
     fn fill_color_none_returns_default() {
-        let style = Style::default();
+        let style = Properties::default();
         assert_eq!(resolve_fill_color(&style), "#CCCCCC");
     }
 
     #[test]
     fn fill_color_gradient_uses_first_stop() {
-        let style = Style {
+        let style = Properties {
             fill: Some(Paint::LinearGradient {
                 angle: 0.0,
                 stops: vec![GradientStop {
@@ -1506,7 +1511,7 @@ mod tests {
                     },
                 }],
             }),
-            ..Style::default()
+            ..Properties::default()
         };
         assert_eq!(resolve_fill_color(&style), "#00FF00");
     }
