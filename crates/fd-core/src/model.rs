@@ -269,7 +269,7 @@ pub enum VPlace {
 
 /// A reusable theme set that nodes can reference via `use: theme_name`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Style {
+pub struct Properties {
     pub fill: Option<Paint>,
     pub stroke: Option<Stroke>,
     pub font: Option<FontSpec>,
@@ -419,7 +419,7 @@ impl EdgeAnchor {
 /// with many similarly styled edges.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EdgeDefaults {
-    pub style: Style,
+    pub props: Properties,
     pub arrow: Option<ArrowKind>,
     pub curve: Option<CurveKind>,
 }
@@ -432,7 +432,7 @@ pub struct Edge {
     pub to: EdgeAnchor,
     /// Optional text child node (max 1). The node lives in the SceneGraph.
     pub text_child: Option<NodeId>,
-    pub style: Style,
+    pub props: Properties,
     pub use_styles: SmallVec<[NodeId; 2]>,
     pub arrow: ArrowKind,
     pub curve: CurveKind,
@@ -556,7 +556,7 @@ pub struct SceneNode {
     pub kind: NodeKind,
 
     /// Inline style overrides on this node.
-    pub style: Style,
+    pub props: Properties,
 
     /// Named theme references (`use: base_text`).
     pub use_styles: SmallVec<[NodeId; 2]>,
@@ -584,7 +584,7 @@ impl SceneNode {
         Self {
             id,
             kind,
-            style: Style::default(),
+            props: Properties::default(),
             use_styles: SmallVec::new(),
             constraints: SmallVec::new(),
             animations: SmallVec::new(),
@@ -624,7 +624,7 @@ pub struct SceneGraph {
     pub root: NodeIndex,
 
     /// Named theme definitions (`theme base_text { ... }`).
-    pub styles: HashMap<NodeId, Style>,
+    pub styles: HashMap<NodeId, Properties>,
 
     /// Index from NodeId → NodeIndex for fast lookup.
     pub id_index: HashMap<NodeId, NodeIndex>,
@@ -838,13 +838,13 @@ impl SceneGraph {
     }
 
     /// Define a named style.
-    pub fn define_style(&mut self, name: NodeId, style: Style) {
+    pub fn define_style(&mut self, name: NodeId, style: Properties) {
         self.styles.insert(name, style);
     }
 
     /// Resolve a node's effective style (merging `use` references + inline overrides + active animations).
-    pub fn resolve_style(&self, node: &SceneNode, active_triggers: &[AnimTrigger]) -> Style {
-        let mut resolved = Style::default();
+    pub fn resolve_style(&self, node: &SceneNode, active_triggers: &[AnimTrigger]) -> Properties {
+        let mut resolved = Properties::default();
 
         // Apply referenced styles in order
         for style_id in &node.use_styles {
@@ -854,7 +854,7 @@ impl SceneGraph {
         }
 
         // Apply inline overrides (take precedence)
-        merge_style(&mut resolved, &node.style);
+        merge_style(&mut resolved, &node.props);
 
         // Apply active animation state overrides
         for anim in &node.animations {
@@ -884,14 +884,18 @@ impl SceneGraph {
     }
 
     /// Resolve an edge's effective style (merging `use` references + inline overrides + active animations).
-    pub fn resolve_style_for_edge(&self, edge: &Edge, active_triggers: &[AnimTrigger]) -> Style {
-        let mut resolved = Style::default();
+    pub fn resolve_style_for_edge(
+        &self,
+        edge: &Edge,
+        active_triggers: &[AnimTrigger],
+    ) -> Properties {
+        let mut resolved = Properties::default();
         for style_id in &edge.use_styles {
             if let Some(base) = self.styles.get(style_id) {
                 merge_style(&mut resolved, base);
             }
         }
-        merge_style(&mut resolved, &edge.style);
+        merge_style(&mut resolved, &edge.props);
 
         for anim in &edge.animations {
             if active_triggers.contains(&anim.trigger) {
@@ -993,7 +997,7 @@ impl Default for SceneGraph {
 }
 
 /// Merge `src` style into `dst`, overwriting only `Some` fields.
-fn merge_style(dst: &mut Style, src: &Style) {
+fn merge_style(dst: &mut Properties, src: &Properties) {
     if src.fill.is_some() {
         dst.fill = src.fill.clone();
     }
@@ -1089,7 +1093,7 @@ mod tests {
         let mut sg = SceneGraph::new();
         sg.define_style(
             NodeId::intern("base"),
-            Style {
+            Properties {
                 fill: Some(Paint::Solid(Color::rgba(0.0, 0.0, 0.0, 1.0))),
                 font: Some(FontSpec {
                     family: "Inter".into(),
@@ -1108,7 +1112,7 @@ mod tests {
             },
         );
         node.use_styles.push(NodeId::intern("base"));
-        node.style.font = Some(FontSpec {
+        node.props.font = Some(FontSpec {
             family: "Inter".into(),
             weight: 700,
             size: 24.0,
@@ -1128,7 +1132,7 @@ mod tests {
         let mut sg = SceneGraph::new();
         sg.define_style(
             NodeId::intern("centered"),
-            Style {
+            Properties {
                 text_align: Some(TextAlign::Center),
                 text_valign: Some(TextVAlign::Middle),
                 ..Default::default()
@@ -1144,7 +1148,7 @@ mod tests {
             },
         );
         node.use_styles.push(NodeId::intern("centered"));
-        node.style.text_align = Some(TextAlign::Right);
+        node.props.text_align = Some(TextAlign::Right);
 
         let resolved = sg.resolve_style(&node, &[]);
         // Horizontal should be overridden to Right
@@ -1351,7 +1355,7 @@ mod tests {
                 height: 40.0,
             },
         );
-        node.style.fill = Some(Paint::Solid(Color::rgba(1.0, 0.0, 0.0, 1.0)));
+        node.props.fill = Some(Paint::Solid(Color::rgba(1.0, 0.0, 0.0, 1.0)));
         node.animations.push(AnimKeyframe {
             trigger: AnimTrigger::Press,
             duration_ms: 100,

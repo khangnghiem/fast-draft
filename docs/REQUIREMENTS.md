@@ -132,7 +132,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R4.15** _(done)_: Named colors — `fill: purple` etc. accepted (17 Tailwind palette colors)
 - **R4.16** _(done)_: Property aliases — `background:`/`color:` → fill, `rounded:`/`radius:` → corner
 - **R4.17** _(done)_: Dimension units — `w: 320px` accepted, `px` stripped by parser
-- **R4.18** _(done)_: Theme/When rename + emitter reorder — `style` → `theme`, `anim` → `when` for clarity; emitter order: spec → children → style → when; old keywords accepted for backward compatibility
+- **R4.18** _(done)_: Keyword rename — `theme` → `style` (reusable property bundles), `anim` → `when` for clarity; internal Rust struct `Style` → `Properties`, field `.style` → `.props`; emitter order: spec → children → style → when; old keywords (`theme`, `style` as legacy) accepted for backward compatibility
 - **R4.19** _(done)_: ReadMode filtered views — `emit_filtered(graph, mode)` with 8 modes (Full/Structure/Layout/Design/Spec/Visual/When/Edges); CLI `fd-lsp --view <mode>` for AI token savings; VS Code read-only virtual document provider with status bar mode selector
 - **R4.20** _(planned)_: AI Assist on selection — select nodes on canvas → click "✦ AI Assist" → AI receives `.fd` text of selected nodes → returns redesigned `.fd` → bidi-sync renders changes live; undo reverts entire AI edit atomically
 - **R4.21** _(planned)_: **Comprehensibility Score** — compute a 0–100 score measuring how easily AI agents can understand an FD document. Metrics:

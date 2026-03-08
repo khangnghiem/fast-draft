@@ -58,7 +58,7 @@ pub struct FdCanvas {
     /// Pointer-down scene position — used to detect click vs drag.
     pointer_down_pos: Option<(f32, f32)>,
     /// Style clipboard for Copy/Paste Style (⌥⌘C / ⌥⌘V).
-    style_clipboard: Option<fd_core::model::Style>,
+    style_clipboard: Option<fd_core::model::Properties>,
     /// Whether we already duplicated during this drag (Alt+drag).
     /// Reset on pointer-up. Prevents re-duplication on subsequent move events.
     alt_duplicated: bool,
@@ -1049,7 +1049,7 @@ impl FdCanvas {
                     from: fd_core::model::EdgeAnchor::Node(nf),
                     to: fd_core::model::EdgeAnchor::Node(nt),
                     text_child: new_text_child,
-                    style: edge.style.clone(),
+                    props: edge.props.clone(),
                     use_styles: edge.use_styles.clone(),
                     arrow: edge.arrow,
                     curve: edge.curve,
@@ -1848,7 +1848,7 @@ impl FdCanvas {
                 if value == "none" || value == "transparent" {
                     // Clear fill → fully transparent
                     if let Some(node) = self.engine.graph.get_by_id(id) {
-                        let mut style = node.style.clone();
+                        let mut style = node.props.clone();
                         style.fill = None;
                         GraphMutation::SetStyle { id, style }
                     } else {
@@ -1856,7 +1856,7 @@ impl FdCanvas {
                     }
                 } else if let Some(color) = Color::from_hex(value) {
                     if let Some(node) = self.engine.graph.get_by_id(id) {
-                        let mut style = node.style.clone();
+                        let mut style = node.props.clone();
                         style.fill = Some(Paint::Solid(color));
                         GraphMutation::SetStyle { id, style }
                     } else {
@@ -1869,7 +1869,7 @@ impl FdCanvas {
             "strokeColor" => {
                 if let Some(color) = Color::from_hex(value) {
                     if let Some(node) = self.engine.graph.get_by_id(id) {
-                        let mut style = node.style.clone();
+                        let mut style = node.props.clone();
                         let resolved = self.engine.graph.resolve_style(node, &[]);
                         let mut stroke = style.stroke.or(resolved.stroke).unwrap_or_default();
                         stroke.paint = Paint::Solid(color);
@@ -1885,7 +1885,7 @@ impl FdCanvas {
             "strokeWidth" => {
                 if let Ok(w) = value.parse::<f32>() {
                     if let Some(node) = self.engine.graph.get_by_id(id) {
-                        let mut style = node.style.clone();
+                        let mut style = node.props.clone();
                         let resolved = self.engine.graph.resolve_style(node, &[]);
                         let mut stroke = style.stroke.or(resolved.stroke).unwrap_or_default();
                         stroke.width = w;
@@ -1901,7 +1901,7 @@ impl FdCanvas {
             "cornerRadius" => {
                 if let Ok(r) = value.parse::<f32>() {
                     if let Some(node) = self.engine.graph.get_by_id(id) {
-                        let mut style = node.style.clone();
+                        let mut style = node.props.clone();
                         style.corner_radius = Some(r);
                         GraphMutation::SetStyle { id, style }
                     } else {
@@ -1914,7 +1914,7 @@ impl FdCanvas {
             "opacity" => {
                 if let Ok(o) = value.parse::<f32>() {
                     if let Some(node) = self.engine.graph.get_by_id(id) {
-                        let mut style = node.style.clone();
+                        let mut style = node.props.clone();
                         style.opacity = Some(o);
                         GraphMutation::SetStyle { id, style }
                     } else {
@@ -1931,7 +1931,7 @@ impl FdCanvas {
                     _ => TextAlign::Center,
                 };
                 if let Some(node) = self.engine.graph.get_by_id(id) {
-                    let mut style = node.style.clone();
+                    let mut style = node.props.clone();
                     style.text_align = Some(align);
                     GraphMutation::SetStyle { id, style }
                 } else {
@@ -1945,7 +1945,7 @@ impl FdCanvas {
                     _ => TextVAlign::Middle,
                 };
                 if let Some(node) = self.engine.graph.get_by_id(id) {
-                    let mut style = node.style.clone();
+                    let mut style = node.props.clone();
                     style.text_valign = Some(valign);
                     GraphMutation::SetStyle { id, style }
                 } else {
@@ -2110,23 +2110,23 @@ impl FdCanvas {
             Color::rgba(0.2, 0.2, 0.2, 1.0) // #333333 — visible on light bg
         };
         if kind == "frame" {
-            node.style.fill = Some(Paint::Solid(Color::rgba(0.95, 0.95, 0.97, 1.0)));
-            node.style.stroke = Some(Stroke {
+            node.props.fill = Some(Paint::Solid(Color::rgba(0.95, 0.95, 0.97, 1.0)));
+            node.props.stroke = Some(Stroke {
                 paint: Paint::Solid(Color::rgba(0.75, 0.75, 0.8, 1.0)),
                 width: 1.0,
                 cap: StrokeCap::Butt,
                 join: StrokeJoin::Miter,
             });
         } else if kind == "rect" {
-            node.style.stroke = Some(Stroke {
+            node.props.stroke = Some(Stroke {
                 paint: Paint::Solid(stroke_color),
                 width: 2.5,
                 cap: StrokeCap::Round,
                 join: StrokeJoin::Round,
             });
-            node.style.corner_radius = Some(8.0);
+            node.props.corner_radius = Some(8.0);
         } else if kind == "ellipse" {
-            node.style.stroke = Some(Stroke {
+            node.props.stroke = Some(Stroke {
                 paint: Paint::Solid(stroke_color),
                 width: 2.5,
                 cap: StrokeCap::Round,
@@ -2175,7 +2175,7 @@ impl FdCanvas {
             from: EdgeAnchor::Node(from),
             to: EdgeAnchor::Node(to),
             text_child: None,
-            style: fd_core::model::Style::default(),
+            props: fd_core::model::Properties::default(),
             use_styles: Default::default(),
             arrow: ArrowKind::End,
             curve: CurveKind::Smooth,
@@ -2205,7 +2205,7 @@ impl FdCanvas {
             from: EdgeAnchor::Point(x1, y1),
             to: EdgeAnchor::Point(x2, y2),
             text_child: None,
-            style: fd_core::model::Style::default(),
+            props: fd_core::model::Properties::default(),
             use_styles: Default::default(),
             arrow: ArrowKind::End,
             curve: CurveKind::Straight,
@@ -2693,7 +2693,7 @@ impl FdCanvas {
                 if let Some(id) = self.select_tool.first_selected()
                     && let Some(node) = self.engine.graph.get_by_id(id)
                 {
-                    self.style_clipboard = Some(node.style.clone());
+                    self.style_clipboard = Some(node.props.clone());
                 }
                 (false, false)
             }

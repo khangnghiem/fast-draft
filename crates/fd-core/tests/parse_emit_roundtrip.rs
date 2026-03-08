@@ -219,7 +219,7 @@ rect @hero {
     let id = NodeId::intern("hero");
     let n2 = graph2.get_by_id(id).unwrap();
     assert!(
-        matches!(&n2.style.fill, Some(Paint::LinearGradient { .. })),
+        matches!(&n2.props.fill, Some(Paint::LinearGradient { .. })),
         "LinearGradient fill lost after round-trip.\nEmitted:\n{emitted}"
     );
 }
@@ -239,7 +239,7 @@ ellipse @glow {
     let id = NodeId::intern("glow");
     let n2 = graph2.get_by_id(id).unwrap();
     assert!(
-        matches!(&n2.style.fill, Some(Paint::RadialGradient { .. })),
+        matches!(&n2.props.fill, Some(Paint::RadialGradient { .. })),
         "RadialGradient fill lost after round-trip.\nEmitted:\n{emitted}"
     );
 }
@@ -260,7 +260,7 @@ rect @card {
     let id = NodeId::intern("card");
     let n2 = graph2.get_by_id(id).unwrap();
     let shadow = n2
-        .style
+        .props
         .shadow
         .as_ref()
         .unwrap_or_else(|| panic!("shadow lost after round-trip.\nEmitted:\n{emitted}"));

@@ -498,7 +498,7 @@ fn intrinsic_size(node: &SceneNode) -> (f32, f32) {
         NodeKind::Text {
             content, max_width, ..
         } => {
-            let font_size = node.style.font.as_ref().map_or(14.0, |f| f.size);
+            let font_size = node.props.font.as_ref().map_or(14.0, |f| f.size);
             let char_width = font_size * 0.6;
             let total_w = content.chars().count() as f32 * char_width;
             let line_height = font_size * 1.4;

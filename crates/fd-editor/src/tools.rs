@@ -460,13 +460,13 @@ impl Tool for RectTool {
                 );
                 node.constraints.push(Constraint::Position { x: *x, y: *y });
                 // Transparent fill + dark stroke (matching create_node_at defaults)
-                node.style.stroke = Some(Stroke {
+                node.props.stroke = Some(Stroke {
                     paint: Paint::Solid(Color::rgba(0.2, 0.2, 0.2, 1.0)),
                     width: 2.5,
                     cap: StrokeCap::Round,
                     join: StrokeJoin::Round,
                 });
-                node.style.corner_radius = Some(8.0);
+                node.props.corner_radius = Some(8.0);
                 vec![GraphMutation::AddNode {
                     parent_id: NodeId::intern("root"),
                     node: Box::new(node),
@@ -806,7 +806,7 @@ impl Tool for EllipseTool {
                 let mut node = SceneNode::new(id, NodeKind::Ellipse { rx: 0.0, ry: 0.0 });
                 node.constraints.push(Constraint::Position { x: *x, y: *y });
                 // Transparent fill + dark stroke (matching create_node_at defaults)
-                node.style.stroke = Some(Stroke {
+                node.props.stroke = Some(Stroke {
                     paint: Paint::Solid(Color::rgba(0.2, 0.2, 0.2, 1.0)),
                     width: 2.5,
                     cap: StrokeCap::Round,
@@ -1025,7 +1025,7 @@ impl Tool for ArrowTool {
     }
 
     fn handle(&mut self, event: &InputEvent, hit_node: Option<NodeId>) -> Vec<GraphMutation> {
-        use fd_core::model::{ArrowKind, CurveKind, Edge, Style};
+        use fd_core::model::{ArrowKind, CurveKind, Edge, Properties};
 
         match event {
             InputEvent::PointerDown { x, y, .. } => {
@@ -1089,7 +1089,7 @@ impl Tool for ArrowTool {
                     from: from_anchor,
                     to: to_anchor,
                     text_child: None,
-                    style: Style::default(),
+                    props: Properties::default(),
                     use_styles: Default::default(),
                     arrow: ArrowKind::End,
                     curve: CurveKind::Smooth,

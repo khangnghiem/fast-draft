@@ -536,7 +536,7 @@ fn build_scene_graph(
                 clip: false,
                 layout: LayoutMode::Free { pad: 0.0 },
             },
-            style: Style {
+            props: Properties {
                 fill: Some(Paint::Solid(Color::rgba(0.95, 0.95, 0.97, 1.0))),
                 corner_radius: Some(12.0),
                 stroke: Some(Stroke {
@@ -545,7 +545,7 @@ fn build_scene_graph(
                     cap: StrokeCap::Round,
                     join: StrokeJoin::Round,
                 }),
-                ..Style::default()
+                ..Properties::default()
             },
             use_styles: Default::default(),
             constraints: smallvec::smallvec![Constraint::Position {
@@ -641,7 +641,7 @@ fn build_scene_graph(
         let scene_node = SceneNode {
             id: fd_id,
             kind,
-            style: Style {
+            props: Properties {
                 fill: Some(Paint::Solid(Color::rgba(0.93, 0.95, 1.0, 1.0))),
                 stroke: Some(Stroke {
                     paint: Paint::Solid(Color::rgba(0.2, 0.2, 0.3, 1.0)),
@@ -650,7 +650,7 @@ fn build_scene_graph(
                     join: StrokeJoin::Round,
                 }),
                 corner_radius,
-                ..Style::default()
+                ..Properties::default()
             },
             use_styles: Default::default(),
             constraints: smallvec::smallvec![Constraint::Position { x: rel_x, y: rel_y }],
@@ -672,14 +672,14 @@ fn build_scene_graph(
                     content: mnode.label.clone(),
                     max_width: None,
                 },
-                style: Style {
+                props: Properties {
                     font: Some(FontSpec {
                         family: "Inter".into(),
                         weight: 500,
                         size: 14.0,
                     }),
                     fill: Some(Paint::Solid(Color::rgba(0.1, 0.1, 0.15, 1.0))),
-                    ..Style::default()
+                    ..Properties::default()
                 },
                 use_styles: Default::default(),
                 constraints: Default::default(),
@@ -724,14 +724,14 @@ fn build_scene_graph(
                     content: label_text.clone(),
                     max_width: None,
                 },
-                style: Style {
+                props: Properties {
                     font: Some(FontSpec {
                         family: "Inter".into(),
                         weight: 400,
                         size: 12.0,
                     }),
                     fill: Some(Paint::Solid(Color::rgba(0.3, 0.3, 0.4, 1.0))),
-                    ..Style::default()
+                    ..Properties::default()
                 },
                 use_styles: Default::default(),
                 constraints: Default::default(),
@@ -751,7 +751,7 @@ fn build_scene_graph(
             from: EdgeAnchor::Node(from_id),
             to: EdgeAnchor::Node(to_id),
             text_child,
-            style: Style::default(),
+            props: Properties::default(),
             use_styles: Default::default(),
             arrow,
             curve: CurveKind::Smooth,
@@ -806,7 +806,7 @@ mod tests {
         let graph = parse_mermaid(input).unwrap();
         let a = graph.get_by_id(NodeId::intern("A")).unwrap();
         // Rounded gets corner_radius=30
-        assert_eq!(a.style.corner_radius, Some(30.0));
+        assert_eq!(a.props.corner_radius, Some(30.0));
     }
 
     #[test]

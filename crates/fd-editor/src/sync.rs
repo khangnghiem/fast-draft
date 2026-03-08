@@ -301,7 +301,7 @@ impl SyncEngine {
             }
             GraphMutation::SetStyle { id, style } => {
                 if let Some(node) = self.graph.get_by_id_mut(id) {
-                    node.style = style;
+                    node.props = style;
                 }
             }
             GraphMutation::SetText { id, content } => {
@@ -585,7 +585,7 @@ impl SyncEngine {
 
         if let NodeKind::Text { content, .. } = child_kind {
             let font_size = self.graph.graph[child_idx]
-                .style
+                .props
                 .font
                 .as_ref()
                 .map_or(14.0, |f| f.size);
@@ -759,7 +759,7 @@ fn handle_child_group_relationship(
     if let NodeKind::Text { content, .. } = child_kind {
         // Use same heuristic as intrinsic_size() in layout.rs
         let font_size = graph.graph[child_idx]
-            .style
+            .props
             .font
             .as_ref()
             .map_or(14.0, |f| f.size);
@@ -958,7 +958,7 @@ pub enum GraphMutation {
     },
     SetStyle {
         id: NodeId,
-        style: Style,
+        style: Properties,
     },
     SetText {
         id: NodeId,
