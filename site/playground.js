@@ -261,6 +261,141 @@ function updateFab(canvas) {
   }
 }
 
+/** ─── Properties Panel ──────────────────────────────────────────────── */
+let propsSuppressSync = false;
+
+/** Show/hide and populate the properties panel for the selected node. */
+function updatePropertiesPanel() {
+  const panel = document.getElementById('props-panel');
+  if (!panel || !fdCanvas) { panel?.classList.remove('visible'); adjustMinimapForProps(false); return; }
+
+  const json = fdCanvas.get_selected_node_props();
+  let props;
+  try { props = JSON.parse(json); } catch (_) { panel.classList.remove('visible'); adjustMinimapForProps(false); return; }
+
+  if (!props.id) {
+    panel.classList.remove('visible');
+    adjustMinimapForProps(false);
+    return;
+  }
+
+  propsSuppressSync = true;
+  panel.classList.add('visible');
+  adjustMinimapForProps(true);
+
+  // Header
+  document.getElementById('pp-node-id').textContent = `@${props.id}`;
+  document.getElementById('pp-kind').textContent = props.kind || '';
+
+  // Position & Size
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val !== undefined ? Math.round(val) : ''; };
+  setVal('pp-x', props.x);
+  setVal('pp-y', props.y);
+  setVal('pp-w', props.width);
+  setVal('pp-h', props.height);
+
+  // Fill color
+  const fillEl = document.getElementById('pp-fill');
+  if (fillEl && props.fill) {
+    let hex = props.fill;
+    if (hex.length === 4) hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+    fillEl.value = hex.substring(0, 7);
+  }
+
+  // Stroke
+  const strokeEl = document.getElementById('pp-stroke');
+  if (strokeEl && props.strokeColor) {
+    let hex = props.strokeColor;
+    if (hex.length === 4) hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+    strokeEl.value = hex.substring(0, 7);
+  }
+  setVal('pp-stroke-w', props.strokeWidth);
+  setVal('pp-corner', props.cornerRadius);
+
+  // Opacity
+  const opSlider = document.getElementById('pp-opacity');
+  const opVal = document.getElementById('pp-opacity-val');
+  const opacity = props.opacity !== undefined ? props.opacity : 1;
+  if (opSlider) opSlider.value = opacity;
+  if (opVal) opVal.textContent = Math.round(opacity * 100) + '%';
+
+  // Hide appearance for groups
+  const appearance = document.getElementById('pp-appearance');
+  if (appearance) appearance.style.display = (props.kind === 'root' || props.kind === 'group') ? 'none' : '';
+
+  propsSuppressSync = false;
+}
+
+/** Shift minimap when props panel is visible. */
+function adjustMinimapForProps(visible) {
+  const mc = document.getElementById('minimap-container');
+  if (mc) mc.style.right = visible ? '212px' : '12px';
+}
+
+/** Wire input handlers for the properties panel fields. */
+function setupPropsPanel(editor) {
+  const propChange = (key, el) => {
+    if (propsSuppressSync || !fdCanvas) return;
+    const changed = fdCanvas.set_node_prop(key, el.value);
+    if (changed) { renderCanvas(); syncCanvasToEditor(editor); }
+  };
+
+  // W/H inputs (debounced)
+  let debounce = null;
+  ['pp-w', 'pp-h'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const key = id === 'pp-w' ? 'width' : 'height';
+    el.addEventListener('input', () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => propChange(key, el), 150);
+    });
+  });
+
+  // Fill color
+  document.getElementById('pp-fill')?.addEventListener('input', function() { propChange('fill', this); });
+
+  // Stroke color
+  document.getElementById('pp-stroke')?.addEventListener('input', function() { propChange('strokeColor', this); });
+
+  // Stroke width
+  document.getElementById('pp-stroke-w')?.addEventListener('input', function() {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => propChange('strokeWidth', this), 150);
+  });
+
+  // Corner radius
+  document.getElementById('pp-corner')?.addEventListener('input', function() {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => propChange('cornerRadius', this), 150);
+  });
+
+  // Opacity slider
+  const opSlider = document.getElementById('pp-opacity');
+  const opVal = document.getElementById('pp-opacity-val');
+  if (opSlider) {
+    opSlider.addEventListener('input', () => {
+      if (opVal) opVal.textContent = Math.round(parseFloat(opSlider.value) * 100) + '%';
+      clearTimeout(debounce);
+      debounce = setTimeout(() => propChange('opacity', opSlider), 100);
+    });
+  }
+
+  // Duplicate
+  document.getElementById('pp-duplicate')?.addEventListener('click', () => {
+    if (!fdCanvas) return;
+    const changed = fdCanvas.duplicate_selected();
+    if (changed) { renderCanvas(); syncCanvasToEditor(editor); updatePropertiesPanel(); }
+  });
+
+  // Delete
+  document.getElementById('pp-delete')?.addEventListener('click', () => {
+    if (!fdCanvas) return;
+    const changed = fdCanvas.delete_selected();
+    if (changed) { renderCanvas(); syncCanvasToEditor(editor); updatePropertiesPanel(); }
+  });
+}
+
 /** ─── Layers Panel ────────────────────────────────────────────────────── */
 const LAYER_ICONS = {
   group: '◻', frame: '▣', rect: '▢', ellipse: '○',
@@ -410,6 +545,7 @@ function refreshLayersPanel() {
           el.classList.toggle('selected', el.getAttribute('data-node-id') === nodeId)
         );
         updateFab(document.getElementById('fd-canvas'));
+        updatePropertiesPanel();
       }
     });
   });
@@ -554,6 +690,7 @@ async function initPlayground() {
     fdCanvas = new wasm.FdCanvas(canvasW, rect.height);
     fdCanvas.set_theme(isDark);
     fdCanvas.set_text(editor.value);
+    setupPropsPanel(editor);
 
     // Get canvas 2D context
     ctx = canvas.getContext('2d');
@@ -565,6 +702,7 @@ async function initPlayground() {
       if (time - minimapLastRender > MINIMAP_INTERVAL) {
         renderMinimap(canvas);
         refreshLayersPanel();
+        updatePropertiesPanel();
         minimapLastRender = time;
       }
       animFrameId = requestAnimationFrame(renderLoop);
@@ -667,8 +805,9 @@ async function initPlayground() {
         canvas.style.cursor = '';
       }
 
-      // Show FAB if node selected
+      // Show FAB + Props if node selected
       updateFab(canvas);
+      updatePropertiesPanel();
     });
 
     // ── Wheel → Pan / Zoom ────────────────────────────────────────────
