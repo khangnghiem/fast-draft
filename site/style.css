@@ -1374,6 +1374,13 @@ code {
   transform: translateY(0);
 }
 
+/* ─── Zen Mode ─── */
+.zen-mode .playground-toolbar { display: none !important; }
+.zen-mode #settings-menu { display: none !important; }
+.zen-mode .playground-editor { display: none !important; }
+.zen-mode .playground-split { grid-template-columns: 1fr; }
+.zen-mode .playground-canvas { min-height: 500px; }
+
 /* ─── Responsive ─── */
 @media (max-width: 768px) {
   .nav-links {
@@ -1413,6 +1420,10 @@ code {
   .hero-sub { font-size: 1rem; }
 
   .playground-label { display: none; }
+
+  #layers-panel, #props-panel { display: none !important; }
+  #floating-toolbar { left: 8px; }
+  #minimap-container { display: none; }
 }
 
 @media (max-width: 480px) {
