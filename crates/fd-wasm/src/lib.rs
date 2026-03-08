@@ -247,8 +247,14 @@ impl FdCanvas {
         alt: bool,
         meta: bool,
     ) -> bool {
-        // Start batch so all drag mutations become one undo step
-        self.commands.begin_batch(&mut self.engine);
+        // Start batch so all drag mutations become one undo step.
+        // Skip batching for Text tool — it emits a single AddNode, so
+        // Command::Single (with RemoveNode inverse) gives cheaper undo
+        // without a full document re-parse via set_text().
+        let needs_batch = self.active_tool != ToolKind::Text;
+        if needs_batch {
+            self.commands.begin_batch(&mut self.engine);
+        }
 
         let mods = Modifiers {
             shift,
@@ -448,13 +454,25 @@ impl FdCanvas {
             meta,
         };
 
-        // End batch — squash all drag mutations into one undo step
-        self.commands.end_batch(&mut self.engine);
+        // End batch — squash all drag mutations into one undo step.
+        // Skip for Text tool (not batched — see handle_pointer_down).
+        if self.active_tool != ToolKind::Text {
+            self.commands.end_batch(&mut self.engine);
+        }
 
         // Finalize marquee selection before handling pointer-up
         let marquee_changed = if let Some((rx, ry, rw, rh)) = self.select_tool.marquee_rect {
             if rw > 2.0 || rh > 2.0 {
                 let hits = hit_test_rect(
+                    &self.engine.graph,
+                    self.engine.current_bounds(),
+                    rx,
+                    ry,
+                    rw,
+                    rh,
+                );
+                // Also collect edges intersecting the marquee
+                let edge_hits = fd_render::hit::hit_test_rect_edges(
                     &self.engine.graph,
                     self.engine.current_bounds(),
                     rx,
@@ -474,6 +492,12 @@ impl FdCanvas {
                             self.select_tool.visual_highlight.push(raw_id);
                         }
                     }
+                    for edge_id in edge_hits {
+                        if !self.select_tool.selected.contains(&edge_id) {
+                            self.select_tool.selected.push(edge_id);
+                            self.select_tool.visual_highlight.push(edge_id);
+                        }
+                    }
                 } else {
                     let mut new_selection = Vec::new();
                     let mut new_highlight = Vec::new();
@@ -482,6 +506,12 @@ impl FdCanvas {
                         if !new_selection.contains(&id) {
                             new_selection.push(id);
                             new_highlight.push(raw_id);
+                        }
+                    }
+                    for edge_id in edge_hits {
+                        if !new_selection.contains(&edge_id) {
+                            new_selection.push(edge_id);
+                            new_highlight.push(edge_id);
                         }
                     }
                     self.select_tool.selected = new_selection;
@@ -633,7 +663,10 @@ impl FdCanvas {
             return true;
         }
         let id = NodeId::intern(node_id);
-        if self.engine.graph.get_by_id(id).is_some() {
+        // Accept both scene-tree nodes and edges
+        let is_node = self.engine.graph.get_by_id(id).is_some();
+        let is_edge = self.engine.graph.edges.iter().any(|e| e.id == id);
+        if is_node || is_edge {
             self.select_tool.selected = vec![id];
             self.select_tool.visual_highlight = vec![id];
             true
@@ -653,8 +686,12 @@ impl FdCanvas {
     /// Undo the last action.
     pub fn undo(&mut self) -> bool {
         let result = self.commands.undo(&mut self.engine);
-        if result.is_some() {
-            self.engine.resolve();
+        if let Some((_desc, is_snapshot)) = &result {
+            // Snapshot undo already called set_text() → resolve_layout().
+            // Only call resolve() for single-mutation undo.
+            if !is_snapshot {
+                self.engine.resolve();
+            }
             self.engine.flush_to_text();
         }
         result.is_some()
@@ -663,8 +700,10 @@ impl FdCanvas {
     /// Redo the last undone action.
     pub fn redo(&mut self) -> bool {
         let result = self.commands.redo(&mut self.engine);
-        if result.is_some() {
-            self.engine.resolve();
+        if let Some((_desc, is_snapshot)) = &result {
+            if !is_snapshot {
+                self.engine.resolve();
+            }
             self.engine.flush_to_text();
         }
         result.is_some()
@@ -812,9 +851,16 @@ impl FdCanvas {
             return false;
         }
         let ids: Vec<NodeId> = self.select_tool.selected.clone();
+        // Emit RemoveEdge for edge IDs, RemoveNode for node IDs
         let mutations: Vec<GraphMutation> = ids
             .iter()
-            .map(|id| GraphMutation::RemoveNode { id: *id })
+            .map(|id| {
+                if self.engine.graph.edges.iter().any(|e| e.id == *id) {
+                    GraphMutation::RemoveEdge { id: *id }
+                } else {
+                    GraphMutation::RemoveNode { id: *id }
+                }
+            })
             .collect();
 
         // Wrap in a batch so multi-delete (including edge cleanup) is
@@ -1624,6 +1670,12 @@ impl FdCanvas {
             Some(id) => id,
             None => return "{}".to_string(),
         };
+
+        // Check if selected item is an edge
+        if let Some(edge) = self.engine.graph.edges.iter().find(|e| e.id == id) {
+            return self.edge_props_json(edge);
+        }
+
         let node = match self.engine.graph.get_by_id(id) {
             Some(n) => n,
             None => return "{}".to_string(),
@@ -1800,6 +1852,74 @@ impl FdCanvas {
         serde_json::Value::Object(props).to_string()
     }
 
+    /// Build JSON properties for a selected edge.
+    fn edge_props_json(&self, edge: &Edge) -> String {
+        let mut props = serde_json::Map::new();
+        props.insert(
+            "id".into(),
+            serde_json::Value::String(edge.id.as_str().to_string()),
+        );
+        props.insert("kind".into(), "edge".into());
+
+        // From / To
+        let from_str = match &edge.from {
+            EdgeAnchor::Node(id) => id.as_str().to_string(),
+            EdgeAnchor::Point(x, y) => format!("({x}, {y})"),
+        };
+        let to_str = match &edge.to {
+            EdgeAnchor::Node(id) => id.as_str().to_string(),
+            EdgeAnchor::Point(x, y) => format!("({x}, {y})"),
+        };
+        props.insert("from".into(), serde_json::Value::String(from_str));
+        props.insert("to".into(), serde_json::Value::String(to_str));
+
+        // Arrow
+        let arrow_str = match edge.arrow {
+            ArrowKind::None => "none",
+            ArrowKind::Start => "start",
+            ArrowKind::End => "end",
+            ArrowKind::Both => "both",
+        };
+        props.insert(
+            "arrow".into(),
+            serde_json::Value::String(arrow_str.to_string()),
+        );
+
+        // Curve
+        let curve_str = match edge.curve {
+            CurveKind::Straight => "straight",
+            CurveKind::Smooth => "smooth",
+            CurveKind::Step => "step",
+        };
+        props.insert(
+            "curve".into(),
+            serde_json::Value::String(curve_str.to_string()),
+        );
+
+        // Stroke
+        let resolved = self.engine.graph.resolve_style_for_edge(edge, &[]);
+        if let Some(ref stroke) = resolved.stroke {
+            if let Paint::Solid(c) = &stroke.paint {
+                props.insert("strokeColor".into(), serde_json::Value::String(c.to_hex()));
+            }
+            props.insert("strokeWidth".into(), serde_json::json!(stroke.width));
+        }
+
+        // Flow animation
+        if let Some(ref flow) = edge.flow {
+            let flow_str = match flow.kind {
+                fd_core::model::FlowKind::Pulse => "pulse",
+                fd_core::model::FlowKind::Dash => "dash",
+            };
+            props.insert(
+                "flow".into(),
+                serde_json::Value::String(flow_str.to_string()),
+            );
+            props.insert("flowDuration".into(), serde_json::json!(flow.duration_ms));
+        }
+
+        serde_json::Value::Object(props).to_string()
+    }
     /// Get basic properties of a node by its ID (without selecting it).
     /// Returns JSON with `text`, `fontSize`, `fontFamily`, `fontWeight`.
     /// Returns `{}` if the node is not found.
@@ -2303,7 +2423,17 @@ impl FdCanvas {
 
 impl FdCanvas {
     fn hit_test(&self, x: f32, y: f32) -> Option<NodeId> {
-        fd_render::hit::hit_test(&self.engine.graph, self.engine.current_bounds(), x, y)
+        // Nodes take priority over edges
+        fd_render::hit::hit_test(&self.engine.graph, self.engine.current_bounds(), x, y).or_else(
+            || {
+                fd_render::hit::hit_test_edge(
+                    &self.engine.graph,
+                    self.engine.current_bounds(),
+                    x,
+                    y,
+                )
+            },
+        )
     }
 
     fn apply_mutations(&mut self, mutations: Vec<GraphMutation>) -> bool {

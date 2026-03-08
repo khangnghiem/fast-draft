@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.10.85 — Edge Selection (R3.1)
+
+- **FEATURE (R3.1)**: Edges are now selectable on canvas — click an edge stroke (5px hit radius) to select, Shift+click for multi-select, marquee box selection includes edges; selected edges show #4FC3F7 highlight stroke; Delete/Backspace removes selected edges via `RemoveEdge` mutation (undoable); properties panel shows edge-specific properties (from/to, arrow, curve, stroke, flow)
+- **CORE**: New `hit_test_edge()` in `hit.rs` — point-to-curve distance testing for all 3 curve types: Straight (line segment), Smooth (quadratic Bézier flattened to 8 segments), Step (3-segment orthogonal path); closest-edge wins when multiple overlap
+- **CORE**: New `hit_test_rect_edges()` in `hit.rs` — marquee rectangle intersection testing for edges using segment-vs-rect cross-product orientation test
+- **WASM**: `hit_test()` falls back to edges when no node is hit (nodes take priority); `select_by_id()` accepts edge IDs; `delete_selected()` emits `RemoveEdge` for edge IDs; `edge_props_json()` serializes edge properties for the inspector panel
+- **RENDER**: `draw_edges()` renders 3px-wider #4FC3F7 highlight stroke on selected edges
+- **TESTING**: 6 new tests — `point_to_segment_dist_basic`, `point_to_segment_dist_endpoint`, `hit_test_edge_straight`, `hit_test_edge_point_anchors`, `hit_test_edge_step`, `hit_test_rect_edges_marquee`
+
 ### v0.10.84 — Canvas UI Parity: Site ↔ VSCode (R6.8)
 
 - **UX (R6.8)**: Floating scroll toolbar — replaced static top toolbar with wooden scroll handles, paper rolls, and SVG icon tool buttons matching VSCode extension's scroll toolbar design

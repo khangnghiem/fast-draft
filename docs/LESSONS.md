@@ -28,6 +28,7 @@ Engineering lessons discovered through building FD.
   codespace, cp, target, sync   → L304-318 (gh codespace cp Hangs)
   browser, subagent, context, spiral → L320-344 (Browser Subagent Context Spiral)
   native-drag, svg, preventDefault → L347-355 (Native Drag Hijacks SVG Pointerdown)
+  undo, batch, snapshot, resolve  → L358-375 (Snapshot Undo Clobbers Bounds)
 -->
 
 ## Resize Fight: Bounds Ownership Chain (SyncEngine ↔ Layout Engine ↔ JS)
@@ -342,3 +343,21 @@ Engineering lessons discovered through building FD.
 **Fix**: (v0.10.32) Added `e.preventDefault()` in the tool button `pointerdown` handler. Also added CSS `pointer-events: none; -webkit-user-drag: none` on `.ft-tool-btn svg` as belt-and-suspenders.
 
 **Lesson**: **Any custom drag interaction on elements containing `<svg>`, `<img>`, or `<a>` MUST call `e.preventDefault()` in the `pointerdown` handler.** These elements have browser-native drag behavior that overrides pointer event tracking. `e.stopPropagation()` only prevents parent handlers from firing — it does NOT prevent the browser's default drag behavior. This is the #1 reason custom drag interactions silently fail and is nearly impossible to debug from code review alone because the code logic is correct — the browser just never delivers the events.
+
+---
+
+## Snapshot Undo Clobbers Bounds — Don't Batch Single-Action Operations
+
+**Date**: 2026-03-09
+**Context**: Creating a text node on canvas (T tool click) then pressing ⌘Z rearranged all other nodes. Same class as Resize Fight (L33-48).
+
+**Root cause**: Two compounding issues:
+
+1. **TextTool's single AddNode was unnecessarily batched** — `begin_batch()`/`end_batch()` wrapped every pointer gesture, so even a single-click text placement became a `Command::Snapshot`. Snapshot undo calls `set_text(text_before)` → full `parse_document()` + `resolve_layout()`, creating a fresh bounds HashMap with `intrinsic_size` heuristics that clobber JS-measured text bounds.
+2. **Redundant `resolve()` in `undo()`** — after snapshot undo already resolved via `set_text()`, `lib.rs` called `resolve()` again, double-clobbering any bounds that survived the first pass.
+
+**Fix**:
+- Skip `begin_batch()`/`end_batch()` for TextTool (single-action), so AddNode goes through `Command::Single` with `RemoveNode` inverse — no re-parse
+- `undo()`/`redo()` return `(desc, is_snapshot)` — skip `resolve()` when snapshot already resolved
+
+**Rule**: **Only batch operations that emit multiple incremental mutations (drag gestures).** Single-action operations (click-to-place) should use `Command::Single` for atomic inverse undo without full document re-parse. The bounds ownership chain (L48) applies equally to undo paths.
