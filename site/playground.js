@@ -1155,19 +1155,86 @@ async function initPlayground() {
       }
     });
 
-    // ── Theme Toggle ──────────────────────────────────────────────────
-    document.getElementById('theme-toggle').addEventListener('click', function() {
-      isDark = !isDark;
-      if (fdCanvas) fdCanvas.set_theme(isDark);
-      this.textContent = isDark ? '🌙 Dark' : '☀️ Light';
-      this.classList.toggle('active', !isDark);
+    // ── Settings Menu ─────────────────────────────────────────────────
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsMenu = document.getElementById('settings-menu');
+
+    function updateSettingsToggles() {
+      document.getElementById('sm-dark')?.classList.toggle('on', isDark);
+      document.getElementById('sm-sketchy')?.classList.toggle('on', isSketchy);
+      document.getElementById('sm-grid')?.classList.toggle('on', gridEnabled);
+    }
+
+    settingsBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      updateSettingsToggles();
+      settingsMenu?.classList.toggle('visible');
     });
 
-    // ── Sketchy Toggle ────────────────────────────────────────────────
-    document.getElementById('sketchy-toggle').addEventListener('click', function() {
-      isSketchy = !isSketchy;
-      if (fdCanvas) fdCanvas.set_sketchy_mode(isSketchy);
-      this.classList.toggle('active', isSketchy);
+    settingsMenu?.querySelectorAll('.sm-item').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const setting = btn.getAttribute('data-setting');
+        switch (setting) {
+          case 'dark-mode':
+            isDark = !isDark;
+            if (fdCanvas) fdCanvas.set_theme(isDark);
+            break;
+          case 'sketchy':
+            isSketchy = !isSketchy;
+            if (fdCanvas) fdCanvas.set_sketchy_mode(isSketchy);
+            break;
+          case 'grid':
+            gridEnabled = !gridEnabled;
+            break;
+          case 'fit': {
+            // Fit to content: scan all nodes, compute bounding box, set zoom+pan
+            if (fdCanvas) {
+              const text = fdCanvas.get_text();
+              const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
+              const nodes = [];
+              let m;
+              while ((m = idRegex.exec(text)) !== null) {
+                try {
+                  const bj = fdCanvas.get_node_bounds(m[1]);
+                  if (!bj) continue;
+                  const b = JSON.parse(bj);
+                  if (b.width > 0 && b.height > 0) nodes.push(b);
+                } catch (_) {}
+              }
+              if (nodes.length > 0) {
+                let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
+                for (const n of nodes) {
+                  sx = Math.min(sx, n.x);
+                  sy = Math.min(sy, n.y);
+                  sx2 = Math.max(sx2, n.x + n.width);
+                  sy2 = Math.max(sy2, n.y + n.height);
+                }
+                const pad = 40;
+                sx -= pad; sy -= pad; sx2 += pad; sy2 += pad;
+                const sw = sx2 - sx, sh = sy2 - sy;
+                const cw = canvas.clientWidth, ch = canvas.clientHeight;
+                zoomLevel = Math.min(cw / sw, ch / sh, ZOOM_MAX);
+                zoomLevel = Math.max(zoomLevel, ZOOM_MIN);
+                panX = (cw - sw * zoomLevel) / 2 - sx * zoomLevel;
+                panY = (ch - sh * zoomLevel) / 2 - sy * zoomLevel;
+                updateZoomIndicator();
+              }
+            }
+            settingsMenu?.classList.remove('visible');
+            renderCanvas();
+            return;
+          }
+        }
+        updateSettingsToggles();
+        renderCanvas();
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!settingsMenu?.contains(e.target) && e.target !== settingsBtn) {
+        settingsMenu?.classList.remove('visible');
+      }
     });
 
   } catch (err) {
