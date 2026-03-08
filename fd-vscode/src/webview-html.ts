@@ -2861,11 +2861,29 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         items.forEach((p, i) => {
           const row = document.createElement('div');
           row.className = 'renamify-row';
-          row.innerHTML =
-            '<input type="checkbox" checked data-idx="' + i + '">' +
-            '<span class="renamify-old">@' + p.oldId + '</span>' +
-            '<span class="renamify-arrow">→</span>' +
-            '<span class="renamify-new">@' + p.newId + '</span>';
+
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = true;
+          cb.dataset.idx = String(i);
+          row.appendChild(cb);
+
+          const oldSpan = document.createElement('span');
+          oldSpan.className = 'renamify-old';
+          // Security: Use textContent to prevent XSS from untrusted node IDs
+          oldSpan.textContent = '@' + p.oldId;
+          row.appendChild(oldSpan);
+
+          const arrow = document.createElement('span');
+          arrow.className = 'renamify-arrow';
+          arrow.textContent = '→';
+          row.appendChild(arrow);
+
+          const newSpan = document.createElement('span');
+          newSpan.className = 'renamify-new';
+          newSpan.textContent = '@' + p.newId;
+          row.appendChild(newSpan);
+
           body.appendChild(row);
         });
         footer.style.display = 'flex';
