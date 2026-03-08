@@ -2,31 +2,31 @@
 # Flowchart components — process, decision, start/end, connectors.
 # Usage: import "libraries/flowchart.fd" as flow
 
-# ─── Themes ───
+# ─── Styles ───
 
-theme flow_process {
+style flow_process {
   fill: #FFFFFF
   stroke: #2D3436 2
   corner: 8
 }
 
-theme flow_decision {
+style flow_decision {
   fill: #FFF3E0
   stroke: #E17055 2
 }
 
-theme flow_start_end {
+style flow_start_end {
   fill: #E8F5E9
   stroke: #00B894 2
   corner: 24
 }
 
-theme flow_label {
+style flow_label {
   fill: #2D3436
   font: "Inter" 500 13
 }
 
-theme flow_sublabel {
+style flow_sublabel {
   fill: #636E72
   font: "Inter" 400 11
 }

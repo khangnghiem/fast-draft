@@ -1,27 +1,27 @@
 # Kanban Board — Project Manager use case
 # Demonstrates: row/column layouts, semantic IDs, named colors, style reuse
 
-theme card {
+style card {
   fill: #FFFFFF
   corner: 8
 }
 
-theme column_bg {
+style column_bg {
   fill: #F4F5F7
   corner: 12
 }
 
-theme tag_urgent {
+style tag_urgent {
   fill: #FEE2E2
   corner: 4
 }
 
-theme tag_feature {
+style tag_feature {
   fill: #DBEAFE
   corner: 4
 }
 
-theme tag_bug {
+style tag_bug {
   fill: #FEF3C7
   corner: 4
 }

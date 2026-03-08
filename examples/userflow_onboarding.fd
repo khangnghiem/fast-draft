@@ -1,6 +1,6 @@
 import "../../examples/design_system.fd" as ds
 
-# ─── Themes ───
+# ─── Styles ───
 
 style flow_edge {
 }
