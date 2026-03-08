@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.10.83 — CI/CD Hardening (R6.10)
+
+- **CI (R6.10)**: Added WASM build check to CI — `wasm-pack build crates/fd-wasm` now runs on every push/PR to `main`, catching WASM-breaking Rust changes before merge (previously only caught at deploy time in `pages.yml`)
+- **CI (R6.10)**: Replaced manual `actions/cache` with `Swatinem/rust-cache@v2` across all workflows — smarter per-crate caching with partial restore keys; ~30–60s faster CI runs; shared cache keys (`ci`, `wasm`) reduce cache duplication
+- **CI (R6.10)**: Added explicit `permissions: contents: read` to `ci.yml` and `pages.yml` — minimal token scope prevents accidental write access in CI jobs
+- **CI (R6.10)**: Unified release workflow — merged `publish.yml` + `release.yml` into a single `release.yml` with job dependency graph: CI gate → extension publish + LSP binary builds + Zed extension (parallel) → GitHub Release; atomic all-or-nothing release prevents half-published states
+- **CLEANUP**: Deleted `publish.yml` (absorbed into unified `release.yml`)
+
 ### v0.10.82 — Complete `theme` → `style` Keyword Cleanup (R4.18)
 
 - **CLEANUP (R4.18)**: Replaced all remaining `theme` keywords with `style` across the entire codebase — playground examples in `site/playground.js` (3 example strings, 6 occurrences), 3 library `.fd` files (`wireframe`, `flowchart`, `ui-kit`), 9 benchmark `.fd` files, 3 design doc `.fd` files, 3 example `.fd` files; also updated `# ─── Themes ───` section headers to `# ─── Styles ───` in all 13 affected files
