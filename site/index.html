@@ -360,48 +360,23 @@
     <div class="container">
       <div class="section-header">
         <h2>Under the <span class="gradient-text">Hood</span></h2>
-        <p>Five Rust crates, one TypeScript extension, zero compromises.</p>
-      </div>
-      <div class="arch-diagram">
-        <pre class="arch-ascii">┌─────────────────────────────────────────────────────┐
-│  .fd file (text DSL)                                │
-├─────────────────────────────────────────────────────┤
-│  fd-core        Parser ↔ SceneGraph (DAG) ↔ Emitter │
-│                  Layout solver (constraints → coords) │
-├─────────────────────────────────────────────────────┤
-│  fd-render      Vello + wgpu → GPU canvas           │
-│                  Hit testing (point → node)           │
-├─────────────────────────────────────────────────────┤
-│  fd-editor      Bidi sync engine                    │
-│                  Tools (select, rect, pen, text)      │
-│                  Undo/redo command stack               │
-├─────────────────────────────────────────────────────┤
-│  tree-sitter-fd Tree-sitter grammar for editors     │
-├─────────────────────────────────────────────────────┤
-│  fd-vscode      VS Code Custom Editor (WASM webview)│
-│  editors/       Zed, Neovim, Sublime, Helix, Emacs  │
-└─────────────────────────────────────────────────────┘</pre>
+        <p>Rust + WASM, from parser to pixel.</p>
       </div>
       <div class="crate-grid">
         <div class="crate-card">
-          <h4>fd-core</h4>
-          <p>Data model, winnow parser, emitter, constraint layout solver</p>
+          <h4>Core Engine</h4>
+          <p class="crate-flow">.fd text → Parser → SceneGraph → Emitter → .fd text</p>
+          <p>Winnow parser, DAG scene graph, constraint layout solver, and language server with hover, completions, and diagnostics.</p>
         </div>
         <div class="crate-card">
-          <h4>fd-render</h4>
-          <p>Vello/wgpu 2D renderer + hit testing</p>
+          <h4>GPU Renderer</h4>
+          <p class="crate-flow">SceneGraph → Vello + wgpu → GPU canvas</p>
+          <p>Hardware-accelerated 2D rendering via WASM. Hit testing, smart guides, and the bridge that powers this playground.</p>
         </div>
         <div class="crate-card">
-          <h4>fd-editor</h4>
-          <p>Bidirectional sync, tool system, undo/redo, input abstraction</p>
-        </div>
-        <div class="crate-card">
-          <h4>fd-wasm</h4>
-          <p>WASM bridge — powers this playground and the VS Code extension</p>
-        </div>
-        <div class="crate-card">
-          <h4>fd-lsp</h4>
-          <p>Language server — hover, completions, format, diagnostics</p>
+          <h4>Canvas Editor</h4>
+          <p class="crate-flow">Canvas ↔ Text (bidirectional sync)</p>
+          <p>Draw or code — both update in &lt;16ms. Select, rect, pen, text, eraser tools with full undo/redo.</p>
         </div>
       </div>
     </div>
