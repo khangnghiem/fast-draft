@@ -162,7 +162,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R6.3** _(future)_: Mobile app (iOS, Android) via native wgpu
 - **R6.4** _(future)_: Web app (standalone browser app)
 - **R6.5** _(done)_: GitHub Pages landing site at [fast-draft.com](https://fast-draft.com) with live WASM playground, custom domain (Cloudflare DNS), and auto-deploy via GitHub Actions (`pages.yml`)
-- **R6.6** _(done)_: Interactive playground — canvas supports pointer events (select, drag, draw), layers panel (tree view sidebar with expand/collapse), floating toolbar with 7 SVG tool buttons (matching VS Code extension), minimap with zoom controls (bottom-right, click-to-pan, +/−/reset), undo/redo header buttons, clickable zoom reset, floating action bar (FAB), zoom/pan navigation, keyboard shortcuts, undo/redo, and bidirectional code↔canvas sync; zero Rust changes, all in `playground.js`/`index.html`/`style.css`
+- **R6.6** _(done)_: Interactive playground — canvas supports pointer events (select, drag, draw), layers panel (tree view sidebar), properties panel (right sidebar with fill/stroke/opacity/size editing + duplicate/delete), floating toolbar with 7 SVG tool buttons, minimap with zoom controls, undo/redo header buttons, clickable zoom reset, floating action bar (FAB), zoom/pan navigation, keyboard shortcuts, undo/redo, and bidirectional code↔canvas sync; zero Rust changes, all in `playground.js`/`index.html`/`style.css`
 
 ## Non-Functional Requirements
 

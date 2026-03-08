@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.74 — Properties Panel (R6.6)
+
+- **UX (R6.6)**: Properties panel (right sidebar) in playground canvas — 200px panel showing selected node's ID, kind, position (X/Y readonly), size (W/H editable), fill color, stroke color + width, corner radius, opacity slider, duplicate + delete actions
+- **SITE**: `updatePropertiesPanel()` reads `get_selected_node_props()` JSON; input handlers call `set_node_prop(key, value)` with debounce; minimap shifts right when panel is visible
+- **SITE**: Panel hidden by default, appears on node selection (pointerup, layer click, render loop throttle)
+
 ### v0.10.74 — Remove Redundant Auto-Comments on Text Nodes (R4.21)
 
 - **CLEANUP (R4.21)**: Text nodes no longer get `# [auto] label: "..."` comments — text content is already visible inline in the node declaration (e.g. `text @title "Dashboard"`), making the auto-comment 100% redundant; saves ~6% tokens in typical files; container, styled-shape, and edge-connection auto-comments are preserved
