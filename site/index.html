@@ -88,37 +88,8 @@
           </select>
         </div>
         <div class="toolbar-right">
-          <button id="settings-btn" class="toolbar-btn" title="Settings">⚙</button>
+          <button id="zen-toggle-btn" class="toolbar-btn" title="Zen Mode">🧘</button>
         </div>
-      </div>
-      <div id="settings-menu">
-        <button class="sm-item" data-setting="dark-mode">
-          <span class="sm-label">🌙 Dark Mode</span><span class="sm-toggle" id="sm-dark"></span>
-        </button>
-        <button class="sm-item" data-setting="sketchy">
-          <span class="sm-label">✏️ Sketchy</span><span class="sm-toggle" id="sm-sketchy"></span>
-        </button>
-        <button class="sm-item" data-setting="grid">
-          <span class="sm-label">⊞ Grid</span><span class="sm-toggle" id="sm-grid"></span>
-        </button>
-        <div class="sm-sep"></div>
-        <button class="sm-item" data-setting="fit">
-          <span class="sm-label">⊡ Fit to Content</span>
-        </button>
-        <div class="sm-sep"></div>
-        <button class="sm-item" data-setting="copy-png" id="sm-copy-png">
-          <span class="sm-label">📷 Copy as PNG</span>
-        </button>
-        <button class="sm-item" data-setting="export-svg" id="sm-export-svg">
-          <span class="sm-label">📄 Download SVG</span>
-        </button>
-        <button class="sm-item" data-setting="import-css" id="sm-import-css">
-          <span class="sm-label">🎨 Import CSS</span>
-        </button>
-        <div class="sm-sep"></div>
-        <button class="sm-item" data-setting="zen">
-          <span class="sm-label">🧘 Zen Mode</span><span class="sm-toggle" id="sm-zen"></span>
-        </button>
       </div>
       <input type="file" id="css-file-input" accept=".css" style="display:none">
       <div id="playground-container" class="playground-split">
@@ -129,48 +100,74 @@
           <textarea id="fd-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
         </div>
         <div class="playground-canvas">
-          <div class="canvas-toolbar" id="canvas-toolbar">
-            <div class="tb-zone tb-left">
-              <button class="tool-btn active" data-tool="select"><span class="tool-icon">⬚</span>Select<span class="tool-key">V</span></button>
-              <button class="tool-btn" data-tool="rect"><span class="tool-icon">▢</span>Rect<span class="tool-key">R</span></button>
-              <button class="tool-btn" data-tool="ellipse"><span class="tool-icon">○</span>Ellipse<span class="tool-key">O</span></button>
-              <button class="tool-btn" data-tool="text"><span class="tool-icon">T</span>Text<span class="tool-key">T</span></button>
-              <button class="tool-btn" data-tool="arrow"><span class="tool-icon">↗</span>Arrow<span class="tool-key">A</span></button>
-              <button class="tool-btn" data-tool="pen"><span class="tool-icon">✎</span>Pen<span class="tool-key">P</span></button>
-              <button class="tool-btn" data-tool="eraser"><span class="tool-icon">◇</span>Eraser<span class="tool-key">E</span></button>
-            </div>
-            <div class="tb-zone tb-center"></div>
-            <div class="tb-zone tb-right">
-              <button class="tool-btn ch-btn" id="undo-btn" title="Undo (⌘Z)">↶</button>
-              <button class="tool-btn ch-btn" id="redo-btn" title="Redo (⇧⌘Z)">↷</button>
-              <span id="zoom-level" class="zoom-pill" title="Click to reset zoom">100%</span>
-            </div>
-          </div>
           <div id="canvas-wrapper">
             <div id="layers-panel"></div>
             <div class="panel-resize-handle layers-handle" id="layers-resize"></div>
             <canvas id="fd-canvas"></canvas>
-            <div id="minimap-container">
-              <canvas id="minimap-canvas"></canvas>
-              <div id="minimap-zoom">
-                <button class="mz-btn" id="zoom-out-btn">−</button>
-                <button class="mz-btn" id="zoom-reset-btn">100%</button>
-                <button class="mz-btn" id="zoom-in-btn">+</button>
+            <!-- Settings Hamburger (inside canvas) -->
+            <div class="settings-dropdown-container" id="settings-dropdown-container">
+              <button class="settings-btn" id="settings-menu-btn" title="Settings &amp; tools">☰</button>
+              <div class="settings-menu" id="settings-menu">
+                <button class="settings-menu-item" id="sm-dark-toggle" data-setting="dark-mode"><span class="sm-icon">🌙</span><span class="sm-label">Dark Mode</span></button>
+                <button class="settings-menu-item" id="sm-sketchy-toggle" data-setting="sketchy"><span class="sm-icon">✏️</span><span class="sm-label">Sketchy</span></button>
+                <button class="settings-menu-item" id="sm-grid-toggle" data-setting="grid"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span></button>
+                <div class="settings-menu-sep"></div>
+                <button class="settings-menu-item" data-setting="fit"><span class="sm-icon">⊡</span><span class="sm-label">Fit to Content</span></button>
+                <div class="settings-menu-sep"></div>
+                <button class="settings-menu-item" data-setting="copy-png" id="sm-copy-png"><span class="sm-icon">📷</span><span class="sm-label">Copy as PNG</span></button>
+                <button class="settings-menu-item" data-setting="export-svg" id="sm-export-svg"><span class="sm-icon">📄</span><span class="sm-label">Download SVG</span></button>
+                <button class="settings-menu-item" data-setting="import-css" id="sm-import-css"><span class="sm-icon">🎨</span><span class="sm-label">Import CSS</span></button>
+                <div class="settings-menu-sep"></div>
+                <button class="settings-menu-item" data-setting="zen"><span class="sm-icon">🧘</span><span class="sm-label">Zen Mode</span></button>
               </div>
             </div>
-            <div id="fab" class="fab">
-              <label class="fab-item" title="Fill color">
-                <span class="fab-label">Fill</span>
-                <input type="color" id="fab-fill" class="fab-color" value="#007AFF">
-              </label>
+            <!-- Floating Action Bar (frosted glass) -->
+            <div id="floating-action-bar">
+              <label class="fab-label" for="fab-fill">Fill</label>
+              <input type="color" id="fab-fill" class="fab-color" value="#007AFF" title="Fill color">
               <div class="fab-sep"></div>
-              <label class="fab-item" title="Stroke color">
-                <span class="fab-label">Stroke</span>
-                <input type="color" id="fab-stroke" class="fab-color" value="#333333">
-              </label>
+              <label class="fab-label" for="fab-stroke">Stroke</label>
+              <input type="color" id="fab-stroke" class="fab-color" value="#333333" title="Stroke color">
+              <input type="number" id="fab-stroke-w" aria-label="Stroke width" class="fab-input" min="0" max="20" step="1" value="1" title="Stroke width">
               <div class="fab-sep"></div>
-              <button id="fab-delete" class="fab-delete" title="Delete (⌫)">🗑</button>
+              <label class="fab-label" for="fab-opacity">Opacity</label>
+              <input type="range" id="fab-opacity" aria-label="Opacity" class="fab-slider" min="0" max="1" step="0.05" value="1" title="Opacity">
+              <span id="fab-opacity-val" style="font-size:10px;min-width:24px">100%</span>
+              <div class="fab-sep"></div>
+              <button class="fab-delete-btn" id="fab-delete" title="Delete (⌫)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
             </div>
+            <!-- Minimap (Google Maps pill) -->
+            <div id="minimap-container">
+              <canvas id="minimap-canvas"></canvas>
+              <div id="minimap-zoom-controls">
+                <button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button>
+                <div class="bl-sep"></div>
+                <button class="bl-btn" id="zoom-reset-btn" title="Reset zoom">100%</button>
+                <div class="bl-sep"></div>
+                <button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button>
+              </div>
+            </div>
+            <!-- Floating Scroll Toolbar -->
+            <div id="floating-toolbar" class="scroll-toolbar horizontal unrolled">
+              <div class="scroll-handle handle-start" title="Drag to move, click to roll">
+                <div class="wood-core"><div class="finial-top"></div><div class="finial-bottom"></div></div>
+                <div class="paper-roll left-roll"></div>
+              </div>
+              <div class="scroll-paper-body">
+                <button class="ft-tool-btn active" data-tool="select"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2L3.5 13.5L7 10L11.5 14.5L13 13L9 8.5L13 8.5Z"/></svg><span class="ft-tooltip">Select<span class="tt-shortcut">V</span></span></button>
+                <button class="ft-tool-btn" data-tool="rect"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="12" height="10" rx="2"/></svg><span class="ft-tooltip">Rectangle<span class="tt-shortcut">R</span></span></button>
+                <button class="ft-tool-btn" data-tool="ellipse"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/></svg><span class="ft-tooltip">Ellipse<span class="tt-shortcut">O</span></span></button>
+                <button class="ft-tool-btn" data-tool="pen"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5L14.5 7.5L6.5 15.5H2.5V11.5Z"/><path d="M10.5 3.5L14.5 7.5"/><path d="M8.5 5.5L12.5 9.5"/></svg><span class="ft-tooltip">Pen<span class="tt-shortcut">P</span></span></button>
+                <button class="ft-tool-btn" data-tool="arrow"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14L14 4"/><path d="M7 4H14V11"/></svg><span class="ft-tooltip">Arrow<span class="tt-shortcut">A</span></span></button>
+                <button class="ft-tool-btn" data-tool="text"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4H14"/><path d="M9 4V15"/><path d="M6 15H12"/></svg><span class="ft-tooltip">Text<span class="tt-shortcut">T</span></span></button>
+                <button class="ft-tool-btn" data-tool="eraser"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5L8 12L5.5 14.5H2.5V12L9.5 5L12.25 2.25Z"/><path d="M8.5 6L12 9.5"/><line x1="5" y1="15" x2="15" y2="15"/></svg><span class="ft-tooltip">Eraser<span class="tt-shortcut">E</span></span></button>
+              </div>
+              <div class="scroll-handle handle-end" title="Drag to move, click to roll">
+                <div class="paper-roll right-roll"></div>
+                <div class="wood-core"><div class="finial-top"></div><div class="finial-bottom"></div></div>
+              </div>
+            </div>
+            <!-- Properties Panel -->
             <div id="props-panel">
               <div class="props-inner">
                 <div class="props-title">
@@ -178,7 +175,7 @@
                   <span class="kind-badge" id="pp-kind"></span>
                 </div>
                 <div class="props-section">
-                  <div class="props-section-label">Position & Size</div>
+                  <div class="props-section-label">Position &amp; Size</div>
                   <div class="props-grid">
                     <label class="pp-field"><span>X</span><input type="number" id="pp-x" readonly></label>
                     <label class="pp-field"><span>Y</span><input type="number" id="pp-y" readonly></label>
