@@ -657,6 +657,26 @@ async function initPlayground() {
     });
     minimapCanvas.addEventListener('pointerup', () => { mmDragging = false; });
 
+    // ── Undo/Redo Buttons ─────────────────────────────────────────────
+    document.getElementById('undo-btn').addEventListener('click', () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.undo();
+      if (changed) { renderCanvas(); syncCanvasToEditor(editor); }
+    });
+    document.getElementById('redo-btn').addEventListener('click', () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.redo();
+      if (changed) { renderCanvas(); syncCanvasToEditor(editor); }
+    });
+
+    // ── Zoom Indicator Click → Reset ──────────────────────────────────
+    document.getElementById('zoom-level').addEventListener('click', () => {
+      zoomLevel = 1.0; panX = 0; panY = 0;
+      updateZoomIndicator();
+      renderCanvas();
+      renderMinimap(canvas);
+    });
+
     // ── Zoom Buttons ──────────────────────────────────────────────────
     const applyZoomCenter = (newZoom) => {
       const cr = canvas.getBoundingClientRect();
