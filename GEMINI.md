@@ -52,6 +52,11 @@ Before proposing any new requirement, search the **Requirement Index** at the bo
 > [!CAUTION]
 > **NEVER use `git push --force` or `git push --force-with-lease`.** If there are conflicts, resolve them with `git pull --rebase` or a merge commit. To clean up commit history, use squash merge on the PR.
 
+### 🌐 Browser Subagent (MANDATORY)
+
+- **Reuse open tabs** — when a browser tab with the same hostname is already open, navigate within that tab instead of opening a new one. Only open a new tab if no existing tab matches the target hostname.
+- **Includes Codespaces** — the same rule applies to GitHub Codespace tabs (`*.github.dev`). Never open a duplicate Codespace tab.
+
 ---
 
 ## TIER 1: FD STACK RULES

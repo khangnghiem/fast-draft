@@ -267,7 +267,7 @@ pub enum VPlace {
     Bottom,
 }
 
-/// A reusable theme set that nodes can reference via `use: theme_name`.
+/// A reusable style set that nodes can reference via `use: style_name`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Properties {
     pub fill: Option<Paint>,
@@ -558,7 +558,7 @@ pub struct SceneNode {
     /// Inline style overrides on this node.
     pub props: Properties,
 
-    /// Named theme references (`use: base_text`).
+    /// Named style references (`use: base_text`).
     pub use_styles: SmallVec<[NodeId; 2]>,
 
     /// Constraint-based positioning.
@@ -623,7 +623,7 @@ pub struct SceneGraph {
     /// The root node index.
     pub root: NodeIndex,
 
-    /// Named theme definitions (`theme base_text { ... }`).
+    /// Named style definitions (`style base_text { ... }`).
     pub styles: HashMap<NodeId, Properties>,
 
     /// Index from NodeId → NodeIndex for fast lookup.

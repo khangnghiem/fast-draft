@@ -190,11 +190,11 @@
 
 ### v0.10.60 — Format Precision & AI Comprehensibility (R4.21)
 
-- **FEATURE (R4.21)**: Comprehensibility Score requirement — R4.21 documents a planned 0–100 score measuring AI comprehensibility (semantic naming ratio, comment density, theme reuse, edge default coverage, token cost)
+- **FEATURE (R4.21)**: Comprehensibility Score requirement — R4.21 documents a planned 0–100 score measuring AI comprehensibility (semantic naming ratio, comment density, style reuse, edge default coverage, token cost)
 - **CORE**: 1-decimal precision — `format_num` emits 1dp instead of 2dp for coordinates, dimensions, and scales (token efficiency)
 - **CORE**: Edge defaults — `edge_defaults {}` block defines document-level default stroke/arrow/curve; individual edges skip matching properties
 - **CORE**: ReadMode::Diff — `snapshot_graph()` creates hash-based snapshot; `emit_diff(graph, &snapshot)` outputs `+`/`~`/`-` prefixed changes
-- **CORE**: Inline doc-comments — emitter generates `# [auto]` comments (text labels, child counts, theme refs, edge connections); parser skips `[auto]` on round-trip
+- **CORE**: Inline doc-comments — emitter generates `# [auto]` comments (text labels, child counts, style refs, edge connections); parser skips `[auto]` on round-trip
 - **EXTENSION**: Edge-based naming — `ai-renamify.ts` adds `edgeTargets` to `NodeContext`; anonymous nodes connected to named nodes get `_to_target` suffix
 - **EXTENSION**: Unified Refactor command — `ai-refactor.ts` orchestrates Renamify + style hoisting; `fd.refactor` command registered in palette
 - **TESTING**: 14 new tests — F1 precision (2), F2 edge defaults (3), F5 snapshot/diff (4), F6 auto-comments (4), comprehensibility score (1)
