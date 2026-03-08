@@ -649,7 +649,7 @@ interface LibraryFile {
 
 /**
  * Scan workspace `libraries/` directories for .fd files.
- * Parse each file to extract reusable components (themes, groups, nodes).
+ * Parse each file to extract reusable components (styles, groups, nodes).
  */
 async function scanLibraryFiles(): Promise<LibraryFile[]> {
   const results: LibraryFile[] = [];
@@ -678,7 +678,7 @@ async function scanLibraryFiles(): Promise<LibraryFile[]> {
 
 /**
  * Parse a library .fd file to extract component definitions.
- * Extracts themes and top-level nodes (group, rect, ellipse, etc.) with their full code.
+ * Extracts styles and top-level nodes (group, rect, ellipse, etc.) with their full code.
  */
 function parseLibraryComponents(text: string): LibraryComponent[] {
   const components: LibraryComponent[] = [];
@@ -694,9 +694,9 @@ function parseLibraryComponents(text: string): LibraryComponent[] {
       continue;
     }
 
-    // Theme definition: theme name { ... }
-    const themeMatch = trimmed.match(/^theme\s+(\w+)\s*\{/);
-    if (themeMatch) {
+    // Style definition: style name { ... } (also accepts legacy `theme`)
+    const styleMatch = trimmed.match(/^(?:style|theme)\s+(\w+)\s*\{/);
+    if (styleMatch) {
       const startLine = i;
       let depth = 1;
       i++;
@@ -706,7 +706,7 @@ function parseLibraryComponents(text: string): LibraryComponent[] {
         i++;
       }
       const code = lines.slice(startLine, i).join("\n");
-      components.push({ name: themeMatch[1], kind: "theme", code });
+      components.push({ name: styleMatch[1], kind: "style", code });
       continue;
     }
 

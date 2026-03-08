@@ -1,17 +1,17 @@
 # FD v1
 # SaaS landing page — hero section with CTA, features, and social proof
 
-theme heading {
+style heading {
   fill: #1A1A2E
   font: "Inter" 700 32
 }
 
-theme body {
+style body {
   fill: #6B7280
   font: "Inter" 400 16
 }
 
-theme card {
+style card {
   fill: #FFFFFF
   corner: 16
 }

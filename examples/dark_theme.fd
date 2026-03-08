@@ -1,24 +1,24 @@
 # ─── Themes ───
 
-theme dark_accent {
+style dark_accent {
   fill: #A29BFE  # blue
 }
 
-theme dark_bg {
+style dark_bg {
   fill: #1A1A2E  # blue
 }
 
-theme dark_card {
+style dark_card {
   fill: #2D2D44  # blue
   corner: 12
 }
 
-theme dark_muted {
+style dark_muted {
   fill: #6B7280  # blue
   font: "Inter" regular 12
 }
 
-theme dark_text {
+style dark_text {
   fill: #E0E0E0  # white
   font: "Inter" regular 14
 }
