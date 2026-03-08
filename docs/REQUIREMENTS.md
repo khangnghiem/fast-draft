@@ -315,3 +315,4 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | path / d: commands | R3.62, R3.4 |
 | padding / spacing | R1.21 |
 | resizable panels | R6.7 |
+| edge selection | R3.1, R1.10 |

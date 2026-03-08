@@ -82,7 +82,16 @@ pub fn render_scene(
     );
 
     // Draw edges between nodes
-    draw_edges(ctx, graph, bounds, time_ms, hovered_id, pressed_id, sketchy);
+    draw_edges(
+        ctx,
+        graph,
+        bounds,
+        time_ms,
+        hovered_id,
+        pressed_id,
+        selected_ids,
+        sketchy,
+    );
 
     // Draw smart guides (alignment lines)
     draw_smart_guides(ctx, smart_guides);
@@ -835,6 +844,7 @@ fn draw_smart_guides(ctx: &CanvasRenderingContext2d, guides: &[(f64, f64, f64, f
 
 // ─── Edge rendering ─────────────────────────────────────────────────────────
 
+#[allow(clippy::too_many_arguments)]
 fn draw_edges(
     ctx: &CanvasRenderingContext2d,
     graph: &SceneGraph,
@@ -842,6 +852,7 @@ fn draw_edges(
     time_ms: f64,
     hovered_id: Option<&str>,
     pressed_id: Option<&str>,
+    selected_ids: &[String],
     sketchy: bool,
 ) {
     use fd_core::model::{ArrowKind, CurveKind, EdgeAnchor};
@@ -924,6 +935,17 @@ fn draw_edges(
             }
         }
         ctx.stroke();
+
+        // Selection highlight: draw a thicker stroke on top
+        let is_selected = selected_ids.iter().any(|s| s == edge.id.as_str());
+        if is_selected {
+            ctx.set_stroke_style_str("#4FC3F7");
+            ctx.set_line_width(stroke_width + 2.0);
+            ctx.stroke();
+            // Restore the original stroke for subsequent drawing
+            ctx.set_stroke_style_str(&stroke_color);
+            ctx.set_line_width(stroke_width);
+        }
 
         // Arrowheads — use curve tangent direction, not center-to-center
         let (end_from_x, end_from_y, start_from_x, start_from_y) = match edge.curve {
