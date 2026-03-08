@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.10.76 — Resizable Panels (R6.7)
+
+- **UX (R6.7)**: Layers panel is now resizable — drag the right edge handle to resize between 120–360px (site) or 140–400px (VS Code); handle highlights with accent color on hover/drag; double-click handle to collapse panel to 0px; click thin restore strip to uncollapse
+- **UX (R6.7)**: Properties panel is now resizable — same drag/collapse mechanism on the left edge; canvas area dynamically adjusts via CSS variables `--layers-width` / `--props-width`
+- **UX (R6.7)**: Panel widths persist across sessions — site uses `localStorage`, VS Code uses `vscode.setState()`; collapsed state also persisted
+- **UX (R6.7)**: Floating toolbar offset dynamically tracks layers panel width — `left: calc(var(--layers-width) + 12px)` replaces hardcoded `192px`
+- **SITE**: `setupPanelResize()` in `playground.js` — pointer capture drag handler, MutationObserver for props visibility, localStorage persistence
+- **EXTENSION**: `setupPanelResize()` in `panels.js` — same drag handler pattern with `vscode.setState()` persistence; `getLayersPanelWidth()` in `navigation.js` already reads `offsetWidth` dynamically, so all zoom/fit/snap calculations auto-adapt
+
 ### v0.10.75 — Context Menu (R6.6)
 
 - **UX (R6.6)**: Right-click context menu on playground canvas — glassmorphic dropdown with 8 actions: Duplicate, Delete, Bring Forward, Send Backward, Group, Ungroup, Copy as .fd; auto-selects node under cursor via `hit_test_at()`; dismisses on outside click, Escape, or pointerdown

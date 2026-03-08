@@ -343,7 +343,9 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       left: 0;
       top: 0;
       bottom: 0;
-      width: 232px;
+      width: var(--layers-width, 232px);
+      min-width: 0;
+      max-width: 400px;
       background: var(--fd-surface);
       border-right: 0.5px solid var(--fd-border);
       overflow-y: auto;
@@ -353,6 +355,13 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       padding: 0;
       backdrop-filter: blur(24px) saturate(180%);
       -webkit-backdrop-filter: blur(24px) saturate(180%);
+      transition: width 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+    #layers-panel.no-transition { transition: none; }
+    #layers-panel.collapsed {
+      width: 0 !important;
+      border-right: none;
+      overflow: hidden;
     }
     #layers-panel::-webkit-scrollbar { width: 6px; }
     #layers-panel::-webkit-scrollbar-track { background: transparent; }
@@ -1380,6 +1389,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       position: relative;
       overflow: hidden;
       display: flex;
+      --layers-width: 232px;
+      --props-width: 0px;
     }
     canvas {
       display: block;
@@ -1387,6 +1398,59 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       position: relative;
       z-index: 1;
     }
+
+    /* ── Panel Resize Handles ── */
+    .panel-resize-handle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      cursor: col-resize;
+      z-index: 20;
+      background: transparent;
+      transition: background 0.15s ease;
+    }
+    .panel-resize-handle::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 8px;
+      left: -2px;
+    }
+    .panel-resize-handle:hover,
+    .panel-resize-handle.active {
+      background: var(--fd-accent);
+    }
+    .panel-resize-handle.layers-handle {
+      right: -2px;
+    }
+    .panel-resize-handle.props-handle {
+      left: -2px;
+    }
+    .panel-restore-strip {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      z-index: 16;
+      cursor: pointer;
+      background: transparent;
+      transition: background 0.15s ease;
+    }
+    .panel-restore-strip:hover {
+      background: var(--fd-accent-dim);
+    }
+    .panel-restore-strip.layers-restore {
+      left: 0;
+      display: none;
+    }
+    .panel-restore-strip.props-restore {
+      right: 0;
+      display: none;
+    }
+    #layers-panel.collapsed ~ .layers-restore { display: block; }
+    #props-panel.collapsed ~ .props-restore { display: block; }
     #loading {
       position: absolute;
       inset: 0;
@@ -1440,9 +1504,16 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       transition: width 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
       flex-shrink: 0;
       overflow-y: auto;
+      min-width: 0;
+      max-width: 400px;
     }
+    #props-panel.no-transition { transition: none; }
     #props-panel.visible {
-      width: 244px;
+      width: var(--props-width, 244px);
+    }
+    #props-panel.collapsed {
+      width: 0 !important;
+      overflow: hidden;
     }
     .props-inner {
       padding: 16px 14px;
@@ -2514,7 +2585,10 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
     <div id="center-snap-guides"></div>
     <div id="layers-panel"></div>
+    <div class="panel-resize-handle layers-handle" id="layers-resize"></div>
     <div id="library-panel"></div>
+    <div class="panel-restore-strip layers-restore" id="layers-restore" title="Show layers panel"></div>
+    <div class="panel-restore-strip props-restore" id="props-restore" title="Show properties panel"></div>
     <div id="minimap-container"><canvas id="minimap-canvas"></canvas><div id="minimap-zoom-controls"><button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-reset-btn" title="Reset zoom (click)">100%</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button></div></div>
     <!-- Floating Bottom Toolbar (Scroll UX) -->
     <div id="floating-toolbar" class="scroll-toolbar horizontal unrolled">

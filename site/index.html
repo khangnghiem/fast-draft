@@ -136,6 +136,7 @@
           </div>
           <div id="canvas-wrapper">
             <div id="layers-panel"></div>
+            <div class="panel-resize-handle layers-handle" id="layers-resize"></div>
             <canvas id="fd-canvas"></canvas>
             <div id="floating-toolbar">
               <button class="ft-btn active" data-tool="select" title="Select (V)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2L3.5 13.5L7 10L11.5 14.5L13 13L9 8.5L13 8.5Z"/></svg></button>
@@ -220,6 +221,9 @@
               </div>
               <p class="loading-text">Initializing WASM engine…</p>
             </div>
+            <div class="panel-resize-handle props-handle" id="props-resize"></div>
+            <div class="panel-restore-strip layers-restore" id="layers-restore" title="Show layers panel"></div>
+            <div class="panel-restore-strip props-restore" id="props-restore" title="Show properties panel"></div>
           </div>
         </div>
       </div>

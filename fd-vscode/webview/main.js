@@ -3851,6 +3851,134 @@ function wireLibraryHandlers(panel) {
   });
 }
 
+// ─── Panel Resize ────────────────────────────────────────────────────────
+
+/** Set up drag-to-resize for layers and properties panels. */
+function setupPanelResize() {
+  const container = document.getElementById("canvas-container");
+  const layersPanel = document.getElementById("layers-panel");
+  const layersHandle = document.getElementById("layers-resize");
+  const propsPanel = document.getElementById("props-panel");
+  const layersRestore = document.getElementById("layers-restore");
+  const propsRestore = document.getElementById("props-restore");
+
+  if (!container || !layersPanel) return;
+
+  const MIN_WIDTH = 140;
+  const MAX_WIDTH = 400;
+  const DEFAULT_LAYERS_W = 232;
+  const DEFAULT_PROPS_W = 244;
+
+  // Restore persisted state
+  const savedState = vscode.getState() || {};
+  if (savedState.layersWidth && savedState.layersWidth >= MIN_WIDTH && savedState.layersWidth <= MAX_WIDTH) {
+    container.style.setProperty("--layers-width", savedState.layersWidth + "px");
+  }
+  if (savedState.propsWidth && savedState.propsWidth >= MIN_WIDTH && savedState.propsWidth <= MAX_WIDTH) {
+    container.style.setProperty("--props-width", savedState.propsWidth + "px");
+  }
+  if (savedState.layersCollapsed) {
+    layersPanel.classList.add("collapsed");
+    container.style.setProperty("--layers-width", "0px");
+  }
+
+  /** Position layers resize handle at panel's right edge. */
+  function positionLayersHandle() {
+    if (!layersHandle) return;
+    const w = layersPanel.classList.contains("collapsed") ? 0 : layersPanel.offsetWidth;
+    layersHandle.style.left = w + "px";
+    layersHandle.style.display = layersPanel.classList.contains("collapsed") ? "none" : "";
+  }
+
+  // Initial position
+  requestAnimationFrame(positionLayersHandle);
+
+  // ── Layers panel drag ──
+  if (layersHandle) {
+    let dragging = false;
+    let startX = 0;
+    let startW = 0;
+
+    layersHandle.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragging = true;
+      startX = e.clientX;
+      startW = layersPanel.offsetWidth;
+      layersPanel.classList.add("no-transition");
+      layersHandle.classList.add("active");
+      layersHandle.setPointerCapture(e.pointerId);
+    });
+
+    layersHandle.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      const newW = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startW + dx));
+      container.style.setProperty("--layers-width", newW + "px");
+      positionLayersHandle();
+      renderDirty = true;
+    });
+
+    const endDrag = () => {
+      if (!dragging) return;
+      dragging = false;
+      layersPanel.classList.remove("no-transition");
+      layersHandle.classList.remove("active");
+      const w = layersPanel.offsetWidth;
+      vscode.setState({ ...(vscode.getState() || {}), layersWidth: w });
+    };
+    layersHandle.addEventListener("pointerup", endDrag);
+    layersHandle.addEventListener("pointercancel", endDrag);
+
+    // Double-click to collapse
+    layersHandle.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isCollapsed = layersPanel.classList.toggle("collapsed");
+      if (isCollapsed) {
+        container.style.setProperty("--layers-width", "0px");
+        vscode.setState({ ...(vscode.getState() || {}), layersCollapsed: true });
+      } else {
+        const state = vscode.getState() || {};
+        const restoreW = (state.layersWidth >= MIN_WIDTH && state.layersWidth <= MAX_WIDTH) ? state.layersWidth : DEFAULT_LAYERS_W;
+        container.style.setProperty("--layers-width", restoreW + "px");
+        vscode.setState({ ...(vscode.getState() || {}), layersCollapsed: false });
+      }
+      requestAnimationFrame(() => { positionLayersHandle(); renderDirty = true; });
+    });
+  }
+
+  // ── Restore strips ──
+  if (layersRestore) {
+    layersRestore.addEventListener("click", () => {
+      layersPanel.classList.remove("collapsed");
+      const state = vscode.getState() || {};
+      const restoreW = (state.layersWidth >= MIN_WIDTH && state.layersWidth <= MAX_WIDTH) ? state.layersWidth : DEFAULT_LAYERS_W;
+      container.style.setProperty("--layers-width", restoreW + "px");
+      vscode.setState({ ...(vscode.getState() || {}), layersCollapsed: false });
+      requestAnimationFrame(() => { positionLayersHandle(); renderDirty = true; });
+    });
+  }
+
+  // ── Props panel: observe visibility and apply persisted width ──
+  if (propsPanel) {
+    const propsObserver = new MutationObserver(() => {
+      if (propsPanel.classList.contains("visible") && !propsPanel.classList.contains("collapsed")) {
+        const state = vscode.getState() || {};
+        const w = (state.propsWidth >= MIN_WIDTH && state.propsWidth <= MAX_WIDTH) ? state.propsWidth : DEFAULT_PROPS_W;
+        container.style.setProperty("--props-width", w + "px");
+      } else {
+        container.style.setProperty("--props-width", "0px");
+      }
+      renderDirty = true;
+    });
+    propsObserver.observe(propsPanel, { attributes: true, attributeFilter: ["class"] });
+  }
+
+  // NOTE: Props panel has no separate resize handle in VS Code since it uses
+  // a flex-based layout and the panels are overlays on the canvas-container.
+  // The layers panel is the primary resizable panel; props panel gets persisted width.
+}
 // ─── Inline Text Editor ────────────────────────────────────────────────────
 
 /** Inline textarea for editing text nodes and shape labels directly on canvas. */
@@ -6782,6 +6910,7 @@ async function main() {
     setupInsertMenu();
     setupMinimap();
     setupColorSwatches();
+    setupPanelResize();
     setupTouchGestures();
     setupZoomControls();
     setupUndoRedoControls();
