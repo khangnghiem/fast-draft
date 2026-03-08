@@ -237,6 +237,43 @@ function renderCanvas() {
   fdCanvas.render(ctx, performance.now());
 }
 
+/** Show a brief toast notification */
+function showToast(msg) {
+  const el = document.createElement('div');
+  el.className = 'fd-toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => el.remove(), 300);
+  }, 1500);
+}
+
+/** Compute full scene bounding box from all @id nodes */
+function getSceneBounds() {
+  if (!fdCanvas) return null;
+  const text = fdCanvas.get_text();
+  const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
+  let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
+  let found = false;
+  let m;
+  while ((m = idRegex.exec(text)) !== null) {
+    try {
+      const bj = fdCanvas.get_node_bounds(m[1]);
+      if (!bj) continue;
+      const b = JSON.parse(bj);
+      if (b.width > 0 && b.height > 0) {
+        sx = Math.min(sx, b.x); sy = Math.min(sy, b.y);
+        sx2 = Math.max(sx2, b.x + b.width); sy2 = Math.max(sy2, b.y + b.height);
+        found = true;
+      }
+    } catch (_) {}
+  }
+  if (!found) return null;
+  const pad = 20;
+  return { x: sx - pad, y: sy - pad, w: sx2 - sx + pad * 2, h: sy2 - sy + pad * 2 };
+}
 /** Update toolbar active state */
 function updateToolbar(activeTool) {
   document.querySelectorAll('.ft-btn').forEach(b => b.classList.remove('active'));
@@ -1223,6 +1260,50 @@ async function initPlayground() {
             }
             settingsMenu?.classList.remove('visible');
             renderCanvas();
+            return;
+          }
+          case 'copy-png': {
+            if (!fdCanvas) break;
+            // Use selection bounds if available, else full scene
+            const selBounds = fdCanvas.get_selection_bounds();
+            let bx, by, bw, bh;
+            if (selBounds) {
+              [bx, by, bw, bh] = selBounds;
+            } else {
+              const sb = getSceneBounds();
+              if (!sb) { showToast('Nothing to export'); break; }
+              bx = sb.x; by = sb.y; bw = sb.w; bh = sb.h;
+            }
+            const dpr = window.devicePixelRatio || 1;
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = Math.ceil(bw * dpr);
+            offCanvas.height = Math.ceil(bh * dpr);
+            const offCtx = offCanvas.getContext('2d');
+            offCtx.scale(dpr, dpr);
+            fdCanvas.render_export(offCtx, -bx, -by);
+            offCanvas.toBlob((blob) => {
+              if (!blob) { showToast('Export failed'); return; }
+              navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': blob })
+              ]).then(() => showToast('Copied as PNG!'))
+                .catch(() => showToast('Clipboard blocked'));
+            }, 'image/png');
+            settingsMenu?.classList.remove('visible');
+            return;
+          }
+          case 'export-svg': {
+            if (!fdCanvas) break;
+            const svgStr = fdCanvas.export_svg();
+            if (!svgStr) { showToast('Nothing to export'); break; }
+            const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'fast-draft-export.svg';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('SVG downloaded!');
+            settingsMenu?.classList.remove('visible');
             return;
           }
         }
