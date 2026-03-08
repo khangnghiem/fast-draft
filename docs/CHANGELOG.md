@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.73 — Layers Panel (R6.6)
+
+- **UX (R6.6)**: Layers panel (tree view sidebar) in playground canvas — 180px left sidebar with glassmorphic background showing hierarchical document tree parsed from FD text; displays node kind icons (◻ group, ▢ rect, ○ ellipse, T text, ⟶ edge, ◆ style), click-to-select, and chevron expand/collapse for groups
+- **SITE**: Ported `parseLayerTree()` and `renderLayerNode()` from VS Code extension `panels.js`; `refreshLayersPanel()` with diff-based skip (text + selectedId); throttled at ~10fps in render loop
+- **SITE**: Canvas and floating toolbar offset by 180px to accommodate sidebar; `resizeCanvas()` and `FdCanvas` init adjusted for panel width
+
 ### v0.10.72 — Undo/Redo Buttons + Canvas Header Cleanup (R6.6)
 
 - **UX (R6.6)**: Undo/redo buttons in playground canvas header — ↶ and ↷ ghost buttons with keyboard shortcut tooltips; calls `fdCanvas.undo()` / `fdCanvas.redo()` and syncs canvas + code editor

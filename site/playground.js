@@ -261,6 +261,173 @@ function updateFab(canvas) {
   }
 }
 
+/** ─── Layers Panel ────────────────────────────────────────────────────── */
+const LAYER_ICONS = {
+  group: '◻', frame: '▣', rect: '▢', ellipse: '○',
+  path: '〜', text: 'T', style: '◆', edge: '⟶', spec: '◇'
+};
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/** Parse FD source into a hierarchical layer tree. */
+function parseLayerTree(source) {
+  const lines = source.split('\n');
+  const root = [];
+  const stack = [];
+  let braceDepth = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const openBraces = (trimmed.match(/\{/g) || []).length;
+    const closeBraces = (trimmed.match(/\}/g) || []).length;
+
+    // Style definition
+    const styleMatch = trimmed.match(/^style\s+(\w+)\s*\{/);
+    if (styleMatch) {
+      const node = { id: styleMatch[1], kind: 'style', text: '', children: [] };
+      if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
+      else root.push(node);
+      braceDepth += openBraces - closeBraces;
+      stack.push({ node, depth: braceDepth });
+      continue;
+    }
+
+    // Edge
+    const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s*\{/);
+    if (edgeMatch) {
+      const node = { id: edgeMatch[1], kind: 'edge', text: '', children: [] };
+      if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
+      else root.push(node);
+      braceDepth += openBraces - closeBraces;
+      stack.push({ node, depth: braceDepth });
+      continue;
+    }
+
+    // Typed node
+    const nodeMatch = trimmed.match(/^(group|frame|rect|ellipse|path|text)\s+@(\w+)(?:\s+"([^"]*)")?\s*\{?/);
+    if (nodeMatch) {
+      const node = { id: nodeMatch[2], kind: nodeMatch[1], text: nodeMatch[3] || '', children: [] };
+      if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
+      else root.push(node);
+      if (trimmed.endsWith('{')) { braceDepth += 1; stack.push({ node, depth: braceDepth }); }
+      continue;
+    }
+
+    // Closing brace
+    if (trimmed === '}') {
+      braceDepth -= 1;
+      while (stack.length > 0 && stack[stack.length - 1].depth > braceDepth) stack.pop();
+      continue;
+    }
+
+    braceDepth += openBraces - closeBraces;
+  }
+  return root;
+}
+
+/** Render a layer tree node as HTML. */
+function renderLayerNode(node, selectedId, depth = 0) {
+  const icon = LAYER_ICONS[node.kind] || '•';
+  const isSelected = node.id === selectedId;
+  const hasChildren = node.children.length > 0;
+
+  let indent = '';
+  for (let i = 0; i < depth; i++) indent += '<span class="layer-indent-guide"></span>';
+
+  const chevronClass = hasChildren ? 'layer-chevron expanded' : 'layer-chevron empty';
+  const chevron = `<span class="${chevronClass}" data-toggle-id="${escHtml(node.id)}">▶</span>`;
+
+  let html = `<div class="layer-item${isSelected ? ' selected' : ''}" data-node-id="${escHtml(node.id)}">`;
+  html += `<span class="layer-indent">${indent}</span>`;
+  html += chevron;
+  html += `<span class="layer-icon">${icon}</span>`;
+  html += `<span class="layer-name">${escHtml(node.id)}</span>`;
+  html += `<span class="layer-kind">${escHtml(node.kind)}</span>`;
+  html += '</div>';
+
+  if (hasChildren) {
+    html += `<div class="layer-children" data-parent-id="${escHtml(node.id)}">`;
+    for (const child of node.children) html += renderLayerNode(child, selectedId, depth + 1);
+    html += '</div>';
+  }
+  return html;
+}
+
+let lastLayerText = '';
+let lastLayerSelectedId = '';
+
+/** Refresh the layers panel. */
+function refreshLayersPanel() {
+  const panel = document.getElementById('layers-panel');
+  if (!panel || !fdCanvas) return;
+
+  const selectedId = fdCanvas.get_selected_id() || '';
+  const source = fdCanvas.get_text();
+
+  // Selection-only change: just update highlights
+  if (source === lastLayerText && selectedId !== lastLayerSelectedId) {
+    lastLayerSelectedId = selectedId;
+    panel.querySelectorAll('.layer-item').forEach(el =>
+      el.classList.toggle('selected', el.getAttribute('data-node-id') === selectedId)
+    );
+    const sel = panel.querySelector('.layer-item.selected');
+    if (sel) sel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    return;
+  }
+
+  // No change at all
+  if (source === lastLayerText && selectedId === lastLayerSelectedId) return;
+
+  lastLayerText = source;
+  lastLayerSelectedId = selectedId;
+
+  const tree = parseLayerTree(source);
+  const countNodes = (nodes) => nodes.reduce((s, n) => s + 1 + countNodes(n.children), 0);
+  const total = countNodes(tree);
+
+  let html = '<div class="layers-header">';
+  html += '<span class="layers-title">Layers</span>';
+  html += `<span class="layers-count">${total}</span>`;
+  html += '</div><div class="layers-body">';
+  for (const node of tree) html += renderLayerNode(node, selectedId);
+  html += '</div>';
+
+  panel.innerHTML = html;
+
+  // Wire click-to-select
+  panel.querySelectorAll('.layer-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.layer-chevron')) return;
+      e.stopPropagation();
+      const nodeId = item.getAttribute('data-node-id');
+      if (nodeId && fdCanvas) {
+        fdCanvas.select_by_id(nodeId);
+        renderCanvas();
+        lastLayerSelectedId = nodeId;
+        panel.querySelectorAll('.layer-item').forEach(el =>
+          el.classList.toggle('selected', el.getAttribute('data-node-id') === nodeId)
+        );
+        updateFab(document.getElementById('fd-canvas'));
+      }
+    });
+  });
+
+  // Wire chevron toggle
+  panel.querySelectorAll('.layer-chevron:not(.empty)').forEach(chevron => {
+    chevron.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const toggleId = chevron.getAttribute('data-toggle-id');
+      const childrenEl = panel.querySelector(`.layer-children[data-parent-id="${toggleId}"]`);
+      if (childrenEl) {
+        const collapsed = childrenEl.classList.toggle('collapsed');
+        chevron.classList.toggle('expanded', !collapsed);
+      }
+    });
+  });
+}
+
 /** ─── Minimap ─────────────────────────────────────────────────────────── */
 let minimapLastRender = 0;
 const MINIMAP_INTERVAL = 100; // ~10fps
@@ -369,12 +536,13 @@ async function initPlayground() {
     const resizeCanvas = () => {
       const rect = wrapper.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = rect.width * dpr;
+      const canvasWidth = rect.width - 180; // layers panel offset
+      canvas.width = canvasWidth * dpr;
       canvas.height = rect.height * dpr;
-      canvas.style.width = rect.width + 'px';
+      canvas.style.width = canvasWidth + 'px';
       canvas.style.height = rect.height + 'px';
       if (fdCanvas) {
-        fdCanvas.resize(rect.width, rect.height);
+        fdCanvas.resize(canvasWidth, rect.height);
       }
     };
 
@@ -382,7 +550,8 @@ async function initPlayground() {
 
     // Create the FdCanvas instance
     const rect = wrapper.getBoundingClientRect();
-    fdCanvas = new wasm.FdCanvas(rect.width, rect.height);
+    const canvasW = rect.width - 180;
+    fdCanvas = new wasm.FdCanvas(canvasW, rect.height);
     fdCanvas.set_theme(isDark);
     fdCanvas.set_text(editor.value);
 
@@ -392,9 +561,10 @@ async function initPlayground() {
     // Render loop — continuous for hover effects and animations
     const renderLoop = (time) => {
       renderCanvas();
-      // Minimap at ~10fps
+      // Minimap + Layers at ~10fps
       if (time - minimapLastRender > MINIMAP_INTERVAL) {
         renderMinimap(canvas);
+        refreshLayersPanel();
         minimapLastRender = time;
       }
       animFrameId = requestAnimationFrame(renderLoop);
