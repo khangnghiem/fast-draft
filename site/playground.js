@@ -213,8 +213,11 @@ function updateToolbar(activeTool) {
 
 /** Update zoom indicator text */
 function updateZoomIndicator() {
+  const pct = Math.round(zoomLevel * 100) + '%';
   const el = document.getElementById('zoom-level');
-  if (el) el.textContent = Math.round(zoomLevel * 100) + '%';
+  if (el) el.textContent = pct;
+  const rb = document.getElementById('zoom-reset-btn');
+  if (rb) rb.textContent = pct;
 }
 
 /** Sync canvas text back to textarea with echo suppression */
@@ -256,6 +259,94 @@ function updateFab(canvas) {
   } catch (_) {
     fab.classList.remove('visible');
   }
+}
+
+/** ─── Minimap ─────────────────────────────────────────────────────────── */
+let minimapLastRender = 0;
+const MINIMAP_INTERVAL = 100; // ~10fps
+
+/** Render the minimap: scaled scene overview + blue viewport rect */
+function renderMinimap(canvas) {
+  const mc = document.getElementById('minimap-canvas');
+  if (!mc || !fdCanvas) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const mw = 150, mh = 100;
+  mc.width = mw * dpr;
+  mc.height = mh * dpr;
+
+  const mctx = mc.getContext('2d');
+  mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  mctx.clearRect(0, 0, mw, mh);
+
+  // Extract @ids from text
+  const text = fdCanvas.get_text();
+  const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
+  const ids = [];
+  let m;
+  while ((m = idRegex.exec(text)) !== null) ids.push(m[1]);
+
+  // Get bounds for all nodes
+  const nodes = [];
+  for (const id of ids) {
+    try {
+      const bj = fdCanvas.get_node_bounds(id);
+      if (!bj) continue;
+      const b = JSON.parse(bj);
+      if (b.width > 0 && b.height > 0) nodes.push(b);
+    } catch (_) {}
+  }
+
+  if (nodes.length === 0) return;
+
+  // Compute scene bounding box with padding
+  let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
+  for (const n of nodes) {
+    sx = Math.min(sx, n.x);
+    sy = Math.min(sy, n.y);
+    sx2 = Math.max(sx2, n.x + n.width);
+    sy2 = Math.max(sy2, n.y + n.height);
+  }
+  const pad = 40;
+  sx -= pad; sy -= pad; sx2 += pad; sy2 += pad;
+  const sw = sx2 - sx, sh = sy2 - sy;
+
+  // Scale to fit minimap
+  const scale = Math.min(mw / sw, mh / sh);
+  const ox = (mw - sw * scale) / 2;
+  const oy = (mh - sh * scale) / 2;
+
+  // Draw nodes
+  mctx.fillStyle = 'rgba(108, 92, 231, 0.35)';
+  mctx.strokeStyle = 'rgba(108, 92, 231, 0.6)';
+  mctx.lineWidth = 0.5;
+  for (const n of nodes) {
+    const rx = ox + (n.x - sx) * scale;
+    const ry = oy + (n.y - sy) * scale;
+    const rw = n.width * scale;
+    const rh = n.height * scale;
+    mctx.fillRect(rx, ry, rw, rh);
+    mctx.strokeRect(rx, ry, rw, rh);
+  }
+
+  // Draw viewport rect
+  if (canvas) {
+    const cr = canvas.getBoundingClientRect();
+    const vx = -panX / zoomLevel;
+    const vy = -panY / zoomLevel;
+    const vw = cr.width / zoomLevel;
+    const vh = cr.height / zoomLevel;
+    const vrx = ox + (vx - sx) * scale;
+    const vry = oy + (vy - sy) * scale;
+    const vrw = vw * scale;
+    const vrh = vh * scale;
+    mctx.strokeStyle = '#4FC3F7';
+    mctx.lineWidth = 1.5;
+    mctx.strokeRect(vrx, vry, vrw, vrh);
+  }
+
+  // Store scene info for click-to-pan
+  mc._minimap = { sx, sy, sw, sh, scale, ox, oy };
 }
 
 // ─── Init ────────────────────────────────────────────────────────────────
@@ -301,6 +392,11 @@ async function initPlayground() {
     // Render loop — continuous for hover effects and animations
     const renderLoop = (time) => {
       renderCanvas();
+      // Minimap at ~10fps
+      if (time - minimapLastRender > MINIMAP_INTERVAL) {
+        renderMinimap(canvas);
+        minimapLastRender = time;
+      }
       animFrameId = requestAnimationFrame(renderLoop);
     };
     animFrameId = requestAnimationFrame(renderLoop);
@@ -530,6 +626,58 @@ async function initPlayground() {
     // ── Resize Observer ───────────────────────────────────────────────
     const resizeObserver = new ResizeObserver(() => resizeCanvas());
     resizeObserver.observe(wrapper);
+
+    // ── Minimap Click-to-Pan ───────────────────────────────────────────
+    const minimapCanvas = document.getElementById('minimap-canvas');
+    let mmDragging = false;
+    const minimapPanTo = (e) => {
+      const mc = minimapCanvas;
+      const info = mc._minimap;
+      if (!info || !canvas) return;
+      const rect = mc.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      // Convert minimap coords to scene coords
+      const sceneX = info.sx + (mx - info.ox) / info.scale;
+      const sceneY = info.sy + (my - info.oy) / info.scale;
+      // Center viewport on clicked point
+      const cr = canvas.getBoundingClientRect();
+      panX = cr.width / 2 - sceneX * zoomLevel;
+      panY = cr.height / 2 - sceneY * zoomLevel;
+      renderCanvas();
+      renderMinimap(canvas);
+    };
+    minimapCanvas.addEventListener('pointerdown', (e) => {
+      mmDragging = true;
+      minimapCanvas.setPointerCapture(e.pointerId);
+      minimapPanTo(e);
+    });
+    minimapCanvas.addEventListener('pointermove', (e) => {
+      if (mmDragging) minimapPanTo(e);
+    });
+    minimapCanvas.addEventListener('pointerup', () => { mmDragging = false; });
+
+    // ── Zoom Buttons ──────────────────────────────────────────────────
+    const applyZoomCenter = (newZoom) => {
+      const cr = canvas.getBoundingClientRect();
+      const cx = cr.width / 2;
+      const cy = cr.height / 2;
+      newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, newZoom));
+      panX = cx - (cx - panX) * (newZoom / zoomLevel);
+      panY = cy - (cy - panY) * (newZoom / zoomLevel);
+      zoomLevel = newZoom;
+      updateZoomIndicator();
+      renderCanvas();
+      renderMinimap(canvas);
+    };
+    document.getElementById('zoom-in-btn').addEventListener('click', () => applyZoomCenter(zoomLevel * 1.25));
+    document.getElementById('zoom-out-btn').addEventListener('click', () => applyZoomCenter(zoomLevel / 1.25));
+    document.getElementById('zoom-reset-btn').addEventListener('click', () => {
+      zoomLevel = 1.0; panX = 0; panY = 0;
+      updateZoomIndicator();
+      renderCanvas();
+      renderMinimap(canvas);
+    });
 
     // ── Example Selector ──────────────────────────────────────────────
     document.getElementById('example-select').addEventListener('change', (e) => {

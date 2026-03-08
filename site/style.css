@@ -474,6 +474,56 @@ code {
   user-select: none;
 }
 
+/* ─── Minimap ─── */
+#minimap-container {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 20;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  background: rgba(22, 27, 34, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+#minimap-canvas {
+  display: block;
+  width: 150px;
+  height: 100px;
+}
+#minimap-zoom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.mz-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: var(--mono);
+  padding: 4px 0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.mz-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+.mz-btn:active {
+  transform: scale(0.92);
+}
+#zoom-reset-btn {
+  font-size: 10px;
+  letter-spacing: -0.2px;
+}
+
 /* ─── Floating Action Bar ─── */
 .fab {
   display: none;

@@ -119,6 +119,14 @@
               <button class="ft-btn" data-tool="pen" title="Pen (P)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5L14.5 7.5L6.5 15.5H2.5V11.5Z"/><path d="M10.5 3.5L14.5 7.5"/><path d="M8.5 5.5L12.5 9.5"/></svg></button>
               <button class="ft-btn" data-tool="eraser" title="Eraser (E)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5L8 12L5.5 14.5H2.5V12L9.5 5L12.25 2.25Z"/><path d="M8.5 6L12 9.5"/><line x1="5" y1="15" x2="15" y2="15"/></svg></button>
             </div>
+            <div id="minimap-container">
+              <canvas id="minimap-canvas"></canvas>
+              <div id="minimap-zoom">
+                <button class="mz-btn" id="zoom-out-btn">−</button>
+                <button class="mz-btn" id="zoom-reset-btn">100%</button>
+                <button class="mz-btn" id="zoom-in-btn">+</button>
+              </div>
+            </div>
             <div id="fab" class="fab">
               <label class="fab-item" title="Fill color">
                 <span class="fab-label">Fill</span>
