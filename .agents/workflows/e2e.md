@@ -79,6 +79,42 @@ Take ONE screenshot at the end. Return PASS/FAIL for each check (1-3) and stop.
 
 ---
 
+## Tier: Site Deploy Verification
+
+> Run **after merge** to confirm the deploy landed on [fast-draft.com](https://fast-draft.com).
+> Requires the `pages.yml` workflow to have completed successfully.
+> **One browser subagent call — copy the task below verbatim.**
+
+### Pre-check
+
+1. **Verify the deploy workflow passed:**
+
+   ```bash
+   gh run list --workflow=pages.yml --limit 1 --json status,conclusion
+   ```
+
+   If `conclusion` is not `success`, do NOT proceed — fix the deploy first.
+
+### Browser subagent task:
+
+```
+Navigate to https://fast-draft.com and verify the site is live after deploy:
+
+1. SITE LOADS: Page title contains "Fast Draft", hero section visible with "Design as Code".
+2. PLAYGROUND VISIBLE: Live Playground section with code editor and canvas area visible.
+3. WASM LOADS: Canvas renders shapes (not blank/black). Wait up to 5s for WASM init.
+
+Take ONE screenshot at the end. Return PASS/FAIL for each check (1-3) and stop.
+```
+
+### Reporting:
+
+```
+Site Deploy: ✅ 3/3 — site loads, playground visible, WASM renders. Screenshot attached.
+```
+
+---
+
 ## Tier: Full
 
 > Run for major feature PRs or pre-release. Includes all phases below.
