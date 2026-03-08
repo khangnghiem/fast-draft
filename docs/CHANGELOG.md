@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.10.77 — Apple HIG Canvas Parity (R6.8)
+
+- **UX (R6.8)**: Website playground canvas redesigned with Apple HIG design language — frosted glass toolbar, panels, and overlays using `backdrop-filter: blur(20px) saturate(180%)`; blue accent `#007AFF` replacing purple `#6C5CE7`; SF Pro system font stack; `0.5px` hairline borders; Apple-style color tokens (`--fd-*` CSS variables)
+- **UX (R6.8)**: Horizontal frosted toolbar replaces vertical floating toolbar — tool buttons with text labels + keyboard shortcut hint badges (`V`, `R`, `O`, `T`, `A`, `P`, `E`); segmented control active state with blur shadow; undo/redo buttons + zoom pill in right zone
+- **UX (R6.8)**: Properties panel enriched — `props-inner` wrapper with section labels ("Position & Size", "Appearance"), kind badge (blue capsule), Apple-style input fields
+- **UX (R6.8)**: Layers panel indent guides — thin vertical lines (`::before` pseudo-element) showing hierarchy depth; Apple blue accent on selected items
+- **UX (R6.8)**: Dimension tooltip — `W × H` tooltip appears below dragged/resized nodes during pointer interaction; frosted glass pill with monospace font
+- **UX (R6.8)**: Modifier cursor feedback — ⌘/Meta shows grab cursor, Alt/Option shows copy cursor; matches VS Code extension behavior
+- **SITE**: All canvas components (minimap, FAB, context menu, minimap zoom) updated to Apple HIG frosted glass tokens
+
 ### v0.10.76 — Resizable Panels (R6.7)
 
 - **UX (R6.7)**: Layers panel is now resizable — drag the right edge handle to resize between 120–360px (site) or 140–400px (VS Code); handle highlights with accent color on hover/drag; double-click handle to collapse panel to 0px; click thin restore strip to uncollapse

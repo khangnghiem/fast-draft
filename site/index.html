@@ -125,28 +125,27 @@
           <textarea id="fd-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
         </div>
         <div class="playground-canvas">
-          <div class="editor-header">
-            <span class="editor-dot canvas-dot"></span> Canvas Mode
-            <div class="canvas-header-actions">
-              <button class="ch-btn" id="undo-btn" title="Undo (⌘Z)">↶</button>
-              <button class="ch-btn" id="redo-btn" title="Redo (⇧⌘Z)">↷</button>
-              <span class="ch-sep"></span>
-              <span id="zoom-level" class="zoom-indicator" title="Click to reset zoom">100%</span>
+          <div class="canvas-toolbar" id="canvas-toolbar">
+            <div class="tb-zone tb-left">
+              <button class="tool-btn active" data-tool="select"><span class="tool-icon">⬚</span>Select<span class="tool-key">V</span></button>
+              <button class="tool-btn" data-tool="rect"><span class="tool-icon">▢</span>Rect<span class="tool-key">R</span></button>
+              <button class="tool-btn" data-tool="ellipse"><span class="tool-icon">○</span>Ellipse<span class="tool-key">O</span></button>
+              <button class="tool-btn" data-tool="text"><span class="tool-icon">T</span>Text<span class="tool-key">T</span></button>
+              <button class="tool-btn" data-tool="arrow"><span class="tool-icon">↗</span>Arrow<span class="tool-key">A</span></button>
+              <button class="tool-btn" data-tool="pen"><span class="tool-icon">✎</span>Pen<span class="tool-key">P</span></button>
+              <button class="tool-btn" data-tool="eraser"><span class="tool-icon">◇</span>Eraser<span class="tool-key">E</span></button>
+            </div>
+            <div class="tb-zone tb-center"></div>
+            <div class="tb-zone tb-right">
+              <button class="tool-btn ch-btn" id="undo-btn" title="Undo (⌘Z)">↶</button>
+              <button class="tool-btn ch-btn" id="redo-btn" title="Redo (⇧⌘Z)">↷</button>
+              <span id="zoom-level" class="zoom-pill" title="Click to reset zoom">100%</span>
             </div>
           </div>
           <div id="canvas-wrapper">
             <div id="layers-panel"></div>
             <div class="panel-resize-handle layers-handle" id="layers-resize"></div>
             <canvas id="fd-canvas"></canvas>
-            <div id="floating-toolbar">
-              <button class="ft-btn active" data-tool="select" title="Select (V)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2L3.5 13.5L7 10L11.5 14.5L13 13L9 8.5L13 8.5Z"/></svg></button>
-              <button class="ft-btn" data-tool="rect" title="Rectangle (R)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="12" height="10" rx="2"/></svg></button>
-              <button class="ft-btn" data-tool="ellipse" title="Ellipse (O)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/></svg></button>
-              <button class="ft-btn" data-tool="text" title="Text (T)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4H14"/><path d="M9 4V15"/><path d="M6 15H12"/></svg></button>
-              <button class="ft-btn" data-tool="arrow" title="Arrow (A)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14L14 4"/><path d="M7 4H14V11"/></svg></button>
-              <button class="ft-btn" data-tool="pen" title="Pen (P)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5L14.5 7.5L6.5 15.5H2.5V11.5Z"/><path d="M10.5 3.5L14.5 7.5"/><path d="M8.5 5.5L12.5 9.5"/></svg></button>
-              <button class="ft-btn" data-tool="eraser" title="Eraser (E)"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5L8 12L5.5 14.5H2.5V12L9.5 5L12.25 2.25Z"/><path d="M8.5 6L12 9.5"/><line x1="5" y1="15" x2="15" y2="15"/></svg></button>
-            </div>
             <div id="minimap-container">
               <canvas id="minimap-canvas"></canvas>
               <div id="minimap-zoom">
@@ -158,7 +157,7 @@
             <div id="fab" class="fab">
               <label class="fab-item" title="Fill color">
                 <span class="fab-label">Fill</span>
-                <input type="color" id="fab-fill" class="fab-color" value="#6C5CE7">
+                <input type="color" id="fab-fill" class="fab-color" value="#007AFF">
               </label>
               <div class="fab-sep"></div>
               <label class="fab-item" title="Stroke color">
@@ -169,35 +168,37 @@
               <button id="fab-delete" class="fab-delete" title="Delete (⌫)">🗑</button>
             </div>
             <div id="props-panel">
-              <div class="pp-header">
-                <span class="pp-node-id" id="pp-node-id">—</span>
-                <span class="pp-kind" id="pp-kind"></span>
-              </div>
-              <div class="pp-section">
-                <div class="pp-section-title">Position & Size</div>
-                <div class="pp-grid">
-                  <label class="pp-field"><span>X</span><input type="number" id="pp-x" readonly></label>
-                  <label class="pp-field"><span>Y</span><input type="number" id="pp-y" readonly></label>
-                  <label class="pp-field"><span>W</span><input type="number" id="pp-w" min="1"></label>
-                  <label class="pp-field"><span>H</span><input type="number" id="pp-h" min="1"></label>
+              <div class="props-inner">
+                <div class="props-title">
+                  <span id="pp-node-id">—</span>
+                  <span class="kind-badge" id="pp-kind"></span>
                 </div>
-              </div>
-              <div class="pp-section" id="pp-appearance">
-                <div class="pp-section-title">Appearance</div>
-                <label class="pp-row"><span>Fill</span><input type="color" id="pp-fill" value="#6C5CE7"></label>
-                <label class="pp-row"><span>Stroke</span><input type="color" id="pp-stroke" value="#333333"></label>
-                <label class="pp-row"><span>Stroke W</span><input type="number" id="pp-stroke-w" min="0" step="0.5" value="0"></label>
-                <label class="pp-row"><span>Corner</span><input type="number" id="pp-corner" min="0" value="0"></label>
-                <label class="pp-row"><span>Opacity</span>
-                  <div class="pp-opacity-wrap">
-                    <input type="range" id="pp-opacity" min="0" max="1" step="0.01" value="1">
-                    <span id="pp-opacity-val">100%</span>
+                <div class="props-section">
+                  <div class="props-section-label">Position & Size</div>
+                  <div class="props-grid">
+                    <label class="pp-field"><span>X</span><input type="number" id="pp-x" readonly></label>
+                    <label class="pp-field"><span>Y</span><input type="number" id="pp-y" readonly></label>
+                    <label class="pp-field"><span>W</span><input type="number" id="pp-w" min="1"></label>
+                    <label class="pp-field"><span>H</span><input type="number" id="pp-h" min="1"></label>
                   </div>
-                </label>
-              </div>
-              <div class="pp-section pp-actions">
-                <button class="pp-action-btn" id="pp-duplicate" title="Duplicate">⧉ Duplicate</button>
-                <button class="pp-action-btn pp-delete" id="pp-delete" title="Delete">🗑 Delete</button>
+                </div>
+                <div class="props-section" id="pp-appearance">
+                  <div class="props-section-label">Appearance</div>
+                  <label class="pp-row"><span>Fill</span><input type="color" id="pp-fill" value="#007AFF"></label>
+                  <label class="pp-row"><span>Stroke</span><input type="color" id="pp-stroke" value="#333333"></label>
+                  <label class="pp-row"><span>Stroke W</span><input type="number" id="pp-stroke-w" min="0" step="0.5" value="0"></label>
+                  <label class="pp-row"><span>Corner</span><input type="number" id="pp-corner" min="0" value="0"></label>
+                  <label class="pp-row"><span>Opacity</span>
+                    <div class="pp-opacity-wrap">
+                      <input type="range" id="pp-opacity" min="0" max="1" step="0.01" value="1">
+                      <span id="pp-opacity-val">100%</span>
+                    </div>
+                  </label>
+                </div>
+                <div class="props-section pp-actions">
+                  <button class="pp-action-btn" id="pp-duplicate" title="Duplicate">⧉ Duplicate</button>
+                  <button class="pp-action-btn pp-delete" id="pp-delete" title="Delete">🗑 Delete</button>
+                </div>
               </div>
             </div>
             <div id="ctx-menu">
@@ -212,6 +213,7 @@
               <div class="ctx-sep"></div>
               <button class="ctx-item" data-action="copy-fd">📋 Copy as .fd</button>
             </div>
+            <div id="dimension-tooltip"></div>
             <div id="canvas-loading" class="canvas-loading">
               <div class="skeleton-preview">
                 <div class="skeleton-shape skeleton-rect"></div>
