@@ -44,7 +44,7 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
         } else if rest.starts_with("style ") || rest.starts_with("theme ") {
             let (name, style) = parse_style_block
                 .parse_next(&mut rest)
-                .map_err(|e| format!("line {line}: theme/style error — expected `theme name {{ props }}`, got `{ctx}…`: {e}"))?;
+                .map_err(|e| format!("line {line}: style/theme error — expected `style name {{ props }}`, got `{ctx}…`: {e}"))?;
             graph.define_style(name, style);
             pending_comments.clear();
         } else if rest.starts_with("spec ") || rest.starts_with("spec{") {

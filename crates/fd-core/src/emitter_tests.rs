@@ -1470,7 +1470,7 @@ frame @grd {
 fn make_test_graph() -> SceneGraph {
     // A rich document with styles, layout, anims, specs, and edges
     let input = r#"
-theme accent {
+style accent {
   fill: #6C5CE7
   font: "Inter" bold 16
 }
@@ -1532,7 +1532,7 @@ fn emit_filtered_structure() {
     assert!(!out.contains("fill:"), "no fill in structure mode");
     assert!(!out.contains("spec"), "no spec in structure mode");
     assert!(!out.contains("when"), "no when in structure mode");
-    assert!(!out.contains("theme"), "no theme in structure mode");
+    assert!(!out.contains("style"), "no style in structure mode");
     assert!(!out.contains("edge"), "no edges in structure mode");
 }
 
@@ -1608,7 +1608,7 @@ fn emit_filtered_when() {
     // Should NOT have node-level styles, layout, or spec
     assert!(!out.contains("corner:"), "no corner in when mode");
     assert!(!out.contains("w: 200"), "no dims in when mode");
-    assert!(!out.contains("theme"), "no theme in when mode");
+    assert!(!out.contains("style"), "no style in when mode");
     assert!(!out.contains("spec"), "no spec in when mode");
 }
 
@@ -1631,10 +1631,10 @@ fn emit_filtered_edges() {
 
 #[test]
 fn roundtrip_no_duplicate_separators() {
-    // Document with themes + nodes + edge triggers section separators.
+    // Document with styles + nodes + edge triggers section separators.
     // After multiple round-trips, separators must appear exactly once.
     let input = r#"
-theme accent {
+style accent {
   fill: #A29BFE
 }
 
@@ -1691,7 +1691,7 @@ edge @link {
 fn roundtrip_user_comments_not_stripped() {
     // User comments (non-separator) must survive even with separators present.
     let input = r#"
-theme dark {
+style dark {
   fill: #1A1A2E
 }
 
@@ -2223,7 +2223,7 @@ fn roundtrip_auto_comments_not_duplicated() {
 #[test]
 fn emit_auto_comment_styled_node() {
     let input =
-        "theme accent {\n  fill: #6C5CE7\n}\nrect @btn {\n  w: 120 h: 40\n  use: accent\n}\n";
+        "style accent {\n  fill: #6C5CE7\n}\nrect @btn {\n  w: 120 h: 40\n  use: accent\n}\n";
     let graph = parse_document(input).unwrap();
     let output = emit_document(&graph);
     assert!(
