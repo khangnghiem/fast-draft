@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.10.84 — Canvas UI Parity: Site ↔ VSCode (R6.8)
+
+- **UX (R6.8)**: Floating scroll toolbar — replaced static top toolbar with wooden scroll handles, paper rolls, and SVG icon tool buttons matching VSCode extension's scroll toolbar design
+- **UX (R6.8)**: Settings menu inside canvas — moved settings from outer toolbar to a hamburger (☰) icon inside the canvas wrapper; frosted glass dropdown with toggle switches for dark mode, sketchy mode, grid, zen mode, and export actions
+- **UX (R6.8)**: Light/dark theme toggle — canvas chrome (toolbar, panels, FAB, minimap) now supports both themes via `.dark-canvas` CSS class; light theme is default with CSS variables, dark overrides scoped to class
+- **UX (R6.8)**: Frosted glass FAB — floating action bar upgraded with `backdrop-filter: blur(20px)`, stroke-width number input, opacity slider with percentage readout, and red delete button
+- **UX (R6.8)**: Minimap zoom pill — replaced simple zoom buttons with Google Maps-style pill (`[− 100% +]`) overlaid on minimap; frosted glass background
+- **UX (R6.8)**: Zen mode toggle button — dedicated button in canvas area for quick Zen mode activation
+- **SITE**: All changes in `site/index.html`, `site/style.css`, `site/playground.js` — no Rust crate changes
+
 ### v0.10.83 — CI/CD Hardening (R6.10)
 
 - **CI (R6.10)**: Added WASM build check to CI — `wasm-pack build crates/fd-wasm` now runs on every push/PR to `main`, catching WASM-breaking Rust changes before merge (previously only caught at deploy time in `pages.yml`)

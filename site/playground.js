@@ -403,8 +403,8 @@ function getSceneBounds() {
 }
 /** Update toolbar active state */
 function updateToolbar(activeTool) {
-  document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
-  const btn = document.querySelector(`.tool-btn[data-tool="${activeTool}"]`);
+  document.querySelectorAll('.ft-tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`.ft-tool-btn[data-tool="${activeTool}"]`);
   if (btn) btn.classList.add('active');
 }
 
@@ -427,7 +427,7 @@ function syncCanvasToEditor(editor) {
 
 /** Show/hide and position the floating action bar above the selected node */
 function updateFab(canvas) {
-  const fab = document.getElementById('fab');
+  const fab = document.getElementById('floating-action-bar');
   if (!fab || !fdCanvas) { fab?.classList.remove('visible'); return; }
 
   const selectedId = fdCanvas.get_selected_id();
@@ -456,6 +456,12 @@ function updateFab(canvas) {
       const props = JSON.parse(propsJson);
       if (props.fill) document.getElementById('fab-fill').value = props.fill;
       if (props.strokeColor) document.getElementById('fab-stroke').value = props.strokeColor;
+      const swEl = document.getElementById('fab-stroke-w');
+      if (swEl && props.strokeWidth !== undefined) swEl.value = Math.round(props.strokeWidth);
+      const opEl = document.getElementById('fab-opacity');
+      const opValEl = document.getElementById('fab-opacity-val');
+      if (opEl && props.opacity !== undefined) { opEl.value = props.opacity; }
+      if (opValEl) opValEl.textContent = Math.round((props.opacity ?? 1) * 100) + '%';
     }
   } catch (_) {
     fab.classList.remove('visible');
@@ -1171,6 +1177,18 @@ async function initPlayground() {
     setupPropsPanel(editor);
     setupContextMenu(editor);
 
+    // Set initial dark state on canvas wrapper
+    if (isDark) {
+      wrapper.classList.add('dark-canvas');
+    }
+
+    // Zen toggle button
+    document.getElementById('zen-toggle-btn')?.addEventListener('click', () => {
+      zenMode = !zenMode;
+      document.querySelector('.hero-playground')?.classList.toggle('zen-mode', zenMode);
+      setTimeout(() => { resizeCanvas(); renderCanvas(); }, 50);
+    });
+
     // Get canvas 2D context
     ctx = canvas.getContext('2d');
 
@@ -1344,8 +1362,8 @@ async function initPlayground() {
       renderCanvas();
     }, { passive: false });
 
-    // ── Tool Toolbar ──────────────────────────────────────────────────
-    document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+    // ── Tool Toolbar (floating scroll) ────────────────────────────────────
+    document.querySelectorAll('.ft-tool-btn[data-tool]').forEach(btn => {
       btn.addEventListener('click', () => {
         if (!fdCanvas) return;
         const tool = btn.dataset.tool;
@@ -1355,7 +1373,7 @@ async function initPlayground() {
       });
     });
 
-    // ── Floating Action Bar ───────────────────────────────────────────
+    // ── Floating Action Bar ─────────────────────────────────────────
     document.getElementById('fab-fill')?.addEventListener('input', (e) => {
       if (!fdCanvas) return;
       fdCanvas.set_node_prop('fill', e.target.value);
@@ -1368,12 +1386,26 @@ async function initPlayground() {
       renderCanvas();
       syncCanvasToEditor(editor);
     });
+    document.getElementById('fab-stroke-w')?.addEventListener('input', (e) => {
+      if (!fdCanvas) return;
+      fdCanvas.set_node_prop('strokeWidth', e.target.value);
+      renderCanvas();
+      syncCanvasToEditor(editor);
+    });
+    document.getElementById('fab-opacity')?.addEventListener('input', (e) => {
+      if (!fdCanvas) return;
+      fdCanvas.set_node_prop('opacity', e.target.value);
+      const valEl = document.getElementById('fab-opacity-val');
+      if (valEl) valEl.textContent = Math.round(parseFloat(e.target.value) * 100) + '%';
+      renderCanvas();
+      syncCanvasToEditor(editor);
+    });
     document.getElementById('fab-delete')?.addEventListener('click', () => {
       if (!fdCanvas) return;
       fdCanvas.handle_key('Backspace', false, false, false, false);
       renderCanvas();
       syncCanvasToEditor(editor);
-      document.getElementById('fab')?.classList.remove('visible');
+      document.getElementById('floating-action-bar')?.classList.remove('visible');
     });
 
     // ── Keyboard Shortcuts ────────────────────────────────────────────
@@ -1421,7 +1453,7 @@ async function initPlayground() {
           renderCanvas();
           syncCanvasToEditor(editor);
         }
-        document.getElementById('fab')?.classList.remove('visible');
+        document.getElementById('floating-action-bar')?.classList.remove('visible');
         e.preventDefault();
         return;
       }
@@ -1493,25 +1525,8 @@ async function initPlayground() {
     });
     minimapCanvas.addEventListener('pointerup', () => { mmDragging = false; });
 
-    // ── Undo/Redo Buttons ─────────────────────────────────────────────
-    document.getElementById('undo-btn').addEventListener('click', () => {
-      if (!fdCanvas) return;
-      const changed = fdCanvas.undo();
-      if (changed) { renderCanvas(); syncCanvasToEditor(editor); }
-    });
-    document.getElementById('redo-btn').addEventListener('click', () => {
-      if (!fdCanvas) return;
-      const changed = fdCanvas.redo();
-      if (changed) { renderCanvas(); syncCanvasToEditor(editor); }
-    });
-
-    // ── Zoom Indicator Click → Reset ──────────────────────────────────
-    document.getElementById('zoom-level').addEventListener('click', () => {
-      zoomLevel = 1.0; panX = 0; panY = 0;
-      updateZoomIndicator();
-      renderCanvas();
-      renderMinimap(canvas);
-    });
+    // (Undo/Redo buttons removed — use keyboard shortcuts ⌘Z / ⇧⌘Z)
+    // (Zoom pill removed — zoom is now in minimap pill)
 
     // ── Zoom Buttons ──────────────────────────────────────────────────
     const applyZoomCenter = (newZoom) => {
@@ -1547,15 +1562,14 @@ async function initPlayground() {
       }
     });
 
-    // ── Settings Menu ─────────────────────────────────────────────────
-    const settingsBtn = document.getElementById('settings-btn');
+    // ── Settings Menu (inside canvas) ──────────────────────────────────
+    const settingsBtn = document.getElementById('settings-menu-btn');
     const settingsMenu = document.getElementById('settings-menu');
 
     function updateSettingsToggles() {
-      document.getElementById('sm-dark')?.classList.toggle('on', isDark);
-      document.getElementById('sm-sketchy')?.classList.toggle('on', isSketchy);
-      document.getElementById('sm-grid')?.classList.toggle('on', gridEnabled);
-      document.getElementById('sm-zen')?.classList.toggle('on', zenMode);
+      document.getElementById('sm-dark-toggle')?.classList.toggle('toggle-on', isDark);
+      document.getElementById('sm-sketchy-toggle')?.classList.toggle('toggle-on', isSketchy);
+      document.getElementById('sm-grid-toggle')?.classList.toggle('toggle-on', gridEnabled);
     }
 
     settingsBtn?.addEventListener('click', (e) => {
@@ -1564,7 +1578,7 @@ async function initPlayground() {
       settingsMenu?.classList.toggle('visible');
     });
 
-    settingsMenu?.querySelectorAll('.sm-item').forEach(btn => {
+    settingsMenu?.querySelectorAll('.settings-menu-item').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const setting = btn.getAttribute('data-setting');
@@ -1572,6 +1586,7 @@ async function initPlayground() {
           case 'dark-mode':
             isDark = !isDark;
             if (fdCanvas) fdCanvas.set_theme(isDark);
+            document.getElementById('canvas-wrapper')?.classList.toggle('dark-canvas', isDark);
             break;
           case 'sketchy':
             isSketchy = !isSketchy;
@@ -1706,7 +1721,8 @@ async function initPlayground() {
     });
 
     document.addEventListener('click', (e) => {
-      if (!settingsMenu?.contains(e.target) && e.target !== settingsBtn) {
+      const container = document.getElementById('settings-dropdown-container');
+      if (container && !container.contains(e.target)) {
         settingsMenu?.classList.remove('visible');
       }
     });
