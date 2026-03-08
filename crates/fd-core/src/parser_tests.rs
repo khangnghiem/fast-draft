@@ -753,8 +753,8 @@ frame @card {
     let graph = parse_document(src).unwrap();
     let emitted = crate::emitter::emit_document(&graph);
     assert!(
-        emitted.contains("pad: 12"),
-        "emitted should contain pad: 12, got: {emitted}"
+        emitted.contains("padding: 12"),
+        "emitted should contain padding: 12, got: {emitted}"
     );
 
     let reparsed = parse_document(&emitted).unwrap();
@@ -783,7 +783,89 @@ frame @card {
     let graph = parse_document(src).unwrap();
     let emitted = crate::emitter::emit_document(&graph);
     assert!(
-        !emitted.contains("pad:"),
-        "pad: 0 should not appear in emitted output"
+        !emitted.contains("padding:") && !emitted.contains("pad:"),
+        "padding: 0 should not appear in emitted output"
     );
+}
+
+#[test]
+fn parse_property_alias_border() {
+    let src = r#"rect @r { w: 100 h: 50 border: #DDDDDD 2 }"#;
+    let graph = parse_document(src).unwrap();
+    let node = graph.get_by_id(crate::id::NodeId::intern("r")).unwrap();
+    assert!(node.props.stroke.is_some(), "border: should map to stroke");
+    let stroke = node.props.stroke.as_ref().unwrap();
+    assert_eq!(stroke.width, 2.0);
+
+    // Emitter uses canonical name
+    let emitted = crate::emitter::emit_document(&graph);
+    assert!(
+        emitted.contains("stroke:"),
+        "border: should emit as stroke:"
+    );
+    // Round-trip
+    let reparsed = parse_document(&emitted).unwrap();
+    assert!(
+        reparsed
+            .get_by_id(crate::id::NodeId::intern("r"))
+            .unwrap()
+            .props
+            .stroke
+            .is_some()
+    );
+}
+
+#[test]
+fn parse_property_alias_apply() {
+    let src = r#"
+style accent {
+  fill: #6C5CE7
+}
+rect @btn { w: 200 h: 48 apply: accent }
+"#;
+    let graph = parse_document(src).unwrap();
+    let btn = graph.get_by_id(NodeId::intern("btn")).unwrap();
+    assert_eq!(btn.use_styles.len(), 1, "apply: should map to use:");
+
+    // Emitter uses canonical name
+    let emitted = crate::emitter::emit_document(&graph);
+    assert!(
+        emitted.contains("use: accent"),
+        "apply: should emit as use:"
+    );
+    // Round-trip
+    let reparsed = parse_document(&emitted).unwrap();
+    let btn2 = reparsed.get_by_id(NodeId::intern("btn")).unwrap();
+    assert_eq!(btn2.use_styles.len(), 1);
+}
+
+#[test]
+fn roundtrip_padding_canonical() {
+    // Emitter should output 'padding:' (not 'pad:'), and parser should accept both
+    let src = r#"
+frame @card {
+  w: 400 h: 300
+  padding: 16
+  rect @child { w: 100 h: 50 }
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let emitted = crate::emitter::emit_document(&graph);
+    assert!(
+        emitted.contains("padding: 16"),
+        "emitter should output 'padding:' canonical form, got: {emitted}"
+    );
+    let reparsed = parse_document(&emitted).unwrap();
+    let node = reparsed
+        .get_by_id(crate::id::NodeId::intern("card"))
+        .unwrap();
+    match &node.kind {
+        NodeKind::Frame { layout, .. } => match layout {
+            crate::model::LayoutMode::Free { pad } => {
+                assert_eq!(*pad, 16.0, "padding should survive roundtrip");
+            }
+            other => panic!("expected Free layout, got {other:?}"),
+        },
+        other => panic!("expected Frame, got {other:?}"),
+    }
 }

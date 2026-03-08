@@ -856,7 +856,7 @@ fn parse_node_property(
                 }
             }
         }
-        "stroke" => {
+        "stroke" | "border" => {
             let color = parse_hex_color.parse_next(input)?;
             let _ = space1.parse_next(input)?;
             let w = parse_number.parse_next(input)?;
@@ -912,7 +912,7 @@ fn parse_node_property(
                 .parse_next(input);
             }
         }
-        "use" => {
+        "use" | "apply" => {
             use_styles.push(parse_identifier.map(NodeId::intern).parse_next(input)?);
         }
         "font" => {

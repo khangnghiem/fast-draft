@@ -132,15 +132,16 @@ crates/
 | Fact | Value |
 | ---- | ----- |
 | **Live URL** | [https://fast-draft.com](https://fast-draft.com) |
-| **Hosting** | GitHub Pages (free, static) |
-| **DNS** | Cloudflare — CNAME `@` → `khangnghiem.github.io`, proxy **OFF** |
+| **Hosting** | Cloudflare Pages (free, 330+ edge PoPs) |
+| **DNS** | Cloudflare — CNAME `@` → `fast-draft.pages.dev`, proxy **ON** |
 | **Source** | `site/` directory (index.html, style.css, playground.js, wasm/) |
-| **CNAME file** | `site/CNAME` — contains `fast-draft.com` |
+| **Headers** | `site/_headers` — WASM cache (1yr immutable) + security headers |
 | **Deploy trigger** | Auto on push to `main` via `.github/workflows/pages.yml` |
 | **WASM build** | `wasm-pack build crates/fd-wasm --target web --out-dir ../../site/wasm` |
+| **Secrets** | `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` in GitHub repo secrets |
 
 > [!CAUTION]
-> **Never delete or modify `site/CNAME`.** Removing it breaks the custom domain binding and reverts to `khangnghiem.github.io/fast-draft/`.
+> **Never delete or modify `site/_headers`.** It controls WASM caching and security response headers.
 
 ### Before Completing Any Task
 

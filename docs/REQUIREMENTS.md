@@ -130,7 +130,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R4.13** _(done)_: Font weight names — parser/emitter use `bold`, `semibold`, `regular` etc. instead of numeric codes
 - **R4.14** _(done)_: Color hint comments — emitter appends `# red`, `# purple` etc. after hex colors
 - **R4.15** _(done)_: Named colors — `fill: purple` etc. accepted (17 Tailwind palette colors)
-- **R4.16** _(done)_: Property aliases — `background:`/`color:` → fill, `rounded:`/`radius:` → corner
+- **R4.16** _(done)_: Property aliases — `background:`/`color:` → fill, `rounded:`/`radius:` → corner, `border:` → stroke, `apply:` → use; emitter outputs `padding:` (universal CSS term) instead of `pad:`
 - **R4.17** _(done)_: Dimension units — `w: 320px` accepted, `px` stripped by parser
 - **R4.18** _(done)_: Keyword rename — `theme` → `style` (reusable property bundles), `anim` → `when` for clarity; internal Rust struct `Style` → `Properties`, field `.style` → `.props`; emitter order: spec → children → style → when; old keywords (`theme`, `style` as legacy) accepted for backward compatibility
 - **R4.19** _(done)_: ReadMode filtered views — `emit_filtered(graph, mode)` with 8 modes (Full/Structure/Layout/Design/Spec/Visual/When/Edges); CLI `fd-lsp --view <mode>` for AI token savings; VS Code read-only virtual document provider with status bar mode selector
@@ -161,7 +161,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R6.2** _(future)_: Desktop app via Tauri (macOS, Windows, Linux)
 - **R6.3** _(future)_: Mobile app (iOS, Android) via native wgpu
 - **R6.4** _(future)_: Web app (standalone browser app)
-- **R6.5** _(done)_: GitHub Pages landing site at [fast-draft.com](https://fast-draft.com) with live WASM playground, custom domain (Cloudflare DNS), and auto-deploy via GitHub Actions (`pages.yml`)
+- **R6.5** _(done)_: Cloudflare Pages landing site at [fast-draft.com](https://fast-draft.com) with live WASM playground, custom domain, and auto-deploy via GitHub Actions (`pages.yml`) → Cloudflare Pages
 - **R6.6** _(done)_: Interactive playground — canvas supports pointer events (select, drag, draw), layers panel (tree view sidebar), properties panel (right sidebar with fill/stroke/opacity/size), right-click context menu (duplicate/delete/z-order/group/copy), floating toolbar with 7 SVG tool buttons, minimap with zoom controls, undo/redo header buttons, clickable zoom reset, FAB, zoom/pan navigation, keyboard shortcuts, undo/redo, and bidirectional code↔canvas sync; zero Rust changes, all in `playground.js`/`index.html`/`style.css`
 - **R6.7** _(done)_: Resizable panels — layers and properties panels are drag-to-resize with accent-highlighted handles; double-click handle to collapse (0px); click restore strip to uncollapse; widths persist via `localStorage` (site) / `vscode.setState()` (extension); canvas area dynamically adjusts via CSS variables `--layers-width` / `--props-width`; floating toolbar tracks layers width
 - **R6.8** _(done)_: Apple HIG canvas parity — website playground redesigned with Apple HIG design language (frosted glass, blue accent, SF Pro font, hairline borders); horizontal toolbar with text labels + keyboard hints replacing vertical floating toolbar; enriched properties panel with section labels; layers indent guides; dimension tooltip during drag; modifier cursor feedback (⌘=grab, Alt=copy)

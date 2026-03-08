@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.10.79 — Cross-Framework Property Aliases (R4.16)
+
+- **FEATURE (R4.16)**: `border:` accepted as alias for `stroke:` — CSS/Tailwind's most common expectation for outline/border styling; emitter outputs canonical `stroke:`
+- **FEATURE (R4.16)**: `apply:` accepted as alias for `use:` — Tailwind's `@apply` convention for referencing style blocks; emitter outputs canonical `use:`
+- **EMITTER (R4.16)**: Standalone padding now emits `padding:` instead of `pad:` — `padding` is the universal term across CSS, Flutter, SwiftUI, and Compose; parser still accepts both `pad:` and `padding:`
+- **TESTING**: 3 new tests — `parse_property_alias_border` (border→stroke roundtrip), `parse_property_alias_apply` (apply→use roundtrip), `roundtrip_padding_canonical` (padding: survives parse/emit)
+
 ### v0.10.78 — Import CSS Styles (R6.9)
 
 - **FEATURE (R6.9)**: "Import CSS" button in canvas settings menu (⚙️) — click to select a `.css` file; class selectors are parsed and converted to FD `style` blocks using `parseCssToFdStyles()`, then prepended to the editor with a section header comment
