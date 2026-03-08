@@ -396,6 +396,99 @@ function setupPropsPanel(editor) {
   });
 }
 
+/** ─── Context Menu ──────────────────────────────────────────────────── */
+function closeContextMenu() {
+  document.getElementById('ctx-menu')?.classList.remove('visible');
+}
+
+/** Wire context menu events and action handlers. */
+function setupContextMenu(editor) {
+  const menu = document.getElementById('ctx-menu');
+  const canvas = document.getElementById('fd-canvas');
+  if (!menu || !canvas) return;
+
+  // Right-click on canvas
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (!fdCanvas) return;
+
+    const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
+    const hitId = fdCanvas.hit_test_at(x, y);
+    if (hitId) {
+      fdCanvas.select_by_id(hitId);
+      renderCanvas();
+      updateFab(canvas);
+      updatePropertiesPanel();
+    }
+
+    // Position menu (keep within viewport)
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let mx = e.clientX;
+    let my = e.clientY;
+    if (mx + 170 > vw) mx = vw - 174;
+    if (my + 280 > vh) my = vh - 284;
+    menu.style.left = mx + 'px';
+    menu.style.top = my + 'px';
+    menu.classList.add('visible');
+  });
+
+  // Action handlers
+  const doAction = (action) => {
+    if (!fdCanvas) return;
+    let changed = false;
+    switch (action) {
+      case 'duplicate':
+        changed = fdCanvas.duplicate_selected();
+        break;
+      case 'delete':
+        changed = fdCanvas.delete_selected();
+        break;
+      case 'bring-forward': {
+        const r = JSON.parse(fdCanvas.handle_key(']', false, false, false, true));
+        changed = r.changed;
+        break;
+      }
+      case 'send-backward': {
+        const r = JSON.parse(fdCanvas.handle_key('[', false, false, false, true));
+        changed = r.changed;
+        break;
+      }
+      case 'group':
+        changed = fdCanvas.group_selected();
+        break;
+      case 'ungroup':
+        changed = fdCanvas.ungroup_selected();
+        break;
+      case 'copy-fd':
+        navigator.clipboard.writeText(fdCanvas.get_text()).catch(() => {});
+        break;
+    }
+    if (changed) {
+      renderCanvas();
+      syncCanvasToEditor(editor);
+      updatePropertiesPanel();
+    }
+    closeContextMenu();
+  };
+
+  menu.querySelectorAll('.ctx-item').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      doAction(btn.getAttribute('data-action'));
+    });
+  });
+
+  // Dismiss on outside click, escape, scroll
+  document.addEventListener('click', (e) => {
+    if (!menu.contains(e.target)) closeContextMenu();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeContextMenu();
+  });
+  canvas.addEventListener('pointerdown', closeContextMenu);
+}
+
 /** ─── Layers Panel ────────────────────────────────────────────────────── */
 const LAYER_ICONS = {
   group: '◻', frame: '▣', rect: '▢', ellipse: '○',
@@ -691,6 +784,7 @@ async function initPlayground() {
     fdCanvas.set_theme(isDark);
     fdCanvas.set_text(editor.value);
     setupPropsPanel(editor);
+    setupContextMenu(editor);
 
     // Get canvas 2D context
     ctx = canvas.getContext('2d');

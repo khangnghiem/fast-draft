@@ -807,6 +807,47 @@ code {
   border-color: rgba(239, 68, 68, 0.3);
 }
 
+/* ─── Context Menu ─── */
+#ctx-menu {
+  display: none;
+  position: fixed;
+  z-index: 100;
+  min-width: 160px;
+  padding: 6px;
+  background: rgba(22, 27, 34, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+#ctx-menu.visible { display: block; }
+.ctx-item {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-align: left;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+.ctx-item:hover {
+  background: var(--accent);
+  color: #fff;
+}
+.ctx-item[data-action="delete"]:hover {
+  background: rgba(239, 68, 68, 0.8);
+}
+.ctx-sep {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 4px 6px;
+}
+
 /* ─── Minimap ─── */
 #minimap-container {
   position: absolute;
