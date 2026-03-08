@@ -179,6 +179,8 @@ let panX = 0, panY = 0;
 let panStartX = 0, panStartY = 0;
 let panDragging = false;
 let zoomLevel = 1.0;
+let gridEnabled = false;
+const GRID_SPACING = 20;
 const ZOOM_MIN = 0.1, ZOOM_MAX = 5;
 let isPanning = false;
 
@@ -193,6 +195,36 @@ function screenToScene(clientX, clientY, canvasEl) {
   };
 }
 
+/** Draw subtle grid overlay in scene space */
+function drawGrid() {
+  if (!gridEnabled || !ctx) return;
+  const canvas = ctx.canvas;
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.width / dpr;
+  const h = canvas.height / dpr;
+  const left = -panX / zoomLevel;
+  const top = -panY / zoomLevel;
+  const right = left + w / zoomLevel;
+  const bottom = top + h / zoomLevel;
+  const startX = Math.floor(left / GRID_SPACING) * GRID_SPACING;
+  const startY = Math.floor(top / GRID_SPACING) * GRID_SPACING;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 0.5 / zoomLevel;
+  ctx.beginPath();
+  for (let x = startX; x <= right; x += GRID_SPACING) {
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+  }
+  for (let y = startY; y <= bottom; y += GRID_SPACING) {
+    ctx.moveTo(left, y);
+    ctx.lineTo(right, y);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
 /** Render the scene with DPR + zoom/pan transform */
 function renderCanvas() {
   if (!fdCanvas || !ctx) return;
@@ -201,6 +233,7 @@ function renderCanvas() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.setTransform(dpr * zoomLevel, 0, 0, dpr * zoomLevel, panX * dpr, panY * dpr);
+  drawGrid();
   fdCanvas.render(ctx, performance.now());
 }
 
@@ -967,6 +1000,14 @@ async function initPlayground() {
       if (e.code === 'Space' && !e.repeat && !editorFocused) {
         isPanning = true;
         canvas.style.cursor = 'grab';
+        e.preventDefault();
+        return;
+      }
+
+      // Grid toggle (G key)
+      if (!editorFocused && e.key.toLowerCase() === 'g' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        gridEnabled = !gridEnabled;
+        renderCanvas();
         e.preventDefault();
         return;
       }
