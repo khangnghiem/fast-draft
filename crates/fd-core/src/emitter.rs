@@ -214,7 +214,7 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
             LayoutMode::Free { pad } => {
                 if *pad > 0.0 {
                     indent(out, depth + 1);
-                    writeln!(out, "pad: {}", format_num(*pad)).unwrap();
+                    writeln!(out, "padding: {}", format_num(*pad)).unwrap();
                 }
             }
             LayoutMode::Column { gap, pad } => {
@@ -1103,7 +1103,7 @@ fn emit_layout_mode_filtered(out: &mut String, kind: &NodeKind, depth: usize) {
         LayoutMode::Free { pad } => {
             if *pad > 0.0 {
                 indent(out, depth);
-                writeln!(out, "pad: {}", format_num(*pad)).unwrap();
+                writeln!(out, "padding: {}", format_num(*pad)).unwrap();
             }
         }
         LayoutMode::Column { gap, pad } => {
