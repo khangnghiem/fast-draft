@@ -2545,6 +2545,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         <button class="settings-menu-item" data-export="svg-file"><span class="sm-icon">✨</span><span class="sm-label">Save as SVG</span></button>
         <button class="settings-menu-item" data-export="fd-clip"><span class="sm-icon">📝</span><span class="sm-label">Copy as .fd</span></button>
         <div class="settings-menu-sep"></div>
+        <button class="settings-menu-item" id="sm-import-css"><span class="sm-icon">🎨</span><span class="sm-label">Import CSS</span></button>
+        <div class="settings-menu-sep"></div>
         <button class="settings-menu-item" id="sm-shortcuts"><span class="sm-icon">⌨️</span><span class="sm-label">Keyboard Shortcuts</span><span class="sm-shortcut">?</span></button>
       </div>
       </div>
@@ -2784,6 +2786,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div class="picker-body" id="anim-picker-body"></div>
   </div>
 
+  <input type="file" id="css-file-input" accept=".css" style="display:none">
   <script nonce="{nonce}">
     window.initialText = {initialText};
     window.wasmBinaryUrl = "{wasmBinaryUri}";
