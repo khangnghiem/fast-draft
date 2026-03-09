@@ -315,8 +315,8 @@ ellipse @stage_prod {
   w: 90 h: 44
   fill: #6B7280  # blue
   corner: 8
-  x: 668
-  y: 640
+  x: 980.9
+  y: 685.7
   when :press {
     fill: #6C5CE7  # blue
     ease: spring 300ms

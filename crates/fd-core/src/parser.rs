@@ -1170,12 +1170,21 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
         other => AnimTrigger::Custom(other.to_string()),
     };
 
+    // Trigger-specific default durations
+    let default_duration = match &trigger {
+        AnimTrigger::Hover => 300u32,
+        AnimTrigger::Press => 150u32,
+        AnimTrigger::Enter => 500u32,
+        AnimTrigger::Custom(_) => 300u32,
+    };
+
     skip_space(input);
     let _ = '{'.parse_next(input)?;
 
     let mut props = AnimProperties::default();
-    let mut duration_ms = 300u32;
+    let mut duration_ms = default_duration;
     let mut easing = Easing::EaseInOut;
+    let mut delay_ms: Option<u32> = None;
 
     skip_ws_and_comments(input);
 
@@ -1216,6 +1225,13 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
                     }
                 }
             }
+            "delay" => {
+                let n = parse_number.parse_next(input)?;
+                delay_ms = Some(n as u32);
+                if input.starts_with("ms") {
+                    *input = &input[2..];
+                }
+            }
             _ => {
                 let _ = take_till::<_, _, ContextError>(0.., |c: char| {
                     c == '\n' || c == ';' || c == '}'
@@ -1235,6 +1251,7 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
         duration_ms,
         easing,
         properties: props,
+        delay_ms,
     })
 }
 

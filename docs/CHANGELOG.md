@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.10.87 — Animation Duration & Breaks (R1.5, R5.6)
+
+- **FEATURE (R1.5)**: Trigger-specific default durations — `:hover` 300ms, `:press` 150ms (faster for tactile feedback), `:enter` 500ms (dramatic reveals); explicit `ease:` overrides the default
+- **FEATURE (R5.6)**: New `delay: Nms` property inside animation blocks — optional post-revert cooldown before re-triggering; parsed, emitted, and roundtripped correctly; `None` by default
+- **FIX**: Proportional time envelope — renderer now uses node's actual `duration_ms` instead of hardcoded 700ms (200+300+200) envelope; envelope phases: ease-in = `duration_ms`, hold = 60%, ease-out = 50%
+- **FIX**: Duration mismatch bug — `render2d.rs` now looks up the hover animation's `duration_ms` from the node's `AnimKeyframe` instead of ignoring it
+- **TESTING**: 6 new tests — `parse_animation_press_default_duration`, `parse_animation_enter_default_duration`, `parse_animation_delay`, `roundtrip_animation_delay`, `parse_animation_explicit_duration_overrides_default`, `parse_animation_no_delay_default`
+
 ### v0.10.86 — Fix Node Flashing After Move
 
 - **FIX**: Nodes no longer flash/flicker after being moved on the canvas — root cause was an async echo-back race in the VS Code extension: `suppressEchoBack` was cleared synchronously after `applyEdit()`, but VS Code fires `onDidChangeTextDocument` asynchronously, sending text back to the webview → `set_text()` → `resolve()` → fresh bounds that clobber in-place move deltas for one frame; fixed by timeout-guarding `suppressEchoBack` for 200ms (matching existing `suppressCursorSync` pattern)
