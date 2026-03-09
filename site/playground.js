@@ -1087,17 +1087,30 @@ function setViewMode(mode) {
 async function aiTouch() {
   if (!fdCanvas) { showToast('Canvas not ready'); return; }
 
-  const selectedId = fdCanvas.get_selected_id?.();
-  if (!selectedId) { showToast('Select a node first'); return; }
+  // Multi-selection support: get all selected IDs (nodes + edges)
+  let selectedIds = [];
+  try {
+    const idsJson = fdCanvas.get_selected_ids?.();
+    selectedIds = idsJson ? JSON.parse(idsJson) : [];
+  } catch (_) {}
+  // Fallback to single selection
+  if (selectedIds.length === 0) {
+    const single = fdCanvas.get_selected_id?.();
+    if (single) selectedIds = [single];
+  }
+  if (selectedIds.length === 0) {
+    showToast('Select a node or edge first');
+    return;
+  }
 
   const btn = document.getElementById('ai-touch-btn');
   btn?.classList.add('loading');
   const statusEl = document.getElementById('canvas-status');
-  if (statusEl) statusEl.textContent = 'Refining…';
+  if (statusEl) statusEl.textContent = `Refining ${selectedIds.length} element${selectedIds.length > 1 ? 's' : ''}…`;
 
   try {
     const fdText = fdCanvas.get_text();
-    const prompt = buildRefinePrompt(fdText, [selectedId]);
+    const prompt = buildRefinePrompt(fdText, selectedIds);
 
     const resp = await fetch('/api/ai', {
       method: 'POST',
@@ -1112,18 +1125,20 @@ async function aiTouch() {
     // Strip markdown fences
     refined = refined.replace(/^```(?:fd|text)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
 
-    // Validate: must contain at least one node keyword
-    if (!refined.match(/\b(rect|ellipse|text|group|path)\b/)) {
-      showToast('AI returned invalid output — try again');
+    if (!refined) {
+      showToast('AI returned empty output — try again');
       return;
     }
 
-    // Apply refined text to canvas
+    // Splice modified blocks back into the original document
+    const result = spliceModifiedBlocks(fdText, refined, selectedIds);
+
+    // Update editor and canvas
     const editor = document.getElementById('fd-editor');
-    if (editor) editor.value = refined;
-    fdCanvas.set_text(refined);
+    if (editor) editor.value = result;
+    fdCanvas.set_text(result);
     renderCanvas();
-    showToast('✦ AI Touch applied!');
+    showToast(`✦ AI Touch — ${selectedIds.length} element${selectedIds.length > 1 ? 's' : ''} refined`);
   } catch (err) {
     console.warn('AI Touch error:', err);
     showToast('AI unavailable — check /api/ai endpoint');
@@ -1133,27 +1148,149 @@ async function aiTouch() {
   }
 }
 
-function buildRefinePrompt(fdText, nodeIds) {
-  const targetList = nodeIds.map(id => `@${id}`).join(', ');
+function buildRefinePrompt(fdText, selectedIds) {
+  const nodeList = selectedIds.filter(id => !id.includes('->')).map(id => `@${id}`);
+  const edgeList = selectedIds.filter(id => id.includes('->'));
+
+  let targetDesc = '';
+  if (nodeList.length > 0) targetDesc += `Nodes: ${nodeList.join(', ')}`;
+  if (edgeList.length > 0) targetDesc += `${targetDesc ? '\n' : ''}Edges: ${edgeList.join(', ')}`;
+
+  // Extract the blocks for the selected elements
+  const selectedBlocks = extractBlocksForIds(fdText, selectedIds);
+
   return `You are an expert UI designer working with the FD (Fast Draft) format.
 
-Given the .fd document below, improve the following nodes: ${targetList}
+## Task
+
+Improve ONLY the following elements:
+${targetDesc}
 
 ## Rules
 
-1. **Rename auto-generated IDs**: Replace any \`@_kind_N\` (like \`@_rect_0\`, \`@_text_3\`) with a short, semantic snake_case name that describes the node's purpose (e.g., \`@hero_card\`, \`@nav_btn\`). Max 15 characters.
+1. **Rename auto-generated IDs**: Replace \`@_kind_N\` (like \`@_rect_0\`) with a short, semantic snake_case name (e.g., \`@hero_card\`). Max 15 chars.
+2. **Restyle for visual polish**: Improve colors (harmonious hex palettes), add rounded corners, adjust sizing. Modern design best practices.
+3. **Preserve structure**: Do NOT add, remove, or reorder elements. Only change IDs and visual properties (fill, stroke, corner, opacity, font, dash).
+4. **Edges**: You may restyle visual edges (stroke, dash, label). Do NOT modify constraint edges (center_in, align_left, etc.).
+5. **Output ONLY the modified blocks** — one per element. No unchanged elements, no full document.
+6. **No markdown fences, no explanations** — just valid FD blocks.
 
-2. **Restyle for visual polish**: Improve colors (use harmonious hex palettes), add rounded corners, adjust spacing/sizing. Follow modern design best practices.
+## Selected Blocks to Modify
 
-3. **Preserve structure**: Do NOT add, remove, or reorder nodes. Only change IDs and visual properties (fill, stroke, corner, opacity, font).
+${selectedBlocks}
 
-4. **Output the COMPLETE refined .fd document** — not just the changed nodes.
-
-5. **Output ONLY valid FD text** — no markdown fences, no explanations.
-
-## FD Document
+## Full Document (read-only context — DO NOT output this, use for design harmony only)
 
 ${fdText}`;
+}
+
+/** Extract FD text blocks for the given node/edge IDs. */
+function extractBlocksForIds(fdText, ids) {
+  const lines = fdText.split('\n');
+  const blocks = [];
+  const idSet = new Set(ids);
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+
+    // Match node definitions: group @id { or rect @id {
+    const nodeMatch = trimmed.match(/^(group|frame|rect|ellipse|path|text)\s+@(\w+)/);
+    if (nodeMatch && idSet.has(nodeMatch[2])) {
+      // Extract the full block (from this line to matching closing brace)
+      const block = extractBlock(lines, i);
+      blocks.push(block);
+      continue;
+    }
+
+    // Match edge definitions: @from -> @to or @id -> property: value
+    const edgeMatch = trimmed.match(/@(\w+)\s*->/);
+    if (edgeMatch && idSet.has(edgeMatch[1])) {
+      const block = extractBlock(lines, i);
+      blocks.push(block);
+    }
+  }
+
+  return blocks.join('\n\n') || ids.map(id => `# (block for @${id} not found)`).join('\n');
+}
+
+/** Extract a block of FD text starting at lineIdx, matching braces. */
+function extractBlock(lines, startIdx) {
+  const result = [lines[startIdx]];
+  if (!lines[startIdx].includes('{')) return lines[startIdx];
+
+  let depth = 0;
+  for (let i = startIdx; i < lines.length; i++) {
+    if (i !== startIdx) result.push(lines[i]);
+    depth += (lines[i].match(/\{/g) || []).length;
+    depth -= (lines[i].match(/\}/g) || []).length;
+    if (depth <= 0) break;
+  }
+  return result.join('\n');
+}
+
+/** Splice AI-modified blocks back into the original document.
+ *  Finds each selected ID block in the original and replaces it with the AI version. */
+function spliceModifiedBlocks(originalFd, aiOutput, selectedIds) {
+  // If AI returned something that looks like a complete document, just use it
+  if (aiOutput.match(/^(#|style\s|group\s|frame\s|rect\s|ellipse\s|path\s|text\s)/m) &&
+      aiOutput.split('\n').length > 5 &&
+      aiOutput.match(/\b(rect|ellipse|text|group|path)\b/g)?.length >= 3) {
+    // Looks like a full document — might be AI ignoring instructions
+    // Still try to splice if possible, otherwise use as-is
+  }
+
+  let result = originalFd;
+  const aiLines = aiOutput.split('\n');
+
+  for (const id of selectedIds) {
+    // Find the block for this ID in the AI output
+    const aiBlock = findBlockForId(aiLines, id);
+    if (!aiBlock) continue;
+
+    // Find and replace the block in the original document
+    const origLines = result.split('\n');
+    const origBlock = findBlockWithRange(origLines, id);
+    if (!origBlock) continue;
+
+    const before = origLines.slice(0, origBlock.startLine);
+    const after = origLines.slice(origBlock.endLine + 1);
+    result = [...before, aiBlock, ...after].join('\n');
+  }
+
+  return result;
+}
+
+/** Find a block for a given ID in FD text lines. */
+function findBlockForId(lines, id) {
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    const nodeMatch = trimmed.match(new RegExp(`^(group|frame|rect|ellipse|path|text)\\s+@(\\w*${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\w*)`));
+    const edgeMatch = trimmed.match(new RegExp(`@${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*->`));
+    if (nodeMatch || edgeMatch) {
+      return extractBlock(lines, i);
+    }
+  }
+  return null;
+}
+
+/** Find a block's line range for a given ID. */
+function findBlockWithRange(lines, id) {
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    const nodeMatch = trimmed.match(new RegExp(`^(group|frame|rect|ellipse|path|text)\\s+@${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`));
+    const edgeMatch = trimmed.match(new RegExp(`@${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*->`));
+    if (nodeMatch || edgeMatch) {
+      if (!lines[i].includes('{')) return { startLine: i, endLine: i };
+      let depth = 0;
+      for (let j = i; j < lines.length; j++) {
+        depth += (lines[j].match(/\{/g) || []).length;
+        depth -= (lines[j].match(/\}/g) || []).length;
+        if (depth <= 0) return { startLine: i, endLine: j };
+      }
+      return { startLine: i, endLine: lines.length - 1 };
+    }
+  }
+  return null;
 }
 
 /** ─── Renamify — Heuristic + AI Rename ───────────────────────────────── */
