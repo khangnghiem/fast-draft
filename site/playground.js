@@ -862,6 +862,66 @@ function renderMinimap(canvas) {
   mc._minimap = { sx, sy, sw: sceneW, sh: sceneH, scale, ox, oy };
 }
 
+// ─── Split Resize (code ↔ canvas) ────────────────────────────────────────
+
+/** Set up drag-to-resize for the code/canvas split. */
+function setupSplitResize(container, resizeCanvas) {
+  const handle = document.getElementById('split-resize');
+  if (!handle || !container) return;
+
+  const MIN_FRAC = 0.25; // editor min 25%
+  const MAX_FRAC = 0.75; // editor max 75%
+
+  // Restore persisted fraction
+  const savedFrac = parseFloat(localStorage.getItem('fd-split-fraction'));
+  if (savedFrac >= MIN_FRAC && savedFrac <= MAX_FRAC) {
+    container.style.setProperty('--editor-width', `${savedFrac}fr`);
+  }
+
+  let dragging = false;
+  let containerRect = null;
+
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragging = true;
+    containerRect = container.getBoundingClientRect();
+    handle.classList.add('active');
+    handle.setPointerCapture(e.pointerId);
+  });
+
+  handle.addEventListener('pointermove', (e) => {
+    if (!dragging || !containerRect) return;
+    const x = e.clientX - containerRect.left;
+    let frac = x / containerRect.width;
+    frac = Math.max(MIN_FRAC, Math.min(MAX_FRAC, frac));
+    container.style.setProperty('--editor-width', `${frac}fr`);
+    resizeCanvas();
+    renderCanvas();
+  });
+
+  const endDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('active');
+    // Persist fraction
+    const style = container.style.getPropertyValue('--editor-width');
+    const frac = parseFloat(style);
+    if (!isNaN(frac)) localStorage.setItem('fd-split-fraction', String(frac));
+  };
+  handle.addEventListener('pointerup', endDrag);
+  handle.addEventListener('pointercancel', endDrag);
+
+  // Double-click to reset to 50/50
+  handle.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    container.style.setProperty('--editor-width', '1fr');
+    localStorage.removeItem('fd-split-fraction');
+    resizeCanvas();
+    renderCanvas();
+  });
+}
+
 // ─── Panel Resize ────────────────────────────────────────────────────────
 
 /** Set up drag-to-resize for layers and properties panels. */
@@ -1603,6 +1663,7 @@ async function initPlayground() {
 
     // ── Panel Resize Setup ───────────────────────────────────────────
     setupPanelResize(wrapper, resizeCanvas);
+    setupSplitResize(document.getElementById('playground-container'), resizeCanvas);
 
     // ── Text Editor → Canvas ──────────────────────────────────────────
     editor.addEventListener('input', () => {

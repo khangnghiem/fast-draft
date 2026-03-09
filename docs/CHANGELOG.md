@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.96 — Taller Playground + Resizable Split (R6.6)
+
+- **UX (R6.6)**: Playground min-height bumped from `70vh` to `80vh` — ~100px more workspace on typical laptop screens
+- **UX (R6.6)**: Draggable split resize handle between Code Mode and Canvas — drag to adjust editor/canvas ratio (25–75% range); double-click to reset to 50/50; ratio persists in `localStorage`; handle highlights with accent on hover/drag; hidden in zen mode and mobile breakpoint
+- **SITE**: Changes in `site/index.html`, `site/style.css`, `site/playground.js`
+
 ### v0.10.95 — Hero Section Compaction (R6.5)
 
 - **UX (R6.5)**: Compacted hero section to push the live playground above the fold — removed "Open Source · MIT License" badge (already in footer), inlined 3 stats (5× / 6.5× / 370) as a single compact text row below CTAs, removed "▶ Live Playground" toolbar label; tightened `#hero` padding (80→64px top, 48→32px bottom), `hero-content` margin (40→16px), CTA margin (32→16px); ~200px vertical savings
