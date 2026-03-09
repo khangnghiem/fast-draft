@@ -869,13 +869,20 @@ function setupSplitResize(container, resizeCanvas) {
   const handle = document.getElementById('split-resize');
   if (!handle || !container) return;
 
-  const MIN_FRAC = 0.25; // editor min 25%
-  const MAX_FRAC = 0.75; // editor max 75%
+  const MIN_FRAC = 0.25;
+  const MAX_FRAC = 0.75;
+
+  /** Apply a fraction as pixel width (accurate cursor tracking). */
+  function applyFraction(frac) {
+    const w = container.getBoundingClientRect().width;
+    container.style.setProperty('--editor-width', `${Math.round(w * frac)}px`);
+  }
 
   // Restore persisted fraction
   const savedFrac = parseFloat(localStorage.getItem('fd-split-fraction'));
   if (savedFrac >= MIN_FRAC && savedFrac <= MAX_FRAC) {
-    container.style.setProperty('--editor-width', `${savedFrac}fr`);
+    // Defer to after layout so container has width
+    requestAnimationFrame(() => applyFraction(savedFrac));
   }
 
   let dragging = false;
@@ -893,9 +900,8 @@ function setupSplitResize(container, resizeCanvas) {
   handle.addEventListener('pointermove', (e) => {
     if (!dragging || !containerRect) return;
     const x = e.clientX - containerRect.left;
-    let frac = x / containerRect.width;
-    frac = Math.max(MIN_FRAC, Math.min(MAX_FRAC, frac));
-    container.style.setProperty('--editor-width', `${frac}fr`);
+    const frac = Math.max(MIN_FRAC, Math.min(MAX_FRAC, x / containerRect.width));
+    container.style.setProperty('--editor-width', `${Math.round(containerRect.width * frac)}px`);
     resizeCanvas();
     renderCanvas();
   });
@@ -904,10 +910,13 @@ function setupSplitResize(container, resizeCanvas) {
     if (!dragging) return;
     dragging = false;
     handle.classList.remove('active');
-    // Persist fraction
-    const style = container.style.getPropertyValue('--editor-width');
-    const frac = parseFloat(style);
-    if (!isNaN(frac)) localStorage.setItem('fd-split-fraction', String(frac));
+    // Persist as fraction (viewport-independent)
+    const cw = container.getBoundingClientRect().width;
+    const editorEl = container.querySelector('.playground-editor');
+    if (editorEl && cw > 0) {
+      const frac = editorEl.offsetWidth / cw;
+      localStorage.setItem('fd-split-fraction', String(frac.toFixed(4)));
+    }
   };
   handle.addEventListener('pointerup', endDrag);
   handle.addEventListener('pointercancel', endDrag);
@@ -915,10 +924,17 @@ function setupSplitResize(container, resizeCanvas) {
   // Double-click to reset to 50/50
   handle.addEventListener('dblclick', (e) => {
     e.preventDefault();
-    container.style.setProperty('--editor-width', '1fr');
+    container.style.removeProperty('--editor-width');
     localStorage.removeItem('fd-split-fraction');
     resizeCanvas();
     renderCanvas();
+  });
+
+  // Re-apply on window resize so px values stay proportional
+  window.addEventListener('resize', () => {
+    if (dragging) return;
+    const frac = parseFloat(localStorage.getItem('fd-split-fraction'));
+    if (frac >= MIN_FRAC && frac <= MAX_FRAC) applyFraction(frac);
   });
 }
 
