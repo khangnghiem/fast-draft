@@ -41,6 +41,13 @@ jobs:
           command: pages project create fast-draft --production-branch=main
         continue-on-error: true  # OK if project already exists
 
+      - name: Copy Pages Functions
+        run: |
+          if [ -d functions ]; then
+            cp -r functions site/
+            echo "Copied Pages Functions to site/"
+          fi
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:

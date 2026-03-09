@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.10.94 — Top Toolbar + AI Features (R6.10)
+
+- **UX (R6.10)**: Apple HIG frosted-glass top toolbar inside canvas with 3-zone layout — AI buttons (left), view toggle (center), status + zen + settings (right)
+- **UX (R6.10)**: All / Design / Spec segmented view toggle — Design hides `spec {}` blocks, Spec shows only annotated nodes
+- **AI (R6.10)**: ✦ AI Touch button — refines selected node styling and naming via Cloudflare Workers AI (`@cf/meta/llama-3.1-8b-instruct`)
+- **AI (R6.10)**: ✦ Renamify button — heuristic rename engine (analyzes text content, shape, parent context) with AI enhancement fallback
+- **INFRA (R6.10)**: Cloudflare Pages Function at `/api/ai` — serverless AI proxy, no client-side API keys, 10k neurons/day free tier
+- **UX (R6.10)**: Settings ☰ and Zen 🧘 moved from floating buttons into toolbar; zen case removed from settings menu
+- **UX (R6.10)**: Keyboard Shortcuts item added to settings menu
+
 ### v0.10.93 — Canvas Parity + Minimap Fix (R6.9)
 
 - **UX (R6.9)**: Default canvas theme → light — matches VS Code extension's first impression; users with saved preference keep their choice via `localStorage`
