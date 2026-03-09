@@ -258,8 +258,8 @@ frame @pipeline {
   w: 460 h: 236
   use: card
   shadow: (0,2,16,#00000010)
-  x: 280
-  y: 540
+  x: 275.2
+  y: 546.1
 }
 
 # Pipeline stages as connected nodes
@@ -326,6 +326,11 @@ ellipse @stage_prod {
 text @_text_2 "Text" {
   x: 405.5
   y: 851.8
+}
+
+text @_text_0 "Text" {
+  x: 360.6
+  y: 657.3
 }
 
 # ─── Flows ───
