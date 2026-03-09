@@ -704,8 +704,8 @@ function setupContextMenu(editor) {
       if (zenMode) {
         zenMode = false;
         document.querySelector('.hero-playground')?.classList.remove('zen-mode');
-        resizeCanvas();
-        renderCanvas();
+        // Trigger resize via observer (resizeCanvas is scoped to initPlayground)
+        setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
       }
     }
   });
@@ -1193,6 +1193,13 @@ async function initPlayground() {
     document.getElementById('zen-toggle-btn')?.addEventListener('click', () => {
       zenMode = !zenMode;
       document.querySelector('.hero-playground')?.classList.toggle('zen-mode', zenMode);
+      setTimeout(() => { resizeCanvas(); renderCanvas(); }, 50);
+    });
+
+    // Zen exit button (visible only in zen mode)
+    document.getElementById('zen-exit-btn')?.addEventListener('click', () => {
+      zenMode = false;
+      document.querySelector('.hero-playground')?.classList.remove('zen-mode');
       setTimeout(() => { resizeCanvas(); renderCanvas(); }, 50);
     });
 
