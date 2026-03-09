@@ -533,7 +533,7 @@ code {
   overflow: hidden;
   background: var(--border);
   box-shadow: var(--shadow), var(--shadow-glow);
-  min-height: 420px;
+  min-height: 70vh;
 }
 .playground-editor, .playground-canvas {
   background: var(--bg-card);
