@@ -2554,7 +2554,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <span class="zen-full-only" id="status">Loading WASM…</span>
       <button class="tool-btn" id="zen-toggle-btn" title="Switch to Zen mode">🧘</button>
       <!-- Settings Hamburger ☰ -->
-      <div class="settings-dropdown-container" id="settings-dropdown-container">
+      <div class="settings-dropdown-container zen-full-only" id="settings-dropdown-container">
       <button class="tool-btn" id="settings-menu-btn" title="Settings & tools">☰</button>
       <div class="settings-menu" id="settings-menu">
         <button class="settings-menu-item" id="sm-grid-toggle"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span><span class="sm-shortcut">G</span></button>
