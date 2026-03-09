@@ -36,7 +36,8 @@ let ctx = null;
 let isDark = (function() {
   const saved = localStorage.getItem('fd-theme');
   if (saved) return saved === 'dark';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  // Default to light theme (matches VS Code extension)
+  return false;
 })();
 let isSketchy = false;
 let animFrameId = null;
@@ -774,7 +775,7 @@ function refreshLayersPanel() {
 let minimapLastRender = 0;
 const MINIMAP_INTERVAL = 100; // ~10fps
 
-/** Render the minimap: scaled scene overview + blue viewport rect */
+/** Render the minimap: actual WASM scene overview + viewport rect */
 function renderMinimap(canvas) {
   const mc = document.getElementById('minimap-canvas');
   if (!mc || !fdCanvas) return;
@@ -786,57 +787,56 @@ function renderMinimap(canvas) {
 
   const mctx = mc.getContext('2d');
   mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  mctx.clearRect(0, 0, mw, mh);
 
-  // Extract @ids from text
+  // Theme-aware background
+  mctx.fillStyle = isDark ? 'rgba(28,28,30,0.9)' : 'rgba(245,245,247,0.9)';
+  mctx.fillRect(0, 0, mw, mh);
+
+  // Compute scene bounding box from node bounds
   const text = fdCanvas.get_text();
-  const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
-  const ids = [];
-  let m;
-  while ((m = idRegex.exec(text)) !== null) ids.push(m[1]);
+  if (!text || text.trim().length === 0) return;
 
-  // Get bounds for all nodes
-  const nodes = [];
-  for (const id of ids) {
+  let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
+  let foundAny = false;
+  const nodeIdPattern = /@(\w+)/g;
+  const seenIds = new Set();
+  let m;
+  while ((m = nodeIdPattern.exec(text)) !== null) {
+    const id = m[1];
+    if (seenIds.has(id)) continue;
+    seenIds.add(id);
     try {
       const bj = fdCanvas.get_node_bounds(id);
       if (!bj) continue;
       const b = JSON.parse(bj);
-      if (b.width > 0 && b.height > 0) nodes.push(b);
+      if (b.width > 0 && b.height > 0) {
+        sx = Math.min(sx, b.x);
+        sy = Math.min(sy, b.y);
+        sx2 = Math.max(sx2, b.x + b.width);
+        sy2 = Math.max(sy2, b.y + b.height);
+        foundAny = true;
+      }
     } catch (_) {}
   }
+  if (!foundAny) return;
 
-  if (nodes.length === 0) return;
+  const pad = 20;
+  const sceneW = sx2 - sx;
+  const sceneH = sy2 - sy;
+  if (sceneW <= 0 || sceneH <= 0) return;
 
-  // Compute scene bounding box with padding
-  let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
-  for (const n of nodes) {
-    sx = Math.min(sx, n.x);
-    sy = Math.min(sy, n.y);
-    sx2 = Math.max(sx2, n.x + n.width);
-    sy2 = Math.max(sy2, n.y + n.height);
-  }
-  const pad = 40;
-  sx -= pad; sy -= pad; sx2 += pad; sy2 += pad;
-  const sw = sx2 - sx, sh = sy2 - sy;
+  // Scale to fit minimap with padding
+  const scale = Math.min((mw - pad * 2) / sceneW, (mh - pad * 2) / sceneH);
+  const ox = (mw - sceneW * scale) / 2;
+  const oy = (mh - sceneH * scale) / 2;
 
-  // Scale to fit minimap
-  const scale = Math.min(mw / sw, mh / sh);
-  const ox = (mw - sw * scale) / 2;
-  const oy = (mh - sh * scale) / 2;
-
-  // Draw nodes
-  mctx.fillStyle = 'rgba(108, 92, 231, 0.35)';
-  mctx.strokeStyle = 'rgba(108, 92, 231, 0.6)';
-  mctx.lineWidth = 0.5;
-  for (const n of nodes) {
-    const rx = ox + (n.x - sx) * scale;
-    const ry = oy + (n.y - sy) * scale;
-    const rw = n.width * scale;
-    const rh = n.height * scale;
-    mctx.fillRect(rx, ry, rw, rh);
-    mctx.strokeRect(rx, ry, rw, rh);
-  }
+  // Render actual scene scaled into minimap via WASM
+  mctx.save();
+  mctx.translate(ox, oy);
+  mctx.scale(scale, scale);
+  mctx.translate(-sx, -sy);
+  fdCanvas.render(mctx, performance.now());
+  mctx.restore();
 
   // Draw viewport rect
   if (canvas) {
@@ -849,13 +849,17 @@ function renderMinimap(canvas) {
     const vry = oy + (vy - sy) * scale;
     const vrw = vw * scale;
     const vrh = vh * scale;
-    mctx.strokeStyle = '#4FC3F7';
+
+    // Theme-aware viewport indicator
+    mctx.strokeStyle = isDark ? 'rgba(10, 132, 255, 0.6)' : 'rgba(0, 122, 255, 0.5)';
     mctx.lineWidth = 1.5;
     mctx.strokeRect(vrx, vry, vrw, vrh);
+    mctx.fillStyle = isDark ? 'rgba(10, 132, 255, 0.08)' : 'rgba(0, 122, 255, 0.06)';
+    mctx.fillRect(vrx, vry, vrw, vrh);
   }
 
-  // Store scene info for click-to-pan
-  mc._minimap = { sx, sy, sw, sh, scale, ox, oy };
+  // Store scene info for click-to-pan (backward-compatible)
+  mc._minimap = { sx, sy, sw: sceneW, sh: sceneH, scale, ox, oy };
 }
 
 // ─── Panel Resize ────────────────────────────────────────────────────────

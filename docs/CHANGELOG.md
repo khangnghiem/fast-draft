@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.10.93 — Canvas Parity + Minimap Fix (R6.9)
+
+- **UX (R6.9)**: Default canvas theme → light — matches VS Code extension's first impression; users with saved preference keep their choice via `localStorage`
+- **FIX (R6.9)**: Minimap now renders actual scene via `fdCanvas.render()` instead of drawing plain purple rectangles — shows real shapes, colors, and text exactly as on the main canvas
+- **UX (R6.9)**: Minimap uses theme-aware background (`#F5F5F7` light / `#1C1C1E` dark) and blue viewport indicator with filled overlay, matching the VS Code extension
+- **FIX (R6.9)**: Minimap node-ID parsing now deduplicates with `Set` — prevents double-counting nodes that appear multiple times in source (e.g., `from: @node` references)
+- **SITE**: Changes in `site/playground.js`
+
 ### v0.10.92 — Theme Toggle in Navbar + Canvas Toolbar (R3.13)
 
 - **UX (R3.13)**: Discoverable Light/Dark theme toggle — ☀️/🌙 icon button added to navbar (between nav links and Install Extension) and canvas toolbar (after Eraser, separated by divider); removed hidden Dark Mode from ☰ settings menu
