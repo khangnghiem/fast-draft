@@ -17,7 +17,7 @@
   <!-- Preload WASM for instant playground -->
   <link rel="modulepreload" href="./wasm/fd_wasm.js" />
   <link rel="preload" href="./wasm/fd_wasm_bg.wasm" as="fetch" crossorigin />
-  <link rel="stylesheet" href="style.css?v=0.10.94" />
+  <link rel="stylesheet" href="style.css?v=0.10.95" />
   <!-- FOUC prevention: apply saved theme before first paint -->
   <script>
     (function() {
@@ -58,7 +58,6 @@
       <div class="hero-grid"></div>
     </div>
     <div class="hero-content">
-      <div class="hero-badge">Open Source · MIT License</div>
       <h1>Design as <span class="gradient-text">Code</span></h1>
       <p class="hero-sub">A file format and canvas for drawing, design, and animation — right inside your code editor. Draw it or code it? <strong>Both.</strong></p>
       <div class="hero-cta">
@@ -69,33 +68,18 @@
           <span class="btn-icon">★</span> View on GitHub
         </a>
       </div>
-      <div class="hero-stats">
-        <div class="stat">
-          <span class="stat-value">5×</span>
-          <span class="stat-label">fewer tokens than SVG</span>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat">
-          <span class="stat-value">6.5×</span>
-          <span class="stat-label">smaller than Excalidraw</span>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat">
-          <span class="stat-value">370</span>
-          <span class="stat-label">tests passing</span>
-        </div>
+      <div class="hero-stats-inline">
+        <span class="stat-chip"><strong>5×</strong> fewer tokens than SVG</span>
+        <span class="stat-dot">·</span>
+        <span class="stat-chip"><strong>6.5×</strong> smaller than Excalidraw</span>
+        <span class="stat-dot">·</span>
+        <span class="stat-chip"><strong>370</strong> tests passing</span>
       </div>
     </div>
 
     <!-- ─── Playground Embedded in Hero ─── -->
     <div class="hero-playground">
-      <div class="playground-toolbar">
-        <div class="toolbar-left">
-          <span class="playground-label">▶ Live Playground</span>
 
-        </div>
-        <div class="toolbar-right"></div>
-      </div>
       <input type="file" id="css-file-input" accept=".css" style="display:none">
       <div id="playground-container" class="playground-split">
         <div class="playground-editor">
