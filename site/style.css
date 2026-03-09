@@ -381,24 +381,7 @@ code {
   align-items: center;
   gap: 12px;
 }
-.toolbar-label {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-.toolbar-select {
-  background: var(--bg-card);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font);
-  font-size: 0.9rem;
-  cursor: pointer;
-  outline: none;
-  transition: border-color var(--transition);
-}
-.toolbar-select:focus { border-color: var(--accent); }
+
 .toolbar-btn {
   background: var(--bg-card);
   color: var(--text-secondary);

@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.10.91 — Remove Example Selector (R6.8)
+
+- **CLEANUP (R6.8)**: Removed multi-example selector from playground — collapsed 3 example files (`card`, `login`, `welcome`) into a single `DEFAULT_FD` constant keeping only the card example; removed `<select>` dropdown, `<label>`, event listener, and `.toolbar-label`/`.toolbar-select` CSS rules; ~150 lines removed across `playground.js`, `index.html`, `style.css`
+
 ### v0.10.90 — Fix Frame Auto-Resize (R3.2)
 
 - **FIX (R3.2)**: Frames no longer involuntarily resize to enclose their children — frames have declared `width`/`height` and should maintain those dimensions; previously `finalize_child_bounds()` and `expand_group_to_children()` treated frames identically to groups, auto-expanding bounds to fit the child bounding box on every pointer release; now all frames (not just `clip: true`) are skipped in auto-sizing logic; only groups auto-size
