@@ -1,0 +1,165 @@
+# ─── Edge Types Showcase ──────────────────────────────────────────────────
+
+style node_base {
+  w: 100 h: 60
+  fill: #FFFFFF
+  corner: 8
+  shadow: (0,2,8,#00000020)
+}
+
+style node_text {
+  fill: #1A1A2E
+  font: "Inter" semibold 14
+}
+
+# ─── Curves ───
+
+text @section_curves "Curve Types" {
+  fill: #6C5CE7
+  font: "Inter" bold 24
+  x: 50 y: 50
+}
+
+rect @n1_curve {
+  text @t1 "Straight" { use: node_text }
+  use: node_base
+  x: 50 y: 100
+}
+rect @n2_curve {
+  text @t2 "Target" { use: node_text }
+  use: node_base
+  x: 250 y: 100
+}
+edge @e_straight {
+  from: @n1_curve to: @n2_curve
+  stroke: #A29BFE 2
+  curve: straight
+}
+
+rect @n3_curve {
+  text @t3 "Smooth" { use: node_text }
+  use: node_base
+  x: 50 y: 200
+}
+rect @n4_curve {
+  text @t4 "Target" { use: node_text }
+  use: node_base
+  x: 250 y: 200
+}
+edge @e_smooth {
+  from: @n3_curve to: @n4_curve
+  stroke: #A29BFE 2
+  curve: smooth
+}
+
+rect @n5_curve {
+  text @t5 "Step" { use: node_text }
+  use: node_base
+  x: 50 y: 300
+}
+rect @n6_curve {
+  text @t6 "Target" { use: node_text }
+  use: node_base
+  x: 250 y: 300
+}
+edge @e_step {
+  from: @n5_curve to: @n6_curve
+  stroke: #A29BFE 2
+  curve: step
+}
+
+# ─── Arrows ───
+
+text @section_arrows "Arrow Styles" {
+  fill: #6C5CE7
+  font: "Inter" bold 24
+  x: 400 y: 50
+}
+
+rect @n1_arrow {
+  text @t7 "Start" { use: node_text }
+  use: node_base
+  x: 400 y: 100
+}
+rect @n2_arrow {
+  text @t8 "Target" { use: node_text }
+  use: node_base
+  x: 600 y: 100
+}
+edge @e_start {
+  from: @n1_arrow to: @n2_arrow
+  stroke: #00B894 2
+  arrow: start
+}
+
+rect @n3_arrow {
+  text @t9 "End" { use: node_text }
+  use: node_base
+  x: 400 y: 200
+}
+rect @n4_arrow {
+  text @t10 "Target" { use: node_text }
+  use: node_base
+  x: 600 y: 200
+}
+edge @e_end {
+  from: @n3_arrow to: @n4_arrow
+  stroke: #00B894 2
+  arrow: end
+}
+
+rect @n5_arrow {
+  text @t11 "Both" { use: node_text }
+  use: node_base
+  x: 400 y: 300
+}
+rect @n6_arrow {
+  text @t12 "Target" { use: node_text }
+  use: node_base
+  x: 600 y: 300
+}
+edge @e_both {
+  from: @n5_arrow to: @n6_arrow
+  stroke: #00B894 2
+  arrow: both
+}
+
+# ─── Flows ───
+
+text @section_flows "Flow Animations" {
+  fill: #6C5CE7
+  font: "Inter" bold 24
+  x: 750 y: 50
+}
+
+rect @n1_flow {
+  text @t13 "Pulse" { use: node_text }
+  use: node_base
+  x: 750 y: 100
+}
+rect @n2_flow {
+  text @t14 "Target" { use: node_text }
+  use: node_base
+  x: 950 y: 100
+}
+edge @e_pulse {
+  from: @n1_flow to: @n2_flow
+  stroke: #E17055 2
+  flow: pulse 1200ms
+}
+
+rect @n3_flow {
+  text @t15 "Dash" { use: node_text }
+  use: node_base
+  x: 750 y: 200
+}
+rect @n4_flow {
+  text @t16 "Target" { use: node_text }
+  use: node_base
+  x: 950 y: 200
+}
+edge @e_dash {
+  from: @n3_flow to: @n4_flow
+  stroke: #E17055 2
+  flow: dash 800ms
+}
