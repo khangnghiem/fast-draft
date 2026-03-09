@@ -218,7 +218,7 @@ code {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 80px 24px 48px;
+  padding: 64px 24px 32px;
   overflow: hidden;
 }
 .hero-bg {
@@ -249,20 +249,9 @@ code {
   z-index: 1;
   text-align: center;
   max-width: 800px;
-  margin-bottom: 40px;
+  margin-bottom: 16px;
 }
-.hero-badge {
-  display: inline-block;
-  padding: 6px 16px;
-  border-radius: 100px;
-  border: 1px solid var(--border);
-  background: rgba(108, 92, 231, 0.1);
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  font-weight: 500;
-  margin-bottom: 20px;
-  letter-spacing: 0.02em;
-}
+
 #hero h1 {
   font-size: clamp(2.2rem, 5vw, 3.8rem);
   font-weight: 800;
@@ -288,7 +277,7 @@ code {
   gap: 16px;
   justify-content: center;
   flex-wrap: wrap;
-  margin-bottom: 32px;
+  margin-bottom: 16px;
 }
 .btn {
   display: inline-flex;
@@ -326,31 +315,26 @@ code {
   transform: translateY(-2px);
 }
 .btn-icon { font-size: 0.9em; }
-.hero-stats {
+/* ── Hero Stats (inline) ── */
+.hero-stats-inline {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 32px;
+  gap: 8px;
   flex-wrap: wrap;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
 }
-.stat { text-align: center; }
-.stat-value {
-  display: block;
-  font-size: 1.8rem;
-  font-weight: 800;
+.hero-stats-inline strong {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  font-weight: 800;
 }
-.stat-label {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-.stat-divider {
-  width: 1px;
-  height: 40px;
-  background: var(--border);
+.stat-dot {
+  color: var(--text-muted);
+  font-size: 0.7rem;
 }
 
 /* ─── Hero Playground ─── */
@@ -361,12 +345,7 @@ code {
   max-width: var(--max-width);
   margin-top: 8px;
 }
-.playground-label {
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 0.9rem;
-  letter-spacing: 0.02em;
-}
+
 
 /* ─── Sections ─── */
 .section { padding: 100px 24px; }
@@ -1910,17 +1889,12 @@ code {
   .playground-editor { min-height: 280px; }
   .playground-canvas { min-height: 320px; }
 
-  .hero-stats { gap: 16px; }
-  .stat-divider { display: none; }
-
   .features-grid { grid-template-columns: 1fr; }
   .modes-grid { grid-template-columns: 1fr; }
   .crate-grid { grid-template-columns: 1fr 1fr; }
 
   #hero h1 { font-size: 2rem; }
   .hero-sub { font-size: 1rem; }
-
-  .playground-label { display: none; }
 
   #layers-panel, #props-panel { display: none !important; }
   #floating-toolbar { left: 8px; }

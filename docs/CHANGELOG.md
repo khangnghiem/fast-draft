@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.95 — Hero Section Compaction (R6.5)
+
+- **UX (R6.5)**: Compacted hero section to push the live playground above the fold — removed "Open Source · MIT License" badge (already in footer), inlined 3 stats (5× / 6.5× / 370) as a single compact text row below CTAs, removed "▶ Live Playground" toolbar label; tightened `#hero` padding (80→64px top, 48→32px bottom), `hero-content` margin (40→16px), CTA margin (32→16px); ~200px vertical savings
+- **CLEANUP**: Removed dead CSS for `.hero-badge`, `.playground-label`, old `.hero-stats`/`.stat-value`/`.stat-label`/`.stat-divider` rules; cleaned stale mobile responsive overrides
+- **SITE**: Changes in `site/index.html`, `site/style.css`
+
 ### v0.10.94 — Top Toolbar + AI Features (R6.10)
 
 - **UX (R6.10)**: Apple HIG frosted-glass top toolbar inside canvas with 3-zone layout — AI buttons (left), view toggle (center), status + zen + settings (right)
