@@ -489,14 +489,27 @@ code {
 
 .playground-split {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px;
+  grid-template-columns: var(--editor-width, 1fr) auto 1fr;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   overflow: hidden;
   background: var(--border);
   box-shadow: var(--shadow), var(--shadow-glow);
-  min-height: 70vh;
+  min-height: 80vh;
+}
+
+/* ── Split Resize Handle ── */
+.split-resize-handle {
+  width: 6px;
+  cursor: col-resize;
+  background: var(--border);
+  position: relative;
+  z-index: 2;
+  transition: background 0.15s;
+}
+.split-resize-handle:hover,
+.split-resize-handle.active {
+  background: var(--accent);
 }
 .playground-editor, .playground-canvas {
   background: var(--bg-card);
@@ -1857,6 +1870,7 @@ code {
 .zen-mode .settings-dropdown-container { display: none !important; }
 .zen-mode .playground-editor { display: none !important; }
 .zen-mode .playground-split { grid-template-columns: 1fr; }
+.zen-mode .split-resize-handle { display: none; }
 .zen-mode .playground-canvas { min-height: 500px; }
 .zen-mode #floating-toolbar { display: none !important; }
 .zen-mode #minimap-container { display: none !important; }
@@ -1886,6 +1900,7 @@ code {
     grid-template-columns: 1fr;
     min-height: auto;
   }
+  .split-resize-handle { display: none; }
   .playground-editor { min-height: 280px; }
   .playground-canvas { min-height: 320px; }
 
