@@ -17,7 +17,7 @@
   <!-- Preload WASM for instant playground -->
   <link rel="modulepreload" href="./wasm/fd_wasm.js" />
   <link rel="preload" href="./wasm/fd_wasm_bg.wasm" as="fetch" crossorigin />
-  <link rel="stylesheet" href="style.css?v=0.10.99" />
+  <link rel="stylesheet" href="style.css?v=0.10.100" />
   <!-- FOUC prevention: apply saved theme before first paint -->
   <script>
     (function() {
@@ -84,7 +84,7 @@
       <div id="playground-container" class="playground-split">
         <div class="playground-editor">
           <div class="editor-header">
-            <span class="editor-dot"></span> Code Mode
+            <span class="editor-dot"></span> Code
           </div>
           <textarea id="fd-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
         </div>
@@ -94,6 +94,7 @@
             <!-- Top Toolbar (Apple HIG frosted bar) -->
             <div id="canvas-toolbar">
               <div class="tb-zone tb-left zen-full-only">
+                <span class="canvas-label"><span class="editor-dot design"></span> Design</span>
                 <button class="tool-btn" id="ai-touch-btn" title="AI Touch — refine selected node">✦ AI Touch</button>
                 <button class="tool-btn" id="renamify-btn" title="Renamify — rename anonymous node IDs">✦ Renamify</button>
               </div>
@@ -294,7 +295,7 @@
       </div>
       <div class="modes-grid">
         <div class="mode-card">
-          <div class="mode-badge">🤖 Code Mode</div>
+          <div class="mode-badge">🤖 Code</div>
           <h3>The AI Interface</h3>
           <p>LLMs and coding agents read, write, and reason about <code>.fd</code> text directly. Uses ~5× fewer tokens than Excalidraw JSON.</p>
           <ul class="mode-list">
