@@ -170,6 +170,8 @@ let isDark = true;
 let isSketchy = false;
 let animFrameId = null;
 let suppressSync = false;
+/** Debounce timer for editor→canvas sync (hoisted for syncCanvasToEditor to clear) */
+let editorDebounceTimer = null;
 
 // Pointer tracking
 let activePointerId = -1;
@@ -421,6 +423,11 @@ function updateZoomIndicator() {
 function syncCanvasToEditor(editor) {
   if (!fdCanvas) return;
   suppressSync = true;
+  // Cancel any pending debounced input→canvas sync — it would fire
+  // after suppressSync is cleared, calling set_text() → resolve() →
+  // fresh bounds that clobber in-place move deltas, causing a flash.
+  clearTimeout(editorDebounceTimer);
+  editorDebounceTimer = null;
   editor.value = fdCanvas.get_text();
   suppressSync = false;
 }
@@ -1213,11 +1220,10 @@ async function initPlayground() {
     setupPanelResize(wrapper, resizeCanvas);
 
     // ── Text Editor → Canvas ──────────────────────────────────────────
-    let debounceTimer = null;
     editor.addEventListener('input', () => {
       if (suppressSync) return;
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
+      clearTimeout(editorDebounceTimer);
+      editorDebounceTimer = setTimeout(() => {
         if (fdCanvas) fdCanvas.set_text(editor.value);
       }, 50);
     });
