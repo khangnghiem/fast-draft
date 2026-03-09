@@ -2593,7 +2593,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <label class="fab-label fab-text-only" for="fab-font-size">Size</label>
       <input type="number" id="fab-font-size" class="fab-input fab-text-only" min="8" max="200" step="1" value="16" title="Font size">
       <div class="fab-sep"></div>
-      <button class="fab-delete-btn" id="deleteSelectedBtn" title="Delete (⌫)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
+      <button class="fab-delete-btn" id="deleteSelectedBtn" title="Delete (⌫)" aria-label="Delete selected node"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
 
     </div>
     <canvas id="fd-canvas" class="tool-select"></canvas>
@@ -2622,14 +2622,14 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         <div class="paper-roll left-roll"></div>
       </div>
       <div class="scroll-paper-body">
-        <button class="ft-tool-btn active" data-tool="select"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2L3.5 13.5L7 10L11.5 14.5L13 13L9 8.5L13 8.5Z"/></svg><span class="ft-tooltip">Select<span class="tt-shortcut">V</span></span></button>
-        <button class="ft-tool-btn" data-tool="rect"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="12" height="10" rx="2"/></svg><span class="ft-tooltip">Rectangle<span class="tt-shortcut">R</span></span></button>
-        <button class="ft-tool-btn" data-tool="ellipse"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/></svg><span class="ft-tooltip">Ellipse<span class="tt-shortcut">O</span></span></button>
-        <button class="ft-tool-btn" data-tool="pen"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5L14.5 7.5L6.5 15.5H2.5V11.5Z"/><path d="M10.5 3.5L14.5 7.5" /><path d="M8.5 5.5L12.5 9.5"/></svg><span class="ft-tooltip">Pen<span class="tt-shortcut">P</span></span></button>
-        <button class="ft-tool-btn" data-tool="arrow"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14L14 4"/><path d="M7 4H14V11"/></svg><span class="ft-tooltip">Arrow<span class="tt-shortcut">A</span></span></button>
-        <button class="ft-tool-btn" data-tool="text"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4H14"/><path d="M9 4V15"/><path d="M6 15H12"/></svg><span class="ft-tooltip">Text<span class="tt-shortcut">T</span></span></button>
-        <button class="ft-tool-btn" data-tool="frame"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="14" height="14" rx="2"/><rect x="5.5" y="5.5" width="7" height="7" rx="1"/></svg><span class="ft-tooltip">Frame<span class="tt-shortcut">F</span></span></button>
-        <button class="ft-tool-btn" data-tool="eraser"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5L8 12L5.5 14.5H2.5V12L9.5 5L12.25 2.25Z"/><path d="M8.5 6L12 9.5"/><line x1="5" y1="15" x2="15" y2="15"/></svg><span class="ft-tooltip">Eraser<span class="tt-shortcut">E</span></span></button>
+        <button class="ft-tool-btn active" data-tool="select" aria-label="Select tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2L3.5 13.5L7 10L11.5 14.5L13 13L9 8.5L13 8.5Z"/></svg><span class="ft-tooltip">Select<span class="tt-shortcut">V</span></span></button>
+        <button class="ft-tool-btn" data-tool="rect" aria-label="Rectangle tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="12" height="10" rx="2"/></svg><span class="ft-tooltip">Rectangle<span class="tt-shortcut">R</span></span></button>
+        <button class="ft-tool-btn" data-tool="ellipse" aria-label="Ellipse tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/></svg><span class="ft-tooltip">Ellipse<span class="tt-shortcut">O</span></span></button>
+        <button class="ft-tool-btn" data-tool="pen" aria-label="Pen tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5L14.5 7.5L6.5 15.5H2.5V11.5Z"/><path d="M10.5 3.5L14.5 7.5" /><path d="M8.5 5.5L12.5 9.5"/></svg><span class="ft-tooltip">Pen<span class="tt-shortcut">P</span></span></button>
+        <button class="ft-tool-btn" data-tool="arrow" aria-label="Arrow tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14L14 4"/><path d="M7 4H14V11"/></svg><span class="ft-tooltip">Arrow<span class="tt-shortcut">A</span></span></button>
+        <button class="ft-tool-btn" data-tool="text" aria-label="Text tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4H14"/><path d="M9 4V15"/><path d="M6 15H12"/></svg><span class="ft-tooltip">Text<span class="tt-shortcut">T</span></span></button>
+        <button class="ft-tool-btn" data-tool="frame" aria-label="Frame tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="14" height="14" rx="2"/><rect x="5.5" y="5.5" width="7" height="7" rx="1"/></svg><span class="ft-tooltip">Frame<span class="tt-shortcut">F</span></span></button>
+        <button class="ft-tool-btn" data-tool="eraser" aria-label="Eraser tool"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5L8 12L5.5 14.5H2.5V12L9.5 5L12.25 2.25Z"/><path d="M8.5 6L12 9.5"/><line x1="5" y1="15" x2="15" y2="15"/></svg><span class="ft-tooltip">Eraser<span class="tt-shortcut">E</span></span></button>
       </div>
       <div class="scroll-handle handle-end" title="Drag to move, click to roll">
         <div class="paper-roll right-roll"></div>
@@ -2732,7 +2732,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
   <div id="annotation-card">
     <div class="card-header">
       <span id="card-title">Spec</span>
-      <button class="card-close" id="card-close-btn">×</button>
+      <button class="card-close" id="card-close-btn" aria-label="Close">×</button>
     </div>
     <div class="field-group">
       <label class="field-label" for="ann-description">Description</label>
@@ -2795,7 +2795,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
   <div id="renamify-panel">
     <div class="renamify-header">
       <span class="renamify-title">✦ Renamify</span>
-      <button class="renamify-close" id="renamify-close">×</button>
+      <button class="renamify-close" id="renamify-close" aria-label="Close">×</button>
     </div>
     <div class="renamify-body" id="renamify-body"></div>
     <div class="renamify-footer" id="renamify-footer" style="display:none">
@@ -2805,7 +2805,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
   </div>
   <div id="anim-picker">
-    <div class="picker-header"><span class="picker-icon">⚡</span> Add Animation <button class="picker-close" id="anim-picker-close">×</button></div>
+    <div class="picker-header"><span class="picker-icon">⚡</span> Add Animation <button class="picker-close" id="anim-picker-close" aria-label="Close">×</button></div>
     <div class="picker-body" id="anim-picker-body"></div>
   </div>
 
