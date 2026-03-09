@@ -1037,6 +1037,339 @@ function setupPanelResize(wrapper, resizeCanvas) {
 
 // ─── Init ────────────────────────────────────────────────────────────────
 
+/** ─── View Mode Toggle ────────────────────────────────────────────────── */
+let viewMode = 'all';
+
+function setViewMode(mode) {
+  viewMode = mode;
+  document.getElementById('view-all')?.classList.toggle('active', mode === 'all');
+  document.getElementById('view-design')?.classList.toggle('active', mode === 'design');
+  document.getElementById('view-spec')?.classList.toggle('active', mode === 'spec');
+
+  // Update editor text based on view mode
+  if (!fdCanvas) return;
+  const fullText = fdCanvas.get_text();
+  const editor = document.getElementById('fd-editor');
+  if (!editor) return;
+
+  if (mode === 'all') {
+    editor.value = fullText;
+    editor.readOnly = false;
+  } else if (mode === 'design') {
+    // Hide spec blocks for design view
+    editor.value = fullText.replace(/\n?\s*spec\s*\{[^}]*\}/g, '').replace(/\n?\s*spec\s+"[^"]*"/g, '');
+    editor.readOnly = true;
+  } else if (mode === 'spec') {
+    // Show only spec-annotated nodes
+    const lines = fullText.split('\n');
+    const specLines = [];
+    let skipBlock = false;
+    for (const line of lines) {
+      if (line.trim().startsWith('#') || line.trim().startsWith('spec ') || line.trim().startsWith('spec{')) {
+        specLines.push(line);
+        continue;
+      }
+      const nodeMatch = line.trim().match(/^(group|frame|rect|ellipse|text|path)\s+@/);
+      if (nodeMatch) {
+        specLines.push(line);
+        continue;
+      }
+      if (line.trim() === '}') {
+        specLines.push(line);
+      }
+    }
+    editor.value = specLines.join('\n');
+    editor.readOnly = true;
+  }
+}
+
+/** ─── AI Touch — Refine Selected Node ────────────────────────────────── */
+async function aiTouch() {
+  if (!fdCanvas) { showToast('Canvas not ready'); return; }
+
+  const selectedId = fdCanvas.get_selected_id?.();
+  if (!selectedId) { showToast('Select a node first'); return; }
+
+  const btn = document.getElementById('ai-touch-btn');
+  btn?.classList.add('loading');
+  const statusEl = document.getElementById('canvas-status');
+  if (statusEl) statusEl.textContent = 'Refining…';
+
+  try {
+    const fdText = fdCanvas.get_text();
+    const prompt = buildRefinePrompt(fdText, [selectedId]);
+
+    const resp = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, mode: 'refine' }),
+    });
+
+    if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+    const data = await resp.json();
+    let refined = data.result || '';
+
+    // Strip markdown fences
+    refined = refined.replace(/^```(?:fd|text)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
+
+    // Validate: must contain at least one node keyword
+    if (!refined.match(/\b(rect|ellipse|text|group|path)\b/)) {
+      showToast('AI returned invalid output — try again');
+      return;
+    }
+
+    // Apply refined text to canvas
+    const editor = document.getElementById('fd-editor');
+    if (editor) editor.value = refined;
+    fdCanvas.set_text(refined);
+    renderCanvas();
+    showToast('✦ AI Touch applied!');
+  } catch (err) {
+    console.warn('AI Touch error:', err);
+    showToast('AI unavailable — check /api/ai endpoint');
+  } finally {
+    btn?.classList.remove('loading');
+    if (statusEl) statusEl.textContent = 'Ready';
+  }
+}
+
+function buildRefinePrompt(fdText, nodeIds) {
+  const targetList = nodeIds.map(id => `@${id}`).join(', ');
+  return `You are an expert UI designer working with the FD (Fast Draft) format.
+
+Given the .fd document below, improve the following nodes: ${targetList}
+
+## Rules
+
+1. **Rename auto-generated IDs**: Replace any \`@_kind_N\` (like \`@_rect_0\`, \`@_text_3\`) with a short, semantic snake_case name that describes the node's purpose (e.g., \`@hero_card\`, \`@nav_btn\`). Max 15 characters.
+
+2. **Restyle for visual polish**: Improve colors (use harmonious hex palettes), add rounded corners, adjust spacing/sizing. Follow modern design best practices.
+
+3. **Preserve structure**: Do NOT add, remove, or reorder nodes. Only change IDs and visual properties (fill, stroke, corner, opacity, font).
+
+4. **Output the COMPLETE refined .fd document** — not just the changed nodes.
+
+5. **Output ONLY valid FD text** — no markdown fences, no explanations.
+
+## FD Document
+
+${fdText}`;
+}
+
+/** ─── Renamify — Heuristic + AI Rename ───────────────────────────────── */
+async function renamify() {
+  if (!fdCanvas) { showToast('Canvas not ready'); return; }
+
+  const btn = document.getElementById('renamify-btn');
+  btn?.classList.add('loading');
+  const statusEl = document.getElementById('canvas-status');
+  if (statusEl) statusEl.textContent = 'Renaming…';
+
+  try {
+    const fdText = fdCanvas.get_text();
+    const anonIds = findAnonymousNodeIds(fdText);
+
+    if (anonIds.length === 0) {
+      showToast('No anonymous IDs found — all nodes already named!');
+      return;
+    }
+
+    // Use heuristic rename (no API needed, works immediately)
+    const proposals = heuristicRename(fdText, anonIds);
+
+    if (proposals.length === 0) {
+      showToast('Could not generate better names');
+      return;
+    }
+
+    // Apply renames
+    let result = fdText;
+    for (const { oldId, newId } of proposals) {
+      const pattern = new RegExp(`@${oldId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g');
+      result = result.replace(pattern, `@${newId}`);
+    }
+
+    // Update editor and canvas
+    const editor = document.getElementById('fd-editor');
+    if (editor) editor.value = result;
+    fdCanvas.set_text(result);
+    renderCanvas();
+    showToast(`✦ Renamed ${proposals.length} node${proposals.length > 1 ? 's' : ''}`);
+  } catch (err) {
+    console.warn('Renamify error:', err);
+    showToast('Rename failed — try again');
+  } finally {
+    btn?.classList.remove('loading');
+    if (statusEl) statusEl.textContent = 'Ready';
+  }
+}
+
+/** Find auto-generated node IDs like @_rect_0, @_text_3 */
+function findAnonymousNodeIds(fdText) {
+  const re = /(?:group|frame|rect|ellipse|path|text)\s+@(_(?:rect|ellipse|group|frame|path|text)_\d+)/g;
+  const ids = [];
+  let m;
+  while ((m = re.exec(fdText)) !== null) {
+    if (!ids.includes(m[1])) ids.push(m[1]);
+  }
+  return ids;
+}
+
+/** Sanitize a string to a valid FD identifier (snake_case, no special chars). */
+function sanitizeToFdId(raw) {
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9_\s]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 20);
+}
+
+/** Extract context for anonymous nodes from FD text. */
+function extractNodeContexts(fdText, anonIds) {
+  const lines = fdText.split('\n');
+  const contexts = new Map();
+  const parentStack = [];
+  let braceDepth = 0;
+  const depthAtPush = [];
+  let currentNode = null;
+
+  const NODE_RE = /^\s*(group|frame|rect|ellipse|path|text)\s+@(\w+)(?:\s+"([^"]*)")?\s*\{?\s*$/;
+  const WIDTH_RE = /\bw:\s*(\d+(?:\.\d+)?)/;
+  const HEIGHT_RE = /\bh:\s*(\d+(?:\.\d+)?)/;
+  const CONTENT_RE = /\bcontent:\s*"([^"]*)"/;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const openBraces = (trimmed.match(/\{/g) || []).length;
+    const closeBraces = (trimmed.match(/\}/g) || []).length;
+
+    const nodeMatch = trimmed.match(NODE_RE);
+    if (nodeMatch) {
+      const [, type, id, inlineText] = nodeMatch;
+      const ctx = { id, type, parentId: parentStack.length > 0 ? parentStack[parentStack.length - 1] : undefined };
+      if (inlineText) ctx.textContent = inlineText;
+
+      if (anonIds.has(id)) {
+        contexts.set(id, ctx);
+        currentNode = ctx;
+      }
+
+      if ((type === 'group' || type === 'frame') && trimmed.includes('{')) {
+        parentStack.push(id);
+        depthAtPush.push(braceDepth + openBraces);
+      }
+
+      braceDepth += openBraces - closeBraces;
+      continue;
+    }
+
+    if (currentNode && braceDepth > 0) {
+      const wMatch = trimmed.match(WIDTH_RE);
+      const hMatch = trimmed.match(HEIGHT_RE);
+      const contentMatch = trimmed.match(CONTENT_RE);
+      if (wMatch) currentNode.width = parseFloat(wMatch[1]);
+      if (hMatch) currentNode.height = parseFloat(hMatch[1]);
+      if (contentMatch && !currentNode.textContent) currentNode.textContent = contentMatch[1];
+    }
+
+    braceDepth += openBraces - closeBraces;
+
+    if (trimmed === '}') {
+      while (depthAtPush.length > 0 && depthAtPush[depthAtPush.length - 1] > braceDepth) {
+        depthAtPush.pop();
+        parentStack.pop();
+      }
+      if (braceDepth <= 0) currentNode = null;
+    }
+  }
+
+  return contexts;
+}
+
+/** Generate a semantic name from node context using heuristics. */
+function generateHeuristicName(ctx) {
+  const parts = [];
+
+  // 1. Text content takes priority
+  if (ctx.textContent) {
+    const cleaned = ctx.textContent
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .trim()
+      .split(/\s+/)
+      .slice(0, 3)
+      .join('_');
+    if (cleaned) {
+      parts.push(cleaned);
+      parts.push(ctx.type !== 'text' ? ctx.type : 'label');
+      return sanitizeToFdId(parts.join('_'));
+    }
+  }
+
+  // 2. Parent context
+  if (ctx.parentId && !ctx.parentId.match(/^_?(group|frame)_\d+$/)) {
+    parts.push(ctx.parentId);
+  }
+
+  // 3. Shape detection
+  if (ctx.type === 'ellipse' && ctx.width && ctx.height && ctx.width === ctx.height) {
+    parts.push('circle');
+  } else if (ctx.type === 'rect' && ctx.width && ctx.height) {
+    if (ctx.width > ctx.height * 3) parts.push('bar');
+    else if (ctx.height > ctx.width * 3) parts.push('column');
+    else parts.push(ctx.type);
+  } else {
+    parts.push(ctx.type);
+  }
+
+  return sanitizeToFdId(parts.join('_')) || ctx.type;
+}
+
+/** Heuristic rename — generate semantic names without AI. */
+function heuristicRename(fdText, anonIds) {
+  const existingIds = findAllNodeIds(fdText);
+  const anonSet = new Set(anonIds);
+  const contexts = extractNodeContexts(fdText, anonSet);
+  const usedNames = new Set(existingIds);
+  const proposals = [];
+
+  for (const oldId of anonIds) {
+    const ctx = contexts.get(oldId);
+    if (!ctx) continue;
+
+    let newId = generateHeuristicName(ctx);
+    if (!newId || newId === oldId) continue;
+
+    let candidate = newId;
+    let suffix = 2;
+    while (usedNames.has(candidate)) {
+      candidate = `${newId}_${suffix}`;
+      suffix++;
+    }
+    newId = candidate;
+
+    usedNames.add(newId);
+    proposals.push({ oldId, newId });
+  }
+
+  return proposals;
+}
+
+/** Find ALL node IDs in an FD document. */
+function findAllNodeIds(fdText) {
+  const re = /(?:group|frame|rect|ellipse|path|text)\s+@(\w+)/g;
+  const ids = [];
+  let m;
+  while ((m = re.exec(fdText)) !== null) {
+    if (!ids.includes(m[1])) ids.push(m[1]);
+  }
+  return ids;
+}
+
 async function initPlayground() {
   const editor = document.getElementById('fd-editor');
   const canvas = document.getElementById('fd-canvas');
@@ -1103,6 +1436,13 @@ async function initPlayground() {
       zenBtn.title = zenMode ? 'Exit Zen Mode (Esc)' : 'Zen Mode (Esc)';
       setTimeout(() => { resizeCanvas(); renderCanvas(); }, 50);
     });
+
+    // ── Toolbar buttons ──────────────────────────────────────────────
+    document.getElementById('ai-touch-btn')?.addEventListener('click', aiTouch);
+    document.getElementById('renamify-btn')?.addEventListener('click', renamify);
+    document.getElementById('view-all')?.addEventListener('click', () => setViewMode('all'));
+    document.getElementById('view-design')?.addEventListener('click', () => setViewMode('design'));
+    document.getElementById('view-spec')?.addEventListener('click', () => setViewMode('spec'));
 
     // Get canvas 2D context
     ctx = canvas.getContext('2d');
@@ -1500,17 +1840,6 @@ async function initPlayground() {
           case 'grid':
             gridEnabled = !gridEnabled;
             break;
-          case 'zen': {
-            zenMode = !zenMode;
-            document.querySelector('.hero-playground')?.classList.toggle('zen-mode', zenMode);
-            const zb = document.getElementById('zen-toggle-btn');
-            if (zb) { zb.textContent = zenMode ? '✕ Exit Zen' : '🧘'; zb.title = zenMode ? 'Exit Zen Mode (Esc)' : 'Zen Mode (Esc)'; }
-            settingsMenu?.classList.remove('visible');
-            // Trigger resize after layout change
-            setTimeout(() => { resizeCanvas(); renderCanvas(); }, 50);
-            updateSettingsToggles();
-            return;
-          }
           case 'fit': {
             // Fit to content: scan all nodes, compute bounding box, set zoom+pan
             if (fdCanvas) {

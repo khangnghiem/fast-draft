@@ -17,7 +17,7 @@
   <!-- Preload WASM for instant playground -->
   <link rel="modulepreload" href="./wasm/fd_wasm.js" />
   <link rel="preload" href="./wasm/fd_wasm_bg.wasm" as="fetch" crossorigin />
-  <link rel="stylesheet" href="style.css?v=0.10.93" />
+  <link rel="stylesheet" href="style.css?v=0.10.94" />
   <!-- FOUC prevention: apply saved theme before first paint -->
   <script>
     (function() {
@@ -106,26 +106,43 @@
         </div>
         <div class="playground-canvas">
           <div id="canvas-wrapper">
+            <!-- Top Toolbar (Apple HIG frosted bar) -->
+            <div id="canvas-toolbar">
+              <div class="tb-zone tb-left zen-full-only">
+                <button class="tool-btn" id="ai-touch-btn" title="AI Touch — refine selected node">✦ AI Touch</button>
+                <button class="tool-btn" id="renamify-btn" title="Renamify — rename anonymous node IDs">✦ Renamify</button>
+              </div>
+              <div class="tb-zone tb-center zen-full-only">
+                <div class="view-toggle" id="view-toggle">
+                  <button class="view-btn active" id="view-all" title="All View — full details">All</button>
+                  <button class="view-btn" id="view-design" title="Design View — visual properties">Design</button>
+                  <button class="view-btn" id="view-spec" title="Spec View — requirements">Spec</button>
+                </div>
+              </div>
+              <div class="tb-zone tb-right">
+                <span class="zen-full-only" id="canvas-status">Ready</span>
+                <button class="tool-btn" id="zen-toggle-btn" title="Zen Mode (Esc)">🧘</button>
+                <div class="settings-dropdown-container zen-full-only" id="settings-dropdown-container">
+                  <button class="tool-btn" id="settings-menu-btn" title="Settings &amp; tools">☰</button>
+                  <div class="settings-menu" id="settings-menu">
+                    <button class="settings-menu-item" id="sm-sketchy-toggle" data-setting="sketchy"><span class="sm-icon">✏️</span><span class="sm-label">Sketchy</span></button>
+                    <button class="settings-menu-item" id="sm-grid-toggle" data-setting="grid"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span></button>
+                    <div class="settings-menu-sep"></div>
+                    <button class="settings-menu-item" data-setting="fit"><span class="sm-icon">⊡</span><span class="sm-label">Fit to Content</span></button>
+                    <div class="settings-menu-sep"></div>
+                    <button class="settings-menu-item" data-setting="copy-png" id="sm-copy-png"><span class="sm-icon">📷</span><span class="sm-label">Copy as PNG</span></button>
+                    <button class="settings-menu-item" data-setting="export-svg" id="sm-export-svg"><span class="sm-icon">📄</span><span class="sm-label">Download SVG</span></button>
+                    <button class="settings-menu-item" data-setting="import-css" id="sm-import-css"><span class="sm-icon">🎨</span><span class="sm-label">Import CSS</span></button>
+                    <div class="settings-menu-sep"></div>
+                    <button class="settings-menu-item" id="sm-shortcuts"><span class="sm-icon">⌨️</span><span class="sm-label">Keyboard Shortcuts</span><span class="sm-shortcut">?</span></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="canvas-content">
             <div id="layers-panel"></div>
             <div class="panel-resize-handle layers-handle" id="layers-resize"></div>
             <canvas id="fd-canvas"></canvas>
-            <!-- Settings Hamburger (inside canvas) -->
-            <div class="settings-dropdown-container" id="settings-dropdown-container">
-              <button class="settings-btn" id="settings-menu-btn" title="Settings &amp; tools">☰</button>
-              <div class="settings-menu" id="settings-menu">
-
-                <button class="settings-menu-item" id="sm-sketchy-toggle" data-setting="sketchy"><span class="sm-icon">✏️</span><span class="sm-label">Sketchy</span></button>
-                <button class="settings-menu-item" id="sm-grid-toggle" data-setting="grid"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span></button>
-                <div class="settings-menu-sep"></div>
-                <button class="settings-menu-item" data-setting="fit"><span class="sm-icon">⊡</span><span class="sm-label">Fit to Content</span></button>
-                <div class="settings-menu-sep"></div>
-                <button class="settings-menu-item" data-setting="copy-png" id="sm-copy-png"><span class="sm-icon">📷</span><span class="sm-label">Copy as PNG</span></button>
-                <button class="settings-menu-item" data-setting="export-svg" id="sm-export-svg"><span class="sm-icon">📄</span><span class="sm-label">Download SVG</span></button>
-                <button class="settings-menu-item" data-setting="import-css" id="sm-import-css"><span class="sm-icon">🎨</span><span class="sm-label">Import CSS</span></button>
-                <div class="settings-menu-sep"></div>
-                <button class="settings-menu-item" data-setting="zen"><span class="sm-icon">🧘</span><span class="sm-label">Zen Mode</span></button>
-              </div>
-            </div>
             <!-- Floating Action Bar (frosted glass) -->
             <div id="floating-action-bar">
               <label class="fab-label" for="fab-fill">Fill</label>
@@ -152,8 +169,6 @@
                 <button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button>
               </div>
             </div>
-            <!-- Zen Mode Toggle (inside canvas so it stays visible in zen mode) -->
-            <button id="zen-toggle-btn" class="zen-toggle-canvas" title="Zen Mode (Esc)">🧘</button>
             <!-- Floating Scroll Toolbar -->
             <div id="floating-toolbar" class="scroll-toolbar horizontal unrolled">
               <div class="scroll-handle handle-start" title="Drag to move, click to roll">
@@ -236,7 +251,8 @@
             <div class="panel-resize-handle props-handle" id="props-resize"></div>
             <div class="panel-restore-strip layers-restore" id="layers-restore" title="Show layers panel"></div>
             <div class="panel-restore-strip props-restore" id="props-restore" title="Show properties panel"></div>
-          </div>
+            </div><!-- /canvas-content -->
+          </div><!-- /canvas-wrapper -->
         </div>
       </div>
     </div>
