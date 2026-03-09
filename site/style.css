@@ -521,6 +521,8 @@ code {
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
+  height: 42px;
+  box-sizing: border-box;
   border-bottom: 1px solid var(--border);
   font-size: 0.8rem;
   font-weight: 600;
@@ -574,6 +576,8 @@ code {
   display: flex;
   gap: 3px;
   padding: 10px 16px;
+  height: 42px;
+  box-sizing: border-box;
   background: var(--fd-toolbar-bg, rgba(246,246,248,0.72));
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
