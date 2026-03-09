@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.10.89 — Bigger Canvas (R6.8)
+
+- **UX (R6.8)**: Playground canvas height changed from fixed `420px` to `70vh` — fills ~70% of the viewport on any screen size, making the canvas feel like a real workspace rather than a demo widget
+- **SITE**: `site/style.css` — `.playground-split { min-height: 70vh }`
+
 ### v0.10.88 — Unified Zen Mode Toggle (R6.8)
 
 - **UX (R6.8)**: Zen toggle moved from outer toolbar into the canvas wrapper — single 🧘/✕ button that stays visible in both normal and zen mode; clicking toggles zen on/off with icon swap; positioned top-right of canvas as frosted-glass 32×32 pill; settings menu "Zen Mode" and Escape key both sync the button icon
