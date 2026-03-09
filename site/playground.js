@@ -704,6 +704,8 @@ function setupContextMenu(editor) {
       if (zenMode) {
         zenMode = false;
         document.querySelector('.hero-playground')?.classList.remove('zen-mode');
+        const zb = document.getElementById('zen-toggle-btn');
+        if (zb) { zb.textContent = '🧘'; zb.title = 'Zen Mode (Esc)'; }
         // Trigger resize via observer (resizeCanvas is scoped to initPlayground)
         setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
       }
@@ -1189,17 +1191,13 @@ async function initPlayground() {
       wrapper.classList.add('dark-canvas');
     }
 
-    // Zen toggle button
-    document.getElementById('zen-toggle-btn')?.addEventListener('click', () => {
+    // Zen toggle button (inside canvas — stays visible in zen mode)
+    const zenBtn = document.getElementById('zen-toggle-btn');
+    zenBtn?.addEventListener('click', () => {
       zenMode = !zenMode;
       document.querySelector('.hero-playground')?.classList.toggle('zen-mode', zenMode);
-      setTimeout(() => { resizeCanvas(); renderCanvas(); }, 50);
-    });
-
-    // Zen exit button (visible only in zen mode)
-    document.getElementById('zen-exit-btn')?.addEventListener('click', () => {
-      zenMode = false;
-      document.querySelector('.hero-playground')?.classList.remove('zen-mode');
+      zenBtn.textContent = zenMode ? '✕' : '🧘';
+      zenBtn.title = zenMode ? 'Exit Zen Mode (Esc)' : 'Zen Mode (Esc)';
       setTimeout(() => { resizeCanvas(); renderCanvas(); }, 50);
     });
 
@@ -1611,6 +1609,8 @@ async function initPlayground() {
           case 'zen': {
             zenMode = !zenMode;
             document.querySelector('.hero-playground')?.classList.toggle('zen-mode', zenMode);
+            const zb = document.getElementById('zen-toggle-btn');
+            if (zb) { zb.textContent = zenMode ? '✕' : '🧘'; zb.title = zenMode ? 'Exit Zen Mode (Esc)' : 'Zen Mode (Esc)'; }
             settingsMenu?.classList.remove('visible');
             // Trigger resize after layout change
             setTimeout(() => { resizeCanvas(); renderCanvas(); }, 50);

@@ -1701,33 +1701,40 @@ code {
 }
 
 /* ─── Zen Mode ─── */
-.zen-exit-btn {
-  display: none;
+.zen-toggle-canvas {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 8px;
+  right: 8px;
   z-index: 50;
-  padding: 6px 14px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: 0.5px solid var(--fd-border);
   border-radius: 8px;
   background: var(--fd-surface);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   color: var(--fd-text-secondary);
-  font-size: 12px;
-  font-weight: 500;
-  font-family: inherit;
+  font-size: 16px;
+  line-height: 32px;
+  text-align: center;
   cursor: pointer;
   box-shadow: var(--fd-shadow-sm);
   transition: all 0.15s ease;
+  opacity: 0.6;
 }
-.zen-exit-btn:hover {
+.zen-toggle-canvas:hover {
   background: var(--fd-surface-hover);
   color: var(--fd-text);
   box-shadow: var(--fd-shadow-md);
+  opacity: 1;
 }
-.zen-exit-btn:active { transform: scale(0.95); }
-.zen-mode .zen-exit-btn { display: block; }
+.zen-toggle-canvas:active { transform: scale(0.95); }
+/* In zen mode: more visible since it's the only exit */
+.zen-mode .zen-toggle-canvas {
+  opacity: 1;
+  background: var(--fd-surface-hover);
+}
 .zen-mode .playground-toolbar { display: none !important; }
 .zen-mode .settings-dropdown-container { display: none !important; }
 .zen-mode .playground-editor { display: none !important; }
