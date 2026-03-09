@@ -1741,3 +1741,136 @@ fn select_tool_reclick_keeps_selection() {
         "re-clicking should keep selection"
     );
 }
+
+#[test]
+fn tool_pen_basic_drawing() {
+    let mut tool = PenTool::new();
+
+    // 1. PointerDown starts drawing
+    let down_mutations = tool.handle(
+        &InputEvent::PointerDown {
+            x: 10.0,
+            y: 20.0,
+            pressure: 0.5,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    assert_eq!(down_mutations.len(), 1);
+    assert!(tool.is_drawing());
+
+    let path_id = match &down_mutations[0] {
+        GraphMutation::AddNode { parent_id: _, node } => {
+            assert!(node.id.as_str().starts_with("path"));
+            match &node.kind {
+                NodeKind::Path { commands } => {
+                    assert_eq!(commands.len(), 1);
+                    assert!(matches!(commands[0], PathCmd::MoveTo(10.0, 20.0)));
+                }
+                _ => panic!("Expected Path node"),
+            }
+            node.id
+        }
+        _ => panic!("Expected AddNode mutation"),
+    };
+
+    // 2. PointerMove updates path (raw points via LineTo)
+    let move_mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 15.0,
+            y: 25.0,
+            pressure: 0.8,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    assert_eq!(move_mutations.len(), 1);
+    match &move_mutations[0] {
+        GraphMutation::UpdatePath { id, commands } => {
+            assert_eq!(*id, path_id);
+            assert_eq!(commands.len(), 2);
+            assert!(matches!(commands[0], PathCmd::MoveTo(10.0, 20.0)));
+            assert!(matches!(commands[1], PathCmd::LineTo(15.0, 25.0)));
+        }
+        _ => panic!("Expected UpdatePath mutation"),
+    }
+
+    // 3. PointerUp finishes drawing (smooths to Bezier)
+    // Add one more point to trigger bezier smoothing (needs >= 3 points usually)
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 20.0,
+            y: 20.0,
+            pressure: 0.2,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    let up_mutations = tool.handle(
+        &InputEvent::PointerUp {
+            x: 20.0,
+            y: 20.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    assert_eq!(up_mutations.len(), 1);
+    assert!(!tool.is_drawing());
+
+    match &up_mutations[0] {
+        GraphMutation::UpdatePath { id, commands } => {
+            assert_eq!(*id, path_id);
+            // First is MoveTo, then smooth Bezier commands (CubicTo)
+            assert!(commands.len() > 1);
+            assert!(matches!(commands[0], PathCmd::MoveTo(10.0, 20.0)));
+            assert!(matches!(commands[1], PathCmd::CubicTo { .. }));
+        }
+        _ => panic!("Expected UpdatePath mutation"),
+    }
+}
+
+#[test]
+fn tool_pen_two_points_fallback() {
+    let mut tool = PenTool::new();
+
+    tool.handle(&InputEvent::PointerDown { x: 0.0, y: 0.0, pressure: 0.5, modifiers: Modifiers::NONE }, None);
+    tool.handle(&InputEvent::PointerMove { x: 10.0, y: 10.0, pressure: 0.5, modifiers: Modifiers::NONE }, None);
+
+    let up_mutations = tool.handle(
+        &InputEvent::PointerUp { x: 10.0, y: 10.0, modifiers: Modifiers::NONE },
+        None,
+    );
+
+    assert_eq!(up_mutations.len(), 1);
+    match &up_mutations[0] {
+        GraphMutation::UpdatePath { id: _, commands } => {
+            // 2 points should just use LineTo fallback, not CubicTo
+            assert_eq!(commands.len(), 2);
+            assert!(matches!(commands[0], PathCmd::MoveTo(0.0, 0.0)));
+            assert!(matches!(commands[1], PathCmd::LineTo(10.0, 10.0)));
+        }
+        _ => panic!("Expected UpdatePath mutation"),
+    }
+}
+
+#[test]
+fn tool_pen_cancel_drawing() {
+    let mut tool = PenTool::new();
+
+    tool.handle(&InputEvent::PointerDown { x: 0.0, y: 0.0, pressure: 0.5, modifiers: Modifiers::NONE }, None);
+    assert!(tool.is_drawing());
+
+    tool.cancel();
+    assert!(!tool.is_drawing());
+
+    // PointerMove after cancel should not generate mutations
+    let move_mutations = tool.handle(
+        &InputEvent::PointerMove { x: 10.0, y: 10.0, pressure: 0.5, modifiers: Modifiers::NONE },
+        None,
+    );
+    assert!(move_mutations.is_empty());
+}
