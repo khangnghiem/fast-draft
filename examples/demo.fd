@@ -54,6 +54,7 @@ frame @sidebar {
     tag: navigation, responsive
   }
   text @app_name "FastDraft" {
+    w: 290.9
     fill: #FFFFFF  # white
     font: "Inter" bold 18
   }
@@ -94,11 +95,12 @@ frame @sidebar {
     }
   }
   layout: column gap=8 pad=16
-  w: 220 h: 600
+  w: 322.9 h: 257.4
   fill: #2D2B55  # blue
   corner: 0
-  x: 20
-  y: 20
+  opacity: 1
+  x: -121.8
+  y: 19.8
 }
 
 # Top header area
