@@ -665,12 +665,9 @@ impl SyncEngine {
         let mut changed = false;
 
         for group_idx in groups {
-            // Skip clip frames — they intentionally clip content
-            let is_clip = matches!(
-                &self.graph.graph[group_idx].kind,
-                NodeKind::Frame { clip: true, .. }
-            );
-            if is_clip {
+            // Frames have declared dimensions — never auto-resize them.
+            // Only Groups auto-size to their children's bounding box.
+            if matches!(&self.graph.graph[group_idx].kind, NodeKind::Frame { .. }) {
                 continue;
             }
 
@@ -805,6 +802,10 @@ pub fn expand_group_to_children(
     bounds: &mut HashMap<NodeIndex, fd_core::ResolvedBounds>,
     exclude_idx: Option<NodeIndex>,
 ) {
+    // Frames have declared dimensions — never auto-resize
+    if matches!(graph.graph[group_idx].kind, NodeKind::Frame { .. }) {
+        return;
+    }
     let pad = group_padding(graph, group_idx);
     let children = graph.children(group_idx);
     if children.is_empty() {

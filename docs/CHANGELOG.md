@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.90 — Fix Frame Auto-Resize (R3.2)
+
+- **FIX (R3.2)**: Frames no longer involuntarily resize to enclose their children — frames have declared `width`/`height` and should maintain those dimensions; previously `finalize_child_bounds()` and `expand_group_to_children()` treated frames identically to groups, auto-expanding bounds to fit the child bounding box on every pointer release; now all frames (not just `clip: true`) are skipped in auto-sizing logic; only groups auto-size
+- **CORE**: `finalize_child_bounds()` in `sync.rs` — guard changed from `clip: true` frames only → ALL frames; `expand_group_to_children()` — early return added for `NodeKind::Frame` preventing callers (`erase_node_immediately`, `detach_child_from_group`) from resizing frames
+- **TESTING**: New `sync_frame_does_not_auto_resize` regression test — verifies non-clip frame retains declared 200×100 dimensions after child overflow + `finalize_child_bounds()`
+
 ### v0.10.89 — Bigger Canvas (R6.8)
 
 - **UX (R6.8)**: Playground canvas height changed from fixed `420px` to `70vh` — fills ~70% of the viewport on any screen size, making the canvas feel like a real workspace rather than a demo widget

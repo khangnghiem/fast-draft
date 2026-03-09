@@ -960,6 +960,49 @@ frame @clip_frame {
 }
 
 #[test]
+fn sync_frame_does_not_auto_resize() {
+    // Non-clip frame should also NOT expand when children overflow.
+    // Frames have declared dimensions — only Groups auto-size.
+    let input = r#"
+frame @card {
+  w: 200 h: 100
+
+  rect @child { w: 80 h: 40 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let frame_idx = engine.graph.index_of(NodeId::intern("card")).unwrap();
+    let child_idx = engine.graph.index_of(NodeId::intern("child")).unwrap();
+
+    let frame_before = engine.bounds[&frame_idx];
+
+    // Simulate resize: widen child beyond frame
+    if let Some(cb) = engine.bounds.get_mut(&child_idx) {
+        cb.width = 400.0;
+    }
+
+    let changed = engine.finalize_child_bounds();
+
+    // Frame should NOT expand (declared size is authoritative)
+    let frame_after = engine.bounds[&frame_idx];
+    assert_eq!(
+        frame_before.width, frame_after.width,
+        "frame should not auto-resize: {} == {}",
+        frame_before.width, frame_after.width
+    );
+    assert_eq!(
+        frame_before.height, frame_after.height,
+        "frame height should not change: {} == {}",
+        frame_before.height, frame_after.height
+    );
+    assert!(!changed, "no changes expected for non-clip frame");
+}
+
+#[test]
 fn sync_move_group_propagates_to_children() {
     let input = r#"
 group @grp {
