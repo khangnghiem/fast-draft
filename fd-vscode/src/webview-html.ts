@@ -2884,11 +2884,28 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         items.forEach((p, i) => {
           const row = document.createElement('div');
           row.className = 'renamify-row';
-          row.innerHTML =
-            '<input type="checkbox" checked data-idx="' + i + '">' +
-            '<span class="renamify-old">@' + p.oldId + '</span>' +
-            '<span class="renamify-arrow">→</span>' +
-            '<span class="renamify-new">@' + p.newId + '</span>';
+
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.checked = true;
+          checkbox.dataset.idx = String(i);
+          row.appendChild(checkbox);
+
+          const oldSpan = document.createElement('span');
+          oldSpan.className = 'renamify-old';
+          oldSpan.textContent = '@' + p.oldId;
+          row.appendChild(oldSpan);
+
+          const arrowSpan = document.createElement('span');
+          arrowSpan.className = 'renamify-arrow';
+          arrowSpan.textContent = '→';
+          row.appendChild(arrowSpan);
+
+          const newSpan = document.createElement('span');
+          newSpan.className = 'renamify-new';
+          newSpan.textContent = '@' + p.newId;
+          row.appendChild(newSpan);
+
           body.appendChild(row);
         });
         footer.style.display = 'flex';
