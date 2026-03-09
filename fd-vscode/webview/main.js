@@ -184,114 +184,6 @@ function showToast(message, durationMs = 1200) {
   }, durationMs);
 }
 
-/**
- * Parse CSS text and convert class rules to FD style blocks.
- * Only extracts the ~6 properties FD supports; everything else is silently ignored.
- */
-function parseCssToFdStyles(cssText) {
-  const styles = [];
-  const classRegex = /\.([a-zA-Z_-][\w-]*)\s*\{([^}]*)\}/g;
-  let match;
-
-  while ((match = classRegex.exec(cssText)) !== null) {
-    const rawName = match[1];
-    const body = match[2];
-    const name = rawName.replace(/-/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
-    if (!name) continue;
-
-    const props = [];
-    const propRegex = /([a-z-]+)\s*:\s*([^;]+)/gi;
-    let pm;
-    while ((pm = propRegex.exec(body)) !== null) {
-      const prop = pm[1].trim().toLowerCase();
-      const val = pm[2].trim();
-
-      switch (prop) {
-        case "background-color":
-        case "background": {
-          const hexMatch = val.match(/#[0-9a-fA-F]{3,8}/);
-          if (hexMatch) props.push(`  fill: ${hexMatch[0]}`);
-          else if (val.match(/^(rgb|rgba)\(/)) {
-            const hex = rgbToHex(val);
-            if (hex) props.push(`  fill: ${hex}`);
-          } else if (val.match(/^[a-zA-Z]+$/) && !val.includes("gradient")) {
-            props.push(`  fill: ${val}`);
-          }
-          break;
-        }
-        case "color": {
-          const hexMatch = val.match(/#[0-9a-fA-F]{3,8}/);
-          if (hexMatch) props.push(`  fill: ${hexMatch[0]}`);
-          else if (val.match(/^(rgb|rgba)\(/)) {
-            const hex = rgbToHex(val);
-            if (hex) props.push(`  fill: ${hex}`);
-          }
-          break;
-        }
-        case "border-radius": {
-          const px = parseInt(val);
-          if (!isNaN(px) && px > 0) props.push(`  corner: ${px}`);
-          break;
-        }
-        case "opacity": {
-          const op = parseFloat(val);
-          if (!isNaN(op) && op >= 0 && op < 1) props.push(`  opacity: ${op}`);
-          break;
-        }
-        case "box-shadow": {
-          const shadowMatch = val.match(/([\d.]+)\w*\s+([\d.]+)\w*\s+([\d.]+)\w*\s+(.+)/);
-          if (shadowMatch) {
-            const [, sx, sy, blur, color] = shadowMatch;
-            const hexC = color.match(/#[0-9a-fA-F]{3,8}/);
-            const c = hexC ? hexC[0] : "#00000020";
-            props.push(`  shadow: (${parseInt(sx)},${parseInt(sy)},${parseInt(blur)},${c})`);
-          }
-          break;
-        }
-        case "border": {
-          const borderMatch = val.match(/([\d.]+)\w*\s+\w+\s+(#[0-9a-fA-F]{3,8})/);
-          if (borderMatch) {
-            props.push(`  stroke: ${borderMatch[2]} ${parseInt(borderMatch[1])}`);
-          }
-          break;
-        }
-        case "font-family": {
-          const family = val.replace(/['"]/g, "").split(",")[0].trim();
-          if (family) props.push(`  font: "${family}"`);
-          break;
-        }
-        case "font-size": {
-          const fs = parseInt(val);
-          if (!isNaN(fs) && fs > 0) props.push(`  font: ${fs}`);
-          break;
-        }
-        case "font-weight": {
-          const weightMap = { "100": "thin", "200": "extralight", "300": "light", "400": "regular",
-            "500": "medium", "600": "semibold", "700": "bold", "800": "extrabold", "900": "black",
-            "normal": "regular", "bold": "bold" };
-          const w = weightMap[val.toLowerCase()];
-          if (w && w !== "regular") props.push(`  font: ${w}`);
-          break;
-        }
-      }
-    }
-
-    if (props.length > 0) {
-      styles.push(`style ${name} {\n${props.join("\n")}\n}`);
-    }
-  }
-
-  return styles;
-}
-
-/** Convert rgb(r,g,b) or rgba(r,g,b,a) to hex */
-function rgbToHex(rgb) {
-  const match = rgb.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-  if (!match) return null;
-  const [, r, g, b] = match.map(Number);
-  return "#" + [r, g, b].map(c => c.toString(16).padStart(2, "0")).join("");
-}
-
 /** Apply stored defaults to the currently selected (newly created) node */
 function applyDefaultsToNewNode(toolName) {
   if (!fdCanvas) return;
@@ -4804,38 +4696,6 @@ function setupSettingsMenu() {
     toggleShortcutHelp();
   });
 
-  // Import CSS
-  document.getElementById("sm-import-css")?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    menu.classList.remove("visible");
-    const fileInput = document.getElementById("css-file-input");
-    if (!fileInput) return;
-    fileInput.value = "";
-    fileInput.onchange = (ev) => {
-      const file = ev.target.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (re) => {
-        const cssText = re.target.result;
-        const fdStyles = parseCssToFdStyles(cssText);
-        if (fdStyles.length === 0) {
-          showToast("No mappable CSS classes found");
-          return;
-        }
-        const styleBlock = "# ─── Imported CSS Styles ───\n\n" + fdStyles.join("\n\n") + "\n\n";
-        if (fdCanvas) {
-          const current = fdCanvas.get_text();
-          fdCanvas.set_text(styleBlock + current);
-          render();
-          syncTextToExtension();
-        }
-        showToast(`Imported ${fdStyles.length} style${fdStyles.length > 1 ? "s" : ""} from ${file.name}`);
-      };
-      reader.readAsText(file);
-    };
-    fileInput.click();
-  });
-
   // Close when clicking outside
   document.addEventListener("pointerdown", (e) => {
     if (menu.classList.contains("visible") && !menu.contains(e.target) && !btn.contains(e.target)) {
@@ -6094,7 +5954,7 @@ function applyZenMode(isZen) {
   const btn = document.getElementById("zen-toggle-btn");
   if (isZen) {
     document.body.classList.add("zen-mode");
-    if (btn) { btn.textContent = '🔧'; btn.title = 'Switch to Full mode'; }
+    if (btn) { btn.textContent = '✕ Exit Zen'; btn.title = 'Exit Zen mode'; }
   } else {
     document.body.classList.remove("zen-mode");
     if (btn) { btn.textContent = '🧘'; btn.title = 'Switch to Zen mode'; }
