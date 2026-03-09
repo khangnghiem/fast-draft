@@ -17,12 +17,12 @@
   <!-- Preload WASM for instant playground -->
   <link rel="modulepreload" href="./wasm/fd_wasm.js" />
   <link rel="preload" href="./wasm/fd_wasm_bg.wasm" as="fetch" crossorigin />
-  <link rel="stylesheet" href="style.css?v=0.10.92" />
+  <link rel="stylesheet" href="style.css?v=0.10.93" />
   <!-- FOUC prevention: apply saved theme before first paint -->
   <script>
     (function() {
       var saved = localStorage.getItem('fd-theme');
-      var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var dark = saved ? saved === 'dark' : false; // Default to light (matches extension)
       if (dark) document.documentElement.classList.add('dark-theme');
       else document.documentElement.classList.add('light-theme');
     })();
