@@ -2358,6 +2358,29 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     #zen-toggle-btn {
       font-size: 15px;
     }
+    /* In zen mode: pin button at top-right of canvas as a pill */
+    .zen-mode #zen-toggle-btn {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      z-index: 100;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.9);
+      border: 0.5px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: all 0.15s ease;
+    }
+    .zen-mode #zen-toggle-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
 
     /* ── Zen Mode overrides ── */
     .zen-mode #toolbar {
