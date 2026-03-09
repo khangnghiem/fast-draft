@@ -1,7 +1,6 @@
 // ─── FD Playground — WASM-powered interactive editor ───
 
-const EXAMPLES = {
-  card: `# A card with a button that reacts on hover
+const DEFAULT_FD = `# A card with a button that reacts on hover
 
 style accent {
   fill: #6C5CE7
@@ -29,139 +28,7 @@ group @card {
   }
 }
 
-@card -> center_in: canvas`,
-
-  login: `# Login form with spec annotations
-
-style accent {
-  fill: #6C5CE7
-  corner: 10
-}
-
-style base_text {
-  fill: #333333
-  font: "Inter" regular 14
-}
-
-group @login_form {
-  spec {
-    "User authentication entry point"
-    accept: "email + password fields visible"
-    status: todo
-  }
-  text @title "Welcome Back" {
-    fill: #1A1A2E
-    font: "Inter" bold 24
-  }
-  rect @email_field {
-    text @email_hint "Email" {
-      use: base_text
-      fill: #999999
-    }
-    w: 280 h: 44
-    stroke: #DDDDDD 1
-    corner: 8
-  }
-  rect @pass_field {
-    text @pass_hint "Password" {
-      use: base_text
-      fill: #999999
-    }
-    w: 280 h: 44
-    stroke: #DDDDDD 1
-    corner: 8
-  }
-  rect @login_btn {
-    spec {
-      "Primary CTA"
-      accept: "disabled when fields empty"
-      status: done
-      priority: high
-    }
-    text @btn_label "Sign In" {
-      fill: #FFFFFF
-      font: "Inter" semibold 16
-    }
-    w: 280 h: 48
-    use: accent
-    fill: #5A4BD1
-    when :hover {
-      fill: #4A3BC1
-      scale: 1.02
-      ease: spring 200ms
-    }
-  }
-  layout: column gap=16 pad=32
-}
-
-@login_form -> center_in: canvas`,
-
-  welcome: `# Welcome to Fast Draft!
-
-style accent { fill: #6C5CE7 }
-style soft { fill: #DFE6E9; corner: 12 }
-style label_style { font: "Inter" 500 14; fill: #2D3436 }
-
-text @welcome_title "Welcome to Fast Draft" {
-  x: 180  y: 40
-  font: "Inter" 700 28
-  fill: #2D3436
-}
-
-text @welcome_sub "Edit this code to see changes live!" {
-  x: 180  y: 80
-  font: "Inter" 400 14
-  fill: #636E72
-}
-
-rect @step1_bg {
-  x: 60  y: 140
-  w: 200  h: 140
-  use: soft
-}
-
-text @step1_title "1. Draw Shapes" {
-  x: 80  y: 160
-  use: label_style
-}
-
-rect @step1_demo {
-  x: 220  y: 200
-  w: 30  h: 30
-  use: accent
-  corner: 6
-  when :hover { scale: 1.1; ease: spring 200ms }
-}
-
-rect @step2_bg {
-  x: 300  y: 140
-  w: 200  h: 140
-  use: soft
-}
-
-text @step2_title "2. Add Text" {
-  x: 320  y: 160
-  use: label_style
-}
-
-rect @step3_bg {
-  x: 540  y: 140
-  w: 200  h: 140
-  use: soft
-}
-
-text @step3_title "3. Style It" {
-  x: 560  y: 160
-  use: label_style
-}
-
-ellipse @step3_demo {
-  x: 700  y: 200
-  w: 20  h: 20
-  fill: #E17055
-  when :hover { fill: #00B894; ease: ease_out 300ms }
-}`
-};
+@card -> center_in: canvas`;
 
 // ─── State ───────────────────────────────────────────────────────────────
 let fdCanvas = null;
@@ -1151,8 +1018,8 @@ async function initPlayground() {
   const loading = document.getElementById('canvas-loading');
   const wrapper = document.getElementById('canvas-wrapper');
 
-  // Load initial example
-  editor.value = EXAMPLES.card;
+  // Load default FD content
+  editor.value = DEFAULT_FD;
 
   try {
     // Load WASM module
@@ -1561,17 +1428,7 @@ async function initPlayground() {
       renderMinimap(canvas);
     });
 
-    // ── Example Selector ──────────────────────────────────────────────
-    document.getElementById('example-select').addEventListener('change', (e) => {
-      const example = EXAMPLES[e.target.value];
-      if (example) {
-        editor.value = example;
-        if (fdCanvas) fdCanvas.set_text(example);
-        // Reset zoom/pan for new example
-        panX = 0; panY = 0; zoomLevel = 1.0;
-        updateZoomIndicator();
-      }
-    });
+
 
     // ── Settings Menu (inside canvas) ──────────────────────────────────
     const settingsBtn = document.getElementById('settings-menu-btn');
