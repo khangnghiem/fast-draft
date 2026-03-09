@@ -1701,6 +1701,33 @@ code {
 }
 
 /* ─── Zen Mode ─── */
+.zen-exit-btn {
+  display: none;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 50;
+  padding: 6px 14px;
+  border: 0.5px solid var(--fd-border);
+  border-radius: 8px;
+  background: var(--fd-surface);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  color: var(--fd-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: var(--fd-shadow-sm);
+  transition: all 0.15s ease;
+}
+.zen-exit-btn:hover {
+  background: var(--fd-surface-hover);
+  color: var(--fd-text);
+  box-shadow: var(--fd-shadow-md);
+}
+.zen-exit-btn:active { transform: scale(0.95); }
+.zen-mode .zen-exit-btn { display: block; }
 .zen-mode .playground-toolbar { display: none !important; }
 .zen-mode .settings-dropdown-container { display: none !important; }
 .zen-mode .playground-editor { display: none !important; }

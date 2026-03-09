@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.88 — Fix Zen Mode Exit on Web (R6.8)
+
+- **FIX (R6.8)**: Zen mode on the website playground now has a visible exit button — frosted-glass "✕ Exit Zen" pill in the top-right corner of the canvas, shown only in zen mode; clicking it or pressing Escape exits zen mode and restores the full editor layout
+- **FIX**: Fixed scoping bug in Escape key handler — `resizeCanvas()` was called from `setupContextMenu()` but scoped inside `initPlayground()`; replaced with `window.dispatchEvent(new Event('resize'))` to trigger the `ResizeObserver`
+- **SITE**: Changes in `site/index.html` (button markup), `site/style.css` (exit button styles), `site/playground.js` (click handler + Escape fix)
+
 ### v0.10.87 — Animation Duration & Breaks (R1.5, R5.6)
 
 - **FEATURE (R1.5)**: Trigger-specific default durations — `:hover` 300ms, `:press` 150ms (faster for tactile feedback), `:enter` 500ms (dramatic reveals); explicit `ease:` overrides the default
