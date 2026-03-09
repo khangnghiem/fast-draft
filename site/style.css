@@ -489,13 +489,13 @@ code {
 
 .playground-split {
   display: grid;
-  grid-template-columns: var(--editor-width, 1fr) auto 1fr;
+  grid-template-columns: var(--editor-width, 2fr) auto 3fr;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   overflow: hidden;
   background: var(--border);
   box-shadow: var(--shadow), var(--shadow-glow);
-  min-height: 80vh;
+  min-height: 75vh;
 }
 
 /* ── Split Resize Handle ── */
