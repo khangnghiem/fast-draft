@@ -1720,8 +1720,8 @@ code {
   text-align: center;
   cursor: pointer;
   box-shadow: var(--fd-shadow-sm);
-  transition: all 0.15s ease;
-  opacity: 0.6;
+  transition: all 0.2s ease;
+  opacity: 0.7;
 }
 .zen-toggle-canvas:hover {
   background: var(--fd-surface-hover);
@@ -1730,10 +1730,19 @@ code {
   opacity: 1;
 }
 .zen-toggle-canvas:active { transform: scale(0.95); }
-/* In zen mode: more visible since it's the only exit */
+/* In zen mode: expand to pill with text, high contrast */
 .zen-mode .zen-toggle-canvas {
+  width: auto;
+  height: auto;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  line-height: 1.4;
   opacity: 1;
-  background: var(--fd-surface-hover);
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 .zen-mode .playground-toolbar { display: none !important; }
 .zen-mode .settings-dropdown-container { display: none !important; }

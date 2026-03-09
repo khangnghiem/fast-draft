@@ -1196,7 +1196,7 @@ async function initPlayground() {
     zenBtn?.addEventListener('click', () => {
       zenMode = !zenMode;
       document.querySelector('.hero-playground')?.classList.toggle('zen-mode', zenMode);
-      zenBtn.textContent = zenMode ? '✕' : '🧘';
+      zenBtn.textContent = zenMode ? '✕ Exit Zen' : '🧘';
       zenBtn.title = zenMode ? 'Exit Zen Mode (Esc)' : 'Zen Mode (Esc)';
       setTimeout(() => { resizeCanvas(); renderCanvas(); }, 50);
     });
@@ -1610,7 +1610,7 @@ async function initPlayground() {
             zenMode = !zenMode;
             document.querySelector('.hero-playground')?.classList.toggle('zen-mode', zenMode);
             const zb = document.getElementById('zen-toggle-btn');
-            if (zb) { zb.textContent = zenMode ? '✕' : '🧘'; zb.title = zenMode ? 'Exit Zen Mode (Esc)' : 'Zen Mode (Esc)'; }
+            if (zb) { zb.textContent = zenMode ? '✕ Exit Zen' : '🧘'; zb.title = zenMode ? 'Exit Zen Mode (Esc)' : 'Zen Mode (Esc)'; }
             settingsMenu?.classList.remove('visible');
             // Trigger resize after layout change
             setTimeout(() => { resizeCanvas(); renderCanvas(); }, 50);
