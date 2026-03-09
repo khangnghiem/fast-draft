@@ -17,7 +17,16 @@
   <!-- Preload WASM for instant playground -->
   <link rel="modulepreload" href="./wasm/fd_wasm.js" />
   <link rel="preload" href="./wasm/fd_wasm_bg.wasm" as="fetch" crossorigin />
-  <link rel="stylesheet" href="style.css?v=0.10.89" />
+  <link rel="stylesheet" href="style.css?v=0.10.90" />
+  <!-- FOUC prevention: apply saved theme before first paint -->
+  <script>
+    (function() {
+      var saved = localStorage.getItem('fd-theme');
+      var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (dark) document.documentElement.classList.add('dark-theme');
+      else document.documentElement.classList.add('light-theme');
+    })();
+  </script>
 </head>
 <body>
   <!-- ─── Navigation ─── -->
@@ -31,6 +40,9 @@
         <a href="#features">Features</a>
         <a href="#benchmarks">Benchmarks</a>
         <a href="#architecture">Architecture</a>
+        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle theme">
+          <span class="theme-icon">☀️</span>
+        </button>
         <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener" class="btn-nav">Install Extension</a>
       </div>
       <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle menu">
@@ -101,7 +113,7 @@
             <div class="settings-dropdown-container" id="settings-dropdown-container">
               <button class="settings-btn" id="settings-menu-btn" title="Settings &amp; tools">☰</button>
               <div class="settings-menu" id="settings-menu">
-                <button class="settings-menu-item" id="sm-dark-toggle" data-setting="dark-mode"><span class="sm-icon">🌙</span><span class="sm-label">Dark Mode</span></button>
+
                 <button class="settings-menu-item" id="sm-sketchy-toggle" data-setting="sketchy"><span class="sm-icon">✏️</span><span class="sm-label">Sketchy</span></button>
                 <button class="settings-menu-item" id="sm-grid-toggle" data-setting="grid"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span></button>
                 <div class="settings-menu-sep"></div>
@@ -156,6 +168,8 @@
                 <button class="ft-tool-btn" data-tool="arrow"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14L14 4"/><path d="M7 4H14V11"/></svg><span class="ft-tooltip">Arrow<span class="tt-shortcut">A</span></span></button>
                 <button class="ft-tool-btn" data-tool="text"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4H14"/><path d="M9 4V15"/><path d="M6 15H12"/></svg><span class="ft-tooltip">Text<span class="tt-shortcut">T</span></span></button>
                 <button class="ft-tool-btn" data-tool="eraser"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5L8 12L5.5 14.5H2.5V12L9.5 5L12.25 2.25Z"/><path d="M8.5 6L12 9.5"/><line x1="5" y1="15" x2="15" y2="15"/></svg><span class="ft-tooltip">Eraser<span class="tt-shortcut">E</span></span></button>
+                <div class="ft-sep"></div>
+                <button class="ft-tool-btn" id="canvas-theme-btn" title="Toggle theme (D)"><span class="ft-theme-icon">☀️</span><span class="ft-tooltip">Theme<span class="tt-shortcut">D</span></span></button>
               </div>
               <div class="scroll-handle handle-end" title="Drag to move, click to roll">
                 <div class="paper-roll right-roll"></div>

@@ -33,7 +33,11 @@ group @card {
 // ─── State ───────────────────────────────────────────────────────────────
 let fdCanvas = null;
 let ctx = null;
-let isDark = true;
+let isDark = (function() {
+  const saved = localStorage.getItem('fd-theme');
+  if (saved) return saved === 'dark';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+})();
 let isSketchy = false;
 let animFrameId = null;
 let suppressSync = false;
@@ -63,6 +67,23 @@ function getLayersPanelWidth() {
 function getPropsPanelWidth() {
   const panel = document.getElementById('props-panel');
   return (panel && panel.classList.contains('visible')) ? panel.offsetWidth : 0;
+}
+
+/** Apply theme globally — single source of truth. */
+function applyTheme(dark) {
+  isDark = dark;
+  // Canvas wrapper
+  document.getElementById('canvas-wrapper')?.classList.toggle('dark-canvas', dark);
+  // WASM renderer
+  if (fdCanvas) fdCanvas.set_theme(dark);
+  // Navbar icon
+  const navIcon = document.querySelector('#theme-toggle .theme-icon');
+  if (navIcon) navIcon.textContent = dark ? '☀️' : '🌙';
+  // Canvas toolbar icon
+  const canvasIcon = document.querySelector('#canvas-theme-btn .ft-theme-icon');
+  if (canvasIcon) canvasIcon.textContent = dark ? '☀️' : '🌙';
+  // Persist
+  localStorage.setItem('fd-theme', dark ? 'dark' : 'light');
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -1053,10 +1074,21 @@ async function initPlayground() {
     setupPropsPanel(editor);
     setupContextMenu(editor);
 
-    // Set initial dark state on canvas wrapper
-    if (isDark) {
-      wrapper.classList.add('dark-canvas');
-    }
+    // Set initial dark state on canvas wrapper + update icons
+    wrapper.classList.toggle('dark-canvas', isDark);
+    applyTheme(isDark);
+
+    // Navbar theme toggle
+    document.getElementById('theme-toggle')?.addEventListener('click', () => {
+      applyTheme(!isDark);
+      renderCanvas();
+    });
+
+    // Canvas toolbar theme toggle
+    document.getElementById('canvas-theme-btn')?.addEventListener('click', () => {
+      applyTheme(!isDark);
+      renderCanvas();
+    });
 
     // Zen toggle button (inside canvas — stays visible in zen mode)
     const zenBtn = document.getElementById('zen-toggle-btn');
@@ -1322,6 +1354,13 @@ async function initPlayground() {
           e.preventDefault();
           return;
         }
+        // Theme toggle shortcut (D)
+        if (e.key.toLowerCase() === 'd') {
+          applyTheme(!isDark);
+          renderCanvas();
+          e.preventDefault();
+          return;
+        }
       }
 
       // Delete (only when canvas focused)
@@ -1435,7 +1474,6 @@ async function initPlayground() {
     const settingsMenu = document.getElementById('settings-menu');
 
     function updateSettingsToggles() {
-      document.getElementById('sm-dark-toggle')?.classList.toggle('toggle-on', isDark);
       document.getElementById('sm-sketchy-toggle')?.classList.toggle('toggle-on', isSketchy);
       document.getElementById('sm-grid-toggle')?.classList.toggle('toggle-on', gridEnabled);
     }
@@ -1451,11 +1489,6 @@ async function initPlayground() {
         e.stopPropagation();
         const setting = btn.getAttribute('data-setting');
         switch (setting) {
-          case 'dark-mode':
-            isDark = !isDark;
-            if (fdCanvas) fdCanvas.set_theme(isDark);
-            document.getElementById('canvas-wrapper')?.classList.toggle('dark-canvas', isDark);
-            break;
           case 'sketchy':
             isSketchy = !isSketchy;
             if (fdCanvas) fdCanvas.set_sketchy_mode(isSketchy);
