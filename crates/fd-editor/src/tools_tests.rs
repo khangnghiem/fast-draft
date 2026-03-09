@@ -1837,11 +1837,31 @@ fn tool_pen_basic_drawing() {
 fn tool_pen_two_points_fallback() {
     let mut tool = PenTool::new();
 
-    tool.handle(&InputEvent::PointerDown { x: 0.0, y: 0.0, pressure: 0.5, modifiers: Modifiers::NONE }, None);
-    tool.handle(&InputEvent::PointerMove { x: 10.0, y: 10.0, pressure: 0.5, modifiers: Modifiers::NONE }, None);
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 0.0,
+            y: 0.0,
+            pressure: 0.5,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 10.0,
+            y: 10.0,
+            pressure: 0.5,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
 
     let up_mutations = tool.handle(
-        &InputEvent::PointerUp { x: 10.0, y: 10.0, modifiers: Modifiers::NONE },
+        &InputEvent::PointerUp {
+            x: 10.0,
+            y: 10.0,
+            modifiers: Modifiers::NONE,
+        },
         None,
     );
 
@@ -1861,7 +1881,15 @@ fn tool_pen_two_points_fallback() {
 fn tool_pen_cancel_drawing() {
     let mut tool = PenTool::new();
 
-    tool.handle(&InputEvent::PointerDown { x: 0.0, y: 0.0, pressure: 0.5, modifiers: Modifiers::NONE }, None);
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 0.0,
+            y: 0.0,
+            pressure: 0.5,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
     assert!(tool.is_drawing());
 
     tool.cancel();
@@ -1869,7 +1897,12 @@ fn tool_pen_cancel_drawing() {
 
     // PointerMove after cancel should not generate mutations
     let move_mutations = tool.handle(
-        &InputEvent::PointerMove { x: 10.0, y: 10.0, pressure: 0.5, modifiers: Modifiers::NONE },
+        &InputEvent::PointerMove {
+            x: 10.0,
+            y: 10.0,
+            pressure: 0.5,
+            modifiers: Modifiers::NONE,
+        },
         None,
     );
     assert!(move_mutations.is_empty());
