@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.10.86 — Fix Node Flashing After Move
+
+- **FIX**: Nodes no longer flash/flicker after being moved on the canvas — root cause was an async echo-back race in the VS Code extension: `suppressEchoBack` was cleared synchronously after `applyEdit()`, but VS Code fires `onDidChangeTextDocument` asynchronously, sending text back to the webview → `set_text()` → `resolve()` → fresh bounds that clobber in-place move deltas for one frame; fixed by timeout-guarding `suppressEchoBack` for 200ms (matching existing `suppressCursorSync` pattern)
+- **FIX (site)**: Website playground no longer flashes after canvas interaction — `syncCanvasToEditor()` now clears the pending editor→canvas debounce timer, preventing a stale 50ms callback from calling `set_text()` → `resolve()` after `suppressSync` is already cleared
+
 ### v0.10.85 — Edge Selection (R3.1)
 
 - **FEATURE (R3.1)**: Edges are now selectable on canvas — click an edge stroke (5px hit radius) to select, Shift+click for multi-select, marquee box selection includes edges; selected edges show #4FC3F7 highlight stroke; Delete/Backspace removes selected edges via `RemoveEdge` mutation (undoable); properties panel shows edge-specific properties (from/to, arrow, curve, stroke, flow)

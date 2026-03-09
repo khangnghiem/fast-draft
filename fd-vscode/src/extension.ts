@@ -96,7 +96,12 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
             incoming
           );
           await vscode.workspace.applyEdit(edit);
-          suppressEchoBack = false;
+          // Delay clearing — VS Code may fire onDidChangeTextDocument
+          // asynchronously after applyEdit resolves. Without the delay,
+          // the echo sends setText back to the webview → set_text() →
+          // resolve() → fresh bounds that clobber in-place move deltas,
+          // causing a visible one-frame flash after dragging nodes.
+          setTimeout(() => { suppressEchoBack = false; }, 200);
           // Delay re-enabling cursor sync — selection events fire asynchronously
           setTimeout(() => { suppressCursorSync = false; }, 200);
           break;

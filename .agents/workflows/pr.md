@@ -45,17 +45,23 @@ description: Create a Pull Request and merge feature branch into main
    - `title`: conventional format like `feat(core): add FD parser`
    - `body`: summary of changes, what was tested
 
-7. Merge the PR and delete the branch:
+7. **Wait for CI** to pass (blocks until all checks complete):
 
-   ```bash
-   gh pr merge <PR_NUMBER> --merge --delete-branch
-   ```
+    ```bash
+    gh pr checks <PR_NUMBER> --watch --fail-fast
+    ```
 
-8. Sync local main:
+8. Merge the PR and delete the branch:
+
+    ```bash
+    gh pr merge <PR_NUMBER> --squash --delete-branch
+    ```
+
+9. Sync local main:
 
    ```bash
    git checkout main
    git pull origin main
    ```
 
-9. Report the PR URL and merge status to the user.
+10. Report the PR URL and merge status to the user.
