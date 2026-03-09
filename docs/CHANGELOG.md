@@ -17,11 +17,12 @@
 
 ## Completed Requirements
 
-### v0.10.88 — Fix Zen Mode Exit on Web (R6.8)
+### v0.10.88 — Unified Zen Mode Toggle (R6.8)
 
-- **FIX (R6.8)**: Zen mode on the website playground now has a visible exit button — frosted-glass "✕ Exit Zen" pill in the top-right corner of the canvas, shown only in zen mode; clicking it or pressing Escape exits zen mode and restores the full editor layout
+- **UX (R6.8)**: Zen toggle moved from outer toolbar into the canvas wrapper — single 🧘/✕ button that stays visible in both normal and zen mode; clicking toggles zen on/off with icon swap; positioned top-right of canvas as frosted-glass 32×32 pill; settings menu "Zen Mode" and Escape key both sync the button icon
 - **FIX**: Fixed scoping bug in Escape key handler — `resizeCanvas()` was called from `setupContextMenu()` but scoped inside `initPlayground()`; replaced with `window.dispatchEvent(new Event('resize'))` to trigger the `ResizeObserver`
-- **SITE**: Changes in `site/index.html` (button markup), `site/style.css` (exit button styles), `site/playground.js` (click handler + Escape fix)
+- **CLEANUP**: Removed separate `#zen-exit-btn` and outer toolbar `#zen-toggle-btn`; unified into one `#zen-toggle-btn` inside `#canvas-wrapper`
+- **SITE**: Changes in `site/index.html`, `site/style.css`, `site/playground.js`
 
 ### v0.10.87 — Animation Duration & Breaks (R1.5, R5.6)
 
