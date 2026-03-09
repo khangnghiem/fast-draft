@@ -153,6 +153,32 @@ code {
   transition: color var(--transition);
 }
 .nav-links a:hover { color: var(--text-primary); }
+
+/* ─── Navbar Theme Toggle ─── */
+.theme-toggle-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 0;
+  line-height: 1;
+}
+.theme-toggle-btn:hover {
+  background: var(--bg-card-hover);
+  transform: scale(1.08);
+  border-color: var(--text-muted);
+}
+.theme-toggle-btn:active {
+  transform: scale(0.95);
+}
+
 .btn-nav {
   background: var(--accent) !important;
   color: #fff !important;
@@ -932,6 +958,20 @@ code {
   opacity: 0;
   visibility: hidden;
   transition-delay: 0s;
+}
+
+/* ─── Toolbar Theme Toggle + Separator ─── */
+.ft-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--fd-border);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+.ft-theme-icon {
+  font-size: 16px;
+  line-height: 1;
+  pointer-events: none;
 }
 
 /* ── (Zoom pill removed — zoom is now in minimap controls) ── */

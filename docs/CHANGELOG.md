@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.10.92 — Theme Toggle in Navbar + Canvas Toolbar (R3.13)
+
+- **UX (R3.13)**: Discoverable Light/Dark theme toggle — ☀️/🌙 icon button added to navbar (between nav links and Install Extension) and canvas toolbar (after Eraser, separated by divider); removed hidden Dark Mode from ☰ settings menu
+- **UX (R3.13)**: OS preference detection — respects `prefers-color-scheme: dark` on first visit; manual choice persists in `localStorage` (`fd-theme` key); FOUC-preventing `<script>` in `<head>` applies theme before first paint
+- **UX (R3.13)**: Canvas toolbar keyboard shortcut `D` toggles theme — matches tool shortcut pattern (V/R/O/T/A/P/E)
+- **SITE**: Changes in `site/index.html`, `site/style.css`, `site/playground.js`
+
 ### v0.10.91 — Remove Example Selector (R6.8)
 
 - **CLEANUP (R6.8)**: Removed multi-example selector from playground — collapsed 3 example files (`card`, `login`, `welcome`) into a single `DEFAULT_FD` constant keeping only the card example; removed `<select>` dropdown, `<label>`, event listener, and `.toolbar-label`/`.toolbar-select` CSS rules; ~150 lines removed across `playground.js`, `index.html`, `style.css`
