@@ -573,7 +573,7 @@ code {
 #canvas-toolbar {
   display: flex;
   gap: 3px;
-  padding: 5px 10px;
+  padding: 10px 16px;
   background: var(--fd-toolbar-bg, rgba(246,246,248,0.72));
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
