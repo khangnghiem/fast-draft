@@ -869,3 +869,127 @@ frame @card {
         other => panic!("expected Frame, got {other:?}"),
     }
 }
+
+#[test]
+fn parse_animation_press_default_duration() {
+    let input = r#"
+rect @btn {
+  w: 100 h: 40
+  anim :press {
+    scale: 0.97
+  }
+}
+"#;
+    let graph = parse_document(input).expect("parse failed");
+    let btn = graph.get_by_id(NodeId::intern("btn")).unwrap();
+    assert_eq!(btn.animations.len(), 1);
+    assert_eq!(btn.animations[0].trigger, AnimTrigger::Press);
+    assert_eq!(
+        btn.animations[0].duration_ms, 150,
+        ":press default should be 150ms"
+    );
+}
+
+#[test]
+fn parse_animation_enter_default_duration() {
+    let input = r#"
+rect @hero {
+  w: 400 h: 200
+  anim :enter {
+    opacity: 1.0
+  }
+}
+"#;
+    let graph = parse_document(input).expect("parse failed");
+    let hero = graph.get_by_id(NodeId::intern("hero")).unwrap();
+    assert_eq!(hero.animations.len(), 1);
+    assert_eq!(hero.animations[0].trigger, AnimTrigger::Enter);
+    assert_eq!(
+        hero.animations[0].duration_ms, 500,
+        ":enter default should be 500ms"
+    );
+}
+
+#[test]
+fn parse_animation_delay() {
+    let input = r#"
+rect @card {
+  w: 200 h: 100
+  anim :hover {
+    scale: 1.05
+    ease: ease_out 200ms
+    delay: 500ms
+  }
+}
+"#;
+    let graph = parse_document(input).expect("parse failed");
+    let card = graph.get_by_id(NodeId::intern("card")).unwrap();
+    assert_eq!(card.animations.len(), 1);
+    assert_eq!(card.animations[0].delay_ms, Some(500));
+    assert_eq!(card.animations[0].duration_ms, 200);
+}
+
+#[test]
+fn roundtrip_animation_delay() {
+    let input = r#"
+rect @btn {
+  w: 100 h: 40
+  anim :hover {
+    scale: 1.1
+    ease: spring 300ms
+    delay: 250ms
+  }
+}
+"#;
+    let graph = parse_document(input).expect("parse failed");
+    let btn = graph.get_by_id(NodeId::intern("btn")).unwrap();
+    assert_eq!(btn.animations[0].delay_ms, Some(250));
+
+    // Emit and re-parse
+    let emitted = crate::emitter::emit_document(&graph);
+    assert!(emitted.contains("delay: 250ms"), "emitted: {emitted}");
+
+    let reparsed = parse_document(&emitted).expect("re-parse failed");
+    let btn2 = reparsed.get_by_id(NodeId::intern("btn")).unwrap();
+    assert_eq!(btn2.animations[0].delay_ms, Some(250));
+    assert_eq!(btn2.animations[0].duration_ms, 300);
+}
+
+#[test]
+fn parse_animation_explicit_duration_overrides_default() {
+    // Even with :press (default 150ms), explicit ease: should override
+    let input = r#"
+rect @btn {
+  w: 100 h: 40
+  anim :press {
+    scale: 0.95
+    ease: ease_out 80ms
+  }
+}
+"#;
+    let graph = parse_document(input).expect("parse failed");
+    let btn = graph.get_by_id(NodeId::intern("btn")).unwrap();
+    assert_eq!(
+        btn.animations[0].duration_ms, 80,
+        "explicit duration should override trigger default"
+    );
+}
+
+#[test]
+fn parse_animation_no_delay_default() {
+    let input = r#"
+rect @btn {
+  w: 100 h: 40
+  anim :hover {
+    scale: 1.05
+    ease: ease_out 300ms
+  }
+}
+"#;
+    let graph = parse_document(input).expect("parse failed");
+    let btn = graph.get_by_id(NodeId::intern("btn")).unwrap();
+    assert_eq!(
+        btn.animations[0].delay_ms, None,
+        "delay should be None by default"
+    );
+}

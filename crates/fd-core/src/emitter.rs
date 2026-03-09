@@ -637,6 +637,11 @@ fn emit_anim(out: &mut String, anim: &AnimKeyframe, depth: usize) {
     indent(out, depth + 1);
     writeln!(out, "ease: {ease_name} {}ms", anim.duration_ms).unwrap();
 
+    if let Some(delay) = anim.delay_ms {
+        indent(out, depth + 1);
+        writeln!(out, "delay: {delay}ms").unwrap();
+    }
+
     indent(out, depth);
     out.push_str("}\n");
 }

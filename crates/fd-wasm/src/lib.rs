@@ -1485,6 +1485,7 @@ impl FdCanvas {
             duration_ms,
             easing,
             properties: anim_props,
+            delay_ms: None,
         };
 
         // Get current animations and append the new one

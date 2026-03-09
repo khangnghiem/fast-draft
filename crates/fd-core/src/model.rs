@@ -315,6 +315,9 @@ pub struct AnimKeyframe {
     pub duration_ms: u32,
     pub easing: Easing,
     pub properties: AnimProperties,
+    /// Optional post-revert cooldown (ms) before re-triggerable.
+    /// `None` = no cooldown (default).
+    pub delay_ms: Option<u32>,
 }
 
 /// Animatable property overrides.
@@ -1364,6 +1367,7 @@ mod tests {
                 scale: Some(0.97),
                 ..Default::default()
             },
+            delay_ms: None,
         });
 
         // Without press trigger: scale should be None
