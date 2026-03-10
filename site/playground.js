@@ -154,6 +154,44 @@ function renderCanvas() {
   fdCanvas.render(ctx, performance.now());
 }
 
+/** Auto-center scene content in canvas viewport */
+function fitToContent(canvas) {
+  if (!fdCanvas) return;
+  try {
+    const text = fdCanvas.get_text();
+    const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
+    const nodes = [];
+    let m;
+    while ((m = idRegex.exec(text)) !== null) {
+      try {
+        const bj = fdCanvas.get_node_bounds(m[1]);
+        if (!bj) continue;
+        const b = JSON.parse(bj);
+        if (b.width > 0 && b.height > 0) nodes.push(b);
+      } catch (_) { }
+    }
+    if (nodes.length === 0) return;
+    let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
+    for (const n of nodes) {
+      sx = Math.min(sx, n.x);
+      sy = Math.min(sy, n.y);
+      sx2 = Math.max(sx2, n.x + n.width);
+      sy2 = Math.max(sy2, n.y + n.height);
+    }
+    const pad = 40;
+    sx -= pad; sy -= pad; sx2 += pad; sy2 += pad;
+    const sw = sx2 - sx, sh = sy2 - sy;
+    const cw = canvas.clientWidth, ch = canvas.clientHeight;
+    if (cw === 0 || ch === 0) return;
+    zoomLevel = Math.min(cw / sw, ch / sh, ZOOM_MAX);
+    zoomLevel = Math.max(zoomLevel, ZOOM_MIN);
+    panX = (cw - sw * zoomLevel) / 2 - sx * zoomLevel;
+    panY = (ch - sh * zoomLevel) / 2 - sy * zoomLevel;
+    updateZoomIndicator();
+    renderDirty = true;
+  } catch (_) { }
+}
+
 /** Show a brief toast notification */
 function showToast(msg) {
   const el = document.createElement('div');
@@ -1749,6 +1787,9 @@ async function initPlayground() {
     };
     animFrameId = requestAnimationFrame(renderLoop);
 
+    // Auto-center scene content in viewport on init
+    fitToContent(canvas);
+
     // Hide loading overlay
     loading.classList.add('hidden');
 
@@ -2218,41 +2259,9 @@ async function initPlayground() {
             gridEnabled = !gridEnabled;
             break;
           case 'fit': {
-            // Fit to content: scan all nodes, compute bounding box, set zoom+pan
-            if (fdCanvas) {
-              const text = fdCanvas.get_text();
-              const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
-              const nodes = [];
-              let m;
-              while ((m = idRegex.exec(text)) !== null) {
-                try {
-                  const bj = fdCanvas.get_node_bounds(m[1]);
-                  if (!bj) continue;
-                  const b = JSON.parse(bj);
-                  if (b.width > 0 && b.height > 0) nodes.push(b);
-                } catch (_) {}
-              }
-              if (nodes.length > 0) {
-                let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
-                for (const n of nodes) {
-                  sx = Math.min(sx, n.x);
-                  sy = Math.min(sy, n.y);
-                  sx2 = Math.max(sx2, n.x + n.width);
-                  sy2 = Math.max(sy2, n.y + n.height);
-                }
-                const pad = 40;
-                sx -= pad; sy -= pad; sx2 += pad; sy2 += pad;
-                const sw = sx2 - sx, sh = sy2 - sy;
-                const cw = canvas.clientWidth, ch = canvas.clientHeight;
-                zoomLevel = Math.min(cw / sw, ch / sh, ZOOM_MAX);
-                zoomLevel = Math.max(zoomLevel, ZOOM_MIN);
-                panX = (cw - sw * zoomLevel) / 2 - sx * zoomLevel;
-                panY = (ch - sh * zoomLevel) / 2 - sy * zoomLevel;
-                updateZoomIndicator();
-              }
-            }
+            fitToContent(canvas);
             settingsMenu?.classList.remove('visible');
-            renderCanvas();
+            renderDirty = true;
             return;
           }
           case 'copy-png': {
