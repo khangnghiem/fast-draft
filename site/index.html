@@ -17,7 +17,7 @@
   <!-- Preload WASM for instant playground -->
   <link rel="modulepreload" href="./wasm/fd_wasm.js" />
   <link rel="preload" href="./wasm/fd_wasm_bg.wasm" as="fetch" crossorigin />
-  <link rel="stylesheet" href="style.css?v=0.10.111" />
+  <link rel="stylesheet" href="style.css?v=0.11.0" />
 
 </head>
 <body>
@@ -70,10 +70,7 @@
           <div class="editor-header">
             <span class="editor-dot"></span> Code
           </div>
-          <div class="editor-highlight-wrap">
-            <pre id="fd-highlight" aria-hidden="true"><code id="fd-highlight-code"></code></pre>
-            <textarea id="fd-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
-          </div>
+          <div id="fd-editor"></div>
         </div>
         <div class="split-resize-handle" id="split-resize"></div>
         <div class="playground-canvas">
@@ -438,7 +435,7 @@
     </div>
   </footer>
 
-  <script type="module" src="playground.js?v=0.10.111"></script>
+  <script type="module" src="playground.js?v=0.11.0"></script>
   <script>
     // Mobile menu toggle
     document.getElementById('mobile-menu-btn').addEventListener('click', function() {
