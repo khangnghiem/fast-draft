@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.97 — Code Mode Syntax Highlighting + Hero Stats Cleanup (R6.11)
+
+- **FEATURE (R6.11)**: Code Mode now has live syntax highlighting — FD tokens (keywords, node IDs, properties, strings, hex colors, numbers, comments) are colorized using a transparent textarea + highlighted `<pre>` overlay pattern; token colors follow VS Code dark+ theme palette with light theme variants; zero external dependencies
+- **CLEANUP**: Removed hero stats badges ("5× fewer tokens", "6.5× smaller", "370 tests passing") from hero section — data already shown in the Benchmarks table lower on the page; reduces visual clutter
+- **SITE**: Changes in `site/index.html`, `site/style.css`, `site/playground.js`
+
 ### v0.10.96 — Taller Playground + Resizable Split (R6.6)
 
 - **UX (R6.6)**: Playground min-height bumped from `70vh` to `80vh` — ~100px more workspace on typical laptop screens

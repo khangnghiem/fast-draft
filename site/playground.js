@@ -318,6 +318,7 @@ function syncCanvasToEditor(editor) {
   clearTimeout(editorDebounceTimer);
   editorDebounceTimer = null;
   editor.value = fdCanvas.get_text();
+  highlightEditor(editor);
   suppressSync = false;
 }
 
@@ -1555,6 +1556,90 @@ function findAllNodeIds(fdText) {
   return ids;
 }
 
+// ─── Syntax Highlighting ─────────────────────────────────────────────────
+
+/** Escape HTML entities for safe insertion into <pre> */
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * Tokenize a single line of FD source into highlighted HTML.
+ * Token priority: comment > string > style-block > node-decl > property >
+ *   node-id > hex-color > number > keywords
+ */
+function tokenizeLine(line) {
+  // Full-line comment
+  if (/^\s*#/.test(line)) {
+    return `<span class="fd-comment">${escapeHtml(line)}</span>`;
+  }
+
+  const tokens = [];
+  // Regex patterns with named groups for token types
+  const patterns = [
+    { re: /"[^"]*"/g, cls: 'fd-string' },
+    {
+      re: /\b(style)\s+(\w+)/g, handler: (m) =>
+        `<span class="fd-keyword">${m[1]}</span> <span class="fd-style-name">${m[2]}</span>`
+    },
+    { re: /\b(group|frame|rect|ellipse|path|text|edge)\b/g, cls: 'fd-keyword' },
+    {
+      re: /\b(w|h|x|y|fill|stroke|font|corner|opacity|shadow|bg|layout|use|center_in|offset|gap|pad|scale|rotate|translate|ease|duration|cols|from|to|when|spec|status|priority|accept|src|alt)\s*:/g,
+      handler: (m) => `<span class="fd-property">${m[1]}</span>:`
+    },
+    { re: /@\w+/g, cls: 'fd-node-id' },
+    { re: /#[0-9A-Fa-f]{3,8}\b/g, cls: 'fd-hex' },
+    { re: /\b\d+(\.\d+)?\b/g, cls: 'fd-number' },
+    {
+      re: /\b(anim|when|column|row|grid|free|spring|linear|ease_in|ease_out|ease_in_out|canvas|bold|italic|semibold|medium|light|thin|center|left|right|top|bottom|middle)\b/g,
+      cls: 'fd-kw-other'
+    },
+  ];
+
+  // Build a flat list of {start, end, html} from all patterns
+  for (const pat of patterns) {
+    pat.re.lastIndex = 0;
+    let m;
+    while ((m = pat.re.exec(line)) !== null) {
+      const start = m.index;
+      const end = start + m[0].length;
+      const html = pat.handler
+        ? pat.handler(m)
+        : `<span class="${pat.cls}">${escapeHtml(m[0])}</span>`;
+      tokens.push({ start, end, html });
+    }
+  }
+
+  // Sort by position, remove overlaps (first wins)
+  tokens.sort((a, b) => a.start - b.start || b.end - a.end);
+  const merged = [];
+  let cursor = 0;
+  for (const t of tokens) {
+    if (t.start < cursor) continue; // overlaps with previous
+    if (t.start > cursor) merged.push(escapeHtml(line.slice(cursor, t.start)));
+    merged.push(t.html);
+    cursor = t.end;
+  }
+  if (cursor < line.length) merged.push(escapeHtml(line.slice(cursor)));
+  return merged.join('');
+}
+
+/** Highlight full FD source into the overlay <code> element. */
+function highlightEditor(editor) {
+  const code = document.getElementById('fd-highlight-code');
+  if (!code) return;
+  const lines = editor.value.split('\n');
+  code.innerHTML = lines.map(tokenizeLine).join('\n') + '\n';
+}
+
+/** Sync scroll position from textarea to highlight overlay. */
+function syncHighlightScroll(editor) {
+  const pre = document.getElementById('fd-highlight');
+  if (!pre) return;
+  pre.scrollTop = editor.scrollTop;
+  pre.scrollLeft = editor.scrollLeft;
+}
+
 async function initPlayground() {
   const editor = document.getElementById('fd-editor');
   const canvas = document.getElementById('fd-canvas');
@@ -1563,6 +1648,7 @@ async function initPlayground() {
 
   // Load default FD content
   editor.value = DEFAULT_FD;
+  highlightEditor(editor);
 
   try {
     // Load WASM module
@@ -1655,12 +1741,16 @@ async function initPlayground() {
 
     // ── Text Editor → Canvas ──────────────────────────────────────────
     editor.addEventListener('input', () => {
+      highlightEditor(editor);
       if (suppressSync) return;
       clearTimeout(editorDebounceTimer);
       editorDebounceTimer = setTimeout(() => {
         if (fdCanvas) fdCanvas.set_text(editor.value);
       }, 50);
     });
+
+    // ── Scroll sync (textarea → highlight overlay) ────────────────────
+    editor.addEventListener('scroll', () => syncHighlightScroll(editor));
 
     // ── Pointer Events ────────────────────────────────────────────────
     canvas.addEventListener('pointerdown', (e) => {

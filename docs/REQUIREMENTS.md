@@ -167,6 +167,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R6.8** _(done)_: Apple HIG canvas parity — website playground redesigned with Apple HIG design language (frosted glass, blue accent, SF Pro font, hairline borders); horizontal toolbar with text labels + keyboard hints replacing vertical floating toolbar; enriched properties panel with section labels; layers indent guides; dimension tooltip during drag; modifier cursor feedback (⌘=grab, Alt=copy)
 - **R6.9** _(done)_: Import CSS — settings menu button triggers file picker for `.css` files; class selectors parsed and converted to FD `style` blocks (`fill`, `corner`, `opacity`, `shadow`, `stroke`, `font`); one-shot conversion with toast feedback; available on both website playground and VS Code extension
 - **R6.10** _(done)_: CI/CD hardening — WASM build check in CI (catches `wasm32-unknown-unknown` breakage before merge); `Swatinem/rust-cache@v2` for smarter cargo caching; explicit minimal `permissions` on all workflows; unified `release.yml` with CI gate → parallel extension/LSP/Zed publish → GitHub Release (atomic all-or-nothing); branch protection recommended for `main`
+- **R6.11** _(done)_: Code Mode syntax highlighting — FD tokens (keywords, node IDs, properties, strings, hex colors, numbers, comments) colorized in the web playground's Code panel via transparent textarea + `<pre>` overlay pattern; token colors follow VS Code dark+ palette with light theme variants; zero external dependencies; scroll-synced with sub-frame latency
 
 ## Non-Functional Requirements
 
@@ -199,49 +200,49 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 
 <!-- Maps each requirement to its test functions. If a row is empty, the requirement lacks test coverage. -->
 
-| Requirement | Test Functions                                                                                                                                                                                                                  | Coverage                       |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| R1.1–R1.8   | `parser::tests::parse_*`, `emitter::tests::emit_*`, `roundtrip_*`                                                                                                                                                               | ✅ 76 fd-core + 18 integration |
-| R1.9        | `emit_annotations_*`, `roundtrip_preserves_annotations`                                                                                                                                                                         | ✅                             |
-| R1.10       | `parse_edge_*`, `emit_edge_*`, `roundtrip_edge_*`                                                                                                                                                                               | ✅                             |
-| R1.11       | `emit_edge_with_trigger_anim`, `roundtrip_edge_hover_anim`                                                                                                                                                                      | ✅                             |
-| R1.12       | `emit_edge_flow_*`, `roundtrip_edge_flow_*`                                                                                                                                                                                     | ✅                             |
-| R1.13       | `emit_generic_node`, `roundtrip_generic_*`                                                                                                                                                                                      | ✅                             |
-| R1.14       | `parse_import`, `emit_import`, `roundtrip_import`                                                                                                                                                                               | ✅                             |
-| R1.15       | `emit_bg_shorthand`, `roundtrip_bg_shorthand`                                                                                                                                                                                   | ✅                             |
-| R1.16       | `roundtrip_comment_*`                                                                                                                                                                                                           | ✅                             |
-| R1.17       | `parse_align_*`, `roundtrip_align*`, `style_merging_align`                                                                                                                                                                      | ✅                             |
-| R2.1–R2.5   | `sync::tests::sync_*`, `bidi_sync::*`, `e2e-ux: Canvas→Code`                                                                                                                                                                    | ✅ 12 sync + 9 integ + 4 E2E   |
-| R3.1        | `tools::tests::select_tool_*`, `hit::tests::*`                                                                                                                                                                                  | ✅ 5 tests + 3 hit tests       |
+| Requirement | Test Functions                                                                                                                                                                                                                                                     | Coverage                       |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
+| R1.1–R1.8   | `parser::tests::parse_*`, `emitter::tests::emit_*`, `roundtrip_*`                                                                                                                                                                                                  | ✅ 76 fd-core + 18 integration |
+| R1.9        | `emit_annotations_*`, `roundtrip_preserves_annotations`                                                                                                                                                                                                            | ✅                             |
+| R1.10       | `parse_edge_*`, `emit_edge_*`, `roundtrip_edge_*`                                                                                                                                                                                                                  | ✅                             |
+| R1.11       | `emit_edge_with_trigger_anim`, `roundtrip_edge_hover_anim`                                                                                                                                                                                                         | ✅                             |
+| R1.12       | `emit_edge_flow_*`, `roundtrip_edge_flow_*`                                                                                                                                                                                                                        | ✅                             |
+| R1.13       | `emit_generic_node`, `roundtrip_generic_*`                                                                                                                                                                                                                         | ✅                             |
+| R1.14       | `parse_import`, `emit_import`, `roundtrip_import`                                                                                                                                                                                                                  | ✅                             |
+| R1.15       | `emit_bg_shorthand`, `roundtrip_bg_shorthand`                                                                                                                                                                                                                      | ✅                             |
+| R1.16       | `roundtrip_comment_*`                                                                                                                                                                                                                                              | ✅                             |
+| R1.17       | `parse_align_*`, `roundtrip_align*`, `style_merging_align`                                                                                                                                                                                                         | ✅                             |
+| R2.1–R2.5   | `sync::tests::sync_*`, `bidi_sync::*`, `e2e-ux: Canvas→Code`                                                                                                                                                                                                       | ✅ 12 sync + 9 integ + 4 E2E   |
+| R3.1        | `tools::tests::select_tool_*`, `hit::tests::*`                                                                                                                                                                                                                     | ✅ 5 tests + 3 hit tests       |
 | R3.2        | `select_tool_drag`, `select_tool_shift_drag_*`, resize integ., `sync_resize_frame_children_reflow`, `sync_resize_frame_centered_text_recenters`, `sync_move_frame_flush_no_jump`, `sync_move_frame_children_follow_after_flush`, `sync_frame_does_not_auto_resize` | ✅ 8 tests                     |
-| R3.3        | `rect_tool_*`, `ellipse_tool_*`, `text_tool_*`                                                                                                                                                                                  | ✅ 7 tests                     |
-| R3.4        | _(pen tool — captures pressure, no unit test)_                                                                                                                                                                                  | ⚠️ No pen tool tests           |
-| R3.5        | _(planned)_                                                                                                                                                                                                                     | —                              |
-| R3.6        | E2E UX: zoom/pan/pinch tests in `e2e-ux.test.ts`                                                                                                                                                                                | ✅ 4 E2E tests                 |
-| R3.7        | `commands::tests::*`, `undo_redo::*`                                                                                                                                                                                            | ✅ 5 unit + 7 integration      |
-| R3.8–R3.14  | E2E UX: properties, color, theme, view mode in `e2e-ux.test.ts`                                                                                                                                                                 | ✅ 12 E2E tests                |
-| R3.16       | `hit_test_resize_handle` (WASM), E2E UX cursor tests                                                                                                                                                                            | ⚠️ WASM-side only              |
-| R3.17       | E2E UX: grid/snap tests                                                                                                                                                                                                         | ⚠️ JS-only                     |
-| R3.18       | E2E UX: dimension tooltip tests                                                                                                                                                                                                 | ⚠️ JS-only                     |
-| R3.20       | E2E UX: zoom calculations, pinch clamp                                                                                                                                                                                          | ✅ 4 E2E tests                 |
-| R3.21       | E2E UX: grid spacing adaptation                                                                                                                                                                                                 | ✅ 3 E2E tests                 |
-| R3.24       | `effective_target_*`, `is_ancestor_of`, `hit_test_nested_groups`                                                                                                                                                                | ✅ 5 Rust + 4 E2E tests        |
-| R3.25       | E2E UX: minimap scale, click-to-navigate                                                                                                                                                                                        | ✅ 2 E2E tests                 |
-| R3.26       | E2E UX: arrow nudge 1px/10px                                                                                                                                                                                                    | ✅ 2 E2E tests                 |
-| R3.27       | E2E UX: rename sanitization, word-boundary                                                                                                                                                                                      | ✅ 3 E2E tests                 |
-| R3.28       | E2E UX: inline text editing, hex luminance                                                                                                                                                                                      | ✅ 3 E2E tests                 |
-| R3.29       | E2E UX: animation tween engine                                                                                                                                                                                                  | ✅ 2 E2E tests                 |
-| R3.30       | _(JS-only, camera animation)_                                                                                                                                                                                                   | ⚠️ JS-only                     |
-| R4.1–R4.6   | Covered by R1/R2 tests                                                                                                                                                                                                          | ✅                             |
-| R4.7–R4.11  | _(extension-side, no test)_                                                                                                                                                                                                     | ❌                             |
-| R3.36       | `layout_text_centered_in_rect`, `layout_text_in_ellipse_*`, `layout_text_explicit_pos_*`                                                                                                                                        | ✅ 4 tests                     |
-| R3.39–R3.44 | _(JS-only; floating toolbar, snap, edge context menu — no WASM-side tests)_                                                                                                                                                     | ⚠️ JS-only                     |
-| R3.45       | `sync_resize_child_expands_parent_on_finalize`, `sync_resize_child_within_bounds_no_expand`, `sync_cascade_expand_two_levels`, `sync_cascade_stops_at_clip_frame`                                                               | ✅ 4 tests                     |
-| R3.46       | _(JS-side measurement; WASM API `update_text_metrics` untested directly)_                                                                                                                                                       | ⚠️ WASM-side only              |
-| R1.19       | `roundtrip_edge_label_offset`                                                                                                                                                                                                   | ✅ 1 test                      |
-| R1.20       | `roundtrip_edge_point_anchors`, `roundtrip_edge_mixed_anchors`, `parse_edge_omitted_anchors_default`                                                                                                                            | ✅ 3 tests                     |
-| R3.48       | `eraser_tool_lifecycle`, `eraser_tool_clear_resets_state`, `eraser_tool_pointerdown_clears_previous_ids`, `erase_child_preserves_group`, `erase_last_child_leaves_empty_group`, `erase_nested_cascade`                          | ✅ 6 tests                     |
-| R5.1–R5.8   | `hit::tests::*`, `resolve::tests::*`, `render2d::tests::*`                                                                                                                                                                      | ✅ 3 hit + 6 layout + 3 render |
+| R3.3        | `rect_tool_*`, `ellipse_tool_*`, `text_tool_*`                                                                                                                                                                                                                     | ✅ 7 tests                     |
+| R3.4        | _(pen tool — captures pressure, no unit test)_                                                                                                                                                                                                                     | ⚠️ No pen tool tests           |
+| R3.5        | _(planned)_                                                                                                                                                                                                                                                        | —                              |
+| R3.6        | E2E UX: zoom/pan/pinch tests in `e2e-ux.test.ts`                                                                                                                                                                                                                   | ✅ 4 E2E tests                 |
+| R3.7        | `commands::tests::*`, `undo_redo::*`                                                                                                                                                                                                                               | ✅ 5 unit + 7 integration      |
+| R3.8–R3.14  | E2E UX: properties, color, theme, view mode in `e2e-ux.test.ts`                                                                                                                                                                                                    | ✅ 12 E2E tests                |
+| R3.16       | `hit_test_resize_handle` (WASM), E2E UX cursor tests                                                                                                                                                                                                               | ⚠️ WASM-side only              |
+| R3.17       | E2E UX: grid/snap tests                                                                                                                                                                                                                                            | ⚠️ JS-only                     |
+| R3.18       | E2E UX: dimension tooltip tests                                                                                                                                                                                                                                    | ⚠️ JS-only                     |
+| R3.20       | E2E UX: zoom calculations, pinch clamp                                                                                                                                                                                                                             | ✅ 4 E2E tests                 |
+| R3.21       | E2E UX: grid spacing adaptation                                                                                                                                                                                                                                    | ✅ 3 E2E tests                 |
+| R3.24       | `effective_target_*`, `is_ancestor_of`, `hit_test_nested_groups`                                                                                                                                                                                                   | ✅ 5 Rust + 4 E2E tests        |
+| R3.25       | E2E UX: minimap scale, click-to-navigate                                                                                                                                                                                                                           | ✅ 2 E2E tests                 |
+| R3.26       | E2E UX: arrow nudge 1px/10px                                                                                                                                                                                                                                       | ✅ 2 E2E tests                 |
+| R3.27       | E2E UX: rename sanitization, word-boundary                                                                                                                                                                                                                         | ✅ 3 E2E tests                 |
+| R3.28       | E2E UX: inline text editing, hex luminance                                                                                                                                                                                                                         | ✅ 3 E2E tests                 |
+| R3.29       | E2E UX: animation tween engine                                                                                                                                                                                                                                     | ✅ 2 E2E tests                 |
+| R3.30       | _(JS-only, camera animation)_                                                                                                                                                                                                                                      | ⚠️ JS-only                     |
+| R4.1–R4.6   | Covered by R1/R2 tests                                                                                                                                                                                                                                             | ✅                             |
+| R4.7–R4.11  | _(extension-side, no test)_                                                                                                                                                                                                                                        | ❌                             |
+| R3.36       | `layout_text_centered_in_rect`, `layout_text_in_ellipse_*`, `layout_text_explicit_pos_*`                                                                                                                                                                           | ✅ 4 tests                     |
+| R3.39–R3.44 | _(JS-only; floating toolbar, snap, edge context menu — no WASM-side tests)_                                                                                                                                                                                        | ⚠️ JS-only                     |
+| R3.45       | `sync_resize_child_expands_parent_on_finalize`, `sync_resize_child_within_bounds_no_expand`, `sync_cascade_expand_two_levels`, `sync_cascade_stops_at_clip_frame`                                                                                                  | ✅ 4 tests                     |
+| R3.46       | _(JS-side measurement; WASM API `update_text_metrics` untested directly)_                                                                                                                                                                                          | ⚠️ WASM-side only              |
+| R1.19       | `roundtrip_edge_label_offset`                                                                                                                                                                                                                                      | ✅ 1 test                      |
+| R1.20       | `roundtrip_edge_point_anchors`, `roundtrip_edge_mixed_anchors`, `parse_edge_omitted_anchors_default`                                                                                                                                                               | ✅ 3 tests                     |
+| R3.48       | `eraser_tool_lifecycle`, `eraser_tool_clear_resets_state`, `eraser_tool_pointerdown_clears_previous_ids`, `erase_child_preserves_group`, `erase_last_child_leaves_empty_group`, `erase_nested_cascade`                                                             | ✅ 6 tests                     |
+| R5.1–R5.8   | `hit::tests::*`, `resolve::tests::*`, `render2d::tests::*`                                                                                                                                                                                                         | ✅ 3 hit + 6 layout + 3 render |
 
 **Total**: 182 Rust tests + 188 TypeScript tests = **370 tests**
 
@@ -249,44 +250,44 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 
 <!-- AI: Search this index BEFORE proposing new requirements. If a similar tag already exists, extend the existing requirement instead of creating a duplicate. Also check docs/specs/ for detailed spec docs. -->
 
-| Tag                 | Requirements                                                             |
-| ------------------- | ------------------------------------------------------------------------ |
-| selection           | R2.5, R3.1, R3.16, R3.24                                                 |
-| drawing             | R3.3, R3.15, R3.19                                                       |
-| pen / freehand      | R3.4, R3.22, R3.23                                                       |
-| pan                 | R3.6, R3.10                                                              |
-| zoom                | R3.6, R3.20                                                              |
-| grid / snap         | R3.17, R3.21                                                             |
-| cursor              | R3.11, R3.16                                                             |
-| resize              | R3.2, R3.16                                                              |
-| feedback / tooltip  | R3.15, R3.18                                                             |
-| export              | R3.31, R3.55, R3.56, R4.7                                                |
-| minimap             | R3.25                                                                    |
-| nudge               | R3.26                                                                    |
-| rename              | R3.27                                                                    |
-| undo / redo         | R3.7                                                                     |
-| properties          | R3.8                                                                     |
-| drag-drop           | R3.9                                                                     |
-| annotation          | R1.9, R3.12, R4.5                                                        |
-| theme               | R3.13                                                                    |
-| view mode           | R3.14, R4.11                                                             |
-| pressure / pencil   | R3.4, R3.10, R3.22                                                       |
+| Tag                 | Requirements                                                                    |
+| ------------------- | ------------------------------------------------------------------------------- |
+| selection           | R2.5, R3.1, R3.16, R3.24                                                        |
+| drawing             | R3.3, R3.15, R3.19                                                              |
+| pen / freehand      | R3.4, R3.22, R3.23                                                              |
+| pan                 | R3.6, R3.10                                                                     |
+| zoom                | R3.6, R3.20                                                                     |
+| grid / snap         | R3.17, R3.21                                                                    |
+| cursor              | R3.11, R3.16                                                                    |
+| resize              | R3.2, R3.16                                                                     |
+| feedback / tooltip  | R3.15, R3.18                                                                    |
+| export              | R3.31, R3.55, R3.56, R4.7                                                       |
+| minimap             | R3.25                                                                           |
+| nudge               | R3.26                                                                           |
+| rename              | R3.27                                                                           |
+| undo / redo         | R3.7                                                                            |
+| properties          | R3.8                                                                            |
+| drag-drop           | R3.9                                                                            |
+| annotation          | R1.9, R3.12, R4.5                                                               |
+| theme               | R3.13                                                                           |
+| view mode           | R3.14, R4.11                                                                    |
+| pressure / pencil   | R3.4, R3.10, R3.22                                                              |
 | ai / refinement     | R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17, R4.20, R4.21 |
-| edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8                                    |
-| import              | R1.14, R1.18                                                             |
-| style / theme       | R1.4, R4.3, R4.18                                                        |
-| animation           | R1.5, R1.11, R1.12, R3.29, R4.18, R5.6, R5.8                             |
-| rendering           | R5.1, R5.2, R5.4, R5.5                                                   |
-| platform            | R6.1, R6.2, R6.3, R6.4, R6.5, R6.6, R6.7, R6.8, R6.9, R6.10           |
-| inline editing      | R3.28                                                                    |
-| text alignment      | R1.17, R3.28, R3.36, R3.37                                               |
-| layout / centering  | R3.36, R3.37                                                             |
-| layers / navigation | R3.30                                                                    |
-| group / drill-down  | R3.24, R3.34                                                             |
-| group / reparent    | R3.34, R3.35, R3.38                                                      |
-| image               | R3.32                                                                    |
-| library             | R3.33, R3.34                                                             |
-| group / frame       | R3.24, R3.34, R1.1                                                       |
+| edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8                                           |
+| import              | R1.14, R1.18                                                                    |
+| style / theme       | R1.4, R4.3, R4.18                                                               |
+| animation           | R1.5, R1.11, R1.12, R3.29, R4.18, R5.6, R5.8                                    |
+| rendering           | R5.1, R5.2, R5.4, R5.5                                                          |
+| platform            | R6.1, R6.2, R6.3, R6.4, R6.5, R6.6, R6.7, R6.8, R6.9, R6.10, R6.11              |
+| inline editing      | R3.28                                                                           |
+| text alignment      | R1.17, R3.28, R3.36, R3.37                                                      |
+| layout / centering  | R3.36, R3.37                                                                    |
+| layers / navigation | R3.30                                                                           |
+| group / drill-down  | R3.24, R3.34                                                                    |
+| group / reparent    | R3.34, R3.35, R3.38                                                             |
+| image               | R3.32                                                                           |
+| library             | R3.33, R3.34                                                                    |
+| group / frame       | R3.24, R3.34, R1.1                                                              |
 
 | content-first | R4.12 |
 | mermaid | R1.18 |
