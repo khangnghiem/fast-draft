@@ -17,6 +17,17 @@
 
 ## Completed Requirements
 
+### v0.10.100 — Mobile Touch Interactions (R6.11)
+
+- **FIX (R6.11)**: Canvas touch interactions now work on mobile — single-finger tap, drag, draw all functional; root cause was missing `e.preventDefault()` on canvas `pointerdown` and missing `touch-action: none` CSS, causing browser to intercept touch gestures for page scrolling
+- **FIX (R6.11)**: Node flashing eliminated — render loop now uses dirty-flag pattern instead of unconditional 60fps re-render; `renderDirty` flag set by pointer/wheel/UI events, cleared after each paint; reduces idle GPU usage to zero
+- **UX (R6.11)**: Two-finger pan on mobile — touching canvas with two fingers simultaneously initiates pan mode (drag to pan); cancels any in-progress single-finger interaction
+- **UX (R6.11)**: Pinch-to-zoom on mobile — two-finger pinch gesture zooms canvas centered on pinch midpoint; zoom level clamped to 0.1×–5×; zoom indicator updates in real-time
+- **FIX (R6.11)**: `pointercancel` handler — properly cleans up multi-touch state when browser cancels pointer events (app switch, incoming call, gesture timeout)
+- **UX (R6.11)**: Light theme editor background set to `#FAFAFA` (Atom One Light) — previously used dark Atom One bg in both themes
+- **CSS**: `touch-action: none; user-select: none` on `#canvas-wrapper` — prevents browser scroll/zoom and text selection during canvas interactions
+- **SITE**: Changes in `site/style.css`, `site/playground.js`, `site/index.html` (cache-bust v0.10.106)
+
 ### v0.10.99 — Code Mode Scroll Fix + Atom One Dark Theme (R6.11)
 
 - **FIX (R6.11)**: Code Mode scroll sync fixed — syntax highlight overlay (`#fd-highlight`) now uses `overflow: hidden` instead of `overflow: auto`, relying entirely on JS `scrollTop` sync; previously the overlay had independent scroll behavior that diverged from the textarea
