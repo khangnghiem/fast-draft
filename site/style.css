@@ -315,52 +315,15 @@ code {
   transform: translateY(-2px);
 }
 .btn-icon { font-size: 0.9em; }
-/* ── Syntax Highlighting Overlay ── */
-.editor-highlight-wrap {
-  position: relative;
+/* ── CodeMirror Editor Container ── */
+#fd-editor {
   flex: 1;
   overflow: hidden;
+  position: relative;
 }
-#fd-highlight {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  overflow: hidden; /* JS controls scrollTop via syncHighlightScroll */
-  pointer-events: none;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-family: var(--mono);
-  font-size: 0.85rem;
-  line-height: 1.7;
-  padding: 16px 20px;
-  tab-size: 2;
-  color: transparent; /* hidden, tokens provide color */
-  background: transparent;
-  border: none;
+#fd-editor .cm-editor {
+  height: 100%;
 }
-#fd-highlight code {
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
-  tab-size: inherit;
-  color: #ABB2BF; /* Atom One Dark foreground — always dark */
-  background: transparent; /* override global code bg */
-  padding: 0;
-  border-radius: 0;
-}
-/* Token colors — Atom One Dark palette */
-.fd-comment { color: #5C6370; font-style: italic; }
-.fd-keyword { color: #C678DD; }
-.fd-node-id { color: #E06C75; }
-.fd-property { color: #D19A66; }
-.fd-string  { color: #98C379; }
-.fd-hex     { color: #D19A66; }
-.fd-number  { color: #D19A66; }
-.fd-kw-other { color: #56B6C2; }
-.fd-style-name { color: #E5C07B; }
-/* Light theme: code editor stays dark, no overrides needed.
-   Atom One Dark palette is used regardless of page theme. */
-
 /* ─── Hero Playground ─── */
 .hero-playground {
   position: relative;
@@ -580,27 +543,6 @@ code {
   letter-spacing: 0.05em;
 }
 .canvas-dot { background: var(--success); }
-#fd-editor {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  resize: none;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: transparent;
-  caret-color: #ABB2BF; /* Atom One Dark foreground — always visible */
-  font-family: var(--mono);
-  font-size: 0.85rem;
-  line-height: 1.7;
-  padding: 16px 20px;
-  tab-size: 2;
-  z-index: 1;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  overflow: auto;
-}
 #canvas-wrapper {
   flex: 1;
   position: relative;

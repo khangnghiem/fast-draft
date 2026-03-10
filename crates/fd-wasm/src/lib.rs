@@ -2449,6 +2449,28 @@ impl FdCanvas {
         let json_guides: Vec<[f64; 4]> = guides.iter().map(|g| [g.0, g.1, g.2, g.3]).collect();
         serde_json::to_string(&json_guides).unwrap_or_else(|_| "[]".to_string())
     }
+    // ─── Code Mode: Diagnostics, Completions, Hover ─────────────────────
+
+    /// Get parse diagnostics for the current document text.
+    /// Returns JSON: `[{line, col, endCol, message, severity}]`
+    pub fn get_diagnostics(&mut self) -> String {
+        let text = self.engine.text.clone();
+        get_diagnostics_for_text(&text)
+    }
+
+    /// Get context-aware completions at the cursor position.
+    /// Returns JSON: `[{label, kind, detail, insertText}]`
+    pub fn get_completions(&self, line: u32, col: u32) -> String {
+        let text = self.engine.text.clone();
+        get_completions_for_text(&text, line, col)
+    }
+
+    /// Get hover information at the cursor position.
+    /// Returns JSON: `{content: "markdown"}` or `""` if no info.
+    pub fn get_hover(&self, line: u32, col: u32) -> String {
+        let text = self.engine.text.clone();
+        get_hover_for_text(&text, line, col)
+    }
 }
 // ─── Private helpers ─────────────────────────────────────────────────────
 
@@ -2943,6 +2965,323 @@ fn console_error_panic_hook_setup() {
             }));
         });
     }
+}
+
+// ─── Code Mode helpers (no canvas needed) ────────────────────────────────
+
+/// Compute parse diagnostics for FD source text.
+/// Returns JSON: `[{line, col, endCol, message, severity}]`
+fn get_diagnostics_for_text(text: &str) -> String {
+    match fd_core::parser::parse_document(text) {
+        Ok(_) => "[]".to_string(),
+        Err(err_msg) => {
+            let (line, col) = extract_error_pos(text, &err_msg);
+            let escaped = err_msg.replace('\\', "\\\\").replace('"', "\\\"");
+            format!(
+                r#"[{{"line":{line},"col":{col},"endCol":{end},"message":"{escaped}","severity":"error"}}]"#,
+                end = col + 1
+            )
+        }
+    }
+}
+
+/// Best-effort extraction of error position from winnow error messages.
+fn extract_error_pos(source: &str, error: &str) -> (u32, u32) {
+    // winnow errors contain remaining text: "... at '...remaining...'"
+    if let Some(at_idx) = error.find("at '") {
+        let remaining = &error[at_idx + 4..];
+        if let Some(end) = remaining.find('\'') {
+            let snippet = &remaining[..end];
+            if let Some(offset) = source.find(snippet) {
+                return offset_to_lc(source, offset);
+            }
+        }
+    }
+    // Fallback: end of document
+    let line_count = source.lines().count();
+    if line_count == 0 {
+        return (0, 0);
+    }
+    let last_line = line_count.saturating_sub(1) as u32;
+    let last_col = source.lines().last().map_or(0, |l| l.len() as u32);
+    (last_line, last_col)
+}
+
+/// Convert byte offset to (line, col) — zero-indexed.
+fn offset_to_lc(source: &str, offset: usize) -> (u32, u32) {
+    let mut line = 0u32;
+    let mut col = 0u32;
+    for (i, ch) in source.char_indices() {
+        if i >= offset {
+            break;
+        }
+        if ch == '\n' {
+            line += 1;
+            col = 0;
+        } else {
+            col += 1;
+        }
+    }
+    (line, col)
+}
+
+/// Compute context-aware completions at the cursor position.
+fn get_completions_for_text(text: &str, line: u32, col: u32) -> String {
+    let cur_line = text.lines().nth(line as usize).unwrap_or("");
+    let end = std::cmp::min(col as usize, cur_line.len());
+    let before = cur_line[..end].trim();
+
+    // After a property colon → suggest values
+    if let Some(prop) = before
+        .strip_suffix(':')
+        .or_else(|| before.strip_suffix(": "))
+    {
+        let prop_name = prop.split_whitespace().last().unwrap_or("");
+        return completions_json(&value_completions_data(prop_name));
+    }
+
+    // Brace depth determines context
+    let depth = brace_depth(text, line, col);
+    if depth == 0 {
+        completions_json(&top_level_items())
+    } else {
+        completions_json(&node_body_items())
+    }
+}
+
+/// Count brace nesting depth up to (line, col).
+fn brace_depth(text: &str, line: u32, col: u32) -> usize {
+    let mut depth: i32 = 0;
+    for (i, ln) in text.lines().enumerate() {
+        if i > line as usize {
+            break;
+        }
+        let end = if i == line as usize {
+            std::cmp::min(col as usize, ln.len())
+        } else {
+            ln.len()
+        };
+        for ch in ln[..end].chars() {
+            match ch {
+                '{' => depth += 1,
+                '}' => depth -= 1,
+                _ => {}
+            }
+        }
+    }
+    depth.max(0) as usize
+}
+
+fn top_level_items() -> Vec<(&'static str, &'static str, &'static str)> {
+    vec![
+        ("rect", "keyword", "Rectangle shape"),
+        ("ellipse", "keyword", "Ellipse / circle shape"),
+        ("text", "keyword", "Text label"),
+        ("frame", "keyword", "Frame container with clip"),
+        ("group", "keyword", "Group container"),
+        ("path", "keyword", "Freeform path"),
+        ("style", "keyword", "Reusable style definition"),
+        ("edge", "keyword", "Edge / connection"),
+        ("import", "keyword", "Import another .fd file"),
+    ]
+}
+
+fn node_body_items() -> Vec<(&'static str, &'static str, &'static str)> {
+    vec![
+        ("w:", "property", "Width"),
+        ("h:", "property", "Height"),
+        ("fill:", "property", "Fill color"),
+        ("stroke:", "property", "Stroke color and width"),
+        ("corner:", "property", "Corner radius"),
+        ("opacity:", "property", "Opacity (0.0–1.0)"),
+        ("font:", "property", "Font family, weight, size"),
+        ("bg:", "property", "Background shorthand"),
+        ("use:", "property", "Reference a named style"),
+        ("layout:", "property", "Layout mode for children"),
+        ("shadow:", "property", "Drop shadow"),
+        ("x:", "property", "X position"),
+        ("y:", "property", "Y position"),
+        ("align:", "property", "Text alignment"),
+        ("when", "keyword", "Animation block"),
+        ("spec", "keyword", "Annotation block"),
+        ("rect", "keyword", "Nested rectangle"),
+        ("ellipse", "keyword", "Nested ellipse"),
+        ("text", "keyword", "Nested text"),
+        ("frame", "keyword", "Nested frame"),
+        ("group", "keyword", "Nested group"),
+    ]
+}
+
+fn value_completions_data(property: &str) -> Vec<(&'static str, &'static str, &'static str)> {
+    match property {
+        "layout" => vec![
+            ("column", "value", "Vertical stack"),
+            ("row", "value", "Horizontal stack"),
+            ("grid", "value", "Grid layout"),
+            ("free", "value", "Free positioning"),
+        ],
+        "ease" => vec![
+            ("linear", "value", "Linear easing"),
+            ("ease_in", "value", "Ease in"),
+            ("ease_out", "value", "Ease out"),
+            ("ease_in_out", "value", "Ease in-out"),
+            ("spring", "value", "Spring physics"),
+        ],
+        "status" => vec![
+            ("todo", "value", "Not started"),
+            ("doing", "value", "In progress"),
+            ("done", "value", "Completed"),
+            ("blocked", "value", "Blocked"),
+        ],
+        "priority" => vec![
+            ("low", "value", "Low"),
+            ("medium", "value", "Medium"),
+            ("high", "value", "High"),
+            ("critical", "value", "Critical"),
+        ],
+        "fill" | "background" | "color" => vec![
+            ("#6C5CE7", "value", "Purple"),
+            ("#FF6B6B", "value", "Red"),
+            ("#3B82F6", "value", "Blue"),
+            ("#22C55E", "value", "Green"),
+            ("#F59E0B", "value", "Amber"),
+            ("#EC4899", "value", "Pink"),
+            ("#333333", "value", "Dark gray"),
+            ("#FFFFFF", "value", "White"),
+        ],
+        "align" => vec![
+            ("left", "value", "Left-align"),
+            ("center", "value", "Center-align"),
+            ("right", "value", "Right-align"),
+        ],
+        "arrow" => vec![
+            ("none", "value", "No arrowheads"),
+            ("start", "value", "Arrow at start"),
+            ("end", "value", "Arrow at end"),
+            ("both", "value", "Both ends"),
+        ],
+        "curve" => vec![
+            ("straight", "value", "Straight line"),
+            ("smooth", "value", "Smooth curve"),
+            ("step", "value", "Step routing"),
+        ],
+        _ => vec![],
+    }
+}
+
+/// Serialize completion items to JSON.
+fn completions_json(items: &[(&str, &str, &str)]) -> String {
+    let entries: Vec<String> = items
+        .iter()
+        .map(|(label, kind, detail)| {
+            format!(
+                r#"{{"label":"{}","kind":"{}","detail":"{}"}}"#,
+                label, kind, detail
+            )
+        })
+        .collect();
+    format!("[{}]", entries.join(","))
+}
+
+/// Compute hover info at cursor position.
+fn get_hover_for_text(text: &str, line: u32, col: u32) -> String {
+    let Some(cur_line) = text.lines().nth(line as usize) else {
+        return String::new();
+    };
+    let word = extract_word(cur_line, col as usize);
+    if word.is_empty() {
+        return String::new();
+    }
+
+    // @id hover — show node kind
+    if let Some(id) = word.strip_prefix('@') {
+        // Try to find the node kind from the text
+        let pattern = format!("@{id}");
+        for ln in text.lines() {
+            let trimmed = ln.trim();
+            if trimmed.contains(&pattern) {
+                for kw in &["rect", "ellipse", "text", "frame", "group", "path", "edge"] {
+                    if trimmed.starts_with(kw) {
+                        let escaped = format!(
+                            "**@{id}** — {kind} node",
+                            kind = kw
+                                .chars()
+                                .next()
+                                .unwrap()
+                                .to_uppercase()
+                                .collect::<String>()
+                                + &kw[1..]
+                        );
+                        return format!(r#"{{"content":"{}"}}"#, escaped);
+                    }
+                }
+            }
+        }
+        return format!(r#"{{"content":"**@{id}** — node reference"}}"#);
+    }
+
+    // Keyword / property hover
+    let info = match word {
+        "rect" => {
+            "**rect** — Rectangle shape.\n\nProperties: `w:` `h:` `fill:` `stroke:` `corner:` `opacity:`"
+        }
+        "ellipse" => {
+            "**ellipse** — Ellipse or circle shape.\n\nProperties: `w:` `h:` `fill:` `stroke:` `opacity:`"
+        }
+        "text" => "**text** — Text label node.\n\nInline content: `text @id \"content\" { ... }`",
+        "frame" => {
+            "**frame** — Visible container with explicit size.\n\nSupports `layout:` for auto arrangement."
+        }
+        "group" => {
+            "**group** — Organizational container.\n\nInvisible on canvas. Auto-sizes to children."
+        }
+        "path" => "**path** — Freeform vector path.\n\nSVG-like commands via `d:` property.",
+        "style" | "theme" => {
+            "**style** — Reusable style definition.\n\nApply to nodes with `use: style_name`."
+        }
+        "edge" => "**edge** — Connection between nodes.\n\n`from:` `to:` `arrow:` `curve:` `flow:`",
+        "w" | "width" => "**w:** — Width in pixels.",
+        "h" | "height" => "**h:** — Height in pixels.",
+        "fill" => "**fill:** — Fill color. Accepts `#RGB`, `#RRGGBB`, named colors.",
+        "stroke" => "**stroke:** — Stroke color and width.",
+        "corner" => "**corner:** — Corner radius.",
+        "opacity" => "**opacity:** — 0.0 (transparent) to 1.0 (opaque).",
+        "font" => "**font:** — Font spec: `\"Family\" weight size`.",
+        "bg" => "**bg:** — Background with inline corner/shadow.",
+        "use" => "**use:** — Reference a named style.",
+        "layout" => "**layout:** — Children arrangement: `column`, `row`, `grid`, `free`.",
+        "when" | "anim" => "**when** — Animation block. Triggers: `:hover`, `:press`, `:enter`.",
+        "spec" => "**spec** — Structured annotation block.",
+        "ease" => "**ease:** — Easing: `linear`, `ease_in`, `ease_out`, `spring`.",
+        "shadow" => "**shadow:** — Drop shadow `(ox,oy,blur,#color)`.",
+        "align" => "**align:** — Text alignment: `left|center|right [top|middle|bottom]`.",
+        _ => return String::new(),
+    };
+
+    let escaped = info.replace('"', "\\\"").replace('\n', "\\n");
+    format!(r#"{{"content":"{escaped}"}}"#)
+}
+
+/// Extract the word at a column position.
+fn extract_word(line: &str, col: usize) -> &str {
+    let bytes = line.as_bytes();
+    let col = col.min(line.len());
+    // Include @ prefix for node IDs
+    let start = (0..col)
+        .rev()
+        .take_while(|&i| {
+            i < bytes.len()
+                && (bytes[i].is_ascii_alphanumeric()
+                    || bytes[i] == b'_'
+                    || bytes[i] == b'@'
+                    || bytes[i] == b'#')
+        })
+        .count();
+    let begin = col.saturating_sub(start);
+    let end_off = (col..line.len())
+        .take_while(|&i| bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_')
+        .count();
+    &line[begin..col + end_off]
 }
 
 // ─── Standalone validation functions (no canvas needed) ──────────────────

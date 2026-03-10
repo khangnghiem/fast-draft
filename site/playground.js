@@ -1,5 +1,173 @@
 // ─── FD Playground — WASM-powered interactive editor ───
 
+// ─── CodeMirror 6 Imports ────────────────────────────────────────────────
+import { EditorState, Compartment } from 'https://esm.sh/@codemirror/state@6';
+import {
+  EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter,
+  drawSelection, placeholder, tooltips, hoverTooltip
+} from 'https://esm.sh/@codemirror/view@6';
+import { StreamLanguage } from 'https://esm.sh/@codemirror/language@6';
+import { tags, HighlightStyle, syntaxHighlighting } from 'https://esm.sh/@lezer/highlight@1';
+import { autocompletion } from 'https://esm.sh/@codemirror/autocomplete@6';
+import { linter, lintGutter } from 'https://esm.sh/@codemirror/lint@6';
+import { defaultKeymap, history, historyKeymap } from 'https://esm.sh/@codemirror/commands@6';
+import { bracketMatching } from 'https://esm.sh/@codemirror/language@6';
+import { closeBrackets, closeBracketsKeymap } from 'https://esm.sh/@codemirror/autocomplete@6';
+import { highlightSelectionMatches } from 'https://esm.sh/@codemirror/search@6';
+
+// ─── FD Language Definition (StreamLanguage) ─────────────────────────────
+const fdLanguage = StreamLanguage.define({
+  token(stream) {
+    // Skip whitespace
+    if (stream.eatSpace()) return null;
+
+    // Comment: # to end of line
+    if (stream.match(/^#.*/)) return 'comment';
+
+    // String: "..."
+    if (stream.match(/^"[^"]*"/)) return 'string';
+
+    // Node keywords
+    if (stream.match(/^(group|frame|rect|ellipse|path|text|edge|image|import)\b/)) return 'keyword';
+
+    // Style/theme keyword
+    if (stream.match(/^(style|theme)\b/)) return 'keyword';
+
+    // Animation/spec keywords
+    if (stream.match(/^(when|anim|spec)\b/)) return 'keyword';
+
+    // Property names followed by colon
+    if (stream.match(/^(w|h|x|y|fill|stroke|font|corner|opacity|shadow|bg|layout|use|center_in|offset|gap|pad|scale|rotate|translate|ease|duration|cols|from|to|src|alt|align|clip|arrow|curve|flow|place|d|label_offset)\s*:/)) {
+      return 'propertyName';
+    }
+
+    // Node ID: @word
+    if (stream.match(/^@\w+/)) return 'variableName.special';
+
+    // Hex color: #FFF or #FFFFFF or #FFFFFFAA
+    if (stream.match(/^#[0-9A-Fa-f]{3,8}\b/)) return 'color';
+
+    // Number (including decimals)
+    if (stream.match(/^\d+(\.\d+)?/)) return 'number';
+
+    // Layout/easing/animation value keywords
+    if (stream.match(/^(column|row|grid|free|spring|linear|ease_in|ease_out|ease_in_out|canvas|bold|italic|semibold|medium|light|thin|center|left|right|top|bottom|middle|cover|contain|none|start|end|both|smooth|straight|step|pulse|dash|todo|doing|done|blocked|low|high|critical)\b/)) {
+      return 'atom';
+    }
+
+    // Triggers
+    if (stream.match(/^:(hover|press|enter)\b/)) return 'meta';
+
+    // Braces
+    if (stream.eat('{') || stream.eat('}')) return 'brace';
+
+    // Consume any other character
+    stream.next();
+    return null;
+  },
+});
+
+// ─── Atom One Dark Theme for CodeMirror ──────────────────────────────────
+const fdHighlightStyle = HighlightStyle.define([
+  { tag: tags.keyword, color: '#C678DD' },           // purple
+  { tag: tags.comment, color: '#5C6370', fontStyle: 'italic' },
+  { tag: tags.string, color: '#98C379' },             // green
+  { tag: tags.propertyName, color: '#E06C75' },       // red
+  { tag: tags.variableName, color: '#E5C07B' },       // yellow/gold (node IDs)
+  { tag: tags.color, color: '#56B6C2' },              // cyan (hex colors)
+  { tag: tags.number, color: '#D19A66' },             // orange
+  { tag: tags.atom, color: '#56B6C2' },               // cyan (value keywords)
+  { tag: tags.meta, color: '#61AFEF' },               // blue (triggers)
+  { tag: tags.brace, color: '#ABB2BF' },              // gray
+]);
+
+const fdTheme = EditorView.theme({
+  '&': {
+    backgroundColor: '#1a1b26',
+    color: '#ABB2BF',
+    fontSize: '13px',
+    fontFamily: '"JetBrains Mono", "SF Mono", Menlo, Monaco, "Courier New", monospace',
+    height: '100%',
+  },
+  '.cm-content': {
+    padding: '12px 0',
+    caretColor: '#528bff',
+  },
+  '.cm-cursor': {
+    borderLeftColor: '#528bff',
+  },
+  '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': {
+    backgroundColor: '#3E4451 !important',
+  },
+  '.cm-activeLine': {
+    backgroundColor: '#2c313c40',
+  },
+  '.cm-activeLineGutter': {
+    backgroundColor: '#2c313c40',
+  },
+  '.cm-gutters': {
+    backgroundColor: '#1a1b26',
+    color: '#495162',
+    border: 'none',
+    borderRight: '1px solid #2c313c',
+  },
+  '.cm-lineNumbers .cm-gutterElement': {
+    padding: '0 8px 0 12px',
+    minWidth: '32px',
+  },
+  // Lint gutter
+  '.cm-lint-marker-error': {
+    content: '"●"',
+    color: '#E06C75',
+  },
+  // Autocomplete
+  '.cm-tooltip.cm-tooltip-autocomplete': {
+    backgroundColor: '#21252b',
+    border: '1px solid #3E4451',
+    borderRadius: '6px',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+  },
+  '.cm-tooltip-autocomplete ul li': {
+    padding: '4px 10px',
+    fontSize: '12px',
+  },
+  '.cm-tooltip-autocomplete ul li[aria-selected]': {
+    backgroundColor: '#2c313c',
+    color: '#ABB2BF',
+  },
+  // Hover tooltip
+  '.cm-tooltip-hover': {
+    backgroundColor: '#21252b',
+    border: '1px solid #3E4451',
+    borderRadius: '6px',
+    padding: '6px 10px',
+    fontSize: '12px',
+    lineHeight: '1.5',
+    maxWidth: '400px',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+  },
+  // Lint underlines
+  '.cm-lintRange-error': {
+    backgroundImage: 'none',
+    textDecoration: 'underline wavy #E06C75',
+    textDecorationSkipInk: 'none',
+  },
+  // Bracket matching
+  '.cm-matchingBracket': {
+    backgroundColor: '#515a6b40',
+    outline: '1px solid #515a6b',
+  },
+  // Scrollbar
+  '.cm-scroller': {
+    overflow: 'auto',
+  },
+}, { dark: true });
+
+/** Global CodeMirror EditorView */
+let editorView = null;
+/** Compartment for read-only state */
+const readOnlyCompartment = new Compartment();
+
 const DEFAULT_FD = `# A card with a button that reacts on hover
 
 style accent {
@@ -339,17 +507,19 @@ function updateZoomIndicator() {
   if (rb) rb.textContent = pct;
 }
 
-/** Sync canvas text back to textarea with echo suppression */
-function syncCanvasToEditor(editor) {
-  if (!fdCanvas) return;
+/** Sync canvas text back to CodeMirror with echo suppression */
+function syncCanvasToEditor() {
+  if (!fdCanvas || !editorView) return;
   suppressSync = true;
-  // Cancel any pending debounced input→canvas sync — it would fire
-  // after suppressSync is cleared, calling set_text() → resolve() →
-  // fresh bounds that clobber in-place move deltas, causing a flash.
   clearTimeout(editorDebounceTimer);
   editorDebounceTimer = null;
-  editor.value = fdCanvas.get_text();
-  highlightEditor(editor);
+  const newText = fdCanvas.get_text();
+  const currentText = editorView.state.doc.toString();
+  if (newText !== currentText) {
+    editorView.dispatch({
+      changes: { from: 0, to: currentText.length, insert: newText },
+    });
+  }
   suppressSync = false;
 }
 
@@ -468,11 +638,11 @@ function adjustMinimapForProps(visible) {
 }
 
 /** Wire input handlers for the properties panel fields. */
-function setupPropsPanel(editor) {
+function setupPropsPanel() {
   const propChange = (key, el) => {
     if (propsSuppressSync || !fdCanvas) return;
     const changed = fdCanvas.set_node_prop(key, el.value);
-    if (changed) { renderCanvas(); syncCanvasToEditor(editor); }
+    if (changed) { renderCanvas(); syncCanvasToEditor(); }
   };
 
   // W/H inputs (debounced)
@@ -520,14 +690,14 @@ function setupPropsPanel(editor) {
   document.getElementById('pp-duplicate')?.addEventListener('click', () => {
     if (!fdCanvas) return;
     const changed = fdCanvas.duplicate_selected();
-    if (changed) { renderCanvas(); syncCanvasToEditor(editor); updatePropertiesPanel(); }
+    if (changed) { renderCanvas(); syncCanvasToEditor(); updatePropertiesPanel(); }
   });
 
   // Delete
   document.getElementById('pp-delete')?.addEventListener('click', () => {
     if (!fdCanvas) return;
     const changed = fdCanvas.delete_selected();
-    if (changed) { renderCanvas(); syncCanvasToEditor(editor); updatePropertiesPanel(); }
+    if (changed) { renderCanvas(); syncCanvasToEditor(); updatePropertiesPanel(); }
   });
 }
 
@@ -537,7 +707,7 @@ function closeContextMenu() {
 }
 
 /** Wire context menu events and action handlers. */
-function setupContextMenu(editor) {
+function setupContextMenu() {
   const menu = document.getElementById('ctx-menu');
   const canvas = document.getElementById('fd-canvas');
   if (!menu || !canvas) return;
@@ -601,7 +771,7 @@ function setupContextMenu(editor) {
     }
     if (changed) {
       renderCanvas();
-      syncCanvasToEditor(editor);
+      syncCanvasToEditor();
       updatePropertiesPanel();
     }
     closeContextMenu();
@@ -1126,24 +1296,18 @@ function setViewMode(mode) {
   document.getElementById('view-design')?.classList.toggle('active', mode === 'design');
   document.getElementById('view-spec')?.classList.toggle('active', mode === 'spec');
 
-  // Update editor text based on view mode
-  if (!fdCanvas) return;
+  if (!fdCanvas || !editorView) return;
   const fullText = fdCanvas.get_text();
-  const editor = document.getElementById('fd-editor');
-  if (!editor) return;
 
-  if (mode === 'all') {
-    editor.value = fullText;
-    editor.readOnly = false;
-  } else if (mode === 'design') {
-    // Hide spec blocks for design view
-    editor.value = fullText.replace(/\n?\s*spec\s*\{[^}]*\}/g, '').replace(/\n?\s*spec\s+"[^"]*"/g, '');
-    editor.readOnly = true;
+  let displayText = fullText;
+  let isReadOnly = false;
+
+  if (mode === 'design') {
+    displayText = fullText.replace(/\n?\s*spec\s*\{[^}]*\}/g, '').replace(/\n?\s*spec\s+"[^"]*"/g, '');
+    isReadOnly = true;
   } else if (mode === 'spec') {
-    // Show only spec-annotated nodes
     const lines = fullText.split('\n');
     const specLines = [];
-    let skipBlock = false;
     for (const line of lines) {
       if (line.trim().startsWith('#') || line.trim().startsWith('spec ') || line.trim().startsWith('spec{')) {
         specLines.push(line);
@@ -1158,9 +1322,21 @@ function setViewMode(mode) {
         specLines.push(line);
       }
     }
-    editor.value = specLines.join('\n');
-    editor.readOnly = true;
+    displayText = specLines.join('\n');
+    isReadOnly = true;
   }
+
+  suppressSync = true;
+  const cur = editorView.state.doc.toString();
+  if (displayText !== cur) {
+    editorView.dispatch({
+      changes: { from: 0, to: cur.length, insert: displayText },
+    });
+  }
+  editorView.dispatch({
+    effects: readOnlyCompartment.reconfigure(EditorState.readOnly.of(isReadOnly)),
+  });
+  suppressSync = false;
 }
 
 /** ─── AI Touch — Refine Selected Node ────────────────────────────────── */
@@ -1215,7 +1391,10 @@ async function aiTouch() {
 
     // Update editor and canvas
     const editor = document.getElementById('fd-editor');
-    if (editor) editor.value = result;
+    if (editorView) {
+      const cur = editorView.state.doc.toString();
+      editorView.dispatch({ changes: { from: 0, to: cur.length, insert: result } });
+    }
     fdCanvas.set_text(result);
     renderCanvas();
     showToast(`✦ AI Touch — ${selectedIds.length} element${selectedIds.length > 1 ? 's' : ''} refined`);
@@ -1408,7 +1587,10 @@ async function renamify() {
 
     // Update editor and canvas
     const editor = document.getElementById('fd-editor');
-    if (editor) editor.value = result;
+    if (editorView) {
+      const cur = editorView.state.doc.toString();
+      editorView.dispatch({ changes: { from: 0, to: cur.length, insert: result } });
+    }
     fdCanvas.set_text(result);
     renderCanvas();
     showToast(`✦ Renamed ${proposals.length} node${proposals.length > 1 ? 's' : ''}`);
@@ -1589,97 +1771,14 @@ function findAllNodeIds(fdText) {
 
 // ─── Syntax Highlighting ─────────────────────────────────────────────────
 
-/** Escape HTML entities for safe insertion into <pre> */
-function escapeHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-/**
- * Tokenize a single line of FD source into highlighted HTML.
- * Token priority: comment > string > style-block > node-decl > property >
- *   node-id > hex-color > number > keywords
- */
-function tokenizeLine(line) {
-  // Full-line comment
-  if (/^\s*#/.test(line)) {
-    return `<span class="fd-comment">${escapeHtml(line)}</span>`;
-  }
-
-  const tokens = [];
-  // Regex patterns with named groups for token types
-  const patterns = [
-    { re: /"[^"]*"/g, cls: 'fd-string' },
-    {
-      re: /\b(style)\s+(\w+)/g, handler: (m) =>
-        `<span class="fd-keyword">${m[1]}</span> <span class="fd-style-name">${m[2]}</span>`
-    },
-    { re: /\b(group|frame|rect|ellipse|path|text|edge)\b/g, cls: 'fd-keyword' },
-    {
-      re: /\b(w|h|x|y|fill|stroke|font|corner|opacity|shadow|bg|layout|use|center_in|offset|gap|pad|scale|rotate|translate|ease|duration|cols|from|to|when|spec|status|priority|accept|src|alt)\s*:/g,
-      handler: (m) => `<span class="fd-property">${m[1]}</span>:`
-    },
-    { re: /@\w+/g, cls: 'fd-node-id' },
-    { re: /#[0-9A-Fa-f]{3,8}\b/g, cls: 'fd-hex' },
-    { re: /\b\d+(\.\d+)?\b/g, cls: 'fd-number' },
-    {
-      re: /\b(anim|when|column|row|grid|free|spring|linear|ease_in|ease_out|ease_in_out|canvas|bold|italic|semibold|medium|light|thin|center|left|right|top|bottom|middle)\b/g,
-      cls: 'fd-kw-other'
-    },
-  ];
-
-  // Build a flat list of {start, end, html} from all patterns
-  for (const pat of patterns) {
-    pat.re.lastIndex = 0;
-    let m;
-    while ((m = pat.re.exec(line)) !== null) {
-      const start = m.index;
-      const end = start + m[0].length;
-      const html = pat.handler
-        ? pat.handler(m)
-        : `<span class="${pat.cls}">${escapeHtml(m[0])}</span>`;
-      tokens.push({ start, end, html });
-    }
-  }
-
-  // Sort by position, remove overlaps (first wins)
-  tokens.sort((a, b) => a.start - b.start || b.end - a.end);
-  const merged = [];
-  let cursor = 0;
-  for (const t of tokens) {
-    if (t.start < cursor) continue; // overlaps with previous
-    if (t.start > cursor) merged.push(escapeHtml(line.slice(cursor, t.start)));
-    merged.push(t.html);
-    cursor = t.end;
-  }
-  if (cursor < line.length) merged.push(escapeHtml(line.slice(cursor)));
-  return merged.join('');
-}
-
-/** Highlight full FD source into the overlay <code> element. */
-function highlightEditor(editor) {
-  const code = document.getElementById('fd-highlight-code');
-  if (!code) return;
-  const lines = editor.value.split('\n');
-  code.innerHTML = lines.map(tokenizeLine).join('\n') + '\n';
-}
-
-/** Sync scroll position from textarea to highlight overlay. */
-function syncHighlightScroll(editor) {
-  const pre = document.getElementById('fd-highlight');
-  if (!pre) return;
-  pre.scrollTop = editor.scrollTop;
-  pre.scrollLeft = editor.scrollLeft;
-}
+// Syntax highlighting and scroll sync are now handled by CodeMirror.
+// The old tokenizeLine, highlightEditor, syncHighlightScroll functions are removed.
 
 async function initPlayground() {
-  const editor = document.getElementById('fd-editor');
+  const editorMount = document.getElementById('fd-editor');
   const canvas = document.getElementById('fd-canvas');
   const loading = document.getElementById('canvas-loading');
   const wrapper = document.getElementById('canvas-wrapper');
-
-  // Load default FD content
-  editor.value = DEFAULT_FD;
-  highlightEditor(editor);
 
   try {
     // Load WASM module
@@ -1718,9 +1817,123 @@ async function initPlayground() {
     const canvasW = rect.width - getLayersPanelWidth();
     fdCanvas = new wasm.FdCanvas(canvasW, rect.height);
     // Theme is always light — WASM defaults to dark_mode: false
-    fdCanvas.set_text(editor.value);
-    setupPropsPanel(editor);
-    setupContextMenu(editor);
+    fdCanvas.set_text(DEFAULT_FD);
+
+    // ── Create CodeMirror Editor ──────────────────────────────────────
+    const fdLinter = linter((view) => {
+      if (!fdCanvas) return [];
+      const text = view.state.doc.toString();
+      try {
+        // Use the WASM diagnostics API
+        const raw = fdCanvas.get_diagnostics();
+        const diags = JSON.parse(raw);
+        return diags.map(d => {
+          const from = view.state.doc.line(d.line + 1).from + d.col;
+          const to = Math.min(
+            view.state.doc.line(d.line + 1).from + d.endCol,
+            view.state.doc.line(d.line + 1).to
+          );
+          return {
+            from: Math.min(from, view.state.doc.length),
+            to: Math.min(to, view.state.doc.length),
+            severity: 'error',
+            message: d.message,
+          };
+        });
+      } catch { return []; }
+    }, { delay: 300 });
+
+    const fdCompletionSource = (context) => {
+      if (!fdCanvas) return null;
+      const pos = context.state.doc.lineAt(context.pos);
+      const line = pos.number - 1; // 0-indexed
+      const col = context.pos - pos.from;
+      try {
+        const raw = fdCanvas.get_completions(line, col);
+        const items = JSON.parse(raw);
+        if (!items.length) return null;
+        // Find the word start for completion range
+        const before = context.state.sliceDoc(pos.from, context.pos);
+        const wordMatch = before.match(/[\w@#]*$/);
+        const wordStart = context.pos - (wordMatch ? wordMatch[0].length : 0);
+        return {
+          from: wordStart,
+          options: items.map(item => ({
+            label: item.label,
+            type: item.kind === 'keyword' ? 'keyword' :
+              item.kind === 'property' ? 'property' : 'enum',
+            detail: item.detail,
+          })),
+        };
+      } catch { return null; }
+    };
+
+    const fdHoverTooltip = hoverTooltip((view, pos) => {
+      if (!fdCanvas) return null;
+      const line = view.state.doc.lineAt(pos);
+      const lineNum = line.number - 1;
+      const col = pos - line.from;
+      try {
+        const raw = fdCanvas.get_hover(lineNum, col);
+        if (!raw) return null;
+        const info = JSON.parse(raw);
+        if (!info.content) return null;
+        return {
+          pos,
+          above: true,
+          create() {
+            const dom = document.createElement('div');
+            dom.className = 'cm-tooltip-hover';
+            dom.textContent = info.content.replace(/\\n/g, '\n');
+            return { dom };
+          },
+        };
+      } catch { return null; }
+    });
+
+    editorView = new EditorView({
+      state: EditorState.create({
+        doc: DEFAULT_FD,
+        extensions: [
+          lineNumbers(),
+          highlightActiveLine(),
+          highlightActiveLineGutter(),
+          drawSelection(),
+          bracketMatching(),
+          closeBrackets(),
+          history(),
+          highlightSelectionMatches(),
+          fdLanguage,
+          syntaxHighlighting(fdHighlightStyle),
+          fdTheme,
+          readOnlyCompartment.of(EditorState.readOnly.of(false)),
+          lintGutter(),
+          fdLinter,
+          autocompletion({ override: [fdCompletionSource] }),
+          fdHoverTooltip,
+          keymap.of([
+            ...closeBracketsKeymap,
+            ...defaultKeymap,
+            ...historyKeymap,
+          ]),
+          EditorView.updateListener.of((update) => {
+            if (!update.docChanged || suppressSync) return;
+            clearTimeout(editorDebounceTimer);
+            editorDebounceTimer = setTimeout(() => {
+              if (fdCanvas) {
+                const text = update.state.doc.toString();
+                fdCanvas.set_text(text);
+                renderDirty = true;
+              }
+            }, 50);
+          }),
+        ],
+      }),
+      parent: editorMount,
+    });
+
+    setupPropsPanel();
+    setupContextMenu();
 
     // Zen toggle button (inside canvas — stays visible in zen mode)
     const zenBtn = document.getElementById('zen-toggle-btn');
@@ -1768,26 +1981,6 @@ async function initPlayground() {
     // ── Panel Resize Setup ───────────────────────────────────────────
     setupPanelResize(wrapper, resizeCanvas);
     setupSplitResize(document.getElementById('playground-container'), resizeCanvas);
-
-    // ── Text Editor → Canvas ──────────────────────────────────────────
-    editor.addEventListener('input', () => {
-      highlightEditor(editor);
-      if (suppressSync) return;
-      clearTimeout(editorDebounceTimer);
-      editorDebounceTimer = setTimeout(() => {
-        if (fdCanvas) fdCanvas.set_text(editor.value);
-      }, 50);
-    });
-
-    // ── Scroll sync (textarea → highlight overlay) ────────────────────
-    let scrollRafId = null;
-    editor.addEventListener('scroll', () => {
-      if (scrollRafId) return;
-      scrollRafId = requestAnimationFrame(() => {
-        syncHighlightScroll(editor);
-        scrollRafId = null;
-      });
-    });
 
     // ── Pointer Events ────────────────────────────────────────────────
     canvas.addEventListener('pointerdown', (e) => {
@@ -1953,7 +2146,7 @@ async function initPlayground() {
 
       if (result.changed) {
         renderDirty = true;
-        syncCanvasToEditor(editor);
+        syncCanvasToEditor();
       }
 
       // Auto-switch toolbar after drawing gesture
@@ -2022,19 +2215,19 @@ async function initPlayground() {
       if (!fdCanvas) return;
       fdCanvas.set_node_prop('fill', e.target.value);
       renderCanvas();
-      syncCanvasToEditor(editor);
+      syncCanvasToEditor();
     });
     document.getElementById('fab-stroke')?.addEventListener('input', (e) => {
       if (!fdCanvas) return;
       fdCanvas.set_node_prop('stroke', e.target.value);
       renderCanvas();
-      syncCanvasToEditor(editor);
+      syncCanvasToEditor();
     });
     document.getElementById('fab-stroke-w')?.addEventListener('input', (e) => {
       if (!fdCanvas) return;
       fdCanvas.set_node_prop('strokeWidth', e.target.value);
       renderCanvas();
-      syncCanvasToEditor(editor);
+      syncCanvasToEditor();
     });
     document.getElementById('fab-opacity')?.addEventListener('input', (e) => {
       if (!fdCanvas) return;
@@ -2042,13 +2235,13 @@ async function initPlayground() {
       const valEl = document.getElementById('fab-opacity-val');
       if (valEl) valEl.textContent = Math.round(parseFloat(e.target.value) * 100) + '%';
       renderCanvas();
-      syncCanvasToEditor(editor);
+      syncCanvasToEditor();
     });
     document.getElementById('fab-delete')?.addEventListener('click', () => {
       if (!fdCanvas) return;
       fdCanvas.handle_key('Backspace', false, false, false, false);
       renderCanvas();
-      syncCanvasToEditor(editor);
+      syncCanvasToEditor();
       document.getElementById('floating-action-bar')?.classList.remove('visible');
     });
 
@@ -2096,7 +2289,7 @@ async function initPlayground() {
         const r = JSON.parse(fdCanvas.handle_key(e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey));
         if (r.changed) {
           renderCanvas();
-          syncCanvasToEditor(editor);
+          syncCanvasToEditor();
         }
         document.getElementById('floating-action-bar')?.classList.remove('visible');
         e.preventDefault();
@@ -2109,7 +2302,7 @@ async function initPlayground() {
         const changed = e.shiftKey ? fdCanvas.redo() : fdCanvas.undo();
         if (changed) {
           renderCanvas();
-          syncCanvasToEditor(editor);
+          syncCanvasToEditor();
         }
         return;
       }
@@ -2120,7 +2313,7 @@ async function initPlayground() {
           const r = JSON.parse(fdCanvas.handle_key(e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey));
           if (r.changed) {
             renderCanvas();
-            syncCanvasToEditor(editor);
+            syncCanvasToEditor();
           }
         } catch (_) {}
       }
@@ -2293,8 +2486,12 @@ async function initPlayground() {
                 }
                 // Prepend generated styles to editor
                 const styleBlock = '# ─── Imported CSS Styles ───\n\n' + fdStyles.join('\n\n') + '\n\n';
-                editor.value = styleBlock + editor.value;
-                if (fdCanvas) fdCanvas.set_text(editor.value);
+                if (editorView) {
+                  const cur = editorView.state.doc.toString();
+                  const newText = styleBlock + cur;
+                  editorView.dispatch({ changes: { from: 0, to: cur.length, insert: newText } });
+                  if (fdCanvas) fdCanvas.set_text(newText);
+                }
                 showToast(`Imported ${fdStyles.length} style${fdStyles.length > 1 ? 's' : ''} from ${file.name}`);
               };
               reader.readAsText(file);
