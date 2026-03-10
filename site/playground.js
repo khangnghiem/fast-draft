@@ -1714,10 +1714,17 @@ async function initPlayground() {
       const layersW = getLayersPanelWidth();
       const propsW = getPropsPanelWidth();
       const canvasWidth = rect.width - layersW - propsW;
-      canvas.width = canvasWidth * dpr;
-      canvas.height = rect.height * dpr;
-      canvas.style.width = canvasWidth + 'px';
-      canvas.style.height = rect.height + 'px';
+      const newW = Math.round(canvasWidth * dpr);
+      const newH = Math.round(rect.height * dpr);
+      // Only reassign if dimensions actually changed —
+      // canvas.width = X clears the pixel buffer (HTML5 spec),
+      // causing a 1-frame blank flash on every ResizeObserver tick.
+      if (canvas.width !== newW || canvas.height !== newH) {
+        canvas.width = newW;
+        canvas.height = newH;
+        canvas.style.width = canvasWidth + 'px';
+        canvas.style.height = rect.height + 'px';
+      }
       if (fdCanvas) {
         fdCanvas.resize(canvasWidth, rect.height);
       }
