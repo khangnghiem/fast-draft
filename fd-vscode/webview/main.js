@@ -5868,41 +5868,16 @@ function setupHelpButton() {
   }
 }
 
-// ─── Theme Toggle ─────────────────────────────────────────────────────────────
+// (Theme is always light — no toggle needed)
 
 let isDarkTheme = false;
 
 function setupThemeToggle() {
-  const btn = document.getElementById("theme-toggle-btn");
-  if (!btn) return;
-
-  // Restore persisted theme
-  const savedState = vscode.getState();
-  if (savedState && savedState.darkTheme) {
-    isDarkTheme = true;
-    applyTheme(true);
-  }
-
-  btn.addEventListener("click", () => {
-    isDarkTheme = !isDarkTheme;
-    applyTheme(isDarkTheme);
-    vscode.setState({ ...(vscode.getState() || {}), darkTheme: isDarkTheme });
-  });
+  // Theme is always light — no toggle needed
 }
 
 function applyTheme(isDark) {
-  const btn = document.getElementById("theme-toggle-btn");
-  if (isDark) {
-    document.body.classList.add("dark-theme");
-    if (btn) btn.textContent = "☀️";
-  } else {
-    document.body.classList.remove("dark-theme");
-    if (btn) btn.textContent = "🌙";
-  }
-  if (fdCanvas) {
-    fdCanvas.set_theme(isDark);
-    render();
-  }
+  // Theme is always light — no-op
 }
 
 // ─── Sketchy Mode Toggle ──────────────────────────────────────────────────────
@@ -6237,8 +6212,7 @@ function exportToPng() {
   const exportCtx = exportCanvas.getContext("2d");
 
   // White background
-  const isDark = document.body.classList.contains("dark-theme");
-  exportCtx.fillStyle = isDark ? "#1C1C1E" : "#FFFFFF";
+  exportCtx.fillStyle = "#FFFFFF"; // Always light theme
   exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
 
   // Render scene centered in export canvas

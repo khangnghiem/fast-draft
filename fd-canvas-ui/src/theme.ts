@@ -58,8 +58,8 @@ export const LIGHT_THEME: ThemeContract = {
   border_radius: 8,
 };
 
-/** Dark theme — macOS Catppuccin Mocha-inspired. */
-export const DARK_THEME: ThemeContract = {
+/** Dark theme — kept for reference but not exported (canvas is light-only). */
+const DARK_THEME: ThemeContract = {
   canvas_bg: "#1C1C1E",
   grid_color: "rgba(255, 255, 255, 0.04)",
   selection_accent: "#0A84FF",
@@ -77,7 +77,7 @@ export const DARK_THEME: ThemeContract = {
   border_radius: 8,
 };
 
-/** Get a theme by mode name. */
-export function getTheme(mode: "light" | "dark"): ThemeContract {
-  return mode === "dark" ? DARK_THEME : LIGHT_THEME;
+/** Get the canvas theme (always light). */
+export function getTheme(): ThemeContract {
+  return LIGHT_THEME;
 }
