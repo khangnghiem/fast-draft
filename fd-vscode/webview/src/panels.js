@@ -950,7 +950,7 @@ function refreshLibraryPanel() {
 
   let html = `<div class="lib-header">`;
   html += `<span class="lib-title">📦 Libraries</span>`;
-  html += `<button class="lib-close" id="lib-close-btn" title="Close">×</button>`;
+  html += `<button class="lib-close" id="lib-close-btn" title="Close" aria-label="Close">×</button>`;
   html += `</div>`;
   html += `<input class="lib-search" id="lib-search" type="text" placeholder="Search components…" value="${escapeAttr(librarySearchQuery)}">`;
 

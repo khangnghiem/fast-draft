@@ -1860,7 +1860,7 @@ function buildShortcutHelpHtml() {
     <div class="help-panel">
       <div class="help-header">
         <h3>Keyboard Shortcuts</h3>
-        <button class="help-close">×</button>
+        <button class="help-close" aria-label="Close">×</button>
       </div>
       <div class="help-body">
   `;
@@ -2233,7 +2233,7 @@ function addAcceptRow(value) {
   item.className = "accept-item";
   item.innerHTML = `
     <input type="text" value="${escapeAttr(value)}" placeholder="Acceptance criterion">
-    <button class="card-close" style="font-size:14px">×</button>
+    <button class="card-close" style="font-size:14px" aria-label="Close">×</button>
   `;
   item.querySelector("button").addEventListener("click", () => {
     item.remove();
@@ -3768,7 +3768,7 @@ function refreshLibraryPanel() {
 
   let html = `<div class="lib-header">`;
   html += `<span class="lib-title">📦 Libraries</span>`;
-  html += `<button class="lib-close" id="lib-close-btn" title="Close">×</button>`;
+  html += `<button class="lib-close" id="lib-close-btn" title="Close" aria-label="Close">×</button>`;
   html += `</div>`;
   html += `<input class="lib-search" id="lib-search" type="text" placeholder="Search components…" value="${escapeAttr(librarySearchQuery)}">`;
 
