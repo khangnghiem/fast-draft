@@ -1787,8 +1787,8 @@ async function initPlayground() {
     };
     animFrameId = requestAnimationFrame(renderLoop);
 
-    // Auto-center scene content in viewport on init
-    fitToContent(canvas);
+    // Auto-center scene content in viewport on init (deferred for layout)
+    requestAnimationFrame(() => fitToContent(canvas));
 
     // Hide loading overlay
     loading.classList.add('hidden');
