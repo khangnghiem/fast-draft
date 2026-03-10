@@ -301,7 +301,7 @@ function playDetachAnimation(nodeId) {
 
   // Create a temporary glow overlay on the canvas for the detached node
   try {
-    const boundsJson = fdCanvas.get_node_bounds(nodeId);
+    const boundsJson = fdCanvas.get_node_bounds_json(nodeId);
     if (!boundsJson) return;
     const b = JSON.parse(boundsJson);
     if (!b.width) return;
@@ -545,7 +545,7 @@ function setupPointerEvents() {
         const selectedId = fdCanvas.get_selected_id();
         if (selectedId && changed) {
           try {
-            const b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
+            const b = JSON.parse(fdCanvas.get_node_bounds_json(selectedId));
             if (b.x !== undefined) {
               showDimensionTooltip(e.clientX, e.clientY, `(${Math.round(b.x)}, ${Math.round(b.y)})`);
             }
@@ -674,7 +674,7 @@ function setupPointerEvents() {
       try {
         const edgeId = fdCanvas.find_edge_for_text(draggedNodeId);
         if (edgeId) {
-          const edgeBounds = JSON.parse(fdCanvas.get_node_bounds(draggedNodeId));
+          const edgeBounds = JSON.parse(fdCanvas.get_node_bounds_json(draggedNodeId));
           const textCx = edgeBounds.x + edgeBounds.width / 2;
           const textCy = edgeBounds.y + edgeBounds.height / 2;
           // Compute edge midpoint from edge endpoints
@@ -687,8 +687,8 @@ function setupPointerEvents() {
             const toMatch = edgeMatch[0].match(/to:\s+@(\w+)/);
             if (fromMatch && toMatch) {
               try {
-                const fb = JSON.parse(fdCanvas.get_node_bounds(fromMatch[1]));
-                const tb = JSON.parse(fdCanvas.get_node_bounds(toMatch[1]));
+                const fb = JSON.parse(fdCanvas.get_node_bounds_json(fromMatch[1]));
+                const tb = JSON.parse(fdCanvas.get_node_bounds_json(toMatch[1]));
                 const mx = (fb.x + fb.width / 2 + tb.x + tb.width / 2) / 2;
                 const my = (fb.y + fb.height / 2 + tb.y + tb.height / 2) / 2;
                 const dist = Math.hypot(textCx - mx, textCy - my);
@@ -1376,7 +1376,7 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     const selId = fdCanvas?.get_selected_id();
     if (selId) {
-      const boundsJson = fdCanvas.get_node_bounds(selId);
+      const boundsJson = fdCanvas.get_node_bounds_json(selId);
       const b = JSON.parse(boundsJson);
       const cx = (b.x + b.width / 2 + panX) * currentZoom;
       const cy = (b.y + panY) * currentZoom;
@@ -1698,7 +1698,7 @@ function getResizeHandleCursor(x, y) {
   if (!selectedId) return "";
   let b;
   try {
-    b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
+    b = JSON.parse(fdCanvas.get_node_bounds_json(selectedId));
   } catch (_) { return ""; }
   if (b.x === undefined) return "";
 
@@ -1892,7 +1892,7 @@ function nudgeSelected(arrowKey, step) {
   if (!selectedId) return;
 
   try {
-    const boundsJson = fdCanvas.get_node_bounds(selectedId);
+    const boundsJson = fdCanvas.get_node_bounds_json(selectedId);
     const b = JSON.parse(boundsJson);
     if (b.x === undefined) return;
 
@@ -1941,7 +1941,7 @@ function updateFloatingBar() {
   // Get node bounds in scene space
   let bounds;
   try {
-    bounds = JSON.parse(fdCanvas.get_node_bounds(selectedId));
+    bounds = JSON.parse(fdCanvas.get_node_bounds_json(selectedId));
   } catch (_) {
     fab.classList.remove("visible");
     return;
@@ -4211,7 +4211,7 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   // This fixes both "double-click shape jump" and "editing vs non-editing mismatch".
   measureAndUpdateTextBounds(nodeId);
 
-  const boundsJson = fdCanvas.get_node_bounds(nodeId);
+  const boundsJson = fdCanvas.get_node_bounds_json(nodeId);
   const b = JSON.parse(boundsJson);
   // Use minimum size for zero-width nodes (e.g. new text nodes)
   const bw = b.width || 80;
@@ -4513,7 +4513,7 @@ function zoomToFit() {
     if (seenIds.has(id)) continue;
     seenIds.add(id);
     try {
-      const boundsJson = fdCanvas.get_node_bounds(id);
+      const boundsJson = fdCanvas.get_node_bounds_json(id);
       const b = JSON.parse(boundsJson);
       if (b.width && b.width > 0) {
         minX = Math.min(minX, b.x);
@@ -5437,8 +5437,8 @@ function setupFloatingToolbar() {
       const toId = match[3];
       let fromBounds, toBounds;
       try {
-        fromBounds = JSON.parse(fdCanvas.get_node_bounds(fromId));
-        toBounds = JSON.parse(fdCanvas.get_node_bounds(toId));
+        fromBounds = JSON.parse(fdCanvas.get_node_bounds_json(fromId));
+        toBounds = JSON.parse(fdCanvas.get_node_bounds_json(toId));
       } catch (_) { continue; }
       if (!fromBounds || !toBounds) continue;
       const fx = fromBounds.x + fromBounds.width / 2;
@@ -5510,7 +5510,7 @@ function setupFloatingToolbar() {
     }
     if (!nearestId) return null;
     let tb;
-    try { tb = JSON.parse(fdCanvas.get_node_bounds(nearestId)); } catch (_) { return null; }
+    try { tb = JSON.parse(fdCanvas.get_node_bounds_json(nearestId)); } catch (_) { return null; }
     if (!tb || !tb.width) return null;
     const tRight = tb.x + tb.width;
     const tBottom = tb.y + tb.height;
@@ -5625,7 +5625,7 @@ function getSceneBoundsInner() {
     if (seenIds.has(id)) continue;
     seenIds.add(id);
     try {
-      const b = JSON.parse(fdCanvas.get_node_bounds(id));
+      const b = JSON.parse(fdCanvas.get_node_bounds_json(id));
       if (b.width && b.width > 0) {
         minX = Math.min(minX, b.x);
         minY = Math.min(minY, b.y);
@@ -5771,7 +5771,7 @@ function focusOnNode(nodeId) {
   if (!fdCanvas) return;
   let bounds;
   try {
-    bounds = JSON.parse(fdCanvas.get_node_bounds(nodeId));
+    bounds = JSON.parse(fdCanvas.get_node_bounds_json(nodeId));
     if (!bounds || (bounds.width <= 0 && bounds.height <= 0)) return;
   } catch (_) { return; }
 
@@ -5874,7 +5874,7 @@ function zoomToSelection() {
   if (!selectedId) return;
 
   try {
-    const b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
+    const b = JSON.parse(fdCanvas.get_node_bounds_json(selectedId));
     if (!b.width || b.width <= 0) return;
 
     const container = document.getElementById("canvas-container");
@@ -6107,8 +6107,13 @@ async function pasteFromClipboard() {
   }
 
   // Replace all @id references with new names
-  for (const [oldId, newId] of idMap) {
-    pasteText = pasteText.replace(new RegExp(`@${oldId}\\b`, 'g'), `@${newId}`);
+  // Use a single RegExp pass for better performance
+  if (idMap.size > 0) {
+    const ids = Array.from(idMap.keys());
+    const combinedPattern = new RegExp(`@(${ids.join('|')})\\b`, 'g');
+    pasteText = pasteText.replace(combinedPattern, (_match, oldId) => {
+      return `@${idMap.get(oldId) || oldId}`;
+    });
   }
   const newRootId = idMap.get(rootId) || rootId;
 
@@ -6116,7 +6121,7 @@ async function pasteFromClipboard() {
   // Try to get the original node's width for proper spacing
   let xOffset = pasteOffsetCount * 20; // Fallback: cumulative 20px
   try {
-    const boundsJson = fdCanvas.get_node_bounds(rootId);
+    const boundsJson = fdCanvas.get_node_bounds_json(rootId);
     if (boundsJson) {
       const bounds = JSON.parse(boundsJson);
       if (bounds && bounds.width > 0) {
@@ -6259,7 +6264,7 @@ function exportToPng() {
     if (seenIds.has(id)) continue;
     seenIds.add(id);
     try {
-      const b = JSON.parse(fdCanvas.get_node_bounds(id));
+      const b = JSON.parse(fdCanvas.get_node_bounds_json(id));
       if (b.width && b.width > 0) {
         minX = Math.min(minX, b.x);
         minY = Math.min(minY, b.y);
@@ -7030,7 +7035,7 @@ function render() {
       // ── Fix #3: Highlight target node under cursor during arrow drag ──
       if (ap.target_id) {
         try {
-          const targetBoundsJson = fdCanvas.get_node_bounds(ap.target_id);
+          const targetBoundsJson = fdCanvas.get_node_bounds_json(ap.target_id);
           if (targetBoundsJson) {
             const tb = JSON.parse(targetBoundsJson);
             const pad = 4;
@@ -7067,7 +7072,7 @@ function render() {
 
     // Draw parent group glow
     try {
-      const parentBoundsJson = fdCanvas.get_node_bounds(parentId);
+      const parentBoundsJson = fdCanvas.get_node_bounds_json(parentId);
       if (parentBoundsJson) {
         const pb = JSON.parse(parentBoundsJson);
         const pad = 4;

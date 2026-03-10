@@ -20,7 +20,7 @@ function updateFloatingBar() {
   // Get node bounds in scene space
   let bounds;
   try {
-    bounds = JSON.parse(fdCanvas.get_node_bounds(selectedId));
+    bounds = JSON.parse(fdCanvas.get_node_bounds_json(selectedId));
   } catch (_) {
     fab.classList.remove("visible");
     return;

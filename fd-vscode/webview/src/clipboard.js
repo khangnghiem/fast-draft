@@ -126,8 +126,13 @@ async function pasteFromClipboard() {
   }
 
   // Replace all @id references with new names
-  for (const [oldId, newId] of idMap) {
-    pasteText = pasteText.replace(new RegExp(`@${oldId}\\b`, 'g'), `@${newId}`);
+  // Use a single RegExp pass for better performance
+  if (idMap.size > 0) {
+    const ids = Array.from(idMap.keys());
+    const combinedPattern = new RegExp(`@(${ids.join('|')})\\b`, 'g');
+    pasteText = pasteText.replace(combinedPattern, (_match, oldId) => {
+      return `@${idMap.get(oldId) || oldId}`;
+    });
   }
   const newRootId = idMap.get(rootId) || rootId;
 
@@ -135,7 +140,7 @@ async function pasteFromClipboard() {
   // Try to get the original node's width for proper spacing
   let xOffset = pasteOffsetCount * 20; // Fallback: cumulative 20px
   try {
-    const boundsJson = fdCanvas.get_node_bounds(rootId);
+    const boundsJson = fdCanvas.get_node_bounds_json(rootId);
     if (boundsJson) {
       const bounds = JSON.parse(boundsJson);
       if (bounds && bounds.width > 0) {
@@ -278,7 +283,7 @@ function exportToPng() {
     if (seenIds.has(id)) continue;
     seenIds.add(id);
     try {
-      const b = JSON.parse(fdCanvas.get_node_bounds(id));
+      const b = JSON.parse(fdCanvas.get_node_bounds_json(id));
       if (b.width && b.width > 0) {
         minX = Math.min(minX, b.x);
         minY = Math.min(minY, b.y);

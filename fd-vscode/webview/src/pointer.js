@@ -203,7 +203,7 @@ function setupPointerEvents() {
         const selectedId = fdCanvas.get_selected_id();
         if (selectedId && changed) {
           try {
-            const b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
+            const b = JSON.parse(fdCanvas.get_node_bounds_json(selectedId));
             if (b.x !== undefined) {
               showDimensionTooltip(e.clientX, e.clientY, `(${Math.round(b.x)}, ${Math.round(b.y)})`);
             }
@@ -332,7 +332,7 @@ function setupPointerEvents() {
       try {
         const edgeId = fdCanvas.find_edge_for_text(draggedNodeId);
         if (edgeId) {
-          const edgeBounds = JSON.parse(fdCanvas.get_node_bounds(draggedNodeId));
+          const edgeBounds = JSON.parse(fdCanvas.get_node_bounds_json(draggedNodeId));
           const textCx = edgeBounds.x + edgeBounds.width / 2;
           const textCy = edgeBounds.y + edgeBounds.height / 2;
           // Compute edge midpoint from edge endpoints
@@ -345,8 +345,8 @@ function setupPointerEvents() {
             const toMatch = edgeMatch[0].match(/to:\s+@(\w+)/);
             if (fromMatch && toMatch) {
               try {
-                const fb = JSON.parse(fdCanvas.get_node_bounds(fromMatch[1]));
-                const tb = JSON.parse(fdCanvas.get_node_bounds(toMatch[1]));
+                const fb = JSON.parse(fdCanvas.get_node_bounds_json(fromMatch[1]));
+                const tb = JSON.parse(fdCanvas.get_node_bounds_json(toMatch[1]));
                 const mx = (fb.x + fb.width / 2 + tb.x + tb.width / 2) / 2;
                 const my = (fb.y + fb.height / 2 + tb.y + tb.height / 2) / 2;
                 const dist = Math.hypot(textCx - mx, textCy - my);
