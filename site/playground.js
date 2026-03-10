@@ -6,7 +6,8 @@ style accent {
   fill: #6C5CE7
 }
 
-group @card {
+frame @card {
+  w: 260 h: 160
   layout: column gap=16 pad=24
   bg: #FFF corner=12 shadow=(0,4,20,#0002)
 

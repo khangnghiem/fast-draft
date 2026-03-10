@@ -176,6 +176,14 @@ export class FdCanvas {
      */
     get_text_children(node_id: string): string;
     /**
+     * Get the current theme as a JSON object for cross-platform consumption.
+     *
+     * Returns a [`ThemeContract`] serialized as JSON, containing all visual
+     * constants (colors, fonts, spacing) that platform hosts need for
+     * consistent UI rendering.
+     */
+    get_theme_json(): string;
+    /**
      * Get the current tool name.
      */
     get_tool_name(): string;
@@ -371,6 +379,7 @@ export interface InitOutput {
     readonly fdcanvas_get_sketchy_mode: (a: number) => number;
     readonly fdcanvas_get_text: (a: number) => [number, number];
     readonly fdcanvas_get_text_children: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_get_theme_json: (a: number) => [number, number];
     readonly fdcanvas_get_tool_name: (a: number) => [number, number];
     readonly fdcanvas_group_selected: (a: number) => number;
     readonly fdcanvas_handle_key: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];

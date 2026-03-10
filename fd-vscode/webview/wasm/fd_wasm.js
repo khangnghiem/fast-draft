@@ -521,6 +521,26 @@ export class FdCanvas {
         }
     }
     /**
+     * Get the current theme as a JSON object for cross-platform consumption.
+     *
+     * Returns a [`ThemeContract`] serialized as JSON, containing all visual
+     * constants (colors, fonts, spacing) that platform hosts need for
+     * consistent UI rendering.
+     * @returns {string}
+     */
+    get_theme_json() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_theme_json(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Get the current tool name.
      * @returns {string}
      */

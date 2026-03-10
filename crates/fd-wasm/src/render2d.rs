@@ -275,7 +275,10 @@ fn render_node(
             );
         }
         NodeKind::Group => {
-            // Group is purely organizational — no background fill
+            // Draw group background if fill/bg/shadow/stroke is explicitly set
+            if style.fill.is_some() || style.shadow.is_some() || style.stroke.is_some() {
+                draw_rect(ctx, node_bounds, &style, false);
+            }
 
             // Draw hover/selection borders for groups
             if is_selected || Some(node.id.as_str()) == hovered_id {
