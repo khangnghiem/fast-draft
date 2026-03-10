@@ -1,0 +1,120 @@
+# ─── Edges Catalog ──────────────────────────────────────────────────────────
+
+text @title "Edges & Connections" {
+  font: "Inter" bold 32
+  fill: #1E293B
+  x: 20 y: 20
+}
+
+# Base nodes for demonstration
+style node_style {
+  w: 120 h: 60
+  corner: 8
+  fill: #E2E8F0
+  stroke: #94A3B8 2
+}
+
+style node_text {
+  font: "Inter" semibold 14
+  fill: #334155
+}
+
+# ─── Curve Kinds ────────────────────────────────────────────────────────────
+text @curve_title "Curve Kinds" { font: "Inter" semibold 20; fill: #475569; x: 20 y: 100 }
+
+rect @curve_src_1 { use: node_style; x: 20 y: 140; text { use: node_text; "Straight Source" } }
+rect @curve_dst_1 { use: node_style; x: 250 y: 190; text { use: node_text; "Straight Dest" } }
+edge @edge_straight {
+  from: @curve_src_1
+  to: @curve_dst_1
+  curve: straight
+  stroke: #3B82F6 2
+  text "Straight" { font: "Inter" medium 12; fill: #2563EB }
+}
+
+rect @curve_src_2 { use: node_style; x: 20 y: 240; text { use: node_text; "Smooth Source" } }
+rect @curve_dst_2 { use: node_style; x: 250 y: 290; text { use: node_text; "Smooth Dest" } }
+edge @edge_smooth {
+  from: @curve_src_2
+  to: @curve_dst_2
+  curve: smooth
+  stroke: #10B981 2
+  text "Smooth" { font: "Inter" medium 12; fill: #059669 }
+}
+
+rect @curve_src_3 { use: node_style; x: 20 y: 340; text { use: node_text; "Step Source" } }
+rect @curve_dst_3 { use: node_style; x: 250 y: 390; text { use: node_text; "Step Dest" } }
+edge @edge_step {
+  from: @curve_src_3
+  to: @curve_dst_3
+  curve: step
+  stroke: #F59E0B 2
+  text "Step" { font: "Inter" medium 12; fill: #D97706 }
+}
+
+# ─── Arrow Kinds ────────────────────────────────────────────────────────────
+text @arrow_title "Arrow Kinds" { font: "Inter" semibold 20; fill: #475569; x: 420 y: 100 }
+
+rect @arrow_src_1 { use: node_style; x: 420 y: 140; text { use: node_text; "None Source" } }
+rect @arrow_dst_1 { use: node_style; x: 650 y: 140; text { use: node_text; "None Dest" } }
+edge @edge_arrow_none {
+  from: @arrow_src_1
+  to: @arrow_dst_1
+  arrow: none
+  stroke: #64748B 2
+}
+
+rect @arrow_src_2 { use: node_style; x: 420 y: 220; text { use: node_text; "End Source" } }
+rect @arrow_dst_2 { use: node_style; x: 650 y: 220; text { use: node_text; "End Dest" } }
+edge @edge_arrow_end {
+  from: @arrow_src_2
+  to: @arrow_dst_2
+  arrow: end
+  stroke: #64748B 2
+}
+
+rect @arrow_src_3 { use: node_style; x: 420 y: 300; text { use: node_text; "Start Source" } }
+rect @arrow_dst_3 { use: node_style; x: 650 y: 300; text { use: node_text; "Start Dest" } }
+edge @edge_arrow_start {
+  from: @arrow_src_3
+  to: @arrow_dst_3
+  arrow: start
+  stroke: #64748B 2
+}
+
+rect @arrow_src_4 { use: node_style; x: 420 y: 380; text { use: node_text; "Both Source" } }
+rect @arrow_dst_4 { use: node_style; x: 650 y: 380; text { use: node_text; "Both Dest" } }
+edge @edge_arrow_both {
+  from: @arrow_src_4
+  to: @arrow_dst_4
+  arrow: both
+  stroke: #64748B 2
+}
+
+
+# ─── Flow Animations ────────────────────────────────────────────────────────
+text @flow_title "Flow Animations" { font: "Inter" semibold 20; fill: #475569; x: 20 y: 500 }
+
+rect @flow_src_1 { use: node_style; x: 20 y: 540; text { use: node_text; "Pulse Source" } }
+rect @flow_dst_1 { use: node_style; x: 350 y: 540; text { use: node_text; "Pulse Dest" } }
+edge @edge_flow_pulse {
+  from: @flow_src_1
+  to: @flow_dst_1
+  curve: smooth
+  arrow: end
+  stroke: #8B5CF6 2
+  flow: pulse 1500ms
+  text "Pulse" { font: "Inter" medium 12; fill: #7C3AED }
+}
+
+rect @flow_src_2 { use: node_style; x: 20 y: 640; text { use: node_text; "Dash Source" } }
+rect @flow_dst_2 { use: node_style; x: 350 y: 640; text { use: node_text; "Dash Dest" } }
+edge @edge_flow_dash {
+  from: @flow_src_2
+  to: @flow_dst_2
+  curve: step
+  arrow: end
+  stroke: #EC4899 2
+  flow: dash 1000ms
+  text "Dash" { font: "Inter" medium 12; fill: #DB2777 }
+}

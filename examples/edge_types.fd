@@ -1,0 +1,189 @@
+# ─── Edge Types Showcase ───
+# This file demonstrates all the features of edges in FD:
+# - Curve types (straight, smooth, step)
+# - Arrows (none, start, end, both)
+# - Anchors (node centers, free points)
+# - Animations (hover, flow pulses, flow dashes)
+
+group @curves_demo {
+  text @curves_title "Curve Types" {
+    font: "Inter" bold 24
+    y: -100
+  }
+
+  rect @node_c1 {
+    w: 80 h: 60
+    fill: #333333  # gray
+    corner: 8
+    x: -200
+  }
+
+  rect @node_c2 {
+    w: 80 h: 60
+    fill: #333333  # gray
+    corner: 8
+    x: -50
+  }
+
+  rect @node_c3 {
+    w: 80 h: 60
+    fill: #333333  # gray
+    corner: 8
+    x: 50
+  }
+
+  rect @node_c4 {
+    w: 80 h: 60
+    fill: #333333  # gray
+    corner: 8
+    x: 200
+  }
+}
+
+group @arrows_demo {
+  text @arrows_title "Arrow Types" {
+    font: "Inter" bold 24
+    y: 150
+  }
+
+  rect @node_a1 {
+    w: 80 h: 60
+    fill: #333333  # gray
+    corner: 8
+    x: -200
+    y: 250
+  }
+
+  rect @node_a2 {
+    w: 80 h: 60
+    fill: #333333  # gray
+    corner: 8
+    x: -50
+    y: 250
+  }
+
+  rect @node_a3 {
+    w: 80 h: 60
+    fill: #333333  # gray
+    corner: 8
+    x: 50
+    y: 250
+  }
+
+  rect @node_a4 {
+    w: 80 h: 60
+    fill: #333333  # gray
+    corner: 8
+    x: 200
+    y: 250
+  }
+}
+
+group @flows_demo {
+  text @flows_title "Flow Animations & Hover" {
+    font: "Inter" bold 24
+    y: 400
+  }
+
+  rect @node_f1 {
+    w: 80 h: 60
+    fill: #333333  # gray
+    corner: 8
+    x: -200
+    y: 500
+  }
+
+  rect @node_f2 {
+    w: 80 h: 60
+    fill: #333333  # gray
+    corner: 8
+    x: -50
+    y: 500
+  }
+
+  rect @node_f3 {
+    w: 80 h: 60
+    fill: #333333  # gray
+    corner: 8
+    x: 50
+    y: 500
+  }
+
+  rect @node_f4 {
+    w: 80 h: 60
+    fill: #333333  # gray
+    corner: 8
+    x: 200
+    y: 500
+  }
+}
+
+group @anchors_demo {
+  text @anchors_title "Point Anchors & Steps" {
+    font: "Inter" bold 24
+    y: 650
+  }
+
+  rect @node_p1 {
+    w: 80 h: 60
+    fill: #333333  # gray
+    corner: 8
+    x: -100
+    y: 750
+  }
+}
+
+edge @edge_straight {
+  from: @node_c1
+  to: @node_c2
+  stroke: #6C5CE7 3
+  arrow: end
+}
+
+edge @edge_smooth {
+  from: @node_c3
+  to: @node_c4
+  stroke: #6C5CE7 3
+  arrow: end
+  curve: smooth
+}
+
+edge @edge_arrow_start {
+  from: @node_a1
+  to: @node_a2
+  stroke: #00B894 3
+  arrow: start
+}
+
+edge @edge_arrow_both {
+  from: @node_a3
+  to: @node_a4
+  stroke: #00B894 3
+  arrow: both
+}
+
+edge @edge_pulse {
+  from: @node_f1
+  to: @node_f2
+  stroke: #E17055 3
+  flow: pulse 1000ms
+}
+
+edge @edge_dash {
+  from: @node_f3
+  to: @node_f4
+  stroke: #E17055 3
+  flow: dash 800ms
+
+  when :hover {
+    ease: ease_in_out 300ms
+  }
+}
+
+edge @edge_mixed {
+  from: @node_p1
+  to: 100 800
+  stroke: #FD79A8 3
+  arrow: end
+  curve: step
+}
