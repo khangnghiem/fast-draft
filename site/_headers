@@ -1,6 +1,8 @@
-# WASM binary — content-addressed by build, safe to cache forever
+# WASM — filenames are NOT content-hashed, so never cache immutably.
+# no-cache = always revalidate with CDN (304 if unchanged, fast).
+# This prevents stale .wasm + fresh .js mismatch after deploys.
 /wasm/*
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: no-cache
 
 # All pages — security headers
 /*
