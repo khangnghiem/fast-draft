@@ -1724,6 +1724,8 @@ async function initPlayground() {
         canvas.height = newH;
         canvas.style.width = canvasWidth + 'px';
         canvas.style.height = rect.height + 'px';
+        // Buffer was cleared — schedule repaint so we don't show a blank frame
+        renderDirty = true;
       }
       if (fdCanvas) {
         fdCanvas.resize(canvasWidth, rect.height);
