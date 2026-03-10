@@ -4,15 +4,13 @@
 import { EditorState, Compartment } from 'https://esm.sh/@codemirror/state@6';
 import {
   EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter,
-  drawSelection, placeholder, tooltips, hoverTooltip
+  drawSelection, tooltips, hoverTooltip
 } from 'https://esm.sh/@codemirror/view@6';
-import { StreamLanguage } from 'https://esm.sh/@codemirror/language@6';
-import { tags, HighlightStyle, syntaxHighlighting } from 'https://esm.sh/@lezer/highlight@1';
-import { autocompletion } from 'https://esm.sh/@codemirror/autocomplete@6';
+import { StreamLanguage, HighlightStyle, syntaxHighlighting, bracketMatching } from 'https://esm.sh/@codemirror/language@6';
+import { tags } from 'https://esm.sh/@lezer/highlight@1';
+import { autocompletion, closeBrackets, closeBracketsKeymap } from 'https://esm.sh/@codemirror/autocomplete@6';
 import { linter, lintGutter } from 'https://esm.sh/@codemirror/lint@6';
 import { defaultKeymap, history, historyKeymap } from 'https://esm.sh/@codemirror/commands@6';
-import { bracketMatching } from 'https://esm.sh/@codemirror/language@6';
-import { closeBrackets, closeBracketsKeymap } from 'https://esm.sh/@codemirror/autocomplete@6';
 import { highlightSelectionMatches } from 'https://esm.sh/@codemirror/search@6';
 
 // ─── FD Language Definition (StreamLanguage) ─────────────────────────────
