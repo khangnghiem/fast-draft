@@ -2148,6 +2148,62 @@ group @container {
     assert_eq!(ids, vec!["back", "mid", "front"]);
 }
 
+/// Z-order: bring_to_front persists through flush_to_text + re-parse roundtrip.
+/// Regression test: previously dispatch_action didn't call flush_to_text(),
+/// so z-order changes were lost when JS re-read the text.
+#[test]
+fn sync_bring_to_front_persists_through_roundtrip() {
+    let input = r#"
+rect @back { w: 40 h: 30 x: 10 y: 10 }
+rect @mid { w: 40 h: 30 x: 60 y: 10 }
+rect @front { w: 40 h: 30 x: 110 y: 10 }
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    let back_id = NodeId::intern("back");
+    let back_idx = engine.graph.index_of(back_id).unwrap();
+
+    // Bring @back to front (it's currently the first/backmost child)
+    let changed = engine.graph.bring_to_front(back_idx);
+    assert!(changed, "bring_to_front should return true");
+
+    // Verify in-memory order changed: mid, front, back
+    let root = engine.graph.root;
+    let children = engine.graph.children(root);
+    let ids: Vec<&str> = children
+        .iter()
+        .map(|&idx| engine.graph.graph[idx].id.as_str())
+        .collect();
+    assert_eq!(
+        ids,
+        vec!["mid", "front", "back"],
+        "after bring_to_front, @back should be last"
+    );
+
+    // Flush to text and re-parse (simulates what happens in the real app)
+    engine.mark_dirty();
+    engine.flush_to_text();
+    let text = engine.current_text().to_string();
+    let engine2 = SyncEngine::from_text(&text, viewport).unwrap();
+
+    // After roundtrip, child order should be preserved
+    let root2 = engine2.graph.root;
+    let children2 = engine2.graph.children(root2);
+    let ids2: Vec<&str> = children2
+        .iter()
+        .map(|&idx| engine2.graph.graph[idx].id.as_str())
+        .collect();
+    assert_eq!(
+        ids2,
+        vec!["mid", "front", "back"],
+        "z-order should persist through flush_to_text + re-parse roundtrip"
+    );
+}
+
 /// next_clone_name: chained duplication produces foo, foo_2, foo_3.
 #[test]
 fn sync_clone_name_sequence() {

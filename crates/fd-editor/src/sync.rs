@@ -487,6 +487,13 @@ impl SyncEngine {
         self.text_dirty = true;
     }
 
+    /// Mark text as needing re-emission from the graph.
+    /// Used when the graph is modified directly (e.g. z-order changes)
+    /// outside of apply_mutation().
+    pub fn mark_dirty(&mut self) {
+        self.text_dirty = true;
+    }
+
     /// Flush: re-emit the text from the current graph state.
     /// Called after a batch of mutations (e.g. at end of drag gesture).
     pub fn flush_to_text(&mut self) {

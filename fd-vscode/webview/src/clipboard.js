@@ -72,7 +72,7 @@ function cutSelectedAsFd() {
   }
 }
 
-/** Paste node(s) from the FD clipboard with a +20px offset gap. */
+/** Paste node(s) from the FD clipboard with horizontal stagger. */
 async function pasteFromClipboard() {
   if (!fdCanvas) return;
 
@@ -89,12 +89,10 @@ async function pasteFromClipboard() {
 
   if (!clipText.trim()) return;
 
-  // Increment paste offset (cumulative: +20, +40, +60…)
+  // Increment paste offset count
   pasteOffsetCount++;
-  const offset = pasteOffsetCount * 20;
 
-  // Recursively rename ALL @ids inside the pasted block to avoid collisions
-  const suffix = "_cp" + Math.floor(Math.random() * 9000 + 1000);
+  // Collect all @id declarations in the pasted block
   const idPattern = /@(\w+)\s*\{/g;
   const allIds = new Set();
   let m;
@@ -103,29 +101,60 @@ async function pasteFromClipboard() {
   }
   if (allIds.size === 0) return;
 
-  // Build renamed text: replace each @oldId with @oldId_cpXXXX everywhere
+  // Build renamed text: use incremented _N naming (consistent with Alt+drag)
+  const existingText = fdCanvas.get_text();
   let pasteText = clipText;
   const rootId = [...allIds][0]; // First ID = root node for selection
-  for (const oldId of allIds) {
-    const newId = oldId + suffix;
-    // Replace @id declarations and all references (use:, center_in:, etc.)
-    pasteText = pasteText.replace(new RegExp(`@${oldId}\\b`, "g"), `@${newId}`);
-  }
-  const newRootId = rootId + suffix;
+  const idMap = new Map();
 
-  // Offset coordinates: shift x: and y: values by the paste offset
+  for (const oldId of allIds) {
+    // Find the stem (strip existing _N or _cpXXXX suffix)
+    const stem = oldId.replace(/_(?:\d+|cp\d+)$/, '');
+    // Scan existing text for highest _N suffix
+    let maxN = 1;
+    const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
+    let match;
+    while ((match = re.exec(existingText)) !== null) {
+      maxN = Math.max(maxN, parseInt(match[1]));
+    }
+    // Also check if the base stem exists (counts as _1)
+    if (new RegExp(`@${stem}\\b`).test(existingText)) {
+      maxN = Math.max(maxN, 1);
+    }
+    const newId = stem + '_' + (maxN + 1);
+    idMap.set(oldId, newId);
+  }
+
+  // Replace all @id references with new names
+  for (const [oldId, newId] of idMap) {
+    pasteText = pasteText.replace(new RegExp(`@${oldId}\\b`, 'g'), `@${newId}`);
+  }
+  const newRootId = idMap.get(rootId) || rootId;
+
+  // Horizontal stagger: offset x only (keep same y for horizontal alignment)
+  // Try to get the original node's width for proper spacing
+  let xOffset = pasteOffsetCount * 20; // Fallback: cumulative 20px
+  try {
+    const boundsJson = fdCanvas.get_node_bounds(rootId);
+    if (boundsJson) {
+      const bounds = JSON.parse(boundsJson);
+      if (bounds && bounds.width > 0) {
+        // Place to the right with 20px gap
+        xOffset = (bounds.width + 20) * pasteOffsetCount;
+      }
+    }
+  } catch (_) { /* use fallback offset */ }
+
   pasteText = pasteText.replace(/\b(x:\s*)(-?\d+(?:\.\d+)?)/g, (_match, prefix, val) => {
-    return prefix + (parseFloat(val) + offset);
+    return prefix + (parseFloat(val) + xOffset);
   });
-  pasteText = pasteText.replace(/\b(y:\s*)(-?\d+(?:\.\d+)?)/g, (_match, prefix, val) => {
-    return prefix + (parseFloat(val) + offset);
-  });
+  // y: values unchanged — keeps vertical alignment
 
   // Capture text before for undo
   const textBefore = fdCanvas.get_text();
 
   // Append to current text
-  const updatedText = textBefore.trimEnd() + "\n\n" + pasteText + "\n";
+  const updatedText = textBefore.trimEnd() + '\n\n' + pasteText + '\n';
   fdCanvas.set_text(updatedText);
 
   // Push undo snapshot so ⌘Z reverts the paste

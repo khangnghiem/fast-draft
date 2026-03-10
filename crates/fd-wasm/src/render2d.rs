@@ -68,7 +68,19 @@ pub fn render_scene(
     // Draw grid dots
     draw_grid(ctx, canvas_width, canvas_height, theme);
 
-    // Paint nodes recursively from root
+    // Draw edges first (behind nodes) — matches Figma/Sketch connector layering
+    draw_edges(
+        ctx,
+        graph,
+        bounds,
+        time_ms,
+        hovered_id,
+        pressed_id,
+        selected_ids,
+        sketchy,
+    );
+
+    // Paint nodes recursively from root (on top of edges)
     render_node(
         ctx,
         graph,
@@ -81,18 +93,6 @@ pub fn render_scene(
         sketchy,
         time_ms,
         hover_start_ms,
-    );
-
-    // Draw edges between nodes
-    draw_edges(
-        ctx,
-        graph,
-        bounds,
-        time_ms,
-        hovered_id,
-        pressed_id,
-        selected_ids,
-        sketchy,
     );
 
     // Draw smart guides (alignment lines)
