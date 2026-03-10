@@ -60,6 +60,19 @@ let zenMode = false;
 const ZOOM_MIN = 0.1, ZOOM_MAX = 5;
 let isPanning = false;
 
+// Render dirty flag — only re-render when something changed
+let renderDirty = true;
+
+// Multi-touch state (for two-finger pan and pinch-to-zoom)
+let activePointers = new Map(); // pointerId → {x, y}
+let pinchStartDist = 0;
+let pinchStartZoom = 1;
+let pinchPanStartX = 0;
+let pinchPanStartY = 0;
+let pinchMidStartX = 0;
+let pinchMidStartY = 0;
+let isTwoFingerGesture = false;
+
 /** Get current layers panel width (dynamic for resize). */
 function getLayersPanelWidth() {
   const panel = document.getElementById('layers-panel');
@@ -1719,9 +1732,12 @@ async function initPlayground() {
     // Get canvas 2D context
     ctx = canvas.getContext('2d');
 
-    // Render loop — continuous for hover effects and animations
+    // Render loop — only repaint when dirty flag is set
     const renderLoop = (time) => {
-      renderCanvas();
+      if (renderDirty) {
+        renderCanvas();
+        renderDirty = false;
+      }
       // Minimap + Layers at ~10fps
       if (time - minimapLastRender > MINIMAP_INTERVAL) {
         renderMinimap(canvas);
@@ -1763,6 +1779,29 @@ async function initPlayground() {
     // ── Pointer Events ────────────────────────────────────────────────
     canvas.addEventListener('pointerdown', (e) => {
       if (!fdCanvas) return;
+      e.preventDefault(); // prevent browser scroll/zoom on touch
+
+      // Track all active pointers for multi-touch
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      // Two-finger gesture detection
+      if (activePointers.size === 2) {
+        isTwoFingerGesture = true;
+        const pts = [...activePointers.values()];
+        pinchStartDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+        pinchStartZoom = zoomLevel;
+        pinchMidStartX = (pts[0].x + pts[1].x) / 2;
+        pinchMidStartY = (pts[0].y + pts[1].y) / 2;
+        pinchPanStartX = panX;
+        pinchPanStartY = panY;
+        // Cancel any single-finger interaction in progress
+        if (activePointerId !== -1) {
+          panDragging = false;
+          activePointerId = -1;
+        }
+        return;
+      }
+
       // Blur textarea so keyboard shortcuts work on canvas
       editor.blur();
 
@@ -1775,7 +1814,6 @@ async function initPlayground() {
         panStartY = e.clientY - panY;
         canvas.style.cursor = 'grabbing';
         activePointerId = e.pointerId;
-        e.preventDefault();
         return;
       }
 
@@ -1787,11 +1825,39 @@ async function initPlayground() {
         e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
       );
       activePointerId = e.pointerId;
-      if (changed) renderCanvas();
+      if (changed) { renderDirty = true; }
     });
 
     document.addEventListener('pointermove', (e) => {
       if (!fdCanvas) return;
+
+      // Update tracked pointer position
+      if (activePointers.has(e.pointerId)) {
+        activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      }
+
+      // Two-finger gesture: pan + pinch-to-zoom
+      if (isTwoFingerGesture && activePointers.size === 2) {
+        const pts = [...activePointers.values()];
+        const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+        const midX = (pts[0].x + pts[1].x) / 2;
+        const midY = (pts[0].y + pts[1].y) / 2;
+
+        // Pinch zoom
+        const scale = dist / pinchStartDist;
+        const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, pinchStartZoom * scale));
+
+        // Pan follows midpoint
+        const canvasRect = canvas.getBoundingClientRect();
+        const mx = pinchMidStartX - canvasRect.left;
+        const my = pinchMidStartY - canvasRect.top;
+        panX = mx - (mx - pinchPanStartX) * (newZoom / pinchStartZoom) + (midX - pinchMidStartX);
+        panY = my - (my - pinchPanStartY) * (newZoom / pinchStartZoom) + (midY - pinchMidStartY);
+        zoomLevel = newZoom;
+        updateZoomIndicator();
+        renderDirty = true;
+        return;
+      }
 
       // Only process our owned pointer or hover over canvas
       if (activePointerId !== -1 && e.pointerId !== activePointerId) return;
@@ -1801,7 +1867,7 @@ async function initPlayground() {
       if (panDragging) {
         panX = e.clientX - panStartX;
         panY = e.clientY - panStartY;
-        renderCanvas();
+        renderDirty = true;
         return;
       }
 
@@ -1810,7 +1876,7 @@ async function initPlayground() {
         x, y, e.pressure || 1.0,
         e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
       );
-      if (changed) renderCanvas();
+      if (changed) { renderDirty = true; }
 
       // Dimension tooltip — show W×H during drag
       if (activePointerId !== -1) {
@@ -1841,6 +1907,20 @@ async function initPlayground() {
 
     document.addEventListener('pointerup', (e) => {
       if (!fdCanvas) return;
+
+      // Clean up tracked pointer
+      activePointers.delete(e.pointerId);
+
+      // End two-finger gesture
+      if (isTwoFingerGesture) {
+        if (activePointers.size < 2) {
+          isTwoFingerGesture = false;
+          // Reset single-finger state so next touch starts clean
+          activePointerId = -1;
+        }
+        return;
+      }
+
       if (activePointerId === -1) return;
       if (e.pointerId !== activePointerId) return;
       activePointerId = -1;
@@ -1859,7 +1939,7 @@ async function initPlayground() {
       const result = JSON.parse(resultJson);
 
       if (result.changed) {
-        renderCanvas();
+        renderDirty = true;
         syncCanvasToEditor(editor);
       }
 
@@ -1876,6 +1956,19 @@ async function initPlayground() {
       // Hide dimension tooltip
       const tip = document.getElementById('dimension-tooltip');
       if (tip) tip.style.display = 'none';
+    });
+
+    // Clean up on pointer cancel (mobile: app switch, incoming call, etc.)
+    document.addEventListener('pointercancel', (e) => {
+      activePointers.delete(e.pointerId);
+      if (isTwoFingerGesture && activePointers.size < 2) {
+        isTwoFingerGesture = false;
+      }
+      if (e.pointerId === activePointerId) {
+        activePointerId = -1;
+        panDragging = false;
+        canvas.style.cursor = '';
+      }
     });
 
     // ── Wheel → Pan / Zoom ────────────────────────────────────────────
@@ -1897,7 +1990,7 @@ async function initPlayground() {
         panX -= e.deltaX;
         panY -= e.deltaY;
       }
-      renderCanvas();
+      renderDirty = true;
     }, { passive: false });
 
     // ── Tool Toolbar (floating scroll) ────────────────────────────────────

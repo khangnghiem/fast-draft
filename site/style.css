@@ -545,6 +545,9 @@ code {
   display: flex;
   flex-direction: column;
 }
+.light-theme .playground-editor {
+  background: #FAFAFA; /* Atom One Light editor background */
+}
 .playground-canvas {
   background: var(--bg-card);
   display: flex;
@@ -611,6 +614,9 @@ code {
   --props-width: 0px;
   display: flex;
   flex-direction: column;
+  touch-action: none;           /* prevent browser scroll/zoom on touch */
+  -webkit-user-select: none;    /* prevent text selection during drag */
+  user-select: none;
 }
 
 /* ── Canvas Toolbar (Apple HIG frosted bar) ── */
