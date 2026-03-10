@@ -344,6 +344,9 @@ code {
   line-height: inherit;
   tab-size: inherit;
   color: #ABB2BF; /* Atom One Dark foreground — always dark */
+  background: transparent; /* override global code bg */
+  padding: 0;
+  border-radius: 0;
 }
 /* Token colors — Atom One Dark palette */
 .fd-comment { color: #5C6370; font-style: italic; }
