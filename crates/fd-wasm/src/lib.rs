@@ -246,7 +246,20 @@ impl FdCanvas {
             width: width as f32,
             height: height as f32,
         };
-        self.engine.resolve();
+        // Skip resolve() during active interactions (drag, draw, resize).
+        // ResizeObserver fires when the properties panel opens/closes,
+        // changing the canvas width. resolve() creates a fresh bounds
+        // HashMap from constraints, clobbering in-place drag deltas and
+        // causing nodes to snap back (flashing) every frame.
+        let interacting = self.select_tool.dragging
+            || self.select_tool.resize_handle.is_some()
+            || self.rect_tool.is_drawing()
+            || self.pen_tool.is_drawing()
+            || self.ellipse_tool.is_drawing()
+            || self.arrow_tool.drawing;
+        if !interacting {
+            self.engine.resolve();
+        }
     }
 
     /// Handle pointer down event. Returns true if the graph changed.
