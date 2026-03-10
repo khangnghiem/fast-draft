@@ -216,6 +216,20 @@ impl FdCanvas {
         self.sketchy_mode
     }
 
+    /// Get the current theme as a JSON object for cross-platform consumption.
+    ///
+    /// Returns a [`ThemeContract`] serialized as JSON, containing all visual
+    /// constants (colors, fonts, spacing) that platform hosts need for
+    /// consistent UI rendering.
+    pub fn get_theme_json(&self) -> String {
+        let contract = if self.dark_mode {
+            fd_core::theme::ThemeContract::dark()
+        } else {
+            fd_core::theme::ThemeContract::light()
+        };
+        contract.to_json()
+    }
+
     /// Check if any edge in the scene has a flow animation (pulse/dash).
     ///
     /// The JS render loop uses this to keep rendering continuously when

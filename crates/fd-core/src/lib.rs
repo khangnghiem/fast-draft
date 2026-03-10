@@ -9,6 +9,7 @@ pub mod parser;
 pub mod resolve;
 #[cfg(test)]
 pub mod test_helpers;
+pub mod theme;
 pub mod transform;
 
 pub use emitter::{ReadMode, emit_filtered};
