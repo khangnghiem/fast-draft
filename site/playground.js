@@ -1387,8 +1387,7 @@ async function aiTouch() {
     // Splice modified blocks back into the original document
     const result = spliceModifiedBlocks(fdText, refined, selectedIds);
 
-    // Update editor and canvas
-    const editor = document.getElementById('fd-editor');
+    // Update CodeMirror and canvas
     if (editorView) {
       const cur = editorView.state.doc.toString();
       editorView.dispatch({ changes: { from: 0, to: cur.length, insert: result } });
@@ -1583,8 +1582,7 @@ async function renamify() {
       result = result.replace(pattern, `@${newId}`);
     }
 
-    // Update editor and canvas
-    const editor = document.getElementById('fd-editor');
+    // Update CodeMirror and canvas
     if (editorView) {
       const cur = editorView.state.doc.toString();
       editorView.dispatch({ changes: { from: 0, to: cur.length, insert: result } });
@@ -2006,8 +2004,8 @@ async function initPlayground() {
         return;
       }
 
-      // Blur textarea so keyboard shortcuts work on canvas
-      editor.blur();
+      // Blur CodeMirror so keyboard shortcuts work on canvas
+      editorView?.contentDOM.blur();
 
       const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
 
@@ -2246,7 +2244,7 @@ async function initPlayground() {
     // ── Keyboard Shortcuts ────────────────────────────────────────────
     document.addEventListener('keydown', (e) => {
       if (!fdCanvas) return;
-      const editorFocused = document.activeElement === editor;
+      const editorFocused = editorView?.hasFocus ?? false;
 
       // Space → pan mode
       if (e.code === 'Space' && !e.repeat && !editorFocused) {
