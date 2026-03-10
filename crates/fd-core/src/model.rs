@@ -837,6 +837,8 @@ impl SceneGraph {
         for &sib in &new_order {
             self.graph.add_edge(parent, sib, ());
         }
+        // Store explicit child order so children() returns z-order, not NodeIndex order
+        self.sorted_child_order.insert(parent, new_order);
         true
     }
 

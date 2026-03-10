@@ -4015,6 +4015,49 @@ function setupInlineEditor() {
     const props = JSON.parse(propsJson);
     if (!props.id) return;
 
+    // Edge double-click: find/create text child and edit it
+    if (props.kind === "edge") {
+      const edgeId = props.id;
+      const source = fdCanvas.get_text();
+      // Check if edge already has a text child
+      const edgeBlockRe = new RegExp(`edge\\s+@${edgeId}\\s*\\{([^}]*(?:\\{[^}]*\\}[^}]*)*)\\}`, 's');
+      const edgeMatch = source.match(edgeBlockRe);
+      if (edgeMatch) {
+        const innerBlock = edgeMatch[1];
+        const textChildRe = /text\s+@(\w+)\s+"([^"]*)"/;
+        const textMatch = innerBlock.match(textChildRe);
+        if (textMatch) {
+          // Text child exists — edit it
+          const textChildId = textMatch[1];
+          fdCanvas.select_by_id(textChildId);
+          render();
+          openInlineEditor(textChildId, "content", textMatch[2]);
+        } else {
+          // No text child — create one via text manipulation
+          const textId = "label_" + edgeId;
+          const esc = edgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const re = new RegExp(`(edge\\s+@${esc}\\s*\\{)`);
+          const m2 = source.match(re);
+          if (m2) {
+            const insertPos = source.indexOf(m2[0]) + m2[0].length;
+            const newSource = source.slice(0, insertPos)
+              + `\n  text @${textId} "Label" {}`
+              + source.slice(insertPos);
+            const textBefore = source;
+            fdCanvas.set_text(newSource);
+            fdCanvas.push_undo_snapshot(textBefore, newSource);
+            render();
+            syncTextToExtension();
+            fdCanvas.select_by_id(textId);
+            render();
+            setTimeout(() => openInlineEditor(textId, "content", "Label"), 50);
+          }
+        }
+      }
+      e.preventDefault();
+      return;
+    }
+
     const isText = props.kind === "text";
     const isShape = props.kind === "rect" || props.kind === "ellipse";
     if (!isText && !isShape) return;
@@ -4192,7 +4235,9 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   // matches how Canvas2D's draw_text() computes line_height = size * 1.2.
   const rawFontSize = props.fontSize || 14;
   const fontSize = Math.round(rawFontSize * zoomLevel);
-  const fontFamily = props.fontFamily || "Inter, sans-serif";
+  // Use exact font family from WASM renderer — no fallback chain added
+  // to ensure pixel-perfect match with Canvas2D rendering
+  const fontFamily = props.fontFamily || "Inter";
   const fontWeight = props.fontWeight || 400;
   const lineHeight = Math.round(rawFontSize * 1.2 * zoomLevel);
 
@@ -4234,12 +4279,12 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   const originalValue = currentValue;
 
   // Vertical padding: match Canvas2D text_baseline positioning exactly.
-  // draw_text() uses:
+  // draw_text() uses a fixed 2.0px offset in scene-space (not zoom-scaled).
   //   top    → text_baseline="top",    y = b.y + 2.0
   //   middle → text_baseline="middle", y = b.y + h/2
   //   bottom → text_baseline="bottom", y = b.y + h - 2.0
-  // Since we use outline (not border), the textarea content area == node bounds.
-  const topOffset = Math.round(2 * zoomLevel);
+  // Use constant 2px offset regardless of zoom (renderer uses scene-space pixels).
+  const topOffset = 2;
   let padTop = 0;
   let padBottom = 0;
   if (vAlign === "top") {
@@ -5869,7 +5914,6 @@ function setupHelpButton() {
 }
 
 // (Theme is always light — no toggle needed)
-
 let isDarkTheme = false;
 
 function setupThemeToggle() {
@@ -5929,10 +5973,10 @@ function applyZenMode(isZen) {
   const btn = document.getElementById("zen-toggle-btn");
   if (isZen) {
     document.body.classList.add("zen-mode");
-    if (btn) { btn.textContent = '✕ Exit Zen'; btn.title = 'Exit Zen mode'; }
+    if (btn) { btn.textContent = '🧘'; btn.title = 'Exit Zen mode'; btn.classList.add('zen-active'); }
   } else {
     document.body.classList.remove("zen-mode");
-    if (btn) { btn.textContent = '🧘'; btn.title = 'Switch to Zen mode'; }
+    if (btn) { btn.textContent = '🧘'; btn.title = 'Switch to Zen mode'; btn.classList.remove('zen-active'); }
     // Clear any zen-visible overrides when leaving zen mode
     document.getElementById("layers-panel")?.classList.remove("zen-visible");
     document.getElementById("props-panel")?.classList.remove("zen-visible");
@@ -6009,7 +6053,7 @@ function cutSelectedAsFd() {
   }
 }
 
-/** Paste node(s) from the FD clipboard with a +20px offset gap. */
+/** Paste node(s) from the FD clipboard with horizontal stagger. */
 async function pasteFromClipboard() {
   if (!fdCanvas) return;
 
@@ -6026,12 +6070,10 @@ async function pasteFromClipboard() {
 
   if (!clipText.trim()) return;
 
-  // Increment paste offset (cumulative: +20, +40, +60…)
+  // Increment paste offset count
   pasteOffsetCount++;
-  const offset = pasteOffsetCount * 20;
 
-  // Recursively rename ALL @ids inside the pasted block to avoid collisions
-  const suffix = "_cp" + Math.floor(Math.random() * 9000 + 1000);
+  // Collect all @id declarations in the pasted block
   const idPattern = /@(\w+)\s*\{/g;
   const allIds = new Set();
   let m;
@@ -6040,29 +6082,60 @@ async function pasteFromClipboard() {
   }
   if (allIds.size === 0) return;
 
-  // Build renamed text: replace each @oldId with @oldId_cpXXXX everywhere
+  // Build renamed text: use incremented _N naming (consistent with Alt+drag)
+  const existingText = fdCanvas.get_text();
   let pasteText = clipText;
   const rootId = [...allIds][0]; // First ID = root node for selection
-  for (const oldId of allIds) {
-    const newId = oldId + suffix;
-    // Replace @id declarations and all references (use:, center_in:, etc.)
-    pasteText = pasteText.replace(new RegExp(`@${oldId}\\b`, "g"), `@${newId}`);
-  }
-  const newRootId = rootId + suffix;
+  const idMap = new Map();
 
-  // Offset coordinates: shift x: and y: values by the paste offset
+  for (const oldId of allIds) {
+    // Find the stem (strip existing _N or _cpXXXX suffix)
+    const stem = oldId.replace(/_(?:\d+|cp\d+)$/, '');
+    // Scan existing text for highest _N suffix
+    let maxN = 1;
+    const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
+    let match;
+    while ((match = re.exec(existingText)) !== null) {
+      maxN = Math.max(maxN, parseInt(match[1]));
+    }
+    // Also check if the base stem exists (counts as _1)
+    if (new RegExp(`@${stem}\\b`).test(existingText)) {
+      maxN = Math.max(maxN, 1);
+    }
+    const newId = stem + '_' + (maxN + 1);
+    idMap.set(oldId, newId);
+  }
+
+  // Replace all @id references with new names
+  for (const [oldId, newId] of idMap) {
+    pasteText = pasteText.replace(new RegExp(`@${oldId}\\b`, 'g'), `@${newId}`);
+  }
+  const newRootId = idMap.get(rootId) || rootId;
+
+  // Horizontal stagger: offset x only (keep same y for horizontal alignment)
+  // Try to get the original node's width for proper spacing
+  let xOffset = pasteOffsetCount * 20; // Fallback: cumulative 20px
+  try {
+    const boundsJson = fdCanvas.get_node_bounds(rootId);
+    if (boundsJson) {
+      const bounds = JSON.parse(boundsJson);
+      if (bounds && bounds.width > 0) {
+        // Place to the right with 20px gap
+        xOffset = (bounds.width + 20) * pasteOffsetCount;
+      }
+    }
+  } catch (_) { /* use fallback offset */ }
+
   pasteText = pasteText.replace(/\b(x:\s*)(-?\d+(?:\.\d+)?)/g, (_match, prefix, val) => {
-    return prefix + (parseFloat(val) + offset);
+    return prefix + (parseFloat(val) + xOffset);
   });
-  pasteText = pasteText.replace(/\b(y:\s*)(-?\d+(?:\.\d+)?)/g, (_match, prefix, val) => {
-    return prefix + (parseFloat(val) + offset);
-  });
+  // y: values unchanged — keeps vertical alignment
 
   // Capture text before for undo
   const textBefore = fdCanvas.get_text();
 
   // Append to current text
-  const updatedText = textBefore.trimEnd() + "\n\n" + pasteText + "\n";
+  const updatedText = textBefore.trimEnd() + '\n\n' + pasteText + '\n';
   fdCanvas.set_text(updatedText);
 
   // Push undo snapshot so ⌘Z reverts the paste
@@ -6212,7 +6285,8 @@ function exportToPng() {
   const exportCtx = exportCanvas.getContext("2d");
 
   // White background
-  exportCtx.fillStyle = "#FFFFFF"; // Always light theme
+  const isDark = document.body.classList.contains("dark-theme");
+  exportCtx.fillStyle = isDark ? "#1C1C1E" : "#FFFFFF";
   exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
 
   // Render scene centered in export canvas

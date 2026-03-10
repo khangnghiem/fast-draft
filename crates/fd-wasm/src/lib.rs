@@ -2703,36 +2703,16 @@ impl FdCanvas {
             let o_cy = b.y + b.height / 2.0;
             let o_bottom = b.y + b.height;
 
-            // Check X-axis alignments
-            let x_refs = [
-                (s_left, o_left),
-                (s_left, o_cx),
-                (s_left, o_right),
-                (s_cx, o_left),
-                (s_cx, o_cx),
-                (s_cx, o_right),
-                (s_right, o_left),
-                (s_right, o_cx),
-                (s_right, o_right),
-            ];
+            // Check X-axis alignments (Figma-style: same-kind only)
+            let x_refs = [(s_left, o_left), (s_cx, o_cx), (s_right, o_right)];
             for (sv, ov) in x_refs {
                 if (sv - ov).abs() < snap_threshold {
                     guides.push((ov as f64, 0.0, ov as f64, h));
                 }
             }
 
-            // Check Y-axis alignments
-            let y_refs = [
-                (s_top, o_top),
-                (s_top, o_cy),
-                (s_top, o_bottom),
-                (s_cy, o_top),
-                (s_cy, o_cy),
-                (s_cy, o_bottom),
-                (s_bottom, o_top),
-                (s_bottom, o_cy),
-                (s_bottom, o_bottom),
-            ];
+            // Check Y-axis alignments (Figma-style: same-kind only)
+            let y_refs = [(s_top, o_top), (s_cy, o_cy), (s_bottom, o_bottom)];
             for (sv, ov) in y_refs {
                 if (sv - ov).abs() < snap_threshold {
                     guides.push((0.0, ov as f64, w, ov as f64));
@@ -2747,6 +2727,11 @@ impl FdCanvas {
                 .then(a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
         });
         guides.dedup_by(|a, b| (a.0 - b.0).abs() < 0.5 && (a.1 - b.1).abs() < 0.5);
+
+        // Cap at 4 guides max (2 vertical + 2 horizontal, closest wins)
+        if guides.len() > 4 {
+            guides.truncate(4);
+        }
 
         guides
     }
@@ -2808,11 +2793,15 @@ impl FdCanvas {
                 (false, false)
             }
 
-            // Z-order (now handled in Rust)
+            // Z-order (handled in Rust — flush to text so reorder persists)
             ShortcutAction::SendBackward => {
                 if let Some(id) = self.select_tool.first_selected() {
                     if let Some(idx) = self.engine.graph.index_of(id) {
                         let changed = self.engine.graph.send_backward(idx);
+                        if changed {
+                            self.engine.mark_dirty();
+                            self.engine.flush_to_text();
+                        }
                         (changed, false)
                     } else {
                         (false, false)
@@ -2825,6 +2814,10 @@ impl FdCanvas {
                 if let Some(id) = self.select_tool.first_selected() {
                     if let Some(idx) = self.engine.graph.index_of(id) {
                         let changed = self.engine.graph.bring_forward(idx);
+                        if changed {
+                            self.engine.mark_dirty();
+                            self.engine.flush_to_text();
+                        }
                         (changed, false)
                     } else {
                         (false, false)
@@ -2837,6 +2830,10 @@ impl FdCanvas {
                 if let Some(id) = self.select_tool.first_selected() {
                     if let Some(idx) = self.engine.graph.index_of(id) {
                         let changed = self.engine.graph.send_to_back(idx);
+                        if changed {
+                            self.engine.mark_dirty();
+                            self.engine.flush_to_text();
+                        }
                         (changed, false)
                     } else {
                         (false, false)
@@ -2849,6 +2846,10 @@ impl FdCanvas {
                 if let Some(id) = self.select_tool.first_selected() {
                     if let Some(idx) = self.engine.graph.index_of(id) {
                         let changed = self.engine.graph.bring_to_front(idx);
+                        if changed {
+                            self.engine.mark_dirty();
+                            self.engine.flush_to_text();
+                        }
                         (changed, false)
                     } else {
                         (false, false)

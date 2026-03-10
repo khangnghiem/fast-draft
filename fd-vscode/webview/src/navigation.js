@@ -1551,10 +1551,10 @@ function applyZenMode(isZen) {
   const btn = document.getElementById("zen-toggle-btn");
   if (isZen) {
     document.body.classList.add("zen-mode");
-    if (btn) { btn.textContent = '✕ Exit Zen'; btn.title = 'Exit Zen mode'; }
+    if (btn) { btn.textContent = '🧘'; btn.title = 'Exit Zen mode'; btn.classList.add('zen-active'); }
   } else {
     document.body.classList.remove("zen-mode");
-    if (btn) { btn.textContent = '🧘'; btn.title = 'Switch to Zen mode'; }
+    if (btn) { btn.textContent = '🧘'; btn.title = 'Switch to Zen mode'; btn.classList.remove('zen-active'); }
     // Clear any zen-visible overrides when leaving zen mode
     document.getElementById("layers-panel")?.classList.remove("zen-visible");
     document.getElementById("props-panel")?.classList.remove("zen-visible");
