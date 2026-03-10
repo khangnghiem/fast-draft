@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.102 — README Rewrite + CONTRIBUTING.md
+
+- **DOCS**: Rewrote README.md from 238 → ~115 lines — added hero screenshot (Code+Canvas side-by-side), shortened tagline, corrected token ratio from "~5×" to "~6×" (matching benchmark average of 6.5×), trimmed feature list from 13 to 6 differentiating items, added live playground CTA to fast-draft.com, fixed `group` → `frame` in code example, added "Web playground 🟢 Live" to platform roadmap
+- **DOCS**: Extracted architecture, crate structure, build instructions, design decisions, and git workflow from README into new `CONTRIBUTING.md` — README now links to it; contributor-facing detail no longer clutters the user-facing landing page
+- **DOCS**: Added `docs/images/hero-code-canvas.png` — screenshot of fast-draft.com playground showing Code Mode (left) and Canvas Mode (right) rendering a card component
+
 ### v0.10.101 — Fix Canvas Interactions After CodeMirror Refactor (R6.11)
 
 - **FIX (R6.11)**: All canvas interactions (click, drag, shape creation, selection) were completely broken — `pointerdown` handler called `editor.blur()` but `editor` was undefined after the CodeMirror 6 refactor (commit `4d6ab749`); `ReferenceError` crashed the handler before `handle_pointer_down()` could run; fixed to `editorView?.contentDOM.blur()`
