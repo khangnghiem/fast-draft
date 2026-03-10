@@ -20,11 +20,16 @@ target
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+# Node dependencies (all packages)
+node_modules/
+
 # VS Code Extension
-ftd-vscode/node_modules/
 ftd-vscode/out/
 ftd-vscode/wasm/
 *.vsix
+
+# fd-canvas-ui build output
+fd-canvas-ui/dist/
 
 # GitHub Pages WASM build output (built by CI)
 site/wasm/
