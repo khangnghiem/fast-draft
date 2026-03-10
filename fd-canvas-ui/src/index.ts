@@ -37,4 +37,4 @@ export type { PlatformHost } from "./host.js";
 
 // ── Theme ───────────────────────────────────────────────────────────
 export type { ThemeContract } from "./theme.js";
-export { LIGHT_THEME, DARK_THEME, getTheme } from "./theme.js";
+export { LIGHT_THEME, getTheme } from "./theme.js";

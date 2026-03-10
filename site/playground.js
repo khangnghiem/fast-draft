@@ -34,12 +34,7 @@ frame @card {
 // ─── State ───────────────────────────────────────────────────────────────
 let fdCanvas = null;
 let ctx = null;
-let isDark = (function() {
-  const saved = localStorage.getItem('fd-theme');
-  if (saved) return saved === 'dark';
-  // Default to light theme (matches VS Code extension)
-  return false;
-})();
+let isDark = false; // Light theme only — no toggle
 let isSketchy = false;
 let animFrameId = null;
 let suppressSync = false;
@@ -84,22 +79,6 @@ function getPropsPanelWidth() {
   return (panel && panel.classList.contains('visible')) ? panel.offsetWidth : 0;
 }
 
-/** Apply theme globally — single source of truth. */
-function applyTheme(dark) {
-  isDark = dark;
-  // Canvas wrapper
-  document.getElementById('canvas-wrapper')?.classList.toggle('dark-canvas', dark);
-  // WASM renderer
-  if (fdCanvas) fdCanvas.set_theme(dark);
-  // Navbar icon
-  const navIcon = document.querySelector('#theme-toggle .theme-icon');
-  if (navIcon) navIcon.textContent = dark ? '☀️' : '🌙';
-  // Canvas toolbar icon
-  const canvasIcon = document.querySelector('#canvas-theme-btn .ft-theme-icon');
-  if (canvasIcon) canvasIcon.textContent = dark ? '☀️' : '🌙';
-  // Persist
-  localStorage.setItem('fd-theme', dark ? 'dark' : 'light');
-}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
@@ -1738,26 +1717,10 @@ async function initPlayground() {
     const rect = wrapper.getBoundingClientRect();
     const canvasW = rect.width - getLayersPanelWidth();
     fdCanvas = new wasm.FdCanvas(canvasW, rect.height);
-    fdCanvas.set_theme(isDark);
+    // Theme is always light — WASM defaults to dark_mode: false
     fdCanvas.set_text(editor.value);
     setupPropsPanel(editor);
     setupContextMenu(editor);
-
-    // Set initial dark state on canvas wrapper + update icons
-    wrapper.classList.toggle('dark-canvas', isDark);
-    applyTheme(isDark);
-
-    // Navbar theme toggle
-    document.getElementById('theme-toggle')?.addEventListener('click', () => {
-      applyTheme(!isDark);
-      renderCanvas();
-    });
-
-    // Canvas toolbar theme toggle
-    document.getElementById('canvas-theme-btn')?.addEventListener('click', () => {
-      applyTheme(!isDark);
-      renderCanvas();
-    });
 
     // Zen toggle button (inside canvas — stays visible in zen mode)
     const zenBtn = document.getElementById('zen-toggle-btn');
@@ -2125,13 +2088,7 @@ async function initPlayground() {
           e.preventDefault();
           return;
         }
-        // Theme toggle shortcut (D)
-        if (e.key.toLowerCase() === 'd') {
-          applyTheme(!isDark);
-          renderCanvas();
-          e.preventDefault();
-          return;
-        }
+
       }
 
       // Delete (only when canvas focused)

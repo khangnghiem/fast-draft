@@ -21,8 +21,6 @@ export interface PlatformHost {
   /** Show a brief toast notification. */
   showToast(message: string, durationMs?: number): void;
 
-  /** Get the current theme mode. */
-  getTheme(): "light" | "dark";
 
   // ── State Persistence ─────────────────────────────────────────────
 
