@@ -343,7 +343,7 @@ code {
   font-size: inherit;
   line-height: inherit;
   tab-size: inherit;
-  color: var(--text-primary);
+  color: #ABB2BF; /* Atom One Dark foreground — always dark */
 }
 /* Token colors — Atom One Dark palette */
 .fd-comment { color: #5C6370; font-style: italic; }
@@ -355,16 +355,8 @@ code {
 .fd-number  { color: #D19A66; }
 .fd-kw-other { color: #56B6C2; }
 .fd-style-name { color: #E5C07B; }
-/* Light theme overrides — Atom One Light palette */
-.light-theme .fd-comment  { color: #A0A1A7; font-style: italic; }
-.light-theme .fd-keyword  { color: #A626A4; }
-.light-theme .fd-node-id  { color: #E45649; }
-.light-theme .fd-property { color: #986801; }
-.light-theme .fd-string   { color: #50A14F; }
-.light-theme .fd-hex      { color: #986801; }
-.light-theme .fd-number   { color: #986801; }
-.light-theme .fd-kw-other { color: #0184BC; }
-.light-theme .fd-style-name { color: #C18401; }
+/* Light theme: code editor stays dark, no overrides needed.
+   Atom One Dark palette is used regardless of page theme. */
 
 /* ─── Hero Playground ─── */
 .hero-playground {
@@ -541,12 +533,13 @@ code {
   background: var(--accent);
 }
 .playground-editor {
-  background: #282C34; /* Atom One Dark editor background */
+  background: #282C34; /* Atom One Dark — always dark code mode */
   display: flex;
   flex-direction: column;
 }
+/* Code mode is always dark, even in light theme */
 .light-theme .playground-editor {
-  background: #FAFAFA; /* Atom One Light editor background */
+  background: #282C34;
 }
 .playground-canvas {
   background: var(--bg-card);
@@ -594,7 +587,7 @@ code {
   outline: none;
   background: transparent;
   color: transparent;
-  caret-color: var(--text-primary);
+  caret-color: #ABB2BF; /* Atom One Dark foreground — always visible */
   font-family: var(--mono);
   font-size: 0.85rem;
   line-height: 1.7;
