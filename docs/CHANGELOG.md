@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.10.101 — Fix Canvas Interactions After CodeMirror Refactor (R6.11)
+
+- **FIX (R6.11)**: All canvas interactions (click, drag, shape creation, selection) were completely broken — `pointerdown` handler called `editor.blur()` but `editor` was undefined after the CodeMirror 6 refactor (commit `4d6ab749`); `ReferenceError` crashed the handler before `handle_pointer_down()` could run; fixed to `editorView?.contentDOM.blur()`
+- **FIX (R6.11)**: Keyboard shortcuts fired while typing in CodeMirror — `document.activeElement === editor` check was broken (same undefined `editor`); replaced with idiomatic `editorView?.hasFocus ?? false`
+- **CLEANUP**: Removed 2 dead `const editor = document.getElementById('fd-editor')` declarations left behind by CodeMirror refactor in `aiTouch` and `renamify` functions
+- **SITE**: Changes in `site/playground.js`, `site/index.html` (cache-bust v0.11.2)
+
 ### v0.10.100 — Mobile Touch Interactions (R6.11)
 
 - **FIX (R6.11)**: Canvas touch interactions now work on mobile — single-finger tap, drag, draw all functional; root cause was missing `e.preventDefault()` on canvas `pointerdown` and missing `touch-action: none` CSS, causing browser to intercept touch gestures for page scrolling
