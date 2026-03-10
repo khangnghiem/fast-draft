@@ -315,27 +315,56 @@ code {
   transform: translateY(-2px);
 }
 .btn-icon { font-size: 0.9em; }
-/* ── Hero Stats (inline) ── */
-.hero-stats-inline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+/* ── Syntax Highlighting Overlay ── */
+.editor-highlight-wrap {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
 }
-.hero-stats-inline strong {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  font-weight: 800;
+#fd-highlight {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  overflow: auto;
+  pointer-events: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  line-height: 1.7;
+  padding: 16px 20px;
+  tab-size: 2;
+  color: transparent; /* hidden, tokens provide color */
+  background: transparent;
+  border: none;
 }
-.stat-dot {
-  color: var(--text-muted);
-  font-size: 0.7rem;
+#fd-highlight code {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  tab-size: inherit;
+  color: var(--text-primary);
 }
+/* Token colors — VS Code dark+ palette */
+.fd-comment { color: #6A9955; font-style: italic; }
+.fd-keyword { color: #C586C0; }
+.fd-node-id { color: #9CDCFE; }
+.fd-property { color: #DCDCAA; }
+.fd-string  { color: #CE9178; }
+.fd-hex     { color: #CE9178; }
+.fd-number  { color: #B5CEA8; }
+.fd-kw-other { color: #569CD6; }
+.fd-style-name { color: #4EC9B0; }
+/* Light theme overrides */
+.light-theme .fd-comment  { color: #008000; }
+.light-theme .fd-keyword  { color: #AF00DB; }
+.light-theme .fd-node-id  { color: #001080; }
+.light-theme .fd-property { color: #795E26; }
+.light-theme .fd-string   { color: #A31515; }
+.light-theme .fd-hex      { color: #A31515; }
+.light-theme .fd-number   { color: #098658; }
+.light-theme .fd-kw-other { color: #0000FF; }
+.light-theme .fd-style-name { color: #267F99; }
 
 /* ─── Hero Playground ─── */
 .hero-playground {
@@ -548,17 +577,25 @@ code {
 }
 .canvas-dot { background: var(--success); }
 #fd-editor {
-  flex: 1;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   resize: none;
   border: none;
   outline: none;
   background: transparent;
-  color: var(--text-primary);
+  color: transparent;
+  caret-color: var(--text-primary);
   font-family: var(--mono);
   font-size: 0.85rem;
   line-height: 1.7;
   padding: 16px 20px;
   tab-size: 2;
+  z-index: 1;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow: auto;
 }
 #canvas-wrapper {
   flex: 1;
