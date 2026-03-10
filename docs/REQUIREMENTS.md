@@ -93,7 +93,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.7** _(done)_: Undo/redo — full command stack, works across text and canvas edits
 - **R3.8** _(done)_: Properties panel — frosted glass inspector for position, size, fill, stroke, corner, opacity; includes Actions section with Group, Ungroup, Duplicate, Frame, Front, Back, Copy PNG, Delete buttons; auto-disables state-dependent actions
 - **R3.9** _(done)_: Insert dropdown — `＋ Insert` button in top bar with shape/layout popover; replaces bottom shape palette
-- **R3.10** _(done)_: Apple Pencil Pro squeeze — toggle between last two tools
+- **R3.10** _(done)_: Apple Pencil Pro squeeze — toggle between last two tools; _(planned)_: barrel roll (`UITouch.rollAngle`) for brush rotation and tilt (`azimuthAngle`/`altitudeAngle`) for shading on native iOS
 - **R3.11** _(done)_: Per-tool cursor feedback (crosshair, text cursor, default)
 - **R3.12** _(done)_: Annotation pins — badge dots on annotated nodes with inline edit card
 - **R3.17** _(done)_: Smart guides — alignment snapping with visual guide lines; Ctrl/⌘ to disable
@@ -148,18 +148,19 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 
 - **R5.1** _(done)_: GPU-accelerated 2D rendering via Vello + wgpu (webview currently uses Canvas2D fallback)
 - **R5.2** _(done)_: WASM-compatible for web/IDE deployment
-- **R5.3** _(future)_: Native-compatible for desktop/mobile (same Rust code)
+- **R5.3** _(planned)_: Native-compatible for desktop/mobile — same Rust core (`fd-core`, `fd-editor`) compiled to native ARM64/x86 via FFI; rendering via platform-specific `DrawBackend` implementations
 - **R5.4** _(done)_: Shapes: rect, ellipse, path, text, frame, generic
 - **R5.5** _(done)_: Styling: fill, stroke, gradients, shadows, corner radius, opacity
 - **R5.6** _(done)_: Animation: keyframe transitions with easing functions → [spec](specs/animation-system.md)
 - **R5.7** _(done)_: Edge rendering: lines, smooth curves, step routing with arrowheads and labels → [spec](specs/edge-system.md)
 - **R5.8** _(done)_: Edge animation rendering: trigger effects + flow animations → [spec](specs/edge-system.md)
+- **R5.9** _(partial)_: `DrawBackend` trait — pluggable rendering abstraction in `fd-render`; trait defined with ~30 methods mirroring Canvas2D API; `Canvas2dBackend`, `CoreGraphicsBackend`, `VelloBackend` implementations planned; `render2d.rs` refactoring to use `&dyn DrawBackend` is next phase
 
 ### R6: Platform Targets
 
 - **R6.1** _(done)_: VS Code / Cursor IDE custom editor extension (published)
-- **R6.2** _(future)_: Desktop app via Tauri (macOS, Windows, Linux)
-- **R6.3** _(future)_: Mobile app (iOS, Android) via native wgpu
+- **R6.2** _(planned)_: Desktop app via Tauri v2 (macOS, Windows, Linux) — wraps shared `fd-canvas-ui` TS module (R6.12) in native window; native file dialogs, system menus; WASM rendering via `Canvas2dBackend`; prerequisite: R6.12
+- **R6.3** _(planned)_: iOS app — Swift + Rust via UniFFI; `CoreGraphicsBackend` for rendering; full Apple Pencil Pro support (squeeze R3.10, barrel roll, pressure, tilt, hover via `UIPencilInteraction` + `UITouch`); `InputEvent` mapping in ~50 lines of Swift; prerequisite: R5.9
 - **R6.4** _(future)_: Web app (standalone browser app)
 - **R6.5** _(done)_: Cloudflare Pages landing site at [fast-draft.com](https://fast-draft.com) with live WASM playground, custom domain, and auto-deploy via GitHub Actions (`pages.yml`) → Cloudflare Pages
 - **R6.6** _(done)_: Interactive playground — canvas supports pointer events (select, drag, draw), layers panel (tree view sidebar), properties panel (right sidebar with fill/stroke/opacity/size), right-click context menu (duplicate/delete/z-order/group/copy), floating toolbar with 7 SVG tool buttons, minimap with zoom controls, undo/redo header buttons, clickable zoom reset, FAB, zoom/pan navigation, keyboard shortcuts, undo/redo, and bidirectional code↔canvas sync; zero Rust changes, all in `playground.js`/`index.html`/`style.css`
@@ -168,6 +169,9 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R6.9** _(done)_: Import CSS — settings menu button triggers file picker for `.css` files; class selectors parsed and converted to FD `style` blocks (`fill`, `corner`, `opacity`, `shadow`, `stroke`, `font`); one-shot conversion with toast feedback; available on both website playground and VS Code extension
 - **R6.10** _(done)_: CI/CD hardening — WASM build check in CI (catches `wasm32-unknown-unknown` breakage before merge); `Swatinem/rust-cache@v2` for smarter cargo caching; explicit minimal `permissions` on all workflows; unified `release.yml` with CI gate → parallel extension/LSP/Zed publish → GitHub Release (atomic all-or-nothing); branch protection recommended for `main`
 - **R6.11** _(done)_: Code Mode syntax highlighting — FD tokens (keywords, node IDs, properties, strings, hex colors, numbers, comments) colorized in the web playground's Code panel via transparent textarea + `<pre>` overlay pattern; token colors follow VS Code dark+ palette with light theme variants; zero external dependencies; scroll-synced with sub-frame latency
+- **R6.12** _(partial)_: Shared canvas UI module (`fd-canvas-ui`) — TypeScript package with `PlatformHost` interface and `ThemeContract` types; foundation skeleton created; full extraction of pointer routing, panels, render loop, sync, clipboard, shortcuts from `playground.js` and VS Code `main.js` is next phase
+- **R6.13** _(planned)_: Android app — Kotlin + Rust via JNI/NDK; `AndroidCanvasBackend` for rendering; `MotionEvent` → `InputEvent` mapping; prerequisite: R5.9
+- **R6.14** _(planned)_: Cloud file sync — `.fd` plain-text files synced via platform-native backends: iCloud Drive (`UIDocument` + `NSFilePresenter`) on iOS/macOS, Google Drive (Storage Access Framework) on Android, native filesystem on Desktop/VS Code; no custom backend needed for V1; real-time collaboration (CRDT/OT) deferred to V2
 
 ## Non-Functional Requirements
 
@@ -185,16 +189,18 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, data flow, and rendering pipeline.
 
-| Layer            | Technology                            |
-| ---------------- | ------------------------------------- |
-| Language         | Rust (edition 2024)                   |
-| Rendering        | Vello + wgpu (Canvas2D fallback)      |
-| Parsing          | winnow                                |
-| Graph            | petgraph `StableDiGraph`              |
-| String interning | lasso                                 |
-| WASM             | wasm-pack + wasm-bindgen              |
-| IDE glue         | TypeScript (minimal VS Code API shim) |
-| Desktop (future) | Tauri                                 |
+| Layer            | Technology                                                   |
+| ---------------- | ------------------------------------------------------------ |
+| Language         | Rust (edition 2024)                                          |
+| Rendering        | Vello + wgpu (Canvas2D fallback); `DrawBackend` trait (R5.9) |
+| Parsing          | winnow                                                       |
+| Graph            | petgraph `StableDiGraph`                                     |
+| String interning | lasso                                                        |
+| WASM             | wasm-pack + wasm-bindgen                                     |
+| IDE glue         | TypeScript (shared `fd-canvas-ui` module, R6.12)             |
+| Desktop          | Tauri v2 (R6.2)                                              |
+| iOS              | Swift + UniFFI + CoreGraphics (R6.3)                         |
+| Android          | Kotlin + JNI/NDK (R6.13)                                     |
 
 ## Test Matrix
 
@@ -250,44 +256,50 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 
 <!-- AI: Search this index BEFORE proposing new requirements. If a similar tag already exists, extend the existing requirement instead of creating a duplicate. Also check docs/specs/ for detailed spec docs. -->
 
-| Tag                 | Requirements                                                                    |
-| ------------------- | ------------------------------------------------------------------------------- |
-| selection           | R2.5, R3.1, R3.16, R3.24                                                        |
-| drawing             | R3.3, R3.15, R3.19                                                              |
-| pen / freehand      | R3.4, R3.22, R3.23                                                              |
-| pan                 | R3.6, R3.10                                                                     |
-| zoom                | R3.6, R3.20                                                                     |
-| grid / snap         | R3.17, R3.21                                                                    |
-| cursor              | R3.11, R3.16                                                                    |
-| resize              | R3.2, R3.16                                                                     |
-| feedback / tooltip  | R3.15, R3.18                                                                    |
-| export              | R3.31, R3.55, R3.56, R4.7                                                       |
-| minimap             | R3.25                                                                           |
-| nudge               | R3.26                                                                           |
-| rename              | R3.27                                                                           |
-| undo / redo         | R3.7                                                                            |
-| properties          | R3.8                                                                            |
-| drag-drop           | R3.9                                                                            |
-| annotation          | R1.9, R3.12, R4.5                                                               |
-| theme               | R3.13                                                                           |
-| view mode           | R3.14, R4.11                                                                    |
-| pressure / pencil   | R3.4, R3.10, R3.22                                                              |
-| ai / refinement     | R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17, R4.20, R4.21 |
-| edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8                                           |
-| import              | R1.14, R1.18                                                                    |
-| style / theme       | R1.4, R4.3, R4.18                                                               |
-| animation           | R1.5, R1.11, R1.12, R3.29, R4.18, R5.6, R5.8                                    |
-| rendering           | R5.1, R5.2, R5.4, R5.5                                                          |
-| platform            | R6.1, R6.2, R6.3, R6.4, R6.5, R6.6, R6.7, R6.8, R6.9, R6.10, R6.11              |
-| inline editing      | R3.28                                                                           |
-| text alignment      | R1.17, R3.28, R3.36, R3.37                                                      |
-| layout / centering  | R3.36, R3.37                                                                    |
-| layers / navigation | R3.30                                                                           |
-| group / drill-down  | R3.24, R3.34                                                                    |
-| group / reparent    | R3.34, R3.35, R3.38                                                             |
-| image               | R3.32                                                                           |
-| library             | R3.33, R3.34                                                                    |
-| group / frame       | R3.24, R3.34, R1.1                                                              |
+| Tag                 | Requirements                                                                            |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| selection           | R2.5, R3.1, R3.16, R3.24                                                                |
+| drawing             | R3.3, R3.15, R3.19                                                                      |
+| pen / freehand      | R3.4, R3.22, R3.23                                                                      |
+| pan                 | R3.6, R3.10                                                                             |
+| zoom                | R3.6, R3.20                                                                             |
+| grid / snap         | R3.17, R3.21                                                                            |
+| cursor              | R3.11, R3.16                                                                            |
+| resize              | R3.2, R3.16                                                                             |
+| feedback / tooltip  | R3.15, R3.18                                                                            |
+| export              | R3.31, R3.55, R3.56, R4.7                                                               |
+| minimap             | R3.25                                                                                   |
+| nudge               | R3.26                                                                                   |
+| rename              | R3.27                                                                                   |
+| undo / redo         | R3.7                                                                                    |
+| properties          | R3.8                                                                                    |
+| drag-drop           | R3.9                                                                                    |
+| annotation          | R1.9, R3.12, R4.5                                                                       |
+| theme               | R3.13                                                                                   |
+| view mode           | R3.14, R4.11                                                                            |
+| pressure / pencil   | R3.4, R3.10, R3.22                                                                      |
+| ai / refinement     | R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17, R4.20, R4.21         |
+| edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8                                                   |
+| import              | R1.14, R1.18                                                                            |
+| style / theme       | R1.4, R4.3, R4.18                                                                       |
+| animation           | R1.5, R1.11, R1.12, R3.29, R4.18, R5.6, R5.8                                            |
+| rendering           | R5.1, R5.2, R5.4, R5.5, R5.9                                                            |
+| platform            | R6.1, R6.2, R6.3, R6.4, R6.5, R6.6, R6.7, R6.8, R6.9, R6.10, R6.11, R6.12, R6.13, R6.14 |
+| draw-backend        | R5.3, R5.9                                                                              |
+| cross-platform      | R5.9, R6.2, R6.3, R6.12, R6.13, R6.14                                                   |
+| ios / apple-pencil  | R3.10, R6.3                                                                             |
+| android             | R6.13                                                                                   |
+| file-sync / cloud   | R6.14                                                                                   |
+| shared-ui           | R6.12                                                                                   |
+| inline editing      | R3.28                                                                                   |
+| text alignment      | R1.17, R3.28, R3.36, R3.37                                                              |
+| layout / centering  | R3.36, R3.37                                                                            |
+| layers / navigation | R3.30                                                                                   |
+| group / drill-down  | R3.24, R3.34                                                                            |
+| group / reparent    | R3.34, R3.35, R3.38                                                                     |
+| image               | R3.32                                                                                   |
+| library             | R3.33, R3.34                                                                            |
+| group / frame       | R3.24, R3.34, R1.1                                                                      |
 
 | content-first | R4.12 |
 | mermaid | R1.18 |

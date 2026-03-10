@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.10.98 — Cross-Platform Foundations (R5.9, R6.12)
+
+- **CORE (R5.9)**: `DrawBackend` trait — platform-agnostic 2D rendering abstraction in `fd-render/src/backend.rs`; ~30 methods (fill, stroke, path, text, transform, clip) mirroring Canvas2D API; ready for `Canvas2dBackend`, `CoreGraphicsBackend`, and `VelloBackend` implementations
+- **CORE (R6.12)**: `ThemeContract` — single source of truth for visual constants in `fd-core/src/theme.rs`; light/dark constructors matching Apple HIG; `to_json()` serialization for JS consumption; 5 unit tests (non-empty fields, light≠dark, JSON roundtrip)
+- **WASM**: `get_theme_json()` API on `FdCanvas` — returns current `ThemeContract` as JSON for cross-platform theming; `CanvasTheme` refactored to derive from `ThemeContract` via `from_contract()`
+- **NEW (R6.12)**: `fd-canvas-ui` TypeScript package skeleton — `PlatformHost` interface (document I/O, UI feedback, state persistence, optional clipboard/messaging), `ThemeContract` types + `LIGHT_THEME`/`DARK_THEME` constants matching Rust values, barrel re-export index
+- **TESTING**: 5 new Rust tests (theme contract), TypeScript compiles cleanly
+
 ### v0.10.97 — Code Mode Syntax Highlighting + Hero Stats Cleanup (R6.11)
 
 - **FEATURE (R6.11)**: Code Mode now has live syntax highlighting — FD tokens (keywords, node IDs, properties, strings, hex colors, numbers, comments) are colorized using a transparent textarea + highlighted `<pre>` overlay pattern; token colors follow VS Code dark+ theme palette with light theme variants; zero external dependencies

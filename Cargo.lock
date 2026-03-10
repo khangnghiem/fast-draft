@@ -329,6 +329,7 @@ dependencies = [
  "proptest",
  "rmp-serde",
  "serde",
+ "serde_json",
  "smallvec",
  "winnow",
 ]

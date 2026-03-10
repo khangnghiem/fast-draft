@@ -4,40 +4,42 @@
 //! `CanvasRenderingContext2d`. Used as MVP renderer before Vello/wgpu.
 
 use fd_core::model::*;
+use fd_core::theme::ThemeContract;
 use fd_core::{NodeIndex, ResolvedBounds, SceneGraph};
 use std::collections::HashMap;
 use web_sys::CanvasRenderingContext2d;
 
 /// Theme-dependent colors for the canvas renderer.
+///
+/// Derived from [`ThemeContract`] — the cross-platform source of truth.
 pub struct CanvasTheme {
-    pub bg: &'static str,
-    pub grid: &'static str,
-    pub placeholder_border: &'static str,
-    pub placeholder_bg: &'static str,
-    pub placeholder_text: &'static str,
+    pub bg: String,
+    pub grid: String,
+    pub placeholder_border: String,
+    pub placeholder_bg: String,
+    pub placeholder_text: String,
 }
 
 impl CanvasTheme {
+    /// Create a canvas theme from a cross-platform theme contract.
+    pub fn from_contract(contract: &ThemeContract) -> Self {
+        Self {
+            bg: contract.canvas_bg.clone(),
+            grid: contract.grid_color.clone(),
+            placeholder_border: contract.placeholder_border.clone(),
+            placeholder_bg: contract.placeholder_bg.clone(),
+            placeholder_text: contract.placeholder_text.clone(),
+        }
+    }
+
     /// Light theme — Apple-style warm white canvas.
     pub fn light() -> Self {
-        Self {
-            bg: "#F5F5F7",
-            grid: "rgba(0, 0, 0, 0.05)",
-            placeholder_border: "#86868B",
-            placeholder_bg: "rgba(142, 142, 147, 0.06)",
-            placeholder_text: "#86868B",
-        }
+        Self::from_contract(&ThemeContract::light())
     }
 
     /// Dark theme — macOS dark mode.
     pub fn dark() -> Self {
-        Self {
-            bg: "#1C1C1E",
-            grid: "rgba(255, 255, 255, 0.04)",
-            placeholder_border: "#636366",
-            placeholder_bg: "rgba(99, 99, 102, 0.08)",
-            placeholder_text: "#98989D",
-        }
+        Self::from_contract(&ThemeContract::dark())
     }
 }
 
@@ -60,7 +62,7 @@ pub fn render_scene(
     hover_start_ms: f64,
 ) {
     // Clear canvas
-    ctx.set_fill_style_str(theme.bg);
+    ctx.set_fill_style_str(&theme.bg);
     ctx.fill_rect(0.0, 0.0, canvas_width, canvas_height);
 
     // Draw grid dots
@@ -716,7 +718,7 @@ fn draw_generic_placeholder(
     ctx.save();
 
     // Dashed border
-    ctx.set_stroke_style_str(theme.placeholder_border);
+    ctx.set_stroke_style_str(&theme.placeholder_border);
     ctx.set_line_width(1.0);
     let _ = ctx.set_line_dash(&js_sys::Array::of2(
         &wasm_bindgen::JsValue::from_f64(4.0),
@@ -726,12 +728,12 @@ fn draw_generic_placeholder(
     ctx.stroke();
 
     // Background fill (subtle)
-    ctx.set_fill_style_str(theme.placeholder_bg);
+    ctx.set_fill_style_str(&theme.placeholder_bg);
     ctx.fill();
 
     // @id label centered
     ctx.set_font("11px Inter, system-ui, sans-serif");
-    ctx.set_fill_style_str(theme.placeholder_text);
+    ctx.set_fill_style_str(&theme.placeholder_text);
     ctx.set_text_align("center");
     ctx.set_text_baseline("middle");
     let label = format!("@{}", id);
@@ -789,7 +791,7 @@ fn draw_selection_handles(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, ki
 }
 
 fn draw_grid(ctx: &CanvasRenderingContext2d, width: f64, height: f64, theme: &CanvasTheme) {
-    ctx.set_fill_style_str(theme.grid);
+    ctx.set_fill_style_str(&theme.grid);
     let spacing = 20.0;
     let mut x = 0.0;
     while x < width {
