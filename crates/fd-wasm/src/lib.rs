@@ -395,7 +395,10 @@ impl FdCanvas {
         self.hovered_id = hit;
         let hovered_changed = prev_hovered != self.hovered_id;
         if hovered_changed && self.hovered_id.is_some() {
-            self.hover_start_ms = js_sys::Date::now();
+            self.hover_start_ms = web_sys::window()
+                .and_then(|w| w.performance())
+                .map(|p| p.now())
+                .unwrap_or(0.0);
         }
 
         // Eraser: delete nodes on drag-over
