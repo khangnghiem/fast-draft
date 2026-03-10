@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.10.99 — Code Mode Scroll Fix + Atom One Dark Theme (R6.11)
+
+- **FIX (R6.11)**: Code Mode scroll sync fixed — syntax highlight overlay (`#fd-highlight`) now uses `overflow: hidden` instead of `overflow: auto`, relying entirely on JS `scrollTop` sync; previously the overlay had independent scroll behavior that diverged from the textarea
+- **UX (R6.11)**: Syntax highlighting switched from VS Code dark+ to **Atom One Dark** palette — warmer, more cohesive colors: comments `#5C6370` (muted gray), keywords `#C678DD` (purple), node IDs `#E06C75` (red), properties `#D19A66` (orange), strings `#98C379` (green), other keywords `#56B6C2` (cyan), style names `#E5C07B` (yellow)
+- **UX (R6.11)**: Light theme overrides updated to **Atom One Light** palette — comments `#A0A1A7`, keywords `#A626A4`, node IDs `#E45649`, strings `#50A14F`, properties/numbers `#986801`, other keywords `#0184BC`
+- **UX (R6.11)**: Code editor background changed to `#282C34` (Atom One Dark) for thematic consistency
+- **FIX (R6.11)**: WASM error fallback improved — shows "Canvas couldn't start" with actual error message instead of misleading "Playground requires WebAssembly"
+- **PERF (R6.11)**: Scroll sync throttled via `requestAnimationFrame` — prevents redundant scroll handler calls for smoother 60fps scrolling
+- **SITE**: Changes in `site/style.css`, `site/playground.js`, `site/index.html` (cache-bust v0.10.105)
+
 ### v0.10.98 — Cross-Platform Foundations (R5.9, R6.12)
 
 - **CORE (R5.9)**: `DrawBackend` trait — platform-agnostic 2D rendering abstraction in `fd-render/src/backend.rs`; ~30 methods (fill, stroke, path, text, transform, clip) mirroring Canvas2D API; ready for `Canvas2dBackend`, `CoreGraphicsBackend`, and `VelloBackend` implementations

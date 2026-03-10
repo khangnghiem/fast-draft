@@ -325,7 +325,7 @@ code {
   position: absolute;
   inset: 0;
   margin: 0;
-  overflow: auto;
+  overflow: hidden; /* JS controls scrollTop via syncHighlightScroll */
   pointer-events: none;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -345,26 +345,26 @@ code {
   tab-size: inherit;
   color: var(--text-primary);
 }
-/* Token colors — VS Code dark+ palette */
-.fd-comment { color: #6A9955; font-style: italic; }
-.fd-keyword { color: #C586C0; }
-.fd-node-id { color: #9CDCFE; }
-.fd-property { color: #DCDCAA; }
-.fd-string  { color: #CE9178; }
-.fd-hex     { color: #CE9178; }
-.fd-number  { color: #B5CEA8; }
-.fd-kw-other { color: #569CD6; }
-.fd-style-name { color: #4EC9B0; }
-/* Light theme overrides */
-.light-theme .fd-comment  { color: #008000; }
-.light-theme .fd-keyword  { color: #AF00DB; }
-.light-theme .fd-node-id  { color: #001080; }
-.light-theme .fd-property { color: #795E26; }
-.light-theme .fd-string   { color: #A31515; }
-.light-theme .fd-hex      { color: #A31515; }
-.light-theme .fd-number   { color: #098658; }
-.light-theme .fd-kw-other { color: #0000FF; }
-.light-theme .fd-style-name { color: #267F99; }
+/* Token colors — Atom One Dark palette */
+.fd-comment { color: #5C6370; font-style: italic; }
+.fd-keyword { color: #C678DD; }
+.fd-node-id { color: #E06C75; }
+.fd-property { color: #D19A66; }
+.fd-string  { color: #98C379; }
+.fd-hex     { color: #D19A66; }
+.fd-number  { color: #D19A66; }
+.fd-kw-other { color: #56B6C2; }
+.fd-style-name { color: #E5C07B; }
+/* Light theme overrides — Atom One Light palette */
+.light-theme .fd-comment  { color: #A0A1A7; font-style: italic; }
+.light-theme .fd-keyword  { color: #A626A4; }
+.light-theme .fd-node-id  { color: #E45649; }
+.light-theme .fd-property { color: #986801; }
+.light-theme .fd-string   { color: #50A14F; }
+.light-theme .fd-hex      { color: #986801; }
+.light-theme .fd-number   { color: #986801; }
+.light-theme .fd-kw-other { color: #0184BC; }
+.light-theme .fd-style-name { color: #C18401; }
 
 /* ─── Hero Playground ─── */
 .hero-playground {
@@ -540,7 +540,12 @@ code {
 .split-resize-handle.active {
   background: var(--accent);
 }
-.playground-editor, .playground-canvas {
+.playground-editor {
+  background: #282C34; /* Atom One Dark editor background */
+  display: flex;
+  flex-direction: column;
+}
+.playground-canvas {
   background: var(--bg-card);
   display: flex;
   flex-direction: column;
