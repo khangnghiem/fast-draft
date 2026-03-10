@@ -222,7 +222,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | R3.1        | `tools::tests::select_tool_*`, `hit::tests::*`                                                                                                                                                                                                                     | ✅ 5 tests + 3 hit tests       |
 | R3.2        | `select_tool_drag`, `select_tool_shift_drag_*`, resize integ., `sync_resize_frame_children_reflow`, `sync_resize_frame_centered_text_recenters`, `sync_move_frame_flush_no_jump`, `sync_move_frame_children_follow_after_flush`, `sync_frame_does_not_auto_resize` | ✅ 8 tests                     |
 | R3.3        | `rect_tool_*`, `ellipse_tool_*`, `text_tool_*`                                                                                                                                                                                                                     | ✅ 7 tests                     |
-| R3.4        | _(pen tool — captures pressure, no unit test)_                                                                                                                                                                                                                     | ⚠️ No pen tool tests           |
+| R3.4        | `tool_pen_basic_draw`, `tool_pen_two_points`, `tool_pen_cancel`, `tool_pen_subsampling`                                                                                                                                                                          | ✅ Covered by PenTool unit tests |
 | R3.5        | _(planned)_                                                                                                                                                                                                                                                        | —                              |
 | R3.6        | E2E UX: zoom/pan/pinch tests in `e2e-ux.test.ts`                                                                                                                                                                                                                   | ✅ 4 E2E tests                 |
 | R3.7        | `commands::tests::*`, `undo_redo::*`                                                                                                                                                                                                                               | ✅ 5 unit + 7 integration      |
@@ -250,7 +250,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | R3.48       | `eraser_tool_lifecycle`, `eraser_tool_clear_resets_state`, `eraser_tool_pointerdown_clears_previous_ids`, `erase_child_preserves_group`, `erase_last_child_leaves_empty_group`, `erase_nested_cascade`                                                             | ✅ 6 tests                     |
 | R5.1–R5.8   | `hit::tests::*`, `resolve::tests::*`, `render2d::tests::*`                                                                                                                                                                                                         | ✅ 3 hit + 6 layout + 3 render |
 
-**Total**: 182 Rust tests + 188 TypeScript tests = **370 tests**
+**Total**: 186 Rust tests + 188 TypeScript tests = **374 tests**
 
 ## Requirement Index
 
