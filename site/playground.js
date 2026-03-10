@@ -1751,7 +1751,14 @@ async function initPlayground() {
     });
 
     // ── Scroll sync (textarea → highlight overlay) ────────────────────
-    editor.addEventListener('scroll', () => syncHighlightScroll(editor));
+    let scrollRafId = null;
+    editor.addEventListener('scroll', () => {
+      if (scrollRafId) return;
+      scrollRafId = requestAnimationFrame(() => {
+        syncHighlightScroll(editor);
+        scrollRafId = null;
+      });
+    });
 
     // ── Pointer Events ────────────────────────────────────────────────
     canvas.addEventListener('pointerdown', (e) => {
@@ -2242,10 +2249,12 @@ async function initPlayground() {
 
   } catch (err) {
     console.error('Failed to load WASM:', err);
+    const errDetail = err.message ? `<code style="font-size:12px;opacity:0.7;display:block;margin-bottom:12px">${err.message}</code>` : '';
     loading.innerHTML = `
-      <p style="color: var(--text-secondary); text-align: center; max-width: 320px;">
-        <strong>Playground requires WebAssembly</strong><br><br>
-        Install the
+      <p style="color: var(--text-secondary); text-align: center; max-width: 360px;">
+        <strong>Canvas couldn't start</strong><br><br>
+        ${errDetail}
+        Try reloading the page. If the issue persists, install the
         <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank">VS Code extension</a>
         for the full canvas experience, or
         <a href="https://github.com/khangnghiem/fast-draft" target="_blank">build from source</a>.
