@@ -135,7 +135,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R4.18** _(done)_: Keyword rename — `theme` → `style` (reusable property bundles), `anim` → `when` for clarity; internal Rust struct `Style` → `Properties`, field `.style` → `.props`; emitter order: spec → children → style → when; old keywords (`theme`, `style` as legacy) accepted for backward compatibility
 - **R4.19** _(done)_: ReadMode filtered views — `emit_filtered(graph, mode)` with 8 modes (Full/Structure/Layout/Design/Spec/Visual/When/Edges); CLI `fd-lsp --view <mode>` for AI token savings; VS Code read-only virtual document provider with status bar mode selector
 - **R4.20** _(planned)_: AI Assist on selection — select nodes on canvas → click "✦ AI Assist" → AI receives `.fd` text of selected nodes → returns redesigned `.fd` → bidi-sync renders changes live; undo reverts entire AI edit atomically
-- **R4.21** _(planned)_: **Comprehensibility Score** — compute a 0–100 score measuring how easily AI agents can understand an FD document. Metrics:
+- **R4.21** _(done)_: **Comprehensibility Score** — compute a 0–100 score measuring how easily AI agents can understand an FD document. Metrics:
   - **Semantic naming ratio**: % of non-anonymous `@id`s (target: >80%)
   - **Inline doc-comment density**: % of nodes with `[auto]` or manual `#` comments
   - **Style reuse ratio**: % of styled nodes using `use:` references vs inline styles

@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.10.103 — Comprehensibility Score
+
+- Added `compute_comprehensibility_score` for measuring FD document readability (R4.21).
+
 ### v0.10.102 — README Rewrite + CONTRIBUTING.md
 
 - **DOCS**: Rewrote README.md from 238 → ~115 lines — added hero screenshot (Code+Canvas side-by-side), shortened tagline, corrected token ratio from "~5×" to "~6×" (matching benchmark average of 6.5×), trimmed feature list from 13 to 6 differentiating items, added live playground CTA to fast-draft.com, fixed `group` → `frame` in code example, added "Web playground 🟢 Live" to platform roadmap
