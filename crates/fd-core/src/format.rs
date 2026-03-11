@@ -76,7 +76,7 @@ mod tests {
         let input = r#"
 # FD v1
 
-theme accent {
+style accent {
   fill: #6C5CE7
   corner: 10
 }
@@ -95,7 +95,7 @@ rect @primary_btn {
     #[test]
     fn format_document_dedupes_use_styles() {
         let input = r#"
-theme card {
+style card {
   fill: #FFF
 }
 rect @box {

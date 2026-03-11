@@ -4,7 +4,7 @@
 
 ## Overview
 
-FD libraries are `.fd` files that export **themes** (reusable styles) and **components** (named groups) for use in other `.fd` files via the `import` statement.
+FD libraries are `.fd` files that export **styles** (reusable property bundles) and **components** (named groups) for use in other `.fd` files via the `import` statement.
 
 ```
 import "libraries/ui-kit.fd" as ui
@@ -34,9 +34,9 @@ Libraries are:
 # Description of what this library provides.
 # Usage: import "libraries/my-lib.fd" as my
 
-# ─── Themes ───
+# ─── Styles ───
 
-theme my_accent {
+style my_accent {
   fill: #FF6B6B
   corner: 8
 }
@@ -66,7 +66,7 @@ Put your `.fd` file in the workspace `libraries/` directory. The Library Panel i
 ```
 import "libraries/my-lib.fd" as my
 
-# Reference themes and components with the namespace prefix
+# Reference styles and components with the namespace prefix
 rect @hero {
   w: 400 h: 200
   use: my.my_accent
@@ -79,7 +79,7 @@ rect @hero {
 | ------------------ | ---------------------------------------------------------------------- |
 | **Header comment** | Start with `# @library "Name"` for panel discovery                     |
 | **Semantic IDs**   | Use descriptive names: `@btn_primary`, `@nav_sidebar`                  |
-| **Themes first**   | Define themes before components that use them                          |
+| **Styles first**   | Define styles before components that use them                          |
 | **Grouped**        | Related components should share section comments (`# ─── Buttons ───`) |
 | **Self-contained** | Each component should work standalone (include all needed styles)      |
 

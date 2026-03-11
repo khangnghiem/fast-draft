@@ -44,7 +44,7 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
         } else if rest.starts_with("style ") || rest.starts_with("theme ") {
             let (name, style) = parse_style_block
                 .parse_next(&mut rest)
-                .map_err(|e| format!("line {line}: theme/style error — expected `theme name {{ props }}`, got `{ctx}…`: {e}"))?;
+                .map_err(|e| format!("line {line}: style/theme error — expected `style name {{ props }}`, got `{ctx}…`: {e}"))?;
             graph.define_style(name, style);
             pending_comments.clear();
         } else if rest.starts_with("spec ") || rest.starts_with("spec{") {
@@ -86,7 +86,7 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
                         content,
                         max_width: None,
                     },
-                    style: crate::model::Style::default(),
+                    props: crate::model::Properties::default(),
                     use_styles: Default::default(),
                     constraints: Default::default(),
                     annotations: Vec::new(),
@@ -163,7 +163,7 @@ fn is_generic_node_start(s: &str) -> bool {
 struct ParsedNode {
     id: NodeId,
     kind: NodeKind,
-    style: Style,
+    props: Properties,
     use_styles: Vec<NodeId>,
     constraints: Vec<Constraint>,
     animations: Vec<AnimKeyframe>,
@@ -181,7 +181,7 @@ fn insert_node_recursive(
     parsed: ParsedNode,
 ) {
     let mut node = SceneNode::new(parsed.id, parsed.kind);
-    node.style = parsed.style;
+    node.props = parsed.props;
     node.use_styles.extend(parsed.use_styles);
     node.constraints.extend(parsed.constraints);
     node.animations.extend(parsed.animations);
@@ -218,6 +218,7 @@ fn parse_import_line(input: &mut &str) -> ModalResult<Import> {
 /// Section separators emitted automatically by the emitter.
 /// These are skipped during parsing to avoid duplication on round-trip.
 const SECTION_SEPARATORS: &[&str] = &[
+    "─── Styles ───",
     "─── Themes ───",
     "─── Layout ───",
     "─── Constraints ───",
@@ -399,14 +400,14 @@ fn parse_spec_item(input: &mut &str) -> ModalResult<Annotation> {
 
 // ─── Style block parser ─────────────────────────────────────────────────
 
-fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Style)> {
+fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Properties)> {
     let _ = alt(("theme", "style")).parse_next(input)?;
     let _ = space1.parse_next(input)?;
     let name = parse_identifier.map(NodeId::intern).parse_next(input)?;
     skip_space(input);
     let _ = '{'.parse_next(input)?;
 
-    let mut style = Style::default();
+    let mut style = Properties::default();
     skip_ws_and_comments(input);
 
     while !input.starts_with('}') {
@@ -418,7 +419,7 @@ fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Style)> {
     Ok((name, style))
 }
 
-fn parse_style_property(input: &mut &str, style: &mut Style) -> ModalResult<()> {
+fn parse_style_property(input: &mut &str, style: &mut Properties) -> ModalResult<()> {
     let prop_name = parse_identifier.parse_next(input)?;
     skip_space(input);
     let _ = ':'.parse_next(input)?;
@@ -468,7 +469,7 @@ fn weight_name_to_number(name: &str) -> Option<u16> {
     }
 }
 
-fn parse_font_value(input: &mut &str, style: &mut Style) -> ModalResult<()> {
+fn parse_font_value(input: &mut &str, style: &mut Properties) -> ModalResult<()> {
     let mut font = style.font.clone().unwrap_or_default();
 
     if input.starts_with('"') {
@@ -553,7 +554,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     skip_space(input);
     let _ = '{'.parse_next(input)?;
 
-    let mut style = Style::default();
+    let mut style = Properties::default();
     let mut use_styles = Vec::new();
     let mut constraints = Vec::new();
     let mut animations = Vec::new();
@@ -561,7 +562,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let mut children = Vec::new();
     let mut width: Option<f32> = None;
     let mut height: Option<f32> = None;
-    let mut layout = LayoutMode::Free;
+    let mut layout = LayoutMode::Free { pad: 0.0 };
     let mut clip = false;
     let mut place: Option<(HPlace, VPlace)> = None;
     let mut path_commands: Vec<PathCmd> = Vec::new();
@@ -639,7 +640,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     Ok(ParsedNode {
         id,
         kind,
-        style,
+        props: style,
         use_styles,
         constraints,
         animations,
@@ -766,7 +767,7 @@ fn parse_gradient_stops(input: &mut &str) -> ModalResult<Vec<GradientStop>> {
 #[allow(clippy::too_many_arguments)]
 fn parse_node_property(
     input: &mut &str,
-    style: &mut Style,
+    style: &mut Properties,
     use_styles: &mut Vec<NodeId>,
     constraints: &mut Vec<Constraint>,
     width: &mut Option<f32>,
@@ -855,7 +856,7 @@ fn parse_node_property(
                 }
             }
         }
-        "stroke" => {
+        "stroke" | "border" => {
             let color = parse_hex_color.parse_next(input)?;
             let _ = space1.parse_next(input)?;
             let w = parse_number.parse_next(input)?;
@@ -911,7 +912,7 @@ fn parse_node_property(
                 .parse_next(input);
             }
         }
-        "use" => {
+        "use" | "apply" => {
             use_styles.push(parse_identifier.map(NodeId::intern).parse_next(input)?);
         }
         "font" => {
@@ -941,12 +942,22 @@ fn parse_node_property(
                 "column" => LayoutMode::Column { gap, pad },
                 "row" => LayoutMode::Row { gap, pad },
                 "grid" => LayoutMode::Grid { cols: 2, gap, pad },
-                _ => LayoutMode::Free,
+                _ => LayoutMode::Free { pad: 0.0 },
             };
         }
         "clip" => {
             let val = parse_identifier.parse_next(input)?;
             *clip = val == "true";
+        }
+        "pad" | "padding" => {
+            // Standalone pad: N — sets padding on Free frames
+            let val = parse_number.parse_next(input)?;
+            match layout {
+                LayoutMode::Free { pad } => *pad = val,
+                LayoutMode::Column { pad, .. }
+                | LayoutMode::Row { pad, .. }
+                | LayoutMode::Grid { pad, .. } => *pad = val,
+            }
         }
         "d" => {
             // Parse SVG-like path commands: M x y L x y C ... Z
@@ -1047,7 +1058,7 @@ fn parse_node_property(
 
 // ─── Alignment value parser ──────────────────────────────────────────────
 
-fn parse_align_value(input: &mut &str, style: &mut Style) -> ModalResult<()> {
+fn parse_align_value(input: &mut &str, style: &mut Properties) -> ModalResult<()> {
     use crate::model::{TextAlign, TextVAlign};
 
     let first = parse_identifier.parse_next(input)?;
@@ -1159,12 +1170,21 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
         other => AnimTrigger::Custom(other.to_string()),
     };
 
+    // Trigger-specific default durations
+    let default_duration = match &trigger {
+        AnimTrigger::Hover => 300u32,
+        AnimTrigger::Press => 150u32,
+        AnimTrigger::Enter => 500u32,
+        AnimTrigger::Custom(_) => 300u32,
+    };
+
     skip_space(input);
     let _ = '{'.parse_next(input)?;
 
     let mut props = AnimProperties::default();
-    let mut duration_ms = 300u32;
+    let mut duration_ms = default_duration;
     let mut easing = Easing::EaseInOut;
+    let mut delay_ms: Option<u32> = None;
 
     skip_ws_and_comments(input);
 
@@ -1205,6 +1225,13 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
                     }
                 }
             }
+            "delay" => {
+                let n = parse_number.parse_next(input)?;
+                delay_ms = Some(n as u32);
+                if input.starts_with("ms") {
+                    *input = &input[2..];
+                }
+            }
             _ => {
                 let _ = take_till::<_, _, ContextError>(0.., |c: char| {
                     c == '\n' || c == ';' || c == '}'
@@ -1224,6 +1251,7 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
         duration_ms,
         easing,
         properties: props,
+        delay_ms,
     })
 }
 
@@ -1263,7 +1291,7 @@ fn parse_edge_defaults_block(input: &mut &str) -> ModalResult<EdgeDefaults> {
                 let color = parse_hex_color.parse_next(input)?;
                 skip_space(input);
                 let w = parse_number.parse_next(input).unwrap_or(1.0);
-                defaults.style.stroke = Some(Stroke {
+                defaults.props.stroke = Some(Stroke {
                     paint: Paint::Solid(color),
                     width: w,
                     ..Stroke::default()
@@ -1289,7 +1317,7 @@ fn parse_edge_defaults_block(input: &mut &str) -> ModalResult<EdgeDefaults> {
                 });
             }
             "opacity" => {
-                defaults.style.opacity = Some(parse_number.parse_next(input)?);
+                defaults.props.opacity = Some(parse_number.parse_next(input)?);
             }
             _ => {
                 let _ = take_till::<_, _, ContextError>(0.., |c: char| {
@@ -1325,7 +1353,7 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
     let mut to = None;
     let mut text_child = None;
     let mut text_child_content = None; // (NodeId, content_string)
-    let mut style = Style::default();
+    let mut style = Properties::default();
     let mut use_styles = Vec::new();
     let mut arrow = ArrowKind::None;
     let mut curve = CurveKind::Straight;
@@ -1458,7 +1486,7 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
             from: from.unwrap_or(EdgeAnchor::Point(0.0, 0.0)),
             to: to.unwrap_or(EdgeAnchor::Point(0.0, 0.0)),
             text_child,
-            style,
+            props: style,
             use_styles: use_styles.into(),
             arrow,
             curve,

@@ -1,61 +1,61 @@
 # Design tokens / design system file
-# Demonstrates theme reuse and component patterns
+# Demonstrates style reuse and component patterns
 
 # ─── Color Tokens ───
 
-theme primary {
+style primary {
   fill: #6C5CE7
 }
 
-theme primary_hover {
+style primary_hover {
   fill: #5A4BD1
 }
 
-theme secondary {
+style secondary {
   fill: #A29BFE
 }
 
-theme surface {
+style surface {
   fill: #FFFFFF
   corner: 12
 }
 
-theme surface_elevated {
+style surface_elevated {
   fill: #FFFFFF
   corner: 16
 }
 
-theme danger {
+style danger {
   fill: #EF4444
 }
 
-theme success {
+style success {
   fill: #22C55E
 }
 
 # ─── Typography Tokens ───
 
-theme h1 {
+style h1 {
   font: "Inter" bold 32
   fill: #111827
 }
 
-theme h2 {
+style h2 {
   font: "Inter" semibold 24
   fill: #1F2937
 }
 
-theme h3 {
+style h3 {
   font: "Inter" semibold 18
   fill: #374151
 }
 
-theme body {
+style body {
   font: "Inter" regular 16
   fill: #4B5563
 }
 
-theme caption {
+style caption {
   font: "Inter" regular 12
   fill: #9CA3AF
 }

@@ -84,6 +84,7 @@ async function main() {
     setupInsertMenu();
     setupMinimap();
     setupColorSwatches();
+    setupPanelResize();
     setupTouchGestures();
     setupZoomControls();
     setupUndoRedoControls();
@@ -121,7 +122,7 @@ function render() {
   ctx.setTransform(z, 0, 0, z, panX * dpr, panY * dpr);
   // Draw grid below shapes
   if (gridEnabled) drawGrid();
-  fdCanvas.render(ctx, performance.now());
+  fdCanvas.render(ctx, performance.now(), gridEnabled);
 
   // ── Arrow tool: draw live preview line during drag ──
   const arrowPreviewJson = fdCanvas.get_arrow_preview();

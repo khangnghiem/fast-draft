@@ -342,6 +342,7 @@ rect @box {
             scale: Some(1.1),
             ..Default::default()
         },
+        delay_ms: None,
     });
     engine.apply_mutation(GraphMutation::SetAnimations {
         id: NodeId::intern("box"),
@@ -384,8 +385,8 @@ text @heading "Hello" {
 
     // Verify no alignment initially
     let node = engine.graph.get_by_id(NodeId::intern("heading")).unwrap();
-    assert!(node.style.text_align.is_none());
-    assert!(node.style.text_valign.is_none());
+    assert!(node.props.text_align.is_none());
+    assert!(node.props.text_valign.is_none());
 
     // Apply SetStyle mutation with alignment
     let mut style = engine.graph.resolve_style(node, &[]);
@@ -399,8 +400,8 @@ text @heading "Hello" {
 
     // Verify graph updated
     let node = engine.graph.get_by_id(NodeId::intern("heading")).unwrap();
-    assert_eq!(node.style.text_align, Some(TextAlign::Right));
-    assert_eq!(node.style.text_valign, Some(TextVAlign::Bottom));
+    assert_eq!(node.props.text_align, Some(TextAlign::Right));
+    assert_eq!(node.props.text_valign, Some(TextVAlign::Bottom));
 
     // Verify text output contains align property
     assert!(
@@ -412,8 +413,8 @@ text @heading "Hello" {
     // Verify round-trip
     let engine2 = SyncEngine::from_text(&engine.text, viewport).unwrap();
     let node2 = engine2.graph.get_by_id(NodeId::intern("heading")).unwrap();
-    assert_eq!(node2.style.text_align, Some(TextAlign::Right));
-    assert_eq!(node2.style.text_valign, Some(TextVAlign::Bottom));
+    assert_eq!(node2.props.text_align, Some(TextAlign::Right));
+    assert_eq!(node2.props.text_valign, Some(TextVAlign::Bottom));
 }
 
 #[test]
@@ -956,6 +957,49 @@ frame @clip_frame {
         frame_before.width, frame_after.width
     );
     assert!(!changed, "no changes expected for clip frame");
+}
+
+#[test]
+fn sync_frame_does_not_auto_resize() {
+    // Non-clip frame should also NOT expand when children overflow.
+    // Frames have declared dimensions — only Groups auto-size.
+    let input = r#"
+frame @card {
+  w: 200 h: 100
+
+  rect @child { w: 80 h: 40 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let frame_idx = engine.graph.index_of(NodeId::intern("card")).unwrap();
+    let child_idx = engine.graph.index_of(NodeId::intern("child")).unwrap();
+
+    let frame_before = engine.bounds[&frame_idx];
+
+    // Simulate resize: widen child beyond frame
+    if let Some(cb) = engine.bounds.get_mut(&child_idx) {
+        cb.width = 400.0;
+    }
+
+    let changed = engine.finalize_child_bounds();
+
+    // Frame should NOT expand (declared size is authoritative)
+    let frame_after = engine.bounds[&frame_idx];
+    assert_eq!(
+        frame_before.width, frame_after.width,
+        "frame should not auto-resize: {} == {}",
+        frame_before.width, frame_after.width
+    );
+    assert_eq!(
+        frame_before.height, frame_after.height,
+        "frame height should not change: {} == {}",
+        frame_before.height, frame_after.height
+    );
+    assert!(!changed, "no changes expected for non-clip frame");
 }
 
 #[test]
@@ -2102,6 +2146,62 @@ group @container {
         .map(|&idx| engine.graph.graph[idx].id.as_str())
         .collect();
     assert_eq!(ids, vec!["back", "mid", "front"]);
+}
+
+/// Z-order: bring_to_front persists through flush_to_text + re-parse roundtrip.
+/// Regression test: previously dispatch_action didn't call flush_to_text(),
+/// so z-order changes were lost when JS re-read the text.
+#[test]
+fn sync_bring_to_front_persists_through_roundtrip() {
+    let input = r#"
+rect @back { w: 40 h: 30 x: 10 y: 10 }
+rect @mid { w: 40 h: 30 x: 60 y: 10 }
+rect @front { w: 40 h: 30 x: 110 y: 10 }
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    let back_id = NodeId::intern("back");
+    let back_idx = engine.graph.index_of(back_id).unwrap();
+
+    // Bring @back to front (it's currently the first/backmost child)
+    let changed = engine.graph.bring_to_front(back_idx);
+    assert!(changed, "bring_to_front should return true");
+
+    // Verify in-memory order changed: mid, front, back
+    let root = engine.graph.root;
+    let children = engine.graph.children(root);
+    let ids: Vec<&str> = children
+        .iter()
+        .map(|&idx| engine.graph.graph[idx].id.as_str())
+        .collect();
+    assert_eq!(
+        ids,
+        vec!["mid", "front", "back"],
+        "after bring_to_front, @back should be last"
+    );
+
+    // Flush to text and re-parse (simulates what happens in the real app)
+    engine.mark_dirty();
+    engine.flush_to_text();
+    let text = engine.current_text().to_string();
+    let engine2 = SyncEngine::from_text(&text, viewport).unwrap();
+
+    // After roundtrip, child order should be preserved
+    let root2 = engine2.graph.root;
+    let children2 = engine2.graph.children(root2);
+    let ids2: Vec<&str> = children2
+        .iter()
+        .map(|&idx| engine2.graph.graph[idx].id.as_str())
+        .collect();
+    assert_eq!(
+        ids2,
+        vec!["mid", "front", "back"],
+        "z-order should persist through flush_to_text + re-parse roundtrip"
+    );
 }
 
 /// next_clone_name: chained duplication produces foo, foo_2, foo_3.

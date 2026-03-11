@@ -1,9 +1,9 @@
 # Welcome to Fast Draft!
 # Click any shape to select it. Try moving, resizing, and editing.
 
-theme accent { fill: #6C5CE7 }
-theme soft { fill: #DFE6E9; corner: 12 }
-theme label_style { font: "Inter" 500 14; fill: #2D3436 }
+style accent { fill: #6C5CE7 }
+style soft { fill: #DFE6E9; corner: 12 }
+style label_style { font: "Inter" 500 14; fill: #2D3436 }
 
 # ── Title ──
 text @welcome_title "Welcome to Fast Draft ✨" {

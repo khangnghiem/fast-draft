@@ -37,7 +37,7 @@ pub fn emit_document(graph: &SceneGraph) -> String {
 
     // Emit style definitions
     if use_separators && has_styles {
-        out.push_str("# ─── Themes ───\n\n");
+        out.push_str("# ─── Styles ───\n\n");
     }
     let mut styles: Vec<_> = graph.styles.iter().collect();
     styles.sort_by_key(|(id, _)| id.as_str().to_string());
@@ -95,9 +95,9 @@ fn indent(out: &mut String, depth: usize) {
     }
 }
 
-fn emit_style_block(out: &mut String, name: &NodeId, style: &Style, depth: usize) {
+fn emit_style_block(out: &mut String, name: &NodeId, style: &Properties, depth: usize) {
     indent(out, depth);
-    writeln!(out, "theme {} {{", name.as_str()).unwrap();
+    writeln!(out, "style {} {{", name.as_str()).unwrap();
 
     if let Some(ref fill) = style.fill {
         emit_paint_prop(out, "fill", fill, depth + 1);
@@ -157,7 +157,7 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         && node.annotations.is_empty()
         && node.use_styles.is_empty()
         && node.animations.is_empty()
-        && !has_inline_styles(&node.style)
+        && !has_inline_styles(&node.props)
         && !matches!(&node.kind, NodeKind::Image { .. })
     {
         return;
@@ -211,7 +211,12 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
     // Layout mode (for frames)
     if let NodeKind::Frame { layout, .. } = &node.kind {
         match layout {
-            LayoutMode::Free => {}
+            LayoutMode::Free { pad } => {
+                if *pad > 0.0 {
+                    indent(out, depth + 1);
+                    writeln!(out, "padding: {}", format_num(*pad)).unwrap();
+                }
+            }
             LayoutMode::Column { gap, pad } => {
                 indent(out, depth + 1);
                 writeln!(
@@ -345,10 +350,10 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
     }
 
     // Inline style properties
-    if let Some(ref fill) = node.style.fill {
+    if let Some(ref fill) = node.props.fill {
         emit_paint_prop(out, "fill", fill, depth + 1);
     }
-    if let Some(ref stroke) = node.style.stroke {
+    if let Some(ref stroke) = node.props.stroke {
         indent(out, depth + 1);
         match &stroke.paint {
             Paint::Solid(c) => {
@@ -357,18 +362,18 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
             _ => writeln!(out, "stroke: #000 {}", format_num(stroke.width)).unwrap(),
         }
     }
-    if let Some(radius) = node.style.corner_radius {
+    if let Some(radius) = node.props.corner_radius {
         indent(out, depth + 1);
         writeln!(out, "corner: {}", format_num(radius)).unwrap();
     }
-    if let Some(ref font) = node.style.font {
+    if let Some(ref font) = node.props.font {
         emit_font_prop(out, font, depth + 1);
     }
-    if let Some(opacity) = node.style.opacity {
+    if let Some(opacity) = node.props.opacity {
         indent(out, depth + 1);
         writeln!(out, "opacity: {}", format_num(opacity)).unwrap();
     }
-    if let Some(ref shadow) = node.style.shadow {
+    if let Some(ref shadow) = node.props.shadow {
         indent(out, depth + 1);
         writeln!(
             out,
@@ -382,13 +387,13 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
     }
 
     // Text alignment
-    if node.style.text_align.is_some() || node.style.text_valign.is_some() {
-        let h = match node.style.text_align {
+    if node.props.text_align.is_some() || node.props.text_valign.is_some() {
+        let h = match node.props.text_align {
             Some(TextAlign::Left) => "left",
             Some(TextAlign::Right) => "right",
             _ => "center",
         };
-        let v = match node.style.text_valign {
+        let v = match node.props.text_valign {
             Some(TextVAlign::Top) => "top",
             Some(TextVAlign::Bottom) => "bottom",
             _ => "middle",
@@ -632,6 +637,11 @@ fn emit_anim(out: &mut String, anim: &AnimKeyframe, depth: usize) {
     indent(out, depth + 1);
     writeln!(out, "ease: {ease_name} {}ms", anim.duration_ms).unwrap();
 
+    if let Some(delay) = anim.delay_ms {
+        indent(out, depth + 1);
+        writeln!(out, "delay: {delay}ms").unwrap();
+    }
+
     indent(out, depth);
     out.push_str("}\n");
 }
@@ -676,7 +686,7 @@ fn emit_constraint(out: &mut String, node_id: &NodeId, constraint: &Constraint) 
 fn emit_edge_defaults_block(out: &mut String, defaults: &EdgeDefaults) {
     out.push_str("edge_defaults {\n");
 
-    if let Some(ref stroke) = defaults.style.stroke {
+    if let Some(ref stroke) = defaults.props.stroke {
         match &stroke.paint {
             Paint::Solid(c) => {
                 writeln!(out, "  stroke: {} {}", c.to_hex(), format_num(stroke.width)).unwrap();
@@ -686,7 +696,7 @@ fn emit_edge_defaults_block(out: &mut String, defaults: &EdgeDefaults) {
             }
         }
     }
-    if let Some(opacity) = defaults.style.opacity {
+    if let Some(opacity) = defaults.props.opacity {
         writeln!(out, "  opacity: {}", format_num(opacity)).unwrap();
     }
     if let Some(arrow) = defaults.arrow
@@ -749,14 +759,14 @@ fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph, defaults: Option
 
     // Stroke — skip if matches edge_defaults
     let stroke_matches_default = defaults
-        .and_then(|d| d.style.stroke.as_ref())
+        .and_then(|d| d.props.stroke.as_ref())
         .is_some_and(|ds| {
-            edge.style
+            edge.props
                 .stroke
                 .as_ref()
                 .is_some_and(|es| stroke_eq(es, ds))
         });
-    if !stroke_matches_default && let Some(ref stroke) = edge.style.stroke {
+    if !stroke_matches_default && let Some(ref stroke) = edge.props.stroke {
         match &stroke.paint {
             Paint::Solid(c) => {
                 writeln!(out, "  stroke: {} {}", c.to_hex(), format_num(stroke.width)).unwrap();
@@ -768,12 +778,12 @@ fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph, defaults: Option
     }
 
     // Opacity — skip if matches edge_defaults
-    let opacity_matches_default = defaults.and_then(|d| d.style.opacity).is_some_and(|do_| {
-        edge.style
+    let opacity_matches_default = defaults.and_then(|d| d.props.opacity).is_some_and(|do_| {
+        edge.props
             .opacity
             .is_some_and(|eo| (eo - do_).abs() < 0.001)
     });
-    if !opacity_matches_default && let Some(opacity) = edge.style.opacity {
+    if !opacity_matches_default && let Some(opacity) = edge.props.opacity {
         writeln!(out, "  opacity: {}", format_num(opacity)).unwrap();
     }
 
@@ -832,14 +842,8 @@ fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph, defaults: Option
 fn generate_auto_comment(node: &SceneNode, graph: &SceneGraph, idx: NodeIndex) -> Option<String> {
     match &node.kind {
         NodeKind::Root => None,
-        NodeKind::Text { content, .. } if !content.is_empty() => {
-            let truncated = if content.len() > 30 {
-                format!("{}…", &content[..27])
-            } else {
-                content.clone()
-            };
-            Some(format!("label: \"{truncated}\""))
-        }
+        // Text nodes are self-documenting via inline "content" — skip auto-comment
+        NodeKind::Text { .. } => None,
         NodeKind::Group => {
             let count = graph.children(idx).len();
             if count > 0 {
@@ -851,7 +855,7 @@ fn generate_auto_comment(node: &SceneNode, graph: &SceneGraph, idx: NodeIndex) -
         NodeKind::Frame { layout, .. } => {
             let count = graph.children(idx).len();
             let layout_str = match layout {
-                LayoutMode::Free => "free",
+                LayoutMode::Free { .. } => "free",
                 LayoutMode::Column { .. } => "column",
                 LayoutMode::Row { .. } => "row",
                 LayoutMode::Grid { .. } => "grid",
@@ -900,7 +904,7 @@ pub enum ReadMode {
     Structure,
     /// Structure + dimensions (`w:`/`h:`) + `layout:` directives + constraints.
     Layout,
-    /// Structure + themes/styles + `fill:`/`stroke:`/`font:`/`corner:`/`use:` refs.
+    /// Structure + styles + `fill:`/`stroke:`/`font:`/`corner:`/`use:` refs.
     Design,
     /// Structure + `spec {}` blocks + annotations.
     Spec,
@@ -920,7 +924,7 @@ pub enum ReadMode {
 /// - `Full`: identical to `emit_document`.
 /// - `Structure`: node kind + `@id` + children. No styles, dims, anims, specs.
 /// - `Layout`: structure + `w:`/`h:` + `layout:` + constraints (`->`).
-/// - `Design`: structure + themes + `fill:`/`stroke:`/`font:`/`corner:`/`use:`.
+/// - `Design`: structure + styles + `fill:`/`stroke:`/`font:`/`corner:`/`use:`.
 /// - `Spec`: structure + `spec {}` blocks.
 /// - `Visual`: layout + design + when combined.
 /// - `When`: structure + `when :trigger { ... }` blocks.
@@ -938,12 +942,12 @@ pub fn emit_filtered(graph: &SceneGraph, mode: ReadMode) -> String {
     let mut out = String::with_capacity(1024);
 
     let children = graph.children(graph.root);
-    let include_themes = matches!(mode, ReadMode::Design | ReadMode::Visual);
+    let include_styles = matches!(mode, ReadMode::Design | ReadMode::Visual);
     let include_constraints = matches!(mode, ReadMode::Layout | ReadMode::Visual);
     let include_edges = matches!(mode, ReadMode::Edges | ReadMode::Visual);
 
-    // Themes (Design and Visual modes)
-    if include_themes && !graph.styles.is_empty() {
+    // Styles (Design and Visual modes)
+    if include_styles && !graph.styles.is_empty() {
         let mut styles: Vec<_> = graph.styles.iter().collect();
         styles.sort_by_key(|(id, _)| id.as_str().to_string());
         for (name, style) in &styles {
@@ -1042,10 +1046,10 @@ fn emit_node_filtered(
             indent(out, depth + 1);
             writeln!(out, "use: {}", style_ref.as_str()).unwrap();
         }
-        if let Some(ref fill) = node.style.fill {
+        if let Some(ref fill) = node.props.fill {
             emit_paint_prop(out, "fill", fill, depth + 1);
         }
-        if let Some(ref stroke) = node.style.stroke {
+        if let Some(ref stroke) = node.props.stroke {
             indent(out, depth + 1);
             match &stroke.paint {
                 Paint::Solid(c) => {
@@ -1054,14 +1058,14 @@ fn emit_node_filtered(
                 _ => writeln!(out, "stroke: #000 {}", format_num(stroke.width)).unwrap(),
             }
         }
-        if let Some(radius) = node.style.corner_radius {
+        if let Some(radius) = node.props.corner_radius {
             indent(out, depth + 1);
             writeln!(out, "corner: {}", format_num(radius)).unwrap();
         }
-        if let Some(ref font) = node.style.font {
+        if let Some(ref font) = node.props.font {
             emit_font_prop(out, font, depth + 1);
         }
-        if let Some(opacity) = node.style.opacity {
+        if let Some(opacity) = node.props.opacity {
             indent(out, depth + 1);
             writeln!(out, "opacity: {}", format_num(opacity)).unwrap();
         }
@@ -1101,7 +1105,12 @@ fn emit_layout_mode_filtered(out: &mut String, kind: &NodeKind, depth: usize) {
         _ => return, // Group is always Free — no layout emission
     };
     match layout {
-        LayoutMode::Free => {}
+        LayoutMode::Free { pad } => {
+            if *pad > 0.0 {
+                indent(out, depth);
+                writeln!(out, "padding: {}", format_num(*pad)).unwrap();
+            }
+        }
         LayoutMode::Column { gap, pad } => {
             indent(out, depth);
             writeln!(
@@ -1264,7 +1273,7 @@ fn emit_spec_annotations(out: &mut String, annotations: &[Annotation], prefix: &
 }
 
 /// Check if a `Style` has any non-default properties set.
-fn has_inline_styles(style: &Style) -> bool {
+fn has_inline_styles(style: &Properties) -> bool {
     style.fill.is_some()
         || style.stroke.is_some()
         || style.font.is_some()

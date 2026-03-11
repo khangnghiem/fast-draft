@@ -2,34 +2,34 @@
 # Wireframe components — navbar, sidebar, content, footer, placeholders.
 # Usage: import "libraries/wireframe.fd" as wire
 
-# ─── Themes ───
+# ─── Styles ───
 
-theme wire_bg {
+style wire_bg {
   fill: #FAFAFA
   corner: 0
 }
 
-theme wire_panel {
+style wire_panel {
   fill: #FFFFFF
   stroke: #E0E0E0 1
 }
 
-theme wire_accent {
+style wire_accent {
   fill: #6C5CE7
   corner: 4
 }
 
-theme wire_heading {
+style wire_heading {
   fill: #2D3436
   font: "Inter" 700 16
 }
 
-theme wire_text {
+style wire_text {
   fill: #636E72
   font: "Inter" 400 13
 }
 
-theme wire_muted {
+style wire_muted {
   fill: #B2BEC3
   font: "Inter" 400 12
 }

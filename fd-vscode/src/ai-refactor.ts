@@ -4,7 +4,7 @@
  * Invoked via Canvas toolbar "Refactor" button or command palette.
  * Runs all cleanup passes in sequence:
  *   1. Rename anonymous IDs → semantic names (Renamify)
- *   2. Hoist repeated inline styles → shared theme blocks
+ *   2. Hoist repeated inline styles → shared style blocks
  *   3. Round coordinates to 1dp precision (already handled by emitter)
  */
 
@@ -13,7 +13,7 @@ import { callRenamifyAi, applyGlobalRenames, RenamifyResult, RenameProposal } fr
 export interface RefactorResult {
     /** Number of nodes renamed by Renamify. */
     renamed: number;
-    /** Number of theme blocks hoisted from inline styles. */
+    /** Number of style blocks hoisted from inline styles. */
     stylesHoisted: number;
     /** The final refactored FD text. */
     fdText: string;
@@ -57,10 +57,10 @@ export async function runRefactor(
         try {
             const before = text;
             text = wasmFormatFn(text);
-            // Count hoisted themes by diffing theme blocks
-            const themesBefore = (before.match(/^theme\s+/gm) || []).length;
-            const themesAfter = (text.match(/^theme\s+/gm) || []).length;
-            stylesHoisted = Math.max(0, themesAfter - themesBefore);
+            // Count hoisted styles by diffing style blocks
+            const stylesBefore = (before.match(/^style\s+/gm) || []).length;
+            const stylesAfter = (text.match(/^style\s+/gm) || []).length;
+            stylesHoisted = Math.max(0, stylesAfter - stylesBefore);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             warnings.push(`Style hoisting failed: ${msg}`);
@@ -87,7 +87,7 @@ export function summarizeRefactor(result: RefactorResult): string {
         parts.push(`${result.renamed} node(s) renamed`);
     }
     if (result.stylesHoisted > 0) {
-        parts.push(`${result.stylesHoisted} theme(s) hoisted`);
+        parts.push(`${result.stylesHoisted} style(s) hoisted`);
     }
     if (parts.length === 0) {
         return "No changes needed — document is already clean.";

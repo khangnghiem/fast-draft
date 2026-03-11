@@ -312,7 +312,7 @@ function addAcceptRow(value) {
   item.className = "accept-item";
   item.innerHTML = `
     <input type="text" value="${escapeAttr(value)}" placeholder="Acceptance criterion">
-    <button class="card-close" style="font-size:14px">×</button>
+    <button class="card-close" style="font-size:14px" aria-label="Close">×</button>
   `;
   item.querySelector("button").addEventListener("click", () => {
     item.remove();
@@ -610,6 +610,7 @@ function setupContextMenu() {
       const resultJson = fdCanvas.handle_key("]", false, true, false, true);
       const result = JSON.parse(resultJson);
       if (result.changed) {
+        bumpGeneration();
         render();
         syncTextToExtension();
       }
@@ -623,6 +624,7 @@ function setupContextMenu() {
       const resultJson = fdCanvas.handle_key("[", false, true, false, true);
       const result = JSON.parse(resultJson);
       if (result.changed) {
+        bumpGeneration();
         render();
         syncTextToExtension();
       }

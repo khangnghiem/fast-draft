@@ -4,7 +4,7 @@
 //! Passes are applied by `format_document` in `format.rs` based on `FormatConfig`.
 
 use crate::id::NodeId;
-use crate::model::{NodeKind, Paint, SceneGraph, SceneNode, Style};
+use crate::model::{NodeKind, Paint, Properties, SceneGraph, SceneNode};
 use std::collections::HashMap;
 
 // ─── Dedup use-styles ─────────────────────────────────────────────────────
@@ -33,25 +33,25 @@ fn dedup_use_on_node(node: &mut SceneNode) {
 
 /// Promote repeated identical inline styles into top-level `style {}` blocks.
 ///
-/// Any two or more nodes that share the same inline `Style` fingerprint will
+/// Any two or more nodes that share the same inline `Properties` fingerprint will
 /// have their inline style replaced with a `use:` reference to a shared
 /// style block. Comment-preservation is guaranteed: only `style` and
 /// `use_styles` fields change, never node ordering or comments.
 ///
 /// New style names use the pattern `_auto_N`.
 pub fn hoist_styles(graph: &mut SceneGraph) {
-    // Build fingerprint → (list of node indices, example Style) map.
-    let mut fp_map: HashMap<String, (Vec<petgraph::graph::NodeIndex>, Style)> = HashMap::new();
+    // Build fingerprint → (list of node indices, example Properties) map.
+    let mut fp_map: HashMap<String, (Vec<petgraph::graph::NodeIndex>, Properties)> = HashMap::new();
 
     for idx in graph.graph.node_indices() {
         let node = &graph.graph[idx];
-        if is_style_empty(&node.style) {
+        if is_style_empty(&node.props) {
             continue;
         }
-        let fp = style_fingerprint(&node.style);
+        let fp = style_fingerprint(&node.props);
         let entry = fp_map
             .entry(fp)
-            .or_insert_with(|| (Vec::new(), node.style.clone()));
+            .or_insert_with(|| (Vec::new(), node.props.clone()));
         entry.0.push(idx);
     }
 
@@ -67,7 +67,7 @@ pub fn hoist_styles(graph: &mut SceneGraph) {
 
         for &idx in indices {
             let node = &mut graph.graph[idx];
-            node.style = Style::default();
+            node.props = Properties::default();
             if !node.use_styles.contains(&style_name) {
                 node.use_styles.insert(0, style_name);
             }
@@ -75,10 +75,10 @@ pub fn hoist_styles(graph: &mut SceneGraph) {
     }
 }
 
-// ─── Style fingerprint ────────────────────────────────────────────────────
+// ─── Properties fingerprint ────────────────────────────────────────────────────
 
-/// A deterministic string key for a Style, used for deduplication during hoisting.
-fn style_fingerprint(style: &Style) -> String {
+/// A deterministic string key for a Properties, used for deduplication during hoisting.
+fn style_fingerprint(style: &Properties) -> String {
     let mut parts = Vec::new();
 
     if let Some(ref fill) = style.fill {
@@ -138,7 +138,7 @@ fn paint_key(paint: &Paint) -> String {
     }
 }
 
-fn is_style_empty(style: &Style) -> bool {
+fn is_style_empty(style: &Properties) -> bool {
     style.fill.is_none()
         && style.stroke.is_none()
         && style.font.is_none()
@@ -275,11 +275,11 @@ rect @box_b {
 
         // Inline style should be cleared
         assert!(
-            box_a.style.fill.is_none(),
+            box_a.props.fill.is_none(),
             "inline fill should be cleared after hoist"
         );
         assert!(
-            box_b.style.fill.is_none(),
+            box_b.props.fill.is_none(),
             "inline fill should be cleared after hoist"
         );
     }

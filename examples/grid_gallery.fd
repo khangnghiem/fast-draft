@@ -1,7 +1,7 @@
 # FD v1
 # Photo gallery — grid layout showcase with hover interactions
 
-theme card_text {
+style card_text {
   fill: #FFFFFF
   font: "Inter" 400 14
 }

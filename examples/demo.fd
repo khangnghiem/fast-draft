@@ -1,36 +1,36 @@
-# ─── Themes ───
+# ─── Styles ───
 
-theme accent_text {
+style accent_text {
   fill: #FFFFFF  # white
   font: "Inter" semibold 14
 }
 
-theme body {
+style body {
   fill: #6B7280  # blue
   font: "Inter" regular 14
 }
 
-theme brand {
+style brand {
   fill: #6C5CE7  # blue
   corner: 12
 }
 
-theme card {
+style card {
   fill: #FFFFFF  # white
   corner: 14
 }
 
-theme heading {
+style heading {
   fill: #1A1A2E  # blue
   font: "Inter" bold 22
 }
 
-theme metric {
+style metric {
   fill: #6C5CE7  # blue
   font: "Inter" bold 32
 }
 
-theme subheading {
+style subheading {
   fill: #111827  # blue
   font: "Inter" semibold 16
 }
@@ -44,7 +44,7 @@ edge_defaults {
 # ─── Layout ───
 
 # Sidebar navigation
-# [auto] free container (4 children)
+# [auto] column container (4 children)
 frame @sidebar {
   spec {
     "Persistent sidebar — always visible"
@@ -53,13 +53,12 @@ frame @sidebar {
     priority: high
     tag: navigation, responsive
   }
-  # [auto] label: "FastDraft"
   text @app_name "FastDraft" {
+    w: 290.9
     fill: #FFFFFF  # white
     font: "Inter" bold 18
   }
   rect @nav_dashboard {
-    # [auto] label: "Dashboard"
     text @_text_10 "Dashboard" {
       use: accent_text
     }
@@ -72,7 +71,6 @@ frame @sidebar {
     }
   }
   rect @nav_projects {
-    # [auto] label: "Projects"
     text @_text_11 "Projects" {
       use: accent_text
       opacity: 0.7
@@ -85,7 +83,6 @@ frame @sidebar {
     }
   }
   rect @nav_settings {
-    # [auto] label: "Settings"
     text @_text_12 "Settings" {
       use: accent_text
       opacity: 0.7
@@ -97,22 +94,22 @@ frame @sidebar {
       ease: ease_out 150ms
     }
   }
-  w: 220 h: 600
+  layout: column gap=8 pad=16
+  w: 322.9 h: 257.4
   fill: #2D2B55  # blue
   corner: 0
-  x: 20
-  y: 20
+  opacity: 1
+  x: -121.8
+  y: 19.8
 }
 
 # Top header area
-# [auto] label: "Dashboard"
 text @page_title "Dashboard" {
   use: heading
   x: 280
   y: 32
 }
 
-# [auto] label: "Welcome back — here's wha…"
 text @page_subtitle "Welcome back — here's what's happening today." {
   use: body
   x: 280
@@ -130,19 +127,6 @@ rect @card_revenue {
     priority: high
     tag: metrics, dashboard
   }
-  # [auto] label: "Revenue"
-  text @revenue_label "Revenue" {
-    use: body
-    x: 296
-    y: 112
-  }
-  # [auto] label: "$48,250"
-  text @revenue_value "$48,250" {
-    use: metric
-    x: 296
-    y: 136
-  }
-  # [auto] label: "+12.5% ↑"
   text @revenue_delta "+12.5% ↑" {
     fill: #22C55E  # green
     font: "Inter" semibold 13
@@ -152,48 +136,57 @@ rect @card_revenue {
   w: 220 h: 120
   use: card
   shadow: (0,2,16,#00000010)
-  x: 280
-  y: 100
+  x: 279.8
+  y: 98.9
   when :hover {
     scale: 1
     ease: spring 200ms
   }
 }
 
+text @revenue_label "Revenue" {
+  use: body
+  x: 490.7
+  y: 183.7
+}
+
+text @revenue_value "$48,250" {
+  use: metric
+  x: 527
+  y: 205.8
+}
+
 # [auto] styled: card
 rect @card_users {
-  # [auto] label: "Active Users"
   text @users_label "Active Users" {
     use: body
     x: 520
     y: 112
   }
-  # [auto] label: "2,847"
-  text @users_value "2,847" {
-    use: metric
-    x: 520
-    y: 136
-  }
   w: 220 h: 120
   use: card
   shadow: (0,2,16,#00000010)
-  x: 516
-  y: 100
+  x: 518.7
+  y: 98.8
   when :hover {
     scale: 1
     ease: spring 200ms
   }
 }
 
+text @users_value "2,847" {
+  use: metric
+  x: 888.2
+  y: 534
+}
+
 # [auto] styled: card
 rect @card_tasks {
-  # [auto] label: "Completed Tasks"
   text @tasks_label "Completed Tasks" {
     use: body
     x: 756
     y: 112
   }
-  # [auto] label: "1,094"
   text @tasks_value "1,094" {
     use: metric
     x: 756
@@ -202,8 +195,8 @@ rect @card_tasks {
   w: 220 h: 120
   use: card
   shadow: (0,2,16,#00000010)
-  x: 752
-  y: 100
+  x: 754.8
+  y: 99.6
   when :hover {
     scale: 1
     ease: spring 200ms
@@ -220,12 +213,12 @@ frame @activity_feed {
     status: todo
     tag: realtime, engagement
   }
-  # [auto] label: "Recent Activity"
   text @feed_title "Recent Activity" {
     use: subheading
+    x: 8.4
+    y: 5.8
   }
   rect @activity_1 {
-    # [auto] label: "Alice submitted design review"
     text @_text_13 "Alice submitted design review" {
       use: body
     }
@@ -234,7 +227,6 @@ frame @activity_feed {
     corner: 8
   }
   rect @activity_2 {
-    # [auto] label: "Bob merged pull request #284"
     text @_text_14 "Bob merged pull request #284" {
       use: body
     }
@@ -243,7 +235,6 @@ frame @activity_feed {
     corner: 8
   }
   rect @activity_3 {
-    # [auto] label: "Carol deployed v2.1.0 to st…"
     text @_text_15 "Carol deployed v2.1.0 to staging" {
       use: body
     }
@@ -255,14 +246,13 @@ frame @activity_feed {
   w: 460 h: 280
   use: card
   shadow: (0,2,16,#00000010)
-  x: 280
-  y: 240
+  x: 251
+  y: 309.1
 }
 
 # ─── Pipeline Status ───
 # [auto] column container (1 children)
 frame @pipeline {
-  # [auto] label: "Deployment Pipeline"
   text @pipeline_title "Deployment Pipeline" {
     use: subheading
   }
@@ -270,24 +260,25 @@ frame @pipeline {
   w: 460 h: 236
   use: card
   shadow: (0,2,16,#00000010)
-  x: 280
-  y: 540
+  x: 206
+  y: 753
 }
 
 # Pipeline stages as connected nodes
 # [auto] connects to stage_test
 rect @stage_build {
-  # [auto] label: "Test"
-  text @_text_23 "Test" {
-  }
   w: 90 h: 44
   fill: #22C55E  # green
   corner: 8
-  x: 166.3
-  y: 637.5
+  x: 165.6
+  y: 639.8
 }
 
-# [auto] label: "Build"
+text @_text_23 "Test" {
+  x: 175.3
+  y: 651.8
+}
+
 text @_text_16 "Build" {
   use: accent_text
   x: 236.6
@@ -296,7 +287,6 @@ text @_text_16 "Build" {
 
 # [auto] connects to stage_staging
 rect @stage_test {
-  # [auto] label: "Test"
   text @_text_17 "Test" {
     use: accent_text
   }
@@ -309,35 +299,47 @@ rect @stage_test {
 
 # [auto] connects to stage_prod
 rect @stage_staging {
-  # [auto] label: "Staging"
-  text @_text_18 "Staging" {
-    use: accent_text
-  }
-  w: 90 h: 44
+  w: 85.9 h: 47.6
   fill: #F59E0B  # orange
   corner: 8
-  x: 548
-  y: 640
+  x: 636.6
+  y: 619.9
   when :hover {
     fill: #D97706  # orange
     ease: ease_out 150ms
   }
 }
 
+text @_text_18 "Staging" {
+  use: accent_text
+  x: 488.1
+  y: 726.3
+}
+
 ellipse @stage_prod {
-  # [auto] label: "Prod"
   text @_text_19 "Prod" {
+    w: 206
     use: accent_text
   }
-  w: 90 h: 44
+  w: 103 h: 85.1
   fill: #6B7280  # blue
   corner: 8
-  x: 668
-  y: 640
+  x: 884.5
+  y: 681
   when :press {
     fill: #6C5CE7  # blue
     ease: spring 300ms
   }
+}
+
+text @_text_2 "Text" {
+  x: 405.5
+  y: 851.8
+}
+
+text @_text_0 "Text" {
+  x: 360.6
+  y: 657.3
 }
 
 # ─── Flows ───

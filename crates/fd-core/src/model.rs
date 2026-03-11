@@ -267,9 +267,9 @@ pub enum VPlace {
     Bottom,
 }
 
-/// A reusable theme set that nodes can reference via `use: theme_name`.
+/// A reusable style set that nodes can reference via `use: style_name`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Style {
+pub struct Properties {
     pub fill: Option<Paint>,
     pub stroke: Option<Stroke>,
     pub font: Option<FontSpec>,
@@ -315,6 +315,9 @@ pub struct AnimKeyframe {
     pub duration_ms: u32,
     pub easing: Easing,
     pub properties: AnimProperties,
+    /// Optional post-revert cooldown (ms) before re-triggerable.
+    /// `None` = no cooldown (default).
+    pub delay_ms: Option<u32>,
 }
 
 /// Animatable property overrides.
@@ -419,7 +422,7 @@ impl EdgeAnchor {
 /// with many similarly styled edges.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EdgeDefaults {
-    pub style: Style,
+    pub props: Properties,
     pub arrow: Option<ArrowKind>,
     pub curve: Option<CurveKind>,
 }
@@ -432,7 +435,7 @@ pub struct Edge {
     pub to: EdgeAnchor,
     /// Optional text child node (max 1). The node lives in the SceneGraph.
     pub text_child: Option<NodeId>,
-    pub style: Style,
+    pub props: Properties,
     pub use_styles: SmallVec<[NodeId; 2]>,
     pub arrow: ArrowKind,
     pub curve: CurveKind,
@@ -460,17 +463,23 @@ pub struct FlowAnim {
 }
 
 /// Group layout mode (for children arrangement).
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LayoutMode {
     /// Free / absolute positioning of children.
-    #[default]
-    Free,
+    /// Optional padding insets the content area (default 0).
+    Free { pad: f32 },
     /// Column (vertical stack).
     Column { gap: f32, pad: f32 },
     /// Row (horizontal stack).
     Row { gap: f32, pad: f32 },
     /// Grid layout.
     Grid { cols: u32, gap: f32, pad: f32 },
+}
+
+impl Default for LayoutMode {
+    fn default() -> Self {
+        LayoutMode::Free { pad: 0.0 }
+    }
 }
 
 // ─── Scene Graph Nodes ───────────────────────────────────────────────────
@@ -550,9 +559,9 @@ pub struct SceneNode {
     pub kind: NodeKind,
 
     /// Inline style overrides on this node.
-    pub style: Style,
+    pub props: Properties,
 
-    /// Named theme references (`use: base_text`).
+    /// Named style references (`use: base_text`).
     pub use_styles: SmallVec<[NodeId; 2]>,
 
     /// Constraint-based positioning.
@@ -578,7 +587,7 @@ impl SceneNode {
         Self {
             id,
             kind,
-            style: Style::default(),
+            props: Properties::default(),
             use_styles: SmallVec::new(),
             constraints: SmallVec::new(),
             animations: SmallVec::new(),
@@ -617,8 +626,8 @@ pub struct SceneGraph {
     /// The root node index.
     pub root: NodeIndex,
 
-    /// Named theme definitions (`theme base_text { ... }`).
-    pub styles: HashMap<NodeId, Style>,
+    /// Named style definitions (`style base_text { ... }`).
+    pub styles: HashMap<NodeId, Properties>,
 
     /// Index from NodeId → NodeIndex for fast lookup.
     pub id_index: HashMap<NodeId, NodeIndex>,
@@ -828,17 +837,19 @@ impl SceneGraph {
         for &sib in &new_order {
             self.graph.add_edge(parent, sib, ());
         }
+        // Store explicit child order so children() returns z-order, not NodeIndex order
+        self.sorted_child_order.insert(parent, new_order);
         true
     }
 
     /// Define a named style.
-    pub fn define_style(&mut self, name: NodeId, style: Style) {
+    pub fn define_style(&mut self, name: NodeId, style: Properties) {
         self.styles.insert(name, style);
     }
 
     /// Resolve a node's effective style (merging `use` references + inline overrides + active animations).
-    pub fn resolve_style(&self, node: &SceneNode, active_triggers: &[AnimTrigger]) -> Style {
-        let mut resolved = Style::default();
+    pub fn resolve_style(&self, node: &SceneNode, active_triggers: &[AnimTrigger]) -> Properties {
+        let mut resolved = Properties::default();
 
         // Apply referenced styles in order
         for style_id in &node.use_styles {
@@ -848,7 +859,7 @@ impl SceneGraph {
         }
 
         // Apply inline overrides (take precedence)
-        merge_style(&mut resolved, &node.style);
+        merge_style(&mut resolved, &node.props);
 
         // Apply active animation state overrides
         for anim in &node.animations {
@@ -878,14 +889,18 @@ impl SceneGraph {
     }
 
     /// Resolve an edge's effective style (merging `use` references + inline overrides + active animations).
-    pub fn resolve_style_for_edge(&self, edge: &Edge, active_triggers: &[AnimTrigger]) -> Style {
-        let mut resolved = Style::default();
+    pub fn resolve_style_for_edge(
+        &self,
+        edge: &Edge,
+        active_triggers: &[AnimTrigger],
+    ) -> Properties {
+        let mut resolved = Properties::default();
         for style_id in &edge.use_styles {
             if let Some(base) = self.styles.get(style_id) {
                 merge_style(&mut resolved, base);
             }
         }
-        merge_style(&mut resolved, &edge.style);
+        merge_style(&mut resolved, &edge.props);
 
         for anim in &edge.animations {
             if active_triggers.contains(&anim.trigger) {
@@ -987,7 +1002,7 @@ impl Default for SceneGraph {
 }
 
 /// Merge `src` style into `dst`, overwriting only `Some` fields.
-fn merge_style(dst: &mut Style, src: &Style) {
+fn merge_style(dst: &mut Properties, src: &Properties) {
     if src.fill.is_some() {
         dst.fill = src.fill.clone();
     }
@@ -1083,7 +1098,7 @@ mod tests {
         let mut sg = SceneGraph::new();
         sg.define_style(
             NodeId::intern("base"),
-            Style {
+            Properties {
                 fill: Some(Paint::Solid(Color::rgba(0.0, 0.0, 0.0, 1.0))),
                 font: Some(FontSpec {
                     family: "Inter".into(),
@@ -1102,7 +1117,7 @@ mod tests {
             },
         );
         node.use_styles.push(NodeId::intern("base"));
-        node.style.font = Some(FontSpec {
+        node.props.font = Some(FontSpec {
             family: "Inter".into(),
             weight: 700,
             size: 24.0,
@@ -1122,7 +1137,7 @@ mod tests {
         let mut sg = SceneGraph::new();
         sg.define_style(
             NodeId::intern("centered"),
-            Style {
+            Properties {
                 text_align: Some(TextAlign::Center),
                 text_valign: Some(TextVAlign::Middle),
                 ..Default::default()
@@ -1138,7 +1153,7 @@ mod tests {
             },
         );
         node.use_styles.push(NodeId::intern("centered"));
-        node.style.text_align = Some(TextAlign::Right);
+        node.props.text_align = Some(TextAlign::Right);
 
         let resolved = sg.resolve_style(&node, &[]);
         // Horizontal should be overridden to Right
@@ -1345,7 +1360,7 @@ mod tests {
                 height: 40.0,
             },
         );
-        node.style.fill = Some(Paint::Solid(Color::rgba(1.0, 0.0, 0.0, 1.0)));
+        node.props.fill = Some(Paint::Solid(Color::rgba(1.0, 0.0, 0.0, 1.0)));
         node.animations.push(AnimKeyframe {
             trigger: AnimTrigger::Press,
             duration_ms: 100,
@@ -1354,6 +1369,7 @@ mod tests {
                 scale: Some(0.97),
                 ..Default::default()
             },
+            delay_ms: None,
         });
 
         // Without press trigger: scale should be None
@@ -1365,5 +1381,249 @@ mod tests {
         assert_eq!(resolved.scale, Some(0.97));
         // Fill should still be present
         assert!(resolved.fill.is_some());
+    }
+
+    #[test]
+    fn z_order_bring_forward() {
+        let mut sg = SceneGraph::new();
+        let a = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("a"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _b = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("b"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _c = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("c"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+
+        // Initial: [a, b, c]
+        let ids: Vec<&str> = sg
+            .children(sg.root)
+            .iter()
+            .map(|&i| sg.graph[i].id.as_str())
+            .collect();
+        assert_eq!(ids, vec!["a", "b", "c"]);
+
+        // Bring @a forward → should swap a and b → [b, a, c]
+        let changed = sg.bring_forward(a);
+        assert!(changed);
+        let ids: Vec<&str> = sg
+            .children(sg.root)
+            .iter()
+            .map(|&i| sg.graph[i].id.as_str())
+            .collect();
+        assert_eq!(ids, vec!["b", "a", "c"]);
+    }
+
+    #[test]
+    fn z_order_send_backward() {
+        let mut sg = SceneGraph::new();
+        let _a = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("a"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _b = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("b"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let c = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("c"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+
+        // Send @c backward → should swap c and b → [a, c, b]
+        let changed = sg.send_backward(c);
+        assert!(changed);
+        let ids: Vec<&str> = sg
+            .children(sg.root)
+            .iter()
+            .map(|&i| sg.graph[i].id.as_str())
+            .collect();
+        assert_eq!(ids, vec!["a", "c", "b"]);
+    }
+
+    #[test]
+    fn z_order_bring_to_front() {
+        let mut sg = SceneGraph::new();
+        let a = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("a"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _b = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("b"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _c = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("c"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+
+        // Bring @a to front → [b, c, a]
+        let changed = sg.bring_to_front(a);
+        assert!(changed);
+        let ids: Vec<&str> = sg
+            .children(sg.root)
+            .iter()
+            .map(|&i| sg.graph[i].id.as_str())
+            .collect();
+        assert_eq!(ids, vec!["b", "c", "a"]);
+    }
+
+    #[test]
+    fn z_order_send_to_back() {
+        let mut sg = SceneGraph::new();
+        let _a = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("a"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _b = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("b"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let c = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("c"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+
+        // Send @c to back → [c, a, b]
+        let changed = sg.send_to_back(c);
+        assert!(changed);
+        let ids: Vec<&str> = sg
+            .children(sg.root)
+            .iter()
+            .map(|&i| sg.graph[i].id.as_str())
+            .collect();
+        assert_eq!(ids, vec!["c", "a", "b"]);
+    }
+
+    #[test]
+    fn z_order_emitter_roundtrip() {
+        use crate::emitter::emit_document;
+        use crate::parser::parse_document;
+
+        let mut sg = SceneGraph::new();
+        let a = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("a"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _b = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("b"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _c = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("c"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+
+        // Bring @a to front → [b, c, a]
+        sg.bring_to_front(a);
+
+        // Emit and re-parse
+        let text = emit_document(&sg);
+        let reparsed = parse_document(&text).unwrap();
+        let ids: Vec<&str> = reparsed
+            .children(reparsed.root)
+            .iter()
+            .map(|&i| reparsed.graph[i].id.as_str())
+            .collect();
+        assert_eq!(
+            ids,
+            vec!["b", "c", "a"],
+            "Z-order should survive emit→parse roundtrip. Emitted:\n{}",
+            text
+        );
     }
 }

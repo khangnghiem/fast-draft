@@ -124,7 +124,7 @@ fn resolve_recursive(
                 width: 0.0,
                 height: 0.0,
                 clip: false,
-                layout: LayoutMode::Free,
+                layout: LayoutMode::Free { pad: 0.0 },
             },
         );
         let frame_idx = graph.add_node(graph.root, frame_node);

@@ -1270,7 +1270,7 @@ function renderMinimap() {
   minimapCtx.translate(offsetX, offsetY);
   minimapCtx.scale(scale, scale);
   minimapCtx.translate(-bounds.minX, -bounds.minY);
-  fdCanvas.render(minimapCtx, performance.now());
+  fdCanvas.render(minimapCtx, performance.now(), true);
   minimapCtx.restore();
 
   // Cache the scene image (without viewport rect) for smooth overlay
@@ -1491,41 +1491,15 @@ function setupHelpButton() {
   }
 }
 
-// ─── Theme Toggle ─────────────────────────────────────────────────────────────
-
+// (Theme is always light — no toggle needed)
 let isDarkTheme = false;
 
 function setupThemeToggle() {
-  const btn = document.getElementById("theme-toggle-btn");
-  if (!btn) return;
-
-  // Restore persisted theme
-  const savedState = vscode.getState();
-  if (savedState && savedState.darkTheme) {
-    isDarkTheme = true;
-    applyTheme(true);
-  }
-
-  btn.addEventListener("click", () => {
-    isDarkTheme = !isDarkTheme;
-    applyTheme(isDarkTheme);
-    vscode.setState({ ...(vscode.getState() || {}), darkTheme: isDarkTheme });
-  });
+  // Theme is always light — no toggle needed
 }
 
 function applyTheme(isDark) {
-  const btn = document.getElementById("theme-toggle-btn");
-  if (isDark) {
-    document.body.classList.add("dark-theme");
-    if (btn) btn.textContent = "☀️";
-  } else {
-    document.body.classList.remove("dark-theme");
-    if (btn) btn.textContent = "🌙";
-  }
-  if (fdCanvas) {
-    fdCanvas.set_theme(isDark);
-    render();
-  }
+  // Theme is always light — no-op
 }
 
 // ─── Sketchy Mode Toggle ──────────────────────────────────────────────────────
@@ -1577,10 +1551,10 @@ function applyZenMode(isZen) {
   const btn = document.getElementById("zen-toggle-btn");
   if (isZen) {
     document.body.classList.add("zen-mode");
-    if (btn) { btn.textContent = '🔧'; btn.title = 'Switch to Full mode'; }
+    if (btn) { btn.textContent = '🧘'; btn.title = 'Exit Zen mode'; btn.classList.add('zen-active'); }
   } else {
     document.body.classList.remove("zen-mode");
-    if (btn) { btn.textContent = '🧘'; btn.title = 'Switch to Zen mode'; }
+    if (btn) { btn.textContent = '🧘'; btn.title = 'Switch to Zen mode'; btn.classList.remove('zen-active'); }
     // Clear any zen-visible overrides when leaving zen mode
     document.getElementById("layers-panel")?.classList.remove("zen-visible");
     document.getElementById("props-panel")?.classList.remove("zen-visible");

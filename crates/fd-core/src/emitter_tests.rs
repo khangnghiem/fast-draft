@@ -63,7 +63,7 @@ text @title "Hello" {
         NodeKind::Text { content, .. } => assert_eq!(content, "Hello"),
         _ => panic!("expected Text"),
     }
-    let font = node.style.font.as_ref().expect("font missing");
+    let font = node.props.font.as_ref().expect("font missing");
     assert_eq!(font.family, "Inter");
     assert_eq!(font.weight, 700);
     assert_eq!(font.size, 32.0);
@@ -339,7 +339,7 @@ edge @flow {
     let edge = &graph.edges[0];
     assert_eq!(edge.arrow, ArrowKind::Both);
     assert_eq!(edge.curve, CurveKind::Smooth);
-    assert!(edge.style.stroke.is_some());
+    assert!(edge.props.stroke.is_some());
 
     let output = emit_document(&graph);
     let graph2 = parse_document(&output).expect("styled edge roundtrip failed");
@@ -458,8 +458,8 @@ fn parse_generic_with_properties() {
     let graph = parse_document(input).unwrap();
     let card = graph.get_by_id(NodeId::intern("card")).unwrap();
     assert!(matches!(card.kind, NodeKind::Generic));
-    assert!(card.style.fill.is_some());
-    assert_eq!(card.style.corner_radius, Some(8.0));
+    assert!(card.props.fill.is_some());
+    assert_eq!(card.props.corner_radius, Some(8.0));
 }
 
 #[test]
@@ -909,8 +909,8 @@ edge @flow {
     let output = emit_document(&graph);
 
     assert!(
-        output.contains("# ─── Themes ───"),
-        "should have Themes separator"
+        output.contains("# ─── Styles ───"),
+        "should have Styles separator"
     );
     assert!(
         output.contains("# ─── Layout ───"),
@@ -962,10 +962,10 @@ fill: #F5F5F5
 }
 
 #[test]
-fn roundtrip_theme_keyword() {
-    // Verify that `theme` keyword parses and emits correctly
+fn roundtrip_style_keyword() {
+    // Verify that `style` keyword parses and emits correctly
     let input = r#"
-theme accent {
+style accent {
   fill: #6C5CE7
   corner: 12
 }
@@ -978,21 +978,21 @@ rect @btn {
     let graph = parse_document(input).unwrap();
     let output = emit_document(&graph);
 
-    // Emitter should output `theme`, not `style`
+    // Emitter should output `style`, not `theme` (legacy)
     assert!(
-        output.contains("theme accent"),
-        "should emit `theme` keyword"
+        output.contains("style accent"),
+        "should emit `style` keyword"
     );
     assert!(
-        !output.contains("style accent"),
-        "should NOT emit `style` keyword"
+        !output.contains("theme accent"),
+        "should NOT emit `theme` keyword"
     );
 
     // Round-trip: re-parse emitted output
-    let graph2 = parse_document(&output).expect("re-parse of theme output failed");
+    let graph2 = parse_document(&output).expect("re-parse of style output failed");
     assert!(
         graph2.styles.contains_key(&NodeId::intern("accent")),
-        "theme definition should survive roundtrip"
+        "style definition should survive roundtrip"
     );
 }
 
@@ -1035,10 +1035,10 @@ ease: ease_out 200ms
 }
 
 #[test]
-fn parse_old_style_keyword_compat() {
-    // Old `style` keyword must still be accepted by the parser
+fn parse_old_theme_keyword_compat() {
+    // Old `theme` keyword must still be accepted by the parser
     let input = r#"
-style accent {
+theme accent {
   fill: #6C5CE7
 }
 
@@ -1050,14 +1050,14 @@ rect @btn {
     let graph = parse_document(input).unwrap();
     assert!(
         graph.styles.contains_key(&NodeId::intern("accent")),
-        "old `style` keyword should parse into a theme definition"
+        "old `theme` keyword should parse into a style definition"
     );
 
-    // Emitter should upgrade to `theme`
+    // Emitter should output `style`
     let output = emit_document(&graph);
     assert!(
-        output.contains("theme accent"),
-        "emitter should upgrade `style` to `theme`"
+        output.contains("style accent"),
+        "emitter should output `style` keyword"
     );
 }
 
@@ -1096,12 +1096,12 @@ ease: spring 150ms
 }
 
 #[test]
-fn roundtrip_theme_import() {
-    // Verify that import + theme references work together
+fn roundtrip_style_import() {
+    // Verify that import + style references work together
     let input = r#"
 import "tokens.fd" as tokens
 
-theme card_base {
+style card_base {
   fill: #FFFFFF
   corner: 16
 }
@@ -1114,14 +1114,14 @@ rect @card {
     let graph = parse_document(input).unwrap();
     let output = emit_document(&graph);
 
-    // Both import and theme should appear in output
+    // Both import and style should appear in output
     assert!(
         output.contains("import \"tokens.fd\" as tokens"),
         "import should survive roundtrip"
     );
     assert!(
-        output.contains("theme card_base"),
-        "theme should survive roundtrip"
+        output.contains("style card_base"),
+        "style should survive roundtrip"
     );
 
     // Re-parse
@@ -1129,7 +1129,7 @@ rect @card {
     assert_eq!(graph2.imports.len(), 1, "import count should survive");
     assert!(
         graph2.styles.contains_key(&NodeId::intern("card_base")),
-        "theme def should survive"
+        "style def should survive"
     );
 }
 
@@ -1276,7 +1276,7 @@ rect @grad {
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("grad")).unwrap();
     assert!(matches!(
-        node.style.fill,
+        node.props.fill,
         Some(Paint::LinearGradient { .. })
     ));
 
@@ -1285,7 +1285,7 @@ rect @grad {
     let graph2 = parse_document(&output).expect("re-parse of linear gradient failed");
     let node2 = graph2.get_by_id(NodeId::intern("grad")).unwrap();
     assert!(matches!(
-        node2.style.fill,
+        node2.props.fill,
         Some(Paint::LinearGradient { .. })
     ));
 }
@@ -1301,7 +1301,7 @@ rect @radial_box {
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("radial_box")).unwrap();
     assert!(matches!(
-        node.style.fill,
+        node.props.fill,
         Some(Paint::RadialGradient { .. })
     ));
 
@@ -1310,7 +1310,7 @@ rect @radial_box {
     let graph2 = parse_document(&output).expect("re-parse of radial gradient failed");
     let node2 = graph2.get_by_id(NodeId::intern("radial_box")).unwrap();
     assert!(matches!(
-        node2.style.fill,
+        node2.props.fill,
         Some(Paint::RadialGradient { .. })
     ));
 }
@@ -1325,14 +1325,14 @@ rect @shadowed {
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("shadowed")).unwrap();
-    let shadow = node.style.shadow.as_ref().expect("shadow should exist");
+    let shadow = node.props.shadow.as_ref().expect("shadow should exist");
     assert_eq!(shadow.blur, 20.0);
 
     let output = emit_document(&graph);
     assert!(output.contains("shadow:"), "should emit shadow");
     let graph2 = parse_document(&output).expect("re-parse of shadow failed");
     let node2 = graph2.get_by_id(NodeId::intern("shadowed")).unwrap();
-    let shadow2 = node2.style.shadow.as_ref().expect("shadow should survive");
+    let shadow2 = node2.props.shadow.as_ref().expect("shadow should survive");
     assert_eq!(shadow2.offset_y, 4.0);
     assert_eq!(shadow2.blur, 20.0);
 }
@@ -1348,12 +1348,12 @@ rect @faded {
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("faded")).unwrap();
-    assert_eq!(node.style.opacity, Some(0.5));
+    assert_eq!(node.props.opacity, Some(0.5));
 
     let output = emit_document(&graph);
     let graph2 = parse_document(&output).expect("re-parse of opacity failed");
     let node2 = graph2.get_by_id(NodeId::intern("faded")).unwrap();
-    assert_eq!(node2.style.opacity, Some(0.5));
+    assert_eq!(node2.props.opacity, Some(0.5));
 }
 
 #[test]
@@ -1470,7 +1470,7 @@ frame @grd {
 fn make_test_graph() -> SceneGraph {
     // A rich document with styles, layout, anims, specs, and edges
     let input = r#"
-theme accent {
+style accent {
   fill: #6C5CE7
   font: "Inter" bold 16
 }
@@ -1532,7 +1532,7 @@ fn emit_filtered_structure() {
     assert!(!out.contains("fill:"), "no fill in structure mode");
     assert!(!out.contains("spec"), "no spec in structure mode");
     assert!(!out.contains("when"), "no when in structure mode");
-    assert!(!out.contains("theme"), "no theme in structure mode");
+    assert!(!out.contains("style"), "no style in structure mode");
     assert!(!out.contains("edge"), "no edges in structure mode");
 }
 
@@ -1546,7 +1546,7 @@ fn emit_filtered_layout() {
     assert!(out.contains("x: 20"), "should include position");
     // Should NOT have styles or anims
     assert!(!out.contains("fill:"), "no fill in layout mode");
-    assert!(!out.contains("theme"), "no theme in layout mode");
+    assert!(!out.contains("style"), "no style in layout mode");
     assert!(!out.contains("when :hover"), "no when in layout mode");
 }
 
@@ -1554,8 +1554,8 @@ fn emit_filtered_layout() {
 fn emit_filtered_design() {
     let graph = make_test_graph();
     let out = emit_filtered(&graph, ReadMode::Design);
-    // Should have themes + styles
-    assert!(out.contains("theme accent"), "should include theme");
+    // Should have style definitions
+    assert!(out.contains("style accent"), "should include style");
     assert!(out.contains("use: accent"), "should include use ref");
     assert!(out.contains("fill:"), "should include fill");
     assert!(out.contains("corner: 12"), "should include corner");
@@ -1583,7 +1583,7 @@ fn emit_filtered_visual() {
     let graph = make_test_graph();
     let out = emit_filtered(&graph, ReadMode::Visual);
     // Visual = Layout + Design + When
-    assert!(out.contains("theme accent"), "should include theme");
+    assert!(out.contains("style accent"), "should include style");
     assert!(out.contains("layout: column"), "should include layout");
     assert!(out.contains("w: 200 h: 100"), "should include dims");
     assert!(out.contains("fill:"), "should include fill");
@@ -1608,7 +1608,7 @@ fn emit_filtered_when() {
     // Should NOT have node-level styles, layout, or spec
     assert!(!out.contains("corner:"), "no corner in when mode");
     assert!(!out.contains("w: 200"), "no dims in when mode");
-    assert!(!out.contains("theme"), "no theme in when mode");
+    assert!(!out.contains("style"), "no style in when mode");
     assert!(!out.contains("spec"), "no spec in when mode");
 }
 
@@ -1631,10 +1631,10 @@ fn emit_filtered_edges() {
 
 #[test]
 fn roundtrip_no_duplicate_separators() {
-    // Document with themes + nodes + edge triggers section separators.
+    // Document with styles + nodes + edge triggers section separators.
     // After multiple round-trips, separators must appear exactly once.
     let input = r#"
-theme accent {
+style accent {
   fill: #A29BFE
 }
 
@@ -1657,8 +1657,8 @@ edge @link {
 
     // Separators should exist
     assert!(
-        pass1.contains("# ─── Themes ───"),
-        "pass 1 should have Themes separator: {pass1}"
+        pass1.contains("# ─── Styles ───"),
+        "pass 1 should have Styles separator: {pass1}"
     );
     assert!(
         pass1.contains("# ─── Layout ───"),
@@ -1670,10 +1670,10 @@ edge @link {
     let pass2 = emit_document(&graph2);
 
     // Count occurrences — must be exactly 1 each
-    let themes_count = pass2.matches("# ─── Themes ───").count();
+    let styles_count = pass2.matches("# ─── Styles ───").count();
     let layout_count = pass2.matches("# ─── Layout ───").count();
     let flows_count = pass2.matches("# ─── Flows ───").count();
-    assert_eq!(themes_count, 1, "Themes separator duplicated: {pass2}");
+    assert_eq!(styles_count, 1, "Styles separator duplicated: {pass2}");
     assert_eq!(layout_count, 1, "Layout separator duplicated: {pass2}");
     assert_eq!(flows_count, 1, "Flows separator duplicated: {pass2}");
 
@@ -1691,7 +1691,7 @@ edge @link {
 fn roundtrip_user_comments_not_stripped() {
     // User comments (non-separator) must survive even with separators present.
     let input = r#"
-theme dark {
+style dark {
   fill: #1A1A2E
 }
 
@@ -1952,8 +1952,8 @@ image @styled_img {
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("styled_img")).unwrap();
-    assert_eq!(node.style.corner_radius, Some(12.0));
-    assert_eq!(node.style.opacity, Some(0.8));
+    assert_eq!(node.props.corner_radius, Some(12.0));
+    assert_eq!(node.props.opacity, Some(0.8));
 
     let output = emit_document(&graph);
     assert!(output.contains("corner: 12"));
@@ -1962,8 +1962,8 @@ image @styled_img {
 
     let graph2 = parse_document(&output).unwrap();
     let node2 = graph2.get_by_id(NodeId::intern("styled_img")).unwrap();
-    assert_eq!(node2.style.corner_radius, Some(12.0));
-    assert_eq!(node2.style.opacity, Some(0.8));
+    assert_eq!(node2.props.corner_radius, Some(12.0));
+    assert_eq!(node2.props.opacity, Some(0.8));
     match &node2.kind {
         NodeKind::Image { fit, .. } => assert_eq!(*fit, ImageFit::Fill),
         _ => panic!("expected Image"),
@@ -2027,7 +2027,7 @@ edge @link {
         .edge_defaults
         .as_ref()
         .expect("should have edge_defaults");
-    assert!(defaults.style.stroke.is_some());
+    assert!(defaults.props.stroke.is_some());
     assert_eq!(defaults.arrow, Some(ArrowKind::End));
     assert_eq!(defaults.curve, Some(CurveKind::Smooth));
 }
@@ -2111,7 +2111,7 @@ edge @bc {
     // bc edge should still have its own stroke/arrow
     let bc = graph2.edges.iter().find(|e| e.id.as_str() == "bc").unwrap();
     assert_eq!(bc.arrow, ArrowKind::Both);
-    assert!(bc.style.stroke.is_some());
+    assert!(bc.props.stroke.is_some());
 }
 
 // ─── F5: ReadMode::Diff tests ───────────────────────────────────────────
@@ -2182,13 +2182,13 @@ fn snapshot_no_changes() {
 // ─── F6: Inline Doc-Comments tests ──────────────────────────────────────
 
 #[test]
-fn emit_auto_comment_text_node() {
+fn emit_no_auto_comment_text_node() {
     let input = "text @title \"Welcome Home\" {\n  fill: #333333\n}\n";
     let graph = parse_document(input).unwrap();
     let output = emit_document(&graph);
     assert!(
-        output.contains("[auto] label: \"Welcome Home\""),
-        "text node should get auto-comment: {output}"
+        !output.contains("[auto]"),
+        "text node should NOT get auto-comment (self-documenting): {output}"
     );
 }
 
@@ -2205,7 +2205,8 @@ fn emit_auto_comment_group_children() {
 
 #[test]
 fn roundtrip_auto_comments_not_duplicated() {
-    let input = "text @label \"Hello\" {\n  fill: #333333\n}\n";
+    // Use a group (which still gets auto-comments) to test duplication
+    let input = "group @panel {\n  rect @a { w: 50 h: 50 }\n}\n";
     let graph = parse_document(input).unwrap();
     let pass1 = emit_document(&graph);
     assert!(pass1.contains("[auto]"), "pass1 should have auto-comment");
@@ -2222,7 +2223,7 @@ fn roundtrip_auto_comments_not_duplicated() {
 #[test]
 fn emit_auto_comment_styled_node() {
     let input =
-        "theme accent {\n  fill: #6C5CE7\n}\nrect @btn {\n  w: 120 h: 40\n  use: accent\n}\n";
+        "style accent {\n  fill: #6C5CE7\n}\nrect @btn {\n  w: 120 h: 40\n  use: accent\n}\n";
     let graph = parse_document(input).unwrap();
     let output = emit_document(&graph);
     assert!(

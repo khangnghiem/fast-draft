@@ -1,0 +1,189 @@
+// FD Edge Types Showcase
+// Demonstrates all available edge styles, curves, arrows, and animations.
+
+// A canvas acting as the root container
+frame @canvas {
+  width: 1000
+  height: 800
+  fill: #F0F2F5
+  border_radius: 12
+}
+
+@canvas -> center_in: canvas
+
+// ─── STYLES ─────────────────────────────────────────────────────────────
+
+style node_style {
+  width: 120
+  height: 60
+  fill: #FFFFFF
+  stroke: #D1D5DB 1
+  border_radius: 8
+  layout: center
+  shadow: 0 4 12 #000000 0.05 4
+}
+
+style node_text {
+  fill: #374151
+  font: "Inter, sans-serif" 14
+}
+
+style section_title {
+  fill: #111827
+  font: "Inter, sans-serif" 20
+  text_align: left
+}
+
+// ─── CURVE KINDS ────────────────────────────────────────────────────────
+
+text @title_curves "Curve Types" { use: section_title }
+@title_curves -> offset: @canvas 40, 40
+
+// Straight Curve
+frame @straight_a { use: node_style text "Node A" { use: node_text } }
+frame @straight_b { use: node_style text "Node B" { use: node_text } }
+@straight_a -> offset: @canvas 40, 100
+@straight_b -> offset: @straight_a 300, 0
+
+edge @edge_straight {
+  from: @straight_a
+  to: @straight_b
+  curve: straight
+  stroke: #4F46E5 2
+  text "Straight" { fill: #4F46E5 font: "Inter" 12 }
+  label_offset: 0 -15
+}
+
+// Smooth Curve
+frame @smooth_a { use: node_style text "Node C" { use: node_text } }
+frame @smooth_b { use: node_style text "Node D" { use: node_text } }
+@smooth_a -> offset: @straight_a 0, 100
+@smooth_b -> offset: @smooth_a 300, 50
+
+edge @edge_smooth {
+  from: @smooth_a
+  to: @smooth_b
+  curve: smooth
+  stroke: #10B981 2
+  text "Smooth" { fill: #10B981 font: "Inter" 12 }
+  label_offset: 0 -15
+}
+
+// Step Curve
+frame @step_a { use: node_style text "Node E" { use: node_text } }
+frame @step_b { use: node_style text "Node F" { use: node_text } }
+@step_a -> offset: @smooth_a 0, 150
+@step_b -> offset: @step_a 300, 50
+
+edge @edge_step {
+  from: @step_a
+  to: @step_b
+  curve: step
+  stroke: #F59E0B 2
+  text "Step" { fill: #F59E0B font: "Inter" 12 }
+  label_offset: 0 -15
+}
+
+// ─── ARROW STYLES ───────────────────────────────────────────────────────
+
+text @title_arrows "Arrow Styles" { use: section_title }
+@title_arrows -> offset: @canvas 500, 40
+
+// Start Arrow
+frame @arrow_start_a { use: node_style text "Node G" { use: node_text } }
+frame @arrow_start_b { use: node_style text "Node H" { use: node_text } }
+@arrow_start_a -> offset: @canvas 500, 100
+@arrow_start_b -> offset: @arrow_start_a 300, 0
+
+edge @edge_arrow_start {
+  from: @arrow_start_a
+  to: @arrow_start_b
+  arrow: start
+  stroke: #6B7280 2
+  text "Start" { fill: #6B7280 font: "Inter" 12 }
+  label_offset: 0 -15
+}
+
+// End Arrow
+frame @arrow_end_a { use: node_style text "Node I" { use: node_text } }
+frame @arrow_end_b { use: node_style text "Node J" { use: node_text } }
+@arrow_end_a -> offset: @arrow_start_a 0, 100
+@arrow_end_b -> offset: @arrow_end_a 300, 0
+
+edge @edge_arrow_end {
+  from: @arrow_end_a
+  to: @arrow_end_b
+  arrow: end
+  stroke: #6B7280 2
+  text "End" { fill: #6B7280 font: "Inter" 12 }
+  label_offset: 0 -15
+}
+
+// Both Arrows
+frame @arrow_both_a { use: node_style text "Node K" { use: node_text } }
+frame @arrow_both_b { use: node_style text "Node L" { use: node_text } }
+@arrow_both_a -> offset: @arrow_end_a 0, 100
+@arrow_both_b -> offset: @arrow_both_a 300, 0
+
+edge @edge_arrow_both {
+  from: @arrow_both_a
+  to: @arrow_both_b
+  arrow: both
+  stroke: #6B7280 2
+  text "Both" { fill: #6B7280 font: "Inter" 12 }
+  label_offset: 0 -15
+}
+
+// None Arrows
+frame @arrow_none_a { use: node_style text "Node M" { use: node_text } }
+frame @arrow_none_b { use: node_style text "Node N" { use: node_text } }
+@arrow_none_a -> offset: @arrow_both_a 0, 100
+@arrow_none_b -> offset: @arrow_none_a 300, 0
+
+edge @edge_arrow_none {
+  from: @arrow_none_a
+  to: @arrow_none_b
+  arrow: none
+  stroke: #6B7280 2
+  text "None" { fill: #6B7280 font: "Inter" 12 }
+  label_offset: 0 -15
+}
+
+// ─── FLOW ANIMATIONS ────────────────────────────────────────────────────
+
+text @title_flows "Flow Animations" { use: section_title }
+@title_flows -> offset: @canvas 40, 500
+
+// Pulse Flow
+frame @flow_pulse_a { use: node_style text "Source" { use: node_text } }
+frame @flow_pulse_b { use: node_style text "Target" { use: node_text } }
+@flow_pulse_a -> offset: @canvas 40, 560
+@flow_pulse_b -> offset: @flow_pulse_a 300, 0
+
+edge @edge_flow_pulse {
+  from: @flow_pulse_a
+  to: @flow_pulse_b
+  curve: smooth
+  arrow: end
+  stroke: #3B82F6 2
+  flow: pulse 1000ms
+  text "Pulse Flow" { fill: #3B82F6 font: "Inter" 12 }
+  label_offset: 0 -15
+}
+
+// Dash Flow
+frame @flow_dash_a { use: node_style text "Client" { use: node_text } }
+frame @flow_dash_b { use: node_style text "Server" { use: node_text } }
+@flow_dash_a -> offset: @flow_pulse_a 0, 100
+@flow_dash_b -> offset: @flow_dash_a 300, 0
+
+edge @edge_flow_dash {
+  from: @flow_dash_a
+  to: @flow_dash_b
+  curve: smooth
+  arrow: end
+  stroke: #EC4899 2
+  flow: dash 800ms
+  text "Dash Flow" { fill: #EC4899 font: "Inter" 12 }
+  label_offset: 0 -15
+}

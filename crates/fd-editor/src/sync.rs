@@ -215,7 +215,7 @@ impl SyncEngine {
                                     LayoutMode::Column { pad, .. }
                                     | LayoutMode::Row { pad, .. }
                                     | LayoutMode::Grid { pad, .. } => *pad,
-                                    LayoutMode::Free => 0.0,
+                                    LayoutMode::Free { pad } => *pad,
                                 },
                                 _ => 0.0,
                             };
@@ -301,7 +301,7 @@ impl SyncEngine {
             }
             GraphMutation::SetStyle { id, style } => {
                 if let Some(node) = self.graph.get_by_id_mut(id) {
-                    node.style = style;
+                    node.props = style;
                 }
             }
             GraphMutation::SetText { id, content } => {
@@ -487,6 +487,13 @@ impl SyncEngine {
         self.text_dirty = true;
     }
 
+    /// Mark text as needing re-emission from the graph.
+    /// Used when the graph is modified directly (e.g. z-order changes)
+    /// outside of apply_mutation().
+    pub fn mark_dirty(&mut self) {
+        self.text_dirty = true;
+    }
+
     /// Flush: re-emit the text from the current graph state.
     /// Called after a batch of mutations (e.g. at end of drag gesture).
     pub fn flush_to_text(&mut self) {
@@ -585,7 +592,7 @@ impl SyncEngine {
 
         if let NodeKind::Text { content, .. } = child_kind {
             let font_size = self.graph.graph[child_idx]
-                .style
+                .props
                 .font
                 .as_ref()
                 .map_or(14.0, |f| f.size);
@@ -665,12 +672,9 @@ impl SyncEngine {
         let mut changed = false;
 
         for group_idx in groups {
-            // Skip clip frames — they intentionally clip content
-            let is_clip = matches!(
-                &self.graph.graph[group_idx].kind,
-                NodeKind::Frame { clip: true, .. }
-            );
-            if is_clip {
+            // Frames have declared dimensions — never auto-resize them.
+            // Only Groups auto-size to their children's bounding box.
+            if matches!(&self.graph.graph[group_idx].kind, NodeKind::Frame { .. }) {
                 continue;
             }
 
@@ -759,7 +763,7 @@ fn handle_child_group_relationship(
     if let NodeKind::Text { content, .. } = child_kind {
         // Use same heuristic as intrinsic_size() in layout.rs
         let font_size = graph.graph[child_idx]
-            .style
+            .props
             .font
             .as_ref()
             .map_or(14.0, |f| f.size);
@@ -805,6 +809,10 @@ pub fn expand_group_to_children(
     bounds: &mut HashMap<NodeIndex, fd_core::ResolvedBounds>,
     exclude_idx: Option<NodeIndex>,
 ) {
+    // Frames have declared dimensions — never auto-resize
+    if matches!(graph.graph[group_idx].kind, NodeKind::Frame { .. }) {
+        return;
+    }
     let pad = group_padding(graph, group_idx);
     let children = graph.children(group_idx);
     if children.is_empty() {
@@ -958,7 +966,7 @@ pub enum GraphMutation {
     },
     SetStyle {
         id: NodeId,
-        style: Style,
+        style: Properties,
     },
     SetText {
         id: NodeId,
