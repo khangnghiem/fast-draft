@@ -11,7 +11,7 @@ use web_sys::CanvasRenderingContext2d;
 
 /// Theme-dependent colors for the canvas renderer.
 ///
-/// Derived from [`ThemeContract`] — the cross-platform source of truth.
+/// Derived from `ThemeContract` — the cross-platform source of truth.
 pub struct CanvasTheme {
     pub bg: String,
     pub grid: String,
