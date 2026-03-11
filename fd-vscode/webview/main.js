@@ -2350,6 +2350,16 @@ function setupContextMenu() {
     render();
 
     if (!hitId) {
+      // Fallback: try edge hit-test for edge context menu
+      if (fdCanvas.hit_test_edge_at) {
+        const edgeHit = fdCanvas.hit_test_edge_at(x, y);
+        if (edgeHit) {
+          const container = document.getElementById("canvas-container");
+          const containerRect = container.getBoundingClientRect();
+          showEdgeContextMenu(edgeHit, e.clientX - containerRect.left, e.clientY - containerRect.top);
+          return;
+        }
+      }
       closeContextMenu();
       return;
     }
@@ -2373,10 +2383,8 @@ function setupContextMenu() {
     // Ungroup requires at least one selected item to be a group
     let canUngroup = false;
     if (selectedIds.length >= 1) {
-      // Check each selected node's kind via the FD source text
       const source = fdCanvas.get_text();
       for (const id of selectedIds) {
-        // Match "group @id" in source — if found, this node is a group
         const groupRe = new RegExp(`(?:^|\\n)\\s*group\\s+@${id}\\b`);
         if (groupRe.test(source)) {
           canUngroup = true;
@@ -2390,9 +2398,14 @@ function setupContextMenu() {
     const hasSpec = nodeHasSpec(contextMenuNodeId);
     document.getElementById("ctx-add-annotation").style.display = hasSpec ? "none" : "";
     document.getElementById("ctx-view-spec").style.display = hasSpec ? "" : "none";
-    document.getElementById("ctx-show-specs")?.style && (
-      document.getElementById("ctx-show-specs").style.display = hasSpec ? "" : "none"
-    );
+
+    // Update Lock button state
+    const lockBtn = document.getElementById("ctx-lock");
+    if (lockBtn && fdCanvas.is_node_locked) {
+      const isLocked = fdCanvas.is_node_locked(contextMenuNodeId);
+      lockBtn.querySelector(".menu-icon").textContent = isLocked ? "\uD83D\uDD13" : "\uD83D\uDD12";
+      lockBtn.querySelector(".menu-label").textContent = isLocked ? "Unlock" : "Lock";
+    }
 
     menu.classList.add("visible");
   });
@@ -2418,17 +2431,7 @@ function setupContextMenu() {
     closeContextMenu();
   });
 
-  // Show Specs via context menu — opens spec annotation card
-  document.getElementById("ctx-show-specs")?.addEventListener("click", () => {
-    if (contextMenuNodeId) {
-      if (fdCanvas) fdCanvas.select_by_id(contextMenuNodeId);
-      render();
-      const menu = document.getElementById("context-menu");
-      const menuRect = menu.getBoundingClientRect();
-      openAnnotationCard(contextMenuNodeId, menuRect.left, menuRect.top);
-    }
-    closeContextMenu();
-  });
+  // Removed: "Show Specs" was a duplicate of "View Spec" — consolidated
 
 
 
@@ -2612,11 +2615,44 @@ function setupContextMenu() {
       const hasSpec = nodeHasSpec(nodeId);
       document.getElementById("ctx-add-annotation").style.display = hasSpec ? "none" : "";
       document.getElementById("ctx-view-spec").style.display = hasSpec ? "" : "none";
-      const showSpecsEl = document.getElementById("ctx-show-specs");
-      if (showSpecsEl) showSpecsEl.style.display = hasSpec ? "" : "none";
+      // Update Lock state
+      const lockBtn = document.getElementById("ctx-lock");
+      if (lockBtn && fdCanvas.is_node_locked) {
+        const isLocked = fdCanvas.is_node_locked(nodeId);
+        lockBtn.querySelector(".menu-icon").textContent = isLocked ? "\uD83D\uDD13" : "\uD83D\uDD12";
+        lockBtn.querySelector(".menu-label").textContent = isLocked ? "Unlock" : "Lock";
+      }
       menu.classList.add("visible");
     });
   }
+
+  // Lock/Unlock via context menu
+  document.getElementById("ctx-lock")?.addEventListener("click", () => {
+    if (fdCanvas && contextMenuNodeId && fdCanvas.toggle_node_locked) {
+      const isLocked = fdCanvas.toggle_node_locked(contextMenuNodeId);
+      render();
+      syncTextToExtension();
+    }
+    closeContextMenu();
+  });
+
+  // Rename via context menu
+  document.getElementById("ctx-rename")?.addEventListener("click", () => {
+    if (!fdCanvas || !contextMenuNodeId) { closeContextMenu(); return; }
+    const oldId = contextMenuNodeId;
+    closeContextMenu();
+    const newId = prompt(`Rename @${oldId} to:`, oldId);
+    if (!newId || newId === oldId || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(newId)) return;
+    // Replace all occurrences of @oldId with @newId in source text
+    const text = fdCanvas.get_text();
+    const escaped = oldId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`@${escaped}\\b`, "g");
+    const newText = text.replace(re, `@${newId}`);
+    fdCanvas.set_text(newText);
+    bumpGeneration();
+    render();
+    syncTextToExtension();
+  });
 }
 
 function closeContextMenu() {
@@ -2721,6 +2757,46 @@ function setupEdgeContextMenu() {
     applyEdgeChange();
   });
   flowDur.addEventListener("change", applyEdgeChange);
+
+  // Delete edge
+  document.getElementById("ecm-delete")?.addEventListener("click", () => {
+    if (!fdCanvas || !ecmEdgeId) { closeEdgeContextMenu(); return; }
+    // Select the edge and delete it
+    fdCanvas.select_by_id(ecmEdgeId);
+    const changed = fdCanvas.delete_selected();
+    if (changed) {
+      bumpGeneration();
+      render();
+      syncTextToExtension();
+    }
+    closeEdgeContextMenu();
+  });
+
+  // Reverse edge direction (swap from: and to:)
+  document.getElementById("ecm-reverse")?.addEventListener("click", () => {
+    if (!fdCanvas || !ecmEdgeId) { closeEdgeContextMenu(); return; }
+    const text = fdCanvas.get_text();
+    const esc = ecmEdgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(edge\\s+@${esc}\\s*\\{[^}]*?)\\}`, "s");
+    const m = text.match(re);
+    if (!m) { closeEdgeContextMenu(); return; }
+    let block = m[1];
+    // Extract from: and to: values
+    const fromMatch = block.match(/from:\s*(.+)/);
+    const toMatch = block.match(/to:\s*(.+)/);
+    if (fromMatch && toMatch) {
+      const fromVal = fromMatch[1].trim();
+      const toVal = toMatch[1].trim();
+      block = block.replace(/from:\s*.+/, `from: ${toVal}`);
+      block = block.replace(/to:\s*.+/, `to: ${fromVal}`);
+      const newText = text.replace(re, block + "\n}");
+      fdCanvas.set_text(newText);
+      bumpGeneration();
+      render();
+      syncTextToExtension();
+    }
+    closeEdgeContextMenu();
+  });
 }
 
 /** Draw a dot grid behind shapes. Grid adapts to zoom level. */
@@ -4280,7 +4356,9 @@ function openInlineEditor(nodeId, propKey, currentValue) {
 
   // Get text alignment — WASM API returns effective defaults (left/top for
   // standalone text, center/middle for text-in-shape)
-  const hAlign = props.textAlign || "left";
+  // WASM API always returns the context-aware default (center for text-in-shape,
+  // left for standalone), so this fallback is a safety net only.
+  const hAlign = props.textAlign || (isTextNode ? "left" : "center");
   const vAlign = props.textVAlign || "top";
 
   // Store original value for Esc rollback
@@ -5700,7 +5778,7 @@ function renderMinimap() {
   minimapCtx.translate(offsetX, offsetY);
   minimapCtx.scale(scale, scale);
   minimapCtx.translate(-bounds.minX, -bounds.minY);
-  fdCanvas.render(minimapCtx, performance.now(), true);
+  fdCanvas.render(minimapCtx, performance.now(), true, false);
   minimapCtx.restore();
 
   // Cache the scene image (without viewport rect) for smooth overlay
@@ -6302,7 +6380,7 @@ function exportToPng() {
 
   // Render scene centered in export canvas
   exportCtx.setTransform(dpr, 0, 0, dpr, (padding - minX) * dpr, (padding - minY) * dpr);
-  fdCanvas.render(exportCtx, performance.now(), true);
+  fdCanvas.render(exportCtx, performance.now(), true, true);
 
   // Send to extension for save dialog
   const dataUrl = exportCanvas.toDataURL("image/png");
@@ -7000,6 +7078,11 @@ function render() {
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Fill background in identity-scaled space (covers full canvas regardless of pan/zoom)
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const isDark = document.body.classList.contains("dark-theme");
+  ctx.fillStyle = isDark ? '#1C1C1E' : '#F5F5F7';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.restore();
   ctx.save();
   // Apply zoom + pan: scale by zoom, then translate by pan
@@ -7007,7 +7090,7 @@ function render() {
   ctx.setTransform(z, 0, 0, z, panX * dpr, panY * dpr);
   // Draw grid below shapes
   if (gridEnabled) drawGrid();
-  fdCanvas.render(ctx, performance.now(), gridEnabled);
+  fdCanvas.render(ctx, performance.now(), gridEnabled, true);
 
   // ── Arrow tool: draw live preview line during drag ──
   const arrowPreviewJson = fdCanvas.get_arrow_preview();

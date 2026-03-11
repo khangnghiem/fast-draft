@@ -115,6 +115,11 @@ function render() {
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Fill background in identity-scaled space (covers full canvas regardless of pan/zoom)
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const isDark = document.body.classList.contains("dark-theme");
+  ctx.fillStyle = isDark ? '#1C1C1E' : '#F5F5F7';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.restore();
   ctx.save();
   // Apply zoom + pan: scale by zoom, then translate by pan
@@ -122,7 +127,7 @@ function render() {
   ctx.setTransform(z, 0, 0, z, panX * dpr, panY * dpr);
   // Draw grid below shapes
   if (gridEnabled) drawGrid();
-  fdCanvas.render(ctx, performance.now(), gridEnabled);
+  fdCanvas.render(ctx, performance.now(), gridEnabled, true);
 
   // ── Arrow tool: draw live preview line during drag ──
   const arrowPreviewJson = fdCanvas.get_arrow_preview();

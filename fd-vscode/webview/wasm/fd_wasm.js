@@ -806,6 +806,26 @@ export class FdCanvas {
         }
     }
     /**
+     * Hit-test for edges only at scene-space coordinates.
+     * Returns the edge ID if hit, or empty string.
+     * Used by JS to show edge context menu on right-click.
+     * @param {number} x
+     * @param {number} y
+     * @returns {string}
+     */
+    hit_test_edge_at(x, y) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_hit_test_edge_at(this.__wbg_ptr, x, y);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Import a Mermaid diagram, converting it to FD format.
      * Merges the resulting nodes and edges into the current document.
      * Returns `true` on success, `false` on parse error.
@@ -816,6 +836,17 @@ export class FdCanvas {
         const ptr0 = passStringToWasm0(mermaid_text, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.fdcanvas_import_mermaid(this.__wbg_ptr, ptr0, len0);
+        return ret !== 0;
+    }
+    /**
+     * Check if a node is locked. Returns false if node not found.
+     * @param {string} id
+     * @returns {boolean}
+     */
+    is_node_locked(id) {
+        const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_is_node_locked(this.__wbg_ptr, ptr0, len0);
         return ret !== 0;
     }
     /**
@@ -994,6 +1025,18 @@ export class FdCanvas {
         const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         wasm.fdcanvas_set_tool(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
+     * Toggle the locked state of a node. Returns the new locked state.
+     * Returns false if node not found.
+     * @param {string} id
+     * @returns {boolean}
+     */
+    toggle_node_locked(id) {
+        const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_toggle_node_locked(this.__wbg_ptr, ptr0, len0);
+        return ret !== 0;
     }
     /**
      * Undo the last action.

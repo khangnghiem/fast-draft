@@ -1270,7 +1270,7 @@ function renderMinimap() {
   minimapCtx.translate(offsetX, offsetY);
   minimapCtx.scale(scale, scale);
   minimapCtx.translate(-bounds.minX, -bounds.minY);
-  fdCanvas.render(minimapCtx, performance.now(), true);
+  fdCanvas.render(minimapCtx, performance.now(), true, false);
   minimapCtx.restore();
 
   // Cache the scene image (without viewport rect) for smooth overlay
