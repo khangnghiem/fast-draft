@@ -44,7 +44,7 @@ edge_defaults {
 # ─── Layout ───
 
 # Sidebar navigation
-# [auto] column container (4 children)
+# [auto] column container (5 children)
 frame @sidebar {
   spec {
     "Persistent sidebar — always visible"
@@ -57,11 +57,10 @@ frame @sidebar {
     w: 290.9
     fill: #FFFFFF  # white
     font: "Inter" bold 18
+    x: -47.6
+    y: 74.6
   }
   rect @nav_dashboard {
-    text @_text_10 "Dashboard" {
-      use: accent_text
-    }
     w: 180 h: 40
     fill: #5A4BD1  # blue
     corner: 8
@@ -69,6 +68,11 @@ frame @sidebar {
       fill: #4A3BC1  # blue
       ease: ease_out 150ms
     }
+  }
+  text @_text_10 "Dashboard" {
+    use: accent_text
+    x: 47.4
+    y: 117.8
   }
   rect @nav_projects {
     text @_text_11 "Projects" {
@@ -101,8 +105,8 @@ frame @sidebar {
   fill: #2D2B55  # blue
   corner: 0
   opacity: 1
-  x: -121.8
-  y: 19.8
+  x: -416.5
+  y: -988.2
 }
 
 # Top header area

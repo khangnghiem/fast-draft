@@ -1400,6 +1400,9 @@ impl FdCanvas {
         let changed = self.engine.finalize_child_bounds();
         if changed {
             self.engine.flush_to_text();
+            // Bounds changed — rebuild spatial index so hit-testing
+            // uses the expanded parent AABBs (not stale pre-expand ones).
+            self.rebuild_spatial_index();
         }
         changed
     }
@@ -1491,7 +1494,13 @@ impl FdCanvas {
             b.y = parent_b.y + (parent_b.height - final_height) / 2.0;
         }
 
-        old_bounds != self.engine.bounds.get(&idx).copied()
+        let changed = old_bounds != self.engine.bounds.get(&idx).copied();
+        if changed {
+            // Bounds changed — rebuild spatial index so hit-testing
+            // uses the updated text AABB (not stale pre-measure one).
+            self.rebuild_spatial_index();
+        }
+        changed
     }
 
     /// Check if a node has any direct Text children.
@@ -2601,7 +2610,18 @@ impl FdCanvas {
     fn hit_test(&self, x: f32, y: f32) -> Option<NodeId> {
         // Use spatial index if available (O(log N + K) vs O(N))
         let node_hit = if let Some(ref index) = self.spatial_index {
-            index.query_point(x, y)
+            let result = index.query_point(x, y);
+            // ── Diagnostic: detect stale spatial index (TEMPORARY — remove after testing) ──
+            let brute =
+                fd_render::hit::hit_test(&self.engine.graph, self.engine.current_bounds(), x, y);
+            if result != brute {
+                let msg = format!(
+                    "[FD DIAG] Stale spatial index! index={:?} brute={:?} at ({}, {})",
+                    result, brute, x, y
+                );
+                web_sys::console::warn_1(&msg.into());
+            }
+            result
         } else {
             fd_render::hit::hit_test(&self.engine.graph, self.engine.current_bounds(), x, y)
         };
