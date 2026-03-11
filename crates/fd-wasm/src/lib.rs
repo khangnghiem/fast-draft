@@ -629,8 +629,20 @@ impl FdCanvas {
             ToolKind::Eraser => vec![],
         };
         let changed = self.apply_mutations(mutations);
-        // Flush text after gesture ends
-        if changed {
+
+        // Compute tool_switched early — needed for flush and visual_changed.
+        // A draw tool (Rect/Ellipse/Pen/Text/Arrow/Frame) completing its
+        // gesture means the scene changed even if PointerUp returned no
+        // mutations (the AddNode happened during PointerDown).
+        let tool_switched =
+            self.active_tool != ToolKind::Select && self.active_tool != ToolKind::Eraser;
+
+        // Flush text after gesture ends.
+        // Also flush when a draw tool completes (tool_switched) — the
+        // AddNode was applied during PointerDown but the tool's PointerUp
+        // returns no mutations, so `changed` is false. end_batch() already
+        // flushed, but this ensures consistency for non-batched paths.
+        if changed || tool_switched {
             self.engine.flush_to_text();
         }
 
@@ -647,12 +659,14 @@ impl FdCanvas {
         self.alt_press_pos = None;
         self.alt_clone_origins.clear();
 
-        let visual_changed =
-            changed || marquee_changed || pressed_changed || hovered_changed || drill_changed;
+        let visual_changed = changed
+            || marquee_changed
+            || pressed_changed
+            || hovered_changed
+            || drill_changed
+            || tool_switched;
 
         // Auto-switch back to Select after drawing gesture completes
-        let tool_switched =
-            self.active_tool != ToolKind::Select && self.active_tool != ToolKind::Eraser;
         if tool_switched {
             self.set_tool("select");
         }

@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.108 — Fix Drawing Tools + Playground UI (R6.6)
+
+- **FIX (R6.6)**: Drawing tools (Rect/Ellipse/Pen/Text/Arrow) now work on the playground — shapes appear on canvas AND sync to the code editor; root cause: `handle_pointer_up` computed `visual_changed` without `tool_switched`, so after a draw gesture the JS never called `syncCanvasToEditor()`; the node existed in WASM (flushed by `end_batch()`) but `changed=false` in the JSON response because the tool's `PointerUp` returns empty mutations (all work done in PointerDown/PointerMove); fix: compute `tool_switched` early and include it in both the `flush_to_text()` gate and `visual_changed`; JS now syncs on `result.toolSwitched` too
+- **FIX (R6.6)**: Layers panel no longer auto-collapses from stale `localStorage` — `fd-layers-collapsed` key from previous sessions no longer hides the layers panel on playground load; hardcoded `layersCollapsed = false` so first-time visitors always see the scene tree
+- **UX (R6.6)**: Property panel number inputs (W/H/Stroke W/Corner) now auto-select all text on focus — click an input field and immediately type a new value without manual text selection
+
 ### v0.10.107 — Fix Node Can Only Be Moved Once (R3.16)
 
 - **FIX (R3.16)**: Nodes can now be moved repeatedly on the canvas — root cause: `SpatialIndex` for O(log N) hit testing was never rebuilt after move/resize operations; `apply_mutations()` skipped `rebuild_spatial_index()` for MoveNode/ResizeNode batches (to avoid `resolve()` → bounds clobbering); cached bounds were updated in-place but the spatial index still held pre-move AABBs; on the next `pointerdown`, `hit_test()` queried the stale index and returned `None` at the node's new position
