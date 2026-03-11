@@ -31,6 +31,7 @@ Engineering lessons discovered through building FD.
   undo, batch, snapshot, resolve  → L358-375 (Snapshot Undo Clobbers Bounds)
   text, metrics, center, bounds   → L377-389 (Text Metrics Update Must Re-Center)
   spatial-index, hit-test, stale, move → L391-403 (Spatial Index Must Be Rebuilt After Bounds Mutation)
+  hover, click, press, pointer-down    → L405-417 (Pointer Down Must Not Set Hover State)
 -->
 
 
@@ -319,20 +320,11 @@ Engineering lessons discovered through building FD.
 
 ---
 
-## CI/CD: Browser Subagent Scratchpad Spirals on Heavy Context
+## Browser Subagent May Spiral on Very Heavy Context
 
 **Date**: 2026-03-04
-**Context**: Trying to run E2E browser testing in the same conversation that had done deep research (read CHANGELOG 800 lines, LESSONS.md, SHORTCUTS.md, `main.js` outline, `tools.rs`, multiple workflows, 20+ commands, 4 artifacts, and dozens of file edits).
 
-**Root cause**: Browser subagents inherit the **full parent conversation context**. When context is already heavy (>3000 lines of source code loaded), the subagent's internal reasoning enters an infinite spiral: "Wait, I'll do it. Actually, I'll do it. Wait, I'll also try to check..." — generating thousands of tokens of looping thought before the system crashes. This happened **twice** in the same session despite being warned after the first occurrence.
-
-**Fix**: **Never launch browser subagents in a context-heavy conversation.** Always:
-
-1. Do research/planning in one conversation
-2. Start a **new, clean conversation** for E2E browser testing
-3. The `/nonstop` Phase 4 rule already enforces this — follow it
-
-**Lesson**: **E2E browser testing MUST be done in a fresh conversation.** If you've done significant research, file reading, or code editing in the current conversation, the accumulated context will cause the browser subagent to spiral. This is a platform constraint, not a code bug. The `/nonstop` workflow's Phase 4 context-check rule exists for this reason.
+Browser subagents inherit the full parent conversation context. When context exceeds ~10,000 lines of loaded source code, the subagent's reasoning can enter an infinite loop. If you've done extensive research or code editing, consider starting a fresh conversation for E2E browser testing.
 
 ---
 
@@ -390,3 +382,16 @@ Engineering lessons discovered through building FD.
 **Fix**: Added `self.rebuild_spatial_index()` in `handle_pointer_up()` after `flush_to_text()` — the spatial index is rebuilt once per gesture, using the already-updated cached bounds. O(N log N) but only once per pointer-up, not per frame.
 
 **Rule**: **Any optimization cache derived from bounds must be invalidated/rebuilt whenever bounds change.** The spatial index, like cached bounds themselves (L249), is a derived data structure — when the authoritative data (bounds HashMap) changes in-place, all caches must follow.
+
+---
+
+## Pointer Down Must Not Set Hover State
+
+**Date**: 2026-03-11
+**Context**: Clicking `@nav_projects` and `@nav_settings` in `demo.fd` triggered their `:hover` fill animation, making them change color on click (not just hover).
+
+**Root cause**: `handle_pointer_down` set both `pressed_id` AND `hovered_id` to the hit node (L342-344). `handle_pointer_up` also set `hovered_id` (L608-610). Since the renderer pushes `AnimTrigger::Hover` whenever `hovered_id` matches the node, clicking a node activated `:hover` animations immediately — even without a `pointer_move` event. The bug was most visible on nodes with no base `fill` (transparent → colored on "hover").
+
+**Fix**: Removed `hovered_id` assignment from both `handle_pointer_down` and `handle_pointer_up`. Only `handle_pointer_move` manages `hovered_id`, aligning with CSS behavior where `:hover` is cursor-proximity based, not click-based. Also added base fill to affected `demo.fd` nav items.
+
+**Rule**: **Hover and press/click are independent pointer states.** `hovered_id` should only be set by `pointer_move`; `pressed_id` should only be set by `pointer_down`/`pointer_up`. Conflating them causes `:hover` animations to fire on click, which is incorrect behavior.
