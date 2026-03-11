@@ -239,6 +239,7 @@ document.addEventListener("keydown", (e) => {
 
   // Handle graph changes
   if (result.changed) {
+    bumpGeneration();
     render();
     syncTextToExtension();
     closeContextMenu();

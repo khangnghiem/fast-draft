@@ -490,7 +490,7 @@ function setupPointerEvents() {
     }
 
     const isAltMove = e.altKey || modAltHeld;
-    const changed = fdCanvas.handle_pointer_move(
+    const moveResult = JSON.parse(fdCanvas.handle_pointer_move(
       x,
       y,
       e.pressure || 1.0,
@@ -498,7 +498,8 @@ function setupPointerEvents() {
       e.ctrlKey,
       isAltMove,
       e.metaKey
-    );
+    ));
+    const changed = moveResult.changed;
     if (changed) render();
 
     // Read ghost origin bounds for Alt+drag preview
@@ -541,15 +542,10 @@ function setupPointerEvents() {
           showDimensionTooltip(e.clientX, e.clientY, `${Math.round(w)} × ${Math.round(h)}`);
         }
       } else if (tool === "select") {
-        // Moving: show (X, Y) of selected node
-        const selectedId = fdCanvas.get_selected_id();
-        if (selectedId && changed) {
-          try {
-            const b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
-            if (b.x !== undefined) {
-              showDimensionTooltip(e.clientX, e.clientY, `(${Math.round(b.x)}, ${Math.round(b.y)})`);
-            }
-          } catch (_) { /* skip */ }
+        // Moving: show (X, Y) from bundled bounds (no extra WASM calls)
+        if (changed && moveResult.bounds) {
+          const b = moveResult.bounds;
+          showDimensionTooltip(e.clientX, e.clientY, `(${Math.round(b.x)}, ${Math.round(b.y)})`);
         }
       }
     }
@@ -1196,11 +1192,19 @@ window.addEventListener("message", (event) => {
     case "setText": {
       if (!fdCanvas) return;
       suppressTextSync = true;
-      fdCanvas.set_text(message.text);
+      const resultJson = fdCanvas.set_text(message.text);
       lastSyncedText = message.text; // Keep dedup in sync
       bumpGeneration(); // External text change — invalidate caches
-      measureAllTextNodes(); // Tight text bounds after code edit
-      render();
+      try {
+        const r = JSON.parse(resultJson);
+        if (r.layout_changed) {
+          measureAllTextNodes(); // Tight text bounds after code edit
+          render();
+        }
+      } catch (_) {
+        measureAllTextNodes();
+        render();
+      }
       suppressTextSync = false;
 
       break;
@@ -1489,6 +1493,7 @@ document.addEventListener("keydown", (e) => {
 
   // Handle graph changes
   if (result.changed) {
+    bumpGeneration();
     render();
     syncTextToExtension();
     closeContextMenu();
@@ -1913,9 +1918,10 @@ function nudgeSelected(arrowKey, step) {
     const dx = newX - b.x;
     const dy = newY - b.y;
     fdCanvas.handle_pointer_down(cx, cy, 1.0, false, false, false, false);
-    const changed = fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false);
+    const moveResultJson = fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false);
+    const moveResult = JSON.parse(moveResultJson);
     const upResult = JSON.parse(fdCanvas.handle_pointer_up(cx + dx, cy + dy, false, false, false, false));
-    if (upResult.changed || changed) {
+    if (upResult.changed || moveResult.changed) {
       render();
       syncTextToExtension();
       updatePropertiesPanel();
@@ -2531,6 +2537,7 @@ function setupContextMenu() {
       const resultJson = fdCanvas.handle_key("]", false, true, false, true);
       const result = JSON.parse(resultJson);
       if (result.changed) {
+        bumpGeneration();
         render();
         syncTextToExtension();
       }
@@ -2544,6 +2551,7 @@ function setupContextMenu() {
       const resultJson = fdCanvas.handle_key("[", false, true, false, true);
       const result = JSON.parse(resultJson);
       if (result.changed) {
+        bumpGeneration();
         render();
         syncTextToExtension();
       }
@@ -3018,13 +3026,13 @@ function setupPropsActions() {
       if (!fdCanvas) return;
       const resultJson = fdCanvas.handle_key("]", false, true, false, true);
       const result = JSON.parse(resultJson);
-      if (result.changed) { render(); syncTextToExtension(); }
+      if (result.changed) { bumpGeneration(); render(); syncTextToExtension(); }
     },
     "props-send-back": () => {
       if (!fdCanvas) return;
       const resultJson = fdCanvas.handle_key("[", false, true, false, true);
       const result = JSON.parse(resultJson);
-      if (result.changed) { render(); syncTextToExtension(); }
+      if (result.changed) { bumpGeneration(); render(); syncTextToExtension(); }
     },
     "props-copy-png": () => {
       if (!fdCanvas) return;
@@ -5692,7 +5700,7 @@ function renderMinimap() {
   minimapCtx.translate(offsetX, offsetY);
   minimapCtx.scale(scale, scale);
   minimapCtx.translate(-bounds.minX, -bounds.minY);
-  fdCanvas.render(minimapCtx, performance.now());
+  fdCanvas.render(minimapCtx, performance.now(), true);
   minimapCtx.restore();
 
   // Cache the scene image (without viewport rect) for smooth overlay
@@ -6291,7 +6299,7 @@ function exportToPng() {
 
   // Render scene centered in export canvas
   exportCtx.setTransform(dpr, 0, 0, dpr, (padding - minX) * dpr, (padding - minY) * dpr);
-  fdCanvas.render(exportCtx, performance.now());
+  fdCanvas.render(exportCtx, performance.now(), true);
 
   // Send to extension for save dialog
   const dataUrl = exportCanvas.toDataURL("image/png");
@@ -6996,7 +7004,7 @@ function render() {
   ctx.setTransform(z, 0, 0, z, panX * dpr, panY * dpr);
   // Draw grid below shapes
   if (gridEnabled) drawGrid();
-  fdCanvas.render(ctx, performance.now());
+  fdCanvas.render(ctx, performance.now(), gridEnabled);
 
   // ── Arrow tool: draw live preview line during drag ──
   const arrowPreviewJson = fdCanvas.get_arrow_preview();

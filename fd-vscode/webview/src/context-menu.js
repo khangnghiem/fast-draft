@@ -610,6 +610,7 @@ function setupContextMenu() {
       const resultJson = fdCanvas.handle_key("]", false, true, false, true);
       const result = JSON.parse(resultJson);
       if (result.changed) {
+        bumpGeneration();
         render();
         syncTextToExtension();
       }
@@ -623,6 +624,7 @@ function setupContextMenu() {
       const resultJson = fdCanvas.handle_key("[", false, true, false, true);
       const result = JSON.parse(resultJson);
       if (result.changed) {
+        bumpGeneration();
         render();
         syncTextToExtension();
       }
