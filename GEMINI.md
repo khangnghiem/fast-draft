@@ -56,7 +56,10 @@ Before proposing any new requirement, search the **Requirement Index** at the bo
 
 - **Reuse open tabs** — when a browser tab with the same hostname is already open, navigate within that tab instead of opening a new one. Only open a new tab if no existing tab matches the target hostname.
 - **Includes Codespaces** — the same rule applies to GitHub Codespace tabs (`*.github.dev`). Never open a duplicate Codespace tab.
-- **Small viewport for screenshots** — before any screenshot, resize the browser window to **900×600**. GPU-rendered canvases produce large images; this keeps screenshots under the 5 MB API limit.
+- **Small viewport BEFORE subagent** — resize the browser window to **900×600** as the **first action** inside every `browser_subagent` task, before any other interaction. Recordings capture every frame at viewport resolution; 3008×1575 produces files ~25× larger than 900×600. Never rely on resizing only before screenshots — the recording is already bloated by then.
+- **RecordingName convention** — use `{tier}_{phase}` format: `smoke_canvas`, `full_draw_select`, `deploy_verify`. Descriptive names make it easy to audit and clean up large recordings.
+- **Minimize subagent duration** — keep subagent tasks focused and fast. Long idle time inside a subagent inflates recording size. Return immediately after the last action.
+- **Clean up old recordings** — before E2E runs, delete recordings older than 1 hour: `find ~/.gemini/antigravity/brain/ -name "*.webp" -mmin +60 -delete 2>/dev/null`.
 
 ---
 
