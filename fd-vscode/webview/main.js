@@ -6192,9 +6192,12 @@ async function pasteFromClipboard() {
     idMap.set(oldId, newId);
   }
 
-  // Replace all @id references with new names
-  for (const [oldId, newId] of idMap) {
-    pasteText = pasteText.replace(new RegExp(`@${oldId}\\b`, 'g'), `@${newId}`);
+  // Replace all @id references with new names using a single-pass regex
+  if (idMap.size > 0) {
+    const pattern = new RegExp(`@(${[...idMap.keys()].join('|')})\\b`, 'g');
+    pasteText = pasteText.replace(pattern, (match, oldId) => {
+      return `@${idMap.get(oldId)}`;
+    });
   }
   const newRootId = idMap.get(rootId) || rootId;
 
