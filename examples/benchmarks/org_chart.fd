@@ -1,12 +1,12 @@
 # Org Chart — HR / Manager use case
 # Demonstrates: edges, nested groups, ellipse avatars, named colors
 
-theme person_card {
+style person_card {
   fill: #FFFFFF
   corner: 12
 }
 
-theme role_badge {
+style role_badge {
   corner: 4
 }
 

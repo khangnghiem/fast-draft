@@ -44,7 +44,7 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
         } else if rest.starts_with("style ") || rest.starts_with("theme ") {
             let (name, style) = parse_style_block
                 .parse_next(&mut rest)
-                .map_err(|e| format!("line {line}: theme/style error — expected `theme name {{ props }}`, got `{ctx}…`: {e}"))?;
+                .map_err(|e| format!("line {line}: style/theme error — expected `style name {{ props }}`, got `{ctx}…`: {e}"))?;
             graph.define_style(name, style);
             pending_comments.clear();
         } else if rest.starts_with("spec ") || rest.starts_with("spec{") {
@@ -68,6 +68,12 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
                 }
                 pending_comments.clear();
             }
+        } else if rest.starts_with("edge_defaults ") || rest.starts_with("edge_defaults{") {
+            let defaults = parse_edge_defaults_block
+                .parse_next(&mut rest)
+                .map_err(|e| format!("line {line}: edge_defaults error — expected `edge_defaults {{ props }}`, got `{ctx}…`: {e}"))?;
+            graph.edge_defaults = Some(defaults);
+            pending_comments.clear();
         } else if rest.starts_with("edge ") {
             let (edge, text_child_data) = parse_edge_block
                 .parse_next(&mut rest)
@@ -80,12 +86,13 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
                         content,
                         max_width: None,
                     },
-                    style: crate::model::Style::default(),
+                    props: crate::model::Properties::default(),
                     use_styles: Default::default(),
                     constraints: Default::default(),
                     annotations: Vec::new(),
                     animations: Default::default(),
                     comments: Vec::new(),
+                    place: None,
                 };
                 let idx = graph.graph.add_node(text_node);
                 graph.graph.add_edge(graph.root, idx, ());
@@ -132,6 +139,7 @@ fn starts_with_node_keyword(s: &str) -> bool {
         || s.starts_with("rect")
         || s.starts_with("ellipse")
         || s.starts_with("path")
+        || s.starts_with("image")
         || s.starts_with("text")
 }
 
@@ -155,7 +163,7 @@ fn is_generic_node_start(s: &str) -> bool {
 struct ParsedNode {
     id: NodeId,
     kind: NodeKind,
-    style: Style,
+    props: Properties,
     use_styles: Vec<NodeId>,
     constraints: Vec<Constraint>,
     animations: Vec<AnimKeyframe>,
@@ -163,6 +171,8 @@ struct ParsedNode {
     /// Comments that appeared before this node's opening `{` in the source.
     comments: Vec<String>,
     children: Vec<ParsedNode>,
+    /// 9-position placement within parent.
+    place: Option<(HPlace, VPlace)>,
 }
 
 fn insert_node_recursive(
@@ -171,12 +181,13 @@ fn insert_node_recursive(
     parsed: ParsedNode,
 ) {
     let mut node = SceneNode::new(parsed.id, parsed.kind);
-    node.style = parsed.style;
+    node.props = parsed.props;
     node.use_styles.extend(parsed.use_styles);
     node.constraints.extend(parsed.constraints);
     node.animations.extend(parsed.animations);
     node.annotations = parsed.annotations;
     node.comments = parsed.comments;
+    node.place = parsed.place;
 
     let idx = graph.add_node(parent, node);
 
@@ -207,6 +218,7 @@ fn parse_import_line(input: &mut &str) -> ModalResult<Import> {
 /// Section separators emitted automatically by the emitter.
 /// These are skipped during parsing to avoid duplication on round-trip.
 const SECTION_SEPARATORS: &[&str] = &[
+    "─── Styles ───",
     "─── Themes ───",
     "─── Layout ───",
     "─── Constraints ───",
@@ -234,8 +246,8 @@ fn collect_leading_comments(input: &mut &str) -> Vec<String> {
             if input.starts_with('\n') {
                 *input = &input[1..];
             }
-            // Skip section separators; collect everything else
-            if !text.is_empty() && !is_section_separator(&text) {
+            // Skip section separators and [auto] doc-comments; collect everything else
+            if !text.is_empty() && !is_section_separator(&text) && !text.starts_with("[auto]") {
                 comments.push(text);
             }
             continue;
@@ -388,14 +400,14 @@ fn parse_spec_item(input: &mut &str) -> ModalResult<Annotation> {
 
 // ─── Style block parser ─────────────────────────────────────────────────
 
-fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Style)> {
+fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Properties)> {
     let _ = alt(("theme", "style")).parse_next(input)?;
     let _ = space1.parse_next(input)?;
     let name = parse_identifier.map(NodeId::intern).parse_next(input)?;
     skip_space(input);
     let _ = '{'.parse_next(input)?;
 
-    let mut style = Style::default();
+    let mut style = Properties::default();
     skip_ws_and_comments(input);
 
     while !input.starts_with('}') {
@@ -407,7 +419,7 @@ fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Style)> {
     Ok((name, style))
 }
 
-fn parse_style_property(input: &mut &str, style: &mut Style) -> ModalResult<()> {
+fn parse_style_property(input: &mut &str, style: &mut Properties) -> ModalResult<()> {
     let prop_name = parse_identifier.parse_next(input)?;
     skip_space(input);
     let _ = ':'.parse_next(input)?;
@@ -457,7 +469,7 @@ fn weight_name_to_number(name: &str) -> Option<u16> {
     }
 }
 
-fn parse_font_value(input: &mut &str, style: &mut Style) -> ModalResult<()> {
+fn parse_font_value(input: &mut &str, style: &mut Properties) -> ModalResult<()> {
     let mut font = style.font.clone().unwrap_or_default();
 
     if input.starts_with('"') {
@@ -513,6 +525,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
             "rect".value("rect"),
             "ellipse".value("ellipse"),
             "path".value("path"),
+            "image".value("image"),
             "text".value("text"),
         ))
         .parse_next(input)?
@@ -541,7 +554,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     skip_space(input);
     let _ = '{'.parse_next(input)?;
 
-    let mut style = Style::default();
+    let mut style = Properties::default();
     let mut use_styles = Vec::new();
     let mut constraints = Vec::new();
     let mut animations = Vec::new();
@@ -549,8 +562,12 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let mut children = Vec::new();
     let mut width: Option<f32> = None;
     let mut height: Option<f32> = None;
-    let mut layout = LayoutMode::Free;
+    let mut layout = LayoutMode::Free { pad: 0.0 };
     let mut clip = false;
+    let mut place: Option<(HPlace, VPlace)> = None;
+    let mut path_commands: Vec<PathCmd> = Vec::new();
+    let mut image_src: Option<String> = None;
+    let mut image_fit = ImageFit::default();
 
     skip_ws_and_comments(input);
 
@@ -575,6 +592,10 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
                 &mut height,
                 &mut layout,
                 &mut clip,
+                &mut place,
+                &mut path_commands,
+                &mut image_src,
+                &mut image_fit,
             )?;
         }
         // Collect comments between items; they'll be attached to the *next* child node
@@ -604,7 +625,13 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
             max_width: width,
         },
         "path" => NodeKind::Path {
-            commands: Vec::new(),
+            commands: path_commands,
+        },
+        "image" => NodeKind::Image {
+            source: ImageSource::File(image_src.unwrap_or_default()),
+            width: width.unwrap_or(100.0),
+            height: height.unwrap_or(100.0),
+            fit: image_fit,
         },
         "generic" => NodeKind::Generic,
         _ => unreachable!(),
@@ -613,13 +640,14 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     Ok(ParsedNode {
         id,
         kind,
-        style,
+        props: style,
         use_styles,
         constraints,
         animations,
         annotations,
         comments: Vec::new(),
         children,
+        place,
     })
 }
 
@@ -636,6 +664,7 @@ fn starts_with_child_node(input: &str) -> bool {
         ("rect", 4),
         ("ellipse", 7),
         ("path", 4),
+        ("image", 5),
         ("text", 4),
     ];
     for &(keyword, len) in keywords {
@@ -738,13 +767,17 @@ fn parse_gradient_stops(input: &mut &str) -> ModalResult<Vec<GradientStop>> {
 #[allow(clippy::too_many_arguments)]
 fn parse_node_property(
     input: &mut &str,
-    style: &mut Style,
+    style: &mut Properties,
     use_styles: &mut Vec<NodeId>,
     constraints: &mut Vec<Constraint>,
     width: &mut Option<f32>,
     height: &mut Option<f32>,
     layout: &mut LayoutMode,
     clip: &mut bool,
+    place: &mut Option<(HPlace, VPlace)>,
+    path_commands: &mut Vec<PathCmd>,
+    image_src: &mut Option<String>,
+    image_fit: &mut ImageFit,
 ) -> ModalResult<()> {
     let prop_name = parse_identifier.parse_next(input)?;
     skip_space(input);
@@ -823,7 +856,7 @@ fn parse_node_property(
                 }
             }
         }
-        "stroke" => {
+        "stroke" | "border" => {
             let color = parse_hex_color.parse_next(input)?;
             let _ = space1.parse_next(input)?;
             let w = parse_number.parse_next(input)?;
@@ -842,6 +875,9 @@ fn parse_node_property(
         }
         "align" | "text_align" => {
             parse_align_value(input, style)?;
+        }
+        "place" => {
+            *place = Some(parse_place_value(input)?);
         }
         "shadow" => {
             // shadow: (ox,oy,blur,#COLOR)  — colon already consumed by property parser
@@ -876,7 +912,7 @@ fn parse_node_property(
                 .parse_next(input);
             }
         }
-        "use" => {
+        "use" | "apply" => {
             use_styles.push(parse_identifier.map(NodeId::intern).parse_next(input)?);
         }
         "font" => {
@@ -906,12 +942,108 @@ fn parse_node_property(
                 "column" => LayoutMode::Column { gap, pad },
                 "row" => LayoutMode::Row { gap, pad },
                 "grid" => LayoutMode::Grid { cols: 2, gap, pad },
-                _ => LayoutMode::Free,
+                _ => LayoutMode::Free { pad: 0.0 },
             };
         }
         "clip" => {
             let val = parse_identifier.parse_next(input)?;
             *clip = val == "true";
+        }
+        "pad" | "padding" => {
+            // Standalone pad: N — sets padding on Free frames
+            let val = parse_number.parse_next(input)?;
+            match layout {
+                LayoutMode::Free { pad } => *pad = val,
+                LayoutMode::Column { pad, .. }
+                | LayoutMode::Row { pad, .. }
+                | LayoutMode::Grid { pad, .. } => *pad = val,
+            }
+        }
+        "d" => {
+            // Parse SVG-like path commands: M x y L x y C ... Z
+            loop {
+                skip_space(input);
+                let at_end = input.is_empty()
+                    || input.starts_with('\n')
+                    || input.starts_with(';')
+                    || input.starts_with('}');
+                if at_end {
+                    break;
+                }
+                let saved = *input;
+                if let Ok(cmd_char) = take_while::<_, _, ContextError>(1..=1, |c: char| {
+                    matches!(c, 'M' | 'L' | 'Q' | 'C' | 'Z')
+                })
+                .parse_next(input)
+                {
+                    skip_space(input);
+                    match cmd_char {
+                        "M" => {
+                            let x = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let y = parse_number.parse_next(input)?;
+                            path_commands.push(PathCmd::MoveTo(x, y));
+                        }
+                        "L" => {
+                            let x = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let y = parse_number.parse_next(input)?;
+                            path_commands.push(PathCmd::LineTo(x, y));
+                        }
+                        "Q" => {
+                            let cx = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let cy = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let ex = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let ey = parse_number.parse_next(input)?;
+                            path_commands.push(PathCmd::QuadTo(cx, cy, ex, ey));
+                        }
+                        "C" => {
+                            let c1x = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let c1y = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let c2x = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let c2y = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let ex = parse_number.parse_next(input)?;
+                            skip_space(input);
+                            let ey = parse_number.parse_next(input)?;
+                            path_commands.push(PathCmd::CubicTo(c1x, c1y, c2x, c2y, ex, ey));
+                        }
+                        "Z" => {
+                            path_commands.push(PathCmd::Close);
+                        }
+                        _ => {
+                            *input = saved;
+                            break;
+                        }
+                    }
+                } else {
+                    *input = saved;
+                    break;
+                }
+            }
+        }
+        "src" => {
+            *image_src = Some(
+                parse_quoted_string
+                    .map(|s| s.to_string())
+                    .parse_next(input)?,
+            );
+        }
+        "fit" => {
+            let val = parse_identifier.parse_next(input)?;
+            *image_fit = match val {
+                "cover" => ImageFit::Cover,
+                "contain" => ImageFit::Contain,
+                "fill" => ImageFit::Fill,
+                "none" => ImageFit::None,
+                _ => ImageFit::Cover,
+            };
         }
         _ => {
             let _ =
@@ -926,7 +1058,7 @@ fn parse_node_property(
 
 // ─── Alignment value parser ──────────────────────────────────────────────
 
-fn parse_align_value(input: &mut &str, style: &mut Style) -> ModalResult<()> {
+fn parse_align_value(input: &mut &str, style: &mut Properties) -> ModalResult<()> {
     use crate::model::{TextAlign, TextVAlign};
 
     let first = parse_identifier.parse_next(input)?;
@@ -953,6 +1085,77 @@ fn parse_align_value(input: &mut &str, style: &mut Style) -> ModalResult<()> {
     Ok(())
 }
 
+// ─── Place value parser ──────────────────────────────────────────────────
+
+fn parse_place_value(input: &mut &str) -> ModalResult<(HPlace, VPlace)> {
+    use crate::model::{HPlace, VPlace};
+
+    let first = parse_identifier.parse_next(input)?;
+
+    // Check for compound hyphenated form: "top-left", "bottom-right", etc.
+    if input.starts_with('-') {
+        let saved = *input;
+        *input = &input[1..]; // consume '-'
+        if let Ok(second) = parse_identifier.parse_next(input) {
+            match (first, second) {
+                ("top", "left") => return Ok((HPlace::Left, VPlace::Top)),
+                ("top", "right") => return Ok((HPlace::Right, VPlace::Top)),
+                ("bottom", "left") => return Ok((HPlace::Left, VPlace::Bottom)),
+                ("bottom", "right") => return Ok((HPlace::Right, VPlace::Bottom)),
+                _ => *input = saved, // restore if unrecognized
+            }
+        } else {
+            *input = saved;
+        }
+    }
+
+    match first {
+        "center" => {
+            // Check if there's a second word (2-arg form: "center top")
+            skip_space(input);
+            let at_end = input.is_empty()
+                || input.starts_with('\n')
+                || input.starts_with(';')
+                || input.starts_with('}');
+            if !at_end && let Ok(second) = parse_identifier.parse_next(input) {
+                let v = match second {
+                    "top" => VPlace::Top,
+                    "bottom" => VPlace::Bottom,
+                    _ => VPlace::Middle,
+                };
+                return Ok((HPlace::Center, v));
+            }
+            Ok((HPlace::Center, VPlace::Middle))
+        }
+        "top" => Ok((HPlace::Center, VPlace::Top)),
+        "bottom" => Ok((HPlace::Center, VPlace::Bottom)),
+        _ => {
+            // 2-arg form: "left middle", "right top", etc.
+            let h = match first {
+                "left" => HPlace::Left,
+                "right" => HPlace::Right,
+                _ => HPlace::Center,
+            };
+
+            skip_space(input);
+            let at_end = input.is_empty()
+                || input.starts_with('\n')
+                || input.starts_with(';')
+                || input.starts_with('}');
+            if !at_end && let Ok(second) = parse_identifier.parse_next(input) {
+                let v = match second {
+                    "top" => VPlace::Top,
+                    "bottom" => VPlace::Bottom,
+                    _ => VPlace::Middle,
+                };
+                return Ok((h, v));
+            }
+
+            Ok((h, VPlace::Middle))
+        }
+    }
+}
+
 // ─── Animation block parser ─────────────────────────────────────────────
 
 fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
@@ -967,12 +1170,21 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
         other => AnimTrigger::Custom(other.to_string()),
     };
 
+    // Trigger-specific default durations
+    let default_duration = match &trigger {
+        AnimTrigger::Hover => 300u32,
+        AnimTrigger::Press => 150u32,
+        AnimTrigger::Enter => 500u32,
+        AnimTrigger::Custom(_) => 300u32,
+    };
+
     skip_space(input);
     let _ = '{'.parse_next(input)?;
 
     let mut props = AnimProperties::default();
-    let mut duration_ms = 300u32;
+    let mut duration_ms = default_duration;
     let mut easing = Easing::EaseInOut;
+    let mut delay_ms: Option<u32> = None;
 
     skip_ws_and_comments(input);
 
@@ -1013,6 +1225,13 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
                     }
                 }
             }
+            "delay" => {
+                let n = parse_number.parse_next(input)?;
+                delay_ms = Some(n as u32);
+                if input.starts_with("ms") {
+                    *input = &input[2..];
+                }
+            }
             _ => {
                 let _ = take_till::<_, _, ContextError>(0.., |c: char| {
                     c == '\n' || c == ';' || c == '}'
@@ -1032,6 +1251,7 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
         duration_ms,
         easing,
         properties: props,
+        delay_ms,
     })
 }
 
@@ -1048,6 +1268,70 @@ fn parse_edge_anchor(input: &mut &str) -> ModalResult<EdgeAnchor> {
         let y = parse_number.parse_next(input)?;
         Ok(EdgeAnchor::Point(x, y))
     }
+}
+
+// ─── Edge defaults parser ──────────────────────────────────────────────
+
+fn parse_edge_defaults_block(input: &mut &str) -> ModalResult<EdgeDefaults> {
+    let _ = "edge_defaults".parse_next(input)?;
+    skip_space(input);
+    let _ = '{'.parse_next(input)?;
+
+    let mut defaults = EdgeDefaults::default();
+    skip_ws_and_comments(input);
+
+    while !input.starts_with('}') {
+        let prop = parse_identifier.parse_next(input)?;
+        skip_space(input);
+        let _ = ':'.parse_next(input)?;
+        skip_space(input);
+
+        match prop {
+            "stroke" => {
+                let color = parse_hex_color.parse_next(input)?;
+                skip_space(input);
+                let w = parse_number.parse_next(input).unwrap_or(1.0);
+                defaults.props.stroke = Some(Stroke {
+                    paint: Paint::Solid(color),
+                    width: w,
+                    ..Stroke::default()
+                });
+            }
+            "arrow" => {
+                let kind = parse_identifier.parse_next(input)?;
+                defaults.arrow = Some(match kind {
+                    "none" => ArrowKind::None,
+                    "start" => ArrowKind::Start,
+                    "end" => ArrowKind::End,
+                    "both" => ArrowKind::Both,
+                    _ => ArrowKind::None,
+                });
+            }
+            "curve" => {
+                let kind = parse_identifier.parse_next(input)?;
+                defaults.curve = Some(match kind {
+                    "straight" => CurveKind::Straight,
+                    "smooth" => CurveKind::Smooth,
+                    "step" => CurveKind::Step,
+                    _ => CurveKind::Straight,
+                });
+            }
+            "opacity" => {
+                defaults.props.opacity = Some(parse_number.parse_next(input)?);
+            }
+            _ => {
+                let _ = take_till::<_, _, ContextError>(0.., |c: char| {
+                    c == '\n' || c == ';' || c == '}'
+                })
+                .parse_next(input);
+            }
+        }
+        skip_opt_separator(input);
+        skip_ws_and_comments(input);
+    }
+
+    let _ = '}'.parse_next(input)?;
+    Ok(defaults)
 }
 
 // ─── Edge block parser ─────────────────────────────────────────────────
@@ -1069,7 +1353,7 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
     let mut to = None;
     let mut text_child = None;
     let mut text_child_content = None; // (NodeId, content_string)
-    let mut style = Style::default();
+    let mut style = Properties::default();
     let mut use_styles = Vec::new();
     let mut arrow = ArrowKind::None;
     let mut curve = CurveKind::Straight;
@@ -1202,7 +1486,7 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
             from: from.unwrap_or(EdgeAnchor::Point(0.0, 0.0)),
             to: to.unwrap_or(EdgeAnchor::Point(0.0, 0.0)),
             text_child,
-            style,
+            props: style,
             use_styles: use_styles.into(),
             arrow,
             curve,

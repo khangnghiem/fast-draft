@@ -1,147 +1,374 @@
-# ─── Themes ───
+# ─── Styles ───
 
-theme accent {
-  fill: #6C5CE7  # blue
-  corner: 10
+style accent_text {
+  fill: #FFFFFF  # white
+  font: "Inter" semibold 14
 }
 
-theme base_text {
-  fill: #333333  # gray
+style body {
+  fill: #6B7280  # blue
   font: "Inter" regular 14
 }
 
-# ─── Layout ───
+style brand {
+  fill: #6C5CE7  # blue
+  corner: 12
+}
+
+style card {
+  fill: #FFFFFF  # white
+  corner: 14
+}
+
+style heading {
+  fill: #1A1A2E  # blue
+  font: "Inter" bold 22
+}
+
+style metric {
+  fill: #6C5CE7  # blue
+  font: "Inter" bold 32
+}
+
+style subheading {
+  fill: #111827  # blue
+  font: "Inter" semibold 16
+}
+
+edge_defaults {
+  stroke: #8B7CF7 1.5
+  arrow: end
+  curve: smooth
+}
 
 # ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
-# ─── Layout ───
-group @login_form {
+
+# Sidebar navigation
+# [auto] column container (4 children)
+frame @sidebar {
   spec {
-    "User authentication entry point"
-    accept: "email + password fields visible"
-    accept: "sign-in button triggers auth flow"
-    status: todo
+    "Persistent sidebar — always visible"
+    accept: "collapses to icons on small screens"
+    status: done
+    priority: high
+    tag: navigation, responsive
   }
-  rect @email_field {
-    spec {
-      "Email input field"
-      accept: "validates email format on blur"
-      accept: "shows error state with red border"
-      priority: high
-    }
-    text @email_hint "Email" {
-      use: base_text
-      fill: #999999  # gray
-      x: 128.57
-      y: 14.63
-    }
-    w: 280 h: 44
-    stroke: #DDDDDD 1
-    corner: 8
-    x: 31.68
-    y: 68.31
+  text @app_name "FastDraft" {
+    w: 290.9
+    fill: #FFFFFF  # white
+    font: "Inter" bold 18
   }
-  rect @pass_field {
-    spec {
-      "Password input field"
-      accept: "minimum 8 characters"
-      priority: high
+  rect @nav_dashboard {
+    text @_text_10 "Dashboard" {
+      use: accent_text
     }
-    text @pass_hint "Password" {
-      use: base_text
-      fill: #999999  # gray
-      x: 106.98
-      y: 15.88
-    }
-    w: 280 h: 44
-    stroke: #DDDDDD 1
-    corner: 8
-    x: 28.33
-    y: 106.06
-  }
-  rect @login_btn {
-    spec {
-      "Primary CTA — triggers login API call"
-      accept: "disabled state when fields empty"
-      accept: "loading spinner during auth"
-      status: done
-      priority: high
-    }
-    w: 280 h: 48
-    use: accent
+    w: 180 h: 40
     fill: #5A4BD1  # blue
-    x: 27.69
-    y: 169.03
+    corner: 8
     when :hover {
       fill: #4A3BC1  # blue
-      scale: 1.02
-      ease: spring 200ms
-    }
-    when :press {
-      scale: 0.97
-      ease: ease_out 100ms
+      ease: ease_out 150ms
     }
   }
-  layout: column gap=16 pad=32
-  x: 316.56
-  y: 379.28
+  rect @nav_projects {
+    text @_text_11 "Projects" {
+      use: accent_text
+      opacity: 0.7
+    }
+    w: 180 h: 40
+    corner: 8
+    when :hover {
+      fill: #5A4BD1  # blue
+      ease: ease_out 150ms
+    }
+  }
+  rect @nav_settings {
+    text @_text_12 "Settings" {
+      use: accent_text
+      opacity: 0.7
+    }
+    w: 180 h: 40
+    corner: 8
+    when :hover {
+      fill: #5A4BD1  # blue
+      ease: ease_out 150ms
+    }
+  }
+  layout: column gap=8 pad=16
+  w: 322.9 h: 257.4
+  fill: #2D2B55  # blue
+  corner: 0
+  opacity: 1
+  x: -121.8
+  y: 19.8
 }
 
-text @title "Welcome Back" {
-  spec "Brand greeting — sets emotional tone"
-  fill: #1A1A2E  # blue
-  font: "Inter" bold 24
-  x: 362.63
-  y: 347.77
+# Top header area
+text @page_title "Dashboard" {
+  use: heading
+  x: 280
+  y: 32
 }
 
-rect @rect_0 {
-  w: 0.21 h: 0.65
-  x: 345.86
-  y: 704.14
+text @page_subtitle "Welcome back — here's what's happening today." {
+  use: body
+  x: 280
+  y: 60
 }
 
-rect @rect_1 {
-  w: 82.84 h: 82.84
-  x: 317.93
-  y: 631.19
+# ─── Metric Cards ───
+# [auto] styled: card
+rect @card_revenue {
+  spec {
+    "Revenue metric card"
+    accept: "shows daily/weekly/monthly toggle"
+    accept: "sparkline chart in background"
+    status: doing
+    priority: high
+    tag: metrics, dashboard
+  }
+  text @revenue_delta "+12.5% ↑" {
+    fill: #22C55E  # green
+    font: "Inter" semibold 13
+    x: 424
+    y: 143
+  }
+  w: 220 h: 120
+  use: card
+  shadow: (0,2,16,#00000010)
+  x: 279.8
+  y: 98.9
+  when :hover {
+    scale: 1
+    ease: spring 200ms
+  }
 }
 
-text @btn_label "Sign In" {
-  fill: #FFFFFF  # white
-  font: "Inter" semibold 16
-  x: 445.88
-  y: 667.3
+text @revenue_label "Revenue" {
+  use: body
+  x: 490.7
+  y: 183.7
 }
 
-text @_anon_1 "Test" {
-  x: 531.32
-  y: 637.2
+text @revenue_value "$48,250" {
+  use: metric
+  x: 527
+  y: 205.8
 }
 
-rect @_anon_2 {
-  w: 100 h: 80
-  stroke: #333333 2.5
+# [auto] styled: card
+rect @card_users {
+  text @users_label "Active Users" {
+    use: body
+    x: 520
+    y: 112
+  }
+  w: 220 h: 120
+  use: card
+  shadow: (0,2,16,#00000010)
+  x: 518.7
+  y: 98.8
+  when :hover {
+    scale: 1
+    ease: spring 200ms
+  }
+}
+
+text @users_value "2,847" {
+  use: metric
+  x: 888.2
+  y: 534
+}
+
+# [auto] styled: card
+rect @card_tasks {
+  text @tasks_label "Completed Tasks" {
+    use: body
+    x: 756
+    y: 112
+  }
+  text @tasks_value "1,094" {
+    use: metric
+    x: 756
+    y: 136
+  }
+  w: 220 h: 120
+  use: card
+  shadow: (0,2,16,#00000010)
+  x: 754.8
+  y: 99.6
+  when :hover {
+    scale: 1
+    ease: spring 200ms
+  }
+}
+
+# ─── Activity Feed ───
+# [auto] column container (4 children)
+frame @activity_feed {
+  spec {
+    "Recent activity stream"
+    accept: "auto-refreshes every 30s"
+    accept: "click to navigate to item"
+    status: todo
+    tag: realtime, engagement
+  }
+  text @feed_title "Recent Activity" {
+    use: subheading
+    x: 8.4
+    y: 5.8
+  }
+  rect @activity_1 {
+    text @_text_13 "Alice submitted design review" {
+      use: body
+    }
+    w: 420 h: 44
+    fill: #F9FAFB  # white
+    corner: 8
+  }
+  rect @activity_2 {
+    text @_text_14 "Bob merged pull request #284" {
+      use: body
+    }
+    w: 420 h: 44
+    fill: #F9FAFB  # white
+    corner: 8
+  }
+  rect @activity_3 {
+    text @_text_15 "Carol deployed v2.1.0 to staging" {
+      use: body
+    }
+    w: 420 h: 44
+    fill: #F9FAFB  # white
+    corner: 8
+  }
+  layout: column gap=8 pad=20
+  w: 460 h: 280
+  use: card
+  shadow: (0,2,16,#00000010)
+  x: 251
+  y: 309.1
+}
+
+# ─── Pipeline Status ───
+# [auto] column container (1 children)
+frame @pipeline {
+  text @pipeline_title "Deployment Pipeline" {
+    use: subheading
+  }
+  layout: column gap=12 pad=20
+  w: 460 h: 236
+  use: card
+  shadow: (0,2,16,#00000010)
+  x: 206
+  y: 753
+}
+
+# Pipeline stages as connected nodes
+# [auto] connects to stage_test
+rect @stage_build {
+  w: 90 h: 44
+  fill: #22C55E  # green
   corner: 8
-  x: 126.4
-  y: 642.36
+  x: 165.6
+  y: 639.8
 }
 
-rect @_anon_4 {
-  w: 100 h: 80
-  stroke: #333333 2.5
+text @_text_23 "Test" {
+  x: 175.3
+  y: 651.8
+}
+
+text @_text_16 "Build" {
+  use: accent_text
+  x: 236.6
+  y: 655
+}
+
+# [auto] connects to stage_staging
+rect @stage_test {
+  text @_text_17 "Test" {
+    use: accent_text
+  }
+  w: 90 h: 44
+  fill: #22C55E  # green
   corner: 8
-  x: 134.91
-  y: 790.5
+  x: 428
+  y: 640
+}
+
+# [auto] connects to stage_prod
+rect @stage_staging {
+  w: 85.9 h: 47.6
+  fill: #F59E0B  # orange
+  corner: 8
+  x: 636.6
+  y: 619.9
+  when :hover {
+    fill: #D97706  # orange
+    ease: ease_out 150ms
+  }
+}
+
+text @_text_18 "Staging" {
+  use: accent_text
+  x: 488.1
+  y: 726.3
+}
+
+ellipse @stage_prod {
+  text @_text_19 "Prod" {
+    w: 206
+    use: accent_text
+  }
+  w: 103 h: 85.1
+  fill: #6B7280  # blue
+  corner: 8
+  x: 884.5
+  y: 681
+  when :press {
+    fill: #6C5CE7  # blue
+    ease: spring 300ms
+  }
+}
+
+text @_text_2 "Text" {
+  x: 405.5
+  y: 851.8
+}
+
+text @_text_0 "Text" {
+  x: 360.6
+  y: 657.3
 }
 
 # ─── Flows ───
 
-edge @edge_3 {
-  from: @rect_1
-  to: @_anon_2
+edge @build_to_test {
+  from: @stage_build
+  to: @stage_test
   stroke: #6B7080 1.5
-  arrow: end
-  curve: smooth
+  flow: pulse 800ms
+}
+edge @test_to_staging {
+  from: @stage_test
+  to: @stage_staging
+  stroke: #6B7080 1.5
+  flow: pulse 800ms
+}
+edge @staging_to_prod {
+  from: @stage_staging
+  to: @stage_prod
+  stroke: #F59E0B 1.5
+  flow: dash 1200ms
+}
+edge @revenue_to_users {
+  from: @card_revenue
+  to: @card_users
+  stroke: #E5E7EB 1
+}
+edge @users_to_tasks {
+  from: @card_users
+  to: @card_tasks
+  stroke: #E5E7EB 1
 }

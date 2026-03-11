@@ -1,0 +1,11 @@
+# WASM — filenames are NOT content-hashed, so never cache immutably.
+# no-cache = always revalidate with CDN (304 if unchanged, fast).
+# This prevents stale .wasm + fresh .js mismatch after deploys.
+/wasm/*
+  Cache-Control: no-cache
+
+# All pages — security headers
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY

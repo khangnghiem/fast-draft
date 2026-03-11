@@ -1,16 +1,16 @@
-# ─── Themes ───
+# ─── Styles ───
 
-theme desc_text {
+style desc_text {
   fill: #6B7280  # blue
   font: "Inter" regular 12
 }
 
-theme screen {
+style screen {
   fill: #FFFFFF  # white
   corner: 14
 }
 
-theme screen_label {
+style screen_label {
   fill: #1A1A2E  # blue
   font: "Inter" bold 16
 }

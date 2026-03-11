@@ -1,12 +1,12 @@
+# ─── Layout ───
+
 group @color_palette {
-  layout: column gap=24 pad=32
   text @palette_title "Color Palette" {
     fill: #1A1A2E  # blue
     font: "Inter" bold 28
   }
   group @primary_row {
     spec "Primary brand colors"
-    layout: row gap=12 pad=0
     rect @swatch_primary {
       w: 80 h: 80
       use: primary
@@ -35,7 +35,6 @@ group @color_palette {
   }
   group @neutral_row {
     spec "Neutral & surface colors"
-    layout: row gap=12 pad=0
     rect @swatch_white {
       w: 80 h: 80
       fill: #FFFFFF  # white
@@ -68,7 +67,6 @@ group @color_palette {
     font: "Inter" bold 28
   }
   group @type_scale {
-    layout: column gap=16 pad=0
     text @t_display "Display — 48px Bold" {
       fill: #1A1A2E  # blue
       font: "Inter" bold 48
@@ -106,14 +104,13 @@ group @color_palette {
       accept: "minimum 44px touch target"
       tag: a11y, components
     }
-    layout: row gap=16 pad=0
     rect @btn_primary {
       spec "Primary action button"
-      w: 160 h: 48
       text @_anon_7 "Get Started" {
         fill: #FFFFFF  # white
         font: "Inter" semibold 15
       }
+      w: 160 h: 48
       use: primary
       fill: #5A4BD1  # blue
       corner: 10
@@ -124,84 +121,206 @@ group @color_palette {
 rect @btn_secondary {
   spec "Secondary action button"
   w: 160 h: 48
-  text @_anon_8 "Learn More" {
-    fill: #6C5CE7  # blue
-    font: "Inter" semibold 15
-  }
   fill: #F0EDFC  # blue
   stroke: #6C5CE7 2
   corner: 10
+  x: -155.08
+  y: 461.83
+}
+
+text @_anon_8 "Learn More" {
+  fill: #6C5CE7  # blue
+  font: "Inter" semibold 15
+  x: 301.1
+  y: 80.84
 }
 
 rect @btn_ghost {
   spec "Ghost / text-only button"
-  w: 160 h: 48
   text @_anon_9 "Cancel" {
     fill: #6B7280  # blue
     font: "Inter" medium 15
   }
+  w: 160 h: 48
   fill: #F5F5F7  # white
   corner: 10
+  x: 232.52
+  y: 15.9
 }
 
 rect @btn_danger {
   spec "Destructive action button"
-  w: 160 h: 48
   text @_anon_10 "Delete" {
     fill: #FFFFFF  # white
     font: "Inter" semibold 15
   }
+  w: 160 h: 48
   use: danger
   fill: #D63031  # red
   corner: 10
+  x: 26.23
+  y: 86.72
 }
 
 text @input_title "Inputs" {
   fill: #1A1A2E  # blue
   font: "Inter" bold 28
+  x: 245.56
+  y: -86.37
 }
 
-group @inputs {
-  layout: column gap=12 pad=0
-  rect @input_default {
-    spec "Default text input"
-    w: 320 h: 48
-    text @_anon_11 "Placeholder text..." {
-      fill: #9CA3AF  # blue
-      font: "Inter" regular 14
-    }
-    fill: #FFFFFF  # white
-    stroke: #E8E8EC 1
-    corner: 8
-  }
-  rect @input_focus {
-    spec {
-      "Focused input state"
-      status: done
-    }
-    w: 320 h: 48
-    text @_anon_12 "Typing here..." {
-      fill: #1A1A2E  # blue
-      font: "Inter" regular 14
-    }
-    fill: #FFFFFF  # white
-    stroke: #6C5CE7 2
-    corner: 8
-  }
-  rect @input_error {
-    spec {
-      "Error input state"
-      accept: "red border + error message below"
-    }
-    w: 320 h: 48
-    text @_anon_13 "invalid@" {
-      fill: #E17055  # red
-      font: "Inter" regular 14
-    }
-    fill: #FFF6F4  # white
-    stroke: #E17055 2
-    corner: 8
-  }
+rect @input_default {
+  spec "Default text input"
+  w: 320 h: 48
+  fill: #FFFFFF  # white
+  stroke: #E8E8EC 1
+  corner: 8
+  x: -18.36
+  y: 378.9
 }
+
+text @_anon_11 "Placeholder text..." {
+  fill: #9CA3AF  # blue
+  font: "Inter" regular 14
+  x: 435.92
+  y: 250.93
+}
+
+rect @input_focus {
+  spec {
+    "Focused input state"
+    status: done
+  }
+  text @_anon_12 "Typing here..." {
+    fill: #1A1A2E  # blue
+    font: "Inter" regular 14
+  }
+  w: 320 h: 48
+  fill: #FFFFFF  # white
+  stroke: #6C5CE7 2
+  corner: 8
+  x: -8.68
+  y: 289.87
+}
+
+rect @input_error {
+  spec {
+    "Error input state"
+    accept: "red border + error message below"
+  }
+  text @_anon_13 "invalid@" {
+    fill: #E17055  # red
+    font: "Inter" regular 14
+  }
+  w: 320 h: 48
+  fill: #FFF6F4  # white
+  stroke: #E17055 2
+  corner: 8
+  x: 21.69
+  y: 177.55
+}
+
+ellipse @ellipse_0 {
+  w: 0.29 h: 0.04
+  x: 69.36
+  y: 692.7
+}
+
+rect @rect_1 {
+  w: 92.4 h: 72.01
+  x: 99.89
+  y: 557.42
+}
+
+ellipse @ellipse_3 {
+  w: 50 h: 50
+  x: 5.86
+  y: 592.42
+}
+
+rect @_rect_0 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 109.25
+  y: 744.84
+}
+
+ellipse @_ellipse_1 {
+  w: 50 h: 40
+  stroke: #333333 2.5
+  x: 351.95
+  y: 667.47
+}
+
+rect @_rect_0 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: -134.14
+  y: 602.42
+}
+
+rect @_rect_0 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 108.26
+  y: 980.2
+}
+
+rect @rect_1 {
+  w: 11.29 h: 6
+  x: 49.32
+  y: 1032.64
+}
+
+group @_group_3 {
+  rect @_rect_2 {
+    w: 100 h: 80
+    stroke: #333333 2.5
+    corner: 8
+  }
+  x: -23.55
+  y: 1255.55
+}
+
+rect @rect_4 {
+  w: 131.51 h: 111.27
+  x: 182.09
+  y: 1144.49
+}
+
+rect @rect_5 {
+  w: 211.17 h: 156.62
+  x: 325.83
+  y: 920.76
+}
+
+rect @_rect_6 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 485.69
+  y: 1266.48
+}
+
+rect @rect_7 {
+  w: 120 h: 80
+  x: 567.47
+  y: 1112.22
+}
+
+# ─── Constraints ───
 
 @color_palette -> center_in: canvas
+
+# ─── Flows ───
+
+edge @edge_1 {
+  from: @ellipse_3
+  to: @_rect_0
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}

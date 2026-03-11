@@ -1,25 +1,25 @@
-# Dashboard layout using constraints and themes
+# Dashboard layout using constraints and styles
 # Demonstrates responsive patterns with column/row/grid
 
 import "tokens.fd" as tokens
 
-theme card_bg {
+style card_bg {
   fill: #FFFFFF
   corner: 12
   opacity: 0.95
 }
 
-theme label {
+style label {
   font: "Inter" regular 14
   fill: #6B7280
 }
 
-theme heading {
+style heading {
   font: "Inter" bold 20
   fill: #111827
 }
 
-theme metric_value {
+style metric_value {
   font: "Inter" semibold 32
   fill: #6C5CE7
 }

@@ -507,10 +507,10 @@ export function sanitizeToFdId(name: string): string {
 
 // ─── Markdown Fence Stripping ────────────────────────────────────────────
 
-/** Strip ` ```fd ` or ` ```text ` fences from LLM output. */
+/** Strip markdown fences from LLM output (supports common language tags). */
 export function stripMarkdownFences(text: string): string {
   let result = text;
-  result = result.replace(/^```(?:fd|text|plaintext)?\s*\n?/, "");
+  result = result.replace(/^```(?:fd|text|plaintext|json|javascript|typescript|html|css)?\s*\n?/, "");
   result = result.replace(/\n?```\s*$/, "");
   return result.trim();
 }

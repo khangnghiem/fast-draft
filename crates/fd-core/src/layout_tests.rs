@@ -335,9 +335,10 @@ frame @card {
 }
 
 #[test]
-fn layout_column_ignores_position_constraint() {
-    // Children with stale Position constraints inside a column layout
-    // should be positioned by the column, not by their Position.
+fn layout_column_position_constraint_becomes_absolute() {
+    // Children with Position constraints inside a column layout become
+    // absolutely positioned (Figma-style). They're pulled out of the
+    // column flow, while children without Position stay stacked.
     let input = r#"
 frame @card {
   w: 800 h: 600
@@ -365,26 +366,26 @@ x: 500 y: 500
     let b = bounds[&b_idx];
     let card = bounds[&card_idx];
 
-    // Both children should be at column x = pad (20), NOT at x=500
+    // @a stays in column flow: x = card.x + pad (20)
     assert!(
-        (a.x - b.x).abs() < 0.01,
-        "a.x ({}) and b.x ({}) should be equal (column aligns them)",
+        (a.x - (card.x + 20.0)).abs() < 0.01,
+        "a.x ({}) should be card.x + pad ({})",
         a.x,
-        b.x
+        card.x + 20.0
     );
-    // b should be below a by height + gap (40 + 10 = 50)
+
+    // @b has Position(500, 500) → absolutely positioned at card.x + 500
     assert!(
-        (b.y - a.y - 50.0).abs() < 0.01,
-        "b.y ({}) should be a.y + 50, got diff = {}",
+        (b.x - (card.x + 500.0)).abs() < 0.01,
+        "b.x ({}) should be card.x + 500 ({})",
+        b.x,
+        card.x + 500.0
+    );
+    assert!(
+        (b.y - (card.y + 500.0)).abs() < 0.01,
+        "b.y ({}) should be card.y + 500 ({})",
         b.y,
-        b.y - a.y
-    );
-    // Both children should be inside the card
-    assert!(
-        b.y + b.height <= card.y + card.height + 0.1,
-        "b bottom ({}) must be inside card bottom ({})",
-        b.y + b.height,
-        card.y + card.height
+        card.y + 500.0
     );
 }
 
@@ -581,13 +582,155 @@ font: "Inter" 400 12
 
     let card = bounds[&graph.index_of(NodeId::intern("card")).unwrap()];
     let title = bounds[&graph.index_of(NodeId::intern("title")).unwrap()];
+    let subtitle = bounds[&graph.index_of(NodeId::intern("subtitle")).unwrap()];
 
-    // Multiple children: text should NOT be expanded to parent
+    // Multiple children: text width should remain intrinsic (not expanded)
     assert!(
         title.width < card.width,
         "text width ({}) should be < parent ({}) with multiple children",
         title.width,
         card.width
+    );
+
+    // Both text children should be auto-centered (multi-child lift)
+    let title_cx = title.x + title.width / 2.0;
+    let card_cx = card.x + card.width / 2.0;
+    assert!(
+        (title_cx - card_cx).abs() < 1.0,
+        "title center_x ({title_cx}) should ≈ card center_x ({card_cx})"
+    );
+    let subtitle_cx = subtitle.x + subtitle.width / 2.0;
+    assert!(
+        (subtitle_cx - card_cx).abs() < 1.0,
+        "subtitle center_x ({subtitle_cx}) should ≈ card center_x ({card_cx})"
+    );
+}
+
+#[test]
+fn layout_place_center() {
+    let input = r#"
+rect @btn {
+  w: 200 h: 60
+  text @label "Click" {
+    place: center
+  }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let bounds = resolve_layout(
+        &graph,
+        Viewport {
+            width: 800.0,
+            height: 600.0,
+        },
+    );
+
+    let btn = bounds[&graph.index_of(NodeId::intern("btn")).unwrap()];
+    let label = bounds[&graph.index_of(NodeId::intern("label")).unwrap()];
+
+    let label_cx = label.x + label.width / 2.0;
+    let btn_cx = btn.x + btn.width / 2.0;
+    assert!(
+        (label_cx - btn_cx).abs() < 1.0,
+        "place:center h — label_cx={label_cx}, btn_cx={btn_cx}"
+    );
+    let label_cy = label.y + label.height / 2.0;
+    let btn_cy = btn.y + btn.height / 2.0;
+    assert!(
+        (label_cy - btn_cy).abs() < 1.0,
+        "place:center v — label_cy={label_cy}, btn_cy={btn_cy}"
+    );
+}
+
+#[test]
+fn layout_place_top_left() {
+    let input = r#"
+rect @box {
+  w: 200 h: 100
+  text @corner "X" { place: top-left }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let bounds = resolve_layout(
+        &graph,
+        Viewport {
+            width: 800.0,
+            height: 600.0,
+        },
+    );
+
+    let parent = bounds[&graph.index_of(NodeId::intern("box")).unwrap()];
+    let child = bounds[&graph.index_of(NodeId::intern("corner")).unwrap()];
+
+    assert!((child.x - parent.x).abs() < 0.01, "top-left x mismatch");
+    assert!((child.y - parent.y).abs() < 0.01, "top-left y mismatch");
+}
+
+#[test]
+fn layout_place_bottom_right() {
+    let input = r#"
+rect @box {
+  w: 200 h: 100
+  text @corner "X" { place: bottom-right }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let bounds = resolve_layout(
+        &graph,
+        Viewport {
+            width: 800.0,
+            height: 600.0,
+        },
+    );
+
+    let parent = bounds[&graph.index_of(NodeId::intern("box")).unwrap()];
+    let child = bounds[&graph.index_of(NodeId::intern("corner")).unwrap()];
+
+    let expected_x = parent.x + parent.width - child.width;
+    let expected_y = parent.y + parent.height - child.height;
+    assert!(
+        (child.x - expected_x).abs() < 0.01,
+        "bottom-right x mismatch"
+    );
+    assert!(
+        (child.y - expected_y).abs() < 0.01,
+        "bottom-right y mismatch"
+    );
+}
+
+#[test]
+fn layout_auto_center_multiple_text_children() {
+    let input = r#"
+rect @card {
+  w: 300 h: 200
+  text @heading "Hello" { font: "Inter" 700 24 }
+  text @body "World" { font: "Inter" 400 14 }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let bounds = resolve_layout(
+        &graph,
+        Viewport {
+            width: 800.0,
+            height: 600.0,
+        },
+    );
+
+    let card = bounds[&graph.index_of(NodeId::intern("card")).unwrap()];
+    let heading = bounds[&graph.index_of(NodeId::intern("heading")).unwrap()];
+    let body = bounds[&graph.index_of(NodeId::intern("body")).unwrap()];
+    let card_cx = card.x + card.width / 2.0;
+
+    let heading_cx = heading.x + heading.width / 2.0;
+    assert!(
+        (heading_cx - card_cx).abs() < 1.0,
+        "heading center ({heading_cx}) ≈ card center ({card_cx})"
+    );
+
+    let body_cx = body.x + body.width / 2.0;
+    assert!(
+        (body_cx - card_cx).abs() < 1.0,
+        "body center ({body_cx}) ≈ card center ({card_cx})"
     );
 }
 
@@ -685,5 +828,282 @@ text @btn_label "Sign In" { }
         "btn_label width ({}) should be < login_btn width ({})",
         btn_label.width,
         login_btn.width
+    );
+}
+
+/// Regression test: resolve_subtree preserves existing cached child bounds
+/// (via or_insert in Free layout) while re-centering text within new parent.
+/// The combination of or_insert + skip resolve() prevents the resize fight.
+#[test]
+fn resolve_subtree_preserves_cached_bounds_and_recenters() {
+    let input = r#"
+rect @parent {
+  w: 200 h: 100
+  text @child "Hello World" {
+    font: "Inter" 400 14
+  }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut bounds = resolve_layout(&graph, viewport);
+
+    let parent_idx = graph.index_of(NodeId::intern("parent")).unwrap();
+    let child_idx = graph.index_of(NodeId::intern("child")).unwrap();
+
+    // Simulate JS-measured text metrics: override child size with specific values
+    let js_width = 85.5;
+    let js_height = 20.0;
+    if let Some(cb) = bounds.get_mut(&child_idx) {
+        cb.width = js_width;
+        cb.height = js_height;
+    }
+
+    // Resize parent from 200→300 and call resolve_subtree
+    if let Some(pb) = bounds.get_mut(&parent_idx) {
+        pb.width = 300.0;
+    }
+    resolve_subtree(&graph, parent_idx, &mut bounds, viewport);
+
+    let child_after = bounds[&child_idx];
+    let parent_after = bounds[&parent_idx];
+
+    // or_insert preserves the JS-measured sizes
+    assert!(
+        (child_after.width - js_width).abs() < 0.01,
+        "child width ({}) should be preserved at {js_width}",
+        child_after.width
+    );
+    assert!(
+        (child_after.height - js_height).abs() < 0.01,
+        "child height ({}) should be preserved at {js_height}",
+        child_after.height
+    );
+
+    // Auto-centering re-centers child within new parent bounds
+    let child_cx = child_after.x + child_after.width / 2.0;
+    let parent_cx = parent_after.x + parent_after.width / 2.0;
+    assert!(
+        (child_cx - parent_cx).abs() < 1.0,
+        "child center ({child_cx}) should be ≈ new parent center ({parent_cx})"
+    );
+}
+
+#[test]
+fn layout_text_max_width_wraps_height() {
+    // Text with max_width should have width clamped to max_width.
+    // Height is a single-line placeholder — JS measureText() is the
+    // authoritative source for actual wrapped height (KI Lesson #9).
+    let input = r#"
+text @long "Hello World this is a long sentence that should wrap" {
+  font: "Inter" 400 14
+  w: 80
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let bounds = resolve_layout(&graph, viewport);
+
+    let idx = graph.index_of(NodeId::intern("long")).unwrap();
+    let b = &bounds[&idx];
+
+    // Width should be clamped to max_width (80)
+    assert!(
+        (b.width - 80.0).abs() < 0.01,
+        "text width ({}) should be 80 (max_width)",
+        b.width
+    );
+
+    // Height should be single-line placeholder (14 * 1.4 = 19.6)
+    let single_line = 14.0 * 1.4;
+    assert!(
+        (b.height - single_line).abs() < 0.01,
+        "text height ({}) should be single-line placeholder ({single_line})",
+        b.height
+    );
+}
+
+#[test]
+fn layout_free_frame_pad_insets_children() {
+    let input = r#"
+frame @card {
+  w: 400 h: 300
+  pad: 20
+
+  rect @child { w: 100 h: 50 }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let bounds = resolve_layout(&graph, viewport);
+
+    let card = bounds[&graph.index_of(NodeId::intern("card")).unwrap()];
+    let child = bounds[&graph.index_of(NodeId::intern("child")).unwrap()];
+
+    // Child default position should be at parent origin + pad
+    assert!(
+        (child.x - (card.x + 20.0)).abs() < 0.01,
+        "child.x ({}) should be card.x + pad ({})",
+        child.x,
+        card.x + 20.0
+    );
+    assert!(
+        (child.y - (card.y + 20.0)).abs() < 0.01,
+        "child.y ({}) should be card.y + pad ({})",
+        child.y,
+        card.y + 20.0
+    );
+}
+
+#[test]
+fn layout_free_frame_pad_text_centered_in_padded_area() {
+    let input = r#"
+frame @card {
+  w: 400 h: 300
+  pad: 40
+
+  text @label "Hello" {
+    font: "Inter" 600 14
+    place: center
+  }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let bounds = resolve_layout(&graph, viewport);
+
+    let card = bounds[&graph.index_of(NodeId::intern("card")).unwrap()];
+    let label = bounds[&graph.index_of(NodeId::intern("label")).unwrap()];
+
+    // Text should be centered within padded area (400-80=320, 300-80=220)
+    let content_cx = card.x + 40.0 + (400.0 - 80.0) / 2.0;
+    let content_cy = card.y + 40.0 + (300.0 - 80.0) / 2.0;
+    let label_cx = label.x + label.width / 2.0;
+    let label_cy = label.y + label.height / 2.0;
+
+    assert!(
+        (label_cx - content_cx).abs() < 1.0,
+        "label center x ({label_cx}) should match padded content center ({content_cx})"
+    );
+    assert!(
+        (label_cy - content_cy).abs() < 1.0,
+        "label center y ({label_cy}) should match padded content center ({content_cy})"
+    );
+}
+
+#[test]
+fn layout_free_frame_pad_zero_matches_no_pad() {
+    // pad=0 should behave identically to the old Free without pad
+    let input = r#"
+frame @card {
+  w: 400 h: 300
+  rect @child { w: 100 h: 50 }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let bounds = resolve_layout(&graph, viewport);
+
+    let card = bounds[&graph.index_of(NodeId::intern("card")).unwrap()];
+    let child = bounds[&graph.index_of(NodeId::intern("child")).unwrap()];
+
+    // Child should be at parent origin (no padding)
+    assert!(
+        (child.x - card.x).abs() < 0.01,
+        "child.x ({}) should equal card.x ({})",
+        child.x,
+        card.x
+    );
+    assert!(
+        (child.y - card.y).abs() < 0.01,
+        "child.y ({}) should equal card.y ({})",
+        child.y,
+        card.y
+    );
+}
+
+#[test]
+fn layout_text_stays_centered_after_bounds_shrink() {
+    // Regression test for: centered text shifts left on click.
+    // Simulates what update_text_metrics does: shrinks text bounds
+    // to JS-measured size. After shrinking, text must remain centered
+    // within the parent shape.
+    let input = r#"
+rect @btn {
+  w: 320 h: 44
+  text @label "Sign In" {
+    font: "Inter" 600 14
+  }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut bounds = resolve_layout(&graph, viewport);
+
+    let btn_idx = graph.index_of(NodeId::intern("btn")).unwrap();
+    let label_idx = graph.index_of(NodeId::intern("label")).unwrap();
+
+    let btn = bounds[&btn_idx];
+
+    // Verify initial centering
+    let label_before = bounds[&label_idx];
+    let initial_cx = label_before.x + label_before.width / 2.0;
+    let btn_cx = btn.x + btn.width / 2.0;
+    assert!(
+        (initial_cx - btn_cx).abs() < 1.0,
+        "initial text center ({initial_cx}) should match btn center ({btn_cx})"
+    );
+
+    // Simulate update_text_metrics: shrink to measured size
+    // "Sign In" at 14px ≈ 50px wide, 19.6px tall (from JS measureText)
+    let measured_w = 50.0_f32;
+    let measured_h = 19.6_f32;
+    if let Some(b) = bounds.get_mut(&label_idx) {
+        b.width = measured_w;
+        b.height = measured_h;
+        // Re-center within parent (this is what update_text_metrics now does)
+        b.x = btn.x + (btn.width - measured_w) / 2.0;
+        b.y = btn.y + (btn.height - measured_h) / 2.0;
+    }
+
+    // Verify text is still centered after shrink
+    let label_after = bounds[&label_idx];
+    let after_cx = label_after.x + label_after.width / 2.0;
+    let after_cy = label_after.y + label_after.height / 2.0;
+    let btn_cy = btn.y + btn.height / 2.0;
+
+    assert!(
+        (after_cx - btn_cx).abs() < 0.1,
+        "after shrink: text center x ({after_cx}) should match btn center ({btn_cx})"
+    );
+    assert!(
+        (after_cy - btn_cy).abs() < 0.1,
+        "after shrink: text center y ({after_cy}) should match btn center ({btn_cy})"
+    );
+
+    // Verify text bounds are smaller than parent
+    assert!(
+        label_after.width < btn.width,
+        "text width ({}) should be < parent ({})",
+        label_after.width,
+        btn.width
     );
 }

@@ -26,20 +26,19 @@ Each prompt must be: **self-contained** (all context inline), **one concern**, *
 
 ### 3. Prompt Format
 
-````markdown
+> [!IMPORTANT]
+> **Each prompt MUST be a single fenced code block** (` ````text `) so the user can copy the entire prompt in one click. Do NOT put metadata (Depends on, Files, Verify) outside the code block — embed everything inside it.
+
+`````markdown
 ### Prompt N: [Short Title]
 
-**Depends on:** Prompt N-1 (or "None")
-**Files:** `path/to/file1`, `path/to/file2`
-
-```
+````text
 [Complete instruction — what, where, why, expected result.
 Reference specific file paths, line numbers, CSS selectors.
-End with verification step.]
-```
-
-**Verify:** [What "done" looks like]
+End with "Verify: [what done looks like]"
+End with /yolo /nonstop /e2e]
 ````
+`````
 
 ### 4. Standard Sequences
 
@@ -69,15 +68,13 @@ End with verification step.]
 After implementation prompts, always include:
 
 - [ ] **Unit/integration test prompt** — `/test` workflow (TDD: write failing tests → implement → green)
-- [ ] **E2E browser prompt** — `/e2e` workflow (Codespace canvas testing)
-- [ ] **E2E UX prompt** — `/e2e-ux` workflow (systematic 8-phase UX verification)
+- [ ] **E2E browser prompt** — `/e2e` workflow (smoke tier for routine PRs, full tier for major features)
 
 ### Post-Implementation
 
 - [ ] `/build` passes
 - [ ] `/smoke` passes
-- [ ] `/e2e` passes
-- [ ] `/e2e-ux` all 8 phases pass
+- [ ] `/e2e` passes (smoke or full tier as appropriate)
 - [ ] `/commit` + `/pr`
 ```
 
@@ -85,20 +82,21 @@ After implementation prompts, always include:
 
 ## Rules
 
-| Rule                  | Description                                                                                                                                 |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Min 3 prompts**     | We want agents to spend time doing work                                                                                                     |
-| **Max 10 prompts**    | If more needed, split into sub-features                                                                                                     |
-| **Copy-paste ready**  | Each prompt works standalone — no "see above"                                                                                               |
-| **Concrete refs**     | Actual file paths, line numbers, selectors                                                                                                  |
-| **No ambiguity**      | Agent should never guess                                                                                                                    |
-| **Test-last prompts** | Final 1–3 prompts are ALWAYS `/test`, `/e2e`, `/e2e-ux`                                                                                     |
-| **Auto-pipeline**     | Every prompt MUST end with `/yolo /nonstop /e2e-ux` so the agent runs the full build→test→commit→E2E pipeline autonomously without stopping |
+| Rule                  | Description                                                                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Single copy block** | Each prompt MUST be one fenced code block (` ````text `) — no metadata outside it                                                        |
+| **Min 3 prompts**     | We want agents to spend time doing work                                                                                                  |
+| **Max 10 prompts**    | If more needed, split into sub-features                                                                                                  |
+| **Copy-paste ready**  | Each prompt works standalone — no "see above"                                                                                            |
+| **Concrete refs**     | Actual file paths, line numbers, selectors                                                                                               |
+| **No ambiguity**      | Agent should never guess                                                                                                                 |
+| **Test-last prompts** | Final 1–2 prompts are ALWAYS `/test`, `/e2e`                                                                                             |
+| **Auto-pipeline**     | Every prompt MUST end with `/yolo /nonstop /e2e` so the agent runs the full build→test→commit→E2E pipeline autonomously without stopping |
 
 ---
 
 ## Integration
 
 ```
-/suggest → pick → /prompts → execute 1–N → /test → /e2e → /e2e-ux → /build → /pr
+/suggest → pick → /prompts → execute 1–N → /test → /e2e → /build → /pr
 ```

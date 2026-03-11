@@ -1,3 +1,5 @@
+# ─── Layout ───
+
 # FD v1
 # Constraint-based layout — demonstrates all positioning strategies
 # ─── Canvas-centered hero ────────────────────────────────────────────────
@@ -18,53 +20,60 @@ frame @hero {
     }
   }
   layout: column gap=16 pad=40
-  w: 407.93 h: 187.77
-  x: 157.7
-  y: 678.67
+  w: 335.62 h: 189.95
+  x: -231.89
+  y: 178.97
 }
 
 text @_text_0 "Try It Now" {
   fill: #FFFFFF  # white
   font: "Inter" semibold 16
-  x: 249.51
-  y: 785.35
+  x: 388.51
+  y: 611.44
 }
 
-text @hero_title "Welcome to FD" {
+text @hero_title "Welcome to " {
+  w: 388.49
   fill: #1A1A2E  # blue
   font: "Inter" extrabold 48
-  x: 306.81
-  y: 449.41
+  x: 232.76
+  y: 465.27
 }
 
 # ─── Offset-positioned tooltip ───────────────────────────────────────────
 rect @tooltip_target {
   spec "Anchor element for tooltip"
-  text @_text_1 "Hover me" {
-    fill: #333333  # gray
-    font: "Inter" medium 14
-  }
   w: 160 h: 48
   fill: #F5F5F7  # white
   stroke: #E8E8EC 1
   corner: 8
 }
 
+text @_text_1 "Hover me" {
+  fill: #333333  # gray
+  font: "Inter" medium 14
+  x: 174.32
+  y: 819.94
+}
+
 rect @tooltip {
   spec "Tooltip — positioned via offset constraint"
-  text @_text_2 "I'm 20px right, 60px down" {
-    fill: #FFFFFF  # white
-    font: "Inter" regular 13
-  }
   w: 200 h: 44
   fill: #1A1A2E  # blue
   corner: 8
-  x: 154.92
-  y: 969.79
+  x: 198.14
+  y: 967.18
   when :enter {
     opacity: 1
     ease: ease_out 300ms
   }
+}
+
+text @_text_2 "I'm 20px right, 60px down" {
+  fill: #FFFFFF  # white
+  font: "Inter" regular 13
+  x: 214.58
+  y: 995.72
 }
 
 # ─── Fill-parent panel ───────────────────────────────────────────────────
@@ -80,36 +89,57 @@ rect @full_width_bg {
 text @_text_3 "This panel uses fill_parent with 24px inset" {
   fill: #6B7280  # blue
   font: "Inter" regular 14
-  x: 183.66
-  y: 326.51
+  x: 185.81
+  y: 332.85
 }
 
-# ─── Floating action button ─────────────────────────────────────────────
-rect @fab {
-  spec {
-    "Floating action button — fixed bottom-right"
-    accept: "persists across scroll"
+group @_group_0 {
+  rect @fab {
+    spec {
+      "Floating action button — fixed bottom-right"
+      accept: "persists across scroll"
+    }
+    text @_text_4 "+" {
+      w: 26.76
+      fill: #FFFFFF  # white
+      font: "Inter" bold 24
+      x: 16.25
+      y: 9.41
+    }
+    w: 56 h: 56
+    fill: #6C5CE7  # blue
+    corner: 28
+    shadow: (0,4,16,#6C5CE760)
+    when :hover {
+      scale: 1.5
+      ease: spring 1300ms
+    }
+    when :press {
+      scale: 0.5
+      ease: spring 2150ms
+    }
   }
-  text @_text_4 "+" {
-    fill: #FFFFFF  # white
-    font: "Inter" bold 24
-    x: 20.19
-    y: 10.73
-  }
-  w: 56 h: 56
-  fill: #6C5CE7  # blue
-  corner: 28
-  shadow: (0,4,16,#6C5CE760)
-  x: 145.14
-  y: 1111.11
-  when :hover {
-    scale: 1.1
-    ease: spring 300ms
-  }
-  when :press {
-    scale: 0.9
-    ease: spring 150ms
-  }
+  x: 81.82
+  y: 1077.34
 }
+
+# ─── Constraints ───
 
 @tooltip_target -> offset: @hero 0, 180
+
+# ─── Flows ───
+
+edge @edge_0 {
+  from: 126.8 1463.14
+  to: 413.21 1360.45
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}
+edge @edge_1 {
+  from: 269.13 1778.93
+  to: 714.37 1615.77
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}

@@ -14,17 +14,17 @@ description: Merge an existing PR into main and sync local branch
    git config core.hooksPath .githooks
    ```
 
-2. Verify the PR is ready (CI green, no blocking reviews):
+2. **Wait for CI** to pass (blocks until all checks complete):
 
-   ```bash
-   gh pr view <PR_NUMBER> --json state,statusCheckRollup
-   ```
+    ```bash
+    gh pr checks <PR_NUMBER> --watch --fail-fast
+    ```
 
 3. Merge the PR and delete the source branch:
 
-   ```bash
-   gh pr merge <PR_NUMBER> --merge --delete-branch
-   ```
+    ```bash
+    gh pr merge <PR_NUMBER> --squash --delete-branch
+    ```
 
 4. Sync local `main`:
 

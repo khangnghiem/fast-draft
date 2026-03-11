@@ -1,9 +1,9 @@
-theme step_desc {
+style step_desc {
   fill: #6B7280  # blue
   font: "Inter" regular 16
 }
 
-theme step_title {
+style step_title {
   fill: #1A1A2E  # blue
   font: "Inter" bold 28
 }

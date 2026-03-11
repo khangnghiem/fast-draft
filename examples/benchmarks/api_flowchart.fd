@@ -1,26 +1,26 @@
-# ─── Themes ───
+# ─── Styles ───
 
-theme decision_box {
+style decision_box {
   fill: #FEF3C7  # yellow
   corner: 4
 }
 
-theme error_box {
+style error_box {
   fill: #FEE2E2  # red
   corner: 8
 }
 
-theme io_box {
+style io_box {
   fill: #F3E8FF  # purple
   corner: 12
 }
 
-theme process_box {
+style process_box {
   fill: #EFF6FF  # blue
   corner: 8
 }
 
-theme success_box {
+style success_box {
   fill: #D1FAE5  # green
   corner: 8
 }

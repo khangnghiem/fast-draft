@@ -1,22 +1,22 @@
 # Login Form — Product Designer use case
 # Demonstrates: nested groups, style reuse, spec annotations, animations
 
-theme card_bg {
+style card_bg {
   fill: #FFFFFF
   corner: 16
 }
 
-theme input_field {
+style input_field {
   fill: #F8F9FA
   corner: 8
 }
 
-theme primary_btn {
+style primary_btn {
   fill: #6C5CE7
   corner: 10
 }
 
-theme secondary_btn {
+style secondary_btn {
   fill: #F0F0F5
   corner: 10
 }
