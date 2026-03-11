@@ -705,16 +705,157 @@ function setupPropsPanel() {
   });
 }
 
+/** ─── Clipboard (Copy / Paste / Cut) ────────────────────────────────── */
+let fdClipboard = '';
+let pasteOffsetCount = 0;
+
+/** Extract the .fd text block for a single node by its ID. */
+function extractNodeBlock(text, nodeId) {
+  const lines = text.split('\n');
+  const startPattern = new RegExp(`^\\s*(\\w+)\\s+@${nodeId}\\b`);
+  let startIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (startPattern.test(lines[i])) { startIdx = i; break; }
+  }
+  if (startIdx < 0) return '';
+
+  // Walk down from the declaration line until indent <= start
+  const startIndent = lines[startIdx].match(/^\s*/)[0].length;
+  let endIdx = startIdx + 1;
+  while (endIdx < lines.length) {
+    const line = lines[endIdx];
+    if (line.trim().length === 0) { endIdx++; continue; }
+    const indent = line.match(/^\s*/)[0].length;
+    if (indent <= startIndent) break;
+    endIdx++;
+  }
+  return lines.slice(startIdx, endIdx).join('\n');
+}
+
+/** Copy the selected node's .fd block to internal + system clipboard. */
+function copySelectedAsFd() {
+  if (!fdCanvas) return;
+  const text = fdCanvas.get_text();
+  const selectedId = fdCanvas.get_selected_id();
+  if (!selectedId) return;
+
+  const block = extractNodeBlock(text, selectedId);
+  if (!block) return;
+
+  fdClipboard = block;
+  pasteOffsetCount = 0;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(fdClipboard).catch(() => {});
+  }
+}
+
+/** Cut the selected node — copy then delete. */
+function cutSelectedAsFd() {
+  if (!fdCanvas) return;
+  copySelectedAsFd();
+  const changed = fdCanvas.delete_selected();
+  if (changed) {
+    renderCanvas();
+    syncCanvasToEditor();
+  }
+}
+
+/** Paste node(s) from the FD clipboard with horizontal stagger. */
+async function pasteFromClipboard() {
+  if (!fdCanvas) return;
+
+  // Try system clipboard, fall back to internal
+  let clipText = fdClipboard;
+  try {
+    if (navigator.clipboard) {
+      const sysText = await navigator.clipboard.readText();
+      if (sysText && sysText.includes('@')) clipText = sysText;
+    }
+  } catch (_) { /* permission denied */ }
+  if (!clipText.trim()) return;
+
+  pasteOffsetCount++;
+
+  // Collect all @id declarations
+  const idPattern = /@(\w+)\s*\{/g;
+  const allIds = new Set();
+  let m;
+  while ((m = idPattern.exec(clipText)) !== null) allIds.add(m[1]);
+  // Also match @id with quoted text: rect @foo "text" {
+  const idPattern2 = /@(\w+)\s+"[^"]*"\s*\{/g;
+  while ((m = idPattern2.exec(clipText)) !== null) allIds.add(m[1]);
+  // Also match typed nodes: rect @id { or ellipse @id {
+  const idPattern3 = /(?:rect|ellipse|text|group|frame|path|edge)\s+@(\w+)/g;
+  while ((m = idPattern3.exec(clipText)) !== null) allIds.add(m[1]);
+  if (allIds.size === 0) return;
+
+  // Rename IDs to avoid conflicts
+  const existingText = fdCanvas.get_text();
+  let pasteText = clipText;
+  const rootId = [...allIds][0];
+  const idMap = new Map();
+
+  for (const oldId of allIds) {
+    const stem = oldId.replace(/_(?:\d+|cp\d+)$/, '');
+    let maxN = 0;
+    const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
+    let match;
+    while ((match = re.exec(existingText)) !== null) {
+      maxN = Math.max(maxN, parseInt(match[1]));
+    }
+    if (new RegExp(`@${stem}\\b`).test(existingText)) maxN = Math.max(maxN, 1);
+    idMap.set(oldId, stem + '_' + (maxN + 1));
+  }
+
+  for (const [oldId, newId] of idMap) {
+    pasteText = pasteText.replace(new RegExp(`@${oldId}\\b`, 'g'), `@${newId}`);
+  }
+  const newRootId = idMap.get(rootId) || rootId;
+
+  // Horizontal offset: place to the right with gap
+  let xOffset = pasteOffsetCount * 20;
+  try {
+    const boundsJson = fdCanvas.get_node_bounds(rootId);
+    if (boundsJson) {
+      const bounds = JSON.parse(boundsJson);
+      if (bounds && bounds.width > 0) xOffset = (bounds.width + 20) * pasteOffsetCount;
+    }
+  } catch (_) {}
+
+  pasteText = pasteText.replace(/\b(x:\s*)(-?\d+(?:\.\d+)?)/g, (_m, prefix, val) => {
+    return prefix + (parseFloat(val) + xOffset);
+  });
+
+  // Undo support
+  const textBefore = fdCanvas.get_text();
+  const updatedText = textBefore.trimEnd() + '\n\n' + pasteText + '\n';
+  fdCanvas.set_text(updatedText);
+  fdCanvas.push_undo_snapshot(textBefore, updatedText);
+
+  renderCanvas();
+  syncCanvasToEditor();
+
+  // Select the newly pasted root node
+  fdCanvas.select_by_id(newRootId);
+  renderCanvas();
+  updatePropertiesPanel();
+  refreshLayersPanel();
+}
+
 /** ─── Context Menu ──────────────────────────────────────────────────── */
+let contextMenuClickPos = null; // scene-space {x, y} of right-click
+
 function closeContextMenu() {
   document.getElementById('ctx-menu')?.classList.remove('visible');
+  document.getElementById('ctx-menu-canvas')?.classList.remove('visible');
 }
 
 /** Wire context menu events and action handlers. */
 function setupContextMenu() {
-  const menu = document.getElementById('ctx-menu');
+  const nodeMenu = document.getElementById('ctx-menu');
+  const canvasMenu = document.getElementById('ctx-menu-canvas');
   const canvas = document.getElementById('fd-canvas');
-  if (!menu || !canvas) return;
+  if (!canvas) return;
 
   // Right-click on canvas
   canvas.addEventListener('contextmenu', (e) => {
@@ -723,30 +864,54 @@ function setupContextMenu() {
 
     const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
     const hitId = fdCanvas.hit_test_at(x, y);
-    if (hitId) {
-      fdCanvas.select_by_id(hitId);
-      renderCanvas();
-      updateFab(canvas);
-      updatePropertiesPanel();
-    }
 
-    // Position menu (keep within viewport)
+    // Position helper (keep within viewport)
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     let mx = e.clientX;
     let my = e.clientY;
-    if (mx + 170 > vw) mx = vw - 174;
-    if (my + 280 > vh) my = vh - 284;
-    menu.style.left = mx + 'px';
-    menu.style.top = my + 'px';
-    menu.classList.add('visible');
+
+    if (hitId) {
+      // ── Node context menu ──
+      fdCanvas.select_by_id(hitId);
+      renderCanvas();
+      updateFab(canvas);
+      updatePropertiesPanel();
+
+      if (nodeMenu) {
+        if (mx + 170 > vw) mx = vw - 174;
+        if (my + 280 > vh) my = vh - 284;
+        nodeMenu.style.left = mx + 'px';
+        nodeMenu.style.top = my + 'px';
+        canvasMenu?.classList.remove('visible');
+        nodeMenu.classList.add('visible');
+      }
+    } else {
+      // ── Empty space context menu ──
+      contextMenuClickPos = { x, y };
+      if (canvasMenu) {
+        if (mx + 170 > vw) mx = vw - 174;
+        if (my + 220 > vh) my = vh - 224;
+        canvasMenu.style.left = mx + 'px';
+        canvasMenu.style.top = my + 'px';
+        nodeMenu?.classList.remove('visible');
+        canvasMenu.classList.add('visible');
+      }
+    }
   });
 
-  // Action handlers
-  const doAction = (action) => {
+  // ── Node menu action handlers ──
+  const doNodeAction = (action) => {
     if (!fdCanvas) return;
     let changed = false;
     switch (action) {
+      case 'copy':
+        copySelectedAsFd();
+        break;
+      case 'cut':
+        cutSelectedAsFd();
+        changed = true; // already rendered inside cutSelectedAsFd
+        break;
       case 'duplicate':
         changed = fdCanvas.duplicate_selected();
         break;
@@ -777,20 +942,73 @@ function setupContextMenu() {
       renderCanvas();
       syncCanvasToEditor();
       updatePropertiesPanel();
+      refreshLayersPanel();
     }
     closeContextMenu();
   };
 
-  menu.querySelectorAll('.ctx-item').forEach(btn => {
+  nodeMenu?.querySelectorAll('.ctx-item').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      doAction(btn.getAttribute('data-action'));
+      doNodeAction(btn.getAttribute('data-action'));
+    });
+  });
+
+  // ── Canvas (empty space) menu action handlers ──
+  const doCanvasAction = (action) => {
+    if (!fdCanvas) return;
+    switch (action) {
+      case 'paste':
+        pasteFromClipboard();
+        break;
+      case 'add-rect':
+        fdCanvas.set_tool('rect');
+        updateToolbar('rect');
+        canvas.style.cursor = 'crosshair';
+        break;
+      case 'add-ellipse':
+        fdCanvas.set_tool('ellipse');
+        updateToolbar('ellipse');
+        canvas.style.cursor = 'crosshair';
+        break;
+      case 'add-text':
+        fdCanvas.set_tool('text');
+        updateToolbar('text');
+        canvas.style.cursor = 'crosshair';
+        break;
+      case 'fit': {
+        // Zoom to fit content
+        const sb = fdCanvas.get_scene_bounds();
+        if (sb) {
+          try {
+            const b = JSON.parse(sb);
+            if (b.w > 0 && b.h > 0) {
+              const cr = canvas.getBoundingClientRect();
+              const zoom = Math.min(cr.width / (b.w + 60), cr.height / (b.h + 60), 2);
+              zoomLevel = zoom;
+              panX = cr.width / 2 - (b.x + b.w / 2) * zoom;
+              panY = cr.height / 2 - (b.y + b.h / 2) * zoom;
+              renderCanvas();
+              updateZoomIndicator();
+            }
+          } catch (_) {}
+        }
+        break;
+      }
+    }
+    closeContextMenu();
+  };
+
+  canvasMenu?.querySelectorAll('.ctx-item').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      doCanvasAction(btn.getAttribute('data-action'));
     });
   });
 
   // Dismiss on outside click, escape, scroll
   document.addEventListener('click', (e) => {
-    if (!menu.contains(e.target)) closeContextMenu();
+    if (!nodeMenu?.contains(e.target) && !canvasMenu?.contains(e.target)) closeContextMenu();
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -801,7 +1019,6 @@ function setupContextMenu() {
         document.querySelector('.hero-playground')?.classList.remove('zen-mode');
         const zb = document.getElementById('zen-toggle-btn');
         if (zb) { zb.textContent = '🧘'; zb.title = 'Zen Mode (Esc)'; }
-        // Trigger resize via observer (resizeCanvas is scoped to initPlayground)
         setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
       }
     }
@@ -2272,6 +2489,42 @@ async function initPlayground() {
         }
         document.getElementById('floating-action-bar')?.classList.remove('visible');
         e.preventDefault();
+        return;
+      }
+
+      // ── Copy (⌘C / Ctrl+C) ──
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c' && !e.shiftKey && !e.altKey && !editorFocused) {
+        e.preventDefault();
+        copySelectedAsFd();
+        return;
+      }
+
+      // ── Cut (⌘X / Ctrl+X) ──
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'x' && !e.shiftKey && !e.altKey && !editorFocused) {
+        e.preventDefault();
+        cutSelectedAsFd();
+        return;
+      }
+
+      // ── Paste (⌘V / Ctrl+V) ──
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'v' && !e.shiftKey && !e.altKey && !editorFocused) {
+        e.preventDefault();
+        pasteFromClipboard();
+        return;
+      }
+
+      // ── Duplicate (⌘D / Ctrl+D) ──
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd' && !editorFocused) {
+        e.preventDefault();
+        if (fdCanvas) {
+          const changed = fdCanvas.duplicate_selected();
+          if (changed) {
+            renderCanvas();
+            syncCanvasToEditor();
+            updatePropertiesPanel();
+            refreshLayersPanel();
+          }
+        }
         return;
       }
 

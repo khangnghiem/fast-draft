@@ -17,7 +17,7 @@
   <!-- Preload WASM for instant playground -->
   <link rel="modulepreload" href="./wasm/fd_wasm.js" />
   <link rel="preload" href="./wasm/fd_wasm_bg.wasm" as="fetch" crossorigin />
-  <link rel="stylesheet" href="style.css?v=0.11.2" />
+  <link rel="stylesheet" href="style.css?v=0.11.3" />
 
 </head>
 <body>
@@ -196,8 +196,10 @@
               </div>
             </div>
             <div id="ctx-menu">
-              <button class="ctx-item" data-action="duplicate">⧉ Duplicate</button>
-              <button class="ctx-item" data-action="delete">🗑 Delete</button>
+              <button class="ctx-item" data-action="copy">📋 Copy <span class="ctx-shortcut">⌘C</span></button>
+              <button class="ctx-item" data-action="cut">✂ Cut <span class="ctx-shortcut">⌘X</span></button>
+              <button class="ctx-item" data-action="duplicate">⧉ Duplicate <span class="ctx-shortcut">⌘D</span></button>
+              <button class="ctx-item" data-action="delete">🗑 Delete <span class="ctx-shortcut">⌫</span></button>
               <div class="ctx-sep"></div>
               <button class="ctx-item" data-action="bring-forward">↑ Bring Forward</button>
               <button class="ctx-item" data-action="send-backward">↓ Send Backward</button>
@@ -205,7 +207,16 @@
               <button class="ctx-item" data-action="group">⊞ Group</button>
               <button class="ctx-item" data-action="ungroup">⊟ Ungroup</button>
               <div class="ctx-sep"></div>
-              <button class="ctx-item" data-action="copy-fd">📋 Copy as .fd</button>
+              <button class="ctx-item" data-action="copy-fd">📄 Copy as .fd</button>
+            </div>
+            <div id="ctx-menu-canvas">
+              <button class="ctx-item" data-action="paste">📋 Paste <span class="ctx-shortcut">⌘V</span></button>
+              <div class="ctx-sep"></div>
+              <button class="ctx-item" data-action="add-rect">▢ Add Rectangle <span class="ctx-shortcut">R</span></button>
+              <button class="ctx-item" data-action="add-ellipse">○ Add Ellipse <span class="ctx-shortcut">O</span></button>
+              <button class="ctx-item" data-action="add-text">T Add Text <span class="ctx-shortcut">T</span></button>
+              <div class="ctx-sep"></div>
+              <button class="ctx-item" data-action="fit">⊡ Fit to Content</button>
             </div>
             <div id="dimension-tooltip"></div>
             <div id="canvas-loading" class="canvas-loading">
@@ -435,7 +446,7 @@
     </div>
   </footer>
 
-  <script type="module" src="playground.js?v=0.11.2"></script>
+  <script type="module" src="playground.js?v=0.11.3"></script>
   <script>
     // Mobile menu toggle
     document.getElementById('mobile-menu-btn').addEventListener('click', function() {
