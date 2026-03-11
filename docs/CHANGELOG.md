@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.104 — Fix Z-Order Operations (R3.41)
+
+- **FIX (R3.41)**: Z-order operations (Bring to Front, Send to Back) now work from context menu, properties panel, and keyboard shortcuts — root cause: JS handlers called `render()` + `syncTextToExtension()` but skipped `bumpGeneration()`, so the layers panel never refreshed and the animation loop didn't mark the canvas dirty for subsequent frames; all 5 z-order handlers across `context-menu.js`, `panels.js`, and `shortcuts.js` now call `bumpGeneration()` before `render()`
+- **FIX (R3.41)**: Keyboard shortcuts `⌘[` / `⌘]` / `⌘⇧[` / `⌘⇧]` now reach the canvas — VS Code intercepted these for Indent/Outdent Line and Fold/Unfold; added `keybindings` overrides in `package.json` with `when: activeCustomEditorId == 'fd.canvas'` to disable the default bindings when the FD canvas editor is focused
+- **TESTING**: 5 new z-order unit tests in `model.rs` — `z_order_bring_forward`, `z_order_send_backward`, `z_order_bring_to_front`, `z_order_send_to_back`, `z_order_emitter_roundtrip`
+
 ### v0.10.103 — Canvas Performance: Spatial Index + Bounds-Hash Skip (R5.9)
 
 - **PERF (R5.9)**: `SpatialIndex` in `fd-render/src/hit.rs` — sorted-bounds spatial index with O(log N + K) `query_point()` and `query_rect()` methods, replacing O(N) brute-force walk for hit testing; index rebuilt after layout resolve; cached in `FdCanvas` for use in `hit_test()`; falls back to brute-force when index unavailable

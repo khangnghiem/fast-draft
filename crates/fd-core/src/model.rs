@@ -1382,4 +1382,248 @@ mod tests {
         // Fill should still be present
         assert!(resolved.fill.is_some());
     }
+
+    #[test]
+    fn z_order_bring_forward() {
+        let mut sg = SceneGraph::new();
+        let a = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("a"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _b = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("b"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _c = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("c"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+
+        // Initial: [a, b, c]
+        let ids: Vec<&str> = sg
+            .children(sg.root)
+            .iter()
+            .map(|&i| sg.graph[i].id.as_str())
+            .collect();
+        assert_eq!(ids, vec!["a", "b", "c"]);
+
+        // Bring @a forward → should swap a and b → [b, a, c]
+        let changed = sg.bring_forward(a);
+        assert!(changed);
+        let ids: Vec<&str> = sg
+            .children(sg.root)
+            .iter()
+            .map(|&i| sg.graph[i].id.as_str())
+            .collect();
+        assert_eq!(ids, vec!["b", "a", "c"]);
+    }
+
+    #[test]
+    fn z_order_send_backward() {
+        let mut sg = SceneGraph::new();
+        let _a = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("a"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _b = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("b"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let c = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("c"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+
+        // Send @c backward → should swap c and b → [a, c, b]
+        let changed = sg.send_backward(c);
+        assert!(changed);
+        let ids: Vec<&str> = sg
+            .children(sg.root)
+            .iter()
+            .map(|&i| sg.graph[i].id.as_str())
+            .collect();
+        assert_eq!(ids, vec!["a", "c", "b"]);
+    }
+
+    #[test]
+    fn z_order_bring_to_front() {
+        let mut sg = SceneGraph::new();
+        let a = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("a"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _b = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("b"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _c = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("c"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+
+        // Bring @a to front → [b, c, a]
+        let changed = sg.bring_to_front(a);
+        assert!(changed);
+        let ids: Vec<&str> = sg
+            .children(sg.root)
+            .iter()
+            .map(|&i| sg.graph[i].id.as_str())
+            .collect();
+        assert_eq!(ids, vec!["b", "c", "a"]);
+    }
+
+    #[test]
+    fn z_order_send_to_back() {
+        let mut sg = SceneGraph::new();
+        let _a = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("a"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _b = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("b"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let c = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("c"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+
+        // Send @c to back → [c, a, b]
+        let changed = sg.send_to_back(c);
+        assert!(changed);
+        let ids: Vec<&str> = sg
+            .children(sg.root)
+            .iter()
+            .map(|&i| sg.graph[i].id.as_str())
+            .collect();
+        assert_eq!(ids, vec!["c", "a", "b"]);
+    }
+
+    #[test]
+    fn z_order_emitter_roundtrip() {
+        use crate::emitter::emit_document;
+        use crate::parser::parse_document;
+
+        let mut sg = SceneGraph::new();
+        let a = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("a"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _b = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("b"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let _c = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("c"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+
+        // Bring @a to front → [b, c, a]
+        sg.bring_to_front(a);
+
+        // Emit and re-parse
+        let text = emit_document(&sg);
+        let reparsed = parse_document(&text).unwrap();
+        let ids: Vec<&str> = reparsed
+            .children(reparsed.root)
+            .iter()
+            .map(|&i| reparsed.graph[i].id.as_str())
+            .collect();
+        assert_eq!(
+            ids,
+            vec!["b", "c", "a"],
+            "Z-order should survive emit→parse roundtrip. Emitted:\n{}",
+            text
+        );
+    }
 }

@@ -200,13 +200,13 @@ function setupPropsActions() {
       if (!fdCanvas) return;
       const resultJson = fdCanvas.handle_key("]", false, true, false, true);
       const result = JSON.parse(resultJson);
-      if (result.changed) { render(); syncTextToExtension(); }
+      if (result.changed) { bumpGeneration(); render(); syncTextToExtension(); }
     },
     "props-send-back": () => {
       if (!fdCanvas) return;
       const resultJson = fdCanvas.handle_key("[", false, true, false, true);
       const result = JSON.parse(resultJson);
-      if (result.changed) { render(); syncTextToExtension(); }
+      if (result.changed) { bumpGeneration(); render(); syncTextToExtension(); }
     },
     "props-copy-png": () => {
       if (!fdCanvas) return;
