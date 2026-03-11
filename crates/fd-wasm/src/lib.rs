@@ -14,12 +14,14 @@ use fd_core::model::{
 use fd_editor::commands::CommandStack;
 use fd_editor::input::{InputEvent, Modifiers};
 use fd_editor::shortcuts::{ShortcutAction, ShortcutMap};
-use fd_editor::sync::{GraphMutation, SyncEngine, expand_group_to_children};
+use fd_editor::sync::{GraphMutation, SyncEngine, expand_group_to_children, next_clone_name};
 use fd_editor::tools::{
     ArrowTool, EllipseTool, EraserTool, PenTool, RectTool, ResizeHandle, SelectTool, TextTool,
     Tool, ToolKind,
 };
-use fd_render::hit::hit_test_rect;
+use fd_render::hit::{SpatialIndex, hit_test_rect};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use wasm_bindgen::prelude::*;
 use web_sys::CanvasRenderingContext2d;
 
@@ -51,6 +53,8 @@ pub struct FdCanvas {
     dark_mode: bool,
     /// Sketchy hand-drawn rendering mode.
     sketchy_mode: bool,
+    /// Cached canvas theme — rebuilt only on `set_theme()`, not per-frame.
+    cached_theme: render2d::CanvasTheme,
     hovered_id: Option<fd_core::id::NodeId>,
     pressed_id: Option<fd_core::id::NodeId>,
     /// Timestamp (ms) when hover started on the current node.
@@ -58,7 +62,22 @@ pub struct FdCanvas {
     /// Pointer-down scene position — used to detect click vs drag.
     pointer_down_pos: Option<(f32, f32)>,
     /// Style clipboard for Copy/Paste Style (⌥⌘C / ⌥⌘V).
-    style_clipboard: Option<fd_core::model::Style>,
+    style_clipboard: Option<fd_core::model::Properties>,
+    /// Whether we already duplicated during this drag (Alt+drag).
+    /// Reset on pointer-up. Prevents re-duplication on subsequent move events.
+    alt_duplicated: bool,
+    /// Scene-space position where Alt was first detected during a drag.
+    /// Duplication is deferred until the pointer moves ≥3px from this point
+    /// (Figma-style threshold to prevent accidental clones on Alt keypress).
+    alt_press_pos: Option<(f32, f32)>,
+    /// Bounds snapshots of original node(s) captured at duplication time.
+    /// JS reads this via `get_alt_drag_ghost()` to render translucent ghost
+    /// outlines at the original positions during clone-drag.
+    alt_clone_origins: Vec<(f32, f32, f32, f32)>,
+    /// Cached spatial index for O(log N) hit testing. Rebuilt after layout resolve.
+    spatial_index: Option<SpatialIndex>,
+    /// Hash of resolved bounds — used to detect layout-unchanged text edits.
+    bounds_hash: u64,
 }
 
 #[wasm_bindgen]
@@ -93,19 +112,71 @@ impl FdCanvas {
             suppress_sync: false,
             dark_mode: false,
             sketchy_mode: false,
+            cached_theme: render2d::CanvasTheme::light(),
             hovered_id: None,
             pressed_id: None,
             hover_start_ms: 0.0,
             pointer_down_pos: None,
             style_clipboard: None,
+            alt_duplicated: false,
+            alt_press_pos: None,
+            alt_clone_origins: Vec::new(),
+            spatial_index: None,
+            bounds_hash: 0,
         }
     }
 
     /// Set the FD source text, re-parsing into the scene graph.
-    /// Returns `true` on success, `false` on parse error.
-    pub fn set_text(&mut self, text: &str) -> bool {
+    /// Returns a JSON string: `{"ok":true,"layout_changed":bool}`
+    /// `layout_changed` is false when only non-layout properties changed
+    /// (comments, specs, style names) — JS can skip re-render in that case.
+    pub fn set_text(&mut self, text: &str) -> String {
+        // Early return if text unchanged
+        if text == self.engine.current_text() {
+            return r#"{"ok":true,"layout_changed":false}"#.to_string();
+        }
         self.suppress_sync = true;
         let result = self.engine.set_text(text);
+        self.engine.resolve();
+        self.suppress_sync = false;
+        if result.is_err() {
+            return r#"{"ok":false,"layout_changed":false}"#.to_string();
+        }
+        // Check if layout actually changed via bounds hash
+        let new_hash = self.compute_bounds_hash();
+        let layout_changed = new_hash != self.bounds_hash;
+        self.bounds_hash = new_hash;
+        if layout_changed {
+            // Rebuild spatial index when layout changes
+            self.rebuild_spatial_index();
+        }
+        let lc = if layout_changed { "true" } else { "false" };
+        format!(r#"{{"ok":true,"layout_changed":{lc}}}"#)
+    }
+
+    /// Import a Mermaid diagram, converting it to FD format.
+    /// Merges the resulting nodes and edges into the current document.
+    /// Returns `true` on success, `false` on parse error.
+    pub fn import_mermaid(&mut self, mermaid_text: &str) -> bool {
+        let imported = match fd_core::parse_mermaid(mermaid_text) {
+            Ok(g) => g,
+            Err(_) => return false,
+        };
+
+        // Emit the imported graph as FD text
+        let imported_fd = fd_core::emitter::emit_document(&imported);
+
+        // Append to current text
+        let current = self.engine.current_text().to_string();
+        let combined = if current.trim().is_empty() {
+            imported_fd
+        } else {
+            format!("{}\n\n{}", current.trim_end(), imported_fd)
+        };
+
+        // Re-parse the combined text
+        self.suppress_sync = true;
+        let result = self.engine.set_text(&combined);
         self.engine.resolve();
         self.suppress_sync = false;
         result.is_ok()
@@ -117,18 +188,13 @@ impl FdCanvas {
     }
 
     /// Render the scene to a Canvas2D context.
-    pub fn render(&self, ctx: &CanvasRenderingContext2d, time_ms: f64) {
+    pub fn render(&self, ctx: &CanvasRenderingContext2d, time_ms: f64, skip_grid: bool) {
         let selected_ids: Vec<String> = self
             .select_tool
             .visual_highlight
             .iter()
             .map(|id| id.as_str().to_string())
             .collect();
-        let theme = if self.dark_mode {
-            render2d::CanvasTheme::dark()
-        } else {
-            render2d::CanvasTheme::light()
-        };
 
         // Compute smart alignment guides when dragging/resizing
         let guides = self.compute_smart_guides();
@@ -140,7 +206,7 @@ impl FdCanvas {
             self.width,
             self.height,
             &selected_ids,
-            &theme,
+            &self.cached_theme,
             self.select_tool.marquee_rect,
             time_ms,
             self.hovered_id.as_ref().map(|id| id.as_str()),
@@ -148,12 +214,18 @@ impl FdCanvas {
             &guides,
             self.sketchy_mode,
             self.hover_start_ms,
+            skip_grid,
         );
     }
 
     /// Set the canvas theme.
     pub fn set_theme(&mut self, is_dark: bool) {
         self.dark_mode = is_dark;
+        self.cached_theme = if is_dark {
+            render2d::CanvasTheme::dark()
+        } else {
+            render2d::CanvasTheme::light()
+        };
     }
 
     /// Enable or disable sketchy (hand-drawn) rendering mode.
@@ -166,6 +238,28 @@ impl FdCanvas {
         self.sketchy_mode
     }
 
+    /// Get the current theme as a JSON object for cross-platform consumption.
+    ///
+    /// Returns a `ThemeContract` serialized as JSON, containing all visual
+    /// constants (colors, fonts, spacing) that platform hosts need for
+    /// consistent UI rendering.
+    pub fn get_theme_json(&self) -> String {
+        let contract = if self.dark_mode {
+            fd_core::theme::ThemeContract::dark()
+        } else {
+            fd_core::theme::ThemeContract::light()
+        };
+        contract.to_json()
+    }
+
+    /// Check if any edge in the scene has a flow animation (pulse/dash).
+    ///
+    /// The JS render loop uses this to keep rendering continuously when
+    /// flow animations exist, instead of freezing when idle.
+    pub fn has_active_flows(&self) -> bool {
+        self.engine.graph.edges.iter().any(|e| e.flow.is_some())
+    }
+
     /// Resize the canvas.
     pub fn resize(&mut self, width: f64, height: f64) {
         self.width = width;
@@ -174,7 +268,20 @@ impl FdCanvas {
             width: width as f32,
             height: height as f32,
         };
-        self.engine.resolve();
+        // Skip resolve() during active interactions (drag, draw, resize).
+        // ResizeObserver fires when the properties panel opens/closes,
+        // changing the canvas width. resolve() creates a fresh bounds
+        // HashMap from constraints, clobbering in-place drag deltas and
+        // causing nodes to snap back (flashing) every frame.
+        let interacting = self.select_tool.dragging
+            || self.select_tool.resize_handle.is_some()
+            || self.rect_tool.is_drawing()
+            || self.pen_tool.is_drawing()
+            || self.ellipse_tool.is_drawing()
+            || self.arrow_tool.drawing;
+        if !interacting {
+            self.engine.resolve();
+        }
     }
 
     /// Handle pointer down event. Returns true if the graph changed.
@@ -189,8 +296,14 @@ impl FdCanvas {
         alt: bool,
         meta: bool,
     ) -> bool {
-        // Start batch so all drag mutations become one undo step
-        self.commands.begin_batch(&mut self.engine);
+        // Start batch so all drag mutations become one undo step.
+        // Skip batching for Text tool — it emits a single AddNode, so
+        // Command::Single (with RemoveNode inverse) gives cheaper undo
+        // without a full document re-parse via set_text().
+        let needs_batch = self.active_tool != ToolKind::Text;
+        if needs_batch {
+            self.commands.begin_batch(&mut self.engine);
+        }
 
         let mods = Modifiers {
             shift,
@@ -265,11 +378,31 @@ impl FdCanvas {
             ToolKind::Eraser => unreachable!("handled above"),
         };
         let changed = self.apply_mutations(mutations);
+
+        // Alt+click on select tool: record position for deferred duplication.
+        // Actual clone happens in handle_pointer_move after ≥3px of movement
+        // (Figma-style threshold to prevent accidental clones on Alt keypress).
+        if self.active_tool == ToolKind::Select
+            && alt
+            && !ctrl
+            && !meta
+            && hit.is_some()
+            && !self.select_tool.selected.is_empty()
+        {
+            self.alt_press_pos = Some((x, y));
+        }
+
         // Marquee start also counts as a visual change (need re-render)
-        changed || self.select_tool.marquee_start.is_some() || pressed_changed || hovered_changed
+        changed
+            || self.select_tool.marquee_start.is_some()
+            || pressed_changed
+            || hovered_changed
+            || self.alt_press_pos.is_some()
     }
 
-    /// Handle pointer move event. Returns true if the graph changed.
+    /// Handle pointer move event. Returns JSON string:
+    /// `{"changed":bool}` or `{"changed":bool,"bounds":{"x":N,"y":N,"w":N,"h":N}}`
+    /// when actively dragging a selected node (for dimension tooltip).
     #[allow(clippy::too_many_arguments)]
     pub fn handle_pointer_move(
         &mut self,
@@ -280,7 +413,7 @@ impl FdCanvas {
         ctrl: bool,
         alt: bool,
         meta: bool,
-    ) -> bool {
+    ) -> String {
         let mods = Modifiers {
             shift,
             ctrl,
@@ -299,7 +432,10 @@ impl FdCanvas {
         self.hovered_id = hit;
         let hovered_changed = prev_hovered != self.hovered_id;
         if hovered_changed && self.hovered_id.is_some() {
-            self.hover_start_ms = js_sys::Date::now();
+            self.hover_start_ms = web_sys::window()
+                .and_then(|w| w.performance())
+                .map(|p| p.now())
+                .unwrap_or(0.0);
         }
 
         // Eraser: delete nodes on drag-over
@@ -308,9 +444,28 @@ impl FdCanvas {
                 && !self.eraser_tool.erased_ids.contains(&hit_id)
             {
                 self.erase_node_immediately(hit_id);
-                return true;
+                return r#"{"changed":true}"#.to_string();
             }
-            return hovered_changed;
+            let c = if hovered_changed { "true" } else { "false" };
+            return format!(r#"{{"changed":{c}}}"#);
+        }
+
+        // Alt+drag duplication with 3px threshold.
+        if self.active_tool == ToolKind::Select
+            && alt
+            && !self.alt_duplicated
+            && !self.select_tool.selected.is_empty()
+            && let Some((ox, oy)) = self.alt_press_pos
+        {
+            let dist_sq = (x - ox) * (x - ox) + (y - oy) * (y - oy);
+            if dist_sq >= 9.0 {
+                self.capture_alt_clone_origins();
+                self.alt_duplicated = true;
+                self.alt_press_pos = None;
+                self.duplicate_selected_at(0.0, 0.0);
+                self.select_tool.last_x = x;
+                self.select_tool.last_y = y;
+            }
         }
 
         let mutations = match self.active_tool {
@@ -320,11 +475,29 @@ impl FdCanvas {
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
-            ToolKind::Eraser => vec![], // Not dragging — no-op hover
+            ToolKind::Eraser => vec![],
         };
         let changed = self.apply_mutations(mutations);
-        // Marquee drag also counts as visual change
-        changed || self.select_tool.marquee_rect.is_some() || hovered_changed
+        let visual_changed = changed || self.select_tool.marquee_rect.is_some() || hovered_changed;
+
+        // Bundle selected node bounds for JS dimension tooltip (avoids 2 extra WASM calls)
+        let is_dragging = self.select_tool.dragging || self.select_tool.resize_handle.is_some();
+        if visual_changed
+            && is_dragging
+            && let Some(id) = self.select_tool.first_selected()
+            && let Some(idx) = self.engine.graph.index_of(id)
+            && let Some(b) = self.engine.current_bounds().get(&idx)
+            && b.width > 0.0
+            && b.height > 0.0
+        {
+            return format!(
+                r#"{{"changed":true,"bounds":{{"x":{},"y":{},"w":{},"h":{}}}}}"#,
+                b.x, b.y, b.width, b.height
+            );
+        }
+
+        let c = if visual_changed { "true" } else { "false" };
+        format!(r#"{{"changed":{c}}}"#)
     }
 
     /// Handle pointer up event. Returns a JSON string:
@@ -348,16 +521,25 @@ impl FdCanvas {
             meta,
         };
 
-        // Snapshot previous selection for fresh-select detection
-        let prev_selected = self.select_tool.selected.clone();
-
-        // End batch — squash all drag mutations into one undo step
-        self.commands.end_batch(&mut self.engine);
+        // End batch — squash all drag mutations into one undo step.
+        // Skip for Text tool (not batched — see handle_pointer_down).
+        if self.active_tool != ToolKind::Text {
+            self.commands.end_batch(&mut self.engine);
+        }
 
         // Finalize marquee selection before handling pointer-up
         let marquee_changed = if let Some((rx, ry, rw, rh)) = self.select_tool.marquee_rect {
             if rw > 2.0 || rh > 2.0 {
                 let hits = hit_test_rect(
+                    &self.engine.graph,
+                    self.engine.current_bounds(),
+                    rx,
+                    ry,
+                    rw,
+                    rh,
+                );
+                // Also collect edges intersecting the marquee
+                let edge_hits = fd_render::hit::hit_test_rect_edges(
                     &self.engine.graph,
                     self.engine.current_bounds(),
                     rx,
@@ -377,6 +559,12 @@ impl FdCanvas {
                             self.select_tool.visual_highlight.push(raw_id);
                         }
                     }
+                    for edge_id in edge_hits {
+                        if !self.select_tool.selected.contains(&edge_id) {
+                            self.select_tool.selected.push(edge_id);
+                            self.select_tool.visual_highlight.push(edge_id);
+                        }
+                    }
                 } else {
                     let mut new_selection = Vec::new();
                     let mut new_highlight = Vec::new();
@@ -385,6 +573,12 @@ impl FdCanvas {
                         if !new_selection.contains(&id) {
                             new_selection.push(id);
                             new_highlight.push(raw_id);
+                        }
+                    }
+                    for edge_id in edge_hits {
+                        if !new_selection.contains(&edge_id) {
+                            new_selection.push(edge_id);
+                            new_highlight.push(edge_id);
                         }
                     }
                     self.select_tool.selected = new_selection;
@@ -435,56 +629,44 @@ impl FdCanvas {
             ToolKind::Eraser => vec![],
         };
         let changed = self.apply_mutations(mutations);
-        // Flush text after gesture ends
-        if changed {
+
+        // Compute tool_switched early — needed for flush and visual_changed.
+        // A draw tool (Rect/Ellipse/Pen/Text/Arrow/Frame) completing its
+        // gesture means the scene changed even if PointerUp returned no
+        // mutations (the AddNode happened during PointerDown).
+        let tool_switched =
+            self.active_tool != ToolKind::Select && self.active_tool != ToolKind::Eraser;
+
+        // Flush text after gesture ends.
+        // Also flush when a draw tool completes (tool_switched) — the
+        // AddNode was applied during PointerDown but the tool's PointerUp
+        // returns no mutations, so `changed` is false. end_batch() already
+        // flushed, but this ensures consistency for non-batched paths.
+        if changed || tool_switched {
             self.engine.flush_to_text();
         }
 
+        // Rebuild spatial index so hit testing uses updated positions.
+        // apply_mutations() skips this for MoveNode/ResizeNode batches
+        // (to avoid resolve() clobbering), but the cached bounds ARE
+        // updated in-place — so rebuild the index from those bounds now.
+        self.rebuild_spatial_index();
+
         let drill_changed = false;
 
-        // Auto bring-forward on fresh click-select (not drag, not re-select)
-        let was_click = self
-            .pointer_down_pos
-            .map(|(dx, dy)| (x - dx).abs() < 5.0 && (y - dy).abs() < 5.0)
-            .unwrap_or(false);
-        let zorder_changed = if was_click
-            && self.select_tool.selected.len() == 1
-            && !prev_selected.contains(&self.select_tool.selected[0])
-        {
-            if let Some(idx) = self.engine.graph.index_of(self.select_tool.selected[0]) {
-                // Skip bring_forward for groups — they should stay behind children
-                let is_group = matches!(
-                    self.engine.graph.graph[idx].kind,
-                    fd_core::model::NodeKind::Group
-                );
-                if is_group {
-                    false
-                } else {
-                    let raised = self.engine.graph.bring_forward(idx);
-                    if raised {
-                        self.engine.flush_to_text();
-                    }
-                    raised
-                }
-            } else {
-                false
-            }
-        } else {
-            false
-        };
-
         self.pointer_down_pos = None;
+        self.alt_duplicated = false;
+        self.alt_press_pos = None;
+        self.alt_clone_origins.clear();
 
         let visual_changed = changed
             || marquee_changed
             || pressed_changed
             || hovered_changed
             || drill_changed
-            || zorder_changed;
+            || tool_switched;
 
         // Auto-switch back to Select after drawing gesture completes
-        let tool_switched =
-            self.active_tool != ToolKind::Select && self.active_tool != ToolKind::Eraser;
         if tool_switched {
             self.set_tool("select");
         }
@@ -568,7 +750,10 @@ impl FdCanvas {
             return true;
         }
         let id = NodeId::intern(node_id);
-        if self.engine.graph.get_by_id(id).is_some() {
+        // Accept both scene-tree nodes and edges
+        let is_node = self.engine.graph.get_by_id(id).is_some();
+        let is_edge = self.engine.graph.edges.iter().any(|e| e.id == id);
+        if is_node || is_edge {
             self.select_tool.selected = vec![id];
             self.select_tool.visual_highlight = vec![id];
             true
@@ -588,8 +773,12 @@ impl FdCanvas {
     /// Undo the last action.
     pub fn undo(&mut self) -> bool {
         let result = self.commands.undo(&mut self.engine);
-        if result.is_some() {
-            self.engine.resolve();
+        if let Some((_desc, is_snapshot)) = &result {
+            // Snapshot undo already called set_text() → resolve_layout().
+            // Only call resolve() for single-mutation undo.
+            if !is_snapshot {
+                self.engine.resolve();
+            }
             self.engine.flush_to_text();
         }
         result.is_some()
@@ -598,8 +787,10 @@ impl FdCanvas {
     /// Redo the last undone action.
     pub fn redo(&mut self) -> bool {
         let result = self.commands.redo(&mut self.engine);
-        if result.is_some() {
-            self.engine.resolve();
+        if let Some((_desc, is_snapshot)) = &result {
+            if !is_snapshot {
+                self.engine.resolve();
+            }
             self.engine.flush_to_text();
         }
         result.is_some()
@@ -608,6 +799,67 @@ impl FdCanvas {
     /// Check if text changed due to canvas interaction (for sync back to editor).
     pub fn has_pending_text_change(&self) -> bool {
         !self.suppress_sync
+    }
+
+    /// Push a text snapshot for undo support.
+    /// Used by JS-driven operations (e.g., paste) that bypass the mutation
+    /// system but still need to be undoable.
+    pub fn push_undo_snapshot(&mut self, text_before: &str, text_after: &str) {
+        self.commands
+            .push_snapshot(text_before.to_string(), text_after.to_string(), "paste");
+    }
+
+    /// Cancel an in-progress drag gesture (Esc mid-drag).
+    ///
+    /// Restores the scene to the pre-drag state by abandoning the batch
+    /// snapshot and resetting all tool drag flags. Returns `true` if a
+    /// drag was actually cancelled.
+    pub fn cancel_drag(&mut self) -> bool {
+        // Check if any tool is actively dragging
+        let was_dragging = self.select_tool.dragging
+            || self.select_tool.marquee_start.is_some()
+            || self.select_tool.resize_handle.is_some()
+            || self.rect_tool.is_drawing()
+            || self.ellipse_tool.is_drawing()
+            || self.pen_tool.is_drawing()
+            || self.arrow_tool.drawing
+            || self.eraser_tool.dragging;
+
+        if !was_dragging {
+            return false;
+        }
+
+        // Abandon the batch — restores pre-drag text snapshot
+        self.commands.abandon_batch(&mut self.engine);
+        self.engine.resolve();
+
+        // Reset all tool drag states
+        self.select_tool.dragging = false;
+        self.select_tool.marquee_start = None;
+        self.select_tool.marquee_rect = None;
+        self.select_tool.resize_handle = None;
+        self.select_tool.locked_axis = None;
+        self.select_tool.shift_toggled_off = None;
+
+        self.rect_tool.cancel();
+        self.ellipse_tool.cancel();
+        self.pen_tool.cancel();
+        self.arrow_tool.drawing = false;
+        self.arrow_tool.start_pos = None;
+        self.arrow_tool.current_pos = None;
+        self.arrow_tool.source_node = None;
+        self.arrow_tool.target_node = None;
+        self.eraser_tool.clear();
+
+        // Reset interaction state
+        self.pointer_down_pos = None;
+        self.alt_duplicated = false;
+        self.alt_press_pos = None;
+        self.alt_clone_origins.clear();
+        self.pressed_id = None;
+        self.erase_pending_flush = false;
+
+        true
     }
 
     // ─── Keyboard Shortcut API ───────────────────────────────────────────
@@ -686,17 +938,61 @@ impl FdCanvas {
             return false;
         }
         let ids: Vec<NodeId> = self.select_tool.selected.clone();
+        // Emit RemoveEdge for edge IDs, RemoveNode for node IDs
         let mutations: Vec<GraphMutation> = ids
             .iter()
-            .map(|id| GraphMutation::RemoveNode { id: *id })
+            .map(|id| {
+                if self.engine.graph.edges.iter().any(|e| e.id == *id) {
+                    GraphMutation::RemoveEdge { id: *id }
+                } else {
+                    GraphMutation::RemoveNode { id: *id }
+                }
+            })
             .collect();
-        let changed = self.apply_mutations(mutations);
-        if changed {
-            self.select_tool.selected.clear();
-            self.select_tool.visual_highlight.clear();
-            self.engine.flush_to_text();
+
+        // Wrap in a batch so multi-delete (including edge cleanup) is
+        // a single atomic undo step via text snapshot.
+        self.commands.begin_batch(&mut self.engine);
+        for mutation in mutations {
+            self.commands
+                .execute(&mut self.engine, mutation, "delete selected");
         }
-        changed
+        self.engine.resolve();
+        self.commands.end_batch(&mut self.engine);
+
+        self.select_tool.selected.clear();
+        self.select_tool.visual_highlight.clear();
+        self.engine.flush_to_text();
+        true
+    }
+
+    /// Capture bounds of currently selected nodes before Alt+drag duplication.
+    /// Called right before `duplicate_selected_at` so the ghost shows the
+    /// original positions (before selection transfers to clones).
+    fn capture_alt_clone_origins(&mut self) {
+        self.alt_clone_origins.clear();
+        for &id in &self.select_tool.selected {
+            if let Some(idx) = self.engine.graph.index_of(id)
+                && let Some(b) = self.engine.current_bounds().get(&idx)
+            {
+                self.alt_clone_origins.push((b.x, b.y, b.width, b.height));
+            }
+        }
+    }
+
+    /// Get ghost origin bounds for Alt+drag visual feedback.
+    /// Returns a JSON array of `{x, y, w, h}` objects, or empty string
+    /// if no Alt+drag clone is active.
+    pub fn get_alt_drag_ghost(&self) -> String {
+        if self.alt_clone_origins.is_empty() {
+            return String::new();
+        }
+        let entries: Vec<String> = self
+            .alt_clone_origins
+            .iter()
+            .map(|(x, y, w, h)| format!(r#"{{"x":{},"y":{},"w":{},"h":{}}}"#, x, y, w, h))
+            .collect();
+        format!("[{}]", entries.join(","))
     }
 
     /// Duplicate the currently selected node(s). Returns true if duplicated.
@@ -705,45 +1001,202 @@ impl FdCanvas {
     }
 
     /// Duplicate selected node(s) with a custom offset. Returns true if duplicated.
+    /// Handles multi-select: clones ALL selected nodes, deep-copies Group/Frame
+    /// subtrees, remaps internal references, and duplicates edges between them.
     /// Use (0, 0) for Alt+drag clone-in-place.
     pub fn duplicate_selected_at(&mut self, dx: f32, dy: f32) -> bool {
-        let first_id = match self.select_tool.first_selected() {
-            Some(id) => id,
-            None => return false,
-        };
-        let original = match self.engine.graph.get_by_id(first_id) {
-            Some(node) => node.clone(),
-            None => return false,
-        };
-        let mut cloned = original;
-        // Derive name from original — strip existing _copy_N suffix to avoid
-        // recursive growth (e.g. btn_copy_7_copy_8), then append fresh _copy_N.
-        let base = first_id.as_str();
-        let stem = base.rfind("_copy_").map_or(base, |pos| &base[..pos]);
-        let new_id = NodeId::with_prefix(&format!("{stem}_copy"));
-        cloned.id = new_id;
-        if dx != 0.0 || dy != 0.0 {
-            cloned.constraints.push(fd_core::model::Constraint::Offset {
-                from: first_id,
-                dx,
-                dy,
-            });
-        } else {
-            // Clone in-place: copy the original's position constraints
-            // (no offset needed — constraints are already cloned)
+        if self.select_tool.selected.is_empty() {
+            return false;
         }
 
-        let mutation = GraphMutation::AddNode {
-            parent_id: NodeId::intern("root"),
-            node: Box::new(cloned),
-        };
-        let changed = self.apply_mutations(vec![mutation]);
+        let selected_ids: Vec<NodeId> = self.select_tool.selected.clone();
+        let mut id_map: std::collections::HashMap<NodeId, NodeId> =
+            std::collections::HashMap::new();
+        let mut mutations: Vec<GraphMutation> = Vec::new();
+
+        // Phase 1: Clone each selected node (+ descendants for Group/Frame)
+        for &orig_id in &selected_ids {
+            self.clone_node_recursive(orig_id, dx, dy, &selected_ids, &mut id_map, &mut mutations);
+        }
+
+        if mutations.is_empty() {
+            return false;
+        }
+
+        // Phase 2: Remap internal references in cloned nodes
+        // Constraints (Offset.from, CenterIn) that reference other cloned
+        // nodes should point to the clone, not the original.
+        for mutation in &mut mutations {
+            if let GraphMutation::AddNode { node, .. } = mutation {
+                for constraint in &mut node.constraints {
+                    match constraint {
+                        fd_core::model::Constraint::Offset { from, .. } => {
+                            if let Some(&new_from) = id_map.get(from) {
+                                *from = new_from;
+                            }
+                        }
+                        fd_core::model::Constraint::CenterIn(target) => {
+                            if let Some(&new_target) = id_map.get(target) {
+                                *target = new_target;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        // Phase 3: Duplicate edges where both endpoints are in the cloned set
+        let edge_mutations = self.clone_edges_between(&id_map);
+        mutations.extend(edge_mutations);
+
+        // Phase 4: Apply all mutations at once
+        let changed = self.apply_mutations(mutations);
         if changed {
-            self.select_tool.selected = vec![new_id];
-            self.select_tool.visual_highlight = vec![new_id];
+            // Transfer selection to the new clones (only top-level, not
+            // descendants — matching the original selection granularity)
+            let new_ids: Vec<NodeId> = selected_ids
+                .iter()
+                .filter_map(|old| id_map.get(old).copied())
+                .collect();
+            self.select_tool.selected = new_ids.clone();
+            self.select_tool.visual_highlight = new_ids;
             self.engine.flush_to_text();
         }
         changed
+    }
+
+    /// Clone a single node and (if Group/Frame) all its descendants.
+    /// Populates `id_map` (old→new) and appends AddNode mutations.
+    fn clone_node_recursive(
+        &self,
+        orig_id: NodeId,
+        dx: f32,
+        dy: f32,
+        selected_ids: &[NodeId],
+        id_map: &mut std::collections::HashMap<NodeId, NodeId>,
+        mutations: &mut Vec<GraphMutation>,
+    ) {
+        // Skip if already cloned (e.g. child of a previously cloned group)
+        if id_map.contains_key(&orig_id) {
+            return;
+        }
+
+        let original = match self.engine.graph.get_by_id(orig_id) {
+            Some(node) => node.clone(),
+            None => return,
+        };
+
+        // Incremental clone name: foo → foo_2, foo_2 → foo_3
+        let new_id = next_clone_name(&self.engine.graph, orig_id);
+        id_map.insert(orig_id, new_id);
+
+        let mut cloned = original;
+        cloned.id = new_id;
+
+        // Top-level selected nodes get independent position from resolved bounds.
+        // Strip inherited positioning constraints so the clone doesn't overlap
+        // the original (fixes selection coupling + drag inversion bugs).
+        if selected_ids.contains(&orig_id) {
+            cloned.constraints.retain(|c| {
+                !matches!(
+                    c,
+                    Constraint::Position { .. }
+                        | Constraint::Offset { .. }
+                        | Constraint::CenterIn(_)
+                        | Constraint::FillParent { .. }
+                )
+            });
+            if let Some(idx) = self.engine.graph.index_of(orig_id)
+                && let Some(b) = self.engine.current_bounds().get(&idx)
+            {
+                let rx = ((b.x + dx) * 100.0).round() / 100.0;
+                let ry = ((b.y + dy) * 100.0).round() / 100.0;
+                cloned
+                    .constraints
+                    .push(Constraint::Position { x: rx, y: ry });
+            }
+        }
+
+        // Determine parent for the clone
+        let parent_id = if selected_ids.contains(&orig_id) {
+            NodeId::intern("root")
+        } else {
+            // This is a descendant — find its parent and use the cloned parent
+            let orig_idx = self.engine.graph.index_of(orig_id);
+            let parent_idx = orig_idx.and_then(|idx| self.engine.graph.parent(idx));
+            let parent_orig_id = parent_idx.map(|pidx| self.engine.graph.graph[pidx].id);
+            parent_orig_id
+                .and_then(|pid| id_map.get(&pid).copied())
+                .unwrap_or_else(|| NodeId::intern("root"))
+        };
+
+        mutations.push(GraphMutation::AddNode {
+            parent_id,
+            node: Box::new(cloned),
+        });
+
+        // Deep-copy children for Group/Frame nodes
+        let orig_kind = self
+            .engine
+            .graph
+            .get_by_id(orig_id)
+            .map(|n| &n.kind)
+            .cloned();
+        let is_container = matches!(
+            orig_kind.as_ref(),
+            Some(NodeKind::Group) | Some(NodeKind::Frame { .. })
+        );
+        if is_container && let Some(orig_idx) = self.engine.graph.index_of(orig_id) {
+            let children = self.engine.graph.children(orig_idx);
+            for child_idx in children {
+                let child_id = self.engine.graph.graph[child_idx].id;
+                self.clone_node_recursive(child_id, 0.0, 0.0, &[], id_map, mutations);
+            }
+        }
+    }
+
+    /// Clone edges where both endpoints are in the id_map (i.e., both
+    /// endpoints were cloned). Returns AddEdge mutations.
+    fn clone_edges_between(
+        &self,
+        id_map: &std::collections::HashMap<NodeId, NodeId>,
+    ) -> Vec<GraphMutation> {
+        let mut edge_mutations = Vec::new();
+        for edge in &self.engine.graph.edges {
+            let from_id = edge.from.node_id();
+            let to_id = edge.to.node_id();
+
+            // Only clone if both endpoints were cloned
+            let new_from = from_id.and_then(|id| id_map.get(&id).copied());
+            let new_to = to_id.and_then(|id| id_map.get(&id).copied());
+
+            if let (Some(nf), Some(nt)) = (new_from, new_to) {
+                let new_edge_id = next_clone_name(&self.engine.graph, edge.id);
+
+                // Remap text_child if it was also cloned
+                let new_text_child = edge.text_child.and_then(|tc| id_map.get(&tc).copied());
+
+                let cloned_edge = fd_core::model::Edge {
+                    id: new_edge_id,
+                    from: fd_core::model::EdgeAnchor::Node(nf),
+                    to: fd_core::model::EdgeAnchor::Node(nt),
+                    text_child: new_text_child,
+                    props: edge.props.clone(),
+                    use_styles: edge.use_styles.clone(),
+                    arrow: edge.arrow,
+                    curve: edge.curve,
+                    annotations: edge.annotations.clone(),
+                    animations: edge.animations.clone(),
+                    flow: edge.flow,
+                    label_offset: edge.label_offset,
+                };
+                edge_mutations.push(GraphMutation::AddEdge {
+                    edge: Box::new(cloned_edge),
+                });
+            }
+        }
+        edge_mutations
     }
 
     /// Group the currently selected nodes. Returns true if grouped.
@@ -981,7 +1434,18 @@ impl FdCanvas {
         };
         let new_width = match max_w {
             Some(mw) => mw, // Width stays at max_width (wrapping constraint)
-            None => content_width,
+            None => {
+                // If the text is in a managed layout (Column/Row/Grid), the layout
+                // solver stretches its width to fill the container. Don't shrink
+                // below the layout-assigned width — that would undo the stretch
+                // and cause the text to jump from centered to left-aligned.
+                if fd_core::layout::is_parent_managed(&self.engine.graph, idx) {
+                    let layout_width = self.engine.bounds.get(&idx).map_or(0.0, |b| b.width);
+                    content_width.max(layout_width)
+                } else {
+                    content_width
+                }
+            }
         };
 
         // Enforce minimum bounds
@@ -1002,6 +1466,30 @@ impl FdCanvas {
             return false;
         }
 
+        // Re-center text within parent shape after bounds shrink.
+        // Without this, text shifts visually because its bounding box narrowed
+        // but x/y stayed at the old (wider) centered position.
+        let node = &self.engine.graph.graph[idx];
+        let has_position = node
+            .constraints
+            .iter()
+            .any(|c| matches!(c, Constraint::Position { .. }));
+        let has_place = node.place.is_some();
+
+        if !has_position
+            && !has_place
+            && let Some(parent_idx) = self.engine.graph.parent(idx)
+            && matches!(
+                &self.engine.graph.graph[parent_idx].kind,
+                NodeKind::Rect { .. } | NodeKind::Ellipse { .. } | NodeKind::Frame { .. }
+            )
+            && let Some(parent_b) = self.engine.bounds.get(&parent_idx).copied()
+            && let Some(b) = self.engine.bounds.get_mut(&idx)
+        {
+            b.x = parent_b.x + (parent_b.width - final_width) / 2.0;
+            b.y = parent_b.y + (parent_b.height - final_height) / 2.0;
+        }
+
         old_bounds != self.engine.bounds.get(&idx).copied()
     }
 
@@ -1017,6 +1505,31 @@ impl FdCanvas {
             .children(idx)
             .iter()
             .any(|ci| matches!(self.engine.graph.graph[*ci].kind, NodeKind::Text { .. }))
+    }
+
+    /// Get IDs of all direct Text children of a node.
+    /// Returns JSON array of string IDs, e.g. `["label","subtitle"]`.
+    /// Used by JS to remeasure text bounds after parent resize.
+    pub fn get_text_children(&self, node_id: &str) -> String {
+        let id = NodeId::intern(node_id);
+        let Some(idx) = self.engine.graph.index_of(id) else {
+            return "[]".to_string();
+        };
+        let ids: Vec<String> = self
+            .engine
+            .graph
+            .children(idx)
+            .iter()
+            .filter_map(|ci| {
+                let node = &self.engine.graph.graph[*ci];
+                if matches!(node.kind, NodeKind::Text { .. }) {
+                    Some(node.id.as_str().to_string())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        serde_json::to_string(&ids).unwrap_or_else(|_| "[]".to_string())
     }
 
     /// Get the parent ID of a node. Returns empty string for root-level nodes.
@@ -1094,6 +1607,7 @@ impl FdCanvas {
             duration_ms,
             easing,
             properties: anim_props,
+            delay_ms: None,
         };
 
         // Get current animations and append the new one
@@ -1222,12 +1736,6 @@ impl FdCanvas {
             return;
         }
 
-        let theme = if self.dark_mode {
-            render2d::CanvasTheme::dark()
-        } else {
-            render2d::CanvasTheme::light()
-        };
-
         let selected_ids: Vec<String> = self
             .select_tool
             .selected
@@ -1240,7 +1748,7 @@ impl FdCanvas {
             &self.engine.graph,
             self.engine.current_bounds(),
             &selected_ids,
-            &theme,
+            &self.cached_theme,
             offset_x,
             offset_y,
             self.sketchy_mode,
@@ -1279,6 +1787,12 @@ impl FdCanvas {
             Some(id) => id,
             None => return "{}".to_string(),
         };
+
+        // Check if selected item is an edge
+        if let Some(edge) = self.engine.graph.edges.iter().find(|e| e.id == id) {
+            return self.edge_props_json(edge);
+        }
+
         let node = match self.engine.graph.get_by_id(id) {
             Some(n) => n,
             None => return "{}".to_string(),
@@ -1320,6 +1834,27 @@ impl FdCanvas {
             }
             NodeKind::Path { .. } => {
                 props.insert("kind".into(), "path".into());
+            }
+            NodeKind::Image {
+                width,
+                height,
+                source,
+                fit,
+            } => {
+                props.insert("kind".into(), "image".into());
+                props.insert("width".into(), serde_json::json!(width));
+                props.insert("height".into(), serde_json::json!(height));
+                let src = match source {
+                    fd_core::model::ImageSource::File(p) => p.clone(),
+                };
+                props.insert("src".into(), serde_json::Value::String(src));
+                let fit_str = match fit {
+                    fd_core::model::ImageFit::Cover => "cover",
+                    fd_core::model::ImageFit::Contain => "contain",
+                    fd_core::model::ImageFit::Fill => "fill",
+                    fd_core::model::ImageFit::None => "none",
+                };
+                props.insert("fit".into(), serde_json::Value::String(fit_str.to_string()));
             }
             NodeKind::Generic => {
                 props.insert("kind".into(), "generic".into());
@@ -1434,6 +1969,74 @@ impl FdCanvas {
         serde_json::Value::Object(props).to_string()
     }
 
+    /// Build JSON properties for a selected edge.
+    fn edge_props_json(&self, edge: &Edge) -> String {
+        let mut props = serde_json::Map::new();
+        props.insert(
+            "id".into(),
+            serde_json::Value::String(edge.id.as_str().to_string()),
+        );
+        props.insert("kind".into(), "edge".into());
+
+        // From / To
+        let from_str = match &edge.from {
+            EdgeAnchor::Node(id) => id.as_str().to_string(),
+            EdgeAnchor::Point(x, y) => format!("({x}, {y})"),
+        };
+        let to_str = match &edge.to {
+            EdgeAnchor::Node(id) => id.as_str().to_string(),
+            EdgeAnchor::Point(x, y) => format!("({x}, {y})"),
+        };
+        props.insert("from".into(), serde_json::Value::String(from_str));
+        props.insert("to".into(), serde_json::Value::String(to_str));
+
+        // Arrow
+        let arrow_str = match edge.arrow {
+            ArrowKind::None => "none",
+            ArrowKind::Start => "start",
+            ArrowKind::End => "end",
+            ArrowKind::Both => "both",
+        };
+        props.insert(
+            "arrow".into(),
+            serde_json::Value::String(arrow_str.to_string()),
+        );
+
+        // Curve
+        let curve_str = match edge.curve {
+            CurveKind::Straight => "straight",
+            CurveKind::Smooth => "smooth",
+            CurveKind::Step => "step",
+        };
+        props.insert(
+            "curve".into(),
+            serde_json::Value::String(curve_str.to_string()),
+        );
+
+        // Stroke
+        let resolved = self.engine.graph.resolve_style_for_edge(edge, &[]);
+        if let Some(ref stroke) = resolved.stroke {
+            if let Paint::Solid(c) = &stroke.paint {
+                props.insert("strokeColor".into(), serde_json::Value::String(c.to_hex()));
+            }
+            props.insert("strokeWidth".into(), serde_json::json!(stroke.width));
+        }
+
+        // Flow animation
+        if let Some(ref flow) = edge.flow {
+            let flow_str = match flow.kind {
+                fd_core::model::FlowKind::Pulse => "pulse",
+                fd_core::model::FlowKind::Dash => "dash",
+            };
+            props.insert(
+                "flow".into(),
+                serde_json::Value::String(flow_str.to_string()),
+            );
+            props.insert("flowDuration".into(), serde_json::json!(flow.duration_ms));
+        }
+
+        serde_json::Value::Object(props).to_string()
+    }
     /// Get basic properties of a node by its ID (without selecting it).
     /// Returns JSON with `text`, `fontSize`, `fontFamily`, `fontWeight`.
     /// Returns `{}` if the node is not found.
@@ -1446,8 +2049,15 @@ impl FdCanvas {
         let style = self.engine.graph.resolve_style(node, &[]);
         let mut props = serde_json::Map::new();
 
-        if let NodeKind::Text { ref content, .. } = node.kind {
+        if let NodeKind::Text {
+            ref content,
+            max_width,
+        } = node.kind
+        {
             props.insert("text".into(), serde_json::Value::String(content.clone()));
+            if let Some(mw) = max_width {
+                props.insert("maxWidth".into(), serde_json::json!(mw));
+            }
         }
 
         if let Some(ref font) = style.font {
@@ -1472,9 +2082,18 @@ impl FdCanvas {
 
         let mutation = match key {
             "fill" => {
-                if let Some(color) = Color::from_hex(value) {
+                if value == "none" || value == "transparent" {
+                    // Clear fill → fully transparent
                     if let Some(node) = self.engine.graph.get_by_id(id) {
-                        let mut style = node.style.clone();
+                        let mut style = node.props.clone();
+                        style.fill = None;
+                        GraphMutation::SetStyle { id, style }
+                    } else {
+                        return false;
+                    }
+                } else if let Some(color) = Color::from_hex(value) {
+                    if let Some(node) = self.engine.graph.get_by_id(id) {
+                        let mut style = node.props.clone();
                         style.fill = Some(Paint::Solid(color));
                         GraphMutation::SetStyle { id, style }
                     } else {
@@ -1487,7 +2106,7 @@ impl FdCanvas {
             "strokeColor" => {
                 if let Some(color) = Color::from_hex(value) {
                     if let Some(node) = self.engine.graph.get_by_id(id) {
-                        let mut style = node.style.clone();
+                        let mut style = node.props.clone();
                         let resolved = self.engine.graph.resolve_style(node, &[]);
                         let mut stroke = style.stroke.or(resolved.stroke).unwrap_or_default();
                         stroke.paint = Paint::Solid(color);
@@ -1503,7 +2122,7 @@ impl FdCanvas {
             "strokeWidth" => {
                 if let Ok(w) = value.parse::<f32>() {
                     if let Some(node) = self.engine.graph.get_by_id(id) {
-                        let mut style = node.style.clone();
+                        let mut style = node.props.clone();
                         let resolved = self.engine.graph.resolve_style(node, &[]);
                         let mut stroke = style.stroke.or(resolved.stroke).unwrap_or_default();
                         stroke.width = w;
@@ -1519,7 +2138,7 @@ impl FdCanvas {
             "cornerRadius" => {
                 if let Ok(r) = value.parse::<f32>() {
                     if let Some(node) = self.engine.graph.get_by_id(id) {
-                        let mut style = node.style.clone();
+                        let mut style = node.props.clone();
                         style.corner_radius = Some(r);
                         GraphMutation::SetStyle { id, style }
                     } else {
@@ -1532,7 +2151,7 @@ impl FdCanvas {
             "opacity" => {
                 if let Ok(o) = value.parse::<f32>() {
                     if let Some(node) = self.engine.graph.get_by_id(id) {
-                        let mut style = node.style.clone();
+                        let mut style = node.props.clone();
                         style.opacity = Some(o);
                         GraphMutation::SetStyle { id, style }
                     } else {
@@ -1549,7 +2168,7 @@ impl FdCanvas {
                     _ => TextAlign::Center,
                 };
                 if let Some(node) = self.engine.graph.get_by_id(id) {
-                    let mut style = node.style.clone();
+                    let mut style = node.props.clone();
                     style.text_align = Some(align);
                     GraphMutation::SetStyle { id, style }
                 } else {
@@ -1563,7 +2182,7 @@ impl FdCanvas {
                     _ => TextVAlign::Middle,
                 };
                 if let Some(node) = self.engine.graph.get_by_id(id) {
-                    let mut style = node.style.clone();
+                    let mut style = node.props.clone();
                     style.text_valign = Some(valign);
                     GraphMutation::SetStyle { id, style }
                 } else {
@@ -1688,6 +2307,42 @@ impl FdCanvas {
         "{}".to_string()
     }
 
+    /// Get the bounding box of all non-root nodes in the scene.
+    /// Returns `{"x":N,"y":N,"w":N,"h":N}` or `""` if no nodes exist.
+    /// Single WASM call replaces N×get_node_bounds() roundtrips in JS minimap.
+    pub fn get_scene_bounds(&self) -> String {
+        let mut sx = f32::MAX;
+        let mut sy = f32::MAX;
+        let mut sx2 = f32::MIN;
+        let mut sy2 = f32::MIN;
+        let mut found = false;
+
+        for (&idx, b) in self.engine.current_bounds() {
+            if idx == self.engine.graph.root {
+                continue;
+            }
+            if b.width > 0.0 && b.height > 0.0 {
+                sx = sx.min(b.x);
+                sy = sy.min(b.y);
+                sx2 = sx2.max(b.x + b.width);
+                sy2 = sy2.max(b.y + b.height);
+                found = true;
+            }
+        }
+
+        if !found {
+            return String::new();
+        }
+
+        format!(
+            r#"{{"x":{},"y":{},"w":{},"h":{}}}"#,
+            sx,
+            sy,
+            sx2 - sx,
+            sy2 - sy
+        )
+    }
+
     /// Hit-test at scene-space coordinates. Returns the topmost node ID, or empty string.
     pub fn hit_test_at(&self, x: f32, y: f32) -> String {
         self.hit_test(x, y)
@@ -1714,7 +2369,7 @@ impl FdCanvas {
                 width: 200.0,
                 height: 150.0,
                 clip: false,
-                layout: LayoutMode::Free,
+                layout: LayoutMode::Free { pad: 0.0 },
             },
             _ => return false,
         };
@@ -1728,23 +2383,23 @@ impl FdCanvas {
             Color::rgba(0.2, 0.2, 0.2, 1.0) // #333333 — visible on light bg
         };
         if kind == "frame" {
-            node.style.fill = Some(Paint::Solid(Color::rgba(0.95, 0.95, 0.97, 1.0)));
-            node.style.stroke = Some(Stroke {
+            node.props.fill = Some(Paint::Solid(Color::rgba(0.95, 0.95, 0.97, 1.0)));
+            node.props.stroke = Some(Stroke {
                 paint: Paint::Solid(Color::rgba(0.75, 0.75, 0.8, 1.0)),
                 width: 1.0,
                 cap: StrokeCap::Butt,
                 join: StrokeJoin::Miter,
             });
         } else if kind == "rect" {
-            node.style.stroke = Some(Stroke {
+            node.props.stroke = Some(Stroke {
                 paint: Paint::Solid(stroke_color),
                 width: 2.5,
                 cap: StrokeCap::Round,
                 join: StrokeJoin::Round,
             });
-            node.style.corner_radius = Some(8.0);
+            node.props.corner_radius = Some(8.0);
         } else if kind == "ellipse" {
-            node.style.stroke = Some(Stroke {
+            node.props.stroke = Some(Stroke {
                 paint: Paint::Solid(stroke_color),
                 width: 2.5,
                 cap: StrokeCap::Round,
@@ -1793,7 +2448,7 @@ impl FdCanvas {
             from: EdgeAnchor::Node(from),
             to: EdgeAnchor::Node(to),
             text_child: None,
-            style: fd_core::model::Style::default(),
+            props: fd_core::model::Properties::default(),
             use_styles: Default::default(),
             arrow: ArrowKind::End,
             curve: CurveKind::Smooth,
@@ -1823,7 +2478,7 @@ impl FdCanvas {
             from: EdgeAnchor::Point(x1, y1),
             to: EdgeAnchor::Point(x2, y2),
             text_child: None,
-            style: fd_core::model::Style::default(),
+            props: fd_core::model::Properties::default(),
             use_styles: Default::default(),
             arrow: ArrowKind::End,
             curve: CurveKind::Straight,
@@ -1843,13 +2498,141 @@ impl FdCanvas {
             String::new()
         }
     }
-}
 
+    /// Compute alignment guides for a hypothetical rect at (x, y, w, h).
+    /// Used by JS drag-to-create to show snap lines before the node exists.
+    /// Returns JSON: `[[x1,y1,x2,y2], ...]`
+    pub fn compute_guides_for_rect(&self, x: f32, y: f32, w: f32, h: f32) -> String {
+        let snap_threshold = 5.0_f32;
+        let mut guides = Vec::new();
+
+        let s_left = x;
+        let s_cx = x + w / 2.0;
+        let s_right = x + w;
+        let s_top = y;
+        let s_cy = y + h / 2.0;
+        let s_bottom = y + h;
+
+        let vw = self.width;
+        let vh = self.height;
+
+        for (&idx, b) in self.engine.current_bounds() {
+            if idx == self.engine.graph.root {
+                continue;
+            }
+
+            let o_left = b.x;
+            let o_cx = b.x + b.width / 2.0;
+            let o_right = b.x + b.width;
+            let o_top = b.y;
+            let o_cy = b.y + b.height / 2.0;
+            let o_bottom = b.y + b.height;
+
+            for (sv, ov) in [
+                (s_left, o_left),
+                (s_left, o_cx),
+                (s_left, o_right),
+                (s_cx, o_left),
+                (s_cx, o_cx),
+                (s_cx, o_right),
+                (s_right, o_left),
+                (s_right, o_cx),
+                (s_right, o_right),
+            ] {
+                if (sv - ov).abs() < snap_threshold {
+                    guides.push((ov as f64, 0.0, ov as f64, vh));
+                }
+            }
+
+            for (sv, ov) in [
+                (s_top, o_top),
+                (s_top, o_cy),
+                (s_top, o_bottom),
+                (s_cy, o_top),
+                (s_cy, o_cy),
+                (s_cy, o_bottom),
+                (s_bottom, o_top),
+                (s_bottom, o_cy),
+                (s_bottom, o_bottom),
+            ] {
+                if (sv - ov).abs() < snap_threshold {
+                    guides.push((0.0, ov as f64, vw, ov as f64));
+                }
+            }
+        }
+
+        guides.sort_by(|a, b| {
+            a.0.partial_cmp(&b.0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then(a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+        });
+        guides.dedup_by(|a, b| (a.0 - b.0).abs() < 0.5 && (a.1 - b.1).abs() < 0.5);
+
+        let json_guides: Vec<[f64; 4]> = guides.iter().map(|g| [g.0, g.1, g.2, g.3]).collect();
+        serde_json::to_string(&json_guides).unwrap_or_else(|_| "[]".to_string())
+    }
+    // ─── Code Mode: Diagnostics, Completions, Hover ─────────────────────
+
+    /// Get parse diagnostics for the current document text.
+    /// Returns JSON: `[{line, col, endCol, message, severity}]`
+    pub fn get_diagnostics(&mut self) -> String {
+        let text = self.engine.text.clone();
+        get_diagnostics_for_text(&text)
+    }
+
+    /// Get context-aware completions at the cursor position.
+    /// Returns JSON: `[{label, kind, detail, insertText}]`
+    pub fn get_completions(&self, line: u32, col: u32) -> String {
+        let text = self.engine.text.clone();
+        get_completions_for_text(&text, line, col)
+    }
+
+    /// Get hover information at the cursor position.
+    /// Returns JSON: `{content: "markdown"}` or `""` if no info.
+    pub fn get_hover(&self, line: u32, col: u32) -> String {
+        let text = self.engine.text.clone();
+        get_hover_for_text(&text, line, col)
+    }
+}
 // ─── Private helpers ─────────────────────────────────────────────────────
 
 impl FdCanvas {
     fn hit_test(&self, x: f32, y: f32) -> Option<NodeId> {
-        fd_render::hit::hit_test(&self.engine.graph, self.engine.current_bounds(), x, y)
+        // Use spatial index if available (O(log N + K) vs O(N))
+        let node_hit = if let Some(ref index) = self.spatial_index {
+            index.query_point(x, y)
+        } else {
+            fd_render::hit::hit_test(&self.engine.graph, self.engine.current_bounds(), x, y)
+        };
+        // Nodes take priority over edges
+        node_hit.or_else(|| {
+            fd_render::hit::hit_test_edge(&self.engine.graph, self.engine.current_bounds(), x, y)
+        })
+    }
+
+    /// Rebuild the spatial index from current bounds.
+    fn rebuild_spatial_index(&mut self) {
+        self.spatial_index = Some(SpatialIndex::build(
+            &self.engine.graph,
+            self.engine.current_bounds(),
+        ));
+    }
+
+    /// Compute a hash of all resolved bounds for change detection.
+    fn compute_bounds_hash(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        let bounds = self.engine.current_bounds();
+        // Sort by index for deterministic ordering
+        let mut entries: Vec<_> = bounds.iter().collect();
+        entries.sort_by_key(|(idx, _)| idx.index());
+        for (idx, b) in entries {
+            idx.index().hash(&mut hasher);
+            b.x.to_bits().hash(&mut hasher);
+            b.y.to_bits().hash(&mut hasher);
+            b.width.to_bits().hash(&mut hasher);
+            b.height.to_bits().hash(&mut hasher);
+        }
+        hasher.finish()
     }
 
     fn apply_mutations(&mut self, mutations: Vec<GraphMutation>) -> bool {
@@ -1875,6 +2658,7 @@ impl FdCanvas {
         // and fight with the in-place update.
         if !all_drag_ops {
             self.engine.resolve();
+            self.rebuild_spatial_index();
         }
         true
     }
@@ -2066,36 +2850,16 @@ impl FdCanvas {
             let o_cy = b.y + b.height / 2.0;
             let o_bottom = b.y + b.height;
 
-            // Check X-axis alignments
-            let x_refs = [
-                (s_left, o_left),
-                (s_left, o_cx),
-                (s_left, o_right),
-                (s_cx, o_left),
-                (s_cx, o_cx),
-                (s_cx, o_right),
-                (s_right, o_left),
-                (s_right, o_cx),
-                (s_right, o_right),
-            ];
+            // Check X-axis alignments (Figma-style: same-kind only)
+            let x_refs = [(s_left, o_left), (s_cx, o_cx), (s_right, o_right)];
             for (sv, ov) in x_refs {
                 if (sv - ov).abs() < snap_threshold {
                     guides.push((ov as f64, 0.0, ov as f64, h));
                 }
             }
 
-            // Check Y-axis alignments
-            let y_refs = [
-                (s_top, o_top),
-                (s_top, o_cy),
-                (s_top, o_bottom),
-                (s_cy, o_top),
-                (s_cy, o_cy),
-                (s_cy, o_bottom),
-                (s_bottom, o_top),
-                (s_bottom, o_cy),
-                (s_bottom, o_bottom),
-            ];
+            // Check Y-axis alignments (Figma-style: same-kind only)
+            let y_refs = [(s_top, o_top), (s_cy, o_cy), (s_bottom, o_bottom)];
             for (sv, ov) in y_refs {
                 if (sv - ov).abs() < snap_threshold {
                     guides.push((0.0, ov as f64, w, ov as f64));
@@ -2110,6 +2874,11 @@ impl FdCanvas {
                 .then(a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
         });
         guides.dedup_by(|a, b| (a.0 - b.0).abs() < 0.5 && (a.1 - b.1).abs() < 0.5);
+
+        // Cap at 4 guides max (2 vertical + 2 horizontal, closest wins)
+        if guides.len() > 4 {
+            guides.truncate(4);
+        }
 
         guides
     }
@@ -2171,11 +2940,15 @@ impl FdCanvas {
                 (false, false)
             }
 
-            // Z-order (now handled in Rust)
+            // Z-order (handled in Rust — flush to text so reorder persists)
             ShortcutAction::SendBackward => {
                 if let Some(id) = self.select_tool.first_selected() {
                     if let Some(idx) = self.engine.graph.index_of(id) {
                         let changed = self.engine.graph.send_backward(idx);
+                        if changed {
+                            self.engine.mark_dirty();
+                            self.engine.flush_to_text();
+                        }
                         (changed, false)
                     } else {
                         (false, false)
@@ -2188,6 +2961,10 @@ impl FdCanvas {
                 if let Some(id) = self.select_tool.first_selected() {
                     if let Some(idx) = self.engine.graph.index_of(id) {
                         let changed = self.engine.graph.bring_forward(idx);
+                        if changed {
+                            self.engine.mark_dirty();
+                            self.engine.flush_to_text();
+                        }
                         (changed, false)
                     } else {
                         (false, false)
@@ -2200,6 +2977,10 @@ impl FdCanvas {
                 if let Some(id) = self.select_tool.first_selected() {
                     if let Some(idx) = self.engine.graph.index_of(id) {
                         let changed = self.engine.graph.send_to_back(idx);
+                        if changed {
+                            self.engine.mark_dirty();
+                            self.engine.flush_to_text();
+                        }
                         (changed, false)
                     } else {
                         (false, false)
@@ -2212,6 +2993,10 @@ impl FdCanvas {
                 if let Some(id) = self.select_tool.first_selected() {
                     if let Some(idx) = self.engine.graph.index_of(id) {
                         let changed = self.engine.graph.bring_to_front(idx);
+                        if changed {
+                            self.engine.mark_dirty();
+                            self.engine.flush_to_text();
+                        }
                         (changed, false)
                     } else {
                         (false, false)
@@ -2239,7 +3024,7 @@ impl FdCanvas {
                 if let Some(id) = self.select_tool.first_selected()
                     && let Some(node) = self.engine.graph.get_by_id(id)
                 {
-                    self.style_clipboard = Some(node.style.clone());
+                    self.style_clipboard = Some(node.props.clone());
                 }
                 (false, false)
             }
@@ -2330,6 +3115,323 @@ fn console_error_panic_hook_setup() {
     }
 }
 
+// ─── Code Mode helpers (no canvas needed) ────────────────────────────────
+
+/// Compute parse diagnostics for FD source text.
+/// Returns JSON: `[{line, col, endCol, message, severity}]`
+fn get_diagnostics_for_text(text: &str) -> String {
+    match fd_core::parser::parse_document(text) {
+        Ok(_) => "[]".to_string(),
+        Err(err_msg) => {
+            let (line, col) = extract_error_pos(text, &err_msg);
+            let escaped = err_msg.replace('\\', "\\\\").replace('"', "\\\"");
+            format!(
+                r#"[{{"line":{line},"col":{col},"endCol":{end},"message":"{escaped}","severity":"error"}}]"#,
+                end = col + 1
+            )
+        }
+    }
+}
+
+/// Best-effort extraction of error position from winnow error messages.
+fn extract_error_pos(source: &str, error: &str) -> (u32, u32) {
+    // winnow errors contain remaining text: "... at '...remaining...'"
+    if let Some(at_idx) = error.find("at '") {
+        let remaining = &error[at_idx + 4..];
+        if let Some(end) = remaining.find('\'') {
+            let snippet = &remaining[..end];
+            if let Some(offset) = source.find(snippet) {
+                return offset_to_lc(source, offset);
+            }
+        }
+    }
+    // Fallback: end of document
+    let line_count = source.lines().count();
+    if line_count == 0 {
+        return (0, 0);
+    }
+    let last_line = line_count.saturating_sub(1) as u32;
+    let last_col = source.lines().last().map_or(0, |l| l.len() as u32);
+    (last_line, last_col)
+}
+
+/// Convert byte offset to (line, col) — zero-indexed.
+fn offset_to_lc(source: &str, offset: usize) -> (u32, u32) {
+    let mut line = 0u32;
+    let mut col = 0u32;
+    for (i, ch) in source.char_indices() {
+        if i >= offset {
+            break;
+        }
+        if ch == '\n' {
+            line += 1;
+            col = 0;
+        } else {
+            col += 1;
+        }
+    }
+    (line, col)
+}
+
+/// Compute context-aware completions at the cursor position.
+fn get_completions_for_text(text: &str, line: u32, col: u32) -> String {
+    let cur_line = text.lines().nth(line as usize).unwrap_or("");
+    let end = std::cmp::min(col as usize, cur_line.len());
+    let before = cur_line[..end].trim();
+
+    // After a property colon → suggest values
+    if let Some(prop) = before
+        .strip_suffix(':')
+        .or_else(|| before.strip_suffix(": "))
+    {
+        let prop_name = prop.split_whitespace().last().unwrap_or("");
+        return completions_json(&value_completions_data(prop_name));
+    }
+
+    // Brace depth determines context
+    let depth = brace_depth(text, line, col);
+    if depth == 0 {
+        completions_json(&top_level_items())
+    } else {
+        completions_json(&node_body_items())
+    }
+}
+
+/// Count brace nesting depth up to (line, col).
+fn brace_depth(text: &str, line: u32, col: u32) -> usize {
+    let mut depth: i32 = 0;
+    for (i, ln) in text.lines().enumerate() {
+        if i > line as usize {
+            break;
+        }
+        let end = if i == line as usize {
+            std::cmp::min(col as usize, ln.len())
+        } else {
+            ln.len()
+        };
+        for ch in ln[..end].chars() {
+            match ch {
+                '{' => depth += 1,
+                '}' => depth -= 1,
+                _ => {}
+            }
+        }
+    }
+    depth.max(0) as usize
+}
+
+fn top_level_items() -> Vec<(&'static str, &'static str, &'static str)> {
+    vec![
+        ("rect", "keyword", "Rectangle shape"),
+        ("ellipse", "keyword", "Ellipse / circle shape"),
+        ("text", "keyword", "Text label"),
+        ("frame", "keyword", "Frame container with clip"),
+        ("group", "keyword", "Group container"),
+        ("path", "keyword", "Freeform path"),
+        ("style", "keyword", "Reusable style definition"),
+        ("edge", "keyword", "Edge / connection"),
+        ("import", "keyword", "Import another .fd file"),
+    ]
+}
+
+fn node_body_items() -> Vec<(&'static str, &'static str, &'static str)> {
+    vec![
+        ("w:", "property", "Width"),
+        ("h:", "property", "Height"),
+        ("fill:", "property", "Fill color"),
+        ("stroke:", "property", "Stroke color and width"),
+        ("corner:", "property", "Corner radius"),
+        ("opacity:", "property", "Opacity (0.0–1.0)"),
+        ("font:", "property", "Font family, weight, size"),
+        ("bg:", "property", "Background shorthand"),
+        ("use:", "property", "Reference a named style"),
+        ("layout:", "property", "Layout mode for children"),
+        ("shadow:", "property", "Drop shadow"),
+        ("x:", "property", "X position"),
+        ("y:", "property", "Y position"),
+        ("align:", "property", "Text alignment"),
+        ("when", "keyword", "Animation block"),
+        ("spec", "keyword", "Annotation block"),
+        ("rect", "keyword", "Nested rectangle"),
+        ("ellipse", "keyword", "Nested ellipse"),
+        ("text", "keyword", "Nested text"),
+        ("frame", "keyword", "Nested frame"),
+        ("group", "keyword", "Nested group"),
+    ]
+}
+
+fn value_completions_data(property: &str) -> Vec<(&'static str, &'static str, &'static str)> {
+    match property {
+        "layout" => vec![
+            ("column", "value", "Vertical stack"),
+            ("row", "value", "Horizontal stack"),
+            ("grid", "value", "Grid layout"),
+            ("free", "value", "Free positioning"),
+        ],
+        "ease" => vec![
+            ("linear", "value", "Linear easing"),
+            ("ease_in", "value", "Ease in"),
+            ("ease_out", "value", "Ease out"),
+            ("ease_in_out", "value", "Ease in-out"),
+            ("spring", "value", "Spring physics"),
+        ],
+        "status" => vec![
+            ("todo", "value", "Not started"),
+            ("doing", "value", "In progress"),
+            ("done", "value", "Completed"),
+            ("blocked", "value", "Blocked"),
+        ],
+        "priority" => vec![
+            ("low", "value", "Low"),
+            ("medium", "value", "Medium"),
+            ("high", "value", "High"),
+            ("critical", "value", "Critical"),
+        ],
+        "fill" | "background" | "color" => vec![
+            ("#6C5CE7", "value", "Purple"),
+            ("#FF6B6B", "value", "Red"),
+            ("#3B82F6", "value", "Blue"),
+            ("#22C55E", "value", "Green"),
+            ("#F59E0B", "value", "Amber"),
+            ("#EC4899", "value", "Pink"),
+            ("#333333", "value", "Dark gray"),
+            ("#FFFFFF", "value", "White"),
+        ],
+        "align" => vec![
+            ("left", "value", "Left-align"),
+            ("center", "value", "Center-align"),
+            ("right", "value", "Right-align"),
+        ],
+        "arrow" => vec![
+            ("none", "value", "No arrowheads"),
+            ("start", "value", "Arrow at start"),
+            ("end", "value", "Arrow at end"),
+            ("both", "value", "Both ends"),
+        ],
+        "curve" => vec![
+            ("straight", "value", "Straight line"),
+            ("smooth", "value", "Smooth curve"),
+            ("step", "value", "Step routing"),
+        ],
+        _ => vec![],
+    }
+}
+
+/// Serialize completion items to JSON.
+fn completions_json(items: &[(&str, &str, &str)]) -> String {
+    let entries: Vec<String> = items
+        .iter()
+        .map(|(label, kind, detail)| {
+            format!(
+                r#"{{"label":"{}","kind":"{}","detail":"{}"}}"#,
+                label, kind, detail
+            )
+        })
+        .collect();
+    format!("[{}]", entries.join(","))
+}
+
+/// Compute hover info at cursor position.
+fn get_hover_for_text(text: &str, line: u32, col: u32) -> String {
+    let Some(cur_line) = text.lines().nth(line as usize) else {
+        return String::new();
+    };
+    let word = extract_word(cur_line, col as usize);
+    if word.is_empty() {
+        return String::new();
+    }
+
+    // @id hover — show node kind
+    if let Some(id) = word.strip_prefix('@') {
+        // Try to find the node kind from the text
+        let pattern = format!("@{id}");
+        for ln in text.lines() {
+            let trimmed = ln.trim();
+            if trimmed.contains(&pattern) {
+                for kw in &["rect", "ellipse", "text", "frame", "group", "path", "edge"] {
+                    if trimmed.starts_with(kw) {
+                        let escaped = format!(
+                            "**@{id}** — {kind} node",
+                            kind = kw
+                                .chars()
+                                .next()
+                                .unwrap()
+                                .to_uppercase()
+                                .collect::<String>()
+                                + &kw[1..]
+                        );
+                        return format!(r#"{{"content":"{}"}}"#, escaped);
+                    }
+                }
+            }
+        }
+        return format!(r#"{{"content":"**@{id}** — node reference"}}"#);
+    }
+
+    // Keyword / property hover
+    let info = match word {
+        "rect" => {
+            "**rect** — Rectangle shape.\n\nProperties: `w:` `h:` `fill:` `stroke:` `corner:` `opacity:`"
+        }
+        "ellipse" => {
+            "**ellipse** — Ellipse or circle shape.\n\nProperties: `w:` `h:` `fill:` `stroke:` `opacity:`"
+        }
+        "text" => "**text** — Text label node.\n\nInline content: `text @id \"content\" { ... }`",
+        "frame" => {
+            "**frame** — Visible container with explicit size.\n\nSupports `layout:` for auto arrangement."
+        }
+        "group" => {
+            "**group** — Organizational container.\n\nInvisible on canvas. Auto-sizes to children."
+        }
+        "path" => "**path** — Freeform vector path.\n\nSVG-like commands via `d:` property.",
+        "style" | "theme" => {
+            "**style** — Reusable style definition.\n\nApply to nodes with `use: style_name`."
+        }
+        "edge" => "**edge** — Connection between nodes.\n\n`from:` `to:` `arrow:` `curve:` `flow:`",
+        "w" | "width" => "**w:** — Width in pixels.",
+        "h" | "height" => "**h:** — Height in pixels.",
+        "fill" => "**fill:** — Fill color. Accepts `#RGB`, `#RRGGBB`, named colors.",
+        "stroke" => "**stroke:** — Stroke color and width.",
+        "corner" => "**corner:** — Corner radius.",
+        "opacity" => "**opacity:** — 0.0 (transparent) to 1.0 (opaque).",
+        "font" => "**font:** — Font spec: `\"Family\" weight size`.",
+        "bg" => "**bg:** — Background with inline corner/shadow.",
+        "use" => "**use:** — Reference a named style.",
+        "layout" => "**layout:** — Children arrangement: `column`, `row`, `grid`, `free`.",
+        "when" | "anim" => "**when** — Animation block. Triggers: `:hover`, `:press`, `:enter`.",
+        "spec" => "**spec** — Structured annotation block.",
+        "ease" => "**ease:** — Easing: `linear`, `ease_in`, `ease_out`, `spring`.",
+        "shadow" => "**shadow:** — Drop shadow `(ox,oy,blur,#color)`.",
+        "align" => "**align:** — Text alignment: `left|center|right [top|middle|bottom]`.",
+        _ => return String::new(),
+    };
+
+    let escaped = info.replace('"', "\\\"").replace('\n', "\\n");
+    format!(r#"{{"content":"{escaped}"}}"#)
+}
+
+/// Extract the word at a column position.
+fn extract_word(line: &str, col: usize) -> &str {
+    let bytes = line.as_bytes();
+    let col = col.min(line.len());
+    // Include @ prefix for node IDs
+    let start = (0..col)
+        .rev()
+        .take_while(|&i| {
+            i < bytes.len()
+                && (bytes[i].is_ascii_alphanumeric()
+                    || bytes[i] == b'_'
+                    || bytes[i] == b'@'
+                    || bytes[i] == b'#')
+        })
+        .count();
+    let begin = col.saturating_sub(start);
+    let end_off = (col..line.len())
+        .take_while(|&i| bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_')
+        .count();
+    &line[begin..col + end_off]
+}
+
 // ─── Standalone validation functions (no canvas needed) ──────────────────
 
 /// Validate FD source text. Returns JSON: `{"ok":true}` or `{"ok":false,"error":"..."}`.
@@ -2374,6 +3476,7 @@ fn collect_node_tree(graph: &fd_core::SceneGraph, idx: fd_core::NodeIndex) -> se
         fd_core::NodeKind::Rect { .. } => "rect",
         fd_core::NodeKind::Ellipse { .. } => "ellipse",
         fd_core::NodeKind::Path { .. } => "path",
+        fd_core::NodeKind::Image { .. } => "image",
         fd_core::NodeKind::Text { .. } => "text",
     };
     let children: Vec<serde_json::Value> = graph

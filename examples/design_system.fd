@@ -1,3 +1,5 @@
+# ─── Layout ───
+
 group @color_palette {
   text @palette_title "Color Palette" {
     fill: #1A1A2E  # blue
@@ -118,14 +120,19 @@ group @color_palette {
 
 rect @btn_secondary {
   spec "Secondary action button"
-  text @_anon_8 "Learn More" {
-    fill: #6C5CE7  # blue
-    font: "Inter" semibold 15
-  }
   w: 160 h: 48
   fill: #F0EDFC  # blue
   stroke: #6C5CE7 2
   corner: 10
+  x: -155.08
+  y: 461.83
+}
+
+text @_anon_8 "Learn More" {
+  fill: #6C5CE7  # blue
+  font: "Inter" semibold 15
+  x: 301.1
+  y: 80.84
 }
 
 rect @btn_ghost {
@@ -137,6 +144,8 @@ rect @btn_ghost {
   w: 160 h: 48
   fill: #F5F5F7  # white
   corner: 10
+  x: 232.52
+  y: 15.9
 }
 
 rect @btn_danger {
@@ -149,11 +158,15 @@ rect @btn_danger {
   use: danger
   fill: #D63031  # red
   corner: 10
+  x: 26.23
+  y: 86.72
 }
 
 text @input_title "Inputs" {
   fill: #1A1A2E  # blue
   font: "Inter" bold 28
+  x: 245.56
+  y: -86.37
 }
 
 rect @input_default {
@@ -207,4 +220,107 @@ rect @input_error {
   y: 177.55
 }
 
+ellipse @ellipse_0 {
+  w: 0.29 h: 0.04
+  x: 69.36
+  y: 692.7
+}
+
+rect @rect_1 {
+  w: 92.4 h: 72.01
+  x: 99.89
+  y: 557.42
+}
+
+ellipse @ellipse_3 {
+  w: 50 h: 50
+  x: 5.86
+  y: 592.42
+}
+
+rect @_rect_0 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 109.25
+  y: 744.84
+}
+
+ellipse @_ellipse_1 {
+  w: 50 h: 40
+  stroke: #333333 2.5
+  x: 351.95
+  y: 667.47
+}
+
+rect @_rect_0 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: -134.14
+  y: 602.42
+}
+
+rect @_rect_0 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 108.26
+  y: 980.2
+}
+
+rect @rect_1 {
+  w: 11.29 h: 6
+  x: 49.32
+  y: 1032.64
+}
+
+group @_group_3 {
+  rect @_rect_2 {
+    w: 100 h: 80
+    stroke: #333333 2.5
+    corner: 8
+  }
+  x: -23.55
+  y: 1255.55
+}
+
+rect @rect_4 {
+  w: 131.51 h: 111.27
+  x: 182.09
+  y: 1144.49
+}
+
+rect @rect_5 {
+  w: 211.17 h: 156.62
+  x: 325.83
+  y: 920.76
+}
+
+rect @_rect_6 {
+  w: 100 h: 80
+  stroke: #333333 2.5
+  corner: 8
+  x: 485.69
+  y: 1266.48
+}
+
+rect @rect_7 {
+  w: 120 h: 80
+  x: 567.47
+  y: 1112.22
+}
+
+# ─── Constraints ───
+
 @color_palette -> center_in: canvas
+
+# ─── Flows ───
+
+edge @edge_1 {
+  from: @ellipse_3
+  to: @_rect_0
+  stroke: #6B7080 1.5
+  arrow: end
+  curve: smooth
+}

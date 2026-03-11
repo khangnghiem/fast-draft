@@ -41,6 +41,9 @@ async function main() {
       fdCanvas.set_text(window.initialText);
     }
 
+    // Detect flow animations for continuous render loop
+    hasFlowEdges = fdCanvas.has_active_flows();
+
     // Measure all text nodes for tight bounding boxes
     measureAllTextNodes();
 
@@ -64,6 +67,7 @@ async function main() {
     setupPropertiesPanel();
     setupInlineEditor();
     setupAlignGrid();
+    setupPropsActions();
     setupDragAndDrop();
     setupAnimPicker();
     setupHelpButton();
@@ -80,13 +84,18 @@ async function main() {
     setupInsertMenu();
     setupMinimap();
     setupColorSwatches();
-    setupSelectionBar();
+    setupPanelResize();
     setupTouchGestures();
     setupZoomControls();
     setupUndoRedoControls();
     setupSettingsMenu();
     setupFloatingToolbar();
     setupEdgeContextMenu();
+
+    // Ensure no stale menus are visible after init
+    closeContextMenu();
+    hideFloatingBar();
+    closeEdgeContextMenu();
 
     // Tell extension we're ready
     vscode.postMessage({ type: "ready" });
@@ -113,7 +122,7 @@ function render() {
   ctx.setTransform(z, 0, 0, z, panX * dpr, panY * dpr);
   // Draw grid below shapes
   if (gridEnabled) drawGrid();
-  fdCanvas.render(ctx, performance.now());
+  fdCanvas.render(ctx, performance.now(), gridEnabled);
 
   // ── Arrow tool: draw live preview line during drag ──
   const arrowPreviewJson = fdCanvas.get_arrow_preview();
@@ -243,6 +252,19 @@ function render() {
     if (erasePoofs.length > 0) renderDirty = true;
   }
 
+  // ── Alt+drag ghost: translucent outlines at original positions ──
+  if (altDragGhosts.length > 0) {
+    ctx.save();
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = "#4FC3F7";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    for (const g of altDragGhosts) {
+      ctx.strokeRect(g.x, g.y, g.w, g.h);
+    }
+    ctx.restore();
+  }
+
   ctx.restore();
 
   // Update minimap viewport indicator smoothly (scene re-renders at lower frequency)
@@ -265,7 +287,7 @@ let animFrameId = null;
 function startAnimLoop() {
   if (animFrameId !== null) return; // already running
   function loop() {
-    if (renderDirty || activeTweens.length > 0 || erasePoofs.length > 0) {
+    if (renderDirty || activeTweens.length > 0 || erasePoofs.length > 0 || hasFlowEdges) {
       renderDirty = false;
       render();
     }

@@ -8,6 +8,48 @@
  *  when rapidly arrowing through lines in the text editor. */
 let codeFocusDebounceTimer = null;
 
+/**
+ * Central selection sync — one function, all panels.
+ * Ensures that selecting a node/edge in ANY panel updates all others.
+ *
+ * @param {string} id - Node or edge ID (from @id), or "" to deselect
+ * @param {'canvas'|'layers'|'code'|'keyboard'} source - Origin panel
+ */
+function syncSelection(id, source) {
+  if (!fdCanvas) return;
+
+  // 1. Canvas: select + render (skip if source is canvas — already selected)
+  if (source !== "canvas") {
+    fdCanvas.select_by_id(id || "");
+    // select_by_id returns false for edge IDs — that's OK, edges
+    // don't have canvas selection highlights yet
+    render();
+  }
+
+  // 2. Dedup state — prevents redundant nodeSelected round-trips
+  lastNotifiedSelectedId = id || "";
+
+  // 3. Layers: highlight + scroll into view
+  refreshLayersPanel();
+
+  // 4. Code: notify extension to highlight line (skip if source is code)
+  if (source !== "code") {
+    vscode.postMessage({ type: "nodeSelected", id: id || "" });
+  }
+
+  // 5. Canvas focus: debounced pan/zoom (only for Code→Canvas)
+  if (source === "code" && id) {
+    clearTimeout(codeFocusDebounceTimer);
+    codeFocusDebounceTimer = setTimeout(() => focusOnNode(id), 150);
+  }
+
+  // 6. Side panels
+  updatePropertiesPanel();
+  // FAB is canvas-contextual — only show when selecting via canvas click
+  if (source === "canvas") updateFloatingBar();
+  else hideFloatingBar();
+}
+
 window.addEventListener("message", (event) => {
   const message = event.data;
 
@@ -15,30 +57,26 @@ window.addEventListener("message", (event) => {
     case "setText": {
       if (!fdCanvas) return;
       suppressTextSync = true;
-      fdCanvas.set_text(message.text);
+      const resultJson = fdCanvas.set_text(message.text);
       lastSyncedText = message.text; // Keep dedup in sync
       bumpGeneration(); // External text change — invalidate caches
-      measureAllTextNodes(); // Tight text bounds after code edit
-      render();
+      try {
+        const r = JSON.parse(resultJson);
+        if (r.layout_changed) {
+          measureAllTextNodes(); // Tight text bounds after code edit
+          render();
+        }
+      } catch (_) {
+        measureAllTextNodes();
+        render();
+      }
       suppressTextSync = false;
 
       break;
     }
     case "selectNode": {
-      if (!fdCanvas) return;
-      const nodeId = message.nodeId || "";
-      if (fdCanvas.select_by_id(nodeId)) {
-        // Sync dedup state so next canvas click sends nodeSelected correctly
-        lastNotifiedSelectedId = nodeId;
-        render();
-        // Update Layers panel highlight + scroll into view
-        refreshLayersPanel();
-        // Debounced pan/zoom to the selected node on Canvas (150ms)
-        if (nodeId) {
-          clearTimeout(codeFocusDebounceTimer);
-          codeFocusDebounceTimer = setTimeout(() => focusOnNode(nodeId), 150);
-        }
-      }
+      // Code cursor moved to a node/edge line → sync all panels
+      syncSelection(message.nodeId || "", "code");
       break;
     }
     case "libraryData": {
@@ -81,4 +119,5 @@ function syncTextToExtension() {
     text: text,
   });
 }
+
 

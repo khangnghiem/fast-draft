@@ -4,33 +4,33 @@
 import "tokens.fd" as tokens
 
 # Typography scale — uses named colors for quick scanning
-theme display {
+style display {
   font: "Inter" bold 48
   fill: slate
 }
 
-theme heading {
+style heading {
   font: "Inter" semibold 24
   fill: slate
 }
 
-theme body {
+style body {
   font: "Inter" regular 16
   fill: gray
 }
 
-theme caption {
+style caption {
   font: "Inter" medium 12
   fill: gray
 }
 
 # Shared component styles
-theme swatch_card {
+style swatch_card {
   fill: white
   corner: 12
 }
 
-theme section_label {
+style section_label {
   font: "Inter" semibold 11
   fill: gray
   opacity: 0.6

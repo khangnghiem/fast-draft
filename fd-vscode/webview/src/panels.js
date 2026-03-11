@@ -147,6 +147,9 @@ function updatePropertiesPanel() {
     appearance.style.display = (props.kind === "root" || props.kind === "group") ? "none" : "";
   }
 
+  // Actions section state
+  updatePropsActionsState();
+
   propsSuppressSync = false;
 }
 
@@ -166,6 +169,88 @@ function setupAlignGrid() {
     syncTextToExtension();
     updatePropertiesPanel();
   });
+}
+
+// ─── Props Actions (Group, Ungroup, Duplicate, etc.) ───────────────────────
+
+function setupPropsActions() {
+  const actions = {
+    "props-group": () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.group_selected();
+      if (changed) { render(); syncTextToExtension(); }
+    },
+    "props-ungroup": () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.ungroup_selected();
+      if (changed) { render(); syncTextToExtension(); }
+    },
+    "props-duplicate": () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.duplicate_selected();
+      if (changed) { render(); syncTextToExtension(); }
+    },
+    "props-frame": () => {
+      if (!fdCanvas) return;
+      const resultJson = fdCanvas.handle_key("f", false, false, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) { render(); syncTextToExtension(); }
+    },
+    "props-bring-front": () => {
+      if (!fdCanvas) return;
+      const resultJson = fdCanvas.handle_key("]", false, true, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) { bumpGeneration(); render(); syncTextToExtension(); }
+    },
+    "props-send-back": () => {
+      if (!fdCanvas) return;
+      const resultJson = fdCanvas.handle_key("[", false, true, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) { bumpGeneration(); render(); syncTextToExtension(); }
+    },
+    "props-copy-png": () => {
+      if (!fdCanvas) return;
+      copySelectionAsPng();
+    },
+    "props-delete": () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.delete_selected();
+      if (changed) { render(); syncTextToExtension(); }
+    },
+  };
+
+  for (const [id, handler] of Object.entries(actions)) {
+    document.getElementById(id)?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      handler();
+      updatePropertiesPanel();
+      updateFloatingBar();
+      refreshLayersPanel();
+    });
+  }
+}
+
+/** Enable/disable action buttons based on current selection state. */
+function updatePropsActionsState() {
+  if (!fdCanvas) return;
+  const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+  const canGroup = selectedIds.length >= 2;
+
+  // Check if any selected node is a group
+  let canUngroup = false;
+  if (selectedIds.length >= 1) {
+    const source = fdCanvas.get_text();
+    for (const id of selectedIds) {
+      if (new RegExp(`(?:^|\\n)\\s*group\\s+@${id}\\b`).test(source)) {
+        canUngroup = true;
+        break;
+      }
+    }
+  }
+
+  document.getElementById("props-group")?.classList.toggle("disabled", !canGroup);
+  document.getElementById("props-ungroup")?.classList.toggle("disabled", !canUngroup);
+  document.getElementById("props-frame")?.classList.toggle("disabled", !canGroup);
 }
 
 
@@ -603,22 +688,18 @@ function refreshLayersPanel() {
       e.stopPropagation();
       const nodeId = item.getAttribute("data-node-id");
       if (nodeId && fdCanvas) {
-        if (fdCanvas.select_by_id(nodeId)) {
-          // Pre-set generation so that scheduleSideEffects() → refreshLayersPanel() skips DOM rebuild.
-          // This keeps our DOM references valid for the highlight update below.
-          lastLayerGeneration = sceneGeneration;
-          lastLayerSelectedId = nodeId;
-          render();
-          // Update selection highlight in layers (DOM still intact because rebuild was skipped)
-          panel.querySelectorAll(".layer-item").forEach((el) => {
-            el.classList.toggle("selected", el.getAttribute("data-node-id") === nodeId);
-          });
-          // Smart focus: pan/zoom to the selected node if needed
-          focusOnNode(nodeId);
-          // Notify extension of selection
-          vscode.postMessage({ type: "nodeSelected", id: nodeId });
-          updatePropertiesPanel();
-        }
+        // Pre-set generation so refreshLayersPanel() inside syncSelection skips DOM rebuild.
+        // This keeps our DOM references valid for the highlight update below.
+        lastLayerGeneration = sceneGeneration;
+        lastLayerSelectedId = nodeId;
+        // Update selection highlight in layers (DOM still intact because rebuild was skipped)
+        panel.querySelectorAll(".layer-item").forEach((el) => {
+          el.classList.toggle("selected", el.getAttribute("data-node-id") === nodeId);
+        });
+        // Smart focus: pan/zoom to the selected node if needed
+        focusOnNode(nodeId);
+        // Central sync: Canvas select + Code highlight + side panels
+        syncSelection(nodeId, "layers");
       }
     });
   });
@@ -869,7 +950,7 @@ function refreshLibraryPanel() {
 
   let html = `<div class="lib-header">`;
   html += `<span class="lib-title">📦 Libraries</span>`;
-  html += `<button class="lib-close" id="lib-close-btn" title="Close">×</button>`;
+  html += `<button class="lib-close" id="lib-close-btn" title="Close" aria-label="Close">×</button>`;
   html += `</div>`;
   html += `<input class="lib-search" id="lib-search" type="text" placeholder="Search components…" value="${escapeAttr(librarySearchQuery)}">`;
 
@@ -952,3 +1033,131 @@ function wireLibraryHandlers(panel) {
   });
 }
 
+// ─── Panel Resize ────────────────────────────────────────────────────────
+
+/** Set up drag-to-resize for layers and properties panels. */
+function setupPanelResize() {
+  const container = document.getElementById("canvas-container");
+  const layersPanel = document.getElementById("layers-panel");
+  const layersHandle = document.getElementById("layers-resize");
+  const propsPanel = document.getElementById("props-panel");
+  const layersRestore = document.getElementById("layers-restore");
+  const propsRestore = document.getElementById("props-restore");
+
+  if (!container || !layersPanel) return;
+
+  const MIN_WIDTH = 140;
+  const MAX_WIDTH = 400;
+  const DEFAULT_LAYERS_W = 232;
+  const DEFAULT_PROPS_W = 244;
+
+  // Restore persisted state
+  const savedState = vscode.getState() || {};
+  if (savedState.layersWidth && savedState.layersWidth >= MIN_WIDTH && savedState.layersWidth <= MAX_WIDTH) {
+    container.style.setProperty("--layers-width", savedState.layersWidth + "px");
+  }
+  if (savedState.propsWidth && savedState.propsWidth >= MIN_WIDTH && savedState.propsWidth <= MAX_WIDTH) {
+    container.style.setProperty("--props-width", savedState.propsWidth + "px");
+  }
+  if (savedState.layersCollapsed) {
+    layersPanel.classList.add("collapsed");
+    container.style.setProperty("--layers-width", "0px");
+  }
+
+  /** Position layers resize handle at panel's right edge. */
+  function positionLayersHandle() {
+    if (!layersHandle) return;
+    const w = layersPanel.classList.contains("collapsed") ? 0 : layersPanel.offsetWidth;
+    layersHandle.style.left = w + "px";
+    layersHandle.style.display = layersPanel.classList.contains("collapsed") ? "none" : "";
+  }
+
+  // Initial position
+  requestAnimationFrame(positionLayersHandle);
+
+  // ── Layers panel drag ──
+  if (layersHandle) {
+    let dragging = false;
+    let startX = 0;
+    let startW = 0;
+
+    layersHandle.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragging = true;
+      startX = e.clientX;
+      startW = layersPanel.offsetWidth;
+      layersPanel.classList.add("no-transition");
+      layersHandle.classList.add("active");
+      layersHandle.setPointerCapture(e.pointerId);
+    });
+
+    layersHandle.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      const newW = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startW + dx));
+      container.style.setProperty("--layers-width", newW + "px");
+      positionLayersHandle();
+      renderDirty = true;
+    });
+
+    const endDrag = () => {
+      if (!dragging) return;
+      dragging = false;
+      layersPanel.classList.remove("no-transition");
+      layersHandle.classList.remove("active");
+      const w = layersPanel.offsetWidth;
+      vscode.setState({ ...(vscode.getState() || {}), layersWidth: w });
+    };
+    layersHandle.addEventListener("pointerup", endDrag);
+    layersHandle.addEventListener("pointercancel", endDrag);
+
+    // Double-click to collapse
+    layersHandle.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isCollapsed = layersPanel.classList.toggle("collapsed");
+      if (isCollapsed) {
+        container.style.setProperty("--layers-width", "0px");
+        vscode.setState({ ...(vscode.getState() || {}), layersCollapsed: true });
+      } else {
+        const state = vscode.getState() || {};
+        const restoreW = (state.layersWidth >= MIN_WIDTH && state.layersWidth <= MAX_WIDTH) ? state.layersWidth : DEFAULT_LAYERS_W;
+        container.style.setProperty("--layers-width", restoreW + "px");
+        vscode.setState({ ...(vscode.getState() || {}), layersCollapsed: false });
+      }
+      requestAnimationFrame(() => { positionLayersHandle(); renderDirty = true; });
+    });
+  }
+
+  // ── Restore strips ──
+  if (layersRestore) {
+    layersRestore.addEventListener("click", () => {
+      layersPanel.classList.remove("collapsed");
+      const state = vscode.getState() || {};
+      const restoreW = (state.layersWidth >= MIN_WIDTH && state.layersWidth <= MAX_WIDTH) ? state.layersWidth : DEFAULT_LAYERS_W;
+      container.style.setProperty("--layers-width", restoreW + "px");
+      vscode.setState({ ...(vscode.getState() || {}), layersCollapsed: false });
+      requestAnimationFrame(() => { positionLayersHandle(); renderDirty = true; });
+    });
+  }
+
+  // ── Props panel: observe visibility and apply persisted width ──
+  if (propsPanel) {
+    const propsObserver = new MutationObserver(() => {
+      if (propsPanel.classList.contains("visible") && !propsPanel.classList.contains("collapsed")) {
+        const state = vscode.getState() || {};
+        const w = (state.propsWidth >= MIN_WIDTH && state.propsWidth <= MAX_WIDTH) ? state.propsWidth : DEFAULT_PROPS_W;
+        container.style.setProperty("--props-width", w + "px");
+      } else {
+        container.style.setProperty("--props-width", "0px");
+      }
+      renderDirty = true;
+    });
+    propsObserver.observe(propsPanel, { attributes: true, attributeFilter: ["class"] });
+  }
+
+  // NOTE: Props panel has no separate resize handle in VS Code since it uses
+  // a flex-based layout and the panels are overlays on the canvas-container.
+  // The layers panel is the primary resizable panel; props panel gets persisted width.
+}

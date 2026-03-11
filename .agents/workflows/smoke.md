@@ -32,7 +32,15 @@ description: Quick sanity check — run before committing or as a lightweight CI
    cargo fmt --all -- --check
    ```
 
-5. **Report** results to user. If all pass, it's safe to `/yolo`.
+5. **Live site health check** (if on `main` or post-merge):
+
+   ```bash
+   curl -sL -o /dev/null -w '%{http_code}' https://fast-draft.com
+   ```
+
+   Should return `200`. If not, check `gh run list --workflow=pages.yml --limit 1`.
+
+6. **Report** results to user. If all pass, it's safe to `/yolo`.
 
 ---
 

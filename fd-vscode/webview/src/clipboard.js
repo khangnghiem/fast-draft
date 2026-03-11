@@ -2,22 +2,20 @@
 // This file is part of the FD webview module system.
 // Build with: pnpm run build:webview
 
-// ─── Copy / Paste / Select All (Figma/Sketch standard) ───────────────────────
+// ─── Copy / Paste / Cut / Select All (Figma/Sketch standard) ─────────────────
 
 /** Clipboard buffer for FD node text */
 let fdClipboard = "";
 
-/** Copy the selected node's .fd block to the clipboard. */
-function copySelectedAsFd() {
-  if (!fdCanvas) return;
-  const selectedId = fdCanvas.get_selected_id();
-  if (!selectedId) return;
+/** Cumulative paste offset — increments by 20 on each successive paste,
+ *  resets when a new copy is made. */
+let pasteOffsetCount = 0;
 
-  const text = fdCanvas.get_text();
+/** Extract the .fd text block for a single node by its ID.
+ *  Returns the block string, or "" if not found. */
+function extractNodeBlock(text, nodeId) {
   const lines = text.split("\n");
-
-  // Find the line that starts the node declaration
-  const startPattern = new RegExp(`^\\s*(\\w+)\\s+@${selectedId}\\b`);
+  const startPattern = new RegExp(`^\\s*(\\w+)\\s+@${nodeId}\\b`);
   let startIdx = -1;
   for (let i = 0; i < lines.length; i++) {
     if (startPattern.test(lines[i])) {
@@ -25,12 +23,9 @@ function copySelectedAsFd() {
       break;
     }
   }
-  if (startIdx < 0) return;
+  if (startIdx < 0) return "";
 
-  // Determine the indentation of the start line
   const startIndent = lines[startIdx].match(/^\s*/)[0].length;
-
-  // Collect all lines belonging to this block (same or deeper indentation)
   let endIdx = startIdx + 1;
   while (endIdx < lines.length) {
     const line = lines[endIdx];
@@ -39,8 +34,26 @@ function copySelectedAsFd() {
     if (indent <= startIndent) break;
     endIdx++;
   }
+  return lines.slice(startIdx, endIdx).join("\n");
+}
 
-  fdClipboard = lines.slice(startIdx, endIdx).join("\n");
+/** Copy the selected node(s)' .fd block(s) to the clipboard. */
+function copySelectedAsFd() {
+  if (!fdCanvas) return;
+
+  const text = fdCanvas.get_text();
+  const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+  if (selectedIds.length === 0) return;
+
+  const blocks = [];
+  for (const id of selectedIds) {
+    const block = extractNodeBlock(text, id);
+    if (block) blocks.push(block);
+  }
+  if (blocks.length === 0) return;
+
+  fdClipboard = blocks.join("\n\n");
+  pasteOffsetCount = 0; // Reset offset on new copy
 
   // Also copy to system clipboard
   if (navigator.clipboard) {
@@ -48,7 +61,18 @@ function copySelectedAsFd() {
   }
 }
 
-/** Paste a node from the FD clipboard. */
+/** Cut the selected node(s) — copy + delete. */
+function cutSelectedAsFd() {
+  if (!fdCanvas) return;
+  copySelectedAsFd();
+  const changed = fdCanvas.delete_selected();
+  if (changed) {
+    render();
+    syncTextToExtension();
+  }
+}
+
+/** Paste node(s) from the FD clipboard with horizontal stagger. */
 async function pasteFromClipboard() {
   if (!fdCanvas) return;
 
@@ -65,8 +89,10 @@ async function pasteFromClipboard() {
 
   if (!clipText.trim()) return;
 
-  // Recursively rename ALL @ids inside the pasted block to avoid collisions
-  const suffix = "_cp" + Math.floor(Math.random() * 9000 + 1000);
+  // Increment paste offset count
+  pasteOffsetCount++;
+
+  // Collect all @id declarations in the pasted block
   const idPattern = /@(\w+)\s*\{/g;
   const allIds = new Set();
   let m;
@@ -75,20 +101,65 @@ async function pasteFromClipboard() {
   }
   if (allIds.size === 0) return;
 
-  // Build renamed text: replace each @oldId with @oldId_cpXXXX everywhere
+  // Build renamed text: use incremented _N naming (consistent with Alt+drag)
+  const existingText = fdCanvas.get_text();
   let pasteText = clipText;
   const rootId = [...allIds][0]; // First ID = root node for selection
+  const idMap = new Map();
+
   for (const oldId of allIds) {
-    const newId = oldId + suffix;
-    // Replace @id declarations and all references (use:, center_in:, etc.)
-    pasteText = pasteText.replace(new RegExp(`@${oldId}\\b`, "g"), `@${newId}`);
+    // Find the stem (strip existing _N or _cpXXXX suffix)
+    const stem = oldId.replace(/_(?:\d+|cp\d+)$/, '');
+    // Scan existing text for highest _N suffix
+    let maxN = 1;
+    const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
+    let match;
+    while ((match = re.exec(existingText)) !== null) {
+      maxN = Math.max(maxN, parseInt(match[1]));
+    }
+    // Also check if the base stem exists (counts as _1)
+    if (new RegExp(`@${stem}\\b`).test(existingText)) {
+      maxN = Math.max(maxN, 1);
+    }
+    const newId = stem + '_' + (maxN + 1);
+    idMap.set(oldId, newId);
   }
-  const newRootId = rootId + suffix;
+
+  // Replace all @id references with new names
+  for (const [oldId, newId] of idMap) {
+    pasteText = pasteText.replace(new RegExp(`@${oldId}\\b`, 'g'), `@${newId}`);
+  }
+  const newRootId = idMap.get(rootId) || rootId;
+
+  // Horizontal stagger: offset x only (keep same y for horizontal alignment)
+  // Try to get the original node's width for proper spacing
+  let xOffset = pasteOffsetCount * 20; // Fallback: cumulative 20px
+  try {
+    const boundsJson = fdCanvas.get_node_bounds(rootId);
+    if (boundsJson) {
+      const bounds = JSON.parse(boundsJson);
+      if (bounds && bounds.width > 0) {
+        // Place to the right with 20px gap
+        xOffset = (bounds.width + 20) * pasteOffsetCount;
+      }
+    }
+  } catch (_) { /* use fallback offset */ }
+
+  pasteText = pasteText.replace(/\b(x:\s*)(-?\d+(?:\.\d+)?)/g, (_match, prefix, val) => {
+    return prefix + (parseFloat(val) + xOffset);
+  });
+  // y: values unchanged — keeps vertical alignment
+
+  // Capture text before for undo
+  const textBefore = fdCanvas.get_text();
 
   // Append to current text
-  const currentText = fdCanvas.get_text();
-  const updatedText = currentText.trimEnd() + "\n\n" + pasteText + "\n";
+  const updatedText = textBefore.trimEnd() + '\n\n' + pasteText + '\n';
   fdCanvas.set_text(updatedText);
+
+  // Push undo snapshot so ⌘Z reverts the paste
+  fdCanvas.push_undo_snapshot(textBefore, updatedText);
+
   render();
   syncTextToExtension();
 
@@ -97,6 +168,7 @@ async function pasteFromClipboard() {
   render();
   updatePropertiesPanel();
 }
+
 
 /** Select all nodes in the scene. */
 function selectAllNodes() {
@@ -238,7 +310,7 @@ function exportToPng() {
 
   // Render scene centered in export canvas
   exportCtx.setTransform(dpr, 0, 0, dpr, (padding - minX) * dpr, (padding - minY) * dpr);
-  fdCanvas.render(exportCtx, performance.now());
+  fdCanvas.render(exportCtx, performance.now(), true);
 
   // Send to extension for save dialog
   const dataUrl = exportCanvas.toDataURL("image/png");

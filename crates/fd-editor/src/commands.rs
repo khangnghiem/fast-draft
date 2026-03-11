@@ -97,6 +97,21 @@ impl CommandStack {
         }
     }
 
+    /// Abandon (cancel) a batch in progress, restoring the text to the
+    /// pre-batch snapshot. No undo entry is created. Used by Esc-to-cancel
+    /// to revert a drag mid-gesture.
+    pub fn abandon_batch(&mut self, engine: &mut SyncEngine) {
+        if self.batch_depth == 0 {
+            return;
+        }
+        // Restore the pre-drag text snapshot
+        if let Some(text_before) = self.batch_snapshot.take() {
+            let _ = engine.set_text(&text_before);
+        }
+        self.batch_depth = 0;
+        self.batch_dirty = false;
+    }
+
     /// Execute a mutation via the sync engine and push to undo stack.
     pub fn execute(&mut self, engine: &mut SyncEngine, mutation: GraphMutation, description: &str) {
         if self.batch_depth > 0 {
@@ -126,16 +141,20 @@ impl CommandStack {
     }
 
     /// Undo the last command (or batch snapshot).
-    pub fn undo(&mut self, engine: &mut SyncEngine) -> Option<String> {
+    ///
+    /// Returns `(description, is_snapshot)`. When `is_snapshot` is true,
+    /// the full document was re-parsed via `set_text()` which already
+    /// calls `resolve_layout()` — callers should skip a redundant `resolve()`.
+    pub fn undo(&mut self, engine: &mut SyncEngine) -> Option<(String, bool)> {
         let cmd = self.undo_stack.pop()?;
-        let desc = match &cmd {
+        let (desc, is_snapshot) = match &cmd {
             Command::Single {
                 inverse,
                 description,
                 ..
             } => {
                 engine.apply_mutation(*inverse.clone());
-                description.clone()
+                (description.clone(), false)
             }
             Command::Snapshot {
                 text_before,
@@ -143,24 +162,26 @@ impl CommandStack {
                 ..
             } => {
                 let _ = engine.set_text(text_before);
-                description.clone()
+                (description.clone(), true)
             }
         };
         self.redo_stack.push(cmd);
-        Some(desc)
+        Some((desc, is_snapshot))
     }
 
     /// Redo the last undone command (or batch snapshot).
-    pub fn redo(&mut self, engine: &mut SyncEngine) -> Option<String> {
+    ///
+    /// Returns `(description, is_snapshot)`. See `undo()` for details.
+    pub fn redo(&mut self, engine: &mut SyncEngine) -> Option<(String, bool)> {
         let cmd = self.redo_stack.pop()?;
-        let desc = match &cmd {
+        let (desc, is_snapshot) = match &cmd {
             Command::Single {
                 forward,
                 description,
                 ..
             } => {
                 engine.apply_mutation(*forward.clone());
-                description.clone()
+                (description.clone(), false)
             }
             Command::Snapshot {
                 text_after,
@@ -168,11 +189,11 @@ impl CommandStack {
                 ..
             } => {
                 let _ = engine.set_text(text_after);
-                description.clone()
+                (description.clone(), true)
             }
         };
         self.undo_stack.push(cmd);
-        Some(desc)
+        Some((desc, is_snapshot))
     }
 
     pub fn can_undo(&self) -> bool {
@@ -181,6 +202,25 @@ impl CommandStack {
 
     pub fn can_redo(&self) -> bool {
         !self.redo_stack.is_empty()
+    }
+
+    /// Push a text snapshot directly for undo support.
+    /// Used by JS-driven operations (e.g., paste) that bypass the mutation
+    /// system but still need to be undoable.
+    pub fn push_snapshot(&mut self, text_before: String, text_after: String, description: &str) {
+        if text_before == text_after {
+            return;
+        }
+        let cmd = Command::Snapshot {
+            text_before,
+            text_after,
+            description: description.to_string(),
+        };
+        self.undo_stack.push(cmd);
+        if self.undo_stack.len() > self.max_depth {
+            self.undo_stack.remove(0);
+        }
+        self.redo_stack.clear();
     }
 }
 
@@ -232,7 +272,7 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
             let old_style = engine
                 .graph
                 .get_by_id(*id)
-                .map(|n| n.style.clone())
+                .map(|n| n.props.clone())
                 .unwrap_or_default();
             GraphMutation::SetStyle {
                 id: *id,
@@ -361,16 +401,16 @@ rect @box {
         let moved_x = b.x;
 
         // Undo
-        let desc = stack.undo(&mut engine);
-        assert_eq!(desc, Some("Move box".to_string()));
+        let result = stack.undo(&mut engine);
+        assert_eq!(result.as_ref().map(|(d, _)| d.as_str()), Some("Move box"));
 
         engine.resolve();
         let b2 = engine.current_bounds().get(&idx).unwrap();
         assert!((b2.x - (moved_x - 50.0)).abs() < 0.1);
 
         // Redo
-        let desc = stack.redo(&mut engine);
-        assert_eq!(desc, Some("Move box".to_string()));
+        let result = stack.redo(&mut engine);
+        assert_eq!(result.as_ref().map(|(d, _)| d.as_str()), Some("Move box"));
 
         engine.resolve();
         let b3 = engine.current_bounds().get(&idx).unwrap();
@@ -486,7 +526,7 @@ rect @box {
             .graph
             .get_by_id(NodeId::intern("r"))
             .unwrap()
-            .style
+            .props
             .fill
         {
             Some(fd_core::model::Paint::Solid(c)) => c.to_hex(),
@@ -498,7 +538,7 @@ rect @box {
             .graph
             .get_by_id(NodeId::intern("r"))
             .unwrap()
-            .style
+            .props
             .clone();
         new_style.fill = Some(fd_core::model::Paint::Solid(fd_core::model::Color {
             r: 0.0,
@@ -520,7 +560,7 @@ rect @box {
             .graph
             .get_by_id(NodeId::intern("r"))
             .unwrap()
-            .style
+            .props
             .fill
         {
             Some(fd_core::model::Paint::Solid(c)) => c.to_hex(),
@@ -533,7 +573,7 @@ rect @box {
             .graph
             .get_by_id(NodeId::intern("r"))
             .unwrap()
-            .style
+            .props
             .fill
         {
             Some(fd_core::model::Paint::Solid(c)) => c.to_hex(),
@@ -568,8 +608,10 @@ rect @box {
         stack.end_batch(&mut engine);
 
         // One undo should reverse the entire gesture
-        let desc = stack.undo(&mut engine);
-        assert!(desc.is_some());
+        let result = stack.undo(&mut engine);
+        assert!(result.is_some());
+        // Batch undo uses snapshot path
+        assert!(result.unwrap().1, "batch undo should be a snapshot");
         engine.resolve();
 
         // Verify position is back to start
@@ -611,8 +653,8 @@ rect @box {
         // Undo + Redo
         stack.undo(&mut engine);
         engine.resolve();
-        let desc = stack.redo(&mut engine);
-        assert!(desc.is_some());
+        let result = stack.redo(&mut engine);
+        assert!(result.is_some());
         engine.resolve();
 
         // Verify position is at the dragged location
@@ -636,6 +678,58 @@ rect @box {
         stack.begin_batch(&mut engine);
         stack.end_batch(&mut engine);
 
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn abandon_batch_restores_position() {
+        let input = "rect @box { w: 100 h: 50 }\n";
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let mut stack = CommandStack::new(100);
+
+        // Capture original position
+        let idx = engine.graph.index_of(NodeId::intern("box")).unwrap();
+        let orig_x = engine.current_bounds().get(&idx).unwrap().x;
+        let orig_y = engine.current_bounds().get(&idx).unwrap().y;
+
+        // Simulate a drag gesture: begin_batch, 3 moves
+        stack.begin_batch(&mut engine);
+        for _ in 0..3 {
+            stack.execute(
+                &mut engine,
+                GraphMutation::MoveNode {
+                    id: NodeId::intern("box"),
+                    dx: 20.0,
+                    dy: 10.0,
+                },
+                "drag",
+            );
+        }
+
+        // Abandon instead of ending — simulates Esc mid-drag
+        stack.abandon_batch(&mut engine);
+        engine.resolve();
+
+        // Position should be restored to original
+        let b = engine.current_bounds().get(&idx).unwrap();
+        assert!(
+            (b.x - orig_x).abs() < 1.0,
+            "x should be near {}, got {}",
+            orig_x,
+            b.x
+        );
+        assert!(
+            (b.y - orig_y).abs() < 1.0,
+            "y should be near {}, got {}",
+            orig_y,
+            b.y
+        );
+
+        // No undo entry should have been created
         assert!(!stack.can_undo());
     }
 }

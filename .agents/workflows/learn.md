@@ -58,7 +58,7 @@ Pick the most relevant category:
 | **WASM**        | Build targets, feature flags, wasm-pack       |
 | **CI/CD**       | GitHub Actions, test flakiness, clippy lints  |
 | **Git**         | Branch workflow, merge conflicts, hooks       |
-| **FD Format**   | Syntax, semantics, spec blocks, themes        |
+| **FD Format**   | Syntax, semantics, spec blocks, styles        |
 | **Cross-Crate** | Dependency ordering, trait bounds, re-exports |
 | **Testing**     | Test setup, mocking, assertion patterns       |
 

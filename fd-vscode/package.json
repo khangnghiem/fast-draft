@@ -2,7 +2,7 @@
   "name": "fast-draft",
   "displayName": "Fast Draft",
   "description": "Design Specs as Code",
-  "version": "0.10.28",
+  "version": "0.10.104",
   "publisher": "KhangNghiem",
   "license": "MIT",
   "icon": "icon.png",
@@ -230,7 +230,29 @@
           "group": "navigation"
         }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "key": "cmd+[",
+        "command": "-editor.action.outdentLines",
+        "when": "activeCustomEditorId == 'fd.canvas'"
+      },
+      {
+        "key": "cmd+]",
+        "command": "-editor.action.indentLines",
+        "when": "activeCustomEditorId == 'fd.canvas'"
+      },
+      {
+        "key": "cmd+shift+[",
+        "command": "-editor.fold",
+        "when": "activeCustomEditorId == 'fd.canvas'"
+      },
+      {
+        "key": "cmd+shift+]",
+        "command": "-editor.unfold",
+        "when": "activeCustomEditorId == 'fd.canvas'"
+      }
+    ]
   },
   "scripts": {
     "test": "vitest run",

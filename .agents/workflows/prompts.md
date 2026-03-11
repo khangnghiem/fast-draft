@@ -26,20 +26,19 @@ Each prompt must be: **self-contained** (all context inline), **one concern**, *
 
 ### 3. Prompt Format
 
-````markdown
+> [!IMPORTANT]
+> **Each prompt MUST be a single fenced code block** (` ````text `) so the user can copy the entire prompt in one click. Do NOT put metadata (Depends on, Files, Verify) outside the code block — embed everything inside it.
+
+`````markdown
 ### Prompt N: [Short Title]
 
-**Depends on:** Prompt N-1 (or "None")
-**Files:** `path/to/file1`, `path/to/file2`
-
-```
+````text
 [Complete instruction — what, where, why, expected result.
 Reference specific file paths, line numbers, CSS selectors.
-End with verification step.]
-```
-
-**Verify:** [What "done" looks like]
+End with "Verify: [what done looks like]"
+End with /yolo /nonstop /e2e]
 ````
+`````
 
 ### 4. Standard Sequences
 
@@ -85,6 +84,7 @@ After implementation prompts, always include:
 
 | Rule                  | Description                                                                                                                              |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Single copy block** | Each prompt MUST be one fenced code block (` ````text `) — no metadata outside it                                                        |
 | **Min 3 prompts**     | We want agents to spend time doing work                                                                                                  |
 | **Max 10 prompts**    | If more needed, split into sub-features                                                                                                  |
 | **Copy-paste ready**  | Each prompt works standalone — no "see above"                                                                                            |

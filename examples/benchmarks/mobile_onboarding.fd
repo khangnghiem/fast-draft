@@ -1,27 +1,27 @@
 # Mobile Onboarding — Mobile Designer use case
 # Demonstrates: frames with clip, column layouts, animations, style reuse
 
-theme phone_frame {
+style phone_frame {
   fill: #1A1A2E
   corner: 40
 }
 
-theme screen_bg {
+style screen_bg {
   fill: #FFFFFF
   corner: 32
 }
 
-theme dot_active {
+style dot_active {
   fill: #6C5CE7
   corner: 6
 }
 
-theme dot_inactive {
+style dot_inactive {
   fill: #D1D5DB
   corner: 6
 }
 
-theme cta_primary {
+style cta_primary {
   fill: #6C5CE7
   corner: 12
 }

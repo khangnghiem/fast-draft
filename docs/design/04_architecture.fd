@@ -1,16 +1,16 @@
-# ─── Themes ───
+# ─── Styles ───
 
-theme crate_box {
+style crate_box {
   fill: #1A1A2E  # blue
   corner: 16
 }
 
-theme module_chip {
+style module_chip {
   fill: #2D2D4E  # blue
   corner: 8
 }
 
-theme platform_box {
+style platform_box {
   fill: #FFFFFF  # white
   corner: 12
 }

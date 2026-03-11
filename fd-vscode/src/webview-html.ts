@@ -18,6 +18,7 @@ export const COMMAND_TOGGLE_VIEW_MODE = "fd.toggleViewMode";
 export const COMMAND_OPEN_READONLY_VIEW = "fd.openReadOnlyView";
 export const COMMAND_CHANGE_VIEW_MODE = "fd.changeViewMode";
 export const COMMAND_RENAMIFY = "fd.renamify";
+export const COMMAND_REFACTOR = "fd.refactor";
 
 export function getNonce(): string {
   return crypto.randomBytes(16).toString("hex");
@@ -31,7 +32,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'none';
     script-src 'nonce-{nonce}' 'wasm-unsafe-eval' {cspSource};
-    style-src 'nonce-{nonce}';
+    style-src 'nonce-{nonce}' 'unsafe-inline';
     img-src {cspSource};
     connect-src {cspSource};
     font-src {cspSource};
@@ -342,7 +343,9 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       left: 0;
       top: 0;
       bottom: 0;
-      width: 232px;
+      width: var(--layers-width, 232px);
+      min-width: 0;
+      max-width: 400px;
       background: var(--fd-surface);
       border-right: 0.5px solid var(--fd-border);
       overflow-y: auto;
@@ -352,6 +355,13 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       padding: 0;
       backdrop-filter: blur(24px) saturate(180%);
       -webkit-backdrop-filter: blur(24px) saturate(180%);
+      transition: width 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+    #layers-panel.no-transition { transition: none; }
+    #layers-panel.collapsed {
+      width: 0 !important;
+      border-right: none;
+      overflow: hidden;
     }
     #layers-panel::-webkit-scrollbar { width: 6px; }
     #layers-panel::-webkit-scrollbar-track { background: transparent; }
@@ -1379,6 +1389,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       position: relative;
       overflow: hidden;
       display: flex;
+      --layers-width: 232px;
+      --props-width: 0px;
     }
     canvas {
       display: block;
@@ -1386,6 +1398,59 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       position: relative;
       z-index: 1;
     }
+
+    /* ── Panel Resize Handles ── */
+    .panel-resize-handle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      cursor: col-resize;
+      z-index: 20;
+      background: transparent;
+      transition: background 0.15s ease;
+    }
+    .panel-resize-handle::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 8px;
+      left: -2px;
+    }
+    .panel-resize-handle:hover,
+    .panel-resize-handle.active {
+      background: var(--fd-accent);
+    }
+    .panel-resize-handle.layers-handle {
+      right: -2px;
+    }
+    .panel-resize-handle.props-handle {
+      left: -2px;
+    }
+    .panel-restore-strip {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      z-index: 16;
+      cursor: pointer;
+      background: transparent;
+      transition: background 0.15s ease;
+    }
+    .panel-restore-strip:hover {
+      background: var(--fd-accent-dim);
+    }
+    .panel-restore-strip.layers-restore {
+      left: 0;
+      display: none;
+    }
+    .panel-restore-strip.props-restore {
+      right: 0;
+      display: none;
+    }
+    #layers-panel.collapsed ~ .layers-restore { display: block; }
+    #props-panel.collapsed ~ .props-restore { display: block; }
     #loading {
       position: absolute;
       inset: 0;
@@ -1439,9 +1504,16 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       transition: width 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
       flex-shrink: 0;
       overflow-y: auto;
+      min-width: 0;
+      max-width: 400px;
     }
+    #props-panel.no-transition { transition: none; }
     #props-panel.visible {
-      width: 244px;
+      width: var(--props-width, 244px);
+    }
+    #props-panel.collapsed {
+      width: 0 !important;
+      overflow: hidden;
     }
     .props-inner {
       padding: 16px 14px;
@@ -1592,7 +1664,35 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       font-weight: 500;
     }
 
-
+    /* ── Props Actions ── */
+    .props-actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+    }
+    .props-action-btn {
+      padding: 5px 8px;
+      border: 0.5px solid var(--fd-border);
+      border-radius: 6px;
+      background: var(--fd-input-bg);
+      color: var(--fd-text-secondary);
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: left;
+    }
+    .props-action-btn:hover {
+      background: var(--fd-surface-hover);
+      color: var(--fd-text);
+    }
+    .props-action-btn:active { transform: scale(0.97); }
+    .props-action-btn.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    .props-delete-btn { color: #FF453A; }
+    .props-delete-btn:hover { background: rgba(255,69,58,0.12); color: #FF453A; }
 
     /* ── Annotation Card ── */
     #annotation-card {
@@ -2036,7 +2136,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       padding: 0 4px;
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.15);
       z-index: 1;
-      overflow: hidden;
+      overflow: visible;
       transition: padding 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
     }
     .dark-theme .scroll-paper-body {
@@ -2074,7 +2174,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .horizontal .ft-tool-btn { height: 32px; }
     .vertical .ft-tool-btn { width: 32px; }
 
-    .ft-tool-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .ft-tool-btn svg { width: 18px; height: 18px; flex-shrink: 0; -webkit-user-drag: none; pointer-events: none; }
     .ft-tool-btn:hover { background: rgba(0,0,0,0.06); color: var(--fd-text); }
     .dark-theme .ft-tool-btn:hover { background: rgba(255,255,255,0.1); }
     .ft-tool-btn:active { transform: scale(0.92); }
@@ -2160,6 +2260,13 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     }
     #floating-toolbar.rolled-up .ft-tooltip {
       display: none;
+    }
+    /* Vertical toolbar: show tooltip to the right instead of above */
+    .vertical .ft-tool-btn .ft-tooltip {
+      bottom: auto;
+      left: calc(100% + 8px);
+      top: 50%;
+      transform: translateY(-50%);
     }
 
     /* ── Shortcut Help (Apple sheet) ── */
@@ -2250,6 +2357,29 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     /* ── Zen Mode Toggle Button (inline toolbar) ── */
     #zen-toggle-btn {
       font-size: 15px;
+    }
+    /* In zen mode: pin button at top-right of canvas as a pill */
+    .zen-mode #zen-toggle-btn {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      z-index: 100;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.9);
+      border: 0.5px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: all 0.15s ease;
+    }
+    .zen-mode #zen-toggle-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
     }
 
     /* ── Zen Mode overrides ── */
@@ -2424,7 +2554,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <span class="zen-full-only" id="status">Loading WASM…</span>
       <button class="tool-btn" id="zen-toggle-btn" title="Switch to Zen mode">🧘</button>
       <!-- Settings Hamburger ☰ -->
-      <div class="settings-dropdown-container" id="settings-dropdown-container">
+      <div class="settings-dropdown-container zen-full-only" id="settings-dropdown-container">
       <button class="tool-btn" id="settings-menu-btn" title="Settings & tools">☰</button>
       <div class="settings-menu" id="settings-menu">
         <button class="settings-menu-item" id="sm-grid-toggle"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span><span class="sm-shortcut">G</span></button>
@@ -2437,6 +2567,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         <button class="settings-menu-item" data-export="png-file"><span class="sm-icon">🖼️</span><span class="sm-label">Save as PNG</span></button>
         <button class="settings-menu-item" data-export="svg-file"><span class="sm-icon">✨</span><span class="sm-label">Save as SVG</span></button>
         <button class="settings-menu-item" data-export="fd-clip"><span class="sm-icon">📝</span><span class="sm-label">Copy as .fd</span></button>
+        <div class="settings-menu-sep"></div>
+        <button class="settings-menu-item" id="sm-import-css"><span class="sm-icon">🎨</span><span class="sm-label">Import CSS</span></button>
         <div class="settings-menu-sep"></div>
         <button class="settings-menu-item" id="sm-shortcuts"><span class="sm-icon">⌨️</span><span class="sm-label">Keyboard Shortcuts</span><span class="sm-shortcut">?</span></button>
       </div>
@@ -2462,14 +2594,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <input type="number" id="fab-font-size" class="fab-input fab-text-only" min="8" max="200" step="1" value="16" title="Font size">
       <div class="fab-sep"></div>
       <button class="fab-delete-btn" id="deleteSelectedBtn" title="Delete (⌫)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
-      <button class="fab-btn" id="fab-more-btn" aria-label="More actions" title="More actions">⋯</button>
-      <div id="fab-overflow-menu">
-        <button class="fab-menu-item" data-action="group">⌘G Group</button>
-        <button class="fab-menu-item" data-action="ungroup">⌘⇧G Ungroup</button>
-        <button class="fab-menu-item" data-action="duplicate">⌘D Duplicate</button>
-        <button class="fab-menu-item" data-action="copy-png">⌘⇧C Copy as PNG</button>
-        <button class="fab-menu-item" data-action="delete" style="color:#e57373">⌫ Delete</button>
-      </div>
+
     </div>
     <canvas id="fd-canvas" class="tool-select"></canvas>
     <div id="dimension-tooltip"></div>
@@ -2485,7 +2610,10 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
     <div id="center-snap-guides"></div>
     <div id="layers-panel"></div>
+    <div class="panel-resize-handle layers-handle" id="layers-resize"></div>
     <div id="library-panel"></div>
+    <div class="panel-restore-strip layers-restore" id="layers-restore" title="Show layers panel"></div>
+    <div class="panel-restore-strip props-restore" id="props-restore" title="Show properties panel"></div>
     <div id="minimap-container"><canvas id="minimap-canvas"></canvas><div id="minimap-zoom-controls"><button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-reset-btn" title="Reset zoom (click)">100%</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button></div></div>
     <!-- Floating Bottom Toolbar (Scroll UX) -->
     <div id="floating-toolbar" class="scroll-toolbar horizontal unrolled">
@@ -2586,12 +2714,25 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
             <button class="align-cell" data-h="right"  data-v="bottom"><span class="align-dot"></span></button>
           </div>
         </div>
+        <div class="props-section" id="props-actions-section">
+          <div class="props-section-label">Actions</div>
+          <div class="props-actions-grid">
+            <button class="props-action-btn" id="props-group" title="Group ⌘G">◻ Group</button>
+            <button class="props-action-btn" id="props-ungroup" title="Ungroup ⇧⌘G">◫ Ungroup</button>
+            <button class="props-action-btn" id="props-duplicate" title="Duplicate ⌘D">⊕ Duplicate</button>
+            <button class="props-action-btn" id="props-frame" title="Frame Selection">⊞ Frame</button>
+            <button class="props-action-btn" id="props-bring-front" title="Bring to Front ⌘⇧]">↑ Front</button>
+            <button class="props-action-btn" id="props-send-back" title="Send to Back ⌘⇧[">↓ Back</button>
+            <button class="props-action-btn" id="props-copy-png" title="Copy as PNG ⌘⇧C">🖼 PNG</button>
+            <button class="props-action-btn props-delete-btn" id="props-delete" title="Delete ⌫">🗑 Delete</button>
+          </div>
+        </div>
     </div>
   </div>
   <div id="annotation-card">
     <div class="card-header">
       <span id="card-title">Spec</span>
-      <button class="card-close" id="card-close-btn">×</button>
+      <button class="card-close" id="card-close-btn" aria-label="Close">×</button>
     </div>
     <div class="field-group">
       <label class="field-label" for="ann-description">Description</label>
@@ -2654,7 +2795,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
   <div id="renamify-panel">
     <div class="renamify-header">
       <span class="renamify-title">✦ Renamify</span>
-      <button class="renamify-close" id="renamify-close">×</button>
+      <button class="renamify-close" id="renamify-close" aria-label="Close">×</button>
     </div>
     <div class="renamify-body" id="renamify-body"></div>
     <div class="renamify-footer" id="renamify-footer" style="display:none">
@@ -2664,10 +2805,11 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
   </div>
   <div id="anim-picker">
-    <div class="picker-header"><span class="picker-icon">⚡</span> Add Animation <button class="picker-close" id="anim-picker-close">×</button></div>
+    <div class="picker-header"><span class="picker-icon">⚡</span> Add Animation <button class="picker-close" id="anim-picker-close" aria-label="Close">×</button></div>
     <div class="picker-body" id="anim-picker-body"></div>
   </div>
 
+  <input type="file" id="css-file-input" accept=".css" style="display:none">
   <script nonce="{nonce}">
     window.initialText = {initialText};
     window.wasmBinaryUrl = "{wasmBinaryUri}";
@@ -2742,11 +2884,29 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         items.forEach((p, i) => {
           const row = document.createElement('div');
           row.className = 'renamify-row';
-          row.innerHTML =
-            '<input type="checkbox" checked data-idx="' + i + '">' +
-            '<span class="renamify-old">@' + p.oldId + '</span>' +
-            '<span class="renamify-arrow">→</span>' +
-            '<span class="renamify-new">@' + p.newId + '</span>';
+
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = true;
+          cb.dataset.idx = i.toString();
+
+          const oldSpan = document.createElement('span');
+          oldSpan.className = 'renamify-old';
+          oldSpan.textContent = '@' + p.oldId;
+
+          const arrowSpan = document.createElement('span');
+          arrowSpan.className = 'renamify-arrow';
+          arrowSpan.textContent = '→';
+
+          const newSpan = document.createElement('span');
+          newSpan.className = 'renamify-new';
+          newSpan.textContent = '@' + p.newId;
+
+          row.appendChild(cb);
+          row.appendChild(oldSpan);
+          row.appendChild(arrowSpan);
+          row.appendChild(newSpan);
+
           body.appendChild(row);
         });
         footer.style.display = 'flex';

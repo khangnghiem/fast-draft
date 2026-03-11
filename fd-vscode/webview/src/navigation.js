@@ -4,6 +4,11 @@
 
 // ─── Dimension Tooltip (R3.18) ────────────────────────────────────────────────
 
+/** Module-level drag state (shared with pointer.js document listeners) */
+let dtcTool = null;
+let dtcActive = false;
+let ftDragging = false;   // true while toolbar is being dragged
+
 /** Show a floating dimension tooltip near the cursor. */
 function showDimensionTooltip(clientX, clientY, text) {
   const el = document.getElementById("dimension-tooltip");
@@ -401,31 +406,122 @@ function setupFloatingToolbar() {
     observer.observe(btn, { attributes: true, attributeFilter: ["class"] });
   });
 
-  let isDragging = false;
+  // ftDragging is declared at module scope (above) so
+  // pointer.js document-level listeners can check for active toolbar drags
   let dragStartX = 0;
   let dragStartY = 0;
   let dragStartTime = 0;
   let initialLeft = 0;
   let initialTop = 0;
   let activePointerId = -1;
+  // Canonical toolbar dimensions (as if horizontal) — captured on drag start
+  // so the snap ghost always reflects the target orientation, not the current one
+  let canonW = 0;
+  let canonH = 0;
 
-  // Use document-level listeners — setPointerCapture fails in VS Code webview iframes
+  /** Compute snap target using closest-edge comparison */
+  function computeSnap(projX, projY) {
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+    const tbW = toolbar.offsetWidth;
+    const tbH = toolbar.offsetHeight;
+    const panelW = getLayersPanelWidth();
+
+    // Distance from each edge of the projected toolbar to the viewport edge
+    const dTop = projY;
+    const dBottom = viewH - (projY + tbH);
+    const dLeft = projX - panelW; // account for layers panel
+    const dRight = viewW - (projX + tbW);
+
+    // Find the closest edge
+    const edges = [
+      { edge: "top", dist: dTop },
+      { edge: "bottom", dist: dBottom },
+      { edge: "left", dist: dLeft },
+      { edge: "right", dist: dRight },
+    ];
+    edges.sort((a, b) => a.dist - b.dist);
+    return edges[0].edge;
+  }
+
+  /** Compute the exact landing position for each snap edge.
+   *  Uses canonW/canonH (horizontal-layout dimensions) captured at drag start
+   *  so the ghost reflects the TARGET orientation, not the current one. */
+  function getSnapPosition(edge, projX, projY) {
+    const viewW = window.innerWidth;
+    const container = document.getElementById("canvas-container");
+    const cr = container.getBoundingClientRect();
+    const panelW = getLayersPanelWidth();
+
+    if (edge === "top" || edge === "bottom") {
+      // Horizontal: width = canonW (long side), height = canonH (short side)
+      const left = Math.max(panelW + 8, Math.min(projX, viewW - canonW - 8)) - cr.left;
+      const pos = { left: left + "px", width: canonW + "px", height: canonH + "px" };
+      if (edge === "top") pos.top = "8px";
+      else pos.bottom = "8px";
+      return pos;
+    }
+    // Vertical (left/right): width = canonH (short), height = canonW (long)
+    const top = Math.max(8, Math.min(projY - cr.top, cr.height - canonW - 8));
+    if (edge === "left") {
+      const leftPx = panelW + 8 - cr.left;
+      return { left: Math.max(0, leftPx) + "px", top: top + "px", width: canonH + "px", height: canonW + "px" };
+    }
+    return { right: "8px", top: top + "px", width: canonH + "px", height: canonW + "px" };
+  }
+
+  /** Show snap guide as a ghost rectangle at the exact landing position */
+  function showSnapGuide(edge, projX, projY) {
+    let guide = document.getElementById("ft-snap-guide");
+    if (!guide) {
+      guide = document.createElement("div");
+      guide.id = "ft-snap-guide";
+      document.getElementById("canvas-container").appendChild(guide);
+    }
+    const pos = getSnapPosition(edge, projX, projY);
+    guide.style.cssText = "position:absolute;pointer-events:none;z-index:9999;";
+    guide.style.left = pos.left || "auto";
+    guide.style.right = pos.right || "auto";
+    guide.style.top = pos.top || "auto";
+    guide.style.bottom = pos.bottom || "auto";
+    guide.style.width = pos.width;
+    guide.style.height = pos.height;
+    guide.style.border = "2px dashed var(--fd-accent, #4FC3F7)";
+    guide.style.borderRadius = "10px";
+    guide.style.opacity = "0.6";
+    guide.style.display = "block";
+  }
+
+  /** Hide the snap guide overlay */
+  function hideSnapGuide() {
+    const guide = document.getElementById("ft-snap-guide");
+    if (guide) guide.style.display = "none";
+  }
+
+  // Document-level listeners for toolbar drag
   document.addEventListener("pointermove", (e) => {
-    if (!isDragging || e.pointerId !== activePointerId) return;
+    if (!ftDragging || e.pointerId !== activePointerId) return;
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
 
-    // Drag visual: disable transition, apply translate + lift effect
+    // Drag visual: apply translate + lift effect (no position change)
     toolbar.style.transition = "none";
     toolbar.style.transform = `translate(${dx}px, ${dy}px)`;
     toolbar.style.boxShadow = "0 8px 32px rgba(0,0,0,0.25)";
     toolbar.style.opacity = "0.92";
+
+    // Show snap guide preview
+    const projX = initialLeft + dx;
+    const projY = initialTop + dy;
+    const edge = computeSnap(projX, projY);
+    showSnapGuide(edge, projX, projY);
   });
 
   document.addEventListener("pointerup", (e) => {
-    if (!isDragging || e.pointerId !== activePointerId) return;
-    isDragging = false;
+    if (!ftDragging || e.pointerId !== activePointerId) return;
+    ftDragging = false;
     activePointerId = -1;
+    hideSnapGuide();
 
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
@@ -446,45 +542,34 @@ function setupFloatingToolbar() {
       return;
     }
 
-    // Handle Drag & Snap
-    const snapThreshold = 60;
+    // Commit final position — reuse getSnapPosition() for exact ghost match
     const finalX = initialLeft + dx;
     const finalY = initialTop + dy;
-
-    const viewW = window.innerWidth;
-    const viewH = window.innerHeight;
-
-    const distTop = finalY;
-    const distBottom = viewH - (finalY + toolbar.offsetHeight);
-    const distLeft = finalX;
-    const distRight = viewW - (finalX + toolbar.offsetWidth);
-
-    let newPos = {};
-    let newOrientation = "horizontal";
-
-    if (distRight < snapThreshold) {
-      newOrientation = "vertical";
-      newPos = { right: "2vw", top: Math.max(2, (finalY / viewH) * 100) + "vh" };
-    } else if (distLeft < snapThreshold) {
-      newOrientation = "vertical";
-      newPos = { left: "calc(232px + 2vw)", top: Math.max(2, (finalY / viewH) * 100) + "vh" };
-    } else if (distTop < snapThreshold) {
-      newOrientation = "horizontal";
-      newPos = { top: "2vh", left: Math.max(2, (finalX / viewW) * 100) + "vw" };
-    } else {
-      newOrientation = "horizontal";
-      // Default relative position
-      newPos = { bottom: "1.5vh", left: Math.max(2, (finalX / viewW) * 100) + "vw" };
-    }
+    const edge = computeSnap(finalX, finalY);
+    const newOrientation = (edge === "left" || edge === "right") ? "vertical" : "horizontal";
 
     toolbar.classList.remove("horizontal", "vertical");
     toolbar.classList.add(newOrientation);
 
-    toolbar.style.left = newPos.left || "auto";
-    toolbar.style.right = newPos.right || "auto";
-    toolbar.style.top = newPos.top || "auto";
-    toolbar.style.bottom = newPos.bottom || "auto";
+    // Get the exact same position the ghost showed
+    const snapPos = getSnapPosition(edge, finalX, finalY);
 
+    // Apply position: getSnapPosition returns css values relative to canvas-container,
+    // which is what the toolbar is already positioned inside of (position:absolute)
+    toolbar.style.left = snapPos.left || "auto";
+    toolbar.style.right = snapPos.right || "auto";
+    toolbar.style.top = snapPos.top || "auto";
+    toolbar.style.bottom = snapPos.bottom || "auto";
+    // Clear width/height — toolbar auto-sizes from content
+    toolbar.style.width = "";
+    toolbar.style.height = "";
+
+    const newPos = {
+      left: snapPos.left || undefined,
+      right: snapPos.right || undefined,
+      top: snapPos.top || undefined,
+      bottom: snapPos.bottom || undefined,
+    };
     vscode.setState({ ...(vscode.getState() || {}), ftPosition: newPos, ftOrientation: newOrientation });
 
     if (toolbar.classList.contains("rolled-up")) {
@@ -498,20 +583,24 @@ function setupFloatingToolbar() {
     // Skip if target is a tool button or inside one (handled by drag-to-create)
     if (e.target.closest(".ft-tool-btn")) return;
 
-    isDragging = true;
     activePointerId = e.pointerId;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
     dragStartTime = Date.now();
 
-    // Normalize to px position before drag to avoid CSS anchor conflicts
+    // Record initial position WITHOUT modifying CSS — avoids jump on click
     const rect = toolbar.getBoundingClientRect();
     initialLeft = rect.left;
     initialTop = rect.top;
-    toolbar.style.left = rect.left + "px";
-    toolbar.style.top = rect.top + "px";
-    toolbar.style.right = "auto";
-    toolbar.style.bottom = "auto";
+
+    // Capture canonical (horizontal-layout) dimensions so snap ghost
+    // reflects the target orientation regardless of current state
+    const isHoriz = toolbar.classList.contains("horizontal");
+    canonW = isHoriz ? rect.width : rect.height; // long side
+    canonH = isHoriz ? rect.height : rect.width; // short side
+
+    // Set ftDragging AFTER recording initial state
+    ftDragging = true;
 
     e.preventDefault();
     e.stopPropagation();
@@ -519,19 +608,22 @@ function setupFloatingToolbar() {
 
   // ── Drag-to-Create: drag a tool button onto the canvas ──
   const DRAG_THRESHOLD = 5;
-  let dtcActive = false;
-  let dtcTool = null;
+  // dtcTool and dtcActive are declared at module scope (above) so
+  // pointer.js document-level listeners can check for active toolbar drags
   let dtcStartX = 0;
   let dtcStartY = 0;
   let dtcGhost = null;
+  let dtcCancelled = false; // true when pointer re-enters toolbar
+  let dtcGuideOverlay = null; // SVG overlay for alignment guides
 
+  // Ghost shapes match WASM create_node_at defaults exactly
   const ghostShapes = {
-    rect: { w: 120, h: 80, css: "border-radius:8px;" },
-    ellipse: { w: 100, h: 100, css: "border-radius:50%;" },
+    rect: { w: 100, h: 80, css: "border-radius:8px;" },
+    ellipse: { w: 100, h: 80, css: "border-radius:50%;" },
     pen: { w: 80, h: 60, css: "border-radius:4px;" },
     arrow: { w: 120, h: 2, css: "" },
     text: { w: 60, h: 28, css: "border-radius:4px;" },
-    frame: { w: 140, h: 100, css: "border-radius:4px;" },
+    frame: { w: 200, h: 150, css: "border-radius:4px;" },
   };
 
   function createGhost(tool) {
@@ -541,19 +633,23 @@ function setupFloatingToolbar() {
     const isDark = document.body.classList.contains("dark-theme");
     const borderColor = isDark ? "rgba(255,255,255,0.5)" : "rgba(51,51,51,0.5)";
     const bg = isDark ? "rgba(255,255,255,0.06)" : "rgba(51,51,51,0.06)";
+    // Scale ghost to match how the shape will appear on canvas at current zoom
+    const sw = Math.round(shape.w * zoomLevel);
+    const sh = Math.round(shape.h * zoomLevel);
     let content = "";
     if (tool === "text") {
-      content = `<span style="font-size:14px;color:${borderColor};font-weight:500;">T</span>`;
+      content = `<span style="font-size:${Math.round(14 * zoomLevel)}px;color:${borderColor};font-weight:500;">T</span>`;
     }
     if (tool === "arrow") {
       // Diagonal line ghost
+      const aw = Math.round(shape.w * zoomLevel);
       el.style.cssText = `
         position:fixed;pointer-events:none;z-index:10000;
-        width:${shape.w}px;height:${shape.w}px;
+        width:${aw}px;height:${aw}px;
         transform:translate(-50%,-50%);
         opacity:0.7;
       `;
-      el.innerHTML = `<svg width="${shape.w}" height="${shape.w}" viewBox="0 0 ${shape.w} ${shape.w}" fill="none">
+      el.innerHTML = `<svg width="${aw}" height="${aw}" viewBox="0 0 ${shape.w} ${shape.w}" fill="none">
         <line x1="10" y1="${shape.w - 10}" x2="${shape.w - 10}" y2="10"
           stroke="${borderColor}" stroke-width="2" stroke-dasharray="6 4"/>
         <path d="M${shape.w - 30},10 L${shape.w - 10},10 L${shape.w - 10},30"
@@ -562,7 +658,7 @@ function setupFloatingToolbar() {
     } else {
       el.style.cssText = `
         position:fixed;pointer-events:none;z-index:10000;
-        width:${shape.w}px;height:${shape.h}px;
+        width:${sw}px;height:${sh}px;
         border:2px dashed ${borderColor};
         background:${bg};
         ${shape.css}
@@ -596,13 +692,13 @@ function setupFloatingToolbar() {
 
     btn.addEventListener("pointerdown", (e) => {
       e.stopPropagation(); // Prevent scroll-handle drag from activating
+      e.preventDefault();  // Prevent native drag on SVG icons — critical for dtc
       dtcTool = tool;
       dtcBtn = btn;
       dtcStartX = e.clientX;
       dtcStartY = e.clientY;
       dtcActive = false;
-      // NOTE: setPointerCapture intentionally omitted —
-      // it silently fails in VS Code webview iframes
+
     });
 
     // Suppress click after drag-to-create
@@ -615,26 +711,107 @@ function setupFloatingToolbar() {
     }, true);
   });
 
-  // Document-level listeners — setPointerCapture fails in VS Code webview iframes
+  // Document-level listeners for drag-to-create
   document.addEventListener("pointermove", (e) => {
     if (!dtcTool) return;
     const dx = e.clientX - dtcStartX;
     const dy = e.clientY - dtcStartY;
     if (!dtcActive && (dx * dx + dy * dy) >= DRAG_THRESHOLD * DRAG_THRESHOLD) {
       dtcActive = true;
+      dtcCancelled = false;
       dtcGhost = createGhost(dtcTool);
     }
-    if (dtcActive && dtcGhost) {
-      moveGhost(dtcGhost, e.clientX, e.clientY);
+    if (dtcActive) {
+      // ── Cancel/re-drag: detect pointer over toolbar ──
+      const tbRect = toolbar.getBoundingClientRect();
+      const overToolbar = e.clientX >= tbRect.left && e.clientX <= tbRect.right
+        && e.clientY >= tbRect.top && e.clientY <= tbRect.bottom;
+      if (overToolbar && !dtcCancelled) {
+        // Pointer re-entered toolbar → cancel
+        dtcCancelled = true;
+        removeGhost();
+        removeDtcGuideOverlay();
+        removeDtcSnapEdgePreview();
+      } else if (!overToolbar && dtcCancelled) {
+        // Pointer left toolbar again → re-activate
+        dtcCancelled = false;
+        dtcGhost = createGhost(dtcTool);
+      }
+
+      if (!dtcCancelled && dtcGhost) {
+        // ── Keep ghost sized to current zoom (handles zoom-while-dragging) ──
+        const shape = ghostShapes[dtcTool] || ghostShapes.rect;
+        const sw = Math.round(shape.w * zoomLevel) + "px";
+        const sh = Math.round(shape.h * zoomLevel) + "px";
+        if (dtcTool === "arrow") {
+          dtcGhost.style.width = sw;
+          dtcGhost.style.height = sw;
+          const svgEl = dtcGhost.querySelector("svg");
+          if (svgEl) { svgEl.setAttribute("width", sw); svgEl.setAttribute("height", sw); }
+        } else {
+          dtcGhost.style.width = sw;
+          dtcGhost.style.height = sh;
+        }
+        // ── Alt+drag: snap ghost to cardinal position near node ──
+        const canvasEl = document.getElementById("fd-canvas");
+        if (e.altKey && canvasEl && fdCanvas && dtcTool !== "text") {
+          const cRect = canvasEl.getBoundingClientRect();
+          const rawX = ((e.clientX - cRect.left) - panX) / zoomLevel;
+          const rawY = ((e.clientY - cRect.top) - panY) / zoomLevel;
+          const snapPreview = dtcFindSnapTarget(rawX, rawY, dtcTool);
+          if (snapPreview) {
+            // Snap ghost to cardinal position
+            const screenX = snapPreview.x * zoomLevel + panX + cRect.left
+              + (ghostShapes[dtcTool] || ghostShapes.rect).w / 2;
+            const screenY = snapPreview.y * zoomLevel + panY + cRect.top
+              + (ghostShapes[dtcTool] || ghostShapes.rect).h / 2;
+            moveGhost(dtcGhost, screenX, screenY);
+            // Dashed edge preview line from target center to ghost center
+            const shape = ghostShapes[dtcTool] || ghostShapes.rect;
+            const ghostCx = snapPreview.x + shape.w / 2;
+            const ghostCy = snapPreview.y + shape.h / 2;
+            renderDtcSnapEdgePreview(snapPreview.targetCx, snapPreview.targetCy,
+              ghostCx, ghostCy, canvasEl);
+          } else {
+            moveGhost(dtcGhost, e.clientX, e.clientY);
+            removeDtcSnapEdgePreview();
+          }
+        } else {
+          moveGhost(dtcGhost, e.clientX, e.clientY);
+          removeDtcSnapEdgePreview();
+        }
+
+        // ── Alignment guides via WASM ──
+        if (canvasEl && fdCanvas) {
+          const cRect = canvasEl.getBoundingClientRect();
+          const sceneX = ((e.clientX - cRect.left) - panX) / zoomLevel;
+          const sceneY = ((e.clientY - cRect.top) - panY) / zoomLevel;
+          const shape = ghostShapes[dtcTool] || ghostShapes.rect;
+          const gw = shape.w / zoomLevel;
+          const gh = shape.h / zoomLevel;
+          // Center the hypothetical shape at cursor
+          const gx = sceneX - gw / 2;
+          const gy = sceneY - gh / 2;
+          try {
+            const guidesJson = fdCanvas.compute_guides_for_rect(gx, gy, gw, gh);
+            const guides = JSON.parse(guidesJson);
+            renderDtcGuideOverlay(guides, canvasEl);
+          } catch (_) {
+            removeDtcGuideOverlay();
+          }
+        }
+      }
     }
   });
 
   document.addEventListener("pointerup", (e) => {
     if (!dtcTool) return;
 
-    if (dtcActive) {
+    if (dtcActive && !dtcCancelled) {
       // Drag-to-create: check if drop is over the canvas
       removeGhost();
+      removeDtcGuideOverlay();
+      removeDtcSnapEdgePreview();
       const canvasEl = document.getElementById("fd-canvas");
       if (canvasEl && fdCanvas) {
         const rect = canvasEl.getBoundingClientRect();
@@ -650,6 +827,7 @@ function setupFloatingToolbar() {
             const consumed = dtcTextConsume(rawX, rawY, cx, cy, rect);
             if (consumed) {
               dtcActive = false;
+              dtcCancelled = false;
               dtcTool = null;
               if (dtcBtn) dtcBtn._dtcSuppressClick = true;
               dtcBtn = null;
@@ -657,8 +835,8 @@ function setupFloatingToolbar() {
             }
           }
 
-          // ── Snap-to-node detection (non-text tools) ──
-          const snap = dtcFindSnapTarget(rawX, rawY, dtcTool);
+          // ── Snap-to-node detection (non-text tools, Alt required) ──
+          const snap = e.altKey ? dtcFindSnapTarget(rawX, rawY, dtcTool) : null;
           const sceneX = snap ? snap.x : rawX;
           const sceneY = snap ? snap.y : rawY;
 
@@ -689,10 +867,17 @@ function setupFloatingToolbar() {
         }
       }
       dtcActive = false;
+      dtcCancelled = false;
       dtcTool = null;
       if (dtcBtn) dtcBtn._dtcSuppressClick = true;
       dtcBtn = null;
     } else {
+      // Cancelled or no drag — clean up
+      removeGhost();
+      removeDtcGuideOverlay();
+      removeDtcSnapEdgePreview();
+      dtcActive = false;
+      dtcCancelled = false;
       dtcTool = null;
       dtcBtn = null;
     }
@@ -701,10 +886,102 @@ function setupFloatingToolbar() {
   document.addEventListener("pointercancel", () => {
     if (!dtcTool) return;
     removeGhost();
+    removeDtcGuideOverlay();
+    removeDtcSnapEdgePreview();
     dtcActive = false;
+    dtcCancelled = false;
     dtcTool = null;
     dtcBtn = null;
   });
+
+  // ── Esc cancels drag-to-create ──
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && dtcTool) {
+      removeGhost();
+      removeDtcGuideOverlay();
+      removeDtcSnapEdgePreview();
+      dtcActive = false;
+      dtcCancelled = false;
+      dtcTool = null;
+      dtcBtn = null;
+      e.preventDefault();
+    }
+  });
+
+  // ── Alignment guide overlay for drag-to-create ──
+  function renderDtcGuideOverlay(guides, canvasEl) {
+    if (!guides || guides.length === 0) { removeDtcGuideOverlay(); return; }
+    const cRect = canvasEl.getBoundingClientRect();
+    if (!dtcGuideOverlay) {
+      dtcGuideOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      dtcGuideOverlay.style.cssText = `
+        position:fixed;pointer-events:none;z-index:9999;
+        left:${cRect.left}px;top:${cRect.top}px;
+        width:${cRect.width}px;height:${cRect.height}px;
+      `;
+      document.body.appendChild(dtcGuideOverlay);
+    }
+    // Update position/size
+    dtcGuideOverlay.style.left = cRect.left + "px";
+    dtcGuideOverlay.style.top = cRect.top + "px";
+    dtcGuideOverlay.style.width = cRect.width + "px";
+    dtcGuideOverlay.style.height = cRect.height + "px";
+    dtcGuideOverlay.setAttribute("viewBox",
+      `0 0 ${cRect.width / zoomLevel} ${cRect.height / zoomLevel}`);
+
+    // Transform from scene-space to viewport-space
+    const ox = panX / zoomLevel;
+    const oy = panY / zoomLevel;
+    let inner = `<g transform="translate(${ox},${oy})">`;
+    for (const [x1, y1, x2, y2] of guides) {
+      inner += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" 
+        stroke="#FF6B8A" stroke-width="${0.5 / zoomLevel}" stroke-dasharray="${4 / zoomLevel} ${3 / zoomLevel}" />`;
+    }
+    inner += `</g>`;
+    dtcGuideOverlay.innerHTML = inner;
+  }
+
+  function removeDtcGuideOverlay() {
+    if (dtcGuideOverlay) { dtcGuideOverlay.remove(); dtcGuideOverlay = null; }
+  }
+
+  // ── Snap edge preview overlay (dashed line from target node to ghost) ──
+  let dtcSnapEdgeOverlay = null;
+
+  function renderDtcSnapEdgePreview(fromX, fromY, toX, toY, canvasEl) {
+    const cRect = canvasEl.getBoundingClientRect();
+    if (!dtcSnapEdgeOverlay) {
+      dtcSnapEdgeOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      dtcSnapEdgeOverlay.style.cssText = `
+        position:fixed;pointer-events:none;z-index:9998;
+        left:${cRect.left}px;top:${cRect.top}px;
+        width:${cRect.width}px;height:${cRect.height}px;
+      `;
+      document.body.appendChild(dtcSnapEdgeOverlay);
+    }
+    dtcSnapEdgeOverlay.style.left = cRect.left + "px";
+    dtcSnapEdgeOverlay.style.top = cRect.top + "px";
+    dtcSnapEdgeOverlay.style.width = cRect.width + "px";
+    dtcSnapEdgeOverlay.style.height = cRect.height + "px";
+    dtcSnapEdgeOverlay.setAttribute("viewBox",
+      `0 0 ${cRect.width / zoomLevel} ${cRect.height / zoomLevel}`);
+    const ox = panX / zoomLevel;
+    const oy = panY / zoomLevel;
+    const sw = 1.5 / zoomLevel;
+    const dash = `${6 / zoomLevel} ${4 / zoomLevel}`;
+    dtcSnapEdgeOverlay.innerHTML = `<g transform="translate(${ox},${oy})">
+      <line x1="${fromX}" y1="${fromY}" x2="${toX}" y2="${toY}"
+        stroke="var(--fd-accent, #4FC3F7)" stroke-width="${sw}" stroke-dasharray="${dash}"
+        stroke-linecap="round" opacity="0.7" />
+      <circle cx="${toX}" cy="${toY}" r="${4 / zoomLevel}"
+        fill="var(--fd-accent, #4FC3F7)" opacity="0.6" />
+    </g>`;
+  }
+
+  function removeDtcSnapEdgePreview() {
+    if (dtcSnapEdgeOverlay) { dtcSnapEdgeOverlay.remove(); dtcSnapEdgeOverlay = null; }
+  }
+
   // ── Text drop-to-consume helper ──
   function dtcTextConsume(sceneX, sceneY, screenX, screenY, canvasRect) {
     if (!fdCanvas) return false;
@@ -993,7 +1270,7 @@ function renderMinimap() {
   minimapCtx.translate(offsetX, offsetY);
   minimapCtx.scale(scale, scale);
   minimapCtx.translate(-bounds.minX, -bounds.minY);
-  fdCanvas.render(minimapCtx, performance.now());
+  fdCanvas.render(minimapCtx, performance.now(), true);
   minimapCtx.restore();
 
   // Cache the scene image (without viewport rect) for smooth overlay
@@ -1214,41 +1491,15 @@ function setupHelpButton() {
   }
 }
 
-// ─── Theme Toggle ─────────────────────────────────────────────────────────────
-
+// (Theme is always light — no toggle needed)
 let isDarkTheme = false;
 
 function setupThemeToggle() {
-  const btn = document.getElementById("theme-toggle-btn");
-  if (!btn) return;
-
-  // Restore persisted theme
-  const savedState = vscode.getState();
-  if (savedState && savedState.darkTheme) {
-    isDarkTheme = true;
-    applyTheme(true);
-  }
-
-  btn.addEventListener("click", () => {
-    isDarkTheme = !isDarkTheme;
-    applyTheme(isDarkTheme);
-    vscode.setState({ ...(vscode.getState() || {}), darkTheme: isDarkTheme });
-  });
+  // Theme is always light — no toggle needed
 }
 
 function applyTheme(isDark) {
-  const btn = document.getElementById("theme-toggle-btn");
-  if (isDark) {
-    document.body.classList.add("dark-theme");
-    if (btn) btn.textContent = "☀️";
-  } else {
-    document.body.classList.remove("dark-theme");
-    if (btn) btn.textContent = "🌙";
-  }
-  if (fdCanvas) {
-    fdCanvas.set_theme(isDark);
-    render();
-  }
+  // Theme is always light — no-op
 }
 
 // ─── Sketchy Mode Toggle ──────────────────────────────────────────────────────
@@ -1300,10 +1551,10 @@ function applyZenMode(isZen) {
   const btn = document.getElementById("zen-toggle-btn");
   if (isZen) {
     document.body.classList.add("zen-mode");
-    if (btn) { btn.textContent = '🔧'; btn.title = 'Switch to Full mode'; }
+    if (btn) { btn.textContent = '🧘'; btn.title = 'Exit Zen mode'; btn.classList.add('zen-active'); }
   } else {
     document.body.classList.remove("zen-mode");
-    if (btn) { btn.textContent = '🧘'; btn.title = 'Switch to Zen mode'; }
+    if (btn) { btn.textContent = '🧘'; btn.title = 'Switch to Zen mode'; btn.classList.remove('zen-active'); }
     // Clear any zen-visible overrides when leaving zen mode
     document.getElementById("layers-panel")?.classList.remove("zen-visible");
     document.getElementById("props-panel")?.classList.remove("zen-visible");

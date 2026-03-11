@@ -60,15 +60,51 @@ rect @button {
 
 Duration format: `Nms` (e.g. `300ms`, `1500ms`)
 
+### Trigger-Specific Default Durations
+
+| Trigger    | Default  | Rationale                    |
+| ---------- | -------- | ---------------------------- |
+| `:hover`   | 300ms    | Standard interactive feel    |
+| `:press`   | 150ms    | Fast tactile feedback        |
+| `:enter`   | 500ms    | Dramatic viewport reveals    |
+| Custom     | 300ms    | Safe general-purpose default |
+
+Explicit `ease: <fn> <duration>` always overrides the trigger default.
+
+### `delay:` Property (Cooldown)
+
+Optional post-revert cooldown before re-triggering:
+
+```fd
+anim :hover {
+  scale: 1.05
+  ease: ease_out 200ms
+  delay: 500ms    # wait 500ms after revert before re-triggerable
+}
+```
+
+Default: no delay (omitted from output).
+
 ## Tween Engine (R5.6)
 
 Animation state machine per node:
 
 ```
-IDLE → trigger fires → ANIMATING → duration elapsed → HOLD
-                                                        ↓
-                                         trigger reverts → REVERTING → IDLE
+IDLE → trigger fires → ANIMATING → duration elapsed → HOLD → trigger reverts → REVERTING → (delay) → IDLE
 ```
+
+### Proportional Time Envelope
+
+The renderer uses the node's `duration_ms` for the ease-in phase, then derives:
+
+| Phase     | Duration            |
+| --------- | ------------------- |
+| Ease-in   | `duration_ms`       |
+| Hold      | `duration_ms × 0.6` |
+| Ease-out  | `duration_ms × 0.5` |
+| **Total** | `duration_ms × 2.1` |
+
+Example: 300ms ease → 300ms in + 180ms hold + 150ms out = 630ms total.
 
 ### Interpolation
 

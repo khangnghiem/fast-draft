@@ -1,26 +1,26 @@
-# ─── Themes ───
+# ─── Styles ───
 
-theme box_green {
+style box_green {
   fill: #10B981  # teal
   corner: 16
 }
 
-theme box_orange {
+style box_orange {
   fill: #F59E0B  # orange
   corner: 16
 }
 
-theme box_primary {
+style box_primary {
   fill: #6C5CE7  # blue
   corner: 16
 }
 
-theme desc {
+style desc {
   fill: #6B7280  # blue
   font: "Inter" regular 12
 }
 
-theme label {
+style label {
   fill: #1A1A2E  # blue
   font: "Inter" semibold 14
 }

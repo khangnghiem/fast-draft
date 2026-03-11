@@ -2,54 +2,54 @@
 # Reusable UI components — buttons, inputs, cards, badges, avatars.
 # Usage: import "libraries/ui-kit.fd" as ui
 
-# ─── Themes ───
+# ─── Styles ───
 
-theme primary {
+style primary {
   fill: #6C5CE7
   corner: 8
 }
 
-theme primary_hover {
+style primary_hover {
   fill: #5A4BD1
   corner: 8
 }
 
-theme secondary {
+style secondary {
   fill: #DFE6E9
   corner: 8
 }
 
-theme danger {
+style danger {
   fill: #E17055
   corner: 8
 }
 
-theme success {
+style success {
   fill: #00B894
   corner: 8
 }
 
-theme input_style {
+style input_style {
   stroke: #DDDDDD 1
   corner: 8
 }
 
-theme label_text {
+style label_text {
   fill: #2D3436
   font: "Inter" 500 14
 }
 
-theme hint_text {
+style hint_text {
   fill: #999999
   font: "Inter" 400 13
 }
 
-theme heading {
+style heading {
   fill: #1A1A2E
   font: "Inter" 700 24
 }
 
-theme subheading {
+style subheading {
   fill: #2D3436
   font: "Inter" 600 16
 }

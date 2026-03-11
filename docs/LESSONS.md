@@ -24,11 +24,15 @@ Engineering lessons discovered through building FD.
   feature, removal, cleanup     → L237-246 (Feature Removal Requires Full Cleanup)
   resize, cached-bounds, model  → L249-259 (Cached Bounds Must Track Mutations)
   animation, time, hover        → L262-272 (Animations: Always Add Time Limits)
-  setPointerCapture, webview    → L275-284 (setPointerCapture Fails in Webview)
-  e2e, false-positive, codespace → L288-301 (E2E Tests Give False Positives)
+
   codespace, cp, target, sync   → L304-318 (gh codespace cp Hangs)
   browser, subagent, context, spiral → L320-344 (Browser Subagent Context Spiral)
+  native-drag, svg, preventDefault → L347-355 (Native Drag Hijacks SVG Pointerdown)
+  undo, batch, snapshot, resolve  → L358-375 (Snapshot Undo Clobbers Bounds)
+  text, metrics, center, bounds   → L377-389 (Text Metrics Update Must Re-Center)
+  spatial-index, hit-test, stale, move → L391-403 (Spatial Index Must Be Rebuilt After Bounds Mutation)
 -->
+
 
 ## Resize Fight: Bounds Ownership Chain (SyncEngine ↔ Layout Engine ↔ JS)
 
@@ -253,7 +257,7 @@ Engineering lessons discovered through building FD.
 **Date**: 2026-03-02
 **Context**: Double-clicking a text node to edit showed text at wrong size/style — the inline editor didn't match what the canvas rendered.
 
-**Root cause**: `get_selected_node_props()` only returned `fontSize`/`fontFamily`/`fontWeight` when `style.font.is_some()`. Text nodes using the default font (no explicit `font:` in FD source) got no font keys in the JSON. The JS fallback (`14`/`"Inter"`/`400`) happened to match the renderer defaults, but broke when themes set different sizes.
+**Root cause**: `get_selected_node_props()` only returned `fontSize`/`fontFamily`/`fontWeight` when `style.font.is_some()`. Text nodes using the default font (no explicit `font:` in FD source) got no font keys in the JSON. The JS fallback (`14`/`"Inter"`/`400`) happened to match the renderer defaults, but broke when styles set different sizes.
 
 **Fix**: Always return `fontSize`, `fontFamily`, `fontWeight` using `style.font.as_ref().map_or(default, |f| f.field)` — same defaults as the renderer.
 
@@ -298,36 +302,6 @@ Engineering lessons discovered through building FD.
 
 ---
 
-## setPointerCapture Fails Silently in VS Code Webview — Use Document-Level Listeners
-
-**Date**: 2026-03-03
-**Context**: Drag-to-create from floating toolbar buttons didn't work — ghost preview never appeared, shapes never created on canvas drop. Same root cause as toolbar drag handles (PR #333, v0.10.8).
-
-**Root cause**: `btn.setPointerCapture(e.pointerId)` silently fails inside VS Code webview iframes. When `pointermove`/`pointerup` listeners are attached to the button element, they stop firing as soon as the pointer leaves the button's bounding box (because the capture never took effect). This means: no ghost preview, no drop detection, no new shapes.
-
-**Fix**: Removed `setPointerCapture` call. Moved `pointermove`, `pointerup`, and `pointercancel` from per-button listeners to `document`-level listeners. Added `dtcBtn` variable to track the originating button for click suppression after drag.
-
-**Lesson**: **Never use `setPointerCapture` in VS Code webview code.** It silently fails in iframe contexts. Always use document-level `pointermove`/`pointerup` listeners for any drag interaction that needs to track the pointer after it leaves the originating element. Pattern: attach `pointerdown` on the element (for state init), attach `pointermove`/`pointerup` on `document` (for tracking).
-
----
-
-## VS Code: E2E Tests in Codespace Can Give False Positives for Webview Interactions
-
-**Date**: 2026-03-04
-**Context**: Toolbar drag fix (PR #357, v0.10.23) — CSS `user-select: none` + JS body-wide `pointerdown` handler. E2E in Codespace passed (toolbar moved, drag-to-create worked), but user reported the bug was "not fixed at all."
-
-**Root cause**: Codespace browser testing uses a remote VS Code server where the webview rendering pipeline differs from the desktop VS Code app. Pointer event handling, z-index layering, and `setPointerCapture` behavior may all behave differently in the Codespace iframe environment vs the native Electron webview. A "passing" E2E test doesn't guarantee the fix works on the user's local VS Code.
-
-**Fix**: For VS Code webview pointer/drag fixes:
-
-1. Always add `console.log` diagnostics to confirm event handlers fire in the actual local environment
-2. Never rely solely on Codespace E2E for webview interaction bugs — test locally too
-3. Check if `setPointerCapture` on sibling elements (like `canvas.setPointerCapture` at line 713 of `main.js`) interferes with document-level `pointermove` listeners used by the toolbar drag
-
-**Lesson**: **Codespace E2E tests are unreliable for VS Code webview pointer interaction bugs.** The rendering and event pipeline differs between remote/web VS Code and desktop Electron VS Code. Always verify pointer/drag fixes on the local desktop app. When a bug report says "not fixed at all," add diagnostic logging as the first debugging step.
-
----
-
 ## CI/CD: `gh codespace cp -r -e .` Hangs on Large Projects
 
 **Date**: 2026-03-04
@@ -359,3 +333,60 @@ Engineering lessons discovered through building FD.
 3. The `/nonstop` Phase 4 rule already enforces this — follow it
 
 **Lesson**: **E2E browser testing MUST be done in a fresh conversation.** If you've done significant research, file reading, or code editing in the current conversation, the accumulated context will cause the browser subagent to spiral. This is a platform constraint, not a code bug. The `/nonstop` workflow's Phase 4 context-check rule exists for this reason.
+
+---
+
+## Native Drag Hijacks SVG Pointerdown — Always preventDefault
+
+**Date**: 2026-03-05
+**Context**: Drag-to-create from floating toolbar buttons never worked despite 6 prior fix attempts (v0.10.8 through v0.10.31). All those fixes addressed event routing — `setPointerCapture` removal, document-level listeners, pointer ownership tracking — but the feature STILL didn't work.
+
+**Root cause**: The tool button `pointerdown` handler called `e.stopPropagation()` but NOT `e.preventDefault()`. Without `preventDefault`, the browser initiates **native HTML drag-and-drop** on the `<svg>` icons inside `<button>` elements. Native drag completely hijacks all subsequent `pointermove` events at the browser level — document-level listeners never fire, the drag threshold is never reached, the ghost preview never appears.
+
+**Fix**: (v0.10.32) Added `e.preventDefault()` in the tool button `pointerdown` handler. Also added CSS `pointer-events: none; -webkit-user-drag: none` on `.ft-tool-btn svg` as belt-and-suspenders.
+
+**Lesson**: **Any custom drag interaction on elements containing `<svg>`, `<img>`, or `<a>` MUST call `e.preventDefault()` in the `pointerdown` handler.** These elements have browser-native drag behavior that overrides pointer event tracking. `e.stopPropagation()` only prevents parent handlers from firing — it does NOT prevent the browser's default drag behavior. This is the #1 reason custom drag interactions silently fail and is nearly impossible to debug from code review alone because the code logic is correct — the browser just never delivers the events.
+
+---
+
+## Snapshot Undo Clobbers Bounds — Don't Batch Single-Action Operations
+
+**Date**: 2026-03-09
+**Context**: Creating a text node on canvas (T tool click) then pressing ⌘Z rearranged all other nodes. Same class as Resize Fight (L33-48).
+
+**Root cause**: Two compounding issues:
+
+1. **TextTool's single AddNode was unnecessarily batched** — `begin_batch()`/`end_batch()` wrapped every pointer gesture, so even a single-click text placement became a `Command::Snapshot`. Snapshot undo calls `set_text(text_before)` → full `parse_document()` + `resolve_layout()`, creating a fresh bounds HashMap with `intrinsic_size` heuristics that clobber JS-measured text bounds.
+2. **Redundant `resolve()` in `undo()`** — after snapshot undo already resolved via `set_text()`, `lib.rs` called `resolve()` again, double-clobbering any bounds that survived the first pass.
+
+**Fix**:
+- Skip `begin_batch()`/`end_batch()` for TextTool (single-action), so AddNode goes through `Command::Single` with `RemoveNode` inverse — no re-parse
+- `undo()`/`redo()` return `(desc, is_snapshot)` — skip `resolve()` when snapshot already resolved
+
+**Rule**: **Only batch operations that emit multiple incremental mutations (drag gestures).** Single-action operations (click-to-place) should use `Command::Single` for atomic inverse undo without full document re-parse. The bounds ownership chain (L48) applies equally to undo paths.
+
+---
+
+## Text Metrics Update Must Re-Center in Parent
+
+**Date**: 2026-03-11
+**Context**: Centered text inside shapes (rect/ellipse/frame) visually shifted to left-aligned when clicked.
+
+**Root cause**: `update_text_metrics()` (lib.rs) shrinks text bounds to JS `measureText()` size but preserved x/y position. The layout solver initially centered text within parent shapes by setting bounds equal to the parent. After shrink, the narrower bounds at the old position made text appear left-shifted relative to the parent.
+
+**Fix**: After updating bounds dimensions in `update_text_metrics()`, re-center text within parent shape — matching the layout solver's auto-center behavior for text children without explicit Position or place constraints.
+
+**Rule**: **Any function that modifies a node's bounds dimensions must also re-resolve or re-center position when the node participates in auto-centering.** The layout solver's centering is position-dependent on size — shrinking without re-centering breaks the invariant.
+
+---
+
+## Spatial Index Must Be Rebuilt After Bounds Mutation
+
+**Date**: 2026-03-11
+**Context**: Nodes could only be moved once on the canvas — after the first drag, the node became un-selectable and un-movable.
+
+**Root cause**: `apply_mutations()` in `lib.rs` deliberately skips `rebuild_spatial_index()` for MoveNode/ResizeNode batches (to avoid `resolve()` → bounds clobbering). The cached bounds ARE updated in-place, but the `SpatialIndex` still holds the node's **pre-move AABB**. On the next `pointerdown`, `hit_test()` queries the stale spatial index and returns `None` at the node's new visual position.
+
+**Fix**: Added `self.rebuild_spatial_index()` in `handle_pointer_up()` after `flush_to_text()` — the spatial index is rebuilt once per gesture, using the already-updated cached bounds. O(N log N) but only once per pointer-up, not per frame.
+
+**Rule**: **Any optimization cache derived from bounds must be invalidated/rebuilt whenever bounds change.** The spatial index, like cached bounds themselves (L249), is a derived data structure — when the authoritative data (bounds HashMap) changes in-place, all caches must follow.

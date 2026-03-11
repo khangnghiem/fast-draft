@@ -17,10 +17,16 @@ description: Publish all FD packages to their respective registries
    - `CARGO_REGISTRY_TOKEN`, `NPM_TOKEN`, `VSCE_PAT`, `VSX_PAT`
    - `GEMINI_API_KEY` (for AI features in fd-vscode)
 
-2. **Verify CI passes**:
+2. **Verify CI passes** (local + remote):
 
    ```bash
    cargo clippy --workspace -- -D warnings && cargo test --workspace
+   ```
+
+   If there's an open PR, also wait for remote CI:
+
+   ```bash
+   gh pr checks <PR_NUMBER> --watch --fail-fast
    ```
 
 3. **Bump versions** in all affected `Cargo.toml` / `package.json`
@@ -80,4 +86,6 @@ cd fd-vscode && pnpm ovsx publish -p <VSX_PAT from .env>
    > This also triggers the **Zed extension update** automatically via `huacnlee/zed-extension-action`.
    > It creates a PR to `zed-industries/extensions` with the updated submodule pointer.
 
-6. Report publish results to user.
+6. **Site auto-deploys** — merging to `main` triggers `.github/workflows/pages.yml`, which rebuilds WASM and deploys `site/` to [fast-draft.com](https://fast-draft.com). No manual deploy needed.
+
+7. Report publish results to user.

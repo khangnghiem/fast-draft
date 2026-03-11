@@ -52,6 +52,11 @@ Before proposing any new requirement, search the **Requirement Index** at the bo
 > [!CAUTION]
 > **NEVER use `git push --force` or `git push --force-with-lease`.** If there are conflicts, resolve them with `git pull --rebase` or a merge commit. To clean up commit history, use squash merge on the PR.
 
+### 🌐 Browser Subagent (MANDATORY)
+
+- **Reuse open tabs** — when a browser tab with the same hostname is already open, navigate within that tab instead of opening a new one. Only open a new tab if no existing tab matches the target hostname.
+- **Includes Codespaces** — the same rule applies to GitHub Codespace tabs (`*.github.dev`). Never open a duplicate Codespace tab.
+
 ---
 
 ## TIER 1: FD STACK RULES
@@ -105,7 +110,7 @@ crates/
 | **Semantic IDs**            | `@login_form` not `@rect_17` — intent over auto-generated names            |
 | **Constraints over coords** | `center_in: canvas` not `x: 400 y: 300` — relationships > pixels           |
 | **Accurate comments**       | `#` for context — wrong comments hurt more than no comments                |
-| **Theme reuse**             | Define `theme` blocks, reference with `use:` — consistency > ad-hoc        |
+| **Style reuse**             | Define `style` blocks, reference with `use:` — consistency > ad-hoc        |
 | **Spec for intent**         | `spec { ... }` metadata (status, priority, accept) — structured > freeform |
 | **Shorthand OK**            | `w:` / `h:` / `#FFF` are fine — unambiguous in context                     |
 
@@ -126,6 +131,32 @@ crates/
 ---
 
 ## TIER 2: CI/CD
+
+### 🌐 Site & Domain
+
+| Fact | Value |
+| ---- | ----- |
+| **Live URL** | [https://fast-draft.com](https://fast-draft.com) |
+| **Hosting** | Cloudflare Pages (free, 330+ edge PoPs) |
+| **DNS** | Cloudflare — CNAME `@` → `fast-draft.pages.dev`, proxy **ON** |
+| **Source** | `site/` directory (index.html, style.css, playground.js, wasm/) |
+| **Headers** | `site/_headers` — WASM cache (1yr immutable) + security headers |
+| **Deploy trigger** | Auto on push to `main` via `.github/workflows/pages.yml` |
+| **WASM build** | `wasm-pack build crates/fd-wasm --target web --out-dir ../../site/wasm` |
+| **Secrets** | `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` in GitHub repo secrets |
+
+### ⚙️ CI/CD Workflows
+
+| Workflow | Trigger | Purpose |
+| -------- | ------- | ------- |
+| `ci.yml` | push/PR to `main` | Rust check + test + clippy + fmt, WASM build, VS Code extension compile |
+| `pages.yml` | push to `main` | Build WASM → deploy to Cloudflare Pages |
+| `release.yml` | `v*` tag | CI gate → VS Code ext publish + fd-lsp binaries + Zed ext → GitHub Release |
+
+All workflows use `Swatinem/rust-cache@v2` with shared cache keys (`ci`, `wasm`).
+
+> [!CAUTION]
+> **Never delete or modify `site/_headers`.** It controls WASM caching and security response headers.
 
 ### Before Completing Any Task
 

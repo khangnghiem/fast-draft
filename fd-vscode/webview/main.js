@@ -82,11 +82,17 @@ let sideEffectTimer = null;
 /** Cached scene bounds + generation for minimap */
 let cachedSceneBounds = null;
 let sceneBoundsGeneration = -1;
+/** Whether the scene has edge flow animations (pulse/dash) — keeps render loop alive */
+let hasFlowEdges = false;
 
 /** Mark the canvas as needing a re-render on the next animation frame. */
 function markDirty() { renderDirty = true; }
 /** Bump the scene generation counter (call on any data mutation). */
-function bumpGeneration() { sceneGeneration++; markDirty(); }
+function bumpGeneration() {
+  sceneGeneration++;
+  markDirty();
+  if (fdCanvas) hasFlowEdges = fdCanvas.has_active_flows();
+}
 
 /** Grid overlay state */
 let gridEnabled = false;
@@ -107,6 +113,8 @@ let cmdTempSelectActive = false;
 let cmdTempSelectOriginalTool = null;
 /** Alt+drag clone-and-drag active */
 let altCloneActive = false;
+/** Ghost bounds from WASM — original positions of nodes before Alt+drag clone */
+let altDragGhosts = [];
 /** Ctrl+click on any tool → temporary eraser mode */
 let tempEraserMode = false;
 let tempEraserPrevTool = null;
@@ -341,18 +349,14 @@ function playDetachAnimation(nodeId) {
 function setupPointerEvents() {
   const dpr = window.devicePixelRatio || 1;
 
+  // Track canvas pointer ownership via document-level listeners
+  let canvasPointerId = -1;
+
   canvas.addEventListener("pointerdown", (e) => {
     if (!fdCanvas) return;
 
-    // Skip if pointer is over the floating toolbar (sibling overlay)
-    const ft = document.getElementById("floating-toolbar");
-    if (ft) {
-      const tbRect = ft.getBoundingClientRect();
-      if (e.clientX >= tbRect.left && e.clientX <= tbRect.right
-        && e.clientY >= tbRect.top && e.clientY <= tbRect.bottom) {
-        return;
-      }
-    }
+    // Skip if pointer originated inside the floating toolbar (DOM ancestry)
+    if (e.target.closest && e.target.closest('#floating-toolbar')) return;
 
     clearModifierCursors(); // Modifier preview ends when interaction starts
     const rect = canvas.getBoundingClientRect();
@@ -365,7 +369,7 @@ function setupPointerEvents() {
       panStartX = e.clientX - panX;
       panStartY = e.clientY - panY;
       canvas.style.cursor = "grabbing";
-      canvas.setPointerCapture(e.pointerId);
+      canvasPointerId = e.pointerId;
       e.preventDefault();
       return;
     }
@@ -397,18 +401,15 @@ function setupPointerEvents() {
       updateToolbarActive("eraser");
     }
 
-    // ── Alt+drag = clone and drag ──
-    if (e.altKey && !e.metaKey && !e.ctrlKey) {
+    // Alt+drag duplication is handled entirely by WASM via
+    // duplicate_selected_at(0,0) — JS only tracks altCloneActive
+    // to suppress the style-picker eyedropper on pointer-up.
+    const isAlt = e.altKey || modAltHeld;
+    if (isAlt && !e.metaKey && !e.ctrlKey) {
       const hitId = fdCanvas.hit_test_at(x, y);
       if (hitId) {
-        // Ensure the node is selected first
-        fdCanvas.select_by_id(hitId);
-        // Duplicate in-place (0,0 offset), new clone becomes selected
-        fdCanvas.duplicate_selected_at(0.0, 0.0);
-        render();
-        syncTextToExtension();
         altCloneActive = true;
-        // Now switch to select to drag the clone
+        // Switch to select for drawing tools so WASM sees SelectTool
         if (isDrawingTool) {
           cmdTempSelectActive = true;
           cmdTempSelectOriginalTool = currentTool;
@@ -434,11 +435,11 @@ function setupPointerEvents() {
       e.pressure || 1.0,
       e.shiftKey,
       e.ctrlKey,
-      e.altKey,
+      isAlt,
       e.metaKey
     );
     if (changed) render();
-    canvas.setPointerCapture(e.pointerId);
+    canvasPointerId = e.pointerId;
 
     // Track interaction start for dimension tooltip
     pointerIsDown = true;
@@ -457,8 +458,14 @@ function setupPointerEvents() {
     }
   });
 
-  canvas.addEventListener("pointermove", (e) => {
+  document.addEventListener("pointermove", (e) => {
     if (!fdCanvas) return;
+    // During active drag, only process our owned pointer
+    if (canvasPointerId !== -1 && e.pointerId !== canvasPointerId) return;
+    // Skip if toolbar drag or drag-to-create is in progress
+    if (ftDragging || dtcTool) return;
+    // During hover (no active drag), only process events over the canvas
+    if (canvasPointerId === -1 && e.target !== canvas) return;
 
     // Pan drag in progress
     if (panDragging) {
@@ -482,16 +489,26 @@ function setupPointerEvents() {
       }
     }
 
-    const changed = fdCanvas.handle_pointer_move(
+    const isAltMove = e.altKey || modAltHeld;
+    const moveResult = JSON.parse(fdCanvas.handle_pointer_move(
       x,
       y,
       e.pressure || 1.0,
       e.shiftKey,
       e.ctrlKey,
-      e.altKey,
+      isAltMove,
       e.metaKey
-    );
+    ));
+    const changed = moveResult.changed;
     if (changed) render();
+
+    // Read ghost origin bounds for Alt+drag preview
+    if (altCloneActive && fdCanvas.get_alt_drag_ghost) {
+      try {
+        const ghostJson = fdCanvas.get_alt_drag_ghost();
+        altDragGhosts = ghostJson ? JSON.parse(ghostJson) : [];
+      } catch (_) { altDragGhosts = []; }
+    }
     // Arrow tool: always re-render during drag for live preview line
     else if (pointerIsDown && currentToolAtPointerDown === "arrow") render();
 
@@ -525,15 +542,10 @@ function setupPointerEvents() {
           showDimensionTooltip(e.clientX, e.clientY, `${Math.round(w)} × ${Math.round(h)}`);
         }
       } else if (tool === "select") {
-        // Moving: show (X, Y) of selected node
-        const selectedId = fdCanvas.get_selected_id();
-        if (selectedId && changed) {
-          try {
-            const b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
-            if (b.x !== undefined) {
-              showDimensionTooltip(e.clientX, e.clientY, `(${Math.round(b.x)}, ${Math.round(b.y)})`);
-            }
-          } catch (_) { /* skip */ }
+        // Moving: show (X, Y) from bundled bounds (no extra WASM calls)
+        if (changed && moveResult.bounds) {
+          const b = moveResult.bounds;
+          showDimensionTooltip(e.clientX, e.clientY, `(${Math.round(b.x)}, ${Math.round(b.y)})`);
         }
       }
     }
@@ -555,29 +567,31 @@ function setupPointerEvents() {
     }
   });
 
-  canvas.addEventListener("pointerup", (e) => {
+  document.addEventListener("pointerup", (e) => {
     if (!fdCanvas) return;
-    // Always release pointer capture — prevents stale captures
-    // from blocking toolbar and other overlay pointer events
-    try { canvas.releasePointerCapture(e.pointerId); } catch (_) { }
+    // Skip entirely if no canvas pointerdown started this interaction
+    if (canvasPointerId === -1) return;
+    // Only handle events from our owned pointer
+    if (e.pointerId !== canvasPointerId) return;
+    canvasPointerId = -1;
 
     // End pan drag
     if (panDragging) {
       panDragging = false;
       canvas.style.cursor = isPanning ? "grab" : "";
-      canvas.releasePointerCapture(e.pointerId);
       return;
     }
 
     const rect = canvas.getBoundingClientRect();
     const x = ((e.clientX - rect.left) - panX) / zoomLevel;
     const y = ((e.clientY - rect.top) - panY) / zoomLevel;
+    const isAltUp = e.altKey || modAltHeld;
     const resultJson = fdCanvas.handle_pointer_up(
       x,
       y,
       e.shiftKey,
       e.ctrlKey,
-      e.altKey,
+      isAltUp,
       e.metaKey
     );
     const result = JSON.parse(resultJson);
@@ -605,7 +619,7 @@ function setupPointerEvents() {
     }
 
     // ── Alt+click style picker (eyedropper for styles) ──
-    if (e.altKey && !altCloneActive && !cmdTempSelectActive && result.changed) {
+    if (isAltUp && !altCloneActive && !cmdTempSelectActive && result.changed) {
       const selectedId = fdCanvas.get_selected_id();
       if (selectedId) {
         pickStyleFromSelectedNode();
@@ -615,16 +629,19 @@ function setupPointerEvents() {
       }
     }
 
-    canvas.releasePointerCapture(e.pointerId);
+
     // Update properties panel after interaction ends
     updatePropertiesPanel();
     updateFloatingBar();
-    // Notify extension of canvas selection change (for Code ↔ Canvas sync)
+    // Notify extension of canvas selection (for Code ↔ Canvas sync)
     // Skip during inline editing — prevents focus stealing that kills the textarea
     if (!inlineEditorActive) {
       const selectedId = fdCanvas.get_selected_id();
       if (selectedId !== lastNotifiedSelectedId) {
-        lastNotifiedSelectedId = selectedId;
+        // Selection changed — full sync (panels + code highlight)
+        syncSelection(selectedId, "canvas");
+      } else if (selectedId) {
+        // Same node re-clicked — re-highlight code ("show me the code" intent)
         vscode.postMessage({ type: "nodeSelected", id: selectedId });
       }
     }
@@ -691,6 +708,26 @@ function setupPointerEvents() {
       }
     }
 
+    // ── Post-release: remeasure text bounds after resize ──
+    // When a text node is resized (sets max_width) or a parent shape is
+    // resized (propagates max_width to child text), JS measureText() gives
+    // the accurate wrapped height that the heuristic can only estimate.
+    if (result.changed && fdCanvas) {
+      const selectedId = fdCanvas.get_selected_id();
+      if (selectedId) {
+        // If selected node is text → measure it directly
+        measureAndUpdateTextBounds(selectedId);
+        // If selected node is a parent → measure all text children
+        try {
+          const childIds = JSON.parse(fdCanvas.get_text_children(selectedId));
+          for (const childId of childIds) {
+            measureAndUpdateTextBounds(childId);
+          }
+        } catch (_) { /* ignore parse errors */ }
+        render();
+      }
+    }
+
     isDraggingNode = false;
     draggedNodeId = null;
     animDropTargetId = null;
@@ -707,6 +744,7 @@ function setupPointerEvents() {
     cmdTempSelectActive = false;
     cmdTempSelectOriginalTool = null;
     altCloneActive = false;
+    altDragGhosts = [];
 
     // ── Restore tool after Ctrl temp Eraser ──
     if (tempEraserMode && tempEraserPrevTool && fdCanvas) {
@@ -1105,6 +1143,48 @@ function updateLockedIndicator(tool) {
  *  when rapidly arrowing through lines in the text editor. */
 let codeFocusDebounceTimer = null;
 
+/**
+ * Central selection sync — one function, all panels.
+ * Ensures that selecting a node/edge in ANY panel updates all others.
+ *
+ * @param {string} id - Node or edge ID (from @id), or "" to deselect
+ * @param {'canvas'|'layers'|'code'|'keyboard'} source - Origin panel
+ */
+function syncSelection(id, source) {
+  if (!fdCanvas) return;
+
+  // 1. Canvas: select + render (skip if source is canvas — already selected)
+  if (source !== "canvas") {
+    fdCanvas.select_by_id(id || "");
+    // select_by_id returns false for edge IDs — that's OK, edges
+    // don't have canvas selection highlights yet
+    render();
+  }
+
+  // 2. Dedup state — prevents redundant nodeSelected round-trips
+  lastNotifiedSelectedId = id || "";
+
+  // 3. Layers: highlight + scroll into view
+  refreshLayersPanel();
+
+  // 4. Code: notify extension to highlight line (skip if source is code)
+  if (source !== "code") {
+    vscode.postMessage({ type: "nodeSelected", id: id || "" });
+  }
+
+  // 5. Canvas focus: debounced pan/zoom (only for Code→Canvas)
+  if (source === "code" && id) {
+    clearTimeout(codeFocusDebounceTimer);
+    codeFocusDebounceTimer = setTimeout(() => focusOnNode(id), 150);
+  }
+
+  // 6. Side panels
+  updatePropertiesPanel();
+  // FAB is canvas-contextual — only show when selecting via canvas click
+  if (source === "canvas") updateFloatingBar();
+  else hideFloatingBar();
+}
+
 window.addEventListener("message", (event) => {
   const message = event.data;
 
@@ -1112,30 +1192,26 @@ window.addEventListener("message", (event) => {
     case "setText": {
       if (!fdCanvas) return;
       suppressTextSync = true;
-      fdCanvas.set_text(message.text);
+      const resultJson = fdCanvas.set_text(message.text);
       lastSyncedText = message.text; // Keep dedup in sync
       bumpGeneration(); // External text change — invalidate caches
-      measureAllTextNodes(); // Tight text bounds after code edit
-      render();
+      try {
+        const r = JSON.parse(resultJson);
+        if (r.layout_changed) {
+          measureAllTextNodes(); // Tight text bounds after code edit
+          render();
+        }
+      } catch (_) {
+        measureAllTextNodes();
+        render();
+      }
       suppressTextSync = false;
 
       break;
     }
     case "selectNode": {
-      if (!fdCanvas) return;
-      const nodeId = message.nodeId || "";
-      if (fdCanvas.select_by_id(nodeId)) {
-        // Sync dedup state so next canvas click sends nodeSelected correctly
-        lastNotifiedSelectedId = nodeId;
-        render();
-        // Update Layers panel highlight + scroll into view
-        refreshLayersPanel();
-        // Debounced pan/zoom to the selected node on Canvas (150ms)
-        if (nodeId) {
-          clearTimeout(codeFocusDebounceTimer);
-          codeFocusDebounceTimer = setTimeout(() => focusOnNode(nodeId), 150);
-        }
-      }
+      // Code cursor moved to a node/edge line → sync all panels
+      syncSelection(message.nodeId || "", "code");
       break;
     }
     case "libraryData": {
@@ -1179,10 +1255,19 @@ function syncTextToExtension() {
   });
 }
 
+
 // ─── Keyboard shortcuts (delegated to WASM) ─────────────────────────────
 
 /** Whether we're in pan mode (Space held) */
 let isPanning = false;
+
+// ─── Global modifier key tracking ────────────────────────────────────────
+// macOS Option/Alt pressed mid-drag may not update e.altKey on pointermove
+// in Electron/VS Code webviews. Track state explicitly via keydown/keyup.
+let modAltHeld = false;
+let modCtrlHeld = false;
+let modMetaHeld = false;
+let modShiftHeld = false;
 
 document.addEventListener("keydown", (e) => {
   if (!fdCanvas) return;
@@ -1194,6 +1279,43 @@ document.addEventListener("keydown", (e) => {
       document.activeElement.tagName === "TEXTAREA")
   ) {
     return;
+  }
+
+  // ── Esc cancels active drag (node move/resize/draw) ──
+  if (e.key === "Escape" && pointerIsDown && fdCanvas) {
+    const cancelled = fdCanvas.cancel_drag();
+    if (cancelled) {
+      // Reset all JS-side drag state
+      pointerIsDown = false;
+      isDraggingNode = false;
+      draggedNodeId = null;
+      nearDetachState = null;
+      altCloneActive = false;
+      altDragGhosts = [];
+      hideDimensionTooltip();
+
+      // Restore tool after ⌘+drag temp Select or Alt+drag clone
+      if (cmdTempSelectActive && cmdTempSelectOriginalTool) {
+        fdCanvas.set_tool(cmdTempSelectOriginalTool);
+        updateToolbarActive(lockedTool || cmdTempSelectOriginalTool);
+        updateCanvasCursor(cmdTempSelectOriginalTool);
+      }
+      cmdTempSelectActive = false;
+      cmdTempSelectOriginalTool = null;
+
+      // Restore tool after Ctrl temp Eraser
+      if (tempEraserMode && tempEraserPrevTool) {
+        fdCanvas.set_tool(tempEraserPrevTool);
+        updateToolbarActive(lockedTool || tempEraserPrevTool);
+        updateCanvasCursor(tempEraserPrevTool);
+      }
+      tempEraserMode = false;
+      tempEraserPrevTool = null;
+
+      render();
+      e.preventDefault();
+      return;
+    }
   }
 
   // Close annotation card / context menu on Escape (before WASM)
@@ -1371,6 +1493,7 @@ document.addEventListener("keydown", (e) => {
 
   // Handle graph changes
   if (result.changed) {
+    bumpGeneration();
     render();
     syncTextToExtension();
     closeContextMenu();
@@ -1428,8 +1551,7 @@ document.addEventListener("keydown", (e) => {
   // Notify extension of selection changes from keyboard actions
   if (result.changed || result.action === "deselect") {
     const selectedId = fdCanvas.get_selected_id();
-    vscode.postMessage({ type: "nodeSelected", id: selectedId });
-    updateFloatingBar();
+    syncSelection(selectedId, "keyboard");
   }
 
   // Update cursor when tool changes via shortcut
@@ -1453,7 +1575,13 @@ function clearModifierCursors() {
 }
 
 document.addEventListener("keydown", (e) => {
-  // Skip if pointer is already down (active interaction handles its own cursor)
+  // Always update tracked modifier state (even mid-drag)
+  if (e.key === "Alt") modAltHeld = true;
+  if (e.key === "Control") modCtrlHeld = true;
+  if (e.key === "Meta") modMetaHeld = true;
+  if (e.key === "Shift") modShiftHeld = true;
+
+  // Skip cursor preview if pointer is already down (active interaction)
   if (pointerIsDown) return;
   // Skip if a text input is focused
   const active = document.activeElement;
@@ -1477,6 +1605,12 @@ document.addEventListener("keydown", (e) => {
 }, true);
 
 document.addEventListener("keyup", (e) => {
+  // Always update tracked modifier state
+  if (e.key === "Alt") modAltHeld = false;
+  if (e.key === "Control") modCtrlHeld = false;
+  if (e.key === "Meta") modMetaHeld = false;
+  if (e.key === "Shift") modShiftHeld = false;
+
   if (e.key === " " && isPanning) {
     isPanning = false;
     canvas.style.cursor = "";
@@ -1507,9 +1641,13 @@ document.addEventListener("keyup", (e) => {
   }
 });
 
-// Clear modifier cursors when window loses focus (handles Cmd+Tab, Alt+Tab, etc.)
+// Clear modifier cursors and tracked state when window loses focus
 window.addEventListener("blur", () => {
   clearModifierCursors();
+  modAltHeld = false;
+  modCtrlHeld = false;
+  modMetaHeld = false;
+  modShiftHeld = false;
   // Also restore from temp modes if window lost focus mid-hold
   if (isCmdHold && fdCanvas && toolBeforeCmdHold) {
     isCmdHold = false;
@@ -1727,7 +1865,7 @@ function buildShortcutHelpHtml() {
     <div class="help-panel">
       <div class="help-header">
         <h3>Keyboard Shortcuts</h3>
-        <button class="help-close">×</button>
+        <button class="help-close" aria-label="Close">×</button>
       </div>
       <div class="help-body">
   `;
@@ -1780,9 +1918,10 @@ function nudgeSelected(arrowKey, step) {
     const dx = newX - b.x;
     const dy = newY - b.y;
     fdCanvas.handle_pointer_down(cx, cy, 1.0, false, false, false, false);
-    const changed = fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false);
+    const moveResultJson = fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false);
+    const moveResult = JSON.parse(moveResultJson);
     const upResult = JSON.parse(fdCanvas.handle_pointer_up(cx + dx, cy + dy, false, false, false, false));
-    if (upResult.changed || changed) {
+    if (upResult.changed || moveResult.changed) {
       render();
       syncTextToExtension();
       updatePropertiesPanel();
@@ -1882,8 +2021,6 @@ function updateFloatingBar() {
 function hideFloatingBar() {
   const fab = document.getElementById("floating-action-bar");
   if (fab) fab.classList.remove("visible");
-  const menu = document.getElementById("fab-overflow-menu");
-  if (menu) menu.classList.remove("visible");
 }
 
 // ─── Delete Button (Floating Action Bar) ───────────────────────────────────
@@ -2102,7 +2239,7 @@ function addAcceptRow(value) {
   item.className = "accept-item";
   item.innerHTML = `
     <input type="text" value="${escapeAttr(value)}" placeholder="Acceptance criterion">
-    <button class="card-close" style="font-size:14px">×</button>
+    <button class="card-close" style="font-size:14px" aria-label="Close">×</button>
   `;
   item.querySelector("button").addEventListener("click", () => {
     item.remove();
@@ -2400,6 +2537,7 @@ function setupContextMenu() {
       const resultJson = fdCanvas.handle_key("]", false, true, false, true);
       const result = JSON.parse(resultJson);
       if (result.changed) {
+        bumpGeneration();
         render();
         syncTextToExtension();
       }
@@ -2413,6 +2551,7 @@ function setupContextMenu() {
       const resultJson = fdCanvas.handle_key("[", false, true, false, true);
       const result = JSON.parse(resultJson);
       if (result.changed) {
+        bumpGeneration();
         render();
         syncTextToExtension();
       }
@@ -2834,6 +2973,9 @@ function updatePropertiesPanel() {
     appearance.style.display = (props.kind === "root" || props.kind === "group") ? "none" : "";
   }
 
+  // Actions section state
+  updatePropsActionsState();
+
   propsSuppressSync = false;
 }
 
@@ -2853,6 +2995,88 @@ function setupAlignGrid() {
     syncTextToExtension();
     updatePropertiesPanel();
   });
+}
+
+// ─── Props Actions (Group, Ungroup, Duplicate, etc.) ───────────────────────
+
+function setupPropsActions() {
+  const actions = {
+    "props-group": () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.group_selected();
+      if (changed) { render(); syncTextToExtension(); }
+    },
+    "props-ungroup": () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.ungroup_selected();
+      if (changed) { render(); syncTextToExtension(); }
+    },
+    "props-duplicate": () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.duplicate_selected();
+      if (changed) { render(); syncTextToExtension(); }
+    },
+    "props-frame": () => {
+      if (!fdCanvas) return;
+      const resultJson = fdCanvas.handle_key("f", false, false, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) { render(); syncTextToExtension(); }
+    },
+    "props-bring-front": () => {
+      if (!fdCanvas) return;
+      const resultJson = fdCanvas.handle_key("]", false, true, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) { bumpGeneration(); render(); syncTextToExtension(); }
+    },
+    "props-send-back": () => {
+      if (!fdCanvas) return;
+      const resultJson = fdCanvas.handle_key("[", false, true, false, true);
+      const result = JSON.parse(resultJson);
+      if (result.changed) { bumpGeneration(); render(); syncTextToExtension(); }
+    },
+    "props-copy-png": () => {
+      if (!fdCanvas) return;
+      copySelectionAsPng();
+    },
+    "props-delete": () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.delete_selected();
+      if (changed) { render(); syncTextToExtension(); }
+    },
+  };
+
+  for (const [id, handler] of Object.entries(actions)) {
+    document.getElementById(id)?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      handler();
+      updatePropertiesPanel();
+      updateFloatingBar();
+      refreshLayersPanel();
+    });
+  }
+}
+
+/** Enable/disable action buttons based on current selection state. */
+function updatePropsActionsState() {
+  if (!fdCanvas) return;
+  const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+  const canGroup = selectedIds.length >= 2;
+
+  // Check if any selected node is a group
+  let canUngroup = false;
+  if (selectedIds.length >= 1) {
+    const source = fdCanvas.get_text();
+    for (const id of selectedIds) {
+      if (new RegExp(`(?:^|\\n)\\s*group\\s+@${id}\\b`).test(source)) {
+        canUngroup = true;
+        break;
+      }
+    }
+  }
+
+  document.getElementById("props-group")?.classList.toggle("disabled", !canGroup);
+  document.getElementById("props-ungroup")?.classList.toggle("disabled", !canUngroup);
+  document.getElementById("props-frame")?.classList.toggle("disabled", !canGroup);
 }
 
 
@@ -3290,22 +3514,18 @@ function refreshLayersPanel() {
       e.stopPropagation();
       const nodeId = item.getAttribute("data-node-id");
       if (nodeId && fdCanvas) {
-        if (fdCanvas.select_by_id(nodeId)) {
-          // Pre-set generation so that scheduleSideEffects() → refreshLayersPanel() skips DOM rebuild.
-          // This keeps our DOM references valid for the highlight update below.
-          lastLayerGeneration = sceneGeneration;
-          lastLayerSelectedId = nodeId;
-          render();
-          // Update selection highlight in layers (DOM still intact because rebuild was skipped)
-          panel.querySelectorAll(".layer-item").forEach((el) => {
-            el.classList.toggle("selected", el.getAttribute("data-node-id") === nodeId);
-          });
-          // Smart focus: pan/zoom to the selected node if needed
-          focusOnNode(nodeId);
-          // Notify extension of selection
-          vscode.postMessage({ type: "nodeSelected", id: nodeId });
-          updatePropertiesPanel();
-        }
+        // Pre-set generation so refreshLayersPanel() inside syncSelection skips DOM rebuild.
+        // This keeps our DOM references valid for the highlight update below.
+        lastLayerGeneration = sceneGeneration;
+        lastLayerSelectedId = nodeId;
+        // Update selection highlight in layers (DOM still intact because rebuild was skipped)
+        panel.querySelectorAll(".layer-item").forEach((el) => {
+          el.classList.toggle("selected", el.getAttribute("data-node-id") === nodeId);
+        });
+        // Smart focus: pan/zoom to the selected node if needed
+        focusOnNode(nodeId);
+        // Central sync: Canvas select + Code highlight + side panels
+        syncSelection(nodeId, "layers");
       }
     });
   });
@@ -3556,7 +3776,7 @@ function refreshLibraryPanel() {
 
   let html = `<div class="lib-header">`;
   html += `<span class="lib-title">📦 Libraries</span>`;
-  html += `<button class="lib-close" id="lib-close-btn" title="Close">×</button>`;
+  html += `<button class="lib-close" id="lib-close-btn" title="Close" aria-label="Close">×</button>`;
   html += `</div>`;
   html += `<input class="lib-search" id="lib-search" type="text" placeholder="Search components…" value="${escapeAttr(librarySearchQuery)}">`;
 
@@ -3639,6 +3859,134 @@ function wireLibraryHandlers(panel) {
   });
 }
 
+// ─── Panel Resize ────────────────────────────────────────────────────────
+
+/** Set up drag-to-resize for layers and properties panels. */
+function setupPanelResize() {
+  const container = document.getElementById("canvas-container");
+  const layersPanel = document.getElementById("layers-panel");
+  const layersHandle = document.getElementById("layers-resize");
+  const propsPanel = document.getElementById("props-panel");
+  const layersRestore = document.getElementById("layers-restore");
+  const propsRestore = document.getElementById("props-restore");
+
+  if (!container || !layersPanel) return;
+
+  const MIN_WIDTH = 140;
+  const MAX_WIDTH = 400;
+  const DEFAULT_LAYERS_W = 232;
+  const DEFAULT_PROPS_W = 244;
+
+  // Restore persisted state
+  const savedState = vscode.getState() || {};
+  if (savedState.layersWidth && savedState.layersWidth >= MIN_WIDTH && savedState.layersWidth <= MAX_WIDTH) {
+    container.style.setProperty("--layers-width", savedState.layersWidth + "px");
+  }
+  if (savedState.propsWidth && savedState.propsWidth >= MIN_WIDTH && savedState.propsWidth <= MAX_WIDTH) {
+    container.style.setProperty("--props-width", savedState.propsWidth + "px");
+  }
+  if (savedState.layersCollapsed) {
+    layersPanel.classList.add("collapsed");
+    container.style.setProperty("--layers-width", "0px");
+  }
+
+  /** Position layers resize handle at panel's right edge. */
+  function positionLayersHandle() {
+    if (!layersHandle) return;
+    const w = layersPanel.classList.contains("collapsed") ? 0 : layersPanel.offsetWidth;
+    layersHandle.style.left = w + "px";
+    layersHandle.style.display = layersPanel.classList.contains("collapsed") ? "none" : "";
+  }
+
+  // Initial position
+  requestAnimationFrame(positionLayersHandle);
+
+  // ── Layers panel drag ──
+  if (layersHandle) {
+    let dragging = false;
+    let startX = 0;
+    let startW = 0;
+
+    layersHandle.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragging = true;
+      startX = e.clientX;
+      startW = layersPanel.offsetWidth;
+      layersPanel.classList.add("no-transition");
+      layersHandle.classList.add("active");
+      layersHandle.setPointerCapture(e.pointerId);
+    });
+
+    layersHandle.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      const newW = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startW + dx));
+      container.style.setProperty("--layers-width", newW + "px");
+      positionLayersHandle();
+      renderDirty = true;
+    });
+
+    const endDrag = () => {
+      if (!dragging) return;
+      dragging = false;
+      layersPanel.classList.remove("no-transition");
+      layersHandle.classList.remove("active");
+      const w = layersPanel.offsetWidth;
+      vscode.setState({ ...(vscode.getState() || {}), layersWidth: w });
+    };
+    layersHandle.addEventListener("pointerup", endDrag);
+    layersHandle.addEventListener("pointercancel", endDrag);
+
+    // Double-click to collapse
+    layersHandle.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isCollapsed = layersPanel.classList.toggle("collapsed");
+      if (isCollapsed) {
+        container.style.setProperty("--layers-width", "0px");
+        vscode.setState({ ...(vscode.getState() || {}), layersCollapsed: true });
+      } else {
+        const state = vscode.getState() || {};
+        const restoreW = (state.layersWidth >= MIN_WIDTH && state.layersWidth <= MAX_WIDTH) ? state.layersWidth : DEFAULT_LAYERS_W;
+        container.style.setProperty("--layers-width", restoreW + "px");
+        vscode.setState({ ...(vscode.getState() || {}), layersCollapsed: false });
+      }
+      requestAnimationFrame(() => { positionLayersHandle(); renderDirty = true; });
+    });
+  }
+
+  // ── Restore strips ──
+  if (layersRestore) {
+    layersRestore.addEventListener("click", () => {
+      layersPanel.classList.remove("collapsed");
+      const state = vscode.getState() || {};
+      const restoreW = (state.layersWidth >= MIN_WIDTH && state.layersWidth <= MAX_WIDTH) ? state.layersWidth : DEFAULT_LAYERS_W;
+      container.style.setProperty("--layers-width", restoreW + "px");
+      vscode.setState({ ...(vscode.getState() || {}), layersCollapsed: false });
+      requestAnimationFrame(() => { positionLayersHandle(); renderDirty = true; });
+    });
+  }
+
+  // ── Props panel: observe visibility and apply persisted width ──
+  if (propsPanel) {
+    const propsObserver = new MutationObserver(() => {
+      if (propsPanel.classList.contains("visible") && !propsPanel.classList.contains("collapsed")) {
+        const state = vscode.getState() || {};
+        const w = (state.propsWidth >= MIN_WIDTH && state.propsWidth <= MAX_WIDTH) ? state.propsWidth : DEFAULT_PROPS_W;
+        container.style.setProperty("--props-width", w + "px");
+      } else {
+        container.style.setProperty("--props-width", "0px");
+      }
+      renderDirty = true;
+    });
+    propsObserver.observe(propsPanel, { attributes: true, attributeFilter: ["class"] });
+  }
+
+  // NOTE: Props panel has no separate resize handle in VS Code since it uses
+  // a flex-based layout and the panels are overlays on the canvas-container.
+  // The layers panel is the primary resizable panel; props panel gets persisted width.
+}
 // ─── Inline Text Editor ────────────────────────────────────────────────────
 
 /** Inline textarea for editing text nodes and shape labels directly on canvas. */
@@ -3674,6 +4022,49 @@ function setupInlineEditor() {
     const propsJson = fdCanvas.get_selected_node_props();
     const props = JSON.parse(propsJson);
     if (!props.id) return;
+
+    // Edge double-click: find/create text child and edit it
+    if (props.kind === "edge") {
+      const edgeId = props.id;
+      const source = fdCanvas.get_text();
+      // Check if edge already has a text child
+      const edgeBlockRe = new RegExp(`edge\\s+@${edgeId}\\s*\\{([^}]*(?:\\{[^}]*\\}[^}]*)*)\\}`, 's');
+      const edgeMatch = source.match(edgeBlockRe);
+      if (edgeMatch) {
+        const innerBlock = edgeMatch[1];
+        const textChildRe = /text\s+@(\w+)\s+"([^"]*)"/;
+        const textMatch = innerBlock.match(textChildRe);
+        if (textMatch) {
+          // Text child exists — edit it
+          const textChildId = textMatch[1];
+          fdCanvas.select_by_id(textChildId);
+          render();
+          openInlineEditor(textChildId, "content", textMatch[2]);
+        } else {
+          // No text child — create one via text manipulation
+          const textId = "label_" + edgeId;
+          const esc = edgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const re = new RegExp(`(edge\\s+@${esc}\\s*\\{)`);
+          const m2 = source.match(re);
+          if (m2) {
+            const insertPos = source.indexOf(m2[0]) + m2[0].length;
+            const newSource = source.slice(0, insertPos)
+              + `\n  text @${textId} "Label" {}`
+              + source.slice(insertPos);
+            const textBefore = source;
+            fdCanvas.set_text(newSource);
+            fdCanvas.push_undo_snapshot(textBefore, newSource);
+            render();
+            syncTextToExtension();
+            fdCanvas.select_by_id(textId);
+            render();
+            setTimeout(() => openInlineEditor(textId, "content", "Label"), 50);
+          }
+        }
+      }
+      e.preventDefault();
+      return;
+    }
 
     const isText = props.kind === "text";
     const isShape = props.kind === "rect" || props.kind === "ellipse";
@@ -3852,7 +4243,9 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   // matches how Canvas2D's draw_text() computes line_height = size * 1.2.
   const rawFontSize = props.fontSize || 14;
   const fontSize = Math.round(rawFontSize * zoomLevel);
-  const fontFamily = props.fontFamily || "Inter, sans-serif";
+  // Use exact font family from WASM renderer — no fallback chain added
+  // to ensure pixel-perfect match with Canvas2D rendering
+  const fontFamily = props.fontFamily || "Inter";
   const fontWeight = props.fontWeight || 400;
   const lineHeight = Math.round(rawFontSize * 1.2 * zoomLevel);
 
@@ -3894,12 +4287,12 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   const originalValue = currentValue;
 
   // Vertical padding: match Canvas2D text_baseline positioning exactly.
-  // draw_text() uses:
+  // draw_text() uses a fixed 2.0px offset in scene-space (not zoom-scaled).
   //   top    → text_baseline="top",    y = b.y + 2.0
   //   middle → text_baseline="middle", y = b.y + h/2
   //   bottom → text_baseline="bottom", y = b.y + h - 2.0
-  // Since we use outline (not border), the textarea content area == node bounds.
-  const topOffset = Math.round(2 * zoomLevel);
+  // Use constant 2px offset regardless of zoom (renderer uses scene-space pixels).
+  const topOffset = 2;
   let padTop = 0;
   let padBottom = 0;
   if (vAlign === "top") {
@@ -4040,6 +4433,11 @@ function openInlineEditor(nodeId, propKey, currentValue) {
 }
 
 // ─── Dimension Tooltip (R3.18) ────────────────────────────────────────────────
+
+/** Module-level drag state (shared with pointer.js document listeners) */
+let dtcTool = null;
+let dtcActive = false;
+let ftDragging = false;   // true while toolbar is being dragged
 
 /** Show a floating dimension tooltip near the cursor. */
 function showDimensionTooltip(clientX, clientY, text) {
@@ -4438,31 +4836,122 @@ function setupFloatingToolbar() {
     observer.observe(btn, { attributes: true, attributeFilter: ["class"] });
   });
 
-  let isDragging = false;
+  // ftDragging is declared at module scope (above) so
+  // pointer.js document-level listeners can check for active toolbar drags
   let dragStartX = 0;
   let dragStartY = 0;
   let dragStartTime = 0;
   let initialLeft = 0;
   let initialTop = 0;
   let activePointerId = -1;
+  // Canonical toolbar dimensions (as if horizontal) — captured on drag start
+  // so the snap ghost always reflects the target orientation, not the current one
+  let canonW = 0;
+  let canonH = 0;
 
-  // Use document-level listeners — setPointerCapture fails in VS Code webview iframes
+  /** Compute snap target using closest-edge comparison */
+  function computeSnap(projX, projY) {
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+    const tbW = toolbar.offsetWidth;
+    const tbH = toolbar.offsetHeight;
+    const panelW = getLayersPanelWidth();
+
+    // Distance from each edge of the projected toolbar to the viewport edge
+    const dTop = projY;
+    const dBottom = viewH - (projY + tbH);
+    const dLeft = projX - panelW; // account for layers panel
+    const dRight = viewW - (projX + tbW);
+
+    // Find the closest edge
+    const edges = [
+      { edge: "top", dist: dTop },
+      { edge: "bottom", dist: dBottom },
+      { edge: "left", dist: dLeft },
+      { edge: "right", dist: dRight },
+    ];
+    edges.sort((a, b) => a.dist - b.dist);
+    return edges[0].edge;
+  }
+
+  /** Compute the exact landing position for each snap edge.
+   *  Uses canonW/canonH (horizontal-layout dimensions) captured at drag start
+   *  so the ghost reflects the TARGET orientation, not the current one. */
+  function getSnapPosition(edge, projX, projY) {
+    const viewW = window.innerWidth;
+    const container = document.getElementById("canvas-container");
+    const cr = container.getBoundingClientRect();
+    const panelW = getLayersPanelWidth();
+
+    if (edge === "top" || edge === "bottom") {
+      // Horizontal: width = canonW (long side), height = canonH (short side)
+      const left = Math.max(panelW + 8, Math.min(projX, viewW - canonW - 8)) - cr.left;
+      const pos = { left: left + "px", width: canonW + "px", height: canonH + "px" };
+      if (edge === "top") pos.top = "8px";
+      else pos.bottom = "8px";
+      return pos;
+    }
+    // Vertical (left/right): width = canonH (short), height = canonW (long)
+    const top = Math.max(8, Math.min(projY - cr.top, cr.height - canonW - 8));
+    if (edge === "left") {
+      const leftPx = panelW + 8 - cr.left;
+      return { left: Math.max(0, leftPx) + "px", top: top + "px", width: canonH + "px", height: canonW + "px" };
+    }
+    return { right: "8px", top: top + "px", width: canonH + "px", height: canonW + "px" };
+  }
+
+  /** Show snap guide as a ghost rectangle at the exact landing position */
+  function showSnapGuide(edge, projX, projY) {
+    let guide = document.getElementById("ft-snap-guide");
+    if (!guide) {
+      guide = document.createElement("div");
+      guide.id = "ft-snap-guide";
+      document.getElementById("canvas-container").appendChild(guide);
+    }
+    const pos = getSnapPosition(edge, projX, projY);
+    guide.style.cssText = "position:absolute;pointer-events:none;z-index:9999;";
+    guide.style.left = pos.left || "auto";
+    guide.style.right = pos.right || "auto";
+    guide.style.top = pos.top || "auto";
+    guide.style.bottom = pos.bottom || "auto";
+    guide.style.width = pos.width;
+    guide.style.height = pos.height;
+    guide.style.border = "2px dashed var(--fd-accent, #4FC3F7)";
+    guide.style.borderRadius = "10px";
+    guide.style.opacity = "0.6";
+    guide.style.display = "block";
+  }
+
+  /** Hide the snap guide overlay */
+  function hideSnapGuide() {
+    const guide = document.getElementById("ft-snap-guide");
+    if (guide) guide.style.display = "none";
+  }
+
+  // Document-level listeners for toolbar drag
   document.addEventListener("pointermove", (e) => {
-    if (!isDragging || e.pointerId !== activePointerId) return;
+    if (!ftDragging || e.pointerId !== activePointerId) return;
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
 
-    // Drag visual: disable transition, apply translate + lift effect
+    // Drag visual: apply translate + lift effect (no position change)
     toolbar.style.transition = "none";
     toolbar.style.transform = `translate(${dx}px, ${dy}px)`;
     toolbar.style.boxShadow = "0 8px 32px rgba(0,0,0,0.25)";
     toolbar.style.opacity = "0.92";
+
+    // Show snap guide preview
+    const projX = initialLeft + dx;
+    const projY = initialTop + dy;
+    const edge = computeSnap(projX, projY);
+    showSnapGuide(edge, projX, projY);
   });
 
   document.addEventListener("pointerup", (e) => {
-    if (!isDragging || e.pointerId !== activePointerId) return;
-    isDragging = false;
+    if (!ftDragging || e.pointerId !== activePointerId) return;
+    ftDragging = false;
     activePointerId = -1;
+    hideSnapGuide();
 
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
@@ -4483,45 +4972,34 @@ function setupFloatingToolbar() {
       return;
     }
 
-    // Handle Drag & Snap
-    const snapThreshold = 60;
+    // Commit final position — reuse getSnapPosition() for exact ghost match
     const finalX = initialLeft + dx;
     const finalY = initialTop + dy;
-
-    const viewW = window.innerWidth;
-    const viewH = window.innerHeight;
-
-    const distTop = finalY;
-    const distBottom = viewH - (finalY + toolbar.offsetHeight);
-    const distLeft = finalX;
-    const distRight = viewW - (finalX + toolbar.offsetWidth);
-
-    let newPos = {};
-    let newOrientation = "horizontal";
-
-    if (distRight < snapThreshold) {
-      newOrientation = "vertical";
-      newPos = { right: "2vw", top: Math.max(2, (finalY / viewH) * 100) + "vh" };
-    } else if (distLeft < snapThreshold) {
-      newOrientation = "vertical";
-      newPos = { left: "calc(232px + 2vw)", top: Math.max(2, (finalY / viewH) * 100) + "vh" };
-    } else if (distTop < snapThreshold) {
-      newOrientation = "horizontal";
-      newPos = { top: "2vh", left: Math.max(2, (finalX / viewW) * 100) + "vw" };
-    } else {
-      newOrientation = "horizontal";
-      // Default relative position
-      newPos = { bottom: "1.5vh", left: Math.max(2, (finalX / viewW) * 100) + "vw" };
-    }
+    const edge = computeSnap(finalX, finalY);
+    const newOrientation = (edge === "left" || edge === "right") ? "vertical" : "horizontal";
 
     toolbar.classList.remove("horizontal", "vertical");
     toolbar.classList.add(newOrientation);
 
-    toolbar.style.left = newPos.left || "auto";
-    toolbar.style.right = newPos.right || "auto";
-    toolbar.style.top = newPos.top || "auto";
-    toolbar.style.bottom = newPos.bottom || "auto";
+    // Get the exact same position the ghost showed
+    const snapPos = getSnapPosition(edge, finalX, finalY);
 
+    // Apply position: getSnapPosition returns css values relative to canvas-container,
+    // which is what the toolbar is already positioned inside of (position:absolute)
+    toolbar.style.left = snapPos.left || "auto";
+    toolbar.style.right = snapPos.right || "auto";
+    toolbar.style.top = snapPos.top || "auto";
+    toolbar.style.bottom = snapPos.bottom || "auto";
+    // Clear width/height — toolbar auto-sizes from content
+    toolbar.style.width = "";
+    toolbar.style.height = "";
+
+    const newPos = {
+      left: snapPos.left || undefined,
+      right: snapPos.right || undefined,
+      top: snapPos.top || undefined,
+      bottom: snapPos.bottom || undefined,
+    };
     vscode.setState({ ...(vscode.getState() || {}), ftPosition: newPos, ftOrientation: newOrientation });
 
     if (toolbar.classList.contains("rolled-up")) {
@@ -4535,20 +5013,24 @@ function setupFloatingToolbar() {
     // Skip if target is a tool button or inside one (handled by drag-to-create)
     if (e.target.closest(".ft-tool-btn")) return;
 
-    isDragging = true;
     activePointerId = e.pointerId;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
     dragStartTime = Date.now();
 
-    // Normalize to px position before drag to avoid CSS anchor conflicts
+    // Record initial position WITHOUT modifying CSS — avoids jump on click
     const rect = toolbar.getBoundingClientRect();
     initialLeft = rect.left;
     initialTop = rect.top;
-    toolbar.style.left = rect.left + "px";
-    toolbar.style.top = rect.top + "px";
-    toolbar.style.right = "auto";
-    toolbar.style.bottom = "auto";
+
+    // Capture canonical (horizontal-layout) dimensions so snap ghost
+    // reflects the target orientation regardless of current state
+    const isHoriz = toolbar.classList.contains("horizontal");
+    canonW = isHoriz ? rect.width : rect.height; // long side
+    canonH = isHoriz ? rect.height : rect.width; // short side
+
+    // Set ftDragging AFTER recording initial state
+    ftDragging = true;
 
     e.preventDefault();
     e.stopPropagation();
@@ -4556,19 +5038,22 @@ function setupFloatingToolbar() {
 
   // ── Drag-to-Create: drag a tool button onto the canvas ──
   const DRAG_THRESHOLD = 5;
-  let dtcActive = false;
-  let dtcTool = null;
+  // dtcTool and dtcActive are declared at module scope (above) so
+  // pointer.js document-level listeners can check for active toolbar drags
   let dtcStartX = 0;
   let dtcStartY = 0;
   let dtcGhost = null;
+  let dtcCancelled = false; // true when pointer re-enters toolbar
+  let dtcGuideOverlay = null; // SVG overlay for alignment guides
 
+  // Ghost shapes match WASM create_node_at defaults exactly
   const ghostShapes = {
-    rect: { w: 120, h: 80, css: "border-radius:8px;" },
-    ellipse: { w: 100, h: 100, css: "border-radius:50%;" },
+    rect: { w: 100, h: 80, css: "border-radius:8px;" },
+    ellipse: { w: 100, h: 80, css: "border-radius:50%;" },
     pen: { w: 80, h: 60, css: "border-radius:4px;" },
     arrow: { w: 120, h: 2, css: "" },
     text: { w: 60, h: 28, css: "border-radius:4px;" },
-    frame: { w: 140, h: 100, css: "border-radius:4px;" },
+    frame: { w: 200, h: 150, css: "border-radius:4px;" },
   };
 
   function createGhost(tool) {
@@ -4578,19 +5063,23 @@ function setupFloatingToolbar() {
     const isDark = document.body.classList.contains("dark-theme");
     const borderColor = isDark ? "rgba(255,255,255,0.5)" : "rgba(51,51,51,0.5)";
     const bg = isDark ? "rgba(255,255,255,0.06)" : "rgba(51,51,51,0.06)";
+    // Scale ghost to match how the shape will appear on canvas at current zoom
+    const sw = Math.round(shape.w * zoomLevel);
+    const sh = Math.round(shape.h * zoomLevel);
     let content = "";
     if (tool === "text") {
-      content = `<span style="font-size:14px;color:${borderColor};font-weight:500;">T</span>`;
+      content = `<span style="font-size:${Math.round(14 * zoomLevel)}px;color:${borderColor};font-weight:500;">T</span>`;
     }
     if (tool === "arrow") {
       // Diagonal line ghost
+      const aw = Math.round(shape.w * zoomLevel);
       el.style.cssText = `
         position:fixed;pointer-events:none;z-index:10000;
-        width:${shape.w}px;height:${shape.w}px;
+        width:${aw}px;height:${aw}px;
         transform:translate(-50%,-50%);
         opacity:0.7;
       `;
-      el.innerHTML = `<svg width="${shape.w}" height="${shape.w}" viewBox="0 0 ${shape.w} ${shape.w}" fill="none">
+      el.innerHTML = `<svg width="${aw}" height="${aw}" viewBox="0 0 ${shape.w} ${shape.w}" fill="none">
         <line x1="10" y1="${shape.w - 10}" x2="${shape.w - 10}" y2="10"
           stroke="${borderColor}" stroke-width="2" stroke-dasharray="6 4"/>
         <path d="M${shape.w - 30},10 L${shape.w - 10},10 L${shape.w - 10},30"
@@ -4599,7 +5088,7 @@ function setupFloatingToolbar() {
     } else {
       el.style.cssText = `
         position:fixed;pointer-events:none;z-index:10000;
-        width:${shape.w}px;height:${shape.h}px;
+        width:${sw}px;height:${sh}px;
         border:2px dashed ${borderColor};
         background:${bg};
         ${shape.css}
@@ -4633,13 +5122,13 @@ function setupFloatingToolbar() {
 
     btn.addEventListener("pointerdown", (e) => {
       e.stopPropagation(); // Prevent scroll-handle drag from activating
+      e.preventDefault();  // Prevent native drag on SVG icons — critical for dtc
       dtcTool = tool;
       dtcBtn = btn;
       dtcStartX = e.clientX;
       dtcStartY = e.clientY;
       dtcActive = false;
-      // NOTE: setPointerCapture intentionally omitted —
-      // it silently fails in VS Code webview iframes
+
     });
 
     // Suppress click after drag-to-create
@@ -4652,26 +5141,107 @@ function setupFloatingToolbar() {
     }, true);
   });
 
-  // Document-level listeners — setPointerCapture fails in VS Code webview iframes
+  // Document-level listeners for drag-to-create
   document.addEventListener("pointermove", (e) => {
     if (!dtcTool) return;
     const dx = e.clientX - dtcStartX;
     const dy = e.clientY - dtcStartY;
     if (!dtcActive && (dx * dx + dy * dy) >= DRAG_THRESHOLD * DRAG_THRESHOLD) {
       dtcActive = true;
+      dtcCancelled = false;
       dtcGhost = createGhost(dtcTool);
     }
-    if (dtcActive && dtcGhost) {
-      moveGhost(dtcGhost, e.clientX, e.clientY);
+    if (dtcActive) {
+      // ── Cancel/re-drag: detect pointer over toolbar ──
+      const tbRect = toolbar.getBoundingClientRect();
+      const overToolbar = e.clientX >= tbRect.left && e.clientX <= tbRect.right
+        && e.clientY >= tbRect.top && e.clientY <= tbRect.bottom;
+      if (overToolbar && !dtcCancelled) {
+        // Pointer re-entered toolbar → cancel
+        dtcCancelled = true;
+        removeGhost();
+        removeDtcGuideOverlay();
+        removeDtcSnapEdgePreview();
+      } else if (!overToolbar && dtcCancelled) {
+        // Pointer left toolbar again → re-activate
+        dtcCancelled = false;
+        dtcGhost = createGhost(dtcTool);
+      }
+
+      if (!dtcCancelled && dtcGhost) {
+        // ── Keep ghost sized to current zoom (handles zoom-while-dragging) ──
+        const shape = ghostShapes[dtcTool] || ghostShapes.rect;
+        const sw = Math.round(shape.w * zoomLevel) + "px";
+        const sh = Math.round(shape.h * zoomLevel) + "px";
+        if (dtcTool === "arrow") {
+          dtcGhost.style.width = sw;
+          dtcGhost.style.height = sw;
+          const svgEl = dtcGhost.querySelector("svg");
+          if (svgEl) { svgEl.setAttribute("width", sw); svgEl.setAttribute("height", sw); }
+        } else {
+          dtcGhost.style.width = sw;
+          dtcGhost.style.height = sh;
+        }
+        // ── Alt+drag: snap ghost to cardinal position near node ──
+        const canvasEl = document.getElementById("fd-canvas");
+        if (e.altKey && canvasEl && fdCanvas && dtcTool !== "text") {
+          const cRect = canvasEl.getBoundingClientRect();
+          const rawX = ((e.clientX - cRect.left) - panX) / zoomLevel;
+          const rawY = ((e.clientY - cRect.top) - panY) / zoomLevel;
+          const snapPreview = dtcFindSnapTarget(rawX, rawY, dtcTool);
+          if (snapPreview) {
+            // Snap ghost to cardinal position
+            const screenX = snapPreview.x * zoomLevel + panX + cRect.left
+              + (ghostShapes[dtcTool] || ghostShapes.rect).w / 2;
+            const screenY = snapPreview.y * zoomLevel + panY + cRect.top
+              + (ghostShapes[dtcTool] || ghostShapes.rect).h / 2;
+            moveGhost(dtcGhost, screenX, screenY);
+            // Dashed edge preview line from target center to ghost center
+            const shape = ghostShapes[dtcTool] || ghostShapes.rect;
+            const ghostCx = snapPreview.x + shape.w / 2;
+            const ghostCy = snapPreview.y + shape.h / 2;
+            renderDtcSnapEdgePreview(snapPreview.targetCx, snapPreview.targetCy,
+              ghostCx, ghostCy, canvasEl);
+          } else {
+            moveGhost(dtcGhost, e.clientX, e.clientY);
+            removeDtcSnapEdgePreview();
+          }
+        } else {
+          moveGhost(dtcGhost, e.clientX, e.clientY);
+          removeDtcSnapEdgePreview();
+        }
+
+        // ── Alignment guides via WASM ──
+        if (canvasEl && fdCanvas) {
+          const cRect = canvasEl.getBoundingClientRect();
+          const sceneX = ((e.clientX - cRect.left) - panX) / zoomLevel;
+          const sceneY = ((e.clientY - cRect.top) - panY) / zoomLevel;
+          const shape = ghostShapes[dtcTool] || ghostShapes.rect;
+          const gw = shape.w / zoomLevel;
+          const gh = shape.h / zoomLevel;
+          // Center the hypothetical shape at cursor
+          const gx = sceneX - gw / 2;
+          const gy = sceneY - gh / 2;
+          try {
+            const guidesJson = fdCanvas.compute_guides_for_rect(gx, gy, gw, gh);
+            const guides = JSON.parse(guidesJson);
+            renderDtcGuideOverlay(guides, canvasEl);
+          } catch (_) {
+            removeDtcGuideOverlay();
+          }
+        }
+      }
     }
   });
 
   document.addEventListener("pointerup", (e) => {
     if (!dtcTool) return;
 
-    if (dtcActive) {
+    if (dtcActive && !dtcCancelled) {
       // Drag-to-create: check if drop is over the canvas
       removeGhost();
+      removeDtcGuideOverlay();
+      removeDtcSnapEdgePreview();
       const canvasEl = document.getElementById("fd-canvas");
       if (canvasEl && fdCanvas) {
         const rect = canvasEl.getBoundingClientRect();
@@ -4687,6 +5257,7 @@ function setupFloatingToolbar() {
             const consumed = dtcTextConsume(rawX, rawY, cx, cy, rect);
             if (consumed) {
               dtcActive = false;
+              dtcCancelled = false;
               dtcTool = null;
               if (dtcBtn) dtcBtn._dtcSuppressClick = true;
               dtcBtn = null;
@@ -4694,8 +5265,8 @@ function setupFloatingToolbar() {
             }
           }
 
-          // ── Snap-to-node detection (non-text tools) ──
-          const snap = dtcFindSnapTarget(rawX, rawY, dtcTool);
+          // ── Snap-to-node detection (non-text tools, Alt required) ──
+          const snap = e.altKey ? dtcFindSnapTarget(rawX, rawY, dtcTool) : null;
           const sceneX = snap ? snap.x : rawX;
           const sceneY = snap ? snap.y : rawY;
 
@@ -4726,10 +5297,17 @@ function setupFloatingToolbar() {
         }
       }
       dtcActive = false;
+      dtcCancelled = false;
       dtcTool = null;
       if (dtcBtn) dtcBtn._dtcSuppressClick = true;
       dtcBtn = null;
     } else {
+      // Cancelled or no drag — clean up
+      removeGhost();
+      removeDtcGuideOverlay();
+      removeDtcSnapEdgePreview();
+      dtcActive = false;
+      dtcCancelled = false;
       dtcTool = null;
       dtcBtn = null;
     }
@@ -4738,10 +5316,102 @@ function setupFloatingToolbar() {
   document.addEventListener("pointercancel", () => {
     if (!dtcTool) return;
     removeGhost();
+    removeDtcGuideOverlay();
+    removeDtcSnapEdgePreview();
     dtcActive = false;
+    dtcCancelled = false;
     dtcTool = null;
     dtcBtn = null;
   });
+
+  // ── Esc cancels drag-to-create ──
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && dtcTool) {
+      removeGhost();
+      removeDtcGuideOverlay();
+      removeDtcSnapEdgePreview();
+      dtcActive = false;
+      dtcCancelled = false;
+      dtcTool = null;
+      dtcBtn = null;
+      e.preventDefault();
+    }
+  });
+
+  // ── Alignment guide overlay for drag-to-create ──
+  function renderDtcGuideOverlay(guides, canvasEl) {
+    if (!guides || guides.length === 0) { removeDtcGuideOverlay(); return; }
+    const cRect = canvasEl.getBoundingClientRect();
+    if (!dtcGuideOverlay) {
+      dtcGuideOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      dtcGuideOverlay.style.cssText = `
+        position:fixed;pointer-events:none;z-index:9999;
+        left:${cRect.left}px;top:${cRect.top}px;
+        width:${cRect.width}px;height:${cRect.height}px;
+      `;
+      document.body.appendChild(dtcGuideOverlay);
+    }
+    // Update position/size
+    dtcGuideOverlay.style.left = cRect.left + "px";
+    dtcGuideOverlay.style.top = cRect.top + "px";
+    dtcGuideOverlay.style.width = cRect.width + "px";
+    dtcGuideOverlay.style.height = cRect.height + "px";
+    dtcGuideOverlay.setAttribute("viewBox",
+      `0 0 ${cRect.width / zoomLevel} ${cRect.height / zoomLevel}`);
+
+    // Transform from scene-space to viewport-space
+    const ox = panX / zoomLevel;
+    const oy = panY / zoomLevel;
+    let inner = `<g transform="translate(${ox},${oy})">`;
+    for (const [x1, y1, x2, y2] of guides) {
+      inner += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" 
+        stroke="#FF6B8A" stroke-width="${0.5 / zoomLevel}" stroke-dasharray="${4 / zoomLevel} ${3 / zoomLevel}" />`;
+    }
+    inner += `</g>`;
+    dtcGuideOverlay.innerHTML = inner;
+  }
+
+  function removeDtcGuideOverlay() {
+    if (dtcGuideOverlay) { dtcGuideOverlay.remove(); dtcGuideOverlay = null; }
+  }
+
+  // ── Snap edge preview overlay (dashed line from target node to ghost) ──
+  let dtcSnapEdgeOverlay = null;
+
+  function renderDtcSnapEdgePreview(fromX, fromY, toX, toY, canvasEl) {
+    const cRect = canvasEl.getBoundingClientRect();
+    if (!dtcSnapEdgeOverlay) {
+      dtcSnapEdgeOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      dtcSnapEdgeOverlay.style.cssText = `
+        position:fixed;pointer-events:none;z-index:9998;
+        left:${cRect.left}px;top:${cRect.top}px;
+        width:${cRect.width}px;height:${cRect.height}px;
+      `;
+      document.body.appendChild(dtcSnapEdgeOverlay);
+    }
+    dtcSnapEdgeOverlay.style.left = cRect.left + "px";
+    dtcSnapEdgeOverlay.style.top = cRect.top + "px";
+    dtcSnapEdgeOverlay.style.width = cRect.width + "px";
+    dtcSnapEdgeOverlay.style.height = cRect.height + "px";
+    dtcSnapEdgeOverlay.setAttribute("viewBox",
+      `0 0 ${cRect.width / zoomLevel} ${cRect.height / zoomLevel}`);
+    const ox = panX / zoomLevel;
+    const oy = panY / zoomLevel;
+    const sw = 1.5 / zoomLevel;
+    const dash = `${6 / zoomLevel} ${4 / zoomLevel}`;
+    dtcSnapEdgeOverlay.innerHTML = `<g transform="translate(${ox},${oy})">
+      <line x1="${fromX}" y1="${fromY}" x2="${toX}" y2="${toY}"
+        stroke="var(--fd-accent, #4FC3F7)" stroke-width="${sw}" stroke-dasharray="${dash}"
+        stroke-linecap="round" opacity="0.7" />
+      <circle cx="${toX}" cy="${toY}" r="${4 / zoomLevel}"
+        fill="var(--fd-accent, #4FC3F7)" opacity="0.6" />
+    </g>`;
+  }
+
+  function removeDtcSnapEdgePreview() {
+    if (dtcSnapEdgeOverlay) { dtcSnapEdgeOverlay.remove(); dtcSnapEdgeOverlay = null; }
+  }
+
   // ── Text drop-to-consume helper ──
   function dtcTextConsume(sceneX, sceneY, screenX, screenY, canvasRect) {
     if (!fdCanvas) return false;
@@ -5030,7 +5700,7 @@ function renderMinimap() {
   minimapCtx.translate(offsetX, offsetY);
   minimapCtx.scale(scale, scale);
   minimapCtx.translate(-bounds.minX, -bounds.minY);
-  fdCanvas.render(minimapCtx, performance.now());
+  fdCanvas.render(minimapCtx, performance.now(), true);
   minimapCtx.restore();
 
   // Cache the scene image (without viewport rect) for smooth overlay
@@ -5251,41 +5921,15 @@ function setupHelpButton() {
   }
 }
 
-// ─── Theme Toggle ─────────────────────────────────────────────────────────────
-
+// (Theme is always light — no toggle needed)
 let isDarkTheme = false;
 
 function setupThemeToggle() {
-  const btn = document.getElementById("theme-toggle-btn");
-  if (!btn) return;
-
-  // Restore persisted theme
-  const savedState = vscode.getState();
-  if (savedState && savedState.darkTheme) {
-    isDarkTheme = true;
-    applyTheme(true);
-  }
-
-  btn.addEventListener("click", () => {
-    isDarkTheme = !isDarkTheme;
-    applyTheme(isDarkTheme);
-    vscode.setState({ ...(vscode.getState() || {}), darkTheme: isDarkTheme });
-  });
+  // Theme is always light — no toggle needed
 }
 
 function applyTheme(isDark) {
-  const btn = document.getElementById("theme-toggle-btn");
-  if (isDark) {
-    document.body.classList.add("dark-theme");
-    if (btn) btn.textContent = "☀️";
-  } else {
-    document.body.classList.remove("dark-theme");
-    if (btn) btn.textContent = "🌙";
-  }
-  if (fdCanvas) {
-    fdCanvas.set_theme(isDark);
-    render();
-  }
+  // Theme is always light — no-op
 }
 
 // ─── Sketchy Mode Toggle ──────────────────────────────────────────────────────
@@ -5337,32 +5981,30 @@ function applyZenMode(isZen) {
   const btn = document.getElementById("zen-toggle-btn");
   if (isZen) {
     document.body.classList.add("zen-mode");
-    if (btn) { btn.textContent = '🔧'; btn.title = 'Switch to Full mode'; }
+    if (btn) { btn.textContent = '🧘'; btn.title = 'Exit Zen mode'; btn.classList.add('zen-active'); }
   } else {
     document.body.classList.remove("zen-mode");
-    if (btn) { btn.textContent = '🧘'; btn.title = 'Switch to Zen mode'; }
+    if (btn) { btn.textContent = '🧘'; btn.title = 'Switch to Zen mode'; btn.classList.remove('zen-active'); }
     // Clear any zen-visible overrides when leaving zen mode
     document.getElementById("layers-panel")?.classList.remove("zen-visible");
     document.getElementById("props-panel")?.classList.remove("zen-visible");
   }
 }
 
-// ─── Copy / Paste / Select All (Figma/Sketch standard) ───────────────────────
+// ─── Copy / Paste / Cut / Select All (Figma/Sketch standard) ─────────────────
 
 /** Clipboard buffer for FD node text */
 let fdClipboard = "";
 
-/** Copy the selected node's .fd block to the clipboard. */
-function copySelectedAsFd() {
-  if (!fdCanvas) return;
-  const selectedId = fdCanvas.get_selected_id();
-  if (!selectedId) return;
+/** Cumulative paste offset — increments by 20 on each successive paste,
+ *  resets when a new copy is made. */
+let pasteOffsetCount = 0;
 
-  const text = fdCanvas.get_text();
+/** Extract the .fd text block for a single node by its ID.
+ *  Returns the block string, or "" if not found. */
+function extractNodeBlock(text, nodeId) {
   const lines = text.split("\n");
-
-  // Find the line that starts the node declaration
-  const startPattern = new RegExp(`^\\s*(\\w+)\\s+@${selectedId}\\b`);
+  const startPattern = new RegExp(`^\\s*(\\w+)\\s+@${nodeId}\\b`);
   let startIdx = -1;
   for (let i = 0; i < lines.length; i++) {
     if (startPattern.test(lines[i])) {
@@ -5370,12 +6012,9 @@ function copySelectedAsFd() {
       break;
     }
   }
-  if (startIdx < 0) return;
+  if (startIdx < 0) return "";
 
-  // Determine the indentation of the start line
   const startIndent = lines[startIdx].match(/^\s*/)[0].length;
-
-  // Collect all lines belonging to this block (same or deeper indentation)
   let endIdx = startIdx + 1;
   while (endIdx < lines.length) {
     const line = lines[endIdx];
@@ -5384,8 +6023,26 @@ function copySelectedAsFd() {
     if (indent <= startIndent) break;
     endIdx++;
   }
+  return lines.slice(startIdx, endIdx).join("\n");
+}
 
-  fdClipboard = lines.slice(startIdx, endIdx).join("\n");
+/** Copy the selected node(s)' .fd block(s) to the clipboard. */
+function copySelectedAsFd() {
+  if (!fdCanvas) return;
+
+  const text = fdCanvas.get_text();
+  const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+  if (selectedIds.length === 0) return;
+
+  const blocks = [];
+  for (const id of selectedIds) {
+    const block = extractNodeBlock(text, id);
+    if (block) blocks.push(block);
+  }
+  if (blocks.length === 0) return;
+
+  fdClipboard = blocks.join("\n\n");
+  pasteOffsetCount = 0; // Reset offset on new copy
 
   // Also copy to system clipboard
   if (navigator.clipboard) {
@@ -5393,7 +6050,18 @@ function copySelectedAsFd() {
   }
 }
 
-/** Paste a node from the FD clipboard. */
+/** Cut the selected node(s) — copy + delete. */
+function cutSelectedAsFd() {
+  if (!fdCanvas) return;
+  copySelectedAsFd();
+  const changed = fdCanvas.delete_selected();
+  if (changed) {
+    render();
+    syncTextToExtension();
+  }
+}
+
+/** Paste node(s) from the FD clipboard with horizontal stagger. */
 async function pasteFromClipboard() {
   if (!fdCanvas) return;
 
@@ -5410,8 +6078,10 @@ async function pasteFromClipboard() {
 
   if (!clipText.trim()) return;
 
-  // Recursively rename ALL @ids inside the pasted block to avoid collisions
-  const suffix = "_cp" + Math.floor(Math.random() * 9000 + 1000);
+  // Increment paste offset count
+  pasteOffsetCount++;
+
+  // Collect all @id declarations in the pasted block
   const idPattern = /@(\w+)\s*\{/g;
   const allIds = new Set();
   let m;
@@ -5420,20 +6090,65 @@ async function pasteFromClipboard() {
   }
   if (allIds.size === 0) return;
 
-  // Build renamed text: replace each @oldId with @oldId_cpXXXX everywhere
+  // Build renamed text: use incremented _N naming (consistent with Alt+drag)
+  const existingText = fdCanvas.get_text();
   let pasteText = clipText;
   const rootId = [...allIds][0]; // First ID = root node for selection
+  const idMap = new Map();
+
   for (const oldId of allIds) {
-    const newId = oldId + suffix;
-    // Replace @id declarations and all references (use:, center_in:, etc.)
-    pasteText = pasteText.replace(new RegExp(`@${oldId}\\b`, "g"), `@${newId}`);
+    // Find the stem (strip existing _N or _cpXXXX suffix)
+    const stem = oldId.replace(/_(?:\d+|cp\d+)$/, '');
+    // Scan existing text for highest _N suffix
+    let maxN = 1;
+    const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
+    let match;
+    while ((match = re.exec(existingText)) !== null) {
+      maxN = Math.max(maxN, parseInt(match[1]));
+    }
+    // Also check if the base stem exists (counts as _1)
+    if (new RegExp(`@${stem}\\b`).test(existingText)) {
+      maxN = Math.max(maxN, 1);
+    }
+    const newId = stem + '_' + (maxN + 1);
+    idMap.set(oldId, newId);
   }
-  const newRootId = rootId + suffix;
+
+  // Replace all @id references with new names
+  for (const [oldId, newId] of idMap) {
+    pasteText = pasteText.replace(new RegExp(`@${oldId}\\b`, 'g'), `@${newId}`);
+  }
+  const newRootId = idMap.get(rootId) || rootId;
+
+  // Horizontal stagger: offset x only (keep same y for horizontal alignment)
+  // Try to get the original node's width for proper spacing
+  let xOffset = pasteOffsetCount * 20; // Fallback: cumulative 20px
+  try {
+    const boundsJson = fdCanvas.get_node_bounds(rootId);
+    if (boundsJson) {
+      const bounds = JSON.parse(boundsJson);
+      if (bounds && bounds.width > 0) {
+        // Place to the right with 20px gap
+        xOffset = (bounds.width + 20) * pasteOffsetCount;
+      }
+    }
+  } catch (_) { /* use fallback offset */ }
+
+  pasteText = pasteText.replace(/\b(x:\s*)(-?\d+(?:\.\d+)?)/g, (_match, prefix, val) => {
+    return prefix + (parseFloat(val) + xOffset);
+  });
+  // y: values unchanged — keeps vertical alignment
+
+  // Capture text before for undo
+  const textBefore = fdCanvas.get_text();
 
   // Append to current text
-  const currentText = fdCanvas.get_text();
-  const updatedText = currentText.trimEnd() + "\n\n" + pasteText + "\n";
+  const updatedText = textBefore.trimEnd() + '\n\n' + pasteText + '\n';
   fdCanvas.set_text(updatedText);
+
+  // Push undo snapshot so ⌘Z reverts the paste
+  fdCanvas.push_undo_snapshot(textBefore, updatedText);
+
   render();
   syncTextToExtension();
 
@@ -5442,6 +6157,7 @@ async function pasteFromClipboard() {
   render();
   updatePropertiesPanel();
 }
+
 
 /** Select all nodes in the scene. */
 function selectAllNodes() {
@@ -5583,7 +6299,7 @@ function exportToPng() {
 
   // Render scene centered in export canvas
   exportCtx.setTransform(dpr, 0, 0, dpr, (padding - minX) * dpr, (padding - minY) * dpr);
-  fdCanvas.render(exportCtx, performance.now());
+  fdCanvas.render(exportCtx, performance.now(), true);
 
   // Send to extension for save dialog
   const dataUrl = exportCanvas.toDataURL("image/png");
@@ -6207,6 +6923,9 @@ async function main() {
       fdCanvas.set_text(window.initialText);
     }
 
+    // Detect flow animations for continuous render loop
+    hasFlowEdges = fdCanvas.has_active_flows();
+
     // Measure all text nodes for tight bounding boxes
     measureAllTextNodes();
 
@@ -6230,6 +6949,7 @@ async function main() {
     setupPropertiesPanel();
     setupInlineEditor();
     setupAlignGrid();
+    setupPropsActions();
     setupDragAndDrop();
     setupAnimPicker();
     setupHelpButton();
@@ -6246,13 +6966,18 @@ async function main() {
     setupInsertMenu();
     setupMinimap();
     setupColorSwatches();
-    setupSelectionBar();
+    setupPanelResize();
     setupTouchGestures();
     setupZoomControls();
     setupUndoRedoControls();
     setupSettingsMenu();
     setupFloatingToolbar();
     setupEdgeContextMenu();
+
+    // Ensure no stale menus are visible after init
+    closeContextMenu();
+    hideFloatingBar();
+    closeEdgeContextMenu();
 
     // Tell extension we're ready
     vscode.postMessage({ type: "ready" });
@@ -6279,7 +7004,7 @@ function render() {
   ctx.setTransform(z, 0, 0, z, panX * dpr, panY * dpr);
   // Draw grid below shapes
   if (gridEnabled) drawGrid();
-  fdCanvas.render(ctx, performance.now());
+  fdCanvas.render(ctx, performance.now(), gridEnabled);
 
   // ── Arrow tool: draw live preview line during drag ──
   const arrowPreviewJson = fdCanvas.get_arrow_preview();
@@ -6409,6 +7134,19 @@ function render() {
     if (erasePoofs.length > 0) renderDirty = true;
   }
 
+  // ── Alt+drag ghost: translucent outlines at original positions ──
+  if (altDragGhosts.length > 0) {
+    ctx.save();
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = "#4FC3F7";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    for (const g of altDragGhosts) {
+      ctx.strokeRect(g.x, g.y, g.w, g.h);
+    }
+    ctx.restore();
+  }
+
   ctx.restore();
 
   // Update minimap viewport indicator smoothly (scene re-renders at lower frequency)
@@ -6431,7 +7169,7 @@ let animFrameId = null;
 function startAnimLoop() {
   if (animFrameId !== null) return; // already running
   function loop() {
-    if (renderDirty || activeTweens.length > 0 || erasePoofs.length > 0) {
+    if (renderDirty || activeTweens.length > 0 || erasePoofs.length > 0 || hasFlowEdges) {
       renderDirty = false;
       render();
     }

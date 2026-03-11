@@ -7,6 +7,14 @@
 /** Whether we're in pan mode (Space held) */
 let isPanning = false;
 
+// ─── Global modifier key tracking ────────────────────────────────────────
+// macOS Option/Alt pressed mid-drag may not update e.altKey on pointermove
+// in Electron/VS Code webviews. Track state explicitly via keydown/keyup.
+let modAltHeld = false;
+let modCtrlHeld = false;
+let modMetaHeld = false;
+let modShiftHeld = false;
+
 document.addEventListener("keydown", (e) => {
   if (!fdCanvas) return;
 
@@ -17,6 +25,43 @@ document.addEventListener("keydown", (e) => {
       document.activeElement.tagName === "TEXTAREA")
   ) {
     return;
+  }
+
+  // ── Esc cancels active drag (node move/resize/draw) ──
+  if (e.key === "Escape" && pointerIsDown && fdCanvas) {
+    const cancelled = fdCanvas.cancel_drag();
+    if (cancelled) {
+      // Reset all JS-side drag state
+      pointerIsDown = false;
+      isDraggingNode = false;
+      draggedNodeId = null;
+      nearDetachState = null;
+      altCloneActive = false;
+      altDragGhosts = [];
+      hideDimensionTooltip();
+
+      // Restore tool after ⌘+drag temp Select or Alt+drag clone
+      if (cmdTempSelectActive && cmdTempSelectOriginalTool) {
+        fdCanvas.set_tool(cmdTempSelectOriginalTool);
+        updateToolbarActive(lockedTool || cmdTempSelectOriginalTool);
+        updateCanvasCursor(cmdTempSelectOriginalTool);
+      }
+      cmdTempSelectActive = false;
+      cmdTempSelectOriginalTool = null;
+
+      // Restore tool after Ctrl temp Eraser
+      if (tempEraserMode && tempEraserPrevTool) {
+        fdCanvas.set_tool(tempEraserPrevTool);
+        updateToolbarActive(lockedTool || tempEraserPrevTool);
+        updateCanvasCursor(tempEraserPrevTool);
+      }
+      tempEraserMode = false;
+      tempEraserPrevTool = null;
+
+      render();
+      e.preventDefault();
+      return;
+    }
   }
 
   // Close annotation card / context menu on Escape (before WASM)
@@ -194,6 +239,7 @@ document.addEventListener("keydown", (e) => {
 
   // Handle graph changes
   if (result.changed) {
+    bumpGeneration();
     render();
     syncTextToExtension();
     closeContextMenu();
@@ -251,8 +297,7 @@ document.addEventListener("keydown", (e) => {
   // Notify extension of selection changes from keyboard actions
   if (result.changed || result.action === "deselect") {
     const selectedId = fdCanvas.get_selected_id();
-    vscode.postMessage({ type: "nodeSelected", id: selectedId });
-    updateFloatingBar();
+    syncSelection(selectedId, "keyboard");
   }
 
   // Update cursor when tool changes via shortcut
@@ -276,7 +321,13 @@ function clearModifierCursors() {
 }
 
 document.addEventListener("keydown", (e) => {
-  // Skip if pointer is already down (active interaction handles its own cursor)
+  // Always update tracked modifier state (even mid-drag)
+  if (e.key === "Alt") modAltHeld = true;
+  if (e.key === "Control") modCtrlHeld = true;
+  if (e.key === "Meta") modMetaHeld = true;
+  if (e.key === "Shift") modShiftHeld = true;
+
+  // Skip cursor preview if pointer is already down (active interaction)
   if (pointerIsDown) return;
   // Skip if a text input is focused
   const active = document.activeElement;
@@ -300,6 +351,12 @@ document.addEventListener("keydown", (e) => {
 }, true);
 
 document.addEventListener("keyup", (e) => {
+  // Always update tracked modifier state
+  if (e.key === "Alt") modAltHeld = false;
+  if (e.key === "Control") modCtrlHeld = false;
+  if (e.key === "Meta") modMetaHeld = false;
+  if (e.key === "Shift") modShiftHeld = false;
+
   if (e.key === " " && isPanning) {
     isPanning = false;
     canvas.style.cursor = "";
@@ -330,9 +387,13 @@ document.addEventListener("keyup", (e) => {
   }
 });
 
-// Clear modifier cursors when window loses focus (handles Cmd+Tab, Alt+Tab, etc.)
+// Clear modifier cursors and tracked state when window loses focus
 window.addEventListener("blur", () => {
   clearModifierCursors();
+  modAltHeld = false;
+  modCtrlHeld = false;
+  modMetaHeld = false;
+  modShiftHeld = false;
   // Also restore from temp modes if window lost focus mid-hold
   if (isCmdHold && fdCanvas && toolBeforeCmdHold) {
     isCmdHold = false;
@@ -550,7 +611,7 @@ function buildShortcutHelpHtml() {
     <div class="help-panel">
       <div class="help-header">
         <h3>Keyboard Shortcuts</h3>
-        <button class="help-close">×</button>
+        <button class="help-close" aria-label="Close">×</button>
       </div>
       <div class="help-body">
   `;
@@ -603,9 +664,10 @@ function nudgeSelected(arrowKey, step) {
     const dx = newX - b.x;
     const dy = newY - b.y;
     fdCanvas.handle_pointer_down(cx, cy, 1.0, false, false, false, false);
-    const changed = fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false);
+    const moveResultJson = fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false);
+    const moveResult = JSON.parse(moveResultJson);
     const upResult = JSON.parse(fdCanvas.handle_pointer_up(cx + dx, cy + dy, false, false, false, false));
-    if (upResult.changed || changed) {
+    if (upResult.changed || moveResult.changed) {
       render();
       syncTextToExtension();
       updatePropertiesPanel();

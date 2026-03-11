@@ -7,18 +7,14 @@
 function setupPointerEvents() {
   const dpr = window.devicePixelRatio || 1;
 
+  // Track canvas pointer ownership via document-level listeners
+  let canvasPointerId = -1;
+
   canvas.addEventListener("pointerdown", (e) => {
     if (!fdCanvas) return;
 
-    // Skip if pointer is over the floating toolbar (sibling overlay)
-    const ft = document.getElementById("floating-toolbar");
-    if (ft) {
-      const tbRect = ft.getBoundingClientRect();
-      if (e.clientX >= tbRect.left && e.clientX <= tbRect.right
-        && e.clientY >= tbRect.top && e.clientY <= tbRect.bottom) {
-        return;
-      }
-    }
+    // Skip if pointer originated inside the floating toolbar (DOM ancestry)
+    if (e.target.closest && e.target.closest('#floating-toolbar')) return;
 
     clearModifierCursors(); // Modifier preview ends when interaction starts
     const rect = canvas.getBoundingClientRect();
@@ -31,7 +27,7 @@ function setupPointerEvents() {
       panStartX = e.clientX - panX;
       panStartY = e.clientY - panY;
       canvas.style.cursor = "grabbing";
-      canvas.setPointerCapture(e.pointerId);
+      canvasPointerId = e.pointerId;
       e.preventDefault();
       return;
     }
@@ -63,18 +59,15 @@ function setupPointerEvents() {
       updateToolbarActive("eraser");
     }
 
-    // ── Alt+drag = clone and drag ──
-    if (e.altKey && !e.metaKey && !e.ctrlKey) {
+    // Alt+drag duplication is handled entirely by WASM via
+    // duplicate_selected_at(0,0) — JS only tracks altCloneActive
+    // to suppress the style-picker eyedropper on pointer-up.
+    const isAlt = e.altKey || modAltHeld;
+    if (isAlt && !e.metaKey && !e.ctrlKey) {
       const hitId = fdCanvas.hit_test_at(x, y);
       if (hitId) {
-        // Ensure the node is selected first
-        fdCanvas.select_by_id(hitId);
-        // Duplicate in-place (0,0 offset), new clone becomes selected
-        fdCanvas.duplicate_selected_at(0.0, 0.0);
-        render();
-        syncTextToExtension();
         altCloneActive = true;
-        // Now switch to select to drag the clone
+        // Switch to select for drawing tools so WASM sees SelectTool
         if (isDrawingTool) {
           cmdTempSelectActive = true;
           cmdTempSelectOriginalTool = currentTool;
@@ -100,11 +93,11 @@ function setupPointerEvents() {
       e.pressure || 1.0,
       e.shiftKey,
       e.ctrlKey,
-      e.altKey,
+      isAlt,
       e.metaKey
     );
     if (changed) render();
-    canvas.setPointerCapture(e.pointerId);
+    canvasPointerId = e.pointerId;
 
     // Track interaction start for dimension tooltip
     pointerIsDown = true;
@@ -123,8 +116,14 @@ function setupPointerEvents() {
     }
   });
 
-  canvas.addEventListener("pointermove", (e) => {
+  document.addEventListener("pointermove", (e) => {
     if (!fdCanvas) return;
+    // During active drag, only process our owned pointer
+    if (canvasPointerId !== -1 && e.pointerId !== canvasPointerId) return;
+    // Skip if toolbar drag or drag-to-create is in progress
+    if (ftDragging || dtcTool) return;
+    // During hover (no active drag), only process events over the canvas
+    if (canvasPointerId === -1 && e.target !== canvas) return;
 
     // Pan drag in progress
     if (panDragging) {
@@ -148,16 +147,26 @@ function setupPointerEvents() {
       }
     }
 
-    const changed = fdCanvas.handle_pointer_move(
+    const isAltMove = e.altKey || modAltHeld;
+    const moveResult = JSON.parse(fdCanvas.handle_pointer_move(
       x,
       y,
       e.pressure || 1.0,
       e.shiftKey,
       e.ctrlKey,
-      e.altKey,
+      isAltMove,
       e.metaKey
-    );
+    ));
+    const changed = moveResult.changed;
     if (changed) render();
+
+    // Read ghost origin bounds for Alt+drag preview
+    if (altCloneActive && fdCanvas.get_alt_drag_ghost) {
+      try {
+        const ghostJson = fdCanvas.get_alt_drag_ghost();
+        altDragGhosts = ghostJson ? JSON.parse(ghostJson) : [];
+      } catch (_) { altDragGhosts = []; }
+    }
     // Arrow tool: always re-render during drag for live preview line
     else if (pointerIsDown && currentToolAtPointerDown === "arrow") render();
 
@@ -191,15 +200,10 @@ function setupPointerEvents() {
           showDimensionTooltip(e.clientX, e.clientY, `${Math.round(w)} × ${Math.round(h)}`);
         }
       } else if (tool === "select") {
-        // Moving: show (X, Y) of selected node
-        const selectedId = fdCanvas.get_selected_id();
-        if (selectedId && changed) {
-          try {
-            const b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
-            if (b.x !== undefined) {
-              showDimensionTooltip(e.clientX, e.clientY, `(${Math.round(b.x)}, ${Math.round(b.y)})`);
-            }
-          } catch (_) { /* skip */ }
+        // Moving: show (X, Y) from bundled bounds (no extra WASM calls)
+        if (changed && moveResult.bounds) {
+          const b = moveResult.bounds;
+          showDimensionTooltip(e.clientX, e.clientY, `(${Math.round(b.x)}, ${Math.round(b.y)})`);
         }
       }
     }
@@ -221,29 +225,31 @@ function setupPointerEvents() {
     }
   });
 
-  canvas.addEventListener("pointerup", (e) => {
+  document.addEventListener("pointerup", (e) => {
     if (!fdCanvas) return;
-    // Always release pointer capture — prevents stale captures
-    // from blocking toolbar and other overlay pointer events
-    try { canvas.releasePointerCapture(e.pointerId); } catch (_) { }
+    // Skip entirely if no canvas pointerdown started this interaction
+    if (canvasPointerId === -1) return;
+    // Only handle events from our owned pointer
+    if (e.pointerId !== canvasPointerId) return;
+    canvasPointerId = -1;
 
     // End pan drag
     if (panDragging) {
       panDragging = false;
       canvas.style.cursor = isPanning ? "grab" : "";
-      canvas.releasePointerCapture(e.pointerId);
       return;
     }
 
     const rect = canvas.getBoundingClientRect();
     const x = ((e.clientX - rect.left) - panX) / zoomLevel;
     const y = ((e.clientY - rect.top) - panY) / zoomLevel;
+    const isAltUp = e.altKey || modAltHeld;
     const resultJson = fdCanvas.handle_pointer_up(
       x,
       y,
       e.shiftKey,
       e.ctrlKey,
-      e.altKey,
+      isAltUp,
       e.metaKey
     );
     const result = JSON.parse(resultJson);
@@ -271,7 +277,7 @@ function setupPointerEvents() {
     }
 
     // ── Alt+click style picker (eyedropper for styles) ──
-    if (e.altKey && !altCloneActive && !cmdTempSelectActive && result.changed) {
+    if (isAltUp && !altCloneActive && !cmdTempSelectActive && result.changed) {
       const selectedId = fdCanvas.get_selected_id();
       if (selectedId) {
         pickStyleFromSelectedNode();
@@ -281,16 +287,19 @@ function setupPointerEvents() {
       }
     }
 
-    canvas.releasePointerCapture(e.pointerId);
+
     // Update properties panel after interaction ends
     updatePropertiesPanel();
     updateFloatingBar();
-    // Notify extension of canvas selection change (for Code ↔ Canvas sync)
+    // Notify extension of canvas selection (for Code ↔ Canvas sync)
     // Skip during inline editing — prevents focus stealing that kills the textarea
     if (!inlineEditorActive) {
       const selectedId = fdCanvas.get_selected_id();
       if (selectedId !== lastNotifiedSelectedId) {
-        lastNotifiedSelectedId = selectedId;
+        // Selection changed — full sync (panels + code highlight)
+        syncSelection(selectedId, "canvas");
+      } else if (selectedId) {
+        // Same node re-clicked — re-highlight code ("show me the code" intent)
         vscode.postMessage({ type: "nodeSelected", id: selectedId });
       }
     }
@@ -357,6 +366,26 @@ function setupPointerEvents() {
       }
     }
 
+    // ── Post-release: remeasure text bounds after resize ──
+    // When a text node is resized (sets max_width) or a parent shape is
+    // resized (propagates max_width to child text), JS measureText() gives
+    // the accurate wrapped height that the heuristic can only estimate.
+    if (result.changed && fdCanvas) {
+      const selectedId = fdCanvas.get_selected_id();
+      if (selectedId) {
+        // If selected node is text → measure it directly
+        measureAndUpdateTextBounds(selectedId);
+        // If selected node is a parent → measure all text children
+        try {
+          const childIds = JSON.parse(fdCanvas.get_text_children(selectedId));
+          for (const childId of childIds) {
+            measureAndUpdateTextBounds(childId);
+          }
+        } catch (_) { /* ignore parse errors */ }
+        render();
+      }
+    }
+
     isDraggingNode = false;
     draggedNodeId = null;
     animDropTargetId = null;
@@ -373,6 +402,7 @@ function setupPointerEvents() {
     cmdTempSelectActive = false;
     cmdTempSelectOriginalTool = null;
     altCloneActive = false;
+    altDragGhosts = [];
 
     // ── Restore tool after Ctrl temp Eraser ──
     if (tempEraserMode && tempEraserPrevTool && fdCanvas) {

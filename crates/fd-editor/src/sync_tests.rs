@@ -342,6 +342,7 @@ rect @box {
             scale: Some(1.1),
             ..Default::default()
         },
+        delay_ms: None,
     });
     engine.apply_mutation(GraphMutation::SetAnimations {
         id: NodeId::intern("box"),
@@ -384,8 +385,8 @@ text @heading "Hello" {
 
     // Verify no alignment initially
     let node = engine.graph.get_by_id(NodeId::intern("heading")).unwrap();
-    assert!(node.style.text_align.is_none());
-    assert!(node.style.text_valign.is_none());
+    assert!(node.props.text_align.is_none());
+    assert!(node.props.text_valign.is_none());
 
     // Apply SetStyle mutation with alignment
     let mut style = engine.graph.resolve_style(node, &[]);
@@ -399,8 +400,8 @@ text @heading "Hello" {
 
     // Verify graph updated
     let node = engine.graph.get_by_id(NodeId::intern("heading")).unwrap();
-    assert_eq!(node.style.text_align, Some(TextAlign::Right));
-    assert_eq!(node.style.text_valign, Some(TextVAlign::Bottom));
+    assert_eq!(node.props.text_align, Some(TextAlign::Right));
+    assert_eq!(node.props.text_valign, Some(TextVAlign::Bottom));
 
     // Verify text output contains align property
     assert!(
@@ -412,8 +413,8 @@ text @heading "Hello" {
     // Verify round-trip
     let engine2 = SyncEngine::from_text(&engine.text, viewport).unwrap();
     let node2 = engine2.graph.get_by_id(NodeId::intern("heading")).unwrap();
-    assert_eq!(node2.style.text_align, Some(TextAlign::Right));
-    assert_eq!(node2.style.text_valign, Some(TextVAlign::Bottom));
+    assert_eq!(node2.props.text_align, Some(TextAlign::Right));
+    assert_eq!(node2.props.text_valign, Some(TextVAlign::Bottom));
 }
 
 #[test]
@@ -959,6 +960,49 @@ frame @clip_frame {
 }
 
 #[test]
+fn sync_frame_does_not_auto_resize() {
+    // Non-clip frame should also NOT expand when children overflow.
+    // Frames have declared dimensions — only Groups auto-size.
+    let input = r#"
+frame @card {
+  w: 200 h: 100
+
+  rect @child { w: 80 h: 40 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let frame_idx = engine.graph.index_of(NodeId::intern("card")).unwrap();
+    let child_idx = engine.graph.index_of(NodeId::intern("child")).unwrap();
+
+    let frame_before = engine.bounds[&frame_idx];
+
+    // Simulate resize: widen child beyond frame
+    if let Some(cb) = engine.bounds.get_mut(&child_idx) {
+        cb.width = 400.0;
+    }
+
+    let changed = engine.finalize_child_bounds();
+
+    // Frame should NOT expand (declared size is authoritative)
+    let frame_after = engine.bounds[&frame_idx];
+    assert_eq!(
+        frame_before.width, frame_after.width,
+        "frame should not auto-resize: {} == {}",
+        frame_before.width, frame_after.width
+    );
+    assert_eq!(
+        frame_before.height, frame_after.height,
+        "frame height should not change: {} == {}",
+        frame_before.height, frame_after.height
+    );
+    assert!(!changed, "no changes expected for non-clip frame");
+}
+
+#[test]
 fn sync_move_group_propagates_to_children() {
     let input = r#"
 group @grp {
@@ -1090,10 +1134,10 @@ rect @login_button {
     });
     engine.flush_to_text();
     let text = engine.current_text();
-    // The duplicate should have a name derived from the original
+    // The duplicate should have an incremental name (login_button_2)
     assert!(
-        text.contains("login_button_copy_"),
-        "expected derived name in: {text}"
+        text.contains("@login_button_2"),
+        "expected incremental name login_button_2 in: {text}"
     );
     // Original should still be present
     assert!(text.contains("@login_button"));
@@ -1687,4 +1731,549 @@ text @label "Hello World" {
         "bounds width should be 150: got {}",
         bounds.width
     );
+}
+
+#[test]
+fn sync_resize_parent_sets_child_text_max_width() {
+    // When a rect parent is resized narrower, its child text should
+    // get max_width set to the parent's width (Option A: permanent).
+    let input = r#"
+rect @card {
+  w: 300 h: 200
+  text @title "Hello World this is a long title for testing" {
+    font: "Inter" 400 14
+  }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let card_id = NodeId::intern("card");
+    let title_id = NodeId::intern("title");
+    let title_idx = engine.graph.index_of(title_id).unwrap();
+
+    // Initially, text should have no max_width
+    match &engine.graph.graph[title_idx].kind {
+        NodeKind::Text { max_width, .. } => {
+            assert_eq!(*max_width, None, "initial text should have no max_width");
+        }
+        _ => panic!("expected Text"),
+    }
+
+    // Resize the parent narrower
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        id: card_id,
+        width: 120.0,
+        height: 200.0,
+    });
+
+    // Child text should now have max_width = parent width (120)
+    match &engine.graph.graph[title_idx].kind {
+        NodeKind::Text { max_width, .. } => {
+            assert_eq!(
+                *max_width,
+                Some(120.0),
+                "child text max_width should be set to parent width"
+            );
+        }
+        _ => panic!("expected Text after resize"),
+    }
+
+    // Child bounds width should match parent width
+    let title_bounds = engine.bounds[&title_idx];
+    assert!(
+        (title_bounds.width - 120.0).abs() < 0.01,
+        "child text width ({}) should match parent width 120",
+        title_bounds.width
+    );
+    // Height is NOT estimated by heuristic — JS measureText() is authoritative.
+    // The test only verifies max_width propagation and width update.
+}
+
+#[test]
+fn sync_resize_text_preserves_height() {
+    // Resizing a text node directly should set max_width and update
+    // width, but NOT estimate height — JS measureText() is authoritative.
+    let input = r#"
+text @paragraph "This is a fairly long paragraph of text that needs to wrap to multiple lines" {
+  font: "Inter" 400 14
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let para_id = NodeId::intern("paragraph");
+    let para_idx = engine.graph.index_of(para_id).unwrap();
+
+    let original_height = engine.bounds[&para_idx].height;
+
+    // Resize to a narrow width — height should NOT change
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        id: para_id,
+        width: 100.0,
+        height: 20.0, // Deliberately small — should be ignored for text
+    });
+
+    let bounds = engine.bounds[&para_idx];
+    assert!(
+        (bounds.width - 100.0).abs() < 0.01,
+        "text bounds width should be 100: got {}",
+        bounds.width
+    );
+    assert!(
+        (bounds.height - original_height).abs() < 0.01,
+        "text bounds height ({}) should be unchanged from original ({original_height})",
+        bounds.height
+    );
+
+    // max_width should be set
+    match &engine.graph.graph[para_idx].kind {
+        NodeKind::Text { max_width, .. } => {
+            assert_eq!(*max_width, Some(100.0), "max_width should be set to 100");
+        }
+        _ => panic!("expected Text"),
+    }
+}
+
+// ─── Multi-Delete Reproduction Tests ────────────────────────────────────
+
+#[test]
+fn sync_delete_multiple_siblings() {
+    // Reproduce: select 3 sibling rects, delete all at once
+    let input = r#"
+rect @a { w: 40 h: 30 }
+rect @b { w: 40 h: 30 }
+rect @c { w: 40 h: 30 }
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    // Apply three RemoveNode mutations sequentially (like delete_selected does)
+    let ids = vec![
+        NodeId::intern("a"),
+        NodeId::intern("b"),
+        NodeId::intern("c"),
+    ];
+    for id in &ids {
+        engine.apply_mutation(GraphMutation::RemoveNode { id: *id });
+    }
+    engine.resolve();
+    engine.flush_to_text();
+
+    for id in &ids {
+        assert!(
+            engine.graph.get_by_id(*id).is_none(),
+            "@{} should be deleted",
+            id.as_str()
+        );
+    }
+    let text = engine.current_text();
+    assert!(!text.contains("@a"), "text should not contain @a");
+    assert!(!text.contains("@b"), "text should not contain @b");
+    assert!(!text.contains("@c"), "text should not contain @c");
+}
+
+#[test]
+fn sync_delete_multiple_with_edges() {
+    // Reproduce: delete nodes that are connected by edges
+    let input = r#"
+rect @src { w: 40 h: 30 }
+rect @dst { w: 40 h: 30 }
+
+edge @conn {
+  from: @src
+  to: @dst
+  arrow: end
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    // Delete both nodes
+    engine.apply_mutation(GraphMutation::RemoveNode {
+        id: NodeId::intern("src"),
+    });
+    engine.apply_mutation(GraphMutation::RemoveNode {
+        id: NodeId::intern("dst"),
+    });
+    engine.resolve();
+    engine.flush_to_text();
+
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("src")).is_none(),
+        "@src should be deleted"
+    );
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("dst")).is_none(),
+        "@dst should be deleted"
+    );
+
+    let text = engine.current_text();
+    assert!(
+        !text.contains("@src"),
+        "emitted text should not reference deleted @src: {text}"
+    );
+    assert!(
+        !text.contains("@dst"),
+        "emitted text should not reference deleted @dst: {text}"
+    );
+    // Edge referencing deleted nodes should also be cleaned up
+    assert!(
+        !text.contains("edge @conn"),
+        "edge referencing deleted nodes should be removed from text: {text}"
+    );
+}
+
+#[test]
+fn sync_delete_parent_and_child() {
+    // Delete both a group and its child simultaneously
+    let input = r#"
+group @grp {
+  rect @child { w: 40 h: 30 }
+}
+rect @survivor { w: 20 h: 20 }
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    engine.apply_mutation(GraphMutation::RemoveNode {
+        id: NodeId::intern("grp"),
+    });
+    engine.apply_mutation(GraphMutation::RemoveNode {
+        id: NodeId::intern("child"),
+    });
+    engine.resolve();
+    engine.flush_to_text();
+
+    assert!(engine.graph.get_by_id(NodeId::intern("grp")).is_none());
+    assert!(engine.graph.get_by_id(NodeId::intern("child")).is_none());
+    assert!(engine.graph.get_by_id(NodeId::intern("survivor")).is_some());
+
+    let text = engine.current_text();
+    assert!(!text.contains("@grp"));
+    assert!(!text.contains("@child"));
+    assert!(text.contains("@survivor"));
+}
+
+// ─── Clone Position Independence + Incremental Naming Tests ─────────────
+
+#[test]
+fn sync_duplicate_position_independent() {
+    // After duplicating a node, moving the original should NOT move the clone.
+    let input = r#"
+rect @card {
+  w: 100
+  h: 50
+  x: 100
+  y: 200
+}
+"#;
+    let viewport = fd_core::Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let card_id = NodeId::intern("card");
+    engine.apply_mutation(GraphMutation::DuplicateNode { id: card_id });
+    engine.resolve();
+
+    // Find the clone
+    let clone_id = NodeId::intern("card_2");
+    assert!(
+        engine.graph.get_by_id(clone_id).is_some(),
+        "clone @card_2 should exist"
+    );
+
+    let clone_idx = engine.graph.index_of(clone_id).unwrap();
+    let clone_before = engine.bounds[&clone_idx];
+
+    // Move the original far away
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: card_id,
+        dx: 500.0,
+        dy: 300.0,
+    });
+
+    // Clone should NOT have moved (independent position)
+    let clone_after = engine.bounds[&clone_idx];
+    assert!(
+        (clone_after.x - clone_before.x).abs() < 0.01,
+        "clone x should not change: {} vs {}",
+        clone_before.x,
+        clone_after.x
+    );
+    assert!(
+        (clone_after.y - clone_before.y).abs() < 0.01,
+        "clone y should not change: {} vs {}",
+        clone_before.y,
+        clone_after.y
+    );
+}
+
+#[test]
+fn sync_duplicate_incremental_naming() {
+    // Cloning the same node twice should produce _2 and _3.
+    let input = r#"
+rect @card {
+  w: 80
+  h: 40
+  x: 10
+  y: 10
+}
+"#;
+    let viewport = fd_core::Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let card_id = NodeId::intern("card");
+
+    // First clone
+    engine.apply_mutation(GraphMutation::DuplicateNode { id: card_id });
+    engine.resolve();
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("card_2")).is_some(),
+        "first clone should be card_2"
+    );
+
+    // Second clone of original
+    engine.apply_mutation(GraphMutation::DuplicateNode { id: card_id });
+    engine.resolve();
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("card_3")).is_some(),
+        "second clone should be card_3"
+    );
+
+    // Clone of clone should also increment
+    engine.apply_mutation(GraphMutation::DuplicateNode {
+        id: NodeId::intern("card_2"),
+    });
+    engine.resolve();
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("card_4")).is_some(),
+        "clone of card_2 should be card_4"
+    );
+}
+
+#[test]
+fn sync_duplicate_no_overlapping_bounds() {
+    // Clone should not occupy the exact same position as the original.
+    let input = r#"
+rect @box {
+  w: 100
+  h: 50
+  x: 50
+  y: 60
+}
+"#;
+    let viewport = fd_core::Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let box_id = NodeId::intern("box");
+    let box_idx = engine.graph.index_of(box_id).unwrap();
+    let orig_bounds = engine.bounds[&box_idx];
+
+    engine.apply_mutation(GraphMutation::DuplicateNode { id: box_id });
+    engine.resolve();
+
+    let clone_id = NodeId::intern("box_2");
+    let clone_idx = engine.graph.index_of(clone_id).unwrap();
+    let clone_bounds = engine.bounds[&clone_idx];
+
+    // Clone should be offset by 20px (not overlapping)
+    assert!(
+        (clone_bounds.x - orig_bounds.x - 20.0).abs() < 0.01,
+        "clone x should be 20px offset: orig={}, clone={}",
+        orig_bounds.x,
+        clone_bounds.x
+    );
+    assert!(
+        (clone_bounds.y - orig_bounds.y - 20.0).abs() < 0.01,
+        "clone y should be 20px offset: orig={}, clone={}",
+        orig_bounds.y,
+        clone_bounds.y
+    );
+}
+
+/// Z-order: bring_forward on the already-frontmost child is a no-op.
+/// Verifies GraphMutation won't panic or corrupt sibling order.
+#[test]
+fn sync_bring_forward_already_front_is_noop() {
+    let input = r#"
+group @container {
+  rect @back { w: 40 h: 30 }
+  rect @mid { w: 40 h: 30 }
+  rect @front { w: 40 h: 30 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    let front_id = NodeId::intern("front");
+    let front_idx = engine.graph.index_of(front_id).unwrap();
+    let container_idx = engine.graph.index_of(NodeId::intern("container")).unwrap();
+
+    // @front is already the last (frontmost) child
+    let changed = engine.graph.bring_forward(front_idx);
+    assert!(
+        !changed,
+        "bring_forward on frontmost child should return false"
+    );
+
+    // Verify sibling order is unchanged
+    let children = engine.graph.children(container_idx);
+    assert_eq!(children.len(), 3);
+    let ids: Vec<&str> = children
+        .iter()
+        .map(|&idx| engine.graph.graph[idx].id.as_str())
+        .collect();
+    assert_eq!(ids, vec!["back", "mid", "front"]);
+}
+
+/// Z-order: bring_to_front persists through flush_to_text + re-parse roundtrip.
+/// Regression test: previously dispatch_action didn't call flush_to_text(),
+/// so z-order changes were lost when JS re-read the text.
+#[test]
+fn sync_bring_to_front_persists_through_roundtrip() {
+    let input = r#"
+rect @back { w: 40 h: 30 x: 10 y: 10 }
+rect @mid { w: 40 h: 30 x: 60 y: 10 }
+rect @front { w: 40 h: 30 x: 110 y: 10 }
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    let back_id = NodeId::intern("back");
+    let back_idx = engine.graph.index_of(back_id).unwrap();
+
+    // Bring @back to front (it's currently the first/backmost child)
+    let changed = engine.graph.bring_to_front(back_idx);
+    assert!(changed, "bring_to_front should return true");
+
+    // Verify in-memory order changed: mid, front, back
+    let root = engine.graph.root;
+    let children = engine.graph.children(root);
+    let ids: Vec<&str> = children
+        .iter()
+        .map(|&idx| engine.graph.graph[idx].id.as_str())
+        .collect();
+    assert_eq!(
+        ids,
+        vec!["mid", "front", "back"],
+        "after bring_to_front, @back should be last"
+    );
+
+    // Flush to text and re-parse (simulates what happens in the real app)
+    engine.mark_dirty();
+    engine.flush_to_text();
+    let text = engine.current_text().to_string();
+    let engine2 = SyncEngine::from_text(&text, viewport).unwrap();
+
+    // After roundtrip, child order should be preserved
+    let root2 = engine2.graph.root;
+    let children2 = engine2.graph.children(root2);
+    let ids2: Vec<&str> = children2
+        .iter()
+        .map(|&idx| engine2.graph.graph[idx].id.as_str())
+        .collect();
+    assert_eq!(
+        ids2,
+        vec!["mid", "front", "back"],
+        "z-order should persist through flush_to_text + re-parse roundtrip"
+    );
+}
+
+/// next_clone_name: chained duplication produces foo, foo_2, foo_3.
+#[test]
+fn sync_clone_name_sequence() {
+    let input = r#"
+rect @card { w: 100 h: 80 }
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let card_id = NodeId::intern("card");
+
+    // First clone: card → card_2
+    engine.apply_mutation(GraphMutation::DuplicateNode { id: card_id });
+    engine.resolve();
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("card_2")).is_some(),
+        "first clone should be card_2"
+    );
+
+    // Second clone: card → card_3
+    engine.apply_mutation(GraphMutation::DuplicateNode { id: card_id });
+    engine.resolve();
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("card_3")).is_some(),
+        "second clone should be card_3"
+    );
+
+    // Clone the clone: card_2 → card_4
+    let card2_id = NodeId::intern("card_2");
+    engine.apply_mutation(GraphMutation::DuplicateNode { id: card2_id });
+    engine.resolve();
+    assert!(
+        engine.graph.get_by_id(NodeId::intern("card_4")).is_some(),
+        "cloning card_2 should produce card_4 (max existing + 1)"
+    );
+}
+
+/// evaluate_near_detach: child partially outside parent returns warning info.
+#[test]
+fn sync_near_detach_warning_zone() {
+    let input = r#"
+group @box {
+  rect @child { w: 100 h: 50 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let child_id = NodeId::intern("child");
+
+    // Child fully inside → no near-detach warning
+    assert!(
+        engine.evaluate_near_detach(child_id).is_none(),
+        "fully inside should not trigger near-detach"
+    );
+
+    // Move child mostly outside (still overlapping ~20% area)
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: child_id,
+        dx: 80.0,
+        dy: 40.0,
+    });
+
+    // Now check: near-detach should fire if overlap < 25%
+    // The exact result depends on group size; we just verify no crash.
+    let _result = engine.evaluate_near_detach(child_id);
+    // This exercises the code path without asserting a specific value —
+    // the geometry depends on group auto-sizing. Main goal: no panic.
 }

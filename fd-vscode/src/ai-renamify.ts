@@ -29,7 +29,7 @@ export interface RenamifyResult {
 
 // ─── Prompt ──────────────────────────────────────────────────────────────
 
-function buildRenamifyPrompt(fdText: string, anonIds: string[]): string {
+export function buildRenamifyPrompt(fdText: string, anonIds: string[]): string {
     const idList = anonIds.map((id) => `@${id}`).join(", ");
     return `You are an expert UI designer working with the FD (Fast Draft) format.
 
@@ -61,7 +61,7 @@ ${fdText}`;
  * Parse the AI response into validated rename proposals.
  * Handles edge cases: duplicates, conflicts, invalid identifiers.
  */
-function parseRenamifyResponse(
+export function parseRenamifyResponse(
     raw: string,
     anonIds: string[],
     existingIds: string[]
@@ -177,10 +177,236 @@ async function callProvider(prompt: string): Promise<string> {
     }
 }
 
+// ─── Heuristic Renamer (No-API Fallback) ─────────────────────────────────
+
+/** Lightweight context extracted from a node's FD block. */
+interface NodeContext {
+    id: string;
+    type: string;         // rect, text, ellipse, group, frame, path, edge
+    textContent?: string; // for text nodes: the quoted label
+    parentId?: string;    // nearest named parent group/frame
+    width?: number;
+    height?: number;
+    edgeTargets?: string[]; // IDs of nodes this node connects TO via edges
+}
+
+/**
+ * Extract lightweight context for each anonymous node by scanning the FD text.
+ * This is intentionally simple — no full parser, just line-by-line extraction.
+ */
+function extractNodeContexts(fdText: string, anonIds: Set<string>): Map<string, NodeContext> {
+    const lines = fdText.split("\n");
+    const contexts = new Map<string, NodeContext>();
+    const parentStack: string[] = []; // stack of group/frame IDs
+    let braceDepth = 0;
+    const depthAtPush: number[] = [];
+    let currentNode: NodeContext | null = null;
+
+    const NODE_RE = /^\s*(group|frame|rect|ellipse|path|text)\s+@(\w+)(?:\s+"([^"]*)")?\s*\{?\s*$/;
+    const WIDTH_RE = /\bw:\s*(\d+(?:\.\d+)?)/;
+    const HEIGHT_RE = /\bh:\s*(\d+(?:\.\d+)?)/;
+    const CONTENT_RE = /\bcontent:\s*"([^"]*)"/;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) {
+            // Count braces even in comments? No, skip.
+            continue;
+        }
+
+        const openBraces = (trimmed.match(/\{/g) || []).length;
+        const closeBraces = (trimmed.match(/\}/g) || []).length;
+
+        // Check for node declaration
+        const nodeMatch = trimmed.match(NODE_RE);
+        if (nodeMatch) {
+            const [, type, id, inlineText] = nodeMatch;
+            const ctx: NodeContext = {
+                id,
+                type,
+                parentId: parentStack.length > 0 ? parentStack[parentStack.length - 1] : undefined,
+            };
+            if (inlineText) ctx.textContent = inlineText;
+
+            if (anonIds.has(id)) {
+                contexts.set(id, ctx);
+                currentNode = ctx;
+            }
+
+            // Push as parent if it's a group/frame and has opening brace
+            if ((type === "group" || type === "frame") && trimmed.includes("{")) {
+                parentStack.push(id);
+                depthAtPush.push(braceDepth + openBraces);
+            }
+
+            braceDepth += openBraces - closeBraces;
+            continue;
+        }
+
+        // Extract properties from current anonymous node's block
+        if (currentNode && braceDepth > 0) {
+            const wMatch = trimmed.match(WIDTH_RE);
+            const hMatch = trimmed.match(HEIGHT_RE);
+            const contentMatch = trimmed.match(CONTENT_RE);
+            if (wMatch) currentNode.width = parseFloat(wMatch[1]);
+            if (hMatch) currentNode.height = parseFloat(hMatch[1]);
+            if (contentMatch && !currentNode.textContent) {
+                currentNode.textContent = contentMatch[1];
+            }
+        }
+
+        braceDepth += openBraces - closeBraces;
+
+        // Pop parent stack on closing brace
+        if (trimmed === "}") {
+            while (depthAtPush.length > 0 && depthAtPush[depthAtPush.length - 1] > braceDepth) {
+                depthAtPush.pop();
+                parentStack.pop();
+            }
+            if (braceDepth <= 0) currentNode = null;
+        }
+    }
+
+    // Second pass: scan for edge connections and populate edgeTargets
+    const EDGE_FROM_RE = /\bfrom:\s*@(\w+)/;
+    const EDGE_TO_RE = /\bto:\s*@(\w+)/;
+    let currentEdgeFrom: string | null = null;
+    let currentEdgeTo: string | null = null;
+    let inEdge = false;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("edge ") || trimmed.startsWith("edge@")) {
+            inEdge = true;
+            currentEdgeFrom = null;
+            currentEdgeTo = null;
+            continue;
+        }
+        if (inEdge) {
+            const fromMatch = trimmed.match(EDGE_FROM_RE);
+            const toMatch = trimmed.match(EDGE_TO_RE);
+            if (fromMatch) currentEdgeFrom = fromMatch[1];
+            if (toMatch) currentEdgeTo = toMatch[1];
+            if (trimmed === "}") {
+                // Edge block closed — link from→to
+                if (currentEdgeFrom && currentEdgeTo) {
+                    const fromCtx = contexts.get(currentEdgeFrom);
+                    if (fromCtx) {
+                        if (!fromCtx.edgeTargets) fromCtx.edgeTargets = [];
+                        fromCtx.edgeTargets.push(currentEdgeTo);
+                    }
+                }
+                inEdge = false;
+            }
+        }
+    }
+
+    return contexts;
+}
+
+/**
+ * Generate a semantic name from node context using heuristics.
+ * Returns a sanitized snake_case name.
+ */
+function generateHeuristicName(ctx: NodeContext): string {
+    const parts: string[] = [];
+
+    // 1. Text content takes priority — "Login" → login
+    if (ctx.textContent) {
+        const cleaned = ctx.textContent
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, "")
+            .trim()
+            .split(/\s+/)
+            .slice(0, 3) // max 3 words
+            .join("_");
+        if (cleaned) {
+            parts.push(cleaned);
+            // Append type suffix for clarity if not already implied
+            if (ctx.type !== "text") parts.push(ctx.type);
+            else parts.push("label");
+            return sanitizeToFdId(parts.join("_"));
+        }
+    }
+
+    // 2. Edge connection — name by what I connect TO
+    if (ctx.edgeTargets?.length) {
+        const semanticTarget = ctx.edgeTargets.find(
+            t => !/^_?(rect|ellipse|group|frame|path|text|edge)_\d+$/.test(t)
+        );
+        if (semanticTarget) {
+            parts.push(`${ctx.type}_to_${semanticTarget}`);
+            return sanitizeToFdId(parts.join("_"));
+        }
+    }
+
+    // 3. Parent context — rect inside @sidebar → sidebar_rect
+    if (ctx.parentId && !ctx.parentId.match(/^_?(group|frame)_\d+$/)) {
+        // Parent has a semantic name, use it
+        parts.push(ctx.parentId);
+    }
+
+    // 3. Shape detection for visual hints
+    if (ctx.type === "ellipse" && ctx.width && ctx.height && ctx.width === ctx.height) {
+        parts.push("circle");
+    } else if (ctx.type === "rect" && ctx.width && ctx.height) {
+        if (ctx.width > ctx.height * 3) {
+            parts.push("bar");
+        } else if (ctx.height > ctx.width * 3) {
+            parts.push("column");
+        } else {
+            parts.push(ctx.type);
+        }
+    } else {
+        parts.push(ctx.type);
+    }
+
+    const name = parts.join("_");
+    return sanitizeToFdId(name) || ctx.type;
+}
+
+/**
+ * Heuristic rename — generate semantic names from FD document context.
+ * No AI required. Used as fallback when no API key is configured.
+ */
+export function heuristicRename(fdText: string): RenameProposal[] {
+    const anonIds = findAnonymousNodeIds(fdText);
+    if (anonIds.length === 0) return [];
+
+    const existingIds = findAllNodeIds(fdText);
+    const anonSet = new Set(anonIds);
+    const contexts = extractNodeContexts(fdText, anonSet);
+    const usedNames = new Set(existingIds);
+    const proposals: RenameProposal[] = [];
+
+    for (const oldId of anonIds) {
+        const ctx = contexts.get(oldId);
+        if (!ctx) continue;
+
+        let newId = generateHeuristicName(ctx);
+        if (!newId || newId === oldId) continue;
+
+        // Resolve conflicts
+        let candidate = newId;
+        let suffix = 2;
+        while (usedNames.has(candidate)) {
+            candidate = `${newId}_${suffix}`;
+            suffix++;
+        }
+        newId = candidate;
+
+        usedNames.add(newId);
+        proposals.push({ oldId, newId });
+    }
+
+    return proposals;
+}
+
 // ─── Main Entry Point ────────────────────────────────────────────────────
 
 /**
  * Scan the document for anonymous IDs and propose semantic renames via AI.
+ * Falls back to heuristic rename when no API key is configured.
  */
 export async function callRenamifyAi(fdText: string): Promise<RenamifyResult> {
     const anonIds = findAnonymousNodeIds(fdText);
@@ -206,10 +432,15 @@ export async function callRenamifyAi(fdText: string): Promise<RenamifyResult> {
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         if (message === "NEEDS_SETTINGS") {
+            // Fall back to heuristic rename instead of erroring
+            const proposals = heuristicRename(fdText);
+            if (proposals.length > 0) {
+                return { proposals };
+            }
             const config = getAiConfig();
             return {
                 proposals: [],
-                error: `${config.provider} API key not configured. Set it in Settings → fd.ai.`,
+                error: `No renames possible. Configure ${config.provider} API key in Settings → fd.ai for smarter suggestions.`,
                 needsSettings: true,
             };
         }
@@ -240,3 +471,4 @@ export function applyGlobalRenames(
 function escapeRegex(str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+

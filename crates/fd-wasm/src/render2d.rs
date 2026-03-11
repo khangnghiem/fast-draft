@@ -4,40 +4,42 @@
 //! `CanvasRenderingContext2d`. Used as MVP renderer before Vello/wgpu.
 
 use fd_core::model::*;
+use fd_core::theme::ThemeContract;
 use fd_core::{NodeIndex, ResolvedBounds, SceneGraph};
 use std::collections::HashMap;
 use web_sys::CanvasRenderingContext2d;
 
 /// Theme-dependent colors for the canvas renderer.
+///
+/// Derived from `ThemeContract` — the cross-platform source of truth.
 pub struct CanvasTheme {
-    pub bg: &'static str,
-    pub grid: &'static str,
-    pub placeholder_border: &'static str,
-    pub placeholder_bg: &'static str,
-    pub placeholder_text: &'static str,
+    pub bg: String,
+    pub grid: String,
+    pub placeholder_border: String,
+    pub placeholder_bg: String,
+    pub placeholder_text: String,
 }
 
 impl CanvasTheme {
+    /// Create a canvas theme from a cross-platform theme contract.
+    pub fn from_contract(contract: &ThemeContract) -> Self {
+        Self {
+            bg: contract.canvas_bg.clone(),
+            grid: contract.grid_color.clone(),
+            placeholder_border: contract.placeholder_border.clone(),
+            placeholder_bg: contract.placeholder_bg.clone(),
+            placeholder_text: contract.placeholder_text.clone(),
+        }
+    }
+
     /// Light theme — Apple-style warm white canvas.
     pub fn light() -> Self {
-        Self {
-            bg: "#F5F5F7",
-            grid: "rgba(0, 0, 0, 0.05)",
-            placeholder_border: "#86868B",
-            placeholder_bg: "rgba(142, 142, 147, 0.06)",
-            placeholder_text: "#86868B",
-        }
+        Self::from_contract(&ThemeContract::light())
     }
 
     /// Dark theme — macOS dark mode.
     pub fn dark() -> Self {
-        Self {
-            bg: "#1C1C1E",
-            grid: "rgba(255, 255, 255, 0.04)",
-            placeholder_border: "#636366",
-            placeholder_bg: "rgba(99, 99, 102, 0.08)",
-            placeholder_text: "#98989D",
-        }
+        Self::from_contract(&ThemeContract::dark())
     }
 }
 
@@ -58,15 +60,30 @@ pub fn render_scene(
     smart_guides: &[(f64, f64, f64, f64)],
     sketchy: bool,
     hover_start_ms: f64,
+    skip_grid: bool,
 ) {
     // Clear canvas
-    ctx.set_fill_style_str(theme.bg);
+    ctx.set_fill_style_str(&theme.bg);
     ctx.fill_rect(0.0, 0.0, canvas_width, canvas_height);
 
-    // Draw grid dots
-    draw_grid(ctx, canvas_width, canvas_height, theme);
+    // Draw grid dots (skip when JS handles grid via cached CanvasPattern)
+    if !skip_grid {
+        draw_grid(ctx, canvas_width, canvas_height, theme);
+    }
 
-    // Paint nodes recursively from root
+    // Draw edges first (behind nodes) — matches Figma/Sketch connector layering
+    draw_edges(
+        ctx,
+        graph,
+        bounds,
+        time_ms,
+        hovered_id,
+        pressed_id,
+        selected_ids,
+        sketchy,
+    );
+
+    // Paint nodes recursively from root (on top of edges)
     render_node(
         ctx,
         graph,
@@ -80,9 +97,6 @@ pub fn render_scene(
         time_ms,
         hover_start_ms,
     );
-
-    // Draw edges between nodes
-    draw_edges(ctx, graph, bounds, time_ms, hovered_id, pressed_id, sketchy);
 
     // Draw smart guides (alignment lines)
     draw_smart_guides(ctx, smart_guides);
@@ -180,14 +194,22 @@ fn render_node(
     let is_selected = selected_ids.iter().any(|sel| sel == node.id.as_str());
 
     // Apply scale transform from node center if animation set it
-    // For hover animations: limit to 500ms with ease-in/ease-out
+    // Proportional time envelope based on the node's animation duration_ms
     let raw_scale = style.scale.unwrap_or(1.0);
     let effective_scale = if is_hovered && (raw_scale - 1.0).abs() > f32::EPSILON {
+        // Look up the actual duration_ms from the node's hover animation
+        let anim_duration = node
+            .animations
+            .iter()
+            .find(|a| a.trigger == fd_core::model::AnimTrigger::Hover)
+            .map(|a| a.duration_ms as f64)
+            .unwrap_or(300.0);
         let elapsed = time_ms - hover_start_ms;
-        let ease_in_ms = 200.0;
-        let hold_ms = 300.0;
-        let ease_out_ms = 200.0;
-        let total_ms = ease_in_ms + hold_ms + ease_out_ms; // 700ms total
+        // Proportional envelope: ease-in = duration, hold = 60%, ease-out = 50%
+        let ease_in_ms = anim_duration;
+        let hold_ms = anim_duration * 0.6;
+        let ease_out_ms = anim_duration * 0.5;
+        let total_ms = ease_in_ms + hold_ms + ease_out_ms;
         if elapsed < 0.0 || elapsed > total_ms {
             1.0 // Past animation duration, revert to normal
         } else if elapsed < ease_in_ms {
@@ -256,7 +278,10 @@ fn render_node(
             );
         }
         NodeKind::Group => {
-            // Group is purely organizational — no background fill
+            // Draw group background if fill/bg/shadow/stroke is explicitly set
+            if style.fill.is_some() || style.shadow.is_some() || style.stroke.is_some() {
+                draw_rect(ctx, node_bounds, &style, false);
+            }
 
             // Draw hover/selection borders for groups
             if is_selected || Some(node.id.as_str()) == hovered_id {
@@ -321,6 +346,10 @@ fn render_node(
         NodeKind::Path { commands } => {
             draw_path(ctx, node_bounds, commands, &style, is_selected);
         }
+        NodeKind::Image { .. } => {
+            // Image rendering deferred — draw placeholder rect until texture pipeline.
+            draw_rect(ctx, node_bounds, &style, is_selected);
+        }
     }
 
     // Paint children
@@ -356,7 +385,12 @@ fn render_node(
 
 // ─── Drawing primitives ─────────────────────────────────────────────────
 
-fn draw_rect(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, style: &Style, is_selected: bool) {
+fn draw_rect(
+    ctx: &CanvasRenderingContext2d,
+    b: &ResolvedBounds,
+    style: &Properties,
+    is_selected: bool,
+) {
     let (x, y, w, h) = (b.x as f64, b.y as f64, b.width as f64, b.height as f64);
     let radius = style.corner_radius.unwrap_or(0.0) as f64;
 
@@ -364,10 +398,12 @@ fn draw_rect(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, style: &Style, 
     apply_opacity(ctx, style);
     apply_shadow(ctx, style);
 
-    // Fill
+    // Fill (only if style has an explicit fill — None = transparent)
     rounded_rect_path(ctx, x, y, w, h, radius);
-    apply_fill(ctx, style, x, y, w, h);
-    ctx.fill();
+    if style.fill.is_some() {
+        apply_fill(ctx, style, x, y, w, h);
+        ctx.fill();
+    }
     clear_shadow(ctx);
 
     // Stroke
@@ -393,7 +429,7 @@ fn draw_rect(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, style: &Style, 
 fn draw_ellipse(
     ctx: &CanvasRenderingContext2d,
     b: &ResolvedBounds,
-    style: &Style,
+    style: &Properties,
     is_selected: bool,
 ) {
     let cx = b.x as f64 + b.width as f64 / 2.0;
@@ -407,8 +443,10 @@ fn draw_ellipse(
 
     ctx.begin_path();
     let _ = ctx.ellipse(cx, cy, rx, ry, 0.0, 0.0, std::f64::consts::TAU);
-    apply_fill(ctx, style, cx - rx, cy - ry, rx * 2.0, ry * 2.0);
-    ctx.fill();
+    if style.fill.is_some() {
+        apply_fill(ctx, style, cx - rx, cy - ry, rx * 2.0, ry * 2.0);
+        ctx.fill();
+    }
     clear_shadow(ctx);
 
     if let Some(ref stroke) = style.stroke {
@@ -433,7 +471,7 @@ fn draw_text(
     ctx: &CanvasRenderingContext2d,
     b: &ResolvedBounds,
     content: &str,
-    style: &Style,
+    style: &Properties,
     in_shape: bool,
     max_width: Option<f32>,
 ) {
@@ -563,7 +601,7 @@ fn draw_shape_label(
     ctx: &CanvasRenderingContext2d,
     b: &ResolvedBounds,
     label: &str,
-    style: &Style,
+    style: &Properties,
 ) {
     ctx.save();
     apply_opacity(ctx, style);
@@ -590,7 +628,7 @@ fn draw_shape_label(
 
 /// Pick a readable label color based on the shape's fill luminance.
 #[allow(dead_code)]
-fn pick_label_color(style: &Style) -> String {
+fn pick_label_color(style: &Properties) -> String {
     match &style.fill {
         Some(Paint::Solid(c)) => {
             // Perceived luminance (sRGB)
@@ -610,7 +648,7 @@ fn draw_path(
     ctx: &CanvasRenderingContext2d,
     b: &ResolvedBounds,
     commands: &[PathCmd],
-    style: &Style,
+    style: &Properties,
     is_selected: bool,
 ) {
     if commands.is_empty() {
@@ -686,7 +724,7 @@ fn draw_generic_placeholder(
     ctx.save();
 
     // Dashed border
-    ctx.set_stroke_style_str(theme.placeholder_border);
+    ctx.set_stroke_style_str(&theme.placeholder_border);
     ctx.set_line_width(1.0);
     let _ = ctx.set_line_dash(&js_sys::Array::of2(
         &wasm_bindgen::JsValue::from_f64(4.0),
@@ -696,12 +734,12 @@ fn draw_generic_placeholder(
     ctx.stroke();
 
     // Background fill (subtle)
-    ctx.set_fill_style_str(theme.placeholder_bg);
+    ctx.set_fill_style_str(&theme.placeholder_bg);
     ctx.fill();
 
     // @id label centered
     ctx.set_font("11px Inter, system-ui, sans-serif");
-    ctx.set_fill_style_str(theme.placeholder_text);
+    ctx.set_fill_style_str(&theme.placeholder_text);
     ctx.set_text_align("center");
     ctx.set_text_baseline("middle");
     let label = format!("@{}", id);
@@ -759,7 +797,7 @@ fn draw_selection_handles(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, ki
 }
 
 fn draw_grid(ctx: &CanvasRenderingContext2d, width: f64, height: f64, theme: &CanvasTheme) {
-    ctx.set_fill_style_str(theme.grid);
+    ctx.set_fill_style_str(&theme.grid);
     let spacing = 20.0;
     let mut x = 0.0;
     while x < width {
@@ -822,6 +860,7 @@ fn draw_smart_guides(ctx: &CanvasRenderingContext2d, guides: &[(f64, f64, f64, f
 
 // ─── Edge rendering ─────────────────────────────────────────────────────────
 
+#[allow(clippy::too_many_arguments)]
 fn draw_edges(
     ctx: &CanvasRenderingContext2d,
     graph: &SceneGraph,
@@ -829,6 +868,7 @@ fn draw_edges(
     time_ms: f64,
     hovered_id: Option<&str>,
     pressed_id: Option<&str>,
+    selected_ids: &[String],
     sketchy: bool,
 ) {
     use fd_core::model::{ArrowKind, CurveKind, EdgeAnchor};
@@ -911,6 +951,17 @@ fn draw_edges(
             }
         }
         ctx.stroke();
+
+        // Selection highlight: draw a thicker stroke on top
+        let is_selected = selected_ids.iter().any(|s| s == edge.id.as_str());
+        if is_selected {
+            ctx.set_stroke_style_str("#4FC3F7");
+            ctx.set_line_width(stroke_width + 2.0);
+            ctx.stroke();
+            // Restore the original stroke for subsequent drawing
+            ctx.set_stroke_style_str(&stroke_color);
+            ctx.set_line_width(stroke_width);
+        }
 
         // Arrowheads — use curve tangent direction, not center-to-center
         let (end_from_x, end_from_y, start_from_x, start_from_y) = match edge.curve {
@@ -1101,7 +1152,7 @@ fn rounded_rect_path(ctx: &CanvasRenderingContext2d, x: f64, y: f64, w: f64, h: 
 }
 
 /// Set the fill style — creates a CanvasGradient for gradient paints.
-fn apply_fill(ctx: &CanvasRenderingContext2d, style: &Style, x: f64, y: f64, w: f64, h: f64) {
+fn apply_fill(ctx: &CanvasRenderingContext2d, style: &Properties, x: f64, y: f64, w: f64, h: f64) {
     match &style.fill {
         Some(Paint::LinearGradient { angle, stops }) => {
             let rad = (*angle as f64).to_radians();
@@ -1138,12 +1189,12 @@ fn apply_fill(ctx: &CanvasRenderingContext2d, style: &Style, x: f64, y: f64, w: 
             }
         }
         Some(Paint::Solid(c)) => ctx.set_fill_style_str(&c.to_hex()),
-        None => ctx.set_fill_style_str("#CCCCCC"),
+        None => {} // No fill = transparent (do not paint)
     }
 }
 
 /// Apply CSS drop-shadow from Style.shadow.
-fn apply_shadow(ctx: &CanvasRenderingContext2d, style: &Style) {
+fn apply_shadow(ctx: &CanvasRenderingContext2d, style: &Properties) {
     if let Some(ref shadow) = style.shadow {
         ctx.set_shadow_blur(shadow.blur as f64);
         ctx.set_shadow_offset_x(shadow.offset_x as f64);
@@ -1160,7 +1211,7 @@ fn clear_shadow(ctx: &CanvasRenderingContext2d) {
     ctx.set_shadow_color("transparent");
 }
 
-fn resolve_fill_color(style: &Style) -> String {
+fn resolve_fill_color(style: &Properties) -> String {
     match &style.fill {
         Some(paint) => resolve_paint_color(paint),
         None => "#CCCCCC".to_string(),
@@ -1180,7 +1231,7 @@ fn resolve_paint_color(paint: &Paint) -> String {
     }
 }
 
-fn apply_opacity(ctx: &CanvasRenderingContext2d, style: &Style) {
+fn apply_opacity(ctx: &CanvasRenderingContext2d, style: &Properties) {
     if let Some(opacity) = style.opacity {
         ctx.set_global_alpha(opacity as f64);
     }
@@ -1215,7 +1266,7 @@ fn sketchy_line(ctx: &CanvasRenderingContext2d, x1: f64, y1: f64, x2: f64, y2: f
 fn draw_rect_sketchy(
     ctx: &CanvasRenderingContext2d,
     b: &ResolvedBounds,
-    style: &Style,
+    style: &Properties,
     is_selected: bool,
 ) {
     let (x, y, w, h) = (b.x as f64, b.y as f64, b.width as f64, b.height as f64);
@@ -1302,7 +1353,7 @@ fn draw_rect_sketchy(
 fn draw_ellipse_sketchy(
     ctx: &CanvasRenderingContext2d,
     b: &ResolvedBounds,
-    style: &Style,
+    style: &Properties,
     is_selected: bool,
 ) {
     let cx = b.x as f64 + b.width as f64 / 2.0;
@@ -1383,7 +1434,7 @@ fn draw_ellipse_sketchy(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fd_core::model::{Color, GradientStop, Paint, Style};
+    use fd_core::model::{Color, GradientStop, Paint, Properties};
 
     // ─── CanvasTheme ─────────────────────────────────────────────────────
 
@@ -1416,46 +1467,46 @@ mod tests {
 
     #[test]
     fn label_color_dark_fill_returns_white() {
-        let style = Style {
+        let style = Properties {
             fill: Some(Paint::Solid(Color {
                 r: 0.0,
                 g: 0.0,
                 b: 0.0,
                 a: 1.0,
             })),
-            ..Style::default()
+            ..Properties::default()
         };
         assert_eq!(pick_label_color(&style), "#FFFFFF");
     }
 
     #[test]
     fn label_color_light_fill_returns_dark() {
-        let style = Style {
+        let style = Properties {
             fill: Some(Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 1.0,
             })),
-            ..Style::default()
+            ..Properties::default()
         };
         assert_eq!(pick_label_color(&style), "#1C1C1E");
     }
 
     #[test]
     fn label_color_no_fill_returns_dark() {
-        let style = Style::default();
+        let style = Properties::default();
         assert_eq!(pick_label_color(&style), "#1C1C1E");
     }
 
     #[test]
     fn label_color_gradient_fill_returns_dark() {
-        let style = Style {
+        let style = Properties {
             fill: Some(Paint::LinearGradient {
                 angle: 90.0,
                 stops: vec![],
             }),
-            ..Style::default()
+            ..Properties::default()
         };
         // Gradient doesn't match Solid branch → falls through to default
         assert_eq!(pick_label_color(&style), "#1C1C1E");
@@ -1465,27 +1516,27 @@ mod tests {
 
     #[test]
     fn fill_color_solid() {
-        let style = Style {
+        let style = Properties {
             fill: Some(Paint::Solid(Color {
                 r: 1.0,
                 g: 0.0,
                 b: 0.0,
                 a: 1.0,
             })),
-            ..Style::default()
+            ..Properties::default()
         };
         assert_eq!(resolve_fill_color(&style), "#FF0000");
     }
 
     #[test]
     fn fill_color_none_returns_default() {
-        let style = Style::default();
+        let style = Properties::default();
         assert_eq!(resolve_fill_color(&style), "#CCCCCC");
     }
 
     #[test]
     fn fill_color_gradient_uses_first_stop() {
-        let style = Style {
+        let style = Properties {
             fill: Some(Paint::LinearGradient {
                 angle: 0.0,
                 stops: vec![GradientStop {
@@ -1498,7 +1549,7 @@ mod tests {
                     },
                 }],
             }),
-            ..Style::default()
+            ..Properties::default()
         };
         assert_eq!(resolve_fill_color(&style), "#00FF00");
     }

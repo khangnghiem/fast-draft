@@ -1,32 +1,32 @@
 # Data Dashboard — Data Analyst use case
 # Demonstrates: grid layout, nested groups, style tokens, KPI cards
 
-theme kpi_card {
+style kpi_card {
   fill: #FFFFFF
   corner: 12
 }
 
-theme chart_area {
+style chart_area {
   fill: #F8FAFC
   corner: 8
 }
 
-theme metric_value {
+style metric_value {
   font: "Inter" bold 28
   fill: #0F172A
 }
 
-theme metric_label {
+style metric_label {
   font: "Inter" medium 12
   fill: #64748B
 }
 
-theme metric_delta_up {
+style metric_delta_up {
   font: "Inter" semibold 13
   fill: #10B981
 }
 
-theme metric_delta_down {
+style metric_delta_down {
   font: "Inter" semibold 13
   fill: #EF4444
 }

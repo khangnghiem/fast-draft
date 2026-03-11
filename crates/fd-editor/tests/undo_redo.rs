@@ -47,8 +47,8 @@ fn undo_restores_previous_state() {
     }
 
     // Undo
-    let desc = stack.undo(&mut engine);
-    assert_eq!(desc.as_deref(), Some("Resize box"));
+    let result = stack.undo(&mut engine);
+    assert_eq!(result.as_ref().map(|(d, _)| d.as_str()), Some("Resize box"));
 
     // Verify original dimensions restored
     let node = engine.graph.get_by_id(NodeId::intern("box")).unwrap();
@@ -185,7 +185,7 @@ fn undo_on_empty_stack_returns_none() {
     let mut engine = make_engine();
     let mut stack = CommandStack::new(100);
 
-    assert_eq!(stack.undo(&mut engine), None);
+    assert!(stack.undo(&mut engine).is_none());
     assert!(!stack.can_undo());
 }
 
@@ -194,7 +194,7 @@ fn redo_on_empty_stack_returns_none() {
     let mut engine = make_engine();
     let mut stack = CommandStack::new(100);
 
-    assert_eq!(stack.redo(&mut engine), None);
+    assert!(stack.redo(&mut engine).is_none());
     assert!(!stack.can_redo());
 }
 
