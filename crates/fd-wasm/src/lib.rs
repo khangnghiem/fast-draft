@@ -634,6 +634,12 @@ impl FdCanvas {
             self.engine.flush_to_text();
         }
 
+        // Rebuild spatial index so hit testing uses updated positions.
+        // apply_mutations() skips this for MoveNode/ResizeNode batches
+        // (to avoid resolve() clobbering), but the cached bounds ARE
+        // updated in-place — so rebuild the index from those bounds now.
+        self.rebuild_spatial_index();
+
         let drill_changed = false;
 
         self.pointer_down_pos = None;

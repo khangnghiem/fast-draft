@@ -733,4 +733,70 @@ rect @b {
         assert_eq!(index.query_point(100.0, 100.0), None);
         assert!(index.query_rect(0.0, 0.0, 800.0, 600.0).is_empty());
     }
+
+    /// Regression test: spatial index must be rebuilt after in-place bounds
+    /// mutation (e.g. MoveNode). Without rebuild, the index uses stale AABBs
+    /// and hit_test returns None at the node's new position.
+    /// This is the root cause of the "node can only be moved once" bug.
+    #[test]
+    fn spatial_index_stale_after_move() {
+        let input = r#"
+rect @movable {
+  w: 100
+  h: 100
+  x: 10
+  y: 10
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut bounds = resolve_layout(&graph, viewport);
+        let idx = graph.index_of(NodeId::intern("movable")).unwrap();
+
+        // Build initial index — node at (10, 10)
+        let stale_index = SpatialIndex::build(&graph, &bounds);
+        assert_eq!(
+            stale_index.query_point(50.0, 50.0),
+            Some(NodeId::intern("movable")),
+            "should hit node at original position"
+        );
+
+        // Simulate MoveNode: update bounds in-place (dx=200, dy=200)
+        if let Some(b) = bounds.get_mut(&idx) {
+            b.x += 200.0;
+            b.y += 200.0;
+        }
+
+        // Stale index should MISS at the new position (this was the bug)
+        assert_eq!(
+            stale_index.query_point(250.0, 250.0),
+            None,
+            "stale index should miss node at new position"
+        );
+
+        // Stale index should still "hit" at the OLD position (phantom)
+        assert_eq!(
+            stale_index.query_point(50.0, 50.0),
+            Some(NodeId::intern("movable")),
+            "stale index still thinks node is at old position"
+        );
+
+        // Rebuild index — should find node at new position
+        let fresh_index = SpatialIndex::build(&graph, &bounds);
+        assert_eq!(
+            fresh_index.query_point(250.0, 250.0),
+            Some(NodeId::intern("movable")),
+            "rebuilt index should find node at new position"
+        );
+
+        // Rebuilt index should NOT hit at old position
+        assert_eq!(
+            fresh_index.query_point(50.0, 50.0),
+            None,
+            "rebuilt index should not find node at old position"
+        );
+    }
 }
