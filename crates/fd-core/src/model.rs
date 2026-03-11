@@ -597,6 +597,10 @@ pub struct SceneNode {
     /// 9-position placement of this child within its parent.
     /// `None` = default positioning (auto-center for text, origin for others).
     pub place: Option<(HPlace, VPlace)>,
+
+    /// Whether this node is locked (prevents move, resize, delete on canvas).
+    /// Parsed from `locked: true` in the FD format.
+    pub locked: bool,
 }
 
 impl SceneNode {
@@ -612,6 +616,7 @@ impl SceneNode {
             annotations: Vec::new(),
             comments: Vec::new(),
             place: None,
+            locked: false,
         }
     }
 }

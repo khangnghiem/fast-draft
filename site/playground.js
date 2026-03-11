@@ -878,6 +878,13 @@ function setupContextMenu() {
       updateFab(canvas);
       updatePropertiesPanel();
 
+      // Update Lock button label
+      const lockBtn = document.getElementById('ctx-lock-site');
+      if (lockBtn && fdCanvas.is_node_locked) {
+        const isLocked = fdCanvas.is_node_locked(hitId);
+        lockBtn.textContent = isLocked ? '\uD83D\uDD13 Unlock' : '\uD83D\uDD12 Lock';
+      }
+
       if (nodeMenu) {
         if (mx + 170 > vw) mx = vw - 174;
         if (my + 280 > vh) my = vh - 284;
@@ -885,6 +892,27 @@ function setupContextMenu() {
         nodeMenu.style.top = my + 'px';
         canvasMenu?.classList.remove('visible');
         nodeMenu.classList.add('visible');
+      }
+    } else if (fdCanvas.hit_test_edge_at) {
+      // ── Edge right-click → open edge properties panel ──
+      const edgeHit = fdCanvas.hit_test_edge_at(x, y);
+      if (edgeHit) {
+        fdCanvas.select_by_id(edgeHit);
+        renderCanvas();
+        updatePropertiesPanel();
+        // Show toast confirming the edge was selected
+        showToast(`Selected edge @${edgeHit}`);
+      } else {
+        // ── Empty space context menu ──
+        contextMenuClickPos = { x, y };
+        if (canvasMenu) {
+          if (mx + 170 > vw) mx = vw - 174;
+          if (my + 220 > vh) my = vh - 224;
+          canvasMenu.style.left = mx + 'px';
+          canvasMenu.style.top = my + 'px';
+          nodeMenu?.classList.remove('visible');
+          canvasMenu.classList.add('visible');
+        }
       }
     } else {
       // ── Empty space context menu ──
@@ -937,6 +965,24 @@ function setupContextMenu() {
       case 'copy-fd':
         navigator.clipboard.writeText(fdCanvas.get_text()).catch(() => {});
         break;
+      case 'lock':
+        if (fdCanvas.toggle_node_locked) {
+          fdCanvas.toggle_node_locked(fdCanvas.get_selected_id());
+          changed = true;
+        }
+        break;
+      case 'rename': {
+        const selId = fdCanvas.get_selected_id();
+        if (!selId) break;
+        const newId = prompt(`Rename @${selId} to:`, selId);
+        if (!newId || newId === selId || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(newId)) break;
+        const text = fdCanvas.get_text();
+        const esc = selId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = new RegExp(`@${esc}\\b`, 'g');
+        fdCanvas.set_text(text.replace(re, `@${newId}`));
+        changed = true;
+        break;
+      }
     }
     if (changed) {
       renderCanvas();

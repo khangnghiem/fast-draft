@@ -1286,7 +1286,11 @@ code {
   border-radius: var(--fd-radius);
   box-shadow: var(--fd-shadow-lg);
 }
-#ctx-menu.visible, #ctx-menu-canvas.visible { display: block; }
+#ctx-menu.visible, #ctx-menu-canvas.visible { display: block; animation: ctx-fade-in 0.12s ease-out; }
+@keyframes ctx-fade-in {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
 .ctx-item {
   display: flex;
   align-items: center;

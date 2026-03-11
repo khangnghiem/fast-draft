@@ -556,6 +556,7 @@ fn build_scene_graph(
             annotations: Vec::new(),
             comments: vec![format!("Subgraph: {}", sg.label)],
             place: None,
+            locked: false,
         };
         let idx = graph.add_node(root, frame_node);
         subgraph_indices.insert(sg.id.clone(), idx);
@@ -658,6 +659,7 @@ fn build_scene_graph(
             annotations: Vec::new(),
             comments: Vec::new(),
             place: None,
+            locked: false,
         };
 
         // Add the main node
@@ -687,6 +689,7 @@ fn build_scene_graph(
                 annotations: Vec::new(),
                 comments: Vec::new(),
                 place: Some((HPlace::Center, VPlace::Middle)),
+                locked: false,
             };
             graph.add_node(node_idx, text_node);
         }
@@ -739,6 +742,7 @@ fn build_scene_graph(
                 annotations: Vec::new(),
                 comments: Vec::new(),
                 place: None,
+                locked: false,
             };
             let idx = graph.graph.add_node(text_node);
             graph.graph.add_edge(root, idx, ());

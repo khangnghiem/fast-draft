@@ -419,6 +419,12 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         writeln!(out, "place: {place_str}").unwrap();
     }
 
+    // Locked flag (only emit when true — false is default)
+    if node.locked {
+        indent(out, depth + 1);
+        writeln!(out, "locked: true").unwrap();
+    }
+
     // Inline position (x: / y:) — emitted here for token efficiency
     for constraint in &node.constraints {
         if let Constraint::Position { x, y } = constraint {
