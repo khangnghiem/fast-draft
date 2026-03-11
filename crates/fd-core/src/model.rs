@@ -24,14 +24,30 @@ pub struct Color {
     pub a: f32,
 }
 
-/// Helper to parse a single hex digit.
-pub fn hex_val(c: u8) -> Option<u8> {
-    match c {
-        b'0'..=b'9' => Some(c - b'0'),
-        b'a'..=b'f' => Some(c - b'a' + 10),
-        b'A'..=b'F' => Some(c - b'A' + 10),
-        _ => None,
+/// Compile-time lookup table for fast hex character parsing.
+/// Maps ASCII bytes to their 0-15 hex value, or 255 if invalid.
+/// This avoids branching (match statement) in the hot parsing path.
+const HEX_LUT: [u8; 256] = {
+    let mut lut = [255; 256];
+    let mut i = 0;
+    while i < 10 {
+        lut[(b'0' + i) as usize] = i;
+        i += 1;
     }
+    let mut i = 0;
+    while i < 6 {
+        lut[(b'a' + i) as usize] = i + 10;
+        lut[(b'A' + i) as usize] = i + 10;
+        i += 1;
+    }
+    lut
+};
+
+/// Helper to parse a single hex digit.
+#[inline(always)]
+pub fn hex_val(c: u8) -> Option<u8> {
+    let val = HEX_LUT[c as usize];
+    if val != 255 { Some(val) } else { None }
 }
 
 impl Color {
