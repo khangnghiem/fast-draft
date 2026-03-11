@@ -29,7 +29,9 @@ Engineering lessons discovered through building FD.
   browser, subagent, context, spiral → L320-344 (Browser Subagent Context Spiral)
   native-drag, svg, preventDefault → L347-355 (Native Drag Hijacks SVG Pointerdown)
   undo, batch, snapshot, resolve  → L358-375 (Snapshot Undo Clobbers Bounds)
+  text, metrics, center, bounds   → L377-389 (Text Metrics Update Must Re-Center)
 -->
+
 
 ## Resize Fight: Bounds Ownership Chain (SyncEngine ↔ Layout Engine ↔ JS)
 
@@ -361,3 +363,16 @@ Engineering lessons discovered through building FD.
 - `undo()`/`redo()` return `(desc, is_snapshot)` — skip `resolve()` when snapshot already resolved
 
 **Rule**: **Only batch operations that emit multiple incremental mutations (drag gestures).** Single-action operations (click-to-place) should use `Command::Single` for atomic inverse undo without full document re-parse. The bounds ownership chain (L48) applies equally to undo paths.
+
+---
+
+## Text Metrics Update Must Re-Center in Parent
+
+**Date**: 2026-03-11
+**Context**: Centered text inside shapes (rect/ellipse/frame) visually shifted to left-aligned when clicked.
+
+**Root cause**: `update_text_metrics()` (lib.rs) shrinks text bounds to JS `measureText()` size but preserved x/y position. The layout solver initially centered text within parent shapes by setting bounds equal to the parent. After shrink, the narrower bounds at the old position made text appear left-shifted relative to the parent.
+
+**Fix**: After updating bounds dimensions in `update_text_metrics()`, re-center text within parent shape — matching the layout solver's auto-center behavior for text children without explicit Position or place constraints.
+
+**Rule**: **Any function that modifies a node's bounds dimensions must also re-resolve or re-center position when the node participates in auto-centering.** The layout solver's centering is position-dependent on size — shrinking without re-centering breaks the invariant.
