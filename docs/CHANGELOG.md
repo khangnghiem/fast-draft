@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.10.113 — Optimize Browser Recording Size (DX)
+
+- **DX**: `GEMINI.md` Browser Subagent rules expanded — viewport must be resized to 900×600 as the **first action** inside every `browser_subagent` task (not just before screenshots); recordings at 3008×1575 are ~25× larger than at 900×600
+- **DX**: `RecordingName` convention — `{tier}_{phase}` format (`smoke_canvas`, `full_draw_select`, `deploy_verify`) for easy audit and cleanup
+- **DX**: Minimize subagent duration rule — return immediately after the last action; idle time inflates recording size
+- **DX**: Recording cleanup rule — `find ~/.gemini/antigravity/brain/ -name "*.webp" -mmin +60 -delete` before E2E runs
+- **DX**: `/e2e` Full tier merged from 9 phases → 4 phases — reduces recording count by ~56% while maintaining identical test coverage
+- **DX**: `/e2e` context guard softened — E2E can run in the same conversation unless it's very heavy; fresh conversation only needed for extremely large contexts
+- **DX**: `/e2e` "Recording Size Rules" section added — documents all recording-related constraints in one place
+
 ### v0.10.112 — Context Menu Enhancements (R6.6, R3.1)
 
 - **FEATURE (R3.1)**: Edge right-click — right-clicking an edge on the canvas opens the edge context menu (VS Code) or selects the edge with a toast (site); uses new `hit_test_edge_at()` WASM API with 5px proximity detection
