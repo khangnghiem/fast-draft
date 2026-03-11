@@ -240,7 +240,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | R3.29       | E2E UX: animation tween engine                                                                                                                                                                                                                                     | ✅ 2 E2E tests                 |
 | R3.30       | _(JS-only, camera animation)_                                                                                                                                                                                                                                      | ⚠️ JS-only                     |
 | R4.1–R4.6   | Covered by R1/R2 tests                                                                                                                                                                                                                                             | ✅                             |
-| R4.7–R4.11  | _(extension-side, no test)_                                                                                                                                                                                                                                        | ❌                             |
+| R4.7–R4.11  | `exportSpec.test.ts`, `spec-view.test.ts`                                                                                                                                                                                                                          | ✅ 2 TS tests                  |
 | R3.36       | `layout_text_centered_in_rect`, `layout_text_in_ellipse_*`, `layout_text_explicit_pos_*`                                                                                                                                                                           | ✅ 4 tests                     |
 | R3.39–R3.44 | _(JS-only; floating toolbar, snap, edge context menu — no WASM-side tests)_                                                                                                                                                                                        | ⚠️ JS-only                     |
 | R3.45       | `sync_resize_child_expands_parent_on_finalize`, `sync_resize_child_within_bounds_no_expand`, `sync_cascade_expand_two_levels`, `sync_cascade_stops_at_clip_frame`                                                                                                  | ✅ 4 tests                     |
@@ -250,7 +250,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | R3.48       | `eraser_tool_lifecycle`, `eraser_tool_clear_resets_state`, `eraser_tool_pointerdown_clears_previous_ids`, `erase_child_preserves_group`, `erase_last_child_leaves_empty_group`, `erase_nested_cascade`                                                             | ✅ 6 tests                     |
 | R5.1–R5.8   | `hit::tests::*`, `resolve::tests::*`, `render2d::tests::*`                                                                                                                                                                                                         | ✅ 3 hit + 6 layout + 3 render |
 
-**Total**: 186 Rust tests + 188 TypeScript tests = **374 tests**
+**Total**: 186 Rust tests + 190 TypeScript tests = **376 tests**
 
 ## Requirement Index
 

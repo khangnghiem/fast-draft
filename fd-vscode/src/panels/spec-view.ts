@@ -218,7 +218,7 @@ export class FdSpecViewPanel {
 </html>`;
   }
 
-  private parseSpec(source: string): string {
+  public parseSpec(source: string): string {
     const lines = source.split("\n");
     let html = "";
     const nodeStack: { indent: number; hasAnnotations: boolean }[] = [];
@@ -233,7 +233,8 @@ export class FdSpecViewPanel {
     let currentEdge: { from: string; to: string; label: string; annotations: { type: string; value: string }[] } | null = null;
     let insideEdge = false;
 
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       const trimmed = line.trim();
       if (!trimmed) continue;
 
@@ -259,8 +260,7 @@ export class FdSpecViewPanel {
         if (trimmed.includes("{")) {
           let specDepth = (trimmed.match(/\{/g) || []).length;
           specDepth -= (trimmed.match(/\}/g) || []).length;
-          const lineIdx = lines.indexOf(line);
-          let j = lineIdx + 1;
+          let j = i + 1;
           while (j < lines.length && specDepth > 0) {
             const specLine = lines[j].trim();
             specDepth += (specLine.match(/\{/g) || []).length;
