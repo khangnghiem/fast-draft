@@ -2732,7 +2732,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
   <div id="annotation-card">
     <div class="card-header">
       <span id="card-title">Spec</span>
-      <button class="card-close" id="card-close-btn">×</button>
+      <button class="card-close" id="card-close-btn" aria-label="Close">×</button>
     </div>
     <div class="field-group">
       <label class="field-label" for="ann-description">Description</label>
@@ -2795,7 +2795,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
   <div id="renamify-panel">
     <div class="renamify-header">
       <span class="renamify-title">✦ Renamify</span>
-      <button class="renamify-close" id="renamify-close">×</button>
+      <button class="renamify-close" id="renamify-close" aria-label="Close">×</button>
     </div>
     <div class="renamify-body" id="renamify-body"></div>
     <div class="renamify-footer" id="renamify-footer" style="display:none">
@@ -2805,7 +2805,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
   </div>
   <div id="anim-picker">
-    <div class="picker-header"><span class="picker-icon">⚡</span> Add Animation <button class="picker-close" id="anim-picker-close">×</button></div>
+    <div class="picker-header"><span class="picker-icon">⚡</span> Add Animation <button class="picker-close" id="anim-picker-close" aria-label="Close">×</button></div>
     <div class="picker-body" id="anim-picker-body"></div>
   </div>
 

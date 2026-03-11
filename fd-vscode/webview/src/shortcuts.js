@@ -611,7 +611,7 @@ function buildShortcutHelpHtml() {
     <div class="help-panel">
       <div class="help-header">
         <h3>Keyboard Shortcuts</h3>
-        <button class="help-close">×</button>
+        <button class="help-close" aria-label="Close">×</button>
       </div>
       <div class="help-body">
   `;
