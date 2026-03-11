@@ -1,0 +1,3 @@
+## 2024-05-24 - [Avoid `try/catch` and `JSON.parse` empty strings in `get_node_bounds`]
+**Learning:** `JSON.parse` wrapped in a `try/catch` block for `fdCanvas.get_node_bounds` (which returns `{}` or empty values often on missing nodes) can be slow in a tight loop. Furthermore, using `Regex.exec` stateful matching in a `while` loop is slower than a `String.match` mapped over the slice of the string.
+**Action:** Use `fdCanvas.get_node_bounds_json(id)` instead of `get_node_bounds(id)` since it's already used for early-bail and avoids `try/catch` when handling `{}` checks manually. Use `String.match` and substring slice in loops for string extraction.
