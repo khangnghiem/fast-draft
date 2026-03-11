@@ -76,6 +76,34 @@ let sceneBoundsGeneration = -1;
 /** Whether the scene has edge flow animations (pulse/dash) — keeps render loop alive */
 let hasFlowEdges = false;
 
+// ─── Security Helpers ────────────────────────────────────────────────────
+
+/**
+ * Escapes a string to prevent XSS when inserted into innerHTML.
+ * Hardened to escape &, <, >, ", and ' characters.
+ */
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Escapes a string to prevent XSS when inserted into HTML attributes.
+ * Identical to escapeHtml to ensure complete coverage.
+ */
+function escapeAttr(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /** Mark the canvas as needing a re-render on the next animation frame. */
 function markDirty() { renderDirty = true; }
 /** Bump the scene generation counter (call on any data mutation). */
