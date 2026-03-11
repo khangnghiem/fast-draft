@@ -835,13 +835,22 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .dark-theme #edge-context-menu {
       box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
     }
-    #edge-context-menu.visible { display: block; }
+    #edge-context-menu.visible { display: block; animation: ctx-fade-in 0.12s ease-out; }
     .ecm-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 4px 0;
       gap: 8px;
+    }
+    .ecm-action {
+      cursor: pointer;
+      border-radius: 5px;
+      padding: 5px 6px;
+      transition: background 0.1s;
+    }
+    .ecm-action:hover {
+      background: var(--fd-surface-hover);
     }
     .ecm-label {
       font-weight: 500;
@@ -1816,7 +1825,11 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .dark-theme #context-menu {
       box-shadow: 0 10px 38px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.2);
     }
-    #context-menu.visible { display: block; }
+    #context-menu.visible { display: block; animation: ctx-fade-in 0.12s ease-out; }
+    @keyframes ctx-fade-in {
+      from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
     #context-menu .menu-item {
       padding: 4px 10px;
       cursor: default;
@@ -2622,6 +2635,9 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <div class="ecm-row"><span class="ecm-label">Stroke</span><input type="color" class="ecm-color" id="ecm-stroke-color" value="#999999"><input type="number" class="ecm-input" id="ecm-stroke-width" value="1" min="0.5" max="10" step="0.5"></div>
       <hr class="ecm-sep">
       <div class="ecm-row"><span class="ecm-label">Flow</span><select class="ecm-select" id="ecm-flow"><option value="none">None</option><option value="pulse">Pulse</option><option value="dash">Dash</option></select><input type="number" class="ecm-input" id="ecm-flow-dur" value="800" min="100" max="5000" step="100" style="display:none"></div>
+      <hr class="ecm-sep">
+      <div class="ecm-row ecm-action" id="ecm-reverse"><span class="ecm-label">⇆ Reverse Direction</span></div>
+      <div class="ecm-row ecm-action" id="ecm-delete" style="color: var(--fd-destructive, #e55);"><span class="ecm-label">⊖ Delete Edge</span></div>
     </div>
     <div id="center-snap-guides"></div>
     <div id="layers-panel"></div>
@@ -2788,7 +2804,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div class="menu-item" id="ctx-ai-refine"><span class="menu-icon">✦</span><span class="menu-label">AI Touch</span></div>
     <div class="menu-item" id="ctx-add-annotation"><span class="menu-icon">◇</span><span class="menu-label">Add Spec</span></div>
     <div class="menu-item" id="ctx-view-spec" style="display:none"><span class="menu-icon">◈</span><span class="menu-label">View Spec</span><span class="menu-shortcut">⌘I</span></div>
-    <div class="menu-item" id="ctx-show-specs" style="display:none"><span class="menu-icon">◇</span><span class="menu-label">Show Specs</span></div>
+    <div class="menu-item" id="ctx-rename" data-action="rename"><span class="menu-icon">✏️</span><span class="menu-label">Rename</span></div>
 
     <div class="menu-separator"></div>
     <div class="menu-item" id="ctx-cut" data-action="cut"><span class="menu-icon">✂</span><span class="menu-label">Cut</span><span class="menu-shortcut">⌘X</span></div>
@@ -2803,7 +2819,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div class="menu-separator"></div>
     <div class="menu-item" id="ctx-bring-front" data-action="bring-front"><span class="menu-icon">↑</span><span class="menu-label">Bring to Front</span><span class="menu-shortcut">⌘⇧]</span></div>
     <div class="menu-item" id="ctx-send-back" data-action="send-back"><span class="menu-icon">↓</span><span class="menu-label">Send to Back</span><span class="menu-shortcut">⌘⇧[</span></div>
-    <div class="menu-item disabled" id="ctx-lock" data-action="lock"><span class="menu-icon">🔒</span><span class="menu-label">Lock</span></div>
+    <div class="menu-item" id="ctx-lock" data-action="lock"><span class="menu-icon">🔒</span><span class="menu-label">Lock</span></div>
     <div class="menu-separator"></div>
     <div class="menu-item" id="ctx-delete" data-action="delete"><span class="menu-icon">⊖</span><span class="menu-label">Delete</span><span class="menu-shortcut">⌫</span></div>
   </div>

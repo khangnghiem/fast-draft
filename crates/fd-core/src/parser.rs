@@ -93,6 +93,7 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
                     animations: Default::default(),
                     comments: Vec::new(),
                     place: None,
+                    locked: false,
                 };
                 let idx = graph.graph.add_node(text_node);
                 graph.graph.add_edge(graph.root, idx, ());
@@ -173,6 +174,8 @@ struct ParsedNode {
     children: Vec<ParsedNode>,
     /// 9-position placement within parent.
     place: Option<(HPlace, VPlace)>,
+    /// Whether this node is locked (prevents move/resize/delete).
+    locked: bool,
 }
 
 fn insert_node_recursive(
@@ -188,6 +191,7 @@ fn insert_node_recursive(
     node.annotations = parsed.annotations;
     node.comments = parsed.comments;
     node.place = parsed.place;
+    node.locked = parsed.locked;
 
     let idx = graph.add_node(parent, node);
 
@@ -565,6 +569,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let mut layout = LayoutMode::Free { pad: 0.0 };
     let mut clip = false;
     let mut place: Option<(HPlace, VPlace)> = None;
+    let mut locked = false;
     let mut path_commands: Vec<PathCmd> = Vec::new();
     let mut image_src: Option<String> = None;
     let mut image_fit = ImageFit::default();
@@ -593,6 +598,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
                 &mut layout,
                 &mut clip,
                 &mut place,
+                &mut locked,
                 &mut path_commands,
                 &mut image_src,
                 &mut image_fit,
@@ -648,6 +654,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
         comments: Vec::new(),
         children,
         place,
+        locked,
     })
 }
 
@@ -775,6 +782,7 @@ fn parse_node_property(
     layout: &mut LayoutMode,
     clip: &mut bool,
     place: &mut Option<(HPlace, VPlace)>,
+    locked: &mut bool,
     path_commands: &mut Vec<PathCmd>,
     image_src: &mut Option<String>,
     image_fit: &mut ImageFit,
@@ -878,6 +886,11 @@ fn parse_node_property(
         }
         "place" => {
             *place = Some(parse_place_value(input)?);
+        }
+        "locked" => {
+            // locked: true — parse boolean value
+            let val = parse_identifier.parse_next(input)?;
+            *locked = val == "true";
         }
         "shadow" => {
             // shadow: (ox,oy,blur,#COLOR)  — colon already consumed by property parser

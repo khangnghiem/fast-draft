@@ -17,6 +17,20 @@
 
 ## Completed Requirements
 
+### v0.10.112 — Context Menu Enhancements (R6.6, R3.1)
+
+- **FEATURE (R3.1)**: Edge right-click — right-clicking an edge on the canvas opens the edge context menu (VS Code) or selects the edge with a toast (site); uses new `hit_test_edge_at()` WASM API with 5px proximity detection
+- **FEATURE (R6.6)**: Lock/Unlock node — `locked: bool` field on `SceneNode` parsed/emitted/roundtripped; locked nodes cannot be moved, resized, or deleted; context menu dynamically shows 🔒 Lock / 🔓 Unlock; `is_node_locked()` and `toggle_node_locked()` WASM APIs
+- **FEATURE (R6.6)**: Inline Rename — context menu "Rename" item prompts for new ID, regex-replaces all `@oldId` references in source text (nodes, edges, constraints) with `@newId`; validates identifier format
+- **FEATURE (R3.1)**: Edge Delete — "Delete Edge" button in edge context menu removes the edge via `select_by_id` + `delete_selected`
+- **FEATURE (R3.1)**: Edge Reverse Direction — "Reverse Direction" button swaps `from:` and `to:` values in the edge block
+- **UX (R6.6)**: Context menu open animation — 120ms fade-in with `scale(0.96)` + `translateY(-4px)` on both node and edge context menus; applied to VS Code extension and site playground
+- **CLEANUP (R6.6)**: Merged duplicate "Show Specs" and "View Spec" into single "View Spec" menu item — removed `ctx-show-specs` HTML and event handler
+- **PARITY (R6.6)**: Site playground context menu updated with Lock, Rename, and edge right-click actions matching VS Code extension
+- **TESTING**: Roundtrip test for `locked` property; all existing tests pass
+- **CORE**: `locked: false` added to all `SceneNode` constructors in `mermaid.rs`
+- **CSS**: `.ecm-action` class for clickable edge menu rows (Delete, Reverse)
+
 ### v0.10.111 — Copy/Paste + Context-Aware Right-Click Menu (R6.6, R3.59)
 
 - **FEATURE (R3.59)**: ⌘C/⌘V/⌘X Copy/Cut/Paste now works on playground canvas — copies selected node's `.fd` block to internal + system clipboard; paste renames IDs with `_N` suffix to avoid conflicts, offsets `x:` by `(width + 20) × pasteCount` for horizontal stagger with gap; undo support via `push_undo_snapshot()`

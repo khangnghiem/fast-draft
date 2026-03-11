@@ -939,14 +939,16 @@ impl FdCanvas {
             return false;
         }
         let ids: Vec<NodeId> = self.select_tool.selected.clone();
-        // Emit RemoveEdge for edge IDs, RemoveNode for node IDs
+        // Emit RemoveEdge for edge IDs, RemoveNode for node IDs (skip locked nodes)
         let mutations: Vec<GraphMutation> = ids
             .iter()
-            .map(|id| {
+            .filter_map(|id| {
                 if self.engine.graph.edges.iter().any(|e| e.id == *id) {
-                    GraphMutation::RemoveEdge { id: *id }
+                    Some(GraphMutation::RemoveEdge { id: *id })
+                } else if self.engine.graph.get_by_id(*id).is_some_and(|n| n.locked) {
+                    None // Skip locked nodes
                 } else {
-                    GraphMutation::RemoveNode { id: *id }
+                    Some(GraphMutation::RemoveNode { id: *id })
                 }
             })
             .collect();
@@ -2358,6 +2360,35 @@ impl FdCanvas {
         self.hit_test(x, y)
             .map(|id| id.as_str().to_string())
             .unwrap_or_default()
+    }
+
+    /// Hit-test for edges only at scene-space coordinates.
+    /// Returns the edge ID if hit, or empty string.
+    /// Used by JS to show edge context menu on right-click.
+    pub fn hit_test_edge_at(&self, x: f32, y: f32) -> String {
+        fd_render::hit::hit_test_edge(&self.engine.graph, self.engine.current_bounds(), x, y)
+            .map(|id| id.as_str().to_string())
+            .unwrap_or_default()
+    }
+
+    /// Check if a node is locked. Returns false if node not found.
+    pub fn is_node_locked(&self, id: &str) -> bool {
+        let nid = fd_core::id::NodeId::intern(id);
+        self.engine.graph.get_by_id(nid).is_some_and(|n| n.locked)
+    }
+
+    /// Toggle the locked state of a node. Returns the new locked state.
+    /// Returns false if node not found.
+    pub fn toggle_node_locked(&mut self, id: &str) -> bool {
+        let nid = fd_core::id::NodeId::intern(id);
+        if let Some(node) = self.engine.graph.get_by_id_mut(nid) {
+            node.locked = !node.locked;
+            let new_state = node.locked;
+            self.engine.flush_to_text();
+            new_state
+        } else {
+            false
+        }
     }
 
     /// Create a node at a specific position (for drag-and-drop).

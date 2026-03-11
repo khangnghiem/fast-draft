@@ -993,3 +993,35 @@ rect @btn {
         "delay should be None by default"
     );
 }
+
+#[test]
+fn roundtrip_locked() {
+    let src = r#"
+rect @frozen {
+  w: 100 h: 50
+  fill: #007AFF
+  locked: true
+}
+rect @free {
+  w: 80 h: 40
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let frozen = graph.get_by_id(NodeId::intern("frozen")).unwrap();
+    assert!(frozen.locked, "locked should be true after parse");
+    let free = graph.get_by_id(NodeId::intern("free")).unwrap();
+    assert!(!free.locked, "locked should default to false");
+
+    // Emit and re-parse
+    let emitted = crate::emitter::emit_document(&graph);
+    assert!(emitted.contains("locked: true"), "emitted: {emitted}");
+    // Unlocked node should NOT have locked: in output
+    let frozen_block = emitted.split("@frozen").nth(1).unwrap_or("");
+    assert!(frozen_block.contains("locked: true"));
+
+    let reparsed = parse_document(&emitted).unwrap();
+    let frozen2 = reparsed.get_by_id(NodeId::intern("frozen")).unwrap();
+    assert!(frozen2.locked, "locked should survive roundtrip");
+    let free2 = reparsed.get_by_id(NodeId::intern("free")).unwrap();
+    assert!(!free2.locked, "unlocked should survive roundtrip");
+}
