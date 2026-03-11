@@ -60,13 +60,16 @@ pub fn render_scene(
     smart_guides: &[(f64, f64, f64, f64)],
     sketchy: bool,
     hover_start_ms: f64,
+    skip_grid: bool,
 ) {
     // Clear canvas
     ctx.set_fill_style_str(&theme.bg);
     ctx.fill_rect(0.0, 0.0, canvas_width, canvas_height);
 
-    // Draw grid dots
-    draw_grid(ctx, canvas_width, canvas_height, theme);
+    // Draw grid dots (skip when JS handles grid via cached CanvasPattern)
+    if !skip_grid {
+        draw_grid(ctx, canvas_width, canvas_height, theme);
+    }
 
     // Draw edges first (behind nodes) — matches Figma/Sketch connector layering
     draw_edges(

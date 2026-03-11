@@ -223,6 +223,7 @@ let isPanning = false;
 
 // Render dirty flag — only re-render when something changed
 let renderDirty = true;
+let uiDirty = true;
 
 // Multi-touch state (for two-finger pan and pinch-to-zoom)
 let activePointers = new Map(); // pointerId → {x, y}
@@ -296,7 +297,7 @@ function renderCanvas() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.setTransform(dpr * zoomLevel, 0, 0, dpr * zoomLevel, panX * dpr, panY * dpr);
   drawGrid();
-  fdCanvas.render(ctx, performance.now());
+  fdCanvas.render(ctx, performance.now(), true);
 }
 
 /** Auto-center scene content in canvas viewport */
@@ -333,7 +334,7 @@ function fitToContent(canvas) {
     panX = (cw - sw * zoomLevel) / 2 - sx * zoomLevel;
     panY = (ch - sh * zoomLevel) / 2 - sy * zoomLevel;
     updateZoomIndicator();
-    renderDirty = true;
+    renderDirty = true; uiDirty = true;
   } catch (_) { }
 }
 
@@ -992,50 +993,24 @@ function renderMinimap(canvas) {
   mctx.fillStyle = isDark ? 'rgba(28,28,30,0.9)' : 'rgba(245,245,247,0.9)';
   mctx.fillRect(0, 0, mw, mh);
 
-  // Compute scene bounding box from node bounds
-  const text = fdCanvas.get_text();
-  if (!text || text.trim().length === 0) return;
-
-  let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
-  let foundAny = false;
-  const nodeIdPattern = /@(\w+)/g;
-  const seenIds = new Set();
-  let m;
-  while ((m = nodeIdPattern.exec(text)) !== null) {
-    const id = m[1];
-    if (seenIds.has(id)) continue;
-    seenIds.add(id);
-    try {
-      const bj = fdCanvas.get_node_bounds(id);
-      if (!bj) continue;
-      const b = JSON.parse(bj);
-      if (b.width > 0 && b.height > 0) {
-        sx = Math.min(sx, b.x);
-        sy = Math.min(sy, b.y);
-        sx2 = Math.max(sx2, b.x + b.width);
-        sy2 = Math.max(sy2, b.y + b.height);
-        foundAny = true;
-      }
-    } catch (_) {}
-  }
-  if (!foundAny) return;
+  // Use single WASM call instead of N×get_node_bounds()
+  const sceneBoundsJson = fdCanvas.get_scene_bounds();
+  if (!sceneBoundsJson) return;
+  let sb;
+  try { sb = JSON.parse(sceneBoundsJson); } catch (_) { return; }
+  if (!sb.w || sb.w <= 0 || !sb.h || sb.h <= 0) return;
 
   const pad = 20;
-  const sceneW = sx2 - sx;
-  const sceneH = sy2 - sy;
-  if (sceneW <= 0 || sceneH <= 0) return;
+  const scale = Math.min((mw - pad * 2) / sb.w, (mh - pad * 2) / sb.h);
+  const ox = (mw - sb.w * scale) / 2;
+  const oy = (mh - sb.h * scale) / 2;
 
-  // Scale to fit minimap with padding
-  const scale = Math.min((mw - pad * 2) / sceneW, (mh - pad * 2) / sceneH);
-  const ox = (mw - sceneW * scale) / 2;
-  const oy = (mh - sceneH * scale) / 2;
-
-  // Render actual scene scaled into minimap via WASM
+  // Render actual scene scaled into minimap via WASM (skip grid)
   mctx.save();
   mctx.translate(ox, oy);
   mctx.scale(scale, scale);
-  mctx.translate(-sx, -sy);
-  fdCanvas.render(mctx, performance.now());
+  mctx.translate(-sb.x, -sb.y);
+  fdCanvas.render(mctx, performance.now(), true);
   mctx.restore();
 
   // Draw viewport rect
@@ -1045,8 +1020,8 @@ function renderMinimap(canvas) {
     const vy = -panY / zoomLevel;
     const vw = cr.width / zoomLevel;
     const vh = cr.height / zoomLevel;
-    const vrx = ox + (vx - sx) * scale;
-    const vry = oy + (vy - sy) * scale;
+    const vrx = ox + (vx - sb.x) * scale;
+    const vry = oy + (vy - sb.y) * scale;
     const vrw = vw * scale;
     const vrh = vh * scale;
 
@@ -1059,7 +1034,7 @@ function renderMinimap(canvas) {
   }
 
   // Store scene info for click-to-pan (backward-compatible)
-  mc._minimap = { sx, sy, sw: sceneW, sh: sceneH, scale, ox, oy };
+  mc._minimap = { sx: sb.x, sy: sb.y, sw: sb.w, sh: sb.h, scale, ox, oy };
 }
 
 // ─── Split Resize (code ↔ canvas) ────────────────────────────────────────
@@ -1799,7 +1774,7 @@ async function initPlayground() {
         canvas.style.width = canvasWidth + 'px';
         canvas.style.height = rect.height + 'px';
         // Buffer was cleared — schedule repaint so we don't show a blank frame
-        renderDirty = true;
+        renderDirty = true; uiDirty = true;
       }
       if (fdCanvas) {
         fdCanvas.resize(canvasWidth, rect.height);
@@ -1918,8 +1893,15 @@ async function initPlayground() {
             editorDebounceTimer = setTimeout(() => {
               if (fdCanvas) {
                 const text = update.state.doc.toString();
-                fdCanvas.set_text(text);
-                renderDirty = true;
+                const resultJson = fdCanvas.set_text(text);
+                try {
+                  const r = JSON.parse(resultJson);
+                  if (r.layout_changed) {
+                    renderDirty = true; uiDirty = true;
+                  }
+                } catch (_) {
+                  renderDirty = true; uiDirty = true;
+                }
               }
             }, 50);
           }),
@@ -1957,12 +1939,13 @@ async function initPlayground() {
         renderCanvas();
         renderDirty = false;
       }
-      // Minimap + Layers at ~10fps
-      if (time - minimapLastRender > MINIMAP_INTERVAL) {
+      // Minimap + Layers at ~10fps (only when something changed)
+      if (uiDirty && time - minimapLastRender > MINIMAP_INTERVAL) {
         renderMinimap(canvas);
         refreshLayersPanel();
         updatePropertiesPanel();
         minimapLastRender = time;
+        uiDirty = false;
       }
       animFrameId = requestAnimationFrame(renderLoop);
     };
@@ -2027,7 +2010,7 @@ async function initPlayground() {
         e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
       );
       activePointerId = e.pointerId;
-      if (changed) { renderDirty = true; }
+      if (changed) { renderDirty = true; uiDirty = true; }
     });
 
     document.addEventListener('pointermove', (e) => {
@@ -2057,7 +2040,7 @@ async function initPlayground() {
         panY = my - (my - pinchPanStartY) * (newZoom / pinchStartZoom) + (midY - pinchMidStartY);
         zoomLevel = newZoom;
         updateZoomIndicator();
-        renderDirty = true;
+        renderDirty = true; uiDirty = true;
         return;
       }
 
@@ -2069,40 +2052,33 @@ async function initPlayground() {
       if (panDragging) {
         panX = e.clientX - panStartX;
         panY = e.clientY - panStartY;
-        renderDirty = true;
+        renderDirty = true; uiDirty = true;
         return;
       }
 
       const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
-      const changed = fdCanvas.handle_pointer_move(
+      const moveResultJson = fdCanvas.handle_pointer_move(
         x, y, e.pressure || 1.0,
         e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
       );
-      if (changed) { renderDirty = true; }
+      const moveResult = JSON.parse(moveResultJson);
+      if (moveResult.changed) { renderDirty = true; uiDirty = true; }
 
-      // Dimension tooltip — show W×H during drag
-      if (activePointerId !== -1) {
-        const selectedId = fdCanvas.get_selected_id();
-        if (selectedId) {
-          try {
-            const bj = fdCanvas.get_node_bounds(selectedId);
-            if (bj) {
-              const b = JSON.parse(bj);
-              if (b.width > 0 && b.height > 0) {
-                const tip = document.getElementById('dimension-tooltip');
-                if (tip) {
-                  tip.textContent = `${Math.round(b.width)} × ${Math.round(b.height)}`;
-                  const sx = b.x * zoomLevel + panX + (b.width * zoomLevel) / 2;
-                  const sy = (b.y + b.height) * zoomLevel + panY + 16;
-                  const wrapRect = document.getElementById('canvas-wrapper').getBoundingClientRect();
-                  tip.style.left = (sx - wrapRect.left + canvas.offsetLeft) + 'px';
-                  tip.style.top = sy + 'px';
-                  tip.style.display = 'block';
-                  tip.style.transform = 'translateX(-50%)';
-                }
-              }
-            }
-          } catch (_) {}
+      // Dimension tooltip — show W×H during drag (using bundled bounds)
+      if (activePointerId !== -1 && moveResult.bounds) {
+        const b = moveResult.bounds;
+        if (b.w > 0 && b.h > 0) {
+          const tip = document.getElementById('dimension-tooltip');
+          if (tip) {
+            tip.textContent = `${Math.round(b.w)} × ${Math.round(b.h)}`;
+            const sx = b.x * zoomLevel + panX + (b.w * zoomLevel) / 2;
+            const sy = (b.y + b.h) * zoomLevel + panY + 16;
+            const wrapRect = document.getElementById('canvas-wrapper').getBoundingClientRect();
+            tip.style.left = (sx - wrapRect.left + canvas.offsetLeft) + 'px';
+            tip.style.top = sy + 'px';
+            tip.style.display = 'block';
+            tip.style.transform = 'translateX(-50%)';
+          }
         }
       }
     });
@@ -2141,7 +2117,7 @@ async function initPlayground() {
       const result = JSON.parse(resultJson);
 
       if (result.changed) {
-        renderDirty = true;
+        renderDirty = true; uiDirty = true;
         syncCanvasToEditor();
       }
 
@@ -2192,7 +2168,7 @@ async function initPlayground() {
         panX -= e.deltaX;
         panY -= e.deltaY;
       }
-      renderDirty = true;
+      renderDirty = true; uiDirty = true;
     }, { passive: false });
 
     // ── Tool Toolbar (floating scroll) ────────────────────────────────────
@@ -2416,7 +2392,7 @@ async function initPlayground() {
           case 'fit': {
             fitToContent(canvas);
             settingsMenu?.classList.remove('visible');
-            renderDirty = true;
+            renderDirty = true; uiDirty = true;
             return;
           }
           case 'copy-png': {

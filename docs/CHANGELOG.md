@@ -17,6 +17,17 @@
 
 ## Completed Requirements
 
+### v0.10.103 — Canvas Performance: Spatial Index + Bounds-Hash Skip (R5.9)
+
+- **PERF (R5.9)**: `SpatialIndex` in `fd-render/src/hit.rs` — sorted-bounds spatial index with O(log N + K) `query_point()` and `query_rect()` methods, replacing O(N) brute-force walk for hit testing; index rebuilt after layout resolve; cached in `FdCanvas` for use in `hit_test()`; falls back to brute-force when index unavailable
+- **PERF (R5.9)**: Bounds-hash skip — `set_text()` now returns JSON `{"ok":bool,"layout_changed":bool}` instead of `bool`; after every parse+resolve, computes a deterministic hash of all resolved bounds; when hash matches previous, `layout_changed` is false → JS skips re-render, `measureAllTextNodes()`, and UI panel updates for comment/spec/style-name-only edits
+- **PERF (R5.9)**: Cached `CanvasTheme` — theme rebuilt only on `set_theme()`, not per-frame; eliminates per-frame allocation
+- **PERF (R5.9)**: `get_scene_bounds()` WASM API — returns all node bounds in single call; minimap uses this instead of N separate `get_node_bounds()` calls
+- **PERF (R5.9)**: Bundled `handle_pointer_move()` — returns JSON with `changed` flag + drag bounds, eliminating separate WASM calls for dimension tooltip
+- **PERF (R5.9)**: `skip_grid` parameter on `render()` — grid rendering skipped for minimap and export, shifting responsibility to JS
+- **PERF (R5.9)**: `uiDirty` flag in `playground.js` — gates minimap, layers panel, and properties panel updates; only set on user interactions, not text-only changes
+- **TESTING**: 3 new tests — `spatial_index_query_point_matches_hit_test`, `spatial_index_query_rect_matches_hit_test_rect`, `spatial_index_empty`
+
 ### v0.10.102 — README Rewrite + CONTRIBUTING.md
 
 - **DOCS**: Rewrote README.md from 238 → ~115 lines — added hero screenshot (Code+Canvas side-by-side), shortened tagline, corrected token ratio from "~5×" to "~6×" (matching benchmark average of 6.5×), trimmed feature list from 13 to 6 differentiating items, added live playground CTA to fast-draft.com, fixed `group` → `frame` in code example, added "Web playground 🟢 Live" to platform roadmap

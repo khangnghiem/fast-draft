@@ -11,6 +11,119 @@ use fd_core::id::NodeId;
 use fd_core::model::*;
 use std::collections::HashMap;
 
+// ─── Spatial Index ───────────────────────────────────────────────────────
+
+/// Lightweight spatial index: entries sorted by x-min for binary-search
+/// narrowing. Provides O(log N + K) point queries and rect queries where
+/// K is the number of candidates in the x-range.
+///
+/// Rebuild after every layout resolve (construction is O(N log N)).
+#[derive(Debug, Clone)]
+pub struct SpatialIndex {
+    /// Sorted by `x_min` for binary search.
+    entries: Vec<SpatialEntry>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct SpatialEntry {
+    x_min: f32,
+    x_max: f32,
+    y_min: f32,
+    y_max: f32,
+    id: NodeId,
+    /// Paint order index (higher = drawn later = visually on top).
+    z_order: u32,
+}
+
+impl SpatialIndex {
+    /// Build from the current bounds map + scene graph.
+    /// Skips Root nodes. O(N log N).
+    pub fn build(graph: &SceneGraph, bounds: &HashMap<NodeIndex, ResolvedBounds>) -> Self {
+        let mut entries = Vec::with_capacity(bounds.len());
+        let mut z = 0u32;
+        Self::collect_entries(graph, graph.root, bounds, &mut entries, &mut z);
+        entries.sort_by(|a, b| {
+            a.x_min
+                .partial_cmp(&b.x_min)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        Self { entries }
+    }
+
+    fn collect_entries(
+        graph: &SceneGraph,
+        idx: NodeIndex,
+        bounds: &HashMap<NodeIndex, ResolvedBounds>,
+        out: &mut Vec<SpatialEntry>,
+        z: &mut u32,
+    ) {
+        let node = &graph.graph[idx];
+        if !matches!(node.kind, NodeKind::Root)
+            && let Some(b) = bounds.get(&idx)
+            && b.width > 0.0
+            && b.height > 0.0
+        {
+            out.push(SpatialEntry {
+                x_min: b.x,
+                x_max: b.x + b.width,
+                y_min: b.y,
+                y_max: b.y + b.height,
+                id: node.id,
+                z_order: *z,
+            });
+            *z += 1;
+        }
+        for child_idx in graph.children(idx) {
+            Self::collect_entries(graph, child_idx, bounds, out, z);
+        }
+    }
+
+    /// Find the topmost node containing (px, py). O(log N + K).
+    pub fn query_point(&self, px: f32, py: f32) -> Option<NodeId> {
+        // Binary search: find first entry where x_min <= px
+        // All entries with x_min > px can be skipped.
+        let start = self.entries.partition_point(|e| e.x_min <= px);
+        // Walk backwards from `start` to check entries whose x-range contains px
+        let mut best: Option<(u32, NodeId)> = None;
+        for i in (0..start).rev() {
+            let e = &self.entries[i];
+            // Once x_max < px, no earlier entry can contain px either
+            // (they have smaller x_min, but we need x_max >= px)
+            // Actually, earlier entries could still contain px if they're wide.
+            // We can't break early on x_max — only on x_min + max_width.
+            // For correctness, scan all entries with x_min <= px.
+            if e.x_max >= px
+                && e.y_min <= py
+                && e.y_max >= py
+                && (best.is_none() || e.z_order > best.unwrap().0)
+            {
+                best = Some((e.z_order, e.id));
+            }
+        }
+        best.map(|(_, id)| id)
+    }
+
+    /// Find all nodes intersecting the rectangle (rx, ry, rw, rh). O(log N + K).
+    pub fn query_rect(&self, rx: f32, ry: f32, rw: f32, rh: f32) -> Vec<NodeId> {
+        let rx2 = rx + rw;
+        let ry2 = ry + rh;
+        // Only entries with x_min <= rx2 can intersect
+        let end = self.entries.partition_point(|e| e.x_min <= rx2);
+        let mut result = Vec::new();
+        for e in &self.entries[..end] {
+            if e.x_max >= rx && e.y_min <= ry2 && e.y_max >= ry {
+                result.push(e.id);
+            }
+        }
+        result
+    }
+
+    /// Returns true if the index is empty (no nodes).
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}
+
 /// Find the topmost node at position (px, py).
 /// Returns `None` if no node is hit (background).
 pub fn hit_test(
@@ -517,5 +630,107 @@ edge @link { from: @a; to: @b }
         // Marquee misses the edge
         let result = hit_test_rect_edges(&graph, &bounds, 0.0, 50.0, 100.0, 20.0);
         assert!(result.is_empty());
+    }
+
+    // ─── SpatialIndex tests ──────────────────────────────────────────────
+
+    #[test]
+    fn spatial_index_query_point_matches_hit_test() {
+        let input = r#"
+rect @a {
+  w: 100
+  h: 100
+}
+
+rect @b {
+  w: 50
+  h: 50
+}
+
+@a -> absolute: 10, 10
+@b -> absolute: 200, 200
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+        let index = SpatialIndex::build(&graph, &bounds);
+
+        // Hit @a
+        let brute = hit_test(&graph, &bounds, 15.0, 15.0);
+        let indexed = index.query_point(15.0, 15.0);
+        assert_eq!(brute, indexed, "SpatialIndex should match hit_test for @a");
+
+        // Hit @b
+        let brute = hit_test(&graph, &bounds, 205.0, 205.0);
+        let indexed = index.query_point(205.0, 205.0);
+        assert_eq!(brute, indexed, "SpatialIndex should match hit_test for @b");
+
+        // Miss (empty area)
+        let brute = hit_test(&graph, &bounds, 799.0, 599.0);
+        let indexed = index.query_point(799.0, 599.0);
+        assert_eq!(
+            brute, indexed,
+            "SpatialIndex should match hit_test for miss"
+        );
+    }
+
+    #[test]
+    fn spatial_index_query_rect_matches_hit_test_rect() {
+        let input = r#"
+rect @a {
+  w: 100
+  h: 100
+}
+
+rect @b {
+  w: 50
+  h: 50
+}
+
+@a -> absolute: 10, 10
+@b -> absolute: 200, 200
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+        let index = SpatialIndex::build(&graph, &bounds);
+
+        // Marquee that covers @a only
+        let brute = hit_test_rect(&graph, &bounds, 0.0, 0.0, 150.0, 150.0);
+        let indexed = index.query_rect(0.0, 0.0, 150.0, 150.0);
+        let brute_set: std::collections::HashSet<_> = brute.into_iter().collect();
+        let indexed_set: std::collections::HashSet<_> = indexed.into_iter().collect();
+        assert_eq!(
+            brute_set, indexed_set,
+            "Rect query should match for @a area"
+        );
+
+        // Marquee that covers both
+        let brute = hit_test_rect(&graph, &bounds, 0.0, 0.0, 300.0, 300.0);
+        let indexed = index.query_rect(0.0, 0.0, 300.0, 300.0);
+        let brute_set: std::collections::HashSet<_> = brute.into_iter().collect();
+        let indexed_set: std::collections::HashSet<_> = indexed.into_iter().collect();
+        assert_eq!(brute_set, indexed_set, "Rect query should match for both");
+    }
+
+    #[test]
+    fn spatial_index_empty() {
+        let input = "";
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+        let index = SpatialIndex::build(&graph, &bounds);
+        assert!(index.is_empty());
+        assert_eq!(index.query_point(100.0, 100.0), None);
+        assert!(index.query_rect(0.0, 0.0, 800.0, 600.0).is_empty());
     }
 }
