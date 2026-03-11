@@ -295,7 +295,9 @@ function openInlineEditor(nodeId, propKey, currentValue) {
 
   // Get text alignment — WASM API returns effective defaults (left/top for
   // standalone text, center/middle for text-in-shape)
-  const hAlign = props.textAlign || "left";
+  // WASM API always returns the context-aware default (center for text-in-shape,
+  // left for standalone), so this fallback is a safety net only.
+  const hAlign = props.textAlign || (isTextNode ? "left" : "center");
   const vAlign = props.textVAlign || "top";
 
   // Store original value for Esc rollback

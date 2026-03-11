@@ -1414,7 +1414,18 @@ impl FdCanvas {
         };
         let new_width = match max_w {
             Some(mw) => mw, // Width stays at max_width (wrapping constraint)
-            None => content_width,
+            None => {
+                // If the text is in a managed layout (Column/Row/Grid), the layout
+                // solver stretches its width to fill the container. Don't shrink
+                // below the layout-assigned width — that would undo the stretch
+                // and cause the text to jump from centered to left-aligned.
+                if fd_core::layout::is_parent_managed(&self.engine.graph, idx) {
+                    let layout_width = self.engine.bounds.get(&idx).map_or(0.0, |b| b.width);
+                    content_width.max(layout_width)
+                } else {
+                    content_width
+                }
+            }
         };
 
         // Enforce minimum bounds

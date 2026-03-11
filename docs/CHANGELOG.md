@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.10.106 — Fix Text Alignment Shift in Managed Layouts (R3.46)
+
+- **FIX (R3.46)**: Text inside column/row/grid frames no longer shifts from centered to left-aligned after clicking the frame — root cause: `update_text_metrics()` overwrote the layout-stretched text width with the narrower measured text width (e.g. 420px → 184px), destroying the column layout stretch; `draw_text()` then centered within the shrunken bounds, which appeared left-aligned relative to the frame; fix: `update_text_metrics` now preserves the wider of measured vs layout-assigned width when the text node is inside a managed layout (`is_parent_managed` guard)
+- **FIX (R3.46)**: Inline text editor default `textAlign` fallback in `inline-edit.js` now uses context-aware defaults matching the WASM renderer — previously hardcoded `"left"`, now falls back to `"center"` for non-standalone-text nodes; the WASM API always returns the effective alignment, so this is a safety net only
+
 ### v0.10.105 — Fix Centered Text Shifts Left on Click (R3.28)
 
 - **FIX (R3.28)**: Centered text inside shapes (rect/ellipse/frame) no longer shifts to left-aligned when clicking the node — root cause: `update_text_metrics()` shrank text bounds to JS-measured size while preserving x/y position, breaking the layout solver's auto-centering for text children; fix: after updating bounds dimensions, re-center text within parent shape when text has no explicit `Position` constraint or `place:` property
