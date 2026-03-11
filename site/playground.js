@@ -293,11 +293,18 @@ function renderCanvas() {
   if (!fdCanvas || !ctx) return;
   const canvas = ctx.canvas;
   const dpr = window.devicePixelRatio || 1;
+  // 1. Clear in raw pixel space
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // 2. Fill background in DPR-scaled identity space (covers full canvas)
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = isDark ? '#1C1C1E' : '#F5F5F7';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // 3. Apply zoom/pan transform for scene rendering
   ctx.setTransform(dpr * zoomLevel, 0, 0, dpr * zoomLevel, panX * dpr, panY * dpr);
   drawGrid();
-  fdCanvas.render(ctx, performance.now(), true);
+  // 4. Render scene — skip_bg=true since we already filled above
+  fdCanvas.render(ctx, performance.now(), true, true);
 }
 
 /** Auto-center scene content in canvas viewport */
@@ -1280,7 +1287,7 @@ function renderMinimap(canvas) {
   mctx.translate(ox, oy);
   mctx.scale(scale, scale);
   mctx.translate(-sb.x, -sb.y);
-  fdCanvas.render(mctx, performance.now(), true);
+  fdCanvas.render(mctx, performance.now(), true, false);
   mctx.restore();
 
   // Draw viewport rect

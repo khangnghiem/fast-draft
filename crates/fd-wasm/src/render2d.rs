@@ -61,10 +61,14 @@ pub fn render_scene(
     sketchy: bool,
     hover_start_ms: f64,
     skip_grid: bool,
+    skip_bg: bool,
 ) {
-    // Clear canvas
-    ctx.set_fill_style_str(&theme.bg);
-    ctx.fill_rect(0.0, 0.0, canvas_width, canvas_height);
+    // Clear canvas — skip when JS caller already filled background
+    // in identity space (avoids gaps from zoom/pan transform).
+    if !skip_bg {
+        ctx.set_fill_style_str(&theme.bg);
+        ctx.fill_rect(0.0, 0.0, canvas_width, canvas_height);
+    }
 
     // Draw grid dots (skip when JS handles grid via cached CanvasPattern)
     if !skip_grid {

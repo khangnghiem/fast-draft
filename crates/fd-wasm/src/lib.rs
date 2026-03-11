@@ -188,7 +188,16 @@ impl FdCanvas {
     }
 
     /// Render the scene to a Canvas2D context.
-    pub fn render(&self, ctx: &CanvasRenderingContext2d, time_ms: f64, skip_grid: bool) {
+    ///
+    /// * `skip_grid` — skip drawing the background grid dots (JS handles grid separately).
+    /// * `skip_bg` — skip filling the background color (caller already filled in identity space).
+    pub fn render(
+        &self,
+        ctx: &CanvasRenderingContext2d,
+        time_ms: f64,
+        skip_grid: bool,
+        skip_bg: bool,
+    ) {
         let selected_ids: Vec<String> = self
             .select_tool
             .visual_highlight
@@ -215,6 +224,7 @@ impl FdCanvas {
             self.sketchy_mode,
             self.hover_start_ms,
             skip_grid,
+            skip_bg,
         );
     }
 

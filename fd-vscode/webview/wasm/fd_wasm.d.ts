@@ -269,11 +269,21 @@ export class FdCanvas {
      */
     hit_test_at(x: number, y: number): string;
     /**
+     * Hit-test for edges only at scene-space coordinates.
+     * Returns the edge ID if hit, or empty string.
+     * Used by JS to show edge context menu on right-click.
+     */
+    hit_test_edge_at(x: number, y: number): string;
+    /**
      * Import a Mermaid diagram, converting it to FD format.
      * Merges the resulting nodes and edges into the current document.
      * Returns `true` on success, `false` on parse error.
      */
     import_mermaid(mermaid_text: string): boolean;
+    /**
+     * Check if a node is locked. Returns false if node not found.
+     */
+    is_node_locked(id: string): boolean;
     /**
      * Create a new canvas controller with the given dimensions.
      */
@@ -343,6 +353,11 @@ export class FdCanvas {
      * Switch the active tool, remembering the previous one.
      */
     set_tool(name: string): void;
+    /**
+     * Toggle the locked state of a node. Returns the new locked state.
+     * Returns false if node not found.
+     */
+    toggle_node_locked(id: string): boolean;
     /**
      * Undo the last action.
      */
@@ -420,7 +435,9 @@ export interface InitOutput {
     readonly fdcanvas_has_pending_text_change: (a: number) => number;
     readonly fdcanvas_has_text_child: (a: number, b: number, c: number) => number;
     readonly fdcanvas_hit_test_at: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_hit_test_edge_at: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_import_mermaid: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_is_node_locked: (a: number, b: number, c: number) => number;
     readonly fdcanvas_new: (a: number, b: number) => number;
     readonly fdcanvas_parent_of: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_push_undo_snapshot: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -436,6 +453,7 @@ export interface InitOutput {
     readonly fdcanvas_set_text: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_set_theme: (a: number, b: number) => void;
     readonly fdcanvas_set_tool: (a: number, b: number, c: number) => void;
+    readonly fdcanvas_toggle_node_locked: (a: number, b: number, c: number) => number;
     readonly fdcanvas_undo: (a: number) => number;
     readonly fdcanvas_ungroup_selected: (a: number) => number;
     readonly fdcanvas_update_text_metrics: (a: number, b: number, c: number, d: number, e: number) => number;

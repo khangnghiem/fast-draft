@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.10.114 — Fix Canvas Background Fill in Transformed Space (R6.9)
+
+- **FIX (R6.9)**: Canvas background no longer shifts or leaves white gaps when panning/zooming — root cause: WASM `render_scene()` filled the background after JS applied the zoom/pan transform (`setTransform(dpr*z, 0, 0, dpr*z, panX*dpr, panY*dpr)`), so the fill started at the transformed origin instead of canvas pixel (0,0); fix: background is now filled in identity transform space by JS before applying zoom/pan, and WASM `render()` accepts a new `skip_bg: bool` parameter to skip its own background fill
+- **WASM**: New `skip_bg` parameter on `render()` and `render_scene()` — when `true`, skips the `fill_rect(0, 0, w, h)` background fill, delegating to the JS caller
+- **SITE**: `renderCanvas()` in `playground.js` — clears canvas, fills background in identity space (`setTransform(1,0,0,1,0,0)` + `fillRect`), then applies zoom/pan transform before calling WASM `render(ctx, t, grid, true)`
+- **EXTENSION**: Updated all 3 VS Code webview `fdCanvas.render()` call sites — main render (`skip_bg=true` with JS bg fill), export (`skip_bg=true`, already has own bg), minimap (`skip_bg=false`, manages own transform)
+
 ### v0.10.113 — Optimize Browser Recording Size (DX)
 
 - **DX**: `GEMINI.md` Browser Subagent rules expanded — viewport must be resized to 900×600 as the **first action** inside every `browser_subagent` task (not just before screenshots); recordings at 3008×1575 are ~25× larger than at 900×600
