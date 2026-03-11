@@ -220,6 +220,7 @@ const GRID_SPACING = 20;
 let zenMode = false;
 const ZOOM_MIN = 0.1, ZOOM_MAX = 5;
 let isPanning = false;
+let inlineEditorActive = false;
 
 // Render dirty flag — only re-render when something changed
 let renderDirty = true;
@@ -937,17 +938,18 @@ function setupContextMenu() {
     }
   });
 
-  // ── Node menu action handlers ──
+  // ── Node menu action handlers (with undo snapshots) ──
   const doNodeAction = (action) => {
     if (!fdCanvas) return;
     let changed = false;
+    const textBefore = fdCanvas.get_text();
     switch (action) {
       case 'copy':
         copySelectedAsFd();
         break;
       case 'cut':
         cutSelectedAsFd();
-        changed = true; // already rendered inside cutSelectedAsFd
+        changed = true;
         break;
       case 'duplicate':
         changed = fdCanvas.duplicate_selected();
@@ -994,6 +996,11 @@ function setupContextMenu() {
       }
     }
     if (changed) {
+      // Push undo snapshot for context menu mutations
+      const textAfter = fdCanvas.get_text();
+      if (textBefore !== textAfter) {
+        fdCanvas.push_undo_snapshot(textBefore, textAfter);
+      }
       renderCanvas();
       syncCanvasToEditor();
       updatePropertiesPanel();
@@ -2024,6 +2031,201 @@ function findAllNodeIds(fdText) {
 // Syntax highlighting and scroll sync are now handled by CodeMirror.
 // The old tokenizeLine, highlightEditor, syncHighlightScroll functions are removed.
 
+/** ─── Arrow-Key Nudge (Figma/Sketch standard) ──────────────────────── */
+function nudgeSelected(arrowKey, step) {
+  if (!fdCanvas) return;
+  const selectedId = fdCanvas.get_selected_id();
+  if (!selectedId) return;
+
+  try {
+    const boundsJson = fdCanvas.get_node_bounds(selectedId);
+    const b = JSON.parse(boundsJson);
+    if (b.x === undefined) return;
+
+    const cx = b.x + b.width / 2;
+    const cy = b.y + b.height / 2;
+    let dx = 0, dy = 0;
+
+    switch (arrowKey) {
+      case 'ArrowUp': dy = -step; break;
+      case 'ArrowDown': dy = step; break;
+      case 'ArrowLeft': dx = -step; break;
+      case 'ArrowRight': dx = step; break;
+    }
+
+    // Use pointer sequence to move correctly through WASM
+    fdCanvas.handle_pointer_down(cx, cy, 1.0, false, false, false, false);
+    fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false);
+    const upResult = JSON.parse(fdCanvas.handle_pointer_up(cx + dx, cy + dy, false, false, false, false));
+    if (upResult.changed) {
+      renderDirty = true; uiDirty = true;
+      syncCanvasToEditor();
+      updatePropertiesPanel();
+      refreshLayersPanel();
+    }
+  } catch (_) { /* skip */ }
+}
+
+/** ─── Inline Text Editor (double-click to edit) ───────────────────── */
+function setupInlineEditor(canvas) {
+  canvas.addEventListener('dblclick', (e) => {
+    if (!fdCanvas || inlineEditorActive) return;
+    const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
+
+    const nodeId = fdCanvas.get_selected_id();
+
+    // Double-click empty space → create text node
+    if (!nodeId) {
+      if (fdCanvas.create_node_at) {
+        const created = fdCanvas.create_node_at('text', x, y);
+        if (created) {
+          renderCanvas();
+          syncCanvasToEditor();
+          refreshLayersPanel();
+          const newId = fdCanvas.get_selected_id();
+          if (newId) {
+            setTimeout(() => openInlineTextEditor(newId, ''), 50);
+          }
+        }
+      }
+      e.preventDefault();
+      return;
+    }
+
+    // Get node props
+    let props;
+    try {
+      const json = fdCanvas.get_selected_node_props();
+      props = JSON.parse(json);
+    } catch (_) { return; }
+    if (!props.id) return;
+
+    // Only edit text and shape nodes
+    const isText = props.kind === 'text';
+    const isShape = props.kind === 'rect' || props.kind === 'ellipse';
+    if (!isText && !isShape) return;
+
+    const currentValue = isText ? (props.content || '') : (props.label || '');
+    openInlineTextEditor(props.id, currentValue, isText ? 'content' : 'label');
+    e.preventDefault();
+  });
+}
+
+/** Open a floating textarea over the node for in-place text editing. */
+function openInlineTextEditor(nodeId, currentValue, propKey = 'content') {
+  if (inlineEditorActive || !fdCanvas) return;
+
+  let boundsJson;
+  try { boundsJson = fdCanvas.get_node_bounds(nodeId); } catch (_) { return; }
+  const b = JSON.parse(boundsJson);
+  const bw = b.width || 80;
+  const bh = b.height || 24;
+
+  inlineEditorActive = true;
+  if (fdCanvas.clear_pressed) fdCanvas.clear_pressed();
+  renderCanvas();
+
+  // Get font info from node props
+  let props;
+  try { props = JSON.parse(fdCanvas.get_selected_node_props()); } catch (_) { props = {}; }
+  const fontSize = Math.round((props.fontSize || 14) * zoomLevel);
+  const fontFamily = props.fontFamily || 'Inter, system-ui, sans-serif';
+  const fontWeight = props.fontWeight || 400;
+  const lineHeight = Math.round((props.fontSize || 14) * 1.2 * zoomLevel);
+
+  // Convert scene-space to screen-space
+  const sx = (b.x || 0) * zoomLevel + panX;
+  const sy = (b.y || 0) * zoomLevel + panY;
+  const sw = Math.max(bw * zoomLevel, 80);
+  const sh = Math.max(bh * zoomLevel, lineHeight + 4);
+
+  // Determine colors
+  const isText = props.kind === 'text';
+  let bgColor, textColor;
+  if (isText) {
+    bgColor = 'transparent';
+    textColor = props.fill || '#1C1C1E';
+  } else if (props.fill && props.fill !== 'none') {
+    bgColor = props.fill;
+    textColor = '#FFFFFF';
+  } else {
+    bgColor = '#F5F5F7';
+    textColor = '#1C1C1E';
+  }
+
+  const wrapper = document.getElementById('canvas-wrapper');
+  const originalValue = currentValue;
+
+  // Create textarea
+  const textarea = document.createElement('textarea');
+  textarea.value = currentValue;
+  textarea.style.cssText = `
+    position: absolute; left: ${sx}px; top: ${sy}px;
+    width: ${sw}px; min-height: ${sh}px;
+    font-size: ${fontSize}px; font-family: ${fontFamily}; font-weight: ${fontWeight};
+    line-height: ${lineHeight}px;
+    color: ${textColor}; background: ${bgColor};
+    border: 2px solid #0A84FF; border-radius: 4px;
+    padding: 2px 4px; margin: 0; box-sizing: border-box;
+    resize: none; outline: none; overflow: hidden;
+    z-index: 10000; white-space: pre-wrap; word-wrap: break-word;
+  `;
+
+  // Auto-resize
+  const autoResize = () => {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+  };
+  textarea.addEventListener('input', autoResize);
+
+  const commitEdit = () => {
+    if (!inlineEditorActive) return;
+    const newValue = textarea.value.trim();
+    if (newValue !== originalValue && fdCanvas) {
+      const textBefore = fdCanvas.get_text();
+      fdCanvas.set_node_prop(propKey, newValue);
+      const textAfter = fdCanvas.get_text();
+      if (textBefore !== textAfter) {
+        fdCanvas.push_undo_snapshot(textBefore, textAfter);
+      }
+      renderCanvas();
+      syncCanvasToEditor();
+      refreshLayersPanel();
+    }
+    cleanup();
+  };
+
+  const cancelEdit = () => {
+    cleanup();
+  };
+
+  const cleanup = () => {
+    inlineEditorActive = false;
+    textarea.remove();
+    renderCanvas();
+  };
+
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      commitEdit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEdit();
+    }
+    e.stopPropagation(); // Prevent canvas shortcuts while editing
+  });
+
+  textarea.addEventListener('blur', () => {
+    setTimeout(commitEdit, 50);
+  });
+
+  wrapper.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  autoResize();
+}
+
 async function initPlayground() {
   const editorMount = document.getElementById('fd-editor');
   const canvas = document.getElementById('fd-canvas');
@@ -2193,6 +2395,7 @@ async function initPlayground() {
 
     setupPropsPanel();
     setupContextMenu();
+    setupInlineEditor(canvas);
 
     // Zen toggle button (inside canvas — stays visible in zen mode)
     const zenBtn = document.getElementById('zen-toggle-btn');
@@ -2526,7 +2729,7 @@ async function initPlayground() {
 
       // Tool shortcuts (only when canvas focused)
       if (!editorFocused && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        const toolMap = { v:'select', r:'rect', o:'ellipse', t:'text', a:'arrow', p:'pen', e:'eraser' };
+        const toolMap = { v:'select', r:'rect', o:'ellipse', t:'text', a:'arrow', p:'pen', e:'eraser', f:'frame' };
         const tool = toolMap[e.key.toLowerCase()];
         if (tool) {
           fdCanvas.set_tool(tool);
@@ -2535,7 +2738,17 @@ async function initPlayground() {
           e.preventDefault();
           return;
         }
+      }
 
+      // ── Arrow-key nudge (Figma/Sketch standard) ──
+      if (!editorFocused && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+        const selectedId = fdCanvas.get_selected_id();
+        if (selectedId && !e.metaKey && !e.ctrlKey && !e.altKey) {
+          e.preventDefault();
+          const step = e.shiftKey ? 10 : 1;
+          nudgeSelected(e.key, step);
+          return;
+        }
       }
 
       // Delete (only when canvas focused)
@@ -2568,6 +2781,36 @@ async function initPlayground() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'v' && !e.shiftKey && !e.altKey && !editorFocused) {
         e.preventDefault();
         pasteFromClipboard();
+        return;
+      }
+
+      // ── Select All (⌘A / Ctrl+A) ──
+      if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'a') && !e.shiftKey && !editorFocused) {
+        e.preventDefault();
+        // Select first visible node as a basic select-all
+        const text = fdCanvas.get_text();
+        const idRe = /@([a-zA-Z_][a-zA-Z0-9_]*)/;
+        const m = idRe.exec(text);
+        if (m) { fdCanvas.select_by_id(m[1]); renderDirty = true; uiDirty = true; }
+        return;
+      }
+
+      // ── Zoom shortcuts (⌘+/⌘-/⌘0) ──
+      if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        applyZoomCenter(zoomLevel * 1.25);
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === '-') {
+        e.preventDefault();
+        applyZoomCenter(zoomLevel / 1.25);
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === '0') {
+        e.preventDefault();
+        fitToContent(canvas);
+        renderCanvas();
+        renderMinimap(canvas);
         return;
       }
 
@@ -2672,8 +2915,7 @@ async function initPlayground() {
     document.getElementById('zoom-in-btn').addEventListener('click', () => applyZoomCenter(zoomLevel * 1.25));
     document.getElementById('zoom-out-btn').addEventListener('click', () => applyZoomCenter(zoomLevel / 1.25));
     document.getElementById('zoom-reset-btn').addEventListener('click', () => {
-      zoomLevel = 1.0; panX = 0; panY = 0;
-      updateZoomIndicator();
+      fitToContent(canvas);
       renderCanvas();
       renderMinimap(canvas);
     });
