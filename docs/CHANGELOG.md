@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.10.111 — Copy/Paste + Context-Aware Right-Click Menu (R6.6, R3.59)
+
+- **FEATURE (R3.59)**: ⌘C/⌘V/⌘X Copy/Cut/Paste now works on playground canvas — copies selected node's `.fd` block to internal + system clipboard; paste renames IDs with `_N` suffix to avoid conflicts, offsets `x:` by `(width + 20) × pasteCount` for horizontal stagger with gap; undo support via `push_undo_snapshot()`
+- **FEATURE (R6.6)**: ⌘D Duplicate shortcut on playground — calls `duplicate_selected()` with `preventDefault` to block browser bookmark dialog
+- **FEATURE (R6.6)**: Context-aware right-click menu — right-clicking a node shows node menu (Copy, Cut, Duplicate, Delete, z-order, Group/Ungroup, Copy as .fd with shortcut badges); right-clicking empty space shows canvas menu (Paste, Add Rectangle/Ellipse/Text, Fit to Content)
+- **UX**: Keyboard shortcut badges in context menu items — `⌘C`, `⌘X`, `⌘D`, `⌫`, `⌘V`, `R`, `O`, `T` shown right-aligned in muted style
+- **CSS**: New `#ctx-menu-canvas` element styled identically to `#ctx-menu`; `.ctx-shortcut` badge class; `.ctx-item` changed from `display: block` to `display: flex` for shortcut alignment; orange hover on Cut action
+- **SITE**: Changes in `site/playground.js`, `site/index.html`, `site/style.css`
+
 ### v0.10.110 — Harden Spatial Index Rebuild (R3.16)
 
 - **FIX (R3.16)**: `finalize_bounds()` now calls `rebuild_spatial_index()` after expanding parent groups — previously the spatial index retained pre-expand AABBs, causing hit-test misses on expanded parents

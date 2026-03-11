@@ -1273,7 +1273,7 @@ code {
 }
 
 /* ─── Context Menu ─── */
-#ctx-menu {
+#ctx-menu, #ctx-menu-canvas {
   display: none;
   position: fixed;
   z-index: 100;
@@ -1286,9 +1286,11 @@ code {
   border-radius: var(--fd-radius);
   box-shadow: var(--fd-shadow-lg);
 }
-#ctx-menu.visible { display: block; }
+#ctx-menu.visible, #ctx-menu-canvas.visible { display: block; }
 .ctx-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
   padding: 6px 10px;
   border: none;
@@ -1304,8 +1306,23 @@ code {
   background: var(--fd-accent);
   color: var(--fd-accent-fg);
 }
+.ctx-item:hover .ctx-shortcut {
+  color: var(--fd-accent-fg);
+  opacity: 0.7;
+}
 .ctx-item[data-action="delete"]:hover {
   background: rgba(255, 59, 48, 0.8);
+}
+.ctx-item[data-action="cut"]:hover {
+  background: rgba(255, 149, 0, 0.8);
+}
+.ctx-shortcut {
+  font-size: 10px;
+  color: var(--fd-text-tertiary);
+  font-family: var(--mono);
+  margin-left: auto;
+  padding-left: 16px;
+  font-weight: 500;
 }
 .ctx-sep {
   height: 1px;
