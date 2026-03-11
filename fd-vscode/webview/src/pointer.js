@@ -148,7 +148,7 @@ function setupPointerEvents() {
     }
 
     const isAltMove = e.altKey || modAltHeld;
-    const changed = fdCanvas.handle_pointer_move(
+    const moveResult = JSON.parse(fdCanvas.handle_pointer_move(
       x,
       y,
       e.pressure || 1.0,
@@ -156,7 +156,8 @@ function setupPointerEvents() {
       e.ctrlKey,
       isAltMove,
       e.metaKey
-    );
+    ));
+    const changed = moveResult.changed;
     if (changed) render();
 
     // Read ghost origin bounds for Alt+drag preview
@@ -199,15 +200,10 @@ function setupPointerEvents() {
           showDimensionTooltip(e.clientX, e.clientY, `${Math.round(w)} × ${Math.round(h)}`);
         }
       } else if (tool === "select") {
-        // Moving: show (X, Y) of selected node
-        const selectedId = fdCanvas.get_selected_id();
-        if (selectedId && changed) {
-          try {
-            const b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
-            if (b.x !== undefined) {
-              showDimensionTooltip(e.clientX, e.clientY, `(${Math.round(b.x)}, ${Math.round(b.y)})`);
-            }
-          } catch (_) { /* skip */ }
+        // Moving: show (X, Y) from bundled bounds (no extra WASM calls)
+        if (changed && moveResult.bounds) {
+          const b = moveResult.bounds;
+          showDimensionTooltip(e.clientX, e.clientY, `(${Math.round(b.x)}, ${Math.round(b.y)})`);
         }
       }
     }

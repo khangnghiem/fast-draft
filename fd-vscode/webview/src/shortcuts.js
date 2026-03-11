@@ -663,9 +663,10 @@ function nudgeSelected(arrowKey, step) {
     const dx = newX - b.x;
     const dy = newY - b.y;
     fdCanvas.handle_pointer_down(cx, cy, 1.0, false, false, false, false);
-    const changed = fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false);
+    const moveResultJson = fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false);
+    const moveResult = JSON.parse(moveResultJson);
     const upResult = JSON.parse(fdCanvas.handle_pointer_up(cx + dx, cy + dy, false, false, false, false));
-    if (upResult.changed || changed) {
+    if (upResult.changed || moveResult.changed) {
       render();
       syncTextToExtension();
       updatePropertiesPanel();

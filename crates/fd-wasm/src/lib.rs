@@ -19,7 +19,9 @@ use fd_editor::tools::{
     ArrowTool, EllipseTool, EraserTool, PenTool, RectTool, ResizeHandle, SelectTool, TextTool,
     Tool, ToolKind,
 };
-use fd_render::hit::hit_test_rect;
+use fd_render::hit::{SpatialIndex, hit_test_rect};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use wasm_bindgen::prelude::*;
 use web_sys::CanvasRenderingContext2d;
 
@@ -51,6 +53,8 @@ pub struct FdCanvas {
     dark_mode: bool,
     /// Sketchy hand-drawn rendering mode.
     sketchy_mode: bool,
+    /// Cached canvas theme — rebuilt only on `set_theme()`, not per-frame.
+    cached_theme: render2d::CanvasTheme,
     hovered_id: Option<fd_core::id::NodeId>,
     pressed_id: Option<fd_core::id::NodeId>,
     /// Timestamp (ms) when hover started on the current node.
@@ -70,6 +74,10 @@ pub struct FdCanvas {
     /// JS reads this via `get_alt_drag_ghost()` to render translucent ghost
     /// outlines at the original positions during clone-drag.
     alt_clone_origins: Vec<(f32, f32, f32, f32)>,
+    /// Cached spatial index for O(log N) hit testing. Rebuilt after layout resolve.
+    spatial_index: Option<SpatialIndex>,
+    /// Hash of resolved bounds — used to detect layout-unchanged text edits.
+    bounds_hash: u64,
 }
 
 #[wasm_bindgen]
@@ -104,6 +112,7 @@ impl FdCanvas {
             suppress_sync: false,
             dark_mode: false,
             sketchy_mode: false,
+            cached_theme: render2d::CanvasTheme::light(),
             hovered_id: None,
             pressed_id: None,
             hover_start_ms: 0.0,
@@ -112,25 +121,37 @@ impl FdCanvas {
             alt_duplicated: false,
             alt_press_pos: None,
             alt_clone_origins: Vec::new(),
+            spatial_index: None,
+            bounds_hash: 0,
         }
     }
 
     /// Set the FD source text, re-parsing into the scene graph.
-    /// Returns `true` on success, `false` on parse error.
-    pub fn set_text(&mut self, text: &str) -> bool {
-        // Early return if text unchanged — avoids resolve() overwriting
-        // JS-measured text bounds with heuristic intrinsic_size values.
-        // This is critical for the resize flow: after resize, the text
-        // content doesn't change (only max_width does), so the round-trip
-        // from extension echoing back the same text should be a no-op.
+    /// Returns a JSON string: `{"ok":true,"layout_changed":bool}`
+    /// `layout_changed` is false when only non-layout properties changed
+    /// (comments, specs, style names) — JS can skip re-render in that case.
+    pub fn set_text(&mut self, text: &str) -> String {
+        // Early return if text unchanged
         if text == self.engine.current_text() {
-            return true;
+            return r#"{"ok":true,"layout_changed":false}"#.to_string();
         }
         self.suppress_sync = true;
         let result = self.engine.set_text(text);
         self.engine.resolve();
         self.suppress_sync = false;
-        result.is_ok()
+        if result.is_err() {
+            return r#"{"ok":false,"layout_changed":false}"#.to_string();
+        }
+        // Check if layout actually changed via bounds hash
+        let new_hash = self.compute_bounds_hash();
+        let layout_changed = new_hash != self.bounds_hash;
+        self.bounds_hash = new_hash;
+        if layout_changed {
+            // Rebuild spatial index when layout changes
+            self.rebuild_spatial_index();
+        }
+        let lc = if layout_changed { "true" } else { "false" };
+        format!(r#"{{"ok":true,"layout_changed":{lc}}}"#)
     }
 
     /// Import a Mermaid diagram, converting it to FD format.
@@ -167,18 +188,13 @@ impl FdCanvas {
     }
 
     /// Render the scene to a Canvas2D context.
-    pub fn render(&self, ctx: &CanvasRenderingContext2d, time_ms: f64) {
+    pub fn render(&self, ctx: &CanvasRenderingContext2d, time_ms: f64, skip_grid: bool) {
         let selected_ids: Vec<String> = self
             .select_tool
             .visual_highlight
             .iter()
             .map(|id| id.as_str().to_string())
             .collect();
-        let theme = if self.dark_mode {
-            render2d::CanvasTheme::dark()
-        } else {
-            render2d::CanvasTheme::light()
-        };
 
         // Compute smart alignment guides when dragging/resizing
         let guides = self.compute_smart_guides();
@@ -190,7 +206,7 @@ impl FdCanvas {
             self.width,
             self.height,
             &selected_ids,
-            &theme,
+            &self.cached_theme,
             self.select_tool.marquee_rect,
             time_ms,
             self.hovered_id.as_ref().map(|id| id.as_str()),
@@ -198,12 +214,18 @@ impl FdCanvas {
             &guides,
             self.sketchy_mode,
             self.hover_start_ms,
+            skip_grid,
         );
     }
 
     /// Set the canvas theme.
     pub fn set_theme(&mut self, is_dark: bool) {
         self.dark_mode = is_dark;
+        self.cached_theme = if is_dark {
+            render2d::CanvasTheme::dark()
+        } else {
+            render2d::CanvasTheme::light()
+        };
     }
 
     /// Enable or disable sketchy (hand-drawn) rendering mode.
@@ -378,7 +400,9 @@ impl FdCanvas {
             || self.alt_press_pos.is_some()
     }
 
-    /// Handle pointer move event. Returns true if the graph changed.
+    /// Handle pointer move event. Returns JSON string:
+    /// `{"changed":bool}` or `{"changed":bool,"bounds":{"x":N,"y":N,"w":N,"h":N}}`
+    /// when actively dragging a selected node (for dimension tooltip).
     #[allow(clippy::too_many_arguments)]
     pub fn handle_pointer_move(
         &mut self,
@@ -389,7 +413,7 @@ impl FdCanvas {
         ctrl: bool,
         alt: bool,
         meta: bool,
-    ) -> bool {
+    ) -> String {
         let mods = Modifiers {
             shift,
             ctrl,
@@ -420,30 +444,25 @@ impl FdCanvas {
                 && !self.eraser_tool.erased_ids.contains(&hit_id)
             {
                 self.erase_node_immediately(hit_id);
-                return true;
+                return r#"{"changed":true}"#.to_string();
             }
-            return hovered_changed;
+            let c = if hovered_changed { "true" } else { "false" };
+            return format!(r#"{{"changed":{c}}}"#);
         }
 
         // Alt+drag duplication with 3px threshold.
-        // Only triggers when Alt was held at pointer-down (alt_press_pos set
-        // there). Pressing Alt mid-drag does NOT clone — prevents accidental
-        // duplication since the pointer is already moving.
         if self.active_tool == ToolKind::Select
             && alt
             && !self.alt_duplicated
             && !self.select_tool.selected.is_empty()
             && let Some((ox, oy)) = self.alt_press_pos
         {
-            // Check 3px distance threshold before duplicating
             let dist_sq = (x - ox) * (x - ox) + (y - oy) * (y - oy);
             if dist_sq >= 9.0 {
-                // Capture original bounds for ghost preview before cloning
                 self.capture_alt_clone_origins();
                 self.alt_duplicated = true;
                 self.alt_press_pos = None;
                 self.duplicate_selected_at(0.0, 0.0);
-                // Update last_x/y so the next delta is computed from here
                 self.select_tool.last_x = x;
                 self.select_tool.last_y = y;
             }
@@ -456,11 +475,29 @@ impl FdCanvas {
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
-            ToolKind::Eraser => vec![], // Not dragging — no-op hover
+            ToolKind::Eraser => vec![],
         };
         let changed = self.apply_mutations(mutations);
-        // Marquee drag also counts as visual change
-        changed || self.select_tool.marquee_rect.is_some() || hovered_changed
+        let visual_changed = changed || self.select_tool.marquee_rect.is_some() || hovered_changed;
+
+        // Bundle selected node bounds for JS dimension tooltip (avoids 2 extra WASM calls)
+        let is_dragging = self.select_tool.dragging || self.select_tool.resize_handle.is_some();
+        if visual_changed
+            && is_dragging
+            && let Some(id) = self.select_tool.first_selected()
+            && let Some(idx) = self.engine.graph.index_of(id)
+            && let Some(b) = self.engine.current_bounds().get(&idx)
+            && b.width > 0.0
+            && b.height > 0.0
+        {
+            return format!(
+                r#"{{"changed":true,"bounds":{{"x":{},"y":{},"w":{},"h":{}}}}}"#,
+                b.x, b.y, b.width, b.height
+            );
+        }
+
+        let c = if visual_changed { "true" } else { "false" };
+        format!(r#"{{"changed":{c}}}"#)
     }
 
     /// Handle pointer up event. Returns a JSON string:
@@ -1644,12 +1681,6 @@ impl FdCanvas {
             return;
         }
 
-        let theme = if self.dark_mode {
-            render2d::CanvasTheme::dark()
-        } else {
-            render2d::CanvasTheme::light()
-        };
-
         let selected_ids: Vec<String> = self
             .select_tool
             .selected
@@ -1662,7 +1693,7 @@ impl FdCanvas {
             &self.engine.graph,
             self.engine.current_bounds(),
             &selected_ids,
-            &theme,
+            &self.cached_theme,
             offset_x,
             offset_y,
             self.sketchy_mode,
@@ -2221,6 +2252,42 @@ impl FdCanvas {
         "{}".to_string()
     }
 
+    /// Get the bounding box of all non-root nodes in the scene.
+    /// Returns `{"x":N,"y":N,"w":N,"h":N}` or `""` if no nodes exist.
+    /// Single WASM call replaces N×get_node_bounds() roundtrips in JS minimap.
+    pub fn get_scene_bounds(&self) -> String {
+        let mut sx = f32::MAX;
+        let mut sy = f32::MAX;
+        let mut sx2 = f32::MIN;
+        let mut sy2 = f32::MIN;
+        let mut found = false;
+
+        for (&idx, b) in self.engine.current_bounds() {
+            if idx == self.engine.graph.root {
+                continue;
+            }
+            if b.width > 0.0 && b.height > 0.0 {
+                sx = sx.min(b.x);
+                sy = sy.min(b.y);
+                sx2 = sx2.max(b.x + b.width);
+                sy2 = sy2.max(b.y + b.height);
+                found = true;
+            }
+        }
+
+        if !found {
+            return String::new();
+        }
+
+        format!(
+            r#"{{"x":{},"y":{},"w":{},"h":{}}}"#,
+            sx,
+            sy,
+            sx2 - sx,
+            sy2 - sy
+        )
+    }
+
     /// Hit-test at scene-space coordinates. Returns the topmost node ID, or empty string.
     pub fn hit_test_at(&self, x: f32, y: f32) -> String {
         self.hit_test(x, y)
@@ -2476,17 +2543,41 @@ impl FdCanvas {
 
 impl FdCanvas {
     fn hit_test(&self, x: f32, y: f32) -> Option<NodeId> {
+        // Use spatial index if available (O(log N + K) vs O(N))
+        let node_hit = if let Some(ref index) = self.spatial_index {
+            index.query_point(x, y)
+        } else {
+            fd_render::hit::hit_test(&self.engine.graph, self.engine.current_bounds(), x, y)
+        };
         // Nodes take priority over edges
-        fd_render::hit::hit_test(&self.engine.graph, self.engine.current_bounds(), x, y).or_else(
-            || {
-                fd_render::hit::hit_test_edge(
-                    &self.engine.graph,
-                    self.engine.current_bounds(),
-                    x,
-                    y,
-                )
-            },
-        )
+        node_hit.or_else(|| {
+            fd_render::hit::hit_test_edge(&self.engine.graph, self.engine.current_bounds(), x, y)
+        })
+    }
+
+    /// Rebuild the spatial index from current bounds.
+    fn rebuild_spatial_index(&mut self) {
+        self.spatial_index = Some(SpatialIndex::build(
+            &self.engine.graph,
+            self.engine.current_bounds(),
+        ));
+    }
+
+    /// Compute a hash of all resolved bounds for change detection.
+    fn compute_bounds_hash(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        let bounds = self.engine.current_bounds();
+        // Sort by index for deterministic ordering
+        let mut entries: Vec<_> = bounds.iter().collect();
+        entries.sort_by_key(|(idx, _)| idx.index());
+        for (idx, b) in entries {
+            idx.index().hash(&mut hasher);
+            b.x.to_bits().hash(&mut hasher);
+            b.y.to_bits().hash(&mut hasher);
+            b.width.to_bits().hash(&mut hasher);
+            b.height.to_bits().hash(&mut hasher);
+        }
+        hasher.finish()
     }
 
     fn apply_mutations(&mut self, mutations: Vec<GraphMutation>) -> bool {
@@ -2512,6 +2603,7 @@ impl FdCanvas {
         // and fight with the in-place update.
         if !all_drag_ops {
             self.engine.resolve();
+            self.rebuild_spatial_index();
         }
         true
     }

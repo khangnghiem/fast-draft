@@ -57,11 +57,19 @@ window.addEventListener("message", (event) => {
     case "setText": {
       if (!fdCanvas) return;
       suppressTextSync = true;
-      fdCanvas.set_text(message.text);
+      const resultJson = fdCanvas.set_text(message.text);
       lastSyncedText = message.text; // Keep dedup in sync
       bumpGeneration(); // External text change — invalidate caches
-      measureAllTextNodes(); // Tight text bounds after code edit
-      render();
+      try {
+        const r = JSON.parse(resultJson);
+        if (r.layout_changed) {
+          measureAllTextNodes(); // Tight text bounds after code edit
+          render();
+        }
+      } catch (_) {
+        measureAllTextNodes();
+        render();
+      }
       suppressTextSync = false;
 
       break;
