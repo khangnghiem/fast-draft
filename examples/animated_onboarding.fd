@@ -1,26 +1,26 @@
-# ─── Themes ───
+# ─── Styles ───
 
-theme cta {
+style cta {
   fill: #6C5CE7  # blue
   corner: 12
 }
 
-theme cta_text {
+style cta_text {
   fill: #FFFFFF  # white
   font: "Inter" semibold 16
 }
 
-theme step_bg {
+style step_bg {
   fill: #FFFFFF  # white
   corner: 16
 }
 
-theme step_body {
+style step_body {
   fill: #6B7280  # blue
   font: "Inter" regular 16
 }
 
-theme step_title {
+style step_title {
   fill: #1F2937  # blue
   font: "Inter" bold 24
 }

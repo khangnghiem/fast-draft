@@ -69,6 +69,15 @@ pub struct SelectTool {
     /// Drag origin for Shift axis-lock (total displacement, not per-frame).
     drag_start_x: f32,
     drag_start_y: f32,
+    /// Locked axis for Shift-constrained drag.
+    /// `None` = undecided (below threshold), `Some(true)` = horizontal,
+    /// `Some(false)` = vertical. Locked once total displacement ≥ 4px.
+    pub locked_axis: Option<bool>,
+    /// Node ID deferred for Shift+click toggle-deselect on PointerUp.
+    /// When Shift+clicking an already-selected node, we defer the deselect
+    /// to PointerUp so Shift+drag can constrain the axis without losing
+    /// the clicked node from the selection.
+    pub shift_toggled_off: Option<NodeId>,
     /// Marquee (rubber-band) selection state.
     /// Set when pointer-down hits empty space. `(start_x, start_y)`.
     pub marquee_start: Option<(f32, f32)>,
@@ -98,6 +107,8 @@ impl SelectTool {
             last_y: 0.0,
             drag_start_x: 0.0,
             drag_start_y: 0.0,
+            locked_axis: None,
+            shift_toggled_off: None,
             marquee_start: None,
             marquee_rect: None,
             resize_handle: None,
@@ -159,10 +170,15 @@ impl Tool for SelectTool {
                 }
 
                 if let Some(hit_id) = hit_node {
-                    // Shift+click: toggle node in/out of selection
+                    // Shift+click: toggle node in/out of selection.
+                    // If clicking an already-selected node with Shift, DEFER
+                    // the deselect to PointerUp so Shift+drag can constrain
+                    // the axis without losing this node from the selection.
+                    self.shift_toggled_off = None;
                     if modifiers.shift {
-                        if let Some(pos) = self.selected.iter().position(|id| *id == hit_id) {
-                            self.selected.remove(pos);
+                        if self.selected.contains(&hit_id) {
+                            // Defer deselect — will fire on PointerUp if no drag
+                            self.shift_toggled_off = Some(hit_id);
                         } else {
                             self.selected.push(hit_id);
                         }
@@ -177,6 +193,7 @@ impl Tool for SelectTool {
                     self.last_y = *y;
                     self.drag_start_x = *x;
                     self.drag_start_y = *y;
+                    self.locked_axis = None;
 
                     // Alt+click duplication is handled by FdCanvas (not here)
                     // so that selection can transfer to the clone properly.
@@ -282,24 +299,51 @@ impl Tool for SelectTool {
                     // so that selection can transfer to the clone properly.
 
                     // Shift: constrain to dominant axis using TOTAL displacement
-                    // from drag start (Figma-style). Per-frame deltas are too
-                    // small and cause the axis to flip every frame.
+                    // from drag start (Figma-style). Axis is locked once total
+                    // displacement exceeds a 4px dead-zone to prevent jitter
+                    // near the origin where tiny moves flip the axis.
                     if modifiers.shift {
+                        // Cancel deferred Shift deselect — this is a drag, not a click
+                        self.shift_toggled_off = None;
+
                         let total_dx = x - self.drag_start_x;
                         let total_dy = y - self.drag_start_y;
-                        let (dx, dy) = if total_dx.abs() >= total_dy.abs() {
+
+                        let axis_horizontal = match self.locked_axis {
+                            Some(locked) => locked,
+                            None => {
+                                let dist = total_dx.abs().max(total_dy.abs());
+                                if dist < 4.0 {
+                                    // Below threshold: free move (no constraint yet)
+                                    let dx = x - self.last_x;
+                                    let dy = y - self.last_y;
+                                    self.last_x = *x;
+                                    self.last_y = *y;
+                                    return self
+                                        .selected
+                                        .iter()
+                                        .map(|id| GraphMutation::MoveNode { id: *id, dx, dy })
+                                        .collect();
+                                }
+                                let h = total_dx.abs() >= total_dy.abs();
+                                self.locked_axis = Some(h);
+                                h
+                            }
+                        };
+
+                        let (dx, dy) = if axis_horizontal {
                             // Lock horizontal: move to (x, start_y)
                             (x - self.last_x, self.drag_start_y - self.last_y)
                         } else {
                             // Lock vertical: move to (start_x, y)
                             (self.drag_start_x - self.last_x, y - self.last_y)
                         };
-                        self.last_x = if total_dx.abs() >= total_dy.abs() {
+                        self.last_x = if axis_horizontal {
                             *x
                         } else {
                             self.drag_start_x
                         };
-                        self.last_y = if total_dx.abs() >= total_dy.abs() {
+                        self.last_y = if axis_horizontal {
                             self.drag_start_y
                         } else {
                             *y
@@ -328,8 +372,16 @@ impl Tool for SelectTool {
             }
             InputEvent::PointerUp { .. } => {
                 // Marquee end is handled by FdCanvas (it calls hit_test_rect)
+                // Deferred Shift+click deselect: if the user Shift+clicked
+                // an already-selected node but didn't drag, deselect it now.
+                if let Some(toggle_id) = self.shift_toggled_off.take()
+                    && let Some(pos) = self.selected.iter().position(|id| *id == toggle_id)
+                {
+                    self.selected.remove(pos);
+                }
                 self.dragging = false;
                 self.resize_handle = None;
+                self.locked_axis = None;
                 vec![]
             }
             _ => vec![],
@@ -408,13 +460,13 @@ impl Tool for RectTool {
                 );
                 node.constraints.push(Constraint::Position { x: *x, y: *y });
                 // Transparent fill + dark stroke (matching create_node_at defaults)
-                node.style.stroke = Some(Stroke {
+                node.props.stroke = Some(Stroke {
                     paint: Paint::Solid(Color::rgba(0.2, 0.2, 0.2, 1.0)),
                     width: 2.5,
                     cap: StrokeCap::Round,
                     join: StrokeJoin::Round,
                 });
-                node.style.corner_radius = Some(8.0);
+                node.props.corner_radius = Some(8.0);
                 vec![GraphMutation::AddNode {
                     parent_id: NodeId::intern("root"),
                     node: Box::new(node),
@@ -526,6 +578,8 @@ pub struct PenTool {
     drawing: bool,
     points: Vec<(f32, f32)>,
     current_id: Option<NodeId>,
+    /// Parent node for new path nodes (default: root).
+    parent_id: NodeId,
 }
 
 impl Default for PenTool {
@@ -540,12 +594,19 @@ impl PenTool {
             drawing: false,
             points: Vec::new(),
             current_id: None,
+            parent_id: NodeId::intern("root"),
         }
     }
 
     /// Whether a draw gesture is in progress.
     pub fn is_drawing(&self) -> bool {
         self.drawing
+    }
+
+    /// Set the parent node for new path nodes.
+    /// Paths will be created as children of this node.
+    pub fn set_parent(&mut self, id: NodeId) {
+        self.parent_id = id;
     }
 
     /// Cancel the current draw gesture (reset state).
@@ -575,7 +636,7 @@ impl Tool for PenTool {
                 };
                 let node = SceneNode::new(id, path);
                 vec![GraphMutation::AddNode {
-                    parent_id: NodeId::intern("root"),
+                    parent_id: self.parent_id,
                     node: Box::new(node),
                 }]
             }
@@ -745,7 +806,7 @@ impl Tool for EllipseTool {
                 let mut node = SceneNode::new(id, NodeKind::Ellipse { rx: 0.0, ry: 0.0 });
                 node.constraints.push(Constraint::Position { x: *x, y: *y });
                 // Transparent fill + dark stroke (matching create_node_at defaults)
-                node.style.stroke = Some(Stroke {
+                node.props.stroke = Some(Stroke {
                     paint: Paint::Solid(Color::rgba(0.2, 0.2, 0.2, 1.0)),
                     width: 2.5,
                     cap: StrokeCap::Round,
@@ -964,7 +1025,7 @@ impl Tool for ArrowTool {
     }
 
     fn handle(&mut self, event: &InputEvent, hit_node: Option<NodeId>) -> Vec<GraphMutation> {
-        use fd_core::model::{ArrowKind, CurveKind, Edge, Style};
+        use fd_core::model::{ArrowKind, CurveKind, Edge, Properties};
 
         match event {
             InputEvent::PointerDown { x, y, .. } => {
@@ -1028,7 +1089,7 @@ impl Tool for ArrowTool {
                     from: from_anchor,
                     to: to_anchor,
                     text_child: None,
-                    style: Style::default(),
+                    props: Properties::default(),
                     use_styles: Default::default(),
                     arrow: ArrowKind::End,
                     curve: CurveKind::Smooth,

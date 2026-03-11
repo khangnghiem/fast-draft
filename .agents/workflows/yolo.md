@@ -137,20 +137,39 @@ git checkout -b feat/<descriptive-name>
     - Title in conventional format
     - Body summarizing changes + test results
 
-16. **Merge PR** and clean up:
+16. **Wait for CI** to pass:
 
     ```bash
-    gh pr merge <PR_NUMBER> --merge --delete-branch
+    gh pr checks <PR_NUMBER> --watch --fail-fast
     ```
 
-17. **Sync main**:
+17. **Merge PR** and clean up:
+
+    ```bash
+    gh pr merge <PR_NUMBER> --squash --delete-branch
+    ```
+
+18. **Sync main**:
 
     ```bash
     git checkout main
     git pull origin main
     ```
 
-18. **Build & Publish VS Code extension** (if `fd-vscode/`, `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `tree-sitter-fd/` were changed):
+19. **Verify site deploy** (if `site/`, `crates/fd-wasm/`, or `crates/fd-core/` changed):
+
+    Wait for the `pages.yml` deploy workflow to complete:
+
+    ```bash
+    sleep 30 && gh run list --workflow=pages.yml --limit 1 --json status,conclusion
+    ```
+
+    If `conclusion` is `success`, run the `/e2e` **Site Deploy Verification** tier
+    to confirm https://fast-draft.com is serving the updated content.
+
+    > **Skip** if the change is docs-only, CI config, or VS Code extension-only.
+
+20. **Build & Publish VS Code extension** (if `fd-vscode/`, `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `tree-sitter-fd/` were changed):
 
     > ⚠️ **MANDATORY**: Read `.env` for `VSCE_PAT`, `VSX_PAT`, and `GEMINI_API_KEY` BEFORE publishing.
     > Never rely on interactive prompts — always pass tokens via flags.
@@ -180,10 +199,10 @@ git checkout -b feat/<descriptive-name>
     > Skip publish if the change is local-only or version wasn't bumped.
     > **NEVER** publish to only one registry — both Marketplace AND Open VSX are required.
 
-19. Report PR URL, merge status, and publish results to user.
+21. Report PR URL, merge status, deploy verification, and publish results to user.
 
 ---
 
 ## `/yolo` — Full Pipeline
 
-Runs **all steps 1–19** in sequence (local + deploy).
+Runs **all steps 1–21** in sequence (local + deploy).

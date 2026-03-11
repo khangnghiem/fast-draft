@@ -320,7 +320,7 @@ checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
 name = "fd-core"
-version = "0.1.13"
+version = "0.1.15"
 dependencies = [
  "lasso",
  "log",
@@ -329,13 +329,14 @@ dependencies = [
  "proptest",
  "rmp-serde",
  "serde",
+ "serde_json",
  "smallvec",
  "winnow",
 ]
 
 [[package]]
 name = "fd-editor"
-version = "0.1.13"
+version = "0.1.15"
 dependencies = [
  "fd-core",
  "fd-render",
@@ -347,7 +348,7 @@ dependencies = [
 
 [[package]]
 name = "fd-lsp"
-version = "0.1.13"
+version = "0.1.15"
 dependencies = [
  "fd-core",
  "log",
@@ -359,7 +360,7 @@ dependencies = [
 
 [[package]]
 name = "fd-render"
-version = "0.1.13"
+version = "0.1.15"
 dependencies = [
  "fd-core",
  "kurbo",
@@ -372,7 +373,7 @@ dependencies = [
 
 [[package]]
 name = "fd-wasm"
-version = "0.1.13"
+version = "0.1.15"
 dependencies = [
  "fd-core",
  "fd-editor",

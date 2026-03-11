@@ -84,6 +84,7 @@ frame @card {
   fill: <color>
   corner: <radius>
   clip: true          # optional — clips children to frame bounds
+  pad: <px>           # optional — insets content area (works without layout:)
   layout: column gap=<px> pad=<px>
 
   # Children go here (nested nodes)
@@ -246,6 +247,8 @@ w: 280 h: 48
 9. **Named colors** — `fill: purple`, `fill: blue` etc. are accepted (17 Tailwind palette colors); hex always works too
 10. **Property aliases** — `background:` / `color:` → fill, `rounded:` / `radius:` → corner; the emitter uses canonical names
 11. **Dimension units** — `w: 320px` is accepted; the `px` suffix is cosmetic and stripped by the parser
+12. **Always use padding** — `pad: 12` on frames adds breathing room between edges and content; `layout: column pad=16` on managed layouts; never place children flush against frame edges
+13. **Prefer managed layouts** — use `layout: column gap=8 pad=16` instead of manual `x:` / `y:` for stacked elements; it's more maintainable and responsive
 
 ## Example: Complete Card
 

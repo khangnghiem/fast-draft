@@ -3,8 +3,8 @@
 
 spec "E-commerce checkout flow — MVP scope"
 
-theme label { font: "Inter" 14; fill: #333 }
-theme muted { font: "Inter" 12; fill: #999 }
+style label { font: "Inter" 14; fill: #333 }
+style muted { font: "Inter" 12; fill: #999 }
 
 # ─── Checkout page ───────────────────────────────────────────────────────
 

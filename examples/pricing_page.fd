@@ -1,23 +1,23 @@
-theme check {
+style check {
   fill: #00B894  # teal
 }
 
-theme feature {
+style feature {
   fill: #333333  # gray
   font: "Inter" regular 14
 }
 
-theme heading {
+style heading {
   fill: #1A1A2E  # blue
   font: "Inter" bold 32
 }
 
-theme price {
+style price {
   fill: #1A1A2E  # blue
   font: "Inter" extrabold 48
 }
 
-theme subhead {
+style subhead {
   fill: #6B7280  # blue
   font: "Inter" regular 16
 }

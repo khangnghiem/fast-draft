@@ -41,6 +41,9 @@ async function main() {
       fdCanvas.set_text(window.initialText);
     }
 
+    // Detect flow animations for continuous render loop
+    hasFlowEdges = fdCanvas.has_active_flows();
+
     // Measure all text nodes for tight bounding boxes
     measureAllTextNodes();
 
@@ -81,6 +84,7 @@ async function main() {
     setupInsertMenu();
     setupMinimap();
     setupColorSwatches();
+    setupPanelResize();
     setupTouchGestures();
     setupZoomControls();
     setupUndoRedoControls();
@@ -118,7 +122,7 @@ function render() {
   ctx.setTransform(z, 0, 0, z, panX * dpr, panY * dpr);
   // Draw grid below shapes
   if (gridEnabled) drawGrid();
-  fdCanvas.render(ctx, performance.now());
+  fdCanvas.render(ctx, performance.now(), gridEnabled);
 
   // ── Arrow tool: draw live preview line during drag ──
   const arrowPreviewJson = fdCanvas.get_arrow_preview();
@@ -283,7 +287,7 @@ let animFrameId = null;
 function startAnimLoop() {
   if (animFrameId !== null) return; // already running
   function loop() {
-    if (renderDirty || activeTweens.length > 0 || erasePoofs.length > 0) {
+    if (renderDirty || activeTweens.length > 0 || erasePoofs.length > 0 || hasFlowEdges) {
       renderDirty = false;
       render();
     }

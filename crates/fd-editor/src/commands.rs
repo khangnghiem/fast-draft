@@ -141,16 +141,20 @@ impl CommandStack {
     }
 
     /// Undo the last command (or batch snapshot).
-    pub fn undo(&mut self, engine: &mut SyncEngine) -> Option<String> {
+    ///
+    /// Returns `(description, is_snapshot)`. When `is_snapshot` is true,
+    /// the full document was re-parsed via `set_text()` which already
+    /// calls `resolve_layout()` — callers should skip a redundant `resolve()`.
+    pub fn undo(&mut self, engine: &mut SyncEngine) -> Option<(String, bool)> {
         let cmd = self.undo_stack.pop()?;
-        let desc = match &cmd {
+        let (desc, is_snapshot) = match &cmd {
             Command::Single {
                 inverse,
                 description,
                 ..
             } => {
                 engine.apply_mutation(*inverse.clone());
-                description.clone()
+                (description.clone(), false)
             }
             Command::Snapshot {
                 text_before,
@@ -158,24 +162,26 @@ impl CommandStack {
                 ..
             } => {
                 let _ = engine.set_text(text_before);
-                description.clone()
+                (description.clone(), true)
             }
         };
         self.redo_stack.push(cmd);
-        Some(desc)
+        Some((desc, is_snapshot))
     }
 
     /// Redo the last undone command (or batch snapshot).
-    pub fn redo(&mut self, engine: &mut SyncEngine) -> Option<String> {
+    ///
+    /// Returns `(description, is_snapshot)`. See `undo()` for details.
+    pub fn redo(&mut self, engine: &mut SyncEngine) -> Option<(String, bool)> {
         let cmd = self.redo_stack.pop()?;
-        let desc = match &cmd {
+        let (desc, is_snapshot) = match &cmd {
             Command::Single {
                 forward,
                 description,
                 ..
             } => {
                 engine.apply_mutation(*forward.clone());
-                description.clone()
+                (description.clone(), false)
             }
             Command::Snapshot {
                 text_after,
@@ -183,11 +189,11 @@ impl CommandStack {
                 ..
             } => {
                 let _ = engine.set_text(text_after);
-                description.clone()
+                (description.clone(), true)
             }
         };
         self.undo_stack.push(cmd);
-        Some(desc)
+        Some((desc, is_snapshot))
     }
 
     pub fn can_undo(&self) -> bool {
@@ -266,7 +272,7 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
             let old_style = engine
                 .graph
                 .get_by_id(*id)
-                .map(|n| n.style.clone())
+                .map(|n| n.props.clone())
                 .unwrap_or_default();
             GraphMutation::SetStyle {
                 id: *id,
@@ -395,16 +401,16 @@ rect @box {
         let moved_x = b.x;
 
         // Undo
-        let desc = stack.undo(&mut engine);
-        assert_eq!(desc, Some("Move box".to_string()));
+        let result = stack.undo(&mut engine);
+        assert_eq!(result.as_ref().map(|(d, _)| d.as_str()), Some("Move box"));
 
         engine.resolve();
         let b2 = engine.current_bounds().get(&idx).unwrap();
         assert!((b2.x - (moved_x - 50.0)).abs() < 0.1);
 
         // Redo
-        let desc = stack.redo(&mut engine);
-        assert_eq!(desc, Some("Move box".to_string()));
+        let result = stack.redo(&mut engine);
+        assert_eq!(result.as_ref().map(|(d, _)| d.as_str()), Some("Move box"));
 
         engine.resolve();
         let b3 = engine.current_bounds().get(&idx).unwrap();
@@ -520,7 +526,7 @@ rect @box {
             .graph
             .get_by_id(NodeId::intern("r"))
             .unwrap()
-            .style
+            .props
             .fill
         {
             Some(fd_core::model::Paint::Solid(c)) => c.to_hex(),
@@ -532,7 +538,7 @@ rect @box {
             .graph
             .get_by_id(NodeId::intern("r"))
             .unwrap()
-            .style
+            .props
             .clone();
         new_style.fill = Some(fd_core::model::Paint::Solid(fd_core::model::Color {
             r: 0.0,
@@ -554,7 +560,7 @@ rect @box {
             .graph
             .get_by_id(NodeId::intern("r"))
             .unwrap()
-            .style
+            .props
             .fill
         {
             Some(fd_core::model::Paint::Solid(c)) => c.to_hex(),
@@ -567,7 +573,7 @@ rect @box {
             .graph
             .get_by_id(NodeId::intern("r"))
             .unwrap()
-            .style
+            .props
             .fill
         {
             Some(fd_core::model::Paint::Solid(c)) => c.to_hex(),
@@ -602,8 +608,10 @@ rect @box {
         stack.end_batch(&mut engine);
 
         // One undo should reverse the entire gesture
-        let desc = stack.undo(&mut engine);
-        assert!(desc.is_some());
+        let result = stack.undo(&mut engine);
+        assert!(result.is_some());
+        // Batch undo uses snapshot path
+        assert!(result.unwrap().1, "batch undo should be a snapshot");
         engine.resolve();
 
         // Verify position is back to start
@@ -645,8 +653,8 @@ rect @box {
         // Undo + Redo
         stack.undo(&mut engine);
         engine.resolve();
-        let desc = stack.redo(&mut engine);
-        assert!(desc.is_some());
+        let result = stack.redo(&mut engine);
+        assert!(result.is_some());
         engine.resolve();
 
         // Verify position is at the dragged location

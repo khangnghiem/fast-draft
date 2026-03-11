@@ -335,6 +335,61 @@ export class FdCanvas {
         }
     }
     /**
+     * Get context-aware completions at the cursor position.
+     * Returns JSON: `[{label, kind, detail, insertText}]`
+     * @param {number} line
+     * @param {number} col
+     * @returns {string}
+     */
+    get_completions(line, col) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_completions(this.__wbg_ptr, line, col);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Get parse diagnostics for the current document text.
+     * Returns JSON: `[{line, col, endCol, message, severity}]`
+     * @returns {string}
+     */
+    get_diagnostics() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_diagnostics(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Get hover information at the cursor position.
+     * Returns JSON: `{content: "markdown"}` or `""` if no info.
+     * @param {number} line
+     * @param {number} col
+     * @returns {string}
+     */
+    get_hover(line, col) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_hover(this.__wbg_ptr, line, col);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Get animations for a node as a JSON array.
      * Returns `[]` if node not found or has no animations.
      * @param {string} node_id
@@ -414,6 +469,24 @@ export class FdCanvas {
             return getStringFromWasm0(ret[0], ret[1]);
         } finally {
             wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * Get the bounding box of all non-root nodes in the scene.
+     * Returns `{"x":N,"y":N,"w":N,"h":N}` or `""` if no nodes exist.
+     * Single WASM call replaces N×get_node_bounds() roundtrips in JS minimap.
+     * @returns {string}
+     */
+    get_scene_bounds() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_scene_bounds(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
         }
     }
     /**
@@ -521,6 +594,26 @@ export class FdCanvas {
         }
     }
     /**
+     * Get the current theme as a JSON object for cross-platform consumption.
+     *
+     * Returns a [`ThemeContract`] serialized as JSON, containing all visual
+     * constants (colors, fonts, spacing) that platform hosts need for
+     * consistent UI rendering.
+     * @returns {string}
+     */
+    get_theme_json() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_theme_json(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Get the current tool name.
      * @returns {string}
      */
@@ -584,7 +677,9 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
-     * Handle pointer move event. Returns true if the graph changed.
+     * Handle pointer move event. Returns JSON string:
+     * `{"changed":bool}` or `{"changed":bool,"bounds":{"x":N,"y":N,"w":N,"h":N}}`
+     * when actively dragging a selected node (for dimension tooltip).
      * @param {number} x
      * @param {number} y
      * @param {number} pressure
@@ -592,11 +687,19 @@ export class FdCanvas {
      * @param {boolean} ctrl
      * @param {boolean} alt
      * @param {boolean} meta
-     * @returns {boolean}
+     * @returns {string}
      */
     handle_pointer_move(x, y, pressure, shift, ctrl, alt, meta) {
-        const ret = wasm.fdcanvas_handle_pointer_move(this.__wbg_ptr, x, y, pressure, shift, ctrl, alt, meta);
-        return ret !== 0;
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_handle_pointer_move(this.__wbg_ptr, x, y, pressure, shift, ctrl, alt, meta);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
     }
     /**
      * Handle pointer up event. Returns a JSON string:
@@ -654,6 +757,17 @@ export class FdCanvas {
         }
     }
     /**
+     * Check if any edge in the scene has a flow animation (pulse/dash).
+     *
+     * The JS render loop uses this to keep rendering continuously when
+     * flow animations exist, instead of freezing when idle.
+     * @returns {boolean}
+     */
+    has_active_flows() {
+        const ret = wasm.fdcanvas_has_active_flows(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Check if text changed due to canvas interaction (for sync back to editor).
      * @returns {boolean}
      */
@@ -690,6 +804,19 @@ export class FdCanvas {
         } finally {
             wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
         }
+    }
+    /**
+     * Import a Mermaid diagram, converting it to FD format.
+     * Merges the resulting nodes and edges into the current document.
+     * Returns `true` on success, `false` on parse error.
+     * @param {string} mermaid_text
+     * @returns {boolean}
+     */
+    import_mermaid(mermaid_text) {
+        const ptr0 = passStringToWasm0(mermaid_text, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_import_mermaid(this.__wbg_ptr, ptr0, len0);
+        return ret !== 0;
     }
     /**
      * Create a new canvas controller with the given dimensions.
@@ -758,9 +885,10 @@ export class FdCanvas {
      * Render the scene to a Canvas2D context.
      * @param {CanvasRenderingContext2D} ctx
      * @param {number} time_ms
+     * @param {boolean} skip_grid
      */
-    render(ctx, time_ms) {
-        wasm.fdcanvas_render(this.__wbg_ptr, ctx, time_ms);
+    render(ctx, time_ms, skip_grid) {
+        wasm.fdcanvas_render(this.__wbg_ptr, ctx, time_ms, skip_grid);
     }
     /**
      * Render only the selected nodes (and their children) to the given context.
@@ -831,15 +959,25 @@ export class FdCanvas {
     }
     /**
      * Set the FD source text, re-parsing into the scene graph.
-     * Returns `true` on success, `false` on parse error.
+     * Returns a JSON string: `{"ok":true,"layout_changed":bool}`
+     * `layout_changed` is false when only non-layout properties changed
+     * (comments, specs, style names) — JS can skip re-render in that case.
      * @param {string} text
-     * @returns {boolean}
+     * @returns {string}
      */
     set_text(text) {
-        const ptr0 = passStringToWasm0(text, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.fdcanvas_set_text(this.__wbg_ptr, ptr0, len0);
-        return ret !== 0;
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(text, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_set_text(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
     }
     /**
      * Set the canvas theme.
@@ -942,6 +1080,10 @@ function __wbg_get_imports() {
             getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
             getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
         },
+        __wbg___wbindgen_is_undefined_9e4d92534c42d778: function(arg0) {
+            const ret = arg0 === undefined;
+            return ret;
+        },
         __wbg___wbindgen_throw_be289d5034ed271b: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
@@ -960,6 +1102,10 @@ function __wbg_get_imports() {
         __wbg_bezierCurveTo_38509204f815cfd5: function(arg0, arg1, arg2, arg3, arg4, arg5, arg6) {
             arg0.bezierCurveTo(arg1, arg2, arg3, arg4, arg5, arg6);
         },
+        __wbg_call_389efe28435a9388: function() { return handleError(function (arg0, arg1) {
+            const ret = arg0.call(arg1);
+            return ret;
+        }, arguments); },
         __wbg_closePath_de4e48859360b1b1: function(arg0) {
             arg0.closePath();
         },
@@ -990,6 +1136,16 @@ function __wbg_get_imports() {
             const ret = arg0.globalAlpha;
             return ret;
         },
+        __wbg_instanceof_Window_ed49b2db8df90359: function(arg0) {
+            let result;
+            try {
+                result = arg0 instanceof Window;
+            } catch (_) {
+                result = false;
+            }
+            const ret = result;
+            return ret;
+        },
         __wbg_lineTo_c584cff6c760c4a5: function(arg0, arg1, arg2) {
             arg0.lineTo(arg1, arg2);
         },
@@ -1004,17 +1160,25 @@ function __wbg_get_imports() {
             const ret = new Array();
             return ret;
         },
+        __wbg_new_no_args_1c7c842f08d00ebb: function(arg0, arg1) {
+            const ret = new Function(getStringFromWasm0(arg0, arg1));
+            return ret;
+        },
         __wbg_new_with_length_6523745c0bd32809: function(arg0) {
             const ret = new Float64Array(arg0 >>> 0);
             return ret;
         },
-        __wbg_now_a3af9a2f4bbaa4d1: function() {
-            const ret = Date.now();
+        __wbg_now_ebffdf7e580f210d: function(arg0) {
+            const ret = arg0.now();
             return ret;
         },
         __wbg_of_9ab14f9d4bfb5040: function(arg0, arg1) {
             const ret = Array.of(arg0, arg1);
             return ret;
+        },
+        __wbg_performance_06f12ba62483475d: function(arg0) {
+            const ret = arg0.performance;
+            return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
         },
         __wbg_quadraticCurveTo_b39b7adc73767cc0: function(arg0, arg1, arg2, arg3, arg4) {
             arg0.quadraticCurveTo(arg1, arg2, arg3, arg4);
@@ -1075,6 +1239,22 @@ function __wbg_get_imports() {
         },
         __wbg_set_textBaseline_c7ec6538cc52b073: function(arg0, arg1, arg2) {
             arg0.textBaseline = getStringFromWasm0(arg1, arg2);
+        },
+        __wbg_static_accessor_GLOBAL_12837167ad935116: function() {
+            const ret = typeof global === 'undefined' ? null : global;
+            return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+        },
+        __wbg_static_accessor_GLOBAL_THIS_e628e89ab3b1c95f: function() {
+            const ret = typeof globalThis === 'undefined' ? null : globalThis;
+            return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+        },
+        __wbg_static_accessor_SELF_a621d3dfbb60d0ce: function() {
+            const ret = typeof self === 'undefined' ? null : self;
+            return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+        },
+        __wbg_static_accessor_WINDOW_f8727f0cf888e0bd: function() {
+            const ret = typeof window === 'undefined' ? null : window;
+            return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
         },
         __wbg_strokeRect_4da24de25ed7fbaf: function(arg0, arg1, arg2, arg3, arg4) {
             arg0.strokeRect(arg1, arg2, arg3, arg4);
@@ -1218,6 +1398,10 @@ function handleError(f, args) {
         const idx = addToExternrefTable0(e);
         wasm.__wbindgen_exn_store(idx);
     }
+}
+
+function isLikeNone(x) {
+    return x === undefined || x === null;
 }
 
 function passStringToWasm0(arg, malloc, realloc) {

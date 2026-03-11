@@ -178,10 +178,10 @@ describe("computeSpecHideLines", () => {
     expect(computeSpecHideLines([])).toEqual([]);
   });
 
-  it("hides theme blocks entirely", () => {
-    const lines = ["theme heading {", "  fill: #333", "  font: Inter 700 32", "}"];
+  it("hides style blocks entirely", () => {
+    const lines = ["style heading {", "  fill: #333", "  font: Inter 700 32", "}"];
     const hidden = computeSpecHideLines(lines);
-    // All 4 lines should be hidden (theme block + closing brace of theme)
+    // All 4 lines should be hidden (style block + closing brace)
     expect(hidden).toEqual([0, 1, 2, 3]);
   });
 
@@ -292,7 +292,7 @@ describe("computeSpecFoldRanges", () => {
   });
 
   it("returns one range for a single contiguous hidden block", () => {
-    const lines = ["theme heading {", "  fill: #333", "  font: Inter 700 32", "}"];
+    const lines = ["style heading {", "  fill: #333", "  font: Inter 700 32", "}"];
     const ranges = computeSpecFoldRanges(lines);
     expect(ranges).toEqual([{ start: 0, end: 3 }]);
   });
@@ -313,7 +313,7 @@ describe("computeSpecFoldRanges", () => {
 
   it("returns multiple ranges when hidden blocks are separated by kept lines", () => {
     const lines = [
-      "theme body {",      // 0 - hidden
+      "style body {",      // 0 - hidden
       "  fill: #333",      // 1 - hidden
       "}",                 // 2 - hidden
       "",                  // 3 - blank (kept)
@@ -519,8 +519,8 @@ describe("parseDocumentSymbols", () => {
     expect(result[0].children[0].endLine).toBe(3);
   });
 
-  it("parses theme definition", () => {
-    const lines = ["theme card_text {", "  font: Inter 14", "  fill: #FFF", "}"];
+  it("parses style definition", () => {
+    const lines = ["style card_text {", "  font: Inter 14", "  fill: #FFF", "}"];
     const result = parseDocumentSymbols(lines);
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe("card_text");
@@ -556,7 +556,7 @@ describe("parseDocumentSymbols", () => {
 
   it("handles multiple top-level symbols", () => {
     const lines = [
-      "theme heading {",
+      "style heading {",
       "  fill: #333",
       "}",
       "rect @hero {",
@@ -655,8 +655,8 @@ describe("findSymbolAtLine", () => {
     expect(findSymbolAtLine([], 0)).toBeUndefined();
   });
 
-  it("handles theme blocks (non-@ symbols)", () => {
-    const styleLines = ["theme heading {", "  fill: #333", "}"];
+  it("handles style blocks (non-@ symbols)", () => {
+    const styleLines = ["style heading {", "  fill: #333", "}"];
     const styleSymbols = parseDocumentSymbols(styleLines);
     const sym = findSymbolAtLine(styleSymbols, 1);
     expect(sym).toBeDefined();
@@ -697,8 +697,8 @@ describe("transformSpecViewLine", () => {
     expect(transformSpecViewLine("    text @label \"Hi\" {")).toBe('    @label "Hi" {');
   });
 
-  it("does not transform theme lines", () => {
-    expect(transformSpecViewLine("theme heading {")).toBe("theme heading {");
+  it("does not transform style lines", () => {
+    expect(transformSpecViewLine("style heading {")).toBe("style heading {");
   });
 
   it("does not transform edge lines", () => {

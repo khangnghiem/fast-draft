@@ -55,10 +55,10 @@ module.exports = grammar({
         spec_keyword: (_$) =>
             choice("accept", "status", "priority", "tag"),
 
-        // ─── Style/Theme Block ──────────────────────────────────
+        // ─── Style Block (legacy: theme) ───────────────────────
         style_block: ($) =>
             seq(
-                choice("theme", "style"),
+                choice("style", "theme"),
                 field("name", $.identifier),
                 "{",
                 repeat($.property),

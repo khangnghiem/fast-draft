@@ -187,6 +187,7 @@ interface NodeContext {
     parentId?: string;    // nearest named parent group/frame
     width?: number;
     height?: number;
+    edgeTargets?: string[]; // IDs of nodes this node connects TO via edges
 }
 
 /**
@@ -266,6 +267,40 @@ function extractNodeContexts(fdText: string, anonIds: Set<string>): Map<string, 
         }
     }
 
+    // Second pass: scan for edge connections and populate edgeTargets
+    const EDGE_FROM_RE = /\bfrom:\s*@(\w+)/;
+    const EDGE_TO_RE = /\bto:\s*@(\w+)/;
+    let currentEdgeFrom: string | null = null;
+    let currentEdgeTo: string | null = null;
+    let inEdge = false;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("edge ") || trimmed.startsWith("edge@")) {
+            inEdge = true;
+            currentEdgeFrom = null;
+            currentEdgeTo = null;
+            continue;
+        }
+        if (inEdge) {
+            const fromMatch = trimmed.match(EDGE_FROM_RE);
+            const toMatch = trimmed.match(EDGE_TO_RE);
+            if (fromMatch) currentEdgeFrom = fromMatch[1];
+            if (toMatch) currentEdgeTo = toMatch[1];
+            if (trimmed === "}") {
+                // Edge block closed — link from→to
+                if (currentEdgeFrom && currentEdgeTo) {
+                    const fromCtx = contexts.get(currentEdgeFrom);
+                    if (fromCtx) {
+                        if (!fromCtx.edgeTargets) fromCtx.edgeTargets = [];
+                        fromCtx.edgeTargets.push(currentEdgeTo);
+                    }
+                }
+                inEdge = false;
+            }
+        }
+    }
+
     return contexts;
 }
 
@@ -294,7 +329,18 @@ function generateHeuristicName(ctx: NodeContext): string {
         }
     }
 
-    // 2. Parent context — rect inside @sidebar → sidebar_rect
+    // 2. Edge connection — name by what I connect TO
+    if (ctx.edgeTargets?.length) {
+        const semanticTarget = ctx.edgeTargets.find(
+            t => !/^_?(rect|ellipse|group|frame|path|text|edge)_\d+$/.test(t)
+        );
+        if (semanticTarget) {
+            parts.push(`${ctx.type}_to_${semanticTarget}`);
+            return sanitizeToFdId(parts.join("_"));
+        }
+    }
+
+    // 3. Parent context — rect inside @sidebar → sidebar_rect
     if (ctx.parentId && !ctx.parentId.match(/^_?(group|frame)_\d+$/)) {
         // Parent has a semantic name, use it
         parts.push(ctx.parentId);

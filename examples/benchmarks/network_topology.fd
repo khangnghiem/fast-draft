@@ -1,21 +1,21 @@
-# ─── Themes ───
+# ─── Styles ───
 
-theme cache_box {
+style cache_box {
   fill: #D1FAE5  # green
   corner: 8
 }
 
-theme db_box {
+style db_box {
   fill: #FEF3C7  # yellow
   corner: 8
 }
 
-theme ext_box {
+style ext_box {
   fill: #F3E8FF  # purple
   corner: 8
 }
 
-theme server_box {
+style server_box {
   fill: #EFF6FF  # blue
   corner: 8
 }

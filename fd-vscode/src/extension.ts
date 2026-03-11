@@ -16,7 +16,7 @@ import { FdTreePreviewPanel } from "./panels/tree-preview";
 import { FdSpecViewPanel } from "./panels/spec-view";
 import { FdDocumentSymbolProvider } from "./document-symbol";
 import { FdReadOnlyProvider, FD_READONLY_SCHEME, VIEW_MODE_LABELS, FdViewMode } from "./panels/readonly-provider";
-import { getNonce, HTML_TEMPLATE, VIEW_TYPE_CANVAS, COMMAND_AI_REFINE, COMMAND_AI_REFINE_ALL, COMMAND_EXPORT_SPEC, COMMAND_OPEN_CANVAS, COMMAND_SHOW_PREVIEW, COMMAND_SHOW_SPEC_VIEW, COMMAND_TOGGLE_VIEW_MODE, COMMAND_OPEN_READONLY_VIEW, COMMAND_CHANGE_VIEW_MODE, COMMAND_RENAMIFY } from "./webview-html";
+import { getNonce, HTML_TEMPLATE, VIEW_TYPE_CANVAS, COMMAND_AI_REFINE, COMMAND_AI_REFINE_ALL, COMMAND_EXPORT_SPEC, COMMAND_OPEN_CANVAS, COMMAND_SHOW_PREVIEW, COMMAND_SHOW_SPEC_VIEW, COMMAND_TOGGLE_VIEW_MODE, COMMAND_OPEN_READONLY_VIEW, COMMAND_CHANGE_VIEW_MODE, COMMAND_RENAMIFY, COMMAND_REFACTOR } from "./webview-html";
 
 /**
  * FD Custom Editor Provider.
@@ -96,7 +96,12 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
             incoming
           );
           await vscode.workspace.applyEdit(edit);
-          suppressEchoBack = false;
+          // Delay clearing — VS Code may fire onDidChangeTextDocument
+          // asynchronously after applyEdit resolves. Without the delay,
+          // the echo sends setText back to the webview → set_text() →
+          // resolve() → fresh bounds that clobber in-place move deltas,
+          // causing a visible one-frame flash after dragging nodes.
+          setTimeout(() => { suppressEchoBack = false; }, 200);
           // Delay re-enabling cursor sync — selection events fire asynchronously
           setTimeout(() => { suppressCursorSync = false; }, 200);
           break;
@@ -649,7 +654,7 @@ interface LibraryFile {
 
 /**
  * Scan workspace `libraries/` directories for .fd files.
- * Parse each file to extract reusable components (themes, groups, nodes).
+ * Parse each file to extract reusable components (styles, groups, nodes).
  */
 async function scanLibraryFiles(): Promise<LibraryFile[]> {
   const results: LibraryFile[] = [];
@@ -678,7 +683,7 @@ async function scanLibraryFiles(): Promise<LibraryFile[]> {
 
 /**
  * Parse a library .fd file to extract component definitions.
- * Extracts themes and top-level nodes (group, rect, ellipse, etc.) with their full code.
+ * Extracts styles and top-level nodes (group, rect, ellipse, etc.) with their full code.
  */
 function parseLibraryComponents(text: string): LibraryComponent[] {
   const components: LibraryComponent[] = [];
@@ -694,9 +699,9 @@ function parseLibraryComponents(text: string): LibraryComponent[] {
       continue;
     }
 
-    // Theme definition: theme name { ... }
-    const themeMatch = trimmed.match(/^theme\s+(\w+)\s*\{/);
-    if (themeMatch) {
+    // Style definition: style name { ... } (also accepts legacy `theme`)
+    const styleMatch = trimmed.match(/^(?:style|theme)\s+(\w+)\s*\{/);
+    if (styleMatch) {
       const startLine = i;
       let depth = 1;
       i++;
@@ -706,7 +711,7 @@ function parseLibraryComponents(text: string): LibraryComponent[] {
         i++;
       }
       const code = lines.slice(startLine, i).join("\n");
-      components.push({ name: themeMatch[1], kind: "theme", code });
+      components.push({ name: styleMatch[1], kind: "style", code });
       continue;
     }
 
@@ -1273,6 +1278,19 @@ export function activate(context: vscode.ExtensionContext) {
       } else {
         vscode.window.showInformationMessage(
           "Open the FD Canvas editor first to use Renamify."
+        );
+      }
+    })
+  );
+
+  // Register Refactor command (unified cleanup: rename + style hoist + round)
+  context.subscriptions.push(
+    vscode.commands.registerCommand(COMMAND_REFACTOR, () => {
+      if (FdEditorProvider.activePanel) {
+        FdEditorProvider.activePanel.webview.postMessage({ type: "triggerRefactor" });
+      } else {
+        vscode.window.showInformationMessage(
+          "Open the FD Canvas editor first to use Refactor."
         );
       }
     })
