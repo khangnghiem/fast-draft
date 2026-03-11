@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.110 — Harden Spatial Index Rebuild (R3.16)
+
+- **FIX (R3.16)**: `finalize_bounds()` now calls `rebuild_spatial_index()` after expanding parent groups — previously the spatial index retained pre-expand AABBs, causing hit-test misses on expanded parents
+- **FIX (R3.16)**: `update_text_metrics()` now calls `rebuild_spatial_index()` when text bounds change — JS-measured text dimensions were updating cached bounds without rebuilding the spatial index, causing stale hit-test after text measurement
+- **DIAG (R3.16)**: Temporary diagnostic `console.warn` in `hit_test()` — compares spatial index result vs brute-force for every hit test; logs `[FD DIAG] Stale spatial index!` when they disagree; **to be removed after verification**
+
 ### v0.10.109 — Fix Hover/Click State Conflation (R1.5)
 
 - **FIX (R1.5)**: Clicking a node no longer triggers `:hover` animations — `handle_pointer_down` and `handle_pointer_up` no longer set `hovered_id`; only `handle_pointer_move` manages hover state, aligning with CSS behavior where `:hover` is cursor-proximity based, not click-based; most visible on nodes with no base fill (transparent → colored on click)

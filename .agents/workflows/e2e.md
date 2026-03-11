@@ -74,6 +74,7 @@ On the open FD canvas editor, execute these 3 checks in sequence:
 3. BIDI SYNC: In the code editor panel, manually add "rect @smoke_test { w: 80 h: 40 }"
    on a new line → new rect appears on canvas.
 
+Resize browser viewport to 900×600 before taking screenshots.
 Take ONE screenshot at the end. Return PASS/FAIL for each check (1-3) and stop.
 ```
 
@@ -104,6 +105,7 @@ Navigate to https://fast-draft.com and verify the site is live after deploy:
 2. PLAYGROUND VISIBLE: Live Playground section with code editor and canvas area visible.
 3. WASM LOADS: Canvas renders shapes (not blank/black). Wait up to 5s for WASM init.
 
+Resize browser viewport to 900×600 before taking screenshots.
 Take ONE screenshot at the end. Return PASS/FAIL for each check (1-3) and stop.
 ```
 
@@ -119,6 +121,7 @@ Site Deploy: ✅ 3/3 — site loads, playground visible, WASM renders. Screensho
 
 > Run for major feature PRs or pre-release. Includes all phases below.
 > Each phase = ONE browser subagent call with the verbatim task.
+> **Always resize viewport to 900×600 before taking screenshots** in each phase.
 
 ### Phase 1 — Canvas Load & Render
 
@@ -246,3 +249,4 @@ For failures: one-line description + screenshot. No extended prose.
 - Use Ctrl (not ⌘) in the Codespace terminal — it runs Linux
 - All keyboard shortcuts are listed in the `?` help overlay
 - When running Smoke tier, the entire test is ONE subagent call
+- **Resize viewport to 900×600** before taking any screenshot — GPU-rendered canvases produce large images that can exceed the 5 MB API limit

@@ -56,6 +56,7 @@ Before proposing any new requirement, search the **Requirement Index** at the bo
 
 - **Reuse open tabs** — when a browser tab with the same hostname is already open, navigate within that tab instead of opening a new one. Only open a new tab if no existing tab matches the target hostname.
 - **Includes Codespaces** — the same rule applies to GitHub Codespace tabs (`*.github.dev`). Never open a duplicate Codespace tab.
+- **Small viewport for screenshots** — before any screenshot, resize the browser window to **900×600**. GPU-rendered canvases produce large images; this keeps screenshots under the 5 MB API limit.
 
 ---
 
