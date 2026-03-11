@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### R3.56 (done) — Export to HTML+CSS+JS
+- Implemented `emit_html` in `fd-core` which converts a `SceneGraph` into a standalone HTML string.
+- Frame, Group, Rect, Image, and Text nodes are absolutely positioned as `<div>` or `<p>` elements matching layout bounds.
+- Ellipse, Path, and Edge nodes are mapped into a full-screen `<svg>` overlay.
+- Added support for filling, strokes, fonts, corners, opacity, and text alignment through inline CSS.
+
+
 ### v0.10.114 — Fix Canvas Background Fill in Transformed Space (R6.9)
 
 - **FIX (R6.9)**: Canvas background no longer shifts or leaves white gaps when panning/zooming — root cause: WASM `render_scene()` filled the background after JS applied the zoom/pan transform (`setTransform(dpr*z, 0, 0, dpr*z, panX*dpr, panY*dpr)`), so the fill started at the transformed origin instead of canvas pixel (0,0); fix: background is now filled in identity transform space by JS before applying zoom/pan, and WASM `render()` accepts a new `skip_bg: bool` parameter to skip its own background fill

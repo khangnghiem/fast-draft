@@ -1,5 +1,6 @@
 pub mod emitter;
 pub mod format;
+pub mod html;
 pub mod id;
 pub mod layout;
 pub mod lint;
