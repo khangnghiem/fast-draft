@@ -1741,3 +1741,218 @@ fn select_tool_reclick_keeps_selection() {
         "re-clicking should keep selection"
     );
 }
+
+#[test]
+fn tool_pen_basic_draw() {
+    let mut tool = PenTool::new();
+    assert_eq!(tool.kind(), ToolKind::Pen);
+    assert!(!tool.is_drawing());
+
+    // 1. PointerDown: Starts drawing, creates Path
+    let muts = tool.handle(
+        &InputEvent::PointerDown {
+            x: 10.0,
+            y: 20.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert!(tool.is_drawing());
+    assert_eq!(muts.len(), 1);
+
+    let path_id = match &muts[0] {
+        GraphMutation::AddNode { parent_id, node } => {
+            assert_eq!(*parent_id, NodeId::intern("root"));
+            assert!(node.id.as_str().starts_with("path_"));
+            if let NodeKind::Path { commands } = &node.kind {
+                assert_eq!(commands.len(), 1);
+                assert!(matches!(commands[0], PathCmd::MoveTo(10.0, 20.0)));
+            } else {
+                panic!("Expected Path node");
+            }
+            node.id
+        }
+        _ => panic!("Expected AddNode"),
+    };
+
+    // 2. PointerMove: Updates path with LineTo
+    let muts = tool.handle(
+        &InputEvent::PointerMove {
+            x: 15.0,
+            y: 25.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(muts.len(), 1);
+    match &muts[0] {
+        GraphMutation::UpdatePath { id, commands } => {
+            assert_eq!(*id, path_id);
+            assert_eq!(commands.len(), 2);
+            assert!(matches!(commands[0], PathCmd::MoveTo(10.0, 20.0)));
+            assert!(matches!(commands[1], PathCmd::LineTo(15.0, 25.0)));
+        }
+        _ => panic!("Expected UpdatePath"),
+    }
+
+    // 3. PointerMove again
+    let _ = tool.handle(
+        &InputEvent::PointerMove {
+            x: 20.0,
+            y: 30.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // 4. PointerUp: Finalizes with Catmull-Rom smoothing
+    let muts = tool.handle(
+        &InputEvent::PointerUp {
+            x: 20.0,
+            y: 30.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert!(!tool.is_drawing());
+    assert_eq!(muts.len(), 1);
+    match &muts[0] {
+        GraphMutation::UpdatePath { id, commands } => {
+            assert_eq!(*id, path_id);
+            assert_eq!(commands.len(), 3); // MoveTo, CubicTo, CubicTo
+            assert!(matches!(commands[0], PathCmd::MoveTo(10.0, 20.0)));
+            assert!(matches!(
+                commands[1],
+                PathCmd::CubicTo(_, _, _, _, 15.0, 25.0)
+            ));
+            assert!(matches!(
+                commands[2],
+                PathCmd::CubicTo(_, _, _, _, 20.0, 30.0)
+            ));
+        }
+        _ => panic!("Expected UpdatePath"),
+    }
+}
+
+#[test]
+fn tool_pen_two_points() {
+    let mut tool = PenTool::new();
+
+    // Down
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 0.0,
+            y: 0.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    // Move
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 100.0,
+            y: 100.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    // Up - exactly 2 points should just be MoveTo + LineTo
+    let muts = tool.handle(
+        &InputEvent::PointerUp {
+            x: 100.0,
+            y: 100.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    match &muts[0] {
+        GraphMutation::UpdatePath { commands, .. } => {
+            assert_eq!(commands.len(), 2);
+            assert!(matches!(commands[0], PathCmd::MoveTo(0.0, 0.0)));
+            assert!(matches!(commands[1], PathCmd::LineTo(100.0, 100.0)));
+        }
+        _ => panic!("Expected UpdatePath"),
+    }
+}
+
+#[test]
+fn tool_pen_cancel() {
+    let mut tool = PenTool::new();
+
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 0.0,
+            y: 0.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert!(tool.is_drawing());
+
+    tool.cancel();
+    assert!(!tool.is_drawing());
+
+    // Moving after cancel does nothing
+    let muts = tool.handle(
+        &InputEvent::PointerMove {
+            x: 100.0,
+            y: 100.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert!(muts.is_empty());
+}
+
+#[test]
+fn tool_pen_subsampling() {
+    let mut tool = PenTool::new();
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 0.0,
+            y: 0.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Feed 100 points
+    for i in 1..=100 {
+        tool.handle(
+            &InputEvent::PointerMove {
+                x: i as f32,
+                y: i as f32,
+                pressure: 1.0,
+                modifiers: Modifiers::NONE,
+            },
+            None,
+        );
+    }
+
+    let muts = tool.handle(
+        &InputEvent::PointerUp {
+            x: 100.0,
+            y: 100.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    match &muts[0] {
+        GraphMutation::UpdatePath { commands, .. } => {
+            // Should be subsampled to max 64 points
+            // 1 MoveTo + 63 CubicTo = 64 commands
+            assert_eq!(commands.len(), 64);
+        }
+        _ => panic!("Expected UpdatePath"),
+    }
+}
