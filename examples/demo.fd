@@ -76,6 +76,7 @@ frame @sidebar {
       opacity: 0.7
     }
     w: 180 h: 40
+    fill: #3D3A6E  # blue
     corner: 8
     when :hover {
       fill: #5A4BD1  # blue
@@ -88,6 +89,7 @@ frame @sidebar {
       opacity: 0.7
     }
     w: 180 h: 40
+    fill: #3D3A6E  # blue
     corner: 8
     when :hover {
       fill: #5A4BD1  # blue

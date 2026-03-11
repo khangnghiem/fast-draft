@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.109 — Fix Hover/Click State Conflation (R1.5)
+
+- **FIX (R1.5)**: Clicking a node no longer triggers `:hover` animations — `handle_pointer_down` and `handle_pointer_up` no longer set `hovered_id`; only `handle_pointer_move` manages hover state, aligning with CSS behavior where `:hover` is cursor-proximity based, not click-based; most visible on nodes with no base fill (transparent → colored on click)
+- **FIX**: `@nav_projects` and `@nav_settings` in `demo.fd` now have a base fill (`#3D3A6E`) so hover transitions go from muted purple to bright purple, matching `@nav_dashboard`'s pattern
+- **DOCS**: New LESSONS.md entry — "Pointer Down Must Not Set Hover State"
+
 ### v0.10.108 — Fix Drawing Tools + Playground UI (R6.6)
 
 - **FIX (R6.6)**: Drawing tools (Rect/Ellipse/Pen/Text/Arrow) now work on the playground — shapes appear on canvas AND sync to the code editor; root cause: `handle_pointer_up` computed `visual_changed` without `tool_switched`, so after a draw gesture the JS never called `syncCanvasToEditor()`; the node existed in WASM (flushed by `end_batch()`) but `changed=false` in the JSON response because the tool's `PointerUp` returns empty mutations (all work done in PointerDown/PointerMove); fix: compute `tool_switched` early and include it in both the `flush_to_text()` gate and `visual_changed`; JS now syncs on `result.toolSwitched` too

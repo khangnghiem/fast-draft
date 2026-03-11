@@ -339,9 +339,10 @@ impl FdCanvas {
         self.pressed_id = hit;
         let pressed_changed = prev_pressed != self.pressed_id;
 
-        let prev_hovered = self.hovered_id;
-        self.hovered_id = hit;
-        let hovered_changed = prev_hovered != self.hovered_id;
+        // Don't set hovered_id on pointer-down — hover is managed
+        // exclusively by handle_pointer_move (CSS-style behavior).
+        // Click should only set pressed_id, not trigger :hover animations.
+        let hovered_changed = false;
 
         // Check for resize handle hit on currently selected node
         if self.active_tool == ToolKind::Select
@@ -605,9 +606,9 @@ impl FdCanvas {
                 .effective_target(id, &self.select_tool.selected)
         });
 
-        let prev_hovered = self.hovered_id;
-        self.hovered_id = hit;
-        let hovered_changed = prev_hovered != self.hovered_id;
+        // Don't set hovered_id on pointer-up — hover is managed
+        // exclusively by handle_pointer_move (CSS-style behavior).
+        let hovered_changed = false;
 
         // Eraser: end gesture — flush text once, reset state
         if self.active_tool == ToolKind::Eraser {

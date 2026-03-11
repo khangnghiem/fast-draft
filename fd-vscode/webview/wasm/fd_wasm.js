@@ -596,7 +596,7 @@ export class FdCanvas {
     /**
      * Get the current theme as a JSON object for cross-platform consumption.
      *
-     * Returns a [`ThemeContract`] serialized as JSON, containing all visual
+     * Returns a `ThemeContract` serialized as JSON, containing all visual
      * constants (colors, fonts, spacing) that platform hosts need for
      * consistent UI rendering.
      * @returns {string}
