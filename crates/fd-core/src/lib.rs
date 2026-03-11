@@ -23,3 +23,4 @@ pub use transform::{dedup_use_styles, hoist_styles, sort_nodes};
 
 // Re-export petgraph types so downstream crates don't need a direct dependency
 pub use petgraph::graph::NodeIndex;
+pub mod html;
