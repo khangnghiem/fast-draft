@@ -518,6 +518,41 @@ fn parse_font_value(input: &mut &str, style: &mut Properties) -> ModalResult<()>
 
 // ─── Node parser ─────────────────────────────────────────────────────────
 
+#[derive(Debug)]
+pub(crate) struct NodeParseState {
+    pub style: Properties,
+    pub use_styles: Vec<NodeId>,
+    pub constraints: Vec<Constraint>,
+    pub width: Option<f32>,
+    pub height: Option<f32>,
+    pub layout: LayoutMode,
+    pub clip: bool,
+    pub place: Option<(HPlace, VPlace)>,
+    pub locked: bool,
+    pub path_commands: Vec<PathCmd>,
+    pub image_src: Option<String>,
+    pub image_fit: ImageFit,
+}
+
+impl Default for NodeParseState {
+    fn default() -> Self {
+        Self {
+            style: Properties::default(),
+            use_styles: Vec::new(),
+            constraints: Vec::new(),
+            width: None,
+            height: None,
+            layout: LayoutMode::Free { pad: 0.0 },
+            clip: false,
+            place: None,
+            locked: false,
+            path_commands: Vec::new(),
+            image_src: None,
+            image_fit: ImageFit::default(),
+        }
+    }
+}
+
 fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     // Type keyword is optional — `@id { }` creates a Generic node
     let kind_str = if input.starts_with('@') {
@@ -558,21 +593,10 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     skip_space(input);
     let _ = '{'.parse_next(input)?;
 
-    let mut style = Properties::default();
-    let mut use_styles = Vec::new();
-    let mut constraints = Vec::new();
+    let mut state = NodeParseState::default();
     let mut animations = Vec::new();
     let mut annotations = Vec::new();
     let mut children = Vec::new();
-    let mut width: Option<f32> = None;
-    let mut height: Option<f32> = None;
-    let mut layout = LayoutMode::Free { pad: 0.0 };
-    let mut clip = false;
-    let mut place: Option<(HPlace, VPlace)> = None;
-    let mut locked = false;
-    let mut path_commands: Vec<PathCmd> = Vec::new();
-    let mut image_src: Option<String> = None;
-    let mut image_fit = ImageFit::default();
 
     skip_ws_and_comments(input);
 
@@ -588,21 +612,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
         } else if input.starts_with("when") || input.starts_with("anim") {
             animations.push(parse_anim_block.parse_next(input)?);
         } else {
-            parse_node_property(
-                input,
-                &mut style,
-                &mut use_styles,
-                &mut constraints,
-                &mut width,
-                &mut height,
-                &mut layout,
-                &mut clip,
-                &mut place,
-                &mut locked,
-                &mut path_commands,
-                &mut image_src,
-                &mut image_fit,
-            )?;
+            parse_node_property(input, &mut state)?;
         }
         // Collect comments between items; they'll be attached to the *next* child node
         let _inner_comments = collect_leading_comments(input);
@@ -613,31 +623,31 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let kind = match kind_str {
         "group" => NodeKind::Group, // Group is purely organizational — layout ignored
         "frame" => NodeKind::Frame {
-            width: width.unwrap_or(200.0),
-            height: height.unwrap_or(200.0),
-            clip,
-            layout,
+            width: state.width.unwrap_or(200.0),
+            height: state.height.unwrap_or(200.0),
+            clip: state.clip,
+            layout: state.layout,
         },
         "rect" => NodeKind::Rect {
-            width: width.unwrap_or(100.0),
-            height: height.unwrap_or(100.0),
+            width: state.width.unwrap_or(100.0),
+            height: state.height.unwrap_or(100.0),
         },
         "ellipse" => NodeKind::Ellipse {
-            rx: width.unwrap_or(50.0),
-            ry: height.unwrap_or(50.0),
+            rx: state.width.unwrap_or(50.0),
+            ry: state.height.unwrap_or(50.0),
         },
         "text" => NodeKind::Text {
             content: inline_text.unwrap_or_default(),
-            max_width: width,
+            max_width: state.width,
         },
         "path" => NodeKind::Path {
-            commands: path_commands,
+            commands: state.path_commands,
         },
         "image" => NodeKind::Image {
-            source: ImageSource::File(image_src.unwrap_or_default()),
-            width: width.unwrap_or(100.0),
-            height: height.unwrap_or(100.0),
-            fit: image_fit,
+            source: ImageSource::File(state.image_src.unwrap_or_default()),
+            width: state.width.unwrap_or(100.0),
+            height: state.height.unwrap_or(100.0),
+            fit: state.image_fit,
         },
         "generic" => NodeKind::Generic,
         _ => unreachable!(),
@@ -646,15 +656,15 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     Ok(ParsedNode {
         id,
         kind,
-        props: style,
-        use_styles,
-        constraints,
+        props: state.style,
+        use_styles: state.use_styles,
+        constraints: state.constraints,
         animations,
         annotations,
         comments: Vec::new(),
         children,
-        place,
-        locked,
+        place: state.place,
+        locked: state.locked,
     })
 }
 
@@ -771,53 +781,79 @@ fn parse_gradient_stops(input: &mut &str) -> ModalResult<Vec<GradientStop>> {
     Ok(stops)
 }
 
-#[allow(clippy::too_many_arguments)]
-fn parse_node_property(
-    input: &mut &str,
-    style: &mut Properties,
-    use_styles: &mut Vec<NodeId>,
-    constraints: &mut Vec<Constraint>,
-    width: &mut Option<f32>,
-    height: &mut Option<f32>,
-    layout: &mut LayoutMode,
-    clip: &mut bool,
-    place: &mut Option<(HPlace, VPlace)>,
-    locked: &mut bool,
-    path_commands: &mut Vec<PathCmd>,
-    image_src: &mut Option<String>,
-    image_fit: &mut ImageFit,
-) -> ModalResult<()> {
+fn parse_node_property(input: &mut &str, state: &mut NodeParseState) -> ModalResult<()> {
     let prop_name = parse_identifier.parse_next(input)?;
     skip_space(input);
     let _ = ':'.parse_next(input)?;
     skip_space(input);
 
     match prop_name {
+        "x" | "y" | "place" => parse_node_position(input, prop_name, state)?,
+        "w" | "width" | "h" | "height" => parse_node_dimension(input, prop_name, state)?,
+        "fill" | "background" | "color" | "bg" | "stroke" | "border" | "corner" | "rounded"
+        | "radius" | "opacity" | "shadow" | "font" => parse_node_style(input, prop_name, state)?,
+        "align" | "text_align" | "label" => parse_node_text(input, prop_name, state)?,
+        "layout" | "clip" | "pad" | "padding" => {
+            parse_node_layout_and_clip(input, prop_name, state)?
+        }
+        "d" | "src" | "fit" => parse_node_path_and_image(input, prop_name, state)?,
+        _ => parse_node_misc(input, prop_name, state)?,
+    }
+
+    skip_opt_separator(input);
+    Ok(())
+}
+
+fn parse_node_position(
+    input: &mut &str,
+    prop_name: &str,
+    state: &mut NodeParseState,
+) -> ModalResult<()> {
+    match prop_name {
         "x" => {
             let x_val = parse_number.parse_next(input)?;
-            // Replace existing Position constraint if present, else push new
-            if let Some(Constraint::Position { x, .. }) = constraints
+            if let Some(Constraint::Position { x, .. }) = state
+                .constraints
                 .iter_mut()
                 .find(|c| matches!(c, Constraint::Position { .. }))
             {
                 *x = x_val;
             } else {
-                constraints.push(Constraint::Position { x: x_val, y: 0.0 });
+                state
+                    .constraints
+                    .push(Constraint::Position { x: x_val, y: 0.0 });
             }
         }
         "y" => {
             let y_val = parse_number.parse_next(input)?;
-            if let Some(Constraint::Position { y, .. }) = constraints
+            if let Some(Constraint::Position { y, .. }) = state
+                .constraints
                 .iter_mut()
                 .find(|c| matches!(c, Constraint::Position { .. }))
             {
                 *y = y_val;
             } else {
-                constraints.push(Constraint::Position { x: 0.0, y: y_val });
+                state
+                    .constraints
+                    .push(Constraint::Position { x: 0.0, y: y_val });
             }
         }
+        "place" => {
+            state.place = Some(parse_place_value(input)?);
+        }
+        _ => unreachable!(),
+    }
+    Ok(())
+}
+
+fn parse_node_dimension(
+    input: &mut &str,
+    prop_name: &str,
+    state: &mut NodeParseState,
+) -> ModalResult<()> {
+    match prop_name {
         "w" | "width" => {
-            *width = Some(parse_number.parse_next(input)?);
+            state.width = Some(parse_number.parse_next(input)?);
             skip_px_suffix(input);
             skip_space(input);
             if input.starts_with("h:") || input.starts_with("h :") {
@@ -825,24 +861,35 @@ fn parse_node_property(
                 skip_space(input);
                 let _ = ':'.parse_next(input)?;
                 skip_space(input);
-                *height = Some(parse_number.parse_next(input)?);
+                state.height = Some(parse_number.parse_next(input)?);
                 skip_px_suffix(input);
             }
         }
         "h" | "height" => {
-            *height = Some(parse_number.parse_next(input)?);
+            state.height = Some(parse_number.parse_next(input)?);
             skip_px_suffix(input);
         }
+        _ => unreachable!(),
+    }
+    Ok(())
+}
+
+fn parse_node_style(
+    input: &mut &str,
+    prop_name: &str,
+    state: &mut NodeParseState,
+) -> ModalResult<()> {
+    match prop_name {
         "fill" | "background" | "color" => {
-            style.fill = Some(parse_paint(input)?);
+            state.style.fill = Some(parse_paint(input)?);
         }
         "bg" => {
-            style.fill = Some(Paint::Solid(parse_hex_color.parse_next(input)?));
+            state.style.fill = Some(Paint::Solid(parse_hex_color.parse_next(input)?));
             loop {
                 skip_space(input);
                 if input.starts_with("corner=") {
                     let _ = "corner=".parse_next(input)?;
-                    style.corner_radius = Some(parse_number.parse_next(input)?);
+                    state.style.corner_radius = Some(parse_number.parse_next(input)?);
                 } else if input.starts_with("shadow=(") {
                     let _ = "shadow=(".parse_next(input)?;
                     let ox = parse_number.parse_next(input)?;
@@ -853,7 +900,7 @@ fn parse_node_property(
                     let _ = ','.parse_next(input)?;
                     let color = parse_hex_color.parse_next(input)?;
                     let _ = ')'.parse_next(input)?;
-                    style.shadow = Some(Shadow {
+                    state.style.shadow = Some(Shadow {
                         offset_x: ox,
                         offset_y: oy,
                         blur,
@@ -868,32 +915,20 @@ fn parse_node_property(
             let color = parse_hex_color.parse_next(input)?;
             let _ = space1.parse_next(input)?;
             let w = parse_number.parse_next(input)?;
-            style.stroke = Some(Stroke {
+            state.style.stroke = Some(Stroke {
                 paint: Paint::Solid(color),
                 width: w,
                 ..Stroke::default()
             });
         }
         "corner" | "rounded" | "radius" => {
-            style.corner_radius = Some(parse_number.parse_next(input)?);
+            state.style.corner_radius = Some(parse_number.parse_next(input)?);
             skip_px_suffix(input);
         }
         "opacity" => {
-            style.opacity = Some(parse_number.parse_next(input)?);
-        }
-        "align" | "text_align" => {
-            parse_align_value(input, style)?;
-        }
-        "place" => {
-            *place = Some(parse_place_value(input)?);
-        }
-        "locked" => {
-            // locked: true — parse boolean value
-            let val = parse_identifier.parse_next(input)?;
-            *locked = val == "true";
+            state.style.opacity = Some(parse_number.parse_next(input)?);
         }
         "shadow" => {
-            // shadow: (ox,oy,blur,#COLOR)  — colon already consumed by property parser
             skip_space(input);
             if input.starts_with('(') {
                 let _ = '('.parse_next(input)?;
@@ -905,13 +940,30 @@ fn parse_node_property(
                 let _ = ','.parse_next(input)?;
                 let color = parse_hex_color.parse_next(input)?;
                 let _ = ')'.parse_next(input)?;
-                style.shadow = Some(Shadow {
+                state.style.shadow = Some(Shadow {
                     offset_x: ox,
                     offset_y: oy,
                     blur,
                     color,
                 });
             }
+        }
+        "font" => {
+            parse_font_value(input, &mut state.style)?;
+        }
+        _ => unreachable!(),
+    }
+    Ok(())
+}
+
+fn parse_node_text(
+    input: &mut &str,
+    prop_name: &str,
+    state: &mut NodeParseState,
+) -> ModalResult<()> {
+    match prop_name {
+        "align" | "text_align" => {
+            parse_align_value(input, &mut state.style)?;
         }
         "label" => {
             // Deprecated: label is now a text child node.
@@ -925,12 +977,17 @@ fn parse_node_property(
                 .parse_next(input);
             }
         }
-        "use" | "apply" => {
-            use_styles.push(parse_identifier.map(NodeId::intern).parse_next(input)?);
-        }
-        "font" => {
-            parse_font_value(input, style)?;
-        }
+        _ => unreachable!(),
+    }
+    Ok(())
+}
+
+fn parse_node_layout_and_clip(
+    input: &mut &str,
+    prop_name: &str,
+    state: &mut NodeParseState,
+) -> ModalResult<()> {
+    match prop_name {
         "layout" => {
             let mode_str = parse_identifier.parse_next(input)?;
             skip_space(input);
@@ -951,7 +1008,7 @@ fn parse_node_property(
                     break;
                 }
             }
-            *layout = match mode_str {
+            state.layout = match mode_str {
                 "column" => LayoutMode::Column { gap, pad },
                 "row" => LayoutMode::Row { gap, pad },
                 "grid" => LayoutMode::Grid { cols: 2, gap, pad },
@@ -960,89 +1017,98 @@ fn parse_node_property(
         }
         "clip" => {
             let val = parse_identifier.parse_next(input)?;
-            *clip = val == "true";
+            state.clip = val == "true";
         }
         "pad" | "padding" => {
-            // Standalone pad: N — sets padding on Free frames
             let val = parse_number.parse_next(input)?;
-            match layout {
+            match &mut state.layout {
                 LayoutMode::Free { pad } => *pad = val,
                 LayoutMode::Column { pad, .. }
                 | LayoutMode::Row { pad, .. }
                 | LayoutMode::Grid { pad, .. } => *pad = val,
             }
         }
-        "d" => {
-            // Parse SVG-like path commands: M x y L x y C ... Z
-            loop {
-                skip_space(input);
-                let at_end = input.is_empty()
-                    || input.starts_with('\n')
-                    || input.starts_with(';')
-                    || input.starts_with('}');
-                if at_end {
-                    break;
-                }
-                let saved = *input;
-                if let Ok(cmd_char) = take_while::<_, _, ContextError>(1..=1, |c: char| {
-                    matches!(c, 'M' | 'L' | 'Q' | 'C' | 'Z')
-                })
-                .parse_next(input)
-                {
-                    skip_space(input);
-                    match cmd_char {
-                        "M" => {
-                            let x = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let y = parse_number.parse_next(input)?;
-                            path_commands.push(PathCmd::MoveTo(x, y));
-                        }
-                        "L" => {
-                            let x = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let y = parse_number.parse_next(input)?;
-                            path_commands.push(PathCmd::LineTo(x, y));
-                        }
-                        "Q" => {
-                            let cx = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let cy = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let ex = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let ey = parse_number.parse_next(input)?;
-                            path_commands.push(PathCmd::QuadTo(cx, cy, ex, ey));
-                        }
-                        "C" => {
-                            let c1x = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let c1y = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let c2x = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let c2y = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let ex = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let ey = parse_number.parse_next(input)?;
-                            path_commands.push(PathCmd::CubicTo(c1x, c1y, c2x, c2y, ex, ey));
-                        }
-                        "Z" => {
-                            path_commands.push(PathCmd::Close);
-                        }
-                        _ => {
-                            *input = saved;
-                            break;
-                        }
-                    }
-                } else {
-                    *input = saved;
-                    break;
-                }
+        _ => unreachable!(),
+    }
+    Ok(())
+}
+
+fn parse_node_path_and_image(
+    input: &mut &str,
+    prop_name: &str,
+    state: &mut NodeParseState,
+) -> ModalResult<()> {
+    match prop_name {
+        "d" => loop {
+            skip_space(input);
+            let at_end = input.is_empty()
+                || input.starts_with('\n')
+                || input.starts_with(';')
+                || input.starts_with('}');
+            if at_end {
+                break;
             }
-        }
+            let saved = *input;
+            if let Ok(cmd_char) = take_while::<_, _, ContextError>(1..=1, |c: char| {
+                matches!(c, 'M' | 'L' | 'Q' | 'C' | 'Z')
+            })
+            .parse_next(input)
+            {
+                skip_space(input);
+                match cmd_char {
+                    "M" => {
+                        let x = parse_number.parse_next(input)?;
+                        skip_space(input);
+                        let y = parse_number.parse_next(input)?;
+                        state.path_commands.push(PathCmd::MoveTo(x, y));
+                    }
+                    "L" => {
+                        let x = parse_number.parse_next(input)?;
+                        skip_space(input);
+                        let y = parse_number.parse_next(input)?;
+                        state.path_commands.push(PathCmd::LineTo(x, y));
+                    }
+                    "Q" => {
+                        let cx = parse_number.parse_next(input)?;
+                        skip_space(input);
+                        let cy = parse_number.parse_next(input)?;
+                        skip_space(input);
+                        let ex = parse_number.parse_next(input)?;
+                        skip_space(input);
+                        let ey = parse_number.parse_next(input)?;
+                        state.path_commands.push(PathCmd::QuadTo(cx, cy, ex, ey));
+                    }
+                    "C" => {
+                        let c1x = parse_number.parse_next(input)?;
+                        skip_space(input);
+                        let c1y = parse_number.parse_next(input)?;
+                        skip_space(input);
+                        let c2x = parse_number.parse_next(input)?;
+                        skip_space(input);
+                        let c2y = parse_number.parse_next(input)?;
+                        skip_space(input);
+                        let ex = parse_number.parse_next(input)?;
+                        skip_space(input);
+                        let ey = parse_number.parse_next(input)?;
+                        state
+                            .path_commands
+                            .push(PathCmd::CubicTo(c1x, c1y, c2x, c2y, ex, ey));
+                    }
+                    "Z" => {
+                        state.path_commands.push(PathCmd::Close);
+                    }
+                    _ => {
+                        *input = saved;
+                        break;
+                    }
+                }
+            } else {
+                *input = saved;
+                break;
+            }
+        },
         "src" => {
-            *image_src = Some(
+            state.image_src = Some(
                 parse_quoted_string
                     .map(|s| s.to_string())
                     .parse_next(input)?,
@@ -1050,7 +1116,7 @@ fn parse_node_property(
         }
         "fit" => {
             let val = parse_identifier.parse_next(input)?;
-            *image_fit = match val {
+            state.image_fit = match val {
                 "cover" => ImageFit::Cover,
                 "contain" => ImageFit::Contain,
                 "fill" => ImageFit::Fill,
@@ -1058,14 +1124,32 @@ fn parse_node_property(
                 _ => ImageFit::Cover,
             };
         }
+        _ => unreachable!(),
+    }
+    Ok(())
+}
+
+fn parse_node_misc(
+    input: &mut &str,
+    prop_name: &str,
+    state: &mut NodeParseState,
+) -> ModalResult<()> {
+    match prop_name {
+        "locked" => {
+            let val = parse_identifier.parse_next(input)?;
+            state.locked = val == "true";
+        }
+        "use" | "apply" => {
+            state
+                .use_styles
+                .push(parse_identifier.map(NodeId::intern).parse_next(input)?);
+        }
         _ => {
             let _ =
                 take_till::<_, _, ContextError>(0.., |c: char| c == '\n' || c == ';' || c == '}')
                     .parse_next(input);
         }
     }
-
-    skip_opt_separator(input);
     Ok(())
 }
 
@@ -1349,6 +1433,37 @@ fn parse_edge_defaults_block(input: &mut &str) -> ModalResult<EdgeDefaults> {
 
 // ─── Edge block parser ─────────────────────────────────────────────────
 
+#[derive(Debug)]
+pub(crate) struct EdgeParseState {
+    pub from: Option<EdgeAnchor>,
+    pub to: Option<EdgeAnchor>,
+    pub text_child: Option<NodeId>,
+    pub text_child_content: Option<(NodeId, String)>,
+    pub style: Properties,
+    pub use_styles: Vec<NodeId>,
+    pub arrow: ArrowKind,
+    pub curve: CurveKind,
+    pub flow: Option<FlowAnim>,
+    pub label_offset: Option<(f32, f32)>,
+}
+
+impl Default for EdgeParseState {
+    fn default() -> Self {
+        Self {
+            from: None,
+            to: None,
+            text_child: None,
+            text_child_content: None,
+            style: Properties::default(),
+            use_styles: Vec::new(),
+            arrow: ArrowKind::None,
+            curve: CurveKind::Straight,
+            flow: None,
+            label_offset: None,
+        }
+    }
+}
+
 fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, String)>)> {
     let _ = "edge".parse_next(input)?;
     let _ = space1.parse_next(input)?;
@@ -1362,18 +1477,9 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
     skip_space(input);
     let _ = '{'.parse_next(input)?;
 
-    let mut from = None;
-    let mut to = None;
-    let mut text_child = None;
-    let mut text_child_content = None; // (NodeId, content_string)
-    let mut style = Properties::default();
-    let mut use_styles = Vec::new();
-    let mut arrow = ArrowKind::None;
-    let mut curve = CurveKind::Straight;
+    let mut state = EdgeParseState::default();
     let mut annotations = Vec::new();
     let mut animations = Vec::new();
-    let mut flow = None;
-    let mut label_offset = None;
 
     skip_ws_and_comments(input);
 
@@ -1386,8 +1492,8 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
             // Nested text child: text @id "content" { ... }
             let node = parse_node.parse_next(input)?;
             if let NodeKind::Text { ref content, .. } = node.kind {
-                text_child = Some(node.id);
-                text_child_content = Some((node.id, content.clone()));
+                state.text_child = Some(node.id);
+                state.text_child_content = Some((node.id, content.clone()));
             }
         } else {
             let prop = parse_identifier.parse_next(input)?;
@@ -1395,88 +1501,7 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
             let _ = ':'.parse_next(input)?;
             skip_space(input);
 
-            match prop {
-                "from" => {
-                    from = Some(parse_edge_anchor(input)?);
-                }
-                "to" => {
-                    to = Some(parse_edge_anchor(input)?);
-                }
-                "label" => {
-                    // Backward compat: label: "string" → auto-create text child
-                    let s = parse_quoted_string
-                        .map(|s| s.to_string())
-                        .parse_next(input)?;
-                    let label_id = NodeId::intern(&format!("_{}_label", id.as_str()));
-                    text_child = Some(label_id);
-                    text_child_content = Some((label_id, s));
-                }
-                "stroke" => {
-                    let color = parse_hex_color.parse_next(input)?;
-                    skip_space(input);
-                    let w = parse_number.parse_next(input).unwrap_or(1.0);
-                    style.stroke = Some(Stroke {
-                        paint: Paint::Solid(color),
-                        width: w,
-                        ..Stroke::default()
-                    });
-                }
-                "arrow" => {
-                    let kind = parse_identifier.parse_next(input)?;
-                    arrow = match kind {
-                        "none" => ArrowKind::None,
-                        "start" => ArrowKind::Start,
-                        "end" => ArrowKind::End,
-                        "both" => ArrowKind::Both,
-                        _ => ArrowKind::None,
-                    };
-                }
-                "curve" => {
-                    let kind = parse_identifier.parse_next(input)?;
-                    curve = match kind {
-                        "straight" => CurveKind::Straight,
-                        "smooth" => CurveKind::Smooth,
-                        "step" => CurveKind::Step,
-                        _ => CurveKind::Straight,
-                    };
-                }
-                "use" => {
-                    use_styles.push(parse_identifier.map(NodeId::intern).parse_next(input)?);
-                }
-                "opacity" => {
-                    style.opacity = Some(parse_number.parse_next(input)?);
-                }
-                "flow" => {
-                    let kind_str = parse_identifier.parse_next(input)?;
-                    let kind = match kind_str {
-                        "pulse" => FlowKind::Pulse,
-                        "dash" => FlowKind::Dash,
-                        _ => FlowKind::Pulse,
-                    };
-                    skip_space(input);
-                    let dur = parse_number.parse_next(input).unwrap_or(800.0) as u32;
-                    if input.starts_with("ms") {
-                        *input = &input[2..];
-                    }
-                    flow = Some(FlowAnim {
-                        kind,
-                        duration_ms: dur,
-                    });
-                }
-                "label_offset" => {
-                    let ox = parse_number.parse_next(input)?;
-                    skip_space(input);
-                    let oy = parse_number.parse_next(input)?;
-                    label_offset = Some((ox, oy));
-                }
-                _ => {
-                    let _ = take_till::<_, _, ContextError>(0.., |c: char| {
-                        c == '\n' || c == ';' || c == '}'
-                    })
-                    .parse_next(input);
-                }
-            }
-
+            parse_edge_property(input, prop, &mut state, id)?;
             skip_opt_separator(input);
         }
         skip_ws_and_comments(input);
@@ -1485,8 +1510,8 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
     let _ = '}'.parse_next(input)?;
 
     // Default stroke if none provided
-    if style.stroke.is_none() {
-        style.stroke = Some(Stroke {
+    if state.style.stroke.is_none() {
+        state.style.stroke = Some(Stroke {
             paint: Paint::Solid(Color::rgba(0.42, 0.44, 0.5, 1.0)),
             width: 1.5,
             ..Stroke::default()
@@ -1496,20 +1521,111 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
     Ok((
         Edge {
             id,
-            from: from.unwrap_or(EdgeAnchor::Point(0.0, 0.0)),
-            to: to.unwrap_or(EdgeAnchor::Point(0.0, 0.0)),
-            text_child,
-            props: style,
-            use_styles: use_styles.into(),
-            arrow,
-            curve,
+            from: state.from.unwrap_or(EdgeAnchor::Point(0.0, 0.0)),
+            to: state.to.unwrap_or(EdgeAnchor::Point(0.0, 0.0)),
+            text_child: state.text_child,
+            props: state.style,
+            use_styles: state.use_styles.into(),
+            arrow: state.arrow,
+            curve: state.curve,
             annotations,
             animations: animations.into(),
-            flow,
-            label_offset,
+            flow: state.flow,
+            label_offset: state.label_offset,
         },
-        text_child_content,
+        state.text_child_content,
     ))
+}
+
+fn parse_edge_property(
+    input: &mut &str,
+    prop: &str,
+    state: &mut EdgeParseState,
+    id: NodeId,
+) -> ModalResult<()> {
+    match prop {
+        "from" => {
+            state.from = Some(parse_edge_anchor(input)?);
+        }
+        "to" => {
+            state.to = Some(parse_edge_anchor(input)?);
+        }
+        "label" => {
+            // Backward compat: label: "string" → auto-create text child
+            let s = parse_quoted_string
+                .map(|s| s.to_string())
+                .parse_next(input)?;
+            let label_id = NodeId::intern(&format!("_{}_label", id.as_str()));
+            state.text_child = Some(label_id);
+            state.text_child_content = Some((label_id, s));
+        }
+        "stroke" => {
+            let color = parse_hex_color.parse_next(input)?;
+            skip_space(input);
+            let w = parse_number.parse_next(input).unwrap_or(1.0);
+            state.style.stroke = Some(Stroke {
+                paint: Paint::Solid(color),
+                width: w,
+                ..Stroke::default()
+            });
+        }
+        "arrow" => {
+            let kind = parse_identifier.parse_next(input)?;
+            state.arrow = match kind {
+                "none" => ArrowKind::None,
+                "start" => ArrowKind::Start,
+                "end" => ArrowKind::End,
+                "both" => ArrowKind::Both,
+                _ => ArrowKind::None,
+            };
+        }
+        "curve" => {
+            let kind = parse_identifier.parse_next(input)?;
+            state.curve = match kind {
+                "straight" => CurveKind::Straight,
+                "smooth" => CurveKind::Smooth,
+                "step" => CurveKind::Step,
+                _ => CurveKind::Straight,
+            };
+        }
+        "use" => {
+            state
+                .use_styles
+                .push(parse_identifier.map(NodeId::intern).parse_next(input)?);
+        }
+        "opacity" => {
+            state.style.opacity = Some(parse_number.parse_next(input)?);
+        }
+        "flow" => {
+            let kind_str = parse_identifier.parse_next(input)?;
+            let kind = match kind_str {
+                "pulse" => FlowKind::Pulse,
+                "dash" => FlowKind::Dash,
+                _ => FlowKind::Pulse,
+            };
+            skip_space(input);
+            let dur = parse_number.parse_next(input).unwrap_or(800.0) as u32;
+            if input.starts_with("ms") {
+                *input = &input[2..];
+            }
+            state.flow = Some(FlowAnim {
+                kind,
+                duration_ms: dur,
+            });
+        }
+        "label_offset" => {
+            let ox = parse_number.parse_next(input)?;
+            skip_space(input);
+            let oy = parse_number.parse_next(input)?;
+            state.label_offset = Some((ox, oy));
+        }
+        _ => {
+            let _ =
+                take_till::<_, _, ContextError>(0.., |c: char| c == '\n' || c == ';' || c == '}')
+                    .parse_next(input);
+        }
+    }
+    Ok(())
 }
 
 // ─── Constraint line parser ──────────────────────────────────────────────
