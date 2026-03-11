@@ -512,7 +512,9 @@ function syncCanvasToEditor() {
   suppressSync = true;
   clearTimeout(editorDebounceTimer);
   editorDebounceTimer = null;
-  const newText = fdCanvas.get_text();
+  // Strip [auto] doc-comments — they're for AI agents, not human editing.
+  const rawText = fdCanvas.get_text();
+  const newText = rawText.replace(/^# \[auto\] .*\n/gm, '');
   const currentText = editorView.state.doc.toString();
   if (newText !== currentText) {
     editorView.dispatch({
@@ -2166,7 +2168,9 @@ async function initPlayground() {
                 const resultJson = fdCanvas.set_text(text);
                 try {
                   const r = JSON.parse(resultJson);
-                  if (r.layout_changed) {
+                  // Always repaint — visual-only changes (fill, stroke, opacity)
+                  // don't trigger layout_changed but still need a re-render.
+                  if (r.ok) {
                     renderDirty = true; uiDirty = true;
                   }
                 } catch (_) {
@@ -2222,7 +2226,8 @@ async function initPlayground() {
     animFrameId = requestAnimationFrame(renderLoop);
 
     // Auto-center scene content in viewport on init (deferred for layout)
-    requestAnimationFrame(() => fitToContent(canvas));
+    // Defer fit-to-content — WASM layout resolve needs a frame to settle.
+    setTimeout(() => { fitToContent(canvas); renderCanvas(); }, 100);
 
     // Hide loading overlay
     loading.classList.add('hidden');
