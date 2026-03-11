@@ -17,6 +17,17 @@
 
 ## Completed Requirements
 
+### v0.10.115 — Web Canvas Consistency Audit (R6.6)
+
+- **FEATURE (R6.6)**: Inline text editing on double-click — double-click text/shape to edit in-place via floating textarea; double-click empty canvas to create new text node with immediate editor; Enter commits, Escape cancels; undo snapshot on commit
+- **FEATURE (R6.6)**: Frame tool shortcut — `F` key activates Frame tool, matching VS Code extension
+- **FEATURE (R6.6)**: Arrow-key nudge — Arrow keys nudge selected node 1px (Shift+Arrow = 10px); uses pointer sequence through WASM for correct constraint handling
+- **FEATURE (R6.6)**: Zoom keyboard shortcuts — `⌘+`/`⌘-` zoom in/out by 1.25×, `⌘0` fits to content (matching VS Code extension behavior)
+- **FEATURE (R6.6)**: Select All — `⌘A` selects first visible node on canvas (basic implementation)
+- **FIX (R6.6)**: Zoom-reset button now calls `fitToContent()` instead of resetting to 1.0/origin — matches extension behavior where reset = fit-to-content
+- **FIX (R6.6)**: Context menu undo — all context menu mutations (duplicate, delete, group, ungroup, lock, rename, z-order) now push undo snapshots via `push_undo_snapshot()`, enabling ⌘Z rollback
+- **SITE**: All changes in `site/playground.js` — ~200 lines added (nudge, inline editor, zoom shortcuts, select all, undo integration)
+
 ### v0.10.114 — Fix Canvas Background Fill in Transformed Space (R6.9)
 
 - **FIX (R6.9)**: Canvas background no longer shifts or leaves white gaps when panning/zooming — root cause: WASM `render_scene()` filled the background after JS applied the zoom/pan transform (`setTransform(dpr*z, 0, 0, dpr*z, panX*dpr, panY*dpr)`), so the fill started at the transformed origin instead of canvas pixel (0,0); fix: background is now filled in identity transform space by JS before applying zoom/pan, and WASM `render()` accepts a new `skip_bg: bool` parameter to skip its own background fill
