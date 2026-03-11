@@ -38,6 +38,49 @@ function setupInlineEditor() {
     const props = JSON.parse(propsJson);
     if (!props.id) return;
 
+    // Edge double-click: find/create text child and edit it
+    if (props.kind === "edge") {
+      const edgeId = props.id;
+      const source = fdCanvas.get_text();
+      // Check if edge already has a text child
+      const edgeBlockRe = new RegExp(`edge\\s+@${edgeId}\\s*\\{([^}]*(?:\\{[^}]*\\}[^}]*)*)\\}`, 's');
+      const edgeMatch = source.match(edgeBlockRe);
+      if (edgeMatch) {
+        const innerBlock = edgeMatch[1];
+        const textChildRe = /text\s+@(\w+)\s+"([^"]*)"/;
+        const textMatch = innerBlock.match(textChildRe);
+        if (textMatch) {
+          // Text child exists — edit it
+          const textChildId = textMatch[1];
+          fdCanvas.select_by_id(textChildId);
+          render();
+          openInlineEditor(textChildId, "content", textMatch[2]);
+        } else {
+          // No text child — create one via text manipulation
+          const textId = "label_" + edgeId;
+          const esc = edgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const re = new RegExp(`(edge\\s+@${esc}\\s*\\{)`);
+          const m2 = source.match(re);
+          if (m2) {
+            const insertPos = source.indexOf(m2[0]) + m2[0].length;
+            const newSource = source.slice(0, insertPos)
+              + `\n  text @${textId} "Label" {}`
+              + source.slice(insertPos);
+            const textBefore = source;
+            fdCanvas.set_text(newSource);
+            fdCanvas.push_undo_snapshot(textBefore, newSource);
+            render();
+            syncTextToExtension();
+            fdCanvas.select_by_id(textId);
+            render();
+            setTimeout(() => openInlineEditor(textId, "content", "Label"), 50);
+          }
+        }
+      }
+      e.preventDefault();
+      return;
+    }
+
     const isText = props.kind === "text";
     const isShape = props.kind === "rect" || props.kind === "ellipse";
     if (!isText && !isShape) return;
@@ -215,7 +258,9 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   // matches how Canvas2D's draw_text() computes line_height = size * 1.2.
   const rawFontSize = props.fontSize || 14;
   const fontSize = Math.round(rawFontSize * zoomLevel);
-  const fontFamily = props.fontFamily || "Inter, sans-serif";
+  // Use exact font family from WASM renderer — no fallback chain added
+  // to ensure pixel-perfect match with Canvas2D rendering
+  const fontFamily = props.fontFamily || "Inter";
   const fontWeight = props.fontWeight || 400;
   const lineHeight = Math.round(rawFontSize * 1.2 * zoomLevel);
 
@@ -250,19 +295,21 @@ function openInlineEditor(nodeId, propKey, currentValue) {
 
   // Get text alignment — WASM API returns effective defaults (left/top for
   // standalone text, center/middle for text-in-shape)
-  const hAlign = props.textAlign || "left";
+  // WASM API always returns the context-aware default (center for text-in-shape,
+  // left for standalone), so this fallback is a safety net only.
+  const hAlign = props.textAlign || (isTextNode ? "left" : "center");
   const vAlign = props.textVAlign || "top";
 
   // Store original value for Esc rollback
   const originalValue = currentValue;
 
   // Vertical padding: match Canvas2D text_baseline positioning exactly.
-  // draw_text() uses:
+  // draw_text() uses a fixed 2.0px offset in scene-space (not zoom-scaled).
   //   top    → text_baseline="top",    y = b.y + 2.0
   //   middle → text_baseline="middle", y = b.y + h/2
   //   bottom → text_baseline="bottom", y = b.y + h - 2.0
-  // Since we use outline (not border), the textarea content area == node bounds.
-  const topOffset = Math.round(2 * zoomLevel);
+  // Use constant 2px offset regardless of zoom (renderer uses scene-space pixels).
+  const topOffset = 2;
   let padTop = 0;
   let padBottom = 0;
   if (vAlign === "top") {

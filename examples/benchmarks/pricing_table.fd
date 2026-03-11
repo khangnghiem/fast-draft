@@ -1,27 +1,27 @@
 # Pricing Table — Marketing use case
 # Demonstrates: row layout, style reuse, highlighted tier, animations
 
-theme tier_card {
+style tier_card {
   fill: #FFFFFF
   corner: 16
 }
 
-theme tier_highlighted {
+style tier_highlighted {
   fill: #6C5CE7
   corner: 16
 }
 
-theme feature_text {
+style feature_text {
   font: "Inter" regular 14
   fill: #4B5563
 }
 
-theme price_text {
+style price_text {
   font: "Inter" bold 40
   fill: #111827
 }
 
-theme tier_name {
+style tier_name {
   font: "Inter" semibold 20
   fill: #111827
 }

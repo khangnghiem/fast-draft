@@ -6,7 +6,7 @@
 use fd_core::NodeIndex;
 use fd_core::ResolvedBounds;
 use fd_core::SceneGraph;
-use fd_core::model::{NodeKind, Paint, PathCmd, StrokeCap, StrokeJoin, Style};
+use fd_core::model::{NodeKind, Paint, PathCmd, Properties, StrokeCap, StrokeJoin};
 use kurbo::{
     Affine, BezPath, Cap, Ellipse as KurboEllipse, Join, Point, Rect, RoundedRect,
     Stroke as KurboStroke,
@@ -61,6 +61,12 @@ fn paint_node(
 
         NodeKind::Path { commands } => paint_path(scene, commands, nb, &style),
 
+        NodeKind::Image { .. } => {
+            // Image rendering deferred — needs WASM texture pipeline.
+            // Draw a placeholder rect with the image's style (stroke/fill).
+            paint_rect(scene, nb, &style);
+        }
+
         NodeKind::Frame { .. } => {
             // Frames always render their background (like a visible container)
             paint_rect(scene, nb, &style);
@@ -74,7 +80,7 @@ fn paint_node(
 
 // ─── Shape painters ──────────────────────────────────────────────────────────
 
-fn paint_rect(scene: &mut Scene, nb: &ResolvedBounds, style: &Style) {
+fn paint_rect(scene: &mut Scene, nb: &ResolvedBounds, style: &Properties) {
     let kurbo_rect = Rect::new(
         nb.x as f64,
         nb.y as f64,
@@ -86,14 +92,14 @@ fn paint_rect(scene: &mut Scene, nb: &ResolvedBounds, style: &Style) {
     stroke_shape(scene, &shape, style);
 }
 
-fn paint_ellipse(scene: &mut Scene, nb: &ResolvedBounds, rx: f32, ry: f32, style: &Style) {
+fn paint_ellipse(scene: &mut Scene, nb: &ResolvedBounds, rx: f32, ry: f32, style: &Properties) {
     let center = Point::new((nb.x + rx) as f64, (nb.y + ry) as f64);
     let shape = KurboEllipse::new(center, (rx as f64, ry as f64), 0.0);
     fill_shape(scene, &shape, style);
     stroke_shape(scene, &shape, style);
 }
 
-fn paint_path(scene: &mut Scene, commands: &[PathCmd], nb: &ResolvedBounds, style: &Style) {
+fn paint_path(scene: &mut Scene, commands: &[PathCmd], nb: &ResolvedBounds, style: &Properties) {
     if commands.is_empty() {
         return;
     }
@@ -124,14 +130,14 @@ fn paint_path(scene: &mut Scene, commands: &[PathCmd], nb: &ResolvedBounds, styl
 
 // ─── Fill and stroke ─────────────────────────────────────────────────────────
 
-fn fill_shape<S: kurbo::Shape>(scene: &mut Scene, shape: &S, style: &Style) {
+fn fill_shape<S: kurbo::Shape>(scene: &mut Scene, shape: &S, style: &Properties) {
     if let Some(paint) = &style.fill {
         let color = paint_to_color(paint, style.opacity);
         scene.fill(Fill::NonZero, Affine::IDENTITY, color, None, shape);
     }
 }
 
-fn stroke_shape<S: kurbo::Shape>(scene: &mut Scene, shape: &S, style: &Style) {
+fn stroke_shape<S: kurbo::Shape>(scene: &mut Scene, shape: &S, style: &Properties) {
     if let Some(stroke) = &style.stroke {
         let vello_stroke = KurboStroke {
             width: stroke.width as f64,

@@ -27,6 +27,43 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
+  // ── Esc cancels active drag (node move/resize/draw) ──
+  if (e.key === "Escape" && pointerIsDown && fdCanvas) {
+    const cancelled = fdCanvas.cancel_drag();
+    if (cancelled) {
+      // Reset all JS-side drag state
+      pointerIsDown = false;
+      isDraggingNode = false;
+      draggedNodeId = null;
+      nearDetachState = null;
+      altCloneActive = false;
+      altDragGhosts = [];
+      hideDimensionTooltip();
+
+      // Restore tool after ⌘+drag temp Select or Alt+drag clone
+      if (cmdTempSelectActive && cmdTempSelectOriginalTool) {
+        fdCanvas.set_tool(cmdTempSelectOriginalTool);
+        updateToolbarActive(lockedTool || cmdTempSelectOriginalTool);
+        updateCanvasCursor(cmdTempSelectOriginalTool);
+      }
+      cmdTempSelectActive = false;
+      cmdTempSelectOriginalTool = null;
+
+      // Restore tool after Ctrl temp Eraser
+      if (tempEraserMode && tempEraserPrevTool) {
+        fdCanvas.set_tool(tempEraserPrevTool);
+        updateToolbarActive(lockedTool || tempEraserPrevTool);
+        updateCanvasCursor(tempEraserPrevTool);
+      }
+      tempEraserMode = false;
+      tempEraserPrevTool = null;
+
+      render();
+      e.preventDefault();
+      return;
+    }
+  }
+
   // Close annotation card / context menu on Escape (before WASM)
   if (e.key === "Escape") {
     closeAnnotationCard();
@@ -202,6 +239,7 @@ document.addEventListener("keydown", (e) => {
 
   // Handle graph changes
   if (result.changed) {
+    bumpGeneration();
     render();
     syncTextToExtension();
     closeContextMenu();
@@ -573,7 +611,7 @@ function buildShortcutHelpHtml() {
     <div class="help-panel">
       <div class="help-header">
         <h3>Keyboard Shortcuts</h3>
-        <button class="help-close">×</button>
+        <button class="help-close" aria-label="Close">×</button>
       </div>
       <div class="help-body">
   `;
@@ -626,9 +664,10 @@ function nudgeSelected(arrowKey, step) {
     const dx = newX - b.x;
     const dy = newY - b.y;
     fdCanvas.handle_pointer_down(cx, cy, 1.0, false, false, false, false);
-    const changed = fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false);
+    const moveResultJson = fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false);
+    const moveResult = JSON.parse(moveResultJson);
     const upResult = JSON.parse(fdCanvas.handle_pointer_up(cx + dx, cy + dy, false, false, false, false));
-    if (upResult.changed || changed) {
+    if (upResult.changed || moveResult.changed) {
       render();
       syncTextToExtension();
       updatePropertiesPanel();

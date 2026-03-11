@@ -73,11 +73,17 @@ let sideEffectTimer = null;
 /** Cached scene bounds + generation for minimap */
 let cachedSceneBounds = null;
 let sceneBoundsGeneration = -1;
+/** Whether the scene has edge flow animations (pulse/dash) — keeps render loop alive */
+let hasFlowEdges = false;
 
 /** Mark the canvas as needing a re-render on the next animation frame. */
 function markDirty() { renderDirty = true; }
 /** Bump the scene generation counter (call on any data mutation). */
-function bumpGeneration() { sceneGeneration++; markDirty(); }
+function bumpGeneration() {
+  sceneGeneration++;
+  markDirty();
+  if (fdCanvas) hasFlowEdges = fdCanvas.has_active_flows();
+}
 
 /** Grid overlay state */
 let gridEnabled = false;
@@ -98,6 +104,8 @@ let cmdTempSelectActive = false;
 let cmdTempSelectOriginalTool = null;
 /** Alt+drag clone-and-drag active */
 let altCloneActive = false;
+/** Ghost bounds from WASM — original positions of nodes before Alt+drag clone */
+let altDragGhosts = [];
 /** Ctrl+click on any tool → temporary eraser mode */
 let tempEraserMode = false;
 let tempEraserPrevTool = null;

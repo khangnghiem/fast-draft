@@ -1,16 +1,16 @@
 import "../../examples/design_system.fd" as ds
 
-# ─── Themes ───
+# ─── Styles ───
 
-theme flow_edge {
+style flow_edge {
 }
 
-theme screen {
+style screen {
   fill: #FFFFFF  # white
   corner: 16
 }
 
-theme screen_title {
+style screen_title {
   fill: #1A1A2E  # blue
   font: "Inter" bold 20
 }

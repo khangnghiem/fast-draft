@@ -215,7 +215,7 @@ impl SyncEngine {
                                     LayoutMode::Column { pad, .. }
                                     | LayoutMode::Row { pad, .. }
                                     | LayoutMode::Grid { pad, .. } => *pad,
-                                    LayoutMode::Free => 0.0,
+                                    LayoutMode::Free { pad } => *pad,
                                 },
                                 _ => 0.0,
                             };
@@ -277,11 +277,31 @@ impl SyncEngine {
                 if let Some(idx) = self.graph.index_of(id) {
                     self.bounds.remove(&idx);
                     self.graph.remove_node(idx);
+
+                    // Clean up visual edges referencing the deleted node
+                    let orphaned_text_children: Vec<NodeId> = self
+                        .graph
+                        .edges
+                        .iter()
+                        .filter(|e| e.from.node_id() == Some(id) || e.to.node_id() == Some(id))
+                        .filter_map(|e| e.text_child)
+                        .collect();
+                    self.graph
+                        .edges
+                        .retain(|e| e.from.node_id() != Some(id) && e.to.node_id() != Some(id));
+
+                    // Remove orphaned edge text_child nodes
+                    for tc_id in orphaned_text_children {
+                        if let Some(tc_idx) = self.graph.index_of(tc_id) {
+                            self.bounds.remove(&tc_idx);
+                            self.graph.remove_node(tc_idx);
+                        }
+                    }
                 }
             }
             GraphMutation::SetStyle { id, style } => {
                 if let Some(node) = self.graph.get_by_id_mut(id) {
-                    node.style = style;
+                    node.props = style;
                 }
             }
             GraphMutation::SetText { id, content } => {
@@ -305,18 +325,30 @@ impl SyncEngine {
             }
             GraphMutation::DuplicateNode { id } => {
                 if let Some(original) = self.graph.get_by_id(id).cloned() {
-                    // Derive name from original — strip existing _copy_N suffix
-                    let base = id.as_str();
-                    let stem = base.rfind("_copy_").map_or(base, |pos| &base[..pos]);
-                    let new_id = NodeId::with_prefix(&format!("{stem}_copy"));
+                    // Incremental clone name: foo → foo_2, foo_2 → foo_3
+                    let new_id = next_clone_name(&self.graph, id);
                     let mut cloned = original;
                     cloned.id = new_id;
-                    // Offset via constraint
-                    cloned.constraints.push(Constraint::Offset {
-                        from: id,
-                        dx: 20.0,
-                        dy: 20.0,
+                    // Strip inherited positioning — clone gets its own position
+                    cloned.constraints.retain(|c| {
+                        !matches!(
+                            c,
+                            Constraint::Position { .. }
+                                | Constraint::Offset { .. }
+                                | Constraint::CenterIn(_)
+                                | Constraint::FillParent { .. }
+                        )
                     });
+                    // Position from resolved bounds + 20px offset
+                    if let Some(idx) = self.graph.index_of(id)
+                        && let Some(b) = self.bounds.get(&idx)
+                    {
+                        let rx = ((b.x + 20.0) * 100.0).round() / 100.0;
+                        let ry = ((b.y + 20.0) * 100.0).round() / 100.0;
+                        cloned
+                            .constraints
+                            .push(Constraint::Position { x: rx, y: ry });
+                    }
                     self.graph.add_node(self.graph.root, cloned);
                 }
             }
@@ -455,6 +487,13 @@ impl SyncEngine {
         self.text_dirty = true;
     }
 
+    /// Mark text as needing re-emission from the graph.
+    /// Used when the graph is modified directly (e.g. z-order changes)
+    /// outside of apply_mutation().
+    pub fn mark_dirty(&mut self) {
+        self.text_dirty = true;
+    }
+
     /// Flush: re-emit the text from the current graph state.
     /// Called after a batch of mutations (e.g. at end of drag gesture).
     pub fn flush_to_text(&mut self) {
@@ -553,7 +592,7 @@ impl SyncEngine {
 
         if let NodeKind::Text { content, .. } = child_kind {
             let font_size = self.graph.graph[child_idx]
-                .style
+                .props
                 .font
                 .as_ref()
                 .map_or(14.0, |f| f.size);
@@ -633,12 +672,9 @@ impl SyncEngine {
         let mut changed = false;
 
         for group_idx in groups {
-            // Skip clip frames — they intentionally clip content
-            let is_clip = matches!(
-                &self.graph.graph[group_idx].kind,
-                NodeKind::Frame { clip: true, .. }
-            );
-            if is_clip {
+            // Frames have declared dimensions — never auto-resize them.
+            // Only Groups auto-size to their children's bounding box.
+            if matches!(&self.graph.graph[group_idx].kind, NodeKind::Frame { .. }) {
                 continue;
             }
 
@@ -727,7 +763,7 @@ fn handle_child_group_relationship(
     if let NodeKind::Text { content, .. } = child_kind {
         // Use same heuristic as intrinsic_size() in layout.rs
         let font_size = graph.graph[child_idx]
-            .style
+            .props
             .font
             .as_ref()
             .map_or(14.0, |f| f.size);
@@ -773,6 +809,10 @@ pub fn expand_group_to_children(
     bounds: &mut HashMap<NodeIndex, fd_core::ResolvedBounds>,
     exclude_idx: Option<NodeIndex>,
 ) {
+    // Frames have declared dimensions — never auto-resize
+    if matches!(graph.graph[group_idx].kind, NodeKind::Frame { .. }) {
+        return;
+    }
     let pad = group_padding(graph, group_idx);
     let children = graph.children(group_idx);
     if children.is_empty() {
@@ -926,7 +966,7 @@ pub enum GraphMutation {
     },
     SetStyle {
         id: NodeId,
-        style: Style,
+        style: Properties,
     },
     SetText {
         id: NodeId,
@@ -968,6 +1008,34 @@ pub enum GraphMutation {
     RemoveEdge {
         id: NodeId,
     },
+}
+
+/// Derive an incremental clone name: `foo` → `foo_2`, `foo_2` → `foo_3`.
+///
+/// Scans the graph for existing names matching `{stem}_N` and picks `max(N)+1`.
+/// The stem is derived by stripping a trailing `_N` numeric suffix (since
+/// auto-generated IDs follow the `{kind}_{counter}` pattern).
+pub fn next_clone_name(graph: &SceneGraph, orig_id: NodeId) -> NodeId {
+    let base = orig_id.as_str();
+    // Strip trailing _N suffix to get the stem (e.g. "rect_3" → "rect")
+    let stem = base
+        .rsplit_once('_')
+        .and_then(|(prefix, suffix)| suffix.parse::<u32>().ok().map(|_| prefix))
+        .unwrap_or(base);
+    let mut max_n = 1u32;
+    for idx in graph.graph.node_indices() {
+        let name = graph.graph[idx].id.as_str();
+        if name == stem {
+            max_n = max_n.max(1);
+        }
+        if let Some(rest) = name.strip_prefix(stem)
+            && let Some(n_str) = rest.strip_prefix('_')
+            && let Ok(n) = n_str.parse::<u32>()
+        {
+            max_n = max_n.max(n);
+        }
+    }
+    NodeId::intern(&format!("{stem}_{}", max_n + 1))
 }
 
 #[cfg(test)]

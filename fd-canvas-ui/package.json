@@ -1,0 +1,19 @@
+{
+  "name": "fd-canvas-ui",
+  "version": "0.1.0",
+  "description": "Shared canvas UI module for FD — cross-platform pointer routing, panels, render loop, sync, clipboard, and shortcuts",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit"
+  },
+  "files": [
+    "dist/"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

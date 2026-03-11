@@ -148,7 +148,7 @@ function setupPointerEvents() {
     }
 
     const isAltMove = e.altKey || modAltHeld;
-    const changed = fdCanvas.handle_pointer_move(
+    const moveResult = JSON.parse(fdCanvas.handle_pointer_move(
       x,
       y,
       e.pressure || 1.0,
@@ -156,8 +156,17 @@ function setupPointerEvents() {
       e.ctrlKey,
       isAltMove,
       e.metaKey
-    );
+    ));
+    const changed = moveResult.changed;
     if (changed) render();
+
+    // Read ghost origin bounds for Alt+drag preview
+    if (altCloneActive && fdCanvas.get_alt_drag_ghost) {
+      try {
+        const ghostJson = fdCanvas.get_alt_drag_ghost();
+        altDragGhosts = ghostJson ? JSON.parse(ghostJson) : [];
+      } catch (_) { altDragGhosts = []; }
+    }
     // Arrow tool: always re-render during drag for live preview line
     else if (pointerIsDown && currentToolAtPointerDown === "arrow") render();
 
@@ -191,15 +200,10 @@ function setupPointerEvents() {
           showDimensionTooltip(e.clientX, e.clientY, `${Math.round(w)} × ${Math.round(h)}`);
         }
       } else if (tool === "select") {
-        // Moving: show (X, Y) of selected node
-        const selectedId = fdCanvas.get_selected_id();
-        if (selectedId && changed) {
-          try {
-            const b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
-            if (b.x !== undefined) {
-              showDimensionTooltip(e.clientX, e.clientY, `(${Math.round(b.x)}, ${Math.round(b.y)})`);
-            }
-          } catch (_) { /* skip */ }
+        // Moving: show (X, Y) from bundled bounds (no extra WASM calls)
+        if (changed && moveResult.bounds) {
+          const b = moveResult.bounds;
+          showDimensionTooltip(e.clientX, e.clientY, `(${Math.round(b.x)}, ${Math.round(b.y)})`);
         }
       }
     }
@@ -287,12 +291,16 @@ function setupPointerEvents() {
     // Update properties panel after interaction ends
     updatePropertiesPanel();
     updateFloatingBar();
-    // Notify extension of canvas selection change (for Code ↔ Canvas sync)
+    // Notify extension of canvas selection (for Code ↔ Canvas sync)
     // Skip during inline editing — prevents focus stealing that kills the textarea
     if (!inlineEditorActive) {
       const selectedId = fdCanvas.get_selected_id();
       if (selectedId !== lastNotifiedSelectedId) {
+        // Selection changed — full sync (panels + code highlight)
         syncSelection(selectedId, "canvas");
+      } else if (selectedId) {
+        // Same node re-clicked — re-highlight code ("show me the code" intent)
+        vscode.postMessage({ type: "nodeSelected", id: selectedId });
       }
     }
 
@@ -394,6 +402,7 @@ function setupPointerEvents() {
     cmdTempSelectActive = false;
     cmdTempSelectOriginalTool = null;
     altCloneActive = false;
+    altDragGhosts = [];
 
     // ── Restore tool after Ctrl temp Eraser ──
     if (tempEraserMode && tempEraserPrevTool && fdCanvas) {
