@@ -698,6 +698,11 @@ function setupPropsPanel() {
     const changed = fdCanvas.delete_selected();
     if (changed) { renderCanvas(); syncCanvasToEditor(); updatePropertiesPanel(); }
   });
+
+  // Select all text on focus for number inputs (easier editing)
+  ['pp-w', 'pp-h', 'pp-stroke-w', 'pp-corner'].forEach(id => {
+    document.getElementById(id)?.addEventListener('focus', (e) => e.target.select());
+  });
 }
 
 /** ─── Context Menu ──────────────────────────────────────────────────── */
@@ -1104,7 +1109,9 @@ function setupPanelResize(wrapper, resizeCanvas) {
   // Restore persisted widths
   const savedLayersW = parseInt(localStorage.getItem('fd-layers-width'), 10);
   const savedPropsW = parseInt(localStorage.getItem('fd-props-width'), 10);
-  const layersCollapsed = localStorage.getItem('fd-layers-collapsed') === '1';
+  // Don't auto-collapse layers panel — always show on playground load
+  // so first-time visitors see their scene tree.
+  const layersCollapsed = false;
   const propsCollapsed = localStorage.getItem('fd-props-collapsed') === '1';
 
   if (savedLayersW && savedLayersW >= MIN_WIDTH && savedLayersW <= MAX_WIDTH) {
@@ -2116,7 +2123,7 @@ async function initPlayground() {
       );
       const result = JSON.parse(resultJson);
 
-      if (result.changed) {
+      if (result.changed || result.toolSwitched) {
         renderDirty = true; uiDirty = true;
         syncCanvasToEditor();
       }

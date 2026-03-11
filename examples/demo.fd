@@ -176,8 +176,8 @@ rect @card_users {
 
 text @users_value "2,847" {
   use: metric
-  x: 888.9
-  y: 463.2
+  x: 888.2
+  y: 534
 }
 
 # [auto] styled: card
@@ -302,8 +302,8 @@ rect @stage_staging {
   w: 85.9 h: 47.6
   fill: #F59E0B  # orange
   corner: 8
-  x: 548
-  y: 640
+  x: 636.6
+  y: 619.9
   when :hover {
     fill: #D97706  # orange
     ease: ease_out 150ms
@@ -318,14 +318,14 @@ text @_text_18 "Staging" {
 
 ellipse @stage_prod {
   text @_text_19 "Prod" {
-    w: 128.5
+    w: 206
     use: accent_text
   }
-  w: 64.3 h: 58.2
+  w: 103 h: 85.1
   fill: #6B7280  # blue
   corner: 8
-  x: 875.9
-  y: 717.2
+  x: 884.5
+  y: 681
   when :press {
     fill: #6C5CE7  # blue
     ease: spring 300ms
