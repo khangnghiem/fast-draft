@@ -30,6 +30,7 @@ Engineering lessons discovered through building FD.
   native-drag, svg, preventDefault → L347-355 (Native Drag Hijacks SVG Pointerdown)
   undo, batch, snapshot, resolve  → L358-375 (Snapshot Undo Clobbers Bounds)
   text, metrics, center, bounds   → L377-389 (Text Metrics Update Must Re-Center)
+  spatial-index, hit-test, stale, move → L391-403 (Spatial Index Must Be Rebuilt After Bounds Mutation)
 -->
 
 
@@ -376,3 +377,16 @@ Engineering lessons discovered through building FD.
 **Fix**: After updating bounds dimensions in `update_text_metrics()`, re-center text within parent shape — matching the layout solver's auto-center behavior for text children without explicit Position or place constraints.
 
 **Rule**: **Any function that modifies a node's bounds dimensions must also re-resolve or re-center position when the node participates in auto-centering.** The layout solver's centering is position-dependent on size — shrinking without re-centering breaks the invariant.
+
+---
+
+## Spatial Index Must Be Rebuilt After Bounds Mutation
+
+**Date**: 2026-03-11
+**Context**: Nodes could only be moved once on the canvas — after the first drag, the node became un-selectable and un-movable.
+
+**Root cause**: `apply_mutations()` in `lib.rs` deliberately skips `rebuild_spatial_index()` for MoveNode/ResizeNode batches (to avoid `resolve()` → bounds clobbering). The cached bounds ARE updated in-place, but the `SpatialIndex` still holds the node's **pre-move AABB**. On the next `pointerdown`, `hit_test()` queries the stale spatial index and returns `None` at the node's new visual position.
+
+**Fix**: Added `self.rebuild_spatial_index()` in `handle_pointer_up()` after `flush_to_text()` — the spatial index is rebuilt once per gesture, using the already-updated cached bounds. O(N log N) but only once per pointer-up, not per frame.
+
+**Rule**: **Any optimization cache derived from bounds must be invalidated/rebuilt whenever bounds change.** The spatial index, like cached bounds themselves (L249), is a derived data structure — when the authoritative data (bounds HashMap) changes in-place, all caches must follow.

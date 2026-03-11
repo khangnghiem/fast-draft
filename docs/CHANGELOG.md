@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.10.107 — Fix Node Can Only Be Moved Once (R3.16)
+
+- **FIX (R3.16)**: Nodes can now be moved repeatedly on the canvas — root cause: `SpatialIndex` for O(log N) hit testing was never rebuilt after move/resize operations; `apply_mutations()` skipped `rebuild_spatial_index()` for MoveNode/ResizeNode batches (to avoid `resolve()` → bounds clobbering); cached bounds were updated in-place but the spatial index still held pre-move AABBs; on the next `pointerdown`, `hit_test()` queried the stale index and returned `None` at the node's new position
+- **FIX (R3.16)**: Added `self.rebuild_spatial_index()` in `handle_pointer_up()` after `flush_to_text()` — spatial index is rebuilt once per gesture using already-updated cached bounds; O(N log N) but only once per pointer-up, not per frame
+- **TESTING**: New `spatial_index_stale_after_move` regression test — builds index, moves bounds in-place, verifies stale index misses at new position, rebuilds index, verifies hit at new position and miss at old position
+- **DOCS**: New LESSONS.md entry — "Spatial Index Must Be Rebuilt After Bounds Mutation"
+
 ### v0.10.106 — Fix Text Alignment Shift in Managed Layouts (R3.46)
 
 - **FIX (R3.46)**: Text inside column/row/grid frames no longer shifts from centered to left-aligned after clicking the frame — root cause: `update_text_metrics()` overwrote the layout-stretched text width with the narrower measured text width (e.g. 420px → 184px), destroying the column layout stretch; `draw_text()` then centered within the shrunken bounds, which appeared left-aligned relative to the frame; fix: `update_text_metrics` now preserves the wider of measured vs layout-assigned width when the text node is inside a managed layout (`is_parent_managed` guard)
