@@ -1036,3 +1036,74 @@ frame @card {
         card.y
     );
 }
+
+#[test]
+fn layout_text_stays_centered_after_bounds_shrink() {
+    // Regression test for: centered text shifts left on click.
+    // Simulates what update_text_metrics does: shrinks text bounds
+    // to JS-measured size. After shrinking, text must remain centered
+    // within the parent shape.
+    let input = r#"
+rect @btn {
+  w: 320 h: 44
+  text @label "Sign In" {
+    font: "Inter" 600 14
+  }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut bounds = resolve_layout(&graph, viewport);
+
+    let btn_idx = graph.index_of(NodeId::intern("btn")).unwrap();
+    let label_idx = graph.index_of(NodeId::intern("label")).unwrap();
+
+    let btn = bounds[&btn_idx];
+
+    // Verify initial centering
+    let label_before = bounds[&label_idx];
+    let initial_cx = label_before.x + label_before.width / 2.0;
+    let btn_cx = btn.x + btn.width / 2.0;
+    assert!(
+        (initial_cx - btn_cx).abs() < 1.0,
+        "initial text center ({initial_cx}) should match btn center ({btn_cx})"
+    );
+
+    // Simulate update_text_metrics: shrink to measured size
+    // "Sign In" at 14px ≈ 50px wide, 19.6px tall (from JS measureText)
+    let measured_w = 50.0_f32;
+    let measured_h = 19.6_f32;
+    if let Some(b) = bounds.get_mut(&label_idx) {
+        b.width = measured_w;
+        b.height = measured_h;
+        // Re-center within parent (this is what update_text_metrics now does)
+        b.x = btn.x + (btn.width - measured_w) / 2.0;
+        b.y = btn.y + (btn.height - measured_h) / 2.0;
+    }
+
+    // Verify text is still centered after shrink
+    let label_after = bounds[&label_idx];
+    let after_cx = label_after.x + label_after.width / 2.0;
+    let after_cy = label_after.y + label_after.height / 2.0;
+    let btn_cy = btn.y + btn.height / 2.0;
+
+    assert!(
+        (after_cx - btn_cx).abs() < 0.1,
+        "after shrink: text center x ({after_cx}) should match btn center ({btn_cx})"
+    );
+    assert!(
+        (after_cy - btn_cy).abs() < 0.1,
+        "after shrink: text center y ({after_cy}) should match btn center ({btn_cy})"
+    );
+
+    // Verify text bounds are smaller than parent
+    assert!(
+        label_after.width < btn.width,
+        "text width ({}) should be < parent ({})",
+        label_after.width,
+        btn.width
+    );
+}

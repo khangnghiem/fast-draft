@@ -1435,6 +1435,30 @@ impl FdCanvas {
             return false;
         }
 
+        // Re-center text within parent shape after bounds shrink.
+        // Without this, text shifts visually because its bounding box narrowed
+        // but x/y stayed at the old (wider) centered position.
+        let node = &self.engine.graph.graph[idx];
+        let has_position = node
+            .constraints
+            .iter()
+            .any(|c| matches!(c, Constraint::Position { .. }));
+        let has_place = node.place.is_some();
+
+        if !has_position
+            && !has_place
+            && let Some(parent_idx) = self.engine.graph.parent(idx)
+            && matches!(
+                &self.engine.graph.graph[parent_idx].kind,
+                NodeKind::Rect { .. } | NodeKind::Ellipse { .. } | NodeKind::Frame { .. }
+            )
+            && let Some(parent_b) = self.engine.bounds.get(&parent_idx).copied()
+            && let Some(b) = self.engine.bounds.get_mut(&idx)
+        {
+            b.x = parent_b.x + (parent_b.width - final_width) / 2.0;
+            b.y = parent_b.y + (parent_b.height - final_height) / 2.0;
+        }
+
         old_bounds != self.engine.bounds.get(&idx).copied()
     }
 

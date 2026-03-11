@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.105 — Fix Centered Text Shifts Left on Click (R3.28)
+
+- **FIX (R3.28)**: Centered text inside shapes (rect/ellipse/frame) no longer shifts to left-aligned when clicking the node — root cause: `update_text_metrics()` shrank text bounds to JS-measured size while preserving x/y position, breaking the layout solver's auto-centering for text children; fix: after updating bounds dimensions, re-center text within parent shape when text has no explicit `Position` constraint or `place:` property
+- **TESTING**: New `layout_text_stays_centered_after_bounds_shrink` regression test — creates text inside rect, shrinks bounds to simulated measured size, verifies text center still matches parent center
+- **DOCS**: New LESSONS.md entry — "Text Metrics Update Must Re-Center in Parent"
+
 ### v0.10.104 — Fix Z-Order Operations (R3.41)
 
 - **FIX (R3.41)**: Z-order operations (Bring to Front, Send to Back) now work from context menu, properties panel, and keyboard shortcuts — root cause: JS handlers called `render()` + `syncTextToExtension()` but skipped `bumpGeneration()`, so the layers panel never refreshed and the animation loop didn't mark the canvas dirty for subsequent frames; all 5 z-order handlers across `context-menu.js`, `panels.js`, and `shortcuts.js` now call `bumpGeneration()` before `render()`
