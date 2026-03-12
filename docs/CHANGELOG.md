@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.10.119 — Documentation Pages (R6.15)
+
+- **SITE (R6.15)**: New `/docs/` section on fast-draft.com — three static pages served from `site/docs/`:
+  - **Language Reference** (`/docs/`) — complete `.fd` format guide: node types, styles, edges, animations, constraints, layout, annotations, colors, property aliases, imports; syntax-highlighted code examples with Atom One Dark palette
+  - **Keyboard Shortcuts** (`/docs/shortcuts.html`) — 8-section reference: tools, edit, transform, z-order, view, modifiers, floating toolbar, zen mode, mobile/touch
+  - **Changelog** (`/docs/changelog.html`) — curated release notes for recent versions with category tags (FEATURE, FIX, UX, PERF, INFRA, DOCS); links to full CHANGELOG.md on GitHub
+- **SITE (R6.15)**: Shared docs stylesheet (`site/docs/style.css`) — dark theme matching main site, fixed sidebar navigation with scroll-spy, responsive layout (collapsible sidebar on mobile), code blocks, tables, callouts, keyboard badges, prev/next page navigation
+- **SITE (R6.15)**: "Docs" link added to main site navbar and footer
+- **INFRA**: `site/_headers` — added `no-cache` for `/docs/*.html` and `/docs/*.css`
+
 ### v0.10.118 — Website Theme Polish Batch 1 (R6.5)
 
 - **UX (R6.5)**: Canvas now defaults to dark theme on marketing site — matches the dark `#0D1117` page background; calls `set_theme(true)` on WASM init + adds `.dark-canvas` class to wrapper; eliminates the jarring light/dark visual disconnect

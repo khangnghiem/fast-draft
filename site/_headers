@@ -11,6 +11,12 @@
 /*.css
   Cache-Control: no-cache
 
+# Docs — always revalidate so updates appear immediately
+/docs/*.html
+  Cache-Control: no-cache
+/docs/*.css
+  Cache-Control: no-cache
+
 # All pages — security headers
 /*
   X-Content-Type-Options: nosniff

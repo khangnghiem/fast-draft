@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FD Language Reference — Fast Draft Docs</title>
+  <meta name="description" content="Complete language reference for the .fd file format — node types, styles, edges, animations, constraints, layout, and annotations." />
+  <meta property="og:title" content="FD Language Reference — Fast Draft Docs" />
+  <meta property="og:description" content="Complete language reference for the .fd file format." />
+  <link rel="canonical" href="https://fast-draft.com/docs/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ─── Nav ─── -->
+  <nav class="docs-nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">Fast Draft</span>
+      </a>
+      <div class="nav-links">
+        <a href="/" >Home</a>
+        <a href="/docs/" class="active">Docs</a>
+        <a href="/docs/shortcuts.html">Shortcuts</a>
+        <a href="/docs/changelog.html">Changelog</a>
+        <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener" class="btn-nav">Install</a>
+      </div>
+      <button class="mobile-menu-btn" aria-label="Toggle menu" onclick="document.querySelector('.nav-links').classList.toggle('open');this.classList.toggle('open')">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="docs-layout">
+    <!-- ─── Sidebar ─── -->
+    <aside class="docs-sidebar" id="docs-sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Pages</div>
+        <ul class="sidebar-links">
+          <li><a href="/docs/" class="sidebar-page-link active"><span class="page-icon">📖</span> Language Reference</a></li>
+          <li><a href="/docs/shortcuts.html" class="sidebar-page-link"><span class="page-icon">⌨️</span> Shortcuts</a></li>
+          <li><a href="/docs/changelog.html" class="sidebar-page-link"><span class="page-icon">📋</span> Changelog</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Reference</div>
+        <ul class="sidebar-links">
+          <li><a href="#getting-started">Getting Started</a></li>
+          <li><a href="#node-types">Node Types</a></li>
+          <li class="nested"><a href="#rect">Rect</a></li>
+          <li class="nested"><a href="#ellipse">Ellipse</a></li>
+          <li class="nested"><a href="#text">Text</a></li>
+          <li class="nested"><a href="#group">Group</a></li>
+          <li class="nested"><a href="#frame">Frame</a></li>
+          <li class="nested"><a href="#path">Path</a></li>
+          <li class="nested"><a href="#generic">Generic</a></li>
+          <li><a href="#styles">Styles</a></li>
+          <li><a href="#edges">Edges</a></li>
+          <li><a href="#animations">Animations</a></li>
+          <li><a href="#constraints">Constraints</a></li>
+          <li><a href="#layout">Layout</a></li>
+          <li><a href="#annotations">Annotations</a></li>
+          <li><a href="#colors">Colors</a></li>
+          <li><a href="#property-aliases">Property Aliases</a></li>
+          <li><a href="#imports">Imports</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- ─── Content ─── -->
+    <main class="docs-content">
+      <h1>FD Language <span class="gradient-text">Reference</span></h1>
+      <p class="subtitle">Complete guide to the <code>.fd</code> file format — a human- and AI-readable text DSL for 2D graphics, layout, and animation.</p>
+
+      <!-- Getting Started -->
+      <h2 id="getting-started">Getting Started</h2>
+      <p>An <code>.fd</code> file describes a 2D design using plain text. Every visual element is a <strong>node</strong> with an optional <code>@id</code>, properties (fill, size, font), and optional children.</p>
+
+      <div class="callout callout-tip">
+        <strong>💡 Try it live</strong> — open the <a href="/">playground</a> on fast-draft.com or install the <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank">VS Code extension</a>.
+      </div>
+
+      <p>Here's a complete card component in 20 lines:</p>
+
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-comment"># A card with hover animation</span>
+
+<span class="hl-keyword">style</span> <span class="hl-id">accent</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">fill:</span> <span class="hl-color">#6C5CE7</span>
+<span class="hl-punct">}</span>
+
+<span class="hl-keyword">frame</span> <span class="hl-id">@card</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">layout:</span> column gap=<span class="hl-number">16</span> pad=<span class="hl-number">24</span>
+  <span class="hl-prop">bg:</span> <span class="hl-color">#FFF</span> corner=<span class="hl-number">12</span> shadow=(<span class="hl-number">0</span>,<span class="hl-number">4</span>,<span class="hl-number">20</span>,<span class="hl-color">#0002</span>)
+
+  <span class="hl-keyword">text</span> <span class="hl-id">@title</span> <span class="hl-string">"Hello World"</span> <span class="hl-punct">{</span>
+    <span class="hl-prop">font:</span> <span class="hl-string">"Inter"</span> <span class="hl-number">600</span> <span class="hl-number">24</span>
+    <span class="hl-prop">fill:</span> <span class="hl-color">#1A1A2E</span>
+  <span class="hl-punct">}</span>
+
+  <span class="hl-keyword">rect</span> <span class="hl-id">@button</span> <span class="hl-punct">{</span>
+    <span class="hl-prop">w:</span> <span class="hl-number">200</span> <span class="hl-prop">h:</span> <span class="hl-number">48</span>
+    <span class="hl-prop">corner:</span> <span class="hl-number">10</span>
+    <span class="hl-prop">use:</span> accent
+    <span class="hl-keyword">when</span> <span class="hl-trigger">:hover</span> <span class="hl-punct">{</span> <span class="hl-prop">fill:</span> <span class="hl-color">#5A4BD1</span>  <span class="hl-prop">scale:</span> <span class="hl-number">1.02</span>  <span class="hl-prop">ease:</span> spring <span class="hl-number">300</span>ms <span class="hl-punct">}</span>
+  <span class="hl-punct">}</span>
+<span class="hl-punct">}</span>
+
+<span class="hl-id">@card</span> -> <span class="hl-prop">center_in:</span> canvas</code></pre>
+      </div>
+
+      <!-- Node Types -->
+      <h2 id="node-types">Node Types</h2>
+      <p>Every visual element is a node. Nodes have an optional <code>@id</code> (semantic name) and visual properties.</p>
+
+      <h3 id="rect">rect</h3>
+      <p>A rectangle with optional corner radius, fill, and stroke.</p>
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-keyword">rect</span> <span class="hl-id">@login_btn</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">w:</span> <span class="hl-number">280</span> <span class="hl-prop">h:</span> <span class="hl-number">48</span>
+  <span class="hl-prop">fill:</span> <span class="hl-color">#6C5CE7</span>
+  <span class="hl-prop">stroke:</span> <span class="hl-color">#333</span> <span class="hl-number">2</span>
+  <span class="hl-prop">corner:</span> <span class="hl-number">10</span>
+  <span class="hl-prop">opacity:</span> <span class="hl-number">0.9</span>
+<span class="hl-punct">}</span></code></pre>
+      </div>
+
+      <h3 id="ellipse">ellipse</h3>
+      <p>An ellipse (or circle when <code>w</code> equals <code>h</code>).</p>
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-keyword">ellipse</span> <span class="hl-id">@avatar</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">w:</span> <span class="hl-number">64</span> <span class="hl-prop">h:</span> <span class="hl-number">64</span>
+  <span class="hl-prop">fill:</span> <span class="hl-color">#0A84FF</span>
+<span class="hl-punct">}</span></code></pre>
+      </div>
+
+      <h3 id="text">text</h3>
+      <p>A text element with inline content. Supports font family, weight, size, and alignment.</p>
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-keyword">text</span> <span class="hl-id">@heading</span> <span class="hl-string">"Dashboard"</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">font:</span> <span class="hl-string">"Inter"</span> <span class="hl-number">700</span> <span class="hl-number">28</span>
+  <span class="hl-prop">fill:</span> <span class="hl-color">#1A1A2E</span>
+  <span class="hl-prop">align:</span> center middle
+<span class="hl-punct">}</span></code></pre>
+      </div>
+      <p>Font weight accepts numbers (<code>700</code>) or names (<code>bold</code>, <code>semibold</code>, <code>regular</code>, etc.).</p>
+
+      <h3 id="group">group</h3>
+      <p>A container that auto-sizes to fit its children. Supports managed layouts.</p>
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-keyword">group</span> <span class="hl-id">@sidebar</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">layout:</span> column gap=<span class="hl-number">8</span> pad=<span class="hl-number">16</span>
+
+  <span class="hl-keyword">text</span> <span class="hl-id">@nav_home</span> <span class="hl-string">"Home"</span> <span class="hl-punct">{</span> <span class="hl-prop">font:</span> <span class="hl-string">"Inter"</span> <span class="hl-number">500</span> <span class="hl-number">14</span> <span class="hl-punct">}</span>
+  <span class="hl-keyword">text</span> <span class="hl-id">@nav_settings</span> <span class="hl-string">"Settings"</span> <span class="hl-punct">{</span> <span class="hl-prop">font:</span> <span class="hl-string">"Inter"</span> <span class="hl-number">500</span> <span class="hl-number">14</span> <span class="hl-punct">}</span>
+<span class="hl-punct">}</span></code></pre>
+      </div>
+
+      <h3 id="frame">frame</h3>
+      <p>Like a group but with declared dimensions. Can optionally clip children to its bounds.</p>
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-keyword">frame</span> <span class="hl-id">@card</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">w:</span> <span class="hl-number">320</span> <span class="hl-prop">h:</span> <span class="hl-number">200</span>
+  <span class="hl-prop">fill:</span> <span class="hl-color">#FFF</span>
+  <span class="hl-prop">corner:</span> <span class="hl-number">12</span>
+  <span class="hl-prop">clip:</span> true
+  <span class="hl-prop">padding:</span> <span class="hl-number">16</span>
+  <span class="hl-prop">layout:</span> column gap=<span class="hl-number">12</span>
+
+  <span class="hl-comment"># Children go here</span>
+  <span class="hl-keyword">rect</span> <span class="hl-id">@banner</span> <span class="hl-punct">{</span> <span class="hl-prop">w:</span> <span class="hl-number">288</span> <span class="hl-prop">h:</span> <span class="hl-number">80</span> <span class="hl-prop">fill:</span> <span class="hl-color">#6C5CE7</span> <span class="hl-punct">}</span>
+<span class="hl-punct">}</span></code></pre>
+      </div>
+
+      <h3 id="path">path</h3>
+      <p>A freehand or bezier path using SVG-like <code>d:</code> commands.</p>
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-keyword">path</span> <span class="hl-id">@arrow</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">d:</span> M <span class="hl-number">0</span> <span class="hl-number">0</span> L <span class="hl-number">100</span> <span class="hl-number">50</span> Q <span class="hl-number">120</span> <span class="hl-number">60</span> <span class="hl-number">140</span> <span class="hl-number">50</span> Z
+  <span class="hl-prop">stroke:</span> <span class="hl-color">#333</span> <span class="hl-number">2</span>
+<span class="hl-punct">}</span></code></pre>
+      </div>
+      <p>Commands: <code>M</code> (move to), <code>L</code> (line to), <code>Q</code> (quadratic curve), <code>C</code> (cubic curve), <code>Z</code> (close).</p>
+
+      <h3 id="generic">generic</h3>
+      <p>A node without a shape type — useful for spec-only requirements and wireframing.</p>
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-id">@login_btn</span> <span class="hl-punct">{</span>
+  <span class="hl-keyword">spec</span> <span class="hl-punct">{</span>
+    <span class="hl-string">"Primary CTA — triggers login API call"</span>
+    <span class="hl-prop">accept:</span> <span class="hl-string">"disabled when fields empty"</span>
+    <span class="hl-prop">status:</span> in_progress
+  <span class="hl-punct">}</span>
+  <span class="hl-prop">fill:</span> <span class="hl-color">#FFFFFF</span>
+  <span class="hl-prop">corner:</span> <span class="hl-number">8</span>
+<span class="hl-punct">}</span></code></pre>
+      </div>
+      <p>On canvas, generic nodes render as dashed placeholder boxes. Add a keyword prefix (e.g., <code>rect @login_btn</code>) to upgrade to a concrete type.</p>
+
+      <!-- Styles -->
+      <h2 id="styles">Styles</h2>
+      <p>Named, reusable sets of visual properties. Reference them with <code>use:</code> on any node.</p>
+
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-keyword">style</span> <span class="hl-id">accent</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">fill:</span> <span class="hl-color">#6C5CE7</span>
+  <span class="hl-prop">corner:</span> <span class="hl-number">8</span>
+<span class="hl-punct">}</span>
+
+<span class="hl-keyword">style</span> <span class="hl-id">body_text</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">font:</span> <span class="hl-string">"Inter"</span> <span class="hl-number">400</span> <span class="hl-number">14</span>
+  <span class="hl-prop">fill:</span> <span class="hl-color">#333</span>
+<span class="hl-punct">}</span>
+
+<span class="hl-keyword">rect</span> <span class="hl-id">@button</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">w:</span> <span class="hl-number">200</span> <span class="hl-prop">h:</span> <span class="hl-number">48</span>
+  <span class="hl-prop">use:</span> accent
+<span class="hl-punct">}</span>
+
+<span class="hl-keyword">text</span> <span class="hl-id">@desc</span> <span class="hl-string">"Overview"</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">use:</span> body_text
+<span class="hl-punct">}</span></code></pre>
+      </div>
+
+      <div class="callout callout-info">
+        <strong>ℹ️ Legacy support</strong> — the parser also accepts <code>theme</code> as a keyword. <code>style</code> is the canonical form.
+      </div>
+
+      <!-- Edges -->
+      <h2 id="edges">Edges</h2>
+      <p>Visual connections between nodes — lines, curves, arrows, and labels for flowcharts and diagrams.</p>
+
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-keyword">edge</span> <span class="hl-id">@login_to_dashboard</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">from:</span> <span class="hl-id">@login_screen</span>
+  <span class="hl-prop">to:</span> <span class="hl-id">@dashboard</span>
+  <span class="hl-prop">label:</span> <span class="hl-string">"on success"</span>
+  <span class="hl-prop">stroke:</span> <span class="hl-color">#10B981</span> <span class="hl-number">2</span>
+  <span class="hl-prop">arrow:</span> end          <span class="hl-comment"># none | start | end | both</span>
+  <span class="hl-prop">curve:</span> smooth        <span class="hl-comment"># straight | smooth | step</span>
+<span class="hl-punct">}</span></code></pre>
+      </div>
+
+      <h4>Edge properties</h4>
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Property</th><th>Values</th><th>Default</th></tr></thead>
+          <tbody>
+            <tr><td><code>from:</code></td><td><code>@node_id</code> or <code>x y</code></td><td>—</td></tr>
+            <tr><td><code>to:</code></td><td><code>@node_id</code> or <code>x y</code></td><td>—</td></tr>
+            <tr><td><code>arrow:</code></td><td><code>none</code>, <code>start</code>, <code>end</code>, <code>both</code></td><td><code>none</code></td></tr>
+            <tr><td><code>curve:</code></td><td><code>straight</code>, <code>smooth</code>, <code>step</code></td><td><code>straight</code></td></tr>
+            <tr><td><code>label:</code></td><td>String</td><td>—</td></tr>
+            <tr><td><code>stroke:</code></td><td><code>#hex width</code></td><td><code>#888 1</code></td></tr>
+            <tr><td><code>flow:</code></td><td><code>pulse Nms</code>, <code>dash Nms</code></td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Flow animations</h4>
+      <p>Edges can have continuous flow effects:</p>
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-keyword">edge</span> <span class="hl-id">@data_flow</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">from:</span> <span class="hl-id">@api</span>  <span class="hl-prop">to:</span> <span class="hl-id">@db</span>
+  <span class="hl-prop">flow:</span> pulse <span class="hl-number">800</span>ms    <span class="hl-comment"># traveling dot</span>
+<span class="hl-punct">}</span>
+
+<span class="hl-keyword">edge</span> <span class="hl-id">@sync_line</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">from:</span> <span class="hl-id">@a</span>  <span class="hl-prop">to:</span> <span class="hl-id">@b</span>
+  <span class="hl-prop">flow:</span> dash <span class="hl-number">500</span>ms     <span class="hl-comment"># marching dashes</span>
+<span class="hl-punct">}</span></code></pre>
+      </div>
+
+      <!-- Animations -->
+      <h2 id="animations">Animations</h2>
+      <p>Trigger-based animations with easing functions. Attach to any node or edge.</p>
+
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-keyword">rect</span> <span class="hl-id">@button</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">w:</span> <span class="hl-number">200</span> <span class="hl-prop">h:</span> <span class="hl-number">48</span>
+  <span class="hl-prop">fill:</span> <span class="hl-color">#6C5CE7</span>
+
+  <span class="hl-keyword">when</span> <span class="hl-trigger">:hover</span> <span class="hl-punct">{</span>
+    <span class="hl-prop">fill:</span> <span class="hl-color">#5A4BD1</span>
+    <span class="hl-prop">scale:</span> <span class="hl-number">1.05</span>
+    <span class="hl-prop">ease:</span> spring <span class="hl-number">300</span>ms
+  <span class="hl-punct">}</span>
+
+  <span class="hl-keyword">when</span> <span class="hl-trigger">:press</span> <span class="hl-punct">{</span>
+    <span class="hl-prop">scale:</span> <span class="hl-number">0.95</span>
+    <span class="hl-prop">ease:</span> ease_out <span class="hl-number">150</span>ms
+  <span class="hl-punct">}</span>
+<span class="hl-punct">}</span></code></pre>
+      </div>
+
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Trigger</th><th>Default Duration</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>:hover</code></td><td>300ms</td><td>Cursor enters the node</td></tr>
+            <tr><td><code>:press</code></td><td>150ms</td><td>Pointer is pressed on the node</td></tr>
+            <tr><td><code>:enter</code></td><td>500ms</td><td>Node enters the viewport</td></tr>
+            <tr><td><code>:custom</code></td><td>300ms</td><td>Any custom trigger name</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Animatable properties</h4>
+      <p><code>fill</code>, <code>opacity</code>, <code>scale</code>, <code>rotate</code>, <code>x</code>, <code>y</code></p>
+
+      <h4>Easing functions</h4>
+      <p><code>linear</code>, <code>ease_in</code>, <code>ease_out</code>, <code>ease_in_out</code>, <code>spring</code></p>
+
+      <!-- Constraints -->
+      <h2 id="constraints">Constraints</h2>
+      <p>Position nodes relative to other nodes or the canvas. Use constraints over absolute coordinates.</p>
+
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-comment"># Center in the canvas</span>
+<span class="hl-id">@card</span> -> <span class="hl-prop">center_in:</span> canvas
+
+<span class="hl-comment"># Center inside another node</span>
+<span class="hl-id">@label</span> -> <span class="hl-prop">center_in:</span> <span class="hl-id">@card</span>
+
+<span class="hl-comment"># Offset from a reference node</span>
+<span class="hl-id">@tooltip</span> -> <span class="hl-prop">offset:</span> <span class="hl-id">@button</span> <span class="hl-number">0</span>, <span class="hl-number">-40</span>
+
+<span class="hl-comment"># Fill parent with 16px padding</span>
+<span class="hl-id">@bg</span> -> <span class="hl-prop">fill_parent:</span> <span class="hl-number">16</span></code></pre>
+      </div>
+
+      <p>For absolute positioning (e.g., after dragging), use inline <code>x:</code> / <code>y:</code>:</p>
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-keyword">rect</span> <span class="hl-id">@box</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">x:</span> <span class="hl-number">100</span>  <span class="hl-prop">y:</span> <span class="hl-number">200</span>
+  <span class="hl-prop">w:</span> <span class="hl-number">50</span>   <span class="hl-prop">h:</span> <span class="hl-number">50</span>
+<span class="hl-punct">}</span></code></pre>
+      </div>
+
+      <!-- Layout -->
+      <h2 id="layout">Layout</h2>
+      <p>Groups and frames support managed layouts for automatic child positioning.</p>
+
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-comment"># Vertical stack</span>
+<span class="hl-keyword">group</span> <span class="hl-id">@stack</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">layout:</span> column gap=<span class="hl-number">12</span> pad=<span class="hl-number">16</span>
+  <span class="hl-keyword">rect</span> <span class="hl-id">@a</span> <span class="hl-punct">{</span> <span class="hl-prop">w:</span> <span class="hl-number">100</span> <span class="hl-prop">h:</span> <span class="hl-number">40</span> <span class="hl-punct">}</span>
+  <span class="hl-keyword">rect</span> <span class="hl-id">@b</span> <span class="hl-punct">{</span> <span class="hl-prop">w:</span> <span class="hl-number">100</span> <span class="hl-prop">h:</span> <span class="hl-number">40</span> <span class="hl-punct">}</span>
+<span class="hl-punct">}</span>
+
+<span class="hl-comment"># Horizontal row</span>
+<span class="hl-keyword">group</span> <span class="hl-id">@row</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">layout:</span> row gap=<span class="hl-number">8</span>
+  <span class="hl-keyword">rect</span> <span class="hl-id">@c</span> <span class="hl-punct">{</span> <span class="hl-prop">w:</span> <span class="hl-number">60</span> <span class="hl-prop">h:</span> <span class="hl-number">60</span> <span class="hl-punct">}</span>
+  <span class="hl-keyword">rect</span> <span class="hl-id">@d</span> <span class="hl-punct">{</span> <span class="hl-prop">w:</span> <span class="hl-number">60</span> <span class="hl-prop">h:</span> <span class="hl-number">60</span> <span class="hl-punct">}</span>
+<span class="hl-punct">}</span>
+
+<span class="hl-comment"># Grid layout</span>
+<span class="hl-keyword">group</span> <span class="hl-id">@grid</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">layout:</span> grid cols=<span class="hl-number">3</span> gap=<span class="hl-number">8</span> pad=<span class="hl-number">12</span>
+  <span class="hl-keyword">rect</span> <span class="hl-id">@e</span> <span class="hl-punct">{</span> <span class="hl-prop">w:</span> <span class="hl-number">50</span> <span class="hl-prop">h:</span> <span class="hl-number">50</span> <span class="hl-punct">}</span>
+  <span class="hl-keyword">rect</span> <span class="hl-id">@f</span> <span class="hl-punct">{</span> <span class="hl-prop">w:</span> <span class="hl-number">50</span> <span class="hl-prop">h:</span> <span class="hl-number">50</span> <span class="hl-punct">}</span>
+  <span class="hl-keyword">rect</span> <span class="hl-id">@g</span> <span class="hl-punct">{</span> <span class="hl-prop">w:</span> <span class="hl-number">50</span> <span class="hl-prop">h:</span> <span class="hl-number">50</span> <span class="hl-punct">}</span>
+<span class="hl-punct">}</span></code></pre>
+      </div>
+
+      <!-- Annotations -->
+      <h2 id="annotations">Annotations</h2>
+      <p>Structured metadata attached to nodes via <code>spec</code> blocks. Unlike <code># comments</code>, annotations are parsed, stored in the scene graph, and survive round-trips.</p>
+
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-keyword">rect</span> <span class="hl-id">@login_btn</span> <span class="hl-punct">{</span>
+  <span class="hl-keyword">spec</span> <span class="hl-punct">{</span>
+    <span class="hl-string">"Primary CTA — triggers login API call"</span>
+    <span class="hl-prop">accept:</span> <span class="hl-string">"disabled state when fields empty"</span>
+    <span class="hl-prop">accept:</span> <span class="hl-string">"loading spinner during auth"</span>
+    <span class="hl-prop">status:</span> in_progress
+    <span class="hl-prop">priority:</span> high
+    <span class="hl-prop">tag:</span> auth, mvp
+  <span class="hl-punct">}</span>
+  <span class="hl-prop">w:</span> <span class="hl-number">280</span> <span class="hl-prop">h:</span> <span class="hl-number">48</span>
+<span class="hl-punct">}</span></code></pre>
+      </div>
+
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Syntax</th><th>Kind</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>"text"</code></td><td>Description</td><td>What this node is/does</td></tr>
+            <tr><td><code>accept: "text"</code></td><td>Accept</td><td>Acceptance criterion (can repeat)</td></tr>
+            <tr><td><code>status: value</code></td><td>Status</td><td><code>draft</code>, <code>in_progress</code>, <code>done</code></td></tr>
+            <tr><td><code>priority: value</code></td><td>Priority</td><td><code>high</code>, <code>medium</code>, <code>low</code></td></tr>
+            <tr><td><code>tag: value</code></td><td>Tag</td><td>Categorization labels</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Inline form (single description):</p>
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-keyword">rect</span> <span class="hl-id">@btn</span> <span class="hl-punct">{</span>
+  <span class="hl-keyword">spec</span> <span class="hl-string">"Primary action button"</span>
+  <span class="hl-prop">w:</span> <span class="hl-number">200</span> <span class="hl-prop">h:</span> <span class="hl-number">48</span>
+<span class="hl-punct">}</span></code></pre>
+      </div>
+
+      <!-- Colors -->
+      <h2 id="colors">Colors</h2>
+      <p>Hex format with optional alpha:</p>
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-prop">fill:</span> <span class="hl-color">#6C5CE7</span>         <span class="hl-comment"># 6-digit hex</span>
+<span class="hl-prop">fill:</span> <span class="hl-color">#FFF</span>             <span class="hl-comment"># 3-digit shorthand</span>
+<span class="hl-prop">fill:</span> <span class="hl-color">#FF000080</span>        <span class="hl-comment"># 8-digit hex with alpha</span>
+<span class="hl-prop">fill:</span> <span class="hl-color">#0002</span>            <span class="hl-comment"># 4-digit with alpha</span></code></pre>
+      </div>
+
+      <h4>Named colors</h4>
+      <p>17 Tailwind palette colors are accepted by name:</p>
+      <p><code>red</code>, <code>orange</code>, <code>amber</code>, <code>yellow</code>, <code>lime</code>, <code>green</code>, <code>emerald</code>, <code>teal</code>, <code>cyan</code>, <code>sky</code>, <code>blue</code>, <code>indigo</code>, <code>violet</code>, <code>purple</code>, <code>fuchsia</code>, <code>pink</code>, <code>rose</code></p>
+
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-prop">fill:</span> purple
+<span class="hl-prop">fill:</span> emerald
+<span class="hl-prop">stroke:</span> rose <span class="hl-number">2</span></code></pre>
+      </div>
+
+      <h4>Background shorthand</h4>
+      <p>Combine fill, corner, and shadow in one line:</p>
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-prop">bg:</span> <span class="hl-color">#FFF</span> corner=<span class="hl-number">12</span> shadow=(<span class="hl-number">0</span>,<span class="hl-number">4</span>,<span class="hl-number">20</span>,<span class="hl-color">#0002</span>)</code></pre>
+      </div>
+
+      <!-- Property Aliases -->
+      <h2 id="property-aliases">Property Aliases</h2>
+      <p>Common CSS/Tailwind names are accepted for convenience. The emitter always outputs the canonical name.</p>
+
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Alias</th><th>Canonical</th></tr></thead>
+          <tbody>
+            <tr><td><code>background:</code>, <code>color:</code></td><td><code>fill:</code></td></tr>
+            <tr><td><code>rounded:</code>, <code>radius:</code></td><td><code>corner:</code></td></tr>
+            <tr><td><code>border:</code></td><td><code>stroke:</code></td></tr>
+            <tr><td><code>apply:</code></td><td><code>use:</code></td></tr>
+            <tr><td><code>pad:</code></td><td><code>padding:</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Dimension units are optional — <code>w: 320px</code> is accepted, <code>px</code> is stripped.</p>
+
+      <!-- Imports -->
+      <h2 id="imports">Imports</h2>
+      <p>Reference styles and nodes from other <code>.fd</code> files:</p>
+
+      <div class="code-block">
+        <div class="code-block-header"><span>.fd</span></div>
+        <pre><code><span class="hl-keyword">import</span> <span class="hl-string">"components/buttons.fd"</span> <span class="hl-keyword">as</span> btn
+<span class="hl-keyword">import</span> <span class="hl-string">"shared/tokens.fd"</span> <span class="hl-keyword">as</span> tokens
+
+<span class="hl-keyword">rect</span> <span class="hl-id">@hero</span> <span class="hl-punct">{</span>
+  <span class="hl-prop">use:</span> tokens.accent
+<span class="hl-punct">}</span></code></pre>
+      </div>
+
+      <!-- Prev/Next -->
+      <div class="page-nav">
+        <div></div>
+        <a href="/docs/shortcuts.html" class="page-nav-link next">
+          <span class="page-nav-label">Next →</span>
+          <span class="page-nav-title">Keyboard Shortcuts</span>
+        </a>
+      </div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="docs-footer">
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener">VS Code Marketplace</a>
+      <a href="https://github.com/khangnghiem/fast-draft/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+    </div>
+    <p>Made with Rust, WASM, and ❤️ by <a href="https://github.com/khangnghiem" target="_blank" rel="noopener">Khang Nghiêm</a></p>
+  </footer>
+
+  <script>
+    // Mobile sidebar toggle
+    document.querySelector('.mobile-menu-btn')?.addEventListener('click', function() {
+      document.getElementById('docs-sidebar')?.classList.toggle('open');
+    });
+    // Active sidebar link highlight on scroll
+    const headings = document.querySelectorAll('h2[id], h3[id]');
+    const sidebarLinks = document.querySelectorAll('.sidebar-links a[href^="#"]');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          sidebarLinks.forEach(l => l.classList.remove('active'));
+          const link = document.querySelector(`.sidebar-links a[href="#${entry.target.id}"]`);
+          if (link) link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-80px 0px -70% 0px' });
+    headings.forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>
