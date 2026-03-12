@@ -3573,3 +3573,4 @@ fn collect_node_tree(graph: &fd_core::SceneGraph, idx: fd_core::NodeIndex) -> se
     }
     obj
 }
+mod tests;
