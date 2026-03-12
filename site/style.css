@@ -586,6 +586,7 @@ code {
   background: #282C34; /* Atom One Dark — always dark code mode */
   display: flex;
   flex-direction: column;
+  min-width: 0; /* prevent grid blowout from intrinsic content width */
 }
 /* Code mode is always dark, even in light theme */
 .light-theme .playground-editor {
@@ -595,6 +596,8 @@ code {
   background: var(--bg-card);
   display: flex;
   flex-direction: column;
+  min-width: 0;         /* prevent grid blowout from canvas pixel width */
+  overflow: hidden;     /* belt-and-suspenders containment */
 }
 .editor-header {
   display: flex;
