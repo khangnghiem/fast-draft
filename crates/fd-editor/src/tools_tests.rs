@@ -1672,7 +1672,7 @@ fn select_tool_shift_click_deselects_on_pointerup() {
 }
 
 /// Regression test: Eraser hover-only (no drag) must produce empty mutations
-/// and not crash. Before v0.10.40 this caused a panic on empty erased_ids.
+/// and not crash. Before v0.11.40 this caused a panic on empty erased_ids.
 #[test]
 fn eraser_tool_hover_only_no_crash() {
     let mut tool = EraserTool::new();
