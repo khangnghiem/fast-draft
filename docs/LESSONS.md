@@ -33,6 +33,7 @@ Engineering lessons discovered through building FD.
   spatial-index, hit-test, stale, move → L391-403 (Spatial Index Must Be Rebuilt After Bounds Mutation)
   hover, click, press, pointer-down    → L405-417 (Pointer Down Must Not Set Hover State)
   resize-observer, raf, canvas-blank, click → L419-431 (ResizeObserver Must Repaint Synchronously)
+  deploy, cache-bust, stale, cdn, browser → L433-445 (Deploy Without Cache-Bust = Invisible Fix)
 -->
 
 
@@ -409,3 +410,16 @@ Browser subagents inherit the full parent conversation context. When context exc
 **Fix**: Call `renderCanvas()` synchronously at the end of `resizeCanvas()` when the buffer was cleared, instead of relying on `renderDirty` + RAF. Set `renderDirty = false` to prevent a redundant double-render on the next RAF tick.
 
 **Rule**: **Never rely on RAF `renderDirty` flags after `canvas.width/height` assignment.** The HTML5 spec clears the entire pixel buffer on any dimension assignment. Since ResizeObserver callbacks fire after RAF in Chrome's rendering pipeline, the cleared canvas will be composited before the next RAF can repaint. Always repaint synchronously after clearing.
+
+---
+
+## Deploy Without Cache-Bust = Invisible Fix
+
+**Date**: 2026-03-12
+**Context**: v0.10.116 deployed a critical canvas fix to Cloudflare Pages. CDN had the new `playground.js`, but users still saw the bug. `pages.yml` even purges the CF CDN cache — yet the fix was invisible.
+
+**Root cause**: `index.html` loads `playground.js?v=0.11.4`. The `?v=` query string wasn't bumped. Cloudflare's default `Cache-Control: public, max-age=14400` (4 hours) caused browsers to serve stale JS. The CDN purge only clears Cloudflare's edge cache — it cannot purge individual browser caches. The query string acts as the real cache key.
+
+**Fix**: (1) Bumped `?v=0.11.5` immediately. (2) Added `pages.yml` auto-bust step that replaces `?v=X.Y.Z` with `?v=<git-sha>` before every deploy. (3) Added `Cache-Control: no-cache` for `/*.js` and `/*.css` in `_headers` as belt-and-suspenders.
+
+**Rule**: **Every site deploy must produce unique asset URLs.** Content-hash or git-SHA query strings are the only reliable way to invalidate browser caches. CDN purge alone is insufficient — browsers own their cache independently. Automate this in CI; never rely on manual version bumps.

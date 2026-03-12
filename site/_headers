@@ -4,6 +4,13 @@
 /wasm/*
   Cache-Control: no-cache
 
+# JS/CSS — also not content-hashed. Always revalidate so deploys
+# take effect immediately instead of waiting for max-age expiry.
+/*.js
+  Cache-Control: no-cache
+/*.css
+  Cache-Control: no-cache
+
 # All pages — security headers
 /*
   X-Content-Type-Options: nosniff

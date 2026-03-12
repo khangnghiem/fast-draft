@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.117 — Auto Cache-Bust Deploy Pipeline (DX)
+
+- **INFRA (DX)**: `pages.yml` auto-bust step — replaces `?v=X.Y.Z` query strings in `index.html` with `?v=<7-char-git-sha>` before deploying; every deploy produces unique asset URLs, eliminating stale browser cache forever; no manual version bumps needed
+- **INFRA (DX)**: `site/_headers` — added `Cache-Control: no-cache` for `/*.js` and `/*.css` files; browsers always revalidate (304 if unchanged), matching the existing WASM caching rule; belt-and-suspenders defense against stale assets
+- **FIX**: Bumped `playground.js?v=0.11.4` → `?v=0.11.5` and `style.css?v=0.11.3` → `?v=0.11.5` in `index.html` — previous deploy of v0.10.116 fix was invisible to users because the query string wasn't updated, causing browsers to serve 4-hour-cached stale JS
+
 ### v0.10.116 — Fix Canvas Blank After Clicking a Node (R6.9)
 
 - **FIX (R6.9)**: Canvas no longer goes blank after clicking a node — root cause: ResizeObserver/RAF race condition; clicking a node opens the Properties panel (`.visible`), changing wrapper layout → ResizeObserver fires `resizeCanvas()` → `canvas.width = newW` clears pixel buffer (HTML5 spec); the RAF loop already consumed `renderDirty=true` earlier in the same frame, so the cleared canvas was composited blank; fix: `resizeCanvas()` now calls `renderCanvas()` synchronously after clearing the buffer instead of relying on `renderDirty` + next RAF tick
