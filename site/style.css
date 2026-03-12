@@ -2063,6 +2063,45 @@ code {
 .zen-mode #floating-toolbar { display: none !important; }
 .zen-mode #minimap-container { display: none !important; }
 
+/* ─── Full Screen Mode ─── */
+/* Separate from Zen: expands playground to fill entire viewport */
+.fullscreen-mode #navbar,
+.fullscreen-mode #hero .hero-content,
+.fullscreen-mode #hero .hero-bg,
+.fullscreen-mode .section,
+.fullscreen-mode #cta,
+.fullscreen-mode #footer { display: none !important; }
+
+.fullscreen-mode #hero {
+  padding: 0;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  overflow: hidden;
+}
+.fullscreen-mode .hero-playground {
+  max-width: 100%;
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  animation: fullscreen-enter 0.25s ease-out;
+}
+.fullscreen-mode .playground-split {
+  min-height: 100vh;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+@keyframes fullscreen-enter {
+  from { transform: scale(0.97); opacity: 0.8; }
+  to { transform: scale(1); opacity: 1; }
+}
+/* Fullscreen toolbar button highlight */
+#fullscreen-toggle-btn.fs-active {
+  color: var(--fd-accent, #007AFF);
+  background: var(--fd-accent-dim, rgba(0,122,255,0.1));
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 768px) {
   .nav-links {

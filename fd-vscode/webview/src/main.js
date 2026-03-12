@@ -77,6 +77,7 @@ async function main() {
     setupThemeToggle();
     setupSketchyToggle();
     setupZenModeToggle();
+    setupFullscreenToggle();
     setupZoomIndicator();
     setupGridToggle();
     setupSpecBadgeToggle();

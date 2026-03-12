@@ -137,6 +137,20 @@ Zen mode keeps: 6 core tools (Select, Rect, Ellipse, Pen, Arrow, Text), Sketchy 
 
 ---
 
+## Full Screen Mode
+
+| Action                        | Effect                                |
+| ----------------------------- | ------------------------------------- |
+| Click ⛶/✕ toggle (toolbar)    | Toggle Full Screen mode               |
+| `⇧F` (Shift+F)               | Toggle Full Screen mode               |
+| `Escape`                      | Exit Full Screen mode                 |
+
+Full Screen mode hides: Navigation, hero, footer, page chrome. Expands playground to fill viewport.
+Full Screen mode keeps: Code editor, canvas, toolbar, all tools.
+Full Screen is independent of Zen mode — both can be active simultaneously.
+
+---
+
 ## Apple Pencil Pro
 
 | Gesture              | Action                |
