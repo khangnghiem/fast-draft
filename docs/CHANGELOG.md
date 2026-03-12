@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### HTML+CSS Export (R3.56)
+
+- **FEAT (R3.56)**: Added `emit_html` to `fd-core` to export scene graphs to standalone HTML files.
+- **CORE**: Maps Rect/Frame/Text to absolutely positioned DOM elements, and Ellipse/Path/Edge to a full-screen SVG overlay.
+
 ### v0.11.129 — Fix 30-70 Split Breaks on First Node Drag (R6.6)
 
 - **FIX (R6.6)**: Playground 30-70 code/canvas split no longer expands when first dragging a node — root cause: CSS Grid children default to `min-width: auto`, so when `resizeCanvas()` set `canvas.style.width` to a fixed pixel value, the `.playground-canvas` column couldn't shrink below that intrinsic width, forcing the grid column to exceed its `7fr` allocation; fix: added `min-width: 0` to both `.playground-editor` and `.playground-canvas` grid children (standard CSS Grid overflow fix) + `overflow: hidden` on `.playground-canvas` as defense in depth
