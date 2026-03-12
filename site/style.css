@@ -544,7 +544,7 @@ code {
 
 .playground-split {
   display: grid;
-  grid-template-columns: var(--editor-width, 2fr) auto 3fr;
+  grid-template-columns: var(--editor-width, 3fr) auto 7fr;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   overflow: hidden;
