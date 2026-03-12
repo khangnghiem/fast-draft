@@ -470,7 +470,7 @@ function setupContextMenu() {
     // Show/hide spec-related menu items based on whether node has a spec
     const hasSpec = nodeHasSpec(contextMenuNodeId);
     document.getElementById("ctx-add-annotation").style.display = hasSpec ? "none" : "";
-    document.getElementById("ctx-view-spec").style.display = hasSpec ? "" : "none";
+    document.getElementById("ctx-view-notes").style.display = hasSpec ? "" : "none";
 
     // Update Lock button state
     const lockBtn = document.getElementById("ctx-lock");
@@ -492,8 +492,8 @@ function setupContextMenu() {
     closeContextMenu();
   });
 
-  // View Spec via context menu
-  document.getElementById("ctx-view-spec")?.addEventListener("click", () => {
+  // View Notes via context menu
+  document.getElementById("ctx-view-notes")?.addEventListener("click", () => {
     if (contextMenuNodeId) {
       if (fdCanvas) fdCanvas.select_by_id(contextMenuNodeId);
       render();
@@ -504,7 +504,7 @@ function setupContextMenu() {
     closeContextMenu();
   });
 
-  // Removed: "Show Specs" was a duplicate of "View Spec" — consolidated
+  // Removed: "Show Specs" was a duplicate of "View Notes" — consolidated
 
 
 
@@ -687,7 +687,7 @@ function setupContextMenu() {
       ungroupBtn.classList.toggle("disabled", !canUngroup);
       const hasSpec = nodeHasSpec(nodeId);
       document.getElementById("ctx-add-annotation").style.display = hasSpec ? "none" : "";
-      document.getElementById("ctx-view-spec").style.display = hasSpec ? "" : "none";
+      document.getElementById("ctx-view-notes").style.display = hasSpec ? "" : "none";
       // Update Lock state
       const lockBtn = document.getElementById("ctx-lock");
       if (lockBtn && fdCanvas.is_node_locked) {
@@ -948,14 +948,14 @@ function setupGridToggle() {
 
 /** Toggle spec badge overlay on/off (independent of Spec View mode). */
 function toggleSpecBadges() {
-  specBadgesVisible = !specBadgesVisible;
-  const btn = document.getElementById("sm-spec-badge-toggle");
-  if (btn) btn.classList.toggle("active", specBadgesVisible);
-  vscode.setState({ ...(vscode.getState() || {}), specBadgesVisible });
+  noteBadgesVisible = !noteBadgesVisible;
+  const btn = document.getElementById("sm-note-badge-toggle");
+  if (btn) btn.classList.toggle("active", noteBadgesVisible);
+  vscode.setState({ ...(vscode.getState() || {}), noteBadgesVisible });
 
   const overlay = document.getElementById("spec-overlay");
-  if (specBadgesVisible || viewMode === "spec") {
-    refreshSpecBadges();
+  if (noteBadgesVisible || viewMode === "notes") {
+    refreshNoteBadges();
   } else {
     if (overlay) { overlay.innerHTML = ""; overlay.style.display = "none"; }
   }
@@ -963,15 +963,15 @@ function toggleSpecBadges() {
 
 /** Set up spec badge toggle button and restore persisted state. */
 function setupSpecBadgeToggle() {
-  const btn = document.getElementById("sm-spec-badge-toggle");
+  const btn = document.getElementById("sm-note-badge-toggle");
   if (!btn) return;
 
   // Restore persisted state
   const savedState = vscode.getState();
-  if (savedState && savedState.specBadgesVisible) {
-    specBadgesVisible = true;
+  if (savedState && savedState.noteBadgesVisible) {
+    noteBadgesVisible = true;
     btn.classList.add("active");
-    setTimeout(() => { if (fdCanvas) refreshSpecBadges(); }, 500);
+    setTimeout(() => { if (fdCanvas) refreshNoteBadges(); }, 500);
   }
 
   btn.addEventListener("click", toggleSpecBadges);

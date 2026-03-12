@@ -2592,9 +2592,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
     <div class="tb-zone tb-center zen-full-only">
       <div class="view-toggle" id="view-toggle">
-        <button class="view-btn active" id="view-all" title="All View — full details">All</button>
-        <button class="view-btn" id="view-design" title="Design View — visual properties">Design</button>
-        <button class="view-btn" id="view-spec" title="Spec View — requirements and structure">Spec</button>
+        <button class="view-btn active" id="view-design" title="Design View — visual properties">Design</button>
+        <button class="view-btn" id="view-notes" title="Notes View — annotations &amp; to-dos">Notes</button>
       </div>
     </div>
     <div class="tb-zone tb-right">
@@ -2606,7 +2605,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <button class="tool-btn" id="settings-menu-btn" title="Settings & tools">☰</button>
       <div class="settings-menu" id="settings-menu">
         <button class="settings-menu-item" id="sm-grid-toggle"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span><span class="sm-shortcut">G</span></button>
-        <button class="settings-menu-item" id="sm-spec-badge-toggle"><span class="sm-icon">◇</span><span class="sm-label">Spec Badges</span></button>
+        <button class="settings-menu-item" id="sm-note-badge-toggle"><span class="sm-icon">◇</span><span class="sm-label">Note Badges</span></button>
         <button class="settings-menu-item" id="sm-library-toggle"><span class="sm-icon">📦</span><span class="sm-label">Libraries</span><span class="sm-shortcut">⇧L</span></button>
         <button class="settings-menu-item" id="sm-sketchy-toggle"><span class="sm-icon">✏️</span><span class="sm-label">Sketchy Mode</span></button>
         <button class="settings-menu-item" id="sm-theme-toggle"><span class="sm-icon">🌙</span><span class="sm-label">Dark Theme</span></button>
@@ -2822,8 +2821,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
   </div>
   <div id="context-menu">
     <div class="menu-item" id="ctx-ai-refine"><span class="menu-icon">✦</span><span class="menu-label">AI Touch</span></div>
-    <div class="menu-item" id="ctx-add-annotation"><span class="menu-icon">◇</span><span class="menu-label">Add Spec</span></div>
-    <div class="menu-item" id="ctx-view-spec" style="display:none"><span class="menu-icon">◈</span><span class="menu-label">View Spec</span><span class="menu-shortcut">⌘I</span></div>
+    <div class="menu-item" id="ctx-add-annotation"><span class="menu-icon">◇</span><span class="menu-label">Add Note</span></div>
+    <div class="menu-item" id="ctx-view-notes" style="display:none"><span class="menu-icon">◈</span><span class="menu-label">View Notes</span><span class="menu-shortcut">⌘I</span></div>
     <div class="menu-item" id="ctx-rename" data-action="rename"><span class="menu-icon">✏️</span><span class="menu-label">Rename</span></div>
 
     <div class="menu-separator"></div>

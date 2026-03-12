@@ -124,10 +124,10 @@ status: draft
         Annotation::Description("Updated description".into())
     );
 
-    // Verify text re-emitted with spec blocks
+    // Verify text re-emitted with note blocks
     assert!(engine.text.contains("\"Updated description\""));
     assert!(engine.text.contains("status: done"));
-    assert!(engine.text.contains("accept: \"all tests pass\""));
+    assert!(engine.text.contains("todo: \"all tests pass\""));
 }
 
 #[test]

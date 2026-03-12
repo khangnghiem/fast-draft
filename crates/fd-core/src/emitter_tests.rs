@@ -638,7 +638,7 @@ tag: auth
     let graph = parse_document(input).unwrap();
     let md = emit_spec_markdown(&graph, "login.fd");
 
-    assert!(md.starts_with("# Spec: login.fd\n"));
+    assert!(md.starts_with("# Notes: login.fd\n"));
     assert!(md.contains("## @login_btn `rect`"));
     assert!(md.contains("> Primary CTA for login"));
     assert!(md.contains("- [ ] disabled when fields empty"));
@@ -1232,6 +1232,7 @@ fn roundtrip_unicode_text() {
 
 #[test]
 fn roundtrip_spec_all_fields() {
+    // Old `spec` keyword still parses and round-trips correctly
     let input = r#"
 rect @full_spec {
   spec {
@@ -1249,6 +1250,15 @@ tag: mvp, auth
     assert_eq!(node.annotations.len(), 5, "should have 5 annotations");
 
     let output = emit_document(&graph);
+    // Emitter should upgrade `spec` to `note` and `accept:` to `todo:`
+    assert!(
+        output.contains("note {"),
+        "emitter should output `note` keyword, got: {output}"
+    );
+    assert!(
+        output.contains("todo:"),
+        "emitter should output `todo:` keyword, got: {output}"
+    );
     let graph2 = parse_document(&output).expect("re-parse of full spec failed");
     let node2 = graph2.get_by_id(NodeId::intern("full_spec")).unwrap();
     assert_eq!(node2.annotations.len(), 5);
@@ -1408,6 +1418,7 @@ ease: spring 150ms
 
 #[test]
 fn roundtrip_inline_spec_shorthand() {
+    // Old `spec "..."` shorthand still parses correctly
     let input = r#"
 rect @btn {
   spec "Primary action button"
@@ -1424,8 +1435,39 @@ rect @btn {
     ));
 
     let output = emit_document(&graph);
-    let graph2 = parse_document(&output).expect("re-parse of inline spec failed");
+    // Emitter should upgrade to `note` keyword
+    assert!(
+        output.contains("note \""),
+        "emitter should output `note` keyword: {output}"
+    );
+    let graph2 = parse_document(&output).expect("re-parse of inline note failed");
     let node2 = graph2.get_by_id(NodeId::intern("btn")).unwrap();
+    assert_eq!(node2.annotations, node.annotations);
+}
+
+#[test]
+fn roundtrip_note_keyword() {
+    // New `note` keyword works directly
+    let input = r#"
+rect @card {
+  note {
+    "Card component"
+    todo: "responsive on mobile"
+    status: doing
+  }
+  w: 200 h: 100
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("card")).unwrap();
+    assert_eq!(node.annotations.len(), 3, "should have 3 annotations");
+    assert!(matches!(&node.annotations[1], Annotation::Accept(s) if s == "responsive on mobile"));
+
+    let output = emit_document(&graph);
+    assert!(output.contains("note {"), "should emit note keyword");
+    assert!(output.contains("todo:"), "should emit todo keyword");
+    let graph2 = parse_document(&output).expect("re-parse of note keyword failed");
+    let node2 = graph2.get_by_id(NodeId::intern("card")).unwrap();
     assert_eq!(node2.annotations, node.annotations);
 }
 
@@ -1566,16 +1608,25 @@ fn emit_filtered_design() {
 }
 
 #[test]
-fn emit_filtered_spec() {
+fn emit_filtered_notes() {
     let graph = make_test_graph();
-    let out = emit_filtered(&graph, ReadMode::Spec);
-    // Should have spec blocks
-    assert!(out.contains("spec"), "should include spec");
+    let out = emit_filtered(&graph, ReadMode::Notes);
+    // Should have note blocks
+    assert!(out.contains("note"), "should include note");
     assert!(out.contains("Main card component"), "should include desc");
     assert!(out.contains("status: done"), "should include status");
     // Should NOT have styles or anims
-    assert!(!out.contains("fill:"), "no fill in spec mode");
-    assert!(!out.contains("when"), "no when in spec mode");
+    assert!(!out.contains("fill:"), "no fill in notes mode");
+    assert!(!out.contains("when"), "no when in notes mode");
+}
+
+#[test]
+fn emit_filtered_spec_alias() {
+    // ReadMode::Spec (alias) should produce the same output as ReadMode::Notes
+    let graph = make_test_graph();
+    let notes_out = emit_filtered(&graph, ReadMode::Notes);
+    let spec_out = emit_filtered(&graph, ReadMode::Spec);
+    assert_eq!(notes_out, spec_out, "Spec should be alias for Notes");
 }
 
 #[test]

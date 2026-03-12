@@ -178,14 +178,14 @@ async fn main() {
             "structure" => fd_core::ReadMode::Structure,
             "layout" => fd_core::ReadMode::Layout,
             "design" => fd_core::ReadMode::Design,
-            "spec" => fd_core::ReadMode::Spec,
+            "notes" | "spec" => fd_core::ReadMode::Notes,
             "visual" => fd_core::ReadMode::Visual,
             "when" => fd_core::ReadMode::When,
             "edges" => fd_core::ReadMode::Edges,
             other => {
                 eprintln!("fd-lsp --view error: unknown mode '{other}'");
                 eprintln!(
-                    "valid modes: full, structure, layout, design, spec, visual, when, edges"
+                    "valid modes: full, structure, layout, design, notes, visual, when, edges"
                 );
                 std::process::exit(1);
             }

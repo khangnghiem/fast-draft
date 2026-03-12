@@ -32,8 +32,8 @@ const fdLanguage = StreamLanguage.define({
     // Style/theme keyword
     if (stream.match(/^(style|theme)\b/)) return 'keyword';
 
-    // Animation/spec keywords
-    if (stream.match(/^(when|anim|spec)\b/)) return 'keyword';
+    // Animation/note keywords
+    if (stream.match(/^(when|anim|note|spec)\b/)) return 'keyword';
 
     // Property names followed by colon
     if (stream.match(/^(w|h|x|y|fill|stroke|font|corner|opacity|shadow|bg|layout|use|center_in|offset|gap|pad|scale|rotate|translate|ease|duration|cols|from|to|src|alt|align|clip|arrow|curve|flow|place|d|label_offset)\s*:/)) {
@@ -991,6 +991,23 @@ function setupContextMenu() {
       case 'copy-fd':
         navigator.clipboard.writeText(fdCanvas.get_text()).catch(() => {});
         break;
+      case 'add-note': {
+        const noteId = fdCanvas.get_selected_id();
+        if (!noteId) break;
+        const noteText = prompt('Add a note:');
+        if (!noteText) break;
+        const src = fdCanvas.get_text();
+        // Find the closing brace of this node and insert note before it
+        const nodeRe = new RegExp(`(@${noteId.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\s*(?:"[^"]*"\\s*)?\\{)`);
+        const m = src.match(nodeRe);
+        if (m) {
+          const insertPos = m.index + m[0].length;
+          const newSrc = src.slice(0, insertPos) + `\n  note "${noteText}"` + src.slice(insertPos);
+          fdCanvas.set_text(newSrc);
+          changed = true;
+        }
+        break;
+      }
       case 'lock':
         if (fdCanvas.toggle_node_locked) {
           fdCanvas.toggle_node_locked(fdCanvas.get_selected_id());
@@ -1116,7 +1133,7 @@ function setupContextMenu() {
 /** ─── Layers Panel ────────────────────────────────────────────────────── */
 const LAYER_ICONS = {
   group: '◻', frame: '▣', rect: '▢', ellipse: '○',
-  path: '〜', text: 'T', style: '◆', edge: '⟶', spec: '◇'
+  path: '〜', text: 'T', style: '◆', edge: '⟶', note: '◇', spec: '◇'
 };
 
 function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -1572,13 +1589,12 @@ function setupPanelResize(wrapper, resizeCanvas) {
 // ─── Init ────────────────────────────────────────────────────────────────
 
 /** ─── View Mode Toggle ────────────────────────────────────────────────── */
-let viewMode = 'all';
+let viewMode = 'design';
 
 function setViewMode(mode) {
   viewMode = mode;
-  document.getElementById('view-all')?.classList.toggle('active', mode === 'all');
   document.getElementById('view-design')?.classList.toggle('active', mode === 'design');
-  document.getElementById('view-spec')?.classList.toggle('active', mode === 'spec');
+  document.getElementById('view-notes')?.classList.toggle('active', mode === 'notes');
 
   if (!fdCanvas || !editorView) return;
   const fullText = fdCanvas.get_text();
@@ -1587,26 +1603,26 @@ function setViewMode(mode) {
   let isReadOnly = false;
 
   if (mode === 'design') {
-    displayText = fullText.replace(/\n?\s*spec\s*\{[^}]*\}/g, '').replace(/\n?\s*spec\s+"[^"]*"/g, '');
+    displayText = fullText.replace(/\n?\s*(?:note|spec)\s*\{[^}]*\}/g, '').replace(/\n?\s*(?:note|spec)\s+"[^"]*"/g, '');
     isReadOnly = true;
-  } else if (mode === 'spec') {
+  } else if (mode === 'notes') {
     const lines = fullText.split('\n');
-    const specLines = [];
+    const noteLines = [];
     for (const line of lines) {
-      if (line.trim().startsWith('#') || line.trim().startsWith('spec ') || line.trim().startsWith('spec{')) {
-        specLines.push(line);
+      if (line.trim().startsWith('#') || line.trim().startsWith('note ') || line.trim().startsWith('note{') || line.trim().startsWith('spec ') || line.trim().startsWith('spec{')) {
+        noteLines.push(line);
         continue;
       }
       const nodeMatch = line.trim().match(/^(group|frame|rect|ellipse|text|path)\s+@/);
       if (nodeMatch) {
-        specLines.push(line);
+        noteLines.push(line);
         continue;
       }
       if (line.trim() === '}') {
-        specLines.push(line);
+        noteLines.push(line);
       }
     }
-    displayText = specLines.join('\n');
+    displayText = noteLines.join('\n');
     isReadOnly = true;
   }
 
@@ -2508,9 +2524,8 @@ async function initPlayground() {
     // ── Toolbar buttons ──────────────────────────────────────────────
     document.getElementById('ai-touch-btn')?.addEventListener('click', aiTouch);
     document.getElementById('renamify-btn')?.addEventListener('click', renamify);
-    document.getElementById('view-all')?.addEventListener('click', () => setViewMode('all'));
     document.getElementById('view-design')?.addEventListener('click', () => setViewMode('design'));
-    document.getElementById('view-spec')?.addEventListener('click', () => setViewMode('spec'));
+    document.getElementById('view-notes')?.addEventListener('click', () => setViewMode('notes'));
 
     // Get canvas 2D context
     ctx = canvas.getContext('2d');

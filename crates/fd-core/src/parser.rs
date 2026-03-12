@@ -47,9 +47,13 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
                 .map_err(|e| format!("line {line}: style/theme error — expected `style name {{ props }}`, got `{ctx}…`: {e}"))?;
             graph.define_style(name, style);
             pending_comments.clear();
-        } else if rest.starts_with("spec ") || rest.starts_with("spec{") {
-            // Top-level spec blocks are ignored (they only apply inside nodes)
-            let _ = parse_spec_block.parse_next(&mut rest);
+        } else if rest.starts_with("spec ")
+            || rest.starts_with("spec{")
+            || rest.starts_with("note ")
+            || rest.starts_with("note{")
+        {
+            // Top-level note/spec blocks are ignored (they only apply inside nodes)
+            let _ = parse_note_block.parse_next(&mut rest);
             pending_comments.clear();
         } else if rest.starts_with('@') {
             if is_generic_node_start(rest) {
@@ -326,14 +330,16 @@ fn skip_px_suffix(input: &mut &str) {
     }
 }
 
-// ─── Spec block parser ──────────────────────────────────────────────────
+// ─── Note block parser (accepts both `note` and legacy `spec`) ──────────
 
-/// Parse a `spec { ... }` block or inline `spec "description"` into annotations.
-fn parse_spec_block(input: &mut &str) -> ModalResult<Vec<Annotation>> {
-    let _ = "spec".parse_next(input)?;
+/// Parse a `note { ... }` block or inline `note "description"` into annotations.
+/// Also accepts the legacy `spec` keyword for backward compatibility.
+fn parse_note_block(input: &mut &str) -> ModalResult<Vec<Annotation>> {
+    // Accept both `note` and legacy `spec`
+    let _ = alt(("note", "spec")).parse_next(input)?;
     skip_space(input);
 
-    // Inline shorthand: `spec "description"`
+    // Inline shorthand: `note "description"`
     if input.starts_with('"') {
         let desc = parse_quoted_string
             .map(|s| s.to_string())
@@ -342,13 +348,13 @@ fn parse_spec_block(input: &mut &str) -> ModalResult<Vec<Annotation>> {
         return Ok(vec![Annotation::Description(desc)]);
     }
 
-    // Block form: `spec { ... }`
+    // Block form: `note { ... }`
     let _ = '{'.parse_next(input)?;
     let mut annotations = Vec::new();
     skip_ws_and_comments(input);
 
     while !input.starts_with('}') {
-        annotations.push(parse_spec_item.parse_next(input)?);
+        annotations.push(parse_note_item.parse_next(input)?);
         skip_ws_and_comments(input);
     }
 
@@ -356,15 +362,15 @@ fn parse_spec_block(input: &mut &str) -> ModalResult<Vec<Annotation>> {
     Ok(annotations)
 }
 
-/// Parse a single item inside a `spec { ... }` block.
+/// Parse a single item inside a `note { ... }` block.
 ///
 /// Handles:
 /// - `"description text"` → Description
-/// - `accept: "criterion"` → Accept
+/// - `todo: "criterion"` → Accept (also accepts legacy `accept:`)
 /// - `status: value` → Status
 /// - `priority: value` → Priority
 /// - `tag: value` → Tag
-fn parse_spec_item(input: &mut &str) -> ModalResult<Annotation> {
+fn parse_note_item(input: &mut &str) -> ModalResult<Annotation> {
     // Freeform description: `"text"`
     if input.starts_with('"') {
         let desc = parse_quoted_string
@@ -391,7 +397,7 @@ fn parse_spec_item(input: &mut &str) -> ModalResult<Annotation> {
     };
 
     let ann = match keyword {
-        "accept" => Annotation::Accept(value),
+        "todo" | "accept" => Annotation::Accept(value),
         "status" => Annotation::Status(value),
         "priority" => Annotation::Priority(value),
         "tag" => Annotation::Tag(value),
@@ -577,8 +583,12 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     skip_ws_and_comments(input);
 
     while !input.starts_with('}') {
-        if input.starts_with("spec ") || input.starts_with("spec{") {
-            annotations.extend(parse_spec_block.parse_next(input)?);
+        if input.starts_with("spec ")
+            || input.starts_with("spec{")
+            || input.starts_with("note ")
+            || input.starts_with("note{")
+        {
+            annotations.extend(parse_note_block.parse_next(input)?);
         } else if starts_with_child_node(input) {
             let mut child = parse_node.parse_next(input)?;
             // Any comments collected before this child are attached to it
@@ -1378,8 +1388,12 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
     skip_ws_and_comments(input);
 
     while !input.starts_with('}') {
-        if input.starts_with("spec ") || input.starts_with("spec{") {
-            annotations.extend(parse_spec_block.parse_next(input)?);
+        if input.starts_with("spec ")
+            || input.starts_with("spec{")
+            || input.starts_with("note ")
+            || input.starts_with("note{")
+        {
+            annotations.extend(parse_note_block.parse_next(input)?);
         } else if input.starts_with("when") || input.starts_with("anim") {
             animations.push(parse_anim_block.parse_next(input)?);
         } else if input.starts_with("text ") || input.starts_with("text@") {

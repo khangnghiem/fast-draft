@@ -238,39 +238,37 @@ function openAnimPicker(targetNodeId, clientX, clientY) {
 // ─── View Mode Toggle ────────────────────────────────────────────────────
 
 function setupViewToggle() {
-  document.getElementById("view-all")?.addEventListener("click", () => setViewMode("all"));
   document.getElementById("view-design")?.addEventListener("click", () => setViewMode("design"));
-  document.getElementById("view-spec")?.addEventListener("click", () => setViewMode("spec"));
+  document.getElementById("view-notes")?.addEventListener("click", () => setViewMode("notes"));
 }
 
 function setViewMode(mode) {
   viewMode = mode;
-  const isSpec = mode === "spec";
+  const isNotes = mode === "notes";
 
-  document.getElementById("view-all")?.classList.toggle("active", mode === "all");
   document.getElementById("view-design")?.classList.toggle("active", mode === "design");
-  document.getElementById("view-spec")?.classList.toggle("active", isSpec);
+  document.getElementById("view-notes")?.classList.toggle("active", isNotes);
 
-  // Canvas stays visible — spec view keeps full interactivity
+  // Canvas stays visible — notes view keeps full interactivity
   const overlay = document.getElementById("spec-overlay");
-  if (overlay) overlay.style.display = (isSpec || specBadgesVisible) ? "" : "none";
+  if (overlay) overlay.style.display = (isNotes || noteBadgesVisible) ? "" : "none";
 
-  // Hide properties panel in spec view
+  // Hide properties panel in notes view
   const props = document.getElementById("props-panel");
-  if (props && isSpec) props.classList.remove("visible");
+  if (props && isNotes) props.classList.remove("visible");
 
   // Notify extension to apply/remove code-mode spec folding
   vscode.postMessage({ type: "viewModeChanged", mode });
 
-  if (isSpec || specBadgesVisible) {
-    refreshSpecBadges();
+  if (isNotes || noteBadgesVisible) {
+    refreshNoteBadges();
   } else {
     // Clear badges when leaving spec view with toggle OFF
     if (overlay) overlay.innerHTML = "";
   }
 
-  if (isSpec) {
-    refreshSpecView();
+  if (isNotes) {
+    refreshNoteView();
   }
 
   // Always refresh layers (it's always visible)
@@ -282,7 +280,7 @@ function setViewMode(mode) {
  * In Design/All view: only show spec details for the currently selected node.
  * Badge pins are removed; specs appear on hover via tooltip.
  */
-function refreshSpecBadges() {
+function refreshNoteBadges() {
   const overlay = document.getElementById("spec-overlay");
   if (!overlay || !fdCanvas) return;
 
@@ -350,9 +348,9 @@ function hideSpecTooltip() {
   if (tooltip) tooltip.classList.remove("visible");
 }
 
-function refreshSpecView() {
-  // Badges are now handled by refreshSpecBadges()
-  refreshSpecBadges();
+function refreshNoteView() {
+  // Badges are now handled by refreshNoteBadges()
+  refreshNoteBadges();
 }
 
 /**

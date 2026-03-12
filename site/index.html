@@ -94,9 +94,8 @@
               </div>
               <div class="tb-zone tb-center zen-full-only">
                 <div class="view-toggle" id="view-toggle">
-                  <button class="view-btn active" id="view-all" title="All View — full details">All</button>
-                  <button class="view-btn" id="view-design" title="Design View — visual properties">Design</button>
-                  <button class="view-btn" id="view-spec" title="Spec View — requirements">Spec</button>
+                  <button class="view-btn active" id="view-design" title="Design View — visual properties">Design</button>
+                  <button class="view-btn" id="view-notes" title="Notes View — annotations & to-dos">Notes</button>
                 </div>
               </div>
               <div class="tb-zone tb-right">
@@ -223,6 +222,8 @@
               <button class="ctx-item" data-action="lock" id="ctx-lock-site">🔒 Lock</button>
               <div class="ctx-sep"></div>
               <button class="ctx-item" data-action="copy-fd">📄 Copy as .fd</button>
+              <div class="ctx-sep"></div>
+              <button class="ctx-item" data-action="add-note">📝 Add Note</button>
             </div>
             <div id="ctx-menu-canvas">
               <button class="ctx-item" data-action="paste">📋 Paste <span class="ctx-shortcut">⌘V</span></button>
@@ -273,8 +274,8 @@
         </div>
         <div class="feature-card" style="--i: 2">
           <div class="feature-icon">📋</div>
-          <h3>Specs Built In</h3>
-          <p>Attach requirements, status, and acceptance criteria directly to visual elements with <code>spec</code> blocks.</p>
+          <h3>Notes Built In</h3>
+          <p>Attach annotations, to-dos, and status tags directly to visual elements with <code>note</code> blocks.</p>
         </div>
         <div class="feature-card" style="--i: 3">
           <div class="feature-icon">🎨</div>

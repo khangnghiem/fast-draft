@@ -453,23 +453,23 @@ fn emit_annotations(out: &mut String, annotations: &[Annotation], depth: usize) 
         return;
     }
 
-    // Single description → inline shorthand: `spec "desc"`
+    // Single description → inline shorthand: `note "desc"`
     if annotations.len() == 1
         && let Annotation::Description(s) = &annotations[0]
     {
         indent(out, depth);
-        writeln!(out, "spec \"{s}\"").unwrap();
+        writeln!(out, "note \"{s}\"").unwrap();
         return;
     }
 
-    // Multiple annotations → block form: `spec { ... }`
+    // Multiple annotations → block form: `note { ... }`
     indent(out, depth);
-    out.push_str("spec {\n");
+    out.push_str("note {\n");
     for ann in annotations {
         indent(out, depth + 1);
         match ann {
             Annotation::Description(s) => writeln!(out, "\"{s}\"").unwrap(),
-            Annotation::Accept(s) => writeln!(out, "accept: \"{s}\"").unwrap(),
+            Annotation::Accept(s) => writeln!(out, "todo: \"{s}\"").unwrap(),
             Annotation::Status(s) => writeln!(out, "status: {s}").unwrap(),
             Annotation::Priority(s) => writeln!(out, "priority: {s}").unwrap(),
             Annotation::Tag(s) => writeln!(out, "tag: {s}").unwrap(),
@@ -912,7 +912,9 @@ pub enum ReadMode {
     Layout,
     /// Structure + styles + `fill:`/`stroke:`/`font:`/`corner:`/`use:` refs.
     Design,
-    /// Structure + `spec {}` blocks + annotations.
+    /// Structure + `note {}` blocks + annotations.
+    Notes,
+    /// Backward-compatible alias for `Notes`.
     Spec,
     /// Layout + Design + When combined — the full visual story.
     Visual,
@@ -928,10 +930,10 @@ pub enum ReadMode {
 /// Emit a `SceneGraph` filtered to show only the properties relevant to `mode`.
 ///
 /// - `Full`: identical to `emit_document`.
-/// - `Structure`: node kind + `@id` + children. No styles, dims, anims, specs.
+/// - `Structure`: node kind + `@id` + children. No styles, dims, anims, notes.
 /// - `Layout`: structure + `w:`/`h:` + `layout:` + constraints (`->`).
 /// - `Design`: structure + styles + `fill:`/`stroke:`/`font:`/`corner:`/`use:`.
-/// - `Spec`: structure + `spec {}` blocks.
+/// - `Notes` (or `Spec`): structure + `note {}` blocks.
 /// - `Visual`: layout + design + when combined.
 /// - `When`: structure + `when :trigger { ... }` blocks.
 /// - `Edges`: structure + `edge @id { ... }` blocks.
@@ -940,6 +942,12 @@ pub fn emit_filtered(graph: &SceneGraph, mode: ReadMode) -> String {
     if mode == ReadMode::Full {
         return emit_document(graph);
     }
+    // Normalize Spec alias to Notes
+    let mode = if mode == ReadMode::Spec {
+        ReadMode::Notes
+    } else {
+        mode
+    };
     if mode == ReadMode::Diff {
         // Diff mode requires a snapshot — use emit_diff() directly
         return String::from("# Use emit_diff(graph, &snapshot) for Diff mode\n");
@@ -1025,8 +1033,8 @@ fn emit_node_filtered(
 
     out.push_str(" {\n");
 
-    // Spec annotations (Spec mode only)
-    if mode == ReadMode::Spec {
+    // Note annotations (Notes mode only)
+    if mode == ReadMode::Notes {
         emit_annotations(out, &node.annotations, depth + 1);
     }
 
@@ -1169,17 +1177,16 @@ fn emit_dimensions_filtered(out: &mut String, kind: &NodeKind, depth: usize) {
     }
 }
 
-// ─── Spec Markdown Export ─────────────────────────────────────────────────
+// ─── Notes Markdown Export ────────────────────────────────────────────────
 
-/// Emit a `SceneGraph` as a markdown spec document.
+/// Emit a `SceneGraph` as a markdown notes document.
 ///
-/// Extracts only `@id` names, `spec { ... }` annotations, hierarchy, and edges —
+/// Extracts only `@id` names, `note { ... }` annotations, hierarchy, and edges —
 /// all visual properties (fill, stroke, dimensions, animations) are omitted.
-/// Intended for PM-facing spec reports.
 #[must_use]
-pub fn emit_spec_markdown(graph: &SceneGraph, title: &str) -> String {
+pub fn emit_notes_markdown(graph: &SceneGraph, title: &str) -> String {
     let mut out = String::with_capacity(512);
-    writeln!(out, "# Spec: {title}\n").unwrap();
+    writeln!(out, "# Notes: {title}\n").unwrap();
 
     // Emit root's children
     let children = graph.children(graph.root);
@@ -1426,6 +1433,12 @@ pub fn emit_diff(graph: &SceneGraph, prev: &GraphSnapshot) -> String {
     }
 
     out
+}
+
+/// Backward-compatible alias for `emit_notes_markdown`.
+#[must_use]
+pub fn emit_spec_markdown(graph: &SceneGraph, title: &str) -> String {
+    emit_notes_markdown(graph, title)
 }
 
 #[cfg(test)]
