@@ -2816,15 +2816,15 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         <div class="props-section" id="props-align-section" style="display:none">
           <div class="props-section-label">Alignment</div>
           <div class="align-grid" id="align-grid">
-            <button class="align-cell" data-h="left"   data-v="top"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="center" data-v="top"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="right"  data-v="top"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="left"   data-v="middle"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="center" data-v="middle"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="right"  data-v="middle"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="left"   data-v="bottom"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="center" data-v="bottom"><span class="align-dot"></span></button>
-            <button class="align-cell" data-h="right"  data-v="bottom"><span class="align-dot"></span></button>
+            <button class="align-cell" aria-label="Align left top" data-h="left"   data-v="top"><span class="align-dot"></span></button>
+            <button class="align-cell" aria-label="Align center top" data-h="center" data-v="top"><span class="align-dot"></span></button>
+            <button class="align-cell" aria-label="Align right top" data-h="right"  data-v="top"><span class="align-dot"></span></button>
+            <button class="align-cell" aria-label="Align left middle" data-h="left"   data-v="middle"><span class="align-dot"></span></button>
+            <button class="align-cell" aria-label="Align center middle" data-h="center" data-v="middle"><span class="align-dot"></span></button>
+            <button class="align-cell" aria-label="Align right middle" data-h="right"  data-v="middle"><span class="align-dot"></span></button>
+            <button class="align-cell" aria-label="Align left bottom" data-h="left"   data-v="bottom"><span class="align-dot"></span></button>
+            <button class="align-cell" aria-label="Align center bottom" data-h="center" data-v="bottom"><span class="align-dot"></span></button>
+            <button class="align-cell" aria-label="Align right bottom" data-h="right"  data-v="bottom"><span class="align-dot"></span></button>
           </div>
         </div>
         <div class="props-section" id="props-actions-section">
