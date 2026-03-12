@@ -32,7 +32,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
   /** The most recently focused canvas webview panel, for command routing. */
   public static activePanel: vscode.WebviewPanel | undefined;
   /** Current view mode of the active panel. */
-  public static activeViewMode: "design" | "notes" = "all";
+  public static activeViewMode: "design" | "notes" = "design";
   /** Callback invoked when canvas webview changes view mode. */
   public static onViewModeChanged: ((mode: "design" | "notes") => void) | undefined;
 
