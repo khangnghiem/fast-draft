@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.122 — Playground 30-70 Code/Design Split (R6.6)
+
+- **UX (R6.6)**: Default playground split changed from 40/60 to **30/70** — design canvas gets 70% of horizontal space, code editor 30%; gives the visual canvas more room by default while keeping code readable; grid-template-columns changed from `2fr auto 3fr` to `3fr auto 7fr`
+- **UX (R6.6)**: Minimum split fraction lowered from 25% to 15% — users can now drag the code panel narrower for even more canvas space; double-click handle resets to 30/70 (was 50/50)
+- **SITE**: Changes in `site/style.css`, `site/playground.js`
+
 ### v0.10.121 — Fix WASM Import Error on Chrome/Edge (R6.9)
 
 - **FIX (R6.9)**: Canvas no longer fails on Chrome with `WebAssembly.instantiate(): Import #0 "./fd_wasm_bg.js" "__wbg_instanceof_Window_ed49b2db8df90359": function import requires a callable` — root cause: stale `fd_wasm.js` glue file cached by browser while `fd_wasm_bg.wasm` was updated; the `modulepreload` link and dynamic `import()` call had no cache-busting `?v=` query strings, causing Chrome/Edge to serve mismatched JS+WASM pairs

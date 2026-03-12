@@ -1328,7 +1328,7 @@ function setupSplitResize(container, resizeCanvas) {
   const handle = document.getElementById('split-resize');
   if (!handle || !container) return;
 
-  const MIN_FRAC = 0.25;
+  const MIN_FRAC = 0.15;
   const MAX_FRAC = 0.75;
 
   let dragging = false;
@@ -1360,7 +1360,7 @@ function setupSplitResize(container, resizeCanvas) {
   handle.addEventListener('pointerup', endDrag);
   handle.addEventListener('pointercancel', endDrag);
 
-  // Double-click to reset to 50/50
+  // Double-click to reset to default 30/70 split
   handle.addEventListener('dblclick', (e) => {
     e.preventDefault();
     container.style.removeProperty('--editor-width');
