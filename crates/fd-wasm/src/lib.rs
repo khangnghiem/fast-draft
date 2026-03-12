@@ -2705,9 +2705,23 @@ impl FdCanvas {
                 GraphMutation::MoveNode { .. } | GraphMutation::ResizeNode { .. }
             )
         });
+        // Collect all MoveNode target IDs so the sync engine can skip
+        // descendant propagation for co-selected nodes (prevents 2× movement
+        // when both parent and child are selected and dragged).
+        let co_selected: Vec<fd_core::id::NodeId> = mutations
+            .iter()
+            .filter_map(|m| match m {
+                GraphMutation::MoveNode { id, .. } => Some(*id),
+                _ => None,
+            })
+            .collect();
         for mutation in mutations {
-            self.commands
-                .execute(&mut self.engine, mutation, "canvas edit");
+            self.commands.execute_with_co_selected(
+                &mut self.engine,
+                mutation,
+                "canvas edit",
+                &co_selected,
+            );
         }
         // Skip full layout resolve for move/resize batches — bounds already
         // updated in-place. Re-resolving would recalculate from constraints

@@ -2277,3 +2277,140 @@ group @box {
     // This exercises the code path without asserting a specific value —
     // the geometry depends on group auto-sizing. Main goal: no panic.
 }
+
+/// Regression: selecting both a group and its child, then dragging, must move
+/// both by exactly the same delta. Before the fix, the child moved 2× because:
+/// 1. Parent's MoveNode propagated dx/dy to child bounds (descendant propagation)
+/// 2. Child's own MoveNode applied dx/dy again
+/// Fix: `apply_mutation_with_co_selected` skips propagation for co-selected nodes.
+#[test]
+fn sync_multi_select_parent_child_no_double_move() {
+    let input = r#"
+group @parent {
+  x: 10 y: 10
+
+  rect @child { x: 20 y: 20 w: 40 h: 30 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    let parent_id = NodeId::intern("parent");
+    let child_id = NodeId::intern("child");
+    let parent_idx = engine.graph.index_of(parent_id).unwrap();
+    let child_idx = engine.graph.index_of(child_id).unwrap();
+
+    let parent_before = engine.bounds[&parent_idx];
+    let child_before = engine.bounds[&child_idx];
+
+    let dx = 50.0_f32;
+    let dy = 30.0_f32;
+    let co_selected = vec![parent_id, child_id];
+
+    // Simulate multi-select drag: both parent and child get MoveNode
+    // with co_selected context (as FdCanvas::apply_mutations does).
+    engine.apply_mutation_with_co_selected(
+        GraphMutation::MoveNode {
+            id: parent_id,
+            dx,
+            dy,
+        },
+        &co_selected,
+    );
+    engine.apply_mutation_with_co_selected(
+        GraphMutation::MoveNode {
+            id: child_id,
+            dx,
+            dy,
+        },
+        &co_selected,
+    );
+
+    // Both should have moved by exactly (dx, dy) — NOT 2× for the child.
+    let parent_after = engine.bounds[&parent_idx];
+    assert!(
+        (parent_after.x - (parent_before.x + dx)).abs() < 0.01,
+        "parent x: expected {}, got {}",
+        parent_before.x + dx,
+        parent_after.x
+    );
+    assert!(
+        (parent_after.y - (parent_before.y + dy)).abs() < 0.01,
+        "parent y: expected {}, got {}",
+        parent_before.y + dy,
+        parent_after.y
+    );
+
+    let child_after = engine.bounds[&child_idx];
+    assert!(
+        (child_after.x - (child_before.x + dx)).abs() < 0.01,
+        "child x: expected {} (1×), got {} — double-move bug!",
+        child_before.x + dx,
+        child_after.x
+    );
+    assert!(
+        (child_after.y - (child_before.y + dy)).abs() < 0.01,
+        "child y: expected {} (1×), got {} — double-move bug!",
+        child_before.y + dy,
+        child_after.y
+    );
+}
+
+/// Ensure that moving only a parent (without co-selected children) still
+/// propagates dx/dy to descendants as before (no regression from the fix).
+#[test]
+fn sync_single_select_parent_still_propagates_to_children() {
+    let input = r#"
+group @parent {
+  x: 10 y: 10
+
+  rect @child { x: 20 y: 20 w: 40 h: 30 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    let parent_id = NodeId::intern("parent");
+    let child_id = NodeId::intern("child");
+    let parent_idx = engine.graph.index_of(parent_id).unwrap();
+    let child_idx = engine.graph.index_of(child_id).unwrap();
+
+    let parent_before = engine.bounds[&parent_idx];
+    let child_before = engine.bounds[&child_idx];
+
+    let dx = 50.0_f32;
+    let dy = 30.0_f32;
+
+    // Only parent selected — child should be propagated automatically.
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: parent_id,
+        dx,
+        dy,
+    });
+
+    let parent_after = engine.bounds[&parent_idx];
+    assert!(
+        (parent_after.x - (parent_before.x + dx)).abs() < 0.01,
+        "parent x"
+    );
+
+    let child_after = engine.bounds[&child_idx];
+    assert!(
+        (child_after.x - (child_before.x + dx)).abs() < 0.01,
+        "child should move with parent: expected {}, got {}",
+        child_before.x + dx,
+        child_after.x
+    );
+    assert!(
+        (child_after.y - (child_before.y + dy)).abs() < 0.01,
+        "child should move with parent: expected {}, got {}",
+        child_before.y + dy,
+        child_after.y
+    );
+}

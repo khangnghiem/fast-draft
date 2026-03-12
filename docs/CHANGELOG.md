@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.10.125 — Fix Multi-Node Drag Double-Move (R3.16)
+
+- **FIX (R3.16)**: Selected parent+child nodes now move at the same speed when dragged together — root cause: `MoveNode` in `sync.rs` propagated dx/dy to **all** descendants' cached bounds; when both parent and child were selected and dragged, the child received the delta twice (once from its own `MoveNode` + once from the parent's descendant propagation); fix: new `apply_mutation_with_co_selected()` method accepts a slice of co-selected `NodeId`s and skips descendant propagation for nodes in that set; `CommandStack::execute_with_co_selected()` and `FdCanvas::apply_mutations()` wire the co-selected context through the pipeline
+- **TESTING**: 2 new regression tests — `sync_multi_select_parent_child_no_double_move` (parent+child both selected, both move 1× not 2×), `sync_single_select_parent_still_propagates_to_children` (single-parent drag still propagates to descendants, no regression)
+
 ### v0.10.124 — Figma-Style Double-Click Text Drill-In (R3.28)
 
 - **UX (R3.28)**: Double-clicking a rect/ellipse/frame now drills into its child text node (Figma behavior) — if no text child exists, creates one and opens inline editor; if text child exists, selects it and opens inline editor; selection transfers from parent shape to child text node during editing

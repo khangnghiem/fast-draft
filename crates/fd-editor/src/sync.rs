@@ -85,6 +85,19 @@ impl SyncEngine {
     /// Apply a graph mutation from canvas interaction, then re-sync text.
     /// This is the hot path during drag/draw — must be fast.
     pub fn apply_mutation(&mut self, mutation: GraphMutation) {
+        self.apply_mutation_with_co_selected(mutation, &[]);
+    }
+
+    /// Apply a graph mutation, skipping descendant bounds propagation for
+    /// nodes in `co_selected`. When multiple nodes are selected and dragged,
+    /// each gets its own `MoveNode` mutation. Without this filter, a parent's
+    /// `MoveNode` would propagate dx/dy to a co-selected child, and then the
+    /// child's own `MoveNode` would move it again — resulting in 2× movement.
+    pub fn apply_mutation_with_co_selected(
+        &mut self,
+        mutation: GraphMutation,
+        co_selected: &[NodeId],
+    ) {
         match mutation {
             GraphMutation::MoveNode { id, dx, dy } => {
                 if let Some(idx) = self.graph.index_of(id) {
@@ -99,8 +112,16 @@ impl SyncEngine {
                     }
                     // Propagate movement to all descendants' cached bounds
                     // so children move together with their parent (e.g. group drag).
+                    // Skip descendants that are co-selected — they get their own
+                    // MoveNode mutation and would otherwise move 2×.
                     let descendants = Self::collect_descendants(&self.graph, idx);
                     for child_idx in descendants {
+                        if !co_selected.is_empty()
+                            && let Some(child_node) = self.graph.graph.node_weight(child_idx)
+                            && co_selected.contains(&child_node.id)
+                        {
+                            continue;
+                        }
                         if let Some(child_bounds) = self.bounds.get_mut(&child_idx) {
                             child_bounds.x += dx;
                             child_bounds.y += dy;
