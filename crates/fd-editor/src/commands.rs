@@ -306,15 +306,11 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
                 content: old_content,
             }
         }
-        GraphMutation::SetAnnotations { id, annotations: _ } => {
-            let old_annotations = engine
-                .graph
-                .get_by_id(*id)
-                .map(|n| n.annotations.clone())
-                .unwrap_or_default();
-            GraphMutation::SetAnnotations {
+        GraphMutation::SetNote { id, note: _ } => {
+            let old_note = engine.graph.get_by_id(*id).and_then(|n| n.note.clone());
+            GraphMutation::SetNote {
                 id: *id,
-                annotations: old_annotations,
+                note: old_note,
             }
         }
         // DuplicateNode creates a new anonymous node — we can't know its

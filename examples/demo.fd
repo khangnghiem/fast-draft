@@ -48,9 +48,8 @@ edge_defaults {
 frame @sidebar {
   note {
     "Persistent sidebar — always visible"
-    accept: "collapses to icons on small screens"
-    status: done
-    priority: high
+    todo: "collapses to icons on small screens"
+    done: "basic layout"
     tag: navigation, responsive
   }
   text @app_name "FastDraft" {
@@ -127,10 +126,8 @@ text @page_subtitle "Welcome back — here's what's happening today." {
 rect @card_revenue {
   note {
     "Revenue metric card"
-    accept: "shows daily/weekly/monthly toggle"
-    accept: "sparkline chart in background"
-    status: doing
-    priority: high
+    todo: "shows daily/weekly/monthly toggle"
+    todo: "sparkline chart in background"
     tag: metrics, dashboard
   }
   text @revenue_delta "+12.5% ↑" {
@@ -214,9 +211,8 @@ rect @card_tasks {
 frame @activity_feed {
   note {
     "Recent activity stream"
-    accept: "auto-refreshes every 30s"
-    accept: "click to navigate to item"
-    status: todo
+    todo: "auto-refreshes every 30s"
+    todo: "click to navigate to item"
     tag: realtime, engagement
   }
   text @feed_title "Recent Activity" {

@@ -154,7 +154,7 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
     // or non-default inline styles (fill, stroke, etc.).
     if matches!(node.kind, NodeKind::Group | NodeKind::Frame { .. })
         && graph.children(idx).is_empty()
-        && node.annotations.is_empty()
+        && node.note.is_none()
         && node.use_styles.is_empty()
         && node.animations.is_empty()
         && !has_inline_styles(&node.props)
@@ -196,8 +196,8 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
 
     out.push_str(" {\n");
 
-    // Annotations (spec block)
-    emit_annotations(out, &node.annotations, depth + 1);
+    // Note block
+    emit_note(out, &node.note, depth + 1);
 
     // Children — emitted right after spec so the structural skeleton
     // is visible first. Visual styling comes at the tail for clean folding.
@@ -448,32 +448,26 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
     out.push_str("}\n");
 }
 
-fn emit_annotations(out: &mut String, annotations: &[Annotation], depth: usize) {
-    if annotations.is_empty() {
-        return;
-    }
+fn emit_note(out: &mut String, note: &Option<String>, depth: usize) {
+    let content = match note {
+        Some(s) if !s.is_empty() => s,
+        _ => return,
+    };
 
-    // Single description → inline shorthand: `note "desc"`
-    if annotations.len() == 1
-        && let Annotation::Description(s) = &annotations[0]
-    {
+    // Single-line note → inline shorthand: `note "text"`
+    if !content.contains('\n') {
         indent(out, depth);
-        writeln!(out, "note \"{s}\"").unwrap();
+        writeln!(out, "note \"{content}\"").unwrap();
         return;
     }
 
-    // Multiple annotations → block form: `note { ... }`
+    // Multiline → block form: `note { ... }`
     indent(out, depth);
     out.push_str("note {\n");
-    for ann in annotations {
+    for line in content.lines() {
         indent(out, depth + 1);
-        match ann {
-            Annotation::Description(s) => writeln!(out, "\"{s}\"").unwrap(),
-            Annotation::Accept(s) => writeln!(out, "todo: \"{s}\"").unwrap(),
-            Annotation::Status(s) => writeln!(out, "status: {s}").unwrap(),
-            Annotation::Priority(s) => writeln!(out, "priority: {s}").unwrap(),
-            Annotation::Tag(s) => writeln!(out, "tag: {s}").unwrap(),
-        }
+        out.push_str(line);
+        out.push('\n');
     }
     indent(out, depth);
     out.push_str("}\n");
@@ -733,8 +727,8 @@ fn emit_edge_defaults_block(out: &mut String, defaults: &EdgeDefaults) {
 fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph, defaults: Option<&EdgeDefaults>) {
     writeln!(out, "edge @{} {{", edge.id.as_str()).unwrap();
 
-    // Annotations
-    emit_annotations(out, &edge.annotations, 1);
+    // Note
+    emit_note(out, &edge.note, 1);
 
     // Nested text child
     if let Some(text_id) = edge.text_child
@@ -1033,9 +1027,9 @@ fn emit_node_filtered(
 
     out.push_str(" {\n");
 
-    // Note annotations (Notes mode only)
+    // Note (Notes mode only)
     if mode == ReadMode::Notes {
-        emit_annotations(out, &node.annotations, depth + 1);
+        emit_note(out, &node.note, depth + 1);
     }
 
     // Children (always recurse)
@@ -1177,11 +1171,9 @@ fn emit_dimensions_filtered(out: &mut String, kind: &NodeKind, depth: usize) {
     }
 }
 
-// ─── Notes Markdown Export ────────────────────────────────────────────────
-
 /// Emit a `SceneGraph` as a markdown notes document.
 ///
-/// Extracts only `@id` names, `note { ... }` annotations, hierarchy, and edges —
+/// Extracts only `@id` names, `note { ... }` content, hierarchy, and edges —
 /// all visual properties (fill, stroke, dimensions, animations) are omitted.
 #[must_use]
 pub fn emit_notes_markdown(graph: &SceneGraph, title: &str) -> String {
@@ -1214,7 +1206,13 @@ pub fn emit_notes_markdown(graph: &SceneGraph, title: &str) -> String {
                 write!(out, " — {content}").unwrap();
             }
             out.push('\n');
-            emit_spec_annotations(&mut out, &edge.annotations, "  ");
+            // Emit edge note as indented markdown
+            if let Some(note) = &edge.note {
+                for line in note.lines() {
+                    writeln!(out, "  {line}").unwrap();
+                }
+                out.push('\n');
+            }
         }
     }
 
@@ -1224,14 +1222,12 @@ pub fn emit_notes_markdown(graph: &SceneGraph, title: &str) -> String {
 fn emit_spec_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, heading_level: usize) {
     let node = &graph.graph[idx];
 
-    // Skip nodes with no annotations and no annotated children
-    let has_annotations = !node.annotations.is_empty();
+    // Skip nodes with no note and no noted children
+    let has_note = node.note.is_some();
     let children = graph.children(idx);
-    let has_annotated_children = children
-        .iter()
-        .any(|c| has_annotations_recursive(graph, *c));
+    let has_noted_children = children.iter().any(|c| has_note_recursive(graph, *c));
 
-    if !has_annotations && !has_annotated_children {
+    if !has_note && !has_noted_children {
         return;
     }
 
@@ -1250,8 +1246,11 @@ fn emit_spec_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, heading_
     };
     writeln!(out, "{hashes} @{} `{kind_label}`\n", node.id.as_str()).unwrap();
 
-    // Annotation details
-    emit_spec_annotations(out, &node.annotations, "");
+    // Note content — output as-is (it's already markdown)
+    if let Some(note) = &node.note {
+        out.push_str(note);
+        out.push_str("\n\n");
+    }
 
     // Children (recurse with deeper heading level)
     for child_idx in &children {
@@ -1259,30 +1258,15 @@ fn emit_spec_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, heading_
     }
 }
 
-fn has_annotations_recursive(graph: &SceneGraph, idx: NodeIndex) -> bool {
+fn has_note_recursive(graph: &SceneGraph, idx: NodeIndex) -> bool {
     let node = &graph.graph[idx];
-    if !node.annotations.is_empty() {
+    if node.note.is_some() {
         return true;
     }
     graph
         .children(idx)
         .iter()
-        .any(|c| has_annotations_recursive(graph, *c))
-}
-
-fn emit_spec_annotations(out: &mut String, annotations: &[Annotation], prefix: &str) {
-    for ann in annotations {
-        match ann {
-            Annotation::Description(s) => writeln!(out, "{prefix}> {s}").unwrap(),
-            Annotation::Accept(s) => writeln!(out, "{prefix}- [ ] {s}").unwrap(),
-            Annotation::Status(s) => writeln!(out, "{prefix}- **Status:** {s}").unwrap(),
-            Annotation::Priority(s) => writeln!(out, "{prefix}- **Priority:** {s}").unwrap(),
-            Annotation::Tag(s) => writeln!(out, "{prefix}- **Tag:** {s}").unwrap(),
-        }
-    }
-    if !annotations.is_empty() {
-        out.push('\n');
-    }
+        .any(|c| has_note_recursive(graph, *c))
 }
 
 /// Check if a `Style` has any non-default properties set.

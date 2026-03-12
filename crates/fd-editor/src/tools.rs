@@ -1093,7 +1093,7 @@ impl Tool for ArrowTool {
                     use_styles: Default::default(),
                     arrow: ArrowKind::End,
                     curve: CurveKind::Smooth,
-                    annotations: Vec::new(),
+                    note: None,
                     animations: Default::default(),
                     flow: None,
                     label_offset: None,

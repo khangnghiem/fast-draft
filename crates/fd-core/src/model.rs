@@ -347,26 +347,6 @@ pub struct AnimProperties {
     pub translate: Option<(f32, f32)>,
 }
 
-// ─── Annotations ─────────────────────────────────────────────────────────
-
-/// Structured annotation attached to a scene node.
-/// Parsed from `note { ... }` blocks in the FD format.
-/// Also accepts the legacy `spec { ... }` keyword for backward compatibility.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Annotation {
-    /// Freeform description: `note { "User auth entry point" }`
-    Description(String),
-    /// To-do / acceptance criterion: `note { todo: "validates email on blur" }`
-    /// Also accepts the legacy `accept:` keyword.
-    Accept(String),
-    /// Status: `note { status: todo }` (values: todo, doing, done, blocked)
-    Status(String),
-    /// Priority: `note { priority: high }`
-    Priority(String),
-    /// Tag: `note { tag: auth }`
-    Tag(String),
-}
-
 // ─── Imports ─────────────────────────────────────────────────────────────
 
 /// A file import declaration: `import "path.fd" as namespace`.
@@ -458,7 +438,7 @@ pub struct Edge {
     pub use_styles: SmallVec<[NodeId; 2]>,
     pub arrow: ArrowKind,
     pub curve: CurveKind,
-    pub annotations: Vec<Annotation>,
+    pub note: Option<String>,
     pub animations: SmallVec<[AnimKeyframe; 2]>,
     pub flow: Option<FlowAnim>,
     /// Offset of the edge text from the midpoint, set when label is dragged.
@@ -589,8 +569,8 @@ pub struct SceneNode {
     /// Animations attached to this node.
     pub animations: SmallVec<[AnimKeyframe; 2]>,
 
-    /// Structured annotations (`note { ... }` block, also accepts legacy `spec`).
-    pub annotations: Vec<Annotation>,
+    /// Markdown note content (`note { ... }` block, also accepts legacy `spec`).
+    pub note: Option<String>,
 
     /// Line comments (`# text`) that appeared before this node in the source.
     /// Preserved across parse/emit round-trips so format passes don't delete them.
@@ -615,7 +595,7 @@ impl SceneNode {
             use_styles: SmallVec::new(),
             constraints: SmallVec::new(),
             animations: SmallVec::new(),
-            annotations: Vec::new(),
+            note: None,
             comments: Vec::new(),
             place: None,
             locked: false,

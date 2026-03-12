@@ -1126,6 +1126,11 @@ function setupContextMenu() {
         toggleFullscreen();
       }
     }
+    // ⌘⇧N (Ctrl+Shift+N) → toggle Notes panel
+    if (e.key === 'N' && e.shiftKey && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      toggleNotesPanel();
+    }
   });
   canvas.addEventListener('pointerdown', closeContextMenu);
 }
@@ -1588,55 +1593,116 @@ function setupPanelResize(wrapper, resizeCanvas) {
 
 // ─── Init ────────────────────────────────────────────────────────────────
 
-/** ─── View Mode Toggle ────────────────────────────────────────────────── */
-let viewMode = 'design';
+/** ─── Notes Panel ────────────────────────────────────────────────────── */
+let notesPanelOpen = false;
 
-function setViewMode(mode) {
-  viewMode = mode;
-  document.getElementById('view-design')?.classList.toggle('active', mode === 'design');
-  document.getElementById('view-notes')?.classList.toggle('active', mode === 'notes');
+/**
+ * Parse note blocks from FD text and return structured data.
+ * Extracts: todo, done, tag, and description annotations per node.
+ */
+function parseNotesFromText(text) {
+  const notes = [];
+  const lines = text.split('\n');
+  let currentNode = null;
+  let inNote = false;
+  let braceDepth = 0;
 
-  if (!fdCanvas || !editorView) return;
-  const fullText = fdCanvas.get_text();
+  for (const line of lines) {
+    const trimmed = line.trim();
 
-  let displayText = fullText;
-  let isReadOnly = false;
+    // Detect node declarations: kind @id {
+    const nodeMatch = trimmed.match(/^(?:group|frame|rect|ellipse|text|path|edge|image)\s+@(\S+)/);
+    const genericMatch = trimmed.match(/^@(\S+)\s*(?:"[^"]*"\s*)?\{/);
+    if (nodeMatch) {
+      currentNode = nodeMatch[1];
+    } else if (genericMatch && !nodeMatch) {
+      currentNode = genericMatch[1];
+    }
 
-  if (mode === 'design') {
-    displayText = fullText.replace(/\n?\s*(?:note|spec)\s*\{[^}]*\}/g, '').replace(/\n?\s*(?:note|spec)\s+"[^"]*"/g, '');
-    isReadOnly = true;
-  } else if (mode === 'notes') {
-    const lines = fullText.split('\n');
-    const noteLines = [];
-    for (const line of lines) {
-      if (line.trim().startsWith('#') || line.trim().startsWith('note ') || line.trim().startsWith('note{') || line.trim().startsWith('spec ') || line.trim().startsWith('spec{')) {
-        noteLines.push(line);
+    // Detect note/spec block start
+    if (trimmed.startsWith('note ') || trimmed.startsWith('note{') ||
+        trimmed.startsWith('spec ') || trimmed.startsWith('spec{')) {
+      inNote = true;
+      braceDepth = 0;
+
+      // Inline shorthand: note "text"
+      const inlineMatch = trimmed.match(/^(?:note|spec)\s+"([^"]+)"/);
+      if (inlineMatch && !trimmed.includes('{')) {
+        notes.push({ node: currentNode, type: 'desc', text: inlineMatch[1] });
+        inNote = false;
         continue;
-      }
-      const nodeMatch = line.trim().match(/^(group|frame|rect|ellipse|text|path)\s+@/);
-      if (nodeMatch) {
-        noteLines.push(line);
-        continue;
-      }
-      if (line.trim() === '}') {
-        noteLines.push(line);
       }
     }
-    displayText = noteLines.join('\n');
-    isReadOnly = true;
+
+    if (inNote) {
+      if (trimmed.includes('{')) braceDepth++;
+      if (trimmed.includes('}')) braceDepth--;
+
+      // Parse items inside note block
+      const todoMatch = trimmed.match(/^todo:\s*"([^"]+)"/);
+      const doneMatch = trimmed.match(/^done:\s*"([^"]+)"/);
+      const tagMatch = trimmed.match(/^tag:\s*(.+)/);
+      const descMatch = trimmed.match(/^"([^"]+)"/);
+
+      if (todoMatch) notes.push({ node: currentNode, type: 'todo', text: todoMatch[1] });
+      else if (doneMatch) notes.push({ node: currentNode, type: 'done', text: doneMatch[1] });
+      else if (tagMatch) notes.push({ node: currentNode, type: 'tag', text: tagMatch[1].trim() });
+      else if (descMatch) notes.push({ node: currentNode, type: 'desc', text: descMatch[1] });
+
+      if (braceDepth <= 0) inNote = false;
+    }
+  }
+  return notes;
+}
+
+function renderNotesPanel() {
+  const body = document.getElementById('notes-panel-body');
+  if (!body || !fdCanvas) return;
+
+  const text = fdCanvas.get_text();
+  const notes = parseNotesFromText(text);
+
+  if (notes.length === 0) {
+    body.innerHTML = '<p class="notes-empty">No notes yet. Add a note via right-click → Add Note.</p>';
+    return;
   }
 
-  suppressSync = true;
-  const cur = editorView.state.doc.toString();
-  if (displayText !== cur) {
-    editorView.dispatch({
-      changes: { from: 0, to: cur.length, insert: displayText },
-    });
+  // Group by node
+  const groups = {};
+  for (const n of notes) {
+    const key = n.node || '_root';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(n);
   }
-  editorView.dispatch({
-    effects: readOnlyCompartment.reconfigure(EditorState.readOnly.of(isReadOnly)),
+
+  let html = '';
+  for (const [nodeId, items] of Object.entries(groups)) {
+    html += `<div class="note-group">`;
+    html += `<div class="note-group-header" data-node="${nodeId}" title="Click to select @${nodeId}">@${nodeId}</div>`;
+    for (const item of items) {
+      html += `<div class="note-item ${item.type}">${item.text}</div>`;
+    }
+    html += `</div>`;
+  }
+  body.innerHTML = html;
+
+  // Click-to-select: clicking a group header selects the node on canvas
+  body.querySelectorAll('.note-group-header').forEach(el => {
+    el.addEventListener('click', () => {
+      const nid = el.dataset.node;
+      if (nid && nid !== '_root' && fdCanvas) {
+        fdCanvas.select_by_id(nid);
+      }
+    });
   });
-  suppressSync = false;
+}
+
+function toggleNotesPanel() {
+  const panel = document.getElementById('notes-panel');
+  if (!panel) return;
+  notesPanelOpen = !notesPanelOpen;
+  panel.classList.toggle('hidden', !notesPanelOpen);
+  if (notesPanelOpen) renderNotesPanel();
 }
 
 /** ─── AI Touch — Refine Selected Node ────────────────────────────────── */
@@ -2524,8 +2590,8 @@ async function initPlayground() {
     // ── Toolbar buttons ──────────────────────────────────────────────
     document.getElementById('ai-touch-btn')?.addEventListener('click', aiTouch);
     document.getElementById('renamify-btn')?.addEventListener('click', renamify);
-    document.getElementById('view-design')?.addEventListener('click', () => setViewMode('design'));
-    document.getElementById('view-notes')?.addEventListener('click', () => setViewMode('notes'));
+    document.getElementById('notes-toggle-btn')?.addEventListener('click', toggleNotesPanel);
+    document.getElementById('notes-panel-close')?.addEventListener('click', toggleNotesPanel);
 
     // Get canvas 2D context
     ctx = canvas.getContext('2d');

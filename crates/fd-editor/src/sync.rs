@@ -334,9 +334,9 @@ impl SyncEngine {
                     *c = content;
                 }
             }
-            GraphMutation::SetAnnotations { id, annotations } => {
+            GraphMutation::SetNote { id, note } => {
                 if let Some(node) = self.graph.get_by_id_mut(id) {
-                    node.annotations = annotations;
+                    node.note = note;
                 }
             }
             GraphMutation::SetAnimations { id, animations } => {
@@ -993,9 +993,9 @@ pub enum GraphMutation {
         id: NodeId,
         content: String,
     },
-    SetAnnotations {
+    SetNote {
         id: NodeId,
-        annotations: Vec<Annotation>,
+        note: Option<String>,
     },
     /// Duplicate a node (clone with offset). Used by Alt+drag.
     DuplicateNode {

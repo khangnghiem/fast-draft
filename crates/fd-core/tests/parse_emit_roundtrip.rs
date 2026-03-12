@@ -130,10 +130,10 @@ fn roundtrip_preserves_use_references() {
     );
 }
 
-// ─── Annotation preservation ─────────────────────────────────────────────
+// ─── Note preservation ───────────────────────────────────────────────────
 
 #[test]
-fn roundtrip_preserves_annotations() {
+fn roundtrip_preserves_note() {
     let input = include_str!("fixtures/login_form.fd");
     let graph1 = parse_document(input).unwrap();
     let emitted = emit_document(&graph1);
@@ -143,14 +143,7 @@ fn roundtrip_preserves_annotations() {
     let n1 = graph1.get_by_id(id).unwrap();
     let n2 = graph2.get_by_id(id).unwrap();
 
-    assert_eq!(
-        n1.annotations.len(),
-        n2.annotations.len(),
-        "annotation count changed for @login_form"
-    );
-
-    // Verify specific annotations survive
-    assert_eq!(n1.annotations, n2.annotations);
+    assert_eq!(n1.note, n2.note, "note content changed for @login_form");
 }
 
 // ─── Animation preservation ──────────────────────────────────────────────
