@@ -10,10 +10,14 @@
   <meta property="og:description" content="A file format and canvas for drawing, design, and animation — right inside your code editor." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://fast-draft.com" />
+  <meta property="og:image" content="https://fast-draft.com/og-card.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Fast Draft — Design as Code" />
+  <meta name="twitter:description" content="A file format and canvas for drawing, design, and animation — right inside your code editor." />
+  <meta name="twitter:image" content="https://fast-draft.com/og-card.png" />
   <link rel="canonical" href="https://fast-draft.com" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/style.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-mono/style.min.css" />
   <!-- Preload WASM for instant playground -->
   <link rel="modulepreload" href="./wasm/fd_wasm.js" />
   <link rel="preload" href="./wasm/fd_wasm_bg.wasm" as="fetch" crossorigin />
@@ -249,32 +253,32 @@
         <p>Built for both humans and AI agents — design and code in perfect sync.</p>
       </div>
       <div class="features-grid">
-        <div class="feature-card">
+        <div class="feature-card" style="--i: 0">
           <div class="feature-icon">🤖</div>
           <h3>AI-Friendly</h3>
           <p>Compact text DSL — ~5× fewer tokens than SVG. LLMs read, write, and reason about entire UIs in a single prompt.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card" style="--i: 1">
           <div class="feature-icon">↔️</div>
           <h3>Two-Way Sync</h3>
           <p>Edit code or canvas — the other updates instantly in &lt;16ms. One source of truth, zero conflicts.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card" style="--i: 2">
           <div class="feature-icon">📋</div>
           <h3>Specs Built In</h3>
           <p>Attach requirements, status, and acceptance criteria directly to visual elements with <code>spec</code> blocks.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card" style="--i: 3">
           <div class="feature-icon">🎨</div>
           <h3>GPU Canvas</h3>
           <p>Vello + wgpu rendering engine. Smart guides, resize handles, sketchy mode, animations — Figma-grade tools.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card" style="--i: 4">
           <div class="feature-icon">🔀</div>
           <h3>Git-Friendly</h3>
           <p>Plain text format — <code>git diff</code>, <code>git merge</code>, and code review all work naturally.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card" style="--i: 5">
           <div class="feature-icon">⚡</div>
           <h3>6 Editors</h3>
           <p>VS Code, Cursor, Zed, Neovim, Sublime, Helix, Emacs. Canvas in VS Code, syntax highlighting everywhere.</p>
