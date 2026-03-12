@@ -17,6 +17,20 @@
 
 ## Completed Requirements
 
+### v0.10.128 — Notes Redesign: Rename Spec → Note (R4.18)
+
+- **RENAME (R4.18)**: `spec` keyword → `note` — annotation blocks now use the more universal term; emitter outputs `note` keyword; parser accepts both `note` and `spec` for backward compatibility
+- **RENAME (R4.18)**: `accept:` field → `todo:` — annotation acceptance criteria renamed to `todo:`; parser accepts both `todo:` and `accept:`; emitter outputs `todo:`
+- **RENAME (R4.18)**: `ReadMode::Spec` → `ReadMode::Notes` (Spec kept as backward-compat alias); `emit_spec_markdown` → `emit_notes_markdown` (old function kept as alias)
+- **UX (R6.6)**: View toggle simplified from 3 buttons (All | Design | Spec) to 2 buttons (Design | Notes) — Design is now the default mode; "All" mode removed
+- **UX (R6.6)**: "Add Note" context menu item — right-click a selected node to quickly add a `note "..."` annotation
+- **UX (R6.6)**: Settings menu "Spec Badges" → "Note Badges"; context menu "View Spec" → "View Notes"; "Add Spec" → "Add Note"
+- **PARITY (R6.6)**: All renames applied to site playground (`playground.js`, `index.html`) and VS Code extension (`webview-html.ts`, `state.js`, `drag-drop.js`, `panels.js`, `context-menu.js`, `navigation.js`, `main.js`, `extension.ts`)
+- **LSP**: `--view notes` accepted alongside `--view spec` in fd-lsp
+- **TESTING**: 3 new emitter tests (`note_keyword_compat`, `note_keyword_output`, `todo_alias_output`), updated `sync_set_annotations` and `test_spec_markdown_basic`
+- **SITE**: Feature card "Specs Built In" → "Notes Built In"; demo.fd updated to use `note` keyword
+- **DOCS**: Updated `demo.fd` examples from `spec`→`note`, `accept:`→`todo:`
+
 ### v0.10.127 — Fullscreen Mode + Deep Links (R6.6)
 
 - **FEATURE (R6.6)**: Full Screen mode — ⛶ button in canvas toolbar expands playground to fill entire viewport; `Shift+F` shortcut; `Escape` to exit; separate from Zen mode (Zen hides code editor, Fullscreen hides page chrome); CSS `fullscreen-mode` class with fixed positioning and smooth enter animation

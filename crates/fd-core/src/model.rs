@@ -350,18 +350,20 @@ pub struct AnimProperties {
 // ─── Annotations ─────────────────────────────────────────────────────────
 
 /// Structured annotation attached to a scene node.
-/// Parsed from `spec { ... }` blocks in the FD format.
+/// Parsed from `note { ... }` blocks in the FD format.
+/// Also accepts the legacy `spec { ... }` keyword for backward compatibility.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Annotation {
-    /// Freeform description: `spec { "User auth entry point" }`
+    /// Freeform description: `note { "User auth entry point" }`
     Description(String),
-    /// Acceptance criterion: `spec { accept: "validates email on blur" }`
+    /// To-do / acceptance criterion: `note { todo: "validates email on blur" }`
+    /// Also accepts the legacy `accept:` keyword.
     Accept(String),
-    /// Status: `spec { status: todo }` (values: todo, doing, done, blocked)
+    /// Status: `note { status: todo }` (values: todo, doing, done, blocked)
     Status(String),
-    /// Priority: `spec { priority: high }`
+    /// Priority: `note { priority: high }`
     Priority(String),
-    /// Tag: `spec { tag: auth }`
+    /// Tag: `note { tag: auth }`
     Tag(String),
 }
 
@@ -508,7 +510,7 @@ pub enum NodeKind {
     Root,
 
     /// Generic placeholder — no visual shape assigned yet.
-    /// Used for spec-only nodes: `@login_btn { spec "CTA" }`
+    /// Used for note-only nodes: `@login_btn { note "CTA" }`
     Generic,
 
     /// Organizational container (like Figma Group).
@@ -587,7 +589,7 @@ pub struct SceneNode {
     /// Animations attached to this node.
     pub animations: SmallVec<[AnimKeyframe; 2]>,
 
-    /// Structured annotations (`spec { ... }` block).
+    /// Structured annotations (`note { ... }` block, also accepts legacy `spec`).
     pub annotations: Vec<Annotation>,
 
     /// Line comments (`# text`) that appeared before this node in the source.

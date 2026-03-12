@@ -259,7 +259,7 @@ function setupSettingsMenu() {
   });
 
   // Spec badges toggle
-  document.getElementById("sm-spec-badge-toggle")?.addEventListener("click", (e) => {
+  document.getElementById("sm-note-badge-toggle")?.addEventListener("click", (e) => {
     e.stopPropagation();
     toggleSpecBadges();
     updateSettingsToggleStates();
@@ -330,11 +330,11 @@ function setupSettingsMenu() {
 /** Update toggle-on class for settings menu items. */
 function updateSettingsToggleStates() {
   const gridItem = document.getElementById("sm-grid-toggle");
-  const specItem = document.getElementById("sm-spec-badge-toggle");
+  const specItem = document.getElementById("sm-note-badge-toggle");
   const sketchyItem = document.getElementById("sm-sketchy-toggle");
   const themeItem = document.getElementById("sm-theme-toggle");
   if (gridItem) gridItem.classList.toggle("toggle-on", gridEnabled);
-  if (specItem) specItem.classList.toggle("toggle-on", specBadgesVisible);
+  if (specItem) specItem.classList.toggle("toggle-on", noteBadgesVisible);
   if (sketchyItem) sketchyItem.classList.toggle("toggle-on", fdCanvas ? fdCanvas.get_sketchy_mode() : false);
   if (themeItem) themeItem.classList.toggle("toggle-on", isDarkTheme);
   const libItem = document.getElementById("sm-library-toggle");

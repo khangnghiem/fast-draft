@@ -319,8 +319,8 @@ function scheduleSideEffects() {
   if (sideEffectTimer) return; // already scheduled
   sideEffectTimer = setTimeout(() => {
     sideEffectTimer = null;
-    if (viewMode === "spec" || specBadgesVisible) refreshSpecBadges();
-    if (viewMode === "spec") refreshSpecView();
+    if (viewMode === "notes" || noteBadgesVisible) refreshNoteBadges();
+    if (viewMode === "notes") refreshNoteView();
     refreshLayersPanel();
     renderMinimap();
   }, 100);

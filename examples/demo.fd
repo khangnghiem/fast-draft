@@ -46,7 +46,7 @@ edge_defaults {
 # Sidebar navigation
 # [auto] column container (5 children)
 frame @sidebar {
-  spec {
+  note {
     "Persistent sidebar — always visible"
     accept: "collapses to icons on small screens"
     status: done
@@ -125,7 +125,7 @@ text @page_subtitle "Welcome back — here's what's happening today." {
 # ─── Metric Cards ───
 # [auto] styled: card
 rect @card_revenue {
-  spec {
+  note {
     "Revenue metric card"
     accept: "shows daily/weekly/monthly toggle"
     accept: "sparkline chart in background"
@@ -212,7 +212,7 @@ rect @card_tasks {
 # ─── Activity Feed ───
 # [auto] column container (4 children)
 frame @activity_feed {
-  spec {
+  note {
     "Recent activity stream"
     accept: "auto-refreshes every 30s"
     accept: "click to navigate to item"

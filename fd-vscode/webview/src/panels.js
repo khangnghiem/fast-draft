@@ -394,7 +394,7 @@ function renderLayerNode(node, selectedId, depth = 0) {
 
 // ─── Spec Summary Panel (replaces layers in Spec mode) ──────────────────
 
-function refreshSpecSummary(panel) {
+function refreshNotesSummary(panel) {
   if (!fdCanvas) return;
   const source = fdCanvas.get_text();
   const annotated = parseAnnotatedNodes(source);
@@ -432,7 +432,7 @@ function refreshSpecSummary(panel) {
   ];
   html += `<div class="spec-filter-tabs">`;
   for (const f of filters) {
-    const active = specFilter === f.key ? " active" : "";
+    const active = noteFilter === f.key ? " active" : "";
     // Count per filter
     let count;
     if (f.key === "all") {
@@ -447,10 +447,10 @@ function refreshSpecSummary(panel) {
   html += `</div>`;
 
   // Filter nodes by status
-  const filtered = specFilter === "all"
+  const filtered = noteFilter === "all"
     ? annotated
     : annotated.filter(n =>
-      n.annotations.some(a => a.type === "status" && a.value === specFilter)
+      n.annotations.some(a => a.type === "status" && a.value === noteFilter)
     );
 
   if (filtered.length === 0 && annotated.length === 0) {
@@ -528,8 +528,8 @@ function wireSpecPanelHandlers(panel, annotated) {
   panel.querySelectorAll(".spec-filter-btn").forEach(btn => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      specFilter = btn.getAttribute("data-filter") || "all";
-      refreshSpecSummary(panel);
+      noteFilter = btn.getAttribute("data-filter") || "all";
+      refreshNotesSummary(panel);
     });
   });
 
@@ -604,10 +604,10 @@ function exportSpecReport(annotated) {
 function bulkSetStatus(annotated, newStatus) {
   if (!fdCanvas) return;
   // Apply status to currently visible (filtered) nodes
-  const targets = specFilter === "all"
+  const targets = noteFilter === "all"
     ? annotated
     : annotated.filter(n =>
-      n.annotations.some(a => a.type === "status" && a.value === specFilter)
+      n.annotations.some(a => a.type === "status" && a.value === noteFilter)
     );
 
   for (const node of targets) {
@@ -622,7 +622,7 @@ function bulkSetStatus(annotated, newStatus) {
   syncTextToExtension();
   // Refresh to show updated statuses
   const panel = document.getElementById("layers-panel");
-  if (panel) refreshSpecSummary(panel);
+  if (panel) refreshNotesSummary(panel);
 }
 
 /** Last layer generation + selection — skip rebuild when unchanged */
@@ -634,9 +634,9 @@ function refreshLayersPanel() {
   if (!panel || !fdCanvas) return;
 
   // In Spec mode, show requirements summary instead of layers
-  if (viewMode === "spec") {
+  if (viewMode === "notes") {
     lastLayerGeneration = -1;
-    refreshSpecSummary(panel);
+    refreshNotesSummary(panel);
     return;
   }
 
