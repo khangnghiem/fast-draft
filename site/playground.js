@@ -2100,13 +2100,34 @@ function setupInlineEditor(canvas) {
     } catch (_) { return; }
     if (!props.id) return;
 
-    // Only edit text and shape nodes
+    // Only edit text and shape nodes (rect/ellipse/frame)
     const isText = props.kind === 'text';
-    const isShape = props.kind === 'rect' || props.kind === 'ellipse';
+    const isShape = props.kind === 'rect' || props.kind === 'ellipse' || props.kind === 'frame';
     if (!isText && !isShape) return;
 
-    const currentValue = isText ? (props.content || '') : (props.label || '');
-    openInlineTextEditor(props.id, currentValue, isText ? 'content' : 'label');
+    if (isText) {
+      // Direct text node — edit its content
+      openInlineTextEditor(props.id, props.content || '', 'content');
+    } else {
+      // Shape node — drill into child text (Figma behavior)
+      const existingTextId = fdCanvas.get_text_child_id(props.id);
+      if (existingTextId) {
+        // Select the child text node and edit it
+        fdCanvas.select_by_id(existingTextId);
+        renderCanvas();
+        const childProps = JSON.parse(fdCanvas.get_selected_node_props());
+        openInlineTextEditor(existingTextId, childProps.content || '', 'content');
+      } else {
+        // Create a new text child inside the shape
+        const newTextId = fdCanvas.create_child_text(props.id, 'Text');
+        if (newTextId) {
+          renderCanvas();
+          syncCanvasToEditor();
+          refreshLayersPanel();
+          setTimeout(() => openInlineTextEditor(newTextId, 'Text', 'content'), 50);
+        }
+      }
+    }
     e.preventDefault();
   });
 }

@@ -4,7 +4,7 @@
 
 // ─── Inline Text Editor ────────────────────────────────────────────────────
 
-/** Inline textarea for editing text nodes and shape labels directly on canvas. */
+/** Inline textarea for editing text nodes directly on canvas. */
 let inlineEditorActive = false;
 
 function setupInlineEditor() {
@@ -82,13 +82,32 @@ function setupInlineEditor() {
     }
 
     const isText = props.kind === "text";
-    const isShape = props.kind === "rect" || props.kind === "ellipse";
+    const isShape = props.kind === "rect" || props.kind === "ellipse" || props.kind === "frame";
     if (!isText && !isShape) return;
 
-    const propKey = isText ? "content" : "label";
-    const currentValue = isText ? (props.content || "") : (props.label || "");
-
-    openInlineEditor(props.id, propKey, currentValue);
+    if (isText) {
+      // Direct text node — edit content
+      openInlineEditor(props.id, "content", props.content || "");
+    } else {
+      // Shape node — drill into child text (Figma behavior)
+      const existingTextId = fdCanvas.get_text_child_id(props.id);
+      if (existingTextId) {
+        // Select the child text node and edit it
+        fdCanvas.select_by_id(existingTextId);
+        render();
+        const childPropsJson = fdCanvas.get_selected_node_props();
+        const childProps = JSON.parse(childPropsJson);
+        openInlineEditor(existingTextId, "content", childProps.content || "");
+      } else {
+        // Create a new text child inside the shape
+        const newTextId = fdCanvas.create_child_text(props.id, "Text");
+        if (newTextId) {
+          render();
+          syncTextToExtension();
+          setTimeout(() => openInlineEditor(newTextId, "content", "Text"), 50);
+        }
+      }
+    }
     e.preventDefault();
   });
 }
@@ -414,7 +433,7 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     const changed = fdCanvas.set_node_prop(propKey, newVal);
     if (changed) {
       // Measure text content and update bounds for intrinsic sizing
-      if (propKey === "content" || propKey === "label") {
+      if (propKey === "content") {
         measureAndUpdateTextBounds(nodeId);
       }
       render();
