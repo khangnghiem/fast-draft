@@ -34,6 +34,7 @@ Engineering lessons discovered through building FD.
   hover, click, press, pointer-down    → L405-417 (Pointer Down Must Not Set Hover State)
   resize-observer, raf, canvas-blank, click → L419-431 (ResizeObserver Must Repaint Synchronously)
   deploy, cache-bust, stale, cdn, browser → L433-445 (Deploy Without Cache-Bust = Invisible Fix)
+  wasm, modulepreload, import, cache, chrome → L447-459 (WASM Modulepreload Cache Mismatch)
 -->
 
 
@@ -423,3 +424,16 @@ Browser subagents inherit the full parent conversation context. When context exc
 **Fix**: (1) Bumped `?v=0.11.5` immediately. (2) Added `pages.yml` auto-bust step that replaces `?v=X.Y.Z` with `?v=<git-sha>` before every deploy. (3) Added `Cache-Control: no-cache` for `/*.js` and `/*.css` in `_headers` as belt-and-suspenders.
 
 **Rule**: **Every site deploy must produce unique asset URLs.** Content-hash or git-SHA query strings are the only reliable way to invalidate browser caches. CDN purge alone is insufficient — browsers own their cache independently. Automate this in CI; never rely on manual version bumps.
+
+---
+
+## WASM Modulepreload Cache Mismatch Breaks Chrome/Edge
+
+**Date**: 2026-03-12
+**Context**: Canvas broken on Chrome with `WebAssembly.instantiate(): Import #0 "./fd_wasm_bg.js" "__wbg_instanceof_Window_ed49b2db8df90359": function import requires a callable`. Very slow on Edge.
+
+**Root cause**: `index.html` had `<link rel="modulepreload" href="./wasm/fd_wasm.js" />` and `playground.js` had `import('./wasm/fd_wasm.js')` — neither with cache-busting `?v=` query strings. The `_headers` file specified `no-cache` for `/wasm/*`, but `modulepreload` and dynamic `import()` bypass that in some browsers, serving a stale JS glue file that's missing functions the newer WASM binary expects.
+
+**Fix**: Added `?v=0.11.5` to all four WASM paths (modulepreload, preload, import, init). Extended `pages.yml` auto-bust to also `sed` `playground.js`.
+
+**Rule**: **Cache-bust every resource loaded by `modulepreload`, `import()`, and `fetch()` — not just `<script src>`.** The `_headers` `no-cache` directive only affects `fetch()`-style loads; `modulepreload` has its own caching behavior in Chrome/Edge. All importable resources must have version-stamped URLs.

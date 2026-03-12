@@ -2236,9 +2236,9 @@ async function initPlayground() {
     // Load WASM module
     const statusEl = document.getElementById('loading-status');
     if (statusEl) statusEl.textContent = 'Loading engine…';
-    const wasm = await import('./wasm/fd_wasm.js');
+    const wasm = await import('./wasm/fd_wasm.js?v=0.11.5');
     if (statusEl) statusEl.textContent = 'Initializing runtime…';
-    await wasm.default('./wasm/fd_wasm_bg.wasm');
+    await wasm.default('./wasm/fd_wasm_bg.wasm?v=0.11.5');
 
     // Size the canvas
     const resizeCanvas = () => {

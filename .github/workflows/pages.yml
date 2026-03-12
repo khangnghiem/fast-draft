@@ -52,6 +52,7 @@ jobs:
         run: |
           SHA=$(git rev-parse --short=7 HEAD)
           sed -i "s/?v=[0-9.]*/?v=$SHA/g" site/index.html
+          sed -i "s/?v=[0-9.]*/?v=$SHA/g" site/playground.js
           echo "Cache-bust: ?v=$SHA"
 
       - name: Deploy to Cloudflare Pages
