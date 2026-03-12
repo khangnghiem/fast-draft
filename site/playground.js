@@ -2322,9 +2322,9 @@ async function initPlayground() {
         canvas.style.height = rect.height + 'px';
         bufferCleared = true;
         uiDirty = true;
-      }
-      if (fdCanvas) {
-        fdCanvas.resize(canvasWidth, rect.height);
+        if (fdCanvas) {
+          fdCanvas.resize(canvasWidth, rect.height);
+        }
       }
       // Repaint synchronously after resize — do NOT rely on renderDirty + RAF.
       // ResizeObserver fires after RAF in Chrome's rendering pipeline, so

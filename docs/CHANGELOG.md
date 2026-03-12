@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.10.129 — Fix 30-70 Split Breaks on First Node Drag (R6.6)
+
+- **FIX (R6.6)**: Playground 30-70 code/canvas split no longer expands when first dragging a node — root cause: CSS Grid children default to `min-width: auto`, so when `resizeCanvas()` set `canvas.style.width` to a fixed pixel value, the `.playground-canvas` column couldn't shrink below that intrinsic width, forcing the grid column to exceed its `7fr` allocation; fix: added `min-width: 0` to both `.playground-editor` and `.playground-canvas` grid children (standard CSS Grid overflow fix) + `overflow: hidden` on `.playground-canvas` as defense in depth
+- **PERF (R6.6)**: `fdCanvas.resize()` WASM call moved inside the dimension-change guard — previously called unconditionally on every `resizeCanvas()` invocation (including during pointer events via ResizeObserver); now only fires when canvas pixel dimensions actually change, eliminating redundant WASM layout recalculations during drag
+- **SITE**: Changes in `site/style.css`, `site/playground.js`
+
+
 ### v0.10.128 — Notes Redesign: Rename Spec → Note (R4.18)
 
 - **RENAME (R4.18)**: `spec` keyword → `note` — annotation blocks now use the more universal term; emitter outputs `note` keyword; parser accepts both `note` and `spec` for backward compatibility
