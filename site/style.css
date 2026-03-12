@@ -551,6 +551,9 @@ code {
   background: var(--border);
   box-shadow: var(--shadow), var(--shadow-glow);
   min-height: 75vh;
+  /* Unified header: no gap color bleeding into the header row */
+  --header-bg: rgba(28, 28, 30, 0.88);
+  --header-border: rgba(255, 255, 255, 0.06);
 }
 
 /* ── Split Resize Handle ── */
@@ -565,6 +568,19 @@ code {
 .split-resize-handle:hover,
 .split-resize-handle.active {
   background: var(--accent);
+}
+/* Bridge the header gap — pseudo-element covers the handle's header zone */
+.split-resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 42px; /* matches header height */
+  background: var(--header-bg, rgba(28, 28, 30, 0.88));
+  border-bottom: 0.5px solid var(--header-border, rgba(255, 255, 255, 0.06));
+  pointer-events: none;
+  z-index: 3;
 }
 .playground-editor {
   background: #282C34; /* Atom One Dark — always dark code mode */
@@ -587,7 +603,11 @@ code {
   padding: 10px 16px;
   height: 42px;
   box-sizing: border-box;
-  border-bottom: 1px solid var(--border);
+  /* Unified header — match Design toolbar's frosted glass */
+  background: var(--header-bg, rgba(28, 28, 30, 0.88));
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 0.5px solid var(--header-border, rgba(255, 255, 255, 0.06));
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-secondary);
@@ -632,17 +652,14 @@ code {
   padding: 10px 16px;
   height: 42px;
   box-sizing: border-box;
-  background: var(--fd-toolbar-bg, rgba(246,246,248,0.72));
+  /* Unified header — same frosted glass as Code header */
+  background: var(--header-bg, rgba(28, 28, 30, 0.88));
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 0.5px solid var(--fd-toolbar-border, rgba(0,0,0,0.06));
+  border-bottom: 0.5px solid var(--header-border, rgba(255, 255, 255, 0.06));
   flex-shrink: 0;
   align-items: center;
   z-index: 10;
-}
-.dark-theme #canvas-toolbar {
-  --fd-toolbar-bg: rgba(28,28,30,0.72);
-  --fd-toolbar-border: rgba(255,255,255,0.06);
 }
 .tb-zone { display: flex; align-items: center; gap: 3px; }
 .tb-left { flex: 0 0 auto; }

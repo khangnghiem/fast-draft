@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.10.123 — Unified Playground Header Bar (R6.6)
+
+- **UX (R6.6)**: Code and Design headers are now visually connected as one continuous frosted glass bar — both panels share unified `--header-bg` and `--header-border` CSS tokens; `::before` pseudo-element on the resize handle bridges the 6px gutter gap; removes the `.dark-theme #canvas-toolbar` override (now unnecessary); headers have matching `backdrop-filter: blur(20px) saturate(180%)` and 0.5px hairline border-bottom
+- **SITE**: Changes in `site/style.css`
+
 ### v0.10.122 — Playground 30-70 Code/Design Split (R6.6)
 
 - **UX (R6.6)**: Default playground split changed from 40/60 to **30/70** — design canvas gets 70% of horizontal space, code editor 30%; gives the visual canvas more room by default while keeping code readable; grid-template-columns changed from `2fr auto 3fr` to `3fr auto 7fr`
