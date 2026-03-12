@@ -321,35 +321,93 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       opacity: 0.55;
       border-color: rgba(0, 0, 0, 0.1);
     }
-    /* ── View Toggle (Design | Spec segmented control) ── */
-    .view-toggle {
+    /* ── Notes Panel (right slide-in) ── */
+    .notes-panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 260px;
+      background: var(--fd-surface);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-left: 0.5px solid var(--fd-border);
+      z-index: 15;
       display: flex;
-      gap: 1px;
-      background: var(--fd-segment-bg);
-      border-radius: var(--fd-radius-sm);
-      padding: 2px;
-      margin-left: 4px;
+      flex-direction: column;
+      transition: transform 0.25s ease, opacity 0.2s ease;
+      transform: translateX(0);
+      opacity: 1;
+      overflow: hidden;
     }
-    .view-btn {
-      padding: 3px 10px;
+    .notes-panel.hidden {
+      transform: translateX(100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .notes-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 0.5px solid var(--fd-border);
+      flex-shrink: 0;
+    }
+    .notes-panel-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--fd-text);
+    }
+    .notes-panel-close {
       border: none;
       background: transparent;
-      color: var(--fd-text-secondary);
-      border-radius: 5px;
       cursor: pointer;
-      font-size: 11px;
-      font-weight: 500;
-      font-family: inherit;
-      transition: all 0.15s ease;
-      letter-spacing: -0.01em;
+      font-size: 14px;
+      color: var(--fd-text-secondary);
+      padding: 2px 4px;
+      border-radius: 4px;
+      line-height: 1;
     }
-    .view-btn:hover { color: var(--fd-text); }
-    .view-btn.active {
-      background: var(--fd-segment-active);
+    .notes-panel-close:hover {
+      background: var(--fd-surface-hover);
       color: var(--fd-text);
-      box-shadow: var(--fd-segment-shadow);
-      font-weight: 600;
     }
+    .notes-panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .notes-empty {
+      font-size: 11px;
+      color: var(--fd-text-secondary);
+      text-align: center;
+      padding: 24px 12px;
+      line-height: 1.5;
+    }
+    .note-group { margin-bottom: 12px; }
+    .note-group-header {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--fd-accent);
+      padding: 4px 8px;
+      cursor: pointer;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .note-group-header:hover { background: var(--fd-accent-dim); }
+    .note-item {
+      font-size: 11px;
+      color: var(--fd-text);
+      padding: 4px 8px 4px 16px;
+      line-height: 1.4;
+      border-radius: 4px;
+    }
+    .note-item:hover { background: var(--fd-surface-hover); }
+    .note-item.todo::before { content: "\\2610 "; color: var(--fd-accent); }
+    .note-item.done { color: var(--fd-text-secondary); text-decoration: line-through; }
+    .note-item.done::before { content: "\\2611 "; }
+    .note-item.tag { display: inline-block; background: var(--fd-accent-dim); padding: 2px 8px; border-radius: 10px; margin: 2px; font-size: 10px; color: var(--fd-accent); }
 
     /* ── Layers Panel (Figma / Sketch sidebar) ── */
     #layers-panel {
@@ -2590,13 +2648,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <button class="tool-btn" id="ai-refine-btn" title="AI Touch selected node (select a node first)">✦ AI Touch</button>
       <button class="tool-btn" id="renamify-btn" title="Renamify — batch AI rename anonymous node IDs">✦ Renamify</button>
     </div>
-    <div class="tb-zone tb-center zen-full-only">
-      <div class="view-toggle" id="view-toggle">
-        <button class="view-btn active" id="view-design" title="Design View — visual properties">Design</button>
-        <button class="view-btn" id="view-notes" title="Notes View — annotations &amp; to-dos">Notes</button>
-      </div>
-    </div>
     <div class="tb-zone tb-right">
+      <button class="tool-btn" id="notes-toggle-btn" title="Notes Panel">📝</button>
       <span class="zen-full-only" id="status">Loading WASM…</span>
       <button class="tool-btn" id="fullscreen-toggle-btn" title="Full Screen (⇧F)">⛶</button>
       <button class="tool-btn" id="zen-toggle-btn" title="Switch to Zen mode">🧘</button>
@@ -2644,6 +2697,16 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
 
     </div>
     <canvas id="fd-canvas" class="tool-select"></canvas>
+    <!-- Notes Panel (right-side slide-in) -->
+    <div id="notes-panel" class="notes-panel hidden">
+      <div class="notes-panel-header">
+        <span class="notes-panel-title">📝 Notes</span>
+        <button class="notes-panel-close" id="notes-panel-close" title="Close">✕</button>
+      </div>
+      <div class="notes-panel-body" id="notes-panel-body">
+        <p class="notes-empty">No notes yet. Add a note via right-click → Add Note.</p>
+      </div>
+    </div>
     <div id="dimension-tooltip"></div>
     <div id="spec-overlay"></div>
     <div id="spec-hover-tooltip"></div>
@@ -2822,7 +2885,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
   <div id="context-menu">
     <div class="menu-item" id="ctx-ai-refine"><span class="menu-icon">✦</span><span class="menu-label">AI Touch</span></div>
     <div class="menu-item" id="ctx-add-annotation"><span class="menu-icon">◇</span><span class="menu-label">Add Note</span></div>
-    <div class="menu-item" id="ctx-view-notes" style="display:none"><span class="menu-icon">◈</span><span class="menu-label">View Notes</span><span class="menu-shortcut">⌘I</span></div>
+    <div class="menu-item" id="ctx-view-notes"><span class="menu-icon">📝</span><span class="menu-label">Notes Panel</span><span class="menu-shortcut">⌘⇧N</span></div>
     <div class="menu-item" id="ctx-rename" data-action="rename"><span class="menu-icon">✏️</span><span class="menu-label">Rename</span></div>
 
     <div class="menu-separator"></div>
@@ -3014,6 +3077,110 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
           vscodeApi.postMessage({ type: 'renamifyAccepted', renames: proposals });
         }
         closePanel();
+      });
+    })();
+  </script>
+
+  <script nonce="{nonce}">
+    // ─── Notes Panel handlers ─────────
+    (function() {
+      let notesPanelOpen = false;
+      const panel = document.getElementById('notes-panel');
+      const body = document.getElementById('notes-panel-body');
+
+      function parseNotesFromText(text) {
+        const notes = [];
+        const lines = text.split('\\n');
+        let currentNode = null;
+        let inNote = false;
+        let braceDepth = 0;
+        for (const line of lines) {
+          const trimmed = line.trim();
+          const nodeMatch = trimmed.match(/^(?:group|frame|rect|ellipse|text|path|edge|image)\\s+@(\\S+)/);
+          const genericMatch = trimmed.match(/^@(\\S+)\\s*(?:"[^"]*"\\s*)?\\{/);
+          if (nodeMatch) currentNode = nodeMatch[1];
+          else if (genericMatch && !nodeMatch) currentNode = genericMatch[1];
+          if (trimmed.startsWith('note ') || trimmed.startsWith('note{') ||
+              trimmed.startsWith('spec ') || trimmed.startsWith('spec{')) {
+            inNote = true;
+            braceDepth = 0;
+            const inlineMatch = trimmed.match(/^(?:note|spec)\\s+"([^"]+)"/);
+            if (inlineMatch && !trimmed.includes('{')) {
+              notes.push({ node: currentNode, type: 'desc', text: inlineMatch[1] });
+              inNote = false;
+              continue;
+            }
+          }
+          if (inNote) {
+            if (trimmed.includes('{')) braceDepth++;
+            if (trimmed.includes('}')) braceDepth--;
+            const todoMatch = trimmed.match(/^todo:\\s*"([^"]+)"/);
+            const doneMatch = trimmed.match(/^done:\\s*"([^"]+)"/);
+            const tagMatch = trimmed.match(/^tag:\\s*(.+)/);
+            const descMatch = trimmed.match(/^"([^"]+)"/);
+            if (todoMatch) notes.push({ node: currentNode, type: 'todo', text: todoMatch[1] });
+            else if (doneMatch) notes.push({ node: currentNode, type: 'done', text: doneMatch[1] });
+            else if (tagMatch) notes.push({ node: currentNode, type: 'tag', text: tagMatch[1].trim() });
+            else if (descMatch) notes.push({ node: currentNode, type: 'desc', text: descMatch[1] });
+            if (braceDepth <= 0) inNote = false;
+          }
+        }
+        return notes;
+      }
+
+      function renderNotesPanel() {
+        if (!body || !window.fdCanvas) return;
+        const text = window.fdCanvas.get_text();
+        const notes = parseNotesFromText(text);
+        if (notes.length === 0) {
+          body.innerHTML = '<p class="notes-empty">No notes yet. Add a note via right-click \\u2192 Add Note.</p>';
+          return;
+        }
+        const groups = {};
+        for (const n of notes) {
+          const key = n.node || '_root';
+          if (!groups[key]) groups[key] = [];
+          groups[key].push(n);
+        }
+        let html = '';
+        for (const [nodeId, items] of Object.entries(groups)) {
+          html += '<div class="note-group">';
+          html += '<div class="note-group-header" data-node="' + nodeId + '" title="Click to select @' + nodeId + '">@' + nodeId + '</div>';
+          for (const item of items) {
+            html += '<div class="note-item ' + item.type + '">' + item.text + '</div>';
+          }
+          html += '</div>';
+        }
+        body.innerHTML = html;
+        body.querySelectorAll('.note-group-header').forEach(el => {
+          el.addEventListener('click', () => {
+            const nid = el.dataset.node;
+            if (nid && nid !== '_root' && window.fdCanvas) {
+              window.fdCanvas.select_by_id(nid);
+            }
+          });
+        });
+      }
+
+      window.toggleNotesPanel = function() {
+        if (!panel) return;
+        notesPanelOpen = !notesPanelOpen;
+        panel.classList.toggle('hidden', !notesPanelOpen);
+        if (notesPanelOpen) renderNotesPanel();
+      };
+
+      document.getElementById('notes-toggle-btn')?.addEventListener('click', window.toggleNotesPanel);
+      document.getElementById('notes-panel-close')?.addEventListener('click', window.toggleNotesPanel);
+      document.getElementById('ctx-view-notes')?.addEventListener('click', () => {
+        window.toggleNotesPanel();
+        document.getElementById('context-menu')?.classList.remove('visible');
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'N' && e.shiftKey && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          window.toggleNotesPanel();
+        }
       });
     })();
   </script>

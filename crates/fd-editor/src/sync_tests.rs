@@ -84,15 +84,12 @@ rect @box {
 }
 
 #[test]
-fn sync_set_annotations() {
+fn sync_set_note() {
     let input = r#"
 rect @box {
   w: 100
   h: 50
-  spec {
-"A test box"
-status: draft
-  }
+  note "Initial note"
 }
 "#;
     let viewport = Viewport {
@@ -101,44 +98,36 @@ status: draft
     };
     let mut engine = SyncEngine::from_text(input, viewport).unwrap();
 
-    // Verify initial annotations
+    // Verify initial note
     let node = engine.graph.get_by_id(NodeId::intern("box")).unwrap();
-    assert_eq!(node.annotations.len(), 2);
+    assert_eq!(node.note.as_deref(), Some("Initial note"));
 
-    // Update annotations via mutation
-    engine.apply_mutation(GraphMutation::SetAnnotations {
+    // Update note via mutation
+    engine.apply_mutation(GraphMutation::SetNote {
         id: NodeId::intern("box"),
-        annotations: vec![
-            Annotation::Description("Updated description".into()),
-            Annotation::Status("done".into()),
-            Annotation::Accept("all tests pass".into()),
-        ],
+        note: Some("## Updated\n- [ ] task one\n- [x] task two".into()),
     });
     engine.flush_to_text();
 
     // Verify graph updated
     let node = engine.graph.get_by_id(NodeId::intern("box")).unwrap();
-    assert_eq!(node.annotations.len(), 3);
-    assert_eq!(
-        node.annotations[0],
-        Annotation::Description("Updated description".into())
-    );
+    assert!(node.note.as_ref().unwrap().contains("## Updated"));
+    assert!(node.note.as_ref().unwrap().contains("- [ ] task one"));
 
-    // Verify text re-emitted with note blocks
-    assert!(engine.text.contains("\"Updated description\""));
-    assert!(engine.text.contains("status: done"));
-    assert!(engine.text.contains("todo: \"all tests pass\""));
+    // Verify text re-emitted with note block
+    assert!(engine.text.contains("note {"));
+    assert!(engine.text.contains("## Updated"));
 }
 
 #[test]
-fn sync_annotations_roundtrip() {
+fn sync_note_roundtrip() {
     let input = r#"
 rect @card {
   w: 200
   h: 100
-  spec {
-"Card component"
-priority: high
+  note {
+    # Card component
+    - [ ] renders correctly
   }
 }
 "#;
@@ -148,25 +137,18 @@ priority: high
     };
     let mut engine = SyncEngine::from_text(input, viewport).unwrap();
 
-    // Mutate annotations
-    engine.apply_mutation(GraphMutation::SetAnnotations {
+    // Mutate note
+    engine.apply_mutation(GraphMutation::SetNote {
         id: NodeId::intern("card"),
-        annotations: vec![
-            Annotation::Description("Updated card".into()),
-            Annotation::Accept("renders correctly".into()),
-            Annotation::Status("in_progress".into()),
-        ],
+        note: Some("# Updated card\n- [ ] renders correctly\n- [ ] needs review".into()),
     });
     let text = engine.current_text().to_string();
 
     // Re-parse from text
     let engine2 = SyncEngine::from_text(&text, viewport).unwrap();
     let node = engine2.graph.get_by_id(NodeId::intern("card")).unwrap();
-    assert_eq!(node.annotations.len(), 3);
-    assert_eq!(
-        node.annotations[2],
-        Annotation::Status("in_progress".into())
-    );
+    assert!(node.note.as_ref().unwrap().contains("needs review"));
+    assert!(node.note.as_ref().unwrap().contains("# Updated card"));
 }
 
 #[test]

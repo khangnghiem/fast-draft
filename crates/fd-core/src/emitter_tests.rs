@@ -137,36 +137,31 @@ rect @btn {
 }
 
 #[test]
-fn roundtrip_annotation_description() {
+fn roundtrip_note_inline() {
     let input = r#"
 rect @box {
-  spec "Primary container for content"
+  note "Primary container for content"
   w: 100 h: 50
   fill: #FF0000
 }
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("box")).unwrap();
-    assert_eq!(node.annotations.len(), 1);
-    assert_eq!(
-        node.annotations[0],
-        Annotation::Description("Primary container for content".into())
-    );
+    assert_eq!(node.note.as_deref(), Some("Primary container for content"));
 
     let output = emit_document(&graph);
-    let graph2 = parse_document(&output).expect("re-parse of annotation failed");
+    let graph2 = parse_document(&output).expect("re-parse of note failed");
     let node2 = graph2.get_by_id(NodeId::intern("box")).unwrap();
-    assert_eq!(node2.annotations.len(), 1);
-    assert_eq!(node2.annotations[0], node.annotations[0]);
+    assert_eq!(node2.note, node.note);
 }
 
 #[test]
-fn roundtrip_annotation_accept() {
+fn roundtrip_note_block_markdown() {
     let input = r#"
 rect @login_btn {
-  spec {
-accept: "disabled state when fields empty"
-accept: "loading spinner during auth"
+  note {
+    - [ ] disabled state when fields empty
+    - [ ] loading spinner during auth
   }
   w: 280 h: 48
   fill: #6C5CE7
@@ -174,102 +169,92 @@ accept: "loading spinner during auth"
 "#;
     let graph = parse_document(input).unwrap();
     let btn = graph.get_by_id(NodeId::intern("login_btn")).unwrap();
-    assert_eq!(btn.annotations.len(), 2);
-    assert_eq!(
-        btn.annotations[0],
-        Annotation::Accept("disabled state when fields empty".into())
-    );
-    assert_eq!(
-        btn.annotations[1],
-        Annotation::Accept("loading spinner during auth".into())
-    );
+    let note = btn.note.as_ref().expect("should have note");
+    assert!(note.contains("disabled state when fields empty"));
+    assert!(note.contains("loading spinner during auth"));
 
     let output = emit_document(&graph);
-    let graph2 = parse_document(&output).expect("re-parse of accept annotation failed");
+    let graph2 = parse_document(&output).expect("re-parse of note block failed");
     let btn2 = graph2.get_by_id(NodeId::intern("login_btn")).unwrap();
-    assert_eq!(btn2.annotations, btn.annotations);
+    assert_eq!(btn2.note, btn.note);
 }
 
 #[test]
-fn roundtrip_annotation_status_priority() {
+fn roundtrip_note_multiline_content() {
+    // Raw markdown content is preserved through parse → emit → re-parse
     let input = r#"
 rect @card {
-  spec {
-status: doing
-priority: high
-tag: mvp
+  note {
+    ## Card Features
+    - Dark mode support
+    - Responsive layout
   }
   w: 300 h: 200
 }
 "#;
     let graph = parse_document(input).unwrap();
     let card = graph.get_by_id(NodeId::intern("card")).unwrap();
-    assert_eq!(card.annotations.len(), 3);
-    assert_eq!(card.annotations[0], Annotation::Status("doing".into()));
-    assert_eq!(card.annotations[1], Annotation::Priority("high".into()));
-    assert_eq!(card.annotations[2], Annotation::Tag("mvp".into()));
+    let note = card.note.as_ref().expect("should have note");
+    assert!(note.contains("## Card Features"));
+    assert!(note.contains("Dark mode support"));
 
     let output = emit_document(&graph);
-    let graph2 =
-        parse_document(&output).expect("re-parse of status/priority/tag annotation failed");
+    let graph2 = parse_document(&output).expect("re-parse of multiline note failed");
     let card2 = graph2.get_by_id(NodeId::intern("card")).unwrap();
-    assert_eq!(card2.annotations, card.annotations);
+    assert_eq!(card2.note, card.note);
 }
 
 #[test]
-fn roundtrip_annotation_nested() {
+fn roundtrip_note_nested() {
     let input = r#"
 group @form {
   layout: column gap=16 pad=32
-  spec "User authentication entry point"
+  note "User authentication entry point"
 
   rect @email {
-spec {
-  accept: "validates email format"
-}
-w: 280 h: 44
+    note {
+      Validates email format on blur
+    }
+    w: 280 h: 44
   }
 }
 "#;
     let graph = parse_document(input).unwrap();
     let form = graph.get_by_id(NodeId::intern("form")).unwrap();
-    assert_eq!(form.annotations.len(), 1);
+    assert_eq!(
+        form.note.as_deref(),
+        Some("User authentication entry point")
+    );
     let email = graph.get_by_id(NodeId::intern("email")).unwrap();
-    assert_eq!(email.annotations.len(), 1);
+    assert!(email.note.is_some());
 
     let output = emit_document(&graph);
-    let graph2 = parse_document(&output).expect("re-parse of nested annotation failed");
+    let graph2 = parse_document(&output).expect("re-parse of nested note failed");
     let form2 = graph2.get_by_id(NodeId::intern("form")).unwrap();
-    assert_eq!(form2.annotations, form.annotations);
+    assert_eq!(form2.note, form.note);
     let email2 = graph2.get_by_id(NodeId::intern("email")).unwrap();
-    assert_eq!(email2.annotations, email.annotations);
+    assert_eq!(email2.note, email.note);
 }
 
 #[test]
-fn parse_annotation_freeform() {
+fn parse_note_raw_content() {
     let input = r#"
 rect @widget {
-  spec {
-"Description line"
-accept: "criterion one"
-status: done
-priority: low
-tag: design
+  note {
+    # Widget Notes
+    Some description text
+    - [ ] criterion one
+    - [x] done item
   }
   w: 100 h: 100
 }
 "#;
     let graph = parse_document(input).unwrap();
     let w = graph.get_by_id(NodeId::intern("widget")).unwrap();
-    assert_eq!(w.annotations.len(), 5);
-    assert_eq!(
-        w.annotations[0],
-        Annotation::Description("Description line".into())
-    );
-    assert_eq!(w.annotations[1], Annotation::Accept("criterion one".into()));
-    assert_eq!(w.annotations[2], Annotation::Status("done".into()));
-    assert_eq!(w.annotations[3], Annotation::Priority("low".into()));
-    assert_eq!(w.annotations[4], Annotation::Tag("design".into()));
+    let note = w.note.as_ref().expect("should have note");
+    assert!(note.contains("# Widget Notes"));
+    assert!(note.contains("criterion one"));
+    assert!(note.contains("done item"));
 }
 
 #[test]
@@ -349,15 +334,15 @@ edge @flow {
 }
 
 #[test]
-fn roundtrip_edge_with_annotations() {
+fn roundtrip_edge_with_note() {
     let input = r#"
 rect @login { w: 200 h: 100 }
 rect @dashboard { w: 200 h: 100 }
 
 edge @login_flow {
-  spec {
-"Main authentication flow"
-accept: "must redirect within 2s"
+  note {
+    Main authentication flow
+    Must redirect within 2s
   }
   from: @login
   to: @dashboard
@@ -367,48 +352,40 @@ accept: "must redirect within 2s"
 "#;
     let graph = parse_document(input).unwrap();
     let edge = &graph.edges[0];
-    assert_eq!(edge.annotations.len(), 2);
-    assert_eq!(
-        edge.annotations[0],
-        Annotation::Description("Main authentication flow".into())
-    );
-    assert_eq!(
-        edge.annotations[1],
-        Annotation::Accept("must redirect within 2s".into())
-    );
+    let note = edge.note.as_ref().expect("edge should have note");
+    assert!(note.contains("Main authentication flow"));
+    assert!(note.contains("redirect within 2s"));
 
     let output = emit_document(&graph);
-    let graph2 = parse_document(&output).expect("annotated edge roundtrip failed");
+    let graph2 = parse_document(&output).expect("noted edge roundtrip failed");
     let edge2 = &graph2.edges[0];
-    assert_eq!(edge2.annotations, edge.annotations);
+    assert_eq!(edge2.note, edge.note);
 }
 
 #[test]
 fn roundtrip_generic_node() {
     let input = r#"
 @login_btn {
-  spec {
-"Primary CTA — triggers login API call"
-accept: "disabled when fields empty"
-status: doing
+  note {
+    Primary CTA — triggers login API call
+    - [ ] disabled when fields empty
   }
 }
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("login_btn")).unwrap();
     assert!(matches!(node.kind, NodeKind::Generic));
-    assert_eq!(node.annotations.len(), 3);
+    assert!(node.note.is_some());
 
     let output = emit_document(&graph);
     assert!(output.contains("@login_btn {"));
-    // Should NOT have a type prefix
     assert!(!output.contains("rect @login_btn"));
     assert!(!output.contains("group @login_btn"));
 
     let graph2 = parse_document(&output).expect("re-parse of generic node failed");
     let node2 = graph2.get_by_id(NodeId::intern("login_btn")).unwrap();
     assert!(matches!(node2.kind, NodeKind::Generic));
-    assert_eq!(node2.annotations, node.annotations);
+    assert_eq!(node2.note, node.note);
 }
 
 #[test]
@@ -418,17 +395,11 @@ group @form {
   layout: column gap=16 pad=32
 
   @email_input {
-spec {
-  "Email field"
-  accept: "validates format on blur"
-}
+    note "Email field with validation"
   }
 
   @password_input {
-spec {
-  "Password field"
-  accept: "min 8 chars"
-}
+    note "Password field (min 8 chars)"
   }
 }
 "#;
@@ -438,13 +409,13 @@ spec {
 
     let email = graph.get_by_id(NodeId::intern("email_input")).unwrap();
     assert!(matches!(email.kind, NodeKind::Generic));
-    assert_eq!(email.annotations.len(), 2);
+    assert!(email.note.is_some());
 
     let output = emit_document(&graph);
     let graph2 = parse_document(&output).expect("re-parse of nested generic failed");
     let email2 = graph2.get_by_id(NodeId::intern("email_input")).unwrap();
     assert!(matches!(email2.kind, NodeKind::Generic));
-    assert_eq!(email2.annotations, email.annotations);
+    assert_eq!(email2.note, email.note);
 }
 
 #[test]
@@ -621,84 +592,73 @@ edge @no_endpoints {
 }
 
 #[test]
-fn test_spec_markdown_basic() {
+fn test_notes_markdown_basic() {
     let input = r#"
 rect @login_btn {
-  spec {
-"Primary CTA for login"
-accept: "disabled when fields empty"
-status: doing
-priority: high
-tag: auth
+  note {
+    ## Login Button
+    - [ ] disabled when fields empty
+    - [x] styled with brand colors
   }
   w: 280 h: 48
   fill: #6C5CE7
 }
 "#;
     let graph = parse_document(input).unwrap();
-    let md = emit_spec_markdown(&graph, "login.fd");
+    let md = emit_notes_markdown(&graph, "login.fd");
 
     assert!(md.starts_with("# Notes: login.fd\n"));
     assert!(md.contains("## @login_btn `rect`"));
-    assert!(md.contains("> Primary CTA for login"));
-    assert!(md.contains("- [ ] disabled when fields empty"));
-    assert!(md.contains("- **Status:** doing"));
-    assert!(md.contains("- **Priority:** high"));
-    assert!(md.contains("- **Tag:** auth"));
+    assert!(md.contains("## Login Button"));
+    assert!(md.contains("disabled when fields empty"));
     // Visual props must NOT appear
     assert!(!md.contains("280"));
     assert!(!md.contains("6C5CE7"));
 }
 
 #[test]
-fn test_spec_markdown_nested() {
+fn test_notes_markdown_nested() {
     let input = r#"
 group @form {
   layout: column gap=16 pad=32
-  spec {
-"Shipping address form"
-accept: "autofill from saved addresses"
-  }
+  note "Shipping address form"
 
   rect @email {
-spec {
-  "Email input"
-  accept: "validates email format"
-}
-w: 280 h: 44
+    note {
+      Email input validation
+    }
+    w: 280 h: 44
   }
 
-  rect @no_annotations {
-w: 100 h: 50
-fill: #CCC
+  rect @no_note {
+    w: 100 h: 50
+    fill: #CCC
   }
 }
 "#;
     let graph = parse_document(input).unwrap();
-    let md = emit_spec_markdown(&graph, "checkout.fd");
+    let md = emit_notes_markdown(&graph, "checkout.fd");
 
     assert!(md.contains("## @form `group`"));
     assert!(md.contains("### @email `rect`"));
-    assert!(md.contains("> Shipping address form"));
-    assert!(md.contains("- [ ] autofill from saved addresses"));
-    assert!(md.contains("- [ ] validates email format"));
-    // Node without annotations should be skipped
-    assert!(!md.contains("no_annotations"));
+    assert!(md.contains("Shipping address form"));
+    assert!(md.contains("Email input validation"));
+    // Node without note should be skipped
+    assert!(!md.contains("no_note"));
 }
 
 #[test]
-fn test_spec_markdown_with_edges() {
+fn test_notes_markdown_with_edges() {
     let input = r#"
 rect @login { w: 200 h: 100 }
 rect @dashboard {
-  spec "Main dashboard"
+  note "Main dashboard"
   w: 200 h: 100
 }
 
 edge @auth_flow {
-  spec {
-"Authentication flow"
-accept: "redirect within 2s"
+  note {
+    Authentication flow details
   }
   from: @login
   to: @dashboard
@@ -707,13 +667,12 @@ accept: "redirect within 2s"
 }
 "#;
     let graph = parse_document(input).unwrap();
-    let md = emit_spec_markdown(&graph, "flow.fd");
+    let md = emit_notes_markdown(&graph, "flow.fd");
 
     assert!(md.contains("## Flows"));
     assert!(md.contains("**@login** → **@dashboard**"));
     assert!(md.contains("on success"));
-    assert!(md.contains("> Authentication flow"));
-    assert!(md.contains("- [ ] redirect within 2s"));
+    assert!(md.contains("Authentication flow details"));
 }
 
 #[test]
@@ -1231,38 +1190,31 @@ fn roundtrip_unicode_text() {
 }
 
 #[test]
-fn roundtrip_spec_all_fields() {
-    // Old `spec` keyword still parses and round-trips correctly
+fn roundtrip_note_all_fields() {
+    // `spec` keyword still parses and round-trips correctly
     let input = r#"
 rect @full_spec {
   spec {
-"Full specification node"
-accept: "all fields present"
-status: doing
-priority: high
-tag: mvp, auth
+    Full specification node
+    - [ ] all fields present
+    **Priority:** high
   }
   w: 100 h: 50
 }
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("full_spec")).unwrap();
-    assert_eq!(node.annotations.len(), 5, "should have 5 annotations");
+    assert!(node.note.is_some());
 
     let output = emit_document(&graph);
-    // Emitter should upgrade `spec` to `note` and `accept:` to `todo:`
+    // Emitter should output `note` keyword (upgraded from `spec`)
     assert!(
         output.contains("note {"),
         "emitter should output `note` keyword, got: {output}"
     );
-    assert!(
-        output.contains("todo:"),
-        "emitter should output `todo:` keyword, got: {output}"
-    );
     let graph2 = parse_document(&output).expect("re-parse of full spec failed");
     let node2 = graph2.get_by_id(NodeId::intern("full_spec")).unwrap();
-    assert_eq!(node2.annotations.len(), 5);
-    assert_eq!(node2.annotations, node.annotations);
+    assert_eq!(node2.note, node.note);
 }
 
 #[test]
@@ -1417,58 +1369,151 @@ ease: spring 150ms
 }
 
 #[test]
-fn roundtrip_inline_spec_shorthand() {
-    // Old `spec "..."` shorthand still parses correctly
+fn roundtrip_inline_note_shorthand() {
+    // `note "..."` shorthand parses as inline note
     let input = r#"
 rect @btn {
-  spec "Primary action button"
+  note "Primary action button"
   w: 180 h: 48
   fill: #6C5CE7
 }
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("btn")).unwrap();
-    assert_eq!(node.annotations.len(), 1);
-    assert!(matches!(
-        &node.annotations[0],
-        Annotation::Description(d) if d == "Primary action button"
-    ));
+    assert_eq!(node.note.as_deref(), Some("Primary action button"));
 
     let output = emit_document(&graph);
-    // Emitter should upgrade to `note` keyword
     assert!(
         output.contains("note \""),
         "emitter should output `note` keyword: {output}"
     );
     let graph2 = parse_document(&output).expect("re-parse of inline note failed");
     let node2 = graph2.get_by_id(NodeId::intern("btn")).unwrap();
-    assert_eq!(node2.annotations, node.annotations);
+    assert_eq!(node2.note, node.note);
 }
 
 #[test]
-fn roundtrip_note_keyword() {
-    // New `note` keyword works directly
+fn roundtrip_note_keyword_block() {
+    // `note { ... }` block captures raw markdown
     let input = r#"
 rect @card {
   note {
-    "Card component"
-    todo: "responsive on mobile"
-    status: doing
+    # Card component
+    - [ ] responsive on mobile
+    - [ ] dark mode
   }
   w: 200 h: 100
 }
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("card")).unwrap();
-    assert_eq!(node.annotations.len(), 3, "should have 3 annotations");
-    assert!(matches!(&node.annotations[1], Annotation::Accept(s) if s == "responsive on mobile"));
+    let note = node.note.as_ref().expect("should have note");
+    assert!(note.contains("responsive on mobile"));
 
     let output = emit_document(&graph);
     assert!(output.contains("note {"), "should emit note keyword");
-    assert!(output.contains("todo:"), "should emit todo keyword");
     let graph2 = parse_document(&output).expect("re-parse of note keyword failed");
     let node2 = graph2.get_by_id(NodeId::intern("card")).unwrap();
-    assert_eq!(node2.annotations, node.annotations);
+    assert_eq!(node2.note, node.note);
+}
+
+#[test]
+fn parse_note_checklist() {
+    let input = r#"
+rect @task {
+  note {
+    - [x] Pick the color
+    - [x] Choose the font
+  }
+  w: 100 h: 50
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("task")).unwrap();
+    let note = node.note.as_ref().expect("should have note");
+    assert!(note.contains("Pick the color"));
+    assert!(note.contains("Choose the font"));
+}
+
+#[test]
+fn roundtrip_note_checklist() {
+    let input = r#"
+rect @task {
+  note {
+    A task card
+    - [ ] Add animation
+    - [x] Pick the font
+  }
+  w: 100 h: 50
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let output = emit_document(&graph);
+
+    assert!(output.contains("note {"));
+    assert!(output.contains("A task card"));
+
+    let graph2 = parse_document(&output).expect("re-parse of checklist note failed");
+    let node2 = graph2.get_by_id(NodeId::intern("task")).unwrap();
+    let note = node2.note.as_ref().expect("should have note");
+    assert!(note.contains("Add animation"));
+    assert!(note.contains("Pick the font"));
+}
+
+#[test]
+fn note_content_preserves_all_lines() {
+    let input = r#"
+rect @widget {
+  note {
+    Description text
+    - [ ] Still need to do
+    - [ ] Another todo
+    - [x] Already done thing
+    - [x] Another done
+    **Tag:** important
+  }
+  w: 100 h: 50
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let output = emit_document(&graph);
+
+    let graph2 = parse_document(&output).expect("re-parse of note failed");
+    let node = graph2.get_by_id(NodeId::intern("widget")).unwrap();
+    let note = node.note.as_ref().expect("should have note");
+
+    // All lines should be preserved in raw markdown
+    assert!(note.contains("Description text"));
+    assert!(note.contains("Still need to do"));
+    assert!(note.contains("Another todo"));
+    assert!(note.contains("Already done thing"));
+    assert!(note.contains("important"));
+}
+
+#[test]
+fn spec_keyword_captured_as_raw_note() {
+    // Old `spec { ... }` content is captured as raw markdown
+    let input = r#"
+rect @old {
+  spec {
+    Legacy format text
+    status: done
+    accept: "old criterion"
+  }
+  w: 100 h: 50
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("old")).unwrap();
+    let note = node.note.as_ref().expect("should have note");
+    // Raw content is captured verbatim
+    assert!(note.contains("Legacy format text"));
+    assert!(note.contains("status: done"));
+
+    let output = emit_document(&graph);
+    // Emitter upgrades `spec` to `note`
+    assert!(output.contains("note {"), "should emit note keyword");
+    assert!(!output.contains("spec {"), "should not emit spec keyword");
 }
 
 #[test]
@@ -1614,7 +1659,11 @@ fn emit_filtered_notes() {
     // Should have note blocks
     assert!(out.contains("note"), "should include note");
     assert!(out.contains("Main card component"), "should include desc");
-    assert!(out.contains("status: done"), "should include status");
+    // Raw spec content is preserved
+    assert!(
+        out.contains("status: done"),
+        "should include raw status line"
+    );
     // Should NOT have styles or anims
     assert!(!out.contains("fill:"), "no fill in notes mode");
     assert!(!out.contains("when"), "no when in notes mode");

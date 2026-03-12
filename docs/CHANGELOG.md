@@ -17,6 +17,17 @@
 
 ## Completed Requirements
 
+### v0.11.130 — Raw Markdown Notes (R4.18)
+
+- **REFACTOR (R4.18)**: Replaced structured `Annotation` enum with raw markdown `note: Option<String>` — content inside `note { }` or `spec { }` blocks is now captured verbatim as raw markdown text, enabling checklists (`- [ ]` / `- [x]`), headings, bullets, and any markdown syntax; the old DSL (`todo:`, `done:`, `tag:`, `accept:`, `status:`, `priority:`) is no longer parsed into variants — it's preserved as raw text
+- **CORE**: Deleted `Annotation` enum (5 variants: `Description`, `Todo`, `Done`, `Tag`, `Status`) from `model.rs`; `SceneNode.note` and `Edge.note` are now `Option<String>`
+- **PARSER**: `parse_note_block` rewritten with brace-depth counting to capture raw markdown; new `dedent_note_content` strips common leading whitespace; `parse_note_item` deleted
+- **EMITTER**: `emit_annotations` → `emit_note`; single-line notes emit as `note "text"`, multiline as `note { content }`; `emit_notes_markdown` passes through raw content; `emit_spec_annotations` and `has_annotations_recursive` deleted
+- **SYNC**: `SetAnnotations` mutation → `SetNote { id, note: Option<String> }`; undo logic simplified to clone/restore a single `Option<String>`
+- **WASM**: `get_annotations_json`/`set_annotations_json` → `get_note`/`set_note` — plain string APIs instead of JSON array
+- **TESTING**: 230 tests pass; ~18 tests rewritten from structured annotation assertions to raw markdown content checks
+- **COMPAT**: `spec` keyword still accepted by parser (emitter always outputs `note`); `.fd` example files unchanged
+
 ### v0.11.129 — Fix 30-70 Split Breaks on First Node Drag (R6.6)
 
 - **FIX (R6.6)**: Playground 30-70 code/canvas split no longer expands when first dragging a node — root cause: CSS Grid children default to `min-width: auto`, so when `resizeCanvas()` set `canvas.style.width` to a fixed pixel value, the `.playground-canvas` column couldn't shrink below that intrinsic width, forcing the grid column to exceed its `7fr` allocation; fix: added `min-width: 0` to both `.playground-editor` and `.playground-canvas` grid children (standard CSS Grid overflow fix) + `overflow: hidden` on `.playground-canvas` as defense in depth

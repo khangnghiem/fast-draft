@@ -93,7 +93,7 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
                     props: crate::model::Properties::default(),
                     use_styles: Default::default(),
                     constraints: Default::default(),
-                    annotations: Vec::new(),
+                    note: None,
                     animations: Default::default(),
                     comments: Vec::new(),
                     place: None,
@@ -172,7 +172,7 @@ struct ParsedNode {
     use_styles: Vec<NodeId>,
     constraints: Vec<Constraint>,
     animations: Vec<AnimKeyframe>,
-    annotations: Vec<Annotation>,
+    note: Option<String>,
     /// Comments that appeared before this node's opening `{` in the source.
     comments: Vec<String>,
     children: Vec<ParsedNode>,
@@ -192,7 +192,7 @@ fn insert_node_recursive(
     node.use_styles.extend(parsed.use_styles);
     node.constraints.extend(parsed.constraints);
     node.animations.extend(parsed.animations);
-    node.annotations = parsed.annotations;
+    node.note = parsed.note;
     node.comments = parsed.comments;
     node.place = parsed.place;
     node.locked = parsed.locked;
@@ -330,11 +330,9 @@ fn skip_px_suffix(input: &mut &str) {
     }
 }
 
-// ─── Note block parser (accepts both `note` and legacy `spec`) ──────────
-
-/// Parse a `note { ... }` block or inline `note "description"` into annotations.
+/// Parse a `note { ... }` block or inline `note "description"` into raw markdown.
 /// Also accepts the legacy `spec` keyword for backward compatibility.
-fn parse_note_block(input: &mut &str) -> ModalResult<Vec<Annotation>> {
+fn parse_note_block(input: &mut &str) -> ModalResult<String> {
     // Accept both `note` and legacy `spec`
     let _ = alt(("note", "spec")).parse_next(input)?;
     skip_space(input);
@@ -345,67 +343,60 @@ fn parse_note_block(input: &mut &str) -> ModalResult<Vec<Annotation>> {
             .map(|s| s.to_string())
             .parse_next(input)?;
         skip_opt_separator(input);
-        return Ok(vec![Annotation::Description(desc)]);
+        return Ok(desc);
     }
 
-    // Block form: `note { ... }`
+    // Block form: `note { ... }` — capture raw content with brace-depth counting
     let _ = '{'.parse_next(input)?;
-    let mut annotations = Vec::new();
-    skip_ws_and_comments(input);
-
-    while !input.starts_with('}') {
-        annotations.push(parse_note_item.parse_next(input)?);
-        skip_ws_and_comments(input);
+    let mut depth = 1u32;
+    let mut content_len = 0;
+    for (i, ch) in input.char_indices() {
+        match ch {
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    content_len = i;
+                    break;
+                }
+            }
+            _ => {}
+        }
     }
-
+    let raw = &input[..content_len];
+    *input = &input[content_len..];
     let _ = '}'.parse_next(input)?;
-    Ok(annotations)
+
+    // Trim leading/trailing whitespace but preserve internal formatting
+    let trimmed = dedent_note_content(raw);
+    Ok(trimmed)
 }
 
-/// Parse a single item inside a `note { ... }` block.
-///
-/// Handles:
-/// - `"description text"` → Description
-/// - `todo: "criterion"` → Accept (also accepts legacy `accept:`)
-/// - `status: value` → Status
-/// - `priority: value` → Priority
-/// - `tag: value` → Tag
-fn parse_note_item(input: &mut &str) -> ModalResult<Annotation> {
-    // Freeform description: `"text"`
-    if input.starts_with('"') {
-        let desc = parse_quoted_string
-            .map(|s| s.to_string())
-            .parse_next(input)?;
-        skip_opt_separator(input);
-        return Ok(Annotation::Description(desc));
+/// Dedent note block content: remove the common leading whitespace from all lines.
+fn dedent_note_content(raw: &str) -> String {
+    let trimmed = raw.trim_matches('\n');
+    if trimmed.is_empty() {
+        return String::new();
     }
-
-    // Typed annotation: `keyword: value`
-    let keyword = parse_identifier.parse_next(input)?;
-    skip_space(input);
-    let _ = ':'.parse_next(input)?;
-    skip_space(input);
-
-    let value = if input.starts_with('"') {
-        parse_quoted_string
-            .map(|s| s.to_string())
-            .parse_next(input)?
-    } else {
-        let v: &str =
-            take_till(0.., |c: char| c == '\n' || c == ';' || c == '}').parse_next(input)?;
-        v.trim().to_string()
-    };
-
-    let ann = match keyword {
-        "todo" | "accept" => Annotation::Accept(value),
-        "status" => Annotation::Status(value),
-        "priority" => Annotation::Priority(value),
-        "tag" => Annotation::Tag(value),
-        _ => Annotation::Description(format!("{keyword}: {value}")),
-    };
-
-    skip_opt_separator(input);
-    Ok(ann)
+    // Find minimum indentation across non-empty lines
+    let min_indent = trimmed
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| l.len() - l.trim_start().len())
+        .min()
+        .unwrap_or(0);
+    // Strip that prefix from each line
+    trimmed
+        .lines()
+        .map(|l| {
+            if l.len() >= min_indent {
+                &l[min_indent..]
+            } else {
+                l.trim_start()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 // ─── Style block parser ─────────────────────────────────────────────────
@@ -568,7 +559,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let mut use_styles = Vec::new();
     let mut constraints = Vec::new();
     let mut animations = Vec::new();
-    let mut annotations = Vec::new();
+    let mut note: Option<String> = None;
     let mut children = Vec::new();
     let mut width: Option<f32> = None;
     let mut height: Option<f32> = None;
@@ -588,7 +579,12 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
             || input.starts_with("note ")
             || input.starts_with("note{")
         {
-            annotations.extend(parse_note_block.parse_next(input)?);
+            let content = parse_note_block.parse_next(input)?;
+            // Multiple note blocks: append with newline separator
+            note = Some(match note {
+                Some(existing) => format!("{existing}\n\n{content}"),
+                None => content,
+            });
         } else if starts_with_child_node(input) {
             let mut child = parse_node.parse_next(input)?;
             // Any comments collected before this child are attached to it
@@ -660,7 +656,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
         use_styles,
         constraints,
         animations,
-        annotations,
+        note,
         comments: Vec::new(),
         children,
         place,
@@ -1380,7 +1376,7 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
     let mut use_styles = Vec::new();
     let mut arrow = ArrowKind::None;
     let mut curve = CurveKind::Straight;
-    let mut annotations = Vec::new();
+    let mut note: Option<String> = None;
     let mut animations = Vec::new();
     let mut flow = None;
     let mut label_offset = None;
@@ -1393,7 +1389,11 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
             || input.starts_with("note ")
             || input.starts_with("note{")
         {
-            annotations.extend(parse_note_block.parse_next(input)?);
+            let content = parse_note_block.parse_next(input)?;
+            note = Some(match note {
+                Some(existing) => format!("{existing}\n\n{content}"),
+                None => content,
+            });
         } else if input.starts_with("when") || input.starts_with("anim") {
             animations.push(parse_anim_block.parse_next(input)?);
         } else if input.starts_with("text ") || input.starts_with("text@") {
@@ -1517,7 +1517,7 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
             use_styles: use_styles.into(),
             arrow,
             curve,
-            annotations,
+            note,
             animations: animations.into(),
             flow,
             label_offset,

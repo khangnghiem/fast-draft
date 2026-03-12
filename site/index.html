@@ -92,13 +92,8 @@
                 <button class="tool-btn" id="ai-touch-btn" title="AI Touch — refine selected node">✦ AI Touch</button>
                 <button class="tool-btn" id="renamify-btn" title="Renamify — rename anonymous node IDs">✦ Renamify</button>
               </div>
-              <div class="tb-zone tb-center zen-full-only">
-                <div class="view-toggle" id="view-toggle">
-                  <button class="view-btn active" id="view-design" title="Design View — visual properties">Design</button>
-                  <button class="view-btn" id="view-notes" title="Notes View — annotations & to-dos">Notes</button>
-                </div>
-              </div>
               <div class="tb-zone tb-right">
+                <button class="tool-btn" id="notes-toggle-btn" title="Notes Panel (⌘⇧N)">📝</button>
                 <span class="zen-full-only" id="canvas-status">Ready</span>
                 <button class="tool-btn" id="share-btn" title="Share playground link">🔗</button>
                 <button class="tool-btn" id="fullscreen-toggle-btn" title="Full Screen (⇧F)">⛶</button>
@@ -124,6 +119,16 @@
             <div id="layers-panel"></div>
             <div class="panel-resize-handle layers-handle" id="layers-resize"></div>
             <canvas id="fd-canvas"></canvas>
+            <!-- Notes Panel (right-side slide-in) -->
+            <div id="notes-panel" class="notes-panel hidden">
+              <div class="notes-panel-header">
+                <span class="notes-panel-title">📝 Notes</span>
+                <button class="notes-panel-close" id="notes-panel-close" title="Close">✕</button>
+              </div>
+              <div class="notes-panel-body" id="notes-panel-body">
+                <p class="notes-empty">No notes yet. Add a note via right-click → Add Note.</p>
+              </div>
+            </div>
             <!-- Floating Action Bar (frosted glass) -->
             <div id="floating-action-bar">
               <label class="fab-label" for="fab-fill">Fill</label>

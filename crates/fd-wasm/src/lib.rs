@@ -8,8 +8,8 @@ mod svg;
 use fd_core::id::NodeId;
 use fd_core::layout::Viewport;
 use fd_core::model::{
-    Annotation, ArrowKind, Color, Constraint, CurveKind, Edge, EdgeAnchor, LayoutMode, NodeKind,
-    Paint, SceneNode, Stroke, StrokeCap, StrokeJoin, TextAlign, TextVAlign,
+    ArrowKind, Color, Constraint, CurveKind, Edge, EdgeAnchor, LayoutMode, NodeKind, Paint,
+    SceneNode, Stroke, StrokeCap, StrokeJoin, TextAlign, TextVAlign,
 };
 use fd_editor::commands::CommandStack;
 use fd_editor::input::{InputEvent, Modifiers};
@@ -1199,7 +1199,7 @@ impl FdCanvas {
                     use_styles: edge.use_styles.clone(),
                     arrow: edge.arrow,
                     curve: edge.curve,
-                    annotations: edge.annotations.clone(),
+                    note: edge.note.clone(),
                     animations: edge.animations.clone(),
                     flow: edge.flow,
                     label_offset: edge.label_offset,
@@ -1296,31 +1296,30 @@ impl FdCanvas {
         changed
     }
 
-    // ─── Annotation APIs ─────────────────────────────────────────────────
+    // ─── Note APIs ───────────────────────────────────────────────────────
 
-    /// Get annotations for a node as JSON array.
-    /// Returns `[]` if node not found or has no annotations.
-    pub fn get_annotations_json(&self, node_id: &str) -> String {
+    /// Get the raw markdown note for a node.
+    /// Returns empty string if node not found or has no note.
+    pub fn get_note(&self, node_id: &str) -> String {
         let id = NodeId::intern(node_id);
-        let annotations = self
-            .engine
+        self.engine
             .graph
             .get_by_id(id)
-            .map(|n| &n.annotations)
-            .cloned()
-            .unwrap_or_default();
-        serde_json::to_string(&annotations).unwrap_or_else(|_| "[]".to_string())
+            .and_then(|n| n.note.clone())
+            .unwrap_or_default()
     }
 
-    /// Set annotations for a node from a JSON array.
+    /// Set the raw markdown note for a node.
+    /// Pass empty string to clear the note.
     /// Returns `true` on success.
-    pub fn set_annotations_json(&mut self, node_id: &str, json: &str) -> bool {
-        let annotations: Vec<Annotation> = match serde_json::from_str(json) {
-            Ok(a) => a,
-            Err(_) => return false,
-        };
+    pub fn set_note(&mut self, node_id: &str, content: &str) -> bool {
         let id = NodeId::intern(node_id);
-        let mutations = vec![GraphMutation::SetAnnotations { id, annotations }];
+        let note = if content.is_empty() {
+            None
+        } else {
+            Some(content.to_string())
+        };
+        let mutations = vec![GraphMutation::SetNote { id, note }];
         let changed = self.apply_mutations(mutations);
         if changed {
             self.engine.flush_to_text();
@@ -2497,7 +2496,7 @@ impl FdCanvas {
             use_styles: Default::default(),
             arrow: ArrowKind::End,
             curve: CurveKind::Smooth,
-            annotations: Vec::new(),
+            note: None,
             animations: Default::default(),
             flow: None,
             label_offset: None,
@@ -2527,7 +2526,7 @@ impl FdCanvas {
             use_styles: Default::default(),
             arrow: ArrowKind::End,
             curve: CurveKind::Straight,
-            annotations: Vec::new(),
+            note: None,
             animations: Default::default(),
             flow: None,
             label_offset: None,
@@ -3569,9 +3568,8 @@ fn collect_node_tree(graph: &fd_core::SceneGraph, idx: fd_core::NodeIndex) -> se
     if !children.is_empty() {
         obj["children"] = serde_json::Value::Array(children);
     }
-    if !node.annotations.is_empty() {
-        obj["annotations"] =
-            serde_json::to_value(&node.annotations).unwrap_or(serde_json::Value::Null);
+    if let Some(note) = &node.note {
+        obj["note"] = serde_json::Value::String(note.clone());
     }
     obj
 }
