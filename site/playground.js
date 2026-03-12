@@ -200,7 +200,7 @@ frame @card {
 // ─── State ───────────────────────────────────────────────────────────────
 let fdCanvas = null;
 let ctx = null;
-let isDark = false; // Light theme only — no toggle
+let isDark = true; // Dark theme to match marketing page
 let isSketchy = false;
 let animFrameId = null;
 let suppressSync = false;
@@ -2277,7 +2277,9 @@ async function initPlayground() {
     const rect = wrapper.getBoundingClientRect();
     const canvasW = rect.width - getLayersPanelWidth();
     fdCanvas = new wasm.FdCanvas(canvasW, rect.height);
-    // Theme is always light — WASM defaults to dark_mode: false
+    // Dark theme to match marketing page
+    fdCanvas.set_theme(true);
+    wrapper.classList.add('dark-canvas');
     fdCanvas.set_text(DEFAULT_FD);
 
     // ── Create CodeMirror Editor ──────────────────────────────────────

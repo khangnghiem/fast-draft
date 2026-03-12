@@ -10,7 +10,7 @@
   --text-muted: #484F58;
   --accent: #007AFF;
   --accent-hover: #0071EB;
-  --accent-glow: rgba(0, 122, 255, 0.2);
+  --accent-glow: rgba(108, 92, 231, 0.2);
   --accent-2: #5AC8FA;
   --border: #30363D;
   --border-light: #21262D;
@@ -19,9 +19,9 @@
   --radius-lg: 16px;
   --radius-sm: 8px;
   --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  --shadow-glow: 0 0 40px rgba(0, 122, 255, 0.12);
-  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', sans-serif;
-  --mono: 'SF Mono', SFMono-Regular, ui-monospace, 'JetBrains Mono', monospace;
+  --shadow-glow: 0 0 40px rgba(108, 92, 231, 0.15);
+  --font: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', sans-serif;
+  --mono: 'Geist Mono', 'SF Mono', SFMono-Regular, ui-monospace, 'JetBrains Mono', monospace;
   --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --max-width: 1200px;
 
@@ -271,10 +271,13 @@ code {
   letter-spacing: -0.03em;
 }
 .gradient-text {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  background: linear-gradient(135deg, #6C5CE7, #0A84FF);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+.gradient-bg {
+  background: linear-gradient(135deg, #6C5CE7, #0A84FF);
 }
 .hero-sub {
   font-size: 1.1rem;
@@ -304,7 +307,7 @@ code {
   text-decoration: none;
 }
 .btn-primary {
-  background: var(--accent);
+  background: linear-gradient(135deg, #6C5CE7, #0A84FF);
   color: #fff;
   box-shadow: 0 4px 20px rgba(108, 92, 231, 0.3);
 }
@@ -1610,16 +1613,35 @@ code {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   background: var(--bg-card);
-  transition: all var(--transition);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+.feature-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(108, 92, 231, 0.06), rgba(10, 132, 255, 0.06));
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.feature-card:hover::before {
+  opacity: 1;
 }
 .feature-card:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-glow);
-  transform: translateY(-4px);
+  border-color: #6C5CE7;
+  box-shadow: 0 0 30px rgba(108, 92, 231, 0.2), 0 8px 32px rgba(0, 0, 0, 0.3);
+  transform: translateY(-6px);
 }
 .feature-icon {
   font-size: 2rem;
   margin-bottom: 16px;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: inline-block;
+}
+.feature-card:hover .feature-icon {
+  transform: translateY(-4px) scale(1.15);
 }
 .feature-card h3 {
   font-size: 1.2rem;
@@ -1646,8 +1668,8 @@ code {
   transition: all var(--transition);
 }
 .mode-card:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-glow);
+  border-color: #6C5CE7;
+  box-shadow: 0 0 30px rgba(108, 92, 231, 0.2), 0 8px 32px rgba(0, 0, 0, 0.3);
   transform: translateY(-4px);
 }
 .mode-badge {
@@ -1849,6 +1871,7 @@ code {
   opacity: 0;
   transform: translateY(24px);
   transition: opacity 0.6s ease, transform 0.6s ease;
+  transition-delay: calc(var(--i, 0) * 80ms);
 }
 .animate-in.visible {
   opacity: 1;

@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.10.118 — Website Theme Polish Batch 1 (R6.5)
+
+- **UX (R6.5)**: Canvas now defaults to dark theme on marketing site — matches the dark `#0D1117` page background; calls `set_theme(true)` on WASM init + adds `.dark-canvas` class to wrapper; eliminates the jarring light/dark visual disconnect
+- **SEO (R6.5)**: Added OG social card — `og:image` and `twitter:card` meta tags with a 1200×630 branded preview image (`site/og-card.png`); sharing on social platforms now shows a rich preview with "Fast Draft — Design as Code" branding
+- **UX (R6.5)**: Accent evolved to purple→blue gradient (`#6C5CE7` → `#0A84FF`) — applied to `.gradient-text`, primary CTA button, feature card hover borders, mode card hover borders, and `--accent-glow` / `--shadow-glow` tokens; creates a distinctive brand identity
+- **UX (R6.5)**: Typography upgraded to Geist Sans + Geist Mono — replaces Inter + JetBrains Mono via jsDelivr CDN; sharper, more modern dev-tool aesthetic; Inter and JetBrains Mono remain as fallbacks
+- **UX (R6.5)**: Feature card micro-interactions — icon bounces up and scales 1.15× on hover via spring-curve easing; subtle gradient overlay fades in on hover; staggered scroll-reveal with `calc(var(--i) * 80ms)` delay per card for sequential animation
+- **SITE**: Changes in `site/style.css`, `site/index.html`, `site/playground.js`, new `site/og-card.png`
+
 ### v0.10.117 — Auto Cache-Bust Deploy Pipeline (DX)
 
 - **INFRA (DX)**: `pages.yml` auto-bust step — replaces `?v=X.Y.Z` query strings in `index.html` with `?v=<7-char-git-sha>` before deploying; every deploy produces unique asset URLs, eliminating stale browser cache forever; no manual version bumps needed
