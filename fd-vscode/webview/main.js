@@ -1939,7 +1939,12 @@ function updateFloatingBar() {
   if (!fab || !fdCanvas) return;
 
   const selectedId = fdCanvas.get_selected_id();
-  if (!selectedId || pointerIsDown || inlineEditorActive) {
+  if (!selectedId || inlineEditorActive) {
+    fab.classList.remove("visible");
+    return;
+  }
+  // Hide FAB during draw gestures (not during select-tool move — FAB tracks via side-effects loop)
+  if (pointerIsDown && fdCanvas.get_tool_name() !== 'select') {
     fab.classList.remove("visible");
     return;
   }
@@ -7304,6 +7309,8 @@ function scheduleSideEffects() {
     if (viewMode === "spec") refreshSpecView();
     refreshLayersPanel();
     renderMinimap();
+    updateFloatingBar();
+    updatePropertiesPanel();
   }, 100);
 }
 

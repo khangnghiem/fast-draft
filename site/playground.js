@@ -2465,6 +2465,7 @@ async function initPlayground() {
         renderMinimap(canvas);
         refreshLayersPanel();
         updatePropertiesPanel();
+        updateFab(canvas);
         minimapLastRender = time;
         uiDirty = false;
       }
@@ -2545,8 +2546,10 @@ async function initPlayground() {
         return;
       }
 
-      // Hide FAB during interaction
-      document.getElementById('fab')?.classList.remove('visible');
+      // Hide FAB during draw gestures (not during move — FAB tracks via render loop)
+      if (fdCanvas.get_tool_name() !== 'select') {
+        document.getElementById('floating-action-bar')?.classList.remove('visible');
+      }
 
       const changed = fdCanvas.handle_pointer_down(
         x, y, e.pressure || 1.0,

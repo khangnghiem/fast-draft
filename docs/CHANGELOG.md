@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.10.126 — FAB Persistent During Drag (R6.6)
+
+- **UX (R6.6)**: Floating Action Bar (FAB) now stays visible and tracks the node during move drag — previously disappeared on pointerdown and only reappeared on pointerup; `updateFab(canvas)` added to the ~10fps render loop alongside `updatePropertiesPanel()`; CSS transitions (`left 0.08s ease, top 0.08s ease`) provide smooth tracking animation for free
+- **FIX (R6.6)**: Dead FAB-hide code on pointerdown — `document.getElementById('fab')` targeted nonexistent element (actual ID is `floating-action-bar`); fixed to correct ID and gated behind draw-gesture check (FAB only hides during draw/resize tools, not during select-tool move)
+- **PARITY (R6.6)**: VS Code extension `updateFloatingBar()` updated with same draw-gesture gate — `pointerIsDown` no longer unconditionally hides the FAB; `scheduleSideEffects()` now calls `updateFloatingBar()` + `updatePropertiesPanel()` at ~10fps for consistent tracking
+- **SITE**: Changes in `site/playground.js`
+- **EXTENSION**: Changes in `fd-vscode/webview/main.js`
+
 ### v0.10.125 — Fix Multi-Node Drag Double-Move (R3.16)
 
 - **FIX (R3.16)**: Selected parent+child nodes now move at the same speed when dragged together — root cause: `MoveNode` in `sync.rs` propagated dx/dy to **all** descendants' cached bounds; when both parent and child were selected and dragged, the child received the delta twice (once from its own `MoveNode` + once from the parent's descendant propagation); fix: new `apply_mutation_with_co_selected()` method accepts a slice of co-selected `NodeId`s and skips descendant propagation for nodes in that set; `CommandStack::execute_with_co_selected()` and `FdCanvas::apply_mutations()` wire the co-selected context through the pipeline
