@@ -3132,8 +3132,12 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         if (!body || !window.fdCanvas) return;
         const text = window.fdCanvas.get_text();
         const notes = parseNotesFromText(text);
+        body.innerHTML = '';
         if (notes.length === 0) {
-          body.innerHTML = '<p class="notes-empty">No notes yet. Add a note via right-click \\u2192 Add Note.</p>';
+          const empty = document.createElement('p');
+          empty.className = 'notes-empty';
+          empty.textContent = 'No notes yet. Add a note via right-click → Add Note.';
+          body.appendChild(empty);
           return;
         }
         const groups = {};
@@ -3142,24 +3146,34 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
           if (!groups[key]) groups[key] = [];
           groups[key].push(n);
         }
-        let html = '';
         for (const [nodeId, items] of Object.entries(groups)) {
-          html += '<div class="note-group">';
-          html += '<div class="note-group-header" data-node="' + nodeId + '" title="Click to select @' + nodeId + '">@' + nodeId + '</div>';
-          for (const item of items) {
-            html += '<div class="note-item ' + item.type + '">' + item.text + '</div>';
-          }
-          html += '</div>';
-        }
-        body.innerHTML = html;
-        body.querySelectorAll('.note-group-header').forEach(el => {
-          el.addEventListener('click', () => {
-            const nid = el.dataset.node;
+          const groupDiv = document.createElement('div');
+          groupDiv.className = 'note-group';
+
+          const header = document.createElement('div');
+          header.className = 'note-group-header';
+          header.dataset.node = nodeId;
+          header.title = 'Click to select @' + nodeId;
+          header.textContent = '@' + nodeId;
+
+          header.addEventListener('click', () => {
+            const nid = header.dataset.node;
             if (nid && nid !== '_root' && window.fdCanvas) {
               window.fdCanvas.select_by_id(nid);
             }
           });
-        });
+
+          groupDiv.appendChild(header);
+
+          for (const item of items) {
+            const noteDiv = document.createElement('div');
+            noteDiv.className = 'note-item ' + item.type;
+            noteDiv.textContent = item.text;
+            groupDiv.appendChild(noteDiv);
+          }
+
+          body.appendChild(groupDiv);
+        }
       }
 
       window.toggleNotesPanel = function() {
