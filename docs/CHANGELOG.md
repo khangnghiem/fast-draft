@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.10.121 — Fix WASM Import Error on Chrome/Edge (R6.9)
+
+- **FIX (R6.9)**: Canvas no longer fails on Chrome with `WebAssembly.instantiate(): Import #0 "./fd_wasm_bg.js" "__wbg_instanceof_Window_ed49b2db8df90359": function import requires a callable` — root cause: stale `fd_wasm.js` glue file cached by browser while `fd_wasm_bg.wasm` was updated; the `modulepreload` link and dynamic `import()` call had no cache-busting `?v=` query strings, causing Chrome/Edge to serve mismatched JS+WASM pairs
+- **INFRA**: Added `?v=0.11.5` to all four WASM paths: `modulepreload` and `preload` in `index.html`, `import()` and `wasm.default()` in `playground.js`; these are auto-replaced with git SHA by `pages.yml` on every deploy
+- **INFRA**: Extended `pages.yml` auto-bust step to also `sed` `playground.js` (was only `index.html`); ensures WASM import paths get unique URLs on every deploy
+- **DOCS**: New LESSONS.md entry — "WASM Modulepreload Cache Mismatch Breaks Chrome/Edge"
+
 ### v0.10.120 — Website Theme Polish Batch 2 (R6.5)
 
 - **UX (R6.5)**: Animated hero skeleton during WASM load — three CSS shapes (card, title bar, button) assemble from scattered positions with spring-curve easing; purple→blue gradient progress bar fills during load; status text transitions through "Loading engine…" → "Initializing runtime…" → "Parsing scene…" → "✓ Ready"; smooth 400ms fade-out when canvas is ready; `prefers-reduced-motion` fallback disables assembly animation
