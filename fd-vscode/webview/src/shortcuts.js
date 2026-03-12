@@ -69,6 +69,20 @@ document.addEventListener("keydown", (e) => {
     closeAnnotationCard();
     closeContextMenu();
     closeShortcutHelp();
+    // Exit fullscreen mode on Escape (before Zen mode)
+    if (document.body.classList.contains("fullscreen-mode")) {
+      applyFullscreenMode(false);
+      vscode.setState({ ...(vscode.getState() || {}), fullscreenMode: false });
+    }
+  }
+
+  // ── Shift+F: toggle fullscreen ──
+  if (e.key === "F" && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    e.preventDefault();
+    const isFull = document.body.classList.contains("fullscreen-mode");
+    applyFullscreenMode(!isFull);
+    vscode.setState({ ...(vscode.getState() || {}), fullscreenMode: !isFull });
+    return;
   }
 
   // ── Grid toggle shortcut ──

@@ -1323,6 +1323,20 @@ document.addEventListener("keydown", (e) => {
     closeAnnotationCard();
     closeContextMenu();
     closeShortcutHelp();
+    // Exit fullscreen mode on Escape (before Zen mode)
+    if (document.body.classList.contains("fullscreen-mode")) {
+      applyFullscreenMode(false);
+      vscode.setState({ ...(vscode.getState() || {}), fullscreenMode: false });
+    }
+  }
+
+  // ── Shift+F: toggle fullscreen ──
+  if (e.key === "F" && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    e.preventDefault();
+    const isFull = document.body.classList.contains("fullscreen-mode");
+    applyFullscreenMode(!isFull);
+    vscode.setState({ ...(vscode.getState() || {}), fullscreenMode: !isFull });
+    return;
   }
 
   // ── Grid toggle shortcut ──
@@ -1939,12 +1953,7 @@ function updateFloatingBar() {
   if (!fab || !fdCanvas) return;
 
   const selectedId = fdCanvas.get_selected_id();
-  if (!selectedId || inlineEditorActive) {
-    fab.classList.remove("visible");
-    return;
-  }
-  // Hide FAB during draw gestures (not during select-tool move — FAB tracks via side-effects loop)
-  if (pointerIsDown && fdCanvas.get_tool_name() !== 'select') {
+  if (!selectedId || pointerIsDown || inlineEditorActive) {
     fab.classList.remove("visible");
     return;
   }
@@ -6093,6 +6102,37 @@ function applyZenMode(isZen) {
   }
 }
 
+
+// ─── Full Screen Mode Toggle ──────────────────────────────────────────────────
+
+function setupFullscreenToggle() {
+  const btn = document.getElementById("fullscreen-toggle-btn");
+  if (!btn) return;
+
+  // Restore persisted state
+  const savedState = vscode.getState();
+  if (savedState && savedState.fullscreenMode) {
+    applyFullscreenMode(true);
+  }
+
+  btn.addEventListener("click", () => {
+    const isFull = document.body.classList.contains("fullscreen-mode");
+    applyFullscreenMode(!isFull);
+    vscode.setState({ ...(vscode.getState() || {}), fullscreenMode: !isFull });
+  });
+}
+
+function applyFullscreenMode(isFull) {
+  const btn = document.getElementById("fullscreen-toggle-btn");
+  if (isFull) {
+    document.body.classList.add("fullscreen-mode");
+    if (btn) { btn.textContent = '✕'; btn.title = 'Exit Full Screen (Esc)'; btn.classList.add('fs-active'); }
+  } else {
+    document.body.classList.remove("fullscreen-mode");
+    if (btn) { btn.textContent = '⛶'; btn.title = 'Full Screen (⇧F)'; btn.classList.remove('fs-active'); }
+  }
+}
+
 // ─── Copy / Paste / Cut / Select All (Figma/Sketch standard) ─────────────────
 
 /** Clipboard buffer for FD node text */
@@ -7064,6 +7104,7 @@ async function main() {
     setupThemeToggle();
     setupSketchyToggle();
     setupZenModeToggle();
+    setupFullscreenToggle();
     setupZoomIndicator();
     setupGridToggle();
     setupSpecBadgeToggle();
@@ -7309,8 +7350,6 @@ function scheduleSideEffects() {
     if (viewMode === "spec") refreshSpecView();
     refreshLayersPanel();
     renderMinimap();
-    updateFloatingBar();
-    updatePropertiesPanel();
   }, 100);
 }
 

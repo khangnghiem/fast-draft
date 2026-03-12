@@ -12,6 +12,7 @@ import { autocompletion, closeBrackets, closeBracketsKeymap } from 'https://esm.
 import { linter, lintGutter } from 'https://esm.sh/@codemirror/lint@6';
 import { defaultKeymap, history, historyKeymap } from 'https://esm.sh/@codemirror/commands@6';
 import { highlightSelectionMatches } from 'https://esm.sh/@codemirror/search@6';
+import LZString from 'https://esm.sh/lz-string@1.5.0';
 
 // ─── FD Language Definition (StreamLanguage) ─────────────────────────────
 const fdLanguage = StreamLanguage.define({
@@ -218,6 +219,7 @@ let zoomLevel = 1.0;
 let gridEnabled = false;
 const GRID_SPACING = 20;
 let zenMode = false;
+let fullscreenMode = false;
 const ZOOM_MIN = 0.1, ZOOM_MAX = 5;
 let isPanning = false;
 let inlineEditorActive = false;
@@ -344,6 +346,19 @@ function fitToContent(canvas) {
     updateZoomIndicator();
     renderDirty = true; uiDirty = true;
   } catch (_) { }
+}
+
+/** Toggle full-screen mode (expands playground to fill entire viewport) */
+function toggleFullscreen() {
+  fullscreenMode = !fullscreenMode;
+  document.body.classList.toggle('fullscreen-mode', fullscreenMode);
+  const btn = document.getElementById('fullscreen-toggle-btn');
+  if (btn) {
+    btn.textContent = fullscreenMode ? '✕' : '⛶';
+    btn.title = fullscreenMode ? 'Exit Full Screen (Esc)' : 'Full Screen (⇧F)';
+    btn.classList.toggle('fs-active', fullscreenMode);
+  }
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
 }
 
 /** Show a brief toast notification */
@@ -1075,13 +1090,23 @@ function setupContextMenu() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeContextMenu();
-      // Exit Zen mode on Escape
-      if (zenMode) {
+      // Exit fullscreen mode on Escape
+      if (fullscreenMode) {
+        toggleFullscreen();
+      } else if (zenMode) {
+        // Exit Zen mode on Escape
         zenMode = false;
         document.querySelector('.hero-playground')?.classList.remove('zen-mode');
         const zb = document.getElementById('zen-toggle-btn');
         if (zb) { zb.textContent = '🧘'; zb.title = 'Zen Mode (Esc)'; }
         setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+      }
+    }
+    // Shift+F → toggle fullscreen
+    if (e.key === 'F' && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        toggleFullscreen();
       }
     }
   });
@@ -2305,7 +2330,17 @@ async function initPlayground() {
     fdCanvas.set_theme(true);
     wrapper.classList.add('dark-canvas');
     if (statusEl) statusEl.textContent = 'Parsing scene…';
-    fdCanvas.set_text(DEFAULT_FD);
+    // Deep link: load ?code= param if present, else use default
+    const urlParams = new URLSearchParams(window.location.search);
+    const codeParam = urlParams.get('code');
+    let initialFd = DEFAULT_FD;
+    if (codeParam) {
+      try {
+        const decoded = LZString.decompressFromEncodedURIComponent(codeParam);
+        if (decoded && decoded.trim().length > 0) initialFd = decoded;
+      } catch (_) { /* invalid code param, use default */ }
+    }
+    fdCanvas.set_text(initialFd);
     if (statusEl) statusEl.textContent = '✓ Ready';
 
     // ── Create CodeMirror Editor ──────────────────────────────────────
@@ -2382,7 +2417,7 @@ async function initPlayground() {
 
     editorView = new EditorView({
       state: EditorState.create({
-        doc: DEFAULT_FD,
+        doc: initialFd,
         extensions: [
           lineNumbers(),
           highlightActiveLine(),
@@ -2443,6 +2478,32 @@ async function initPlayground() {
       zenBtn.title = zenMode ? 'Exit Zen Mode (Esc)' : 'Zen Mode (Esc)';
       setTimeout(() => { resizeCanvas(); renderCanvas(); }, 50);
     });
+
+    // Full Screen toggle
+    document.getElementById('fullscreen-toggle-btn')?.addEventListener('click', toggleFullscreen);
+
+    // Share button — copy ?code= deep link to clipboard
+    document.getElementById('share-btn')?.addEventListener('click', () => {
+      if (!editorView) return;
+      const text = editorView.state.doc.toString();
+      const compressed = LZString.compressToEncodedURIComponent(text);
+      const url = new URL(window.location.href);
+      url.searchParams.set('code', compressed);
+      // Also preserve fullscreen state if active
+      if (fullscreenMode) url.searchParams.set('fullscreen', '');
+      else url.searchParams.delete('fullscreen');
+      navigator.clipboard.writeText(url.toString()).then(() => {
+        showToast('Link copied to clipboard!');
+      }).catch(() => {
+        // Fallback: show URL in prompt
+        prompt('Copy this link:', url.toString());
+      });
+    });
+
+    // Auto-fullscreen from URL param
+    if (urlParams.has('fullscreen')) {
+      setTimeout(toggleFullscreen, 100);
+    }
 
     // ── Toolbar buttons ──────────────────────────────────────────────
     document.getElementById('ai-touch-btn')?.addEventListener('click', aiTouch);

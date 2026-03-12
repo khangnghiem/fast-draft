@@ -1561,3 +1561,34 @@ function applyZenMode(isZen) {
   }
 }
 
+
+// ─── Full Screen Mode Toggle ──────────────────────────────────────────────────
+
+function setupFullscreenToggle() {
+  const btn = document.getElementById("fullscreen-toggle-btn");
+  if (!btn) return;
+
+  // Restore persisted state
+  const savedState = vscode.getState();
+  if (savedState && savedState.fullscreenMode) {
+    applyFullscreenMode(true);
+  }
+
+  btn.addEventListener("click", () => {
+    const isFull = document.body.classList.contains("fullscreen-mode");
+    applyFullscreenMode(!isFull);
+    vscode.setState({ ...(vscode.getState() || {}), fullscreenMode: !isFull });
+  });
+}
+
+function applyFullscreenMode(isFull) {
+  const btn = document.getElementById("fullscreen-toggle-btn");
+  if (isFull) {
+    document.body.classList.add("fullscreen-mode");
+    if (btn) { btn.textContent = '✕'; btn.title = 'Exit Full Screen (Esc)'; btn.classList.add('fs-active'); }
+  } else {
+    document.body.classList.remove("fullscreen-mode");
+    if (btn) { btn.textContent = '⛶'; btn.title = 'Full Screen (⇧F)'; btn.classList.remove('fs-active'); }
+  }
+}
+

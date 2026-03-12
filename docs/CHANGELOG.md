@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.10.127 — Fullscreen Mode + Deep Links (R6.6)
+
+- **FEATURE (R6.6)**: Full Screen mode — ⛶ button in canvas toolbar expands playground to fill entire viewport; `Shift+F` shortcut; `Escape` to exit; separate from Zen mode (Zen hides code editor, Fullscreen hides page chrome); CSS `fullscreen-mode` class with fixed positioning and smooth enter animation
+- **FEATURE (R6.6)**: Deep linking with URL compression — 🔗 Share button compresses current editor text via LZ-String (`compressToEncodedURIComponent`) and copies `?code=...` URL to clipboard; loading a `?code=` URL decompresses and populates the editor; `?fullscreen` parameter auto-enters fullscreen on load
+- **PARITY (R6.6)**: VS Code extension — fullscreen toggle button, CSS, Shift+F shortcut, and Escape exit added to `webview-html.ts`, `navigation.js`, `shortcuts.js`, `main.js`; state persisted via `vscode.setState()`
+- **SITE**: Changes in `site/style.css`, `site/index.html`, `site/playground.js`
+- **EXTENSION**: Changes in `fd-vscode/src/webview-html.ts`, `fd-vscode/webview/src/navigation.js`, `fd-vscode/webview/src/shortcuts.js`, `fd-vscode/webview/src/main.js`, `fd-vscode/webview/main.js` (built)
+
 ### v0.10.126 — FAB Persistent During Drag (R6.6)
 
 - **UX (R6.6)**: Floating Action Bar (FAB) now stays visible and tracks the node during move drag — previously disappeared on pointerdown and only reappeared on pointerup; `updateFab(canvas)` added to the ~10fps render loop alongside `updatePropertiesPanel()`; CSS transitions (`left 0.08s ease, top 0.08s ease`) provide smooth tracking animation for free

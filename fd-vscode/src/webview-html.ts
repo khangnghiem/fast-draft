@@ -2429,6 +2429,25 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       display: block !important;
     }
 
+    /* ── Full Screen Mode (separate from Zen) ── */
+    .fullscreen-mode #toolbar {
+      padding: 4px 8px;
+      gap: 2px;
+    }
+    .fullscreen-mode .zen-full-only { display: none !important; }
+    .fullscreen-mode #layers-panel { display: none !important; }
+    .fullscreen-mode #props-panel { display: none !important; }
+    .fullscreen-mode #minimap-container { display: none !important; }
+    .fullscreen-mode #spec-overlay { display: none !important; }
+    .fullscreen-mode #floating-toolbar { display: none !important; }
+    #fullscreen-toggle-btn {
+      font-size: 15px;
+    }
+    #fullscreen-toggle-btn.fs-active {
+      color: var(--fd-accent);
+      background: var(--fd-accent-dim);
+    }
+
     /* ── Renamify Panel (diff-preview overlay) ── */
     #renamify-panel {
       display: none;
@@ -2580,6 +2599,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
     <div class="tb-zone tb-right">
       <span class="zen-full-only" id="status">Loading WASM…</span>
+      <button class="tool-btn" id="fullscreen-toggle-btn" title="Full Screen (⇧F)">⛶</button>
       <button class="tool-btn" id="zen-toggle-btn" title="Switch to Zen mode">🧘</button>
       <!-- Settings Hamburger ☰ -->
       <div class="settings-dropdown-container zen-full-only" id="settings-dropdown-container">
