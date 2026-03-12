@@ -38,6 +38,11 @@
         <a href="#architecture">Architecture</a>
         <a href="/docs/">Docs</a>
 
+        <button id="canvas-theme-toggle" class="theme-pill" title="Toggle canvas theme" aria-label="Toggle canvas theme">
+          <span class="theme-pill-icon theme-pill-sun">☀️</span>
+          <span class="theme-pill-icon theme-pill-moon">🌙</span>
+          <span class="theme-pill-slider"></span>
+        </button>
         <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener" class="btn-nav">Install Extension</a>
       </div>
       <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle menu">
@@ -228,13 +233,13 @@
             </div>
             <div id="dimension-tooltip"></div>
             <div id="canvas-loading" class="canvas-loading">
-              <div class="skeleton-preview">
-                <div class="skeleton-shape skeleton-rect"></div>
-                <div class="skeleton-shape skeleton-circle"></div>
-                <div class="skeleton-shape skeleton-line"></div>
-                <div class="skeleton-shape skeleton-line skeleton-line-short"></div>
+              <div class="skeleton-scene">
+                <div class="skeleton-shape skeleton-card"></div>
+                <div class="skeleton-shape skeleton-title"></div>
+                <div class="skeleton-shape skeleton-btn-shape"></div>
               </div>
-              <p class="loading-text">Initializing WASM engine…</p>
+              <div class="loading-progress"><div class="loading-progress-bar"></div></div>
+              <p class="loading-text" id="loading-status">Loading engine…</p>
             </div>
             <div class="panel-resize-handle props-handle" id="props-resize"></div>
             <div class="panel-restore-strip layers-restore" id="layers-restore" title="Show layers panel"></div>
