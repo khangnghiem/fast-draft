@@ -114,16 +114,29 @@ impl CommandStack {
 
     /// Execute a mutation via the sync engine and push to undo stack.
     pub fn execute(&mut self, engine: &mut SyncEngine, mutation: GraphMutation, description: &str) {
+        self.execute_with_co_selected(engine, mutation, description, &[]);
+    }
+
+    /// Execute a mutation with co-selected context (for multi-node drag).
+    /// `co_selected` lists all NodeIds being moved in the same batch so that
+    /// descendant propagation skips nodes that have their own MoveNode.
+    pub fn execute_with_co_selected(
+        &mut self,
+        engine: &mut SyncEngine,
+        mutation: GraphMutation,
+        description: &str,
+        co_selected: &[fd_core::id::NodeId],
+    ) {
         if self.batch_depth > 0 {
             // Inside a batch: apply the mutation live but don't track it.
             // The snapshot at end_batch() will capture the cumulative effect.
-            engine.apply_mutation(mutation);
+            engine.apply_mutation_with_co_selected(mutation, co_selected);
             self.batch_dirty = true;
             return;
         }
 
         let inverse = compute_inverse(engine, &mutation);
-        engine.apply_mutation(mutation.clone());
+        engine.apply_mutation_with_co_selected(mutation.clone(), co_selected);
 
         let cmd = Command::Single {
             forward: Box::new(mutation),
