@@ -81,6 +81,30 @@ export class FdCanvas {
         }
     }
     /**
+     * Create a text node as a child of an existing shape (rect/ellipse/frame).
+     * Used by double-click to drill into a shape and start inline editing.
+     * Returns the new text node's ID, or empty string on failure.
+     * @param {string} parent_id
+     * @param {string} content
+     * @returns {string}
+     */
+    create_child_text(parent_id, content) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(parent_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_create_child_text(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+            deferred3_0 = ret[0];
+            deferred3_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    /**
      * Create an edge between two nodes.
      * Returns the new edge ID, or empty string on failure.
      * @param {string} from_id
@@ -573,6 +597,26 @@ export class FdCanvas {
         }
     }
     /**
+     * Get the ID of the first text child node of a shape.
+     * Returns empty string if the shape has no text child.
+     * @param {string} parent_id
+     * @returns {string}
+     */
+    get_text_child_id(parent_id) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(parent_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_get_text_child_id(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * Get IDs of all direct Text children of a node.
      * Returns JSON array of string IDs, e.g. `["label","subtitle"]`.
      * Used by JS to remeasure text bounds after parent resize.
@@ -914,12 +958,16 @@ export class FdCanvas {
     }
     /**
      * Render the scene to a Canvas2D context.
+     *
+     * * `skip_grid` — skip drawing the background grid dots (JS handles grid separately).
+     * * `skip_bg` — skip filling the background color (caller already filled in identity space).
      * @param {CanvasRenderingContext2D} ctx
      * @param {number} time_ms
      * @param {boolean} skip_grid
+     * @param {boolean} skip_bg
      */
-    render(ctx, time_ms, skip_grid) {
-        wasm.fdcanvas_render(this.__wbg_ptr, ctx, time_ms, skip_grid);
+    render(ctx, time_ms, skip_grid, skip_bg) {
+        wasm.fdcanvas_render(this.__wbg_ptr, ctx, time_ms, skip_grid, skip_bg);
     }
     /**
      * Render only the selected nodes (and their children) to the given context.

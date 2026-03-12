@@ -1886,21 +1886,6 @@ impl FdCanvas {
             }
         }
 
-        // Text child content (for rect/ellipse — find first Text child)
-        if matches!(
-            node.kind,
-            NodeKind::Rect { .. } | NodeKind::Ellipse { .. } | NodeKind::Frame { .. }
-        ) && let Some(idx) = self.engine.graph.index_of(id)
-        {
-            for child_idx in self.engine.graph.children(idx) {
-                if let NodeKind::Text { ref content, .. } = self.engine.graph.graph[child_idx].kind
-                {
-                    props.insert("label".into(), serde_json::Value::String(content.clone()));
-                    break;
-                }
-            }
-        }
-
         // Fill
         if let Some(Paint::Solid(c)) = &style.fill {
             props.insert("fill".into(), serde_json::Value::String(c.to_hex()));
@@ -2241,53 +2226,7 @@ impl FdCanvas {
                 id,
                 content: value.to_string(),
             },
-            "label" => {
-                // Find or create a text child node for the shape
-                if let Some(parent_idx) = self.engine.graph.index_of(id) {
-                    // Find existing text child
-                    let existing_text_child = self
-                        .engine
-                        .graph
-                        .children(parent_idx)
-                        .into_iter()
-                        .find(|&ci| {
-                            matches!(self.engine.graph.graph[ci].kind, NodeKind::Text { .. })
-                        });
 
-                    if value.is_empty() {
-                        // Remove text child if value is empty
-                        if let Some(child_idx) = existing_text_child {
-                            let child_id = self.engine.graph.graph[child_idx].id;
-                            GraphMutation::RemoveNode { id: child_id }
-                        } else {
-                            return false;
-                        }
-                    } else if let Some(child_idx) = existing_text_child {
-                        // Update existing text child
-                        let child_id = self.engine.graph.graph[child_idx].id;
-                        GraphMutation::SetText {
-                            id: child_id,
-                            content: value.to_string(),
-                        }
-                    } else {
-                        // Create new text child node
-                        let child_id = NodeId::anonymous("text");
-                        let node = SceneNode::new(
-                            child_id,
-                            NodeKind::Text {
-                                content: value.to_string(),
-                                max_width: None,
-                            },
-                        );
-                        GraphMutation::AddNode {
-                            parent_id: id,
-                            node: Box::new(node),
-                        }
-                    }
-                } else {
-                    return false;
-                }
-            }
             _ => return false,
         };
 
@@ -2469,6 +2408,61 @@ impl FdCanvas {
             self.engine.flush_to_text();
         }
         changed
+    }
+
+    /// Create a text node as a child of an existing shape (rect/ellipse/frame).
+    /// Used by double-click to drill into a shape and start inline editing.
+    /// Returns the new text node's ID, or empty string on failure.
+    pub fn create_child_text(&mut self, parent_id: &str, content: &str) -> String {
+        let pid = NodeId::intern(parent_id);
+        // Verify parent exists and is a shape
+        let is_shape = self.engine.graph.get_by_id(pid).is_some_and(|n| {
+            matches!(
+                n.kind,
+                NodeKind::Rect { .. } | NodeKind::Ellipse { .. } | NodeKind::Frame { .. }
+            )
+        });
+        if !is_shape {
+            return String::new();
+        }
+        let child_id = NodeId::anonymous("text");
+        let node = SceneNode::new(
+            child_id,
+            NodeKind::Text {
+                content: content.to_string(),
+                max_width: None,
+            },
+        );
+        let mutation = GraphMutation::AddNode {
+            parent_id: pid,
+            node: Box::new(node),
+        };
+        let changed = self.apply_mutations(vec![mutation]);
+        if changed {
+            self.select_tool.selected = vec![child_id];
+            self.select_tool.visual_highlight = vec![child_id];
+            self.engine.flush_to_text();
+            child_id.as_str().to_string()
+        } else {
+            String::new()
+        }
+    }
+
+    /// Get the ID of the first text child node of a shape.
+    /// Returns empty string if the shape has no text child.
+    pub fn get_text_child_id(&self, parent_id: &str) -> String {
+        let pid = NodeId::intern(parent_id);
+        if let Some(parent_idx) = self.engine.graph.index_of(pid) {
+            for child_idx in self.engine.graph.children(parent_idx) {
+                if matches!(
+                    self.engine.graph.graph[child_idx].kind,
+                    NodeKind::Text { .. }
+                ) {
+                    return self.engine.graph.graph[child_idx].id.as_str().to_string();
+                }
+            }
+        }
+        String::new()
     }
 
     /// Create an edge between two nodes.

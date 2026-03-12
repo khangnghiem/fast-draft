@@ -39,6 +39,12 @@ export class FdCanvas {
      */
     compute_guides_for_rect(x: number, y: number, w: number, h: number): string;
     /**
+     * Create a text node as a child of an existing shape (rect/ellipse/frame).
+     * Used by double-click to drill into a shape and start inline editing.
+     * Returns the new text node's ID, or empty string on failure.
+     */
+    create_child_text(parent_id: string, content: string): string;
+    /**
      * Create an edge between two nodes.
      * Returns the new edge ID, or empty string on failure.
      */
@@ -191,6 +197,11 @@ export class FdCanvas {
      */
     get_text(): string;
     /**
+     * Get the ID of the first text child node of a shape.
+     * Returns empty string if the shape has no text child.
+     */
+    get_text_child_id(parent_id: string): string;
+    /**
      * Get IDs of all direct Text children of a node.
      * Returns JSON array of string IDs, e.g. `["label","subtitle"]`.
      * Used by JS to remeasure text bounds after parent resize.
@@ -308,8 +319,11 @@ export class FdCanvas {
     remove_node_animations(node_id: string): boolean;
     /**
      * Render the scene to a Canvas2D context.
+     *
+     * * `skip_grid` — skip drawing the background grid dots (JS handles grid separately).
+     * * `skip_bg` — skip filling the background color (caller already filled in identity space).
      */
-    render(ctx: CanvasRenderingContext2D, time_ms: number, skip_grid: boolean): void;
+    render(ctx: CanvasRenderingContext2D, time_ms: number, skip_grid: boolean, skip_bg: boolean): void;
     /**
      * Render only the selected nodes (and their children) to the given context.
      * Used for "Copy as PNG" exports. Translates context by `offset_x, offset_y`.
@@ -394,6 +408,7 @@ export interface InitOutput {
     readonly fdcanvas_cancel_drag: (a: number) => number;
     readonly fdcanvas_clear_pressed: (a: number) => void;
     readonly fdcanvas_compute_guides_for_rect: (a: number, b: number, c: number, d: number, e: number) => [number, number];
+    readonly fdcanvas_create_child_text: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_create_edge: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_create_edge_at: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_create_node_at: (a: number, b: number, c: number, d: number, e: number) => number;
@@ -422,6 +437,7 @@ export interface InitOutput {
     readonly fdcanvas_get_selection_bounds: (a: number) => any;
     readonly fdcanvas_get_sketchy_mode: (a: number) => number;
     readonly fdcanvas_get_text: (a: number) => [number, number];
+    readonly fdcanvas_get_text_child_id: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_text_children: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_theme_json: (a: number) => [number, number];
     readonly fdcanvas_get_tool_name: (a: number) => [number, number];
@@ -443,7 +459,7 @@ export interface InitOutput {
     readonly fdcanvas_push_undo_snapshot: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fdcanvas_redo: (a: number) => number;
     readonly fdcanvas_remove_node_animations: (a: number, b: number, c: number) => number;
-    readonly fdcanvas_render: (a: number, b: any, c: number, d: number) => void;
+    readonly fdcanvas_render: (a: number, b: any, c: number, d: number, e: number) => void;
     readonly fdcanvas_render_export: (a: number, b: any, c: number, d: number) => void;
     readonly fdcanvas_resize: (a: number, b: number, c: number) => void;
     readonly fdcanvas_select_by_id: (a: number, b: number, c: number) => number;

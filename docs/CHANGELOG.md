@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.10.124 — Figma-Style Double-Click Text Drill-In (R3.28)
+
+- **UX (R3.28)**: Double-clicking a rect/ellipse/frame now drills into its child text node (Figma behavior) — if no text child exists, creates one and opens inline editor; if text child exists, selects it and opens inline editor; selection transfers from parent shape to child text node during editing
+- **WASM**: New `create_child_text(parent_id, content)` API — creates a text node as child of a shape, selects it, and returns the new text ID; validates parent is a rect/ellipse/frame
+- **WASM**: New `get_text_child_id(parent_id)` API — returns the ID of the first text child node of a shape, or empty string if none exists
+- **CLEANUP**: Removed `"label"` abstraction from WASM APIs — `get_selected_node_props()` no longer returns a `label` property for shapes; `set_node_prop("label", ...)` handler removed; inline editing now operates entirely through real text node IDs and `"content"` prop
+- **PARITY**: Frame nodes now support double-click text editing (was only rect/ellipse)
+- **SITE**: `playground.js` updated to use `create_child_text()` / `get_text_child_id()` instead of label prop
+- **EXTENSION**: `inline-edit.js` and bundled `main.js` updated with same drill-in logic
+
 ### v0.10.123 — Unified Playground Header Bar (R6.6)
 
 - **UX (R6.6)**: Code and Design headers are now visually connected as one continuous frosted glass bar — both panels share unified `--header-bg` and `--header-border` CSS tokens; `::before` pseudo-element on the resize handle bridges the 6px gutter gap; removes the `.dark-theme #canvas-toolbar` override (now unnecessary); headers have matching `backdrop-filter: blur(20px) saturate(180%)` and 0.5px hairline border-bottom
