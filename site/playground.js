@@ -2437,7 +2437,13 @@ async function initPlayground() {
 
     // Auto-center scene content in viewport on init (deferred for layout)
     // Defer fit-to-content — WASM layout resolve needs a frame to settle.
-    setTimeout(() => { fitToContent(canvas); renderCanvas(); }, 100);
+    setTimeout(() => {
+      fitToContent(canvas);
+      renderCanvas();
+      refreshLayersPanel();
+      renderMinimap(canvas);
+      uiDirty = false; // first render done
+    }, 100);
 
     // Hide loading overlay
     loading.classList.add('hidden');
