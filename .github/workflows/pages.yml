@@ -48,6 +48,12 @@ jobs:
             echo "Copied Pages Functions to site/"
           fi
 
+      - name: Auto-bust cache (replace ?v=X.Y.Z with git SHA)
+        run: |
+          SHA=$(git rev-parse --short=7 HEAD)
+          sed -i "s/?v=[0-9.]*/?v=$SHA/g" site/index.html
+          echo "Cache-bust: ?v=$SHA"
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
