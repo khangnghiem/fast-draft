@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Changelog — Fast Draft Docs</title>
+  <meta name="description" content="What's new in Fast Draft — release notes, new features, bug fixes, and improvements." />
+  <meta property="og:title" content="Changelog — Fast Draft Docs" />
+  <meta property="og:description" content="What's new in Fast Draft — release notes, new features, bug fixes, and improvements." />
+  <link rel="canonical" href="https://fast-draft.com/docs/changelog.html" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ─── Nav ─── -->
+  <nav class="docs-nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">Fast Draft</span>
+      </a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/docs/">Docs</a>
+        <a href="/docs/shortcuts.html">Shortcuts</a>
+        <a href="/docs/changelog.html" class="active">Changelog</a>
+        <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener" class="btn-nav">Install</a>
+      </div>
+      <button class="mobile-menu-btn" aria-label="Toggle menu" onclick="document.querySelector('.nav-links').classList.toggle('open');this.classList.toggle('open')">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="docs-layout">
+    <!-- ─── Sidebar ─── -->
+    <aside class="docs-sidebar" id="docs-sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Pages</div>
+        <ul class="sidebar-links">
+          <li><a href="/docs/" class="sidebar-page-link"><span class="page-icon">📖</span> Language Reference</a></li>
+          <li><a href="/docs/shortcuts.html" class="sidebar-page-link"><span class="page-icon">⌨️</span> Shortcuts</a></li>
+          <li><a href="/docs/changelog.html" class="sidebar-page-link active"><span class="page-icon">📋</span> Changelog</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Recent Versions</div>
+        <ul class="sidebar-links">
+          <li><a href="#v0.10.118">v0.10.118</a></li>
+          <li><a href="#v0.10.117">v0.10.117</a></li>
+          <li><a href="#v0.10.116">v0.10.116</a></li>
+          <li><a href="#v0.10.115">v0.10.115</a></li>
+          <li><a href="#v0.10.114">v0.10.114</a></li>
+          <li><a href="#v0.10.112">v0.10.112</a></li>
+          <li><a href="#v0.10.111">v0.10.111</a></li>
+          <li><a href="#v0.10.108">v0.10.108</a></li>
+          <li><a href="#v0.10.107">v0.10.107</a></li>
+          <li><a href="#v0.10.103">v0.10.103</a></li>
+          <li><a href="#v0.10.100">v0.10.100</a></li>
+          <li><a href="#older">Older versions</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- ─── Content ─── -->
+    <main class="docs-content">
+      <h1>What's <span class="gradient-text">New</span></h1>
+      <p class="subtitle">Release notes for Fast Draft. Each version documents new features, bug fixes, and improvements across all platforms.</p>
+
+      <div class="callout callout-info">
+        <strong>ℹ️ Full changelog</strong> — for the complete changelog with 100+ versions, see <a href="https://github.com/khangnghiem/fast-draft/blob/main/docs/CHANGELOG.md" target="_blank">CHANGELOG.md on GitHub</a>.
+      </div>
+
+      <!-- v0.10.118 -->
+      <div class="changelog-version" id="v0.10.118">
+        <h3>v0.10.118 <span class="version-badge">Latest</span></h3>
+        <h4>Website Theme Polish — Batch 1</h4>
+        <ul>
+          <li><span class="changelog-tag tag-ux">UX</span> Canvas defaults to dark theme on marketing site — matches the dark page background</li>
+          <li><span class="changelog-tag tag-docs">SEO</span> Added OG social card for rich previews when shared on social platforms</li>
+          <li><span class="changelog-tag tag-ux">UX</span> Accent evolved to purple→blue gradient (<code>#6C5CE7</code> → <code>#0A84FF</code>) across hero, CTAs, and cards</li>
+          <li><span class="changelog-tag tag-ux">UX</span> Typography upgraded to Geist Sans + Geist Mono (Inter + JetBrains Mono as fallbacks)</li>
+          <li><span class="changelog-tag tag-ux">UX</span> Feature card micro-interactions — icon bounces, gradient overlays, staggered scroll-reveal</li>
+        </ul>
+      </div>
+
+      <!-- v0.10.117 -->
+      <div class="changelog-version" id="v0.10.117">
+        <h3>v0.10.117</h3>
+        <h4>Auto Cache-Bust Deploy Pipeline</h4>
+        <ul>
+          <li><span class="changelog-tag tag-infra">INFRA</span> <code>pages.yml</code> auto-bust — replaces <code>?v=X.Y.Z</code> with <code>?v=&lt;git-sha&gt;</code> before deploy; no manual version bumps needed</li>
+          <li><span class="changelog-tag tag-infra">INFRA</span> <code>site/_headers</code> — added <code>no-cache</code> for JS/CSS files; browsers always revalidate</li>
+        </ul>
+      </div>
+
+      <!-- v0.10.116 -->
+      <div class="changelog-version" id="v0.10.116">
+        <h3>v0.10.116</h3>
+        <h4>Fix Canvas Blank After Clicking a Node</h4>
+        <ul>
+          <li><span class="changelog-tag tag-fix">FIX</span> Canvas no longer goes blank after clicking a node — ResizeObserver/RAF race condition fixed</li>
+        </ul>
+      </div>
+
+      <!-- v0.10.115 -->
+      <div class="changelog-version" id="v0.10.115">
+        <h3>v0.10.115</h3>
+        <h4>Web Canvas Consistency Audit</h4>
+        <ul>
+          <li><span class="changelog-tag tag-feature">FEATURE</span> Inline text editing on double-click</li>
+          <li><span class="changelog-tag tag-feature">FEATURE</span> Frame tool shortcut (<kbd>F</kbd>)</li>
+          <li><span class="changelog-tag tag-feature">FEATURE</span> Arrow-key nudge (1px, Shift+10px)</li>
+          <li><span class="changelog-tag tag-feature">FEATURE</span> Zoom keyboard shortcuts (<kbd>⌘+</kbd> / <kbd>⌘-</kbd> / <kbd>⌘0</kbd>)</li>
+          <li><span class="changelog-tag tag-feature">FEATURE</span> Select All (<kbd>⌘A</kbd>)</li>
+          <li><span class="changelog-tag tag-fix">FIX</span> Context menu undo — all mutations now push undo snapshots</li>
+        </ul>
+      </div>
+
+      <!-- v0.10.114 -->
+      <div class="changelog-version" id="v0.10.114">
+        <h3>v0.10.114</h3>
+        <h4>Fix Canvas Background Fill</h4>
+        <ul>
+          <li><span class="changelog-tag tag-fix">FIX</span> Canvas background no longer shifts when panning/zooming — background fill moved to identity transform space</li>
+        </ul>
+      </div>
+
+      <!-- v0.10.112 -->
+      <div class="changelog-version" id="v0.10.112">
+        <h3>v0.10.112</h3>
+        <h4>Context Menu Enhancements</h4>
+        <ul>
+          <li><span class="changelog-tag tag-feature">FEATURE</span> Edge right-click with <code>hit_test_edge_at()</code> WASM API</li>
+          <li><span class="changelog-tag tag-feature">FEATURE</span> Lock/Unlock node — <code>locked</code> property parsed, emitted, and enforced</li>
+          <li><span class="changelog-tag tag-feature">FEATURE</span> Inline Rename — regex-replaces all <code>@oldId</code> references</li>
+          <li><span class="changelog-tag tag-feature">FEATURE</span> Edge Delete and Reverse Direction</li>
+          <li><span class="changelog-tag tag-ux">UX</span> Context menu 120ms fade-in animation</li>
+        </ul>
+      </div>
+
+      <!-- v0.10.111 -->
+      <div class="changelog-version" id="v0.10.111">
+        <h3>v0.10.111</h3>
+        <h4>Copy/Paste + Context-Aware Right-Click Menu</h4>
+        <ul>
+          <li><span class="changelog-tag tag-feature">FEATURE</span> <kbd>⌘C</kbd>/<kbd>⌘V</kbd>/<kbd>⌘X</kbd> Copy/Cut/Paste on canvas</li>
+          <li><span class="changelog-tag tag-feature">FEATURE</span> <kbd>⌘D</kbd> Duplicate shortcut</li>
+          <li><span class="changelog-tag tag-ux">UX</span> Context-aware right-click — node menu vs. canvas menu</li>
+          <li><span class="changelog-tag tag-ux">UX</span> Keyboard shortcut badges in context menu items</li>
+        </ul>
+      </div>
+
+      <!-- v0.10.108 -->
+      <div class="changelog-version" id="v0.10.108">
+        <h3>v0.10.108</h3>
+        <h4>Fix Drawing Tools + Playground UI</h4>
+        <ul>
+          <li><span class="changelog-tag tag-fix">FIX</span> Drawing tools now work — shapes appear on canvas AND sync to code editor</li>
+          <li><span class="changelog-tag tag-fix">FIX</span> Layers panel no longer auto-collapses from stale localStorage</li>
+          <li><span class="changelog-tag tag-ux">UX</span> Property panel inputs auto-select all text on focus</li>
+        </ul>
+      </div>
+
+      <!-- v0.10.107 -->
+      <div class="changelog-version" id="v0.10.107">
+        <h3>v0.10.107</h3>
+        <h4>Fix Node Can Only Be Moved Once</h4>
+        <ul>
+          <li><span class="changelog-tag tag-fix">FIX</span> Nodes can now be moved repeatedly — spatial index rebuilt after move/resize</li>
+          <li><span class="changelog-tag tag-perf">PERF</span> Spatial index rebuild is O(N log N) but only once per pointer-up</li>
+        </ul>
+      </div>
+
+      <!-- v0.10.103 -->
+      <div class="changelog-version" id="v0.10.103">
+        <h3>v0.10.103</h3>
+        <h4>Canvas Performance: Spatial Index + Bounds-Hash Skip</h4>
+        <ul>
+          <li><span class="changelog-tag tag-perf">PERF</span> O(log N) spatial index for hit testing</li>
+          <li><span class="changelog-tag tag-perf">PERF</span> Bounds-hash skip — identical layouts skip re-render</li>
+          <li><span class="changelog-tag tag-perf">PERF</span> Cached <code>CanvasTheme</code> — no per-frame allocation</li>
+          <li><span class="changelog-tag tag-perf">PERF</span> Bundled <code>handle_pointer_move()</code> — single WASM call</li>
+        </ul>
+      </div>
+
+      <!-- v0.10.100 -->
+      <div class="changelog-version" id="v0.10.100">
+        <h3>v0.10.100</h3>
+        <h4>Mobile Touch Interactions</h4>
+        <ul>
+          <li><span class="changelog-tag tag-fix">FIX</span> Canvas touch interactions work on mobile — single-finger tap, drag, draw</li>
+          <li><span class="changelog-tag tag-ux">UX</span> Two-finger pan on mobile</li>
+          <li><span class="changelog-tag tag-ux">UX</span> Pinch-to-zoom centered on pinch midpoint</li>
+          <li><span class="changelog-tag tag-fix">FIX</span> Dirty-flag rendering eliminates node flashing</li>
+        </ul>
+      </div>
+
+      <!-- Older -->
+      <div class="changelog-version" id="older">
+        <h3>Older Versions</h3>
+        <p>For the complete changelog history (v0.10.0–v0.10.99 and earlier), see the <a href="https://github.com/khangnghiem/fast-draft/blob/main/docs/CHANGELOG.md" target="_blank">full CHANGELOG.md on GitHub</a>.</p>
+        <p>Key milestones:</p>
+        <ul>
+          <li><strong>v0.10.94</strong> — Apple HIG canvas toolbar, AI Touch + Renamify</li>
+          <li><strong>v0.10.85</strong> — Edge selection on canvas</li>
+          <li><strong>v0.10.80</strong> — Migrate to Cloudflare Pages</li>
+          <li><strong>v0.10.77</strong> — Apple HIG canvas parity</li>
+          <li><strong>v0.10.66</strong> — Interactive playground with tools and undo</li>
+          <li><strong>v0.10.65</strong> — Playground-first landing page</li>
+          <li><strong>v0.10.60</strong> — AI comprehensibility score, auto-comments</li>
+          <li><strong>v0.10.58</strong> — Mermaid import, detach snap</li>
+        </ul>
+      </div>
+
+      <!-- Prev/Next -->
+      <div class="page-nav">
+        <a href="/docs/shortcuts.html" class="page-nav-link">
+          <span class="page-nav-label">← Previous</span>
+          <span class="page-nav-title">Keyboard Shortcuts</span>
+        </a>
+        <div></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="docs-footer">
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener">VS Code Marketplace</a>
+      <a href="https://github.com/khangnghiem/fast-draft/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+    </div>
+    <p>Made with Rust, WASM, and ❤️ by <a href="https://github.com/khangnghiem" target="_blank" rel="noopener">Khang Nghiêm</a></p>
+  </footer>
+
+  <script>
+    document.querySelector('.mobile-menu-btn')?.addEventListener('click', function() {
+      document.getElementById('docs-sidebar')?.classList.toggle('open');
+    });
+    const headings = document.querySelectorAll('h3[id]');
+    const sidebarLinks = document.querySelectorAll('.sidebar-links a[href^="#"]');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          sidebarLinks.forEach(l => l.classList.remove('active'));
+          const link = document.querySelector(`.sidebar-links a[href="#${entry.target.id}"]`);
+          if (link) link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-80px 0px -70% 0px' });
+    headings.forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

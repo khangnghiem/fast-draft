@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Keyboard Shortcuts — Fast Draft Docs</title>
+  <meta name="description" content="Complete keyboard shortcut reference for the Fast Draft canvas editor — tools, edit, transform, z-order, and modifier keys." />
+  <meta property="og:title" content="Keyboard Shortcuts — Fast Draft Docs" />
+  <meta property="og:description" content="Complete keyboard shortcut reference for the Fast Draft canvas editor." />
+  <link rel="canonical" href="https://fast-draft.com/docs/shortcuts.html" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ─── Nav ─── -->
+  <nav class="docs-nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">Fast Draft</span>
+      </a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/docs/">Docs</a>
+        <a href="/docs/shortcuts.html" class="active">Shortcuts</a>
+        <a href="/docs/changelog.html">Changelog</a>
+        <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener" class="btn-nav">Install</a>
+      </div>
+      <button class="mobile-menu-btn" aria-label="Toggle menu" onclick="document.querySelector('.nav-links').classList.toggle('open');this.classList.toggle('open')">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="docs-layout">
+    <!-- ─── Sidebar ─── -->
+    <aside class="docs-sidebar" id="docs-sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Pages</div>
+        <ul class="sidebar-links">
+          <li><a href="/docs/" class="sidebar-page-link"><span class="page-icon">📖</span> Language Reference</a></li>
+          <li><a href="/docs/shortcuts.html" class="sidebar-page-link active"><span class="page-icon">⌨️</span> Shortcuts</a></li>
+          <li><a href="/docs/changelog.html" class="sidebar-page-link"><span class="page-icon">📋</span> Changelog</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Sections</div>
+        <ul class="sidebar-links">
+          <li><a href="#tools">Tools</a></li>
+          <li><a href="#edit">Edit</a></li>
+          <li><a href="#transform">Transform</a></li>
+          <li><a href="#z-order">Z-Order</a></li>
+          <li><a href="#view">View</a></li>
+          <li><a href="#modifiers">Modifier Keys</a></li>
+          <li><a href="#floating-toolbar">Floating Toolbar</a></li>
+          <li><a href="#zen-mode">Zen Mode</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- ─── Content ─── -->
+    <main class="docs-content">
+      <h1>Keyboard <span class="gradient-text">Shortcuts</span></h1>
+      <p class="subtitle">Complete reference for canvas editor shortcuts. Works in both VS Code extension and the <a href="/">web playground</a>.</p>
+
+      <div class="callout callout-info">
+        <strong>ℹ️ Platform note</strong> — <kbd>⌘</kbd> on macOS = <kbd>Ctrl</kbd> on Windows/Linux. Shortcuts work when the canvas is focused (not the code editor).
+      </div>
+
+      <!-- Tools -->
+      <h2 id="tools">Tools</h2>
+      <p>Press once to activate. Press twice (<kbd>V</kbd><kbd>V</kbd>) to lock the tool (it stays active after drawing).</p>
+
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Key</th><th>Tool</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>V</kbd></td><td>Select</td><td>Click, drag, marquee select, move, resize</td></tr>
+            <tr><td><kbd>R</kbd></td><td>Rectangle</td><td>Draw rects. +Shift = square</td></tr>
+            <tr><td><kbd>O</kbd></td><td>Ellipse</td><td>Draw ovals. +Shift = circle</td></tr>
+            <tr><td><kbd>T</kbd></td><td>Text</td><td>Click to place text, then type</td></tr>
+            <tr><td><kbd>A</kbd></td><td>Arrow</td><td>Draw connectors between nodes</td></tr>
+            <tr><td><kbd>P</kbd></td><td>Pen</td><td>Click/drag for free-form paths</td></tr>
+            <tr><td><kbd>E</kbd></td><td>Eraser</td><td>Click/swipe to erase nodes</td></tr>
+            <tr><td><kbd>F</kbd></td><td>Frame</td><td>Draw a container frame</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Edit -->
+      <h2 id="edit">Edit</h2>
+
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Shortcut</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>⌘</kbd><kbd>Z</kbd></td><td>Undo</td></tr>
+            <tr><td><kbd>⌘</kbd><kbd>⇧</kbd><kbd>Z</kbd></td><td>Redo</td></tr>
+            <tr><td><kbd>⌘</kbd><kbd>C</kbd></td><td>Copy selected node(s) as .fd text</td></tr>
+            <tr><td><kbd>⌘</kbd><kbd>V</kbd></td><td>Paste .fd text onto canvas</td></tr>
+            <tr><td><kbd>⌘</kbd><kbd>X</kbd></td><td>Cut (copy + delete)</td></tr>
+            <tr><td><kbd>⌘</kbd><kbd>D</kbd></td><td>Duplicate selected node(s)</td></tr>
+            <tr><td><kbd>⌫</kbd> / <kbd>Delete</kbd></td><td>Delete selected nodes or edges</td></tr>
+            <tr><td><kbd>⌘</kbd><kbd>A</kbd></td><td>Select all</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>Deselect / cancel drag / exit Zen</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Transform -->
+      <h2 id="transform">Transform</h2>
+
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Shortcut</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd></td><td>Nudge 1px</td></tr>
+            <tr><td><kbd>⇧</kbd> + <kbd>Arrow</kbd></td><td>Nudge 10px</td></tr>
+            <tr><td><kbd>Shift</kbd> + drag</td><td>Constrain to horizontal or vertical axis</td></tr>
+            <tr><td><kbd>Shift</kbd> + draw Rect</td><td>Constrain to square</td></tr>
+            <tr><td><kbd>Shift</kbd> + draw Ellipse</td><td>Constrain to circle</td></tr>
+            <tr><td><kbd>Alt</kbd> + draw</td><td>Draw from center outward</td></tr>
+            <tr><td><kbd>Alt</kbd> + drag node</td><td>Duplicate and drag the clone</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Z-Order -->
+      <h2 id="z-order">Z-Order</h2>
+
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Shortcut</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>⌘</kbd><kbd>]</kbd></td><td>Bring Forward</td></tr>
+            <tr><td><kbd>⌘</kbd><kbd>[</kbd></td><td>Send Backward</td></tr>
+            <tr><td><kbd>⌘</kbd><kbd>⇧</kbd><kbd>]</kbd></td><td>Bring to Front</td></tr>
+            <tr><td><kbd>⌘</kbd><kbd>⇧</kbd><kbd>[</kbd></td><td>Send to Back</td></tr>
+            <tr><td><kbd>⌘</kbd><kbd>G</kbd></td><td>Group selected nodes</td></tr>
+            <tr><td><kbd>⌘</kbd><kbd>⇧</kbd><kbd>G</kbd></td><td>Ungroup</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- View -->
+      <h2 id="view">View</h2>
+
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Shortcut</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>⌘</kbd><kbd>+</kbd></td><td>Zoom in</td></tr>
+            <tr><td><kbd>⌘</kbd><kbd>-</kbd></td><td>Zoom out</td></tr>
+            <tr><td><kbd>⌘</kbd><kbd>0</kbd></td><td>Fit to content</td></tr>
+            <tr><td><kbd>Ctrl</kbd> + Scroll</td><td>Zoom (scroll wheel)</td></tr>
+            <tr><td><kbd>Space</kbd> + Drag</td><td>Pan canvas (hand tool)</td></tr>
+            <tr><td>Middle mouse + Drag</td><td>Pan canvas</td></tr>
+            <tr><td><kbd>D</kbd></td><td>Toggle light/dark theme</td></tr>
+            <tr><td><kbd>?</kbd></td><td>Show shortcut help overlay</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modifier Keys -->
+      <h2 id="modifiers">Modifier Keys</h2>
+      <p>Holding a modifier key shows a cursor preview to indicate the available action:</p>
+
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Key</th><th>Cursor</th><th>Indicates</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>⌘</kbd> / <kbd>Ctrl</kbd></td><td>✋ Grab</td><td>Pan the canvas</td></tr>
+            <tr><td><kbd>Alt</kbd> / <kbd>⌥</kbd></td><td>📋 Copy</td><td>Alt+drag will duplicate</td></tr>
+            <tr><td><kbd>Ctrl</kbd> (macOS)</td><td>❌ Eraser</td><td>Ctrl+click will erase</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Style shortcuts -->
+      <h3>Style Shortcuts</h3>
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Shortcut</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd></td><td>Copy style from selected node</td></tr>
+            <tr><td><kbd>⌥</kbd><kbd>⌘</kbd><kbd>V</kbd></td><td>Paste style onto selected node</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Floating Toolbar -->
+      <h2 id="floating-toolbar">Floating Toolbar</h2>
+      <p>The scroll-themed floating toolbar supports drag interactions:</p>
+      <ul>
+        <li><strong>Drag handle</strong> — grab the ornamental handles to reposition the toolbar</li>
+        <li><strong>Drag tool button to canvas</strong> — starts a "drag-to-create" gesture with ghost preview</li>
+        <li><strong>Hold <kbd>⌥</kbd> while dragging</strong> — snap to existing nodes and auto-create edges</li>
+        <li><strong>Double-click handle</strong> — snap toolbar to nearest edge</li>
+      </ul>
+
+      <!-- Zen Mode -->
+      <h2 id="zen-mode">Zen Mode</h2>
+      <p>Zen mode hides all UI chrome for a distraction-free canvas. Toggle with the 🧘 button or <kbd>Esc</kbd> to exit.</p>
+      <ul>
+        <li>In Zen mode, tools still work via keyboard shortcuts</li>
+        <li>The 🧘/✕ button remains visible for quick exit</li>
+        <li>Settings menu also has a Zen Mode toggle</li>
+      </ul>
+
+      <!-- Mobile -->
+      <h2 id="mobile">Mobile / Touch</h2>
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Gesture</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td>Single finger tap</td><td>Select node</td></tr>
+            <tr><td>Single finger drag</td><td>Move / draw</td></tr>
+            <tr><td>Two-finger drag</td><td>Pan canvas</td></tr>
+            <tr><td>Pinch</td><td>Zoom in/out</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Prev/Next -->
+      <div class="page-nav">
+        <a href="/docs/" class="page-nav-link">
+          <span class="page-nav-label">← Previous</span>
+          <span class="page-nav-title">Language Reference</span>
+        </a>
+        <a href="/docs/changelog.html" class="page-nav-link next">
+          <span class="page-nav-label">Next →</span>
+          <span class="page-nav-title">Changelog</span>
+        </a>
+      </div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="docs-footer">
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener">VS Code Marketplace</a>
+      <a href="https://github.com/khangnghiem/fast-draft/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+    </div>
+    <p>Made with Rust, WASM, and ❤️ by <a href="https://github.com/khangnghiem" target="_blank" rel="noopener">Khang Nghiêm</a></p>
+  </footer>
+
+  <script>
+    document.querySelector('.mobile-menu-btn')?.addEventListener('click', function() {
+      document.getElementById('docs-sidebar')?.classList.toggle('open');
+    });
+    const headings = document.querySelectorAll('h2[id], h3[id]');
+    const sidebarLinks = document.querySelectorAll('.sidebar-links a[href^="#"]');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          sidebarLinks.forEach(l => l.classList.remove('active'));
+          const link = document.querySelector(`.sidebar-links a[href="#${entry.target.id}"]`);
+          if (link) link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-80px 0px -70% 0px' });
+    headings.forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>
