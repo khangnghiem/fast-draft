@@ -32,6 +32,7 @@ Engineering lessons discovered through building FD.
   text, metrics, center, bounds   → L377-389 (Text Metrics Update Must Re-Center)
   spatial-index, hit-test, stale, move → L391-403 (Spatial Index Must Be Rebuilt After Bounds Mutation)
   hover, click, press, pointer-down    → L405-417 (Pointer Down Must Not Set Hover State)
+  resize-observer, raf, canvas-blank, click → L419-431 (ResizeObserver Must Repaint Synchronously)
 -->
 
 
@@ -395,3 +396,16 @@ Browser subagents inherit the full parent conversation context. When context exc
 **Fix**: Removed `hovered_id` assignment from both `handle_pointer_down` and `handle_pointer_up`. Only `handle_pointer_move` manages `hovered_id`, aligning with CSS behavior where `:hover` is cursor-proximity based, not click-based. Also added base fill to affected `demo.fd` nav items.
 
 **Rule**: **Hover and press/click are independent pointer states.** `hovered_id` should only be set by `pointer_move`; `pressed_id` should only be set by `pointer_down`/`pointer_up`. Conflating them causes `:hover` animations to fire on click, which is incorrect behavior.
+
+---
+
+## ResizeObserver Must Repaint Synchronously After canvas.width Assignment
+
+**Date**: 2026-03-12
+**Context**: Clicking any node on fast-draft.com caused the entire canvas to go blank. Scene graph intact (Layers/Properties panels worked), but nothing was painted.
+
+**Root cause**: ResizeObserver / RAF race condition. When clicking a node, `updatePropertiesPanel()` adds `.visible` → wrapper layout changes → ResizeObserver fires `resizeCanvas()` → `canvas.width = newW` clears all pixels (HTML5 spec). The RAF-based render loop had already consumed `renderDirty=true` from the `pointerup` handler earlier in the same frame, so the cleared canvas was painted blank. Setting `renderDirty=true` inside `resizeCanvas()` deferred the repaint to the NEXT RAF tick, but by then the browser had already composited and displayed the blank frame.
+
+**Fix**: Call `renderCanvas()` synchronously at the end of `resizeCanvas()` when the buffer was cleared, instead of relying on `renderDirty` + RAF. Set `renderDirty = false` to prevent a redundant double-render on the next RAF tick.
+
+**Rule**: **Never rely on RAF `renderDirty` flags after `canvas.width/height` assignment.** The HTML5 spec clears the entire pixel buffer on any dimension assignment. Since ResizeObserver callbacks fire after RAF in Chrome's rendering pipeline, the cleared canvas will be composited before the next RAF can repaint. Always repaint synchronously after clearing.

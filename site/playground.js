@@ -2249,16 +2249,25 @@ async function initPlayground() {
       // Only reassign if dimensions actually changed —
       // canvas.width = X clears the pixel buffer (HTML5 spec),
       // causing a 1-frame blank flash on every ResizeObserver tick.
+      let bufferCleared = false;
       if (canvas.width !== newW || canvas.height !== newH) {
         canvas.width = newW;
         canvas.height = newH;
         canvas.style.width = canvasWidth + 'px';
         canvas.style.height = rect.height + 'px';
-        // Buffer was cleared — schedule repaint so we don't show a blank frame
-        renderDirty = true; uiDirty = true;
+        bufferCleared = true;
+        uiDirty = true;
       }
       if (fdCanvas) {
         fdCanvas.resize(canvasWidth, rect.height);
+      }
+      // Repaint synchronously after resize — do NOT rely on renderDirty + RAF.
+      // ResizeObserver fires after RAF in Chrome's rendering pipeline, so
+      // canvas.width = X clears pixels AFTER the RAF has already rendered.
+      // Without an immediate repaint here, the browser paints a blank canvas.
+      if (bufferCleared) {
+        renderCanvas();
+        renderDirty = false; // prevent redundant double-render on next RAF
       }
     };
 

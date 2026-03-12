@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.10.116 — Fix Canvas Blank After Clicking a Node (R6.9)
+
+- **FIX (R6.9)**: Canvas no longer goes blank after clicking a node — root cause: ResizeObserver/RAF race condition; clicking a node opens the Properties panel (`.visible`), changing wrapper layout → ResizeObserver fires `resizeCanvas()` → `canvas.width = newW` clears pixel buffer (HTML5 spec); the RAF loop already consumed `renderDirty=true` earlier in the same frame, so the cleared canvas was composited blank; fix: `resizeCanvas()` now calls `renderCanvas()` synchronously after clearing the buffer instead of relying on `renderDirty` + next RAF tick
+- **DOCS**: New LESSONS.md entry — "ResizeObserver Must Repaint Synchronously After canvas.width Assignment"
+
 ### v0.10.115 — Web Canvas Consistency Audit (R6.6)
 
 - **FEATURE (R6.6)**: Inline text editing on double-click — double-click text/shape to edit in-place via floating textarea; double-click empty canvas to create new text node with immediate editor; Enter commits, Escape cancels; undo snapshot on commit
