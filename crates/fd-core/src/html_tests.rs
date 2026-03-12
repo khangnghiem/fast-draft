@@ -1,6 +1,6 @@
 use crate::html::emit_html;
-use crate::model::*;
 use crate::id::NodeId;
+use crate::model::*;
 use smallvec::SmallVec;
 
 #[test]

@@ -99,6 +99,7 @@ pub fn emit_html(graph: &SceneGraph) -> String {
         );
 
         // Border/Stroke for Rects/Frames
+        #[allow(clippy::collapsible_if)]
         if let Some(stroke) = &node.props.stroke {
             if let Paint::Solid(color) = &stroke.paint {
                 style.push_str(&format!(
@@ -170,6 +171,7 @@ pub fn emit_html(graph: &SceneGraph) -> String {
 
                 let mut stroke_str = "none".to_string();
                 let mut stroke_width = 0.0;
+                #[allow(clippy::collapsible_if)]
                 if let Some(stroke) = &node.props.stroke {
                     if let Paint::Solid(color) = &stroke.paint {
                         stroke_str = color.to_hex();
@@ -206,6 +208,7 @@ pub fn emit_html(graph: &SceneGraph) -> String {
                 }
                 let mut stroke_str = "black".to_string();
                 let mut stroke_width = 1.0;
+                #[allow(clippy::collapsible_if)]
                 if let Some(stroke) = &node.props.stroke {
                     if let Paint::Solid(color) = &stroke.paint {
                         stroke_str = color.to_hex();
