@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.10.120 — Website Theme Polish Batch 2 (R6.5)
+
+- **UX (R6.5)**: Animated hero skeleton during WASM load — three CSS shapes (card, title bar, button) assemble from scattered positions with spring-curve easing; purple→blue gradient progress bar fills during load; status text transitions through "Loading engine…" → "Initializing runtime…" → "Parsing scene…" → "✓ Ready"; smooth 400ms fade-out when canvas is ready; `prefers-reduced-motion` fallback disables assembly animation
+- **UX (R6.5)**: Navbar canvas theme toggle — pill-style sun/moon toggle in the navigation bar; clicking switches the canvas between dark (default) and light themes via `fdCanvas.set_theme()`; toggles `.dark-canvas` class on wrapper for canvas chrome; slider animates with gradient knob between sun ☀️ and moon 🌙 positions; purple glow on hover
+- **SITE**: Changes in `site/style.css`, `site/index.html`, `site/playground.js`
+
 ### v0.10.119 — Documentation Pages (R6.15)
 
 - **SITE (R6.15)**: New `/docs/` section on fast-draft.com — three static pages served from `site/docs/`:

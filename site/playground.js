@@ -2234,7 +2234,10 @@ async function initPlayground() {
 
   try {
     // Load WASM module
+    const statusEl = document.getElementById('loading-status');
+    if (statusEl) statusEl.textContent = 'Loading engine…';
     const wasm = await import('./wasm/fd_wasm.js');
+    if (statusEl) statusEl.textContent = 'Initializing runtime…';
     await wasm.default('./wasm/fd_wasm_bg.wasm');
 
     // Size the canvas
@@ -2280,7 +2283,9 @@ async function initPlayground() {
     // Dark theme to match marketing page
     fdCanvas.set_theme(true);
     wrapper.classList.add('dark-canvas');
+    if (statusEl) statusEl.textContent = 'Parsing scene…';
     fdCanvas.set_text(DEFAULT_FD);
+    if (statusEl) statusEl.textContent = '✓ Ready';
 
     // ── Create CodeMirror Editor ──────────────────────────────────────
     const fdLinter = linter((view) => {
@@ -2457,7 +2462,22 @@ async function initPlayground() {
     }, 100);
 
     // Hide loading overlay
-    loading.classList.add('hidden');
+    // Hide loading overlay with fade-out
+    loading.classList.add('fade-out');
+    setTimeout(() => loading.classList.add('hidden'), 400);
+
+    // ── Theme Toggle ─────────────────────────────────────────────────
+    const themeToggle = document.getElementById('canvas-theme-toggle');
+    if (themeToggle) {
+      themeToggle.addEventListener('click', () => {
+        isDark = !isDark;
+        if (fdCanvas) fdCanvas.set_theme(isDark);
+        wrapper.classList.toggle('dark-canvas', isDark);
+        themeToggle.classList.toggle('is-light', !isDark);
+        renderDirty = true;
+        renderCanvas();
+      });
+    }
 
     // ── Panel Resize Setup ───────────────────────────────────────────
     setupPanelResize(wrapper, resizeCanvas);
