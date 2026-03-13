@@ -35,6 +35,7 @@ Engineering lessons discovered through building FD.
   resize-observer, raf, canvas-blank, click → L419-431 (ResizeObserver Must Repaint Synchronously)
   deploy, cache-bust, stale, cdn, browser → L433-445 (Deploy Without Cache-Bust = Invisible Fix)
   wasm, modulepreload, import, cache, chrome → L447-459 (WASM Modulepreload Cache Mismatch)
+  wasm-opt, blank, canvas2d, dead-code, optimization → (wasm-opt -O2 Strips Canvas2D Draw Calls)
 -->
 
 
@@ -437,3 +438,15 @@ Browser subagents inherit the full parent conversation context. When context exc
 **Fix**: Added `?v=0.11.5` to all four WASM paths (modulepreload, preload, import, init). Extended `pages.yml` auto-bust to also `sed` `playground.js`.
 
 **Rule**: **Cache-bust every resource loaded by `modulepreload`, `import()`, and `fetch()` — not just `<script src>`.** The `_headers` `no-cache` directive only affects `fetch()`-style loads; `modulepreload` has its own caching behavior in Chrome/Edge. All importable resources must have version-stamped URLs.
+
+
+## wasm-opt -O2 Strips Canvas2D Draw Calls
+
+**Date**: 2026-03-13
+**Context**: Canvas rendered completely blank — no shapes, text, or UI elements despite all nodes having valid bounds and correctly resolved styles. The rendering pipeline was fully functional (nodes traversed, styles resolved, draw functions called) but no pixels appeared.
+
+**Root cause**: `wasm-opt -O2` (wasm-pack's default optimization level) was stripping Canvas2D API calls (`fill_rect`, `stroke`, `fill`, `set_fill_style_str`, etc.) as dead code. These are imported JavaScript functions with void return, which `wasm-opt` at `-O2` treats as side-effect-free and eligible for elimination. Adding debug `console.log` and `fill_rect` calls prevented the optimization from triggering, which is why the canvas worked with debug code but not without.
+
+**Fix**: Added `[package.metadata.wasm-pack.profile.release] wasm-opt = ["-O1"]` to `crates/fd-wasm/Cargo.toml`. `-O1` preserves all imported JS side-effects while still applying safe optimizations.
+
+**Rule**: **Never use `wasm-opt -O2` or higher for WASM modules that call external JS functions with void return (Canvas2D, DOM manipulation, console).** The optimizer cannot distinguish side-effect-free pure functions from side-effectful DOM API calls. Use `-O1` or explicitly mark imports as having side effects.

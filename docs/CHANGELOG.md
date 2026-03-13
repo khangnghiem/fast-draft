@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.131 — Fix Blank Canvas: wasm-opt -O2 Strips Canvas2D Draw Calls (R6.9)
+
+- **FIX (R6.9)**: Canvas no longer renders blank in both VS Code extension and site playground — root cause: `wasm-opt -O2` (wasm-pack's default) was incorrectly stripping Canvas2D draw calls (`fill_rect`, `stroke`, `fill`, `set_fill_style_str`, etc.) as dead code because these are imported JavaScript functions with void return that `wasm-opt` treats as side-effect-free at `-O2`; downgraded to `-O1` which preserves all imported JS side-effects while still applying safe optimizations
+- **INFRA**: Added `[package.metadata.wasm-pack.profile.release] wasm-opt = ["-O1"]` to `crates/fd-wasm/Cargo.toml` — overrides wasm-pack's default `-O2` optimization level; `-O1` retains ~90% of size savings without stripping external function calls
+- **DIAG**: Verified via 3-tier test: (1) dev build (no wasm-opt) → renders correctly, (2) release build with `-O1` → renders correctly, (3) release build with `-O2` (default) → blank canvas
+
 ### v0.11.130 — Raw Markdown Notes (R4.18)
 
 - **REFACTOR (R4.18)**: Replaced structured `Annotation` enum with raw markdown `note: Option<String>` — content inside `note { }` or `spec { }` blocks is now captured verbatim as raw markdown text, enabling checklists (`- [ ]` / `- [x]`), headings, bullets, and any markdown syntax; the old DSL (`todo:`, `done:`, `tag:`, `accept:`, `status:`, `priority:`) is no longer parsed into variants — it's preserved as raw text
