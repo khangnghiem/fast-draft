@@ -10,6 +10,7 @@
 | Key   | Action                | Notes                                 |
 | ----- | --------------------- | ------------------------------------- |
 | `V`   | Select / Move         | Default tool                          |
+| `H`   | Hand (pan) tool       |                                       |
 | `R`   | Rectangle             |                                       |
 | `O`   | Ellipse               |                                       |
 | `P`   | Pen (freehand)        |                                       |

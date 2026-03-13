@@ -30,6 +30,11 @@ impl FdCanvas {
             self.commands.begin_batch(&mut self.engine);
         }
 
+        // Hand tool: pan is handled entirely in JS, skip WASM dispatch
+        if self.active_tool == ToolKind::Hand {
+            return false;
+        }
+
         let mods = Modifiers {
             shift,
             ctrl,
@@ -101,6 +106,7 @@ impl FdCanvas {
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
+            ToolKind::Hand => return false, // pan handled in JS
             ToolKind::Eraser => unreachable!("handled above"),
         };
         let changed = self.apply_mutations(mutations);
@@ -208,6 +214,14 @@ impl FdCanvas {
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
+            ToolKind::Hand => {
+                // Hand tool: pan handled in JS, skip WASM dispatch
+                return serde_json::to_string(&PointerMoveResult {
+                    changed: hovered_changed,
+                    bounds: None,
+                })
+                .unwrap_or_else(|_| r#"{"changed":false}"#.to_string());
+            }
             ToolKind::Eraser => vec![],
         };
         let changed = self.apply_mutations(mutations);
@@ -368,6 +382,7 @@ impl FdCanvas {
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
+            ToolKind::Hand => vec![], // pan handled in JS
             ToolKind::Eraser => vec![],
         };
         let changed = self.apply_mutations(mutations);
@@ -451,7 +466,6 @@ impl FdCanvas {
         self.select_tool.marquee_start = None;
         self.select_tool.marquee_rect = None;
         self.select_tool.resize_handle = None;
-        self.select_tool.locked_axis = None;
         self.select_tool.shift_toggled_off = None;
 
         self.rect_tool.cancel();

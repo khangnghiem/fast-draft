@@ -231,6 +231,7 @@ impl FdCanvas {
     pub fn set_tool(&mut self, name: &str) {
         let new_tool = match name {
             "select" => ToolKind::Select,
+            "hand" => ToolKind::Hand,
             "rect" => ToolKind::Rect,
             "ellipse" => ToolKind::Ellipse,
             "pen" => ToolKind::Pen,

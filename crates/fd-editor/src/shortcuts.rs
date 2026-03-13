@@ -15,6 +15,7 @@
 pub enum ShortcutAction {
     // ── Tool switching ──
     ToolSelect,
+    ToolHand,
     ToolRect,
     ToolEllipse,
     ToolPen,
@@ -150,6 +151,7 @@ impl ShortcutMap {
             "a" | "A" => Some(ShortcutAction::ToolArrow),
             "f" | "F" => Some(ShortcutAction::ToolFrame),
             "e" | "E" => Some(ShortcutAction::ToolEraser),
+            "h" | "H" => Some(ShortcutAction::ToolHand),
             // Screenbrush: Tab = toggle between two most-used tools
             "Tab" => Some(ShortcutAction::ToggleLastTool),
             "Delete" | "Backspace" => Some(ShortcutAction::Delete),
@@ -197,6 +199,10 @@ mod tests {
         assert_eq!(
             ShortcutMap::resolve("e", false, false, false, false),
             Some(ShortcutAction::ToolEraser)
+        );
+        assert_eq!(
+            ShortcutMap::resolve("h", false, false, false, false),
+            Some(ShortcutAction::ToolHand)
         );
     }
 

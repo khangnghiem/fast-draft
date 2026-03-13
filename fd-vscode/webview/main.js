@@ -364,7 +364,7 @@ function setupPointerEvents() {
     const rawY = e.clientY - rect.top;
 
     // Middle-click or Space+click → start pan drag
-    if (e.button === 1 || isPanning) {
+    if (e.button === 1 || isPanning || fdCanvas.get_tool_name() === 'hand') {
       panDragging = true;
       panStartX = e.clientX - panX;
       panStartY = e.clientY - panY;
@@ -578,7 +578,7 @@ function setupPointerEvents() {
     // End pan drag
     if (panDragging) {
       panDragging = false;
-      canvas.style.cursor = isPanning ? "grab" : "";
+      canvas.style.cursor = (isPanning || fdCanvas.get_tool_name() === 'hand') ? "grab" : "";
       return;
     }
 
