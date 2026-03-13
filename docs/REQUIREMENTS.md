@@ -109,7 +109,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.33** _(done)_: Component libraries — reusable node collections from a library panel; stored as `.fd` files; 3 built-in libraries (UI Kit, Flowchart, Wireframe)
 - **R3.34** _(planned)_: Community library directory — searchable gallery for publishing and discovering shared libraries
 - **R3.55** _(planned)_: Export to Excalidraw JSON — `export_excalidraw(graph)` converts FD scene to Excalidraw's JSON format; rect/ellipse/text/arrow elements mapped correctly; ⌘⇧X shortcut
-- **R3.56** _(planned)_: Export to HTML+CSS+JS — `export_html(graph)` generates standalone responsive HTML page; shapes → `<div>`, text → `<p>`, constraints → flexbox, animations → CSS transitions
+- **R3.56** _(done)_: Export to HTML+CSS+JS — `export_html(graph)` generates standalone responsive HTML page; shapes → `<div>`, text → `<p>`, constraints → flexbox, animations → CSS transitions
 - **R3.57** _(planned)_: Fine pen tools — `taper_start`, `taper_end`, `smoothing` properties on pen strokes; variable stroke width rendering; settings in properties panel
 - **R3.58** _(planned)_: Animation timeline — visual keyframe panel showing `when` blocks as timeline tracks; drag endpoints to adjust duration; scrub to preview animation state
 
@@ -240,7 +240,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | R3.29       | E2E UX: animation tween engine                                                                                                                                                                                                                                     | ✅ 2 E2E tests                 |
 | R3.30       | _(JS-only, camera animation)_                                                                                                                                                                                                                                      | ⚠️ JS-only                     |
 | R4.1–R4.6   | Covered by R1/R2 tests                                                                                                                                                                                                                                             | ✅                             |
-| R4.7–R4.11  | _(extension-side, no test)_                                                                                                                                                                                                                                        | ❌                             |
+| R4.7–R4.11  | `exportSpec.test.ts`, `spec-view.test.ts`                                                                                                                                                                                                                          | ✅ 2 TS tests                  |
 | R3.36       | `layout_text_centered_in_rect`, `layout_text_in_ellipse_*`, `layout_text_explicit_pos_*`                                                                                                                                                                           | ✅ 4 tests                     |
 | R3.39–R3.44 | _(JS-only; floating toolbar, snap, edge context menu — no WASM-side tests)_                                                                                                                                                                                        | ⚠️ JS-only                     |
 | R3.45       | `sync_resize_child_expands_parent_on_finalize`, `sync_resize_child_within_bounds_no_expand`, `sync_cascade_expand_two_levels`, `sync_cascade_stops_at_clip_frame`                                                                                                  | ✅ 4 tests                     |
@@ -250,7 +250,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | R3.48       | `eraser_tool_lifecycle`, `eraser_tool_clear_resets_state`, `eraser_tool_pointerdown_clears_previous_ids`, `erase_child_preserves_group`, `erase_last_child_leaves_empty_group`, `erase_nested_cascade`                                                             | ✅ 6 tests                     |
 | R5.1–R5.8   | `hit::tests::*`, `resolve::tests::*`, `render2d::tests::*`                                                                                                                                                                                                         | ✅ 3 hit + 6 layout + 3 render |
 
-**Total**: 186 Rust tests + 188 TypeScript tests = **374 tests**
+**Total**: 186 Rust tests + 190 TypeScript tests = **376 tests**
 
 ## Requirement Index
 
@@ -317,7 +317,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | edge anchor | R1.20 |
 | eraser / delete | R3.48 |
 | excalidraw export | R3.55 |
-| html export | R3.56 |
+| html export | R3.56 | X |
 | fine pen / taper | R3.57, R3.4, R3.22 |
 | animation timeline | R3.58, R1.5 |
 | ai assist canvas | R4.20, R4.8 |
