@@ -46,6 +46,7 @@ let zoomLevel = 1.0;
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 10;
 const ZOOM_STEP = 1.25; // Each ⌘+/⌘− multiplies by this
+const ZOOM_WHEEL_FACTOR = 1.04; // Normalized zoom step for wheel/trackpad (shared with site)
 
 /** @type {CanvasRenderingContext2D | null} */
 let ctx = null;
@@ -791,7 +792,7 @@ function setupPointerEvents() {
       const rect = canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
-      zoomAtPoint(mx, my, e.deltaY < 0 ? 1.03 : 1 / 1.03);
+      zoomAtPoint(mx, my, e.deltaY < 0 ? ZOOM_WHEEL_FACTOR : 1 / ZOOM_WHEEL_FACTOR);
     } else {
       panX -= e.deltaX;
       panY -= e.deltaY;
@@ -813,7 +814,8 @@ function setupTouchGestures() {
   let threeFingerHandled = false;
   let pencilActive = false;
 
-  // Inertia state
+  // Inertia state — weighted velocity for smooth momentum
+  const velocityHistory = []; // last 3 frames: [{vx, vy, t}]
   let inertiaVx = 0;
   let inertiaVy = 0;
   let lastPanTime = 0;
@@ -844,13 +846,27 @@ function setupTouchGestures() {
       cancelAnimationFrame(inertiaRaf);
       inertiaRaf = null;
     }
+    velocityHistory.length = 0;
+  }
+
+  function computeWeightedVelocity() {
+    if (velocityHistory.length === 0) return { vx: 0, vy: 0 };
+    let totalWeight = 0;
+    let vx = 0, vy = 0;
+    for (let i = 0; i < velocityHistory.length; i++) {
+      const weight = i + 1;
+      vx += velocityHistory[i].vx * weight;
+      vy += velocityHistory[i].vy * weight;
+      totalWeight += weight;
+    }
+    return { vx: vx / totalWeight, vy: vy / totalWeight };
   }
 
   function applyInertia() {
-    const friction = 0.92;
+    const friction = 0.95;
     inertiaVx *= friction;
     inertiaVy *= friction;
-    if (Math.abs(inertiaVx) < 0.5 && Math.abs(inertiaVy) < 0.5) {
+    if (Math.abs(inertiaVx) < 0.1 && Math.abs(inertiaVy) < 0.1) {
       inertiaRaf = null;
       return;
     }
@@ -910,7 +926,14 @@ function setupTouchGestures() {
       // Start pinch / two-finger pan
       isGesturing = true;
       const touches = [...activeTouches.values()];
-      lastPinchDist = pinchDistance(touches[0], touches[1]);
+
+      // Smart disambiguation: reject if fingers too close (< 30px)
+      const dist = pinchDistance(touches[0], touches[1]);
+      if (dist < 30) {
+        return;
+      }
+
+      lastPinchDist = dist;
       lastPinchCenter = pinchCenter(touches[0], touches[1]);
       e.preventDefault();
     }
@@ -963,11 +986,14 @@ function setupTouchGestures() {
       panX += dx;
       panY += dy;
 
-      // Track velocity for inertia
+      // Track velocity for inertia (weighted 3-frame history)
       const now = performance.now();
-      const dt = now - lastPanTime || 16;
-      inertiaVx = dx * (16 / dt);
-      inertiaVy = dy * (16 / dt);
+      const dt = velocityHistory.length > 0
+        ? now - velocityHistory[velocityHistory.length - 1].t
+        : 16;
+      const normalizedDt = Math.max(dt, 1);
+      velocityHistory.push({ vx: dx * (16 / normalizedDt), vy: dy * (16 / normalizedDt), t: now });
+      if (velocityHistory.length > 3) velocityHistory.shift();
       lastPanTime = now;
 
       lastPinchDist = dist;
@@ -1026,7 +1052,10 @@ function setupTouchGestures() {
     if (activeTouches.size === 0 && isGesturing) {
       isGesturing = false;
       lastPinchDist = 0;
-      if (Math.abs(inertiaVx) > 1 || Math.abs(inertiaVy) > 1) {
+      const { vx, vy } = computeWeightedVelocity();
+      inertiaVx = vx;
+      inertiaVy = vy;
+      if (Math.abs(inertiaVx) > 0.5 || Math.abs(inertiaVy) > 0.5) {
         inertiaRaf = requestAnimationFrame(applyInertia);
       }
     }
@@ -1039,6 +1068,7 @@ function setupTouchGestures() {
     clearLongPress();
     isGesturing = false;
     pencilActive = false;
+    cancelInertia();
   });
 }
 

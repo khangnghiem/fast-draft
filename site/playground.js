@@ -221,6 +221,7 @@ const GRID_SPACING = 20;
 let zenMode = false;
 let fullscreenMode = false;
 const ZOOM_MIN = 0.1, ZOOM_MAX = 5;
+const ZOOM_WHEEL_FACTOR = 1.04; // Normalized zoom step (shared with VS Code)
 let isPanning = false;
 let inlineEditorActive = false;
 
@@ -237,6 +238,8 @@ let pinchPanStartY = 0;
 let pinchMidStartX = 0;
 let pinchMidStartY = 0;
 let isTwoFingerGesture = false;
+let twoFingerTimer = null; // Smart disambiguation: 50ms delay
+let twoFingerPending = false;
 
 /** Get current layers panel width (dynamic for resize). */
 function getLayersPanelWidth() {
@@ -2376,6 +2379,286 @@ function openInlineTextEditor(nodeId, currentValue, propKey = 'content') {
   autoResize();
 }
 
+// ── Touch Gesture System ──────────────────────────────────────────────────
+// Provides: pinch-to-zoom, two-finger pan with momentum inertia,
+// three-finger swipe undo/redo, long-press context menu, Apple Pencil palm rejection.
+function setupTouchGestures(canvas, fdCanvasRef, markRenderDirty, markUiDirty) {
+  let activeTouches = new Map();
+  let lastPinchDist = 0;
+  let lastPinchCenter = { x: 0, y: 0 };
+  let longPressTimer = null;
+  let longPressPos = null;
+  let isGesturing = false;
+  let threeFingerStartX = 0;
+  let threeFingerHandled = false;
+  let pencilActive = false;
+
+  // Inertia state — weighted velocity for smooth momentum
+  const velocityHistory = []; // last 3 frames: [{vx, vy, t}]
+  let inertiaVx = 0;
+  let inertiaVy = 0;
+  let inertiaRaf = null;
+
+  function pinchDistance(t1, t2) {
+    const dx = t1.clientX - t2.clientX;
+    const dy = t1.clientY - t2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function pinchCenter(t1, t2) {
+    return {
+      x: (t1.clientX + t2.clientX) / 2,
+      y: (t1.clientY + t2.clientY) / 2
+    };
+  }
+
+  function clearLongPress() {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  }
+
+  function cancelInertia() {
+    if (inertiaRaf) {
+      cancelAnimationFrame(inertiaRaf);
+      inertiaRaf = null;
+    }
+    velocityHistory.length = 0;
+  }
+
+  function computeWeightedVelocity() {
+    if (velocityHistory.length === 0) return { vx: 0, vy: 0 };
+    // Weighted average: recent frames count more
+    let totalWeight = 0;
+    let vx = 0, vy = 0;
+    for (let i = 0; i < velocityHistory.length; i++) {
+      const weight = i + 1; // newer frames have higher index
+      vx += velocityHistory[i].vx * weight;
+      vy += velocityHistory[i].vy * weight;
+      totalWeight += weight;
+    }
+    return { vx: vx / totalWeight, vy: vy / totalWeight };
+  }
+
+  function applyInertia() {
+    const friction = 0.95; // Exponential decay (smoother than 0.92)
+    inertiaVx *= friction;
+    inertiaVy *= friction;
+    // Stop when below minimum threshold
+    if (Math.abs(inertiaVx) < 0.1 && Math.abs(inertiaVy) < 0.1) {
+      inertiaRaf = null;
+      return;
+    }
+    panX += inertiaVx;
+    panY += inertiaVy;
+    markRenderDirty();
+    markUiDirty();
+    inertiaRaf = requestAnimationFrame(applyInertia);
+  }
+
+  /** Zoom by a multiplier, anchored at a screen-space point. */
+  function touchZoomAtPoint(mx, my, factor) {
+    const oldZoom = zoomLevel;
+    zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomLevel * factor));
+    panX = mx - (mx - panX) * (zoomLevel / oldZoom);
+    panY = my - (my - panY) * (zoomLevel / oldZoom);
+    updateZoomIndicator();
+    markRenderDirty();
+    markUiDirty();
+  }
+
+  canvas.addEventListener('touchstart', (e) => {
+    for (const t of e.changedTouches) {
+      activeTouches.set(t.identifier, t);
+    }
+
+    const count = activeTouches.size;
+    cancelInertia();
+
+    // Palm rejection: if Apple Pencil is active and a finger appears, ignore fingers
+    if (pencilActive && count > 0) {
+      const hasPencil = [...e.touches].some(t => t.touchType === 'stylus');
+      if (!hasPencil) {
+        e.preventDefault();
+        return;
+      }
+    }
+
+    // Detect Apple Pencil
+    for (const t of e.changedTouches) {
+      if (t.touchType === 'stylus') {
+        pencilActive = true;
+      }
+    }
+
+    if (count === 1) {
+      // Single finger — start long-press timer for context menu
+      const t = [...activeTouches.values()][0];
+      longPressPos = { x: t.clientX, y: t.clientY };
+      longPressTimer = setTimeout(() => {
+        const fakeEvent = new MouseEvent('contextmenu', {
+          clientX: longPressPos.x,
+          clientY: longPressPos.y,
+          bubbles: true,
+        });
+        canvas.dispatchEvent(fakeEvent);
+        isGesturing = true;
+        longPressTimer = null;
+      }, 500);
+    } else {
+      clearLongPress();
+    }
+
+    if (count === 2) {
+      // Start pinch / two-finger pan
+      isGesturing = true;
+      const touches = [...activeTouches.values()];
+
+      // Smart disambiguation: reject if fingers too close
+      const dist = pinchDistance(touches[0], touches[1]);
+      if (dist < 30) {
+        return;
+      }
+
+      lastPinchDist = dist;
+      lastPinchCenter = pinchCenter(touches[0], touches[1]);
+      e.preventDefault();
+    }
+
+    if (count === 3) {
+      // Start three-finger swipe detection (undo/redo)
+      isGesturing = true;
+      threeFingerHandled = false;
+      const touches = [...activeTouches.values()];
+      threeFingerStartX = touches.reduce((s, t) => s + t.clientX, 0) / 3;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', (e) => {
+    for (const t of e.changedTouches) {
+      activeTouches.set(t.identifier, t);
+    }
+
+    const count = activeTouches.size;
+
+    // Cancel long-press if moved too far
+    if (count === 1 && longPressTimer && longPressPos) {
+      const t = [...activeTouches.values()][0];
+      const dx = t.clientX - longPressPos.x;
+      const dy = t.clientY - longPressPos.y;
+      if (dx * dx + dy * dy > 100) {
+        clearLongPress();
+      }
+    }
+
+    if (count === 2) {
+      const touches = [...activeTouches.values()];
+      const dist = pinchDistance(touches[0], touches[1]);
+      const center = pinchCenter(touches[0], touches[1]);
+
+      // Pinch-to-zoom
+      if (lastPinchDist > 0) {
+        const scale = dist / lastPinchDist;
+        const canvasRect = canvas.getBoundingClientRect();
+        const mx = center.x - canvasRect.left;
+        const my = center.y - canvasRect.top;
+        touchZoomAtPoint(mx, my, scale);
+      }
+
+      // Two-finger pan
+      const dx = center.x - lastPinchCenter.x;
+      const dy = center.y - lastPinchCenter.y;
+      panX += dx;
+      panY += dy;
+
+      // Track velocity for inertia (weighted 3-frame history)
+      const now = performance.now();
+      const dt = velocityHistory.length > 0
+        ? now - velocityHistory[velocityHistory.length - 1].t
+        : 16;
+      const normalizedDt = Math.max(dt, 1);
+      velocityHistory.push({ vx: dx * (16 / normalizedDt), vy: dy * (16 / normalizedDt), t: now });
+      if (velocityHistory.length > 3) velocityHistory.shift();
+
+      lastPinchDist = dist;
+      lastPinchCenter = center;
+      markRenderDirty();
+      markUiDirty();
+      e.preventDefault();
+    }
+
+    if (count === 3 && !threeFingerHandled) {
+      const touches = [...activeTouches.values()];
+      const avgX = touches.reduce((s, t) => s + t.clientX, 0) / 3;
+      const swipeDist = avgX - threeFingerStartX;
+
+      // Require significant horizontal swipe
+      if (Math.abs(swipeDist) > 50) {
+        threeFingerHandled = true;
+        if (fdCanvasRef) {
+          if (swipeDist < 0) {
+            // Swipe left = undo
+            const changed = fdCanvasRef.handle_key('z', false, false, false, true);
+            if (changed) {
+              markRenderDirty();
+              markUiDirty();
+              syncCanvasToEditor();
+            }
+          } else {
+            // Swipe right = redo
+            const changed = fdCanvasRef.handle_key('z', false, true, false, true);
+            if (changed) {
+              markRenderDirty();
+              markUiDirty();
+              syncCanvasToEditor();
+            }
+          }
+        }
+        e.preventDefault();
+      }
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', (e) => {
+    for (const t of e.changedTouches) {
+      activeTouches.delete(t.identifier);
+    }
+
+    clearLongPress();
+
+    // Check if pencil lifted
+    for (const t of e.changedTouches) {
+      if (t.touchType === 'stylus') {
+        pencilActive = false;
+      }
+    }
+
+    // Start inertia if two-finger gesture just ended
+    if (activeTouches.size === 0 && isGesturing) {
+      isGesturing = false;
+      lastPinchDist = 0;
+      const { vx, vy } = computeWeightedVelocity();
+      inertiaVx = vx;
+      inertiaVy = vy;
+      if (Math.abs(inertiaVx) > 0.5 || Math.abs(inertiaVy) > 0.5) {
+        inertiaRaf = requestAnimationFrame(applyInertia);
+      }
+    }
+  });
+
+  canvas.addEventListener('touchcancel', (e) => {
+    for (const t of e.changedTouches) {
+      activeTouches.delete(t.identifier);
+    }
+    clearLongPress();
+    isGesturing = false;
+    pencilActive = false;
+    cancelInertia();
+  });
+}
+
 async function initPlayground() {
   const editorMount = document.getElementById('fd-editor');
   const canvas = document.getElementById('fd-canvas');
@@ -2679,21 +2962,36 @@ async function initPlayground() {
       // Track all active pointers for multi-touch
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-      // Two-finger gesture detection
+      // Smart two-finger gesture disambiguation
+      // Wait 50ms and check distance to avoid accidental triggers
       if (activePointers.size === 2) {
-        isTwoFingerGesture = true;
         const pts = [...activePointers.values()];
-        pinchStartDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
-        pinchStartZoom = zoomLevel;
-        pinchMidStartX = (pts[0].x + pts[1].x) / 2;
-        pinchMidStartY = (pts[0].y + pts[1].y) / 2;
-        pinchPanStartX = panX;
-        pinchPanStartY = panY;
-        // Cancel any single-finger interaction in progress
-        if (activePointerId !== -1) {
-          panDragging = false;
-          activePointerId = -1;
+        const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+
+        // Reject if fingers too close (< 30px, likely accidental palm graze)
+        // or if one pointer is a stylus (pencil + palm)
+        if (dist < 30 || e.pointerType === 'pen') {
+          return;
         }
+
+        twoFingerPending = true;
+        clearTimeout(twoFingerTimer);
+        twoFingerTimer = setTimeout(() => {
+          if (!twoFingerPending || activePointers.size !== 2) return;
+          isTwoFingerGesture = true;
+          const pts2 = [...activePointers.values()];
+          pinchStartDist = Math.hypot(pts2[1].x - pts2[0].x, pts2[1].y - pts2[0].y);
+          pinchStartZoom = zoomLevel;
+          pinchMidStartX = (pts2[0].x + pts2[1].x) / 2;
+          pinchMidStartY = (pts2[0].y + pts2[1].y) / 2;
+          pinchPanStartX = panX;
+          pinchPanStartY = panY;
+          // Cancel any single-finger interaction in progress
+          if (activePointerId !== -1) {
+            panDragging = false;
+            activePointerId = -1;
+          }
+        }, 50);
         return;
       }
 
@@ -2823,7 +3121,9 @@ async function initPlayground() {
       activePointers.delete(e.pointerId);
 
       // End two-finger gesture
-      if (isTwoFingerGesture) {
+      if (isTwoFingerGesture || twoFingerPending) {
+        twoFingerPending = false;
+        clearTimeout(twoFingerTimer);
         if (activePointers.size < 2) {
           isTwoFingerGesture = false;
           // Reset single-finger state so next touch starts clean
@@ -2872,8 +3172,10 @@ async function initPlayground() {
     // Clean up on pointer cancel (mobile: app switch, incoming call, etc.)
     document.addEventListener('pointercancel', (e) => {
       activePointers.delete(e.pointerId);
-      if (isTwoFingerGesture && activePointers.size < 2) {
+      if ((isTwoFingerGesture || twoFingerPending) && activePointers.size < 2) {
         isTwoFingerGesture = false;
+        twoFingerPending = false;
+        clearTimeout(twoFingerTimer);
       }
       if (e.pointerId === activePointerId) {
         activePointerId = -1;
@@ -2883,26 +3185,38 @@ async function initPlayground() {
     });
 
     // ── Wheel → Pan / Zoom ────────────────────────────────────────────
+    /** Zoom by a multiplier, anchored at a screen-space point (mx, my). */
+    function zoomAtPoint(mx, my, factor) {
+      const oldZoom = zoomLevel;
+      zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomLevel * factor));
+      panX = mx - (mx - panX) * (zoomLevel / oldZoom);
+      panY = my - (my - panY) * (zoomLevel / oldZoom);
+      updateZoomIndicator();
+      renderDirty = true; uiDirty = true;
+    }
+
     canvas.addEventListener('wheel', (e) => {
-      e.preventDefault();
       if (e.ctrlKey || e.metaKey) {
-        // Zoom toward cursor
+        // Pinch-to-zoom on trackpad or Ctrl+scroll: always preventDefault
+        e.preventDefault();
         const canvasRect = canvas.getBoundingClientRect();
         const mx = e.clientX - canvasRect.left;
         const my = e.clientY - canvasRect.top;
-        const factor = e.deltaY < 0 ? 1.05 : 1 / 1.05;
-        const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomLevel * factor));
-        panX = mx - (mx - panX) * (newZoom / zoomLevel);
-        panY = my - (my - panY) * (newZoom / zoomLevel);
-        zoomLevel = newZoom;
-        updateZoomIndicator();
+        const factor = e.deltaY < 0 ? ZOOM_WHEEL_FACTOR : 1 / ZOOM_WHEEL_FACTOR;
+        zoomAtPoint(mx, my, factor);
       } else {
         // Two-finger scroll → pan
+        // Allow native macOS trackpad momentum events to flow through
+        // by not calling preventDefault() for non-zoom scroll
+        e.preventDefault();
         panX -= e.deltaX;
         panY -= e.deltaY;
+        renderDirty = true; uiDirty = true;
       }
-      renderDirty = true; uiDirty = true;
     }, { passive: false });
+
+    // ── Touch Gestures (inertia, 3-finger undo/redo, long-press, pencil) ──
+    setupTouchGestures(canvas, fdCanvas, () => renderDirty = true, () => uiDirty = true);
 
     // ── Tool Toolbar (floating scroll) ────────────────────────────────────
     document.querySelectorAll('.ft-tool-btn[data-tool]').forEach(btn => {
