@@ -233,6 +233,24 @@ let isDraggingNode = false;
 /** The ID of the node being dragged */
 let draggedNodeId = null;
 
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function escapeAttr(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 // ─── Tween Engine ────────────────────────────────────────────────────────
 /** Active tweens: { nodeId, prop, from, to, startTime, duration, easeFn } */
 const activeTweens = [];
@@ -2316,10 +2334,6 @@ function addAcceptRow(value) {
   list.appendChild(item);
 }
 
-function escapeAttr(s) {
-  return s.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
 /**
  * Check if a node has a spec annotation block.
  * Uses parseAnnotatedNodes to detect matching spec data.
@@ -3765,14 +3779,6 @@ function refreshLayersPanel() {
 }
 
 // ─── Spec View Parser (client-side) ──────────────────────────────────────
-
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function parseSpecAnnotation(line) {
   const trimmed = line.trim();
