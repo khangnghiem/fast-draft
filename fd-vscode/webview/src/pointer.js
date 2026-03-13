@@ -2,6 +2,9 @@
 // This file is part of the FD webview module system.
 // Build with: pnpm run build:webview
 
+// ─── Gesture Constants ──────────────────────────────────────────────────
+const ZOOM_WHEEL_FACTOR = 1.04;
+
 // ─── Pointer Events ──────────────────────────────────────────────────────
 
 function setupPointerEvents() {
@@ -442,15 +445,16 @@ function setupPointerEvents() {
 
   // ── Wheel / Trackpad → Pan or Zoom ──
   canvas.addEventListener("wheel", (e) => {
-    e.preventDefault();
     // Pinch-to-zoom on trackpad fires as wheel with ctrlKey
     // Also allow zoom while panning (Space held)
     if (e.ctrlKey || e.metaKey || isPanning) {
+      e.preventDefault();
       const rect = canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
-      zoomAtPoint(mx, my, e.deltaY < 0 ? 1.03 : 1 / 1.03);
+      zoomAtPoint(mx, my, e.deltaY < 0 ? ZOOM_WHEEL_FACTOR : 1 / ZOOM_WHEEL_FACTOR);
     } else {
+      // Let native trackpad momentum handle scroll for smooth pan
       panX -= e.deltaX;
       panY -= e.deltaY;
       render();
@@ -504,11 +508,14 @@ function setupTouchGestures() {
     }
   }
 
+  // Velocity history for weighted average
+  let velocityHistory = [];
+
   function applyInertia() {
-    const friction = 0.92;
+    const friction = 0.95;
     inertiaVx *= friction;
     inertiaVy *= friction;
-    if (Math.abs(inertiaVx) < 0.5 && Math.abs(inertiaVy) < 0.5) {
+    if (Math.abs(inertiaVx) < 0.1 && Math.abs(inertiaVy) < 0.1) {
       inertiaRaf = null;
       return;
     }
@@ -568,8 +575,14 @@ function setupTouchGestures() {
       // Start pinch / two-finger pan
       isGesturing = true;
       const touches = [...activeTouches.values()];
-      lastPinchDist = pinchDistance(touches[0], touches[1]);
+      const initialDist = pinchDistance(touches[0], touches[1]);
+      // Smart disambiguation: reject if fingers too close (accidental palm)
+      if (initialDist < 30) {
+        return;
+      }
+      lastPinchDist = initialDist;
       lastPinchCenter = pinchCenter(touches[0], touches[1]);
+      velocityHistory = [];
       e.preventDefault();
     }
 
@@ -621,11 +634,21 @@ function setupTouchGestures() {
       panX += dx;
       panY += dy;
 
-      // Track velocity for inertia
+      // Track velocity for inertia (weighted 3-frame average)
       const now = performance.now();
       const dt = now - lastPanTime || 16;
-      inertiaVx = dx * (16 / dt);
-      inertiaVy = dy * (16 / dt);
+      const frameVx = dx * (16 / dt);
+      const frameVy = dy * (16 / dt);
+      velocityHistory.push({ vx: frameVx, vy: frameVy });
+      if (velocityHistory.length > 3) velocityHistory.shift();
+      // Weighted average: recent frames count more
+      const weights = velocityHistory.length === 3 ? [0.2, 0.3, 0.5] :
+                      velocityHistory.length === 2 ? [0.4, 0.6] : [1.0];
+      inertiaVx = 0; inertiaVy = 0;
+      for (let i = 0; i < velocityHistory.length; i++) {
+        inertiaVx += velocityHistory[i].vx * weights[i];
+        inertiaVy += velocityHistory[i].vy * weights[i];
+      }
       lastPanTime = now;
 
       lastPinchDist = dist;
@@ -695,6 +718,7 @@ function setupTouchGestures() {
       activeTouches.delete(t.identifier);
     }
     clearLongPress();
+    cancelInertia();
     isGesturing = false;
     pencilActive = false;
   });
