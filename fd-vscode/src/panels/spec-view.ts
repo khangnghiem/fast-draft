@@ -233,7 +233,12 @@ export class FdSpecViewPanel {
     let currentEdge: { from: string; to: string; label: string; annotations: { type: string; value: string }[] } | null = null;
     let insideEdge = false;
 
-    for (const line of lines) {
+    // PERFORMANCE OPTIMIZATION:
+    // Using explicit index `i` instead of `lines.indexOf(line)` inside the loop
+    // turns O(N^2) time complexity into O(N) when parsing multiline blocks.
+    // It also correctly handles duplicate lines like `spec {`.
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       const trimmed = line.trim();
       if (!trimmed) continue;
 
@@ -259,7 +264,7 @@ export class FdSpecViewPanel {
         if (trimmed.includes("{")) {
           let specDepth = (trimmed.match(/\{/g) || []).length;
           specDepth -= (trimmed.match(/\}/g) || []).length;
-          const lineIdx = lines.indexOf(line);
+          const lineIdx = i;
           let j = lineIdx + 1;
           while (j < lines.length && specDepth > 0) {
             const specLine = lines[j].trim();
