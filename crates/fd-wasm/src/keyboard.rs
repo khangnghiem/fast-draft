@@ -128,6 +128,10 @@ impl FdCanvas {
                 self.set_tool("eraser");
                 (false, true)
             }
+            ShortcutAction::ToolHand => {
+                self.set_tool("hand");
+                (false, true)
+            }
             // Screenbrush: Tab toggles between two most-used tools
             ShortcutAction::ToggleLastTool => {
                 std::mem::swap(&mut self.prev_tool, &mut self.active_tool);
@@ -260,6 +264,7 @@ impl FdCanvas {
 pub(crate) fn tool_kind_to_name(kind: ToolKind) -> &'static str {
     match kind {
         ToolKind::Select => "select",
+        ToolKind::Hand => "hand",
         ToolKind::Rect => "rect",
         ToolKind::Ellipse => "ellipse",
         ToolKind::Pen => "pen",
@@ -273,6 +278,7 @@ pub(crate) fn tool_kind_to_name(kind: ToolKind) -> &'static str {
 pub(crate) fn action_to_name(action: ShortcutAction) -> &'static str {
     match action {
         ShortcutAction::ToolSelect => "toolSelect",
+        ShortcutAction::ToolHand => "toolHand",
         ShortcutAction::ToolRect => "toolRect",
         ShortcutAction::ToolEllipse => "toolEllipse",
         ShortcutAction::ToolPen => "toolPen",

@@ -2700,8 +2700,8 @@ async function initPlayground() {
 
       const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
 
-      // Middle-click or Space+click → start pan
-      if (e.button === 1 || isPanning) {
+      // Middle-click, Space+click, or Hand tool → start pan
+      if (e.button === 1 || isPanning || fdCanvas.get_tool_name() === 'hand') {
         panDragging = true;
         panStartX = e.clientX - panX;
         panStartY = e.clientY - panY;
@@ -2816,7 +2816,7 @@ async function initPlayground() {
       // End pan drag
       if (panDragging) {
         panDragging = false;
-        canvas.style.cursor = isPanning ? 'grab' : '';
+        canvas.style.cursor = (isPanning || fdCanvas.get_tool_name() === 'hand') ? 'grab' : '';
         return;
       }
 
@@ -2954,12 +2954,12 @@ async function initPlayground() {
 
       // Tool shortcuts (only when canvas focused)
       if (!editorFocused && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        const toolMap = { v:'select', r:'rect', o:'ellipse', t:'text', a:'arrow', p:'pen', e:'eraser', f:'frame' };
+        const toolMap = { v:'select', r:'rect', o:'ellipse', t:'text', a:'arrow', p:'pen', e:'eraser', f:'frame', h:'hand' };
         const tool = toolMap[e.key.toLowerCase()];
         if (tool) {
           fdCanvas.set_tool(tool);
           updateToolbar(tool);
-          canvas.style.cursor = (tool === 'select' || tool === 'eraser') ? '' : 'crosshair';
+          canvas.style.cursor = tool === 'hand' ? 'grab' : (tool === 'select' || tool === 'eraser') ? '' : 'crosshair';
           e.preventDefault();
           return;
         }

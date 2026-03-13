@@ -21,6 +21,7 @@ use fd_core::model::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolKind {
     Select,
+    Hand,
     Rect,
     Ellipse,
     Pen,
@@ -66,13 +67,6 @@ pub struct SelectTool {
     pub dragging: bool,
     pub last_x: f32,
     pub last_y: f32,
-    /// Drag origin for Shift axis-lock (total displacement, not per-frame).
-    drag_start_x: f32,
-    drag_start_y: f32,
-    /// Locked axis for Shift-constrained drag.
-    /// `None` = undecided (below threshold), `Some(true)` = horizontal,
-    /// `Some(false)` = vertical. Locked once total displacement ≥ 4px.
-    pub locked_axis: Option<bool>,
     /// Node ID deferred for Shift+click toggle-deselect on PointerUp.
     /// When Shift+clicking an already-selected node, we defer the deselect
     /// to PointerUp so Shift+drag can constrain the axis without losing
@@ -89,6 +83,8 @@ pub struct SelectTool {
     resize_origin: (f32, f32, f32, f32),
     /// Fixed anchor point during resize (opposite corner/edge).
     resize_anchor: (f32, f32),
+    /// Original aspect ratio at resize start (w/h) for Shift+resize.
+    resize_aspect: f32,
 }
 
 impl Default for SelectTool {
@@ -105,15 +101,13 @@ impl SelectTool {
             dragging: false,
             last_x: 0.0,
             last_y: 0.0,
-            drag_start_x: 0.0,
-            drag_start_y: 0.0,
-            locked_axis: None,
             shift_toggled_off: None,
             marquee_start: None,
             marquee_rect: None,
             resize_handle: None,
             resize_origin: (0.0, 0.0, 0.0, 0.0),
             resize_anchor: (0.0, 0.0),
+            resize_aspect: 1.0,
         }
     }
 
@@ -123,6 +117,7 @@ impl SelectTool {
         let (x, y, w, h) = bounds;
         self.resize_handle = Some(handle);
         self.resize_origin = bounds;
+        self.resize_aspect = w / h.max(0.001);
         // Anchor is the opposite corner/edge that stays fixed
         self.resize_anchor = match handle {
             ResizeHandle::TopLeft => (x + w, y + h),
@@ -191,9 +186,6 @@ impl Tool for SelectTool {
                     self.dragging = true;
                     self.last_x = *x;
                     self.last_y = *y;
-                    self.drag_start_x = *x;
-                    self.drag_start_y = *y;
-                    self.locked_axis = None;
 
                     // Alt+click duplication is handled by FdCanvas (not here)
                     // so that selection can transfer to the clone properly.
@@ -221,13 +213,20 @@ impl Tool for SelectTool {
                     let mut mx = *x;
                     let mut my = *y;
 
-                    // Shift: constrain to square
+                    // Shift: preserve original aspect ratio
                     if modifiers.shift {
+                        let aspect = self.resize_aspect;
                         let dw = (mx - ax).abs();
                         let dh = (my - ay).abs();
-                        let side = dw.max(dh);
-                        mx = if mx > ax { ax + side } else { ax - side };
-                        my = if my > ay { ay + side } else { ay - side };
+                        if dw / aspect.max(0.001) >= dh {
+                            // Width-dominant: compute height from aspect
+                            let new_h = dw / aspect.max(0.001);
+                            my = if my > ay { ay + new_h } else { ay - new_h };
+                        } else {
+                            // Height-dominant: compute width from aspect
+                            let new_w = dh * aspect;
+                            mx = if mx > ax { ax + new_w } else { ax - new_w };
+                        }
                     }
 
                     // Compute new bounds from anchor + cursor
@@ -298,56 +297,27 @@ impl Tool for SelectTool {
                     // Alt mid-drag duplication is handled by FdCanvas (not here)
                     // so that selection can transfer to the clone properly.
 
-                    // Shift: constrain to dominant axis using TOTAL displacement
-                    // from drag start (Figma-style). Axis is locked once total
-                    // displacement exceeds a 4px dead-zone to prevent jitter
-                    // near the origin where tiny moves flip the axis.
+                    // Shift: per-frame axis-snap — project movement onto the
+                    // dominant axis (H or V). Allows switching axes mid-drag
+                    // by changing direction. No diagonal movement.
                     if modifiers.shift {
-                        // Cancel deferred Shift deselect — this is a drag, not a click
-                        self.shift_toggled_off = None;
+                        let dx = x - self.last_x;
+                        let dy = y - self.last_y;
 
-                        let total_dx = x - self.drag_start_x;
-                        let total_dy = y - self.drag_start_y;
-
-                        let axis_horizontal = match self.locked_axis {
-                            Some(locked) => locked,
-                            None => {
-                                let dist = total_dx.abs().max(total_dy.abs());
-                                if dist < 4.0 {
-                                    // Below threshold: free move (no constraint yet)
-                                    let dx = x - self.last_x;
-                                    let dy = y - self.last_y;
-                                    self.last_x = *x;
-                                    self.last_y = *y;
-                                    return self
-                                        .selected
-                                        .iter()
-                                        .map(|id| GraphMutation::MoveNode { id: *id, dx, dy })
-                                        .collect();
-                                }
-                                let h = total_dx.abs() >= total_dy.abs();
-                                self.locked_axis = Some(h);
-                                h
-                            }
+                        // Snap to dominant axis
+                        let (dx, dy) = if dx.abs() >= dy.abs() {
+                            (dx, 0.0)
+                        } else {
+                            (0.0, dy)
                         };
 
-                        let (dx, dy) = if axis_horizontal {
-                            // Lock horizontal: move to (x, start_y)
-                            (x - self.last_x, self.drag_start_y - self.last_y)
-                        } else {
-                            // Lock vertical: move to (start_x, y)
-                            (self.drag_start_x - self.last_x, y - self.last_y)
-                        };
-                        self.last_x = if axis_horizontal {
-                            *x
-                        } else {
-                            self.drag_start_x
-                        };
-                        self.last_y = if axis_horizontal {
-                            self.drag_start_y
-                        } else {
-                            *y
-                        };
+                        // Only cancel deferred Shift deselect if we actually moved
+                        if dx.abs() > 0.5 || dy.abs() > 0.5 {
+                            self.shift_toggled_off = None;
+                        }
+
+                        self.last_x += dx;
+                        self.last_y += dy;
 
                         return self
                             .selected
@@ -381,7 +351,6 @@ impl Tool for SelectTool {
                 }
                 self.dragging = false;
                 self.resize_handle = None;
-                self.locked_axis = None;
                 vec![]
             }
             _ => vec![],

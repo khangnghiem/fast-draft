@@ -139,8 +139,8 @@ rect @card_revenue {
   w: 220 h: 120
   use: card
   shadow: (0,2,16,#00000010)
-  x: 279.8
-  y: 98.9
+  x: 279.6
+  y: 97.7
   when :hover {
     scale: 1
     ease: spring 200ms
@@ -169,8 +169,8 @@ rect @card_users {
   w: 220 h: 120
   use: card
   shadow: (0,2,16,#00000010)
-  x: 518.7
-  y: 98.8
+  x: 526.2
+  y: 92.1
   when :hover {
     scale: 1
     ease: spring 200ms
@@ -198,8 +198,8 @@ rect @card_tasks {
   w: 220 h: 120
   use: card
   shadow: (0,2,16,#00000010)
-  x: 754.8
-  y: 99.6
+  x: 798
+  y: 65.4
   when :hover {
     scale: 1
     ease: spring 200ms
@@ -237,19 +237,24 @@ frame @activity_feed {
     corner: 8
   }
   rect @activity_3 {
-    text @_text_15 "Carol deployed v2.1.0 to staging" {
-      use: body
-    }
     w: 420 h: 44
     fill: #F9FAFB  # white
     corner: 8
+    x: 21.7
+    y: 172.8
   }
   layout: column gap=8 pad=20
   w: 460 h: 280
   use: card
   shadow: (0,2,16,#00000010)
-  x: 251
-  y: 309.1
+  x: 270.2
+  y: 299
+}
+
+text @_text_15 "Carol deployed v2.1.0 to staging" {
+  use: body
+  x: 401.5
+  y: 479.4
 }
 
 # ─── Pipeline Status ───
@@ -269,11 +274,11 @@ frame @pipeline {
 # Pipeline stages as connected nodes
 # [auto] connects to stage_test
 rect @stage_build {
-  w: 90 h: 44
+  w: 37.7 h: 37.7
   fill: #22C55E  # green
   corner: 8
-  x: 165.6
-  y: 639.8
+  x: 217.9
+  y: 646.1
 }
 
 text @_text_23 "Test" {
@@ -291,12 +296,14 @@ text @_text_16 "Build" {
 rect @stage_test {
   text @_text_17 "Test" {
     use: accent_text
+    x: 31.4
+    y: 9.6
   }
-  w: 90 h: 44
+  w: 109.1 h: 35
   fill: #22C55E  # green
   corner: 8
-  x: 428
-  y: 640
+  x: 398.7
+  y: 649.4
 }
 
 # [auto] connects to stage_prod
@@ -342,6 +349,12 @@ text @_text_2 "Text" {
 text @_text_0 "Text" {
   x: 360.6
   y: 657.3
+}
+
+text @_text_24 "Carol deployed v2.1.0 to staging" {
+  use: body
+  x: 406.2
+  y: 438.2
 }
 
 # ─── Flows ───

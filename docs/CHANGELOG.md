@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.11.132 — Hand Tool + Shift Interaction Improvements (R3.54, R6.6)
+
+- **FEATURE (R6.6)**: Hand tool (`H` key) — dedicated pan tool; click+drag to pan canvas; toolbar button with ✋ icon between Select and Rect; `grab`/`grabbing` cursor; panning handled entirely in JS, WASM pointer handlers return early for Hand tool
+- **CHANGE (R3.54)**: Shift+drag axis-snap is now **per-frame** instead of lock-based — each frame projects movement onto the dominant axis (horizontal or vertical), allowing direction changes mid-drag; no dead-zone threshold; removed `locked_axis`, `drag_start_x`, `drag_start_y` from `SelectTool`
+- **CHANGE (R3.54)**: Shift+resize now preserves **original aspect ratio** instead of forcing square — `resize_aspect` field captures `w/h` at resize start; width-dominant and height-dominant paths compute the constrained dimension from the aspect ratio
+- **FIX (R3.54)**: Shift+click deselect no longer cancelled by sub-pixel pointer jitter — `shift_toggled_off` cancellation moved past a 0.5px meaningful-move threshold, preventing accidental deselect cancellation from trackpad noise
+- **PARITY (R6.6)**: Hand tool added to both site playground and VS Code extension — toolbar button, keyboard shortcut, cursor, pan behavior all consistent
+- **TESTING**: Rewrote 4 Shift+drag tests for per-frame axis-snap behavior; all 115 workspace tests pass
+- **DOCS**: Updated `SHORTCUTS.md` with `H` → Hand (pan) tool
+
 ### v0.11.131 — Fix Blank Canvas: wasm-opt -O2 Strips Canvas2D Draw Calls (R6.9)
 
 - **FIX (R6.9)**: Canvas no longer renders blank in both VS Code extension and site playground — root cause: `wasm-opt -O2` (wasm-pack's default) was incorrectly stripping Canvas2D draw calls (`fill_rect`, `stroke`, `fill`, `set_fill_style_str`, etc.) as dead code because these are imported JavaScript functions with void return that `wasm-opt` treats as side-effect-free at `-O2`; downgraded to `-O1` which preserves all imported JS side-effects while still applying safe optimizations

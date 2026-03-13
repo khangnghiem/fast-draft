@@ -60,8 +60,7 @@ fn select_tool_shift_drag_constrains_axis() {
         Some(target),
     );
 
-    // Drag diagonally with Shift → constrain to dominant axis (X)
-    // Displacement (30, 10) exceeds 4px threshold → locks horizontal
+    // Drag diagonally with Shift → snap to dominant axis (X) per-frame
     let mutations = tool.handle(
         &InputEvent::PointerMove {
             x: 30.0,
@@ -79,11 +78,6 @@ fn select_tool_shift_drag_constrains_axis() {
         }
         _ => panic!("expected MoveNode"),
     }
-    assert_eq!(
-        tool.locked_axis,
-        Some(true),
-        "axis should be locked to horizontal"
-    );
 }
 
 #[test]
@@ -1142,8 +1136,8 @@ fn ellipse_tool_creates_with_default_stroke() {
 
 #[test]
 fn select_tool_shift_drag_no_jitter_on_diagonal() {
-    // Regression: per-frame axis constraint used to flip every frame when
-    // dragging diagonally, causing visible zigzag/jitter.
+    // Per-frame axis-snap: each frame projects onto the dominant axis.
+    // When dragging diagonally, each frame snaps independently.
     let mut tool = SelectTool::new();
     let target = NodeId::intern("box_jitter");
     let shift = Modifiers {
@@ -1162,7 +1156,7 @@ fn select_tool_shift_drag_no_jitter_on_diagonal() {
         Some(target),
     );
 
-    // Frame 1: move mostly horizontal (dx=5, dy=3) → total: (5, 3) → lock X
+    // Frame 1: move mostly horizontal (dx=5, dy=3) → snap to X
     let m1 = tool.handle(
         &InputEvent::PointerMove {
             x: 105.0,
@@ -1176,12 +1170,13 @@ fn select_tool_shift_drag_no_jitter_on_diagonal() {
     match &m1[0] {
         GraphMutation::MoveNode { dx, dy, .. } => {
             assert!((dx - 5.0).abs() < 0.01, "frame1 dx={dx}");
-            assert!(dy.abs() < 0.01, "frame1 dy={dy} should be 0 (X-locked)");
+            assert!(dy.abs() < 0.01, "frame1 dy={dy} should be 0 (X-dominant)");
         }
         _ => panic!("expected MoveNode"),
     }
 
-    // Frame 2: continue diagonally (total: 12, 8) → still X-dominant → still lock X
+    // Frame 2: cursor (112, 108). last is (105, 100).
+    // dx=7, dy=8 → Y-dominant → snap to Y
     let m2 = tool.handle(
         &InputEvent::PointerMove {
             x: 112.0,
@@ -1194,17 +1189,18 @@ fn select_tool_shift_drag_no_jitter_on_diagonal() {
     assert_eq!(m2.len(), 1);
     match &m2[0] {
         GraphMutation::MoveNode { dx, dy, .. } => {
-            assert!((dx - 7.0).abs() < 0.01, "frame2 dx={dx}");
-            assert!(dy.abs() < 0.01, "frame2 dy={dy} should be 0 (X-locked)");
+            assert!(dx.abs() < 0.01, "frame2 dx={dx} should be 0 (Y-dominant)");
+            assert!((dy - 8.0).abs() < 0.01, "frame2 dy={dy}");
         }
         _ => panic!("expected MoveNode"),
     }
 
-    // Frame 3: even more diagonal (total: 18, 15) → still X > Y → lock X
+    // Frame 3: cursor (113, 116). last is (105, 108).
+    // dx=8, dy=8 → equal → X wins (>=), snap to X
     let m3 = tool.handle(
         &InputEvent::PointerMove {
-            x: 118.0,
-            y: 115.0,
+            x: 113.0,
+            y: 116.0,
             pressure: 1.0,
             modifiers: shift,
         },
@@ -1213,8 +1209,8 @@ fn select_tool_shift_drag_no_jitter_on_diagonal() {
     assert_eq!(m3.len(), 1);
     match &m3[0] {
         GraphMutation::MoveNode { dx, dy, .. } => {
-            assert!((dx - 6.0).abs() < 0.01, "frame3 dx={dx}");
-            assert!(dy.abs() < 0.01, "frame3 dy={dy} should be 0 (X-locked)");
+            assert!((dx - 8.0).abs() < 0.01, "frame3 dx={dx}");
+            assert!(dy.abs() < 0.01, "frame3 dy={dy} should be 0 (X-dominant)");
         }
         _ => panic!("expected MoveNode"),
     }
@@ -1239,7 +1235,7 @@ fn select_tool_shift_drag_locks_vertical() {
         Some(target),
     );
 
-    // Move mostly vertical (total: 3, 20) → lock Y
+    // Move mostly vertical (dx=3, dy=20) → snap to Y per-frame
     let m1 = tool.handle(
         &InputEvent::PointerMove {
             x: 53.0,
@@ -1252,7 +1248,7 @@ fn select_tool_shift_drag_locks_vertical() {
     assert_eq!(m1.len(), 1);
     match &m1[0] {
         GraphMutation::MoveNode { dx, dy, .. } => {
-            assert!(dx.abs() < 0.01, "dx={dx} should be 0 (Y-locked)");
+            assert!(dx.abs() < 0.01, "dx={dx} should be 0 (Y-dominant)");
             assert!((dy - 20.0).abs() < 0.01, "dy={dy}");
         }
         _ => panic!("expected MoveNode"),
@@ -1372,11 +1368,10 @@ fn ellipse_tool_shift_draw_northwest_correct_origin() {
     assert!(has_move, "should have MoveNode for NW direction");
 }
 
-/// Regression: Shift+drag near origin should use dead-zone threshold.
-/// Below 4px displacement, the axis is NOT locked and movement is free.
-/// Once past 4px, the axis locks and stays locked.
+/// Per-frame axis-snap has no dead-zone — every frame snaps independently.
+/// Small displacements still snap to dominant axis.
 #[test]
-fn select_tool_shift_drag_dead_zone() {
+fn select_tool_shift_drag_small_moves() {
     let mut tool = SelectTool::new();
     let target = NodeId::intern("box_dz");
     let shift = Modifiers {
@@ -1394,9 +1389,8 @@ fn select_tool_shift_drag_dead_zone() {
         },
         Some(target),
     );
-    assert!(tool.locked_axis.is_none(), "axis should start as None");
 
-    // Move (2, 1.5) — below 4px threshold → free move, no axis lock
+    // Move (2, 1.5) — small but X-dominant → snap to X
     let mutations = tool.handle(
         &InputEvent::PointerMove {
             x: 102.0,
@@ -1406,66 +1400,31 @@ fn select_tool_shift_drag_dead_zone() {
         },
         None,
     );
-    assert_eq!(mutations.len(), 1, "should emit MoveNode for free move");
-    assert!(
-        tool.locked_axis.is_none(),
-        "axis should NOT be locked below threshold"
-    );
+    assert_eq!(mutations.len(), 1, "should emit MoveNode");
     match &mutations[0] {
         GraphMutation::MoveNode { dx, dy, .. } => {
-            // Free move: both dx and dy should be non-zero
             assert!((dx - 2.0).abs() < 0.01, "dx={dx} should be 2.0");
-            assert!((dy - 1.5).abs() < 0.01, "dy={dy} should be 1.5");
+            assert!(dy.abs() < 0.01, "dy={dy} should be 0 (X-dominant)");
         }
         _ => panic!("expected MoveNode"),
     }
 
-    // Move to (110, 103) — total displacement (10, 3) exceeds 4px → locks horizontal
+    // Move vertically: cursor (102, 111.5). last is (102, 100).
+    // dx=0, dy=11.5 → snap to Y (axis switches!)
     let mutations = tool.handle(
         &InputEvent::PointerMove {
-            x: 110.0,
-            y: 103.0,
+            x: 102.0,
+            y: 111.5,
             pressure: 1.0,
             modifiers: shift,
         },
         None,
-    );
-    assert_eq!(
-        tool.locked_axis,
-        Some(true),
-        "axis should lock to horizontal"
     );
     assert_eq!(mutations.len(), 1);
     match &mutations[0] {
-        GraphMutation::MoveNode { dy, .. } => {
-            // Y should snap back to start_y (100.0) from last_y (101.5)
-            assert!(
-                dy.abs() < 2.0,
-                "Y should be constrained near 0, got dy={dy}"
-            );
-        }
-        _ => panic!("expected MoveNode"),
-    }
-
-    // Subsequent move: axis stays locked even if Y > X
-    let mutations = tool.handle(
-        &InputEvent::PointerMove {
-            x: 112.0,
-            y: 120.0,
-            pressure: 1.0,
-            modifiers: shift,
-        },
-        None,
-    );
-    assert_eq!(
-        tool.locked_axis,
-        Some(true),
-        "axis should STAY locked to horizontal"
-    );
-    match &mutations[0] {
         GraphMutation::MoveNode { dx, dy, .. } => {
-            assert!((dx - 2.0).abs() < 0.01, "dx={dx}");
-            assert!(dy.abs() < 0.01, "Y should still be constrained, dy={dy}");
+            assert!(dx.abs() < 0.01, "dx={dx} should be 0 (Y-dominant)");
+            assert!((dy - 11.5).abs() < 0.01, "dy={dy}");
         }
         _ => panic!("expected MoveNode"),
     }
@@ -1565,7 +1524,7 @@ fn select_tool_shift_drag_multi_select_moves_all() {
         "shift_toggled_off should be set"
     );
 
-    // Shift+drag moves all 3 nodes (displacement 20,5 > 4px threshold → locks X)
+    // Shift+drag moves all 3 nodes (displacement 20,5 → X-dominant)
     let mutations = tool.handle(
         &InputEvent::PointerMove {
             x: 70.0,
