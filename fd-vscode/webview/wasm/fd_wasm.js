@@ -19,9 +19,6 @@ export class FdCanvas {
     }
     /**
      * Add an animation to a node by ID.
-     * `trigger` is "hover", "press", or "enter".
-     * `props_json` is a JSON object with optional keys: scale, opacity, rotate, fill, duration, ease.
-     * Returns `true` on success.
      * @param {string} node_id
      * @param {string} trigger
      * @param {string} props_json
@@ -60,8 +57,6 @@ export class FdCanvas {
     }
     /**
      * Compute alignment guides for a hypothetical rect at (x, y, w, h).
-     * Used by JS drag-to-create to show snap lines before the node exists.
-     * Returns JSON: `[[x1,y1,x2,y2], ...]`
      * @param {number} x
      * @param {number} y
      * @param {number} w
@@ -81,9 +76,7 @@ export class FdCanvas {
         }
     }
     /**
-     * Create a text node as a child of an existing shape (rect/ellipse/frame).
-     * Used by double-click to drill into a shape and start inline editing.
-     * Returns the new text node's ID, or empty string on failure.
+     * Create a text node as a child of an existing shape.
      * @param {string} parent_id
      * @param {string} content
      * @returns {string}
@@ -106,7 +99,6 @@ export class FdCanvas {
     }
     /**
      * Create an edge between two nodes.
-     * Returns the new edge ID, or empty string on failure.
      * @param {string} from_id
      * @param {string} to_id
      * @returns {string}
@@ -128,8 +120,7 @@ export class FdCanvas {
         }
     }
     /**
-     * Create a standalone edge with point anchors (no connected nodes).
-     * Returns the new edge ID, or empty string on failure.
+     * Create a standalone edge with point anchors.
      * @param {number} x1
      * @param {number} y1
      * @param {number} x2
@@ -150,8 +141,6 @@ export class FdCanvas {
     }
     /**
      * Create a node at a specific position (for drag-and-drop).
-     * `kind` is "rect", "ellipse", "text", or "frame".
-     * Returns `true` if the node was created.
      * @param {string} kind
      * @param {number} x
      * @param {number} y
@@ -173,8 +162,6 @@ export class FdCanvas {
     }
     /**
      * Detach a text child from its parent edge.
-     * Clears the edge's text_child field and flushes text.
-     * Returns the edge ID that was modified, or empty if not found.
      * @param {string} text_id
      * @returns {string}
      */
@@ -214,11 +201,7 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
-     * Get last detach event info. Returns JSON:
-     * `{"detached":true,"nodeId":"...","fromGroupId":"..."}` or `""` if none.
-     * Clears the event after reading (one-shot).
-     * Evaluate a drop for structural detach. Returns JSON if detached, empty otherwise.
-     * Clears the event after reading (one-shot).
+     * Evaluate a drop for structural detach.
      * @param {string} node_id
      * @returns {string}
      */
@@ -238,8 +221,6 @@ export class FdCanvas {
     }
     /**
      * Evaluate if a dragging node is near detaching from its parent group.
-     * Returns JSON `{"parentId":"...","childCx":...,"childCy":...,"parentCx":...,"parentCy":...}`
-     * if the overlap is less than 25%. Otherwise returns an empty string.
      * @param {string} node_id
      * @returns {string}
      */
@@ -275,8 +256,6 @@ export class FdCanvas {
     }
     /**
      * Post-release: expand parent groups to contain overflowing children.
-     * Called once on pointer release (never per-frame).
-     * Returns `true` if any parent was expanded.
      * @returns {boolean}
      */
     finalize_bounds() {
@@ -285,7 +264,6 @@ export class FdCanvas {
     }
     /**
      * Find the edge whose text_child matches the given text node ID.
-     * Returns the edge ID string, or empty if no edge owns this text.
      * @param {string} text_id
      * @returns {string}
      */
@@ -301,6 +279,22 @@ export class FdCanvas {
             return getStringFromWasm0(ret[0], ret[1]);
         } finally {
             wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * Get all notes across the entire document.
+     * @returns {string}
+     */
+    get_all_notes() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_all_notes(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
         }
     }
     /**
@@ -322,28 +316,7 @@ export class FdCanvas {
         }
     }
     /**
-     * Get annotations for a node as JSON array.
-     * Returns `[]` if node not found or has no annotations.
-     * @param {string} node_id
-     * @returns {string}
-     */
-    get_annotations_json(node_id) {
-        let deferred2_0;
-        let deferred2_1;
-        try {
-            const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len0 = WASM_VECTOR_LEN;
-            const ret = wasm.fdcanvas_get_annotations_json(this.__wbg_ptr, ptr0, len0);
-            deferred2_0 = ret[0];
-            deferred2_1 = ret[1];
-            return getStringFromWasm0(ret[0], ret[1]);
-        } finally {
-            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
-        }
-    }
-    /**
      * Get the arrow tool's live preview line during drag.
-     * Returns JSON with target_id when hovering a node, or `""` if not dragging.
      * @returns {string}
      */
     get_arrow_preview() {
@@ -360,7 +333,6 @@ export class FdCanvas {
     }
     /**
      * Get context-aware completions at the cursor position.
-     * Returns JSON: `[{label, kind, detail, insertText}]`
      * @param {number} line
      * @param {number} col
      * @returns {string}
@@ -379,7 +351,6 @@ export class FdCanvas {
     }
     /**
      * Get parse diagnostics for the current document text.
-     * Returns JSON: `[{line, col, endCol, message, severity}]`
      * @returns {string}
      */
     get_diagnostics() {
@@ -396,7 +367,6 @@ export class FdCanvas {
     }
     /**
      * Get hover information at the cursor position.
-     * Returns JSON: `{content: "markdown"}` or `""` if no info.
      * @param {number} line
      * @param {number} col
      * @returns {string}
@@ -415,7 +385,6 @@ export class FdCanvas {
     }
     /**
      * Get animations for a node as a JSON array.
-     * Returns `[]` if node not found or has no animations.
      * @param {string} node_id
      * @returns {string}
      */
@@ -435,7 +404,6 @@ export class FdCanvas {
     }
     /**
      * Get the scene-space bounds of a node by its ID.
-     * Returns `{}` if the node is not found.
      * @param {string} node_id
      * @returns {string}
      */
@@ -455,8 +423,6 @@ export class FdCanvas {
     }
     /**
      * Get the resolved bounds of a node by its `@id` as JSON.
-     * Returns `{"x":N,"y":N,"width":N,"height":N}` or `"{}"` if not found.
-     * Used by JS to capture bounds BEFORE the eraser deletes the node.
      * @param {string} id_str
      * @returns {string}
      */
@@ -476,8 +442,6 @@ export class FdCanvas {
     }
     /**
      * Get basic properties of a node by its ID (without selecting it).
-     * Returns JSON with `text`, `fontSize`, `fontFamily`, `fontWeight`.
-     * Returns `{}` if the node is not found.
      * @param {string} node_id
      * @returns {string}
      */
@@ -496,9 +460,26 @@ export class FdCanvas {
         }
     }
     /**
+     * Get the raw markdown note for a node.
+     * @param {string} node_id
+     * @returns {string}
+     */
+    get_note(node_id) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_get_note(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * Get the bounding box of all non-root nodes in the scene.
-     * Returns `{"x":N,"y":N,"w":N,"h":N}` or `""` if no nodes exist.
-     * Single WASM call replaces N×get_node_bounds() roundtrips in JS minimap.
      * @returns {string}
      */
     get_scene_bounds() {
@@ -598,7 +579,6 @@ export class FdCanvas {
     }
     /**
      * Get the ID of the first text child node of a shape.
-     * Returns empty string if the shape has no text child.
      * @param {string} parent_id
      * @returns {string}
      */
@@ -618,8 +598,6 @@ export class FdCanvas {
     }
     /**
      * Get IDs of all direct Text children of a node.
-     * Returns JSON array of string IDs, e.g. `["label","subtitle"]`.
-     * Used by JS to remeasure text bounds after parent resize.
      * @param {string} node_id
      * @returns {string}
      */
@@ -638,11 +616,7 @@ export class FdCanvas {
         }
     }
     /**
-     * Get the current theme as a JSON object for cross-platform consumption.
-     *
-     * Returns a `ThemeContract` serialized as JSON, containing all visual
-     * constants (colors, fonts, spacing) that platform hosts need for
-     * consistent UI rendering.
+     * Get the current theme as a JSON object.
      * @returns {string}
      */
     get_theme_json() {
@@ -801,10 +775,7 @@ export class FdCanvas {
         }
     }
     /**
-     * Check if any edge in the scene has a flow animation (pulse/dash).
-     *
-     * The JS render loop uses this to keep rendering continuously when
-     * flow animations exist, instead of freezing when idle.
+     * Check if any edge in the scene has a flow animation.
      * @returns {boolean}
      */
     has_active_flows() {
@@ -821,7 +792,6 @@ export class FdCanvas {
     }
     /**
      * Check if a node has any direct Text children.
-     * Used by the JS webview to decide whether to auto-center a dropped text.
      * @param {string} node_id
      * @returns {boolean}
      */
@@ -851,8 +821,6 @@ export class FdCanvas {
     }
     /**
      * Hit-test for edges only at scene-space coordinates.
-     * Returns the edge ID if hit, or empty string.
-     * Used by JS to show edge context menu on right-click.
      * @param {number} x
      * @param {number} y
      * @returns {string}
@@ -871,8 +839,6 @@ export class FdCanvas {
     }
     /**
      * Import a Mermaid diagram, converting it to FD format.
-     * Merges the resulting nodes and edges into the current document.
-     * Returns `true` on success, `false` on parse error.
      * @param {string} mermaid_text
      * @returns {boolean}
      */
@@ -925,8 +891,6 @@ export class FdCanvas {
     }
     /**
      * Push a text snapshot for undo support.
-     * Used by JS-driven operations (e.g., paste) that bypass the mutation
-     * system but still need to be undoable.
      * @param {string} text_before
      * @param {string} text_after
      */
@@ -959,8 +923,8 @@ export class FdCanvas {
     /**
      * Render the scene to a Canvas2D context.
      *
-     * * `skip_grid` — skip drawing the background grid dots (JS handles grid separately).
-     * * `skip_bg` — skip filling the background color (caller already filled in identity space).
+     * * `skip_grid` — skip drawing the background grid dots.
+     * * `skip_bg` — skip filling the background color.
      * @param {CanvasRenderingContext2D} ctx
      * @param {number} time_ms
      * @param {boolean} skip_grid
@@ -971,7 +935,6 @@ export class FdCanvas {
     }
     /**
      * Render only the selected nodes (and their children) to the given context.
-     * Used for "Copy as PNG" exports. Translates context by `offset_x, offset_y`.
      * @param {CanvasRenderingContext2D} ctx
      * @param {number} offset_x
      * @param {number} offset_y
@@ -1000,21 +963,6 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
-     * Set annotations for a node from a JSON array.
-     * Returns `true` on success.
-     * @param {string} node_id
-     * @param {string} json
-     * @returns {boolean}
-     */
-    set_annotations_json(node_id, json) {
-        const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len1 = WASM_VECTOR_LEN;
-        const ret = wasm.fdcanvas_set_annotations_json(this.__wbg_ptr, ptr0, len0, ptr1, len1);
-        return ret !== 0;
-    }
-    /**
      * Set a property on the currently selected node.
      * Returns `true` if the property was set.
      * @param {string} key
@@ -1030,6 +978,20 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Set the raw markdown note for a node.
+     * @param {string} node_id
+     * @param {string} content
+     * @returns {boolean}
+     */
+    set_note(node_id, content) {
+        const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_set_note(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return ret !== 0;
+    }
+    /**
      * Enable or disable sketchy (hand-drawn) rendering mode.
      * @param {boolean} enabled
      */
@@ -1039,8 +1001,6 @@ export class FdCanvas {
     /**
      * Set the FD source text, re-parsing into the scene graph.
      * Returns a JSON string: `{"ok":true,"layout_changed":bool}`
-     * `layout_changed` is false when only non-layout properties changed
-     * (comments, specs, style names) — JS can skip re-render in that case.
      * @param {string} text
      * @returns {string}
      */
@@ -1076,7 +1036,6 @@ export class FdCanvas {
     }
     /**
      * Toggle the locked state of a node. Returns the new locked state.
-     * Returns false if node not found.
      * @param {string} id
      * @returns {boolean}
      */
@@ -1104,8 +1063,6 @@ export class FdCanvas {
     }
     /**
      * Update a text node's resolved bounds using JS-measured dimensions.
-     * Called from JS after `measureText()` to set the tight bounding box.
-     * Returns `true` if bounds changed (and parent expansion may be needed).
      * @param {string} node_id
      * @param {number} measured_width
      * @param {number} measured_height
@@ -1122,7 +1079,6 @@ if (Symbol.dispose) FdCanvas.prototype[Symbol.dispose] = FdCanvas.prototype.free
 
 /**
  * Parse FD source and return the scene graph as JSON for the tree preview.
- * Returns JSON `{"ok":true,"nodes":[...]}` or `{"ok":false,"error":"..."}`.
  * @param {string} source
  * @returns {string}
  */
@@ -1142,7 +1098,7 @@ export function parse_to_json(source) {
 }
 
 /**
- * Validate FD source text. Returns JSON: `{"ok":true}` or `{"ok":false,"error":"..."}`.
+ * Validate FD source text.
  * @param {string} source
  * @returns {string}
  */

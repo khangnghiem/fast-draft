@@ -12,9 +12,6 @@ export class FdCanvas {
     [Symbol.dispose](): void;
     /**
      * Add an animation to a node by ID.
-     * `trigger` is "hover", "press", or "enter".
-     * `props_json` is a JSON object with optional keys: scale, opacity, rotate, fill, duration, ease.
-     * Returns `true` on success.
      */
     add_animation_to_node(node_id: string, trigger: string, props_json: string): boolean;
     /**
@@ -34,30 +31,22 @@ export class FdCanvas {
     clear_pressed(): void;
     /**
      * Compute alignment guides for a hypothetical rect at (x, y, w, h).
-     * Used by JS drag-to-create to show snap lines before the node exists.
-     * Returns JSON: `[[x1,y1,x2,y2], ...]`
      */
     compute_guides_for_rect(x: number, y: number, w: number, h: number): string;
     /**
-     * Create a text node as a child of an existing shape (rect/ellipse/frame).
-     * Used by double-click to drill into a shape and start inline editing.
-     * Returns the new text node's ID, or empty string on failure.
+     * Create a text node as a child of an existing shape.
      */
     create_child_text(parent_id: string, content: string): string;
     /**
      * Create an edge between two nodes.
-     * Returns the new edge ID, or empty string on failure.
      */
     create_edge(from_id: string, to_id: string): string;
     /**
-     * Create a standalone edge with point anchors (no connected nodes).
-     * Returns the new edge ID, or empty string on failure.
+     * Create a standalone edge with point anchors.
      */
     create_edge_at(x1: number, y1: number, x2: number, y2: number): string;
     /**
      * Create a node at a specific position (for drag-and-drop).
-     * `kind` is "rect", "ellipse", "text", or "frame".
-     * Returns `true` if the node was created.
      */
     create_node_at(kind: string, x: number, y: number): boolean;
     /**
@@ -66,8 +55,6 @@ export class FdCanvas {
     delete_selected(): boolean;
     /**
      * Detach a text child from its parent edge.
-     * Clears the edge's text_child field and flushes text.
-     * Returns the edge ID that was modified, or empty if not found.
      */
     detach_text_from_edge(text_id: string): string;
     /**
@@ -82,17 +69,11 @@ export class FdCanvas {
      */
     duplicate_selected_at(dx: number, dy: number): boolean;
     /**
-     * Get last detach event info. Returns JSON:
-     * `{"detached":true,"nodeId":"...","fromGroupId":"..."}` or `""` if none.
-     * Clears the event after reading (one-shot).
-     * Evaluate a drop for structural detach. Returns JSON if detached, empty otherwise.
-     * Clears the event after reading (one-shot).
+     * Evaluate a drop for structural detach.
      */
     evaluate_drop(node_id: string): string;
     /**
      * Evaluate if a dragging node is near detaching from its parent group.
-     * Returns JSON `{"parentId":"...","childCx":...,"childCy":...,"parentCx":...,"parentCy":...}`
-     * if the overlap is less than 25%. Otherwise returns an empty string.
      */
     evaluate_near_detach(node_id: string): string;
     /**
@@ -101,15 +82,16 @@ export class FdCanvas {
     export_svg(): string;
     /**
      * Post-release: expand parent groups to contain overflowing children.
-     * Called once on pointer release (never per-frame).
-     * Returns `true` if any parent was expanded.
      */
     finalize_bounds(): boolean;
     /**
      * Find the edge whose text_child matches the given text node ID.
-     * Returns the edge ID string, or empty if no edge owns this text.
      */
     find_edge_for_text(text_id: string): string;
+    /**
+     * Get all notes across the entire document.
+     */
+    get_all_notes(): string;
     /**
      * Get ghost origin bounds for Alt+drag visual feedback.
      * Returns a JSON array of `{x, y, w, h}` objects, or empty string
@@ -117,56 +99,43 @@ export class FdCanvas {
      */
     get_alt_drag_ghost(): string;
     /**
-     * Get annotations for a node as JSON array.
-     * Returns `[]` if node not found or has no annotations.
-     */
-    get_annotations_json(node_id: string): string;
-    /**
      * Get the arrow tool's live preview line during drag.
-     * Returns JSON with target_id when hovering a node, or `""` if not dragging.
      */
     get_arrow_preview(): string;
     /**
      * Get context-aware completions at the cursor position.
-     * Returns JSON: `[{label, kind, detail, insertText}]`
      */
     get_completions(line: number, col: number): string;
     /**
      * Get parse diagnostics for the current document text.
-     * Returns JSON: `[{line, col, endCol, message, severity}]`
      */
     get_diagnostics(): string;
     /**
      * Get hover information at the cursor position.
-     * Returns JSON: `{content: "markdown"}` or `""` if no info.
      */
     get_hover(line: number, col: number): string;
     /**
      * Get animations for a node as a JSON array.
-     * Returns `[]` if node not found or has no animations.
      */
     get_node_animations_json(node_id: string): string;
     /**
      * Get the scene-space bounds of a node by its ID.
-     * Returns `{}` if the node is not found.
      */
     get_node_bounds(node_id: string): string;
     /**
      * Get the resolved bounds of a node by its `@id` as JSON.
-     * Returns `{"x":N,"y":N,"width":N,"height":N}` or `"{}"` if not found.
-     * Used by JS to capture bounds BEFORE the eraser deletes the node.
      */
     get_node_bounds_json(id_str: string): string;
     /**
      * Get basic properties of a node by its ID (without selecting it).
-     * Returns JSON with `text`, `fontSize`, `fontFamily`, `fontWeight`.
-     * Returns `{}` if the node is not found.
      */
     get_node_props(node_id: string): string;
     /**
+     * Get the raw markdown note for a node.
+     */
+    get_note(node_id: string): string;
+    /**
      * Get the bounding box of all non-root nodes in the scene.
-     * Returns `{"x":N,"y":N,"w":N,"h":N}` or `""` if no nodes exist.
-     * Single WASM call replaces N×get_node_bounds() roundtrips in JS minimap.
      */
     get_scene_bounds(): string;
     /**
@@ -198,21 +167,14 @@ export class FdCanvas {
     get_text(): string;
     /**
      * Get the ID of the first text child node of a shape.
-     * Returns empty string if the shape has no text child.
      */
     get_text_child_id(parent_id: string): string;
     /**
      * Get IDs of all direct Text children of a node.
-     * Returns JSON array of string IDs, e.g. `["label","subtitle"]`.
-     * Used by JS to remeasure text bounds after parent resize.
      */
     get_text_children(node_id: string): string;
     /**
-     * Get the current theme as a JSON object for cross-platform consumption.
-     *
-     * Returns a `ThemeContract` serialized as JSON, containing all visual
-     * constants (colors, fonts, spacing) that platform hosts need for
-     * consistent UI rendering.
+     * Get the current theme as a JSON object.
      */
     get_theme_json(): string;
     /**
@@ -260,10 +222,7 @@ export class FdCanvas {
      */
     handle_stylus_squeeze(shift: boolean, ctrl: boolean, alt: boolean, meta: boolean): string;
     /**
-     * Check if any edge in the scene has a flow animation (pulse/dash).
-     *
-     * The JS render loop uses this to keep rendering continuously when
-     * flow animations exist, instead of freezing when idle.
+     * Check if any edge in the scene has a flow animation.
      */
     has_active_flows(): boolean;
     /**
@@ -272,7 +231,6 @@ export class FdCanvas {
     has_pending_text_change(): boolean;
     /**
      * Check if a node has any direct Text children.
-     * Used by the JS webview to decide whether to auto-center a dropped text.
      */
     has_text_child(node_id: string): boolean;
     /**
@@ -281,14 +239,10 @@ export class FdCanvas {
     hit_test_at(x: number, y: number): string;
     /**
      * Hit-test for edges only at scene-space coordinates.
-     * Returns the edge ID if hit, or empty string.
-     * Used by JS to show edge context menu on right-click.
      */
     hit_test_edge_at(x: number, y: number): string;
     /**
      * Import a Mermaid diagram, converting it to FD format.
-     * Merges the resulting nodes and edges into the current document.
-     * Returns `true` on success, `false` on parse error.
      */
     import_mermaid(mermaid_text: string): boolean;
     /**
@@ -305,8 +259,6 @@ export class FdCanvas {
     parent_of(node_id: string): string;
     /**
      * Push a text snapshot for undo support.
-     * Used by JS-driven operations (e.g., paste) that bypass the mutation
-     * system but still need to be undoable.
      */
     push_undo_snapshot(text_before: string, text_after: string): void;
     /**
@@ -320,13 +272,12 @@ export class FdCanvas {
     /**
      * Render the scene to a Canvas2D context.
      *
-     * * `skip_grid` — skip drawing the background grid dots (JS handles grid separately).
-     * * `skip_bg` — skip filling the background color (caller already filled in identity space).
+     * * `skip_grid` — skip drawing the background grid dots.
+     * * `skip_bg` — skip filling the background color.
      */
     render(ctx: CanvasRenderingContext2D, time_ms: number, skip_grid: boolean, skip_bg: boolean): void;
     /**
      * Render only the selected nodes (and their children) to the given context.
-     * Used for "Copy as PNG" exports. Translates context by `offset_x, offset_y`.
      */
     render_export(ctx: CanvasRenderingContext2D, offset_x: number, offset_y: number): void;
     /**
@@ -339,15 +290,14 @@ export class FdCanvas {
      */
     select_by_id(node_id: string): boolean;
     /**
-     * Set annotations for a node from a JSON array.
-     * Returns `true` on success.
-     */
-    set_annotations_json(node_id: string, json: string): boolean;
-    /**
      * Set a property on the currently selected node.
      * Returns `true` if the property was set.
      */
     set_node_prop(key: string, value: string): boolean;
+    /**
+     * Set the raw markdown note for a node.
+     */
+    set_note(node_id: string, content: string): boolean;
     /**
      * Enable or disable sketchy (hand-drawn) rendering mode.
      */
@@ -355,8 +305,6 @@ export class FdCanvas {
     /**
      * Set the FD source text, re-parsing into the scene graph.
      * Returns a JSON string: `{"ok":true,"layout_changed":bool}`
-     * `layout_changed` is false when only non-layout properties changed
-     * (comments, specs, style names) — JS can skip re-render in that case.
      */
     set_text(text: string): string;
     /**
@@ -369,7 +317,6 @@ export class FdCanvas {
     set_tool(name: string): void;
     /**
      * Toggle the locked state of a node. Returns the new locked state.
-     * Returns false if node not found.
      */
     toggle_node_locked(id: string): boolean;
     /**
@@ -382,20 +329,17 @@ export class FdCanvas {
     ungroup_selected(): boolean;
     /**
      * Update a text node's resolved bounds using JS-measured dimensions.
-     * Called from JS after `measureText()` to set the tight bounding box.
-     * Returns `true` if bounds changed (and parent expansion may be needed).
      */
     update_text_metrics(node_id: string, measured_width: number, measured_height: number): boolean;
 }
 
 /**
  * Parse FD source and return the scene graph as JSON for the tree preview.
- * Returns JSON `{"ok":true,"nodes":[...]}` or `{"ok":false,"error":"..."}`.
  */
 export function parse_to_json(source: string): string;
 
 /**
- * Validate FD source text. Returns JSON: `{"ok":true}` or `{"ok":false,"error":"..."}`.
+ * Validate FD source text.
  */
 export function validate(source: string): string;
 
@@ -404,10 +348,48 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_fdcanvas_free: (a: number, b: number) => void;
-    readonly fdcanvas_add_animation_to_node: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly fdcanvas_get_arrow_preview: (a: number) => [number, number];
+    readonly fdcanvas_get_sketchy_mode: (a: number) => number;
+    readonly fdcanvas_get_text: (a: number) => [number, number];
+    readonly fdcanvas_get_theme_json: (a: number) => [number, number];
+    readonly fdcanvas_get_tool_name: (a: number) => [number, number];
+    readonly fdcanvas_has_active_flows: (a: number) => number;
+    readonly fdcanvas_has_pending_text_change: (a: number) => number;
+    readonly fdcanvas_import_mermaid: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_new: (a: number, b: number) => number;
+    readonly fdcanvas_push_undo_snapshot: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly fdcanvas_redo: (a: number) => number;
+    readonly fdcanvas_resize: (a: number, b: number, c: number) => void;
+    readonly fdcanvas_set_sketchy_mode: (a: number, b: number) => void;
+    readonly fdcanvas_set_text: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_set_theme: (a: number, b: number) => void;
+    readonly fdcanvas_set_tool: (a: number, b: number, c: number) => void;
+    readonly fdcanvas_undo: (a: number) => number;
+    readonly fdcanvas_get_completions: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_get_diagnostics: (a: number) => [number, number];
+    readonly fdcanvas_get_hover: (a: number, b: number, c: number) => [number, number];
+    readonly parse_to_json: (a: number, b: number) => [number, number];
+    readonly validate: (a: number, b: number) => [number, number];
     readonly fdcanvas_cancel_drag: (a: number) => number;
-    readonly fdcanvas_clear_pressed: (a: number) => void;
     readonly fdcanvas_compute_guides_for_rect: (a: number, b: number, c: number, d: number, e: number) => [number, number];
+    readonly fdcanvas_get_node_bounds: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_get_node_bounds_json: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_get_node_props: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_get_scene_bounds: (a: number) => [number, number];
+    readonly fdcanvas_get_selected_node_props: (a: number) => [number, number];
+    readonly fdcanvas_get_text_children: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_handle_pointer_down: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
+    readonly fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
+    readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+    readonly fdcanvas_has_text_child: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_hit_test_at: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_hit_test_edge_at: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_is_node_locked: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_parent_of: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_set_node_prop: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly fdcanvas_toggle_node_locked: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_update_text_metrics: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly fdcanvas_clear_pressed: (a: number) => void;
     readonly fdcanvas_create_child_text: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_create_edge: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_create_edge_at: (a: number, b: number, c: number, d: number, e: number) => [number, number];
@@ -422,60 +404,23 @@ export interface InitOutput {
     readonly fdcanvas_finalize_bounds: (a: number) => number;
     readonly fdcanvas_find_edge_for_text: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_alt_drag_ghost: (a: number) => [number, number];
-    readonly fdcanvas_get_annotations_json: (a: number, b: number, c: number) => [number, number];
-    readonly fdcanvas_get_arrow_preview: (a: number) => [number, number];
-    readonly fdcanvas_get_completions: (a: number, b: number, c: number) => [number, number];
-    readonly fdcanvas_get_diagnostics: (a: number) => [number, number];
-    readonly fdcanvas_get_hover: (a: number, b: number, c: number) => [number, number];
-    readonly fdcanvas_get_node_animations_json: (a: number, b: number, c: number) => [number, number];
-    readonly fdcanvas_get_node_bounds: (a: number, b: number, c: number) => [number, number];
-    readonly fdcanvas_get_node_props: (a: number, b: number, c: number) => [number, number];
-    readonly fdcanvas_get_scene_bounds: (a: number) => [number, number];
     readonly fdcanvas_get_selected_id: (a: number) => [number, number];
     readonly fdcanvas_get_selected_ids: (a: number) => [number, number];
-    readonly fdcanvas_get_selected_node_props: (a: number) => [number, number];
     readonly fdcanvas_get_selection_bounds: (a: number) => any;
-    readonly fdcanvas_get_sketchy_mode: (a: number) => number;
-    readonly fdcanvas_get_text: (a: number) => [number, number];
     readonly fdcanvas_get_text_child_id: (a: number, b: number, c: number) => [number, number];
-    readonly fdcanvas_get_text_children: (a: number, b: number, c: number) => [number, number];
-    readonly fdcanvas_get_theme_json: (a: number) => [number, number];
-    readonly fdcanvas_get_tool_name: (a: number) => [number, number];
     readonly fdcanvas_group_selected: (a: number) => number;
     readonly fdcanvas_handle_key: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
-    readonly fdcanvas_handle_pointer_down: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
-    readonly fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
-    readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly fdcanvas_handle_stylus_squeeze: (a: number, b: number, c: number, d: number, e: number) => [number, number];
-    readonly fdcanvas_has_active_flows: (a: number) => number;
-    readonly fdcanvas_has_pending_text_change: (a: number) => number;
-    readonly fdcanvas_has_text_child: (a: number, b: number, c: number) => number;
-    readonly fdcanvas_hit_test_at: (a: number, b: number, c: number) => [number, number];
-    readonly fdcanvas_hit_test_edge_at: (a: number, b: number, c: number) => [number, number];
-    readonly fdcanvas_import_mermaid: (a: number, b: number, c: number) => number;
-    readonly fdcanvas_is_node_locked: (a: number, b: number, c: number) => number;
-    readonly fdcanvas_new: (a: number, b: number) => number;
-    readonly fdcanvas_parent_of: (a: number, b: number, c: number) => [number, number];
-    readonly fdcanvas_push_undo_snapshot: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly fdcanvas_redo: (a: number) => number;
-    readonly fdcanvas_remove_node_animations: (a: number, b: number, c: number) => number;
     readonly fdcanvas_render: (a: number, b: any, c: number, d: number, e: number) => void;
     readonly fdcanvas_render_export: (a: number, b: any, c: number, d: number) => void;
-    readonly fdcanvas_resize: (a: number, b: number, c: number) => void;
     readonly fdcanvas_select_by_id: (a: number, b: number, c: number) => number;
-    readonly fdcanvas_set_annotations_json: (a: number, b: number, c: number, d: number, e: number) => number;
-    readonly fdcanvas_set_node_prop: (a: number, b: number, c: number, d: number, e: number) => number;
-    readonly fdcanvas_set_sketchy_mode: (a: number, b: number) => void;
-    readonly fdcanvas_set_text: (a: number, b: number, c: number) => [number, number];
-    readonly fdcanvas_set_theme: (a: number, b: number) => void;
-    readonly fdcanvas_set_tool: (a: number, b: number, c: number) => void;
-    readonly fdcanvas_toggle_node_locked: (a: number, b: number, c: number) => number;
-    readonly fdcanvas_undo: (a: number) => number;
     readonly fdcanvas_ungroup_selected: (a: number) => number;
-    readonly fdcanvas_update_text_metrics: (a: number, b: number, c: number, d: number, e: number) => number;
-    readonly parse_to_json: (a: number, b: number) => [number, number];
-    readonly validate: (a: number, b: number) => [number, number];
-    readonly fdcanvas_get_node_bounds_json: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_add_animation_to_node: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly fdcanvas_get_all_notes: (a: number) => [number, number];
+    readonly fdcanvas_get_node_animations_json: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_get_note: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_remove_node_animations: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_set_note: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;
