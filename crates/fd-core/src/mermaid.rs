@@ -81,6 +81,8 @@ struct MermaidSubgraph {
 /// let graph = parse_mermaid(input).unwrap();
 /// assert!(graph.get_by_id(fd_core::id::NodeId::intern("A")).is_some());
 /// ```
+///
+/// Parses a Mermaid flowchart or graph string and converts it into a `SceneGraph`.
 pub fn parse_mermaid(input: &str) -> Result<SceneGraph, String> {
     let input = input.trim();
     if input.is_empty() {

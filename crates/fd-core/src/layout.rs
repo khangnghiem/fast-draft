@@ -63,6 +63,9 @@ pub fn resolve_layout(
 /// This is a lightweight version of `resolve_layout` scoped to one subtree.
 /// Used by `ResizeNode` to re-flow column/row/grid children and re-center
 /// text during drag, without re-resolving the entire graph.
+///
+/// This handles constraint resolution, column/row/grid managed layouts,
+/// and recomputes the bounding boxes of group auto-sizes bottom-up.
 pub fn resolve_subtree(
     graph: &SceneGraph,
     parent_idx: NodeIndex,
@@ -94,6 +97,9 @@ fn resolve_constraints_top_down(
 }
 
 /// Check whether a node's parent uses a managed layout (Column/Row/Grid).
+///
+/// Returns `true` if the parent is a Frame with a non-Free layout mode
+/// (e.g. Column, Row, or Grid), which overrides relative constraints.
 pub fn is_parent_managed(graph: &SceneGraph, node_idx: NodeIndex) -> bool {
     let parent_idx = match graph.parent(node_idx) {
         Some(p) => p,
