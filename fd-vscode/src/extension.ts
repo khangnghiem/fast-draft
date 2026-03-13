@@ -216,6 +216,33 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
           });
           break;
         }
+        case "readNoteFile": {
+          const filePath = (message as any).path as string;
+          const requestId = (message as any).requestId as string;
+          if (!filePath || !requestId) break;
+          try {
+            // Resolve path relative to the .fd document's directory
+            const docDir = vscode.Uri.joinPath(document.uri, "..");
+            const fileUri = vscode.Uri.joinPath(docDir, filePath);
+            const content = await vscode.workspace.fs.readFile(fileUri);
+            const text = new TextDecoder().decode(content);
+            webviewPanel.webview.postMessage({
+              type: "noteFileContent",
+              requestId,
+              path: filePath,
+              content: text,
+            });
+          } catch {
+            webviewPanel.webview.postMessage({
+              type: "noteFileContent",
+              requestId,
+              path: filePath,
+              content: null,
+              error: `File not found: ${filePath}`,
+            });
+          }
+          break;
+        }
 
       }
     });

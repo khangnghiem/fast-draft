@@ -1636,13 +1636,23 @@ function renderNotesPanel() {
     html += `<div class="note-group-header" data-node="${nodeId}" title="Click to select @${nodeId}">@${nodeId}</div>`;
     html += `<div class="note-markdown">`;
 
-    if (typeof marked !== 'undefined') {
-      // Convert GFM task list checkboxes to interactive HTML
-      const rendered = marked.parse(rawNote);
-      html += rendered;
+    // Check if entire note is a file reference (inline form: note "./spec.md")
+    const fileRefMatch = rawNote.trim().match(/^\.?\.?\/[^\s]+\.md$/);
+    if (fileRefMatch) {
+      html += `<div class="note-file-link" title="Open in VS Code to view">📎 ${rawNote.trim()}</div>`;
     } else {
-      // Fallback: show as preformatted text
-      html += `<pre>${rawNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+      // Process @include directives within block notes
+      let processedNote = rawNote.replace(
+        /@include\("([^"]+\.md)"\)/g,
+        (_, path) => `\n\n<div class="note-file-link" title="Open in VS Code to view">📎 ${path}</div>\n\n`
+      );
+
+      if (typeof marked !== 'undefined') {
+        const rendered = marked.parse(processedNote);
+        html += rendered;
+      } else {
+        html += `<pre>${processedNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+      }
     }
 
     html += `</div></div>`;

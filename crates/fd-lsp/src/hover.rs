@@ -8,6 +8,7 @@ use tower_lsp::lsp_types::*;
 /// - Hovering an `@id` → shows node type and properties.
 /// - Hovering a node keyword → shows description from FD spec.
 /// - Hovering a property name → shows accepted values.
+/// - Hovering a note file path → shows file path info.
 pub fn compute_hover(text: &str, pos: Position, graph: Option<&SceneGraph>) -> Option<Hover> {
     let line = text.lines().nth(pos.line as usize)?;
     let word = extract_word_at(line, pos.character as usize);
@@ -19,6 +20,11 @@ pub fn compute_hover(text: &str, pos: Position, graph: Option<&SceneGraph>) -> O
     // Node ID hover (starts with @)
     if let Some(id) = word.strip_prefix('@') {
         return hover_node_id(id, graph);
+    }
+
+    // Note file path hover: detect "path.md" on lines starting with note/spec
+    if let Some(info) = hover_note_file_path(line) {
+        return Some(info);
     }
 
     // Keyword / property hover
@@ -153,7 +159,10 @@ fn hover_keyword(word: &str) -> Option<Hover> {
             "**ease:** — Easing function.\n\nValues: `linear`, `ease_in`, `ease_out`, `ease_in_out`, `spring`\nFormat: `ease: spring 300ms`"
         }
         "spring" => "**spring** — Spring physics easing.\n\nnatural bounce animation.",
-        // Annotations
+        // Annotations / notes
+        "note" | "spec" => {
+            "**note** — Markdown note block.\n\nInline: `note \"description\"`\nBlock: `note { markdown content }`\nFile link: `note \"./path.md\"` (renders linked file)\n\n`@include(\"path.md\")` can embed files within block notes.\n(Legacy keyword `spec` also accepted.)"
+        }
         "accept" => {
             "**## accept:** — Acceptance criterion annotation.\n\nFormat: `## accept: \"description\"`"
         }
@@ -168,6 +177,48 @@ fn hover_keyword(word: &str) -> Option<Hover> {
     };
 
     Some(make_hover(info))
+}
+
+/// Detect file path references in note lines: `note "./path.md"`.
+fn hover_note_file_path(line: &str) -> Option<Hover> {
+    let trimmed = line.trim();
+    // Match: note "path.md" or spec "path.md"
+    let path = if let Some(rest) = trimmed
+        .strip_prefix("note ")
+        .or_else(|| trimmed.strip_prefix("spec "))
+    {
+        let rest = rest.trim();
+        if rest.starts_with('"') && rest.ends_with('"') && rest.len() > 2 {
+            let inner = &rest[1..rest.len() - 1];
+            if inner.ends_with(".md") {
+                Some(inner)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+    // Match: @include("path.md") within block notes
+    else if trimmed.contains("@include(") {
+        let start = trimmed.find("@include(\"")? + 10;
+        let end = trimmed[start..].find("\")")? + start;
+        let inner = &trimmed[start..end];
+        if inner.ends_with(".md") {
+            Some(inner)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    path.map(|p| {
+        make_hover(&format!(
+            "📎 **Linked file**: `{}`\n\nThis note references an external markdown file.\nIn VS Code, the file content is rendered inline in the Notes panel.",
+            p
+        ))
+    })
 }
 
 fn make_hover(content: &str) -> Hover {

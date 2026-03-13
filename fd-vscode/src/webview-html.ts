@@ -452,6 +452,37 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .note-markdown hr { border: none; border-top: 0.5px solid var(--fd-border); margin: 8px 0; }
     .note-markdown strong { font-weight: 700; }
     .note-markdown em { font-style: italic; }
+    .note-file-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      margin: 4px 0;
+      background: var(--fd-accent-dim);
+      border: 1px solid var(--fd-border);
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--fd-accent);
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+      cursor: default;
+      user-select: text;
+    }
+    .note-file-link.loaded {
+      cursor: pointer;
+      background: var(--fd-accent-dim);
+    }
+    .note-file-link.error {
+      color: var(--fd-text-secondary);
+      border-color: rgba(255,59,48,0.3);
+      background: rgba(255,59,48,0.05);
+    }
+    .note-file-content {
+      margin: 4px 0 8px;
+      padding: 8px;
+      background: var(--fd-surface-hover);
+      border-radius: 6px;
+      border-left: 3px solid var(--fd-accent);
+    }
 
     /* ── Layers Panel (Figma / Sketch sidebar) ── */
     #layers-panel {
@@ -3251,13 +3282,38 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         }
 
         let html = '';
+        const fileRequests = [];
         for (const entry of notes) {
           const nodeId = entry.id;
           const rawNote = entry.note;
           html += '<div class="note-group" data-note-node="' + nodeId + '">';
           html += '<div class="note-group-header" data-node="' + nodeId + '" title="Click to select @' + nodeId + '">@' + nodeId + '</div>';
-          html += '<div class="note-markdown">' + simpleMarkdown(rawNote) + '</div>';
-          html += '</div>';
+          html += '<div class="note-markdown">';
+
+          // Check if entire note is a file reference (inline form: note "./spec.md")
+          const fileRefMatch = rawNote.trim().match(/^\\.?\\.?\\/[^\\s]+\\.md$/);
+          if (fileRefMatch) {
+            const filePath = rawNote.trim();
+            const reqId = 'nf_' + nodeId + '_' + Date.now();
+            html += '<div class="note-file-link" data-file-req="' + reqId + '" data-file-path="' + filePath + '">\\ud83d\\udcce ' + filePath + '</div>';
+            html += '<div class="note-file-content" id="' + reqId + '" style="display:none"></div>';
+            fileRequests.push({ reqId, path: filePath });
+          } else {
+            // Process @include directives within block notes
+            let processedNote = rawNote;
+            const includePattern = /@include\\("([^"]+\\.md)"\\)/g;
+            let includeMatch;
+            while ((includeMatch = includePattern.exec(rawNote)) !== null) {
+              const inclPath = includeMatch[1];
+              const reqId = 'nf_' + nodeId + '_inc_' + fileRequests.length + '_' + Date.now();
+              const badge = '<div class="note-file-link" data-file-req="' + reqId + '" data-file-path="' + inclPath + '">\\ud83d\\udcce ' + inclPath + '</div><div class="note-file-content" id="' + reqId + '" style="display:none"></div>';
+              processedNote = processedNote.replace(includeMatch[0], badge);
+              fileRequests.push({ reqId, path: inclPath });
+            }
+            html += simpleMarkdown(processedNote);
+          }
+
+          html += '</div></div>';
         }
         body.innerHTML = html;
 
@@ -3302,7 +3358,34 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
             renderNotesPanel();
           });
         });
+
+        // Request file content from extension host for file-link notes
+        if (typeof vscode !== 'undefined' && fileRequests.length > 0) {
+          for (const req of fileRequests) {
+            vscode.postMessage({ type: 'readNoteFile', requestId: req.reqId, path: req.path });
+          }
+        }
       }
+
+      // Handle file content responses from extension host
+      window.addEventListener('message', (event) => {
+        const msg = event.data;
+        if (msg.type === 'noteFileContent' && msg.requestId) {
+          const container = document.getElementById(msg.requestId);
+          const badge = document.querySelector('[data-file-req="' + msg.requestId + '"]');
+          if (container && badge) {
+            if (msg.content) {
+              container.innerHTML = simpleMarkdown(msg.content);
+              container.style.display = 'block';
+              badge.classList.add('loaded');
+              badge.textContent = '\\ud83d\\udcce ' + msg.path + ' \\u2713';
+            } else {
+              badge.classList.add('error');
+              badge.textContent = '\\u26a0 ' + (msg.error || 'File not found');
+            }
+          }
+        }
+      });
 
       window.toggleNotesPanel = function() {
         if (!panel) return;
