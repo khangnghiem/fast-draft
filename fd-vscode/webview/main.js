@@ -7081,6 +7081,8 @@ async function main() {
     // Hide loading overlay
     if (loading) loading.style.display = "none";
     if (status) status.textContent = "Ready";
+    // Hand tool is default on load — set grab cursor
+    canvas.style.cursor = "grab";
 
     // Set up event listeners
     setupPointerEvents();

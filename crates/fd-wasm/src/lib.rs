@@ -96,8 +96,8 @@ impl FdCanvas {
         Self {
             engine,
             commands: CommandStack::new(200),
-            active_tool: ToolKind::Select,
-            prev_tool: ToolKind::Select,
+            active_tool: ToolKind::Hand,
+            prev_tool: ToolKind::Hand,
             select_tool: SelectTool::new(),
             rect_tool: RectTool::new(),
             ellipse_tool: EllipseTool::new(),
