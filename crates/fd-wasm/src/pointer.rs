@@ -30,9 +30,14 @@ impl FdCanvas {
             self.commands.begin_batch(&mut self.engine);
         }
 
-        // Hand tool: pan is handled entirely in JS, skip WASM dispatch
+        // Smart Hand: hit-test first — if a node is under the cursor,
+        // delegate to SelectTool for move. Otherwise return false → JS pans.
         if self.active_tool == ToolKind::Hand {
-            return false;
+            let raw_hit = self.hit_test(x, y);
+            if raw_hit.is_none() {
+                return false; // empty space → JS handles pan
+            }
+            // Node hit → fall through to normal pointer-down flow below
         }
 
         let mods = Modifiers {
@@ -106,7 +111,7 @@ impl FdCanvas {
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
-            ToolKind::Hand => return false, // pan handled in JS
+            ToolKind::Hand => self.select_tool.handle(&event, hit),
             ToolKind::Eraser => unreachable!("handled above"),
         };
         let changed = self.apply_mutations(mutations);
@@ -215,12 +220,17 @@ impl FdCanvas {
             ToolKind::Text => self.text_tool.handle(&event, hit),
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
             ToolKind::Hand => {
-                // Hand tool: pan handled in JS, skip WASM dispatch
-                return serde_json::to_string(&PointerMoveResult {
-                    changed: hovered_changed,
-                    bounds: None,
-                })
-                .unwrap_or_else(|_| r#"{"changed":false}"#.to_string());
+                // Smart Hand: delegate to SelectTool if actively dragging a node.
+                // Otherwise skip (JS pan or hover-only).
+                if self.select_tool.dragging {
+                    self.select_tool.handle(&event, hit)
+                } else {
+                    return serde_json::to_string(&PointerMoveResult {
+                        changed: hovered_changed,
+                        bounds: None,
+                    })
+                    .unwrap_or_else(|_| r#"{"changed":false}"#.to_string());
+                }
             }
             ToolKind::Eraser => vec![],
         };
@@ -382,7 +392,7 @@ impl FdCanvas {
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
-            ToolKind::Hand => vec![], // pan handled in JS
+            ToolKind::Hand => self.select_tool.handle(&event, hit),
             ToolKind::Eraser => vec![],
         };
         let changed = self.apply_mutations(mutations);
@@ -391,8 +401,9 @@ impl FdCanvas {
         // A draw tool (Rect/Ellipse/Pen/Text/Arrow/Frame) completing its
         // gesture means the scene changed even if PointerUp returned no
         // mutations (the AddNode happened during PointerDown).
-        let tool_switched =
-            self.active_tool != ToolKind::Select && self.active_tool != ToolKind::Eraser;
+        let tool_switched = self.active_tool != ToolKind::Select
+            && self.active_tool != ToolKind::Eraser
+            && self.active_tool != ToolKind::Hand;
 
         // Flush text after gesture ends.
         // Also flush when a draw tool completes (tool_switched) — the

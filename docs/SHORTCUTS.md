@@ -10,7 +10,7 @@
 | Key   | Action                | Notes                                 |
 | ----- | --------------------- | ------------------------------------- |
 | `V`   | Select / Move         | Default tool                          |
-| `H`   | Hand (pan) tool       |                                       |
+| `H`   | Hand (smart pan)      | Pan on empty space, move nodes on drag|
 | `R`   | Rectangle             |                                       |
 | `O`   | Ellipse               |                                       |
 | `P`   | Pen (freehand)        |                                       |

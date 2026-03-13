@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.133 — Smart Hand Tool (R6.6)
+
+- **FEATURE (R6.6)**: Hand tool is now context-aware ("Smart Hand") — dragging empty space pans the canvas (unchanged), dragging a node selects and moves it (new); WASM hit-tests on pointer-down: node hit → delegates to SelectTool for select+move, empty → returns false for JS pan; two-finger gestures always pan even on objects (unchanged, JS-level); Hand tool excluded from `tool_switched` auto-switch logic to prevent switching back to Select after pointer-up
+- **PARITY (R6.6)**: Smart Hand behavior applied to both site playground (`playground.js`) and VS Code extension (`pointer.js`→`main.js`); cursor shows `grab` on idle, `grabbing` during pan, delegates to WASM cursor for node interactions
+- **DOCS**: Updated `SHORTCUTS.md` — Hand tool description changed from "Hand (pan) tool" to "Hand (smart pan) · Pan on empty space, move nodes on drag"
+
 ### v0.11.132 — Hand Tool + Shift Interaction Improvements (R3.54, R6.6)
 
 - **FEATURE (R6.6)**: Hand tool (`H` key) — dedicated pan tool; click+drag to pan canvas; toolbar button with ✋ icon between Select and Rect; `grab`/`grabbing` cursor; panning handled entirely in JS, WASM pointer handlers return early for Hand tool
