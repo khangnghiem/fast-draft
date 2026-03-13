@@ -878,6 +878,41 @@ code {
 }
 .note-markdown strong { font-weight: 700; }
 .note-markdown em { font-style: italic; }
+.note-file-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  margin: 4px 0;
+  background: rgba(0,122,255,0.08);
+  border: 1px solid rgba(0,122,255,0.15);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--fd-accent, #007AFF);
+  font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+  cursor: default;
+  user-select: text;
+}
+.note-file-link.loaded {
+  cursor: pointer;
+  background: rgba(0,122,255,0.05);
+}
+.note-file-link.error {
+  color: var(--fd-text-secondary, #86868B);
+  border-color: rgba(255,59,48,0.2);
+  background: rgba(255,59,48,0.05);
+}
+.note-file-content {
+  margin: 4px 0 8px;
+  padding: 8px;
+  background: rgba(0,0,0,0.03);
+  border-radius: 6px;
+  border-left: 3px solid var(--fd-accent, #007AFF);
+}
+.dark-theme .note-file-content,
+.dark-theme .note-file-link {
+  background: rgba(255,255,255,0.05);
+}
 
 
 /* ── Status text ── */

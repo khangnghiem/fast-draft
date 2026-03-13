@@ -65,6 +65,7 @@ impl LanguageServer for FdLanguageServer {
                     ..Default::default()
                 }),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
+                definition_provider: Some(OneOf::Left(true)),
                 document_symbol_provider: Some(OneOf::Left(true)),
                 ..Default::default()
             },
@@ -127,6 +128,57 @@ impl LanguageServer for FdLanguageServer {
         }
     }
 
+    async fn goto_definition(
+        &self,
+        params: GotoDefinitionParams,
+    ) -> Result<Option<GotoDefinitionResponse>> {
+        let uri = &params.text_document_position_params.text_document.uri;
+        let pos = params.text_document_position_params.position;
+
+        let docs = self.documents.lock().unwrap();
+        let doc = match docs.get(uri) {
+            Some(d) => d,
+            None => return Ok(None),
+        };
+
+        let line = match doc.text.lines().nth(pos.line as usize) {
+            Some(l) => l,
+            None => return Ok(None),
+        };
+
+        // Detect note file path: note "./path.md" or @include("path.md")
+        let file_path = extract_note_file_path(line);
+        let file_path = match file_path {
+            Some(p) => p,
+            None => return Ok(None),
+        };
+
+        // Resolve path relative to document URI
+        let doc_uri = uri.to_string();
+        let base_dir = if let Some(idx) = doc_uri.rfind('/') {
+            &doc_uri[..idx]
+        } else {
+            &doc_uri
+        };
+
+        let target_uri = if file_path.starts_with('/') {
+            match Url::parse(&format!("file://{}", file_path)) {
+                Ok(u) => u,
+                Err(_) => return Ok(None),
+            }
+        } else {
+            match Url::parse(&format!("{}/{}", base_dir, file_path)) {
+                Ok(u) => u,
+                Err(_) => return Ok(None),
+            }
+        };
+
+        Ok(Some(GotoDefinitionResponse::Scalar(Location::new(
+            target_uri,
+            Range::new(Position::new(0, 0), Position::new(0, 0)),
+        ))))
+    }
+
     async fn document_symbol(
         &self,
         params: DocumentSymbolParams,
@@ -141,6 +193,36 @@ impl LanguageServer for FdLanguageServer {
             Ok(Some(DocumentSymbolResponse::Flat(Vec::new())))
         }
     }
+}
+
+/// Extract a file path from a note/spec line.
+/// Matches: `note "./path.md"` or `@include("path.md")`.
+fn extract_note_file_path(line: &str) -> Option<String> {
+    let trimmed = line.trim();
+    // Match: note "path.md" or spec "path.md"
+    if let Some(rest) = trimmed
+        .strip_prefix("note ")
+        .or_else(|| trimmed.strip_prefix("spec "))
+    {
+        let rest = rest.trim();
+        if rest.starts_with('"') && rest.ends_with('"') && rest.len() > 2 {
+            let inner = &rest[1..rest.len() - 1];
+            if inner.ends_with(".md") {
+                return Some(inner.to_string());
+            }
+        }
+    }
+    // Match: @include("path.md")
+    if let Some(start) = trimmed.find("@include(\"") {
+        let start = start + 10;
+        if let Some(end) = trimmed[start..].find("\")") {
+            let inner = &trimmed[start..start + end];
+            if inner.ends_with(".md") {
+                return Some(inner.to_string());
+            }
+        }
+    }
+    None
 }
 
 #[tokio::main]
