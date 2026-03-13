@@ -31,3 +31,9 @@ log = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }
+
+# wasm-opt -O2 (wasm-pack default) incorrectly strips Canvas2D draw
+# calls as dead code. -O1 preserves all imported JS side-effects while
+# still applying safe optimizations (size savings ~90% of -O2).
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-O1"]
