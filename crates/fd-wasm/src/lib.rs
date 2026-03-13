@@ -1327,6 +1327,32 @@ impl FdCanvas {
         changed
     }
 
+    /// Get all notes across the entire document.
+    /// Returns JSON: `[{"id":"node_id","note":"markdown content"}, ...]`
+    pub fn get_all_notes(&self) -> String {
+        let mut result = Vec::new();
+        for node in self.engine.graph.graph.node_weights() {
+            if let Some(ref note) = node.note {
+                let id_str = node.id.as_str();
+                result.push(serde_json::json!({
+                    "id": id_str,
+                    "note": note,
+                }));
+            }
+        }
+        // Also collect edge notes
+        for edge in &self.engine.graph.edges {
+            if let Some(ref note) = edge.note {
+                let id_str = edge.id.as_str();
+                result.push(serde_json::json!({
+                    "id": id_str,
+                    "note": note,
+                }));
+            }
+        }
+        serde_json::Value::Array(result).to_string()
+    }
+
     // ─── Detach Info API ─────────────────────────────────────────────────
 
     /// Get last detach event info. Returns JSON:

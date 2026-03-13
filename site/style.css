@@ -799,20 +799,85 @@ code {
 .note-group-header:hover {
   background: rgba(0,122,255,0.08);
 }
-.note-item {
-  font-size: 11px;
+.note-markdown {
+  font-size: 12px;
   color: var(--fd-text, #1D1D1F);
-  padding: 4px 8px 4px 16px;
-  line-height: 1.4;
+  padding: 4px 8px 8px 8px;
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+.note-markdown h1, .note-markdown h2, .note-markdown h3 {
+  font-weight: 700;
+  margin: 8px 0 4px;
+  letter-spacing: -0.01em;
+}
+.note-markdown h1 { font-size: 15px; }
+.note-markdown h2 { font-size: 13px; }
+.note-markdown h3 { font-size: 12px; }
+.note-markdown p { margin: 4px 0; }
+.note-markdown ul, .note-markdown ol {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+.note-markdown li { margin: 2px 0; }
+.note-markdown li input[type="checkbox"] {
+  accent-color: var(--fd-accent, #007AFF);
+  margin-right: 6px;
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+}
+.note-markdown code {
+  font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+  font-size: 10px;
+  background: rgba(0,0,0,0.06);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.dark-theme .note-markdown code {
+  background: rgba(255,255,255,0.1);
+}
+.note-markdown pre {
+  background: rgba(0,0,0,0.06);
+  padding: 8px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 6px 0;
+}
+.note-markdown pre code {
+  background: none;
+  padding: 0;
+}
+.dark-theme .note-markdown pre {
+  background: rgba(255,255,255,0.06);
+}
+.note-markdown blockquote {
+  border-left: 3px solid var(--fd-accent, #007AFF);
+  margin: 4px 0;
+  padding: 2px 8px;
+  color: var(--fd-text-secondary, #86868B);
+  font-style: italic;
+}
+.note-markdown a {
+  color: var(--fd-accent, #007AFF);
+  text-decoration: none;
+}
+.note-markdown a:hover { text-decoration: underline; }
+.note-markdown hr {
+  border: none;
+  border-top: 1px solid rgba(0,0,0,0.1);
+  margin: 8px 0;
+}
+.dark-theme .note-markdown hr {
+  border-top-color: rgba(255,255,255,0.1);
+}
+.note-markdown img {
+  max-width: 100%;
   border-radius: 4px;
 }
-.note-item:hover {
-  background: rgba(0,0,0,0.04);
-}
-.note-item.todo::before { content: "☐ "; color: var(--fd-accent, #007AFF); }
-.note-item.done { color: var(--fd-text-secondary, #86868B); text-decoration: line-through; }
-.note-item.done::before { content: "☑ "; }
-.note-item.tag { display: inline-block; background: rgba(0,122,255,0.1); padding: 2px 8px; border-radius: 10px; margin: 2px; font-size: 10px; color: var(--fd-accent, #007AFF); }
+.note-markdown strong { font-weight: 700; }
+.note-markdown em { font-style: italic; }
 
 
 /* ── Status text ── */

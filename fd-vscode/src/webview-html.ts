@@ -396,18 +396,62 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       letter-spacing: 0.03em;
     }
     .note-group-header:hover { background: var(--fd-accent-dim); }
-    .note-item {
-      font-size: 11px;
+    .note-markdown {
+      font-size: 12px;
       color: var(--fd-text);
-      padding: 4px 8px 4px 16px;
-      line-height: 1.4;
-      border-radius: 4px;
+      padding: 4px 8px 8px 8px;
+      line-height: 1.6;
+      word-wrap: break-word;
     }
-    .note-item:hover { background: var(--fd-surface-hover); }
-    .note-item.todo::before { content: "\\2610 "; color: var(--fd-accent); }
-    .note-item.done { color: var(--fd-text-secondary); text-decoration: line-through; }
-    .note-item.done::before { content: "\\2611 "; }
-    .note-item.tag { display: inline-block; background: var(--fd-accent-dim); padding: 2px 8px; border-radius: 10px; margin: 2px; font-size: 10px; color: var(--fd-accent); }
+    .note-markdown h1, .note-markdown h2, .note-markdown h3 {
+      font-weight: 700;
+      margin: 8px 0 4px;
+      letter-spacing: -0.01em;
+    }
+    .note-markdown h1 { font-size: 15px; }
+    .note-markdown h2 { font-size: 13px; }
+    .note-markdown h3 { font-size: 12px; }
+    .note-markdown p { margin: 4px 0; }
+    .note-markdown ul, .note-markdown ol {
+      margin: 4px 0;
+      padding-left: 20px;
+    }
+    .note-markdown li { margin: 2px 0; }
+    .note-markdown li input[type="checkbox"] {
+      accent-color: var(--fd-accent);
+      margin-right: 6px;
+      cursor: pointer;
+      width: 14px;
+      height: 14px;
+      vertical-align: middle;
+    }
+    .note-markdown code {
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+      font-size: 10px;
+      background: var(--fd-surface-hover);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    .note-markdown pre {
+      background: var(--fd-surface-hover);
+      padding: 8px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 6px 0;
+    }
+    .note-markdown pre code { background: none; padding: 0; }
+    .note-markdown blockquote {
+      border-left: 3px solid var(--fd-accent);
+      margin: 4px 0;
+      padding: 2px 8px;
+      color: var(--fd-text-secondary);
+      font-style: italic;
+    }
+    .note-markdown a { color: var(--fd-accent); text-decoration: none; }
+    .note-markdown a:hover { text-decoration: underline; }
+    .note-markdown hr { border: none; border-top: 0.5px solid var(--fd-border); margin: 8px 0; }
+    .note-markdown strong { font-weight: 700; }
+    .note-markdown em { font-style: italic; }
 
     /* ── Layers Panel (Figma / Sketch sidebar) ── */
     #layers-panel {
@@ -3088,76 +3132,174 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       const panel = document.getElementById('notes-panel');
       const body = document.getElementById('notes-panel-body');
 
-      function parseNotesFromText(text) {
-        const notes = [];
-        const lines = text.split('\\n');
-        let currentNode = null;
-        let inNote = false;
-        let braceDepth = 0;
-        for (const line of lines) {
+      // Lightweight inline markdown → HTML converter (GFM subset)
+      function simpleMarkdown(src) {
+        let html = '';
+        const lines = src.split('\\n');
+        let inList = false;
+        let inCode = false;
+        let codeBuf = '';
+        let inBlockquote = false;
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
           const trimmed = line.trim();
-          const nodeMatch = trimmed.match(/^(?:group|frame|rect|ellipse|text|path|edge|image)\\s+@(\\S+)/);
-          const genericMatch = trimmed.match(/^@(\\S+)\\s*(?:"[^"]*"\\s*)?\\{/);
-          if (nodeMatch) currentNode = nodeMatch[1];
-          else if (genericMatch && !nodeMatch) currentNode = genericMatch[1];
-          if (trimmed.startsWith('note ') || trimmed.startsWith('note{') ||
-              trimmed.startsWith('spec ') || trimmed.startsWith('spec{')) {
-            inNote = true;
-            braceDepth = 0;
-            const inlineMatch = trimmed.match(/^(?:note|spec)\\s+"([^"]+)"/);
-            if (inlineMatch && !trimmed.includes('{')) {
-              notes.push({ node: currentNode, type: 'desc', text: inlineMatch[1] });
-              inNote = false;
-              continue;
+
+          // Fenced code blocks
+          if (trimmed.startsWith('\`\`\`')) {
+            if (inCode) {
+              html += '<pre><code>' + codeBuf.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</code></pre>';
+              codeBuf = '';
+              inCode = false;
+            } else {
+              if (inList) { html += '</ul>'; inList = false; }
+              inCode = true;
             }
+            continue;
           }
-          if (inNote) {
-            if (trimmed.includes('{')) braceDepth++;
-            if (trimmed.includes('}')) braceDepth--;
-            const todoMatch = trimmed.match(/^todo:\\s*"([^"]+)"/);
-            const doneMatch = trimmed.match(/^done:\\s*"([^"]+)"/);
-            const tagMatch = trimmed.match(/^tag:\\s*(.+)/);
-            const descMatch = trimmed.match(/^"([^"]+)"/);
-            if (todoMatch) notes.push({ node: currentNode, type: 'todo', text: todoMatch[1] });
-            else if (doneMatch) notes.push({ node: currentNode, type: 'done', text: doneMatch[1] });
-            else if (tagMatch) notes.push({ node: currentNode, type: 'tag', text: tagMatch[1].trim() });
-            else if (descMatch) notes.push({ node: currentNode, type: 'desc', text: descMatch[1] });
-            if (braceDepth <= 0) inNote = false;
+          if (inCode) { codeBuf += line + '\\n'; continue; }
+
+          // Close list if non-list line
+          if (inList && !trimmed.match(/^[-*+]\\s|^\\d+\\.\\s|^- \\[[ xX]\\]/)) {
+            html += '</ul>';
+            inList = false;
           }
+          // Close blockquote
+          if (inBlockquote && !trimmed.startsWith('>')) {
+            html += '</blockquote>';
+            inBlockquote = false;
+          }
+
+          // Empty line
+          if (trimmed === '') { continue; }
+
+          // Headings
+          const hMatch = trimmed.match(/^(#{1,3})\\s+(.*)/);
+          if (hMatch) {
+            const level = hMatch[1].length;
+            html += '<h' + level + '>' + inlineFormat(hMatch[2]) + '</h' + level + '>';
+            continue;
+          }
+
+          // Horizontal rule
+          if (/^(---|\\*\\*\\*|___)\\s*$/.test(trimmed)) { html += '<hr>'; continue; }
+
+          // Blockquote
+          if (trimmed.startsWith('> ')) {
+            if (!inBlockquote) { html += '<blockquote>'; inBlockquote = true; }
+            html += '<p>' + inlineFormat(trimmed.slice(2)) + '</p>';
+            continue;
+          }
+
+          // Task list items
+          const taskMatch = trimmed.match(/^[-*+]\\s+\\[([ xX])\\]\\s+(.*)/);
+          if (taskMatch) {
+            if (!inList) { html += '<ul>'; inList = true; }
+            const checked = taskMatch[1].trim() !== '' ? ' checked' : '';
+            html += '<li><input type="checkbox"' + checked + '> ' + inlineFormat(taskMatch[2]) + '</li>';
+            continue;
+          }
+
+          // Unordered list
+          const ulMatch = trimmed.match(/^[-*+]\\s+(.*)/);
+          if (ulMatch) {
+            if (!inList) { html += '<ul>'; inList = true; }
+            html += '<li>' + inlineFormat(ulMatch[1]) + '</li>';
+            continue;
+          }
+
+          // Ordered list
+          const olMatch = trimmed.match(/^\\d+\\.\\s+(.*)/);
+          if (olMatch) {
+            if (!inList) { html += '<ul>'; inList = true; }
+            html += '<li>' + inlineFormat(olMatch[1]) + '</li>';
+            continue;
+          }
+
+          // Paragraph
+          html += '<p>' + inlineFormat(trimmed) + '</p>';
         }
-        return notes;
+
+        if (inList) html += '</ul>';
+        if (inBlockquote) html += '</blockquote>';
+        if (inCode) html += '<pre><code>' + codeBuf.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</code></pre>';
+        return html;
+      }
+
+      // Inline formatting: bold, italic, code, links
+      function inlineFormat(text) {
+        return text
+          .replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/\`([^\`]+)\`/g, '<code>$1</code>')
+          .replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>')
+          .replace(/\\*(.+?)\\*/g, '<em>$1</em>')
+          .replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2">$1</a>');
       }
 
       function renderNotesPanel() {
         if (!body || !window.fdCanvas) return;
-        const text = window.fdCanvas.get_text();
-        const notes = parseNotesFromText(text);
+
+        let notes;
+        try {
+          const json = window.fdCanvas.get_all_notes();
+          notes = JSON.parse(json);
+        } catch (_) { notes = []; }
+
         if (notes.length === 0) {
           body.innerHTML = '<p class="notes-empty">No notes yet. Add a note via right-click \\u2192 Add Note.</p>';
           return;
         }
-        const groups = {};
-        for (const n of notes) {
-          const key = n.node || '_root';
-          if (!groups[key]) groups[key] = [];
-          groups[key].push(n);
-        }
+
         let html = '';
-        for (const [nodeId, items] of Object.entries(groups)) {
-          html += '<div class="note-group">';
+        for (const entry of notes) {
+          const nodeId = entry.id;
+          const rawNote = entry.note;
+          html += '<div class="note-group" data-note-node="' + nodeId + '">';
           html += '<div class="note-group-header" data-node="' + nodeId + '" title="Click to select @' + nodeId + '">@' + nodeId + '</div>';
-          for (const item of items) {
-            html += '<div class="note-item ' + item.type + '">' + item.text + '</div>';
-          }
+          html += '<div class="note-markdown">' + simpleMarkdown(rawNote) + '</div>';
           html += '</div>';
         }
         body.innerHTML = html;
+
+        // Click-to-select
         body.querySelectorAll('.note-group-header').forEach(el => {
           el.addEventListener('click', () => {
             const nid = el.dataset.node;
             if (nid && nid !== '_root' && window.fdCanvas) {
               window.fdCanvas.select_by_id(nid);
             }
+          });
+        });
+
+        // Interactive checkboxes
+        body.querySelectorAll('.note-markdown input[type="checkbox"]').forEach(cb => {
+          cb.addEventListener('change', (e) => {
+            const group = e.target.closest('.note-group');
+            if (!group) return;
+            const nodeId = group.dataset.noteNode;
+            if (!nodeId || !window.fdCanvas) return;
+
+            const currentNote = window.fdCanvas.get_note(nodeId);
+            if (!currentNote) return;
+
+            const allCheckboxes = group.querySelectorAll('input[type="checkbox"]');
+            let cbIndex = 0;
+            for (let i = 0; i < allCheckboxes.length; i++) {
+              if (allCheckboxes[i] === e.target) { cbIndex = i; break; }
+            }
+
+            let checkboxCount = 0;
+            const updatedNote = currentNote.replace(/- \\[([ xX])\\]/g, (match, state) => {
+              if (checkboxCount === cbIndex) {
+                checkboxCount++;
+                return state.trim() ? '- [ ]' : '- [x]';
+              }
+              checkboxCount++;
+              return match;
+            });
+
+            window.fdCanvas.set_note(nodeId, updatedNote);
+            renderNotesPanel();
           });
         });
       }

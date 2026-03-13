@@ -1597,92 +1597,55 @@ function setupPanelResize(wrapper, resizeCanvas) {
 let notesPanelOpen = false;
 
 /**
- * Parse note blocks from FD text and return structured data.
- * Extracts: todo, done, tag, and description annotations per node.
+ * Render notes panel using WASM get_all_notes() API + marked.js.
+ * Each node's raw markdown note is rendered via marked.parse().
+ * Interactive checkboxes: click to toggle [ ] ↔ [x] and write back.
  */
-function parseNotesFromText(text) {
-  const notes = [];
-  const lines = text.split('\n');
-  let currentNode = null;
-  let inNote = false;
-  let braceDepth = 0;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    // Detect node declarations: kind @id {
-    const nodeMatch = trimmed.match(/^(?:group|frame|rect|ellipse|text|path|edge|image)\s+@(\S+)/);
-    const genericMatch = trimmed.match(/^@(\S+)\s*(?:"[^"]*"\s*)?\{/);
-    if (nodeMatch) {
-      currentNode = nodeMatch[1];
-    } else if (genericMatch && !nodeMatch) {
-      currentNode = genericMatch[1];
-    }
-
-    // Detect note/spec block start
-    if (trimmed.startsWith('note ') || trimmed.startsWith('note{') ||
-        trimmed.startsWith('spec ') || trimmed.startsWith('spec{')) {
-      inNote = true;
-      braceDepth = 0;
-
-      // Inline shorthand: note "text"
-      const inlineMatch = trimmed.match(/^(?:note|spec)\s+"([^"]+)"/);
-      if (inlineMatch && !trimmed.includes('{')) {
-        notes.push({ node: currentNode, type: 'desc', text: inlineMatch[1] });
-        inNote = false;
-        continue;
-      }
-    }
-
-    if (inNote) {
-      if (trimmed.includes('{')) braceDepth++;
-      if (trimmed.includes('}')) braceDepth--;
-
-      // Parse items inside note block
-      const todoMatch = trimmed.match(/^todo:\s*"([^"]+)"/);
-      const doneMatch = trimmed.match(/^done:\s*"([^"]+)"/);
-      const tagMatch = trimmed.match(/^tag:\s*(.+)/);
-      const descMatch = trimmed.match(/^"([^"]+)"/);
-
-      if (todoMatch) notes.push({ node: currentNode, type: 'todo', text: todoMatch[1] });
-      else if (doneMatch) notes.push({ node: currentNode, type: 'done', text: doneMatch[1] });
-      else if (tagMatch) notes.push({ node: currentNode, type: 'tag', text: tagMatch[1].trim() });
-      else if (descMatch) notes.push({ node: currentNode, type: 'desc', text: descMatch[1] });
-
-      if (braceDepth <= 0) inNote = false;
-    }
-  }
-  return notes;
-}
-
 function renderNotesPanel() {
   const body = document.getElementById('notes-panel-body');
   if (!body || !fdCanvas) return;
 
-  const text = fdCanvas.get_text();
-  const notes = parseNotesFromText(text);
+  // Get all notes from WASM API
+  let notes;
+  try {
+    const json = fdCanvas.get_all_notes();
+    notes = JSON.parse(json);
+  } catch (_) {
+    notes = [];
+  }
 
   if (notes.length === 0) {
     body.innerHTML = '<p class="notes-empty">No notes yet. Add a note via right-click → Add Note.</p>';
     return;
   }
 
-  // Group by node
-  const groups = {};
-  for (const n of notes) {
-    const key = n.node || '_root';
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(n);
+  // Configure marked for safe rendering
+  if (typeof marked !== 'undefined') {
+    marked.setOptions({
+      breaks: true,
+      gfm: true,
+    });
   }
 
   let html = '';
-  for (const [nodeId, items] of Object.entries(groups)) {
-    html += `<div class="note-group">`;
+  for (const entry of notes) {
+    const nodeId = entry.id;
+    const rawNote = entry.note;
+
+    html += `<div class="note-group" data-note-node="${nodeId}">`;
     html += `<div class="note-group-header" data-node="${nodeId}" title="Click to select @${nodeId}">@${nodeId}</div>`;
-    for (const item of items) {
-      html += `<div class="note-item ${item.type}">${item.text}</div>`;
+    html += `<div class="note-markdown">`;
+
+    if (typeof marked !== 'undefined') {
+      // Convert GFM task list checkboxes to interactive HTML
+      const rendered = marked.parse(rawNote);
+      html += rendered;
+    } else {
+      // Fallback: show as preformatted text
+      html += `<pre>${rawNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
     }
-    html += `</div>`;
+
+    html += `</div></div>`;
   }
   body.innerHTML = html;
 
@@ -1692,6 +1655,55 @@ function renderNotesPanel() {
       const nid = el.dataset.node;
       if (nid && nid !== '_root' && fdCanvas) {
         fdCanvas.select_by_id(nid);
+      }
+    });
+  });
+
+  // Interactive checkboxes: toggle [ ] ↔ [x] in the raw markdown
+  body.querySelectorAll('.note-markdown input[type="checkbox"]').forEach(cb => {
+    cb.removeAttribute('disabled');
+    cb.addEventListener('change', (e) => {
+      const group = e.target.closest('.note-group');
+      if (!group) return;
+      const nodeId = group.dataset.noteNode;
+      if (!nodeId || !fdCanvas) return;
+
+      // Get current note, find the N-th checkbox, toggle it
+      const currentNote = fdCanvas.get_note(nodeId);
+      if (!currentNote) return;
+
+      // Find checkbox index within this note-group
+      const allCheckboxes = group.querySelectorAll('input[type="checkbox"]');
+      let cbIndex = 0;
+      for (let i = 0; i < allCheckboxes.length; i++) {
+        if (allCheckboxes[i] === e.target) { cbIndex = i; break; }
+      }
+
+      // Toggle the N-th checkbox pattern in the raw markdown
+      let checkboxCount = 0;
+      const updatedNote = currentNote.replace(/- \[([ xX])\]/g, (match, state) => {
+        if (checkboxCount === cbIndex) {
+          checkboxCount++;
+          return state.trim() ? '- [ ]' : '- [x]';
+        }
+        checkboxCount++;
+        return match;
+      });
+
+      // Write back via WASM
+      fdCanvas.set_note(nodeId, updatedNote);
+
+      // Sync to code editor
+      if (typeof syncCanvasToEditor === 'function') {
+        syncCanvasToEditor();
+      } else if (typeof editorView !== 'undefined' && editorView) {
+        const newText = fdCanvas.get_text();
+        const currentText = editorView.state.doc.toString();
+        if (newText !== currentText) {
+          editorView.dispatch({
+            changes: { from: 0, to: currentText.length, insert: newText }
+          });
+        }
       }
     });
   });
