@@ -80,6 +80,9 @@
 | `Ctrl` (hold)     | Eraser cursor preview             |
 | Pinch             | Trackpad zoom                     |
 | Middle-click drag | Pan                               |
+| Two-finger pan    | Touch pan with inertia            |
+| Three-finger swipe| Undo (left) / Redo (right)        |
+| Long-press (500ms)| Context menu (touch)              |
 
 ---
 

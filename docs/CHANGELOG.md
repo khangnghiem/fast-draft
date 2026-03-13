@@ -17,6 +17,18 @@
 
 ## Completed Requirements
 
+### v0.11.134 — Two-Finger Gesture Redesign (R3.6, R6.6)
+
+- **UX (R3.6)**: Normalized zoom wheel factor — unified to `ZOOM_WHEEL_FACTOR = 1.04` across site (`playground.js`) and VS Code (`main.js`); was 1.05 on site and 1.03 on VS Code
+- **UX (R3.6)**: Smart two-finger gesture disambiguation — 50ms delay before committing to two-finger mode (site); 30px minimum distance threshold rejects accidental palm grazes (both platforms); Apple Pencil palm rejection via `touchType === 'stylus'` / `pointerType === 'pen'`
+- **FEATURE (R6.6)**: Full touch gesture system ported to site — `setupTouchGestures()` (280 lines) adds: pinch-to-zoom, two-finger pan with momentum inertia, three-finger swipe undo/redo (50px threshold), long-press context menu (500ms), Apple Pencil palm rejection; previously site only had pointer-based gestures
+- **UX (R3.6)**: Improved pan inertia on both platforms — weighted 3-frame velocity average (recent frames count more), exponential decay friction `0.95` (was `0.92`), minimum velocity threshold `0.1px` (was `0.5`); smoother momentum stop
+- **UX (R3.6)**: `zoomAtPoint()` helper extracted on site — replaces inline zoom math in wheel handler; consistent cursor-anchored zoom behavior
+- **FIX (R3.6)**: `touchcancel` now calls `cancelInertia()` on VS Code — prevents ghost inertia after app switch
+- **SITE**: Changes in `site/playground.js`
+- **EXTENSION**: Changes in `fd-vscode/webview/main.js`
+- **DOCS**: Updated `SHORTCUTS.md` with touch gesture shortcuts (two-finger pan, three-finger undo/redo, long-press context menu)
+
 ### v0.11.133 — Smart Hand Tool (R6.6)
 
 - **FEATURE (R6.6)**: Hand tool is now context-aware ("Smart Hand") — dragging empty space pans the canvas (unchanged), dragging a node selects and moves it (new); WASM hit-tests on pointer-down: node hit → delegates to SelectTool for select+move, empty → returns false for JS pan; two-finger gestures always pan even on objects (unchanged, JS-level); Hand tool excluded from `tool_switched` auto-switch logic to prevent switching back to Select after pointer-up
