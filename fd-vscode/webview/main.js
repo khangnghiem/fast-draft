@@ -363,13 +363,39 @@ function setupPointerEvents() {
     const rawX = e.clientX - rect.left;
     const rawY = e.clientY - rect.top;
 
-    // Middle-click or Space+click → start pan drag
-    if (e.button === 1 || isPanning || fdCanvas.get_tool_name() === 'hand') {
+    // Middle-click or Space+click → always pan
+    if (e.button === 1 || isPanning) {
       panDragging = true;
       panStartX = e.clientX - panX;
       panStartY = e.clientY - panY;
       canvas.style.cursor = "grabbing";
       canvasPointerId = e.pointerId;
+      e.preventDefault();
+      return;
+    }
+
+    // Smart Hand: ask WASM (hit-test) — pan if empty space, else WASM handles move
+    if (fdCanvas.get_tool_name() === 'hand') {
+      const rect2 = canvas.getBoundingClientRect();
+      const hx = (rawX - panX) / zoomLevel;
+      const hy = (rawY - panY) / zoomLevel;
+      const changed = fdCanvas.handle_pointer_down(
+        hx, hy, e.pressure || 1.0,
+        e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
+      );
+      if (changed) {
+        // Hit a node → WASM is handling select+move
+        canvasPointerId = e.pointerId;
+        pointerIsDown = true;
+        if (changed) render();
+      } else {
+        // Empty space → pan
+        panDragging = true;
+        panStartX = e.clientX - panX;
+        panStartY = e.clientY - panY;
+        canvas.style.cursor = "grabbing";
+        canvasPointerId = e.pointerId;
+      }
       e.preventDefault();
       return;
     }
@@ -7081,8 +7107,6 @@ async function main() {
     // Hide loading overlay
     if (loading) loading.style.display = "none";
     if (status) status.textContent = "Ready";
-    // Hand tool is default on load — set grab cursor
-    canvas.style.cursor = "grab";
 
     // Set up event listeners
     setupPointerEvents();
