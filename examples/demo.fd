@@ -302,8 +302,8 @@ rect @stage_test {
   w: 109.1 h: 35
   fill: #22C55E  # green
   corner: 8
-  x: 398.7
-  y: 649.4
+  x: 419.6
+  y: 663.2
 }
 
 # [auto] connects to stage_prod
@@ -341,14 +341,11 @@ ellipse @stage_prod {
   }
 }
 
-text @_text_2 "Text" {
-  x: 405.5
-  y: 851.8
-}
-
 text @_text_0 "Text" {
-  x: 360.6
-  y: 657.3
+  w: 37.1
+  fill: #FFFFFF  # white
+  x: 665.8
+  y: 635.5
 }
 
 text @_text_24 "Carol deployed v2.1.0 to staging" {

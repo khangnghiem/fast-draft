@@ -2446,6 +2446,8 @@ async function initPlayground() {
     }
     fdCanvas.set_text(initialFd);
     if (statusEl) statusEl.textContent = '✓ Ready';
+    // Hand tool is default on load — set grab cursor
+    canvas.style.cursor = 'grab';
 
     // ── Create CodeMirror Editor ──────────────────────────────────────
     const fdLinter = linter((view) => {
