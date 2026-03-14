@@ -47,6 +47,11 @@ impl Default for FormatConfig {
 ///
 /// # Errors
 /// Returns the parser error string if the input is not valid FD syntax.
+///
+/// # Usage
+/// Parses the document, applies transforms (like deduping, hoisting styles,
+/// and sorting nodes) in-place based on the `FormatConfig`, and then emits
+/// the resulting `SceneGraph` back to a formatted string.
 pub fn format_document(text: &str, config: &FormatConfig) -> Result<String, String> {
     let mut scene = parse_document(text)?;
 

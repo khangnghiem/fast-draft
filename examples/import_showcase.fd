@@ -1,0 +1,66 @@
+# Import and Namespace Showcase
+# Demonstrates how to import styles, components, and references from other files.
+
+import "design_tokens.fd" as tokens
+
+frame @main_container {
+  spec "Main container demonstrating imported tokens and components"
+  w: 800 h: 600
+  use: tokens.surface_elevated
+  layout: column gap=32 pad=40
+
+  text @title "Import Showcase" {
+    use: tokens.h1
+  }
+
+  text @description "This file imports styles from design_tokens.fd using the 'tokens' namespace." {
+    use: tokens.body
+  }
+
+  group @buttons_row {
+    layout: row gap=16 pad=0
+
+    rect @custom_btn {
+      w: 160 h: 48
+      use: tokens.primary
+      corner: 8
+
+      text @custom_btn_label "Imported Style" {
+        font: "Inter" semibold 15
+        fill: #FFFFFF
+      }
+    }
+
+    rect @custom_btn_danger {
+      w: 160 h: 48
+      use: tokens.danger
+      corner: 8
+
+      text @custom_btn_danger_label "Danger Style" {
+        font: "Inter" semibold 15
+        fill: #FFFFFF
+      }
+    }
+  }
+
+  group @status_section {
+    layout: row gap=16 pad=0
+
+    text @status_label "System Status:" {
+      use: tokens.h3
+    }
+
+    rect @badge {
+      w: 100 h: 32
+      use: tokens.success
+      corner: 16
+
+      text @badge_text "Operational" {
+        font: "Inter" semibold 14
+        fill: #FFFFFF
+      }
+    }
+  }
+}
+
+@main_container -> center_in: canvas

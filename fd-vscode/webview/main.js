@@ -85,6 +85,34 @@ let sceneBoundsGeneration = -1;
 /** Whether the scene has edge flow animations (pulse/dash) — keeps render loop alive */
 let hasFlowEdges = false;
 
+// ─── Security Helpers ────────────────────────────────────────────────────
+
+/**
+ * Escapes a string to prevent XSS when inserted into innerHTML.
+ * Hardened to escape &, <, >, ", and ' characters.
+ */
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Escapes a string to prevent XSS when inserted into HTML attributes.
+ * Identical to escapeHtml to ensure complete coverage.
+ */
+function escapeAttr(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /** Mark the canvas as needing a re-render on the next animation frame. */
 function markDirty() { renderDirty = true; }
 /** Bump the scene generation counter (call on any data mutation). */
@@ -2567,10 +2595,6 @@ function addAcceptRow(value) {
   list.appendChild(item);
 }
 
-function escapeAttr(s) {
-  return s.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
 /**
  * Check if a node has a spec annotation block.
  * Uses parseAnnotatedNodes to detect matching spec data.
@@ -4016,14 +4040,6 @@ function refreshLayersPanel() {
 }
 
 // ─── Spec View Parser (client-side) ──────────────────────────────────────
-
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function parseSpecAnnotation(line) {
   const trimmed = line.trim();
@@ -6567,9 +6583,12 @@ async function pasteFromClipboard() {
     idMap.set(oldId, newId);
   }
 
-  // Replace all @id references with new names
-  for (const [oldId, newId] of idMap) {
-    pasteText = pasteText.replace(new RegExp(`@${oldId}\\b`, 'g'), `@${newId}`);
+  // Replace all @id references with new names using a single-pass regex
+  if (idMap.size > 0) {
+    const pattern = new RegExp(`@(${[...idMap.keys()].join('|')})\\b`, 'g');
+    pasteText = pasteText.replace(pattern, (match, oldId) => {
+      return `@${idMap.get(oldId)}`;
+    });
   }
   const newRootId = idMap.get(rootId) || rootId;
 

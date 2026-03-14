@@ -601,3 +601,6 @@ fn console_error_panic_hook_setup() {
         });
     }
 }
+
+#[cfg(test)]
+mod lib_test;
