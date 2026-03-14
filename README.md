@@ -71,7 +71,7 @@ frame @card {
 ## Features
 
 - ↔️ **Two-way sync** — edit code or canvas, the other updates in <16ms
-- 🤖 **AI Assist** — press ⌘I to improve designs with AI (supports 5 providers)
+- 🤖 **AI Touch** — press ⌘I to improve designs with AI (supports 5 providers)
 - 📋 **Spec blocks** — attach requirements, status, and acceptance criteria directly to shapes
 - ✏️ **Sketchy rendering** — hand-drawn mode with wobbly, organic lines
 - 👆 **Touch & gestures** — two-finger pan, pinch-to-zoom, Apple Pencil support

@@ -118,7 +118,7 @@ impl FdCanvas {
     ///
     /// Returns valid FD text containing just the selected node blocks
     /// (including children for groups/frames). If nothing is selected,
-    /// returns the full document. Used by AI Assist to provide accurate
+    /// returns the full document. Used by AI Touch to provide accurate
     /// selection context without fragile regex extraction.
     pub fn emit_selection_fd(&self) -> String {
         if self.select_tool.selected.is_empty() {
