@@ -3232,17 +3232,7 @@ async function initPlayground() {
       });
     }
 
-    // ── Site Theme Toggle ─────────────────────────────────────────────
-    const siteToggle = document.getElementById('site-theme-toggle');
-    if (siteToggle) {
-      siteToggle.addEventListener('click', () => {
-        const isLight = document.body.classList.toggle('light-theme');
-        document.documentElement.classList.toggle('light-theme', isLight);
-        document.documentElement.style.colorScheme = isLight ? 'light' : 'dark';
-        siteToggle.textContent = isLight ? '☀️' : '🌙';
-        localStorage.setItem('fd-site-theme', isLight ? 'light' : 'dark');
-      });
-    }
+
 
     // ── Panel Resize Setup ───────────────────────────────────────────
     setupPanelResize(wrapper, resizeCanvas);

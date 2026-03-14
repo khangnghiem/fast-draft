@@ -384,85 +384,6 @@ kbd {
   color: var(--accent);
 }
 
-/* ─── Light Theme Overrides (docs-specific) ─── */
-body.light-theme .docs-sidebar {
-  border-right-color: var(--border);
-}
-body.light-theme .sidebar-links li a:hover {
-  background: var(--bg-secondary);
-}
-body.light-theme .sidebar-links li a.active {
-  background: rgba(0, 122, 255, 0.08);
-}
-/* Code blocks — swap dark editor bg for light */
-body.light-theme .code-block {
-  background: #F5F5F7;
-  border-color: var(--border);
-}
-body.light-theme .code-block-header {
-  background: #EBEBED;
-  border-bottom-color: var(--border);
-  color: var(--text-secondary);
-}
-body.light-theme .code-block code {
-  color: var(--text-primary);
-}
-/* Syntax highlighting — darker tones for light bg */
-body.light-theme .hl-keyword { color: #7C3AED; }
-body.light-theme .hl-id { color: #DC2626; }
-body.light-theme .hl-prop { color: #B45309; }
-body.light-theme .hl-string { color: #16A34A; }
-body.light-theme .hl-number { color: #B45309; }
-body.light-theme .hl-comment { color: #9CA3AF; }
-body.light-theme .hl-color { color: #0891B2; }
-body.light-theme .hl-trigger { color: #2563EB; }
-body.light-theme .hl-punct { color: #6B7280; }
-/* Inline code */
-body.light-theme .docs-content code {
-  background: var(--bg-secondary);
-  color: #7C3AED;
-  border-color: var(--border);
-}
-/* Tables */
-body.light-theme .docs-table-wrap {
-  border-color: var(--border);
-}
-body.light-theme .docs-table th {
-  background: var(--bg-secondary);
-  border-bottom-color: var(--border);
-}
-body.light-theme .docs-table td {
-  border-bottom-color: var(--border-light);
-}
-body.light-theme .docs-table tr:hover td {
-  background: rgba(0, 0, 0, 0.02);
-}
-/* Kbd badges */
-body.light-theme kbd {
-  background: var(--bg-secondary);
-  border-color: var(--border);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-}
-/* Callouts */
-body.light-theme .callout-tip { background: rgba(52, 199, 89, 0.08); }
-body.light-theme .callout-info { background: rgba(0, 122, 255, 0.06); }
-body.light-theme .callout-warning { background: rgba(255, 159, 10, 0.08); }
-/* Page nav */
-body.light-theme .page-nav-link {
-  border-color: var(--border);
-}
-body.light-theme .page-nav-link:hover {
-  background: rgba(0, 122, 255, 0.04);
-  border-color: var(--accent);
-}
-/* Changelog tags stay readable on light bg */
-body.light-theme .tag-feature { background: rgba(108, 92, 231, 0.1); }
-body.light-theme .tag-fix { background: rgba(255, 69, 58, 0.08); }
-body.light-theme .tag-ux { background: rgba(52, 199, 89, 0.08); }
-body.light-theme .tag-perf { background: rgba(255, 159, 10, 0.08); }
-body.light-theme .tag-docs { background: rgba(0, 122, 255, 0.08); }
-body.light-theme .tag-infra { background: rgba(139, 148, 158, 0.1); }
-
 /* ─── Mobile responsive ─── */
 @media (max-width: 768px) {
   .docs-sidebar {
@@ -500,9 +421,6 @@ body.light-theme .tag-infra { background: rgba(139, 148, 158, 0.1); }
   .docs-content h2 { font-size: 1.3rem; }
   .page-nav { grid-template-columns: 1fr; }
   .code-block pre { padding: 12px 14px; }
-  body.light-theme .nav-links.open {
-    background: rgba(255, 255, 255, 0.95);
-  }
 }
 
 @media (max-width: 1024px) and (min-width: 769px) {

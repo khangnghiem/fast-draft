@@ -22,17 +22,14 @@
 - **R4.20 — AI Touch Enhancement**: New `emit_selection_fd()` WASM API emits FD text for only selected nodes, replacing fragile regex-based block extraction in JS. AI Touch prompt now uses accurate WASM-powered selection extraction with JS fallback.
 - New public functions in `emitter.rs`: `emit_node_standalone()` and `emit_edge_standalone()`.
 
-### v0.11.138 — Fix Theme Toggle Across Docs Pages (R3.13)
+### v0.11.140 — Dark-Only Site + Canvas Pill Contrast Fix (R3.13)
 
-- **FIX (R3.13)**: Docs pages (Language Reference, Shortcuts, Changelog) now fully support light theme — added ~80 lines of `body.light-theme` CSS overrides to `site/docs/style.css` covering code blocks (light bg + adjusted syntax highlighting), inline code, tables, kbd badges, callouts, changelog tags, sidebar, page nav, and mobile nav
-- **FIX (R3.13)**: Eliminated FOUC (flash of unstyled content) on all pages — `light-theme` class now applied synchronously to `<html>` in `<head>` script before first paint, plus `document.documentElement.style.colorScheme = 'light'`; body class deferred to DOMContentLoaded for CSS compatibility
-- **FIX (R3.13)**: Theme toggle handlers on all pages now sync both `html` and `body` classes + `colorScheme` property — ensures consistent behavior whether CSS targets `html.light-theme` or `body.light-theme`
-- **SITE**: Changes in `site/docs/style.css`, `site/docs/index.html`, `site/docs/shortcuts.html`, `site/docs/changelog.html`, `site/playground.js`
+- **UX (R3.13)**: Site is now dark-only — removed site-wide ☀️/🌙 toggle from navbar on all pages (index, docs, shortcuts, changelog). Dark theme is the brand identity; eliminates the confusing two-toggle experience
+- **UX (R3.13)**: Canvas pill toggle is now the sole theme control — switches between light/dark canvas (`.dark-canvas` class). Fixed contrast by switching from marketing vars (`--bg-card`, `--border`) to canvas-specific `--fd-*` tokens (`--fd-surface-solid`, `--fd-border`). Hover glow now uses `--fd-accent` blue instead of purple
+- **CLEANUP**: Deleted ~150 lines of `body.light-theme` CSS from `shared.css` (variable overrides, nav/footer), `style.css` (hero, playground, cards, responsive), and `docs/style.css` (code blocks, tables, sidebar, callouts, tags — all 80 lines added in v0.11.138). Removed `.theme-toggle-btn` component CSS, `fd-site-theme` localStorage, and all head scripts/toggle handlers
+- **SITE**: Changes in `shared.css`, `style.css`, `docs/style.css`, `index.html`, `docs/index.html`, `docs/shortcuts.html`, `docs/changelog.html`, `playground.js`
 
-### v0.11.137 — Two Theme Toggles: Site + Canvas (R3.13, R6.5)
-
-- **UX (R3.13)**: Two independent theme toggles — site-wide ☀️/🌙 button in navbar controls `body.light-theme` class (marketing sections, nav, footer, docs pages); canvas-specific pill toggle in canvas toolbar controls `.dark-canvas` class (canvas chrome, scroll toolbar, floating toolbar)
-- **UX (R6.5)**: Light theme CSS tokens — `body.light-theme` overrides all marketing tokens (`--bg-primary: #FFFFFF`, `--text-primary: #1D1D1F`, etc.); softer hero gradients/grid, lighter card hover shadows, frosted white nav/footer backgrounds; code editor panel always stays dark (`#282C34`)
+### ~~v0.11.138~~ ~~v0.11.137~~ — _superseded by v0.11.140_
 - **UX (R3.13)**: localStorage persistence — both themes saved independently (`fd-site-theme`, `fd-canvas-theme`); inline `<script>` in `<head>` applies `body.light-theme` before first paint to prevent FOUC; canvas pill syncs with initial state on load
 - **UX (R3.13)**: Canvas pill toggle relocated from navbar to canvas toolbar (right zone, after Zen button) — semantically grouped with canvas-specific controls
 - **PARITY (R6.5)**: Site toggle added to all 4 pages — home page + 3 docs pages (index, shortcuts, changelog) share identical toggle button, head script, and click handler
