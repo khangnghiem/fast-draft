@@ -172,12 +172,12 @@
         "icon": "$(paintcan)"
       },
       {
-        "command": "fd.aiRefine",
+        "command": "fd.aiTouch",
         "title": "FD: AI Touch Selection",
         "icon": "$(sparkle)"
       },
       {
-        "command": "fd.aiRefineAll",
+        "command": "fd.aiTouchAll",
         "title": "FD: AI Touch All",
         "icon": "$(wand)"
       },

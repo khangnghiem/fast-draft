@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { exportSpecMarkdown } from "./exportSpec";
-import { refineSelectedNodes, findAnonNodeIds } from "./ai-refine";
+import { refineSelectedNodes, findAnonNodeIds } from "./ai-touch";
 import { callRenamifyAi, applyGlobalRenames, RenameProposal } from "./ai-renamify";
 import {
   parseAnnotation as fdParseAnnotation,
@@ -17,7 +17,7 @@ import { FdTreePreviewPanel } from "./panels/tree-preview";
 import { FdSpecViewPanel } from "./panels/spec-view";
 import { FdDocumentSymbolProvider } from "./document-symbol";
 import { FdReadOnlyProvider, FD_READONLY_SCHEME, VIEW_MODE_LABELS, FdViewMode } from "./panels/readonly-provider";
-import { getNonce, HTML_TEMPLATE, VIEW_TYPE_CANVAS, COMMAND_AI_REFINE, COMMAND_AI_REFINE_ALL, COMMAND_EXPORT_SPEC, COMMAND_OPEN_CANVAS, COMMAND_SHOW_PREVIEW, COMMAND_SHOW_SPEC_VIEW, COMMAND_TOGGLE_VIEW_MODE, COMMAND_OPEN_READONLY_VIEW, COMMAND_CHANGE_VIEW_MODE, COMMAND_RENAMIFY, COMMAND_REFACTOR } from "./webview-html";
+import { getNonce, HTML_TEMPLATE, VIEW_TYPE_CANVAS, COMMAND_AI_TOUCH, COMMAND_AI_TOUCH_ALL, COMMAND_EXPORT_SPEC, COMMAND_OPEN_CANVAS, COMMAND_SHOW_PREVIEW, COMMAND_SHOW_SPEC_VIEW, COMMAND_TOGGLE_VIEW_MODE, COMMAND_OPEN_READONLY_VIEW, COMMAND_CHANGE_VIEW_MODE, COMMAND_RENAMIFY, COMMAND_REFACTOR } from "./webview-html";
 
 /**
  * FD Custom Editor Provider.
@@ -156,7 +156,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
           });
           break;
         }
-        case "aiRefine": {
+        case "aiTouch": {
           const nodeIds = message.nodeIds ?? [];
           await this.handleAiRefine(document, webviewPanel, nodeIds);
           break;
@@ -302,14 +302,14 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
   ): Promise<void> {
     if (nodeIds.length === 0) {
       webviewPanel.webview.postMessage({
-        type: "aiRefineComplete",
+        type: "aiTouchComplete",
         error: "Select a node first.",
       });
       return;
     }
 
     // Notify webview that refine started
-    webviewPanel.webview.postMessage({ type: "aiRefineStarted" });
+    webviewPanel.webview.postMessage({ type: "aiTouchStarted" });
 
     const result = await refineSelectedNodes(document.getText(), nodeIds);
 
@@ -323,7 +323,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
         vscode.commands.executeCommand("workbench.action.openSettings", "fd.ai");
       }
       webviewPanel.webview.postMessage({
-        type: "aiRefineComplete",
+        type: "aiTouchComplete",
         error: result.error,
       });
       return;
@@ -342,7 +342,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     );
     await vscode.workspace.applyEdit(edit);
 
-    webviewPanel.webview.postMessage({ type: "aiRefineComplete" });
+    webviewPanel.webview.postMessage({ type: "aiTouchComplete" });
     vscode.window.showInformationMessage(
       `AI Touch: ${nodeIds.length} node(s) refined.`
     );
@@ -996,7 +996,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register AI Touch command (selected nodes via cursor position)
   context.subscriptions.push(
-    vscode.commands.registerCommand(COMMAND_AI_REFINE, async () => {
+    vscode.commands.registerCommand(COMMAND_AI_TOUCH, async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || editor.document.languageId !== "fd") {
         vscode.window.showInformationMessage(
@@ -1042,7 +1042,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register AI Touch All command (all auto-generated nodes)
   context.subscriptions.push(
-    vscode.commands.registerCommand(COMMAND_AI_REFINE_ALL, async () => {
+    vscode.commands.registerCommand(COMMAND_AI_TOUCH_ALL, async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || editor.document.languageId !== "fd") {
         vscode.window.showInformationMessage(
