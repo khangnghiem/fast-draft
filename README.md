@@ -77,6 +77,49 @@ frame @card {
 - 👆 **Touch & gestures** — two-finger pan, pinch-to-zoom, Apple Pencil support
 - 🎬 **Drag-and-drop animations** — drag a shape onto another to add hover/press effects
 
+## AI Touch
+
+One button, context-adaptive AI. All modes go through a single `/api/ai` endpoint.
+
+| Action | What Happens | Credits |
+|--------|-------------|---------|
+| ✦ AI Touch (with selection) | Phase 1: refine styling + naming → Phase 2: scoped review with score | 2 |
+| ✦ AI Touch (no selection) | Full-document design review | 1 |
+| ☰ → Full Design Review | Same as above | 1 |
+| ✦ Renamify | Rename anonymous IDs to semantic names | 1 |
+
+### Model Configuration
+
+Models are configured via **Cloudflare environment variables** (Dashboard → Workers & Pages → fast-draft → Settings → Environment variables):
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `AI_MODEL_FAST` | refine + renamify | `@cf/google/gemma-3-12b-it` |
+| `AI_MODEL_QUALITY` | review | `@cf/google/gemma-3-12b-it` |
+| `AI_DAILY_LIMIT` | calls/day/IP | `20` |
+
+**Recommended production models:**
+```
+AI_MODEL_FAST=@cf/meta/llama-3.1-8b-instruct
+AI_MODEL_QUALITY=@cf/meta/llama-3.3-70b-instruct-fp8-fast
+```
+
+### Admin Model Override
+
+Override the model per browser session using a URL parameter:
+
+```
+https://fast-draft.com/playground?ai_model=llama-70b
+```
+
+| Alias | Model |
+|-------|-------|
+| `gemma-12b` | `@cf/google/gemma-3-12b-it` |
+| `llama-8b` | `@cf/meta/llama-3.1-8b-instruct` |
+| `llama-70b` | `@cf/meta/llama-3.3-70b-instruct-fp8-fast` |
+
+The review panel footer shows which model produced the result.
+
 ## Built-In Specs
 
 Attach requirements directly to visual elements:
