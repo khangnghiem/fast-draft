@@ -32,14 +32,38 @@ y: 300
 
     assert!(canvas.select_tool.first_selected().is_some());
 
-    assert_eq!(canvas.hit_test_resize_handle(50.0, 50.0), Some(ResizeHandle::TopLeft));
-    assert_eq!(canvas.hit_test_resize_handle(100.0, 50.0), Some(ResizeHandle::TopCenter));
-    assert_eq!(canvas.hit_test_resize_handle(150.0, 50.0), Some(ResizeHandle::TopRight));
-    assert_eq!(canvas.hit_test_resize_handle(50.0, 100.0), Some(ResizeHandle::MiddleLeft));
-    assert_eq!(canvas.hit_test_resize_handle(150.0, 100.0), Some(ResizeHandle::MiddleRight));
-    assert_eq!(canvas.hit_test_resize_handle(50.0, 150.0), Some(ResizeHandle::BottomLeft));
-    assert_eq!(canvas.hit_test_resize_handle(100.0, 150.0), Some(ResizeHandle::BottomCenter));
-    assert_eq!(canvas.hit_test_resize_handle(150.0, 150.0), Some(ResizeHandle::BottomRight));
+    assert_eq!(
+        canvas.hit_test_resize_handle(50.0, 50.0),
+        Some(ResizeHandle::TopLeft)
+    );
+    assert_eq!(
+        canvas.hit_test_resize_handle(100.0, 50.0),
+        Some(ResizeHandle::TopCenter)
+    );
+    assert_eq!(
+        canvas.hit_test_resize_handle(150.0, 50.0),
+        Some(ResizeHandle::TopRight)
+    );
+    assert_eq!(
+        canvas.hit_test_resize_handle(50.0, 100.0),
+        Some(ResizeHandle::MiddleLeft)
+    );
+    assert_eq!(
+        canvas.hit_test_resize_handle(150.0, 100.0),
+        Some(ResizeHandle::MiddleRight)
+    );
+    assert_eq!(
+        canvas.hit_test_resize_handle(50.0, 150.0),
+        Some(ResizeHandle::BottomLeft)
+    );
+    assert_eq!(
+        canvas.hit_test_resize_handle(100.0, 150.0),
+        Some(ResizeHandle::BottomCenter)
+    );
+    assert_eq!(
+        canvas.hit_test_resize_handle(150.0, 150.0),
+        Some(ResizeHandle::BottomRight)
+    );
 
     // Hit test outside
     assert_eq!(canvas.hit_test_resize_handle(10.0, 10.0), None);
@@ -52,8 +76,14 @@ y: 300
     let idx = canvas.engine.graph.index_of(id).unwrap();
     let b = canvas.engine.current_bounds().get(&idx).unwrap().clone();
 
-    assert_eq!(canvas.hit_test_resize_handle(b.x, b.y + b.height / 2.0), Some(ResizeHandle::MiddleLeft));
-    assert_eq!(canvas.hit_test_resize_handle(b.x + b.width, b.y + b.height / 2.0), Some(ResizeHandle::MiddleRight));
+    assert_eq!(
+        canvas.hit_test_resize_handle(b.x, b.y + b.height / 2.0),
+        Some(ResizeHandle::MiddleLeft)
+    );
+    assert_eq!(
+        canvas.hit_test_resize_handle(b.x + b.width, b.y + b.height / 2.0),
+        Some(ResizeHandle::MiddleRight)
+    );
     assert_eq!(canvas.hit_test_resize_handle(b.x, b.y), None); // Top left has no handle on text
 
     // Select the group
@@ -147,7 +177,6 @@ frame @col {
 }
 "#;
     canvas.set_text(text);
-
 
     let id = fd_core::id::NodeId::intern("txt");
     let idx = canvas.engine.graph.index_of(id).unwrap();
