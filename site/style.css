@@ -1379,6 +1379,16 @@ code {
   box-shadow: var(--fd-shadow-lg);
 }
 #ctx-menu.visible, #ctx-menu-canvas.visible { display: block; animation: ctx-fade-in 0.12s ease-out; }
+.ctx-selection-badge {
+  padding: 4px 10px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--fd-accent);
+  border-bottom: 0.5px solid var(--fd-border);
+  margin-bottom: 4px;
+}
 @keyframes ctx-fade-in {
   from { opacity: 0; transform: scale(0.96) translateY(-4px); }
   to { opacity: 1; transform: scale(1) translateY(0); }

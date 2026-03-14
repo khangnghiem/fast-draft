@@ -444,6 +444,89 @@ impl FdCanvas {
         changed
     }
 
+    /// Set a property on ALL currently selected nodes (bulk editing).
+    /// Returns `true` if any node was changed.
+    pub fn set_multi_node_prop(&mut self, key: &str, value: &str) -> bool {
+        let ids: Vec<NodeId> = self.select_tool.selected.clone();
+        if ids.is_empty() {
+            return false;
+        }
+        // For single selection, delegate to set_node_prop for efficiency
+        if ids.len() == 1 {
+            return self.set_node_prop(key, value);
+        }
+
+        let mut mutations: Vec<GraphMutation> = Vec::new();
+        for id in &ids {
+            if let Some(mutation) = self.build_prop_mutation(*id, key, value) {
+                mutations.push(mutation);
+            }
+        }
+        if mutations.is_empty() {
+            return false;
+        }
+        let changed = self.apply_mutations(mutations);
+        if changed {
+            self.engine.flush_to_text();
+        }
+        changed
+    }
+
+    /// Build a property mutation for a specific node (shared by set_node_prop and set_multi_node_prop).
+    fn build_prop_mutation(&self, id: NodeId, key: &str, value: &str) -> Option<GraphMutation> {
+        match key {
+            "fill" => {
+                if value == "none" || value == "transparent" {
+                    let node = self.engine.graph.get_by_id(id)?;
+                    let mut style = node.props.clone();
+                    style.fill = None;
+                    Some(GraphMutation::SetStyle { id, style })
+                } else {
+                    let color = Color::from_hex(value)?;
+                    let node = self.engine.graph.get_by_id(id)?;
+                    let mut style = node.props.clone();
+                    style.fill = Some(Paint::Solid(color));
+                    Some(GraphMutation::SetStyle { id, style })
+                }
+            }
+            "strokeColor" => {
+                let color = Color::from_hex(value)?;
+                let node = self.engine.graph.get_by_id(id)?;
+                let mut style = node.props.clone();
+                let resolved = self.engine.graph.resolve_style(node, &[]);
+                let mut stroke = style.stroke.or(resolved.stroke).unwrap_or_default();
+                stroke.paint = Paint::Solid(color);
+                style.stroke = Some(stroke);
+                Some(GraphMutation::SetStyle { id, style })
+            }
+            "strokeWidth" => {
+                let w = value.parse::<f32>().ok()?;
+                let node = self.engine.graph.get_by_id(id)?;
+                let mut style = node.props.clone();
+                let resolved = self.engine.graph.resolve_style(node, &[]);
+                let mut stroke = style.stroke.or(resolved.stroke).unwrap_or_default();
+                stroke.width = w;
+                style.stroke = Some(stroke);
+                Some(GraphMutation::SetStyle { id, style })
+            }
+            "cornerRadius" => {
+                let r = value.parse::<f32>().ok()?;
+                let node = self.engine.graph.get_by_id(id)?;
+                let mut style = node.props.clone();
+                style.corner_radius = Some(r);
+                Some(GraphMutation::SetStyle { id, style })
+            }
+            "opacity" => {
+                let o = value.parse::<f32>().ok()?;
+                let node = self.engine.graph.get_by_id(id)?;
+                let mut style = node.props.clone();
+                style.opacity = Some(o);
+                Some(GraphMutation::SetStyle { id, style })
+            }
+            _ => None,
+        }
+    }
+
     /// Get the scene-space bounds of a node by its ID.
     pub fn get_node_bounds(&self, node_id: &str) -> String {
         let id = fd_core::id::NodeId::intern(node_id);

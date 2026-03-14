@@ -596,10 +596,36 @@ function updateFab(canvas) {
 /** ─── Properties Panel ──────────────────────────────────────────────── */
 let propsSuppressSync = false;
 
-/** Show/hide and populate the properties panel for the selected node. */
 function updatePropertiesPanel() {
   const panel = document.getElementById('props-panel');
   if (!panel || !fdCanvas) { panel?.classList.remove('visible'); adjustMinimapForProps(false); return; }
+
+  // #4: Check for multi-selection
+  const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+  const isMulti = selectedIds.length > 1;
+
+  if (isMulti) {
+    // Multi-selection: show count and appearance controls only
+    propsSuppressSync = true;
+    panel.classList.add('visible');
+    adjustMinimapForProps(true);
+
+    document.getElementById('pp-node-id').textContent = `${selectedIds.length} objects`;
+    document.getElementById('pp-kind').textContent = 'mixed';
+
+    // Hide position & size (not meaningful for mixed selection)
+    ['pp-x', 'pp-y', 'pp-w', 'pp-h'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '—';
+    });
+
+    // Show appearance section for bulk editing
+    const appearance = document.getElementById('pp-appearance');
+    if (appearance) appearance.style.display = '';
+
+    propsSuppressSync = false;
+    return;
+  }
 
   const json = fdCanvas.get_selected_node_props();
   let props;
@@ -668,7 +694,10 @@ function adjustMinimapForProps(visible) {
 function setupPropsPanel() {
   const propChange = (key, el) => {
     if (propsSuppressSync || !fdCanvas) return;
-    const changed = fdCanvas.set_node_prop(key, el.value);
+    // #4: Use bulk editing when multiple nodes are selected
+    const changed = (fdCanvas.set_multi_node_prop && JSON.parse(fdCanvas.get_selected_ids()).length > 1)
+      ? fdCanvas.set_multi_node_prop(key, el.value)
+      : fdCanvas.set_node_prop(key, el.value);
     if (changed) { renderCanvas(); syncCanvasToEditor(); }
   };
 
@@ -902,16 +931,57 @@ function setupContextMenu() {
 
     if (hitId) {
       // ── Node context menu ──
-      fdCanvas.select_by_id(hitId);
+      // #1: Preserve multi-selection — only replace if hit node isn't already selected
+      const currentIds = JSON.parse(fdCanvas.get_selected_ids());
+      if (!currentIds.includes(hitId)) {
+        fdCanvas.select_by_id(hitId);
+      }
       renderCanvas();
       updateFab(canvas);
       updatePropertiesPanel();
 
-      // Update Lock button label
-      const lockBtn = document.getElementById('ctx-lock-site');
-      if (lockBtn && fdCanvas.is_node_locked) {
-        const isLocked = fdCanvas.is_node_locked(hitId);
-        lockBtn.textContent = isLocked ? '\uD83D\uDD13 Unlock' : '\uD83D\uDD12 Lock';
+      // Re-read selection after possible change
+      const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      const selCount = selectedIds.length;
+      const isMulti = selCount > 1;
+
+      // #3: Selection count badge
+      const badge = document.getElementById('ctx-selection-badge');
+      if (badge) {
+        if (isMulti) {
+          badge.textContent = `${selCount} objects selected`;
+          badge.style.display = '';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+
+      // #3: Multi-aware action labels
+      const setLabel = (id, single, multi) => {
+        const el = document.getElementById(id);
+        if (el) {
+          const shortcut = el.querySelector('.ctx-shortcut');
+          const shortcutHtml = shortcut ? ` ${shortcut.outerHTML}` : '';
+          el.innerHTML = (isMulti ? multi : single) + shortcutHtml;
+        }
+      };
+      setLabel('ctx-del-btn', '🗑 Delete', `🗑 Delete ${selCount} items`);
+      setLabel('ctx-dup-btn', '⧉ Duplicate', `⧉ Duplicate ${selCount} items`);
+      setLabel('ctx-copy-btn', '📋 Copy', `📋 Copy ${selCount} items`);
+      setLabel('ctx-cut-btn', '✂ Cut', `✂ Cut ${selCount} items`);
+
+      // #3: Hide single-node-only items when multi-selected
+      document.querySelectorAll('#ctx-menu .ctx-single-only').forEach(el => {
+        el.style.display = isMulti ? 'none' : '';
+      });
+
+      // Update Lock button label (single only)
+      if (!isMulti) {
+        const lockBtn = document.getElementById('ctx-lock-site');
+        if (lockBtn && fdCanvas.is_node_locked) {
+          const isLocked = fdCanvas.is_node_locked(hitId);
+          lockBtn.textContent = isLocked ? '\uD83D\uDD13 Unlock' : '\uD83D\uDD12 Lock';
+        }
       }
 
       if (nodeMenu) {

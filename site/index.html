@@ -226,23 +226,24 @@
               </div>
             </div>
             <div id="ctx-menu">
-              <button class="ctx-item" data-action="copy">📋 Copy <span class="ctx-shortcut">⌘C</span></button>
-              <button class="ctx-item" data-action="cut">✂ Cut <span class="ctx-shortcut">⌘X</span></button>
-              <button class="ctx-item" data-action="duplicate">⧉ Duplicate <span class="ctx-shortcut">⌘D</span></button>
-              <button class="ctx-item" data-action="delete">🗑 Delete <span class="ctx-shortcut">⌫</span></button>
+              <div class="ctx-selection-badge" id="ctx-selection-badge" style="display:none"></div>
+              <button class="ctx-item" data-action="copy" id="ctx-copy-btn">📋 Copy <span class="ctx-shortcut">⌘C</span></button>
+              <button class="ctx-item" data-action="cut" id="ctx-cut-btn">✂ Cut <span class="ctx-shortcut">⌘X</span></button>
+              <button class="ctx-item" data-action="duplicate" id="ctx-dup-btn">⧉ Duplicate <span class="ctx-shortcut">⌘D</span></button>
+              <button class="ctx-item" data-action="delete" id="ctx-del-btn">🗑 Delete <span class="ctx-shortcut">⌫</span></button>
               <div class="ctx-sep"></div>
               <button class="ctx-item" data-action="bring-forward">↑ Bring Forward</button>
               <button class="ctx-item" data-action="send-backward">↓ Send Backward</button>
               <div class="ctx-sep"></div>
               <button class="ctx-item" data-action="group">⊞ Group</button>
               <button class="ctx-item" data-action="ungroup">⊟ Ungroup</button>
-              <div class="ctx-sep"></div>
-              <button class="ctx-item" data-action="rename">✏️ Rename</button>
-              <button class="ctx-item" data-action="lock" id="ctx-lock-site">🔒 Lock</button>
-              <div class="ctx-sep"></div>
-              <button class="ctx-item" data-action="copy-fd">📄 Copy as .fd</button>
-              <div class="ctx-sep"></div>
-              <button class="ctx-item" data-action="add-note">📝 Add Note</button>
+              <div class="ctx-sep ctx-single-only"></div>
+              <button class="ctx-item ctx-single-only" data-action="rename">✏️ Rename</button>
+              <button class="ctx-item ctx-single-only" data-action="lock" id="ctx-lock-site">🔒 Lock</button>
+              <div class="ctx-sep ctx-single-only"></div>
+              <button class="ctx-item ctx-single-only" data-action="copy-fd">📄 Copy as .fd</button>
+              <div class="ctx-sep ctx-single-only"></div>
+              <button class="ctx-item ctx-single-only" data-action="add-note">📝 Add Note</button>
               <div class="ctx-sep"></div>
               <div class="ctx-ai-touch-wrap">
                 <button class="ctx-item ctx-ai-trigger" data-action="ai-touch">✦ AI Touch <span class="ctx-ai-chevron">▸</span></button>
