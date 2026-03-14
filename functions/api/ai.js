@@ -29,9 +29,32 @@ const DEFAULT_MODEL_QUALITY = '@cf/google/gemma-3-12b-it';
 // ─── Model Aliases (for admin URL param override) ────────────────────────
 
 const MODEL_ALIASES = {
-  'gemma-12b': '@cf/google/gemma-3-12b-it',
-  'llama-8b': '@cf/meta/llama-3.1-8b-instruct',
-  'llama-70b': '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+  // Meta Llama
+  'llama-1b':       '@cf/meta/llama-3.2-1b-instruct',
+  'llama-3b':       '@cf/meta/llama-3.2-3b-instruct',
+  'llama-8b':       '@cf/meta/llama-3.1-8b-instruct',
+  'llama-8b-fast':  '@cf/meta/llama-3.1-8b-instruct-fast',
+  'llama-70b':      '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+  'llama-scout':    '@cf/meta/llama-4-scout-17b-16e-instruct',
+  // Google Gemma
+  'gemma-12b':      '@cf/google/gemma-3-12b-it',
+  // Qwen
+  'qwen-coder':     '@cf/qwen/qwen2.5-coder-32b-instruct',
+  'qwen-30b':       '@cf/qwen/qwen3-30b-a3b-fp8',
+  'qwq-32b':        '@cf/qwen/qwq-32b',
+  // Mistral
+  'mistral-24b':    '@cf/mistral/mistral-small-3.1-24b-instruct',
+  // OpenAI
+  'gpt-20b':        '@cf/openai/gpt-oss-20b',
+  'gpt-120b':       '@cf/openai/gpt-oss-120b',
+  // NVIDIA
+  'nemotron-120b':  '@cf/nvidia/nemotron-3-120b-a12b',
+  // DeepSeek
+  'deepseek-r1':    '@cf/deepseek/deepseek-r1-distill-qwen-32b',
+  // IBM
+  'granite':        '@cf/ibm/granite-4.0-h-micro',
+  // GLM
+  'glm-flash':      '@cf/zai-org/glm-4.7-flash',
 };
 
 // ─── FD Syntax Guide (compressed + golden example) ──────────────────────

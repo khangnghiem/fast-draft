@@ -112,11 +112,25 @@ Override the model per browser session using a URL parameter:
 https://fast-draft.com/playground?ai_model=llama-70b
 ```
 
-| Alias | Model |
-|-------|-------|
-| `gemma-12b` | `@cf/google/gemma-3-12b-it` |
-| `llama-8b` | `@cf/meta/llama-3.1-8b-instruct` |
-| `llama-70b` | `@cf/meta/llama-3.3-70b-instruct-fp8-fast` |
+| Alias | Model | Size |
+|-------|-------|------|
+| `llama-1b` | Llama 3.2 1B | Tiny, ultra-fast |
+| `llama-3b` | Llama 3.2 3B | Small, fast |
+| `llama-8b` | Llama 3.1 8B | Medium, balanced |
+| `llama-8b-fast` | Llama 3.1 8B Fast | Medium, speed-optimized |
+| `llama-70b` | Llama 3.3 70B FP8 | Large, highest quality |
+| `llama-scout` | Llama 4 Scout 17B MoE | Multimodal, 16 experts |
+| `gemma-12b` | Gemma 3 12B | Medium, 128K context |
+| `qwen-coder` | Qwen 2.5 Coder 32B | Code-specialized |
+| `qwen-30b` | Qwen 3 30B MoE | MoE, reasoning |
+| `qwq-32b` | QwQ 32B | Reasoning, R1-class |
+| `mistral-24b` | Mistral Small 3.1 24B | Vision + 128K context |
+| `gpt-20b` | GPT-OSS 20B | Low latency |
+| `gpt-120b` | GPT-OSS 120B | High reasoning |
+| `nemotron-120b` | Nemotron 3 Super 120B | Multi-agent |
+| `deepseek-r1` | DeepSeek R1 Distill 32B | Reasoning champion |
+| `granite` | Granite 4.0 Micro | Agentic, function calling |
+| `glm-flash` | GLM 4.7 Flash | 131K context, fast |
 
 The review panel footer shows which model produced the result.
 
