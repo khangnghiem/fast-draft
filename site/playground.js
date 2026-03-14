@@ -1978,6 +1978,57 @@ ${targetDesc}
 5. **Output ONLY the modified blocks** — one per element. No unchanged elements, no full document.
 6. **No markdown fences, no explanations** — just valid FD blocks.
 
+## Example 1: Rename + Restyle a plain node
+
+INPUT:
+rect @_rect_0 {
+  w: 200 h: 120
+  fill: #FF0000
+  corner: 0
+}
+
+OUTPUT:
+rect @hero_card {
+  w: 200 h: 120
+  fill: #6C5CE7
+  corner: 14
+  shadow: (0,2,16,#00000010)
+}
+
+## Example 2: Fix naming + colors inside a frame (preserve structure)
+
+INPUT:
+frame @_frame_1 {
+  text @_text_3 "Login" {
+    fill: #000000
+    font: "Arial" 12
+  }
+  rect @_rect_4 {
+    w: 200 h: 40
+    fill: #0000FF
+    corner: 0
+  }
+  w: 300 h: 200
+  fill: #EEEEEE
+}
+
+OUTPUT:
+frame @login_form {
+  text @login_title "Login" {
+    fill: #1A1A2E
+    font: "Inter" bold 18
+  }
+  rect @login_submit {
+    w: 200 h: 40
+    fill: #6C5CE7
+    corner: 10
+    when :hover { fill: #5A4BD1 ease: ease_out 150ms }
+  }
+  w: 300 h: 200
+  fill: #F5F5F7
+  corner: 16
+}
+
 ## Selected Blocks to Modify
 
 ${selectedBlocks}

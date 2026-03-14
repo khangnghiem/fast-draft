@@ -27,21 +27,40 @@ const MODEL_70B = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 // ─── FD Format Guide ─────────────────────────────────────────────────────
 
 const FD_SYNTAX_GUIDE = `
-## FD Format Reference
+## FD Syntax (compressed)
 
-Node types: rect, ellipse, text, frame, group, path, image
-Properties: fill:#HEX, stroke:#HEX N, corner:N, opacity:0-1, font:"Name" Npx bold
-Layout: layout: column|row gap=N pad=N, place: center|top_left|bottom_right
+Nodes: rect|ellipse|text|frame|group|path|image @id { props }
+Props: fill:#HEX stroke:#HEX_N corner:N opacity:0-1 font:"F" Npx bold|semibold
+Layout: layout: column|row gap=N pad=N, place: center|top_left
 Constraints: center_in: @parent, offset: @ref dx dy
-Styles: style card_style { fill: #1A1A2E corner: 12 } → use: card_style
-Edges: edge @id { from: @a to: @b arrow: end curve: smooth }
-Notes: note "description" or note { markdown content }
+Style: style name { ... } → use: name
+Edge: edge @id { from: @a to: @b arrow: end curve: smooth }
+Note: note { "text" tag: x done: "y" }
+Hover: when :hover { fill: #HEX ease: ease_out 150ms }
 
-Rules:
-- IDs are semantic snake_case: @hero_card not @_rect_0
-- Colors use harmonious palettes, not random hex
-- Use style blocks for repeated properties (DRY)
-- Prefer constraints over absolute coordinates
+## Golden Example (from a well-designed FD document)
+
+style card { fill: #FFFFFF corner: 14 }
+style brand { fill: #6C5CE7 corner: 12 }
+style heading { fill: #1A1A2E font: "Inter" bold 22 }
+style body { fill: #6B7280 font: "Inter" regular 14 }
+
+rect @hero_card {
+  w: 220 h: 120
+  use: card
+  shadow: (0,2,16,#00000010)
+  when :hover { scale: 1 ease: spring 200ms }
+}
+
+frame @sidebar {
+  layout: column gap=8 pad=16
+  fill: #2D2B55 corner: 0
+  rect @nav_dashboard { w: 180 h: 40 fill: #5A4BD1 corner: 8 }
+}
+
+edge @build_to_test { from: @stage_build to: @stage_test stroke: #6B7080 1.5 flow: pulse 800ms }
+
+Rules: IDs=semantic snake_case. Colors=harmonious palettes. DRY=use style blocks. Constraints>coords.
 `;
 
 // ─── Rate Limiting ───────────────────────────────────────────────────────
