@@ -19,7 +19,7 @@
  * ## Usage
  *
  * ```typescript
- * import { PlatformHost, getTheme, LIGHT_THEME } from 'fd-canvas-ui';
+ * import { PlatformHost, getTheme, matchShortcut, DEFAULT_SHORTCUTS } from 'fd-canvas-ui';
  *
  * const host: PlatformHost = {
  *   getDocument: () => editor.getText(),
@@ -38,3 +38,26 @@ export type { PlatformHost } from "./host.js";
 // ── Theme ───────────────────────────────────────────────────────────
 export type { ThemeContract } from "./theme.js";
 export { LIGHT_THEME, getTheme } from "./theme.js";
+
+// ── Pointer ─────────────────────────────────────────────────────────
+export type { ScenePoint, PointerState, GestureKind, ViewportTransform } from "./pointer.js";
+export {
+  createPointerState,
+  viewportToScene,
+  classifyGesture,
+  pinchDistance,
+  pinchMidpoint,
+} from "./pointer.js";
+
+// ── Keyboard Shortcuts ──────────────────────────────────────────────
+export type { Shortcut, ShortcutMap } from "./shortcuts.js";
+export { DEFAULT_SHORTCUTS, matchShortcut } from "./shortcuts.js";
+
+// ── Clipboard ───────────────────────────────────────────────────────
+export {
+  copyNodes,
+  pasteNodes,
+  copyStyle,
+  pasteStyle,
+  hasStyleClipboard,
+} from "./clipboard.js";

@@ -8,6 +8,7 @@ pub mod mermaid;
 pub mod model;
 pub mod parser;
 pub mod resolve;
+pub mod score;
 #[cfg(test)]
 pub mod test_helpers;
 pub mod theme;
@@ -20,6 +21,7 @@ pub use layout::{Viewport, resolve_layout};
 pub use lint::{LintDiagnostic, LintSeverity, lint_document};
 pub use mermaid::parse_mermaid;
 pub use model::*;
+pub use score::{ScoreReport, compute_score};
 pub use transform::{dedup_use_styles, hoist_styles, sort_nodes};
 
 // Re-export petgraph types so downstream crates don't need a direct dependency
