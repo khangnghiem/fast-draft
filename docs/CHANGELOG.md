@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.144 — Single AI Endpoint + Env-Var Model Selection (R4.23, R4.24)
+- **Single endpoint**: Merged all AI into `/api/ai` with 3 modes: `refine`, `renamify`, `review`. Deleted `functions/api/ai-review.js`.
+- **Env-var model selection**: `AI_MODEL_FAST` (refine/renamify) and `AI_MODEL_QUALITY` (review). Default: `@cf/google/gemma-3-12b-it` for both.
+- **1 credit per action**: Every AI call costs exactly 1 credit. Full-doc review dropped from 3→1 credits.
+- **Files**: `functions/api/ai.js` (rewritten), `functions/api/ai-review.js` (deleted), `site/playground.js`
+
 ### v0.11.143 — Few-Shot Prompt Engineering for AI Touch (R4.23)
 - **2-shot refine examples**: `buildRefinePrompt()` now includes 2 before/after example pairs (rename+restyle, frame structure preservation). ~30-40% quality improvement on 8B model.
 - **1-shot review examples**: All 4 review prompts (scoped, naming, visual, structure) include concrete input→output examples for 70B model.
