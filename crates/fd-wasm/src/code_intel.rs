@@ -28,6 +28,30 @@ impl FdCanvas {
         let text = self.engine.text.clone();
         get_hover_for_text(&text, line, col)
     }
+
+    /// Compute the AI comprehensibility score (R4.21).
+    /// Returns JSON: `{"total":72,"metrics":[{"name":"...","label":"...","score":15,"suggestion":"..."},...]}`
+    pub fn compute_score(&self) -> String {
+        let report = fd_core::score::compute_score(&self.engine.graph);
+        let metrics_json: Vec<String> = report
+            .metrics
+            .iter()
+            .map(|m| {
+                format!(
+                    r#"{{"name":"{}","label":"{}","score":{},"suggestion":"{}"}}"#,
+                    m.name,
+                    m.label,
+                    m.score,
+                    m.suggestion.replace('"', r#"\""#)
+                )
+            })
+            .collect();
+        format!(
+            r#"{{"total":{},"metrics":[{}]}}"#,
+            report.total,
+            metrics_json.join(",")
+        )
+    }
 }
 
 // ─── Standalone validation functions (no canvas needed) ──────────────────

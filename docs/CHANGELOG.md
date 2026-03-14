@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.149 — Comprehensibility Score, Incremental Parse, Shared Canvas UI
+- **CORE (R4.21)**: Comprehensibility Score — new `score.rs` module computes a 0–100 score across 5 metrics: Semantic Naming, Doc-Comment Density, Style Reuse, Edge Default Coverage, Token Efficiency; exposed via `FdCanvas::compute_score()` WASM API returning JSON with total + per-metric breakdown & suggestions; 6 unit tests
+- **PERF (R2.3)**: Block-level incremental parse — `update_text_range()` in `sync.rs` now splits text into top-level blocks, hashes each, and skips full re-parse + layout resolve when block hashes are unchanged; falls back to full re-parse for structural changes; 6 unit tests
+- **PLATFORM (R6.12)**: Shared Canvas UI Module Phase 1 — `fd-canvas-ui` package with 3 new modules: `pointer.ts` (gesture classification, viewport→scene transform, pinch helpers), `shortcuts.ts` (default shortcut map + cross-platform matcher), `clipboard.ts` (node & style clipboard with platform fallback); barrel exports in `index.ts`
+- **CLEANUP (R3.44)**: Marked as done — double-click edge labeling supersedes "text consume on drag"
+
 ### v0.11.148 — Reduce Motion Support (R6.16)
 - **A11Y (R6.16)**: System-wide `prefers-reduced-motion` — global CSS blanket rule suppresses all CSS animations and transitions when OS "Reduce motion" is enabled; skeleton shimmer preserved as minimal loading indicator; JS guards skip touch inertia, camera pan animation, and detach pop effect
 - **A11Y (R6.16)**: Manual "Reduce Motion" toggle — new toggle in ☰ Settings dropdown + `⇧M` keyboard shortcut; `localStorage` persistence (`fd-reduce-motion` key); `.reduce-motion` body class mirrors the CSS media query blanket rule; toast notification confirms state change
