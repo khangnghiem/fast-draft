@@ -96,8 +96,7 @@
             <div id="canvas-toolbar">
               <div class="tb-zone tb-left zen-full-only">
                 <span class="canvas-label"><span class="editor-dot design"></span> Design</span>
-                <button class="tool-btn" id="ai-touch-btn" title="AI Touch — refine selected node">✦ AI Touch</button>
-                <button class="tool-btn" id="ai-review-btn" title="AI Review — design quality audit">✦ AI Review</button>
+                <button class="tool-btn" id="ai-touch-btn" title="AI Touch — refine + review selected (no selection = full audit)">✦ AI Touch</button>
                 <button class="tool-btn" id="renamify-btn" title="Renamify — rename anonymous node IDs">✦ Renamify</button>
               </div>
               <div class="tb-zone tb-right">
@@ -122,6 +121,7 @@
                     <button class="settings-menu-item" data-setting="copy-png" id="sm-copy-png"><span class="sm-icon">📷</span><span class="sm-label">Copy as PNG</span></button>
                     <button class="settings-menu-item" data-setting="export-svg" id="sm-export-svg"><span class="sm-icon">📄</span><span class="sm-label">Download SVG</span></button>
                     <button class="settings-menu-item" data-setting="import-css" id="sm-import-css"><span class="sm-icon">🎨</span><span class="sm-label">Import CSS</span></button>
+                    <button class="settings-menu-item" id="sm-design-review" data-setting="design-review"><span class="sm-icon">✦</span><span class="sm-label">Full Design Review</span></button>
                     <div class="settings-menu-sep"></div>
                     <button class="settings-menu-item" id="sm-shortcuts"><span class="sm-icon">⌨️</span><span class="sm-label">Keyboard Shortcuts</span><span class="sm-shortcut">?</span></button>
                   </div>

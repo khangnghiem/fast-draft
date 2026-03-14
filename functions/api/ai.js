@@ -1,9 +1,8 @@
 /**
  * Cloudflare Pages Function — AI endpoint for FD playground.
- * Uses Cloudflare Workers AI with IP-based rate limiting.
+ * Smart model routing: 8B for refine/renamify, 70B for review.
  *
- * Bindings required (configure in Cloudflare Dashboard →
- * Pages → fast-draft → Settings → Functions → Bindings):
+ * Bindings required:
  *   - AI (Workers AI)
  *   - RATE_LIMIT (KV Namespace) — for daily per-IP counters
  *
@@ -18,9 +17,14 @@ const CORS_HEADERS = {
 };
 
 const DEFAULT_DAILY_LIMIT = 10;
-const KV_TTL_SECONDS = 86400; // 24 hours
+const KV_TTL_SECONDS = 86400;
 
-// ─── FD Format Guide (injected into prompts) ────────────────────────────
+// ─── Models ──────────────────────────────────────────────────────────────
+
+const MODEL_8B = '@cf/meta/llama-3.1-8b-instruct';
+const MODEL_70B = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+
+// ─── FD Format Guide ─────────────────────────────────────────────────────
 
 const FD_SYNTAX_GUIDE = `
 ## FD Format Reference
@@ -42,31 +46,86 @@ Rules:
 
 // ─── Rate Limiting ───────────────────────────────────────────────────────
 
-async function checkRateLimit(context) {
+async function checkRateLimit(context, cost = 1) {
   const kv = context.env.RATE_LIMIT;
-  if (!kv) return { allowed: true, remaining: -1, limit: -1 }; // No KV = no limit
+  if (!kv) return { allowed: true, remaining: -1, limit: -1 };
 
   const ip = context.request.headers.get('CF-Connecting-IP') || 'unknown';
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const today = new Date().toISOString().slice(0, 10);
   const key = `ai:${ip}:${today}`;
   const limit = parseInt(context.env.AI_DAILY_LIMIT || DEFAULT_DAILY_LIMIT, 10);
 
   const current = parseInt(await kv.get(key) || '0', 10);
 
-  if (current >= limit) {
-    return { allowed: false, remaining: 0, limit, resetAt: today + 'T23:59:59Z' };
+  if (current + cost > limit) {
+    return { allowed: false, remaining: Math.max(0, limit - current), limit, needed: cost };
   }
 
-  await kv.put(key, String(current + 1), { expirationTtl: KV_TTL_SECONDS });
-  return { allowed: true, remaining: limit - current - 1, limit };
+  await kv.put(key, String(current + cost), { expirationTtl: KV_TTL_SECONDS });
+  return { allowed: true, remaining: limit - current - cost, limit };
 }
 
 function rateLimitHeaders(rateInfo) {
   return {
     'X-RateLimit-Limit': String(rateInfo.limit),
     'X-RateLimit-Remaining': String(rateInfo.remaining),
-    ...(rateInfo.resetAt ? { 'Retry-After': '3600' } : {}),
+    ...(rateInfo.remaining < 0 ? {} : {}),
   };
+}
+
+// ─── Model + Prompt Selection ────────────────────────────────────────────
+
+function getModelConfig(mode) {
+  switch (mode) {
+    case 'renamify':
+      return {
+        model: MODEL_8B,
+        system: `You are a UI naming expert. Return ONLY a valid JSON object mapping old node IDs to new semantic names. No markdown, no explanation.${FD_SYNTAX_GUIDE}`,
+        maxTokens: 4096,
+        temp: 0.3,
+      };
+    case 'refine':
+      return {
+        model: MODEL_8B,
+        system: `You are an expert UI designer working with the FD (Fast Draft) format. Return ONLY valid FD text with improved styling and semantic naming. No markdown fences, no explanations.${FD_SYNTAX_GUIDE}`,
+        maxTokens: 4096,
+        temp: 0.4,
+      };
+    case 'review-scoped':
+      return {
+        model: MODEL_70B,
+        system: `You are a professional design auditor for FD (Fast Draft) documents. Analyze the given FD nodes and return a JSON object with this exact structure:
+{
+  "categories": [
+    {
+      "name": "Naming",
+      "icon": "📝",
+      "findings": [{"severity": "error"|"warning"|"info", "message": "...", "suggestion": "..."}]
+    },
+    {
+      "name": "Colors & Visuals",
+      "icon": "🎨",
+      "findings": [...]
+    },
+    {
+      "name": "Structure & Layout",
+      "icon": "📐",
+      "findings": [...]
+    }
+  ]
+}
+Return ONLY valid JSON. No markdown fences, no explanations.`,
+        maxTokens: 4096,
+        temp: 0.2,
+      };
+    default:
+      return {
+        model: MODEL_8B,
+        system: `You are an expert UI designer. Return ONLY valid FD text.${FD_SYNTAX_GUIDE}`,
+        maxTokens: 4096,
+        temp: 0.3,
+      };
+  }
 }
 
 // ─── Request Handler ─────────────────────────────────────────────────────
@@ -75,7 +134,6 @@ export async function onRequestPost(context) {
   const headers = { 'Content-Type': 'application/json', ...CORS_HEADERS };
 
   try {
-    // Rate limit check
     const rateInfo = await checkRateLimit(context);
     Object.assign(headers, rateLimitHeaders(rateInfo));
 
@@ -92,44 +150,40 @@ export async function onRequestPost(context) {
 
     if (!prompt) {
       return new Response(JSON.stringify({ error: 'Missing prompt' }), {
-        status: 400,
-        headers,
+        status: 400, headers,
       });
     }
 
     if (!context.env.AI) {
       return new Response(JSON.stringify({
-        error: 'Workers AI binding not configured. Add AI binding in Cloudflare Dashboard → Pages → Settings → Functions.',
+        error: 'Workers AI binding not configured.',
       }), { status: 503, headers });
     }
 
-    const systemPrompt = mode === 'renamify'
-      ? `You are a UI naming expert. Return ONLY a valid JSON object mapping old node IDs to new semantic names. No markdown, no explanation.${FD_SYNTAX_GUIDE}`
-      : `You are an expert UI designer working with the FD (Fast Draft) format. Return ONLY valid FD text. No markdown fences, no explanations.${FD_SYNTAX_GUIDE}`;
+    const config = getModelConfig(mode);
 
-    const result = await context.env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
+    const result = await context.env.AI.run(config.model, {
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: config.system },
         { role: 'user', content: prompt },
       ],
-      max_tokens: 8192,
-      temperature: 0.3,
+      max_tokens: config.maxTokens,
+      temperature: config.temp,
     });
 
     return new Response(JSON.stringify({
       result: result.response,
+      model: config.model.includes('70b') ? '70B' : '8B',
       remaining: rateInfo.remaining,
       limit: rateInfo.limit,
     }), { headers });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message || 'AI request failed' }), {
-      status: 500,
-      headers,
+      status: 500, headers,
     });
   }
 }
 
-// Handle OPTIONS preflight
 export async function onRequestOptions() {
   return new Response(null, { headers: CORS_HEADERS });
 }

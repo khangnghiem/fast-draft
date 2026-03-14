@@ -1730,54 +1730,60 @@ function toggleNotesPanel() {
   if (notesPanelOpen) renderNotesPanel();
 }
 
-/** ─── AI Touch — Refine Selected Node ────────────────────────────────── */
+/** ─── AI Touch — Unified Two-Phase Pipeline ──────────────────────────── *
+ * With selection:  Phase 1 (8B refine) → Phase 2 (70B scoped review)
+ * No selection:    Full-doc review (70B, 3 credits)
+ * ──────────────────────────────────────────────────────────────────────── */
 async function aiTouch() {
   if (!fdCanvas) { showToast('Canvas not ready'); return; }
 
-  // Multi-selection support: get all selected IDs (nodes + edges)
+  // Gather selected IDs
   let selectedIds = [];
   try {
     const idsJson = fdCanvas.get_selected_ids?.();
     selectedIds = idsJson ? JSON.parse(idsJson) : [];
   } catch (_) {}
-  // Fallback to single selection
   if (selectedIds.length === 0) {
     const single = fdCanvas.get_selected_id?.();
     if (single) selectedIds = [single];
   }
-  if (selectedIds.length === 0) {
-    showToast('Select a node or edge first');
-    return;
-  }
 
   const btn = document.getElementById('ai-touch-btn');
-  btn?.classList.add('loading');
   const statusEl = document.getElementById('canvas-status');
-  if (statusEl) statusEl.textContent = `Refining ${selectedIds.length} element${selectedIds.length > 1 ? 's' : ''}…`;
+
+  // No selection → full-doc review (fallback)
+  if (selectedIds.length === 0) {
+    return runFullDocReview(btn, statusEl);
+  }
+
+  // ── Two-phase pipeline: Refine → Scoped Review ──
+  btn?.classList.add('loading');
+  if (statusEl) statusEl.textContent = `✦ Phase 1: Refining ${selectedIds.length} element${selectedIds.length > 1 ? 's' : ''}…`;
+
+  const panel = document.getElementById('ai-review-panel');
+  const body = document.getElementById('ai-review-body');
+  const scoreBadge = document.getElementById('ai-review-score');
 
   try {
     const fdText = fdCanvas.get_text();
-    const prompt = buildRefinePrompt(fdText, selectedIds);
 
-    const resp = await fetch('/api/ai', {
+    // ── Phase 1: Refine (8B model, 1 credit) ──
+    const prompt = buildRefinePrompt(fdText, selectedIds);
+    const refineResp = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, mode: 'refine' }),
     });
 
-    if (resp.status === 429) {
-      const data = await resp.json();
+    if (refineResp.status === 429) {
+      const data = await refineResp.json();
       showToast(`Rate limit reached — ${data.limit}/day free. Try again tomorrow.`);
       return;
     }
-    if (!resp.ok) throw new Error(`API error: ${resp.status}`);
-    const data = await resp.json();
-    if (data.remaining != null && data.remaining <= 2) {
-      showToast(`✦ ${data.remaining} AI calls remaining today`);
-    }
-    let refined = data.result || '';
+    if (!refineResp.ok) throw new Error(`Refine API error: ${refineResp.status}`);
+    const refineData = await refineResp.json();
 
-    // Strip markdown fences
+    let refined = refineData.result || '';
     refined = refined.replace(/^```(?:fd|text)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
 
     if (!refined) {
@@ -1785,83 +1791,108 @@ async function aiTouch() {
       return;
     }
 
-    // Splice modified blocks back into the original document
+    // Apply refined text to editor + canvas
     const result = spliceModifiedBlocks(fdText, refined, selectedIds);
-
-    // Update CodeMirror and canvas
     if (editorView) {
       const cur = editorView.state.doc.toString();
       editorView.dispatch({ changes: { from: 0, to: cur.length, insert: result } });
     }
     fdCanvas.set_text(result);
     renderCanvas();
-    showToast(`✦ AI Touch — ${selectedIds.length} element${selectedIds.length > 1 ? 's' : ''} refined`);
+
+    // ── Phase 2: Scoped Review (70B model, 1 credit) ──
+    if (statusEl) statusEl.textContent = '✦ Phase 2: Analyzing improvements…';
+
+    // Show panel with loading state
+    if (body) body.innerHTML = '<p class="ai-review-loading">Scoring improvements…</p>';
+    if (scoreBadge) { scoreBadge.textContent = ''; scoreBadge.className = 'ai-review-score-badge'; }
+    panel?.classList.remove('hidden');
+
+    // Get the refined blocks for scoped review
+    let scopedFdText;
+    try {
+      scopedFdText = fdCanvas.emit_selection_fd?.();
+    } catch (_) {}
+    if (!scopedFdText) {
+      scopedFdText = extractBlocksForIds(result, selectedIds);
+    }
+
+    const reviewResp = await fetch('/api/ai-review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fdText: scopedFdText, mode: 'scoped' }),
+    });
+
+    if (reviewResp.status === 429) {
+      // Refine succeeded but review exceeded limit — still a win
+      if (body) body.innerHTML = '<p class="ai-review-error">Review skipped — rate limit reached. Your design was refined!</p>';
+      showToast(`✦ AI Touch — ${selectedIds.length} element${selectedIds.length > 1 ? 's' : ''} refined (review skipped)`);
+      return;
+    }
+    if (!reviewResp.ok) throw new Error(`Review API error: ${reviewResp.status}`);
+    const reviewData = await reviewResp.json();
+
+    renderReviewPanel(reviewData, body, scoreBadge);
+
+    const remaining = reviewData.remaining ?? refineData.remaining;
+    let msg = `✦ AI Touch — Score: ${reviewData.score}/100`;
+    if (remaining != null && remaining <= 2) msg += ` (${remaining} calls left)`;
+    showToast(msg);
+
   } catch (err) {
     console.warn('AI Touch error:', err);
     showToast('AI unavailable — check /api/ai endpoint');
+    if (body) body.innerHTML = '<p class="ai-review-error">Review unavailable</p>';
   } finally {
     btn?.classList.remove('loading');
     if (statusEl) statusEl.textContent = 'Ready';
   }
 }
 
-/** ─── AI Review — Design Quality Audit ───────────────────────────────── */
-async function aiReview() {
-  if (!fdCanvas) { showToast('Canvas not ready'); return; }
+/** Full-doc review (3 credits, 3 parallel LLM calls) — via settings menu */
+async function runFullDocReview(btn, statusEl) {
+  btn?.classList.add('loading');
+  if (statusEl) statusEl.textContent = 'Full design review… (3 AI calls)';
 
-  const btn = document.getElementById('ai-review-btn');
   const panel = document.getElementById('ai-review-panel');
   const body = document.getElementById('ai-review-body');
   const scoreBadge = document.getElementById('ai-review-score');
-  const statusEl = document.getElementById('canvas-status');
 
-  // Toggle panel off if already open
-  if (panel && !panel.classList.contains('hidden')) {
-    panel.classList.add('hidden');
-    return;
-  }
-
-  btn?.classList.add('loading');
-  if (statusEl) statusEl.textContent = 'Analyzing design…';
-
-  // Show panel with loading state
-  if (body) body.innerHTML = '<p class="ai-review-loading">Analyzing design… (3 AI calls)</p>';
+  if (body) body.innerHTML = '<p class="ai-review-loading">Full design review… (3 AI calls, 3 credits)</p>';
   if (scoreBadge) { scoreBadge.textContent = ''; scoreBadge.className = 'ai-review-score-badge'; }
   panel?.classList.remove('hidden');
 
   try {
     const fdText = fdCanvas.get_text();
-
     const resp = await fetch('/api/ai-review', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fdText }),
+      body: JSON.stringify({ fdText, mode: 'full' }),
     });
 
     if (resp.status === 429) {
       const data = await resp.json();
-      if (body) body.innerHTML = `<p class="ai-review-error">Rate limit reached — Review costs ${data.needed || 3} credits. You have ${data.remaining || 0}/${data.limit || 10} remaining today.</p>`;
+      if (body) body.innerHTML = `<p class="ai-review-error">Rate limit — costs 3 credits. ${data.remaining || 0}/${data.limit || 10} remaining.</p>`;
       return;
     }
-    if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+    if (!resp.ok) throw new Error(`Review API error: ${resp.status}`);
     const data = await resp.json();
 
     renderReviewPanel(data, body, scoreBadge);
     showToast(`✦ Design Review — Score: ${data.score}/100`);
   } catch (err) {
-    console.warn('AI Review error:', err);
-    if (body) body.innerHTML = '<p class="ai-review-error">Review unavailable — check /api/ai-review endpoint</p>';
+    console.warn('Full doc review error:', err);
+    if (body) body.innerHTML = '<p class="ai-review-error">Review unavailable</p>';
   } finally {
     btn?.classList.remove('loading');
     if (statusEl) statusEl.textContent = 'Ready';
   }
 }
 
-/** Render the structured review report into the panel body. */
+/** Render structured review report into the panel. */
 function renderReviewPanel(data, bodyEl, scoreBadgeEl) {
   if (!bodyEl) return;
 
-  // Score badge
   if (scoreBadgeEl) {
     scoreBadgeEl.textContent = `${data.score}/100`;
     scoreBadgeEl.className = 'ai-review-score-badge';
@@ -1871,8 +1902,8 @@ function renderReviewPanel(data, bodyEl, scoreBadgeEl) {
   }
 
   const severityIcon = { error: '❌', warning: '⚠️', info: 'ℹ️' };
-
   let html = '';
+
   for (const cat of (data.categories || [])) {
     html += `<div class="ai-review-category">
       <div class="ai-review-cat-header">
@@ -1897,7 +1928,6 @@ function renderReviewPanel(data, bodyEl, scoreBadgeEl) {
     } else {
       html += '<p class="ai-review-perfect">✅ No issues found</p>';
     }
-
     html += '</div>';
   }
 
@@ -1908,7 +1938,7 @@ function renderReviewPanel(data, bodyEl, scoreBadgeEl) {
   bodyEl.innerHTML = html;
 }
 
-/** Escape HTML for safe rendering in review findings. */
+/** Escape HTML for safe rendering. */
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
@@ -3293,9 +3323,13 @@ async function initPlayground() {
 
     // ── Toolbar buttons ──────────────────────────────────────────────
     document.getElementById('ai-touch-btn')?.addEventListener('click', aiTouch);
-    document.getElementById('ai-review-btn')?.addEventListener('click', aiReview);
     document.getElementById('ai-review-close')?.addEventListener('click', () => {
       document.getElementById('ai-review-panel')?.classList.add('hidden');
+    });
+    document.getElementById('sm-design-review')?.addEventListener('click', () => {
+      const btn = document.getElementById('ai-touch-btn');
+      const statusEl = document.getElementById('canvas-status');
+      runFullDocReview(btn, statusEl);
     });
     document.getElementById('renamify-btn')?.addEventListener('click', renamify);
     document.getElementById('notes-toggle-btn')?.addEventListener('click', toggleNotesPanel);
