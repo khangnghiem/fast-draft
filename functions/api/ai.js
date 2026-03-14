@@ -212,7 +212,7 @@ export async function onRequestPost(context) {
       }), { status: 429, headers });
     }
 
-    const { prompt, mode, model_hint } = await context.request.json();
+    const { prompt, mode, model_hint, user_focus } = await context.request.json();
 
     if (!prompt) {
       return new Response(JSON.stringify({ error: 'Missing prompt' }), {
@@ -231,6 +231,11 @@ export async function onRequestPost(context) {
     // Admin model override via URL param (validated against whitelist)
     if (model_hint && MODEL_ALIASES[model_hint]) {
       config.model = MODEL_ALIASES[model_hint];
+    }
+
+    // Append user focus to system prompt (if provided)
+    if (user_focus && typeof user_focus === 'string' && user_focus.trim()) {
+      config.system += `\n\n## User Focus\n${user_focus.trim().slice(0, 200)}`;
     }
 
     const result = await context.env.AI.run(config.model, {

@@ -76,7 +76,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       });
 
     // ─── Webview → Extension: canvas mutations ─────────────────────
-    webviewPanel.webview.onDidReceiveMessage(async (message: { type: string; text?: string; id?: string; nodeIds?: string[] }) => {
+    webviewPanel.webview.onDidReceiveMessage(async (message: { type: string; text?: string; id?: string; nodeIds?: string[]; userFocus?: string }) => {
       switch (message.type) {
         case "textChanged": {
           const incoming = message.text ?? "";
@@ -158,7 +158,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
         }
         case "aiTouch": {
           const nodeIds = message.nodeIds ?? [];
-          await this.handleAiRefine(document, webviewPanel, nodeIds);
+          await this.handleAiRefine(document, webviewPanel, nodeIds, message.userFocus);
           break;
         }
         case "renamify": {
@@ -298,7 +298,8 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
   private async handleAiRefine(
     document: vscode.TextDocument,
     webviewPanel: vscode.WebviewPanel,
-    nodeIds: string[]
+    nodeIds: string[],
+    userFocus?: string
   ): Promise<void> {
     if (nodeIds.length === 0) {
       webviewPanel.webview.postMessage({
@@ -311,7 +312,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     // Notify webview that refine started
     webviewPanel.webview.postMessage({ type: "aiTouchStarted" });
 
-    const result = await refineSelectedNodes(document.getText(), nodeIds);
+    const result = await refineSelectedNodes(document.getText(), nodeIds, userFocus);
 
     if (result.error) {
       const action = result.needsSettings ? "Open Settings" : undefined;

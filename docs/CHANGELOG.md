@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.147 — AI Touch Context Menu Prompt + Flat Review Findings (R4.25)
+- **UX (R4.25)**: Custom prompt textarea in right-click context menu — `✦ AI Touch ▸` expandable submenu with 200-char textarea, live char counter, and "Run ✦" button; prompt persists in `localStorage` (`fd-ai-prompt` key); menu stays open while typing (stopPropagation on textarea events); ⌘Enter shortcut to run
+- **UX (R4.25)**: Flat review findings — removed category grouping (Naming, Colors & Visuals, Structure & Layout) from review panel UI; all findings now displayed as a single flat list with severity icons and suggestions; raw categorized data logged to `console.debug('[AI Touch] Raw review:')` for debugging
+- **API (R4.25)**: `user_focus` field — API accepts optional `user_focus` string in request body; appended as `## User Focus` section to system prompt for both refine and review modes; server-side truncation to 200 chars
+- **PARITY (R4.25)**: VS Code extension updated with same submenu, prompt persistence, and `userFocus` parameter through message pipeline → `refineSelectedNodes()` → LLM prompt
+- **SITE**: Changes in `site/index.html`, `site/style.css`, `site/playground.js`, `functions/api/ai.js`
+- **EXTENSION**: Changes in `fd-vscode/src/webview-html.ts`, `fd-vscode/src/extension.ts`, `fd-vscode/src/ai-touch.ts`
+
 ### v0.11.146 — WASM Loading Performance (R6.5)
 - **PERF (R6.5)**: Immutable cache headers — `_headers` changed from `no-cache` to `public, max-age=31536000, immutable` for WASM, JS, and CSS; safe because `pages.yml` auto-busts all URLs with `?v=<git-sha>` on every deploy; return visitors get instant loads from browser disk cache
 - **PERF (R6.5)**: Real progress bar — replaced fake 2.5s CSS animation with `fetch()` + `ReadableStream` byte tracking; progress bar now shows actual download percentage ("Loading engine… 72%"); JS module import and WASM fetch run in parallel via `Promise.all()`
