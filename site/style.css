@@ -1711,11 +1711,11 @@ code {
   overflow: hidden;
 }
 .loading-progress-bar {
-  width: 100%;
+  width: 0%;
   height: 100%;
   background: linear-gradient(90deg, #6C5CE7, #0A84FF);
   border-radius: 2px;
-  animation: progress-fill 2.5s ease-in-out;
+  transition: width 0.15s ease;
 }
 
 .loading-text {
@@ -1734,12 +1734,6 @@ code {
   0% { /* initial values from inline transform */ }
   100% { transform: translateY(0) translateX(0) scale(1); opacity: 1; }
 }
-@keyframes progress-fill {
-  0% { transform: translateX(-100%); }
-  80% { transform: translateX(0); }
-  100% { transform: translateX(0); }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .skeleton-shape {
     animation: skeleton-shimmer 1.5s ease-in-out infinite;
@@ -1747,8 +1741,7 @@ code {
     transform: none;
   }
   .loading-progress-bar {
-    animation: none;
-    transform: none;
+    transition: none;
   }
 }
 

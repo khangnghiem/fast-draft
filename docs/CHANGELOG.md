@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.146 — WASM Loading Performance (R6.5)
+- **PERF (R6.5)**: Immutable cache headers — `_headers` changed from `no-cache` to `public, max-age=31536000, immutable` for WASM, JS, and CSS; safe because `pages.yml` auto-busts all URLs with `?v=<git-sha>` on every deploy; return visitors get instant loads from browser disk cache
+- **PERF (R6.5)**: Real progress bar — replaced fake 2.5s CSS animation with `fetch()` + `ReadableStream` byte tracking; progress bar now shows actual download percentage ("Loading engine… 72%"); JS module import and WASM fetch run in parallel via `Promise.all()`
+- **PERF (R6.5)**: WASM binary optimization — added `--enable-bulk-memory --enable-reference-types` flags to `wasm-opt` for more compact binary encoding
+- **PERF (R6.5)**: `fetchpriority="high"` on WASM preload link in `index.html` — prioritizes WASM download over lower-priority assets
+- **CSS**: Removed unused `progress-fill` keyframe; `.loading-progress-bar` now uses `transition: width 0.15s ease` driven by JS instead of fixed animation
+- **SITE**: Changes in `site/_headers`, `site/index.html`, `site/style.css`, `site/playground.js`, `crates/fd-wasm/Cargo.toml`
+
 ### v0.11.145 — Admin Model Override + Model Badge (R4.23)
 - **Admin URL param**: Add `?ai_model=llama-70b` (or `llama-8b`, `gemma-12b`) to override model per session. Validated against whitelist.
 - **Model badge**: Review panel footer shows which model produced the result (e.g. "Model: gemma-3-12b-it").

@@ -3159,12 +3159,46 @@ async function initPlayground() {
   const wrapper = document.getElementById('canvas-wrapper');
 
   try {
-    // Load WASM module
+    // Load WASM module with real progress tracking
     const statusEl = document.getElementById('loading-status');
+    const progressBar = document.querySelector('.loading-progress-bar');
     if (statusEl) statusEl.textContent = 'Loading engine…';
-    const wasm = await import('./wasm/fd_wasm.js?v=0.11.5');
-    if (statusEl) statusEl.textContent = 'Initializing runtime…';
-    await wasm.default('./wasm/fd_wasm_bg.wasm?v=0.11.5');
+
+    // Start JS module import and WASM fetch in parallel
+    const [wasm, wasmResponse] = await Promise.all([
+      import('./wasm/fd_wasm.js?v=0.11.5'),
+      fetch('./wasm/fd_wasm_bg.wasm?v=0.11.5'),
+    ]);
+
+    // Stream WASM bytes with real progress
+    const contentLength = +wasmResponse.headers.get('Content-Length') || 0;
+    if (contentLength > 0 && wasmResponse.body) {
+      const reader = wasmResponse.body.getReader();
+      const chunks = [];
+      let loaded = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loaded += value.length;
+        const pct = Math.min(loaded / contentLength, 1);
+        if (progressBar) progressBar.style.width = (pct * 100) + '%';
+        if (statusEl) statusEl.textContent = `Loading engine… ${Math.round(pct * 100)}%`;
+      }
+      // Combine chunks into a single buffer
+      const wasmBytes = new Uint8Array(loaded);
+      let offset = 0;
+      for (const chunk of chunks) { wasmBytes.set(chunk, offset); offset += chunk.length; }
+
+      if (statusEl) statusEl.textContent = 'Initializing runtime…';
+      if (progressBar) progressBar.style.width = '100%';
+      await wasm.default(wasmBytes.buffer);
+    } else {
+      // Fallback: no Content-Length (e.g. compressed), use streaming init
+      if (statusEl) statusEl.textContent = 'Initializing runtime…';
+      if (progressBar) progressBar.style.width = '100%';
+      await wasm.default('./wasm/fd_wasm_bg.wasm?v=0.11.5');
+    }
 
     // Size the canvas
     const resizeCanvas = () => {
