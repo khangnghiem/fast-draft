@@ -64,6 +64,10 @@ pub enum ShortcutAction {
     CopyStyle,
     /// Paste clipboard style onto selected node (⌥⌘V).
     PasteStyle,
+
+    // ── Export ──
+    /// Export selection as Excalidraw JSON (⌘⇧E).
+    ExportExcalidraw,
 }
 
 /// Resolves key events into shortcut actions.
@@ -109,6 +113,7 @@ impl ShortcutMap {
                 "]" => Some(ShortcutAction::BringToFront),
                 "?" => Some(ShortcutAction::ShowHelp),
                 "g" | "G" => Some(ShortcutAction::Ungroup),
+                "e" | "E" => Some(ShortcutAction::ExportExcalidraw),
                 _ => None,
             };
         }
