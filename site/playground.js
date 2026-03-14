@@ -1765,8 +1765,16 @@ async function aiTouch() {
       body: JSON.stringify({ prompt, mode: 'refine' }),
     });
 
+    if (resp.status === 429) {
+      const data = await resp.json();
+      showToast(`Rate limit reached — ${data.limit}/day free. Try again tomorrow.`);
+      return;
+    }
     if (!resp.ok) throw new Error(`API error: ${resp.status}`);
     const data = await resp.json();
+    if (data.remaining != null && data.remaining <= 2) {
+      showToast(`✦ ${data.remaining} AI calls remaining today`);
+    }
     let refined = data.result || '';
 
     // Strip markdown fences
@@ -1795,6 +1803,116 @@ async function aiTouch() {
     btn?.classList.remove('loading');
     if (statusEl) statusEl.textContent = 'Ready';
   }
+}
+
+/** ─── AI Review — Design Quality Audit ───────────────────────────────── */
+async function aiReview() {
+  if (!fdCanvas) { showToast('Canvas not ready'); return; }
+
+  const btn = document.getElementById('ai-review-btn');
+  const panel = document.getElementById('ai-review-panel');
+  const body = document.getElementById('ai-review-body');
+  const scoreBadge = document.getElementById('ai-review-score');
+  const statusEl = document.getElementById('canvas-status');
+
+  // Toggle panel off if already open
+  if (panel && !panel.classList.contains('hidden')) {
+    panel.classList.add('hidden');
+    return;
+  }
+
+  btn?.classList.add('loading');
+  if (statusEl) statusEl.textContent = 'Analyzing design…';
+
+  // Show panel with loading state
+  if (body) body.innerHTML = '<p class="ai-review-loading">Analyzing design… (3 AI calls)</p>';
+  if (scoreBadge) { scoreBadge.textContent = ''; scoreBadge.className = 'ai-review-score-badge'; }
+  panel?.classList.remove('hidden');
+
+  try {
+    const fdText = fdCanvas.get_text();
+
+    const resp = await fetch('/api/ai-review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fdText }),
+    });
+
+    if (resp.status === 429) {
+      const data = await resp.json();
+      if (body) body.innerHTML = `<p class="ai-review-error">Rate limit reached — Review costs ${data.needed || 3} credits. You have ${data.remaining || 0}/${data.limit || 10} remaining today.</p>`;
+      return;
+    }
+    if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+    const data = await resp.json();
+
+    renderReviewPanel(data, body, scoreBadge);
+    showToast(`✦ Design Review — Score: ${data.score}/100`);
+  } catch (err) {
+    console.warn('AI Review error:', err);
+    if (body) body.innerHTML = '<p class="ai-review-error">Review unavailable — check /api/ai-review endpoint</p>';
+  } finally {
+    btn?.classList.remove('loading');
+    if (statusEl) statusEl.textContent = 'Ready';
+  }
+}
+
+/** Render the structured review report into the panel body. */
+function renderReviewPanel(data, bodyEl, scoreBadgeEl) {
+  if (!bodyEl) return;
+
+  // Score badge
+  if (scoreBadgeEl) {
+    scoreBadgeEl.textContent = `${data.score}/100`;
+    scoreBadgeEl.className = 'ai-review-score-badge';
+    if (data.score >= 80) scoreBadgeEl.classList.add('score-high');
+    else if (data.score >= 50) scoreBadgeEl.classList.add('score-mid');
+    else scoreBadgeEl.classList.add('score-low');
+  }
+
+  const severityIcon = { error: '❌', warning: '⚠️', info: 'ℹ️' };
+
+  let html = '';
+  for (const cat of (data.categories || [])) {
+    html += `<div class="ai-review-category">
+      <div class="ai-review-cat-header">
+        <span class="ai-review-cat-icon">${cat.icon || '📋'}</span>
+        <span class="ai-review-cat-name">${cat.name}</span>
+        <span class="ai-review-cat-score">${cat.score}/100</span>
+      </div>`;
+
+    if (cat.findings && cat.findings.length > 0) {
+      html += '<ul class="ai-review-findings">';
+      for (const f of cat.findings) {
+        const icon = severityIcon[f.severity] || 'ℹ️';
+        html += `<li class="ai-review-finding">
+          <span class="ai-review-severity">${icon}</span>
+          <div class="ai-review-finding-text">
+            ${escapeHtml(f.message)}
+            ${f.suggestion ? `<div class="ai-review-suggestion">💡 ${escapeHtml(f.suggestion)}</div>` : ''}
+          </div>
+        </li>`;
+      }
+      html += '</ul>';
+    } else {
+      html += '<p class="ai-review-perfect">✅ No issues found</p>';
+    }
+
+    html += '</div>';
+  }
+
+  if (!data.categories || data.categories.length === 0) {
+    html = '<p class="ai-review-error">No review data returned</p>';
+  }
+
+  bodyEl.innerHTML = html;
+}
+
+/** Escape HTML for safe rendering in review findings. */
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 function buildRefinePrompt(fdText, selectedIds) {
@@ -3175,6 +3293,10 @@ async function initPlayground() {
 
     // ── Toolbar buttons ──────────────────────────────────────────────
     document.getElementById('ai-touch-btn')?.addEventListener('click', aiTouch);
+    document.getElementById('ai-review-btn')?.addEventListener('click', aiReview);
+    document.getElementById('ai-review-close')?.addEventListener('click', () => {
+      document.getElementById('ai-review-panel')?.classList.add('hidden');
+    });
     document.getElementById('renamify-btn')?.addEventListener('click', renamify);
     document.getElementById('notes-toggle-btn')?.addEventListener('click', toggleNotesPanel);
     document.getElementById('notes-panel-close')?.addEventListener('click', toggleNotesPanel);

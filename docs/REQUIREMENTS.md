@@ -143,6 +143,9 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
   - **Read token cost**: total tokens in `ReadMode::Full` vs optimal `ReadMode::Structure`
   - Display as a badge in the Canvas toolbar (e.g. `AI: 72/100`) and in `fd-lsp --score`
   - Provide per-metric breakdown for targeted improvement suggestions
+- **R4.22** _(done)_: **AI Rate Limiting** — IP-based daily call limit via Cloudflare KV (`RATE_LIMIT` namespace). 10 calls/day/IP free tier (configurable via `AI_DAILY_LIMIT` env var). KV key format `ai:{ip}:{date}` with 24h TTL auto-cleanup. Responses include `X-RateLimit-Limit` and `X-RateLimit-Remaining` headers. 429 response with `Retry-After` when exceeded. Frontend shows remaining-count toast when ≤2 calls left and rate-limit-exceeded toast on 429. Design Review costs 3 credits per review.
+- **R4.23** _(done)_: **AI Quality Upgrade** — model upgraded from `@cf/meta/llama-3.1-8b-instruct` to `@cf/meta/llama-3.3-70b-instruct-fp8-fast` on Cloudflare Workers AI. Enhanced system prompts include FD format syntax guide (node types, properties, constraints, styles, edges). `max_tokens` increased from 4096 to 8192. Temperature lowered to 0.3 for more deterministic output.
+- **R4.24** _(done)_: **Design Review Agent** — multi-step AI analysis via `/api/ai-review` endpoint. Runs 3 parallel LLM calls: naming audit (anonymous IDs, conventions), visual critique (color harmony, spacing, contrast, corner radius, typography hierarchy), and structure analysis (style reuse, layout quality, hierarchy, accessibility sizing). Returns structured JSON with per-category scores (0–100), overall score, and severity-graded findings (error/warning/info) with fix suggestions. Frontend: "✦ AI Review" button in toolbar; frosted glass slide-up panel with category cards, score badges (green ≥80, orange ≥50, red <50), and severity icons.
 
 ### R5: Rendering
 
@@ -278,7 +281,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | theme               | R3.13                                                                                   |
 | view mode           | R3.14, R4.11                                                                            |
 | pressure / pencil   | R3.4, R3.10, R3.22                                                                      |
-| ai / refinement     | R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17, R4.20, R4.21         |
+| ai / refinement     | R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17, R4.20, R4.21, R4.22, R4.23, R4.24 |
+| rate-limit          | R4.22                                                                                   |
 | edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8                                                   |
 | import              | R1.14, R1.18                                                                            |
 | style / theme       | R1.4, R4.3, R4.18                                                                       |

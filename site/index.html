@@ -97,6 +97,7 @@
               <div class="tb-zone tb-left zen-full-only">
                 <span class="canvas-label"><span class="editor-dot design"></span> Design</span>
                 <button class="tool-btn" id="ai-touch-btn" title="AI Touch — refine selected node">✦ AI Touch</button>
+                <button class="tool-btn" id="ai-review-btn" title="AI Review — design quality audit">✦ AI Review</button>
                 <button class="tool-btn" id="renamify-btn" title="Renamify — rename anonymous node IDs">✦ Renamify</button>
               </div>
               <div class="tb-zone tb-right">
@@ -253,6 +254,19 @@
               <button class="ctx-item" data-action="fit">⊡ Fit to Content</button>
             </div>
             <div id="dimension-tooltip"></div>
+            <!-- AI Review Panel (slide-up from bottom) -->
+            <div id="ai-review-panel" class="ai-review-panel hidden">
+              <div class="ai-review-header">
+                <div class="ai-review-title">
+                  <span class="ai-review-icon">✦</span> Design Review
+                  <span class="ai-review-score-badge" id="ai-review-score"></span>
+                </div>
+                <button class="ai-review-close" id="ai-review-close" title="Close">✕</button>
+              </div>
+              <div class="ai-review-body" id="ai-review-body">
+                <p class="ai-review-loading" id="ai-review-loading">Analyzing design…</p>
+              </div>
+            </div>
             <div id="canvas-loading" class="canvas-loading">
               <div class="skeleton-scene">
                 <div class="skeleton-shape skeleton-card"></div>
