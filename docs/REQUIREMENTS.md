@@ -108,7 +108,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.32** _(done)_: Image embedding — `image` nodes with `src:` file reference; `ImageFit` enum (cover/contain/fill/none); parser/emitter roundtrip; renderer shows placeholder rect until WASM texture pipeline
 - **R3.33** _(done)_: Component libraries — reusable node collections from a library panel; stored as `.fd` files; 3 built-in libraries (UI Kit, Flowchart, Wireframe)
 - **R3.34** _(planned)_: Community library directory — searchable gallery for publishing and discovering shared libraries
-- **R3.55** _(planned)_: Export to Excalidraw JSON — `export_excalidraw(graph)` converts FD scene to Excalidraw's JSON format; rect/ellipse/text/arrow elements mapped correctly; ⌘⇧X shortcut
+- **R3.55** _(done)_: Export to Excalidraw JSON — `export_excalidraw(graph)` converts FD scene to Excalidraw's JSON format; rect/ellipse/text/arrow elements mapped correctly; ⌘⇧E shortcut
 - **R3.56** _(planned)_: Export to HTML+CSS+JS — `export_html(graph)` generates standalone responsive HTML page; shapes → `<div>`, text → `<p>`, constraints → flexbox, animations → CSS transitions
 - **R3.57** _(planned)_: Fine pen tools — `taper_start`, `taper_end`, `smoothing` properties on pen strokes; variable stroke width rendering; settings in properties panel
 - **R3.58** _(planned)_: Animation timeline — visual keyframe panel showing `when` blocks as timeline tracks; drag endpoints to adjust duration; scrub to preview animation state
@@ -134,7 +134,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R4.17** _(done)_: Dimension units — `w: 320px` accepted, `px` stripped by parser
 - **R4.18** _(done)_: Keyword rename — `theme` → `style` (reusable property bundles), `anim` → `when` for clarity; internal Rust struct `Style` → `Properties`, field `.style` → `.props`; emitter order: spec → children → style → when; old keywords (`theme`, `style` as legacy) accepted for backward compatibility; `spec` → `note` keyword rename; `accept:` → `todo:` rename; raw markdown notes — `Annotation` enum deleted, `note: Option<String>` stores free-form markdown captured verbatim from `note { }` blocks
 - **R4.19** _(done)_: ReadMode filtered views — `emit_filtered(graph, mode)` with 8 modes (Full/Structure/Layout/Design/Spec/Visual/When/Edges); CLI `fd-lsp --view <mode>` for AI token savings; VS Code read-only virtual document provider with status bar mode selector
-- **R4.20** _(planned)_: AI Assist on selection — select nodes on canvas → click "✦ AI Assist" → AI receives `.fd` text of selected nodes → returns redesigned `.fd` → bidi-sync renders changes live; undo reverts entire AI edit atomically
+- **R4.20** _(done)_: AI Assist on selection — select nodes on canvas → click "✦ AI Assist" → AI receives `.fd` text of selected nodes via `emit_selection_fd()` WASM API → returns redesigned `.fd` → bidi-sync renders changes live; undo reverts entire AI edit atomically
 - **R4.21** _(planned)_: **Comprehensibility Score** — compute a 0–100 score measuring how easily AI agents can understand an FD document. Metrics:
   - **Semantic naming ratio**: % of non-anonymous `@id`s (target: >80%)
   - **Inline doc-comment density**: % of nodes with `[auto]` or manual `#` comments

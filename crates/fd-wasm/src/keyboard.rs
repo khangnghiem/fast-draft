@@ -230,7 +230,8 @@ impl FdCanvas {
             | ShortcutAction::ZoomToFit
             | ShortcutAction::PanStart
             | ShortcutAction::PanEnd
-            | ShortcutAction::ShowHelp => (false, false),
+            | ShortcutAction::ShowHelp
+            | ShortcutAction::ExportExcalidraw => (false, false),
 
             // Style clipboard
             ShortcutAction::CopyStyle => {
@@ -311,5 +312,6 @@ pub(crate) fn action_to_name(action: ShortcutAction) -> &'static str {
         ShortcutAction::ShowHelp => "showHelp",
         ShortcutAction::CopyStyle => "copyStyle",
         ShortcutAction::PasteStyle => "pasteStyle",
+        ShortcutAction::ExportExcalidraw => "exportExcalidraw",
     }
 }

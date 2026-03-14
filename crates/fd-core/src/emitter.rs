@@ -836,6 +836,31 @@ fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph, defaults: Option
     out.push_str("}\n");
 }
 
+/// Emit a single node subtree as standalone FD text.
+///
+/// Public wrapper around `emit_node` for use by `emit_selection_fd`.
+/// Includes the node with all its children, styles, and animations.
+pub fn emit_node_standalone(
+    out: &mut String,
+    graph: &SceneGraph,
+    idx: NodeIndex,
+    _bounds: &std::collections::HashMap<NodeIndex, ResolvedBounds>,
+) {
+    emit_node(out, graph, idx, 0);
+}
+
+/// Emit a single edge as standalone FD text.
+///
+/// Public wrapper around `emit_edge` for use by `emit_selection_fd`.
+pub fn emit_edge_standalone(
+    out: &mut String,
+    edge: &Edge,
+    graph: &SceneGraph,
+    defaults: Option<&EdgeDefaults>,
+) {
+    emit_edge(out, edge, graph, defaults);
+}
+
 /// Generate an auto-comment for AI comprehension based on node heuristics.
 ///
 /// Returns `None` if the node doesn't benefit from extra context.

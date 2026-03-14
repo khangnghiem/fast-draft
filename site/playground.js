@@ -1805,8 +1805,14 @@ function buildRefinePrompt(fdText, selectedIds) {
   if (nodeList.length > 0) targetDesc += `Nodes: ${nodeList.join(', ')}`;
   if (edgeList.length > 0) targetDesc += `${targetDesc ? '\n' : ''}Edges: ${edgeList.join(', ')}`;
 
-  // Extract the blocks for the selected elements
-  const selectedBlocks = extractBlocksForIds(fdText, selectedIds);
+  // Extract the blocks using WASM emitter (accurate, no regex fragility)
+  let selectedBlocks;
+  try {
+    selectedBlocks = fdCanvas.emit_selection_fd();
+  } catch (_) {
+    // Fallback to regex-based extraction if WASM API not available
+    selectedBlocks = extractBlocksForIds(fdText, selectedIds);
+  }
 
   return `You are an expert UI designer working with the FD (Fast Draft) format.
 
@@ -3694,6 +3700,24 @@ async function initPlayground() {
       if (!editorFocused) {
         try {
           const r = JSON.parse(fdCanvas.handle_key(e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey));
+
+          // Handle export actions returned from WASM
+          if (r.action === 'exportExcalidraw') {
+            e.preventDefault();
+            try {
+              const json = fdCanvas.export_excalidraw();
+              navigator.clipboard.writeText(json).then(() => {
+                showToast('✦ Excalidraw JSON copied to clipboard');
+              }).catch(() => {
+                showToast('Failed to copy — check clipboard permissions');
+              });
+            } catch (err) {
+              console.warn('Excalidraw export error:', err);
+              showToast('Export failed');
+            }
+            return;
+          }
+
           if (r.changed) {
             renderCanvas();
             syncCanvasToEditor();

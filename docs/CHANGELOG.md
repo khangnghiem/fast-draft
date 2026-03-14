@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.139 — Excalidraw Export + AI Assist Enhancement (R3.55, R4.20)
+- **R3.55 — Excalidraw Export**: New `export_excalidraw()` WASM API converts FD scene to Excalidraw v2 JSON. Maps rect/frame→rectangle, ellipse→ellipse, text→text, path→freedraw. Includes fill, stroke, opacity, corner radius. ⌘⇧E keyboard shortcut copies JSON to clipboard. Core logic in `fd-core/src/excalidraw.rs` with 9 unit tests.
+- **R4.20 — AI Assist Enhancement**: New `emit_selection_fd()` WASM API emits FD text for only selected nodes, replacing fragile regex-based block extraction in JS. AI Touch prompt now uses accurate WASM-powered selection extraction with JS fallback.
+- New public functions in `emitter.rs`: `emit_node_standalone()` and `emit_edge_standalone()`.
+
 ### v0.11.138 — Fix Theme Toggle Across Docs Pages (R3.13)
 
 - **FIX (R3.13)**: Docs pages (Language Reference, Shortcuts, Changelog) now fully support light theme — added ~80 lines of `body.light-theme` CSS overrides to `site/docs/style.css` covering code blocks (light bg + adjusted syntax highlighting), inline code, tables, kbd badges, callouts, changelog tags, sidebar, page nav, and mobile nav

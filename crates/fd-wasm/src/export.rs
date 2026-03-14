@@ -95,4 +95,59 @@ impl FdCanvas {
             &theme,
         )
     }
+
+    /// Export the current selection (or entire canvas if empty) as Excalidraw v2 JSON.
+    ///
+    /// The output can be pasted directly into excalidraw.com.
+    pub fn export_excalidraw(&self) -> String {
+        let selected_ids: Vec<String> = self
+            .select_tool
+            .selected
+            .iter()
+            .map(|id| id.as_str().to_string())
+            .collect();
+
+        fd_core::excalidraw::export_excalidraw(
+            &self.engine.graph,
+            self.engine.current_bounds(),
+            &selected_ids,
+        )
+    }
+
+    /// Emit FD text for only the currently selected nodes.
+    ///
+    /// Returns valid FD text containing just the selected node blocks
+    /// (including children for groups/frames). If nothing is selected,
+    /// returns the full document. Used by AI Assist to provide accurate
+    /// selection context without fragile regex extraction.
+    pub fn emit_selection_fd(&self) -> String {
+        if self.select_tool.selected.is_empty() {
+            return fd_core::emitter::emit_document(&self.engine.graph);
+        }
+
+        let mut out = String::with_capacity(512);
+        let bounds = self.engine.current_bounds();
+
+        for id in &self.select_tool.selected {
+            // Check if it's an edge
+            if let Some(edge) = self.engine.graph.edges.iter().find(|e| e.id == *id) {
+                fd_core::emitter::emit_edge_standalone(
+                    &mut out,
+                    edge,
+                    &self.engine.graph,
+                    self.engine.graph.edge_defaults.as_ref(),
+                );
+                out.push('\n');
+                continue;
+            }
+
+            // It's a node — emit its subtree
+            if let Some(idx) = self.engine.graph.index_of(*id) {
+                fd_core::emitter::emit_node_standalone(&mut out, &self.engine.graph, idx, bounds);
+                out.push('\n');
+            }
+        }
+
+        out
+    }
 }

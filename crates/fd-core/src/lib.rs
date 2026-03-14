@@ -1,4 +1,5 @@
 pub mod emitter;
+pub mod excalidraw;
 pub mod format;
 pub mod id;
 pub mod layout;

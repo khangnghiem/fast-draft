@@ -201,6 +201,27 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Emit FD text for only the currently selected nodes.
+     *
+     * Returns valid FD text containing just the selected node blocks
+     * (including children for groups/frames). If nothing is selected,
+     * returns the full document. Used by AI Assist to provide accurate
+     * selection context without fragile regex extraction.
+     * @returns {string}
+     */
+    emit_selection_fd() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_emit_selection_fd(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Evaluate a drop for structural detach.
      * @param {string} node_id
      * @returns {string}
@@ -236,6 +257,24 @@ export class FdCanvas {
             return getStringFromWasm0(ret[0], ret[1]);
         } finally {
             wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * Export the current selection (or entire canvas if empty) as Excalidraw v2 JSON.
+     *
+     * The output can be pasted directly into excalidraw.com.
+     * @returns {string}
+     */
+    export_excalidraw() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_export_excalidraw(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
         }
     }
     /**
