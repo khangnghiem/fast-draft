@@ -2315,3 +2315,12 @@ code {
   text-align: center;
   padding: 16px;
 }
+.ai-review-footer {
+  font-size: 10px;
+  color: var(--fd-text-secondary, #86868B);
+  text-align: right;
+  padding: 4px 12px 6px;
+  opacity: 0.6;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  margin-top: 8px;
+}

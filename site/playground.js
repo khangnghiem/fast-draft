@@ -1731,9 +1731,18 @@ function toggleNotesPanel() {
 }
 
 /** ─── AI Touch — Unified Two-Phase Pipeline ──────────────────────────── *
- * With selection:  Phase 1 (8B refine) → Phase 2 (70B scoped review)
- * No selection:    Full-doc review (70B, 3 credits)
+ * With selection:  Phase 1 (refine) → Phase 2 (scoped review)
+ * No selection:    Full-doc review
  * ──────────────────────────────────────────────────────────────────────── */
+
+/** Read admin model override from URL param: ?ai_model=llama-70b */
+function getAiModelHint() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('ai_model') || undefined;
+  } catch (_) { return undefined; }
+}
+
 async function aiTouch() {
   if (!fdCanvas) { showToast('Canvas not ready'); return; }
 
@@ -1767,12 +1776,13 @@ async function aiTouch() {
   try {
     const fdText = fdCanvas.get_text();
 
-    // ── Phase 1: Refine (8B model, 1 credit) ──
+    // ── Phase 1: Refine (1 credit) ──
     const prompt = buildRefinePrompt(fdText, selectedIds);
+    const modelHint = getAiModelHint();
     const refineResp = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, mode: 'refine' }),
+      body: JSON.stringify({ prompt, mode: 'refine', model_hint: modelHint }),
     });
 
     if (refineResp.status === 429) {
@@ -1820,7 +1830,7 @@ async function aiTouch() {
     const reviewResp = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: `Review these FD nodes:\n\n${scopedFdText}`, mode: 'review' }),
+      body: JSON.stringify({ prompt: `Review these FD nodes:\n\n${scopedFdText}`, mode: 'review', model_hint: getAiModelHint() }),
     });
 
     if (reviewResp.status === 429) {
@@ -1866,7 +1876,7 @@ async function runFullDocReview(btn, statusEl) {
     const resp = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: `Review this FD document:\n\n${fdText}`, mode: 'review' }),
+      body: JSON.stringify({ prompt: `Review this FD document:\n\n${fdText}`, mode: 'review', model_hint: getAiModelHint() }),
     });
 
     if (resp.status === 429) {
@@ -1928,6 +1938,12 @@ function renderReviewPanel(data, bodyEl, scoreBadgeEl) {
       html += '<p class="ai-review-perfect">✅ No issues found</p>';
     }
     html += '</div>';
+  }
+
+  // Model badge footer
+  const modelName = data.model ? data.model.split('/').pop() : '';
+  if (modelName) {
+    html += `<div class="ai-review-footer">Model: ${escapeHtml(modelName)}</div>`;
   }
 
   if (!data.categories || data.categories.length === 0) {

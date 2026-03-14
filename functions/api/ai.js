@@ -26,6 +26,14 @@ const KV_TTL_SECONDS = 86400;
 const DEFAULT_MODEL_FAST = '@cf/google/gemma-3-12b-it';
 const DEFAULT_MODEL_QUALITY = '@cf/google/gemma-3-12b-it';
 
+// ─── Model Aliases (for admin URL param override) ────────────────────────
+
+const MODEL_ALIASES = {
+  'gemma-12b': '@cf/google/gemma-3-12b-it',
+  'llama-8b': '@cf/meta/llama-3.1-8b-instruct',
+  'llama-70b': '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+};
+
 // ─── FD Syntax Guide (compressed + golden example) ──────────────────────
 
 const FD_SYNTAX_GUIDE = `
@@ -181,7 +189,7 @@ export async function onRequestPost(context) {
       }), { status: 429, headers });
     }
 
-    const { prompt, mode } = await context.request.json();
+    const { prompt, mode, model_hint } = await context.request.json();
 
     if (!prompt) {
       return new Response(JSON.stringify({ error: 'Missing prompt' }), {
@@ -196,6 +204,11 @@ export async function onRequestPost(context) {
     }
 
     const config = getModelConfig(mode, context.env);
+
+    // Admin model override via URL param (validated against whitelist)
+    if (model_hint && MODEL_ALIASES[model_hint]) {
+      config.model = MODEL_ALIASES[model_hint];
+    }
 
     const result = await context.env.AI.run(config.model, {
       messages: [
