@@ -18,6 +18,10 @@
   <script>
     (function() {
       var st = localStorage.getItem('fd-site-theme');
+      if (st === 'light') {
+        document.documentElement.classList.add('light-theme');
+        document.documentElement.style.colorScheme = 'light';
+      }
       document.addEventListener('DOMContentLoaded', function() {
         if (st === 'light') document.body.classList.add('light-theme');
         var btn = document.getElementById('site-theme-toggle');
@@ -289,6 +293,8 @@
     var st = document.getElementById('site-theme-toggle');
     if (st) st.addEventListener('click', function() {
       var isLight = document.body.classList.toggle('light-theme');
+      document.documentElement.classList.toggle('light-theme', isLight);
+      document.documentElement.style.colorScheme = isLight ? 'light' : 'dark';
       st.textContent = isLight ? '☀️' : '🌙';
       localStorage.setItem('fd-site-theme', isLight ? 'light' : 'dark');
     });
