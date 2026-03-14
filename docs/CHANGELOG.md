@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.145 — Admin Model Override + Model Badge (R4.23)
+- **Admin URL param**: Add `?ai_model=llama-70b` (or `llama-8b`, `gemma-12b`) to override model per session. Validated against whitelist.
+- **Model badge**: Review panel footer shows which model produced the result (e.g. "Model: gemma-3-12b-it").
+- **Files**: `functions/api/ai.js` (MODEL_ALIASES), `site/playground.js` (getAiModelHint + badge), `site/style.css`
+
 ### v0.11.144 — Single AI Endpoint + Env-Var Model Selection (R4.23, R4.24)
 - **Single endpoint**: Merged all AI into `/api/ai` with 3 modes: `refine`, `renamify`, `review`. Deleted `functions/api/ai-review.js`.
 - **Env-var model selection**: `AI_MODEL_FAST` (refine/renamify) and `AI_MODEL_QUALITY` (review). Default: `@cf/google/gemma-3-12b-it` for both.
