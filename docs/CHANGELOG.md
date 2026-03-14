@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.142 — Unified AI Touch Pipeline: Two-Phase Refine + Review (R4.24)
+- **Unified AI Touch**: One button, two phases. With selection: Phase 1 (8B refine → apply changes) + Phase 2 (70B scoped review → score panel). Without selection: full-doc review (3 credits).
+- **Smart Model Routing**: 8B for refine/renamify (fast, cheap), 70B for review (quality-critical). ~60% fewer neurons per call.
+- **Scoped Review**: New `mode: 'scoped'` in `/api/ai-review` — single LLM call for selected nodes only (1 credit vs 3 for full doc).
+- **Toolbar Simplification**: Removed standalone "✦ AI Review" button. Full Design Review available via ☰ settings menu.
+- **Files**: `functions/api/ai.js`, `functions/api/ai-review.js`, `site/playground.js`, `site/index.html`
+
 ### v0.11.141 — AI Touch Monetization: Rate Limiting + Quality Upgrade + Design Review Agent (R4.22, R4.23, R4.24)
 - **R4.22 — AI Rate Limiting**: IP-based daily call limit via Cloudflare KV (`RATE_LIMIT` namespace). 10 calls/day/IP free tier (configurable via `AI_DAILY_LIMIT` env var). `X-RateLimit-Limit`/`X-RateLimit-Remaining` response headers. 429 response with retry info. Frontend shows remaining-count toast and rate-limit-exceeded toast. Design Review costs 3 credits per review.
 - **R4.23 — AI Quality Upgrade**: Model upgraded from `llama-3.1-8b-instruct` to `llama-3.3-70b-instruct-fp8-fast`. Enhanced system prompts with FD format syntax guide. `max_tokens` 4096→8192. Temperature 0.3 for deterministic output.
