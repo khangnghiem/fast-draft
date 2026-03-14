@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.11.137 — Two Theme Toggles: Site + Canvas (R3.13, R6.5)
+
+- **UX (R3.13)**: Two independent theme toggles — site-wide ☀️/🌙 button in navbar controls `body.light-theme` class (marketing sections, nav, footer, docs pages); canvas-specific pill toggle in canvas toolbar controls `.dark-canvas` class (canvas chrome, scroll toolbar, floating toolbar)
+- **UX (R6.5)**: Light theme CSS tokens — `body.light-theme` overrides all marketing tokens (`--bg-primary: #FFFFFF`, `--text-primary: #1D1D1F`, etc.); softer hero gradients/grid, lighter card hover shadows, frosted white nav/footer backgrounds; code editor panel always stays dark (`#282C34`)
+- **UX (R3.13)**: localStorage persistence — both themes saved independently (`fd-site-theme`, `fd-canvas-theme`); inline `<script>` in `<head>` applies `body.light-theme` before first paint to prevent FOUC; canvas pill syncs with initial state on load
+- **UX (R3.13)**: Canvas pill toggle relocated from navbar to canvas toolbar (right zone, after Zen button) — semantically grouped with canvas-specific controls
+- **PARITY (R6.5)**: Site toggle added to all 4 pages — home page + 3 docs pages (index, shortcuts, changelog) share identical toggle button, head script, and click handler
+- **CSS**: New `.theme-toggle-btn` circular button in `shared.css`; `body.light-theme .site-nav`, `.site-footer`, `.hero-gradient`, `.hero-grid`, `.playground-split`, `.editor-header`, `.feature-card:hover`, `.mode-card:hover`, mobile `.nav-links` overrides
+- **SITE**: Changes in `site/shared.css`, `site/style.css`, `site/index.html`, `site/playground.js`, `site/docs/index.html`, `site/docs/shortcuts.html`, `site/docs/changelog.html`
+
 ### v0.11.136 — Unified Navbar + Footer + Shared CSS (R6.5, R6.15)
 
 - **REFACTOR (R6.5)**: Unified navbar across all 4 site pages — home page and 3 docs pages now share identical `.site-nav` HTML structure with consistent links (Home, Docs, Shortcuts, Changelog, GitHub, Install Extension); home page retains transparent→frosted-on-scroll effect via `.nav-transparent` modifier; docs pages start frosted

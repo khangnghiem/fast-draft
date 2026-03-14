@@ -24,6 +24,24 @@
   <link rel="stylesheet" href="shared.css?v=0.11.5" />
   <link rel="stylesheet" href="style.css?v=0.11.5" />
 
+  <!-- Flash-free theme persistence -->
+  <script>
+    (function() {
+      var st = localStorage.getItem('fd-site-theme');
+      if (st === 'light') document.documentElement.style.colorScheme = 'light';
+      var ct = localStorage.getItem('fd-canvas-theme');
+      // Apply body classes as early as possible (before CSS paints)
+      document.addEventListener('DOMContentLoaded', function() {
+        if (st === 'light') document.body.classList.add('light-theme');
+        // Update site toggle icon
+        var sBtn = document.getElementById('site-theme-toggle');
+        if (sBtn) sBtn.textContent = (st === 'light') ? '☀️' : '🌙';
+        // Update canvas pill toggle
+        var cBtn = document.getElementById('canvas-theme-toggle');
+        if (cBtn && ct === 'light') cBtn.classList.add('is-light');
+      });
+    })();
+  </script>
 </head>
 <body>
   <!-- ─── Navigation ─── -->
@@ -40,11 +58,7 @@
         <a href="/docs/changelog.html">Changelog</a>
         <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
 
-        <button id="canvas-theme-toggle" class="theme-pill" title="Toggle canvas theme" aria-label="Toggle canvas theme">
-          <span class="theme-pill-icon theme-pill-sun">☀️</span>
-          <span class="theme-pill-icon theme-pill-moon">🌙</span>
-          <span class="theme-pill-slider"></span>
-        </button>
+        <button id="site-theme-toggle" class="theme-toggle-btn" title="Toggle site theme" aria-label="Toggle site theme">🌙</button>
         <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener" class="btn-nav">Install Extension</a>
       </div>
       <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle menu">
@@ -100,6 +114,11 @@
                 <button class="tool-btn" id="share-btn" title="Share playground link">🔗</button>
                 <button class="tool-btn" id="fullscreen-toggle-btn" title="Full Screen (⇧F)">⛶</button>
                 <button class="tool-btn" id="zen-toggle-btn" title="Zen Mode (Esc)">🧘</button>
+                <button id="canvas-theme-toggle" class="theme-pill" title="Toggle canvas theme" aria-label="Toggle canvas theme" style="margin-left: 2px;">
+                  <span class="theme-pill-icon theme-pill-sun">☀️</span>
+                  <span class="theme-pill-icon theme-pill-moon">🌙</span>
+                  <span class="theme-pill-slider"></span>
+                </button>
                 <div class="settings-dropdown-container zen-full-only" id="settings-dropdown-container">
                   <button class="tool-btn" id="settings-menu-btn" title="Settings &amp; tools">☰</button>
                   <div class="settings-menu" id="settings-menu">
