@@ -81,8 +81,32 @@
 | Pinch             | Trackpad zoom                     |
 | Middle-click drag | Pan                               |
 | Two-finger pan    | Touch pan with inertia            |
-| Three-finger swipe| Undo (left) / Redo (right)        |
 | Long-press (500ms)| Context menu (touch)              |
+
+### Multi-Finger Touch Gestures (iPadOS-style)
+
+Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** = edit, **4-finger** = app.
+
+#### 3-Finger (Edit Level)
+
+| Gesture              | Action                              | Notes                                |
+| -------------------- | ----------------------------------- | ------------------------------------ |
+| 3-finger tap         | Undo                                | <200ms, <15px movement               |
+| 3-finger double-tap  | Redo                                | Second tap within 400ms              |
+| 3-finger swipe left  | Undo                                | >50px horizontal swipe               |
+| 3-finger swipe right | Redo                                | >50px horizontal swipe               |
+| 3-finger pinch-in    | Copy selected node                  | Area shrinks >60%                    |
+| 3-finger pinch-out   | Paste from clipboard                | Area grows >150%                     |
+| 3-finger long-press  | Edit menu (Undo/Redo/Cut/Copy/Paste)| 500ms hold; auto-dismiss after 3s    |
+
+#### 4-Finger (App Level)
+
+| Gesture                   | Action                      | Notes                              |
+| ------------------------- | --------------------------- | ---------------------------------- |
+| 4-finger tap              | Toggle Zen mode             | <250ms, <20px movement             |
+| 4-finger swipe up         | Zoom to fit                 | >50px vertical swipe               |
+| 4-finger swipe down       | Zoom to selection            | Falls back to 100% if no selection |
+| 4-finger swipe left/right | Cycle tool (prev/next)      | Follows toolbar order              |
 
 ---
 

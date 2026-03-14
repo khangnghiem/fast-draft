@@ -2381,7 +2381,11 @@ function openInlineTextEditor(nodeId, currentValue, propKey = 'content') {
 
 // ── Touch Gesture System ──────────────────────────────────────────────────
 // Provides: pinch-to-zoom, two-finger pan with momentum inertia,
-// three-finger swipe undo/redo, long-press context menu, Apple Pencil palm rejection.
+// three-finger swipe/tap/pinch (undo/redo/copy/paste), four-finger swipe/tap
+// (zen mode, zoom-to-fit, zoom-to-selection, tool cycle),
+// long-press context menu, Apple Pencil palm rejection.
+//
+// Gesture hierarchy: 1-finger = object, 2-finger = viewport, 3-finger = edit, 4-finger = app.
 function setupTouchGestures(canvas, fdCanvasRef, markRenderDirty, markUiDirty) {
   let activeTouches = new Map();
   let lastPinchDist = 0;
@@ -2398,6 +2402,26 @@ function setupTouchGestures(canvas, fdCanvasRef, markRenderDirty, markUiDirty) {
   let inertiaVx = 0;
   let inertiaVy = 0;
   let inertiaRaf = null;
+
+  // ── 3-finger tap/double-tap state (undo/redo) ──
+  let threeFingerTouchStart = 0;  // timestamp of 3-finger touchstart
+  let threeFingerStartPositions = []; // [{x,y}] at touchstart
+  let lastThreeFingerTapTime = 0;
+
+  // ── 3-finger pinch state (copy/paste) ──
+  let threeFingerStartArea = 0;   // bounding area of 3 touches at start
+  let threeFingerPinchHandled = false;
+
+  // ── 3-finger long-press state (edit menu) ──
+  let threeFingerLongPressTimer = null;
+
+  // ── 4-finger state ──
+  let fourFingerTouchStart = 0;
+  let fourFingerStartPositions = [];
+  let fourFingerHandled = false;
+
+  // Tool cycle order (matches toolbar visual order)
+  const TOOL_CYCLE = ['hand', 'select', 'rect', 'ellipse', 'pen', 'arrow', 'text', 'eraser'];
 
   function pinchDistance(t1, t2) {
     const dx = t1.clientX - t2.clientX;
@@ -2527,11 +2551,40 @@ function setupTouchGestures(canvas, fdCanvasRef, markRenderDirty, markUiDirty) {
     }
 
     if (count === 3) {
-      // Start three-finger swipe detection (undo/redo)
+      // Start three-finger gesture detection (swipe/tap/pinch/long-press)
       isGesturing = true;
       threeFingerHandled = false;
+      threeFingerPinchHandled = false;
       const touches = [...activeTouches.values()];
       threeFingerStartX = touches.reduce((s, t) => s + t.clientX, 0) / 3;
+      threeFingerTouchStart = performance.now();
+      threeFingerStartPositions = touches.map(t => ({ x: t.clientX, y: t.clientY }));
+
+      // Compute bounding area for pinch detection
+      const xs = touches.map(t => t.clientX);
+      const ys = touches.map(t => t.clientY);
+      threeFingerStartArea = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys));
+
+      // Start 3-finger long-press timer (500ms → edit menu)
+      if (threeFingerLongPressTimer) clearTimeout(threeFingerLongPressTimer);
+      threeFingerLongPressTimer = setTimeout(() => {
+        threeFingerLongPressTimer = null;
+        if (activeTouches.size === 3 && !threeFingerHandled && !threeFingerPinchHandled) {
+          threeFingerHandled = true;
+          showThreeFingerEditMenu(touches);
+        }
+      }, 500);
+
+      e.preventDefault();
+    }
+
+    if (count === 4) {
+      // Start four-finger gesture detection (tap/swipe)
+      isGesturing = true;
+      fourFingerHandled = false;
+      const touches = [...activeTouches.values()];
+      fourFingerTouchStart = performance.now();
+      fourFingerStartPositions = touches.map(t => ({ x: t.clientX, y: t.clientY }));
       e.preventDefault();
     }
   }, { passive: false });
@@ -2597,6 +2650,7 @@ function setupTouchGestures(canvas, fdCanvasRef, markRenderDirty, markUiDirty) {
       // Require significant horizontal swipe
       if (Math.abs(swipeDist) > 50) {
         threeFingerHandled = true;
+        if (threeFingerLongPressTimer) { clearTimeout(threeFingerLongPressTimer); threeFingerLongPressTimer = null; }
         if (fdCanvasRef) {
           if (swipeDist < 0) {
             // Swipe left = undo
@@ -2618,20 +2672,186 @@ function setupTouchGestures(canvas, fdCanvasRef, markRenderDirty, markUiDirty) {
         }
         e.preventDefault();
       }
+
+      // ── 3-finger pinch detection (copy / paste) ──
+      if (!threeFingerPinchHandled && threeFingerStartArea > 0) {
+        const xs = touches.map(t => t.clientX);
+        const ys = touches.map(t => t.clientY);
+        const currentArea = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys));
+        const ratio = currentArea / threeFingerStartArea;
+
+        if (ratio < 0.4) {
+          // Pinch-in → copy
+          threeFingerPinchHandled = true;
+          threeFingerHandled = true;
+          if (threeFingerLongPressTimer) { clearTimeout(threeFingerLongPressTimer); threeFingerLongPressTimer = null; }
+          copySelectedAsFd();
+          showToast('Copied');
+          e.preventDefault();
+        } else if (ratio > 2.5) {
+          // Pinch-out → paste
+          threeFingerPinchHandled = true;
+          threeFingerHandled = true;
+          if (threeFingerLongPressTimer) { clearTimeout(threeFingerLongPressTimer); threeFingerLongPressTimer = null; }
+          pasteFromClipboard();
+          e.preventDefault();
+        }
+      }
+    }
+
+    // ── 4-finger swipe detection ──
+    if (count === 4 && !fourFingerHandled) {
+      const touches = [...activeTouches.values()];
+      const avgX = touches.reduce((s, t) => s + t.clientX, 0) / 4;
+      const avgY = touches.reduce((s, t) => s + t.clientY, 0) / 4;
+      const startAvgX = fourFingerStartPositions.reduce((s, p) => s + p.x, 0) / 4;
+      const startAvgY = fourFingerStartPositions.reduce((s, p) => s + p.y, 0) / 4;
+      const dx = avgX - startAvgX;
+      const dy = avgY - startAvgY;
+
+      const SWIPE_THRESHOLD = 50;
+
+      if (Math.abs(dy) > SWIPE_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
+        fourFingerHandled = true;
+        if (dy < 0) {
+          // Swipe up → zoom-to-fit
+          fitToContent(canvas);
+          markRenderDirty();
+          markUiDirty();
+        } else {
+          // Swipe down → zoom-to-selection (or reset to 100% if none)
+          if (fdCanvasRef) {
+            const selectedId = fdCanvasRef.get_selected_id();
+            if (selectedId) {
+              try {
+                const b = JSON.parse(fdCanvasRef.get_node_bounds(selectedId));
+                if (b.width > 0 && b.height > 0) {
+                  const cr = canvas.getBoundingClientRect();
+                  const pad = 60;
+                  const zoom = Math.min(cr.width / (b.width + pad), cr.height / (b.height + pad), ZOOM_MAX);
+                  zoomLevel = Math.max(zoom, ZOOM_MIN);
+                  panX = cr.width / 2 - (b.x + b.width / 2) * zoomLevel;
+                  panY = cr.height / 2 - (b.y + b.height / 2) * zoomLevel;
+                  updateZoomIndicator();
+                  markRenderDirty();
+                  markUiDirty();
+                }
+              } catch (_) {}
+            } else {
+              // No selection → reset to 100%
+              const cr = canvas.getBoundingClientRect();
+              zoomLevel = 1.0;
+              panX = cr.width / 2;
+              panY = cr.height / 2;
+              updateZoomIndicator();
+              markRenderDirty();
+              markUiDirty();
+            }
+          }
+        }
+        e.preventDefault();
+      } else if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+        // Horizontal swipe → cycle tool
+        fourFingerHandled = true;
+        if (fdCanvasRef) {
+          const currentTool = fdCanvasRef.get_tool_name();
+          const currentIdx = TOOL_CYCLE.indexOf(currentTool);
+          const dir = dx > 0 ? 1 : -1;
+          const nextIdx = (currentIdx + dir + TOOL_CYCLE.length) % TOOL_CYCLE.length;
+          const nextTool = TOOL_CYCLE[nextIdx];
+          fdCanvasRef.set_tool(nextTool);
+          updateToolbar(nextTool);
+          canvas.style.cursor = (nextTool === 'select' || nextTool === 'eraser' || nextTool === 'hand') ? '' : 'crosshair';
+          if (nextTool === 'hand') canvas.style.cursor = 'grab';
+          showToast(nextTool.charAt(0).toUpperCase() + nextTool.slice(1));
+        }
+        e.preventDefault();
+      }
     }
   }, { passive: false });
 
   canvas.addEventListener('touchend', (e) => {
+    const prevCount = activeTouches.size;
     for (const t of e.changedTouches) {
       activeTouches.delete(t.identifier);
     }
 
     clearLongPress();
+    if (threeFingerLongPressTimer) { clearTimeout(threeFingerLongPressTimer); threeFingerLongPressTimer = null; }
 
     // Check if pencil lifted
     for (const t of e.changedTouches) {
       if (t.touchType === 'stylus') {
         pencilActive = false;
+      }
+    }
+
+    // ── 3-finger tap / double-tap detection (undo / redo) ──
+    if (prevCount === 3 && activeTouches.size === 0 && !threeFingerHandled && !threeFingerPinchHandled) {
+      const elapsed = performance.now() - threeFingerTouchStart;
+      if (elapsed < 200) {
+        // Check total movement — must be <15px to count as tap
+        const maxMove = threeFingerStartPositions.reduce((max, p, i) => {
+          const endT = e.changedTouches[i];
+          if (!endT) return max;
+          const dist = Math.hypot(endT.clientX - p.x, endT.clientY - p.y);
+          return Math.max(max, dist);
+        }, 0);
+
+        if (maxMove < 15) {
+          const now = performance.now();
+          if (now - lastThreeFingerTapTime < 400) {
+            // Double-tap → redo
+            lastThreeFingerTapTime = 0;
+            if (fdCanvasRef) {
+              const changed = fdCanvasRef.handle_key('z', false, true, false, true);
+              if (changed) {
+                markRenderDirty();
+                markUiDirty();
+                syncCanvasToEditor();
+              }
+            }
+          } else {
+            // Single tap → schedule undo (wait for potential double-tap)
+            lastThreeFingerTapTime = now;
+            setTimeout(() => {
+              if (lastThreeFingerTapTime === now && fdCanvasRef) {
+                const changed = fdCanvasRef.handle_key('z', false, false, false, true);
+                if (changed) {
+                  markRenderDirty();
+                  markUiDirty();
+                  syncCanvasToEditor();
+                }
+              }
+            }, 400);
+          }
+        }
+      }
+    }
+
+    // ── 4-finger tap detection (zen mode toggle) ──
+    if (prevCount === 4 && activeTouches.size === 0 && !fourFingerHandled) {
+      const elapsed = performance.now() - fourFingerTouchStart;
+      if (elapsed < 250) {
+        // Check total movement — must be <20px to count as tap
+        const maxMove = fourFingerStartPositions.reduce((max, p, i) => {
+          const endT = e.changedTouches[i];
+          if (!endT) return max;
+          const dist = Math.hypot(endT.clientX - p.x, endT.clientY - p.y);
+          return Math.max(max, dist);
+        }, 0);
+
+        if (maxMove < 20) {
+          // Toggle zen mode
+          zenMode = !zenMode;
+          document.querySelector('.hero-playground')?.classList.toggle('zen-mode', zenMode);
+          const zenBtn = document.getElementById('zen-toggle-btn');
+          if (zenBtn) {
+            zenBtn.textContent = zenMode ? '✕ Exit Zen' : '🧘';
+            zenBtn.title = zenMode ? 'Exit Zen Mode (Esc)' : 'Zen Mode (Esc)';
+          }
+          setTimeout(() => { markRenderDirty(); markUiDirty(); }, 50);
+        }
       }
     }
 
@@ -2653,10 +2873,63 @@ function setupTouchGestures(canvas, fdCanvasRef, markRenderDirty, markUiDirty) {
       activeTouches.delete(t.identifier);
     }
     clearLongPress();
+    if (threeFingerLongPressTimer) { clearTimeout(threeFingerLongPressTimer); threeFingerLongPressTimer = null; }
     isGesturing = false;
     pencilActive = false;
     cancelInertia();
   });
+
+  // ── 3-finger long-press edit menu ──
+  function showThreeFingerEditMenu(touches) {
+    // Position at the centroid of the 3 touches
+    const cx = touches.reduce((s, t) => s + t.clientX, 0) / 3;
+    const cy = touches.reduce((s, t) => s + t.clientY, 0) / 3;
+
+    // Remove existing menu if present
+    const existing = document.getElementById('three-finger-edit-menu');
+    if (existing) existing.remove();
+
+    const menu = document.createElement('div');
+    menu.id = 'three-finger-edit-menu';
+    menu.style.cssText = `
+      position: fixed; left: ${cx}px; top: ${cy - 50}px; transform: translateX(-50%);
+      display: flex; gap: 2px; padding: 6px 8px;
+      background: rgba(30,30,30,0.92); backdrop-filter: blur(12px);
+      border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      z-index: 10001; font-size: 13px; color: #fff; user-select: none;
+    `;
+
+    const actions = [
+      { label: 'Undo', fn: () => { if (!fdCanvasRef) return; const c = fdCanvasRef.handle_key('z', false, false, false, true); if (c) { markRenderDirty(); markUiDirty(); syncCanvasToEditor(); } } },
+      { label: 'Redo', fn: () => { if (!fdCanvasRef) return; const c = fdCanvasRef.handle_key('z', false, true, false, true); if (c) { markRenderDirty(); markUiDirty(); syncCanvasToEditor(); } } },
+      { label: 'Cut', fn: () => cutSelectedAsFd() },
+      { label: 'Copy', fn: () => { copySelectedAsFd(); showToast('Copied'); } },
+      { label: 'Paste', fn: () => pasteFromClipboard() },
+    ];
+
+    for (const action of actions) {
+      const btn = document.createElement('button');
+      btn.textContent = action.label;
+      btn.style.cssText = `
+        border: none; background: transparent; color: #fff; padding: 6px 12px;
+        cursor: pointer; border-radius: 6px; font-size: 13px; font-weight: 500;
+      `;
+      btn.addEventListener('pointerenter', () => { btn.style.background = 'rgba(255,255,255,0.15)'; });
+      btn.addEventListener('pointerleave', () => { btn.style.background = 'transparent'; });
+      btn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        action.fn();
+        menu.remove();
+      });
+      menu.appendChild(btn);
+    }
+
+    document.body.appendChild(menu);
+    // Auto-dismiss after 3s or on any touch/click elsewhere
+    const dismiss = () => { menu.remove(); document.removeEventListener('pointerdown', dismiss); };
+    setTimeout(dismiss, 3000);
+    setTimeout(() => document.addEventListener('pointerdown', dismiss), 100);
+  }
 }
 
 async function initPlayground() {
