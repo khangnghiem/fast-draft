@@ -74,6 +74,7 @@
 | `L`               | Toggle Layers panel               |
 | `⇧L`              | Toggle Library panel              |
 | `G`               | Toggle grid overlay               |
+| `⇧M`              | Toggle Reduce Motion              |
 | `Space` (hold)    | Pan / hand tool                   |
 | `⌘` (hold)        | Temporary hand tool (Select mode) |
 | `Alt` (hold)      | Copy cursor preview               |

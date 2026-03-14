@@ -219,6 +219,15 @@ let zoomLevel = 1.0;
 let gridEnabled = false;
 const GRID_SPACING = 20;
 let zenMode = false;
+
+// Reduce Motion — respect OS setting + manual toggle
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+let reduceMotion = prefersReducedMotion.matches || localStorage.getItem('fd-reduce-motion') === 'true';
+if (reduceMotion) document.body.classList.add('reduce-motion');
+prefersReducedMotion.addEventListener('change', (e) => {
+  reduceMotion = e.matches || localStorage.getItem('fd-reduce-motion') === 'true';
+  document.body.classList.toggle('reduce-motion', reduceMotion);
+});
 let fullscreenMode = false;
 const ZOOM_MIN = 0.1, ZOOM_MAX = 5;
 const ZOOM_WHEEL_FACTOR = 1.04; // Normalized zoom step (shared with VS Code)
@@ -3206,7 +3215,7 @@ function setupTouchGestures(canvas, fdCanvasRef, markRenderDirty, markUiDirty) {
       const { vx, vy } = computeWeightedVelocity();
       inertiaVx = vx;
       inertiaVy = vy;
-      if (Math.abs(inertiaVx) > 0.5 || Math.abs(inertiaVy) > 0.5) {
+      if (!reduceMotion && (Math.abs(inertiaVx) > 0.5 || Math.abs(inertiaVy) > 0.5)) {
         inertiaRaf = requestAnimationFrame(applyInertia);
       }
     }
@@ -3953,6 +3962,17 @@ async function initPlayground() {
         return;
       }
 
+      // Reduce Motion toggle (Shift+M)
+      if (!editorFocused && e.key === 'M' && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const manual = localStorage.getItem('fd-reduce-motion') === 'true';
+        localStorage.setItem('fd-reduce-motion', manual ? 'false' : 'true');
+        reduceMotion = !manual || prefersReducedMotion.matches;
+        document.body.classList.toggle('reduce-motion', !manual);
+        showToast(reduceMotion ? 'Reduce Motion: ON' : 'Reduce Motion: OFF');
+        e.preventDefault();
+        return;
+      }
+
       // Tool shortcuts (only when canvas focused)
       if (!editorFocused && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const toolMap = { v:'select', r:'rect', o:'ellipse', t:'text', a:'arrow', p:'pen', e:'eraser', f:'frame', h:'hand' };
@@ -4173,6 +4193,7 @@ async function initPlayground() {
     function updateSettingsToggles() {
       document.getElementById('sm-sketchy-toggle')?.classList.toggle('toggle-on', isSketchy);
       document.getElementById('sm-grid-toggle')?.classList.toggle('toggle-on', gridEnabled);
+      document.getElementById('sm-motion-toggle')?.classList.toggle('toggle-on', reduceMotion);
     }
 
     settingsBtn?.addEventListener('click', (e) => {
@@ -4193,6 +4214,14 @@ async function initPlayground() {
           case 'grid':
             gridEnabled = !gridEnabled;
             break;
+          case 'reduce-motion': {
+            const manual = localStorage.getItem('fd-reduce-motion') === 'true';
+            localStorage.setItem('fd-reduce-motion', manual ? 'false' : 'true');
+            reduceMotion = !manual || prefersReducedMotion.matches;
+            document.body.classList.toggle('reduce-motion', !manual);
+            showToast(reduceMotion ? 'Reduce Motion: ON' : 'Reduce Motion: OFF');
+            break;
+          }
           case 'fit': {
             fitToContent(canvas);
             settingsMenu?.classList.remove('visible');

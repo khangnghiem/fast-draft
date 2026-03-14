@@ -1833,14 +1833,30 @@ code {
   100% { transform: translateY(0) translateX(0) scale(1); opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Keep skeleton shimmer as a subtle loading indicator */
   .skeleton-shape {
-    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite !important;
     opacity: 1;
     transform: none;
   }
-  .loading-progress-bar {
-    transition: none;
-  }
+}
+/* Manual toggle — mirrors the media query above */
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+.reduce-motion .skeleton-shape {
+  animation: skeleton-shimmer 1.5s ease-in-out infinite !important;
+  opacity: 1;
+  transform: none;
 }
 
 /* ─── Features ─── */
