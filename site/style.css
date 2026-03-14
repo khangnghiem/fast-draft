@@ -180,6 +180,12 @@ code {
     radial-gradient(ellipse 60% 80% at 80% 60%, rgba(9, 132, 227, 0.1), transparent),
     radial-gradient(ellipse 40% 40% at 20% 80%, rgba(108, 92, 231, 0.08), transparent);
 }
+body.light-theme .hero-gradient {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(108, 92, 231, 0.08), transparent),
+    radial-gradient(ellipse 60% 80% at 80% 60%, rgba(9, 132, 227, 0.06), transparent),
+    radial-gradient(ellipse 40% 40% at 20% 80%, rgba(108, 92, 231, 0.04), transparent);
+}
 .hero-grid {
   position: absolute;
   inset: 0;
@@ -189,6 +195,11 @@ code {
   background-size: 60px 60px;
   mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black, transparent);
   -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black, transparent);
+}
+body.light-theme .hero-grid {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
 }
 .hero-content {
   position: relative;
@@ -431,6 +442,10 @@ code {
   --header-bg: rgba(28, 28, 30, 0.88);
   --header-border: rgba(255, 255, 255, 0.06);
 }
+body.light-theme .playground-split {
+  --header-bg: rgba(246, 246, 248, 0.88);
+  --header-border: rgba(0, 0, 0, 0.08);
+}
 
 /* ── Split Resize Handle ── */
 .split-resize-handle {
@@ -464,8 +479,8 @@ code {
   flex-direction: column;
   min-width: 0; /* prevent grid blowout from intrinsic content width */
 }
-/* Code mode is always dark, even in light theme */
-.light-theme .playground-editor {
+/* Code editor is always dark, even when site is in light theme */
+body.light-theme .playground-editor {
   background: #282C34;
 }
 .playground-canvas {
@@ -492,6 +507,12 @@ code {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+/* Keep editor header legible — code panel is always dark */
+body.light-theme .editor-header {
+  background: rgba(28, 28, 30, 0.88);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.6);
 }
 .editor-dot {
   width: 8px; height: 8px;
@@ -1812,6 +1833,9 @@ code {
   box-shadow: 0 0 30px rgba(108, 92, 231, 0.2), 0 8px 32px rgba(0, 0, 0, 0.3);
   transform: translateY(-6px);
 }
+body.light-theme .feature-card:hover {
+  box-shadow: 0 0 30px rgba(108, 92, 231, 0.12), 0 8px 32px rgba(0, 0, 0, 0.08);
+}
 .feature-icon {
   font-size: 2rem;
   margin-bottom: 16px;
@@ -1849,6 +1873,9 @@ code {
   border-color: #6C5CE7;
   box-shadow: 0 0 30px rgba(108, 92, 231, 0.2), 0 8px 32px rgba(0, 0, 0, 0.3);
   transform: translateY(-4px);
+}
+body.light-theme .mode-card:hover {
+  box-shadow: 0 0 30px rgba(108, 92, 231, 0.12), 0 8px 32px rgba(0, 0, 0, 0.08);
 }
 .mode-badge {
   display: inline-block;
@@ -2116,6 +2143,9 @@ code {
 
 /* ─── Responsive ─── */
 @media (max-width: 768px) {
+  body.light-theme .mobile-menu-btn span {
+    background: var(--text-primary);
+  }
   .nav-links {
     display: none;
     position: absolute;

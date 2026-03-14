@@ -201,7 +201,7 @@ frame @card {
 // ─── State ───────────────────────────────────────────────────────────────
 let fdCanvas = null;
 let ctx = null;
-let isDark = true; // Dark theme to match marketing page
+let isDark = localStorage.getItem('fd-canvas-theme') !== 'light'; // Default dark
 let isSketchy = false;
 let animFrameId = null;
 let suppressSync = false;
@@ -2986,9 +2986,9 @@ async function initPlayground() {
     const rect = wrapper.getBoundingClientRect();
     const canvasW = rect.width - getLayersPanelWidth();
     fdCanvas = new wasm.FdCanvas(canvasW, rect.height);
-    // Dark theme to match marketing page
-    fdCanvas.set_theme(true);
-    wrapper.classList.add('dark-canvas');
+    // Canvas theme — honor localStorage preference
+    fdCanvas.set_theme(isDark);
+    wrapper.classList.toggle('dark-canvas', isDark);
     if (statusEl) statusEl.textContent = 'Parsing scene…';
     // Deep link: load ?code= param if present, else use default
     const urlParams = new URLSearchParams(window.location.search);
@@ -3210,16 +3210,29 @@ async function initPlayground() {
     loading.classList.add('fade-out');
     setTimeout(() => loading.classList.add('hidden'), 400);
 
-    // ── Theme Toggle ─────────────────────────────────────────────────
+    // ── Canvas Theme Toggle ─────────────────────────────────────────
     const themeToggle = document.getElementById('canvas-theme-toggle');
     if (themeToggle) {
+      // Sync pill visual with initial state
+      themeToggle.classList.toggle('is-light', !isDark);
       themeToggle.addEventListener('click', () => {
         isDark = !isDark;
         if (fdCanvas) fdCanvas.set_theme(isDark);
         wrapper.classList.toggle('dark-canvas', isDark);
         themeToggle.classList.toggle('is-light', !isDark);
+        localStorage.setItem('fd-canvas-theme', isDark ? 'dark' : 'light');
         renderDirty = true;
         renderCanvas();
+      });
+    }
+
+    // ── Site Theme Toggle ─────────────────────────────────────────────
+    const siteToggle = document.getElementById('site-theme-toggle');
+    if (siteToggle) {
+      siteToggle.addEventListener('click', () => {
+        const isLight = document.body.classList.toggle('light-theme');
+        siteToggle.textContent = isLight ? '☀️' : '🌙';
+        localStorage.setItem('fd-site-theme', isLight ? 'light' : 'dark');
       });
     }
 

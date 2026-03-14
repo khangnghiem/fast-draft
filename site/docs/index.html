@@ -15,6 +15,16 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared.css" />
   <link rel="stylesheet" href="style.css" />
+  <script>
+    (function() {
+      var st = localStorage.getItem('fd-site-theme');
+      document.addEventListener('DOMContentLoaded', function() {
+        if (st === 'light') document.body.classList.add('light-theme');
+        var btn = document.getElementById('site-theme-toggle');
+        if (btn) btn.textContent = (st === 'light') ? '☀️' : '🌙';
+      });
+    })();
+  </script>
 </head>
 <body>
   <!-- ─── Nav ─── -->
@@ -30,6 +40,7 @@
         <a href="/docs/shortcuts.html">Shortcuts</a>
         <a href="/docs/changelog.html">Changelog</a>
         <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
+        <button id="site-theme-toggle" class="theme-toggle-btn" title="Toggle site theme" aria-label="Toggle site theme">🌙</button>
         <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener" class="btn-nav">Install Extension</a>
       </div>
       <button class="mobile-menu-btn" aria-label="Toggle menu" onclick="document.querySelector('.nav-links').classList.toggle('open');this.classList.toggle('open')">
@@ -537,6 +548,13 @@
       });
     }, { rootMargin: '-80px 0px -70% 0px' });
     headings.forEach(h => observer.observe(h));
+    // Site theme toggle
+    var st = document.getElementById('site-theme-toggle');
+    if (st) st.addEventListener('click', function() {
+      var isLight = document.body.classList.toggle('light-theme');
+      st.textContent = isLight ? '☀️' : '🌙';
+      localStorage.setItem('fd-site-theme', isLight ? 'light' : 'dark');
+    });
   </script>
 </body>
 </html>
