@@ -2008,6 +2008,56 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       background: var(--fd-border);
       margin: 4px 8px;
     }
+    /* ── AI Touch Context Menu Submenu ── */
+    .ctx-ai-touch-wrap { position: relative; }
+    .ctx-ai-submenu {
+      display: none;
+      padding: 8px;
+      border-top: 1px solid var(--fd-border);
+    }
+    .ctx-ai-touch-wrap.expanded .ctx-ai-submenu { display: block; }
+    .ctx-ai-prompt {
+      width: 100%;
+      min-width: 170px;
+      border: 1px solid var(--fd-border);
+      background: rgba(0,0,0,0.06);
+      color: var(--fd-text);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-family: inherit;
+      font-size: 11px;
+      line-height: 1.4;
+      resize: none;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .dark-theme .ctx-ai-prompt { background: rgba(255,255,255,0.06); }
+    .ctx-ai-prompt:focus { border-color: var(--fd-accent); }
+    .ctx-ai-prompt::placeholder { color: var(--fd-text-tertiary); font-style: italic; }
+    .ctx-ai-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+    .ctx-ai-counter {
+      font-size: 10px;
+      color: var(--fd-text-tertiary);
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+    }
+    .ctx-ai-run {
+      border: none;
+      background: var(--fd-accent);
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .ctx-ai-run:hover { filter: brightness(1.1); }
+    .ctx-ai-run:active { transform: scale(0.95); }
 
     /* ── Drop Context Menu (reparent on drop) ── */
     .drop-ctx-menu {
@@ -2959,7 +3009,16 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
   </div>
   <div id="context-menu">
-    <div class="menu-item" id="ctx-ai-touch"><span class="menu-icon">✦</span><span class="menu-label">AI Touch</span></div>
+    <div class="menu-item-wrap ctx-ai-touch-wrap" id="ctx-ai-touch-wrap">
+      <div class="menu-item" id="ctx-ai-touch"><span class="menu-icon">✦</span><span class="menu-label">AI Touch</span><span class="menu-shortcut">▸</span></div>
+      <div class="ctx-ai-submenu" id="ctx-ai-submenu">
+        <textarea class="ctx-ai-prompt" id="ctx-ai-prompt" placeholder="e.g. Make it Apple HIG style" maxlength="200" rows="2"></textarea>
+        <div class="ctx-ai-footer">
+          <span class="ctx-ai-counter" id="ctx-ai-counter">0/200</span>
+          <button class="ctx-ai-run" id="ctx-ai-run">Run ✦</button>
+        </div>
+      </div>
+    </div>
     <div class="menu-item" id="ctx-add-annotation"><span class="menu-icon">◇</span><span class="menu-label">Add Note</span></div>
     <div class="menu-item" id="ctx-view-notes"><span class="menu-icon">📝</span><span class="menu-label">Notes Panel</span><span class="menu-shortcut">⌘⇧N</span></div>
     <div class="menu-item" id="ctx-rename" data-action="rename"><span class="menu-icon">✏️</span><span class="menu-label">Rename</span></div>
@@ -3032,13 +3091,57 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         vscodeApi.postMessage({ type: 'aiTouch', nodeIds: ids });
       });
 
-      // Context menu: AI Touch
-      document.getElementById('ctx-ai-touch')?.addEventListener('click', () => {
-        if (selectedNodeId) {
-          vscodeApi.postMessage({ type: 'aiTouch', nodeIds: [selectedNodeId] });
+      // Context menu: AI Touch — toggle submenu
+      document.getElementById('ctx-ai-touch')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const wrap = document.getElementById('ctx-ai-touch-wrap');
+        if (wrap) {
+          wrap.classList.toggle('expanded');
+          const promptEl = document.getElementById('ctx-ai-prompt');
+          const counterEl = document.getElementById('ctx-ai-counter');
+          if (promptEl) {
+            const saved = localStorage.getItem('fd-ai-prompt') || '';
+            promptEl.value = saved;
+            if (counterEl) counterEl.textContent = saved.length + '/200';
+            setTimeout(() => promptEl.focus(), 50);
+          }
         }
-        document.getElementById('context-menu')?.classList.remove('visible');
       });
+
+      // AI Touch prompt textarea wiring
+      const ctxAiPrompt = document.getElementById('ctx-ai-prompt');
+      const ctxAiCounter = document.getElementById('ctx-ai-counter');
+      const ctxAiRun = document.getElementById('ctx-ai-run');
+
+      if (ctxAiPrompt) {
+        ctxAiPrompt.addEventListener('input', () => {
+          const len = ctxAiPrompt.value.length;
+          if (ctxAiCounter) ctxAiCounter.textContent = len + '/200';
+          localStorage.setItem('fd-ai-prompt', ctxAiPrompt.value);
+        });
+        ctxAiPrompt.addEventListener('click', (e) => e.stopPropagation());
+        ctxAiPrompt.addEventListener('mousedown', (e) => e.stopPropagation());
+        ctxAiPrompt.addEventListener('keydown', (e) => {
+          e.stopPropagation();
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            document.getElementById('context-menu')?.classList.remove('visible');
+            document.getElementById('ctx-ai-touch-wrap')?.classList.remove('expanded');
+            const ids = selectedNodeId ? [selectedNodeId] : [];
+            vscodeApi.postMessage({ type: 'aiTouch', nodeIds: ids, userFocus: localStorage.getItem('fd-ai-prompt') || undefined });
+          }
+        });
+      }
+
+      if (ctxAiRun) {
+        ctxAiRun.addEventListener('click', (e) => {
+          e.stopPropagation();
+          document.getElementById('context-menu')?.classList.remove('visible');
+          document.getElementById('ctx-ai-touch-wrap')?.classList.remove('expanded');
+          const ids = selectedNodeId ? [selectedNodeId] : [];
+          vscodeApi.postMessage({ type: 'aiTouch', nodeIds: ids, userFocus: localStorage.getItem('fd-ai-prompt') || undefined });
+        });
+      }
     })();
   </script>
   <script nonce="{nonce}">

@@ -74,9 +74,9 @@ export function getAiConfig(): AiConfig {
 
 // ─── Prompt ──────────────────────────────────────────────────────────────
 
-function buildRefinePrompt(fdText: string, nodeIds: string[]): string {
+function buildRefinePrompt(fdText: string, nodeIds: string[], userFocus?: string): string {
   const targetList = nodeIds.map((id) => `@${id}`).join(", ");
-  return `You are an expert UI designer working with the FD (Fast Draft) format.
+  let prompt = `You are an expert UI designer working with the FD (Fast Draft) format.
 
 Given the .fd document below, improve the following nodes: ${targetList}
 
@@ -95,6 +95,12 @@ Given the .fd document below, improve the following nodes: ${targetList}
 ## FD Document
 
 ${fdText}`;
+
+  if (userFocus && userFocus.trim()) {
+    prompt += `\n\n## User Focus\n${userFocus.trim().slice(0, 200)}`;
+  }
+
+  return prompt;
 }
 
 // ─── API Calls ───────────────────────────────────────────────────────────
@@ -263,14 +269,15 @@ async function callOpenRouter(
  */
 export async function refineSelectedNodes(
   fdText: string,
-  nodeIds: string[]
+  nodeIds: string[],
+  userFocus?: string
 ): Promise<RefineResult> {
   if (nodeIds.length === 0) {
     return { refinedText: fdText, error: "No nodes selected for refinement" };
   }
 
   const config = getAiConfig();
-  const prompt = buildRefinePrompt(fdText, nodeIds);
+  const prompt = buildRefinePrompt(fdText, nodeIds, userFocus);
 
   try {
     let refined: string;

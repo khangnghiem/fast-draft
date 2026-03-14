@@ -876,6 +876,7 @@ let contextMenuClickPos = null; // scene-space {x, y} of right-click
 function closeContextMenu() {
   document.getElementById('ctx-menu')?.classList.remove('visible');
   document.getElementById('ctx-menu-canvas')?.classList.remove('visible');
+  document.querySelector('.ctx-ai-touch-wrap')?.classList.remove('expanded');
 }
 
 /** Wire context menu events and action handlers. */
@@ -1011,6 +1012,23 @@ function setupContextMenu() {
         }
         break;
       }
+      case 'ai-touch': {
+        // Toggle submenu expansion instead of closing
+        const wrap = document.querySelector('.ctx-ai-touch-wrap');
+        if (wrap) {
+          wrap.classList.toggle('expanded');
+          // Restore saved prompt
+          const promptEl = document.getElementById('ctx-ai-prompt');
+          const counterEl = document.getElementById('ctx-ai-counter');
+          if (promptEl) {
+            const saved = localStorage.getItem('fd-ai-prompt') || '';
+            promptEl.value = saved;
+            if (counterEl) counterEl.textContent = `${saved.length}/200`;
+            setTimeout(() => promptEl.focus(), 50);
+          }
+        }
+        return; // Don't close the menu
+      }
       case 'lock':
         if (fdCanvas.toggle_node_locked) {
           fdCanvas.toggle_node_locked(fdCanvas.get_selected_id());
@@ -1050,6 +1068,40 @@ function setupContextMenu() {
       doNodeAction(btn.getAttribute('data-action'));
     });
   });
+
+  // ── AI Touch context menu prompt wiring ──
+  const ctxAiPrompt = document.getElementById('ctx-ai-prompt');
+  const ctxAiCounter = document.getElementById('ctx-ai-counter');
+  const ctxAiRun = document.getElementById('ctx-ai-run');
+
+  if (ctxAiPrompt) {
+    // Live char counter + persist to localStorage
+    ctxAiPrompt.addEventListener('input', () => {
+      const len = ctxAiPrompt.value.length;
+      if (ctxAiCounter) ctxAiCounter.textContent = `${len}/200`;
+      localStorage.setItem('fd-ai-prompt', ctxAiPrompt.value);
+    });
+    // Prevent context menu from closing when clicking inside the textarea
+    ctxAiPrompt.addEventListener('click', (e) => e.stopPropagation());
+    ctxAiPrompt.addEventListener('mousedown', (e) => e.stopPropagation());
+    // Ctrl+Enter or Enter (with empty prompt) to run
+    ctxAiPrompt.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        closeContextMenu();
+        aiTouch();
+      }
+    });
+  }
+
+  if (ctxAiRun) {
+    ctxAiRun.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeContextMenu();
+      aiTouch();
+    });
+  }
 
   // ── Canvas (empty space) menu action handlers ──
   const doCanvasAction = (action) => {
@@ -1779,10 +1831,11 @@ async function aiTouch() {
     // ── Phase 1: Refine (1 credit) ──
     const prompt = buildRefinePrompt(fdText, selectedIds);
     const modelHint = getAiModelHint();
+    const userFocus = localStorage.getItem('fd-ai-prompt') || undefined;
     const refineResp = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, mode: 'refine', model_hint: modelHint }),
+      body: JSON.stringify({ prompt, mode: 'refine', model_hint: modelHint, user_focus: userFocus }),
     });
 
     if (refineResp.status === 429) {
@@ -1830,7 +1883,7 @@ async function aiTouch() {
     const reviewResp = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: `Review these FD nodes:\n\n${scopedFdText}`, mode: 'review', model_hint: getAiModelHint() }),
+      body: JSON.stringify({ prompt: `Review these FD nodes:\n\n${scopedFdText}`, mode: 'review', model_hint: getAiModelHint(), user_focus: localStorage.getItem('fd-ai-prompt') || undefined }),
     });
 
     if (reviewResp.status === 429) {
@@ -1876,7 +1929,7 @@ async function runFullDocReview(btn, statusEl) {
     const resp = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: `Review this FD document:\n\n${fdText}`, mode: 'review', model_hint: getAiModelHint() }),
+      body: JSON.stringify({ prompt: `Review this FD document:\n\n${fdText}`, mode: 'review', model_hint: getAiModelHint(), user_focus: localStorage.getItem('fd-ai-prompt') || undefined }),
     });
 
     if (resp.status === 429) {
@@ -1898,9 +1951,12 @@ async function runFullDocReview(btn, statusEl) {
   }
 }
 
-/** Render structured review report into the panel. */
+/** Render flat review findings into the panel (no category grouping). */
 function renderReviewPanel(data, bodyEl, scoreBadgeEl) {
   if (!bodyEl) return;
+
+  // Log raw categorized response for debugging
+  console.debug('[AI Touch] Raw review:', data);
 
   if (scoreBadgeEl) {
     scoreBadgeEl.textContent = `${data.score}/100`;
@@ -1910,34 +1966,32 @@ function renderReviewPanel(data, bodyEl, scoreBadgeEl) {
     else scoreBadgeEl.classList.add('score-low');
   }
 
+  // Flatten all findings from all categories into one list
+  const allFindings = [];
+  for (const cat of (data.categories || [])) {
+    for (const f of (cat.findings || [])) {
+      allFindings.push(f);
+    }
+  }
+
   const severityIcon = { error: '❌', warning: '⚠️', info: 'ℹ️' };
   let html = '';
 
-  for (const cat of (data.categories || [])) {
-    html += `<div class="ai-review-category">
-      <div class="ai-review-cat-header">
-        <span class="ai-review-cat-icon">${cat.icon || '📋'}</span>
-        <span class="ai-review-cat-name">${cat.name}</span>
-        <span class="ai-review-cat-score">${cat.score}/100</span>
-      </div>`;
-
-    if (cat.findings && cat.findings.length > 0) {
-      html += '<ul class="ai-review-findings">';
-      for (const f of cat.findings) {
-        const icon = severityIcon[f.severity] || 'ℹ️';
-        html += `<li class="ai-review-finding">
-          <span class="ai-review-severity">${icon}</span>
-          <div class="ai-review-finding-text">
-            ${escapeHtml(f.message)}
-            ${f.suggestion ? `<div class="ai-review-suggestion">💡 ${escapeHtml(f.suggestion)}</div>` : ''}
-          </div>
-        </li>`;
-      }
-      html += '</ul>';
-    } else {
-      html += '<p class="ai-review-perfect">✅ No issues found</p>';
+  if (allFindings.length > 0) {
+    html += '<ul class="ai-review-findings">';
+    for (const f of allFindings) {
+      const icon = severityIcon[f.severity] || 'ℹ️';
+      html += `<li class="ai-review-finding">
+        <span class="ai-review-severity">${icon}</span>
+        <div class="ai-review-finding-text">
+          ${escapeHtml(f.message)}
+          ${f.suggestion ? `<div class="ai-review-suggestion">💡 ${escapeHtml(f.suggestion)}</div>` : ''}
+        </div>
+      </li>`;
     }
-    html += '</div>';
+    html += '</ul>';
+  } else {
+    html += '<p class="ai-review-perfect">✅ No issues found</p>';
   }
 
   // Model badge footer
