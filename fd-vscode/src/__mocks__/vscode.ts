@@ -1,6 +1,6 @@
 /**
  * Minimal vscode mock for Vitest.
- * Only stubs the APIs actually used by ai-refine.ts (workspace.getConfiguration).
+ * Only stubs the APIs actually used by ai-touch.ts (workspace.getConfiguration).
  */
 export const workspace = {
     getConfiguration: (_section?: string) => ({

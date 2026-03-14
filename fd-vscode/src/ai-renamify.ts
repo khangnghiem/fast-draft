@@ -1,12 +1,12 @@
 /**
  * AI Renamify — batch rename anonymous node IDs to semantic names.
  *
- * Uses the same AI provider infrastructure as ai-refine.ts but sends a
+ * Uses the same AI provider infrastructure as ai-touch.ts but sends a
  * focused rename-only prompt that returns a JSON map instead of a full
  * document rewrite. Much faster and more reliable.
  */
 
-import { getAiConfig } from "./ai-refine";
+import { getAiConfig } from "./ai-touch";
 import {
     findAnonymousNodeIds,
     findAllNodeIds,

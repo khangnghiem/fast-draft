@@ -10,8 +10,8 @@ export const CONFIG_SECTION = "fd.ai";
 
 export const COMMAND_SHOW_PREVIEW = "fd.showPreview";
 export const COMMAND_OPEN_CANVAS = "fd.openCanvas";
-export const COMMAND_AI_REFINE = "fd.aiRefine";
-export const COMMAND_AI_REFINE_ALL = "fd.aiRefineAll";
+export const COMMAND_AI_TOUCH = "fd.aiTouch";
+export const COMMAND_AI_TOUCH_ALL = "fd.aiTouchAll";
 export const COMMAND_SHOW_SPEC_VIEW = "fd.showSpecView";
 export const COMMAND_EXPORT_SPEC = "fd.exportSpec";
 export const COMMAND_TOGGLE_VIEW_MODE = "fd.toggleViewMode";
@@ -2720,7 +2720,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
 <body>
   <div id="toolbar">
     <div class="tb-zone tb-left zen-full-only">
-      <button class="tool-btn" id="ai-refine-btn" title="AI Touch selected node (select a node first)">✦ AI Touch</button>
+      <button class="tool-btn" id="ai-touch-btn" title="AI Touch selected node (select a node first)">✦ AI Touch</button>
       <button class="tool-btn" id="renamify-btn" title="Renamify — batch AI rename anonymous node IDs">✦ Renamify</button>
     </div>
     <div class="tb-zone tb-right">
@@ -2959,7 +2959,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
   </div>
   <div id="context-menu">
-    <div class="menu-item" id="ctx-ai-refine"><span class="menu-icon">✦</span><span class="menu-label">AI Touch</span></div>
+    <div class="menu-item" id="ctx-ai-touch"><span class="menu-icon">✦</span><span class="menu-label">AI Touch</span></div>
     <div class="menu-item" id="ctx-add-annotation"><span class="menu-icon">◇</span><span class="menu-label">Add Note</span></div>
     <div class="menu-item" id="ctx-view-notes"><span class="menu-icon">📝</span><span class="menu-label">Notes Panel</span><span class="menu-shortcut">⌘⇧N</span></div>
     <div class="menu-item" id="ctx-rename" data-action="rename"><span class="menu-icon">✏️</span><span class="menu-label">Rename</span></div>
@@ -3016,26 +3016,26 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         if (e.data.type === 'nodeSelected') {
           selectedNodeId = e.data.id || null;
         }
-        if (e.data.type === 'aiRefineStarted') {
-          const btn = document.getElementById('ai-refine-btn');
+        if (e.data.type === 'aiTouchStarted') {
+          const btn = document.getElementById('ai-touch-btn');
           if (btn) { btn.textContent = '⏳ Refining…'; btn.disabled = true; }
         }
-        if (e.data.type === 'aiRefineComplete') {
-          const btn = document.getElementById('ai-refine-btn');
+        if (e.data.type === 'aiTouchComplete') {
+          const btn = document.getElementById('ai-touch-btn');
           if (btn) { btn.textContent = '✦ AI Touch'; btn.disabled = false; }
         }
       });
 
       // Touch selected node
-      document.getElementById('ai-refine-btn')?.addEventListener('click', () => {
+      document.getElementById('ai-touch-btn')?.addEventListener('click', () => {
         const ids = selectedNodeId ? [selectedNodeId] : [];
-        vscodeApi.postMessage({ type: 'aiRefine', nodeIds: ids });
+        vscodeApi.postMessage({ type: 'aiTouch', nodeIds: ids });
       });
 
       // Context menu: AI Touch
-      document.getElementById('ctx-ai-refine')?.addEventListener('click', () => {
+      document.getElementById('ctx-ai-touch')?.addEventListener('click', () => {
         if (selectedNodeId) {
-          vscodeApi.postMessage({ type: 'aiRefine', nodeIds: [selectedNodeId] });
+          vscodeApi.postMessage({ type: 'aiTouch', nodeIds: [selectedNodeId] });
         }
         document.getElementById('context-menu')?.classList.remove('visible');
       });
