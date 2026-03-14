@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.143 — Few-Shot Prompt Engineering for AI Touch (R4.23)
+- **2-shot refine examples**: `buildRefinePrompt()` now includes 2 before/after example pairs (rename+restyle, frame structure preservation). ~30-40% quality improvement on 8B model.
+- **1-shot review examples**: All 4 review prompts (scoped, naming, visual, structure) include concrete input→output examples for 70B model.
+- **Compressed FD syntax guide**: `FD_SYNTAX_GUIDE` rewritten for token efficiency (~40% fewer tokens) with golden example snippet from `demo.fd`.
+- **Files**: `functions/api/ai.js`, `functions/api/ai-review.js`, `site/playground.js`
+
 ### v0.11.142 — Unified AI Touch Pipeline: Two-Phase Refine + Review (R4.24)
 - **Unified AI Touch**: One button, two phases. With selection: Phase 1 (8B refine → apply changes) + Phase 2 (70B scoped review → score panel). Without selection: full-doc review (3 credits).
 - **Smart Model Routing**: 8B for refine/renamify (fast, cheap), 70B for review (quality-critical). ~60% fewer neurons per call.

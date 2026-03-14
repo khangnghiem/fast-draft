@@ -50,13 +50,35 @@ Analyze ONLY the given FD nodes. Return a JSON object with this exact structure:
     {"name": "Structure & Layout", "icon": "📐", "findings": [...]}
   ]
 }
+
+Example input:
+rect @_rect_0 { w: 200 h: 120 fill: #FF0000 corner: 0 }
+
+Example output:
+{"categories":[{"name":"Naming","icon":"📝","findings":[{"severity":"error","message":"Anonymous ID @_rect_0 — should be semantic","suggestion":"Rename to @hero_card or @action_btn based on purpose"}]},{"name":"Colors & Visuals","icon":"🎨","findings":[{"severity":"warning","message":"Raw red #FF0000 — not from a design palette","suggestion":"Use harmonious color like #6C5CE7 or #EF4444"},{"severity":"warning","message":"No corner radius — looks harsh","suggestion":"Add corner: 12 for modern feel"}]},{"name":"Structure & Layout","icon":"📐","findings":[{"severity":"info","message":"No shadow or hover state","suggestion":"Add shadow: (0,2,16,#00000010) and when :hover for interactivity"}]}]}
+
 Return ONLY valid JSON. No markdown, no explanations. Empty findings array if perfect.`;
 
-const NAMING_PROMPT = `You are an FD code quality auditor. Check naming: anonymous IDs, non-descriptive names, inconsistent conventions, missing IDs. Return ONLY a JSON array of findings: [{"severity":"error"|"warning"|"info","message":"...","nodeId":"...","suggestion":"..."}]. Empty array if perfect.`;
+const NAMING_PROMPT = `You are an FD code quality auditor. Check naming: anonymous IDs (@_rect_0), non-descriptive names, inconsistent conventions, missing IDs.
 
-const VISUAL_PROMPT = `You are a UI designer auditing FD. Check: color harmony, spacing consistency, contrast, corner radius consistency, typography hierarchy. Return ONLY a JSON array of findings: [{"severity":"error"|"warning"|"info","message":"...","nodeId":"...","suggestion":"..."}]. Empty array if perfect.`;
+Example: For input "rect @_rect_0 { w: 100 h: 50 }", return:
+[{"severity":"error","message":"Anonymous ID @_rect_0","nodeId":"@_rect_0","suggestion":"Rename to semantic name like @action_btn"}]
 
-const STRUCTURE_PROMPT = `You are an FD architecture auditor. Check: style reuse (inline vs use:), absolute positions vs constraints, hierarchy (groups/frames), accessibility (min 44×44), edge_defaults. Return ONLY a JSON array of findings: [{"severity":"error"|"warning"|"info","message":"...","suggestion":"..."}]. Empty array if perfect.`;
+Return ONLY a JSON array. Empty array if perfect.`;
+
+const VISUAL_PROMPT = `You are a UI designer auditing FD. Check: color harmony, spacing, contrast, corner radius, typography hierarchy.
+
+Example: For input "rect @card { fill: #FF0000 corner: 0 }", return:
+[{"severity":"warning","message":"Raw #FF0000 not from a cohesive palette","nodeId":"@card","suggestion":"Use #EF4444 or #6C5CE7 for brand consistency"},{"severity":"warning","message":"corner: 0 looks harsh on a card","nodeId":"@card","suggestion":"Add corner: 12-16 for modern design"}]
+
+Return ONLY a JSON array. Empty array if perfect.`;
+
+const STRUCTURE_PROMPT = `You are an FD architecture auditor. Check: style reuse (inline vs use:), absolute positions vs constraints, hierarchy (groups/frames), accessibility (min 44×44), edge_defaults.
+
+Example: For input with repeated "fill: #FFF corner: 12" on 3 rects, return:
+[{"severity":"warning","message":"Repeated fill:#FFF corner:12 on 3 nodes","suggestion":"Extract to style card { fill: #FFF corner: 12 } and use: card"}]
+
+Return ONLY a JSON array. Empty array if perfect.`;
 
 // ─── LLM Helpers ─────────────────────────────────────────────────────────
 
