@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.141 — AI Touch Monetization: Rate Limiting + Quality Upgrade + Design Review Agent (R4.22, R4.23, R4.24)
+- **R4.22 — AI Rate Limiting**: IP-based daily call limit via Cloudflare KV (`RATE_LIMIT` namespace). 10 calls/day/IP free tier (configurable via `AI_DAILY_LIMIT` env var). `X-RateLimit-Limit`/`X-RateLimit-Remaining` response headers. 429 response with retry info. Frontend shows remaining-count toast and rate-limit-exceeded toast. Design Review costs 3 credits per review.
+- **R4.23 — AI Quality Upgrade**: Model upgraded from `llama-3.1-8b-instruct` to `llama-3.3-70b-instruct-fp8-fast`. Enhanced system prompts with FD format syntax guide. `max_tokens` 4096→8192. Temperature 0.3 for deterministic output.
+- **R4.24 — Design Review Agent**: New `/api/ai-review` endpoint runs 3 parallel LLM calls (naming audit, visual critique, structure analysis). Returns structured JSON with per-category scores and severity-graded findings. New "✦ AI Review" toolbar button with frosted glass slide-up panel showing category cards, score badges, and fix suggestions.
+- **Files**: `functions/api/ai.js` (rewritten), `functions/api/ai-review.js` (new), `site/playground.js`, `site/index.html`, `site/style.css`
+
 ### v0.11.139 — Excalidraw Export + AI Touch Enhancement (R3.55, R4.20)
 - **R3.55 — Excalidraw Export**: New `export_excalidraw()` WASM API converts FD scene to Excalidraw v2 JSON. Maps rect/frame→rectangle, ellipse→ellipse, text→text, path→freedraw. Includes fill, stroke, opacity, corner radius. ⌘⇧E keyboard shortcut copies JSON to clipboard. Core logic in `fd-core/src/excalidraw.rs` with 9 unit tests.
 - **R4.20 — AI Touch Enhancement**: New `emit_selection_fd()` WASM API emits FD text for only selected nodes, replacing fragile regex-based block extraction in JS. AI Touch prompt now uses accurate WASM-powered selection extraction with JS fallback.
