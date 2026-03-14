@@ -1,0 +1,79 @@
+# ─── Imports ───
+# Demonstrates cross-file style reuse and namespacing (R1.14)
+
+import "design_tokens.fd" as dt
+
+# ─── Layout ───
+
+frame @canvas {
+  width: 800
+  height: 600
+  use: dt.surface
+}
+
+@canvas -> center_in: canvas
+
+text @title "Imports & Namespaces" {
+  use: dt.h1
+}
+@title -> offset: @canvas 40, 40
+
+text @subtitle "Styles imported from design_tokens.fd" {
+  use: dt.body
+  opacity: 0.7
+}
+@subtitle -> offset: @title 0, 48
+
+group @buttons_row {
+  layout: row gap=20
+
+  rect @primary_btn {
+    spec "Imported primary style"
+    use: dt.primary
+    w: 200
+    h: 48
+    corner: 10
+
+    text @lbl_primary "Primary (Imported)" {
+      use: dt.body
+      fill: #FFFFFF
+      font: "Inter" semibold 15
+    }
+  }
+
+  rect @danger_btn {
+    spec "Imported danger style"
+    use: dt.danger
+    w: 200
+    h: 48
+    corner: 10
+
+    text @lbl_danger "Danger (Imported)" {
+      use: dt.body
+      fill: #FFFFFF
+      font: "Inter" semibold 15
+    }
+  }
+}
+@buttons_row -> offset: @subtitle 0, 60
+
+# We can also extend imported styles locally
+style custom_surface {
+  use: dt.surface_elevated
+  stroke: #6C5CE7 2.0
+}
+
+frame @custom_card {
+  use: custom_surface
+  width: 420
+  height: 200
+
+  text @card_title "Extended Style" {
+    use: dt.h2
+  }
+
+  text @card_desc "This card uses a local style that inherits from dt.surface_elevated." {
+    use: dt.body
+  }
+}
+@custom_card -> offset: @buttons_row 0, 100
