@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.148 — Reduce Motion Support (R6.16)
+- **A11Y (R6.16)**: System-wide `prefers-reduced-motion` — global CSS blanket rule suppresses all CSS animations and transitions when OS "Reduce motion" is enabled; skeleton shimmer preserved as minimal loading indicator; JS guards skip touch inertia, camera pan animation, and detach pop effect
+- **A11Y (R6.16)**: Manual "Reduce Motion" toggle — new toggle in ☰ Settings dropdown + `⇧M` keyboard shortcut; `localStorage` persistence (`fd-reduce-motion` key); `.reduce-motion` body class mirrors the CSS media query blanket rule; toast notification confirms state change
+- **A11Y (R6.16)**: Live OS detection — `matchMedia` change listener updates `reduceMotion` flag in real-time when user toggles system accessibility setting
+- **PARITY (R6.16)**: VS Code extension — `reduceMotion` flag in `state.js` with OS `matchMedia` detection; inertia guard in `pointer.js`; detach animation guard in `render.js`; focus-on-node instant jump in `navigation.js`
+- **SITE**: Changes in `site/style.css`, `site/index.html`, `site/playground.js`
+- **EXTENSION**: Changes in `fd-vscode/webview/src/state.js`, `pointer.js`, `render.js`, `navigation.js`, `main.js` (built)
+- **DOCS**: `⇧M` shortcut added to `SHORTCUTS.md`
+
 ### v0.11.147 — AI Touch Context Menu Prompt + Flat Review Findings (R4.25)
 - **UX (R4.25)**: Custom prompt textarea in right-click context menu — `✦ AI Touch ▸` expandable submenu with 200-char textarea, live char counter, and "Run ✦" button; prompt persists in `localStorage` (`fd-ai-prompt` key); menu stays open while typing (stopPropagation on textarea events); ⌘Enter shortcut to run
 - **UX (R4.25)**: Flat review findings — removed category grouping (Naming, Colors & Visuals, Structure & Layout) from review panel UI; all findings now displayed as a single flat list with severity icons and suggestions; raw categorized data logged to `console.debug('[AI Touch] Raw review:')` for debugging

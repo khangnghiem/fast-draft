@@ -1420,6 +1420,16 @@ function focusOnNode(nodeId) {
   // Cancel any running focus animation
   if (focusAnimId) cancelAnimationFrame(focusAnimId);
 
+  // Reduce motion: jump directly, no animation
+  if (reduceMotion) {
+    panX = finalTargetPanX;
+    panY = finalTargetPanY;
+    zoomLevel = targetZoom;
+    render();
+    updateZoomIndicator();
+    return;
+  }
+
   function step(now) {
     const elapsed = now - startTime;
     const t = Math.min(elapsed / duration, 1);

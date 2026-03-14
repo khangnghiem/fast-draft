@@ -52,7 +52,7 @@ function evalTweens(now) {
  * Uses a brief scale-pop tween (105% → 100%) and a glow pulse overlay.
  */
 function playDetachAnimation(nodeId) {
-  if (!fdCanvas || !nodeId) return;
+  if (!fdCanvas || !nodeId || reduceMotion) return;
 
   // Inject @keyframes on first use
   if (!document.getElementById("detach-anim-style")) {

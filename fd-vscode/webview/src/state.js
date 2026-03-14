@@ -89,6 +89,11 @@ function bumpGeneration() {
 let gridEnabled = false;
 const GRID_BASE_SPACING = 20;
 
+// Reduce Motion — respect OS setting
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+let reduceMotion = prefersReducedMotion.matches;
+prefersReducedMotion.addEventListener('change', (e) => { reduceMotion = e.matches; });
+
 /** Hidden nodes set (layer visibility toggle) */
 const hiddenNodes = new Set();
 

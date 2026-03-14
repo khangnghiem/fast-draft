@@ -98,6 +98,11 @@ function bumpGeneration() {
 let gridEnabled = false;
 const GRID_BASE_SPACING = 20;
 
+// Reduce Motion — respect OS setting
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+let reduceMotion = prefersReducedMotion.matches;
+prefersReducedMotion.addEventListener('change', (e) => { reduceMotion = e.matches; });
+
 /** Hidden nodes set (layer visibility toggle) */
 const hiddenNodes = new Set();
 
@@ -283,7 +288,7 @@ function evalTweens(now) {
  * Uses a brief scale-pop tween (105% → 100%) and a glow pulse overlay.
  */
 function playDetachAnimation(nodeId) {
-  if (!fdCanvas || !nodeId) return;
+  if (!fdCanvas || !nodeId || reduceMotion) return;
 
   // Inject @keyframes on first use
   if (!document.getElementById("detach-anim-style")) {
@@ -1245,7 +1250,7 @@ function setupTouchGestures() {
     if (activeTouches.size === 0 && isGesturing) {
       isGesturing = false;
       lastPinchDist = 0;
-      if (Math.abs(inertiaVx) > 1 || Math.abs(inertiaVy) > 1) {
+      if (!reduceMotion && (Math.abs(inertiaVx) > 1 || Math.abs(inertiaVy) > 1)) {
         inertiaRaf = requestAnimationFrame(applyInertia);
       }
     }
@@ -2651,16 +2656,12 @@ function setupContextMenu() {
     const x = ((e.clientX - rect.left) - panX) / zoomLevel;
     const y = ((e.clientY - rect.top) - panY) / zoomLevel;
 
-    // Hit-test for a node (without disrupting selection)
-    const hitId = fdCanvas.hit_test_at ? fdCanvas.hit_test_at(x, y) : '';
-
-    // #1: Preserve multi-selection — only replace if hit node isn't already selected
-    if (hitId) {
-      const currentIds = JSON.parse(fdCanvas.get_selected_ids());
-      if (!currentIds.includes(hitId)) {
-        fdCanvas.select_by_id(hitId);
-      }
-    }
+    // Hit-test for a node
+    const selectedId = fdCanvas.get_selected_id();
+    // Try to find node under pointer via selecting
+    fdCanvas.handle_pointer_down(x, y, 1.0);
+    fdCanvas.handle_pointer_up(x, y, false, false, false, false);
+    const hitId = fdCanvas.get_selected_id();
     render();
 
     if (!hitId) {
@@ -2687,8 +2688,6 @@ function setupContextMenu() {
 
     // Enable/disable Group and Ungroup based on selection
     const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
-    const selCount = selectedIds.length;
-    const isMulti = selCount > 1;
     const groupBtn = document.getElementById("ctx-group");
     const ungroupBtn = document.getElementById("ctx-ungroup");
 
@@ -2710,40 +2709,17 @@ function setupContextMenu() {
     }
     ungroupBtn.classList.toggle("disabled", !canUngroup);
 
-    // #3: Multi-aware labels — update Delete/Duplicate button text
-    const ctxDelete = document.getElementById("ctx-delete");
-    if (ctxDelete) {
-      const label = ctxDelete.querySelector(".menu-label");
-      if (label) label.textContent = isMulti ? `Delete ${selCount} items` : "Delete";
-    }
-    const ctxDuplicate = document.getElementById("ctx-duplicate");
-    if (ctxDuplicate) {
-      const label = ctxDuplicate.querySelector(".menu-label");
-      if (label) label.textContent = isMulti ? `Duplicate ${selCount} items` : "Duplicate";
-    }
+    // Show/hide spec-related menu items based on whether node has a spec
+    const hasSpec = nodeHasSpec(contextMenuNodeId);
+    document.getElementById("ctx-add-annotation").style.display = hasSpec ? "none" : "";
+    document.getElementById("ctx-view-notes").style.display = hasSpec ? "" : "none";
 
-    // #3: Hide single-node-only items when multi-selected
-    const singleOnlyIds = ["ctx-rename", "ctx-lock", "ctx-add-annotation", "ctx-view-notes"];
-    singleOnlyIds.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = isMulti ? "none" : "";
-    });
-
-    // Show/hide spec-related menu items based on whether node has a spec (single only)
-    if (!isMulti) {
-      const hasSpec = nodeHasSpec(contextMenuNodeId);
-      document.getElementById("ctx-add-annotation").style.display = hasSpec ? "none" : "";
-      document.getElementById("ctx-view-notes").style.display = hasSpec ? "" : "none";
-    }
-
-    // Update Lock button state (single only)
-    if (!isMulti) {
-      const lockBtn = document.getElementById("ctx-lock");
-      if (lockBtn && fdCanvas.is_node_locked) {
-        const isLocked = fdCanvas.is_node_locked(contextMenuNodeId);
-        lockBtn.querySelector(".menu-icon").textContent = isLocked ? "\uD83D\uDD13" : "\uD83D\uDD12";
-        lockBtn.querySelector(".menu-label").textContent = isLocked ? "Unlock" : "Lock";
-      }
+    // Update Lock button state
+    const lockBtn = document.getElementById("ctx-lock");
+    if (lockBtn && fdCanvas.is_node_locked) {
+      const isLocked = fdCanvas.is_node_locked(contextMenuNodeId);
+      lockBtn.querySelector(".menu-icon").textContent = isLocked ? "\uD83D\uDD13" : "\uD83D\uDD12";
+      lockBtn.querySelector(".menu-label").textContent = isLocked ? "Unlock" : "Lock";
     }
 
     menu.classList.add("visible");
@@ -6285,6 +6261,16 @@ function focusOnNode(nodeId) {
 
   // Cancel any running focus animation
   if (focusAnimId) cancelAnimationFrame(focusAnimId);
+
+  // Reduce motion: jump directly, no animation
+  if (reduceMotion) {
+    panX = finalTargetPanX;
+    panY = finalTargetPanY;
+    zoomLevel = targetZoom;
+    render();
+    updateZoomIndicator();
+    return;
+  }
 
   function step(now) {
     const elapsed = now - startTime;

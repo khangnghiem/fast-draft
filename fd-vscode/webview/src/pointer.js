@@ -903,7 +903,7 @@ function setupTouchGestures() {
     if (activeTouches.size === 0 && isGesturing) {
       isGesturing = false;
       lastPinchDist = 0;
-      if (Math.abs(inertiaVx) > 1 || Math.abs(inertiaVy) > 1) {
+      if (!reduceMotion && (Math.abs(inertiaVx) > 1 || Math.abs(inertiaVy) > 1)) {
         inertiaRaf = requestAnimationFrame(applyInertia);
       }
     }
