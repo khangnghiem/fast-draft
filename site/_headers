@@ -1,21 +1,19 @@
-# WASM — filenames are NOT content-hashed, so never cache immutably.
-# no-cache = always revalidate with CDN (304 if unchanged, fast).
-# This prevents stale .wasm + fresh .js mismatch after deploys.
+# WASM, JS, CSS — all URLs are cache-busted with ?v=<git-sha> via
+# pages.yml auto-bust step. Immutable = browsers never revalidate,
+# return visitors get instant loads from disk cache.
 /wasm/*
-  Cache-Control: no-cache
+  Cache-Control: public, max-age=31536000, immutable
 
-# JS/CSS — also not content-hashed. Always revalidate so deploys
-# take effect immediately instead of waiting for max-age expiry.
 /*.js
-  Cache-Control: no-cache
+  Cache-Control: public, max-age=31536000, immutable
 /*.css
-  Cache-Control: no-cache
+  Cache-Control: public, max-age=31536000, immutable
 
-# Docs — always revalidate so updates appear immediately
+# Docs — cache-busted via ?v= in shared.css/docs.css links
 /docs/*.html
-  Cache-Control: no-cache
+  Cache-Control: public, max-age=3600
 /docs/*.css
-  Cache-Control: no-cache
+  Cache-Control: public, max-age=31536000, immutable
 
 # All pages — security headers
 /*
