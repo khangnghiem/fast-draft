@@ -1800,7 +1800,7 @@ async function aiTouch() {
     fdCanvas.set_text(result);
     renderCanvas();
 
-    // ── Phase 2: Scoped Review (70B model, 1 credit) ──
+    // ── Phase 2: Scoped Review (1 credit) ──
     if (statusEl) statusEl.textContent = '✦ Phase 2: Analyzing improvements…';
 
     // Show panel with loading state
@@ -1817,14 +1817,13 @@ async function aiTouch() {
       scopedFdText = extractBlocksForIds(result, selectedIds);
     }
 
-    const reviewResp = await fetch('/api/ai-review', {
+    const reviewResp = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fdText: scopedFdText, mode: 'scoped' }),
+      body: JSON.stringify({ prompt: `Review these FD nodes:\n\n${scopedFdText}`, mode: 'review' }),
     });
 
     if (reviewResp.status === 429) {
-      // Refine succeeded but review exceeded limit — still a win
       if (body) body.innerHTML = '<p class="ai-review-error">Review skipped — rate limit reached. Your design was refined!</p>';
       showToast(`✦ AI Touch — ${selectedIds.length} element${selectedIds.length > 1 ? 's' : ''} refined (review skipped)`);
       return;
@@ -1849,30 +1848,30 @@ async function aiTouch() {
   }
 }
 
-/** Full-doc review (3 credits, 3 parallel LLM calls) — via settings menu */
+/** Full-doc review (1 credit) — via settings menu or no-selection AI Touch */
 async function runFullDocReview(btn, statusEl) {
   btn?.classList.add('loading');
-  if (statusEl) statusEl.textContent = 'Full design review… (3 AI calls)';
+  if (statusEl) statusEl.textContent = 'Full design review…';
 
   const panel = document.getElementById('ai-review-panel');
   const body = document.getElementById('ai-review-body');
   const scoreBadge = document.getElementById('ai-review-score');
 
-  if (body) body.innerHTML = '<p class="ai-review-loading">Full design review… (3 AI calls, 3 credits)</p>';
+  if (body) body.innerHTML = '<p class="ai-review-loading">Analyzing entire design… (1 credit)</p>';
   if (scoreBadge) { scoreBadge.textContent = ''; scoreBadge.className = 'ai-review-score-badge'; }
   panel?.classList.remove('hidden');
 
   try {
     const fdText = fdCanvas.get_text();
-    const resp = await fetch('/api/ai-review', {
+    const resp = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fdText, mode: 'full' }),
+      body: JSON.stringify({ prompt: `Review this FD document:\n\n${fdText}`, mode: 'review' }),
     });
 
     if (resp.status === 429) {
       const data = await resp.json();
-      if (body) body.innerHTML = `<p class="ai-review-error">Rate limit — costs 3 credits. ${data.remaining || 0}/${data.limit || 10} remaining.</p>`;
+      if (body) body.innerHTML = `<p class="ai-review-error">Rate limit reached. ${data.remaining || 0}/${data.limit || 20} remaining.</p>`;
       return;
     }
     if (!resp.ok) throw new Error(`Review API error: ${resp.status}`);
