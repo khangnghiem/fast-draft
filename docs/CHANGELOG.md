@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.138 — Fix Theme Toggle Across Docs Pages (R3.13)
+
+- **FIX (R3.13)**: Docs pages (Language Reference, Shortcuts, Changelog) now fully support light theme — added ~80 lines of `body.light-theme` CSS overrides to `site/docs/style.css` covering code blocks (light bg + adjusted syntax highlighting), inline code, tables, kbd badges, callouts, changelog tags, sidebar, page nav, and mobile nav
+- **FIX (R3.13)**: Eliminated FOUC (flash of unstyled content) on all pages — `light-theme` class now applied synchronously to `<html>` in `<head>` script before first paint, plus `document.documentElement.style.colorScheme = 'light'`; body class deferred to DOMContentLoaded for CSS compatibility
+- **FIX (R3.13)**: Theme toggle handlers on all pages now sync both `html` and `body` classes + `colorScheme` property — ensures consistent behavior whether CSS targets `html.light-theme` or `body.light-theme`
+- **SITE**: Changes in `site/docs/style.css`, `site/docs/index.html`, `site/docs/shortcuts.html`, `site/docs/changelog.html`, `site/playground.js`
+
 ### v0.11.137 — Two Theme Toggles: Site + Canvas (R3.13, R6.5)
 
 - **UX (R3.13)**: Two independent theme toggles — site-wide ☀️/🌙 button in navbar controls `body.light-theme` class (marketing sections, nav, footer, docs pages); canvas-specific pill toggle in canvas toolbar controls `.dark-canvas` class (canvas chrome, scroll toolbar, floating toolbar)
