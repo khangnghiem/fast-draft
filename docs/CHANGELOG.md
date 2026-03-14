@@ -17,6 +17,19 @@
 
 ## Completed Requirements
 
+### v0.11.135 — Multi-Finger Gesture System (R3.6, R6.3, R6.6)
+
+- **FEATURE (R3.6)**: 3-finger tap → undo, 3-finger double-tap → redo (iPadOS-native, <200ms + <15px movement threshold, 400ms double-tap window)
+- **FEATURE (R3.6)**: 3-finger pinch-in → copy, pinch-out → paste (area ratio thresholds: <0.4 = copy, >2.5 = paste)
+- **FEATURE (R3.6)**: 3-finger long-press (500ms) → floating edit menu with Undo/Redo/Cut/Copy/Paste (auto-dismiss 3s)
+- **FEATURE (R3.6)**: 4-finger tap → toggle Zen mode (<250ms, <20px movement)
+- **FEATURE (R3.6)**: 4-finger swipe up → zoom-to-fit, swipe down → zoom-to-selection (50px threshold; falls back to 100% if no selection)
+- **FEATURE (R3.6)**: 4-finger horizontal swipe → cycle tool in toolbar order (hand→select→rect→ellipse→pen→arrow→text→eraser, wraps around)
+- **UX (R6.3)**: iPadOS gesture hierarchy — 1-finger=object, 2-finger=viewport, 3-finger=edit, 4-finger=app; muscle-memory aligned with iOS
+- **SITE**: Changes in `site/playground.js` (`setupTouchGestures`)
+- **EXTENSION**: Changes in `fd-vscode/webview/src/pointer.js` (`setupTouchGestures`)
+- **DOCS**: Updated `SHORTCUTS.md` with full multi-finger gesture reference table
+
 ### v0.11.134 — Two-Finger Gesture Redesign (R3.6, R6.6)
 
 - **UX (R3.6)**: Normalized zoom wheel factor — unified to `ZOOM_WHEEL_FACTOR = 1.04` across site (`playground.js`) and VS Code (`main.js`); was 1.05 on site and 1.03 on VS Code
