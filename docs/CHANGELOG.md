@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.136 — Unified Navbar + Footer + Shared CSS (R6.5, R6.15)
+
+- **REFACTOR (R6.5)**: Unified navbar across all 4 site pages — home page and 3 docs pages now share identical `.site-nav` HTML structure with consistent links (Home, Docs, Shortcuts, Changelog, GitHub, Install Extension); home page retains transparent→frosted-on-scroll effect via `.nav-transparent` modifier; docs pages start frosted
+- **REFACTOR (R6.15)**: Unified footer across all 4 pages — docs pages upgraded from minimal text-only `.docs-footer` to rich `.site-footer` with brand logo, 5 navigation links, and copyright line matching the home page
+- **REFACTOR (R6.5)**: Extracted `shared.css` (170 lines) — single source of truth for design tokens (`:root` vars), reset, body, links, keyboard accessibility, `.site-nav`, `.site-footer`, `.gradient-text`, mobile responsive nav; imported by all pages; eliminates ~200 lines of duplicated CSS across `style.css` and `docs/style.css`
+- **UX (R6.5)**: Font stack unified to Geist Sans + Geist Mono across all pages — docs pages previously used Inter + JetBrains Mono; now consistent with home page; JetBrains Mono retained as code-block fallback
+- **UX (R6.15)**: CTA button label unified to "Install Extension" (was "Install" on docs pages)
+- **SITE**: New `site/shared.css`; changes in `site/style.css`, `site/index.html`, `site/docs/index.html`, `site/docs/shortcuts.html`, `site/docs/changelog.html`, `site/docs/style.css`
+
 ### v0.11.135 — Multi-Finger Gesture System (R3.6, R6.3, R6.6)
 
 - **FEATURE (R3.6)**: 3-finger tap → undo, 3-finger double-tap → redo (iPadOS-native, <200ms + <15px movement threshold, 400ms double-tap window)

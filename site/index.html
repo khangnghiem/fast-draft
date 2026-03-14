@@ -21,22 +21,24 @@
   <!-- Preload WASM for instant playground -->
   <link rel="modulepreload" href="./wasm/fd_wasm.js?v=0.11.5" />
   <link rel="preload" href="./wasm/fd_wasm_bg.wasm?v=0.11.5" as="fetch" crossorigin />
+  <link rel="stylesheet" href="shared.css?v=0.11.5" />
   <link rel="stylesheet" href="style.css?v=0.11.5" />
 
 </head>
 <body>
   <!-- ─── Navigation ─── -->
-  <nav id="navbar">
+  <nav id="navbar" class="site-nav nav-transparent">
     <div class="nav-inner">
-      <a href="#" class="nav-logo">
+      <a href="/" class="nav-logo">
         <span class="logo-icon">⚡</span>
         <span class="logo-text">Fast Draft</span>
       </a>
       <div class="nav-links">
-        <a href="#features">Features</a>
-        <a href="#benchmarks">Benchmarks</a>
-        <a href="#architecture">Architecture</a>
+        <a href="/" class="active">Home</a>
         <a href="/docs/">Docs</a>
+        <a href="/docs/shortcuts.html">Shortcuts</a>
+        <a href="/docs/changelog.html">Changelog</a>
+        <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
 
         <button id="canvas-theme-toggle" class="theme-pill" title="Toggle canvas theme" aria-label="Toggle canvas theme">
           <span class="theme-pill-icon theme-pill-sun">☀️</span>
@@ -453,13 +455,14 @@
   </section>
 
   <!-- ─── Footer ─── -->
-  <footer id="footer">
-    <div class="container footer-inner">
+  <footer id="footer" class="site-footer">
+    <div class="footer-inner">
       <div class="footer-brand">
         <span class="logo-icon">⚡</span>
         <span class="logo-text">Fast Draft</span>
       </div>
       <div class="footer-links">
+        <a href="/">Home</a>
         <a href="/docs/">Docs</a>
         <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
         <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener">VS Code Marketplace</a>
@@ -480,7 +483,8 @@
 
     // Navbar scroll effect
     window.addEventListener('scroll', function() {
-      document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
+      const nav = document.getElementById('navbar');
+      if (nav) nav.classList.toggle('scrolled', window.scrollY > 50);
     });
 
     // Smooth scroll for anchor links

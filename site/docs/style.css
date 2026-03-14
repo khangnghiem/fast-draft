@@ -1,118 +1,10 @@
-/* ─── Docs Design Tokens (inherits from main site) ─── */
+/* Shared tokens, reset, links are in /shared.css */
+/* Docs-specific variables */
 :root {
-  --bg-primary: #0D1117;
-  --bg-secondary: #161B22;
-  --bg-card: #1C2128;
-  --bg-card-hover: #21262D;
-  --text-primary: #E6EDF3;
-  --text-secondary: #8B949E;
-  --text-muted: #484F58;
-  --accent: #007AFF;
-  --accent-hover: #0071EB;
-  --accent-glow: rgba(108, 92, 231, 0.2);
-  --border: #30363D;
-  --border-light: #21262D;
-  --success: #34C759;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-  --mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
-  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --max-width: 1200px;
   --sidebar-width: 240px;
   --content-max: 820px;
 }
-
-/* ─── Reset ─── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; scroll-padding-top: 80px; }
-body {
-  font-family: var(--font);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  line-height: 1.7;
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-}
-a { color: var(--accent); text-decoration: none; transition: color var(--transition); }
-a:hover { color: var(--accent-hover); }
-
-/* ─── Nav ─── */
-.docs-nav {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 100;
-  background: rgba(13, 17, 23, 0.85);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid var(--border);
-}
-.nav-inner {
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: 14px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.nav-logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-primary);
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-.logo-icon { font-size: 1.4rem; }
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-.nav-links a {
-  color: var(--text-secondary);
-  font-size: 0.88rem;
-  font-weight: 500;
-  transition: color var(--transition);
-}
-.nav-links a:hover { color: var(--text-primary); }
-.nav-links a.active { color: var(--text-primary); font-weight: 600; }
-.btn-nav {
-  background: var(--accent) !important;
-  color: #fff !important;
-  padding: 7px 14px;
-  border-radius: var(--radius-sm);
-  font-weight: 600 !important;
-  font-size: 0.85rem;
-  transition: background var(--transition), transform var(--transition) !important;
-}
-.btn-nav:hover {
-  background: var(--accent-hover) !important;
-  transform: translateY(-1px);
-}
-
-/* ─── Mobile menu ─── */
-.mobile-menu-btn {
-  display: none;
-  flex-direction: column;
-  gap: 5px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-}
-.mobile-menu-btn span {
-  display: block;
-  width: 22px;
-  height: 2px;
-  background: var(--text-primary);
-  border-radius: 2px;
-  transition: transform var(--transition), opacity var(--transition);
-}
-.mobile-menu-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-.mobile-menu-btn.open span:nth-child(2) { opacity: 0; }
-.mobile-menu-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+/* Nav and mobile menu styles are in /shared.css — .site-nav */
 
 /* ─── Layout ─── */
 .docs-layout {
@@ -208,12 +100,7 @@ a:hover { color: var(--accent-hover); }
   margin-bottom: 32px;
   line-height: 1.6;
 }
-.gradient-text {
-  background: linear-gradient(135deg, #6C5CE7, #0A84FF);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
+/* .gradient-text is in /shared.css */
 .docs-content h2 {
   font-size: 1.5rem;
   font-weight: 700;
@@ -460,23 +347,7 @@ kbd {
 .tag-docs { background: rgba(0, 122, 255, 0.12); color: var(--accent); }
 .tag-infra { background: rgba(139, 148, 158, 0.15); color: var(--text-secondary); }
 
-/* ─── Footer ─── */
-.docs-footer {
-  border-top: 1px solid var(--border-light);
-  padding: 32px 24px;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-.docs-footer a { color: var(--text-secondary); }
-.docs-footer a:hover { color: var(--text-primary); }
-.footer-links {
-  display: flex;
-  gap: 24px;
-  justify-content: center;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
+/* Footer styles are in /shared.css — .site-footer */
 
 /* ─── Prev/Next navigation ─── */
 .page-nav {
@@ -557,13 +428,4 @@ kbd {
   .docs-content { margin-left: 200px; padding: 28px 28px 60px; }
 }
 
-/* ─── Scroll animation ─── */
-.animate-in {
-  opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-.animate-in.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
+/* Scroll animation is in /shared.css */

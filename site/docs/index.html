@@ -10,24 +10,27 @@
   <link rel="canonical" href="https://fast-draft.com/docs/" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/style.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-mono/style.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <!-- ─── Nav ─── -->
-  <nav class="docs-nav">
+  <nav class="site-nav">
     <div class="nav-inner">
       <a href="/" class="nav-logo">
         <span class="logo-icon">⚡</span>
         <span class="logo-text">Fast Draft</span>
       </a>
       <div class="nav-links">
-        <a href="/" >Home</a>
+        <a href="/">Home</a>
         <a href="/docs/" class="active">Docs</a>
         <a href="/docs/shortcuts.html">Shortcuts</a>
         <a href="/docs/changelog.html">Changelog</a>
         <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener" class="btn-nav">Install</a>
+        <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener" class="btn-nav">Install Extension</a>
       </div>
       <button class="mobile-menu-btn" aria-label="Toggle menu" onclick="document.querySelector('.nav-links').classList.toggle('open');this.classList.toggle('open')">
         <span></span><span></span><span></span>
@@ -499,14 +502,21 @@
   </div>
 
   <!-- Footer -->
-  <footer class="docs-footer">
-    <div class="footer-links">
-      <a href="/">Home</a>
-      <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener">VS Code Marketplace</a>
-      <a href="https://github.com/khangnghiem/fast-draft/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">Fast Draft</span>
+      </div>
+      <div class="footer-links">
+        <a href="/">Home</a>
+        <a href="/docs/">Docs</a>
+        <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener">VS Code Marketplace</a>
+        <a href="https://github.com/khangnghiem/fast-draft/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+      </div>
+      <p class="footer-copy">Made with Rust, WASM, and ❤️ by <a href="https://github.com/khangnghiem" target="_blank" rel="noopener">Khang Nghiêm</a></p>
     </div>
-    <p>Made with Rust, WASM, and ❤️ by <a href="https://github.com/khangnghiem" target="_blank" rel="noopener">Khang Nghiêm</a></p>
   </footer>
 
   <script>
