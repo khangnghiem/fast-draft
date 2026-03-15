@@ -167,6 +167,51 @@ fn hit_test_node(
     None
 }
 
+/// Find the topmost node at (px, py), excluding a set of node indices.
+/// Used for ⌘+drag reparent to find the container beneath the dragged node.
+pub fn hit_test_excluding(
+    graph: &SceneGraph,
+    bounds: &HashMap<NodeIndex, ResolvedBounds>,
+    px: f32,
+    py: f32,
+    excluded: &std::collections::HashSet<NodeIndex>,
+) -> Option<NodeId> {
+    hit_test_node_excluding(graph, graph.root, bounds, px, py, excluded)
+}
+
+fn hit_test_node_excluding(
+    graph: &SceneGraph,
+    idx: NodeIndex,
+    bounds: &HashMap<NodeIndex, ResolvedBounds>,
+    px: f32,
+    py: f32,
+    excluded: &std::collections::HashSet<NodeIndex>,
+) -> Option<NodeId> {
+    let children = graph.children(idx);
+
+    for &child_idx in children.iter().rev() {
+        if excluded.contains(&child_idx) {
+            continue;
+        }
+        if let Some(hit) = hit_test_node_excluding(graph, child_idx, bounds, px, py, excluded) {
+            return Some(hit);
+        }
+    }
+
+    let node = &graph.graph[idx];
+    if matches!(node.kind, NodeKind::Root) || excluded.contains(&idx) {
+        return None;
+    }
+
+    if let Some(b) = bounds.get(&idx)
+        && b.contains(px, py)
+    {
+        return Some(node.id);
+    }
+
+    None
+}
+
 /// Find all non-root nodes whose bounds intersect the given rectangle.
 /// Used for marquee (box) selection.
 pub fn hit_test_rect(
@@ -798,5 +843,55 @@ rect @movable {
             None,
             "rebuilt index should not find node at old position"
         );
+    }
+
+    /// Regression: hit_test_excluding skips excluded nodes and their descendants.
+    /// This is the root cause fix for ⌘+drag reparent — the dragged node sat on
+    /// top of the target container, so normal hit_test returned the dragged node
+    /// instead of the container underneath.
+    #[test]
+    fn hit_test_excluding_skips_dragged_node() {
+        let input = r#"
+rect @container {
+  w: 200
+  h: 200
+  x: 50
+  y: 50
+}
+
+rect @child {
+  w: 80
+  h: 60
+  x: 100
+  y: 100
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        // Without exclusion: @child is on top at (120, 120)
+        let hit = hit_test(&graph, &bounds, 120.0, 120.0);
+        assert_eq!(hit, Some(NodeId::intern("child")));
+
+        // With @child excluded: should return @container underneath
+        let child_idx = graph.index_of(NodeId::intern("child")).unwrap();
+        let mut excluded = std::collections::HashSet::new();
+        excluded.insert(child_idx);
+        let hit_excl = hit_test_excluding(&graph, &bounds, 120.0, 120.0, &excluded);
+        assert_eq!(
+            hit_excl,
+            Some(NodeId::intern("container")),
+            "excluding @child should reveal @container underneath"
+        );
+
+        // With both excluded: should return None
+        let container_idx = graph.index_of(NodeId::intern("container")).unwrap();
+        excluded.insert(container_idx);
+        let hit_none = hit_test_excluding(&graph, &bounds, 120.0, 120.0, &excluded);
+        assert_eq!(hit_none, None, "excluding both nodes should return None");
     }
 }

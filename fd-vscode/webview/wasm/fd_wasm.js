@@ -35,6 +35,18 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Add a node to the current selection without clearing (⌘+click add mode).
+     * Returns true if the node was found and added (ignores if already selected).
+     * @param {string} node_id
+     * @returns {boolean}
+     */
+    add_to_selection(node_id) {
+        const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_add_to_selection(this.__wbg_ptr, ptr0, len0);
+        return ret !== 0;
+    }
+    /**
      * Cancel an in-progress drag gesture (Esc mid-drag).
      *
      * Restores the scene to the pre-drag state by abandoning the batch
@@ -398,6 +410,23 @@ export class FdCanvas {
         let deferred1_1;
         try {
             const ret = wasm.fdcanvas_get_completions(this.__wbg_ptr, line, col);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Return a JSON array of valid container node IDs for the "Move Into" menu.
+     * Each entry is `{"id": "...", "kind": "..."}`.
+     * @returns {string}
+     */
+    get_container_ids() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_container_ids(this.__wbg_ptr);
             deferred1_0 = ret[0];
             deferred1_1 = ret[1];
             return getStringFromWasm0(ret[0], ret[1]);
@@ -892,6 +921,28 @@ export class FdCanvas {
         }
     }
     /**
+     * Hit-test at scene-space coordinates, excluding a specific node (and its children).
+     * Used for ⌘+drag reparent so the dragged node doesn't block the container underneath.
+     * @param {number} x
+     * @param {number} y
+     * @param {string} exclude_id
+     * @returns {string}
+     */
+    hit_test_at_excluding(x, y, exclude_id) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(exclude_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_hit_test_at_excluding(this.__wbg_ptr, x, y, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * Hit-test for edges only at scene-space coordinates.
      * @param {number} x
      * @param {number} y
@@ -1015,9 +1066,23 @@ export class FdCanvas {
         wasm.fdcanvas_render_export(this.__wbg_ptr, ctx, offset_x, offset_y);
     }
     /**
-     * Reparent a node into a target container (⌘+drag).
+     * Reorder a child node to a specific z-order index within its parent.
+     * Used by layer panel drag-to-reorder.
+     * @param {string} child_id
+     * @param {number} index
+     * @returns {boolean}
+     */
+    reorder_child(child_id, index) {
+        const ptr0 = passStringToWasm0(child_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_reorder_child(this.__wbg_ptr, ptr0, len0, index);
+        return ret !== 0;
+    }
+    /**
+     * Reparent a node into a target container (⌘+drag or layer drag).
      *
-     * The target must be a container type (Rect, Ellipse, Frame, Group).
+     * The target must be a container type (Rect, Ellipse, Frame, Group)
+     * or "root" to move to the document root.
      * Returns true if the reparent succeeded.
      * @param {string} child_id
      * @param {string} target_id
@@ -1029,6 +1094,24 @@ export class FdCanvas {
         const ptr1 = passStringToWasm0(target_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len1 = WASM_VECTOR_LEN;
         const ret = wasm.fdcanvas_reparent_into(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return ret !== 0;
+    }
+    /**
+     * Reparent a node into a target container and center it.
+     *
+     * Same validation as `reparent_into` but instead of preserving
+     * visual position, strips positional constraints and adds
+     * `CenterIn(target)` so the child is centered in the new parent.
+     * @param {string} child_id
+     * @param {string} target_id
+     * @returns {boolean}
+     */
+    reparent_into_centered(child_id, target_id) {
+        const ptr0 = passStringToWasm0(child_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(target_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_reparent_into_centered(this.__wbg_ptr, ptr0, len0, ptr1, len1);
         return ret !== 0;
     }
     /**
@@ -1050,6 +1133,19 @@ export class FdCanvas {
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.fdcanvas_select_by_id(this.__wbg_ptr, ptr0, len0);
         return ret !== 0;
+    }
+    /**
+     * Select multiple nodes by their IDs from a JSON array (⇧+click range select).
+     * Replaces the current selection with the provided IDs.
+     * Returns the number of valid nodes that were selected.
+     * @param {string} ids_json
+     * @returns {number}
+     */
+    select_multiple_by_ids(ids_json) {
+        const ptr0 = passStringToWasm0(ids_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_select_multiple_by_ids(this.__wbg_ptr, ptr0, len0);
+        return ret >>> 0;
     }
     /**
      * Set a property on ALL currently selected nodes (bulk editing).
@@ -1155,6 +1251,19 @@ export class FdCanvas {
         const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.fdcanvas_toggle_node_locked(this.__wbg_ptr, ptr0, len0);
+        return ret !== 0;
+    }
+    /**
+     * Toggle a node in/out of the current selection (⌘+click in layers).
+     * If the node is already selected, deselect it. Otherwise, add it.
+     * Returns true if the node was found (valid id).
+     * @param {string} node_id
+     * @returns {boolean}
+     */
+    toggle_select_by_id(node_id) {
+        const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_toggle_select_by_id(this.__wbg_ptr, ptr0, len0);
         return ret !== 0;
     }
     /**
