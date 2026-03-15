@@ -3911,6 +3911,35 @@ async function initPlayground() {
       });
     });
 
+    // ── Scroll Toolbar: double-click handle to roll/unroll ──────────────
+    const scrollToolbar = document.getElementById('floating-toolbar');
+    const setupScrollRoll = (handleEl, rollClass, otherClass) => {
+      if (!handleEl) return;
+      handleEl.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (scrollToolbar.classList.contains(rollClass)) {
+          // Unroll
+          scrollToolbar.classList.remove(rollClass);
+          scrollToolbar.classList.add('unrolled');
+          localStorage.removeItem('fd-toolbar-rolled');
+        } else {
+          // Roll up from this side
+          scrollToolbar.classList.remove('unrolled', otherClass);
+          scrollToolbar.classList.add(rollClass);
+          localStorage.setItem('fd-toolbar-rolled', rollClass.replace('rolled-', ''));
+        }
+      });
+    };
+    setupScrollRoll(document.querySelector('.handle-start'), 'rolled-left', 'rolled-right');
+    setupScrollRoll(document.querySelector('.handle-end'), 'rolled-right', 'rolled-left');
+    // Restore rolled state from localStorage
+    const savedRoll = localStorage.getItem('fd-toolbar-rolled');
+    if (savedRoll === 'left' || savedRoll === 'right') {
+      scrollToolbar.classList.remove('unrolled');
+      scrollToolbar.classList.add(`rolled-${savedRoll}`);
+    }
+
     // ── Floating Action Bar ─────────────────────────────────────────
     document.getElementById('fab-fill')?.addEventListener('input', (e) => {
       if (!fdCanvas) return;
@@ -3955,6 +3984,8 @@ async function initPlayground() {
       if (e.code === 'Space' && !e.repeat && !editorFocused) {
         isPanning = true;
         canvas.style.cursor = 'grab';
+        // Highlight Hand button in toolbar
+        document.querySelector('.ft-tool-btn[data-tool="hand"]')?.classList.add('pan-active');
         e.preventDefault();
         return;
       }
@@ -4117,6 +4148,18 @@ async function initPlayground() {
             return;
           }
 
+          // Handle zoomReset action (bare 0 key → 100%)
+          if (r.action === 'zoomReset') {
+            e.preventDefault();
+            zoomLevel = 1.0;
+            panX = 0;
+            panY = 0;
+            updateZoomIndicator();
+            renderCanvas();
+            renderMinimap(canvas);
+            return;
+          }
+
           if (r.changed) {
             renderCanvas();
             syncCanvasToEditor();
@@ -4129,6 +4172,8 @@ async function initPlayground() {
       if (e.code === 'Space') {
         isPanning = false;
         if (!panDragging) canvas.style.cursor = '';
+        // Remove pan indicator from Hand button
+        document.querySelector('.ft-tool-btn[data-tool="hand"]')?.classList.remove('pan-active');
       }
       // Clear modifier cursors
       if (e.key === 'Meta') canvas.classList.remove('modifier-cmd');

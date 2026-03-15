@@ -1082,6 +1082,18 @@ code {
 }
 .horizontal .left-roll { width: var(--left-roll-width); height: 38px; border-radius: 8px; }
 .horizontal .right-roll { width: var(--right-roll-width); height: 38px; border-radius: 8px; }
+/* Roll/unroll transitions */
+.scroll-toolbar .scroll-paper-body,
+.scroll-toolbar .left-roll,
+.scroll-toolbar .right-roll {
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1), padding 1s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
+}
+.scroll-toolbar.rolled-right .scroll-paper-body { width: 0; overflow: hidden; padding: 0; opacity: 0; }
+.scroll-toolbar.rolled-right .right-roll { width: 28px; }
+.scroll-toolbar.rolled-right .left-roll  { width: 4px; }
+.scroll-toolbar.rolled-left  .scroll-paper-body { width: 0; overflow: hidden; padding: 0; opacity: 0; }
+.scroll-toolbar.rolled-left  .left-roll  { width: 28px; }
+.scroll-toolbar.rolled-left  .right-roll { width: 4px; }
 .scroll-paper-body {
   background: linear-gradient(to bottom, #F8F8F8, #E8E8E8);
   display: flex;
@@ -1123,6 +1135,20 @@ code {
   box-shadow: 0 2px 6px rgba(42, 110, 240, 0.3);
 }
 .dark-canvas .ft-tool-btn.active { box-shadow: 0 2px 6px rgba(58, 130, 246, 0.4); }
+/* Space-hold pan indicator on Hand button */
+.ft-tool-btn.pan-active {
+  background: rgba(42, 110, 240, 0.15);
+  box-shadow: 0 0 0 2px rgba(42, 110, 240, 0.3);
+  animation: pan-pulse 1.5s ease-in-out infinite;
+}
+.dark-canvas .ft-tool-btn.pan-active {
+  background: rgba(58, 130, 246, 0.2);
+  box-shadow: 0 0 0 2px rgba(58, 130, 246, 0.35);
+}
+@keyframes pan-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(42, 110, 240, 0.3); }
+  50% { box-shadow: 0 0 0 4px rgba(42, 110, 240, 0.15); }
+}
 .ft-tooltip {
   position: absolute;
   bottom: calc(100% + 8px);
@@ -2154,7 +2180,11 @@ code {
 .zen-mode .playground-split { grid-template-columns: 1fr; }
 .zen-mode .split-resize-handle { display: none; }
 .zen-mode .playground-canvas { min-height: 500px; }
-.zen-mode #floating-toolbar { display: none !important; }
+.zen-mode #floating-toolbar {
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 16px;
+}
 .zen-mode #minimap-container { display: none !important; }
 
 /* ─── Full Screen Mode ─── */

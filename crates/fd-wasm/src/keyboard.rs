@@ -228,6 +228,7 @@ impl FdCanvas {
             | ShortcutAction::ZoomIn
             | ShortcutAction::ZoomOut
             | ShortcutAction::ZoomToFit
+            | ShortcutAction::ZoomReset
             | ShortcutAction::PanStart
             | ShortcutAction::PanEnd
             | ShortcutAction::ShowHelp
@@ -302,6 +303,7 @@ pub(crate) fn action_to_name(action: ShortcutAction) -> &'static str {
         ShortcutAction::ZoomIn => "zoomIn",
         ShortcutAction::ZoomOut => "zoomOut",
         ShortcutAction::ZoomToFit => "zoomToFit",
+        ShortcutAction::ZoomReset => "zoomReset",
         ShortcutAction::PanStart => "panStart",
         ShortcutAction::PanEnd => "panEnd",
         ShortcutAction::SendBackward => "sendBackward",
