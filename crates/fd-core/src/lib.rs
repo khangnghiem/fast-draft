@@ -1,3 +1,4 @@
+pub mod completion;
 pub mod emitter;
 pub mod excalidraw;
 pub mod format;
