@@ -1702,6 +1702,28 @@ code {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
+/* ─── Reparent Overlay (⌘+drag visual feedback) ─── */
+#reparent-overlay {
+  display: none;
+  position: absolute;
+  z-index: 199;
+  border: 2px dashed var(--fd-accent, #0A84FF);
+  border-radius: 8px;
+  background: rgba(10, 132, 255, 0.06);
+  pointer-events: none;
+  box-sizing: border-box;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--mono);
+  color: var(--fd-accent, #0A84FF);
+  letter-spacing: -0.01em;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  transition: left 0.06s ease, top 0.06s ease, width 0.06s ease, height 0.06s ease;
+}
+
 /* ─── Modifier Cursors ─── */
 #fd-canvas.tool-select { cursor: default; }
 #fd-canvas.tool-rect,

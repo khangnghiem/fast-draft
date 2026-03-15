@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.166 — Fix ⌘+Drag Reparent (R3.64)
+- **FIX (R3.64)**: ⌘+drag reparent now works correctly — root cause: `hit_test_at()` returned the dragged node itself (topmost at pointer position), so the `hitId !== selectedId` check always failed; new `hit_test_at_excluding(x, y, excludeId)` WASM API performs hit testing while skipping the dragged node and its descendants, revealing the container underneath
+- **CORE**: New `hit_test_excluding()` function in `fd-render/src/hit.rs` — recursive traversal that skips all nodes in an excluded `HashSet<NodeIndex>`; new `hit_test_at_excluding()` WASM API in `fd-wasm/src/props.rs` collects dragged node + all descendants into exclusion set
+- **UX (R3.64)**: Visual feedback during ⌘+drag — dashed blue overlay highlights the target container with "Nest into @id" label; overlay tracks pointer position in real-time during pointermove; hidden on pointer release
+- **PARITY**: ⌘+drag reparent + visual feedback ported to VS Code extension (`fd-vscode/webview/src/pointer.js`)
+- **TESTING**: New `hit_test_excluding_skips_dragged_node` regression test — verifies excluding @child reveals @container underneath; verifies excluding both returns None
+
 ### v0.11.165 — Mobile Canvas Polish (R6.7, R6.6)
 - **FIX (R6.7)**: Auto-fit content on mobile resize — `fitToContent()` now fires via debounced ResizeObserver (200ms) on ≤768px viewports, ensuring scene content is always centered and scaled to fit the canvas after layout changes; previously `fitToContent` only ran once at init (100ms timeout), which was too early for mobile CSS layout to settle
 - **UX (R6.6)**: Canvas-first mobile layout — code editor is hidden by default at ≤768px; new "{ } Code" toggle button in toolbar opens the editor as a full-screen overlay; "✕" close button in editor header dismisses back to canvas; auto-closes when viewport grows past 768px

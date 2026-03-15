@@ -602,6 +602,41 @@ impl FdCanvas {
             .unwrap_or_default()
     }
 
+    /// Hit-test at scene-space coordinates, excluding a specific node (and its children).
+    /// Used for ⌘+drag reparent so the dragged node doesn't block the container underneath.
+    pub fn hit_test_at_excluding(&self, x: f32, y: f32, exclude_id: &str) -> String {
+        let exclude = NodeId::intern(exclude_id);
+        let exclude_idx = self.engine.graph.index_of(exclude);
+
+        // Collect indices to exclude: the node itself + all descendants
+        let mut excluded_indices = std::collections::HashSet::new();
+        if let Some(idx) = exclude_idx {
+            excluded_indices.insert(idx);
+            // Also exclude children (for groups/frames being dragged)
+            fn collect_descendants(
+                graph: &fd_core::model::SceneGraph,
+                idx: fd_core::NodeIndex,
+                out: &mut std::collections::HashSet<fd_core::NodeIndex>,
+            ) {
+                for child in graph.children(idx) {
+                    out.insert(child);
+                    collect_descendants(graph, child, out);
+                }
+            }
+            collect_descendants(&self.engine.graph, idx, &mut excluded_indices);
+        }
+
+        fd_render::hit::hit_test_excluding(
+            &self.engine.graph,
+            self.engine.current_bounds(),
+            x,
+            y,
+            &excluded_indices,
+        )
+        .map(|id| id.as_str().to_string())
+        .unwrap_or_default()
+    }
+
     /// Hit-test for edges only at scene-space coordinates.
     pub fn hit_test_edge_at(&self, x: f32, y: f32) -> String {
         fd_render::hit::hit_test_edge(&self.engine.graph, self.engine.current_bounds(), x, y)

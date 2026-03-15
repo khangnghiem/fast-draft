@@ -4590,6 +4590,40 @@ async function initPlayground() {
       const moveResult = JSON.parse(moveResultJson);
       if (moveResult.changed) { renderDirty = true; uiDirty = true; }
 
+      // ⌘+drag reparent visual feedback: highlight target container during drag
+      if (activePointerId !== -1 && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+        const selectedId = fdCanvas.get_selected_id();
+        if (selectedId && fdCanvas.hit_test_at_excluding) {
+          try {
+            const hitId = fdCanvas.hit_test_at_excluding(x, y, selectedId);
+            const overlay = document.getElementById('reparent-overlay');
+            if (hitId && hitId !== selectedId) {
+              const boundsJson = fdCanvas.get_node_bounds(hitId);
+              if (boundsJson && overlay) {
+                const b = JSON.parse(boundsJson);
+                const sx = b.x * zoomLevel + panX;
+                const sy = b.y * zoomLevel + panY;
+                const sw = b.w * zoomLevel;
+                const sh = b.h * zoomLevel;
+                const wrapRect = document.getElementById('canvas-wrapper').getBoundingClientRect();
+                overlay.style.left = (sx - wrapRect.left + canvas.offsetLeft) + 'px';
+                overlay.style.top = (sy - wrapRect.top + canvas.offsetTop) + 'px';
+                overlay.style.width = sw + 'px';
+                overlay.style.height = sh + 'px';
+                overlay.dataset.target = hitId;
+                overlay.textContent = `Nest into @${hitId}`;
+                overlay.style.display = 'flex';
+              }
+            } else if (overlay) {
+              overlay.style.display = 'none';
+            }
+          } catch (_) { /* API may not exist */ }
+        }
+      } else {
+        const overlay = document.getElementById('reparent-overlay');
+        if (overlay) overlay.style.display = 'none';
+      }
+
       // Dimension tooltip — show W×H during drag (using bundled bounds)
       if (activePointerId !== -1 && moveResult.bounds) {
         const b = moveResult.bounds;
@@ -4643,24 +4677,28 @@ async function initPlayground() {
 
       const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
 
+      // Hide reparent overlay on pointer up
+      const reparentOverlay = document.getElementById('reparent-overlay');
+      if (reparentOverlay) reparentOverlay.style.display = 'none';
+
       // ⌘+drag reparent: if Cmd/Ctrl held, check if we're over a container
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
         const selectedId = fdCanvas.get_selected_id();
         if (selectedId) {
           try {
-            const hitJson = fdCanvas.hit_test_at(x, y);
-            if (hitJson) {
-              const hit = JSON.parse(hitJson);
-              if (hit.id && hit.id !== selectedId) {
-                const ok = fdCanvas.reparent_into(selectedId, hit.id);
-                if (ok) {
-                  renderDirty = true; uiDirty = true;
-                  syncCanvasToEditor();
-                  showToast(`Nested into ${hit.id}`);
-                }
+            // Use excluding hit test to skip the dragged node itself
+            const hitId = fdCanvas.hit_test_at_excluding
+              ? fdCanvas.hit_test_at_excluding(x, y, selectedId)
+              : '';
+            if (hitId && hitId !== selectedId) {
+              const ok = fdCanvas.reparent_into(selectedId, hitId);
+              if (ok) {
+                renderDirty = true; uiDirty = true;
+                syncCanvasToEditor();
+                showToast(`Nested into @${hitId}`);
               }
             }
-          } catch (_) { /* reparent_into or hit_test_at may not exist */ }
+          } catch (_) { /* reparent_into or hit_test_at_excluding may not exist */ }
         }
       }
 

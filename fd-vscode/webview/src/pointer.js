@@ -243,6 +243,51 @@ function setupPointerEvents() {
     } else if (!isDraggingNode) {
       nearDetachState = null;
     }
+
+    // ── ⌘+drag reparent visual feedback ──
+    if (pointerIsDown && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+      const selectedId = fdCanvas.get_selected_id();
+      if (selectedId && fdCanvas.hit_test_at_excluding) {
+        try {
+          const hitId = fdCanvas.hit_test_at_excluding(x, y, selectedId);
+          let overlay = document.getElementById('reparent-overlay');
+          if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'reparent-overlay';
+            overlay.style.cssText = 'display:none;position:absolute;z-index:199;' +
+              'border:2px dashed var(--fd-accent,#0A84FF);border-radius:8px;' +
+              'background:rgba(10,132,255,0.06);pointer-events:none;box-sizing:border-box;' +
+              'align-items:flex-start;justify-content:center;padding-top:4px;' +
+              'font-size:10px;font-weight:600;color:var(--fd-accent,#0A84FF);' +
+              'letter-spacing:-0.01em;font-family:monospace;';
+            const container = document.getElementById('canvas-container');
+            if (container) container.appendChild(overlay);
+          }
+          if (hitId && hitId !== selectedId) {
+            const boundsJson = fdCanvas.get_node_bounds(hitId);
+            if (boundsJson && overlay) {
+              const b = JSON.parse(boundsJson);
+              const sx = b.x * zoomLevel + panX;
+              const sy = b.y * zoomLevel + panY;
+              const sw = b.w * zoomLevel;
+              const sh = b.h * zoomLevel;
+              overlay.style.left = sx + 'px';
+              overlay.style.top = sy + 'px';
+              overlay.style.width = sw + 'px';
+              overlay.style.height = sh + 'px';
+              overlay.dataset.target = hitId;
+              overlay.textContent = `Nest into @${hitId}`;
+              overlay.style.display = 'flex';
+            }
+          } else if (overlay) {
+            overlay.style.display = 'none';
+          }
+        } catch (_) { /* API may not exist */ }
+      }
+    } else {
+      const overlay = document.getElementById('reparent-overlay');
+      if (overlay) overlay.style.display = 'none';
+    }
   });
 
   document.addEventListener("pointerup", (e) => {
@@ -329,6 +374,29 @@ function setupPointerEvents() {
     hideDimensionTooltip();
 
     // Animation drop on release removed (bug #4)
+
+    // ── ⌘+drag reparent: reparent into container on release ──
+    const reparentOverlay = document.getElementById('reparent-overlay');
+    if (reparentOverlay) reparentOverlay.style.display = 'none';
+
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+      const selectedId = fdCanvas.get_selected_id();
+      if (selectedId) {
+        try {
+          const hitId = fdCanvas.hit_test_at_excluding
+            ? fdCanvas.hit_test_at_excluding(x, y, selectedId)
+            : '';
+          if (hitId && hitId !== selectedId) {
+            const ok = fdCanvas.reparent_into(selectedId, hitId);
+            if (ok) {
+              render();
+              syncTextToExtension();
+              showToast(`Nested into @${hitId}`);
+            }
+          }
+        } catch (_) { /* reparent_into or hit_test_at_excluding may not exist */ }
+      }
+    }
 
     // ── Detach snap feedback: scale pop + glow on group detach ──
     if (isDraggingNode && fdCanvas && draggedNodeId) {
