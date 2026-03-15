@@ -42,6 +42,8 @@ pub enum ShortcutAction {
     ZoomIn,
     ZoomOut,
     ZoomToFit,
+    /// Reset zoom to 100% (bare `0` key).
+    ZoomReset,
     PanStart,
     PanEnd,
 
@@ -157,6 +159,7 @@ impl ShortcutMap {
             "f" | "F" => Some(ShortcutAction::ToolFrame),
             "e" | "E" => Some(ShortcutAction::ToolEraser),
             "h" | "H" => Some(ShortcutAction::ToolHand),
+            "0" => Some(ShortcutAction::ZoomReset),
             // Screenbrush: Tab = toggle between two most-used tools
             "Tab" => Some(ShortcutAction::ToggleLastTool),
             "Delete" | "Backspace" => Some(ShortcutAction::Delete),
@@ -329,6 +332,20 @@ mod tests {
             ShortcutMap::resolve("-", false, false, false, true),
             Some(ShortcutAction::ZoomOut)
         );
+        assert_eq!(
+            ShortcutMap::resolve("0", false, false, false, true),
+            Some(ShortcutAction::ZoomToFit)
+        );
+    }
+
+    #[test]
+    fn resolve_zoom_reset() {
+        // Bare 0 → ZoomReset (100%)
+        assert_eq!(
+            ShortcutMap::resolve("0", false, false, false, false),
+            Some(ShortcutAction::ZoomReset)
+        );
+        // ⌘0 → ZoomToFit (different action)
         assert_eq!(
             ShortcutMap::resolve("0", false, false, false, true),
             Some(ShortcutAction::ZoomToFit)

@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.153 — Hand Tool Improvements (R3.6, R6.6)
+- **FEATURE (R3.6)**: Bare `0` key shortcut → Reset zoom to 100% — new `ZoomReset` action in `shortcuts.rs`; `⌘0` remains Zoom-to-Fit; wired through WASM `keyboard.rs` and handled in `playground.js`
+- **FEATURE (R6.6)**: Floating toolbar visible in Zen mode — toolbar is centered at bottom instead of hidden; touch/iPad users can access Hand tool and other tools without keyboard
+- **FEATURE (R6.6)**: Scroll-roll minimize on toolbar handles — double-click right handle rolls paper right-to-left (1s CSS transition), double-click left handle rolls left-to-right; double-click again to unroll; state persisted in `localStorage` (`fd-toolbar-rolled`)
+- **FEATURE (R3.6)**: Space-hold pan visual indicator — Hand tool button shows pulsing blue ring animation (`.pan-active`) while Space is held; removed on Space release
+- **TESTING**: New `resolve_zoom_reset` test verifying bare `0` → ZoomReset and `⌘0` → ZoomToFit
+- **RUST**: `shortcuts.rs` (ZoomReset variant + mapping), `keyboard.rs` (action routing + name)
+- **SITE**: `style.css` (rolled-left/rolled-right CSS, pan-active pulse, Zen toolbar), `playground.js` (scroll-roll dblclick, zoomReset handler, pan indicator)
+
 ### v0.11.152 — Apple Pencil Pro Squeeze Combos + Pressure-Sensitive Pen Strokes (R3.10, R3.22)
 - **FEATURE (R3.10)**: Apple Pencil Pro squeeze detection ported to site playground — `pointerdown` with `button=5 && pointerType='pen'` triggers tool toggle via `handle_stylus_squeeze()`; modifier combos: plain=toggle
 
