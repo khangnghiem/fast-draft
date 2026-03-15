@@ -339,7 +339,41 @@ impl FdCanvas {
             ancestor = self.engine.graph.parent(a);
         }
 
+        // Capture absolute bounds BEFORE reparent so we can preserve visual position
+        let abs_bounds = self.engine.current_bounds().get(&child_idx).copied();
+
         self.engine.graph.reparent_node(child_idx, target_idx);
+
+        // Fix #1: Adjust Position constraint to be relative to the new parent
+        // so the node stays visually in-place (mirrors detach_child_from_group logic).
+        if let Some(child_b) = abs_bounds {
+            let new_parent_offset = self
+                .engine
+                .current_bounds()
+                .get(&target_idx)
+                .map(|b| (b.x, b.y))
+                .unwrap_or((0.0, 0.0));
+            let new_rel_x = ((child_b.x - new_parent_offset.0) * 100.0).round() / 100.0;
+            let new_rel_y = ((child_b.y - new_parent_offset.1) * 100.0).round() / 100.0;
+
+            if let Some(node) = self.engine.graph.get_by_id_mut(child) {
+                // Remove all positional constraints and set an explicit Position
+                node.constraints.retain(|c| {
+                    !matches!(
+                        c,
+                        Constraint::Position { .. }
+                            | Constraint::Offset { .. }
+                            | Constraint::CenterIn(_)
+                            | Constraint::FillParent { .. }
+                    )
+                });
+                node.constraints.push(Constraint::Position {
+                    x: new_rel_x,
+                    y: new_rel_y,
+                });
+            }
+        }
+
         self.engine.mark_dirty();
         self.engine.flush_to_text();
         self.rebuild_spatial_index();

@@ -1443,9 +1443,9 @@ function parseLayerTree(source) {
 }
 
 /** Render a layer tree node as HTML. */
-function renderLayerNode(node, selectedId, depth = 0) {
+function renderLayerNode(node, selectedIds, depth = 0) {
   const icon = LAYER_ICONS[node.kind] || '•';
-  const isSelected = node.id === selectedId;
+  const isSelected = selectedIds.has(node.id);
   const hasChildren = node.children.length > 0;
 
   let indent = '';
@@ -1465,7 +1465,7 @@ function renderLayerNode(node, selectedId, depth = 0) {
 
   if (hasChildren) {
     html += `<div class="layer-children" data-parent-id="${escHtml(node.id)}">`;
-    for (const child of node.children) html += renderLayerNode(child, selectedId, depth + 1);
+    for (const child of node.children) html += renderLayerNode(child, selectedIds, depth + 1);
     html += '</div>';
   }
   return html;
@@ -1473,6 +1473,25 @@ function renderLayerNode(node, selectedId, depth = 0) {
 
 let lastLayerText = '';
 let lastLayerSelectedId = '';
+
+/** Last clicked layer item ID — for ⇧+click range select */
+let lastClickedLayerId = '';
+
+/** Flatten a layer tree into a visible-order array of IDs (respects collapsed state). */
+function flattenLayerTree(nodes, panel) {
+  const result = [];
+  for (const node of nodes) {
+    result.push(node.id);
+    if (node.children.length > 0) {
+      const childrenEl = panel?.querySelector(`.layer-children[data-parent-id="${node.id}"]`);
+      const isCollapsed = childrenEl?.classList.contains('collapsed');
+      if (!isCollapsed) {
+        result.push(...flattenLayerTree(node.children, panel));
+      }
+    }
+  }
+  return result;
+}
 
 /** Close any open layer context menu. */
 function closeLayerCtxMenu() {
@@ -1692,6 +1711,12 @@ function wireLayerContextMenu(panel) {
 
       // "Move to Root"
       menuHtml += `<div class="layer-ctx-item" data-action="move-to-root"><span class="ctx-icon">↑</span>Move to Root</div>`;
+      menuHtml += '<div class="layer-ctx-sep"></div>';
+      menuHtml += `<div class="layer-ctx-item" data-action="duplicate"><span class="ctx-icon">⊕</span>Duplicate</div>`;
+      menuHtml += `<div class="layer-ctx-item" data-action="copy"><span class="ctx-icon">⎘</span>Copy</div>`;
+      menuHtml += `<div class="layer-ctx-item" data-action="paste"><span class="ctx-icon">⎗</span>Paste</div>`;
+      menuHtml += '<div class="layer-ctx-sep"></div>';
+      menuHtml += `<div class="layer-ctx-item layer-ctx-danger" data-action="delete"><span class="ctx-icon">✕</span>Delete</div>`;
 
       const menu = document.createElement('div');
       menu.className = 'layer-ctx-menu';
@@ -1723,6 +1748,24 @@ function wireLayerContextMenu(panel) {
             changed = fdCanvas.reparent_into(nodeId, targetId);
           } else if (action === 'move-to-root') {
             changed = fdCanvas.reparent_into(nodeId, 'root');
+          } else if (action === 'duplicate') {
+            fdCanvas.select_by_id(nodeId);
+            changed = fdCanvas.duplicate_selected();
+          } else if (action === 'copy') {
+            fdCanvas.select_by_id(nodeId);
+            copySelectedAsFd();
+            closeLayerCtxMenu();
+            return;
+          } else if (action === 'paste') {
+            pasteFromClipboard().then(() => {
+              renderCanvas(); syncCanvasToEditor();
+              updatePropertiesPanel(); refreshLayersPanel();
+            });
+            closeLayerCtxMenu();
+            return;
+          } else if (action === 'delete') {
+            fdCanvas.select_by_id(nodeId);
+            changed = fdCanvas.delete_selected();
           }
 
           if (changed) {
@@ -1756,14 +1799,16 @@ function refreshLayersPanel() {
   const panel = document.getElementById('layers-panel');
   if (!panel || !fdCanvas) return;
 
-  const selectedId = fdCanvas.get_selected_id() || '';
+  // Use full set of selected IDs for multi-select highlighting
+  const selectedIds = new Set(JSON.parse(fdCanvas.get_selected_ids()));
+  const selectedKey = [...selectedIds].sort().join(',');
   const source = fdCanvas.get_text();
 
   // Selection-only change: just update highlights
-  if (source === lastLayerText && selectedId !== lastLayerSelectedId) {
-    lastLayerSelectedId = selectedId;
+  if (source === lastLayerText && selectedKey !== lastLayerSelectedId) {
+    lastLayerSelectedId = selectedKey;
     panel.querySelectorAll('.layer-item').forEach(el =>
-      el.classList.toggle('selected', el.getAttribute('data-node-id') === selectedId)
+      el.classList.toggle('selected', selectedIds.has(el.getAttribute('data-node-id')))
     );
     const sel = panel.querySelector('.layer-item.selected');
     if (sel) sel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -1771,10 +1816,10 @@ function refreshLayersPanel() {
   }
 
   // No change at all
-  if (source === lastLayerText && selectedId === lastLayerSelectedId) return;
+  if (source === lastLayerText && selectedKey === lastLayerSelectedId) return;
 
   lastLayerText = source;
-  lastLayerSelectedId = selectedId;
+  lastLayerSelectedId = selectedKey;
 
   const tree = parseLayerTree(source);
   const countNodes = (nodes) => nodes.reduce((s, n) => s + 1 + countNodes(n.children), 0);
@@ -1784,27 +1829,64 @@ function refreshLayersPanel() {
   html += '<span class="layers-title">Layers</span>';
   html += `<span class="layers-count">${total}</span>`;
   html += '</div><div class="layers-body">';
-  for (const node of tree) html += renderLayerNode(node, selectedId);
+  for (const node of tree) html += renderLayerNode(node, selectedIds);
   html += '</div>';
 
   panel.innerHTML = html;
 
-  // Wire click-to-select
+  // Wire click-to-select with ⌘+click multi and ⇧+click range
   panel.querySelectorAll('.layer-item').forEach(item => {
     item.addEventListener('click', (e) => {
       if (e.target.closest('.layer-chevron')) return;
       e.stopPropagation();
       const nodeId = item.getAttribute('data-node-id');
-      if (nodeId && fdCanvas) {
-        fdCanvas.select_by_id(nodeId);
-        renderCanvas();
-        lastLayerSelectedId = nodeId;
+      if (!nodeId || !fdCanvas) return;
+
+      // ⌘+click (Mac) / Ctrl+click — toggle
+      if (e.metaKey || e.ctrlKey) {
+        fdCanvas.toggle_select_by_id(nodeId);
+        lastClickedLayerId = nodeId;
+        const newIds = new Set(JSON.parse(fdCanvas.get_selected_ids()));
+        lastLayerSelectedId = [...newIds].sort().join(',');
         panel.querySelectorAll('.layer-item').forEach(el =>
-          el.classList.toggle('selected', el.getAttribute('data-node-id') === nodeId)
+          el.classList.toggle('selected', newIds.has(el.getAttribute('data-node-id')))
         );
-        updateFab(document.getElementById('fd-canvas'));
+        renderDirty = true;
         updatePropertiesPanel();
+        return;
       }
+
+      // ⇧+click — range select
+      if (e.shiftKey && lastClickedLayerId) {
+        const flatIds = flattenLayerTree(tree, panel);
+        const startIdx = flatIds.indexOf(lastClickedLayerId);
+        const endIdx = flatIds.indexOf(nodeId);
+        if (startIdx >= 0 && endIdx >= 0) {
+          const lo = Math.min(startIdx, endIdx);
+          const hi = Math.max(startIdx, endIdx);
+          const rangeIds = flatIds.slice(lo, hi + 1);
+          fdCanvas.select_multiple_by_ids(JSON.stringify(rangeIds));
+          const newIds = new Set(rangeIds);
+          lastLayerSelectedId = [...newIds].sort().join(',');
+          panel.querySelectorAll('.layer-item').forEach(el =>
+            el.classList.toggle('selected', newIds.has(el.getAttribute('data-node-id')))
+          );
+          renderDirty = true;
+          updatePropertiesPanel();
+          return;
+        }
+      }
+
+      // Plain click — single select
+      lastClickedLayerId = nodeId;
+      fdCanvas.select_by_id(nodeId);
+      renderCanvas();
+      lastLayerSelectedId = nodeId;
+      panel.querySelectorAll('.layer-item').forEach(el =>
+        el.classList.toggle('selected', el.getAttribute('data-node-id') === nodeId)
+      );
+      updateFab(document.getElementById('fd-canvas'));
+      updatePropertiesPanel();
     });
   });
 
@@ -1826,6 +1908,58 @@ function refreshLayersPanel() {
 
   // ── Layer Context Menu (#3 "Move Into") ──
   wireLayerContextMenu(panel);
+
+  // ── Keyboard shortcuts when layers panel is focused (#7) ──
+  wireLayerKeyboardShortcuts(panel);
+}
+
+/** Wire keyboard shortcuts for layers panel — Delete, ⌘C/X/V/D */
+function wireLayerKeyboardShortcuts(panel) {
+  if (!panel.hasAttribute('tabindex')) panel.setAttribute('tabindex', '-1');
+  if (panel._layerKeysWired) return;
+  panel._layerKeysWired = true;
+
+  panel.addEventListener('keydown', (e) => {
+    if (!fdCanvas) return;
+    const meta = e.metaKey || e.ctrlKey;
+    const key = e.key.toLowerCase();
+
+    if (key === 'delete' || key === 'backspace') {
+      e.preventDefault(); e.stopPropagation();
+      if (fdCanvas.delete_selected()) {
+        renderCanvas(); syncCanvasToEditor();
+        updatePropertiesPanel(); refreshLayersPanel();
+      }
+      return;
+    }
+    if (meta && key === 'd') {
+      e.preventDefault(); e.stopPropagation();
+      if (fdCanvas.duplicate_selected()) {
+        renderCanvas(); syncCanvasToEditor();
+        updatePropertiesPanel(); refreshLayersPanel();
+      }
+      return;
+    }
+    if (meta && key === 'c' && !e.shiftKey) {
+      e.preventDefault(); e.stopPropagation();
+      copySelectedAsFd(); return;
+    }
+    if (meta && key === 'x') {
+      e.preventDefault(); e.stopPropagation();
+      cutSelectedAsFd();
+      renderCanvas(); syncCanvasToEditor();
+      updatePropertiesPanel(); refreshLayersPanel();
+      return;
+    }
+    if (meta && key === 'v') {
+      e.preventDefault(); e.stopPropagation();
+      pasteFromClipboard().then(() => {
+        renderCanvas(); syncCanvasToEditor();
+        updatePropertiesPanel(); refreshLayersPanel();
+      });
+      return;
+    }
+  });
 }
 
 /** ─── Minimap ─────────────────────────────────────────────────────────── */
