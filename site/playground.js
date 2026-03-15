@@ -3285,6 +3285,23 @@ function setupTouchGestures(canvas, fdCanvasRef, markRenderDirty, markUiDirty) {
   }
 }
 
+// ── Apple Pencil Pro Squeeze Detection ────────────────────────────────────
+// On iPad Safari, Apple Pencil Pro squeeze fires as a button=5 pointer event.
+// Modifier combos: plain=toggle last two tools, Shift=Pen, Ctrl=Select,
+// Alt=Rect, Ctrl+Shift=Ellipse.
+function setupApplePencilPro(canvas) {
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'pen' && e.button === 5 && fdCanvas) {
+      const newTool = fdCanvas.handle_stylus_squeeze(
+        e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
+      );
+      updateToolbar(newTool);
+      canvas.style.cursor = (newTool === 'select' || newTool === 'eraser') ? '' : 'crosshair';
+      if (newTool === 'hand') canvas.style.cursor = 'grab';
+    }
+  });
+}
+
 async function initPlayground() {
   const editorMount = document.getElementById('fd-editor');
   const canvas = document.getElementById('fd-canvas');
@@ -3879,6 +3896,9 @@ async function initPlayground() {
 
     // ── Touch Gestures (inertia, 3-finger undo/redo, long-press, pencil) ──
     setupTouchGestures(canvas, fdCanvas, () => renderDirty = true, () => uiDirty = true);
+
+    // ── Apple Pencil Pro squeeze detection ──
+    setupApplePencilPro(canvas);
 
     // ── Tool Toolbar (floating scroll) ────────────────────────────────────
     document.querySelectorAll('.ft-tool-btn[data-tool]').forEach(btn => {

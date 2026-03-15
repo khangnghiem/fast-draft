@@ -370,6 +370,17 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
                 GraphMutation::RemoveEdge { id: *id }
             }
         }
+        GraphMutation::SetStrokeWidth { id, width: _ } => {
+            let old_width = engine
+                .graph
+                .get_by_id(*id)
+                .and_then(|n| n.props.stroke.as_ref().map(|s| s.width))
+                .unwrap_or(2.5);
+            GraphMutation::SetStrokeWidth {
+                id: *id,
+                width: old_width,
+            }
+        }
     }
 }
 
