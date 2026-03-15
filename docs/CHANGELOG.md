@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.165 — Mobile Canvas Polish (R6.7, R6.6)
+- **FIX (R6.7)**: Auto-fit content on mobile resize — `fitToContent()` now fires via debounced ResizeObserver (200ms) on ≤768px viewports, ensuring scene content is always centered and scaled to fit the canvas after layout changes; previously `fitToContent` only ran once at init (100ms timeout), which was too early for mobile CSS layout to settle
+- **UX (R6.6)**: Canvas-first mobile layout — code editor is hidden by default at ≤768px; new "{ } Code" toggle button in toolbar opens the editor as a full-screen overlay; "✕" close button in editor header dismisses back to canvas; auto-closes when viewport grows past 768px
+- **UX (R6.6)**: Compact toolbar at ≤768px — hide text labels on non-essential items (AI Touch, Renamify, Notes, Share, Fullscreen, Status); reduce toolbar height from 42px to 36px; smaller font/padding on remaining buttons
+- **UX (R6.6)**: Floating scroll toolbar rescaled to 82% at ≤768px with reduced bottom offset (4px), preventing clipping on small canvas areas
+- **FIX (R6.7)**: Orientation change handler — `orientationchange` event fires `resizeCanvas()` + `fitToContent()` after 300ms delay (iOS layout settle time)
+- **SITE**: Changes in `site/style.css`, `site/index.html`, `site/playground.js`
+
 ### v0.11.164 — Responsive Canvas Fix + Mobile Layers Drawer (R6.7)
 - **FIX (R6.7)**: Canvas no longer has 180px dead space at ≤768px viewport — root cause: `#layers-panel` was hidden via `display: none !important` but `--layers-width` CSS custom property was never reset to `0px`, so `#fd-canvas` still used `left: var(--layers-width, 180px)` and `width: calc(100% - 180px - ...)` even though the panel was invisible; fix: added `#canvas-wrapper { --layers-width: 0px; --props-width: 0px; }` to the ≤768px media query
 - **FEATURE (R6.7)**: Layers panel accessible on mobile as slide-in drawer — instead of `display: none`, the layers panel is now positioned as an absolute overlay that slides in from the left with a smooth 250ms transition; "☰ Layers" toggle button in the canvas toolbar (tb-right zone) opens/closes the drawer; frosted glass backdrop (click to dismiss); drawer auto-closes when viewport grows past 768px via `matchMedia` listener

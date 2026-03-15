@@ -543,6 +543,32 @@ code {
   background: var(--fd-accent-dim, rgba(0,122,255,0.1));
 }
 
+/* Mobile code toggle — hidden on desktop, shown at ≤768px */
+#mobile-code-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  color: var(--fd-text-secondary, #86868B);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  gap: 4px;
+}
+#mobile-code-toggle:hover {
+  background: var(--fd-surface-hover, rgba(0,0,0,0.06));
+  color: var(--fd-text, #1D1D1F);
+}
+#mobile-code-toggle.active {
+  color: var(--fd-accent, #007AFF);
+  background: var(--fd-accent-dim, rgba(0,122,255,0.1));
+}
+
 /* ── Tool Buttons ── */
 .tool-btn {
   padding: 4px 8px;
@@ -2356,10 +2382,22 @@ code {
   .playground-split {
     grid-template-columns: 1fr;
     min-height: auto;
+    position: relative;
   }
   .split-resize-handle { display: none; }
-  .playground-editor { min-height: 280px; }
-  .playground-canvas { min-height: 320px; }
+
+  /* #4: Canvas-first — hide code editor by default, show as overlay */
+  .playground-editor {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 200;
+    min-height: auto;
+  }
+  .playground-editor.mobile-code-open {
+    display: flex;
+  }
+  .playground-canvas { min-height: 50vh; }
 
   .features-grid { grid-template-columns: 1fr; }
   .modes-grid { grid-template-columns: 1fr; }
@@ -2394,8 +2432,28 @@ code {
   .panel-resize-handle.props-handle { display: none !important; }
   .panel-restore-strip.props-restore { display: none !important; }
 
-  #floating-toolbar { left: 8px; }
+  /* #3: Rescale floating toolbar for small canvas */
+  #floating-toolbar {
+    left: 8px;
+    transform: scale(0.82);
+    transform-origin: bottom left;
+    bottom: 4px;
+  }
   #minimap-container { display: none; }
+
+  /* #2: Compact toolbar — hide text labels and non-essential items */
+  .canvas-label { font-size: 0; width: 0; overflow: hidden; padding: 0; margin: 0; }
+  .canvas-label .editor-dot { font-size: 12px; width: auto; margin: 0; }
+  #ai-touch-btn, #renamify-btn, #notes-toggle-btn,
+  #canvas-status, #share-btn, #fullscreen-toggle-btn { display: none !important; }
+  #canvas-toolbar { padding: 6px 8px; height: 36px; gap: 2px; }
+  .tb-zone { gap: 2px; }
+  .tool-btn { font-size: 10px; padding: 3px 6px; }
+
+  /* #4: Mobile code toggle button (visible only on mobile) */
+  #mobile-code-toggle {
+    display: inline-flex;
+  }
 
   /* Mobile layers backdrop (click to dismiss) */
   #mobile-layers-backdrop {
