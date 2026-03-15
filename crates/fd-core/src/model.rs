@@ -820,6 +820,26 @@ impl SceneGraph {
         self.rebuild_child_order(parent, &siblings, pos, last)
     }
 
+    /// Move a child to a specific index within its parent's children.
+    /// Clamps `target_index` to `[0, sibling_count - 1]`.
+    /// Returns true if the order changed.
+    pub fn move_child_to_index(&mut self, child: NodeIndex, target_index: usize) -> bool {
+        let parent = match self.parent(child) {
+            Some(p) => p,
+            None => return false,
+        };
+        let siblings = self.children(parent);
+        let from = match siblings.iter().position(|&s| s == child) {
+            Some(p) => p,
+            None => return false,
+        };
+        let to = target_index.min(siblings.len().saturating_sub(1));
+        if from == to {
+            return false;
+        }
+        self.rebuild_child_order(parent, &siblings, from, to)
+    }
+
     /// Rebuild child edges, moving child at `from` to `to` position.
     fn rebuild_child_order(
         &mut self,
@@ -1632,5 +1652,128 @@ mod tests {
             "Z-order should survive emit→parse roundtrip. Emitted:\n{}",
             text
         );
+    }
+
+    #[test]
+    fn move_child_to_index_basic() {
+        let mut sg = SceneGraph::new();
+        let a = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("a"),
+                NodeKind::Rect {
+                    width: 10.0,
+                    height: 10.0,
+                },
+            ),
+        );
+        let _b = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("b"),
+                NodeKind::Rect {
+                    width: 10.0,
+                    height: 10.0,
+                },
+            ),
+        );
+        let _c = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("c"),
+                NodeKind::Rect {
+                    width: 10.0,
+                    height: 10.0,
+                },
+            ),
+        );
+        // Move "a" from index 0 to index 2 (last)
+        assert!(sg.move_child_to_index(a, 2));
+        let ids: Vec<&str> = sg
+            .children(sg.root)
+            .iter()
+            .map(|&i| sg.graph[i].id.as_str())
+            .collect();
+        assert_eq!(ids, vec!["b", "c", "a"]);
+    }
+
+    #[test]
+    fn move_child_to_index_out_of_bounds() {
+        let mut sg = SceneGraph::new();
+        let a = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("a"),
+                NodeKind::Rect {
+                    width: 10.0,
+                    height: 10.0,
+                },
+            ),
+        );
+        let _b = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("b"),
+                NodeKind::Rect {
+                    width: 10.0,
+                    height: 10.0,
+                },
+            ),
+        );
+        // Index 999 should clamp to last position (1)
+        assert!(sg.move_child_to_index(a, 999));
+        let ids: Vec<&str> = sg
+            .children(sg.root)
+            .iter()
+            .map(|&i| sg.graph[i].id.as_str())
+            .collect();
+        assert_eq!(ids, vec!["b", "a"]);
+    }
+
+    #[test]
+    fn move_child_to_index_noop() {
+        let mut sg = SceneGraph::new();
+        let a = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("a"),
+                NodeKind::Rect {
+                    width: 10.0,
+                    height: 10.0,
+                },
+            ),
+        );
+        // Move to same index → no change
+        assert!(!sg.move_child_to_index(a, 0));
+    }
+
+    #[test]
+    fn reparent_then_children_correct() {
+        let mut sg = SceneGraph::new();
+        let group = sg.add_node(
+            sg.root,
+            SceneNode::new(NodeId::intern("g"), NodeKind::Group),
+        );
+        let rect = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("r"),
+                NodeKind::Rect {
+                    width: 10.0,
+                    height: 10.0,
+                },
+            ),
+        );
+        // rect is child of root initially
+        assert_eq!(sg.children(sg.root).len(), 2);
+        // Reparent rect into group
+        sg.reparent_node(rect, group);
+        assert_eq!(sg.children(sg.root).len(), 1);
+        assert_eq!(sg.children(group).len(), 1);
+        assert_eq!(sg.children(group)[0], rect);
+        // Reparent back to root
+        sg.reparent_node(rect, sg.root);
+        assert_eq!(sg.children(sg.root).len(), 2);
+        assert_eq!(sg.children(group).len(), 0);
     }
 }

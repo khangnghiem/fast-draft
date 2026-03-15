@@ -82,6 +82,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.65** _(done)_: Drag-back-to-cancel — during a draw gesture, dragging back within 5px of the starting point resets the shape; pointer-up then triggers click-to-place (default size) instead of a tiny drawn shape; applies to RectTool and EllipseTool
 - **R3.66** _(done)_: iPad interaction polish — persistent smart defaults via localStorage (fill/stroke/strokeWidth/opacity remembered across sessions); dimension tooltip during draw-tool gestures (Rect/Ellipse/Frame); 3-finger double-tap = undo (removed single-tap undo); pencil hover ghost preview for draw tools; Shift+Alt square/circle-from-center combo
 - **R3.67** _(done)_: Input-aware Hand tool — Apple Pencil selects/moves (delegates to Select behavior), finger/mouse always pans; visual mode indicator (cursor changes on pen hover); drag-from-toolbar-to-canvas creates shapes in one gesture
+- **R3.68** _(done)_: Layer drag-to-reparent — drag layer items to reparent into containers (split-zone: top/bottom 25% = reorder, middle 50% = nest); drag-to-reorder z-order siblings; right-click "Move Into" context menu; drop-to-root (empty space); all operations push undo snapshots; WASM `reorder_child()` + `get_container_ids()` APIs; `reparent_into()` enhanced to accept "root" target
 
 #### R3c: Navigation & View
 
@@ -342,7 +343,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | resizable panels | R6.7 |
 | edge selection | R3.1, R1.10 |
 | tool locking / sticky | R3.63 |
-| reparent / nesting | R3.34, R3.64 |
+| reparent / nesting | R3.34, R3.64, R3.68 |
 | drag-back-to-cancel | R3.65 |
 | smart defaults / ipad | R3.66, R3.42 |
 | hand tool / input-aware | R3.67, R6.6 |

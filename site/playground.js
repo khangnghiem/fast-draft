@@ -1454,7 +1454,8 @@ function renderLayerNode(node, selectedId, depth = 0) {
   const chevronClass = hasChildren ? 'layer-chevron expanded' : 'layer-chevron empty';
   const chevron = `<span class="${chevronClass}" data-toggle-id="${escHtml(node.id)}">▶</span>`;
 
-  let html = `<div class="layer-item${isSelected ? ' selected' : ''}" data-node-id="${escHtml(node.id)}">`;
+  const isContainer = ['rect','ellipse','frame','group'].includes(node.kind);
+  let html = `<div class="layer-item${isSelected ? ' selected' : ''}" data-node-id="${escHtml(node.id)}" data-node-kind="${escHtml(node.kind)}" draggable="true">`;
   html += `<span class="layer-indent">${indent}</span>`;
   html += chevron;
   html += `<span class="layer-icon">${icon}</span>`;
@@ -1472,6 +1473,283 @@ function renderLayerNode(node, selectedId, depth = 0) {
 
 let lastLayerText = '';
 let lastLayerSelectedId = '';
+
+/** Close any open layer context menu. */
+function closeLayerCtxMenu() {
+  document.querySelectorAll('.layer-ctx-menu').forEach(m => m.remove());
+}
+
+/** Clear all drag indicators from layer items. */
+function clearLayerDragIndicators(panel) {
+  panel.querySelectorAll('.layer-item').forEach(el => {
+    el.classList.remove('drag-over-nest', 'drag-over-above', 'drag-over-below');
+  });
+  panel.querySelectorAll('.layers-body').forEach(el => {
+    el.classList.remove('drag-over-root');
+  });
+}
+
+/** Determine the drop zone based on cursor Y position within the element.
+ *  Returns 'above' (top 25%), 'below' (bottom 25%), or 'nest' (middle 50%). */
+function getDropZone(e, el) {
+  const rect = el.getBoundingClientRect();
+  const y = e.clientY - rect.top;
+  const h = rect.height;
+  if (y < h * 0.25) return 'above';
+  if (y > h * 0.75) return 'below';
+  return 'nest';
+}
+
+/** Collect a flat ordered list of {id, index-within-parent} from the DOM. */
+function getSiblingIndex(panel, nodeId) {
+  const item = panel.querySelector(`.layer-item[data-node-id="${nodeId}"]`);
+  if (!item) return 0;
+  const parent = item.parentElement;
+  if (!parent) return 0;
+  const siblings = [...parent.querySelectorAll(':scope > .layer-item')];
+  return siblings.indexOf(item);
+}
+
+/** Wire drag-and-drop handlers on all layer items (#1, #2, #4, #5). */
+function wireLayerDragDrop(panel) {
+  if (!fdCanvas) return;
+  let draggedId = null;
+
+  panel.querySelectorAll('.layer-item').forEach(item => {
+    // ── dragstart ──
+    item.addEventListener('dragstart', (e) => {
+      draggedId = item.getAttribute('data-node-id');
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', draggedId);
+    });
+
+    // ── dragover ── (determines drop zone indicator)
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const targetId = item.getAttribute('data-node-id');
+      if (!draggedId || targetId === draggedId) return;
+
+      clearLayerDragIndicators(panel);
+      const zone = getDropZone(e, item);
+      const kind = item.getAttribute('data-node-kind');
+      const isContainer = ['rect','ellipse','frame','group'].includes(kind);
+
+      if (zone === 'nest' && isContainer) {
+        item.classList.add('drag-over-nest');
+      } else if (zone === 'above') {
+        item.classList.add('drag-over-above');
+      } else {
+        item.classList.add('drag-over-below');
+      }
+    });
+
+    // ── dragleave ──
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('drag-over-nest', 'drag-over-above', 'drag-over-below');
+    });
+
+    // ── drop ── (#1 reparent, #2 reorder, #4 undo guard)
+    item.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      clearLayerDragIndicators(panel);
+      const targetId = item.getAttribute('data-node-id');
+      if (!draggedId || !fdCanvas || targetId === draggedId) return;
+
+      const textBefore = fdCanvas.get_text();
+      const zone = getDropZone(e, item);
+      const kind = item.getAttribute('data-node-kind');
+      const isContainer = ['rect','ellipse','frame','group'].includes(kind);
+      let changed = false;
+
+      if (zone === 'nest' && isContainer) {
+        // #1: Reparent into container
+        changed = fdCanvas.reparent_into(draggedId, targetId);
+      } else {
+        // #2: Reorder — calculate target index
+        const targetIndex = getSiblingIndex(panel, targetId);
+        const insertIndex = zone === 'above' ? targetIndex : targetIndex + 1;
+        // Check if same parent — if so, reorder; otherwise reparent first
+        const targetItem = panel.querySelector(`.layer-item[data-node-id="${targetId}"]`);
+        const dragItem = panel.querySelector(`.layer-item[data-node-id="${draggedId}"]`);
+        const targetParent = targetItem?.parentElement?.getAttribute?.('data-parent-id');
+        const dragParent = dragItem?.parentElement?.getAttribute?.('data-parent-id');
+        if (targetParent && dragParent && targetParent === dragParent) {
+          // Same parent — pure reorder
+          changed = fdCanvas.reorder_child(draggedId, insertIndex);
+        } else if (targetParent) {
+          // Different parent — reparent into target's parent, then reorder
+          changed = fdCanvas.reparent_into(draggedId, targetParent);
+          if (changed) {
+            fdCanvas.reorder_child(draggedId, insertIndex);
+          }
+        } else {
+          // Target is at root level — reparent to root, then reorder
+          changed = fdCanvas.reparent_into(draggedId, 'root');
+          if (changed) {
+            fdCanvas.reorder_child(draggedId, insertIndex);
+          }
+        }
+      }
+
+      // #4: Undo snapshot guard
+      if (changed) {
+        const textAfter = fdCanvas.get_text();
+        if (textBefore !== textAfter) {
+          fdCanvas.push_undo_snapshot(textBefore, textAfter);
+        }
+        renderCanvas();
+        syncCanvasToEditor();
+        updatePropertiesPanel();
+        refreshLayersPanel();
+      }
+      draggedId = null;
+    });
+
+    // ── dragend ── (cleanup)
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      clearLayerDragIndicators(panel);
+      draggedId = null;
+    });
+  });
+
+  // #5: Drop-to-root — drop on empty space in layers-body
+  const layersBody = panel.querySelector('.layers-body');
+  if (layersBody) {
+    layersBody.addEventListener('dragover', (e) => {
+      // Only highlight if dropping on empty space (not on a layer-item)
+      if (e.target.closest('.layer-item')) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      clearLayerDragIndicators(panel);
+      layersBody.classList.add('drag-over-root');
+    });
+    layersBody.addEventListener('dragleave', (e) => {
+      if (!layersBody.contains(e.relatedTarget) || e.relatedTarget?.closest('.layer-item')) {
+        layersBody.classList.remove('drag-over-root');
+      }
+    });
+    layersBody.addEventListener('drop', (e) => {
+      if (e.target.closest('.layer-item')) return; // handled by item drop
+      e.preventDefault();
+      layersBody.classList.remove('drag-over-root');
+      if (!draggedId || !fdCanvas) return;
+
+      const textBefore = fdCanvas.get_text();
+      const changed = fdCanvas.reparent_into(draggedId, 'root');
+      if (changed) {
+        const textAfter = fdCanvas.get_text();
+        if (textBefore !== textAfter) {
+          fdCanvas.push_undo_snapshot(textBefore, textAfter);
+        }
+        renderCanvas();
+        syncCanvasToEditor();
+        updatePropertiesPanel();
+        refreshLayersPanel();
+      }
+      draggedId = null;
+    });
+  }
+}
+
+/** Wire right-click context menu on layer items (#3 "Move Into"). */
+function wireLayerContextMenu(panel) {
+  if (!fdCanvas) return;
+
+  panel.querySelectorAll('.layer-item').forEach(item => {
+    item.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeLayerCtxMenu();
+
+      const nodeId = item.getAttribute('data-node-id');
+      if (!nodeId) return;
+
+      // Build context menu
+      let menuHtml = '';
+
+      // "Move Into ▸" submenu — list valid containers
+      if (fdCanvas.get_container_ids) {
+        try {
+          const containers = JSON.parse(fdCanvas.get_container_ids());
+          const validTargets = containers.filter(c => c.id !== nodeId);
+          if (validTargets.length > 0) {
+            menuHtml += `<div class="layer-ctx-item" data-action="move-into-header" style="opacity:0.5;cursor:default;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.3px">Move Into</div>`;
+            for (const t of validTargets.slice(0, 15)) {
+              const icon = LAYER_ICONS[t.kind] || '•';
+              menuHtml += `<div class="layer-ctx-item" data-action="move-into" data-target="${escHtml(t.id)}"><span class="ctx-icon">${icon}</span>@${escHtml(t.id)}</div>`;
+            }
+            if (validTargets.length > 15) {
+              menuHtml += `<div class="layer-ctx-item" style="opacity:0.5;cursor:default">…${validTargets.length - 15} more</div>`;
+            }
+            menuHtml += '<div class="layer-ctx-sep"></div>';
+          }
+        } catch (_) {}
+      }
+
+      // "Move to Root"
+      menuHtml += `<div class="layer-ctx-item" data-action="move-to-root"><span class="ctx-icon">↑</span>Move to Root</div>`;
+
+      const menu = document.createElement('div');
+      menu.className = 'layer-ctx-menu';
+      menu.innerHTML = menuHtml;
+
+      // Position
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      let mx = e.clientX;
+      let my = e.clientY;
+      document.body.appendChild(menu);
+      if (mx + menu.offsetWidth > vw) mx = vw - menu.offsetWidth - 4;
+      if (my + menu.offsetHeight > vh) my = vh - menu.offsetHeight - 4;
+      menu.style.left = mx + 'px';
+      menu.style.top = my + 'px';
+
+      // Wire actions
+      menu.querySelectorAll('.layer-ctx-item[data-action]').forEach(btn => {
+        btn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const action = btn.getAttribute('data-action');
+          if (action === 'move-into-header') return;
+
+          const textBefore = fdCanvas.get_text();
+          let changed = false;
+
+          if (action === 'move-into') {
+            const targetId = btn.getAttribute('data-target');
+            changed = fdCanvas.reparent_into(nodeId, targetId);
+          } else if (action === 'move-to-root') {
+            changed = fdCanvas.reparent_into(nodeId, 'root');
+          }
+
+          if (changed) {
+            const textAfter = fdCanvas.get_text();
+            if (textBefore !== textAfter) {
+              fdCanvas.push_undo_snapshot(textBefore, textAfter);
+            }
+            renderCanvas();
+            syncCanvasToEditor();
+            updatePropertiesPanel();
+            refreshLayersPanel();
+          }
+          closeLayerCtxMenu();
+        });
+      });
+
+      // Close on outside click
+      const closeOnClick = (ev) => {
+        if (!menu.contains(ev.target)) {
+          closeLayerCtxMenu();
+          document.removeEventListener('click', closeOnClick);
+        }
+      };
+      setTimeout(() => document.addEventListener('click', closeOnClick), 0);
+    });
+  });
+}
 
 /** Refresh the layers panel. */
 function refreshLayersPanel() {
@@ -1542,6 +1820,12 @@ function refreshLayersPanel() {
       }
     });
   });
+
+  // ── Layer Drag-and-Drop (#1 reparent, #2 reorder, #5 drop-to-root) ──
+  wireLayerDragDrop(panel);
+
+  // ── Layer Context Menu (#3 "Move Into") ──
+  wireLayerContextMenu(panel);
 }
 
 /** ─── Minimap ─────────────────────────────────────────────────────────── */

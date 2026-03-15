@@ -17,6 +17,18 @@
 
 ## Completed Requirements
 
+### v0.11.157 — Layer Drag-to-Reparent + Reorder + Context Menu (R3.68)
+- **FEATURE (R3.68)**: Drag-to-reparent in layers panel — drag a layer item onto a container (rect/ellipse/frame/group) to make it a child; split-zone cursor detection (top 25% = insert above, middle 50% = nest into container, bottom 25% = insert below); blue highlight and insertion line visual feedback
+- **FEATURE (R3.68)**: Drag-to-reorder in layers panel — drag a layer item above/below siblings to reorder z-order; works across parent boundaries (reparents then reorders)
+- **FEATURE (R3.68)**: "Move Into" context menu — right-click any layer item to see a context menu listing all valid containers; select one to reparent into it; also includes "Move to Root" option
+- **FEATURE (R3.68)**: Drop-to-root — drag a nested layer item to the empty space in the layers panel to move it back to the document root
+- **FEATURE (R3.68)**: Undo snapshot guard — all reparent/reorder operations push undo snapshots via `push_undo_snapshot()` for seamless ⌘Z rollback
+- **WASM**: New `reorder_child(child_id, index)` API — reorders child to a specific z-order index within its parent; new `get_container_ids()` API — returns JSON array of valid containers for the "Move Into" menu; enhanced `reparent_into()` — now accepts `"root"` as target and skips if already a child of that parent
+- **CORE**: New `move_child_to_index(child, target_index)` on `SceneGraph` — clamped index reorder with `rebuild_child_order()`
+- **TESTING**: 4 new unit tests — `move_child_to_index_basic`, `move_child_to_index_out_of_bounds`, `move_child_to_index_noop`, `reparent_then_children_correct`
+- **PARITY**: All drag-and-drop + context menu functionality implemented on both site (`playground.js`) and VS Code extension (`panels.js`)
+- **CSS**: New drag-and-drop styles (`.dragging`, `.drag-over-nest`, `.drag-over-above`, `.drag-over-below`, `.drag-over-root`, `.layer-ctx-menu`) in both `style.css` and `webview-html.ts`
+
 ### v0.11.156 — Input-Aware Hand Tool + Drag-from-Toolbar (R3.67)
 - **FEATURE (R3.67)**: Input-aware Hand tool — Apple Pencil (pen) selects/moves nodes (delegates to Select behavior), finger/mouse always pans; matches Procreate/Concepts/Affinity Designer 2 iPad convention; `effective_tool()` helper centralizes Hand+Pen→Select logic across all pointer handlers (down/move/up)
 - **FEATURE (R3.67)**: Visual mode indicator — pencil hover on Hand tool shows `default` cursor (not `grab`) and `move` cursor over nodes, making it clear pencil will select; provides immediate feedback about input-device-specific behavior

@@ -781,6 +781,71 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       display: none;
     }
 
+    /* ── Layer Drag-and-Drop ── */
+    .layer-item[draggable="true"] { cursor: grab; }
+    .layer-item.dragging {
+      opacity: 0.4;
+      border: 1px dashed var(--fd-accent);
+      background: transparent !important;
+    }
+    .layer-item.drag-over-nest {
+      outline: 2px solid var(--fd-accent);
+      outline-offset: -2px;
+      background: var(--fd-accent-dim) !important;
+      border-radius: 4px;
+    }
+    .layer-item.drag-over-above {
+      box-shadow: inset 0 2px 0 0 var(--fd-accent);
+    }
+    .layer-item.drag-over-below {
+      box-shadow: inset 0 -2px 0 0 var(--fd-accent);
+    }
+    .layers-body.drag-over-root {
+      background: var(--fd-accent-dim);
+      outline: 1px dashed var(--fd-accent);
+      outline-offset: -2px;
+    }
+    .layer-ctx-menu {
+      position: fixed;
+      min-width: 150px;
+      background: var(--fd-surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 0.5px solid var(--fd-border);
+      border-radius: 8px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08);
+      padding: 4px;
+      z-index: 200;
+      font-size: 11px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .layer-ctx-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+      color: var(--fd-text);
+      white-space: nowrap;
+    }
+    .layer-ctx-item:hover {
+      background: var(--fd-accent);
+      color: #fff;
+    }
+    .layer-ctx-item .ctx-icon {
+      font-size: 10px;
+      opacity: 0.7;
+      width: 14px;
+      text-align: center;
+    }
+    .layer-ctx-sep {
+      height: 1px;
+      background: var(--fd-border);
+      margin: 3px 4px;
+    }
+
     /* ── Spec Overlay (transparent badge layer over canvas) ── */
     #spec-overlay {
       display: none;
