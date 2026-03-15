@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.151 — Hand Tool Reverted to Pan-Only (R3.6)
+- **CHANGE (R3.6)**: Hand tool is now pan-only — removed "Smart Hand" context-aware behavior (hit-test on pointer-down, select+move on nodes); Hand tool now always pans regardless of what's under the cursor, matching Figma/Sketch/Procreate/Affinity convention; decision driven by iPad + Apple Pencil Pro safety (accidental node moves when expecting safe pan) and input hierarchy clarity (pencil = precision, fingers = navigate, Hand = safe viewport tool)
+- **CORE**: `pointer.rs` — `handle_pointer_down` returns `false` immediately for Hand tool (was: hit-test → delegate to SelectTool); `handle_pointer_move` and `handle_pointer_up` return empty mutations for Hand (was: delegate to SelectTool during drag)
+- **SITE**: `playground.js` — Hand tool block simplified to always initiate pan (was: WASM hit-test → conditional pan or node move)
+- **EXTENSION**: `pointer.js` + `main.js` — same simplification as site
+- **DOCS**: `SHORTCUTS.md` — `H` key description changed from "Hand (smart pan) · Pan on empty space, move nodes on drag" to "Hand (pan) · Pan canvas with click+drag"; `REQUIREMENTS.md` R3.6 updated to reflect pan-only behavior
+
 ### v0.11.150 — Fix Extension Shortcuts + Cursor Icons (R3.11, R6.1)
 - **FIX (R6.1)**: Tool shortcuts (V/R/H/O/P/A/T/F/E) now work when the canvas custom editor is active — previously captured by VS Code's native keybinding system and never reaching the webview's keydown handler; added `fd.tool.*` commands registered in `extension.ts` with single-key keybindings (`when: activeCustomEditorId == 'fd.canvas'`) that forward `toolChanged` messages to the canvas webview via `postMessage`
 - **FIX (R3.11)**: Hand tool now shows `grab` cursor instead of inheriting default — added missing `#fd-canvas.tool-hand { cursor: grab }` CSS rule; also added `tool-arrow` (crosshair) and `tool-frame` (crosshair) cursor rules

@@ -3683,24 +3683,13 @@ async function initPlayground() {
         return;
       }
 
-      // Smart Hand: ask WASM (hit-test) — pan if empty space, else WASM handles move
+      // Hand tool: always pan (no selection or node dragging)
       if (fdCanvas.get_tool_name() === 'hand') {
-        const changed = fdCanvas.handle_pointer_down(
-          x, y, e.pressure || 1.0,
-          e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
-        );
-        if (changed) {
-          // Hit a node → WASM is handling select+move
-          activePointerId = e.pointerId;
-          renderDirty = true; uiDirty = true;
-        } else {
-          // Empty space → pan
-          panDragging = true;
-          panStartX = e.clientX - panX;
-          panStartY = e.clientY - panY;
-          canvas.style.cursor = 'grabbing';
-          activePointerId = e.pointerId;
-        }
+        panDragging = true;
+        panStartX = e.clientX - panX;
+        panStartY = e.clientY - panY;
+        canvas.style.cursor = 'grabbing';
+        activePointerId = e.pointerId;
         return;
       }
 
