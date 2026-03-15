@@ -835,6 +835,31 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
+  // ─── Tool shortcut commands (forwarded to canvas webview) ────────
+  // These are triggered by single-key keybindings (V/R/H/etc.)
+  // registered in package.json with `activeCustomEditorId == 'fd.canvas'`.
+  const toolCommands: Record<string, string> = {
+    "fd.tool.select": "select",
+    "fd.tool.hand": "hand",
+    "fd.tool.rect": "rect",
+    "fd.tool.ellipse": "ellipse",
+    "fd.tool.pen": "pen",
+    "fd.tool.arrow": "arrow",
+    "fd.tool.text": "text",
+    "fd.tool.frame": "frame",
+    "fd.tool.eraser": "eraser",
+  };
+  for (const [commandId, toolName] of Object.entries(toolCommands)) {
+    context.subscriptions.push(
+      vscode.commands.registerCommand(commandId, () => {
+        FdEditorProvider.activePanel?.webview.postMessage({
+          type: "toolChanged",
+          tool: toolName,
+        });
+      })
+    );
+  }
+
   // ─── Code-mode Spec View (editor decorations) ────────────────────
   // When spec mode is active, hide style/animation/layout details from
   // the text editor, showing only #, spec blocks, node/edge declarations, and braces.

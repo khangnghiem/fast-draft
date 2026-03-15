@@ -1551,6 +1551,9 @@ code {
 #fd-canvas.tool-pen { cursor: crosshair; }
 #fd-canvas.tool-text { cursor: text; }
 #fd-canvas.tool-eraser { cursor: crosshair; }
+#fd-canvas.tool-hand { cursor: grab; }
+#fd-canvas.tool-arrow { cursor: crosshair; }
+#fd-canvas.tool-frame { cursor: crosshair; }
 #fd-canvas.modifier-cmd { cursor: grab !important; }
 #fd-canvas.modifier-alt { cursor: copy !important; }
 

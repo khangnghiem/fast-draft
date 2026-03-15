@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.150 — Fix Extension Shortcuts + Cursor Icons (R3.11, R6.1)
+- **FIX (R6.1)**: Tool shortcuts (V/R/H/O/P/A/T/F/E) now work when the canvas custom editor is active — previously captured by VS Code's native keybinding system and never reaching the webview's keydown handler; added `fd.tool.*` commands registered in `extension.ts` with single-key keybindings (`when: activeCustomEditorId == 'fd.canvas'`) that forward `toolChanged` messages to the canvas webview via `postMessage`
+- **FIX (R3.11)**: Hand tool now shows `grab` cursor instead of inheriting default — added missing `#fd-canvas.tool-hand { cursor: grab }` CSS rule; also added `tool-arrow` (crosshair) and `tool-frame` (crosshair) cursor rules
+- **FIX (R6.1)**: `toolChanged` message handler in `sync.js` now calls `updateToolbarActive()` which includes `updateCanvasCursor()` — previously only toggled toolbar button `.active` classes without updating the canvas cursor
+- **EXTENSION**: Changes in `package.json` (9 commands + 9 keybindings), `extension.ts` (command handlers), `webview/src/sync.js` (handler), `site/style.css` (3 cursor rules)
+
 ### v0.11.149 — Comprehensibility Score, Incremental Parse, Shared Canvas UI
 - **CORE (R4.21)**: Comprehensibility Score — new `score.rs` module computes a 0–100 score across 5 metrics: Semantic Naming, Doc-Comment Density, Style Reuse, Edge Default Coverage, Token Efficiency; exposed via `FdCanvas::compute_score()` WASM API returning JSON with total + per-metric breakdown & suggestions; 6 unit tests
 - **PERF (R2.3)**: Block-level incremental parse — `update_text_range()` in `sync.rs` now splits text into top-level blocks, hashes each, and skips full re-parse + layout resolve when block hashes are unchanged; falls back to full re-parse for structural changes; 6 unit tests
