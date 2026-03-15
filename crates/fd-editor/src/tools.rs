@@ -395,6 +395,11 @@ impl RectTool {
         self.drawing
     }
 
+    /// The ID of the shape currently being drawn (if any).
+    pub fn current_drawing_id(&self) -> Option<NodeId> {
+        self.current_id
+    }
+
     /// Cancel the current draw gesture (reset state).
     pub fn cancel(&mut self) {
         self.drawing = false;
@@ -448,6 +453,14 @@ impl Tool for RectTool {
                     && let Some(id) = self.current_id
                 {
                     self.dragged = true;
+
+                    // Drag-back-to-cancel: if cursor returns within 5px of
+                    // start, reset dragged so PointerUp produces click-to-place.
+                    let dist_sq = (x - self.start_x).powi(2) + (y - self.start_y).powi(2);
+                    if dist_sq < 25.0 {
+                        self.dragged = false;
+                    }
+
                     let mut w = (x - self.start_x).abs();
                     let mut h = (y - self.start_y).abs();
 
@@ -776,6 +789,11 @@ impl EllipseTool {
         self.drawing
     }
 
+    /// The ID of the shape currently being drawn (if any).
+    pub fn current_drawing_id(&self) -> Option<NodeId> {
+        self.current_id
+    }
+
     /// Cancel the current draw gesture (reset state).
     pub fn cancel(&mut self) {
         self.drawing = false;
@@ -822,6 +840,14 @@ impl Tool for EllipseTool {
                     && let Some(id) = self.current_id
                 {
                     self.dragged = true;
+
+                    // Drag-back-to-cancel: if cursor returns within 5px of
+                    // start, reset dragged so PointerUp produces click-to-place.
+                    let dist_sq = (x - self.start_x).powi(2) + (y - self.start_y).powi(2);
+                    if dist_sq < 25.0 {
+                        self.dragged = false;
+                    }
+
                     let mut w = (x - self.start_x).abs();
                     let mut h = (y - self.start_y).abs();
 

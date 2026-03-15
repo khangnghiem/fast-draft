@@ -77,6 +77,10 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.22** _(done)_: Pressure-sensitive stroke width — pen maps average pressure to stroke width on finalization (1.0–4.5px range); `SetStrokeWidth` mutation with undo/redo; 3 unit tests (light/heavy/default) → [spec](specs/drawing-tools.md)
 - **R3.23** _(planned)_: Freehand shape recognition — detect near-geometric shapes, offer "Snap to Shape" action → [spec](specs/drawing-tools.md)
 - **R3.62** _(done)_: Path command serialization — `d:` inline SVG-like syntax (M/L/Q/C/Z) for pen tool path roundtrip; coordinates rounded to 2 decimals for token efficiency
+- **R3.63** _(done)_: Tool locking (sticky mode) — double-press keyboard shortcut (e.g. `R R`) or double-click toolbar button locks the tool so it stays active after placing shapes; select V or Escape to unlock; clear lock on tool switch
+- **R3.64** _(done)_: ⌘+drag reparent — holding ⌘/Ctrl while dragging a node onto a container (Rect/Ellipse/Frame/Group) makes it a child; works across all tools; WASM `reparent_into()` API with cycle detection and container validation
+- **R3.65** _(done)_: Drag-back-to-cancel — during a draw gesture, dragging back within 5px of the starting point resets the shape; pointer-up then triggers click-to-place (default size) instead of a tiny drawn shape; applies to RectTool and EllipseTool
+- **R3.66** _(done)_: iPad interaction polish — persistent smart defaults via localStorage (fill/stroke/strokeWidth/opacity remembered across sessions); dimension tooltip during draw-tool gestures (Rect/Ellipse/Frame); 3-finger double-tap = undo (removed single-tap undo); pencil hover ghost preview for draw tools; Shift+Alt square/circle-from-center combo
 
 #### R3c: Navigation & View
 
@@ -336,3 +340,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | padding / spacing | R1.21 |
 | resizable panels | R6.7 |
 | edge selection | R3.1, R1.10 |
+| tool locking / sticky | R3.63 |
+| reparent / nesting | R3.34, R3.64 |
+| drag-back-to-cancel | R3.65 |
+| smart defaults / ipad | R3.66, R3.42 |

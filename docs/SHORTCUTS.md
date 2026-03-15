@@ -92,8 +92,7 @@ Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** 
 
 | Gesture              | Action                              | Notes                                |
 | -------------------- | ----------------------------------- | ------------------------------------ |
-| 3-finger tap         | Undo                                | <200ms, <15px movement               |
-| 3-finger double-tap  | Redo                                | Second tap within 400ms              |
+| 3-finger double-tap  | Undo                                | Second tap within 400ms              |
 | 3-finger swipe left  | Undo                                | >50px horizontal swipe               |
 | 3-finger swipe right | Redo                                | >50px horizontal swipe               |
 | 3-finger pinch-in    | Copy selected node                  | Area shrinks >60%                    |
@@ -115,13 +114,15 @@ Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** 
 
 ### When a Drawing Tool is active (R, O, P, A, T, F)
 
-| Modifier       | On Object                     | On Empty Space                   |
-| -------------- | ----------------------------- | -------------------------------- |
-| None           | Draw new shape                | Draw new shape                   |
-| `⌘`            | **Move object** (temp Select) | **Marquee select** (temp Select) |
-| `Alt`          | **Clone + drag**              | Draw new shape                   |
-| `Shift`        | Constrain (square/axis)       | Constrain                        |
-| `Space` (hold) | Pan                           | Pan                              |
+| Modifier       | On Object                                       | On Empty Space                   |
+| -------------- | ----------------------------------------------- | -------------------------------- |
+| None           | Draw new shape                                  | Draw new shape                   |
+| `⌘`            | **Move object** (temp Select)                   | **Marquee select** (temp Select) |
+| `⌘` + drag     | **Reparent** — drop onto container makes child  | —                                |
+| `Alt`          | **Clone + drag**                                | Draw new shape                   |
+| `Shift`        | Constrain (square/axis)                         | Constrain                        |
+| `Shift+Alt`    | Square/circle from center                       | Square/circle from center        |
+| `Space` (hold) | Pan                                             | Pan                              |
 
 ### When Select Tool is active (V)
 
@@ -130,6 +131,7 @@ Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** 
 | None               | Move / select                                             | Marquee select |
 | `Alt`              | **Clone + drag**                                          | Marquee select |
 | `Alt` (click only) | **Style picker** — copies fill/stroke/opacity as defaults | —              |
+| `⌘` + drag         | **Reparent** — drop onto container makes child            | —              |
 | `Shift`            | Add to selection                                          | Add to marquee |
 | `⌘` (hold)         | Pan                                                       | Pan            |
 | `Space` (hold)     | Pan                                                       | Pan            |
@@ -150,7 +152,12 @@ Per-tool session memory for style properties. When you change a shape's style, t
 
 Defaults are **captured** from both the Floating Action Bar and the Properties panel.
 Defaults are **applied** automatically when a new shape is drawn.
-Defaults **reset** on page reload (session only, not saved to `.fd` file).
+Defaults are **persisted** to `localStorage` (survive page reload).
+
+### Drag-Back-To-Cancel
+
+During a draw gesture, dragging back to within **5px of the starting point** resets the shape.
+On pointer-up, the tool treats this as a click-to-place (default size) rather than a tiny drag.
 
 ---
 

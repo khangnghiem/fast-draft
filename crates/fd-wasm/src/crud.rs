@@ -281,4 +281,54 @@ impl FdCanvas {
         }
         changed
     }
+
+    /// Reparent a node into a target container (⌘+drag).
+    ///
+    /// The target must be a container type (Rect, Ellipse, Frame, Group).
+    /// Returns true if the reparent succeeded.
+    pub fn reparent_into(&mut self, child_id: &str, target_id: &str) -> bool {
+        let child = NodeId::intern(child_id);
+        let target = NodeId::intern(target_id);
+
+        // Prevent self-reparent
+        if child == target {
+            return false;
+        }
+
+        let child_idx = match self.engine.graph.index_of(child) {
+            Some(idx) => idx,
+            None => return false,
+        };
+        let target_idx = match self.engine.graph.index_of(target) {
+            Some(idx) => idx,
+            None => return false,
+        };
+
+        // Target must be a container type
+        let is_container = matches!(
+            self.engine.graph.graph[target_idx].kind,
+            NodeKind::Rect { .. }
+                | NodeKind::Ellipse { .. }
+                | NodeKind::Frame { .. }
+                | NodeKind::Group
+        );
+        if !is_container {
+            return false;
+        }
+
+        // Prevent circular reparent (child is ancestor of target)
+        let mut ancestor = Some(target_idx);
+        while let Some(a) = ancestor {
+            if a == child_idx {
+                return false; // would create cycle
+            }
+            ancestor = self.engine.graph.parent(a);
+        }
+
+        self.engine.graph.reparent_node(child_idx, target_idx);
+        self.engine.mark_dirty();
+        self.engine.flush_to_text();
+        self.rebuild_spatial_index();
+        true
+    }
 }
