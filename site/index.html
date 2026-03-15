@@ -86,6 +86,7 @@
         <div class="playground-editor">
           <div class="editor-header">
             <span class="editor-dot"></span> Code
+            <button id="mobile-code-close" style="display:none; margin-left:auto; border:none; background:transparent; color:#86868B; font-size:16px; cursor:pointer; padding:2px 8px;">✕</button>
           </div>
           <div id="fd-editor"></div>
         </div>
@@ -95,6 +96,7 @@
             <!-- Top Toolbar (Apple HIG frosted bar) -->
             <div id="canvas-toolbar">
               <div class="tb-zone tb-left zen-full-only">
+                <button id="mobile-code-toggle" title="Toggle Code Editor">{ } Code</button>
                 <span class="canvas-label"><span class="editor-dot design"></span> Design</span>
                 <button class="tool-btn" id="ai-touch-btn" title="AI Touch — refine + review selected (no selection = full audit)">✦ AI Touch</button>
                 <button class="tool-btn" id="renamify-btn" title="Renamify — rename anonymous node IDs">✦ Renamify</button>

@@ -4328,10 +4328,60 @@ async function initPlayground() {
     mobileLayersToggle?.addEventListener('click', toggleMobileLayersDrawer);
     mobileLayersBackdrop?.addEventListener('click', closeMobileLayersDrawer);
 
-    // Auto-close drawer when viewport grows past mobile breakpoint
+    // ── Mobile Code Editor Toggle (#4) ───────────────────────────────
+    const mobileCodeToggle = document.getElementById('mobile-code-toggle');
+    const mobileCodeClose = document.getElementById('mobile-code-close');
+    const playgroundEditor = document.querySelector('.playground-editor');
+
+    function toggleMobileCodeEditor() {
+      if (!playgroundEditor) return;
+      const isOpen = playgroundEditor.classList.toggle('mobile-code-open');
+      mobileCodeToggle?.classList.toggle('active', isOpen);
+    }
+    function closeMobileCodeEditor() {
+      playgroundEditor?.classList.remove('mobile-code-open');
+      mobileCodeToggle?.classList.remove('active');
+    }
+
+    mobileCodeToggle?.addEventListener('click', toggleMobileCodeEditor);
+    mobileCodeClose?.addEventListener('click', closeMobileCodeEditor);
+
+    // Show close button only on mobile
     const mobileQuery = window.matchMedia('(max-width: 768px)');
-    mobileQuery.addEventListener('change', (e) => {
-      if (!e.matches) closeMobileLayersDrawer();
+    function updateMobileUI(e) {
+      if (mobileCodeClose) mobileCodeClose.style.display = e.matches ? 'block' : 'none';
+      if (!e.matches) {
+        closeMobileLayersDrawer();
+        closeMobileCodeEditor();
+      }
+    }
+    mobileQuery.addEventListener('change', updateMobileUI);
+    updateMobileUI(mobileQuery); // init
+
+    // ── #1: Debounced fitToContent on resize ─────────────────────────
+    let fitDebounceTimer = null;
+    const originalResizeCanvas = resizeCanvas;
+    const resizeCanvasWithFit = () => {
+      originalResizeCanvas();
+      clearTimeout(fitDebounceTimer);
+      fitDebounceTimer = setTimeout(() => {
+        if (fdCanvas && window.matchMedia('(max-width: 768px)').matches) {
+          fitToContent(canvas);
+          renderCanvas();
+        }
+      }, 200);
+    };
+    // Patch: ResizeObserver will use the enhanced version
+    // (the resizeObserver is set up later, but we store the enhanced fn)
+    window.__fdResizeCanvasWithFit = resizeCanvasWithFit;
+
+    // ── #5: FitToContent on orientation change ───────────────────────
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => {
+        resizeCanvas();
+        fitToContent(canvas);
+        renderCanvas();
+      }, 300); // iOS needs time to settle new dimensions
     });
 
     // ── Pointer Events ────────────────────────────────────────────────
@@ -5094,7 +5144,11 @@ async function initPlayground() {
     });
 
     // ── Resize Observer ───────────────────────────────────────────────
-    const resizeObserver = new ResizeObserver(() => resizeCanvas());
+    // Use the enhanced resize function that includes debounced fitToContent for mobile (#1)
+    const resizeObserver = new ResizeObserver(() => {
+      if (window.__fdResizeCanvasWithFit) window.__fdResizeCanvasWithFit();
+      else resizeCanvas();
+    });
     resizeObserver.observe(wrapper);
 
     // ── Minimap Click-to-Pan ───────────────────────────────────────────
