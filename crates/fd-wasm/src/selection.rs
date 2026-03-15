@@ -283,7 +283,9 @@ impl FdCanvas {
         };
 
         // Incremental clone name: foo → foo_2, foo_2 → foo_3
-        let new_id = next_clone_name(&self.engine.graph, orig_id);
+        // Pass already-generated names so batch duplicates get distinct suffixes
+        let taken: Vec<NodeId> = id_map.values().copied().collect();
+        let new_id = next_clone_name(&self.engine.graph, orig_id, &taken);
         id_map.insert(orig_id, new_id);
 
         let mut cloned = original;
@@ -367,7 +369,7 @@ impl FdCanvas {
             let new_to = to_id.and_then(|id| id_map.get(&id).copied());
 
             if let (Some(nf), Some(nt)) = (new_from, new_to) {
-                let new_edge_id = next_clone_name(&self.engine.graph, edge.id);
+                let new_edge_id = next_clone_name(&self.engine.graph, edge.id, &[]);
 
                 // Remap text_child if it was also cloned
                 let new_text_child = edge.text_child.and_then(|tc| id_map.get(&tc).copied());

@@ -7,6 +7,9 @@
 /** Clipboard buffer for FD node text */
 let fdClipboard = "";
 
+/** Track whether clipboard content is from internal copy (vs. external paste). */
+let fdClipboardIsInternal = false;
+
 /** Cumulative paste offset — increments by 20 on each successive paste,
  *  resets when a new copy is made. */
 let pasteOffsetCount = 0;
@@ -41,6 +44,21 @@ function extractNodeBlock(text, nodeId) {
 function copySelectedAsFd() {
   if (!fdCanvas) return;
 
+  // Use emit_selection_fd for multi-node + edge support
+  try {
+    const selFd = fdCanvas.emit_selection_fd();
+    if (selFd && selFd.trim()) {
+      fdClipboard = selFd;
+      fdClipboardIsInternal = true;
+      pasteOffsetCount = 0;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(fdClipboard).catch(() => { });
+      }
+      return;
+    }
+  } catch (_) {}
+
+  // Fallback: multi-node via get_selected_ids + extractNodeBlock
   const text = fdCanvas.get_text();
   const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
   if (selectedIds.length === 0) return;
@@ -53,9 +71,9 @@ function copySelectedAsFd() {
   if (blocks.length === 0) return;
 
   fdClipboard = blocks.join("\n\n");
-  pasteOffsetCount = 0; // Reset offset on new copy
+  fdClipboardIsInternal = true;
+  pasteOffsetCount = 0;
 
-  // Also copy to system clipboard
   if (navigator.clipboard) {
     navigator.clipboard.writeText(fdClipboard).catch(() => { });
   }
@@ -72,24 +90,40 @@ function cutSelectedAsFd() {
   }
 }
 
-/** Paste node(s) from the FD clipboard with horizontal stagger. */
+/** Paste node(s) — delegates to WASM duplicate for internal clipboard,
+ *  falls back to text-based paste for external system clipboard content. */
 async function pasteFromClipboard() {
   if (!fdCanvas) return;
 
-  // Try reading from system clipboard first
-  let clipText = fdClipboard;
+  // Check if system clipboard has different content (external paste)
   try {
     if (navigator.clipboard) {
       const sysText = await navigator.clipboard.readText();
-      if (sysText && sysText.includes("@")) {
-        clipText = sysText;
+      if (sysText && sysText.includes("@") && sysText !== fdClipboard) {
+        fdClipboard = sysText;
+        fdClipboardIsInternal = false;
       }
     }
-  } catch (_) { /* permission denied, use internal clipboard */ }
+  } catch (_) { /* permission denied — use internal */ }
 
-  if (!clipText.trim()) return;
+  // Internal clipboard: delegate to WASM duplicate_selected() for correct
+  // naming, constraint remapping, edge duplication, and position handling.
+  if (fdClipboardIsInternal && fdClipboard) {
+    fdCanvas.push_undo_snapshot(fdCanvas.get_text(), fdCanvas.get_text());
+    const changed = fdCanvas.duplicate_selected();
+    if (changed) {
+      render();
+      syncTextToExtension();
+      updatePropertiesPanel();
+      refreshLayersPanel();
+    }
+    return;
+  }
 
-  // Increment paste offset count
+  // External clipboard: text-based paste with batch-aware ID renaming
+  const clipText = fdClipboard;
+  if (!clipText || !clipText.trim()) return;
+
   pasteOffsetCount++;
 
   // Collect all @id declarations in the pasted block
@@ -101,28 +135,31 @@ async function pasteFromClipboard() {
   }
   if (allIds.size === 0) return;
 
-  // Build renamed text: use incremented _N naming (consistent with Alt+drag)
+  // Build renamed text: use batch-aware incremented _N naming
   const existingText = fdCanvas.get_text();
   let pasteText = clipText;
-  const rootId = [...allIds][0]; // First ID = root node for selection
+  const rootId = [...allIds][0];
   const idMap = new Map();
+  const batchMaxCache = new Map(); // stem → current max N (batch-aware)
 
   for (const oldId of allIds) {
-    // Find the stem (strip existing _N or _cpXXXX suffix)
     const stem = oldId.replace(/_(?:\d+|cp\d+)$/, '');
-    // Scan existing text for highest _N suffix
-    let maxN = 1;
-    const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
-    let match;
-    while ((match = re.exec(existingText)) !== null) {
-      maxN = Math.max(maxN, parseInt(match[1]));
+    let maxN = batchMaxCache.get(stem) || 0;
+    if (maxN === 0) {
+      // First time seeing this stem — scan existing text
+      maxN = 1;
+      const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
+      let match;
+      while ((match = re.exec(existingText)) !== null) {
+        maxN = Math.max(maxN, parseInt(match[1]));
+      }
+      if (new RegExp(`@${stem}\\b`).test(existingText)) {
+        maxN = Math.max(maxN, 1);
+      }
     }
-    // Also check if the base stem exists (counts as _1)
-    if (new RegExp(`@${stem}\\b`).test(existingText)) {
-      maxN = Math.max(maxN, 1);
-    }
-    const newId = stem + '_' + (maxN + 1);
-    idMap.set(oldId, newId);
+    const newN = maxN + 1;
+    batchMaxCache.set(stem, newN);
+    idMap.set(oldId, stem + '_' + newN);
   }
 
   // Replace all @id references with new names
@@ -131,33 +168,26 @@ async function pasteFromClipboard() {
   }
   const newRootId = idMap.get(rootId) || rootId;
 
-  // Horizontal stagger: offset x only (keep same y for horizontal alignment)
-  // Try to get the original node's width for proper spacing
-  let xOffset = pasteOffsetCount * 20; // Fallback: cumulative 20px
+  // Horizontal stagger
+  let xOffset = pasteOffsetCount * 20;
   try {
     const boundsJson = fdCanvas.get_node_bounds(rootId);
     if (boundsJson) {
       const bounds = JSON.parse(boundsJson);
       if (bounds && bounds.width > 0) {
-        // Place to the right with 20px gap
         xOffset = (bounds.width + 20) * pasteOffsetCount;
       }
     }
-  } catch (_) { /* use fallback offset */ }
+  } catch (_) {}
 
   pasteText = pasteText.replace(/\b(x:\s*)(-?\d+(?:\.\d+)?)/g, (_match, prefix, val) => {
     return prefix + (parseFloat(val) + xOffset);
   });
-  // y: values unchanged — keeps vertical alignment
 
-  // Capture text before for undo
+  // Undo support
   const textBefore = fdCanvas.get_text();
-
-  // Append to current text
   const updatedText = textBefore.trimEnd() + '\n\n' + pasteText + '\n';
   fdCanvas.set_text(updatedText);
-
-  // Push undo snapshot so ⌘Z reverts the paste
   fdCanvas.push_undo_snapshot(textBefore, updatedText);
 
   render();
