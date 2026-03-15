@@ -448,6 +448,12 @@ function setupPointerEvents() {
       }
     }
 
+    // Update pointer type for adaptive hit radii (iPad touch/pencil)
+    if (fdCanvas.set_pointer_type) {
+      const pt = e.pointerType === 'touch' ? 1 : e.pointerType === 'pen' ? 2 : 0;
+      fdCanvas.set_pointer_type(pt);
+    }
+
     const changed = fdCanvas.handle_pointer_down(
       x,
       y,

@@ -3,6 +3,61 @@
 //! Normalizes mouse, touch, and stylus (Apple Pencil Pro) events
 //! into a unified `InputEvent` enum consumed by tools.
 
+/// Pointer device type — used for adaptive hit radii and UI feedback.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum PointerType {
+    /// Mouse or trackpad (tightest hit radius).
+    #[default]
+    Mouse,
+    /// Touch / finger (largest hit radius — Apple HIG 44pt).
+    Touch,
+    /// Stylus / Apple Pencil (medium hit radius).
+    Pen,
+}
+
+impl PointerType {
+    /// Convert from JS numeric value: 0=mouse, 1=touch, 2=pen.
+    pub fn from_u8(v: u8) -> Self {
+        match v {
+            1 => Self::Touch,
+            2 => Self::Pen,
+            _ => Self::Mouse,
+        }
+    }
+
+    /// Hit radius for node selection (scene-space pixels).
+    pub fn node_hit_radius(self) -> f32 {
+        match self {
+            Self::Mouse => 0.0,  // Use exact bounds
+            Self::Touch => 12.0, // Expanded for fat-finger
+            Self::Pen => 4.0,    // Slightly expanded for pencil tip
+        }
+    }
+
+    /// Hit radius for resize handle detection (scene-space pixels).
+    pub fn handle_hit_radius(self) -> f32 {
+        match self {
+            Self::Mouse => 8.0,
+            Self::Touch => 24.0,
+            Self::Pen => 12.0,
+        }
+    }
+
+    /// Visual size of resize handles (CSS pixels).
+    pub fn handle_visual_size(self) -> f32 {
+        match self {
+            Self::Mouse => 7.0,
+            Self::Touch => 14.0,
+            Self::Pen => 9.0,
+        }
+    }
+
+    /// Whether to show only corner handles (skip midpoints).
+    pub fn corners_only(self) -> bool {
+        matches!(self, Self::Touch)
+    }
+}
+
 /// Keyboard modifier state captured alongside any input event.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Modifiers {

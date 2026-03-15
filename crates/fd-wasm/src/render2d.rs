@@ -62,6 +62,8 @@ pub fn render_scene(
     hover_start_ms: f64,
     skip_grid: bool,
     skip_bg: bool,
+    handle_size: f64,
+    corners_only: bool,
 ) {
     // Clear canvas — skip when JS caller already filled background
     // in identity space (avoids gaps from zoom/pan transform).
@@ -100,6 +102,8 @@ pub fn render_scene(
         sketchy,
         time_ms,
         hover_start_ms,
+        handle_size,
+        corners_only,
     );
 
     // Draw smart guides (alignment lines)
@@ -160,6 +164,8 @@ pub fn render_export(
             sketchy,
             0.0,
             0.0,
+            7.0,   // Default mouse handle size for export
+            false, // Never corners-only for export
         );
     }
 
@@ -179,6 +185,8 @@ fn render_node(
     sketchy: bool,
     time_ms: f64,
     hover_start_ms: f64,
+    handle_size: f64,
+    corners_only: bool,
 ) {
     let node = &graph.graph[idx];
     let node_bounds = match bounds.get(&idx) {
@@ -370,6 +378,8 @@ fn render_node(
             sketchy,
             time_ms,
             hover_start_ms,
+            handle_size,
+            corners_only,
         );
     }
 
@@ -378,7 +388,7 @@ fn render_node(
     // Selection overlay (drawn after children so it's on top)
     // Groups don't get resize handles — only dashed border (drawn in Group branch above)
     if is_selected && !matches!(&node.kind, NodeKind::Group) {
-        draw_selection_handles(ctx, node_bounds, &node.kind);
+        draw_selection_handles(ctx, node_bounds, &node.kind, handle_size, corners_only);
     }
 
     // Restore scale transform
@@ -752,9 +762,14 @@ fn draw_generic_placeholder(
     ctx.restore();
 }
 
-fn draw_selection_handles(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, kind: &NodeKind) {
+fn draw_selection_handles(
+    ctx: &CanvasRenderingContext2d,
+    b: &ResolvedBounds,
+    kind: &NodeKind,
+    handle_size: f64,
+    corners_only: bool,
+) {
     let (x, y, w, h) = (b.x as f64, b.y as f64, b.width as f64, b.height as f64);
-    let handle_size = 7.0;
     let half = handle_size / 2.0;
 
     // Text nodes: thin selection border + horizontal-only handles (Apple Preview style)
@@ -769,6 +784,21 @@ fn draw_selection_handles(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, ki
     ctx.set_stroke_style_str("#4FC3F7");
     ctx.set_line_width(1.5);
 
+    let draw_handle = |ctx: &CanvasRenderingContext2d, hx: f64, hy: f64| {
+        if corners_only {
+            // Touch: larger round handles for finger targets
+            let r = handle_size / 2.0;
+            ctx.begin_path();
+            let _ = ctx.arc(hx + half, hy + half, r, 0.0, std::f64::consts::TAU);
+            ctx.fill();
+            ctx.stroke();
+        } else {
+            // Mouse/Pen: standard square handles
+            ctx.fill_rect(hx, hy, handle_size, handle_size);
+            ctx.stroke_rect(hx, hy, handle_size, handle_size);
+        }
+    };
+
     if is_text {
         // Text nodes: only horizontal resize handles (MiddleLeft + MiddleRight)
         let handles = [
@@ -776,26 +806,31 @@ fn draw_selection_handles(ctx: &CanvasRenderingContext2d, b: &ResolvedBounds, ki
             (x + w - half, y + h / 2.0 - half), // MiddleRight
         ];
         for (hx, hy) in handles {
-            ctx.fill_rect(hx, hy, handle_size, handle_size);
-            ctx.stroke_rect(hx, hy, handle_size, handle_size);
+            draw_handle(ctx, hx, hy);
         }
     } else {
-        // 8-point handles: corners + midpoints (Figma/Sketch style)
-        let handles = [
-            // Corners
+        // Corner handles (always shown)
+        let corners = [
             (x - half, y - half),         // TopLeft
             (x + w - half, y - half),     // TopRight
             (x - half, y + h - half),     // BottomLeft
             (x + w - half, y + h - half), // BottomRight
-            // Midpoints
-            (x + w / 2.0 - half, y - half),     // TopCenter
-            (x + w / 2.0 - half, y + h - half), // BottomCenter
-            (x - half, y + h / 2.0 - half),     // MiddleLeft
-            (x + w - half, y + h / 2.0 - half), // MiddleRight
         ];
-        for (hx, hy) in handles {
-            ctx.fill_rect(hx, hy, handle_size, handle_size);
-            ctx.stroke_rect(hx, hy, handle_size, handle_size);
+        for (hx, hy) in corners {
+            draw_handle(ctx, hx, hy);
+        }
+
+        // Midpoint handles (skipped for touch — too close to corners for fingers)
+        if !corners_only {
+            let midpoints = [
+                (x + w / 2.0 - half, y - half),     // TopCenter
+                (x + w / 2.0 - half, y + h - half), // BottomCenter
+                (x - half, y + h / 2.0 - half),     // MiddleLeft
+                (x + w - half, y + h / 2.0 - half), // MiddleRight
+            ];
+            for (hx, hy) in midpoints {
+                draw_handle(ctx, hx, hy);
+            }
         }
     }
 }

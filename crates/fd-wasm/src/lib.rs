@@ -18,6 +18,7 @@ use fd_core::id::NodeId;
 use fd_core::layout::Viewport;
 use fd_core::model::{NodeKind, Properties};
 use fd_editor::commands::CommandStack;
+use fd_editor::input::PointerType;
 use fd_editor::sync::{GraphMutation, SyncEngine, expand_group_to_children};
 use fd_editor::tools::{
     ArrowTool, EllipseTool, EraserTool, PenTool, RectTool, ResizeHandle, SelectTool, TextTool,
@@ -76,6 +77,8 @@ pub struct FdCanvas {
     pub(crate) spatial_index: Option<SpatialIndex>,
     /// Hash of resolved bounds — used to detect layout-unchanged text edits.
     pub(crate) bounds_hash: u64,
+    /// Current pointer device type — updated each pointer event from JS.
+    pub(crate) pointer_type: PointerType,
 }
 
 // ─── Lifecycle & Core APIs ───────────────────────────────────────────────
@@ -122,6 +125,7 @@ impl FdCanvas {
             alt_clone_origins: Vec::new(),
             spatial_index: None,
             bounds_hash: 0,
+            pointer_type: PointerType::Mouse,
         }
     }
 
@@ -245,6 +249,22 @@ impl FdCanvas {
             self.prev_tool = self.active_tool;
             self.active_tool = new_tool;
         }
+    }
+
+    /// Set the current pointer device type (0=mouse, 1=touch, 2=pen).
+    /// Called from JS before each pointer event to adapt hit radii and handle sizes.
+    pub fn set_pointer_type(&mut self, ptype: u8) {
+        self.pointer_type = PointerType::from_u8(ptype);
+    }
+
+    /// Get the visual handle size for the current pointer type (for JS rendering).
+    pub fn get_handle_visual_size(&self) -> f32 {
+        self.pointer_type.handle_visual_size()
+    }
+
+    /// Whether to show only corner handles (true for touch).
+    pub fn get_corners_only(&self) -> bool {
+        self.pointer_type.corners_only()
     }
 
     /// Get the arrow tool's live preview line during drag.
@@ -473,7 +493,7 @@ impl FdCanvas {
         let by = b.y;
         let bw = b.width;
         let bh = b.height;
-        let radius = 8.0_f32;
+        let radius = self.pointer_type.handle_hit_radius();
 
         if is_text {
             let handles = [
@@ -488,16 +508,21 @@ impl FdCanvas {
                 }
             }
         } else {
-            let handles = [
+            // Corners always present; midpoints skipped for touch (too close for fingers)
+            let mut handles: Vec<(f32, f32, ResizeHandle)> = vec![
                 (bx, by, ResizeHandle::TopLeft),
-                (bx + bw / 2.0, by, ResizeHandle::TopCenter),
                 (bx + bw, by, ResizeHandle::TopRight),
-                (bx, by + bh / 2.0, ResizeHandle::MiddleLeft),
-                (bx + bw, by + bh / 2.0, ResizeHandle::MiddleRight),
                 (bx, by + bh, ResizeHandle::BottomLeft),
-                (bx + bw / 2.0, by + bh, ResizeHandle::BottomCenter),
                 (bx + bw, by + bh, ResizeHandle::BottomRight),
             ];
+            if !self.pointer_type.corners_only() {
+                handles.extend([
+                    (bx + bw / 2.0, by, ResizeHandle::TopCenter),
+                    (bx, by + bh / 2.0, ResizeHandle::MiddleLeft),
+                    (bx + bw, by + bh / 2.0, ResizeHandle::MiddleRight),
+                    (bx + bw / 2.0, by + bh, ResizeHandle::BottomCenter),
+                ]);
+            }
             for (hx, hy, handle) in handles {
                 let dx = x - hx;
                 let dy = y - hy;
