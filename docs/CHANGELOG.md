@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.164 — Responsive Canvas Fix + Mobile Layers Drawer (R6.7)
+- **FIX (R6.7)**: Canvas no longer has 180px dead space at ≤768px viewport — root cause: `#layers-panel` was hidden via `display: none !important` but `--layers-width` CSS custom property was never reset to `0px`, so `#fd-canvas` still used `left: var(--layers-width, 180px)` and `width: calc(100% - 180px - ...)` even though the panel was invisible; fix: added `#canvas-wrapper { --layers-width: 0px; --props-width: 0px; }` to the ≤768px media query
+- **FEATURE (R6.7)**: Layers panel accessible on mobile as slide-in drawer — instead of `display: none`, the layers panel is now positioned as an absolute overlay that slides in from the left with a smooth 250ms transition; "☰ Layers" toggle button in the canvas toolbar (tb-right zone) opens/closes the drawer; frosted glass backdrop (click to dismiss); drawer auto-closes when viewport grows past 768px via `matchMedia` listener
+- **CSS**: New `#mobile-layers-toggle` button styles (hidden on desktop, inline-flex at ≤768px), `#mobile-layers-backdrop` overlay, `#layers-panel.mobile-open` transform state
+- **SITE**: Changes in `site/style.css`, `site/index.html`, `site/playground.js`
+
 ### v0.11.163 — Layers Context Menu Parity (R3.69)
 - **FEATURE (R3.69)**: Layers context menu expanded from 7 to 15 items — now matches canvas context menu; new items: Rename (triggers inline edit), Cut (⌘X), Copy as PNG (⌘⇧C), Group (⌘G), Ungroup (⇧⌘G), Frame Selection, Bring to Front (⌘⇧]), Send to Back (⌘⇧[), Lock/Unlock (dynamic icon), Select Children (containers only)
 - **UX (R3.69)**: Keyboard shortcut hints — all context menu items show their keyboard shortcut right-aligned in muted style (e.g. `⌘X`, `⌘D`, `⌫`); Group/Ungroup dynamically disabled when not applicable
