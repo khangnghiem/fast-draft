@@ -781,7 +781,7 @@ function wireLayerDragDrop(panel) {
   }
 }
 
-/** Wire right-click context menu on layer items ("Move Into"). */
+/** Wire right-click context menu on layer items — full parity with canvas context menu. */
 function wireLayerContextMenu(panel) {
   if (!fdCanvas) return;
   panel.querySelectorAll('.layer-item').forEach(item => {
@@ -791,7 +791,60 @@ function wireLayerContextMenu(panel) {
       closeLayerCtxMenu();
       const nodeId = item.getAttribute('data-node-id');
       if (!nodeId) return;
+
+      // Determine selection state for enable/disable logic
+      const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      if (!selectedIds.includes(nodeId)) {
+        fdCanvas.select_by_id(nodeId);
+      }
+      const nodeKind = item.getAttribute('data-node-kind');
+      const isContainer = ['rect','ellipse','frame','group'].includes(nodeKind);
+      const hasChildren = !!item.nextElementSibling?.classList.contains('layer-children');
+      const canGroup = selectedIds.length >= 2 || (selectedIds.includes(nodeId) && selectedIds.length >= 2);
+      let canUngroup = false;
+      const source = fdCanvas.get_text();
+      for (const id of selectedIds) {
+        if (new RegExp(`(?:^|\\n)\\s*group\\s+@${id}\\b`).test(source)) {
+          canUngroup = true;
+          break;
+        }
+      }
+      const isLocked = fdCanvas.is_node_locked ? fdCanvas.is_node_locked(nodeId) : false;
+
       let menuHtml = '';
+
+      // ── Rename ──
+      menuHtml += `<div class="layer-ctx-item" data-action="rename"><span class="ctx-icon">✏️</span>Rename</div>`;
+      menuHtml += '<div class="layer-ctx-sep"></div>';
+
+      // ── Clipboard: Cut, Copy, Paste, Copy as PNG ──
+      menuHtml += `<div class="layer-ctx-item" data-action="cut"><span class="ctx-icon">✂</span>Cut<span class="layer-ctx-shortcut">⌘X</span></div>`;
+      menuHtml += `<div class="layer-ctx-item" data-action="copy"><span class="ctx-icon">⎘</span>Copy<span class="layer-ctx-shortcut">⌘C</span></div>`;
+      menuHtml += `<div class="layer-ctx-item" data-action="paste"><span class="ctx-icon">📋</span>Paste<span class="layer-ctx-shortcut">⌘V</span></div>`;
+      menuHtml += `<div class="layer-ctx-item" data-action="copy-png"><span class="ctx-icon">🖼</span>Copy as PNG<span class="layer-ctx-shortcut">⌘⇧C</span></div>`;
+      menuHtml += '<div class="layer-ctx-sep"></div>';
+
+      // ── Structure: Duplicate, Group, Ungroup, Frame Selection ──
+      menuHtml += `<div class="layer-ctx-item" data-action="duplicate"><span class="ctx-icon">⊕</span>Duplicate<span class="layer-ctx-shortcut">⌘D</span></div>`;
+      menuHtml += `<div class="layer-ctx-item${canGroup ? '' : ' layer-ctx-disabled'}" data-action="group"><span class="ctx-icon">◻</span>Group<span class="layer-ctx-shortcut">⌘G</span></div>`;
+      menuHtml += `<div class="layer-ctx-item${canUngroup ? '' : ' layer-ctx-disabled'}" data-action="ungroup"><span class="ctx-icon">◫</span>Ungroup<span class="layer-ctx-shortcut">⇧⌘G</span></div>`;
+      menuHtml += `<div class="layer-ctx-item" data-action="frame"><span class="ctx-icon">⊞</span>Frame Selection</div>`;
+      menuHtml += '<div class="layer-ctx-sep"></div>';
+
+      // ── Z-order: Bring to Front, Send to Back ──
+      menuHtml += `<div class="layer-ctx-item" data-action="bring-front"><span class="ctx-icon">↑</span>Bring to Front<span class="layer-ctx-shortcut">⌘⇧]</span></div>`;
+      menuHtml += `<div class="layer-ctx-item" data-action="send-back"><span class="ctx-icon">↓</span>Send to Back<span class="layer-ctx-shortcut">⌘⇧[</span></div>`;
+
+      // ── Lock / Unlock ──
+      menuHtml += `<div class="layer-ctx-item" data-action="lock"><span class="ctx-icon">${isLocked ? '🔓' : '🔒'}</span>${isLocked ? 'Unlock' : 'Lock'}</div>`;
+
+      // ── Select Children (containers only) ──
+      if (isContainer && hasChildren) {
+        menuHtml += `<div class="layer-ctx-item" data-action="select-children"><span class="ctx-icon">📂</span>Select Children</div>`;
+      }
+      menuHtml += '<div class="layer-ctx-sep"></div>';
+
+      // ── Move Into submenu ──
       if (fdCanvas.get_container_ids) {
         try {
           const containers = JSON.parse(fdCanvas.get_container_ids());
@@ -812,11 +865,10 @@ function wireLayerContextMenu(panel) {
       }
       menuHtml += `<div class="layer-ctx-item" data-action="move-to-root"><span class="ctx-icon">↑</span>Move to Root</div>`;
       menuHtml += '<div class="layer-ctx-sep"></div>';
-      menuHtml += `<div class="layer-ctx-item" data-action="duplicate"><span class="ctx-icon">⊕</span>Duplicate</div>`;
-      menuHtml += `<div class="layer-ctx-item" data-action="copy"><span class="ctx-icon">⎘</span>Copy</div>`;
-      menuHtml += `<div class="layer-ctx-item" data-action="paste"><span class="ctx-icon">⎗</span>Paste</div>`;
-      menuHtml += '<div class="layer-ctx-sep"></div>';
-      menuHtml += `<div class="layer-ctx-item layer-ctx-danger" data-action="delete"><span class="ctx-icon">✕</span>Delete</div>`;
+
+      // ── Delete ──
+      menuHtml += `<div class="layer-ctx-item layer-ctx-danger" data-action="delete"><span class="ctx-icon">✕</span>Delete<span class="layer-ctx-shortcut">⌫</span></div>`;
+
       const menu = document.createElement('div');
       menu.className = 'layer-ctx-menu';
       menu.innerHTML = menuHtml;
@@ -834,20 +886,20 @@ function wireLayerContextMenu(panel) {
           ev.stopPropagation();
           const action = btn.getAttribute('data-action');
           if (action === 'move-into-header') return;
+          if (btn.classList.contains('layer-ctx-disabled')) return;
           const textBefore = fdCanvas.get_text();
           let changed = false;
-          if (action === 'move-into') {
-            changed = fdCanvas.reparent_into(nodeId, btn.getAttribute('data-target'));
-          } else if (action === 'center-into') {
-            const targetId = btn.getAttribute('data-target');
-            changed = fdCanvas.reparent_into_centered
-              ? fdCanvas.reparent_into_centered(nodeId, targetId)
-              : fdCanvas.reparent_into(nodeId, targetId);
-          } else if (action === 'move-to-root') {
-            changed = fdCanvas.reparent_into(nodeId, 'root');
-          } else if (action === 'duplicate') {
+
+          if (action === 'rename') {
+            closeLayerCtxMenu();
+            // Trigger inline rename by simulating double-click on layer name
+            const nameEl = item.querySelector('.layer-name');
+            if (nameEl) nameEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+            return;
+          } else if (action === 'cut') {
             fdCanvas.select_by_id(nodeId);
-            changed = fdCanvas.duplicate_selected();
+            copySelectedAsFd();
+            changed = fdCanvas.delete_selected();
           } else if (action === 'copy') {
             fdCanvas.select_by_id(nodeId);
             copySelectedAsFd();
@@ -863,6 +915,62 @@ function wireLayerContextMenu(panel) {
             });
             closeLayerCtxMenu();
             return;
+          } else if (action === 'copy-png') {
+            fdCanvas.select_by_id(nodeId);
+            if (typeof copySelectionAsPng === 'function') copySelectionAsPng();
+            closeLayerCtxMenu();
+            return;
+          } else if (action === 'duplicate') {
+            fdCanvas.select_by_id(nodeId);
+            changed = fdCanvas.duplicate_selected();
+          } else if (action === 'group') {
+            changed = fdCanvas.group_selected();
+          } else if (action === 'ungroup') {
+            changed = fdCanvas.ungroup_selected();
+          } else if (action === 'frame') {
+            const resultJson = fdCanvas.handle_key('f', false, false, false, true);
+            const result = JSON.parse(resultJson);
+            changed = result.changed;
+          } else if (action === 'bring-front') {
+            const resultJson = fdCanvas.handle_key(']', false, true, false, true);
+            const result = JSON.parse(resultJson);
+            changed = result.changed;
+          } else if (action === 'send-back') {
+            const resultJson = fdCanvas.handle_key('[', false, true, false, true);
+            const result = JSON.parse(resultJson);
+            changed = result.changed;
+          } else if (action === 'lock') {
+            if (fdCanvas.toggle_node_locked) {
+              fdCanvas.toggle_node_locked(nodeId);
+              changed = true;
+            }
+          } else if (action === 'select-children') {
+            // Collect all child node IDs from the DOM
+            const childrenContainer = panel.querySelector(`.layer-children[data-parent-id="${nodeId}"]`);
+            if (childrenContainer) {
+              const childIds = [...childrenContainer.querySelectorAll(':scope > .layer-item')].map(
+                el => el.getAttribute('data-node-id')
+              ).filter(Boolean);
+              if (childIds.length > 0) {
+                fdCanvas.select_multiple_by_ids(JSON.stringify(childIds));
+                bumpGeneration();
+                render();
+                updatePropertiesPanel();
+                updateFloatingBar();
+                refreshLayersPanel();
+              }
+            }
+            closeLayerCtxMenu();
+            return;
+          } else if (action === 'move-into') {
+            changed = fdCanvas.reparent_into(nodeId, btn.getAttribute('data-target'));
+          } else if (action === 'center-into') {
+            const targetId = btn.getAttribute('data-target');
+            changed = fdCanvas.reparent_into_centered
+              ? fdCanvas.reparent_into_centered(nodeId, targetId)
+              : fdCanvas.reparent_into(nodeId, targetId);
+          } else if (action === 'move-to-root') {
+            changed = fdCanvas.reparent_into(nodeId, 'root');
           } else if (action === 'delete') {
             fdCanvas.select_by_id(nodeId);
             changed = fdCanvas.delete_selected();
