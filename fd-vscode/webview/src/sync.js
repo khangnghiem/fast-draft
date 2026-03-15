@@ -88,13 +88,7 @@ window.addEventListener("message", (event) => {
     case "toolChanged": {
       if (!fdCanvas) return;
       fdCanvas.set_tool(message.tool);
-      // Update toolbar UI (both top and floating)
-      document.querySelectorAll(".tool-btn[data-tool], .ft-tool-btn[data-tool]").forEach((btn) => {
-        btn.classList.toggle(
-          "active",
-          btn.getAttribute("data-tool") === message.tool
-        );
-      });
+      updateToolbarActive(message.tool);
       break;
     }
     case "setViewMode": {
