@@ -2853,13 +2853,13 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <button class="tool-btn" id="renamify-btn" title="Renamify — batch AI rename anonymous node IDs">✦ Renamify</button>
     </div>
     <div class="tb-zone tb-right">
-      <button class="tool-btn" id="notes-toggle-btn" title="Notes Panel">📝</button>
+      <button class="tool-btn" id="notes-toggle-btn" aria-label="Notes Panel" title="Notes Panel">📝</button>
       <span class="zen-full-only" id="status">Loading WASM…</span>
-      <button class="tool-btn" id="fullscreen-toggle-btn" title="Full Screen (⇧F)">⛶</button>
-      <button class="tool-btn" id="zen-toggle-btn" title="Switch to Zen mode">🧘</button>
+      <button class="tool-btn" id="fullscreen-toggle-btn" aria-label="Full Screen" title="Full Screen (⇧F)">⛶</button>
+      <button class="tool-btn" id="zen-toggle-btn" aria-label="Switch to Zen mode" title="Switch to Zen mode">🧘</button>
       <!-- Settings Hamburger ☰ -->
       <div class="settings-dropdown-container zen-full-only" id="settings-dropdown-container">
-      <button class="tool-btn" id="settings-menu-btn" title="Settings & tools">☰</button>
+      <button class="tool-btn" id="settings-menu-btn" aria-label="Settings and tools" title="Settings & tools">☰</button>
       <div class="settings-menu" id="settings-menu">
         <button class="settings-menu-item" id="sm-grid-toggle"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span><span class="sm-shortcut">G</span></button>
         <button class="settings-menu-item" id="sm-note-badge-toggle"><span class="sm-icon">◇</span><span class="sm-label">Note Badges</span></button>
@@ -2897,7 +2897,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <label class="fab-label fab-text-only" for="fab-font-size">Size</label>
       <input type="number" id="fab-font-size" class="fab-input fab-text-only" min="8" max="200" step="1" value="16" title="Font size">
       <div class="fab-sep"></div>
-      <button class="fab-delete-btn" id="deleteSelectedBtn" title="Delete (⌫)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
+      <button class="fab-delete-btn" id="deleteSelectedBtn" aria-label="Delete" title="Delete (⌫)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
 
     </div>
     <canvas id="fd-canvas" class="tool-select"></canvas>
@@ -2931,7 +2931,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div id="library-panel"></div>
     <div class="panel-restore-strip layers-restore" id="layers-restore" title="Show layers panel"></div>
     <div class="panel-restore-strip props-restore" id="props-restore" title="Show properties panel"></div>
-    <div id="minimap-container"><canvas id="minimap-canvas"></canvas><div id="minimap-zoom-controls"><button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-reset-btn" title="Reset zoom (click)">100%</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button></div></div>
+    <div id="minimap-container"><canvas id="minimap-canvas"></canvas><div id="minimap-zoom-controls"><button class="bl-btn" id="zoom-out-btn" aria-label="Zoom out" title="Zoom out">−</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-reset-btn" aria-label="Reset zoom" title="Reset zoom (click)">100%</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-in-btn" aria-label="Zoom in" title="Zoom in">+</button></div></div>
     <!-- Floating Bottom Toolbar (Scroll UX) -->
     <div id="floating-toolbar" class="scroll-toolbar horizontal unrolled">
       <div class="scroll-handle handle-start" title="Drag to move, click to roll">
