@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.152 — Apple Pencil Pro Squeeze Combos + Pressure-Sensitive Pen Strokes (R3.10, R3.22)
+- **FEATURE (R3.10)**: Apple Pencil Pro squeeze detection ported to site playground — `pointerdown` with `button=5 && pointerType='pen'` triggers tool toggle via `handle_stylus_squeeze()`; modifier combos: plain=toggle
+
+ 	 last two tools, Shift=Pen, Ctrl=Select, Alt=Rect, Ctrl+Shift=Ellipse
+- **FEATURE (R3.22)**: Pressure-sensitive pen strokes — `PenTool` now stores pressure per point `(x, y, pressure)`; on `PointerUp`, average pressure maps to stroke width via `pressure_to_stroke_width()` (1.0–4.5px range: light ≤0.3 → 1.0px, heavy ≥0.9 → 4.5px); default stroke `#5E5CE6` applied on path creation
+- **CORE**: New `SetStrokeWidth { id, width }` `GraphMutation` with full undo/redo support in `commands.rs` and `sync.rs`
+- **TESTING**: 3 new pressure tests — `pen_tool_light_pressure_thin_stroke`, `pen_tool_heavy_pressure_thick_stroke`, `pen_tool_default_pressure_medium_stroke`; updated `tool_pen_basic_draw` and `tool_pen_subsampling` for new mutation count
+- **SITE**: `setupApplePencilPro(canvas)` function in `playground.js`
+
 ### v0.11.151 — Hand Tool Reverted to Pan-Only (R3.6)
 - **CHANGE (R3.6)**: Hand tool is now pan-only — removed "Smart Hand" context-aware behavior (hit-test on pointer-down, select+move on nodes); Hand tool now always pans regardless of what's under the cursor, matching Figma/Sketch/Procreate/Affinity convention; decision driven by iPad + Apple Pencil Pro safety (accidental node moves when expecting safe pan) and input hierarchy clarity (pencil = precision, fingers = navigate, Hand = safe viewport tool)
 - **CORE**: `pointer.rs` — `handle_pointer_down` returns `false` immediately for Hand tool (was: hit-test → delegate to SelectTool); `handle_pointer_move` and `handle_pointer_up` return empty mutations for Hand (was: delegate to SelectTool during drag)
