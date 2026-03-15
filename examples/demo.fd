@@ -267,8 +267,8 @@ frame @pipeline {
   w: 460 h: 236
   use: card
   shadow: (0,2,16,#00000010)
-  x: 206
-  y: 753
+  x: 231.3
+  y: 752.6
 }
 
 # Pipeline stages as connected nodes

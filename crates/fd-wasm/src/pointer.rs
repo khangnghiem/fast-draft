@@ -30,14 +30,10 @@ impl FdCanvas {
             self.commands.begin_batch(&mut self.engine);
         }
 
-        // Smart Hand: hit-test first — if a node is under the cursor,
-        // delegate to SelectTool for move. Otherwise return false → JS pans.
+        // Hand tool: always return false → JS handles pan.
+        // Hand is pan-only (no selection or node dragging).
         if self.active_tool == ToolKind::Hand {
-            let raw_hit = self.hit_test(x, y);
-            if raw_hit.is_none() {
-                return false; // empty space → JS handles pan
-            }
-            // Node hit → fall through to normal pointer-down flow below
+            return false;
         }
 
         let mods = Modifiers {
@@ -111,7 +107,7 @@ impl FdCanvas {
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
-            ToolKind::Hand => self.select_tool.handle(&event, hit),
+            ToolKind::Hand => vec![],
             ToolKind::Eraser => unreachable!("handled above"),
         };
         let changed = self.apply_mutations(mutations);
@@ -219,19 +215,7 @@ impl FdCanvas {
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
-            ToolKind::Hand => {
-                // Smart Hand: delegate to SelectTool if actively dragging a node.
-                // Otherwise skip (JS pan or hover-only).
-                if self.select_tool.dragging {
-                    self.select_tool.handle(&event, hit)
-                } else {
-                    return serde_json::to_string(&PointerMoveResult {
-                        changed: hovered_changed,
-                        bounds: None,
-                    })
-                    .unwrap_or_else(|_| r#"{"changed":false}"#.to_string());
-                }
-            }
+            ToolKind::Hand => vec![],
             ToolKind::Eraser => vec![],
         };
         let changed = self.apply_mutations(mutations);
@@ -392,7 +376,7 @@ impl FdCanvas {
             ToolKind::Pen => self.pen_tool.handle(&event, hit),
             ToolKind::Text => self.text_tool.handle(&event, hit),
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
-            ToolKind::Hand => self.select_tool.handle(&event, hit),
+            ToolKind::Hand => vec![],
             ToolKind::Eraser => vec![],
         };
         let changed = self.apply_mutations(mutations);
