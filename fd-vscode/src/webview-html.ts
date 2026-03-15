@@ -3346,6 +3346,10 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       const panel = document.getElementById('notes-panel');
       const body = document.getElementById('notes-panel-body');
 
+      function escapeHtml(s) {
+        return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+      }
+
       // Lightweight inline markdown → HTML converter (GFM subset)
       function simpleMarkdown(src) {
         let html = '';
@@ -3469,17 +3473,19 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         for (const entry of notes) {
           const nodeId = entry.id;
           const rawNote = entry.note;
-          html += '<div class="note-group" data-note-node="' + nodeId + '">';
-          html += '<div class="note-group-header" data-node="' + nodeId + '" title="Click to select @' + nodeId + '">@' + nodeId + '</div>';
+          const safeNodeId = escapeHtml(nodeId);
+          html += '<div class="note-group" data-note-node="' + safeNodeId + '">';
+          html += '<div class="note-group-header" data-node="' + safeNodeId + '" title="Click to select @' + safeNodeId + '">@' + safeNodeId + '</div>';
           html += '<div class="note-markdown">';
 
           // Check if entire note is a file reference (inline form: note "./spec.md")
           const fileRefMatch = rawNote.trim().match(/^\\.?\\.?\\/[^\\s]+\\.md$/);
           if (fileRefMatch) {
             const filePath = rawNote.trim();
+            const safeFilePath = escapeHtml(filePath);
             const reqId = 'nf_' + nodeId + '_' + Date.now();
-            html += '<div class="note-file-link" data-file-req="' + reqId + '" data-file-path="' + filePath + '">\\ud83d\\udcce ' + filePath + '</div>';
-            html += '<div class="note-file-content" id="' + reqId + '" style="display:none"></div>';
+            html += '<div class="note-file-link" data-file-req="' + escapeHtml(reqId) + '" data-file-path="' + safeFilePath + '">\\ud83d\\udcce ' + safeFilePath + '</div>';
+            html += '<div class="note-file-content" id="' + escapeHtml(reqId) + '" style="display:none"></div>';
             fileRequests.push({ reqId, path: filePath });
           } else {
             // Process @include directives within block notes
@@ -3488,8 +3494,9 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
             let includeMatch;
             while ((includeMatch = includePattern.exec(rawNote)) !== null) {
               const inclPath = includeMatch[1];
+              const safeInclPath = escapeHtml(inclPath);
               const reqId = 'nf_' + nodeId + '_inc_' + fileRequests.length + '_' + Date.now();
-              const badge = '<div class="note-file-link" data-file-req="' + reqId + '" data-file-path="' + inclPath + '">\\ud83d\\udcce ' + inclPath + '</div><div class="note-file-content" id="' + reqId + '" style="display:none"></div>';
+              const badge = '<div class="note-file-link" data-file-req="' + escapeHtml(reqId) + '" data-file-path="' + safeInclPath + '">\\ud83d\\udcce ' + safeInclPath + '</div><div class="note-file-content" id="' + escapeHtml(reqId) + '" style="display:none"></div>';
               processedNote = processedNote.replace(includeMatch[0], badge);
               fileRequests.push({ reqId, path: inclPath });
             }
