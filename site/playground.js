@@ -4308,6 +4308,32 @@ async function initPlayground() {
     setupPanelResize(wrapper, resizeCanvas);
     setupSplitResize(document.getElementById('playground-container'), resizeCanvas);
 
+    // ── Mobile Layers Drawer Toggle ──────────────────────────────────
+    const mobileLayersToggle = document.getElementById('mobile-layers-toggle');
+    const mobileLayersBackdrop = document.getElementById('mobile-layers-backdrop');
+    const layersPanelEl = document.getElementById('layers-panel');
+
+    function toggleMobileLayersDrawer() {
+      if (!layersPanelEl) return;
+      const isOpen = layersPanelEl.classList.toggle('mobile-open');
+      mobileLayersBackdrop?.classList.toggle('visible', isOpen);
+      mobileLayersToggle?.classList.toggle('active', isOpen);
+    }
+    function closeMobileLayersDrawer() {
+      layersPanelEl?.classList.remove('mobile-open');
+      mobileLayersBackdrop?.classList.remove('visible');
+      mobileLayersToggle?.classList.remove('active');
+    }
+
+    mobileLayersToggle?.addEventListener('click', toggleMobileLayersDrawer);
+    mobileLayersBackdrop?.addEventListener('click', closeMobileLayersDrawer);
+
+    // Auto-close drawer when viewport grows past mobile breakpoint
+    const mobileQuery = window.matchMedia('(max-width: 768px)');
+    mobileQuery.addEventListener('change', (e) => {
+      if (!e.matches) closeMobileLayersDrawer();
+    });
+
     // ── Pointer Events ────────────────────────────────────────────────
     canvas.addEventListener('pointerdown', (e) => {
       if (!fdCanvas) return;
