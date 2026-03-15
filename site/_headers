@@ -1,3 +1,10 @@
+# HTML pages — always revalidate so new ?v=<sha> asset URLs are picked up.
+# 304 responses are ~200 bytes, so repeat visits remain fast.
+/index.html
+  Cache-Control: no-cache
+/*.html
+  Cache-Control: no-cache
+
 # WASM, JS, CSS — all URLs are cache-busted with ?v=<git-sha> via
 # pages.yml auto-bust step. Immutable = browsers never revalidate,
 # return visitors get instant loads from disk cache.
