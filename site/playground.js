@@ -3803,8 +3803,8 @@ async function initPlayground() {
         return;
       }
 
-      // Hand tool: always pan (no selection or node dragging)
-      if (fdCanvas.get_tool_name() === 'hand') {
+      // Hand tool: finger/mouse → pan; Apple Pencil → fall through to Select (WASM)
+      if (fdCanvas.get_tool_name() === 'hand' && e.pointerType !== 'pen') {
         panDragging = true;
         panStartX = e.clientX - panX;
         panStartY = e.clientY - panY;
@@ -3896,10 +3896,18 @@ async function initPlayground() {
         pencilHover.sceneY = hy;
         pencilHover.screenX = e.clientX;
         pencilHover.screenY = e.clientY;
+        // Visual mode indicator: pencil shows default cursor on Hand tool (select mode)
+        if (fdCanvas.get_tool_name() === 'hand') {
+          canvas.style.cursor = 'default';
+        }
         // Check what's under the pencil for hover highlight
         try {
           const hitJson = fdCanvas.hit_test_at(hx, hy);
           pencilHover.nodeId = hitJson ? JSON.parse(hitJson).id || null : null;
+          // Hand+Pen over a node → show move cursor (indicates select behavior)
+          if (pencilHover.nodeId && fdCanvas.get_tool_name() === 'hand') {
+            canvas.style.cursor = 'move';
+          }
         } catch (_) { pencilHover.nodeId = null; }
         renderDirty = true;
         return;
@@ -4087,7 +4095,22 @@ async function initPlayground() {
     setupApplePencilPro(canvas);
 
     // ── Tool Toolbar (floating scroll) ────────────────────────────────────
+    let toolbarDragTool = null; // Tracks drag-from-toolbar-to-canvas
     document.querySelectorAll('.ft-tool-btn[data-tool]').forEach(btn => {
+      // pointerdown: switch tool immediately (enables drag-to-create)
+      btn.addEventListener('pointerdown', (e) => {
+        if (!fdCanvas) return;
+        const tool = btn.dataset.tool;
+        fdCanvas.set_tool(tool);
+        updateToolbar(tool);
+        canvas.style.cursor = tool === 'hand' ? 'grab' : (tool === 'select' || tool === 'eraser') ? '' : 'crosshair';
+        // Track for drag-from-toolbar-to-canvas
+        if (tool !== 'hand' && tool !== 'select' && tool !== 'eraser') {
+          toolbarDragTool = tool;
+          e.preventDefault(); // prevent text selection during drag
+        }
+      });
+
       btn.addEventListener('click', () => {
         if (!fdCanvas) return;
         const tool = btn.dataset.tool;
@@ -4107,11 +4130,33 @@ async function initPlayground() {
           lastToolBtnTime = now;
           lastToolBtnName = tool;
         }
+        // Tool already set via pointerdown — just ensure consistency
         fdCanvas.set_tool(tool);
         updateToolbar(tool);
         canvas.style.cursor = tool === 'hand' ? 'grab' : (tool === 'select' || tool === 'eraser') ? '' : 'crosshair';
       });
     });
+
+    // Drag-from-toolbar: when pointer enters canvas during toolbar drag,
+    // synthesize a pointer-down to start shape creation
+    canvas.addEventListener('pointerenter', (e) => {
+      if (!toolbarDragTool || !fdCanvas || e.buttons === 0) return;
+      const tool = toolbarDragTool;
+      toolbarDragTool = null;
+      // Synthesize pointer-down at entry point
+      fdCanvas.set_pointer_type(pointerTypeToU8(e.pointerType));
+      const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
+      const changed = fdCanvas.handle_pointer_down(
+        x, y, e.pressure || 1.0,
+        e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
+      );
+      activePointerId = e.pointerId;
+      if (changed) { renderDirty = true; uiDirty = true; }
+      // Hide FAB during draw gestures
+      document.getElementById('floating-action-bar')?.classList.remove('visible');
+    });
+    // Clear toolbar drag on pointer up anywhere
+    document.addEventListener('pointerup', () => { toolbarDragTool = null; }, true);
 
     // ── Scroll Toolbar: double-click handle to roll/unroll ──────────────
     const scrollToolbar = document.getElementById('floating-toolbar');

@@ -309,6 +309,13 @@ export class FdCanvas {
      */
     render_export(ctx: CanvasRenderingContext2D, offset_x: number, offset_y: number): void;
     /**
+     * Reparent a node into a target container (⌘+drag).
+     *
+     * The target must be a container type (Rect, Ellipse, Frame, Group).
+     * Returns true if the reparent succeeded.
+     */
+    reparent_into(child_id: string, target_id: string): boolean;
+    /**
      * Resize the canvas.
      */
     resize(width: number, height: number): void;
@@ -423,12 +430,6 @@ export interface InitOutput {
     readonly fdcanvas_group_selected: (a: number) => number;
     readonly fdcanvas_select_by_id: (a: number, b: number, c: number) => number;
     readonly fdcanvas_ungroup_selected: (a: number) => number;
-    readonly fdcanvas_cancel_drag: (a: number) => number;
-    readonly fdcanvas_handle_key: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
-    readonly fdcanvas_handle_pointer_down: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
-    readonly fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
-    readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
-    readonly fdcanvas_handle_stylus_squeeze: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_compute_guides_for_rect: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_create_child_text: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_create_edge: (a: number, b: number, c: number, d: number, e: number) => [number, number];
@@ -451,10 +452,17 @@ export interface InitOutput {
     readonly fdcanvas_hit_test_edge_at: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_is_node_locked: (a: number, b: number, c: number) => number;
     readonly fdcanvas_parent_of: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_reparent_into: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly fdcanvas_set_multi_node_prop: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly fdcanvas_set_node_prop: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly fdcanvas_toggle_node_locked: (a: number, b: number, c: number) => number;
     readonly fdcanvas_update_text_metrics: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly fdcanvas_cancel_drag: (a: number) => number;
+    readonly fdcanvas_handle_key: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+    readonly fdcanvas_handle_pointer_down: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
+    readonly fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
+    readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+    readonly fdcanvas_handle_stylus_squeeze: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_add_animation_to_node: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly fdcanvas_emit_selection_fd: (a: number) => [number, number];
     readonly fdcanvas_export_excalidraw: (a: number) => [number, number];

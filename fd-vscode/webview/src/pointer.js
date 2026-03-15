@@ -35,8 +35,8 @@ function setupPointerEvents() {
       return;
     }
 
-    // Hand tool: always pan (no selection or node dragging)
-    if (fdCanvas.get_tool_name() === 'hand') {
+    // Hand tool: finger/mouse → pan; Apple Pencil → fall through to Select (WASM)
+    if (fdCanvas.get_tool_name() === 'hand' && e.pointerType !== 'pen') {
       panDragging = true;
       panStartX = e.clientX - panX;
       panStartY = e.clientY - panY;
