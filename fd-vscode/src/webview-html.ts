@@ -845,6 +845,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       background: var(--fd-border);
       margin: 3px 4px;
     }
+    .layer-ctx-danger { color: #FF3B30; }
+    .layer-ctx-danger:hover { background: rgba(255,59,48,0.15); color: #FF3B30; }
 
     /* ── Spec Overlay (transparent badge layer over canvas) ── */
     #spec-overlay {

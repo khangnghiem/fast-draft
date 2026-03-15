@@ -49,6 +49,69 @@ impl FdCanvas {
         }
     }
 
+    /// Toggle a node in/out of the current selection (⌘+click in layers).
+    /// If the node is already selected, deselect it. Otherwise, add it.
+    /// Returns true if the node was found (valid id).
+    pub fn toggle_select_by_id(&mut self, node_id: &str) -> bool {
+        if node_id.is_empty() {
+            return false;
+        }
+        let id = NodeId::intern(node_id);
+        let is_node = self.engine.graph.get_by_id(id).is_some();
+        let is_edge = self.engine.graph.edges.iter().any(|e| e.id == id);
+        if !is_node && !is_edge {
+            return false;
+        }
+        if let Some(pos) = self.select_tool.selected.iter().position(|&s| s == id) {
+            self.select_tool.selected.remove(pos);
+            self.select_tool.visual_highlight.retain(|&s| s != id);
+        } else {
+            self.select_tool.selected.push(id);
+            self.select_tool.visual_highlight.push(id);
+        }
+        true
+    }
+
+    /// Add a node to the current selection without clearing (⌘+click add mode).
+    /// Returns true if the node was found and added (ignores if already selected).
+    pub fn add_to_selection(&mut self, node_id: &str) -> bool {
+        if node_id.is_empty() {
+            return false;
+        }
+        let id = NodeId::intern(node_id);
+        let is_node = self.engine.graph.get_by_id(id).is_some();
+        let is_edge = self.engine.graph.edges.iter().any(|e| e.id == id);
+        if !is_node && !is_edge {
+            return false;
+        }
+        if !self.select_tool.selected.contains(&id) {
+            self.select_tool.selected.push(id);
+            self.select_tool.visual_highlight.push(id);
+        }
+        true
+    }
+
+    /// Select multiple nodes by their IDs from a JSON array (⇧+click range select).
+    /// Replaces the current selection with the provided IDs.
+    /// Returns the number of valid nodes that were selected.
+    pub fn select_multiple_by_ids(&mut self, ids_json: &str) -> u32 {
+        let ids: Vec<String> = serde_json::from_str(ids_json).unwrap_or_default();
+        self.select_tool.selected.clear();
+        self.select_tool.visual_highlight.clear();
+        let mut count = 0u32;
+        for id_str in &ids {
+            let id = NodeId::intern(id_str);
+            let is_node = self.engine.graph.get_by_id(id).is_some();
+            let is_edge = self.engine.graph.edges.iter().any(|e| e.id == id);
+            if is_node || is_edge {
+                self.select_tool.selected.push(id);
+                self.select_tool.visual_highlight.push(id);
+                count += 1;
+            }
+        }
+        count
+    }
+
     /// Clear the pressed interaction state.
     ///
     /// Called from JS when entering inline text editing to suppress

@@ -17,6 +17,17 @@
 
 ## Completed Requirements
 
+### v0.11.158 — Layers Panel File Explorer UX (R3.69)
+- **FIX (R3.69)**: Reparent position preservation — moving a node via layers panel (drag, context menu, or WASM API) now preserves its visual canvas position by computing parent-relative coordinates from absolute bounds; fixes text nodes "disappearing" at (0,0) when moved to root and identity duplication on round-trip
+- **FEATURE (R3.69)**: ⌘+Click multi-select in layers — Command/Ctrl+Click toggles individual nodes in/out of the selection set; highlights update immediately from actual WASM selection state
+- **FEATURE (R3.69)**: ⇧+Click batch select in layers — Shift+Click selects a contiguous range from the last-clicked item to the current item, respecting collapsed/expanded tree state
+- **FEATURE (R3.69)**: Keyboard shortcuts in layers panel — Delete/Backspace, ⌘C (copy), ⌘X (cut), ⌘V (paste), ⌘D (duplicate), ⌘A (select all) all work when the layers panel has focus
+- **FEATURE (R3.69)**: Context menu enhancements — right-click layer items now shows Duplicate, Copy, Paste, and Delete actions alongside existing Move Into/Move to Root; Delete uses red danger styling
+- **WASM**: New `toggle_select_by_id(id)` API — toggles a single node in/out of the current selection (for ⌘+Click); new `add_to_selection(id)` API — adds without clearing; new `select_multiple_by_ids(json)` API — replaces selection with a batch of IDs (for ⇧+Click range)
+- **CORE**: `reparent_into()` in `crud.rs` now captures absolute bounds before reparent, computes new parent-relative Position constraint after reparent, and strips conflicting positional constraints (Offset, CenterIn, FillParent)
+- **PARITY**: All changes implemented on both site (`playground.js`) and VS Code extension (`panels.js`)
+- **CSS**: New `.layer-ctx-danger` styling for destructive menu items; `.layer-ctx-sep` separator between action groups
+
 ### v0.11.157 — Layer Drag-to-Reparent + Reorder + Context Menu (R3.68)
 - **FEATURE (R3.68)**: Drag-to-reparent in layers panel — drag a layer item onto a container (rect/ellipse/frame/group) to make it a child; split-zone cursor detection (top 25% = insert above, middle 50% = nest into container, bottom 25% = insert below); blue highlight and insertion line visual feedback
 - **FEATURE (R3.68)**: Drag-to-reorder in layers panel — drag a layer item above/below siblings to reorder z-order; works across parent boundaries (reparents then reorders)
