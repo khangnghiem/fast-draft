@@ -86,6 +86,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.69** _(done)_: Layers panel file explorer UX — ⌘+Click multi-select (toggle), ⇧+Click batch-select (range), keyboard shortcuts (Delete/⌘C/⌘X/⌘V/⌘D/⌘A) when panel has focus, context menu with Duplicate/Copy/Paste/Delete actions, position-preserving reparent (fixes text node disappearance and identity duplication); WASM `toggle_select_by_id()`, `add_to_selection()`, `select_multiple_by_ids()` APIs
 - **R3.70** _(done)_: Hand tool modifier keys — Alt (Option) on Hand = temp Select + clone (duplicate on click/drag); Cmd (⌘) on Hand = temp Select for move/select/reparent; creates V↔H symmetry (Select+Cmd=pan, Hand+Cmd=select); tool-aware modifier cursor previews (Hand+Cmd shows pointer cursor, not grab); restores Hand tool on pointer-up
 - **R3.71** _(done)_: Arrow Shift+drag angle snap — holding Shift while drawing an arrow snaps the endpoint to the nearest 45° increment (0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°); complete Shift modifier documentation in SHORTCUTS.md with per-tool constraint table; Frame tool inherits Shift+square from RectTool
+- **R3.72** _(done)_: Center-in-parent reparent — opt-in mode for reparent operations via Alt+drop in Layers panel or "⊙ Center in @target" context menu item; strips positional constraints and adds `CenterIn(target)` constraint; default behavior (preserve visual position) unchanged; `reparent_into_centered()` WASM API
 
 #### R3c: Navigation & View
 
@@ -346,7 +347,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | resizable panels | R6.7 |
 | edge selection | R3.1, R1.10 |
 | tool locking / sticky | R3.63 |
-| reparent / nesting | R3.34, R3.64, R3.68 |
+| reparent / nesting | R3.34, R3.64, R3.68, R3.72 |
 | drag-back-to-cancel | R3.65 |
 | smart defaults / ipad | R3.66, R3.42 |
 | hand tool / input-aware | R3.67, R3.70, R6.6 |

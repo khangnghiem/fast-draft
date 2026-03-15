@@ -1629,8 +1629,10 @@ function wireLayerDragDrop(panel) {
       let changed = false;
 
       if (zone === 'nest' && isContainer) {
-        // #1: Reparent into container
-        changed = fdCanvas.reparent_into(draggedId, targetId);
+        // #1: Reparent into container (Alt = center, default = preserve position)
+        changed = e.altKey && fdCanvas.reparent_into_centered
+          ? fdCanvas.reparent_into_centered(draggedId, targetId)
+          : fdCanvas.reparent_into(draggedId, targetId);
       } else {
         // #2: Reorder — calculate target index
         const targetIndex = getSiblingIndex(panel, targetId);
@@ -1745,6 +1747,7 @@ function wireLayerContextMenu(panel) {
             for (const t of validTargets.slice(0, 15)) {
               const icon = LAYER_ICONS[t.kind] || '•';
               menuHtml += `<div class="layer-ctx-item" data-action="move-into" data-target="${escHtml(t.id)}"><span class="ctx-icon">${icon}</span>@${escHtml(t.id)}</div>`;
+              menuHtml += `<div class="layer-ctx-item" data-action="center-into" data-target="${escHtml(t.id)}" style="padding-left:28px;opacity:0.7;font-size:11px"><span class="ctx-icon">⊙</span>Center in @${escHtml(t.id)}</div>`;
             }
             if (validTargets.length > 15) {
               menuHtml += `<div class="layer-ctx-item" style="opacity:0.5;cursor:default">…${validTargets.length - 15} more</div>`;
@@ -1791,6 +1794,11 @@ function wireLayerContextMenu(panel) {
           if (action === 'move-into') {
             const targetId = btn.getAttribute('data-target');
             changed = fdCanvas.reparent_into(nodeId, targetId);
+          } else if (action === 'center-into') {
+            const targetId = btn.getAttribute('data-target');
+            changed = fdCanvas.reparent_into_centered
+              ? fdCanvas.reparent_into_centered(nodeId, targetId)
+              : fdCanvas.reparent_into(nodeId, targetId);
           } else if (action === 'move-to-root') {
             changed = fdCanvas.reparent_into(nodeId, 'root');
           } else if (action === 'duplicate') {
