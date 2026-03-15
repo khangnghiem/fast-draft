@@ -120,9 +120,20 @@ Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** 
 | `⌘`            | **Move object** (temp Select)                   | **Marquee select** (temp Select) |
 | `⌘` + drag     | **Reparent** — drop onto container makes child  | —                                |
 | `Alt`          | **Clone + drag**                                | Draw new shape                   |
-| `Shift`        | Constrain (square/axis)                         | Constrain                        |
+| `Shift`        | Constrain (square/axis) — see per-tool table    | Constrain                        |
 | `Shift+Alt`    | Square/circle from center                       | Square/circle from center        |
 | `Space` (hold) | Pan                                             | Pan                              |
+
+#### Shift constraint per drawing tool
+
+| Tool        | Shift+drag effect                                     |
+| ----------- | ----------------------------------------------------- |
+| **Rect**    | Constrain to square                                   |
+| **Ellipse** | Constrain to circle                                   |
+| **Frame**   | Constrain to square (same as Rect)                    |
+| **Arrow**   | Snap angle to nearest 45° (0°, 45°, 90°, 135°…)       |
+| **Pen**     | — (no constraint — freehand)                          |
+| **Text**    | — (click-to-place, no drag constraint)                |
 
 ### When Select Tool is active (V)
 
@@ -144,6 +155,7 @@ Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** 
 | `Alt`              | **Clone + drag** (temp Select)                 | Pan            |
 | `⌘`                | **Move / select** (temp Select)                | Marquee select |
 | `⌘` + drag         | **Reparent** — drop onto container makes child | —              |
+| `Shift`            | — (no effect — pan is unconstrained)           | —              |
 | `Space` (hold)     | Pan                                            | Pan            |
 
 ---

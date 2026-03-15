@@ -1059,14 +1059,24 @@ impl Tool for ArrowTool {
                 self.source_node = hit_node;
                 vec![]
             }
-            InputEvent::PointerMove { x, y, .. } => {
+            InputEvent::PointerMove {
+                x, y, modifiers, ..
+            } => {
                 if self.drawing {
-                    self.current_pos = Some((*x, *y));
+                    let (sx, sy) = self.start_pos.unwrap_or((*x, *y));
+                    let (fx, fy) = if modifiers.shift {
+                        snap_to_45_degrees(sx, sy, *x, *y)
+                    } else {
+                        (*x, *y)
+                    };
+                    self.current_pos = Some((fx, fy));
                     self.target_node = hit_node;
                 }
                 vec![]
             }
-            InputEvent::PointerUp { x, y, .. } => {
+            InputEvent::PointerUp {
+                x, y, modifiers, ..
+            } => {
                 self.drawing = false;
                 let source = self.source_node.take();
                 let start = self.start_pos.take();
@@ -1087,7 +1097,19 @@ impl Tool for ArrowTool {
                 };
                 let to_anchor = match target {
                     Some(id) => EdgeAnchor::Node(id),
-                    None => EdgeAnchor::Point(*x, *y),
+                    None => {
+                        // Shift: snap endpoint to nearest 45° from start
+                        let (fx, fy) = if modifiers.shift {
+                            let (sx, sy) = match &from_anchor {
+                                EdgeAnchor::Point(px, py) => (*px, *py),
+                                _ => start.unwrap_or((*x, *y)),
+                            };
+                            snap_to_45_degrees(sx, sy, *x, *y)
+                        } else {
+                            (*x, *y)
+                        };
+                        EdgeAnchor::Point(fx, fy)
+                    }
                 };
 
                 // Prevent self-loops
@@ -1129,6 +1151,28 @@ impl Tool for ArrowTool {
             _ => vec![],
         }
     }
+}
+
+// ─── Arrow angle snap helper ─────────────────────────────────────────────
+
+/// Snap a point to the nearest 45° direction from a start point.
+///
+/// Projects `(end_x, end_y)` onto one of 8 directions:
+/// 0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°.
+/// Returns the snapped `(x, y)` at the same distance from start.
+fn snap_to_45_degrees(start_x: f32, start_y: f32, end_x: f32, end_y: f32) -> (f32, f32) {
+    let dx = end_x - start_x;
+    let dy = end_y - start_y;
+    let dist = (dx * dx + dy * dy).sqrt();
+    if dist < 0.001 {
+        return (end_x, end_y);
+    }
+    let angle = dy.atan2(dx);
+    // Round to nearest 45° (π/4)
+    let snap_angle = (angle / core::f32::consts::FRAC_PI_4).round() * core::f32::consts::FRAC_PI_4;
+    let snapped_x = start_x + dist * snap_angle.cos();
+    let snapped_y = start_y + dist * snap_angle.sin();
+    (snapped_x, snapped_y)
 }
 
 // ─── Eraser Tool ─────────────────────────────────────────────────────────

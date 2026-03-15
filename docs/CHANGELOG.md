@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.160 — Arrow Shift+Drag Angle Snap + Shift Behavior Documentation (R3.71)
+- **FEATURE (R3.71)**: Arrow tool Shift+drag → 45° angle snap — holding Shift while drawing an arrow snaps the endpoint to the nearest 45° increment (0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°); applies to both live preview (PointerMove) and final placement (PointerUp for point anchors); `snap_to_45_degrees()` helper in `tools.rs`
+- **DOCS (R3.71)**: Complete Shift modifier documentation in `SHORTCUTS.md` — new per-tool Shift constraint table (Rect→square, Ellipse→circle, Frame→square, Arrow→45° snap, Pen/Text→none); Hand tool Shift row added (no effect — pan is unconstrained)
+- **PARITY**: Frame tool already inherits Shift+drag square constraint from RectTool (both routed through `rect_tool.handle()` in `pointer.rs`)
+- **TESTING**: 3 new tests — `arrow_tool_shift_snaps_to_45_degrees` (horizontal snap), `arrow_tool_shift_snaps_preview_to_diagonal` (45° diagonal snap), `snap_to_45_degrees_all_directions` (all 8 compass directions + zero-distance edge case)
+
 ### v0.11.159 — Hand Tool Modifier Keys (R3.70)
 - **FEATURE (R3.70)**: Alt (Option) on Hand tool → temporary duplicate mode — holding Alt while on the Hand tool temporarily switches to Select + clone behavior; Alt+click/drag a node duplicates it (same as Alt+drag on Select tool); tool restores to Hand on pointer-up
 - **FEATURE (R3.70)**: Cmd (⌘) on Hand tool → temporary select mode — holding Cmd while on the Hand tool temporarily switches to Select tool; click to select, drag to move, drag onto container to reparent; creates perfect V↔H symmetry (Select+Cmd=pan, Hand+Cmd=select)
