@@ -85,6 +85,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.68** _(done)_: Layer drag-to-reparent — drag layer items to reparent into containers (split-zone: top/bottom 25% = reorder, middle 50% = nest); drag-to-reorder z-order siblings; right-click "Move Into" context menu; drop-to-root (empty space); all operations push undo snapshots; WASM `reorder_child()` + `get_container_ids()` APIs; `reparent_into()` enhanced to accept "root" target
 - **R3.69** _(done)_: Layers panel file explorer UX — ⌘+Click multi-select (toggle), ⇧+Click batch-select (range), keyboard shortcuts (Delete/⌘C/⌘X/⌘V/⌘D/⌘A) when panel has focus, context menu with Duplicate/Copy/Paste/Delete actions, position-preserving reparent (fixes text node disappearance and identity duplication); WASM `toggle_select_by_id()`, `add_to_selection()`, `select_multiple_by_ids()` APIs
 - **R3.70** _(done)_: Hand tool modifier keys — Alt (Option) on Hand = temp Select + clone (duplicate on click/drag); Cmd (⌘) on Hand = temp Select for move/select/reparent; creates V↔H symmetry (Select+Cmd=pan, Hand+Cmd=select); tool-aware modifier cursor previews (Hand+Cmd shows pointer cursor, not grab); restores Hand tool on pointer-up
+- **R3.71** _(done)_: Arrow Shift+drag angle snap — holding Shift while drawing an arrow snaps the endpoint to the nearest 45° increment (0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°); complete Shift modifier documentation in SHORTCUTS.md with per-tool constraint table; Frame tool inherits Shift+square from RectTool
 
 #### R3c: Navigation & View
 
@@ -352,3 +353,4 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | drag-from-toolbar | R3.67 |
 | layers-panel-ux | R3.69, R3.68, R3.30 |
 | hand-tool-modifiers | R3.70, R3.54 |
+| arrow-shift-snap / shift-constraint | R3.71, R3.54, R3.66 |

@@ -2215,3 +2215,113 @@ fn rect_tool_drag_back_to_start_is_click() {
         _ => panic!("expected ResizeNode"),
     }
 }
+
+#[test]
+fn arrow_tool_shift_snaps_to_45_degrees() {
+    let mut tool = ArrowTool::new();
+    let shift = Modifiers {
+        shift: true,
+        ..Modifiers::NONE
+    };
+
+    // Press at (100, 100)
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 100.0,
+            y: 100.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Drag nearly horizontal (slight Y offset) with Shift
+    // → should snap to pure horizontal (0°)
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 300.0,
+            y: 115.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    let preview = tool.preview_line().expect("preview during drag");
+    // Start should still be (100, 100)
+    assert!((preview.0 - 100.0).abs() < 0.01, "start x");
+    assert!((preview.1 - 100.0).abs() < 0.01, "start y");
+    // End Y should snap to start Y (horizontal)
+    assert!(
+        (preview.3 - 100.0).abs() < 1.0,
+        "end Y should snap to horizontal: got {}",
+        preview.3
+    );
+}
+
+#[test]
+fn arrow_tool_shift_snaps_preview_to_diagonal() {
+    let mut tool = ArrowTool::new();
+    let shift = Modifiers {
+        shift: true,
+        ..Modifiers::NONE
+    };
+
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 0.0,
+            y: 0.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Drag at ~40° (close to 45°) with Shift → should snap to 45°
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 100.0,
+            y: 85.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    let preview = tool.preview_line().expect("preview during drag");
+    // At 45°, end_x should equal end_y
+    assert!(
+        (preview.2 - preview.3).abs() < 1.0,
+        "diagonal snap: x={}, y={} should be ~equal",
+        preview.2,
+        preview.3
+    );
+}
+
+#[test]
+fn snap_to_45_degrees_all_directions() {
+    use super::snap_to_45_degrees;
+
+    // East (0°): nearly horizontal drag → snap to pure east
+    let (x, y) = snap_to_45_degrees(0.0, 0.0, 100.0, 5.0);
+    assert!(y.abs() < 1.0, "east snap: y={y} should be ~0");
+    assert!((x - 100.0).abs() < 1.0, "east snap: x={x} should be ~100");
+
+    // North-East (45°): drag at 40° → snap to 45°
+    let (x, y) = snap_to_45_degrees(0.0, 0.0, 100.0, 85.0);
+    assert!(
+        (x - y).abs() < 1.0,
+        "NE snap: x={x}, y={y} should be ~equal"
+    );
+
+    // South (-90°): nearly straight down
+    let (x, y) = snap_to_45_degrees(0.0, 0.0, 3.0, -100.0);
+    assert!(x.abs() < 1.0, "south snap: x={x} should be ~0");
+    assert!(
+        (y - (-100.0)).abs() < 1.0,
+        "south snap: y={y} should be ~-100"
+    );
+
+    // Zero distance: should return input unchanged
+    let (x, y) = snap_to_45_degrees(50.0, 50.0, 50.0, 50.0);
+    assert!((x - 50.0).abs() < 0.01);
+    assert!((y - 50.0).abs() < 0.01);
+}
