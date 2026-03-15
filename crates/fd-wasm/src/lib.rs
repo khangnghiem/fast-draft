@@ -257,6 +257,16 @@ impl FdCanvas {
         self.pointer_type = PointerType::from_u8(ptype);
     }
 
+    /// Resolve the effective tool for the current pointer event.
+    /// Hand + Apple Pencil → Select (input-aware Hand: finger=pan, pencil=select).
+    pub(crate) fn effective_tool(&self) -> ToolKind {
+        if self.active_tool == ToolKind::Hand && self.pointer_type == PointerType::Pen {
+            ToolKind::Select
+        } else {
+            self.active_tool
+        }
+    }
+
     /// Get the visual handle size for the current pointer type (for JS rendering).
     pub fn get_handle_visual_size(&self) -> f32 {
         self.pointer_type.handle_visual_size()

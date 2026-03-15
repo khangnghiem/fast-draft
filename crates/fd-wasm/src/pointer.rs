@@ -30,9 +30,12 @@ impl FdCanvas {
             self.commands.begin_batch(&mut self.engine);
         }
 
-        // Hand tool: always return false → JS handles pan.
-        // Hand is pan-only (no selection or node dragging).
-        if self.active_tool == ToolKind::Hand {
+        // Hand tool: finger/mouse → return false (JS handles pan).
+        // Apple Pencil (Pen) → fall through to Select behavior,
+        // enabling input-aware Hand: finger=pan, pencil=select.
+        if self.active_tool == ToolKind::Hand
+            && self.pointer_type != fd_editor::input::PointerType::Pen
+        {
             return false;
         }
 
@@ -100,7 +103,9 @@ impl FdCanvas {
             return erased || pressed_changed || hovered_changed;
         }
 
-        let mutations = match self.active_tool {
+        // Hand + Pen → Select behavior (input-aware Hand tool)
+        let effective = self.effective_tool();
+        let mutations = match effective {
             ToolKind::Select => self.select_tool.handle(&event, hit),
             ToolKind::Rect | ToolKind::Frame => self.rect_tool.handle(&event, hit),
             ToolKind::Ellipse => self.ellipse_tool.handle(&event, hit),
@@ -208,7 +213,8 @@ impl FdCanvas {
             }
         }
 
-        let mutations = match self.active_tool {
+        let effective = self.effective_tool();
+        let mutations = match effective {
             ToolKind::Select => self.select_tool.handle(&event, hit),
             ToolKind::Rect | ToolKind::Frame => self.rect_tool.handle(&event, hit),
             ToolKind::Ellipse => self.ellipse_tool.handle(&event, hit),
@@ -397,7 +403,8 @@ impl FdCanvas {
             self.eraser_tool.clear();
         }
 
-        let mutations = match self.active_tool {
+        let effective = self.effective_tool();
+        let mutations = match effective {
             ToolKind::Select => self.select_tool.handle(&event, hit),
             ToolKind::Rect | ToolKind::Frame => self.rect_tool.handle(&event, hit),
             ToolKind::Ellipse => self.ellipse_tool.handle(&event, hit),
@@ -413,9 +420,9 @@ impl FdCanvas {
         // A draw tool (Rect/Ellipse/Pen/Text/Arrow/Frame) completing its
         // gesture means the scene changed even if PointerUp returned no
         // mutations (the AddNode happened during PointerDown).
-        let tool_switched = self.active_tool != ToolKind::Select
-            && self.active_tool != ToolKind::Eraser
-            && self.active_tool != ToolKind::Hand;
+        let tool_switched = effective != ToolKind::Select
+            && effective != ToolKind::Eraser
+            && effective != ToolKind::Hand;
 
         // Flush text after gesture ends.
         // Also flush when a draw tool completes (tool_switched) — the

@@ -1015,6 +1015,23 @@ export class FdCanvas {
         wasm.fdcanvas_render_export(this.__wbg_ptr, ctx, offset_x, offset_y);
     }
     /**
+     * Reparent a node into a target container (⌘+drag).
+     *
+     * The target must be a container type (Rect, Ellipse, Frame, Group).
+     * Returns true if the reparent succeeded.
+     * @param {string} child_id
+     * @param {string} target_id
+     * @returns {boolean}
+     */
+    reparent_into(child_id, target_id) {
+        const ptr0 = passStringToWasm0(child_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(target_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_reparent_into(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return ret !== 0;
+    }
+    /**
      * Resize the canvas.
      * @param {number} width
      * @param {number} height

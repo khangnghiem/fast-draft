@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.156 — Input-Aware Hand Tool + Drag-from-Toolbar (R3.67)
+- **FEATURE (R3.67)**: Input-aware Hand tool — Apple Pencil (pen) selects/moves nodes (delegates to Select behavior), finger/mouse always pans; matches Procreate/Concepts/Affinity Designer 2 iPad convention; `effective_tool()` helper centralizes Hand+Pen→Select logic across all pointer handlers (down/move/up)
+- **FEATURE (R3.67)**: Visual mode indicator — pencil hover on Hand tool shows `default` cursor (not `grab`) and `move` cursor over nodes, making it clear pencil will select; provides immediate feedback about input-device-specific behavior
+- **FEATURE (R3.67)**: Drag-from-toolbar-to-canvas — pressing a draw tool button and dragging onto the canvas starts shape creation in one continuous gesture; `pointerdown` on toolbar sets tool immediately, `pointerenter` on canvas synthesizes a pointer-down to begin drawing
+- **WASM**: `effective_tool()` on `FdCanvas` (returns Select when Hand+Pen, else active tool); all 3 match arms + `tool_switched` in `pointer.rs` use effective tool
+- **PARITY**: VS Code extension `pointer.js` updated with same Hand+Pen gate
+- **DOCS**: Updated SHORTCUTS.md (Hand tool input-aware behavior)
+
 ### v0.11.155 — Rect Tool iPad Enhancements (R3.63, R3.64, R3.65, R3.66)
 - **FEATURE (R3.63)**: Tool locking (sticky mode) — double-press keyboard shortcut (`R R`) or double-click toolbar button locks tool; stays active after placing shapes; 🔒 visual badge + toast; V/Escape unlocks; switching tools clears lock
 - **FEATURE (R3.64)**: ⌘+drag reparent — holding ⌘/Ctrl during drag-and-drop moves node into a container (Rect/Ellipse/Frame/Group); `reparent_into()` WASM API with cycle detection and container-type validation; works across all tools

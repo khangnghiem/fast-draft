@@ -81,6 +81,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.64** _(done)_: ⌘+drag reparent — holding ⌘/Ctrl while dragging a node onto a container (Rect/Ellipse/Frame/Group) makes it a child; works across all tools; WASM `reparent_into()` API with cycle detection and container validation
 - **R3.65** _(done)_: Drag-back-to-cancel — during a draw gesture, dragging back within 5px of the starting point resets the shape; pointer-up then triggers click-to-place (default size) instead of a tiny drawn shape; applies to RectTool and EllipseTool
 - **R3.66** _(done)_: iPad interaction polish — persistent smart defaults via localStorage (fill/stroke/strokeWidth/opacity remembered across sessions); dimension tooltip during draw-tool gestures (Rect/Ellipse/Frame); 3-finger double-tap = undo (removed single-tap undo); pencil hover ghost preview for draw tools; Shift+Alt square/circle-from-center combo
+- **R3.67** _(done)_: Input-aware Hand tool — Apple Pencil selects/moves (delegates to Select behavior), finger/mouse always pans; visual mode indicator (cursor changes on pen hover); drag-from-toolbar-to-canvas creates shapes in one gesture
 
 #### R3c: Navigation & View
 
@@ -344,3 +345,5 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | reparent / nesting | R3.34, R3.64 |
 | drag-back-to-cancel | R3.65 |
 | smart defaults / ipad | R3.66, R3.42 |
+| hand tool / input-aware | R3.67, R6.6 |
+| drag-from-toolbar | R3.67 |
