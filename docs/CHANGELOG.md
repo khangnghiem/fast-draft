@@ -17,6 +17,9 @@
 
 ## Completed Requirements
 
+### v0.11.167 — HTML Export (R3.56)
+- **HTML+CSS Export**: Added `emit_html` to `fd-core` to generate a standalone HTML document representing the scene graph using absolutely positioned `<div>` and `<svg>` elements.
+
 ### v0.11.166 — Fix ⌘+Drag Reparent (R3.64)
 - **FIX (R3.64)**: ⌘+drag reparent now works correctly — root cause: `hit_test_at()` returned the dragged node itself (topmost at pointer position), so the `hitId !== selectedId` check always failed; new `hit_test_at_excluding(x, y, excludeId)` WASM API performs hit testing while skipping the dragged node and its descendants, revealing the container underneath
 - **CORE**: New `hit_test_excluding()` function in `fd-render/src/hit.rs` — recursive traversal that skips all nodes in an excluded `HashSet<NodeIndex>`; new `hit_test_at_excluding()` WASM API in `fd-wasm/src/props.rs` collects dragged node + all descendants into exclusion set

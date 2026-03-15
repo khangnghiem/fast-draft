@@ -1,6 +1,7 @@
 pub mod emitter;
 pub mod excalidraw;
 pub mod format;
+pub mod html;
 pub mod id;
 pub mod layout;
 pub mod lint;
@@ -16,6 +17,7 @@ pub mod transform;
 
 pub use emitter::{ReadMode, emit_filtered};
 pub use format::{FormatConfig, format_document};
+pub use html::emit_html;
 pub use id::NodeId;
 pub use layout::{Viewport, resolve_layout};
 pub use lint::{LintDiagnostic, LintSeverity, lint_document};
