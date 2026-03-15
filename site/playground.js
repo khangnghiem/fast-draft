@@ -254,6 +254,11 @@ let lastToolKeyName = '';
 let lastToolBtnTime = 0;
 let lastToolBtnName = '';
 
+// Modifier drag state — Hand tool modifier bypass
+let handTempSelectActive = false;
+let handTempSelectOriginalTool = null;
+let handAltCloneActive = false;
+
 // Smart defaults — per-tool style memory (persistent via localStorage)
 let smartDefaults = { fill: null, stroke: '#333333', strokeWidth: 2.5, opacity: 1, cornerRadius: 8 };
 try {
@@ -4221,14 +4226,40 @@ async function initPlayground() {
         return;
       }
 
-      // Hand tool: finger/mouse → pan; Apple Pencil → fall through to Select (WASM)
+      // Hand tool: check modifier keys before defaulting to pan
+      // Apple Pencil always falls through to Select (WASM) regardless of modifiers
       if (fdCanvas.get_tool_name() === 'hand' && e.pointerType !== 'pen') {
-        panDragging = true;
-        panStartX = e.clientX - panX;
-        panStartY = e.clientY - panY;
-        canvas.style.cursor = 'grabbing';
-        activePointerId = e.pointerId;
-        return;
+        canvas.classList.remove('modifier-cmd', 'modifier-alt');
+        const isAltHand = e.altKey;
+        const isCmdHand = e.metaKey && !e.ctrlKey;
+
+        // Alt on Hand → temp Select for clone+drag (duplicate)
+        if (isAltHand && !isCmdHand) {
+          handTempSelectActive = true;
+          handTempSelectOriginalTool = 'hand';
+          handAltCloneActive = true;
+          fdCanvas.set_tool('select');
+          canvas.style.cursor = 'copy';
+          // Fall through to normal pointer handling below
+        }
+        // Cmd on Hand → temp Select for move/select/reparent
+        else if (isCmdHand && !isAltHand) {
+          handTempSelectActive = true;
+          handTempSelectOriginalTool = 'hand';
+          handAltCloneActive = false;
+          fdCanvas.set_tool('select');
+          canvas.style.cursor = 'default';
+          // Fall through to normal pointer handling below
+        }
+        // No modifier → pan as usual
+        else {
+          panDragging = true;
+          panStartX = e.clientX - panX;
+          panStartY = e.clientY - panY;
+          canvas.style.cursor = 'grabbing';
+          activePointerId = e.pointerId;
+          return;
+        }
       }
 
       // Hide FAB during draw gestures (not during move — FAB tracks via render loop)
@@ -4451,6 +4482,16 @@ async function initPlayground() {
         }
       }
 
+      // Restore Hand tool after modifier-key temp Select
+      if (handTempSelectActive && handTempSelectOriginalTool) {
+        fdCanvas.set_tool(handTempSelectOriginalTool);
+        updateToolbar(handTempSelectOriginalTool);
+        canvas.style.cursor = 'grab';
+      }
+      handTempSelectActive = false;
+      handTempSelectOriginalTool = null;
+      handAltCloneActive = false;
+
       // Show FAB + Props if node selected
       updateFab(canvas);
       updatePropertiesPanel();
@@ -4663,9 +4704,21 @@ async function initPlayground() {
         return;
       }
 
-      // Modifier cursors (⌘=grab, Alt=copy)
-      if (e.key === 'Meta') canvas.classList.add('modifier-cmd');
-      if (e.key === 'Alt') canvas.classList.add('modifier-alt');
+      // Tool-aware modifier cursors:
+      // Hand+Cmd → default/pointer (select preview), other+Cmd → grab (pan preview)
+      // Alt → copy cursor on all tools
+      if (e.key === 'Meta') {
+        canvas.classList.remove('modifier-cmd', 'modifier-alt');
+        if (fdCanvas && fdCanvas.get_tool_name() === 'hand') {
+          canvas.classList.add('modifier-alt'); // pointer/default cursor for select preview
+        } else {
+          canvas.classList.add('modifier-cmd'); // grab cursor for pan preview
+        }
+      }
+      if (e.key === 'Alt') {
+        canvas.classList.remove('modifier-cmd', 'modifier-alt');
+        canvas.classList.add('modifier-alt');
+      }
 
       // Grid toggle (G key)
       if (!editorFocused && e.key.toLowerCase() === 'g' && !e.metaKey && !e.ctrlKey && !e.altKey) {

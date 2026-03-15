@@ -136,6 +136,16 @@ Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** 
 | `⌘` (hold)         | Pan                                                       | Pan            |
 | `Space` (hold)     | Pan                                                       | Pan            |
 
+### When Hand Tool is active (H)
+
+| Modifier           | On Object                                      | On Empty Space |
+| ------------------ | ---------------------------------------------- | -------------- |
+| None               | Pan                                            | Pan            |
+| `Alt`              | **Clone + drag** (temp Select)                 | Pan            |
+| `⌘`                | **Move / select** (temp Select)                | Marquee select |
+| `⌘` + drag         | **Reparent** — drop onto container makes child | —              |
+| `Space` (hold)     | Pan                                            | Pan            |
+
 ---
 
 ## Smart Defaults (Sticky Styles)

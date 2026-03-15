@@ -382,15 +382,39 @@ function setupPointerEvents() {
       return;
     }
 
-    // Hand tool: always pan (no selection or node dragging)
+    // Hand tool: check for modifier keys before defaulting to pan
     if (fdCanvas.get_tool_name() === 'hand') {
-      panDragging = true;
-      panStartX = e.clientX - panX;
-      panStartY = e.clientY - panY;
-      canvas.style.cursor = "grabbing";
-      canvasPointerId = e.pointerId;
-      e.preventDefault();
-      return;
+      clearModifierCursors();
+      const isAltHand = e.altKey || modAltHeld;
+      const isCmdHand = e.metaKey && !e.ctrlKey;
+
+      // Alt on Hand → temp Select for clone+drag (duplicate)
+      if (isAltHand && !isCmdHand) {
+        cmdTempSelectActive = true;
+        cmdTempSelectOriginalTool = 'hand';
+        fdCanvas.set_tool('select');
+        altCloneActive = true;
+        canvas.style.cursor = 'copy';
+        // Fall through to normal pointer handling below
+      }
+      // Cmd on Hand → temp Select for move/select/reparent
+      else if (isCmdHand && !isAltHand) {
+        cmdTempSelectActive = true;
+        cmdTempSelectOriginalTool = 'hand';
+        fdCanvas.set_tool('select');
+        canvas.style.cursor = 'default';
+        // Fall through to normal pointer handling below
+      }
+      // No modifier → pan as usual
+      else {
+        panDragging = true;
+        panStartX = e.clientX - panX;
+        panStartY = e.clientY - panY;
+        canvas.style.cursor = "grabbing";
+        canvasPointerId = e.pointerId;
+        e.preventDefault();
+        return;
+      }
     }
 
     // Adjust for pan offset and zoom level → scene-space coords
@@ -1887,12 +1911,20 @@ document.addEventListener("keydown", (e) => {
   const active = document.activeElement;
   if (active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT")) return;
 
-  // Cmd/Meta held alone → grab cursor (pan preview)
+  // Tool-aware modifier cursor previews:
+  // Hand+Cmd → default cursor (select), Select+Cmd → grab (pan), Drawing+Cmd → default (select)
+  // Alt → copy cursor on all tools
+  // Ctrl → eraser cursor on all tools
+  const currentToolForPreview = fdCanvas ? fdCanvas.get_tool_name() : 'select';
   if (e.key === "Meta" && !e.ctrlKey && !e.altKey && !e.shiftKey) {
     clearModifierCursors();
-    canvas.classList.add("modifier-cmd");
+    if (currentToolForPreview === 'hand') {
+      canvas.classList.add("modifier-alt"); // reuse default/pointer cursor class for select preview
+    } else {
+      canvas.classList.add("modifier-cmd"); // grab cursor for pan preview on other tools
+    }
   }
-  // Alt/Option held alone → copy cursor (clone preview)
+  // Alt/Option held alone → copy cursor (clone preview) on all tools
   if (e.key === "Alt" && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
     clearModifierCursors();
     canvas.classList.add("modifier-alt");
