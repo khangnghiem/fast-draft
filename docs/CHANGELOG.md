@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.159 — Hand Tool Modifier Keys (R3.70)
+- **FEATURE (R3.70)**: Alt (Option) on Hand tool → temporary duplicate mode — holding Alt while on the Hand tool temporarily switches to Select + clone behavior; Alt+click/drag a node duplicates it (same as Alt+drag on Select tool); tool restores to Hand on pointer-up
+- **FEATURE (R3.70)**: Cmd (⌘) on Hand tool → temporary select mode — holding Cmd while on the Hand tool temporarily switches to Select tool; click to select, drag to move, drag onto container to reparent; creates perfect V↔H symmetry (Select+Cmd=pan, Hand+Cmd=select)
+- **FEATURE (R3.70)**: Tool-aware modifier cursor previews — Cmd held on Hand tool shows default/pointer cursor (select preview) instead of grab cursor; other tools unchanged (Cmd=grab, Alt=copy, Ctrl=eraser)
+- **PARITY**: All changes implemented on both site (`playground.js`) and VS Code extension (`main.js`)
+- **DOCS**: Updated `SHORTCUTS.md` with new Hand tool modifier behavior table
+
 ### v0.11.158 — Layers Panel File Explorer UX (R3.69)
 - **FIX (R3.69)**: Reparent position preservation — moving a node via layers panel (drag, context menu, or WASM API) now preserves its visual canvas position by computing parent-relative coordinates from absolute bounds; fixes text nodes "disappearing" at (0,0) when moved to root and identity duplication on round-trip
 - **FEATURE (R3.69)**: ⌘+Click multi-select in layers — Command/Ctrl+Click toggles individual nodes in/out of the selection set; highlights update immediately from actual WASM selection state
