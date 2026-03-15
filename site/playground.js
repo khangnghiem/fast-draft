@@ -234,6 +234,19 @@ const ZOOM_WHEEL_FACTOR = 1.04; // Normalized zoom step (shared with VS Code)
 let isPanning = false;
 let inlineEditorActive = false;
 
+// ── iPad touch/pencil visual feedback ────────────────────────────────
+/** Map PointerEvent.pointerType to WASM u8: 0=mouse, 1=touch, 2=pen */
+function pointerTypeToU8(pointerType) {
+  if (pointerType === 'touch') return 1;
+  if (pointerType === 'pen') return 2;
+  return 0;
+}
+
+// Touch contact halo — visual feedback for finger taps
+let touchHalo = { active: false, x: 0, y: 0, sceneX: 0, sceneY: 0, startTime: 0, targetBounds: null };
+// Apple Pencil hover preview — crosshair + node highlight
+let pencilHover = { active: false, sceneX: 0, sceneY: 0, screenX: 0, screenY: 0, nodeId: null };
+
 // Render dirty flag — only re-render when something changed
 let renderDirty = true;
 let uiDirty = true;
@@ -320,6 +333,68 @@ function renderCanvas() {
   drawGrid();
   // 4. Render scene — skip_bg=true since we already filled above
   fdCanvas.render(ctx, performance.now(), true, true);
+
+  // ── iPad touch/pencil visual overlays ──────────────────────────────
+  // Touch contact halo (finger tap feedback)
+  if (touchHalo.active) {
+    const elapsed = performance.now() - touchHalo.startTime;
+    const scale = Math.min(1, elapsed / 150); // 150ms scale-in
+    const alpha = 0.2 * (1 - Math.max(0, (elapsed - 300) / 200)); // fade after 300ms
+    if (alpha > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(touchHalo.sceneX, touchHalo.sceneY, 24 * scale, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(79, 195, 247, ${alpha.toFixed(3)})`;
+      ctx.fill();
+      // Target node highlight glow
+      if (touchHalo.targetBounds) {
+        const tb = touchHalo.targetBounds;
+        ctx.strokeStyle = `rgba(79, 195, 247, ${(alpha * 2).toFixed(3)})`;
+        ctx.lineWidth = 2 / zoomLevel;
+        ctx.strokeRect(tb.x, tb.y, tb.width, tb.height);
+      }
+      ctx.restore();
+      renderDirty = true; // keep animating
+    } else {
+      touchHalo.active = false;
+    }
+  }
+
+  // Apple Pencil hover preview (crosshair + node highlight)
+  if (pencilHover.active) {
+    ctx.save();
+    const px = pencilHover.sceneX;
+    const py = pencilHover.sceneY;
+    const cs = 6 / zoomLevel; // Crosshair size scales inversely with zoom
+    const lw = 1.5 / zoomLevel;
+    ctx.strokeStyle = '#4FC3F7';
+    ctx.lineWidth = lw;
+    // Crosshair lines
+    ctx.beginPath();
+    ctx.moveTo(px - cs, py); ctx.lineTo(px + cs, py);
+    ctx.moveTo(px, py - cs); ctx.lineTo(px, py + cs);
+    ctx.stroke();
+    // Center dot
+    ctx.beginPath();
+    ctx.arc(px, py, 2 / zoomLevel, 0, Math.PI * 2);
+    ctx.fillStyle = '#4FC3F7';
+    ctx.fill();
+    // Hover node highlight
+    if (pencilHover.nodeId) {
+      try {
+        const bJson = fdCanvas.get_node_bounds(pencilHover.nodeId);
+        if (bJson) {
+          const hb = JSON.parse(bJson);
+          ctx.setLineDash([4 / zoomLevel, 4 / zoomLevel]);
+          ctx.strokeStyle = 'rgba(79, 195, 247, 0.6)';
+          ctx.lineWidth = 1 / zoomLevel;
+          ctx.strokeRect(hb.x, hb.y, hb.width, hb.height);
+          ctx.setLineDash([]);
+        }
+      } catch (_) { /* node may not exist */ }
+    }
+    ctx.restore();
+  }
 }
 
 /** Auto-center scene content in canvas viewport */
@@ -3649,6 +3724,12 @@ async function initPlayground() {
       if (!fdCanvas) return;
       e.preventDefault(); // prevent browser scroll/zoom on touch
 
+      // Update pointer type for adaptive hit radii + handle rendering
+      fdCanvas.set_pointer_type(pointerTypeToU8(e.pointerType));
+
+      // Clear pencil hover on contact
+      pencilHover.active = false;
+
       // Track all active pointers for multi-touch
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
@@ -3721,6 +3802,23 @@ async function initPlayground() {
       );
       activePointerId = e.pointerId;
       if (changed) { renderDirty = true; uiDirty = true; }
+
+      // Touch contact halo — visual feedback for finger taps (iPad)
+      if (e.pointerType === 'touch') {
+        touchHalo = { active: true, x: e.clientX, y: e.clientY, sceneX: x, sceneY: y, startTime: performance.now(), targetBounds: null };
+        // Get target node bounds for highlight
+        try {
+          const hitJson = fdCanvas.hit_test_at(x, y);
+          if (hitJson) {
+            const hit = JSON.parse(hitJson);
+            if (hit.id) {
+              const boundsJson = fdCanvas.get_node_bounds(hit.id);
+              if (boundsJson) touchHalo.targetBounds = JSON.parse(boundsJson);
+            }
+          }
+        } catch (_) { /* hit_test_at may not exist yet */ }
+        renderDirty = true;
+      }
     });
 
     document.addEventListener('pointermove', (e) => {
@@ -3763,6 +3861,25 @@ async function initPlayground() {
         panX = e.clientX - panStartX;
         panY = e.clientY - panStartY;
         renderDirty = true; uiDirty = true;
+        return;
+      }
+
+      // Apple Pencil hover preview — detect pen hovering above screen
+      // iPadOS 16.1+ sends pointermove with pointerType='pen', buttons=0, pressure=0
+      if (e.pointerType === 'pen' && e.buttons === 0 && activePointerId === -1) {
+        fdCanvas.set_pointer_type(2); // pen
+        const { x: hx, y: hy } = screenToScene(e.clientX, e.clientY, canvas);
+        pencilHover.active = true;
+        pencilHover.sceneX = hx;
+        pencilHover.sceneY = hy;
+        pencilHover.screenX = e.clientX;
+        pencilHover.screenY = e.clientY;
+        // Check what's under the pencil for hover highlight
+        try {
+          const hitJson = fdCanvas.hit_test_at(hx, hy);
+          pencilHover.nodeId = hitJson ? JSON.parse(hitJson).id || null : null;
+        } catch (_) { pencilHover.nodeId = null; }
+        renderDirty = true;
         return;
       }
 
@@ -3816,6 +3933,9 @@ async function initPlayground() {
       activePointerId = -1;
 
       // End pan drag
+      // Clear touch halo on pointer up
+      touchHalo.active = false;
+
       if (panDragging) {
         panDragging = false;
         canvas.style.cursor = (isPanning || fdCanvas.get_tool_name() === 'hand') ? 'grab' : '';

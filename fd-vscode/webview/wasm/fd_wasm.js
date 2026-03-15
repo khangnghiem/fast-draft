@@ -76,6 +76,23 @@ export class FdCanvas {
         }
     }
     /**
+     * Compute the AI comprehensibility score (R4.21).
+     * Returns JSON: `{"total":72,"metrics":[{"name":"...","label":"...","score":15,"suggestion":"..."},...]}`
+     * @returns {string}
+     */
+    compute_score() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_compute_score(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Create a text node as a child of an existing shape.
      * @param {string} parent_id
      * @param {string} content
@@ -205,7 +222,7 @@ export class FdCanvas {
      *
      * Returns valid FD text containing just the selected node blocks
      * (including children for groups/frames). If nothing is selected,
-     * returns the full document. Used by AI Assist to provide accurate
+     * returns the full document. Used by AI Touch to provide accurate
      * selection context without fragile regex extraction.
      * @returns {string}
      */
@@ -389,6 +406,14 @@ export class FdCanvas {
         }
     }
     /**
+     * Whether to show only corner handles (true for touch).
+     * @returns {boolean}
+     */
+    get_corners_only() {
+        const ret = wasm.fdcanvas_get_corners_only(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Get parse diagnostics for the current document text.
      * @returns {string}
      */
@@ -403,6 +428,14 @@ export class FdCanvas {
         } finally {
             wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
         }
+    }
+    /**
+     * Get the visual handle size for the current pointer type (for JS rendering).
+     * @returns {number}
+     */
+    get_handle_visual_size() {
+        const ret = wasm.fdcanvas_get_handle_visual_size(this.__wbg_ptr);
+        return ret;
     }
     /**
      * Get hover information at the cursor position.
@@ -1002,6 +1035,21 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Set a property on ALL currently selected nodes (bulk editing).
+     * Returns `true` if any node was changed.
+     * @param {string} key
+     * @param {string} value
+     * @returns {boolean}
+     */
+    set_multi_node_prop(key, value) {
+        const ptr0 = passStringToWasm0(key, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(value, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_set_multi_node_prop(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return ret !== 0;
+    }
+    /**
      * Set a property on the currently selected node.
      * Returns `true` if the property was set.
      * @param {string} key
@@ -1029,6 +1077,14 @@ export class FdCanvas {
         const len1 = WASM_VECTOR_LEN;
         const ret = wasm.fdcanvas_set_note(this.__wbg_ptr, ptr0, len0, ptr1, len1);
         return ret !== 0;
+    }
+    /**
+     * Set the current pointer device type (0=mouse, 1=touch, 2=pen).
+     * Called from JS before each pointer event to adapt hit radii and handle sizes.
+     * @param {number} ptype
+     */
+    set_pointer_type(ptype) {
+        wasm.fdcanvas_set_pointer_type(this.__wbg_ptr, ptype);
     }
     /**
      * Enable or disable sketchy (hand-drawn) rendering mode.

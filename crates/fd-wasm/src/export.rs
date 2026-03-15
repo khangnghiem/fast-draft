@@ -45,6 +45,8 @@ impl FdCanvas {
             self.hover_start_ms,
             skip_grid,
             skip_bg,
+            self.pointer_type.handle_visual_size() as f64,
+            self.pointer_type.corners_only(),
         );
     }
 

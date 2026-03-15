@@ -17,6 +17,17 @@
 
 ## Completed Requirements
 
+### v0.11.154 — iPad Cursor Tool Improvements (R3.6, R6.3)
+- **FEATURE (R3.6)**: Touch-aware hit radii — `PointerType` enum (Mouse/Touch/Pen) with adaptive `handle_hit_radius()` (touch=24px, pen=12px, mouse=8px) and `node_hit_radius()` (touch=12px, pen=4px, mouse=0px); `set_pointer_type(u8)` WASM API called from JS before every `handle_pointer_down`
+- **FEATURE (R6.3)**: Visual cursor feedback for touch — translucent blue halo (24px radius, 150ms scale-in, 200ms fade) appears at finger contact point; target node gets a matching blue highlight glow; rendered as Canvas2D overlay in `renderCanvas()`
+- **FEATURE (R6.3)**: Apple Pencil hover preview — detects pen hover via `pointerType='pen' && buttons=0` in pointermove; draws cyan crosshair + center dot at hover position; highlighted node gets dashed blue outline when pencil hovers over it
+- **FEATURE (R6.3)**: Touch-optimized resize handles — touch gets 14px round handles (was 7px squares) with corners-only (4 handles instead of 8); `draw_selection_handles()` accepts `handle_size` and `corners_only` params threaded through `render_scene()` → `render_node()`
+- **WASM**: New `set_pointer_type(u8)`, `get_handle_visual_size() → f32`, `get_corners_only() → bool` APIs on `FdCanvas`
+- **CORE**: `PointerType` in `fd-editor/src/input.rs` — `from_u8()`, `handle_hit_radius()`, `handle_visual_size()`, `corners_only()`, `node_hit_radius()` methods
+- **PARITY**: VS Code extension `main.js` + `pointer.js` — `set_pointer_type` called before `handle_pointer_down` with `pointerType` forwarding
+- **SITE**: Changes in `site/playground.js` (touch halo, pencil hover, pointer type helper)
+- **RUST**: Changes in `input.rs`, `lib.rs`, `render2d.rs`, `export.rs`
+
 ### v0.11.153 — Hand Tool Improvements (R3.6, R6.6)
 - **FEATURE (R3.6)**: Bare `0` key shortcut → Reset zoom to 100% — new `ZoomReset` action in `shortcuts.rs`; `⌘0` remains Zoom-to-Fit; wired through WASM `keyboard.rs` and handled in `playground.js`
 - **FEATURE (R6.6)**: Floating toolbar visible in Zen mode — toolbar is centered at bottom instead of hidden; touch/iPad users can access Hand tool and other tools without keyboard
