@@ -247,6 +247,20 @@ let touchHalo = { active: false, x: 0, y: 0, sceneX: 0, sceneY: 0, startTime: 0,
 // Apple Pencil hover preview — crosshair + node highlight
 let pencilHover = { active: false, sceneX: 0, sceneY: 0, screenX: 0, screenY: 0, nodeId: null };
 
+// Tool locking (sticky mode) — double-press shortcut or double-click button
+let lockedTool = null;
+let lastToolKeyTime = 0;
+let lastToolKeyName = '';
+let lastToolBtnTime = 0;
+let lastToolBtnName = '';
+
+// Smart defaults — per-tool style memory (persistent via localStorage)
+let smartDefaults = { fill: null, stroke: '#333333', strokeWidth: 2.5, opacity: 1, cornerRadius: 8 };
+try {
+  const saved = localStorage.getItem('fd-smart-defaults');
+  if (saved) smartDefaults = { ...smartDefaults, ...JSON.parse(saved) };
+} catch (_) {}
+
 // Render dirty flag — only re-render when something changed
 let renderDirty = true;
 let uiDirty = true;
@@ -360,7 +374,7 @@ function renderCanvas() {
     }
   }
 
-  // Apple Pencil hover preview (crosshair + node highlight)
+  // Apple Pencil hover preview (crosshair + node highlight + tool ghost)
   if (pencilHover.active) {
     ctx.save();
     const px = pencilHover.sceneX;
@@ -379,8 +393,26 @@ function renderCanvas() {
     ctx.arc(px, py, 2 / zoomLevel, 0, Math.PI * 2);
     ctx.fillStyle = '#4FC3F7';
     ctx.fill();
-    // Hover node highlight
-    if (pencilHover.nodeId) {
+    // Tool-specific ghost preview during hover
+    const hoverTool = fdCanvas ? fdCanvas.get_tool_name() : '';
+    if (hoverTool === 'rect' || hoverTool === 'frame') {
+      // Show 120×80 ghost outline centered at hover
+      ctx.setLineDash([4 / zoomLevel, 4 / zoomLevel]);
+      ctx.strokeStyle = 'rgba(79, 195, 247, 0.4)';
+      ctx.lineWidth = 1.5 / zoomLevel;
+      ctx.strokeRect(px - 60, py - 40, 120, 80);
+      ctx.setLineDash([]);
+    } else if (hoverTool === 'ellipse') {
+      // Show 100×100 ghost circle centered at hover
+      ctx.setLineDash([4 / zoomLevel, 4 / zoomLevel]);
+      ctx.strokeStyle = 'rgba(79, 195, 247, 0.4)';
+      ctx.lineWidth = 1.5 / zoomLevel;
+      ctx.beginPath();
+      ctx.ellipse(px, py, 50, 50, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else if (pencilHover.nodeId) {
+      // Hover node highlight (non-draw tools)
       try {
         const bJson = fdCanvas.get_node_bounds(pencilHover.nodeId);
         if (bJson) {
@@ -3229,10 +3261,10 @@ function setupTouchGestures(canvas, fdCanvasRef, markRenderDirty, markUiDirty) {
         if (maxMove < 15) {
           const now = performance.now();
           if (now - lastThreeFingerTapTime < 400) {
-            // Double-tap → redo
+            // Double-tap → undo
             lastThreeFingerTapTime = 0;
             if (fdCanvasRef) {
-              const changed = fdCanvasRef.handle_key('z', false, true, false, true);
+              const changed = fdCanvasRef.handle_key('z', false, false, false, true);
               if (changed) {
                 markRenderDirty();
                 markUiDirty();
@@ -3240,18 +3272,8 @@ function setupTouchGestures(canvas, fdCanvasRef, markRenderDirty, markUiDirty) {
               }
             }
           } else {
-            // Single tap → schedule undo (wait for potential double-tap)
+            // Single tap → record time for double-tap detection (no action)
             lastThreeFingerTapTime = now;
-            setTimeout(() => {
-              if (lastThreeFingerTapTime === now && fdCanvasRef) {
-                const changed = fdCanvasRef.handle_key('z', false, false, false, true);
-                if (changed) {
-                  markRenderDirty();
-                  markUiDirty();
-                  syncCanvasToEditor();
-                }
-              }
-            }, 400);
           }
         }
       }
@@ -3943,6 +3965,28 @@ async function initPlayground() {
       }
 
       const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
+
+      // ⌘+drag reparent: if Cmd/Ctrl held, check if we're over a container
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+        const selectedId = fdCanvas.get_selected_id();
+        if (selectedId) {
+          try {
+            const hitJson = fdCanvas.hit_test_at(x, y);
+            if (hitJson) {
+              const hit = JSON.parse(hitJson);
+              if (hit.id && hit.id !== selectedId) {
+                const ok = fdCanvas.reparent_into(selectedId, hit.id);
+                if (ok) {
+                  renderDirty = true; uiDirty = true;
+                  syncCanvasToEditor();
+                  showToast(`Nested into ${hit.id}`);
+                }
+              }
+            }
+          } catch (_) { /* reparent_into or hit_test_at may not exist */ }
+        }
+      }
+
       const resultJson = fdCanvas.handle_pointer_up(
         x, y, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
       );
@@ -3953,10 +3997,32 @@ async function initPlayground() {
         syncCanvasToEditor();
       }
 
+      // Apply smart defaults to newly created shapes
+      if (result.toolSwitched && result.changed) {
+        const newId = fdCanvas.get_selected_id();
+        if (newId) {
+          try {
+            if (smartDefaults.fill) fdCanvas.set_node_prop('fill', smartDefaults.fill);
+            if (smartDefaults.stroke) fdCanvas.set_node_prop('stroke', smartDefaults.stroke);
+            if (smartDefaults.strokeWidth) fdCanvas.set_node_prop('strokeWidth', String(smartDefaults.strokeWidth));
+            if (smartDefaults.opacity != null && smartDefaults.opacity < 1) fdCanvas.set_node_prop('opacity', String(smartDefaults.opacity));
+            renderDirty = true;
+            syncCanvasToEditor();
+          } catch (_) { /* prop not settable */ }
+        }
+      }
+
       // Auto-switch toolbar after drawing gesture
       if (result.toolSwitched) {
-        updateToolbar(result.tool);
-        canvas.style.cursor = '';
+        // Honor locked tool — re-activate instead of switching to Select
+        if (lockedTool) {
+          fdCanvas.set_tool(lockedTool);
+          updateToolbar(lockedTool);
+          canvas.style.cursor = lockedTool === 'hand' ? 'grab' : (lockedTool === 'select' || lockedTool === 'eraser') ? '' : 'crosshair';
+        } else {
+          updateToolbar(result.tool);
+          canvas.style.cursor = '';
+        }
       }
 
       // Show FAB + Props if node selected
@@ -4025,9 +4091,25 @@ async function initPlayground() {
       btn.addEventListener('click', () => {
         if (!fdCanvas) return;
         const tool = btn.dataset.tool;
+        const now = performance.now();
+        // Double-click = lock tool (sticky mode)
+        if (tool === lastToolBtnName && now - lastToolBtnTime < 400) {
+          lockedTool = tool;
+          btn.classList.add('tool-locked');
+          showToast(`🔒 ${tool.charAt(0).toUpperCase() + tool.slice(1)} tool locked`);
+          lastToolBtnTime = 0;
+        } else {
+          // Single click = unlock if different tool
+          if (lockedTool && tool !== lockedTool) {
+            document.querySelector('.ft-tool-btn.tool-locked')?.classList.remove('tool-locked');
+            lockedTool = null;
+          }
+          lastToolBtnTime = now;
+          lastToolBtnName = tool;
+        }
         fdCanvas.set_tool(tool);
         updateToolbar(tool);
-        canvas.style.cursor = (tool === 'select' || tool === 'eraser') ? '' : 'crosshair';
+        canvas.style.cursor = tool === 'hand' ? 'grab' : (tool === 'select' || tool === 'eraser') ? '' : 'crosshair';
       });
     });
 
@@ -4064,24 +4146,32 @@ async function initPlayground() {
     document.getElementById('fab-fill')?.addEventListener('input', (e) => {
       if (!fdCanvas) return;
       fdCanvas.set_node_prop('fill', e.target.value);
+      smartDefaults.fill = e.target.value;
+      try { localStorage.setItem('fd-smart-defaults', JSON.stringify(smartDefaults)); } catch (_) {}
       renderCanvas();
       syncCanvasToEditor();
     });
     document.getElementById('fab-stroke')?.addEventListener('input', (e) => {
       if (!fdCanvas) return;
       fdCanvas.set_node_prop('stroke', e.target.value);
+      smartDefaults.stroke = e.target.value;
+      try { localStorage.setItem('fd-smart-defaults', JSON.stringify(smartDefaults)); } catch (_) {}
       renderCanvas();
       syncCanvasToEditor();
     });
     document.getElementById('fab-stroke-w')?.addEventListener('input', (e) => {
       if (!fdCanvas) return;
       fdCanvas.set_node_prop('strokeWidth', e.target.value);
+      smartDefaults.strokeWidth = parseFloat(e.target.value) || 2.5;
+      try { localStorage.setItem('fd-smart-defaults', JSON.stringify(smartDefaults)); } catch (_) {}
       renderCanvas();
       syncCanvasToEditor();
     });
     document.getElementById('fab-opacity')?.addEventListener('input', (e) => {
       if (!fdCanvas) return;
       fdCanvas.set_node_prop('opacity', e.target.value);
+      smartDefaults.opacity = parseFloat(e.target.value);
+      try { localStorage.setItem('fd-smart-defaults', JSON.stringify(smartDefaults)); } catch (_) {}
       const valEl = document.getElementById('fab-opacity-val');
       if (valEl) valEl.textContent = Math.round(parseFloat(e.target.value) * 100) + '%';
       renderCanvas();
@@ -4138,6 +4228,23 @@ async function initPlayground() {
         const toolMap = { v:'select', r:'rect', o:'ellipse', t:'text', a:'arrow', p:'pen', e:'eraser', f:'frame', h:'hand' };
         const tool = toolMap[e.key.toLowerCase()];
         if (tool) {
+          const now = performance.now();
+          // Double-press = lock tool (sticky mode)
+          if (tool === lastToolKeyName && now - lastToolKeyTime < 300) {
+            lockedTool = tool;
+            document.querySelector('.ft-tool-btn.tool-locked')?.classList.remove('tool-locked');
+            document.querySelector(`.ft-tool-btn[data-tool="${tool}"]`)?.classList.add('tool-locked');
+            showToast(`🔒 ${tool.charAt(0).toUpperCase() + tool.slice(1)} tool locked`);
+            lastToolKeyTime = 0;
+          } else {
+            // Single press = select tool, unlock if different
+            if (lockedTool && (tool !== lockedTool || tool === 'select')) {
+              document.querySelector('.ft-tool-btn.tool-locked')?.classList.remove('tool-locked');
+              lockedTool = null;
+            }
+            lastToolKeyTime = now;
+            lastToolKeyName = tool;
+          }
           fdCanvas.set_tool(tool);
           updateToolbar(tool);
           canvas.style.cursor = tool === 'hand' ? 'grab' : (tool === 'select' || tool === 'eraser') ? '' : 'crosshair';

@@ -17,6 +17,17 @@
 
 ## Completed Requirements
 
+### v0.11.155 — Rect Tool iPad Enhancements (R3.63, R3.64, R3.65, R3.66)
+- **FEATURE (R3.63)**: Tool locking (sticky mode) — double-press keyboard shortcut (`R R`) or double-click toolbar button locks tool; stays active after placing shapes; 🔒 visual badge + toast; V/Escape unlocks; switching tools clears lock
+- **FEATURE (R3.64)**: ⌘+drag reparent — holding ⌘/Ctrl during drag-and-drop moves node into a container (Rect/Ellipse/Frame/Group); `reparent_into()` WASM API with cycle detection and container-type validation; works across all tools
+- **FEATURE (R3.65)**: Drag-back-to-cancel — dragging back within 5px of start during draw gesture resets `dragged` flag; pointer-up triggers click-to-place (default size) instead of tiny shape; applies to RectTool and EllipseTool
+- **FEATURE (R3.66)**: iPad interaction polish — persistent smart defaults via localStorage; dimension tooltip during Rect/Ellipse/Frame draw (WASM returns bounds for draw tools); 3-finger double-tap = undo (removed delayed single-tap undo); pencil hover ghost preview (rect/ellipse outlines); Shift+Alt square/circle-from-center explicit handling
+- **CORE**: `current_drawing_id()` getters on `RectTool` and `EllipseTool`; drag-back-to-cancel in `tools.rs` PointerMove handlers
+- **WASM**: `reparent_into()` in `crud.rs`; draw-tool bounds in `pointer.rs` PointerMove response
+- **TESTING**: 3 new unit tests (`rect_tool_shift_alt_square_from_center`, `rect_tool_cancel_resets_state`, `rect_tool_drag_back_to_start_is_click`)
+- **SITE**: `playground.js` — tool locking state, double-press/double-click detection, smart defaults (load/save), locked tool honor on pointer-up, ⌘+drag reparent, pencil hover ghost, 3-finger gesture fix, FAB smart defaults save
+- **DOCS**: Updated `SHORTCUTS.md` (3-finger gestures, ⌘+drag, Shift+Alt, persistent defaults, drag-back-to-cancel), `REQUIREMENTS.md` (R3.63-R3.66)
+
 ### v0.11.154 — iPad Cursor Tool Improvements (R3.6, R6.3)
 - **FEATURE (R3.6)**: Touch-aware hit radii — `PointerType` enum (Mouse/Touch/Pen) with adaptive `handle_hit_radius()` (touch=24px, pen=12px, mouse=8px) and `node_hit_radius()` (touch=12px, pen=4px, mouse=0px); `set_pointer_type(u8)` WASM API called from JS before every `handle_pointer_down`
 - **FEATURE (R6.3)**: Visual cursor feedback for touch — translucent blue halo (24px radius, 150ms scale-in, 200ms fade) appears at finger contact point; target node gets a matching blue highlight glow; rendered as Canvas2D overlay in `renderCanvas()`

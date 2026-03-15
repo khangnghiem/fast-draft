@@ -243,6 +243,34 @@ impl FdCanvas {
             .unwrap_or_else(|_| r#"{"changed":true}"#.to_string());
         }
 
+        // Dimension tooltip during draw-tool gestures (Rect/Ellipse/Frame)
+        let is_draw_tool = matches!(
+            self.active_tool,
+            ToolKind::Rect | ToolKind::Frame | ToolKind::Ellipse
+        );
+        if visual_changed
+            && is_draw_tool
+            && let Some(id) = self
+                .rect_tool
+                .current_drawing_id()
+                .or(self.ellipse_tool.current_drawing_id())
+            && let Some(idx) = self.engine.graph.index_of(id)
+            && let Some(b) = self.engine.current_bounds().get(&idx)
+            && b.width > 0.0
+            && b.height > 0.0
+        {
+            return serde_json::to_string(&PointerMoveResult {
+                changed: true,
+                bounds: Some(BoundsInfo {
+                    x: b.x,
+                    y: b.y,
+                    w: b.width,
+                    h: b.height,
+                }),
+            })
+            .unwrap_or_else(|_| r#"{"changed":true}"#.to_string());
+        }
+
         serde_json::to_string(&PointerMoveResult {
             changed: visual_changed,
             bounds: None,

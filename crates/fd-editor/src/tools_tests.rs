@@ -2068,3 +2068,150 @@ fn pen_tool_default_pressure_medium_stroke() {
         _ => panic!("Expected SetStrokeWidth"),
     }
 }
+
+#[test]
+fn rect_tool_shift_alt_square_from_center() {
+    let mut tool = RectTool::new();
+    let shift_alt = Modifiers {
+        shift: true,
+        alt: true,
+        ..Modifiers::NONE
+    };
+
+    // Start at (100, 100)
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 100.0,
+            y: 100.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Drag to (150, 130) with Shift+Alt → square from center
+    // Raw: w=50, h=30 → Shift: side=50 → Alt: double to 100
+    // Position: center at (100,100), so top-left at (50, 50)
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 150.0,
+            y: 130.0,
+            pressure: 1.0,
+            modifiers: shift_alt,
+        },
+        None,
+    );
+    assert_eq!(
+        mutations.len(),
+        2,
+        "Shift+Alt should emit MoveNode + ResizeNode"
+    );
+    match &mutations[1] {
+        GraphMutation::ResizeNode { width, height, .. } => {
+            assert!(
+                (width - height).abs() < 0.01,
+                "Should be square: w={width}, h={height}"
+            );
+            assert!((width - 100.0).abs() < 0.01, "w={width} expected 100");
+        }
+        _ => panic!("expected ResizeNode"),
+    }
+}
+
+#[test]
+fn rect_tool_cancel_resets_state() {
+    let mut tool = RectTool::new();
+
+    // Start drawing
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 50.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert!(tool.drawing);
+    assert!(tool.current_id.is_some());
+
+    // Drag to establish a size
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 150.0,
+            y: 100.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert!(tool.dragged);
+
+    // Cancel
+    tool.cancel();
+    assert!(!tool.drawing);
+    assert!(!tool.dragged);
+    assert!(tool.current_id.is_none());
+}
+
+#[test]
+fn rect_tool_drag_back_to_start_is_click() {
+    let mut tool = RectTool::new();
+
+    // Start at (100, 100)
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 100.0,
+            y: 100.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Drag far away
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 250.0,
+            y: 200.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert!(tool.dragged);
+
+    // Drag back to within 5px of start
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 102.0,
+            y: 101.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    // dragged should be reset since we're back near start
+    assert!(
+        !tool.dragged,
+        "Should reset dragged=false when back near start"
+    );
+
+    // PointerUp should produce click-to-place (120×80)
+    let mutations = tool.handle(
+        &InputEvent::PointerUp {
+            x: 102.0,
+            y: 101.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 2, "Should produce click-to-place defaults");
+    match &mutations[0] {
+        GraphMutation::ResizeNode { width, height, .. } => {
+            assert!((width - 120.0).abs() < 0.01, "w={width}");
+            assert!((height - 80.0).abs() < 0.01, "h={height}");
+        }
+        _ => panic!("expected ResizeNode"),
+    }
+}
