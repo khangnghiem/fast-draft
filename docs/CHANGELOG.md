@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.163 — Layers Context Menu Parity (R3.69)
+- **FEATURE (R3.69)**: Layers context menu expanded from 7 to 15 items — now matches canvas context menu; new items: Rename (triggers inline edit), Cut (⌘X), Copy as PNG (⌘⇧C), Group (⌘G), Ungroup (⇧⌘G), Frame Selection, Bring to Front (⌘⇧]), Send to Back (⌘⇧[), Lock/Unlock (dynamic icon), Select Children (containers only)
+- **UX (R3.69)**: Keyboard shortcut hints — all context menu items show their keyboard shortcut right-aligned in muted style (e.g. `⌘X`, `⌘D`, `⌫`); Group/Ungroup dynamically disabled when not applicable
+- **UX (R3.69)**: Contextual Select Children — appears only for container nodes (rect/ellipse/frame/group) with children; selects all direct children via `select_multiple_by_ids()`
+- **CSS**: New `.layer-ctx-shortcut` (right-aligned muted shortcut hints), `.layer-ctx-disabled` (grayed-out + pointer-events none); increased context menu `max-height` from 240px to 400px and `min-width` from 150px to 180px
+- **PARITY**: All changes applied to both site (`playground.js`, `style.css`) and VS Code extension (`panels.js`, `webview-html.ts`)
+
 ### v0.11.162 — Opt-in Center-in-Parent Reparent (R3.72)
 - **FEATURE (R3.72)**: Alt+drop in Layers panel → center child in parent — holding Alt/Option while dropping a node onto a container in the Layers panel uses `CenterIn` constraint instead of preserving visual position; default (no modifier) behavior unchanged
 - **FEATURE (R3.72)**: "Center in @target" context menu items — right-click a layer item → "Move Into" sub-menu now shows both "Move into @target" (preserve position) and "⊙ Center in @target" (center) for each container

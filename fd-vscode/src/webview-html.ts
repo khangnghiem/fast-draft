@@ -807,7 +807,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     }
     .layer-ctx-menu {
       position: fixed;
-      min-width: 150px;
+      min-width: 180px;
       background: var(--fd-surface);
       backdrop-filter: blur(24px) saturate(180%);
       -webkit-backdrop-filter: blur(24px) saturate(180%);
@@ -817,7 +817,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       padding: 4px;
       z-index: 200;
       font-size: 11px;
-      max-height: 240px;
+      max-height: 400px;
       overflow-y: auto;
     }
     .layer-ctx-item {
@@ -839,6 +839,18 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       opacity: 0.7;
       width: 14px;
       text-align: center;
+    }
+    .layer-ctx-shortcut {
+      margin-left: auto;
+      font-size: 10px;
+      opacity: 0.45;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .layer-ctx-item:hover .layer-ctx-shortcut { opacity: 0.7; color: #fff; }
+    .layer-ctx-disabled {
+      opacity: 0.35;
+      pointer-events: none;
+      cursor: default;
     }
     .layer-ctx-sep {
       height: 1px;

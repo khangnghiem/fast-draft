@@ -382,39 +382,15 @@ function setupPointerEvents() {
       return;
     }
 
-    // Hand tool: check for modifier keys before defaulting to pan
-    if (fdCanvas.get_tool_name() === 'hand') {
-      clearModifierCursors();
-      const isAltHand = e.altKey || modAltHeld;
-      const isCmdHand = e.metaKey && !e.ctrlKey;
-
-      // Alt on Hand → temp Select for clone+drag (duplicate)
-      if (isAltHand && !isCmdHand) {
-        cmdTempSelectActive = true;
-        cmdTempSelectOriginalTool = 'hand';
-        fdCanvas.set_tool('select');
-        altCloneActive = true;
-        canvas.style.cursor = 'copy';
-        // Fall through to normal pointer handling below
-      }
-      // Cmd on Hand → temp Select for move/select/reparent
-      else if (isCmdHand && !isAltHand) {
-        cmdTempSelectActive = true;
-        cmdTempSelectOriginalTool = 'hand';
-        fdCanvas.set_tool('select');
-        canvas.style.cursor = 'default';
-        // Fall through to normal pointer handling below
-      }
-      // No modifier → pan as usual
-      else {
-        panDragging = true;
-        panStartX = e.clientX - panX;
-        panStartY = e.clientY - panY;
-        canvas.style.cursor = "grabbing";
-        canvasPointerId = e.pointerId;
-        e.preventDefault();
-        return;
-      }
+    // Hand tool: finger/mouse → pan; Apple Pencil → fall through to Select (WASM)
+    if (fdCanvas.get_tool_name() === 'hand' && e.pointerType !== 'pen') {
+      panDragging = true;
+      panStartX = e.clientX - panX;
+      panStartY = e.clientY - panY;
+      canvas.style.cursor = "grabbing";
+      canvasPointerId = e.pointerId;
+      e.preventDefault();
+      return;
     }
 
     // Adjust for pan offset and zoom level → scene-space coords
@@ -1911,20 +1887,12 @@ document.addEventListener("keydown", (e) => {
   const active = document.activeElement;
   if (active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT")) return;
 
-  // Tool-aware modifier cursor previews:
-  // Hand+Cmd → default cursor (select), Select+Cmd → grab (pan), Drawing+Cmd → default (select)
-  // Alt → copy cursor on all tools
-  // Ctrl → eraser cursor on all tools
-  const currentToolForPreview = fdCanvas ? fdCanvas.get_tool_name() : 'select';
+  // Cmd/Meta held alone → grab cursor (pan preview)
   if (e.key === "Meta" && !e.ctrlKey && !e.altKey && !e.shiftKey) {
     clearModifierCursors();
-    if (currentToolForPreview === 'hand') {
-      canvas.classList.add("modifier-alt"); // reuse default/pointer cursor class for select preview
-    } else {
-      canvas.classList.add("modifier-cmd"); // grab cursor for pan preview on other tools
-    }
+    canvas.classList.add("modifier-cmd");
   }
-  // Alt/Option held alone → copy cursor (clone preview) on all tools
+  // Alt/Option held alone → copy cursor (clone preview)
   if (e.key === "Alt" && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
     clearModifierCursors();
     canvas.classList.add("modifier-alt");
@@ -3588,9 +3556,9 @@ function parseLayerTree(source) {
 }
 
 /** Render a layer tree node as HTML with Figma-style indentation. */
-function renderLayerNode(node, selectedId, depth = 0) {
+function renderLayerNode(node, selectedIds, depth = 0) {
   const icon = LAYER_ICONS[node.kind] || "•";
-  const isSelected = node.id === selectedId;
+  const isSelected = selectedIds.has(node.id);
   const hasChildren = node.children.length > 0;
   const textPreview = node.text ? `<span class="layer-text-preview">"${escapeHtml(node.text)}"</span>` : "";
 
@@ -3604,7 +3572,7 @@ function renderLayerNode(node, selectedId, depth = 0) {
   const chevronClass = hasChildren ? "layer-chevron expanded" : "layer-chevron empty";
   const chevron = `<span class="${chevronClass}" data-toggle-id="${escapeAttr(node.id)}">▶</span>`;
 
-  let html = `<div class="layer-item${isSelected ? " selected" : ""}" data-node-id="${escapeAttr(node.id)}">`;
+  let html = `<div class="layer-item${isSelected ? " selected" : ""}" data-node-id="${escapeAttr(node.id)}" data-node-kind="${escapeAttr(node.kind)}" draggable="true">`;
   html += `<span class="layer-indent">${indent}</span>`;
   html += chevron;
   html += `<span class="layer-icon">${icon}</span>`;
@@ -3617,7 +3585,7 @@ function renderLayerNode(node, selectedId, depth = 0) {
   if (hasChildren) {
     html += `<div class="layer-children" data-parent-id="${escapeAttr(node.id)}">`;
     for (const child of node.children) {
-      html += renderLayerNode(child, selectedId, depth + 1);
+      html += renderLayerNode(child, selectedIds, depth + 1);
     }
     html += `</div>`;
   }
@@ -3859,9 +3827,401 @@ function bulkSetStatus(annotated, newStatus) {
   if (panel) refreshNotesSummary(panel);
 }
 
+/** Close any open layer context menu. */
+function closeLayerCtxMenu() {
+  document.querySelectorAll('.layer-ctx-menu').forEach(m => m.remove());
+}
+
+/** Clear all drag indicators from layer items. */
+function clearLayerDragIndicators(panel) {
+  panel.querySelectorAll('.layer-item').forEach(el => {
+    el.classList.remove('drag-over-nest', 'drag-over-above', 'drag-over-below');
+  });
+  panel.querySelectorAll('.layers-body').forEach(el => {
+    el.classList.remove('drag-over-root');
+  });
+}
+
+/** Determine drop zone: 'above' (top 25%), 'below' (bottom 25%), 'nest' (middle 50%). */
+function getDropZone(e, el) {
+  const rect = el.getBoundingClientRect();
+  const y = e.clientY - rect.top;
+  const h = rect.height;
+  if (y < h * 0.25) return 'above';
+  if (y > h * 0.75) return 'below';
+  return 'nest';
+}
+
+/** Get sibling index of a node in the DOM. */
+function getSiblingIndex(panel, nodeId) {
+  const item = panel.querySelector(`.layer-item[data-node-id="${nodeId}"]`);
+  if (!item) return 0;
+  const parent = item.parentElement;
+  if (!parent) return 0;
+  const siblings = [...parent.querySelectorAll(':scope > .layer-item')];
+  return siblings.indexOf(item);
+}
+
+/** Wire drag-and-drop handlers on layer items. */
+function wireLayerDragDrop(panel) {
+  if (!fdCanvas) return;
+  let draggedId = null;
+
+  panel.querySelectorAll('.layer-item').forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      draggedId = item.getAttribute('data-node-id');
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', draggedId);
+    });
+
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const targetId = item.getAttribute('data-node-id');
+      if (!draggedId || targetId === draggedId) return;
+      clearLayerDragIndicators(panel);
+      const zone = getDropZone(e, item);
+      const kind = item.getAttribute('data-node-kind');
+      const isContainer = ['rect','ellipse','frame','group'].includes(kind);
+      if (zone === 'nest' && isContainer) {
+        item.classList.add('drag-over-nest');
+      } else if (zone === 'above') {
+        item.classList.add('drag-over-above');
+      } else {
+        item.classList.add('drag-over-below');
+      }
+    });
+
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('drag-over-nest', 'drag-over-above', 'drag-over-below');
+    });
+
+    item.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      clearLayerDragIndicators(panel);
+      const targetId = item.getAttribute('data-node-id');
+      if (!draggedId || !fdCanvas || targetId === draggedId) return;
+      const textBefore = fdCanvas.get_text();
+      const zone = getDropZone(e, item);
+      const kind = item.getAttribute('data-node-kind');
+      const isContainer = ['rect','ellipse','frame','group'].includes(kind);
+      let changed = false;
+      if (zone === 'nest' && isContainer) {
+        changed = e.altKey && fdCanvas.reparent_into_centered
+          ? fdCanvas.reparent_into_centered(draggedId, targetId)
+          : fdCanvas.reparent_into(draggedId, targetId);
+      } else {
+        const targetIndex = getSiblingIndex(panel, targetId);
+        const insertIndex = zone === 'above' ? targetIndex : targetIndex + 1;
+        const targetParent = item.parentElement?.getAttribute?.('data-parent-id');
+        const dragItem = panel.querySelector(`.layer-item[data-node-id="${draggedId}"]`);
+        const dragParent = dragItem?.parentElement?.getAttribute?.('data-parent-id');
+        if (targetParent && dragParent && targetParent === dragParent) {
+          changed = fdCanvas.reorder_child(draggedId, insertIndex);
+        } else if (targetParent) {
+          changed = fdCanvas.reparent_into(draggedId, targetParent);
+          if (changed) fdCanvas.reorder_child(draggedId, insertIndex);
+        } else {
+          changed = fdCanvas.reparent_into(draggedId, 'root');
+          if (changed) fdCanvas.reorder_child(draggedId, insertIndex);
+        }
+      }
+      if (changed) {
+        const textAfter = fdCanvas.get_text();
+        if (textBefore !== textAfter) fdCanvas.push_undo_snapshot(textBefore, textAfter);
+        bumpGeneration();
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+        refreshLayersPanel();
+      }
+      draggedId = null;
+    });
+
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      clearLayerDragIndicators(panel);
+      draggedId = null;
+    });
+  });
+
+  // Drop-to-root
+  const layersBody = panel.querySelector('.layers-body');
+  if (layersBody) {
+    layersBody.addEventListener('dragover', (e) => {
+      if (e.target.closest('.layer-item')) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      clearLayerDragIndicators(panel);
+      layersBody.classList.add('drag-over-root');
+    });
+    layersBody.addEventListener('dragleave', (e) => {
+      if (!layersBody.contains(e.relatedTarget) || e.relatedTarget?.closest('.layer-item')) {
+        layersBody.classList.remove('drag-over-root');
+      }
+    });
+    layersBody.addEventListener('drop', (e) => {
+      if (e.target.closest('.layer-item')) return;
+      e.preventDefault();
+      layersBody.classList.remove('drag-over-root');
+      if (!draggedId || !fdCanvas) return;
+      const textBefore = fdCanvas.get_text();
+      const changed = fdCanvas.reparent_into(draggedId, 'root');
+      if (changed) {
+        const textAfter = fdCanvas.get_text();
+        if (textBefore !== textAfter) fdCanvas.push_undo_snapshot(textBefore, textAfter);
+        bumpGeneration();
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+        refreshLayersPanel();
+      }
+      draggedId = null;
+    });
+  }
+}
+
+/** Wire right-click context menu on layer items — full parity with canvas context menu. */
+function wireLayerContextMenu(panel) {
+  if (!fdCanvas) return;
+  panel.querySelectorAll('.layer-item').forEach(item => {
+    item.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeLayerCtxMenu();
+      const nodeId = item.getAttribute('data-node-id');
+      if (!nodeId) return;
+
+      // Determine selection state for enable/disable logic
+      const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      if (!selectedIds.includes(nodeId)) {
+        fdCanvas.select_by_id(nodeId);
+      }
+      const nodeKind = item.getAttribute('data-node-kind');
+      const isContainer = ['rect','ellipse','frame','group'].includes(nodeKind);
+      const hasChildren = !!item.nextElementSibling?.classList.contains('layer-children');
+      const canGroup = selectedIds.length >= 2 || (selectedIds.includes(nodeId) && selectedIds.length >= 2);
+      let canUngroup = false;
+      const source = fdCanvas.get_text();
+      for (const id of selectedIds) {
+        if (new RegExp(`(?:^|\\n)\\s*group\\s+@${id}\\b`).test(source)) {
+          canUngroup = true;
+          break;
+        }
+      }
+      const isLocked = fdCanvas.is_node_locked ? fdCanvas.is_node_locked(nodeId) : false;
+
+      let menuHtml = '';
+
+      // ── Rename ──
+      menuHtml += `<div class="layer-ctx-item" data-action="rename"><span class="ctx-icon">✏️</span>Rename</div>`;
+      menuHtml += '<div class="layer-ctx-sep"></div>';
+
+      // ── Clipboard: Cut, Copy, Paste, Copy as PNG ──
+      menuHtml += `<div class="layer-ctx-item" data-action="cut"><span class="ctx-icon">✂</span>Cut<span class="layer-ctx-shortcut">⌘X</span></div>`;
+      menuHtml += `<div class="layer-ctx-item" data-action="copy"><span class="ctx-icon">⎘</span>Copy<span class="layer-ctx-shortcut">⌘C</span></div>`;
+      menuHtml += `<div class="layer-ctx-item" data-action="paste"><span class="ctx-icon">📋</span>Paste<span class="layer-ctx-shortcut">⌘V</span></div>`;
+      menuHtml += `<div class="layer-ctx-item" data-action="copy-png"><span class="ctx-icon">🖼</span>Copy as PNG<span class="layer-ctx-shortcut">⌘⇧C</span></div>`;
+      menuHtml += '<div class="layer-ctx-sep"></div>';
+
+      // ── Structure: Duplicate, Group, Ungroup, Frame Selection ──
+      menuHtml += `<div class="layer-ctx-item" data-action="duplicate"><span class="ctx-icon">⊕</span>Duplicate<span class="layer-ctx-shortcut">⌘D</span></div>`;
+      menuHtml += `<div class="layer-ctx-item${canGroup ? '' : ' layer-ctx-disabled'}" data-action="group"><span class="ctx-icon">◻</span>Group<span class="layer-ctx-shortcut">⌘G</span></div>`;
+      menuHtml += `<div class="layer-ctx-item${canUngroup ? '' : ' layer-ctx-disabled'}" data-action="ungroup"><span class="ctx-icon">◫</span>Ungroup<span class="layer-ctx-shortcut">⇧⌘G</span></div>`;
+      menuHtml += `<div class="layer-ctx-item" data-action="frame"><span class="ctx-icon">⊞</span>Frame Selection</div>`;
+      menuHtml += '<div class="layer-ctx-sep"></div>';
+
+      // ── Z-order: Bring to Front, Send to Back ──
+      menuHtml += `<div class="layer-ctx-item" data-action="bring-front"><span class="ctx-icon">↑</span>Bring to Front<span class="layer-ctx-shortcut">⌘⇧]</span></div>`;
+      menuHtml += `<div class="layer-ctx-item" data-action="send-back"><span class="ctx-icon">↓</span>Send to Back<span class="layer-ctx-shortcut">⌘⇧[</span></div>`;
+
+      // ── Lock / Unlock ──
+      menuHtml += `<div class="layer-ctx-item" data-action="lock"><span class="ctx-icon">${isLocked ? '🔓' : '🔒'}</span>${isLocked ? 'Unlock' : 'Lock'}</div>`;
+
+      // ── Select Children (containers only) ──
+      if (isContainer && hasChildren) {
+        menuHtml += `<div class="layer-ctx-item" data-action="select-children"><span class="ctx-icon">📂</span>Select Children</div>`;
+      }
+      menuHtml += '<div class="layer-ctx-sep"></div>';
+
+      // ── Move Into submenu ──
+      if (fdCanvas.get_container_ids) {
+        try {
+          const containers = JSON.parse(fdCanvas.get_container_ids());
+          const validTargets = containers.filter(c => c.id !== nodeId);
+          if (validTargets.length > 0) {
+            menuHtml += `<div class="layer-ctx-item" data-action="move-into-header" style="opacity:0.5;cursor:default;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.3px">Move Into</div>`;
+            for (const t of validTargets.slice(0, 15)) {
+              const icon = LAYER_ICONS[t.kind] || '•';
+              menuHtml += `<div class="layer-ctx-item" data-action="move-into" data-target="${escapeAttr(t.id)}"><span class="ctx-icon">${icon}</span>@${escapeHtml(t.id)}</div>`;
+              menuHtml += `<div class="layer-ctx-item" data-action="center-into" data-target="${escapeAttr(t.id)}" style="padding-left:28px;opacity:0.7;font-size:11px"><span class="ctx-icon">⊙</span>Center in @${escapeHtml(t.id)}</div>`;
+            }
+            if (validTargets.length > 15) {
+              menuHtml += `<div class="layer-ctx-item" style="opacity:0.5;cursor:default">…${validTargets.length - 15} more</div>`;
+            }
+            menuHtml += '<div class="layer-ctx-sep"></div>';
+          }
+        } catch (_) {}
+      }
+      menuHtml += `<div class="layer-ctx-item" data-action="move-to-root"><span class="ctx-icon">↑</span>Move to Root</div>`;
+      menuHtml += '<div class="layer-ctx-sep"></div>';
+
+      // ── Delete ──
+      menuHtml += `<div class="layer-ctx-item layer-ctx-danger" data-action="delete"><span class="ctx-icon">✕</span>Delete<span class="layer-ctx-shortcut">⌫</span></div>`;
+
+      const menu = document.createElement('div');
+      menu.className = 'layer-ctx-menu';
+      menu.innerHTML = menuHtml;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      let mx = e.clientX;
+      let my = e.clientY;
+      document.body.appendChild(menu);
+      if (mx + menu.offsetWidth > vw) mx = vw - menu.offsetWidth - 4;
+      if (my + menu.offsetHeight > vh) my = vh - menu.offsetHeight - 4;
+      menu.style.left = mx + 'px';
+      menu.style.top = my + 'px';
+      menu.querySelectorAll('.layer-ctx-item[data-action]').forEach(btn => {
+        btn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const action = btn.getAttribute('data-action');
+          if (action === 'move-into-header') return;
+          if (btn.classList.contains('layer-ctx-disabled')) return;
+          const textBefore = fdCanvas.get_text();
+          let changed = false;
+
+          if (action === 'rename') {
+            closeLayerCtxMenu();
+            // Trigger inline rename by simulating double-click on layer name
+            const nameEl = item.querySelector('.layer-name');
+            if (nameEl) nameEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+            return;
+          } else if (action === 'cut') {
+            fdCanvas.select_by_id(nodeId);
+            copySelectedAsFd();
+            changed = fdCanvas.delete_selected();
+          } else if (action === 'copy') {
+            fdCanvas.select_by_id(nodeId);
+            copySelectedAsFd();
+            closeLayerCtxMenu();
+            return;
+          } else if (action === 'paste') {
+            pasteFromClipboard().then(() => {
+              bumpGeneration();
+              render();
+              syncTextToExtension();
+              updatePropertiesPanel();
+              refreshLayersPanel();
+            });
+            closeLayerCtxMenu();
+            return;
+          } else if (action === 'copy-png') {
+            fdCanvas.select_by_id(nodeId);
+            if (typeof copySelectionAsPng === 'function') copySelectionAsPng();
+            closeLayerCtxMenu();
+            return;
+          } else if (action === 'duplicate') {
+            fdCanvas.select_by_id(nodeId);
+            changed = fdCanvas.duplicate_selected();
+          } else if (action === 'group') {
+            changed = fdCanvas.group_selected();
+          } else if (action === 'ungroup') {
+            changed = fdCanvas.ungroup_selected();
+          } else if (action === 'frame') {
+            const resultJson = fdCanvas.handle_key('f', false, false, false, true);
+            const result = JSON.parse(resultJson);
+            changed = result.changed;
+          } else if (action === 'bring-front') {
+            const resultJson = fdCanvas.handle_key(']', false, true, false, true);
+            const result = JSON.parse(resultJson);
+            changed = result.changed;
+          } else if (action === 'send-back') {
+            const resultJson = fdCanvas.handle_key('[', false, true, false, true);
+            const result = JSON.parse(resultJson);
+            changed = result.changed;
+          } else if (action === 'lock') {
+            if (fdCanvas.toggle_node_locked) {
+              fdCanvas.toggle_node_locked(nodeId);
+              changed = true;
+            }
+          } else if (action === 'select-children') {
+            // Collect all child node IDs from the DOM
+            const childrenContainer = panel.querySelector(`.layer-children[data-parent-id="${nodeId}"]`);
+            if (childrenContainer) {
+              const childIds = [...childrenContainer.querySelectorAll(':scope > .layer-item')].map(
+                el => el.getAttribute('data-node-id')
+              ).filter(Boolean);
+              if (childIds.length > 0) {
+                fdCanvas.select_multiple_by_ids(JSON.stringify(childIds));
+                bumpGeneration();
+                render();
+                updatePropertiesPanel();
+                updateFloatingBar();
+                refreshLayersPanel();
+              }
+            }
+            closeLayerCtxMenu();
+            return;
+          } else if (action === 'move-into') {
+            changed = fdCanvas.reparent_into(nodeId, btn.getAttribute('data-target'));
+          } else if (action === 'center-into') {
+            const targetId = btn.getAttribute('data-target');
+            changed = fdCanvas.reparent_into_centered
+              ? fdCanvas.reparent_into_centered(nodeId, targetId)
+              : fdCanvas.reparent_into(nodeId, targetId);
+          } else if (action === 'move-to-root') {
+            changed = fdCanvas.reparent_into(nodeId, 'root');
+          } else if (action === 'delete') {
+            fdCanvas.select_by_id(nodeId);
+            changed = fdCanvas.delete_selected();
+          }
+          if (changed) {
+            const textAfter = fdCanvas.get_text();
+            if (textBefore !== textAfter) fdCanvas.push_undo_snapshot(textBefore, textAfter);
+            bumpGeneration();
+            render();
+            syncTextToExtension();
+            updatePropertiesPanel();
+            refreshLayersPanel();
+          }
+          closeLayerCtxMenu();
+        });
+      });
+      const closeOnClick = (ev) => {
+        if (!menu.contains(ev.target)) {
+          closeLayerCtxMenu();
+          document.removeEventListener('click', closeOnClick);
+        }
+      };
+      setTimeout(() => document.addEventListener('click', closeOnClick), 0);
+    });
+  });
+}
+
 /** Last layer generation + selection — skip rebuild when unchanged */
 let lastLayerGeneration = -1;
 let lastLayerSelectedId = "";
+
+/** Last clicked layer item ID — for ⇧+click range select */
+let lastClickedLayerId = "";
+
+/** Flatten a layer tree into a visible-order array of IDs (respects collapsed state). */
+function flattenLayerTree(nodes, panel) {
+  const result = [];
+  for (const node of nodes) {
+    result.push(node.id);
+    if (node.children.length > 0) {
+      const childrenEl = panel?.querySelector(`.layer-children[data-parent-id="${node.id}"]`);
+      const isCollapsed = childrenEl?.classList.contains('collapsed');
+      if (!isCollapsed) {
+        result.push(...flattenLayerTree(node.children, panel));
+      }
+    }
+  }
+  return result;
+}
 
 function refreshLayersPanel() {
   const panel = document.getElementById("layers-panel");
@@ -3874,25 +4234,27 @@ function refreshLayersPanel() {
     return;
   }
 
-  const selectedId = fdCanvas.get_selected_id() || "";
+  // Use full set of selected IDs for multi-select highlighting
+  const selectedIds = new Set(JSON.parse(fdCanvas.get_selected_ids()));
+  const selectedKey = [...selectedIds].sort().join(',');
 
   // Skip DOM rebuild if nothing changed (uses generation counter instead of full-text hash)
-  if (sceneGeneration === lastLayerGeneration && selectedId === lastLayerSelectedId) return;
+  if (sceneGeneration === lastLayerGeneration && selectedKey === lastLayerSelectedId) return;
 
   // Selection-only change: update highlight on existing DOM without full rebuild
-  if (sceneGeneration === lastLayerGeneration && selectedId !== lastLayerSelectedId) {
-    lastLayerSelectedId = selectedId;
+  if (sceneGeneration === lastLayerGeneration && selectedKey !== lastLayerSelectedId) {
+    lastLayerSelectedId = selectedKey;
     panel.querySelectorAll(".layer-item").forEach(el =>
-      el.classList.toggle("selected", el.getAttribute("data-node-id") === selectedId)
+      el.classList.toggle("selected", selectedIds.has(el.getAttribute("data-node-id")))
     );
-    // Scroll selected item into view (Canvas/Code → Layers sync)
+    // Scroll first selected item into view (Canvas/Code → Layers sync)
     const selectedEl = panel.querySelector('.layer-item.selected');
     if (selectedEl) selectedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     return;
   }
 
   lastLayerGeneration = sceneGeneration;
-  lastLayerSelectedId = selectedId;
+  lastLayerSelectedId = selectedKey;
 
   const source = fdCanvas.get_text();
 
@@ -3908,33 +4270,72 @@ function refreshLayersPanel() {
   html += `</div>`;
   html += `<div class="layers-body">`;
   for (const node of tree) {
-    html += renderLayerNode(node, selectedId);
+    html += renderLayerNode(node, selectedIds);
   }
   html += `</div>`;
 
   panel.innerHTML = html;
 
-  // Wire click handlers for layer items (selection)
+  // Wire click handlers for layer items — ⌘+click multi, ⇧+click range, plain click
   panel.querySelectorAll(".layer-item").forEach((item) => {
     item.addEventListener("click", (e) => {
       // Don't select when clicking chevron
       if (e.target.closest(".layer-chevron")) return;
       e.stopPropagation();
       const nodeId = item.getAttribute("data-node-id");
-      if (nodeId && fdCanvas) {
-        // Pre-set generation so refreshLayersPanel() inside syncSelection skips DOM rebuild.
-        // This keeps our DOM references valid for the highlight update below.
+      if (!nodeId || !fdCanvas) return;
+
+      // ⌘+click (Mac) / Ctrl+click (others) — toggle single node in selection
+      if (e.metaKey || e.ctrlKey) {
+        fdCanvas.toggle_select_by_id(nodeId);
+        lastClickedLayerId = nodeId;
+        // Update highlighting from actual selection state
+        const newIds = new Set(JSON.parse(fdCanvas.get_selected_ids()));
         lastLayerGeneration = sceneGeneration;
-        lastLayerSelectedId = nodeId;
-        // Update selection highlight in layers (DOM still intact because rebuild was skipped)
-        panel.querySelectorAll(".layer-item").forEach((el) => {
-          el.classList.toggle("selected", el.getAttribute("data-node-id") === nodeId);
-        });
-        // Smart focus: pan/zoom to the selected node if needed
-        focusOnNode(nodeId);
-        // Central sync: Canvas select + Code highlight + side panels
-        syncSelection(nodeId, "layers");
+        lastLayerSelectedId = [...newIds].sort().join(',');
+        panel.querySelectorAll(".layer-item").forEach(el =>
+          el.classList.toggle("selected", newIds.has(el.getAttribute("data-node-id")))
+        );
+        render();
+        updatePropertiesPanel();
+        updateFloatingBar();
+        return;
       }
+
+      // ⇧+click — range select from lastClickedLayerId to this node
+      if (e.shiftKey && lastClickedLayerId) {
+        const flatIds = flattenLayerTree(tree, panel);
+        const startIdx = flatIds.indexOf(lastClickedLayerId);
+        const endIdx = flatIds.indexOf(nodeId);
+        if (startIdx >= 0 && endIdx >= 0) {
+          const lo = Math.min(startIdx, endIdx);
+          const hi = Math.max(startIdx, endIdx);
+          const rangeIds = flatIds.slice(lo, hi + 1);
+          fdCanvas.select_multiple_by_ids(JSON.stringify(rangeIds));
+          const newIds = new Set(rangeIds);
+          lastLayerGeneration = sceneGeneration;
+          lastLayerSelectedId = [...newIds].sort().join(',');
+          panel.querySelectorAll(".layer-item").forEach(el =>
+            el.classList.toggle("selected", newIds.has(el.getAttribute("data-node-id")))
+          );
+          render();
+          updatePropertiesPanel();
+          updateFloatingBar();
+          return;
+        }
+      }
+
+      // Plain click — single select
+      lastClickedLayerId = nodeId;
+      lastLayerGeneration = sceneGeneration;
+      lastLayerSelectedId = nodeId;
+      panel.querySelectorAll(".layer-item").forEach((el) => {
+        el.classList.toggle("selected", el.getAttribute("data-node-id") === nodeId);
+      });
+      // Smart focus: pan/zoom to the selected node if needed
+      focusOnNode(nodeId);
+      // Central sync: Canvas select + Code highlight + side panels
+      syncSelection(nodeId, "layers");
     });
   });
 
@@ -4029,6 +4430,109 @@ function refreshLayersPanel() {
       e.stopPropagation();
       toggleNodeVisibility(nodeId);
     });
+  });
+
+  // ── Layer Drag-and-Drop ──
+  wireLayerDragDrop(panel);
+
+  // ── Layer Context Menu ("Move Into") ──
+  wireLayerContextMenu(panel);
+
+  // ── Keyboard shortcuts when layers panel is focused (#7) ──
+  wireLayerKeyboardShortcuts(panel);
+}
+
+/** Wire keyboard shortcuts for layers panel — Delete, ⌘C/X/V/D (#5, #7) */
+function wireLayerKeyboardShortcuts(panel) {
+  // Make panel focusable so it can receive key events
+  if (!panel.hasAttribute('tabindex')) panel.setAttribute('tabindex', '-1');
+
+  // Only attach once
+  if (panel._layerKeysWired) return;
+  panel._layerKeysWired = true;
+
+  panel.addEventListener('keydown', (e) => {
+    if (!fdCanvas) return;
+    const meta = e.metaKey || e.ctrlKey;
+    const key = e.key.toLowerCase();
+
+    // Delete / Backspace → delete selected
+    if (key === 'delete' || key === 'backspace') {
+      e.preventDefault();
+      e.stopPropagation();
+      const changed = fdCanvas.delete_selected();
+      if (changed) {
+        bumpGeneration();
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+        updateFloatingBar();
+        refreshLayersPanel();
+      }
+      return;
+    }
+
+    // ⌘D → duplicate
+    if (meta && key === 'd') {
+      e.preventDefault();
+      e.stopPropagation();
+      const changed = fdCanvas.duplicate_selected();
+      if (changed) {
+        bumpGeneration();
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+        updateFloatingBar();
+        refreshLayersPanel();
+      }
+      return;
+    }
+
+    // ⌘C → copy
+    if (meta && key === 'c' && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      copySelectedAsFd();
+      return;
+    }
+
+    // ⌘X → cut
+    if (meta && key === 'x') {
+      e.preventDefault();
+      e.stopPropagation();
+      cutSelectedAsFd();
+      bumpGeneration();
+      render();
+      syncTextToExtension();
+      updatePropertiesPanel();
+      updateFloatingBar();
+      refreshLayersPanel();
+      return;
+    }
+
+    // ⌘V → paste
+    if (meta && key === 'v') {
+      e.preventDefault();
+      e.stopPropagation();
+      pasteFromClipboard().then(() => {
+        bumpGeneration();
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+        updateFloatingBar();
+        refreshLayersPanel();
+      });
+      return;
+    }
+
+    // ⌘A → select all
+    if (meta && key === 'a') {
+      e.preventDefault();
+      e.stopPropagation();
+      selectAllNodes();
+      refreshLayersPanel();
+      return;
+    }
   });
 }
 
@@ -6466,6 +6970,9 @@ function applyFullscreenMode(isFull) {
 /** Clipboard buffer for FD node text */
 let fdClipboard = "";
 
+/** Track whether clipboard content is from internal copy (vs. external paste). */
+let fdClipboardIsInternal = false;
+
 /** Cumulative paste offset — increments by 20 on each successive paste,
  *  resets when a new copy is made. */
 let pasteOffsetCount = 0;
@@ -6500,6 +7007,21 @@ function extractNodeBlock(text, nodeId) {
 function copySelectedAsFd() {
   if (!fdCanvas) return;
 
+  // Use emit_selection_fd for multi-node + edge support
+  try {
+    const selFd = fdCanvas.emit_selection_fd();
+    if (selFd && selFd.trim()) {
+      fdClipboard = selFd;
+      fdClipboardIsInternal = true;
+      pasteOffsetCount = 0;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(fdClipboard).catch(() => { });
+      }
+      return;
+    }
+  } catch (_) {}
+
+  // Fallback: multi-node via get_selected_ids + extractNodeBlock
   const text = fdCanvas.get_text();
   const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
   if (selectedIds.length === 0) return;
@@ -6512,9 +7034,9 @@ function copySelectedAsFd() {
   if (blocks.length === 0) return;
 
   fdClipboard = blocks.join("\n\n");
-  pasteOffsetCount = 0; // Reset offset on new copy
+  fdClipboardIsInternal = true;
+  pasteOffsetCount = 0;
 
-  // Also copy to system clipboard
   if (navigator.clipboard) {
     navigator.clipboard.writeText(fdClipboard).catch(() => { });
   }
@@ -6531,24 +7053,40 @@ function cutSelectedAsFd() {
   }
 }
 
-/** Paste node(s) from the FD clipboard with horizontal stagger. */
+/** Paste node(s) — delegates to WASM duplicate for internal clipboard,
+ *  falls back to text-based paste for external system clipboard content. */
 async function pasteFromClipboard() {
   if (!fdCanvas) return;
 
-  // Try reading from system clipboard first
-  let clipText = fdClipboard;
+  // Check if system clipboard has different content (external paste)
   try {
     if (navigator.clipboard) {
       const sysText = await navigator.clipboard.readText();
-      if (sysText && sysText.includes("@")) {
-        clipText = sysText;
+      if (sysText && sysText.includes("@") && sysText !== fdClipboard) {
+        fdClipboard = sysText;
+        fdClipboardIsInternal = false;
       }
     }
-  } catch (_) { /* permission denied, use internal clipboard */ }
+  } catch (_) { /* permission denied — use internal */ }
 
-  if (!clipText.trim()) return;
+  // Internal clipboard: delegate to WASM duplicate_selected() for correct
+  // naming, constraint remapping, edge duplication, and position handling.
+  if (fdClipboardIsInternal && fdClipboard) {
+    fdCanvas.push_undo_snapshot(fdCanvas.get_text(), fdCanvas.get_text());
+    const changed = fdCanvas.duplicate_selected();
+    if (changed) {
+      render();
+      syncTextToExtension();
+      updatePropertiesPanel();
+      refreshLayersPanel();
+    }
+    return;
+  }
 
-  // Increment paste offset count
+  // External clipboard: text-based paste with batch-aware ID renaming
+  const clipText = fdClipboard;
+  if (!clipText || !clipText.trim()) return;
+
   pasteOffsetCount++;
 
   // Collect all @id declarations in the pasted block
@@ -6560,28 +7098,31 @@ async function pasteFromClipboard() {
   }
   if (allIds.size === 0) return;
 
-  // Build renamed text: use incremented _N naming (consistent with Alt+drag)
+  // Build renamed text: use batch-aware incremented _N naming
   const existingText = fdCanvas.get_text();
   let pasteText = clipText;
-  const rootId = [...allIds][0]; // First ID = root node for selection
+  const rootId = [...allIds][0];
   const idMap = new Map();
+  const batchMaxCache = new Map(); // stem → current max N (batch-aware)
 
   for (const oldId of allIds) {
-    // Find the stem (strip existing _N or _cpXXXX suffix)
     const stem = oldId.replace(/_(?:\d+|cp\d+)$/, '');
-    // Scan existing text for highest _N suffix
-    let maxN = 1;
-    const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
-    let match;
-    while ((match = re.exec(existingText)) !== null) {
-      maxN = Math.max(maxN, parseInt(match[1]));
+    let maxN = batchMaxCache.get(stem) || 0;
+    if (maxN === 0) {
+      // First time seeing this stem — scan existing text
+      maxN = 1;
+      const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
+      let match;
+      while ((match = re.exec(existingText)) !== null) {
+        maxN = Math.max(maxN, parseInt(match[1]));
+      }
+      if (new RegExp(`@${stem}\\b`).test(existingText)) {
+        maxN = Math.max(maxN, 1);
+      }
     }
-    // Also check if the base stem exists (counts as _1)
-    if (new RegExp(`@${stem}\\b`).test(existingText)) {
-      maxN = Math.max(maxN, 1);
-    }
-    const newId = stem + '_' + (maxN + 1);
-    idMap.set(oldId, newId);
+    const newN = maxN + 1;
+    batchMaxCache.set(stem, newN);
+    idMap.set(oldId, stem + '_' + newN);
   }
 
   // Replace all @id references with new names
@@ -6590,33 +7131,26 @@ async function pasteFromClipboard() {
   }
   const newRootId = idMap.get(rootId) || rootId;
 
-  // Horizontal stagger: offset x only (keep same y for horizontal alignment)
-  // Try to get the original node's width for proper spacing
-  let xOffset = pasteOffsetCount * 20; // Fallback: cumulative 20px
+  // Horizontal stagger
+  let xOffset = pasteOffsetCount * 20;
   try {
     const boundsJson = fdCanvas.get_node_bounds(rootId);
     if (boundsJson) {
       const bounds = JSON.parse(boundsJson);
       if (bounds && bounds.width > 0) {
-        // Place to the right with 20px gap
         xOffset = (bounds.width + 20) * pasteOffsetCount;
       }
     }
-  } catch (_) { /* use fallback offset */ }
+  } catch (_) {}
 
   pasteText = pasteText.replace(/\b(x:\s*)(-?\d+(?:\.\d+)?)/g, (_match, prefix, val) => {
     return prefix + (parseFloat(val) + xOffset);
   });
-  // y: values unchanged — keeps vertical alignment
 
-  // Capture text before for undo
+  // Undo support
   const textBefore = fdCanvas.get_text();
-
-  // Append to current text
   const updatedText = textBefore.trimEnd() + '\n\n' + pasteText + '\n';
   fdCanvas.set_text(updatedText);
-
-  // Push undo snapshot so ⌘Z reverts the paste
   fdCanvas.push_undo_snapshot(textBefore, updatedText);
 
   render();
