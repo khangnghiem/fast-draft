@@ -1767,7 +1767,7 @@ fn tool_pen_basic_draw() {
         None,
     );
 
-    // 4. PointerUp: Finalizes with Catmull-Rom smoothing
+    // 4. PointerUp: Finalizes with Catmull-Rom smoothing + pressure-derived stroke width
     let muts = tool.handle(
         &InputEvent::PointerUp {
             x: 20.0,
@@ -1777,7 +1777,7 @@ fn tool_pen_basic_draw() {
         None,
     );
     assert!(!tool.is_drawing());
-    assert_eq!(muts.len(), 1);
+    assert_eq!(muts.len(), 2); // UpdatePath + SetStrokeWidth
     match &muts[0] {
         GraphMutation::UpdatePath { id, commands } => {
             assert_eq!(*id, path_id);
@@ -1793,6 +1793,14 @@ fn tool_pen_basic_draw() {
             ));
         }
         _ => panic!("Expected UpdatePath"),
+    }
+    match &muts[1] {
+        GraphMutation::SetStrokeWidth { id, width } => {
+            assert_eq!(*id, path_id);
+            // All pressure=1.0 → max width = 4.5
+            assert!((width - 4.5).abs() < 0.01, "width={width}");
+        }
+        _ => panic!("Expected SetStrokeWidth"),
     }
 }
 
@@ -1906,6 +1914,7 @@ fn tool_pen_subsampling() {
         None,
     );
 
+    assert_eq!(muts.len(), 2); // UpdatePath + SetStrokeWidth
     match &muts[0] {
         GraphMutation::UpdatePath { commands, .. } => {
             // Should be subsampled to max 64 points
@@ -1913,5 +1922,149 @@ fn tool_pen_subsampling() {
             assert_eq!(commands.len(), 64);
         }
         _ => panic!("Expected UpdatePath"),
+    }
+}
+
+#[test]
+fn pen_tool_light_pressure_thin_stroke() {
+    let mut tool = PenTool::new();
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 0.0,
+            y: 0.0,
+            pressure: 0.1,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 50.0,
+            y: 50.0,
+            pressure: 0.15,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 100.0,
+            y: 100.0,
+            pressure: 0.1,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    let muts = tool.handle(
+        &InputEvent::PointerUp {
+            x: 100.0,
+            y: 100.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(muts.len(), 2);
+    match &muts[1] {
+        GraphMutation::SetStrokeWidth { width, .. } => {
+            // avg pressure ≈ 0.117 → width ≈ 1.0 + 3.5 * 0.117 ≈ 1.41
+            assert!(
+                *width < 2.0,
+                "light pressure should produce thin stroke, got {width}"
+            );
+            assert!(*width >= 1.0, "stroke should be at least 1.0, got {width}");
+        }
+        _ => panic!("Expected SetStrokeWidth"),
+    }
+}
+
+#[test]
+fn pen_tool_heavy_pressure_thick_stroke() {
+    let mut tool = PenTool::new();
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 0.0,
+            y: 0.0,
+            pressure: 0.9,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 50.0,
+            y: 50.0,
+            pressure: 0.95,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 100.0,
+            y: 100.0,
+            pressure: 0.85,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    let muts = tool.handle(
+        &InputEvent::PointerUp {
+            x: 100.0,
+            y: 100.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(muts.len(), 2);
+    match &muts[1] {
+        GraphMutation::SetStrokeWidth { width, .. } => {
+            // avg pressure ≈ 0.9 → width ≈ 1.0 + 3.5 * 0.9 ≈ 4.15
+            assert!(
+                *width > 3.5,
+                "heavy pressure should produce thick stroke, got {width}"
+            );
+            assert!(*width <= 4.5, "stroke should be at most 4.5, got {width}");
+        }
+        _ => panic!("Expected SetStrokeWidth"),
+    }
+}
+
+#[test]
+fn pen_tool_default_pressure_medium_stroke() {
+    let mut tool = PenTool::new();
+    // Default mouse pressure is 0.5 in most browsers
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 0.0,
+            y: 0.0,
+            pressure: 0.5,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 100.0,
+            y: 100.0,
+            pressure: 0.5,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    let muts = tool.handle(
+        &InputEvent::PointerUp {
+            x: 100.0,
+            y: 100.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(muts.len(), 2);
+    match &muts[1] {
+        GraphMutation::SetStrokeWidth { width, .. } => {
+            // pressure=0.5 → width = 1.0 + 3.5 * 0.5 = 2.75
+            assert!((width - 2.75).abs() < 0.01, "expected 2.75, got {width}");
+        }
+        _ => panic!("Expected SetStrokeWidth"),
     }
 }

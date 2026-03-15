@@ -545,7 +545,8 @@ impl Tool for RectTool {
 
 pub struct PenTool {
     drawing: bool,
-    points: Vec<(f32, f32)>,
+    /// Points with pressure: (x, y, pressure 0.0–1.0).
+    points: Vec<(f32, f32, f32)>,
     current_id: Option<NodeId>,
     /// Parent node for new path nodes (default: root).
     parent_id: NodeId,
@@ -593,27 +594,34 @@ impl Tool for PenTool {
 
     fn handle(&mut self, event: &InputEvent, _hit_node: Option<NodeId>) -> Vec<GraphMutation> {
         match event {
-            InputEvent::PointerDown { x, y, .. } => {
+            InputEvent::PointerDown { x, y, pressure, .. } => {
                 self.drawing = true;
                 self.points.clear();
-                self.points.push((*x, *y));
+                self.points.push((*x, *y, *pressure));
                 let id = NodeId::with_prefix("path");
                 self.current_id = Some(id);
 
                 let path = NodeKind::Path {
                     commands: vec![PathCmd::MoveTo(*x, *y)],
                 };
-                let node = SceneNode::new(id, path);
+                let mut node = SceneNode::new(id, path);
+                // Default stroke for pen — will be updated on PointerUp with pressure
+                node.props.stroke = Some(Stroke {
+                    paint: Paint::Solid(Color::rgba(0.37, 0.36, 0.90, 1.0)),
+                    width: 2.5,
+                    cap: StrokeCap::Round,
+                    join: StrokeJoin::Round,
+                });
                 vec![GraphMutation::AddNode {
                     parent_id: self.parent_id,
                     node: Box::new(node),
                 }]
             }
-            InputEvent::PointerMove { x, y, .. } => {
+            InputEvent::PointerMove { x, y, pressure, .. } => {
                 if self.drawing
                     && let Some(id) = self.current_id
                 {
-                    self.points.push((*x, *y));
+                    self.points.push((*x, *y, *pressure));
                     // Emit a live LineTo so the path is visible during drawing.
                     // On PointerUp, these are replaced with smooth bezier curves.
                     let cmds = raw_points_to_lineto(&self.points);
@@ -624,10 +632,18 @@ impl Tool for PenTool {
             InputEvent::PointerUp { .. } => {
                 self.drawing = false;
                 if let Some(id) = self.current_id.take() {
+                    // Compute stroke width from average pressure (1.0–4.5px range)
+                    let stroke_width = pressure_to_stroke_width(&self.points);
                     // Smooth the raw pointer samples into Catmull-Rom cubic bezier curves.
                     let cmds = points_to_smooth_bezier(&self.points);
                     self.points.clear();
-                    return vec![GraphMutation::UpdatePath { id, commands: cmds }];
+                    return vec![
+                        GraphMutation::UpdatePath { id, commands: cmds },
+                        GraphMutation::SetStrokeWidth {
+                            id,
+                            width: stroke_width,
+                        },
+                    ];
                 }
                 self.points.clear();
                 vec![]
@@ -639,14 +655,27 @@ impl Tool for PenTool {
 
 // ─── Path smoothing helpers ───────────────────────────────────────────────
 
+/// Compute stroke width from average pressure across all points.
+/// Light pressure (≤0.3) → thin (1.0px), heavy pressure (≥0.9) → thick (4.5px).
+fn pressure_to_stroke_width(points: &[(f32, f32, f32)]) -> f32 {
+    if points.is_empty() {
+        return 2.5;
+    }
+    let avg_pressure: f32 = points.iter().map(|p| p.2).sum::<f32>() / points.len() as f32;
+    // Map pressure [0.0, 1.0] → stroke width [1.0, 4.5]
+    let min_width = 1.0_f32;
+    let max_width = 4.5_f32;
+    min_width + (max_width - min_width) * avg_pressure.clamp(0.0, 1.0)
+}
+
 /// Build a simple MoveTo + LineTo chain from raw points (used during live drawing).
-fn raw_points_to_lineto(points: &[(f32, f32)]) -> Vec<PathCmd> {
+fn raw_points_to_lineto(points: &[(f32, f32, f32)]) -> Vec<PathCmd> {
     if points.is_empty() {
         return vec![];
     }
     let mut cmds = Vec::with_capacity(points.len());
     cmds.push(PathCmd::MoveTo(points[0].0, points[0].1));
-    for &(x, y) in points.iter().skip(1) {
+    for &(x, y, _) in points.iter().skip(1) {
         cmds.push(PathCmd::LineTo(x, y));
     }
     cmds
@@ -658,7 +687,7 @@ fn raw_points_to_lineto(points: &[(f32, f32)]) -> Vec<PathCmd> {
 /// For each segment between point[i] and point[i+1], the two control
 /// points are derived from the neighboring points, producing a C1-continuous
 /// (tangent-smooth) spline. Tension is fixed at 1/6 (the classic value).
-fn points_to_smooth_bezier(points: &[(f32, f32)]) -> Vec<PathCmd> {
+fn points_to_smooth_bezier(points: &[(f32, f32, f32)]) -> Vec<PathCmd> {
     if points.len() < 2 {
         return raw_points_to_lineto(points);
     }
@@ -697,7 +726,7 @@ fn points_to_smooth_bezier(points: &[(f32, f32)]) -> Vec<PathCmd> {
 
 /// Reduce a point cloud to at most `max_pts` evenly-spaced samples.
 /// This keeps generated `.fd` path commands concise for typical strokes.
-fn subsample_points(pts: &[(f32, f32)], max_pts: usize) -> Vec<(f32, f32)> {
+fn subsample_points(pts: &[(f32, f32, f32)], max_pts: usize) -> Vec<(f32, f32, f32)> {
     if pts.len() <= max_pts {
         return pts.to_vec();
     }

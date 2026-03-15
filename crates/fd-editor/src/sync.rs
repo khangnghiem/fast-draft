@@ -389,6 +389,20 @@ impl SyncEngine {
                     *cmds = commands;
                 }
             }
+            GraphMutation::SetStrokeWidth { id, width } => {
+                if let Some(node) = self.graph.get_by_id_mut(id) {
+                    if let Some(ref mut stroke) = node.props.stroke {
+                        stroke.width = width;
+                    } else {
+                        node.props.stroke = Some(Stroke {
+                            paint: Paint::Solid(Color::rgba(0.37, 0.36, 0.90, 1.0)),
+                            width,
+                            cap: StrokeCap::Round,
+                            join: StrokeJoin::Round,
+                        });
+                    }
+                }
+            }
             GraphMutation::GroupNodes { ids, new_group_id } => {
                 if ids.is_empty() {
                     return;
@@ -1055,6 +1069,11 @@ pub enum GraphMutation {
     /// Remove an edge by its ID.
     RemoveEdge {
         id: NodeId,
+    },
+    /// Update a node's stroke width (e.g. from pen pressure).
+    SetStrokeWidth {
+        id: NodeId,
+        width: f32,
     },
 }
 
