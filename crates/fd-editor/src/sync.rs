@@ -354,7 +354,7 @@ impl SyncEngine {
             GraphMutation::DuplicateNode { id } => {
                 if let Some(original) = self.graph.get_by_id(id).cloned() {
                     // Incremental clone name: foo → foo_2, foo_2 → foo_3
-                    let new_id = next_clone_name(&self.graph, id);
+                    let new_id = next_clone_name(&self.graph, id, &[]);
                     let mut cloned = original;
                     cloned.id = new_id;
                     // Strip inherited positioning — clone gets its own position
@@ -1082,7 +1082,7 @@ pub enum GraphMutation {
 /// Scans the graph for existing names matching `{stem}_N` and picks `max(N)+1`.
 /// The stem is derived by stripping a trailing `_N` numeric suffix (since
 /// auto-generated IDs follow the `{kind}_{counter}` pattern).
-pub fn next_clone_name(graph: &SceneGraph, orig_id: NodeId) -> NodeId {
+pub fn next_clone_name(graph: &SceneGraph, orig_id: NodeId, extra_taken: &[NodeId]) -> NodeId {
     let base = orig_id.as_str();
     // Strip trailing _N suffix to get the stem (e.g. "rect_3" → "rect")
     let stem = base
@@ -1090,8 +1090,24 @@ pub fn next_clone_name(graph: &SceneGraph, orig_id: NodeId) -> NodeId {
         .and_then(|(prefix, suffix)| suffix.parse::<u32>().ok().map(|_| prefix))
         .unwrap_or(base);
     let mut max_n = 1u32;
+    // Scan existing graph
     for idx in graph.graph.node_indices() {
         let name = graph.graph[idx].id.as_str();
+        if name == stem {
+            max_n = max_n.max(1);
+        }
+        if let Some(rest) = name.strip_prefix(stem)
+            && let Some(n_str) = rest.strip_prefix('_')
+            && let Ok(n) = n_str.parse::<u32>()
+        {
+            max_n = max_n.max(n);
+        }
+    }
+    // Also scan names already generated in this batch (avoids collisions
+    // when duplicating multiple nodes with the same stem, e.g. button_2 +
+    // button_3 → button_4 + button_5 instead of two button_4s).
+    for taken in extra_taken {
+        let name = taken.as_str();
         if name == stem {
             max_n = max_n.max(1);
         }
