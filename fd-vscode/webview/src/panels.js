@@ -707,7 +707,9 @@ function wireLayerDragDrop(panel) {
       const isContainer = ['rect','ellipse','frame','group'].includes(kind);
       let changed = false;
       if (zone === 'nest' && isContainer) {
-        changed = fdCanvas.reparent_into(draggedId, targetId);
+        changed = e.altKey && fdCanvas.reparent_into_centered
+          ? fdCanvas.reparent_into_centered(draggedId, targetId)
+          : fdCanvas.reparent_into(draggedId, targetId);
       } else {
         const targetIndex = getSiblingIndex(panel, targetId);
         const insertIndex = zone === 'above' ? targetIndex : targetIndex + 1;
@@ -799,6 +801,7 @@ function wireLayerContextMenu(panel) {
             for (const t of validTargets.slice(0, 15)) {
               const icon = LAYER_ICONS[t.kind] || '•';
               menuHtml += `<div class="layer-ctx-item" data-action="move-into" data-target="${escapeAttr(t.id)}"><span class="ctx-icon">${icon}</span>@${escapeHtml(t.id)}</div>`;
+              menuHtml += `<div class="layer-ctx-item" data-action="center-into" data-target="${escapeAttr(t.id)}" style="padding-left:28px;opacity:0.7;font-size:11px"><span class="ctx-icon">⊙</span>Center in @${escapeHtml(t.id)}</div>`;
             }
             if (validTargets.length > 15) {
               menuHtml += `<div class="layer-ctx-item" style="opacity:0.5;cursor:default">…${validTargets.length - 15} more</div>`;
@@ -835,6 +838,11 @@ function wireLayerContextMenu(panel) {
           let changed = false;
           if (action === 'move-into') {
             changed = fdCanvas.reparent_into(nodeId, btn.getAttribute('data-target'));
+          } else if (action === 'center-into') {
+            const targetId = btn.getAttribute('data-target');
+            changed = fdCanvas.reparent_into_centered
+              ? fdCanvas.reparent_into_centered(nodeId, targetId)
+              : fdCanvas.reparent_into(nodeId, targetId);
           } else if (action === 'move-to-root') {
             changed = fdCanvas.reparent_into(nodeId, 'root');
           } else if (action === 'duplicate') {

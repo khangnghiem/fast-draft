@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.162 — Opt-in Center-in-Parent Reparent (R3.72)
+- **FEATURE (R3.72)**: Alt+drop in Layers panel → center child in parent — holding Alt/Option while dropping a node onto a container in the Layers panel uses `CenterIn` constraint instead of preserving visual position; default (no modifier) behavior unchanged
+- **FEATURE (R3.72)**: "Center in @target" context menu items — right-click a layer item → "Move Into" sub-menu now shows both "Move into @target" (preserve position) and "⊙ Center in @target" (center) for each container
+- **WASM**: New `reparent_into_centered(child, target)` API — same validation as `reparent_into` but strips positional constraints and adds `CenterIn(target)` constraint; refactored shared validation into `validate_reparent` helper (DRY)
+- **PARITY**: All center-in-parent changes applied to both site (`playground.js`) and VS Code extension (`panels.js`)
+
 ### v0.11.161 — Fix Layers Panel Reparent Duplication (R3.68)
 - **FIX (R3.68)**: Dragging a node above its parent in the Layers panel no longer duplicates it — root cause: `reparent_node()` removed the graph edge from old parent → child but did not clean up the old parent's `sorted_child_order` cache; when the old parent had an explicit sort order (created by previous reorder operations), the stale entry caused the emitter to visit the child twice (ghost under old parent + real under new parent)
 - **CORE**: `reparent_node()` in `model.rs` now removes the child from the old parent's `sorted_child_order` after removing the edge — 3-line fix preventing all ghost-child duplication

@@ -282,38 +282,31 @@ impl FdCanvas {
         changed
     }
 
-    /// Reparent a node into a target container (⌘+drag or layer drag).
-    ///
-    /// The target must be a container type (Rect, Ellipse, Frame, Group)
-    /// or "root" to move to the document root.
-    /// Returns true if the reparent succeeded.
-    pub fn reparent_into(&mut self, child_id: &str, target_id: &str) -> bool {
+    /// Validate reparent preconditions (shared by reparent_into and reparent_into_centered).
+    /// Returns (child_idx, target_idx) on success, or None if validation fails.
+    fn validate_reparent(
+        &self,
+        child_id: &str,
+        target_id: &str,
+    ) -> Option<(fd_core::NodeIndex, fd_core::NodeIndex)> {
         let child = NodeId::intern(child_id);
         let target = NodeId::intern(target_id);
 
-        // Prevent self-reparent
         if child == target {
-            return false;
+            return None;
         }
 
-        let child_idx = match self.engine.graph.index_of(child) {
-            Some(idx) => idx,
-            None => return false,
-        };
+        let child_idx = self.engine.graph.index_of(child)?;
 
-        // Allow "root" as a special target
         let target_idx = if target_id == "root" {
             self.engine.graph.root
         } else {
-            match self.engine.graph.index_of(target) {
-                Some(idx) => idx,
-                None => return false,
-            }
+            self.engine.graph.index_of(target)?
         };
 
         // Skip if already a child of that parent
         if self.engine.graph.parent(child_idx) == Some(target_idx) {
-            return false;
+            return None;
         }
 
         // Target must be root or a container type
@@ -326,7 +319,7 @@ impl FdCanvas {
                     | NodeKind::Group
             );
             if !is_container {
-                return false;
+                return None;
             }
         }
 
@@ -334,17 +327,32 @@ impl FdCanvas {
         let mut ancestor = Some(target_idx);
         while let Some(a) = ancestor {
             if a == child_idx {
-                return false; // would create cycle
+                return None;
             }
             ancestor = self.engine.graph.parent(a);
         }
+
+        Some((child_idx, target_idx))
+    }
+
+    /// Reparent a node into a target container (⌘+drag or layer drag).
+    ///
+    /// The target must be a container type (Rect, Ellipse, Frame, Group)
+    /// or "root" to move to the document root.
+    /// Returns true if the reparent succeeded.
+    pub fn reparent_into(&mut self, child_id: &str, target_id: &str) -> bool {
+        let (child_idx, target_idx) = match self.validate_reparent(child_id, target_id) {
+            Some(pair) => pair,
+            None => return false,
+        };
+        let child = NodeId::intern(child_id);
 
         // Capture absolute bounds BEFORE reparent so we can preserve visual position
         let abs_bounds = self.engine.current_bounds().get(&child_idx).copied();
 
         self.engine.graph.reparent_node(child_idx, target_idx);
 
-        // Fix #1: Adjust Position constraint to be relative to the new parent
+        // Adjust Position constraint to be relative to the new parent
         // so the node stays visually in-place (mirrors detach_child_from_group logic).
         if let Some(child_b) = abs_bounds {
             let new_parent_offset = self
@@ -372,6 +380,47 @@ impl FdCanvas {
                     y: new_rel_y,
                 });
             }
+        }
+
+        self.engine.mark_dirty();
+        self.engine.flush_to_text();
+        self.rebuild_spatial_index();
+        true
+    }
+
+    /// Reparent a node into a target container and center it.
+    ///
+    /// Same validation as `reparent_into` but instead of preserving
+    /// visual position, strips positional constraints and adds
+    /// `CenterIn(target)` so the child is centered in the new parent.
+    pub fn reparent_into_centered(&mut self, child_id: &str, target_id: &str) -> bool {
+        let (child_idx, target_idx) = match self.validate_reparent(child_id, target_id) {
+            Some(pair) => pair,
+            None => return false,
+        };
+        let child = NodeId::intern(child_id);
+        let target = NodeId::intern(target_id);
+
+        self.engine.graph.reparent_node(child_idx, target_idx);
+
+        // Strip all positional constraints and add CenterIn(target)
+        if let Some(node) = self.engine.graph.get_by_id_mut(child) {
+            node.constraints.retain(|c| {
+                !matches!(
+                    c,
+                    Constraint::Position { .. }
+                        | Constraint::Offset { .. }
+                        | Constraint::CenterIn(_)
+                        | Constraint::FillParent { .. }
+                )
+            });
+            // Use "root" target → CenterIn(canvas), else CenterIn(target node)
+            let center_target = if target_id == "root" {
+                NodeId::intern("canvas")
+            } else {
+                target
+            };
+            node.constraints.push(Constraint::CenterIn(center_target));
         }
 
         self.engine.mark_dirty();
