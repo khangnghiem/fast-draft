@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.161 — Fix Layers Panel Reparent Duplication (R3.68)
+- **FIX (R3.68)**: Dragging a node above its parent in the Layers panel no longer duplicates it — root cause: `reparent_node()` removed the graph edge from old parent → child but did not clean up the old parent's `sorted_child_order` cache; when the old parent had an explicit sort order (created by previous reorder operations), the stale entry caused the emitter to visit the child twice (ghost under old parent + real under new parent)
+- **CORE**: `reparent_node()` in `model.rs` now removes the child from the old parent's `sorted_child_order` after removing the edge — 3-line fix preventing all ghost-child duplication
+- **CORE**: `children()` in `model.rs` now defensively filters `sorted_child_order` entries against actual graph edges — belt-and-suspenders guard against any future `sorted_child_order` desync
+- **TESTING**: New `reparent_after_reorder_no_ghost_children` regression test — creates parent+children, reorders (creating `sorted_child_order`), reparents child to root, verifies no duplicate in old parent's `children()` and no duplicate in `emit_document()` output
+
 ### v0.11.160 — Arrow Shift+Drag Angle Snap + Shift Behavior Documentation (R3.71)
 - **FEATURE (R3.71)**: Arrow tool Shift+drag → 45° angle snap — holding Shift while drawing an arrow snaps the endpoint to the nearest 45° increment (0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°); applies to both live preview (PointerMove) and final placement (PointerUp for point anchors); `snap_to_45_degrees()` helper in `tools.rs`
 - **DOCS (R3.71)**: Complete Shift modifier documentation in `SHORTCUTS.md` — new per-tool Shift constraint table (Rect→square, Ellipse→circle, Frame→square, Arrow→45° snap, Pen/Text→none); Hand tool Shift row added (no effect — pan is unconstrained)

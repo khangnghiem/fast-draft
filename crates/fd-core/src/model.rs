@@ -725,6 +725,11 @@ impl SceneGraph {
             && let Some(edge) = self.graph.find_edge(old_parent, child)
         {
             self.graph.remove_edge(edge);
+            // Clean up stale sorted_child_order for the old parent
+            // to prevent ghost children in the emitter.
+            if let Some(order) = self.sorted_child_order.get_mut(&old_parent) {
+                order.retain(|&idx| idx != child);
+            }
         }
         self.graph.add_edge(new_parent, child, ());
     }
@@ -735,9 +740,15 @@ impl SceneGraph {
     /// how `petgraph` iterates its adjacency list on different targets
     /// (native vs WASM).
     pub fn children(&self, idx: NodeIndex) -> Vec<NodeIndex> {
-        // If an explicit sort order was set (by sort_nodes), use it
+        // If an explicit sort order was set (by sort_nodes), use it.
+        // Filter out stale entries whose edge was removed (e.g. by reparent_node)
+        // as a defensive guard against sorted_child_order desync.
         if let Some(order) = self.sorted_child_order.get(&idx) {
-            return order.clone();
+            return order
+                .iter()
+                .copied()
+                .filter(|&c| self.graph.find_edge(idx, c).is_some())
+                .collect();
         }
 
         let mut children: Vec<NodeIndex> = self
@@ -1775,5 +1786,74 @@ mod tests {
         sg.reparent_node(rect, sg.root);
         assert_eq!(sg.children(sg.root).len(), 2);
         assert_eq!(sg.children(group).len(), 0);
+    }
+
+    /// Regression test: reorder creates sorted_child_order, then reparent
+    /// must not leave ghost entries in the old parent's children().
+    #[test]
+    fn reparent_after_reorder_no_ghost_children() {
+        let mut sg = SceneGraph::new();
+        let parent = sg.add_node(
+            sg.root,
+            SceneNode::new(
+                NodeId::intern("parent"),
+                NodeKind::Rect {
+                    width: 200.0,
+                    height: 200.0,
+                },
+            ),
+        );
+        let child_a = sg.add_node(
+            parent,
+            SceneNode::new(
+                NodeId::intern("a"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+        let child_b = sg.add_node(
+            parent,
+            SceneNode::new(
+                NodeId::intern("b"),
+                NodeKind::Rect {
+                    width: 50.0,
+                    height: 50.0,
+                },
+            ),
+        );
+
+        // Reorder children to create a sorted_child_order entry
+        assert!(sg.move_child_to_index(child_b, 0));
+        assert!(sg.sorted_child_order.contains_key(&parent));
+        assert_eq!(sg.children(parent), vec![child_b, child_a]);
+
+        // Now reparent child_b out to root (simulates drag-above-parent)
+        sg.reparent_node(child_b, sg.root);
+
+        // Old parent must NOT have ghost children
+        let parent_children = sg.children(parent);
+        assert_eq!(
+            parent_children.len(),
+            1,
+            "parent should have exactly 1 child after reparent, got {:?}",
+            parent_children
+        );
+        assert_eq!(parent_children[0], child_a);
+
+        // New parent (root) should now contain both parent and child_b
+        let root_children = sg.children(sg.root);
+        assert_eq!(root_children.len(), 2);
+        assert!(root_children.contains(&parent));
+        assert!(root_children.contains(&child_b));
+
+        // Emit document should not duplicate child_b
+        let emitted = crate::emitter::emit_document(&sg);
+        let count = emitted.matches("@b").count();
+        assert_eq!(
+            count, 1,
+            "@b should appear exactly once in emitted text, found {count} times:\n{emitted}"
+        );
     }
 }
