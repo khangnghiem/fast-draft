@@ -370,7 +370,7 @@ function renderLayerNode(node, selectedId, depth = 0) {
   const chevronClass = hasChildren ? "layer-chevron expanded" : "layer-chevron empty";
   const chevron = `<span class="${chevronClass}" data-toggle-id="${escapeAttr(node.id)}">▶</span>`;
 
-  let html = `<div class="layer-item${isSelected ? " selected" : ""}" data-node-id="${escapeAttr(node.id)}">`;
+  let html = `<div class="layer-item${isSelected ? " selected" : ""}" data-node-id="${escapeAttr(node.id)}" data-node-kind="${escapeAttr(node.kind)}" draggable="true">`;
   html += `<span class="layer-indent">${indent}</span>`;
   html += chevron;
   html += `<span class="layer-icon">${icon}</span>`;
@@ -625,6 +625,236 @@ function bulkSetStatus(annotated, newStatus) {
   if (panel) refreshNotesSummary(panel);
 }
 
+/** Close any open layer context menu. */
+function closeLayerCtxMenu() {
+  document.querySelectorAll('.layer-ctx-menu').forEach(m => m.remove());
+}
+
+/** Clear all drag indicators from layer items. */
+function clearLayerDragIndicators(panel) {
+  panel.querySelectorAll('.layer-item').forEach(el => {
+    el.classList.remove('drag-over-nest', 'drag-over-above', 'drag-over-below');
+  });
+  panel.querySelectorAll('.layers-body').forEach(el => {
+    el.classList.remove('drag-over-root');
+  });
+}
+
+/** Determine drop zone: 'above' (top 25%), 'below' (bottom 25%), 'nest' (middle 50%). */
+function getDropZone(e, el) {
+  const rect = el.getBoundingClientRect();
+  const y = e.clientY - rect.top;
+  const h = rect.height;
+  if (y < h * 0.25) return 'above';
+  if (y > h * 0.75) return 'below';
+  return 'nest';
+}
+
+/** Get sibling index of a node in the DOM. */
+function getSiblingIndex(panel, nodeId) {
+  const item = panel.querySelector(`.layer-item[data-node-id="${nodeId}"]`);
+  if (!item) return 0;
+  const parent = item.parentElement;
+  if (!parent) return 0;
+  const siblings = [...parent.querySelectorAll(':scope > .layer-item')];
+  return siblings.indexOf(item);
+}
+
+/** Wire drag-and-drop handlers on layer items. */
+function wireLayerDragDrop(panel) {
+  if (!fdCanvas) return;
+  let draggedId = null;
+
+  panel.querySelectorAll('.layer-item').forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      draggedId = item.getAttribute('data-node-id');
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', draggedId);
+    });
+
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const targetId = item.getAttribute('data-node-id');
+      if (!draggedId || targetId === draggedId) return;
+      clearLayerDragIndicators(panel);
+      const zone = getDropZone(e, item);
+      const kind = item.getAttribute('data-node-kind');
+      const isContainer = ['rect','ellipse','frame','group'].includes(kind);
+      if (zone === 'nest' && isContainer) {
+        item.classList.add('drag-over-nest');
+      } else if (zone === 'above') {
+        item.classList.add('drag-over-above');
+      } else {
+        item.classList.add('drag-over-below');
+      }
+    });
+
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('drag-over-nest', 'drag-over-above', 'drag-over-below');
+    });
+
+    item.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      clearLayerDragIndicators(panel);
+      const targetId = item.getAttribute('data-node-id');
+      if (!draggedId || !fdCanvas || targetId === draggedId) return;
+      const textBefore = fdCanvas.get_text();
+      const zone = getDropZone(e, item);
+      const kind = item.getAttribute('data-node-kind');
+      const isContainer = ['rect','ellipse','frame','group'].includes(kind);
+      let changed = false;
+      if (zone === 'nest' && isContainer) {
+        changed = fdCanvas.reparent_into(draggedId, targetId);
+      } else {
+        const targetIndex = getSiblingIndex(panel, targetId);
+        const insertIndex = zone === 'above' ? targetIndex : targetIndex + 1;
+        const targetParent = item.parentElement?.getAttribute?.('data-parent-id');
+        const dragItem = panel.querySelector(`.layer-item[data-node-id="${draggedId}"]`);
+        const dragParent = dragItem?.parentElement?.getAttribute?.('data-parent-id');
+        if (targetParent && dragParent && targetParent === dragParent) {
+          changed = fdCanvas.reorder_child(draggedId, insertIndex);
+        } else if (targetParent) {
+          changed = fdCanvas.reparent_into(draggedId, targetParent);
+          if (changed) fdCanvas.reorder_child(draggedId, insertIndex);
+        } else {
+          changed = fdCanvas.reparent_into(draggedId, 'root');
+          if (changed) fdCanvas.reorder_child(draggedId, insertIndex);
+        }
+      }
+      if (changed) {
+        const textAfter = fdCanvas.get_text();
+        if (textBefore !== textAfter) fdCanvas.push_undo_snapshot(textBefore, textAfter);
+        bumpGeneration();
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+        refreshLayersPanel();
+      }
+      draggedId = null;
+    });
+
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      clearLayerDragIndicators(panel);
+      draggedId = null;
+    });
+  });
+
+  // Drop-to-root
+  const layersBody = panel.querySelector('.layers-body');
+  if (layersBody) {
+    layersBody.addEventListener('dragover', (e) => {
+      if (e.target.closest('.layer-item')) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      clearLayerDragIndicators(panel);
+      layersBody.classList.add('drag-over-root');
+    });
+    layersBody.addEventListener('dragleave', (e) => {
+      if (!layersBody.contains(e.relatedTarget) || e.relatedTarget?.closest('.layer-item')) {
+        layersBody.classList.remove('drag-over-root');
+      }
+    });
+    layersBody.addEventListener('drop', (e) => {
+      if (e.target.closest('.layer-item')) return;
+      e.preventDefault();
+      layersBody.classList.remove('drag-over-root');
+      if (!draggedId || !fdCanvas) return;
+      const textBefore = fdCanvas.get_text();
+      const changed = fdCanvas.reparent_into(draggedId, 'root');
+      if (changed) {
+        const textAfter = fdCanvas.get_text();
+        if (textBefore !== textAfter) fdCanvas.push_undo_snapshot(textBefore, textAfter);
+        bumpGeneration();
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+        refreshLayersPanel();
+      }
+      draggedId = null;
+    });
+  }
+}
+
+/** Wire right-click context menu on layer items ("Move Into"). */
+function wireLayerContextMenu(panel) {
+  if (!fdCanvas) return;
+  panel.querySelectorAll('.layer-item').forEach(item => {
+    item.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeLayerCtxMenu();
+      const nodeId = item.getAttribute('data-node-id');
+      if (!nodeId) return;
+      let menuHtml = '';
+      if (fdCanvas.get_container_ids) {
+        try {
+          const containers = JSON.parse(fdCanvas.get_container_ids());
+          const validTargets = containers.filter(c => c.id !== nodeId);
+          if (validTargets.length > 0) {
+            menuHtml += `<div class="layer-ctx-item" data-action="move-into-header" style="opacity:0.5;cursor:default;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.3px">Move Into</div>`;
+            for (const t of validTargets.slice(0, 15)) {
+              const icon = LAYER_ICONS[t.kind] || '•';
+              menuHtml += `<div class="layer-ctx-item" data-action="move-into" data-target="${escapeAttr(t.id)}"><span class="ctx-icon">${icon}</span>@${escapeHtml(t.id)}</div>`;
+            }
+            if (validTargets.length > 15) {
+              menuHtml += `<div class="layer-ctx-item" style="opacity:0.5;cursor:default">…${validTargets.length - 15} more</div>`;
+            }
+            menuHtml += '<div class="layer-ctx-sep"></div>';
+          }
+        } catch (_) {}
+      }
+      menuHtml += `<div class="layer-ctx-item" data-action="move-to-root"><span class="ctx-icon">↑</span>Move to Root</div>`;
+      const menu = document.createElement('div');
+      menu.className = 'layer-ctx-menu';
+      menu.innerHTML = menuHtml;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      let mx = e.clientX;
+      let my = e.clientY;
+      document.body.appendChild(menu);
+      if (mx + menu.offsetWidth > vw) mx = vw - menu.offsetWidth - 4;
+      if (my + menu.offsetHeight > vh) my = vh - menu.offsetHeight - 4;
+      menu.style.left = mx + 'px';
+      menu.style.top = my + 'px';
+      menu.querySelectorAll('.layer-ctx-item[data-action]').forEach(btn => {
+        btn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const action = btn.getAttribute('data-action');
+          if (action === 'move-into-header') return;
+          const textBefore = fdCanvas.get_text();
+          let changed = false;
+          if (action === 'move-into') {
+            changed = fdCanvas.reparent_into(nodeId, btn.getAttribute('data-target'));
+          } else if (action === 'move-to-root') {
+            changed = fdCanvas.reparent_into(nodeId, 'root');
+          }
+          if (changed) {
+            const textAfter = fdCanvas.get_text();
+            if (textBefore !== textAfter) fdCanvas.push_undo_snapshot(textBefore, textAfter);
+            bumpGeneration();
+            render();
+            syncTextToExtension();
+            updatePropertiesPanel();
+            refreshLayersPanel();
+          }
+          closeLayerCtxMenu();
+        });
+      });
+      const closeOnClick = (ev) => {
+        if (!menu.contains(ev.target)) {
+          closeLayerCtxMenu();
+          document.removeEventListener('click', closeOnClick);
+        }
+      };
+      setTimeout(() => document.addEventListener('click', closeOnClick), 0);
+    });
+  });
+}
+
 /** Last layer generation + selection — skip rebuild when unchanged */
 let lastLayerGeneration = -1;
 let lastLayerSelectedId = "";
@@ -796,6 +1026,12 @@ function refreshLayersPanel() {
       toggleNodeVisibility(nodeId);
     });
   });
+
+  // ── Layer Drag-and-Drop ──
+  wireLayerDragDrop(panel);
+
+  // ── Layer Context Menu ("Move Into") ──
+  wireLayerContextMenu(panel);
 }
 
 // ─── Spec View Parser (client-side) ──────────────────────────────────────

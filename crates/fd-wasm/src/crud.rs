@@ -282,9 +282,10 @@ impl FdCanvas {
         changed
     }
 
-    /// Reparent a node into a target container (⌘+drag).
+    /// Reparent a node into a target container (⌘+drag or layer drag).
     ///
-    /// The target must be a container type (Rect, Ellipse, Frame, Group).
+    /// The target must be a container type (Rect, Ellipse, Frame, Group)
+    /// or "root" to move to the document root.
     /// Returns true if the reparent succeeded.
     pub fn reparent_into(&mut self, child_id: &str, target_id: &str) -> bool {
         let child = NodeId::intern(child_id);
@@ -299,21 +300,34 @@ impl FdCanvas {
             Some(idx) => idx,
             None => return false,
         };
-        let target_idx = match self.engine.graph.index_of(target) {
-            Some(idx) => idx,
-            None => return false,
+
+        // Allow "root" as a special target
+        let target_idx = if target_id == "root" {
+            self.engine.graph.root
+        } else {
+            match self.engine.graph.index_of(target) {
+                Some(idx) => idx,
+                None => return false,
+            }
         };
 
-        // Target must be a container type
-        let is_container = matches!(
-            self.engine.graph.graph[target_idx].kind,
-            NodeKind::Rect { .. }
-                | NodeKind::Ellipse { .. }
-                | NodeKind::Frame { .. }
-                | NodeKind::Group
-        );
-        if !is_container {
+        // Skip if already a child of that parent
+        if self.engine.graph.parent(child_idx) == Some(target_idx) {
             return false;
+        }
+
+        // Target must be root or a container type
+        if target_idx != self.engine.graph.root {
+            let is_container = matches!(
+                self.engine.graph.graph[target_idx].kind,
+                NodeKind::Rect { .. }
+                    | NodeKind::Ellipse { .. }
+                    | NodeKind::Frame { .. }
+                    | NodeKind::Group
+            );
+            if !is_container {
+                return false;
+            }
         }
 
         // Prevent circular reparent (child is ancestor of target)
@@ -330,5 +344,44 @@ impl FdCanvas {
         self.engine.flush_to_text();
         self.rebuild_spatial_index();
         true
+    }
+
+    /// Reorder a child node to a specific z-order index within its parent.
+    /// Used by layer panel drag-to-reorder.
+    pub fn reorder_child(&mut self, child_id: &str, index: usize) -> bool {
+        let child = NodeId::intern(child_id);
+        let child_idx = match self.engine.graph.index_of(child) {
+            Some(idx) => idx,
+            None => return false,
+        };
+        let changed = self.engine.graph.move_child_to_index(child_idx, index);
+        if changed {
+            self.engine.mark_dirty();
+            self.engine.flush_to_text();
+        }
+        changed
+    }
+
+    /// Return a JSON array of valid container node IDs for the "Move Into" menu.
+    /// Each entry is `{"id": "...", "kind": "..."}`.
+    pub fn get_container_ids(&self) -> String {
+        let mut containers = Vec::new();
+        for idx in self.engine.graph.graph.node_indices() {
+            let node = &self.engine.graph.graph[idx];
+            if matches!(
+                node.kind,
+                NodeKind::Rect { .. }
+                    | NodeKind::Ellipse { .. }
+                    | NodeKind::Frame { .. }
+                    | NodeKind::Group
+            ) {
+                containers.push(format!(
+                    "{{\"id\":\"{}\",\"kind\":\"{}\"}}",
+                    node.id.as_str(),
+                    node.kind.kind_name()
+                ));
+            }
+        }
+        format!("[{}]", containers.join(","))
     }
 }
