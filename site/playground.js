@@ -5120,17 +5120,8 @@ async function initPlayground() {
 
       if (panDragging) {
         panDragging = false;
-        // Hand tool click (not drag) on empty space → deselect all
-        if (fdCanvas.get_tool_name() === 'hand' && handPanClientStartX !== null) {
-          const dx = e.clientX - handPanClientStartX;
-          const dy = e.clientY - handPanClientStartY;
-          if (Math.hypot(dx, dy) < 5) {
-            fdCanvas.select_by_id('');
-            renderDirty = true; uiDirty = true;
-          }
-          handPanClientStartX = null;
-          handPanClientStartY = null;
-        }
+        handPanClientStartX = null;
+        handPanClientStartY = null;
         canvas.style.cursor = (isPanning || fdCanvas.get_tool_name() === 'hand') ? 'grab' : '';
         return;
       }
@@ -5209,6 +5200,16 @@ async function initPlayground() {
       handTempSelectActive = false;
       handTempSelectOriginalTool = null;
       handAltCloneActive = false;
+
+      // Re-apply modifier cursors if modifier keys still held after pointer-up
+      // (Hand tool: ⌘ → select cursor, Alt → copy cursor; other tools: ⌘ → grab)
+      if (fdCanvas.get_tool_name() === 'hand') {
+        if (e.metaKey && !e.altKey) {
+          canvas.classList.add('modifier-cmd-select');
+        } else if (e.altKey && !e.metaKey) {
+          canvas.classList.add('modifier-alt');
+        }
+      }
 
       // Show FAB + Props if node selected
       updateFab(canvas);
