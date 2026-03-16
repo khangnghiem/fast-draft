@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.174 — Escape Key Deselects All (R3.6)
+- **UX (R3.6)**: Escape key now deselects all selected nodes when no other UI layer is open — layered dismissal order: context menu → annotation card → shortcut help → fullscreen/zen mode → locked tool → **deselect** (one action per press, matches Figma)
+- **SITE**: Layered Escape handler in `site/playground.js`
+- **PARITY**: Layered Escape handler in `fd-vscode/webview/src/shortcuts.js` (replaces old non-layered handler that closed everything at once); duplicate Escape tool-unlock condition removed
+
 ### v0.11.173 — Hand Tool Click-to-Deselect (R3.6)
 - **FIX (R3.6)**: Hand tool click on empty canvas space now deselects all selected nodes — previously the Hand tool always entered pan mode on pointer-down and returned early, never calling selection logic; fix: on pointer-up, if the pointer moved < 5px from its start position (a click, not a drag), calls `select_by_id('')` to clear selection; matches Figma's Hand tool behavior
 - **SITE**: Changes in `site/playground.js` (hand pan start tracking + deselect on click)
