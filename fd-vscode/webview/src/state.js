@@ -31,6 +31,8 @@ let panY = 0;
 let panStartX = 0;
 let panStartY = 0;
 let panDragging = false;
+let handPanClientStartX = null;  // Track click vs drag for deselect
+let handPanClientStartY = null;
 
 /** Zoom level (1.0 = 100%, range 0.1–10) */
 let zoomLevel = 1.0;

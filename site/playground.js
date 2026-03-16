@@ -259,6 +259,8 @@ let lastToolBtnName = '';
 let handTempSelectActive = false;
 let handTempSelectOriginalTool = null;
 let handAltCloneActive = false;
+let handPanClientStartX = null;  // Track click vs drag for deselect
+let handPanClientStartY = null;
 
 // Smart defaults — per-tool style memory (persistent via localStorage)
 let smartDefaults = { fill: null, stroke: '#333333', strokeWidth: 2.5, opacity: 1, cornerRadius: 8 };
@@ -4916,6 +4918,8 @@ async function initPlayground() {
           panDragging = true;
           panStartX = e.clientX - panX;
           panStartY = e.clientY - panY;
+          handPanClientStartX = e.clientX;
+          handPanClientStartY = e.clientY;
           canvas.style.cursor = 'grabbing';
           activePointerId = e.pointerId;
           return;
@@ -5110,6 +5114,17 @@ async function initPlayground() {
 
       if (panDragging) {
         panDragging = false;
+        // Hand tool click (not drag) on empty space → deselect all
+        if (fdCanvas.get_tool_name() === 'hand' && handPanClientStartX !== null) {
+          const dx = e.clientX - handPanClientStartX;
+          const dy = e.clientY - handPanClientStartY;
+          if (Math.hypot(dx, dy) < 5) {
+            fdCanvas.select_by_id('');
+            renderDirty = true; uiDirty = true;
+          }
+          handPanClientStartX = null;
+          handPanClientStartY = null;
+        }
         canvas.style.cursor = (isPanning || fdCanvas.get_tool_name() === 'hand') ? 'grab' : '';
         return;
       }
