@@ -1058,3 +1058,34 @@ text @outer "Hello" {
         "text node should have no children"
     );
 }
+
+#[test]
+fn roundtrip_import_namespace_example() {
+    let src = std::fs::read_to_string("../../examples/import_namespace.fd").unwrap();
+    let graph = crate::parser::parse_document(&src).expect("Failed to parse import_namespace.fd");
+
+    // Ensure we correctly captured the import
+    assert_eq!(graph.imports.len(), 1);
+    assert_eq!(graph.imports[0].path, "shared_library.fd");
+    assert_eq!(graph.imports[0].namespace, "lib");
+
+    // Check that we're using namespaced styles
+    let mut uses_lib_primary = false;
+    for node_idx in graph.graph.node_indices() {
+        let node = &graph.graph[node_idx];
+        if node
+            .use_styles
+            .iter()
+            .any(|id| id.as_str() == "lib.primary_button")
+        {
+            uses_lib_primary = true;
+        }
+    }
+    assert!(uses_lib_primary, "Failed to find use: lib.primary_button");
+
+    let emitted = crate::emitter::emit_document(&graph);
+    let parsed2 =
+        crate::parser::parse_document(&emitted).expect("Failed to re-parse emitted document");
+
+    assert_eq!(graph.imports.len(), parsed2.imports.len());
+}

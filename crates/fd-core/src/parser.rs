@@ -280,7 +280,7 @@ fn skip_space(input: &mut &str) {
 }
 
 fn parse_identifier<'a>(input: &mut &'a str) -> ModalResult<&'a str> {
-    take_while(1.., |c: char| c.is_alphanumeric() || c == '_').parse_next(input)
+    take_while(1.., |c: char| c.is_alphanumeric() || c == '_' || c == '.').parse_next(input)
 }
 
 fn parse_node_id(input: &mut &str) -> ModalResult<NodeId> {

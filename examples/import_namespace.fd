@@ -1,0 +1,75 @@
+# ─── Import Namespace Showcase ───
+# Demonstrates the use of the `import "filename.fd" as ns` feature
+# to reuse styles defined in an external file.
+
+import "shared_library.fd" as lib
+
+# ─── Components ───
+
+group @toolbar {
+  layout: row gap=16 pad=20
+
+  rect @save_btn {
+    spec "Primary save button using the library's primary_button style"
+    w: 120 h: 40
+    use: lib.primary_button
+    text "Save" {
+      fill: #FFFFFF
+      font: "Inter" bold 14
+    }
+    when :hover {
+      scale: 1.05
+      ease: ease_out 200ms
+    }
+  }
+
+  rect @cancel_btn {
+    spec "Cancel button using the library's secondary_button style"
+    w: 120 h: 40
+    use: lib.secondary_button
+    text "Cancel" {
+      fill: #FFFFFF
+      font: "Inter" bold 14
+    }
+    when :hover {
+      scale: 1.05
+      ease: ease_out 200ms
+    }
+  }
+
+  rect @delete_btn {
+    spec "Delete button using the library's danger_button style"
+    w: 120 h: 40
+    use: lib.danger_button
+    text "Delete" {
+      fill: #FFFFFF
+      font: "Inter" bold 14
+    }
+    when :hover {
+      scale: 1.05
+      ease: ease_out 200ms
+    }
+  }
+}
+
+frame @card {
+  spec "A user profile card using the shared card base style"
+  w: 400 h: 200
+  use: lib.card_base
+  x: 20
+  y: 100
+
+  text @username "Alice Cooper" {
+    font: "Inter" bold 24
+    fill: #333333
+    x: 40
+    y: 40
+  }
+
+  text @bio "Frontend Engineer" {
+    font: "Inter" regular 16
+    fill: #666666
+    x: 40
+    y: 80
+  }
+}
