@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.187 — AI Chat: Selection Context + Chips + Smart Replace (R4.26)
+- **FEATURE (R4.26)**: Selection Context Injection — AI Agent chat automatically includes the currently selected nodes' FD code in the system prompt, enabling context-aware responses when users say "this" or "these". A context badge above the input shows what's selected (e.g., `📌 @login_form`)
+- **FEATURE (R4.26)**: Quick-Action Chips — three contextual one-tap action buttons appear above the chat input, adapting to selection state: no selection (improve colors / add header / review design), single node (restyle / rename / add hover), multi-node (group / align / add edges)
+- **FEATURE (R4.26)**: Smart Replace — when applying AI-generated FD code blocks, the "Apply" button now finds matching `@id` blocks in the document and replaces them in-place (surgical splice) instead of appending. Falls back to append for new nodes. Uses brace-depth tracking for accurate block boundary detection
+- **UX**: Added clear chat button (🗑) in the panel header, `fd-selection-changed` custom event for real-time badge/chip updates, and exclusive panel behavior (opening chat closes specs panel)
+
 ### v0.11.186 — Canvas→Layers Cross-Drag + Searchable Parent Picker (R3.64)
 - **FEATURE (R3.64)**: Canvas→Layers cross-drag — drag a selected node from the canvas into the Layers panel to reparent/reorder; pointer events detect when cursor enters the Layers panel and show the same `drag-over-nest`/`above`/`below` indicators as Layers→Layers drag
 - **FEATURE (R3.64)**: Ghost preview label — while dragging over the Layers panel, a floating `@node_name` badge follows the cursor to indicate which node is being moved

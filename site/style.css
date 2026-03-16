@@ -2863,6 +2863,85 @@ code {
   background: rgba(0, 0, 0, 0.06);
   color: var(--fd-text, #1D1D1F);
 }
+.ai-chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ai-chat-clear {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--fd-text-secondary, #86868B);
+  padding: 3px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.ai-chat-clear:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.06);
+}
+/* ─── Context Badge ─── */
+.ai-chat-context-badge {
+  padding: 4px 12px;
+  margin: 0 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #6C5CE7;
+  background: rgba(108, 92, 231, 0.08);
+  border: 1px solid rgba(108, 92, 231, 0.15);
+  border-radius: 8px;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
+}
+.ai-chat-context-badge.hidden {
+  display: none;
+}
+.dark-canvas .ai-chat-context-badge,
+.dark-theme .ai-chat-context-badge {
+  background: rgba(108, 92, 231, 0.12);
+  border-color: rgba(108, 92, 231, 0.2);
+  color: #A29BFE;
+}
+/* ─── Quick-Action Chips ─── */
+.ai-chat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 12px;
+  flex-shrink: 0;
+}
+.ai-chat-chip {
+  border: 1px solid var(--fd-border, rgba(0, 0, 0, 0.08));
+  border-radius: 16px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--fd-text-secondary, #86868B);
+  background: var(--fd-surface-solid, #fff);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.ai-chat-chip:hover {
+  border-color: #6C5CE7;
+  color: #6C5CE7;
+  background: rgba(108, 92, 231, 0.06);
+}
+.dark-canvas .ai-chat-chip,
+.dark-theme .ai-chat-chip {
+  background: rgba(50, 50, 54, 0.6);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.dark-canvas .ai-chat-chip:hover,
+.dark-theme .ai-chat-chip:hover {
+  border-color: #A29BFE;
+  color: #A29BFE;
+  background: rgba(108, 92, 231, 0.12);
+}
 .ai-chat-messages {
   flex: 1;
   overflow-y: auto;
