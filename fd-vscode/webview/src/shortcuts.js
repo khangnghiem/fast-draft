@@ -66,8 +66,7 @@ document.addEventListener("keydown", (e) => {
 
   // Layered Escape dismissal — one layer per press (Figma-style)
   if (e.key === "Escape") {
-    const ctxVisible = document.getElementById("ctx-menu")?.classList.contains("visible")
-      || document.getElementById("ctx-menu-canvas")?.classList.contains("visible");
+    const ctxVisible = ctxMenu.isOpen;
     const annotVisible = !!annotationCardNodeId;
     const helpVisible = shortcutHelpVisible;
     const isFull = document.body.classList.contains("fullscreen-mode");

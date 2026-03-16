@@ -806,60 +806,6 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       outline: 1px dashed var(--fd-accent);
       outline-offset: -2px;
     }
-    .layer-ctx-menu {
-      position: fixed;
-      min-width: 180px;
-      background: var(--fd-surface);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      border: 0.5px solid var(--fd-border);
-      border-radius: 8px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08);
-      padding: 4px;
-      z-index: 200;
-      font-size: 11px;
-      max-height: 400px;
-      overflow-y: auto;
-    }
-    .layer-ctx-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 10px;
-      cursor: pointer;
-      border-radius: 4px;
-      color: var(--fd-text);
-      white-space: nowrap;
-    }
-    .layer-ctx-item:hover {
-      background: var(--fd-accent);
-      color: #fff;
-    }
-    .layer-ctx-item .ctx-icon {
-      font-size: 10px;
-      opacity: 0.7;
-      width: 14px;
-      text-align: center;
-    }
-    .layer-ctx-shortcut {
-      margin-left: auto;
-      font-size: 10px;
-      opacity: 0.45;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-    .layer-ctx-item:hover .layer-ctx-shortcut { opacity: 0.7; color: #fff; }
-    .layer-ctx-disabled {
-      opacity: 0.35;
-      pointer-events: none;
-      cursor: default;
-    }
-    .layer-ctx-sep {
-      height: 1px;
-      background: var(--fd-border);
-      margin: 3px 4px;
-    }
-    .layer-ctx-danger { color: #FF3B30; }
-    .layer-ctx-danger:hover { background: rgba(255,59,48,0.15); color: #FF3B30; }
 
     /* ── Spec Overlay (transparent badge layer over canvas) ── */
     #spec-overlay {
@@ -1049,6 +995,10 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
     }
     #edge-context-menu.visible { display: block; animation: ctx-fade-in 0.12s ease-out; }
+    @keyframes ctx-fade-in {
+      from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
     .ecm-row {
       display: flex;
       align-items: center;
@@ -2020,34 +1970,34 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     }
     #annotation-card .status-row select { flex: 1; }
 
-    /* ── Context Menu (macOS-style) ── */
-    #context-menu {
-      display: none;
+    /* ── Unified Context Menu (.ctx-menu) ── */
+    .ctx-menu {
       position: absolute;
       z-index: 200;
+      min-width: 200px;
+      padding: 4px;
       background: var(--fd-surface);
       backdrop-filter: blur(24px) saturate(180%);
       -webkit-backdrop-filter: blur(24px) saturate(180%);
       border: 0.5px solid var(--fd-border);
       border-radius: 8px;
-      padding: 4px;
       box-shadow: 0 10px 38px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.06);
       font-size: 13px;
-      min-width: 200px;
+      max-height: 420px;
+      overflow-y: auto;
+      opacity: 0;
+      transform: scale(0.96) translateY(-4px);
+      transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+      outline: none;
     }
-    .dark-theme #context-menu {
+    .dark-theme .ctx-menu {
       box-shadow: 0 10px 38px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.2);
     }
-    #context-menu.visible { display: block; animation: ctx-fade-in 0.12s ease-out; }
-    @keyframes ctx-fade-in {
-      from { opacity: 0; transform: scale(0.96) translateY(-4px); }
-      to { opacity: 1; transform: scale(1) translateY(0); }
-    }
-    #context-menu .menu-item {
+    .ctx-menu-visible { opacity: 1 !important; transform: scale(1) translateY(0) !important; }
+    .ctx-menu-item {
       padding: 4px 10px;
       cursor: default;
       color: var(--fd-text);
-      transition: none;
       border-radius: 5px;
       display: flex;
       align-items: center;
@@ -2055,39 +2005,52 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       height: 26px;
       font-size: 13px;
       letter-spacing: -0.01em;
+      white-space: nowrap;
     }
-    #context-menu .menu-item:hover {
+    .ctx-menu-item:hover, .ctx-menu-active {
       background: var(--fd-accent);
       color: var(--fd-accent-fg);
     }
-    #context-menu .menu-item.disabled {
+    .ctx-menu-disabled {
       opacity: 0.35;
       pointer-events: none;
     }
-    #context-menu .menu-item:hover .menu-shortcut {
+    .ctx-menu-item:hover .ctx-menu-shortcut, .ctx-menu-active .ctx-menu-shortcut {
       color: rgba(255,255,255,0.55);
     }
-    #context-menu .menu-item .menu-icon {
+    .ctx-menu-icon {
       width: 16px;
       text-align: center;
       font-size: 12px;
       flex-shrink: 0;
     }
-    #context-menu .menu-item .menu-label {
+    .ctx-menu-label {
       flex: 1;
     }
-    #context-menu .menu-shortcut {
+    .ctx-menu-shortcut {
       font-size: 11px;
       color: var(--fd-text-tertiary);
       margin-left: auto;
+      padding-left: 16px;
       font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
       letter-spacing: 0;
     }
-    #context-menu .menu-separator {
+    .ctx-menu-sep {
       height: 1px;
       background: var(--fd-border);
       margin: 4px 8px;
     }
+    .ctx-menu-header {
+      padding: 4px 10px 2px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: var(--fd-text-secondary);
+      opacity: 0.5;
+    }
+    .ctx-menu-danger { color: #FF3B30; }
+    .ctx-menu-danger:hover { background: rgba(255,59,48,0.15); color: #FF3B30; }
     /* ── AI Touch Context Menu Submenu ── */
     .ctx-ai-touch-wrap { position: relative; }
     .ctx-ai-submenu {
@@ -3047,38 +3010,6 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <input type="text" id="ann-tags" placeholder="comma-separated tags">
     </div>
   </div>
-  <div id="context-menu">
-    <div class="menu-item-wrap ctx-ai-touch-wrap" id="ctx-ai-touch-wrap">
-      <div class="menu-item" id="ctx-ai-touch"><span class="menu-icon">✦</span><span class="menu-label">AI Touch</span><span class="menu-shortcut">▸</span></div>
-      <div class="ctx-ai-submenu" id="ctx-ai-submenu">
-        <textarea class="ctx-ai-prompt" id="ctx-ai-prompt" placeholder="e.g. Make it Apple HIG style" maxlength="200" rows="2"></textarea>
-        <div class="ctx-ai-footer">
-          <span class="ctx-ai-counter" id="ctx-ai-counter">0/200</span>
-          <button class="ctx-ai-run" id="ctx-ai-run">Run ✦</button>
-        </div>
-      </div>
-    </div>
-    <div class="menu-item" id="ctx-add-annotation"><span class="menu-icon">◇</span><span class="menu-label">Add Note</span></div>
-    <div class="menu-item" id="ctx-view-notes"><span class="menu-icon">📝</span><span class="menu-label">Notes Panel</span><span class="menu-shortcut">⌘⇧N</span></div>
-    <div class="menu-item" id="ctx-rename" data-action="rename"><span class="menu-icon">✏️</span><span class="menu-label">Rename</span></div>
-
-    <div class="menu-separator"></div>
-    <div class="menu-item" id="ctx-cut" data-action="cut"><span class="menu-icon">✂</span><span class="menu-label">Cut</span><span class="menu-shortcut">⌘X</span></div>
-    <div class="menu-item" id="ctx-copy" data-action="copy"><span class="menu-icon">⎘</span><span class="menu-label">Copy</span><span class="menu-shortcut">⌘C</span></div>
-    <div class="menu-item" id="ctx-paste" data-action="paste"><span class="menu-icon">📋</span><span class="menu-label">Paste</span><span class="menu-shortcut">⌘V</span></div>
-    <div class="menu-item" id="ctx-copy-png" data-action="copy-png"><span class="menu-icon">🖼</span><span class="menu-label">Copy as PNG</span><span class="menu-shortcut">⌘⇧C</span></div>
-    <div class="menu-separator"></div>
-    <div class="menu-item" id="ctx-duplicate" data-action="duplicate"><span class="menu-icon">⊕</span><span class="menu-label">Duplicate</span><span class="menu-shortcut">⌘D</span></div>
-    <div class="menu-item" id="ctx-group" data-action="group"><span class="menu-icon">◻</span><span class="menu-label">Group</span><span class="menu-shortcut">⌘G</span></div>
-    <div class="menu-item" id="ctx-ungroup" data-action="ungroup"><span class="menu-icon">◫</span><span class="menu-label">Ungroup</span><span class="menu-shortcut">⇧⌘G</span></div>
-    <div class="menu-item" id="ctx-frame" data-action="frame-selection"><span class="menu-icon">⊞</span><span class="menu-label">Frame Selection</span></div>
-    <div class="menu-separator"></div>
-    <div class="menu-item" id="ctx-bring-front" data-action="bring-front"><span class="menu-icon">↑</span><span class="menu-label">Bring to Front</span><span class="menu-shortcut">⌘⇧]</span></div>
-    <div class="menu-item" id="ctx-send-back" data-action="send-back"><span class="menu-icon">↓</span><span class="menu-label">Send to Back</span><span class="menu-shortcut">⌘⇧[</span></div>
-    <div class="menu-item" id="ctx-lock" data-action="lock"><span class="menu-icon">🔒</span><span class="menu-label">Lock</span></div>
-    <div class="menu-separator"></div>
-    <div class="menu-item" id="ctx-delete" data-action="delete"><span class="menu-icon">⊖</span><span class="menu-label">Delete</span><span class="menu-shortcut">⌫</span></div>
-  </div>
   <div id="renamify-panel">
     <div class="renamify-header">
       <span class="renamify-title">✦ Renamify</span>
@@ -3130,57 +3061,6 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         vscodeApi.postMessage({ type: 'aiTouch', nodeIds: ids });
       });
 
-      // Context menu: AI Touch — toggle submenu
-      document.getElementById('ctx-ai-touch')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const wrap = document.getElementById('ctx-ai-touch-wrap');
-        if (wrap) {
-          wrap.classList.toggle('expanded');
-          const promptEl = document.getElementById('ctx-ai-prompt');
-          const counterEl = document.getElementById('ctx-ai-counter');
-          if (promptEl) {
-            const saved = localStorage.getItem('fd-ai-prompt') || '';
-            promptEl.value = saved;
-            if (counterEl) counterEl.textContent = saved.length + '/200';
-            setTimeout(() => promptEl.focus(), 50);
-          }
-        }
-      });
-
-      // AI Touch prompt textarea wiring
-      const ctxAiPrompt = document.getElementById('ctx-ai-prompt');
-      const ctxAiCounter = document.getElementById('ctx-ai-counter');
-      const ctxAiRun = document.getElementById('ctx-ai-run');
-
-      if (ctxAiPrompt) {
-        ctxAiPrompt.addEventListener('input', () => {
-          const len = ctxAiPrompt.value.length;
-          if (ctxAiCounter) ctxAiCounter.textContent = len + '/200';
-          localStorage.setItem('fd-ai-prompt', ctxAiPrompt.value);
-        });
-        ctxAiPrompt.addEventListener('click', (e) => e.stopPropagation());
-        ctxAiPrompt.addEventListener('mousedown', (e) => e.stopPropagation());
-        ctxAiPrompt.addEventListener('keydown', (e) => {
-          e.stopPropagation();
-          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            document.getElementById('context-menu')?.classList.remove('visible');
-            document.getElementById('ctx-ai-touch-wrap')?.classList.remove('expanded');
-            const ids = selectedNodeId ? [selectedNodeId] : [];
-            vscodeApi.postMessage({ type: 'aiTouch', nodeIds: ids, userFocus: localStorage.getItem('fd-ai-prompt') || undefined });
-          }
-        });
-      }
-
-      if (ctxAiRun) {
-        ctxAiRun.addEventListener('click', (e) => {
-          e.stopPropagation();
-          document.getElementById('context-menu')?.classList.remove('visible');
-          document.getElementById('ctx-ai-touch-wrap')?.classList.remove('expanded');
-          const ids = selectedNodeId ? [selectedNodeId] : [];
-          vscodeApi.postMessage({ type: 'aiTouch', nodeIds: ids, userFocus: localStorage.getItem('fd-ai-prompt') || undefined });
-        });
-      }
     })();
   </script>
   <script nonce="{nonce}">
@@ -3539,10 +3419,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
 
       document.getElementById('notes-toggle-btn')?.addEventListener('click', window.toggleNotesPanel);
       document.getElementById('notes-panel-close')?.addEventListener('click', window.toggleNotesPanel);
-      document.getElementById('ctx-view-notes')?.addEventListener('click', () => {
-        window.toggleNotesPanel();
-        document.getElementById('context-menu')?.classList.remove('visible');
-      });
+
 
       document.addEventListener('keydown', (e) => {
         if (e.key === 'N' && e.shiftKey && (e.metaKey || e.ctrlKey)) {
