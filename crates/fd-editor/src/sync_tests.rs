@@ -2396,3 +2396,83 @@ group @parent {
         child_after.y
     );
 }
+
+// ─── Cascade-Delete Tests ────────────────────────────────────────────────
+
+#[test]
+fn sync_delete_rect_with_text_child() {
+    // Deleting a rect that contains a text child should cascade-delete both.
+    let input = r#"
+rect @btn {
+  w: 200 h: 48
+  text @label "Click" { }
+}
+rect @other { w: 20 h: 20 }
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let btn_id = NodeId::intern("btn");
+    let label_id = NodeId::intern("label");
+
+    // Verify both exist before
+    assert!(engine.graph.get_by_id(btn_id).is_some());
+    assert!(engine.graph.get_by_id(label_id).is_some());
+
+    engine.apply_mutation(GraphMutation::RemoveNode { id: btn_id });
+    engine.flush_to_text();
+
+    // Both parent and child should be gone
+    assert!(
+        engine.graph.get_by_id(btn_id).is_none(),
+        "@btn should be removed"
+    );
+    assert!(
+        engine.graph.get_by_id(label_id).is_none(),
+        "@label should be cascade-deleted with @btn"
+    );
+
+    // Survivor should remain
+    assert!(engine.graph.get_by_id(NodeId::intern("other")).is_some());
+
+    let text = engine.current_text();
+    assert!(!text.contains("@btn"));
+    assert!(!text.contains("@label"));
+    assert!(text.contains("@other"));
+}
+
+#[test]
+fn sync_delete_group_with_nested_children() {
+    // Deleting a group containing a rect with a text child should cascade all 3.
+    let input = r#"
+group @card_group {
+  rect @card {
+    w: 200 h: 100
+    text @title "Hello" { }
+  }
+}
+rect @survivor { w: 20 h: 20 }
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    engine.apply_mutation(GraphMutation::RemoveNode {
+        id: NodeId::intern("card_group"),
+    });
+    engine.flush_to_text();
+
+    assert!(
+        engine
+            .graph
+            .get_by_id(NodeId::intern("card_group"))
+            .is_none()
+    );
+    assert!(engine.graph.get_by_id(NodeId::intern("card")).is_none());
+    assert!(engine.graph.get_by_id(NodeId::intern("title")).is_none());
+    assert!(engine.graph.get_by_id(NodeId::intern("survivor")).is_some());
+}

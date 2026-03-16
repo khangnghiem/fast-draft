@@ -1025,3 +1025,36 @@ rect @free {
     let free2 = reparsed.get_by_id(NodeId::intern("free")).unwrap();
     assert!(!free2.locked, "unlocked should survive roundtrip");
 }
+
+#[test]
+fn parse_text_ignores_nested_nodes() {
+    // Text nodes are leaf-only — any nested node keywords inside a text
+    // block should be silently ignored (not parsed as children).
+    let input = r#"
+text @outer "Hello" {
+  fill: #FF0000
+  rect @inner { w: 50 h: 50 }
+}
+"#;
+    let graph = parse_document(input).expect("parse should succeed");
+    let outer = graph
+        .get_by_id(crate::id::NodeId::intern("outer"))
+        .expect("@outer should exist");
+    assert!(
+        matches!(outer.kind, NodeKind::Text { .. }),
+        "outer should be a text node"
+    );
+    // The @inner rect should NOT exist — text can't have children
+    assert!(
+        graph
+            .get_by_id(crate::id::NodeId::intern("inner"))
+            .is_none(),
+        "@inner should not be parsed as a child of a text node"
+    );
+    // Text node should have no children in the graph
+    let outer_idx = graph.index_of(crate::id::NodeId::intern("outer")).unwrap();
+    assert!(
+        graph.children(outer_idx).is_empty(),
+        "text node should have no children"
+    );
+}

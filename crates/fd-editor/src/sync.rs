@@ -303,6 +303,14 @@ impl SyncEngine {
             }
             GraphMutation::RemoveNode { id } => {
                 if let Some(idx) = self.graph.index_of(id) {
+                    // Cascade-delete all descendants first (children, grandchildren, etc.)
+                    // to prevent orphaned nodes in the graph after petgraph::remove_node
+                    // disconnects edges but leaves child nodes as unreachable islands.
+                    let descendants = Self::collect_descendants(&self.graph, idx);
+                    for desc_idx in descendants.into_iter().rev() {
+                        self.bounds.remove(&desc_idx);
+                        self.graph.remove_node(desc_idx);
+                    }
                     self.bounds.remove(&idx);
                     self.graph.remove_node(idx);
 
