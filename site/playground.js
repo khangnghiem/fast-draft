@@ -33,6 +33,25 @@ import {
   evalTweens,
   playDetachAnimation as corePlayDetachAnimation,
 } from './canvas-core/render.js';
+import {
+  extractNodeBlock as coreExtractNodeBlock,
+  buildPasteIdMap,
+  applyIdRenames,
+  collectDeclaredIds,
+} from './canvas-core/clipboard.js';
+import {
+  getResizeHandleCursor as coreGetResizeHandleCursor,
+  pinchDistance as corePinchDistance,
+  pinchCenter as corePinchCenter,
+  nudgeSelected as coreNudgeSelected,
+} from './canvas-core/viewport.js';
+import {
+  TOOL_SHORTCUTS,
+  TOOL_CYCLE,
+  DOUBLE_PRESS_MS,
+  ZOOM_STEP as CORE_ZOOM_STEP,
+  buildShortcutHelpHtml as coreBuildShortcutHelpHtml,
+} from './canvas-core/shortcuts.js';
 
 // ─── FD Language Definition (StreamLanguage) ─────────────────────────────
 const fdLanguage = StreamLanguage.define({

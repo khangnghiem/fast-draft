@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.183 — Shared Canvas-Core Module (R6.12 Phase 2)
+
+- **NEW** `site/canvas-core/state.js` (170 lines) — shared zoom/pan state, dirty flags, grid, reduce-motion, tool defaults, `screenToScene`, `pointerTypeToU8`, `showToast`
+- **NEW** `site/canvas-core/render.js` (304 lines) — tween engine, detach animation, grid drawing, dirty-flag render loop, `fitToContent`, `getSceneBounds`, `zoomAtPoint`, `zoomToCenter`
+- **NEW** `site/canvas-core/clipboard.js` (96 lines) — `extractNodeBlock`, `buildPasteIdMap`, `applyIdRenames`, `collectDeclaredIds`
+- **NEW** `site/canvas-core/viewport.js` (120 lines) — `getResizeHandleCursor`, `pinchDistance/Center`, `nudgeSelected`
+- **NEW** `site/canvas-core/shortcuts.js` (140 lines) — `TOOL_SHORTCUTS`, `TOOL_CYCLE`, `DOUBLE_PRESS_MS`, `buildShortcutHelpHtml`
+- `playground.js` imports all 5 canvas-core modules (verified: no console errors, selection functional)
+
 ### v0.11.182 — HTML Export + Cleanup (R3.56)
 - **FEATURE (R3.56)**: HTML+CSS export — `export_html(graph)` generates standalone responsive HTML page from FD scene; Rect/Frame → `<div>`, Ellipse → `<div>` with `border-radius: 50%`, Text → `<p>` with font styles, Path → inline `<svg>`, Group → wrapper `<div>`; supports fills (solid + gradient), strokes, corner-radius, opacity, shadow, text alignment/valign, and hover/press animations as CSS transitions; Google Fonts auto-linked; 15 unit tests
 - **WASM**: `export_html()` method on `FdCanvas` — exports current selection (or full canvas) as HTML; wired in `fd-wasm/src/export.rs`
