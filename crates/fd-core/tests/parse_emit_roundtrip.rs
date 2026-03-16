@@ -143,7 +143,7 @@ fn roundtrip_preserves_note() {
     let n1 = graph1.get_by_id(id).unwrap();
     let n2 = graph2.get_by_id(id).unwrap();
 
-    assert_eq!(n1.note, n2.note, "note content changed for @login_form");
+    assert_eq!(n1.spec, n2.spec, "note content changed for @login_form");
 }
 
 // ─── Animation preservation ──────────────────────────────────────────────

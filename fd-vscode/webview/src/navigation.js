@@ -334,7 +334,7 @@ function updateSettingsToggleStates() {
   const sketchyItem = document.getElementById("sm-sketchy-toggle");
   const themeItem = document.getElementById("sm-theme-toggle");
   if (gridItem) gridItem.classList.toggle("toggle-on", gridEnabled);
-  if (specItem) specItem.classList.toggle("toggle-on", noteBadgesVisible);
+  if (specItem) specItem.classList.toggle("toggle-on", specBadgesVisible);
   if (sketchyItem) sketchyItem.classList.toggle("toggle-on", fdCanvas ? fdCanvas.get_sketchy_mode() : false);
   if (themeItem) themeItem.classList.toggle("toggle-on", isDarkTheme);
   const libItem = document.getElementById("sm-library-toggle");

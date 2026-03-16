@@ -239,36 +239,36 @@ function openAnimPicker(targetNodeId, clientX, clientY) {
 
 function setupViewToggle() {
   document.getElementById("view-design")?.addEventListener("click", () => setViewMode("design"));
-  document.getElementById("view-notes")?.addEventListener("click", () => setViewMode("notes"));
+  document.getElementById("view-specs")?.addEventListener("click", () => setViewMode("specs"));
 }
 
 function setViewMode(mode) {
   viewMode = mode;
-  const isNotes = mode === "notes";
+  const isSpecs = mode === "specs";
 
   document.getElementById("view-design")?.classList.toggle("active", mode === "design");
-  document.getElementById("view-notes")?.classList.toggle("active", isNotes);
+  document.getElementById("view-specs")?.classList.toggle("active", isSpecs);
 
   // Canvas stays visible — notes view keeps full interactivity
   const overlay = document.getElementById("spec-overlay");
-  if (overlay) overlay.style.display = (isNotes || noteBadgesVisible) ? "" : "none";
+  if (overlay) overlay.style.display = (isSpecs || specBadgesVisible) ? "" : "none";
 
   // Hide properties panel in notes view
   const props = document.getElementById("props-panel");
-  if (props && isNotes) props.classList.remove("visible");
+  if (props && isSpecs) props.classList.remove("visible");
 
   // Notify extension to apply/remove code-mode spec folding
   vscode.postMessage({ type: "viewModeChanged", mode });
 
-  if (isNotes || noteBadgesVisible) {
-    refreshNoteBadges();
+  if (isSpecs || specBadgesVisible) {
+    refreshSpecBadges();
   } else {
     // Clear badges when leaving spec view with toggle OFF
     if (overlay) overlay.innerHTML = "";
   }
 
-  if (isNotes) {
-    refreshNoteView();
+  if (isSpecs) {
+    refreshSpecView();
   }
 
   // Always refresh layers (it's always visible)
@@ -280,7 +280,7 @@ function setViewMode(mode) {
  * In Design/All view: only show spec details for the currently selected node.
  * Badge pins are removed; specs appear on hover via tooltip.
  */
-function refreshNoteBadges() {
+function refreshSpecBadges() {
   const overlay = document.getElementById("spec-overlay");
   if (!overlay || !fdCanvas) return;
 
@@ -348,9 +348,9 @@ function hideSpecTooltip() {
   if (tooltip) tooltip.classList.remove("visible");
 }
 
-function refreshNoteView() {
-  // Badges are now handled by refreshNoteBadges()
-  refreshNoteBadges();
+function refreshSpecView() {
+  // Badges are now handled by refreshSpecBadges()
+  refreshSpecBadges();
 }
 
 /**

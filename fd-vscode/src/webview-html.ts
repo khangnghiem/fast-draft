@@ -322,8 +322,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       opacity: 0.55;
       border-color: rgba(0, 0, 0, 0.1);
     }
-    /* ── Notes Panel (right slide-in) ── */
-    .notes-panel {
+    /* ── Specs Panel (right slide-in) ── */
+    .specs-panel {
       position: absolute;
       top: 0;
       right: 0;
@@ -341,12 +341,12 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       opacity: 1;
       overflow: hidden;
     }
-    .notes-panel.hidden {
+    .specs-panel.hidden {
       transform: translateX(100%);
       opacity: 0;
       pointer-events: none;
     }
-    .notes-panel-header {
+    .specs-panel-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -354,12 +354,12 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       border-bottom: 0.5px solid var(--fd-border);
       flex-shrink: 0;
     }
-    .notes-panel-title {
+    .specs-panel-title {
       font-size: 12px;
       font-weight: 600;
       color: var(--fd-text);
     }
-    .notes-panel-close {
+    .specs-panel-close {
       border: none;
       background: transparent;
       cursor: pointer;
@@ -369,16 +369,16 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       border-radius: 4px;
       line-height: 1;
     }
-    .notes-panel-close:hover {
+    .specs-panel-close:hover {
       background: var(--fd-surface-hover);
       color: var(--fd-text);
     }
-    .notes-panel-body {
+    .specs-panel-body {
       flex: 1;
       overflow-y: auto;
       padding: 8px;
     }
-    .notes-empty {
+    .specs-empty {
       font-size: 11px;
       color: var(--fd-text-secondary);
       text-align: center;
@@ -2777,7 +2777,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
     <span class="tb-spacer"></span>
     <div class="tb-zone tb-right">
-      <button class="tool-btn" id="notes-toggle-btn" title="Notes Panel">📝</button>
+      <button class="tool-btn" id="specs-toggle-btn" title="Specs Panel">📝</button>
       <span class="fs-hide" id="status">Loading WASM…</span>
       <button class="tool-btn" id="fullscreen-toggle-btn" title="Full Screen (⇧F)">⛶</button>
       <!-- Settings Hamburger ☰ -->
@@ -2824,14 +2824,14 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
 
     </div>
     <canvas id="fd-canvas" class="tool-select"></canvas>
-    <!-- Notes Panel (right-side slide-in) -->
-    <div id="notes-panel" class="notes-panel hidden">
-      <div class="notes-panel-header">
-        <span class="notes-panel-title">📝 Notes</span>
-        <button class="notes-panel-close" id="notes-panel-close" title="Close">✕</button>
+    <!-- Specs Panel (right-side slide-in) -->
+    <div id="specs-panel" class="specs-panel hidden">
+      <div class="specs-panel-header">
+        <span class="specs-panel-title">📋 Specs</span>
+        <button class="specs-panel-close" id="specs-panel-close" title="Close">✕</button>
       </div>
-      <div class="notes-panel-body" id="notes-panel-body">
-        <p class="notes-empty">No notes yet. Add a note via right-click → Add Note.</p>
+      <div class="specs-panel-body" id="specs-panel-body">
+        <p class="specs-empty">No specs yet. Add a note via right-click → Add Spec.</p>
       </div>
     </div>
     <div id="dimension-tooltip"></div>
@@ -3180,11 +3180,11 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
   </script>
 
   <script nonce="{nonce}">
-    // ─── Notes Panel handlers ─────────
+    // ─── Specs Panel handlers ─────────
     (function() {
       let notesPanelOpen = false;
-      const panel = document.getElementById('notes-panel');
-      const body = document.getElementById('notes-panel-body');
+      const panel = document.getElementById('specs-panel');
+      const body = document.getElementById('specs-panel-body');
 
       // Lightweight inline markdown → HTML converter (GFM subset)
       function simpleMarkdown(src) {
@@ -3300,7 +3300,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         } catch (_) { notes = []; }
 
         if (notes.length === 0) {
-          body.innerHTML = '<p class="notes-empty">No notes yet. Add a note via right-click \\u2192 Add Note.</p>';
+          body.innerHTML = '<p class="specs-empty">No specs yet. Add a note via right-click \\u2192 Add Spec.</p>';
           return;
         }
 
@@ -3417,8 +3417,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         if (notesPanelOpen) renderNotesPanel();
       };
 
-      document.getElementById('notes-toggle-btn')?.addEventListener('click', window.toggleNotesPanel);
-      document.getElementById('notes-panel-close')?.addEventListener('click', window.toggleNotesPanel);
+      document.getElementById('specs-toggle-btn')?.addEventListener('click', window.toggleNotesPanel);
+      document.getElementById('specs-panel-close')?.addEventListener('click', window.toggleNotesPanel);
 
 
       document.addEventListener('keydown', (e) => {

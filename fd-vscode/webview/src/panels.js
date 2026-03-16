@@ -394,7 +394,7 @@ function renderLayerNode(node, selectedIds, depth = 0) {
 
 // ─── Spec Summary Panel (replaces layers in Spec mode) ──────────────────
 
-function refreshNotesSummary(panel) {
+function refreshSpecsSummary(panel) {
   if (!fdCanvas) return;
   const source = fdCanvas.get_text();
   const annotated = parseAnnotatedNodes(source);
@@ -529,7 +529,7 @@ function wireSpecPanelHandlers(panel, annotated) {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       noteFilter = btn.getAttribute("data-filter") || "all";
-      refreshNotesSummary(panel);
+      refreshSpecsSummary(panel);
     });
   });
 
@@ -622,7 +622,7 @@ function bulkSetStatus(annotated, newStatus) {
   syncTextToExtension();
   // Refresh to show updated statuses
   const panel = document.getElementById("layers-panel");
-  if (panel) refreshNotesSummary(panel);
+  if (panel) refreshSpecsSummary(panel);
 }
 
 /** Close any open layer context menu. */
@@ -982,9 +982,9 @@ function refreshLayersPanel() {
   if (!panel || !fdCanvas) return;
 
   // In Spec mode, show requirements summary instead of layers
-  if (viewMode === "notes") {
+  if (viewMode === "specs") {
     lastLayerGeneration = -1;
-    refreshNotesSummary(panel);
+    refreshSpecsSummary(panel);
     return;
   }
 

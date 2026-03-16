@@ -154,7 +154,7 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
     // or non-default inline styles (fill, stroke, etc.).
     if matches!(node.kind, NodeKind::Group | NodeKind::Frame { .. })
         && graph.children(idx).is_empty()
-        && node.note.is_none()
+        && node.spec.is_none()
         && node.use_styles.is_empty()
         && node.animations.is_empty()
         && !has_inline_styles(&node.props)
@@ -196,8 +196,8 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
 
     out.push_str(" {\n");
 
-    // Note block
-    emit_note(out, &node.note, depth + 1);
+    // Spec block
+    emit_spec(out, &node.spec, depth + 1);
 
     // Children — emitted right after spec so the structural skeleton
     // is visible first. Visual styling comes at the tail for clean folding.
@@ -448,8 +448,8 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
     out.push_str("}\n");
 }
 
-fn emit_note(out: &mut String, note: &Option<String>, depth: usize) {
-    let content = match note {
+fn emit_spec(out: &mut String, spec: &Option<String>, depth: usize) {
+    let content = match spec {
         Some(s) if !s.is_empty() => s,
         _ => return,
     };
@@ -457,13 +457,13 @@ fn emit_note(out: &mut String, note: &Option<String>, depth: usize) {
     // Single-line note → inline shorthand: `note "text"`
     if !content.contains('\n') {
         indent(out, depth);
-        writeln!(out, "note \"{content}\"").unwrap();
+        writeln!(out, "spec \"{content}\"").unwrap();
         return;
     }
 
-    // Multiline → block form: `note { ... }`
+    // Multiline → block form: `spec { ... }`
     indent(out, depth);
-    out.push_str("note {\n");
+    out.push_str("spec {\n");
     for line in content.lines() {
         indent(out, depth + 1);
         out.push_str(line);
@@ -727,8 +727,8 @@ fn emit_edge_defaults_block(out: &mut String, defaults: &EdgeDefaults) {
 fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph, defaults: Option<&EdgeDefaults>) {
     writeln!(out, "edge @{} {{", edge.id.as_str()).unwrap();
 
-    // Note
-    emit_note(out, &edge.note, 1);
+    // Spec
+    emit_spec(out, &edge.spec, 1);
 
     // Nested text child
     if let Some(text_id) = edge.text_child
@@ -931,10 +931,10 @@ pub enum ReadMode {
     Layout,
     /// Structure + styles + `fill:`/`stroke:`/`font:`/`corner:`/`use:` refs.
     Design,
-    /// Structure + `note {}` blocks + annotations.
-    Notes,
-    /// Backward-compatible alias for `Notes`.
+    /// Structure + `spec {}` blocks + annotations.
     Spec,
+    /// Backward-compatible alias for `Spec`.
+    Notes,
     /// Layout + Design + When combined — the full visual story.
     Visual,
     /// Structure + `when :trigger { ... }` animation blocks only.
@@ -949,10 +949,10 @@ pub enum ReadMode {
 /// Emit a `SceneGraph` filtered to show only the properties relevant to `mode`.
 ///
 /// - `Full`: identical to `emit_document`.
-/// - `Structure`: node kind + `@id` + children. No styles, dims, anims, notes.
+/// - `Structure`: node kind + `@id` + children. No styles, dims, anims, specs.
 /// - `Layout`: structure + `w:`/`h:` + `layout:` + constraints (`->`).
 /// - `Design`: structure + styles + `fill:`/`stroke:`/`font:`/`corner:`/`use:`.
-/// - `Notes` (or `Spec`): structure + `note {}` blocks.
+/// - `Spec` (or `Notes`): structure + `spec {}` blocks.
 /// - `Visual`: layout + design + when combined.
 /// - `When`: structure + `when :trigger { ... }` blocks.
 /// - `Edges`: structure + `edge @id { ... }` blocks.
@@ -961,9 +961,9 @@ pub fn emit_filtered(graph: &SceneGraph, mode: ReadMode) -> String {
     if mode == ReadMode::Full {
         return emit_document(graph);
     }
-    // Normalize Spec alias to Notes
-    let mode = if mode == ReadMode::Spec {
-        ReadMode::Notes
+    // Normalize Notes alias to Spec
+    let mode = if mode == ReadMode::Notes {
+        ReadMode::Spec
     } else {
         mode
     };
@@ -1052,9 +1052,9 @@ fn emit_node_filtered(
 
     out.push_str(" {\n");
 
-    // Note (Notes mode only)
-    if mode == ReadMode::Notes {
-        emit_note(out, &node.note, depth + 1);
+    // Spec (Spec mode only)
+    if mode == ReadMode::Spec {
+        emit_spec(out, &node.spec, depth + 1);
     }
 
     // Children (always recurse)
@@ -1196,14 +1196,14 @@ fn emit_dimensions_filtered(out: &mut String, kind: &NodeKind, depth: usize) {
     }
 }
 
-/// Emit a `SceneGraph` as a markdown notes document.
+/// Emit a `SceneGraph` as a markdown spec document.
 ///
-/// Extracts only `@id` names, `note { ... }` content, hierarchy, and edges —
+/// Extracts only `@id` names, `spec { ... }` content, hierarchy, and edges —
 /// all visual properties (fill, stroke, dimensions, animations) are omitted.
 #[must_use]
-pub fn emit_notes_markdown(graph: &SceneGraph, title: &str) -> String {
+pub fn emit_spec_markdown(graph: &SceneGraph, title: &str) -> String {
     let mut out = String::with_capacity(512);
-    writeln!(out, "# Notes: {title}\n").unwrap();
+    writeln!(out, "# Spec: {title}\n").unwrap();
 
     // Emit root's children
     let children = graph.children(graph.root);
@@ -1231,9 +1231,9 @@ pub fn emit_notes_markdown(graph: &SceneGraph, title: &str) -> String {
                 write!(out, " — {content}").unwrap();
             }
             out.push('\n');
-            // Emit edge note as indented markdown
-            if let Some(note) = &edge.note {
-                for line in note.lines() {
+            // Emit edge spec as indented markdown
+            if let Some(spec) = &edge.spec {
+                for line in spec.lines() {
                     writeln!(out, "  {line}").unwrap();
                 }
                 out.push('\n');
@@ -1247,12 +1247,12 @@ pub fn emit_notes_markdown(graph: &SceneGraph, title: &str) -> String {
 fn emit_spec_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, heading_level: usize) {
     let node = &graph.graph[idx];
 
-    // Skip nodes with no note and no noted children
-    let has_note = node.note.is_some();
+    // Skip nodes with no spec and no spec'd children
+    let has_spec = node.spec.is_some();
     let children = graph.children(idx);
-    let has_noted_children = children.iter().any(|c| has_note_recursive(graph, *c));
+    let has_spec_children = children.iter().any(|c| has_spec_recursive(graph, *c));
 
-    if !has_note && !has_noted_children {
+    if !has_spec && !has_spec_children {
         return;
     }
 
@@ -1271,9 +1271,9 @@ fn emit_spec_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, heading_
     };
     writeln!(out, "{hashes} @{} `{kind_label}`\n", node.id.as_str()).unwrap();
 
-    // Note content — output as-is (it's already markdown)
-    if let Some(note) = &node.note {
-        out.push_str(note);
+    // Spec content — output as-is (it's already markdown)
+    if let Some(spec) = &node.spec {
+        out.push_str(spec);
         out.push_str("\n\n");
     }
 
@@ -1283,15 +1283,15 @@ fn emit_spec_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, heading_
     }
 }
 
-fn has_note_recursive(graph: &SceneGraph, idx: NodeIndex) -> bool {
+fn has_spec_recursive(graph: &SceneGraph, idx: NodeIndex) -> bool {
     let node = &graph.graph[idx];
-    if node.note.is_some() {
+    if node.spec.is_some() {
         return true;
     }
     graph
         .children(idx)
         .iter()
-        .any(|c| has_note_recursive(graph, *c))
+        .any(|c| has_spec_recursive(graph, *c))
 }
 
 /// Check if a `Style` has any non-default properties set.
@@ -1444,10 +1444,10 @@ pub fn emit_diff(graph: &SceneGraph, prev: &GraphSnapshot) -> String {
     out
 }
 
-/// Backward-compatible alias for `emit_notes_markdown`.
+/// Backward-compatible alias for `emit_spec_markdown`.
 #[must_use]
-pub fn emit_spec_markdown(graph: &SceneGraph, title: &str) -> String {
-    emit_notes_markdown(graph, title)
+pub fn emit_notes_markdown(graph: &SceneGraph, title: &str) -> String {
+    emit_spec_markdown(graph, title)
 }
 
 #[cfg(test)]

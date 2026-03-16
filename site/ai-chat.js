@@ -31,12 +31,12 @@ export function toggleChatPanel() {
   if (!panel) return;
   const willOpen = panel.classList.contains('hidden');
   if (willOpen) {
-    // Exclusive right-side: close Notes panel when opening Chat
-    const notesPanel = document.getElementById('notes-panel');
+    // Exclusive right-side: close Specs panel when opening Chat
+    const notesPanel = document.getElementById('specs-panel');
     if (notesPanel && !notesPanel.classList.contains('hidden')) {
       notesPanel.classList.add('hidden');
-      // Sync notesPanelOpen state if it exists on window
-      if (typeof window._notesPanelOpen !== 'undefined') window._notesPanelOpen = false;
+      // Sync specsPanelOpen state if it exists on window
+      if (typeof window._specsPanelOpen !== 'undefined') window._specsPanelOpen = false;
     }
   }
   panel.classList.toggle('hidden');

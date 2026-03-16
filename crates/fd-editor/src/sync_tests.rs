@@ -84,7 +84,7 @@ rect @box {
 }
 
 #[test]
-fn sync_set_note() {
+fn sync_set_spec() {
     let input = r#"
 rect @box {
   w: 100
@@ -100,22 +100,22 @@ rect @box {
 
     // Verify initial note
     let node = engine.graph.get_by_id(NodeId::intern("box")).unwrap();
-    assert_eq!(node.note.as_deref(), Some("Initial note"));
+    assert_eq!(node.spec.as_deref(), Some("Initial note"));
 
     // Update note via mutation
-    engine.apply_mutation(GraphMutation::SetNote {
+    engine.apply_mutation(GraphMutation::SetSpec {
         id: NodeId::intern("box"),
-        note: Some("## Updated\n- [ ] task one\n- [x] task two".into()),
+        spec: Some("## Updated\n- [ ] task one\n- [x] task two".into()),
     });
     engine.flush_to_text();
 
     // Verify graph updated
     let node = engine.graph.get_by_id(NodeId::intern("box")).unwrap();
-    assert!(node.note.as_ref().unwrap().contains("## Updated"));
-    assert!(node.note.as_ref().unwrap().contains("- [ ] task one"));
+    assert!(node.spec.as_ref().unwrap().contains("## Updated"));
+    assert!(node.spec.as_ref().unwrap().contains("- [ ] task one"));
 
     // Verify text re-emitted with note block
-    assert!(engine.text.contains("note {"));
+    assert!(engine.text.contains("spec {"));
     assert!(engine.text.contains("## Updated"));
 }
 
@@ -138,17 +138,17 @@ rect @card {
     let mut engine = SyncEngine::from_text(input, viewport).unwrap();
 
     // Mutate note
-    engine.apply_mutation(GraphMutation::SetNote {
+    engine.apply_mutation(GraphMutation::SetSpec {
         id: NodeId::intern("card"),
-        note: Some("# Updated card\n- [ ] renders correctly\n- [ ] needs review".into()),
+        spec: Some("# Updated card\n- [ ] renders correctly\n- [ ] needs review".into()),
     });
     let text = engine.current_text().to_string();
 
     // Re-parse from text
     let engine2 = SyncEngine::from_text(&text, viewport).unwrap();
     let node = engine2.graph.get_by_id(NodeId::intern("card")).unwrap();
-    assert!(node.note.as_ref().unwrap().contains("needs review"));
-    assert!(node.note.as_ref().unwrap().contains("# Updated card"));
+    assert!(node.spec.as_ref().unwrap().contains("needs review"));
+    assert!(node.spec.as_ref().unwrap().contains("# Updated card"));
 }
 
 #[test]

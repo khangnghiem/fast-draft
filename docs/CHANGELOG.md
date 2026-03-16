@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.185 — Refactor `note` → `spec` Keyword (R4.18)
+- **RENAME (R4.18)**: `note` keyword → `spec` — annotation blocks now use the more precise term `spec` (specification) which better reflects structured metadata for AI agents; emitter outputs `spec` keyword; parser accepts both `spec` (primary) and `note` (legacy alias) for backward compatibility
+- **RENAME (R4.18)**: `ReadMode::Notes` → `ReadMode::Spec` (Notes kept as backward-compat alias); `emit_notes_markdown` → `emit_spec_markdown` (old function kept as alias)
+- **RENAME (R4.18)**: `GraphMutation::SetNote` → `SetSpec`; `SceneNode.note` → `SceneNode.spec`; `Edge.note` → `Edge.spec`
+- **WASM**: `get_note` → `get_spec`, `set_note` → `set_spec`, `get_all_notes` → `get_all_specs`; JSON key `"note"` → `"spec"` in `get_all_specs` output
+- **UI**: "Notes Panel" → "Specs Panel" across site playground (`playground.js`, `index.html`, `style.css`) and VS Code extension (`webview-html.ts`, `extension.ts`, `main.js`, `panels.js`, `context-menu.js`, `drag-drop.js`); all CSS classes `notes-*` → `specs-*`; view mode `"notes"` → `"specs"`
+- **DOCS**: README "Built-In Notes" → "Built-In Specs"; demo.fd examples updated to `spec` keyword
+- **TESTING**: All 200+ tests pass; no breaking changes for `.fd` files using legacy `note` keyword
+
 ### v0.11.184 — Reparent Interaction Redesign (R3.64)
 - **BREAKING (R3.64)**: Removed ⌘+drag reparenting from canvas — previously holding Cmd/Ctrl during drag would reparent into overlapping containers, which was prone to accidental activation; removed from both site (`playground.js`) and VS Code extension (`pointer.js`)
 - **FEATURE (R3.64)**: Post-drop context menu — after moving a node (plain drag, no modifiers) that overlaps a container, a context menu appears offering "Nest into @target" (preserve position) and "Center in @target" (CenterIn constraint); explicit user confirmation prevents accidental reparenting

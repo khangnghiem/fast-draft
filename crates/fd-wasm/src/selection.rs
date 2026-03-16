@@ -386,7 +386,7 @@ impl FdCanvas {
                     use_styles: edge.use_styles.clone(),
                     arrow: edge.arrow,
                     curve: edge.curve,
-                    note: edge.note.clone(),
+                    spec: edge.spec.clone(),
                     animations: edge.animations.clone(),
                     flow: edge.flow,
                     label_offset: edge.label_offset,

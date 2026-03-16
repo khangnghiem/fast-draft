@@ -134,13 +134,13 @@ https://fast-draft.com/playground?ai_model=llama-70b
 
 The review panel footer shows which model produced the result.
 
-## Built-In Notes
+## Built-In Specs
 
-Attach notes and requirements directly to visual elements:
+Attach specs and requirements directly to visual elements:
 
 ```
 rect @login_btn {
-  note {
+  spec {
     Primary CTA — triggers login API call
     - [ ] disabled state when fields empty
     - [ ] loading spinner during auth
@@ -152,8 +152,8 @@ rect @login_btn {
 
 | What you write     | What it means                                          |
 | ------------------ | ------------------------------------------------------ |
-| `note "text"`      | A short inline note on the element                     |
-| `note { markdown }` | Multi-line markdown (checklists, headings, bullets)   |
+| `spec "text"`      | A short inline note on the element                     |
+| `spec { markdown }` | Multi-line markdown (checklists, headings, bullets)   |
 
 ## Editor Support
 

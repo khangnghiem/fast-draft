@@ -52,8 +52,8 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
             || rest.starts_with("note ")
             || rest.starts_with("note{")
         {
-            // Top-level note/spec blocks are ignored (they only apply inside nodes)
-            let _ = parse_note_block.parse_next(&mut rest);
+            // Top-level spec/note blocks are ignored (they only apply inside nodes)
+            let _ = parse_spec_block.parse_next(&mut rest);
             pending_comments.clear();
         } else if rest.starts_with('@') {
             if is_generic_node_start(rest) {
@@ -93,7 +93,7 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
                     props: crate::model::Properties::default(),
                     use_styles: Default::default(),
                     constraints: Default::default(),
-                    note: None,
+                    spec: None,
                     animations: Default::default(),
                     comments: Vec::new(),
                     place: None,
@@ -172,7 +172,7 @@ struct ParsedNode {
     use_styles: Vec<NodeId>,
     constraints: Vec<Constraint>,
     animations: Vec<AnimKeyframe>,
-    note: Option<String>,
+    spec: Option<String>,
     /// Comments that appeared before this node's opening `{` in the source.
     comments: Vec<String>,
     children: Vec<ParsedNode>,
@@ -192,7 +192,7 @@ fn insert_node_recursive(
     node.use_styles.extend(parsed.use_styles);
     node.constraints.extend(parsed.constraints);
     node.animations.extend(parsed.animations);
-    node.note = parsed.note;
+    node.spec = parsed.spec;
     node.comments = parsed.comments;
     node.place = parsed.place;
     node.locked = parsed.locked;
@@ -330,14 +330,14 @@ fn skip_px_suffix(input: &mut &str) {
     }
 }
 
-/// Parse a `note { ... }` block or inline `note "description"` into raw markdown.
-/// Also accepts the legacy `spec` keyword for backward compatibility.
-fn parse_note_block(input: &mut &str) -> ModalResult<String> {
-    // Accept both `note` and legacy `spec`
-    let _ = alt(("note", "spec")).parse_next(input)?;
+/// Parse a `spec { ... }` block or inline `spec "description"` into raw markdown.
+/// Also accepts the legacy `note` keyword for backward compatibility.
+fn parse_spec_block(input: &mut &str) -> ModalResult<String> {
+    // Accept both `spec` (primary) and `note` (legacy)
+    let _ = alt(("spec", "note")).parse_next(input)?;
     skip_space(input);
 
-    // Inline shorthand: `note "description"`
+    // Inline shorthand: `spec "description"`
     if input.starts_with('"') {
         let desc = parse_quoted_string
             .map(|s| s.to_string())
@@ -346,7 +346,7 @@ fn parse_note_block(input: &mut &str) -> ModalResult<String> {
         return Ok(desc);
     }
 
-    // Block form: `note { ... }` — capture raw content with brace-depth counting
+    // Block form: `spec { ... }` — capture raw content with brace-depth counting
     let _ = '{'.parse_next(input)?;
     let mut depth = 1u32;
     let mut content_len = 0;
@@ -368,12 +368,12 @@ fn parse_note_block(input: &mut &str) -> ModalResult<String> {
     let _ = '}'.parse_next(input)?;
 
     // Trim leading/trailing whitespace but preserve internal formatting
-    let trimmed = dedent_note_content(raw);
+    let trimmed = dedent_spec_content(raw);
     Ok(trimmed)
 }
 
-/// Dedent note block content: remove the common leading whitespace from all lines.
-fn dedent_note_content(raw: &str) -> String {
+/// Dedent spec block content: remove the common leading whitespace from all lines.
+fn dedent_spec_content(raw: &str) -> String {
     let trimmed = raw.trim_matches('\n');
     if trimmed.is_empty() {
         return String::new();
@@ -559,7 +559,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let mut use_styles = Vec::new();
     let mut constraints = Vec::new();
     let mut animations = Vec::new();
-    let mut note: Option<String> = None;
+    let mut spec: Option<String> = None;
     let mut children = Vec::new();
     let mut width: Option<f32> = None;
     let mut height: Option<f32> = None;
@@ -579,9 +579,9 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
             || input.starts_with("note ")
             || input.starts_with("note{")
         {
-            let content = parse_note_block.parse_next(input)?;
-            // Multiple note blocks: append with newline separator
-            note = Some(match note {
+            let content = parse_spec_block.parse_next(input)?;
+            // Multiple spec blocks: append with newline separator
+            spec = Some(match spec {
                 Some(existing) => format!("{existing}\n\n{content}"),
                 None => content,
             });
@@ -660,7 +660,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
         use_styles,
         constraints,
         animations,
-        note,
+        spec,
         comments: Vec::new(),
         children,
         place,
@@ -1380,7 +1380,7 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
     let mut use_styles = Vec::new();
     let mut arrow = ArrowKind::None;
     let mut curve = CurveKind::Straight;
-    let mut note: Option<String> = None;
+    let mut spec: Option<String> = None;
     let mut animations = Vec::new();
     let mut flow = None;
     let mut label_offset = None;
@@ -1393,8 +1393,8 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
             || input.starts_with("note ")
             || input.starts_with("note{")
         {
-            let content = parse_note_block.parse_next(input)?;
-            note = Some(match note {
+            let content = parse_spec_block.parse_next(input)?;
+            spec = Some(match spec {
                 Some(existing) => format!("{existing}\n\n{content}"),
                 None => content,
             });
@@ -1521,7 +1521,7 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
             use_styles: use_styles.into(),
             arrow,
             curve,
-            note,
+            spec,
             animations: animations.into(),
             flow,
             label_offset,

@@ -147,12 +147,12 @@ rect @box {
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("box")).unwrap();
-    assert_eq!(node.note.as_deref(), Some("Primary container for content"));
+    assert_eq!(node.spec.as_deref(), Some("Primary container for content"));
 
     let output = emit_document(&graph);
     let graph2 = parse_document(&output).expect("re-parse of note failed");
     let node2 = graph2.get_by_id(NodeId::intern("box")).unwrap();
-    assert_eq!(node2.note, node.note);
+    assert_eq!(node2.spec, node.spec);
 }
 
 #[test]
@@ -169,14 +169,14 @@ rect @login_btn {
 "#;
     let graph = parse_document(input).unwrap();
     let btn = graph.get_by_id(NodeId::intern("login_btn")).unwrap();
-    let note = btn.note.as_ref().expect("should have note");
+    let note = btn.spec.as_ref().expect("should have spec");
     assert!(note.contains("disabled state when fields empty"));
     assert!(note.contains("loading spinner during auth"));
 
     let output = emit_document(&graph);
     let graph2 = parse_document(&output).expect("re-parse of note block failed");
     let btn2 = graph2.get_by_id(NodeId::intern("login_btn")).unwrap();
-    assert_eq!(btn2.note, btn.note);
+    assert_eq!(btn2.spec, btn.spec);
 }
 
 #[test]
@@ -194,14 +194,14 @@ rect @card {
 "#;
     let graph = parse_document(input).unwrap();
     let card = graph.get_by_id(NodeId::intern("card")).unwrap();
-    let note = card.note.as_ref().expect("should have note");
+    let note = card.spec.as_ref().expect("should have spec");
     assert!(note.contains("## Card Features"));
     assert!(note.contains("Dark mode support"));
 
     let output = emit_document(&graph);
     let graph2 = parse_document(&output).expect("re-parse of multiline note failed");
     let card2 = graph2.get_by_id(NodeId::intern("card")).unwrap();
-    assert_eq!(card2.note, card.note);
+    assert_eq!(card2.spec, card.spec);
 }
 
 #[test]
@@ -222,18 +222,18 @@ group @form {
     let graph = parse_document(input).unwrap();
     let form = graph.get_by_id(NodeId::intern("form")).unwrap();
     assert_eq!(
-        form.note.as_deref(),
+        form.spec.as_deref(),
         Some("User authentication entry point")
     );
     let email = graph.get_by_id(NodeId::intern("email")).unwrap();
-    assert!(email.note.is_some());
+    assert!(email.spec.is_some());
 
     let output = emit_document(&graph);
     let graph2 = parse_document(&output).expect("re-parse of nested note failed");
     let form2 = graph2.get_by_id(NodeId::intern("form")).unwrap();
-    assert_eq!(form2.note, form.note);
+    assert_eq!(form2.spec, form.spec);
     let email2 = graph2.get_by_id(NodeId::intern("email")).unwrap();
-    assert_eq!(email2.note, email.note);
+    assert_eq!(email2.spec, email.spec);
 }
 
 #[test]
@@ -251,7 +251,7 @@ rect @widget {
 "#;
     let graph = parse_document(input).unwrap();
     let w = graph.get_by_id(NodeId::intern("widget")).unwrap();
-    let note = w.note.as_ref().expect("should have note");
+    let note = w.spec.as_ref().expect("should have spec");
     assert!(note.contains("# Widget Notes"));
     assert!(note.contains("criterion one"));
     assert!(note.contains("done item"));
@@ -352,14 +352,14 @@ edge @login_flow {
 "#;
     let graph = parse_document(input).unwrap();
     let edge = &graph.edges[0];
-    let note = edge.note.as_ref().expect("edge should have note");
+    let note = edge.spec.as_ref().expect("edge should have spec");
     assert!(note.contains("Main authentication flow"));
     assert!(note.contains("redirect within 2s"));
 
     let output = emit_document(&graph);
     let graph2 = parse_document(&output).expect("noted edge roundtrip failed");
     let edge2 = &graph2.edges[0];
-    assert_eq!(edge2.note, edge.note);
+    assert_eq!(edge2.spec, edge.spec);
 }
 
 #[test]
@@ -375,7 +375,7 @@ fn roundtrip_generic_node() {
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("login_btn")).unwrap();
     assert!(matches!(node.kind, NodeKind::Generic));
-    assert!(node.note.is_some());
+    assert!(node.spec.is_some());
 
     let output = emit_document(&graph);
     assert!(output.contains("@login_btn {"));
@@ -385,7 +385,7 @@ fn roundtrip_generic_node() {
     let graph2 = parse_document(&output).expect("re-parse of generic node failed");
     let node2 = graph2.get_by_id(NodeId::intern("login_btn")).unwrap();
     assert!(matches!(node2.kind, NodeKind::Generic));
-    assert_eq!(node2.note, node.note);
+    assert_eq!(node2.spec, node.spec);
 }
 
 #[test]
@@ -409,13 +409,13 @@ group @form {
 
     let email = graph.get_by_id(NodeId::intern("email_input")).unwrap();
     assert!(matches!(email.kind, NodeKind::Generic));
-    assert!(email.note.is_some());
+    assert!(email.spec.is_some());
 
     let output = emit_document(&graph);
     let graph2 = parse_document(&output).expect("re-parse of nested generic failed");
     let email2 = graph2.get_by_id(NodeId::intern("email_input")).unwrap();
     assert!(matches!(email2.kind, NodeKind::Generic));
-    assert_eq!(email2.note, email.note);
+    assert_eq!(email2.spec, email.spec);
 }
 
 #[test]
@@ -605,9 +605,9 @@ rect @login_btn {
 }
 "#;
     let graph = parse_document(input).unwrap();
-    let md = emit_notes_markdown(&graph, "login.fd");
+    let md = emit_spec_markdown(&graph, "login.fd");
 
-    assert!(md.starts_with("# Notes: login.fd\n"));
+    assert!(md.starts_with("# Spec: login.fd\n"));
     assert!(md.contains("## @login_btn `rect`"));
     assert!(md.contains("## Login Button"));
     assert!(md.contains("disabled when fields empty"));
@@ -637,7 +637,7 @@ group @form {
 }
 "#;
     let graph = parse_document(input).unwrap();
-    let md = emit_notes_markdown(&graph, "checkout.fd");
+    let md = emit_spec_markdown(&graph, "checkout.fd");
 
     assert!(md.contains("## @form `group`"));
     assert!(md.contains("### @email `rect`"));
@@ -667,7 +667,7 @@ edge @auth_flow {
 }
 "#;
     let graph = parse_document(input).unwrap();
-    let md = emit_notes_markdown(&graph, "flow.fd");
+    let md = emit_spec_markdown(&graph, "flow.fd");
 
     assert!(md.contains("## Flows"));
     assert!(md.contains("**@login** → **@dashboard**"));
@@ -1204,17 +1204,17 @@ rect @full_spec {
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("full_spec")).unwrap();
-    assert!(node.note.is_some());
+    assert!(node.spec.is_some());
 
     let output = emit_document(&graph);
     // Emitter should output `note` keyword (upgraded from `spec`)
     assert!(
-        output.contains("note {"),
-        "emitter should output `note` keyword, got: {output}"
+        output.contains("spec {"),
+        "emitter should output `spec` keyword, got: {output}"
     );
     let graph2 = parse_document(&output).expect("re-parse of full spec failed");
     let node2 = graph2.get_by_id(NodeId::intern("full_spec")).unwrap();
-    assert_eq!(node2.note, node.note);
+    assert_eq!(node2.spec, node.spec);
 }
 
 #[test]
@@ -1380,16 +1380,16 @@ rect @btn {
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("btn")).unwrap();
-    assert_eq!(node.note.as_deref(), Some("Primary action button"));
+    assert_eq!(node.spec.as_deref(), Some("Primary action button"));
 
     let output = emit_document(&graph);
     assert!(
-        output.contains("note \""),
-        "emitter should output `note` keyword: {output}"
+        output.contains("spec \""),
+        "emitter should output `spec` keyword: {output}"
     );
     let graph2 = parse_document(&output).expect("re-parse of inline note failed");
     let node2 = graph2.get_by_id(NodeId::intern("btn")).unwrap();
-    assert_eq!(node2.note, node.note);
+    assert_eq!(node2.spec, node.spec);
 }
 
 #[test]
@@ -1407,14 +1407,14 @@ rect @card {
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("card")).unwrap();
-    let note = node.note.as_ref().expect("should have note");
+    let note = node.spec.as_ref().expect("should have spec");
     assert!(note.contains("responsive on mobile"));
 
     let output = emit_document(&graph);
-    assert!(output.contains("note {"), "should emit note keyword");
+    assert!(output.contains("spec {"), "should emit note keyword");
     let graph2 = parse_document(&output).expect("re-parse of note keyword failed");
     let node2 = graph2.get_by_id(NodeId::intern("card")).unwrap();
-    assert_eq!(node2.note, node.note);
+    assert_eq!(node2.spec, node.spec);
 }
 
 #[test]
@@ -1430,7 +1430,7 @@ rect @task {
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("task")).unwrap();
-    let note = node.note.as_ref().expect("should have note");
+    let note = node.spec.as_ref().expect("should have spec");
     assert!(note.contains("Pick the color"));
     assert!(note.contains("Choose the font"));
 }
@@ -1450,12 +1450,12 @@ rect @task {
     let graph = parse_document(input).unwrap();
     let output = emit_document(&graph);
 
-    assert!(output.contains("note {"));
+    assert!(output.contains("spec {"));
     assert!(output.contains("A task card"));
 
     let graph2 = parse_document(&output).expect("re-parse of checklist note failed");
     let node2 = graph2.get_by_id(NodeId::intern("task")).unwrap();
-    let note = node2.note.as_ref().expect("should have note");
+    let note = node2.spec.as_ref().expect("should have spec");
     assert!(note.contains("Add animation"));
     assert!(note.contains("Pick the font"));
 }
@@ -1480,7 +1480,7 @@ rect @widget {
 
     let graph2 = parse_document(&output).expect("re-parse of note failed");
     let node = graph2.get_by_id(NodeId::intern("widget")).unwrap();
-    let note = node.note.as_ref().expect("should have note");
+    let note = node.spec.as_ref().expect("should have spec");
 
     // All lines should be preserved in raw markdown
     assert!(note.contains("Description text"));
@@ -1505,15 +1505,16 @@ rect @old {
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("old")).unwrap();
-    let note = node.note.as_ref().expect("should have note");
+    let note = node.spec.as_ref().expect("should have spec");
     // Raw content is captured verbatim
     assert!(note.contains("Legacy format text"));
     assert!(note.contains("status: done"));
 
     let output = emit_document(&graph);
-    // Emitter upgrades `spec` to `note`
-    assert!(output.contains("note {"), "should emit note keyword");
-    assert!(!output.contains("spec {"), "should not emit spec keyword");
+    // Emitter outputs `spec` (it's now the primary keyword)
+    assert!(output.contains("spec {"), "should emit spec keyword");
+    // Legacy `note` keyword should NOT appear in output
+    assert!(!output.contains("note {"), "should not emit note keyword");
 }
 
 #[test]
@@ -1656,8 +1657,8 @@ fn emit_filtered_design() {
 fn emit_filtered_notes() {
     let graph = make_test_graph();
     let out = emit_filtered(&graph, ReadMode::Notes);
-    // Should have note blocks
-    assert!(out.contains("note"), "should include note");
+    // Should have spec blocks
+    assert!(out.contains("spec"), "should include spec");
     assert!(out.contains("Main card component"), "should include desc");
     // Raw spec content is preserved
     assert!(

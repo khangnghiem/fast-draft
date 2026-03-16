@@ -438,7 +438,7 @@ pub struct Edge {
     pub use_styles: SmallVec<[NodeId; 2]>,
     pub arrow: ArrowKind,
     pub curve: CurveKind,
-    pub note: Option<String>,
+    pub spec: Option<String>,
     pub animations: SmallVec<[AnimKeyframe; 2]>,
     pub flow: Option<FlowAnim>,
     /// Offset of the edge text from the midpoint, set when label is dragged.
@@ -490,7 +490,7 @@ pub enum NodeKind {
     Root,
 
     /// Generic placeholder — no visual shape assigned yet.
-    /// Used for note-only nodes: `@login_btn { note "CTA" }`
+    /// Used for spec-only nodes: `@login_btn { spec "CTA" }`
     Generic,
 
     /// Organizational container (like Figma Group).
@@ -569,8 +569,8 @@ pub struct SceneNode {
     /// Animations attached to this node.
     pub animations: SmallVec<[AnimKeyframe; 2]>,
 
-    /// Markdown note content (`note { ... }` block, also accepts legacy `spec`).
-    pub note: Option<String>,
+    /// Markdown spec content (`spec { ... }` block, also accepts legacy `note`).
+    pub spec: Option<String>,
 
     /// Line comments (`# text`) that appeared before this node in the source.
     /// Preserved across parse/emit round-trips so format passes don't delete them.
@@ -595,7 +595,7 @@ impl SceneNode {
             use_styles: SmallVec::new(),
             constraints: SmallVec::new(),
             animations: SmallVec::new(),
-            note: None,
+            spec: None,
             comments: Vec::new(),
             place: None,
             locked: false,
