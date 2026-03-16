@@ -1694,17 +1694,23 @@ function setupContextMenu() {
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      closeContextMenu();
-      // Exit fullscreen mode on Escape
-      if (fullscreenMode) {
+      // Layered dismissal: close topmost UI layer, one per Escape press
+      const ctxVisible = document.getElementById('ctx-menu')?.classList.contains('visible')
+        || document.getElementById('ctx-menu-canvas')?.classList.contains('visible');
+      if (ctxVisible) {
+        closeContextMenu();
+      } else if (fullscreenMode) {
         toggleFullscreen();
       } else if (zenMode) {
-        // Exit Zen mode on Escape
         zenMode = false;
         document.querySelector('.hero-playground')?.classList.remove('zen-mode');
         const zb = document.getElementById('zen-toggle-btn');
         if (zb) { zb.textContent = '🧘'; zb.title = 'Zen Mode (Esc)'; }
         setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+      } else if (fdCanvas && fdCanvas.get_selected_id()) {
+        // Nothing else to dismiss → deselect all
+        fdCanvas.select_by_id('');
+        renderDirty = true; uiDirty = true;
       }
     }
     // Shift+F → toggle fullscreen

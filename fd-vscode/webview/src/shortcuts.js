@@ -64,15 +64,31 @@ document.addEventListener("keydown", (e) => {
     }
   }
 
-  // Close annotation card / context menu on Escape (before WASM)
+  // Layered Escape dismissal — one layer per press (Figma-style)
   if (e.key === "Escape") {
-    closeAnnotationCard();
-    closeContextMenu();
-    closeShortcutHelp();
-    // Exit fullscreen mode on Escape (before Zen mode)
-    if (document.body.classList.contains("fullscreen-mode")) {
+    const ctxVisible = document.getElementById("ctx-menu")?.classList.contains("visible")
+      || document.getElementById("ctx-menu-canvas")?.classList.contains("visible");
+    const annotVisible = !!annotationCardNodeId;
+    const helpVisible = shortcutHelpVisible;
+    const isFull = document.body.classList.contains("fullscreen-mode");
+
+    if (ctxVisible) {
+      closeContextMenu();
+    } else if (annotVisible) {
+      closeAnnotationCard();
+    } else if (helpVisible) {
+      closeShortcutHelp();
+    } else if (isFull) {
       applyFullscreenMode(false);
       vscode.setState({ ...(vscode.getState() || {}), fullscreenMode: false });
+    } else if (lockedTool) {
+      unlockTool();
+    } else if (fdCanvas && fdCanvas.get_selected_id()) {
+      // Nothing else to dismiss → deselect all
+      fdCanvas.select_by_id('');
+      bumpGeneration();
+      render();
+      syncSelection('', 'keyboard');
     }
   }
 
@@ -207,8 +223,8 @@ document.addEventListener("keydown", (e) => {
     }
   }
 
-  // ── V key or Escape: unlock tool if locked ──
-  if ((e.key === "v" || e.key === "V" || e.key === "Escape") && !e.metaKey && !e.ctrlKey) {
+  // ── V key: unlock tool if locked ──
+  if ((e.key === "v" || e.key === "V") && !e.metaKey && !e.ctrlKey) {
     if (lockedTool) {
       e.preventDefault();
       unlockTool();
