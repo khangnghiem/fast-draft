@@ -1,4 +1,4 @@
-//! Note and animation APIs.
+//! Spec and animation APIs.
 
 use crate::FdCanvas;
 use fd_core::id::NodeId;
@@ -8,25 +8,25 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 impl FdCanvas {
-    /// Get the raw markdown note for a node.
-    pub fn get_note(&self, node_id: &str) -> String {
+    /// Get the raw markdown spec for a node.
+    pub fn get_spec(&self, node_id: &str) -> String {
         let id = NodeId::intern(node_id);
         self.engine
             .graph
             .get_by_id(id)
-            .and_then(|n| n.note.clone())
+            .and_then(|n| n.spec.clone())
             .unwrap_or_default()
     }
 
-    /// Set the raw markdown note for a node.
-    pub fn set_note(&mut self, node_id: &str, content: &str) -> bool {
+    /// Set the raw markdown spec for a node.
+    pub fn set_spec(&mut self, node_id: &str, content: &str) -> bool {
         let id = NodeId::intern(node_id);
-        let note = if content.is_empty() {
+        let spec = if content.is_empty() {
             None
         } else {
             Some(content.to_string())
         };
-        let mutations = vec![GraphMutation::SetNote { id, note }];
+        let mutations = vec![GraphMutation::SetSpec { id, spec }];
         let changed = self.apply_mutations(mutations);
         if changed {
             self.engine.flush_to_text();
@@ -34,24 +34,24 @@ impl FdCanvas {
         changed
     }
 
-    /// Get all notes across the entire document.
-    pub fn get_all_notes(&self) -> String {
+    /// Get all specs across the entire document.
+    pub fn get_all_specs(&self) -> String {
         let mut result = Vec::new();
         for node in self.engine.graph.graph.node_weights() {
-            if let Some(ref note) = node.note {
+            if let Some(ref spec) = node.spec {
                 let id_str = node.id.as_str();
                 result.push(serde_json::json!({
                     "id": id_str,
-                    "note": note,
+                    "spec": spec,
                 }));
             }
         }
         for edge in &self.engine.graph.edges {
-            if let Some(ref note) = edge.note {
+            if let Some(ref spec) = edge.spec {
                 let id_str = edge.id.as_str();
                 result.push(serde_json::json!({
                     "id": id_str,
-                    "note": note,
+                    "spec": spec,
                 }));
             }
         }

@@ -64,14 +64,14 @@ let annotationCardNodeId = null;
 /** Node ID from right-click context menu */
 let contextMenuNodeId = null;
 
-/** Current view mode: "design" | "notes" */
+/** Current view mode: "design" | "specs" */
 let viewMode = "design";
 
 /** Current note filter: "all" | "todo" | "doing" | "done" | "blocked" */
 let noteFilter = "all";
 
 /** Note badge toggle — independent of view mode */
-let noteBadgesVisible = false;
+let specBadgesVisible = false;
 
 
 // ─── Performance: Dirty Flag & Generation Counter ────────────────────────
@@ -3000,7 +3000,7 @@ function buildNodeMenuItems(hitId, selectedIds) {
 
   // Notes
   if (!hasSpec) items.push({ action: 'add-annotation', label: 'Add Note', icon: '◇' });
-  if (hasSpec) items.push({ action: 'view-notes', label: 'Notes Panel', icon: '📝', shortcut: '⌘⇧N' });
+  if (hasSpec) items.push({ action: 'view-specs', label: 'Specs Panel', icon: '📝', shortcut: '⌘⇧N' });
 
   // Rename
   items.push({ action: 'rename', label: 'Rename', icon: '✏️' });
@@ -3046,7 +3046,7 @@ function doNodeAction(action, el) {
     openAnnotationCard(contextMenuNodeId, parseInt(el?.style?.left || 0), parseInt(el?.style?.top || 0));
     return;
   }
-  if (action === 'view-notes') {
+  if (action === 'view-specs') {
     fdCanvas.select_by_id(contextMenuNodeId);
     render();
     openAnnotationCard(contextMenuNodeId, parseInt(el?.style?.left || 0), parseInt(el?.style?.top || 0));
@@ -3410,14 +3410,14 @@ function setupGridToggle() {
 
 /** Toggle spec badge overlay on/off (independent of Spec View mode). */
 function toggleSpecBadges() {
-  noteBadgesVisible = !noteBadgesVisible;
+  specBadgesVisible = !specBadgesVisible;
   const btn = document.getElementById("sm-note-badge-toggle");
-  if (btn) btn.classList.toggle("active", noteBadgesVisible);
-  vscode.setState({ ...(vscode.getState() || {}), noteBadgesVisible });
+  if (btn) btn.classList.toggle("active", specBadgesVisible);
+  vscode.setState({ ...(vscode.getState() || {}), specBadgesVisible });
 
   const overlay = document.getElementById("spec-overlay");
-  if (noteBadgesVisible || viewMode === "notes") {
-    refreshNoteBadges();
+  if (specBadgesVisible || viewMode === "specs") {
+    refreshSpecBadges();
   } else {
     if (overlay) { overlay.innerHTML = ""; overlay.style.display = "none"; }
   }
@@ -3430,10 +3430,10 @@ function setupSpecBadgeToggle() {
 
   // Restore persisted state
   const savedState = vscode.getState();
-  if (savedState && savedState.noteBadgesVisible) {
-    noteBadgesVisible = true;
+  if (savedState && savedState.specBadgesVisible) {
+    specBadgesVisible = true;
     btn.classList.add("active");
-    setTimeout(() => { if (fdCanvas) refreshNoteBadges(); }, 500);
+    setTimeout(() => { if (fdCanvas) refreshSpecBadges(); }, 500);
   }
 
   btn.addEventListener("click", toggleSpecBadges);
@@ -3831,7 +3831,7 @@ function renderLayerNode(node, selectedIds, depth = 0) {
 
 // ─── Spec Summary Panel (replaces layers in Spec mode) ──────────────────
 
-function refreshNotesSummary(panel) {
+function refreshSpecsSummary(panel) {
   if (!fdCanvas) return;
   const source = fdCanvas.get_text();
   const annotated = parseAnnotatedNodes(source);
@@ -3966,7 +3966,7 @@ function wireSpecPanelHandlers(panel, annotated) {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       noteFilter = btn.getAttribute("data-filter") || "all";
-      refreshNotesSummary(panel);
+      refreshSpecsSummary(panel);
     });
   });
 
@@ -4059,7 +4059,7 @@ function bulkSetStatus(annotated, newStatus) {
   syncTextToExtension();
   // Refresh to show updated statuses
   const panel = document.getElementById("layers-panel");
-  if (panel) refreshNotesSummary(panel);
+  if (panel) refreshSpecsSummary(panel);
 }
 
 /** Close any open layer context menu. */
@@ -4419,9 +4419,9 @@ function refreshLayersPanel() {
   if (!panel || !fdCanvas) return;
 
   // In Spec mode, show requirements summary instead of layers
-  if (viewMode === "notes") {
+  if (viewMode === "specs") {
     lastLayerGeneration = -1;
-    refreshNotesSummary(panel);
+    refreshSpecsSummary(panel);
     return;
   }
 
@@ -5888,7 +5888,7 @@ function updateSettingsToggleStates() {
   const sketchyItem = document.getElementById("sm-sketchy-toggle");
   const themeItem = document.getElementById("sm-theme-toggle");
   if (gridItem) gridItem.classList.toggle("toggle-on", gridEnabled);
-  if (specItem) specItem.classList.toggle("toggle-on", noteBadgesVisible);
+  if (specItem) specItem.classList.toggle("toggle-on", specBadgesVisible);
   if (sketchyItem) sketchyItem.classList.toggle("toggle-on", fdCanvas ? fdCanvas.get_sketchy_mode() : false);
   if (themeItem) themeItem.classList.toggle("toggle-on", isDarkTheme);
   const libItem = document.getElementById("sm-library-toggle");
@@ -7803,36 +7803,36 @@ function openAnimPicker(targetNodeId, clientX, clientY) {
 
 function setupViewToggle() {
   document.getElementById("view-design")?.addEventListener("click", () => setViewMode("design"));
-  document.getElementById("view-notes")?.addEventListener("click", () => setViewMode("notes"));
+  document.getElementById("view-specs")?.addEventListener("click", () => setViewMode("specs"));
 }
 
 function setViewMode(mode) {
   viewMode = mode;
-  const isNotes = mode === "notes";
+  const isSpecs = mode === "specs";
 
   document.getElementById("view-design")?.classList.toggle("active", mode === "design");
-  document.getElementById("view-notes")?.classList.toggle("active", isNotes);
+  document.getElementById("view-specs")?.classList.toggle("active", isSpecs);
 
   // Canvas stays visible — notes view keeps full interactivity
   const overlay = document.getElementById("spec-overlay");
-  if (overlay) overlay.style.display = (isNotes || noteBadgesVisible) ? "" : "none";
+  if (overlay) overlay.style.display = (isSpecs || specBadgesVisible) ? "" : "none";
 
   // Hide properties panel in notes view
   const props = document.getElementById("props-panel");
-  if (props && isNotes) props.classList.remove("visible");
+  if (props && isSpecs) props.classList.remove("visible");
 
   // Notify extension to apply/remove code-mode spec folding
   vscode.postMessage({ type: "viewModeChanged", mode });
 
-  if (isNotes || noteBadgesVisible) {
-    refreshNoteBadges();
+  if (isSpecs || specBadgesVisible) {
+    refreshSpecBadges();
   } else {
     // Clear badges when leaving spec view with toggle OFF
     if (overlay) overlay.innerHTML = "";
   }
 
-  if (isNotes) {
-    refreshNoteView();
+  if (isSpecs) {
+    refreshSpecView();
   }
 
   // Always refresh layers (it's always visible)
@@ -7844,7 +7844,7 @@ function setViewMode(mode) {
  * In Design/All view: only show spec details for the currently selected node.
  * Badge pins are removed; specs appear on hover via tooltip.
  */
-function refreshNoteBadges() {
+function refreshSpecBadges() {
   const overlay = document.getElementById("spec-overlay");
   if (!overlay || !fdCanvas) return;
 
@@ -7912,9 +7912,9 @@ function hideSpecTooltip() {
   if (tooltip) tooltip.classList.remove("visible");
 }
 
-function refreshNoteView() {
-  // Badges are now handled by refreshNoteBadges()
-  refreshNoteBadges();
+function refreshSpecView() {
+  // Badges are now handled by refreshSpecBadges()
+  refreshSpecBadges();
 }
 
 /**
@@ -8365,8 +8365,8 @@ function scheduleSideEffects() {
   if (sideEffectTimer) return; // already scheduled
   sideEffectTimer = setTimeout(() => {
     sideEffectTimer = null;
-    if (viewMode === "notes" || noteBadgesVisible) refreshNoteBadges();
-    if (viewMode === "notes") refreshNoteView();
+    if (viewMode === "specs" || specBadgesVisible) refreshSpecBadges();
+    if (viewMode === "specs") refreshSpecView();
     refreshLayersPanel();
     renderMinimap();
   }, 100);

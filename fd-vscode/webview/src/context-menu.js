@@ -646,8 +646,8 @@ function buildNodeMenuItems(hitId, selectedIds) {
   });
 
   // Notes
-  if (!hasSpec) items.push({ action: 'add-annotation', label: 'Add Note', icon: '◇' });
-  if (hasSpec) items.push({ action: 'view-notes', label: 'Notes Panel', icon: '📝', shortcut: '⌘⇧N' });
+  if (!hasSpec) items.push({ action: 'add-annotation', label: 'Add Spec', icon: '◇' });
+  if (hasSpec) items.push({ action: 'view-specs', label: 'Specs Panel', icon: '📝', shortcut: '⌘⇧N' });
 
   // Rename
   items.push({ action: 'rename', label: 'Rename', icon: '✏️' });
@@ -693,7 +693,7 @@ function doNodeAction(action, el) {
     openAnnotationCard(contextMenuNodeId, parseInt(el?.style?.left || 0), parseInt(el?.style?.top || 0));
     return;
   }
-  if (action === 'view-notes') {
+  if (action === 'view-specs') {
     fdCanvas.select_by_id(contextMenuNodeId);
     render();
     openAnnotationCard(contextMenuNodeId, parseInt(el?.style?.left || 0), parseInt(el?.style?.top || 0));
@@ -1057,14 +1057,14 @@ function setupGridToggle() {
 
 /** Toggle spec badge overlay on/off (independent of Spec View mode). */
 function toggleSpecBadges() {
-  noteBadgesVisible = !noteBadgesVisible;
+  specBadgesVisible = !specBadgesVisible;
   const btn = document.getElementById("sm-note-badge-toggle");
-  if (btn) btn.classList.toggle("active", noteBadgesVisible);
-  vscode.setState({ ...(vscode.getState() || {}), noteBadgesVisible });
+  if (btn) btn.classList.toggle("active", specBadgesVisible);
+  vscode.setState({ ...(vscode.getState() || {}), specBadgesVisible });
 
   const overlay = document.getElementById("spec-overlay");
-  if (noteBadgesVisible || viewMode === "notes") {
-    refreshNoteBadges();
+  if (specBadgesVisible || viewMode === "specs") {
+    refreshSpecBadges();
   } else {
     if (overlay) { overlay.innerHTML = ""; overlay.style.display = "none"; }
   }
@@ -1077,10 +1077,10 @@ function setupSpecBadgeToggle() {
 
   // Restore persisted state
   const savedState = vscode.getState();
-  if (savedState && savedState.noteBadgesVisible) {
-    noteBadgesVisible = true;
+  if (savedState && savedState.specBadgesVisible) {
+    specBadgesVisible = true;
     btn.classList.add("active");
-    setTimeout(() => { if (fdCanvas) refreshNoteBadges(); }, 500);
+    setTimeout(() => { if (fdCanvas) refreshSpecBadges(); }, 500);
   }
 
   btn.addEventListener("click", toggleSpecBadges);

@@ -32,9 +32,9 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
   /** The most recently focused canvas webview panel, for command routing. */
   public static activePanel: vscode.WebviewPanel | undefined;
   /** Current view mode of the active panel. */
-  public static activeViewMode: "design" | "notes" = "design";
+  public static activeViewMode: "design" | "specs" = "design";
   /** Callback invoked when canvas webview changes view mode. */
-  public static onViewModeChanged: ((mode: "design" | "notes") => void) | undefined;
+  public static onViewModeChanged: ((mode: "design" | "specs") => void) | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) { }
 
@@ -178,7 +178,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
         }
         case "viewModeChanged": {
           const rawMode = (message as { type: string; mode?: string }).mode;
-          const mode: "design" | "notes" = rawMode === "notes" ? "notes" : "design";
+          const mode: "design" | "specs" = rawMode === "specs" ? "specs" : "design";
           FdEditorProvider.activeViewMode = mode;
           FdEditorProvider.onViewModeChanged?.(mode);
           break;
@@ -1006,7 +1006,7 @@ export function activate(context: vscode.ExtensionContext) {
   // ─── Code-mode Spec View (editor decorations) ────────────────────
   // When spec mode is active, hide style/animation/layout details from
   // the text editor, showing only #, spec blocks, node/edge declarations, and braces.
-  let codeSpecMode: "design" | "notes" = "design";
+  let codeSpecMode: "design" | "specs" = "design";
 
   // Wire up canvas → code-mode spec sync
   FdEditorProvider.onViewModeChanged = (mode) => {
@@ -1026,7 +1026,7 @@ export function activate(context: vscode.ExtensionContext) {
     provideFoldingRanges(
       document: vscode.TextDocument
     ): vscode.FoldingRange[] {
-      if (codeSpecMode !== "notes") return [];
+      if (codeSpecMode !== "specs") return [];
       const lines: string[] = [];
       for (let i = 0; i < document.lineCount; i++) {
         lines.push(document.lineAt(i).text);
@@ -1062,7 +1062,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (editor.document.languageId !== "fd") continue;
       // Focus the editor temporarily to apply fold/unfold commands
       await vscode.window.showTextDocument(editor.document, editor.viewColumn, false);
-      if (codeSpecMode === "notes") {
+      if (codeSpecMode === "specs") {
         await vscode.commands.executeCommand("editor.foldAll");
         applySpecKeywordDecorations(editor);
       } else {
@@ -1095,7 +1095,7 @@ export function activate(context: vscode.ExtensionContext) {
   let foldDebounce: ReturnType<typeof setTimeout> | undefined;
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument((e) => {
-      if (codeSpecMode !== "notes") return;
+      if (codeSpecMode !== "specs") return;
       if (e.document.languageId !== "fd") return;
       clearTimeout(foldDebounce);
       foldDebounce = setTimeout(() => applyCodeSpecView(), 300);
@@ -1105,7 +1105,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Re-fold when visible editors change
   context.subscriptions.push(
     vscode.window.onDidChangeVisibleTextEditors(() => {
-      if (codeSpecMode !== "notes") return;
+      if (codeSpecMode !== "specs") return;
       applyCodeSpecView();
     })
   );
@@ -1113,9 +1113,9 @@ export function activate(context: vscode.ExtensionContext) {
   // Register view mode toggle command (Design ↔ Notes)
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMAND_TOGGLE_VIEW_MODE, () => {
-      const cycle: Record<string, "design" | "notes"> = {
+      const cycle: Record<string, "design" | "specs"> = {
         
-        design: "notes",
+        design: "specs",
         notes: "design",
       };
       const next = cycle[FdEditorProvider.activeViewMode];
@@ -1131,7 +1131,7 @@ export function activate(context: vscode.ExtensionContext) {
       // Apply/remove code-mode folding
       applyCodeSpecView();
 
-      const labels: Record<string, string> = { design: "Design", notes: "Notes" };
+      const labels: Record<string, string> = { design: "Design", notes: "Specs" };
       vscode.window.showInformationMessage(
         `FD View: ${labels[next]} Mode`
       );

@@ -443,8 +443,8 @@ fn collect_node_tree(graph: &fd_core::SceneGraph, idx: fd_core::NodeIndex) -> se
     if !children.is_empty() {
         obj["children"] = serde_json::Value::Array(children);
     }
-    if let Some(note) = &node.note {
-        obj["note"] = serde_json::Value::String(note.clone());
+    if let Some(spec) = &node.spec {
+        obj["spec"] = serde_json::Value::String(spec.clone());
     }
     obj
 }

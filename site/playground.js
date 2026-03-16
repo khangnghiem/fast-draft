@@ -1682,10 +1682,10 @@ function setupContextMenu() {
         toggleFullscreen();
       }
     }
-    // ⌘⇧N (Ctrl+Shift+N) → toggle Notes panel
+    // ⌘⇧N (Ctrl+Shift+N) → toggle Specs panel
     if (e.key === 'N' && e.shiftKey && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      toggleNotesPanel();
+      toggleSpecsPanel();
     }
     // \ (backslash) → toggle Layers panel (no modifiers, not in input)
     if (e.key === '\\' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
@@ -2427,11 +2427,11 @@ function renderMinimap(canvas) {
   mc._minimap = { sx: sb.x, sy: sb.y, sw: sb.w, sh: sb.h, scale, ox, oy };
 }
 
-// ─── Notes Panel Resize ──────────────────────────────────────────────────
+// ─── Specs Panel Resize ──────────────────────────────────────────────────
 
-/** Set up drag-to-resize for the Notes panel (left edge). */
-function setupNotesResize() {
-  const panel = document.getElementById('notes-panel');
+/** Set up drag-to-resize for the Specs panel (left edge). */
+function setupSpecsResize() {
+  const panel = document.getElementById('specs-panel');
   const handle = document.getElementById('notes-resize');
   if (!panel || !handle) return;
 
@@ -2440,9 +2440,9 @@ function setupNotesResize() {
   const DEFAULT_W = 260;
 
   // Restore persisted width
-  const savedW = parseInt(localStorage.getItem('fd-notes-width'), 10);
+  const savedW = parseInt(localStorage.getItem('fd-specs-width'), 10);
   if (savedW >= MIN_W && savedW <= MAX_W) {
-    panel.style.setProperty('--notes-width', savedW + 'px');
+    panel.style.setProperty('--specs-width', savedW + 'px');
   }
 
   let dragging = false;
@@ -2464,7 +2464,7 @@ function setupNotesResize() {
     // Dragging left edge: moving left = wider, moving right = narrower
     const dx = startX - e.clientX;
     const newW = Math.max(MIN_W, Math.min(MAX_W, startW + dx));
-    panel.style.setProperty('--notes-width', newW + 'px');
+    panel.style.setProperty('--specs-width', newW + 'px');
   });
 
   const endDrag = () => {
@@ -2473,7 +2473,7 @@ function setupNotesResize() {
     handle.classList.remove('active');
     // Persist width
     const w = panel.offsetWidth;
-    localStorage.setItem('fd-notes-width', String(w));
+    localStorage.setItem('fd-specs-width', String(w));
   };
   handle.addEventListener('pointerup', endDrag);
   handle.addEventListener('pointercancel', endDrag);
@@ -2481,8 +2481,8 @@ function setupNotesResize() {
   // Double-click to reset to default width
   handle.addEventListener('dblclick', (e) => {
     e.preventDefault();
-    panel.style.setProperty('--notes-width', DEFAULT_W + 'px');
-    localStorage.setItem('fd-notes-width', String(DEFAULT_W));
+    panel.style.setProperty('--specs-width', DEFAULT_W + 'px');
+    localStorage.setItem('fd-specs-width', String(DEFAULT_W));
   });
 }
 
@@ -2711,29 +2711,29 @@ function setupPanelResize(wrapper, resizeCanvas) {
 
 // ─── Init ────────────────────────────────────────────────────────────────
 
-/** ─── Notes Panel ────────────────────────────────────────────────────── */
-let notesPanelOpen = false;
+/** ─── Specs Panel ────────────────────────────────────────────────────── */
+let specsPanelOpen = false;
 
 /**
- * Render notes panel using WASM get_all_notes() API + marked.js.
+ * Render notes panel using WASM get_all_specs() API + marked.js.
  * Each node's raw markdown note is rendered via marked.parse().
  * Interactive checkboxes: click to toggle [ ] ↔ [x] and write back.
  */
-function renderNotesPanel() {
-  const body = document.getElementById('notes-panel-body');
+function renderSpecsPanel() {
+  const body = document.getElementById('specs-panel-body');
   if (!body || !fdCanvas) return;
 
   // Get all notes from WASM API
   let notes;
   try {
-    const json = fdCanvas.get_all_notes();
+    const json = fdCanvas.get_all_specs();
     notes = JSON.parse(json);
   } catch (_) {
     notes = [];
   }
 
   if (notes.length === 0) {
-    body.innerHTML = '<p class="notes-empty">No notes yet. Add a note via right-click → Add Note.</p>';
+    body.innerHTML = '<p class="specs-empty">No notes yet. Add a note via right-click → Add Note.</p>';
     return;
   }
 
@@ -2750,9 +2750,9 @@ function renderNotesPanel() {
     const nodeId = entry.id;
     const rawNote = entry.note;
 
-    html += `<div class="note-group" data-note-node="${nodeId}">`;
-    html += `<div class="note-group-header" data-node="${nodeId}" title="Click to select @${nodeId}">@${nodeId}</div>`;
-    html += `<div class="note-markdown">`;
+    html += `<div class="spec-group" data-note-node="${nodeId}">`;
+    html += `<div class="spec-group-header" data-node="${nodeId}" title="Click to select @${nodeId}">@${nodeId}</div>`;
+    html += `<div class="spec-markdown">`;
 
     // Check if entire note is a file reference (inline form: note "./spec.md")
     const fileRefMatch = rawNote.trim().match(/^\.?\.?\/[^\s]+\.md$/);
@@ -2778,7 +2778,7 @@ function renderNotesPanel() {
   body.innerHTML = html;
 
   // Click-to-select: clicking a group header selects the node on canvas
-  body.querySelectorAll('.note-group-header').forEach(el => {
+  body.querySelectorAll('.spec-group-header').forEach(el => {
     el.addEventListener('click', () => {
       const nid = el.dataset.node;
       if (nid && nid !== '_root' && fdCanvas) {
@@ -2788,19 +2788,19 @@ function renderNotesPanel() {
   });
 
   // Interactive checkboxes: toggle [ ] ↔ [x] in the raw markdown
-  body.querySelectorAll('.note-markdown input[type="checkbox"]').forEach(cb => {
+  body.querySelectorAll('.spec-markdown input[type="checkbox"]').forEach(cb => {
     cb.removeAttribute('disabled');
     cb.addEventListener('change', (e) => {
-      const group = e.target.closest('.note-group');
+      const group = e.target.closest('.spec-group');
       if (!group) return;
       const nodeId = group.dataset.noteNode;
       if (!nodeId || !fdCanvas) return;
 
       // Get current note, find the N-th checkbox, toggle it
-      const currentNote = fdCanvas.get_note(nodeId);
-      if (!currentNote) return;
+      const currentSpec = fdCanvas.get_spec(nodeId);
+      if (!currentSpec) return;
 
-      // Find checkbox index within this note-group
+      // Find checkbox index within this spec-group
       const allCheckboxes = group.querySelectorAll('input[type="checkbox"]');
       let cbIndex = 0;
       for (let i = 0; i < allCheckboxes.length; i++) {
@@ -2809,7 +2809,7 @@ function renderNotesPanel() {
 
       // Toggle the N-th checkbox pattern in the raw markdown
       let checkboxCount = 0;
-      const updatedNote = currentNote.replace(/- \[([ xX])\]/g, (match, state) => {
+      const updatedSpec = currentSpec.replace(/- \[([ xX])\]/g, (match, state) => {
         if (checkboxCount === cbIndex) {
           checkboxCount++;
           return state.trim() ? '- [ ]' : '- [x]';
@@ -2819,7 +2819,7 @@ function renderNotesPanel() {
       });
 
       // Write back via WASM
-      fdCanvas.set_note(nodeId, updatedNote);
+      fdCanvas.set_spec(nodeId, updatedSpec);
 
       // Sync to code editor
       if (typeof syncCanvasToEditor === 'function') {
@@ -2837,8 +2837,8 @@ function renderNotesPanel() {
   });
 }
 
-function toggleNotesPanel() {
-  const panel = document.getElementById('notes-panel');
+function toggleSpecsPanel() {
+  const panel = document.getElementById('specs-panel');
   if (!panel) return;
   const willOpen = panel.classList.contains('hidden');
   if (willOpen) {
@@ -2848,10 +2848,10 @@ function toggleNotesPanel() {
       chatPanel.classList.add('hidden');
     }
   }
-  notesPanelOpen = willOpen;
-  window._notesPanelOpen = notesPanelOpen;
-  panel.classList.toggle('hidden', !notesPanelOpen);
-  if (notesPanelOpen) renderNotesPanel();
+  specsPanelOpen = willOpen;
+  window._specsPanelOpen = specsPanelOpen;
+  panel.classList.toggle('hidden', !specsPanelOpen);
+  if (specsPanelOpen) renderSpecsPanel();
 }
 
 /** Toggle Layers panel collapsed/expanded. */
@@ -4594,8 +4594,8 @@ async function initPlayground() {
         editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: text } });
       }
     );
-    document.getElementById('notes-toggle-btn')?.addEventListener('click', toggleNotesPanel);
-    document.getElementById('notes-panel-close')?.addEventListener('click', toggleNotesPanel);
+    document.getElementById('specs-toggle-btn')?.addEventListener('click', toggleSpecsPanel);
+    document.getElementById('specs-panel-close')?.addEventListener('click', toggleSpecsPanel);
 
     // Get canvas 2D context
     ctx = canvas.getContext('2d');
@@ -4680,8 +4680,8 @@ async function initPlayground() {
     const layersToggleBtn = document.getElementById('layers-toggle-btn');
     layersToggleBtn?.addEventListener('click', toggleLayersPanel);
 
-    // ── Notes Panel Resize ───────────────────────────────────────────
-    setupNotesResize();
+    // ── Specs Panel Resize ───────────────────────────────────────────
+    setupSpecsResize();
 
     // ── Desktop Code Panel Toggle (click editor header) ──────────────
     const editorHeader = document.getElementById('editor-header');

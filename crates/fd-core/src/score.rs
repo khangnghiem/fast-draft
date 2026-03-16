@@ -117,7 +117,7 @@ fn metric_doc_comment_density(graph: &SceneGraph) -> MetricScore {
             continue;
         }
         total += 1;
-        if !node.comments.is_empty() || node.note.is_some() {
+        if !node.comments.is_empty() || node.spec.is_some() {
             commented += 1;
         }
     }

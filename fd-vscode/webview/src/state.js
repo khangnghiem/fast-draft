@@ -55,14 +55,14 @@ let annotationCardNodeId = null;
 /** Node ID from right-click context menu */
 let contextMenuNodeId = null;
 
-/** Current view mode: "design" | "notes" */
+/** Current view mode: "design" | "specs" */
 let viewMode = "design";
 
 /** Current note filter: "all" | "todo" | "doing" | "done" | "blocked" */
 let noteFilter = "all";
 
 /** Note badge toggle — independent of view mode */
-let noteBadgesVisible = false;
+let specBadgesVisible = false;
 
 
 // ─── Performance: Dirty Flag & Generation Counter ────────────────────────
