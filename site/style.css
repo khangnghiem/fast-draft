@@ -543,6 +543,11 @@ code {
   background: var(--fd-accent-dim, rgba(0,122,255,0.1));
 }
 
+/* Desktop layers toggle — always visible */
+#layers-toggle-btn.layers-hidden {
+  opacity: 0.5;
+}
+
 /* Mobile code toggle — hidden on desktop, shown at ≤768px */
 #mobile-code-toggle {
   display: none;
@@ -619,7 +624,9 @@ code {
   top: 36px;
   right: 0;
   bottom: 0;
-  width: 260px;
+  width: var(--notes-width, 260px);
+  min-width: 180px;
+  max-width: 50%;
   background: rgba(255,255,255,0.92);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -912,6 +919,15 @@ code {
 }
 .panel-resize-handle.props-handle {
   left: -2px;
+}
+.panel-resize-handle.notes-handle {
+  position: absolute;
+  left: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  z-index: 20;
 }
 
 /* ─── Collapsed Panel Indicators ─── */

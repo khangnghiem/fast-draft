@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.170 — Panel Toggle, Resize & Exclusive Policy (R6.7)
+- **UX (R6.7)**: Desktop Layers toggle — new `☰` button in canvas toolbar toggles Layers panel collapsed/expanded at all viewports (previously toggle only available on mobile); button dims when panel is collapsed
+- **UX (R6.7)**: `\` keyboard shortcut — pressing backslash toggles the Layers panel collapsed/expanded (no modifiers, not active in text inputs); matches Figma `\` shortcut convention
+- **UX (R6.7)**: Notes panel resize — left-edge drag handle on Notes panel enables resizing between 180–500px; double-click to reset to default 260px; width persists in `localStorage` (`fd-notes-width`); CSS variable `--notes-width` enables dynamic sizing
+- **UX (R6.7)**: Exclusive right-side panels — opening Notes auto-closes AI Chat and vice versa; prevents confusing panel overlap on the right side; state synced via `window._notesPanelOpen` for cross-module coordination between `playground.js` and `ai-chat.js`
+- **SITE**: Changes in `site/index.html`, `site/style.css`, `site/playground.js`, `site/ai-chat.js`
+
 ### v0.11.169 — AI Agent Mode: MCP Server + Multi-Turn Chat (R2.15, R2.16)
 - **FEAT (R2.15)**: MCP Server for FD files — new `fd-mcp/` package exposes 7 MCP tools (`fd_read_document`, `fd_list_nodes`, `fd_create_node`, `fd_update_node`, `fd_delete_node`, `fd_rename_node`, `fd_get_score`) and 1 resource (`fd://active-document`) via stdio transport; registered in VS Code extension `package.json` under `contributes.mcpServers`; enables AI agents (Claude, Cursor, Copilot) to natively read/modify `.fd` files
 - **FEAT (R2.16)**: Multi-Turn AI Chat — new `mode: 'chat'` in `/api/ai` Cloudflare endpoint supports conversation history (up to 10 messages) with full document context injection; frosted glass slide-in chat panel on site with message bubbles, per-block accept/reject for FD code changes, and `ai-chat.js` module; toolbar button `✦ Agent` added

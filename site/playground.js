@@ -1688,6 +1688,13 @@ function setupContextMenu() {
       e.preventDefault();
       toggleNotesPanel();
     }
+    // \ (backslash) → toggle Layers panel (no modifiers, not in input)
+    if (e.key === '\\' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        toggleLayersPanel();
+      }
+    }
   });
   canvas.addEventListener('pointerdown', closeContextMenu);
 }
@@ -2447,6 +2454,65 @@ function renderMinimap(canvas) {
   mc._minimap = { sx: sb.x, sy: sb.y, sw: sb.w, sh: sb.h, scale, ox, oy };
 }
 
+// ─── Notes Panel Resize ──────────────────────────────────────────────────
+
+/** Set up drag-to-resize for the Notes panel (left edge). */
+function setupNotesResize() {
+  const panel = document.getElementById('notes-panel');
+  const handle = document.getElementById('notes-resize');
+  if (!panel || !handle) return;
+
+  const MIN_W = 180;
+  const MAX_W = 500;
+  const DEFAULT_W = 260;
+
+  // Restore persisted width
+  const savedW = parseInt(localStorage.getItem('fd-notes-width'), 10);
+  if (savedW >= MIN_W && savedW <= MAX_W) {
+    panel.style.setProperty('--notes-width', savedW + 'px');
+  }
+
+  let dragging = false;
+  let startX = 0;
+  let startW = 0;
+
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragging = true;
+    startX = e.clientX;
+    startW = panel.offsetWidth;
+    handle.classList.add('active');
+    handle.setPointerCapture(e.pointerId);
+  });
+
+  handle.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    // Dragging left edge: moving left = wider, moving right = narrower
+    const dx = startX - e.clientX;
+    const newW = Math.max(MIN_W, Math.min(MAX_W, startW + dx));
+    panel.style.setProperty('--notes-width', newW + 'px');
+  });
+
+  const endDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('active');
+    // Persist width
+    const w = panel.offsetWidth;
+    localStorage.setItem('fd-notes-width', String(w));
+  };
+  handle.addEventListener('pointerup', endDrag);
+  handle.addEventListener('pointercancel', endDrag);
+
+  // Double-click to reset to default width
+  handle.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    panel.style.setProperty('--notes-width', DEFAULT_W + 'px');
+    localStorage.setItem('fd-notes-width', String(DEFAULT_W));
+  });
+}
+
 // ─── Split Resize (code ↔ canvas) ────────────────────────────────────────
 
 /** Set up drag-to-resize for the code/canvas split. */
@@ -2801,9 +2867,50 @@ function renderNotesPanel() {
 function toggleNotesPanel() {
   const panel = document.getElementById('notes-panel');
   if (!panel) return;
-  notesPanelOpen = !notesPanelOpen;
+  const willOpen = panel.classList.contains('hidden');
+  if (willOpen) {
+    // Exclusive right-side: close AI Chat panel when opening Notes
+    const chatPanel = document.getElementById('ai-chat-panel');
+    if (chatPanel && !chatPanel.classList.contains('hidden')) {
+      chatPanel.classList.add('hidden');
+    }
+  }
+  notesPanelOpen = willOpen;
+  window._notesPanelOpen = notesPanelOpen;
   panel.classList.toggle('hidden', !notesPanelOpen);
   if (notesPanelOpen) renderNotesPanel();
+}
+
+/** Toggle Layers panel collapsed/expanded. */
+function toggleLayersPanel() {
+  const wrapper = document.getElementById('canvas-wrapper');
+  const layersPanel = document.getElementById('layers-panel');
+  const layersHandle = document.getElementById('layers-resize');
+  const toggleBtn = document.getElementById('layers-toggle-btn');
+  if (!layersPanel || !wrapper) return;
+
+  const isCollapsed = layersPanel.classList.toggle('collapsed');
+  if (isCollapsed) {
+    wrapper.style.setProperty('--layers-width', '0px');
+    localStorage.setItem('fd-layers-collapsed', '1');
+  } else {
+    const savedW = parseInt(localStorage.getItem('fd-layers-width'), 10);
+    const restoreW = (savedW >= 120 && savedW <= 360) ? savedW : 180;
+    wrapper.style.setProperty('--layers-width', restoreW + 'px');
+    localStorage.removeItem('fd-layers-collapsed');
+  }
+  toggleBtn?.classList.toggle('layers-hidden', isCollapsed);
+  if (layersHandle) layersHandle.style.display = isCollapsed ? 'none' : '';
+  // Reposition the layers resize handle after toggle
+  if (layersHandle && !isCollapsed) {
+    requestAnimationFrame(() => {
+      layersHandle.style.left = layersPanel.offsetWidth + 'px';
+    });
+  }
+  requestAnimationFrame(() => {
+    window.dispatchEvent(new Event('resize'));
+    renderCanvas();
+  });
 }
 
 /** ─── AI Touch — Unified Two-Phase Pipeline ──────────────────────────── *
@@ -4612,6 +4719,13 @@ async function initPlayground() {
 
     mobileLayersToggle?.addEventListener('click', toggleMobileLayersDrawer);
     mobileLayersBackdrop?.addEventListener('click', closeMobileLayersDrawer);
+
+    // ── Desktop Layers Toggle ────────────────────────────────────────
+    const layersToggleBtn = document.getElementById('layers-toggle-btn');
+    layersToggleBtn?.addEventListener('click', toggleLayersPanel);
+
+    // ── Notes Panel Resize ───────────────────────────────────────────
+    setupNotesResize();
 
     // ── Mobile Code Editor Toggle (#4) ───────────────────────────────
     const mobileCodeToggle = document.getElementById('mobile-code-toggle');
