@@ -91,6 +91,7 @@ async function main() {
     setupSettingsMenu();
     setupFloatingToolbar();
     setupEdgeContextMenu();
+    setupAiChat();
 
     // Ensure no stale menus are visible after init
     closeContextMenu();

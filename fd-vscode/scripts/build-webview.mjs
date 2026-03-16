@@ -35,6 +35,7 @@ const MODULE_ORDER = [
   'navigation.js',
   'clipboard.js',
   'drag-drop.js',
+  'ai-chat.js',
   'main.js',
 ];
 

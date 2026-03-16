@@ -64,6 +64,18 @@ function updatePropertiesPanel() {
   const props = JSON.parse(json);
   const panel = document.getElementById("props-panel");
 
+  // Dispatch selection change event for AI chat panel
+  const selIds = [];
+  try {
+    const ids = JSON.parse(fdCanvas.get_selected_ids());
+    selIds.push(...ids);
+  } catch (_) {}
+  const selKey = selIds.join(',');
+  if (selKey !== updatePropertiesPanel._lastSelKey) {
+    updatePropertiesPanel._lastSelKey = selKey;
+    document.dispatchEvent(new CustomEvent('fd-selection-changed', { detail: { ids: selIds } }));
+  }
+
   if (!props.id) {
     panel.classList.remove("visible");
     return;
