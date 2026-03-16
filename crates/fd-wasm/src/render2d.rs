@@ -9,6 +9,10 @@ use fd_core::{NodeIndex, ResolvedBounds, SceneGraph};
 use std::collections::HashMap;
 use web_sys::CanvasRenderingContext2d;
 
+const DEFAULT_ANIM_DURATION_MS: f64 = 300.0;
+const DEFAULT_CORNER_RADIUS: f64 = 0.0;
+const DEFAULT_MEASURE_WIDTH: f64 = 0.0;
+
 /// Theme-dependent colors for the canvas renderer.
 ///
 /// Derived from `ThemeContract` — the cross-platform source of truth.
@@ -215,7 +219,7 @@ fn render_node(
             .iter()
             .find(|a| a.trigger == fd_core::model::AnimTrigger::Hover)
             .map(|a| a.duration_ms as f64)
-            .unwrap_or(300.0);
+            .unwrap_or(DEFAULT_ANIM_DURATION_MS);
         let elapsed = time_ms - hover_start_ms;
         // Proportional envelope: ease-in = duration, hold = 60%, ease-out = 50%
         let ease_in_ms = anim_duration;
@@ -345,7 +349,7 @@ fn render_node(
                     y - 1.0,
                     w + 2.0,
                     h + 2.0,
-                    style.corner_radius.unwrap_or(0.0) as f64,
+                    style.corner_radius.unwrap_or(DEFAULT_CORNER_RADIUS as f32) as f64,
                 );
                 ctx.stroke();
 
@@ -406,7 +410,7 @@ fn draw_rect(
     is_selected: bool,
 ) {
     let (x, y, w, h) = (b.x as f64, b.y as f64, b.width as f64, b.height as f64);
-    let radius = style.corner_radius.unwrap_or(0.0) as f64;
+    let radius = style.corner_radius.unwrap_or(DEFAULT_CORNER_RADIUS as f32) as f64;
 
     ctx.save();
     apply_opacity(ctx, style);
@@ -549,7 +553,10 @@ fn draw_text(
                 } else {
                     format!("{current_line} {word}")
                 };
-                let measured = ctx.measure_text(&test).map(|m| m.width()).unwrap_or(0.0);
+                let measured = ctx
+                    .measure_text(&test)
+                    .map(|m| m.width())
+                    .unwrap_or(DEFAULT_MEASURE_WIDTH);
                 if !current_line.is_empty() && measured > ww {
                     result.push(current_line);
                     current_line = word.to_string();

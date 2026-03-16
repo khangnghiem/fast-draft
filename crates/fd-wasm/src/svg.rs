@@ -4,6 +4,10 @@ use fd_core::model::ResolvedBounds;
 use fd_core::model::{NodeKind, SceneGraph};
 use std::collections::HashMap;
 
+const DEFAULT_OPACITY: f32 = 1.0;
+const DEFAULT_CORNER_RADIUS: f32 = 0.0;
+const DEFAULT_FONT_SIZE: f32 = 16.0;
+
 fn paint_to_svg_color(p: &fd_core::model::Paint) -> String {
     match p {
         fd_core::model::Paint::Solid(c) => {
@@ -161,7 +165,7 @@ fn render_node_svg(
     };
 
     let style = graph.resolve_style(node, &[]);
-    let opacity = style.opacity.unwrap_or(1.0);
+    let opacity = style.opacity.unwrap_or(DEFAULT_OPACITY);
     let fill = style
         .fill
         .as_ref()
@@ -188,7 +192,7 @@ fn render_node_svg(
 
     match &node.kind {
         NodeKind::Rect { .. } | NodeKind::Frame { .. } => {
-            let r = style.corner_radius.unwrap_or(0.0);
+            let r = style.corner_radius.unwrap_or(DEFAULT_CORNER_RADIUS);
             out.push_str(&format!(
                 "  <rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"{}\" ry=\"{}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{}\" />\n",
                 b.x, b.y, b.width, b.height, r, r, fill, stroke, stroke_width
@@ -205,7 +209,11 @@ fn render_node_svg(
             ));
         }
         NodeKind::Text { content, .. } => {
-            let font_size = style.font.as_ref().map(|f| f.size).unwrap_or(16.0);
+            let font_size = style
+                .font
+                .as_ref()
+                .map(|f| f.size)
+                .unwrap_or(DEFAULT_FONT_SIZE);
             let text_fill = style
                 .fill
                 .as_ref()

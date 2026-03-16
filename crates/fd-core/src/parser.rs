@@ -13,6 +13,18 @@ use winnow::error::ContextError;
 use winnow::prelude::*;
 use winnow::token::{take_till, take_while};
 
+const DEFAULT_FRAME_WIDTH: f32 = 200.0;
+const DEFAULT_FRAME_HEIGHT: f32 = 200.0;
+const DEFAULT_RECT_WIDTH: f32 = 100.0;
+const DEFAULT_RECT_HEIGHT: f32 = 100.0;
+const DEFAULT_ELLIPSE_RX: f32 = 50.0;
+const DEFAULT_ELLIPSE_RY: f32 = 50.0;
+const DEFAULT_IMAGE_WIDTH: f32 = 100.0;
+const DEFAULT_IMAGE_HEIGHT: f32 = 100.0;
+const DEFAULT_STROKE_WIDTH: f32 = 1.0;
+const DEFAULT_ANIM_DURATION_MS: f32 = 800.0;
+const DEFAULT_FILL_PARENT_PAD: f32 = 0.0;
+
 /// Parse an FD document string into a `SceneGraph`.
 #[must_use = "parsing result should be used"]
 pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
@@ -623,18 +635,18 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let kind = match kind_str {
         "group" => NodeKind::Group, // Group is purely organizational — layout ignored
         "frame" => NodeKind::Frame {
-            width: width.unwrap_or(200.0),
-            height: height.unwrap_or(200.0),
+            width: width.unwrap_or(DEFAULT_FRAME_WIDTH),
+            height: height.unwrap_or(DEFAULT_FRAME_HEIGHT),
             clip,
             layout,
         },
         "rect" => NodeKind::Rect {
-            width: width.unwrap_or(100.0),
-            height: height.unwrap_or(100.0),
+            width: width.unwrap_or(DEFAULT_RECT_WIDTH),
+            height: height.unwrap_or(DEFAULT_RECT_HEIGHT),
         },
         "ellipse" => NodeKind::Ellipse {
-            rx: width.unwrap_or(50.0),
-            ry: height.unwrap_or(50.0),
+            rx: width.unwrap_or(DEFAULT_ELLIPSE_RX),
+            ry: height.unwrap_or(DEFAULT_ELLIPSE_RY),
         },
         "text" => NodeKind::Text {
             content: inline_text.unwrap_or_default(),
@@ -645,8 +657,8 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
         },
         "image" => NodeKind::Image {
             source: ImageSource::File(image_src.unwrap_or_default()),
-            width: width.unwrap_or(100.0),
-            height: height.unwrap_or(100.0),
+            width: width.unwrap_or(DEFAULT_IMAGE_WIDTH),
+            height: height.unwrap_or(DEFAULT_IMAGE_HEIGHT),
             fit: image_fit,
         },
         "generic" => NodeKind::Generic,
@@ -1313,7 +1325,9 @@ fn parse_edge_defaults_block(input: &mut &str) -> ModalResult<EdgeDefaults> {
             "stroke" => {
                 let color = parse_hex_color.parse_next(input)?;
                 skip_space(input);
-                let w = parse_number.parse_next(input).unwrap_or(1.0);
+                let w = parse_number
+                    .parse_next(input)
+                    .unwrap_or(DEFAULT_STROKE_WIDTH);
                 defaults.props.stroke = Some(Stroke {
                     paint: Paint::Solid(color),
                     width: w,
@@ -1432,7 +1446,9 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
                 "stroke" => {
                     let color = parse_hex_color.parse_next(input)?;
                     skip_space(input);
-                    let w = parse_number.parse_next(input).unwrap_or(1.0);
+                    let w = parse_number
+                        .parse_next(input)
+                        .unwrap_or(DEFAULT_STROKE_WIDTH);
                     style.stroke = Some(Stroke {
                         paint: Paint::Solid(color),
                         width: w,
@@ -1472,7 +1488,9 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
                         _ => FlowKind::Pulse,
                     };
                     skip_space(input);
-                    let dur = parse_number.parse_next(input).unwrap_or(800.0) as u32;
+                    let dur = parse_number
+                        .parse_next(input)
+                        .unwrap_or(DEFAULT_ANIM_DURATION_MS) as u32;
                     if input.starts_with("ms") {
                         *input = &input[2..];
                     }
@@ -1556,7 +1574,9 @@ fn parse_constraint_line(input: &mut &str) -> ModalResult<(NodeId, Constraint)> 
             Constraint::Offset { from, dx, dy }
         }
         "fill_parent" => {
-            let pad = opt(parse_number).parse_next(input)?.unwrap_or(0.0);
+            let pad = opt(parse_number)
+                .parse_next(input)?
+                .unwrap_or(DEFAULT_FILL_PARENT_PAD);
             Constraint::FillParent { pad }
         }
         "absolute" | "position" => {
