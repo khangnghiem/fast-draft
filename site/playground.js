@@ -479,7 +479,7 @@ function toggleFullscreen() {
   document.body.classList.toggle('fullscreen-mode', fullscreenMode);
   const btn = document.getElementById('fullscreen-toggle-btn');
   if (btn) {
-    btn.textContent = fullscreenMode ? '✕' : '⛶';
+    btn.textContent = fullscreenMode ? '✕ Exit' : '⛶ Full Screen';
     btn.title = fullscreenMode ? 'Exit Full Screen (Esc)' : 'Full Screen (⇧F)';
     btn.classList.toggle('fs-active', fullscreenMode);
   }
