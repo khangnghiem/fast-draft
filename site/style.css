@@ -1735,6 +1735,7 @@ code {
 #fd-canvas.tool-arrow { cursor: crosshair; }
 #fd-canvas.tool-frame { cursor: crosshair; }
 #fd-canvas.modifier-cmd { cursor: grab !important; }
+#fd-canvas.modifier-cmd-select { cursor: default !important; }
 #fd-canvas.modifier-alt { cursor: copy !important; }
 
 /* ─── Minimap (Google Maps pill) ─── */

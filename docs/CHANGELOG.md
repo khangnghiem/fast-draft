@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.167 — Fix ⌘ Key Shows Duplicate Icon on Hand Tool (R3.70)
+- **FIX (R3.70)**: Holding ⌘ on Hand tool now shows default/pointer cursor (select preview) instead of copy/duplicate cursor — root cause: `playground.js` added `modifier-alt` CSS class (which maps to `cursor: copy`) when Cmd was pressed on Hand tool; should have used a select-preview cursor since ⌘+Hand = temp Select, not duplicate; fix: new `modifier-cmd-select` CSS class with `cursor: default` used instead; all class removal calls updated to include the new class
+- **SITE**: Changes in `site/playground.js` (4 locations), `site/style.css` (new `#fd-canvas.modifier-cmd-select` rule)
+
 ### v0.11.166 — Fix ⌘+Drag Reparent (R3.64)
 - **FIX (R3.64)**: ⌘+drag reparent now works correctly — root cause: `hit_test_at()` returned the dragged node itself (topmost at pointer position), so the `hitId !== selectedId` check always failed; new `hit_test_at_excluding(x, y, excludeId)` WASM API performs hit testing while skipping the dragged node and its descendants, revealing the container underneath
 - **CORE**: New `hit_test_excluding()` function in `fd-render/src/hit.rs` — recursive traversal that skips all nodes in an excluded `HashSet<NodeIndex>`; new `hit_test_at_excluding()` WASM API in `fd-wasm/src/props.rs` collects dragged node + all descendants into exclusion set
