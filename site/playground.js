@@ -4449,7 +4449,7 @@ async function initPlayground() {
       // Hand tool: check modifier keys before defaulting to pan
       // Apple Pencil always falls through to Select (WASM) regardless of modifiers
       if (fdCanvas.get_tool_name() === 'hand' && e.pointerType !== 'pen') {
-        canvas.classList.remove('modifier-cmd', 'modifier-alt');
+        canvas.classList.remove('modifier-cmd', 'modifier-alt', 'modifier-cmd-select');
         const isAltHand = e.altKey;
         const isCmdHand = e.metaKey && !e.ctrlKey;
 
@@ -4966,15 +4966,15 @@ async function initPlayground() {
       // Hand+Cmd → default/pointer (select preview), other+Cmd → grab (pan preview)
       // Alt → copy cursor on all tools
       if (e.key === 'Meta') {
-        canvas.classList.remove('modifier-cmd', 'modifier-alt');
+        canvas.classList.remove('modifier-cmd', 'modifier-alt', 'modifier-cmd-select');
         if (fdCanvas && fdCanvas.get_tool_name() === 'hand') {
-          canvas.classList.add('modifier-alt'); // pointer/default cursor for select preview
+          canvas.classList.add('modifier-cmd-select'); // default cursor for select preview
         } else {
           canvas.classList.add('modifier-cmd'); // grab cursor for pan preview
         }
       }
       if (e.key === 'Alt') {
-        canvas.classList.remove('modifier-cmd', 'modifier-alt');
+        canvas.classList.remove('modifier-cmd', 'modifier-alt', 'modifier-cmd-select');
         canvas.classList.add('modifier-alt');
       }
 
@@ -5177,7 +5177,7 @@ async function initPlayground() {
         document.querySelector('.ft-tool-btn[data-tool="hand"]')?.classList.remove('pan-active');
       }
       // Clear modifier cursors
-      if (e.key === 'Meta') canvas.classList.remove('modifier-cmd');
+      if (e.key === 'Meta') canvas.classList.remove('modifier-cmd', 'modifier-cmd-select');
       if (e.key === 'Alt') canvas.classList.remove('modifier-alt');
     });
 
