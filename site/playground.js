@@ -482,6 +482,9 @@ function toggleCodePanel() {
   const container = document.getElementById('playground-container');
   if (!container) return;
   container.classList.toggle('code-collapsed', codeCollapsed);
+  // Sync toolbar button state
+  const codeBtn = document.getElementById('code-toggle-btn');
+  if (codeBtn) codeBtn.classList.toggle('code-hidden', codeCollapsed);
   // Resize canvas when CSS grid transition finishes (not on arbitrary timeout)
   const onEnd = (e) => {
     if (e.propertyName !== 'grid-template-columns') return;
@@ -4761,11 +4764,9 @@ async function initPlayground() {
       toggleCodePanel();
     });
 
-    // ── Expand strip (visible when code panel collapsed) ─────────────
-    const expandStrip = document.getElementById('code-expand-strip');
-    expandStrip?.addEventListener('click', () => {
-      if (codeCollapsed) toggleCodePanel();
-    });
+    // ── Code toggle toolbar button (always visible in canvas toolbar) ──
+    const codeToggleBtn = document.getElementById('code-toggle-btn');
+    codeToggleBtn?.addEventListener('click', () => toggleCodePanel());
 
     // ── Mobile Code Editor Toggle (#4) ───────────────────────────────
     const mobileCodeToggle = document.getElementById('mobile-code-toggle');
