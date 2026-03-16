@@ -40,6 +40,8 @@ let panY = 0;
 let panStartX = 0;
 let panStartY = 0;
 let panDragging = false;
+let handPanClientStartX = null;  // Track click vs drag for deselect
+let handPanClientStartY = null;
 
 /** Zoom level (1.0 = 100%, range 0.1–10) */
 let zoomLevel = 1.0;
@@ -387,6 +389,8 @@ function setupPointerEvents() {
       panDragging = true;
       panStartX = e.clientX - panX;
       panStartY = e.clientY - panY;
+      handPanClientStartX = e.clientX;
+      handPanClientStartY = e.clientY;
       canvas.style.cursor = "grabbing";
       canvasPointerId = e.pointerId;
       e.preventDefault();
@@ -618,8 +622,8 @@ function setupPointerEvents() {
               const sy = b.y * zoomLevel + panY;
               const sw = b.w * zoomLevel;
               const sh = b.h * zoomLevel;
-              overlay.style.left = sx + 'px';
-              overlay.style.top = sy + 'px';
+              overlay.style.left = (canvas.offsetLeft + sx) + 'px';
+              overlay.style.top = (canvas.offsetTop + sy) + 'px';
               overlay.style.width = sw + 'px';
               overlay.style.height = sh + 'px';
               overlay.dataset.target = hitId;
@@ -648,7 +652,17 @@ function setupPointerEvents() {
     // End pan drag
     if (panDragging) {
       panDragging = false;
+      handPanClientStartX = null;
+      handPanClientStartY = null;
       canvas.style.cursor = (isPanning || fdCanvas.get_tool_name() === 'hand') ? "grab" : "";
+      // Re-apply modifier cursors if modifier keys still held after pan
+      if (fdCanvas.get_tool_name() === 'hand') {
+        if (e.metaKey && !e.altKey) {
+          canvas.classList.add('modifier-cmd-select');
+        } else if (e.altKey && !e.metaKey) {
+          canvas.classList.add('modifier-alt');
+        }
+      }
       return;
     }
 
@@ -838,6 +852,15 @@ function setupPointerEvents() {
     cmdTempSelectOriginalTool = null;
     altCloneActive = false;
     altDragGhosts = [];
+
+    // Re-apply modifier cursors if modifier keys still held after pointer-up
+    if (fdCanvas.get_tool_name() === 'hand') {
+      if (e.metaKey && !e.altKey) {
+        canvas.classList.add('modifier-cmd-select');
+      } else if (e.altKey && !e.metaKey) {
+        canvas.classList.add('modifier-alt');
+      }
+    }
 
     // ── Restore tool after Ctrl temp Eraser ──
     if (tempEraserMode && tempEraserPrevTool && fdCanvas) {
@@ -1285,7 +1308,7 @@ function setupTouchGestures() {
       }
     }
 
-    // ── 4-finger tap detection (zen mode toggle) ──
+    // ── 4-finger tap detection (fullscreen toggle) ──
     if (prevCount === 4 && activeTouches.size === 0 && !fourFingerHandled) {
       const elapsed = performance.now() - fourFingerTouchStart;
       if (elapsed < 250) {
@@ -1297,10 +1320,10 @@ function setupTouchGestures() {
         }, 0);
 
         if (maxMove < 20) {
-          // Toggle zen mode
-          const isZen = document.body.classList.contains("zen-mode");
-          applyZenMode(!isZen);
-          vscode.setState({ ...(vscode.getState() || {}), zenMode: !isZen });
+          // Toggle fullscreen mode
+          const isFull = document.body.classList.contains("fullscreen-mode");
+          applyFullscreenMode(!isFull);
+          vscode.setState({ ...(vscode.getState() || {}), fullscreenMode: !isFull });
         }
       }
     }
@@ -1527,9 +1550,19 @@ function syncSelection(id, source) {
   // 3. Layers: highlight + scroll into view
   refreshLayersPanel();
 
-  // 4. Code: notify extension to highlight line (skip if source is code)
+  // 4. Code: notify extension to highlight block(s) (skip if source is code)
   if (source !== "code") {
-    vscode.postMessage({ type: "nodeSelected", id: id || "" });
+    // Send all selected IDs for multi-select code highlighting
+    try {
+      const allIds = JSON.parse(fdCanvas.get_selected_ids());
+      if (allIds.length > 0) {
+        vscode.postMessage({ type: "nodesSelected", ids: allIds });
+      } else {
+        vscode.postMessage({ type: "nodeSelected", id: id || "" });
+      }
+    } catch (_) {
+      vscode.postMessage({ type: "nodeSelected", id: id || "" });
+    }
   }
 
   // 5. Canvas focus: debounced pan/zoom (only for Code→Canvas)
@@ -1672,15 +1705,31 @@ document.addEventListener("keydown", (e) => {
     }
   }
 
-  // Close annotation card / context menu on Escape (before WASM)
+  // Layered Escape dismissal — one layer per press (Figma-style)
   if (e.key === "Escape") {
-    closeAnnotationCard();
-    closeContextMenu();
-    closeShortcutHelp();
-    // Exit fullscreen mode on Escape (before Zen mode)
-    if (document.body.classList.contains("fullscreen-mode")) {
+    const ctxVisible = document.getElementById("ctx-menu")?.classList.contains("visible")
+      || document.getElementById("ctx-menu-canvas")?.classList.contains("visible");
+    const annotVisible = !!annotationCardNodeId;
+    const helpVisible = shortcutHelpVisible;
+    const isFull = document.body.classList.contains("fullscreen-mode");
+
+    if (ctxVisible) {
+      closeContextMenu();
+    } else if (annotVisible) {
+      closeAnnotationCard();
+    } else if (helpVisible) {
+      closeShortcutHelp();
+    } else if (isFull) {
       applyFullscreenMode(false);
       vscode.setState({ ...(vscode.getState() || {}), fullscreenMode: false });
+    } else if (lockedTool) {
+      unlockTool();
+    } else if (fdCanvas && fdCanvas.get_selected_id()) {
+      // Nothing else to dismiss → deselect all
+      fdCanvas.select_by_id('');
+      bumpGeneration();
+      render();
+      syncSelection('', 'keyboard');
     }
   }
 
@@ -1796,7 +1845,7 @@ document.addEventListener("keydown", (e) => {
       e.preventDefault();
       const layersPanel = document.getElementById("layers-panel");
       if (layersPanel) {
-        layersPanel.classList.toggle("zen-visible");
+        layersPanel.classList.toggle("fs-visible");
       }
       return;
     }
@@ -1815,8 +1864,8 @@ document.addEventListener("keydown", (e) => {
     }
   }
 
-  // ── V key or Escape: unlock tool if locked ──
-  if ((e.key === "v" || e.key === "V" || e.key === "Escape") && !e.metaKey && !e.ctrlKey) {
+  // ── V key: unlock tool if locked ──
+  if ((e.key === "v" || e.key === "V") && !e.metaKey && !e.ctrlKey) {
     if (lockedTool) {
       e.preventDefault();
       unlockTool();
@@ -6969,40 +7018,6 @@ function setupSketchyToggle() {
   });
 }
 
-// ─── Zen Mode Toggle ──────────────────────────────────────────────────────────
-
-function setupZenModeToggle() {
-  const btn = document.getElementById("zen-toggle-btn");
-  if (!btn) return;
-
-  // Restore persisted state
-  const savedState = vscode.getState();
-  if (savedState && savedState.zenMode) {
-    applyZenMode(true);
-  }
-
-  btn.addEventListener("click", () => {
-    const isZen = document.body.classList.contains("zen-mode");
-    applyZenMode(!isZen);
-    vscode.setState({ ...(vscode.getState() || {}), zenMode: !isZen });
-  });
-}
-
-function applyZenMode(isZen) {
-  const btn = document.getElementById("zen-toggle-btn");
-  if (isZen) {
-    document.body.classList.add("zen-mode");
-    if (btn) { btn.textContent = '🧘'; btn.title = 'Exit Zen mode'; btn.classList.add('zen-active'); }
-  } else {
-    document.body.classList.remove("zen-mode");
-    if (btn) { btn.textContent = '🧘'; btn.title = 'Switch to Zen mode'; btn.classList.remove('zen-active'); }
-    // Clear any zen-visible overrides when leaving zen mode
-    document.getElementById("layers-panel")?.classList.remove("zen-visible");
-    document.getElementById("props-panel")?.classList.remove("zen-visible");
-  }
-}
-
-
 // ─── Full Screen Mode Toggle ──────────────────────────────────────────────────
 
 function setupFullscreenToggle() {
@@ -7030,6 +7045,9 @@ function applyFullscreenMode(isFull) {
   } else {
     document.body.classList.remove("fullscreen-mode");
     if (btn) { btn.textContent = '⛶'; btn.title = 'Full Screen (⇧F)'; btn.classList.remove('fs-active'); }
+    // Clear any fs-visible overrides when leaving fullscreen
+    document.getElementById("layers-panel")?.classList.remove("fs-visible");
+    document.getElementById("props-panel")?.classList.remove("fs-visible");
   }
 }
 
@@ -8031,7 +8049,6 @@ async function main() {
     setupApplePencilPro();
     setupThemeToggle();
     setupSketchyToggle();
-    setupZenModeToggle();
     setupFullscreenToggle();
     setupZoomIndicator();
     setupGridToggle();

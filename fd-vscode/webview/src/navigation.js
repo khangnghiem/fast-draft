@@ -1538,40 +1538,6 @@ function setupSketchyToggle() {
   });
 }
 
-// ─── Zen Mode Toggle ──────────────────────────────────────────────────────────
-
-function setupZenModeToggle() {
-  const btn = document.getElementById("zen-toggle-btn");
-  if (!btn) return;
-
-  // Restore persisted state
-  const savedState = vscode.getState();
-  if (savedState && savedState.zenMode) {
-    applyZenMode(true);
-  }
-
-  btn.addEventListener("click", () => {
-    const isZen = document.body.classList.contains("zen-mode");
-    applyZenMode(!isZen);
-    vscode.setState({ ...(vscode.getState() || {}), zenMode: !isZen });
-  });
-}
-
-function applyZenMode(isZen) {
-  const btn = document.getElementById("zen-toggle-btn");
-  if (isZen) {
-    document.body.classList.add("zen-mode");
-    if (btn) { btn.textContent = '🧘'; btn.title = 'Exit Zen mode'; btn.classList.add('zen-active'); }
-  } else {
-    document.body.classList.remove("zen-mode");
-    if (btn) { btn.textContent = '🧘'; btn.title = 'Switch to Zen mode'; btn.classList.remove('zen-active'); }
-    // Clear any zen-visible overrides when leaving zen mode
-    document.getElementById("layers-panel")?.classList.remove("zen-visible");
-    document.getElementById("props-panel")?.classList.remove("zen-visible");
-  }
-}
-
-
 // ─── Full Screen Mode Toggle ──────────────────────────────────────────────────
 
 function setupFullscreenToggle() {
@@ -1599,6 +1565,9 @@ function applyFullscreenMode(isFull) {
   } else {
     document.body.classList.remove("fullscreen-mode");
     if (btn) { btn.textContent = '⛶'; btn.title = 'Full Screen (⇧F)'; btn.classList.remove('fs-active'); }
+    // Clear any fs-visible overrides when leaving fullscreen
+    document.getElementById("layers-panel")?.classList.remove("fs-visible");
+    document.getElementById("props-panel")?.classList.remove("fs-visible");
   }
 }
 

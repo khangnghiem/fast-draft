@@ -103,7 +103,7 @@ Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** 
 
 | Gesture                   | Action                      | Notes                              |
 | ------------------------- | --------------------------- | ---------------------------------- |
-| 4-finger tap              | Toggle Zen mode             | <250ms, <20px movement             |
+| 4-finger tap              | Toggle Full Screen mode     | <250ms, <20px movement             |
 | 4-finger swipe up         | Zoom to fit                 | >50px vertical swipe               |
 | 4-finger swipe down       | Zoom to selection            | Falls back to 100% if no selection |
 | 4-finger swipe left/right | Cycle tool (prev/next)      | Follows toolbar order              |
@@ -183,18 +183,6 @@ On pointer-up, the tool treats this as a click-to-place (default size) rather th
 
 ---
 
-## Zen Mode
-
-| Action                         | Effect                                  |
-| ------------------------------ | --------------------------------------- |
-| Click 🧘/🔧 toggle (top-right) | Switch between Zen ↔ Full mode          |
-| `L`                            | Toggle Layers panel (works in Zen mode) |
-
-Zen mode hides: Layers, Properties, Minimap, AI Touch, Grid, Export, Theme, Zoom, Help, Status.
-Zen mode keeps: 6 core tools (Select, Rect, Ellipse, Pen, Arrow, Text), Sketchy toggle.
-
----
-
 ## Full Screen Mode
 
 | Action                        | Effect                                |
@@ -202,10 +190,10 @@ Zen mode keeps: 6 core tools (Select, Rect, Ellipse, Pen, Arrow, Text), Sketchy 
 | Click ⛶/✕ toggle (toolbar)    | Toggle Full Screen mode               |
 | `⇧F` (Shift+F)               | Toggle Full Screen mode               |
 | `Escape`                      | Exit Full Screen mode                 |
+| `L`                           | Toggle Layers panel (works in Full Screen) |
 
-Full Screen mode hides: Navigation, hero, footer, page chrome. Expands playground to fill viewport.
-Full Screen mode keeps: Code editor, canvas, toolbar, all tools.
-Full Screen is independent of Zen mode — both can be active simultaneously.
+Full Screen mode hides: Navigation, hero, footer, page chrome, code editor, toolbar, layers, properties, minimap.
+Full Screen mode keeps: Canvas, floating toolbar (tools), floating action bar.
 
 ---
 

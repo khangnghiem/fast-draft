@@ -219,7 +219,7 @@ let panDragging = false;
 let zoomLevel = 1.0;
 let gridEnabled = false;
 const GRID_SPACING = 20;
-let zenMode = false;
+
 
 // Reduce Motion — respect OS setting + manual toggle
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -484,9 +484,9 @@ function toggleCodePanel() {
   const container = document.getElementById('playground-container');
   if (!container) return;
   container.classList.toggle('code-collapsed', codeCollapsed);
-  // Sync toolbar button state
-  const codeBtn = document.getElementById('code-toggle-btn');
-  if (codeBtn) codeBtn.classList.toggle('code-hidden', codeCollapsed);
+  // Sync segmented control state
+  const segCode = document.getElementById('seg-code');
+  if (segCode) segCode.classList.toggle('active', !codeCollapsed);
   // Resize canvas when CSS grid transition finishes (not on arbitrary timeout)
   const onEnd = (e) => {
     if (e.propertyName !== 'grid-template-columns') return;
@@ -502,13 +502,13 @@ function collapseCodePanel() {
   toggleCodePanel();
 }
 
-/** Toggle full-screen mode (expands playground to fill entire viewport) */
+/** Toggle full-screen mode (expands to viewport + hides canvas chrome) */
 function toggleFullscreen() {
   fullscreenMode = !fullscreenMode;
   document.body.classList.toggle('fullscreen-mode', fullscreenMode);
   const btn = document.getElementById('fullscreen-toggle-btn');
   if (btn) {
-    btn.textContent = fullscreenMode ? '✕ Exit' : '⛶ Full Screen';
+    btn.textContent = fullscreenMode ? '✕ Exit' : '⛶';
     btn.title = fullscreenMode ? 'Exit Full Screen (Esc)' : 'Full Screen (⇧F)';
     btn.classList.toggle('fs-active', fullscreenMode);
   }
@@ -1701,12 +1701,6 @@ function setupContextMenu() {
         closeContextMenu();
       } else if (fullscreenMode) {
         toggleFullscreen();
-      } else if (zenMode) {
-        zenMode = false;
-        document.querySelector('.hero-playground')?.classList.remove('zen-mode');
-        const zb = document.getElementById('zen-toggle-btn');
-        if (zb) { zb.textContent = '🧘'; zb.title = 'Zen Mode (Esc)'; }
-        setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
       } else if (fdCanvas && fdCanvas.get_selected_id()) {
         // Nothing else to dismiss → deselect all
         fdCanvas.select_by_id('');
@@ -4279,15 +4273,8 @@ function setupTouchGestures(canvas, fdCanvasRef, markRenderDirty, markUiDirty) {
         }, 0);
 
         if (maxMove < 20) {
-          // Toggle zen mode
-          zenMode = !zenMode;
-          document.querySelector('.hero-playground')?.classList.toggle('zen-mode', zenMode);
-          const zenBtn = document.getElementById('zen-toggle-btn');
-          if (zenBtn) {
-            zenBtn.textContent = zenMode ? '✕ Exit Zen' : '🧘';
-            zenBtn.title = zenMode ? 'Exit Zen Mode (Esc)' : 'Zen Mode (Esc)';
-          }
-          setTimeout(() => { markRenderDirty(); markUiDirty(); }, 50);
+          // Toggle fullscreen mode
+          toggleFullscreen();
         }
       }
     }
@@ -4619,17 +4606,7 @@ async function initPlayground() {
     setupContextMenu();
     setupInlineEditor(canvas);
 
-    // Zen toggle button (inside canvas — stays visible in zen mode)
-    const zenBtn = document.getElementById('zen-toggle-btn');
-    zenBtn?.addEventListener('click', () => {
-      zenMode = !zenMode;
-      document.querySelector('.hero-playground')?.classList.toggle('zen-mode', zenMode);
-      zenBtn.textContent = zenMode ? '✕ Exit Zen' : '🧘';
-      zenBtn.title = zenMode ? 'Exit Zen Mode (Esc)' : 'Zen Mode (Esc)';
-      setTimeout(() => { resizeCanvas(); renderCanvas(); }, 50);
-    });
-
-    // Full Screen toggle
+    // Full Screen toggle button (inside canvas)
     document.getElementById('fullscreen-toggle-btn')?.addEventListener('click', toggleFullscreen);
 
     // Share button — copy ?code= deep link to clipboard
@@ -4772,9 +4749,9 @@ async function initPlayground() {
       toggleCodePanel();
     });
 
-    // ── Code toggle toolbar button (always visible in canvas toolbar) ──
-    const codeToggleBtn = document.getElementById('code-toggle-btn');
-    codeToggleBtn?.addEventListener('click', () => toggleCodePanel());
+    // ── Segmented Code/Design pill: Code segment toggles code panel ──
+    const segCodeBtn = document.getElementById('seg-code');
+    segCodeBtn?.addEventListener('click', () => toggleCodePanel());
 
     // ── Mobile Code Editor Toggle (#4) ───────────────────────────────
     const mobileCodeToggle = document.getElementById('mobile-code-toggle');

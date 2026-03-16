@@ -959,7 +959,7 @@ function setupTouchGestures() {
       }
     }
 
-    // ── 4-finger tap detection (zen mode toggle) ──
+    // ── 4-finger tap detection (fullscreen toggle) ──
     if (prevCount === 4 && activeTouches.size === 0 && !fourFingerHandled) {
       const elapsed = performance.now() - fourFingerTouchStart;
       if (elapsed < 250) {
@@ -971,10 +971,10 @@ function setupTouchGestures() {
         }, 0);
 
         if (maxMove < 20) {
-          // Toggle zen mode
-          const isZen = document.body.classList.contains("zen-mode");
-          applyZenMode(!isZen);
-          vscode.setState({ ...(vscode.getState() || {}), zenMode: !isZen });
+          // Toggle fullscreen mode
+          const isFull = document.body.classList.contains("fullscreen-mode");
+          applyFullscreenMode(!isFull);
+          vscode.setState({ ...(vscode.getState() || {}), fullscreenMode: !isFull });
         }
       }
     }
