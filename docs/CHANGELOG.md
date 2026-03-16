@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.179 — Text Node Edge Case Fixes (R3.48, R2.1)
+- **FIX (R3.48)**: `RemoveNode` now cascade-deletes all descendants — previously `petgraph::remove_node` disconnected children but left them as unreachable islands with stale `id_index` entries; deleting a rect with a text child (e.g. a button label) no longer orphans the text node
+- **FIX (R2.1)**: `clone_node_recursive` now deep-copies children of `Rect` and `Ellipse` (was `Group`/`Frame` only) — `⌘D` on a button-with-label no longer drops the text child
+- **FIX (R2.1)**: Parser enforces text/path as leaf-only — nested node definitions inside `text` or `path` blocks are silently consumed and discarded; prevents invalid text-in-text graph structures from `.fd` source
+- **TESTING**: 3 new tests — `sync_delete_rect_with_text_child`, `sync_delete_group_with_nested_children`, `parse_text_ignores_nested_nodes`
+- **CORE**: Changes in `sync.rs` (cascade-delete), `selection.rs` (clone container match), `parser.rs` (text/path child guard)
+
 ### v0.11.178 — Fix Extension Toolbar Layout (R6.6)
 - **FIX (R6.6)**: Export, Fullscreen, and Settings buttons in VS Code extension toolbar now align to the far right — added `.tb-spacer` flex element between left zone (AI Touch, Renamify) and right zone (Notes, Status, Fullscreen, Settings); matches the web playground's spacer pattern
 - **EXTENSION**: Changes in `fd-vscode/src/webview-html.ts` (CSS rule + HTML spacer element)

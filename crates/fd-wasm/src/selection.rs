@@ -342,7 +342,10 @@ impl FdCanvas {
             .cloned();
         let is_container = matches!(
             orig_kind.as_ref(),
-            Some(NodeKind::Group) | Some(NodeKind::Frame { .. })
+            Some(NodeKind::Group)
+                | Some(NodeKind::Frame { .. })
+                | Some(NodeKind::Rect { .. })
+                | Some(NodeKind::Ellipse { .. })
         );
         if is_container && let Some(orig_idx) = self.engine.graph.index_of(orig_id) {
             let children = self.engine.graph.children(orig_idx);

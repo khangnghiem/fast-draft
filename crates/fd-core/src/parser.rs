@@ -585,12 +585,16 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
                 Some(existing) => format!("{existing}\n\n{content}"),
                 None => content,
             });
-        } else if starts_with_child_node(input) {
+        } else if starts_with_child_node(input) && !matches!(kind_str, "text" | "path") {
             let mut child = parse_node.parse_next(input)?;
             // Any comments collected before this child are attached to it
             // (they were consumed by the preceding skip_ws_and_comments/collect call)
             child.comments = Vec::new(); // placeholder; child attaches its own leading comments
             children.push(child);
+        } else if starts_with_child_node(input) {
+            // Text/Path nodes are leaf-only — silently consume and discard
+            // any nested node definitions to prevent parse errors.
+            let _discarded = parse_node.parse_next(input)?;
         } else if input.starts_with("when") || input.starts_with("anim") {
             animations.push(parse_anim_block.parse_next(input)?);
         } else {
