@@ -85,8 +85,9 @@
       <button class="tool-btn playground-fs-btn" id="fullscreen-toggle-btn" title="Full Screen (⇧F)">⛶ Full Screen</button>
       <div id="playground-container" class="playground-split">
         <div class="playground-editor">
-          <div class="editor-header">
+          <div class="editor-header" id="editor-header" style="cursor:pointer" title="Toggle Code panel">
             <span class="editor-dot"></span> Code
+            <span class="editor-chevron" id="editor-chevron">▾</span>
             <button id="mobile-code-close" style="display:none; margin-left:auto; border:none; background:transparent; color:#86868B; font-size:16px; cursor:pointer; padding:2px 8px;">✕</button>
           </div>
           <div id="fd-editor"></div>

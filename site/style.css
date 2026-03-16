@@ -506,6 +506,43 @@ button.playground-fs-btn:hover {
   background: var(--accent);
 }
 .editor-dot.design { background: var(--success, #34d399); }
+
+/* ── Code Panel Toggle ── */
+.editor-chevron {
+  margin-left: auto;
+  font-size: 10px;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--text-secondary);
+  user-select: none;
+}
+.editor-header:hover { background: rgba(255,255,255,0.03); }
+/* Collapsed state — hide editor body + resize handle, animate grid */
+.playground-split {
+  transition: grid-template-columns 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.code-collapsed .playground-editor #fd-editor {
+  display: none;
+}
+.code-collapsed .split-resize-handle {
+  display: none;
+}
+.code-collapsed .editor-chevron {
+  transform: rotate(-90deg);
+}
+.code-collapsed {
+  grid-template-columns: 42px 0 1fr;
+}
+.code-collapsed .editor-header {
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+  padding: 12px 8px;
+  height: auto;
+  width: 42px;
+  gap: 6px;
+  justify-content: start;
+}
+.code-collapsed .editor-header #mobile-code-close { display: none !important; }
+
 .canvas-label {
   display: inline-flex;
   align-items: center;

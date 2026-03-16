@@ -473,6 +473,24 @@ function fitToContent(canvas) {
   } catch (_) { }
 }
 
+/** Code panel collapse state */
+let codeCollapsed = false;
+
+/** Toggle code panel visibility (collapse/expand) */
+function toggleCodePanel() {
+  codeCollapsed = !codeCollapsed;
+  const container = document.getElementById('playground-container');
+  if (container) container.classList.toggle('code-collapsed', codeCollapsed);
+  // Reflow canvas after animation completes
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 280);
+}
+
+/** Collapse code panel (idempotent — no-op if already collapsed) */
+function collapseCodePanel() {
+  if (codeCollapsed) return;
+  toggleCodePanel();
+}
+
 /** Toggle full-screen mode (expands playground to fill entire viewport) */
 function toggleFullscreen() {
   fullscreenMode = !fullscreenMode;
@@ -483,6 +501,8 @@ function toggleFullscreen() {
     btn.title = fullscreenMode ? 'Exit Full Screen (Esc)' : 'Full Screen (⇧F)';
     btn.classList.toggle('fs-active', fullscreenMode);
   }
+  // Auto-collapse code panel when entering fullscreen
+  if (fullscreenMode) collapseCodePanel();
   setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
 }
 
@@ -4726,6 +4746,14 @@ async function initPlayground() {
 
     // ── Notes Panel Resize ───────────────────────────────────────────
     setupNotesResize();
+
+    // ── Desktop Code Panel Toggle (click editor header) ──────────────
+    const editorHeader = document.getElementById('editor-header');
+    editorHeader?.addEventListener('click', (e) => {
+      // Don't toggle if clicking the mobile close button
+      if (e.target.id === 'mobile-code-close') return;
+      toggleCodePanel();
+    });
 
     // ── Mobile Code Editor Toggle (#4) ───────────────────────────────
     const mobileCodeToggle = document.getElementById('mobile-code-toggle');
