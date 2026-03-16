@@ -99,6 +99,7 @@
                 <button id="mobile-code-toggle" title="Toggle Code Editor">{ } Code</button>
                 <span class="canvas-label"><span class="editor-dot design"></span> Design</span>
                 <button class="tool-btn" id="ai-touch-btn" title="AI Touch — refine + review selected (no selection = full audit)">✦ AI Touch</button>
+                <button class="tool-btn" id="ai-chat-btn" title="AI Agent — chat about your design">✦ Agent</button>
                 <button class="tool-btn" id="renamify-btn" title="Renamify — rename anonymous node IDs">✦ Renamify</button>
               </div>
               <div class="tb-zone tb-right">
@@ -283,6 +284,25 @@
               </div>
               <div class="ai-review-body" id="ai-review-body">
                 <p class="ai-review-loading" id="ai-review-loading">Analyzing design…</p>
+              </div>
+            </div>
+            <!-- AI Chat Panel (slide-in from right) -->
+            <div id="ai-chat-panel" class="ai-chat-panel hidden">
+              <div class="ai-chat-header">
+                <div class="ai-chat-title">
+                  <span class="ai-chat-icon">✦</span> AI Agent
+                </div>
+                <button class="ai-chat-close" id="ai-chat-close" title="Close">✕</button>
+              </div>
+              <div class="ai-chat-messages" id="ai-chat-messages">
+                <div class="ai-chat-welcome">
+                  <p>Ask me about your design. I can modify nodes, suggest improvements, or answer questions.</p>
+                  <p class="ai-chat-hint">Try: "Make the colors warmer" or "Add a header section"</p>
+                </div>
+              </div>
+              <div class="ai-chat-input-area">
+                <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Ask AI about your design..." rows="1" maxlength="500"></textarea>
+                <button class="ai-chat-send" id="ai-chat-send" title="Send">→</button>
               </div>
             </div>
             <div id="canvas-loading" class="canvas-loading">

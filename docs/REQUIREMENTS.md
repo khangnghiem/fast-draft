@@ -294,7 +294,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | theme               | R3.13                                                                                   |
 | view mode           | R3.14, R4.11                                                                            |
 | pressure / pencil   | R3.4, R3.10, R3.22                                                                      |
-| ai / refinement     | R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17, R4.20, R4.21, R4.22, R4.23, R4.24 |
+| ai / refinement     | R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17, R4.20, R4.21, R4.22, R4.23, R4.24, R4.25, R4.26 |
 | rate-limit          | R4.22                                                                                   |
 | edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8                                                   |
 | import              | R1.14, R1.18                                                                            |
@@ -355,3 +355,5 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | layers-panel-ux | R3.69, R3.68, R3.30 |
 | hand-tool-modifiers | R3.70, R3.54 |
 | arrow-shift-snap / shift-constraint | R3.71, R3.54, R3.66 |
+| mcp-server          | R4.25                                                                                   |
+| ai-chat / agent     | R4.26                                                                                   |

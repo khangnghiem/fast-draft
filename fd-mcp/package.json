@@ -1,0 +1,23 @@
+{
+  "name": "fd-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Fast Draft (.fd) files — exposes FD document operations as tools for AI agents",
+  "type": "module",
+  "main": "dist/server.js",
+  "bin": {
+    "fd-mcp": "dist/server.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.0"
+  },
+  "license": "MIT"
+}
