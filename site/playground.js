@@ -13,6 +13,7 @@ import { linter, lintGutter } from 'https://esm.sh/@codemirror/lint@6';
 import { defaultKeymap, history, historyKeymap } from 'https://esm.sh/@codemirror/commands@6';
 import { highlightSelectionMatches } from 'https://esm.sh/@codemirror/search@6';
 import LZString from 'https://esm.sh/lz-string@1.5.0';
+import { initAiChat } from './ai-chat.js';
 
 // ─── FD Language Definition (StreamLanguage) ─────────────────────────────
 const fdLanguage = StreamLanguage.define({
@@ -4521,6 +4522,15 @@ async function initPlayground() {
       runFullDocReview(btn, statusEl);
     });
     document.getElementById('renamify-btn')?.addEventListener('click', renamify);
+
+    // ── AI Chat panel ────────────────────────────────────────────────
+    initAiChat(
+      () => editorView ? editorView.state.doc.toString() : '',
+      (text) => {
+        if (!editorView) return;
+        editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: text } });
+      }
+    );
     document.getElementById('notes-toggle-btn')?.addEventListener('click', toggleNotesPanel);
     document.getElementById('notes-panel-close')?.addEventListener('click', toggleNotesPanel);
 

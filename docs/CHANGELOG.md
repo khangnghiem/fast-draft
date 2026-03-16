@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.169 — AI Agent Mode: MCP Server + Multi-Turn Chat (R2.15, R2.16)
+- **FEAT (R2.15)**: MCP Server for FD files — new `fd-mcp/` package exposes 7 MCP tools (`fd_read_document`, `fd_list_nodes`, `fd_create_node`, `fd_update_node`, `fd_delete_node`, `fd_rename_node`, `fd_get_score`) and 1 resource (`fd://active-document`) via stdio transport; registered in VS Code extension `package.json` under `contributes.mcpServers`; enables AI agents (Claude, Cursor, Copilot) to natively read/modify `.fd` files
+- **FEAT (R2.16)**: Multi-Turn AI Chat — new `mode: 'chat'` in `/api/ai` Cloudflare endpoint supports conversation history (up to 10 messages) with full document context injection; frosted glass slide-in chat panel on site with message bubbles, per-block accept/reject for FD code changes, and `ai-chat.js` module; toolbar button `✦ Agent` added
+- **SITE**: New `ai-chat.js` module (195 lines), HTML panel in `index.html`, CSS styles in `style.css` (240 lines)
+- **MCP**: `fd-mcp/src/server.ts` (601 lines), `package.json`, `tsconfig.json`
+
 ### v0.11.167 — Fix ⌘ Key Shows Duplicate Icon on Hand Tool (R3.70)
 - **FIX (R3.70)**: Holding ⌘ on Hand tool now shows default/pointer cursor (select preview) instead of copy/duplicate cursor — root cause: `playground.js` added `modifier-alt` CSS class (which maps to `cursor: copy`) when Cmd was pressed on Hand tool; should have used a select-preview cursor since ⌘+Hand = temp Select, not duplicate; fix: new `modifier-cmd-select` CSS class with `cursor: default` used instead; all class removal calls updated to include the new class
 - **SITE**: Changes in `site/playground.js` (4 locations), `site/style.css` (new `#fd-canvas.modifier-cmd-select` rule)

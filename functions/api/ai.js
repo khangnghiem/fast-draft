@@ -124,6 +124,22 @@ function getModelConfig(mode, env) {
   const qualityModel = env.AI_MODEL_QUALITY || DEFAULT_MODEL_QUALITY;
 
   switch (mode) {
+    case 'chat':
+      return {
+        model: fastModel,
+        system: `You are an expert UI designer and coding assistant working with the FD (Fast Draft) design format. You help users create, modify, and improve their designs through natural conversation.
+
+When the user asks you to modify their design:
+1. Return the COMPLETE modified FD blocks (only the ones you changed)
+2. Wrap each modified block in a \`\`\`fd code fence
+3. Brief explanation before each block
+
+When answering questions, be concise and helpful. Always reference node @ids when discussing specific elements.
+${FD_SYNTAX_GUIDE}`,
+        maxTokens: 4096,
+        temp: 0.4,
+        isChat: true,
+      };
     case 'renamify':
       return {
         model: fastModel,
@@ -212,9 +228,17 @@ export async function onRequestPost(context) {
       }), { status: 429, headers });
     }
 
-    const { prompt, mode, model_hint, user_focus } = await context.request.json();
+    const body = await context.request.json();
+    const { prompt, mode, model_hint, user_focus, messages, context: docContext } = body;
 
-    if (!prompt) {
+    // Chat mode requires messages array; other modes require prompt
+    if (mode === 'chat') {
+      if (!messages || !Array.isArray(messages) || messages.length === 0) {
+        return new Response(JSON.stringify({ error: 'Chat mode requires messages array' }), {
+          status: 400, headers,
+        });
+      }
+    } else if (!prompt) {
       return new Response(JSON.stringify({ error: 'Missing prompt' }), {
         status: 400, headers,
       });
@@ -238,11 +262,31 @@ export async function onRequestPost(context) {
       config.system += `\n\n## User Focus\n${user_focus.trim().slice(0, 200)}`;
     }
 
-    const result = await context.env.AI.run(config.model, {
-      messages: [
+    // Build messages for AI call
+    let aiMessages;
+    if (config.isChat) {
+      // Chat mode: include document context in system prompt + conversation history
+      let systemPrompt = config.system;
+      if (docContext && typeof docContext === 'string') {
+        systemPrompt += `\n\n## Current Document\n\`\`\`fd\n${docContext.slice(0, 8000)}\n\`\`\``;
+      }
+      aiMessages = [
+        { role: 'system', content: systemPrompt },
+        // Include up to 10 most recent messages for context window management
+        ...messages.slice(-10).map(m => ({
+          role: m.role === 'user' ? 'user' : 'assistant',
+          content: String(m.content).slice(0, 4000),
+        })),
+      ];
+    } else {
+      aiMessages = [
         { role: 'system', content: config.system },
         { role: 'user', content: prompt },
-      ],
+      ];
+    }
+
+    const result = await context.env.AI.run(config.model, {
+      messages: aiMessages,
       max_tokens: config.maxTokens,
       temperature: config.temp,
     });
