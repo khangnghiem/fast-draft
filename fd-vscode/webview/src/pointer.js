@@ -235,6 +235,66 @@ function setupPointerEvents() {
     const changed = moveResult.changed;
     if (changed) { render(); canvasDragOccurred = true; }
 
+    // ── Canvas→Layers cross-drag: highlight layer items when pointer enters Layers panel ──
+    if (canvasDragOccurred && canvasPointerId !== -1) {
+      const selectedId = fdCanvas.get_selected_id();
+      if (selectedId) {
+        const layersPanel = document.getElementById('layers-panel');
+        const panelRect = layersPanel?.getBoundingClientRect();
+        const overLayers = panelRect && e.clientX >= panelRect.left && e.clientX <= panelRect.right
+          && e.clientY >= panelRect.top && e.clientY <= panelRect.bottom;
+
+        if (overLayers) {
+          const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+          const layerItem = elUnder?.closest('.layer-item');
+          if (layersPanel) clearLayerDragIndicators(layersPanel);
+
+          if (layerItem) {
+            const targetId = layerItem.getAttribute('data-node-id');
+            if (targetId && targetId !== selectedId) {
+              const zone = getDropZone(e, layerItem);
+              const kind = layerItem.getAttribute('data-node-kind');
+              const isContainer = ['rect','ellipse','frame','group'].includes(kind);
+              if (zone === 'nest' && isContainer) {
+                layerItem.classList.add('drag-over-nest');
+              } else if (zone === 'above') {
+                layerItem.classList.add('drag-over-above');
+              } else {
+                layerItem.classList.add('drag-over-below');
+              }
+            }
+          } else if (elUnder?.closest('.layers-body')) {
+            const body = layersPanel.querySelector('.layers-body');
+            if (body) body.classList.add('drag-over-root');
+          }
+
+          // Show ghost label
+          let ghost = document.getElementById('canvas-drag-ghost');
+          if (!ghost) {
+            ghost = document.createElement('div');
+            ghost.id = 'canvas-drag-ghost';
+            ghost.style.cssText = 'position:fixed;z-index:300;pointer-events:none;' +
+              'padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;' +
+              'font-family:var(--vscode-editor-font-family,monospace);' +
+              'color:var(--vscode-focusBorder,#007AFF);' +
+              'background:var(--vscode-menu-background,#1e1e1e);' +
+              'border:1px solid var(--vscode-focusBorder,#007AFF);' +
+              'box-shadow:0 4px 12px rgba(0,0,0,0.3);white-space:nowrap;';
+            document.body.appendChild(ghost);
+          }
+          ghost.textContent = `@${selectedId}`;
+          ghost.style.left = (e.clientX + 12) + 'px';
+          ghost.style.top = (e.clientY - 8) + 'px';
+          ghost.style.display = 'block';
+        } else {
+          const layersPanel2 = document.getElementById('layers-panel');
+          if (layersPanel2) clearLayerDragIndicators(layersPanel2);
+          const ghost = document.getElementById('canvas-drag-ghost');
+          if (ghost) ghost.style.display = 'none';
+        }
+      }
+    }
+
     // Read ghost origin bounds for Alt+drag preview
     if (altCloneActive && fdCanvas.get_alt_drag_ghost) {
       try {
@@ -401,7 +461,78 @@ function setupPointerEvents() {
     const wasDragging = canvasDragOccurred;
     canvasDragOccurred = false;
 
-    if (wasDragging && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+    // Clean up ghost label
+    const ghost = document.getElementById('canvas-drag-ghost');
+    if (ghost) ghost.style.display = 'none';
+
+    // ── Canvas→Layers cross-drop ──
+    let canvasToLayersDone = false;
+    if (wasDragging) {
+      const selectedId = fdCanvas.get_selected_id();
+      if (selectedId) {
+        const layersPanel = document.getElementById('layers-panel');
+        const panelRect = layersPanel?.getBoundingClientRect();
+        const overLayers = panelRect && e.clientX >= panelRect.left && e.clientX <= panelRect.right
+          && e.clientY >= panelRect.top && e.clientY <= panelRect.bottom;
+
+        if (overLayers && layersPanel) {
+          clearLayerDragIndicators(layersPanel);
+          const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+          const layerItem = elUnder?.closest('.layer-item');
+          const textBefore = fdCanvas.get_text();
+          let changed = false;
+
+          if (layerItem) {
+            const targetId = layerItem.getAttribute('data-node-id');
+            if (targetId && targetId !== selectedId) {
+              const zone = getDropZone(e, layerItem);
+              const kind = layerItem.getAttribute('data-node-kind');
+              const isContainer = ['rect','ellipse','frame','group'].includes(kind);
+
+              if (zone === 'nest' && isContainer) {
+                changed = fdCanvas.reparent_into(selectedId, targetId);
+              } else {
+                const targetIndex = getSiblingIndex(layersPanel, targetId);
+                const insertIndex = zone === 'above' ? targetIndex : targetIndex + 1;
+                const targetItem = layersPanel.querySelector(`.layer-item[data-node-id="${targetId}"]`);
+                const dragItem = layersPanel.querySelector(`.layer-item[data-node-id="${selectedId}"]`);
+                const targetParent = targetItem?.parentElement?.getAttribute?.('data-parent-id');
+                const dragParent = dragItem?.parentElement?.getAttribute?.('data-parent-id');
+                if (targetParent && dragParent && targetParent === dragParent) {
+                  changed = fdCanvas.reorder_child(selectedId, insertIndex);
+                } else if (targetParent) {
+                  changed = fdCanvas.reparent_into(selectedId, targetParent);
+                  if (changed) fdCanvas.reorder_child(selectedId, insertIndex);
+                } else {
+                  changed = fdCanvas.reparent_into(selectedId, 'root');
+                  if (changed) fdCanvas.reorder_child(selectedId, insertIndex);
+                }
+              }
+            }
+          } else if (elUnder?.closest('.layers-body')) {
+            const parentId = fdCanvas.get_parent_id ? fdCanvas.get_parent_id(selectedId) : '';
+            if (parentId) {
+              changed = fdCanvas.reparent_into(selectedId, 'root');
+            }
+          }
+
+          if (changed) {
+            const textAfter = fdCanvas.get_text();
+            if (textBefore !== textAfter) {
+              vscode.postMessage({ type: 'pushUndo', textBefore, textAfter });
+            }
+            render();
+            syncTextToExtension();
+            updatePropertiesPanel();
+            refreshLayersPanel();
+            showToast(`Moved @${selectedId}`);
+            canvasToLayersDone = true;
+          }
+        }
+      }
+    }
+
+    if (wasDragging && !canvasToLayersDone && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
       const selectedId = fdCanvas.get_selected_id();
       if (selectedId && fdCanvas.hit_test_at_excluding) {
         try {
