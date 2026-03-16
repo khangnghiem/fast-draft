@@ -54,7 +54,11 @@ Before proposing any new requirement, search the **Requirement Index** at the bo
 
 ### 🌐 Browser Subagent (MANDATORY)
 
-- **Reuse open tabs** — when a browser tab with the same hostname is already open, navigate within that tab instead of opening a new one. Only open a new tab if no existing tab matches the target hostname.
+- **Reuse open tabs (CRITICAL)** — before calling `browser_subagent`, check the Browser State metadata for existing tabs matching the target hostname. If a matching tab exists:
+  1. Pass the **Page ID** to the subagent in the Task description
+  2. Instruct the subagent to use `navigate_browser` on that Page ID — **NEVER** `open_browser_url`
+  3. Only use `open_browser_url` when **zero** tabs match the target hostname
+  - **Template phrase** to include in every subagent Task: _"An existing tab for [hostname] is already open (Page ID: [ID]). Navigate within that tab using navigate_browser. Do NOT open a new tab."_
 - **Includes Codespaces** — the same rule applies to GitHub Codespace tabs (`*.github.dev`). Never open a duplicate Codespace tab.
 - **Small viewport BEFORE subagent** — resize the browser window to **900×600** as the **first action** inside every `browser_subagent` task, before any other interaction. Recordings capture every frame at viewport resolution; 3008×1575 produces files ~25× larger than 900×600. Never rely on resizing only before screenshots — the recording is already bloated by then.
 - **RecordingName convention** — use `{tier}_{phase}` format: `smoke_canvas`, `full_draw_select`, `deploy_verify`. Descriptive names make it easy to audit and clean up large recordings.

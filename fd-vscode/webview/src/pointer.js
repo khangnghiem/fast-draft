@@ -40,6 +40,8 @@ function setupPointerEvents() {
       panDragging = true;
       panStartX = e.clientX - panX;
       panStartY = e.clientY - panY;
+      handPanClientStartX = e.clientX;
+      handPanClientStartY = e.clientY;
       canvas.style.cursor = "grabbing";
       canvasPointerId = e.pointerId;
       e.preventDefault();
@@ -301,6 +303,17 @@ function setupPointerEvents() {
     // End pan drag
     if (panDragging) {
       panDragging = false;
+      // Hand tool click (not drag) on empty space → deselect all
+      if (fdCanvas.get_tool_name() === 'hand' && handPanClientStartX !== null) {
+        const dx = e.clientX - handPanClientStartX;
+        const dy = e.clientY - handPanClientStartY;
+        if (Math.hypot(dx, dy) < 5) {
+          fdCanvas.select_by_id('');
+          bumpGeneration();
+        }
+        handPanClientStartX = null;
+        handPanClientStartY = null;
+      }
       canvas.style.cursor = (isPanning || fdCanvas.get_tool_name() === 'hand') ? "grab" : "";
       return;
     }
