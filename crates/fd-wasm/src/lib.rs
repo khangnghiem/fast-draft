@@ -343,17 +343,7 @@ impl FdCanvas {
 impl FdCanvas {
     pub(crate) fn hit_test(&self, x: f32, y: f32) -> Option<NodeId> {
         let node_hit = if let Some(ref index) = self.spatial_index {
-            let result = index.query_point(x, y);
-            let brute =
-                fd_render::hit::hit_test(&self.engine.graph, self.engine.current_bounds(), x, y);
-            if result != brute {
-                let msg = format!(
-                    "[FD DIAG] Stale spatial index! index={:?} brute={:?} at ({}, {})",
-                    result, brute, x, y
-                );
-                web_sys::console::warn_1(&msg.into());
-            }
-            result
+            index.query_point(x, y)
         } else {
             fd_render::hit::hit_test(&self.engine.graph, self.engine.current_bounds(), x, y)
         };

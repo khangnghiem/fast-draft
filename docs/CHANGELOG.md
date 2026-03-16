@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.182 — HTML Export + Cleanup (R3.56)
+- **FEATURE (R3.56)**: HTML+CSS export — `export_html(graph)` generates standalone responsive HTML page from FD scene; Rect/Frame → `<div>`, Ellipse → `<div>` with `border-radius: 50%`, Text → `<p>` with font styles, Path → inline `<svg>`, Group → wrapper `<div>`; supports fills (solid + gradient), strokes, corner-radius, opacity, shadow, text alignment/valign, and hover/press animations as CSS transitions; Google Fonts auto-linked; 15 unit tests
+- **WASM**: `export_html()` method on `FdCanvas` — exports current selection (or full canvas) as HTML; wired in `fd-wasm/src/export.rs`
+- **UI**: "Download HTML" button (🌐) added to Settings menu in site playground — downloads `fast-draft-export.html` file
+- **FIX**: Removed stale `console.warn("[FD DIAG]")` spatial-index diagnostic from `hit_test` in `lib.rs`
+- **DOCS**: Updated README "Built-In Specs" section to "Built-In Notes" with current `note`/`todo:` syntax
+
 ### v0.11.181 — Unified Context Menu System (R6.6)
 - **REFACTOR (R6.6)**: Ported unified `ContextMenu` class from site playground to VS Code extension — singleton, data-driven context menu with robust dismissal (`AbortController` + capture-phase click/keydown/contextmenu), ARIA roles, keyboard navigation (↑↓ + Enter), viewport clamping, open/close animation via CSS transitions; replaces 3 separate implementations (canvas context menu, layers context menu, static HTML)
 - **REFACTOR (R6.6)**: `setupContextMenu()` replaced — was ~325 lines of manual `document.getElementById` per-item wiring; now 30 lines building item arrays via `buildNodeMenuItems()` + `ctxMenu.open()`; all 15+ actions preserved including AI Touch custom submenu and annotation handling
