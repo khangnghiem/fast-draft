@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.186 — Canvas→Layers Cross-Drag + Searchable Parent Picker (R3.64)
+- **FEATURE (R3.64)**: Canvas→Layers cross-drag — drag a selected node from the canvas into the Layers panel to reparent/reorder; pointer events detect when cursor enters the Layers panel and show the same `drag-over-nest`/`above`/`below` indicators as Layers→Layers drag
+- **FEATURE (R3.64)**: Ghost preview label — while dragging over the Layers panel, a floating `@node_name` badge follows the cursor to indicate which node is being moved
+- **FEATURE (R3.64)**: Searchable "Move Into" picker — right-click → "Move Into…" now opens a filterable popover with all valid containers; replaces the old static 15-item submenu, supports instant search by node ID
+- **PARITY**: All features implemented in both site (`playground.js`) and VS Code extension (`pointer.js`, `panels.js`)
+
 ### v0.11.185 — Refactor `note` → `spec` Keyword (R4.18)
 - **RENAME (R4.18)**: `note` keyword → `spec` — annotation blocks now use the more precise term `spec` (specification) which better reflects structured metadata for AI agents; emitter outputs `spec` keyword; parser accepts both `spec` (primary) and `note` (legacy alias) for backward compatibility
 - **RENAME (R4.18)**: `ReadMode::Notes` → `ReadMode::Spec` (Notes kept as backward-compat alias); `emit_notes_markdown` → `emit_spec_markdown` (old function kept as alias)

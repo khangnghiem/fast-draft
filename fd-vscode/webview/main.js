@@ -584,6 +584,66 @@ function setupPointerEvents() {
     const changed = moveResult.changed;
     if (changed) { render(); canvasDragOccurred = true; }
 
+    // ── Canvas→Layers cross-drag: highlight layer items when pointer enters Layers panel ──
+    if (canvasDragOccurred && canvasPointerId !== -1) {
+      const selectedId = fdCanvas.get_selected_id();
+      if (selectedId) {
+        const layersPanel = document.getElementById('layers-panel');
+        const panelRect = layersPanel?.getBoundingClientRect();
+        const overLayers = panelRect && e.clientX >= panelRect.left && e.clientX <= panelRect.right
+          && e.clientY >= panelRect.top && e.clientY <= panelRect.bottom;
+
+        if (overLayers) {
+          const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+          const layerItem = elUnder?.closest('.layer-item');
+          if (layersPanel) clearLayerDragIndicators(layersPanel);
+
+          if (layerItem) {
+            const targetId = layerItem.getAttribute('data-node-id');
+            if (targetId && targetId !== selectedId) {
+              const zone = getDropZone(e, layerItem);
+              const kind = layerItem.getAttribute('data-node-kind');
+              const isContainer = ['rect','ellipse','frame','group'].includes(kind);
+              if (zone === 'nest' && isContainer) {
+                layerItem.classList.add('drag-over-nest');
+              } else if (zone === 'above') {
+                layerItem.classList.add('drag-over-above');
+              } else {
+                layerItem.classList.add('drag-over-below');
+              }
+            }
+          } else if (elUnder?.closest('.layers-body')) {
+            const body = layersPanel.querySelector('.layers-body');
+            if (body) body.classList.add('drag-over-root');
+          }
+
+          // Show ghost label
+          let ghost = document.getElementById('canvas-drag-ghost');
+          if (!ghost) {
+            ghost = document.createElement('div');
+            ghost.id = 'canvas-drag-ghost';
+            ghost.style.cssText = 'position:fixed;z-index:300;pointer-events:none;' +
+              'padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;' +
+              'font-family:var(--vscode-editor-font-family,monospace);' +
+              'color:var(--vscode-focusBorder,#007AFF);' +
+              'background:var(--vscode-menu-background,#1e1e1e);' +
+              'border:1px solid var(--vscode-focusBorder,#007AFF);' +
+              'box-shadow:0 4px 12px rgba(0,0,0,0.3);white-space:nowrap;';
+            document.body.appendChild(ghost);
+          }
+          ghost.textContent = `@${selectedId}`;
+          ghost.style.left = (e.clientX + 12) + 'px';
+          ghost.style.top = (e.clientY - 8) + 'px';
+          ghost.style.display = 'block';
+        } else {
+          const layersPanel2 = document.getElementById('layers-panel');
+          if (layersPanel2) clearLayerDragIndicators(layersPanel2);
+          const ghost = document.getElementById('canvas-drag-ghost');
+          if (ghost) ghost.style.display = 'none';
+        }
+      }
+    }
+
     // Read ghost origin bounds for Alt+drag preview
     if (altCloneActive && fdCanvas.get_alt_drag_ghost) {
       try {
@@ -750,7 +810,78 @@ function setupPointerEvents() {
     const wasDragging = canvasDragOccurred;
     canvasDragOccurred = false;
 
-    if (wasDragging && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+    // Clean up ghost label
+    const ghost = document.getElementById('canvas-drag-ghost');
+    if (ghost) ghost.style.display = 'none';
+
+    // ── Canvas→Layers cross-drop ──
+    let canvasToLayersDone = false;
+    if (wasDragging) {
+      const selectedId = fdCanvas.get_selected_id();
+      if (selectedId) {
+        const layersPanel = document.getElementById('layers-panel');
+        const panelRect = layersPanel?.getBoundingClientRect();
+        const overLayers = panelRect && e.clientX >= panelRect.left && e.clientX <= panelRect.right
+          && e.clientY >= panelRect.top && e.clientY <= panelRect.bottom;
+
+        if (overLayers && layersPanel) {
+          clearLayerDragIndicators(layersPanel);
+          const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+          const layerItem = elUnder?.closest('.layer-item');
+          const textBefore = fdCanvas.get_text();
+          let changed = false;
+
+          if (layerItem) {
+            const targetId = layerItem.getAttribute('data-node-id');
+            if (targetId && targetId !== selectedId) {
+              const zone = getDropZone(e, layerItem);
+              const kind = layerItem.getAttribute('data-node-kind');
+              const isContainer = ['rect','ellipse','frame','group'].includes(kind);
+
+              if (zone === 'nest' && isContainer) {
+                changed = fdCanvas.reparent_into(selectedId, targetId);
+              } else {
+                const targetIndex = getSiblingIndex(layersPanel, targetId);
+                const insertIndex = zone === 'above' ? targetIndex : targetIndex + 1;
+                const targetItem = layersPanel.querySelector(`.layer-item[data-node-id="${targetId}"]`);
+                const dragItem = layersPanel.querySelector(`.layer-item[data-node-id="${selectedId}"]`);
+                const targetParent = targetItem?.parentElement?.getAttribute?.('data-parent-id');
+                const dragParent = dragItem?.parentElement?.getAttribute?.('data-parent-id');
+                if (targetParent && dragParent && targetParent === dragParent) {
+                  changed = fdCanvas.reorder_child(selectedId, insertIndex);
+                } else if (targetParent) {
+                  changed = fdCanvas.reparent_into(selectedId, targetParent);
+                  if (changed) fdCanvas.reorder_child(selectedId, insertIndex);
+                } else {
+                  changed = fdCanvas.reparent_into(selectedId, 'root');
+                  if (changed) fdCanvas.reorder_child(selectedId, insertIndex);
+                }
+              }
+            }
+          } else if (elUnder?.closest('.layers-body')) {
+            const parentId = fdCanvas.get_parent_id ? fdCanvas.get_parent_id(selectedId) : '';
+            if (parentId) {
+              changed = fdCanvas.reparent_into(selectedId, 'root');
+            }
+          }
+
+          if (changed) {
+            const textAfter = fdCanvas.get_text();
+            if (textBefore !== textAfter) {
+              vscode.postMessage({ type: 'pushUndo', textBefore, textAfter });
+            }
+            render();
+            syncTextToExtension();
+            updatePropertiesPanel();
+            refreshLayersPanel();
+            showToast(`Moved @${selectedId}`);
+            canvasToLayersDone = true;
+          }
+        }
+      }
+    }
+
+    if (wasDragging && !canvasToLayersDone && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
       const selectedId = fdCanvas.get_selected_id();
       if (selectedId && fdCanvas.hit_test_at_excluding) {
         try {
@@ -2999,7 +3130,7 @@ function buildNodeMenuItems(hitId, selectedIds) {
   });
 
   // Notes
-  if (!hasSpec) items.push({ action: 'add-annotation', label: 'Add Note', icon: '◇' });
+  if (!hasSpec) items.push({ action: 'add-annotation', label: 'Add Spec', icon: '◇' });
   if (hasSpec) items.push({ action: 'view-specs', label: 'Specs Panel', icon: '📝', shortcut: '⌘⇧N' });
 
   // Rename
@@ -4067,6 +4198,140 @@ function closeLayerCtxMenu() {
   ctxMenu.close();
 }
 
+/** Searchable "Move Into" picker for the extension — mirrors playground.js implementation. */
+function showSearchableParentPicker(nodeId, posX, posY) {
+  if (!fdCanvas?.get_container_ids) return;
+  let containers;
+  try { containers = JSON.parse(fdCanvas.get_container_ids()); } catch (_) { return; }
+  const validTargets = containers.filter(c => c.id !== nodeId);
+  if (validTargets.length === 0) { showToast('No valid containers'); return; }
+
+  document.getElementById('parent-picker')?.remove();
+
+  const picker = document.createElement('div');
+  picker.id = 'parent-picker';
+  picker.style.cssText = `position:fixed;left:${posX}px;top:${posY}px;z-index:310;` +
+    'min-width:220px;max-width:280px;max-height:320px;display:flex;flex-direction:column;' +
+    'background:var(--vscode-menu-background,#1e1e1e);border:1px solid var(--vscode-menu-border,#454545);' +
+    'border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;' +
+    'font-family:var(--vscode-editor-font-family,monospace);font-size:12px;';
+
+  const header = document.createElement('div');
+  header.style.cssText = 'padding:8px 10px 4px;color:var(--vscode-descriptionForeground,#888);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;';
+  header.textContent = `Move @${nodeId} into`;
+  picker.appendChild(header);
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = 'Search containers…';
+  input.style.cssText = 'margin:0 8px 4px;padding:6px 8px;border:1px solid var(--vscode-input-border,#444);' +
+    'border-radius:6px;background:var(--vscode-input-background,#0A0A0A);color:var(--vscode-input-foreground,#E5E5EA);' +
+    'font-size:12px;font-family:inherit;outline:none;';
+  picker.appendChild(input);
+
+  const list = document.createElement('div');
+  list.style.cssText = 'overflow-y:auto;max-height:240px;padding:4px 0;';
+  picker.appendChild(list);
+
+  function renderList(filter) {
+    list.innerHTML = '';
+    const q = (filter || '').toLowerCase();
+    const matches = validTargets.filter(c => c.id.toLowerCase().includes(q));
+    if (matches.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding:12px 10px;color:var(--vscode-descriptionForeground,#666);text-align:center;';
+      empty.textContent = 'No matches';
+      list.appendChild(empty);
+      return;
+    }
+    for (const t of matches.slice(0, 50)) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:5px 10px;cursor:pointer;' +
+        'color:var(--vscode-menu-foreground,#E5E5EA);transition:background .1s;';
+      row.addEventListener('mouseenter', () => { row.style.background = 'var(--vscode-list-hoverBackground,rgba(255,255,255,0.06))'; });
+      row.addEventListener('mouseleave', () => { row.style.background = ''; });
+
+      const icon = document.createElement('span');
+      icon.textContent = LAYER_ICONS[t.kind] || '•';
+      icon.style.cssText = 'width:16px;text-align:center;flex-shrink:0;';
+      row.appendChild(icon);
+
+      const name = document.createElement('span');
+      name.textContent = `@${t.id}`;
+      name.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      row.appendChild(name);
+
+      const moveBtn = document.createElement('button');
+      moveBtn.textContent = '📦';
+      moveBtn.title = 'Nest (preserve position)';
+      moveBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:2px 4px;font-size:12px;border-radius:4px;';
+      moveBtn.addEventListener('mouseenter', () => { moveBtn.style.background = 'var(--vscode-focusBorder,#007AFF)'; });
+      moveBtn.addEventListener('mouseleave', () => { moveBtn.style.background = ''; });
+      moveBtn.addEventListener('click', (ev) => { ev.stopPropagation(); doReparent(t.id, false); });
+      row.appendChild(moveBtn);
+
+      const centerBtn = document.createElement('button');
+      centerBtn.textContent = '⊙';
+      centerBtn.title = 'Center in container';
+      centerBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:2px 4px;font-size:12px;border-radius:4px;';
+      centerBtn.addEventListener('mouseenter', () => { centerBtn.style.background = 'var(--vscode-focusBorder,#007AFF)'; });
+      centerBtn.addEventListener('mouseleave', () => { centerBtn.style.background = ''; });
+      centerBtn.addEventListener('click', (ev) => { ev.stopPropagation(); doReparent(t.id, true); });
+      row.appendChild(centerBtn);
+
+      row.addEventListener('click', () => doReparent(t.id, false));
+      list.appendChild(row);
+    }
+    if (matches.length > 50) {
+      const more = document.createElement('div');
+      more.style.cssText = 'padding:6px 10px;color:var(--vscode-descriptionForeground,#666);text-align:center;font-size:10px;';
+      more.textContent = `…${matches.length - 50} more (refine search)`;
+      list.appendChild(more);
+    }
+  }
+
+  function doReparent(targetId, center) {
+    const textBefore = fdCanvas.get_text();
+    let changed = false;
+    if (center && fdCanvas.reparent_into_centered) {
+      changed = fdCanvas.reparent_into_centered(nodeId, targetId);
+    } else {
+      changed = fdCanvas.reparent_into(nodeId, targetId);
+    }
+    if (changed) {
+      const textAfter = fdCanvas.get_text();
+      if (textBefore !== textAfter) fdCanvas.push_undo_snapshot(textBefore, textAfter);
+      bumpGeneration(); render(); syncTextToExtension(); updatePropertiesPanel(); refreshLayersPanel();
+      showToast(`Moved @${nodeId} → @${targetId}`);
+    }
+    closePicker();
+  }
+
+  function closePicker() {
+    picker.remove();
+    document.removeEventListener('pointerdown', outsideClickHandler, true);
+    document.removeEventListener('keydown', escHandler, true);
+  }
+  function outsideClickHandler(ev) { if (!picker.contains(ev.target)) closePicker(); }
+  function escHandler(ev) { if (ev.key === 'Escape') { ev.stopPropagation(); closePicker(); } }
+
+  input.addEventListener('input', () => renderList(input.value));
+  renderList('');
+  document.body.appendChild(picker);
+
+  requestAnimationFrame(() => {
+    const r = picker.getBoundingClientRect();
+    if (r.right > window.innerWidth) picker.style.left = Math.max(4, window.innerWidth - r.width - 4) + 'px';
+    if (r.bottom > window.innerHeight) picker.style.top = Math.max(4, window.innerHeight - r.height - 4) + 'px';
+  });
+
+  setTimeout(() => {
+    input.focus();
+    document.addEventListener('pointerdown', outsideClickHandler, true);
+    document.addEventListener('keydown', escHandler, true);
+  }, 50);
+}
+
 /** Clear all drag indicators from layer items. */
 function clearLayerDragIndicators(panel) {
   panel.querySelectorAll('.layer-item').forEach(el => {
@@ -4280,25 +4545,8 @@ function wireLayerContextMenu(panel) {
       }
       items.push({ type: 'separator' });
 
-      // Move Into
-      if (fdCanvas.get_container_ids) {
-        try {
-          const containers = JSON.parse(fdCanvas.get_container_ids());
-          const validTargets = containers.filter(c => c.id !== nodeId);
-          if (validTargets.length > 0) {
-            items.push({ type: 'header', label: 'Move Into' });
-            for (const t of validTargets.slice(0, 15)) {
-              const icon = LAYER_ICONS[t.kind] || '•';
-              items.push({ action: 'move-into', label: '@' + t.id, icon, data: { target: t.id } });
-              items.push({ action: 'center-into', label: 'Center in @' + t.id, icon: '⊙', data: { target: t.id } });
-            }
-            if (validTargets.length > 15) {
-              items.push({ label: '…' + (validTargets.length - 15) + ' more', disabled: true });
-            }
-            items.push({ type: 'separator' });
-          }
-        } catch (_) {}
-      }
+      // Move Into — opens searchable picker
+      items.push({ action: 'move-into-search', label: 'Move Into…', icon: '📦' });
       items.push({ action: 'move-to-root', label: 'Move to Root', icon: '↑' });
       items.push({ type: 'separator' });
 
@@ -4366,6 +4614,9 @@ function wireLayerContextMenu(panel) {
                 bumpGeneration(); render(); updatePropertiesPanel(); updateFloatingBar(); refreshLayersPanel();
               }
             }
+            return;
+          } else if (action === 'move-into-search') {
+            showSearchableParentPicker(nodeId, e.clientX ?? 200, e.clientY ?? 200);
             return;
           } else if (action === 'move-into') {
             changed = fdCanvas.reparent_into(nodeId, btn.getAttribute('data-target'));
