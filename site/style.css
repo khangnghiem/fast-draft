@@ -524,7 +524,10 @@ button.playground-fs-btn:hover {
   display: none;
 }
 .code-collapsed .split-resize-handle {
-  display: none;
+  visibility: hidden;
+  width: 0;
+  min-width: 0;
+  pointer-events: none;
 }
 .code-collapsed .editor-chevron {
   transform: rotate(-90deg);
@@ -540,6 +543,9 @@ button.playground-fs-btn:hover {
   width: 42px;
   gap: 6px;
   justify-content: start;
+}
+.code-collapsed .playground-editor {
+  overflow: visible;
 }
 .code-collapsed .editor-header #mobile-code-close { display: none !important; }
 
