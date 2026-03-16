@@ -1193,61 +1193,6 @@ code {
   outline: 1px dashed var(--fd-accent);
   outline-offset: -2px;
 }
-/* Context menu reparent submenu */
-.layer-ctx-menu {
-  position: fixed;
-  min-width: 180px;
-  background: var(--fd-surface);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 0.5px solid var(--fd-border);
-  border-radius: 8px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08);
-  padding: 4px;
-  z-index: 200;
-  font-size: 11px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-.layer-ctx-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  cursor: pointer;
-  border-radius: 4px;
-  color: var(--fd-text);
-  white-space: nowrap;
-}
-.layer-ctx-item:hover {
-  background: var(--fd-accent);
-  color: #fff;
-}
-.layer-ctx-item .ctx-icon {
-  font-size: 10px;
-  opacity: 0.7;
-  width: 14px;
-  text-align: center;
-}
-.layer-ctx-shortcut {
-  margin-left: auto;
-  font-size: 10px;
-  opacity: 0.45;
-  font-family: system-ui, -apple-system, sans-serif;
-}
-.layer-ctx-item:hover .layer-ctx-shortcut { opacity: 0.7; color: #fff; }
-.layer-ctx-disabled {
-  opacity: 0.35;
-  pointer-events: none;
-  cursor: default;
-}
-.layer-ctx-sep {
-  height: 1px;
-  background: var(--fd-border);
-  margin: 3px 4px;
-}
-.layer-ctx-danger { color: #FF3B30; }
-.layer-ctx-danger:hover { background: rgba(255,59,48,0.15); color: #FF3B30; }
 
 /* ─── Floating Scroll Toolbar ─── */
 #floating-toolbar {
@@ -1618,77 +1563,7 @@ code {
   border-color: rgba(255, 59, 48, 0.3);
 }
 
-/* ─── Context Menu ─── */
-#ctx-menu, #ctx-menu-canvas {
-  display: none;
-  position: fixed;
-  z-index: 100;
-  min-width: 160px;
-  padding: 6px;
-  background: var(--fd-surface);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 0.5px solid var(--fd-border);
-  border-radius: var(--fd-radius);
-  box-shadow: var(--fd-shadow-lg);
-}
-#ctx-menu.visible, #ctx-menu-canvas.visible { display: block; animation: ctx-fade-in 0.12s ease-out; }
-.ctx-selection-badge {
-  padding: 4px 10px 6px;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--fd-accent);
-  border-bottom: 0.5px solid var(--fd-border);
-  margin-bottom: 4px;
-}
-@keyframes ctx-fade-in {
-  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-.ctx-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 6px 10px;
-  border: none;
-  background: transparent;
-  color: var(--fd-text-secondary);
-  font-size: 12px;
-  text-align: left;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: none;
-}
-.ctx-item:hover {
-  background: var(--fd-accent);
-  color: var(--fd-accent-fg);
-}
-.ctx-item:hover .ctx-shortcut {
-  color: var(--fd-accent-fg);
-  opacity: 0.7;
-}
-.ctx-item[data-action="delete"]:hover {
-  background: rgba(255, 59, 48, 0.8);
-}
-.ctx-item[data-action="cut"]:hover {
-  background: rgba(255, 149, 0, 0.8);
-}
-.ctx-shortcut {
-  font-size: 10px;
-  color: var(--fd-text-tertiary);
-  font-family: var(--mono);
-  margin-left: auto;
-  padding-left: 16px;
-  font-weight: 500;
-}
-.ctx-sep {
-  height: 1px;
-  background: var(--fd-border);
-  margin: 4px 6px;
-}
+/* Old ctx-menu styles removed — now using unified .ctx-menu from context-menu.js */
 /* ─── Context Menu: AI Touch Submenu ─── */
 .ctx-ai-touch-wrap {
   position: relative;
@@ -1776,6 +1651,98 @@ code {
 }
 .ctx-ai-run:active {
   transform: scale(0.95);
+}
+
+/* ─── Unified Context Menu (dynamic) ─── */
+.ctx-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 180px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--fd-surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 0.5px solid var(--fd-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08);
+  font-size: 12px;
+  opacity: 0;
+  transform: scale(0.96) translateY(-4px);
+  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+}
+.ctx-menu.ctx-menu-visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+.ctx-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--fd-text);
+  white-space: nowrap;
+  transition: none;
+}
+.ctx-menu-item:hover,
+.ctx-menu-item.ctx-menu-active {
+  background: var(--fd-accent);
+  color: #fff;
+}
+.ctx-menu-item:hover .ctx-menu-shortcut,
+.ctx-menu-item.ctx-menu-active .ctx-menu-shortcut {
+  color: rgba(255,255,255,0.7);
+}
+.ctx-menu-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: default;
+}
+.ctx-menu-danger { color: #FF3B30; }
+.ctx-menu-danger:hover,
+.ctx-menu-danger.ctx-menu-active {
+  background: rgba(255,59,48,0.15);
+  color: #FF3B30;
+}
+.ctx-menu-icon {
+  font-size: 11px;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+.ctx-menu-label {
+  flex: 1;
+  min-width: 0;
+}
+.ctx-menu-shortcut {
+  font-size: 10px;
+  color: var(--fd-text-tertiary);
+  font-family: var(--mono);
+  margin-left: auto;
+  padding-left: 16px;
+  font-weight: 500;
+  opacity: 0.6;
+}
+.ctx-menu-sep {
+  height: 1px;
+  background: var(--fd-border);
+  margin: 3px 4px;
+}
+.ctx-menu-header {
+  padding: 5px 10px 3px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--fd-text-tertiary);
+  cursor: default;
+}
+.ctx-menu-custom {
+  padding: 4px 6px;
 }
 
 /* ─── Dimension Tooltip ─── */
