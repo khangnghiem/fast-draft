@@ -118,7 +118,6 @@ Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** 
 | -------------- | ----------------------------------------------- | -------------------------------- |
 | None           | Draw new shape                                  | Draw new shape                   |
 | `⌘`            | **Move object** (temp Select)                   | **Marquee select** (temp Select) |
-| `⌘` + drag     | **Reparent** — drop onto container makes child  | —                                |
 | `Alt`          | **Clone + drag**                                | Draw new shape                   |
 | `Shift`        | Constrain (square/axis) — see per-tool table    | Constrain                        |
 | `Shift+Alt`    | Square/circle from center                       | Square/circle from center        |
@@ -142,7 +141,6 @@ Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** 
 | None               | Move / select                                             | Marquee select |
 | `Alt`              | **Clone + drag**                                          | Marquee select |
 | `Alt` (click only) | **Style picker** — copies fill/stroke/opacity as defaults | —              |
-| `⌘` + drag         | **Reparent** — drop onto container makes child            | —              |
 | `Shift`            | Add to selection                                          | Add to marquee |
 | `⌘` (hold)         | Pan                                                       | Pan            |
 | `Space` (hold)     | Pan                                                       | Pan            |
@@ -154,7 +152,6 @@ Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** 
 | None               | Pan                                            | Pan            |
 | `Alt`              | **Clone + drag** (temp Select)                 | Pan            |
 | `⌘`                | **Move / select** (temp Select)                | Marquee select |
-| `⌘` + drag         | **Reparent** — drop onto container makes child | —              |
 | `Shift`            | — (no effect — pan is unconstrained)           | —              |
 | `Space` (hold)     | Pan                                            | Pan            |
 

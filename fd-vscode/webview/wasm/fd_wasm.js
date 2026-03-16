@@ -307,6 +307,25 @@ export class FdCanvas {
         }
     }
     /**
+     * Export the current selection (or entire canvas if empty) as a standalone HTML page.
+     *
+     * The output is a complete HTML document with embedded CSS that can be
+     * saved as an `.html` file and opened in any browser.
+     * @returns {string}
+     */
+    export_html() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_export_html(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Export the current selection (or entire canvas if empty) as an SVG string.
      * @returns {string}
      */
@@ -542,6 +561,26 @@ export class FdCanvas {
         }
     }
     /**
+     * Return the kind name of a node (e.g. "rect", "ellipse", "frame", "group", "text").
+     * Returns empty string if the node doesn't exist.
+     * @param {string} node_id
+     * @returns {string}
+     */
+    get_node_kind(node_id) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_get_node_kind(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * Get basic properties of a node by its ID (without selecting it).
      * @param {string} node_id
      * @returns {string}
@@ -572,6 +611,25 @@ export class FdCanvas {
             const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
             const len0 = WASM_VECTOR_LEN;
             const ret = wasm.fdcanvas_get_note(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * Return the parent ID of a node, or empty string if it's a root-level node.
+     * @param {string} node_id
+     * @returns {string}
+     */
+    get_parent_id(node_id) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_get_parent_id(this.__wbg_ptr, ptr0, len0);
             deferred2_0 = ret[0];
             deferred2_1 = ret[1];
             return getStringFromWasm0(ret[0], ret[1]);
@@ -1163,6 +1221,20 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Set a node's position constraint to an absolute (x, y) coordinate.
+     * Used by Layers→Canvas cross-drag to place a node at the drop position.
+     * @param {string} node_id
+     * @param {number} x
+     * @param {number} y
+     * @returns {boolean}
+     */
+    set_node_position(node_id, x, y) {
+        const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_set_node_position(this.__wbg_ptr, ptr0, len0, x, y);
+        return ret !== 0;
+    }
+    /**
      * Set a property on the currently selected node.
      * Returns `true` if the property was set.
      * @param {string} key
@@ -1533,9 +1605,6 @@ function __wbg_get_imports() {
         __wbg_translate_3aa10730376a8c06: function() { return handleError(function (arg0, arg1, arg2) {
             arg0.translate(arg1, arg2);
         }, arguments); },
-        __wbg_warn_f7ae1b2e66ccb930: function(arg0) {
-            console.warn(arg0);
-        },
         __wbg_width_9bbf873307a2ac4e: function(arg0) {
             const ret = arg0.width;
             return ret;
