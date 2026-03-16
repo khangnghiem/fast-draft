@@ -714,6 +714,270 @@ function updateFab(canvas) {
   }
 }
 
+/** ─── Selection → Code Highlight ────────────────────────────────────── */
+let lastHighlightedIds = [];
+let codeHighlightDecos = []; // CodeMirror Decoration marks
+
+/** Find block line ranges for given IDs in the FD text. */
+function findBlockRangesInText(text, ids) {
+  const lines = text.split('\n');
+  const ranges = [];
+  for (const id of ids) {
+    const range = findBlockWithRange(lines, id);
+    if (range) {
+      // Convert line numbers to character offsets for CodeMirror
+      let startPos = 0, endPos = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (i === range.startLine) startPos = endPos;
+        endPos += lines[i].length + 1; // +1 for newline
+        if (i === range.endLine) { ranges.push({ id, startLine: range.startLine, endLine: range.endLine, from: startPos, to: endPos - 1 }); break; }
+      }
+    }
+  }
+  return ranges;
+}
+
+/** Highlight selected blocks in CodeMirror editor. */
+function highlightSelectedBlocksInEditor(ids) {
+  if (!editorView) return;
+  // Avoid redundant updates
+  const idsKey = ids.join(',');
+  if (idsKey === lastHighlightedIds.join(',')) return;
+  lastHighlightedIds = [...ids];
+
+  // Clear existing highlights
+  clearCodeHighlights();
+  if (ids.length === 0) return;
+
+  const text = editorView.state.doc.toString();
+  const ranges = findBlockRangesInText(text, ids);
+  if (ranges.length === 0) return;
+
+  // Apply yellow highlight decorations
+  const { RangeSet, Decoration, StateField, EditorView: EV } = window.cmBundle || {};
+  if (!Decoration) return; // CodeMirror not loaded
+
+  const marks = ranges.map(r => {
+    const from = Math.max(0, Math.min(r.from, text.length));
+    const to = Math.max(from, Math.min(r.to, text.length));
+    return Decoration.mark({ class: 'ai-diff-selected' }).range(from, to);
+  });
+  if (marks.length === 0) return;
+
+  const decoSet = RangeSet.of(marks, true);
+  // Use a compartment-free approach: dispatch via effects if available
+  if (!editorView._fdHighlightField) {
+    const field = StateField.define({
+      create() { return Decoration.none; },
+      update(v, tr) {
+        for (const e of tr.effects) {
+          if (e.is(setHighlightEffect)) return e.value;
+        }
+        return v.map(tr.changes);
+      },
+      provide: f => EV.decorations.from(f),
+    });
+    editorView._fdHighlightField = field;
+    editorView._fdHighlightReconfig = editorView.dispatch({
+      effects: window.cmBundle.StateEffect.appendConfig.of([field]),
+    });
+  }
+  editorView.dispatch({ effects: [setHighlightEffect.of(decoSet)] });
+
+  // Scroll to first highlighted block
+  if (ranges.length > 0) {
+    editorView.dispatch({ effects: EV.scrollIntoView(ranges[0].from, { y: 'center' }) });
+  }
+}
+
+function clearCodeHighlights() {
+  if (!editorView || !editorView._fdHighlightField) return;
+  const { Decoration } = window.cmBundle || {};
+  if (!Decoration) return;
+  editorView.dispatch({ effects: [setHighlightEffect.of(Decoration.none)] });
+}
+
+// StateEffect for highlight decorations — initialized lazily
+let setHighlightEffect;
+let setDiffEffect;
+function initCodeMirrorEffects() {
+  if (setHighlightEffect) return;
+  const { StateEffect } = window.cmBundle || {};
+  if (!StateEffect) return;
+  setHighlightEffect = StateEffect.define();
+  setDiffEffect = StateEffect.define();
+}
+
+/** ─── AI Touch Diff/Accept/Reject State ─────────────────────────────── */
+let aiDiffState = null; // { originalText, perBlockChanges: [{ id, oldBlock, newBlock, startLine, endLine }] }
+
+/** Show inline diff for AI Touch results — accept/reject before applying. */
+function showAiTouchDiff(originalText, refinedOutput, selectedIds) {
+  if (!editorView) return false;
+
+  const origLines = originalText.split('\n');
+  const perBlockChanges = [];
+
+  for (const id of selectedIds) {
+    const origRange = findBlockWithRange(origLines, id);
+    if (!origRange) continue;
+    const oldBlock = origLines.slice(origRange.startLine, origRange.endLine + 1).join('\n');
+
+    // Find the corresponding block in AI output
+    const aiLines = refinedOutput.split('\n');
+    const newBlock = findBlockForId(aiLines, id);
+    if (!newBlock) continue;
+
+    // Check if AI renamed the ID
+    const oldIdMatch = oldBlock.match(/@(\w+)/);
+    const newIdMatch = newBlock.match(/@(\w+)/);
+    const renamedId = (oldIdMatch && newIdMatch && oldIdMatch[1] !== newIdMatch[1]) ? newIdMatch[1] : null;
+
+    if (oldBlock.trim() !== newBlock.trim()) {
+      perBlockChanges.push({ id, oldBlock, newBlock, startLine: origRange.startLine, endLine: origRange.endLine, renamedId });
+    }
+  }
+
+  if (perBlockChanges.length === 0) {
+    showToast('AI Touch: No changes detected');
+    return false;
+  }
+
+  aiDiffState = { originalText, perBlockChanges };
+
+  // Highlight changed blocks in the editor with diff colors
+  renderDiffDecorations(perBlockChanges);
+  showDiffToolbar(perBlockChanges.length);
+  return true;
+}
+
+/** Render red/green diff decorations in CodeMirror. */
+function renderDiffDecorations(changes) {
+  if (!editorView) return;
+  initCodeMirrorEffects();
+  const { Decoration, RangeSet, StateField, EditorView: EV, StateEffect } = window.cmBundle || {};
+  if (!Decoration) return;
+
+  // Register diff field if not already done
+  if (!editorView._fdDiffField) {
+    const field = StateField.define({
+      create() { return Decoration.none; },
+      update(v, tr) {
+        for (const e of tr.effects) {
+          if (e.is(setDiffEffect)) return e.value;
+        }
+        return v.map(tr.changes);
+      },
+      provide: f => EV.decorations.from(f),
+    });
+    editorView._fdDiffField = field;
+    editorView.dispatch({ effects: StateEffect.appendConfig.of([field]) });
+  }
+
+  const text = editorView.state.doc.toString();
+  const marks = [];
+
+  for (const change of changes) {
+    // Highlight the original block range as "will be changed"
+    const lines = text.split('\n');
+    const range = findBlockWithRange(lines, change.id);
+    if (!range) continue;
+
+    let startPos = 0;
+    for (let i = 0; i < range.startLine; i++) startPos += lines[i].length + 1;
+    let endPos = startPos;
+    for (let i = range.startLine; i <= range.endLine; i++) endPos += lines[i].length + 1;
+    endPos = Math.min(endPos - 1, text.length);
+
+    marks.push(Decoration.mark({ class: 'ai-diff-changed' }).range(
+      Math.max(0, startPos), Math.max(startPos, endPos)
+    ));
+  }
+
+  if (marks.length > 0) {
+    editorView.dispatch({ effects: [setDiffEffect.of(RangeSet.of(marks, true))] });
+    // Scroll to first change
+    editorView.dispatch({ effects: EV.scrollIntoView(marks[0].from, { y: 'center' }) });
+  }
+}
+
+/** Show accept/reject toolbar for AI Touch diffs. */
+function showDiffToolbar(changeCount) {
+  let toolbar = document.getElementById('ai-diff-toolbar');
+  if (!toolbar) {
+    toolbar = document.createElement('div');
+    toolbar.id = 'ai-diff-toolbar';
+    toolbar.className = 'ai-diff-toolbar';
+    document.body.appendChild(toolbar);
+  }
+  toolbar.innerHTML = `
+    <span class="ai-diff-label">✦ ${changeCount} block${changeCount > 1 ? 's' : ''} changed</span>
+    <button class="ai-diff-accept" id="ai-diff-accept-btn">✓ Accept</button>
+    <button class="ai-diff-reject" id="ai-diff-reject-btn">✗ Reject</button>
+  `;
+  toolbar.classList.add('visible');
+
+  document.getElementById('ai-diff-accept-btn').onclick = () => acceptAiDiff();
+  document.getElementById('ai-diff-reject-btn').onclick = () => rejectAiDiff();
+}
+
+/** Accept AI Touch changes — apply per-block edits with granular undo. */
+function acceptAiDiff() {
+  if (!aiDiffState || !editorView || !fdCanvas) return;
+
+  const { originalText, perBlockChanges } = aiDiffState;
+  let currentText = originalText;
+
+  // Apply per-block changes (from bottom to top to preserve line numbers)
+  const sorted = [...perBlockChanges].sort((a, b) => b.startLine - a.startLine);
+
+  for (const change of sorted) {
+    const lines = currentText.split('\n');
+    const range = findBlockWithRange(lines, change.id);
+    if (!range) continue;
+
+    const before = lines.slice(0, range.startLine);
+    const after = lines.slice(range.endLine + 1);
+    currentText = [...before, change.newBlock, ...after].join('\n');
+  }
+
+  // Apply to CodeMirror as a single transaction (preserves undo atomically)
+  const cur = editorView.state.doc.toString();
+  editorView.dispatch({ changes: { from: 0, to: cur.length, insert: currentText } });
+
+  // Sync to WASM canvas
+  fdCanvas.set_text(currentText);
+  renderCanvas();
+  refreshLayersPanel();
+  updatePropertiesPanel();
+
+  // Cleanup
+  clearDiffState();
+  showToast(`✓ Accepted ${perBlockChanges.length} AI change${perBlockChanges.length > 1 ? 's' : ''}`);
+}
+
+/** Reject AI Touch changes — restore original text. */
+function rejectAiDiff() {
+  if (!aiDiffState) return;
+  clearDiffState();
+  showToast('✗ AI changes rejected');
+}
+
+/** Clean up diff state and decorations. */
+function clearDiffState() {
+  aiDiffState = null;
+  // Clear diff decorations
+  if (editorView && editorView._fdDiffField) {
+    const { Decoration } = window.cmBundle || {};
+    if (Decoration) {
+      editorView.dispatch({ effects: [setDiffEffect.of(Decoration.none)] });
+    }
+  }
+  // Hide toolbar
+  const toolbar = document.getElementById('ai-diff-toolbar');
+  if (toolbar) toolbar.classList.remove('visible');
+}
+
 /** ─── Properties Panel ──────────────────────────────────────────────── */
 let propsSuppressSync = false;
 
@@ -724,6 +988,12 @@ function updatePropertiesPanel() {
   // #4: Check for multi-selection
   const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
   const isMulti = selectedIds.length > 1;
+
+  // Highlight selected blocks in Code Mode (unless editor is focused)
+  initCodeMirrorEffects();
+  if (document.activeElement !== editorView?.dom && !editorView?.hasFocus) {
+    highlightSelectedBlocksInEditor(selectedIds);
+  }
 
   if (isMulti) {
     // Multi-selection: show count and appearance controls only
@@ -2607,14 +2877,19 @@ async function aiTouch() {
       return;
     }
 
-    // Apply refined text to editor + canvas
-    const result = spliceModifiedBlocks(fdText, refined, selectedIds);
-    if (editorView) {
-      const cur = editorView.state.doc.toString();
-      editorView.dispatch({ changes: { from: 0, to: cur.length, insert: result } });
+    // Show inline diff for review instead of immediate apply
+    initCodeMirrorEffects();
+    const diffShown = showAiTouchDiff(fdText, refined, selectedIds);
+    if (!diffShown) {
+      // Fallback: apply directly if diff UI fails
+      const result = spliceModifiedBlocks(fdText, refined, selectedIds);
+      if (editorView) {
+        const cur = editorView.state.doc.toString();
+        editorView.dispatch({ changes: { from: 0, to: cur.length, insert: result } });
+      }
+      fdCanvas.set_text(result);
+      renderCanvas();
     }
-    fdCanvas.set_text(result);
-    renderCanvas();
 
     // ── Phase 2: Scoped Review (1 credit) ──
     if (statusEl) statusEl.textContent = '✦ Phase 2: Analyzing improvements…';

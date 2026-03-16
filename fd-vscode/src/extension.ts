@@ -76,7 +76,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       });
 
     // ─── Webview → Extension: canvas mutations ─────────────────────
-    webviewPanel.webview.onDidReceiveMessage(async (message: { type: string; text?: string; id?: string; nodeIds?: string[]; userFocus?: string }) => {
+    webviewPanel.webview.onDidReceiveMessage(async (message: { type: string; text?: string; id?: string; ids?: string[]; nodeIds?: string[]; userFocus?: string }) => {
       switch (message.type) {
         case "textChanged": {
           const incoming = message.text ?? "";
@@ -107,45 +107,51 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
           setTimeout(() => { suppressCursorSync = false; }, 200);
           break;
         }
-        case "nodeSelected": {
-          const nodeId = message.id;
-          if (!nodeId) break;
-          // Find the line containing @<nodeId> in the text editor
-          const pattern = new RegExp(`@${nodeId}\\b`);
-          for (let i = 0; i < document.lineCount; i++) {
-            const line = document.lineAt(i);
-            if (pattern.test(line.text)) {
-              const editor = vscode.window.visibleTextEditors.find(
-                (e) => e.document.uri.toString() === document.uri.toString()
-              );
-              if (editor) {
-                const cursorLine = editor.selection.active.line;
-                // Only move cursor if not already on this line
-                if (cursorLine !== i) {
-                  suppressCursorSync = true;
-                  const pos = new vscode.Position(i, 0);
-                  editor.selection = new vscode.Selection(pos, pos);
-                  editor.revealRange(
-                    line.range,
-                    vscode.TextEditorRevealType.InCenterIfOutsideViewport
-                  );
-                }
-                // Always highlight the node declaration line
-                const decoration = vscode.window.createTextEditorDecorationType({
-                  backgroundColor: new vscode.ThemeColor(
-                    "editor.findMatchHighlightBackground"
-                  ),
-                  isWholeLine: true,
-                });
-                editor.setDecorations(decoration, [line.range]);
-                setTimeout(() => decoration.dispose(), 1500);
-              }
-              setTimeout(() => {
-                suppressCursorSync = false;
-              }, 200);
-              break;
-            }
+        case "nodeSelected":
+        case "nodesSelected": {
+          const nodeIds: string[] = message.ids ?? (message.id ? [message.id] : []);
+          if (nodeIds.length === 0) break;
+
+          const editor = vscode.window.visibleTextEditors.find(
+            (e) => e.document.uri.toString() === document.uri.toString()
+          );
+          if (!editor) break;
+
+          // Find all block ranges for selected IDs
+          const decorationRanges: vscode.Range[] = [];
+          for (const nodeId of nodeIds) {
+            const range = this.findBlockRange(document, nodeId);
+            if (range) decorationRanges.push(range);
           }
+
+          if (decorationRanges.length > 0) {
+            // Move cursor to first block (suppress cursor sync)
+            const cursorLine = editor.selection.active.line;
+            const firstRange = decorationRanges[0];
+            if (cursorLine < firstRange.start.line || cursorLine > firstRange.end.line) {
+              suppressCursorSync = true;
+              const pos = new vscode.Position(firstRange.start.line, 0);
+              editor.selection = new vscode.Selection(pos, pos);
+              editor.revealRange(
+                firstRange,
+                vscode.TextEditorRevealType.InCenterIfOutsideViewport
+              );
+            }
+
+            // Highlight all selected blocks
+            const decoration = vscode.window.createTextEditorDecorationType({
+              backgroundColor: new vscode.ThemeColor(
+                "editor.findMatchHighlightBackground"
+              ),
+              isWholeLine: true,
+            });
+            editor.setDecorations(decoration, decorationRanges);
+            setTimeout(() => decoration.dispose(), 2000);
+          }
+
+          setTimeout(() => {
+            suppressCursorSync = false;
+          }, 200);
           break;
         }
         case "ready": {
@@ -295,6 +301,14 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
 
   // ─── AI Touch Handler ─────────────────────────────────────────────
 
+  /** Pending AI diff state for accept/reject flow. */
+  private pendingAiDiff: {
+    document: vscode.TextDocument;
+    webviewPanel: vscode.WebviewPanel;
+    perBlockChanges: Array<{ id: string; oldBlock: string; newBlock: string; startLine: number; endLine: number }>;
+    decoration?: vscode.TextEditorDecorationType;
+  } | null = null;
+
   private async handleAiRefine(
     document: vscode.TextDocument,
     webviewPanel: vscode.WebviewPanel,
@@ -330,23 +344,152 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
       return;
     }
 
-    // Apply refined text to the document
-    const lastLine = document.lineCount - 1;
-    const lastLineRange = document.lineAt(lastLine).range;
-    const fullRange = new vscode.Range(0, 0, lastLine, lastLineRange.end.character);
+    // Compute per-block diffs
+    const docText = document.getText();
+    const docLines = docText.split("\n");
+    const perBlockChanges: Array<{ id: string; oldBlock: string; newBlock: string; startLine: number; endLine: number }> = [];
 
-    const edit = new vscode.WorkspaceEdit();
-    edit.replace(
-      document.uri,
-      fullRange,
-      result.refinedText
-    );
-    await vscode.workspace.applyEdit(edit);
+    for (const id of nodeIds) {
+      const range = this.findBlockRangeLines(docLines, id);
+      if (!range) continue;
+      const oldBlock = docLines.slice(range.startLine, range.endLine + 1).join("\n");
+      const newBlock = this.findBlockInText(result.refinedText, id);
+      if (newBlock && oldBlock.trim() !== newBlock.trim()) {
+        perBlockChanges.push({ id, oldBlock, newBlock, startLine: range.startLine, endLine: range.endLine });
+      }
+    }
 
-    webviewPanel.webview.postMessage({ type: "aiTouchComplete" });
-    vscode.window.showInformationMessage(
-      `AI Touch: ${nodeIds.length} node(s) refined.`
+    if (perBlockChanges.length === 0) {
+      webviewPanel.webview.postMessage({ type: "aiTouchComplete" });
+      vscode.window.showInformationMessage("AI Touch: No changes detected.");
+      return;
+    }
+
+    // Show diff decorations
+    const editor = vscode.window.visibleTextEditors.find(
+      (e) => e.document.uri.toString() === document.uri.toString()
     );
+    if (editor) {
+      const decoration = vscode.window.createTextEditorDecorationType({
+        backgroundColor: "rgba(255, 149, 0, 0.12)",
+        isWholeLine: true,
+        overviewRulerColor: "#FF9500",
+        borderWidth: "0 0 0 3px",
+        borderStyle: "solid",
+        borderColor: "rgba(255, 149, 0, 0.6)",
+      });
+      const ranges = perBlockChanges
+        .map((c) => this.findBlockRange(document, c.id))
+        .filter((r): r is vscode.Range => r !== null);
+      editor.setDecorations(decoration, ranges);
+
+      this.pendingAiDiff = { document, webviewPanel, perBlockChanges, decoration };
+    }
+
+    // Ask user to accept or reject
+    const choice = await vscode.window.showInformationMessage(
+      `AI Touch: ${perBlockChanges.length} block(s) changed. Review and apply?`,
+      "✓ Accept",
+      "✗ Reject"
+    );
+
+    // Clean up decoration
+    this.pendingAiDiff?.decoration?.dispose();
+
+    if (choice === "✓ Accept") {
+      // Apply per-block edits
+      let currentText = docText;
+      const sorted = [...perBlockChanges].sort((a, b) => b.startLine - a.startLine);
+
+      for (const change of sorted) {
+        const lines = currentText.split("\n");
+        const range = this.findBlockRangeLines(lines, change.id);
+        if (!range) continue;
+
+        const before = lines.slice(0, range.startLine);
+        const after = lines.slice(range.endLine + 1);
+        currentText = [...before, change.newBlock, ...after].join("\n");
+      }
+
+      const lastLine = document.lineCount - 1;
+      const lastLineRange = document.lineAt(lastLine).range;
+      const fullRange = new vscode.Range(0, 0, lastLine, lastLineRange.end.character);
+
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(document.uri, fullRange, currentText);
+      await vscode.workspace.applyEdit(edit);
+
+      webviewPanel.webview.postMessage({ type: "aiTouchComplete" });
+      vscode.window.showInformationMessage(
+        `✓ AI Touch: ${perBlockChanges.length} block(s) refined.`
+      );
+    } else {
+      webviewPanel.webview.postMessage({ type: "aiTouchComplete" });
+      vscode.window.showInformationMessage("✗ AI Touch changes rejected.");
+    }
+
+    this.pendingAiDiff = null;
+  }
+
+  // ─── Block Range Helpers ───────────────────────────────────────────
+
+  /** Find a block range for a given @id in a TextDocument (returns vscode.Range). */
+  private findBlockRange(document: vscode.TextDocument, nodeId: string): vscode.Range | null {
+    const lines: string[] = [];
+    for (let i = 0; i < document.lineCount; i++) {
+      lines.push(document.lineAt(i).text);
+    }
+    const result = this.findBlockRangeLines(lines, nodeId);
+    if (!result) return null;
+    return new vscode.Range(
+      new vscode.Position(result.startLine, 0),
+      new vscode.Position(result.endLine, lines[result.endLine].length)
+    );
+  }
+
+  /** Find a block's line range for a given @id in an array of lines. */
+  private findBlockRangeLines(lines: string[], nodeId: string): { startLine: number; endLine: number } | null {
+    const escapedId = nodeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const nodeRe = new RegExp(`^\\s*(group|frame|rect|ellipse|path|text)\\s+@${escapedId}\\b`);
+    const edgeRe = new RegExp(`@${escapedId}\\s*->`);
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (nodeRe.test(trimmed) || edgeRe.test(trimmed)) {
+        if (!lines[i].includes("{")) return { startLine: i, endLine: i };
+        let depth = 0;
+        for (let j = i; j < lines.length; j++) {
+          depth += (lines[j].match(/\{/g) || []).length;
+          depth -= (lines[j].match(/\}/g) || []).length;
+          if (depth <= 0) return { startLine: i, endLine: j };
+        }
+        return { startLine: i, endLine: lines.length - 1 };
+      }
+    }
+    return null;
+  }
+
+  /** Find a block for a given @id in AI output text. */
+  private findBlockInText(text: string, nodeId: string): string | null {
+    const lines = text.split("\n");
+    const escapedId = nodeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const nodeRe = new RegExp(`(group|frame|rect|ellipse|path|text)\\s+@\\w*${escapedId}\\w*`);
+    const edgeRe = new RegExp(`@${escapedId}\\s*->`);
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (nodeRe.test(trimmed) || edgeRe.test(trimmed)) {
+        if (!lines[i].includes("{")) return lines[i];
+        let depth = 0;
+        const blockLines: string[] = [];
+        for (let j = i; j < lines.length; j++) {
+          blockLines.push(lines[j]);
+          depth += (lines[j].match(/\{/g) || []).length;
+          depth -= (lines[j].match(/\}/g) || []).length;
+          if (depth <= 0) return blockLines.join("\n");
+        }
+        return blockLines.join("\n");
+      }
+    }
+    return null;
   }
 
   // ─── Renamify Handler ─────────────────────────────────────────────────

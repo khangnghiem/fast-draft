@@ -2668,3 +2668,79 @@ code {
   border-top: 1px solid rgba(255,255,255,0.05);
   margin-top: 8px;
 }
+
+/* ─── AI Touch: Code Block Highlighting & Diff ─── */
+.cm-editor .ai-diff-selected {
+  background: rgba(255, 204, 0, 0.12);
+  border-left: 3px solid rgba(255, 204, 0, 0.6);
+}
+.dark-canvas .cm-editor .ai-diff-selected,
+.dark-theme .cm-editor .ai-diff-selected {
+  background: rgba(255, 204, 0, 0.08);
+  border-left-color: rgba(255, 204, 0, 0.4);
+}
+.cm-editor .ai-diff-changed {
+  background: rgba(255, 149, 0, 0.12);
+  border-left: 3px solid rgba(255, 149, 0, 0.6);
+}
+.dark-canvas .cm-editor .ai-diff-changed,
+.dark-theme .cm-editor .ai-diff-changed {
+  background: rgba(255, 149, 0, 0.08);
+  border-left-color: rgba(255, 149, 0, 0.5);
+}
+
+.ai-diff-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  z-index: 120;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--fd-surface, rgba(255, 255, 255, 0.92));
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--fd-border, rgba(0, 0, 0, 0.08));
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.ai-diff-toolbar.visible {
+  display: flex;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.dark-canvas .ai-diff-toolbar,
+.dark-theme .ai-diff-toolbar {
+  background: rgba(30, 30, 32, 0.92);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.ai-diff-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fd-text, #1D1D1F);
+  white-space: nowrap;
+}
+.ai-diff-accept, .ai-diff-reject {
+  border: none;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.ai-diff-accept {
+  background: linear-gradient(135deg, #34C759, #30D158);
+  color: #fff;
+}
+.ai-diff-accept:hover { filter: brightness(1.1); }
+.ai-diff-reject {
+  background: rgba(255, 59, 48, 0.1);
+  color: #FF3B30;
+}
+.ai-diff-reject:hover { background: rgba(255, 59, 48, 0.2); }
+
