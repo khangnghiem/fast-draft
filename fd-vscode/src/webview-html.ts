@@ -34,7 +34,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     script-src 'nonce-{nonce}' 'wasm-unsafe-eval' {cspSource};
     style-src 'nonce-{nonce}' 'unsafe-inline';
     img-src {cspSource};
-    connect-src {cspSource};
+    connect-src {cspSource} https://fast-draft.com;
     font-src {cspSource};
   ">
   <style nonce="{nonce}">
@@ -2767,12 +2767,299 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       padding: 0 16px 4px;
     }
 
+    /* ── AI Chat Panel (slide-in from right) ── */
+    .ai-chat-panel {
+      position: absolute;
+      top: 0; right: 0; bottom: 0;
+      width: 320px;
+      max-width: 50%;
+      background: var(--fd-surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border-left: 0.5px solid var(--fd-border);
+      box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+      transform: translateX(0);
+      opacity: 1;
+      overflow: hidden;
+    }
+    .ai-chat-panel.hidden {
+      transform: translateX(100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .dark-theme .ai-chat-panel {
+      box-shadow: -4px 0 24px rgba(0, 0, 0, 0.35);
+    }
+    .ai-chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 0.5px solid var(--fd-border);
+      flex-shrink: 0;
+    }
+    .ai-chat-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--fd-text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ai-chat-icon {
+      font-size: 14px;
+      background: linear-gradient(135deg, #6C5CE7, #0A84FF);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .ai-chat-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .ai-chat-clear {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--fd-text-secondary);
+      padding: 3px 6px;
+      border-radius: 4px;
+      line-height: 1;
+      opacity: 0.6;
+      transition: opacity 0.15s ease, background 0.15s ease;
+    }
+    .ai-chat-clear:hover {
+      opacity: 1;
+      background: var(--fd-surface-hover);
+    }
+    .ai-chat-close {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--fd-text-secondary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      line-height: 1;
+    }
+    .ai-chat-close:hover {
+      background: var(--fd-surface-hover);
+      color: var(--fd-text);
+    }
+    .ai-chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .ai-chat-welcome {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--fd-text-secondary);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .ai-chat-hint {
+      font-style: italic;
+      font-size: 11px;
+      opacity: 0.7;
+      margin-top: 8px;
+    }
+    .ai-chat-msg {
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      line-height: 1.6;
+      max-width: 85%;
+      word-wrap: break-word;
+      animation: chat-msg-in 0.2s ease;
+    }
+    @keyframes chat-msg-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .ai-chat-msg.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #6C5CE7, #0A84FF);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .ai-chat-msg.assistant {
+      align-self: flex-start;
+      background: var(--fd-surface-solid);
+      border: 1px solid var(--fd-border);
+      color: var(--fd-text);
+      border-bottom-left-radius: 4px;
+    }
+    .ai-chat-msg.assistant code {
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+      background: rgba(108, 92, 231, 0.1);
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    .ai-chat-msg.assistant pre {
+      background: var(--fd-surface-hover);
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin: 6px 0;
+      overflow-x: auto;
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .ai-chat-msg.assistant .fd-block-action {
+      display: inline-flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .ai-chat-msg.assistant .fd-apply-btn {
+      border: none;
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      background: linear-gradient(135deg, #34C759, #30D158);
+      color: #fff;
+      transition: filter 0.15s ease;
+    }
+    .ai-chat-msg.assistant .fd-apply-btn:hover { filter: brightness(1.1); }
+    .ai-chat-msg.assistant .fd-reject-btn {
+      border: none;
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      background: rgba(255, 59, 48, 0.1);
+      color: #FF3B30;
+      transition: background 0.15s ease;
+    }
+    .ai-chat-msg.assistant .fd-reject-btn:hover { background: rgba(255, 59, 48, 0.2); }
+    .ai-chat-msg.thinking {
+      align-self: flex-start;
+      color: var(--fd-text-secondary);
+      font-style: italic;
+      font-size: 11px;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .ai-chat-context-badge {
+      padding: 4px 12px;
+      margin: 0 12px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #6C5CE7;
+      background: rgba(108, 92, 231, 0.08);
+      border: 1px solid rgba(108, 92, 231, 0.15);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    .ai-chat-context-badge.hidden { display: none; }
+    .dark-theme .ai-chat-context-badge {
+      background: rgba(108, 92, 231, 0.12);
+      border-color: rgba(108, 92, 231, 0.2);
+      color: #A29BFE;
+    }
+    .ai-chat-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 6px 12px;
+      flex-shrink: 0;
+    }
+    .ai-chat-chip {
+      border: 1px solid var(--fd-border);
+      border-radius: 16px;
+      padding: 4px 10px;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--fd-text-secondary);
+      background: var(--fd-surface-solid);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .ai-chat-chip:hover {
+      border-color: #6C5CE7;
+      color: #6C5CE7;
+      background: rgba(108, 92, 231, 0.06);
+    }
+    .dark-theme .ai-chat-chip:hover {
+      border-color: #A29BFE;
+      color: #A29BFE;
+    }
+    .ai-chat-input-area {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      padding: 10px 16px;
+      border-top: 0.5px solid var(--fd-border);
+      flex-shrink: 0;
+    }
+    .ai-chat-input {
+      flex: 1;
+      border: 1px solid var(--fd-border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-family: inherit;
+      resize: none;
+      min-height: 20px;
+      max-height: 80px;
+      background: var(--fd-surface-solid);
+      color: var(--fd-text);
+      outline: none;
+      transition: border-color 0.2s ease;
+      line-height: 1.4;
+    }
+    .ai-chat-input:focus {
+      border-color: #6C5CE7;
+      box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.15);
+    }
+    .ai-chat-send {
+      border: none;
+      border-radius: 10px;
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #6C5CE7, #0A84FF);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: filter 0.15s ease, transform 0.1s ease;
+    }
+    .ai-chat-send:hover { filter: brightness(1.15); }
+    .ai-chat-send:active { transform: scale(0.94); }
+    .ai-chat-send:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      filter: grayscale(0.3);
+    }
+
   </style>
 </head>
 <body>
   <div id="toolbar">
     <div class="tb-zone tb-left fs-hide">
       <button class="tool-btn" id="ai-touch-btn" title="AI Touch selected node (select a node first)">✦ AI Touch</button>
+      <button class="tool-btn" id="ai-chat-btn" title="AI Agent — chat about your design">✦ Agent</button>
       <button class="tool-btn" id="renamify-btn" title="Renamify — batch AI rename anonymous node IDs">✦ Renamify</button>
     </div>
     <span class="tb-spacer"></span>
@@ -2832,6 +3119,30 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       </div>
       <div class="specs-panel-body" id="specs-panel-body">
         <p class="specs-empty">No specs yet. Add a note via right-click → Add Spec.</p>
+      </div>
+    </div>
+    <!-- AI Chat Panel (slide-in from right) -->
+    <div id="ai-chat-panel" class="ai-chat-panel hidden">
+      <div class="ai-chat-header">
+        <div class="ai-chat-title">
+          <span class="ai-chat-icon">✦</span> AI Agent
+        </div>
+        <div class="ai-chat-header-actions">
+          <button class="ai-chat-clear" id="ai-chat-clear" title="Clear chat">🗑</button>
+          <button class="ai-chat-close" id="ai-chat-close" title="Close">✕</button>
+        </div>
+      </div>
+      <div class="ai-chat-messages" id="ai-chat-messages">
+        <div class="ai-chat-welcome">
+          <p>Ask me about your design. I can modify nodes, suggest improvements, or answer questions.</p>
+          <p class="ai-chat-hint">Try: "Make the colors warmer" or "Add a header section"</p>
+        </div>
+      </div>
+      <div class="ai-chat-chips" id="ai-chat-chips"></div>
+      <div class="ai-chat-context-badge hidden" id="ai-chat-context-badge"></div>
+      <div class="ai-chat-input-area">
+        <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Ask AI about your design..." rows="1" maxlength="500"></textarea>
+        <button class="ai-chat-send" id="ai-chat-send" title="Send">→</button>
       </div>
     </div>
     <div id="dimension-tooltip"></div>
