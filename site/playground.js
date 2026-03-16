@@ -254,6 +254,7 @@ let activePointerId = -1;
 let panX = 0, panY = 0;
 let panStartX = 0, panStartY = 0;
 let panDragging = false;
+let canvasDragOccurred = false; // tracks whether a real canvas drag happened (for post-drop menu)
 let zoomLevel = 1.0;
 let gridEnabled = false;
 const GRID_SPACING = 20;
@@ -4750,10 +4751,48 @@ async function initPlayground() {
       }, 300); // iOS needs time to settle new dimensions
     });
 
+    // ── Layers→Canvas cross-drag ────────────────────────────────────
+    // Accept drops from the Layers panel: reparent to root + move to drop position
+    canvas.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    });
+    canvas.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (!fdCanvas) return;
+      const nodeId = e.dataTransfer.getData('text/plain');
+      if (!nodeId) return;
+
+      const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
+      const textBefore = fdCanvas.get_text();
+
+      // Reparent to root if nested (this is a "take out of container" gesture)
+      const parentId = fdCanvas.get_parent_id ? fdCanvas.get_parent_id(nodeId) : '';
+      if (parentId) {
+        fdCanvas.reparent_into(nodeId, 'root');
+      }
+
+      // Move node to drop position
+      if (fdCanvas.set_node_position) {
+        fdCanvas.set_node_position(nodeId, x, y);
+      }
+
+      const textAfter = fdCanvas.get_text();
+      if (textBefore !== textAfter) {
+        fdCanvas.push_undo_snapshot(textBefore, textAfter);
+      }
+      renderDirty = true; uiDirty = true;
+      syncCanvasToEditor();
+      updatePropertiesPanel();
+      refreshLayersPanel();
+      showToast(`Moved @${nodeId} to canvas`);
+    });
+
     // ── Pointer Events ────────────────────────────────────────────────
     canvas.addEventListener('pointerdown', (e) => {
       if (!fdCanvas) return;
       e.preventDefault(); // prevent browser scroll/zoom on touch
+      canvasDragOccurred = false; // reset drag tracking
 
       // Update pointer type for adaptive hit radii + handle rendering
       fdCanvas.set_pointer_type(pointerTypeToU8(e.pointerType));
@@ -4956,40 +4995,9 @@ async function initPlayground() {
         e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
       );
       const moveResult = JSON.parse(moveResultJson);
-      if (moveResult.changed) { renderDirty = true; uiDirty = true; }
+      if (moveResult.changed) { renderDirty = true; uiDirty = true; canvasDragOccurred = true; }
 
-      // ⌘+drag reparent visual feedback: highlight target container during drag
-      if (activePointerId !== -1 && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
-        const selectedId = fdCanvas.get_selected_id();
-        if (selectedId && fdCanvas.hit_test_at_excluding) {
-          try {
-            const hitId = fdCanvas.hit_test_at_excluding(x, y, selectedId);
-            const overlay = document.getElementById('reparent-overlay');
-            if (hitId && hitId !== selectedId) {
-              const boundsJson = fdCanvas.get_node_bounds(hitId);
-              if (boundsJson && overlay) {
-                const b = JSON.parse(boundsJson);
-                const sx = b.x * zoomLevel + panX;
-                const sy = b.y * zoomLevel + panY;
-                const sw = b.w * zoomLevel;
-                const sh = b.h * zoomLevel;
-                overlay.style.left = (canvas.offsetLeft + sx) + 'px';
-                overlay.style.top = (canvas.offsetTop + sy) + 'px';
-                overlay.style.width = sw + 'px';
-                overlay.style.height = sh + 'px';
-                overlay.dataset.target = hitId;
-                overlay.textContent = `Nest into @${hitId}`;
-                overlay.style.display = 'flex';
-              }
-            } else if (overlay) {
-              overlay.style.display = 'none';
-            }
-          } catch (_) { /* API may not exist */ }
-        }
-      } else {
-        const overlay = document.getElementById('reparent-overlay');
-        if (overlay) overlay.style.display = 'none';
-      }
+      // (⌘+drag reparent removed — reparent via Layers panel drag-drop or post-drop menu)
 
       // Dimension tooltip — show W×H during drag (using bundled bounds)
       if (activePointerId !== -1 && moveResult.bounds) {
@@ -5046,28 +5054,59 @@ async function initPlayground() {
 
       const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
 
-      // Hide reparent overlay on pointer up
-      const reparentOverlay = document.getElementById('reparent-overlay');
-      if (reparentOverlay) reparentOverlay.style.display = 'none';
+      // ── Post-drop reparent context menu ──
+      // After a move gesture, check if the selected node overlaps a container.
+      // If so, offer "Nest into @target" via a small context menu (explicit, no modifiers).
+      const wasDragging = canvasDragOccurred;
+      canvasDragOccurred = false;
 
-      // ⌘+drag reparent: if Cmd/Ctrl held, check if we're over a container
-      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+      if (wasDragging && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
         const selectedId = fdCanvas.get_selected_id();
-        if (selectedId) {
+        if (selectedId && fdCanvas.hit_test_at_excluding) {
           try {
-            // Use excluding hit test to skip the dragged node itself
-            const hitId = fdCanvas.hit_test_at_excluding
-              ? fdCanvas.hit_test_at_excluding(x, y, selectedId)
-              : '';
+            const hitId = fdCanvas.hit_test_at_excluding(x, y, selectedId);
             if (hitId && hitId !== selectedId) {
-              const ok = fdCanvas.reparent_into(selectedId, hitId);
-              if (ok) {
-                renderDirty = true; uiDirty = true;
-                syncCanvasToEditor();
-                showToast(`Nested into @${hitId}`);
+              // Only offer for containers (rect, ellipse, frame, group)
+              const containerKinds = ['rect', 'ellipse', 'frame', 'group'];
+              const hitKind = fdCanvas.get_node_kind ? fdCanvas.get_node_kind(hitId) : '';
+              if (containerKinds.includes(hitKind)) {
+                // Check the node isn't already a child of the target
+                const parentId = fdCanvas.get_parent_id ? fdCanvas.get_parent_id(selectedId) : '';
+                if (parentId !== hitId) {
+                  const textBefore = fdCanvas.get_text();
+                  ctxMenu.open({
+                    items: [
+                      { type: 'action', icon: '📦', label: `Nest into @${hitId}`, action: 'nest' },
+                      { type: 'action', icon: '⊙', label: `Center in @${hitId}`, action: 'center-nest' },
+                    ],
+                    x: e.clientX,
+                    y: e.clientY,
+                    onAction: (action) => {
+                      let changed = false;
+                      if (action === 'nest') {
+                        changed = fdCanvas.reparent_into(selectedId, hitId);
+                      } else if (action === 'center-nest') {
+                        changed = fdCanvas.reparent_into_centered
+                          ? fdCanvas.reparent_into_centered(selectedId, hitId)
+                          : fdCanvas.reparent_into(selectedId, hitId);
+                      }
+                      if (changed) {
+                        const textAfter = fdCanvas.get_text();
+                        if (textBefore !== textAfter) {
+                          fdCanvas.push_undo_snapshot(textBefore, textAfter);
+                        }
+                        renderDirty = true; uiDirty = true;
+                        syncCanvasToEditor();
+                        updatePropertiesPanel();
+                        refreshLayersPanel();
+                        showToast(`Nested into @${hitId}`);
+                      }
+                    },
+                  });
+                }
               }
             }
-          } catch (_) { /* reparent_into or hit_test_at_excluding may not exist */ }
+          } catch (_) { /* hit_test_at_excluding or get_node_kind may not exist */ }
         }
       }
 

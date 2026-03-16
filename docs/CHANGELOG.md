@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.184 — Reparent Interaction Redesign (R3.64)
+- **BREAKING (R3.64)**: Removed ⌘+drag reparenting from canvas — previously holding Cmd/Ctrl during drag would reparent into overlapping containers, which was prone to accidental activation; removed from both site (`playground.js`) and VS Code extension (`pointer.js`)
+- **FEATURE (R3.64)**: Post-drop context menu — after moving a node (plain drag, no modifiers) that overlaps a container, a context menu appears offering "Nest into @target" (preserve position) and "Center in @target" (CenterIn constraint); explicit user confirmation prevents accidental reparenting
+- **FEATURE (R3.64)**: Layers→Canvas cross-drag — dragging a layer item from the Layers panel and dropping it on the canvas reparents the node to root and sets its position to the drop point; uses `set_node_position()` WASM API
+- **UX (R3.64)**: ⌘+Hand tool is now pure select/move — with ⌘+drag reparent removed, holding Cmd on the Hand tool cleanly switches to Select tool for click/drag without reparent side effects
+- **WASM**: New `get_node_kind(id)` API — returns the kind name of a node ("rect", "ellipse", etc.); new `get_parent_id(id)` API — returns the parent node ID or empty string for root-level nodes; new `set_node_position(id, x, y)` API — sets absolute position constraint
+- **CLEANUP**: Removed `#reparent-overlay` from `index.html` and its CSS from `style.css`; removed ⌘+drag→Reparent rows from `SHORTCUTS.md` modifier tables
+- **PARITY**: All changes applied to both site (`playground.js`, `index.html`, `style.css`) and VS Code extension (`pointer.js`, `main.js`)
+
 ### v0.11.183 — Shared Canvas-Core Module (R6.12 Phase 2)
 
 - **NEW** `site/canvas-core/state.js` (170 lines) — shared zoom/pan state, dirty flags, grid, reduce-motion, tool defaults, `screenToScene`, `pointerTypeToU8`, `showToast`

@@ -353,6 +353,58 @@ function playDetachAnimation(nodeId) {
 
 // ─── Gesture Constants ──────────────────────────────────────────────────
 const ZOOM_WHEEL_FACTOR = 1.04;
+let canvasDragOccurred = false; // tracks whether a real canvas drag happened (for post-drop menu)
+
+// ─── Post-drop reparent context menu ────────────────────────────────────
+function showDropContextMenu(clientX, clientY, selectedId, hitId) {
+  closeContextMenu();
+  const menu = document.createElement('div');
+  menu.className = 'ctx-menu ctx-menu-visible';
+  menu.style.cssText = `position:fixed;left:${clientX}px;top:${clientY}px;z-index:200;
+    min-width:160px;padding:4px;background:var(--vscode-menu-background,#1e1e1e);
+    border:1px solid var(--vscode-menu-border,#454545);border-radius:8px;
+    box-shadow:0 8px 30px rgba(0,0,0,0.3);font-size:12px;`;
+
+  const items = [
+    { icon: '📦', label: `Nest into @${hitId}`, action: 'nest' },
+    { icon: '⊙', label: `Center in @${hitId}`, action: 'center-nest' },
+  ];
+
+  for (const item of items) {
+    const el = document.createElement('div');
+    el.className = 'ctx-menu-item';
+    el.innerHTML = `<span class="ctx-menu-icon">${item.icon}</span><span class="ctx-menu-label">${item.label}</span>`;
+    el.addEventListener('click', () => {
+      menu.remove();
+      let changed = false;
+      if (item.action === 'nest') {
+        changed = fdCanvas.reparent_into(selectedId, hitId);
+      } else if (item.action === 'center-nest') {
+        changed = fdCanvas.reparent_into_centered
+          ? fdCanvas.reparent_into_centered(selectedId, hitId)
+          : fdCanvas.reparent_into(selectedId, hitId);
+      }
+      if (changed) {
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+        showToast(`Nested into @${hitId}`);
+      }
+    });
+    menu.appendChild(el);
+  }
+
+  document.body.appendChild(menu);
+
+  // Auto-dismiss on click elsewhere
+  const dismiss = (e) => {
+    if (!menu.contains(e.target)) {
+      menu.remove();
+      document.removeEventListener('pointerdown', dismiss, true);
+    }
+  };
+  setTimeout(() => document.addEventListener('pointerdown', dismiss, true), 0);
+}
 
 // ─── Pointer Events ──────────────────────────────────────────────────────
 
@@ -469,6 +521,7 @@ function setupPointerEvents() {
     );
     if (changed) render();
     canvasPointerId = e.pointerId;
+    canvasDragOccurred = false; // reset drag tracking
 
     // Track interaction start for dimension tooltip
     pointerIsDown = true;
@@ -529,7 +582,7 @@ function setupPointerEvents() {
       e.metaKey
     ));
     const changed = moveResult.changed;
-    if (changed) render();
+    if (changed) { render(); canvasDragOccurred = true; }
 
     // Read ghost origin bounds for Alt+drag preview
     if (altCloneActive && fdCanvas.get_alt_drag_ghost) {
@@ -595,50 +648,7 @@ function setupPointerEvents() {
       nearDetachState = null;
     }
 
-    // ── ⌘+drag reparent visual feedback ──
-    if (pointerIsDown && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
-      const selectedId = fdCanvas.get_selected_id();
-      if (selectedId && fdCanvas.hit_test_at_excluding) {
-        try {
-          const hitId = fdCanvas.hit_test_at_excluding(x, y, selectedId);
-          let overlay = document.getElementById('reparent-overlay');
-          if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = 'reparent-overlay';
-            overlay.style.cssText = 'display:none;position:absolute;z-index:199;' +
-              'border:2px dashed var(--fd-accent,#0A84FF);border-radius:8px;' +
-              'background:rgba(10,132,255,0.06);pointer-events:none;box-sizing:border-box;' +
-              'align-items:flex-start;justify-content:center;padding-top:4px;' +
-              'font-size:10px;font-weight:600;color:var(--fd-accent,#0A84FF);' +
-              'letter-spacing:-0.01em;font-family:monospace;';
-            const container = document.getElementById('canvas-container');
-            if (container) container.appendChild(overlay);
-          }
-          if (hitId && hitId !== selectedId) {
-            const boundsJson = fdCanvas.get_node_bounds(hitId);
-            if (boundsJson && overlay) {
-              const b = JSON.parse(boundsJson);
-              const sx = b.x * zoomLevel + panX;
-              const sy = b.y * zoomLevel + panY;
-              const sw = b.w * zoomLevel;
-              const sh = b.h * zoomLevel;
-              overlay.style.left = (canvas.offsetLeft + sx) + 'px';
-              overlay.style.top = (canvas.offsetTop + sy) + 'px';
-              overlay.style.width = sw + 'px';
-              overlay.style.height = sh + 'px';
-              overlay.dataset.target = hitId;
-              overlay.textContent = `Nest into @${hitId}`;
-              overlay.style.display = 'flex';
-            }
-          } else if (overlay) {
-            overlay.style.display = 'none';
-          }
-        } catch (_) { /* API may not exist */ }
-      }
-    } else {
-      const overlay = document.getElementById('reparent-overlay');
-      if (overlay) overlay.style.display = 'none';
-    }
+      // (⌘+drag reparent removed — reparent via Layers panel drag-drop or post-drop menu)
   });
 
   document.addEventListener("pointerup", (e) => {
@@ -736,26 +746,26 @@ function setupPointerEvents() {
 
     // Animation drop on release removed (bug #4)
 
-    // ── ⌘+drag reparent: reparent into container on release ──
-    const reparentOverlay = document.getElementById('reparent-overlay');
-    if (reparentOverlay) reparentOverlay.style.display = 'none';
+    // ── Post-drop reparent context menu ──
+    const wasDragging = canvasDragOccurred;
+    canvasDragOccurred = false;
 
-    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+    if (wasDragging && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
       const selectedId = fdCanvas.get_selected_id();
-      if (selectedId) {
+      if (selectedId && fdCanvas.hit_test_at_excluding) {
         try {
-          const hitId = fdCanvas.hit_test_at_excluding
-            ? fdCanvas.hit_test_at_excluding(x, y, selectedId)
-            : '';
+          const hitId = fdCanvas.hit_test_at_excluding(x, y, selectedId);
           if (hitId && hitId !== selectedId) {
-            const ok = fdCanvas.reparent_into(selectedId, hitId);
-            if (ok) {
-              render();
-              syncTextToExtension();
-              showToast(`Nested into @${hitId}`);
+            const containerKinds = ['rect', 'ellipse', 'frame', 'group'];
+            const hitKind = fdCanvas.get_node_kind ? fdCanvas.get_node_kind(hitId) : '';
+            if (containerKinds.includes(hitKind)) {
+              const parentId = fdCanvas.get_parent_id ? fdCanvas.get_parent_id(selectedId) : '';
+              if (parentId !== hitId) {
+                showDropContextMenu(e.clientX, e.clientY, selectedId, hitId);
+              }
             }
           }
-        } catch (_) { /* reparent_into or hit_test_at_excluding may not exist */ }
+        } catch (_) { /* hit_test_at_excluding or get_node_kind may not exist */ }
       }
     }
 

@@ -467,4 +467,56 @@ impl FdCanvas {
         }
         format!("[{}]", containers.join(","))
     }
+
+    /// Return the kind name of a node (e.g. "rect", "ellipse", "frame", "group", "text").
+    /// Returns empty string if the node doesn't exist.
+    pub fn get_node_kind(&self, node_id: &str) -> String {
+        let id = NodeId::intern(node_id);
+        self.engine
+            .graph
+            .get_by_id(id)
+            .map(|n| n.kind.kind_name().to_string())
+            .unwrap_or_default()
+    }
+
+    /// Return the parent ID of a node, or empty string if it's a root-level node.
+    pub fn get_parent_id(&self, node_id: &str) -> String {
+        let id = NodeId::intern(node_id);
+        if let Some(idx) = self.engine.graph.index_of(id)
+            && let Some(parent_idx) = self.engine.graph.parent(idx)
+        {
+            if parent_idx == self.engine.graph.root {
+                return String::new();
+            }
+            return self.engine.graph.graph[parent_idx].id.as_str().to_string();
+        }
+        String::new()
+    }
+
+    /// Set a node's position constraint to an absolute (x, y) coordinate.
+    /// Used by Layers→Canvas cross-drag to place a node at the drop position.
+    pub fn set_node_position(&mut self, node_id: &str, x: f32, y: f32) -> bool {
+        let id = NodeId::intern(node_id);
+        if let Some(node) = self.engine.graph.get_by_id_mut(id) {
+            // Remove existing positional constraints
+            node.constraints.retain(|c| {
+                !matches!(
+                    c,
+                    Constraint::Position { .. }
+                        | Constraint::Offset { .. }
+                        | Constraint::CenterIn(_)
+                        | Constraint::FillParent { .. }
+                )
+            });
+            let rx = (x * 100.0).round() / 100.0;
+            let ry = (y * 100.0).round() / 100.0;
+            node.constraints.push(Constraint::Position { x: rx, y: ry });
+            self.engine.mark_dirty();
+            self.engine.flush_to_text();
+            self.rebuild_spatial_index();
+            true
+        } else {
+            false
+        }
+    }
 }
