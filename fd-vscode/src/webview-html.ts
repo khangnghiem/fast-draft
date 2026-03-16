@@ -638,7 +638,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       font-size: 12px;
     }
     .lib-empty-icon { font-size: 24px; opacity: 0.4; margin-bottom: 8px; }
-    .zen-mode #library-panel { display: none !important; }
+    .fullscreen-mode #library-panel { display: none !important; }
     .layers-header {
       display: flex;
       align-items: center;
@@ -2644,64 +2644,23 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       border-top: 0.5px solid var(--fd-border);
     }
 
-    /* ── Zen Mode Toggle Button (inline toolbar) ── */
-    #zen-toggle-btn {
-      font-size: 15px;
-    }
-    /* In zen mode: pin button at top-right of canvas as a pill */
-    .zen-mode #zen-toggle-btn {
-      position: fixed;
-      top: 8px;
-      right: 8px;
-      z-index: 100;
-      padding: 6px 14px;
-      font-size: 13px;
-      font-weight: 500;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.12);
-      color: rgba(255, 255, 255, 0.9);
-      border: 0.5px solid rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      transition: all 0.15s ease;
-    }
-    .zen-mode #zen-toggle-btn:hover {
-      background: rgba(255, 255, 255, 0.2);
-      color: #fff;
-    }
-
-    /* ── Zen Mode overrides ── */
-    .zen-mode #toolbar {
-      padding: 4px 8px;
-      gap: 2px;
-    }
-    .zen-mode .zen-full-only { display: none !important; }
-    .zen-mode #layers-panel { display: none !important; }
-    .zen-mode #props-panel { display: none !important; }
-    .zen-mode #minimap-container { display: none !important; }
-    .zen-mode #spec-overlay { display: none !important; }
-
-    /* Panel toggle via keyboard in zen mode */
-    .zen-mode #layers-panel.zen-visible {
-      display: block !important;
-    }
-    .zen-mode #props-panel.zen-visible {
-      display: block !important;
-    }
-
-    /* ── Full Screen Mode (separate from Zen) ── */
+    /* ── Fullscreen Mode ── */
     .fullscreen-mode #toolbar {
       padding: 4px 8px;
       gap: 2px;
     }
-    .fullscreen-mode .zen-full-only { display: none !important; }
+    .fullscreen-mode .fs-hide { display: none !important; }
     .fullscreen-mode #layers-panel { display: none !important; }
     .fullscreen-mode #props-panel { display: none !important; }
     .fullscreen-mode #minimap-container { display: none !important; }
     .fullscreen-mode #spec-overlay { display: none !important; }
-    .fullscreen-mode #floating-toolbar { display: none !important; }
+    /* Panel toggle via keyboard in fullscreen */
+    .fullscreen-mode #layers-panel.fs-visible {
+      display: block !important;
+    }
+    .fullscreen-mode #props-panel.fs-visible {
+      display: block !important;
+    }
     #fullscreen-toggle-btn {
       font-size: 15px;
     }
@@ -2848,17 +2807,16 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
 </head>
 <body>
   <div id="toolbar">
-    <div class="tb-zone tb-left zen-full-only">
+    <div class="tb-zone tb-left fs-hide">
       <button class="tool-btn" id="ai-touch-btn" title="AI Touch selected node (select a node first)">✦ AI Touch</button>
       <button class="tool-btn" id="renamify-btn" title="Renamify — batch AI rename anonymous node IDs">✦ Renamify</button>
     </div>
     <div class="tb-zone tb-right">
       <button class="tool-btn" id="notes-toggle-btn" title="Notes Panel">📝</button>
-      <span class="zen-full-only" id="status">Loading WASM…</span>
+      <span class="fs-hide" id="status">Loading WASM…</span>
       <button class="tool-btn" id="fullscreen-toggle-btn" title="Full Screen (⇧F)">⛶</button>
-      <button class="tool-btn" id="zen-toggle-btn" title="Switch to Zen mode">🧘</button>
       <!-- Settings Hamburger ☰ -->
-      <div class="settings-dropdown-container zen-full-only" id="settings-dropdown-container">
+      <div class="settings-dropdown-container fs-hide" id="settings-dropdown-container">
       <button class="tool-btn" id="settings-menu-btn" title="Settings & tools">☰</button>
       <div class="settings-menu" id="settings-menu">
         <button class="settings-menu-item" id="sm-grid-toggle"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span><span class="sm-shortcut">G</span></button>

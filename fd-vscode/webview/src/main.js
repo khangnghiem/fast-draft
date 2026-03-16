@@ -76,7 +76,6 @@ async function main() {
     setupApplePencilPro();
     setupThemeToggle();
     setupSketchyToggle();
-    setupZenModeToggle();
     setupFullscreenToggle();
     setupZoomIndicator();
     setupGridToggle();

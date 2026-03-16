@@ -204,7 +204,7 @@ document.addEventListener("keydown", (e) => {
       e.preventDefault();
       const layersPanel = document.getElementById("layers-panel");
       if (layersPanel) {
-        layersPanel.classList.toggle("zen-visible");
+        layersPanel.classList.toggle("fs-visible");
       }
       return;
     }

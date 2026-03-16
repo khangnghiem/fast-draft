@@ -254,39 +254,8 @@ code {
 }
 
 /* Floating fullscreen button — above entire playground */
-button.playground-fs-btn {
-  position: absolute;
-  top: -36px;
-  right: 0;
-  left: auto;
-  z-index: 10;
-  font-size: 13px;
-  padding: 6px 14px;
-  border-radius: 8px;
-  background: rgba(0,122,255,0.08);
-  border: 1px solid rgba(0,122,255,0.35);
-  color: #c8d0da;
-  cursor: pointer;
-  transition: all 0.18s ease;
-  backdrop-filter: blur(8px);
-  letter-spacing: 0.01em;
-  font-weight: 500;
-}
-button.playground-fs-btn:hover {
-  background: rgba(0,122,255,0.15);
-  border-color: rgba(0,122,255,0.5);
-  color: #f5f5f7;
-  box-shadow: 0 0 12px rgba(0,122,255,0.2);
-}
-.fullscreen-mode button.playground-fs-btn {
-  position: fixed;
-  top: 8px;
-  right: 12px;
-  z-index: 210;
-  background: rgba(0,0,0,0.5);
-  border-color: rgba(255,255,255,0.2);
-  color: #f5f5f7;
-}
+/* Fullscreen button is now inside canvas — see .fullscreen-toggle-canvas below */
+
 
 
 /* ─── Sections ─── */
@@ -624,17 +593,50 @@ button.playground-fs-btn:hover {
   color: var(--fd-text-secondary, #86868B);
 }
 
-/* Desktop code toggle — matches Layers pattern */
-#code-toggle-btn {
-  color: var(--fd-text-primary, #f5f5f7);
-  gap: 3px;
-}
-#code-toggle-btn svg {
+/* Desktop segmented Code/Design pill — Apple HIG style */
+.segment-pill {
+  display: inline-flex;
+  align-items: center;
+  background: var(--fd-segment-bg, rgba(142, 142, 147, 0.12));
+  border-radius: 8px;
+  padding: 2px;
+  gap: 1px;
   flex-shrink: 0;
 }
-#code-toggle-btn.code-hidden {
-  opacity: 0.5;
+.segment-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
   color: var(--fd-text-secondary, #86868B);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+.segment-btn.active {
+  background: var(--fd-segment-active, #fff);
+  color: var(--fd-text, #1D1D1F);
+  box-shadow: var(--fd-segment-shadow, 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 1px rgba(0, 0, 0, 0.04));
+}
+.segment-btn:not(.active):hover {
+  color: var(--fd-text, #1D1D1F);
+  background: rgba(255,255,255,0.06);
+}
+.segment-btn svg { flex-shrink: 0; }
+.seg-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success, #34d399);
+  flex-shrink: 0;
 }
 
 /* Mobile code toggle — hidden on desktop, shown at ≤768px */
@@ -920,9 +922,9 @@ button.playground-fs-btn:hover {
   margin-right: 4px;
 }
 
-/* ── Zen mode: hide toolbar zones ── */
-.zen-mode .zen-full-only { display: none !important; }
-.zen-mode #canvas-toolbar {
+/* ── Fullscreen mode: hide toolbar zones ── */
+.fullscreen-mode .fs-hide { display: none !important; }
+.fullscreen-mode #canvas-toolbar {
   padding: 4px 8px;
   background: transparent;
   border-bottom: none;
@@ -2390,8 +2392,8 @@ button.playground-fs-btn:hover {
   transform: translateY(0);
 }
 
-/* ─── Zen Mode ─── */
-.zen-toggle-canvas {
+/* ─── Fullscreen Toggle (inside canvas) ─── */
+.fullscreen-toggle-canvas {
   position: absolute;
   top: 8px;
   right: 8px;
@@ -2413,15 +2415,15 @@ button.playground-fs-btn:hover {
   transition: all 0.2s ease;
   opacity: 0.7;
 }
-.zen-toggle-canvas:hover {
+.fullscreen-toggle-canvas:hover {
   background: var(--fd-surface-hover);
   color: var(--fd-text);
   box-shadow: var(--fd-shadow-md);
   opacity: 1;
 }
-.zen-toggle-canvas:active { transform: scale(0.95); }
-/* In zen mode: expand to pill with text, high contrast */
-.zen-mode .zen-toggle-canvas {
+.fullscreen-toggle-canvas:active { transform: scale(0.95); }
+/* In fullscreen: expand to pill with text, high contrast */
+.fullscreen-mode .fullscreen-toggle-canvas {
   width: auto;
   height: auto;
   padding: 6px 14px;
@@ -2434,21 +2436,20 @@ button.playground-fs-btn:hover {
   color: rgba(255, 255, 255, 0.9);
   border-color: rgba(255, 255, 255, 0.2);
 }
-.zen-mode .playground-toolbar { display: none !important; }
-.zen-mode .settings-dropdown-container { display: none !important; }
-.zen-mode .playground-editor { display: none !important; }
-.zen-mode .playground-split { grid-template-columns: 1fr; }
-.zen-mode .split-resize-handle { display: none; }
-.zen-mode .playground-canvas { min-height: 500px; }
-.zen-mode #floating-toolbar {
+.fullscreen-mode .playground-toolbar { display: none !important; }
+.fullscreen-mode .settings-dropdown-container { display: none !important; }
+.fullscreen-mode .playground-editor { display: none !important; }
+.fullscreen-mode .playground-split { grid-template-columns: 1fr; }
+.fullscreen-mode .split-resize-handle { display: none; }
+.fullscreen-mode .playground-canvas { min-height: 500px; }
+.fullscreen-mode #floating-toolbar {
   left: 50%;
   transform: translateX(-50%);
   bottom: 16px;
 }
-.zen-mode #minimap-container { display: none !important; }
+.fullscreen-mode #minimap-container { display: none !important; }
 
-/* ─── Full Screen Mode ─── */
-/* Separate from Zen: expands playground to fill entire viewport */
+/* ─── Full Screen: viewport expansion ─── */
 .fullscreen-mode #navbar,
 .fullscreen-mode #hero .hero-content,
 .fullscreen-mode #hero .hero-bg,
@@ -2570,12 +2571,11 @@ button.playground-fs-btn:hover {
   }
   #minimap-container { display: none; }
 
-  /* #2: Compact toolbar — hide text labels and non-essential items */
-  .canvas-label { font-size: 0; width: 0; overflow: hidden; padding: 0; margin: 0; }
-  .canvas-label .editor-dot { font-size: 12px; width: auto; margin: 0; }
+  /* #2: Compact toolbar — hide segmented pill and non-essential items on mobile */
+  .segment-pill { display: none; }
   #ai-touch-btn, #renamify-btn, #notes-toggle-btn,
   #canvas-status, #share-btn { display: none !important; }
-  .playground-fs-btn { top: -28px; font-size: 11px; padding: 3px 8px; }
+  .fullscreen-toggle-canvas { font-size: 12px; width: 26px; height: 26px; line-height: 26px; }
   #canvas-toolbar { padding: 6px 8px; height: 36px; gap: 2px; }
   .tb-zone { gap: 2px; }
   .tool-btn { font-size: 10px; padding: 3px 6px; }

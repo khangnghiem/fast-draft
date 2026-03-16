@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.176 — Merge Zen Mode into Fullscreen (R6.6)
+- **UX (R6.6)**: Zen Mode and Fullscreen Mode merged into a single **Fullscreen** mode — entering fullscreen now both expands the playground to fill the viewport AND hides canvas chrome (toolbar, editor, minimap, panels); `⇧F` to enter, `Escape` to exit; `zenMode` state variable removed
+- **UX (R6.6)**: Fullscreen toggle button moved inside the canvas — positioned at top-right corner as a 32×32 frosted-glass pill (`⛶`); expands to `✕ Exit` pill in fullscreen mode; replaces both the old outer `⛶ Full Screen` button and the 🧘 Zen toggle
+- **UX (R6.6)**: 4-finger tap gesture now toggles Fullscreen (was Zen); `L` key toggles Layers panel in fullscreen (was zen-visible, now fs-visible)
+- **CSS**: Replaced `.zen-mode` selectors with `.fullscreen-mode`; renamed `.zen-full-only` → `.fs-hide`; renamed `.zen-toggle-canvas` → `.fullscreen-toggle-canvas`; removed old `.playground-fs-btn` styles
+- **PARITY**: All changes applied to VS Code extension (`webview-html.ts`, `navigation.js`, `pointer.js`, `shortcuts.js`, `main.js`) — removed `setupZenModeToggle()`/`applyZenMode()`, updated `applyFullscreenMode()` to clear `fs-visible` overrides
+- **DOCS**: `SHORTCUTS.md` — Zen Mode section removed, merged into Full Screen section; `shortcuts.html` — same; 4-finger tap gesture updated
+
 ### v0.11.175 — Hand Tool UX: ⌘+Click Deselect + Modifier Cursor Persistence (R3.6)
 - **FIX (R3.6)**: Hand tool plain click no longer deselects — only ⌘+click on empty space deselects (via WASM SelectTool fallthrough); reverts the over-eager plain-click deselect from v0.11.173 while keeping ⌘+click working correctly
 - **UX (R3.6)**: Modifier cursor icons (⌘ → select, Alt → copy) now persist after clicks and drags when the modifier key is still held — previously, pointer-up would reset cursor to `grab` even if user was holding ⌘ or Alt
