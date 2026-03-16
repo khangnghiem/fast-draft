@@ -393,6 +393,7 @@ async function sendMessage(getEditorContent, setEditorContent) {
         context: docContent.slice(0, 8000),
         selection: selFd ? selFd.slice(0, 4000) : undefined,
         selection_ids: selIds.length > 0 ? selIds : undefined,
+        stream: true,
       }),
     });
 
@@ -401,15 +402,80 @@ async function sendMessage(getEditorContent, setEditorContent) {
       throw new Error(err.message || err.error || `HTTP ${response.status}`);
     }
 
-    const data = await response.json();
-    const assistantContent = data.result || 'No response received.';
-
     // Remove thinking indicator
     if (thinkingDiv) thinkingDiv.remove();
 
-    // Add assistant message
-    chatHistory.push({ role: 'assistant', content: assistantContent });
-    addMessage('assistant', assistantContent, getEditorContent, setEditorContent);
+    const contentType = response.headers.get('content-type') || '';
+
+    if (contentType.includes('text/event-stream') && response.body) {
+      // ─── SSE Streaming ─────────────────────────────
+      const messages = getChatMessages();
+      const div = document.createElement('div');
+      div.className = 'ai-chat-msg assistant';
+
+      // Remove welcome message
+      const welcome = messages?.querySelector('.ai-chat-welcome');
+      if (welcome) welcome.remove();
+      messages?.appendChild(div);
+
+      let accumulated = '';
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6).trim();
+          if (payload === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(payload);
+            const token = parsed.response || '';
+            if (token) {
+              accumulated += token;
+              // Live preview: render as escaped text (fast, no layout thrash)
+              div.textContent = accumulated;
+              messages.scrollTop = messages.scrollHeight;
+            }
+          } catch (_) {}
+        }
+      }
+
+      // Finalize: re-render with full markdown + Apply/Skip buttons
+      const finalContent = accumulated || 'No response received.';
+      chatHistory.push({ role: 'assistant', content: finalContent });
+      div.innerHTML = renderAssistantMessage(finalContent, getEditorContent, setEditorContent);
+
+      // Wire apply/reject buttons
+      div.querySelectorAll('.fd-apply-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const fdCode = decodeURIComponent(btn.dataset.fd);
+          const actionDiv = btn.closest('.fd-block-action');
+          smartApplyFdCode(fdCode, getEditorContent, setEditorContent);
+          if (actionDiv) actionDiv.innerHTML = '<span style="color:#34C759;font-size:10px;font-weight:600">✓ Applied</span>';
+        });
+      });
+      div.querySelectorAll('.fd-reject-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const actionDiv = btn.closest('.fd-block-action');
+          if (actionDiv) actionDiv.innerHTML = '<span style="color:#86868B;font-size:10px;font-style:italic">Skipped</span>';
+        });
+      });
+      messages.scrollTop = messages.scrollHeight;
+    } else {
+      // ─── Fallback: full JSON response ──────────────
+      const data = await response.json();
+      const assistantContent = data.result || 'No response received.';
+      chatHistory.push({ role: 'assistant', content: assistantContent });
+      addMessage('assistant', assistantContent, getEditorContent, setEditorContent);
+    }
   } catch (err) {
     if (thinkingDiv) thinkingDiv.remove();
     addMessage('assistant', `⚠️ Error: ${err.message}`, getEditorContent, setEditorContent);

@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.188 — Streaming Responses + VS Code Extension Chat Parity (R4.26)
+- **FEATURE (R4.26)**: SSE Streaming — AI Chat responses now stream token-by-token via Server-Sent Events, showing real-time text as the AI generates it. When streaming completes, the full message is finalized with markdown rendering and Apply/Skip buttons for FD code blocks
+- **FEATURE (R4.26)**: VS Code Extension Chat Parity — ported the full AI Agent chat panel to the VS Code extension with matching CSS, HTML, toolbar button (✦ Agent), selection context badge, quick-action chips, and smart replace. Calls the production `https://fast-draft.com/api/ai` endpoint
+- **API**: `/api/ai` now accepts `stream: true` in chat mode, returning `text/event-stream` with Cloudflare Workers AI streaming. Non-streaming requests and non-chat modes continue to return full JSON as before
+
 ### v0.11.187 — AI Chat: Selection Context + Chips + Smart Replace (R4.26)
 - **FEATURE (R4.26)**: Selection Context Injection — AI Agent chat automatically includes the currently selected nodes' FD code in the system prompt, enabling context-aware responses when users say "this" or "these". A context badge above the input shows what's selected (e.g., `📌 @login_form`)
 - **FEATURE (R4.26)**: Quick-Action Chips — three contextual one-tap action buttons appear above the chat input, adapting to selection state: no selection (improve colors / add header / review design), single node (restyle / rename / add hover), multi-node (group / align / add edges)

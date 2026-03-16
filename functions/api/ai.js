@@ -291,6 +291,29 @@ export async function onRequestPost(context) {
       ];
     }
 
+    // ─── Streaming mode for chat ───────────────────────────────
+    const wantsStream = config.isChat && body.stream === true;
+
+    if (wantsStream) {
+      // Use Cloudflare Workers AI streaming — returns a ReadableStream of SSE
+      const stream = await context.env.AI.run(config.model, {
+        messages: aiMessages,
+        max_tokens: config.maxTokens,
+        temperature: config.temp,
+        stream: true,
+      });
+
+      return new Response(stream, {
+        headers: {
+          ...headers,
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
+    }
+
+    // ─── Non-streaming (full JSON response) ──────────────────
     const result = await context.env.AI.run(config.model, {
       messages: aiMessages,
       max_tokens: config.maxTokens,
