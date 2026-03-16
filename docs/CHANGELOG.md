@@ -23,10 +23,10 @@
 - **PARITY**: Changes in `fd-vscode/webview/src/pointer.js` (line 274-275)
 
 ### v0.11.171 — Code Panel Toggle + Fullscreen Auto-Collapse (R6.6)
-- **UX (R6.6)**: Code panel toggle — clicking the "Code" header bar collapses the code panel; smooth Figma-style collapse via `overflow: hidden` + CSS Grid transition (content clips as column shrinks to 0); 24px expand strip with `▸` chevron appears at left edge for re-expanding; `transitionend` event triggers canvas resize (no setTimeout bounce)
-- **UX (R6.6)**: Fullscreen auto-collapse — entering fullscreen mode (`⇧F`) automatically collapses the code panel to maximize canvas real estate; expand strip stays visible for one-click re-expansion; exiting fullscreen preserves user's collapse state
-- **FIX (R6.6)**: Smooth collapse — replaced `display: none` + `writing-mode: vertical-lr` (caused visible bounce from three properties changing at different speeds) with single `overflow: hidden` mechanism (content clips smoothly as one animation)
-- **SITE**: Changes in `site/index.html` (clickable header + chevron + expand strip), `site/style.css` (`.code-collapsed` + `#code-expand-strip`), `site/playground.js` (`toggleCodePanel()`, `collapseCodePanel()`, `transitionend` handler)
+- **UX (R6.6)**: Code toggle toolbar button — `<> Code` button in canvas toolbar (next to Layers) toggles code panel visibility; dimmed when collapsed, full opacity when expanded; matches Layers toggle `tool-btn` pattern with `<>` SVG icon
+- **UX (R6.6)**: Code panel collapse — smooth Figma-style collapse via `overflow: hidden` + CSS Grid transition; content clips as column shrinks to 0; `transitionend` event triggers precise canvas resize
+- **UX (R6.6)**: Fullscreen auto-collapse — entering fullscreen mode (`⇧F`) automatically collapses the code panel; toolbar button stays visible for one-click re-expansion
+- **SITE**: Changes in `site/index.html` (toolbar Code button), `site/style.css` (`#code-toggle-btn` + `.code-hidden`), `site/playground.js` (`toggleCodePanel()` syncs button state)
 
 ### v0.11.170 — Panel Toggle, Resize & Exclusive Policy (R6.7)
 - **UX (R6.7)**: Desktop Layers toggle — new `☰` button in canvas toolbar toggles Layers panel collapsed/expanded at all viewports (previously toggle only available on mobile); button dims when panel is collapsed
