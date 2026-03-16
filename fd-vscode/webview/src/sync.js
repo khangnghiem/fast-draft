@@ -32,9 +32,19 @@ function syncSelection(id, source) {
   // 3. Layers: highlight + scroll into view
   refreshLayersPanel();
 
-  // 4. Code: notify extension to highlight line (skip if source is code)
+  // 4. Code: notify extension to highlight block(s) (skip if source is code)
   if (source !== "code") {
-    vscode.postMessage({ type: "nodeSelected", id: id || "" });
+    // Send all selected IDs for multi-select code highlighting
+    try {
+      const allIds = JSON.parse(fdCanvas.get_selected_ids());
+      if (allIds.length > 0) {
+        vscode.postMessage({ type: "nodesSelected", ids: allIds });
+      } else {
+        vscode.postMessage({ type: "nodeSelected", id: id || "" });
+      }
+    } catch (_) {
+      vscode.postMessage({ type: "nodeSelected", id: id || "" });
+    }
   }
 
   // 5. Canvas focus: debounced pan/zoom (only for Code→Canvas)

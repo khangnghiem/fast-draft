@@ -88,9 +88,9 @@ Given the .fd document below, improve the following nodes: ${targetList}
 
 3. **Preserve structure**: Do NOT add, remove, or reorder nodes. Do NOT change layout types or constraint relationships. Only change IDs and visual properties (fill, stroke, corner, opacity, font).
 
-4. **Output the COMPLETE refined .fd document** — not just the changed nodes. This is critical for correct round-tripping.
+4. **Output ONLY the modified blocks** — one per element. Do NOT output unchanged nodes or the complete document. Only output the blocks you actually changed.
 
-5. **Output ONLY valid FD text** — no markdown fences, no explanations, no comments about changes. Just the raw .fd content.
+5. **Output ONLY valid FD text** — no markdown fences, no explanations, no comments about changes. Just the raw .fd blocks.
 
 ## FD Document
 
