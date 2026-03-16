@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.177 — Fix Extension Toolbar Layout (R6.6)
+- **FIX (R6.6)**: Export, Fullscreen, and Settings buttons in VS Code extension toolbar now align to the far right — added `.tb-spacer` flex element between left zone (AI Touch, Renamify) and right zone (Notes, Status, Fullscreen, Settings); matches the web playground's spacer pattern
+- **EXTENSION**: Changes in `fd-vscode/src/webview-html.ts` (CSS rule + HTML spacer element)
+
 ### v0.11.176 — Merge Zen Mode into Fullscreen (R6.6)
 - **UX (R6.6)**: Zen Mode and Fullscreen Mode merged into a single **Fullscreen** mode — entering fullscreen now both expands the playground to fill the viewport AND hides canvas chrome (toolbar, editor, minimap, panels); `⇧F` to enter, `Escape` to exit; `zenMode` state variable removed
 - **UX (R6.6)**: Fullscreen toggle button moved inside the canvas — positioned at top-right corner as a 32×32 frosted-glass pill (`⛶`); expands to `✕ Exit` pill in fullscreen mode; replaces both the old outer `⛶ Full Screen` button and the 🧘 Zen toggle
