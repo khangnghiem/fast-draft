@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.181 — Unified Context Menu System (R6.6)
+- **REFACTOR (R6.6)**: Ported unified `ContextMenu` class from site playground to VS Code extension — singleton, data-driven context menu with robust dismissal (`AbortController` + capture-phase click/keydown/contextmenu), ARIA roles, keyboard navigation (↑↓ + Enter), viewport clamping, open/close animation via CSS transitions; replaces 3 separate implementations (canvas context menu, layers context menu, static HTML)
+- **REFACTOR (R6.6)**: `setupContextMenu()` replaced — was ~325 lines of manual `document.getElementById` per-item wiring; now 30 lines building item arrays via `buildNodeMenuItems()` + `ctxMenu.open()`; all 15+ actions preserved including AI Touch custom submenu and annotation handling
+- **REFACTOR (R6.6)**: `wireLayerContextMenu()` replaced — was ~215 lines of HTML string building + per-action click handlers; now uses same `ctxMenu.open()` with data-driven items; all 17 layer actions preserved (rename, clipboard, structure, z-order, lock, select-children, move-into, center-into, delete)
+- **REFACTOR (R6.6)**: `closeLayerCtxMenu()` and `closeContextMenu()` now delegate to `ctxMenu.close()` — single close path with guaranteed cleanup via `AbortController.abort()`
+- **FIX (R6.6)**: Escape key, outside click, and Code Mode click now correctly dismiss both canvas and layers context menus — `shortcuts.js` Escape handler uses `ctxMenu.isOpen` instead of querying removed static DOM elements
+- **CLEANUP**: Removed 32 lines of static `#context-menu` HTML, 55 lines of `.layer-ctx-*` CSS, 68 lines of `#context-menu` CSS (replaced with 83 lines of unified `.ctx-menu` CSS), 51 lines of dead AI Touch inline script
+- **EXTENSION**: Changes in `context-menu.js`, `panels.js`, `shortcuts.js`, `webview-html.ts`
+
 ### v0.11.180 — Code Highlight Flash + Context Menu Fix (R6.6)
 - **UX (R6.6)**: Code highlight now flashes briefly when selecting a node — CSS `@keyframes fd-highlight-flash` fades the yellow highlight over 1.2s; stale CodeMirror decorations auto-cleaned after 1.4s; previously the highlight was permanent
 - **UX (R6.6)**: Multi-selection no longer highlights code — selecting 2+ nodes skips the CodeMirror highlight entirely, eliminating visual noise from large yellow blocks spanning many lines

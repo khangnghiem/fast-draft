@@ -627,7 +627,7 @@ function bulkSetStatus(annotated, newStatus) {
 
 /** Close any open layer context menu. */
 function closeLayerCtxMenu() {
-  document.querySelectorAll('.layer-ctx-menu').forEach(m => m.remove());
+  ctxMenu.close();
 }
 
 /** Clear all drag indicators from layer items. */
@@ -788,11 +788,10 @@ function wireLayerContextMenu(panel) {
     item.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      closeLayerCtxMenu();
+      ctxMenu.close();
       const nodeId = item.getAttribute('data-node-id');
       if (!nodeId) return;
 
-      // Determine selection state for enable/disable logic
       const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
       if (!selectedIds.includes(nodeId)) {
         fdCanvas.select_by_id(nodeId);
@@ -811,114 +810,92 @@ function wireLayerContextMenu(panel) {
       }
       const isLocked = fdCanvas.is_node_locked ? fdCanvas.is_node_locked(nodeId) : false;
 
-      let menuHtml = '';
+      const items = [];
 
-      // ── Rename ──
-      menuHtml += `<div class="layer-ctx-item" data-action="rename"><span class="ctx-icon">✏️</span>Rename</div>`;
-      menuHtml += '<div class="layer-ctx-sep"></div>';
+      // Rename
+      items.push({ action: 'rename', label: 'Rename', icon: '✏️' });
+      items.push({ type: 'separator' });
 
-      // ── Clipboard: Cut, Copy, Paste, Copy as PNG ──
-      menuHtml += `<div class="layer-ctx-item" data-action="cut"><span class="ctx-icon">✂</span>Cut<span class="layer-ctx-shortcut">⌘X</span></div>`;
-      menuHtml += `<div class="layer-ctx-item" data-action="copy"><span class="ctx-icon">⎘</span>Copy<span class="layer-ctx-shortcut">⌘C</span></div>`;
-      menuHtml += `<div class="layer-ctx-item" data-action="paste"><span class="ctx-icon">📋</span>Paste<span class="layer-ctx-shortcut">⌘V</span></div>`;
-      menuHtml += `<div class="layer-ctx-item" data-action="copy-png"><span class="ctx-icon">🖼</span>Copy as PNG<span class="layer-ctx-shortcut">⌘⇧C</span></div>`;
-      menuHtml += '<div class="layer-ctx-sep"></div>';
+      // Clipboard
+      items.push({ action: 'cut', label: 'Cut', icon: '✂', shortcut: '⌘X' });
+      items.push({ action: 'copy', label: 'Copy', icon: '⎘', shortcut: '⌘C' });
+      items.push({ action: 'paste', label: 'Paste', icon: '📋', shortcut: '⌘V' });
+      items.push({ action: 'copy-png', label: 'Copy as PNG', icon: '🖼', shortcut: '⌘⇧C' });
+      items.push({ type: 'separator' });
 
-      // ── Structure: Duplicate, Group, Ungroup, Frame Selection ──
-      menuHtml += `<div class="layer-ctx-item" data-action="duplicate"><span class="ctx-icon">⊕</span>Duplicate<span class="layer-ctx-shortcut">⌘D</span></div>`;
-      menuHtml += `<div class="layer-ctx-item${canGroup ? '' : ' layer-ctx-disabled'}" data-action="group"><span class="ctx-icon">◻</span>Group<span class="layer-ctx-shortcut">⌘G</span></div>`;
-      menuHtml += `<div class="layer-ctx-item${canUngroup ? '' : ' layer-ctx-disabled'}" data-action="ungroup"><span class="ctx-icon">◫</span>Ungroup<span class="layer-ctx-shortcut">⇧⌘G</span></div>`;
-      menuHtml += `<div class="layer-ctx-item" data-action="frame"><span class="ctx-icon">⊞</span>Frame Selection</div>`;
-      menuHtml += '<div class="layer-ctx-sep"></div>';
+      // Structure
+      items.push({ action: 'duplicate', label: 'Duplicate', icon: '⊕', shortcut: '⌘D' });
+      items.push({ action: 'group', label: 'Group', icon: '◻', shortcut: '⌘G', disabled: !canGroup });
+      items.push({ action: 'ungroup', label: 'Ungroup', icon: '◫', shortcut: '⇧⌘G', disabled: !canUngroup });
+      items.push({ action: 'frame', label: 'Frame Selection', icon: '⊞' });
+      items.push({ type: 'separator' });
 
-      // ── Z-order: Bring to Front, Send to Back ──
-      menuHtml += `<div class="layer-ctx-item" data-action="bring-front"><span class="ctx-icon">↑</span>Bring to Front<span class="layer-ctx-shortcut">⌘⇧]</span></div>`;
-      menuHtml += `<div class="layer-ctx-item" data-action="send-back"><span class="ctx-icon">↓</span>Send to Back<span class="layer-ctx-shortcut">⌘⇧[</span></div>`;
+      // Z-order
+      items.push({ action: 'bring-front', label: 'Bring to Front', icon: '↑', shortcut: '⌘⇧]' });
+      items.push({ action: 'send-back', label: 'Send to Back', icon: '↓', shortcut: '⌘⇧[' });
 
-      // ── Lock / Unlock ──
-      menuHtml += `<div class="layer-ctx-item" data-action="lock"><span class="ctx-icon">${isLocked ? '🔓' : '🔒'}</span>${isLocked ? 'Unlock' : 'Lock'}</div>`;
+      // Lock
+      items.push({ action: 'lock', label: isLocked ? 'Unlock' : 'Lock', icon: isLocked ? '🔓' : '🔒' });
 
-      // ── Select Children (containers only) ──
+      // Select Children (containers only)
       if (isContainer && hasChildren) {
-        menuHtml += `<div class="layer-ctx-item" data-action="select-children"><span class="ctx-icon">📂</span>Select Children</div>`;
+        items.push({ action: 'select-children', label: 'Select Children', icon: '📂' });
       }
-      menuHtml += '<div class="layer-ctx-sep"></div>';
+      items.push({ type: 'separator' });
 
-      // ── Move Into submenu ──
+      // Move Into
       if (fdCanvas.get_container_ids) {
         try {
           const containers = JSON.parse(fdCanvas.get_container_ids());
           const validTargets = containers.filter(c => c.id !== nodeId);
           if (validTargets.length > 0) {
-            menuHtml += `<div class="layer-ctx-item" data-action="move-into-header" style="opacity:0.5;cursor:default;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.3px">Move Into</div>`;
+            items.push({ type: 'header', label: 'Move Into' });
             for (const t of validTargets.slice(0, 15)) {
               const icon = LAYER_ICONS[t.kind] || '•';
-              menuHtml += `<div class="layer-ctx-item" data-action="move-into" data-target="${escapeAttr(t.id)}"><span class="ctx-icon">${icon}</span>@${escapeHtml(t.id)}</div>`;
-              menuHtml += `<div class="layer-ctx-item" data-action="center-into" data-target="${escapeAttr(t.id)}" style="padding-left:28px;opacity:0.7;font-size:11px"><span class="ctx-icon">⊙</span>Center in @${escapeHtml(t.id)}</div>`;
+              items.push({ action: 'move-into', label: '@' + t.id, icon, data: { target: t.id } });
+              items.push({ action: 'center-into', label: 'Center in @' + t.id, icon: '⊙', data: { target: t.id } });
             }
             if (validTargets.length > 15) {
-              menuHtml += `<div class="layer-ctx-item" style="opacity:0.5;cursor:default">…${validTargets.length - 15} more</div>`;
+              items.push({ label: '…' + (validTargets.length - 15) + ' more', disabled: true });
             }
-            menuHtml += '<div class="layer-ctx-sep"></div>';
+            items.push({ type: 'separator' });
           }
         } catch (_) {}
       }
-      menuHtml += `<div class="layer-ctx-item" data-action="move-to-root"><span class="ctx-icon">↑</span>Move to Root</div>`;
-      menuHtml += '<div class="layer-ctx-sep"></div>';
+      items.push({ action: 'move-to-root', label: 'Move to Root', icon: '↑' });
+      items.push({ type: 'separator' });
 
-      // ── Delete ──
-      menuHtml += `<div class="layer-ctx-item layer-ctx-danger" data-action="delete"><span class="ctx-icon">✕</span>Delete<span class="layer-ctx-shortcut">⌫</span></div>`;
+      // Delete
+      items.push({ action: 'delete', label: 'Delete', icon: '✕', shortcut: '⌫', danger: true });
 
-      const menu = document.createElement('div');
-      menu.className = 'layer-ctx-menu';
-      menu.innerHTML = menuHtml;
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      let mx = e.clientX;
-      let my = e.clientY;
-      document.body.appendChild(menu);
-      if (mx + menu.offsetWidth > vw) mx = vw - menu.offsetWidth - 4;
-      if (my + menu.offsetHeight > vh) my = vh - menu.offsetHeight - 4;
-      menu.style.left = mx + 'px';
-      menu.style.top = my + 'px';
-      menu.querySelectorAll('.layer-ctx-item[data-action]').forEach(btn => {
-        btn.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          const action = btn.getAttribute('data-action');
-          if (action === 'move-into-header') return;
-          if (btn.classList.contains('layer-ctx-disabled')) return;
-          const textBefore = fdCanvas.get_text();
-          let changed = false;
-
+      ctxMenu.open({
+        items,
+        x: e.clientX,
+        y: e.clientY,
+        onAction: (action, btn) => {
           if (action === 'rename') {
-            closeLayerCtxMenu();
-            // Trigger inline rename by simulating double-click on layer name
             const nameEl = item.querySelector('.layer-name');
             if (nameEl) nameEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
             return;
-          } else if (action === 'cut') {
+          }
+          const textBefore = fdCanvas.get_text();
+          let changed = false;
+          if (action === 'cut') {
             fdCanvas.select_by_id(nodeId);
             copySelectedAsFd();
             changed = fdCanvas.delete_selected();
           } else if (action === 'copy') {
             fdCanvas.select_by_id(nodeId);
             copySelectedAsFd();
-            closeLayerCtxMenu();
             return;
           } else if (action === 'paste') {
             pasteFromClipboard().then(() => {
-              bumpGeneration();
-              render();
-              syncTextToExtension();
-              updatePropertiesPanel();
-              refreshLayersPanel();
+              bumpGeneration(); render(); syncTextToExtension(); updatePropertiesPanel(); refreshLayersPanel();
             });
-            closeLayerCtxMenu();
             return;
           } else if (action === 'copy-png') {
             fdCanvas.select_by_id(nodeId);
             if (typeof copySelectionAsPng === 'function') copySelectionAsPng();
-            closeLayerCtxMenu();
             return;
           } else if (action === 'duplicate') {
             fdCanvas.select_by_id(nodeId);
@@ -940,12 +917,8 @@ function wireLayerContextMenu(panel) {
             const result = JSON.parse(resultJson);
             changed = result.changed;
           } else if (action === 'lock') {
-            if (fdCanvas.toggle_node_locked) {
-              fdCanvas.toggle_node_locked(nodeId);
-              changed = true;
-            }
+            if (fdCanvas.toggle_node_locked) { fdCanvas.toggle_node_locked(nodeId); changed = true; }
           } else if (action === 'select-children') {
-            // Collect all child node IDs from the DOM
             const childrenContainer = panel.querySelector(`.layer-children[data-parent-id="${nodeId}"]`);
             if (childrenContainer) {
               const childIds = [...childrenContainer.querySelectorAll(':scope > .layer-item')].map(
@@ -953,14 +926,9 @@ function wireLayerContextMenu(panel) {
               ).filter(Boolean);
               if (childIds.length > 0) {
                 fdCanvas.select_multiple_by_ids(JSON.stringify(childIds));
-                bumpGeneration();
-                render();
-                updatePropertiesPanel();
-                updateFloatingBar();
-                refreshLayersPanel();
+                bumpGeneration(); render(); updatePropertiesPanel(); updateFloatingBar(); refreshLayersPanel();
               }
             }
-            closeLayerCtxMenu();
             return;
           } else if (action === 'move-into') {
             changed = fdCanvas.reparent_into(nodeId, btn.getAttribute('data-target'));
@@ -978,22 +946,10 @@ function wireLayerContextMenu(panel) {
           if (changed) {
             const textAfter = fdCanvas.get_text();
             if (textBefore !== textAfter) fdCanvas.push_undo_snapshot(textBefore, textAfter);
-            bumpGeneration();
-            render();
-            syncTextToExtension();
-            updatePropertiesPanel();
-            refreshLayersPanel();
+            bumpGeneration(); render(); syncTextToExtension(); updatePropertiesPanel(); refreshLayersPanel();
           }
-          closeLayerCtxMenu();
-        });
+        },
       });
-      const closeOnClick = (ev) => {
-        if (!menu.contains(ev.target)) {
-          closeLayerCtxMenu();
-          document.removeEventListener('click', closeOnClick);
-        }
-      };
-      setTimeout(() => document.addEventListener('click', closeOnClick), 0);
     });
   });
 }
