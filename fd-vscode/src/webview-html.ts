@@ -160,6 +160,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       flex: 0 0 auto;
       gap: 4px;
     }
+    .tb-spacer { flex: 1; }
 
     /* ── Tool Buttons (segmented control) ── */
     .tool-btn {
@@ -2811,6 +2812,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <button class="tool-btn" id="ai-touch-btn" title="AI Touch selected node (select a node first)">✦ AI Touch</button>
       <button class="tool-btn" id="renamify-btn" title="Renamify — batch AI rename anonymous node IDs">✦ Renamify</button>
     </div>
+    <span class="tb-spacer"></span>
     <div class="tb-zone tb-right">
       <button class="tool-btn" id="notes-toggle-btn" title="Notes Panel">📝</button>
       <span class="fs-hide" id="status">Loading WASM…</span>

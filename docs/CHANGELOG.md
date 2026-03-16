@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.178 — Fix Extension Toolbar Layout (R6.6)
+- **FIX (R6.6)**: Export, Fullscreen, and Settings buttons in VS Code extension toolbar now align to the far right — added `.tb-spacer` flex element between left zone (AI Touch, Renamify) and right zone (Notes, Status, Fullscreen, Settings); matches the web playground's spacer pattern
+- **EXTENSION**: Changes in `fd-vscode/src/webview-html.ts` (CSS rule + HTML spacer element)
+
 ### v0.11.177 — Segmented Code/Design Toggle (R6.6)
 - **UX (R6.6)**: Replaced separate `<> Code` button + `● DESIGN` label in canvas toolbar with a unified **segmented pill control** (Apple HIG style) — two segments "Code" and "Design" in a rounded pill; Code segment toggles code panel visibility (active = visible, dimmed = collapsed); Design segment always active with green dot indicator
 - **UX (R6.6)**: Segmented control uses `--fd-segment-*` CSS tokens — active segment gets elevated white/glass background with shadow, inactive is transparent; smooth 200ms transition on toggle
