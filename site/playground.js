@@ -1372,136 +1372,21 @@ async function pasteFromClipboard() {
   refreshLayersPanel();
 }
 
-/** ─── Context Menu ──────────────────────────────────────────────────── */
+/** ─── Context Menu (Unified) ──────────────────────────────────────── */
 let contextMenuClickPos = null; // scene-space {x, y} of right-click
+const ctxMenu = new ContextMenu();
 
 function closeContextMenu() {
-  document.getElementById('ctx-menu')?.classList.remove('visible');
-  document.getElementById('ctx-menu-canvas')?.classList.remove('visible');
-  document.querySelector('.ctx-ai-touch-wrap')?.classList.remove('expanded');
+  ctxMenu.close();
 }
 
 /** Wire context menu events and action handlers. */
 function setupContextMenu() {
-  const nodeMenu = document.getElementById('ctx-menu');
-  const canvasMenu = document.getElementById('ctx-menu-canvas');
   const canvas = document.getElementById('fd-canvas');
   if (!canvas) return;
 
-  // Right-click on canvas
-  canvas.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    if (!fdCanvas) return;
-
-    const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
-    const hitId = fdCanvas.hit_test_at(x, y);
-
-    // Position helper (keep within viewport)
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    let mx = e.clientX;
-    let my = e.clientY;
-
-    if (hitId) {
-      // ── Node context menu ──
-      // #1: Preserve multi-selection — only replace if hit node isn't already selected
-      const currentIds = JSON.parse(fdCanvas.get_selected_ids());
-      if (!currentIds.includes(hitId)) {
-        fdCanvas.select_by_id(hitId);
-      }
-      renderCanvas();
-      updateFab(canvas);
-      updatePropertiesPanel();
-
-      // Re-read selection after possible change
-      const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
-      const selCount = selectedIds.length;
-      const isMulti = selCount > 1;
-
-      // #3: Selection count badge
-      const badge = document.getElementById('ctx-selection-badge');
-      if (badge) {
-        if (isMulti) {
-          badge.textContent = `${selCount} objects selected`;
-          badge.style.display = '';
-        } else {
-          badge.style.display = 'none';
-        }
-      }
-
-      // #3: Multi-aware action labels
-      const setLabel = (id, single, multi) => {
-        const el = document.getElementById(id);
-        if (el) {
-          const shortcut = el.querySelector('.ctx-shortcut');
-          const shortcutHtml = shortcut ? ` ${shortcut.outerHTML}` : '';
-          el.innerHTML = (isMulti ? multi : single) + shortcutHtml;
-        }
-      };
-      setLabel('ctx-del-btn', '🗑 Delete', `🗑 Delete ${selCount} items`);
-      setLabel('ctx-dup-btn', '⧉ Duplicate', `⧉ Duplicate ${selCount} items`);
-      setLabel('ctx-copy-btn', '📋 Copy', `📋 Copy ${selCount} items`);
-      setLabel('ctx-cut-btn', '✂ Cut', `✂ Cut ${selCount} items`);
-
-      // #3: Hide single-node-only items when multi-selected
-      document.querySelectorAll('#ctx-menu .ctx-single-only').forEach(el => {
-        el.style.display = isMulti ? 'none' : '';
-      });
-
-      // Update Lock button label (single only)
-      if (!isMulti) {
-        const lockBtn = document.getElementById('ctx-lock-site');
-        if (lockBtn && fdCanvas.is_node_locked) {
-          const isLocked = fdCanvas.is_node_locked(hitId);
-          lockBtn.textContent = isLocked ? '\uD83D\uDD13 Unlock' : '\uD83D\uDD12 Lock';
-        }
-      }
-
-      if (nodeMenu) {
-        if (mx + 170 > vw) mx = vw - 174;
-        if (my + 280 > vh) my = vh - 284;
-        nodeMenu.style.left = mx + 'px';
-        nodeMenu.style.top = my + 'px';
-        canvasMenu?.classList.remove('visible');
-        nodeMenu.classList.add('visible');
-      }
-    } else if (fdCanvas.hit_test_edge_at) {
-      // ── Edge right-click → open edge properties panel ──
-      const edgeHit = fdCanvas.hit_test_edge_at(x, y);
-      if (edgeHit) {
-        fdCanvas.select_by_id(edgeHit);
-        renderCanvas();
-        updatePropertiesPanel();
-        // Show toast confirming the edge was selected
-        showToast(`Selected edge @${edgeHit}`);
-      } else {
-        // ── Empty space context menu ──
-        contextMenuClickPos = { x, y };
-        if (canvasMenu) {
-          if (mx + 170 > vw) mx = vw - 174;
-          if (my + 220 > vh) my = vh - 224;
-          canvasMenu.style.left = mx + 'px';
-          canvasMenu.style.top = my + 'px';
-          nodeMenu?.classList.remove('visible');
-          canvasMenu.classList.add('visible');
-        }
-      }
-    } else {
-      // ── Empty space context menu ──
-      contextMenuClickPos = { x, y };
-      if (canvasMenu) {
-        if (mx + 170 > vw) mx = vw - 174;
-        if (my + 220 > vh) my = vh - 224;
-        canvasMenu.style.left = mx + 'px';
-        canvasMenu.style.top = my + 'px';
-        nodeMenu?.classList.remove('visible');
-        canvasMenu.classList.add('visible');
-      }
-    }
-  });
-
-  // ── Node menu action handlers (with undo snapshots) ──
-  const doNodeAction = (action) => {
+  // ── Node action handler (shared by canvas and layer menus) ──
+  const doNodeAction = (action, el) => {
     if (!fdCanvas) return;
     let changed = false;
     const textBefore = fdCanvas.get_text();
@@ -1544,7 +1429,6 @@ function setupContextMenu() {
         const noteText = prompt('Add a note:');
         if (!noteText) break;
         const src = fdCanvas.get_text();
-        // Find the closing brace of this node and insert note before it
         const nodeRe = new RegExp(`(@${noteId.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\s*(?:"[^"]*"\\s*)?\\{)`);
         const m = src.match(nodeRe);
         if (m) {
@@ -1554,23 +1438,6 @@ function setupContextMenu() {
           changed = true;
         }
         break;
-      }
-      case 'ai-touch': {
-        // Toggle submenu expansion instead of closing
-        const wrap = document.querySelector('.ctx-ai-touch-wrap');
-        if (wrap) {
-          wrap.classList.toggle('expanded');
-          // Restore saved prompt
-          const promptEl = document.getElementById('ctx-ai-prompt');
-          const counterEl = document.getElementById('ctx-ai-counter');
-          if (promptEl) {
-            const saved = localStorage.getItem('fd-ai-prompt') || '';
-            promptEl.value = saved;
-            if (counterEl) counterEl.textContent = `${saved.length}/200`;
-            setTimeout(() => promptEl.focus(), 50);
-          }
-        }
-        return; // Don't close the menu
       }
       case 'lock':
         if (fdCanvas.toggle_node_locked) {
@@ -1592,7 +1459,6 @@ function setupContextMenu() {
       }
     }
     if (changed) {
-      // Push undo snapshot for context menu mutations
       const textAfter = fdCanvas.get_text();
       if (textBefore !== textAfter) {
         fdCanvas.push_undo_snapshot(textBefore, textAfter);
@@ -1602,51 +1468,9 @@ function setupContextMenu() {
       updatePropertiesPanel();
       refreshLayersPanel();
     }
-    closeContextMenu();
   };
 
-  nodeMenu?.querySelectorAll('.ctx-item').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      doNodeAction(btn.getAttribute('data-action'));
-    });
-  });
-
-  // ── AI Touch context menu prompt wiring ──
-  const ctxAiPrompt = document.getElementById('ctx-ai-prompt');
-  const ctxAiCounter = document.getElementById('ctx-ai-counter');
-  const ctxAiRun = document.getElementById('ctx-ai-run');
-
-  if (ctxAiPrompt) {
-    // Live char counter + persist to localStorage
-    ctxAiPrompt.addEventListener('input', () => {
-      const len = ctxAiPrompt.value.length;
-      if (ctxAiCounter) ctxAiCounter.textContent = `${len}/200`;
-      localStorage.setItem('fd-ai-prompt', ctxAiPrompt.value);
-    });
-    // Prevent context menu from closing when clicking inside the textarea
-    ctxAiPrompt.addEventListener('click', (e) => e.stopPropagation());
-    ctxAiPrompt.addEventListener('mousedown', (e) => e.stopPropagation());
-    // Ctrl+Enter or Enter (with empty prompt) to run
-    ctxAiPrompt.addEventListener('keydown', (e) => {
-      e.stopPropagation();
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        closeContextMenu();
-        aiTouch();
-      }
-    });
-  }
-
-  if (ctxAiRun) {
-    ctxAiRun.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeContextMenu();
-      aiTouch();
-    });
-  }
-
-  // ── Canvas (empty space) menu action handlers ──
+  // ── Canvas empty-space action handler ──
   const doCanvasAction = (action) => {
     if (!fdCanvas) return;
     switch (action) {
@@ -1669,7 +1493,6 @@ function setupContextMenu() {
         canvas.style.cursor = 'crosshair';
         break;
       case 'fit': {
-        // Zoom to fit content
         const sb = fdCanvas.get_scene_bounds();
         if (sb) {
           try {
@@ -1688,31 +1511,127 @@ function setupContextMenu() {
         break;
       }
     }
-    closeContextMenu();
   };
 
-  canvasMenu?.querySelectorAll('.ctx-item').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      doCanvasAction(btn.getAttribute('data-action'));
-    });
+  // ── Build node context menu items ──
+  function buildNodeMenuItems(hitId, selectedIds) {
+    const selCount = selectedIds.length;
+    const isMulti = selCount > 1;
+    const isLocked = fdCanvas.is_node_locked ? fdCanvas.is_node_locked(hitId) : false;
+
+    const items = [];
+
+    // Selection badge (header)
+    if (isMulti) {
+      items.push({ type: 'header', label: `${selCount} objects selected` });
+    }
+
+    // Clipboard
+    items.push({ type: 'action', icon: '📋', label: isMulti ? `Copy ${selCount} items` : 'Copy', shortcut: '⌘C', action: 'copy' });
+    items.push({ type: 'action', icon: '✂', label: isMulti ? `Cut ${selCount} items` : 'Cut', shortcut: '⌘X', action: 'cut' });
+    items.push({ type: 'action', icon: '⧉', label: isMulti ? `Duplicate ${selCount} items` : 'Duplicate', shortcut: '⌘D', action: 'duplicate' });
+    items.push({ type: 'action', icon: '🗑', label: isMulti ? `Delete ${selCount} items` : 'Delete', shortcut: '⌫', action: 'delete', danger: true });
+    items.push({ type: 'separator' });
+
+    // Z-order
+    items.push({ type: 'action', icon: '↑', label: 'Bring Forward', action: 'bring-forward' });
+    items.push({ type: 'action', icon: '↓', label: 'Send Backward', action: 'send-backward' });
+    items.push({ type: 'separator' });
+
+    // Structure
+    items.push({ type: 'action', icon: '⊞', label: 'Group', action: 'group' });
+    items.push({ type: 'action', icon: '⊟', label: 'Ungroup', action: 'ungroup' });
+
+    if (!isMulti) {
+      items.push({ type: 'separator' });
+      items.push({ type: 'action', icon: '✏️', label: 'Rename', action: 'rename' });
+      items.push({ type: 'action', icon: isLocked ? '🔓' : '🔒', label: isLocked ? 'Unlock' : 'Lock', action: 'lock' });
+      items.push({ type: 'separator' });
+      items.push({ type: 'action', icon: '📄', label: 'Copy as .fd', action: 'copy-fd' });
+      items.push({ type: 'separator' });
+      items.push({ type: 'action', icon: '📝', label: 'Add Note', action: 'add-note' });
+    }
+
+    return items;
+  }
+
+  // ── Build canvas empty-space menu items ──
+  function buildCanvasMenuItems() {
+    return [
+      { type: 'action', icon: '📋', label: 'Paste', shortcut: '⌘V', action: 'paste' },
+      { type: 'separator' },
+      { type: 'action', icon: '▢', label: 'Add Rectangle', shortcut: 'R', action: 'add-rect' },
+      { type: 'action', icon: '○', label: 'Add Ellipse', shortcut: 'O', action: 'add-ellipse' },
+      { type: 'action', icon: 'T', label: 'Add Text', shortcut: 'T', action: 'add-text' },
+      { type: 'separator' },
+      { type: 'action', icon: '⊡', label: 'Fit to Content', action: 'fit' },
+    ];
+  }
+
+  // Right-click on canvas
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (!fdCanvas) return;
+
+    const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
+    const hitId = fdCanvas.hit_test_at(x, y);
+
+    if (hitId) {
+      // ── Node context menu ──
+      const currentIds = JSON.parse(fdCanvas.get_selected_ids());
+      if (!currentIds.includes(hitId)) {
+        fdCanvas.select_by_id(hitId);
+      }
+      renderCanvas();
+      updateFab(canvas);
+      updatePropertiesPanel();
+
+      const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      ctxMenu.open({
+        items: buildNodeMenuItems(hitId, selectedIds),
+        x: e.clientX,
+        y: e.clientY,
+        onAction: doNodeAction,
+      });
+    } else if (fdCanvas.hit_test_edge_at) {
+      // ── Edge right-click ──
+      const edgeHit = fdCanvas.hit_test_edge_at(x, y);
+      if (edgeHit) {
+        fdCanvas.select_by_id(edgeHit);
+        renderCanvas();
+        updatePropertiesPanel();
+        showToast(`Selected edge @${edgeHit}`);
+      } else {
+        // ── Empty space context menu ──
+        contextMenuClickPos = { x, y };
+        ctxMenu.open({
+          items: buildCanvasMenuItems(),
+          x: e.clientX,
+          y: e.clientY,
+          onAction: doCanvasAction,
+        });
+      }
+    } else {
+      // ── Empty space context menu ──
+      contextMenuClickPos = { x, y };
+      ctxMenu.open({
+        items: buildCanvasMenuItems(),
+        x: e.clientX,
+        y: e.clientY,
+        onAction: doCanvasAction,
+      });
+    }
   });
 
-  // Dismiss on outside click, escape, scroll
-  document.addEventListener('click', (e) => {
-    if (!nodeMenu?.contains(e.target) && !canvasMenu?.contains(e.target)) closeContextMenu();
-  });
+  // Escape layered dismissal (non-menu uses)
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      // Layered dismissal: close topmost UI layer, one per Escape press
-      const ctxVisible = document.getElementById('ctx-menu')?.classList.contains('visible')
-        || document.getElementById('ctx-menu-canvas')?.classList.contains('visible');
-      if (ctxVisible) {
-        closeContextMenu();
-      } else if (fullscreenMode) {
+      // Context menu Escape is handled by ContextMenu class (capture phase)
+      // Only handle non-menu Escape here
+      if (ctxMenu.isOpen) return; // already handled by ContextMenu
+      if (fullscreenMode) {
         toggleFullscreen();
       } else if (fdCanvas && fdCanvas.get_selected_id()) {
-        // Nothing else to dismiss → deselect all
         fdCanvas.select_by_id('');
         renderDirty = true; uiDirty = true;
       }
@@ -1737,7 +1656,9 @@ function setupContextMenu() {
       }
     }
   });
-  canvas.addEventListener('pointerdown', closeContextMenu);
+  // Close context menu on canvas pointerdown (ContextMenu handles this via capture,
+  // but this ensures the old pattern still works for any other menus)
+  canvas.addEventListener('pointerdown', () => ctxMenu.close());
 }
 
 /** ─── Layers Panel ────────────────────────────────────────────────────── */
@@ -1859,7 +1780,7 @@ function flattenLayerTree(nodes, panel) {
 
 /** Close any open layer context menu. */
 function closeLayerCtxMenu() {
-  document.querySelectorAll('.layer-ctx-menu').forEach(m => m.remove());
+  ctxMenu.close();
 }
 
 /** Clear all drag indicators from layer items. */
@@ -2040,7 +1961,7 @@ function wireLayerDragDrop(panel) {
   }
 }
 
-/** Wire right-click context menu on layer items — full parity with canvas context menu. */
+/** Wire right-click context menu on layer items — uses unified ContextMenu. */
 function wireLayerContextMenu(panel) {
   if (!fdCanvas) return;
 
@@ -2048,7 +1969,6 @@ function wireLayerContextMenu(panel) {
     item.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      closeLayerCtxMenu();
 
       const nodeId = item.getAttribute('data-node-id');
       if (!nodeId) return;
@@ -2072,193 +1992,165 @@ function wireLayerContextMenu(panel) {
       }
       const isLocked = fdCanvas.is_node_locked ? fdCanvas.is_node_locked(nodeId) : false;
 
-      let menuHtml = '';
+      // Build items array
+      const items = [];
 
-      // ── Rename ──
-      menuHtml += `<div class="layer-ctx-item" data-action="rename"><span class="ctx-icon">✏️</span>Rename</div>`;
-      menuHtml += '<div class="layer-ctx-sep"></div>';
+      // Rename
+      items.push({ type: 'action', icon: '✏️', label: 'Rename', action: 'rename' });
+      items.push({ type: 'separator' });
 
-      // ── Clipboard: Cut, Copy, Paste, Copy as PNG ──
-      menuHtml += `<div class="layer-ctx-item" data-action="cut"><span class="ctx-icon">✂</span>Cut<span class="layer-ctx-shortcut">⌘X</span></div>`;
-      menuHtml += `<div class="layer-ctx-item" data-action="copy"><span class="ctx-icon">⎘</span>Copy<span class="layer-ctx-shortcut">⌘C</span></div>`;
-      menuHtml += `<div class="layer-ctx-item" data-action="paste"><span class="ctx-icon">📋</span>Paste<span class="layer-ctx-shortcut">⌘V</span></div>`;
-      menuHtml += `<div class="layer-ctx-item" data-action="copy-png"><span class="ctx-icon">🖼</span>Copy as PNG<span class="layer-ctx-shortcut">⌘⇧C</span></div>`;
-      menuHtml += '<div class="layer-ctx-sep"></div>';
+      // Clipboard
+      items.push({ type: 'action', icon: '✂', label: 'Cut', shortcut: '⌘X', action: 'cut' });
+      items.push({ type: 'action', icon: '⎘', label: 'Copy', shortcut: '⌘C', action: 'copy' });
+      items.push({ type: 'action', icon: '📋', label: 'Paste', shortcut: '⌘V', action: 'paste' });
+      items.push({ type: 'action', icon: '🖼', label: 'Copy as PNG', shortcut: '⌘⇧C', action: 'copy-png' });
+      items.push({ type: 'separator' });
 
-      // ── Structure: Duplicate, Group, Ungroup, Frame Selection ──
-      menuHtml += `<div class="layer-ctx-item" data-action="duplicate"><span class="ctx-icon">⊕</span>Duplicate<span class="layer-ctx-shortcut">⌘D</span></div>`;
-      menuHtml += `<div class="layer-ctx-item${canGroup ? '' : ' layer-ctx-disabled'}" data-action="group"><span class="ctx-icon">◻</span>Group<span class="layer-ctx-shortcut">⌘G</span></div>`;
-      menuHtml += `<div class="layer-ctx-item${canUngroup ? '' : ' layer-ctx-disabled'}" data-action="ungroup"><span class="ctx-icon">◫</span>Ungroup<span class="layer-ctx-shortcut">⇧⌘G</span></div>`;
-      menuHtml += `<div class="layer-ctx-item" data-action="frame"><span class="ctx-icon">⊞</span>Frame Selection</div>`;
-      menuHtml += '<div class="layer-ctx-sep"></div>';
+      // Structure
+      items.push({ type: 'action', icon: '⊕', label: 'Duplicate', shortcut: '⌘D', action: 'duplicate' });
+      items.push({ type: 'action', icon: '◻', label: 'Group', shortcut: '⌘G', action: 'group', disabled: !canGroup });
+      items.push({ type: 'action', icon: '◫', label: 'Ungroup', shortcut: '⇧⌘G', action: 'ungroup', disabled: !canUngroup });
+      items.push({ type: 'action', icon: '⊞', label: 'Frame Selection', action: 'frame' });
+      items.push({ type: 'separator' });
 
-      // ── Z-order: Bring to Front, Send to Back ──
-      menuHtml += `<div class="layer-ctx-item" data-action="bring-front"><span class="ctx-icon">↑</span>Bring to Front<span class="layer-ctx-shortcut">⌘⇧]</span></div>`;
-      menuHtml += `<div class="layer-ctx-item" data-action="send-back"><span class="ctx-icon">↓</span>Send to Back<span class="layer-ctx-shortcut">⌘⇧[</span></div>`;
+      // Z-order
+      items.push({ type: 'action', icon: '↑', label: 'Bring to Front', shortcut: '⌘⇧]', action: 'bring-front' });
+      items.push({ type: 'action', icon: '↓', label: 'Send to Back', shortcut: '⌘⇧[', action: 'send-back' });
 
-      // ── Lock / Unlock ──
-      menuHtml += `<div class="layer-ctx-item" data-action="lock"><span class="ctx-icon">${isLocked ? '🔓' : '🔒'}</span>${isLocked ? 'Unlock' : 'Lock'}</div>`;
+      // Lock
+      items.push({ type: 'action', icon: isLocked ? '🔓' : '🔒', label: isLocked ? 'Unlock' : 'Lock', action: 'lock' });
 
-      // ── Select Children (containers only) ──
+      // Select Children (containers only)
       if (isContainer && hasChildren) {
-        menuHtml += `<div class="layer-ctx-item" data-action="select-children"><span class="ctx-icon">📂</span>Select Children</div>`;
+        items.push({ type: 'action', icon: '📂', label: 'Select Children', action: 'select-children' });
       }
-      menuHtml += '<div class="layer-ctx-sep"></div>';
+      items.push({ type: 'separator' });
 
-      // ── Move Into submenu ──
+      // Move Into submenu
       if (fdCanvas.get_container_ids) {
         try {
           const containers = JSON.parse(fdCanvas.get_container_ids());
           const validTargets = containers.filter(c => c.id !== nodeId);
           if (validTargets.length > 0) {
-            menuHtml += `<div class="layer-ctx-item" data-action="move-into-header" style="opacity:0.5;cursor:default;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.3px">Move Into</div>`;
+            items.push({ type: 'header', label: 'Move Into' });
             for (const t of validTargets.slice(0, 15)) {
               const icon = LAYER_ICONS[t.kind] || '•';
-              menuHtml += `<div class="layer-ctx-item" data-action="move-into" data-target="${escHtml(t.id)}"><span class="ctx-icon">${icon}</span>@${escHtml(t.id)}</div>`;
-              menuHtml += `<div class="layer-ctx-item" data-action="center-into" data-target="${escHtml(t.id)}" style="padding-left:28px;opacity:0.7;font-size:11px"><span class="ctx-icon">⊙</span>Center in @${escHtml(t.id)}</div>`;
+              items.push({ type: 'action', icon, label: `@${t.id}`, action: 'move-into', data: { target: t.id } });
+              items.push({ type: 'action', icon: '⊙', label: `Center in @${t.id}`, action: 'center-into', data: { target: t.id } });
             }
             if (validTargets.length > 15) {
-              menuHtml += `<div class="layer-ctx-item" style="opacity:0.5;cursor:default">…${validTargets.length - 15} more</div>`;
+              items.push({ type: 'header', label: `…${validTargets.length - 15} more` });
             }
-            menuHtml += '<div class="layer-ctx-sep"></div>';
+            items.push({ type: 'separator' });
           }
         } catch (_) {}
       }
-      menuHtml += `<div class="layer-ctx-item" data-action="move-to-root"><span class="ctx-icon">↑</span>Move to Root</div>`;
-      menuHtml += '<div class="layer-ctx-sep"></div>';
+      items.push({ type: 'action', icon: '↑', label: 'Move to Root', action: 'move-to-root' });
+      items.push({ type: 'separator' });
 
-      // ── Delete ──
-      menuHtml += `<div class="layer-ctx-item layer-ctx-danger" data-action="delete"><span class="ctx-icon">✕</span>Delete<span class="layer-ctx-shortcut">⌫</span></div>`;
+      // Delete
+      items.push({ type: 'action', icon: '✕', label: 'Delete', shortcut: '⌫', action: 'delete', danger: true });
 
-      const menu = document.createElement('div');
-      menu.className = 'layer-ctx-menu';
-      menu.innerHTML = menuHtml;
+      // Action handler for layer-specific actions
+      const doLayerAction = (action, el) => {
+        const textBefore = fdCanvas.get_text();
+        let changed = false;
 
-      // Position
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      let mx = e.clientX;
-      let my = e.clientY;
-      document.body.appendChild(menu);
-      if (mx + menu.offsetWidth > vw) mx = vw - menu.offsetWidth - 4;
-      if (my + menu.offsetHeight > vh) my = vh - menu.offsetHeight - 4;
-      menu.style.left = mx + 'px';
-      menu.style.top = my + 'px';
-
-      // Wire actions
-      menu.querySelectorAll('.layer-ctx-item[data-action]').forEach(btn => {
-        btn.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          const action = btn.getAttribute('data-action');
-          if (action === 'move-into-header') return;
-          if (btn.classList.contains('layer-ctx-disabled')) return;
-
-          const textBefore = fdCanvas.get_text();
-          let changed = false;
-
-          if (action === 'rename') {
-            closeLayerCtxMenu();
-            const nameEl = item.querySelector('.layer-name');
-            if (nameEl) nameEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-            return;
-          } else if (action === 'cut') {
-            fdCanvas.select_by_id(nodeId);
-            copySelectedAsFd();
-            changed = fdCanvas.delete_selected();
-          } else if (action === 'copy') {
-            fdCanvas.select_by_id(nodeId);
-            copySelectedAsFd();
-            closeLayerCtxMenu();
-            return;
-          } else if (action === 'paste') {
-            pasteFromClipboard().then(() => {
-              renderCanvas(); syncCanvasToEditor();
-              updatePropertiesPanel(); refreshLayersPanel();
-            });
-            closeLayerCtxMenu();
-            return;
-          } else if (action === 'copy-png') {
-            fdCanvas.select_by_id(nodeId);
-            if (typeof copySelectionAsPng === 'function') copySelectionAsPng();
-            closeLayerCtxMenu();
-            return;
-          } else if (action === 'duplicate') {
-            fdCanvas.select_by_id(nodeId);
-            changed = fdCanvas.duplicate_selected();
-          } else if (action === 'group') {
-            changed = fdCanvas.group_selected();
-          } else if (action === 'ungroup') {
-            changed = fdCanvas.ungroup_selected();
-          } else if (action === 'frame') {
-            const resultJson = fdCanvas.handle_key('f', false, false, false, true);
-            const result = JSON.parse(resultJson);
-            changed = result.changed;
-          } else if (action === 'bring-front') {
-            const resultJson = fdCanvas.handle_key(']', false, true, false, true);
-            const result = JSON.parse(resultJson);
-            changed = result.changed;
-          } else if (action === 'send-back') {
-            const resultJson = fdCanvas.handle_key('[', false, true, false, true);
-            const result = JSON.parse(resultJson);
-            changed = result.changed;
-          } else if (action === 'lock') {
-            if (fdCanvas.toggle_node_locked) {
-              fdCanvas.toggle_node_locked(nodeId);
-              changed = true;
+        if (action === 'rename') {
+          const nameEl = item.querySelector('.layer-name');
+          if (nameEl) nameEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+          return;
+        } else if (action === 'cut') {
+          fdCanvas.select_by_id(nodeId);
+          copySelectedAsFd();
+          changed = fdCanvas.delete_selected();
+        } else if (action === 'copy') {
+          fdCanvas.select_by_id(nodeId);
+          copySelectedAsFd();
+          return;
+        } else if (action === 'paste') {
+          pasteFromClipboard().then(() => {
+            renderCanvas(); syncCanvasToEditor();
+            updatePropertiesPanel(); refreshLayersPanel();
+          });
+          return;
+        } else if (action === 'copy-png') {
+          fdCanvas.select_by_id(nodeId);
+          if (typeof copySelectionAsPng === 'function') copySelectionAsPng();
+          return;
+        } else if (action === 'duplicate') {
+          fdCanvas.select_by_id(nodeId);
+          changed = fdCanvas.duplicate_selected();
+        } else if (action === 'group') {
+          changed = fdCanvas.group_selected();
+        } else if (action === 'ungroup') {
+          changed = fdCanvas.ungroup_selected();
+        } else if (action === 'frame') {
+          const resultJson = fdCanvas.handle_key('f', false, false, false, true);
+          const result = JSON.parse(resultJson);
+          changed = result.changed;
+        } else if (action === 'bring-front') {
+          const resultJson = fdCanvas.handle_key(']', false, true, false, true);
+          const result = JSON.parse(resultJson);
+          changed = result.changed;
+        } else if (action === 'send-back') {
+          const resultJson = fdCanvas.handle_key('[', false, true, false, true);
+          const result = JSON.parse(resultJson);
+          changed = result.changed;
+        } else if (action === 'lock') {
+          if (fdCanvas.toggle_node_locked) {
+            fdCanvas.toggle_node_locked(nodeId);
+            changed = true;
+          }
+        } else if (action === 'select-children') {
+          const childrenContainer = panel.querySelector(`.layer-children[data-parent-id="${nodeId}"]`);
+          if (childrenContainer) {
+            const childIds = [...childrenContainer.querySelectorAll(':scope > .layer-item')].map(
+              el => el.getAttribute('data-node-id')
+            ).filter(Boolean);
+            if (childIds.length > 0) {
+              fdCanvas.select_multiple_by_ids(JSON.stringify(childIds));
+              renderCanvas();
+              updatePropertiesPanel();
+              refreshLayersPanel();
             }
-          } else if (action === 'select-children') {
-            const childrenContainer = panel.querySelector(`.layer-children[data-parent-id="${nodeId}"]`);
-            if (childrenContainer) {
-              const childIds = [...childrenContainer.querySelectorAll(':scope > .layer-item')].map(
-                el => el.getAttribute('data-node-id')
-              ).filter(Boolean);
-              if (childIds.length > 0) {
-                fdCanvas.select_multiple_by_ids(JSON.stringify(childIds));
-                renderCanvas();
-                updatePropertiesPanel();
-                refreshLayersPanel();
-              }
-            }
-            closeLayerCtxMenu();
-            return;
-          } else if (action === 'move-into') {
-            const targetId = btn.getAttribute('data-target');
-            changed = fdCanvas.reparent_into(nodeId, targetId);
-          } else if (action === 'center-into') {
-            const targetId = btn.getAttribute('data-target');
+          }
+          return;
+        } else if (action === 'move-into') {
+          const targetId = el?.getAttribute('data-target');
+          if (targetId) changed = fdCanvas.reparent_into(nodeId, targetId);
+        } else if (action === 'center-into') {
+          const targetId = el?.getAttribute('data-target');
+          if (targetId) {
             changed = fdCanvas.reparent_into_centered
               ? fdCanvas.reparent_into_centered(nodeId, targetId)
               : fdCanvas.reparent_into(nodeId, targetId);
-          } else if (action === 'move-to-root') {
-            changed = fdCanvas.reparent_into(nodeId, 'root');
-          } else if (action === 'delete') {
-            fdCanvas.select_by_id(nodeId);
-            changed = fdCanvas.delete_selected();
           }
+        } else if (action === 'move-to-root') {
+          changed = fdCanvas.reparent_into(nodeId, 'root');
+        } else if (action === 'delete') {
+          fdCanvas.select_by_id(nodeId);
+          changed = fdCanvas.delete_selected();
+        }
 
-          if (changed) {
-            const textAfter = fdCanvas.get_text();
-            if (textBefore !== textAfter) {
-              fdCanvas.push_undo_snapshot(textBefore, textAfter);
-            }
-            renderCanvas();
-            syncCanvasToEditor();
-            updatePropertiesPanel();
-            refreshLayersPanel();
+        if (changed) {
+          const textAfter = fdCanvas.get_text();
+          if (textBefore !== textAfter) {
+            fdCanvas.push_undo_snapshot(textBefore, textAfter);
           }
-          closeLayerCtxMenu();
-        });
-      });
-
-      // Close on outside click/pointerdown (pointerdown fires before click,
-      // ensuring dismissal even if layer items stopPropagation on click)
-      const closeOnPointer = (ev) => {
-        if (!menu.contains(ev.target)) {
-          closeLayerCtxMenu();
-          document.removeEventListener('pointerdown', closeOnPointer);
+          renderCanvas();
+          syncCanvasToEditor();
+          updatePropertiesPanel();
+          refreshLayersPanel();
         }
       };
-      setTimeout(() => document.addEventListener('pointerdown', closeOnPointer), 0);
+
+      ctxMenu.open({
+        items,
+        x: e.clientX,
+        y: e.clientY,
+        onAction: doLayerAction,
+      });
     });
   });
 }
@@ -5777,6 +5669,26 @@ async function initPlayground() {
             a.click();
             URL.revokeObjectURL(url);
             showToast('SVG downloaded!');
+            settingsMenu?.classList.remove('visible');
+            return;
+          }
+          case 'export-html': {
+            if (!fdCanvas) break;
+            try {
+              const htmlStr = fdCanvas.export_html();
+              if (!htmlStr) { showToast('Nothing to export'); break; }
+              const blob = new Blob([htmlStr], { type: 'text/html' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'fast-draft-export.html';
+              a.click();
+              URL.revokeObjectURL(url);
+              showToast('HTML page downloaded!');
+            } catch (err) {
+              console.warn('HTML export error:', err);
+              showToast('Export failed');
+            }
             settingsMenu?.classList.remove('visible');
             return;
           }

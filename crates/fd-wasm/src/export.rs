@@ -116,6 +116,25 @@ impl FdCanvas {
         )
     }
 
+    /// Export the current selection (or entire canvas if empty) as a standalone HTML page.
+    ///
+    /// The output is a complete HTML document with embedded CSS that can be
+    /// saved as an `.html` file and opened in any browser.
+    pub fn export_html(&self) -> String {
+        let selected_ids: Vec<String> = self
+            .select_tool
+            .selected
+            .iter()
+            .map(|id| id.as_str().to_string())
+            .collect();
+
+        fd_core::html_export::export_html(
+            &self.engine.graph,
+            self.engine.current_bounds(),
+            &selected_ids,
+        )
+    }
+
     /// Emit FD text for only the currently selected nodes.
     ///
     /// Returns valid FD text containing just the selected node blocks

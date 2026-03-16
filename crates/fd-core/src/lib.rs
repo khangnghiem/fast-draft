@@ -1,6 +1,7 @@
 pub mod emitter;
 pub mod excalidraw;
 pub mod format;
+pub mod html_export;
 pub mod id;
 pub mod layout;
 pub mod lint;

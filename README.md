@@ -134,30 +134,26 @@ https://fast-draft.com/playground?ai_model=llama-70b
 
 The review panel footer shows which model produced the result.
 
-## Built-In Specs
+## Built-In Notes
 
-Attach requirements directly to visual elements:
+Attach notes and requirements directly to visual elements:
 
 ```
 rect @login_btn {
-  spec {
-    "Primary CTA — triggers login API call"
-    accept: "disabled state when fields empty"
-    accept: "loading spinner during auth"
-    status: in_progress
-    priority: high
+  note {
+    Primary CTA — triggers login API call
+    - [ ] disabled state when fields empty
+    - [ ] loading spinner during auth
   }
   w: 280 h: 48
   fill: #6C5CE7 corner=10
 }
 ```
 
-| What you write   | What it means                                  |
-| ---------------- | ---------------------------------------------- |
-| `spec "text"`    | A short description of what the element does   |
-| `accept: "text"` | What counts as "done" (acceptance criteria)    |
-| `status: draft`  | Current status: `draft`, `in_progress`, `done` |
-| `priority: high` | Importance: `high`, `medium`, `low`            |
+| What you write     | What it means                                          |
+| ------------------ | ------------------------------------------------------ |
+| `note "text"`      | A short inline note on the element                     |
+| `note { markdown }` | Multi-line markdown (checklists, headings, bullets)   |
 
 ## Editor Support
 

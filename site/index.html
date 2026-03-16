@@ -138,6 +138,7 @@
                     <div class="settings-menu-sep"></div>
                     <button class="settings-menu-item" data-setting="copy-png" id="sm-copy-png"><span class="sm-icon">📷</span><span class="sm-label">Copy as PNG</span></button>
                     <button class="settings-menu-item" data-setting="export-svg" id="sm-export-svg"><span class="sm-icon">📄</span><span class="sm-label">Download SVG</span></button>
+                    <button class="settings-menu-item" data-setting="export-html" id="sm-export-html"><span class="sm-icon">🌐</span><span class="sm-label">Download HTML</span></button>
                     <button class="settings-menu-item" data-setting="import-css" id="sm-import-css"><span class="sm-icon">🎨</span><span class="sm-label">Import CSS</span></button>
                     <button class="settings-menu-item" id="sm-design-review" data-setting="design-review"><span class="sm-icon">✦</span><span class="sm-label">Full Design Review</span></button>
                     <div class="settings-menu-sep"></div>
@@ -245,46 +246,6 @@
                   <button class="pp-action-btn pp-delete" id="pp-delete" title="Delete">🗑 Delete</button>
                 </div>
               </div>
-            </div>
-            <div id="ctx-menu">
-              <div class="ctx-selection-badge" id="ctx-selection-badge" style="display:none"></div>
-              <button class="ctx-item" data-action="copy" id="ctx-copy-btn">📋 Copy <span class="ctx-shortcut">⌘C</span></button>
-              <button class="ctx-item" data-action="cut" id="ctx-cut-btn">✂ Cut <span class="ctx-shortcut">⌘X</span></button>
-              <button class="ctx-item" data-action="duplicate" id="ctx-dup-btn">⧉ Duplicate <span class="ctx-shortcut">⌘D</span></button>
-              <button class="ctx-item" data-action="delete" id="ctx-del-btn">🗑 Delete <span class="ctx-shortcut">⌫</span></button>
-              <div class="ctx-sep"></div>
-              <button class="ctx-item" data-action="bring-forward">↑ Bring Forward</button>
-              <button class="ctx-item" data-action="send-backward">↓ Send Backward</button>
-              <div class="ctx-sep"></div>
-              <button class="ctx-item" data-action="group">⊞ Group</button>
-              <button class="ctx-item" data-action="ungroup">⊟ Ungroup</button>
-              <div class="ctx-sep ctx-single-only"></div>
-              <button class="ctx-item ctx-single-only" data-action="rename">✏️ Rename</button>
-              <button class="ctx-item ctx-single-only" data-action="lock" id="ctx-lock-site">🔒 Lock</button>
-              <div class="ctx-sep ctx-single-only"></div>
-              <button class="ctx-item ctx-single-only" data-action="copy-fd">📄 Copy as .fd</button>
-              <div class="ctx-sep ctx-single-only"></div>
-              <button class="ctx-item ctx-single-only" data-action="add-note">📝 Add Note</button>
-              <div class="ctx-sep"></div>
-              <div class="ctx-ai-touch-wrap">
-                <button class="ctx-item ctx-ai-trigger" data-action="ai-touch">✦ AI Touch <span class="ctx-ai-chevron">▸</span></button>
-                <div class="ctx-ai-submenu" id="ctx-ai-submenu">
-                  <textarea class="ctx-ai-prompt" id="ctx-ai-prompt" placeholder="e.g. Make it Apple HIG style" maxlength="200" rows="2"></textarea>
-                  <div class="ctx-ai-footer">
-                    <span class="ctx-ai-counter" id="ctx-ai-counter">0/200</span>
-                    <button class="ctx-ai-run" id="ctx-ai-run">Run ✦</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div id="ctx-menu-canvas">
-              <button class="ctx-item" data-action="paste">📋 Paste <span class="ctx-shortcut">⌘V</span></button>
-              <div class="ctx-sep"></div>
-              <button class="ctx-item" data-action="add-rect">▢ Add Rectangle <span class="ctx-shortcut">R</span></button>
-              <button class="ctx-item" data-action="add-ellipse">○ Add Ellipse <span class="ctx-shortcut">O</span></button>
-              <button class="ctx-item" data-action="add-text">T Add Text <span class="ctx-shortcut">T</span></button>
-              <div class="ctx-sep"></div>
-              <button class="ctx-item" data-action="fit">⊡ Fit to Content</button>
             </div>
             <div id="dimension-tooltip"></div>
             <div id="reparent-overlay"></div>
@@ -550,6 +511,7 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="context-menu.js?v=0.11.5"></script>
   <script type="module" src="playground.js?v=0.11.5"></script>
   <script>
     // Mobile menu toggle
