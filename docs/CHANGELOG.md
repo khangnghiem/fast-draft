@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.171 — Code Panel Toggle + Fullscreen Auto-Collapse (R6.6)
+- **UX (R6.6)**: Code panel toggle — clicking the "Code" header bar on the editor toggles the code panel between expanded and collapsed; collapsed state shows a 42px-wide vertical strip with rotated "Code ▸" text; chevron `▾` indicator rotates to `▸` when collapsed; `code-collapsed` class on `.playground-split` with smooth 250ms CSS Grid transition for premium feel
+- **UX (R6.6)**: Fullscreen auto-collapse — entering fullscreen mode (`⇧F`) automatically collapses the code panel to maximize canvas real estate; header remains visible so users can re-expand with one click; exiting fullscreen preserves user's collapse state
+- **SITE**: Changes in `site/index.html` (clickable header + chevron), `site/style.css` (`.code-collapsed` state + animation), `site/playground.js` (`toggleCodePanel()`, `collapseCodePanel()`, editor header click handler)
+
 ### v0.11.170 — Panel Toggle, Resize & Exclusive Policy (R6.7)
 - **UX (R6.7)**: Desktop Layers toggle — new `☰` button in canvas toolbar toggles Layers panel collapsed/expanded at all viewports (previously toggle only available on mobile); button dims when panel is collapsed
 - **UX (R6.7)**: `\` keyboard shortcut — pressing backslash toggles the Layers panel collapsed/expanded (no modifiers, not active in text inputs); matches Figma `\` shortcut convention
