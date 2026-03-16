@@ -14,6 +14,25 @@ import { defaultKeymap, history, historyKeymap } from 'https://esm.sh/@codemirro
 import { highlightSelectionMatches } from 'https://esm.sh/@codemirror/search@6';
 import LZString from 'https://esm.sh/lz-string@1.5.0';
 import { initAiChat } from './ai-chat.js';
+import {
+  screenToScene as coreScreenToScene,
+  pointerTypeToU8 as corePointerTypeToU8,
+  showToast as coreShowToast,
+  ZOOM_WHEEL_FACTOR as CORE_ZOOM_WHEEL_FACTOR,
+  GRID_SPACING as CORE_GRID_SPACING,
+} from './canvas-core/state.js';
+import {
+  drawGrid as coreDrawGrid,
+  fitToContent as coreFitToContent,
+  getSceneBounds as coreGetSceneBounds,
+  zoomAtPoint as coreZoomAtPoint,
+  startAnimLoop as coreStartAnimLoop,
+  stopAnimLoop as coreStopAnimLoop,
+  activeTweens,
+  startTween,
+  evalTweens,
+  playDetachAnimation as corePlayDetachAnimation,
+} from './canvas-core/render.js';
 
 // ─── FD Language Definition (StreamLanguage) ─────────────────────────────
 const fdLanguage = StreamLanguage.define({
