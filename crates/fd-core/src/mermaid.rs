@@ -11,7 +11,7 @@
 
 use crate::id::NodeId;
 use crate::model::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Direction hint parsed from `flowchart TD|TB|LR|RL|BT`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -115,6 +115,7 @@ fn parse_flowchart(input: &str) -> Result<SceneGraph, String> {
     let mut edges: Vec<MermaidEdge> = Vec::new();
     let mut subgraphs: Vec<MermaidSubgraph> = Vec::new();
     let mut current_subgraph: Option<MermaidSubgraph> = None;
+    let mut current_subgraph_set: HashSet<String> = HashSet::new();
 
     for line in lines {
         let trimmed = line.trim();
@@ -139,6 +140,7 @@ fn parse_flowchart(input: &str) -> Result<SceneGraph, String> {
                 label: sg_label,
                 node_ids: Vec::new(),
             });
+            current_subgraph_set.clear();
             continue;
         }
 
@@ -147,6 +149,7 @@ fn parse_flowchart(input: &str) -> Result<SceneGraph, String> {
             if let Some(sg) = current_subgraph.take() {
                 subgraphs.push(sg);
             }
+            current_subgraph_set.clear();
             continue;
         }
 
@@ -182,10 +185,12 @@ fn parse_flowchart(input: &str) -> Result<SceneGraph, String> {
             // Track nodes in current subgraph
             if let Some(ref mut sg) = current_subgraph {
                 for pe in &parsed_edges {
-                    if !sg.node_ids.contains(&pe.from) {
+                    if !current_subgraph_set.contains(&pe.from) {
+                        current_subgraph_set.insert(pe.from.clone());
                         sg.node_ids.push(pe.from.clone());
                     }
-                    if !sg.node_ids.contains(&pe.to) {
+                    if !current_subgraph_set.contains(&pe.to) {
+                        current_subgraph_set.insert(pe.to.clone());
                         sg.node_ids.push(pe.to.clone());
                     }
                 }
@@ -198,8 +203,9 @@ fn parse_flowchart(input: &str) -> Result<SceneGraph, String> {
         // Try to parse as standalone node definition
         if let Some(node) = try_parse_node_def(trimmed) {
             if let Some(ref mut sg) = current_subgraph
-                && !sg.node_ids.contains(&node.id)
+                && !current_subgraph_set.contains(&node.id)
             {
+                current_subgraph_set.insert(node.id.clone());
                 sg.node_ids.push(node.id.clone());
             }
             nodes.insert(node.id.clone(), node);
@@ -575,17 +581,21 @@ fn build_scene_graph(
 
     // Sort nodes by first occurrence in edges for consistent ordering
     let mut ordered_ids: Vec<String> = Vec::new();
+    let mut ordered_ids_set: HashSet<String> = HashSet::new();
     for edge in edges {
-        if !ordered_ids.contains(&edge.from) {
+        if !ordered_ids_set.contains(&edge.from) {
+            ordered_ids_set.insert(edge.from.clone());
             ordered_ids.push(edge.from.clone());
         }
-        if !ordered_ids.contains(&edge.to) {
+        if !ordered_ids_set.contains(&edge.to) {
+            ordered_ids_set.insert(edge.to.clone());
             ordered_ids.push(edge.to.clone());
         }
     }
     // Add any nodes not referenced in edges
     for id in nodes.keys() {
-        if !ordered_ids.contains(id) {
+        if !ordered_ids_set.contains(id) {
+            ordered_ids_set.insert(id.clone());
             ordered_ids.push(id.clone());
         }
     }
