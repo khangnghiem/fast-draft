@@ -5,7 +5,9 @@
  * design and request modifications. Supports:
  *   - Multi-turn conversation with context
  *   - Automatic document context injection
- *   - Per-block accept/reject for FD code changes
+ *   - Selection context injection (selected nodes' FD code)
+ *   - Per-block accept/reject with smart replace (in-place node update)
+ *   - Quick-action chips that adapt to selection state
  *   - Markdown rendering in responses
  */
 
@@ -15,6 +17,9 @@ const chatHistory = [];
 let isSending = false;
 const AI_ENDPOINT = '/api/ai';
 
+/** @type {Function|null} Getter for FdCanvas reference */
+let _getCanvas = null;
+
 // ─── DOM References ─────────────────────────────────────
 
 function getChatPanel() { return document.getElementById('ai-chat-panel'); }
@@ -23,6 +28,8 @@ function getChatInput() { return document.getElementById('ai-chat-input'); }
 function getChatSend() { return document.getElementById('ai-chat-send'); }
 function getChatBtn() { return document.getElementById('ai-chat-btn'); }
 function getChatClose() { return document.getElementById('ai-chat-close'); }
+function getContextBadge() { return document.getElementById('ai-chat-context-badge'); }
+function getChipsContainer() { return document.getElementById('ai-chat-chips'); }
 
 // ─── Panel Toggle ───────────────────────────────────────
 
@@ -35,7 +42,6 @@ export function toggleChatPanel() {
     const notesPanel = document.getElementById('specs-panel');
     if (notesPanel && !notesPanel.classList.contains('hidden')) {
       notesPanel.classList.add('hidden');
-      // Sync specsPanelOpen state if it exists on window
       if (typeof window._specsPanelOpen !== 'undefined') window._specsPanelOpen = false;
     }
   }
@@ -43,12 +49,122 @@ export function toggleChatPanel() {
   if (!panel.classList.contains('hidden')) {
     const input = getChatInput();
     if (input) input.focus();
+    updateContextBadge();
+    updateChips();
   }
 }
 
 export function closeChatPanel() {
   const panel = getChatPanel();
   if (panel) panel.classList.add('hidden');
+}
+
+export function clearChatHistory() {
+  chatHistory.length = 0;
+  const messages = getChatMessages();
+  if (messages) {
+    messages.innerHTML = '<div class="ai-chat-welcome"><p>Ask me about your design. I can modify nodes, suggest improvements, or answer questions.</p><p class="ai-chat-hint">Try: "Make the colors warmer" or "Add a header section"</p></div>';
+  }
+}
+
+// ─── Selection Context ──────────────────────────────────
+
+/**
+ * Get current selection context from FdCanvas.
+ * @returns {{ ids: string[], fdCode: string }} Selected node IDs and their FD code
+ */
+function getSelectionContext() {
+  if (!_getCanvas) return { ids: [], fdCode: '' };
+  const canvas = _getCanvas();
+  if (!canvas) return { ids: [], fdCode: '' };
+
+  let ids = [];
+  try {
+    const idsJson = canvas.get_selected_ids?.();
+    if (idsJson) ids = JSON.parse(idsJson);
+  } catch (_) {}
+  if (ids.length === 0) {
+    try {
+      const singleId = canvas.get_selected_id?.();
+      if (singleId) ids = [singleId];
+    } catch (_) {}
+  }
+
+  let fdCode = '';
+  if (ids.length > 0) {
+    try {
+      fdCode = canvas.emit_selection_fd?.() || '';
+    } catch (_) {}
+  }
+
+  return { ids, fdCode };
+}
+
+/**
+ * Update the context badge above the input to show what's selected.
+ */
+function updateContextBadge() {
+  const badge = getContextBadge();
+  if (!badge) return;
+
+  const { ids } = getSelectionContext();
+  if (ids.length === 0) {
+    badge.classList.add('hidden');
+    badge.textContent = '';
+  } else if (ids.length === 1) {
+    badge.classList.remove('hidden');
+    badge.textContent = `📌 @${ids[0]}`;
+  } else {
+    badge.classList.remove('hidden');
+    badge.textContent = `📌 ${ids.length} nodes selected`;
+  }
+}
+
+// ─── Quick-Action Chips ─────────────────────────────────
+
+const CHIPS_NONE = [
+  { label: '🎨 Improve colors', msg: 'Improve the color palette to be more harmonious and modern' },
+  { label: '📐 Add header', msg: 'Add a header section to the design' },
+  { label: '✦ Review design', msg: 'Review my design and suggest improvements' },
+];
+
+const CHIPS_SINGLE = [
+  { label: '🎨 Restyle', msg: 'Improve the styling of this node — better colors, corner radius, shadow' },
+  { label: '📝 Rename', msg: 'Suggest a better semantic name for this node' },
+  { label: '✨ Add hover', msg: 'Add a subtle hover animation to this node' },
+];
+
+const CHIPS_MULTI = [
+  { label: '📦 Group these', msg: 'Group these selected nodes into a frame with proper layout' },
+  { label: '📐 Align layout', msg: 'Align and arrange these nodes in a clean layout' },
+  { label: '🔗 Add edges', msg: 'Add connecting edges between these nodes' },
+];
+
+function updateChips() {
+  const container = getChipsContainer();
+  if (!container) return;
+
+  const { ids } = getSelectionContext();
+  let chips;
+  if (ids.length === 0) chips = CHIPS_NONE;
+  else if (ids.length === 1) chips = CHIPS_SINGLE;
+  else chips = CHIPS_MULTI;
+
+  container.innerHTML = '';
+  for (const chip of chips) {
+    const btn = document.createElement('button');
+    btn.className = 'ai-chat-chip';
+    btn.textContent = chip.label;
+    btn.addEventListener('click', () => {
+      const input = getChatInput();
+      if (input) {
+        input.value = chip.msg;
+        input.dispatchEvent(new Event('input'));
+      }
+      sendMessage(_lastGetEditor, _lastSetEditor);
+    });
+    container.appendChild(btn);
+  }
 }
 
 // ─── Message Rendering ──────────────────────────────────
@@ -64,9 +180,9 @@ function escapeHtml(text) {
 /**
  * Render assistant response with markdown support and
  * per-block accept/reject buttons for FD code blocks.
+ * Smart replace: finds matching @id in document and replaces in-place.
  */
 function renderAssistantMessage(content, getEditorContent, setEditorContent) {
-  // Parse FD code blocks and add accept/reject buttons
   const parts = content.split(/(```fd\n[\s\S]*?```)/g);
   let html = '';
   let blockIndex = 0;
@@ -82,7 +198,6 @@ function renderAssistantMessage(content, getEditorContent, setEditorContent) {
       html += `<button class="fd-reject-btn" data-bid="${bid}">✕ Skip</button>`;
       html += '</div>';
     } else {
-      // Simple markdown: **bold**, `code`, newlines
       let md = escapeHtml(part);
       md = md.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
       md = md.replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -92,6 +207,96 @@ function renderAssistantMessage(content, getEditorContent, setEditorContent) {
   }
 
   return html;
+}
+
+/**
+ * Smart Replace: find the node @id in the FD code block and replace
+ * the matching node block in the document in-place.
+ * Falls back to append if no matching node is found.
+ */
+function smartApplyFdCode(fdCode, getEditorContent, setEditorContent) {
+  if (!getEditorContent || !setEditorContent) return;
+
+  const current = getEditorContent();
+
+  // Extract node @ids from the incoming FD code
+  const nodeIdMatches = [...fdCode.matchAll(/^(?:rect|ellipse|text|frame|group|path|image|edge)\s+@(\w+)/gm)];
+
+  if (nodeIdMatches.length === 0) {
+    // No recognizable node — append
+    setEditorContent(current.trimEnd() + '\n\n' + fdCode + '\n');
+    return;
+  }
+
+  let result = current;
+  let anyReplaced = false;
+
+  for (const match of nodeIdMatches) {
+    const nodeId = match[1];
+    // Find the existing block for this @id in the document
+    const blockRange = findNodeBlock(result, nodeId);
+    if (blockRange) {
+      // Extract the NEW block for this node from the AI's output
+      const newBlock = extractNodeBlock(fdCode, nodeId);
+      if (newBlock) {
+        result = result.slice(0, blockRange.start) + newBlock + result.slice(blockRange.end);
+        anyReplaced = true;
+      }
+    }
+  }
+
+  if (!anyReplaced) {
+    // None of the nodes exist yet — append all
+    result = result.trimEnd() + '\n\n' + fdCode + '\n';
+  }
+
+  setEditorContent(result);
+}
+
+/**
+ * Find a node block in FD text by its @id.
+ * Returns { start, end } character offsets or null.
+ */
+function findNodeBlock(source, nodeId) {
+  // Match node declaration: type @nodeId ... {
+  const regex = new RegExp(
+    `^((?:rect|ellipse|text|frame|group|path|image|edge|style)\\s+@${nodeId}(?:\\s|\\{))`,
+    'm'
+  );
+  const match = source.match(regex);
+  if (!match) return null;
+
+  const start = source.indexOf(match[0]);
+  if (start === -1) return null;
+
+  // Find matching closing brace
+  let depth = 0;
+  let i = start;
+  let foundOpen = false;
+  while (i < source.length) {
+    if (source[i] === '{') { depth++; foundOpen = true; }
+    if (source[i] === '}') { depth--; }
+    if (foundOpen && depth === 0) {
+      // Include trailing newline if present
+      let end = i + 1;
+      while (end < source.length && source[end] === '\n') end++;
+      return { start, end };
+    }
+    i++;
+  }
+
+  // No braces found — single-line node
+  const lineEnd = source.indexOf('\n', start);
+  return { start, end: lineEnd === -1 ? source.length : lineEnd + 1 };
+}
+
+/**
+ * Extract a single node block from FD text by its @id.
+ */
+function extractNodeBlock(source, nodeId) {
+  const range = findNodeBlock(source, nodeId);
+  if (!range) return null;
+  return source.slice(range.start, range.end).trim() + '\n';
 }
 
 // ─── Message Addition ───────────────────────────────────
@@ -114,16 +319,12 @@ function addMessage(role, content, getEditorContent, setEditorContent) {
   } else {
     div.innerHTML = renderAssistantMessage(content, getEditorContent, setEditorContent);
 
-    // Wire up accept/reject buttons
+    // Wire up accept/reject buttons with smart replace
     div.querySelectorAll('.fd-apply-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const fdCode = decodeURIComponent(btn.dataset.fd);
         const actionDiv = btn.closest('.fd-block-action');
-        if (setEditorContent && typeof setEditorContent === 'function') {
-          // Append FD code to current document
-          const current = getEditorContent ? getEditorContent() : '';
-          setEditorContent(current.trimEnd() + '\n\n' + fdCode + '\n');
-        }
+        smartApplyFdCode(fdCode, getEditorContent, setEditorContent);
         if (actionDiv) {
           actionDiv.innerHTML = '<span style="color:#34C759;font-size:10px;font-weight:600">✓ Applied</span>';
         }
@@ -147,6 +348,9 @@ function addMessage(role, content, getEditorContent, setEditorContent) {
 
 // ─── Send Message ───────────────────────────────────────
 
+let _lastGetEditor = null;
+let _lastSetEditor = null;
+
 async function sendMessage(getEditorContent, setEditorContent) {
   const input = getChatInput();
   const sendBtn = getChatSend();
@@ -160,9 +364,18 @@ async function sendMessage(getEditorContent, setEditorContent) {
   input.value = '';
   input.style.height = 'auto';
 
+  // Get selection context
+  const { ids: selIds, fdCode: selFd } = getSelectionContext();
+
+  // Build display message (show context if any)
+  let displayMsg = text;
+  if (selIds.length > 0) {
+    displayMsg = `[📌 ${selIds.map(id => '@' + id).join(', ')}] ${text}`;
+  }
+
   // Add user message
   chatHistory.push({ role: 'user', content: text });
-  addMessage('user', text);
+  addMessage('user', displayMsg);
 
   // Show thinking indicator
   const thinkingDiv = addMessage('thinking', '');
@@ -178,6 +391,8 @@ async function sendMessage(getEditorContent, setEditorContent) {
         mode: 'chat',
         messages: chatHistory,
         context: docContent.slice(0, 8000),
+        selection: selFd ? selFd.slice(0, 4000) : undefined,
+        selection_ids: selIds.length > 0 ? selIds : undefined,
       }),
     });
 
@@ -219,8 +434,13 @@ function autoResize(textarea) {
  *
  * @param {Function} getEditorContent - Returns the current FD text
  * @param {Function} setEditorContent - Sets the editor FD text
+ * @param {Function} [getCanvas] - Returns the FdCanvas WASM instance
  */
-export function initAiChat(getEditorContent, setEditorContent) {
+export function initAiChat(getEditorContent, setEditorContent, getCanvas) {
+  _lastGetEditor = getEditorContent;
+  _lastSetEditor = setEditorContent;
+  _getCanvas = getCanvas || null;
+
   const chatBtn = getChatBtn();
   const closeBtn = getChatClose();
   const sendBtn = getChatSend();
@@ -249,5 +469,23 @@ export function initAiChat(getEditorContent, setEditorContent) {
     });
 
     input.addEventListener('input', () => autoResize(input));
+
+    // Update context badge on focus (selection may have changed)
+    input.addEventListener('focus', () => {
+      updateContextBadge();
+      updateChips();
+    });
   }
+
+  // Listen for selection changes to update context badge when panel is visible
+  document.addEventListener('fd-selection-changed', () => {
+    const panel = getChatPanel();
+    if (panel && !panel.classList.contains('hidden')) {
+      updateContextBadge();
+      updateChips();
+    }
+  });
+
+  // Initial chips render
+  updateChips();
 }

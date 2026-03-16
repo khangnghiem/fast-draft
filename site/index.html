@@ -268,7 +268,10 @@
                 <div class="ai-chat-title">
                   <span class="ai-chat-icon">✦</span> AI Agent
                 </div>
-                <button class="ai-chat-close" id="ai-chat-close" title="Close">✕</button>
+                <div class="ai-chat-header-actions">
+                  <button class="ai-chat-clear" id="ai-chat-clear" title="Clear chat">🗑</button>
+                  <button class="ai-chat-close" id="ai-chat-close" title="Close">✕</button>
+                </div>
               </div>
               <div class="ai-chat-messages" id="ai-chat-messages">
                 <div class="ai-chat-welcome">
@@ -276,6 +279,8 @@
                   <p class="ai-chat-hint">Try: "Make the colors warmer" or "Add a header section"</p>
                 </div>
               </div>
+              <div class="ai-chat-chips" id="ai-chat-chips"></div>
+              <div class="ai-chat-context-badge hidden" id="ai-chat-context-badge"></div>
               <div class="ai-chat-input-area">
                 <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Ask AI about your design..." rows="1" maxlength="500"></textarea>
                 <button class="ai-chat-send" id="ai-chat-send" title="Send">→</button>

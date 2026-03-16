@@ -229,7 +229,7 @@ export async function onRequestPost(context) {
     }
 
     const body = await context.request.json();
-    const { prompt, mode, model_hint, user_focus, messages, context: docContext } = body;
+    const { prompt, mode, model_hint, user_focus, messages, context: docContext, selection, selection_ids } = body;
 
     // Chat mode requires messages array; other modes require prompt
     if (mode === 'chat') {
@@ -269,6 +269,12 @@ export async function onRequestPost(context) {
       let systemPrompt = config.system;
       if (docContext && typeof docContext === 'string') {
         systemPrompt += `\n\n## Current Document\n\`\`\`fd\n${docContext.slice(0, 8000)}\n\`\`\``;
+      }
+      // Inject selection context so AI knows what the user is looking at
+      if (selection && typeof selection === 'string' && selection.trim()) {
+        systemPrompt += `\n\n## Selected Nodes\nThe user currently has these nodes selected on the canvas:\n\`\`\`fd\n${selection.slice(0, 4000)}\n\`\`\`\nWhen the user refers to "this", "these", or "the selected", they mean the nodes above. Prioritize modifying these nodes in your response.`;
+      } else if (selection_ids && Array.isArray(selection_ids) && selection_ids.length > 0) {
+        systemPrompt += `\n\n## Selected Nodes\nThe user has these nodes selected: ${selection_ids.map(id => '@' + id).join(', ')}. When they refer to "this" or "these", they mean these nodes.`;
       }
       aiMessages = [
         { role: 'system', content: systemPrompt },

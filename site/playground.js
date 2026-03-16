@@ -13,7 +13,7 @@ import { linter, lintGutter } from 'https://esm.sh/@codemirror/lint@6';
 import { defaultKeymap, history, historyKeymap } from 'https://esm.sh/@codemirror/commands@6';
 import { highlightSelectionMatches } from 'https://esm.sh/@codemirror/search@6';
 import LZString from 'https://esm.sh/lz-string@1.5.0';
-import { initAiChat } from './ai-chat.js';
+import { initAiChat, clearChatHistory } from './ai-chat.js';
 import {
   screenToScene as coreScreenToScene,
   pointerTypeToU8 as corePointerTypeToU8,
@@ -1069,6 +1069,13 @@ function updatePropertiesPanel() {
   // #4: Check for multi-selection
   const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
   const isMulti = selectedIds.length > 1;
+
+  // Notify AI Chat panel about selection changes
+  const selKey = selectedIds.join(',');
+  if (selKey !== updatePropertiesPanel._lastSelKey) {
+    updatePropertiesPanel._lastSelKey = selKey;
+    document.dispatchEvent(new CustomEvent('fd-selection-changed', { detail: { ids: selectedIds } }));
+  }
 
   // Highlight selected blocks in Code Mode (unless editor is focused)
   initCodeMirrorEffects();
@@ -4732,8 +4739,13 @@ async function initPlayground() {
       (text) => {
         if (!editorView) return;
         editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: text } });
-      }
+      },
+      () => fdCanvas
     );
+    // Clear chat button
+    document.getElementById('ai-chat-clear')?.addEventListener('click', () => {
+      clearChatHistory();
+    });
     document.getElementById('specs-toggle-btn')?.addEventListener('click', toggleSpecsPanel);
     document.getElementById('specs-panel-close')?.addEventListener('click', toggleSpecsPanel);
 
