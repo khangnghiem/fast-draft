@@ -20,6 +20,7 @@
 ### v0.11.171 — Code Panel Toggle + Fullscreen Auto-Collapse (R6.6)
 - **UX (R6.6)**: Code panel toggle — clicking the "Code" header bar on the editor toggles the code panel between expanded and collapsed; collapsed state shows a 42px-wide vertical strip with rotated "Code ▸" text; chevron `▾` indicator rotates to `▸` when collapsed; `code-collapsed` class on `.playground-split` with smooth 250ms CSS Grid transition for premium feel
 - **UX (R6.6)**: Fullscreen auto-collapse — entering fullscreen mode (`⇧F`) automatically collapses the code panel to maximize canvas real estate; header remains visible so users can re-expand with one click; exiting fullscreen preserves user's collapse state
+- **FIX (R6.6)**: Collapsed resize handle uses `visibility: hidden` instead of `display: none` — `display: none` removed the handle from CSS Grid flow, causing the canvas to slide into the 0-wide column and disappear
 - **SITE**: Changes in `site/index.html` (clickable header + chevron), `site/style.css` (`.code-collapsed` state + animation), `site/playground.js` (`toggleCodePanel()`, `collapseCodePanel()`, editor header click handler)
 
 ### v0.11.170 — Panel Toggle, Resize & Exclusive Policy (R6.7)
