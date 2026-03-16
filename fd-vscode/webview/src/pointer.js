@@ -303,18 +303,17 @@ function setupPointerEvents() {
     // End pan drag
     if (panDragging) {
       panDragging = false;
-      // Hand tool click (not drag) on empty space → deselect all
-      if (fdCanvas.get_tool_name() === 'hand' && handPanClientStartX !== null) {
-        const dx = e.clientX - handPanClientStartX;
-        const dy = e.clientY - handPanClientStartY;
-        if (Math.hypot(dx, dy) < 5) {
-          fdCanvas.select_by_id('');
-          bumpGeneration();
-        }
-        handPanClientStartX = null;
-        handPanClientStartY = null;
-      }
+      handPanClientStartX = null;
+      handPanClientStartY = null;
       canvas.style.cursor = (isPanning || fdCanvas.get_tool_name() === 'hand') ? "grab" : "";
+      // Re-apply modifier cursors if modifier keys still held after pan
+      if (fdCanvas.get_tool_name() === 'hand') {
+        if (e.metaKey && !e.altKey) {
+          canvas.classList.add('modifier-cmd-select');
+        } else if (e.altKey && !e.metaKey) {
+          canvas.classList.add('modifier-alt');
+        }
+      }
       return;
     }
 
@@ -504,6 +503,15 @@ function setupPointerEvents() {
     cmdTempSelectOriginalTool = null;
     altCloneActive = false;
     altDragGhosts = [];
+
+    // Re-apply modifier cursors if modifier keys still held after pointer-up
+    if (fdCanvas.get_tool_name() === 'hand') {
+      if (e.metaKey && !e.altKey) {
+        canvas.classList.add('modifier-cmd-select');
+      } else if (e.altKey && !e.metaKey) {
+        canvas.classList.add('modifier-alt');
+      }
+    }
 
     // ── Restore tool after Ctrl temp Eraser ──
     if (tempEraserMode && tempEraserPrevTool && fdCanvas) {

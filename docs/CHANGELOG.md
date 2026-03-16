@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.175 — Hand Tool UX: ⌘+Click Deselect + Modifier Cursor Persistence (R3.6)
+- **FIX (R3.6)**: Hand tool plain click no longer deselects — only ⌘+click on empty space deselects (via WASM SelectTool fallthrough); reverts the over-eager plain-click deselect from v0.11.173 while keeping ⌘+click working correctly
+- **UX (R3.6)**: Modifier cursor icons (⌘ → select, Alt → copy) now persist after clicks and drags when the modifier key is still held — previously, pointer-up would reset cursor to `grab` even if user was holding ⌘ or Alt
+- **SITE**: Changes in `site/playground.js` (pointer-up pan block + restore block)
+- **PARITY**: Changes in `fd-vscode/webview/src/pointer.js` (same two fixes)
+
 ### v0.11.174 — Escape Key Deselects All (R3.6)
 - **UX (R3.6)**: Escape key now deselects all selected nodes when no other UI layer is open — layered dismissal order: context menu → annotation card → shortcut help → fullscreen/zen mode → locked tool → **deselect** (one action per press, matches Figma)
 - **SITE**: Layered Escape handler in `site/playground.js`
