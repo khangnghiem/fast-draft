@@ -749,6 +749,7 @@ function updateFab(canvas) {
 /** ─── Selection → Code Highlight ────────────────────────────────────── */
 let lastHighlightedIds = [];
 let codeHighlightDecos = []; // CodeMirror Decoration marks
+let highlightClearTimer = null; // auto-clear after CSS animation
 
 /** Find block line ranges for given IDs in the FD text. */
 function findBlockRangesInText(text, ids) {
@@ -777,15 +778,17 @@ function highlightSelectedBlocksInEditor(ids) {
   if (idsKey === lastHighlightedIds.join(',')) return;
   lastHighlightedIds = [...ids];
 
-  // Clear existing highlights
+  // Clear existing highlights immediately
   clearCodeHighlights();
-  if (ids.length === 0) return;
+
+  // Skip highlight for multi-selection (visual noise) or empty selection
+  if (ids.length === 0 || ids.length > 1) return;
 
   const text = editorView.state.doc.toString();
   const ranges = findBlockRangesInText(text, ids);
   if (ranges.length === 0) return;
 
-  // Apply yellow highlight decorations
+  // Apply flash highlight decorations (CSS animation auto-fades)
   const { RangeSet, Decoration, StateField, EditorView: EV } = window.cmBundle || {};
   if (!Decoration) return; // CodeMirror not loaded
 
@@ -820,6 +823,13 @@ function highlightSelectedBlocksInEditor(ids) {
   if (ranges.length > 0) {
     editorView.dispatch({ effects: EV.scrollIntoView(ranges[0].from, { y: 'center' }) });
   }
+
+  // Auto-clear stale decoration state after CSS animation finishes (1.2s + buffer)
+  clearTimeout(highlightClearTimer);
+  highlightClearTimer = setTimeout(() => {
+    clearCodeHighlights();
+    lastHighlightedIds = [];
+  }, 1400);
 }
 
 function clearCodeHighlights() {
@@ -2240,14 +2250,15 @@ function wireLayerContextMenu(panel) {
         });
       });
 
-      // Close on outside click
-      const closeOnClick = (ev) => {
+      // Close on outside click/pointerdown (pointerdown fires before click,
+      // ensuring dismissal even if layer items stopPropagation on click)
+      const closeOnPointer = (ev) => {
         if (!menu.contains(ev.target)) {
           closeLayerCtxMenu();
-          document.removeEventListener('click', closeOnClick);
+          document.removeEventListener('pointerdown', closeOnPointer);
         }
       };
-      setTimeout(() => document.addEventListener('click', closeOnClick), 0);
+      setTimeout(() => document.addEventListener('pointerdown', closeOnPointer), 0);
     });
   });
 }

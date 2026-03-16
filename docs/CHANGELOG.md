@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.180 — Code Highlight Flash + Context Menu Fix (R6.6)
+- **UX (R6.6)**: Code highlight now flashes briefly when selecting a node — CSS `@keyframes fd-highlight-flash` fades the yellow highlight over 1.2s; stale CodeMirror decorations auto-cleaned after 1.4s; previously the highlight was permanent
+- **UX (R6.6)**: Multi-selection no longer highlights code — selecting 2+ nodes skips the CodeMirror highlight entirely, eliminating visual noise from large yellow blocks spanning many lines
+- **FIX (R6.6)**: Layer context menu now closes on outside click — changed close listener from `click` to `pointerdown`, which fires before `stopPropagation` handlers on layer items; previously clicking inside layers panel (but outside menu) didn't dismiss it
+- **SITE**: Changes in `site/style.css` (CSS animation keyframes), `site/playground.js` (multi-select guard, auto-clear timer, pointerdown listener)
+
 ### v0.11.179 — Text Node Edge Case Fixes (R3.48, R2.1)
 - **FIX (R3.48)**: `RemoveNode` now cascade-deletes all descendants — previously `petgraph::remove_node` disconnected children but left them as unreachable islands with stale `id_index` entries; deleting a rect with a text child (e.g. a button label) no longer orphans the text node
 - **FIX (R2.1)**: `clone_node_recursive` now deep-copies children of `Rect` and `Ellipse` (was `Group`/`Frame` only) — `⌘D` on a button-with-label no longer drops the text child
