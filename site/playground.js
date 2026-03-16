@@ -5044,9 +5044,8 @@ async function initPlayground() {
                 const sy = b.y * zoomLevel + panY;
                 const sw = b.w * zoomLevel;
                 const sh = b.h * zoomLevel;
-                const wrapRect = document.getElementById('canvas-wrapper').getBoundingClientRect();
-                overlay.style.left = (sx - wrapRect.left + canvas.offsetLeft) + 'px';
-                overlay.style.top = (sy - wrapRect.top + canvas.offsetTop) + 'px';
+                overlay.style.left = (canvas.offsetLeft + sx) + 'px';
+                overlay.style.top = (canvas.offsetTop + sy) + 'px';
                 overlay.style.width = sw + 'px';
                 overlay.style.height = sh + 'px';
                 overlay.dataset.target = hitId;

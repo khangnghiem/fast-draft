@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.172 — Fix ⌘+Drag Reparent Overlay Position (R3.64)
+- **FIX (R3.64)**: ⌘+drag reparent dashed border overlay now appears around the target parent node instead of at the top-right of the canvas — root cause: `playground.js` calculated overlay position using `canvas-wrapper.getBoundingClientRect()` subtraction + `canvas.offsetLeft` which double-counted the layers panel offset; `pointer.js` (VS Code) used raw scene-to-screen coordinates without accounting for the canvas position within its parent container; fix: both files now use `canvas.offsetLeft + sx` / `canvas.offsetTop + sy` relative to the `#canvas-content` parent (same pattern used by `#dimension-tooltip`)
+- **SITE**: Changes in `site/playground.js` (line 5035-5036)
+- **PARITY**: Changes in `fd-vscode/webview/src/pointer.js` (line 274-275)
+
 ### v0.11.171 — Code Panel Toggle + Fullscreen Auto-Collapse (R6.6)
 - **UX (R6.6)**: Code panel toggle — clicking the "Code" header bar collapses the code panel; smooth Figma-style collapse via `overflow: hidden` + CSS Grid transition (content clips as column shrinks to 0); 24px expand strip with `▸` chevron appears at left edge for re-expanding; `transitionend` event triggers canvas resize (no setTimeout bounce)
 - **UX (R6.6)**: Fullscreen auto-collapse — entering fullscreen mode (`⇧F`) automatically collapses the code panel to maximize canvas real estate; expand strip stays visible for one-click re-expansion; exiting fullscreen preserves user's collapse state
