@@ -435,6 +435,7 @@ button.playground-fs-btn:hover {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   overflow: hidden;
+  position: relative; /* for #code-expand-strip absolute positioning */
   background: var(--border);
   box-shadow: var(--shadow), var(--shadow-glow);
   min-height: 75vh;
@@ -516,12 +517,12 @@ button.playground-fs-btn:hover {
   user-select: none;
 }
 .editor-header:hover { background: rgba(255,255,255,0.03); }
-/* Collapsed state — hide editor body + resize handle, animate grid */
+/* Collapsed state — smooth width collapse via overflow:hidden, no display:none */
 .playground-split {
   transition: grid-template-columns 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.code-collapsed .playground-editor #fd-editor {
-  display: none;
+.code-collapsed .playground-editor {
+  overflow: hidden;
 }
 .code-collapsed .split-resize-handle {
   visibility: hidden;
@@ -533,21 +534,34 @@ button.playground-fs-btn:hover {
   transform: rotate(-90deg);
 }
 .code-collapsed {
-  grid-template-columns: 42px 0 1fr;
+  grid-template-columns: 0px 0px 1fr;
 }
-.code-collapsed .editor-header {
-  writing-mode: vertical-lr;
-  text-orientation: mixed;
-  padding: 12px 8px;
-  height: auto;
-  width: 42px;
-  gap: 6px;
-  justify-content: start;
+/* Expand strip — thin vertical bar at left edge when code panel is collapsed */
+#code-expand-strip {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  z-index: 10;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 10px;
+  background: var(--header-bg, rgba(28, 28, 30, 0.88));
+  border-right: 0.5px solid var(--header-border, rgba(255, 255, 255, 0.06));
+  transition: background 0.15s ease, color 0.15s ease;
+  user-select: none;
 }
-.code-collapsed .playground-editor {
-  overflow: visible;
+#code-expand-strip:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--accent, #007AFF);
 }
-.code-collapsed .editor-header #mobile-code-close { display: none !important; }
+.code-collapsed #code-expand-strip {
+  display: flex;
+}
 
 .canvas-label {
   display: inline-flex;

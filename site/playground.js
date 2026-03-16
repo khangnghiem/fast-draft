@@ -480,9 +480,15 @@ let codeCollapsed = false;
 function toggleCodePanel() {
   codeCollapsed = !codeCollapsed;
   const container = document.getElementById('playground-container');
-  if (container) container.classList.toggle('code-collapsed', codeCollapsed);
-  // Reflow canvas after animation completes
-  setTimeout(() => window.dispatchEvent(new Event('resize')), 280);
+  if (!container) return;
+  container.classList.toggle('code-collapsed', codeCollapsed);
+  // Resize canvas when CSS grid transition finishes (not on arbitrary timeout)
+  const onEnd = (e) => {
+    if (e.propertyName !== 'grid-template-columns') return;
+    container.removeEventListener('transitionend', onEnd);
+    window.dispatchEvent(new Event('resize'));
+  };
+  container.addEventListener('transitionend', onEnd);
 }
 
 /** Collapse code panel (idempotent — no-op if already collapsed) */
@@ -4753,6 +4759,12 @@ async function initPlayground() {
       // Don't toggle if clicking the mobile close button
       if (e.target.id === 'mobile-code-close') return;
       toggleCodePanel();
+    });
+
+    // ── Expand strip (visible when code panel collapsed) ─────────────
+    const expandStrip = document.getElementById('code-expand-strip');
+    expandStrip?.addEventListener('click', () => {
+      if (codeCollapsed) toggleCodePanel();
     });
 
     // ── Mobile Code Editor Toggle (#4) ───────────────────────────────
