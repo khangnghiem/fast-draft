@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.194 — Fix WASM Loading Hang on Edge/Windows (R6.5, R6.9)
+- **FIX (R6.9)**: WASM loading no longer hangs forever on Edge/Windows — root cause: Cloudflare strips `Content-Length` header when compressing WASM responses (brotli/gzip); fallback path re-fetched the WASM binary via `wasm.default(url)` instead of consuming the already-fetched `Response`, causing body-locking stalls on some Edge/Chromium builds; fix: fallback path now calls `wasmResponse.arrayBuffer()` to consume the in-flight response, eliminating the double-fetch entirely
+- **FIX (R6.5)**: 30-second WASM loading timeout — `raceWithTimeout()` helper wraps the fetch, body-read, and instantiation stages in `Promise.race` with a 30s deadline; on timeout, shows "Loading timed out" error with actionable ↻ Retry button instead of infinite spinner
+- **FIX (R6.5)**: HTTP status check — WASM fetch now throws on non-ok HTTP responses (e.g., 404, 502) with status code in error message
+- **DIAG (R6.9)**: Console breadcrumbs — `[FD]` prefixed log messages at each loading stage (fetch start, fetch complete with timing, binary size, instantiation, canvas creation, ready with total time) for instant diagnosis of future loading issues
+- **SITE**: Changes in `site/playground.js`
+
 ### v0.11.193 — Toolbar Redesign: Remove Segment-Pill + Code-Restore Strip (R6.6)
 - **UX (R6.6)**: Removed redundant `Code | Design` segmented pill from canvas toolbar — Code toggle now lives exclusively in the code panel header (editor-header click + chevron); Design segment was always active with no function; single source of truth for code panel visibility
 - **UX (R6.6)**: Code-restore strip — when code panel is collapsed, an 8px clickable vertical strip appears at the left edge of the playground (reuses `panel-restore-strip` pattern from Layers/Props panels); hover shows accent highlight; click toggles code panel back open
