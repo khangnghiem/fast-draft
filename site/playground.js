@@ -6212,6 +6212,64 @@ async function initPlayground() {
         } catch (_) { /* no file on launch */ }
       })();
 
+      // ── Auto-update check ──────────────────────────────────────────
+      // Check for updates 10s after launch (non-blocking).
+      // Shows a toast if a new version is available.
+      setTimeout(async () => {
+        try {
+          const { check } = await import('https://unpkg.com/@tauri-apps/plugin-updater@2/dist-js/index.mjs');
+          const update = await check();
+          if (update) {
+            console.log(`[FD] Update available: v${update.version}`);
+            // Show persistent toast with update action
+            const toast = document.createElement('div');
+            toast.className = 'fd-update-toast';
+            toast.innerHTML = `
+              <span>Fast Draft v${update.version} available</span>
+              <button id="fd-update-btn">Update Now</button>
+              <button id="fd-update-dismiss" style="background:none;border:none;color:inherit;cursor:pointer;font-size:16px;padding:4px;">✕</button>
+            `;
+            document.body.appendChild(toast);
+            // Trigger animation
+            requestAnimationFrame(() => toast.classList.add('visible'));
+
+            document.getElementById('fd-update-dismiss')?.addEventListener('click', () => {
+              toast.classList.remove('visible');
+              setTimeout(() => toast.remove(), 300);
+            });
+
+            document.getElementById('fd-update-btn')?.addEventListener('click', async () => {
+              const btn = document.getElementById('fd-update-btn');
+              btn.textContent = 'Downloading…';
+              btn.disabled = true;
+              try {
+                await update.downloadAndInstall((progress) => {
+                  if (progress?.event === 'Started' && progress.data?.contentLength) {
+                    btn.textContent = 'Downloading… 0%';
+                  } else if (progress?.event === 'Progress') {
+                    // Progress updates
+                  } else if (progress?.event === 'Finished') {
+                    btn.textContent = 'Restarting…';
+                  }
+                });
+                // Restart the app after update
+                const { relaunch } = await import('https://unpkg.com/@tauri-apps/plugin-process@2/dist-js/index.mjs');
+                await relaunch();
+              } catch (err) {
+                console.error('[FD] Update failed:', err);
+                btn.textContent = 'Update Failed';
+                showToast('Update failed — try again later');
+              }
+            });
+          } else {
+            console.log('[FD] App is up to date');
+          }
+        } catch (err) {
+          // Silently ignore update check failures (network error, no release, etc.)
+          console.debug('[FD] Update check skipped:', err.message || err);
+        }
+      }, 10000);
+
       console.log('[FD] Tauri desktop mode — ⌘O/⌘S/⌘⇧S enabled');
     }
 

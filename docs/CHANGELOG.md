@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.191 — Desktop Auto-Update (R6.2)
+- **FEATURE (R6.2)**: Auto-update via `tauri-plugin-updater` — checks for updates 10s after launch, shows non-intrusive toast ("Fast Draft vX.Y.Z available · [Update Now]"), downloads + installs in-place, then relaunches
+- **FEATURE (R6.2)**: Dual update endpoints — primary: `https://fast-draft.com/api/update/` (Cloudflare CDN, 300+ PoPs, 5min edge cache); fallback: GitHub Releases `latest.json`
+- **FEATURE**: Cloudflare Pages Function at `/api/update/` — proxies `latest.json` from GitHub Releases with 5min caching, returns `204 No Content` on errors for graceful degradation
+- **CI**: Release pipeline now signs update bundles with `TAURI_SIGNING_PRIVATE_KEY` and generates `latest.json` automatically via `tauri-action`
+
 ### v0.11.190 — Fix Desktop Build Pipeline (R6.2)
 - **FIX (R6.2)**: `tauri.conf.json` `frontendDist` path was `../../../site` (resolved outside repo root); corrected to `../../site`
 - **FIX (R6.2)**: Removed `GITHUB_TOKEN` from `tauri-action@v0` env in `release.yml` and `desktop.yml` — prevents tauri-action from creating a duplicate GitHub Release that conflicts with the dedicated `release` job

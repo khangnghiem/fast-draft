@@ -138,10 +138,16 @@ jobs:
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           projectPath: fd-desktop
           tauriScript: npx tauri
           args: ${{ matrix.args }}
+          tagName: ${{ github.ref_name }}
+          releaseName: "Fast Draft ${{ github.ref_name }}"
+          releaseId: ""
+          updaterJsonPreferNsis: true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -150,10 +156,27 @@ jobs:
           path: |
             fd-desktop/src-tauri/target/**/release/bundle/**/*.dmg
             fd-desktop/src-tauri/target/**/release/bundle/**/*.app
+            fd-desktop/src-tauri/target/**/release/bundle/**/*.app.tar.gz
+            fd-desktop/src-tauri/target/**/release/bundle/**/*.app.tar.gz.sig
             fd-desktop/src-tauri/target/**/release/bundle/**/*.AppImage
+            fd-desktop/src-tauri/target/**/release/bundle/**/*.AppImage.sig
+            fd-desktop/src-tauri/target/**/release/bundle/**/*.AppImage.tar.gz
+            fd-desktop/src-tauri/target/**/release/bundle/**/*.AppImage.tar.gz.sig
             fd-desktop/src-tauri/target/**/release/bundle/**/*.deb
             fd-desktop/src-tauri/target/**/release/bundle/**/*.msi
+            fd-desktop/src-tauri/target/**/release/bundle/**/*.msi.zip
+            fd-desktop/src-tauri/target/**/release/bundle/**/*.msi.zip.sig
+            fd-desktop/src-tauri/target/**/release/bundle/**/*.nsis.zip
+            fd-desktop/src-tauri/target/**/release/bundle/**/*.nsis.zip.sig
             fd-desktop/src-tauri/target/**/release/bundle/**/*.exe
+          if-no-files-found: warn
+
+      - name: Upload latest.json
+        if: matrix.rust_target == 'aarch64-apple-darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater-latest-json
+          path: latest.json
           if-no-files-found: warn
 
   # ── Publish VS Code extension ───────────────────────────────────
@@ -236,3 +259,5 @@ jobs:
             fast-draft-desktop-x86_64-apple-darwin/**/*
             fast-draft-desktop-x86_64-unknown-linux-gnu/**/*
             fast-draft-desktop-x86_64-pc-windows-msvc/**/*
+            updater-latest-json/latest.json
+
