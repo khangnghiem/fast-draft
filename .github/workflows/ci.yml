@@ -88,3 +88,27 @@ jobs:
 
       - name: Type check
         run: pnpm run lint
+
+  desktop:
+    name: Desktop (Tauri check)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: desktop-ci
+          workspaces: fd-desktop/src-tauri
+
+      - name: Cargo check
+        run: cd fd-desktop/src-tauri && cargo check
+
+      - name: Clippy
+        run: cd fd-desktop/src-tauri && cargo clippy -- -D warnings
+
+      - name: Format check
+        run: cd fd-desktop/src-tauri && cargo fmt -- --check
+

@@ -32,7 +32,13 @@ description: Quick sanity check — run before committing or as a lightweight CI
    cargo fmt --all -- --check
    ```
 
-5. **Live site health check** (if on `main` or post-merge):
+5. **Tauri desktop check** (excluded from workspace):
+
+   ```bash
+   cd fd-desktop/src-tauri && cargo check && cargo clippy -- -D warnings && cargo fmt -- --check
+   ```
+
+6. **Live site health check** (if on `main` or post-merge):
 
    ```bash
    curl -sL -o /dev/null -w '%{http_code}' https://fast-draft.com
@@ -40,7 +46,7 @@ description: Quick sanity check — run before committing or as a lightweight CI
 
    Should return `200`. If not, check `gh run list --workflow=pages.yml --limit 1`.
 
-6. **Report** results to user. If all pass, it's safe to `/yolo`.
+7. **Report** results to user. If all pass, it's safe to `/yolo`.
 
 ---
 
