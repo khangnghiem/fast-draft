@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "identifier": "com.fast-draft.desktop",
   "build": {
-    "frontendDist": "../../../site",
+    "frontendDist": "../../site",
     "devUrl": "http://localhost:1420"
   },
   "app": {
