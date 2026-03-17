@@ -100,18 +100,8 @@
             <!-- Top Toolbar (Apple HIG frosted bar) -->
             <div id="canvas-toolbar">
               <div class="tb-zone tb-left fs-hide">
-                <div class="segment-pill" id="segment-pill">
-                  <button class="segment-btn active" id="seg-code" title="Toggle Code panel">
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="5.5 4 2 8 5.5 12"/><polyline points="10.5 4 14 8 10.5 12"/></svg>
-                    Code
-                  </button>
-                  <button class="segment-btn active" id="seg-design" title="Canvas design view">
-                    <span class="seg-dot"></span>
-                    Design
-                  </button>
-                </div>
-                <button id="mobile-code-toggle" title="Toggle Code Editor">{ } Code</button>
                 <button class="tool-btn" id="layers-toggle-btn" title="Toggle Layers (\)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="14" height="14" rx="2"/><line x1="5.5" y1="1" x2="5.5" y2="15"/><line x1="1" y1="5" x2="5.5" y2="5"/><line x1="1" y1="9" x2="5.5" y2="9"/></svg> Layers</button>
+                <button id="mobile-code-toggle" title="Toggle Code Editor">{ } Code</button>
                 <button class="tool-btn" id="ai-touch-btn" title="AI Touch — refine + review selected (no selection = full audit)">✦ AI Touch</button>
                 <button class="tool-btn" id="ai-chat-btn" title="AI Agent — chat about your design">✦ Agent</button>
                 <button class="tool-btn" id="renamify-btn" title="Renamify — rename anonymous node IDs">✦ Renamify</button>
@@ -302,6 +292,7 @@
             </div><!-- /canvas-content -->
           </div><!-- /canvas-wrapper -->
         </div>
+        <div class="panel-restore-strip code-restore" id="code-restore" title="Show code panel"></div>
       </div>
     </div>
   </header>

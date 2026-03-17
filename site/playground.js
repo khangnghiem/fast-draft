@@ -523,9 +523,6 @@ function toggleCodePanel() {
   const container = document.getElementById('playground-container');
   if (!container) return;
   container.classList.toggle('code-collapsed', codeCollapsed);
-  // Sync segmented control state
-  const segCode = document.getElementById('seg-code');
-  if (segCode) segCode.classList.toggle('active', !codeCollapsed);
   // Resize canvas when CSS grid transition finishes (not on arbitrary timeout)
   const onEnd = (e) => {
     if (e.propertyName !== 'grid-template-columns') return;
@@ -4843,9 +4840,9 @@ async function initPlayground() {
       toggleCodePanel();
     });
 
-    // ── Segmented Code/Design pill: Code segment toggles code panel ──
-    const segCodeBtn = document.getElementById('seg-code');
-    segCodeBtn?.addEventListener('click', () => toggleCodePanel());
+    // ── Code Restore Strip (thin clickable wall when collapsed) ──────
+    const codeRestore = document.getElementById('code-restore');
+    codeRestore?.addEventListener('click', () => toggleCodePanel());
 
     // ── Mobile Code Editor Toggle (#4) ───────────────────────────────
     const mobileCodeToggle = document.getElementById('mobile-code-toggle');

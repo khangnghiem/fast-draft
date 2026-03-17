@@ -626,50 +626,24 @@ code {
   color: var(--fd-text-secondary, #86868B);
 }
 
-/* Desktop segmented Code/Design pill — Apple HIG style */
-.segment-pill {
-  display: inline-flex;
-  align-items: center;
-  background: var(--fd-segment-bg, rgba(142, 142, 147, 0.12));
-  border-radius: 8px;
-  padding: 2px;
-  gap: 1px;
-  flex-shrink: 0;
-}
-.segment-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--fd-text-secondary, #86868B);
-  font-size: 11px;
-  font-weight: 600;
-  font-family: inherit;
+/* ─── Code Panel Restore Strip (thin clickable wall when collapsed) ─── */
+.panel-restore-strip.code-restore {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  z-index: 18;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  white-space: nowrap;
-  letter-spacing: -0.01em;
-  line-height: 1;
+  background: transparent;
+  transition: background 0.15s ease;
+  display: none;
 }
-.segment-btn.active {
-  background: var(--fd-segment-active, #fff);
-  color: var(--fd-text, #1D1D1F);
-  box-shadow: var(--fd-segment-shadow, 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 1px rgba(0, 0, 0, 0.04));
+.panel-restore-strip.code-restore:hover {
+  background: rgba(108, 92, 231, 0.3);
 }
-.segment-btn:not(.active):hover {
-  color: var(--fd-text, #1D1D1F);
-  background: rgba(255,255,255,0.06);
-}
-.segment-btn svg { flex-shrink: 0; }
-.seg-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--success, #34d399);
-  flex-shrink: 0;
+.code-collapsed .panel-restore-strip.code-restore {
+  display: block;
 }
 
 /* Mobile code toggle — hidden on desktop, shown at ≤768px */
@@ -2660,8 +2634,7 @@ code {
   }
   #minimap-container { display: none; }
 
-  /* #2: Compact toolbar — hide segmented pill and non-essential items on mobile */
-  .segment-pill { display: none; }
+
   #ai-touch-btn, #renamify-btn, #notes-toggle-btn,
   #canvas-status, #share-btn { display: none !important; }
   .fullscreen-toggle-canvas { font-size: 12px; width: 26px; height: 26px; line-height: 26px; }

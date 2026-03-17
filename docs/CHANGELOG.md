@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.193 — Toolbar Redesign: Remove Segment-Pill + Code-Restore Strip (R6.6)
+- **UX (R6.6)**: Removed redundant `Code | Design` segmented pill from canvas toolbar — Code toggle now lives exclusively in the code panel header (editor-header click + chevron); Design segment was always active with no function; single source of truth for code panel visibility
+- **UX (R6.6)**: Code-restore strip — when code panel is collapsed, an 8px clickable vertical strip appears at the left edge of the playground (reuses `panel-restore-strip` pattern from Layers/Props panels); hover shows accent highlight; click toggles code panel back open
+- **UX (R6.6)**: Layers toggle moved to far-left of canvas toolbar — first button in `tb-left` zone for immediate discoverability; previously positioned after the segment-pill
+- **CLEANUP (R6.6)**: Removed ~45 lines of orphaned `.segment-pill`, `.segment-btn`, `.seg-dot` CSS; removed `seg-code` sync logic from `toggleCodePanel()` in JS; cleaned mobile media query `.segment-pill { display: none }` rule
+
 ### v0.11.192 — Desktop IPC Integration Tests (R6.2)
 - **TESTING (R6.2)**: 12 integration tests for all 5 Tauri IPC commands (`open_file`, `save_file`, `get_recent_files`, `add_recent_file`, `get_current_file`) — covers file I/O, state updates, dedup, cap-at-10, name extraction, and open-save roundtrip; uses `tempfile` crate for isolated temp directories
 - **REFACTOR (R6.2)**: Extracted `_inner` functions from `#[tauri::command]` wrappers — testable without Tauri runtime; `State<AppState>` → `&AppState` for direct testing
