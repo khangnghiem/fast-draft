@@ -35,7 +35,7 @@ description: How to build, test, and develop the FD workspace
 5. Build the VS Code extension (when ready):
 
    ```bash
-   cd fd-vscode && npm install && npm run compile
+   cd fd-vscode && pnpm install && pnpm run compile
    ```
 
 6. Lint:
