@@ -4471,15 +4471,35 @@ async function initPlayground() {
     const progressBar = document.querySelector('.loading-progress-bar');
     if (statusEl) statusEl.textContent = 'Loading engine…';
 
-    // Start JS module import and WASM fetch in parallel
-    const [wasm, wasmResponse] = await Promise.all([
-      import('./wasm/fd_wasm.js?v=0.11.5'),
-      fetch('./wasm/fd_wasm_bg.wasm?v=0.11.5'),
+    // Timeout helper — prevents infinite hang if WASM fetch/init stalls
+    const WASM_TIMEOUT_MS = 30000;
+    const raceWithTimeout = (promise, ms, label) => Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(
+        `${label} timed out after ${ms / 1000}s — check your network connection`
+      )), ms)),
     ]);
 
-    // Stream WASM bytes with real progress
+    const t0 = performance.now();
+    console.log('[FD] Fetching WASM module + binary…');
+
+    // Start JS module import and WASM fetch in parallel
+    const [wasm, wasmResponse] = await raceWithTimeout(Promise.all([
+      import('./wasm/fd_wasm.js?v=0.11.5'),
+      fetch('./wasm/fd_wasm_bg.wasm?v=0.11.5'),
+    ]), WASM_TIMEOUT_MS, 'WASM fetch');
+
+    if (!wasmResponse.ok) {
+      throw new Error(`WASM fetch failed: HTTP ${wasmResponse.status} ${wasmResponse.statusText}`);
+    }
+    console.log(`[FD] WASM fetched (${Math.round(performance.now() - t0)}ms)`);
+
+    // Stream WASM bytes with real progress — always consume the already-fetched
+    // response to avoid double-fetch (which causes body-locking stalls on Edge).
     const contentLength = +wasmResponse.headers.get('Content-Length') || 0;
-    if (contentLength > 0 && wasmResponse.body) {
+    let wasmBytes;
+    if (contentLength > 0 && wasmResponse.body && typeof wasmResponse.body.getReader === 'function') {
+      // Happy path: Content-Length present → stream with progress bar
       const reader = wasmResponse.body.getReader();
       const chunks = [];
       let loaded = 0;
@@ -4493,19 +4513,32 @@ async function initPlayground() {
         if (statusEl) statusEl.textContent = `Loading engine… ${Math.round(pct * 100)}%`;
       }
       // Combine chunks into a single buffer
-      const wasmBytes = new Uint8Array(loaded);
+      wasmBytes = new Uint8Array(loaded);
       let offset = 0;
       for (const chunk of chunks) { wasmBytes.set(chunk, offset); offset += chunk.length; }
-
-      if (statusEl) statusEl.textContent = 'Initializing runtime…';
-      if (progressBar) progressBar.style.width = '100%';
-      await wasm.default(wasmBytes.buffer);
     } else {
-      // Fallback: no Content-Length (e.g. compressed), use streaming init
-      if (statusEl) statusEl.textContent = 'Initializing runtime…';
-      if (progressBar) progressBar.style.width = '100%';
-      await wasm.default('./wasm/fd_wasm_bg.wasm?v=0.11.5');
+      // Fallback: no Content-Length (Cloudflare brotli/gzip strips it).
+      // Consume the already-fetched response — NEVER re-fetch.
+      if (statusEl) statusEl.textContent = 'Loading engine…';
+      if (progressBar) progressBar.style.width = '50%';
+      const buf = await raceWithTimeout(
+        wasmResponse.arrayBuffer(),
+        WASM_TIMEOUT_MS,
+        'WASM body read'
+      );
+      wasmBytes = new Uint8Array(buf);
     }
+
+    console.log(`[FD] WASM binary ready (${(wasmBytes.byteLength / 1024).toFixed(0)} KB, ${Math.round(performance.now() - t0)}ms)`);
+    if (statusEl) statusEl.textContent = 'Initializing runtime…';
+    if (progressBar) progressBar.style.width = '100%';
+
+    await raceWithTimeout(
+      wasm.default(wasmBytes.buffer),
+      WASM_TIMEOUT_MS,
+      'WASM instantiation'
+    );
+    console.log(`[FD] Runtime initialized (${Math.round(performance.now() - t0)}ms)`);
 
     // Size the canvas
     const resizeCanvas = () => {
@@ -4544,6 +4577,7 @@ async function initPlayground() {
     resizeCanvas();
 
     // Create the FdCanvas instance
+    console.log('[FD] Creating canvas…');
     const rect = wrapper.getBoundingClientRect();
     const canvasW = rect.width - getLayersPanelWidth();
     fdCanvas = new wasm.FdCanvas(canvasW, rect.height);
@@ -4563,6 +4597,7 @@ async function initPlayground() {
     }
     fdCanvas.set_text(initialFd);
     if (statusEl) statusEl.textContent = '✓ Ready';
+    console.log(`[FD] ✓ Ready (total ${Math.round(performance.now() - t0)}ms)`);
     // Hand tool is default on load — set grab cursor
     canvas.style.cursor = 'grab';
 
@@ -6271,16 +6306,19 @@ async function initPlayground() {
     }
 
   } catch (err) {
-    console.error('Failed to load WASM:', err);
+    console.error('[FD] Failed to load WASM:', err);
+    const isTimeout = err.message && err.message.includes('timed out');
     const errDetail = err.message ? `<code style="font-size:12px;opacity:0.7;display:block;margin-bottom:12px">${err.message}</code>` : '';
+    const retryBtn = `<button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary,#1a1a2e);color:var(--text-primary,#fff);cursor:pointer;font-size:14px">↻ Retry</button>`;
     loading.innerHTML = `
       <p style="color: var(--text-secondary); text-align: center; max-width: 360px;">
-        <strong>Canvas couldn't start</strong><br><br>
+        <strong>${isTimeout ? 'Loading timed out' : 'Canvas couldn\u2019t start'}</strong><br><br>
         ${errDetail}
-        Try reloading the page. If the issue persists, install the
+        ${isTimeout ? 'This can happen on slow connections or behind corporate proxies.' : 'Try reloading the page.'}
+        If the issue persists, install the
         <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank">VS Code extension</a>
-        for the full canvas experience, or
-        <a href="https://github.com/khangnghiem/fast-draft" target="_blank">build from source</a>.
+        for the full canvas experience.<br>
+        ${retryBtn}
       </p>
     `;
   }
