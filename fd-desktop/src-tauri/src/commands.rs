@@ -13,7 +13,7 @@ const MAX_RECENT_FILES: usize = 10;
 const RECENT_FILES_NAME: &str = "recent_files.json";
 
 /// A single entry in the recent files list.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RecentFile {
     /// Absolute path to the file.
     pub path: String,
@@ -21,25 +21,24 @@ pub struct RecentFile {
     pub name: String,
 }
 
-/// Read the content of a `.fd` file from disk.
-#[tauri::command]
-pub fn open_file(path: String, state: State<'_, AppState>) -> Result<String, String> {
-    let content = fs::read_to_string(&path).map_err(|e| format!("Failed to open: {e}"))?;
-    *state.current_file.lock().unwrap() = Some(PathBuf::from(&path));
+// ── Inner (testable) functions ────────────────────────────────────
+
+/// Read a `.fd` file from disk and update `current_file` state.
+pub fn open_file_inner(path: &str, state: &AppState) -> Result<String, String> {
+    let content = fs::read_to_string(path).map_err(|e| format!("Failed to open: {e}"))?;
+    *state.current_file.lock().unwrap() = Some(PathBuf::from(path));
     Ok(content)
 }
 
-/// Write content to the current file (or a specified path).
-#[tauri::command]
-pub fn save_file(path: String, content: String, state: State<'_, AppState>) -> Result<(), String> {
-    fs::write(&path, &content).map_err(|e| format!("Failed to save: {e}"))?;
-    *state.current_file.lock().unwrap() = Some(PathBuf::from(&path));
+/// Write content to disk and update `current_file` state.
+pub fn save_file_inner(path: &str, content: &str, state: &AppState) -> Result<(), String> {
+    fs::write(path, content).map_err(|e| format!("Failed to save: {e}"))?;
+    *state.current_file.lock().unwrap() = Some(PathBuf::from(path));
     Ok(())
 }
 
-/// Get the list of recently opened files.
-#[tauri::command]
-pub fn get_recent_files(state: State<'_, AppState>) -> Vec<RecentFile> {
+/// Load the recent files list from disk.
+pub fn get_recent_files_inner(state: &AppState) -> Vec<RecentFile> {
     let path = state.app_data_dir.join(RECENT_FILES_NAME);
     match fs::read_to_string(&path) {
         Ok(json) => serde_json::from_str(&json).unwrap_or_default(),
@@ -47,9 +46,8 @@ pub fn get_recent_files(state: State<'_, AppState>) -> Vec<RecentFile> {
     }
 }
 
-/// Add a file to the recent files list.
-#[tauri::command]
-pub fn add_recent_file(path: String, state: State<'_, AppState>) -> Result<(), String> {
+/// Add a file to the recent files list and persist to disk.
+pub fn add_recent_file_inner(path: &str, state: &AppState) -> Result<(), String> {
     let recent_path = state.app_data_dir.join(RECENT_FILES_NAME);
 
     // Load existing list
@@ -62,13 +60,19 @@ pub fn add_recent_file(path: String, state: State<'_, AppState>) -> Result<(), S
     files.retain(|f| f.path != path);
 
     // Extract display name
-    let name = PathBuf::from(&path)
+    let name = PathBuf::from(path)
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_else(|| path.clone());
+        .unwrap_or_else(|| path.to_owned());
 
     // Prepend new entry
-    files.insert(0, RecentFile { path, name });
+    files.insert(
+        0,
+        RecentFile {
+            path: path.to_owned(),
+            name,
+        },
+    );
 
     // Cap at max
     files.truncate(MAX_RECENT_FILES);
@@ -85,8 +89,7 @@ pub fn add_recent_file(path: String, state: State<'_, AppState>) -> Result<(), S
 }
 
 /// Get the path of the currently open file (or empty string).
-#[tauri::command]
-pub fn get_current_file(state: State<'_, AppState>) -> String {
+pub fn get_current_file_inner(state: &AppState) -> String {
     state
         .current_file
         .lock()
@@ -94,4 +97,36 @@ pub fn get_current_file(state: State<'_, AppState>) -> String {
         .as_ref()
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_default()
+}
+
+// ── Tauri IPC wrappers ────────────────────────────────────────────
+
+/// Read the content of a `.fd` file from disk.
+#[tauri::command]
+pub fn open_file(path: String, state: State<'_, AppState>) -> Result<String, String> {
+    open_file_inner(&path, &state)
+}
+
+/// Write content to the current file (or a specified path).
+#[tauri::command]
+pub fn save_file(path: String, content: String, state: State<'_, AppState>) -> Result<(), String> {
+    save_file_inner(&path, &content, &state)
+}
+
+/// Get the list of recently opened files.
+#[tauri::command]
+pub fn get_recent_files(state: State<'_, AppState>) -> Vec<RecentFile> {
+    get_recent_files_inner(&state)
+}
+
+/// Add a file to the recent files list.
+#[tauri::command]
+pub fn add_recent_file(path: String, state: State<'_, AppState>) -> Result<(), String> {
+    add_recent_file_inner(&path, &state)
+}
+
+/// Get the path of the currently open file (or empty string).
+#[tauri::command]
+pub fn get_current_file(state: State<'_, AppState>) -> String {
+    get_current_file_inner(&state)
 }

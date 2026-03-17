@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.192 — Desktop IPC Integration Tests (R6.2)
+- **TESTING (R6.2)**: 12 integration tests for all 5 Tauri IPC commands (`open_file`, `save_file`, `get_recent_files`, `add_recent_file`, `get_current_file`) — covers file I/O, state updates, dedup, cap-at-10, name extraction, and open-save roundtrip; uses `tempfile` crate for isolated temp directories
+- **REFACTOR (R6.2)**: Extracted `_inner` functions from `#[tauri::command]` wrappers — testable without Tauri runtime; `State<AppState>` → `&AppState` for direct testing
+
 ### v0.11.191 — Desktop Auto-Update (R6.2)
 - **FEATURE (R6.2)**: Auto-update via `tauri-plugin-updater` — checks for updates 10s after launch, shows non-intrusive toast ("Fast Draft vX.Y.Z available · [Update Now]"), downloads + installs in-place, then relaunches
 - **FEATURE (R6.2)**: Dual update endpoints — primary: `https://fast-draft.com/api/update/` (Cloudflare CDN, 300+ PoPs, 5min edge cache); fallback: GitHub Releases `latest.json`
