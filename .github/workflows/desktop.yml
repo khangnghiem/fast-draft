@@ -1,13 +1,11 @@
-name: Desktop Build
+name: Desktop Build (Dev)
 
+# Manual trigger only — desktop builds are included in release.yml for production
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
