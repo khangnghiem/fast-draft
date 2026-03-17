@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.190 — Fix Desktop Build Pipeline (R6.2)
+- **FIX (R6.2)**: `tauri.conf.json` `frontendDist` path was `../../../site` (resolved outside repo root); corrected to `../../site`
+- **FIX (R6.2)**: Removed `GITHUB_TOKEN` from `tauri-action@v0` env in `release.yml` and `desktop.yml` — prevents tauri-action from creating a duplicate GitHub Release that conflicts with the dedicated `release` job
+- **FIX (R6.2)**: Added explicit `--target` for Linux (`x86_64-unknown-linux-gnu`) and Windows (`x86_64-pc-windows-msvc`) builds — ensures consistent output directory structure across all platforms
+- **FIX (R6.2)**: Updated artifact upload paths from `target/release/bundle/` to `target/**/release/bundle/` — matches Tauri's per-target output directory when `--target` is specified
+
 ### v0.11.189 — Desktop App (Tauri v2) (R6.2)
 - **FEATURE (R6.2)**: Desktop app via Tauri v2 — wraps the existing web playground in a native macOS/Windows/Linux window. All canvas tools, AI Touch, Layers panel, and bidi sync work immediately with zero new rendering code
 - **FEATURE**: Native file I/O — ⌘O (Open), ⌘S (Save), ⌘⇧S (Save As) via native file dialogs with `.fd` file filter. Recent files list (max 10) persisted in app data directory
