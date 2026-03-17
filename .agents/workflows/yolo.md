@@ -59,7 +59,13 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
    >
    > Requires `gh auth refresh -h github.com -s codespace` (one-time setup).
 
-5. **TypeScript tests** (if `fd-vscode/` changed):
+5. **Tauri desktop check** (excluded from workspace — run separately):
+
+   ```bash
+   cd fd-desktop/src-tauri && cargo check && cargo clippy -- -D warnings && cargo fmt -- --check
+   ```
+
+6. **TypeScript tests** (if `fd-vscode/` changed):
 
    ```bash
    cd fd-vscode && pnpm test

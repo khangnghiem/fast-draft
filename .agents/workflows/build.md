@@ -50,7 +50,19 @@ description: How to build, test, and develop the FD workspace
    cargo fmt --all
    ```
 
-8. **Remote Smoke Test** (if results differ from CI, use Codespace for a clean Linux environment):
+8. Check Tauri desktop crate (excluded from workspace):
+
+   ```bash
+   cd fd-desktop/src-tauri && cargo check && cargo clippy -- -D warnings && cargo fmt -- --check
+   ```
+
+9. Build Tauri desktop app (for local testing):
+
+   ```bash
+   cd fd-desktop && npm install && npm run build
+   ```
+
+10. **Remote Smoke Test** (if results differ from CI, use Codespace for a clean Linux environment):
 
    ```bash
    gh cs list
