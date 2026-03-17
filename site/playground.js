@@ -6102,6 +6102,119 @@ async function initPlayground() {
       }
     });
 
+    // ── Tauri Desktop Integration ──────────────────────────────────────
+    // Detect Tauri runtime and wire native file I/O shortcuts.
+    // On web (non-Tauri), this entire block is skipped.
+    const isTauri = !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
+    if (isTauri) {
+      let currentFilePath = null;
+
+      /** Update window title to show the current file name. */
+      function updateTitle(filePath) {
+        if (filePath) {
+          const name = filePath.split('/').pop().split('\\').pop();
+          document.title = `${name} — Fast Draft`;
+        } else {
+          document.title = 'Fast Draft';
+        }
+      }
+
+      /** Open a .fd file via native file dialog. */
+      async function tauriOpen() {
+        try {
+          const { invoke } = window.__TAURI_INTERNALS__ || window.__TAURI__;
+          // Open file dialog via IPC
+          const { open } = await import('https://unpkg.com/@tauri-apps/plugin-dialog@2/dist-js/index.mjs');
+          const result = await open({
+            multiple: false,
+            filters: [{ name: 'Fast Draft', extensions: ['fd'] }],
+          });
+          if (!result) return; // user cancelled
+          const path = typeof result === 'string' ? result : result.path;
+          const content = await invoke('open_file', { path });
+          await invoke('add_recent_file', { path });
+          currentFilePath = path;
+          updateTitle(path);
+          // Load content into editor + canvas
+          if (editorView) {
+            editorView.dispatch({
+              changes: { from: 0, to: editorView.state.doc.length, insert: content },
+            });
+          }
+          showToast('Opened: ' + path.split('/').pop().split('\\').pop());
+        } catch (e) {
+          console.error('Tauri open failed:', e);
+          showToast('Failed to open file');
+        }
+      }
+
+      /** Save to current file (or prompt Save As). */
+      async function tauriSave() {
+        if (!currentFilePath) return tauriSaveAs();
+        try {
+          const { invoke } = window.__TAURI_INTERNALS__ || window.__TAURI__;
+          const content = editorView ? editorView.state.doc.toString() : '';
+          await invoke('save_file', { path: currentFilePath, content });
+          showToast('Saved');
+        } catch (e) {
+          console.error('Tauri save failed:', e);
+          showToast('Failed to save');
+        }
+      }
+
+      /** Save As — prompt for new file path. */
+      async function tauriSaveAs() {
+        try {
+          const { invoke } = window.__TAURI_INTERNALS__ || window.__TAURI__;
+          const { save } = await import('https://unpkg.com/@tauri-apps/plugin-dialog@2/dist-js/index.mjs');
+          const path = await save({
+            filters: [{ name: 'Fast Draft', extensions: ['fd'] }],
+          });
+          if (!path) return; // user cancelled
+          const content = editorView ? editorView.state.doc.toString() : '';
+          await invoke('save_file', { path, content });
+          await invoke('add_recent_file', { path });
+          currentFilePath = path;
+          updateTitle(path);
+          showToast('Saved: ' + path.split('/').pop().split('\\').pop());
+        } catch (e) {
+          console.error('Tauri save-as failed:', e);
+          showToast('Failed to save');
+        }
+      }
+
+      // Wire ⌘O, ⌘S, ⌘⇧S
+      document.addEventListener('keydown', (e) => {
+        const mod = e.metaKey || e.ctrlKey;
+        if (!mod) return;
+
+        if (e.key === 'o' && !e.shiftKey) {
+          e.preventDefault();
+          tauriOpen();
+        } else if (e.key === 's' && !e.shiftKey) {
+          e.preventDefault();
+          tauriSave();
+        } else if (e.key === 's' && e.shiftKey) {
+          e.preventDefault();
+          tauriSaveAs();
+        }
+      });
+
+      // Check if launched with a file argument
+      (async () => {
+        try {
+          const { invoke } = window.__TAURI_INTERNALS__ || window.__TAURI__;
+          const path = await invoke('get_current_file');
+          if (path) {
+            currentFilePath = path;
+            updateTitle(path);
+          }
+        } catch (_) { /* no file on launch */ }
+      })();
+
+      console.log('[FD] Tauri desktop mode — ⌘O/⌘S/⌘⇧S enabled');
+    }
+
   } catch (err) {
     console.error('Failed to load WASM:', err);
     const errDetail = err.message ? `<code style="font-size:12px;opacity:0.7;display:block;margin-bottom:12px">${err.message}</code>` : '';

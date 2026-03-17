@@ -1,0 +1,18 @@
+{
+  "identifier": "default",
+  "description": "Default capabilities for Fast Draft desktop",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "dialog:allow-message",
+    "dialog:allow-ask",
+    "fs:default",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "fs:allow-exists",
+    "shell:allow-open"
+  ]
+}
