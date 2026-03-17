@@ -284,6 +284,71 @@ pub enum VPlace {
     Bottom,
 }
 
+// ─── Spec (WHY layer) ────────────────────────────────────────────────────
+
+/// Structured specification metadata for a node.
+///
+/// Describes the element "in real life" — its identity, personality, and
+/// purpose. All fields are optional. Parsed from `spec { ... }` blocks.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Spec {
+    /// Noun phrase: what the element IS (e.g. "checkout button").
+    pub role: Option<String>,
+    /// Adjective phrases: what the element is LIKE (e.g. ["bold", "urgent"]).
+    pub traits: Vec<String>,
+    /// Verb phrase: what the element DOES (e.g. "initiates payment flow").
+    pub intent: Option<String>,
+    /// Free-form markdown description.
+    pub description: Option<String>,
+}
+
+impl Spec {
+    /// Returns `true` if all fields are empty / `None`.
+    pub fn is_empty(&self) -> bool {
+        self.role.is_none()
+            && self.traits.is_empty()
+            && self.intent.is_none()
+            && self.description.is_none()
+    }
+
+    /// Build a `Spec` from a raw description string (backward compat).
+    pub fn from_description(desc: String) -> Self {
+        Self {
+            description: Some(desc),
+            ..Default::default()
+        }
+    }
+
+    /// Return the full display text (typed fields + description).
+    pub fn display_text(&self) -> String {
+        let mut lines = Vec::new();
+        if let Some(ref role) = self.role {
+            lines.push(format!("role: \"{role}\""));
+        }
+        if !self.traits.is_empty() {
+            lines.push(format!("trait: \"{}\"", self.traits.join(", ")));
+        }
+        if let Some(ref intent) = self.intent {
+            lines.push(format!("intent: \"{intent}\""));
+        }
+        if let Some(ref desc) = self.description {
+            if !lines.is_empty() {
+                lines.push(String::new());
+            }
+            lines.push(desc.clone());
+        }
+        lines.join("\n")
+    }
+
+    /// Check if the display text contains a substring.
+    /// Convenience for backward-compatible test assertions.
+    pub fn contains(&self, needle: &str) -> bool {
+        self.display_text().contains(needle)
+    }
+}
+
+// ─── Properties (WHAT layer) ─────────────────────────────────────────────
+
 /// A reusable style set that nodes can reference via `use: style_name`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Properties {
@@ -301,6 +366,13 @@ pub struct Properties {
 
     /// Scale factor applied during rendering (from animations).
     pub scale: Option<f32>,
+
+    /// Whether the element is visible on canvas (default: true).
+    pub visible: Option<bool>,
+    /// Cursor style on hover (e.g. "pointer", "grab").
+    pub cursor: Option<String>,
+    /// Static rotation in degrees.
+    pub rotate: Option<f32>,
 }
 
 // ─── Animation ───────────────────────────────────────────────────────────
@@ -438,7 +510,7 @@ pub struct Edge {
     pub use_styles: SmallVec<[NodeId; 2]>,
     pub arrow: ArrowKind,
     pub curve: CurveKind,
-    pub spec: Option<String>,
+    pub spec: Option<Spec>,
     pub animations: SmallVec<[AnimKeyframe; 2]>,
     pub flow: Option<FlowAnim>,
     /// Offset of the edge text from the midpoint, set when label is dragged.
@@ -569,8 +641,8 @@ pub struct SceneNode {
     /// Animations attached to this node.
     pub animations: SmallVec<[AnimKeyframe; 2]>,
 
-    /// Markdown spec content (`spec { ... }` block, also accepts legacy `note`).
-    pub spec: Option<String>,
+    /// Structured spec content (`spec { ... }` block, also accepts legacy `note`).
+    pub spec: Option<Spec>,
 
     /// Line comments (`# text`) that appeared before this node in the source.
     /// Preserved across parse/emit round-trips so format passes don't delete them.

@@ -2,29 +2,30 @@
 
 use crate::FdCanvas;
 use fd_core::id::NodeId;
-use fd_core::model::{AnimKeyframe, AnimProperties, AnimTrigger, Color, Easing, Paint};
+use fd_core::model::{AnimKeyframe, AnimProperties, AnimTrigger, Color, Easing, Paint, Spec};
 use fd_editor::sync::GraphMutation;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 impl FdCanvas {
-    /// Get the raw markdown spec for a node.
+    /// Get the displayable spec text for a node.
     pub fn get_spec(&self, node_id: &str) -> String {
         let id = NodeId::intern(node_id);
         self.engine
             .graph
             .get_by_id(id)
-            .and_then(|n| n.spec.clone())
+            .and_then(|n| n.spec.as_ref())
+            .map(|s| s.display_text())
             .unwrap_or_default()
     }
 
-    /// Set the raw markdown spec for a node.
+    /// Set the spec for a node from raw markdown text.
     pub fn set_spec(&mut self, node_id: &str, content: &str) -> bool {
         let id = NodeId::intern(node_id);
         let spec = if content.is_empty() {
             None
         } else {
-            Some(content.to_string())
+            Some(Spec::from_description(content.to_string()))
         };
         let mutations = vec![GraphMutation::SetSpec { id, spec }];
         let changed = self.apply_mutations(mutations);
@@ -42,7 +43,7 @@ impl FdCanvas {
                 let id_str = node.id.as_str();
                 result.push(serde_json::json!({
                     "id": id_str,
-                    "spec": spec,
+                    "spec": spec.display_text(),
                 }));
             }
         }
@@ -51,7 +52,7 @@ impl FdCanvas {
                 let id_str = edge.id.as_str();
                 result.push(serde_json::json!({
                     "id": id_str,
-                    "spec": spec,
+                    "spec": spec.display_text(),
                 }));
             }
         }

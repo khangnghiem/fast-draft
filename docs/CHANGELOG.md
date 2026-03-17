@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.195 — Typed Spec Struct + New Canvas Keywords (R1.9)
+- **FORMAT (R1.9)**: `spec` blocks now parse `role:`, `trait:`, `intent:` keyword fields into a typed `Spec` struct with `role: Option<String>`, `traits: Vec<String>`, `intent: Option<String>`, `description: Option<String>` — AI agents can read and write structured metadata without regex
+- **FORMAT (R1.9)**: Emitter outputs typed fields first (`role:`, `trait:`, `intent:`) followed by blank line separator and free-form markdown description — clean canonical output
+- **FORMAT (R1.9)**: Backward-compatible with legacy `spec { "quoted text" }` and `note { ... }` formats — quoted strings inside block-form specs are auto-unquoted on parse
+- **FORMAT (R1.9)**: `Spec::contains()` helper method for test assertions; `Spec::display_text()` for rendering typed fields + description as one text block
+- **FORMAT**: New canvas keywords: `visible: true|false` (visibility toggle), `cursor: <name>` (CSS cursor hint), `rotate: <degrees>` (static rotation) — parse + emit + roundtrip in `Properties`
+- **INTERNAL**: Updated all downstream crates (`fd-wasm/notes.rs`, `fd-wasm/code_intel.rs`, `fd-editor/sync.rs`) to use typed `Option<Spec>` instead of `Option<String>`
+- **TESTS**: 4 new roundtrip tests: `roundtrip_spec_role_trait_intent`, `roundtrip_spec_with_description`, `roundtrip_visible_cursor_rotate`, `roundtrip_spec_backward_compat_quoted`
+
 ### v0.11.194 — Fix WASM Loading Hang on Edge/Windows (R6.5, R6.9)
 - **FIX (R6.9)**: WASM loading no longer hangs forever on Edge/Windows — root cause: Cloudflare strips `Content-Length` header when compressing WASM responses (brotli/gzip); fallback path re-fetched the WASM binary via `wasm.default(url)` instead of consuming the already-fetched `Response`, causing body-locking stalls on some Edge/Chromium builds; fix: fallback path now calls `wasmResponse.arrayBuffer()` to consume the in-flight response, eliminating the double-fetch entirely
 - **FIX (R6.5)**: 30-second WASM loading timeout — `raceWithTimeout()` helper wraps the fetch, body-read, and instantiation stages in `Promise.race` with a 30s deadline; on timeout, shows "Loading timed out" error with actionable ↻ Retry button instead of infinite spinner

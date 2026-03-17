@@ -113,6 +113,18 @@ fn emit_style_block(out: &mut String, name: &NodeId, style: &Properties, depth: 
         indent(out, depth + 1);
         writeln!(out, "opacity: {}", format_num(opacity)).unwrap();
     }
+    if let Some(visible) = style.visible {
+        indent(out, depth + 1);
+        writeln!(out, "visible: {}", if visible { "true" } else { "false" }).unwrap();
+    }
+    if let Some(ref cursor) = style.cursor {
+        indent(out, depth + 1);
+        writeln!(out, "cursor: {cursor}").unwrap();
+    }
+    if let Some(rotate) = style.rotate {
+        indent(out, depth + 1);
+        writeln!(out, "rotate: {}", format_num(rotate)).unwrap();
+    }
     if let Some(ref shadow) = style.shadow {
         indent(out, depth + 1);
         writeln!(
@@ -373,6 +385,18 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         indent(out, depth + 1);
         writeln!(out, "opacity: {}", format_num(opacity)).unwrap();
     }
+    if let Some(visible) = node.props.visible {
+        indent(out, depth + 1);
+        writeln!(out, "visible: {}", if visible { "true" } else { "false" }).unwrap();
+    }
+    if let Some(ref cursor) = node.props.cursor {
+        indent(out, depth + 1);
+        writeln!(out, "cursor: {cursor}").unwrap();
+    }
+    if let Some(rotate) = node.props.rotate {
+        indent(out, depth + 1);
+        writeln!(out, "rotate: {}", format_num(rotate)).unwrap();
+    }
     if let Some(ref shadow) = node.props.shadow {
         indent(out, depth + 1);
         writeln!(
@@ -448,27 +472,54 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
     out.push_str("}\n");
 }
 
-fn emit_spec(out: &mut String, spec: &Option<String>, depth: usize) {
-    let content = match spec {
+fn emit_spec(out: &mut String, spec: &Option<Spec>, depth: usize) {
+    let spec = match spec {
         Some(s) if !s.is_empty() => s,
         _ => return,
     };
 
-    // Single-line note → inline shorthand: `note "text"`
-    if !content.contains('\n') {
+    let has_keywords = spec.role.is_some() || !spec.traits.is_empty() || spec.intent.is_some();
+    let is_desc_only = !has_keywords && spec.description.is_some();
+    let desc = spec.description.as_deref().unwrap_or("");
+
+    // Single-line description with no typed keywords → inline shorthand
+    if is_desc_only && !desc.contains('\n') {
         indent(out, depth);
-        writeln!(out, "spec \"{content}\"").unwrap();
+        writeln!(out, "spec \"{desc}\"").unwrap();
         return;
     }
 
-    // Multiline → block form: `spec { ... }`
+    // Block form: spec { ... }
     indent(out, depth);
     out.push_str("spec {\n");
-    for line in content.lines() {
+
+    // Typed keyword fields first
+    if let Some(ref role) = spec.role {
+        indent(out, depth + 1);
+        writeln!(out, "role: \"{role}\"").unwrap();
+    }
+    if !spec.traits.is_empty() {
+        indent(out, depth + 1);
+        writeln!(out, "trait: \"{}\"", spec.traits.join(", ")).unwrap();
+    }
+    if let Some(ref intent) = spec.intent {
+        indent(out, depth + 1);
+        writeln!(out, "intent: \"{intent}\"").unwrap();
+    }
+
+    // Blank line separator between keywords and markdown
+    if has_keywords && !desc.is_empty() {
+        indent(out, depth + 1);
+        out.push('\n');
+    }
+
+    // Free markdown description
+    for line in desc.lines() {
         indent(out, depth + 1);
         out.push_str(line);
         out.push('\n');
     }
+
     indent(out, depth);
     out.push_str("}\n");
 }
@@ -1233,7 +1284,8 @@ pub fn emit_spec_markdown(graph: &SceneGraph, title: &str) -> String {
             out.push('\n');
             // Emit edge spec as indented markdown
             if let Some(spec) = &edge.spec {
-                for line in spec.lines() {
+                let text = spec.display_text();
+                for line in text.lines() {
                     writeln!(out, "  {line}").unwrap();
                 }
                 out.push('\n');
@@ -1271,9 +1323,9 @@ fn emit_spec_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, heading_
     };
     writeln!(out, "{hashes} @{} `{kind_label}`\n", node.id.as_str()).unwrap();
 
-    // Spec content — output as-is (it's already markdown)
+    // Spec content — output display text (typed fields + description)
     if let Some(spec) = &node.spec {
-        out.push_str(spec);
+        out.push_str(&spec.display_text());
         out.push_str("\n\n");
     }
 
@@ -1305,6 +1357,9 @@ fn has_inline_styles(style: &Properties) -> bool {
         || style.text_align.is_some()
         || style.text_valign.is_some()
         || style.scale.is_some()
+        || style.visible.is_some()
+        || style.cursor.is_some()
+        || style.rotate.is_some()
 }
 
 /// Format a float without trailing zeros for compact output.

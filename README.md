@@ -61,12 +61,12 @@ frame @card {
 
 ## Why Fast Draft?
 
-| Benefit                        | How                                                                              |
-| ------------------------------ | -------------------------------------------------------------------------------- |
-| **AI-friendly**                | Text DSL ~6× smaller than Excalidraw JSON — LLMs can read and write entire UIs   |
-| **Version-control ready**      | Plain text — `git diff`, `git merge`, code review all work naturally             |
-| **Design + specs in one file** | Attach requirements, status, and acceptance criteria directly to visual elements |
-| **No context switching**       | Design and code live side-by-side in your editor                                 |
+| | Pillar | |
+|---|--------|---|
+| 🔄 | **Design as Code** | Bidirectional sync between text and canvas. Git-friendly by nature. |
+| 🤖 | **AI-Native Format** | Semantic IDs, constraint layout, ~6× fewer tokens. Agents read and write it natively. |
+| 🧩 | **Living Components** | Styles, specs, and animations travel with every element. Reuse via `style` + `import`. |
+| ✏️ | **Prompt as You Draw** | Code, canvas, keyboard, Apple Pencil, touch, or AI — every input composes. |
 
 ## Features
 

@@ -147,7 +147,10 @@ rect @box {
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("box")).unwrap();
-    assert_eq!(node.spec.as_deref(), Some("Primary container for content"));
+    assert_eq!(
+        node.spec.as_ref().and_then(|s| s.description.as_deref()),
+        Some("Primary container for content")
+    );
 
     let output = emit_document(&graph);
     let graph2 = parse_document(&output).expect("re-parse of note failed");
@@ -222,7 +225,7 @@ group @form {
     let graph = parse_document(input).unwrap();
     let form = graph.get_by_id(NodeId::intern("form")).unwrap();
     assert_eq!(
-        form.spec.as_deref(),
+        form.spec.as_ref().and_then(|s| s.description.as_deref()),
         Some("User authentication entry point")
     );
     let email = graph.get_by_id(NodeId::intern("email")).unwrap();
@@ -1380,7 +1383,10 @@ rect @btn {
 "#;
     let graph = parse_document(input).unwrap();
     let node = graph.get_by_id(NodeId::intern("btn")).unwrap();
-    assert_eq!(node.spec.as_deref(), Some("Primary action button"));
+    assert_eq!(
+        node.spec.as_ref().and_then(|s| s.description.as_deref()),
+        Some("Primary action button")
+    );
 
     let output = emit_document(&graph);
     assert!(
@@ -2331,4 +2337,140 @@ fn emit_auto_comment_styled_node() {
         output.contains("[auto] styled: accent"),
         "node with use: should get styled comment: {output}"
     );
+}
+
+// ─── Typed Spec roundtrip tests ──────────────────────────────────────────
+
+#[test]
+fn roundtrip_spec_role_trait_intent() {
+    let input = r#"
+rect @btn {
+  w: 120 h: 40
+  fill: #6C5CE7
+  spec {
+    role: "Primary action button"
+    trait: "interactive, accessible"
+    intent: "submit form data"
+  }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("btn")).unwrap();
+    let spec = node.spec.as_ref().expect("should have spec");
+    assert_eq!(spec.role.as_deref(), Some("Primary action button"));
+    assert_eq!(spec.traits, vec!["interactive", "accessible"]);
+    assert_eq!(spec.intent.as_deref(), Some("submit form data"));
+
+    let output = emit_document(&graph);
+    assert!(
+        output.contains("role:"),
+        "emitted output should contain role"
+    );
+    assert!(
+        output.contains("trait:"),
+        "emitted output should contain trait"
+    );
+    assert!(
+        output.contains("intent:"),
+        "emitted output should contain intent"
+    );
+
+    // Round-trip: re-parse should preserve typed fields
+    let graph2 = parse_document(&output).expect("re-parse of typed spec failed");
+    let node2 = graph2.get_by_id(NodeId::intern("btn")).unwrap();
+    assert_eq!(node2.spec, node.spec);
+}
+
+#[test]
+fn roundtrip_spec_with_description() {
+    let input = r#"
+rect @card {
+  w: 200 h: 120
+  spec {
+    role: "Content card"
+    trait: "responsive"
+
+    ## Features
+    - Dark mode support
+    - Hover effects
+  }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("card")).unwrap();
+    let spec = node.spec.as_ref().expect("should have spec");
+    assert_eq!(spec.role.as_deref(), Some("Content card"));
+    assert!(
+        spec.description
+            .as_ref()
+            .unwrap()
+            .contains("Dark mode support")
+    );
+
+    let output = emit_document(&graph);
+    let graph2 = parse_document(&output).expect("re-parse of spec with desc failed");
+    let node2 = graph2.get_by_id(NodeId::intern("card")).unwrap();
+    assert_eq!(node2.spec, node.spec);
+}
+
+// ─── New canvas keyword roundtrip tests ──────────────────────────────────
+
+#[test]
+fn roundtrip_visible_cursor_rotate() {
+    let input = r#"
+rect @box {
+  w: 100 h: 50
+  fill: #FF0000
+  visible: false
+  cursor: pointer
+  rotate: 45
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("box")).unwrap();
+    assert_eq!(node.props.visible, Some(false));
+    assert_eq!(node.props.cursor.as_deref(), Some("pointer"));
+    assert_eq!(node.props.rotate, Some(45.0));
+
+    let output = emit_document(&graph);
+    assert!(output.contains("visible: false"), "should emit visible");
+    assert!(output.contains("cursor: pointer"), "should emit cursor");
+    assert!(output.contains("rotate: 45"), "should emit rotate");
+
+    let graph2 = parse_document(&output).expect("re-parse of canvas keywords failed");
+    let node2 = graph2.get_by_id(NodeId::intern("box")).unwrap();
+    assert_eq!(node2.props.visible, node.props.visible);
+    assert_eq!(node2.props.cursor, node.props.cursor);
+    assert_eq!(node2.props.rotate, node.props.rotate);
+}
+
+#[test]
+fn roundtrip_spec_backward_compat_quoted() {
+    // Old format: quoted strings inside spec { } blocks should be unquoted
+    let input = r#"
+rect @widget {
+  w: 80 h: 40
+  spec {
+    "A legacy-format description"
+  }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("widget")).unwrap();
+    let spec = node.spec.as_ref().expect("should have spec");
+    assert_eq!(
+        spec.description.as_deref(),
+        Some("A legacy-format description")
+    );
+
+    let output = emit_document(&graph);
+    // Should emit as inline shorthand (single-line desc, no keywords)
+    assert!(
+        output.contains("spec \"A legacy-format description\""),
+        "should use inline shorthand"
+    );
+
+    let graph2 = parse_document(&output).expect("re-parse of backward-compat spec failed");
+    let node2 = graph2.get_by_id(NodeId::intern("widget")).unwrap();
+    assert_eq!(node2.spec, node.spec);
 }

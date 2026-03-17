@@ -100,12 +100,17 @@ rect @box {
 
     // Verify initial note
     let node = engine.graph.get_by_id(NodeId::intern("box")).unwrap();
-    assert_eq!(node.spec.as_deref(), Some("Initial note"));
+    assert_eq!(
+        node.spec.as_ref().and_then(|s| s.description.as_deref()),
+        Some("Initial note")
+    );
 
     // Update note via mutation
     engine.apply_mutation(GraphMutation::SetSpec {
         id: NodeId::intern("box"),
-        spec: Some("## Updated\n- [ ] task one\n- [x] task two".into()),
+        spec: Some(Spec::from_description(
+            "## Updated\n- [ ] task one\n- [x] task two".to_string(),
+        )),
     });
     engine.flush_to_text();
 
@@ -140,7 +145,9 @@ rect @card {
     // Mutate note
     engine.apply_mutation(GraphMutation::SetSpec {
         id: NodeId::intern("card"),
-        spec: Some("# Updated card\n- [ ] renders correctly\n- [ ] needs review".into()),
+        spec: Some(Spec::from_description(
+            "# Updated card\n- [ ] renders correctly\n- [ ] needs review".to_string(),
+        )),
     });
     let text = engine.current_text().to_string();
 

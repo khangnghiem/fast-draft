@@ -4,6 +4,15 @@
 
 FD (Fast Draft) is a file format and interactive canvas for drawing, design, and animation — built for both humans and AI agents. The `.fd` file is the single source of truth, bidirectionally synced with a visual canvas in real-time.
 
+### Four Pillars
+
+| | Pillar | One-liner |
+|---|--------|-----------|
+| 🔄 | **Design as Code** | Bidirectional sync between text and canvas. Git-friendly by nature. |
+| 🤖 | **AI-Native Format** | Semantic IDs, constraint layout, ~6× fewer tokens. Agents read and write it natively. |
+| 🧩 | **Living Components** | Styles, specs, and animations travel with every element. Reuse via `style` + `import`. |
+| ✏️ | **Prompt as You Draw** | Code, canvas, keyboard, Apple Pencil, touch, or AI — every input composes. |
+
 ## Core Requirements
 
 ### R1: File Format (`.fd`)
@@ -16,7 +25,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R1.6** _(done)_: Git-friendly plain text — line-oriented diffs work well
 - **R1.7** _(done)_: Comments via `#` prefix
 - **R1.8** _(done)_: Human-readable and AI-writable without special tooling
-- **R1.9** _(done)_: Structured annotations (`spec` blocks) — description, accept criteria, status (todo/doing/done/blocked), priority, tags — parsed and round-tripped as first-class metadata
+- **R1.9** _(done)_: Typed spec annotations (`spec` blocks) — structured `role:`, `trait:`, `intent:` keyword fields plus free-form markdown description; backward-compatible with legacy content; parsed into typed `Spec` struct and round-tripped faithfully
 - **R1.10** _(done)_: First-class edges — `edge @id { from: @a to: @b }` with arrow, curve, label, stroke, and `spec` annotations → [spec](specs/edge-system.md)
 - **R1.11** _(done)_: Edge trigger animations — edges support `when :hover { ... }` blocks identical to nodes (parser also accepts legacy `anim` keyword) → [spec](specs/edge-system.md)
 - **R1.12** _(done)_: Edge flow animations — `flow: pulse Nms` (traveling dot) and `flow: dash Nms` (marching dashes) → [spec](specs/edge-system.md)

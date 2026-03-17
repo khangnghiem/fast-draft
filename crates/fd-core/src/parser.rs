@@ -172,7 +172,7 @@ struct ParsedNode {
     use_styles: Vec<NodeId>,
     constraints: Vec<Constraint>,
     animations: Vec<AnimKeyframe>,
-    spec: Option<String>,
+    spec: Option<Spec>,
     /// Comments that appeared before this node's opening `{` in the source.
     comments: Vec<String>,
     children: Vec<ParsedNode>,
@@ -330,9 +330,12 @@ fn skip_px_suffix(input: &mut &str) {
     }
 }
 
-/// Parse a `spec { ... }` block or inline `spec "description"` into raw markdown.
+/// Parse a `spec { ... }` block or inline `spec "description"` into a typed `Spec`.
 /// Also accepts the legacy `note` keyword for backward compatibility.
-fn parse_spec_block(input: &mut &str) -> ModalResult<String> {
+///
+/// Lines starting with `role:`, `trait:`, or `intent:` are extracted into
+/// typed fields. Everything else is collected as free-form markdown description.
+fn parse_spec_block(input: &mut &str) -> ModalResult<Spec> {
     // Accept both `spec` (primary) and `note` (legacy)
     let _ = alt(("spec", "note")).parse_next(input)?;
     skip_space(input);
@@ -343,7 +346,7 @@ fn parse_spec_block(input: &mut &str) -> ModalResult<String> {
             .map(|s| s.to_string())
             .parse_next(input)?;
         skip_opt_separator(input);
-        return Ok(desc);
+        return Ok(Spec::from_description(desc));
     }
 
     // Block form: `spec { ... }` — capture raw content with brace-depth counting
@@ -369,7 +372,60 @@ fn parse_spec_block(input: &mut &str) -> ModalResult<String> {
 
     // Trim leading/trailing whitespace but preserve internal formatting
     let trimmed = dedent_spec_content(raw);
-    Ok(trimmed)
+
+    // Extract typed keywords from the dedented content
+    Ok(parse_spec_fields(&trimmed))
+}
+
+/// Extract typed spec fields from dedented block content.
+///
+/// Lines matching known keywords (`role:`, `trait:`, `intent:`) are parsed
+/// into `Spec` fields. Everything else becomes the free markdown `description`.
+fn parse_spec_fields(content: &str) -> Spec {
+    let mut spec = Spec::default();
+    let mut desc_lines: Vec<&str> = Vec::new();
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if let Some(value) = trimmed.strip_prefix("role:") {
+            let value = value.trim().trim_matches('"').trim();
+            if !value.is_empty() {
+                spec.role = Some(value.to_string());
+            }
+        } else if let Some(value) = trimmed.strip_prefix("trait:") {
+            let value = value.trim().trim_matches('"').trim();
+            for part in value.split(',') {
+                let part = part.trim();
+                if !part.is_empty() {
+                    spec.traits.push(part.to_string());
+                }
+            }
+        } else if let Some(value) = trimmed.strip_prefix("intent:") {
+            let value = value.trim().trim_matches('"').trim();
+            if !value.is_empty() {
+                spec.intent = Some(value.to_string());
+            }
+        } else {
+            // Strip surrounding quotes from lines like `"some text"` for backward
+            // compatibility with old-format spec blocks
+            let unquoted =
+                if trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() > 1 {
+                    &trimmed[1..trimmed.len() - 1]
+                } else {
+                    line
+                };
+            desc_lines.push(unquoted);
+        }
+    }
+
+    // Collect remaining lines as markdown description
+    let desc = desc_lines.join("\n");
+    let desc = desc.trim();
+    if !desc.is_empty() {
+        spec.description = Some(desc.to_string());
+    }
+
+    spec
 }
 
 /// Dedent spec block content: remove the common leading whitespace from all lines.
@@ -397,6 +453,29 @@ fn dedent_spec_content(raw: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+/// Merge two `Spec` values. Later values override earlier ones for single-value
+/// fields (`role`, `intent`). Vec fields (`traits`) are merged (union).
+/// Descriptions are concatenated with a blank line separator.
+fn merge_specs(mut base: Spec, other: Spec) -> Spec {
+    if other.role.is_some() {
+        base.role = other.role;
+    }
+    base.traits.extend(other.traits);
+    if other.intent.is_some() {
+        base.intent = other.intent;
+    }
+    match (&base.description, &other.description) {
+        (Some(existing), Some(new)) => {
+            base.description = Some(format!("{existing}\n\n{new}"));
+        }
+        (None, Some(_)) => {
+            base.description = other.description;
+        }
+        _ => {}
+    }
+    base
 }
 
 // ─── Style block parser ─────────────────────────────────────────────────
@@ -439,6 +518,20 @@ fn parse_style_property(input: &mut &str, style: &mut Properties) -> ModalResult
         }
         "opacity" => {
             style.opacity = Some(parse_number.parse_next(input)?);
+        }
+        "visible" => {
+            let val = parse_identifier.parse_next(input)?;
+            style.visible = Some(val == "true");
+        }
+        "cursor" => {
+            let val = parse_quoted_string
+                .map(|s| s.to_string())
+                .parse_next(input)
+                .or_else(|_| parse_identifier.map(|s| s.to_string()).parse_next(input))?;
+            style.cursor = Some(val);
+        }
+        "rotate" => {
+            style.rotate = Some(parse_number.parse_next(input)?);
         }
         "align" | "text_align" => {
             parse_align_value(input, style)?;
@@ -559,7 +652,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let mut use_styles = Vec::new();
     let mut constraints = Vec::new();
     let mut animations = Vec::new();
-    let mut spec: Option<String> = None;
+    let mut spec: Option<Spec> = None;
     let mut children = Vec::new();
     let mut width: Option<f32> = None;
     let mut height: Option<f32> = None;
@@ -579,11 +672,11 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
             || input.starts_with("note ")
             || input.starts_with("note{")
         {
-            let content = parse_spec_block.parse_next(input)?;
-            // Multiple spec blocks: append with newline separator
+            let parsed_spec = parse_spec_block.parse_next(input)?;
+            // Multiple spec blocks: merge fields
             spec = Some(match spec {
-                Some(existing) => format!("{existing}\n\n{content}"),
-                None => content,
+                Some(existing) => merge_specs(existing, parsed_spec),
+                None => parsed_spec,
             });
         } else if starts_with_child_node(input) && !matches!(kind_str, "text" | "path") {
             let mut child = parse_node.parse_next(input)?;
@@ -890,6 +983,20 @@ fn parse_node_property(
         }
         "opacity" => {
             style.opacity = Some(parse_number.parse_next(input)?);
+        }
+        "visible" => {
+            let val = parse_identifier.parse_next(input)?;
+            style.visible = Some(val == "true");
+        }
+        "cursor" => {
+            let val = parse_quoted_string
+                .map(|s| s.to_string())
+                .parse_next(input)
+                .or_else(|_| parse_identifier.map(|s| s.to_string()).parse_next(input))?;
+            style.cursor = Some(val);
+        }
+        "rotate" => {
+            style.rotate = Some(parse_number.parse_next(input)?);
         }
         "align" | "text_align" => {
             parse_align_value(input, style)?;
@@ -1380,7 +1487,7 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
     let mut use_styles = Vec::new();
     let mut arrow = ArrowKind::None;
     let mut curve = CurveKind::Straight;
-    let mut spec: Option<String> = None;
+    let mut spec: Option<Spec> = None;
     let mut animations = Vec::new();
     let mut flow = None;
     let mut label_offset = None;
@@ -1393,10 +1500,10 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
             || input.starts_with("note ")
             || input.starts_with("note{")
         {
-            let content = parse_spec_block.parse_next(input)?;
+            let parsed_spec = parse_spec_block.parse_next(input)?;
             spec = Some(match spec {
-                Some(existing) => format!("{existing}\n\n{content}"),
-                None => content,
+                Some(existing) => merge_specs(existing, parsed_spec),
+                None => parsed_spec,
             });
         } else if input.starts_with("when") || input.starts_with("anim") {
             animations.push(parse_anim_block.parse_next(input)?);
