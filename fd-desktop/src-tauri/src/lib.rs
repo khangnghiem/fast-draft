@@ -6,6 +6,9 @@
 
 mod commands;
 
+#[cfg(test)]
+mod commands_tests;
+
 use std::path::PathBuf;
 use std::sync::Mutex;
 
