@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.189 — Desktop App (Tauri v2) (R6.2)
+- **FEATURE (R6.2)**: Desktop app via Tauri v2 — wraps the existing web playground in a native macOS/Windows/Linux window. All canvas tools, AI Touch, Layers panel, and bidi sync work immediately with zero new rendering code
+- **FEATURE**: Native file I/O — ⌘O (Open), ⌘S (Save), ⌘⇧S (Save As) via native file dialogs with `.fd` file filter. Recent files list (max 10) persisted in app data directory
+- **FEATURE**: Window title shows current filename (`filename.fd — Fast Draft`)
+- **CI**: `desktop.yml` workflow — builds Tauri binaries for macOS (arm64 + x86), Windows (x64), Linux (x64) via `tauri-apps/tauri-action`. Triggered on manual dispatch and version tags
+
 ### v0.11.188 — Streaming Responses + VS Code Extension Chat Parity (R4.26)
 - **FEATURE (R4.26)**: SSE Streaming — AI Chat responses now stream token-by-token via Server-Sent Events, showing real-time text as the AI generates it. When streaming completes, the full message is finalized with markdown rendering and Apply/Skip buttons for FD code blocks
 - **FEATURE (R4.26)**: VS Code Extension Chat Parity — ported the full AI Agent chat panel to the VS Code extension with matching CSS, HTML, toolbar button (✦ Agent), selection context badge, quick-action chips, and smart replace. Calls the production `https://fast-draft.com/api/ai` endpoint

@@ -9,6 +9,7 @@ members = [
 ]
 exclude = [
     "editors/zed",
+    "fd-desktop/src-tauri",
 ]
 
 [workspace.package]

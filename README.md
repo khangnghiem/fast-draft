@@ -174,7 +174,7 @@ rect @login_btn {
 | Zed                       | 🟢 Published   |
 | Neovim / Helix / Sublime  | 🟢 Syntax only |
 | Web playground            | 🟢 Live        |
-| Desktop (macOS/Win/Linux) | ⬜ Planned     |
+| Desktop (macOS/Win/Linux) | 🟢 Available   |
 | iOS / Android             | ⬜ Planned     |
 
 ## Contributing
