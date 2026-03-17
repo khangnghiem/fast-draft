@@ -332,6 +332,7 @@ rect @box {
             ..Default::default()
         },
         delay_ms: None,
+        use_template: None,
     });
     engine.apply_mutation(GraphMutation::SetAnimations {
         id: NodeId::intern("box"),

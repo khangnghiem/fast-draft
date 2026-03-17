@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.196 — Style Spec Extension + When Templates + format_num Precision (R1.9, R1.15)
+- **FORMAT (R1.9)**: Style blocks now support spec metadata — `role:`, `trait:`, `intent:` keywords inside `style name { }` blocks are parsed into `style_specs: HashMap<NodeId, Spec>` on SceneGraph and emitted round-trip
+- **FORMAT (R1.9)**: `resolve_spec()` method on SceneGraph — merges spec from `use:` referenced styles into a node's inline spec; style specs provide defaults, inline overrides take precedence; `merge_spec_values()` utility for Spec merging
+- **FORMAT (R1.15)**: Reusable `when` templates — top-level `when name { scale: 1.05; ease: spring 300ms }` blocks are parsed/emitted/round-tripped via `when_templates: HashMap<NodeId, WhenTemplate>` on SceneGraph
+- **FORMAT (R1.15)**: `use:` inside `when :trigger { }` blocks — `use_template: Option<NodeId>` field on `AnimKeyframe` lets animations reference named `when` templates for DRY animation definitions
+- **FIX**: `format_num` precision increased from 1 to 3 decimal places — fixes roundtrip loss for values like `1.05` (was emitted as `1`, now as `1.05`); values like `128.57` are now preserved instead of being rounded to `128.6`
+- **TESTS**: 4 new roundtrip tests: `roundtrip_style_with_spec`, `use_merges_spec_from_style`, `roundtrip_when_template`, `when_use_template`
+
 ### v0.11.195 — Typed Spec Struct + New Canvas Keywords (R1.9)
 - **FORMAT (R1.9)**: `spec` blocks now parse `role:`, `trait:`, `intent:` keyword fields into a typed `Spec` struct with `role: Option<String>`, `traits: Vec<String>`, `intent: Option<String>`, `description: Option<String>` — AI agents can read and write structured metadata without regex
 - **FORMAT (R1.9)**: Emitter outputs typed fields first (`role:`, `trait:`, `intent:`) followed by blank line separator and free-form markdown description — clean canonical output

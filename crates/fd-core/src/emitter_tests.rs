@@ -2082,11 +2082,12 @@ image @styled_img {
 #[test]
 fn emit_format_num_one_decimal() {
     use crate::emitter::format_num;
-    assert_eq!(format_num(128.57), "128.6");
+    assert_eq!(format_num(128.57), "128.57");
     assert_eq!(format_num(100.0), "100");
     assert_eq!(format_num(0.5), "0.5");
-    assert_eq!(format_num(3.14), "3.1");
+    assert_eq!(format_num(3.14), "3.14");
     assert_eq!(format_num(42.0), "42");
+    assert_eq!(format_num(1.05), "1.05");
 }
 
 #[test]
@@ -2473,4 +2474,179 @@ rect @widget {
     let graph2 = parse_document(&output).expect("re-parse of backward-compat spec failed");
     let node2 = graph2.get_by_id(NodeId::intern("widget")).unwrap();
     assert_eq!(node2.spec, node.spec);
+}
+
+// ─── Phase 2: Style block spec roundtrip tests ──────────────────────────
+
+#[test]
+fn roundtrip_style_with_spec() {
+    let input = r#"
+style cta_primary {
+  role: "Call-to-action button"
+  trait: "bold, urgent"
+  fill: #6C5CE7
+  font: "Inter" 600 16
+}
+
+rect @btn {
+  w: 120 h: 40
+  use: cta_primary
+}
+"#;
+    let graph = parse_document(input).unwrap();
+
+    // Verify spec was parsed and stored
+    let style_spec = graph.style_specs.get(&NodeId::intern("cta_primary"));
+    assert!(style_spec.is_some(), "style should have spec");
+    let spec = style_spec.unwrap();
+    assert_eq!(spec.role.as_deref(), Some("Call-to-action button"));
+    assert_eq!(spec.traits, vec!["bold", "urgent"]);
+
+    // Verify emitter outputs spec in style block
+    let output = emit_document(&graph);
+    assert!(
+        output.contains("role:"),
+        "emitted style should contain role"
+    );
+    assert!(
+        output.contains("trait:"),
+        "emitted style should contain trait"
+    );
+
+    // Round-trip: re-parse should preserve spec in style
+    let graph2 = parse_document(&output).expect("re-parse of style with spec failed");
+    let style_spec2 = graph2.style_specs.get(&NodeId::intern("cta_primary"));
+    assert_eq!(style_spec2, Some(spec));
+}
+
+#[test]
+fn use_merges_spec_from_style() {
+    let input = r#"
+style cta_primary {
+  role: "Call-to-action button"
+  trait: "bold"
+  fill: #6C5CE7
+}
+
+rect @btn {
+  w: 120 h: 40
+  use: cta_primary
+  spec {
+    intent: "submit form data"
+    trait: "accessible"
+  }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("btn")).unwrap();
+
+    // Resolve effective spec (merges style spec + inline spec)
+    let resolved = graph.resolve_spec(node).expect("should resolve spec");
+    assert_eq!(
+        resolved.role.as_deref(),
+        Some("Call-to-action button"),
+        "role from style"
+    );
+    assert_eq!(
+        resolved.intent.as_deref(),
+        Some("submit form data"),
+        "intent from inline"
+    );
+    assert!(
+        resolved.traits.contains(&"bold".to_string()),
+        "trait from style"
+    );
+    assert!(
+        resolved.traits.contains(&"accessible".to_string()),
+        "trait from inline"
+    );
+}
+
+// ─── Phase 3: When template roundtrip tests ─────────────────────────────
+
+#[test]
+fn roundtrip_when_template() {
+    let input = r#"
+when hover_lift {
+  scale: 1.05
+  opacity: 0.9
+  ease: ease_out 200ms
+}
+
+rect @btn {
+  w: 120 h: 40
+  fill: #6C5CE7
+}
+"#;
+    let graph = parse_document(input).unwrap();
+
+    // Verify template was parsed
+    let template = graph.when_templates.get(&NodeId::intern("hover_lift"));
+    assert!(template.is_some(), "when template should be parsed");
+    let tmpl = template.unwrap();
+    assert_eq!(tmpl.properties.scale, Some(1.05));
+    assert_eq!(tmpl.properties.opacity, Some(0.9));
+    assert_eq!(tmpl.duration_ms, 200);
+
+    // Verify emitter outputs when template
+    let output = emit_document(&graph);
+    assert!(
+        output.contains("when hover_lift {"),
+        "should emit when template"
+    );
+    assert!(output.contains("scale: 1.05"), "should emit scale");
+    assert!(output.contains("opacity: 0.9"), "should emit opacity");
+    assert!(output.contains("ease: ease_out 200ms"), "should emit ease");
+
+    // Round-trip: re-parse should preserve template
+    let graph2 = parse_document(&output).expect("re-parse of when template failed");
+    let tmpl2 = graph2
+        .when_templates
+        .get(&NodeId::intern("hover_lift"))
+        .expect("template should survive roundtrip");
+    assert_eq!(tmpl2.properties.scale, tmpl.properties.scale);
+    assert_eq!(tmpl2.properties.opacity, tmpl.properties.opacity);
+    assert_eq!(tmpl2.duration_ms, tmpl.duration_ms);
+}
+
+#[test]
+fn when_use_template() {
+    let input = r#"
+when hover_lift {
+  scale: 1.05
+  ease: spring 300ms
+}
+
+rect @btn {
+  w: 120 h: 40
+  fill: #6C5CE7
+  when :hover {
+    use: hover_lift
+  }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let node = graph.get_by_id(NodeId::intern("btn")).unwrap();
+
+    // Verify animation has use_template set
+    assert_eq!(node.animations.len(), 1);
+    assert_eq!(
+        node.animations[0].use_template,
+        Some(NodeId::intern("hover_lift"))
+    );
+
+    // Verify emitter outputs use: inside when block
+    let output = emit_document(&graph);
+    assert!(
+        output.contains("use: hover_lift"),
+        "should emit use: inside when block"
+    );
+
+    // Round-trip: re-parse should preserve use_template
+    let graph2 = parse_document(&output).expect("re-parse of when use template failed");
+    let node2 = graph2.get_by_id(NodeId::intern("btn")).unwrap();
+    assert_eq!(
+        node2.animations[0].use_template,
+        node.animations[0].use_template
+    );
 }

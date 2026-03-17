@@ -347,6 +347,26 @@ impl Spec {
     }
 }
 
+/// Merge two `Spec` values — `other` overrides `base` for single fields,
+/// extends for collection fields (traits). Used by `resolve_spec`.
+pub fn merge_spec_values(mut base: Spec, other: Spec) -> Spec {
+    if other.role.is_some() {
+        base.role = other.role;
+    }
+    for t in other.traits {
+        if !base.traits.contains(&t) {
+            base.traits.push(t);
+        }
+    }
+    if other.intent.is_some() {
+        base.intent = other.intent;
+    }
+    if other.description.is_some() {
+        base.description = other.description;
+    }
+    base
+}
+
 // ─── Properties (WHAT layer) ─────────────────────────────────────────────
 
 /// A reusable style set that nodes can reference via `use: style_name`.
@@ -407,6 +427,9 @@ pub struct AnimKeyframe {
     /// Optional post-revert cooldown (ms) before re-triggerable.
     /// `None` = no cooldown (default).
     pub delay_ms: Option<u32>,
+    /// Optional reference to a `when` template name.
+    /// Resolved at runtime to merge template properties.
+    pub use_template: Option<NodeId>,
 }
 
 /// Animatable property overrides.
@@ -417,6 +440,25 @@ pub struct AnimProperties {
     pub scale: Option<f32>,
     pub rotate: Option<f32>, // degrees
     pub translate: Option<(f32, f32)>,
+}
+
+/// A reusable animation template — `when name { duration easing props }`.
+/// Can be referenced via `use:` inside `when :trigger { }` blocks.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WhenTemplate {
+    pub duration_ms: u32,
+    pub easing: Easing,
+    pub properties: AnimProperties,
+}
+
+impl Default for WhenTemplate {
+    fn default() -> Self {
+        Self {
+            duration_ms: 300,
+            easing: Easing::EaseInOut,
+            properties: AnimProperties::default(),
+        }
+    }
 }
 
 // ─── Imports ─────────────────────────────────────────────────────────────
@@ -706,6 +748,10 @@ pub struct SceneGraph {
     /// Named style definitions (`style base_text { ... }`).
     pub styles: HashMap<NodeId, Properties>,
 
+    /// Spec metadata associated with named styles.
+    /// Stored separately to avoid breaking the existing `styles` API.
+    pub style_specs: HashMap<NodeId, Spec>,
+
     /// Index from NodeId → NodeIndex for fast lookup.
     pub id_index: HashMap<NodeId, NodeIndex>,
 
@@ -723,6 +769,10 @@ pub struct SceneGraph {
     /// Document-level default styles for edges.
     /// When present, individual edge properties matching the defaults are omitted.
     pub edge_defaults: Option<EdgeDefaults>,
+
+    /// Reusable animation templates — `when name { duration easing props }`.
+    /// Referenced via `use:` inside `when :trigger { }` blocks.
+    pub when_templates: HashMap<NodeId, WhenTemplate>,
 }
 
 impl SceneGraph {
@@ -740,11 +790,13 @@ impl SceneGraph {
             graph,
             root,
             styles: HashMap::new(),
+            style_specs: HashMap::new(),
             id_index,
             edges: Vec::new(),
             imports: Vec::new(),
             sorted_child_order: HashMap::new(),
             edge_defaults: None,
+            when_templates: HashMap::new(),
         }
     }
 
@@ -985,6 +1037,32 @@ impl SceneGraph {
         }
 
         resolved
+    }
+
+    /// Resolve a node's effective spec (merging `use` references + inline spec).
+    /// Styles' specs come first; inline spec overrides/extends.
+    pub fn resolve_spec(&self, node: &SceneNode) -> Option<Spec> {
+        let mut result: Option<Spec> = None;
+
+        // Apply specs from referenced styles in order
+        for style_id in &node.use_styles {
+            if let Some(style_spec) = self.style_specs.get(style_id) {
+                result = Some(merge_spec_values(
+                    result.unwrap_or_default(),
+                    style_spec.clone(),
+                ));
+            }
+        }
+
+        // Apply inline spec (takes precedence)
+        if let Some(ref inline_spec) = node.spec {
+            result = Some(merge_spec_values(
+                result.unwrap_or_default(),
+                inline_spec.clone(),
+            ));
+        }
+
+        result
     }
 
     /// Rebuild the `id_index` (needed after deserialization).
@@ -1480,6 +1558,7 @@ mod tests {
                 ..Default::default()
             },
             delay_ms: None,
+            use_template: None,
         });
 
         // Without press trigger: scale should be None

@@ -116,6 +116,7 @@ impl FdCanvas {
             easing,
             properties: anim_props,
             delay_ms: None,
+            use_template: None,
         };
 
         let mut current_anims = self

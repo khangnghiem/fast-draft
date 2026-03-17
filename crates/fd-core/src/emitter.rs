@@ -42,7 +42,8 @@ pub fn emit_document(graph: &SceneGraph) -> String {
     let mut styles: Vec<_> = graph.styles.iter().collect();
     styles.sort_by_key(|(id, _)| id.as_str().to_string());
     for (name, style) in &styles {
-        emit_style_block(&mut out, name, style, 0);
+        let spec = graph.style_specs.get(name);
+        emit_style_block(&mut out, name, style, spec, 0);
         out.push('\n');
     }
 
@@ -75,6 +76,19 @@ pub fn emit_document(graph: &SceneGraph) -> String {
         }
     }
 
+    // Emit when templates (before edges)
+    if !graph.when_templates.is_empty() {
+        if use_separators {
+            out.push_str("# ─── When Templates ───\n\n");
+        }
+        let mut templates: Vec<_> = graph.when_templates.iter().collect();
+        templates.sort_by_key(|(id, _)| id.as_str().to_string());
+        for (name, template) in &templates {
+            emit_when_template(&mut out, name, template, 0);
+            out.push('\n');
+        }
+    }
+
     // Emit edges
     if use_separators && has_edges {
         if has_constraints {
@@ -95,9 +109,20 @@ fn indent(out: &mut String, depth: usize) {
     }
 }
 
-fn emit_style_block(out: &mut String, name: &NodeId, style: &Properties, depth: usize) {
+fn emit_style_block(
+    out: &mut String,
+    name: &NodeId,
+    style: &Properties,
+    spec: Option<&Spec>,
+    depth: usize,
+) {
     indent(out, depth);
     writeln!(out, "style {} {{", name.as_str()).unwrap();
+
+    // Emit spec keywords first (if present)
+    if let Some(spec) = spec {
+        emit_spec(out, &Some(spec.clone()), depth);
+    }
 
     if let Some(ref fill) = style.fill {
         emit_paint_prop(out, "fill", fill, depth + 1);
@@ -693,6 +718,46 @@ fn emit_anim(out: &mut String, anim: &AnimKeyframe, depth: usize) {
         writeln!(out, "delay: {delay}ms").unwrap();
     }
 
+    if let Some(ref template_name) = anim.use_template {
+        indent(out, depth + 1);
+        writeln!(out, "use: {}", template_name.as_str()).unwrap();
+    }
+
+    indent(out, depth);
+    out.push_str("}\n");
+}
+
+fn emit_when_template(out: &mut String, name: &NodeId, template: &WhenTemplate, depth: usize) {
+    indent(out, depth);
+    writeln!(out, "when {} {{", name.as_str()).unwrap();
+
+    if let Some(ref fill) = template.properties.fill {
+        emit_paint_prop(out, "fill", fill, depth + 1);
+    }
+    if let Some(opacity) = template.properties.opacity {
+        indent(out, depth + 1);
+        writeln!(out, "opacity: {}", format_num(opacity)).unwrap();
+    }
+    if let Some(scale) = template.properties.scale {
+        indent(out, depth + 1);
+        writeln!(out, "scale: {}", format_num(scale)).unwrap();
+    }
+    if let Some(rotate) = template.properties.rotate {
+        indent(out, depth + 1);
+        writeln!(out, "rotate: {}", format_num(rotate)).unwrap();
+    }
+
+    let ease_name = match &template.easing {
+        Easing::Linear => "linear",
+        Easing::EaseIn => "ease_in",
+        Easing::EaseOut => "ease_out",
+        Easing::EaseInOut => "ease_in_out",
+        Easing::Spring => "spring",
+        Easing::CubicBezier(_, _, _, _) => "cubic",
+    };
+    indent(out, depth + 1);
+    writeln!(out, "ease: {ease_name} {}ms", template.duration_ms).unwrap();
+
     indent(out, depth);
     out.push_str("}\n");
 }
@@ -1035,7 +1100,8 @@ pub fn emit_filtered(graph: &SceneGraph, mode: ReadMode) -> String {
         let mut styles: Vec<_> = graph.styles.iter().collect();
         styles.sort_by_key(|(id, _)| id.as_str().to_string());
         for (name, style) in &styles {
-            emit_style_block(&mut out, name, style, 0);
+            let spec = graph.style_specs.get(name);
+            emit_style_block(&mut out, name, style, spec, 0);
             out.push('\n');
         }
     }
@@ -1367,7 +1433,7 @@ pub(crate) fn format_num(n: f32) -> String {
     if n == n.floor() {
         format!("{}", n as i32)
     } else {
-        format!("{n:.1}")
+        format!("{n:.3}")
             .trim_end_matches('0')
             .trim_end_matches('.')
             .to_string()

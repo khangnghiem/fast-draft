@@ -42,10 +42,13 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
             graph.imports.push(import);
             pending_comments.clear();
         } else if rest.starts_with("style ") || rest.starts_with("theme ") {
-            let (name, style) = parse_style_block
+            let (name, style, spec) = parse_style_block
                 .parse_next(&mut rest)
                 .map_err(|e| format!("line {line}: style/theme error — expected `style name {{ props }}`, got `{ctx}…`: {e}"))?;
             graph.define_style(name, style);
+            if let Some(spec) = spec {
+                graph.style_specs.insert(name, spec);
+            }
             pending_comments.clear();
         } else if rest.starts_with("spec ")
             || rest.starts_with("spec{")
@@ -104,6 +107,13 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
                 graph.id_index.insert(text_id, idx);
             }
             graph.edges.push(edge);
+            pending_comments.clear();
+        } else if rest.starts_with("when ") && !rest[5..].trim_start().starts_with(':') {
+            // Top-level `when name { }` template (not `when :trigger`)
+            let (name, template) = parse_when_template
+                .parse_next(&mut rest)
+                .map_err(|e| format!("line {line}: when template error — expected `when name {{ props }}`, got `{ctx}…`: {e}"))?;
+            graph.when_templates.insert(name, template);
             pending_comments.clear();
         } else if starts_with_node_keyword(rest) {
             let mut node_data = parse_node.parse_next(&mut rest).map_err(|e| {
@@ -480,7 +490,7 @@ fn merge_specs(mut base: Spec, other: Spec) -> Spec {
 
 // ─── Style block parser ─────────────────────────────────────────────────
 
-fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Properties)> {
+fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Properties, Option<Spec>)> {
     let _ = alt(("theme", "style")).parse_next(input)?;
     let _ = space1.parse_next(input)?;
     let name = parse_identifier.map(NodeId::intern).parse_next(input)?;
@@ -488,15 +498,37 @@ fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Properties)> {
     let _ = '{'.parse_next(input)?;
 
     let mut style = Properties::default();
+    let mut spec: Option<Spec> = None;
     skip_ws_and_comments(input);
 
     while !input.starts_with('}') {
+        // Try to parse spec block first
+        let saved = *input;
+        if input.starts_with("spec") || input.starts_with("note") {
+            if let Ok(parsed_spec) = parse_spec_block(input) {
+                spec = Some(merge_specs(spec.unwrap_or_default(), parsed_spec));
+                skip_ws_and_comments(input);
+                continue;
+            }
+            *input = saved;
+        }
+        // Try role:/trait:/intent: as top-level spec keywords in style blocks
+        if input.starts_with("role:") || input.starts_with("trait:") || input.starts_with("intent:")
+        {
+            let line_end = input.find('\n').unwrap_or(input.len());
+            let line = &input[..line_end];
+            let partial_spec = parse_spec_fields(line);
+            spec = Some(merge_specs(spec.unwrap_or_default(), partial_spec));
+            *input = &input[line_end..];
+            skip_ws_and_comments(input);
+            continue;
+        }
         parse_style_property(input, &mut style)?;
         skip_ws_and_comments(input);
     }
 
     let _ = '}'.parse_next(input)?;
-    Ok((name, style))
+    Ok((name, style, spec))
 }
 
 fn parse_style_property(input: &mut &str, style: &mut Properties) -> ModalResult<()> {
@@ -1315,6 +1347,7 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
     let mut duration_ms = default_duration;
     let mut easing = Easing::EaseInOut;
     let mut delay_ms: Option<u32> = None;
+    let mut use_template: Option<NodeId> = None;
 
     skip_ws_and_comments(input);
 
@@ -1362,6 +1395,10 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
                     *input = &input[2..];
                 }
             }
+            "use" => {
+                let name = parse_identifier.map(NodeId::intern).parse_next(input)?;
+                use_template = Some(name);
+            }
             _ => {
                 let _ = take_till::<_, _, ContextError>(0.., |c: char| {
                     c == '\n' || c == ';' || c == '}'
@@ -1382,7 +1419,92 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
         easing,
         properties: props,
         delay_ms,
+        use_template,
     })
+}
+
+/// Parse a top-level `when name { ... }` template (no trigger colon).
+/// These are reusable animation definitions referenced via `use:` inside
+/// `when :trigger { }` blocks.
+fn parse_when_template(input: &mut &str) -> ModalResult<(NodeId, WhenTemplate)> {
+    let _ = "when".parse_next(input)?;
+    let _ = space1.parse_next(input)?;
+    // Name without colon (to distinguish from `when :hover`)
+    let name = parse_identifier.map(NodeId::intern).parse_next(input)?;
+    skip_space(input);
+    let _ = '{'.parse_next(input)?;
+
+    let mut props = AnimProperties::default();
+    let mut duration_ms = 300u32;
+    let mut easing = Easing::EaseInOut;
+
+    skip_ws_and_comments(input);
+
+    while !input.starts_with('}') {
+        let prop = parse_identifier.parse_next(input)?;
+        skip_space(input);
+        let _ = ':'.parse_next(input)?;
+        skip_space(input);
+
+        match prop {
+            "fill" => {
+                props.fill = Some(Paint::Solid(parse_hex_color.parse_next(input)?));
+            }
+            "opacity" => {
+                props.opacity = Some(parse_number.parse_next(input)?);
+            }
+            "scale" => {
+                props.scale = Some(parse_number.parse_next(input)?);
+            }
+            "rotate" => {
+                props.rotate = Some(parse_number.parse_next(input)?);
+            }
+            "ease" => {
+                let ease_name = parse_identifier.parse_next(input)?;
+                easing = match ease_name {
+                    "linear" => Easing::Linear,
+                    "ease_in" | "easeIn" => Easing::EaseIn,
+                    "ease_out" | "easeOut" => Easing::EaseOut,
+                    "ease_in_out" | "easeInOut" => Easing::EaseInOut,
+                    "spring" => Easing::Spring,
+                    _ => Easing::EaseInOut,
+                };
+                skip_space(input);
+                if let Ok(n) = parse_number.parse_next(input) {
+                    duration_ms = n as u32;
+                    if input.starts_with("ms") {
+                        *input = &input[2..];
+                    }
+                }
+            }
+            "stroke" => {
+                // stroke: #color width — skip for when templates
+                let _ = parse_hex_color.parse_next(input)?;
+                skip_space(input);
+                let _ = parse_number.parse_next(input);
+            }
+            _ => {
+                let _ = take_till::<_, _, ContextError>(0.., |c: char| {
+                    c == '\n' || c == ';' || c == '}'
+                })
+                .parse_next(input);
+            }
+        }
+
+        skip_opt_separator(input);
+        skip_ws_and_comments(input);
+    }
+
+    let _ = '}'.parse_next(input)?;
+
+    Ok((
+        name,
+        WhenTemplate {
+            duration_ms,
+            easing,
+            properties: props,
+        },
+    ))
 }
 
 // ─── Edge anchor parser ─────────────────────────────────────────────────
