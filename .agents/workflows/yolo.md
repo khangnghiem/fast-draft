@@ -71,7 +71,7 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
    cd fd-vscode && pnpm test
    ```
 
-6. **E2E smoke test** (if `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `fd-vscode/webview/` changed):
+7. **E2E smoke test** (if `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `fd-vscode/webview/` changed):
 
    Build WASM first if Rust crates changed:
 
@@ -86,7 +86,7 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
    > **Skip only if** the change is purely Rust internals with no canvas/UI impact.
    > For full UX testing (all 9 phases), run `/e2e` with full tier or via `/nonstop`.
 
-7. **Report** results to user. **STOP HERE.**
+8. **Report** results to user. **STOP HERE.**
 
 ---
 
@@ -94,28 +94,28 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 
 > Use this after `/yolo local` has passed.
 
-8. **Activate pre-push hook** (one-time per clone — blocks accidental pushes to `main`):
+9. **Activate pre-push hook** (one-time per clone — blocks accidental pushes to `main`):
 
    ```bash
    git config core.hooksPath .githooks
    ```
 
-9. **Check branch** (never commit to main):
+10. **Check branch** (never commit to main):
 
    ```bash
    git branch --show-current
    ```
 
-10. If on `main`, create a feature branch:
+11. If on `main`, create a feature branch:
 
 ```bash
 git checkout -b feat/<descriptive-name>
 ```
 
-11. **Bump Version** (if `fd-vscode/` was changed):
+12. **Bump Version** (if `fd-vscode/` was changed):
     - Bump the `version` field in `fd-vscode/package.json` appropriately (patch/minor/major).
 
-12. **Update docs** (MANDATORY — both files, every time):
+13. **Update docs** (MANDATORY — both files, every time):
     - `docs/CHANGELOG.md` — add entry under the current version section for each meaningful change
     - `docs/REQUIREMENTS.md` — for **every** CHANGELOG entry, check if it introduces, extends, or modifies a requirement:
       - New feature → add a new `R*.N` entry and update the Requirement Index
@@ -123,46 +123,46 @@ git checkout -b feat/<descriptive-name>
       - Bug fix on an existing requirement → no change needed (already documented)
       - Search the Requirement Index for overlap before adding new entries
 
-13. **Stage and commit**:
+14. **Stage and commit**:
 
     ```bash
     git add -A
     git commit -m "<type>(<scope>): <description>"
     ```
 
-14. **Push**:
+15. **Push**:
 
     ```bash
     git push -u origin HEAD
     ```
 
-15. **Create PR** using GitKraken MCP:
+16. **Create PR** using GitKraken MCP:
     - `provider`: github
     - `source_branch`: current branch
     - `target_branch`: main
     - Title in conventional format
     - Body summarizing changes + test results
 
-16. **Wait for CI** to pass:
+17. **Wait for CI** to pass:
 
     ```bash
     gh pr checks <PR_NUMBER> --watch --fail-fast
     ```
 
-17. **Merge PR** and clean up:
+18. **Merge PR** and clean up:
 
     ```bash
     gh pr merge <PR_NUMBER> --squash --delete-branch
     ```
 
-18. **Sync main**:
+19. **Sync main**:
 
     ```bash
     git checkout main
     git pull origin main
     ```
 
-19. **Verify site deploy** (if `site/`, `crates/fd-wasm/`, or `crates/fd-core/` changed):
+20. **Verify site deploy** (if `site/`, `crates/fd-wasm/`, or `crates/fd-core/` changed):
 
     Wait for the `pages.yml` deploy workflow to complete:
 
@@ -175,7 +175,7 @@ git checkout -b feat/<descriptive-name>
 
     > **Skip** if the change is docs-only, CI config, or VS Code extension-only.
 
-20. **Build & Publish VS Code extension** (if `fd-vscode/`, `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `tree-sitter-fd/` were changed):
+21. **Build & Publish VS Code extension** (if `fd-vscode/`, `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `tree-sitter-fd/` were changed):
 
     > ⚠️ **MANDATORY**: Read `.env` for `VSCE_PAT`, `VSX_PAT`, and `GEMINI_API_KEY` BEFORE publishing.
     > Never rely on interactive prompts — always pass tokens via flags.
@@ -205,10 +205,10 @@ git checkout -b feat/<descriptive-name>
     > Skip publish if the change is local-only or version wasn't bumped.
     > **NEVER** publish to only one registry — both Marketplace AND Open VSX are required.
 
-21. Report PR URL, merge status, deploy verification, and publish results to user.
+22. Report PR URL, merge status, deploy verification, and publish results to user.
 
 ---
 
 ## `/yolo` — Full Pipeline
 
-Runs **all steps 1–21** in sequence (local + deploy).
+Runs **all steps 1–22** in sequence (local + deploy).
