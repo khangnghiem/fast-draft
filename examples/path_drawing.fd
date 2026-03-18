@@ -7,7 +7,7 @@
 group @board {
   spec {
     "A freehand drawing board section"
-    accept: "Allows pen strokes"
+    todo: "Allows pen strokes"
   }
 
   # A standalone freehand path representing a doodle or signature

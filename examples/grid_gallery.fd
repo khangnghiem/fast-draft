@@ -24,7 +24,7 @@ group @gallery {
   group @grid {
     spec {
       "Responsive image grid"
-      accept: "images lazy-load with blur-up"
+      todo: "images lazy-load with blur-up"
       tag: layout, grid
     }
     layout: grid cols=3 gap=16 pad=0

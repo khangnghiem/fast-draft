@@ -65,7 +65,7 @@ style caption {
 rect @btn_primary {
   spec {
     "Primary action button"
-    accept: "hover lifts, press shrinks"
+    todo: "hover lifts, press shrinks"
     status: done
     priority: high
   }

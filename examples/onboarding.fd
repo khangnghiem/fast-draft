@@ -12,9 +12,9 @@ style step_title {
 group @wizard {
   spec {
     "Onboarding wizard — 4-step flow"
-    accept: "skip button on every step"
-    accept: "progress dots show current step"
-    accept: "swipe gestures on mobile"
+    todo: "skip button on every step"
+    todo: "progress dots show current step"
+    todo: "swipe gestures on mobile"
     status: doing
     priority: high
     tag: onboarding
@@ -26,7 +26,7 @@ group @wizard {
       rect @illustration {
         spec {
           "Step illustration — animated SVG"
-          accept: "subtle loop animation"
+          todo: "subtle loop animation"
         }
         rect @shape_2 {
           w: 100 h: 60

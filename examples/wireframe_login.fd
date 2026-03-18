@@ -30,7 +30,7 @@ group @login_page {
   rect @email_field {
     spec {
       "Email input field"
-      accept: "validates email format on blur"
+      todo: "validates email format on blur"
     }
     text @email_placeholder "Email address" {
       fill: #9CA3AF  # blue
@@ -42,7 +42,7 @@ group @login_page {
   rect @password_field {
     spec {
       "Password input field"
-      accept: "minimum 8 characters"
+      todo: "minimum 8 characters"
     }
     text @pw_placeholder "Password" {
       fill: #9CA3AF  # blue
@@ -54,8 +54,8 @@ group @login_page {
   rect @login_btn {
     spec {
       "Primary login CTA"
-      accept: "disabled when fields empty"
-      accept: "shows loading spinner during auth"
+      todo: "disabled when fields empty"
+      todo: "shows loading spinner during auth"
     }
     text @login_label "Sign In" {
       fill: #FFFFFF  # white
@@ -79,8 +79,8 @@ group @login_page {
 rect @error_toast {
   spec {
     "Error notification toast"
-    accept: "shows within 200ms of failed auth"
-    accept: "auto-dismiss after 5s"
+    todo: "shows within 200ms of failed auth"
+    todo: "auto-dismiss after 5s"
   }
   text @error_msg "Invalid credentials" {
     fill: #B91C1C  # red
@@ -142,7 +142,7 @@ text @_forgot_flow_label "click" {
 edge @submit_flow {
   spec {
     "Form submission → API validation"
-    accept: "must complete within 3s"
+    todo: "must complete within 3s"
   }
   text @_submit_flow_label "on success" {}
   from: @login_btn

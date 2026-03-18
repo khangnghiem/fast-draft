@@ -28,19 +28,19 @@ Side-by-side comparisons showing FD's advantage over Excalidraw's JSON format.
 | `layout:` (column/row/grid)                  | dashboard, login, kanban, org, mobile, pricing, wireframe, data, design_system |
 | `edge` with labels + curves                  | api_flowchart, org_chart, network_topology                                     |
 | `spec` blocks                                | api_flowchart, login_form, wireframe_ecommerce, network_topology               |
-| `anim`                                       | dashboard, login, mobile, pricing, design_system                               |
+| `when` animations                            | dashboard, login, mobile, pricing, design_system                               |
 | `frame` + `clip`                             | mobile_onboarding                                                              |
 | `ellipse`                                    | org_chart                                                                      |
 | Named colors (`fill: purple`)                | kanban, org_chart, design_system, network_topology                             |
 | `opacity:`                                   | org_chart, design_system                                                       |
-| Property aliases (`background:`, `rounded:`) | design_system                                                                  |
+| Legacy property aliases (accepted, not canonical) | design_system                                                              |
 | `import`                                     | design_system                                                                  |
 | Font weight names                            | All except dashboard_card                                                      |
 
 ## What FD Can Express That Excalidraw Cannot
 
-- **`spec` blocks** — structured annotations (status, priority, acceptance criteria)
-- **`anim` blocks** — hover/press/enter animations with easing
+- **`spec` blocks** — structured annotations (todo, done, tag)
+- **`when` blocks** — hover/press/enter animations with easing
 - **`import`** — cross-file token sharing
 - **`style` + `use:`** — DRY style reuse (change once, update everywhere)
 - **Named colors** — `fill: purple` instead of `fill: #6C5CE7`

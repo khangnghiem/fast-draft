@@ -100,8 +100,8 @@ group @color_palette {
   group @buttons {
     spec {
       "Button component variants"
-      accept: "all buttons must have visible focus rings"
-      accept: "minimum 44px touch target"
+      todo: "all buttons must have visible focus rings"
+      todo: "minimum 44px touch target"
       tag: a11y, components
     }
     rect @btn_primary {
@@ -206,7 +206,7 @@ rect @input_focus {
 rect @input_error {
   spec {
     "Error input state"
-    accept: "red border + error message below"
+    todo: "red border + error message below"
   }
   text @_anon_13 "invalid@" {
     fill: #E17055  # red

@@ -60,7 +60,7 @@ rect @api_gateway {
 rect @auth_check {
   spec {
     "JWT token validation"
-    accept: "reject expired tokens within 5s"
+    todo: "reject expired tokens within 5s"
     status: done
   }
   text @_text_2 "Authenticate?" {
@@ -115,7 +115,7 @@ rect @business_logic {
 rect @db_query {
   spec {
     "Database read/write operations"
-    accept: "queries < 100ms p95"
+    todo: "queries < 100ms p95"
     status: doing
   }
   text @_text_6 "Database Query" {

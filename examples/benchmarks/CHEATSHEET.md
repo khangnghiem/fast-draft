@@ -38,9 +38,12 @@ align: center middle          # Text alignment (h: left|center|right, v: top|mid
 use: style_name               # Apply a named style
 ```
 
-## Property Aliases
+## Property Aliases (Legacy)
 
-| Alias         | Canonical |
+> These aliases are still accepted by the parser but should not be used in new files.
+> The emitter always outputs the canonical keyword.
+
+| Legacy Alias  | Canonical |
 | ------------- | --------- |
 | `background:` | `fill:`   |
 | `color:`      | `fill:`   |
@@ -93,7 +96,7 @@ edge @connection {
 ## Animations
 
 ```fd
-anim :hover {
+when :hover {
   fill: #5A4BD1
   scale: 1.05
   opacity: 1
@@ -101,6 +104,8 @@ anim :hover {
   ease: spring 200ms
 }
 ```
+
+> `anim` is accepted as a legacy alias but `when` is canonical.
 
 | Triggers    | Easing Functions |
 | ----------- | ---------------- |
@@ -120,9 +125,9 @@ rect @btn { spec "Primary CTA" }
 rect @btn {
   spec {
     "Primary CTA — triggers login"
-    accept: "disabled when fields empty"
-    status: doing              # todo | doing | done | blocked
-    priority: high             # low | medium | high
+    todo: "disabled when fields empty"
+    done: "basic layout"
+    tag: forms, auth
   }
 }
 ```

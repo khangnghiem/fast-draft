@@ -97,7 +97,7 @@ group @_group_0 {
   rect @fab {
     spec {
       "Floating action button — fixed bottom-right"
-      accept: "persists across scroll"
+      todo: "persists across scroll"
     }
     text @_text_4 "+" {
       w: 26.76

@@ -41,7 +41,7 @@ group @hero {
     rect @btn_primary {
       spec {
         "Primary CTA — starts free trial"
-        accept: "no credit card required"
+        todo: "no credit card required"
         priority: high
       }
       w: 180 h: 52

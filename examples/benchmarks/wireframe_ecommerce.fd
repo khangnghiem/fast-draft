@@ -9,7 +9,7 @@ group @ecommerce_page {
     @search_bar {
       spec {
         "Product search"
-        accept: "autocomplete < 200ms"
+        todo: "autocomplete < 200ms"
         status: doing
       }
       fill: #F3F4F6  # white

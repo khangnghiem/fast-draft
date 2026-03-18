@@ -14,9 +14,9 @@ frame @checkout_page {
 
   spec {
     "Checkout flow — 3-step wizard"
-    accept: "cart review → shipping → payment"
-    accept: "back button returns to previous step"
-    accept: "progress indicator shows current step"
+    todo: "cart review → shipping → payment"
+    todo: "back button returns to previous step"
+    todo: "progress indicator shows current step"
     status: doing
     priority: high
     tag: checkout, mvp, revenue
@@ -30,8 +30,8 @@ frame @checkout_page {
 
     spec {
       "Step indicator — 3 steps"
-      accept: "completed steps are highlighted"
-      accept: "current step shows active color"
+      todo: "completed steps are highlighted"
+      todo: "current step shows active color"
       status: todo
     }
 
@@ -67,9 +67,9 @@ frame @checkout_page {
 
     spec {
       "Shipping address form"
-      accept: "autofill from saved addresses"
-      accept: "address validation via Google Maps API"
-      accept: "international address format support"
+      todo: "autofill from saved addresses"
+      todo: "address validation via Google Maps API"
+      todo: "international address format support"
       priority: high
       tag: form, ux
     }
@@ -84,7 +84,7 @@ frame @checkout_page {
         stroke: #E8E8EC 1
         spec {
           "First name — required"
-          accept: "min 2 characters"
+          todo: "min 2 characters"
         }
 
         text "First name" { use: muted }
@@ -96,7 +96,7 @@ frame @checkout_page {
         stroke: #E8E8EC 1
         spec {
           "Last name — required"
-          accept: "min 2 characters"
+          todo: "min 2 characters"
         }
 
         text "Last name" { use: muted }
@@ -109,7 +109,7 @@ frame @checkout_page {
       stroke: #E8E8EC 1
       spec {
         "Street address — required"
-        accept: "autocomplete suggestions on typing"
+        todo: "autocomplete suggestions on typing"
         priority: high
       }
 
@@ -144,7 +144,7 @@ frame @checkout_page {
         stroke: #E8E8EC 1
         spec {
           "State — dropdown"
-          accept: "shows state list for US addresses"
+          todo: "shows state list for US addresses"
         }
 
         text "State" { use: muted }
@@ -156,7 +156,7 @@ frame @checkout_page {
         stroke: #E8E8EC 1
         spec {
           "ZIP — required"
-          accept: "validates format per country"
+          todo: "validates format per country"
         }
 
         text "ZIP" { use: muted }
@@ -173,8 +173,8 @@ frame @checkout_page {
     stroke: #E8E8EC 1
     spec {
       "Collapsible order summary panel"
-      accept: "shows item thumbnails, quantities, prices"
-      accept: "updates total on coupon apply"
+      todo: "shows item thumbnails, quantities, prices"
+      todo: "updates total on coupon apply"
       priority: medium
       tag: checkout
     }
@@ -215,8 +215,8 @@ frame @checkout_page {
       fill: #6C5CE7
       spec {
         "Continue to payment"
-        accept: "validates all fields before proceeding"
-        accept: "disabled when required fields incomplete"
+        todo: "validates all fields before proceeding"
+        todo: "disabled when required fields incomplete"
         priority: high
       }
 
