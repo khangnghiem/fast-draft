@@ -105,6 +105,7 @@ impl FdCanvas {
 
         // Hand + Pen → Select behavior (input-aware Hand tool)
         let effective = self.effective_tool();
+        self.rect_tool.frame_mode = effective == ToolKind::Frame;
         let mutations = match effective {
             ToolKind::Select => self.select_tool.handle(&event, hit),
             ToolKind::Rect | ToolKind::Frame => self.rect_tool.handle(&event, hit),
@@ -214,6 +215,7 @@ impl FdCanvas {
         }
 
         let effective = self.effective_tool();
+        self.rect_tool.frame_mode = effective == ToolKind::Frame;
         let mutations = match effective {
             ToolKind::Select => self.select_tool.handle(&event, hit),
             ToolKind::Rect | ToolKind::Frame => self.rect_tool.handle(&event, hit),
@@ -404,6 +406,7 @@ impl FdCanvas {
         }
 
         let effective = self.effective_tool();
+        self.rect_tool.frame_mode = effective == ToolKind::Frame;
         let mutations = match effective {
             ToolKind::Select => self.select_tool.handle(&event, hit),
             ToolKind::Rect | ToolKind::Frame => self.rect_tool.handle(&event, hit),
