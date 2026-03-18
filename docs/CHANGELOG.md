@@ -25,8 +25,9 @@
 
 ### v0.11.204 — Code Panel Minimizes to 10% Instead of Hiding (R6.6)
 - **UX (R6.6)**: Code panel toggle now **minimizes** to ~10% width instead of collapsing to 0% — the editor header ("● Code ▾") stays visible as the click target to re-expand; eliminates the discoverability problem of the fully-hidden panel
+- **UX (R6.6)**: Resize handle stays **visible and draggable** in minimized state — dragging from 10% smoothly expands the panel to any width; handle `pointerdown` auto-uncollapse seeds `--editor-width` from the current 10% position so drag operates on the normal grid template
 - **CLEANUP (R6.6)**: Removed `#code-restore` vertical tab strip — no longer needed since the panel header is always visible at 10%; deleted ~44 lines of orphaned CSS (`.panel-restore-strip.code-restore` and child selectors), HTML element, and JS click listener
-- **SITE**: Changes in `site/style.css` (`.code-collapsed` grid), `site/index.html` (removed restore strip), `site/playground.js` (removed listener)
+- **SITE**: Changes in `site/style.css` (`.code-collapsed` grid + handle), `site/index.html` (removed restore strip), `site/playground.js` (auto-uncollapse on handle drag)
 
 ### v0.11.203 — Code Panel Tab Handle (R6.6)
 - **UX (R6.6)**: Replaced invisible 12px hover-only strip with a visible **28px vertical Tab Handle** when code panel is collapsed — frosted glass background, rotated `{ } Code` label, 3px purple accent left border, rounded right corners; hover widens to 32px with glow; matches VS Code collapsed sidebar pattern for instant discoverability

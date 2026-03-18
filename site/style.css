@@ -537,17 +537,11 @@ code {
 .code-collapsed .playground-editor {
   overflow: hidden;
 }
-.code-collapsed .split-resize-handle {
-  visibility: hidden;
-  width: 0;
-  min-width: 0;
-  pointer-events: none;
-}
 .code-collapsed .editor-chevron {
   transform: rotate(-90deg);
 }
 .code-collapsed {
-  grid-template-columns: 10% 0px 1fr;
+  grid-template-columns: 10% 6px 1fr;
 }
 
 
