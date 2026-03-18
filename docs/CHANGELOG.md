@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.199 — Canvas-Core Migration + Inline Edit Extraction (R6.12)
+- **BUILD (R6.12)**: VS Code webview build script (`build-webview.mjs`) now injects 6 canvas-core shared modules (state, render, clipboard, viewport, shortcuts, inline-edit) before extension-specific modules — establishes single source of truth for shared logic
+- **CANVAS**: Created `site/canvas-core/inline-edit.js` — shared inline text editor with double-click handling, textarea overlay, live sync, Enter/Escape, edge label editing; usable by both site playground and VS Code extension
+
 ### v0.11.198 — Vision Pillars + Site Refresh
 - **DOCS**: Defined 4 vision pillars in `REQUIREMENTS.md` and `README.md`: Design as Code, AI-Native Format, Living Components, Prompt as You Draw
 - **SITE**: Replaced 6 generic feature cards with 4 pillar-aligned cards on `fast-draft.com`
