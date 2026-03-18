@@ -2662,6 +2662,13 @@ function setupSplitResize(container, resizeCanvas) {
     containerRect = container.getBoundingClientRect();
     handle.classList.add('active');
     handle.setPointerCapture(e.pointerId);
+    // If minimized, un-collapse so --editor-width takes effect during drag
+    if (codeCollapsed) {
+      const currentWidth = Math.round(containerRect.width * 0.1);
+      container.style.setProperty('--editor-width', `${currentWidth}px`);
+      codeCollapsed = false;
+      container.closest('.playground-split')?.classList.remove('code-collapsed');
+    }
     // Disable CSS Grid transition during drag — it fights the live updates
     // and causes a ~250ms easing lag on every pointer move.
     if (split) split.style.transition = 'none';
