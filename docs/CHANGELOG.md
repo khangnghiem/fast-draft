@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.200 — Keyword Improvements: Style Extends, Alias Pruning, Emission Unification (R1.22, R4.16, R4.18)
+- **FEATURE (R1.22)**: Style inheritance — `extends: <parent>` inside `style` blocks; child style inherits all parent properties, child properties override; `apply_style_with_extends()` walks extends chain with max depth 8 cycle protection; works with `use:` resolution and edge styles
+- **FORMAT (R4.16)**: Pruned `rounded:` and `radius:` aliases — `corner:` is now the sole keyword for corner radius in both node and style property parsers; deprecated aliases silently ignored
+- **FORMAT (R4.16)**: Unified `pad:` emission — emitter now outputs `pad:` canonically instead of `padding:` for Free-layout frames; parser still accepts both `pad:` and `padding:` for backward compatibility
+- **FORMAT (R4.18)**: Deprecated `anim` keyword documented — `when` is the canonical animation keyword; `anim` still accepted by parser but `when` is emitted
+- **LSP**: Removed deprecated spec sub-keywords (`accept:`, `status:`, `priority:`, `tag:`) from code completions and hover documentation; `spec` block snippet simplified to description-only
+- **DOCS**: Updated SKILL.md (extends syntax, `when` keyword, removed deprecated spec examples), REQUIREMENTS.md (R1.22 style extends, R1.23 component instantiation planned, R4.16 updated)
+- **TESTS**: 3 new tests — `parse_style_extends`, `roundtrip_style_extends`, `parse_style_extends_with_override`; updated `roundtrip_padding_canonical` for `pad:` emission
+
 ### v0.11.199 — Canvas-Core Migration + Inline Edit Extraction (R6.12)
 - **BUILD (R6.12)**: VS Code webview build script (`build-webview.mjs`) now injects 6 canvas-core shared modules (state, render, clipboard, viewport, shortcuts, inline-edit) before extension-specific modules — establishes single source of truth for shared logic
 - **CANVAS**: Created `site/canvas-core/inline-edit.js` — shared inline text editor with double-click handling, textarea overlay, live sync, Enter/Escape, edge label editing; usable by both site playground and VS Code extension

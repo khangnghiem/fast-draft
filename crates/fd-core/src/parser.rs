@@ -42,12 +42,15 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
             graph.imports.push(import);
             pending_comments.clear();
         } else if rest.starts_with("style ") || rest.starts_with("theme ") {
-            let (name, style, spec) = parse_style_block
+            let (name, style, spec, extends) = parse_style_block
                 .parse_next(&mut rest)
                 .map_err(|e| format!("line {line}: style/theme error — expected `style name {{ props }}`, got `{ctx}…`: {e}"))?;
             graph.define_style(name, style);
             if let Some(spec) = spec {
                 graph.style_specs.insert(name, spec);
+            }
+            if let Some(parent) = extends {
+                graph.style_extends.insert(name, parent);
             }
             pending_comments.clear();
         } else if rest.starts_with("spec ")
@@ -490,7 +493,9 @@ fn merge_specs(mut base: Spec, other: Spec) -> Spec {
 
 // ─── Style block parser ─────────────────────────────────────────────────
 
-fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Properties, Option<Spec>)> {
+fn parse_style_block(
+    input: &mut &str,
+) -> ModalResult<(NodeId, Properties, Option<Spec>, Option<NodeId>)> {
     let _ = alt(("theme", "style")).parse_next(input)?;
     let _ = space1.parse_next(input)?;
     let name = parse_identifier.map(NodeId::intern).parse_next(input)?;
@@ -499,6 +504,7 @@ fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Properties, Optio
 
     let mut style = Properties::default();
     let mut spec: Option<Spec> = None;
+    let mut extends: Option<NodeId> = None;
     skip_ws_and_comments(input);
 
     while !input.starts_with('}') {
@@ -523,12 +529,27 @@ fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Properties, Optio
             skip_ws_and_comments(input);
             continue;
         }
+        // Check for extends: keyword
+        if input.starts_with("extends") {
+            let saved_ext = *input;
+            let _ = "extends".parse_next(input)?;
+            skip_space(input);
+            if input.starts_with(':') {
+                let _ = ':'.parse_next(input)?;
+                skip_space(input);
+                extends = Some(parse_identifier.map(NodeId::intern).parse_next(input)?);
+                skip_opt_separator(input);
+                skip_ws_and_comments(input);
+                continue;
+            }
+            *input = saved_ext;
+        }
         parse_style_property(input, &mut style)?;
         skip_ws_and_comments(input);
     }
 
     let _ = '}'.parse_next(input)?;
-    Ok((name, style, spec))
+    Ok((name, style, spec, extends))
 }
 
 fn parse_style_property(input: &mut &str, style: &mut Properties) -> ModalResult<()> {
@@ -544,7 +565,7 @@ fn parse_style_property(input: &mut &str, style: &mut Properties) -> ModalResult
         "font" => {
             parse_font_value(input, style)?;
         }
-        "corner" | "rounded" | "radius" => {
+        "corner" => {
             style.corner_radius = Some(parse_number.parse_next(input)?);
             skip_px_suffix(input);
         }
@@ -1009,7 +1030,7 @@ fn parse_node_property(
                 ..Stroke::default()
             });
         }
-        "corner" | "rounded" | "radius" => {
+        "corner" => {
             style.corner_radius = Some(parse_number.parse_next(input)?);
             skip_px_suffix(input);
         }

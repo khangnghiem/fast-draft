@@ -222,10 +222,7 @@ fn node_body_completions() -> Vec<CompletionItem> {
         label: "spec".to_string(),
         kind: Some(CompletionItemKind::SNIPPET),
         detail: Some("Structured annotation block".to_string()),
-        insert_text: Some(
-            "spec {\n  \"${1:description}\"\n  status: ${2|todo,doing,done,blocked|}\n  priority: ${3|low,medium,high,critical|}\n}"
-                .to_string(),
-        ),
+        insert_text: Some("spec {\n  \"${1:description}\"\n}".to_string()),
         insert_text_format: Some(InsertTextFormat::SNIPPET),
         ..Default::default()
     });
@@ -259,18 +256,7 @@ fn value_completions(property: &str) -> Vec<CompletionItem> {
             ("ease_in_out", "Ease in-out"),
             ("spring", "Spring physics"),
         ],
-        "status" => &[
-            ("todo", "To do (not started)"),
-            ("doing", "In progress"),
-            ("done", "Completed"),
-            ("blocked", "Blocked / waiting"),
-        ],
-        "priority" => &[
-            ("low", "Low priority"),
-            ("medium", "Medium priority"),
-            ("high", "High priority"),
-            ("critical", "Critical priority"),
-        ],
+
         "fill" | "background" | "color" => &[
             ("#6C5CE7", "Purple"),
             ("#FF6B6B", "Red-ish"),

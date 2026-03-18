@@ -773,6 +773,10 @@ pub struct SceneGraph {
     /// Reusable animation templates — `when name { duration easing props }`.
     /// Referenced via `use:` inside `when :trigger { }` blocks.
     pub when_templates: HashMap<NodeId, WhenTemplate>,
+
+    /// Style inheritance chain — `style dark { extends: card; ... }`.
+    /// Keys are child style IDs, values are parent style IDs.
+    pub style_extends: HashMap<NodeId, NodeId>,
 }
 
 impl SceneGraph {
@@ -797,6 +801,7 @@ impl SceneGraph {
             sorted_child_order: HashMap::new(),
             edge_defaults: None,
             when_templates: HashMap::new(),
+            style_extends: HashMap::new(),
         }
     }
 
@@ -1011,11 +1016,9 @@ impl SceneGraph {
     pub fn resolve_style(&self, node: &SceneNode, active_triggers: &[AnimTrigger]) -> Properties {
         let mut resolved = Properties::default();
 
-        // Apply referenced styles in order
+        // Apply referenced styles in order (walking extends chain for each)
         for style_id in &node.use_styles {
-            if let Some(base) = self.styles.get(style_id) {
-                merge_style(&mut resolved, base);
-            }
+            self.apply_style_with_extends(&mut resolved, style_id);
         }
 
         // Apply inline overrides (take precedence)
@@ -1037,6 +1040,29 @@ impl SceneGraph {
         }
 
         resolved
+    }
+
+    /// Apply a style to `resolved`, walking the extends chain first.
+    /// Parent styles are applied before child styles, so child overrides parent.
+    /// Max depth 8 prevents infinite cycles.
+    fn apply_style_with_extends(&self, resolved: &mut Properties, style_id: &NodeId) {
+        // Collect the chain: [grandparent, parent, child]
+        let mut chain = Vec::with_capacity(4);
+        let mut current = *style_id;
+        for _ in 0..8 {
+            chain.push(current);
+            if let Some(&parent) = self.style_extends.get(&current) {
+                current = parent;
+            } else {
+                break;
+            }
+        }
+        // Apply base-first (reverse order)
+        for id in chain.into_iter().rev() {
+            if let Some(base) = self.styles.get(&id) {
+                merge_style(resolved, base);
+            }
+        }
     }
 
     /// Resolve a node's effective spec (merging `use` references + inline spec).
@@ -1082,9 +1108,7 @@ impl SceneGraph {
     ) -> Properties {
         let mut resolved = Properties::default();
         for style_id in &edge.use_styles {
-            if let Some(base) = self.styles.get(style_id) {
-                merge_style(&mut resolved, base);
-            }
+            self.apply_style_with_extends(&mut resolved, style_id);
         }
         merge_style(&mut resolved, &edge.props);
 

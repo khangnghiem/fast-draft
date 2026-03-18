@@ -163,16 +163,6 @@ fn hover_keyword(word: &str) -> Option<Hover> {
         "note" | "spec" => {
             "**note** — Markdown note block.\n\nInline: `note \"description\"`\nBlock: `note { markdown content }`\nFile link: `note \"./path.md\"` (renders linked file)\n\n`@include(\"path.md\")` can embed files within block notes.\n(Legacy keyword `spec` also accepted.)"
         }
-        "accept" => {
-            "**## accept:** — Acceptance criterion annotation.\n\nFormat: `## accept: \"description\"`"
-        }
-        "status" => {
-            "**## status:** — Status annotation.\n\nValues: `todo`, `doing`, `done`, `blocked`\n(Legacy: `draft` → todo, `in_progress` → doing)"
-        }
-        "priority" => {
-            "**## priority:** — Priority annotation.\n\nValues: `low`, `medium`, `high`, `critical`"
-        }
-        "tag" => "**## tag:** — Tag annotation.\n\nFormat: `## tag: category_name`",
         _ => return None,
     };
 

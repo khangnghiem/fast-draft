@@ -458,19 +458,21 @@ fn parse_property_alias_background() {
 }
 
 #[test]
-fn parse_property_alias_rounded() {
+fn parse_property_alias_rounded_ignored() {
+    // rounded: is deprecated — now treated as unknown property and skipped
     let src = r#"rect @r { w: 100 h: 50 rounded: 12 }"#;
     let graph = parse_document(src).unwrap();
     let node = graph.get_by_id(crate::id::NodeId::intern("r")).unwrap();
-    assert_eq!(node.props.corner_radius, Some(12.0));
+    assert_eq!(node.props.corner_radius, None, "rounded: should be ignored");
 }
 
 #[test]
-fn parse_property_alias_radius() {
+fn parse_property_alias_radius_ignored() {
+    // radius: is deprecated — now treated as unknown property and skipped
     let src = r#"rect @r { w: 100 h: 50 radius: 8 }"#;
     let graph = parse_document(src).unwrap();
     let node = graph.get_by_id(crate::id::NodeId::intern("r")).unwrap();
-    assert_eq!(node.props.corner_radius, Some(8.0));
+    assert_eq!(node.props.corner_radius, None, "radius: should be ignored");
 }
 
 #[test]
@@ -534,7 +536,7 @@ fn roundtrip_named_color() {
 
 #[test]
 fn roundtrip_property_aliases() {
-    let src = r#"rect @r { w: 200 h: 100 background: #FF0000 rounded: 12 }"#;
+    let src = r#"rect @r { w: 200 h: 100 background: #FF0000 corner: 12 }"#;
     let graph = parse_document(src).unwrap();
     let emitted = crate::emitter::emit_document(&graph);
     // Emitter uses canonical names
@@ -544,7 +546,7 @@ fn roundtrip_property_aliases() {
     );
     assert!(
         emitted.contains("corner:"),
-        "rounded: should emit as corner:"
+        "corner: should round-trip as corner:"
     );
     let reparsed = parse_document(&emitted).unwrap();
     let node = reparsed.get_by_id(crate::id::NodeId::intern("r")).unwrap();
@@ -753,8 +755,8 @@ frame @card {
     let graph = parse_document(src).unwrap();
     let emitted = crate::emitter::emit_document(&graph);
     assert!(
-        emitted.contains("padding: 12"),
-        "emitted should contain padding: 12, got: {emitted}"
+        emitted.contains("pad: 12"),
+        "emitted should contain pad: 12, got: {emitted}"
     );
 
     let reparsed = parse_document(&emitted).unwrap();
@@ -783,8 +785,8 @@ frame @card {
     let graph = parse_document(src).unwrap();
     let emitted = crate::emitter::emit_document(&graph);
     assert!(
-        !emitted.contains("padding:") && !emitted.contains("pad:"),
-        "padding: 0 should not appear in emitted output"
+        !emitted.contains("pad:") && !emitted.contains("padding:"),
+        "pad: 0 should not appear in emitted output"
     );
 }
 
@@ -841,7 +843,7 @@ rect @btn { w: 200 h: 48 apply: accent }
 
 #[test]
 fn roundtrip_padding_canonical() {
-    // Emitter should output 'padding:' (not 'pad:'), and parser should accept both
+    // Emitter should output 'pad:' (canonical form), and parser should accept both 'pad:' and 'padding:'
     let src = r#"
 frame @card {
   w: 400 h: 300
@@ -852,8 +854,8 @@ frame @card {
     let graph = parse_document(src).unwrap();
     let emitted = crate::emitter::emit_document(&graph);
     assert!(
-        emitted.contains("padding: 16"),
-        "emitter should output 'padding:' canonical form, got: {emitted}"
+        emitted.contains("pad: 16"),
+        "emitter should output 'pad:' canonical form, got: {emitted}"
     );
     let reparsed = parse_document(&emitted).unwrap();
     let node = reparsed
@@ -1088,4 +1090,110 @@ fn roundtrip_import_namespace_example() {
         crate::parser::parse_document(&emitted).expect("Failed to re-parse emitted document");
 
     assert_eq!(graph.imports.len(), parsed2.imports.len());
+}
+
+// ─── Style extends tests ─────────────────────────────────────────────
+
+#[test]
+fn parse_style_extends() {
+    let src = r#"
+style card {
+  fill: #FFFFFF
+  corner: 12
+}
+style dark_card {
+  extends: card
+  fill: #1A1A2E
+}
+rect @box {
+  w: 100 h: 50
+  use: dark_card
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    // dark_card should extend card
+    let dark_id = crate::id::NodeId::intern("dark_card");
+    let card_id = crate::id::NodeId::intern("card");
+    assert_eq!(
+        graph.style_extends.get(&dark_id),
+        Some(&card_id),
+        "dark_card should extend card"
+    );
+    // dark_card should have its own fill
+    let dark_style = graph.styles.get(&dark_id).unwrap();
+    assert!(dark_style.fill.is_some());
+    // card should NOT be in extends (it has no parent)
+    assert!(
+        graph.style_extends.get(&card_id).is_none(),
+        "card should not have extends"
+    );
+}
+
+#[test]
+fn roundtrip_style_extends() {
+    let src = r#"
+style base {
+  fill: #FFFFFF
+  corner: 8
+}
+style variant {
+  extends: base
+  fill: #000000
+}
+rect @box {
+  w: 100 h: 50
+  use: variant
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let emitted = crate::emitter::emit_document(&graph);
+    assert!(
+        emitted.contains("extends: base"),
+        "emitted should contain extends: base, got: {emitted}"
+    );
+    let graph2 = parse_document(&emitted).expect("re-parse failed");
+    let variant_id = crate::id::NodeId::intern("variant");
+    let base_id = crate::id::NodeId::intern("base");
+    assert_eq!(
+        graph2.style_extends.get(&variant_id),
+        Some(&base_id),
+        "extends should survive roundtrip"
+    );
+}
+
+#[test]
+fn parse_style_extends_with_override() {
+    let src = r#"
+style parent_style {
+  fill: #FF0000
+  corner: 16
+  opacity: 0.8
+}
+style child_style {
+  extends: parent_style
+  fill: #00FF00
+}
+rect @box {
+  w: 100 h: 50
+  use: child_style
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let node = graph.get_by_id(crate::id::NodeId::intern("box")).unwrap();
+    // resolve_style should: apply parent_style first, then child_style over it
+    let resolved = graph.resolve_style(node, &[]);
+    // fill should be child's override (#00FF00)
+    assert!(resolved.fill.is_some(), "fill should be resolved");
+    // corner should come from parent (16)
+    assert_eq!(
+        resolved.corner_radius,
+        Some(16.0),
+        "corner should inherit from parent"
+    );
+    // opacity should come from parent (0.8)
+    assert_eq!(
+        resolved.opacity,
+        Some(0.8),
+        "opacity should inherit from parent"
+    );
 }

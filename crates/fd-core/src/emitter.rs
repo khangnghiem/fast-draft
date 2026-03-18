@@ -43,7 +43,8 @@ pub fn emit_document(graph: &SceneGraph) -> String {
     styles.sort_by_key(|(id, _)| id.as_str().to_string());
     for (name, style) in &styles {
         let spec = graph.style_specs.get(name);
-        emit_style_block(&mut out, name, style, spec, 0);
+        let extends = graph.style_extends.get(name);
+        emit_style_block(&mut out, name, style, spec, extends, 0);
         out.push('\n');
     }
 
@@ -114,12 +115,19 @@ fn emit_style_block(
     name: &NodeId,
     style: &Properties,
     spec: Option<&Spec>,
+    extends: Option<&NodeId>,
     depth: usize,
 ) {
     indent(out, depth);
     writeln!(out, "style {} {{", name.as_str()).unwrap();
 
-    // Emit spec keywords first (if present)
+    // Emit extends first (if present)
+    if let Some(parent) = extends {
+        indent(out, depth + 1);
+        writeln!(out, "extends: {}", parent.as_str()).unwrap();
+    }
+
+    // Emit spec keywords (if present)
     if let Some(spec) = spec {
         emit_spec(out, &Some(spec.clone()), depth);
     }
@@ -251,7 +259,7 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
             LayoutMode::Free { pad } => {
                 if *pad > 0.0 {
                     indent(out, depth + 1);
-                    writeln!(out, "padding: {}", format_num(*pad)).unwrap();
+                    writeln!(out, "pad: {}", format_num(*pad)).unwrap();
                 }
             }
             LayoutMode::Column { gap, pad } => {
@@ -1101,7 +1109,8 @@ pub fn emit_filtered(graph: &SceneGraph, mode: ReadMode) -> String {
         styles.sort_by_key(|(id, _)| id.as_str().to_string());
         for (name, style) in &styles {
             let spec = graph.style_specs.get(name);
-            emit_style_block(&mut out, name, style, spec, 0);
+            let extends = graph.style_extends.get(name);
+            emit_style_block(&mut out, name, style, spec, extends, 0);
             out.push('\n');
         }
     }
@@ -1258,7 +1267,7 @@ fn emit_layout_mode_filtered(out: &mut String, kind: &NodeKind, depth: usize) {
         LayoutMode::Free { pad } => {
             if *pad > 0.0 {
                 indent(out, depth);
-                writeln!(out, "padding: {}", format_num(*pad)).unwrap();
+                writeln!(out, "pad: {}", format_num(*pad)).unwrap();
             }
         }
         LayoutMode::Column { gap, pad } => {

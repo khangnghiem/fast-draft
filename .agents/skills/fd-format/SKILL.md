@@ -45,6 +45,15 @@ style <name> {
 }
 ```
 
+Style inheritance via `extends:`:
+
+```
+style dark_card {
+  extends: card
+  fill: #1A1A2E
+}
+```
+
 ### Node Types
 
 Every visual element is a node with an optional `@id`:
@@ -104,8 +113,7 @@ Nodes without a shape type — for spec-only requirements, wireframing, and prog
 @login_btn {
   spec {
     "Primary CTA — triggers login API call"
-    accept: "disabled when fields empty"
-    status: in_progress
+    role: button
   }
   fill: #FFFFFF
   corner: 8
@@ -160,7 +168,7 @@ bg: #FFF corner=12 shadow=(0,4,20,#0002)
 ### Animations
 
 ```
-anim :<trigger> {
+when :<trigger> {
   fill: <color>
   opacity: <0-1>
   scale: <factor>
@@ -171,6 +179,7 @@ anim :<trigger> {
 
 Triggers: `:hover`, `:press`, `:enter`, `:<custom>`
 Easing: `linear`, `ease_in`, `ease_out`, `ease_in_out`, `spring`
+Legacy alias: `anim` is still accepted by the parser but `when` is canonical.
 
 ### Constraints (Top-Level)
 
@@ -269,7 +278,7 @@ w: 180 h: 40
 corner: 8
 use: accent
 text "View Details" { font: "Inter" 500 14; fill: #FFF }
-anim :hover { scale: 1.03; ease: spring 200ms }
+when :hover { scale: 1.03; ease: spring 200ms }
 }
 }
 
