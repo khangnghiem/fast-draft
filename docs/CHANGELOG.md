@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.198 — Vision Pillars + Site Refresh
+- **DOCS**: Defined 4 vision pillars in `REQUIREMENTS.md` and `README.md`: Design as Code, AI-Native Format, Living Components, Prompt as You Draw
+- **SITE**: Replaced 6 generic feature cards with 4 pillar-aligned cards on `fast-draft.com`
+- **SITE**: Fixed stale `note` → `spec` reference and `~5×` → `~6×` token ratio in Two Modes section
+- **REPO**: Merged 3 PRs (#697 XSS fix, #698 ARIA labels, #684 import examples); closed 7 stale/duplicate PRs
+
 ### v0.11.197 — Canvas UI Bug Fixes (R3.3, R3.7)
 - **FIX (R3.3)**: Frame tool (F+drag) now creates `NodeKind::Frame` instead of `NodeKind::Rect` — added `frame_mode` field to `RectTool` that switches between Frame/Rect creation with appropriate defaults (clip, layout, fill)
 - **FIX (R3.7)**: Resize handle hit radius increased from 8→12px (mouse), 12→14px (pen) and visual size from 7→8px (mouse), 9→10px (pen) — reduces accidental shape creation when intending to resize
