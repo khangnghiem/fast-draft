@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.201 — Fix Code Toggle Cannot Restore (R6.6)
+- **FIX (R6.6)**: Code panel can now be reliably toggled back after collapsing — root cause 1: `transitionend` event never fired when CSS Grid transitioned between incompatible units (`0px` ↔ `3fr`), so `window.dispatchEvent(new Event('resize'))` never ran and the canvas didn't resize to the restored layout; fix: added 300ms fallback `setTimeout` that dispatches resize if `transitionend` doesn't fire (cleans up properly if it does)
+- **FIX (R6.6)**: Code-restore strip hit area enlarged — widened from 8px to 12px visible width with a 24px `::after` pseudo-element hit area for reliable clicking; `z-index` increased from 18 to 20 to ensure the strip is not obscured by canvas overlays; hover glow enhanced with `box-shadow`
+- **SITE**: Changes in `site/playground.js` (`toggleCodePanel` fallback), `site/style.css` (`.panel-restore-strip.code-restore` hit area)
+
 ### v0.11.200 — Keyword Improvements: Style Extends, Alias Pruning, Emission Unification (R1.22, R4.16, R4.18)
 - **FEATURE (R1.22)**: Style inheritance — `extends: <parent>` inside `style` blocks; child style inherits all parent properties, child properties override; `apply_style_with_extends()` walks extends chain with max depth 8 cycle protection; works with `use:` resolution and edge styles
 - **FORMAT (R4.16)**: Pruned `rounded:` and `radius:` aliases — `corner:` is now the sole keyword for corner radius in both node and style property parsers; deprecated aliases silently ignored

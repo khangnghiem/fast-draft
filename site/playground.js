@@ -523,13 +523,21 @@ function toggleCodePanel() {
   const container = document.getElementById('playground-container');
   if (!container) return;
   container.classList.toggle('code-collapsed', codeCollapsed);
-  // Resize canvas when CSS grid transition finishes (not on arbitrary timeout)
+  // Resize canvas when CSS grid transition finishes.
+  // Fallback: if transitionend never fires (e.g., 0px↔3fr unit mismatch),
+  // force resize after the expected transition duration.
+  let handled = false;
   const onEnd = (e) => {
     if (e.propertyName !== 'grid-template-columns') return;
     container.removeEventListener('transitionend', onEnd);
+    handled = true;
     window.dispatchEvent(new Event('resize'));
   };
   container.addEventListener('transitionend', onEnd);
+  setTimeout(() => {
+    container.removeEventListener('transitionend', onEnd);
+    if (!handled) window.dispatchEvent(new Event('resize'));
+  }, 300);
 }
 
 /** Collapse code panel (idempotent — no-op if already collapsed) */
