@@ -508,8 +508,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     }
     #layers-panel.no-transition { transition: none; }
     #layers-panel.collapsed {
-      width: 0 !important;
-      border-right: none;
+      width: 40px !important;
       overflow: hidden;
     }
     #layers-panel::-webkit-scrollbar { width: 6px; }
@@ -1628,15 +1627,10 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     .panel-restore-strip:hover {
       background: var(--fd-accent-dim);
     }
-    .panel-restore-strip.layers-restore {
-      left: 0;
-      display: none;
-    }
     .panel-restore-strip.props-restore {
       right: 0;
       display: none;
     }
-    #layers-panel.collapsed ~ .layers-restore { display: block; }
     #props-panel.collapsed ~ .props-restore { display: block; }
     #loading {
       position: absolute;
@@ -3163,7 +3157,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div id="layers-panel"></div>
     <div class="panel-resize-handle layers-handle" id="layers-resize"></div>
     <div id="library-panel"></div>
-    <div class="panel-restore-strip layers-restore" id="layers-restore" title="Show layers panel"></div>
+
     <div class="panel-restore-strip props-restore" id="props-restore" title="Show properties panel"></div>
     <div id="minimap-container"><canvas id="minimap-canvas"></canvas><div id="minimap-zoom-controls"><button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-reset-btn" title="Reset zoom (click)">100%</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button></div></div>
     <!-- Floating Bottom Toolbar (Scroll UX) -->
