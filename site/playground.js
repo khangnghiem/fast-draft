@@ -4919,9 +4919,6 @@ async function initPlayground() {
       toggleCodePanel();
     });
 
-    // ── Code Restore Strip (thin clickable wall when collapsed) ──────
-    const codeRestore = document.getElementById('code-restore');
-    codeRestore?.addEventListener('click', () => toggleCodePanel());
 
     // ── Mobile Code Editor Toggle (#4) ───────────────────────────────
     const mobileCodeToggle = document.getElementById('mobile-code-toggle');
