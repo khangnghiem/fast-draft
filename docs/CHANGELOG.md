@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.202 — Prune Deprecated Backward-Compat Code (R4.16)
+- **REFACTOR (R4.16)**: Removed `ReadMode::Notes` enum variant — collapsed into `ReadMode::Spec`; `emit_notes_markdown()` wrapper function removed
+- **REFACTOR (R4.16)**: Removed dead `label:` property handler from parser — deprecated property now falls through to the standard unknown-property skip
+- **REFACTOR (R4.16)**: Removed `"─── Themes ───"` from parser `SECTION_SEPARATORS` — emitter outputs `style`, never `theme`
+- **LSP**: Removed `(legacy: theme)` and `(legacy: anim)` labels from code completion items; renamed `extract_note_file_path` → `extract_spec_file_path`
+- **CORE**: Cleaned stale "(backward compat)" doc comments across `model.rs`, `tools.rs`, `selection.rs`
+- **NOTE**: Parser backward-compat for `note`/`theme`/`anim` keywords intentionally kept — old `.fd` files still need these
+
 ### v0.11.201 — Fix Code Toggle Cannot Restore (R6.6)
 - **FIX (R6.6)**: Code panel can now be reliably toggled back after collapsing — root cause 1: `transitionend` event never fired when CSS Grid transitioned between incompatible units (`0px` ↔ `3fr`), so `window.dispatchEvent(new Event('resize'))` never ran and the canvas didn't resize to the restored layout; fix: added 300ms fallback `setTimeout` that dispatches resize if `transitionend` doesn't fire (cleans up properly if it does)
 - **FIX (R6.6)**: Code-restore strip hit area enlarged — widened from 8px to 12px visible width with a 24px `::after` pseudo-element hit area for reliable clicking; `z-index` increased from 18 to 20 to ensure the strip is not obscured by canvas overlays; hover glow enhanced with `box-shadow`

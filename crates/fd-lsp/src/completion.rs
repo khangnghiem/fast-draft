@@ -92,7 +92,7 @@ fn top_level_completions() -> Vec<CompletionItem> {
         ),
         (
             "style",
-            "Reusable style definition (legacy: theme)",
+            "Reusable style definition",
             "style ${1:name} {\n  fill: #${2:6C5CE7}\n}",
         ),
         (
@@ -211,7 +211,7 @@ fn node_body_completions() -> Vec<CompletionItem> {
     items.push(CompletionItem {
         label: "when".to_string(),
         kind: Some(CompletionItemKind::SNIPPET),
-        detail: Some("Animation block (legacy: anim)".to_string()),
+        detail: Some("Animation block".to_string()),
         insert_text: Some("when :${1|hover,press,enter|} {\n  $0\n}".to_string()),
         insert_text_format: Some(InsertTextFormat::SNIPPET),
         ..Default::default()

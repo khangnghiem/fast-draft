@@ -146,8 +146,8 @@ impl LanguageServer for FdLanguageServer {
             None => return Ok(None),
         };
 
-        // Detect note file path: note "./path.md" or @include("path.md")
-        let file_path = extract_note_file_path(line);
+        // Detect spec/note file path: spec "./path.md" or @include("path.md")
+        let file_path = extract_spec_file_path(line);
         let file_path = match file_path {
             Some(p) => p,
             None => return Ok(None),
@@ -195,9 +195,9 @@ impl LanguageServer for FdLanguageServer {
     }
 }
 
-/// Extract a file path from a note/spec line.
-/// Matches: `note "./path.md"` or `@include("path.md")`.
-fn extract_note_file_path(line: &str) -> Option<String> {
+/// Extract a file path from a spec/note line.
+/// Matches: `note "./path.md"`, `spec "./path.md"`, or `@include("path.md")`.
+fn extract_spec_file_path(line: &str) -> Option<String> {
     let trimmed = line.trim();
     // Match: note "path.md" or spec "path.md"
     if let Some(rest) = trimmed
@@ -260,7 +260,7 @@ async fn main() {
             "structure" => fd_core::ReadMode::Structure,
             "layout" => fd_core::ReadMode::Layout,
             "design" => fd_core::ReadMode::Design,
-            "notes" | "spec" => fd_core::ReadMode::Notes,
+            "notes" | "spec" => fd_core::ReadMode::Spec,
             "visual" => fd_core::ReadMode::Visual,
             "when" => fd_core::ReadMode::When,
             "edges" => fd_core::ReadMode::Edges,

@@ -311,7 +311,7 @@ impl Spec {
             && self.description.is_none()
     }
 
-    /// Build a `Spec` from a raw description string (backward compat).
+    /// Build a `Spec` from a raw description string.
     pub fn from_description(desc: String) -> Self {
         Self {
             description: Some(desc),
@@ -341,7 +341,6 @@ impl Spec {
     }
 
     /// Check if the display text contains a substring.
-    /// Convenience for backward-compatible test assertions.
     pub fn contains(&self, needle: &str) -> bool {
         self.display_text().contains(needle)
     }
@@ -683,7 +682,7 @@ pub struct SceneNode {
     /// Animations attached to this node.
     pub animations: SmallVec<[AnimKeyframe; 2]>,
 
-    /// Structured spec content (`spec { ... }` block, also accepts legacy `note`).
+    /// Structured spec content (`spec { ... }` block).
     pub spec: Option<Spec>,
 
     /// Line comments (`# text`) that appeared before this node in the source.

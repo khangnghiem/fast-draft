@@ -9,7 +9,7 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 impl FdCanvas {
     /// Get the currently selected node ID, or empty string if none.
-    /// Returns the first selected node for backward compatibility.
+    /// Returns the first selected node.
     pub fn get_selected_id(&self) -> String {
         self.select_tool
             .first_selected()

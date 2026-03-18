@@ -1057,8 +1057,6 @@ pub enum ReadMode {
     Design,
     /// Structure + `spec {}` blocks + annotations.
     Spec,
-    /// Backward-compatible alias for `Spec`.
-    Notes,
     /// Layout + Design + When combined — the full visual story.
     Visual,
     /// Structure + `when :trigger { ... }` animation blocks only.
@@ -1076,7 +1074,7 @@ pub enum ReadMode {
 /// - `Structure`: node kind + `@id` + children. No styles, dims, anims, specs.
 /// - `Layout`: structure + `w:`/`h:` + `layout:` + constraints (`->`).
 /// - `Design`: structure + styles + `fill:`/`stroke:`/`font:`/`corner:`/`use:`.
-/// - `Spec` (or `Notes`): structure + `spec {}` blocks.
+/// - `Spec`: structure + `spec {}` blocks.
 /// - `Visual`: layout + design + when combined.
 /// - `When`: structure + `when :trigger { ... }` blocks.
 /// - `Edges`: structure + `edge @id { ... }` blocks.
@@ -1085,12 +1083,6 @@ pub fn emit_filtered(graph: &SceneGraph, mode: ReadMode) -> String {
     if mode == ReadMode::Full {
         return emit_document(graph);
     }
-    // Normalize Notes alias to Spec
-    let mode = if mode == ReadMode::Notes {
-        ReadMode::Spec
-    } else {
-        mode
-    };
     if mode == ReadMode::Diff {
         // Diff mode requires a snapshot — use emit_diff() directly
         return String::from("# Use emit_diff(graph, &snapshot) for Diff mode\n");
@@ -1572,12 +1564,6 @@ pub fn emit_diff(graph: &SceneGraph, prev: &GraphSnapshot) -> String {
     }
 
     out
-}
-
-/// Backward-compatible alias for `emit_spec_markdown`.
-#[must_use]
-pub fn emit_notes_markdown(graph: &SceneGraph, title: &str) -> String {
-    emit_spec_markdown(graph, title)
 }
 
 #[cfg(test)]

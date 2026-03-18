@@ -240,7 +240,6 @@ fn parse_import_line(input: &mut &str) -> ModalResult<Import> {
 /// These are skipped during parsing to avoid duplication on round-trip.
 const SECTION_SEPARATORS: &[&str] = &[
     "─── Styles ───",
-    "─── Themes ───",
     "─── Layout ───",
     "─── Constraints ───",
     "─── Flows ───",
@@ -280,7 +279,7 @@ fn collect_leading_comments(input: &mut &str) -> Vec<String> {
     comments
 }
 
-/// Skip whitespace and comments without collecting them (used in style/anim blocks
+/// Skip whitespace and comments without collecting them (used in style/animation blocks
 /// where comments are rare and not worth attaching to a model element).
 fn skip_ws_and_comments(input: &mut &str) {
     let _ = collect_leading_comments(input);
@@ -344,12 +343,12 @@ fn skip_px_suffix(input: &mut &str) {
 }
 
 /// Parse a `spec { ... }` block or inline `spec "description"` into a typed `Spec`.
-/// Also accepts the legacy `note` keyword for backward compatibility.
+/// Also accepts the `note` keyword.
 ///
 /// Lines starting with `role:`, `trait:`, or `intent:` are extracted into
 /// typed fields. Everything else is collected as free-form markdown description.
 fn parse_spec_block(input: &mut &str) -> ModalResult<Spec> {
-    // Accept both `spec` (primary) and `note` (legacy)
+    // Accept both `spec` and `note`
     let _ = alt(("spec", "note")).parse_next(input)?;
     skip_space(input);
 
@@ -1083,18 +1082,7 @@ fn parse_node_property(
                 });
             }
         }
-        "label" => {
-            // Deprecated: label is now a text child node.
-            // Skip the value to maintain backwards compatibility with old .fd files.
-            if input.starts_with('"') {
-                let _ = parse_quoted_string.parse_next(input)?;
-            } else {
-                let _ = take_till::<_, _, ContextError>(0.., |c: char| {
-                    c == '\n' || c == ';' || c == '}'
-                })
-                .parse_next(input);
-            }
-        }
+        // label: is deprecated — falls through to unknown-property skip below
         "use" | "apply" => {
             use_styles.push(parse_identifier.map(NodeId::intern).parse_next(input)?);
         }
