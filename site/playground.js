@@ -2641,12 +2641,14 @@ function setupSpecsResize() {
 // ─── Split Resize (code ↔ canvas) ────────────────────────────────────────
 
 /** Set up drag-to-resize for the code/canvas split. */
+let lastSplitResizeTime = 0; // timestamp of last resize drag end
 function setupSplitResize(container, resizeCanvas) {
   const handle = document.getElementById('split-resize');
   if (!handle || !container) return;
 
   const MIN_FRAC = 0.15;
   const MAX_FRAC = 0.75;
+  const COLLAPSE_PX = 100; // drag below this → auto-collapse
 
   let dragging = false;
   let containerRect = null;
@@ -2663,16 +2665,30 @@ function setupSplitResize(container, resizeCanvas) {
   handle.addEventListener('pointermove', (e) => {
     if (!dragging || !containerRect) return;
     const x = e.clientX - containerRect.left;
-    const frac = Math.max(MIN_FRAC, Math.min(MAX_FRAC, x / containerRect.width));
-    container.style.setProperty('--editor-width', `${Math.round(containerRect.width * frac)}px`);
+    // If dragged below collapse threshold, snap to minimum
+    if (x < COLLAPSE_PX) {
+      container.style.setProperty('--editor-width', `${COLLAPSE_PX}px`);
+    } else {
+      const frac = Math.max(MIN_FRAC, Math.min(MAX_FRAC, x / containerRect.width));
+      container.style.setProperty('--editor-width', `${Math.round(containerRect.width * frac)}px`);
+    }
     resizeCanvas();
     renderCanvas();
   });
 
-  const endDrag = () => {
+  const endDrag = (e) => {
     if (!dragging) return;
     dragging = false;
     handle.classList.remove('active');
+    lastSplitResizeTime = Date.now();
+    // Auto-collapse if released below threshold
+    if (containerRect) {
+      const x = (e?.clientX ?? 0) - containerRect.left;
+      if (x < COLLAPSE_PX && !codeCollapsed) {
+        container.style.removeProperty('--editor-width');
+        toggleCodePanel();
+      }
+    }
   };
   handle.addEventListener('pointerup', endDrag);
   handle.addEventListener('pointercancel', endDrag);
@@ -4880,6 +4896,8 @@ async function initPlayground() {
     editorHeader?.addEventListener('click', (e) => {
       // Don't toggle if clicking the mobile close button
       if (e.target.id === 'mobile-code-close') return;
+      // Ignore clicks right after a resize drag (prevents accidental toggle)
+      if (Date.now() - lastSplitResizeTime < 300) return;
       toggleCodePanel();
     });
 
