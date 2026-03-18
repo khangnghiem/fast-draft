@@ -1044,7 +1044,7 @@ pub enum GraphMutation {
     },
     SetSpec {
         id: NodeId,
-        spec: Option<String>,
+        spec: Option<Spec>,
     },
     /// Duplicate a node (clone with offset). Used by Alt+drag.
     DuplicateNode {

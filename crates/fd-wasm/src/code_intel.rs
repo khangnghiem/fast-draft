@@ -444,7 +444,7 @@ fn collect_node_tree(graph: &fd_core::SceneGraph, idx: fd_core::NodeIndex) -> se
         obj["children"] = serde_json::Value::Array(children);
     }
     if let Some(spec) = &node.spec {
-        obj["spec"] = serde_json::Value::String(spec.clone());
+        obj["spec"] = serde_json::Value::String(spec.display_text());
     }
     obj
 }

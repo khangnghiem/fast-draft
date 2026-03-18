@@ -42,7 +42,8 @@ pub fn emit_document(graph: &SceneGraph) -> String {
     let mut styles: Vec<_> = graph.styles.iter().collect();
     styles.sort_by_key(|(id, _)| id.as_str().to_string());
     for (name, style) in &styles {
-        emit_style_block(&mut out, name, style, 0);
+        let spec = graph.style_specs.get(name);
+        emit_style_block(&mut out, name, style, spec, 0);
         out.push('\n');
     }
 
@@ -75,6 +76,19 @@ pub fn emit_document(graph: &SceneGraph) -> String {
         }
     }
 
+    // Emit when templates (before edges)
+    if !graph.when_templates.is_empty() {
+        if use_separators {
+            out.push_str("# ─── When Templates ───\n\n");
+        }
+        let mut templates: Vec<_> = graph.when_templates.iter().collect();
+        templates.sort_by_key(|(id, _)| id.as_str().to_string());
+        for (name, template) in &templates {
+            emit_when_template(&mut out, name, template, 0);
+            out.push('\n');
+        }
+    }
+
     // Emit edges
     if use_separators && has_edges {
         if has_constraints {
@@ -95,9 +109,20 @@ fn indent(out: &mut String, depth: usize) {
     }
 }
 
-fn emit_style_block(out: &mut String, name: &NodeId, style: &Properties, depth: usize) {
+fn emit_style_block(
+    out: &mut String,
+    name: &NodeId,
+    style: &Properties,
+    spec: Option<&Spec>,
+    depth: usize,
+) {
     indent(out, depth);
     writeln!(out, "style {} {{", name.as_str()).unwrap();
+
+    // Emit spec keywords first (if present)
+    if let Some(spec) = spec {
+        emit_spec(out, &Some(spec.clone()), depth);
+    }
 
     if let Some(ref fill) = style.fill {
         emit_paint_prop(out, "fill", fill, depth + 1);
@@ -112,6 +137,18 @@ fn emit_style_block(out: &mut String, name: &NodeId, style: &Properties, depth: 
     if let Some(opacity) = style.opacity {
         indent(out, depth + 1);
         writeln!(out, "opacity: {}", format_num(opacity)).unwrap();
+    }
+    if let Some(visible) = style.visible {
+        indent(out, depth + 1);
+        writeln!(out, "visible: {}", if visible { "true" } else { "false" }).unwrap();
+    }
+    if let Some(ref cursor) = style.cursor {
+        indent(out, depth + 1);
+        writeln!(out, "cursor: {cursor}").unwrap();
+    }
+    if let Some(rotate) = style.rotate {
+        indent(out, depth + 1);
+        writeln!(out, "rotate: {}", format_num(rotate)).unwrap();
     }
     if let Some(ref shadow) = style.shadow {
         indent(out, depth + 1);
@@ -373,6 +410,18 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         indent(out, depth + 1);
         writeln!(out, "opacity: {}", format_num(opacity)).unwrap();
     }
+    if let Some(visible) = node.props.visible {
+        indent(out, depth + 1);
+        writeln!(out, "visible: {}", if visible { "true" } else { "false" }).unwrap();
+    }
+    if let Some(ref cursor) = node.props.cursor {
+        indent(out, depth + 1);
+        writeln!(out, "cursor: {cursor}").unwrap();
+    }
+    if let Some(rotate) = node.props.rotate {
+        indent(out, depth + 1);
+        writeln!(out, "rotate: {}", format_num(rotate)).unwrap();
+    }
     if let Some(ref shadow) = node.props.shadow {
         indent(out, depth + 1);
         writeln!(
@@ -448,27 +497,54 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
     out.push_str("}\n");
 }
 
-fn emit_spec(out: &mut String, spec: &Option<String>, depth: usize) {
-    let content = match spec {
+fn emit_spec(out: &mut String, spec: &Option<Spec>, depth: usize) {
+    let spec = match spec {
         Some(s) if !s.is_empty() => s,
         _ => return,
     };
 
-    // Single-line note → inline shorthand: `note "text"`
-    if !content.contains('\n') {
+    let has_keywords = spec.role.is_some() || !spec.traits.is_empty() || spec.intent.is_some();
+    let is_desc_only = !has_keywords && spec.description.is_some();
+    let desc = spec.description.as_deref().unwrap_or("");
+
+    // Single-line description with no typed keywords → inline shorthand
+    if is_desc_only && !desc.contains('\n') {
         indent(out, depth);
-        writeln!(out, "spec \"{content}\"").unwrap();
+        writeln!(out, "spec \"{desc}\"").unwrap();
         return;
     }
 
-    // Multiline → block form: `spec { ... }`
+    // Block form: spec { ... }
     indent(out, depth);
     out.push_str("spec {\n");
-    for line in content.lines() {
+
+    // Typed keyword fields first
+    if let Some(ref role) = spec.role {
+        indent(out, depth + 1);
+        writeln!(out, "role: \"{role}\"").unwrap();
+    }
+    if !spec.traits.is_empty() {
+        indent(out, depth + 1);
+        writeln!(out, "trait: \"{}\"", spec.traits.join(", ")).unwrap();
+    }
+    if let Some(ref intent) = spec.intent {
+        indent(out, depth + 1);
+        writeln!(out, "intent: \"{intent}\"").unwrap();
+    }
+
+    // Blank line separator between keywords and markdown
+    if has_keywords && !desc.is_empty() {
+        indent(out, depth + 1);
+        out.push('\n');
+    }
+
+    // Free markdown description
+    for line in desc.lines() {
         indent(out, depth + 1);
         out.push_str(line);
         out.push('\n');
     }
+
     indent(out, depth);
     out.push_str("}\n");
 }
@@ -641,6 +717,46 @@ fn emit_anim(out: &mut String, anim: &AnimKeyframe, depth: usize) {
         indent(out, depth + 1);
         writeln!(out, "delay: {delay}ms").unwrap();
     }
+
+    if let Some(ref template_name) = anim.use_template {
+        indent(out, depth + 1);
+        writeln!(out, "use: {}", template_name.as_str()).unwrap();
+    }
+
+    indent(out, depth);
+    out.push_str("}\n");
+}
+
+fn emit_when_template(out: &mut String, name: &NodeId, template: &WhenTemplate, depth: usize) {
+    indent(out, depth);
+    writeln!(out, "when {} {{", name.as_str()).unwrap();
+
+    if let Some(ref fill) = template.properties.fill {
+        emit_paint_prop(out, "fill", fill, depth + 1);
+    }
+    if let Some(opacity) = template.properties.opacity {
+        indent(out, depth + 1);
+        writeln!(out, "opacity: {}", format_num(opacity)).unwrap();
+    }
+    if let Some(scale) = template.properties.scale {
+        indent(out, depth + 1);
+        writeln!(out, "scale: {}", format_num(scale)).unwrap();
+    }
+    if let Some(rotate) = template.properties.rotate {
+        indent(out, depth + 1);
+        writeln!(out, "rotate: {}", format_num(rotate)).unwrap();
+    }
+
+    let ease_name = match &template.easing {
+        Easing::Linear => "linear",
+        Easing::EaseIn => "ease_in",
+        Easing::EaseOut => "ease_out",
+        Easing::EaseInOut => "ease_in_out",
+        Easing::Spring => "spring",
+        Easing::CubicBezier(_, _, _, _) => "cubic",
+    };
+    indent(out, depth + 1);
+    writeln!(out, "ease: {ease_name} {}ms", template.duration_ms).unwrap();
 
     indent(out, depth);
     out.push_str("}\n");
@@ -984,7 +1100,8 @@ pub fn emit_filtered(graph: &SceneGraph, mode: ReadMode) -> String {
         let mut styles: Vec<_> = graph.styles.iter().collect();
         styles.sort_by_key(|(id, _)| id.as_str().to_string());
         for (name, style) in &styles {
-            emit_style_block(&mut out, name, style, 0);
+            let spec = graph.style_specs.get(name);
+            emit_style_block(&mut out, name, style, spec, 0);
             out.push('\n');
         }
     }
@@ -1233,7 +1350,8 @@ pub fn emit_spec_markdown(graph: &SceneGraph, title: &str) -> String {
             out.push('\n');
             // Emit edge spec as indented markdown
             if let Some(spec) = &edge.spec {
-                for line in spec.lines() {
+                let text = spec.display_text();
+                for line in text.lines() {
                     writeln!(out, "  {line}").unwrap();
                 }
                 out.push('\n');
@@ -1271,9 +1389,9 @@ fn emit_spec_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, heading_
     };
     writeln!(out, "{hashes} @{} `{kind_label}`\n", node.id.as_str()).unwrap();
 
-    // Spec content — output as-is (it's already markdown)
+    // Spec content — output display text (typed fields + description)
     if let Some(spec) = &node.spec {
-        out.push_str(spec);
+        out.push_str(&spec.display_text());
         out.push_str("\n\n");
     }
 
@@ -1305,6 +1423,9 @@ fn has_inline_styles(style: &Properties) -> bool {
         || style.text_align.is_some()
         || style.text_valign.is_some()
         || style.scale.is_some()
+        || style.visible.is_some()
+        || style.cursor.is_some()
+        || style.rotate.is_some()
 }
 
 /// Format a float without trailing zeros for compact output.
@@ -1312,7 +1433,7 @@ pub(crate) fn format_num(n: f32) -> String {
     if n == n.floor() {
         format!("{}", n as i32)
     } else {
-        format!("{n:.1}")
+        format!("{n:.3}")
             .trim_end_matches('0')
             .trim_end_matches('.')
             .to_string()

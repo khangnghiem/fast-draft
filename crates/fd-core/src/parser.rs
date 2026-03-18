@@ -42,10 +42,13 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
             graph.imports.push(import);
             pending_comments.clear();
         } else if rest.starts_with("style ") || rest.starts_with("theme ") {
-            let (name, style) = parse_style_block
+            let (name, style, spec) = parse_style_block
                 .parse_next(&mut rest)
                 .map_err(|e| format!("line {line}: style/theme error — expected `style name {{ props }}`, got `{ctx}…`: {e}"))?;
             graph.define_style(name, style);
+            if let Some(spec) = spec {
+                graph.style_specs.insert(name, spec);
+            }
             pending_comments.clear();
         } else if rest.starts_with("spec ")
             || rest.starts_with("spec{")
@@ -104,6 +107,13 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
                 graph.id_index.insert(text_id, idx);
             }
             graph.edges.push(edge);
+            pending_comments.clear();
+        } else if rest.starts_with("when ") && !rest[5..].trim_start().starts_with(':') {
+            // Top-level `when name { }` template (not `when :trigger`)
+            let (name, template) = parse_when_template
+                .parse_next(&mut rest)
+                .map_err(|e| format!("line {line}: when template error — expected `when name {{ props }}`, got `{ctx}…`: {e}"))?;
+            graph.when_templates.insert(name, template);
             pending_comments.clear();
         } else if starts_with_node_keyword(rest) {
             let mut node_data = parse_node.parse_next(&mut rest).map_err(|e| {
@@ -172,7 +182,7 @@ struct ParsedNode {
     use_styles: Vec<NodeId>,
     constraints: Vec<Constraint>,
     animations: Vec<AnimKeyframe>,
-    spec: Option<String>,
+    spec: Option<Spec>,
     /// Comments that appeared before this node's opening `{` in the source.
     comments: Vec<String>,
     children: Vec<ParsedNode>,
@@ -330,9 +340,12 @@ fn skip_px_suffix(input: &mut &str) {
     }
 }
 
-/// Parse a `spec { ... }` block or inline `spec "description"` into raw markdown.
+/// Parse a `spec { ... }` block or inline `spec "description"` into a typed `Spec`.
 /// Also accepts the legacy `note` keyword for backward compatibility.
-fn parse_spec_block(input: &mut &str) -> ModalResult<String> {
+///
+/// Lines starting with `role:`, `trait:`, or `intent:` are extracted into
+/// typed fields. Everything else is collected as free-form markdown description.
+fn parse_spec_block(input: &mut &str) -> ModalResult<Spec> {
     // Accept both `spec` (primary) and `note` (legacy)
     let _ = alt(("spec", "note")).parse_next(input)?;
     skip_space(input);
@@ -343,7 +356,7 @@ fn parse_spec_block(input: &mut &str) -> ModalResult<String> {
             .map(|s| s.to_string())
             .parse_next(input)?;
         skip_opt_separator(input);
-        return Ok(desc);
+        return Ok(Spec::from_description(desc));
     }
 
     // Block form: `spec { ... }` — capture raw content with brace-depth counting
@@ -369,7 +382,60 @@ fn parse_spec_block(input: &mut &str) -> ModalResult<String> {
 
     // Trim leading/trailing whitespace but preserve internal formatting
     let trimmed = dedent_spec_content(raw);
-    Ok(trimmed)
+
+    // Extract typed keywords from the dedented content
+    Ok(parse_spec_fields(&trimmed))
+}
+
+/// Extract typed spec fields from dedented block content.
+///
+/// Lines matching known keywords (`role:`, `trait:`, `intent:`) are parsed
+/// into `Spec` fields. Everything else becomes the free markdown `description`.
+fn parse_spec_fields(content: &str) -> Spec {
+    let mut spec = Spec::default();
+    let mut desc_lines: Vec<&str> = Vec::new();
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if let Some(value) = trimmed.strip_prefix("role:") {
+            let value = value.trim().trim_matches('"').trim();
+            if !value.is_empty() {
+                spec.role = Some(value.to_string());
+            }
+        } else if let Some(value) = trimmed.strip_prefix("trait:") {
+            let value = value.trim().trim_matches('"').trim();
+            for part in value.split(',') {
+                let part = part.trim();
+                if !part.is_empty() {
+                    spec.traits.push(part.to_string());
+                }
+            }
+        } else if let Some(value) = trimmed.strip_prefix("intent:") {
+            let value = value.trim().trim_matches('"').trim();
+            if !value.is_empty() {
+                spec.intent = Some(value.to_string());
+            }
+        } else {
+            // Strip surrounding quotes from lines like `"some text"` for backward
+            // compatibility with old-format spec blocks
+            let unquoted =
+                if trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() > 1 {
+                    &trimmed[1..trimmed.len() - 1]
+                } else {
+                    line
+                };
+            desc_lines.push(unquoted);
+        }
+    }
+
+    // Collect remaining lines as markdown description
+    let desc = desc_lines.join("\n");
+    let desc = desc.trim();
+    if !desc.is_empty() {
+        spec.description = Some(desc.to_string());
+    }
+
+    spec
 }
 
 /// Dedent spec block content: remove the common leading whitespace from all lines.
@@ -399,9 +465,32 @@ fn dedent_spec_content(raw: &str) -> String {
         .join("\n")
 }
 
+/// Merge two `Spec` values. Later values override earlier ones for single-value
+/// fields (`role`, `intent`). Vec fields (`traits`) are merged (union).
+/// Descriptions are concatenated with a blank line separator.
+fn merge_specs(mut base: Spec, other: Spec) -> Spec {
+    if other.role.is_some() {
+        base.role = other.role;
+    }
+    base.traits.extend(other.traits);
+    if other.intent.is_some() {
+        base.intent = other.intent;
+    }
+    match (&base.description, &other.description) {
+        (Some(existing), Some(new)) => {
+            base.description = Some(format!("{existing}\n\n{new}"));
+        }
+        (None, Some(_)) => {
+            base.description = other.description;
+        }
+        _ => {}
+    }
+    base
+}
+
 // ─── Style block parser ─────────────────────────────────────────────────
 
-fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Properties)> {
+fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Properties, Option<Spec>)> {
     let _ = alt(("theme", "style")).parse_next(input)?;
     let _ = space1.parse_next(input)?;
     let name = parse_identifier.map(NodeId::intern).parse_next(input)?;
@@ -409,15 +498,37 @@ fn parse_style_block(input: &mut &str) -> ModalResult<(NodeId, Properties)> {
     let _ = '{'.parse_next(input)?;
 
     let mut style = Properties::default();
+    let mut spec: Option<Spec> = None;
     skip_ws_and_comments(input);
 
     while !input.starts_with('}') {
+        // Try to parse spec block first
+        let saved = *input;
+        if input.starts_with("spec") || input.starts_with("note") {
+            if let Ok(parsed_spec) = parse_spec_block(input) {
+                spec = Some(merge_specs(spec.unwrap_or_default(), parsed_spec));
+                skip_ws_and_comments(input);
+                continue;
+            }
+            *input = saved;
+        }
+        // Try role:/trait:/intent: as top-level spec keywords in style blocks
+        if input.starts_with("role:") || input.starts_with("trait:") || input.starts_with("intent:")
+        {
+            let line_end = input.find('\n').unwrap_or(input.len());
+            let line = &input[..line_end];
+            let partial_spec = parse_spec_fields(line);
+            spec = Some(merge_specs(spec.unwrap_or_default(), partial_spec));
+            *input = &input[line_end..];
+            skip_ws_and_comments(input);
+            continue;
+        }
         parse_style_property(input, &mut style)?;
         skip_ws_and_comments(input);
     }
 
     let _ = '}'.parse_next(input)?;
-    Ok((name, style))
+    Ok((name, style, spec))
 }
 
 fn parse_style_property(input: &mut &str, style: &mut Properties) -> ModalResult<()> {
@@ -439,6 +550,20 @@ fn parse_style_property(input: &mut &str, style: &mut Properties) -> ModalResult
         }
         "opacity" => {
             style.opacity = Some(parse_number.parse_next(input)?);
+        }
+        "visible" => {
+            let val = parse_identifier.parse_next(input)?;
+            style.visible = Some(val == "true");
+        }
+        "cursor" => {
+            let val = parse_quoted_string
+                .map(|s| s.to_string())
+                .parse_next(input)
+                .or_else(|_| parse_identifier.map(|s| s.to_string()).parse_next(input))?;
+            style.cursor = Some(val);
+        }
+        "rotate" => {
+            style.rotate = Some(parse_number.parse_next(input)?);
         }
         "align" | "text_align" => {
             parse_align_value(input, style)?;
@@ -559,7 +684,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let mut use_styles = Vec::new();
     let mut constraints = Vec::new();
     let mut animations = Vec::new();
-    let mut spec: Option<String> = None;
+    let mut spec: Option<Spec> = None;
     let mut children = Vec::new();
     let mut width: Option<f32> = None;
     let mut height: Option<f32> = None;
@@ -579,11 +704,11 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
             || input.starts_with("note ")
             || input.starts_with("note{")
         {
-            let content = parse_spec_block.parse_next(input)?;
-            // Multiple spec blocks: append with newline separator
+            let parsed_spec = parse_spec_block.parse_next(input)?;
+            // Multiple spec blocks: merge fields
             spec = Some(match spec {
-                Some(existing) => format!("{existing}\n\n{content}"),
-                None => content,
+                Some(existing) => merge_specs(existing, parsed_spec),
+                None => parsed_spec,
             });
         } else if starts_with_child_node(input) && !matches!(kind_str, "text" | "path") {
             let mut child = parse_node.parse_next(input)?;
@@ -890,6 +1015,20 @@ fn parse_node_property(
         }
         "opacity" => {
             style.opacity = Some(parse_number.parse_next(input)?);
+        }
+        "visible" => {
+            let val = parse_identifier.parse_next(input)?;
+            style.visible = Some(val == "true");
+        }
+        "cursor" => {
+            let val = parse_quoted_string
+                .map(|s| s.to_string())
+                .parse_next(input)
+                .or_else(|_| parse_identifier.map(|s| s.to_string()).parse_next(input))?;
+            style.cursor = Some(val);
+        }
+        "rotate" => {
+            style.rotate = Some(parse_number.parse_next(input)?);
         }
         "align" | "text_align" => {
             parse_align_value(input, style)?;
@@ -1208,6 +1347,7 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
     let mut duration_ms = default_duration;
     let mut easing = Easing::EaseInOut;
     let mut delay_ms: Option<u32> = None;
+    let mut use_template: Option<NodeId> = None;
 
     skip_ws_and_comments(input);
 
@@ -1255,6 +1395,10 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
                     *input = &input[2..];
                 }
             }
+            "use" => {
+                let name = parse_identifier.map(NodeId::intern).parse_next(input)?;
+                use_template = Some(name);
+            }
             _ => {
                 let _ = take_till::<_, _, ContextError>(0.., |c: char| {
                     c == '\n' || c == ';' || c == '}'
@@ -1275,7 +1419,92 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
         easing,
         properties: props,
         delay_ms,
+        use_template,
     })
+}
+
+/// Parse a top-level `when name { ... }` template (no trigger colon).
+/// These are reusable animation definitions referenced via `use:` inside
+/// `when :trigger { }` blocks.
+fn parse_when_template(input: &mut &str) -> ModalResult<(NodeId, WhenTemplate)> {
+    let _ = "when".parse_next(input)?;
+    let _ = space1.parse_next(input)?;
+    // Name without colon (to distinguish from `when :hover`)
+    let name = parse_identifier.map(NodeId::intern).parse_next(input)?;
+    skip_space(input);
+    let _ = '{'.parse_next(input)?;
+
+    let mut props = AnimProperties::default();
+    let mut duration_ms = 300u32;
+    let mut easing = Easing::EaseInOut;
+
+    skip_ws_and_comments(input);
+
+    while !input.starts_with('}') {
+        let prop = parse_identifier.parse_next(input)?;
+        skip_space(input);
+        let _ = ':'.parse_next(input)?;
+        skip_space(input);
+
+        match prop {
+            "fill" => {
+                props.fill = Some(Paint::Solid(parse_hex_color.parse_next(input)?));
+            }
+            "opacity" => {
+                props.opacity = Some(parse_number.parse_next(input)?);
+            }
+            "scale" => {
+                props.scale = Some(parse_number.parse_next(input)?);
+            }
+            "rotate" => {
+                props.rotate = Some(parse_number.parse_next(input)?);
+            }
+            "ease" => {
+                let ease_name = parse_identifier.parse_next(input)?;
+                easing = match ease_name {
+                    "linear" => Easing::Linear,
+                    "ease_in" | "easeIn" => Easing::EaseIn,
+                    "ease_out" | "easeOut" => Easing::EaseOut,
+                    "ease_in_out" | "easeInOut" => Easing::EaseInOut,
+                    "spring" => Easing::Spring,
+                    _ => Easing::EaseInOut,
+                };
+                skip_space(input);
+                if let Ok(n) = parse_number.parse_next(input) {
+                    duration_ms = n as u32;
+                    if input.starts_with("ms") {
+                        *input = &input[2..];
+                    }
+                }
+            }
+            "stroke" => {
+                // stroke: #color width — skip for when templates
+                let _ = parse_hex_color.parse_next(input)?;
+                skip_space(input);
+                let _ = parse_number.parse_next(input);
+            }
+            _ => {
+                let _ = take_till::<_, _, ContextError>(0.., |c: char| {
+                    c == '\n' || c == ';' || c == '}'
+                })
+                .parse_next(input);
+            }
+        }
+
+        skip_opt_separator(input);
+        skip_ws_and_comments(input);
+    }
+
+    let _ = '}'.parse_next(input)?;
+
+    Ok((
+        name,
+        WhenTemplate {
+            duration_ms,
+            easing,
+            properties: props,
+        },
+    ))
 }
 
 // ─── Edge anchor parser ─────────────────────────────────────────────────
@@ -1380,7 +1609,7 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
     let mut use_styles = Vec::new();
     let mut arrow = ArrowKind::None;
     let mut curve = CurveKind::Straight;
-    let mut spec: Option<String> = None;
+    let mut spec: Option<Spec> = None;
     let mut animations = Vec::new();
     let mut flow = None;
     let mut label_offset = None;
@@ -1393,10 +1622,10 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
             || input.starts_with("note ")
             || input.starts_with("note{")
         {
-            let content = parse_spec_block.parse_next(input)?;
+            let parsed_spec = parse_spec_block.parse_next(input)?;
             spec = Some(match spec {
-                Some(existing) => format!("{existing}\n\n{content}"),
-                None => content,
+                Some(existing) => merge_specs(existing, parsed_spec),
+                None => parsed_spec,
             });
         } else if input.starts_with("when") || input.starts_with("anim") {
             animations.push(parse_anim_block.parse_next(input)?);

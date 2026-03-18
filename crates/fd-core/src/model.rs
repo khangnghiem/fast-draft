@@ -284,6 +284,91 @@ pub enum VPlace {
     Bottom,
 }
 
+// ─── Spec (WHY layer) ────────────────────────────────────────────────────
+
+/// Structured specification metadata for a node.
+///
+/// Describes the element "in real life" — its identity, personality, and
+/// purpose. All fields are optional. Parsed from `spec { ... }` blocks.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Spec {
+    /// Noun phrase: what the element IS (e.g. "checkout button").
+    pub role: Option<String>,
+    /// Adjective phrases: what the element is LIKE (e.g. ["bold", "urgent"]).
+    pub traits: Vec<String>,
+    /// Verb phrase: what the element DOES (e.g. "initiates payment flow").
+    pub intent: Option<String>,
+    /// Free-form markdown description.
+    pub description: Option<String>,
+}
+
+impl Spec {
+    /// Returns `true` if all fields are empty / `None`.
+    pub fn is_empty(&self) -> bool {
+        self.role.is_none()
+            && self.traits.is_empty()
+            && self.intent.is_none()
+            && self.description.is_none()
+    }
+
+    /// Build a `Spec` from a raw description string (backward compat).
+    pub fn from_description(desc: String) -> Self {
+        Self {
+            description: Some(desc),
+            ..Default::default()
+        }
+    }
+
+    /// Return the full display text (typed fields + description).
+    pub fn display_text(&self) -> String {
+        let mut lines = Vec::new();
+        if let Some(ref role) = self.role {
+            lines.push(format!("role: \"{role}\""));
+        }
+        if !self.traits.is_empty() {
+            lines.push(format!("trait: \"{}\"", self.traits.join(", ")));
+        }
+        if let Some(ref intent) = self.intent {
+            lines.push(format!("intent: \"{intent}\""));
+        }
+        if let Some(ref desc) = self.description {
+            if !lines.is_empty() {
+                lines.push(String::new());
+            }
+            lines.push(desc.clone());
+        }
+        lines.join("\n")
+    }
+
+    /// Check if the display text contains a substring.
+    /// Convenience for backward-compatible test assertions.
+    pub fn contains(&self, needle: &str) -> bool {
+        self.display_text().contains(needle)
+    }
+}
+
+/// Merge two `Spec` values — `other` overrides `base` for single fields,
+/// extends for collection fields (traits). Used by `resolve_spec`.
+pub fn merge_spec_values(mut base: Spec, other: Spec) -> Spec {
+    if other.role.is_some() {
+        base.role = other.role;
+    }
+    for t in other.traits {
+        if !base.traits.contains(&t) {
+            base.traits.push(t);
+        }
+    }
+    if other.intent.is_some() {
+        base.intent = other.intent;
+    }
+    if other.description.is_some() {
+        base.description = other.description;
+    }
+    base
+}
+
+// ─── Properties (WHAT layer) ─────────────────────────────────────────────
+
 /// A reusable style set that nodes can reference via `use: style_name`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Properties {
@@ -301,6 +386,13 @@ pub struct Properties {
 
     /// Scale factor applied during rendering (from animations).
     pub scale: Option<f32>,
+
+    /// Whether the element is visible on canvas (default: true).
+    pub visible: Option<bool>,
+    /// Cursor style on hover (e.g. "pointer", "grab").
+    pub cursor: Option<String>,
+    /// Static rotation in degrees.
+    pub rotate: Option<f32>,
 }
 
 // ─── Animation ───────────────────────────────────────────────────────────
@@ -335,6 +427,9 @@ pub struct AnimKeyframe {
     /// Optional post-revert cooldown (ms) before re-triggerable.
     /// `None` = no cooldown (default).
     pub delay_ms: Option<u32>,
+    /// Optional reference to a `when` template name.
+    /// Resolved at runtime to merge template properties.
+    pub use_template: Option<NodeId>,
 }
 
 /// Animatable property overrides.
@@ -345,6 +440,25 @@ pub struct AnimProperties {
     pub scale: Option<f32>,
     pub rotate: Option<f32>, // degrees
     pub translate: Option<(f32, f32)>,
+}
+
+/// A reusable animation template — `when name { duration easing props }`.
+/// Can be referenced via `use:` inside `when :trigger { }` blocks.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WhenTemplate {
+    pub duration_ms: u32,
+    pub easing: Easing,
+    pub properties: AnimProperties,
+}
+
+impl Default for WhenTemplate {
+    fn default() -> Self {
+        Self {
+            duration_ms: 300,
+            easing: Easing::EaseInOut,
+            properties: AnimProperties::default(),
+        }
+    }
 }
 
 // ─── Imports ─────────────────────────────────────────────────────────────
@@ -438,7 +552,7 @@ pub struct Edge {
     pub use_styles: SmallVec<[NodeId; 2]>,
     pub arrow: ArrowKind,
     pub curve: CurveKind,
-    pub spec: Option<String>,
+    pub spec: Option<Spec>,
     pub animations: SmallVec<[AnimKeyframe; 2]>,
     pub flow: Option<FlowAnim>,
     /// Offset of the edge text from the midpoint, set when label is dragged.
@@ -569,8 +683,8 @@ pub struct SceneNode {
     /// Animations attached to this node.
     pub animations: SmallVec<[AnimKeyframe; 2]>,
 
-    /// Markdown spec content (`spec { ... }` block, also accepts legacy `note`).
-    pub spec: Option<String>,
+    /// Structured spec content (`spec { ... }` block, also accepts legacy `note`).
+    pub spec: Option<Spec>,
 
     /// Line comments (`# text`) that appeared before this node in the source.
     /// Preserved across parse/emit round-trips so format passes don't delete them.
@@ -634,6 +748,10 @@ pub struct SceneGraph {
     /// Named style definitions (`style base_text { ... }`).
     pub styles: HashMap<NodeId, Properties>,
 
+    /// Spec metadata associated with named styles.
+    /// Stored separately to avoid breaking the existing `styles` API.
+    pub style_specs: HashMap<NodeId, Spec>,
+
     /// Index from NodeId → NodeIndex for fast lookup.
     pub id_index: HashMap<NodeId, NodeIndex>,
 
@@ -651,6 +769,10 @@ pub struct SceneGraph {
     /// Document-level default styles for edges.
     /// When present, individual edge properties matching the defaults are omitted.
     pub edge_defaults: Option<EdgeDefaults>,
+
+    /// Reusable animation templates — `when name { duration easing props }`.
+    /// Referenced via `use:` inside `when :trigger { }` blocks.
+    pub when_templates: HashMap<NodeId, WhenTemplate>,
 }
 
 impl SceneGraph {
@@ -668,11 +790,13 @@ impl SceneGraph {
             graph,
             root,
             styles: HashMap::new(),
+            style_specs: HashMap::new(),
             id_index,
             edges: Vec::new(),
             imports: Vec::new(),
             sorted_child_order: HashMap::new(),
             edge_defaults: None,
+            when_templates: HashMap::new(),
         }
     }
 
@@ -913,6 +1037,32 @@ impl SceneGraph {
         }
 
         resolved
+    }
+
+    /// Resolve a node's effective spec (merging `use` references + inline spec).
+    /// Styles' specs come first; inline spec overrides/extends.
+    pub fn resolve_spec(&self, node: &SceneNode) -> Option<Spec> {
+        let mut result: Option<Spec> = None;
+
+        // Apply specs from referenced styles in order
+        for style_id in &node.use_styles {
+            if let Some(style_spec) = self.style_specs.get(style_id) {
+                result = Some(merge_spec_values(
+                    result.unwrap_or_default(),
+                    style_spec.clone(),
+                ));
+            }
+        }
+
+        // Apply inline spec (takes precedence)
+        if let Some(ref inline_spec) = node.spec {
+            result = Some(merge_spec_values(
+                result.unwrap_or_default(),
+                inline_spec.clone(),
+            ));
+        }
+
+        result
     }
 
     /// Rebuild the `id_index` (needed after deserialization).
@@ -1408,6 +1558,7 @@ mod tests {
                 ..Default::default()
             },
             delay_ms: None,
+            use_template: None,
         });
 
         // Without press trigger: scale should be None

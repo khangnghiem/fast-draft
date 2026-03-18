@@ -17,6 +17,23 @@
 
 ## Completed Requirements
 
+### v0.11.196 — Style Spec Extension + When Templates + format_num Precision (R1.9, R1.15)
+- **FORMAT (R1.9)**: Style blocks now support spec metadata — `role:`, `trait:`, `intent:` keywords inside `style name { }` blocks are parsed into `style_specs: HashMap<NodeId, Spec>` on SceneGraph and emitted round-trip
+- **FORMAT (R1.9)**: `resolve_spec()` method on SceneGraph — merges spec from `use:` referenced styles into a node's inline spec; style specs provide defaults, inline overrides take precedence; `merge_spec_values()` utility for Spec merging
+- **FORMAT (R1.15)**: Reusable `when` templates — top-level `when name { scale: 1.05; ease: spring 300ms }` blocks are parsed/emitted/round-tripped via `when_templates: HashMap<NodeId, WhenTemplate>` on SceneGraph
+- **FORMAT (R1.15)**: `use:` inside `when :trigger { }` blocks — `use_template: Option<NodeId>` field on `AnimKeyframe` lets animations reference named `when` templates for DRY animation definitions
+- **FIX**: `format_num` precision increased from 1 to 3 decimal places — fixes roundtrip loss for values like `1.05` (was emitted as `1`, now as `1.05`); values like `128.57` are now preserved instead of being rounded to `128.6`
+- **TESTS**: 4 new roundtrip tests: `roundtrip_style_with_spec`, `use_merges_spec_from_style`, `roundtrip_when_template`, `when_use_template`
+
+### v0.11.195 — Typed Spec Struct + New Canvas Keywords (R1.9)
+- **FORMAT (R1.9)**: `spec` blocks now parse `role:`, `trait:`, `intent:` keyword fields into a typed `Spec` struct with `role: Option<String>`, `traits: Vec<String>`, `intent: Option<String>`, `description: Option<String>` — AI agents can read and write structured metadata without regex
+- **FORMAT (R1.9)**: Emitter outputs typed fields first (`role:`, `trait:`, `intent:`) followed by blank line separator and free-form markdown description — clean canonical output
+- **FORMAT (R1.9)**: Backward-compatible with legacy `spec { "quoted text" }` and `note { ... }` formats — quoted strings inside block-form specs are auto-unquoted on parse
+- **FORMAT (R1.9)**: `Spec::contains()` helper method for test assertions; `Spec::display_text()` for rendering typed fields + description as one text block
+- **FORMAT**: New canvas keywords: `visible: true|false` (visibility toggle), `cursor: <name>` (CSS cursor hint), `rotate: <degrees>` (static rotation) — parse + emit + roundtrip in `Properties`
+- **INTERNAL**: Updated all downstream crates (`fd-wasm/notes.rs`, `fd-wasm/code_intel.rs`, `fd-editor/sync.rs`) to use typed `Option<Spec>` instead of `Option<String>`
+- **TESTS**: 4 new roundtrip tests: `roundtrip_spec_role_trait_intent`, `roundtrip_spec_with_description`, `roundtrip_visible_cursor_rotate`, `roundtrip_spec_backward_compat_quoted`
+
 ### v0.11.194 — Fix WASM Loading Hang on Edge/Windows (R6.5, R6.9)
 - **FIX (R6.9)**: WASM loading no longer hangs forever on Edge/Windows — root cause: Cloudflare strips `Content-Length` header when compressing WASM responses (brotli/gzip); fallback path re-fetched the WASM binary via `wasm.default(url)` instead of consuming the already-fetched `Response`, causing body-locking stalls on some Edge/Chromium builds; fix: fallback path now calls `wasmResponse.arrayBuffer()` to consume the in-flight response, eliminating the double-fetch entirely
 - **FIX (R6.5)**: 30-second WASM loading timeout — `raceWithTimeout()` helper wraps the fetch, body-read, and instantiation stages in `Promise.race` with a 30s deadline; on timeout, shows "Loading timed out" error with actionable ↻ Retry button instead of infinite spinner
