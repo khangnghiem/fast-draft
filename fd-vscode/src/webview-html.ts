@@ -3497,6 +3497,16 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       const panel = document.getElementById('specs-panel');
       const body = document.getElementById('specs-panel-body');
 
+      // XSS Prevention: Helper to escape HTML characters
+      function escapeHtml(unsafe) {
+        return String(unsafe)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
       // Lightweight inline markdown → HTML converter (GFM subset)
       function simpleMarkdown(src) {
         let html = '';
@@ -3513,7 +3523,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
           // Fenced code blocks
           if (trimmed.startsWith('\`\`\`')) {
             if (inCode) {
-              html += '<pre><code>' + codeBuf.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</code></pre>';
+              html += '<pre><code>' + escapeHtml(codeBuf) + '</code></pre>';
               codeBuf = '';
               inCode = false;
             } else {
@@ -3587,14 +3597,13 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
 
         if (inList) html += '</ul>';
         if (inBlockquote) html += '</blockquote>';
-        if (inCode) html += '<pre><code>' + codeBuf.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</code></pre>';
+        if (inCode) html += '<pre><code>' + escapeHtml(codeBuf) + '</code></pre>';
         return html;
       }
 
       // Inline formatting: bold, italic, code, links
       function inlineFormat(text) {
-        return text
-          .replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        return escapeHtml(text)
           .replace(/\`([^\`]+)\`/g, '<code>$1</code>')
           .replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>')
           .replace(/\\*(.+?)\\*/g, '<em>$1</em>')
@@ -3618,7 +3627,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         let html = '';
         const fileRequests = [];
         for (const entry of notes) {
-          const nodeId = entry.id;
+          const rawNodeId = entry.id;
+          const nodeId = escapeHtml(rawNodeId);
           const rawNote = entry.note;
           html += '<div class="note-group" data-note-node="' + nodeId + '">';
           html += '<div class="note-group-header" data-node="' + nodeId + '" title="Click to select @' + nodeId + '">@' + nodeId + '</div>';
@@ -3627,22 +3637,26 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
           // Check if entire note is a file reference (inline form: note "./spec.md")
           const fileRefMatch = rawNote.trim().match(/^\\.?\\.?\\/[^\\s]+\\.md$/);
           if (fileRefMatch) {
-            const filePath = rawNote.trim();
-            const reqId = 'nf_' + nodeId + '_' + Date.now();
-            html += '<div class="note-file-link" data-file-req="' + reqId + '" data-file-path="' + filePath + '">\\ud83d\\udcce ' + filePath + '</div>';
-            html += '<div class="note-file-content" id="' + reqId + '" style="display:none"></div>';
-            fileRequests.push({ reqId, path: filePath });
+            const rawFilePath = rawNote.trim();
+            const filePath = escapeHtml(rawFilePath);
+            const reqId = 'nf_' + rawNodeId + '_' + Date.now();
+            const safeReqId = escapeHtml(reqId);
+            html += '<div class="note-file-link" data-file-req="' + safeReqId + '" data-file-path="' + filePath + '">\ud83d\udcce ' + filePath + '</div>';
+            html += '<div class="note-file-content" id="' + safeReqId + '" style="display:none"></div>';
+            fileRequests.push({ reqId, path: rawFilePath });
           } else {
             // Process @include directives within block notes
             let processedNote = rawNote;
             const includePattern = /@include\\("([^"]+\\.md)"\\)/g;
             let includeMatch;
             while ((includeMatch = includePattern.exec(rawNote)) !== null) {
-              const inclPath = includeMatch[1];
-              const reqId = 'nf_' + nodeId + '_inc_' + fileRequests.length + '_' + Date.now();
-              const badge = '<div class="note-file-link" data-file-req="' + reqId + '" data-file-path="' + inclPath + '">\\ud83d\\udcce ' + inclPath + '</div><div class="note-file-content" id="' + reqId + '" style="display:none"></div>';
+              const rawInclPath = includeMatch[1];
+              const inclPath = escapeHtml(rawInclPath);
+              const reqId = 'nf_' + rawNodeId + '_inc_' + fileRequests.length + '_' + Date.now();
+              const safeReqId = escapeHtml(reqId);
+              const badge = '<div class="note-file-link" data-file-req="' + safeReqId + '" data-file-path="' + inclPath + '">\ud83d\udcce ' + inclPath + '</div><div class="note-file-content" id="' + safeReqId + '" style="display:none"></div>';
               processedNote = processedNote.replace(includeMatch[0], badge);
-              fileRequests.push({ reqId, path: inclPath });
+              fileRequests.push({ reqId, path: rawInclPath });
             }
             html += simpleMarkdown(processedNote);
           }
