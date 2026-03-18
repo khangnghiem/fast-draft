@@ -37,18 +37,18 @@ impl PointerType {
     /// Hit radius for resize handle detection (scene-space pixels).
     pub fn handle_hit_radius(self) -> f32 {
         match self {
-            Self::Mouse => 8.0,
+            Self::Mouse => 12.0,
             Self::Touch => 24.0,
-            Self::Pen => 12.0,
+            Self::Pen => 14.0,
         }
     }
 
     /// Visual size of resize handles (CSS pixels).
     pub fn handle_visual_size(self) -> f32 {
         match self {
-            Self::Mouse => 7.0,
+            Self::Mouse => 8.0,
             Self::Touch => 14.0,
-            Self::Pen => 9.0,
+            Self::Pen => 10.0,
         }
     }
 

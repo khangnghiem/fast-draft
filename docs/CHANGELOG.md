@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.197 — Canvas UI Bug Fixes (R3.3, R3.7)
+- **FIX (R3.3)**: Frame tool (F+drag) now creates `NodeKind::Frame` instead of `NodeKind::Rect` — added `frame_mode` field to `RectTool` that switches between Frame/Rect creation with appropriate defaults (clip, layout, fill)
+- **FIX (R3.7)**: Resize handle hit radius increased from 8→12px (mouse), 12→14px (pen) and visual size from 7→8px (mouse), 9→10px (pen) — reduces accidental shape creation when intending to resize
+- **TESTS**: 2 new tool tests: `frame_tool_creates_frame_node`, `rect_tool_without_frame_mode_creates_rect`
+
 ### v0.11.196 — Style Spec Extension + When Templates + format_num Precision (R1.9, R1.15)
 - **FORMAT (R1.9)**: Style blocks now support spec metadata — `role:`, `trait:`, `intent:` keywords inside `style name { }` blocks are parsed into `style_specs: HashMap<NodeId, Spec>` on SceneGraph and emitted round-trip
 - **FORMAT (R1.9)**: `resolve_spec()` method on SceneGraph — merges spec from `use:` referenced styles into a node's inline spec; style specs provide defaults, inline overrides take precedence; `merge_spec_values()` utility for Spec merging

@@ -2325,3 +2325,70 @@ fn snap_to_45_degrees_all_directions() {
     assert!((x - 50.0).abs() < 0.01);
     assert!((y - 50.0).abs() < 0.01);
 }
+
+#[test]
+fn frame_tool_creates_frame_node() {
+    let mut tool = RectTool::new();
+    tool.frame_mode = true;
+
+    // Press to create a frame
+    let mutations = tool.handle(
+        &InputEvent::PointerDown {
+            x: 100.0,
+            y: 100.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::AddNode { node, .. } => {
+            assert!(
+                matches!(node.kind, NodeKind::Frame { .. }),
+                "frame_mode should create Frame, got {:?}",
+                node.kind
+            );
+            // Frame should have a fill (light background)
+            assert!(node.props.fill.is_some(), "frame should have a fill");
+            // Frame should NOT have corner_radius
+            assert!(
+                node.props.corner_radius.is_none(),
+                "frame should not have corner_radius"
+            );
+        }
+        _ => panic!("expected AddNode"),
+    }
+}
+
+#[test]
+fn rect_tool_without_frame_mode_creates_rect() {
+    let mut tool = RectTool::new();
+    // frame_mode defaults to false
+    assert!(!tool.frame_mode);
+
+    let mutations = tool.handle(
+        &InputEvent::PointerDown {
+            x: 50.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::AddNode { node, .. } => {
+            assert!(
+                matches!(node.kind, NodeKind::Rect { .. }),
+                "without frame_mode should create Rect, got {:?}",
+                node.kind
+            );
+            assert!(
+                node.props.corner_radius.is_some(),
+                "rect should have corner_radius"
+            );
+        }
+        _ => panic!("expected AddNode"),
+    }
+}

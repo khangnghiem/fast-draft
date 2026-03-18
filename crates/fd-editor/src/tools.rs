@@ -369,6 +369,9 @@ pub struct RectTool {
     last_cx: f32,
     last_cy: f32,
     current_id: Option<NodeId>,
+    /// When true, creates `NodeKind::Frame` instead of `NodeKind::Rect`.
+    /// Set by `FdCanvas` based on `active_tool == ToolKind::Frame`.
+    pub frame_mode: bool,
 }
 
 impl Default for RectTool {
@@ -387,6 +390,7 @@ impl RectTool {
             last_cx: 0.0,
             last_cy: 0.0,
             current_id: None,
+            frame_mode: false,
         }
     }
 
@@ -422,25 +426,49 @@ impl Tool for RectTool {
                 self.start_y = *y;
                 self.last_cx = *x;
                 self.last_cy = *y;
-                let id = NodeId::with_prefix("rect");
+
+                let (id, kind) = if self.frame_mode {
+                    (
+                        NodeId::with_prefix("frame"),
+                        NodeKind::Frame {
+                            width: 0.0,
+                            height: 0.0,
+                            clip: true,
+                            layout: LayoutMode::default(),
+                        },
+                    )
+                } else {
+                    (
+                        NodeId::with_prefix("rect"),
+                        NodeKind::Rect {
+                            width: 0.0,
+                            height: 0.0,
+                        },
+                    )
+                };
                 self.current_id = Some(id);
 
-                let mut node = SceneNode::new(
-                    id,
-                    NodeKind::Rect {
-                        width: 0.0,
-                        height: 0.0,
-                    },
-                );
+                let mut node = SceneNode::new(id, kind);
                 node.constraints.push(Constraint::Position { x: *x, y: *y });
-                // Transparent fill + dark stroke (matching create_node_at defaults)
-                node.props.stroke = Some(Stroke {
-                    paint: Paint::Solid(Color::rgba(0.2, 0.2, 0.2, 1.0)),
-                    width: 2.5,
-                    cap: StrokeCap::Round,
-                    join: StrokeJoin::Round,
-                });
-                node.props.corner_radius = Some(8.0);
+                if self.frame_mode {
+                    // Frame defaults: light fill, thin stroke, no corner radius
+                    node.props.fill = Some(Paint::Solid(Color::rgba(0.97, 0.97, 0.97, 1.0)));
+                    node.props.stroke = Some(Stroke {
+                        paint: Paint::Solid(Color::rgba(0.7, 0.7, 0.7, 1.0)),
+                        width: 1.0,
+                        cap: StrokeCap::Butt,
+                        join: StrokeJoin::Miter,
+                    });
+                } else {
+                    // Rect defaults: transparent fill + dark stroke
+                    node.props.stroke = Some(Stroke {
+                        paint: Paint::Solid(Color::rgba(0.2, 0.2, 0.2, 1.0)),
+                        width: 2.5,
+                        cap: StrokeCap::Round,
+                        join: StrokeJoin::Round,
+                    });
+                    node.props.corner_radius = Some(8.0);
+                }
                 vec![GraphMutation::AddNode {
                     parent_id: NodeId::intern("root"),
                     node: Box::new(node),
