@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.203 — Code Panel Tab Handle (R6.6)
+- **UX (R6.6)**: Replaced invisible 12px hover-only strip with a visible **28px vertical Tab Handle** when code panel is collapsed — frosted glass background, rotated `{ } Code` label, 3px purple accent left border, rounded right corners; hover widens to 32px with glow; matches VS Code collapsed sidebar pattern for instant discoverability
+- **UX (R6.6)**: Tab Handle hidden on mobile (≤768px) — mobile uses existing `#mobile-code-toggle` toolbar button
+- **SITE**: Changes in `site/style.css` (`.panel-restore-strip.code-restore` rewrite), `site/index.html` (`code-tab-label` span)
+
 ### v0.11.202 — Prune Deprecated Backward-Compat Code (R4.16)
 - **REFACTOR (R4.16)**: Removed `ReadMode::Notes` enum variant — collapsed into `ReadMode::Spec`; `emit_notes_markdown()` wrapper function removed
 - **REFACTOR (R4.16)**: Removed dead `label:` property handler from parser — deprecated property now falls through to the standard unknown-property skip
