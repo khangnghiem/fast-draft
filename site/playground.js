@@ -2644,6 +2644,7 @@ function setupSpecsResize() {
 let lastSplitResizeTime = 0; // timestamp of last resize drag end
 function setupSplitResize(container, resizeCanvas) {
   const handle = document.getElementById('split-resize');
+  const split = document.querySelector('.playground-split');
   if (!handle || !container) return;
 
   const MIN_FRAC = 0.15;
@@ -2652,6 +2653,7 @@ function setupSplitResize(container, resizeCanvas) {
 
   let dragging = false;
   let containerRect = null;
+  let rafId = 0; // RAF throttle
 
   handle.addEventListener('pointerdown', (e) => {
     e.preventDefault();
@@ -2660,26 +2662,42 @@ function setupSplitResize(container, resizeCanvas) {
     containerRect = container.getBoundingClientRect();
     handle.classList.add('active');
     handle.setPointerCapture(e.pointerId);
+    // Disable CSS Grid transition during drag — it fights the live updates
+    // and causes a ~250ms easing lag on every pointer move.
+    if (split) split.style.transition = 'none';
   });
 
   handle.addEventListener('pointermove', (e) => {
     if (!dragging || !containerRect) return;
     const x = e.clientX - containerRect.left;
-    // If dragged below collapse threshold, snap to minimum
+    // Update CSS variable immediately (cheap — just a style property)
     if (x < COLLAPSE_PX) {
       container.style.setProperty('--editor-width', `${COLLAPSE_PX}px`);
     } else {
       const frac = Math.max(MIN_FRAC, Math.min(MAX_FRAC, x / containerRect.width));
       container.style.setProperty('--editor-width', `${Math.round(containerRect.width * frac)}px`);
     }
-    resizeCanvas();
-    renderCanvas();
+    // Throttle expensive WASM resize + render to once per frame
+    if (!rafId) {
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        resizeCanvas();
+        renderCanvas();
+      });
+    }
   });
 
   const endDrag = (e) => {
     if (!dragging) return;
     dragging = false;
     handle.classList.remove('active');
+    // Cancel any pending RAF
+    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+    // Re-enable CSS Grid transition for collapse/expand animations
+    if (split) split.style.transition = '';
+    // Final resize + render at exact position
+    resizeCanvas();
+    renderCanvas();
     lastSplitResizeTime = Date.now();
     // Auto-collapse if released below threshold
     if (containerRect) {
