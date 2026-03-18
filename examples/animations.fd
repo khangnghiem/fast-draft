@@ -111,7 +111,7 @@ text @section_enter "Entrance Animations" {
 group @enter_row {
   spec {
     "Triggered when element enters viewport"
-    accept: "plays once on scroll into view"
+    todo: "plays once on scroll into view"
     tag: animation, ux
   }
   rect @fade_enter {

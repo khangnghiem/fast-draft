@@ -135,7 +135,7 @@ group @design_system {
         text "Primary Action" { font: "Inter" semibold 14; fill: white }
         when :hover { fill: #5A4BD1; scale: 1.02; ease: spring 200ms }
       }
-      rect @btn_secondary { w: 200 h: 44; background: #F3F4F6; rounded: 10
+      rect @btn_secondary { w: 200 h: 44; fill: #F3F4F6; corner: 10
         text "Secondary" { font: "Inter" medium 14; fill: slate }
         when :hover { fill: #E5E7EB; ease: ease_out 150ms }
       }

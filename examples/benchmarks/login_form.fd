@@ -82,7 +82,7 @@ group @login_form {
   rect @sign_in_btn {
     spec {
       "Primary CTA — triggers authentication flow"
-      accept: "disabled when fields empty"
+      todo: "disabled when fields empty"
       status: done
     }
     w: 336 h: 48

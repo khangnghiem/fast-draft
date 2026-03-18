@@ -232,7 +232,7 @@ rect @brightness_card {
 rect @btn_delete {
   spec {
     "Destructive action — delete account"
-    accept: "confirmation dialog before proceeding"
+    todo: "confirmation dialog before proceeding"
     priority: high
   }
   w: 344 h: 48

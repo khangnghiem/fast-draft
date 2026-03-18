@@ -26,7 +26,7 @@ style server_box {
 rect @load_balancer {
   spec {
     "Nginx reverse proxy — round-robin distribution"
-    accept: "health check every 10s"
+    todo: "health check every 10s"
     status: done
   }
   text @_text_9 "Load Balancer" {
@@ -81,7 +81,7 @@ rect @api_server_3 {
 rect @redis_primary {
   spec {
     "Redis 7 — session store + rate limit counters"
-    accept: "< 1ms p99 latency"
+    todo: "< 1ms p99 latency"
     status: done
   }
   text @_text_13 "Redis Primary" {
@@ -110,7 +110,7 @@ rect @redis_replica {
 rect @postgres_primary {
   spec {
     "PostgreSQL 16 — primary read/write"
-    accept: "queries < 100ms p95"
+    todo: "queries < 100ms p95"
     status: done
   }
   text @_text_15 "Postgres Primary" {
@@ -151,7 +151,7 @@ rect @s3_storage {
 rect @queue {
   spec {
     "RabbitMQ — async job processing"
-    accept: "message TTL 24h"
+    todo: "message TTL 24h"
     status: doing
   }
   text @_text_18 "Message Queue" {

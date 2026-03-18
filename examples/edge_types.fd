@@ -6,7 +6,7 @@ frame @canvas {
   width: 1000
   height: 800
   fill: #F0F2F5
-  border_radius: 12
+  corner: 12
 }
 
 @canvas -> center_in: canvas
@@ -18,7 +18,7 @@ style node_style {
   height: 60
   fill: #FFFFFF
   stroke: #D1D5DB 1
-  border_radius: 8
+  corner: 8
   layout: center
   shadow: 0 4 12 #000000 0.05 4
 }

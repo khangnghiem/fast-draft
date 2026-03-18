@@ -25,8 +25,8 @@ style subhead {
 group @pricing {
   spec {
     "Pricing section — conversion-critical"
-    accept: "A/B test popular badge placement"
-    accept: "annual toggle saves 20%"
+    todo: "A/B test popular badge placement"
+    todo: "annual toggle saves 20%"
     priority: high
     tag: conversion, revenue
   }
@@ -42,7 +42,7 @@ group @pricing {
     rect @tier_free {
       spec {
         "Free tier — acquisition funnel entry"
-        accept: "no credit card required"
+        todo: "no credit card required"
         status: done
       }
       group @_anon_31 {
@@ -108,8 +108,8 @@ group @pricing {
     rect @tier_pro {
       spec {
         "Pro tier — primary conversion target"
-        accept: "most popular badge visible"
-        accept: "pre-selected on page load"
+        todo: "most popular badge visible"
+        todo: "pre-selected on page load"
         priority: high
         status: doing
       }
@@ -189,7 +189,7 @@ group @pricing {
     rect @tier_enterprise {
       spec {
         "Enterprise tier — high-value leads"
-        accept: "custom quote form"
+        todo: "custom quote form"
         status: todo
         tag: sales
       }

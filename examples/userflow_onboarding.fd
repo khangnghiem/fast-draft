@@ -36,8 +36,8 @@ rect @landing {
 rect @signup {
   spec {
     "Registration form"
-    accept: "collects name, email, password"
-    accept: "OAuth buttons for Google + GitHub"
+    todo: "collects name, email, password"
+    todo: "OAuth buttons for Google + GitHub"
     status: done
   }
   text @signup_t "Sign Up" {
@@ -52,8 +52,8 @@ rect @signup {
 rect @verify_email {
   spec {
     "Email verification step"
-    accept: "shows 6-digit OTP input"
-    accept: "resend link after 60s cooldown"
+    todo: "shows 6-digit OTP input"
+    todo: "resend link after 60s cooldown"
     status: doing
   }
   text @verify_t "Verify Email" {
@@ -68,7 +68,7 @@ rect @verify_email {
 rect @setup_profile {
   spec {
     "Profile setup — avatar, bio, preferences"
-    accept: "avatar upload with crop"
+    todo: "avatar upload with crop"
     status: todo
   }
   text @setup_t "Setup Profile" {
@@ -158,7 +158,7 @@ edge @cta_click {
 edge @signup_submit {
   spec {
     "Form submission"
-    accept: "validates all fields client-side first"
+    todo: "validates all fields client-side first"
   }
   text @_signup_submit_label "submit" {}
   from: @signup
@@ -187,7 +187,7 @@ edge @profile_done {
 edge @signup_error {
   spec {
     "Registration failure"
-    accept: "shows inline field errors"
+    todo: "shows inline field errors"
   }
   text @_signup_error_label "validation fail" {}
   from: @signup

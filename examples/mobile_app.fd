@@ -40,7 +40,7 @@ group @phone {
     ellipse @avatar {
       spec {
         "User profile picture"
-        accept: "tapping opens profile sheet"
+        todo: "tapping opens profile sheet"
         tag: navigation
       }
       w: 36 h: 36
@@ -53,7 +53,7 @@ group @phone {
   group @stories {
     spec {
       "Horizontal story carousel"
-      accept: "scrollable beyond viewport"
+      todo: "scrollable beyond viewport"
       status: doing
       priority: medium
     }
@@ -76,8 +76,8 @@ group @phone {
   group @post_1 {
     spec {
       "Social feed post card"
-      accept: "double-tap to like"
-      accept: "swipe right for actions"
+      todo: "double-tap to like"
+      todo: "swipe right for actions"
       tag: feed, engagement
     }
     layout: column gap=8 pad=0
@@ -98,7 +98,7 @@ group @phone {
     rect @post_image {
       spec {
         "Post image — loaded from CDN"
-        accept: "lazy-loaded with blur placeholder"
+        todo: "lazy-loaded with blur placeholder"
         priority: high
       }
       w: 375 h: 375
@@ -126,7 +126,7 @@ group @phone {
   group @bottom_nav {
     spec {
       "Bottom tab bar — iOS-style"
-      accept: "haptic feedback on tap"
+      todo: "haptic feedback on tap"
       status: done
       tag: navigation
     }

@@ -71,11 +71,11 @@ const fdLanguage = StreamLanguage.define({
     // Style/theme keyword
     if (stream.match(/^(style|theme)\b/)) return 'keyword';
 
-    // Animation/note keywords
-    if (stream.match(/^(when|anim|note|spec)\b/)) return 'keyword';
+    // Animation/spec keywords
+    if (stream.match(/^(when|spec)\b/)) return 'keyword';
 
     // Property names followed by colon
-    if (stream.match(/^(w|h|x|y|fill|stroke|font|corner|opacity|shadow|bg|layout|use|center_in|offset|gap|pad|scale|rotate|translate|ease|duration|cols|from|to|src|alt|align|clip|arrow|curve|flow|place|d|label_offset)\s*:/)) {
+    if (stream.match(/^(w|h|x|y|fill|stroke|font|corner|opacity|shadow|bg|layout|use|center_in|offset|gap|pad|scale|rotate|translate|ease|duration|cols|from|to|src|alt|align|clip|arrow|curve|flow|place|d|label_offset|todo|done|tag|role|trait|intent|extends|visible|cursor)\s*:/)) {
       return 'propertyName';
     }
 

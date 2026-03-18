@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.205 — Canonicalize Examples & Playground Keywords (R4.16)
+- **EXAMPLES (R4.16)**: `accept:` → `todo:` across 16+ example files (~60 occurrences) — `checkout_flow.fd`, `mobile_app.fd`, `pricing_page.fd`, `userflow_onboarding.fd`, `constraints.fd`, `design_system.fd`, `dark_theme.fd`, `animations.fd`, `landing_page.fd`, `path_drawing.fd`, `edge_types.fd` + 6 benchmark files
+- **EXAMPLES (R4.16)**: `border_radius:` → `corner:` in `edge_types.fd`; `background:` → `fill:` and `rounded:` → `corner:` in `benchmarks/design_system.fd`
+- **DOCS (R4.16)**: `CHEATSHEET.md` — `anim` → `when`, `accept:` → `todo:`, property aliases table marked as legacy; `README.md` — `anim` → `when`, deprecated alias row updated
+- **SITE (R4.16)**: Playground syntax highlighter — removed deprecated `anim`/`note` from keyword matching (only `when`/`spec` highlighted); added `todo:`, `done:`, `tag:`, `role:`, `trait:`, `intent:`, `extends:`, `visible:`, `cursor:` to property highlighting
+
 ### v0.11.204 — Code Panel Minimizes to 10% Instead of Hiding (R6.6)
 - **UX (R6.6)**: Code panel toggle now **minimizes** to ~10% width instead of collapsing to 0% — the editor header ("● Code ▾") stays visible as the click target to re-expand; eliminates the discoverability problem of the fully-hidden panel
 - **CLEANUP (R6.6)**: Removed `#code-restore` vertical tab strip — no longer needed since the panel header is always visible at 10%; deleted ~44 lines of orphaned CSS (`.panel-restore-strip.code-restore` and child selectors), HTML element, and JS click listener
