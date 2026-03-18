@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.208 — Sync Playground Default with demo.fd
+- **SITE**: Replaced playground's 30-line `DEFAULT_FD` card snippet with the comprehensive `demo.fd` format reference (400 lines) — visitors now see every FD keyword, node type, edge style, and animation on first load
+- **SITE**: Stripped `import "shared_library.fd"` from embedded copy (playground has no file system)
+
 ### v0.11.207 — Consolidate Examples (R4.16)
 - **EXAMPLES (R4.16)**: Deleted 13 redundant example files — `animations.fd`, `constraints.fd`, `edge_types.fd`, `design_tokens.fd`, `design_system.fd`, `dark_theme.fd`, `landing_page.fd`, `mobile_app.fd`, `onboarding.fd`, `animated_onboarding.fd`, `responsive_dashboard.fd`, `wireframe_login.fd`, `grid_gallery.fd`
 - **EXAMPLES (R4.16)**: Rewrote `demo.fd` as comprehensive format reference — showcases every FD keyword (import, style, extends, edge_defaults), all node types (rect, ellipse, text, group, frame, path, generic), all properties (fill, stroke, corner, shadow, opacity, clip, pad, locked, place, bg shorthand), all layouts (column, row, grid), all animation triggers and easing functions, all edge styles (curve, arrow, flow, label, spec), and constraints (center_in, offset)
