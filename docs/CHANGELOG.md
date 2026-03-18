@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.206 — Layers Panel Minimizes to 40px Instead of Hiding (R6.6)
+- **UX (R6.6)**: Layers panel `.collapsed` now **minimizes to 40px** instead of `width: 0` — the "LAYERS" header stays visible as the click target to re-expand; resize handle stays positioned at the 40px edge (not hidden)
+- **CLEANUP (R6.6)**: Removed `#layers-restore` strip (HTML + CSS + JS listener) — header is always visible so the restore strip is redundant
+- **SITE + EXTENSION**: Applied to `site/style.css`, `site/index.html`, `site/playground.js`, and `fd-vscode/src/webview-html.ts`
+
 ### v0.11.205 — Canonicalize Examples & Playground Keywords (R4.16)
 - **EXAMPLES (R4.16)**: `accept:` → `todo:` across 16+ example files (~60 occurrences) — `checkout_flow.fd`, `mobile_app.fd`, `pricing_page.fd`, `userflow_onboarding.fd`, `constraints.fd`, `design_system.fd`, `dark_theme.fd`, `animations.fd`, `landing_page.fd`, `path_drawing.fd`, `edge_types.fd` + 6 benchmark files
 - **EXAMPLES (R4.16)**: `border_radius:` → `corner:` in `edge_types.fd`; `background:` → `fill:` and `rounded:` → `corner:` in `benchmarks/design_system.fd`

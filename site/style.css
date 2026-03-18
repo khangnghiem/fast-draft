@@ -958,8 +958,7 @@ code {
 }
 #layers-panel.no-transition { transition: none; }
 #layers-panel.collapsed {
-  width: 0 !important;
-  border-right: none;
+  width: 40px !important;
   overflow: hidden;
 }
 #layers-panel::-webkit-scrollbar { width: 6px; }
@@ -1019,15 +1018,10 @@ code {
 .panel-restore-strip:hover {
   background: rgba(108, 92, 231, 0.3);
 }
-.panel-restore-strip.layers-restore {
-  left: 0;
-  display: none;
-}
 .panel-restore-strip.props-restore {
   right: 0;
   display: none;
 }
-#layers-panel.collapsed ~ .layers-restore { display: block; }
 #props-panel.collapsed ~ .props-restore { display: block; }
 .layers-header {
   display: flex;

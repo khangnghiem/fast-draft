@@ -2852,15 +2852,13 @@ function setupPanelResize(wrapper, resizeCanvas) {
   }
   if (layersCollapsed && layersPanel) {
     layersPanel.classList.add('collapsed');
-    wrapper.style.setProperty('--layers-width', '0px');
   }
 
   /** Position layers resize handle at panel's right edge. */
   function positionLayersHandle() {
     if (!layersHandle || !layersPanel) return;
-    const w = layersPanel.classList.contains('collapsed') ? 0 : layersPanel.offsetWidth;
+    const w = layersPanel.classList.contains('collapsed') ? 40 : layersPanel.offsetWidth;
     layersHandle.style.left = w + 'px';
-    layersHandle.style.display = layersPanel.classList.contains('collapsed') ? 'none' : '';
   }
 
   /** Position props resize handle at panel's left edge. */
@@ -2931,7 +2929,8 @@ function setupPanelResize(wrapper, resizeCanvas) {
       const isCollapsed = panel.classList.toggle('collapsed');
       const varName = side === 'left' ? '--layers-width' : '--props-width';
       if (isCollapsed) {
-        wrapper.style.setProperty(varName, '0px');
+        // Layers minimizes to 40px (CSS-controlled); props to 0px
+        if (side !== 'left') wrapper.style.setProperty(varName, '0px');
         localStorage.setItem(side === 'left' ? 'fd-layers-collapsed' : 'fd-props-collapsed', '1');
       } else {
         const savedW = parseInt(localStorage.getItem(side === 'left' ? 'fd-layers-width' : 'fd-props-width'), 10);
@@ -2951,19 +2950,7 @@ function setupPanelResize(wrapper, resizeCanvas) {
   makeDraggable(layersHandle, layersPanel, 'left', DEFAULT_LAYERS_W);
   makeDraggable(propsHandle, propsPanel, 'right', DEFAULT_PROPS_W);
 
-  // ── Restore strips (click to uncollapse) ──
-  if (layersRestore) {
-    layersRestore.addEventListener('click', () => {
-      if (!layersPanel) return;
-      layersPanel.classList.remove('collapsed');
-      const savedW = parseInt(localStorage.getItem('fd-layers-width'), 10);
-      const restoreW = (savedW >= MIN_WIDTH && savedW <= MAX_WIDTH) ? savedW : DEFAULT_LAYERS_W;
-      wrapper.style.setProperty('--layers-width', restoreW + 'px');
-      localStorage.removeItem('fd-layers-collapsed');
-      requestAnimationFrame(() => { positionLayersHandle(); resizeCanvas(); renderCanvas(); });
-    });
-    layersRestore.addEventListener('dblclick', (e) => e.stopPropagation());
-  }
+
   if (propsRestore) {
     propsRestore.addEventListener('click', () => {
       if (!propsPanel) return;
@@ -3150,7 +3137,7 @@ function toggleLayersPanel() {
 
   const isCollapsed = layersPanel.classList.toggle('collapsed');
   if (isCollapsed) {
-    wrapper.style.setProperty('--layers-width', '0px');
+    // Width is handled by CSS (.collapsed { width: 40px })
     localStorage.setItem('fd-layers-collapsed', '1');
   } else {
     const savedW = parseInt(localStorage.getItem('fd-layers-width'), 10);
@@ -3159,11 +3146,11 @@ function toggleLayersPanel() {
     localStorage.removeItem('fd-layers-collapsed');
   }
   toggleBtn?.classList.toggle('layers-hidden', isCollapsed);
-  if (layersHandle) layersHandle.style.display = isCollapsed ? 'none' : '';
-  // Reposition the layers resize handle after toggle
-  if (layersHandle && !isCollapsed) {
+  // Keep resize handle visible — position at collapsed edge
+  if (layersHandle) {
+    layersHandle.style.display = '';
     requestAnimationFrame(() => {
-      layersHandle.style.left = layersPanel.offsetWidth + 'px';
+      layersHandle.style.left = (isCollapsed ? 40 : layersPanel.offsetWidth) + 'px';
     });
   }
   requestAnimationFrame(() => {
