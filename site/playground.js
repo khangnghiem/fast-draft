@@ -13,14 +13,14 @@ import { linter, lintGutter } from 'https://esm.sh/@codemirror/lint@6';
 import { defaultKeymap, history, historyKeymap } from 'https://esm.sh/@codemirror/commands@6';
 import { highlightSelectionMatches } from 'https://esm.sh/@codemirror/search@6';
 import LZString from 'https://esm.sh/lz-string@1.5.0';
-import { initAiChat, clearChatHistory } from './ai-chat.js';
+import { initAiChat, clearChatHistory } from './ai-chat.js?v=0.11.5';
 import {
   screenToScene as coreScreenToScene,
   pointerTypeToU8 as corePointerTypeToU8,
   showToast as coreShowToast,
   ZOOM_WHEEL_FACTOR as CORE_ZOOM_WHEEL_FACTOR,
   GRID_SPACING as CORE_GRID_SPACING,
-} from './canvas-core/state.js';
+} from './canvas-core/state.js?v=0.11.5';
 import {
   drawGrid as coreDrawGrid,
   fitToContent as coreFitToContent,
@@ -32,26 +32,26 @@ import {
   startTween,
   evalTweens,
   playDetachAnimation as corePlayDetachAnimation,
-} from './canvas-core/render.js';
+} from './canvas-core/render.js?v=0.11.5';
 import {
   extractNodeBlock as coreExtractNodeBlock,
   buildPasteIdMap,
   applyIdRenames,
   collectDeclaredIds,
-} from './canvas-core/clipboard.js';
+} from './canvas-core/clipboard.js?v=0.11.5';
 import {
   getResizeHandleCursor as coreGetResizeHandleCursor,
   pinchDistance as corePinchDistance,
   pinchCenter as corePinchCenter,
   nudgeSelected as coreNudgeSelected,
-} from './canvas-core/viewport.js';
+} from './canvas-core/viewport.js?v=0.11.5';
 import {
   TOOL_SHORTCUTS,
   TOOL_CYCLE,
   DOUBLE_PRESS_MS,
   ZOOM_STEP as CORE_ZOOM_STEP,
   buildShortcutHelpHtml as coreBuildShortcutHelpHtml,
-} from './canvas-core/shortcuts.js';
+} from './canvas-core/shortcuts.js?v=0.11.5';
 
 // ─── FD Language Definition (StreamLanguage) ─────────────────────────────
 const fdLanguage = StreamLanguage.define({
