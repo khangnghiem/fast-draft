@@ -1,39 +1,37 @@
+# ─── FD Format Demo ───
+# Showcases every keyword, node type, edge style, and animation.
+
+import "shared_library.fd" as lib
+
 # ─── Styles ───
 
-style accent_text {
-  fill: #FFFFFF  # white
-  font: "Inter" semibold 14
+style heading {
+  fill: #1A1A2E
+  font: "Inter" bold 28
 }
 
 style body {
-  fill: #6B7280  # blue
+  fill: #6B7280
   font: "Inter" regular 14
 }
 
-style brand {
-  fill: #6C5CE7  # blue
+style accent {
+  fill: #6C5CE7
   corner: 12
 }
 
 style card {
-  fill: #FFFFFF  # white
-  corner: 14
+  fill: #FFFFFF
+  corner: 16
 }
 
-style heading {
-  fill: #1A1A2E  # blue
-  font: "Inter" bold 22
+# Style inheritance via extends:
+style dark_card {
+  extends: card
+  fill: #2D2B55
 }
 
-style metric {
-  fill: #6C5CE7  # blue
-  font: "Inter" bold 32
-}
-
-style subheading {
-  fill: #111827  # blue
-  font: "Inter" semibold 16
-}
+# ─── Edge Defaults ───
 
 edge_defaults {
   stroke: #8B7CF7 1.5
@@ -41,346 +39,361 @@ edge_defaults {
   curve: smooth
 }
 
-# ─── Layout ───
+# ─── Node Types ───
 
-# Sidebar navigation
-# [auto] column container (5 children)
-frame @sidebar {
+# 1. Rect
+rect @hero_rect {
   spec {
-    "Persistent sidebar — always visible"
-    todo: "collapses to icons on small screens"
-    done: "basic layout"
-    tag: navigation, responsive
+    "Primary rectangle — demonstrates fill, stroke, corner, shadow, opacity"
+    todo: "add gradient fill variant"
+    status: done
+    priority: high
+    tag: showcase, mvp
   }
-  text @app_name "FastDraft" {
-    w: 290.9
-    fill: #FFFFFF  # white
-    font: "Inter" bold 18
-    x: -47.6
-    y: 74.6
-  }
-  rect @nav_dashboard {
-    w: 180 h: 40
-    fill: #5A4BD1  # blue
-    corner: 8
-    when :hover {
-      fill: #4A3BC1  # blue
-      ease: ease_out 150ms
-    }
-  }
-  text @_text_10 "Dashboard" {
-    use: accent_text
-    x: 47.4
-    y: 117.8
-  }
-  rect @nav_projects {
-    text @_text_11 "Projects" {
-      use: accent_text
-      opacity: 0.7
-    }
-    w: 180 h: 40
-    fill: #3D3A6E  # blue
-    corner: 8
-    when :hover {
-      fill: #5A4BD1  # blue
-      ease: ease_out 150ms
-    }
-  }
-  rect @nav_settings {
-    text @_text_12 "Settings" {
-      use: accent_text
-      opacity: 0.7
-    }
-    w: 180 h: 40
-    fill: #3D3A6E  # blue
-    corner: 8
-    when :hover {
-      fill: #5A4BD1  # blue
-      ease: ease_out 150ms
-    }
-  }
-  layout: column gap=8 pad=16
-  w: 322.9 h: 257.4
-  fill: #2D2B55  # blue
-  corner: 0
-  opacity: 1
-  x: -416.5
-  y: -988.2
-}
-
-# Top header area
-text @page_title "Dashboard" {
-  use: heading
-  x: 280
-  y: 32
-}
-
-text @page_subtitle "Welcome back — here's what's happening today." {
-  use: body
-  x: 280
-  y: 60
-}
-
-# ─── Metric Cards ───
-# [auto] styled: card
-rect @card_revenue {
-  spec {
-    "Revenue metric card"
-    todo: "shows daily/weekly/monthly toggle"
-    todo: "sparkline chart in background"
-    tag: metrics, dashboard
-  }
-  text @revenue_delta "+12.5% ↑" {
-    fill: #22C55E  # green
-    font: "Inter" semibold 13
-    x: 424
-    y: 143
-  }
-  w: 220 h: 120
-  use: card
-  shadow: (0,2,16,#00000010)
-  x: 279.6
-  y: 97.7
+  w: 280 h: 140
+  use: accent
+  stroke: #5A4BD1 2
+  shadow: (0,4,20,#6C5CE740)
+  opacity: 0.95
   when :hover {
-    scale: 1
+    fill: #5A4BD1
+    scale: 1.03
     ease: spring 200ms
   }
-}
-
-text @revenue_label "Revenue" {
-  use: body
-  x: 490.7
-  y: 183.7
-}
-
-text @revenue_value "$48,250" {
-  use: metric
-  x: 527
-  y: 205.8
-}
-
-# [auto] styled: card
-rect @card_users {
-  text @users_label "Active Users" {
-    use: body
-    x: 520
-    y: 112
-  }
-  w: 220 h: 120
-  use: card
-  shadow: (0,2,16,#00000010)
-  x: 526.2
-  y: 92.1
-  when :hover {
-    scale: 1
-    ease: spring 200ms
-  }
-}
-
-text @users_value "2,847" {
-  use: metric
-  x: 888.2
-  y: 534
-}
-
-# [auto] styled: card
-rect @card_tasks {
-  text @tasks_label "Completed Tasks" {
-    use: body
-    x: 756
-    y: 112
-  }
-  text @tasks_value "1,094" {
-    use: metric
-    x: 756
-    y: 136
-  }
-  w: 220 h: 120
-  use: card
-  shadow: (0,2,16,#00000010)
-  x: 798
-  y: 65.4
-  when :hover {
-    scale: 1
-    ease: spring 200ms
-  }
-}
-
-# ─── Activity Feed ───
-# [auto] column container (4 children)
-frame @activity_feed {
-  spec {
-    "Recent activity stream"
-    todo: "auto-refreshes every 30s"
-    todo: "click to navigate to item"
-    tag: realtime, engagement
-  }
-  text @feed_title "Recent Activity" {
-    use: subheading
-    x: 8.4
-    y: 5.8
-  }
-  rect @activity_1 {
-    text @_text_13 "Alice submitted design review" {
-      use: body
-    }
-    w: 420 h: 44
-    fill: #F9FAFB  # white
-    corner: 8
-  }
-  rect @activity_2 {
-    text @_text_14 "Bob merged pull request #284" {
-      use: body
-    }
-    w: 420 h: 44
-    fill: #F9FAFB  # white
-    corner: 8
-  }
-  rect @activity_3 {
-    w: 420 h: 44
-    fill: #F9FAFB  # white
-    corner: 8
-    x: 21.7
-    y: 172.8
-  }
-  layout: column gap=8 pad=20
-  w: 460 h: 280
-  use: card
-  shadow: (0,2,16,#00000010)
-  x: 270.2
-  y: 299
-}
-
-text @_text_15 "Carol deployed v2.1.0 to staging" {
-  use: body
-  x: 401.5
-  y: 479.4
-}
-
-# ─── Pipeline Status ───
-# [auto] column container (1 children)
-frame @pipeline {
-  text @pipeline_title "Deployment Pipeline" {
-    use: subheading
-  }
-  layout: column gap=12 pad=20
-  w: 460 h: 236
-  use: card
-  shadow: (0,2,16,#00000010)
-  x: 231.3
-  y: 752.6
-}
-
-# Pipeline stages as connected nodes
-# [auto] connects to stage_test
-rect @stage_build {
-  w: 37.7 h: 37.7
-  fill: #22C55E  # green
-  corner: 8
-  x: 217.9
-  y: 646.1
-}
-
-text @_text_23 "Test" {
-  x: 175.3
-  y: 651.8
-}
-
-text @_text_16 "Build" {
-  use: accent_text
-  x: 236.6
-  y: 655
-}
-
-# [auto] connects to stage_staging
-rect @stage_test {
-  text @_text_17 "Test" {
-    use: accent_text
-    x: 31.4
-    y: 9.6
-  }
-  w: 109.1 h: 35
-  fill: #22C55E  # green
-  corner: 8
-  x: 419.6
-  y: 663.2
-}
-
-# [auto] connects to stage_prod
-rect @stage_staging {
-  w: 85.9 h: 47.6
-  fill: #F59E0B  # orange
-  corner: 8
-  x: 636.6
-  y: 619.9
-  when :hover {
-    fill: #D97706  # orange
-    ease: ease_out 150ms
-  }
-}
-
-text @_text_18 "Staging" {
-  use: accent_text
-  x: 488.1
-  y: 726.3
-}
-
-ellipse @stage_prod {
-  text @_text_19 "Prod" {
-    w: 206
-    use: accent_text
-  }
-  w: 103 h: 85.1
-  fill: #6B7280  # blue
-  corner: 8
-  x: 884.5
-  y: 681
   when :press {
-    fill: #6C5CE7  # blue
-    ease: spring 300ms
+    scale: 0.97
+    ease: ease_out 100ms
   }
 }
 
-text @_text_0 "Text" {
-  w: 37.1
-  fill: #FFFFFF  # white
-  x: 665.8
-  y: 635.5
+# 2. Ellipse
+ellipse @demo_circle {
+  spec "Circle node — demonstrates ellipse type"
+  w: 100 h: 100
+  fill: #00B894
+  stroke: #009B77 2
+  when :hover {
+    opacity: 0.8
+    ease: ease_in 150ms
+  }
 }
 
-text @_text_24 "Carol deployed v2.1.0 to staging" {
+# 3. Text (with max-width)
+text @demo_heading "Fast Draft Format Demo" {
+  w: 400
+  use: heading
+}
+
+text @demo_subtitle "Every keyword, node type, edge, and animation in one file." {
   use: body
-  x: 406.2
-  y: 438.2
 }
 
-# ─── Flows ───
+# 4. Group (with row layout)
+group @button_row {
+  layout: row gap=12 pad=0
 
-edge @build_to_test {
-  from: @stage_build
-  to: @stage_test
-  stroke: #6B7080 1.5
-  flow: pulse 800ms
+  rect @btn_primary {
+    spec "Primary action button"
+    text @btn_primary_label "Get Started" {
+      fill: #FFFFFF
+      font: "Inter" semibold 15
+    }
+    w: 160 h: 48
+    use: accent
+    when :hover {
+      fill: #5A4BD1
+      scale: 1.03
+      ease: spring 200ms
+    }
+    when :press {
+      scale: 0.97
+      ease: ease_out 100ms
+    }
+  }
+
+  rect @btn_secondary {
+    text @btn_secondary_label "Learn More" {
+      fill: #6C5CE7
+      font: "Inter" semibold 15
+    }
+    w: 160 h: 48
+    fill: #FFFFFF
+    stroke: #6C5CE7 2
+    corner: 12
+    when :hover {
+      fill: #F0EDFF
+      ease: ease_out 150ms
+    }
+  }
 }
-edge @test_to_staging {
-  from: @stage_test
-  to: @stage_staging
-  stroke: #6B7080 1.5
-  flow: pulse 800ms
+
+# 5. Frame (with column layout, clip, pad)
+frame @info_card {
+  spec {
+    "Card container — frame with clip and padding"
+    done: "layout complete"
+  }
+  text @card_title "Layout Features" {
+    fill: #1A1A2E
+    font: "Inter" semibold 18
+  }
+  text @card_body "Frames support clip, pad, and managed layouts (column, row, grid)." {
+    use: body
+  }
+  rect @card_cta {
+    text @card_cta_label "Action" {
+      fill: #FFFFFF
+      font: "Inter" medium 14
+    }
+    w: 120 h: 36
+    use: accent
+  }
+  layout: column gap=12 pad=24
+  w: 320 h: 220
+  use: card
+  clip: true
+  shadow: (0,2,16,#00000010)
 }
-edge @staging_to_prod {
-  from: @stage_staging
-  to: @stage_prod
-  stroke: #F59E0B 1.5
-  flow: dash 1200ms
+
+# 6. Path
+path @demo_path {
+  spec "Freehand path — pen tool output"
+  stroke: #3B82F6 3
 }
-edge @revenue_to_users {
-  from: @card_revenue
-  to: @card_users
-  stroke: #E5E7EB 1
+
+# 7. Generic node (placeholders)
+@login_btn {
+  spec {
+    "Generic node — no shape keyword, renders as dashed placeholder"
+    todo: "upgrade to rect when design is finalized"
+  }
+  fill: #F0EDFC
+  corner: 8
 }
-edge @users_to_tasks {
-  from: @card_users
-  to: @card_tasks
-  stroke: #E5E7EB 1
+
+# ─── Grid Layout ───
+
+group @color_grid {
+  spec "Grid layout showcase — 3 columns"
+  layout: grid cols=3 gap=12 pad=0
+
+  rect @swatch_1 { w: 80 h: 60; fill: #6C5CE7; corner: 8 }
+  rect @swatch_2 { w: 80 h: 60; fill: #00B894; corner: 8 }
+  rect @swatch_3 { w: 80 h: 60; fill: #FF6B6B; corner: 8 }
+  rect @swatch_4 { w: 80 h: 60; fill: #FFE66D; corner: 8 }
+  rect @swatch_5 { w: 80 h: 60; fill: #A29BFE; corner: 8 }
+  rect @swatch_6 { w: 80 h: 60; fill: #74B9FF; corner: 8 }
 }
+
+# ─── Place (child alignment) ───
+
+frame @place_demo {
+  w: 200 h: 120
+  fill: #F8F9FA
+  corner: 12
+  stroke: #E8E8EC 1
+  pad: 12
+  text @top_left "TL" {
+    font: "Inter" medium 12
+    fill: #999999
+    place: top-left
+  }
+  text @center_text "center" {
+    font: "Inter" medium 12
+    fill: #6C5CE7
+    place: center
+  }
+  text @bottom_right "BR" {
+    font: "Inter" medium 12
+    fill: #999999
+    place: bottom-right
+  }
+}
+
+# ─── Locked Node ───
+
+rect @locked_element {
+  spec "Locked node — cannot be moved or resized on canvas"
+  w: 120 h: 40
+  fill: #E8E8EC
+  corner: 8
+  locked: true
+}
+
+# ─── Animations: All Triggers & Easing ───
+
+# :enter trigger (viewport entrance)
+rect @enter_demo {
+  spec "Entrance animation — plays when scrolled into view"
+  w: 140 h: 80
+  fill: #6C5CE7
+  corner: 12
+  opacity: 0
+  when :enter {
+    opacity: 1
+    scale: 1
+    ease: ease_in_out 500ms
+  }
+}
+
+# :hover with linear easing
+rect @linear_demo {
+  text @linear_label "Linear" {
+    fill: #333333
+    font: "Inter" medium 12
+  }
+  w: 100 h: 60
+  fill: #DFE6E9
+  corner: 10
+  when :hover {
+    fill: #6C5CE7
+    ease: linear 300ms
+  }
+}
+
+# :hover with delay
+rect @delay_demo {
+  text @delay_label "Delayed" {
+    fill: #333333
+    font: "Inter" medium 12
+  }
+  w: 100 h: 60
+  fill: #DFE6E9
+  corner: 10
+  when :hover {
+    scale: 1.1
+    ease: ease_out 300ms
+    delay: 200ms
+  }
+}
+
+# Custom trigger
+rect @custom_trigger {
+  spec "Custom trigger — :active"
+  w: 100 h: 60
+  fill: #FFE66D
+  corner: 10
+  when :active {
+    fill: #FF6B6B
+    rotate: 5
+    ease: spring 400ms
+  }
+}
+
+# ─── Background Shorthand ───
+
+rect @bg_shorthand {
+  spec "bg: shorthand — fill + corner + shadow in one line"
+  w: 200 h: 80
+  bg: #FFFFFF corner=12 shadow=(0,4,16,#00000015)
+}
+
+# ─── Edges: All Styles ───
+
+# Source and target nodes for edges
+rect @node_a { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
+rect @node_b { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
+rect @node_c { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
+rect @node_d { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
+rect @node_e { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
+rect @node_f { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
+
+# Straight curve, end arrow
+edge @edge_straight {
+  from: @node_a
+  to: @node_b
+  label: "straight"
+  stroke: #4F46E5 2
+  arrow: end
+  curve: straight
+}
+
+# Smooth curve, both arrows
+edge @edge_smooth {
+  from: @node_b
+  to: @node_c
+  label: "smooth + both"
+  stroke: #10B981 2
+  arrow: both
+  curve: smooth
+}
+
+# Step curve, start arrow
+edge @edge_step {
+  from: @node_c
+  to: @node_d
+  label: "step + start"
+  stroke: #F59E0B 2
+  arrow: start
+  curve: step
+}
+
+# No arrow
+edge @edge_none {
+  from: @node_d
+  to: @node_e
+  label: "no arrow"
+  stroke: #6B7280 2
+  arrow: none
+  curve: smooth
+}
+
+# Flow: pulse animation on edge
+edge @edge_pulse {
+  from: @node_e
+  to: @node_f
+  label: "pulse flow"
+  stroke: #3B82F6 2
+  arrow: end
+  curve: smooth
+  flow: pulse 1000ms
+}
+
+# Flow: dash animation on edge
+edge @edge_dash {
+  from: @node_a
+  to: @node_f
+  label: "dash flow"
+  stroke: #EC4899 2
+  arrow: end
+  curve: smooth
+  flow: dash 800ms
+}
+
+# Edge with spec
+edge @annotated_edge {
+  spec {
+    "Documented edge — shows spec on edges"
+    todo: "add error path variant"
+  }
+  from: @hero_rect
+  to: @info_card
+  stroke: #6C5CE7 2
+  arrow: end
+  curve: smooth
+}
+
+# ─── Constraints ───
+
+@demo_heading -> center_in: canvas
+@demo_subtitle -> offset: @demo_heading 0, 40
+@hero_rect -> offset: @demo_subtitle 0, 60
+@demo_circle -> offset: @hero_rect 320, 20
+@button_row -> offset: @hero_rect 0, 180
+@info_card -> offset: @button_row 0, 80
+@color_grid -> offset: @info_card 360, 0
+@place_demo -> offset: @info_card 0, 260
+@locked_element -> offset: @place_demo 240, 0
+@enter_demo -> offset: @place_demo 0, 160
+@linear_demo -> offset: @enter_demo 180, 0
+@delay_demo -> offset: @linear_demo 140, 0
+@custom_trigger -> offset: @delay_demo 140, 0
+@bg_shorthand -> offset: @enter_demo 0, 120
+@demo_path -> offset: @demo_circle 140, 0
+@login_btn -> offset: @bg_shorthand 240, 0
+@node_a -> offset: @bg_shorthand 0, 120
+@node_b -> offset: @node_a 200, 0
+@node_c -> offset: @node_b 200, 0
+@node_d -> offset: @node_a 0, 100
+@node_e -> offset: @node_d 200, 0
+@node_f -> offset: @node_e 200, 0

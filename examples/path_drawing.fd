@@ -4,6 +4,15 @@
 # This example illustrates how to attach styles, animations and references
 # to paths in a drawing board setting.
 
+style hover_glow {
+  stroke: #60A5FA 4.0
+}
+
+style default_text {
+  font: "Inter" medium 14
+  fill: #374151
+}
+
 group @board {
   spec {
     "A freehand drawing board section"
@@ -25,13 +34,6 @@ group @board {
   }
 }
 
-theme hover_glow {
-  when :hover {
-    stroke: #60A5FA 4.0
-    scale: 1.05
-  }
-}
-
 # The user can connect drawn elements to standard shapes
 rect @note {
   w: 120 h: 80
@@ -39,11 +41,6 @@ rect @note {
   text "Sign here" {
     use: default_text
   }
-}
-
-theme default_text {
-  font: "Inter" medium 14
-  fill: #374151
 }
 
 edge @doodle_link {
