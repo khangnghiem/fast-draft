@@ -1197,3 +1197,82 @@ rect @box {
         "opacity should inherit from parent"
     );
 }
+
+#[test]
+fn roundtrip_animation_showcase_example() {
+    let src = std::fs::read_to_string("../../examples/animation_showcase.fd").unwrap();
+    let graph = crate::parser::parse_document(&src).expect("Failed to parse animation_showcase.fd");
+
+    // Ensure we correctly captured some elements of the file
+    let hover_scale = graph
+        .get_by_id(crate::id::NodeId::intern("hover_scale"))
+        .expect("hover_scale node not found");
+    assert!(
+        !hover_scale.animations.is_empty(),
+        "hover_scale should have an animation"
+    );
+    assert!(matches!(
+        hover_scale.animations[0].trigger,
+        crate::model::AnimTrigger::Hover
+    ));
+
+    let press_shrink = graph
+        .get_by_id(crate::id::NodeId::intern("press_shrink"))
+        .expect("press_shrink node not found");
+    assert!(
+        !press_shrink.animations.is_empty(),
+        "press_shrink should have an animation"
+    );
+    assert!(matches!(
+        press_shrink.animations[0].trigger,
+        crate::model::AnimTrigger::Press
+    ));
+
+    let enter_fade = graph
+        .get_by_id(crate::id::NodeId::intern("enter_fade"))
+        .expect("enter_fade node not found");
+    assert!(
+        !enter_fade.animations.is_empty(),
+        "enter_fade should have an animation"
+    );
+    assert!(matches!(
+        enter_fade.animations[0].trigger,
+        crate::model::AnimTrigger::Enter
+    ));
+
+    let flow_pulse = graph
+        .edges
+        .iter()
+        .find(|e| e.id.as_str() == "flow_pulse")
+        .expect("flow_pulse edge not found");
+    assert!(matches!(
+        flow_pulse.flow,
+        Some(crate::model::FlowAnim {
+            kind: crate::model::FlowKind::Pulse,
+            ..
+        })
+    ));
+
+    let flow_dash = graph
+        .edges
+        .iter()
+        .find(|e| e.id.as_str() == "flow_dash")
+        .expect("flow_dash edge not found");
+    assert!(matches!(
+        flow_dash.flow,
+        Some(crate::model::FlowAnim {
+            kind: crate::model::FlowKind::Dash,
+            ..
+        })
+    ));
+
+    let emitted = crate::emitter::emit_document(&graph);
+    let reparsed =
+        crate::parser::parse_document(&emitted).expect("Failed to re-parse emitted output");
+
+    assert_eq!(
+        graph.edges.len(),
+        reparsed.edges.len(),
+        "Edge count should match after roundtrip"
+    );
+}

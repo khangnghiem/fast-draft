@@ -1,0 +1,203 @@
+# ─── Animation Showcase ───
+# Demonstrates every animation type: hover, press, enter, custom triggers, and edge flows.
+
+style title {
+  fill: #111827
+  font: "Inter" bold 24
+}
+
+style subtitle {
+  fill: #6B7280
+  font: "Inter" medium 14
+}
+
+style card {
+  fill: #FFFFFF
+  corner: 16
+  shadow: (0,4,20,#00000010)
+  stroke: #E5E7EB 1
+}
+
+# ─── Layout setup ───
+
+text @header "Animation Showcase" {
+  use: title
+  place: top-left
+}
+
+text @subheader "Hover, Press, Enter, and Edge Flows" {
+  use: subtitle
+  offset: @header 0, 32
+}
+
+# ─── 1. Hover Animations ───
+
+group @hover_group {
+  layout: row gap=20 pad=0
+  offset: @subheader 0, 60
+
+  # Simple scaling on hover with spring easing
+  rect @hover_scale {
+    w: 120 h: 60
+    fill: #3B82F6
+    corner: 8
+    text @l1 "Hover Me" { fill: #FFFFFF; font: "Inter" medium 14 }
+    when :hover {
+      scale: 1.05
+      ease: spring 300ms
+    }
+  }
+
+  # Color and rotation change on hover
+  rect @hover_rotate {
+    w: 120 h: 60
+    fill: #10B981
+    corner: 8
+    text @l2 "Rotate" { fill: #FFFFFF; font: "Inter" medium 14 }
+    when :hover {
+      fill: #059669
+      rotate: 10
+      ease: ease_out 200ms
+    }
+  }
+
+  # Delayed animation
+  rect @hover_delay {
+    w: 120 h: 60
+    fill: #F59E0B
+    corner: 8
+    text @l3 "Delayed" { fill: #FFFFFF; font: "Inter" medium 14 }
+    when :hover {
+      opacity: 0.8
+      scale: 1.1
+      ease: ease_in_out 300ms
+      delay: 150ms
+    }
+  }
+}
+
+# ─── 2. Press Animations ───
+
+group @press_group {
+  layout: row gap=20 pad=0
+  offset: @hover_group 0, 100
+
+  # Shrink on press (like a button)
+  rect @press_shrink {
+    w: 120 h: 60
+    fill: #6366F1
+    corner: 8
+    text @p1 "Press Me" { fill: #FFFFFF; font: "Inter" medium 14 }
+    when :press {
+      scale: 0.95
+      ease: ease_out 100ms
+    }
+  }
+
+  # Multiple triggers (Hover + Press)
+  rect @press_combined {
+    w: 120 h: 60
+    fill: #8B5CF6
+    corner: 8
+    text @p2 "Hover & Press" { fill: #FFFFFF; font: "Inter" medium 14 }
+    when :hover {
+      fill: #7C3AED
+      ease: linear 150ms
+    }
+    when :press {
+      scale: 0.92
+      ease: ease_out 50ms
+    }
+  }
+}
+
+# ─── 3. Enter Animations (Viewport) ───
+
+group @enter_group {
+  layout: row gap=20 pad=0
+  offset: @press_group 0, 100
+
+  # Fades in when scrolling into view
+  rect @enter_fade {
+    w: 180 h: 80
+    use: card
+    opacity: 0
+    text @e1 "Fades In" { fill: #374151; font: "Inter" medium 14 }
+    when :enter {
+      opacity: 1
+      ease: ease_in 600ms
+    }
+  }
+
+  # Scales up when scrolling into view
+  rect @enter_scale {
+    w: 180 h: 80
+    use: card
+    scale: 0.8
+    opacity: 0
+    text @e2 "Pops In" { fill: #374151; font: "Inter" medium 14 }
+    when :enter {
+      opacity: 1
+      scale: 1
+      ease: spring 500ms
+    }
+  }
+}
+
+# ─── 4. Custom Triggers ───
+
+rect @custom_active {
+  w: 200 h: 60
+  fill: #EF4444
+  corner: 8
+  offset: @enter_group 0, 120
+  text @c1 "Custom Trigger: active" { fill: #FFFFFF; font: "Inter" medium 14 }
+  when :active {
+    fill: #DC2626
+    scale: 1.05
+    rotate: -2
+    ease: spring 400ms
+  }
+}
+
+# ─── 5. Edge Flow Animations ───
+
+# Source nodes for edge flows
+rect @source_node { w: 60 h: 60; fill: #E5E7EB; corner: 30; offset: @custom_active 0, 120 }
+rect @target_node1 { w: 60 h: 60; fill: #E5E7EB; corner: 30; offset: @source_node 200, -40 }
+rect @target_node2 { w: 60 h: 60; fill: #E5E7EB; corner: 30; offset: @source_node 200, 40 }
+
+# Pulse flow (glowing dot)
+edge @flow_pulse {
+  from: @source_node
+  to: @target_node1
+  text @_flow_pulse_label "pulse" {}
+  stroke: #3B82F6 2
+  curve: smooth
+  arrow: end
+  flow: pulse 1200ms
+}
+
+# Dash flow (marching dashes)
+edge @flow_dash {
+  from: @source_node
+  to: @target_node2
+  text @_flow_dash_label "dash" {}
+  stroke: #10B981 2
+  curve: smooth
+  arrow: end
+  flow: dash 800ms
+}
+
+# Edge trigger animations (edges support `when` blocks too!)
+edge @hoverable_edge {
+  from: @target_node1
+  to: @target_node2
+  label: "hover me"
+  stroke: #9CA3AF 2
+  curve: straight
+  when :hover {
+    stroke: #6366F1 4
+    ease: ease_in_out 200ms
+  }
+}
