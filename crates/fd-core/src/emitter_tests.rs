@@ -1660,9 +1660,9 @@ fn emit_filtered_design() {
 }
 
 #[test]
-fn emit_filtered_notes() {
+fn emit_filtered_spec() {
     let graph = make_test_graph();
-    let out = emit_filtered(&graph, ReadMode::Notes);
+    let out = emit_filtered(&graph, ReadMode::Spec);
     // Should have spec blocks
     assert!(out.contains("spec"), "should include spec");
     assert!(out.contains("Main card component"), "should include desc");
@@ -1672,17 +1672,8 @@ fn emit_filtered_notes() {
         "should include raw status line"
     );
     // Should NOT have styles or anims
-    assert!(!out.contains("fill:"), "no fill in notes mode");
-    assert!(!out.contains("when"), "no when in notes mode");
-}
-
-#[test]
-fn emit_filtered_spec_alias() {
-    // ReadMode::Spec (alias) should produce the same output as ReadMode::Notes
-    let graph = make_test_graph();
-    let notes_out = emit_filtered(&graph, ReadMode::Notes);
-    let spec_out = emit_filtered(&graph, ReadMode::Spec);
-    assert_eq!(notes_out, spec_out, "Spec should be alias for Notes");
+    assert!(!out.contains("fill:"), "no fill in spec mode");
+    assert!(!out.contains("when"), "no when in spec mode");
 }
 
 #[test]

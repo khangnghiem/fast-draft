@@ -131,7 +131,7 @@ impl SelectTool {
         };
     }
 
-    /// Get the first selected node (backward compatibility).
+    /// Get the first selected node.
     pub fn first_selected(&self) -> Option<NodeId> {
         self.selected.first().copied()
     }
