@@ -11,6 +11,1264 @@
  * because relative module resolution fails silently in VS Code webviews
  * (the vscode-webview:// resource scheme doesn't support it).
  */
+// ── canvas-core/state.js ──
+// ─── canvas-core/state.js ─── Shared canvas state
+// Imported by both site/playground.js and fd-vscode/webview/src/main.js.
+//
+// This module holds the mutable state that drives the canvas lifecycle:
+// zoom, pan, dirty flags, grid, motion preferences, and tool defaults.
+// Platform-specific code (CodeMirror, VS Code postMessage) stays in the
+// respective host files.
+
+// ─── Zoom / Pan ──────────────────────────────────────────────────────────
+
+let panX = 0;
+let panY = 0;
+let panStartX = 0;
+let panStartY = 0;
+let panDragging = false;
+let zoomLevel = 1.0;
+const ZOOM_MIN = 0.1;
+const ZOOM_MAX = 10;
+const ZOOM_STEP = 1.25;
+const ZOOM_WHEEL_FACTOR = 1.04;
+
+/** Update pan offsets. */
+function setPan(x, y) { panX = x; panY = y; }
+/** Update zoom level (clamped). */
+function setZoom(z) { zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z)); }
+/** Start pan drag tracking. */
+function startPanDrag(sx, sy) { panStartX = sx; panStartY = sy; panDragging = true; }
+/** End pan drag tracking. */
+function endPanDrag() { panDragging = false; }
+
+// ─── Dirty Flags ─────────────────────────────────────────────────────────
+
+let renderDirty = true;
+/** @type {number} Monotonic generation counter — bumped on every scene mutation */
+let sceneGeneration = 0;
+/** Side-effect throttle timer */
+let sideEffectTimer = null;
+/** Whether the scene contains edge flow animations (keeps render loop alive) */
+let hasFlowEdges = false;
+
+/** Mark the canvas as needing a re-render on the next animation frame. */
+function markDirty() { renderDirty = true; }
+
+/** Clear the dirty flag (called after each render). */
+function clearDirty() { renderDirty = false; }
+
+/** Bump the scene generation counter (call on any data mutation). */
+function bumpGeneration(fdCanvas) {
+  sceneGeneration++;
+  markDirty();
+  if (fdCanvas) {
+    try { hasFlowEdges = fdCanvas.has_active_flows(); } catch (_) {}
+  }
+}
+
+/** Set the side-effect timer reference (for throttled panel updates). */
+function setSideEffectTimer(t) { sideEffectTimer = t; }
+
+// ─── Grid ────────────────────────────────────────────────────────────────
+
+let gridEnabled = false;
+const GRID_SPACING = 20;
+
+function setGridEnabled(v) { gridEnabled = v; }
+function toggleGrid() { gridEnabled = !gridEnabled; markDirty(); }
+
+// ─── Reduce Motion ───────────────────────────────────────────────────────
+
+const prefersReducedMotion = typeof window !== 'undefined'
+  ? window.matchMedia('(prefers-reduced-motion: reduce)')
+  : { matches: false, addEventListener() {} };
+let reduceMotion = prefersReducedMotion.matches;
+
+/** Initialize motion preference listener. */
+function initMotionPreference() {
+  // Check localStorage override (site playground stores manual toggle)
+  if (typeof localStorage !== 'undefined') {
+    const manual = localStorage.getItem('fd-reduce-motion');
+    if (manual === 'true') reduceMotion = true;
+  }
+  prefersReducedMotion.addEventListener('change', (e) => {
+    reduceMotion = e.matches;
+    if (typeof localStorage !== 'undefined') {
+      const manual = localStorage.getItem('fd-reduce-motion');
+      if (manual === 'true') reduceMotion = true;
+    }
+  });
+}
+
+function setReduceMotion(v) { reduceMotion = v; }
+
+// ─── Smart Defaults (Sticky Styles Per Tool) ─────────────────────────────
+
+const toolDefaults = {
+  rect:    { fill: 'none', stroke: '#333333', strokeWidth: 2.5, opacity: 1 },
+  ellipse: { fill: 'none', stroke: '#333333', strokeWidth: 2.5, opacity: 1 },
+  pen:     { stroke: '#333333', strokeWidth: 2, opacity: 1 },
+  arrow:   { stroke: '#333333', strokeWidth: 2, opacity: 1 },
+  text:    { fill: '#333333', fontSize: 16, opacity: 1 },
+  frame:   { stroke: '#6B7280', strokeWidth: 1, opacity: 1 },
+};
+
+/** Capture a property change into the current tool's defaults. */
+function captureDefault(fdCanvas, prop, value) {
+  const toolName = fdCanvas ? fdCanvas.get_tool_name() : 'select';
+  const map = {
+    fill: 'fill', stroke: 'stroke', stroke_width: 'strokeWidth',
+    opacity: 'opacity', font_size: 'fontSize',
+  };
+  const key = map[prop] || prop;
+  if (toolDefaults[toolName] && key in toolDefaults[toolName]) {
+    toolDefaults[toolName][key] = isNaN(Number(value)) ? value : Number(value);
+  }
+}
+
+/** Apply stored defaults to the currently selected (newly created) node. */
+function applyDefaultsToNewNode(fdCanvas, toolName) {
+  if (!fdCanvas) return;
+  const defaults = toolDefaults[toolName];
+  if (!defaults) return;
+  const selectedId = fdCanvas.get_selected_id();
+  if (!selectedId) return;
+  if (defaults.fill) fdCanvas.set_node_prop('fill', defaults.fill);
+  if (defaults.stroke) fdCanvas.set_node_prop('stroke', defaults.stroke);
+  if (defaults.strokeWidth !== undefined) fdCanvas.set_node_prop('stroke_width', String(defaults.strokeWidth));
+  if (defaults.opacity !== undefined && defaults.opacity !== 1) fdCanvas.set_node_prop('opacity', String(defaults.opacity));
+  if (defaults.fontSize !== undefined) fdCanvas.set_node_prop('font_size', String(defaults.fontSize));
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────
+
+/** Convert screen (client) coords to scene coords accounting for zoom+pan. */
+function screenToScene(clientX, clientY, canvasEl) {
+  const rect = canvasEl.getBoundingClientRect();
+  return {
+    x: ((clientX - rect.left) - panX) / zoomLevel,
+    y: ((clientY - rect.top) - panY) / zoomLevel,
+  };
+}
+
+/** Map PointerEvent.pointerType to WASM u8: 0=mouse, 1=touch, 2=pen. */
+function pointerTypeToU8(pointerType) {
+  if (pointerType === 'touch') return 1;
+  if (pointerType === 'pen') return 2;
+  return 0;
+}
+
+// ─── Toast Notification ──────────────────────────────────────────────────
+
+/** Show a brief toast notification at the bottom of the canvas. */
+function showToast(message, durationMs = 1200, container = null) {
+  const existing = document.getElementById('fd-toast');
+  if (existing) existing.remove();
+  const el = document.createElement('div');
+  el.id = 'fd-toast';
+  el.textContent = message;
+  el.style.cssText = `
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    padding: 6px 16px; border-radius: 8px; font-size: 12px; font-weight: 500;
+    color: #fff; background: rgba(30,30,46,0.85); backdrop-filter: blur(8px);
+    pointer-events: none; z-index: 9999; opacity: 0;
+    transition: opacity 150ms ease;
+  `;
+  (container || document.body).appendChild(el);
+  requestAnimationFrame(() => { el.style.opacity = '1'; });
+  setTimeout(() => {
+    el.style.opacity = '0';
+    setTimeout(() => el.remove(), 200);
+  }, durationMs);
+}
+// ── canvas-core/render.js ──
+// ─── canvas-core/render.js ─── Shared render loop + tween engine
+// Imported by both site/playground.js and fd-vscode/webview/src/main.js.
+//
+// This module provides:
+// - Tween engine for CSS-like animations (hover/press transitions)
+// - Dirty-flag render loop (rAF-based, zero cost when idle)
+// - Grid drawing utility
+// - Fit-to-content viewport calculation
+
+import * as S from './state.js';
+
+// ─── Tween Engine ────────────────────────────────────────────────────────
+
+/** Active tweens: { nodeId, prop, from, to, startTime, duration, easeFn } */
+const activeTweens = [];
+
+const EASE_FNS = {
+  linear:      (t) => t,
+  ease_out:    (t) => 1 - Math.pow(1 - t, 3),
+  ease_in:     (t) => t * t * t,
+  ease_in_out: (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+  spring: (t) => {
+    const c4 = (2 * Math.PI) / 3;
+    return t === 0 ? 0 : t === 1 ? 1
+      : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+  },
+};
+
+/** Start a tween (replaces existing same-node+prop tween). */
+function startTween(nodeId, prop, from, to, duration, easeName) {
+  for (let i = activeTweens.length - 1; i >= 0; i--) {
+    if (activeTweens[i].nodeId === nodeId && activeTweens[i].prop === prop) {
+      activeTweens.splice(i, 1);
+    }
+  }
+  activeTweens.push({
+    nodeId, prop, from, to,
+    startTime: performance.now(),
+    duration: duration || 300,
+    easeFn: EASE_FNS[easeName] || EASE_FNS.spring,
+  });
+}
+
+/** Evaluate all active tweens, returning { nodeId → { prop → value } }. */
+function evalTweens(now) {
+  const overrides = {};
+  for (let i = activeTweens.length - 1; i >= 0; i--) {
+    const tw = activeTweens[i];
+    let t = (now - tw.startTime) / tw.duration;
+    if (t >= 1) { t = 1; activeTweens.splice(i, 1); }
+    const v = tw.from + (tw.to - tw.from) * tw.easeFn(t);
+    if (!overrides[tw.nodeId]) overrides[tw.nodeId] = {};
+    overrides[tw.nodeId][tw.prop] = v;
+  }
+  return overrides;
+}
+
+// ─── Detach Animation ────────────────────────────────────────────────────
+
+/**
+ * Play a snappy "detach pop" animation when a node is reparented out.
+ * @param {any} fdCanvas - WASM canvas instance
+ * @param {string} nodeId - ID of detached node
+ * @param {HTMLCanvasElement} canvas - canvas element for overlay positioning
+ */
+function playDetachAnimation(fdCanvas, nodeId, canvas) {
+  if (!fdCanvas || !nodeId || S.reduceMotion) return;
+
+  // Inject @keyframes on first use
+  if (!document.getElementById('detach-anim-style')) {
+    const style = document.createElement('style');
+    style.id = 'detach-anim-style';
+    style.textContent = `
+      @keyframes detachPop {
+        0%   { opacity: 1; transform: scale(1.08); }
+        60%  { opacity: 0.7; transform: scale(1.0); }
+        100% { opacity: 0; transform: scale(0.98); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  try {
+    const boundsJson = fdCanvas.get_node_bounds(nodeId);
+    if (!boundsJson) return;
+    const b = JSON.parse(boundsJson);
+    if (!b.width) return;
+
+    const screenX = b.x * S.zoomLevel + S.panX;
+    const screenY = b.y * S.zoomLevel + S.panY;
+    const screenW = b.width * S.zoomLevel;
+    const screenH = b.height * S.zoomLevel;
+    const pad = 6;
+
+    const glowOverlay = document.createElement('div');
+    glowOverlay.className = 'detach-glow';
+    glowOverlay.style.cssText = `
+      position: absolute;
+      left: ${screenX - pad}px; top: ${screenY - pad}px;
+      width: ${screenW + pad * 2}px; height: ${screenH + pad * 2}px;
+      border: 2px solid #00D2B4; border-radius: 6px;
+      box-shadow: 0 0 12px #00D2B480, inset 0 0 8px #00D2B420;
+      pointer-events: none;
+      animation: detachPop 250ms ease-out forwards;
+      z-index: 9999;
+    `;
+
+    const container = canvas.parentElement || document.body;
+    container.appendChild(glowOverlay);
+    setTimeout(() => glowOverlay.remove(), 300);
+  } catch (_) { /* skip if bounds unavailable */ }
+
+  S.markDirty();
+}
+
+// ─── Grid Drawing ────────────────────────────────────────────────────────
+
+/** Draw subtle grid overlay in scene space (call inside zoom/pan transform). */
+function drawGrid(ctx) {
+  if (!S.gridEnabled || !ctx) return;
+  const canvas = ctx.canvas;
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.width / dpr;
+  const h = canvas.height / dpr;
+  const left = -S.panX / S.zoomLevel;
+  const top = -S.panY / S.zoomLevel;
+  const right = left + w / S.zoomLevel;
+  const bottom = top + h / S.zoomLevel;
+  const startX = Math.floor(left / S.GRID_SPACING) * S.GRID_SPACING;
+  const startY = Math.floor(top / S.GRID_SPACING) * S.GRID_SPACING;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 0.5 / S.zoomLevel;
+  ctx.beginPath();
+  for (let x = startX; x <= right; x += S.GRID_SPACING) {
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+  }
+  for (let y = startY; y <= bottom; y += S.GRID_SPACING) {
+    ctx.moveTo(left, y);
+    ctx.lineTo(right, y);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ─── Render Loop ─────────────────────────────────────────────────────────
+
+/** Animation loop ID. */
+let animFrameId = null;
+
+/**
+ * Start the dirty-checked animation loop.
+ * The loop keeps running via rAF but only calls renderFn when:
+ *   - renderDirty is true (user interaction, text change, resize)
+ *   - activeTweens are in progress (spring/ease animations)
+ *   - hasFlowEdges is true (pulse/dash edge animations)
+ *
+ * @param {Function} renderFn - Platform-specific render function
+ * @param {Function} [extraDirtyCheck] - Optional additional dirty check (e.g. erasePoofs)
+ */
+function startAnimLoop(renderFn, extraDirtyCheck) {
+  if (animFrameId !== null) return; // already running
+  function loop() {
+    const extraDirty = extraDirtyCheck ? extraDirtyCheck() : false;
+    if (S.renderDirty || activeTweens.length > 0 || S.hasFlowEdges || extraDirty) {
+      S.clearDirty();
+      renderFn();
+    }
+    animFrameId = requestAnimationFrame(loop);
+  }
+  animFrameId = requestAnimationFrame(loop);
+}
+
+/** Stop the animation loop (e.g. when canvas is hidden). */
+function stopAnimLoop() {
+  if (animFrameId !== null) {
+    cancelAnimationFrame(animFrameId);
+    animFrameId = null;
+  }
+}
+
+// ─── Fit to Content ──────────────────────────────────────────────────────
+
+/**
+ * Auto-center scene content in canvas viewport.
+ * @param {HTMLCanvasElement} canvasEl - The canvas element
+ * @param {any} fdCanvas - WASM canvas instance
+ * @param {Function} [onComplete] - Callback after zoom/pan updated (e.g. updateZoomIndicator)
+ */
+function fitToContent(canvasEl, fdCanvas, onComplete) {
+  if (!fdCanvas) return;
+  try {
+    const text = fdCanvas.get_text();
+    const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
+    const nodes = [];
+    let m;
+    while ((m = idRegex.exec(text)) !== null) {
+      try {
+        const bj = fdCanvas.get_node_bounds(m[1]);
+        if (!bj) continue;
+        const b = JSON.parse(bj);
+        if (b.width > 0 && b.height > 0) nodes.push(b);
+      } catch (_) {}
+    }
+    if (nodes.length === 0) return;
+
+    let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
+    for (const n of nodes) {
+      sx = Math.min(sx, n.x);
+      sy = Math.min(sy, n.y);
+      sx2 = Math.max(sx2, n.x + n.width);
+      sy2 = Math.max(sy2, n.y + n.height);
+    }
+    const pad = 40;
+    sx -= pad; sy -= pad; sx2 += pad; sy2 += pad;
+    const sw = sx2 - sx, sh = sy2 - sy;
+    const cw = canvasEl.clientWidth, ch = canvasEl.clientHeight;
+    if (cw === 0 || ch === 0) return;
+
+    S.setZoom(Math.min(cw / sw, ch / sh, S.ZOOM_MAX));
+    S.setPan(
+      (cw - sw * S.zoomLevel) / 2 - sx * S.zoomLevel,
+      (ch - sh * S.zoomLevel) / 2 - sy * S.zoomLevel,
+    );
+    S.markDirty();
+    if (onComplete) onComplete();
+  } catch (_) {}
+}
+
+/**
+ * Get the bounding box of all scene content.
+ * @param {any} fdCanvas - WASM canvas instance
+ * @returns {{ x: number, y: number, w: number, h: number } | null}
+ */
+function getSceneBounds(fdCanvas) {
+  if (!fdCanvas) return null;
+  try {
+    const text = fdCanvas.get_text();
+    const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
+    let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
+    let found = false;
+    let m;
+    while ((m = idRegex.exec(text)) !== null) {
+      try {
+        const bj = fdCanvas.get_node_bounds(m[1]);
+        if (!bj) continue;
+        const b = JSON.parse(bj);
+        if (b.width > 0 && b.height > 0) {
+          sx = Math.min(sx, b.x);
+          sy = Math.min(sy, b.y);
+          sx2 = Math.max(sx2, b.x + b.width);
+          sy2 = Math.max(sy2, b.y + b.height);
+          found = true;
+        }
+      } catch (_) {}
+    }
+    if (!found) return null;
+    return { x: sx, y: sy, w: sx2 - sx, h: sy2 - sy };
+  } catch (_) {
+    return null;
+  }
+}
+
+// ─── Zoom Utilities ──────────────────────────────────────────────────────
+
+/**
+ * Zoom by a multiplier, anchored at a screen-space point.
+ * @param {number} mx - Screen X anchor
+ * @param {number} my - Screen Y anchor
+ * @param {number} factor - Zoom multiplier
+ * @param {Function} [onComplete] - Callback (e.g. updateZoomIndicator)
+ */
+function zoomAtPoint(mx, my, factor, onComplete) {
+  const oldZoom = S.zoomLevel;
+  S.setZoom(S.zoomLevel * factor);
+  S.setPan(
+    mx - (mx - S.panX) * (S.zoomLevel / oldZoom),
+    my - (my - S.panY) * (S.zoomLevel / oldZoom),
+  );
+  S.markDirty();
+  if (onComplete) onComplete();
+}
+
+/**
+ * Zoom to a specific level, centered on the canvas.
+ * @param {HTMLCanvasElement} canvasEl
+ * @param {number} newZoom
+ * @param {Function} [onComplete]
+ */
+function zoomToCenter(canvasEl, newZoom, onComplete) {
+  const cr = canvasEl.getBoundingClientRect();
+  const cx = cr.width / 2;
+  const cy = cr.height / 2;
+  const clamped = Math.max(S.ZOOM_MIN, Math.min(S.ZOOM_MAX, newZoom));
+  S.setPan(
+    cx - (cx - S.panX) * (clamped / S.zoomLevel),
+    cy - (cy - S.panY) * (clamped / S.zoomLevel),
+  );
+  S.setZoom(clamped);
+  S.markDirty();
+  if (onComplete) onComplete();
+}
+// ── canvas-core/clipboard.js ──
+// ─── canvas-core/clipboard.js ─── Shared clipboard utilities
+// Pure FD text manipulation — no DOM or platform dependencies.
+
+/**
+ * Extract the .fd text block for a single node by its ID.
+ * @param {string} text - Full FD source text
+ * @param {string} nodeId - Node ID (without @)
+ * @returns {string} The block string, or "" if not found
+ */
+function extractNodeBlock(text, nodeId) {
+  const lines = text.split('\n');
+  const startPattern = new RegExp(`^\\s*(\\w+)\\s+@${nodeId}\\b`);
+  let startIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (startPattern.test(lines[i])) {
+      startIdx = i;
+      break;
+    }
+  }
+  if (startIdx < 0) return '';
+
+  const startIndent = lines[startIdx].match(/^\s*/)[0].length;
+  let endIdx = startIdx + 1;
+  while (endIdx < lines.length) {
+    const line = lines[endIdx];
+    if (line.trim().length === 0) { endIdx++; continue; }
+    const indent = line.match(/^\s*/)[0].length;
+    if (indent <= startIndent) break;
+    endIdx++;
+  }
+  return lines.slice(startIdx, endIdx).join('\n');
+}
+
+/**
+ * Build a batch-aware ID rename map for paste operations.
+ * Ensures pasted nodes get unique IDs that don't conflict with existing text.
+ *
+ * @param {Set<string>} allIds - Set of @id declarations in the pasted block
+ * @param {string} existingText - Current FD source text (for conflict detection)
+ * @returns {Map<string, string>} Map of oldId → newId
+ */
+function buildPasteIdMap(allIds, existingText) {
+  const idMap = new Map();
+  const batchMaxCache = new Map();
+
+  for (const oldId of allIds) {
+    const stem = oldId.replace(/_(?:\d+|cp\d+)$/, '');
+    let maxN = batchMaxCache.get(stem) || 0;
+    if (maxN === 0) {
+      maxN = 1;
+      const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
+      let match;
+      while ((match = re.exec(existingText)) !== null) {
+        maxN = Math.max(maxN, parseInt(match[1]));
+      }
+      if (new RegExp(`@${stem}\\b`).test(existingText)) {
+        maxN = Math.max(maxN, 1);
+      }
+    }
+    const newN = maxN + 1;
+    batchMaxCache.set(stem, newN);
+    idMap.set(oldId, stem + '_' + newN);
+  }
+
+  return idMap;
+}
+
+/**
+ * Apply an ID rename map to pasted FD text.
+ * Replaces all @oldId references with @newId.
+ *
+ * @param {string} pasteText - FD text to rename IDs in
+ * @param {Map<string, string>} idMap - Map of oldId → newId
+ * @returns {string} Text with renamed IDs
+ */
+function applyIdRenames(pasteText, idMap) {
+  let result = pasteText;
+  for (const [oldId, newId] of idMap) {
+    result = result.replace(new RegExp(`@${oldId}\\b`, 'g'), `@${newId}`);
+  }
+  return result;
+}
+
+/**
+ * Collect all @id declarations from FD text.
+ * @param {string} text - FD source text
+ * @returns {Set<string>} Set of declared node IDs
+ */
+function collectDeclaredIds(text) {
+  const idPattern = /@(\w+)\s*\{/g;
+  const ids = new Set();
+  let m;
+  while ((m = idPattern.exec(text)) !== null) {
+    ids.add(m[1]);
+  }
+  return ids;
+}
+// ── canvas-core/viewport.js ──
+// ─── canvas-core/viewport.js ─── Shared viewport geometry
+// Pure math and geometry — no DOM or platform dependencies.
+
+/**
+ * Detect resize handle under cursor, return CSS cursor name.
+ * @param {any} fdCanvas - WASM canvas instance
+ * @param {number} x - Scene-space X
+ * @param {number} y - Scene-space Y
+ * @param {number} hitRadius - Hit radius in scene-space px (default 8)
+ * @returns {string} CSS cursor name, or "" if not over a handle
+ */
+function getResizeHandleCursor(fdCanvas, x, y, hitRadius = 8) {
+  if (!fdCanvas) return '';
+  const selectedId = fdCanvas.get_selected_id();
+  if (!selectedId) return '';
+  let b;
+  try {
+    b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
+  } catch (_) { return ''; }
+  if (b.x === undefined) return '';
+
+  // Check if selected node is text (horizontal-only resize)
+  const propsJson = fdCanvas.get_selected_node_props();
+  let isText = false;
+  try { isText = JSON.parse(propsJson).kind === 'text'; } catch (_) {}
+
+  const r = hitRadius;
+
+  if (isText) {
+    const handles = [
+      { hx: b.x, hy: b.y + b.height / 2, cursor: 'ew-resize' },
+      { hx: b.x + b.width, hy: b.y + b.height / 2, cursor: 'ew-resize' },
+    ];
+    for (const { hx, hy, cursor } of handles) {
+      const dx = x - hx, dy = y - hy;
+      if (dx * dx + dy * dy <= r * r) return cursor;
+    }
+    return '';
+  }
+
+  const handles = [
+    { hx: b.x, hy: b.y, cursor: 'nwse-resize' },
+    { hx: b.x + b.width / 2, hy: b.y, cursor: 'ns-resize' },
+    { hx: b.x + b.width, hy: b.y, cursor: 'nesw-resize' },
+    { hx: b.x, hy: b.y + b.height / 2, cursor: 'ew-resize' },
+    { hx: b.x + b.width, hy: b.y + b.height / 2, cursor: 'ew-resize' },
+    { hx: b.x, hy: b.y + b.height, cursor: 'nesw-resize' },
+    { hx: b.x + b.width / 2, hy: b.y + b.height, cursor: 'ns-resize' },
+    { hx: b.x + b.width, hy: b.y + b.height, cursor: 'nwse-resize' },
+  ];
+  for (const { hx, hy, cursor } of handles) {
+    const dx = x - hx, dy = y - hy;
+    if (dx * dx + dy * dy <= r * r) return cursor;
+  }
+  return '';
+}
+
+/**
+ * Compute pinch distance between two touch points.
+ * @param {{ clientX: number, clientY: number }} t1
+ * @param {{ clientX: number, clientY: number }} t2
+ * @returns {number}
+ */
+function pinchDistance(t1, t2) {
+  const dx = t1.clientX - t2.clientX;
+  const dy = t1.clientY - t2.clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+/**
+ * Compute pinch center between two touch points.
+ * @param {{ clientX: number, clientY: number }} t1
+ * @param {{ clientX: number, clientY: number }} t2
+ * @returns {{ x: number, y: number }}
+ */
+function pinchCenter(t1, t2) {
+  return {
+    x: (t1.clientX + t2.clientX) / 2,
+    y: (t1.clientY + t2.clientY) / 2,
+  };
+}
+
+/**
+ * Nudge the selected node by step pixels in the given arrow direction.
+ * @param {any} fdCanvas - WASM canvas instance
+ * @param {string} arrowKey - 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight'
+ * @param {number} step - Pixels to nudge (1 for normal, 10 for Shift)
+ * @returns {boolean} Whether the scene changed
+ */
+function nudgeSelected(fdCanvas, arrowKey, step) {
+  if (!fdCanvas) return false;
+  const selectedId = fdCanvas.get_selected_id();
+  if (!selectedId) return false;
+
+  try {
+    const boundsJson = fdCanvas.get_node_bounds(selectedId);
+    const b = JSON.parse(boundsJson);
+    if (b.x === undefined) return false;
+
+    let newX = b.x, newY = b.y;
+    switch (arrowKey) {
+      case 'ArrowUp':    newY -= step; break;
+      case 'ArrowDown':  newY += step; break;
+      case 'ArrowLeft':  newX -= step; break;
+      case 'ArrowRight': newX += step; break;
+    }
+
+    const cx = b.x + b.width / 2;
+    const cy = b.y + b.height / 2;
+    const dx = newX - b.x;
+    const dy = newY - b.y;
+    fdCanvas.handle_pointer_down(cx, cy, 1.0, false, false, false, false);
+    const moveResult = JSON.parse(fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false));
+    const upResult = JSON.parse(fdCanvas.handle_pointer_up(cx + dx, cy + dy, false, false, false, false));
+    return upResult.changed || moveResult.changed;
+  } catch (_) {
+    return false;
+  }
+}
+// ── canvas-core/shortcuts.js ──
+// ─── canvas-core/shortcuts.js ─── Shared shortcut data + help overlay HTML
+// Platform-independent shortcut definitions and help overlay builder.
+
+/** Tool shortcut key map (single-key shortcuts for tool activation). */
+const TOOL_SHORTCUTS = {
+  r: 'rect',
+  o: 'ellipse',
+  p: 'pen',
+  a: 'arrow',
+  t: 'text',
+  f: 'frame',
+  e: 'eraser',
+};
+
+/** Tool cycle order (matches toolbar visual order). */
+const TOOL_CYCLE = ['hand', 'select', 'rect', 'ellipse', 'pen', 'arrow', 'text', 'eraser'];
+
+/** Double-press threshold for tool locking (ms). */
+const DOUBLE_PRESS_MS = 400;
+
+/** Zoom step multiplier for ⌘+/⌘− keyboard shortcuts. */
+const ZOOM_STEP = 1.25;
+
+/**
+ * Build the shortcut help overlay HTML.
+ * @returns {string} HTML string for the shortcut help panel
+ */
+function buildShortcutHelpHtml() {
+  const isMac = typeof navigator !== 'undefined'
+    ? navigator.platform.toUpperCase().indexOf('MAC') >= 0
+    : true;
+  const cmd = isMac ? '⌘' : 'Ctrl+';
+
+  const sections = [
+    {
+      title: 'Tools',
+      shortcuts: [
+        ['V', 'Select / Move'],
+        ['R', 'Rectangle'],
+        ['O', 'Ellipse'],
+        ['P', 'Pen (freehand)'],
+        ['A', 'Arrow'],
+        ['T', 'Text'],
+        ['F', 'Frame'],
+        ['E', 'Eraser'],
+        ['Tab', 'Toggle last two tools'],
+        ['R R', 'Lock tool (stays active)'],
+        ['Escape', 'Unlock tool / Deselect'],
+      ],
+    },
+    {
+      title: 'Edit',
+      shortcuts: [
+        [`${cmd}Z`, 'Undo'],
+        [`${cmd}⇧Z`, 'Redo'],
+        ['Del / ⌫', 'Delete selected'],
+        [`${cmd}D`, 'Duplicate (+10,+10)'],
+        [`${cmd}A`, 'Select all'],
+        [`${cmd}G`, 'Group selected'],
+        [`${cmd}⇧G`, 'Ungroup'],
+        [`${cmd}C`, 'Copy'],
+        [`${cmd}X`, 'Cut'],
+        [`${cmd}V`, 'Paste'],
+        [`⌥${cmd}C`, 'Copy Style'],
+        [`⌥${cmd}V`, 'Paste Style'],
+      ],
+    },
+    {
+      title: 'Transform',
+      shortcuts: [
+        [`${cmd}[`, 'Send backward'],
+        [`${cmd}]`, 'Bring forward'],
+        [`${cmd}⇧[`, 'Send to back'],
+        [`${cmd}⇧]`, 'Bring to front'],
+        ['Arrow keys', 'Nudge 1px'],
+        ['Shift+Arrow', 'Nudge 10px'],
+      ],
+    },
+    {
+      title: 'View',
+      shortcuts: [
+        [`${cmd}+`, 'Zoom in'],
+        [`${cmd}−`, 'Zoom out'],
+        ['0', 'Reset zoom to 100%'],
+        [`${cmd}0`, 'Zoom to fit'],
+        [`${cmd}1`, 'Zoom to selection'],
+        ['L', 'Toggle Layers panel'],
+        ['G', 'Toggle grid overlay'],
+        ['Space (hold)', 'Pan / hand tool'],
+        [`${cmd} (hold)`, 'Temp. hand tool'],
+        ['Pinch', 'Trackpad zoom'],
+      ],
+    },
+    {
+      title: 'Modifiers (while dragging)',
+      shortcuts: [
+        ['Shift', 'Constrain axis / square'],
+        ['Alt+drag', 'Duplicate while moving'],
+        ['Double-click', 'Edit text / create text'],
+        ['Dbl-click tool', 'Lock tool (🔒)'],
+      ],
+    },
+    {
+      title: 'Apple Pencil Pro',
+      shortcuts: [
+        ['Squeeze', 'Toggle last two tools'],
+        ['Barrel Roll', 'Rotate brush angle'],
+      ],
+    },
+  ];
+
+  let html = `
+    <div class="help-panel">
+      <div class="help-header">
+        <h3>Keyboard Shortcuts</h3>
+        <button class="help-close" aria-label="Close">×</button>
+      </div>
+      <div class="help-body">
+  `;
+
+  for (const section of sections) {
+    html += `<div class="help-section"><h4>${section.title}</h4><dl>`;
+    for (const [key, desc] of section.shortcuts) {
+      html += `<div class="help-row"><dt><kbd>${key}</kbd></dt><dd>${desc}</dd></div>`;
+    }
+    html += `</dl></div>`;
+  }
+
+  html += `
+      </div>
+      <div class="help-footer">Press <kbd>?</kbd> to close</div>
+    </div>
+  `;
+
+  return html;
+}
+// ── canvas-core/inline-edit.js ──
+// ─── canvas-core/inline-edit.js ─── Shared inline text editor
+// Imported by both site/playground.js and fd-vscode/webview/src/inline-edit.js.
+//
+// Double-click text/shape → floating textarea for in-place editing.
+// Enter = commit, Escape = cancel, live-sync on every keystroke.
+
+/** Whether the inline editor is currently open */
+let inlineEditorActive = false;
+
+/**
+ * Compute relative luminance of a hex color (0=black, 1=white).
+ */
+function hexLuminance(hex) {
+  if (!hex || hex.length < 4) return 1;
+  let r, g, b;
+  if (hex.length <= 5) {
+    r = parseInt(hex[1] + hex[1], 16) / 255;
+    g = parseInt(hex[2] + hex[2], 16) / 255;
+    b = parseInt(hex[3] + hex[3], 16) / 255;
+  } else {
+    r = parseInt(hex.slice(1, 3), 16) / 255;
+    g = parseInt(hex.slice(3, 5), 16) / 255;
+    b = parseInt(hex.slice(5, 7), 16) / 255;
+  }
+  const lin = (c) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+/**
+ * Measure a text node and update its WASM bounds.
+ * Returns true if bounds changed.
+ */
+function measureAndUpdateTextBounds(fdCanvas, canvasEl, nodeId) {
+  if (!fdCanvas) return false;
+  const propsJson = fdCanvas.get_node_props(nodeId);
+  if (!propsJson) return false;
+  let props;
+  try { props = JSON.parse(propsJson); } catch (_) { return false; }
+  const text = props.text || "";
+  if (!text) return false;
+
+  const fontSize = props.fontSize || 14;
+  const fontFamily = props.fontFamily || "Inter, system-ui, sans-serif";
+  const fontWeight = props.fontWeight || 400;
+  const maxWidth = props.maxWidth || null;
+  const lineHeight = fontSize * 1.2;
+
+  const measureCtx = canvasEl.getContext("2d");
+  measureCtx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+
+  let measuredWidth, measuredHeight;
+  if (maxWidth) {
+    const paragraphs = text.split("\n");
+    let totalLines = 0;
+    let maxLineWidth = 0;
+    for (const paragraph of paragraphs) {
+      const words = paragraph.split(/\s+/).filter(w => w.length > 0);
+      if (words.length === 0) { totalLines++; continue; }
+      let currentLine = "";
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        const testWidth = measureCtx.measureText(testLine).width;
+        if (currentLine && testWidth > maxWidth) {
+          maxLineWidth = Math.max(maxLineWidth, measureCtx.measureText(currentLine).width);
+          totalLines++;
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      if (currentLine) {
+        maxLineWidth = Math.max(maxLineWidth, measureCtx.measureText(currentLine).width);
+        totalLines++;
+      }
+    }
+    measuredWidth = maxWidth;
+    measuredHeight = Math.max(totalLines * lineHeight, lineHeight);
+  } else {
+    const metrics = measureCtx.measureText(text);
+    measuredWidth = metrics.width;
+    const rawGlyphHeight = (metrics.actualBoundingBoxAscent != null && metrics.actualBoundingBoxDescent != null)
+      ? metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
+      : lineHeight;
+    measuredHeight = Math.max(rawGlyphHeight, lineHeight);
+  }
+
+  const changed = fdCanvas.update_text_metrics(nodeId, measuredWidth, measuredHeight);
+  if (changed) {
+    fdCanvas.finalize_bounds();
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Measure all text nodes and update bounds.
+ * @param {Function} renderFn — render callback
+ */
+function measureAllTextNodes(fdCanvas, canvasEl, renderFn) {
+  if (!fdCanvas) return;
+  const text = fdCanvas.get_text();
+  const textIdRe = /text\s+@(\w+)\s+"/g;
+  let match;
+  let anyChanged = false;
+  while ((match = textIdRe.exec(text)) !== null) {
+    if (measureAndUpdateTextBounds(fdCanvas, canvasEl, match[1])) {
+      anyChanged = true;
+    }
+  }
+  if (anyChanged && renderFn) renderFn();
+}
+
+/**
+ * Open a floating textarea over a node for in-place editing.
+ *
+ * @param {Object} opts
+ * @param {string} opts.nodeId       — ID of the node to edit
+ * @param {string} opts.propKey      — property key ("content")
+ * @param {string} opts.currentValue — current text value
+ * @param {any}    opts.fdCanvas     — WASM FdCanvas instance
+ * @param {HTMLCanvasElement} opts.canvasEl — the canvas element
+ * @param {HTMLElement} opts.container   — overlay container
+ * @param {Function} opts.renderFn   — render callback
+ * @param {Function} opts.syncFn     — text sync callback
+ * @param {Function} [opts.updatePanelFn] — properties panel update callback
+ * @param {number} opts.panX         — current pan X
+ * @param {number} opts.panY         — current pan Y
+ * @param {number} opts.zoomLevel    — current zoom
+ */
+function openInlineEditor(opts) {
+  if (inlineEditorActive) return;
+
+  const {
+    nodeId, propKey, currentValue,
+    fdCanvas, canvasEl, container,
+    renderFn, syncFn, updatePanelFn,
+    panX, panY, zoomLevel,
+  } = opts;
+
+  // Force-measure text bounds BEFORE reading them
+  measureAndUpdateTextBounds(fdCanvas, canvasEl, nodeId);
+
+  const boundsJson = fdCanvas.get_node_bounds(nodeId);
+  const b = JSON.parse(boundsJson);
+  const bw = b.width || 80;
+  const bh = b.height || 24;
+
+  inlineEditorActive = true;
+
+  // Read node props for styling
+  fdCanvas.select_by_id(nodeId);
+  fdCanvas.clear_pressed();
+  renderFn();
+  const propsJson = fdCanvas.get_selected_node_props();
+  const props = JSON.parse(propsJson);
+
+  const rawFontSize = props.fontSize || 14;
+  const fontSize = Math.round(rawFontSize * zoomLevel);
+  const fontFamily = props.fontFamily || "Inter";
+  const fontWeight = props.fontWeight || 400;
+  const lineHeight = Math.round(rawFontSize * 1.2 * zoomLevel);
+
+  const sx = (b.x || 0) * zoomLevel + panX;
+  const sy = (b.y || 0) * zoomLevel + panY;
+  const sw = Math.max(bw * zoomLevel, 80);
+  const sh = Math.max(bh * zoomLevel, lineHeight + 4);
+
+  // Colors
+  const isDark = document.body.classList.contains("dark-theme") ||
+                 document.body.classList.contains("vscode-dark");
+  const isTextNode = props.kind === "text";
+  let bgColor, textColor;
+
+  if (isTextNode) {
+    bgColor = "transparent";
+    textColor = props.fill || (isDark ? "#E0E0E0" : "#1C1C1E");
+  } else if (props.fill) {
+    bgColor = props.fill;
+    textColor = hexLuminance(props.fill) < 0.4 ? "#FFFFFF" : "#1C1C1E";
+  } else {
+    bgColor = isDark ? "#2D2D44" : "#F5F5F7";
+    textColor = isDark ? "#E0E0E0" : "#1C1C1E";
+  }
+
+  const hAlign = props.textAlign || (isTextNode ? "left" : "center");
+  const vAlign = props.textVAlign || "top";
+  const originalValue = currentValue;
+
+  // Vertical padding
+  const topOffset = 2;
+  let padTop = 0, padBottom = 0;
+  if (vAlign === "top") {
+    padTop = topOffset;
+  } else if (vAlign === "middle") {
+    const lines = (currentValue.match(/\n/g) || []).length + 1;
+    const textHeight = lineHeight * lines;
+    padTop = Math.max(0, Math.round((sh - textHeight) / 2));
+    padBottom = padTop;
+  } else if (vAlign === "bottom") {
+    padBottom = topOffset;
+    const lines = (currentValue.match(/\n/g) || []).length + 1;
+    const textHeight = lineHeight * lines;
+    padTop = Math.max(0, sh - textHeight - padBottom);
+  }
+
+  // Border radius
+  let borderRadius = "8px";
+  if (props.kind === "ellipse") borderRadius = "50%";
+  else if (props.kind === "rect" || props.kind === "frame") {
+    const cr = props.cornerRadius !== undefined ? Math.round(props.cornerRadius * zoomLevel) : 0;
+    borderRadius = `${cr}px`;
+  } else if (isTextNode) borderRadius = "0";
+
+  const outlineStyle = isTextNode ? "1px solid #4FC3F7" : "2px solid #4FC3F7";
+  const boxShadow = isTextNode ? "none" : "0 2px 8px rgba(0,0,0,0.12)";
+
+  const textarea = document.createElement("textarea");
+  textarea.value = currentValue;
+  textarea.style.cssText = [
+    `position:absolute`,
+    `left:${sx}px`, `top:${sy}px`,
+    `width:${sw}px`, `height:${sh}px`,
+    `padding:${padTop}px 0 ${padBottom}px 0`,
+    `font:${fontWeight} ${fontSize}px ${fontFamily}`,
+    `border:none`,
+    `outline:${outlineStyle}`, `outline-offset:-1px`,
+    `border-radius:${borderRadius}`,
+    `background:${bgColor}`, `color:${textColor}`,
+    `resize:none`, `z-index:100`,
+    `box-shadow:${boxShadow}`,
+    `line-height:${lineHeight}px`,
+    `overflow:hidden`, `text-align:${hAlign}`,
+    `box-sizing:border-box`,
+    `-webkit-text-size-adjust:100%`,
+    `word-wrap:break-word`, `white-space:pre-wrap`,
+    `overflow-wrap:break-word`,
+  ].join(";");
+
+  container.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+
+  let lastSyncedValue = currentValue;
+  textarea.addEventListener("input", () => {
+    const val = textarea.value;
+    if (val === lastSyncedValue) return;
+    lastSyncedValue = val;
+    fdCanvas.select_by_id(nodeId);
+    fdCanvas.set_node_prop(propKey, val);
+    renderFn();
+    syncFn();
+  });
+
+  const commit = () => {
+    if (!inlineEditorActive) return;
+    inlineEditorActive = false;
+    const newVal = textarea.value;
+    if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
+    if (!fdCanvas) return;
+    if (newVal === originalValue) { renderFn(); return; }
+    fdCanvas.select_by_id(nodeId);
+    const changed = fdCanvas.set_node_prop(propKey, newVal);
+    if (changed) {
+      if (propKey === "content") measureAndUpdateTextBounds(fdCanvas, canvasEl, nodeId);
+      renderFn();
+      syncFn();
+      if (updatePanelFn) updatePanelFn();
+    }
+  };
+
+  textarea.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      inlineEditorActive = false;
+      if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
+      fdCanvas.select_by_id(nodeId);
+      fdCanvas.set_node_prop(propKey, originalValue);
+      renderFn();
+      syncFn();
+      e.stopPropagation();
+      return;
+    }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      commit();
+    }
+  });
+
+  textarea.addEventListener("blur", () => { setTimeout(commit, 150); });
+}
+
+/**
+ * Setup double-click handler for inline editing on a canvas.
+ *
+ * @param {Object} opts
+ * @param {any}    opts.fdCanvas   — WASM FdCanvas instance getter
+ * @param {HTMLCanvasElement} opts.canvasEl — the canvas element
+ * @param {HTMLElement} opts.container — overlay container
+ * @param {Function} opts.renderFn — render callback
+ * @param {Function} opts.syncFn   — text sync callback
+ * @param {Function} [opts.updatePanelFn] — properties panel update
+ * @param {Function} opts.getPanX  — getter for panX
+ * @param {Function} opts.getPanY  — getter for panY
+ * @param {Function} opts.getZoom  — getter for zoomLevel
+ * @param {Function} opts.screenToScene — coord transform function
+ */
+function setupInlineEditor(opts) {
+  const {
+    canvasEl, container,
+    renderFn, syncFn, updatePanelFn,
+    getPanX, getPanY, getZoom, screenToScene,
+  } = opts;
+
+  canvasEl.addEventListener("dblclick", (e) => {
+    const fdCanvas = typeof opts.fdCanvas === 'function' ? opts.fdCanvas() : opts.fdCanvas;
+    if (!fdCanvas) return;
+
+    const { x, y } = screenToScene(e.clientX, e.clientY, canvasEl);
+    const nodeId = fdCanvas.get_selected_id();
+
+    // No selection → create new text node
+    if (!nodeId) {
+      const created = fdCanvas.create_node_at("text", x, y);
+      if (created) {
+        renderFn();
+        syncFn();
+        const newId = fdCanvas.get_selected_id();
+        if (newId) {
+          setTimeout(() => openInlineEditor({
+            nodeId: newId, propKey: "content", currentValue: "",
+            fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
+            panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
+          }), 50);
+        }
+      }
+      e.preventDefault();
+      return;
+    }
+
+    const propsJson = fdCanvas.get_selected_node_props();
+    const props = JSON.parse(propsJson);
+    if (!props.id) return;
+
+    // Edge → edit/create label
+    if (props.kind === "edge") {
+      const edgeId = props.id;
+      const source = fdCanvas.get_text();
+      const edgeBlockRe = new RegExp(`edge\\s+@${edgeId}\\s*\\{([^}]*(?:\\{[^}]*\\}[^}]*)*)\\}`, 's');
+      const edgeMatch = source.match(edgeBlockRe);
+      if (edgeMatch) {
+        const textChildRe = /text\s+@(\w+)\s+"([^"]*)"/;
+        const textMatch = edgeMatch[1].match(textChildRe);
+        if (textMatch) {
+          fdCanvas.select_by_id(textMatch[1]);
+          renderFn();
+          openInlineEditor({
+            nodeId: textMatch[1], propKey: "content", currentValue: textMatch[2],
+            fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
+            panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
+          });
+        } else {
+          const textId = "label_" + edgeId;
+          const esc = edgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const re = new RegExp(`(edge\\s+@${esc}\\s*\\{)`);
+          const m2 = source.match(re);
+          if (m2) {
+            const insertPos = source.indexOf(m2[0]) + m2[0].length;
+            const newSource = source.slice(0, insertPos)
+              + `\n  text @${textId} "Label" {}`
+              + source.slice(insertPos);
+            const textBefore = source;
+            fdCanvas.set_text(newSource);
+            fdCanvas.push_undo_snapshot(textBefore, newSource);
+            renderFn();
+            syncFn();
+            fdCanvas.select_by_id(textId);
+            renderFn();
+            setTimeout(() => openInlineEditor({
+              nodeId: textId, propKey: "content", currentValue: "Label",
+              fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
+              panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
+            }), 50);
+          }
+        }
+      }
+      e.preventDefault();
+      return;
+    }
+
+    const isText = props.kind === "text";
+    const isShape = props.kind === "rect" || props.kind === "ellipse" || props.kind === "frame";
+    if (!isText && !isShape) return;
+
+    if (isText) {
+      openInlineEditor({
+        nodeId: props.id, propKey: "content", currentValue: props.content || "",
+        fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
+        panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
+      });
+    } else {
+      const existingTextId = fdCanvas.get_text_child_id(props.id);
+      if (existingTextId) {
+        fdCanvas.select_by_id(existingTextId);
+        renderFn();
+        const childPropsJson = fdCanvas.get_selected_node_props();
+        const childProps = JSON.parse(childPropsJson);
+        openInlineEditor({
+          nodeId: existingTextId, propKey: "content", currentValue: childProps.content || "",
+          fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
+          panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
+        });
+      } else {
+        const newTextId = fdCanvas.create_child_text(props.id, "Text");
+        if (newTextId) {
+          renderFn();
+          syncFn();
+          setTimeout(() => openInlineEditor({
+            nodeId: newTextId, propKey: "content", currentValue: "Text",
+            fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
+            panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
+          }), 50);
+        }
+      }
+    }
+    e.preventDefault();
+  });
+}
 /**
  * FD Webview — WASM loader + message bridge.
  *
