@@ -632,15 +632,25 @@ code {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 8px;
-  z-index: 18;
+  width: 12px;
+  z-index: 20;
   cursor: pointer;
   background: transparent;
   transition: background 0.15s ease;
   display: none;
 }
+/* Wider invisible hit area for easier clicking */
+.panel-restore-strip.code-restore::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+}
 .panel-restore-strip.code-restore:hover {
-  background: rgba(108, 92, 231, 0.3);
+  background: rgba(108, 92, 231, 0.35);
+  box-shadow: 2px 0 8px rgba(108, 92, 231, 0.15);
 }
 .code-collapsed .panel-restore-strip.code-restore {
   display: block;
