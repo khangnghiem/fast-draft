@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.207 — Consolidate Examples (R4.16)
+- **EXAMPLES (R4.16)**: Deleted 13 redundant example files — `animations.fd`, `constraints.fd`, `edge_types.fd`, `design_tokens.fd`, `design_system.fd`, `dark_theme.fd`, `landing_page.fd`, `mobile_app.fd`, `onboarding.fd`, `animated_onboarding.fd`, `responsive_dashboard.fd`, `wireframe_login.fd`, `grid_gallery.fd`
+- **EXAMPLES (R4.16)**: Rewrote `demo.fd` as comprehensive format reference — showcases every FD keyword (import, style, extends, edge_defaults), all node types (rect, ellipse, text, group, frame, path, generic), all properties (fill, stroke, corner, shadow, opacity, clip, pad, locked, place, bg shorthand), all layouts (column, row, grid), all animation triggers and easing functions, all edge styles (curve, arrow, flow, label, spec), and constraints (center_in, offset)
+- **FIX (R4.16)**: Fixed `path_drawing.fd` — replaced invalid `theme` keyword with valid `style` blocks; expanded from 57 to 52 well-structured lines with proper style blocks, spec annotations, and edge connections
+- **EXAMPLES**: Final set reduced from 21 to 8 files: `demo.fd`, `welcome.fd`, `checkout_flow.fd`, `pricing_page.fd`, `userflow_onboarding.fd`, `path_drawing.fd`, `import_namespace.fd`, `shared_library.fd`
+
 ### v0.11.206 — Layers Panel Minimizes to 40px Instead of Hiding (R6.6)
 - **UX (R6.6)**: Layers panel `.collapsed` now **minimizes to 40px** instead of `width: 0` — the "LAYERS" header stays visible as the click target to re-expand; resize handle stays positioned at the 40px edge (not hidden)
 - **CLEANUP (R6.6)**: Removed `#layers-restore` strip (HTML + CSS + JS listener) — header is always visible so the restore strip is redundant
