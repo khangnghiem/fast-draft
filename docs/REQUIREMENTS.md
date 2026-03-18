@@ -38,6 +38,8 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R1.19** _(done)_: Edge label offset — `label_offset: <x> <y>` property on edges for draggable text labels; parse/emit roundtrip support
 - **R1.20** _(done)_: Edge anchors — `EdgeAnchor` enum (`@node_id` or `x y` coords) for flexible edge endpoints; `text_child: Option<NodeId>` for styled text labels; `create_edge_at()` WASM API; edge-to-edge validation
 - **R1.21** _(done)_: Free frame padding — `pad: <N>` property on Free-layout frames insets the content area; children default to padded origin, text centering and `place:` use padded bounds; also accepts `padding:` alias
+- **R1.22** _(done)_: Style inheritance — `extends: <parent>` inside `style` blocks; child style inherits all parent properties, child properties override; max depth 8 prevents cycles; works with `use:` resolution and edge styles
+- **R1.23** _(planned)_: Component template instantiation — `use: @node_id` to clone a node subtree as a component instance; enables true component reuse beyond flat style application; deferred for post-v1
 
 ### R2: Bidirectional Sync
 
@@ -149,7 +151,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R4.13** _(done)_: Font weight names — parser/emitter use `bold`, `semibold`, `regular` etc. instead of numeric codes
 - **R4.14** _(done)_: Color hint comments — emitter appends `# red`, `# purple` etc. after hex colors
 - **R4.15** _(done)_: Named colors — `fill: purple` etc. accepted (17 Tailwind palette colors)
-- **R4.16** _(done)_: Property aliases — `background:`/`color:` → fill, `rounded:`/`radius:` → corner, `border:` → stroke, `apply:` → use; emitter outputs `padding:` (universal CSS term) instead of `pad:`
+- **R4.16** _(done)_: Property aliases — `background:`/`color:` → fill, `border:` → stroke, `apply:` → use; emitter outputs `pad:` canonically; deprecated aliases `rounded:`/`radius:` removed (use `corner:` only)
 - **R4.17** _(done)_: Dimension units — `w: 320px` accepted, `px` stripped by parser
 - **R4.18** _(done)_: Keyword rename — `theme` → `style` (reusable property bundles), `anim` → `when` for clarity; internal Rust struct `Style` → `Properties`, field `.style` → `.props`; emitter order: spec → children → style → when; old keywords (`theme`, `style` as legacy) accepted for backward compatibility; `spec` → `note` keyword rename; `accept:` → `todo:` rename; raw markdown notes — `Annotation` enum deleted, `note: Option<String>` stores free-form markdown captured verbatim from `note { }` blocks
 - **R4.19** _(done)_: ReadMode filtered views — `emit_filtered(graph, mode)` with 8 modes (Full/Structure/Layout/Design/Spec/Visual/When/Edges); CLI `fd-lsp --view <mode>` for AI token savings; VS Code read-only virtual document provider with status bar mode selector
@@ -307,7 +309,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | rate-limit          | R4.22                                                                                   |
 | edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8                                                   |
 | import              | R1.14, R1.18                                                                            |
-| style / theme       | R1.4, R4.3, R4.18                                                                       |
+| style / theme       | R1.4, R1.22, R4.3, R4.18                                                                |
 | animation           | R1.5, R1.11, R1.12, R3.29, R4.18, R5.6, R5.8                                            |
 | rendering           | R5.1, R5.2, R5.4, R5.5, R5.9                                                            |
 | platform            | R6.1, R6.2, R6.3, R6.4, R6.5, R6.6, R6.7, R6.8, R6.9, R6.10, R6.11, R6.12, R6.13, R6.14, R6.15, R6.16 |
