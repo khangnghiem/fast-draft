@@ -36,6 +36,7 @@ Engineering lessons discovered through building FD.
   deploy, cache-bust, stale, cdn, browser → L433-445 (Deploy Without Cache-Bust = Invisible Fix)
   wasm, modulepreload, import, cache, chrome → L447-459 (WASM Modulepreload Cache Mismatch)
   wasm-opt, blank, canvas2d, dead-code, optimization → (wasm-opt -O2 Strips Canvas2D Draw Calls)
+  import, cache-bust, immutable, module, stale → (Local ES Module Imports Need Cache-Busting Too)
 -->
 
 
@@ -450,3 +451,15 @@ Browser subagents inherit the full parent conversation context. When context exc
 **Fix**: Added `[package.metadata.wasm-pack.profile.release] wasm-opt = ["-O1"]` to `crates/fd-wasm/Cargo.toml`. `-O1` preserves all imported JS side-effects while still applying safe optimizations.
 
 **Rule**: **Never use `wasm-opt -O2` or higher for WASM modules that call external JS functions with void return (Canvas2D, DOM manipulation, console).** The optimizer cannot distinguish side-effect-free pure functions from side-effectful DOM API calls. Use `-O1` or explicitly mark imports as having side effects.
+
+
+## Local ES Module Imports Need Cache-Busting Too
+
+**Date**: 2026-03-18
+**Context**: The canvas stopped loading on fast-draft.com after `clearChatHistory` was added to `ai-chat.js`. No visible errors in the console — the entire `playground.js` module failed silently.
+
+**Root cause**: `_headers` sets `Cache-Control: public, max-age=31536000, immutable` for all `*.js` files. The CI pipeline's `sed` replaces `?v=X.Y.Z` with `?v=<sha>` in `playground.js`, but the `import {...} from './ai-chat.js'` statements used bare paths without `?v=`. Browsers served the old cached `ai-chat.js` which didn't export `clearChatHistory`, causing an ES module resolution error that silently killed the entire module graph.
+
+**Fix**: Added `?v=0.11.5` to all local import paths in `playground.js` so CI's `sed` finds and replaces them with the commit SHA on each deploy.
+
+**Rule**: **When using immutable cache headers (`max-age=31536000, immutable`), every local `import` path MUST include a `?v=` cache-busting parameter that CI can replace.** Bare import paths will serve stale cached versions forever. ES module import errors kill the entire module graph silently — no console errors, just a blank page.
