@@ -541,7 +541,7 @@ code {
   transform: rotate(-90deg);
 }
 .code-collapsed {
-  grid-template-columns: 10% 6px 1fr;
+  grid-template-columns: var(--collapsed-width, 80px) 6px 1fr;
 }
 
 

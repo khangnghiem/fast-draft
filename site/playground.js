@@ -516,28 +516,84 @@ function fitToContent(canvas) {
 
 /** Code panel collapse state */
 let codeCollapsed = false;
+/** Saved editor width (px string like '280px') to restore on expand */
+let savedEditorWidth = null;
 
-/** Toggle code panel visibility (collapse/expand) */
+/** Toggle code panel visibility (collapse/expand) with smooth animation */
 function toggleCodePanel() {
-  codeCollapsed = !codeCollapsed;
   const container = document.getElementById('playground-container');
   if (!container) return;
-  container.classList.toggle('code-collapsed', codeCollapsed);
-  // Resize canvas when CSS grid transition finishes.
-  // Fallback: if transitionend never fires (e.g., 0px↔3fr unit mismatch),
-  // force resize after the expected transition duration.
-  let handled = false;
-  const onEnd = (e) => {
-    if (e.propertyName !== 'grid-template-columns') return;
-    container.removeEventListener('transitionend', onEnd);
-    handled = true;
-    window.dispatchEvent(new Event('resize'));
-  };
-  container.addEventListener('transitionend', onEnd);
-  setTimeout(() => {
-    container.removeEventListener('transitionend', onEnd);
-    if (!handled) window.dispatchEvent(new Event('resize'));
-  }, 300);
+  const split = container.closest('.playground-split') || container;
+  const containerWidth = container.getBoundingClientRect().width;
+  const collapsedPx = Math.round(containerWidth * 0.1);
+
+  if (!codeCollapsed) {
+    // ── Collapsing: save current width, animate to 10%, then apply class ──
+    const currentWidth = container.style.getPropertyValue('--editor-width');
+    savedEditorWidth = currentWidth || null;
+    // Set px-based collapsed width for smooth CSS Grid interpolation
+    container.style.setProperty('--collapsed-width', `${collapsedPx}px`);
+    // Start from current px position so transition has a valid start
+    if (!currentWidth) {
+      const editorEl = container.querySelector('.playground-editor');
+      if (editorEl) {
+        container.style.setProperty('--editor-width', `${editorEl.offsetWidth}px`);
+      }
+    }
+    // Force layout so the starting value is committed
+    container.offsetHeight;
+    // Set target: animate --editor-width to collapsed size
+    container.style.setProperty('--editor-width', `${collapsedPx}px`);
+    codeCollapsed = true;
+    // After transition finishes, swap to .code-collapsed class
+    let handled = false;
+    const onEnd = (e) => {
+      if (e.propertyName !== 'grid-template-columns') return;
+      split.removeEventListener('transitionend', onEnd);
+      handled = true;
+      container.classList.add('code-collapsed');
+      container.style.removeProperty('--editor-width');
+      window.dispatchEvent(new Event('resize'));
+    };
+    split.addEventListener('transitionend', onEnd);
+    setTimeout(() => {
+      split.removeEventListener('transitionend', onEnd);
+      if (!handled) {
+        container.classList.add('code-collapsed');
+        container.style.removeProperty('--editor-width');
+        window.dispatchEvent(new Event('resize'));
+      }
+    }, 300);
+  } else {
+    // ── Expanding: remove class, animate to saved width ──
+    const targetWidth = savedEditorWidth || null;
+    // Set --editor-width to collapsed px so transition starts from correct position
+    container.style.setProperty('--editor-width', `${collapsedPx}px`);
+    container.classList.remove('code-collapsed');
+    // Force layout so browser commits the collapsed starting point
+    container.offsetHeight;
+    // Animate to saved width (or remove for default 3fr)
+    if (targetWidth) {
+      container.style.setProperty('--editor-width', targetWidth);
+    } else {
+      container.style.removeProperty('--editor-width');
+    }
+    codeCollapsed = false;
+    savedEditorWidth = null;
+    // Resize canvas after transition
+    let handled = false;
+    const onEnd = (e) => {
+      if (e.propertyName !== 'grid-template-columns') return;
+      split.removeEventListener('transitionend', onEnd);
+      handled = true;
+      window.dispatchEvent(new Event('resize'));
+    };
+    split.addEventListener('transitionend', onEnd);
+    setTimeout(() => {
+      split.removeEventListener('transitionend', onEnd);
+      if (!handled) window.dispatchEvent(new Event('resize'));
+    }, 300);
+  }
 }
 
 /** Collapse code panel (idempotent — no-op if already collapsed) */
@@ -2654,6 +2710,7 @@ function setupSplitResize(container, resizeCanvas) {
   let dragging = false;
   let containerRect = null;
   let rafId = 0; // RAF throttle
+  let preDragWidth = null; // editor width before this drag started
 
   handle.addEventListener('pointerdown', (e) => {
     e.preventDefault();
@@ -2662,12 +2719,23 @@ function setupSplitResize(container, resizeCanvas) {
     containerRect = container.getBoundingClientRect();
     handle.classList.add('active');
     handle.setPointerCapture(e.pointerId);
-    // If minimized, un-collapse so --editor-width takes effect during drag
+    // Save current width before any drag changes
     if (codeCollapsed) {
+      // Dragging from minimized — save the previously-saved width (from before collapse)
+      preDragWidth = savedEditorWidth;
+      // Un-collapse instantly (no transition) so --editor-width takes effect
       const currentWidth = Math.round(containerRect.width * 0.1);
+      if (split) split.style.transition = 'none';
       container.style.setProperty('--editor-width', `${currentWidth}px`);
       codeCollapsed = false;
-      container.closest('.playground-split')?.classList.remove('code-collapsed');
+      container.classList.remove('code-collapsed');
+    } else {
+      // Dragging from expanded — save current width
+      preDragWidth = container.style.getPropertyValue('--editor-width') || null;
+      if (!preDragWidth) {
+        const editorEl = container.querySelector('.playground-editor');
+        if (editorEl) preDragWidth = `${editorEl.offsetWidth}px`;
+      }
     }
     // Disable CSS Grid transition during drag — it fights the live updates
     // and causes a ~250ms easing lag on every pointer move.
@@ -2710,10 +2778,35 @@ function setupSplitResize(container, resizeCanvas) {
     if (containerRect) {
       const x = (e?.clientX ?? 0) - containerRect.left;
       if (x < COLLAPSE_PX && !codeCollapsed) {
-        container.style.removeProperty('--editor-width');
-        toggleCodePanel();
+        // Save the pre-drag width so expand restores it
+        savedEditorWidth = preDragWidth;
+        const collapsedPx = Math.round(containerRect.width * 0.1);
+        container.style.setProperty('--collapsed-width', `${collapsedPx}px`);
+        // Animate smoothly from current drag position to collapsed px
+        container.style.setProperty('--editor-width', `${collapsedPx}px`);
+        codeCollapsed = true;
+        // Apply class after transition
+        let handled = false;
+        const onEnd = (ev) => {
+          if (ev.propertyName !== 'grid-template-columns') return;
+          split.removeEventListener('transitionend', onEnd);
+          handled = true;
+          container.classList.add('code-collapsed');
+          container.style.removeProperty('--editor-width');
+          window.dispatchEvent(new Event('resize'));
+        };
+        split.addEventListener('transitionend', onEnd);
+        setTimeout(() => {
+          split.removeEventListener('transitionend', onEnd);
+          if (!handled) {
+            container.classList.add('code-collapsed');
+            container.style.removeProperty('--editor-width');
+            window.dispatchEvent(new Event('resize'));
+          }
+        }, 300);
       }
     }
+    preDragWidth = null;
   };
   handle.addEventListener('pointerup', endDrag);
   handle.addEventListener('pointercancel', endDrag);
