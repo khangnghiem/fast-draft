@@ -139,8 +139,7 @@ code {
   position: relative;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 52px);
-  margin-top: 52px;
+  height: 100vh;
   overflow: hidden;
 }
 .app-playground {
@@ -386,6 +385,13 @@ code {
 }
 .settings-menu-item .sm-label { flex: 1; }
 .settings-menu-item.toggle-on .sm-icon { color: var(--fd-accent); }
+a.settings-menu-item {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+a.settings-menu-item:hover {
+  color: var(--text-primary);
+}
 .settings-menu-sep {
   height: 1px;
   background: var(--fd-border);
