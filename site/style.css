@@ -444,7 +444,7 @@ code {
 
 .playground-split {
   display: grid;
-  grid-template-columns: var(--editor-width, 3fr) auto 7fr;
+  grid-template-columns: 7fr auto var(--editor-width, 3fr);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   overflow: hidden;
@@ -541,7 +541,7 @@ code {
   transform: rotate(-90deg);
 }
 .code-collapsed {
-  grid-template-columns: var(--collapsed-width, 80px) 6px 1fr;
+  grid-template-columns: 1fr 6px var(--collapsed-width, 80px);
 }
 
 
@@ -607,7 +607,15 @@ code {
   background: var(--fd-accent-dim, rgba(0,122,255,0.1));
 }
 
-/* layers-toggle-btn removed — panel header is the toggle */
+/* Layers sidebar toggle icon in toolbar */
+#layers-toggle-pill {
+  display: flex;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+#layers-toggle-pill:hover { opacity: 1; }
+#layers-toggle-pill.layers-visible { opacity: 1; color: var(--fd-accent, #007AFF); }
+#layers-toggle-pill svg { pointer-events: none; }
 
 /* Restore strip removed — header stays visible at 10% minimized width */
 
@@ -947,8 +955,9 @@ code {
 }
 #layers-panel.no-transition { transition: none; }
 #layers-panel.collapsed {
-  width: 40px !important;
+  width: 0 !important;
   overflow: hidden;
+  border-right: none;
 }
 #layers-panel::-webkit-scrollbar { width: 6px; }
 #layers-panel::-webkit-scrollbar-track { background: transparent; }

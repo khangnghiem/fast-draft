@@ -893,27 +893,22 @@ export function activate(context: vscode.ExtensionContext) {
           }
         }
 
-        // Determine the correct target column for canvas (opposite of text editor)
-        const allGroupColumns = vscode.window.tabGroups.all.map(
-          (g) => g.viewColumn
-        );
-        const resolved = resolveTargetColumn(editorColumn, allGroupColumns);
-        const targetColumn =
-          resolved === "beside" ? vscode.ViewColumn.Beside : resolved;
+        // Canvas-first: canvas in column 1 (left), text editor in column 2 (right)
+        const canvasTargetColumn = vscode.ViewColumn.One;
 
         let didOpen = false;
         if (canvasTab && canvasGroup) {
-          if (canvasGroup.viewColumn === editorColumn) {
-            // Canvas is in the SAME column as text editor — move it
+          if (canvasGroup.viewColumn !== canvasTargetColumn) {
+            // Canvas exists but not in column 1 — move it to column 1
             await vscode.commands.executeCommand(
               "vscode.openWith",
               editor.document.uri,
               VIEW_TYPE_CANVAS,
-              { viewColumn: targetColumn, preserveFocus: true }
+              { viewColumn: canvasTargetColumn, preserveFocus: true }
             );
             didOpen = true;
           } else if (!canvasTab.isActive) {
-            // Canvas is in a different column but hidden behind another tab
+            // Canvas is in column 1 but hidden behind another tab — reveal it
             await vscode.commands.executeCommand(
               "vscode.openWith",
               editor.document.uri,
@@ -922,25 +917,31 @@ export function activate(context: vscode.ExtensionContext) {
             );
             didOpen = true;
           }
-          // else: canvas is already active in the other column — nothing to do
+          // else: canvas is already active in column 1 — nothing to do
         } else {
-          // No canvas exists — open one in the other column
+          // No canvas exists — open one in column 1 (left)
           await vscode.commands.executeCommand(
             "vscode.openWith",
             editor.document.uri,
             VIEW_TYPE_CANVAS,
-            { viewColumn: targetColumn, preserveFocus: true }
+            { viewColumn: canvasTargetColumn, preserveFocus: true }
           );
           didOpen = true;
         }
 
-        // Refocus Code Mode — canvas webviews can steal focus despite preserveFocus
+        // Move text editor to column 2 (right) if it's not already there
         if (didOpen) {
           await new Promise((r) => setTimeout(r, 120));
           const textEditor = vscode.window.visibleTextEditors.find(
             (e) => e.document.uri.toString() === key
           );
-          if (textEditor) {
+          if (textEditor && textEditor.viewColumn !== vscode.ViewColumn.Two) {
+            await vscode.window.showTextDocument(
+              textEditor.document,
+              vscode.ViewColumn.Two,
+              false
+            );
+          } else if (textEditor) {
             await vscode.window.showTextDocument(
               textEditor.document,
               textEditor.viewColumn,
