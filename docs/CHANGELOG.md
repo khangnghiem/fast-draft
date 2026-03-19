@@ -17,6 +17,9 @@
 
 ## Completed Requirements
 
+### v0.11.212 — Bump Layers Panel Default Width (R6.6)
+- **UX (R6.6)**: Default Layers panel width increased from **180px to 220px** — node names like `@btn_primary_label` are now readable without truncation; CSS variable `--layers-width` default, `DEFAULT_LAYERS_W` JS constant, and toggle restore fallback all updated; existing user-resized widths in localStorage are unaffected
+
 ### v0.11.211 — Edge Header Syntax + Inline Constraints (R1.6, R1.10)
 - **FORMAT (R1.6)**: New edge header syntax `edge @name @from -> @to { ... }` — from/to anchors declared in header, not body; braceless form `edge @name @from -> @to` for edges with default properties; anonymous form `edge @from -> @to` auto-generates ID; inline label `edge @name @from -> @to "label text"`
 - **FORMAT (R1.10)**: Constraints are now inline node properties — `center_in:`, `offset:`, `fill_parent:` parsed inside node blocks alongside `w:`, `h:`, etc.; external `@id -> verb:` syntax still accepted (backward compat) but emitter outputs inline form

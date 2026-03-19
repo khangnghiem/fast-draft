@@ -3188,7 +3188,7 @@ function setupPanelResize(wrapper, resizeCanvas) {
 
   const MIN_WIDTH = 120;
   const MAX_WIDTH = 360;
-  const DEFAULT_LAYERS_W = 180;
+  const DEFAULT_LAYERS_W = 220;
   const DEFAULT_PROPS_W = 200;
 
   // Restore persisted widths
@@ -3496,7 +3496,7 @@ function toggleLayersPanel() {
     localStorage.setItem('fd-layers-collapsed', '1');
   } else {
     const savedW = parseInt(localStorage.getItem('fd-layers-width'), 10);
-    const restoreW = (savedW >= 120 && savedW <= 360) ? savedW : 180;
+    const restoreW = (savedW >= 120 && savedW <= 360) ? savedW : 220;
     wrapper.style.setProperty('--layers-width', restoreW + 'px');
     localStorage.removeItem('fd-layers-collapsed');
   }

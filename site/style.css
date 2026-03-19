@@ -550,7 +550,7 @@ code {
   position: relative;
   overflow: hidden;
   background: var(--fd-bg);
-  --layers-width: 180px;
+  --layers-width: 220px;
   --props-width: 0px;
   display: flex;
   flex-direction: column;
@@ -924,11 +924,11 @@ code {
 }
 #fd-canvas {
   position: absolute;
-  left: var(--layers-width, 180px);
+  left: var(--layers-width, 220px);
   top: 0;
   right: var(--props-width, 0px);
   bottom: 0;
-  width: calc(100% - var(--layers-width, 180px) - var(--props-width, 0px));
+  width: calc(100% - var(--layers-width, 220px) - var(--props-width, 0px));
   height: 100%;
   display: block;
 }
@@ -939,7 +939,7 @@ code {
   left: 0;
   top: 0;
   bottom: 0;
-  width: var(--layers-width, 180px);
+  width: var(--layers-width, 220px);
   min-width: 0;
   max-width: 400px;
   background: var(--fd-surface);
