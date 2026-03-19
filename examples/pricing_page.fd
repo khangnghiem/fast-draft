@@ -22,9 +22,10 @@ style subhead {
   font: "Inter" regular 16
 }
 
+# [auto] container (3 children)
 group @pricing {
   spec {
-    "Pricing section — conversion-critical"
+    Pricing section — conversion-critical
     todo: "A/B test popular badge placement"
     todo: "annual toggle saves 20%"
     priority: high
@@ -35,16 +36,15 @@ group @pricing {
     x: 23.29
     y: -116.17
   }
-  group @header {
-    layout: column gap=8 pad=0
-  }
+  # [auto] container (3 children)
   group @cards {
     rect @tier_free {
       spec {
-        "Free tier — acquisition funnel entry"
+        Free tier — acquisition funnel entry
         todo: "no credit card required"
         status: done
       }
+      # [auto] container (10 children)
       group @_anon_31 {
         text @_anon_32 "Starter" {
           fill: #6B7280  # blue
@@ -91,7 +91,6 @@ group @pricing {
             ease: ease_out 150ms
           }
         }
-        layout: column gap=16 pad=28
         x: -2.65
         y: -0.1
       }
@@ -107,13 +106,15 @@ group @pricing {
     }
     rect @tier_pro {
       spec {
-        "Pro tier — primary conversion target"
+        Pro tier — primary conversion target
         todo: "most popular badge visible"
         todo: "pre-selected on page load"
         priority: high
         status: doing
       }
+      # [auto] container (11 children)
       group @_anon_41 {
+        # [auto] container (1 children)
         group @popular_badge {
           rect @badge {
             text @_anon_42 "Popular" {
@@ -124,7 +125,6 @@ group @pricing {
             fill: #6C5CE7  # blue
             corner: 14
           }
-          layout: row gap=0 pad=0
         }
         text @_anon_43 "Pro" {
           fill: #6C5CE7  # blue
@@ -174,7 +174,6 @@ group @pricing {
             ease: ease_out 100ms
           }
         }
-        layout: column gap=16 pad=28
       }
       w: 320 h: 520
       fill: #FFFFFF  # white
@@ -188,11 +187,12 @@ group @pricing {
     }
     rect @tier_enterprise {
       spec {
-        "Enterprise tier — high-value leads"
+        Enterprise tier — high-value leads
         todo: "custom quote form"
         status: todo
         tag: sales
       }
+      # [auto] container (10 children)
       group @_anon_52 {
         spec "???"
         text @_anon_53 "Enterprise" {
@@ -240,7 +240,6 @@ group @pricing {
             ease: spring 200ms
           }
         }
-        layout: column gap=16 pad=28
       }
       w: 300 h: 480
       fill: #FFFFFF  # white
@@ -252,9 +251,7 @@ group @pricing {
         ease: spring 300ms
       }
     }
-    layout: row gap=23 pad=0
   }
-  layout: column gap=40 pad=48
   x: -313.81
   y: 97.24
 }

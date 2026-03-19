@@ -1197,3 +1197,236 @@ rect @box {
         "opacity should inherit from parent"
     );
 }
+
+// ─── Inline constraint tests ─────────────────────────────────────────
+
+#[test]
+fn parse_inline_center_in() {
+    let src = r#"rect @hero { w: 200 h: 100; center_in: canvas }"#;
+    let graph = parse_document(src).unwrap();
+    let node = graph.get_by_id(crate::id::NodeId::intern("hero")).unwrap();
+    assert_eq!(node.constraints.len(), 1);
+    match &node.constraints[0] {
+        Constraint::CenterIn(target) => assert_eq!(target.as_str(), "canvas"),
+        _ => panic!("expected CenterIn"),
+    }
+}
+
+#[test]
+fn parse_inline_offset() {
+    let src = r#"
+rect @hero { w: 200 h: 100 }
+rect @card { w: 100 h: 50; offset: @hero 0, 80 }
+"#;
+    let graph = parse_document(src).unwrap();
+    let card = graph.get_by_id(crate::id::NodeId::intern("card")).unwrap();
+    assert_eq!(card.constraints.len(), 1);
+    match &card.constraints[0] {
+        Constraint::Offset { from, dx, dy } => {
+            assert_eq!(from.as_str(), "hero");
+            assert_eq!(*dx, 0.0);
+            assert_eq!(*dy, 80.0);
+        }
+        _ => panic!("expected Offset"),
+    }
+}
+
+#[test]
+fn parse_inline_fill_parent() {
+    let src = r#"frame @side { w: 200 h: 400; fill_parent: 12 }"#;
+    let graph = parse_document(src).unwrap();
+    let node = graph.get_by_id(crate::id::NodeId::intern("side")).unwrap();
+    assert_eq!(node.constraints.len(), 1);
+    match &node.constraints[0] {
+        Constraint::FillParent { pad } => assert_eq!(*pad, 12.0),
+        _ => panic!("expected FillParent"),
+    }
+}
+
+#[test]
+fn roundtrip_inline_constraints() {
+    let src = r#"
+rect @hero { w: 200 h: 100; center_in: canvas }
+rect @card { w: 100 h: 50; offset: @hero 0, 80 }
+"#;
+    let graph = parse_document(src).unwrap();
+    let emitted = crate::emitter::emit_document(&graph);
+
+    // Should emit inline (inside node block), NOT external @id -> verb:
+    assert!(emitted.contains("center_in: canvas"), "emitted: {emitted}");
+    assert!(
+        emitted.contains("offset: @hero 0, 80"),
+        "emitted: {emitted}"
+    );
+    assert!(
+        !emitted.contains("->"),
+        "should NOT contain -> constraint arrows: {emitted}"
+    );
+
+    // Round-trip
+    let reparsed = parse_document(&emitted).unwrap();
+    let hero = reparsed
+        .get_by_id(crate::id::NodeId::intern("hero"))
+        .unwrap();
+    assert!(matches!(&hero.constraints[0], Constraint::CenterIn(_)));
+    let card = reparsed
+        .get_by_id(crate::id::NodeId::intern("card"))
+        .unwrap();
+    assert!(matches!(&card.constraints[0], Constraint::Offset { .. }));
+}
+
+#[test]
+fn parse_legacy_arrow_constraint() {
+    // Old @id -> verb: syntax should still parse (backward compat)
+    let src = r#"
+rect @box { w: 100 h: 100 }
+@box -> center_in: canvas
+"#;
+    let graph = parse_document(src).unwrap();
+    let node = graph.get_by_id(crate::id::NodeId::intern("box")).unwrap();
+    assert_eq!(node.constraints.len(), 1);
+    match &node.constraints[0] {
+        Constraint::CenterIn(target) => assert_eq!(target.as_str(), "canvas"),
+        _ => panic!("expected CenterIn"),
+    }
+}
+
+// ─── Edge header syntax tests ─────────────────────────────────────────
+
+#[test]
+fn parse_edge_header_syntax() {
+    let src = r#"
+rect @a { w: 50 h: 50 }
+rect @b { w: 50 h: 50 }
+edge @flow @a -> @b {
+  arrow: end
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    assert_eq!(graph.edges.len(), 1);
+    let edge = &graph.edges[0];
+    assert_eq!(edge.id.as_str(), "flow");
+    assert_eq!(edge.from, EdgeAnchor::Node(NodeId::intern("a")));
+    assert_eq!(edge.to, EdgeAnchor::Node(NodeId::intern("b")));
+    assert_eq!(edge.arrow, ArrowKind::End);
+}
+
+#[test]
+fn parse_edge_header_braceless() {
+    let src = r#"
+rect @a { w: 50 h: 50 }
+rect @b { w: 50 h: 50 }
+edge @flow @a -> @b
+"#;
+    let graph = parse_document(src).unwrap();
+    assert_eq!(graph.edges.len(), 1);
+    let edge = &graph.edges[0];
+    assert_eq!(edge.id.as_str(), "flow");
+    assert_eq!(edge.from, EdgeAnchor::Node(NodeId::intern("a")));
+    assert_eq!(edge.to, EdgeAnchor::Node(NodeId::intern("b")));
+}
+
+#[test]
+fn parse_edge_header_anonymous() {
+    let src = r#"
+rect @a { w: 50 h: 50 }
+rect @b { w: 50 h: 50 }
+edge @a -> @b
+"#;
+    let graph = parse_document(src).unwrap();
+    assert_eq!(graph.edges.len(), 1);
+    let edge = &graph.edges[0];
+    assert_eq!(edge.from, EdgeAnchor::Node(NodeId::intern("a")));
+    assert_eq!(edge.to, EdgeAnchor::Node(NodeId::intern("b")));
+}
+
+#[test]
+fn parse_edge_header_with_label() {
+    let src = r#"
+rect @a { w: 50 h: 50 }
+rect @b { w: 50 h: 50 }
+edge @flow @a -> @b "submit"
+"#;
+    let graph = parse_document(src).unwrap();
+    assert_eq!(graph.edges.len(), 1);
+    let edge = &graph.edges[0];
+    assert_eq!(edge.id.as_str(), "flow");
+    let text_id = edge.text_child.expect("should have text child");
+    let text_node = graph.get_by_id(text_id).expect("text node should exist");
+    if let NodeKind::Text { content, .. } = &text_node.kind {
+        assert_eq!(content, "submit");
+    } else {
+        panic!("expected Text node");
+    }
+}
+
+#[test]
+fn roundtrip_edge_header() {
+    let src = r#"
+rect @a { w: 50 h: 50 }
+rect @b { w: 50 h: 50 }
+edge @flow @a -> @b {
+  stroke: #6C5CE7 2
+  arrow: end
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let emitted = crate::emitter::emit_document(&graph);
+
+    // Should emit header form
+    assert!(
+        emitted.contains("edge @flow @a -> @b"),
+        "emitted: {emitted}"
+    );
+    assert!(
+        !emitted.contains("from: @a"),
+        "should NOT have from: in body: {emitted}"
+    );
+
+    let reparsed = parse_document(&emitted).unwrap();
+    let edge = &reparsed.edges[0];
+    assert_eq!(edge.from, EdgeAnchor::Node(NodeId::intern("a")));
+    assert_eq!(edge.to, EdgeAnchor::Node(NodeId::intern("b")));
+    assert_eq!(edge.arrow, ArrowKind::End);
+}
+
+#[test]
+fn parse_edge_legacy_body() {
+    // Old from:/to: syntax inside body should still parse (backward compat)
+    let src = r#"
+rect @a { w: 50 h: 50 }
+rect @b { w: 50 h: 50 }
+edge @old {
+  from: @a
+  to: @b
+  arrow: end
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    assert_eq!(graph.edges.len(), 1);
+    let edge = &graph.edges[0];
+    assert_eq!(edge.from, EdgeAnchor::Node(NodeId::intern("a")));
+    assert_eq!(edge.to, EdgeAnchor::Node(NodeId::intern("b")));
+    assert_eq!(edge.arrow, ArrowKind::End);
+}
+
+#[test]
+fn emit_edge_braceless() {
+    // Edge with only default properties should emit without braces
+    let src = r#"
+rect @a { w: 50 h: 50 }
+rect @b { w: 50 h: 50 }
+edge @flow @a -> @b
+"#;
+    let graph = parse_document(src).unwrap();
+    let emitted = crate::emitter::emit_document(&graph);
+    // Should be braceless — no { }
+    assert!(
+        emitted.contains("edge @flow @a -> @b\n"),
+        "should be braceless: {emitted}"
+    );
+    assert!(
+        !emitted.contains("edge @flow @a -> @b {"),
+        "should NOT have opening brace: {emitted}"
+    );
+}

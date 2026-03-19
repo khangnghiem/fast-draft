@@ -1,37 +1,31 @@
-# ─── FD Format Demo ───
-# Showcases every keyword, node type, edge style, and animation.
-
 import "shared_library.fd" as lib
 
 # ─── Styles ───
 
-style heading {
-  fill: #1A1A2E
-  font: "Inter" bold 28
-}
-
-style body {
-  fill: #6B7280
-  font: "Inter" regular 14
-}
-
 style accent {
-  fill: #6C5CE7
+  fill: #6C5CE7  # blue
   corner: 12
 }
 
+style body {
+  fill: #6B7280  # blue
+  font: "Inter" regular 14
+}
+
 style card {
-  fill: #FFFFFF
+  fill: #FFFFFF  # white
   corner: 16
 }
 
-# Style inheritance via extends:
 style dark_card {
   extends: card
-  fill: #2D2B55
+  fill: #2D2B55  # blue
 }
 
-# ─── Edge Defaults ───
+style heading {
+  fill: #1A1A2E  # blue
+  font: "Inter" bold 28
+}
 
 edge_defaults {
   stroke: #8B7CF7 1.5
@@ -39,12 +33,14 @@ edge_defaults {
   curve: smooth
 }
 
-# ─── Node Types ───
+# ─── Layout ───
 
+# ─── Node Types ───
 # 1. Rect
+# [auto] styled: accent
 rect @hero_rect {
   spec {
-    "Primary rectangle — demonstrates fill, stroke, corner, shadow, opacity"
+    Primary rectangle — demonstrates fill, stroke, corner, shadow, opacity
     todo: "add gradient fill variant"
     status: done
     priority: high
@@ -53,10 +49,11 @@ rect @hero_rect {
   w: 280 h: 140
   use: accent
   stroke: #5A4BD1 2
-  shadow: (0,4,20,#6C5CE740)
   opacity: 0.95
+  shadow: (0,4,20,#6C5CE740)
+  offset: @demo_subtitle 0, 60
   when :hover {
-    fill: #5A4BD1
+    fill: #5A4BD1  # blue
     scale: 1.03
     ease: spring 200ms
   }
@@ -70,8 +67,9 @@ rect @hero_rect {
 ellipse @demo_circle {
   spec "Circle node — demonstrates ellipse type"
   w: 100 h: 100
-  fill: #00B894
+  fill: #00B894  # teal
   stroke: #009B77 2
+  offset: @hero_rect 320, 20
   when :hover {
     opacity: 0.8
     ease: ease_in 150ms
@@ -82,26 +80,28 @@ ellipse @demo_circle {
 text @demo_heading "Fast Draft Format Demo" {
   w: 400
   use: heading
+  center_in: canvas
 }
 
 text @demo_subtitle "Every keyword, node type, edge, and animation in one file." {
   use: body
+  offset: @demo_heading 0, 40
 }
 
 # 4. Group (with row layout)
+# [auto] container (2 children)
 group @button_row {
-  layout: row gap=12 pad=0
-
+  # [auto] styled: accent
   rect @btn_primary {
     spec "Primary action button"
     text @btn_primary_label "Get Started" {
-      fill: #FFFFFF
+      fill: #FFFFFF  # white
       font: "Inter" semibold 15
     }
     w: 160 h: 48
     use: accent
     when :hover {
-      fill: #5A4BD1
+      fill: #5A4BD1  # blue
       scale: 1.03
       ease: spring 200ms
     }
@@ -110,39 +110,41 @@ group @button_row {
       ease: ease_out 100ms
     }
   }
-
   rect @btn_secondary {
     text @btn_secondary_label "Learn More" {
-      fill: #6C5CE7
+      fill: #6C5CE7  # blue
       font: "Inter" semibold 15
     }
     w: 160 h: 48
-    fill: #FFFFFF
+    fill: #FFFFFF  # white
     stroke: #6C5CE7 2
     corner: 12
     when :hover {
-      fill: #F0EDFF
+      fill: #F0EDFF  # blue
       ease: ease_out 150ms
     }
   }
+  offset: @hero_rect 0, 180
 }
 
 # 5. Frame (with column layout, clip, pad)
+# [auto] column container (3 children)
 frame @info_card {
   spec {
-    "Card container — frame with clip and padding"
+    Card container — frame with clip and padding
     done: "layout complete"
   }
   text @card_title "Layout Features" {
-    fill: #1A1A2E
+    fill: #1A1A2E  # blue
     font: "Inter" semibold 18
   }
   text @card_body "Frames support clip, pad, and managed layouts (column, row, grid)." {
     use: body
   }
+  # [auto] styled: accent
   rect @card_cta {
     text @card_cta_label "Action" {
-      fill: #FFFFFF
+      fill: #FFFFFF  # white
       font: "Inter" medium 14
     }
     w: 120 h: 36
@@ -150,85 +152,112 @@ frame @info_card {
   }
   layout: column gap=12 pad=24
   w: 320 h: 220
-  use: card
   clip: true
+  use: card
   shadow: (0,2,16,#00000010)
+  offset: @button_row 0, 80
 }
 
 # 6. Path
 path @demo_path {
   spec "Freehand path — pen tool output"
   stroke: #3B82F6 3
+  offset: @demo_circle 140, 0
 }
 
 # 7. Generic node (placeholders)
 @login_btn {
   spec {
-    "Generic node — no shape keyword, renders as dashed placeholder"
+    Generic node — no shape keyword, renders as dashed placeholder
     todo: "upgrade to rect when design is finalized"
   }
-  fill: #F0EDFC
+  fill: #F0EDFC  # blue
   corner: 8
+  offset: @bg_shorthand 240, 0
 }
 
 # ─── Grid Layout ───
-
+# [auto] container (6 children)
 group @color_grid {
   spec "Grid layout showcase — 3 columns"
-  layout: grid cols=3 gap=12 pad=0
-
-  rect @swatch_1 { w: 80 h: 60; fill: #6C5CE7; corner: 8 }
-  rect @swatch_2 { w: 80 h: 60; fill: #00B894; corner: 8 }
-  rect @swatch_3 { w: 80 h: 60; fill: #FF6B6B; corner: 8 }
-  rect @swatch_4 { w: 80 h: 60; fill: #FFE66D; corner: 8 }
-  rect @swatch_5 { w: 80 h: 60; fill: #A29BFE; corner: 8 }
-  rect @swatch_6 { w: 80 h: 60; fill: #74B9FF; corner: 8 }
+  rect @swatch_1 {
+    w: 80 h: 60
+    fill: #6C5CE7  # blue
+    corner: 8
+  }
+  rect @swatch_2 {
+    w: 80 h: 60
+    fill: #00B894  # teal
+    corner: 8
+  }
+  rect @swatch_3 {
+    w: 80 h: 60
+    fill: #FF6B6B  # red
+    corner: 8
+  }
+  rect @swatch_4 {
+    w: 80 h: 60
+    fill: #FFE66D  # yellow
+    corner: 8
+  }
+  rect @swatch_5 {
+    w: 80 h: 60
+    fill: #A29BFE  # blue
+    corner: 8
+  }
+  rect @swatch_6 {
+    w: 80 h: 60
+    fill: #74B9FF  # blue
+    corner: 8
+  }
+  offset: @info_card 360, 0
 }
 
 # ─── Place (child alignment) ───
-
+# [auto] free container (3 children)
 frame @place_demo {
-  w: 200 h: 120
-  fill: #F8F9FA
-  corner: 12
-  stroke: #E8E8EC 1
-  pad: 12
   text @top_left "TL" {
+    fill: #999999  # gray
     font: "Inter" medium 12
-    fill: #999999
     place: top-left
   }
   text @center_text "center" {
+    fill: #6C5CE7  # blue
     font: "Inter" medium 12
-    fill: #6C5CE7
     place: center
   }
   text @bottom_right "BR" {
+    fill: #999999  # gray
     font: "Inter" medium 12
-    fill: #999999
     place: bottom-right
   }
+  pad: 12
+  w: 200 h: 120
+  fill: #F8F9FA  # white
+  stroke: #E8E8EC 1
+  corner: 12
+  offset: @info_card 0, 260
 }
 
 # ─── Locked Node ───
-
 rect @locked_element {
   spec "Locked node — cannot be moved or resized on canvas"
   w: 120 h: 40
-  fill: #E8E8EC
+  fill: #E8E8EC  # white
   corner: 8
   locked: true
+  offset: @place_demo 240, 0
 }
 
 # ─── Animations: All Triggers & Easing ───
-
 # :enter trigger (viewport entrance)
 rect @enter_demo {
   spec "Entrance animation — plays when scrolled into view"
   w: 140 h: 80
-  fill: #6C5CE7
+  fill: #6C5CE7  # blue
   corner: 12
   opacity: 0
+  offset: @place_demo 0, 160
   when :enter {
     opacity: 1
     scale: 1
@@ -239,14 +268,15 @@ rect @enter_demo {
 # :hover with linear easing
 rect @linear_demo {
   text @linear_label "Linear" {
-    fill: #333333
+    fill: #333333  # gray
     font: "Inter" medium 12
   }
   w: 100 h: 60
-  fill: #DFE6E9
+  fill: #DFE6E9  # white
   corner: 10
+  offset: @enter_demo 180, 0
   when :hover {
-    fill: #6C5CE7
+    fill: #6C5CE7  # blue
     ease: linear 300ms
   }
 }
@@ -254,12 +284,13 @@ rect @linear_demo {
 # :hover with delay
 rect @delay_demo {
   text @delay_label "Delayed" {
-    fill: #333333
+    fill: #333333  # gray
     font: "Inter" medium 12
   }
   w: 100 h: 60
-  fill: #DFE6E9
+  fill: #DFE6E9  # white
   corner: 10
+  offset: @linear_demo 140, 0
   when :hover {
     scale: 1.1
     ease: ease_out 300ms
@@ -271,129 +302,134 @@ rect @delay_demo {
 rect @custom_trigger {
   spec "Custom trigger — :active"
   w: 100 h: 60
-  fill: #FFE66D
+  fill: #FFE66D  # yellow
   corner: 10
+  offset: @delay_demo 140, 0
   when :active {
-    fill: #FF6B6B
+    fill: #FF6B6B  # red
     rotate: 5
     ease: spring 400ms
   }
 }
 
 # ─── Background Shorthand ───
-
 rect @bg_shorthand {
   spec "bg: shorthand — fill + corner + shadow in one line"
   w: 200 h: 80
-  bg: #FFFFFF corner=12 shadow=(0,4,16,#00000015)
+  fill: #FFFFFF  # white
+  corner: 12
+  shadow: (0,4,16,#00000015)
+  offset: @enter_demo 0, 120
 }
 
 # ─── Edges: All Styles ───
-
 # Source and target nodes for edges
-rect @node_a { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
-rect @node_b { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
-rect @node_c { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
-rect @node_d { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
-rect @node_e { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
-rect @node_f { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
-
-# Straight curve, end arrow
-edge @edge_straight {
-  from: @node_a
-  to: @node_b
-  label: "straight"
-  stroke: #4F46E5 2
-  arrow: end
-  curve: straight
+# [auto] connects to node_b, node_f
+rect @node_a {
+  w: 100 h: 50
+  fill: #FFFFFF  # white
+  stroke: #D1D5DB 1
+  corner: 8
+  offset: @bg_shorthand 0, 120
 }
 
-# Smooth curve, both arrows
-edge @edge_smooth {
-  from: @node_b
-  to: @node_c
-  label: "smooth + both"
+# [auto] connects to node_c
+rect @node_b {
+  w: 100 h: 50
+  fill: #FFFFFF  # white
+  stroke: #D1D5DB 1
+  corner: 8
+  offset: @node_a 200, 0
+}
+
+# [auto] connects to node_d
+rect @node_c {
+  w: 100 h: 50
+  fill: #FFFFFF  # white
+  stroke: #D1D5DB 1
+  corner: 8
+  offset: @node_b 200, 0
+}
+
+# [auto] connects to node_e
+rect @node_d {
+  w: 100 h: 50
+  fill: #FFFFFF  # white
+  stroke: #D1D5DB 1
+  corner: 8
+  offset: @node_a 0, 100
+}
+
+# [auto] connects to node_f
+rect @node_e {
+  w: 100 h: 50
+  fill: #FFFFFF  # white
+  stroke: #D1D5DB 1
+  corner: 8
+  offset: @node_d 200, 0
+}
+
+rect @node_f {
+  w: 100 h: 50
+  fill: #FFFFFF  # white
+  stroke: #D1D5DB 1
+  corner: 8
+  offset: @node_e 200, 0
+}
+
+text @_edge_straight_label "straight" {
+}
+
+text @_edge_smooth_label "smooth + both" {
+}
+
+text @_edge_step_label "step + start" {
+}
+
+text @_edge_none_label "no arrow" {
+}
+
+text @_edge_pulse_label "pulse flow" {
+}
+
+text @_edge_dash_label "dash flow" {
+}
+
+# ─── Flows ───
+
+edge @edge_straight @node_a -> @node_b {
+  text @_edge_straight_label "straight" {}
+  stroke: #4F46E5 2
+}
+edge @edge_smooth @node_b -> @node_c {
+  text @_edge_smooth_label "smooth + both" {}
   stroke: #10B981 2
   arrow: both
-  curve: smooth
 }
-
-# Step curve, start arrow
-edge @edge_step {
-  from: @node_c
-  to: @node_d
-  label: "step + start"
+edge @edge_step @node_c -> @node_d {
+  text @_edge_step_label "step + start" {}
   stroke: #F59E0B 2
   arrow: start
   curve: step
 }
-
-# No arrow
-edge @edge_none {
-  from: @node_d
-  to: @node_e
-  label: "no arrow"
+edge @edge_none @node_d -> @node_e {
+  text @_edge_none_label "no arrow" {}
   stroke: #6B7280 2
-  arrow: none
-  curve: smooth
 }
-
-# Flow: pulse animation on edge
-edge @edge_pulse {
-  from: @node_e
-  to: @node_f
-  label: "pulse flow"
+edge @edge_pulse @node_e -> @node_f {
+  text @_edge_pulse_label "pulse flow" {}
   stroke: #3B82F6 2
-  arrow: end
-  curve: smooth
   flow: pulse 1000ms
 }
-
-# Flow: dash animation on edge
-edge @edge_dash {
-  from: @node_a
-  to: @node_f
-  label: "dash flow"
+edge @edge_dash @node_a -> @node_f {
+  text @_edge_dash_label "dash flow" {}
   stroke: #EC4899 2
-  arrow: end
-  curve: smooth
   flow: dash 800ms
 }
-
-# Edge with spec
-edge @annotated_edge {
+edge @annotated_edge @hero_rect -> @info_card {
   spec {
-    "Documented edge — shows spec on edges"
+    Documented edge — shows spec on edges
     todo: "add error path variant"
   }
-  from: @hero_rect
-  to: @info_card
   stroke: #6C5CE7 2
-  arrow: end
-  curve: smooth
 }
-
-# ─── Constraints ───
-
-@demo_heading -> center_in: canvas
-@demo_subtitle -> offset: @demo_heading 0, 40
-@hero_rect -> offset: @demo_subtitle 0, 60
-@demo_circle -> offset: @hero_rect 320, 20
-@button_row -> offset: @hero_rect 0, 180
-@info_card -> offset: @button_row 0, 80
-@color_grid -> offset: @info_card 360, 0
-@place_demo -> offset: @info_card 0, 260
-@locked_element -> offset: @place_demo 240, 0
-@enter_demo -> offset: @place_demo 0, 160
-@linear_demo -> offset: @enter_demo 180, 0
-@delay_demo -> offset: @linear_demo 140, 0
-@custom_trigger -> offset: @delay_demo 140, 0
-@bg_shorthand -> offset: @enter_demo 0, 120
-@demo_path -> offset: @demo_circle 140, 0
-@login_btn -> offset: @bg_shorthand 240, 0
-@node_a -> offset: @bg_shorthand 0, 120
-@node_b -> offset: @node_a 200, 0
-@node_c -> offset: @node_b 200, 0
-@node_d -> offset: @node_a 0, 100
-@node_e -> offset: @node_d 200, 0
-@node_f -> offset: @node_e 200, 0

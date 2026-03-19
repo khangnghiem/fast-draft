@@ -1,128 +1,114 @@
-# Login Form — Product Designer use case
-# Demonstrates: nested groups, style reuse, spec annotations, animations
-
 style card_bg {
-  fill: #FFFFFF
+  fill: #FFFFFF  # white
   corner: 16
 }
 
 style input_field {
-  fill: #F8F9FA
+  fill: #F8F9FA  # white
   corner: 8
 }
 
 style primary_btn {
-  fill: #6C5CE7
+  fill: #6C5CE7  # blue
   corner: 10
 }
 
 style secondary_btn {
-  fill: #F0F0F5
+  fill: #F0F0F5  # white
   corner: 10
 }
 
+# [auto] container (9 children)
 group @login_form {
-  layout: column gap=16 pad=32
-  w: 400
-  use: card_bg
-  shadow: (0,4,24,#00000018)
-
   text @title "Sign In" {
+    fill: #1A1A2E  # blue
     font: "Inter" bold 28
-    fill: #1A1A2E
   }
-
   text @subtitle "Welcome back! Please enter your details." {
+    fill: #6B7280  # blue
     font: "Inter" regular 14
-    fill: #6B7280
   }
-
-  # Email field
+  # [auto] container (2 children)
   group @email_group {
-    layout: column gap=6
     text @email_label "Email" {
+      fill: #374151  # blue
       font: "Inter" medium 13
-      fill: #374151
     }
+    # [auto] styled: input_field
     rect @email_input {
-      w: 336 h: 44
-      use: input_field
-      stroke: #E5E7EB 1
       text @email_placeholder "enter@example.com" {
+        fill: #9CA3AF  # blue
         font: "Inter" regular 14
-        fill: #9CA3AF
       }
-    }
-  }
-
-  # Password field
-  group @password_group {
-    layout: column gap=6
-    text @password_label "Password" {
-      font: "Inter" medium 13
-      fill: #374151
-    }
-    rect @password_input {
       w: 336 h: 44
       use: input_field
       stroke: #E5E7EB 1
-      text @password_placeholder "••••••••" {
-        font: "Inter" regular 14
-        fill: #9CA3AF
-      }
     }
   }
-
-  text @forgot_link "Forgot password?" {
-    font: "Inter" medium 13
-    fill: #6C5CE7
+  # [auto] container (2 children)
+  group @password_group {
+    text @password_label "Password" {
+      fill: #374151  # blue
+      font: "Inter" medium 13
+    }
+    # [auto] styled: input_field
+    rect @password_input {
+      text @password_placeholder "••••••••" {
+        fill: #9CA3AF  # blue
+        font: "Inter" regular 14
+      }
+      w: 336 h: 44
+      use: input_field
+      stroke: #E5E7EB 1
+    }
   }
-
-  # Primary CTA
+  text @forgot_link "Forgot password?" {
+    fill: #6C5CE7  # blue
+    font: "Inter" medium 13
+  }
+  # [auto] styled: primary_btn
   rect @sign_in_btn {
     spec {
-      "Primary CTA — triggers authentication flow"
+      Primary CTA — triggers authentication flow
       todo: "disabled when fields empty"
       status: done
     }
+    text @sign_in_label "Sign In" {
+      fill: #FFFFFF  # white
+      font: "Inter" semibold 15
+    }
     w: 336 h: 48
     use: primary_btn
-    text @sign_in_label "Sign In" {
-      font: "Inter" semibold 15
-      fill: #FFFFFF
-    }
     when :hover {
-      fill: #5A4BD1
+      fill: #5A4BD1  # blue
       scale: 1.02
       ease: spring 200ms
     }
   }
-
-  # Divider
   rect @divider {
     w: 336 h: 1
-    fill: #E5E7EB
+    fill: #E5E7EB  # white
   }
-
-  # Social login
+  # [auto] styled: secondary_btn
   rect @google_btn {
+    text @google_label "Continue with Google" {
+      fill: #374151  # blue
+      font: "Inter" medium 14
+    }
     w: 336 h: 44
     use: secondary_btn
     stroke: #E5E7EB 1
-    text @google_label "Continue with Google" {
-      font: "Inter" medium 14
-      fill: #374151
-    }
     when :hover {
-      fill: #E8E8ED
+      fill: #E8E8ED  # white
       ease: ease_out 150ms
     }
   }
-
   text @signup_prompt "Don't have an account? Sign up" {
+    fill: #6B7280  # blue
     font: "Inter" regular 13
-    fill: #6B7280
   }
+  use: card_bg
+  shadow: (0,4,24,#00000018)
+  center_in: canvas
 }
 
-@login_form -> center_in: canvas

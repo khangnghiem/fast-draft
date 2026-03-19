@@ -505,50 +505,40 @@ rect @node_e { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
 rect @node_f { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
 
 # Straight curve, end arrow
-edge @edge_straight {
-  from: @node_a
-  to: @node_b
-  label: "straight"
+edge @edge_straight @node_a -> @node_b {
+  text @_edge_straight_label "straight" {}
   stroke: #4F46E5 2
   arrow: end
   curve: straight
 }
 
 # Smooth curve, both arrows
-edge @edge_smooth {
-  from: @node_b
-  to: @node_c
-  label: "smooth + both"
+edge @edge_smooth @node_b -> @node_c {
+  text @_edge_smooth_label "smooth + both" {}
   stroke: #10B981 2
   arrow: both
   curve: smooth
 }
 
 # Step curve, start arrow
-edge @edge_step {
-  from: @node_c
-  to: @node_d
-  label: "step + start"
+edge @edge_step @node_c -> @node_d {
+  text @_edge_step_label "step + start" {}
   stroke: #F59E0B 2
   arrow: start
   curve: step
 }
 
 # No arrow
-edge @edge_none {
-  from: @node_d
-  to: @node_e
-  label: "no arrow"
+edge @edge_none @node_d -> @node_e {
+  text @_edge_none_label "no arrow" {}
   stroke: #6B7280 2
   arrow: none
   curve: smooth
 }
 
 # Flow: pulse animation on edge
-edge @edge_pulse {
-  from: @node_e
-  to: @node_f
-  label: "pulse flow"
+edge @edge_pulse @node_e -> @node_f {
+  text @_edge_pulse_label "pulse flow" {}
   stroke: #3B82F6 2
   arrow: end
   curve: smooth
@@ -556,10 +546,8 @@ edge @edge_pulse {
 }
 
 # Flow: dash animation on edge
-edge @edge_dash {
-  from: @node_a
-  to: @node_f
-  label: "dash flow"
+edge @edge_dash @node_a -> @node_f {
+  text @_edge_dash_label "dash flow" {}
   stroke: #EC4899 2
   arrow: end
   curve: smooth
@@ -567,13 +555,11 @@ edge @edge_dash {
 }
 
 # Edge with spec
-edge @annotated_edge {
+edge @annotated_edge @hero_rect -> @info_card {
   spec {
     "Documented edge — shows spec on edges"
     todo: "add error path variant"
   }
-  from: @hero_rect
-  to: @info_card
   stroke: #6C5CE7 2
   arrow: end
   curve: smooth
@@ -2168,14 +2154,14 @@ function parseLayerTree(source) {
       continue;
     }
 
-    // Edge
-    const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s*\{/);
+    // Edge — matches both header form (edge @name @from -> @to) and body form (edge @name {)
+    const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s+@(\w+)\s*->\s*@(\w+)/) ||
+                      trimmed.match(/^edge\s+@(\w+)\s*\{/);
     if (edgeMatch) {
       const node = { id: edgeMatch[1], kind: 'edge', text: '', children: [] };
       if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
       else root.push(node);
-      braceDepth += openBraces - closeBraces;
-      stack.push({ node, depth: braceDepth });
+      if (trimmed.includes('{')) { braceDepth += 1; stack.push({ node, depth: braceDepth }); }
       continue;
     }
 

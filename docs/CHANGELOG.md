@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.11.211 — Edge Header Syntax + Inline Constraints (R1.6, R1.10)
+- **FORMAT (R1.6)**: New edge header syntax `edge @name @from -> @to { ... }` — from/to anchors declared in header, not body; braceless form `edge @name @from -> @to` for edges with default properties; anonymous form `edge @from -> @to` auto-generates ID; inline label `edge @name @from -> @to "label text"`
+- **FORMAT (R1.10)**: Constraints are now inline node properties — `center_in:`, `offset:`, `fill_parent:` parsed inside node blocks alongside `w:`, `h:`, etc.; external `@id -> verb:` syntax still accepted (backward compat) but emitter outputs inline form
+- **PARSER**: Fixed `->` vs negative-number disambiguation — `-` only matches as point-anchor start when followed by a digit
+- **EMITTER**: Node-anchor edges use header form; point-anchor edges fall back to body form; braceless when all properties match defaults; constraints emitted inline, external constraint section removed
+- **JS**: `parseLayerTree` in `playground.js` and `panels.js` updated to recognize both header and body edge forms; braceless edges correctly skip brace-depth tracking
+- **SITE**: Playground demo content updated to use edge header syntax; constraints kept in legacy form for demo (WASM parser handles both)
+- **EXAMPLES**: All 19 `.fd` example files auto-migrated to new syntax via parse→re-emit
+- **TESTS**: 12 new tests — `parse_inline_center_in`, `parse_inline_offset`, `parse_inline_fill_parent`, `roundtrip_inline_constraints`, `parse_legacy_arrow_constraint`, `parse_edge_header_syntax`, `parse_edge_header_braceless`, `parse_edge_header_anonymous`, `parse_edge_header_with_label`, `roundtrip_edge_header`, `parse_edge_legacy_body`, `emit_edge_braceless`
+
 ### v0.11.210 — Canvas-First Layout + Layers Collapse-to-Zero (R6.6)
 - **SITE (R6.6)**: Canvas is now on the **left** and Code editor on the **right** — visual output takes the hero position (matches Figma/Penpot convention)
 - **SITE (R6.6)**: Layers panel collapse now goes to **width: 0** (fully hidden) instead of 40px — canvas gets full width when collapsed

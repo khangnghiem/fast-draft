@@ -1,6 +1,8 @@
 # E-Commerce Wireframe — UX Researcher use case
 # Demonstrates: generic nodes (placeholders), grid layout, spec annotations
+# [auto] container (2 children)
 group @ecommerce_page {
+  # [auto] container (4 children)
   group @nav_bar {
     @logo {
       spec "Brand logo"
@@ -8,7 +10,7 @@ group @ecommerce_page {
     }
     @search_bar {
       spec {
-        "Product search"
+        Product search
         todo: "autocomplete < 200ms"
         status: doing
       }
@@ -24,11 +26,12 @@ group @ecommerce_page {
       fill: #E5E7EB  # white
       corner: 18
     }
-    layout: row gap=24 pad=16
     fill: #FFFFFF  # white
     shadow: (0,1,3,#0000000D)
   }
+  # [auto] container (2 children)
   group @main_content {
+    # [auto] container (4 children)
     group @filters {
       text @_anon_7 "Filters" {
         fill: #111827  # blue
@@ -46,11 +49,12 @@ group @ecommerce_page {
         spec "Star rating 1-5"
         fill: #F3F4F6  # white
       }
-      layout: column gap=16 pad=16
       fill: #FFFFFF  # white
       corner: 8
     }
+    # [auto] container (3 children)
     group @products {
+      # [auto] container (3 children)
       group @product_1 {
         @img_1 {
           spec "Product image"
@@ -64,11 +68,11 @@ group @ecommerce_page {
           fill: #111827  # blue
           font: "Inter" semibold 16
         }
-        layout: column gap=8 pad=12
         fill: #FFFFFF  # white
         corner: 8
         shadow: (0,1,3,#0000000D)
       }
+      # [auto] container (3 children)
       group @product_2 {
         @img_2 {
           spec "Product image"
@@ -82,11 +86,11 @@ group @ecommerce_page {
           fill: #111827  # blue
           font: "Inter" semibold 16
         }
-        layout: column gap=8 pad=12
         fill: #FFFFFF  # white
         corner: 8
         shadow: (0,1,3,#0000000D)
       }
+      # [auto] container (3 children)
       group @product_3 {
         @img_3 {
           spec "Product image"
@@ -100,17 +104,13 @@ group @ecommerce_page {
           fill: #111827  # blue
           font: "Inter" semibold 16
         }
-        layout: column gap=8 pad=12
         fill: #FFFFFF  # white
         corner: 8
         shadow: (0,1,3,#0000000D)
       }
-      layout: grid cols=2 gap=16 pad=0
     }
-    layout: row gap=24 pad=16
   }
-  layout: column gap=0 pad=0
   fill: #FAFAFA  # white
+  center_in: canvas
 }
 
-@ecommerce_page -> center_in: canvas

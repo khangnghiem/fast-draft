@@ -1,48 +1,50 @@
 style accent {
-  fill: #6C5CE7
+  fill: #6C5CE7  # blue
 }
 
 style subtle {
-  fill: #F0F0F5
+  fill: #F0F0F5  # white
   corner: 8
 }
 
+# [auto] container (5 children)
 group @dashboard_card {
-  layout: column gap=12 pad=24
-  fill: #FFFFFF
-  corner: 16
-  shadow: (0,4,20,#00000022)
-  x: 288.23
-  y: 276.57
   text @heading "Monthly Revenue" {
-    fill: #1A1A2E
-    font: "Inter" 600 18
+    fill: #1A1A2E  # blue
+    font: "Inter" semibold 18
   }
   text @amount "$48,250" {
-    fill: #1A1A2E
-    font: "Inter" 700 36
+    fill: #1A1A2E  # blue
+    font: "Inter" bold 36
   }
   text @change "+12.5% from last month" {
-    fill: #27AE60
-    font: "Inter" 400 14
+    fill: #27AE60  # green
+    font: "Inter" regular 14
   }
+  # [auto] styled: subtle
   rect @chart_area {
     w: 320 h: 160
     use: subtle
   }
+  # [auto] styled: accent
   rect @cta_button {
+    text @cta_label "View Details" {
+      fill: #FFFFFF  # white
+      font: "Inter" semibold 14
+    }
     w: 320 h: 44
     use: accent
     corner: 10
-    text @cta_label "View Details" {
-      fill: #FFFFFF
-      font: "Inter" 600 14
-    }
     when :hover {
-      fill: #5A4BD1
+      fill: #5A4BD1  # blue
       scale: 1.02
       ease: spring 300ms
     }
   }
+  fill: #FFFFFF  # white
+  corner: 16
+  shadow: (0,4,20,#00000022)
+  x: 288.23
+  y: 276.57
 }
 

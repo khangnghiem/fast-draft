@@ -1,209 +1,210 @@
-# Pricing Table — Marketing use case
-# Demonstrates: row layout, style reuse, highlighted tier, animations
+style feature_text {
+  fill: #4B5563  # blue
+  font: "Inter" regular 14
+}
+
+style price_text {
+  fill: #111827  # blue
+  font: "Inter" bold 40
+}
 
 style tier_card {
-  fill: #FFFFFF
+  fill: #FFFFFF  # white
   corner: 16
 }
 
 style tier_highlighted {
-  fill: #6C5CE7
+  fill: #6C5CE7  # blue
   corner: 16
 }
 
-style feature_text {
-  font: "Inter" regular 14
-  fill: #4B5563
-}
-
-style price_text {
-  font: "Inter" bold 40
-  fill: #111827
-}
-
 style tier_name {
+  fill: #111827  # blue
   font: "Inter" semibold 20
-  fill: #111827
 }
 
+# [auto] container (2 children)
 group @pricing_section {
-  layout: column gap=32 pad=40
-
-  # Header
+  # [auto] container (2 children)
   group @pricing_header {
-    layout: column gap=8
     text @pricing_title "Simple, Transparent Pricing" {
+      fill: #111827  # blue
       font: "Inter" bold 32
-      fill: #111827
     }
     text @pricing_subtitle "No hidden fees. Cancel anytime." {
+      fill: #6B7280  # blue
       font: "Inter" regular 16
-      fill: #6B7280
     }
   }
-
-  # Pricing tiers
+  # [auto] container (3 children)
   group @pricing_tiers {
-    layout: row gap=24
-
-    # Free tier
+    # [auto] container (8 children)
     group @free_tier {
-      layout: column gap=16 pad=28
-      w: 300
-      use: tier_card
-      shadow: (0,2,12,#00000012)
-
       text @free_name "Free" {
         use: tier_name
       }
-
+      # [auto] container (2 children)
       group @free_price {
-        layout: row gap=4
-        text "$0" { use: price_text }
-        text "/month" {
+        text @_text_66 "$0" {
+          use: price_text
+        }
+        text @_text_67 "/month" {
+          fill: #9CA3AF  # blue
           font: "Inter" regular 14
-          fill: #9CA3AF
         }
       }
-
-      rect @free_divider { w: 244 h: 1; fill: #E5E7EB }
-
-      text "5 projects" { use: feature_text }
-      text "1 GB storage" { use: feature_text }
-      text "Basic export (PNG)" { use: feature_text }
-      text "Community support" { use: feature_text }
-
+      rect @free_divider {
+        w: 244 h: 1
+        fill: #E5E7EB  # white
+      }
+      text @_text_68 "5 projects" {
+        use: feature_text
+      }
+      text @_text_69 "1 GB storage" {
+        use: feature_text
+      }
+      text @_text_70 "Basic export (PNG)" {
+        use: feature_text
+      }
+      text @_text_71 "Community support" {
+        use: feature_text
+      }
       rect @free_cta {
-        w: 244 h: 44
-        fill: #F3F4F6
-        corner: 10
-        text "Get Started" {
+        text @_text_72 "Get Started" {
+          fill: #374151  # blue
           font: "Inter" semibold 14
-          fill: #374151
         }
+        w: 244 h: 44
+        fill: #F3F4F6  # white
+        corner: 10
         when :hover {
-          fill: #E5E7EB
+          fill: #E5E7EB  # white
           ease: ease_out 150ms
         }
       }
+      use: tier_card
+      shadow: (0,2,12,#00000012)
     }
-
-    # Pro tier (highlighted)
+    # [auto] container (10 children)
     group @pro_tier {
-      layout: column gap=16 pad=28
-      w: 300
-      use: tier_highlighted
-      shadow: (0,8,32,#6C5CE740)
-
       rect @pro_badge {
-        w: 80 h: 24
-        fill: #FFFFFF33
-        corner: 12
-        text "Popular" {
+        text @_text_73 "Popular" {
+          fill: #FFFFFF  # white
           font: "Inter" semibold 11
-          fill: #FFFFFF
         }
+        w: 80 h: 24
+        fill: #FFFFFF33  # white
+        corner: 12
       }
-
       text @pro_name "Pro" {
+        fill: #FFFFFF  # white
         font: "Inter" semibold 20
-        fill: #FFFFFF
       }
-
+      # [auto] container (2 children)
       group @pro_price {
-        layout: row gap=4
-        text "$19" {
+        text @_text_74 "$19" {
+          fill: #FFFFFF  # white
           font: "Inter" bold 40
-          fill: #FFFFFF
         }
-        text "/month" {
+        text @_text_75 "/month" {
+          fill: #FFFFFFB3  # white
           font: "Inter" regular 14
-          fill: #FFFFFFB3
         }
       }
-
-      rect @pro_divider { w: 244 h: 1; fill: #FFFFFF33 }
-
-      text "Unlimited projects" {
-        font: "Inter" regular 14
-        fill: #FFFFFFCC
+      rect @pro_divider {
+        w: 244 h: 1
+        fill: #FFFFFF33  # white
       }
-      text "50 GB storage" {
+      text @_text_76 "Unlimited projects" {
+        fill: #FFFFFFCC  # white
         font: "Inter" regular 14
-        fill: #FFFFFFCC
       }
-      text "SVG + PDF export" {
+      text @_text_77 "50 GB storage" {
+        fill: #FFFFFFCC  # white
         font: "Inter" regular 14
-        fill: #FFFFFFCC
       }
-      text "Priority support" {
+      text @_text_78 "SVG + PDF export" {
+        fill: #FFFFFFCC  # white
         font: "Inter" regular 14
-        fill: #FFFFFFCC
       }
-      text "Version history" {
+      text @_text_79 "Priority support" {
+        fill: #FFFFFFCC  # white
         font: "Inter" regular 14
-        fill: #FFFFFFCC
       }
-
+      text @_text_80 "Version history" {
+        fill: #FFFFFFCC  # white
+        font: "Inter" regular 14
+      }
       rect @pro_cta {
-        w: 244 h: 44
-        fill: #FFFFFF
-        corner: 10
-        text "Upgrade to Pro" {
+        text @_text_81 "Upgrade to Pro" {
+          fill: #6C5CE7  # blue
           font: "Inter" semibold 14
-          fill: #6C5CE7
         }
+        w: 244 h: 44
+        fill: #FFFFFF  # white
+        corner: 10
         when :hover {
           scale: 1.03
           ease: spring 200ms
         }
       }
+      use: tier_highlighted
+      shadow: (0,8,32,#6C5CE740)
     }
-
-    # Enterprise tier
+    # [auto] container (10 children)
     group @enterprise_tier {
-      layout: column gap=16 pad=28
-      w: 300
-      use: tier_card
-      shadow: (0,2,12,#00000012)
-
       text @enterprise_name "Enterprise" {
         use: tier_name
       }
-
+      # [auto] container (2 children)
       group @enterprise_price {
-        layout: row gap=4
-        text "$79" { use: price_text }
-        text "/month" {
+        text @_text_82 "$79" {
+          use: price_text
+        }
+        text @_text_83 "/month" {
+          fill: #9CA3AF  # blue
           font: "Inter" regular 14
-          fill: #9CA3AF
         }
       }
-
-      rect @ent_divider { w: 244 h: 1; fill: #E5E7EB }
-
-      text "Everything in Pro" { use: feature_text }
-      text "Unlimited storage" { use: feature_text }
-      text "SSO & SAML" { use: feature_text }
-      text "Custom branding" { use: feature_text }
-      text "Dedicated support" { use: feature_text }
-      text "SLA guarantee" { use: feature_text }
-
+      rect @ent_divider {
+        w: 244 h: 1
+        fill: #E5E7EB  # white
+      }
+      text @_text_84 "Everything in Pro" {
+        use: feature_text
+      }
+      text @_text_85 "Unlimited storage" {
+        use: feature_text
+      }
+      text @_text_86 "SSO & SAML" {
+        use: feature_text
+      }
+      text @_text_87 "Custom branding" {
+        use: feature_text
+      }
+      text @_text_88 "Dedicated support" {
+        use: feature_text
+      }
+      text @_text_89 "SLA guarantee" {
+        use: feature_text
+      }
       rect @enterprise_cta {
-        w: 244 h: 44
-        fill: #111827
-        corner: 10
-        text "Contact Sales" {
+        text @_text_90 "Contact Sales" {
+          fill: #FFFFFF  # white
           font: "Inter" semibold 14
-          fill: #FFFFFF
         }
+        w: 244 h: 44
+        fill: #111827  # blue
+        corner: 10
         when :hover {
-          fill: #1F2937
+          fill: #1F2937  # blue
           ease: ease_out 150ms
         }
       }
+      use: tier_card
+      shadow: (0,2,12,#00000012)
     }
   }
+  center_in: canvas
 }
 
-@pricing_section -> center_in: canvas

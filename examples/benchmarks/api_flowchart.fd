@@ -28,9 +28,10 @@ style success_box {
 # ─── Layout ───
 
 # Start point
+# [auto] styled: io_box
 rect @client_request {
   spec {
-    "HTTP request entry point"
+    HTTP request entry point
     tag: api, v2
   }
   text @_text_0 "Client Request" {
@@ -44,6 +45,7 @@ rect @client_request {
 }
 
 # API Gateway
+# [auto] styled: process_box
 rect @api_gateway {
   spec "Rate limiting + request validation"
   text @_text_1 "API Gateway" {
@@ -57,9 +59,10 @@ rect @api_gateway {
 }
 
 # Auth check
+# [auto] styled: decision_box
 rect @auth_check {
   spec {
-    "JWT token validation"
+    JWT token validation
     todo: "reject expired tokens within 5s"
     status: done
   }
@@ -74,6 +77,7 @@ rect @auth_check {
 }
 
 # Auth failure
+# [auto] styled: error_box
 rect @auth_failure {
   text @_text_3 "401 Unauthorized" {
     fill: #DC2626  # red
@@ -86,6 +90,7 @@ rect @auth_failure {
 }
 
 # Route handler
+# [auto] styled: process_box
 rect @route_handler {
   spec "Match endpoint to controller"
   text @_text_4 "Route Handler" {
@@ -99,6 +104,7 @@ rect @route_handler {
 }
 
 # Business logic
+# [auto] styled: process_box
 rect @business_logic {
   spec "Core domain logic execution"
   text @_text_5 "Business Logic" {
@@ -112,9 +118,10 @@ rect @business_logic {
 }
 
 # DB query
+# [auto] styled: process_box
 rect @db_query {
   spec {
-    "Database read/write operations"
+    Database read/write operations
     todo: "queries < 100ms p95"
     status: doing
   }
@@ -129,6 +136,7 @@ rect @db_query {
 }
 
 # Success response
+# [auto] styled: success_box
 rect @success_response {
   text @_text_7 "200 OK + JSON" {
     fill: #059669  # teal
@@ -141,6 +149,7 @@ rect @success_response {
 }
 
 # Error response
+# [auto] styled: error_box
 rect @error_response {
   text @_text_8 "500 Server Error" {
     fill: #DC2626  # red
@@ -164,57 +173,53 @@ text @_db_success_label "query OK" {
 text @_db_error_label "query failed" {
 }
 
+text @_auth_yes_label "valid token" {
+}
+
+text @_auth_no_label "invalid / expired" {
+}
+
+text @_db_success_label "query OK" {
+}
+
+text @_db_error_label "query failed" {
+}
+
 # ─── Flows ───
 
-edge @req_to_gateway {
-  from: @client_request
-  to: @api_gateway
+edge @req_to_gateway @client_request -> @api_gateway {
   stroke: #6B7280 2
   arrow: end
 }
-edge @gateway_to_auth {
-  from: @api_gateway
-  to: @auth_check
+edge @gateway_to_auth @api_gateway -> @auth_check {
   stroke: #6B7280 2
   arrow: end
 }
-edge @auth_yes {
+edge @auth_yes @auth_check -> @route_handler {
   text @_auth_yes_label "valid token" {}
-  from: @auth_check
-  to: @route_handler
   stroke: #10B981 2
   arrow: end
 }
-edge @auth_no {
+edge @auth_no @auth_check -> @auth_failure {
   text @_auth_no_label "invalid / expired" {}
-  from: @auth_check
-  to: @auth_failure
   stroke: #EF4444 2
   arrow: end
 }
-edge @route_to_logic {
-  from: @route_handler
-  to: @business_logic
+edge @route_to_logic @route_handler -> @business_logic {
   stroke: #6B7280 2
   arrow: end
 }
-edge @logic_to_db {
-  from: @business_logic
-  to: @db_query
+edge @logic_to_db @business_logic -> @db_query {
   stroke: #6B7280 2
   arrow: end
 }
-edge @db_success {
+edge @db_success @db_query -> @success_response {
   text @_db_success_label "query OK" {}
-  from: @db_query
-  to: @success_response
   stroke: #10B981 2
   arrow: end
 }
-edge @db_error {
+edge @db_error @db_query -> @error_response {
   text @_db_error_label "query failed" {}
-  from: @db_query
-  to: @error_response
   stroke: #EF4444 2
   arrow: end
 }

@@ -1714,10 +1714,11 @@ fn emit_filtered_when() {
 fn emit_filtered_edges() {
     let graph = make_test_graph();
     let out = emit_filtered(&graph, ReadMode::Edges);
-    // Should have edges
-    assert!(out.contains("edge @card_to_label"), "should include edge");
-    assert!(out.contains("from: @card"), "should include from");
-    assert!(out.contains("to: @label"), "should include to");
+    // Should have edges with header syntax
+    assert!(
+        out.contains("edge @card_to_label @card -> @label"),
+        "should include edge header: {out}"
+    );
     assert!(
         out.contains("text @_card_to_label_label \"displays\" {}"),
         "should include text child"

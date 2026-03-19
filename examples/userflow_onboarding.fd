@@ -18,9 +18,10 @@ style screen_title {
 # ─── Layout ───
 
 # ─── Screens ────────────────────────────────────────────────
+# [auto] styled: screen
 rect @landing {
   spec {
-    "Marketing landing page"
+    Marketing landing page
     status: done
     tag: marketing
   }
@@ -33,9 +34,10 @@ rect @landing {
   y: 200
 }
 
+# [auto] styled: screen
 rect @signup {
   spec {
-    "Registration form"
+    Registration form
     todo: "collects name, email, password"
     todo: "OAuth buttons for Google + GitHub"
     status: done
@@ -49,9 +51,10 @@ rect @signup {
   y: 200
 }
 
+# [auto] styled: screen
 rect @verify_email {
   spec {
-    "Email verification step"
+    Email verification step
     todo: "shows 6-digit OTP input"
     todo: "resend link after 60s cooldown"
     status: doing
@@ -65,9 +68,10 @@ rect @verify_email {
   y: 200
 }
 
+# [auto] styled: screen
 rect @setup_profile {
   spec {
-    "Profile setup — avatar, bio, preferences"
+    Profile setup — avatar, bio, preferences
     todo: "avatar upload with crop"
     status: todo
   }
@@ -80,9 +84,10 @@ rect @setup_profile {
   y: 200
 }
 
+# [auto] styled: screen
 rect @dashboard {
   spec {
-    "Main application dashboard"
+    Main application dashboard
     status: todo
     tag: core
   }
@@ -95,6 +100,7 @@ rect @dashboard {
   y: 200
 }
 
+# [auto] connects to signup
 rect @error_screen {
   spec "Generic error state"
   text @error_t "Error" {
@@ -108,6 +114,7 @@ rect @error_screen {
   y: 420
 }
 
+# [auto] connects to verify_email
 rect @resend_screen {
   spec "Resend verification email"
   text @resend_t "Resend Email" {
@@ -145,79 +152,87 @@ text @_resend_retry_label "resend" {
 text @_error_retry_label "retry" {
 }
 
+text @_cta_click_label "Get Started" {
+}
+
+text @_signup_submit_label "submit" {
+}
+
+text @_email_verified_label "verified" {
+}
+
+text @_profile_done_label "complete" {
+}
+
+text @_signup_error_label "validation fail" {
+}
+
+text @_verify_timeout_label "expired" {
+}
+
+text @_resend_retry_label "resend" {
+}
+
+text @_error_retry_label "retry" {
+}
+
 # ─── Flows ───
 
-edge @cta_click {
+edge @cta_click @landing -> @signup {
   spec "Primary CTA on landing"
   text @_cta_click_label "Get Started" {}
-  from: @landing
-  to: @signup
   stroke: #6C5CE7 2
   arrow: end
 }
-edge @signup_submit {
+edge @signup_submit @signup -> @verify_email {
   spec {
-    "Form submission"
+    Form submission
     todo: "validates all fields client-side first"
   }
   text @_signup_submit_label "submit" {}
-  from: @signup
-  to: @verify_email
   stroke: #6C5CE7 2
   arrow: end
 }
-edge @email_verified {
+edge @email_verified @verify_email -> @setup_profile {
   spec "OTP validated"
   text @_email_verified_label "verified" {}
-  from: @verify_email
-  to: @setup_profile
   stroke: #10B981 2
   arrow: end
   curve: smooth
 }
-edge @profile_done {
+edge @profile_done @setup_profile -> @dashboard {
   spec "Profile setup complete"
   text @_profile_done_label "complete" {}
-  from: @setup_profile
-  to: @dashboard
   stroke: #10B981 2
   arrow: end
   curve: smooth
 }
-edge @signup_error {
+edge @signup_error @signup -> @error_screen {
   spec {
-    "Registration failure"
+    Registration failure
     todo: "shows inline field errors"
   }
   text @_signup_error_label "validation fail" {}
-  from: @signup
-  to: @error_screen
   stroke: #EF4444 1
   arrow: end
   curve: step
 }
-edge @verify_timeout {
+edge @verify_timeout @verify_email -> @resend_screen {
   spec "OTP expired or invalid"
   text @_verify_timeout_label "expired" {}
-  from: @verify_email
-  to: @resend_screen
   stroke: #F59E0B 1
   arrow: end
   curve: step
 }
-edge @resend_retry {
+edge @resend_retry @resend_screen -> @verify_email {
   spec "User requests new OTP"
   text @_resend_retry_label "resend" {}
-  from: @resend_screen
-  to: @verify_email
   stroke: #F59E0B 1
   arrow: end
 }
-edge @error_retry {
+edge @error_retry @error_screen -> @signup {
   spec "User corrects errors and resubmits"
   text @_error_retry_label "retry" {}
-  from: @error_screen
-  to: @signup
   stroke: #6B7280 1
   arrow: end
 }

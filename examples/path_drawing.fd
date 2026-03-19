@@ -1,53 +1,47 @@
-# ─── Path drawing and connections ───
-
-# Since FD paths record points directly, they are fully defined visually.
-# This example illustrates how to attach styles, animations and references
-# to paths in a drawing board setting.
-
-style hover_glow {
-  stroke: #60A5FA 4.0
-}
+# ─── Styles ───
 
 style default_text {
+  fill: #374151  # blue
   font: "Inter" medium 14
-  fill: #374151
 }
 
+style hover_glow {
+}
+
+# ─── Layout ───
+
+# [auto] container (2 children)
 group @board {
   spec {
-    "A freehand drawing board section"
+    A freehand drawing board section
     todo: "Allows pen strokes"
   }
-
-  # A standalone freehand path representing a doodle or signature
+  # [auto] styled: hover_glow
   path @scribble {
-    stroke: #3B82F6 3.0
+    spec "User signature or doodle"
     use: hover_glow
-    spec {
-      "User signature or doodle"
-    }
+    stroke: #3B82F6 3
   }
-
   path @highlight {
-    stroke: #FBBF24 8.0
+    stroke: #FBBF24 8
     opacity: 0.6
   }
 }
 
 # The user can connect drawn elements to standard shapes
 rect @note {
-  w: 120 h: 80
-  fill: #FEF3C7
-  text "Sign here" {
+  text @_text_16 "Sign here" {
     use: default_text
   }
+  w: 120 h: 80
+  fill: #FEF3C7  # yellow
 }
 
-edge @doodle_link {
-  from: @scribble
-  to: @note
+# ─── Flows ───
+
+edge @doodle_link @scribble -> @note {
+  stroke: #9CA3AF 2
   arrow: end
   curve: smooth
-  stroke: #9CA3AF 2.0
   flow: pulse 1500ms
 }

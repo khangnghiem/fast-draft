@@ -1,184 +1,207 @@
-# Mobile Onboarding — Mobile Designer use case
-# Demonstrates: frames with clip, column layouts, animations, style reuse
-
-style phone_frame {
-  fill: #1A1A2E
-  corner: 40
-}
-
-style screen_bg {
-  fill: #FFFFFF
-  corner: 32
+style cta_primary {
+  fill: #6C5CE7  # blue
+  corner: 12
 }
 
 style dot_active {
-  fill: #6C5CE7
+  fill: #6C5CE7  # blue
   corner: 6
 }
 
 style dot_inactive {
-  fill: #D1D5DB
+  fill: #D1D5DB  # white
   corner: 6
 }
 
-style cta_primary {
-  fill: #6C5CE7
-  corner: 12
+style phone_frame {
+  fill: #1A1A2E  # blue
+  corner: 40
+}
+
+style screen_bg {
+  fill: #FFFFFF  # white
+  corner: 32
 }
 
 # Screen 1 — Welcome
+# [auto] free container (1 children)
 frame @screen_welcome {
-  w: 280 h: 520
-  use: phone_frame
-  clip: true
-  x: 60 y: 60
-
+  # [auto] container (5 children)
   group @welcome_content {
-    layout: column gap=24 pad=32
-    use: screen_bg
-
     rect @welcome_illustration {
-      w: 216 h: 180
-      fill: #EDE9FE
-      corner: 16
-      text "🎨" {
+      text @_text_51 "🎨" {
+        fill: #6C5CE7  # blue
         font: "Inter" regular 64
-        fill: #6C5CE7
+      }
+      w: 216 h: 180
+      fill: #EDE9FE  # blue
+      corner: 16
+    }
+    text @welcome_title "Design Anywhere" {
+      fill: #1A1A2E  # blue
+      font: "Inter" bold 22
+    }
+    text @welcome_desc "Create beautiful designs on the go with an intuitive canvas experience." {
+      fill: #6B7280  # blue
+      font: "Inter" regular 14
+    }
+    # [auto] container (3 children)
+    group @dots_1 {
+      # [auto] styled: dot_active
+      rect @_rect_52 {
+        w: 24 h: 6
+        use: dot_active
+      }
+      # [auto] styled: dot_inactive
+      rect @_rect_53 {
+        w: 6 h: 6
+        use: dot_inactive
+      }
+      # [auto] styled: dot_inactive
+      rect @_rect_54 {
+        w: 6 h: 6
+        use: dot_inactive
       }
     }
-
-    text @welcome_title "Design Anywhere" {
-      font: "Inter" bold 22
-      fill: #1A1A2E
-    }
-
-    text @welcome_desc "Create beautiful designs on the go with an intuitive canvas experience." {
-      font: "Inter" regular 14
-      fill: #6B7280
-    }
-
-    # Page dots
-    group @dots_1 {
-      layout: row gap=8
-      rect { w: 24 h: 6; use: dot_active }
-      rect { w: 6 h: 6; use: dot_inactive }
-      rect { w: 6 h: 6; use: dot_inactive }
-    }
-
+    # [auto] styled: cta_primary
     rect @welcome_cta {
+      text @_text_55 "Get Started" {
+        fill: #FFFFFF  # white
+        font: "Inter" semibold 15
+      }
       w: 216 h: 48
       use: cta_primary
-      text "Get Started" {
-        font: "Inter" semibold 15
-        fill: #FFFFFF
-      }
       when :hover {
         scale: 1.03
         ease: spring 200ms
       }
     }
+    use: screen_bg
   }
+  w: 280 h: 520
+  clip: true
+  use: phone_frame
+  x: 60
+  y: 60
 }
 
 # Screen 2 — Collaborate
+# [auto] free container (1 children)
 frame @screen_collab {
-  w: 280 h: 520
-  use: phone_frame
-  clip: true
-  x: 380 y: 60
-
+  # [auto] container (5 children)
   group @collab_content {
-    layout: column gap=24 pad=32
-    use: screen_bg
-
     rect @collab_illustration {
-      w: 216 h: 180
-      fill: #DBEAFE
-      corner: 16
-      text "👥" {
+      text @_text_56 "👥" {
+        fill: #3B82F6  # blue
         font: "Inter" regular 64
-        fill: #3B82F6
+      }
+      w: 216 h: 180
+      fill: #DBEAFE  # blue
+      corner: 16
+    }
+    text @collab_title "Work Together" {
+      fill: #1A1A2E  # blue
+      font: "Inter" bold 22
+    }
+    text @collab_desc "Share your canvas with teammates and iterate in real time." {
+      fill: #6B7280  # blue
+      font: "Inter" regular 14
+    }
+    # [auto] container (3 children)
+    group @dots_2 {
+      # [auto] styled: dot_inactive
+      rect @_rect_57 {
+        w: 6 h: 6
+        use: dot_inactive
+      }
+      # [auto] styled: dot_active
+      rect @_rect_58 {
+        w: 24 h: 6
+        use: dot_active
+      }
+      # [auto] styled: dot_inactive
+      rect @_rect_59 {
+        w: 6 h: 6
+        use: dot_inactive
       }
     }
-
-    text @collab_title "Work Together" {
-      font: "Inter" bold 22
-      fill: #1A1A2E
-    }
-
-    text @collab_desc "Share your canvas with teammates and iterate in real time." {
-      font: "Inter" regular 14
-      fill: #6B7280
-    }
-
-    group @dots_2 {
-      layout: row gap=8
-      rect { w: 6 h: 6; use: dot_inactive }
-      rect { w: 24 h: 6; use: dot_active }
-      rect { w: 6 h: 6; use: dot_inactive }
-    }
-
+    # [auto] styled: cta_primary
     rect @collab_cta {
+      text @_text_60 "Continue" {
+        fill: #FFFFFF  # white
+        font: "Inter" semibold 15
+      }
       w: 216 h: 48
       use: cta_primary
-      text "Continue" {
-        font: "Inter" semibold 15
-        fill: #FFFFFF
-      }
     }
+    use: screen_bg
   }
+  w: 280 h: 520
+  clip: true
+  use: phone_frame
+  x: 380
+  y: 60
 }
 
 # Screen 3 — Export
+# [auto] free container (1 children)
 frame @screen_export {
-  w: 280 h: 520
-  use: phone_frame
-  clip: true
-  x: 700 y: 60
-
+  # [auto] container (5 children)
   group @export_content {
-    layout: column gap=24 pad=32
-    use: screen_bg
-
     rect @export_illustration {
-      w: 216 h: 180
-      fill: #D1FAE5
-      corner: 16
-      text "🚀" {
+      text @_text_61 "🚀" {
+        fill: #10B981  # teal
         font: "Inter" regular 64
-        fill: #10B981
       }
+      w: 216 h: 180
+      fill: #D1FAE5  # green
+      corner: 16
     }
-
     text @export_title "Ship It" {
+      fill: #1A1A2E  # blue
       font: "Inter" bold 22
-      fill: #1A1A2E
     }
-
     text @export_desc "Export to PNG, SVG, or generate production-ready code instantly." {
+      fill: #6B7280  # blue
       font: "Inter" regular 14
-      fill: #6B7280
     }
-
+    # [auto] container (3 children)
     group @dots_3 {
-      layout: row gap=8
-      rect { w: 6 h: 6; use: dot_inactive }
-      rect { w: 6 h: 6; use: dot_inactive }
-      rect { w: 24 h: 6; use: dot_active }
-    }
-
-    rect @export_cta {
-      w: 216 h: 48
-      fill: #10B981
-      corner: 12
-      text "Start Designing" {
-        font: "Inter" semibold 15
-        fill: #FFFFFF
+      # [auto] styled: dot_inactive
+      rect @_rect_62 {
+        w: 6 h: 6
+        use: dot_inactive
       }
+      # [auto] styled: dot_inactive
+      rect @_rect_63 {
+        w: 6 h: 6
+        use: dot_inactive
+      }
+      # [auto] styled: dot_active
+      rect @_rect_64 {
+        w: 24 h: 6
+        use: dot_active
+      }
+    }
+    rect @export_cta {
+      text @_text_65 "Start Designing" {
+        fill: #FFFFFF  # white
+        font: "Inter" semibold 15
+      }
+      w: 216 h: 48
+      fill: #10B981  # teal
+      corner: 12
       when :hover {
         scale: 1.03
         ease: spring 200ms
       }
     }
+    use: screen_bg
   }
+  w: 280 h: 520
+  clip: true
+  use: phone_frame
+  x: 700
+  y: 60
 }
+

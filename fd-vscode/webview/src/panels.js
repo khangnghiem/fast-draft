@@ -308,14 +308,14 @@ function parseLayerTree(source) {
       continue;
     }
 
-    // Edge
-    const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s*\{/);
+    // Edge — matches both header form (edge @name @from -> @to) and body form (edge @name {)
+    const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s+@(\w+)\s*->\s*@(\w+)/) ||
+                      trimmed.match(/^edge\s+@(\w+)\s*\{/);
     if (edgeMatch) {
       const node = { id: edgeMatch[1], kind: "edge", text: "", children: [] };
       if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
       else root.push(node);
-      braceDepth += openBraces - closeBraces;
-      stack.push({ node, depth: braceDepth });
+      if (trimmed.includes('{')) { braceDepth += openBraces - closeBraces; stack.push({ node, depth: braceDepth }); }
       continue;
     }
 
