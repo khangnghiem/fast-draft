@@ -1,8 +1,7 @@
-# Org Chart — HR / Manager use case
-# Demonstrates: edges, nested groups, ellipse avatars, named colors
+# ─── Styles ───
 
 style person_card {
-  fill: #FFFFFF
+  fill: #FFFFFF  # white
   corner: 12
 }
 
@@ -10,224 +9,218 @@ style role_badge {
   corner: 4
 }
 
+# ─── Layout ───
+
 # CEO level
+# [auto] container (3 children)
 group @ceo_card {
-  layout: column gap=4 pad=16
-  use: person_card
-  shadow: (0,2,8,#0000001A)
-  x: 380 y: 40
   ellipse @ceo_avatar {
     w: 40 h: 40
-    fill: purple
+    fill: #8B5CF6  # blue
     opacity: 0.15
   }
   text @ceo_name "Sarah Chen" {
+    fill: #111827  # blue
     font: "Inter" semibold 16
-    fill: #111827
   }
+  # [auto] styled: role_badge
   rect @ceo_role {
+    text @_text_127 "Chief Executive Officer" {
+      fill: #FFFFFF  # white
+      font: "Inter" medium 11
+    }
     w: 140 h: 24
     use: role_badge
-    fill: purple
-    text "Chief Executive Officer" {
-      font: "Inter" medium 11
-      fill: #FFFFFF
-    }
+    fill: #8B5CF6  # blue
   }
+  use: person_card
+  shadow: (0,2,8,#0000001A)
+  x: 380
+  y: 40
 }
 
 # VP level
+# [auto] container (3 children)
 group @vp_eng_card {
-  layout: column gap=4 pad=16
-  use: person_card
-  shadow: (0,2,8,#0000001A)
-  x: 120 y: 200
   ellipse @vp_eng_avatar {
     w: 32 h: 32
-    fill: blue
+    fill: #3B82F6  # blue
     opacity: 0.15
   }
   text @vp_eng_name "Marcus Johnson" {
+    fill: #111827  # blue
     font: "Inter" semibold 14
-    fill: #111827
   }
+  # [auto] styled: role_badge
   rect @vp_eng_role {
+    text @_text_128 "VP Engineering" {
+      fill: #FFFFFF  # white
+      font: "Inter" medium 11
+    }
     w: 120 h: 22
     use: role_badge
-    fill: blue
-    text "VP Engineering" {
-      font: "Inter" medium 11
-      fill: #FFFFFF
-    }
+    fill: #3B82F6  # blue
   }
-}
-
-group @vp_design_card {
-  layout: column gap=4 pad=16
   use: person_card
   shadow: (0,2,8,#0000001A)
-  x: 380 y: 200
+  x: 120
+  y: 200
+}
+
+# [auto] container (3 children)
+group @vp_design_card {
   ellipse @vp_design_avatar {
     w: 32 h: 32
-    fill: violet
+    fill: #8B5CF6  # blue
     opacity: 0.15
   }
   text @vp_design_name "Aisha Patel" {
+    fill: #111827  # blue
     font: "Inter" semibold 14
-    fill: #111827
   }
+  # [auto] styled: role_badge
   rect @vp_design_role {
+    text @_text_129 "VP Design" {
+      fill: #FFFFFF  # white
+      font: "Inter" medium 11
+    }
     w: 100 h: 22
     use: role_badge
-    fill: #8B5CF6
-    text "VP Design" {
-      font: "Inter" medium 11
-      fill: #FFFFFF
-    }
+    fill: #8B5CF6  # blue
   }
-}
-
-group @vp_product_card {
-  layout: column gap=4 pad=16
   use: person_card
   shadow: (0,2,8,#0000001A)
-  x: 620 y: 200
+  x: 380
+  y: 200
+}
+
+# [auto] container (3 children)
+group @vp_product_card {
   ellipse @vp_product_avatar {
     w: 32 h: 32
-    fill: green
+    fill: #22C55E  # green
     opacity: 0.15
   }
   text @vp_product_name "David Kim" {
+    fill: #111827  # blue
     font: "Inter" semibold 14
-    fill: #111827
   }
+  # [auto] styled: role_badge
   rect @vp_product_role {
+    text @_text_130 "VP Product" {
+      fill: #FFFFFF  # white
+      font: "Inter" medium 11
+    }
     w: 100 h: 22
     use: role_badge
-    fill: green
-    text "VP Product" {
-      font: "Inter" medium 11
-      fill: #FFFFFF
-    }
+    fill: #22C55E  # green
   }
+  use: person_card
+  shadow: (0,2,8,#0000001A)
+  x: 620
+  y: 200
 }
 
 # Engineering team
+# [auto] container (2 children)
 group @eng_lead_card {
-  layout: column gap=4 pad=12
-  use: person_card
-  shadow: (0,1,4,#00000012)
-  x: 40 y: 380
   text @eng_lead_name "Lisa Wang" {
+    fill: #111827  # blue
     font: "Inter" medium 13
-    fill: #111827
   }
   text @eng_lead_title "Tech Lead" {
+    fill: #6B7280  # blue
     font: "Inter" regular 11
-    fill: #6B7280
   }
-}
-
-group @eng_sr_card {
-  layout: column gap=4 pad=12
   use: person_card
   shadow: (0,1,4,#00000012)
-  x: 220 y: 380
+  x: 40
+  y: 380
+}
+
+# [auto] container (2 children)
+group @eng_sr_card {
   text @eng_sr_name "James Okafor" {
+    fill: #111827  # blue
     font: "Inter" medium 13
-    fill: #111827
   }
   text @eng_sr_title "Sr. Engineer" {
+    fill: #6B7280  # blue
     font: "Inter" regular 11
-    fill: #6B7280
   }
+  use: person_card
+  shadow: (0,1,4,#00000012)
+  x: 220
+  y: 380
 }
 
 # Design team
+# [auto] container (2 children)
 group @design_lead_card {
-  layout: column gap=4 pad=12
-  use: person_card
-  shadow: (0,1,4,#00000012)
-  x: 380 y: 380
   text @design_lead_name "Emma Rossi" {
+    fill: #111827  # blue
     font: "Inter" medium 13
-    fill: #111827
   }
   text @design_lead_title "Design Lead" {
+    fill: #6B7280  # blue
     font: "Inter" regular 11
-    fill: #6B7280
   }
+  use: person_card
+  shadow: (0,1,4,#00000012)
+  x: 380
+  y: 380
 }
 
 # Product team
+# [auto] container (2 children)
 group @pm_card {
-  layout: column gap=4 pad=12
-  use: person_card
-  shadow: (0,1,4,#00000012)
-  x: 600 y: 380
   text @pm_name "Rio Tanaka" {
+    fill: #111827  # blue
     font: "Inter" medium 13
-    fill: #111827
   }
   text @pm_title "Product Manager" {
+    fill: #6B7280  # blue
     font: "Inter" regular 11
-    fill: #6B7280
   }
+  use: person_card
+  shadow: (0,1,4,#00000012)
+  x: 600
+  y: 380
 }
 
-# Connections — CEO to VPs
-edge @ceo_to_eng {
-  from: @ceo_card
-  to: @vp_eng_card
+# ─── Flows ───
+
+edge @ceo_to_eng @ceo_card -> @vp_eng_card {
   stroke: #D1D5DB 2
   arrow: end
   curve: step
 }
-
-edge @ceo_to_design {
-  from: @ceo_card
-  to: @vp_design_card
+edge @ceo_to_design @ceo_card -> @vp_design_card {
   stroke: #D1D5DB 2
   arrow: end
   curve: step
 }
-
-edge @ceo_to_product {
-  from: @ceo_card
-  to: @vp_product_card
+edge @ceo_to_product @ceo_card -> @vp_product_card {
   stroke: #D1D5DB 2
   arrow: end
   curve: step
 }
-
-# VP to team leads
-edge @eng_to_lead {
-  from: @vp_eng_card
-  to: @eng_lead_card
+edge @eng_to_lead @vp_eng_card -> @eng_lead_card {
   stroke: #BFDBFE 2
   arrow: end
   curve: step
 }
-
-edge @eng_to_sr {
-  from: @vp_eng_card
-  to: @eng_sr_card
+edge @eng_to_sr @vp_eng_card -> @eng_sr_card {
   stroke: #BFDBFE 2
   arrow: end
   curve: step
 }
-
-edge @design_to_lead {
-  from: @vp_design_card
-  to: @design_lead_card
+edge @design_to_lead @vp_design_card -> @design_lead_card {
   stroke: #DDD6FE 2
   arrow: end
   curve: step
 }
-
-edge @product_to_pm {
-  from: @vp_product_card
-  to: @pm_card
+edge @product_to_pm @vp_product_card -> @pm_card {
   stroke: #A7F3D0 2
   arrow: end
   curve: step

@@ -1,50 +1,45 @@
-# ─── Import Namespace Showcase ───
-# Demonstrates the use of the `import "filename.fd" as ns` feature
-# to reuse styles defined in an external file.
-
 import "shared_library.fd" as lib
 
 # ─── Components ───
-
+# [auto] container (3 children)
 group @toolbar {
-  layout: row gap=16 pad=20
-
+  # [auto] styled: lib.primary_button
   rect @save_btn {
     spec "Primary save button using the library's primary_button style"
+    text @_text_13 "Save" {
+      fill: #FFFFFF  # white
+      font: "Inter" bold 14
+    }
     w: 120 h: 40
     use: lib.primary_button
-    text "Save" {
-      fill: #FFFFFF
-      font: "Inter" bold 14
-    }
     when :hover {
       scale: 1.05
       ease: ease_out 200ms
     }
   }
-
+  # [auto] styled: lib.secondary_button
   rect @cancel_btn {
     spec "Cancel button using the library's secondary_button style"
-    w: 120 h: 40
-    use: lib.secondary_button
-    text "Cancel" {
-      fill: #FFFFFF
+    text @_text_14 "Cancel" {
+      fill: #FFFFFF  # white
       font: "Inter" bold 14
     }
+    w: 120 h: 40
+    use: lib.secondary_button
     when :hover {
       scale: 1.05
       ease: ease_out 200ms
     }
   }
-
+  # [auto] styled: lib.danger_button
   rect @delete_btn {
     spec "Delete button using the library's danger_button style"
-    w: 120 h: 40
-    use: lib.danger_button
-    text "Delete" {
-      fill: #FFFFFF
+    text @_text_15 "Delete" {
+      fill: #FFFFFF  # white
       font: "Inter" bold 14
     }
+    w: 120 h: 40
+    use: lib.danger_button
     when :hover {
       scale: 1.05
       ease: ease_out 200ms
@@ -52,24 +47,24 @@ group @toolbar {
   }
 }
 
+# [auto] free container (2 children)
 frame @card {
   spec "A user profile card using the shared card base style"
+  text @username "Alice Cooper" {
+    fill: #333333  # gray
+    font: "Inter" bold 24
+    x: 40
+    y: 40
+  }
+  text @bio "Frontend Engineer" {
+    fill: #666666  # gray
+    font: "Inter" regular 16
+    x: 40
+    y: 80
+  }
   w: 400 h: 200
   use: lib.card_base
   x: 20
   y: 100
-
-  text @username "Alice Cooper" {
-    font: "Inter" bold 24
-    fill: #333333
-    x: 40
-    y: 40
-  }
-
-  text @bio "Frontend Engineer" {
-    font: "Inter" regular 16
-    fill: #666666
-    x: 40
-    y: 80
-  }
 }
+

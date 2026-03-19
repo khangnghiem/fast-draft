@@ -1086,6 +1086,25 @@ fn parse_node_property(
         "use" | "apply" => {
             use_styles.push(parse_identifier.map(NodeId::intern).parse_next(input)?);
         }
+        // ─── Inline constraints (new: center_in:, offset:, fill_parent:) ───
+        "center_in" => {
+            let target = parse_identifier.map(NodeId::intern).parse_next(input)?;
+            constraints.push(Constraint::CenterIn(target));
+        }
+        "offset" => {
+            let from = parse_node_id.parse_next(input)?;
+            let _ = space1.parse_next(input)?;
+            let dx = parse_number.parse_next(input)?;
+            skip_space(input);
+            let _ = ','.parse_next(input)?;
+            skip_space(input);
+            let dy = parse_number.parse_next(input)?;
+            constraints.push(Constraint::Offset { from, dx, dy });
+        }
+        "fill_parent" => {
+            let pad = opt(parse_number).parse_next(input)?.unwrap_or(0.0);
+            constraints.push(Constraint::FillParent { pad });
+        }
         "font" => {
             parse_font_value(input, style)?;
         }
@@ -1601,13 +1620,102 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
     let _ = "edge".parse_next(input)?;
     let _ = space1.parse_next(input)?;
 
-    let id = if input.starts_with('@') {
+    // Parse first @id — could be edge name or from-anchor
+    let first_id = if input.starts_with('@') {
         parse_node_id.parse_next(input)?
     } else {
         NodeId::anonymous("edge")
     };
 
     skip_space(input);
+
+    // ─── New header syntax: edge @name @from -> @to ["label"] [{...}] ───
+    // Disambiguate: if next char is '@' or a digit, first_id is the edge name
+    // and this is the from-anchor. If next is '->' it's anonymous (first_id is from).
+    // If next is '{', it's the old body-only form.
+    let (id, header_from, header_to, header_label) = if input.starts_with('@')
+        || input.starts_with(|c: char| c.is_ascii_digit())
+        || (input.starts_with('-') && input.len() > 1 && input.as_bytes()[1].is_ascii_digit())
+    {
+        // first_id is the edge name; parse from-anchor
+        let from_anchor = parse_edge_anchor(input)?;
+        skip_space(input);
+        let _ = "->".parse_next(input)?;
+        skip_space(input);
+        let to_anchor = parse_edge_anchor(input)?;
+        skip_space(input);
+        // Optional inline label
+        let label = if input.starts_with('"') {
+            Some(
+                parse_quoted_string
+                    .map(|s| s.to_string())
+                    .parse_next(input)?,
+            )
+        } else {
+            None
+        };
+        (first_id, Some(from_anchor), Some(to_anchor), label)
+    } else if input.starts_with("->") {
+        // Anonymous edge: first_id is the from-node
+        let from_anchor = EdgeAnchor::Node(first_id);
+        let _ = "->".parse_next(input)?;
+        skip_space(input);
+        let to_anchor = parse_edge_anchor(input)?;
+        skip_space(input);
+        let label = if input.starts_with('"') {
+            Some(
+                parse_quoted_string
+                    .map(|s| s.to_string())
+                    .parse_next(input)?,
+            )
+        } else {
+            None
+        };
+        (
+            NodeId::anonymous("edge"),
+            Some(from_anchor),
+            Some(to_anchor),
+            label,
+        )
+    } else {
+        // Old body form: edge @name { from: ... to: ... }
+        (first_id, None, None, None)
+    };
+
+    skip_space(input);
+
+    // Braceless edge: no '{' means use defaults and return immediately
+    if header_from.is_some() && !input.starts_with('{') {
+        // Consume optional separator
+        skip_opt_separator(input);
+        let from = header_from.unwrap_or(EdgeAnchor::Point(0.0, 0.0));
+        let to = header_to.unwrap_or(EdgeAnchor::Point(0.0, 0.0));
+        let (text_child, text_child_content) = if let Some(label) = header_label {
+            let label_id = NodeId::intern(&format!("_{}_label", id.as_str()));
+            (Some(label_id), Some((label_id, label)))
+        } else {
+            (None, None)
+        };
+        let style = Properties::default();
+        return Ok((
+            Edge {
+                id,
+                from,
+                to,
+                text_child,
+                props: style,
+                use_styles: Default::default(),
+                arrow: ArrowKind::None,
+                curve: CurveKind::Straight,
+                spec: None,
+                animations: Default::default(),
+                flow: None,
+                label_offset: None,
+            },
+            text_child_content,
+        ));
+    }
+
     let _ = '{'.parse_next(input)?;
 
     let mut from = None;
@@ -1749,11 +1857,24 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
         });
     }
 
+    // Header-provided anchors take precedence over body from:/to:
+    let final_from = header_from.or(from).unwrap_or(EdgeAnchor::Point(0.0, 0.0));
+    let final_to = header_to.or(to).unwrap_or(EdgeAnchor::Point(0.0, 0.0));
+
+    // Header-provided label takes precedence
+    if text_child.is_none()
+        && let Some(ref label) = header_label
+    {
+        let label_id = NodeId::intern(&format!("_{}_label", id.as_str()));
+        text_child = Some(label_id);
+        text_child_content = Some((label_id, label.clone()));
+    }
+
     Ok((
         Edge {
             id,
-            from: from.unwrap_or(EdgeAnchor::Point(0.0, 0.0)),
-            to: to.unwrap_or(EdgeAnchor::Point(0.0, 0.0)),
+            from: final_from,
+            to: final_to,
             text_child,
             props: style,
             use_styles: use_styles.into(),

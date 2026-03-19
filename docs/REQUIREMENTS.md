@@ -26,7 +26,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R1.7** _(done)_: Comments via `#` prefix
 - **R1.8** _(done)_: Human-readable and AI-writable without special tooling
 - **R1.9** _(done)_: Typed spec annotations (`spec` blocks) — structured `role:`, `trait:`, `intent:` keyword fields plus free-form markdown description; backward-compatible with legacy content; parsed into typed `Spec` struct and round-tripped faithfully
-- **R1.10** _(done)_: First-class edges — `edge @id { from: @a to: @b }` with arrow, curve, label, stroke, and `spec` annotations → [spec](specs/edge-system.md)
+- **R1.10** _(done)_: First-class edges — header syntax `edge @name @from -> @to { ... }` (braceless, anonymous, inline label supported); body-form `edge @id { from: @a to: @b }` still accepted for backward compat; inline constraints (`center_in:`, `offset:`, `fill_parent:`) as node properties; arrow, curve, label, stroke, and `spec` annotations → [spec](specs/edge-system.md)
 - **R1.11** _(done)_: Edge trigger animations — edges support `when :hover { ... }` blocks identical to nodes (parser also accepts legacy `anim` keyword) → [spec](specs/edge-system.md)
 - **R1.12** _(done)_: Edge flow animations — `flow: pulse Nms` (traveling dot) and `flow: dash Nms` (marching dashes) → [spec](specs/edge-system.md)
 - **R1.13** _(done)_: Generic nodes — `@id { ... }` without explicit kind keyword for abstract/placeholder elements

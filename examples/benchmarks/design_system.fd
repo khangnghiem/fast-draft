@@ -1,196 +1,329 @@
-# Design System — Brand Designer use case
-# Demonstrates: import, named colors, bg shorthand, style reuse, opacity
-
 import "tokens.fd" as tokens
 
-# Typography scale — uses named colors for quick scanning
-style display {
-  font: "Inter" bold 48
-  fill: slate
-}
-
-style heading {
-  font: "Inter" semibold 24
-  fill: slate
-}
+# ─── Styles ───
 
 style body {
+  fill: #6B7280  # blue
   font: "Inter" regular 16
-  fill: gray
 }
 
 style caption {
+  fill: #6B7280  # blue
   font: "Inter" medium 12
-  fill: gray
 }
 
-# Shared component styles
-style swatch_card {
-  fill: white
-  corner: 12
+style display {
+  fill: #64748B  # blue
+  font: "Inter" bold 48
+}
+
+style heading {
+  fill: #64748B  # blue
+  font: "Inter" semibold 24
 }
 
 style section_label {
+  fill: #6B7280  # blue
   font: "Inter" semibold 11
-  fill: gray
   opacity: 0.6
 }
 
-group @design_system {
-  layout: column gap=32 pad=40
-  bg: #F8FAFC corner=20
+style swatch_card {
+  fill: #FFFFFF  # white
+  corner: 12
+}
 
+# ─── Layout ───
+
+# [auto] container (8 children)
+group @design_system {
   text @page_title "Acme Design System" {
     use: display
   }
-
   text @page_subtitle "Tokens, Typography, Colors & Components" {
     use: body
   }
-
-  # Color palette section
-  text @colors_label "COLOR PALETTE" { use: section_label }
+  text @colors_label "COLOR PALETTE" {
+    use: section_label
+  }
+  # [auto] container (6 children)
   group @color_palette {
-    layout: row gap=16
-
+    # [auto] container (3 children)
     group @primary_swatch {
-      layout: column gap=8 pad=16
+      rect @primary_block {
+        w: 120 h: 80
+        fill: #8B5CF6  # blue
+        corner: 8
+      }
+      text @_text_17 "Purple" {
+        fill: #64748B  # blue
+        font: "Inter" medium 14
+      }
+      text @_text_18 "#6C5CE7" {
+        use: caption
+      }
       use: swatch_card
       shadow: (0,2,8,#0000000F)
-      rect @primary_block { w: 120 h: 80; fill: purple; corner: 8 }
-      text "Purple" { font: "Inter" medium 14; fill: slate }
-      text "#6C5CE7" { use: caption }
     }
-
+    # [auto] container (3 children)
     group @secondary_swatch {
-      layout: column gap=8 pad=16
+      rect @secondary_block {
+        w: 120 h: 80
+        fill: #3B82F6  # blue
+        corner: 8
+      }
+      text @_text_19 "Blue" {
+        fill: #64748B  # blue
+        font: "Inter" medium 14
+      }
+      text @_text_20 "#3B82F6" {
+        use: caption
+      }
       use: swatch_card
       shadow: (0,2,8,#0000000F)
-      rect @secondary_block { w: 120 h: 80; fill: blue; corner: 8 }
-      text "Blue" { font: "Inter" medium 14; fill: slate }
-      text "#3B82F6" { use: caption }
     }
-
+    # [auto] container (3 children)
     group @success_swatch {
-      layout: column gap=8 pad=16
+      rect @success_block {
+        w: 120 h: 80
+        fill: #22C55E  # green
+        corner: 8
+      }
+      text @_text_21 "Green" {
+        fill: #64748B  # blue
+        font: "Inter" medium 14
+      }
+      text @_text_22 "#10B981" {
+        use: caption
+      }
       use: swatch_card
       shadow: (0,2,8,#0000000F)
-      rect @success_block { w: 120 h: 80; fill: green; corner: 8 }
-      text "Green" { font: "Inter" medium 14; fill: slate }
-      text "#10B981" { use: caption }
     }
-
+    # [auto] container (3 children)
     group @warning_swatch {
-      layout: column gap=8 pad=16
+      rect @warning_block {
+        w: 120 h: 80
+        fill: #F59E0B  # orange
+        corner: 8
+      }
+      text @_text_23 "Amber" {
+        fill: #64748B  # blue
+        font: "Inter" medium 14
+      }
+      text @_text_24 "#F59E0B" {
+        use: caption
+      }
       use: swatch_card
       shadow: (0,2,8,#0000000F)
-      rect @warning_block { w: 120 h: 80; fill: yellow; corner: 8 }
-      text "Amber" { font: "Inter" medium 14; fill: slate }
-      text "#F59E0B" { use: caption }
     }
-
+    # [auto] container (3 children)
     group @danger_swatch {
-      layout: column gap=8 pad=16
+      rect @danger_block {
+        w: 120 h: 80
+        fill: #EF4444  # red
+        corner: 8
+      }
+      text @_text_25 "Red" {
+        fill: #64748B  # blue
+        font: "Inter" medium 14
+      }
+      text @_text_26 "#EF4444" {
+        use: caption
+      }
       use: swatch_card
       shadow: (0,2,8,#0000000F)
-      rect @danger_block { w: 120 h: 80; fill: red; corner: 8 }
-      text "Red" { font: "Inter" medium 14; fill: slate }
-      text "#EF4444" { use: caption }
     }
-
+    # [auto] container (3 children)
     group @neutral_swatch {
-      layout: column gap=8 pad=16
+      rect @neutral_block {
+        w: 120 h: 80
+        fill: #64748B  # blue
+        corner: 8
+      }
+      text @_text_27 "Slate" {
+        fill: #64748B  # blue
+        font: "Inter" medium 14
+      }
+      text @_text_28 "#334155" {
+        use: caption
+      }
       use: swatch_card
       shadow: (0,2,8,#0000000F)
-      rect @neutral_block { w: 120 h: 80; fill: slate; corner: 8 }
-      text "Slate" { font: "Inter" medium 14; fill: slate }
-      text "#334155" { use: caption }
     }
   }
-
-  # Typography section
-  text @type_label "TYPOGRAPHY" { use: section_label }
+  text @type_label "TYPOGRAPHY" {
+    use: section_label
+  }
+  # [auto] container (4 children)
   group @typography_showcase {
-    layout: column gap=16 pad=24
+    text @_text_29 "Display — 48px Bold" {
+      use: display
+    }
+    text @_text_30 "Heading — 24px Semibold" {
+      use: heading
+    }
+    text @_text_31 "Body — 16px Regular" {
+      use: body
+    }
+    text @_text_32 "Caption — 12px Medium" {
+      use: caption
+    }
     use: swatch_card
     shadow: (0,2,8,#0000000F)
-    text "Display — 48px Bold" { use: display }
-    text "Heading — 24px Semibold" { use: heading }
-    text "Body — 16px Regular" { use: body }
-    text "Caption — 12px Medium" { use: caption }
   }
-
-  # Component examples
-  text @comp_label "COMPONENTS" { use: section_label }
+  text @comp_label "COMPONENTS" {
+    use: section_label
+  }
+  # [auto] container (3 children)
   group @component_examples {
-    layout: row gap=24
-
-    # Button variants
+    # [auto] container (5 children)
     group @buttons {
-      layout: column gap=12 pad=24
+      text @_text_33 "Buttons" {
+        use: heading
+      }
+      rect @btn_primary {
+        text @_text_34 "Primary Action" {
+          fill: #FFFFFF  # white
+          font: "Inter" semibold 14
+        }
+        w: 200 h: 44
+        fill: #8B5CF6  # blue
+        corner: 10
+        when :hover {
+          fill: #5A4BD1  # blue
+          scale: 1.02
+          ease: spring 200ms
+        }
+      }
+      rect @btn_secondary {
+        text @_text_35 "Secondary" {
+          fill: #64748B  # blue
+          font: "Inter" medium 14
+        }
+        w: 200 h: 44
+        fill: #F3F4F6  # white
+        corner: 10
+        when :hover {
+          fill: #E5E7EB  # white
+          ease: ease_out 150ms
+        }
+      }
+      rect @btn_outline {
+        text @_text_36 "Outlined" {
+          fill: #64748B  # blue
+          font: "Inter" medium 14
+        }
+        w: 200 h: 44
+        fill: #FFFFFF  # white
+        stroke: #D1D5DB 1
+        corner: 10
+      }
+      rect @btn_ghost {
+        text @_text_37 "Ghost" {
+          fill: #8B5CF6  # blue
+          font: "Inter" medium 14
+        }
+        w: 200 h: 44
+        fill: #00000000  # black
+        corner: 10
+        opacity: 0.8
+        when :hover {
+          opacity: 1
+          ease: ease_out 100ms
+        }
+      }
       use: swatch_card
       shadow: (0,2,8,#0000000F)
-      text "Buttons" { use: heading }
-      rect @btn_primary { w: 200 h: 44; fill: purple; corner: 10
-        text "Primary Action" { font: "Inter" semibold 14; fill: white }
-        when :hover { fill: #5A4BD1; scale: 1.02; ease: spring 200ms }
-      }
-      rect @btn_secondary { w: 200 h: 44; fill: #F3F4F6; corner: 10
-        text "Secondary" { font: "Inter" medium 14; fill: slate }
-        when :hover { fill: #E5E7EB; ease: ease_out 150ms }
-      }
-      rect @btn_outline { w: 200 h: 44; fill: white; stroke: #D1D5DB 1; corner: 10
-        text "Outlined" { font: "Inter" medium 14; fill: slate }
-      }
-      rect @btn_ghost { w: 200 h: 44; fill: #00000000; corner: 10; opacity: 0.8
-        text "Ghost" { font: "Inter" medium 14; fill: purple }
-        when :hover { opacity: 1; ease: ease_out 100ms }
-      }
     }
-
-    # Input variants
+    # [auto] container (4 children)
     group @inputs {
-      layout: column gap=12 pad=24
-      use: swatch_card
-      shadow: (0,2,8,#0000000F)
-      text "Inputs" { use: heading }
+      text @_text_38 "Inputs" {
+        use: heading
+      }
       rect @input_default {
-        w: 260 h: 44; fill: white; stroke: #D1D5DB 1; corner: 8
-        text "Default input..." { font: "Inter" regular 14; fill: gray; opacity: 0.5 }
+        text @_text_39 "Default input..." {
+          fill: #6B7280  # blue
+          font: "Inter" regular 14
+          opacity: 0.5
+        }
+        w: 260 h: 44
+        fill: #FFFFFF  # white
+        stroke: #D1D5DB 1
+        corner: 8
       }
       rect @input_focused {
-        w: 260 h: 44; fill: white; stroke: #6C5CE7 2; corner: 8
-        text "Focused input" { font: "Inter" regular 14; fill: slate }
+        text @_text_40 "Focused input" {
+          fill: #64748B  # blue
+          font: "Inter" regular 14
+        }
+        w: 260 h: 44
+        fill: #FFFFFF  # white
+        stroke: #6C5CE7 2
+        corner: 8
       }
       rect @input_error {
-        w: 260 h: 44; fill: #FEF2F2; stroke: #EF4444 1; corner: 8
-        text "Error state" { font: "Inter" regular 14; fill: red }
+        text @_text_41 "Error state" {
+          fill: #EF4444  # red
+          font: "Inter" regular 14
+        }
+        w: 260 h: 44
+        fill: #FEF2F2  # white
+        stroke: #EF4444 1
+        corner: 8
       }
-    }
-
-    # Badge variants
-    group @badges {
-      layout: column gap=12 pad=24
       use: swatch_card
       shadow: (0,2,8,#0000000F)
-      text "Badges" { use: heading }
+    }
+    # [auto] container (2 children)
+    group @badges {
+      text @_text_42 "Badges" {
+        use: heading
+      }
+      # [auto] container (4 children)
       group @badge_row {
-        layout: row gap=8
-        rect { w: 72 h: 24; fill: #DBEAFE; corner: 12
-          text "Info" { font: "Inter" medium 11; fill: blue }
+        rect @_rect_43 {
+          text @_text_44 "Info" {
+            fill: #3B82F6  # blue
+            font: "Inter" medium 11
+          }
+          w: 72 h: 24
+          fill: #DBEAFE  # blue
+          corner: 12
         }
-        rect { w: 80 h: 24; fill: #D1FAE5; corner: 12
-          text "Success" { font: "Inter" medium 11; fill: green }
+        rect @_rect_45 {
+          text @_text_46 "Success" {
+            fill: #22C55E  # green
+            font: "Inter" medium 11
+          }
+          w: 80 h: 24
+          fill: #D1FAE5  # green
+          corner: 12
         }
-        rect { w: 80 h: 24; fill: #FEF3C7; corner: 12
-          text "Warning" { font: "Inter" medium 11; fill: yellow }
+        rect @_rect_47 {
+          text @_text_48 "Warning" {
+            fill: #F59E0B  # orange
+            font: "Inter" medium 11
+          }
+          w: 80 h: 24
+          fill: #FEF3C7  # yellow
+          corner: 12
         }
-        rect { w: 64 h: 24; fill: #FEE2E2; corner: 12
-          text "Error" { font: "Inter" medium 11; fill: red }
+        rect @_rect_49 {
+          text @_text_50 "Error" {
+            fill: #EF4444  # red
+            font: "Inter" medium 11
+          }
+          w: 64 h: 24
+          fill: #FEE2E2  # red
+          corner: 12
         }
       }
+      use: swatch_card
+      shadow: (0,2,8,#0000000F)
     }
   }
+  fill: #F8FAFC  # white
+  corner: 20
+  center_in: canvas
 }
 
-@design_system -> center_in: canvas

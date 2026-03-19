@@ -1,181 +1,166 @@
-# Kanban Board — Project Manager use case
-# Demonstrates: row/column layouts, semantic IDs, named colors, style reuse
-
 style card {
-  fill: #FFFFFF
+  fill: #FFFFFF  # white
   corner: 8
 }
 
 style column_bg {
-  fill: #F4F5F7
+  fill: #F4F5F7  # white
   corner: 12
 }
 
-style tag_urgent {
-  fill: #FEE2E2
+style tag_bug {
+  fill: #FEF3C7  # yellow
   corner: 4
 }
 
 style tag_feature {
-  fill: #DBEAFE
+  fill: #DBEAFE  # blue
   corner: 4
 }
 
-style tag_bug {
-  fill: #FEF3C7
+style tag_urgent {
+  fill: #FEE2E2  # red
   corner: 4
 }
 
+# [auto] container (3 children)
 group @kanban_board {
-  layout: row gap=20 pad=24
-  fill: #ECEDF0
-  corner: 16
-
-  # To Do column
+  # [auto] container (3 children)
   group @todo_column {
-    layout: column gap=12 pad=16
-    w: 280
-    use: column_bg
-
     text @todo_header "To Do" {
+      fill: #1F2937  # blue
       font: "Inter" semibold 16
-      fill: #1F2937
     }
-
+    # [auto] container (3 children)
     group @task_auth {
-      layout: column gap=8 pad=12
-      use: card
-      shadow: (0,1,3,#0000000D)
+      # [auto] styled: tag_urgent
       rect @tag_auth_urgent {
+        text @_text_122 "Urgent" {
+          fill: #EF4444  # red
+          font: "Inter" medium 11
+        }
         w: 56 h: 22
         use: tag_urgent
-        text "Urgent" {
-          font: "Inter" medium 11
-          fill: red
-        }
       }
       text @task_auth_title "Fix authentication timeout" {
+        fill: #111827  # blue
         font: "Inter" medium 14
-        fill: #111827
       }
       text @task_auth_desc "Users getting logged out after 5 min" {
+        fill: #6B7280  # blue
         font: "Inter" regular 12
-        fill: #6B7280
       }
-    }
-
-    group @task_search {
-      layout: column gap=8 pad=12
       use: card
       shadow: (0,1,3,#0000000D)
+    }
+    # [auto] container (3 children)
+    group @task_search {
+      # [auto] styled: tag_feature
       rect @tag_search_feature {
+        text @_text_123 "Feature" {
+          fill: #3B82F6  # blue
+          font: "Inter" medium 11
+        }
         w: 64 h: 22
         use: tag_feature
-        text "Feature" {
-          font: "Inter" medium 11
-          fill: blue
-        }
       }
       text @task_search_title "Add global search" {
+        fill: #111827  # blue
         font: "Inter" medium 14
-        fill: #111827
       }
       text @task_search_desc "Full-text search across projects" {
+        fill: #6B7280  # blue
         font: "Inter" regular 12
-        fill: #6B7280
       }
-    }
-  }
-
-  # In Progress column
-  group @progress_column {
-    layout: column gap=12 pad=16
-    w: 280
-    use: column_bg
-
-    text @progress_header "In Progress" {
-      font: "Inter" semibold 16
-      fill: #1F2937
-    }
-
-    group @task_api {
-      layout: column gap=8 pad=12
       use: card
       shadow: (0,1,3,#0000000D)
+    }
+    use: column_bg
+  }
+  # [auto] container (3 children)
+  group @progress_column {
+    text @progress_header "In Progress" {
+      fill: #1F2937  # blue
+      font: "Inter" semibold 16
+    }
+    # [auto] container (3 children)
+    group @task_api {
+      # [auto] styled: tag_feature
       rect @tag_api_feature {
+        text @_text_124 "Feature" {
+          fill: #3B82F6  # blue
+          font: "Inter" medium 11
+        }
         w: 64 h: 22
         use: tag_feature
-        text "Feature" {
-          font: "Inter" medium 11
-          fill: blue
-        }
       }
       text @task_api_title "REST API v2 migration" {
+        fill: #111827  # blue
         font: "Inter" medium 14
-        fill: #111827
       }
       text @task_api_desc "Migrate endpoints to new schema" {
+        fill: #6B7280  # blue
         font: "Inter" regular 12
-        fill: #6B7280
       }
-    }
-
-    group @task_perf {
-      layout: column gap=8 pad=12
       use: card
       shadow: (0,1,3,#0000000D)
+    }
+    # [auto] container (3 children)
+    group @task_perf {
+      # [auto] styled: tag_bug
       rect @tag_perf_bug {
+        text @_text_125 "Bug" {
+          fill: #F59E0B  # orange
+          font: "Inter" medium 11
+        }
         w: 40 h: 22
         use: tag_bug
-        text "Bug" {
-          font: "Inter" medium 11
-          fill: yellow
-        }
       }
       text @task_perf_title "Dashboard slow on mobile" {
+        fill: #111827  # blue
         font: "Inter" medium 14
-        fill: #111827
       }
       text @task_perf_desc "LCP > 4s on 3G connections" {
+        fill: #6B7280  # blue
         font: "Inter" regular 12
-        fill: #6B7280
       }
-    }
-  }
-
-  # Done column
-  group @done_column {
-    layout: column gap=12 pad=16
-    w: 280
-    use: column_bg
-
-    text @done_header "Done" {
-      font: "Inter" semibold 16
-      fill: #1F2937
-    }
-
-    group @task_dark {
-      layout: column gap=8 pad=12
       use: card
       shadow: (0,1,3,#0000000D)
+    }
+    use: column_bg
+  }
+  # [auto] container (2 children)
+  group @done_column {
+    text @done_header "Done" {
+      fill: #1F2937  # blue
+      font: "Inter" semibold 16
+    }
+    # [auto] container (3 children)
+    group @task_dark {
+      # [auto] styled: tag_feature
       rect @tag_dark_feature {
+        text @_text_126 "Feature" {
+          fill: #3B82F6  # blue
+          font: "Inter" medium 11
+        }
         w: 64 h: 22
         use: tag_feature
-        text "Feature" {
-          font: "Inter" medium 11
-          fill: blue
-        }
       }
       text @task_dark_title "Dark mode support" {
+        fill: #111827  # blue
         font: "Inter" medium 14
-        fill: #111827
       }
       text @task_dark_desc "Theme toggle in settings" {
+        fill: #6B7280  # blue
         font: "Inter" regular 12
-        fill: #6B7280
       }
+      use: card
+      shadow: (0,1,3,#0000000D)
     }
+    use: column_bg
   }
+  fill: #ECEDF0  # white
+  corner: 16
+  center_in: canvas
 }
 
-@kanban_board -> center_in: canvas

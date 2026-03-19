@@ -23,9 +23,10 @@ style server_box {
 # ─── Layout ───
 
 # Load Balancer
+# [auto] connects to api_server_1, api_server_2, api_server_3
 rect @load_balancer {
   spec {
-    "Nginx reverse proxy — round-robin distribution"
+    Nginx reverse proxy — round-robin distribution
     todo: "health check every 10s"
     status: done
   }
@@ -41,6 +42,7 @@ rect @load_balancer {
 }
 
 # API servers
+# [auto] styled: server_box
 rect @api_server_1 {
   spec "Node.js v20 — handles /api/v2/*"
   text @_text_10 "API Server 1" {
@@ -53,6 +55,7 @@ rect @api_server_1 {
   y: 140
 }
 
+# [auto] styled: server_box
 rect @api_server_2 {
   spec "Node.js v20 — handles /api/v2/*"
   text @_text_11 "API Server 2" {
@@ -65,6 +68,7 @@ rect @api_server_2 {
   y: 140
 }
 
+# [auto] styled: server_box
 rect @api_server_3 {
   spec "Node.js v20 — handles /api/v2/*"
   text @_text_12 "API Server 3" {
@@ -78,9 +82,10 @@ rect @api_server_3 {
 }
 
 # Cache layer
+# [auto] styled: cache_box
 rect @redis_primary {
   spec {
-    "Redis 7 — session store + rate limit counters"
+    Redis 7 — session store + rate limit counters
     todo: "< 1ms p99 latency"
     status: done
   }
@@ -94,6 +99,7 @@ rect @redis_primary {
   y: 280
 }
 
+# [auto] styled: cache_box
 rect @redis_replica {
   spec "Read replica — async replication lag < 50ms"
   text @_text_14 "Redis Replica" {
@@ -107,9 +113,10 @@ rect @redis_replica {
 }
 
 # Databases
+# [auto] styled: db_box
 rect @postgres_primary {
   spec {
-    "PostgreSQL 16 — primary read/write"
+    PostgreSQL 16 — primary read/write
     todo: "queries < 100ms p95"
     status: done
   }
@@ -123,6 +130,7 @@ rect @postgres_primary {
   y: 420
 }
 
+# [auto] styled: db_box
 rect @postgres_replica {
   spec "Streaming replica — async, 2s lag budget"
   text @_text_16 "Postgres Replica" {
@@ -136,6 +144,7 @@ rect @postgres_replica {
 }
 
 # External services
+# [auto] styled: ext_box
 rect @s3_storage {
   spec "AWS S3 — file uploads + static assets"
   text @_text_17 "S3 Storage" {
@@ -148,9 +157,10 @@ rect @s3_storage {
   y: 280
 }
 
+# [auto] styled: ext_box
 rect @queue {
   spec {
-    "RabbitMQ — async job processing"
+    RabbitMQ — async job processing
     todo: "message TTL 24h"
     status: doing
   }
@@ -164,6 +174,7 @@ rect @queue {
   y: 420
 }
 
+# [auto] connects to s3_storage
 rect @cdn {
   spec "CloudFront CDN — edge caching for static"
   text @_text_19 "CDN Edge" {
@@ -210,95 +221,104 @@ text @_api3_to_queue_label "enqueue job" {
 text @_cdn_to_s3_label "origin pull" {
 }
 
+text @_lb_to_api1_label "round-robin" {
+}
+
+text @_lb_to_api3_label "round-robin" {
+}
+
+text @_api1_to_cache_label "session lookup" {
+}
+
+text @_api2_to_cache_label "read-through" {
+}
+
+text @_cache_replication_label "async repl" {
+}
+
+text @_api1_to_db_label "read/write" {
+}
+
+text @_api2_to_db_read_label "read-only" {
+}
+
+text @_db_replication_label "streaming repl" {
+}
+
+text @_api3_to_s3_label "file upload" {
+}
+
+text @_api3_to_queue_label "enqueue job" {
+}
+
+text @_cdn_to_s3_label "origin pull" {
+}
+
 # ─── Flows ───
 
-edge @lb_to_api1 {
+edge @lb_to_api1 @load_balancer -> @api_server_1 {
   text @_lb_to_api1_label "round-robin" {}
-  from: @load_balancer
-  to: @api_server_1
   stroke: #3B82F6 2
   arrow: end
   curve: smooth
 }
-edge @lb_to_api2 {
-  from: @load_balancer
-  to: @api_server_2
+edge @lb_to_api2 @load_balancer -> @api_server_2 {
   stroke: #3B82F6 2
   arrow: end
 }
-edge @lb_to_api3 {
+edge @lb_to_api3 @load_balancer -> @api_server_3 {
   text @_lb_to_api3_label "round-robin" {}
-  from: @load_balancer
-  to: @api_server_3
   stroke: #3B82F6 2
   arrow: end
   curve: smooth
 }
-edge @api1_to_cache {
+edge @api1_to_cache @api_server_1 -> @redis_primary {
   text @_api1_to_cache_label "session lookup" {}
-  from: @api_server_1
-  to: @redis_primary
   stroke: #10B981 2
   arrow: end
 }
-edge @api2_to_cache {
+edge @api2_to_cache @api_server_2 -> @redis_replica {
   text @_api2_to_cache_label "read-through" {}
-  from: @api_server_2
-  to: @redis_replica
   stroke: #10B981 2
   arrow: end
 }
-edge @cache_replication {
+edge @cache_replication @redis_primary -> @redis_replica {
   text @_cache_replication_label "async repl" {}
-  from: @redis_primary
-  to: @redis_replica
   stroke: #10B981 1
   arrow: end
   curve: step
 }
-edge @api1_to_db {
+edge @api1_to_db @api_server_1 -> @postgres_primary {
   text @_api1_to_db_label "read/write" {}
-  from: @api_server_1
-  to: @postgres_primary
   stroke: #F59E0B 2
   arrow: end
   curve: smooth
 }
-edge @api2_to_db_read {
+edge @api2_to_db_read @api_server_2 -> @postgres_replica {
   text @_api2_to_db_read_label "read-only" {}
-  from: @api_server_2
-  to: @postgres_replica
   stroke: #F59E0B 1
   arrow: end
   curve: smooth
 }
-edge @db_replication {
+edge @db_replication @postgres_primary -> @postgres_replica {
   text @_db_replication_label "streaming repl" {}
-  from: @postgres_primary
-  to: @postgres_replica
   stroke: #F59E0B 1
   arrow: end
   curve: step
 }
-edge @api3_to_s3 {
+edge @api3_to_s3 @api_server_3 -> @s3_storage {
   text @_api3_to_s3_label "file upload" {}
-  from: @api_server_3
-  to: @s3_storage
   stroke: #8B5CF6 2
   arrow: end
 }
-edge @api3_to_queue {
+edge @api3_to_queue @api_server_3 -> @queue {
   text @_api3_to_queue_label "enqueue job" {}
-  from: @api_server_3
-  to: @queue
   stroke: #8B5CF6 2
   arrow: end
   curve: smooth
 }
-edge @cdn_to_s3 {
+edge @cdn_to_s3 @cdn -> @s3_storage {
   text @_cdn_to_s3_label "origin pull" {}
-  from: @cdn
-  to: @s3_storage
   stroke: #64748B 1
   arrow: both
   curve: smooth

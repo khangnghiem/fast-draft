@@ -1,19 +1,18 @@
-# FD v1
-# Product requirements document — annotated wireframe with full specs
+style label {
+  fill: #333333  # gray
+  font: "Inter" regular 14
+}
 
-spec "E-commerce checkout flow — MVP scope"
-
-style label { font: "Inter" 14; fill: #333 }
-style muted { font: "Inter" 12; fill: #999 }
+style muted {
+  fill: #999999  # gray
+  font: "Inter" regular 12
+}
 
 # ─── Checkout page ───────────────────────────────────────────────────────
-
+# [auto] column container (5 children)
 frame @checkout_page {
-  w: 500 h: 800
-  layout: column gap=20 pad=32
-
   spec {
-    "Checkout flow — 3-step wizard"
+    Checkout flow — 3-step wizard
     todo: "cart review → shipping → payment"
     todo: "back button returns to previous step"
     todo: "progress indicator shows current step"
@@ -21,211 +20,222 @@ frame @checkout_page {
     priority: high
     tag: checkout, mvp, revenue
   }
-
-  # ─── Progress bar ────────────────────────────────────────────────
-
+  # [auto] row container (3 children)
   frame @progress {
-    w: 420 h: 4
-    layout: row gap=0 pad=0
-
     spec {
-      "Step indicator — 3 steps"
+      Step indicator — 3 steps
       todo: "completed steps are highlighted"
       todo: "current step shows active color"
       status: todo
     }
-
     rect @step_1 {
-      w: 140 h: 4
-      fill: #6C5CE7
-      corner: 2
       spec "Step 1: Cart — completed"
+      w: 140 h: 4
+      fill: #6C5CE7  # blue
+      corner: 2
     }
-
     rect @step_2 {
-      w: 140 h: 4
-      fill: #6C5CE7
-      corner: 2
       spec "Step 2: Shipping — active"
-    }
-
-    rect @step_3 {
       w: 140 h: 4
-      fill: #E8E8EC
+      fill: #6C5CE7  # blue
       corner: 2
-      spec "Step 3: Payment — pending"
     }
+    rect @step_3 {
+      spec "Step 3: Payment — pending"
+      w: 140 h: 4
+      fill: #E8E8EC  # white
+      corner: 2
+    }
+    layout: row gap=0 pad=0
+    w: 420 h: 4
   }
-
-  text @page_heading "Shipping Details" { font: "Inter" 700 24; fill: #1A1A2E }
-
-  # ─── Form fields ─────────────────────────────────────────────────
-
+  text @page_heading "Shipping Details" {
+    fill: #1A1A2E  # blue
+    font: "Inter" bold 24
+  }
+  # [auto] column container (4 children)
   frame @form {
-    w: 412 h: 400
-    layout: column gap=12 pad=0
-
     spec {
-      "Shipping address form"
+      Shipping address form
       todo: "autofill from saved addresses"
       todo: "address validation via Google Maps API"
       todo: "international address format support"
       priority: high
       tag: form, ux
     }
-
+    # [auto] row container (2 children)
     frame @name_row {
-      w: 412 h: 48
-      layout: row gap=12 pad=0
-
       rect @first_name {
-        w: 200 h: 48
-        corner: 8
-        stroke: #E8E8EC 1
         spec {
-          "First name — required"
+          First name — required
           todo: "min 2 characters"
         }
-
-        text "First name" { use: muted }
+        text @_text_0 "First name" {
+          use: muted
+        }
+        w: 200 h: 48
+        stroke: #E8E8EC 1
+        corner: 8
       }
-
       rect @last_name {
-        w: 200 h: 48
-        corner: 8
-        stroke: #E8E8EC 1
         spec {
-          "Last name — required"
+          Last name — required
           todo: "min 2 characters"
         }
-
-        text "Last name" { use: muted }
+        text @_text_1 "Last name" {
+          use: muted
+        }
+        w: 200 h: 48
+        stroke: #E8E8EC 1
+        corner: 8
       }
-    }
-
-    rect @address_1 {
+      layout: row gap=12 pad=0
       w: 412 h: 48
-      corner: 8
-      stroke: #E8E8EC 1
+    }
+    rect @address_1 {
       spec {
-        "Street address — required"
+        Street address — required
         todo: "autocomplete suggestions on typing"
         priority: high
       }
-
-      text "Street address" { use: muted }
-    }
-
-    rect @address_2 {
-      w: 412 h: 48
-      corner: 8
-      stroke: #E8E8EC 1
-      spec "Apt/Suite — optional"
-
-      text "Apt, suite, etc. (optional)" { use: muted }
-    }
-
-    frame @city_state {
-      w: 412 h: 48
-      layout: row gap=12 pad=0
-
-      rect @city {
-        w: 200 h: 48
-        corner: 8
-        stroke: #E8E8EC 1
-        spec "City — required"
-
-        text "City" { use: muted }
+      text @_text_2 "Street address" {
+        use: muted
       }
-
-      rect @state {
-        w: 96 h: 48
-        corner: 8
+      w: 412 h: 48
+      stroke: #E8E8EC 1
+      corner: 8
+    }
+    rect @address_2 {
+      spec "Apt/Suite — optional"
+      text @_text_3 "Apt, suite, etc. (optional)" {
+        use: muted
+      }
+      w: 412 h: 48
+      stroke: #E8E8EC 1
+      corner: 8
+    }
+    # [auto] row container (3 children)
+    frame @city_state {
+      rect @city {
+        spec "City — required"
+        text @_text_4 "City" {
+          use: muted
+        }
+        w: 200 h: 48
         stroke: #E8E8EC 1
+        corner: 8
+      }
+      rect @state {
         spec {
-          "State — dropdown"
+          State — dropdown
           todo: "shows state list for US addresses"
         }
-
-        text "State" { use: muted }
-      }
-
-      rect @zip {
+        text @_text_5 "State" {
+          use: muted
+        }
         w: 96 h: 48
-        corner: 8
         stroke: #E8E8EC 1
+        corner: 8
+      }
+      rect @zip {
         spec {
-          "ZIP — required"
+          ZIP — required
           todo: "validates format per country"
         }
-
-        text "ZIP" { use: muted }
+        text @_text_6 "ZIP" {
+          use: muted
+        }
+        w: 96 h: 48
+        stroke: #E8E8EC 1
+        corner: 8
       }
+      layout: row gap=12 pad=0
+      w: 412 h: 48
     }
+    layout: column gap=12 pad=0
+    w: 412 h: 400
   }
-
-  # ─── Order summary ──────────────────────────────────────────────
-
   rect @order_summary {
-    w: 412 h: 200
-    corner: 12
-    fill: #F8F9FA
-    stroke: #E8E8EC 1
     spec {
-      "Collapsible order summary panel"
+      Collapsible order summary panel
       todo: "shows item thumbnails, quantities, prices"
       todo: "updates total on coupon apply"
       priority: medium
       tag: checkout
     }
-
+    # [auto] column container (5 children)
     frame @_summary_layout {
-      w: 372 h: 160
+      text @_text_7 "Order Summary" {
+        fill: #1A1A2E  # blue
+        font: "Inter" semibold 16
+      }
+      text @_text_8 "Widget Pro × 2" {
+        use: label
+      }
+      text @_text_9 "Cable Pack × 1" {
+        use: label
+      }
+      rect @divider {
+        w: 372 h: 1
+        fill: #E8E8EC  # white
+      }
+      text @_text_10 "Total: $147.00" {
+        fill: #1A1A2E  # blue
+        font: "Inter" bold 18
+      }
       layout: column gap=8 pad=20
-      text "Order Summary" { font: "Inter" 600 16; fill: #1A1A2E }
-      text "Widget Pro × 2" { use: label }
-      text "Cable Pack × 1" { use: label }
-
-      rect @divider { w: 372 h: 1; fill: #E8E8EC }
-
-      text "Total: $147.00" { font: "Inter" 700 18; fill: #1A1A2E }
+      w: 372 h: 160
     }
+    w: 412 h: 200
+    fill: #F8F9FA  # white
+    stroke: #E8E8EC 1
+    corner: 12
   }
-
-  # ─── Action buttons ────────────────────────────────────────────
-
+  # [auto] row container (2 children)
   frame @actions {
-    w: 412 h: 48
-    layout: row gap=12 pad=0
-
     rect @btn_back {
-      w: 120 h: 48
-      corner: 10
-      stroke: #E8E8EC 1
       spec "Back to cart"
-
-      text "Back" { font: "Inter" 500 15; fill: #333 }
-
-      when :hover { fill: #F5F5F7; ease: ease_out 150ms }
-    }
-
-    rect @btn_continue {
-      w: 280 h: 48
+      text @_text_11 "Back" {
+        fill: #333333  # gray
+        font: "Inter" medium 15
+      }
+      w: 120 h: 48
+      stroke: #E8E8EC 1
       corner: 10
-      fill: #6C5CE7
+      when :hover {
+        fill: #F5F5F7  # white
+        ease: ease_out 150ms
+      }
+    }
+    rect @btn_continue {
       spec {
-        "Continue to payment"
+        Continue to payment
         todo: "validates all fields before proceeding"
         todo: "disabled when required fields incomplete"
         priority: high
       }
-
-      text "Continue to Payment" { font: "Inter" 600 15; fill: #FFF }
-
-      when :hover { fill: #5A4BD1; scale: 1.02; ease: spring 200ms }
-      when :press { scale: 0.97; ease: ease_out 100ms }
+      text @_text_12 "Continue to Payment" {
+        fill: #FFFFFF  # white
+        font: "Inter" semibold 15
+      }
+      w: 280 h: 48
+      fill: #6C5CE7  # blue
+      corner: 10
+      when :hover {
+        fill: #5A4BD1  # blue
+        scale: 1.02
+        ease: spring 200ms
+      }
+      when :press {
+        scale: 0.97
+        ease: ease_out 100ms
+      }
     }
+    layout: row gap=12 pad=0
+    w: 412 h: 48
   }
+  layout: column gap=20 pad=32
+  w: 500 h: 800
+  center_in: canvas
 }
 
-@checkout_page -> center_in: canvas

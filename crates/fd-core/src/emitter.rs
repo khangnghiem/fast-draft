@@ -16,15 +16,8 @@ pub fn emit_document(graph: &SceneGraph) -> String {
     let has_imports = !graph.imports.is_empty();
     let has_styles = !graph.styles.is_empty();
     let children = graph.children(graph.root);
-    let has_constraints = graph.graph.node_indices().any(|idx| {
-        graph.graph[idx]
-            .constraints
-            .iter()
-            .any(|c| !matches!(c, Constraint::Position { .. }))
-    });
     let has_edges = !graph.edges.is_empty();
-    let section_count =
-        has_imports as u8 + has_styles as u8 + has_constraints as u8 + has_edges as u8;
+    let section_count = has_imports as u8 + has_styles as u8 + has_edges as u8;
     let use_separators = section_count >= 2;
 
     // Emit imports
@@ -63,20 +56,6 @@ pub fn emit_document(graph: &SceneGraph) -> String {
         out.push('\n');
     }
 
-    // Emit top-level constraints (skip Position — emitted inline as x:/y:)
-    if use_separators && has_constraints {
-        out.push_str("# ─── Constraints ───\n\n");
-    }
-    for idx in graph.graph.node_indices() {
-        let node = &graph.graph[idx];
-        for constraint in &node.constraints {
-            if matches!(constraint, Constraint::Position { .. }) {
-                continue; // emitted inline inside node block
-            }
-            emit_constraint(&mut out, &node.id, constraint);
-        }
-    }
-
     // Emit when templates (before edges)
     if !graph.when_templates.is_empty() {
         if use_separators {
@@ -92,9 +71,6 @@ pub fn emit_document(graph: &SceneGraph) -> String {
 
     // Emit edges
     if use_separators && has_edges {
-        if has_constraints {
-            out.push('\n');
-        }
         out.push_str("# ─── Flows ───\n\n");
     }
     for edge in &graph.edges {
@@ -484,14 +460,35 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
 
     // Inline position (x: / y:) — emitted here for token efficiency
     for constraint in &node.constraints {
-        if let Constraint::Position { x, y } = constraint {
-            if *x != 0.0 {
-                indent(out, depth + 1);
-                writeln!(out, "x: {}", format_num(*x)).unwrap();
+        match constraint {
+            Constraint::Position { x, y } => {
+                if *x != 0.0 {
+                    indent(out, depth + 1);
+                    writeln!(out, "x: {}", format_num(*x)).unwrap();
+                }
+                if *y != 0.0 {
+                    indent(out, depth + 1);
+                    writeln!(out, "y: {}", format_num(*y)).unwrap();
+                }
             }
-            if *y != 0.0 {
+            Constraint::CenterIn(target) => {
                 indent(out, depth + 1);
-                writeln!(out, "y: {}", format_num(*y)).unwrap();
+                writeln!(out, "center_in: {}", target.as_str()).unwrap();
+            }
+            Constraint::Offset { from, dx, dy } => {
+                indent(out, depth + 1);
+                writeln!(
+                    out,
+                    "offset: @{} {}, {}",
+                    from.as_str(),
+                    format_num(*dx),
+                    format_num(*dy)
+                )
+                .unwrap();
+            }
+            Constraint::FillParent { pad } => {
+                indent(out, depth + 1);
+                writeln!(out, "fill_parent: {}", format_num(*pad)).unwrap();
             }
         }
     }
@@ -770,43 +767,6 @@ fn emit_when_template(out: &mut String, name: &NodeId, template: &WhenTemplate, 
     out.push_str("}\n");
 }
 
-fn emit_constraint(out: &mut String, node_id: &NodeId, constraint: &Constraint) {
-    match constraint {
-        Constraint::CenterIn(target) => {
-            writeln!(
-                out,
-                "@{} -> center_in: {}",
-                node_id.as_str(),
-                target.as_str()
-            )
-            .unwrap();
-        }
-        Constraint::Offset { from, dx, dy } => {
-            writeln!(
-                out,
-                "@{} -> offset: @{} {}, {}",
-                node_id.as_str(),
-                from.as_str(),
-                format_num(*dx),
-                format_num(*dy)
-            )
-            .unwrap();
-        }
-        Constraint::FillParent { pad } => {
-            writeln!(
-                out,
-                "@{} -> fill_parent: {}",
-                node_id.as_str(),
-                format_num(*pad)
-            )
-            .unwrap();
-        }
-        Constraint::Position { .. } => {
-            // Emitted inline as x: / y: inside node block — skip here
-        }
-    }
-}
-
 fn emit_edge_defaults_block(out: &mut String, defaults: &EdgeDefaults) {
     out.push_str("edge_defaults {\n");
 
@@ -849,7 +809,90 @@ fn emit_edge_defaults_block(out: &mut String, defaults: &EdgeDefaults) {
 }
 
 fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph, defaults: Option<&EdgeDefaults>) {
-    writeln!(out, "edge @{} {{", edge.id.as_str()).unwrap();
+    // Determine if both anchors are node references (for header form)
+    let from_node = match &edge.from {
+        EdgeAnchor::Node(id) => Some(id),
+        _ => None,
+    };
+    let to_node = match &edge.to {
+        EdgeAnchor::Node(id) => Some(id),
+        _ => None,
+    };
+
+    let use_header = from_node.is_some() && to_node.is_some();
+
+    if use_header {
+        // Header form: edge @name @from -> @to { ... }
+        write!(
+            out,
+            "edge @{} @{} -> @{}",
+            edge.id.as_str(),
+            from_node.unwrap().as_str(),
+            to_node.unwrap().as_str()
+        )
+        .unwrap();
+    } else {
+        // Body form (point anchors): edge @name { from: ... to: ... }
+        writeln!(out, "edge @{} {{", edge.id.as_str()).unwrap();
+    }
+
+    // Check if body has any non-default content
+    let has_spec = edge.spec.as_ref().is_some_and(|s| !s.is_empty());
+    let has_text_child = edge.text_child.is_some();
+
+    let stroke_matches_default = defaults
+        .and_then(|d| d.props.stroke.as_ref())
+        .is_some_and(|ds| {
+            edge.props
+                .stroke
+                .as_ref()
+                .is_some_and(|es| stroke_eq(es, ds))
+        });
+    let has_stroke = !stroke_matches_default && edge.props.stroke.is_some();
+
+    let opacity_matches_default = defaults.and_then(|d| d.props.opacity).is_some_and(|do_| {
+        edge.props
+            .opacity
+            .is_some_and(|eo| (eo - do_).abs() < 0.001)
+    });
+    let has_opacity = !opacity_matches_default && edge.props.opacity.is_some();
+
+    let arrow_matches_default = defaults
+        .and_then(|d| d.arrow)
+        .is_some_and(|da| edge.arrow == da);
+    let has_arrow = !arrow_matches_default && edge.arrow != ArrowKind::None;
+
+    let curve_matches_default = defaults
+        .and_then(|d| d.curve)
+        .is_some_and(|dc| edge.curve == dc);
+    let has_curve = !curve_matches_default && edge.curve != CurveKind::Straight;
+
+    let has_flow = edge.flow.is_some();
+    let has_label_offset = edge.label_offset.is_some();
+    let has_anims = !edge.animations.is_empty();
+    let has_use_styles = !edge.use_styles.is_empty();
+
+    let has_body = has_spec
+        || has_text_child
+        || has_stroke
+        || has_opacity
+        || has_arrow
+        || has_curve
+        || has_flow
+        || has_label_offset
+        || has_anims
+        || has_use_styles;
+
+    if use_header && !has_body {
+        // Braceless: just newline
+        out.push('\n');
+        return;
+    }
+
+    if use_header {
+        // Open body for header form
+        out.push_str(" {\n");
+    }
 
     // Spec
     emit_spec(out, &edge.spec, 1);
@@ -862,17 +905,19 @@ fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph, defaults: Option
         writeln!(out, "  text @{} \"{}\" {{}}", text_id.as_str(), content).unwrap();
     }
 
-    // from / to
-    match &edge.from {
-        EdgeAnchor::Node(id) => writeln!(out, "  from: @{}", id.as_str()).unwrap(),
-        EdgeAnchor::Point(x, y) => {
-            writeln!(out, "  from: {} {}", format_num(*x), format_num(*y)).unwrap()
+    // from / to (only in body form — header form already has them)
+    if !use_header {
+        match &edge.from {
+            EdgeAnchor::Node(id) => writeln!(out, "  from: @{}", id.as_str()).unwrap(),
+            EdgeAnchor::Point(x, y) => {
+                writeln!(out, "  from: {} {}", format_num(*x), format_num(*y)).unwrap()
+            }
         }
-    }
-    match &edge.to {
-        EdgeAnchor::Node(id) => writeln!(out, "  to: @{}", id.as_str()).unwrap(),
-        EdgeAnchor::Point(x, y) => {
-            writeln!(out, "  to: {} {}", format_num(*x), format_num(*y)).unwrap()
+        match &edge.to {
+            EdgeAnchor::Node(id) => writeln!(out, "  to: @{}", id.as_str()).unwrap(),
+            EdgeAnchor::Point(x, y) => {
+                writeln!(out, "  to: {} {}", format_num(*x), format_num(*y)).unwrap()
+            }
         }
     }
 
@@ -882,15 +927,7 @@ fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph, defaults: Option
     }
 
     // Stroke — skip if matches edge_defaults
-    let stroke_matches_default = defaults
-        .and_then(|d| d.props.stroke.as_ref())
-        .is_some_and(|ds| {
-            edge.props
-                .stroke
-                .as_ref()
-                .is_some_and(|es| stroke_eq(es, ds))
-        });
-    if !stroke_matches_default && let Some(ref stroke) = edge.props.stroke {
+    if has_stroke && let Some(ref stroke) = edge.props.stroke {
         match &stroke.paint {
             Paint::Solid(c) => {
                 writeln!(out, "  stroke: {} {}", c.to_hex(), format_num(stroke.width)).unwrap();
@@ -902,20 +939,12 @@ fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph, defaults: Option
     }
 
     // Opacity — skip if matches edge_defaults
-    let opacity_matches_default = defaults.and_then(|d| d.props.opacity).is_some_and(|do_| {
-        edge.props
-            .opacity
-            .is_some_and(|eo| (eo - do_).abs() < 0.001)
-    });
-    if !opacity_matches_default && let Some(opacity) = edge.props.opacity {
+    if has_opacity && let Some(opacity) = edge.props.opacity {
         writeln!(out, "  opacity: {}", format_num(opacity)).unwrap();
     }
 
     // Arrow — skip if matches edge_defaults
-    let arrow_matches_default = defaults
-        .and_then(|d| d.arrow)
-        .is_some_and(|da| edge.arrow == da);
-    if !arrow_matches_default && edge.arrow != ArrowKind::None {
+    if has_arrow {
         let name = match edge.arrow {
             ArrowKind::None => "none",
             ArrowKind::Start => "start",
@@ -926,10 +955,7 @@ fn emit_edge(out: &mut String, edge: &Edge, graph: &SceneGraph, defaults: Option
     }
 
     // Curve — skip if matches edge_defaults
-    let curve_matches_default = defaults
-        .and_then(|d| d.curve)
-        .is_some_and(|dc| edge.curve == dc);
-    if !curve_matches_default && edge.curve != CurveKind::Straight {
+    if has_curve {
         let name = match edge.curve {
             CurveKind::Straight => "straight",
             CurveKind::Smooth => "smooth",
@@ -1092,7 +1118,7 @@ pub fn emit_filtered(graph: &SceneGraph, mode: ReadMode) -> String {
 
     let children = graph.children(graph.root);
     let include_styles = matches!(mode, ReadMode::Design | ReadMode::Visual);
-    let include_constraints = matches!(mode, ReadMode::Layout | ReadMode::Visual);
+    let _include_constraints = matches!(mode, ReadMode::Layout | ReadMode::Visual);
     let include_edges = matches!(mode, ReadMode::Edges | ReadMode::Visual);
 
     // Styles (Design and Visual modes)
@@ -1113,18 +1139,9 @@ pub fn emit_filtered(graph: &SceneGraph, mode: ReadMode) -> String {
         out.push('\n');
     }
 
-    // Constraints (Layout and Visual modes)
-    if include_constraints {
-        for idx in graph.graph.node_indices() {
-            let node = &graph.graph[idx];
-            for constraint in &node.constraints {
-                if matches!(constraint, Constraint::Position { .. }) {
-                    continue;
-                }
-                emit_constraint(&mut out, &node.id, constraint);
-            }
-        }
-    }
+    // Constraints are now emitted inline inside node blocks (no separate section needed)
+    // The include_constraints flag is checked by emit_node_filtered to decide
+    // whether to include constraint lines in the node output.
 
     // Edges (Edges and Visual modes)
     if include_edges {

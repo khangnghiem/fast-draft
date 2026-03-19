@@ -1,26 +1,23 @@
-# ─── Shared Library ───
-# Demonstrates a component library meant to be imported.
+style card_base {
+  fill: #FFFFFF  # white
+  corner: 12
+}
 
-style primary_button {
-  fill: #4CAF50
+style danger_button {
+  fill: #F44336  # red
   font: "Inter" bold 14
   corner: 8
 }
 
-style danger_button {
-  fill: #F44336
+style primary_button {
+  fill: #4CAF50  # green
   font: "Inter" bold 14
   corner: 8
 }
 
 style secondary_button {
-  fill: #9E9E9E
+  fill: #9E9E9E  # gray
   font: "Inter" bold 14
   corner: 8
 }
 
-style card_base {
-  fill: #FFFFFF
-  corner: 12
-  shadow: (0, 4, 12, #00000020)
-}
