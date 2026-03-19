@@ -86,20 +86,12 @@
 
       <div id="playground-container" class="playground-split">
 
-        <div class="playground-editor">
-          <div class="editor-header" id="editor-header" style="cursor:pointer" title="Toggle Code panel">
-            <span class="editor-dot"></span> Code
-            <span class="editor-chevron" id="editor-chevron">▾</span>
-            <button id="mobile-code-close" style="display:none; margin-left:auto; border:none; background:transparent; color:#86868B; font-size:16px; cursor:pointer; padding:2px 8px;">✕</button>
-          </div>
-          <div id="fd-editor"></div>
-        </div>
-        <div class="split-resize-handle" id="split-resize"></div>
         <div class="playground-canvas">
           <div id="canvas-wrapper">
             <!-- Top Toolbar (Apple HIG frosted bar) -->
             <div id="canvas-toolbar">
               <div class="tb-zone tb-left fs-hide">
+                <button class="tool-btn layers-pill" id="layers-toggle-pill" title="Toggle Layers (\)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="14" height="14" rx="2"/><line x1="5.5" y1="1" x2="5.5" y2="15"/><line x1="1" y1="5" x2="5.5" y2="5"/><line x1="1" y1="9" x2="5.5" y2="9"/></svg></button>
                 <button id="mobile-code-toggle" title="Toggle Code Editor">{ } Code</button>
                 <button class="tool-btn" id="ai-touch-btn" title="AI Touch — refine + review selected (no selection = full audit)">✦ AI Touch</button>
                 <button class="tool-btn" id="ai-chat-btn" title="AI Agent — chat about your design">✦ Agent</button>
@@ -289,6 +281,15 @@
             <div class="panel-restore-strip props-restore" id="props-restore" title="Show properties panel"></div>
             </div><!-- /canvas-content -->
           </div><!-- /canvas-wrapper -->
+        </div>
+        <div class="split-resize-handle" id="split-resize"></div>
+        <div class="playground-editor">
+          <div class="editor-header" id="editor-header" style="cursor:pointer" title="Toggle Code panel">
+            <span class="editor-dot"></span> Code
+            <span class="editor-chevron" id="editor-chevron">▾</span>
+            <button id="mobile-code-close" style="display:none; margin-left:auto; border:none; background:transparent; color:#86868B; font-size:16px; cursor:pointer; padding:2px 8px;">✕</button>
+          </div>
+          <div id="fd-editor"></div>
         </div>
       </div>
     </div>

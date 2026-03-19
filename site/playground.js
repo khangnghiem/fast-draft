@@ -3121,11 +3121,12 @@ function setupSplitResize(container, resizeCanvas) {
   handle.addEventListener('pointermove', (e) => {
     if (!dragging || !containerRect) return;
     const x = e.clientX - containerRect.left;
-    // Update CSS variable immediately (cheap — just a style property)
-    if (x < COLLAPSE_PX) {
+    // Canvas-first: editor is on the RIGHT, so editor width = total - x
+    const editorW = containerRect.width - x;
+    if (editorW < COLLAPSE_PX) {
       container.style.setProperty('--editor-width', `${COLLAPSE_PX}px`);
     } else {
-      const frac = Math.max(MIN_FRAC, Math.min(MAX_FRAC, x / containerRect.width));
+      const frac = Math.max(MIN_FRAC, Math.min(MAX_FRAC, editorW / containerRect.width));
       container.style.setProperty('--editor-width', `${Math.round(containerRect.width * frac)}px`);
     }
     // Throttle expensive WASM resize + render to once per frame
@@ -3153,7 +3154,8 @@ function setupSplitResize(container, resizeCanvas) {
     // Auto-collapse if released below threshold
     if (containerRect) {
       const x = (e?.clientX ?? 0) - containerRect.left;
-      if (x < COLLAPSE_PX && !codeCollapsed) {
+      const editorW = containerRect.width - x;
+      if (editorW < COLLAPSE_PX && !codeCollapsed) {
         // Save the pre-drag width so expand restores it
         savedEditorWidth = preDragWidth;
         const collapsedPx = Math.round(containerRect.width * 0.1);
@@ -3233,7 +3235,7 @@ function setupPanelResize(wrapper, resizeCanvas) {
   /** Position layers resize handle at panel's right edge. */
   function positionLayersHandle() {
     if (!layersHandle || !layersPanel) return;
-    const w = layersPanel.classList.contains('collapsed') ? 40 : layersPanel.offsetWidth;
+    const w = layersPanel.classList.contains('collapsed') ? 0 : layersPanel.offsetWidth;
     layersHandle.style.left = w + 'px';
   }
 
@@ -3305,8 +3307,8 @@ function setupPanelResize(wrapper, resizeCanvas) {
       const isCollapsed = panel.classList.toggle('collapsed');
       const varName = side === 'left' ? '--layers-width' : '--props-width';
       if (isCollapsed) {
-        // Layers minimizes to 40px (CSS-controlled); props to 0px
-        if (side !== 'left') wrapper.style.setProperty(varName, '0px');
+        // Layers collapses to 0px (hidden); props to 0px
+        wrapper.style.setProperty(varName, '0px');
         localStorage.setItem(side === 'left' ? 'fd-layers-collapsed' : 'fd-props-collapsed', '1');
       } else {
         const savedW = parseInt(localStorage.getItem(side === 'left' ? 'fd-layers-width' : 'fd-props-width'), 10);
@@ -3512,7 +3514,8 @@ function toggleLayersPanel() {
 
   const isCollapsed = layersPanel.classList.toggle('collapsed');
   if (isCollapsed) {
-    // Width is handled by CSS (.collapsed { width: 40px })
+    // Collapse to zero width
+    wrapper.style.setProperty('--layers-width', '0px');
     localStorage.setItem('fd-layers-collapsed', '1');
   } else {
     const savedW = parseInt(localStorage.getItem('fd-layers-width'), 10);
@@ -3520,12 +3523,17 @@ function toggleLayersPanel() {
     wrapper.style.setProperty('--layers-width', restoreW + 'px');
     localStorage.removeItem('fd-layers-collapsed');
   }
-  // Keep resize handle visible — position at collapsed edge
+  // Update pill visual state
+  const pill = document.getElementById('layers-toggle-pill');
+  pill?.classList.toggle('layers-visible', !isCollapsed);
+  // Hide resize handle when collapsed, show when expanded
   if (layersHandle) {
-    layersHandle.style.display = '';
-    requestAnimationFrame(() => {
-      layersHandle.style.left = (isCollapsed ? 40 : layersPanel.offsetWidth) + 'px';
-    });
+    layersHandle.style.display = isCollapsed ? 'none' : '';
+    if (!isCollapsed) {
+      requestAnimationFrame(() => {
+        layersHandle.style.left = layersPanel.offsetWidth + 'px';
+      });
+    }
   }
   requestAnimationFrame(() => {
     window.dispatchEvent(new Event('resize'));
@@ -5363,7 +5371,15 @@ async function initPlayground() {
     mobileLayersToggle?.addEventListener('click', toggleMobileLayersDrawer);
     mobileLayersBackdrop?.addEventListener('click', closeMobileLayersDrawer);
 
-    // ── Desktop Layers Toggle (removed — panel header is the toggle) ──
+    // ── Desktop Layers Toggle (pill icon in toolbar) ──
+    const layersTogglePill = document.getElementById('layers-toggle-pill');
+    if (layersTogglePill) {
+      layersTogglePill.addEventListener('click', toggleLayersPanel);
+      // Set initial pill state
+      const layersEl = document.getElementById('layers-panel');
+      const isLayersOpen = layersEl && !layersEl.classList.contains('collapsed');
+      layersTogglePill.classList.toggle('layers-visible', isLayersOpen);
+    }
 
     // ── Specs Panel Resize ───────────────────────────────────────────
     setupSpecsResize();

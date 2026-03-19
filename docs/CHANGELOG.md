@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.210 — Canvas-First Layout + Layers Collapse-to-Zero (R6.6)
+- **SITE (R6.6)**: Canvas is now on the **left** and Code editor on the **right** — visual output takes the hero position (matches Figma/Penpot convention)
+- **SITE (R6.6)**: Layers panel collapse now goes to **width: 0** (fully hidden) instead of 40px — canvas gets full width when collapsed
+- **SITE (R6.6)**: Added sidebar icon pill in toolbar to toggle Layers panel (replaces header-only toggle for discoverability)
+- **SITE (R6.6)**: Split-resize drag logic inverted for canvas-first grid layout
+- **VSCODE (R6.6)**: Canvas now opens in **ViewColumn.One** (left) with text editor in ViewColumn.Two (right) — canvas-first across all platforms
+
 ### v0.11.209 — Light Theme Default + Layers Consolidation (R6.6)
 - **SITE (R6.6)**: Default canvas theme is now **Light** across all platforms (site, VS Code, desktop) — consistent with Figma/Notion defaults
 - **SITE (R6.6)**: Removed duplicate `Layers` toolbar button — layers panel header is now the sole toggle (Penpot-style), with cursor:pointer and hover highlight
