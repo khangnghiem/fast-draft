@@ -3500,9 +3500,7 @@ function toggleLayersPanel() {
     wrapper.style.setProperty('--layers-width', restoreW + 'px');
     localStorage.removeItem('fd-layers-collapsed');
   }
-  // Update pill visual state
-  const pill = document.getElementById('layers-toggle-pill');
-  pill?.classList.toggle('layers-visible', !isCollapsed);
+  // Sidebar pill visual state no longer needed (dropdown-based)
   // Hide resize handle when collapsed, show when expanded
   if (layersHandle) {
     layersHandle.style.display = isCollapsed ? 'none' : '';
@@ -5266,7 +5264,7 @@ async function initPlayground() {
     document.getElementById('ai-chat-clear')?.addEventListener('click', () => {
       clearChatHistory();
     });
-    document.getElementById('specs-toggle-btn')?.addEventListener('click', toggleSpecsPanel);
+    // Specs toggle now handled by sidebar dropdown (sd-specs-toggle)
     document.getElementById('specs-panel-close')?.addEventListener('click', toggleSpecsPanel);
 
     // Get canvas 2D context
@@ -5306,21 +5304,8 @@ async function initPlayground() {
     loading.classList.add('fade-out');
     setTimeout(() => loading.classList.add('hidden'), 400);
 
-    // ── Canvas Theme Toggle ─────────────────────────────────────────
-    const themeToggle = document.getElementById('canvas-theme-toggle');
-    if (themeToggle) {
-      // Sync pill visual with initial state
-      themeToggle.classList.toggle('is-light', !isDark);
-      themeToggle.addEventListener('click', () => {
-        isDark = !isDark;
-        if (fdCanvas) fdCanvas.set_theme(isDark);
-        wrapper.classList.toggle('dark-canvas', isDark);
-        themeToggle.classList.toggle('is-light', !isDark);
-        localStorage.setItem('fd-canvas-theme', isDark ? 'dark' : 'light');
-        renderDirty = true;
-        renderCanvas();
-      });
-    }
+    // ── Canvas Theme Toggle (moved to settings gear dropdown) ─────────
+    // Theme toggle is now handled by sm-theme-toggle in the gear dropdown
 
 
 
@@ -5348,15 +5333,34 @@ async function initPlayground() {
     mobileLayersToggle?.addEventListener('click', toggleMobileLayersDrawer);
     mobileLayersBackdrop?.addEventListener('click', closeMobileLayersDrawer);
 
-    // ── Desktop Layers Toggle (pill icon in toolbar) ──
-    const layersTogglePill = document.getElementById('layers-toggle-pill');
-    if (layersTogglePill) {
-      layersTogglePill.addEventListener('click', toggleLayersPanel);
-      // Set initial pill state
-      const layersEl = document.getElementById('layers-panel');
-      const isLayersOpen = layersEl && !layersEl.classList.contains('collapsed');
-      layersTogglePill.classList.toggle('layers-visible', isLayersOpen);
+    // ── Desktop Layers Toggle (sidebar pill) ──
+    const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+    const sidebarDropdown = document.getElementById('sidebar-dropdown');
+    if (sidebarToggleBtn) {
+      sidebarToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sidebarDropdown?.classList.toggle('visible');
+        // Close other dropdowns
+        document.getElementById('settings-dropdown')?.classList.remove('visible');
+        document.getElementById('settings-menu')?.classList.remove('visible');
+      });
     }
+    // Sidebar dropdown item handlers
+    document.getElementById('sd-layers-toggle')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sidebarDropdown?.classList.remove('visible');
+      toggleLayersPanel();
+    });
+    document.getElementById('sd-code-toggle')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sidebarDropdown?.classList.remove('visible');
+      toggleCodePanel();
+    });
+    document.getElementById('sd-specs-toggle')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sidebarDropdown?.classList.remove('visible');
+      toggleSpecsPanel();
+    });
 
     // ── Specs Panel Resize ───────────────────────────────────────────
     setupSpecsResize();
@@ -6476,9 +6480,11 @@ async function initPlayground() {
 
 
 
-    // ── Settings Menu (inside canvas) ──────────────────────────────────
+    // ── Chrome Dropdowns (settings gear + hamburger menu) ──────────────
     const settingsBtn = document.getElementById('settings-menu-btn');
     const settingsMenu = document.getElementById('settings-menu');
+    const settingsGearBtn = document.getElementById('settings-gear-btn');
+    const settingsDropdown = document.getElementById('settings-dropdown');
 
     function updateSettingsToggles() {
       document.getElementById('sm-sketchy-toggle')?.classList.toggle('toggle-on', isSketchy);
@@ -6486,16 +6492,39 @@ async function initPlayground() {
       document.getElementById('sm-motion-toggle')?.classList.toggle('toggle-on', reduceMotion);
     }
 
-    settingsBtn?.addEventListener('click', (e) => {
+    // Settings gear dropdown
+    settingsGearBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       updateSettingsToggles();
-      settingsMenu?.classList.toggle('visible');
+      settingsDropdown?.classList.toggle('visible');
+      settingsMenu?.classList.remove('visible');
+      document.getElementById('sidebar-dropdown')?.classList.remove('visible');
     });
 
-    settingsMenu?.querySelectorAll('.settings-menu-item').forEach(btn => {
+    // Hamburger menu dropdown
+    settingsBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      settingsMenu?.classList.toggle('visible');
+      settingsDropdown?.classList.remove('visible');
+      document.getElementById('sidebar-dropdown')?.classList.remove('visible');
+    });
+
+    // Close all dropdowns on click outside
+    document.addEventListener('pointerdown', (e) => {
+      const inside = e.target.closest('.chrome-dropdown') || e.target.closest('.chrome-btn') || e.target.closest('.chrome-dropdown-container');
+      if (!inside) {
+        settingsMenu?.classList.remove('visible');
+        settingsDropdown?.classList.remove('visible');
+        document.getElementById('sidebar-dropdown')?.classList.remove('visible');
+      }
+    });
+
+    // Handle chrome-dropdown-item clicks (settings + menu)
+    document.querySelectorAll('.chrome-dropdown-item').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const setting = btn.getAttribute('data-setting');
+        if (!setting) return; // Links handle themselves
         switch (setting) {
           case 'sketchy':
             isSketchy = !isSketchy;
@@ -6514,13 +6543,12 @@ async function initPlayground() {
           }
           case 'fit': {
             fitToContent(canvas);
-            settingsMenu?.classList.remove('visible');
+            settingsDropdown?.classList.remove('visible');
             renderDirty = true; uiDirty = true;
             return;
           }
           case 'copy-png': {
             if (!fdCanvas) break;
-            // Use selection bounds if available, else full scene
             const selBounds = fdCanvas.get_selection_bounds();
             let bx, by, bw, bh;
             if (selBounds) {
@@ -6586,7 +6614,6 @@ async function initPlayground() {
             settingsMenu?.classList.remove('visible');
             const fileInput = document.getElementById('css-file-input');
             if (!fileInput) break;
-            // Reset so re-selecting same file still triggers change
             fileInput.value = '';
             fileInput.onchange = (ev) => {
               const file = ev.target.files?.[0];
@@ -6599,7 +6626,6 @@ async function initPlayground() {
                   showToast('No mappable CSS classes found');
                   return;
                 }
-                // Prepend generated styles to editor
                 const styleBlock = '# ─── Imported CSS Styles ───\n\n' + fdStyles.join('\n\n') + '\n\n';
                 if (editorView) {
                   const cur = editorView.state.doc.toString();
@@ -6614,16 +6640,43 @@ async function initPlayground() {
             fileInput.click();
             return;
           }
+          case 'design-review': {
+            settingsMenu?.classList.remove('visible');
+            break;
+          }
         }
         updateSettingsToggles();
         renderCanvas();
       });
     });
 
-    document.addEventListener('click', (e) => {
-      const container = document.getElementById('settings-dropdown-container');
-      if (container && !container.contains(e.target)) {
-        settingsMenu?.classList.remove('visible');
+    // Theme toggle (in settings gear dropdown)
+    document.getElementById('sm-theme-toggle')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      isDark = !isDark;
+      if (fdCanvas) fdCanvas.set_theme(isDark);
+      wrapper.classList.toggle('dark-canvas', isDark);
+      localStorage.setItem('fd-canvas-theme', isDark ? 'dark' : 'light');
+      settingsDropdown?.classList.remove('visible');
+      renderDirty = true;
+      renderCanvas();
+    });
+
+    // Undo/Redo buttons (in scroll toolbar)
+    document.getElementById('undo-btn')?.addEventListener('click', () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.undo();
+      if (changed) {
+        renderCanvas();
+        syncCanvasToEditor();
+      }
+    });
+    document.getElementById('redo-btn')?.addEventListener('click', () => {
+      if (!fdCanvas) return;
+      const changed = fdCanvas.redo();
+      if (changed) {
+        renderCanvas();
+        syncCanvasToEditor();
       }
     });
 
