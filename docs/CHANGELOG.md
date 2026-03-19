@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.214 — Remove Homepage Navbar (R6.5)
+- **UX (R6.5)**: Removed navbar from homepage — canvas now fills `100vh` (was `100vh - 52px`); matches Excalidraw's zero-chrome UX and achieves parity with the desktop app (which has no navbar)
+- **UX (R6.5)**: Nav links (About, Docs, Get Fast Draft, GitHub) relocated to ☰ Settings dropdown in canvas toolbar — accessible via the existing hamburger menu; pattern matches Figma/Excalidraw/tldraw
+- **UX (R6.5)**: Welcome overlay retained for first-time visitor onboarding (Docs, Shortcuts, Download links)
+- **DESKTOP**: Web and desktop apps are now visually identical — both are 100% canvas with no outer chrome
+
 ### v0.11.213 — Canvas-First Homepage (R6.5)
 - **UX (R6.5)**: Homepage is now a full-viewport playground — canvas + code editor fill the entire screen (`100vh - 52px` navbar); matches Excalidraw's canvas-first UX; replaces hero marketing content with immediate interactive experience
 - **UX (R6.5)**: Welcome overlay for first-time visitors — frosted glass card with "Ready to design?" prompt, "Open Docs" and "Get App" links; dismisses on click/Escape; remembered via `localStorage` (`fd-welcomed`)
