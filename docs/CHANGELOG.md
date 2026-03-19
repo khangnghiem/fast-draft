@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.213 — Canvas-First Homepage (R6.5)
+- **UX (R6.5)**: Homepage is now a full-viewport playground — canvas + code editor fill the entire screen (`100vh - 52px` navbar); matches Excalidraw's canvas-first UX; replaces hero marketing content with immediate interactive experience
+- **UX (R6.5)**: Welcome overlay for first-time visitors — frosted glass card with "Ready to design?" prompt, "Open Docs" and "Get App" links; dismisses on click/Escape; remembered via `localStorage` (`fd-welcomed`)
+- **SITE (R6.5)**: New `/download/` page — OS-aware download cards (macOS/Windows/Linux) with GitHub Release API auto-fetch for links and file sizes; CLI install snippet with copy button; editor support table
+- **SITE (R6.5)**: New `/about/` page — all marketing content relocated from homepage (features, two modes, benchmarks, architecture); scroll-reveal animations; hero with gradient background
+- **SITE (R6.5)**: Updated nav across all 6 pages (index, about, download, docs, shortcuts, changelog) — links now `About | Docs | Shortcuts | Changelog | GitHub | Get Fast Draft`; "Install Extension" → "Get Fast Draft" button linking to `/download/`
+- **SITE (R6.5)**: Playground border-radius and box-shadow removed for seamless edge-to-edge layout
+- **DESKTOP**: Tauri desktop app automatically inherits the full-viewport layout (shares `site/` directory)
+
 ### v0.11.212 — Bump Layers Panel Default Width (R6.6)
 - **UX (R6.6)**: Default Layers panel width increased from **180px to 220px** — node names like `@btn_primary_label` are now readable without truncation; CSS variable `--layers-width` default, `DEFAULT_LAYERS_W` JS constant, and toggle restore fallback all updated; existing user-resized widths in localStorage are unaffected
 

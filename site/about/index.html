@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About Fast Draft — Design as Code</title>
+  <meta name="description" content="Fast Draft is a file format and canvas for drawing, design, and animation — right inside your code editor. Draw it or code it? Both." />
+  <meta property="og:title" content="About Fast Draft — Design as Code" />
+  <meta property="og:description" content="A file format and canvas for drawing, design, and animation — right inside your code editor." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://fast-draft.com/about/" />
+  <meta property="og:image" content="https://fast-draft.com/og-card.png" />
+  <link rel="canonical" href="https://fast-draft.com/about/" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/style.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-mono/style.min.css" />
+  <link rel="stylesheet" href="../shared.css?v=0.11.5" />
+  <link rel="stylesheet" href="about.css?v=0.11.5" />
+</head>
+<body>
+  <nav id="navbar" class="site-nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">Fast Draft</span>
+      </a>
+      <div class="nav-links">
+        <a href="/about/" class="active">About</a>
+        <a href="/docs/">Docs</a>
+        <a href="/docs/shortcuts.html">Shortcuts</a>
+        <a href="/docs/changelog.html">Changelog</a>
+        <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
+        <a href="/download/" class="btn-nav">Get Fast Draft</a>
+      </div>
+      <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <main class="about-page">
+    <!-- Hero -->
+    <header class="about-hero">
+      <div class="about-hero-bg">
+        <div class="about-gradient"></div>
+        <div class="about-grid"></div>
+      </div>
+      <div class="about-hero-content">
+        <h1>Design as <span class="gradient-text">Code</span></h1>
+        <p class="about-sub">A file format and canvas for drawing, design, and animation — right inside your code editor. Draw it or code it? <strong>Both.</strong></p>
+        <div class="about-cta">
+          <a href="/" class="btn btn-primary">
+            <span class="btn-icon">⚡</span> Try the Playground
+          </a>
+          <a href="/download/" class="btn btn-ghost">
+            <span class="btn-icon">⬇</span> Get Fast Draft
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Features -->
+    <section class="about-section">
+      <div class="about-container">
+        <div class="about-section-header">
+          <h2>Why <span class="gradient-text">Fast Draft</span>?</h2>
+          <p>Built for both humans and AI agents — design and code in perfect sync.</p>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🔄</div>
+            <h3>Design as Code</h3>
+            <p>Bidirectional sync between text and canvas. Plain text means <code>git diff</code>, code review, and merge just work.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🤖</div>
+            <h3>AI-Native Format</h3>
+            <p>Semantic IDs, constraint layout, ~6× fewer tokens than JSON. Agents read and write designs natively.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🧩</div>
+            <h3>Living Components</h3>
+            <p>Styles, specs, and animations travel with every element. Reuse via <code>style</code> blocks and <code>import</code>.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">✏️</div>
+            <h3>Prompt as You Draw</h3>
+            <p>Code, canvas, keyboard, Apple Pencil, touch, or AI — every input is first-class, and they all compose.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Two Modes -->
+    <section class="about-section section-dark">
+      <div class="about-container">
+        <div class="about-section-header">
+          <h2>Two Modes, <span class="gradient-text">One File</span></h2>
+          <p>Each mode is designed for a different audience — but they edit the same file.</p>
+        </div>
+        <div class="modes-grid">
+          <div class="mode-card">
+            <div class="mode-badge">🤖 Code</div>
+            <h3>The AI Interface</h3>
+            <p>LLMs and coding agents read, write, and reason about <code>.fd</code> text directly. Uses ~6× fewer tokens than Excalidraw JSON.</p>
+            <ul class="mode-list">
+              <li>Semantic node names (<code>@login_form</code>)</li>
+              <li>Constraint-based layout (no pixel coords)</li>
+              <li>Structured <code>spec</code> blocks with status + acceptance criteria</li>
+              <li>Named colors and property aliases</li>
+            </ul>
+          </div>
+          <div class="mode-card">
+            <div class="mode-badge">🎨 Canvas Mode</div>
+            <h3>The Human Interface</h3>
+            <p>Designers draw, drag, and resize on a fast, GPU-powered canvas inside VS Code. No code knowledge needed.</p>
+            <ul class="mode-list">
+              <li>Smart guides and resize handles</li>
+              <li>Drag-and-drop animations</li>
+              <li>Floating toolbar and properties panel</li>
+              <li>Touch and Apple Pencil support</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Benchmarks -->
+    <section class="about-section">
+      <div class="about-container">
+        <div class="about-section-header">
+          <h2>The <span class="gradient-text">Numbers</span></h2>
+          <p>Real designs compared: FD vs Excalidraw JSON. Measured across 11 benchmark pairs.</p>
+        </div>
+        <div class="benchmark-table-wrap">
+          <table class="benchmark-table">
+            <thead>
+              <tr>
+                <th>Design</th>
+                <th>FD Size</th>
+                <th>Excalidraw Size</th>
+                <th>Ratio</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Login Form</td><td>2.4 KB</td><td>15.8 KB</td><td><span class="ratio">6.6×</span></td></tr>
+              <tr><td>Dashboard Card</td><td>0.8 KB</td><td>7.3 KB</td><td><span class="ratio">9.1×</span></td></tr>
+              <tr><td>Kanban Board</td><td>3.7 KB</td><td>18.9 KB</td><td><span class="ratio">5.1×</span></td></tr>
+              <tr><td>Org Chart</td><td>4.1 KB</td><td>15.5 KB</td><td><span class="ratio">3.8×</span></td></tr>
+              <tr><td>API Flowchart</td><td>3.3 KB</td><td>27.9 KB</td><td><span class="ratio">8.5×</span></td></tr>
+              <tr><td>Mobile Onboarding</td><td>3.5 KB</td><td>18.7 KB</td><td><span class="ratio">5.3×</span></td></tr>
+              <tr><td>Pricing Table</td><td>4.4 KB</td><td>24.5 KB</td><td><span class="ratio">5.6×</span></td></tr>
+              <tr><td>Network Topology</td><td>4.6 KB</td><td>28.6 KB</td><td><span class="ratio">6.2×</span></td></tr>
+              <tr><td>Data Dashboard</td><td>4.6 KB</td><td>36.0 KB</td><td><span class="ratio">7.8×</span></td></tr>
+              <tr><td>Design System</td><td>5.7 KB</td><td>28.4 KB</td><td><span class="ratio">5.0×</span></td></tr>
+              <tr><td>Wireframe eCommerce</td><td>2.3 KB</td><td>19.0 KB</td><td><span class="ratio">8.3×</span></td></tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td><strong>Average</strong></td>
+                <td></td>
+                <td></td>
+                <td><span class="ratio ratio-avg">6.5×</span></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture -->
+    <section class="about-section section-dark">
+      <div class="about-container">
+        <div class="about-section-header">
+          <h2>Under the <span class="gradient-text">Hood</span></h2>
+          <p>Rust + WASM, from parser to pixel.</p>
+        </div>
+        <div class="crate-grid">
+          <div class="crate-card">
+            <h4>Core Engine</h4>
+            <p class="crate-flow">.fd text → Parser → SceneGraph → Emitter → .fd text</p>
+            <p>Winnow parser, DAG scene graph, constraint layout solver, and language server with hover, completions, and diagnostics.</p>
+          </div>
+          <div class="crate-card">
+            <h4>GPU Renderer</h4>
+            <p class="crate-flow">SceneGraph → Vello + wgpu → GPU canvas</p>
+            <p>Hardware-accelerated 2D rendering via WASM. Hit testing, smart guides, and the bridge that powers the playground.</p>
+          </div>
+          <div class="crate-card">
+            <h4>Canvas Editor</h4>
+            <p class="crate-flow">Canvas ↔ Text (bidirectional sync)</p>
+            <p>Draw or code — both update in &lt;16ms. Select, rect, pen, text, eraser tools with full undo/redo.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="about-section about-final-cta">
+      <div class="about-container" style="text-align: center;">
+        <h2>Ready to <span class="gradient-text">design as code</span>?</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 24px;">Try the playground right now — no download needed.</p>
+        <div class="about-cta">
+          <a href="/" class="btn btn-primary">Open Playground</a>
+          <a href="/download/" class="btn btn-ghost">Get Fast Draft</a>
+          <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener" class="btn btn-ghost">Star on GitHub</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">Fast Draft</span>
+      </div>
+      <div class="footer-links">
+        <a href="/">Playground</a>
+        <a href="/about/">About</a>
+        <a href="/docs/">Docs</a>
+        <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/khangnghiem/fast-draft/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+      </div>
+      <p class="footer-copy">Made with Rust, WASM, and ❤️ by <a href="https://github.com/khangnghiem" target="_blank" rel="noopener">Khang Nghiêm</a></p>
+    </div>
+  </footer>
+
+  <script>
+    // Mobile menu toggle
+    document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+      document.querySelector('.nav-links').classList.toggle('open');
+      this.classList.toggle('open');
+    });
+
+    // Animate elements on scroll
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.feature-card, .mode-card, .crate-card, .about-section-header').forEach(el => {
+      el.classList.add('animate-in');
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>

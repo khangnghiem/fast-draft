@@ -37,21 +37,19 @@
 </head>
 <body>
   <!-- ─── Navigation ─── -->
-  <nav id="navbar" class="site-nav nav-transparent">
+  <nav id="navbar" class="site-nav">
     <div class="nav-inner">
       <a href="/" class="nav-logo">
         <span class="logo-icon">⚡</span>
         <span class="logo-text">Fast Draft</span>
       </a>
       <div class="nav-links">
-        <a href="/" class="active">Home</a>
+        <a href="/about/">About</a>
         <a href="/docs/">Docs</a>
         <a href="/docs/shortcuts.html">Shortcuts</a>
         <a href="/docs/changelog.html">Changelog</a>
         <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
-        <a href="#download">Download</a>
-
-        <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener" class="btn-nav">Install Extension</a>
+        <a href="/download/" class="btn-nav">Get Fast Draft</a>
       </div>
       <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle menu">
         <span></span><span></span><span></span>
@@ -59,28 +57,24 @@
     </div>
   </nav>
 
-  <!-- ─── Hero with Embedded Playground ─── -->
-  <header id="hero">
-    <div class="hero-bg">
-      <div class="hero-gradient"></div>
-      <div class="hero-grid"></div>
-    </div>
-    <div class="hero-content">
-      <h1>Design as <span class="gradient-text">Code</span></h1>
-      <p class="hero-sub">A file format and canvas for drawing, design, and animation — right inside your code editor. Draw it or code it? <strong>Both.</strong></p>
-      <div class="hero-cta">
-        <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener" class="btn btn-primary">
-          <span class="btn-icon">⚡</span> Install Extension
-        </a>
-        <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener" class="btn btn-ghost">
-          <span class="btn-icon">★</span> View on GitHub
-        </a>
+  <!-- ─── Full-Viewport Playground ─── -->
+  <main id="app">
+    <!-- Welcome Overlay (first-time visitors) -->
+    <div id="welcome-overlay" class="welcome-overlay">
+      <div class="welcome-content">
+        <span class="welcome-icon">⚡</span>
+        <h2>Fast Draft</h2>
+        <p class="welcome-sub">Design as Code — draw or type</p>
+        <div class="welcome-actions">
+          <a href="/docs/" class="welcome-link">📖 Docs</a>
+          <a href="/docs/shortcuts.html" class="welcome-link">⌨ Shortcuts</a>
+          <a href="/download/" class="welcome-link">⬇ Download</a>
+        </div>
+        <p class="welcome-hint">Click anywhere to start</p>
       </div>
-
     </div>
 
-    <!-- ─── Playground Embedded in Hero ─── -->
-    <div class="hero-playground">
+    <div class="app-playground">
 
       <input type="file" id="css-file-input" accept=".css" style="display:none">
 
@@ -293,253 +287,7 @@
         </div>
       </div>
     </div>
-  </header>
-
-  <!-- ─── Features ─── -->
-  <section id="features" class="section">
-    <div class="container">
-      <div class="section-header">
-        <h2>Why <span class="gradient-text">Fast Draft</span>?</h2>
-        <p>Built for both humans and AI agents — design and code in perfect sync.</p>
-      </div>
-      <div class="features-grid">
-        <div class="feature-card" style="--i: 0">
-          <div class="feature-icon">🔄</div>
-          <h3>Design as Code</h3>
-          <p>Bidirectional sync between text and canvas. Plain text means <code>git diff</code>, code review, and merge just work.</p>
-        </div>
-        <div class="feature-card" style="--i: 1">
-          <div class="feature-icon">🤖</div>
-          <h3>AI-Native Format</h3>
-          <p>Semantic IDs, constraint layout, ~6× fewer tokens than JSON. Agents read and write designs natively.</p>
-        </div>
-        <div class="feature-card" style="--i: 2">
-          <div class="feature-icon">🧩</div>
-          <h3>Living Components</h3>
-          <p>Styles, specs, and animations travel with every element. Reuse via <code>style</code> blocks and <code>import</code>.</p>
-        </div>
-        <div class="feature-card" style="--i: 3">
-          <div class="feature-icon">✏️</div>
-          <h3>Prompt as You Draw</h3>
-          <p>Code, canvas, keyboard, Apple Pencil, touch, or AI — every input is first-class, and they all compose.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ─── Two Modes ─── -->
-  <section id="modes" class="section section-dark">
-    <div class="container">
-      <div class="section-header">
-        <h2>Two Modes, <span class="gradient-text">One File</span></h2>
-        <p>Each mode is designed for a different audience — but they edit the same file.</p>
-      </div>
-      <div class="modes-grid">
-        <div class="mode-card">
-          <div class="mode-badge">🤖 Code</div>
-          <h3>The AI Interface</h3>
-          <p>LLMs and coding agents read, write, and reason about <code>.fd</code> text directly. Uses ~6× fewer tokens than Excalidraw JSON.</p>
-          <ul class="mode-list">
-            <li>Semantic node names (<code>@login_form</code>)</li>
-            <li>Constraint-based layout (no pixel coords)</li>
-            <li>Structured <code>spec</code> blocks with status + acceptance criteria</li>
-            <li>Named colors and property aliases</li>
-          </ul>
-        </div>
-        <div class="mode-card">
-          <div class="mode-badge">🎨 Canvas Mode</div>
-          <h3>The Human Interface</h3>
-          <p>Designers draw, drag, and resize on a fast, GPU-powered canvas inside VS Code. No code knowledge needed.</p>
-          <ul class="mode-list">
-            <li>Smart guides and resize handles</li>
-            <li>Drag-and-drop animations</li>
-            <li>Floating toolbar and properties panel</li>
-            <li>Touch and Apple Pencil support</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ─── Benchmarks ─── -->
-  <section id="benchmarks" class="section">
-    <div class="container">
-      <div class="section-header">
-        <h2>The <span class="gradient-text">Numbers</span></h2>
-        <p>Real designs compared: FD vs Excalidraw JSON. Measured across 11 benchmark pairs.</p>
-      </div>
-      <div class="benchmark-table-wrap">
-        <table class="benchmark-table">
-          <thead>
-            <tr>
-              <th>Design</th>
-              <th>FD Size</th>
-              <th>Excalidraw Size</th>
-              <th>Ratio</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>Login Form</td><td>2.4 KB</td><td>15.8 KB</td><td><span class="ratio">6.6×</span></td></tr>
-            <tr><td>Dashboard Card</td><td>0.8 KB</td><td>7.3 KB</td><td><span class="ratio">9.1×</span></td></tr>
-            <tr><td>Kanban Board</td><td>3.7 KB</td><td>18.9 KB</td><td><span class="ratio">5.1×</span></td></tr>
-            <tr><td>Org Chart</td><td>4.1 KB</td><td>15.5 KB</td><td><span class="ratio">3.8×</span></td></tr>
-            <tr><td>API Flowchart</td><td>3.3 KB</td><td>27.9 KB</td><td><span class="ratio">8.5×</span></td></tr>
-            <tr><td>Mobile Onboarding</td><td>3.5 KB</td><td>18.7 KB</td><td><span class="ratio">5.3×</span></td></tr>
-            <tr><td>Pricing Table</td><td>4.4 KB</td><td>24.5 KB</td><td><span class="ratio">5.6×</span></td></tr>
-            <tr><td>Network Topology</td><td>4.6 KB</td><td>28.6 KB</td><td><span class="ratio">6.2×</span></td></tr>
-            <tr><td>Data Dashboard</td><td>4.6 KB</td><td>36.0 KB</td><td><span class="ratio">7.8×</span></td></tr>
-            <tr><td>Design System</td><td>5.7 KB</td><td>28.4 KB</td><td><span class="ratio">5.0×</span></td></tr>
-            <tr><td>Wireframe eCommerce</td><td>2.3 KB</td><td>19.0 KB</td><td><span class="ratio">8.3×</span></td></tr>
-          </tbody>
-          <tfoot>
-            <tr>
-              <td><strong>Average</strong></td>
-              <td></td>
-              <td></td>
-              <td><span class="ratio ratio-avg">6.5×</span></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- ─── Architecture ─── -->
-  <section id="architecture" class="section section-dark">
-    <div class="container">
-      <div class="section-header">
-        <h2>Under the <span class="gradient-text">Hood</span></h2>
-        <p>Rust + WASM, from parser to pixel.</p>
-      </div>
-      <div class="crate-grid">
-        <div class="crate-card">
-          <h4>Core Engine</h4>
-          <p class="crate-flow">.fd text → Parser → SceneGraph → Emitter → .fd text</p>
-          <p>Winnow parser, DAG scene graph, constraint layout solver, and language server with hover, completions, and diagnostics.</p>
-        </div>
-        <div class="crate-card">
-          <h4>GPU Renderer</h4>
-          <p class="crate-flow">SceneGraph → Vello + wgpu → GPU canvas</p>
-          <p>Hardware-accelerated 2D rendering via WASM. Hit testing, smart guides, and the bridge that powers this playground.</p>
-        </div>
-        <div class="crate-card">
-          <h4>Canvas Editor</h4>
-          <p class="crate-flow">Canvas ↔ Text (bidirectional sync)</p>
-          <p>Draw or code — both update in &lt;16ms. Select, rect, pen, text, eraser tools with full undo/redo.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ─── Editor Support ─── -->
-  <section id="editors" class="section">
-    <div class="container">
-      <div class="section-header">
-        <h2>Editor <span class="gradient-text">Support</span></h2>
-        <p>Syntax highlighting everywhere, full canvas in VS Code.</p>
-      </div>
-      <div class="editor-table-wrap">
-        <table class="editor-table">
-          <thead>
-            <tr>
-              <th>Editor</th>
-              <th>Syntax</th>
-              <th>LSP</th>
-              <th>Canvas</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>VS Code / Cursor</td><td>✅</td><td>—</td><td>✅</td></tr>
-            <tr><td>Zed</td><td>✅</td><td>✅</td><td>—</td></tr>
-            <tr><td>Neovim</td><td>✅</td><td>—</td><td>—</td></tr>
-            <tr><td>Sublime Text</td><td>✅</td><td>—</td><td>—</td></tr>
-            <tr><td>Helix</td><td>✅</td><td>—</td><td>—</td></tr>
-            <tr><td>Emacs</td><td>✅</td><td>—</td><td>—</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- ─── Desktop Download ─── -->
-  <section id="download" class="section section-dark">
-    <div class="container">
-      <div class="section-header">
-        <h2>Desktop <span class="gradient-text">App</span></h2>
-        <p>Native macOS, Windows, and Linux app — all the power of the playground, no browser needed.</p>
-      </div>
-      <div class="download-cards">
-        <div class="download-card" id="dl-macos">
-          <div class="dl-icon">🍎</div>
-          <h3>macOS</h3>
-          <p>Apple Silicon &amp; Intel</p>
-          <a class="btn btn-primary dl-btn" id="dl-macos-btn" href="#" download>
-            <span class="btn-icon">⬇</span> Download .dmg
-          </a>
-          <span class="dl-size" id="dl-macos-size"></span>
-        </div>
-        <div class="download-card" id="dl-windows">
-          <div class="dl-icon">🪟</div>
-          <h3>Windows</h3>
-          <p>Windows 10+ (x64)</p>
-          <a class="btn btn-primary dl-btn" id="dl-windows-btn" href="#" download>
-            <span class="btn-icon">⬇</span> Download .msi
-          </a>
-          <span class="dl-size" id="dl-windows-size"></span>
-        </div>
-        <div class="download-card" id="dl-linux">
-          <div class="dl-icon">🐧</div>
-          <h3>Linux</h3>
-          <p>Ubuntu / Debian (x64)</p>
-          <a class="btn btn-primary dl-btn" id="dl-linux-btn" href="#" download>
-            <span class="btn-icon">⬇</span> Download .AppImage
-          </a>
-          <span class="dl-size" id="dl-linux-size"></span>
-        </div>
-      </div>
-      <p class="dl-footer">
-        <a href="https://github.com/khangnghiem/fast-draft/releases/latest" target="_blank" rel="noopener">All releases on GitHub →</a>
-        <span class="dl-version" id="dl-version"></span>
-      </p>
-    </div>
-  </section>
-
-  <!-- ─── CTA ─── -->
-  <section id="cta" class="section section-dark">
-    <div class="container cta-container">
-      <h2>Ready to <span class="gradient-text">design as code</span>?</h2>
-      <p>Install the VS Code extension and start drawing in 30 seconds.</p>
-      <div class="hero-cta">
-        <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener" class="btn btn-primary">
-          Install Extension
-        </a>
-        <a href="#download" class="btn btn-ghost">
-          Download Desktop App
-        </a>
-        <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener" class="btn btn-ghost">
-          Star on GitHub
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ─── Footer ─── -->
-  <footer id="footer" class="site-footer">
-    <div class="footer-inner">
-      <div class="footer-brand">
-        <span class="logo-icon">⚡</span>
-        <span class="logo-text">Fast Draft</span>
-      </div>
-      <div class="footer-links">
-        <a href="/">Home</a>
-        <a href="/docs/">Docs</a>
-        <a href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank" rel="noopener">VS Code Marketplace</a>
-        <a href="https://github.com/khangnghiem/fast-draft/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
-      </div>
-      <p class="footer-copy">Made with Rust, WASM, and ❤️ by <a href="https://github.com/khangnghiem" target="_blank" rel="noopener">Khang Nghiêm</a></p>
-    </div>
-  </footer>
+  </main>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="context-menu.js?v=0.11.5"></script>
@@ -551,80 +299,24 @@
       this.classList.toggle('open');
     });
 
-    // Navbar scroll effect
-    window.addEventListener('scroll', function() {
-      const nav = document.getElementById('navbar');
-      if (nav) nav.classList.toggle('scrolled', window.scrollY > 50);
-    });
-
-    // Smooth scroll for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(a => {
-      a.addEventListener('click', function(e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          document.querySelector('.nav-links').classList.remove('open');
-          document.getElementById('mobile-menu-btn').classList.remove('open');
-        }
-      });
-    });
-
-    // Animate elements on scroll
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
-      });
-    }, { threshold: 0.1 });
-
-    document.querySelectorAll('.feature-card, .mode-card, .crate-card, .download-card, .section-header').forEach(el => {
-      el.classList.add('animate-in');
-      observer.observe(el);
-    });
-
-    // ── Download Section: OS detection + GitHub Release fetch ──
+    // Welcome overlay — dismiss on first interaction, remember in localStorage
     (function() {
-      const ua = navigator.userAgent || '';
-      const pl = navigator.platform || '';
-      let os = 'other';
-      if (/Mac/.test(pl) || /Mac/.test(ua)) os = 'macos';
-      else if (/Win/.test(pl) || /Win/.test(ua)) os = 'windows';
-      else if (/Linux/.test(pl) || /Linux/.test(ua)) os = 'linux';
-
-      // Highlight detected OS card
-      const card = document.getElementById('dl-' + os);
-      if (card) card.classList.add('dl-detected');
-
-      // Fetch latest release from GitHub API
-      fetch('https://api.github.com/repos/khangnghiem/fast-draft/releases/latest')
-        .then(r => r.ok ? r.json() : null)
-        .then(release => {
-          if (!release || !release.assets) return;
-
-          // Show version
-          const verEl = document.getElementById('dl-version');
-          if (verEl) verEl.textContent = release.tag_name;
-
-          // Map asset patterns to buttons
-          const map = {
-            'macos': { btn: 'dl-macos-btn', size: 'dl-macos-size', pattern: /\.dmg$/i },
-            'windows': { btn: 'dl-windows-btn', size: 'dl-windows-size', pattern: /\.msi$/i },
-            'linux': { btn: 'dl-linux-btn', size: 'dl-linux-size', pattern: /\.AppImage$/i },
-          };
-
-          for (const [, cfg] of Object.entries(map)) {
-            const asset = release.assets.find(a => cfg.pattern.test(a.name));
-            if (asset) {
-              const btn = document.getElementById(cfg.btn);
-              if (btn) btn.href = asset.browser_download_url;
-              const sz = document.getElementById(cfg.size);
-              if (sz) sz.textContent = (asset.size / 1024 / 1024).toFixed(1) + ' MB';
-            }
-          }
-        })
-        .catch(() => {}); // Silently fail — buttons still link to releases page
+      const overlay = document.getElementById('welcome-overlay');
+      if (!overlay) return;
+      if (localStorage.getItem('fd-welcome-dismissed') ||
+          new URLSearchParams(window.location.search).has('code')) {
+        overlay.remove();
+        return;
+      }
+      function dismiss() {
+        overlay.classList.add('fade-out');
+        setTimeout(() => overlay.remove(), 400);
+        localStorage.setItem('fd-welcome-dismissed', '1');
+      }
+      overlay.addEventListener('pointerdown', dismiss);
+      // Also dismiss if user interacts with canvas or editor
+      document.getElementById('fd-canvas')?.addEventListener('pointerdown', dismiss, { once: true });
+      document.getElementById('fd-editor')?.addEventListener('focusin', dismiss, { once: true });
     })();
   </script>
 </body>

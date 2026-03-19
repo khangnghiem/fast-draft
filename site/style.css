@@ -134,70 +134,111 @@ code {
 
 /* Mobile menu styles are in shared.css */
 
-/* ─── Hero ─── */
-#hero {
+/* ─── Full-Viewport App Layout ─── */
+#app {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 64px 24px 32px;
+  height: calc(100vh - 52px);
+  margin-top: 52px;
   overflow: hidden;
 }
-.hero-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-.hero-gradient {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(108, 92, 231, 0.15), transparent),
-    radial-gradient(ellipse 60% 80% at 80% 60%, rgba(9, 132, 227, 0.1), transparent),
-    radial-gradient(ellipse 40% 40% at 20% 80%, rgba(108, 92, 231, 0.08), transparent);
-}
-.hero-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(48, 54, 61, 0.3) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(48, 54, 61, 0.3) 1px, transparent 1px);
-  background-size: 60px 60px;
-  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black, transparent);
-  -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black, transparent);
-}
-.hero-content {
+.app-playground {
   position: relative;
   z-index: 1;
-  text-align: center;
-  max-width: 800px;
-  margin-bottom: 16px;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
-#hero h1 {
-  font-size: clamp(2.2rem, 5vw, 3.8rem);
-  font-weight: 800;
-  line-height: 1.1;
-  margin-bottom: 16px;
-  letter-spacing: -0.03em;
+/* ─── Welcome Overlay ─── */
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: opacity 0.4s ease;
 }
-/* .gradient-text is in shared.css */
+.welcome-overlay.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+.welcome-content {
+  text-align: center;
+  background: rgba(28, 28, 30, 0.85);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 48px 64px;
+  max-width: 420px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+}
+.welcome-icon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 8px;
+}
+.welcome-content h2 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 4px;
+  color: #f5f5f7;
+}
+.welcome-sub {
+  color: #98989d;
+  font-size: 1rem;
+  margin-bottom: 24px;
+}
+.welcome-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+.welcome-link {
+  color: #98989d;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.welcome-link:hover {
+  color: #f5f5f7;
+}
+.welcome-hint {
+  color: #636366;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* ── CodeMirror Editor Container ── */
+#fd-editor {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+#fd-editor .cm-editor {
+  height: 100%;
+}
+
+/* ── Button utilities (used by about/download pages) ── */
 .gradient-bg {
   background: linear-gradient(135deg, #6C5CE7, #0A84FF);
-}
-.hero-sub {
-  font-size: 1.1rem;
-  color: var(--text-secondary);
-  max-width: 580px;
-  margin: 0 auto 24px;
-  line-height: 1.7;
 }
 .hero-cta {
   display: flex;
   gap: 16px;
   justify-content: center;
   flex-wrap: wrap;
-  margin-bottom: 16px;
 }
 .btn {
   display: inline-flex;
@@ -218,7 +259,6 @@ code {
   box-shadow: 0 4px 20px rgba(108, 92, 231, 0.3);
 }
 .btn-primary:hover {
-  background: var(--accent-hover);
   transform: translateY(-2px);
   box-shadow: 0 8px 30px rgba(108, 92, 231, 0.4);
   color: #fff;
@@ -235,30 +275,8 @@ code {
   transform: translateY(-2px);
 }
 .btn-icon { font-size: 0.9em; }
-/* ── CodeMirror Editor Container ── */
-#fd-editor {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-}
-#fd-editor .cm-editor {
-  height: 100%;
-}
-/* ─── Hero Playground ─── */
-.hero-playground {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: var(--max-width);
-  margin-top: 8px;
-}
 
-/* Floating fullscreen button — above entire playground */
-/* Fullscreen button is now inside canvas — see .fullscreen-toggle-canvas below */
-
-
-
-/* ─── Sections ─── */
+/* ─── Sections (About page) ─── */
 .section { padding: 100px 24px; }
 .section-dark { background: var(--bg-secondary); }
 .container {
@@ -445,13 +463,13 @@ code {
 .playground-split {
   display: grid;
   grid-template-columns: 7fr auto var(--editor-width, 3fr);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
+  border-radius: 0;
+  border: none;
   overflow: hidden;
-  position: relative; /* for #code-expand-strip absolute positioning */
+  position: relative;
   background: var(--border);
-  box-shadow: var(--shadow), var(--shadow-glow);
-  min-height: 75vh;
+  box-shadow: none;
+  height: 100%;
   /* Unified header: no gap color bleeding into the header row */
   --header-bg: rgba(28, 28, 30, 0.88);
   --header-border: rgba(255, 255, 255, 0.06);
@@ -2502,7 +2520,7 @@ code {
   z-index: 200;
   overflow: hidden;
 }
-.fullscreen-mode .hero-playground {
+.fullscreen-mode .app-playground {
   max-width: 100%;
   width: 100%;
   height: 100vh;
