@@ -253,7 +253,7 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   // This fixes both "double-click shape jump" and "editing vs non-editing mismatch".
   measureAndUpdateTextBounds(nodeId);
 
-  const boundsJson = fdCanvas.get_node_bounds(nodeId);
+  const boundsJson = fdCanvas.get_node_bounds_json(nodeId);
   const b = JSON.parse(boundsJson);
   // Use minimum size for zero-width nodes (e.g. new text nodes)
   const bw = b.width || 80;

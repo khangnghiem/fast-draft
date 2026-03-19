@@ -140,7 +140,7 @@ export function openInlineEditor(opts) {
   // Force-measure text bounds BEFORE reading them
   measureAndUpdateTextBounds(fdCanvas, canvasEl, nodeId);
 
-  const boundsJson = fdCanvas.get_node_bounds(nodeId);
+  const boundsJson = fdCanvas.get_node_bounds_json(nodeId);
   const b = JSON.parse(boundsJson);
   const bw = b.width || 80;
   const bh = b.height || 24;

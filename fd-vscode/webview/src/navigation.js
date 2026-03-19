@@ -83,15 +83,15 @@ function zoomToFit() {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   let foundAny = false;
 
-  const nodeIdPattern = /@(\w+)/g;
-  let match;
-  const seenIds = new Set();
-  while ((match = nodeIdPattern.exec(text)) !== null) {
-    const id = match[1];
-    if (seenIds.has(id)) continue;
-    seenIds.add(id);
-    try {
-      const boundsJson = fdCanvas.get_node_bounds(id);
+  const matches = text.match(/@([a-zA-Z_][a-zA-Z0-9_]*)/g);
+  if (matches) {
+    const seenIds = new Set();
+    for (let i = 0; i < matches.length; i++) {
+      const id = matches[i].substring(1);
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
+      try {
+        const boundsJson = fdCanvas.get_node_bounds_json(id);
       const b = JSON.parse(boundsJson);
       if (b.width && b.width > 0) {
         minX = Math.min(minX, b.x);
@@ -100,7 +100,8 @@ function zoomToFit() {
         maxY = Math.max(maxY, b.y + b.height);
         foundAny = true;
       }
-    } catch (_) { /* skip */ }
+      } catch (_) { /* skip */ }
+    }
   }
 
   if (!foundAny) {
@@ -1015,8 +1016,8 @@ function setupFloatingToolbar() {
       const toId = match[3];
       let fromBounds, toBounds;
       try {
-        fromBounds = JSON.parse(fdCanvas.get_node_bounds(fromId));
-        toBounds = JSON.parse(fdCanvas.get_node_bounds(toId));
+        fromBounds = JSON.parse(fdCanvas.get_node_bounds_json(fromId));
+        toBounds = JSON.parse(fdCanvas.get_node_bounds_json(toId));
       } catch (_) { continue; }
       if (!fromBounds || !toBounds) continue;
       const fx = fromBounds.x + fromBounds.width / 2;
@@ -1088,7 +1089,7 @@ function setupFloatingToolbar() {
     }
     if (!nearestId) return null;
     let tb;
-    try { tb = JSON.parse(fdCanvas.get_node_bounds(nearestId)); } catch (_) { return null; }
+    try { tb = JSON.parse(fdCanvas.get_node_bounds_json(nearestId)); } catch (_) { return null; }
     if (!tb || !tb.width) return null;
     const tRight = tb.x + tb.width;
     const tBottom = tb.y + tb.height;
@@ -1195,15 +1196,16 @@ function getSceneBoundsInner() {
 
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   let foundAny = false;
-  const nodeIdPattern = /@(\w+)/g;
-  let match;
-  const seenIds = new Set();
-  while ((match = nodeIdPattern.exec(text)) !== null) {
-    const id = match[1];
-    if (seenIds.has(id)) continue;
-    seenIds.add(id);
-    try {
-      const b = JSON.parse(fdCanvas.get_node_bounds(id));
+
+  const matches = text.match(/@([a-zA-Z_][a-zA-Z0-9_]*)/g);
+  if (matches) {
+    const seenIds = new Set();
+    for (let i = 0; i < matches.length; i++) {
+      const id = matches[i].substring(1);
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
+      try {
+        const b = JSON.parse(fdCanvas.get_node_bounds_json(id));
       if (b.width && b.width > 0) {
         minX = Math.min(minX, b.x);
         minY = Math.min(minY, b.y);
@@ -1211,7 +1213,8 @@ function getSceneBoundsInner() {
         maxY = Math.max(maxY, b.y + b.height);
         foundAny = true;
       }
-    } catch (_) { /* skip */ }
+      } catch (_) { /* skip */ }
+    }
   }
   return foundAny ? { minX, minY, maxX, maxY } : null;
 }
@@ -1349,7 +1352,7 @@ function focusOnNode(nodeId) {
   if (!fdCanvas) return;
   let bounds;
   try {
-    bounds = JSON.parse(fdCanvas.get_node_bounds(nodeId));
+    bounds = JSON.parse(fdCanvas.get_node_bounds_json(nodeId));
     if (!bounds || (bounds.width <= 0 && bounds.height <= 0)) return;
   } catch (_) { return; }
 
@@ -1462,7 +1465,7 @@ function zoomToSelection() {
   if (!selectedId) return;
 
   try {
-    const b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
+    const b = JSON.parse(fdCanvas.get_node_bounds_json(selectedId));
     if (!b.width || b.width <= 0) return;
 
     const container = document.getElementById("canvas-container");

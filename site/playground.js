@@ -805,7 +805,7 @@ function renderCanvas() {
     } else if (pencilHover.nodeId) {
       // Hover node highlight (non-draw tools)
       try {
-        const bJson = fdCanvas.get_node_bounds(pencilHover.nodeId);
+        const bJson = fdCanvas.get_node_bounds_json(pencilHover.nodeId);
         if (bJson) {
           const hb = JSON.parse(bJson);
           ctx.setLineDash([4 / zoomLevel, 4 / zoomLevel]);
@@ -825,16 +825,18 @@ function fitToContent(canvas) {
   if (!fdCanvas) return;
   try {
     const text = fdCanvas.get_text();
-    const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
     const nodes = [];
-    let m;
-    while ((m = idRegex.exec(text)) !== null) {
-      try {
-        const bj = fdCanvas.get_node_bounds(m[1]);
-        if (!bj) continue;
-        const b = JSON.parse(bj);
-        if (b.width > 0 && b.height > 0) nodes.push(b);
-      } catch (_) { }
+    const matches = text.match(/@([a-zA-Z_][a-zA-Z0-9_]*)/g);
+    if (matches) {
+      for (let i = 0; i < matches.length; i++) {
+        const id = matches[i].substring(1);
+        try {
+          const bj = fdCanvas.get_node_bounds_json(id);
+          if (!bj) continue;
+          const b = JSON.parse(bj);
+          if (b.width > 0 && b.height > 0) nodes.push(b);
+        } catch (_) { }
+      }
     }
     if (nodes.length === 0) return;
     let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
@@ -1169,21 +1171,23 @@ function rgbToHex(rgb) {
 function getSceneBounds() {
   if (!fdCanvas) return null;
   const text = fdCanvas.get_text();
-  const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
   let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
   let found = false;
-  let m;
-  while ((m = idRegex.exec(text)) !== null) {
-    try {
-      const bj = fdCanvas.get_node_bounds(m[1]);
-      if (!bj) continue;
-      const b = JSON.parse(bj);
-      if (b.width > 0 && b.height > 0) {
-        sx = Math.min(sx, b.x); sy = Math.min(sy, b.y);
-        sx2 = Math.max(sx2, b.x + b.width); sy2 = Math.max(sy2, b.y + b.height);
-        found = true;
-      }
-    } catch (_) {}
+  const matches = text.match(/@([a-zA-Z_][a-zA-Z0-9_]*)/g);
+  if (matches) {
+    for (let i = 0; i < matches.length; i++) {
+      const id = matches[i].substring(1);
+      try {
+        const bj = fdCanvas.get_node_bounds_json(id);
+        if (!bj) continue;
+        const b = JSON.parse(bj);
+        if (b.width > 0 && b.height > 0) {
+          sx = Math.min(sx, b.x); sy = Math.min(sy, b.y);
+          sx2 = Math.max(sx2, b.x + b.width); sy2 = Math.max(sy2, b.y + b.height);
+          found = true;
+        }
+      } catch (_) {}
+    }
   }
   if (!found) return null;
   const pad = 20;
@@ -1236,7 +1240,7 @@ function updateFab(canvas) {
   if (propsPanel?.classList.contains('visible')) { fab.classList.remove('visible'); return; }
 
   try {
-    const boundsJson = fdCanvas.get_node_bounds(selectedId);
+    const boundsJson = fdCanvas.get_node_bounds_json(selectedId);
     if (!boundsJson) { fab.classList.remove('visible'); return; }
     const b = JSON.parse(boundsJson);
     if (!b.width) { fab.classList.remove('visible'); return; }
@@ -1830,14 +1834,16 @@ async function pasteFromClipboard() {
   pasteOffsetCount++;
 
   // Collect all @id declarations
-  const idPattern = /@(\w+)\s*\{/g;
   const allIds = new Set();
-  let m;
-  while ((m = idPattern.exec(clipText)) !== null) allIds.add(m[1]);
-  const idPattern2 = /@(\w+)\s+"[^"]*"\s*\{/g;
-  while ((m = idPattern2.exec(clipText)) !== null) allIds.add(m[1]);
-  const idPattern3 = /(?:rect|ellipse|text|group|frame|path|edge)\s+@(\w+)/g;
-  while ((m = idPattern3.exec(clipText)) !== null) allIds.add(m[1]);
+  const idMatches1 = clipText.match(/@\w+\s*\{/g);
+  if (idMatches1) idMatches1.forEach(str => allIds.add(str.substring(1, str.indexOf('{')).trim()));
+
+  const idMatches2 = clipText.match(/@\w+\s+"[^"]*"\s*\{/g);
+  if (idMatches2) idMatches2.forEach(str => allIds.add(str.substring(1, str.indexOf('"')).trim()));
+
+  const idMatches3 = clipText.match(/(?:rect|ellipse|text|group|frame|path|edge)\s+@\w+/g);
+  if (idMatches3) idMatches3.forEach(str => allIds.add(str.substring(str.indexOf('@') + 1)));
+
   if (allIds.size === 0) return;
 
   // Rename IDs to avoid conflicts — use batch-aware naming
@@ -1872,7 +1878,7 @@ async function pasteFromClipboard() {
   // Horizontal offset
   let xOffset = pasteOffsetCount * 20;
   try {
-    const boundsJson = fdCanvas.get_node_bounds(rootId);
+    const boundsJson = fdCanvas.get_node_bounds_json(rootId);
     if (boundsJson) {
       const bounds = JSON.parse(boundsJson);
       if (bounds && bounds.width > 0) xOffset = (bounds.width + 20) * pasteOffsetCount;
@@ -3020,7 +3026,7 @@ function renderMinimap(canvas) {
   mctx.fillStyle = isDark ? 'rgba(28,28,30,0.9)' : 'rgba(245,245,247,0.9)';
   mctx.fillRect(0, 0, mw, mh);
 
-  // Use single WASM call instead of N×get_node_bounds()
+  // Use single WASM call instead of N×get_node_bounds_json()
   const sceneBoundsJson = fdCanvas.get_scene_bounds();
   if (!sceneBoundsJson) return;
   let sb;
@@ -4259,7 +4265,7 @@ function nudgeSelected(arrowKey, step) {
   if (!selectedId) return;
 
   try {
-    const boundsJson = fdCanvas.get_node_bounds(selectedId);
+    const boundsJson = fdCanvas.get_node_bounds_json(selectedId);
     const b = JSON.parse(boundsJson);
     if (b.x === undefined) return;
 
@@ -4358,7 +4364,7 @@ function openInlineTextEditor(nodeId, currentValue, propKey = 'content') {
   if (inlineEditorActive || !fdCanvas) return;
 
   let boundsJson;
-  try { boundsJson = fdCanvas.get_node_bounds(nodeId); } catch (_) { return; }
+  try { boundsJson = fdCanvas.get_node_bounds_json(nodeId); } catch (_) { return; }
   const b = JSON.parse(boundsJson);
   const bw = b.width || 80;
   const bh = b.height || 24;
@@ -4813,7 +4819,7 @@ function setupTouchGestures(canvas, fdCanvasRef, markRenderDirty, markUiDirty) {
             const selectedId = fdCanvasRef.get_selected_id();
             if (selectedId) {
               try {
-                const b = JSON.parse(fdCanvasRef.get_node_bounds(selectedId));
+                const b = JSON.parse(fdCanvasRef.get_node_bounds_json(selectedId));
                 if (b.width > 0 && b.height > 0) {
                   const cr = canvas.getBoundingClientRect();
                   const pad = 60;
@@ -5346,7 +5352,7 @@ async function initPlayground() {
         const selectedId = fdCanvas.get_selected_id();
         if (!selectedId) { qcp.classList.remove('visible'); return; }
         try {
-          const boundsJson = fdCanvas.get_node_bounds(selectedId);
+          const boundsJson = fdCanvas.get_node_bounds_json(selectedId);
           if (!boundsJson) { qcp.classList.remove('visible'); return; }
           const b = JSON.parse(boundsJson);
           if (!b.width) { qcp.classList.remove('visible'); return; }
@@ -5893,7 +5899,7 @@ async function initPlayground() {
           if (hitJson) {
             const hit = JSON.parse(hitJson);
             if (hit.id) {
-              const boundsJson = fdCanvas.get_node_bounds(hit.id);
+              const boundsJson = fdCanvas.get_node_bounds_json(hit.id);
               if (boundsJson) touchHalo.targetBounds = JSON.parse(boundsJson);
             }
           }

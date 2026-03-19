@@ -127,11 +127,12 @@ async function pasteFromClipboard() {
   pasteOffsetCount++;
 
   // Collect all @id declarations in the pasted block
-  const idPattern = /@(\w+)\s*\{/g;
   const allIds = new Set();
-  let m;
-  while ((m = idPattern.exec(clipText)) !== null) {
-    allIds.add(m[1]);
+  const idMatches = clipText.match(/@([a-zA-Z_][a-zA-Z0-9_]*)\s*\{/g);
+  if (idMatches) {
+    for (let i = 0; i < idMatches.length; i++) {
+      allIds.add(idMatches[i].substring(1, idMatches[i].indexOf('{')).trim());
+    }
   }
   if (allIds.size === 0) return;
 
@@ -171,7 +172,7 @@ async function pasteFromClipboard() {
   // Horizontal stagger
   let xOffset = pasteOffsetCount * 20;
   try {
-    const boundsJson = fdCanvas.get_node_bounds(rootId);
+    const boundsJson = fdCanvas.get_node_bounds_json(rootId);
     if (boundsJson) {
       const bounds = JSON.parse(boundsJson);
       if (bounds && bounds.width > 0) {
@@ -207,14 +208,16 @@ function selectAllNodes() {
   if (!text) return;
 
   // Find all node IDs
-  const nodeIdPattern = /@(\w+)/g;
-  let match;
   const ids = [];
   const seen = new Set();
-  while ((match = nodeIdPattern.exec(text)) !== null) {
-    if (!seen.has(match[1])) {
-      ids.push(match[1]);
-      seen.add(match[1]);
+  const matches = text.match(/@([a-zA-Z_][a-zA-Z0-9_]*)/g);
+  if (matches) {
+    for (let i = 0; i < matches.length; i++) {
+      const id = matches[i].substring(1);
+      if (!seen.has(id)) {
+        ids.push(id);
+        seen.add(id);
+      }
     }
   }
 

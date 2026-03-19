@@ -70,7 +70,7 @@ function playDetachAnimation(nodeId) {
 
   // Create a temporary glow overlay on the canvas for the detached node
   try {
-    const boundsJson = fdCanvas.get_node_bounds(nodeId);
+    const boundsJson = fdCanvas.get_node_bounds_json(nodeId);
     if (!boundsJson) return;
     const b = JSON.parse(boundsJson);
     if (!b.width) return;

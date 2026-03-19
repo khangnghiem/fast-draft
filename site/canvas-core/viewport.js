@@ -15,7 +15,7 @@ export function getResizeHandleCursor(fdCanvas, x, y, hitRadius = 8) {
   if (!selectedId) return '';
   let b;
   try {
-    b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
+    b = JSON.parse(fdCanvas.get_node_bounds_json(selectedId));
   } catch (_) { return ''; }
   if (b.x === undefined) return '';
 
@@ -93,7 +93,7 @@ export function nudgeSelected(fdCanvas, arrowKey, step) {
   if (!selectedId) return false;
 
   try {
-    const boundsJson = fdCanvas.get_node_bounds(selectedId);
+    const boundsJson = fdCanvas.get_node_bounds_json(selectedId);
     const b = JSON.parse(boundsJson);
     if (b.x === undefined) return false;
 
