@@ -1437,15 +1437,30 @@ fn roundtrip_constraint_system() {
     let source = include_str!("../../../examples/constraint_system.fd");
     let doc = parse_document(source).expect("Failed to parse constraint_system.fd");
     let emitted = emit_document(&doc);
-    let roundtripped = parse_document(&emitted).expect("Failed to parse emitted constraint_system.fd");
+    let roundtripped =
+        parse_document(&emitted).expect("Failed to parse emitted constraint_system.fd");
 
     // Check we preserved the main nodes and their properties
-    let expected_ids = ["center_demo", "center_label", "offset_demo_1", "offset_label_1", "offset_demo_2", "offset_label_2", "fill_demo_parent", "fill_demo_bg", "fill_demo_child", "fill_label", "absolute_demo", "absolute_label"];
+    let expected_ids = [
+        "center_demo",
+        "center_label",
+        "offset_demo_1",
+        "offset_label_1",
+        "offset_demo_2",
+        "offset_label_2",
+        "fill_demo_parent",
+        "fill_demo_bg",
+        "fill_demo_child",
+        "fill_label",
+        "absolute_demo",
+        "absolute_label",
+    ];
     for id_str in expected_ids {
         let node_id = NodeId::intern(id_str);
         assert!(
             roundtripped.index_of(node_id).is_some(),
-            "Missing expected node after roundtrip: {}", id_str
+            "Missing expected node after roundtrip: {}",
+            id_str
         );
     }
 }
