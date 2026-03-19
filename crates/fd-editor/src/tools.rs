@@ -29,6 +29,7 @@ pub enum ToolKind {
     Arrow,
     Frame,
     Eraser,
+    Lasso,
 }
 
 /// Trait for tools that handle input and produce mutations.
@@ -1261,6 +1262,104 @@ impl Tool for EraserTool {
             _ => vec![],
         }
     }
+}
+
+// ─── Lasso Tool ──────────────────────────────────────────────────────────
+
+/// Lasso (freehand polygon) selection tool.
+///
+/// Draw a polygon around nodes to select all whose bounding box centers
+/// fall inside the polygon. Uses ray-casting for point-in-polygon testing.
+pub struct LassoTool {
+    /// Polygon vertices collected during drag.
+    pub polygon: Vec<(f32, f32)>,
+    /// Whether a lasso gesture is active.
+    pub active: bool,
+}
+
+impl Default for LassoTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl LassoTool {
+    pub fn new() -> Self {
+        Self {
+            polygon: Vec::new(),
+            active: false,
+        }
+    }
+
+    /// Clear all lasso state.
+    pub fn clear(&mut self) {
+        self.polygon.clear();
+        self.active = false;
+    }
+
+    /// Test if a point is inside the lasso polygon using ray-casting.
+    pub fn contains_point(&self, px: f32, py: f32) -> bool {
+        point_in_polygon(px, py, &self.polygon)
+    }
+}
+
+impl Tool for LassoTool {
+    fn kind(&self) -> ToolKind {
+        ToolKind::Lasso
+    }
+
+    /// Returns empty mutations — FdCanvas manages multi-select from
+    /// the completed polygon. The tool tracks polygon state only.
+    fn handle(&mut self, event: &InputEvent, _hit_node: Option<NodeId>) -> Vec<GraphMutation> {
+        match event {
+            InputEvent::PointerDown { x, y, .. } => {
+                self.polygon.clear();
+                self.polygon.push((*x, *y));
+                self.active = true;
+                vec![]
+            }
+            InputEvent::PointerMove { x, y, .. } => {
+                if self.active {
+                    // Subsample: skip if < 3px from last point
+                    if let Some(&(lx, ly)) = self.polygon.last() {
+                        let dist_sq = (x - lx).powi(2) + (y - ly).powi(2);
+                        if dist_sq >= 9.0 {
+                            self.polygon.push((*x, *y));
+                        }
+                    }
+                }
+                vec![]
+            }
+            InputEvent::PointerUp { .. } => {
+                self.active = false;
+                // Polygon stays populated for FdCanvas to query
+                vec![]
+            }
+            _ => vec![],
+        }
+    }
+}
+
+/// Ray-casting algorithm for point-in-polygon test.
+///
+/// Casts a horizontal ray from (px, py) to +∞ and counts edge crossings.
+/// Odd count = inside.
+fn point_in_polygon(px: f32, py: f32, polygon: &[(f32, f32)]) -> bool {
+    if polygon.len() < 3 {
+        return false;
+    }
+    let mut inside = false;
+    let n = polygon.len();
+    let mut j = n - 1;
+    for i in 0..n {
+        let (xi, yi) = polygon[i];
+        let (xj, yj) = polygon[j];
+        if ((yi > py) != (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+            inside = !inside;
+        }
+        j = i;
+    }
+    inside
 }
 
 #[cfg(test)]

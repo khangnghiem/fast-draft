@@ -3212,3 +3212,217 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   .ai-chat-panel { width: 100%; max-width: 100%; }
   #ai-chat-btn { display: none !important; }
 }
+
+/* ─── Quick Color Picker ─── */
+.quick-color-picker {
+  display: none;
+  position: fixed;
+  z-index: 100;
+  gap: 4px;
+  align-items: center;
+  padding: 4px 6px;
+  background: var(--fd-surface, rgba(255,255,255,0.82));
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 0.5px solid var(--fd-border, rgba(0,0,0,0.08));
+  border-radius: 10px;
+  box-shadow: var(--fd-shadow-lg, 0 12px 40px rgba(0,0,0,0.12));
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+.quick-color-picker.visible { display: flex; }
+.qcp-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+.qcp-dot:hover { transform: scale(1.25); }
+.qcp-dot.active { border-color: var(--fd-accent, #007AFF); }
+.qcp-custom {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--fd-text-tertiary, #AEAEB2);
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--fd-text-secondary, #86868B);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 0;
+  flex-shrink: 0;
+}
+.qcp-custom:hover { border-color: var(--fd-accent, #007AFF); color: var(--fd-accent); }
+.qcp-custom input[type="color"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+/* ─── Share Modal ─── */
+.share-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.share-modal.visible { display: flex; }
+.share-card {
+  background: var(--fd-surface-solid, #fff);
+  border: 1px solid var(--fd-border, rgba(0,0,0,0.08));
+  border-radius: 16px;
+  box-shadow: var(--fd-shadow-lg, 0 12px 40px rgba(0,0,0,0.12));
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+}
+.share-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.share-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--fd-text, #1D1D1F);
+}
+.share-close {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--fd-text-secondary, #86868B);
+  padding: 4px;
+  border-radius: 4px;
+}
+.share-close:hover { background: var(--fd-surface-hover); }
+.share-url-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.share-url {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--fd-border, rgba(0,0,0,0.08));
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: var(--mono, monospace);
+  background: var(--fd-input-bg, rgba(142,142,147,0.08));
+  color: var(--fd-text, #1D1D1F);
+  outline: none;
+  min-width: 0;
+}
+.share-url:focus { border-color: var(--fd-accent, #007AFF); }
+.share-copy-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #6C5CE7, #0A84FF);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.share-copy-btn:hover { opacity: 0.9; }
+.share-copy-btn:active { transform: scale(0.96); }
+.share-copy-btn.copied {
+  background: #00B894;
+}
+.share-qr {
+  display: block;
+  margin: 0 auto 12px;
+  border-radius: 8px;
+  image-rendering: pixelated;
+}
+.share-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--fd-text-tertiary, #AEAEB2);
+  margin: 0;
+}
+
+/* ─── Presentation Mode ─── */
+.presentation-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0,0,0,0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.presentation-overlay.hidden { display: none; }
+.presentation-counter {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 16px;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.8);
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 301;
+}
+.presentation-exit {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.7);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  z-index: 301;
+  transition: background 0.15s, color 0.15s;
+}
+.presentation-exit:hover {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
+
+/* ─── Image Drop Zone ─── */
+.canvas-drop-zone {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  background: rgba(0,122,255,0.08);
+  border: 2px dashed var(--fd-accent, #007AFF);
+  border-radius: 12px;
+  color: var(--fd-accent, #007AFF);
+  font-size: 16px;
+  font-weight: 600;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.canvas-drop-zone.visible {
+  display: flex;
+}
