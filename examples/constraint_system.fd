@@ -1,0 +1,95 @@
+# Fast Draft: Constraint System Showcase
+# This example demonstrates all constraint types available in the FD layout engine.
+# 1. center_in: Centers a node within another node or the canvas.
+# 2. offset: Positions a node relative to another node with a fixed (dx, dy) offset.
+# 3. fill_parent: Expands a node to match its parent's dimensions minus an optional padding.
+# 4. absolute: Absolute positioning (escape hatch for drag/pin placements).
+
+style label {
+  font: "Inter" 14
+  fill: #333333
+}
+
+# --- 1. center_in ---
+# Center a main container in the canvas
+rect @center_demo {
+  spec "center_in: canvas"
+  w: 400 h: 200
+  fill: #F0F4F8
+  corner: 12
+  stroke: #CBD5E1 1
+  center_in: canvas
+}
+
+text @center_label "center_in: center_demo" {
+  use: label
+  center_in: center_demo
+}
+
+# --- 2. offset ---
+# Position elements relative to the center demo
+rect @offset_demo_1 {
+  spec "offset: right"
+  w: 120 h: 60
+  fill: #E2E8F0
+  corner: 8
+  offset: @center_demo 440, 0
+}
+
+text @offset_label_1 "offset: 440, 0" {
+  use: label
+  center_in: offset_demo_1
+}
+
+rect @offset_demo_2 {
+  spec "offset: below"
+  w: 120 h: 60
+  fill: #E2E8F0
+  corner: 8
+  offset: @center_demo 0, 240
+}
+
+text @offset_label_2 "offset: 0, 240" {
+  use: label
+  center_in: offset_demo_2
+}
+
+# --- 3. fill_parent ---
+# Fill a parent container with padding
+group @fill_demo_parent {
+  rect @fill_demo_bg {
+    w: 300 h: 150
+    fill: #FDE68A
+    corner: 12
+    offset: @center_demo -340, 0
+  }
+
+  rect @fill_demo_child {
+    spec "fill_parent: pad=16"
+    fill: #F59E0B
+    corner: 8
+    fill_parent: 16
+  }
+
+  text @fill_label "fill_parent: 16" {
+    use: label
+    fill: #FFFFFF
+    center_in: fill_demo_child
+  }
+}
+
+# --- 4. Absolute Positioning ---
+# Escape hatch: direct x/y coordinates
+rect @absolute_demo {
+  spec "absolute: x/y coords"
+  w: 150 h: 80
+  fill: #D8B4FE
+  corner: 8
+  x: 50
+  y: 50
+}
+
+text @absolute_label "x: 50\ny: 50" {
+  use: label
+  center_in: absolute_demo
+}
