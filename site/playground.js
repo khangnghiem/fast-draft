@@ -257,6 +257,7 @@ rect @hero_rect {
     tag: showcase, mvp
   }
   w: 280 h: 140
+  offset: @demo_subtitle 0, 60
   use: accent
   stroke: #5A4BD1 2
   shadow: (0,4,20,#6C5CE740)
@@ -276,6 +277,7 @@ rect @hero_rect {
 ellipse @demo_circle {
   spec "Circle node — demonstrates ellipse type"
   w: 100 h: 100
+  offset: @hero_rect 320, 20
   fill: #00B894
   stroke: #009B77 2
   when :hover {
@@ -288,15 +290,18 @@ ellipse @demo_circle {
 text @demo_heading "Fast Draft Format Demo" {
   w: 400
   use: heading
+  center_in: canvas
 }
 
 text @demo_subtitle "Every keyword, node type, edge, and animation in one file." {
   use: body
+  offset: @demo_heading 0, 40
 }
 
 # 4. Group (with row layout)
 group @button_row {
   layout: row gap=12 pad=0
+  offset: @hero_rect 0, 180
 
   rect @btn_primary {
     spec "Primary action button"
@@ -339,6 +344,7 @@ frame @info_card {
     "Card container — frame with clip and padding"
     done: "layout complete"
   }
+  offset: @button_row 0, 80
   text @card_title "Layout Features" {
     fill: #1A1A2E
     font: "Inter" semibold 18
@@ -365,6 +371,7 @@ frame @info_card {
 path @demo_path {
   spec "Freehand path — pen tool output"
   stroke: #3B82F6 3
+  offset: @demo_circle 140, 0
 }
 
 # 7. Generic node (placeholders)
@@ -375,6 +382,7 @@ path @demo_path {
   }
   fill: #F0EDFC
   corner: 8
+  offset: @bg_shorthand 240, 0
 }
 
 # ─── Grid Layout ───
@@ -382,6 +390,7 @@ path @demo_path {
 group @color_grid {
   spec "Grid layout showcase — 3 columns"
   layout: grid cols=3 gap=12 pad=0
+  offset: @info_card 360, 0
 
   rect @swatch_1 { w: 80 h: 60; fill: #6C5CE7; corner: 8 }
   rect @swatch_2 { w: 80 h: 60; fill: #00B894; corner: 8 }
@@ -399,6 +408,7 @@ frame @place_demo {
   corner: 12
   stroke: #E8E8EC 1
   pad: 12
+  offset: @info_card 0, 260
   text @top_left "TL" {
     font: "Inter" medium 12
     fill: #999999
@@ -424,6 +434,7 @@ rect @locked_element {
   fill: #E8E8EC
   corner: 8
   locked: true
+  offset: @place_demo 240, 0
 }
 
 # ─── Animations: All Triggers & Easing ───
@@ -434,6 +445,7 @@ rect @enter_demo {
   w: 140 h: 80
   fill: #6C5CE7
   corner: 12
+  offset: @place_demo 0, 160
   opacity: 0
   when :enter {
     opacity: 1
@@ -451,6 +463,7 @@ rect @linear_demo {
   w: 100 h: 60
   fill: #DFE6E9
   corner: 10
+  offset: @enter_demo 180, 0
   when :hover {
     fill: #6C5CE7
     ease: linear 300ms
@@ -466,6 +479,7 @@ rect @delay_demo {
   w: 100 h: 60
   fill: #DFE6E9
   corner: 10
+  offset: @linear_demo 140, 0
   when :hover {
     scale: 1.1
     ease: ease_out 300ms
@@ -479,6 +493,7 @@ rect @custom_trigger {
   w: 100 h: 60
   fill: #FFE66D
   corner: 10
+  offset: @delay_demo 140, 0
   when :active {
     fill: #FF6B6B
     rotate: 5
@@ -492,17 +507,18 @@ rect @bg_shorthand {
   spec "bg: shorthand — fill + corner + shadow in one line"
   w: 200 h: 80
   bg: #FFFFFF corner=12 shadow=(0,4,16,#00000015)
+  offset: @enter_demo 0, 120
 }
 
 # ─── Edges: All Styles ───
 
 # Source and target nodes for edges
-rect @node_a { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
-rect @node_b { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
-rect @node_c { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
-rect @node_d { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
-rect @node_e { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
-rect @node_f { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8 }
+rect @node_a { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8; offset: @bg_shorthand 0, 120 }
+rect @node_b { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8; offset: @node_a 200, 0 }
+rect @node_c { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8; offset: @node_b 200, 0 }
+rect @node_d { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8; offset: @node_a 0, 100 }
+rect @node_e { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8; offset: @node_d 200, 0 }
+rect @node_f { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8; offset: @node_e 200, 0 }
 
 # Straight curve, end arrow
 edge @edge_straight @node_a -> @node_b {
@@ -563,32 +579,7 @@ edge @annotated_edge @hero_rect -> @info_card {
   stroke: #6C5CE7 2
   arrow: end
   curve: smooth
-}
-
-# ─── Constraints ───
-
-@demo_heading -> center_in: canvas
-@demo_subtitle -> offset: @demo_heading 0, 40
-@hero_rect -> offset: @demo_subtitle 0, 60
-@demo_circle -> offset: @hero_rect 320, 20
-@button_row -> offset: @hero_rect 0, 180
-@info_card -> offset: @button_row 0, 80
-@color_grid -> offset: @info_card 360, 0
-@place_demo -> offset: @info_card 0, 260
-@locked_element -> offset: @place_demo 240, 0
-@enter_demo -> offset: @place_demo 0, 160
-@linear_demo -> offset: @enter_demo 180, 0
-@delay_demo -> offset: @linear_demo 140, 0
-@custom_trigger -> offset: @delay_demo 140, 0
-@bg_shorthand -> offset: @enter_demo 0, 120
-@demo_path -> offset: @demo_circle 140, 0
-@login_btn -> offset: @bg_shorthand 240, 0
-@node_a -> offset: @bg_shorthand 0, 120
-@node_b -> offset: @node_a 200, 0
-@node_c -> offset: @node_b 200, 0
-@node_d -> offset: @node_a 0, 100
-@node_e -> offset: @node_d 200, 0
-@node_f -> offset: @node_e 200, 0`;
+}`;
 
 // ─── State ───────────────────────────────────────────────────────────────
 let fdCanvas = null;
