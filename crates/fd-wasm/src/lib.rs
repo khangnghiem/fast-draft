@@ -21,8 +21,8 @@ use fd_editor::commands::CommandStack;
 use fd_editor::input::PointerType;
 use fd_editor::sync::{GraphMutation, SyncEngine, expand_group_to_children};
 use fd_editor::tools::{
-    ArrowTool, EllipseTool, EraserTool, PenTool, RectTool, ResizeHandle, SelectTool, TextTool,
-    ToolKind,
+    ArrowTool, EllipseTool, EraserTool, LassoTool, PenTool, RectTool, ResizeHandle, SelectTool,
+    TextTool, ToolKind,
 };
 use fd_render::hit::SpatialIndex;
 use std::collections::hash_map::DefaultHasher;
@@ -47,6 +47,7 @@ pub struct FdCanvas {
     pub(crate) text_tool: TextTool,
     pub(crate) arrow_tool: ArrowTool,
     pub(crate) eraser_tool: EraserTool,
+    pub(crate) lasso_tool: LassoTool,
     /// Pending text flush after eraser gesture (batched to pointer-up).
     pub(crate) erase_pending_flush: bool,
     pub(crate) width: f64,
@@ -108,6 +109,7 @@ impl FdCanvas {
             text_tool: TextTool::new(),
             arrow_tool: ArrowTool::new(),
             eraser_tool: EraserTool::new(),
+            lasso_tool: LassoTool::new(),
             erase_pending_flush: false,
             width,
             height,
@@ -243,6 +245,7 @@ impl FdCanvas {
             "arrow" => ToolKind::Arrow,
             "frame" => ToolKind::Frame,
             "eraser" => ToolKind::Eraser,
+            "lasso" => ToolKind::Lasso,
             _ => ToolKind::Select,
         };
         if new_tool != self.active_tool {

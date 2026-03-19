@@ -115,6 +115,10 @@ impl FdCanvas {
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
             ToolKind::Hand => vec![],
             ToolKind::Eraser => unreachable!("handled above"),
+            ToolKind::Lasso => {
+                self.lasso_tool.handle(&event, hit);
+                vec![]
+            }
         };
         let changed = self.apply_mutations(mutations);
 
@@ -225,6 +229,10 @@ impl FdCanvas {
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
             ToolKind::Hand => vec![],
             ToolKind::Eraser => vec![],
+            ToolKind::Lasso => {
+                self.lasso_tool.handle(&event, hit);
+                vec![]
+            }
         };
         let changed = self.apply_mutations(mutations);
         let visual_changed = changed || self.select_tool.marquee_rect.is_some() || hovered_changed;
@@ -416,6 +424,30 @@ impl FdCanvas {
             ToolKind::Arrow => self.arrow_tool.handle(&event, hit),
             ToolKind::Hand => vec![],
             ToolKind::Eraser => vec![],
+            ToolKind::Lasso => {
+                self.lasso_tool.handle(&event, hit);
+                // Select all nodes whose center is inside the lasso polygon
+                if self.lasso_tool.polygon.len() >= 3 {
+                    let bounds = self.engine.current_bounds();
+                    let mut selected = Vec::new();
+                    for (&idx, b) in bounds {
+                        if idx == self.engine.graph.root {
+                            continue;
+                        }
+                        let cx = b.x + b.width / 2.0;
+                        let cy = b.y + b.height / 2.0;
+                        if self.lasso_tool.contains_point(cx, cy)
+                            && let Some(node) = self.engine.graph.graph.node_weight(idx)
+                        {
+                            selected.push(node.id);
+                        }
+                    }
+                    self.select_tool.selected = selected.clone();
+                    self.select_tool.visual_highlight = selected;
+                }
+                self.lasso_tool.clear();
+                vec![]
+            }
         };
         let changed = self.apply_mutations(mutations);
 
@@ -425,7 +457,8 @@ impl FdCanvas {
         // mutations (the AddNode happened during PointerDown).
         let tool_switched = effective != ToolKind::Select
             && effective != ToolKind::Eraser
-            && effective != ToolKind::Hand;
+            && effective != ToolKind::Hand
+            && effective != ToolKind::Lasso;
 
         // Flush text after gesture ends.
         // Also flush when a draw tool completes (tool_switched) — the
@@ -510,6 +543,7 @@ impl FdCanvas {
         self.arrow_tool.source_node = None;
         self.arrow_tool.target_node = None;
         self.eraser_tool.clear();
+        self.lasso_tool.clear();
 
         // Reset interaction state
         self.pointer_down_pos = None;

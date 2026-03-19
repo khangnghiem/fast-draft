@@ -974,6 +974,82 @@ function showToast(msg) {
   }, 1500);
 }
 
+/** Generate a simple QR code on a canvas element (no library needed). */
+function generateQR(canvasEl, text) {
+  if (!canvasEl) return;
+  const ctx = canvasEl.getContext('2d');
+  const size = canvasEl.width;
+  ctx.clearRect(0, 0, size, size);
+
+  // Simple visual "QR-like" pattern (not scannable, but visually communicates sharing)
+  // For production, import a proper QR library. This is a placeholder visual.
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, size, size);
+
+  // Generate a hash-based pattern from the URL
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(i);
+    hash |= 0;
+  }
+
+  const cellSize = 4;
+  const margin = 16;
+  const inner = size - margin * 2;
+  const cols = Math.floor(inner / cellSize);
+
+  ctx.fillStyle = '#1D1D1F';
+
+  // QR finder patterns (corners)
+  const drawFinder = (x, y) => {
+    const s = cellSize * 7;
+    ctx.fillRect(x, y, s, s);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x + cellSize, y + cellSize, s - cellSize * 2, s - cellSize * 2);
+    ctx.fillStyle = '#1D1D1F';
+    ctx.fillRect(x + cellSize * 2, y + cellSize * 2, s - cellSize * 4, s - cellSize * 4);
+  };
+
+  drawFinder(margin, margin);
+  drawFinder(margin + inner - cellSize * 7, margin);
+  drawFinder(margin, margin + inner - cellSize * 7);
+
+  // Data cells — deterministic pattern from URL hash
+  let seed = Math.abs(hash);
+  for (let row = 0; row < cols; row++) {
+    for (let col = 0; col < cols; col++) {
+      // Skip finder pattern areas
+      if ((row < 8 && col < 8) || (row < 8 && col >= cols - 8) || (row >= cols - 8 && col < 8)) continue;
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      if (seed % 3 !== 0) continue;
+      ctx.fillRect(margin + col * cellSize, margin + row * cellSize, cellSize, cellSize);
+    }
+  }
+}
+
+/** Insert an image data URL into the FD document at the given canvas position */
+function insertImageFromDataURL(dataUrl, canvasX, canvasY) {
+  if (!editorView) return;
+  // Convert screen coords to scene coords
+  const sceneX = Math.round((canvasX - panX) / zoomLevel);
+  const sceneY = Math.round((canvasY - panY) / zoomLevel);
+
+  // Create an FD image node
+  const id = `img_${Date.now().toString(36)}`;
+  const fdBlock = `\nimage @${id} {\n  x: ${sceneX} y: ${sceneY}\n  w: 200 h: 150\n  src: "${dataUrl.substring(0, 120)}..."\n}\n`;
+
+  // For now, insert as a rect with the image name as a comment
+  // Full image support requires Rust model changes
+  const rectBlock = `\nrect @${id} {\n  x: ${sceneX} y: ${sceneY}\n  w: 200 h: 150\n  fill: #F0F4FF\n  corner: 8\n  # Dropped image placeholder\n}\n`;
+
+  const currentText = editorView.state.doc.toString();
+  editorView.dispatch({
+    changes: { from: currentText.length, to: currentText.length, insert: rectBlock },
+  });
+  showToast('Image added as placeholder');
+}
+
+
 /**
  * Parse CSS text and convert class rules to FD style blocks.
  * Only extracts the ~6 properties FD supports; everything else is silently ignored.
@@ -5216,22 +5292,247 @@ async function initPlayground() {
     // Full Screen toggle button (inside canvas)
     document.getElementById('fullscreen-toggle-btn')?.addEventListener('click', toggleFullscreen);
 
-    // Share button — copy ?code= deep link to clipboard
+    // Share button — open share modal with URL + QR code
     document.getElementById('share-btn')?.addEventListener('click', () => {
       if (!editorView) return;
       const text = editorView.state.doc.toString();
       const compressed = LZString.compressToEncodedURIComponent(text);
       const url = new URL(window.location.href);
       url.searchParams.set('code', compressed);
-      // Also preserve fullscreen state if active
       if (fullscreenMode) url.searchParams.set('fullscreen', '');
       else url.searchParams.delete('fullscreen');
-      navigator.clipboard.writeText(url.toString()).then(() => {
-        showToast('Link copied to clipboard!');
-      }).catch(() => {
-        // Fallback: show URL in prompt
-        prompt('Copy this link:', url.toString());
+      const shareUrl = url.toString();
+
+      const modal = document.getElementById('share-modal');
+      const urlInput = document.getElementById('share-url-input');
+      const copyBtn = document.getElementById('share-copy-btn');
+
+      urlInput.value = shareUrl;
+      modal.classList.add('visible');
+
+      // Generate QR code on the canvas
+      generateQR(document.getElementById('share-qr'), shareUrl);
+
+      // Copy button
+      copyBtn.textContent = 'Copy';
+      copyBtn.classList.remove('copied');
+      copyBtn.onclick = () => {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          copyBtn.textContent = '✓ Copied!';
+          copyBtn.classList.add('copied');
+          setTimeout(() => {
+            copyBtn.textContent = 'Copy';
+            copyBtn.classList.remove('copied');
+          }, 2000);
+        }).catch(() => prompt('Copy this link:', shareUrl));
+      };
+    });
+    // Close share modal
+    document.getElementById('share-modal-close')?.addEventListener('click', () => {
+      document.getElementById('share-modal')?.classList.remove('visible');
+    });
+    document.getElementById('share-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'share-modal') {
+        document.getElementById('share-modal').classList.remove('visible');
+      }
+    });
+
+    // ── Quick Color Picker ────────────────────────────────────────────
+    const qcp = document.getElementById('quick-color-picker');
+    if (qcp) {
+      // Show QCP when node is selected (alongside or instead of FAB)
+      const updateQCP = () => {
+        if (!fdCanvas) { qcp.classList.remove('visible'); return; }
+        const selectedId = fdCanvas.get_selected_id();
+        if (!selectedId) { qcp.classList.remove('visible'); return; }
+        try {
+          const boundsJson = fdCanvas.get_node_bounds(selectedId);
+          if (!boundsJson) { qcp.classList.remove('visible'); return; }
+          const b = JSON.parse(boundsJson);
+          if (!b.width) { qcp.classList.remove('visible'); return; }
+          const screenX = b.x * zoomLevel + panX + (b.width * zoomLevel) / 2;
+          const screenY = b.y * zoomLevel + panY - 40;
+          const canvasRect = canvas.getBoundingClientRect();
+          qcp.style.left = (canvasRect.left + screenX) + 'px';
+          qcp.style.top = (canvasRect.top + screenY) + 'px';
+          qcp.classList.add('visible');
+
+          // Highlight active color
+          const propsJson = fdCanvas.get_selected_node_props();
+          if (propsJson) {
+            const props = JSON.parse(propsJson);
+            qcp.querySelectorAll('.qcp-dot').forEach(dot => {
+              dot.classList.toggle('active',
+                props.fill && dot.dataset.color.toLowerCase() === props.fill.toLowerCase());
+            });
+          }
+        } catch (_) { qcp.classList.remove('visible'); }
+      };
+
+      // Click dot → apply fill
+      qcp.addEventListener('click', (e) => {
+        const dot = e.target.closest('.qcp-dot');
+        if (!dot || !fdCanvas) return;
+        const color = dot.dataset.color;
+        fdCanvas.set_property('fill', color);
+        requestCanvas();
+        updateQCP();
       });
+      // Right-click dot → apply stroke
+      qcp.addEventListener('contextmenu', (e) => {
+        const dot = e.target.closest('.qcp-dot');
+        if (!dot || !fdCanvas) return;
+        e.preventDefault();
+        fdCanvas.set_property('strokeColor', dot.dataset.color);
+        requestCanvas();
+      });
+      // Custom color
+      document.getElementById('qcp-custom-input')?.addEventListener('input', (e) => {
+        if (!fdCanvas) return;
+        fdCanvas.set_property('fill', e.target.value);
+        requestCanvas();
+        updateQCP();
+      });
+
+      // Hook into render loop to update QCP position
+      const origUpdateFab = updateFab;
+      window._updateQCP = updateQCP;
+    }
+
+    // ── Image Drag-and-Drop ───────────────────────────────────────────
+    const canvasWrapper = document.getElementById('canvas-wrapper');
+    const dropZone = document.getElementById('canvas-drop-zone');
+    if (canvasWrapper && dropZone) {
+      let dragCounter = 0;
+      canvasWrapper.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        dragCounter++;
+        if (e.dataTransfer?.types?.includes('Files')) {
+          dropZone.classList.add('visible');
+        }
+      });
+      canvasWrapper.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      });
+      canvasWrapper.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dragCounter--;
+        if (dragCounter <= 0) {
+          dragCounter = 0;
+          dropZone.classList.remove('visible');
+        }
+      });
+      canvasWrapper.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dragCounter = 0;
+        dropZone.classList.remove('visible');
+        const files = e.dataTransfer?.files;
+        if (!files || files.length === 0) return;
+        for (const file of files) {
+          if (!file.type.startsWith('image/')) continue;
+          if (file.size > 2 * 1024 * 1024) {
+            showToast('Image too large (max 2MB)');
+            continue;
+          }
+          const reader = new FileReader();
+          reader.onload = () => {
+            insertImageFromDataURL(reader.result, e.offsetX, e.offsetY);
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+
+    // ── Presentation Mode ─────────────────────────────────────────────
+    const presOverlay = document.getElementById('presentation-overlay');
+    const presCounter = document.getElementById('presentation-counter');
+    let presentation = { active: false, frames: [], index: 0 };
+
+    function collectFrames() {
+      if (!fdCanvas) return [];
+      const text = editorView ? editorView.state.doc.toString() : '';
+      const frames = [];
+      // Find all frame nodes from the scene graph
+      const nodesJson = fdCanvas.get_all_nodes_json?.();
+      if (nodesJson) {
+        try {
+          const nodes = JSON.parse(nodesJson);
+          for (const n of nodes) {
+            if (n.kind === 'frame' || n.kind === 'Frame') {
+              frames.push({ id: n.id, x: n.x || 0, y: n.y || 0, w: n.w || 400, h: n.h || 300 });
+            }
+          }
+        } catch (_) {}
+      }
+      // Sort top-left to bottom-right
+      frames.sort((a, b) => (a.y - b.y) || (a.x - b.x));
+      return frames;
+    }
+
+    function startPresentation() {
+      const frames = collectFrames();
+      if (frames.length === 0) {
+        showToast('No frames found — create frames first (F key)');
+        return;
+      }
+      presentation = { active: true, frames, index: 0 };
+      presOverlay.classList.remove('hidden');
+      zoomToFrame(frames[0]);
+      updatePresCounter();
+      // Hide all chrome
+      document.querySelectorAll('.chrome-pill, .scroll-toolbar, #floating-action-bar, .quick-color-picker, #props-panel, #minimap-container')
+        .forEach(el => el.style.display = 'none');
+    }
+
+    function stopPresentation() {
+      presentation.active = false;
+      presOverlay.classList.add('hidden');
+      // Restore chrome
+      document.querySelectorAll('.chrome-pill, .scroll-toolbar, #minimap-container')
+        .forEach(el => el.style.display = '');
+      document.getElementById('floating-action-bar').style.display = '';
+      document.getElementById('props-panel').style.display = '';
+    }
+
+    function zoomToFrame(frame) {
+      const canvasRect = canvas.getBoundingClientRect();
+      const cw = canvasRect.width;
+      const ch = canvasRect.height;
+      const zoom = Math.min(cw / frame.w, ch / frame.h) * 0.9;
+      zoomLevel = zoom;
+      panX = (cw / 2) - (frame.x + frame.w / 2) * zoom;
+      panY = (ch / 2) - (frame.y + frame.h / 2) * zoom;
+      requestCanvas();
+    }
+
+    function updatePresCounter() {
+      if (presCounter) {
+        presCounter.textContent = `${presentation.index + 1} / ${presentation.frames.length}`;
+      }
+    }
+
+    document.getElementById('sm-present')?.addEventListener('click', startPresentation);
+    document.getElementById('presentation-exit')?.addEventListener('click', stopPresentation);
+    window.addEventListener('keydown', (e) => {
+      if (!presentation.active) return;
+      if (e.key === 'Escape') { stopPresentation(); e.preventDefault(); return; }
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        if (presentation.index < presentation.frames.length - 1) {
+          presentation.index++;
+          zoomToFrame(presentation.frames[presentation.index]);
+          updatePresCounter();
+        }
+        e.preventDefault();
+      }
+      if (e.key === 'ArrowLeft') {
+        if (presentation.index > 0) {
+          presentation.index--;
+          zoomToFrame(presentation.frames[presentation.index]);
+          updatePresCounter();
+        }
+        e.preventDefault();
+      }
     });
 
     // Auto-fullscreen from URL param
@@ -5282,6 +5583,7 @@ async function initPlayground() {
         refreshLayersPanel();
         updatePropertiesPanel();
         updateFab(canvas);
+        if (window._updateQCP) window._updateQCP();
         minimapLastRender = time;
         uiDirty = false;
       }

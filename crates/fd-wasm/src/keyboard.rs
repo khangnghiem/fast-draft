@@ -128,6 +128,10 @@ impl FdCanvas {
                 self.set_tool("eraser");
                 (false, true)
             }
+            ShortcutAction::ToolLasso => {
+                self.set_tool("lasso");
+                (false, true)
+            }
             ShortcutAction::ToolHand => {
                 self.set_tool("hand");
                 (false, true)
@@ -274,6 +278,7 @@ pub(crate) fn tool_kind_to_name(kind: ToolKind) -> &'static str {
         ToolKind::Arrow => "arrow",
         ToolKind::Frame => "frame",
         ToolKind::Eraser => "eraser",
+        ToolKind::Lasso => "lasso",
     }
 }
 
@@ -288,6 +293,7 @@ pub(crate) fn action_to_name(action: ShortcutAction) -> &'static str {
         ShortcutAction::ToolArrow => "toolArrow",
         ShortcutAction::ToolFrame => "toolFrame",
         ShortcutAction::ToolEraser => "toolEraser",
+        ShortcutAction::ToolLasso => "toolLasso",
         ShortcutAction::ToggleLastTool => "toggleLastTool",
         ShortcutAction::Undo => "undo",
         ShortcutAction::Redo => "redo",

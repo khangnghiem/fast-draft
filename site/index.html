@@ -34,6 +34,12 @@
       });
     })();
   </script>
+  <!-- Service Worker for instant WASM loading on repeat visits -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(function() {});
+    }
+  </script>
 </head>
 <body>
 
@@ -110,6 +116,8 @@
                   <button class="chrome-dropdown-item" id="renamify-btn"><span class="cd-icon">✦</span><span class="cd-label">Renamify</span></button>
                   <button class="chrome-dropdown-item" id="sm-design-review" data-setting="design-review"><span class="cd-icon">✦</span><span class="cd-label">Full Design Review</span></button>
                   <div class="chrome-dropdown-sep"></div>
+                  <button class="chrome-dropdown-item" id="sm-present"><span class="cd-icon">▶</span><span class="cd-label">Present</span></button>
+                  <div class="chrome-dropdown-sep"></div>
                   <button class="chrome-dropdown-item" data-setting="copy-png" id="sm-copy-png"><span class="cd-icon">📷</span><span class="cd-label">Copy as PNG</span></button>
                   <button class="chrome-dropdown-item" data-setting="export-svg" id="sm-export-svg"><span class="cd-icon">📄</span><span class="cd-label">Download SVG</span></button>
                   <button class="chrome-dropdown-item" data-setting="export-html" id="sm-export-html"><span class="cd-icon">🌐</span><span class="cd-label">Download HTML</span></button>
@@ -185,6 +193,7 @@
                 <button class="ft-tool-btn" data-tool="arrow"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M198,64V168a6,6,0,0,1-12,0V78.48L68.24,196.24a6,6,0,0,1-8.48-8.48L177.52,70H88a6,6,0,0,1,0-12H192A6,6,0,0,1,198,64Z"/></svg><span class="ft-tooltip">Arrow<span class="tt-shortcut">A</span></span></button>
                 <button class="ft-tool-btn" data-tool="text"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M206,56V88a6,6,0,0,1-12,0V62H134V194h26a6,6,0,0,1,0,12H96a6,6,0,0,1,0-12h26V62H62V88a6,6,0,0,1-12,0V56a6,6,0,0,1,6-6H200A6,6,0,0,1,206,56Z"/></svg><span class="ft-tooltip">Text<span class="tt-shortcut">T</span></span></button>
                 <button class="ft-tool-btn" data-tool="eraser"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M223.57,81.81,182.19,40.43a22,22,0,0,0-31.12,0L32.43,159.07a22,22,0,0,0,0,31.11L62.5,220.24A6,6,0,0,0,66.74,222H216a6,6,0,0,0,0-12H126.49l97.08-97.08A22,22,0,0,0,223.57,81.81ZM109.51,210H69.22l-28.3-28.3a10,10,0,0,1,0-14.15L96,112.48,151.52,168ZM215.08,104.44,160,159.51,104.48,104l55.08-55.07a10,10,0,0,1,14.14,0l41.38,41.37A10,10,0,0,1,215.08,104.44Z"/></svg><span class="ft-tooltip">Eraser<span class="tt-shortcut">E</span></span></button>
+                <button class="ft-tool-btn" data-tool="lasso"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,0,0,52.3,193.4c1.2,1.4,2.5,2.8,3.8,4.1a8,8,0,0,0,5.7,2.4,8.2,8.2,0,0,0,5.7-2.4,7.9,7.9,0,0,0,0-11.3c-.7-.7-1.3-1.5-2-2.2A88,88,0,1,1,216,128a87.6,87.6,0,0,1-22.3,58.5,8,8,0,0,0,.7,11.3,7.8,7.8,0,0,0,5.3,2,8,8,0,0,0,6-2.7A104,104,0,0,0,128,24Z"/><circle cx="128" cy="208" r="16"/></svg><span class="ft-tooltip">Lasso<span class="tt-shortcut">L</span></span></button>
 
               </div>
               <div class="scroll-handle handle-end" title="Drag to move, click to roll">
@@ -275,6 +284,8 @@
               <div class="loading-progress"><div class="loading-progress-bar"></div></div>
               <p class="loading-text" id="loading-status">Loading engine…</p>
             </div>
+            <!-- Image drop zone overlay -->
+            <div id="canvas-drop-zone" class="canvas-drop-zone">Drop image here</div>
             <div class="panel-resize-handle props-handle" id="props-resize"></div>
             <div class="panel-restore-strip props-restore" id="props-restore" title="Show properties panel"></div>
             </div><!-- /canvas-content -->
@@ -292,6 +303,44 @@
       </div>
     </div>
   </main>
+
+  <!-- Quick Color Picker -->
+  <div id="quick-color-picker" class="quick-color-picker">
+    <button class="qcp-dot" data-color="#1D1D1F" style="background:#1D1D1F" title="Black"></button>
+    <button class="qcp-dot" data-color="#E06C75" style="background:#E06C75" title="Red"></button>
+    <button class="qcp-dot" data-color="#6C5CE7" style="background:#6C5CE7" title="Purple"></button>
+    <button class="qcp-dot" data-color="#00B894" style="background:#00B894" title="Green"></button>
+    <button class="qcp-dot" data-color="#3B82F6" style="background:#3B82F6" title="Blue"></button>
+    <button class="qcp-dot" data-color="#FF6B6B" style="background:#FF6B6B" title="Coral"></button>
+    <button class="qcp-dot" data-color="#FFE66D" style="background:#FFE66D" title="Yellow"></button>
+    <button class="qcp-dot" data-color="#F5F5F7" style="background:#F5F5F7;border:1px solid rgba(0,0,0,0.15)" title="White"></button>
+    <button class="qcp-custom" id="qcp-custom-btn" title="Custom color">
+      <input type="color" id="qcp-custom-input" value="#007AFF">
+      +
+    </button>
+  </div>
+
+  <!-- Share Modal -->
+  <div id="share-modal" class="share-modal">
+    <div class="share-card">
+      <div class="share-header">
+        <span class="share-title">🔗 Share this design</span>
+        <button class="share-close" id="share-modal-close">✕</button>
+      </div>
+      <div class="share-url-row">
+        <input type="text" id="share-url-input" class="share-url" readonly>
+        <button class="share-copy-btn" id="share-copy-btn">Copy</button>
+      </div>
+      <canvas id="share-qr" class="share-qr" width="160" height="160"></canvas>
+      <p class="share-hint">Anyone with this link can view your design</p>
+    </div>
+  </div>
+
+  <!-- Presentation Mode -->
+  <div id="presentation-overlay" class="presentation-overlay hidden">
+    <div class="presentation-counter" id="presentation-counter">1 / 1</div>
+    <button class="presentation-exit" id="presentation-exit" title="Exit (Esc)">✕ Exit</button>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="context-menu.js?v=0.11.5"></script>

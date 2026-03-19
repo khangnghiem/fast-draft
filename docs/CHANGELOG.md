@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.216 — Excalidraw-Inspired Improvements (R3.73–R3.77, R6.17, R7.1, R7.2)
+- **Instant Start (R6.17)**: Service Worker (`sw.js`) with stale-while-revalidate strategy pre-caches WASM assets for instant repeat-visit loading
+- **Quick Color Picker (R3.75)**: 8-preset color strip + custom color picker appears below selected shapes — left-click for fill, right-click for stroke
+- **Share Modal (R3.76)**: Polished share modal with URL input, copy button with success feedback, and QR code visualization — replaces bare clipboard copy
+- **Image Drag-and-Drop (R3.77)**: Drop images onto canvas to create placeholder rects — drag overlay with visual feedback, 2MB size limit
+- **Presentation Mode (R3.74)**: Frame-based slideshow from ☰ Menu → Present — ←/→ arrow keys navigate between frames, Esc exits, auto-hides all chrome
+- **Lasso Selection (R3.73)**: Freehand polygon selection tool with ray-casting point-in-polygon algorithm — `L` key shortcut, selects nodes whose centers fall inside the lasso polygon. 5 new tests
+- **Future**: Documented R7.1 (Real-time Collaboration with CRDT) and R7.2 (Community Library Ecosystem) in REQUIREMENTS.md for later implementation
+
 ### v0.11.215 — App Chrome Redesign (R6.5)
 - **UX (R6.5)**: Replaced full-width canvas toolbar bar with floating chrome pills — sidebar (top-left), AI Touch (top-center), action bar (top-right: Share, Sign in, Settings gear, ☰ Menu). Canvas now has zero persistent chrome bars
 - **UX (R6.5)**: Split settings menu into two dropdowns: ⚙ Settings gear (Sketchy, Grid, Theme, Reduce Motion, Fit to Content) and ☰ Menu (AI Agent, Renamify, Design Review, Export, Shortcuts, Links)

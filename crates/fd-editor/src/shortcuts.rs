@@ -23,6 +23,7 @@ pub enum ShortcutAction {
     ToolArrow,
     ToolFrame,
     ToolEraser,
+    ToolLasso,
     /// Toggle between current and previous tool (Screenbrush: Tab).
     ToggleLastTool,
 
@@ -158,6 +159,7 @@ impl ShortcutMap {
             "a" | "A" => Some(ShortcutAction::ToolArrow),
             "f" | "F" => Some(ShortcutAction::ToolFrame),
             "e" | "E" => Some(ShortcutAction::ToolEraser),
+            "l" | "L" => Some(ShortcutAction::ToolLasso),
             "h" | "H" => Some(ShortcutAction::ToolHand),
             "0" => Some(ShortcutAction::ZoomReset),
             // Screenbrush: Tab = toggle between two most-used tools

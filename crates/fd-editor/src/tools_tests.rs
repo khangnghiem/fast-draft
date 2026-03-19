@@ -2392,3 +2392,144 @@ fn rect_tool_without_frame_mode_creates_rect() {
         _ => panic!("expected AddNode"),
     }
 }
+
+// ─── Lasso Tool Tests ────────────────────────────────────────────────────
+
+#[test]
+fn lasso_tool_lifecycle() {
+    let mut tool = LassoTool::new();
+    assert!(!tool.active);
+    assert!(tool.polygon.is_empty());
+    assert_eq!(tool.kind(), ToolKind::Lasso);
+
+    // PointerDown starts lasso
+    let muts = tool.handle(
+        &InputEvent::PointerDown {
+            x: 10.0,
+            y: 10.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert!(muts.is_empty());
+    assert!(tool.active);
+    assert_eq!(tool.polygon.len(), 1);
+
+    // PointerMove adds points (must be ≥3px from last)
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 20.0,
+            y: 10.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(tool.polygon.len(), 2);
+
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 20.0,
+            y: 20.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(tool.polygon.len(), 3);
+
+    // PointerUp ends lasso but polygon stays
+    tool.handle(
+        &InputEvent::PointerUp {
+            x: 20.0,
+            y: 20.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert!(!tool.active);
+    assert_eq!(tool.polygon.len(), 3, "polygon should remain after up");
+}
+
+#[test]
+fn lasso_tool_point_in_polygon() {
+    let mut tool = LassoTool::new();
+    // Create a square polygon: (0,0) → (100,0) → (100,100) → (0,100)
+    tool.polygon = vec![(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)];
+
+    assert!(tool.contains_point(50.0, 50.0), "center should be inside");
+    assert!(
+        tool.contains_point(10.0, 10.0),
+        "near corner should be inside"
+    );
+    assert!(
+        !tool.contains_point(150.0, 50.0),
+        "outside right should be outside"
+    );
+    assert!(
+        !tool.contains_point(-10.0, 50.0),
+        "outside left should be outside"
+    );
+    assert!(
+        !tool.contains_point(50.0, 150.0),
+        "outside bottom should be outside"
+    );
+}
+
+#[test]
+fn lasso_tool_subsampling_skips_close_points() {
+    let mut tool = LassoTool::new();
+    tool.active = true;
+    tool.polygon.push((0.0, 0.0));
+
+    // Move only 1px away — should NOT add point (threshold is 3px → 9px²)
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 1.0,
+            y: 1.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(tool.polygon.len(), 1, "close move should be skipped");
+
+    // Move 5px away — should add point
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 5.0,
+            y: 0.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(tool.polygon.len(), 2, "far move should be added");
+}
+
+#[test]
+fn lasso_tool_clear_resets() {
+    let mut tool = LassoTool::new();
+    tool.active = true;
+    tool.polygon = vec![(1.0, 2.0), (3.0, 4.0), (5.0, 6.0)];
+
+    tool.clear();
+    assert!(!tool.active);
+    assert!(tool.polygon.is_empty());
+}
+
+#[test]
+fn lasso_tool_fewer_than_3_points_never_contains() {
+    let tool = LassoTool {
+        polygon: vec![(0.0, 0.0), (100.0, 100.0)],
+        active: false,
+    };
+    assert!(
+        !tool.contains_point(50.0, 50.0),
+        "fewer than 3 points should never contain any point"
+    );
+
+    let empty_tool = LassoTool::new();
+    assert!(!empty_tool.contains_point(0.0, 0.0));
+}

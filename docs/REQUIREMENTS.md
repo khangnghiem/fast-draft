@@ -368,3 +368,47 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | arrow-shift-snap / shift-constraint | R3.71, R3.54, R3.66 |
 | mcp-server          | R4.25                                                                                   |
 | ai-chat / agent     | R4.26                                                                                   |
+| collaboration       | R7.1                                                                                    |
+| community-library   | R7.2                                                                                    |
+| lasso               | R3.73                                                                                   |
+| presentation        | R3.74                                                                                   |
+| quick-color-picker  | R3.75                                                                                   |
+| share-modal         | R3.76                                                                                   |
+| image-drop          | R3.77                                                                                   |
+| instant-start       | R6.17                                                                                   |
+
+---
+
+## Future Requirements (Deferred)
+
+### R7.1 — Real-Time Collaboration
+
+**Priority**: Low (multi-week project)
+**Inspired by**: Excalidraw live collaboration
+
+Requirements:
+- WebSocket-based multi-cursor support
+- CRDT or OT for conflict-free concurrent editing
+- Presence indicators (colored cursors with names)
+- Room-based sessions with shareable join links
+- Backend infrastructure needed: WebSocket server, session management, state persistence
+- Consider Yjs or Automerge for CRDT integration
+- Must work with both FD text and canvas sync engine
+
+**Architecture considerations**: FD's bidirectional sync engine already tracks mutations as `GraphMutation`s — these could be serialized and broadcast. The SyncEngine would need to handle remote mutations without triggering re-parse loops.
+
+### R7.2 — Community Library Ecosystem
+
+**Priority**: Low (multi-week project)
+**Inspired by**: Excalidraw library panel
+
+Requirements:
+- Shareable component libraries (.fdlib format)
+- Browse + search community-contributed templates
+- One-click import of library items onto canvas
+- Library panel UI in sidebar
+- Backend infrastructure needed: library registry API, CDN for library assets, user accounts
+- Version management for libraries
+- Categories: UI kits, icons, wireframes, flowcharts, architecture diagrams
+
+**Format consideration**: Libraries would be `.fd` files bundled with metadata (name, author, tags, preview thumbnail). The FD format already supports styles and components via `use:` and `style` blocks — libraries would extend this pattern.
