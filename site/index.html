@@ -63,49 +63,64 @@
 
         <div class="playground-canvas">
           <div id="canvas-wrapper">
-            <!-- Top Toolbar (Apple HIG frosted bar) -->
-            <div id="canvas-toolbar">
-              <div class="tb-zone tb-left fs-hide">
-                <button class="tool-btn layers-pill" id="layers-toggle-pill" title="Toggle Layers (\)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="14" height="14" rx="2"/><line x1="5.5" y1="1" x2="5.5" y2="15"/><line x1="1" y1="5" x2="5.5" y2="5"/><line x1="1" y1="9" x2="5.5" y2="9"/></svg></button>
-                <button id="mobile-code-toggle" title="Toggle Code Editor">{ } Code</button>
-                <button class="tool-btn" id="ai-touch-btn" title="AI Touch — refine + review selected (no selection = full audit)">✦ AI Touch</button>
-                <button class="tool-btn" id="ai-chat-btn" title="AI Agent — chat about your design">✦ Agent</button>
-                <button class="tool-btn" id="renamify-btn" title="Renamify — rename anonymous node IDs">✦ Renamify</button>
-              </div>
-              <div class="tb-zone tb-right">
-                <button id="mobile-layers-toggle" title="Toggle Layers">☰ Layers</button>
-                <button class="tool-btn" id="specs-toggle-btn" title="Specs Panel (⌘⇧N)">📝</button>
+            <!-- ─── Floating Chrome (no toolbar bar) ─── -->
 
-                <span class="tb-spacer"></span>
-                <span class="fs-hide" id="canvas-status">Ready</span>
-                <button class="tool-btn" id="share-btn" title="Share playground link">🔗</button>
-                <button id="canvas-theme-toggle" class="theme-pill" title="Toggle canvas theme" aria-label="Toggle canvas theme">
-                  <span class="theme-pill-icon theme-pill-sun">☀️</span>
-                  <span class="theme-pill-icon theme-pill-moon">🌙</span>
-                  <span class="theme-pill-slider"></span>
-                </button>
-                <div class="settings-dropdown-container fs-hide" id="settings-dropdown-container">
-                  <button class="tool-btn" id="settings-menu-btn" title="Settings &amp; tools">☰</button>
-                  <div class="settings-menu" id="settings-menu">
-                    <button class="settings-menu-item" id="sm-sketchy-toggle" data-setting="sketchy"><span class="sm-icon">✏️</span><span class="sm-label">Sketchy</span></button>
-                    <button class="settings-menu-item" id="sm-grid-toggle" data-setting="grid"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span></button>
-                    <button class="settings-menu-item" id="sm-motion-toggle" data-setting="reduce-motion"><span class="sm-icon">🚫</span><span class="sm-label">Reduce Motion</span></button>
-                    <div class="settings-menu-sep"></div>
-                    <button class="settings-menu-item" data-setting="fit"><span class="sm-icon">⊡</span><span class="sm-label">Fit to Content</span></button>
-                    <div class="settings-menu-sep"></div>
-                    <button class="settings-menu-item" data-setting="copy-png" id="sm-copy-png"><span class="sm-icon">📷</span><span class="sm-label">Copy as PNG</span></button>
-                    <button class="settings-menu-item" data-setting="export-svg" id="sm-export-svg"><span class="sm-icon">📄</span><span class="sm-label">Download SVG</span></button>
-                    <button class="settings-menu-item" data-setting="export-html" id="sm-export-html"><span class="sm-icon">🌐</span><span class="sm-label">Download HTML</span></button>
-                    <button class="settings-menu-item" data-setting="import-css" id="sm-import-css"><span class="sm-icon">🎨</span><span class="sm-label">Import CSS</span></button>
-                    <button class="settings-menu-item" id="sm-design-review" data-setting="design-review"><span class="sm-icon">✦</span><span class="sm-label">Full Design Review</span></button>
-                    <div class="settings-menu-sep"></div>
-                    <button class="settings-menu-item" id="sm-shortcuts"><span class="sm-icon">⌨️</span><span class="sm-label">Keyboard Shortcuts</span><span class="sm-shortcut">?</span></button>
-                    <div class="settings-menu-sep"></div>
-                    <a class="settings-menu-item" href="/about/"><span class="sm-icon">ℹ️</span><span class="sm-label">About Fast Draft</span></a>
-                    <a class="settings-menu-item" href="/docs/"><span class="sm-icon">📖</span><span class="sm-label">Documentation</span></a>
-                    <a class="settings-menu-item" href="/download/"><span class="sm-icon">⬇️</span><span class="sm-label">Get Fast Draft</span></a>
-                    <a class="settings-menu-item" href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener"><span class="sm-icon">🐙</span><span class="sm-label">GitHub</span></a>
-                  </div>
+            <!-- Top-Left: Sidebar pill -->
+            <div id="chrome-sidebar" class="chrome-pill chrome-top-left">
+              <button class="chrome-btn" id="sidebar-toggle-btn" title="Sidebar — Layers, Code, Specs (\)">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="14" height="14" rx="2"/><line x1="5.5" y1="1" x2="5.5" y2="15"/><line x1="1" y1="5" x2="5.5" y2="5"/><line x1="1" y1="9" x2="5.5" y2="9"/></svg>
+              </button>
+              <!-- Sidebar dropdown -->
+              <div class="chrome-dropdown" id="sidebar-dropdown">
+                <button class="chrome-dropdown-item" id="sd-layers-toggle"><span class="cd-icon">☰</span><span class="cd-label">Layers</span><span class="cd-shortcut">\</span></button>
+                <button class="chrome-dropdown-item" id="sd-code-toggle"><span class="cd-icon">{ }</span><span class="cd-label">Code Editor</span></button>
+                <button class="chrome-dropdown-item" id="sd-specs-toggle"><span class="cd-icon">📝</span><span class="cd-label">Specs Panel</span><span class="cd-shortcut">⌘⇧N</span></button>
+              </div>
+            </div>
+
+            <!-- Top-Center: AI Touch pill -->
+            <div id="chrome-ai" class="chrome-pill chrome-top-center">
+              <button class="chrome-btn chrome-btn-accent" id="ai-touch-btn" title="AI Touch — refine + review selected">✦ AI Touch</button>
+            </div>
+
+            <!-- Top-Right: Action bar -->
+            <div id="chrome-actions" class="chrome-pill chrome-top-right">
+              <button class="chrome-btn" id="share-btn" title="Share playground link">🔗 Share</button>
+              <div class="chrome-sep"></div>
+              <button class="chrome-btn" id="auth-btn" title="Sign in or sign up">👤 Sign in</button>
+              <div class="chrome-sep"></div>
+              <!-- Settings gear -->
+              <div class="chrome-dropdown-container" id="settings-dropdown-container">
+                <button class="chrome-btn" id="settings-gear-btn" title="Settings">⚙</button>
+                <div class="chrome-dropdown chrome-dropdown-right" id="settings-dropdown">
+                  <button class="chrome-dropdown-item" id="sm-sketchy-toggle" data-setting="sketchy"><span class="cd-icon">✏️</span><span class="cd-label">Sketchy</span></button>
+                  <button class="chrome-dropdown-item" id="sm-grid-toggle" data-setting="grid"><span class="cd-icon">⊞</span><span class="cd-label">Grid</span></button>
+                  <button class="chrome-dropdown-item" id="sm-theme-toggle"><span class="cd-icon">☀️</span><span class="cd-label">Theme</span></button>
+                  <button class="chrome-dropdown-item" id="sm-motion-toggle" data-setting="reduce-motion"><span class="cd-icon">🚫</span><span class="cd-label">Reduce Motion</span></button>
+                  <div class="chrome-dropdown-sep"></div>
+                  <button class="chrome-dropdown-item" data-setting="fit"><span class="cd-icon">⊡</span><span class="cd-label">Fit to Content</span></button>
+                </div>
+              </div>
+              <div class="chrome-sep"></div>
+              <!-- Hamburger menu -->
+              <div class="chrome-dropdown-container" id="menu-dropdown-container">
+                <button class="chrome-btn" id="settings-menu-btn" title="Menu">☰</button>
+                <div class="chrome-dropdown chrome-dropdown-right" id="settings-menu">
+                  <button class="chrome-dropdown-item" id="ai-chat-btn"><span class="cd-icon">✦</span><span class="cd-label">Agent</span></button>
+                  <button class="chrome-dropdown-item" id="renamify-btn"><span class="cd-icon">✦</span><span class="cd-label">Renamify</span></button>
+                  <button class="chrome-dropdown-item" id="sm-design-review" data-setting="design-review"><span class="cd-icon">✦</span><span class="cd-label">Full Design Review</span></button>
+                  <div class="chrome-dropdown-sep"></div>
+                  <button class="chrome-dropdown-item" data-setting="copy-png" id="sm-copy-png"><span class="cd-icon">📷</span><span class="cd-label">Copy as PNG</span></button>
+                  <button class="chrome-dropdown-item" data-setting="export-svg" id="sm-export-svg"><span class="cd-icon">📄</span><span class="cd-label">Download SVG</span></button>
+                  <button class="chrome-dropdown-item" data-setting="export-html" id="sm-export-html"><span class="cd-icon">🌐</span><span class="cd-label">Download HTML</span></button>
+                  <button class="chrome-dropdown-item" data-setting="import-css" id="sm-import-css"><span class="cd-icon">🎨</span><span class="cd-label">Import CSS</span></button>
+                  <div class="chrome-dropdown-sep"></div>
+                  <button class="chrome-dropdown-item" id="sm-shortcuts"><span class="cd-icon">⌨️</span><span class="cd-label">Keyboard Shortcuts</span><span class="cd-shortcut">?</span></button>
+                  <div class="chrome-dropdown-sep"></div>
+                  <a class="chrome-dropdown-item" href="/about/"><span class="cd-icon">ℹ️</span><span class="cd-label">About Fast Draft</span></a>
+                  <a class="chrome-dropdown-item" href="/docs/"><span class="cd-icon">📖</span><span class="cd-label">Documentation</span></a>
+                  <a class="chrome-dropdown-item" href="/download/"><span class="cd-icon">⬇️</span><span class="cd-label">Get Fast Draft</span></a>
+                  <a class="chrome-dropdown-item" href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener"><span class="cd-icon">🐙</span><span class="cd-label">GitHub</span></a>
                 </div>
               </div>
             </div>
@@ -159,6 +174,9 @@
                 <div class="paper-roll left-roll"></div>
               </div>
               <div class="scroll-paper-body">
+                <button class="ft-tool-btn ft-undo" id="undo-btn" title="Undo (⌘Z)"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M232,200a6,6,0,0,1-12,0,84.09,84.09,0,0,0-84-84H62.49l37.75,37.76a6,6,0,1,1-8.48,8.48l-48-48a6,6,0,0,1,0-8.48l48-48a6,6,0,0,1,8.48,8.48L62.49,104H136A96.11,96.11,0,0,1,232,200Z"/></svg><span class="ft-tooltip">Undo<span class="tt-shortcut">⌘Z</span></span></button>
+                <button class="ft-tool-btn ft-redo" id="redo-btn" title="Redo (⌘⇧Z)"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M232,112a6,6,0,0,1-1.76,4.24l-48,48a6,6,0,0,1-8.48-8.48L211.51,118H120a84.09,84.09,0,0,0-84,84,6,6,0,0,1-12,0A96.11,96.11,0,0,1,120,106h91.51L173.76,68.24a6,6,0,0,1,8.48-8.48l48,48A6,6,0,0,1,232,112Z"/></svg><span class="ft-tooltip">Redo<span class="tt-shortcut">⌘⇧Z</span></span></button>
+                <div class="ft-sep"></div>
                 <button class="ft-tool-btn active" data-tool="hand"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M188,50a25.8,25.8,0,0,0-14,4.11V44a26,26,0,0,0-51.41-5.51A26,26,0,0,0,82,60v71l-7.53-12.1a26,26,0,0,0-45.11,25.87C60.76,211,78.51,238,128,238a86.1,86.1,0,0,0,86-86V76A26,26,0,0,0,188,50Zm14,102a74.09,74.09,0,0,1-74,74c-21,0-34.51-5.05-46.75-17.45C67.81,195,55.54,172,40.1,139.43l-.23-.43a14,14,0,0,1,24.25-14l.1.17,18.68,30A6,6,0,0,0,94,152V60a14,14,0,0,1,28,0v60a6,6,0,0,0,12,0V44a14,14,0,0,1,28,0v76a6,6,0,0,0,12,0V76a14,14,0,0,1,28,0Z"/></svg><span class="ft-tooltip">Hand<span class="tt-shortcut">H</span></span></button>
                 <button class="ft-tool-btn" data-tool="select"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M166.59,134.1a1.91,1.91,0,0,1-.55-1.79,2,2,0,0,1,1.08-1.42l46.25-17.76.24-.1A14,14,0,0,0,212.38,87L52.29,34.7A13.95,13.95,0,0,0,34.7,52.29L87,212.38a13.82,13.82,0,0,0,12.6,9.6c.23,0,.46,0,.69,0A13.84,13.84,0,0,0,113,213.61a2.44,2.44,0,0,0,.1-.24l17.76-46.25a2,2,0,0,1,3.21-.53l51.31,51.31a14,14,0,0,0,19.8,0l12.69-12.69a14,14,0,0,0,0-19.8Zm42.82,62.63-12.68,12.68a2,2,0,0,1-2.83,0L142.59,158.1a14,14,0,0,0-22.74,4.32,2.44,2.44,0,0,0-.1.24L102,208.91a2,2,0,0,1-3.61-.26L46.11,48.57a1.87,1.87,0,0,1,.47-2A1.92,1.92,0,0,1,47.93,46a2.22,2.22,0,0,1,.64.1L208.65,98.38a2,2,0,0,1,.26,3.61l-46.25,17.76-.24.1a14,14,0,0,0-4.32,22.74h0l51.31,51.31A2,2,0,0,1,209.41,196.73Z"/></svg><span class="ft-tooltip">Select<span class="tt-shortcut">V</span></span></button>
                 <button class="ft-tool-btn" data-tool="rect"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M216,42H40A14,14,0,0,0,26,56V200a14,14,0,0,0,14,14H216a14,14,0,0,0,14-14V56A14,14,0,0,0,216,42Zm2,158a2,2,0,0,1-2,2H40a2,2,0,0,1-2-2V56a2,2,0,0,1,2-2H216a2,2,0,0,1,2,2Z"/></svg><span class="ft-tooltip">Rectangle<span class="tt-shortcut">R</span></span></button>

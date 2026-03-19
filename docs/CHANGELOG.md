@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.215 — App Chrome Redesign (R6.5)
+- **UX (R6.5)**: Replaced full-width canvas toolbar bar with floating chrome pills — sidebar (top-left), AI Touch (top-center), action bar (top-right: Share, Sign in, Settings gear, ☰ Menu). Canvas now has zero persistent chrome bars
+- **UX (R6.5)**: Split settings menu into two dropdowns: ⚙ Settings gear (Sketchy, Grid, Theme, Reduce Motion, Fit to Content) and ☰ Menu (AI Agent, Renamify, Design Review, Export, Shortcuts, Links)
+- **UX (R6.5)**: Added sidebar dropdown (☰ top-left) for Layers panel, Code Editor, and Specs Panel toggles — consolidates panel controls into one discoverable pill
+- **UX (R6.5)**: Added undo/redo buttons (↩ ↪) to the scroll toolbar — previously only available via keyboard shortcuts (⌘Z/⌘⇧Z)
+- **UX (R6.5)**: Theme toggle moved from dedicated pill to Settings gear dropdown — cleaner UI, one less persistent button
+- **DESKTOP**: Tauri app inherits all chrome changes (shares `site/` directory)
+
 ### v0.11.214 — Remove Homepage Navbar (R6.5)
 - **UX (R6.5)**: Removed navbar from homepage — canvas now fills `100vh` (was `100vh - 52px`); matches Excalidraw's zero-chrome UX and achieves parity with the desktop app (which has no navbar)
 - **UX (R6.5)**: Nav links (About, Docs, Get Fast Draft, GitHub) relocated to ☰ Settings dropdown in canvas toolbar — accessible via the existing hamburger menu; pattern matches Figma/Excalidraw/tldraw

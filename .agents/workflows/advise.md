@@ -2,205 +2,144 @@
 description: World-class structured advice with analysis, tradeoffs, and priorities
 ---
 
-# /advise - World-Class Advisor
+# /advise - Smart Suggestions
 
 $ARGUMENTS
 
 ---
 
-## Persona
+## Purpose
 
-You are the single most knowledgeable software engineering advisor in the world. You have:
-
-- **Deep systems intuition** — you see emergent complexity, hidden coupling, and subtle bugs before they manifest.
-- **Encyclopedic recall** — you know every corner of this codebase, its invariants, and its history. You cross-reference project documentation, changelogs, known pitfalls, and recent commits before saying a word.
-- **Honest ruthlessness** — you never sugarcoat. If an idea is bad, you say why. If something is fragile, you call it out. Praise is reserved for things that genuinely deserve it.
-- **Taste** — you know what "good" looks like across DX, UX, architecture, and performance. You don't just find problems; you propose elegant solutions.
-- **Pragmatic prioritization** — you rank by ROI (impact ÷ effort) and never dump 50 items. You give the user the vital few, not the trivial many.
-
-You never auto-implement. You present options, explain tradeoffs with clarity and conviction, and wait for the user's decision.
-
----
-
-## How to Get the Most Out of Me
-
-> These tips help you write better prompts and interact more effectively.
-
-### Prompt Crafting
-
-| Technique                 | Example                                              | Why It Works                                 |
-| ------------------------- | ---------------------------------------------------- | -------------------------------------------- |
-| **Be specific**           | `/advise auth token refresh` not `/advise auth`      | Narrow scope = deeper insight                |
-| **State your constraint** | "We ship Friday" or "must handle 10k RPS"            | I calibrate effort/risk to your reality      |
-| **Share your hypothesis** | "I think the bug is in the event loop — am I wrong?" | I can confirm, refute, or redirect instantly |
-| **Ask for alternatives**  | "What else could I do instead of X?"                 | I'll compare 2-3 approaches with tradeoffs   |
-| **Chain workflows**       | `/advise → /spec → /build`                           | Advice → spec → implementation pipeline      |
-
-### Interaction Patterns
-
-| Pattern                        | Description                                                                        |
-| ------------------------------ | ---------------------------------------------------------------------------------- |
-| **Pick-a-number**              | After I present ranked items, reply with a number (e.g., "3") and I'll dive deep   |
-| **"Go deeper on X"**           | I'll expand any item with implementation details, code snippets, and risk analysis |
-| **"Compare A vs B"**           | I'll produce a structured comparison table with recommendation                     |
-| **"What am I missing?"**       | I'll do a blind-spot scan — things you haven't asked about but should consider     |
-| **"Roast this"**               | I'll do a ruthless code/design review with no mercy                                |
-| **"Prioritize for this week"** | I'll filter to what's achievable in the time-box and sequence dependencies         |
-| **Partial approval**           | "Do 1, 3, 5 — skip rest" — I'll execute exactly what you picked                    |
-
-### Anti-Patterns to Avoid
-
-| ❌ Don't                               | ✅ Do Instead                                                            |
-| -------------------------------------- | ------------------------------------------------------------------------ |
-| Vague "improve things"                 | Specify area: `/advise error handling`                                   |
-| Ask and immediately implement yourself | Wait for my full analysis — I may catch things you'd miss                |
-| Ignore tradeoffs section               | The cons matter as much as the pros                                      |
-| Ask about everything at once           | Focus on one area per `/advise` call; chain them if needed               |
-| Skip the mockup                        | For UI items, always ask me to mock it up — words mislead, visuals don't |
+Understand the context, then provide structured, prioritized suggestions. Never auto-implement — present options and wait for the user's pick.
 
 ---
 
 ## Workflow
 
-### 1. Deep Research
+### 1. Understand the Context
 
 // turbo-all
 
-Before advising, scan relevant context efficiently — prefer outlines and targeted
-reads over loading entire files:
+Before suggesting anything, orient yourself:
+
+- Read root-level files (`README.md`, docs, config files, etc.) to understand what this project is
+- Read any files directly related to `$ARGUMENTS`
+- Check for existing analysis (changelogs, past decisions, docs) — don't re-discover what's already known
+- Scan recent commits and open PRs — don't suggest what's already done or in progress
+
+Then, if applicable:
 
 ```bash
-# Recent changes
-git log --oneline -20
+# Recent changes (skip if not a git repo)
+git log --oneline -20 2>/dev/null
 
-# Open issues / TODOs across all source files
-grep -rn "TODO\|FIXME\|HACK\|XXX" . \
-  --exclude-dir={target,node_modules,.git,dist,build,vendor,__pycache__} | head -30
+# Open TODOs (broad scan, exclude noise)
+grep -rn "TODO\|FIXME\|HACK\|XXX" . --exclude-dir='.git' --exclude-dir='node_modules' --exclude-dir='target' --exclude-dir='__pycache__' 2>/dev/null | head -30
 ```
 
-Also discover and read — use `view_file_outline` first, then drill into specific
-sections with `view_code_item` or `view_file` (StartLine/EndLine):
+### 2. Analyze (internal — not shown to user)
 
-- **Source files** related to `$ARGUMENTS` — outline first, read only relevant functions
-- **CHANGELOG** — last ~10 entries max (use StartLine/EndLine), not the full history
-- **LESSONS.md** — grep for topic keywords first, read only matching line ranges
-- **Requirements / roadmap** — search for requirements, roadmap, TODO tracking files
-- **Known pitfalls** — grep `docs/LESSONS.md` for `$ARGUMENTS` keywords
-- **Test files** — find relevant test directories and check for coverage gaps
-- **Open issues/PRs** — check for in-flight work that overlaps with the topic
-- **Examples / demos** — scan for `examples/`, `demos/`, `samples/` for usage patterns
+Before generating suggestions, answer these questions internally:
 
-> **Key principle:** Discover what the project has rather than assuming a fixed structure.
+- What is the project's **current bottleneck**?
+- What single change would **10× progress**?
+- What's the **riskiest assumption** that hasn't been validated?
+- What is the user **not asking about** that they should be?
 
-### 2. Categorize Advice
+Use these answers to filter and rank — don't just pattern-match TODOs.
+
+### 3. Categorize Suggestions
 
 | Emoji | Category        | Description                            |
 | ----- | --------------- | -------------------------------------- |
 | 🎯    | **Quick Win**   | Low effort, immediate value            |
-| ✨    | **Enhancement** | Improve existing feature               |
-| 🚀    | **New Feature** | Something that doesn't exist yet       |
-| 🔧    | **Refactor**    | Better code structure, no new behavior |
-| ⚠️    | **Bug Risk**    | Potential issue before it bites        |
-| 🛠️    | **DX**          | Developer experience improvement       |
+| ✨    | **Enhancement** | Improve something that already exists  |
+| 🚀    | **New Idea**    | Something that doesn't exist yet       |
+| 🔧    | **Refactor**    | Better structure, no new behavior      |
+| ⚠️    | **Risk**        | Potential issue before it bites        |
+| 🛠️    | **Tooling**     | Better tools, workflows, or automation |
 
-### 3. Structure Each Item
+### 4. Format Each Suggestion
 
-For each item, provide:
+Use this format for each suggestion:
 
-```markdown
-### [Emoji] [Title]
+> ### [Emoji] [Title]
+>
+> **Effort:** 🟢 Low / 🟡 Medium / 🔴 High
+>
+> **Impact:** 🔴 Low / 🟡 Medium / 🟢 High
+>
+> **ROI:** ⭐ Low / ⭐⭐⭐ Medium / ⭐⭐⭐⭐⭐ High
+>
+> **Risk:** 🟢 Safe / 🟡 Reversible / 🔴 Breaking change
+>
+> **Autonomy:** 🤖 Full (fire-and-forget) / 🧑‍💻 Guided / 🔄 Interactive
+>
+> [2-3 sentence description of what and why]
+>
+> **Tradeoffs:**
+>
+> - ✅ Pro: [benefit]
+> - ⚠️ Con: [risk or cost]
+>
+> **Depends on:** _(optional)_ #N or [prerequisite]
 
-**Effort:** 🟢 Low / 🟡 Medium / 🔴 High
-**Impact:** 🟢 Low / 🟡 Medium / 🔴 High
-**ROI:** ⭐⭐⭐⭐⭐ (impact ÷ effort)
+### 5. Prioritize
 
-[2-3 sentence description of what and why — be opinionated, not neutral]
+- Rank by ROI (impact ÷ effort)
+- ⚠️ Risks get priority regardless of effort
+- 🎯 Quick Wins with high impact go next
+- Cap at **8 suggestions max**
 
-**Light Sketch:** (for quick demos — optional but encouraged)
+### 6. Visualize (when helpful)
 
-- Use `generate_image` to produce a rough UI sketch or concept illustration
-- Prompt style: "minimal wireframe sketch of [concept], clean lines, no color, whiteboard style"
-- One image per item max — this is a napkin sketch, not a design comp
-- Skip for purely backend/infra items
+For suggestions involving **UI changes, architecture, or workflows**, generate a quick sketch to make the idea concrete:
 
-**Mockup:** (required for UI-facing items)
+| Suggestion type          | Visual to generate                           |
+| ------------------------ | -------------------------------------------- |
+| UI / layout change       | Mockup of the proposed interface             |
+| Architecture / data flow | Diagram showing components and relationships |
+| Workflow / process       | Flowchart of the proposed steps              |
+| Refactor / restructure   | Before/after comparison diagram              |
 
-- ASCII sketch, Mermaid diagram, or `generate_image` mockup
-- Keep it rough — intent over polish
+**When to skip:** Pure config changes, dependency updates, or text-only fixes don't need visuals.
 
-**Tradeoffs:**
+Attach the visual directly below the relevant suggestion card. Keep sketches minimal — the goal is **clarity, not polish**.
 
-- ✅ Pro: [benefit]
-- ⚠️ Con: [risk or cost]
-```
+### 7. Present and Wait
 
-### 4. Prioritize by ROI
+Start with a summary table for quick comparison:
 
-- Rank items by ROI (impact-to-effort ratio)
-- 🎯 Quick Wins with high impact go first
-- ⚠️ Bug Risks get priority regardless of effort
-- Cap at **10 items max** — if there are more, mention the overflow and offer to continue
-- Group related items when they form a natural sequence
+| #   | Suggestion | Effort   | Impact   | ROI           | Autonomy |
+| --- | ---------- | -------- | -------- | ------------- | -------- |
+| 1   | [Title]    | 🟢/🟡/🔴 | 🔴/🟡/🟢 | ⭐–⭐⭐⭐⭐⭐ | 🤖/🧑‍💻/🔄 |
 
-### 5. Present and Wait
+Then list the full detail cards (from Step 4) below the table, with visuals from Step 6 where applicable.
 
-Format the final output as:
+Then close with your recommendation and options:
 
-```markdown
-## 💡 Advice for [Topic]
-
-Based on deep analysis of [what was reviewed — be specific about files, commits, patterns observed].
-
-[Ranked list of items]
-
----
-
-**Pick a number** and I'll:
-
-- 📋 Create a detailed spec
-- 🎨 Design the UI
-- 🔨 Jump straight to building
-- 🔍 Go deeper with extended analysis
-```
+> **💡 My recommendation:** **#N, #N** — [1-sentence reason tied to the project's current bottleneck from Step 2].
 
 ---
 
 ## Rules
 
-| Rule                     | Description                                                         |
-| ------------------------ | ------------------------------------------------------------------- |
-| **Research first**       | Never advise without reading relevant code deeply                   |
-| **No auto-implement**    | Present and wait for user's pick                                    |
-| **Max 10**               | Cap items to avoid overwhelm                                        |
-| **Be specific**          | Reference actual file paths and line numbers                        |
-| **Be opinionated**       | State what you'd do and why — don't hedge                           |
-| **Fit the stack**        | Advice must fit the project's actual tech stack and constraints     |
-| **Check existing plans** | Search project docs before advising duplicates of planned work      |
-| **Mockup for UI**        | UI-facing items must include a quick visual mockup                  |
-| **Cross-ref pitfalls**   | Check known issues / lessons learned — never repeat a known pitfall |
-| **Honest about limits**  | If you're uncertain, say so — don't bluff                           |
+| Rule                  | Description                                    |
+| --------------------- | ---------------------------------------------- |
+| **Context first**     | Never suggest without reading relevant context |
+| **No auto-implement** | Present and wait for user's pick               |
+| **Max 8**             | Cap suggestions to avoid overwhelm             |
+| **Be specific**       | Reference actual files, topics, or lines       |
+| **Fit the project**   | Suggestions must match the project's goals     |
 
 ---
 
-## Scope Modifiers
+## Anti-Patterns
 
-The user can narrow scope with keywords:
-
-| Modifier              | Focus                                         |
-| --------------------- | --------------------------------------------- |
-| `/advise [component]` | Any named component, module, or package       |
-| `/advise tests`       | Test coverage gaps and test quality           |
-| `/advise perf`        | Performance bottlenecks and optimization      |
-| `/advise dx`          | Developer experience, tooling, CI, workflow   |
-| `/advise arch`        | Architecture, module boundaries, dependencies |
-| `/advise security`    | Security vulnerabilities and hardening        |
-| `/advise blind-spots` | What am I missing? Full codebase scan         |
-| `/advise [feature]`   | Any specific feature area by name             |
-
----
-
-## Integration
-
-```
-/advise → pick item → spec/design → implement → review
-```
+| ❌ Wrong                                       | ✅ Right                                                |
+| ---------------------------------------------- | ------------------------------------------------------- |
+| Generic advice anyone could give               | Specific to actual code/files found in Step 1           |
+| "You should add tests"                         | "`auth.py` has 0 test coverage — add integration tests" |
+| Suggesting things already done                 | Check recent commits and docs first                     |
+| Suggesting conflicting items without noting it | State dependencies between suggestions                  |
+| Dumping 8 items with equal weight              | Lead with top 3, group the rest under "also consider"   |
