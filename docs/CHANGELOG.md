@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.209 — Light Theme Default + Layers Consolidation (R6.6)
+- **SITE (R6.6)**: Default canvas theme is now **Light** across all platforms (site, VS Code, desktop) — consistent with Figma/Notion defaults
+- **SITE (R6.6)**: Removed duplicate `Layers` toolbar button — layers panel header is now the sole toggle (Penpot-style), with cursor:pointer and hover highlight
+- **SITE (R6.6)**: Cleaned up `#layers-toggle-btn` CSS and JS references
+
 ### v0.11.208 — Sync Playground Default with demo.fd
 - **SITE**: Replaced playground's 30-line `DEFAULT_FD` card snippet with the comprehensive `demo.fd` format reference (400 lines) — visitors now see every FD keyword, node type, edge style, and animation on first load
 - **SITE**: Stripped `import "shared_library.fd"` from embedded copy (playground has no file system)

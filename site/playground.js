@@ -607,7 +607,7 @@ edge @annotated_edge {
 // ─── State ───────────────────────────────────────────────────────────────
 let fdCanvas = null;
 let ctx = null;
-let isDark = localStorage.getItem('fd-canvas-theme') !== 'light'; // Default dark
+let isDark = localStorage.getItem('fd-canvas-theme') === 'dark'; // Default light
 let isSketchy = false;
 let animFrameId = null;
 let suppressSync = false;
@@ -2800,7 +2800,7 @@ function refreshLayersPanel() {
   const countNodes = (nodes) => nodes.reduce((s, n) => s + 1 + countNodes(n.children), 0);
   const total = countNodes(tree);
 
-  let html = '<div class="layers-header">';
+  let html = '<div class="layers-header" id="layers-header-toggle">';
   html += '<span class="layers-title">Layers</span>';
   html += `<span class="layers-count">${total}</span>`;
   html += '</div><div class="layers-body">';
@@ -2883,6 +2883,15 @@ function refreshLayersPanel() {
 
   // ── Layer Context Menu (#3 "Move Into") ──
   wireLayerContextMenu(panel);
+
+  // ── Layers header click → toggle panel (Penpot-style) ──
+  const layersHeaderEl = panel.querySelector('#layers-header-toggle');
+  if (layersHeaderEl) {
+    layersHeaderEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleLayersPanel();
+    });
+  }
 
   // ── Keyboard shortcuts when layers panel is focused (#7) ──
   wireLayerKeyboardShortcuts(panel);
@@ -3499,7 +3508,6 @@ function toggleLayersPanel() {
   const wrapper = document.getElementById('canvas-wrapper');
   const layersPanel = document.getElementById('layers-panel');
   const layersHandle = document.getElementById('layers-resize');
-  const toggleBtn = document.getElementById('layers-toggle-btn');
   if (!layersPanel || !wrapper) return;
 
   const isCollapsed = layersPanel.classList.toggle('collapsed');
@@ -3512,7 +3520,6 @@ function toggleLayersPanel() {
     wrapper.style.setProperty('--layers-width', restoreW + 'px');
     localStorage.removeItem('fd-layers-collapsed');
   }
-  toggleBtn?.classList.toggle('layers-hidden', isCollapsed);
   // Keep resize handle visible — position at collapsed edge
   if (layersHandle) {
     layersHandle.style.display = '';
@@ -5356,9 +5363,7 @@ async function initPlayground() {
     mobileLayersToggle?.addEventListener('click', toggleMobileLayersDrawer);
     mobileLayersBackdrop?.addEventListener('click', closeMobileLayersDrawer);
 
-    // ── Desktop Layers Toggle ────────────────────────────────────────
-    const layersToggleBtn = document.getElementById('layers-toggle-btn');
-    layersToggleBtn?.addEventListener('click', toggleLayersPanel);
+    // ── Desktop Layers Toggle (removed — panel header is the toggle) ──
 
     // ── Specs Panel Resize ───────────────────────────────────────────
     setupSpecsResize();

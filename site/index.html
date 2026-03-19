@@ -24,13 +24,13 @@
   <link rel="stylesheet" href="shared.css?v=0.11.5" />
   <link rel="stylesheet" href="style.css?v=0.11.5" />
 
-  <!-- Flash-free theme persistence -->
+  <!-- Flash-free theme persistence (default: light) -->
   <script>
     (function() {
       var ct = localStorage.getItem('fd-canvas-theme');
       document.addEventListener('DOMContentLoaded', function() {
         var cBtn = document.getElementById('canvas-theme-toggle');
-        if (cBtn && ct === 'light') cBtn.classList.add('is-light');
+        if (cBtn && ct !== 'dark') cBtn.classList.add('is-light');
       });
     })();
   </script>
@@ -100,7 +100,6 @@
             <!-- Top Toolbar (Apple HIG frosted bar) -->
             <div id="canvas-toolbar">
               <div class="tb-zone tb-left fs-hide">
-                <button class="tool-btn" id="layers-toggle-btn" title="Toggle Layers (\)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="14" height="14" rx="2"/><line x1="5.5" y1="1" x2="5.5" y2="15"/><line x1="1" y1="5" x2="5.5" y2="5"/><line x1="1" y1="9" x2="5.5" y2="9"/></svg> Layers</button>
                 <button id="mobile-code-toggle" title="Toggle Code Editor">{ } Code</button>
                 <button class="tool-btn" id="ai-touch-btn" title="AI Touch — refine + review selected (no selection = full audit)">✦ AI Touch</button>
                 <button class="tool-btn" id="ai-chat-btn" title="AI Agent — chat about your design">✦ Agent</button>
