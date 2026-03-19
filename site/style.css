@@ -607,18 +607,7 @@ code {
   background: var(--fd-accent-dim, rgba(0,122,255,0.1));
 }
 
-/* Desktop layers toggle — SVG sidebar icon + text */
-#layers-toggle-btn {
-  color: var(--fd-text-primary, #f5f5f7);
-  gap: 3px;
-}
-#layers-toggle-btn svg {
-  flex-shrink: 0;
-}
-#layers-toggle-btn.layers-hidden {
-  opacity: 0.5;
-  color: var(--fd-text-secondary, #86868B);
-}
+/* layers-toggle-btn removed — panel header is the toggle */
 
 /* Restore strip removed — header stays visible at 10% minimized width */
 
@@ -1035,6 +1024,12 @@ code {
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   z-index: 1;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+.layers-header:hover {
+  background: var(--fd-surface-hover);
 }
 .layers-title {
   font-size: 11px;
