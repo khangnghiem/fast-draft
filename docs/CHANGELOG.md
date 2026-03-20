@@ -17,6 +17,36 @@
 
 ## Completed Requirements
 
+### v0.11.223 — Chrome Layout Redesign (R6.7)
+
+**Left Panel** — Layers + Code/Specs/Design tabs
+- `#left-panel` replaces separate layers panel + sidebar pills
+- Layers section at top with collapsible header
+- Three tabs at bottom: Code, Specs, Design
+- Split divider between layers and tabs (resizable)
+- `--left-panel-width` CSS var (was `--layers-width`)
+
+**Right Panel** — Agent-only + Actions Bar
+- Removed tab strip (Agent/Code/Specs/Design)
+- Actions bar at top: Share · Sign in · ⚙
+- Full-height agent chat content area
+
+**Toolbar** — Frosted glass pill, draggable, snaps to 4 edges
+- Removed scroll decoration (paper roll, wood cores, finials)
+- Clean frosted glass pill with grip handles (⠿)
+- Drag to move, snap to nearest edge on release
+- Velocity-based throw gesture for quick docking
+- Double-click grip to minimize (only active tool + ✦ AI)
+- ✦ AI Touch button integrated into toolbar
+- Persists position and minimized state in localStorage
+
+**Chrome Cleanup** — Removed 3 floating pills
+- `#chrome-sidebar` (☰ sidebar toggle with dropdown)
+- `#chrome-ai` (✦ AI Touch button)
+- `#chrome-actions` (Share/Settings/Sign in)
+
+Files: `site/index.html`, `site/style.css`, `site/app.js`
+
 ### v0.11.222 — Unified Right Panel with Horizontal Tabs (R6.6)
 - **UX (R6.6)**: Consolidated 5 separate panels (AI Chat, Code Editor, Specs, Properties, Animations) into a single unified `#right-panel` with 4 horizontal tabs: ✦ Agent (default), { } Code, 📋 Specs, ◧ Design
 - **UX (R6.6)**: Merged Animations and Properties into single "Design" tab — properties shown when a node is selected, animation UI merged into the same tab
