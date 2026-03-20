@@ -1,0 +1,171 @@
+# ─── Welcome to Fast Draft! ───
+# This is your interactive canvas + code editor.
+# Everything you see on the canvas is written in FD format.
+# Edit the code → canvas updates. Draw on canvas → code updates.
+
+# ─── Styles ───
+
+style accent {
+  fill: #6C5CE7
+  corner: 12
+}
+
+style card {
+  fill: #FFFFFF
+  corner: 16
+  shadow: (0,2,16,#00000010)
+}
+
+# ─── 👋 Welcome ───
+
+text @welcome_title "Welcome to Fast Draft" {
+  w: 500
+  fill: #1A1A2E
+  font: "Inter" bold 32
+  center_in: canvas
+}
+
+text @welcome_subtitle "Design as Code — draw it or code it. Both." {
+  fill: #6B7280
+  font: "Inter" regular 16
+  offset: @welcome_title 0, 50
+}
+
+# ─── 🎨 Try the Tools ───
+
+text @tools_heading "Try the tools below" {
+  fill: #6C5CE7
+  font: "Inter" semibold 18
+  offset: @welcome_subtitle 0, 80
+}
+
+text @tools_hint "Press R for Rectangle, O for Ellipse, T for Text, P for Pen" {
+  fill: #86868B
+  font: "Inter" regular 13
+  offset: @tools_heading 0, 30
+}
+
+# ─── 🖱️ Navigate ───
+
+frame @nav_card {
+  text @nav_title "Navigation" {
+    fill: #1A1A2E
+    font: "Inter" semibold 16
+  }
+  text @nav_hint1 "Pan: Hold Space + drag" {
+    fill: #6B7280
+    font: "Inter" regular 13
+  }
+  text @nav_hint2 "Zoom: Scroll wheel or pinch" {
+    fill: #6B7280
+    font: "Inter" regular 13
+  }
+  text @nav_hint3 "Fit all: Ctrl+0" {
+    fill: #6B7280
+    font: "Inter" regular 13
+  }
+  layout: column gap=8 pad=20
+  w: 240 h: 160
+  use: card
+  offset: @tools_hint 0, 60
+}
+
+# ─── ✏️ Example Shapes ───
+
+rect @example_rect {
+  w: 160 h: 80
+  use: accent
+  offset: @nav_card 280, 0
+  when :hover {
+    fill: #5A4BD1
+    scale: 1.03
+    ease: spring 200ms
+  }
+}
+
+text @rect_label "Hover me!" {
+  fill: #FFFFFF
+  font: "Inter" semibold 14
+  center_in: @example_rect
+}
+
+ellipse @example_ellipse {
+  w: 100 h: 100
+  fill: #00B894
+  stroke: #009B77 2
+  offset: @example_rect 200, -10
+  when :hover {
+    opacity: 0.7
+    ease: ease_out 150ms
+  }
+}
+
+# ─── 🔗 Connections ───
+
+rect @step_1 {
+  text @_step_1_label "1. Draw" {}
+  w: 100 h: 50
+  fill: #F0EDFF
+  stroke: #6C5CE7 1.5
+  corner: 10
+  offset: @nav_card 0, 200
+}
+
+rect @step_2 {
+  text @_step_2_label "2. Connect" {}
+  w: 100 h: 50
+  fill: #F0EDFF
+  stroke: #6C5CE7 1.5
+  corner: 10
+  offset: @step_1 160, 0
+}
+
+rect @step_3 {
+  text @_step_3_label "3. Animate" {}
+  w: 100 h: 50
+  fill: #F0EDFF
+  stroke: #6C5CE7 1.5
+  corner: 10
+  offset: @step_2 160, 0
+}
+
+edge @flow_1_2 @step_1 -> @step_2 {
+  stroke: #6C5CE7 1.5
+  arrow: end
+  curve: smooth
+}
+
+edge @flow_2_3 @step_2 -> @step_3 {
+  stroke: #6C5CE7 1.5
+  arrow: end
+  curve: smooth
+}
+
+# ─── 💡 Pro Tips ───
+
+frame @tips_card {
+  text @tips_title "Pro Tips" {
+    fill: #1A1A2E
+    font: "Inter" semibold 16
+  }
+  text @tip1 "Double-click text to edit inline" {
+    fill: #6B7280
+    font: "Inter" regular 13
+  }
+  text @tip2 "Right-click for context menu" {
+    fill: #6B7280
+    font: "Inter" regular 13
+  }
+  text @tip3 "⌘Z to undo, ⌘⇧Z to redo" {
+    fill: #6B7280
+    font: "Inter" regular 13
+  }
+  text @tip4 "Press ? for all shortcuts" {
+    fill: #6B7280
+    font: "Inter" regular 13
+  }
+  layout: column gap=8 pad=20
+  w: 280 h: 180
+  use: card
+  offset: @step_1 0, 100
+}

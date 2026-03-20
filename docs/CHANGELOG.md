@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.219 — UI Consolidation + Onboarding (R6.5, R6.6)
+- **UX (R6.5)**: Merged ☰ hamburger menu into ⚙ gear dropdown — single unified settings menu with Agent, Renamify, Design Review, Present, Sketchy, Grid, Theme, Reduce Motion, Fullscreen, Fit to Content, Export options, Shortcuts, and navigation links; removed hamburger button and separator
+- **UX (R6.6)**: Code panel now collapses to **zero width** instead of 10% — resize handle also hides when collapsed; `.code-collapsed` grid uses `0fr` column
+- **UX (R6.6)**: Right sidebar toggle button — floating pill with sidebar icon appears when code panel is collapsed; clicking restores both code panel and layers panel
+- **UX (R6.5)**: Reversed panel startup animation — panels start **visible** at normal size, then collapse to zero after canvas loads (800ms show + 500ms collapse); gives users a visual cue of available panels before canvas takes over; `panels-collapsing` CSS class replaces `panels-intro`/`panels-expanding`
+- **UX (R6.5)**: New onboarding experience — `DEFAULT_FD` replaced with guided `onboarding.fd` content: welcome message, tool hints, navigation card, interactive shapes with hover effects, workflow steps with edge connections, and pro tips; Excalidraw-style first-time user onboarding
+- **EXAMPLES**: New `examples/onboarding.fd` file matching the playground default
+
 ### v0.11.218 — Native Fullscreen + Panel Animation (R6.5)
 - **UX (R6.5)**: Moved fullscreen toggle from floating ⛶ button (which overlapped ☰ hamburger) into ⚙ Settings dropdown as "⛶ Full Screen ⇧F" menu item
 - **UX (R6.5)**: Switched to native Fullscreen API (`requestFullscreen` / `exitFullscreen` with Safari `webkit` fallback) — true OS-level fullscreen on every platform
