@@ -135,6 +135,10 @@ code {
 /* Mobile menu styles are in shared.css */
 
 /* ─── Full-Viewport App Layout ─── */
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
 #app {
   position: relative;
   display: flex;
@@ -1126,11 +1130,13 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
 /* ─── Floating Scroll Toolbar ─── */
 #floating-toolbar {
   position: absolute;
-  left: calc(var(--layers-width, 180px) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 12px;
   z-index: 25;
   display: flex;
   align-items: stretch;
+  max-width: calc(100% - 200px);
   --left-roll-width: 12px;
   --right-roll-width: 12px;
   user-select: none;
