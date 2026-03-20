@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.221 — Rename "Playground" → "Editor" (R6.5)
+- **RENAME (R6.5)**: Renamed `site/playground.js` → `site/app.js` — main JavaScript module gets a proper name matching production app identity
+- **RENAME (R6.5)**: All user-facing "Playground" text → "Editor" across about page, download page, docs, shortcuts, footer links, README, and share button
+- **INFRA**: Updated `.github/workflows/pages.yml` cache-bust `sed` target from `playground.js` to `app.js`
+- **DOCS**: Updated GEMINI.md Source row, CONTRIBUTING.md, docs/TARGET.md, canvas-core comments, fd-vscode comments, and api/ai.js comments
+
 ### v0.11.220 — Layout Fixes: Non-Scrollable Canvas + Centered Toolbar (R6.5, R6.6)
 - **FIX (R6.5)**: Canvas is now truly non-scrollable — added `html, body { overflow: hidden; height: 100% }` to prevent browser-level scroll leaking through the `#app` viewport
 - **UX (R6.6)**: Floating scroll toolbar now centered (`left: 50%; transform: translateX(-50%)`) instead of left-anchored to layers panel width — matches Excalidraw/Figma toolbar placement

@@ -18,7 +18,7 @@
 | Channel | Status | Priority |
 |---------|--------|----------|
 | VS Code / Cursor Marketplace | 🟢 Published | Primary |
-| [fast-draft.com](https://fast-draft.com) playground | 🟢 Live | Primary |
+| [fast-draft.com](https://fast-draft.com) web editor | 🟢 Live | Primary |
 | Word of mouth | Active | Secondary |
 | LinkedIn / social media | Starting | Secondary |
 | Desktop app (Tauri) | ⬜ Planned | Next big bet |
@@ -54,7 +54,7 @@ Priority: fix existing tool reliability before adding new features. Every draw/s
 ```
 1. VS Code Extension — current focus, primary distribution
 2. Desktop App (Tauri) — next big bet, native experience, full keyboard shortcuts
-3. Web App — standalone fast-draft.com beyond playground
+3. Web App — standalone fast-draft.com web editor
 4. iOS App — eventual path, Apple Pencil + touch-first
 5. Android — after iOS
 ```
@@ -66,7 +66,7 @@ Priority: fix existing tool reliability before adding new features. Every draw/s
 ## Metrics to Track (When Ready)
 
 - VS Code extension installs + weekly active users
-- fast-draft.com playground sessions / bounce rate
+- fast-draft.com web editor sessions / bounce rate
 - AI Touch calls/day (proxy for AI agent engagement)
 - GitHub stars + community issues
 - Time-to-first-shape for new users (onboarding metric)

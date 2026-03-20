@@ -3,7 +3,7 @@
 > **Design as Code.** A text format and live canvas for drawing, design, and animation — right inside your code editor.
 
 <p align="center">
-  <a href="https://fast-draft.com"><strong>🌐 Try the Live Playground</strong></a> · 
+  <a href="https://fast-draft.com"><strong>🌐 Try the Web Editor</strong></a> · 
   <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft"><strong>⚡ Install Extension</strong></a> · 
   <a href="https://github.com/khangnghiem/fast-draft"><strong>★ GitHub</strong></a>
 </p>
@@ -109,7 +109,7 @@ AI_MODEL_QUALITY=@cf/meta/llama-3.3-70b-instruct-fp8-fast
 Override the model per browser session using a URL parameter:
 
 ```
-https://fast-draft.com/playground?ai_model=llama-70b
+https://fast-draft.com/?ai_model=llama-70b
 ```
 
 | Alias | Model | Size |
@@ -173,7 +173,7 @@ rect @login_btn {
 | VS Code / Cursor IDE      | 🟡 In progress |
 | Zed                       | 🟢 Published   |
 | Neovim / Helix / Sublime  | 🟢 Syntax only |
-| Web playground            | 🟢 Live        |
+| Web editor               | 🟢 Live        |
 | Desktop (macOS/Win/Linux) | 🟢 Available   |
 | iOS / Android             | ⬜ Planned     |
 

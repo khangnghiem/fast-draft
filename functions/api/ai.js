@@ -1,5 +1,5 @@
 /**
- * Cloudflare Pages Function — Single AI endpoint for FD playground.
+ * Cloudflare Pages Function — Single AI endpoint for FD web editor.
  * Handles all AI modes: refine, renamify, review.
  *
  * Bindings required:

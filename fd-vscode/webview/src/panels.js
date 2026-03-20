@@ -642,7 +642,7 @@ function closeLayerCtxMenu() {
   ctxMenu.close();
 }
 
-/** Searchable "Move Into" picker for the extension — mirrors playground.js implementation. */
+/** Searchable "Move Into" picker for the extension — mirrors app.js implementation. */
 function showSearchableParentPicker(nodeId, posX, posY) {
   if (!fdCanvas?.get_container_ids) return;
   let containers;

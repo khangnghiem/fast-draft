@@ -1,5 +1,5 @@
 // ─── canvas-core/state.js ─── Shared canvas state
-// Imported by both site/playground.js and fd-vscode/webview/src/main.js.
+// Imported by both site/app.js and fd-vscode/webview/src/main.js.
 //
 // This module holds the mutable state that drives the canvas lifecycle:
 // zoom, pan, dirty flags, grid, motion preferences, and tool defaults.
@@ -73,7 +73,7 @@ export let reduceMotion = prefersReducedMotion.matches;
 
 /** Initialize motion preference listener. */
 export function initMotionPreference() {
-  // Check localStorage override (site playground stores manual toggle)
+  // Check localStorage override (site app stores manual toggle)
   if (typeof localStorage !== 'undefined') {
     const manual = localStorage.getItem('fd-reduce-motion');
     if (manual === 'true') reduceMotion = true;

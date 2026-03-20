@@ -18,7 +18,7 @@
   <link rel="canonical" href="https://fast-draft.com" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/style.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-mono/style.min.css" />
-  <!-- Preload WASM for instant playground -->
+  <!-- Preload WASM for instant startup -->
   <link rel="modulepreload" href="./wasm/fd_wasm.js?v=0.11.5" />
   <link rel="preload" href="./wasm/fd_wasm_bg.wasm?v=0.11.5" as="fetch" crossorigin fetchpriority="high" />
   <link rel="stylesheet" href="shared.css?v=0.11.5" />
@@ -44,7 +44,7 @@
 <body>
 
 
-  <!-- ─── Full-Viewport Playground ─── -->
+  <!-- ─── Full-Viewport Editor ─── -->
   <main id="app">
 
     <div class="app-playground">
@@ -77,7 +77,7 @@
 
             <!-- Top-Right: Action bar -->
             <div id="chrome-actions" class="chrome-pill chrome-top-right">
-              <button class="chrome-btn" id="share-btn" title="Share playground link">🔗 Share</button>
+              <button class="chrome-btn" id="share-btn" title="Share link">🔗 Share</button>
               <div class="chrome-sep"></div>
               <button class="chrome-btn" id="auth-btn" title="Sign in or sign up">👤 Sign in</button>
               <div class="chrome-sep"></div>
@@ -329,7 +329,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="context-menu.js?v=0.11.5"></script>
-  <script type="module" src="playground.js?v=0.11.5"></script>
+  <script type="module" src="app.js?v=0.11.5"></script>
   <script>
     // Mobile menu toggle
     document.getElementById('mobile-menu-btn').addEventListener('click', function() {

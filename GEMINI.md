@@ -147,7 +147,7 @@ crates/
 | **Live URL** | [https://fast-draft.com](https://fast-draft.com) |
 | **Hosting** | Cloudflare Pages (free, 330+ edge PoPs) |
 | **DNS** | Cloudflare — CNAME `@` → `fast-draft.pages.dev`, proxy **ON** |
-| **Source** | `site/` directory (index.html, style.css, playground.js, wasm/) |
+| **Source** | `site/` directory (index.html, style.css, app.js, wasm/) |
 | **Headers** | `site/_headers` — WASM cache (1yr immutable) + security headers |
 | **Deploy trigger** | Auto on push to `main` via `.github/workflows/pages.yml` |
 | **WASM build** | `wasm-pack build crates/fd-wasm --target web --out-dir ../../site/wasm` |
