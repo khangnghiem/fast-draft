@@ -466,8 +466,8 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
 #fd-update-btn:disabled { opacity: 0.6; cursor: wait; }
 
 .playground-split {
-  display: grid;
-  grid-template-columns: 7fr auto var(--editor-width, 3fr);
+  display: flex;
+  flex-direction: column;
   border-radius: 0;
   border: none;
   overflow: hidden;
@@ -475,67 +475,17 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   background: var(--border);
   box-shadow: none;
   height: 100%;
-  /* Unified header: no gap color bleeding into the header row */
   --header-bg: rgba(28, 28, 30, 0.88);
   --header-border: rgba(255, 255, 255, 0.06);
 }
 
-/* ── Split Resize Handle ── */
-.split-resize-handle {
-  width: 6px;
-  cursor: col-resize;
-  background: var(--border);
-  position: relative;
-  z-index: 2;
-  transition: background 0.15s;
-}
-.split-resize-handle:hover,
-.split-resize-handle.active {
-  background: var(--accent);
-}
-/* Bridge the header gap — pseudo-element covers the handle's header zone */
-.split-resize-handle::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 42px; /* matches header height */
-  background: var(--header-bg, rgba(28, 28, 30, 0.88));
-  border-bottom: 0.5px solid var(--header-border, rgba(255, 255, 255, 0.06));
-  pointer-events: none;
-  z-index: 3;
-}
-.playground-editor {
-  background: #282C34; /* Atom One Dark — always dark code mode */
-  display: flex;
-  flex-direction: column;
-  min-width: 0; /* prevent grid blowout from intrinsic content width */
-}
 .playground-canvas {
   background: var(--bg-card);
   display: flex;
   flex-direction: column;
-  min-width: 0;         /* prevent grid blowout from canvas pixel width */
-  overflow: hidden;     /* belt-and-suspenders containment */
-}
-.editor-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  height: 42px;
-  box-sizing: border-box;
-  /* Unified header — match Design toolbar's frosted glass */
-  background: var(--header-bg, rgba(28, 28, 30, 0.88));
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 0.5px solid var(--header-border, rgba(255, 255, 255, 0.06));
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 .editor-dot {
   width: 8px; height: 8px;
@@ -544,33 +494,134 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
 }
 .editor-dot.design { background: var(--success, #34d399); }
 
-/* ── Code Panel Toggle ── */
-.editor-chevron {
-  margin-left: auto;
-  font-size: 10px;
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  color: var(--text-secondary);
-  user-select: none;
-}
-.editor-header:hover { background: rgba(255,255,255,0.03); }
-/* Collapsed state — smooth width collapse via overflow:hidden, no display:none */
-.playground-split {
-  transition: grid-template-columns 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.code-collapsed .playground-editor {
+/* ── Unified Right Panel ── */
+#right-panel {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--right-panel-width, 320px);
+  display: flex;
+  flex-direction: column;
+  background: var(--fd-surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-left: 0.5px solid var(--fd-border);
+  z-index: 15;
+  font-size: 11px;
+  color: var(--fd-text);
+  transition: width 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
   overflow: hidden;
 }
-.code-collapsed .editor-chevron {
-  transform: rotate(-90deg);
-}
-.code-collapsed .split-resize-handle {
+#right-panel.collapsed {
   width: 0;
-  min-width: 0;
-  opacity: 0;
-  pointer-events: none;
+  border-left: none;
 }
-.code-collapsed {
-  grid-template-columns: 1fr 0px 0fr;
+
+/* Tab bar */
+.rp-tabs {
+  display: flex;
+  height: 32px;
+  min-height: 32px;
+  background: rgba(0, 0, 0, 0.06);
+  border-bottom: 0.5px solid var(--fd-border);
+  flex-shrink: 0;
+}
+.rp-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--fd-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  user-select: none;
+  padding: 0;
+  line-height: 1;
+  position: relative;
+}
+.rp-tab:hover {
+  background: var(--fd-surface-hover);
+  color: var(--fd-text);
+}
+.rp-tab.active {
+  color: var(--fd-accent);
+  background: transparent;
+}
+.rp-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: var(--fd-accent);
+  border-radius: 1px;
+}
+
+/* Panel content */
+.rp-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+.rp-pane {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.1) transparent;
+}
+.rp-pane::-webkit-scrollbar { width: 4px; }
+.rp-pane::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
+.rp-pane.active {
+  display: flex;
+}
+
+/* Pane header (used in Code tab) */
+.rp-pane-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--fd-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 0.5px solid var(--fd-border);
+  flex-shrink: 0;
+}
+
+/* Code editor inside right panel */
+.rp-pane[data-pane="code"] #fd-editor {
+  flex: 1;
+  overflow: hidden;
+  background: #282C34;
+}
+.rp-pane[data-pane="code"] #fd-editor .cm-editor {
+  height: 100%;
+}
+
+/* Design tab empty state */
+.rp-design-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--fd-text-tertiary);
 }
 
 
@@ -866,9 +917,9 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   position: absolute;
   left: var(--layers-width, 220px);
   top: 0;
-  right: var(--props-width, 0px);
+  right: var(--right-panel-width, 320px);
   bottom: 0;
-  width: calc(100% - var(--layers-width, 220px) - var(--props-width, 0px));
+  width: calc(100% - var(--layers-width, 220px) - var(--right-panel-width, 320px));
   height: 100%;
   display: block;
 }
@@ -960,7 +1011,6 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   right: 0;
   display: none;
 }
-#props-panel.collapsed ~ .props-restore { display: block; }
 .layers-header {
   display: flex;
   align-items: center;
@@ -1314,42 +1364,7 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
 /* ── (Zoom pill removed — zoom is now in minimap controls) ── */
 
 /* ─── Properties Panel ─── */
-#props-panel {
-  display: none;
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 0;
-  overflow: hidden;
-  background: var(--fd-surface);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-left: 0.5px solid var(--fd-border);
-  z-index: 15;
-  font-size: 11px;
-  color: var(--fd-text);
-  transition: width 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
-  flex-shrink: 0;
-  overflow-y: auto;
-  min-width: 0;
-  max-width: 360px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.1) transparent;
-}
-#props-panel.no-transition { transition: none; }
-#props-panel.collapsed {
-  width: 0 !important;
-  padding: 0;
-  border-left: none;
-  overflow: hidden;
-}
-#props-panel::-webkit-scrollbar { width: 4px; }
-#props-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-#props-panel.visible {
-  display: block;
-  width: var(--props-width, 220px);
-}
+/* Props styles now live inside #right-panel Design tab */
 .props-inner {
   padding: 14px 12px;
   min-width: 200px;
@@ -2417,35 +2432,7 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
 }
 
 /* ─── Right Sidebar Toggle ─── */
-.right-sidebar-toggle {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 20;
-  background: var(--fd-surface);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 0.5px solid var(--fd-border);
-  border-radius: 10px;
-  box-shadow: var(--fd-shadow-lg);
-  padding: 8px;
-  cursor: pointer;
-  color: var(--fd-text);
-  display: none; /* hidden by default, shown when code panel is collapsed */
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.right-sidebar-toggle:hover {
-  background: var(--fd-surface-hover);
-  transform: translateY(-50%) scale(1.05);
-}
-.right-sidebar-toggle:active {
-  transform: translateY(-50%) scale(0.95);
-}
-.code-collapsed ~ .right-sidebar-toggle,
-.right-sidebar-toggle.visible {
-  display: flex;
-}
+/* right-sidebar-toggle removed — replaced by #right-panel */
 
 
 /* ─── Responsive ─── */
