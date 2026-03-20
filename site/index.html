@@ -81,10 +81,16 @@
               <div class="chrome-sep"></div>
               <button class="chrome-btn" id="auth-btn" title="Sign in or sign up">👤 Sign in</button>
               <div class="chrome-sep"></div>
-              <!-- Settings gear -->
+              <!-- Settings gear (unified menu) -->
               <div class="chrome-dropdown-container" id="settings-dropdown-container">
                 <button class="chrome-btn" id="settings-gear-btn" title="Settings">⚙</button>
                 <div class="chrome-dropdown chrome-dropdown-right" id="settings-dropdown">
+                  <button class="chrome-dropdown-item" id="ai-chat-btn"><span class="cd-icon">✦</span><span class="cd-label">Agent</span></button>
+                  <button class="chrome-dropdown-item" id="renamify-btn"><span class="cd-icon">✦</span><span class="cd-label">Renamify</span></button>
+                  <button class="chrome-dropdown-item" id="sm-design-review" data-setting="design-review"><span class="cd-icon">✦</span><span class="cd-label">Full Design Review</span></button>
+                  <div class="chrome-dropdown-sep"></div>
+                  <button class="chrome-dropdown-item" id="sm-present"><span class="cd-icon">▶</span><span class="cd-label">Present</span></button>
+                  <div class="chrome-dropdown-sep"></div>
                   <button class="chrome-dropdown-item" id="sm-sketchy-toggle" data-setting="sketchy"><span class="cd-icon">✏️</span><span class="cd-label">Sketchy</span></button>
                   <button class="chrome-dropdown-item" id="sm-grid-toggle" data-setting="grid"><span class="cd-icon">⊞</span><span class="cd-label">Grid</span></button>
                   <button class="chrome-dropdown-item" id="sm-theme-toggle"><span class="cd-icon">☀️</span><span class="cd-label">Theme</span></button>
@@ -92,18 +98,6 @@
                   <div class="chrome-dropdown-sep"></div>
                   <button class="chrome-dropdown-item" id="sm-fullscreen-toggle"><span class="cd-icon">⛶</span><span class="cd-label">Full Screen</span><span class="cd-shortcut">⇧F</span></button>
                   <button class="chrome-dropdown-item" data-setting="fit"><span class="cd-icon">⊡</span><span class="cd-label">Fit to Content</span></button>
-                </div>
-              </div>
-              <div class="chrome-sep"></div>
-              <!-- Hamburger menu -->
-              <div class="chrome-dropdown-container" id="menu-dropdown-container">
-                <button class="chrome-btn" id="settings-menu-btn" title="Menu">☰</button>
-                <div class="chrome-dropdown chrome-dropdown-right" id="settings-menu">
-                  <button class="chrome-dropdown-item" id="ai-chat-btn"><span class="cd-icon">✦</span><span class="cd-label">Agent</span></button>
-                  <button class="chrome-dropdown-item" id="renamify-btn"><span class="cd-icon">✦</span><span class="cd-label">Renamify</span></button>
-                  <button class="chrome-dropdown-item" id="sm-design-review" data-setting="design-review"><span class="cd-icon">✦</span><span class="cd-label">Full Design Review</span></button>
-                  <div class="chrome-dropdown-sep"></div>
-                  <button class="chrome-dropdown-item" id="sm-present"><span class="cd-icon">▶</span><span class="cd-label">Present</span></button>
                   <div class="chrome-dropdown-sep"></div>
                   <button class="chrome-dropdown-item" data-setting="copy-png" id="sm-copy-png"><span class="cd-icon">📷</span><span class="cd-label">Copy as PNG</span></button>
                   <button class="chrome-dropdown-item" data-setting="export-svg" id="sm-export-svg"><span class="cd-icon">📄</span><span class="cd-label">Download SVG</span></button>
@@ -287,6 +281,10 @@
           </div>
           <div id="fd-editor"></div>
         </div>
+        <!-- Right sidebar toggle (appears when code panel is collapsed to zero) -->
+        <button class="right-sidebar-toggle" id="right-sidebar-toggle" title="Toggle Panels (Code Mode)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="14" height="14" rx="2"/><line x1="10.5" y1="1" x2="10.5" y2="15"/></svg>
+        </button>
       </div>
     </div>
   </main>

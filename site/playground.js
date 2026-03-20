@@ -206,20 +206,12 @@ let editorView = null;
 /** Compartment for read-only state */
 const readOnlyCompartment = new Compartment();
 
-const DEFAULT_FD = `# ─── FD Format Demo ───
-# Showcases every keyword, node type, edge style, and animation.
+const DEFAULT_FD = `# ─── Welcome to Fast Draft! ───
+# This is your interactive canvas + code editor.
+# Everything you see on the canvas is written in FD format.
+# Edit the code → canvas updates. Draw on canvas → code updates.
 
 # ─── Styles ───
-
-style heading {
-  fill: #1A1A2E
-  font: "Inter" bold 28
-}
-
-style body {
-  fill: #6B7280
-  font: "Inter" regular 14
-}
 
 style accent {
   fill: #6C5CE7
@@ -229,356 +221,161 @@ style accent {
 style card {
   fill: #FFFFFF
   corner: 16
+  shadow: (0,2,16,#00000010)
 }
 
-# Style inheritance via extends:
-style dark_card {
-  extends: card
-  fill: #2D2B55
+# ─── 👋 Welcome ───
+
+text @welcome_title "Welcome to Fast Draft" {
+  w: 500
+  fill: #1A1A2E
+  font: "Inter" bold 32
+  center_in: canvas
 }
 
-# ─── Edge Defaults ───
-
-edge_defaults {
-  stroke: #8B7CF7 1.5
-  arrow: end
-  curve: smooth
+text @welcome_subtitle "Design as Code — draw it or code it. Both." {
+  fill: #6B7280
+  font: "Inter" regular 16
+  offset: @welcome_title 0, 50
 }
 
-# ─── Node Types ───
+# ─── 🎨 Try the Tools ───
 
-# 1. Rect
-rect @hero_rect {
-  spec {
-    "Primary rectangle — demonstrates fill, stroke, corner, shadow, opacity"
-    todo: "add gradient fill variant"
-    status: done
-    priority: high
-    tag: showcase, mvp
+text @tools_heading "Try the tools below" {
+  fill: #6C5CE7
+  font: "Inter" semibold 18
+  offset: @welcome_subtitle 0, 80
+}
+
+text @tools_hint "Press R for Rectangle, O for Ellipse, T for Text, P for Pen" {
+  fill: #86868B
+  font: "Inter" regular 13
+  offset: @tools_heading 0, 30
+}
+
+# ─── 🖱️ Navigate ───
+
+frame @nav_card {
+  text @nav_title "Navigation" {
+    fill: #1A1A2E
+    font: "Inter" semibold 16
   }
-  w: 280 h: 140
-  offset: @demo_subtitle 0, 60
+  text @nav_hint1 "Pan: Hold Space + drag" {
+    fill: #6B7280
+    font: "Inter" regular 13
+  }
+  text @nav_hint2 "Zoom: Scroll wheel or pinch" {
+    fill: #6B7280
+    font: "Inter" regular 13
+  }
+  text @nav_hint3 "Fit all: Ctrl+0" {
+    fill: #6B7280
+    font: "Inter" regular 13
+  }
+  layout: column gap=8 pad=20
+  w: 240 h: 160
+  use: card
+  offset: @tools_hint 0, 60
+}
+
+# ─── ✏️ Example Shapes ───
+
+rect @example_rect {
+  w: 160 h: 80
   use: accent
-  stroke: #5A4BD1 2
-  shadow: (0,4,20,#6C5CE740)
-  opacity: 0.95
+  offset: @nav_card 280, 0
   when :hover {
     fill: #5A4BD1
     scale: 1.03
     ease: spring 200ms
   }
-  when :press {
-    scale: 0.97
-    ease: ease_out 100ms
-  }
 }
 
-# 2. Ellipse
-ellipse @demo_circle {
-  spec "Circle node — demonstrates ellipse type"
+text @rect_label "Hover me!" {
+  fill: #FFFFFF
+  font: "Inter" semibold 14
+  center_in: @example_rect
+}
+
+ellipse @example_ellipse {
   w: 100 h: 100
-  offset: @hero_rect 320, 20
   fill: #00B894
   stroke: #009B77 2
+  offset: @example_rect 200, -10
   when :hover {
-    opacity: 0.8
-    ease: ease_in 150ms
+    opacity: 0.7
+    ease: ease_out 150ms
   }
 }
 
-# 3. Text (with max-width)
-text @demo_heading "Fast Draft Format Demo" {
-  w: 400
-  use: heading
-  center_in: canvas
+# ─── 🔗 Connections ───
+
+rect @step_1 {
+  text @_step_1_label "1. Draw" {}
+  w: 100 h: 50
+  fill: #F0EDFF
+  stroke: #6C5CE7 1.5
+  corner: 10
+  offset: @nav_card 0, 200
 }
 
-text @demo_subtitle "Every keyword, node type, edge, and animation in one file." {
-  use: body
-  offset: @demo_heading 0, 40
+rect @step_2 {
+  text @_step_2_label "2. Connect" {}
+  w: 100 h: 50
+  fill: #F0EDFF
+  stroke: #6C5CE7 1.5
+  corner: 10
+  offset: @step_1 160, 0
 }
 
-# 4. Group (with row layout)
-group @button_row {
-  layout: row gap=12 pad=0
-  offset: @hero_rect 0, 180
-
-  rect @btn_primary {
-    spec "Primary action button"
-    text @btn_primary_label "Get Started" {
-      fill: #FFFFFF
-      font: "Inter" semibold 15
-    }
-    w: 160 h: 48
-    use: accent
-    when :hover {
-      fill: #5A4BD1
-      scale: 1.03
-      ease: spring 200ms
-    }
-    when :press {
-      scale: 0.97
-      ease: ease_out 100ms
-    }
-  }
-
-  rect @btn_secondary {
-    text @btn_secondary_label "Learn More" {
-      fill: #6C5CE7
-      font: "Inter" semibold 15
-    }
-    w: 160 h: 48
-    fill: #FFFFFF
-    stroke: #6C5CE7 2
-    corner: 12
-    when :hover {
-      fill: #F0EDFF
-      ease: ease_out 150ms
-    }
-  }
+rect @step_3 {
+  text @_step_3_label "3. Animate" {}
+  w: 100 h: 50
+  fill: #F0EDFF
+  stroke: #6C5CE7 1.5
+  corner: 10
+  offset: @step_2 160, 0
 }
 
-# 5. Frame (with column layout, clip, pad)
-frame @info_card {
-  spec {
-    "Card container — frame with clip and padding"
-    done: "layout complete"
-  }
-  offset: @button_row 0, 80
-  text @card_title "Layout Features" {
+edge @flow_1_2 @step_1 -> @step_2 {
+  stroke: #6C5CE7 1.5
+  arrow: end
+  curve: smooth
+}
+
+edge @flow_2_3 @step_2 -> @step_3 {
+  stroke: #6C5CE7 1.5
+  arrow: end
+  curve: smooth
+}
+
+# ─── 💡 Pro Tips ───
+
+frame @tips_card {
+  text @tips_title "Pro Tips" {
     fill: #1A1A2E
-    font: "Inter" semibold 18
+    font: "Inter" semibold 16
   }
-  text @card_body "Frames support clip, pad, and managed layouts (column, row, grid)." {
-    use: body
+  text @tip1 "Double-click text to edit inline" {
+    fill: #6B7280
+    font: "Inter" regular 13
   }
-  rect @card_cta {
-    text @card_cta_label "Action" {
-      fill: #FFFFFF
-      font: "Inter" medium 14
-    }
-    w: 120 h: 36
-    use: accent
+  text @tip2 "Right-click for context menu" {
+    fill: #6B7280
+    font: "Inter" regular 13
   }
-  layout: column gap=12 pad=24
-  w: 320 h: 220
+  text @tip3 "⌘Z to undo, ⌘⇧Z to redo" {
+    fill: #6B7280
+    font: "Inter" regular 13
+  }
+  text @tip4 "Press ? for all shortcuts" {
+    fill: #6B7280
+    font: "Inter" regular 13
+  }
+  layout: column gap=8 pad=20
+  w: 280 h: 180
   use: card
-  clip: true
-  shadow: (0,2,16,#00000010)
-}
-
-# 6. Path
-path @demo_path {
-  spec "Freehand path — pen tool output"
-  stroke: #3B82F6 3
-  offset: @demo_circle 140, 0
-}
-
-# 7. Generic node (placeholders)
-@login_btn {
-  spec {
-    "Generic node — no shape keyword, renders as dashed placeholder"
-    todo: "upgrade to rect when design is finalized"
-  }
-  fill: #F0EDFC
-  corner: 8
-  offset: @bg_shorthand 240, 0
-}
-
-# ─── Grid Layout ───
-
-group @color_grid {
-  spec "Grid layout showcase — 3 columns"
-  layout: grid cols=3 gap=12 pad=0
-  offset: @info_card 360, 0
-
-  rect @swatch_1 { w: 80 h: 60; fill: #6C5CE7; corner: 8 }
-  rect @swatch_2 { w: 80 h: 60; fill: #00B894; corner: 8 }
-  rect @swatch_3 { w: 80 h: 60; fill: #FF6B6B; corner: 8 }
-  rect @swatch_4 { w: 80 h: 60; fill: #FFE66D; corner: 8 }
-  rect @swatch_5 { w: 80 h: 60; fill: #A29BFE; corner: 8 }
-  rect @swatch_6 { w: 80 h: 60; fill: #74B9FF; corner: 8 }
-}
-
-# ─── Place (child alignment) ───
-
-frame @place_demo {
-  w: 200 h: 120
-  fill: #F8F9FA
-  corner: 12
-  stroke: #E8E8EC 1
-  pad: 12
-  offset: @info_card 0, 260
-  text @top_left "TL" {
-    font: "Inter" medium 12
-    fill: #999999
-    place: top-left
-  }
-  text @center_text "center" {
-    font: "Inter" medium 12
-    fill: #6C5CE7
-    place: center
-  }
-  text @bottom_right "BR" {
-    font: "Inter" medium 12
-    fill: #999999
-    place: bottom-right
-  }
-}
-
-# ─── Locked Node ───
-
-rect @locked_element {
-  spec "Locked node — cannot be moved or resized on canvas"
-  w: 120 h: 40
-  fill: #E8E8EC
-  corner: 8
-  locked: true
-  offset: @place_demo 240, 0
-}
-
-# ─── Animations: All Triggers & Easing ───
-
-# :enter trigger (viewport entrance)
-rect @enter_demo {
-  spec "Entrance animation — plays when scrolled into view"
-  w: 140 h: 80
-  fill: #6C5CE7
-  corner: 12
-  offset: @place_demo 0, 160
-  opacity: 0
-  when :enter {
-    opacity: 1
-    scale: 1
-    ease: ease_in_out 500ms
-  }
-}
-
-# :hover with linear easing
-rect @linear_demo {
-  text @linear_label "Linear" {
-    fill: #333333
-    font: "Inter" medium 12
-  }
-  w: 100 h: 60
-  fill: #DFE6E9
-  corner: 10
-  offset: @enter_demo 180, 0
-  when :hover {
-    fill: #6C5CE7
-    ease: linear 300ms
-  }
-}
-
-# :hover with delay
-rect @delay_demo {
-  text @delay_label "Delayed" {
-    fill: #333333
-    font: "Inter" medium 12
-  }
-  w: 100 h: 60
-  fill: #DFE6E9
-  corner: 10
-  offset: @linear_demo 140, 0
-  when :hover {
-    scale: 1.1
-    ease: ease_out 300ms
-    delay: 200ms
-  }
-}
-
-# Custom trigger
-rect @custom_trigger {
-  spec "Custom trigger — :active"
-  w: 100 h: 60
-  fill: #FFE66D
-  corner: 10
-  offset: @delay_demo 140, 0
-  when :active {
-    fill: #FF6B6B
-    rotate: 5
-    ease: spring 400ms
-  }
-}
-
-# ─── Background Shorthand ───
-
-rect @bg_shorthand {
-  spec "bg: shorthand — fill + corner + shadow in one line"
-  w: 200 h: 80
-  bg: #FFFFFF corner=12 shadow=(0,4,16,#00000015)
-  offset: @enter_demo 0, 120
-}
-
-# ─── Edges: All Styles ───
-
-# Source and target nodes for edges
-rect @node_a { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8; offset: @bg_shorthand 0, 120 }
-rect @node_b { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8; offset: @node_a 200, 0 }
-rect @node_c { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8; offset: @node_b 200, 0 }
-rect @node_d { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8; offset: @node_a 0, 100 }
-rect @node_e { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8; offset: @node_d 200, 0 }
-rect @node_f { w: 100 h: 50; fill: #FFFFFF; stroke: #D1D5DB 1; corner: 8; offset: @node_e 200, 0 }
-
-# Straight curve, end arrow
-edge @edge_straight @node_a -> @node_b {
-  text @_edge_straight_label "straight" {}
-  stroke: #4F46E5 2
-  arrow: end
-  curve: straight
-}
-
-# Smooth curve, both arrows
-edge @edge_smooth @node_b -> @node_c {
-  text @_edge_smooth_label "smooth + both" {}
-  stroke: #10B981 2
-  arrow: both
-  curve: smooth
-}
-
-# Step curve, start arrow
-edge @edge_step @node_c -> @node_d {
-  text @_edge_step_label "step + start" {}
-  stroke: #F59E0B 2
-  arrow: start
-  curve: step
-}
-
-# No arrow
-edge @edge_none @node_d -> @node_e {
-  text @_edge_none_label "no arrow" {}
-  stroke: #6B7280 2
-  arrow: none
-  curve: smooth
-}
-
-# Flow: pulse animation on edge
-edge @edge_pulse @node_e -> @node_f {
-  text @_edge_pulse_label "pulse flow" {}
-  stroke: #3B82F6 2
-  arrow: end
-  curve: smooth
-  flow: pulse 1000ms
-}
-
-# Flow: dash animation on edge
-edge @edge_dash @node_a -> @node_f {
-  text @_edge_dash_label "dash flow" {}
-  stroke: #EC4899 2
-  arrow: end
-  curve: smooth
-  flow: dash 800ms
-}
-
-# Edge with spec
-edge @annotated_edge @hero_rect -> @info_card {
-  spec {
-    "Documented edge — shows spec on edges"
-    todo: "add error path variant"
-  }
-  stroke: #6C5CE7 2
-  arrow: end
-  curve: smooth
+  offset: @step_1 0, 100
 }`;
 
 // ─── State ───────────────────────────────────────────────────────────────
@@ -872,11 +669,9 @@ function toggleCodePanel() {
   const collapsedPx = Math.round(containerWidth * 0.1);
 
   if (!codeCollapsed) {
-    // ── Collapsing: save current width, animate to 10%, then apply class ──
+    // ── Collapsing: save current width, animate to zero ──
     const currentWidth = container.style.getPropertyValue('--editor-width');
     savedEditorWidth = currentWidth || null;
-    // Set px-based collapsed width for smooth CSS Grid interpolation
-    container.style.setProperty('--collapsed-width', `${collapsedPx}px`);
     // Start from current px position so transition has a valid start
     if (!currentWidth) {
       const editorEl = container.querySelector('.playground-editor');
@@ -886,9 +681,11 @@ function toggleCodePanel() {
     }
     // Force layout so the starting value is committed
     container.offsetHeight;
-    // Set target: animate --editor-width to collapsed size
-    container.style.setProperty('--editor-width', `${collapsedPx}px`);
+    // Set target: animate --editor-width to zero
+    container.style.setProperty('--editor-width', '0px');
     codeCollapsed = true;
+    // Show right sidebar toggle
+    document.getElementById('right-sidebar-toggle')?.classList.add('visible');
     // After transition finishes, swap to .code-collapsed class
     let handled = false;
     const onEnd = (e) => {
@@ -911,8 +708,8 @@ function toggleCodePanel() {
   } else {
     // ── Expanding: remove class, animate to saved width ──
     const targetWidth = savedEditorWidth || null;
-    // Set --editor-width to collapsed px so transition starts from correct position
-    container.style.setProperty('--editor-width', `${collapsedPx}px`);
+    // Set --editor-width to 0px so transition starts from correct position
+    container.style.setProperty('--editor-width', '0px');
     container.classList.remove('code-collapsed');
     // Force layout so browser commits the collapsed starting point
     container.offsetHeight;
@@ -924,6 +721,8 @@ function toggleCodePanel() {
     }
     codeCollapsed = false;
     savedEditorWidth = null;
+    // Hide right sidebar toggle
+    document.getElementById('right-sidebar-toggle')?.classList.remove('visible');
     // Resize canvas after transition
     let handled = false;
     const onEnd = (e) => {
@@ -5548,27 +5347,39 @@ async function initPlayground() {
       setTimeout(toggleFullscreen, 300);
     }
 
-    // ── Panel startup animation: briefly collapse, then expand ──────
-    // Gives users a visual cue that panels exist and can be toggled
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    // ── Panel startup animation: show briefly, then collapse to zero ────
+    // Gives users a visual cue that panels exist before canvas takes over
+    const reduceMotionStartup = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       || document.body.classList.contains('reduce-motion');
-    if (!reduceMotion && !urlParams.has('fullscreen')) {
-      const layersPanel = document.getElementById('layers-panel');
-      const editorWrapper = document.querySelector('.playground-editor');
+    if (!reduceMotionStartup && !urlParams.has('fullscreen')) {
       const splitContainer = document.getElementById('playground-container');
-      if (layersPanel && editorWrapper && splitContainer) {
-        // Start collapsed
-        splitContainer.classList.add('panels-intro');
-        // Expand after brief delay
+      if (splitContainer) {
+        // After a brief delay showing the panels, collapse them to zero
         setTimeout(() => {
-          splitContainer.classList.remove('panels-intro');
-          splitContainer.classList.add('panels-expanding');
-          // Clean up transition class after animation completes
+          splitContainer.classList.add('panels-collapsing');
+          // After collapse animation completes, apply final collapsed state
           setTimeout(() => {
-            splitContainer.classList.remove('panels-expanding');
+            splitContainer.classList.remove('panels-collapsing');
+            // Apply actual collapsed state
+            if (!codeCollapsed) {
+              codeCollapsed = true;
+              splitContainer.classList.add('code-collapsed');
+              splitContainer.style.removeProperty('--editor-width');
+            }
+            // Collapse layers
+            const lp = document.getElementById('layers-panel');
+            const lh = document.getElementById('layers-resize');
+            if (lp) {
+              lp.classList.add('collapsed');
+              document.getElementById('canvas-wrapper')?.style.setProperty('--layers-width', '0px');
+              localStorage.setItem('fd-layers-collapsed', '1');
+            }
+            if (lh) lh.style.display = 'none';
+            // Show right sidebar toggle
+            document.getElementById('right-sidebar-toggle')?.classList.add('visible');
             window.dispatchEvent(new Event('resize'));
-          }, 350);
-        }, 200);
+          }, 500);
+        }, 800);
       }
     }
 
@@ -5676,7 +5487,6 @@ async function initPlayground() {
         sidebarDropdown?.classList.toggle('visible');
         // Close other dropdowns
         document.getElementById('settings-dropdown')?.classList.remove('visible');
-        document.getElementById('settings-menu')?.classList.remove('visible');
       });
     }
     // Sidebar dropdown item handlers
@@ -5698,6 +5508,19 @@ async function initPlayground() {
 
     // ── Specs Panel Resize ───────────────────────────────────────────
     setupSpecsResize();
+
+    // ── Right Sidebar Toggle (shows when code panel collapsed) ───────
+    const rightSidebarToggle = document.getElementById('right-sidebar-toggle');
+    rightSidebarToggle?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Expand code panel
+      if (codeCollapsed) toggleCodePanel();
+      // Also expand layers if collapsed
+      const lp = document.getElementById('layers-panel');
+      if (lp?.classList.contains('collapsed')) toggleLayersPanel();
+      // Hide the toggle
+      rightSidebarToggle.classList.remove('visible');
+    });
 
     // ── Desktop Code Panel Toggle (click editor header) ──────────────
     const editorHeader = document.getElementById('editor-header');
@@ -6814,9 +6637,7 @@ async function initPlayground() {
 
 
 
-    // ── Chrome Dropdowns (settings gear + hamburger menu) ──────────────
-    const settingsBtn = document.getElementById('settings-menu-btn');
-    const settingsMenu = document.getElementById('settings-menu');
+    // ── Chrome Dropdowns (unified settings gear) ─────────────────────────
     const settingsGearBtn = document.getElementById('settings-gear-btn');
     const settingsDropdown = document.getElementById('settings-dropdown');
 
@@ -6826,20 +6647,11 @@ async function initPlayground() {
       document.getElementById('sm-motion-toggle')?.classList.toggle('toggle-on', reduceMotion);
     }
 
-    // Settings gear dropdown
+    // Settings gear dropdown (unified menu)
     settingsGearBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       updateSettingsToggles();
       settingsDropdown?.classList.toggle('visible');
-      settingsMenu?.classList.remove('visible');
-      document.getElementById('sidebar-dropdown')?.classList.remove('visible');
-    });
-
-    // Hamburger menu dropdown
-    settingsBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      settingsMenu?.classList.toggle('visible');
-      settingsDropdown?.classList.remove('visible');
       document.getElementById('sidebar-dropdown')?.classList.remove('visible');
     });
 
@@ -6847,7 +6659,6 @@ async function initPlayground() {
     document.addEventListener('pointerdown', (e) => {
       const inside = e.target.closest('.chrome-dropdown') || e.target.closest('.chrome-btn') || e.target.closest('.chrome-dropdown-container');
       if (!inside) {
-        settingsMenu?.classList.remove('visible');
         settingsDropdown?.classList.remove('visible');
         document.getElementById('sidebar-dropdown')?.classList.remove('visible');
       }
