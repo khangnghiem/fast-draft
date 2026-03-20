@@ -17,6 +17,9 @@
 
 ## Completed Requirements
 
+### v0.11.217 — Remove Welcome Overlay (R6.5)
+- **UX (R6.5)**: Removed "Click anywhere to start" welcome overlay — users now go straight to the canvas (Excalidraw-style instant start). Cleaned up 67 lines of CSS and 19 lines of JS
+
 ### v0.11.216 — Excalidraw-Inspired Improvements (R3.73–R3.77, R6.17, R7.1, R7.2)
 - **Instant Start (R6.17)**: Service Worker (`sw.js`) with stale-while-revalidate strategy pre-caches WASM assets for instant repeat-visit loading
 - **Quick Color Picker (R3.75)**: 8-preset color strip + custom color picker appears below selected shapes — left-click for fill, right-click for stroke

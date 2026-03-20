@@ -46,20 +46,6 @@
 
   <!-- ─── Full-Viewport Playground ─── -->
   <main id="app">
-    <!-- Welcome Overlay (first-time visitors) -->
-    <div id="welcome-overlay" class="welcome-overlay">
-      <div class="welcome-content">
-        <span class="welcome-icon">⚡</span>
-        <h2>Fast Draft</h2>
-        <p class="welcome-sub">Design as Code — draw or type</p>
-        <div class="welcome-actions">
-          <a href="/docs/" class="welcome-link">📖 Docs</a>
-          <a href="/docs/shortcuts.html" class="welcome-link">⌨ Shortcuts</a>
-          <a href="/download/" class="welcome-link">⬇ Download</a>
-        </div>
-        <p class="welcome-hint">Click anywhere to start</p>
-      </div>
-    </div>
 
     <div class="app-playground">
 
@@ -352,25 +338,6 @@
       this.classList.toggle('open');
     });
 
-    // Welcome overlay — dismiss on first interaction, remember in localStorage
-    (function() {
-      const overlay = document.getElementById('welcome-overlay');
-      if (!overlay) return;
-      if (localStorage.getItem('fd-welcome-dismissed') ||
-          new URLSearchParams(window.location.search).has('code')) {
-        overlay.remove();
-        return;
-      }
-      function dismiss() {
-        overlay.classList.add('fade-out');
-        setTimeout(() => overlay.remove(), 400);
-        localStorage.setItem('fd-welcome-dismissed', '1');
-      }
-      overlay.addEventListener('pointerdown', dismiss);
-      // Also dismiss if user interacts with canvas or editor
-      document.getElementById('fd-canvas')?.addEventListener('pointerdown', dismiss, { once: true });
-      document.getElementById('fd-editor')?.addEventListener('focusin', dismiss, { once: true });
-    })();
   </script>
 </body>
 </html>
