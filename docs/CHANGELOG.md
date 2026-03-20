@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.220 — Layout Fixes: Non-Scrollable Canvas + Centered Toolbar (R6.5, R6.6)
+- **FIX (R6.5)**: Canvas is now truly non-scrollable — added `html, body { overflow: hidden; height: 100% }` to prevent browser-level scroll leaking through the `#app` viewport
+- **UX (R6.6)**: Floating scroll toolbar now centered (`left: 50%; transform: translateX(-50%)`) instead of left-anchored to layers panel width — matches Excalidraw/Figma toolbar placement
+- **UX (R6.6)**: Toolbar has `max-width: calc(100% - 200px)` safety to prevent minimap overlap at narrow viewports
+
 ### v0.11.219 — UI Consolidation + Onboarding (R6.5, R6.6)
 - **UX (R6.5)**: Merged ☰ hamburger menu into ⚙ gear dropdown — single unified settings menu with Agent, Renamify, Design Review, Present, Sketchy, Grid, Theme, Reduce Motion, Fullscreen, Fit to Content, Export options, Shortcuts, and navigation links; removed hamburger button and separator
 - **UX (R6.6)**: Code panel now collapses to **zero width** instead of 10% — resize handle also hides when collapsed; `.code-collapsed` grid uses `0fr` column

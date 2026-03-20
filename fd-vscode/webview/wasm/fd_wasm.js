@@ -369,14 +369,14 @@ export class FdCanvas {
         }
     }
     /**
-     * Get all notes across the entire document.
+     * Get all specs across the entire document.
      * @returns {string}
      */
-    get_all_notes() {
+    get_all_specs() {
         let deferred1_0;
         let deferred1_1;
         try {
-            const ret = wasm.fdcanvas_get_all_notes(this.__wbg_ptr);
+            const ret = wasm.fdcanvas_get_all_specs(this.__wbg_ptr);
             deferred1_0 = ret[0];
             deferred1_1 = ret[1];
             return getStringFromWasm0(ret[0], ret[1]);
@@ -600,25 +600,6 @@ export class FdCanvas {
         }
     }
     /**
-     * Get the raw markdown note for a node.
-     * @param {string} node_id
-     * @returns {string}
-     */
-    get_note(node_id) {
-        let deferred2_0;
-        let deferred2_1;
-        try {
-            const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len0 = WASM_VECTOR_LEN;
-            const ret = wasm.fdcanvas_get_note(this.__wbg_ptr, ptr0, len0);
-            deferred2_0 = ret[0];
-            deferred2_1 = ret[1];
-            return getStringFromWasm0(ret[0], ret[1]);
-        } finally {
-            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
-        }
-    }
-    /**
      * Return the parent ID of a node, or empty string if it's a root-level node.
      * @param {string} node_id
      * @returns {string}
@@ -655,7 +636,7 @@ export class FdCanvas {
     }
     /**
      * Get the currently selected node ID, or empty string if none.
-     * Returns the first selected node for backward compatibility.
+     * Returns the first selected node.
      * @returns {string}
      */
     get_selected_id() {
@@ -719,6 +700,25 @@ export class FdCanvas {
     get_sketchy_mode() {
         const ret = wasm.fdcanvas_get_sketchy_mode(this.__wbg_ptr);
         return ret !== 0;
+    }
+    /**
+     * Get the displayable spec text for a node.
+     * @param {string} node_id
+     * @returns {string}
+     */
+    get_spec(node_id) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_get_spec(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
     }
     /**
      * Get the current FD source text (synced from graph).
@@ -1250,20 +1250,6 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
-     * Set the raw markdown note for a node.
-     * @param {string} node_id
-     * @param {string} content
-     * @returns {boolean}
-     */
-    set_note(node_id, content) {
-        const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len1 = WASM_VECTOR_LEN;
-        const ret = wasm.fdcanvas_set_note(this.__wbg_ptr, ptr0, len0, ptr1, len1);
-        return ret !== 0;
-    }
-    /**
      * Set the current pointer device type (0=mouse, 1=touch, 2=pen).
      * Called from JS before each pointer event to adapt hit radii and handle sizes.
      * @param {number} ptype
@@ -1277,6 +1263,20 @@ export class FdCanvas {
      */
     set_sketchy_mode(enabled) {
         wasm.fdcanvas_set_sketchy_mode(this.__wbg_ptr, enabled);
+    }
+    /**
+     * Set the spec for a node from raw markdown text.
+     * @param {string} node_id
+     * @param {string} content
+     * @returns {boolean}
+     */
+    set_spec(node_id, content) {
+        const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_set_spec(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return ret !== 0;
     }
     /**
      * Set the FD source text, re-parsing into the scene graph.
