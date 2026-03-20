@@ -1,5 +1,5 @@
 /**
- * AI Chat — Multi-Turn Agent panel for Fast Draft playground.
+ * AI Chat — Multi-Turn Agent panel for Fast Draft web editor.
  *
  * Provides a conversational interface where users can discuss their
  * design and request modifications. Supports:

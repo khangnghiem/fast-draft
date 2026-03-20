@@ -1,5 +1,5 @@
 // ─── canvas-core/inline-edit.js ─── Shared inline text editor
-// Imported by both site/playground.js and fd-vscode/webview/src/inline-edit.js.
+// Imported by both site/app.js and fd-vscode/webview/src/inline-edit.js.
 //
 // Double-click text/shape → floating textarea for in-place editing.
 // Enter = commit, Escape = cancel, live-sync on every keystroke.

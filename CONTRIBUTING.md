@@ -69,7 +69,7 @@ cargo clippy --workspace -- -D warnings
 # Format check
 cargo fmt --all -- --check
 
-# Build WASM (for IDE extension + web playground)
+# Build WASM (for IDE extension + web editor)
 wasm-pack build crates/fd-wasm --target web --out-dir ../../site/wasm
 
 # Build VS Code extension

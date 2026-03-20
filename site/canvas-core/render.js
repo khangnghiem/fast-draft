@@ -1,5 +1,5 @@
 // ─── canvas-core/render.js ─── Shared render loop + tween engine
-// Imported by both site/playground.js and fd-vscode/webview/src/main.js.
+// Imported by both site/app.js and fd-vscode/webview/src/main.js.
 //
 // This module provides:
 // - Tween engine for CSS-like animations (hover/press transitions)
