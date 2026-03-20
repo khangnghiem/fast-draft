@@ -2591,12 +2591,20 @@ fn tool_pen_catmull_rom_smoothing() {
     match &muts[0] {
         GraphMutation::UpdatePath { commands, .. } => {
             // Path should start with a MoveTo
-            assert!(matches!(commands.first(), Some(PathCmd::MoveTo(_, _))), "Path should start with MoveTo");
+            assert!(
+                matches!(commands.first(), Some(PathCmd::MoveTo(_, _))),
+                "Path should start with MoveTo"
+            );
 
             // Because of Catmull-Rom logic in `points_to_smooth_bezier`, there should be
             // multiple CubicTo commands generated between the subsampled points.
-            let has_cubic = commands.iter().any(|cmd| matches!(cmd, PathCmd::CubicTo(_, _, _, _, _, _)));
-            assert!(has_cubic, "Path should contain CubicTo commands for Catmull-Rom smoothing");
+            let has_cubic = commands
+                .iter()
+                .any(|cmd| matches!(cmd, PathCmd::CubicTo(_, _, _, _, _, _)));
+            assert!(
+                has_cubic,
+                "Path should contain CubicTo commands for Catmull-Rom smoothing"
+            );
         }
         _ => panic!("Expected UpdatePath as first mutation"),
     }
@@ -2660,7 +2668,12 @@ fn tool_pen_pressure_data_capture() {
             // 1.0 + 0.5333 * 3.5 = 1.0 + 1.8666... = 2.8666...
             let expected_width = 1.0 + (1.6 / 3.0) * 3.5;
             let diff = (*width - expected_width).abs();
-            assert!(diff < 0.01, "Expected stroke width ~{}, got {}", expected_width, width);
+            assert!(
+                diff < 0.01,
+                "Expected stroke width ~{}, got {}",
+                expected_width,
+                width
+            );
         }
         _ => panic!("Expected SetStrokeWidth as second mutation"),
     }
