@@ -518,16 +518,112 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   border-left: none;
 }
 
-/* Tab bar */
-.rp-tabs {
+/* ─── Left Panel: Layers + Tabbed Content ─── */
+#left-panel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--left-panel-width, 280px);
+  min-width: 0;
+  max-width: 500px;
+  background: var(--fd-surface);
+  border-right: 0.5px solid var(--fd-border);
+  z-index: 10;
   display: flex;
-  height: 32px;
-  min-height: 32px;
-  background: rgba(0, 0, 0, 0.06);
+  flex-direction: column;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  transition: width 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+#left-panel.collapsed { width: 0 !important; overflow: hidden; }
+
+/* Layers section (top half) */
+#layers-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 80px;
+  flex: 1;
+  overflow: hidden;
+}
+.lp-layers-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fd-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   border-bottom: 0.5px solid var(--fd-border);
   flex-shrink: 0;
 }
-.rp-tab {
+.lp-layers-title { user-select: none; }
+.lp-layers-collapse {
+  background: none;
+  border: none;
+  color: var(--fd-text-tertiary);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.lp-layers-collapse:hover { background: rgba(0,0,0,0.06); }
+.dark-theme .lp-layers-collapse:hover { background: rgba(255,255,255,0.08); }
+
+/* Layers panel inside the section */
+#layers-panel {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-size: 12px;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.1) transparent;
+}
+
+/* Split divider between layers and tabs */
+.lp-split-divider {
+  height: 4px;
+  cursor: ns-resize;
+  background: var(--fd-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+.lp-split-divider::after {
+  content: '';
+  width: 24px;
+  height: 2px;
+  background: var(--fd-text-tertiary);
+  border-radius: 1px;
+  opacity: 0.4;
+}
+.lp-split-divider:hover::after { opacity: 0.8; }
+
+/* Tabbed section (bottom half) */
+#lp-tabbed-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 120px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Left panel tab bar */
+.lp-tabs {
+  display: flex;
+  height: 30px;
+  min-height: 30px;
+  background: rgba(0, 0, 0, 0.04);
+  border-bottom: 0.5px solid var(--fd-border);
+  flex-shrink: 0;
+}
+.lp-tab {
   flex: 1;
   display: flex;
   align-items: center;
@@ -535,24 +631,25 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   border: none;
   background: transparent;
   color: var(--fd-text-secondary);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
   user-select: none;
-  padding: 0;
+  padding: 0 4px;
   line-height: 1;
   position: relative;
+  white-space: nowrap;
 }
-.rp-tab:hover {
+.lp-tab:hover {
   background: var(--fd-surface-hover);
   color: var(--fd-text);
 }
-.rp-tab.active {
+.lp-tab.active {
   color: var(--fd-accent);
   background: transparent;
 }
-.rp-tab.active::after {
+.lp-tab.active::after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -563,15 +660,15 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   border-radius: 1px;
 }
 
-/* Panel content */
-.rp-content {
+/* Left panel content */
+.lp-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
 }
-.rp-pane {
+.lp-pane {
   display: none;
   flex-direction: column;
   flex: 1;
@@ -581,36 +678,61 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   scrollbar-width: thin;
   scrollbar-color: rgba(0,0,0,0.1) transparent;
 }
-.rp-pane::-webkit-scrollbar { width: 4px; }
-.rp-pane::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
-.rp-pane.active {
+.lp-pane::-webkit-scrollbar { width: 4px; }
+.lp-pane::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
+.lp-pane.active {
   display: flex;
 }
 
-/* Pane header (used in Code tab) */
-.rp-pane-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--fd-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 0.5px solid var(--fd-border);
-  flex-shrink: 0;
-}
-
-/* Code editor inside right panel */
-.rp-pane[data-pane="code"] #fd-editor {
+/* Code editor inside left panel */
+.lp-pane[data-pane="code"] #fd-editor {
   flex: 1;
   overflow: hidden;
   background: #282C34;
 }
-.rp-pane[data-pane="code"] #fd-editor .cm-editor {
+.lp-pane[data-pane="code"] #fd-editor .cm-editor {
   height: 100%;
 }
+
+/* ─── Right Panel: Agent + Actions Bar ─── */
+.rp-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border-bottom: 0.5px solid var(--fd-border);
+  flex-shrink: 0;
+}
+.rp-action-btn {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  color: var(--fd-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+}
+.rp-action-btn:hover {
+  background: rgba(0,0,0,0.06);
+  color: var(--fd-text);
+}
+.dark-theme .rp-action-btn:hover {
+  background: rgba(255,255,255,0.08);
+}
+.rp-actions-spacer { flex: 1; }
+
+/* Agent content = all remaining space */
+.rp-agent-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
 
 /* Design tab empty state */
 .rp-design-empty {
@@ -630,7 +752,7 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   position: relative;
   overflow: hidden;
   background: var(--fd-bg);
-  --layers-width: 220px;
+  --left-panel-width: 280px;
   --props-width: 0px;
   display: flex;
   flex-direction: column;
@@ -915,41 +1037,16 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
 }
 #fd-canvas {
   position: absolute;
-  left: var(--layers-width, 220px);
+  left: var(--left-panel-width, 280px);
   top: 0;
   right: var(--right-panel-width, 320px);
   bottom: 0;
-  width: calc(100% - var(--layers-width, 220px) - var(--right-panel-width, 320px));
+  width: calc(100% - var(--left-panel-width, 280px) - var(--right-panel-width, 320px));
   height: 100%;
   display: block;
 }
 
-/* ─── Layers Panel ─── */
-#layers-panel {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: var(--layers-width, 220px);
-  min-width: 0;
-  max-width: 400px;
-  background: var(--fd-surface);
-  border-right: 0.5px solid var(--fd-border);
-  overflow-y: auto;
-  overflow-x: hidden;
-  z-index: 10;
-  font-size: 12px;
-  padding: 0;
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  transition: width 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-}
-#layers-panel.no-transition { transition: none; }
-#layers-panel.collapsed {
-  width: 0 !important;
-  overflow: hidden;
-  border-right: none;
-}
+/* Layers panel is now inside #left-panel — no absolute positioning needed */
 #layers-panel::-webkit-scrollbar { width: 6px; }
 #layers-panel::-webkit-scrollbar-track { background: transparent; }
 #layers-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
@@ -1177,97 +1274,123 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   outline-offset: -2px;
 }
 
-/* ─── Floating Scroll Toolbar ─── */
+/* ─── Floating Toolbar (frosted glass pill) ─── */
 #floating-toolbar {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 12px;
   z-index: 25;
   display: flex;
-  align-items: stretch;
-  max-width: calc(100% - 200px);
-  --left-roll-width: 12px;
-  --right-roll-width: 12px;
+  align-items: center;
+  gap: 2px;
+  background: var(--fd-surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 0.5px solid var(--fd-border);
+  border-radius: 12px;
+  box-shadow: var(--fd-shadow-lg);
+  padding: 3px;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
+  transition: top 0.25s ease, bottom 0.25s ease, left 0.25s ease, right 0.25s ease, transform 0.25s ease, flex-direction 0.2s ease;
 }
-#floating-toolbar.horizontal { flex-direction: row; }
-.scroll-handle {
+/* ── Snap positions ── */
+.toolbar-docked-top {
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  flex-direction: row;
+}
+.toolbar-docked-bottom {
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  flex-direction: row;
+}
+.toolbar-docked-left {
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-direction: column;
+}
+.toolbar-docked-right {
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-direction: column;
+}
+/* Free-floating (during drag) */
+#floating-toolbar.toolbar-dragging {
+  transition: none !important;
+  position: fixed;
+  z-index: 9999;
+}
+/* ── Grip handles ── */
+.toolbar-grip {
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: grab;
-  position: relative;
-  min-width: 16px;
-  min-height: 16px;
-  padding: 0 4px;
+  padding: 2px 4px;
+  color: var(--fd-text-tertiary);
+  font-size: 14px;
+  border-radius: 6px;
+  user-select: none;
+  letter-spacing: 2px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
 }
-.scroll-handle:active { cursor: grabbing; }
-.horizontal .handle-start { flex-direction: row; }
-.horizontal .handle-end { flex-direction: row; }
-.wood-core {
-  background: linear-gradient(90deg, #5c3a21 0%, #8b5a33 30%, #a06b3f 50%, #8b5a33 70%, #5c3a21 100%);
-  position: absolute;
-  box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+.toolbar-grip:hover { opacity: 1; }
+.toolbar-grip:active { cursor: grabbing; }
+/* ── Minimized state: only active tool + AI button ── */
+#floating-toolbar.toolbar-minimized .ft-tool-btn { display: none; }
+#floating-toolbar.toolbar-minimized .ft-tool-btn.active { display: flex; }
+#floating-toolbar.toolbar-minimized .ft-ai-touch { display: flex; }
+#floating-toolbar.toolbar-minimized .ft-sep { display: none; }
+#floating-toolbar.toolbar-minimized .ft-undo,
+#floating-toolbar.toolbar-minimized .ft-redo { display: none; }
+/* Show one separator between active tool and AI */
+#floating-toolbar.toolbar-minimized .ft-tool-btn.active + .ft-sep { display: block; }
+/* ── Snap indicator (shown during drag near edge) ── */
+.toolbar-snap-indicator {
+  position: fixed;
+  z-index: 9998;
+  background: var(--fd-accent);
+  opacity: 0.3;
+  border-radius: 2px;
+  pointer-events: none;
+  transition: opacity 0.15s;
 }
-.horizontal .wood-core {
-  width: 6px;
-  top: -4px;
-  bottom: -4px;
-  border-radius: 3px;
+.toolbar-snap-indicator.snap-top,
+.toolbar-snap-indicator.snap-bottom {
+  left: 20%;
+  right: 20%;
+  height: 3px;
 }
-.finial-top, .finial-bottom {
-  position: absolute;
-  background: radial-gradient(circle at 30% 30%, #a06b3f, #5c3a21);
-  border-radius: 50%;
-  width: 8px;
-  height: 8px;
-  left: -1px;
+.toolbar-snap-indicator.snap-top { top: 0; }
+.toolbar-snap-indicator.snap-bottom { bottom: 0; }
+.toolbar-snap-indicator.snap-left,
+.toolbar-snap-indicator.snap-right {
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
 }
-.horizontal .finial-top { top: -4px; }
-.horizontal .finial-bottom { bottom: -4px; }
-.paper-roll {
-  background: linear-gradient(90deg, #e0e0e0 0%, #ffffff 20%, #f4f4f4 80%, #cccccc 100%);
-  box-shadow: inset 2px 0 4px rgba(0,0,0,0.05), inset -2px 0 4px rgba(0,0,0,0.1), 2px 2px 8px rgba(0,0,0,0.2);
-  z-index: 2;
-  transition: width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+.toolbar-snap-indicator.snap-left { left: 0; }
+.toolbar-snap-indicator.snap-right { right: 0; }
+/* ── AI Touch button in toolbar ── */
+.ft-ai-touch {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  width: auto;
+  padding: 0 10px;
+  color: var(--fd-accent);
+  gap: 4px;
 }
-.dark-canvas .paper-roll {
-  background: linear-gradient(90deg, #3a3a3c 0%, #4a4a4c 20%, #404042 80%, #2c2c2e 100%);
-  box-shadow: inset 2px 0 4px rgba(0,0,0,0.2), inset -2px 0 4px rgba(0,0,0,0.4), 2px 2px 8px rgba(0,0,0,0.4);
+.ft-ai-touch:hover {
+  background: rgba(42, 110, 240, 0.1);
+  color: var(--fd-accent);
 }
-.horizontal .left-roll { width: var(--left-roll-width); height: 38px; border-radius: 8px; }
-.horizontal .right-roll { width: var(--right-roll-width); height: 38px; border-radius: 8px; }
-/* Roll/unroll transitions */
-.scroll-toolbar .scroll-paper-body,
-.scroll-toolbar .left-roll,
-.scroll-toolbar .right-roll {
-  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1), padding 1s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
-}
-.scroll-toolbar.rolled-right .scroll-paper-body { width: 0; overflow: hidden; padding: 0; opacity: 0; }
-.scroll-toolbar.rolled-right .right-roll { width: 28px; }
-.scroll-toolbar.rolled-right .left-roll  { width: 4px; }
-.scroll-toolbar.rolled-left  .scroll-paper-body { width: 0; overflow: hidden; padding: 0; opacity: 0; }
-.scroll-toolbar.rolled-left  .left-roll  { width: 28px; }
-.scroll-toolbar.rolled-left  .right-roll { width: 4px; }
-.scroll-paper-body {
-  background: linear-gradient(to bottom, #F8F8F8, #E8E8E8);
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 0 4px;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.15);
-  z-index: 1;
-  overflow: visible;
-  height: 38px;
-  flex-direction: row;
-}
-.dark-canvas .scroll-paper-body {
-  background: linear-gradient(to bottom, #3a3a3c, #2c2c2e);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.4);
-}
+
 .ft-tool-btn {
   display: flex;
   align-items: center;
@@ -2484,7 +2607,7 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   .hero-sub { font-size: 1rem; }
 
   /* Fix: reset canvas offset vars so canvas fills full width */
-  #canvas-wrapper { --layers-width: 0px; --props-width: 0px; }
+  #canvas-wrapper { --left-panel-width: 0px; --props-width: 0px; }
 
   /* Layers panel: slide-in drawer overlay instead of hidden */
   #layers-panel {

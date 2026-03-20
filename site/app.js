@@ -657,25 +657,25 @@ function fitToContent(canvas) {
 
 // ── Right Panel Tab Switching ──────────────────────────────────────────
 
-/** Active right panel tab id */
-let activeRightTab = localStorage.getItem('fd-right-tab') || 'agent';
+/** Active left panel tab id */
+let activeLeftTab = localStorage.getItem('fd-left-tab') || 'code';
 
-/** Switch the active tab in the right panel. */
-function switchRightTab(tabId) {
-  const panel = document.getElementById('right-panel');
+/** Switch the active tab in the left panel (Code/Specs/Design). */
+function switchLeftTab(tabId) {
+  const panel = document.getElementById('left-panel');
   if (!panel) return;
   // Ensure panel is visible
   panel.classList.remove('collapsed');
   // Update tabs
-  panel.querySelectorAll('.rp-tab').forEach(t => {
+  panel.querySelectorAll('.lp-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.tab === tabId);
   });
   // Update panes
-  panel.querySelectorAll('.rp-pane').forEach(p => {
+  panel.querySelectorAll('.lp-pane').forEach(p => {
     p.classList.toggle('active', p.dataset.pane === tabId);
   });
-  activeRightTab = tabId;
-  localStorage.setItem('fd-right-tab', tabId);
+  activeLeftTab = tabId;
+  localStorage.setItem('fd-left-tab', tabId);
   // Refresh editor size if switching to code
   if (tabId === 'code' && editorView) {
     requestAnimationFrame(() => editorView.requestMeasure());
@@ -691,13 +691,19 @@ function switchRightTab(tabId) {
   });
 }
 
-/** Toggle right panel collapsed/expanded. */
-function toggleRightPanel() {
-  const panel = document.getElementById('right-panel');
-  if (!panel) return;
+/** Toggle left panel collapsed/expanded. */
+function toggleLeftPanel() {
+  const panel = document.getElementById('left-panel');
+  const wrapper = document.getElementById('canvas-wrapper');
+  if (!panel || !wrapper) return;
   const isCollapsed = panel.classList.toggle('collapsed');
-  if (!isCollapsed) {
-    switchRightTab(activeRightTab);
+  if (isCollapsed) {
+    wrapper.style.setProperty('--left-panel-width', '0px');
+  } else {
+    const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
+    const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 280;
+    wrapper.style.setProperty('--left-panel-width', restoreW + 'px');
+    switchLeftTab(activeLeftTab);
   }
   requestAnimationFrame(() => {
     window.dispatchEvent(new Event('resize'));
@@ -705,30 +711,36 @@ function toggleRightPanel() {
   });
 }
 
-/** Initialize right panel: tab click handlers, default tab. */
-function initRightPanel() {
+/** Toggle right panel collapsed/expanded. */
+function toggleRightPanel() {
   const panel = document.getElementById('right-panel');
   if (!panel) return;
+  panel.classList.toggle('collapsed');
+  requestAnimationFrame(() => {
+    window.dispatchEvent(new Event('resize'));
+    resizeCanvas();
+  });
+}
+
+/** Initialize left panel: tab click handlers, default tab. */
+function initLeftPanel() {
+  const panel = document.getElementById('left-panel');
+  if (!panel) return;
   // Tab click handlers
-  panel.querySelectorAll('.rp-tab').forEach(tab => {
+  panel.querySelectorAll('.lp-tab').forEach(tab => {
     tab.addEventListener('click', (e) => {
       e.stopPropagation();
       const tabId = tab.dataset.tab;
-      if (activeRightTab === tabId && !panel.classList.contains('collapsed')) {
-        // Clicking active tab toggles collapse
-        toggleRightPanel();
-      } else {
-        switchRightTab(tabId);
-      }
+      switchLeftTab(tabId);
     });
   });
   // Set default tab
-  switchRightTab(activeRightTab);
+  switchLeftTab(activeLeftTab);
 }
 
 /** Toggle code panel — just switches to code tab. */
 function toggleCodePanel() {
-  switchRightTab('code');
+  switchLeftTab('code');
 }
 
 /** Collapse code panel (idempotent — no-op if already collapsed) */
@@ -2931,30 +2943,26 @@ let lastSplitResizeTime = 0; // kept for backward compat with any existing guard
 
 // ─── Panel Resize ────────────────────────────────────────────────────────
 
-/** Set up drag-to-resize for layers panel. */
+/** Set up drag-to-resize for left panel. */
 function setupPanelResize(wrapper, resizeCanvas) {
-  const layersPanel = document.getElementById('layers-panel');
+  const leftPanel = document.getElementById('left-panel');
   const layersHandle = document.getElementById('layers-resize');
 
-  const MIN_WIDTH = 120;
-  const MAX_WIDTH = 360;
-  const DEFAULT_LAYERS_W = 220;
+  const MIN_WIDTH = 200;
+  const MAX_WIDTH = 500;
+  const DEFAULT_LEFT_W = 280;
 
   // Restore persisted widths
-  const savedLayersW = parseInt(localStorage.getItem('fd-layers-width'), 10);
-  const layersCollapsed = false;
+  const savedLeftW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
 
-  if (savedLayersW && savedLayersW >= MIN_WIDTH && savedLayersW <= MAX_WIDTH) {
-    wrapper.style.setProperty('--layers-width', savedLayersW + 'px');
-  }
-  if (layersCollapsed && layersPanel) {
-    layersPanel.classList.add('collapsed');
+  if (savedLeftW && savedLeftW >= MIN_WIDTH && savedLeftW <= MAX_WIDTH) {
+    wrapper.style.setProperty('--left-panel-width', savedLeftW + 'px');
   }
 
   /** Position layers resize handle at panel's right edge. */
   function positionLayersHandle() {
-    if (!layersHandle || !layersPanel) return;
-    const w = layersPanel.classList.contains('collapsed') ? 0 : layersPanel.offsetWidth;
+    if (!layersHandle || !leftPanel) return;
+    const w = leftPanel.classList.contains('collapsed') ? 0 : leftPanel.offsetWidth;
     layersHandle.style.left = w + 'px';
   }
 
@@ -2964,7 +2972,7 @@ function setupPanelResize(wrapper, resizeCanvas) {
   });
 
   // ── Layers drag handler ──
-  if (!layersHandle || !layersPanel) return;
+  if (!layersHandle || !leftPanel) return;
   let dragging = false;
   let startX = 0;
   let startW = 0;
@@ -2974,8 +2982,8 @@ function setupPanelResize(wrapper, resizeCanvas) {
     e.stopPropagation();
     dragging = true;
     startX = e.clientX;
-    startW = layersPanel.offsetWidth;
-    layersPanel.classList.add('no-transition');
+    startW = leftPanel.offsetWidth;
+    leftPanel.classList.add('no-transition');
     layersHandle.classList.add('active');
     layersHandle.setPointerCapture(e.pointerId);
   });
@@ -2984,7 +2992,7 @@ function setupPanelResize(wrapper, resizeCanvas) {
     if (!dragging) return;
     const dx = e.clientX - startX;
     const newW = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startW + dx));
-    wrapper.style.setProperty('--layers-width', newW + 'px');
+    wrapper.style.setProperty('--left-panel-width', newW + 'px');
     positionLayersHandle();
     resizeCanvas();
     renderCanvas();
@@ -2993,10 +3001,10 @@ function setupPanelResize(wrapper, resizeCanvas) {
   const endDrag = (e) => {
     if (!dragging) return;
     dragging = false;
-    layersPanel.classList.remove('no-transition');
+    leftPanel.classList.remove('no-transition');
     layersHandle.classList.remove('active');
-    const w = layersPanel.offsetWidth;
-    localStorage.setItem('fd-layers-width', String(w));
+    const w = leftPanel.offsetWidth;
+    localStorage.setItem('fd-left-panel-width', String(w));
   };
   layersHandle.addEventListener('pointerup', endDrag);
   layersHandle.addEventListener('pointercancel', endDrag);
@@ -3005,14 +3013,14 @@ function setupPanelResize(wrapper, resizeCanvas) {
   layersHandle.addEventListener('dblclick', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const isCollapsed = layersPanel.classList.toggle('collapsed');
+    const isCollapsed = leftPanel.classList.toggle('collapsed');
     if (isCollapsed) {
-      wrapper.style.setProperty('--layers-width', '0px');
+      wrapper.style.setProperty('--left-panel-width', '0px');
       localStorage.setItem('fd-layers-collapsed', '1');
     } else {
-      const savedW = parseInt(localStorage.getItem('fd-layers-width'), 10);
-      const restoreW = (savedW >= MIN_WIDTH && savedW <= MAX_WIDTH) ? savedW : DEFAULT_LAYERS_W;
-      wrapper.style.setProperty('--layers-width', restoreW + 'px');
+      const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
+      const restoreW = (savedW >= MIN_WIDTH && savedW <= MAX_WIDTH) ? savedW : DEFAULT_LEFT_W;
+      wrapper.style.setProperty('--left-panel-width', restoreW + 'px');
       localStorage.removeItem('fd-layers-collapsed');
     }
     requestAnimationFrame(() => {
@@ -3152,26 +3160,24 @@ function renderSpecsPanel() {
 }
 
 function toggleSpecsPanel() {
-  switchRightTab('specs');
+  switchLeftTab('specs');
   if (typeof renderSpecsPanel === 'function') renderSpecsPanel();
 }
 
 /** Toggle Layers panel collapsed/expanded. */
 function toggleLayersPanel() {
   const wrapper = document.getElementById('canvas-wrapper');
-  const layersPanel = document.getElementById('layers-panel');
-  const layersHandle = document.getElementById('layers-resize');
-  if (!layersPanel || !wrapper) return;
+  const leftPanel = document.getElementById('left-panel');
+  if (!leftPanel || !wrapper) return;
 
-  const isCollapsed = layersPanel.classList.toggle('collapsed');
+  const isCollapsed = leftPanel.classList.toggle('collapsed');
   if (isCollapsed) {
-    // Collapse to zero width
-    wrapper.style.setProperty('--layers-width', '0px');
+    wrapper.style.setProperty('--left-panel-width', '0px');
     localStorage.setItem('fd-layers-collapsed', '1');
   } else {
-    const savedW = parseInt(localStorage.getItem('fd-layers-width'), 10);
-    const restoreW = (savedW >= 120 && savedW <= 360) ? savedW : 220;
-    wrapper.style.setProperty('--layers-width', restoreW + 'px');
+    const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
+    const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 280;
+    wrapper.style.setProperty('--left-panel-width', restoreW + 'px');
     localStorage.removeItem('fd-layers-collapsed');
   }
   // Sidebar pill visual state no longer needed (dropdown-based)
@@ -5156,7 +5162,7 @@ async function initPlayground() {
             const lh = document.getElementById('layers-resize');
             if (lp) {
               lp.classList.add('collapsed');
-              document.getElementById('canvas-wrapper')?.style.setProperty('--layers-width', '0px');
+              document.getElementById('canvas-wrapper')?.style.setProperty('--left-panel-width', '0px');
               localStorage.setItem('fd-layers-collapsed', '1');
             }
             if (lh) lh.style.display = 'none';
@@ -5240,8 +5246,8 @@ async function initPlayground() {
     // ── Panel Resize Setup ───────────────────────────────────────────
     setupPanelResize(wrapper, resizeCanvas);
 
-    // ── Right Panel Init ─────────────────────────────────────────────
-    initRightPanel();
+    // ── Left Panel Init ──────────────────────────────────────────────
+    initLeftPanel();
 
     // ── Mobile Layers Drawer Toggle ──────────────────────────────────
     const mobileLayersToggle = document.getElementById('mobile-layers-toggle');
@@ -5263,32 +5269,9 @@ async function initPlayground() {
     mobileLayersToggle?.addEventListener('click', toggleMobileLayersDrawer);
     mobileLayersBackdrop?.addEventListener('click', closeMobileLayersDrawer);
 
-    // ── Desktop Layers Toggle (sidebar pill) ──
-    const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
-    const sidebarDropdown = document.getElementById('sidebar-dropdown');
-    if (sidebarToggleBtn) {
-      sidebarToggleBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        sidebarDropdown?.classList.toggle('visible');
-        // Close other dropdowns
-        document.getElementById('settings-dropdown')?.classList.remove('visible');
-      });
-    }
-    // Sidebar dropdown item handlers
-    document.getElementById('sd-layers-toggle')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      sidebarDropdown?.classList.remove('visible');
-      toggleLayersPanel();
-    });
-    document.getElementById('sd-code-toggle')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      sidebarDropdown?.classList.remove('visible');
-      toggleCodePanel();
-    });
-    document.getElementById('sd-specs-toggle')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      sidebarDropdown?.classList.remove('visible');
-      toggleSpecsPanel();
+    // ── Left Panel Collapse (layers-collapse-btn) ──
+    document.getElementById('layers-collapse-btn')?.addEventListener('click', () => {
+      toggleLeftPanel();
     });
 
     // ── Specs Panel Resize ───────────────────────────────────────────
@@ -5302,7 +5285,7 @@ async function initPlayground() {
     const mobileCodeToggle = document.getElementById('mobile-code-toggle');
 
     function toggleMobileCodeEditor() {
-      switchRightTab('code');
+      switchLeftTab('code');
     }
     function closeMobileCodeEditor() {
       // No-op in new panel design
@@ -6026,33 +6009,140 @@ async function initPlayground() {
     // Clear toolbar drag on pointer up anywhere
     document.addEventListener('pointerup', () => { toolbarDragTool = null; }, true);
 
-    // ── Scroll Toolbar: double-click handle to roll/unroll ──────────────
-    const scrollToolbar = document.getElementById('floating-toolbar');
-    const setupScrollRoll = (handleEl, rollClass, otherClass) => {
-      if (!handleEl) return;
-      handleEl.addEventListener('dblclick', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        if (scrollToolbar.classList.contains(rollClass)) {
-          // Unroll
-          scrollToolbar.classList.remove(rollClass);
-          scrollToolbar.classList.add('unrolled');
-          localStorage.removeItem('fd-toolbar-rolled');
+    // ── Toolbar: Drag-to-snap + Minimize ──────────────────────────────────
+    const toolbar = document.getElementById('floating-toolbar');
+    if (toolbar) {
+      // ── Snap indicator element ──
+      let snapIndicator = document.createElement('div');
+      snapIndicator.className = 'toolbar-snap-indicator';
+      snapIndicator.style.display = 'none';
+      document.body.appendChild(snapIndicator);
+
+      // Track drag state
+      let isDragging = false;
+      let dragStartX = 0, dragStartY = 0;
+      let toolbarStartX = 0, toolbarStartY = 0;
+      const pointerHistory = [];
+      const SNAP_THRESHOLD = 60;
+
+      function getSnapSide(x, y) {
+        const w = window.innerWidth, h = window.innerHeight;
+        if (y < SNAP_THRESHOLD) return 'top';
+        if (y > h - SNAP_THRESHOLD) return 'bottom';
+        if (x < SNAP_THRESHOLD) return 'left';
+        if (x > w - SNAP_THRESHOLD) return 'right';
+        return null;
+      }
+
+      function applySnapPosition(side) {
+        // Remove all dock classes
+        toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right', 'toolbar-dragging');
+        toolbar.style.cssText = '';
+        toolbar.classList.add(`toolbar-docked-${side}`);
+        localStorage.setItem('fd-toolbar-pos', side);
+      }
+
+      function showSnapIndicator(side) {
+        snapIndicator.className = 'toolbar-snap-indicator';
+        if (side) {
+          snapIndicator.classList.add(`snap-${side}`);
+          snapIndicator.style.display = 'block';
         } else {
-          // Roll up from this side
-          scrollToolbar.classList.remove('unrolled', otherClass);
-          scrollToolbar.classList.add(rollClass);
-          localStorage.setItem('fd-toolbar-rolled', rollClass.replace('rolled-', ''));
+          snapIndicator.style.display = 'none';
+        }
+      }
+
+      // ── Drag start ──
+      toolbar.querySelectorAll('.toolbar-grip').forEach(grip => {
+        grip.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          isDragging = true;
+          dragStartX = e.clientX;
+          dragStartY = e.clientY;
+          const rect = toolbar.getBoundingClientRect();
+          toolbarStartX = rect.left;
+          toolbarStartY = rect.top;
+          pointerHistory.length = 0;
+
+          // Switch to fixed positioning for free drag
+          toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right');
+          toolbar.classList.add('toolbar-dragging');
+          toolbar.style.left = toolbarStartX + 'px';
+          toolbar.style.top = toolbarStartY + 'px';
+          toolbar.style.transform = 'none';
+          toolbar.style.right = 'auto';
+          toolbar.style.bottom = 'auto';
+
+          grip.setPointerCapture(e.pointerId);
+        });
+
+        // ── Double-click to minimize/expand ──
+        grip.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          toolbar.classList.toggle('toolbar-minimized');
+          localStorage.setItem('fd-toolbar-minimized', toolbar.classList.contains('toolbar-minimized') ? '1' : '0');
+        });
+      });
+
+      // ── Drag move ──
+      document.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - dragStartX;
+        const dy = e.clientY - dragStartY;
+        toolbar.style.left = (toolbarStartX + dx) + 'px';
+        toolbar.style.top = (toolbarStartY + dy) + 'px';
+
+        // Track velocity
+        pointerHistory.push({ x: e.clientX, y: e.clientY, t: Date.now() });
+        if (pointerHistory.length > 5) pointerHistory.shift();
+
+        // Show snap indicator
+        showSnapIndicator(getSnapSide(e.clientX, e.clientY));
+      });
+
+      // ── Drag end / snap ──
+      document.addEventListener('pointerup', (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        showSnapIndicator(null);
+
+        // Check velocity for throw
+        let side = getSnapSide(e.clientX, e.clientY);
+        if (!side && pointerHistory.length >= 2) {
+          const last = pointerHistory[pointerHistory.length - 1];
+          const prev = pointerHistory[0];
+          const dt = (last.t - prev.t) / 1000;
+          if (dt > 0) {
+            const vx = (last.x - prev.x) / dt;
+            const vy = (last.y - prev.y) / dt;
+            const speed = Math.sqrt(vx * vx + vy * vy);
+            if (speed > 500) {
+              // Determine direction
+              if (Math.abs(vx) > Math.abs(vy)) {
+                side = vx > 0 ? 'right' : 'left';
+              } else {
+                side = vy > 0 ? 'bottom' : 'top';
+              }
+            }
+          }
+        }
+
+        if (side) {
+          applySnapPosition(side);
+        } else {
+          // Stay floating at current position
+          toolbar.classList.remove('toolbar-dragging');
         }
       });
-    };
-    setupScrollRoll(document.querySelector('.handle-start'), 'rolled-left', 'rolled-right');
-    setupScrollRoll(document.querySelector('.handle-end'), 'rolled-right', 'rolled-left');
-    // Restore rolled state from localStorage
-    const savedRoll = localStorage.getItem('fd-toolbar-rolled');
-    if (savedRoll === 'left' || savedRoll === 'right') {
-      scrollToolbar.classList.remove('unrolled');
-      scrollToolbar.classList.add(`rolled-${savedRoll}`);
+
+      // ── Restore saved state ──
+      const savedPos = localStorage.getItem('fd-toolbar-pos') || 'top';
+      applySnapPosition(savedPos);
+      if (localStorage.getItem('fd-toolbar-minimized') === '1') {
+        toolbar.classList.add('toolbar-minimized');
+      }
     }
 
     // ── Floating Action Bar ─────────────────────────────────────────
