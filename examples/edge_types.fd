@@ -1,0 +1,55 @@
+# Edge Types Showcase
+# This example demonstrates the different edge routing curves, arrow styles, and flow animations.
+
+# 1. Curve Kinds (straight, smooth, step)
+rect @src1 { w: 100 h: 40 fill: #3B82F6 }
+rect @dst1 { w: 100 h: 40; offset: @src1 200, 0 }
+
+rect @src2 { w: 100 h: 40; offset: @src1 0, 80 fill: #3B82F6 }
+rect @dst2 { w: 100 h: 40; offset: @src2 200, 0 }
+
+rect @src3 { w: 100 h: 40; offset: @src2 0, 80 fill: #3B82F6 }
+rect @dst3 { w: 100 h: 40; offset: @src3 200, 0 }
+
+edge @e1 @src1 -> @dst1 { curve: straight }
+edge @e2 @src2 -> @dst2 { curve: smooth }
+edge @e3 @src3 -> @dst3 { curve: step }
+
+
+# 2. Arrow Styles (none, start, end, both)
+rect @s1 { w: 100 h: 40; offset: @src3 0, 120 fill: #10B981 }
+rect @d1 { w: 100 h: 40; offset: @s1 200, 0 }
+
+rect @s2 { w: 100 h: 40; offset: @s1 0, 80 fill: #10B981 }
+rect @d2 { w: 100 h: 40; offset: @s2 200, 0 }
+
+rect @s3 { w: 100 h: 40; offset: @s2 0, 80 fill: #10B981 }
+rect @d3 { w: 100 h: 40; offset: @s3 200, 0 }
+
+rect @s4 { w: 100 h: 40; offset: @s3 0, 80 fill: #10B981 }
+rect @d4 { w: 100 h: 40; offset: @s4 200, 0 }
+
+edge @a1 @s1 -> @d1 { arrow: none }
+edge @a2 @s2 -> @d2 { arrow: start }
+edge @a3 @s3 -> @d3 { arrow: end }
+edge @a4 @s4 -> @d4 { arrow: both }
+
+
+# 3. Flow Animations (pulse, dash)
+rect @f1_src { w: 100 h: 40; offset: @s4 0, 120 fill: #8B5CF6 }
+rect @f1_dst { w: 100 h: 40; offset: @f1_src 200, 0 }
+
+rect @f2_src { w: 100 h: 40; offset: @f1_src 0, 80 fill: #8B5CF6 }
+rect @f2_dst { w: 100 h: 40; offset: @f2_src 200, 0 }
+
+edge @f1 @f1_src -> @f1_dst {
+  curve: smooth
+  arrow: end
+  flow: pulse 1000ms
+}
+
+edge @f2 @f2_src -> @f2_dst {
+  curve: smooth
+  arrow: end
+  flow: dash 800ms
+}

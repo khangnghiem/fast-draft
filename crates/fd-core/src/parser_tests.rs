@@ -1430,3 +1430,17 @@ edge @flow @a -> @b
         "should NOT have opening brace: {emitted}"
     );
 }
+
+#[test]
+fn roundtrip_edge_types_example() {
+    let src = std::fs::read_to_string("../../examples/edge_types.fd").unwrap();
+    let graph = crate::parser::parse_document(&src).expect("Failed to parse edge_types.fd");
+
+    assert_eq!(graph.edges.len(), 9);
+
+    let emitted = crate::emitter::emit_document(&graph);
+    let parsed2 =
+        crate::parser::parse_document(&emitted).expect("Failed to re-parse emitted document");
+
+    assert_eq!(graph.edges.len(), parsed2.edges.len());
+}
