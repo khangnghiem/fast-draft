@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.218 — Native Fullscreen + Panel Animation (R6.5)
+- **UX (R6.5)**: Moved fullscreen toggle from floating ⛶ button (which overlapped ☰ hamburger) into ⚙ Settings dropdown as "⛶ Full Screen ⇧F" menu item
+- **UX (R6.5)**: Switched to native Fullscreen API (`requestFullscreen` / `exitFullscreen` with Safari `webkit` fallback) — true OS-level fullscreen on every platform
+- **UX (R6.5)**: Removed floating fullscreen button and ~50 lines of associated CSS — cleaner canvas chrome
+- **UX (R6.5)**: Added panel startup animation — Layers and Code panels briefly collapse then expand (0.2s delay + 0.3s ease-out), giving users a visual cue that panels exist and can be toggled. Respects "Reduce Motion" preference
+
 ### v0.11.217 — Remove Welcome Overlay (R6.5)
 - **UX (R6.5)**: Removed "Click anywhere to start" welcome overlay — users now go straight to the canvas (Excalidraw-style instant start). Cleaned up 67 lines of CSS and 19 lines of JS
 

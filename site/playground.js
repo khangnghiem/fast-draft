@@ -946,20 +946,28 @@ function collapseCodePanel() {
   toggleCodePanel();
 }
 
-/** Toggle full-screen mode (expands to viewport + hides canvas chrome) */
+/** Toggle native full-screen mode on all platforms */
 function toggleFullscreen() {
-  fullscreenMode = !fullscreenMode;
-  document.body.classList.toggle('fullscreen-mode', fullscreenMode);
-  const btn = document.getElementById('fullscreen-toggle-btn');
-  if (btn) {
-    btn.textContent = fullscreenMode ? '✕ Exit' : '⛶';
-    btn.title = fullscreenMode ? 'Exit Full Screen (Esc)' : 'Full Screen (⇧F)';
-    btn.classList.toggle('fs-active', fullscreenMode);
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    const el = document.documentElement;
+    (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
   }
-  // Auto-collapse code panel when entering fullscreen
+}
+// Sync fullscreenMode flag with native fullscreen state
+document.addEventListener('fullscreenchange', () => {
+  fullscreenMode = !!document.fullscreenElement;
+  document.body.classList.toggle('fullscreen-mode', fullscreenMode);
   if (fullscreenMode) collapseCodePanel();
   setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
-}
+});
+document.addEventListener('webkitfullscreenchange', () => {
+  fullscreenMode = !!document.webkitFullscreenElement;
+  document.body.classList.toggle('fullscreen-mode', fullscreenMode);
+  if (fullscreenMode) collapseCodePanel();
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+});
 
 /** Show a brief toast notification */
 function showToast(msg) {
@@ -2156,8 +2164,8 @@ function setupContextMenu() {
       // Context menu Escape is handled by ContextMenu class (capture phase)
       // Only handle non-menu Escape here
       if (ctxMenu.isOpen) return; // already handled by ContextMenu
-      if (fullscreenMode) {
-        toggleFullscreen();
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        (document.exitFullscreen || document.webkitExitFullscreen).call(document);
       } else if (fdCanvas && fdCanvas.get_selected_id()) {
         fdCanvas.select_by_id('');
         renderDirty = true; uiDirty = true;
@@ -5289,8 +5297,8 @@ async function initPlayground() {
     setupContextMenu();
     setupInlineEditor(canvas);
 
-    // Full Screen toggle button (inside canvas)
-    document.getElementById('fullscreen-toggle-btn')?.addEventListener('click', toggleFullscreen);
+    // Full Screen toggle in settings dropdown
+    document.getElementById('sm-fullscreen-toggle')?.addEventListener('click', toggleFullscreen);
 
     // Share button — open share modal with URL + QR code
     document.getElementById('share-btn')?.addEventListener('click', () => {
@@ -5537,7 +5545,31 @@ async function initPlayground() {
 
     // Auto-fullscreen from URL param
     if (urlParams.has('fullscreen')) {
-      setTimeout(toggleFullscreen, 100);
+      setTimeout(toggleFullscreen, 300);
+    }
+
+    // ── Panel startup animation: briefly collapse, then expand ──────
+    // Gives users a visual cue that panels exist and can be toggled
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      || document.body.classList.contains('reduce-motion');
+    if (!reduceMotion && !urlParams.has('fullscreen')) {
+      const layersPanel = document.getElementById('layers-panel');
+      const editorWrapper = document.querySelector('.playground-editor');
+      const splitContainer = document.getElementById('playground-container');
+      if (layersPanel && editorWrapper && splitContainer) {
+        // Start collapsed
+        splitContainer.classList.add('panels-intro');
+        // Expand after brief delay
+        setTimeout(() => {
+          splitContainer.classList.remove('panels-intro');
+          splitContainer.classList.add('panels-expanding');
+          // Clean up transition class after animation completes
+          setTimeout(() => {
+            splitContainer.classList.remove('panels-expanding');
+            window.dispatchEvent(new Event('resize'));
+          }, 350);
+        }, 200);
+      }
     }
 
     // ── Toolbar buttons ──────────────────────────────────────────────
