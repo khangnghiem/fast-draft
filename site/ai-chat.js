@@ -22,7 +22,7 @@ let _getCanvas = null;
 
 // ─── DOM References ─────────────────────────────────────
 
-function getChatPanel() { return document.getElementById('ai-chat-panel'); }
+function getChatPanel() { return document.getElementById('rp-agent-content'); }
 function getChatMessages() { return document.getElementById('ai-chat-messages'); }
 function getChatInput() { return document.getElementById('ai-chat-input'); }
 function getChatSend() { return document.getElementById('ai-chat-send'); }
@@ -34,19 +34,14 @@ function getChipsContainer() { return document.getElementById('ai-chat-chips'); 
 // ─── Panel Toggle ───────────────────────────────────────
 
 export function toggleChatPanel() {
-  const panel = getChatPanel();
-  if (!panel) return;
-  const willOpen = panel.classList.contains('hidden');
-  if (willOpen) {
-    // Exclusive right-side: close Specs panel when opening Chat
-    const notesPanel = document.getElementById('specs-panel');
-    if (notesPanel && !notesPanel.classList.contains('hidden')) {
-      notesPanel.classList.add('hidden');
-      if (typeof window._specsPanelOpen !== 'undefined') window._specsPanelOpen = false;
-    }
+  // In unified right panel, just switch to Agent tab
+  if (typeof switchRightTab === 'function') {
+    switchRightTab('agent');
+  } else if (typeof window.switchRightTab === 'function') {
+    window.switchRightTab('agent');
   }
-  panel.classList.toggle('hidden');
-  if (!panel.classList.contains('hidden')) {
+  const panel = getChatPanel();
+  if (panel) {
     const input = getChatInput();
     if (input) input.focus();
     updateContextBadge();
@@ -55,8 +50,7 @@ export function toggleChatPanel() {
 }
 
 export function closeChatPanel() {
-  const panel = getChatPanel();
-  if (panel) panel.classList.add('hidden');
+  // No-op in unified right panel — Agent tab stays accessible via tabs
 }
 
 export function clearChatHistory() {
@@ -546,7 +540,7 @@ export function initAiChat(getEditorContent, setEditorContent, getCanvas) {
   // Listen for selection changes to update context badge when panel is visible
   document.addEventListener('fd-selection-changed', () => {
     const panel = getChatPanel();
-    if (panel && !panel.classList.contains('hidden')) {
+    if (panel) {
       updateContextBadge();
       updateChips();
     }

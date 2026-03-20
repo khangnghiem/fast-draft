@@ -470,10 +470,10 @@ function getLayersPanelWidth() {
   const panel = document.getElementById('layers-panel');
   return panel ? panel.offsetWidth : 0;
 }
-/** Get current props panel width (dynamic for resize). */
-function getPropsPanelWidth() {
-  const panel = document.getElementById('props-panel');
-  return (panel && panel.classList.contains('visible')) ? panel.offsetWidth : 0;
+/** Get current right panel width (dynamic for resize). */
+function getRightPanelWidth() {
+  const panel = document.getElementById('right-panel');
+  return (panel && !panel.classList.contains('collapsed')) ? panel.offsetWidth : 0;
 }
 
 
@@ -655,94 +655,85 @@ function fitToContent(canvas) {
   } catch (_) { }
 }
 
-/** Code panel collapse state */
-let codeCollapsed = false;
-/** Saved editor width (px string like '280px') to restore on expand */
-let savedEditorWidth = null;
+// ── Right Panel Tab Switching ──────────────────────────────────────────
 
-/** Toggle code panel visibility (collapse/expand) with smooth animation */
-function toggleCodePanel() {
-  const container = document.getElementById('playground-container');
-  if (!container) return;
-  const split = container.closest('.playground-split') || container;
-  const containerWidth = container.getBoundingClientRect().width;
-  const collapsedPx = Math.round(containerWidth * 0.1);
+/** Active right panel tab id */
+let activeRightTab = localStorage.getItem('fd-right-tab') || 'agent';
 
-  if (!codeCollapsed) {
-    // ── Collapsing: save current width, animate to zero ──
-    const currentWidth = container.style.getPropertyValue('--editor-width');
-    savedEditorWidth = currentWidth || null;
-    // Start from current px position so transition has a valid start
-    if (!currentWidth) {
-      const editorEl = container.querySelector('.playground-editor');
-      if (editorEl) {
-        container.style.setProperty('--editor-width', `${editorEl.offsetWidth}px`);
-      }
-    }
-    // Force layout so the starting value is committed
-    container.offsetHeight;
-    // Set target: animate --editor-width to zero
-    container.style.setProperty('--editor-width', '0px');
-    codeCollapsed = true;
-    // Show right sidebar toggle
-    document.getElementById('right-sidebar-toggle')?.classList.add('visible');
-    // After transition finishes, swap to .code-collapsed class
-    let handled = false;
-    const onEnd = (e) => {
-      if (e.propertyName !== 'grid-template-columns') return;
-      split.removeEventListener('transitionend', onEnd);
-      handled = true;
-      container.classList.add('code-collapsed');
-      container.style.removeProperty('--editor-width');
-      window.dispatchEvent(new Event('resize'));
-    };
-    split.addEventListener('transitionend', onEnd);
-    setTimeout(() => {
-      split.removeEventListener('transitionend', onEnd);
-      if (!handled) {
-        container.classList.add('code-collapsed');
-        container.style.removeProperty('--editor-width');
-        window.dispatchEvent(new Event('resize'));
-      }
-    }, 300);
-  } else {
-    // ── Expanding: remove class, animate to saved width ──
-    const targetWidth = savedEditorWidth || null;
-    // Set --editor-width to 0px so transition starts from correct position
-    container.style.setProperty('--editor-width', '0px');
-    container.classList.remove('code-collapsed');
-    // Force layout so browser commits the collapsed starting point
-    container.offsetHeight;
-    // Animate to saved width (or remove for default 3fr)
-    if (targetWidth) {
-      container.style.setProperty('--editor-width', targetWidth);
-    } else {
-      container.style.removeProperty('--editor-width');
-    }
-    codeCollapsed = false;
-    savedEditorWidth = null;
-    // Hide right sidebar toggle
-    document.getElementById('right-sidebar-toggle')?.classList.remove('visible');
-    // Resize canvas after transition
-    let handled = false;
-    const onEnd = (e) => {
-      if (e.propertyName !== 'grid-template-columns') return;
-      split.removeEventListener('transitionend', onEnd);
-      handled = true;
-      window.dispatchEvent(new Event('resize'));
-    };
-    split.addEventListener('transitionend', onEnd);
-    setTimeout(() => {
-      split.removeEventListener('transitionend', onEnd);
-      if (!handled) window.dispatchEvent(new Event('resize'));
-    }, 300);
+/** Switch the active tab in the right panel. */
+function switchRightTab(tabId) {
+  const panel = document.getElementById('right-panel');
+  if (!panel) return;
+  // Ensure panel is visible
+  panel.classList.remove('collapsed');
+  // Update tabs
+  panel.querySelectorAll('.rp-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tabId);
+  });
+  // Update panes
+  panel.querySelectorAll('.rp-pane').forEach(p => {
+    p.classList.toggle('active', p.dataset.pane === tabId);
+  });
+  activeRightTab = tabId;
+  localStorage.setItem('fd-right-tab', tabId);
+  // Refresh editor size if switching to code
+  if (tabId === 'code' && editorView) {
+    requestAnimationFrame(() => editorView.requestMeasure());
   }
+  // Render specs if switching to specs
+  if (tabId === 'specs' && typeof renderSpecsPanel === 'function') {
+    renderSpecsPanel();
+  }
+  // Resize canvas
+  requestAnimationFrame(() => {
+    window.dispatchEvent(new Event('resize'));
+    resizeCanvas();
+  });
+}
+
+/** Toggle right panel collapsed/expanded. */
+function toggleRightPanel() {
+  const panel = document.getElementById('right-panel');
+  if (!panel) return;
+  const isCollapsed = panel.classList.toggle('collapsed');
+  if (!isCollapsed) {
+    switchRightTab(activeRightTab);
+  }
+  requestAnimationFrame(() => {
+    window.dispatchEvent(new Event('resize'));
+    resizeCanvas();
+  });
+}
+
+/** Initialize right panel: tab click handlers, default tab. */
+function initRightPanel() {
+  const panel = document.getElementById('right-panel');
+  if (!panel) return;
+  // Tab click handlers
+  panel.querySelectorAll('.rp-tab').forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const tabId = tab.dataset.tab;
+      if (activeRightTab === tabId && !panel.classList.contains('collapsed')) {
+        // Clicking active tab toggles collapse
+        toggleRightPanel();
+      } else {
+        switchRightTab(tabId);
+      }
+    });
+  });
+  // Set default tab
+  switchRightTab(activeRightTab);
+}
+
+/** Toggle code panel — just switches to code tab. */
+function toggleCodePanel() {
+  switchRightTab('code');
 }
 
 /** Collapse code panel (idempotent — no-op if already collapsed) */
 function collapseCodePanel() {
-  if (codeCollapsed) return;
-  toggleCodePanel();
+  // No-op in new right panel design — code is just a tab
 }
 
 /** Toggle native full-screen mode on all platforms */
@@ -1038,9 +1029,9 @@ function updateFab(canvas) {
   const selectedId = fdCanvas.get_selected_id();
   if (!selectedId) { fab.classList.remove('visible'); return; }
 
-  // Hide FAB when props panel is visible
-  const propsPanel = document.getElementById('props-panel');
-  if (propsPanel?.classList.contains('visible')) { fab.classList.remove('visible'); return; }
+  // Hide FAB when Design tab is active in right panel (props visible there)
+  const rpDesignContent = document.getElementById('rp-design-content');
+  if (rpDesignContent && rpDesignContent.style.display !== 'none') { fab.classList.remove('visible'); return; }
 
   try {
     const boundsJson = fdCanvas.get_node_bounds(selectedId);
@@ -1351,8 +1342,13 @@ function clearDiffState() {
 let propsSuppressSync = false;
 
 function updatePropertiesPanel() {
-  const panel = document.getElementById('props-panel');
-  if (!panel || !fdCanvas) { panel?.classList.remove('visible'); adjustMinimapForProps(false); return; }
+  const designContent = document.getElementById('rp-design-content');
+  const designEmpty = document.getElementById('rp-design-empty');
+  if (!designContent || !fdCanvas) {
+    if (designContent) designContent.style.display = 'none';
+    if (designEmpty) designEmpty.style.display = '';
+    return;
+  }
 
   // #4: Check for multi-selection
   const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
@@ -1374,8 +1370,8 @@ function updatePropertiesPanel() {
   if (isMulti) {
     // Multi-selection: show count and appearance controls only
     propsSuppressSync = true;
-    panel.classList.add('visible');
-    adjustMinimapForProps(true);
+    designContent.style.display = '';
+    designEmpty.style.display = 'none';
 
     document.getElementById('pp-node-id').textContent = `${selectedIds.length} objects`;
     document.getElementById('pp-kind').textContent = 'mixed';
@@ -1396,17 +1392,17 @@ function updatePropertiesPanel() {
 
   const json = fdCanvas.get_selected_node_props();
   let props;
-  try { props = JSON.parse(json); } catch (_) { panel.classList.remove('visible'); adjustMinimapForProps(false); return; }
+  try { props = JSON.parse(json); } catch (_) { designContent.style.display = 'none'; designEmpty.style.display = ''; return; }
 
   if (!props.id) {
-    panel.classList.remove('visible');
-    adjustMinimapForProps(false);
+    designContent.style.display = 'none';
+    designEmpty.style.display = '';
     return;
   }
 
   propsSuppressSync = true;
-  panel.classList.add('visible');
-  adjustMinimapForProps(true);
+  designContent.style.display = '';
+  designEmpty.style.display = 'none';
 
   // Header
   document.getElementById('pp-node-id').textContent = `@${props.id}`;
@@ -2930,163 +2926,26 @@ function setupSpecsResize() {
   });
 }
 
-// ─── Split Resize (code ↔ canvas) ────────────────────────────────────────
-
-/** Set up drag-to-resize for the code/canvas split. */
-let lastSplitResizeTime = 0; // timestamp of last resize drag end
-function setupSplitResize(container, resizeCanvas) {
-  const handle = document.getElementById('split-resize');
-  const split = document.querySelector('.playground-split');
-  if (!handle || !container) return;
-
-  const MIN_FRAC = 0.15;
-  const MAX_FRAC = 0.75;
-  const COLLAPSE_PX = 100; // drag below this → auto-collapse
-
-  let dragging = false;
-  let containerRect = null;
-  let rafId = 0; // RAF throttle
-  let preDragWidth = null; // editor width before this drag started
-
-  handle.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragging = true;
-    containerRect = container.getBoundingClientRect();
-    handle.classList.add('active');
-    handle.setPointerCapture(e.pointerId);
-    // Save current width before any drag changes
-    if (codeCollapsed) {
-      // Dragging from minimized — save the previously-saved width (from before collapse)
-      preDragWidth = savedEditorWidth;
-      // Un-collapse instantly (no transition) so --editor-width takes effect
-      const currentWidth = Math.round(containerRect.width * 0.1);
-      if (split) split.style.transition = 'none';
-      container.style.setProperty('--editor-width', `${currentWidth}px`);
-      codeCollapsed = false;
-      container.classList.remove('code-collapsed');
-    } else {
-      // Dragging from expanded — save current width
-      preDragWidth = container.style.getPropertyValue('--editor-width') || null;
-      if (!preDragWidth) {
-        const editorEl = container.querySelector('.playground-editor');
-        if (editorEl) preDragWidth = `${editorEl.offsetWidth}px`;
-      }
-    }
-    // Disable CSS Grid transition during drag — it fights the live updates
-    // and causes a ~250ms easing lag on every pointer move.
-    if (split) split.style.transition = 'none';
-  });
-
-  handle.addEventListener('pointermove', (e) => {
-    if (!dragging || !containerRect) return;
-    const x = e.clientX - containerRect.left;
-    // Canvas-first: editor is on the RIGHT, so editor width = total - x
-    const editorW = containerRect.width - x;
-    if (editorW < COLLAPSE_PX) {
-      container.style.setProperty('--editor-width', `${COLLAPSE_PX}px`);
-    } else {
-      const frac = Math.max(MIN_FRAC, Math.min(MAX_FRAC, editorW / containerRect.width));
-      container.style.setProperty('--editor-width', `${Math.round(containerRect.width * frac)}px`);
-    }
-    // Throttle expensive WASM resize + render to once per frame
-    if (!rafId) {
-      rafId = requestAnimationFrame(() => {
-        rafId = 0;
-        resizeCanvas();
-        renderCanvas();
-      });
-    }
-  });
-
-  const endDrag = (e) => {
-    if (!dragging) return;
-    dragging = false;
-    handle.classList.remove('active');
-    // Cancel any pending RAF
-    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
-    // Re-enable CSS Grid transition for collapse/expand animations
-    if (split) split.style.transition = '';
-    // Final resize + render at exact position
-    resizeCanvas();
-    renderCanvas();
-    lastSplitResizeTime = Date.now();
-    // Auto-collapse if released below threshold
-    if (containerRect) {
-      const x = (e?.clientX ?? 0) - containerRect.left;
-      const editorW = containerRect.width - x;
-      if (editorW < COLLAPSE_PX && !codeCollapsed) {
-        // Save the pre-drag width so expand restores it
-        savedEditorWidth = preDragWidth;
-        const collapsedPx = Math.round(containerRect.width * 0.1);
-        container.style.setProperty('--collapsed-width', `${collapsedPx}px`);
-        // Animate smoothly from current drag position to collapsed px
-        container.style.setProperty('--editor-width', `${collapsedPx}px`);
-        codeCollapsed = true;
-        // Apply class after transition
-        let handled = false;
-        const onEnd = (ev) => {
-          if (ev.propertyName !== 'grid-template-columns') return;
-          split.removeEventListener('transitionend', onEnd);
-          handled = true;
-          container.classList.add('code-collapsed');
-          container.style.removeProperty('--editor-width');
-          window.dispatchEvent(new Event('resize'));
-        };
-        split.addEventListener('transitionend', onEnd);
-        setTimeout(() => {
-          split.removeEventListener('transitionend', onEnd);
-          if (!handled) {
-            container.classList.add('code-collapsed');
-            container.style.removeProperty('--editor-width');
-            window.dispatchEvent(new Event('resize'));
-          }
-        }, 300);
-      }
-    }
-    preDragWidth = null;
-  };
-  handle.addEventListener('pointerup', endDrag);
-  handle.addEventListener('pointercancel', endDrag);
-
-  // Double-click to reset to default 30/70 split
-  handle.addEventListener('dblclick', (e) => {
-    e.preventDefault();
-    container.style.removeProperty('--editor-width');
-    resizeCanvas();
-    renderCanvas();
-  });
-}
+// (setupSplitResize removed — code editor now lives in right panel tabs)
+let lastSplitResizeTime = 0; // kept for backward compat with any existing guards
 
 // ─── Panel Resize ────────────────────────────────────────────────────────
 
-/** Set up drag-to-resize for layers and properties panels. */
+/** Set up drag-to-resize for layers panel. */
 function setupPanelResize(wrapper, resizeCanvas) {
   const layersPanel = document.getElementById('layers-panel');
   const layersHandle = document.getElementById('layers-resize');
-  const propsPanel = document.getElementById('props-panel');
-  const propsHandle = document.getElementById('props-resize');
-  const layersRestore = document.getElementById('layers-restore');
-  const propsRestore = document.getElementById('props-restore');
 
   const MIN_WIDTH = 120;
   const MAX_WIDTH = 360;
   const DEFAULT_LAYERS_W = 220;
-  const DEFAULT_PROPS_W = 200;
 
   // Restore persisted widths
   const savedLayersW = parseInt(localStorage.getItem('fd-layers-width'), 10);
-  const savedPropsW = parseInt(localStorage.getItem('fd-props-width'), 10);
-  // Don't auto-collapse layers panel — always show on playground load
-  // so first-time visitors see their scene tree.
   const layersCollapsed = false;
-  const propsCollapsed = localStorage.getItem('fd-props-collapsed') === '1';
 
   if (savedLayersW && savedLayersW >= MIN_WIDTH && savedLayersW <= MAX_WIDTH) {
     wrapper.style.setProperty('--layers-width', savedLayersW + 'px');
-  }
-  if (savedPropsW && savedPropsW >= MIN_WIDTH && savedPropsW <= MAX_WIDTH) {
-    wrapper.style.setProperty('--props-width', savedPropsW + 'px');
   }
   if (layersCollapsed && layersPanel) {
     layersPanel.classList.add('collapsed');
@@ -3099,125 +2958,69 @@ function setupPanelResize(wrapper, resizeCanvas) {
     layersHandle.style.left = w + 'px';
   }
 
-  /** Position props resize handle at panel's left edge. */
-  function positionPropsHandle() {
-    if (!propsHandle || !propsPanel) return;
-    if (propsPanel.classList.contains('visible') && !propsPanel.classList.contains('collapsed')) {
-      const w = propsPanel.offsetWidth;
-      propsHandle.style.right = w + 'px';
-      propsHandle.style.display = '';
-    } else {
-      propsHandle.style.display = 'none';
-    }
-  }
-
   // Initial position
   requestAnimationFrame(() => {
     positionLayersHandle();
-    positionPropsHandle();
   });
 
-  // ── Generic drag handler ──
-  function makeDraggable(handle, panel, side, defaultW) {
-    if (!handle || !panel) return;
-    let dragging = false;
-    let startX = 0;
-    let startW = 0;
+  // ── Layers drag handler ──
+  if (!layersHandle || !layersPanel) return;
+  let dragging = false;
+  let startX = 0;
+  let startW = 0;
 
-    handle.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragging = true;
-      startX = e.clientX;
-      startW = panel.offsetWidth;
-      panel.classList.add('no-transition');
-      handle.classList.add('active');
-      handle.setPointerCapture(e.pointerId);
-    });
+  layersHandle.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragging = true;
+    startX = e.clientX;
+    startW = layersPanel.offsetWidth;
+    layersPanel.classList.add('no-transition');
+    layersHandle.classList.add('active');
+    layersHandle.setPointerCapture(e.pointerId);
+  });
 
-    handle.addEventListener('pointermove', (e) => {
-      if (!dragging) return;
-      const dx = e.clientX - startX;
-      const newW = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, side === 'left' ? startW + dx : startW - dx));
-      const varName = side === 'left' ? '--layers-width' : '--props-width';
-      wrapper.style.setProperty(varName, newW + 'px');
-      if (side === 'left') positionLayersHandle();
-      else positionPropsHandle();
+  layersHandle.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    const newW = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startW + dx));
+    wrapper.style.setProperty('--layers-width', newW + 'px');
+    positionLayersHandle();
+    resizeCanvas();
+    renderCanvas();
+  });
+
+  const endDrag = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    layersPanel.classList.remove('no-transition');
+    layersHandle.classList.remove('active');
+    const w = layersPanel.offsetWidth;
+    localStorage.setItem('fd-layers-width', String(w));
+  };
+  layersHandle.addEventListener('pointerup', endDrag);
+  layersHandle.addEventListener('pointercancel', endDrag);
+
+  // Double-click to collapse
+  layersHandle.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const isCollapsed = layersPanel.classList.toggle('collapsed');
+    if (isCollapsed) {
+      wrapper.style.setProperty('--layers-width', '0px');
+      localStorage.setItem('fd-layers-collapsed', '1');
+    } else {
+      const savedW = parseInt(localStorage.getItem('fd-layers-width'), 10);
+      const restoreW = (savedW >= MIN_WIDTH && savedW <= MAX_WIDTH) ? savedW : DEFAULT_LAYERS_W;
+      wrapper.style.setProperty('--layers-width', restoreW + 'px');
+      localStorage.removeItem('fd-layers-collapsed');
+    }
+    requestAnimationFrame(() => {
+      positionLayersHandle();
       resizeCanvas();
       renderCanvas();
     });
-
-    const endDrag = (e) => {
-      if (!dragging) return;
-      dragging = false;
-      panel.classList.remove('no-transition');
-      handle.classList.remove('active');
-      // Persist
-      const w = panel.offsetWidth;
-      const key = side === 'left' ? 'fd-layers-width' : 'fd-props-width';
-      localStorage.setItem(key, String(w));
-    };
-    handle.addEventListener('pointerup', endDrag);
-    handle.addEventListener('pointercancel', endDrag);
-
-    // Double-click to collapse
-    handle.addEventListener('dblclick', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const isCollapsed = panel.classList.toggle('collapsed');
-      const varName = side === 'left' ? '--layers-width' : '--props-width';
-      if (isCollapsed) {
-        // Layers collapses to 0px (hidden); props to 0px
-        wrapper.style.setProperty(varName, '0px');
-        localStorage.setItem(side === 'left' ? 'fd-layers-collapsed' : 'fd-props-collapsed', '1');
-      } else {
-        const savedW = parseInt(localStorage.getItem(side === 'left' ? 'fd-layers-width' : 'fd-props-width'), 10);
-        const restoreW = (savedW >= MIN_WIDTH && savedW <= MAX_WIDTH) ? savedW : defaultW;
-        wrapper.style.setProperty(varName, restoreW + 'px');
-        localStorage.removeItem(side === 'left' ? 'fd-layers-collapsed' : 'fd-props-collapsed');
-      }
-      requestAnimationFrame(() => {
-        if (side === 'left') positionLayersHandle();
-        else positionPropsHandle();
-        resizeCanvas();
-        renderCanvas();
-      });
-    });
-  }
-
-  makeDraggable(layersHandle, layersPanel, 'left', DEFAULT_LAYERS_W);
-  makeDraggable(propsHandle, propsPanel, 'right', DEFAULT_PROPS_W);
-
-
-  if (propsRestore) {
-    propsRestore.addEventListener('click', () => {
-      if (!propsPanel) return;
-      propsPanel.classList.remove('collapsed');
-      const savedW = parseInt(localStorage.getItem('fd-props-width'), 10);
-      const restoreW = (savedW >= MIN_WIDTH && savedW <= MAX_WIDTH) ? savedW : DEFAULT_PROPS_W;
-      wrapper.style.setProperty('--props-width', restoreW + 'px');
-      localStorage.removeItem('fd-props-collapsed');
-      requestAnimationFrame(() => { positionPropsHandle(); resizeCanvas(); renderCanvas(); });
-    });
-    propsRestore.addEventListener('dblclick', (e) => e.stopPropagation());
-  }
-
-  // ── Observe props panel visibility changes to reposition handle ──
-  const propsObserver = new MutationObserver(() => {
-    positionPropsHandle();
-    // Update --props-width CSS var when props becomes visible/hidden
-    if (propsPanel.classList.contains('visible') && !propsPanel.classList.contains('collapsed')) {
-      const savedW = parseInt(localStorage.getItem('fd-props-width'), 10);
-      const w = (savedW >= MIN_WIDTH && savedW <= MAX_WIDTH) ? savedW : DEFAULT_PROPS_W;
-      wrapper.style.setProperty('--props-width', w + 'px');
-    } else {
-      wrapper.style.setProperty('--props-width', '0px');
-    }
-    resizeCanvas();
   });
-  if (propsPanel) {
-    propsObserver.observe(propsPanel, { attributes: true, attributeFilter: ['class'] });
-  }
 }
 
 // ─── Init ────────────────────────────────────────────────────────────────
@@ -3349,20 +3152,8 @@ function renderSpecsPanel() {
 }
 
 function toggleSpecsPanel() {
-  const panel = document.getElementById('specs-panel');
-  if (!panel) return;
-  const willOpen = panel.classList.contains('hidden');
-  if (willOpen) {
-    // Exclusive right-side: close AI Chat panel when opening Notes
-    const chatPanel = document.getElementById('ai-chat-panel');
-    if (chatPanel && !chatPanel.classList.contains('hidden')) {
-      chatPanel.classList.add('hidden');
-    }
-  }
-  specsPanelOpen = willOpen;
-  window._specsPanelOpen = specsPanelOpen;
-  panel.classList.toggle('hidden', !specsPanelOpen);
-  if (specsPanelOpen) renderSpecsPanel();
+  switchRightTab('specs');
+  if (typeof renderSpecsPanel === 'function') renderSpecsPanel();
 }
 
 /** Toggle Layers panel collapsed/expanded. */
@@ -4914,7 +4705,7 @@ async function initPlayground() {
       const rect = wrapper.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
       const layersW = getLayersPanelWidth();
-      const propsW = getPropsPanelWidth();
+      const propsW = getRightPanelWidth();
       const canvasWidth = rect.width - layersW - propsW;
       const newW = Math.round(canvasWidth * dpr);
       const newH = Math.round(rect.height * dpr);
@@ -5288,7 +5079,7 @@ async function initPlayground() {
       zoomToFrame(frames[0]);
       updatePresCounter();
       // Hide all chrome
-      document.querySelectorAll('.chrome-pill, .scroll-toolbar, #floating-action-bar, .quick-color-picker, #props-panel, #minimap-container')
+      document.querySelectorAll('.chrome-pill, .scroll-toolbar, #floating-action-bar, .quick-color-picker, #right-panel, #minimap-container')
         .forEach(el => el.style.display = 'none');
     }
 
@@ -5299,7 +5090,7 @@ async function initPlayground() {
       document.querySelectorAll('.chrome-pill, .scroll-toolbar, #minimap-container')
         .forEach(el => el.style.display = '');
       document.getElementById('floating-action-bar').style.display = '';
-      document.getElementById('props-panel').style.display = '';
+      document.getElementById('right-panel').style.display = '';
     }
 
     function zoomToFrame(frame) {
@@ -5360,12 +5151,6 @@ async function initPlayground() {
           // After collapse animation completes, apply final collapsed state
           setTimeout(() => {
             splitContainer.classList.remove('panels-collapsing');
-            // Apply actual collapsed state
-            if (!codeCollapsed) {
-              codeCollapsed = true;
-              splitContainer.classList.add('code-collapsed');
-              splitContainer.style.removeProperty('--editor-width');
-            }
             // Collapse layers
             const lp = document.getElementById('layers-panel');
             const lh = document.getElementById('layers-resize');
@@ -5375,8 +5160,6 @@ async function initPlayground() {
               localStorage.setItem('fd-layers-collapsed', '1');
             }
             if (lh) lh.style.display = 'none';
-            // Show right sidebar toggle
-            document.getElementById('right-sidebar-toggle')?.classList.add('visible');
             window.dispatchEvent(new Event('resize'));
           }, 500);
         }, 800);
@@ -5456,7 +5239,9 @@ async function initPlayground() {
 
     // ── Panel Resize Setup ───────────────────────────────────────────
     setupPanelResize(wrapper, resizeCanvas);
-    setupSplitResize(document.getElementById('playground-container'), resizeCanvas);
+
+    // ── Right Panel Init ─────────────────────────────────────────────
+    initRightPanel();
 
     // ── Mobile Layers Drawer Toggle ──────────────────────────────────
     const mobileLayersToggle = document.getElementById('mobile-layers-toggle');
@@ -5509,52 +5294,26 @@ async function initPlayground() {
     // ── Specs Panel Resize ───────────────────────────────────────────
     setupSpecsResize();
 
-    // ── Right Sidebar Toggle (shows when code panel collapsed) ───────
-    const rightSidebarToggle = document.getElementById('right-sidebar-toggle');
-    rightSidebarToggle?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      // Expand code panel
-      if (codeCollapsed) toggleCodePanel();
-      // Also expand layers if collapsed
-      const lp = document.getElementById('layers-panel');
-      if (lp?.classList.contains('collapsed')) toggleLayersPanel();
-      // Hide the toggle
-      rightSidebarToggle.classList.remove('visible');
-    });
+    // ── (Right sidebar toggle removed — replaced by #right-panel tabs) ──
 
-    // ── Desktop Code Panel Toggle (click editor header) ──────────────
-    const editorHeader = document.getElementById('editor-header');
-    editorHeader?.addEventListener('click', (e) => {
-      // Don't toggle if clicking the mobile close button
-      if (e.target.id === 'mobile-code-close') return;
-      // Ignore clicks right after a resize drag (prevents accidental toggle)
-      if (Date.now() - lastSplitResizeTime < 300) return;
-      toggleCodePanel();
-    });
-
+    // ── (Desktop editor-header toggle removed — code is now a right panel tab) ──
 
     // ── Mobile Code Editor Toggle (#4) ───────────────────────────────
     const mobileCodeToggle = document.getElementById('mobile-code-toggle');
-    const mobileCodeClose = document.getElementById('mobile-code-close');
-    const playgroundEditor = document.querySelector('.playground-editor');
 
     function toggleMobileCodeEditor() {
-      if (!playgroundEditor) return;
-      const isOpen = playgroundEditor.classList.toggle('mobile-code-open');
-      mobileCodeToggle?.classList.toggle('active', isOpen);
+      switchRightTab('code');
     }
     function closeMobileCodeEditor() {
-      playgroundEditor?.classList.remove('mobile-code-open');
-      mobileCodeToggle?.classList.remove('active');
+      // No-op in new panel design
     }
 
     mobileCodeToggle?.addEventListener('click', toggleMobileCodeEditor);
-    mobileCodeClose?.addEventListener('click', closeMobileCodeEditor);
 
     // Show close button only on mobile
     const mobileQuery = window.matchMedia('(max-width: 768px)');
     function updateMobileUI(e) {
-      if (mobileCodeClose) mobileCodeClose.style.display = e.matches ? 'block' : 'none';
+      // mobileCodeClose removed — code is now a right panel tab
       if (!e.matches) {
         closeMobileLayersDrawer();
         closeMobileCodeEditor();

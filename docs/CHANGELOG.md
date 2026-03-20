@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.222 — Unified Right Panel with Horizontal Tabs (R6.6)
+- **UX (R6.6)**: Consolidated 5 separate panels (AI Chat, Code Editor, Specs, Properties, Animations) into a single unified `#right-panel` with 4 horizontal tabs: ✦ Agent (default), { } Code, 📋 Specs, ◧ Design
+- **UX (R6.6)**: Merged Animations and Properties into single "Design" tab — properties shown when a node is selected, animation UI merged into the same tab
+- **UX (R6.6)**: Agent tab is the default/first tab — AI chat accessible immediately on load
+- **UX (R6.6)**: Tabs use frosted glass styling with smooth transitions; active tab highlighted with purple accent indicator; tab state persisted in localStorage
+- **UX (R6.6)**: Right panel can be collapsed/expanded by clicking the active tab — toggles between open and collapsed states with smooth width transition
+- **CLEANUP (R6.6)**: Removed ~300 lines of dead code: `setupSplitResize()`, `codeCollapsed`/`savedEditorWidth` state, `split-resize` handle, `right-sidebar-toggle`, editor-header click handler, props-panel resize logic
+- **SITE**: Changes in `site/index.html` (HTML restructuring), `site/style.css` (tab bar + pane styling), `site/app.js` (tab management, panel consolidation), `site/ai-chat.js` (Agent tab integration)
+
 ### v0.11.221 — Rename "Playground" → "Editor" (R6.5)
 - **RENAME (R6.5)**: Renamed `site/playground.js` → `site/app.js` — main JavaScript module gets a proper name matching production app identity
 - **RENAME (R6.5)**: All user-facing "Playground" text → "Editor" across about page, download page, docs, shortcuts, footer links, README, and share button

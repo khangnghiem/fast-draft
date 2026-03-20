@@ -119,17 +119,7 @@
             <div id="layers-panel"></div>
             <div class="panel-resize-handle layers-handle" id="layers-resize"></div>
             <canvas id="fd-canvas"></canvas>
-            <!-- Specs Panel (right-side slide-in) -->
-            <div id="specs-panel" class="specs-panel hidden">
-              <div class="specs-panel-header">
-                <span class="specs-panel-title">📋 Specs</span>
-                <button class="specs-panel-close" id="specs-panel-close" title="Close">✕</button>
-              </div>
-              <div class="specs-panel-body" id="specs-panel-body">
-                <p class="notes-empty">No notes yet. Add a note via right-click → Add Note.</p>
-              </div>
-              <div class="panel-resize-handle notes-handle" id="notes-resize"></div>
-            </div>
+
             <!-- Floating Action Bar (frosted glass) -->
             <div id="floating-action-bar">
               <label class="fab-label" for="fab-fill">Fill</label>
@@ -182,41 +172,6 @@
                 <div class="wood-core"><div class="finial-top"></div><div class="finial-bottom"></div></div>
               </div>
             </div>
-            <!-- Properties Panel -->
-            <div id="props-panel">
-              <div class="props-inner">
-                <div class="props-title">
-                  <span id="pp-node-id">—</span>
-                  <span class="kind-badge" id="pp-kind"></span>
-                </div>
-                <div class="props-section">
-                  <div class="props-section-label">Position &amp; Size</div>
-                  <div class="props-grid">
-                    <label class="pp-field"><span>X</span><input type="number" id="pp-x" readonly></label>
-                    <label class="pp-field"><span>Y</span><input type="number" id="pp-y" readonly></label>
-                    <label class="pp-field"><span>W</span><input type="number" id="pp-w" min="1"></label>
-                    <label class="pp-field"><span>H</span><input type="number" id="pp-h" min="1"></label>
-                  </div>
-                </div>
-                <div class="props-section" id="pp-appearance">
-                  <div class="props-section-label">Appearance</div>
-                  <label class="pp-row"><span>Fill</span><input type="color" id="pp-fill" value="#007AFF"></label>
-                  <label class="pp-row"><span>Stroke</span><input type="color" id="pp-stroke" value="#333333"></label>
-                  <label class="pp-row"><span>Stroke W</span><input type="number" id="pp-stroke-w" min="0" step="0.5" value="0"></label>
-                  <label class="pp-row"><span>Corner</span><input type="number" id="pp-corner" min="0" value="0"></label>
-                  <label class="pp-row"><span>Opacity</span>
-                    <div class="pp-opacity-wrap">
-                      <input type="range" id="pp-opacity" min="0" max="1" step="0.01" value="1">
-                      <span id="pp-opacity-val">100%</span>
-                    </div>
-                  </label>
-                </div>
-                <div class="props-section pp-actions">
-                  <button class="pp-action-btn" id="pp-duplicate" title="Duplicate">⧉ Duplicate</button>
-                  <button class="pp-action-btn pp-delete" id="pp-delete" title="Delete">🗑 Delete</button>
-                </div>
-              </div>
-            </div>
             <div id="dimension-tooltip"></div>
             <!-- reparent-overlay removed — reparent via Layers drag-drop or post-drop context menu -->
             <!-- AI Review Panel (slide-up from bottom) -->
@@ -232,28 +187,93 @@
                 <p class="ai-review-loading" id="ai-review-loading">Analyzing design…</p>
               </div>
             </div>
-            <!-- AI Chat Panel (slide-in from right) -->
-            <div id="ai-chat-panel" class="ai-chat-panel hidden">
-              <div class="ai-chat-header">
-                <div class="ai-chat-title">
-                  <span class="ai-chat-icon">✦</span> AI Agent
-                </div>
-                <div class="ai-chat-header-actions">
-                  <button class="ai-chat-clear" id="ai-chat-clear" title="Clear chat">🗑</button>
-                  <button class="ai-chat-close" id="ai-chat-close" title="Close">✕</button>
-                </div>
+            <!-- ─── Unified Right Panel ─── -->
+            <div id="right-panel">
+              <div class="rp-tabs">
+                <button class="rp-tab active" data-tab="agent" title="AI Agent (⌥1)">✦</button>
+                <button class="rp-tab" data-tab="code" title="Code Editor (⌥2)">{ }</button>
+                <button class="rp-tab" data-tab="specs" title="Specs (⌥3)">📋</button>
+                <button class="rp-tab" data-tab="design" title="Design (⌥4)">◧</button>
               </div>
-              <div class="ai-chat-messages" id="ai-chat-messages">
-                <div class="ai-chat-welcome">
-                  <p>Ask me about your design. I can modify nodes, suggest improvements, or answer questions.</p>
-                  <p class="ai-chat-hint">Try: "Make the colors warmer" or "Add a header section"</p>
+              <div class="rp-content">
+                <!-- Agent Tab -->
+                <div class="rp-pane active" data-pane="agent">
+                  <div class="ai-chat-header">
+                    <div class="ai-chat-title">
+                      <span class="ai-chat-icon">✦</span> Agent
+                    </div>
+                    <div class="ai-chat-header-actions">
+                      <button class="ai-chat-clear" id="ai-chat-clear" title="Clear chat">🗑</button>
+                    </div>
+                  </div>
+                  <div class="ai-chat-messages" id="ai-chat-messages">
+                    <div class="ai-chat-welcome">
+                      <p>Ask me about your design. I can modify nodes, suggest improvements, or answer questions.</p>
+                      <p class="ai-chat-hint">Try: "Make the colors warmer" or "Add a header section"</p>
+                    </div>
+                  </div>
+                  <div class="ai-chat-chips" id="ai-chat-chips"></div>
+                  <div class="ai-chat-context-badge hidden" id="ai-chat-context-badge"></div>
+                  <div class="ai-chat-input-area">
+                    <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Ask AI about your design..." rows="1" maxlength="500"></textarea>
+                    <button class="ai-chat-send" id="ai-chat-send" title="Send">→</button>
+                  </div>
                 </div>
-              </div>
-              <div class="ai-chat-chips" id="ai-chat-chips"></div>
-              <div class="ai-chat-context-badge hidden" id="ai-chat-context-badge"></div>
-              <div class="ai-chat-input-area">
-                <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Ask AI about your design..." rows="1" maxlength="500"></textarea>
-                <button class="ai-chat-send" id="ai-chat-send" title="Send">→</button>
+                <!-- Code Tab -->
+                <div class="rp-pane" data-pane="code">
+                  <div class="rp-pane-header">
+                    <span class="editor-dot"></span> Code
+                  </div>
+                  <div id="fd-editor"></div>
+                </div>
+                <!-- Specs Tab -->
+                <div class="rp-pane" data-pane="specs">
+                  <div class="specs-panel-header">
+                    <span class="specs-panel-title">📋 Specs</span>
+                  </div>
+                  <div class="specs-panel-body" id="specs-panel-body">
+                    <p class="notes-empty">No notes yet. Add a note via right-click → Add Note.</p>
+                  </div>
+                </div>
+                <!-- Design Tab (Properties + Interactions) -->
+                <div class="rp-pane" data-pane="design">
+                  <div class="rp-design-empty" id="rp-design-empty">
+                    <div style="font-size:20px;opacity:0.3;margin-bottom:6px">◧</div>
+                    <div style="opacity:0.4;font-size:11px">Select a node to inspect</div>
+                  </div>
+                  <div class="props-inner" id="rp-design-content" style="display:none">
+                    <div class="props-title">
+                      <span id="pp-node-id">—</span>
+                      <span class="kind-badge" id="pp-kind"></span>
+                    </div>
+                    <div class="props-section">
+                      <div class="props-section-label">Position &amp; Size</div>
+                      <div class="props-grid">
+                        <label class="pp-field"><span>X</span><input type="number" id="pp-x" readonly></label>
+                        <label class="pp-field"><span>Y</span><input type="number" id="pp-y" readonly></label>
+                        <label class="pp-field"><span>W</span><input type="number" id="pp-w" min="1"></label>
+                        <label class="pp-field"><span>H</span><input type="number" id="pp-h" min="1"></label>
+                      </div>
+                    </div>
+                    <div class="props-section" id="pp-appearance">
+                      <div class="props-section-label">Appearance</div>
+                      <label class="pp-row"><span>Fill</span><input type="color" id="pp-fill" value="#007AFF"></label>
+                      <label class="pp-row"><span>Stroke</span><input type="color" id="pp-stroke" value="#333333"></label>
+                      <label class="pp-row"><span>Stroke W</span><input type="number" id="pp-stroke-w" min="0" step="0.5" value="0"></label>
+                      <label class="pp-row"><span>Corner</span><input type="number" id="pp-corner" min="0" value="0"></label>
+                      <label class="pp-row"><span>Opacity</span>
+                        <div class="pp-opacity-wrap">
+                          <input type="range" id="pp-opacity" min="0" max="1" step="0.01" value="1">
+                          <span id="pp-opacity-val">100%</span>
+                        </div>
+                      </label>
+                    </div>
+                    <div class="props-section pp-actions">
+                      <button class="pp-action-btn" id="pp-duplicate" title="Duplicate">⧉ Duplicate</button>
+                      <button class="pp-action-btn pp-delete" id="pp-delete" title="Delete">🗑 Delete</button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             <div id="canvas-loading" class="canvas-loading">
@@ -267,24 +287,9 @@
             </div>
             <!-- Image drop zone overlay -->
             <div id="canvas-drop-zone" class="canvas-drop-zone">Drop image here</div>
-            <div class="panel-resize-handle props-handle" id="props-resize"></div>
-            <div class="panel-restore-strip props-restore" id="props-restore" title="Show properties panel"></div>
             </div><!-- /canvas-content -->
           </div><!-- /canvas-wrapper -->
         </div>
-        <div class="split-resize-handle" id="split-resize"></div>
-        <div class="playground-editor">
-          <div class="editor-header" id="editor-header" style="cursor:pointer" title="Toggle Code panel">
-            <span class="editor-dot"></span> Code
-            <span class="editor-chevron" id="editor-chevron">▾</span>
-            <button id="mobile-code-close" style="display:none; margin-left:auto; border:none; background:transparent; color:#86868B; font-size:16px; cursor:pointer; padding:2px 8px;">✕</button>
-          </div>
-          <div id="fd-editor"></div>
-        </div>
-        <!-- Right sidebar toggle (appears when code panel is collapsed to zero) -->
-        <button class="right-sidebar-toggle" id="right-sidebar-toggle" title="Toggle Panels (Code Mode)">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="14" height="14" rx="2"/><line x1="10.5" y1="1" x2="10.5" y2="15"/></svg>
-        </button>
       </div>
     </div>
   </main>
