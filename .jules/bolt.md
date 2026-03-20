@@ -1,3 +1,3 @@
-## 2024-05-24 - [Avoid `try/catch` and `JSON.parse` empty strings in `get_node_bounds`]
-**Learning:** `JSON.parse` wrapped in a `try/catch` block for `fdCanvas.get_node_bounds` (which returns `{}` or empty values often on missing nodes) can be slow in a tight loop. Furthermore, using `Regex.exec` stateful matching in a `while` loop is slower than a `String.match` mapped over the slice of the string.
-**Action:** Use `fdCanvas.get_node_bounds_json(id)` instead of `get_node_bounds(id)` since it's already used for early-bail and avoids `try/catch` when handling `{}` checks manually. Use `String.match` and substring slice in loops for string extraction.
+## 2026-03-20 - Optimize mermaid parser nested Vec::contains
+**Learning:** Checking for elements in a Vector within a nested loop like O(N^2) in parse_mermaid subgraph parsing or build_scene_graph layout ordering causes O(N^2) complexity, leading to performance bottlenecks when handling large graphs.
+**Action:** Replace linear Vec::contains calls inside loops with O(1) HashSet lookups to reduce algorithmic complexity to O(N).
