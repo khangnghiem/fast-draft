@@ -17,6 +17,18 @@
 
 ## Completed Requirements
 
+### v0.11.235 — Drag-to-Create + Insert Menu (R3.42, R3.42b)
+
+**Drag-to-Create Re-implemented** — toolbar tool buttons now support drag-to-create: pointerdown on a draw tool button, drag onto the canvas, release to create a shape at the drop point. Ghost preview (dashed outline matching shape type) follows the cursor during drag. Fix: `e.preventDefault()` on toolbar button `pointerdown` blocks native SVG drag hijacking (root cause of 6 prior failures, documented in LESSONS.md).
+
+**Insert Menu** — new `+` button in toolbar opens a frosted glass dropdown with shape shortcuts (Rectangle, Ellipse, Text, Frame, Arrow). Click an item to create the shape at viewport center. Keyboard shortcut: `⌘/` (or `Ctrl+/`).
+
+**Onboarding Updated** — hints now say "pick a tool, then click canvas to draw" + "or drag a tool onto the canvas" (was "click & drag to draw").
+
+**CSS** — added `-webkit-user-drag: none` on `.ft-tool-btn svg` (belt-and-suspenders with existing `pointer-events: none`).
+
+Files: `site/app.js`, `site/index.html`, `site/style.css`
+
 ### v0.11.234 — Left Panel Visible During Loading (R6.5)
 
 **Left Panel Z-Index Fix** — `#left-panel` z-index raised from `10` to `15` to match `#right-panel`. The loading overlay (`.canvas-loading`) has `z-index: 10`, which was covering the left panel during WASM initialization. Now both panels are visible immediately while the canvas engine loads.
