@@ -135,7 +135,7 @@ function processSpecBlockMultiline(lines: string[], i: number, state: any) {
 }
 
 function processEdgeStart(trimmed: string, state: any): boolean {
-  const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s*\{/);
+  const edgeMatch = trimmed.match(/^edge\s+@([^\s\{]+)\s*\{/);
   if (!edgeMatch) return false;
   state.insideEdge = true;
   state.edgeFrom = "";
@@ -148,8 +148,8 @@ function processEdgeStart(trimmed: string, state: any): boolean {
 
 function processEdgeBody(trimmed: string, state: any): boolean {
   if (!state.insideEdge) return false;
-  const fromMatch = trimmed.match(/^from:\s*@(\w+)/);
-  const toMatch = trimmed.match(/^to:\s*@(\w+)/);
+  const fromMatch = trimmed.match(/^from:\s*@([^\s\{]+)/);
+  const toMatch = trimmed.match(/^to:\s*@([^\s\{]+)/);
   const labelMatch = trimmed.match(/^label:\s*"([^"]*)"/);
   if (fromMatch) state.edgeFrom = fromMatch[1];
   if (toMatch) state.edgeTo = toMatch[1];
@@ -181,7 +181,7 @@ function processClosingBrace(trimmed: string, state: any): boolean {
 }
 
 function processNodeDecl(trimmed: string, state: any, doFlush: (s: any) => void): boolean {
-  const nodeMatch = trimmed.match(/^(group|rect|ellipse|path|text)\s+@(\w+)(?:\s+"[^"]*")?\s*\{?/);
+  const nodeMatch = trimmed.match(/^(group|rect|ellipse|path|text)\s+@([^\s\{]+)(?:\s+"[^"]*")?\s*\{?/);
   if (!nodeMatch) return false;
 
   doFlush(state); // Flush PREVIOUS node before starting this new one
@@ -197,7 +197,7 @@ function processNodeDecl(trimmed: string, state: any, doFlush: (s: any) => void)
 }
 
 function processGenericNode(trimmed: string, state: any, doFlush: (s: any) => void): boolean {
-  const genericMatch = trimmed.match(/^@(\w+)\s*\{/);
+  const genericMatch = trimmed.match(/^@([^\s\{]+)\s*\{/);
   if (!genericMatch) return false;
 
   doFlush(state); // Flush PREVIOUS node
