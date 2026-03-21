@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.234 — Left Panel Visible During Loading (R6.5)
+
+**Left Panel Z-Index Fix** — `#left-panel` z-index raised from `10` to `15` to match `#right-panel`. The loading overlay (`.canvas-loading`) has `z-index: 10`, which was covering the left panel during WASM initialization. Now both panels are visible immediately while the canvas engine loads.
+
+Files: `site/style.css`
+
 ### v0.11.233 — Canvas Loading UX Round 2: Eliminate Slide-In Race (R6.5)
 
 **Panel Init Before WASM Await (#1)** — `initLeftPanel()`, `initRightPanel()`, `initSettingsPanel()`, `initOnboarding()` moved to the top of `initPlayground()` before the first `await` (WASM fetch). Previously they ran ~500 lines after the await, leaving a 60-100ms window where panels were uninitialized while the browser painted frames.
