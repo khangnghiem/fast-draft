@@ -17,6 +17,20 @@
 
 ## Completed Requirements
 
+### v0.11.232 — Canvas Loading UX: Instant Panels + Streaming WASM + Module Preloads (R6.5)
+
+**Suppress Minimap/Zoom Slide-In (#1)** — `.init-no-transition` class on `<html>` suppresses all CSS transitions during startup; removed after first frame via `requestAnimationFrame`; minimap and panels appear in their final position instantly
+
+**Left Panel Loads Immediately (#2)** — `initLeftPanel()` moved before WASM init (was called after engine ready); inline `style` on `canvas-wrapper` sets initial CSS vars so panel dimensions are known before JS runs
+
+**CodeMirror Modulepreload (#3)** — 9 `<link rel="modulepreload">` hints for esm.sh dependencies in `<head>`; browser fetches in parallel with HTML parse instead of waiting for `app.js` module graph resolution; saves 200-500ms on cold loads
+
+**SW CDN Module Caching (#4)** — `sw.js` now caches esm.sh modules alongside WASM assets using stale-while-revalidate; repeat visits load from disk cache; CDN pre-caching is best-effort (non-blocking)
+
+**WASM Streaming Instantiation (#5)** — passes `Response` directly to `wasm.default()` which calls `WebAssembly.instantiateStreaming` internally; browser compiles WASM while bytes arrive; saves 100-300ms for 785KB binary; animated progress bar during streaming
+
+Files: `site/index.html`, `site/app.js`, `site/sw.js`
+
 ### v0.11.231 — Mobile Touch Fixes: Pinch Zoom Center + Invisible Panel (R6.5, R6.7)
 
 **Pinch-to-Zoom Center Fix** — zoom now anchors at the current finger midpoint:

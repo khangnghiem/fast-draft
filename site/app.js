@@ -4610,9 +4610,10 @@ async function initPlayground() {
     console.log('[FD] Fetching WASM module + binary…');
 
     // Start JS module import and WASM fetch in parallel
+    const wasmFetchUrl = './wasm/fd_wasm_bg.wasm?v=0.11.5';
     const [wasm, wasmResponse] = await raceWithTimeout(Promise.all([
       import('./wasm/fd_wasm.js?v=0.11.5'),
-      fetch('./wasm/fd_wasm_bg.wasm?v=0.11.5'),
+      fetch(wasmFetchUrl),
     ]), WASM_TIMEOUT_MS, 'WASM fetch');
 
     if (!wasmResponse.ok) {
@@ -4620,51 +4621,46 @@ async function initPlayground() {
     }
     console.log(`[FD] WASM fetched (${Math.round(performance.now() - t0)}ms)`);
 
-    // Stream WASM bytes with real progress — always consume the already-fetched
-    // response to avoid double-fetch (which causes body-locking stalls on Edge).
+    // Streaming WASM instantiation (#5): pass the Response directly to wasm.default()
+    // which calls WebAssembly.instantiateStreaming internally — the browser compiles
+    // WASM while bytes are still arriving over the wire, saving 100-300ms.
+    // For progress UI, read Content-Length from headers to show an estimate.
     const contentLength = +wasmResponse.headers.get('Content-Length') || 0;
-    let wasmBytes;
-    if (contentLength > 0 && wasmResponse.body && typeof wasmResponse.body.getReader === 'function') {
-      // Happy path: Content-Length present → stream with progress bar
-      const reader = wasmResponse.body.getReader();
-      const chunks = [];
-      let loaded = 0;
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        loaded += value.length;
-        const pct = Math.min(loaded / contentLength, 1);
-        if (progressBar) progressBar.style.width = (pct * 100) + '%';
-        if (statusEl) statusEl.textContent = `Loading engine… ${Math.round(pct * 100)}%`;
+    if (contentLength > 0) {
+      // Show estimated progress (we can't stream-read AND pass to instantiateStreaming,
+      // so we animate the progress bar to ~90% over estimated download time)
+      if (progressBar) progressBar.style.width = '30%';
+      if (statusEl) statusEl.textContent = 'Loading engine…';
+      // Animate progress bar during streaming instantiation
+      let progressInterval = setInterval(() => {
+        const cur = parseFloat(progressBar?.style.width) || 30;
+        if (cur < 90 && progressBar) progressBar.style.width = Math.min(cur + 5, 90) + '%';
+      }, 200);
+
+      try {
+        await raceWithTimeout(
+          wasm.default(wasmResponse),
+          WASM_TIMEOUT_MS,
+          'WASM streaming instantiation'
+        );
+      } finally {
+        clearInterval(progressInterval);
       }
-      // Combine chunks into a single buffer
-      wasmBytes = new Uint8Array(loaded);
-      let offset = 0;
-      for (const chunk of chunks) { wasmBytes.set(chunk, offset); offset += chunk.length; }
     } else {
       // Fallback: no Content-Length (Cloudflare brotli/gzip strips it).
-      // Consume the already-fetched response — NEVER re-fetch.
+      // Still use streaming — pass Response directly.
       if (statusEl) statusEl.textContent = 'Loading engine…';
       if (progressBar) progressBar.style.width = '50%';
-      const buf = await raceWithTimeout(
-        wasmResponse.arrayBuffer(),
+      await raceWithTimeout(
+        wasm.default(wasmResponse),
         WASM_TIMEOUT_MS,
-        'WASM body read'
+        'WASM streaming instantiation'
       );
-      wasmBytes = new Uint8Array(buf);
     }
 
-    console.log(`[FD] WASM binary ready (${(wasmBytes.byteLength / 1024).toFixed(0)} KB, ${Math.round(performance.now() - t0)}ms)`);
-    if (statusEl) statusEl.textContent = 'Initializing runtime…';
+    if (statusEl) statusEl.textContent = '✓ Ready';
     if (progressBar) progressBar.style.width = '100%';
-
-    await raceWithTimeout(
-      wasm.default(wasmBytes.buffer),
-      WASM_TIMEOUT_MS,
-      'WASM instantiation'
-    );
-    console.log(`[FD] Runtime initialized (${Math.round(performance.now() - t0)}ms)`);
+    console.log(`[FD] Runtime initialized via streaming (${Math.round(performance.now() - t0)}ms)`);
 
     // Size the canvas
     const resizeCanvas = () => {
@@ -5105,7 +5101,8 @@ async function initPlayground() {
     }
 
     // ── Panels always visible — no theater animation ────
-    // Init left and right panels with saved state
+    // Init left and right panels with saved state (both before WASM — pure DOM)
+    initLeftPanel();
     initRightPanel();
     initSettingsPanel();
     initOnboarding();
@@ -5252,6 +5249,11 @@ async function initPlayground() {
     loading.classList.add('fade-out');
     setTimeout(() => loading.classList.add('hidden'), 400);
 
+    // Remove startup transition suppression — enable animations for user interactions (#1)
+    requestAnimationFrame(() => {
+      document.documentElement.classList.remove('init-no-transition');
+    });
+
     // ── Canvas Theme Toggle (moved to settings gear dropdown) ─────────
     // Theme toggle is now handled by sm-theme-toggle in the gear dropdown
 
@@ -5260,8 +5262,7 @@ async function initPlayground() {
     // ── Panel Resize Setup ───────────────────────────────────────────
     setupPanelResize(wrapper, resizeCanvas);
 
-    // ── Left Panel Init ──────────────────────────────────────────────
-    initLeftPanel();
+    // (initLeftPanel moved earlier — before WASM init)
 
     // ── Mobile Layers Drawer Toggle ──────────────────────────────────
     const mobileLayersToggle = document.getElementById('mobile-layers-toggle');

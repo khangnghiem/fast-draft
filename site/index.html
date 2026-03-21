@@ -22,10 +22,20 @@
   <!-- Preload WASM for instant startup -->
   <link rel="modulepreload" href="./wasm/fd_wasm.js?v=0.11.5" />
   <link rel="preload" href="./wasm/fd_wasm_bg.wasm?v=0.11.5" as="fetch" crossorigin fetchpriority="high" />
+  <!-- Preload CodeMirror deps — browser fetches in parallel with HTML parse (#3) -->
+  <link rel="modulepreload" href="https://esm.sh/@codemirror/state@6" />
+  <link rel="modulepreload" href="https://esm.sh/@codemirror/view@6" />
+  <link rel="modulepreload" href="https://esm.sh/@codemirror/language@6" />
+  <link rel="modulepreload" href="https://esm.sh/@lezer/highlight@1" />
+  <link rel="modulepreload" href="https://esm.sh/@codemirror/autocomplete@6" />
+  <link rel="modulepreload" href="https://esm.sh/@codemirror/lint@6" />
+  <link rel="modulepreload" href="https://esm.sh/@codemirror/commands@6" />
+  <link rel="modulepreload" href="https://esm.sh/@codemirror/search@6" />
+  <link rel="modulepreload" href="https://esm.sh/lz-string@1.5.0" />
   <link rel="stylesheet" href="shared.css?v=0.11.5" />
   <link rel="stylesheet" href="style.css?v=0.11.5" />
 
-  <!-- Flash-free theme persistence (default: light) -->
+  <!-- Flash-free theme + suppress startup transitions (#1, #2) -->
   <script>
     (function() {
       var ct = localStorage.getItem('fd-canvas-theme');
@@ -34,6 +44,22 @@
         if (cBtn && ct !== 'dark') cBtn.classList.add('is-light');
       });
     })();
+  </script>
+  <!-- Suppress slide-in transitions during init (#1) + set initial panel widths (#2) -->
+  <style>
+    /* Prevent minimap/panels from sliding on startup — removed after first frame */
+    .init-no-transition,
+    .init-no-transition #minimap-container,
+    .init-no-transition #left-panel,
+    .init-no-transition #right-panel,
+    .init-no-transition .canvas-chrome-left,
+    .init-no-transition .canvas-chrome-right {
+      transition: none !important;
+    }
+  </style>
+  <script>
+    /* Apply no-transition class before any rendering */
+    document.documentElement.classList.add('init-no-transition');
   </script>
   <!-- Service Worker for instant WASM loading on repeat visits -->
   <script>
@@ -55,7 +81,7 @@
       <div id="playground-container" class="playground-split">
 
         <div class="playground-canvas">
-          <div id="canvas-wrapper">
+          <div id="canvas-wrapper" style="--left-panel-width:280px;--right-panel-width:320px;--right-panel-actual-width:320px">
             <div id="canvas-content">
 
             <div id="mobile-layers-backdrop"></div>
