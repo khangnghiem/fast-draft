@@ -12,11 +12,22 @@
  *   - AI_MODEL_QUALITY: model for review (default: gemma-3-12b-it)
  */
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+function getCorsHeaders(request) {
+  const origin = request.headers.get('Origin') || '';
+
+  // Whitelist exact matches and prefix matches
+  const isAllowed =
+    origin === 'https://fast-draft.com' ||
+    origin.startsWith('http://localhost:') ||
+    origin.startsWith('vscode-webview://');
+
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : 'https://fast-draft.com',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Vary': 'Origin',
+  };
+}
 
 const DEFAULT_DAILY_LIMIT = 20;
 const KV_TTL_SECONDS = 86400;
@@ -208,9 +219,10 @@ function computeScore(categories) {
 // ─── Request Handler ─────────────────────────────────────────────────────
 
 export async function onRequestPost(context) {
+  const corsHeaders = getCorsHeaders(context.request);
   const headers = {
     'Content-Type': 'application/json',
-    ...CORS_HEADERS,
+    ...corsHeaders,
   };
 
   try {
@@ -372,6 +384,7 @@ export async function onRequestPost(context) {
   }
 }
 
-export async function onRequestOptions() {
-  return new Response(null, { headers: CORS_HEADERS });
+export async function onRequestOptions(context) {
+  const corsHeaders = getCorsHeaders(context.request);
+  return new Response(null, { headers: corsHeaders });
 }
