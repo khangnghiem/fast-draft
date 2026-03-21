@@ -199,6 +199,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R6.14** _(planned)_: Cloud file sync — `.fd` plain-text files synced via platform-native backends: iCloud Drive (`UIDocument` + `NSFilePresenter`) on iOS/macOS, Google Drive (Storage Access Framework) on Android, native filesystem on Desktop/VS Code; no custom backend needed for V1; real-time collaboration (CRDT/OT) deferred to V2
 - **R6.15** _(done)_: Documentation pages — `/docs/` section on fast-draft.com with Language Reference, Keyboard Shortcuts, and Changelog pages; shared docs stylesheet with dark theme, fixed sidebar, scroll-spy, responsive layout
 - **R6.16** _(done)_: Reduce motion accessibility — respects OS `prefers-reduced-motion` via global CSS blanket rule (kills all animations/transitions); manual toggle in ☰ Settings dropdown + `⇧M` shortcut with `localStorage` persistence; JS guards skip inertia, detach animation, and focus pan easing; VS Code extension parity via `reduceMotion` flag in `state.js`
+- **R6.17** _(done)_: Panel layout redesign — removed theater opening animation (panels always visible from saved state); left panel tabs consolidated to Code + Inspect (merged Specs+Design); right panel gets Agent + Export tabs; top-corner chrome pills (sidebar toggle top-left, Sign in + Settings dropdown + Hamburger toggle top-right); minimap offset by `--right-panel-actual-width` CSS variable to prevent right panel overlap; panel collapsed state and active tab persisted in localStorage
 
 ## Non-Functional Requirements
 
@@ -312,7 +313,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | style / theme       | R1.4, R1.22, R4.3, R4.18                                                                |
 | animation           | R1.5, R1.11, R1.12, R3.29, R4.18, R5.6, R5.8                                            |
 | rendering           | R5.1, R5.2, R5.4, R5.5, R5.9                                                            |
-| platform            | R6.1, R6.2, R6.3, R6.4, R6.5, R6.6, R6.7, R6.8, R6.9, R6.10, R6.11, R6.12, R6.13, R6.14, R6.15, R6.16 |
+| platform            | R6.1, R6.2, R6.3, R6.4, R6.5, R6.6, R6.7, R6.8, R6.9, R6.10, R6.11, R6.12, R6.13, R6.14, R6.15, R6.16, R6.17 |
 | draw-backend        | R5.3, R5.9                                                                              |
 | cross-platform      | R5.9, R6.2, R6.3, R6.12, R6.13, R6.14                                                   |
 | ios / apple-pencil  | R3.10, R6.3                                                                             |

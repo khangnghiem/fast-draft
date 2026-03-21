@@ -17,6 +17,32 @@
 
 ## Completed Requirements
 
+### v0.11.224 — Panel Layout Redesign (R6.17)
+
+**Theater Animation Removed** — panels always visible on load
+- Deleted `panels-collapsing` CSS and startup animation JS (1.3s delay)
+- Panels restore from localStorage saved state instantly
+
+**Left Panel Tabs** — Layers + Code / Inspect
+- Merged Specs + Design into single **◧ Inspect** tab (specs at top, properties below)
+- Reduced from 3 tabs to 2 for cleaner layout
+
+**Right Panel Tabs** — Agent / Export
+- Added tab bar with **✦ Agent** and **↗ Export** tabs
+- Export tab surfaces Share, PNG, SVG, HTML, Import CSS as card-style buttons
+- Removed old `rp-actions-bar` header (Share/Sign in/⚙ were inside panel)
+
+**Top-Corner Chrome** — always-visible canvas controls
+- Top-left: sidebar toggle icon (◫) — toggles left panel
+- Top-right: Sign in (👤) + Settings (⚙) dropdown + Hamburger (☰) toggle
+- Settings dropdown preserved intact from old `rp-actions-bar`
+
+**Minimap Fix** — no longer covered by right panel
+- `#minimap-container` offset by `--right-panel-actual-width` CSS variable
+- Smooth `right` transition matches panel open/close
+
+Files: `site/index.html`, `site/style.css`, `site/app.js`
+
 ### v0.11.223 — Chrome Layout Redesign (R6.7)
 
 **Left Panel** — Layers + Code/Specs/Design tabs
