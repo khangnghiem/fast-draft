@@ -497,8 +497,8 @@ let activeRightTab = localStorage.getItem('fd-right-tab') || 'agent';
 function switchLeftTab(tabId) {
   const panel = document.getElementById('left-panel');
   if (!panel) return;
-  // Ensure panel is visible
-  panel.classList.remove('collapsed');
+  // Ensure panel is visible (but not on mobile — panels are overlays there)
+  if (window.innerWidth > 768) panel.classList.remove('collapsed');
   // Update tabs
   panel.querySelectorAll('.lp-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.tab === tabId);
@@ -528,9 +528,11 @@ function switchLeftTab(tabId) {
 function switchRightTab(tabId) {
   const panel = document.getElementById('right-panel');
   if (!panel) return;
-  // Ensure panel is visible
-  panel.classList.remove('collapsed');
-  updateRightPanelWidth(true);
+  // Ensure panel is visible (but not on mobile — panels are overlays there)
+  if (window.innerWidth > 768) {
+    panel.classList.remove('collapsed');
+    updateRightPanelWidth(true);
+  }
   // Update tabs
   panel.querySelectorAll('.rp-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.rtab === tabId);
@@ -547,10 +549,13 @@ function switchRightTab(tabId) {
   });
 }
 
-/** Update the --right-panel-actual-width CSS var for minimap offset. */
+/** Update the --right-panel-width and --right-panel-actual-width CSS vars.
+ * --right-panel-width controls canvas positioning (left/right offsets).
+ * --right-panel-actual-width controls minimap offset. */
 function updateRightPanelWidth(expanded) {
   const wrapper = document.getElementById('canvas-wrapper');
   if (!wrapper) return;
+  wrapper.style.setProperty('--right-panel-width', expanded ? '320px' : '0px');
   wrapper.style.setProperty('--right-panel-actual-width', expanded ? '320px' : '0px');
 }
 
@@ -2917,6 +2922,7 @@ function setupPanelResize(wrapper, resizeCanvas) {
   let dragging = false;
   let startX = 0;
   let startW = 0;
+  let resizeRafId = null;
 
   layersHandle.addEventListener('pointerdown', (e) => {
     e.preventDefault();
@@ -2935,8 +2941,14 @@ function setupPanelResize(wrapper, resizeCanvas) {
     const newW = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startW + dx));
     wrapper.style.setProperty('--left-panel-width', newW + 'px');
     positionLayersHandle();
-    resizeCanvas();
-    renderCanvas();
+    // Batch expensive canvas resize + render to once per display frame
+    if (!resizeRafId) {
+      resizeRafId = requestAnimationFrame(() => {
+        resizeCanvas();
+        renderCanvas();
+        resizeRafId = null;
+      });
+    }
   });
 
   const endDrag = (e) => {
@@ -2944,6 +2956,13 @@ function setupPanelResize(wrapper, resizeCanvas) {
     dragging = false;
     leftPanel.classList.remove('no-transition');
     layersHandle.classList.remove('active');
+    // Cancel any pending RAF and do a final sync resize
+    if (resizeRafId) {
+      cancelAnimationFrame(resizeRafId);
+      resizeRafId = null;
+    }
+    resizeCanvas();
+    renderCanvas();
     const w = leftPanel.offsetWidth;
     localStorage.setItem('fd-left-panel-width', String(w));
   };
@@ -5090,9 +5109,47 @@ async function initPlayground() {
     initRightPanel();
     initSettingsPanel();
     initOnboarding();
+
+    // ── Mobile: auto-collapse both panels for canvas-first experience ──
+    const isMobileViewport = window.innerWidth <= 768;
+    if (isMobileViewport) {
+      const lp = document.getElementById('left-panel');
+      const rp = document.getElementById('right-panel');
+      if (lp) lp.classList.add('collapsed');
+      if (rp) rp.classList.add('collapsed');
+      // CSS handles --left/right-panel-width: 0px via !important
+    }
+
     // Wire sidebar (top-left) and hamburger (top-right) chrome toggles
-    document.getElementById('sidebar-toggle-btn')?.addEventListener('click', toggleLeftPanel);
-    document.getElementById('hamburger-toggle-btn')?.addEventListener('click', toggleRightPanel);
+    // On mobile, also manage the backdrop overlay
+    const mobileBackdropEl = document.getElementById('mobile-layers-backdrop');
+
+    document.getElementById('sidebar-toggle-btn')?.addEventListener('click', () => {
+      toggleLeftPanel();
+      // On mobile, show/hide backdrop when left panel is open
+      if (window.innerWidth <= 768 && mobileBackdropEl) {
+        const lp = document.getElementById('left-panel');
+        const isOpen = lp && !lp.classList.contains('collapsed');
+        mobileBackdropEl.classList.toggle('visible', isOpen);
+      }
+    });
+    document.getElementById('hamburger-toggle-btn')?.addEventListener('click', () => {
+      toggleRightPanel();
+      // On mobile, show/hide backdrop when right panel is open
+      if (window.innerWidth <= 768 && mobileBackdropEl) {
+        const rp = document.getElementById('right-panel');
+        const isOpen = rp && !rp.classList.contains('collapsed');
+        mobileBackdropEl.classList.toggle('visible', isOpen);
+      }
+    });
+    // Mobile backdrop click to collapse any open panel
+    mobileBackdropEl?.addEventListener('click', () => {
+      const lp = document.getElementById('left-panel');
+      const rp = document.getElementById('right-panel');
+      if (lp && !lp.classList.contains('collapsed')) toggleLeftPanel();
+      if (rp && !rp.classList.contains('collapsed')) toggleRightPanel();
+      mobileBackdropEl.classList.remove('visible');
+    });
 
     // ── Toolbar buttons ──────────────────────────────────────────────
     document.getElementById('ai-touch-btn')?.addEventListener('click', aiTouch);
