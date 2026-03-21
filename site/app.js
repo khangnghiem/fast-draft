@@ -655,12 +655,15 @@ function fitToContent(canvas) {
   } catch (_) { }
 }
 
-// ── Right Panel Tab Switching ──────────────────────────────────────────
+// ── Panel Tab Switching ──────────────────────────────────────────
 
 /** Active left panel tab id */
 let activeLeftTab = localStorage.getItem('fd-left-tab') || 'code';
 
-/** Switch the active tab in the left panel (Code/Specs/Design). */
+/** Active right panel tab id */
+let activeRightTab = localStorage.getItem('fd-right-tab') || 'agent';
+
+/** Switch the active tab in the left panel (Code/Inspect). */
 function switchLeftTab(tabId) {
   const panel = document.getElementById('left-panel');
   if (!panel) return;
@@ -680,8 +683,8 @@ function switchLeftTab(tabId) {
   if (tabId === 'code' && editorView) {
     requestAnimationFrame(() => editorView.requestMeasure());
   }
-  // Render specs if switching to specs
-  if (tabId === 'specs' && typeof renderSpecsPanel === 'function') {
+  // Render specs if switching to inspect (merged specs+design)
+  if (tabId === 'inspect' && typeof renderSpecsPanel === 'function') {
     renderSpecsPanel();
   }
   // Resize canvas
@@ -689,6 +692,36 @@ function switchLeftTab(tabId) {
     window.dispatchEvent(new Event('resize'));
     resizeCanvas();
   });
+}
+
+/** Switch the active tab in the right panel (Agent/Export). */
+function switchRightTab(tabId) {
+  const panel = document.getElementById('right-panel');
+  if (!panel) return;
+  // Ensure panel is visible
+  panel.classList.remove('collapsed');
+  updateRightPanelWidth(true);
+  // Update tabs
+  panel.querySelectorAll('.rp-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.rtab === tabId);
+  });
+  // Update panes
+  panel.querySelectorAll('.rp-pane').forEach(p => {
+    p.classList.toggle('active', p.dataset.rpane === tabId);
+  });
+  activeRightTab = tabId;
+  localStorage.setItem('fd-right-tab', tabId);
+  requestAnimationFrame(() => {
+    window.dispatchEvent(new Event('resize'));
+    resizeCanvas();
+  });
+}
+
+/** Update the --right-panel-actual-width CSS var for minimap offset. */
+function updateRightPanelWidth(expanded) {
+  const wrapper = document.getElementById('canvas-wrapper');
+  if (!wrapper) return;
+  wrapper.style.setProperty('--right-panel-actual-width', expanded ? '320px' : '0px');
 }
 
 /** Toggle left panel collapsed/expanded. */
@@ -715,7 +748,9 @@ function toggleLeftPanel() {
 function toggleRightPanel() {
   const panel = document.getElementById('right-panel');
   if (!panel) return;
-  panel.classList.toggle('collapsed');
+  const isCollapsed = panel.classList.toggle('collapsed');
+  updateRightPanelWidth(!isCollapsed);
+  localStorage.setItem('fd-right-collapsed', isCollapsed ? '1' : '');
   requestAnimationFrame(() => {
     window.dispatchEvent(new Event('resize'));
     resizeCanvas();
@@ -736,6 +771,29 @@ function initLeftPanel() {
   });
   // Set default tab
   switchLeftTab(activeLeftTab);
+}
+
+/** Initialize right panel: tab click handlers, default tab. */
+function initRightPanel() {
+  const panel = document.getElementById('right-panel');
+  if (!panel) return;
+  // Tab click handlers
+  panel.querySelectorAll('.rp-tab').forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const tabId = tab.dataset.rtab;
+      switchRightTab(tabId);
+    });
+  });
+  // Restore collapsed state
+  if (localStorage.getItem('fd-right-collapsed') === '1') {
+    panel.classList.add('collapsed');
+    updateRightPanelWidth(false);
+  } else {
+    updateRightPanelWidth(true);
+  }
+  // Set default tab
+  switchRightTab(activeRightTab);
 }
 
 /** Toggle code panel — just switches to code tab. */
@@ -3160,7 +3218,7 @@ function renderSpecsPanel() {
 }
 
 function toggleSpecsPanel() {
-  switchLeftTab('specs');
+  switchLeftTab('inspect');
   if (typeof renderSpecsPanel === 'function') renderSpecsPanel();
 }
 
@@ -5144,33 +5202,12 @@ async function initPlayground() {
       setTimeout(toggleFullscreen, 300);
     }
 
-    // ── Panel startup animation: show briefly, then collapse to zero ────
-    // Gives users a visual cue that panels exist before canvas takes over
-    const reduceMotionStartup = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      || document.body.classList.contains('reduce-motion');
-    if (!reduceMotionStartup && !urlParams.has('fullscreen')) {
-      const splitContainer = document.getElementById('playground-container');
-      if (splitContainer) {
-        // After a brief delay showing the panels, collapse them to zero
-        setTimeout(() => {
-          splitContainer.classList.add('panels-collapsing');
-          // After collapse animation completes, apply final collapsed state
-          setTimeout(() => {
-            splitContainer.classList.remove('panels-collapsing');
-            // Collapse layers
-            const lp = document.getElementById('layers-panel');
-            const lh = document.getElementById('layers-resize');
-            if (lp) {
-              lp.classList.add('collapsed');
-              document.getElementById('canvas-wrapper')?.style.setProperty('--left-panel-width', '0px');
-              localStorage.setItem('fd-layers-collapsed', '1');
-            }
-            if (lh) lh.style.display = 'none';
-            window.dispatchEvent(new Event('resize'));
-          }, 500);
-        }, 800);
-      }
-    }
+    // ── Panels always visible — no theater animation ────
+    // Init left and right panels with saved state
+    initRightPanel();
+    // Wire sidebar (top-left) and hamburger (top-right) chrome toggles
+    document.getElementById('sidebar-toggle-btn')?.addEventListener('click', toggleLeftPanel);
+    document.getElementById('hamburger-toggle-btn')?.addEventListener('click', toggleRightPanel);
 
     // ── Toolbar buttons ──────────────────────────────────────────────
     document.getElementById('ai-touch-btn')?.addEventListener('click', aiTouch);
