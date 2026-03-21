@@ -5151,6 +5151,41 @@ async function initPlayground() {
       mobileBackdropEl.classList.remove('visible');
     });
 
+    // ── #3: Mobile panel close buttons (✕ inside tab bars) ──
+    document.getElementById('lp-mobile-close')?.addEventListener('click', () => {
+      toggleLeftPanel();
+      mobileBackdropEl?.classList.remove('visible');
+    });
+    document.getElementById('rp-mobile-close')?.addEventListener('click', () => {
+      toggleRightPanel();
+      mobileBackdropEl?.classList.remove('visible');
+    });
+
+    // ── #2: Toolbar scroll indicator — remove gradient when scrolled to end ──
+    const ftEl = document.getElementById('floating-toolbar');
+    if (ftEl) {
+      const updateScrollMask = () => {
+        const atEnd = ftEl.scrollLeft + ftEl.clientWidth >= ftEl.scrollWidth - 4;
+        ftEl.classList.toggle('scroll-end', atEnd);
+      };
+      ftEl.addEventListener('scroll', updateScrollMask, { passive: true });
+      // Check initial state after layout
+      requestAnimationFrame(updateScrollMask);
+    }
+
+    // ── #4: matchMedia observer — auto-collapse on viewport change ──
+    const mobileMq = window.matchMedia('(max-width: 768px)');
+    mobileMq.addEventListener('change', (e) => {
+      if (e.matches) {
+        // Entering mobile — collapse both panels
+        const lp = document.getElementById('left-panel');
+        const rp = document.getElementById('right-panel');
+        if (lp && !lp.classList.contains('collapsed')) toggleLeftPanel();
+        if (rp && !rp.classList.contains('collapsed')) toggleRightPanel();
+        mobileBackdropEl?.classList.remove('visible');
+      }
+    });
+
     // ── Toolbar buttons ──────────────────────────────────────────────
     document.getElementById('ai-touch-btn')?.addEventListener('click', aiTouch);
     document.getElementById('ai-review-close')?.addEventListener('click', () => {
