@@ -18,6 +18,7 @@
   <link rel="canonical" href="https://fast-draft.com" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/style.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-mono/style.min.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" />
   <!-- Preload WASM for instant startup -->
   <link rel="modulepreload" href="./wasm/fd_wasm.js?v=0.11.5" />
   <link rel="preload" href="./wasm/fd_wasm_bg.wasm?v=0.11.5" as="fetch" crossorigin fetchpriority="high" />
@@ -104,25 +105,21 @@
               </button>
             </div>
 
-            <!-- ─── Left Panel: Layers (top) + Tabbed Content (bottom) ─── -->
+            <!-- ─── Left Panel: Tabbed (Layers / Code / Inspect) ─── -->
             <div id="left-panel">
-              <div id="layers-section">
-                <div class="lp-layers-header">
-                  <span class="lp-layers-title">Layers</span>
-                  <button class="lp-layers-collapse" id="layers-collapse-btn" title="Collapse layers (\\)">▾</button>
-                </div>
-                <div id="layers-panel"></div>
-              </div>
-              <div class="lp-split-divider" id="lp-split-divider"></div>
               <div id="lp-tabbed-section">
                 <div class="lp-tabs">
-                  <button class="lp-tab active" data-tab="code" title="Code Editor">{ } Code</button>
+                  <button class="lp-tab active" data-tab="layers" title="Layers">☰ Layers</button>
+                  <button class="lp-tab" data-tab="code" title="Code Editor">{ } Code</button>
                   <button class="lp-tab" data-tab="inspect" title="Inspect">◧ Inspect</button>
-                  <button class="lp-tab" data-tab="export" title="Export">↗ Export</button>
                 </div>
                 <div class="lp-content">
+                  <!-- Layers Pane -->
+                  <div class="lp-pane active" data-pane="layers">
+                    <div id="layers-panel"></div>
+                  </div>
                   <!-- Code Pane -->
-                  <div class="lp-pane active" data-pane="code">
+                  <div class="lp-pane" data-pane="code">
                     <div id="fd-editor"></div>
                   </div>
                   <!-- Inspect Pane (Specs + Design Properties) -->
@@ -173,16 +170,6 @@
                           <button class="pp-action-btn pp-delete" id="pp-delete" title="Delete">🗑 Delete</button>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                  <!-- Export Pane (moved from right panel) -->
-                  <div class="lp-pane" data-pane="export">
-                    <div class="rp-export-list">
-                      <button class="rp-export-item" id="share-btn"><span class="rp-export-icon">🔗</span><span class="rp-export-label">Share Link</span><span class="rp-export-hint">Copy shareable URL</span></button>
-                      <button class="rp-export-item" id="sm-copy-png" data-setting="copy-png"><span class="rp-export-icon">📷</span><span class="rp-export-label">Copy as PNG</span><span class="rp-export-hint">Clipboard image</span></button>
-                      <button class="rp-export-item" id="sm-export-svg" data-setting="export-svg"><span class="rp-export-icon">📄</span><span class="rp-export-label">Download SVG</span><span class="rp-export-hint">Vector format</span></button>
-                      <button class="rp-export-item" id="sm-export-html" data-setting="export-html"><span class="rp-export-icon">🌐</span><span class="rp-export-label">Download HTML</span><span class="rp-export-hint">Standalone page</span></button>
-                      <button class="rp-export-item" id="sm-import-css" data-setting="import-css"><span class="rp-export-icon">🎨</span><span class="rp-export-label">Import CSS</span><span class="rp-export-hint">Apply stylesheet</span></button>
                     </div>
                   </div>
                 </div>
@@ -252,24 +239,16 @@
                 <p class="ai-review-loading" id="ai-review-loading">Analyzing design…</p>
               </div>
             </div>
-            <!-- ─── Right Panel: Tabbed (Agent / Settings / History) ─── -->
+            <!-- ─── Right Panel: Tabbed (Agent / Export / Settings) ─── -->
             <div id="right-panel">
               <div class="rp-tabs">
                 <button class="rp-tab active" data-rtab="agent" title="AI Agent">✦ Agent</button>
+                <button class="rp-tab" data-rtab="export" title="Export">↗ Export</button>
                 <button class="rp-tab" data-rtab="settings" title="Settings">⚙ Settings</button>
-                <button class="rp-tab" data-rtab="history" title="History">📓 History</button>
               </div>
               <div class="rp-content">
-                <!-- Agent Pane -->
+                <!-- Agent Pane (no internal header — tab is sufficient) -->
                 <div class="rp-pane active" data-rpane="agent">
-                  <div class="ai-chat-header">
-                    <div class="ai-chat-title">
-                      <span class="ai-chat-icon">✦</span> Agent
-                    </div>
-                    <div class="ai-chat-header-actions">
-                      <button class="ai-chat-clear" id="ai-chat-clear" title="Clear chat">🗑</button>
-                    </div>
-                  </div>
                   <div class="ai-chat-messages" id="ai-chat-messages">
                     <div class="ai-chat-welcome">
                       <p>Ask me about your design. I can modify nodes, suggest improvements, or answer questions.</p>
@@ -281,6 +260,17 @@
                   <div class="ai-chat-input-area">
                     <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Ask AI about your design..." rows="1" maxlength="500"></textarea>
                     <button class="ai-chat-send" id="ai-chat-send" title="Send">→</button>
+                    <button class="ai-chat-clear" id="ai-chat-clear" title="Clear chat" style="font-size:12px;background:none;border:none;cursor:pointer;padding:4px;opacity:0.5">🗑</button>
+                  </div>
+                </div>
+                <!-- Export Pane -->
+                <div class="rp-pane" data-rpane="export">
+                  <div class="rp-export-list">
+                    <button class="rp-export-item" id="share-btn"><span class="rp-export-icon">🔗</span><span class="rp-export-label">Share Link</span><span class="rp-export-hint">Copy shareable URL</span></button>
+                    <button class="rp-export-item" id="sm-copy-png" data-setting="copy-png"><span class="rp-export-icon">📷</span><span class="rp-export-label">Copy as PNG</span><span class="rp-export-hint">Clipboard image</span></button>
+                    <button class="rp-export-item" id="sm-export-svg" data-setting="export-svg"><span class="rp-export-icon">📄</span><span class="rp-export-label">Download SVG</span><span class="rp-export-hint">Vector format</span></button>
+                    <button class="rp-export-item" id="sm-export-html" data-setting="export-html"><span class="rp-export-icon">🌐</span><span class="rp-export-label">Download HTML</span><span class="rp-export-hint">Standalone page</span></button>
+                    <button class="rp-export-item" id="sm-import-css" data-setting="import-css"><span class="rp-export-icon">🎨</span><span class="rp-export-label">Import CSS</span><span class="rp-export-hint">Apply stylesheet</span></button>
                   </div>
                 </div>
                 <!-- Settings Pane -->
@@ -313,14 +303,6 @@
                     </div>
                   </div>
                 </div>
-                <!-- History Pane -->
-                <div class="rp-pane" data-rpane="history">
-                  <div class="rp-history-empty">
-                    <div style="font-size:24px;opacity:0.2;margin-bottom:8px">📓</div>
-                    <div style="opacity:0.4;font-size:12px">Version history will appear here</div>
-                    <div style="opacity:0.3;font-size:11px;margin-top:4px">Coming soon</div>
-                  </div>
-                </div>
               </div>
             </div>
             <div id="canvas-loading" class="canvas-loading">
@@ -334,26 +316,12 @@
             </div>
             <!-- Image drop zone overlay -->
             <div id="canvas-drop-zone" class="canvas-drop-zone">Drop image here</div>
-            <!-- ─── Onboarding Overlay (first-visit only) ─── -->
-            <div id="onboarding-overlay" class="onboarding-overlay" style="display:none">
-              <div class="onboarding-backdrop"></div>
-              <div class="onboarding-tip" style="top:70px;left:50%;transform:translateX(-50%)">
-                <div class="onboarding-arrow" style="top:-20px;left:50%;transform:translateX(-50%) rotate(180deg)">↑</div>
-                <strong>Toolbar</strong> · Drag the grip handles (⠿) to move · Double-click to minimize
-              </div>
-              <div class="onboarding-tip" style="top:50%;left:40px;transform:translateY(-50%)">
-                <strong>Left Panel</strong> · Code, properties & export
-              </div>
-              <div class="onboarding-tip" style="top:50%;right:40px;transform:translateY(-50%)">
-                <strong>Right Panel</strong> · Chat with AI about your design
-              </div>
-              <div class="onboarding-tip" style="bottom:60px;right:40px">
-                <strong>Minimap</strong> · Navigate & zoom your canvas
-              </div>
-              <div class="onboarding-tip" style="top:50%;left:50%;transform:translate(-50%,-50%)">
-                <div style="font-size:18px;margin-bottom:6px">👋 Welcome to Fast Draft</div>
-                <div>Click anywhere or press any key to start</div>
-              </div>
+            <!-- ─── Onboarding Hints (canvas-only, handwritten, no overlay) ─── -->
+            <div id="onboarding-hints" class="onboarding-hints" style="display:none">
+              <div class="onboarding-note" style="top:70px;left:50%;transform:translateX(-50%)">← drag handles to move toolbar →</div>
+              <div class="onboarding-note" style="top:50%;left:50%;transform:translate(-50%,-50%)">click & drag to draw ✏️</div>
+              <div class="onboarding-note" style="bottom:50px;right:20px">your minimap ↓</div>
+              <div class="onboarding-note onboarding-welcome" style="top:35%;left:50%;transform:translate(-50%,-50%)">👋 welcome to fast draft!</div>
             </div>
             </div><!-- /canvas-content -->
           </div><!-- /canvas-wrapper -->
