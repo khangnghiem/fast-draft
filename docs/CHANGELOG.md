@@ -17,6 +17,25 @@
 
 ## Completed Requirements
 
+### v0.11.226 — UI Fix Round 2 (R6.18)
+
+**Layers as Tab** — merged into left panel tab bar (Layers/Code/Inspect), removed split-pane divider
+- One view at a time, more vertical space per tab
+- Default active tab: Layers
+
+**Export Moved to Right Panel** — tabs: Agent / Export / Settings (removed History placeholder)
+
+**Agent Header Deduped** — removed `.ai-chat-header` inside pane (tab is sufficient), Clear button moved to input area
+
+**Canvas-Only Onboarding** — handwritten Caveat font annotations directly on canvas
+- No dimming, no overlay, `pointer-events: none`
+- Auto-dismiss after 8s or on first interaction
+- Positioned within canvas bounds (respects panel widths)
+
+**Chrome Icons Inside Canvas Bounds** — offset by `calc(var(--left/right-panel-width) + 10px)`
+- Dynamic transition when panels collapse/expand
+- Never overlaps panels
+
 ### v0.11.225 — UI Refinements v2: Apple-Style Chrome & Onboarding (R6.18)
 
 **Apple-Style Canvas Chrome** — individual 28px icon buttons replace frosted pill overlays

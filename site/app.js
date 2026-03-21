@@ -658,12 +658,12 @@ function fitToContent(canvas) {
 // ── Panel Tab Switching ──────────────────────────────────────────
 
 /** Active left panel tab id */
-let activeLeftTab = localStorage.getItem('fd-left-tab') || 'code';
+let activeLeftTab = localStorage.getItem('fd-left-tab') || 'layers';
 
 /** Active right panel tab id */
 let activeRightTab = localStorage.getItem('fd-right-tab') || 'agent';
 
-/** Switch the active tab in the left panel (Code/Inspect/Export). */
+/** Switch the active tab in the left panel (Layers/Code/Inspect). */
 function switchLeftTab(tabId) {
   const panel = document.getElementById('left-panel');
   if (!panel) return;
@@ -694,7 +694,7 @@ function switchLeftTab(tabId) {
   });
 }
 
-/** Switch the active tab in the right panel (Agent/Settings/History). */
+/** Switch the active tab in the right panel (Agent/Export/Settings). */
 function switchRightTab(tabId) {
   const panel = document.getElementById('right-panel');
   if (!panel) return;
@@ -796,24 +796,29 @@ function initRightPanel() {
   switchRightTab(activeRightTab);
 }
 
-/** Initialize onboarding overlay (shown once on first visit). */
+/** Initialize onboarding hints (shown once on first visit, canvas-only). */
 function initOnboarding() {
   if (localStorage.getItem('fd-onboarded')) return;
-  const overlay = document.getElementById('onboarding-overlay');
-  if (!overlay) return;
-  // Show overlay after a brief delay for WASM init
+  const hints = document.getElementById('onboarding-hints');
+  if (!hints) return;
+  // Show hints after a brief delay for WASM init
   setTimeout(() => {
-    overlay.style.display = '';
+    hints.style.display = '';
   }, 1200);
-  // Dismiss on click or keypress
+  // Fade out and dismiss after 8 seconds or on first click/key
   const dismiss = () => {
-    overlay.style.display = 'none';
+    hints.style.transition = 'opacity 1s ease';
+    hints.style.opacity = '0';
+    setTimeout(() => { hints.style.display = 'none'; }, 1000);
     localStorage.setItem('fd-onboarded', '1');
-    overlay.removeEventListener('click', dismiss);
     document.removeEventListener('keydown', dismiss);
+    document.removeEventListener('pointerdown', dismiss);
   };
-  overlay.addEventListener('click', dismiss);
-  document.addEventListener('keydown', dismiss);
+  // Auto-dismiss after 8s
+  setTimeout(dismiss, 8000);
+  // Or dismiss on any user interaction
+  document.addEventListener('keydown', dismiss, { once: true });
+  document.addEventListener('pointerdown', dismiss, { once: true });
 }
 
 /** Wire settings panel buttons to existing action handlers. */
@@ -5356,10 +5361,7 @@ async function initPlayground() {
     mobileLayersToggle?.addEventListener('click', toggleMobileLayersDrawer);
     mobileLayersBackdrop?.addEventListener('click', closeMobileLayersDrawer);
 
-    // ── Left Panel Collapse (layers-collapse-btn) ──
-    document.getElementById('layers-collapse-btn')?.addEventListener('click', () => {
-      toggleLeftPanel();
-    });
+    // ── (layers-collapse-btn removed — Layers is now a tab) ──
 
     // ── Specs Panel Resize ───────────────────────────────────────────
     setupSpecsResize();
