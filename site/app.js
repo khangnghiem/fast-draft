@@ -5525,16 +5525,17 @@ async function initPlayground() {
         const midX = (pts[0].x + pts[1].x) / 2;
         const midY = (pts[0].y + pts[1].y) / 2;
 
-        // Pinch zoom
+        // Pinch zoom — anchor at current finger midpoint (not initial)
         const scale = dist / pinchStartDist;
         const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, pinchStartZoom * scale));
 
-        // Pan follows midpoint
+        // Zoom at current midpoint + pan follows finger movement
         const canvasRect = canvas.getBoundingClientRect();
-        const mx = pinchMidStartX - canvasRect.left;
-        const my = pinchMidStartY - canvasRect.top;
-        panX = mx - (mx - pinchPanStartX) * (newZoom / pinchStartZoom) + (midX - pinchMidStartX);
-        panY = my - (my - pinchPanStartY) * (newZoom / pinchStartZoom) + (midY - pinchMidStartY);
+        const cmx = midX - canvasRect.left;
+        const cmy = midY - canvasRect.top;
+        const oldZoom = zoomLevel;
+        panX = cmx - (cmx - panX) * (newZoom / oldZoom);
+        panY = cmy - (cmy - panY) * (newZoom / oldZoom);
         zoomLevel = newZoom;
         updateZoomIndicator();
         renderDirty = true; uiDirty = true;
