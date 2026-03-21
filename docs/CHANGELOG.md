@@ -17,6 +17,27 @@
 
 ## Completed Requirements
 
+### v0.11.230 — Mobile UX Round 2 (R6.5)
+
+**Touch-Sized Controls** — all interactive elements meet 44px Apple HIG minimum:
+- Chrome buttons bumped from 26×26px to 36×36px on mobile
+- Toolbar buttons bumped from 6px padding to 10px padding (40×40px min target)
+- `touch-action: manipulation` on toolbar, chrome, and panel tabs (prevents iOS double-tap zoom)
+
+**Toolbar Scroll Indicator** — gradient fade on right edge reveals more tools:
+- `-webkit-mask-image` gradient fades to transparent at 82% width
+- `scroll-end` class (toggled by JS) removes mask when scrolled to end
+- iOS momentum scrolling (`-webkit-overflow-scrolling: touch`)
+- Removed `scale(0.88)` — toolbar now renders at native size for clarity
+
+**Panel Close Buttons** — discoverable ✕ in tab bar headers on mobile:
+- Added `#lp-mobile-close` and `#rp-mobile-close` to panel tab bars
+- Hidden on desktop (`display: none`), shown on mobile (`display: flex !important`)
+- Collapses panel and hides backdrop on click
+
+**Viewport Change Observer** — auto-collapse panels on orientation/resize:
+- `matchMedia('(max-width: 768px)')` listener collapses panels when entering mobile width
+
 ### v0.11.229 — Excalidraw-Inspired User Behavior Tests (R4.16)
 
 **Undo/Redo State Machine Tests** — 6 new tests in `commands.rs`:

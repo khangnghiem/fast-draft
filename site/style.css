@@ -627,6 +627,8 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   background: var(--fd-surface);
   flex-shrink: 0;
 }
+/* Hidden on desktop — shown via !important in mobile breakpoint */
+.mobile-panel-close { display: none; }
 .lp-tab {
   flex: 1;
   display: flex;
@@ -2723,7 +2725,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
     --props-width: 0px;
   }
 
-  /* ── Left panel: off-screen by default, full-width overlay when open ── */
+  /* ── Left panel: off-screen by default, overlay when open ── */
   #left-panel {
     width: 280px !important;
     max-width: 80vw;
@@ -2736,13 +2738,12 @@ a.rp-settings-item:visited { color: var(--fd-text); }
     transform: translateX(0);
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
   }
-  /* On mobile, collapsed just means off-screen (already default) */
   #left-panel.collapsed {
     transform: translateX(-100%);
     box-shadow: none;
   }
 
-  /* ── Right panel: off-screen by default, full-width overlay when open ── */
+  /* ── Right panel: off-screen by default, overlay when open ── */
   #right-panel {
     width: 320px !important;
     max-width: 85vw;
@@ -2765,36 +2766,63 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   .panel-resize-handle.props-handle { display: none !important; }
   .panel-restore-strip { display: none !important; }
 
-  /* ── Floating toolbar: force compact bottom-center pill ── */
+  /* ── #1: Touch-sized floating toolbar ── */
   #floating-toolbar {
     top: auto !important;
-    bottom: 8px !important;
+    bottom: 12px !important;
     left: 50% !important;
     right: auto !important;
-    transform: translateX(-50%) scale(0.88) !important;
+    transform: translateX(-50%) !important;
     transform-origin: bottom center;
     flex-direction: row !important;
-    max-width: calc(100vw - 16px);
+    max-width: calc(100vw - 24px);
+    /* #2: iOS momentum scrolling */
     overflow-x: auto;
     overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    /* #2: Gradient fade scroll indicator on right edge */
+    -webkit-mask-image: linear-gradient(to right, black 0%, black 82%, transparent 100%);
+    mask-image: linear-gradient(to right, black 0%, black 82%, transparent 100%);
+    /* #5: Prevent double-tap zoom */
+    touch-action: manipulation;
+  }
+  /* Remove mask when scrolled to end (JS toggles this class) */
+  #floating-toolbar.scroll-end {
+    -webkit-mask-image: none;
+    mask-image: none;
   }
   /* Hide grip handles on mobile — no dragging */
   #floating-toolbar .toolbar-grip { display: none; }
-  /* Compact tool buttons */
-  #floating-toolbar .ft-tool-btn { padding: 6px; }
+  /* #1: Touch-sized tool buttons (40×40px target) */
+  #floating-toolbar .ft-tool-btn {
+    padding: 10px;
+    min-width: 40px;
+    min-height: 40px;
+    touch-action: manipulation;
+  }
   #floating-toolbar .ft-tooltip { display: none; }
-  #floating-toolbar .ft-ai-touch { font-size: 11px; padding: 4px 8px; }
+  #floating-toolbar .ft-ai-touch {
+    font-size: 12px;
+    padding: 6px 10px;
+    min-height: 40px;
+    touch-action: manipulation;
+  }
 
-  /* ── Chrome buttons: stay compact ── */
+  /* ── #1: Touch-sized chrome buttons (36×36px target) ── */
   .canvas-chrome-left {
     left: 10px !important;
-    top: 8px;
+    top: 10px;
   }
   .canvas-chrome-right {
     right: 10px !important;
-    top: 8px;
+    top: 10px;
   }
-  .canvas-chrome-btn { width: 26px; height: 26px; font-size: 11px; }
+  .canvas-chrome-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+    touch-action: manipulation;
+  }
 
   /* ── Hide non-essential UI on mobile ── */
   #minimap-container { display: none !important; }
@@ -2809,6 +2837,29 @@ a.rp-settings-item:visited { color: var(--fd-text); }
     width: 100% !important;
   }
 
+  /* ── #3: Mobile panel close button (✕) ── */
+  .mobile-panel-close {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-left: auto;
+    border: none;
+    background: transparent;
+    color: var(--fd-text-secondary, #888);
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 6px;
+    flex-shrink: 0;
+    touch-action: manipulation;
+  }
+  .mobile-panel-close:hover,
+  .mobile-panel-close:active {
+    background: rgba(128, 128, 128, 0.2);
+    color: var(--fd-text, #fff);
+  }
+
   /* ── Mobile layers backdrop (click-to-dismiss overlay) ── */
   #mobile-layers-backdrop {
     display: none;
@@ -2820,6 +2871,11 @@ a.rp-settings-item:visited { color: var(--fd-text); }
     -webkit-backdrop-filter: blur(2px);
   }
   #mobile-layers-backdrop.visible { display: block; }
+
+  /* ── #5: Prevent double-tap zoom on panel tabs ── */
+  .lp-tab, .rp-tab {
+    touch-action: manipulation;
+  }
 }
 
 @media (max-width: 480px) {
