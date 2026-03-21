@@ -17,6 +17,33 @@
 
 ## Completed Requirements
 
+### v0.11.225 — UI Refinements v2: Apple-Style Chrome & Onboarding (R6.18)
+
+**Apple-Style Canvas Chrome** — individual 28px icon buttons replace frosted pill overlays
+- Top-left: sidebar toggle + light/dark theme toggle (solid bg, subtle shadow)
+- Top-right: sign in + settings dropdown + right panel toggle
+- No longer covers canvas or panel content
+
+**3 Tabs Per Panel** — segmented control style (rounded pill, no underline)
+- Left panel: Code / Inspect / **↗ Export** (moved from right panel)
+- Right panel: Agent / **⚙ Settings** (full panel, not dropdown) / **📓 History** (placeholder)
+
+**Settings Panel** — all settings as grouped items inside right panel Settings tab
+- AI group: Renamify, Design Review
+- View group: Present, Sketchy, Grid, Reduce Motion
+- Window group: Full Screen, Fit to Content
+- Help group: Shortcuts, About, Docs, Download, GitHub
+
+**Left Panel Width** — default 320px (matching right panel), user-resizable
+
+**Onboarding Overlay** — Excalidraw-style first-visit tips
+- Semi-transparent backdrop with positioned tip cards pointing to toolbar, panels, minimap
+- Dismiss on click anywhere or any keypress; stored in localStorage (`fd-onboarded`)
+
+**Responsive Minimap** — scales with viewport, shifts up when toolbar is bottom-docked
+- `min(150px, 18vw)` width, `min(100px, 12vw)` height
+- Bottom offset 64px when `.toolbar-docked-bottom` sibling present
+
 ### v0.11.224 — Panel Layout Redesign (R6.17)
 
 **Theater Animation Removed** — panels always visible on load

@@ -274,54 +274,40 @@ html, body {
 }
 
 /* ─── Settings Dropdown (inside toolbar) ─── */
-/* ── Floating Chrome System ── */
-.chrome-pill {
+/* ── Canvas Chrome Icons (Apple Notes / Reminders style) ── */
+.canvas-chrome {
   position: absolute;
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 2px;
-  background: var(--fd-surface);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 0.5px solid var(--fd-border);
-  border-radius: 10px;
-  box-shadow: var(--fd-shadow-lg);
-  padding: 3px;
+  gap: 4px;
 }
-.chrome-top-left { top: 10px; left: 10px; }
-.chrome-top-center { top: 10px; left: 50%; transform: translateX(-50%); }
-.chrome-top-right { top: 10px; right: 10px; }
-.chrome-btn {
-  background: none;
-  border: none;
-  padding: 5px 10px;
-  color: var(--fd-text);
+.canvas-chrome-left { top: 10px; left: 10px; }
+.canvas-chrome-right { top: 10px; right: 10px; }
+.canvas-chrome-btn {
+  background: var(--fd-surface);
+  border: 0.5px solid var(--fd-border);
+  padding: 6px;
+  color: var(--fd-text-secondary);
   font-size: 12px;
-  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  border-radius: 7px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
-.chrome-btn:hover { background: var(--fd-surface-hover, rgba(0,0,0,0.06)); }
-.dark-theme .chrome-btn:hover { background: rgba(255,255,255,0.08); }
-.chrome-btn:active { transform: scale(0.97); }
-.chrome-btn-accent {
-  background: var(--fd-accent-dim, rgba(0,122,255,0.1));
-  color: var(--fd-accent, #007AFF);
+.canvas-chrome-btn:hover {
+  background: var(--fd-surface-hover, rgba(0,0,0,0.06));
+  color: var(--fd-text);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
 }
-.chrome-btn-accent:hover { background: var(--fd-accent-dim, rgba(0,122,255,0.18)); }
-.chrome-sep {
-  width: 1px;
-  height: 18px;
-  background: var(--fd-border);
-  flex-shrink: 0;
-}
+.dark-theme .canvas-chrome-btn:hover { background: rgba(255,255,255,0.1); }
+.canvas-chrome-btn:active { transform: scale(0.95); }
 /* Chrome dropdown containers */
 .chrome-dropdown-container {
   position: relative;
@@ -614,13 +600,12 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   overflow: hidden;
 }
 
-/* Left panel tab bar */
+/* Left panel tab bar (segmented control) */
 .lp-tabs {
   display: flex;
-  height: 30px;
-  min-height: 30px;
-  background: rgba(0, 0, 0, 0.04);
-  border-bottom: 0.5px solid var(--fd-border);
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--fd-surface);
   flex-shrink: 0;
 }
 .lp-tab {
@@ -632,32 +617,25 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   background: transparent;
   color: var(--fd-text-secondary);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
   user-select: none;
-  padding: 0 4px;
+  padding: 5px 4px;
   line-height: 1;
   position: relative;
   white-space: nowrap;
+  border-radius: 6px;
+  text-align: center;
 }
 .lp-tab:hover {
   background: var(--fd-surface-hover);
   color: var(--fd-text);
 }
 .lp-tab.active {
-  color: var(--fd-accent);
-  background: transparent;
-}
-.lp-tab.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 20%;
-  right: 20%;
-  height: 2px;
-  background: var(--fd-accent);
-  border-radius: 1px;
+  color: var(--fd-text);
+  background: var(--fd-surface-hover, rgba(0,0,0,0.06));
+  box-shadow: 0 0.5px 1px rgba(0,0,0,0.08);
 }
 
 /* Left panel content */
@@ -694,31 +672,34 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   height: 100%;
 }
 
-/* ─── Right Panel: Tabbed (Agent / Export) ─── */
+/* ─── Right Panel: Tabbed (Agent / Settings / History) ─── */
 .rp-tabs {
   display: flex;
-  gap: 0;
-  border-bottom: 0.5px solid var(--fd-border);
+  gap: 2px;
   flex-shrink: 0;
-  padding: 0 4px;
+  padding: 6px 8px;
+  background: var(--fd-surface);
 }
 .rp-tab {
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
-  padding: 8px 12px;
+  border-radius: 6px;
+  padding: 5px 10px;
   font-size: 11px;
   font-weight: 600;
   font-family: inherit;
   color: var(--fd-text-secondary);
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition: color 0.15s, background 0.15s;
   white-space: nowrap;
+  flex: 1;
+  text-align: center;
 }
 .rp-tab:hover { color: var(--fd-text); background: var(--fd-surface-hover); }
 .rp-tab.active {
-  color: var(--fd-accent, #007AFF);
-  border-bottom-color: var(--fd-accent, #007AFF);
+  color: var(--fd-text);
+  background: var(--fd-surface-hover, rgba(0,0,0,0.06));
+  box-shadow: 0 0.5px 1px rgba(0,0,0,0.08);
 }
 .rp-content {
   flex: 1;
@@ -773,6 +754,99 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   white-space: nowrap;
 }
 
+/* Settings panel */
+.rp-settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px 10px;
+  overflow-y: auto;
+}
+.rp-settings-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--fd-text-tertiary);
+  padding: 0 4px 4px;
+}
+.rp-settings-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+  color: var(--fd-text);
+  text-decoration: none;
+  font-size: 12px;
+}
+.rp-settings-item:hover { background: var(--fd-surface-hover); }
+.rp-settings-item:active { transform: scale(0.98); }
+.rp-settings-icon { width: 18px; text-align: center; flex-shrink: 0; font-size: 14px; }
+.rp-settings-label { flex: 1; }
+.rp-settings-shortcut {
+  font-size: 10px;
+  opacity: 0.5;
+  margin-left: auto;
+}
+a.rp-settings-item { color: var(--fd-text); }
+a.rp-settings-item:visited { color: var(--fd-text); }
+
+/* History empty state */
+.rp-history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--fd-text-tertiary);
+}
+
+/* Onboarding overlay */
+.onboarding-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  pointer-events: auto;
+}
+.onboarding-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+}
+.onboarding-tip {
+  position: absolute;
+  background: var(--fd-surface);
+  border: 0.5px solid var(--fd-border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 12px;
+  color: var(--fd-text);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  max-width: 260px;
+  z-index: 101;
+  line-height: 1.5;
+  animation: onboarding-pop 0.4s ease-out both;
+}
+.onboarding-tip strong { color: var(--fd-accent, #007AFF); }
+.onboarding-arrow {
+  position: absolute;
+  font-size: 18px;
+  color: var(--fd-accent, #007AFF);
+  line-height: 1;
+}
+@keyframes onboarding-pop {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Design tab empty state */
 .rp-design-empty {
   display: flex;
@@ -806,7 +880,7 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   position: relative;
   overflow: hidden;
   background: var(--fd-bg);
-  --left-panel-width: 280px;
+  --left-panel-width: 320px;
   --props-width: 0px;
   display: flex;
   flex-direction: column;
@@ -1913,8 +1987,8 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   position: absolute;
   right: calc(var(--right-panel-actual-width, 0px) + 12px);
   bottom: 12px;
-  width: 150px;
-  height: 100px;
+  width: min(150px, 18vw);
+  height: min(100px, 12vw);
   z-index: 20;
   border-radius: var(--fd-radius);
   overflow: hidden;
@@ -1924,7 +1998,11 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   cursor: pointer;
-  transition: right 0.25s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+  transition: right 0.25s ease, opacity 0.2s ease, box-shadow 0.2s ease, width 0.2s ease, height 0.2s ease, bottom 0.2s ease;
+}
+/* Shift minimap up when toolbar is docked at bottom */
+.toolbar-docked-bottom ~ #minimap-container {
+  bottom: 64px;
 }
 #minimap-container:hover { box-shadow: var(--fd-shadow-lg); }
 #minimap-canvas {

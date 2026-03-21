@@ -663,7 +663,7 @@ let activeLeftTab = localStorage.getItem('fd-left-tab') || 'code';
 /** Active right panel tab id */
 let activeRightTab = localStorage.getItem('fd-right-tab') || 'agent';
 
-/** Switch the active tab in the left panel (Code/Inspect). */
+/** Switch the active tab in the left panel (Code/Inspect/Export). */
 function switchLeftTab(tabId) {
   const panel = document.getElementById('left-panel');
   if (!panel) return;
@@ -694,7 +694,7 @@ function switchLeftTab(tabId) {
   });
 }
 
-/** Switch the active tab in the right panel (Agent/Export). */
+/** Switch the active tab in the right panel (Agent/Settings/History). */
 function switchRightTab(tabId) {
   const panel = document.getElementById('right-panel');
   if (!panel) return;
@@ -734,7 +734,7 @@ function toggleLeftPanel() {
     wrapper.style.setProperty('--left-panel-width', '0px');
   } else {
     const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
-    const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 280;
+    const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 320;
     wrapper.style.setProperty('--left-panel-width', restoreW + 'px');
     switchLeftTab(activeLeftTab);
   }
@@ -794,6 +794,54 @@ function initRightPanel() {
   }
   // Set default tab
   switchRightTab(activeRightTab);
+}
+
+/** Initialize onboarding overlay (shown once on first visit). */
+function initOnboarding() {
+  if (localStorage.getItem('fd-onboarded')) return;
+  const overlay = document.getElementById('onboarding-overlay');
+  if (!overlay) return;
+  // Show overlay after a brief delay for WASM init
+  setTimeout(() => {
+    overlay.style.display = '';
+  }, 1200);
+  // Dismiss on click or keypress
+  const dismiss = () => {
+    overlay.style.display = 'none';
+    localStorage.setItem('fd-onboarded', '1');
+    overlay.removeEventListener('click', dismiss);
+    document.removeEventListener('keydown', dismiss);
+  };
+  overlay.addEventListener('click', dismiss);
+  document.addEventListener('keydown', dismiss);
+}
+
+/** Wire settings panel buttons to existing action handlers. */
+function initSettingsPanel() {
+  // Mirror dropdown actions to settings panel items
+  const mirror = (rpId, smId) => {
+    const rpBtn = document.getElementById(rpId);
+    const smBtn = document.getElementById(smId);
+    if (rpBtn && smBtn) {
+      rpBtn.addEventListener('click', () => smBtn.click());
+    }
+  };
+  mirror('rp-renamify-btn', 'renamify-btn');
+  mirror('rp-design-review', 'sm-design-review');
+  mirror('rp-present', 'sm-present');
+  mirror('rp-sketchy-toggle', 'sm-sketchy-toggle');
+  mirror('rp-grid-toggle', 'sm-grid-toggle');
+  mirror('rp-motion-toggle', 'sm-motion-toggle');
+  mirror('rp-fullscreen-toggle', 'sm-fullscreen-toggle');
+  mirror('rp-shortcuts', 'sm-shortcuts');
+  // Settings gear also opens Settings tab
+  const gearBtn = document.getElementById('settings-gear-btn');
+  if (gearBtn) {
+    gearBtn.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      switchRightTab('settings');
+    });
+  }
 }
 
 /** Toggle code panel — just switches to code tab. */
@@ -5205,6 +5253,8 @@ async function initPlayground() {
     // ── Panels always visible — no theater animation ────
     // Init left and right panels with saved state
     initRightPanel();
+    initSettingsPanel();
+    initOnboarding();
     // Wire sidebar (top-left) and hamburger (top-right) chrome toggles
     document.getElementById('sidebar-toggle-btn')?.addEventListener('click', toggleLeftPanel);
     document.getElementById('hamburger-toggle-btn')?.addEventListener('click', toggleRightPanel);
