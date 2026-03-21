@@ -1416,3 +1416,298 @@ describe("Bidi Sync: Canvas→Code selection highlighting (R2.5)", () => {
         expect(findSymbolAtLine(symbols, 0)!.name).toBe("@dashboard");
     });
 });
+
+// ─── Excalidraw-Inspired: Box-Select Multi-Node Selection ────────────────
+// Simulates Excalidraw's selection.test.tsx: marquee selection that captures
+// nodes whose bounds intersect the selection rectangle.
+
+describe("Excalidraw: Box-select simulation", () => {
+    // Helper: check if a node's bounds intersect a selection rect
+    const boundsIntersect = (
+        node: { x: number; y: number; w: number; h: number },
+        sel: { x: number; y: number; w: number; h: number },
+    ): boolean => {
+        return (
+            node.x < sel.x + sel.w &&
+            node.x + node.w > sel.x &&
+            node.y < sel.y + sel.h &&
+            node.y + node.h > sel.y
+        );
+    };
+
+    it("selects nodes fully inside the marquee", () => {
+        const nodes = [
+            { id: "a", x: 50, y: 50, w: 40, h: 30 },
+            { id: "b", x: 100, y: 80, w: 40, h: 30 },
+            { id: "c", x: 300, y: 300, w: 40, h: 30 }, // outside
+        ];
+        const selection = { x: 40, y: 40, w: 120, h: 80 };
+        const selected = nodes.filter((n) => boundsIntersect(n, selection));
+        expect(selected.map((n) => n.id)).toEqual(["a", "b"]);
+    });
+
+    it("selects nodes partially overlapping the marquee", () => {
+        const nodes = [
+            { id: "a", x: 90, y: 50, w: 40, h: 30 }, // right edge overlaps
+        ];
+        const selection = { x: 0, y: 0, w: 100, h: 100 };
+        const selected = nodes.filter((n) => boundsIntersect(n, selection));
+        expect(selected.map((n) => n.id)).toEqual(["a"]);
+    });
+
+    it("empty marquee selects nothing", () => {
+        const nodes = [
+            { id: "a", x: 50, y: 50, w: 40, h: 30 },
+        ];
+        const selection = { x: 200, y: 200, w: 0, h: 0 };
+        const selected = nodes.filter((n) => boundsIntersect(n, selection));
+        expect(selected).toHaveLength(0);
+    });
+
+    it("drag from bottom-right to top-left normalizes to positive area", () => {
+        // Simulates user dragging backwards (negative width/height)
+        const rawStart = { x: 150, y: 120 };
+        const rawEnd = { x: 40, y: 40 };
+        const normalized = {
+            x: Math.min(rawStart.x, rawEnd.x),
+            y: Math.min(rawStart.y, rawEnd.y),
+            w: Math.abs(rawEnd.x - rawStart.x),
+            h: Math.abs(rawEnd.y - rawStart.y),
+        };
+        expect(normalized.x).toBe(40);
+        expect(normalized.y).toBe(40);
+        expect(normalized.w).toBe(110);
+        expect(normalized.h).toBe(80);
+
+        const nodes = [
+            { id: "inside", x: 50, y: 50, w: 30, h: 20 },
+        ];
+        const selected = nodes.filter((n) => boundsIntersect(n, normalized));
+        expect(selected.map((n) => n.id)).toEqual(["inside"]);
+    });
+});
+
+// ─── Excalidraw-Inspired: Resize Handle Position Calculation ─────────────
+// Simulates the 8-handle resize system from Excalidraw's move.test.tsx.
+
+describe("Excalidraw: Resize handle positions", () => {
+    type Handle = { id: string; x: number; y: number };
+
+    const getResizeHandles = (
+        x: number, y: number, w: number, h: number,
+    ): Handle[] => {
+        const mx = x + w / 2;
+        const my = y + h / 2;
+        return [
+            { id: "nw", x, y },
+            { id: "n", x: mx, y },
+            { id: "ne", x: x + w, y },
+            { id: "w", x, y: my },
+            { id: "e", x: x + w, y: my },
+            { id: "sw", x, y: y + h },
+            { id: "s", x: mx, y: y + h },
+            { id: "se", x: x + w, y: y + h },
+        ];
+    };
+
+    it("returns 8 handles at correct positions", () => {
+        const handles = getResizeHandles(100, 50, 200, 100);
+        expect(handles).toHaveLength(8);
+        expect(handles.find((h) => h.id === "nw")).toEqual({ id: "nw", x: 100, y: 50 });
+        expect(handles.find((h) => h.id === "se")).toEqual({ id: "se", x: 300, y: 150 });
+        expect(handles.find((h) => h.id === "n")).toEqual({ id: "n", x: 200, y: 50 });
+    });
+
+    it("handles move when node is resized", () => {
+        const before = getResizeHandles(100, 50, 200, 100);
+        const after = getResizeHandles(100, 50, 300, 150);
+
+        // SE handle should shift
+        const seBefore = before.find((h) => h.id === "se")!;
+        const seAfter = after.find((h) => h.id === "se")!;
+        expect(seAfter.x).toBe(seBefore.x + 100);
+        expect(seAfter.y).toBe(seBefore.y + 50);
+
+        // NW handle should stay fixed
+        expect(after.find((h) => h.id === "nw")).toEqual(before.find((h) => h.id === "nw"));
+    });
+
+    it("hit-tests point against handle radius", () => {
+        const handles = getResizeHandles(100, 50, 200, 100);
+        const HANDLE_RADIUS = 6;
+
+        const hitTest = (px: number, py: number): Handle | undefined =>
+            handles.find((h) =>
+                Math.abs(px - h.x) <= HANDLE_RADIUS && Math.abs(py - h.y) <= HANDLE_RADIUS,
+            );
+
+        expect(hitTest(100, 50)?.id).toBe("nw"); // Exact hit
+        expect(hitTest(103, 53)?.id).toBe("nw"); // Near hit
+        expect(hitTest(150, 100)).toBeUndefined(); // Center — no handle
+    });
+});
+
+// ─── Excalidraw-Inspired: Context Menu Actions ──────────────────────────
+// Simulates right-click → action dispatch patterns from Excalidraw.
+
+describe("Excalidraw: Context menu action dispatch", () => {
+    type Action = { label: string; action: string; enabled: boolean };
+
+    const getContextMenu = (
+        selectedCount: number,
+        hasClipboard: boolean,
+    ): Action[] => {
+        const menu: Action[] = [];
+
+        if (selectedCount > 0) {
+            menu.push({ label: "Copy", action: "copy", enabled: true });
+            menu.push({ label: "Duplicate", action: "duplicate", enabled: true });
+            menu.push({ label: "Delete", action: "delete", enabled: true });
+        }
+
+        menu.push({ label: "Paste", action: "paste", enabled: hasClipboard });
+
+        if (selectedCount >= 2) {
+            menu.push({ label: "Group", action: "group", enabled: true });
+        }
+
+        if (selectedCount === 1) {
+            menu.push({ label: "Bring to Front", action: "z_front", enabled: true });
+            menu.push({ label: "Send to Back", action: "z_back", enabled: true });
+        }
+
+        return menu;
+    };
+
+    it("shows copy/duplicate/delete when node selected", () => {
+        const menu = getContextMenu(1, false);
+        expect(menu.find((a) => a.action === "copy")?.enabled).toBe(true);
+        expect(menu.find((a) => a.action === "duplicate")?.enabled).toBe(true);
+        expect(menu.find((a) => a.action === "delete")?.enabled).toBe(true);
+    });
+
+    it("shows paste only when clipboard has content", () => {
+        const menuEmpty = getContextMenu(0, false);
+        expect(menuEmpty.find((a) => a.action === "paste")?.enabled).toBe(false);
+
+        const menuFull = getContextMenu(0, true);
+        expect(menuFull.find((a) => a.action === "paste")?.enabled).toBe(true);
+    });
+
+    it("shows group option only when 2+ nodes selected", () => {
+        const menu1 = getContextMenu(1, false);
+        expect(menu1.find((a) => a.action === "group")).toBeUndefined();
+
+        const menu2 = getContextMenu(2, false);
+        expect(menu2.find((a) => a.action === "group")?.enabled).toBe(true);
+    });
+
+    it("shows z-order options only for single selection", () => {
+        const menu1 = getContextMenu(1, false);
+        expect(menu1.find((a) => a.action === "z_front")?.enabled).toBe(true);
+
+        const menu2 = getContextMenu(2, false);
+        expect(menu2.find((a) => a.action === "z_front")).toBeUndefined();
+    });
+
+    it("empty canvas right-click shows only paste", () => {
+        const menu = getContextMenu(0, true);
+        expect(menu).toHaveLength(1);
+        expect(menu[0].action).toBe("paste");
+    });
+});
+
+// ─── Excalidraw-Inspired: Undo/Redo State Tracking (JS Level) ───────────
+// Simulates the JS-side undo/redo stack behavior similar to
+// Excalidraw's history.test.tsx.
+
+describe("Excalidraw: Undo/redo state tracking (JS level)", () => {
+    // Minimal JS-level undo stack simulation
+    class UndoStack {
+        private undos: string[] = [];
+        private redos: string[] = [];
+        private current: string;
+
+        constructor(initial: string) {
+            this.current = initial;
+        }
+
+        push(state: string) {
+            this.undos.push(this.current);
+            this.current = state;
+            this.redos = []; // New action clears redo
+        }
+
+        undo(): string | undefined {
+            if (this.undos.length === 0) return undefined;
+            this.redos.push(this.current);
+            this.current = this.undos.pop()!;
+            return this.current;
+        }
+
+        redo(): string | undefined {
+            if (this.redos.length === 0) return undefined;
+            this.undos.push(this.current);
+            this.current = this.redos.pop()!;
+            return this.current;
+        }
+
+        get state() { return this.current; }
+        get canUndo() { return this.undos.length > 0; }
+        get canRedo() { return this.redos.length > 0; }
+    }
+
+    it("push and undo restores previous state", () => {
+        const stack = new UndoStack("empty");
+        stack.push("rect @a { w: 100 h: 50 }");
+        expect(stack.state).toBe("rect @a { w: 100 h: 50 }");
+
+        stack.undo();
+        expect(stack.state).toBe("empty");
+    });
+
+    it("redo re-applies undone state", () => {
+        const stack = new UndoStack("empty");
+        stack.push("rect @a { w: 100 h: 50 }");
+        stack.undo();
+        stack.redo();
+        expect(stack.state).toBe("rect @a { w: 100 h: 50 }");
+    });
+
+    it("new action clears redo stack (Excalidraw behavior)", () => {
+        const stack = new UndoStack("s1");
+        stack.push("s2");
+        stack.push("s3");
+        stack.undo(); // back to s2
+        expect(stack.canRedo).toBe(true);
+
+        stack.push("s4"); // new action
+        expect(stack.canRedo).toBe(false);
+    });
+
+    it("multi-step undo/redo chain", () => {
+        const stack = new UndoStack("s0");
+        stack.push("s1");
+        stack.push("s2");
+        stack.push("s3");
+
+        // Undo all
+        expect(stack.undo()).toBe("s2");
+        expect(stack.undo()).toBe("s1");
+        expect(stack.undo()).toBe("s0");
+        expect(stack.canUndo).toBe(false);
+
+        // Redo all
+        expect(stack.redo()).toBe("s1");
+        expect(stack.redo()).toBe("s2");
+        expect(stack.redo()).toBe("s3");
+        expect(stack.canRedo).toBe(false);
+    });
+
+    it("undo on empty stack returns undefined", () => {
+        const stack = new UndoStack("initial");
+        expect(stack.undo()).toBeUndefined();
+        expect(stack.canUndo).toBe(false);
+    });
+});
+

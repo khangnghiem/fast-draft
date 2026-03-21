@@ -2484,3 +2484,238 @@ rect @survivor { w: 20 h: 20 }
     assert!(engine.graph.get_by_id(NodeId::intern("title")).is_none());
     assert!(engine.graph.get_by_id(NodeId::intern("survivor")).is_some());
 }
+
+// ─── Excalidraw-Inspired: Bidi Sync Regression Tests ─────────────────────
+// Verify the complete canvas ↔ code pipeline for common user flows.
+
+#[test]
+fn sync_add_node_appears_in_text() {
+    // Excalidraw: drawing a shape adds it to elements array.
+    // FD equivalent: AddNode → flush → text contains the new node.
+    let input = "rect @existing { w: 100 h: 50 }\n";
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    // Simulate drawing a new rect (AddNode mutation from tool)
+    let mut new_node = SceneNode::new(
+        NodeId::intern("drawn_rect"),
+        NodeKind::Rect {
+            width: 120.0,
+            height: 80.0,
+        },
+    );
+    new_node
+        .constraints
+        .push(Constraint::Position { x: 200.0, y: 150.0 });
+    engine.apply_mutation(GraphMutation::AddNode {
+        parent_id: NodeId::intern("root"),
+        node: Box::new(new_node),
+    });
+    engine.flush_to_text();
+
+    // Text should contain the new node
+    let text = engine.current_text();
+    assert!(
+        text.contains("@drawn_rect"),
+        "text should contain new node: {text}"
+    );
+    assert!(text.contains("120"));
+    assert!(text.contains("80"));
+    // Original should still be there
+    assert!(text.contains("@existing"));
+
+    // Round-trip: re-parse from text should reconstruct both nodes
+    let engine2 = SyncEngine::from_text(text, viewport).unwrap();
+    assert!(
+        engine2
+            .graph
+            .get_by_id(NodeId::intern("existing"))
+            .is_some()
+    );
+    assert!(
+        engine2
+            .graph
+            .get_by_id(NodeId::intern("drawn_rect"))
+            .is_some()
+    );
+}
+
+#[test]
+fn sync_set_text_updates_node_and_text() {
+    // Excalidraw: double-click text → edit → content updates in scene.
+    // FD equivalent: SetText mutation → text content updates in code.
+    let input = r#"
+text @title "Original Title" {
+  font: "Inter" 700 24
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    // Verify original
+    let node = engine.graph.get_by_id(NodeId::intern("title")).unwrap();
+    match &node.kind {
+        NodeKind::Text { content, .. } => assert_eq!(content, "Original Title"),
+        _ => panic!("expected Text"),
+    }
+
+    // Edit text (simulates inline text editing)
+    engine.apply_mutation(GraphMutation::SetText {
+        id: NodeId::intern("title"),
+        content: "Updated Title".to_string(),
+    });
+    engine.flush_to_text();
+
+    // Verify graph updated
+    let node = engine.graph.get_by_id(NodeId::intern("title")).unwrap();
+    match &node.kind {
+        NodeKind::Text { content, .. } => assert_eq!(content, "Updated Title"),
+        _ => panic!("expected Text"),
+    }
+
+    // Verify text output contains new content
+    let text = engine.current_text();
+    assert!(
+        text.contains("Updated Title"),
+        "emitted text should contain new content: {text}"
+    );
+    assert!(!text.contains("Original Title"));
+
+    // Round-trip: re-parse preserves the edit
+    let engine2 = SyncEngine::from_text(text, viewport).unwrap();
+    let node2 = engine2.graph.get_by_id(NodeId::intern("title")).unwrap();
+    match &node2.kind {
+        NodeKind::Text { content, .. } => assert_eq!(content, "Updated Title"),
+        _ => panic!("expected Text"),
+    }
+}
+
+#[test]
+fn sync_delete_group_child_text_updates() {
+    // Excalidraw: deleting one element from a group leaves others intact.
+    // FD equivalent: RemoveNode on a group child → text updates, group remains.
+    let input = r#"
+group @toolbar {
+  rect @btn_a { w: 40 h: 30 }
+  rect @btn_b { w: 40 h: 30 }
+  rect @btn_c { w: 40 h: 30 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    // Delete middle child
+    engine.apply_mutation(GraphMutation::RemoveNode {
+        id: NodeId::intern("btn_b"),
+    });
+    engine.flush_to_text();
+
+    // Verify graph
+    assert!(engine.graph.get_by_id(NodeId::intern("btn_b")).is_none());
+    assert!(engine.graph.get_by_id(NodeId::intern("btn_a")).is_some());
+    assert!(engine.graph.get_by_id(NodeId::intern("btn_c")).is_some());
+    assert!(engine.graph.get_by_id(NodeId::intern("toolbar")).is_some());
+
+    // Verify text
+    let text = engine.current_text();
+    assert!(!text.contains("@btn_b"));
+    assert!(text.contains("@btn_a"));
+    assert!(text.contains("@btn_c"));
+    assert!(text.contains("@toolbar"));
+
+    // Round-trip
+    let engine2 = SyncEngine::from_text(text, viewport).unwrap();
+    assert!(engine2.graph.get_by_id(NodeId::intern("btn_b")).is_none());
+    assert!(engine2.graph.get_by_id(NodeId::intern("toolbar")).is_some());
+    let toolbar_idx = engine2.graph.index_of(NodeId::intern("toolbar")).unwrap();
+    assert_eq!(
+        engine2.graph.children(toolbar_idx).len(),
+        2,
+        "toolbar should have 2 children after delete"
+    );
+}
+
+#[test]
+fn sync_full_user_flow_draw_edit_delete() {
+    // Excalidraw regression test pattern: simulate a complete user session.
+    // User draws a rect, creates a text inside it, edits the text, then
+    // deletes the rect (which cascade-deletes the text).
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::new(viewport);
+
+    // Step 1: Draw a rect (simulates R key + drag)
+    let mut rect_node = SceneNode::new(
+        NodeId::intern("card"),
+        NodeKind::Rect {
+            width: 200.0,
+            height: 100.0,
+        },
+    );
+    rect_node
+        .constraints
+        .push(Constraint::Position { x: 50.0, y: 50.0 });
+    engine.apply_mutation(GraphMutation::AddNode {
+        parent_id: NodeId::intern("root"),
+        node: Box::new(rect_node),
+    });
+
+    // Step 2: Add text inside the rect (simulates T key + click inside)
+    let mut text_node = SceneNode::new(
+        NodeId::intern("label"),
+        NodeKind::Text {
+            content: "Click me".to_string(),
+            max_width: None,
+        },
+    );
+    text_node
+        .constraints
+        .push(Constraint::Position { x: 10.0, y: 10.0 });
+    engine.apply_mutation(GraphMutation::AddNode {
+        parent_id: NodeId::intern("card"),
+        node: Box::new(text_node),
+    });
+
+    // Verify both exist in graph
+    assert!(engine.graph.get_by_id(NodeId::intern("card")).is_some());
+    assert!(engine.graph.get_by_id(NodeId::intern("label")).is_some());
+
+    // Step 3: Edit the text (simulates double-click → type)
+    engine.apply_mutation(GraphMutation::SetText {
+        id: NodeId::intern("label"),
+        content: "Submit".to_string(),
+    });
+
+    // Flush and verify text output
+    engine.flush_to_text();
+    let text = engine.current_text();
+    assert!(text.contains("@card"));
+    assert!(text.contains("@label"));
+    assert!(text.contains("Submit"));
+    assert!(!text.contains("Click me"));
+
+    // Step 4: Delete the rect (cascade-deletes text child)
+    engine.apply_mutation(GraphMutation::RemoveNode {
+        id: NodeId::intern("card"),
+    });
+    engine.flush_to_text();
+
+    // Both should be gone
+    assert!(engine.graph.get_by_id(NodeId::intern("card")).is_none());
+    assert!(engine.graph.get_by_id(NodeId::intern("label")).is_none());
+
+    let text = engine.current_text();
+    assert!(!text.contains("@card"));
+    assert!(!text.contains("@label"));
+}

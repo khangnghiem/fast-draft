@@ -17,6 +17,28 @@
 
 ## Completed Requirements
 
+### v0.11.229 — Excalidraw-Inspired User Behavior Tests (R4.16)
+
+**Undo/Redo State Machine Tests** — 6 new tests in `commands.rs`:
+- `undo_redo_add_remove_node` — AddNode → undo removes → redo re-adds
+- `undo_redo_set_text_content` — SetText → undo reverts content → redo re-applies
+- `undo_redo_resize_updates_text` — Resize → undo restores dimensions + text output
+- `undo_redo_multi_step_chain` — 3 operations (move→resize→style) → undo all → redo all
+- `push_snapshot_undo_restores_text` — JS-driven snapshot (paste) → undo reverts graph
+- `undo_redo_group_ungroup` — Group→undo dissolves→redo recreates
+
+**Bidi Sync Regression Tests** — 4 new tests in `sync_tests.rs`:
+- `sync_add_node_appears_in_text` — AddNode → flush → text contains node + roundtrip
+- `sync_set_text_updates_node_and_text` — SetText → flush → text updated + roundtrip
+- `sync_delete_group_child_text_updates` — RemoveNode on group child → group intact + roundtrip
+- `sync_full_user_flow_draw_edit_delete` — Complete user session: draw rect → add text → edit text → cascade delete
+
+**Excalidraw-Style TS User Flow Tests** — 4 new test suites in `e2e-ux.test.ts`:
+- Box-select simulation (AABB intersection, inclusive/partial selection, reverse drag normalization)
+- Resize handle positions (8-handle system, position recalculation, hit-test with radius)
+- Context menu action dispatch (selection-aware menu items, paste/group/z-order availability)
+- JS-level undo/redo state tracking (push/undo/redo, multi-step chains, redo-clear-on-branch)
+
 ### v0.11.228 — Sidebar Performance + Mobile UI Fix (R6.5, R6.7)
 
 **Sidebar Performance** — 4 optimizations for smoother collapse/resize:
