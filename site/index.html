@@ -60,6 +60,37 @@
   <script>
     /* Apply no-transition class before any rendering */
     document.documentElement.classList.add('init-no-transition');
+
+    /* (#3) Read localStorage panel state BEFORE first paint.
+     * Sets correct CSS vars on canvas-wrapper so the initial layout matches
+     * the user's actual saved panel state — zero layout jumps. */
+    (function() {
+      var rpCollapsed = localStorage.getItem('fd-right-collapsed') === '1';
+      var lpCollapsed = localStorage.getItem('fd-left-collapsed') === '1';
+      var lpW = lpCollapsed ? '0px' : (localStorage.getItem('fd-left-panel-width') || '280') + 'px';
+      if (lpW !== '0px') {
+        var w = parseInt(lpW, 10);
+        if (w < 200 || w > 500) lpW = '280px';
+      }
+      var rpW = rpCollapsed ? '0px' : '320px';
+      document.addEventListener('DOMContentLoaded', function() {
+        var cw = document.getElementById('canvas-wrapper');
+        if (cw) {
+          cw.style.setProperty('--left-panel-width', lpW);
+          cw.style.setProperty('--right-panel-width', rpW);
+          cw.style.setProperty('--right-panel-actual-width', rpW);
+        }
+        /* Also apply collapsed class to panels early */
+        if (rpCollapsed) {
+          var rp = document.getElementById('right-panel');
+          if (rp) rp.classList.add('collapsed');
+        }
+        if (lpCollapsed) {
+          var lp = document.getElementById('left-panel');
+          if (lp) lp.classList.add('collapsed');
+        }
+      });
+    })();
   </script>
   <!-- Service Worker for instant WASM loading on repeat visits -->
   <script>
