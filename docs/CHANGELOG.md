@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.227 — Empty Canvas Default & Drag-to-Create Fix (R6.17)
+
+**Empty Canvas** — removed 170-line `DEFAULT_FD` tutorial; new visitors see a blank canvas with onboarding hints
+
+**Drag-to-Create Removed** — disabled `toolbarDragTool` + `pointerenter` synthesized pointer-down (was conflicting with toolbar grip drag); tools now click-only (Figma/Excalidraw behavior)
+
 ### v0.11.226 — UI Fix Round 2 (R6.18)
 
 **Layers as Tab** — merged into left panel tab bar (Layers/Code/Inspect), removed split-pane divider
