@@ -3109,7 +3109,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div id="specs-panel" class="specs-panel hidden">
       <div class="specs-panel-header">
         <span class="specs-panel-title">📋 Specs</span>
-        <button class="specs-panel-close" id="specs-panel-close" title="Close">✕</button>
+        <button class="specs-panel-close" id="specs-panel-close" title="Close" aria-label="Close Specs Panel">✕</button>
       </div>
       <div class="specs-panel-body" id="specs-panel-body">
         <p class="specs-empty">No specs yet. Add a note via right-click → Add Spec.</p>
@@ -3122,8 +3122,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
           <span class="ai-chat-icon">✦</span> AI Agent
         </div>
         <div class="ai-chat-header-actions">
-          <button class="ai-chat-clear" id="ai-chat-clear" title="Clear chat">🗑</button>
-          <button class="ai-chat-close" id="ai-chat-close" title="Close">✕</button>
+          <button class="ai-chat-clear" id="ai-chat-clear" title="Clear chat" aria-label="Clear Chat">🗑</button>
+          <button class="ai-chat-close" id="ai-chat-close" title="Close" aria-label="Close AI Chat">✕</button>
         </div>
       </div>
       <div class="ai-chat-messages" id="ai-chat-messages">
@@ -3136,7 +3136,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <div class="ai-chat-context-badge hidden" id="ai-chat-context-badge"></div>
       <div class="ai-chat-input-area">
         <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Ask AI about your design..." rows="1" maxlength="500"></textarea>
-        <button class="ai-chat-send" id="ai-chat-send" title="Send">→</button>
+        <button class="ai-chat-send" id="ai-chat-send" title="Send" aria-label="Send Message">→</button>
       </div>
     </div>
     <div id="dimension-tooltip"></div>
