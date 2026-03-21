@@ -1,5 +1,5 @@
-// Service Worker for Fast Draft — caches WASM + JS for instant repeat visits.
-// Strategy: stale-while-revalidate for WASM, network-first for everything else.
+// Service Worker for Fast Draft — caches WASM + JS + CDN deps for instant loading.
+// Strategy: stale-while-revalidate for WASM & CDN, network-first for everything else.
 
 const CACHE_NAME = 'fd-v0.11.5';
 const WASM_ASSETS = [
@@ -7,11 +7,32 @@ const WASM_ASSETS = [
   '/wasm/fd_wasm_bg.wasm',
 ];
 
+// CDN dependencies to pre-cache (#4 — eliminates cold-load CDN waterfall)
+const CDN_MODULES = [
+  'https://esm.sh/@codemirror/state@6',
+  'https://esm.sh/@codemirror/view@6',
+  'https://esm.sh/@codemirror/language@6',
+  'https://esm.sh/@lezer/highlight@1',
+  'https://esm.sh/@codemirror/autocomplete@6',
+  'https://esm.sh/@codemirror/lint@6',
+  'https://esm.sh/@codemirror/commands@6',
+  'https://esm.sh/@codemirror/search@6',
+  'https://esm.sh/lz-string@1.5.0',
+];
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Pre-caching WASM assets');
-      return cache.addAll(WASM_ASSETS.map(u => u + '?v=0.11.5'));
+      console.log('[SW] Pre-caching WASM + CDN assets');
+      // Pre-cache WASM assets (critical path)
+      const wasmPromises = cache.addAll(WASM_ASSETS.map(u => u + '?v=0.11.5'));
+      // Pre-cache CDN modules (best-effort — don't block install if CDN is slow)
+      const cdnPromises = Promise.allSettled(
+        CDN_MODULES.map(url => fetch(url, { mode: 'cors' }).then(r => {
+          if (r.ok) return cache.put(url, r);
+        }).catch(() => {}))
+      );
+      return Promise.all([wasmPromises, cdnPromises]);
     })
   );
   self.skipWaiting();
@@ -31,9 +52,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Only cache WASM-related assets
+  // Cache WASM assets (stale-while-revalidate)
   const isWasmAsset = url.pathname.startsWith('/wasm/');
-  if (!isWasmAsset) return;
+  // Cache CDN modules from esm.sh (stale-while-revalidate)
+  const isCdnModule = url.hostname === 'esm.sh';
+
+  if (!isWasmAsset && !isCdnModule) return;
 
   // Stale-while-revalidate: serve from cache immediately, update in background
   event.respondWith(
