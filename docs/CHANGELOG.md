@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.11.233 — Canvas Loading UX Round 2: Eliminate Slide-In Race (R6.5)
+
+**Panel Init Before WASM Await (#1)** — `initLeftPanel()`, `initRightPanel()`, `initSettingsPanel()`, `initOnboarding()` moved to the top of `initPlayground()` before the first `await` (WASM fetch). Previously they ran ~500 lines after the await, leaving a 60-100ms window where panels were uninitialized while the browser painted frames.
+
+**Double-rAF Transition Removal (#2)** — `init-no-transition` class removal now uses double `requestAnimationFrame` (rAF inside rAF). Single rAF can fire in the same paint cycle as layout changes, causing the browser to interpret the CSS var update as a transition-eligible change. Double-rAF guarantees one full painted frame passes before transitions re-enable.
+
+**LocalStorage-Aware Head Script (#3)** — inline `<script>` in `<head>` reads `fd-right-collapsed`, `fd-left-collapsed`, and `fd-left-panel-width` from localStorage before first paint. Sets correct CSS vars (`--left-panel-width`, `--right-panel-width`, `--right-panel-actual-width`) and applies `.collapsed` class on DOMContentLoaded. Returning users with collapsed panels see the correct layout from frame zero — no layout jumps.
+
+Files: `site/app.js`, `site/index.html`
+
 ### v0.11.232 — Canvas Loading UX: Instant Panels + Streaming WASM + Module Preloads (R6.5)
 
 **Suppress Minimap/Zoom Slide-In (#1)** — `.init-no-transition` class on `<html>` suppresses all CSS transitions during startup; removed after first frame via `requestAnimationFrame`; minimap and panels appear in their final position instantly

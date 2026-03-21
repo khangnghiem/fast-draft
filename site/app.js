@@ -4591,6 +4591,14 @@ async function initPlayground() {
   const loading = document.getElementById('canvas-loading');
   const wrapper = document.getElementById('canvas-wrapper');
 
+  // ── (#1) Init panels BEFORE any await — pure DOM, no WASM needed ──────
+  // This runs synchronously before the browser yields to fetch WASM,
+  // so panels are correctly sized from the very first paint frame.
+  initLeftPanel();
+  initRightPanel();
+  initSettingsPanel();
+  initOnboarding();
+
   try {
     // Load WASM module with real progress tracking
     const statusEl = document.getElementById('loading-status');
@@ -5100,12 +5108,7 @@ async function initPlayground() {
       setTimeout(toggleFullscreen, 300);
     }
 
-    // ── Panels always visible — no theater animation ────
-    // Init left and right panels with saved state (both before WASM — pure DOM)
-    initLeftPanel();
-    initRightPanel();
-    initSettingsPanel();
-    initOnboarding();
+    // ── Panels already initialized before WASM (see top of initPlayground) ──
 
     // ── Mobile: auto-collapse both panels for canvas-first experience ──
     const isMobileViewport = window.innerWidth <= 768;
@@ -5249,9 +5252,14 @@ async function initPlayground() {
     loading.classList.add('fade-out');
     setTimeout(() => loading.classList.add('hidden'), 400);
 
-    // Remove startup transition suppression — enable animations for user interactions (#1)
+    // (#2) Double-rAF: wait TWO animation frames before enabling transitions.
+    // Single rAF can fire in the same paint cycle as layout changes from panel init.
+    // Double-rAF guarantees the browser has painted one full frame with the final
+    // layout before transitions are re-enabled — bulletproof against race conditions.
     requestAnimationFrame(() => {
-      document.documentElement.classList.remove('init-no-transition');
+      requestAnimationFrame(() => {
+        document.documentElement.classList.remove('init-no-transition');
+      });
     });
 
     // ── Canvas Theme Toggle (moved to settings gear dropdown) ─────────
