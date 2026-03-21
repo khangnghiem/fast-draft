@@ -17,6 +17,18 @@
 
 ## Completed Requirements
 
+### v0.11.231 — Mobile Touch Fixes: Pinch Zoom Center + Invisible Panel (R6.5, R6.7)
+
+**Pinch-to-Zoom Center Fix** — zoom now anchors at the current finger midpoint:
+- Old formula used frozen `pinchMidStartX/Y` (captured once at gesture start) as zoom anchor — zoom always centered on initial touch position, not where fingers currently are
+- Replaced with standard zoom-at-point formula using live `midX/midY` from active pointers
+- Matches `touchZoomAtPoint` behavior in the touch-events handler
+
+**Invisible Panel Fix** — collapsed panels and backdrop no longer block canvas touches:
+- Added `pointer-events: none` to `#left-panel.collapsed` and `#right-panel.collapsed` on mobile
+- Added `pointer-events: none` default to `#mobile-layers-backdrop`, with `pointer-events: auto` only when `.visible`
+- Root cause: panels off-screen via `transform: translateX(±100%)` still intercepted touch events because CSS transforms don't affect `pointer-events`
+
 ### v0.11.230 — Mobile UX Round 2 (R6.5)
 
 **Touch-Sized Controls** — all interactive elements meet 44px Apple HIG minimum:

@@ -2741,6 +2741,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   #left-panel.collapsed {
     transform: translateX(-100%);
     box-shadow: none;
+    pointer-events: none;
   }
 
   /* ── Right panel: off-screen by default, overlay when open ── */
@@ -2759,6 +2760,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   #right-panel.collapsed {
     transform: translateX(100%);
     box-shadow: none;
+    pointer-events: none;
   }
 
   /* ── Hide resize handles on mobile ── */
@@ -2869,8 +2871,9 @@ a.rp-settings-item:visited { color: var(--fd-text); }
     background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
+    pointer-events: none;
   }
-  #mobile-layers-backdrop.visible { display: block; }
+  #mobile-layers-backdrop.visible { display: block; pointer-events: auto; }
 
   /* ── #5: Prevent double-tap zoom on panel tabs ── */
   .lp-tab, .rp-tab {
