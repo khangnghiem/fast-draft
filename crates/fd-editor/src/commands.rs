@@ -701,6 +701,289 @@ rect @box {
         assert!(!stack.can_undo());
     }
 
+    // ─── Excalidraw-Inspired: Undo/Redo State Machine Tests ────────────────
+    // Modeled after Excalidraw's history.test.tsx: comprehensive undo/redo
+    // coverage for every mutation type and multi-step chains.
+
+    #[test]
+    fn undo_redo_add_remove_node() {
+        // Excalidraw: creating a rect then undoing removes it from the scene.
+        let input = "rect @existing { w: 100 h: 50 }\n";
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let mut stack = CommandStack::new(100);
+
+        // Add a new node
+        let new_node = fd_core::model::SceneNode::new(
+            NodeId::intern("new_rect"),
+            fd_core::model::NodeKind::Rect {
+                width: 80.0,
+                height: 40.0,
+            },
+        );
+        stack.execute(
+            &mut engine,
+            GraphMutation::AddNode {
+                parent_id: NodeId::intern("root"),
+                node: Box::new(new_node),
+            },
+            "Add rect",
+        );
+        assert!(engine.graph.get_by_id(NodeId::intern("new_rect")).is_some());
+
+        // Undo → node removed
+        let result = stack.undo(&mut engine);
+        assert!(result.is_some());
+        assert!(engine.graph.get_by_id(NodeId::intern("new_rect")).is_none());
+        // Original node still exists
+        assert!(engine.graph.get_by_id(NodeId::intern("existing")).is_some());
+
+        // Redo → node re-added
+        stack.redo(&mut engine);
+        assert!(engine.graph.get_by_id(NodeId::intern("new_rect")).is_some());
+    }
+
+    #[test]
+    fn undo_redo_set_text_content() {
+        // Excalidraw: editing text then undoing reverts the content.
+        let input = r#"text @label "Hello" {
+  font: "Inter" 400 16
+}
+"#;
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let mut stack = CommandStack::new(100);
+
+        // Verify original content
+        let node = engine.graph.get_by_id(NodeId::intern("label")).unwrap();
+        if let fd_core::model::NodeKind::Text { content, .. } = &node.kind {
+            assert_eq!(content, "Hello");
+        }
+
+        // Change text
+        stack.execute(
+            &mut engine,
+            GraphMutation::SetText {
+                id: NodeId::intern("label"),
+                content: "World".to_string(),
+            },
+            "Edit text",
+        );
+        let node = engine.graph.get_by_id(NodeId::intern("label")).unwrap();
+        if let fd_core::model::NodeKind::Text { content, .. } = &node.kind {
+            assert_eq!(content, "World");
+        }
+
+        // Undo → text reverts
+        stack.undo(&mut engine);
+        let node = engine.graph.get_by_id(NodeId::intern("label")).unwrap();
+        if let fd_core::model::NodeKind::Text { content, .. } = &node.kind {
+            assert_eq!(content, "Hello");
+        }
+
+        // Redo → text changes again
+        stack.redo(&mut engine);
+        let node = engine.graph.get_by_id(NodeId::intern("label")).unwrap();
+        if let fd_core::model::NodeKind::Text { content, .. } = &node.kind {
+            assert_eq!(content, "World");
+        }
+    }
+
+    #[test]
+    fn undo_redo_resize_updates_text() {
+        // Excalidraw: resizing then undoing reverts dimensions AND text output.
+        let input = "rect @box { w: 100 h: 50 }\n";
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let mut stack = CommandStack::new(100);
+
+        // Resize
+        stack.execute(
+            &mut engine,
+            GraphMutation::ResizeNode {
+                id: NodeId::intern("box"),
+                width: 300.0,
+                height: 200.0,
+            },
+            "Resize box",
+        );
+        engine.flush_to_text();
+        assert!(engine.text.contains("300"));
+        assert!(engine.text.contains("200"));
+
+        // Undo → dimensions revert
+        stack.undo(&mut engine);
+        engine.flush_to_text();
+        let node = engine.graph.get_by_id(NodeId::intern("box")).unwrap();
+        match &node.kind {
+            fd_core::model::NodeKind::Rect { width, height } => {
+                assert_eq!(*width, 100.0);
+                assert_eq!(*height, 50.0);
+            }
+            _ => panic!("expected Rect"),
+        }
+    }
+
+    #[test]
+    fn undo_redo_multi_step_chain() {
+        // Excalidraw: 3 sequential operations → undo all → redo all.
+        // Verifies the undo stack correctly reverses a chain of operations.
+        let input = "rect @a { w: 100 h: 50 }\n";
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let mut stack = CommandStack::new(100);
+
+        // Step 1: Move
+        stack.execute(
+            &mut engine,
+            GraphMutation::MoveNode {
+                id: NodeId::intern("a"),
+                dx: 50.0,
+                dy: 30.0,
+            },
+            "move",
+        );
+
+        // Step 2: Resize
+        stack.execute(
+            &mut engine,
+            GraphMutation::ResizeNode {
+                id: NodeId::intern("a"),
+                width: 200.0,
+                height: 100.0,
+            },
+            "resize",
+        );
+
+        // Step 3: Change style
+        let mut new_style = engine
+            .graph
+            .get_by_id(NodeId::intern("a"))
+            .unwrap()
+            .props
+            .clone();
+        new_style.fill = Some(fd_core::model::Paint::Solid(fd_core::model::Color {
+            r: 0.0,
+            g: 0.0,
+            b: 1.0,
+            a: 1.0,
+        }));
+        stack.execute(
+            &mut engine,
+            GraphMutation::SetStyle {
+                id: NodeId::intern("a"),
+                style: new_style,
+            },
+            "style",
+        );
+
+        // Undo all 3
+        assert_eq!(
+            stack.undo(&mut engine).map(|(d, _)| d),
+            Some("style".to_string())
+        );
+        assert_eq!(
+            stack.undo(&mut engine).map(|(d, _)| d),
+            Some("resize".to_string())
+        );
+        assert_eq!(
+            stack.undo(&mut engine).map(|(d, _)| d),
+            Some("move".to_string())
+        );
+        assert!(!stack.can_undo());
+
+        // Redo all 3
+        assert_eq!(
+            stack.redo(&mut engine).map(|(d, _)| d),
+            Some("move".to_string())
+        );
+        assert_eq!(
+            stack.redo(&mut engine).map(|(d, _)| d),
+            Some("resize".to_string())
+        );
+        assert_eq!(
+            stack.redo(&mut engine).map(|(d, _)| d),
+            Some("style".to_string())
+        );
+        assert!(!stack.can_redo());
+    }
+
+    #[test]
+    fn push_snapshot_undo_restores_text() {
+        // Tests the JS-driven snapshot path (used by paste operations).
+        let text_before = "rect @box { w: 100 h: 50 }\n";
+        let text_after = "rect @box { w: 100 h: 50 }\nrect @pasted { w: 80 h: 40 }\n";
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(text_after, viewport).unwrap();
+        let mut stack = CommandStack::new(100);
+
+        // Push a snapshot (simulates paste)
+        stack.push_snapshot(text_before.to_string(), text_after.to_string(), "paste");
+
+        // Undo → text reverts to before paste
+        let result = stack.undo(&mut engine);
+        assert!(result.is_some());
+        let (desc, is_snapshot) = result.unwrap();
+        assert_eq!(desc, "paste");
+        assert!(is_snapshot);
+
+        // The engine should now have text_before content
+        assert!(engine.graph.get_by_id(NodeId::intern("box")).is_some());
+        assert!(engine.graph.get_by_id(NodeId::intern("pasted")).is_none());
+    }
+
+    #[test]
+    fn undo_redo_group_ungroup() {
+        // Excalidraw: grouping nodes then undoing dissolves the group.
+        let input = "rect @a { x: 0 y: 0 w: 40 h: 30 }\nrect @b { x: 50 y: 0 w: 40 h: 30 }\n";
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let mut stack = CommandStack::new(100);
+
+        // Group @a and @b
+        stack.execute(
+            &mut engine,
+            GraphMutation::GroupNodes {
+                ids: vec![NodeId::intern("a"), NodeId::intern("b")],
+                new_group_id: NodeId::intern("grp"),
+            },
+            "group",
+        );
+        assert!(engine.graph.get_by_id(NodeId::intern("grp")).is_some());
+
+        // Undo → group dissolved (UngroupNode is the inverse)
+        stack.undo(&mut engine);
+        assert!(
+            engine.graph.get_by_id(NodeId::intern("grp")).is_none(),
+            "group should be dissolved after undo"
+        );
+        // Nodes should still exist
+        assert!(engine.graph.get_by_id(NodeId::intern("a")).is_some());
+        assert!(engine.graph.get_by_id(NodeId::intern("b")).is_some());
+
+        // Redo → group recreated
+        stack.redo(&mut engine);
+        assert!(engine.graph.get_by_id(NodeId::intern("grp")).is_some());
+    }
+
     #[test]
     fn abandon_batch_restores_position() {
         let input = "rect @box { w: 100 h: 50 }\n";
