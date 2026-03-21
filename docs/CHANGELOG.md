@@ -17,6 +17,23 @@
 
 ## Completed Requirements
 
+### v0.11.228 — Sidebar Performance + Mobile UI Fix (R6.5, R6.7)
+
+**Sidebar Performance** — 4 optimizations for smoother collapse/resize:
+- GPU-composited `transform: translateX()` slide-out replaces `width` animation (zero layout reflow)
+- Added missing `.no-transition` CSS rule (was toggled in JS but never defined)
+- `requestAnimationFrame` throttle on drag-resize handler (one paint per display frame)
+- `will-change: transform` on both panels for compositor layer promotion
+- Fixed `updateRightPanelWidth()` to also set `--right-panel-width` CSS var
+
+**Mobile UI Rewrite** — canvas-first experience on ≤768px viewports:
+- Both panels auto-collapse on init with backdrop overlay for drawer UI
+- Canvas fills full width (`--left/right-panel-width: 0px !important`)
+- Panels open as slide-in overlays (left 280px, right 320px max 85vw)
+- Toolbar forced to compact bottom-center pill (no drag, no grip handles)
+- Chrome buttons downsized, minimap/FAB/onboarding hidden
+- `switchLeftTab`/`switchRightTab` skip un-collapse on mobile
+
 ### v0.11.227 — Empty Canvas Default & Drag-to-Create Fix (R6.17)
 
 **Empty Canvas** — removed 170-line `DEFAULT_FD` tutorial; new visitors see a blank canvas with onboarding hints

@@ -504,11 +504,12 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   z-index: 15;
   font-size: 11px;
   color: var(--fd-text);
-  transition: width 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
   overflow: hidden;
+  will-change: transform;
 }
 #right-panel.collapsed {
-  width: 0;
+  transform: translateX(100%);
   border-left: none;
 }
 
@@ -528,9 +529,19 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   flex-direction: column;
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  transition: width 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition: transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+  will-change: transform;
 }
-#left-panel.collapsed { width: 0 !important; overflow: hidden; }
+#left-panel.collapsed {
+  transform: translateX(-100%);
+  overflow: hidden;
+}
+
+/* Disable transitions during drag resize */
+.no-transition,
+.no-transition * {
+  transition: none !important;
+}
 
 /* Layers section (top half) */
 #layers-section {
@@ -2698,19 +2709,6 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   }
   .split-resize-handle { display: none; }
 
-  /* #4: Canvas-first — hide code editor by default, show as overlay */
-  .playground-editor {
-    display: none;
-    position: absolute;
-    inset: 0;
-    z-index: 200;
-    min-height: auto;
-  }
-  .playground-editor.mobile-code-open {
-    display: flex;
-  }
-  .playground-canvas { min-height: 50vh; }
-
   .features-grid { grid-template-columns: 1fr; }
   .modes-grid { grid-template-columns: 1fr; }
   .crate-grid { grid-template-columns: 1fr 1fr; }
@@ -2718,54 +2716,100 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   #hero h1 { font-size: 2rem; }
   .hero-sub { font-size: 1rem; }
 
-  /* Fix: reset canvas offset vars so canvas fills full width */
-  #canvas-wrapper { --left-panel-width: 0px; --props-width: 0px; }
+  /* ── Canvas fills full width — panels start hidden ── */
+  #canvas-wrapper {
+    --left-panel-width: 0px !important;
+    --right-panel-width: 0px !important;
+    --props-width: 0px;
+  }
 
-  /* Layers panel: slide-in drawer overlay instead of hidden */
-  #layers-panel {
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 220px !important;
-    max-width: 75vw;
-    z-index: 100;
+  /* ── Left panel: off-screen by default, full-width overlay when open ── */
+  #left-panel {
+    width: 280px !important;
+    max-width: 80vw;
     transform: translateX(-100%);
+    z-index: 100;
+    box-shadow: none;
     transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+  #left-panel:not(.collapsed) {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  }
+  /* On mobile, collapsed just means off-screen (already default) */
+  #left-panel.collapsed {
+    transform: translateX(-100%);
     box-shadow: none;
   }
-  #layers-panel.mobile-open {
+
+  /* ── Right panel: off-screen by default, full-width overlay when open ── */
+  #right-panel {
+    width: 320px !important;
+    max-width: 85vw;
+    transform: translateX(100%);
+    z-index: 100;
+    box-shadow: none;
+    transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+  #right-panel:not(.collapsed) {
     transform: translateX(0);
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.25);
   }
-  /* Hide resize handles on mobile */
+  #right-panel.collapsed {
+    transform: translateX(100%);
+    box-shadow: none;
+  }
+
+  /* ── Hide resize handles on mobile ── */
   .panel-resize-handle.layers-handle { display: none !important; }
-  .panel-restore-strip.layers-restore { display: none !important; }
-
-  #props-panel { display: none !important; }
   .panel-resize-handle.props-handle { display: none !important; }
-  .panel-restore-strip.props-restore { display: none !important; }
-  .panel-restore-strip.code-restore { display: none !important; }
+  .panel-restore-strip { display: none !important; }
 
-  /* #3: Rescale floating toolbar for small canvas */
+  /* ── Floating toolbar: force compact bottom-center pill ── */
   #floating-toolbar {
-    left: 8px;
-    transform: scale(0.82);
-    transform-origin: bottom left;
-    bottom: 4px;
+    top: auto !important;
+    bottom: 8px !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) scale(0.88) !important;
+    transform-origin: bottom center;
+    flex-direction: row !important;
+    max-width: calc(100vw - 16px);
+    overflow-x: auto;
+    overflow-y: hidden;
   }
-  #minimap-container { display: none; }
+  /* Hide grip handles on mobile — no dragging */
+  #floating-toolbar .toolbar-grip { display: none; }
+  /* Compact tool buttons */
+  #floating-toolbar .ft-tool-btn { padding: 6px; }
+  #floating-toolbar .ft-tooltip { display: none; }
+  #floating-toolbar .ft-ai-touch { font-size: 11px; padding: 4px 8px; }
 
+  /* ── Chrome buttons: stay compact ── */
+  .canvas-chrome-left {
+    left: 10px !important;
+    top: 8px;
+  }
+  .canvas-chrome-right {
+    right: 10px !important;
+    top: 8px;
+  }
+  .canvas-chrome-btn { width: 26px; height: 26px; font-size: 11px; }
 
-  #ai-touch-btn, #renamify-btn,
+  /* ── Hide non-essential UI on mobile ── */
+  #minimap-container { display: none !important; }
+  #floating-action-bar { display: none !important; }
   #canvas-status { display: none !important; }
-  .chrome-pill { padding: 2px; }
-  .chrome-btn { font-size: 10px; padding: 3px 6px; }
+  .onboarding-hints { display: none !important; }
 
-  /* #4: Mobile code toggle button (visible only on mobile) */
-  #mobile-code-toggle {
-    display: inline-flex;
+  /* ── Canvas should fill everything ── */
+  #fd-canvas {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
   }
 
-  /* Mobile layers backdrop (click to dismiss) */
+  /* ── Mobile layers backdrop (click-to-dismiss overlay) ── */
   #mobile-layers-backdrop {
     display: none;
     position: absolute;
@@ -2776,11 +2820,6 @@ a.rp-settings-item:visited { color: var(--fd-text); }
     -webkit-backdrop-filter: blur(2px);
   }
   #mobile-layers-backdrop.visible { display: block; }
-
-  /* Toggle button in toolbar */
-  #mobile-layers-toggle {
-    display: inline-flex;
-  }
 }
 
 @media (max-width: 480px) {
