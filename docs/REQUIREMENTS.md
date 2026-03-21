@@ -66,7 +66,8 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.39** _(done)_: Floating toolbar — draggable bottom toolbar with 7 tool buttons (SVG icons); drag handle toggles top/bottom position (80px threshold); double-click collapses to circle; state persists via VS Code webview state → [spec](specs/floating-toolbar.md)
 - **R3.40** _(done)_: Toolbar tooltips — Apple-style frosted glass tooltips on hover (400ms delay); pill shape with backdrop-filter blur; shows tool name + shortcut; replaces native title attributes → [spec](specs/floating-toolbar.md)
 - **R3.41** _(removed)_: ~~Click-to-raise~~ — removed in v0.10.68; caused surprise z-order changes and undo pollution; explicit ⌘] remains for intentional z-order changes
-- **R3.42** _(done)_: Drag-to-create — drag a tool button from floating toolbar onto canvas creates shape at drop position; ghost preview (dashed outline matching shape type) follows cursor; ScreenBrush-style defaults (transparent fill, #333 stroke 2.5); smart defaults cascade applied → [spec](specs/floating-toolbar.md)
+- **R3.42** _(done)_: Drag-to-create — drag a tool button from floating toolbar onto canvas creates shape at drop position; ghost preview (dashed outline matching shape type) follows cursor; `e.preventDefault()` on pointerdown fixes native SVG drag hijacking; smart defaults cascade applied → [spec](specs/floating-toolbar.md)
+- **R3.42b** _(done)_: Insert menu — `+` button in toolbar opens frosted glass dropdown (Rectangle, Ellipse, Text, Frame, Arrow); click to create at viewport center; `⌘/` keyboard shortcut toggles menu → [spec](specs/floating-toolbar.md)
 - **R3.43** _(done)_: Snap-to-node (⌥ Alt required) — holding ⌥ Alt while dropping near existing node (40px threshold) snaps to adjacent position (20px gap, 4 cardinal dirs); auto-creates edge from existing→new node (arrow:end, curve:smooth); shows frosted-glass edge context menu with arrow/curve/stroke/flow controls; Alt-aware ghost preview with dashed edge line during drag → [spec](specs/floating-toolbar.md)
 - **R3.44** _(done)_: Edge text labeling — double-click on edge opens inline text editor for label; dedicated "text consume on drag" dropped in favor of simpler double-click UX → [spec](specs/floating-toolbar.md)
 - **R3.45** _(done)_: Auto-expand parent on release — `finalize_child_bounds()` expands parent groups/frames to contain overflowing children after resize or text growth; processes bottom-up for recursive cascade; skips `clip: true` frames; only on pointer-up (avoids chasing-envelope bug)
@@ -336,7 +337,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | floating toolbar | R3.39, R3.40, R3.42, R3.43, R3.44 |
 | tooltip | R3.18, R3.40 |
 | z-order / raise | R3.41 |
-| drag-to-create | R3.42, R3.44 |
+| drag-to-create | R3.42, R3.42b, R3.44 |
 | snap / auto-edge | R3.43 |
 | text consume | R3.44 |
 | default styles | R3.42 |

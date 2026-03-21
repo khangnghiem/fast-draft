@@ -1552,7 +1552,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   position: relative;
   flex-shrink: 0;
 }
-.ft-tool-btn svg { width: 18px; height: 18px; flex-shrink: 0; pointer-events: none; }
+.ft-tool-btn svg { width: 18px; height: 18px; flex-shrink: 0; pointer-events: none; -webkit-user-drag: none; user-drag: none; }
 .ft-tool-btn:hover { background: rgba(0,0,0,0.06); color: var(--fd-text); }
 .dark-canvas .ft-tool-btn:hover { background: rgba(255,255,255,0.1); }
 .ft-tool-btn:active { transform: scale(0.92); }
@@ -1628,6 +1628,131 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   font-size: 16px;
   line-height: 1;
   pointer-events: none;
+}
+
+/* ── Drag-to-Create Ghost ── */
+.dtc-ghost {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  border: 2px dashed var(--fd-accent, #3B82F6);
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fd-accent, #3B82F6);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--sans);
+  letter-spacing: -0.01em;
+  opacity: 0.85;
+  transition: width 0.1s ease, height 0.1s ease;
+}
+.dtc-ghost.dtc-ellipse {
+  border-radius: 50%;
+}
+.dtc-ghost.dtc-text {
+  border-radius: 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--fd-text-secondary);
+  border-width: 1.5px;
+  border-style: dashed;
+}
+.dtc-ghost.dtc-arrow {
+  border: none;
+  background: none;
+}
+.dtc-ghost.dtc-arrow::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: var(--fd-accent, #3B82F6);
+  transform: rotate(-15deg);
+}
+
+/* ── Insert Menu (+ button dropdown) ── */
+.insert-menu {
+  position: absolute;
+  z-index: 200;
+  min-width: 160px;
+  padding: 4px;
+  background: var(--fd-surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 0.5px solid var(--fd-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08);
+  opacity: 0;
+  transform: scale(0.96) translateY(-4px);
+  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+  pointer-events: none;
+}
+.insert-menu.visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+.insert-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--fd-text);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  transition: none;
+}
+.insert-menu-item:hover {
+  background: var(--fd-accent);
+  color: #fff;
+}
+.insert-menu-item:hover .insert-menu-shortcut {
+  color: rgba(255,255,255,0.7);
+}
+.insert-menu-icon {
+  width: 16px;
+  text-align: center;
+  font-size: 13px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.insert-menu-shortcut {
+  font-size: 10px;
+  color: var(--fd-text-tertiary);
+  font-family: var(--mono);
+  margin-left: auto;
+  padding-left: 12px;
+  font-weight: 500;
+  opacity: 0.6;
+}
+.insert-menu-sep {
+  height: 1px;
+  background: var(--fd-border);
+  margin: 3px 4px;
+}
+
+/* ── Insert button (+ in toolbar) ── */
+.ft-insert-btn {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--fd-text-secondary);
+}
+.ft-insert-btn:hover {
+  color: var(--fd-accent);
 }
 
 /* ── (Zoom pill removed — zoom is now in minimap controls) ── */

@@ -5967,14 +5967,96 @@ async function initPlayground() {
     setupApplePencilPro(canvas);
 
     // ── Tool Toolbar (floating) ────────────────────────────────────
+    // ── Drag-to-Create state ──
+    let dtcActive = false;
+    let dtcStartX = 0, dtcStartY = 0;
+    let dtcTool = '';
+    let dtcGhost = null;
+    const DTC_DRAG_THRESHOLD = 5;
+
+    /** Default dimensions for each shape type */
+    const DTC_SIZES = {
+      rect: [120, 80], ellipse: [100, 100], text: [80, 24],
+      frame: [200, 150], arrow: [120, 40], pen: [120, 80], lasso: [100, 100]
+    };
+
+    /** Insert a shape at the given scene coordinates via FD code injection */
+    function insertShapeAt(type, sceneX, sceneY) {
+      if (!editorView) return;
+      const id = `${type}_${Date.now().toString(36)}`;
+      const [w, h] = DTC_SIZES[type] || [100, 80];
+      const x = Math.round(sceneX);
+      const y = Math.round(sceneY);
+      let fdBlock;
+      if (type === 'text') {
+        fdBlock = `\ntext @${id} "Text" {\n  x: ${x} y: ${y}\n  w: ${w} h: ${h}\n}\n`;
+      } else if (type === 'arrow') {
+        fdBlock = `\nedge @${id} {\n  x: ${x} y: ${y}\n  w: ${w} h: ${h}\n  arrow: end\n  curve: smooth\n}\n`;
+      } else {
+        const fill = smartDefaults.fill || '#007AFF';
+        const corner = type === 'rect' ? `\n  corner: ${smartDefaults.cornerRadius || 8}` : '';
+        fdBlock = `\n${type} @${id} {\n  x: ${x} y: ${y}\n  w: ${w} h: ${h}\n  fill: ${fill}${corner}\n}\n`;
+      }
+      const currentText = editorView.state.doc.toString();
+      editorView.dispatch({
+        changes: { from: currentText.length, to: currentText.length, insert: fdBlock },
+      });
+      showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} created`);
+      // Switch to select tool after creation
+      if (fdCanvas) {
+        fdCanvas.set_tool('select');
+        updateToolbar('select');
+        canvas.style.cursor = '';
+      }
+      renderDirty = true;
+      uiDirty = true;
+    }
+
+    /** Insert a shape at the center of the visible viewport */
+    function insertShapeAtCenter(type) {
+      const canvasEl = document.getElementById('fd-canvas');
+      if (!canvasEl) return;
+      const rect = canvasEl.getBoundingClientRect();
+      const centerClientX = rect.left + rect.width / 2;
+      const centerClientY = rect.top + rect.height / 2;
+      const [w, h] = DTC_SIZES[type] || [100, 80];
+      const sceneX = ((centerClientX - rect.left) - panX) / zoomLevel - w / 2;
+      const sceneY = ((centerClientY - rect.top) - panY) / zoomLevel - h / 2;
+      insertShapeAt(type, sceneX, sceneY);
+    }
+
+    /** Create or show the drag ghost element */
+    function createDtcGhost(tool) {
+      if (dtcGhost) dtcGhost.remove();
+      dtcGhost = document.createElement('div');
+      dtcGhost.className = 'dtc-ghost';
+      const [w, h] = DTC_SIZES[tool] || [100, 80];
+      dtcGhost.style.width = w + 'px';
+      dtcGhost.style.height = h + 'px';
+      if (tool === 'ellipse') dtcGhost.classList.add('dtc-ellipse');
+      else if (tool === 'text') { dtcGhost.classList.add('dtc-text'); dtcGhost.textContent = 'T'; }
+      else if (tool === 'arrow') dtcGhost.classList.add('dtc-arrow');
+      document.body.appendChild(dtcGhost);
+      return dtcGhost;
+    }
+
     document.querySelectorAll('.ft-tool-btn[data-tool]').forEach(btn => {
       // Click to select tool — then draw on canvas (Figma/Excalidraw style)
+      // CRITICAL: e.preventDefault() prevents native SVG drag from hijacking pointer events
+      // See LESSONS.md: "Native Drag Hijacks SVG Pointerdown"
       btn.addEventListener('pointerdown', (e) => {
         if (!fdCanvas) return;
+        e.preventDefault(); // THE FIX: prevent native SVG drag
         const tool = btn.dataset.tool;
         fdCanvas.set_tool(tool);
         updateToolbar(tool);
         canvas.style.cursor = tool === 'hand' ? 'grab' : (tool === 'select' || tool === 'eraser') ? '' : 'crosshair';
+        // Track drag start for drag-to-create
+        if (tool !== 'hand' && tool !== 'select' && tool !== 'eraser' && tool !== 'lasso') {
+          dtcStartX = e.clientX;
+          dtcStartY = e.clientY;
+          dtcTool = tool;
+        }
       });
 
       btn.addEventListener('click', () => {
@@ -6002,6 +6084,93 @@ async function initPlayground() {
         canvas.style.cursor = tool === 'hand' ? 'grab' : (tool === 'select' || tool === 'eraser') ? '' : 'crosshair';
       });
     });
+
+    // ── Drag-to-Create: pointermove + pointerup (document-level) ─────
+    document.addEventListener('pointermove', (e) => {
+      if (!dtcTool || dtcActive) {
+        // Already in drag mode — update ghost position
+        if (dtcActive && dtcGhost) {
+          const [w, h] = DTC_SIZES[dtcTool] || [100, 80];
+          dtcGhost.style.left = (e.clientX - w / 2) + 'px';
+          dtcGhost.style.top = (e.clientY - h / 2) + 'px';
+        }
+        return;
+      }
+      // Check if drag threshold reached
+      const dx = e.clientX - dtcStartX;
+      const dy = e.clientY - dtcStartY;
+      if (Math.sqrt(dx * dx + dy * dy) >= DTC_DRAG_THRESHOLD) {
+        dtcActive = true;
+        createDtcGhost(dtcTool);
+        const [w, h] = DTC_SIZES[dtcTool] || [100, 80];
+        dtcGhost.style.left = (e.clientX - w / 2) + 'px';
+        dtcGhost.style.top = (e.clientY - h / 2) + 'px';
+      }
+    });
+
+    document.addEventListener('pointerup', (e) => {
+      if (!dtcActive) {
+        dtcTool = ''; // Reset drag tracking
+        return;
+      }
+      // Remove ghost
+      if (dtcGhost) { dtcGhost.remove(); dtcGhost = null; }
+      // Check if dropped over canvas
+      const canvasEl = document.getElementById('fd-canvas');
+      if (canvasEl) {
+        const rect = canvasEl.getBoundingClientRect();
+        if (e.clientX >= rect.left && e.clientX <= rect.right &&
+            e.clientY >= rect.top && e.clientY <= rect.bottom) {
+          // Convert screen → scene coords
+          const sceneX = ((e.clientX - rect.left) - panX) / zoomLevel;
+          const sceneY = ((e.clientY - rect.top) - panY) / zoomLevel;
+          const [w, h] = DTC_SIZES[dtcTool] || [100, 80];
+          insertShapeAt(dtcTool, sceneX - w / 2, sceneY - h / 2);
+        } else {
+          showToast('Drop on canvas to create shape');
+        }
+      }
+      dtcActive = false;
+      dtcTool = '';
+    });
+
+    // ── Insert Menu (+  button) ───────────────────────────────────────
+    const insertBtn = document.getElementById('insert-btn');
+    const insertMenu = document.getElementById('insert-menu');
+    if (insertBtn && insertMenu) {
+      insertBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = insertMenu.classList.contains('visible');
+        if (isOpen) {
+          insertMenu.classList.remove('visible');
+        } else {
+          // Position menu below the button
+          const btnRect = insertBtn.getBoundingClientRect();
+          const toolbarEl = document.getElementById('floating-toolbar');
+          const toolbarRect = toolbarEl ? toolbarEl.getBoundingClientRect() : btnRect;
+          insertMenu.style.left = (btnRect.left - toolbarRect.left) + 'px';
+          insertMenu.style.top = (btnRect.bottom - toolbarRect.top + 4) + 'px';
+          insertMenu.classList.add('visible');
+        }
+      });
+
+      // Menu item click → insert shape at center
+      insertMenu.querySelectorAll('.insert-menu-item[data-insert]').forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const type = item.dataset.insert;
+          insertShapeAtCenter(type);
+          insertMenu.classList.remove('visible');
+        });
+      });
+
+      // Close menu on outside click
+      document.addEventListener('pointerdown', (e) => {
+        if (!insertMenu.contains(e.target) && e.target !== insertBtn) {
+          insertMenu.classList.remove('visible');
+        }
+      });
+    }
 
     // ── Toolbar: Drag-to-snap + Minimize ──────────────────────────────────
     const toolbar = document.getElementById('floating-toolbar');
@@ -6211,6 +6380,13 @@ async function initPlayground() {
       if (e.key === 'Alt') {
         canvas.classList.remove('modifier-cmd', 'modifier-alt', 'modifier-cmd-select');
         canvas.classList.add('modifier-alt');
+      }
+      // Insert menu toggle (⌘/ or Ctrl+/)
+      if ((e.metaKey || e.ctrlKey) && e.key === '/' && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        const imBtn = document.getElementById('insert-btn');
+        if (imBtn) imBtn.click();
+        return;
       }
 
       // Grid toggle (G key)

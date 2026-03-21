@@ -93,6 +93,33 @@ sceneY = ((clientY - canvasRect.top)  - panY) / zoomLevel
 
 ---
 
+## 4b. Insert Menu (R3.42b)
+
+**Trigger**: `+` button in toolbar or `⌘/` (`Ctrl+/`) keyboard shortcut.
+
+### Menu Items
+
+| Item      | Shape Type | FD Code                                              |
+|-----------|-----------|-------------------------------------------------------|
+| Rectangle | `rect`    | `rect @rect_<id> { x y w:120 h:80 fill corner:8 }`  |
+| Ellipse   | `ellipse` | `ellipse @ell_<id> { x y w:100 h:100 fill }`         |
+| Text      | `text`    | `text @text_<id> "Text" { x y w:80 h:24 }`           |
+| Frame     | `frame`   | `frame @frame_<id> { x y w:200 h:150 }`              |
+| Arrow     | `edge`    | `edge @arrow_<id> { x y w:120 h:40 arrow:end }`      |
+
+### Behavior
+
+1. Click item → shape created at viewport center
+2. After creation, tool switches to Select
+3. Menu dismissed on outside click, item click, or Escape
+
+### Keyboard
+
+- `⌘/` or `Ctrl+/` — toggle insert menu open/close
+- Menu items show shortcut hints (R, O, T, F, A)
+
+---
+
 ## 5. Snap-to-Node Algorithm (R3.43) — ⌥ Alt Required
 
 When a shape is dropped near an existing node **while holding ⌥ Alt**, it snaps to an adjacent position with an auto-created edge.
