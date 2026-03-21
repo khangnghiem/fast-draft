@@ -65,6 +65,7 @@ struct MermaidSubgraph {
     id: String,
     label: String,
     node_ids: Vec<String>,
+    node_ids_set: std::collections::HashSet<String>,
 }
 
 /// Parse a Mermaid diagram string into an FD `SceneGraph`.
@@ -138,6 +139,7 @@ fn parse_flowchart(input: &str) -> Result<SceneGraph, String> {
                 id: sg_id,
                 label: sg_label,
                 node_ids: Vec::new(),
+                node_ids_set: std::collections::HashSet::new(),
             });
             continue;
         }
@@ -182,10 +184,12 @@ fn parse_flowchart(input: &str) -> Result<SceneGraph, String> {
             // Track nodes in current subgraph
             if let Some(ref mut sg) = current_subgraph {
                 for pe in &parsed_edges {
-                    if !sg.node_ids.contains(&pe.from) {
+                    if !sg.node_ids_set.contains(&pe.from) {
+                        sg.node_ids_set.insert(pe.from.clone());
                         sg.node_ids.push(pe.from.clone());
                     }
-                    if !sg.node_ids.contains(&pe.to) {
+                    if !sg.node_ids_set.contains(&pe.to) {
+                        sg.node_ids_set.insert(pe.to.clone());
                         sg.node_ids.push(pe.to.clone());
                     }
                 }
@@ -198,8 +202,9 @@ fn parse_flowchart(input: &str) -> Result<SceneGraph, String> {
         // Try to parse as standalone node definition
         if let Some(node) = try_parse_node_def(trimmed) {
             if let Some(ref mut sg) = current_subgraph
-                && !sg.node_ids.contains(&node.id)
+                && !sg.node_ids_set.contains(&node.id)
             {
+                sg.node_ids_set.insert(node.id.clone());
                 sg.node_ids.push(node.id.clone());
             }
             nodes.insert(node.id.clone(), node);
@@ -575,17 +580,21 @@ fn build_scene_graph(
 
     // Sort nodes by first occurrence in edges for consistent ordering
     let mut ordered_ids: Vec<String> = Vec::new();
+    let mut ordered_ids_set: std::collections::HashSet<String> = std::collections::HashSet::new();
     for edge in edges {
-        if !ordered_ids.contains(&edge.from) {
+        if !ordered_ids_set.contains(&edge.from) {
+            ordered_ids_set.insert(edge.from.clone());
             ordered_ids.push(edge.from.clone());
         }
-        if !ordered_ids.contains(&edge.to) {
+        if !ordered_ids_set.contains(&edge.to) {
+            ordered_ids_set.insert(edge.to.clone());
             ordered_ids.push(edge.to.clone());
         }
     }
     // Add any nodes not referenced in edges
     for id in nodes.keys() {
-        if !ordered_ids.contains(id) {
+        if !ordered_ids_set.contains(id) {
+            ordered_ids_set.insert(id.clone());
             ordered_ids.push(id.clone());
         }
     }
