@@ -3909,5 +3909,5 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 /* Sidebar toggles now ALWAYS live in panel headers (.lp-tab-toggle / .rp-tab-toggle).
  * Canvas chrome toggles (#sidebar-toggle-btn, #hamburger-toggle-btn) are hidden
  * when the corresponding panel is open (icons would be redundant). */
-[data-lp="open"] #sidebar-toggle-btn { opacity: 0; pointer-events: none; }
-[data-rp="open"] #hamburger-toggle-btn { opacity: 0; pointer-events: none; }
+[data-lp="open"] #sidebar-toggle-btn { display: none; }
+[data-rp="open"] #hamburger-toggle-btn { display: none; }
