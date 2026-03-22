@@ -17,6 +17,18 @@
 
 ## Completed Requirements
 
+### v0.11.237 — Toolbar Drag-Snap Fixes (R3.39)
+
+**Orientation Preserved During Drag** — dragging a vertical toolbar grip no longer flips it to horizontal mid-drag. Fix: `getComputedStyle(toolbar).flexDirection` captured before removing docked classes, explicitly set on `toolbar.style` during drag.
+
+**Canvas-Aware Snap Bounds** — `getSnapSide()` now uses `#fd-canvas.getBoundingClientRect()` instead of `window.innerWidth/Height`. Toolbar snaps within the visible canvas area only, never behind open left/right panels.
+
+**Free-Position Snap** — toolbar can snap anywhere along an edge (not just centered). Drop coordinates are clamped within canvas bounds so the toolbar never overflows. Position (side + coordinates) persisted in localStorage as `{side, x, y}` (auto-migrates old string format).
+
+**Re-clamp on Resize/Panel Toggle** — `reclampToolbar()` fires on `window.resize` and after minimize toggle, keeping toolbar within canvas bounds when panels open/close or window resizes.
+
+Files: `site/app.js`, `site/style.css`
+
 ### v0.11.236 — Chrome Redesign + DTC Fixes (R3.42c, R6.19, R6.20, R6.21)
 
 **DTC Bug Fixes** — ellipse size reduced from 100×100 to 80×80 (visual parity with rect), all shapes now default to transparent fill + theme-aware stroke (#333 light / #CCC dark) instead of blue fill, frame defaults to white fill. Arrow removed from drag-to-create (kept in insert menu only — arrows need two anchor points, not a bbox drop).

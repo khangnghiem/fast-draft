@@ -1439,29 +1439,15 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   touch-action: none;
   transition: top 0.25s ease, bottom 0.25s ease, left 0.25s ease, right 0.25s ease, transform 0.25s ease, flex-direction 0.2s ease;
 }
-/* ── Snap positions ── */
-.toolbar-docked-top {
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  flex-direction: row;
-}
+/* ── Snap positions (flex-direction only — JS handles coordinates) ── */
+.toolbar-docked-top,
 .toolbar-docked-bottom {
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed;
   flex-direction: row;
 }
-.toolbar-docked-left {
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  flex-direction: column;
-}
+.toolbar-docked-left,
 .toolbar-docked-right {
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
+  position: fixed;
   flex-direction: column;
 }
 /* Free-floating (during drag) */
