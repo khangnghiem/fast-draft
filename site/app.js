@@ -295,6 +295,63 @@ let isTwoFingerGesture = false;
 let twoFingerTimer = null; // Smart disambiguation: 50ms delay
 let twoFingerPending = false;
 
+// Lasso select state — draws freeform path, selects enclosed nodes
+let lassoPoints = [];    // Array of {x, y} scene-space points
+let lassoActive = false; // Currently drawing lasso
+
+// Eraser marquee state — draws rectangle, deletes enclosed nodes
+let eraserMarquee = null; // {startX, startY, endX, endY} scene-space
+let eraserActive = false; // Currently drawing eraser marquee
+
+/** Test if a point {x,y} is inside a polygon defined by pts [{x,y},...] (ray-casting) */
+function pointInPolygon(px, py, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const xi = pts[i].x, yi = pts[i].y;
+    const xj = pts[j].x, yj = pts[j].y;
+    if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+/** Test if a rect {x,y,width,height} is fully inside a polygon */
+function rectInsidePolygon(b, pts) {
+  return pointInPolygon(b.x, b.y, pts) &&
+         pointInPolygon(b.x + b.width, b.y, pts) &&
+         pointInPolygon(b.x, b.y + b.height, pts) &&
+         pointInPolygon(b.x + b.width, b.y + b.height, pts);
+}
+
+/** Test if a rect is fully inside another rect */
+function rectInsideRect(inner, outer) {
+  const ox1 = Math.min(outer.startX, outer.endX);
+  const oy1 = Math.min(outer.startY, outer.endY);
+  const ox2 = Math.max(outer.startX, outer.endX);
+  const oy2 = Math.max(outer.startY, outer.endY);
+  return inner.x >= ox1 && inner.y >= oy1 &&
+         (inner.x + inner.width) <= ox2 && (inner.y + inner.height) <= oy2;
+}
+
+/** Get all node IDs and bounds from the scene graph */
+function getAllNodeBounds() {
+  if (!fdCanvas) return [];
+  const text = fdCanvas.get_text();
+  const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
+  const nodes = [];
+  let m;
+  while ((m = idRegex.exec(text)) !== null) {
+    try {
+      const bj = fdCanvas.get_node_bounds(m[1]);
+      if (!bj) continue;
+      const b = JSON.parse(bj);
+      if (b.width > 0 && b.height > 0) nodes.push({ id: m[1], ...b });
+    } catch (_) {}
+  }
+  return nodes;
+}
+
 /** Get current layers panel width (dynamic for resize). */
 function getLayersPanelWidth() {
   const panel = document.getElementById('layers-panel');
@@ -444,6 +501,44 @@ function renderCanvas() {
       } catch (_) { /* node may not exist */ }
     }
     ctx.restore();
+  }
+
+  // ── Lasso path visual ──
+  if (lassoActive && lassoPoints.length > 1) {
+    ctx.save();
+    ctx.setLineDash([6 / zoomLevel, 4 / zoomLevel]);
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.7)';
+    ctx.fillStyle = 'rgba(59, 130, 246, 0.06)';
+    ctx.lineWidth = 1.5 / zoomLevel;
+    ctx.beginPath();
+    ctx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
+    for (let i = 1; i < lassoPoints.length; i++) {
+      ctx.lineTo(lassoPoints[i].x, lassoPoints[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+    renderDirty = true; // keep animating while lasso is active
+  }
+
+  // ── Eraser marquee visual ──
+  if (eraserActive && eraserMarquee) {
+    ctx.save();
+    const ex = Math.min(eraserMarquee.startX, eraserMarquee.endX);
+    const ey = Math.min(eraserMarquee.startY, eraserMarquee.endY);
+    const ew = Math.abs(eraserMarquee.endX - eraserMarquee.startX);
+    const eh = Math.abs(eraserMarquee.endY - eraserMarquee.startY);
+    ctx.setLineDash([6 / zoomLevel, 4 / zoomLevel]);
+    ctx.strokeStyle = 'rgba(255, 59, 48, 0.7)';
+    ctx.fillStyle = 'rgba(255, 59, 48, 0.06)';
+    ctx.lineWidth = 1.5 / zoomLevel;
+    ctx.fillRect(ex, ey, ew, eh);
+    ctx.strokeRect(ex, ey, ew, eh);
+    ctx.setLineDash([]);
+    ctx.restore();
+    renderDirty = true; // keep animating while eraser is active
   }
 }
 
@@ -3192,42 +3287,37 @@ async function aiTouch() {
 
   const btn = document.getElementById('ai-touch-btn');
   const statusEl = document.getElementById('canvas-status');
+  const hasSelection = selectedIds.length > 0;
 
-  // No selection → full-doc review (fallback)
-  if (selectedIds.length === 0) {
-    return runFullDocReview(btn, statusEl);
-  }
-
-  // ── Two-phase pipeline: Refine → Scoped Review ──
   btn?.classList.add('loading');
-  if (statusEl) statusEl.textContent = `✦ Phase 1: Refining ${selectedIds.length} element${selectedIds.length > 1 ? 's' : ''}…`;
-
-  const panel = document.getElementById('ai-review-panel');
-  const body = document.getElementById('ai-review-body');
-  const scoreBadge = document.getElementById('ai-review-score');
+  if (statusEl) statusEl.textContent = hasSelection
+    ? `✦ Refining ${selectedIds.length} element${selectedIds.length > 1 ? 's' : ''}…`
+    : '✦ Refining entire design…';
 
   try {
     const fdText = fdCanvas.get_text();
 
-    // ── Phase 1: Refine (1 credit) ──
-    const prompt = buildRefinePrompt(fdText, selectedIds);
+    // Build prompt — either scoped or full-doc
+    const prompt = hasSelection
+      ? buildRefinePrompt(fdText, selectedIds)
+      : `Improve this FD design — enhance layout, alignment, colors, spacing, and visual hierarchy. Return the COMPLETE improved FD code:\n\n${fdText}`;
     const modelHint = getAiModelHint();
     const userFocus = localStorage.getItem('fd-ai-prompt') || undefined;
-    const refineResp = await fetch('/api/ai', {
+    const resp = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, mode: 'refine', model_hint: modelHint, user_focus: userFocus }),
     });
 
-    if (refineResp.status === 429) {
-      const data = await refineResp.json();
+    if (resp.status === 429) {
+      const data = await resp.json();
       showToast(`Rate limit reached — ${data.limit}/day free. Try again tomorrow.`);
       return;
     }
-    if (!refineResp.ok) throw new Error(`Refine API error: ${refineResp.status}`);
-    const refineData = await refineResp.json();
+    if (!resp.ok) throw new Error(`AI API error: ${resp.status}`);
+    const data = await resp.json();
 
-    let refined = refineData.result || '';
+    let refined = data.result || '';
     refined = refined.replace(/^```(?:fd|text)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
 
     if (!refined) {
@@ -3235,12 +3325,12 @@ async function aiTouch() {
       return;
     }
 
-    // Show inline diff for review instead of immediate apply
+    // Show inline diff for user review (Apply/Reject toolbar)
     initCodeMirrorEffects();
-    const diffShown = showAiTouchDiff(fdText, refined, selectedIds);
+    const diffShown = showAiTouchDiff(fdText, refined, hasSelection ? selectedIds : null);
     if (!diffShown) {
       // Fallback: apply directly if diff UI fails
-      const result = spliceModifiedBlocks(fdText, refined, selectedIds);
+      const result = hasSelection ? spliceModifiedBlocks(fdText, refined, selectedIds) : refined;
       if (editorView) {
         const cur = editorView.state.doc.toString();
         editorView.dispatch({ changes: { from: 0, to: cur.length, insert: result } });
@@ -3249,148 +3339,18 @@ async function aiTouch() {
       renderCanvas();
     }
 
-    // ── Phase 2: Scoped Review (1 credit) ──
-    if (statusEl) statusEl.textContent = '✦ Phase 2: Analyzing improvements…';
-
-    // Show panel with loading state
-    if (body) body.innerHTML = '<p class="ai-review-loading">Scoring improvements…</p>';
-    if (scoreBadge) { scoreBadge.textContent = ''; scoreBadge.className = 'ai-review-score-badge'; }
-    panel?.classList.remove('hidden');
-
-    // Get the refined blocks for scoped review
-    let scopedFdText;
-    try {
-      scopedFdText = fdCanvas.emit_selection_fd?.();
-    } catch (_) {}
-    if (!scopedFdText) {
-      scopedFdText = extractBlocksForIds(result, selectedIds);
-    }
-
-    const reviewResp = await fetch('/api/ai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: `Review these FD nodes:\n\n${scopedFdText}`, mode: 'review', model_hint: getAiModelHint(), user_focus: localStorage.getItem('fd-ai-prompt') || undefined }),
-    });
-
-    if (reviewResp.status === 429) {
-      if (body) body.innerHTML = '<p class="ai-review-error">Review skipped — rate limit reached. Your design was refined!</p>';
-      showToast(`✦ AI Touch — ${selectedIds.length} element${selectedIds.length > 1 ? 's' : ''} refined (review skipped)`);
-      return;
-    }
-    if (!reviewResp.ok) throw new Error(`Review API error: ${reviewResp.status}`);
-    const reviewData = await reviewResp.json();
-
-    renderReviewPanel(reviewData, body, scoreBadge);
-
-    const remaining = reviewData.remaining ?? refineData.remaining;
-    let msg = `✦ AI Touch — Score: ${reviewData.score}/100`;
+    const remaining = data.remaining;
+    let msg = '✦ AI Touch — diff ready for review';
     if (remaining != null && remaining <= 2) msg += ` (${remaining} calls left)`;
     showToast(msg);
 
   } catch (err) {
     console.warn('AI Touch error:', err);
     showToast('AI unavailable — check /api/ai endpoint');
-    if (body) body.innerHTML = '<p class="ai-review-error">Review unavailable</p>';
   } finally {
     btn?.classList.remove('loading');
     if (statusEl) statusEl.textContent = 'Ready';
   }
-}
-
-/** Full-doc review (1 credit) — via settings menu or no-selection AI Touch */
-async function runFullDocReview(btn, statusEl) {
-  btn?.classList.add('loading');
-  if (statusEl) statusEl.textContent = 'Full design review…';
-
-  const panel = document.getElementById('ai-review-panel');
-  const body = document.getElementById('ai-review-body');
-  const scoreBadge = document.getElementById('ai-review-score');
-
-  if (body) body.innerHTML = '<p class="ai-review-loading">Analyzing entire design… (1 credit)</p>';
-  if (scoreBadge) { scoreBadge.textContent = ''; scoreBadge.className = 'ai-review-score-badge'; }
-  panel?.classList.remove('hidden');
-
-  try {
-    const fdText = fdCanvas.get_text();
-    const resp = await fetch('/api/ai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: `Review this FD document:\n\n${fdText}`, mode: 'review', model_hint: getAiModelHint(), user_focus: localStorage.getItem('fd-ai-prompt') || undefined }),
-    });
-
-    if (resp.status === 429) {
-      const data = await resp.json();
-      if (body) body.innerHTML = `<p class="ai-review-error">Rate limit reached. ${data.remaining || 0}/${data.limit || 20} remaining.</p>`;
-      return;
-    }
-    if (!resp.ok) throw new Error(`Review API error: ${resp.status}`);
-    const data = await resp.json();
-
-    renderReviewPanel(data, body, scoreBadge);
-    showToast(`✦ Design Review — Score: ${data.score}/100`);
-  } catch (err) {
-    console.warn('Full doc review error:', err);
-    if (body) body.innerHTML = '<p class="ai-review-error">Review unavailable</p>';
-  } finally {
-    btn?.classList.remove('loading');
-    if (statusEl) statusEl.textContent = 'Ready';
-  }
-}
-
-/** Render flat review findings into the panel (no category grouping). */
-function renderReviewPanel(data, bodyEl, scoreBadgeEl) {
-  if (!bodyEl) return;
-
-  // Log raw categorized response for debugging
-  console.debug('[AI Touch] Raw review:', data);
-
-  if (scoreBadgeEl) {
-    scoreBadgeEl.textContent = `${data.score}/100`;
-    scoreBadgeEl.className = 'ai-review-score-badge';
-    if (data.score >= 80) scoreBadgeEl.classList.add('score-high');
-    else if (data.score >= 50) scoreBadgeEl.classList.add('score-mid');
-    else scoreBadgeEl.classList.add('score-low');
-  }
-
-  // Flatten all findings from all categories into one list
-  const allFindings = [];
-  for (const cat of (data.categories || [])) {
-    for (const f of (cat.findings || [])) {
-      allFindings.push(f);
-    }
-  }
-
-  const severityIcon = { error: '❌', warning: '⚠️', info: 'ℹ️' };
-  let html = '';
-
-  if (allFindings.length > 0) {
-    html += '<ul class="ai-review-findings">';
-    for (const f of allFindings) {
-      const icon = severityIcon[f.severity] || 'ℹ️';
-      html += `<li class="ai-review-finding">
-        <span class="ai-review-severity">${icon}</span>
-        <div class="ai-review-finding-text">
-          ${escapeHtml(f.message)}
-          ${f.suggestion ? `<div class="ai-review-suggestion">💡 ${escapeHtml(f.suggestion)}</div>` : ''}
-        </div>
-      </li>`;
-    }
-    html += '</ul>';
-  } else {
-    html += '<p class="ai-review-perfect">✅ No issues found</p>';
-  }
-
-  // Model badge footer
-  const modelName = data.model ? data.model.split('/').pop() : '';
-  if (modelName) {
-    html += `<div class="ai-review-footer">Model: ${escapeHtml(modelName)}</div>`;
-  }
-
-  if (!data.categories || data.categories.length === 0) {
-    html = '<p class="ai-review-error">No review data returned</p>';
-  }
-
-  bodyEl.innerHTML = html;
 }
 
 /** Escape HTML for safe rendering. */
@@ -5195,14 +5155,6 @@ async function initPlayground() {
 
     // ── Toolbar buttons ──────────────────────────────────────────────
     document.getElementById('ai-touch-btn')?.addEventListener('click', aiTouch);
-    document.getElementById('ai-review-close')?.addEventListener('click', () => {
-      document.getElementById('ai-review-panel')?.classList.add('hidden');
-    });
-    document.getElementById('sm-design-review')?.addEventListener('click', () => {
-      const btn = document.getElementById('ai-touch-btn');
-      const statusEl = document.getElementById('canvas-status');
-      runFullDocReview(btn, statusEl);
-    });
     document.getElementById('renamify-btn')?.addEventListener('click', renamify);
 
     // ── AI Chat panel ────────────────────────────────────────────────
@@ -5499,6 +5451,26 @@ async function initPlayground() {
         document.getElementById('floating-action-bar')?.classList.remove('visible');
       }
 
+      // ── JS-only Lasso select ──
+      const currentTool = fdCanvas.get_tool_name();
+      if (currentTool === 'lasso') {
+        lassoPoints = [{ x, y }];
+        lassoActive = true;
+        activePointerId = e.pointerId;
+        canvas.style.cursor = 'crosshair';
+        renderDirty = true;
+        return;
+      }
+      // ── JS-only Eraser marquee ──
+      if (currentTool === 'eraser') {
+        eraserMarquee = { startX: x, startY: y, endX: x, endY: y };
+        eraserActive = true;
+        activePointerId = e.pointerId;
+        canvas.style.cursor = 'crosshair';
+        renderDirty = true;
+        return;
+      }
+
       const changed = fdCanvas.handle_pointer_down(
         x, y, e.pressure || 1.0,
         e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
@@ -5565,6 +5537,28 @@ async function initPlayground() {
         panX = e.clientX - panStartX;
         panY = e.clientY - panStartY;
         renderDirty = true; uiDirty = true;
+        return;
+      }
+
+      // ── Lasso pointermove — add points to path ──
+      if (lassoActive && activePointerId !== -1) {
+        const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
+        // Subsample: only add if moved >3px from last point
+        const last = lassoPoints[lassoPoints.length - 1];
+        const dist = Math.hypot(x - last.x, y - last.y);
+        if (dist > 3 / zoomLevel) {
+          lassoPoints.push({ x, y });
+          renderDirty = true;
+        }
+        return;
+      }
+
+      // ── Eraser marquee pointermove — update rectangle ──
+      if (eraserActive && activePointerId !== -1) {
+        const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
+        eraserMarquee.endX = x;
+        eraserMarquee.endY = y;
+        renderDirty = true;
         return;
       }
 
@@ -5707,6 +5701,80 @@ async function initPlayground() {
       if (activePointerId === -1) return;
       if (e.pointerId !== activePointerId) return;
       activePointerId = -1;
+
+      // ── Lasso pointerup — select enclosed nodes ──
+      if (lassoActive) {
+        lassoActive = false;
+        if (lassoPoints.length > 4) {
+          const allNodes = getAllNodeBounds();
+          const selectedIds = [];
+          for (const node of allNodes) {
+            if (rectInsidePolygon(node, lassoPoints)) {
+              selectedIds.push(node.id);
+            }
+          }
+          if (selectedIds.length > 0 && fdCanvas.select_multiple_by_ids) {
+            fdCanvas.select_multiple_by_ids(JSON.stringify(selectedIds));
+            showToast(`Selected ${selectedIds.length} node${selectedIds.length > 1 ? 's' : ''}`);
+          } else if (selectedIds.length === 1) {
+            fdCanvas.select_by_id(selectedIds[0]);
+            showToast('Selected 1 node');
+          } else {
+            showToast('No nodes enclosed');
+          }
+          renderDirty = true; uiDirty = true;
+          renderCanvas();
+          refreshLayersPanel();
+        }
+        lassoPoints = [];
+        // Switch to select tool after lasso
+        fdCanvas.set_tool('select');
+        updateToolbar('select');
+        canvas.style.cursor = '';
+        return;
+      }
+
+      // ── Eraser marquee pointerup — delete enclosed nodes ──
+      if (eraserActive) {
+        eraserActive = false;
+        if (eraserMarquee) {
+          const allNodes = getAllNodeBounds();
+          const enclosedIds = [];
+          for (const node of allNodes) {
+            if (rectInsideRect(node, eraserMarquee)) {
+              enclosedIds.push(node.id);
+            }
+          }
+          if (enclosedIds.length > 0 && editorView) {
+            const textBefore = fdCanvas.get_text();
+            // Remove each enclosed node's FD block from the text
+            let text = textBefore;
+            for (const id of enclosedIds) {
+              // Match the full block: type @id ... { ... }
+              const blockRegex = new RegExp(`\\n?(?:rect|ellipse|text|frame|group|edge|path|image)\\s+@${id}\\s+(?:"[^"]*"\\s*)?\\{[^}]*\\}\\s*`, 'g');
+              text = text.replace(blockRegex, '\n');
+            }
+            text = text.replace(/\n{3,}/g, '\n\n').trim() + '\n';
+            editorView.dispatch({
+              changes: { from: 0, to: editorView.state.doc.length, insert: text },
+            });
+            suppressSync = true;
+            fdCanvas.set_text(text);
+            suppressSync = false;
+            if (textBefore !== text) {
+              fdCanvas.push_undo_snapshot(textBefore, text);
+            }
+            showToast(`Erased ${enclosedIds.length} node${enclosedIds.length > 1 ? 's' : ''}`);
+            renderDirty = true; uiDirty = true;
+            renderCanvas();
+            refreshLayersPanel();
+          } else {
+            showToast('No nodes in eraser area');
+          }
+        }
+        eraserMarquee = null;
+        return;
+      }
 
       // End pan drag
       // Clear touch halo on pointer up
@@ -5992,8 +6060,9 @@ async function initPlayground() {
       const [w, h] = DTC_SIZES[type] || [100, 80];
       const x = Math.round(sceneX);
       const y = Math.round(sceneY);
-      const isDark = document.body.classList.contains('dark-theme');
-      const defaultStroke = isDark ? '#CCCCCC' : '#333333';
+      const isDarkNow = document.body.classList.contains('dark-theme');
+      const defaultStroke = isDarkNow ? '#CCCCCC' : '#333333';
+      const defaultFill = isDarkNow ? '#2C2C2E' : '#F0F0F0';
       let fdBlock;
       if (type === 'text') {
         fdBlock = `\ntext @${id} "Text" {\n  x: ${x} y: ${y}\n  w: ${w} h: ${h}\n}\n`;
@@ -6003,21 +6072,27 @@ async function initPlayground() {
         fdBlock = `\nframe @${id} {\n  x: ${x} y: ${y}\n  w: ${w} h: ${h}\n  fill: #FFFFFF\n  stroke: ${defaultStroke} 1\n  corner: 8\n}\n`;
       } else {
         const corner = type === 'rect' ? `\n  corner: ${smartDefaults.cornerRadius || 8}` : '';
-        fdBlock = `\n${type} @${id} {\n  x: ${x} y: ${y}\n  w: ${w} h: ${h}\n  fill: transparent\n  stroke: ${defaultStroke} 1.5${corner}\n}\n`;
+        fdBlock = `\n${type} @${id} {\n  x: ${x} y: ${y}\n  w: ${w} h: ${h}\n  fill: ${defaultFill}\n  stroke: ${defaultStroke} 1.5${corner}\n}\n`;
       }
       const currentText = editorView.state.doc.toString();
+      const newText = currentText + fdBlock;
       editorView.dispatch({
         changes: { from: currentText.length, to: currentText.length, insert: fdBlock },
       });
-      showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} created`);
-      // Switch to select tool after creation
+      // Force immediate sync to canvas so shapes appear right away
       if (fdCanvas) {
+        suppressSync = true;
+        fdCanvas.set_text(newText);
+        suppressSync = false;
         fdCanvas.set_tool('select');
         updateToolbar('select');
         canvas.style.cursor = '';
       }
+      showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} created`);
       renderDirty = true;
       uiDirty = true;
+      renderCanvas();
+      refreshLayersPanel();
     }
 
     /** Insert a shape at the center of the visible viewport */
@@ -6151,12 +6226,32 @@ async function initPlayground() {
         if (isOpen) {
           insertMenu.classList.remove('visible');
         } else {
-          // Position menu below the button
+          // Position menu relative to button, adapting to toolbar edge
           const btnRect = insertBtn.getBoundingClientRect();
           const toolbarEl = document.getElementById('floating-toolbar');
           const toolbarRect = toolbarEl ? toolbarEl.getBoundingClientRect() : btnRect;
-          insertMenu.style.left = (btnRect.left - toolbarRect.left) + 'px';
-          insertMenu.style.top = (btnRect.bottom - toolbarRect.top + 4) + 'px';
+          // Reset positioning
+          insertMenu.style.left = '';
+          insertMenu.style.right = '';
+          insertMenu.style.top = '';
+          insertMenu.style.bottom = '';
+          if (toolbarEl?.classList.contains('toolbar-docked-bottom')) {
+            // Open above when toolbar at bottom
+            insertMenu.style.left = (btnRect.left - toolbarRect.left) + 'px';
+            insertMenu.style.bottom = (toolbarRect.bottom - btnRect.top + 4) + 'px';
+          } else if (toolbarEl?.classList.contains('toolbar-docked-left')) {
+            // Open to the right when toolbar at left
+            insertMenu.style.left = (toolbarRect.right - toolbarRect.left + 4) + 'px';
+            insertMenu.style.top = (btnRect.top - toolbarRect.top) + 'px';
+          } else if (toolbarEl?.classList.contains('toolbar-docked-right')) {
+            // Open to the left when toolbar at right
+            insertMenu.style.right = (toolbarRect.right - toolbarRect.left + 4) + 'px';
+            insertMenu.style.top = (btnRect.top - toolbarRect.top) + 'px';
+          } else {
+            // Default: open below (toolbar at top or floating)
+            insertMenu.style.left = (btnRect.left - toolbarRect.left) + 'px';
+            insertMenu.style.top = (btnRect.bottom - toolbarRect.top + 4) + 'px';
+          }
           insertMenu.classList.add('visible');
         }
       });
@@ -6195,6 +6290,7 @@ async function initPlayground() {
       const pointerHistory = [];
       const SNAP_THRESHOLD = 60;
       const SNAP_GAP = 10;
+      const GRIP_DRAG_THRESHOLD = 5; // minimum px before grip counts as drag
 
       /** Get the visible canvas bounding rect (accounts for open panels) */
       function getCanvasRect() {
@@ -6339,6 +6435,18 @@ async function initPlayground() {
         if (!isDragging) return;
         isDragging = false;
         showSnapIndicator(null);
+
+        // If grip was only clicked (not dragged), restore original position without re-snapping
+        const totalDx = e.clientX - dragStartX;
+        const totalDy = e.clientY - dragStartY;
+        const totalDist = Math.sqrt(totalDx * totalDx + totalDy * totalDy);
+        if (totalDist < GRIP_DRAG_THRESHOLD) {
+          // Click only — restore from saved state, no jump
+          toolbar.classList.remove('toolbar-dragging');
+          const saved = parseToolbarPos();
+          applySnapPosition(saved.side, saved.x, saved.y);
+          return;
+        }
 
         // Check velocity for throw
         let side = getSnapSide(e.clientX, e.clientY);
@@ -6877,10 +6985,7 @@ async function initPlayground() {
             fileInput.click();
             return;
           }
-          case 'design-review': {
-            settingsMenu?.classList.remove('visible');
-            break;
-          }
+
         }
         updateSettingsToggles();
         renderCanvas();
