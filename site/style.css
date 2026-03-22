@@ -283,12 +283,12 @@ html, body {
   gap: 4px;
 }
 .canvas-chrome-left {
-  top: 10px;
-  left: calc(var(--left-panel-width, 320px) + 10px);
+  top: 8px;
+  left: calc(var(--left-panel-width, 320px) + 8px);
 }
 .canvas-chrome-right {
-  top: 10px;
-  right: calc(var(--right-panel-width, 320px) + 10px);
+  top: 8px;
+  right: calc(var(--right-panel-width, 320px) + 8px);
   z-index: 26; /* above panels (z-index: 25) so settings gear is always visible */
 }
 .canvas-chrome-btn {
@@ -1457,6 +1457,13 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   right: calc(var(--right-panel-width, 320px) + 10px);
   top: 50%; transform: translateY(-50%);
 }
+/* Swap separator dimensions for vertical toolbar */
+[data-toolbar="left"] #floating-toolbar .ft-sep,
+[data-toolbar="right"] #floating-toolbar .ft-sep {
+  width: 20px;
+  height: 1px;
+  margin: 2px 0;
+}
 /* Free-floating (during drag) */
 #floating-toolbar.toolbar-dragging {
   transition: none !important;
@@ -1490,32 +1497,18 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 #floating-toolbar.toolbar-minimized .ft-redo { display: none; }
 /* Show one separator between active tool and AI */
 #floating-toolbar.toolbar-minimized .ft-tool-btn.active + .ft-sep { display: block; }
-/* ── Snap indicator (shown during drag near edge) ── */
+/* ── Snap indicator: ghost toolbar silhouette at destination ── */
 .toolbar-snap-indicator {
   position: fixed;
   z-index: 9998;
-  background: var(--fd-accent);
-  opacity: 0.3;
-  border-radius: 2px;
   pointer-events: none;
-  transition: opacity 0.15s;
+  border-radius: 12px;
+  background: var(--fd-surface);
+  border: 1px solid var(--fd-border);
+  box-shadow: var(--fd-shadow-lg);
+  opacity: 0.45;
+  transition: opacity 0.15s, top 0.1s ease, left 0.1s ease, right 0.1s ease, bottom 0.1s ease;
 }
-.toolbar-snap-indicator.snap-top,
-.toolbar-snap-indicator.snap-bottom {
-  left: 20%;
-  right: 20%;
-  height: 3px;
-}
-.toolbar-snap-indicator.snap-top { top: 0; }
-.toolbar-snap-indicator.snap-bottom { bottom: 0; }
-.toolbar-snap-indicator.snap-left,
-.toolbar-snap-indicator.snap-right {
-  top: 20%;
-  bottom: 20%;
-  width: 3px;
-}
-.toolbar-snap-indicator.snap-left { left: 0; }
-.toolbar-snap-indicator.snap-right { right: 0; }
 /* ── AI Touch button in toolbar ── */
 .ft-ai-touch {
   font-size: 12px;
@@ -1611,13 +1604,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 }
 
 /* ─── Toolbar Theme Toggle + Separator ─── */
-.ft-sep {
-  width: 1px;
-  height: 20px;
-  background: var(--fd-border);
-  margin: 0 2px;
-  flex-shrink: 0;
-}
+/* (ft-sep moved to toolbar section above — deduplicated) */
 .ft-theme-icon {
   font-size: 16px;
   line-height: 1;
@@ -2122,7 +2109,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 /* ─── Minimap (Google Maps pill) ─── */
 #minimap-container {
   position: absolute;
-  right: calc(var(--right-panel-actual-width, 0px) + 12px);
+  right: 12px;
   bottom: 12px;
   width: min(150px, 18vw);
   height: min(100px, 12vw);
@@ -2305,7 +2292,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   align-items: center;
   justify-content: center;
   gap: 20px;
-  background: var(--bg-card);
+  background: var(--fd-bg, #F5F5F7);
   transition: opacity 0.4s ease;
   z-index: 10;
 }
