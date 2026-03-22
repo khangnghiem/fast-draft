@@ -1414,7 +1414,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 /* ─── Floating Toolbar (frosted glass pill) ─── */
 #floating-toolbar {
   position: fixed; /* always fixed — never participates in grid */
-  z-index: 25;
+  z-index: 30; /* above panels (z-index 25) */
   display: flex;
   align-items: center;
   gap: 2px;
@@ -3888,7 +3888,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   cursor: pointer;
   color: var(--fd-text-secondary);
   border-radius: 4px;
-  display: none; /* hidden by default — shown when panel is open */
+  display: flex; /* always visible — sidebar toggles live ONLY in panel headers */
   align-items: center;
   justify-content: center;
   transition: background 0.1s, color 0.1s;
@@ -3908,9 +3908,8 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 }
 
 /* ─── Adaptive Chrome Toggle Visibility ─── */
-/* When left panel is open: hide chrome toggle, show panel header toggle */
-.lp-open #sidebar-toggle-btn { opacity: 0; pointer-events: none; }
-.lp-open .lp-tab-toggle { display: flex; }
-/* When right panel is open: hide chrome toggle, show panel header toggle */
-.rp-open #hamburger-toggle-btn { opacity: 0; pointer-events: none; }
-.rp-open .rp-tab-toggle { display: flex; }
+/* Sidebar toggles now ALWAYS live in panel headers (.lp-tab-toggle / .rp-tab-toggle).
+ * Canvas chrome toggles (#sidebar-toggle-btn, #hamburger-toggle-btn) are hidden
+ * when the corresponding panel is open (icons would be redundant). */
+[data-lp="open"] #sidebar-toggle-btn { opacity: 0; pointer-events: none; }
+[data-rp="open"] #hamburger-toggle-btn { opacity: 0; pointer-events: none; }

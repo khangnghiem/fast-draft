@@ -37,6 +37,7 @@ Engineering lessons discovered through building FD.
   wasm, modulepreload, import, cache, chrome → L447-459 (WASM Modulepreload Cache Mismatch)
   wasm-opt, blank, canvas2d, dead-code, optimization → (wasm-opt -O2 Strips Canvas2D Draw Calls)
   import, cache-bust, immutable, module, stale → (Local ES Module Imports Need Cache-Busting Too)
+  sidebar, toggle, chrome, adaptive, refactor → (Sidebar Toggle DOM Duplication Regression)
 -->
 
 
@@ -463,3 +464,16 @@ Browser subagents inherit the full parent conversation context. When context exc
 **Fix**: Added `?v=0.11.5` to all local import paths in `playground.js` so CI's `sed` finds and replaces them with the commit SHA on each deploy.
 
 **Rule**: **When using immutable cache headers (`max-age=31536000, immutable`), every local `import` path MUST include a `?v=` cache-busting parameter that CI can replace.** Bare import paths will serve stale cached versions forever. ES module import errors kill the entire module graph silently — no console errors, just a blank page.
+
+---
+
+## Editor: Sidebar Toggle DOM Duplication Regression
+
+**Date**: 2026-03-22
+**Context**: CSS Grid layout refactor moved panel positioning from `position: absolute` to CSS Grid columns. After the refactor, the sidebar toggle icons appeared floating on the canvas instead of staying in the panel headers.
+
+**Root cause**: The sidebar toggle icon existed in **two DOM locations**: (1) `#sidebar-toggle-btn` inside `#chrome-left` (canvas chrome, absolutely positioned on the canvas), and (2) `.lp-tab-toggle` inside the left panel header. An "adaptive" system hid the canvas chrome icon and showed the panel header icon when the panel was open, using CSS classes (`.lp-open`/`.rp-open`). During the refactor, these class-based selectors were replaced with `[data-lp]`/`[data-rp]` attribute selectors, but the original `.lp-open`/`.rp-open` rules were left in place as dead code. The data-attr selectors were added alongside (not replacing) the old rules. Additionally, the z-index of the toolbar (25) matched the panels (25), causing the toolbar to be hidden behind panels.
+
+**Fix**: (1) Remove the canvas chrome sidebar toggle icons entirely — sidebar toggles belong ONLY in panel headers. (2) Make `.lp-tab-toggle`/`.rp-tab-toggle` always visible (`display: flex`). (3) Bump toolbar z-index to 30. (4) When panel is collapsed (grid column = 0px), show a slim expand strip so the toggle remains accessible.
+
+**Lesson**: **Never maintain the same interactive control in two DOM locations with conditional visibility.** It creates a fragile adaptive system that breaks during refactors because agents must remember to update both the toggle logic AND all visibility CSS selectors. The correct pattern is ONE authoritative DOM location for each control. For sidebar toggles, that location is the panel header — not the canvas chrome.
