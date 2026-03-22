@@ -38,6 +38,7 @@ Engineering lessons discovered through building FD.
   wasm-opt, blank, canvas2d, dead-code, optimization → (wasm-opt -O2 Strips Canvas2D Draw Calls)
   import, cache-bust, immutable, module, stale → (Local ES Module Imports Need Cache-Busting Too)
   sidebar, toggle, chrome, adaptive, refactor → (Sidebar Toggle DOM Duplication Regression)
+  grid-column, absolute, containing-block, shorthand → (CSS Grid: Shorthand grid-column on Absolute Items)
 -->
 
 
@@ -477,3 +478,16 @@ Browser subagents inherit the full parent conversation context. When context exc
 **Fix**: (1) Remove the canvas chrome sidebar toggle icons entirely — sidebar toggles belong ONLY in panel headers. (2) Make `.lp-tab-toggle`/`.rp-tab-toggle` always visible (`display: flex`). (3) Bump toolbar z-index to 30. (4) When panel is collapsed (grid column = 0px), show a slim expand strip so the toggle remains accessible.
 
 **Lesson**: **Never maintain the same interactive control in two DOM locations with conditional visibility.** It creates a fragile adaptive system that breaks during refactors because agents must remember to update both the toggle logic AND all visibility CSS selectors. The correct pattern is ONE authoritative DOM location for each control. For sidebar toggles, that location is the panel header — not the canvas chrome.
+
+---
+
+## CSS Grid: Shorthand `grid-column` on Absolute Items Spans to End
+
+**Date**: 2026-03-23
+**Context**: Chrome icons (share, settings) positioned with `grid-column: 2; position: absolute; right: 8px` inside a 3-column CSS Grid. Expected them at 8px from the canvas column's right edge, but they appeared at 8px from the grid container's right edge — overlapping the right panel.
+
+**Root cause**: `grid-column: 2` is shorthand for `grid-column: 2 / auto`. For absolutely positioned grid items, `auto` resolves to the end of the implicit grid — NOT just the end of column 2. The containing block extends from column 2 to the grid container's right edge, so `right: 8px` positions relative to the entire remaining width.
+
+**Fix**: Use explicit end lines: `grid-column: 2 / 3; grid-row: 1 / 2`. This constrains the containing block to exactly the canvas grid area (column 2, row 1).
+
+**Rule**: **When using `position: absolute` on CSS Grid items, always use explicit grid range syntax (`start / end`).** Shorthand `grid-column: N` resolves to `N / auto`, which for absolute items means the containing block extends to the grid boundary. Use `grid-column: N / (N+1)` to constrain to a single column.
