@@ -27,19 +27,27 @@ impl PointerType {
 
     /// Hit radius for node selection (scene-space pixels).
     pub fn node_hit_radius(self) -> f32 {
+        const HIT_RADIUS_NODE_MOUSE: f32 = 0.0;
+        const HIT_RADIUS_NODE_TOUCH: f32 = 12.0;
+        const HIT_RADIUS_NODE_PEN: f32 = 4.0;
+
         match self {
-            Self::Mouse => 0.0,  // Use exact bounds
-            Self::Touch => 12.0, // Expanded for fat-finger
-            Self::Pen => 4.0,    // Slightly expanded for pencil tip
+            Self::Mouse => HIT_RADIUS_NODE_MOUSE, // Use exact bounds
+            Self::Touch => HIT_RADIUS_NODE_TOUCH, // Expanded for fat-finger
+            Self::Pen => HIT_RADIUS_NODE_PEN,     // Slightly expanded for pencil tip
         }
     }
 
     /// Hit radius for resize handle detection (scene-space pixels).
     pub fn handle_hit_radius(self) -> f32 {
+        const HIT_RADIUS_HANDLE_MOUSE: f32 = 12.0;
+        const HIT_RADIUS_HANDLE_TOUCH: f32 = 24.0;
+        const HIT_RADIUS_HANDLE_PEN: f32 = 14.0;
+
         match self {
-            Self::Mouse => 12.0,
-            Self::Touch => 24.0,
-            Self::Pen => 14.0,
+            Self::Mouse => HIT_RADIUS_HANDLE_MOUSE,
+            Self::Touch => HIT_RADIUS_HANDLE_TOUCH,
+            Self::Pen => HIT_RADIUS_HANDLE_PEN,
         }
     }
 

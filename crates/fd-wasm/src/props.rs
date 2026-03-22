@@ -795,7 +795,7 @@ impl FdCanvas {
 
     /// Compute alignment guides for a hypothetical rect at (x, y, w, h).
     pub fn compute_guides_for_rect(&self, x: f32, y: f32, w: f32, h: f32) -> String {
-        let snap_threshold = 5.0_f32;
+        const SNAP_THRESHOLD_PX: f32 = 5.0;
         let mut guides = Vec::new();
 
         let s_left = x;
@@ -831,7 +831,7 @@ impl FdCanvas {
                 (s_right, o_cx),
                 (s_right, o_right),
             ] {
-                if (sv - ov).abs() < snap_threshold {
+                if (sv - ov).abs() < SNAP_THRESHOLD_PX {
                     guides.push((ov as f64, 0.0, ov as f64, vh));
                 }
             }
@@ -847,7 +847,7 @@ impl FdCanvas {
                 (s_bottom, o_cy),
                 (s_bottom, o_bottom),
             ] {
-                if (sv - ov).abs() < snap_threshold {
+                if (sv - ov).abs() < SNAP_THRESHOLD_PX {
                     guides.push((0.0, ov as f64, vw, ov as f64));
                 }
             }

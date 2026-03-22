@@ -209,13 +209,15 @@ fn render_node(
     // Proportional time envelope based on the node's animation duration_ms
     let raw_scale = style.scale.unwrap_or(1.0);
     let effective_scale = if is_hovered && (raw_scale - 1.0).abs() > f32::EPSILON {
+        const DEFAULT_ANIM_DURATION_HOVER_MS: f64 = 300.0;
+
         // Look up the actual duration_ms from the node's hover animation
         let anim_duration = node
             .animations
             .iter()
             .find(|a| a.trigger == fd_core::model::AnimTrigger::Hover)
             .map(|a| a.duration_ms as f64)
-            .unwrap_or(300.0);
+            .unwrap_or(DEFAULT_ANIM_DURATION_HOVER_MS);
         let elapsed = time_ms - hover_start_ms;
         // Proportional envelope: ease-in = duration, hold = 60%, ease-out = 50%
         let ease_in_ms = anim_duration;

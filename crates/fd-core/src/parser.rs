@@ -1360,12 +1360,17 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
         other => AnimTrigger::Custom(other.to_string()),
     };
 
+    const DEFAULT_ANIM_DURATION_HOVER_MS: u32 = 300;
+    const DEFAULT_ANIM_DURATION_PRESS_MS: u32 = 150;
+    const DEFAULT_ANIM_DURATION_ENTER_MS: u32 = 500;
+    const DEFAULT_ANIM_DURATION_CUSTOM_MS: u32 = 300;
+
     // Trigger-specific default durations
     let default_duration = match &trigger {
-        AnimTrigger::Hover => 300u32,
-        AnimTrigger::Press => 150u32,
-        AnimTrigger::Enter => 500u32,
-        AnimTrigger::Custom(_) => 300u32,
+        AnimTrigger::Hover => DEFAULT_ANIM_DURATION_HOVER_MS,
+        AnimTrigger::Press => DEFAULT_ANIM_DURATION_PRESS_MS,
+        AnimTrigger::Enter => DEFAULT_ANIM_DURATION_ENTER_MS,
+        AnimTrigger::Custom(_) => DEFAULT_ANIM_DURATION_CUSTOM_MS,
     };
 
     skip_space(input);
@@ -1455,6 +1460,8 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
 /// These are reusable animation definitions referenced via `use:` inside
 /// `when :trigger { }` blocks.
 fn parse_when_template(input: &mut &str) -> ModalResult<(NodeId, WhenTemplate)> {
+    const DEFAULT_ANIM_DURATION_TEMPLATE_MS: u32 = 300;
+
     let _ = "when".parse_next(input)?;
     let _ = space1.parse_next(input)?;
     // Name without colon (to distinguish from `when :hover`)
@@ -1463,7 +1470,7 @@ fn parse_when_template(input: &mut &str) -> ModalResult<(NodeId, WhenTemplate)> 
     let _ = '{'.parse_next(input)?;
 
     let mut props = AnimProperties::default();
-    let mut duration_ms = 300u32;
+    let mut duration_ms = DEFAULT_ANIM_DURATION_TEMPLATE_MS;
     let mut easing = Easing::EaseInOut;
 
     skip_ws_and_comments(input);

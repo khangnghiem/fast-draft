@@ -559,7 +559,7 @@ impl FdCanvas {
             None => return vec![],
         };
 
-        let snap_threshold = 5.0_f32;
+        const SNAP_THRESHOLD_PX: f32 = 5.0;
         let mut guides = Vec::new();
 
         let s_left = sb.x;
@@ -586,14 +586,14 @@ impl FdCanvas {
 
             let x_refs = [(s_left, o_left), (s_cx, o_cx), (s_right, o_right)];
             for (sv, ov) in x_refs {
-                if (sv - ov).abs() < snap_threshold {
+                if (sv - ov).abs() < SNAP_THRESHOLD_PX {
                     guides.push((ov as f64, 0.0, ov as f64, h));
                 }
             }
 
             let y_refs = [(s_top, o_top), (s_cy, o_cy), (s_bottom, o_bottom)];
             for (sv, ov) in y_refs {
-                if (sv - ov).abs() < snap_threshold {
+                if (sv - ov).abs() < SNAP_THRESHOLD_PX {
                     guides.push((0.0, ov as f64, w, ov as f64));
                 }
             }
