@@ -53,16 +53,18 @@
       // ── Panel state ──
       var lpC = localStorage.getItem('fd-left-collapsed') === '1';
       var rpC = localStorage.getItem('fd-right-collapsed') === '1';
+      // Auto-collapse panels on narrow viewports (mobile web)
+      if (window.innerWidth <= 768) { lpC = true; rpC = true; }
       h.dataset.lp = lpC ? 'closed' : 'open';
       h.dataset.rp = rpC ? 'closed' : 'open';
 
       // ── Panel widths as CSS vars on <html> ──
-      var lpW = '280';
+      var lpW = '320';
       if (!lpC) {
         var saved = localStorage.getItem('fd-left-panel-width');
         if (saved) {
           var w = parseInt(saved, 10);
-          lpW = (w >= 200 && w <= 500) ? String(w) : '280';
+          lpW = (w >= 200 && w <= 500) ? String(w) : '320';
         }
       }
       h.style.setProperty('--left-panel-width', lpC ? '0px' : lpW + 'px');

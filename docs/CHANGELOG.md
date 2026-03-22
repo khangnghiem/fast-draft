@@ -17,6 +17,18 @@
 
 ## Completed Requirements
 
+### v0.11.244 — Chrome Icon Positioning & Panel Layout (R3.39, R6.5)
+
+**Chrome icons in canvas grid column** — `#chrome-left` and `#chrome-right` now use `grid-column: 2; grid-row: 1` to position within the canvas grid area. Uses simple `left: 8px` / `right: 8px` instead of `calc(var(--panel-width) + 8px)`. Fixes icon position shift when panels toggle and clipping when both panels open.
+
+**Canvas grid min-width** — Grid canvas column changed from `1fr` to `minmax(200px, 1fr)`, preventing the canvas from shrinking below 200px when both panels are open.
+
+**Panel width equalization** — Left panel default width changed from 280px to 320px to match the right panel width, across CSS fallbacks, JS constants (`DEFAULT_LEFT_W`), and the `<head>` initialization script.
+
+**Mobile auto-collapse** — On viewport ≤768px, both panels auto-collapse on startup regardless of saved state. Prevents panels from covering the canvas on mobile web.
+
+Files: `site/style.css`, `site/app.js`, `site/index.html`
+
 ### v0.11.243 — Toolbar & Canvas UI Polish (R3.39, R3.25, R6.5)
 
 **Vertical separator fix** — `.ft-sep` dimensions now swap to `width:20px; height:1px` when toolbar is docked left/right (`data-toolbar="left"/"right"`). Removes the dashed appearance in vertical orientation.
