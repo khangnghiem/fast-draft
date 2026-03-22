@@ -17,6 +17,26 @@
 
 ## Completed Requirements
 
+### v0.11.243 — Toolbar & Canvas UI Polish (R3.39, R3.25, R6.5)
+
+**Vertical separator fix** — `.ft-sep` dimensions now swap to `width:20px; height:1px` when toolbar is docked left/right (`data-toolbar="left"/"right"`). Removes the dashed appearance in vertical orientation.
+
+**Snap shadow preview** — dragging toolbar near a canvas edge shows a ghost silhouette (same size/shape as toolbar, frosted glass, 45% opacity) at the snap destination instead of a thin colored strip. Ghost dimensions estimate orientation change when switching horizontal↔vertical.
+
+**Always-snap behavior** — toolbar always snaps to the nearest canvas edge on drop (no floating state). Auto-detects nearest edge by distance when dropped in open canvas area.
+
+**Default bottom-center** — new users and cleared localStorage now get toolbar at bottom-center (was top-center). Updated `parseToolbarPos()` in app.js and `<head>` script in index.html.
+
+**Canvas loading background** — `.canvas-loading` now uses `var(--fd-bg, #F5F5F7)` instead of `var(--bg-card)` (which resolved to dark `#1C2128` from marketing tokens). Loading screen matches canvas theme.
+
+**Settings icon offset** — `.canvas-chrome-left` and `.canvas-chrome-right` margins reduced from 10px to 8px for tighter alignment with sidebar panel edges.
+
+**Minimap position** — `#minimap-container` right offset simplified from `calc(var(--right-panel-actual-width, 0px) + 12px)` to `12px` (container is already inside the canvas grid column).
+
+**Deduplicated .ft-sep** — removed duplicate definition at line 1614; single source of truth at line 382.
+
+Files: `site/style.css`, `site/app.js`, `site/index.html`
+
 ### v0.11.242 — Toolbar Canvas-Relative Positioning (R3.39)
 
 **CSS calc() positioning** — Toolbar CSS default coords now use `calc(var(--left-panel-width) + (100vw - lpW - rpW) / 2)` to center within the canvas area, not the viewport. Fixes toolbar appearing inside right panel when docked right, and off-center when docked top/bottom.

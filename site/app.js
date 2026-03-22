@@ -6347,7 +6347,7 @@ async function initPlayground() {
       /** Parse saved toolbar position with migration from old string format */
       function parseToolbarPos() {
         const raw = localStorage.getItem('fd-toolbar-pos');
-        if (!raw) return { side: 'top', x: null, y: null };
+        if (!raw) return { side: 'bottom', x: null, y: null };
         try {
           const obj = JSON.parse(raw);
           if (obj && obj.side) return obj;
@@ -6356,14 +6356,41 @@ async function initPlayground() {
         if (['top', 'bottom', 'left', 'right'].includes(raw)) {
           return { side: raw, x: null, y: null };
         }
-        return { side: 'top', x: null, y: null };
+        return { side: 'bottom', x: null, y: null };
       }
 
       function showSnapIndicator(side) {
-        snapIndicator.className = 'toolbar-snap-indicator';
         if (side) {
-          snapIndicator.classList.add(`snap-${side}`);
+          // Measure toolbar to create a ghost silhouette
+          const tbRect = toolbar.getBoundingClientRect();
+          const cr = getCanvasRect();
+          const isVert = (side === 'left' || side === 'right');
+          // Ghost dimensions: swap if orientation will change
+          const currentIsVert = getComputedStyle(toolbar).flexDirection === 'column';
+          let gw = tbRect.width, gh = tbRect.height;
+          if (isVert !== currentIsVert) {
+            // Estimate: swap aspect ratio for ghost preview
+            gw = tbRect.height > 400 ? 44 : tbRect.height > 200 ? 40 : 38;
+            gh = tbRect.width > 400 ? tbRect.width : tbRect.height;
+            if (!isVert) { gw = tbRect.height > 400 ? tbRect.height : tbRect.width; gh = 44; }
+          }
           snapIndicator.style.display = 'block';
+          snapIndicator.style.width = gw + 'px';
+          snapIndicator.style.height = gh + 'px';
+          // Position the ghost at the snap destination
+          if (side === 'top') {
+            snapIndicator.style.left = (cr.left + (cr.width - gw) / 2) + 'px';
+            snapIndicator.style.top = (cr.top + SNAP_GAP) + 'px';
+          } else if (side === 'bottom') {
+            snapIndicator.style.left = (cr.left + (cr.width - gw) / 2) + 'px';
+            snapIndicator.style.top = (cr.bottom - gh - SNAP_GAP) + 'px';
+          } else if (side === 'left') {
+            snapIndicator.style.left = (cr.left + SNAP_GAP) + 'px';
+            snapIndicator.style.top = (cr.top + (cr.height - gh) / 2) + 'px';
+          } else if (side === 'right') {
+            snapIndicator.style.left = (cr.right - gw - SNAP_GAP) + 'px';
+            snapIndicator.style.top = (cr.top + (cr.height - gh) / 2) + 'px';
+          }
         } else {
           snapIndicator.style.display = 'none';
         }
@@ -6466,9 +6493,19 @@ async function initPlayground() {
         if (side) {
           applySnapPosition(side, e.clientX, e.clientY);
         } else {
-          // Stay floating at current position — clear drag class but keep inline styles
-          toolbar.classList.remove('toolbar-dragging');
-          toolbar.style.flexDirection = ''; // reset to CSS default (row)
+          // No snap detected — auto-snap to nearest edge (toolbar must always dock)
+          const cr = getCanvasRect();
+          const cx = e.clientX, cy = e.clientY;
+          const distTop = Math.abs(cy - cr.top);
+          const distBottom = Math.abs(cy - cr.bottom);
+          const distLeft = Math.abs(cx - cr.left);
+          const distRight = Math.abs(cx - cr.right);
+          const minDist = Math.min(distTop, distBottom, distLeft, distRight);
+          if (minDist === distTop) side = 'top';
+          else if (minDist === distBottom) side = 'bottom';
+          else if (minDist === distLeft) side = 'left';
+          else side = 'right';
+          applySnapPosition(side, e.clientX, e.clientY);
         }
       });
 
