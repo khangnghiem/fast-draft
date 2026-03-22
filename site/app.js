@@ -6196,22 +6196,78 @@ async function initPlayground() {
       let toolbarStartX = 0, toolbarStartY = 0;
       const pointerHistory = [];
       const SNAP_THRESHOLD = 60;
+      const SNAP_GAP = 10;
 
+      /** Get the visible canvas bounding rect (accounts for open panels) */
+      function getCanvasRect() {
+        const c = document.getElementById('fd-canvas');
+        return c ? c.getBoundingClientRect() : { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth, height: window.innerHeight };
+      }
+
+      /** Detect which edge the pointer is near (relative to canvas, not window) */
       function getSnapSide(x, y) {
-        const w = window.innerWidth, h = window.innerHeight;
-        if (y < SNAP_THRESHOLD) return 'top';
-        if (y > h - SNAP_THRESHOLD) return 'bottom';
-        if (x < SNAP_THRESHOLD) return 'left';
-        if (x > w - SNAP_THRESHOLD) return 'right';
+        const cr = getCanvasRect();
+        if (y < cr.top + SNAP_THRESHOLD) return 'top';
+        if (y > cr.bottom - SNAP_THRESHOLD) return 'bottom';
+        if (x < cr.left + SNAP_THRESHOLD) return 'left';
+        if (x > cr.right - SNAP_THRESHOLD) return 'right';
         return null;
       }
 
-      function applySnapPosition(side) {
-        // Remove all dock classes
+      /** Position toolbar on an edge at (dropX, dropY), clamped within canvas */
+      function applySnapPosition(side, dropX, dropY) {
         toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right', 'toolbar-dragging');
         toolbar.style.cssText = '';
         toolbar.classList.add(`toolbar-docked-${side}`);
-        localStorage.setItem('fd-toolbar-pos', side);
+
+        // Measure toolbar after class is applied (so flex-direction is correct)
+        const tbRect = toolbar.getBoundingClientRect();
+        const cr = getCanvasRect();
+
+        if (side === 'top' || side === 'bottom') {
+          // Horizontal — clamp left position within canvas
+          let left = (dropX != null) ? dropX - tbRect.width / 2 : cr.left + (cr.width - tbRect.width) / 2;
+          left = Math.max(cr.left + SNAP_GAP, Math.min(left, cr.right - tbRect.width - SNAP_GAP));
+          toolbar.style.position = 'fixed';
+          toolbar.style.left = left + 'px';
+          toolbar.style.top = side === 'top' ? (cr.top + SNAP_GAP) + 'px' : (cr.bottom - tbRect.height - SNAP_GAP) + 'px';
+          toolbar.style.transform = 'none';
+        } else {
+          // Vertical — clamp top position within canvas
+          let top = (dropY != null) ? dropY - tbRect.height / 2 : cr.top + (cr.height - tbRect.height) / 2;
+          top = Math.max(cr.top + SNAP_GAP, Math.min(top, cr.bottom - tbRect.height - SNAP_GAP));
+          toolbar.style.position = 'fixed';
+          toolbar.style.top = top + 'px';
+          toolbar.style.left = side === 'left' ? (cr.left + SNAP_GAP) + 'px' : (cr.right - tbRect.width - SNAP_GAP) + 'px';
+          toolbar.style.transform = 'none';
+        }
+
+        // Persist side + drop coordinates for restore
+        localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side, x: dropX, y: dropY }));
+      }
+
+      /** Re-clamp toolbar to canvas bounds (call on panel toggle / resize) */
+      function reclampToolbar() {
+        if (isDragging) return;
+        const saved = parseToolbarPos();
+        if (saved) applySnapPosition(saved.side, saved.x, saved.y);
+      }
+      // Expose for panel toggle code to call
+      window.__fdReclampToolbar = reclampToolbar;
+
+      /** Parse saved toolbar position with migration from old string format */
+      function parseToolbarPos() {
+        const raw = localStorage.getItem('fd-toolbar-pos');
+        if (!raw) return { side: 'top', x: null, y: null };
+        try {
+          const obj = JSON.parse(raw);
+          if (obj && obj.side) return obj;
+        } catch (_) {}
+        // Migration: old format was just a string like 'top'
+        if (['top', 'bottom', 'left', 'right'].includes(raw)) {
+          return { side: raw, x: null, y: null };
+        }
+        return { side: 'top', x: null, y: null };
       }
 
       function showSnapIndicator(side) {
@@ -6237,6 +6293,9 @@ async function initPlayground() {
           toolbarStartY = rect.top;
           pointerHistory.length = 0;
 
+          // FIX #1: Preserve flex-direction before removing docked classes
+          const currentDirection = getComputedStyle(toolbar).flexDirection;
+
           // Switch to fixed positioning for free drag
           toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right');
           toolbar.classList.add('toolbar-dragging');
@@ -6245,6 +6304,7 @@ async function initPlayground() {
           toolbar.style.transform = 'none';
           toolbar.style.right = 'auto';
           toolbar.style.bottom = 'auto';
+          toolbar.style.flexDirection = currentDirection; // preserve orientation during drag
 
           grip.setPointerCapture(e.pointerId);
         });
@@ -6255,6 +6315,8 @@ async function initPlayground() {
           e.preventDefault();
           toolbar.classList.toggle('toolbar-minimized');
           localStorage.setItem('fd-toolbar-minimized', toolbar.classList.contains('toolbar-minimized') ? '1' : '0');
+          // Re-clamp after size change
+          requestAnimationFrame(() => reclampToolbar());
         });
       });
 
@@ -6270,7 +6332,7 @@ async function initPlayground() {
         pointerHistory.push({ x: e.clientX, y: e.clientY, t: Date.now() });
         if (pointerHistory.length > 5) pointerHistory.shift();
 
-        // Show snap indicator
+        // Show snap indicator (canvas-aware)
         showSnapIndicator(getSnapSide(e.clientX, e.clientY));
       });
 
@@ -6291,7 +6353,6 @@ async function initPlayground() {
             const vy = (last.y - prev.y) / dt;
             const speed = Math.sqrt(vx * vx + vy * vy);
             if (speed > 500) {
-              // Determine direction
               if (Math.abs(vx) > Math.abs(vy)) {
                 side = vx > 0 ? 'right' : 'left';
               } else {
@@ -6302,19 +6363,23 @@ async function initPlayground() {
         }
 
         if (side) {
-          applySnapPosition(side);
+          applySnapPosition(side, e.clientX, e.clientY);
         } else {
-          // Stay floating at current position
+          // Stay floating at current position — clear drag class but keep inline styles
           toolbar.classList.remove('toolbar-dragging');
+          toolbar.style.flexDirection = ''; // reset to CSS default (row)
         }
       });
 
       // ── Restore saved state ──
-      const savedPos = localStorage.getItem('fd-toolbar-pos') || 'top';
-      applySnapPosition(savedPos);
+      const savedPos = parseToolbarPos();
+      applySnapPosition(savedPos.side, savedPos.x, savedPos.y);
       if (localStorage.getItem('fd-toolbar-minimized') === '1') {
         toolbar.classList.add('toolbar-minimized');
       }
+
+      // ── Re-clamp on window resize ──
+      window.addEventListener('resize', () => requestAnimationFrame(() => reclampToolbar()));
     }
 
     // ── Floating Action Bar ─────────────────────────────────────────
