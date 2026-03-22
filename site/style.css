@@ -3912,8 +3912,6 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   margin-left: auto;
 }
 
-/* ─── Adaptive Chrome Toggle Visibility ─── */
-/* When left panel is open, hide chrome-left sidebar toggle (JS adds .lp-open to #canvas-content) */
-.lp-open #sidebar-toggle-btn { display: none; }
-/* When right panel is open, hide chrome-right hamburger toggle (JS adds .rp-open to #canvas-content) */
-.rp-open #hamburger-toggle-btn { display: none; }
+/* Sidebar toggle buttons in panel headers — hidden (toggles stay in chrome) */
+.lp-tab-toggle,
+.rp-tab-toggle { display: none; }
