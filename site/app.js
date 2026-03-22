@@ -2992,7 +2992,7 @@ function setupPanelResize(wrapper, resizeCanvas) {
 
   const MIN_WIDTH = 200;
   const MAX_WIDTH = 500;
-  const DEFAULT_LEFT_W = 280;
+  const DEFAULT_LEFT_W = 320;
 
   // Restore persisted widths
   const savedLeftW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
@@ -3233,7 +3233,7 @@ function toggleLayersPanel() {
     localStorage.setItem('fd-left-collapsed', '1');
   } else {
     const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
-    const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 280;
+    const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 320;
     h.style.setProperty('--left-panel-width', restoreW + 'px');
     localStorage.setItem('fd-left-collapsed', '');
   }

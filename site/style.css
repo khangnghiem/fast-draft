@@ -283,12 +283,16 @@ html, body {
   gap: 4px;
 }
 .canvas-chrome-left {
+  grid-column: 2;
+  grid-row: 1;
   top: 8px;
-  left: calc(var(--left-panel-width, 320px) + 8px);
+  left: 8px;
 }
 .canvas-chrome-right {
+  grid-column: 2;
+  grid-row: 1;
   top: 8px;
-  right: calc(var(--right-panel-width, 320px) + 8px);
+  right: 8px;
   z-index: 26; /* above panels (z-index: 25) so settings gear is always visible */
 }
 .canvas-chrome-btn {
@@ -820,7 +824,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 /* Onboarding hints (canvas-only, handwritten) */
 .onboarding-hints {
   position: absolute;
-  left: var(--left-panel-width, 320px);
+  left: var(--left-panel-width, 320px);  /* floating toolbar left-dock offset */
   right: var(--right-panel-width, 320px);
   top: 0;
   bottom: 0;
@@ -1171,7 +1175,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-columns: var(--left-panel-width, 280px) 1fr var(--right-panel-width, 320px);
+  grid-template-columns: var(--left-panel-width, 320px) minmax(200px, 1fr) var(--right-panel-width, 320px);
   grid-template-rows: 1fr;
 }
 #fd-canvas {
@@ -1435,20 +1439,20 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 .toolbar-docked-top {
   flex-direction: row;
   top: 10px;
-  left: calc(var(--left-panel-width, 280px) + (100vw - var(--left-panel-width, 280px) - var(--right-panel-width, 320px)) / 2);
+  left: calc(var(--left-panel-width, 320px) + (100vw - var(--left-panel-width, 320px) - var(--right-panel-width, 320px)) / 2);
   transform: translateX(-50%);
 }
 [data-toolbar="bottom"] #floating-toolbar,
 .toolbar-docked-bottom {
   flex-direction: row;
   bottom: 10px;
-  left: calc(var(--left-panel-width, 280px) + (100vw - var(--left-panel-width, 280px) - var(--right-panel-width, 320px)) / 2);
+  left: calc(var(--left-panel-width, 320px) + (100vw - var(--left-panel-width, 320px) - var(--right-panel-width, 320px)) / 2);
   transform: translateX(-50%);
 }
 [data-toolbar="left"] #floating-toolbar,
 .toolbar-docked-left {
   flex-direction: column;
-  left: calc(var(--left-panel-width, 280px) + 10px);
+  left: calc(var(--left-panel-width, 320px) + 10px);
   top: 50%; transform: translateY(-50%);
 }
 [data-toolbar="right"] #floating-toolbar,
