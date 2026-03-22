@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.242 — Toolbar Canvas-Relative Positioning (R3.39)
+
+**CSS calc() positioning** — Toolbar CSS default coords now use `calc(var(--left-panel-width) + (100vw - lpW - rpW) / 2)` to center within the canvas area, not the viewport. Fixes toolbar appearing inside right panel when docked right, and off-center when docked top/bottom.
+
+Files: `site/style.css`, `docs/CHANGELOG.md`
+
 ### v0.11.241 — Post-Grid Regression Fixes (R3.39, R6.19)
 
 **Toolbar z-index** — Bumped from 25 to 30 so toolbar floats above panels (z-index 25).

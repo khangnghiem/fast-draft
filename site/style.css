@@ -1429,26 +1429,33 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   -webkit-user-select: none;
   touch-action: none;
 }
-/* ── Toolbar position via data-attrs on <html> — correct from frame 0 ── */
+/* ── Toolbar position via data-attrs on <html> — canvas-relative from frame 0 ── */
+/* Canvas area = viewport minus both panels. Toolbar centers within canvas, not viewport. */
 [data-toolbar="top"] #floating-toolbar,
 .toolbar-docked-top {
   flex-direction: row;
-  top: 10px; left: 50%; transform: translateX(-50%);
+  top: 10px;
+  left: calc(var(--left-panel-width, 280px) + (100vw - var(--left-panel-width, 280px) - var(--right-panel-width, 320px)) / 2);
+  transform: translateX(-50%);
 }
 [data-toolbar="bottom"] #floating-toolbar,
 .toolbar-docked-bottom {
   flex-direction: row;
-  bottom: 10px; left: 50%; transform: translateX(-50%);
+  bottom: 10px;
+  left: calc(var(--left-panel-width, 280px) + (100vw - var(--left-panel-width, 280px) - var(--right-panel-width, 320px)) / 2);
+  transform: translateX(-50%);
 }
 [data-toolbar="left"] #floating-toolbar,
 .toolbar-docked-left {
   flex-direction: column;
-  left: 10px; top: 50%; transform: translateY(-50%);
+  left: calc(var(--left-panel-width, 280px) + 10px);
+  top: 50%; transform: translateY(-50%);
 }
 [data-toolbar="right"] #floating-toolbar,
 .toolbar-docked-right {
   flex-direction: column;
-  right: 10px; top: 50%; transform: translateY(-50%);
+  right: calc(var(--right-panel-width, 320px) + 10px);
+  top: 50%; transform: translateY(-50%);
 }
 /* Free-floating (during drag) */
 #floating-toolbar.toolbar-dragging {
