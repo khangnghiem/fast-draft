@@ -17,6 +17,26 @@
 
 ## Completed Requirements
 
+### v0.11.239 — Canvas & Toolbar Bug Fixes (R3.39, R3.73, R6.5, R6.19)
+
+**DTC Shapes Visible** — Drag-to-create and insert menu shapes now use visible default fills (#F0F0F0 light / #2C2C2E dark) instead of transparent. Immediate `set_text()` + `renderCanvas()` forced after insertion.
+
+**Toolbar Grip Click Fix** — Added 5px drag threshold to grip `pointerup` handler. If drag distance is below threshold, toolbar restores to saved position instead of re-snapping. Eliminates jump on handle click.
+
+**Insert Menu Overflow Fix** — Insert menu detects toolbar's docked position (bottom/left/right) and opens in the appropriate direction (above when bottom-docked, sideways when side-docked).
+
+**Inline Text Editor Position** — `openInlineTextEditor()` now accounts for canvas element offset within wrapper when calculating textarea screen coordinates.
+
+**Lasso Select** — JS-only freeform polygon selection tool. Draws dashed blue lasso path during drag. On release, selects all nodes whose bounding box corners are inside the lasso polygon using ray-casting algorithm. Switches to Select tool after lasso.
+
+**Eraser Marquee** — JS-only rectangle erasure tool. Draws dashed red marquee during drag. On release, deletes all nodes fully enclosed by the rectangle from FD code. Supports undo via `push_undo_snapshot`.
+
+**AI Touch Simplified** — Removed two-phase pipeline (refine + review) and full-doc review feature. Now single-phase code-modify: with selection refines selected nodes, without selection refines entire document. Both show inline diff. Uses 1 API credit instead of 2. Removed review panel HTML, `renderReviewPanel()`, `runFullDocReview()`, and Settings menu item.
+
+**Settings Button Visibility** — Changed settings button icon from sun-like to proper gear/cog SVG. Removed dead `canvas-theme-toggle` reference from `<head>` script.
+
+Files: `site/app.js`, `site/index.html`
+
 ### v0.11.238 — Startup FOUC Fixes (R3.39, R6.19)
 
 **Toolbar Position from `<head>`** — toolbar position now set via inline script in `<head>` before first paint, reading `fd-toolbar-pos` from localStorage. Eliminates the 100–500ms flash at (0,0).
