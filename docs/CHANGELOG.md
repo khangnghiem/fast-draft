@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.11.241 — Post-Grid Regression Fixes (R3.39, R6.19)
+
+**Toolbar z-index** — Bumped from 25 to 30 so toolbar floats above panels (z-index 25).
+
+**Sidebar toggle in panel headers** — Sidebar toggle icons now ALWAYS visible in panel headers (`display: flex`). Removed dependency on `.lp-open`/`.rp-open` class toggles. Canvas chrome toggles (`#sidebar-toggle-btn`, `#hamburger-toggle-btn`) hidden via `[data-lp/rp="open"]` selectors.
+
+**Lesson documented** — Added "Sidebar Toggle DOM Duplication Regression" to `docs/LESSONS.md`.
+
+Files: `site/style.css`, `docs/LESSONS.md`, `docs/CHANGELOG.md`
+
 ### v0.11.240 — CSS Grid Layout + Data-Attr State Machine (R3.39, R6.19)
 
 **Zero-FOUC Architecture** — Refactored `#canvas-content` from absolute-positioned children to CSS Grid (`grid-template-columns: var(--left-panel-width) 1fr var(--right-panel-width)`). All layout state now driven by `data-*` attributes on `<html>` set synchronously from a `<head>` script before `<body>` is parsed. Eliminates toolbar flash at (0,0), panel collapse delay, and adaptive icon flicker.
