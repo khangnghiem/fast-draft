@@ -53,7 +53,8 @@
     .init-no-transition #left-panel,
     .init-no-transition #right-panel,
     .init-no-transition .canvas-chrome-left,
-    .init-no-transition .canvas-chrome-right {
+    .init-no-transition .canvas-chrome-right,
+    .init-no-transition #floating-toolbar {
       transition: none !important;
     }
   </style>
@@ -61,9 +62,9 @@
     /* Apply no-transition class before any rendering */
     document.documentElement.classList.add('init-no-transition');
 
-    /* (#3) Read localStorage panel state BEFORE first paint.
-     * Sets correct CSS vars on canvas-wrapper so the initial layout matches
-     * the user's actual saved panel state — zero layout jumps. */
+    /* (#3) Read localStorage panel + toolbar state BEFORE first paint.
+     * Sets correct CSS vars, panel classes, toolbar position, and chrome
+     * visibility so the initial layout matches saved state — zero jumps. */
     (function() {
       var rpCollapsed = localStorage.getItem('fd-right-collapsed') === '1';
       var lpCollapsed = localStorage.getItem('fd-left-collapsed') === '1';
@@ -73,6 +74,19 @@
         if (w < 200 || w > 500) lpW = '280px';
       }
       var rpW = rpCollapsed ? '0px' : '320px';
+
+      // Parse toolbar position (migrates old string format)
+      var tbPos;
+      try { tbPos = JSON.parse(localStorage.getItem('fd-toolbar-pos')); } catch(e) {}
+      if (!tbPos || !tbPos.side) {
+        var raw = localStorage.getItem('fd-toolbar-pos');
+        if (raw && ['top','bottom','left','right'].indexOf(raw) >= 0) {
+          tbPos = { side: raw };
+        } else {
+          tbPos = { side: 'top' };
+        }
+      }
+
       document.addEventListener('DOMContentLoaded', function() {
         var cw = document.getElementById('canvas-wrapper');
         if (cw) {
@@ -80,7 +94,7 @@
           cw.style.setProperty('--right-panel-width', rpW);
           cw.style.setProperty('--right-panel-actual-width', rpW);
         }
-        /* Also apply collapsed class to panels early */
+        /* Apply collapsed class to panels early */
         if (rpCollapsed) {
           var rp = document.getElementById('right-panel');
           if (rp) rp.classList.add('collapsed');
@@ -88,6 +102,36 @@
         if (lpCollapsed) {
           var lp = document.getElementById('left-panel');
           if (lp) lp.classList.add('collapsed');
+        }
+        /* FIX #2: Set lp-open/rp-open on canvas-content immediately
+         * so adaptive sidebar icons are correctly hidden/shown from frame 0 */
+        var cc = document.getElementById('canvas-content');
+        if (cc) {
+          if (!rpCollapsed) cc.classList.add('rp-open');
+          if (!lpCollapsed) cc.classList.add('lp-open');
+        }
+        /* FIX #1: Position toolbar immediately — prevents FOUC at (0,0).
+         * JS applySnapPosition() refines to exact canvas-aware coords later. */
+        var tb = document.getElementById('floating-toolbar');
+        if (tb) {
+          tb.classList.remove('toolbar-docked-top');
+          tb.classList.add('toolbar-docked-' + tbPos.side);
+          tb.style.position = 'fixed';
+          if (tbPos.side === 'top' || tbPos.side === 'bottom') {
+            tb.style.left = '50%';
+            tb.style.transform = 'translateX(-50%)';
+            tb.style.top = tbPos.side === 'top' ? '10px' : '';
+            tb.style.bottom = tbPos.side === 'bottom' ? '10px' : '';
+          } else {
+            tb.style.top = '50%';
+            tb.style.transform = 'translateY(-50%)';
+            tb.style.left = tbPos.side === 'left' ? '10px' : '';
+            tb.style.right = tbPos.side === 'right' ? '10px' : '';
+          }
+          // Restore minimized state
+          if (localStorage.getItem('fd-toolbar-minimized') === '1') {
+            tb.classList.add('toolbar-minimized');
+          }
         }
       });
     })();
