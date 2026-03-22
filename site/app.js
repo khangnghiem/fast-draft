@@ -5254,10 +5254,8 @@ async function initPlayground() {
       uiDirty = false; // first render done
     }, 100);
 
-    // Hide loading overlay
-    // Hide loading overlay with fade-out
-    loading.classList.add('fade-out');
-    setTimeout(() => loading.classList.add('hidden'), 400);
+    // Hide loading overlay immediately — zero animations
+    loading.classList.add('hidden');
 
     // (#2) Double-rAF: wait TWO animation frames before enabling transitions.
     // Single rAF can fire in the same paint cycle as layout changes from panel init.

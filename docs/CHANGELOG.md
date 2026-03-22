@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.11.238 — Startup FOUC Fixes (R3.39, R6.19)
+
+**Toolbar Position from `<head>`** — toolbar position now set via inline script in `<head>` before first paint, reading `fd-toolbar-pos` from localStorage. Eliminates the 100–500ms flash at (0,0).
+
+**Canvas Chrome Always Visible** — `#chrome-right` z-index raised to 26 (above panels at 25) so settings gear and share buttons are always visible. `rp-open`/`lp-open` classes set from `<head>` script so adaptive sidebar icons hide/show from frame 0.
+
+**Zero Startup Animations** — loading overlay now instant-hidden (no fade), toolbar base transition removed (only applied during snap), chrome position transitions removed. `#floating-toolbar` added to `init-no-transition` suppression list.
+
+Files: `site/index.html`, `site/style.css`, `site/app.js`
+
 ### v0.11.237 — Toolbar Drag-Snap Fixes (R3.39)
 
 **Orientation Preserved During Drag** — dragging a vertical toolbar grip no longer flips it to horizontal mid-drag. Fix: `getComputedStyle(toolbar).flexDirection` captured before removing docked classes, explicitly set on `toolbar.style` during drag.
