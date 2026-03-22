@@ -565,15 +565,12 @@ function toggleLeftPanel() {
   const wrapper = document.getElementById('canvas-wrapper');
   if (!panel || !wrapper) return;
   const isCollapsed = panel.classList.toggle('collapsed');
-  const content = document.getElementById('canvas-content');
   if (isCollapsed) {
     wrapper.style.setProperty('--left-panel-width', '0px');
-    content?.classList.remove('lp-open');
   } else {
     const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
     const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 320;
     wrapper.style.setProperty('--left-panel-width', restoreW + 'px');
-    content?.classList.add('lp-open');
     switchLeftTab(activeLeftTab);
   }
   requestAnimationFrame(() => {
@@ -588,8 +585,6 @@ function toggleRightPanel() {
   if (!panel) return;
   const isCollapsed = panel.classList.toggle('collapsed');
   updateRightPanelWidth(!isCollapsed);
-  const content = document.getElementById('canvas-content');
-  content?.classList.toggle('rp-open', !isCollapsed);
   localStorage.setItem('fd-right-collapsed', isCollapsed ? '1' : '');
   requestAnimationFrame(() => {
     window.dispatchEvent(new Event('resize'));
@@ -611,9 +606,6 @@ function initLeftPanel() {
   });
   // Set default tab
   switchLeftTab(activeLeftTab);
-  // Sync adaptive sidebar toggle visibility
-  const content = document.getElementById('canvas-content');
-  if (!panel.classList.contains('collapsed')) content?.classList.add('lp-open');
 }
 
 /** Initialize right panel: tab click handlers, default tab. */
@@ -637,9 +629,6 @@ function initRightPanel() {
   }
   // Set default tab
   switchRightTab(activeRightTab);
-  // Sync adaptive sidebar toggle visibility
-  const content = document.getElementById('canvas-content');
-  if (!panel.classList.contains('collapsed')) content?.classList.add('rp-open');
 }
 
 /** Initialize onboarding hints (shown once on first visit, canvas-only). */
