@@ -6302,8 +6302,11 @@ async function initPlayground() {
         return null;
       }
 
+      /** Track user's preferred side (for restoring after overflow) */
+      let preferredSide = null;
+
       /** Position toolbar on an edge at (dropX, dropY), clamped within canvas */
-      function applySnapPosition(side, dropX, dropY) {
+      function applySnapPosition(side, dropX, dropY, isAutoOverflow) {
         toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right', 'toolbar-dragging');
         toolbar.style.cssText = '';
         toolbar.classList.add(`toolbar-docked-${side}`);
@@ -6312,6 +6315,13 @@ async function initPlayground() {
         // Measure toolbar after class is applied (so flex-direction is correct)
         const tbRect = toolbar.getBoundingClientRect();
         const cr = getCanvasRect();
+
+        // Auto-snap to vertical left if horizontal toolbar overflows canvas width
+        if ((side === 'top' || side === 'bottom') && tbRect.width > cr.width - 2 * SNAP_GAP) {
+          if (!isAutoOverflow) preferredSide = side; // remember user's preferred side
+          toolbar.classList.remove(`toolbar-docked-${side}`);
+          return applySnapPosition('left', null, dropY, true);
+        }
 
         if (side === 'top' || side === 'bottom') {
           // Horizontal — clamp left position within canvas
@@ -6332,14 +6342,19 @@ async function initPlayground() {
         }
 
         // Persist side + drop coordinates for restore
-        localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side, x: dropX, y: dropY }));
+        if (!isAutoOverflow) {
+          preferredSide = null; // user explicitly chose this side
+          localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side, x: dropX, y: dropY }));
+        }
       }
 
       /** Re-clamp toolbar to canvas bounds (call on panel toggle / resize) */
       function reclampToolbar() {
         if (isDragging) return;
         const saved = parseToolbarPos();
-        if (saved) applySnapPosition(saved.side, saved.x, saved.y);
+        // If canvas widened and user preferred horizontal, try restoring preferred side
+        const tryPreferred = preferredSide || (saved ? saved.side : 'bottom');
+        if (saved) applySnapPosition(tryPreferred, saved.x, saved.y);
       }
       // Expose for panel toggle code to call
       window.__fdReclampToolbar = reclampToolbar;
@@ -6509,12 +6524,14 @@ async function initPlayground() {
         }
       });
 
-      // ── Restore saved state ──
+      // ── Restore saved state (suppress transition to avoid startup jump) ──
+      toolbar.style.transition = 'none';
       const savedPos = parseToolbarPos();
       applySnapPosition(savedPos.side, savedPos.x, savedPos.y);
       if (localStorage.getItem('fd-toolbar-minimized') === '1') {
         toolbar.classList.add('toolbar-minimized');
       }
+      requestAnimationFrame(() => { toolbar.style.transition = ''; });
 
       // ── Re-clamp on window resize ──
       window.addEventListener('resize', () => requestAnimationFrame(() => reclampToolbar()));
