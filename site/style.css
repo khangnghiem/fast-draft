@@ -488,51 +488,39 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
 .editor-dot.design { background: var(--success, #34d399); }
 
 /* ── Unified Right Panel ── */
+/* ─── Right Panel (CSS Grid column 3) ─── */
 #right-panel {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: var(--right-panel-width, 320px);
+  grid-column: 3;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   background: var(--fd-surface);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-left: 0.5px solid var(--fd-border);
-  z-index: 25; /* Above chrome (z:20) so panels overlay toggle icons */
+  z-index: 25;
   font-size: 11px;
   color: var(--fd-text);
-  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
   overflow: hidden;
-  will-change: transform;
+  min-width: 0; /* allow grid to shrink to 0 */
 }
-#right-panel.collapsed {
-  transform: translateX(100%);
+[data-rp="closed"] #right-panel {
   border-left: none;
 }
 
-/* ─── Left Panel: Layers + Tabbed Content ─── */
+/* ─── Left Panel: Layers + Tabbed Content (CSS Grid column 1) ─── */
 #left-panel {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: var(--left-panel-width, 280px);
-  min-width: 0;
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0; /* allow grid to shrink to 0 */
   max-width: 500px;
   background: var(--fd-surface);
   border-right: 0.5px solid var(--fd-border);
-  z-index: 25; /* Match #right-panel — above chrome (z:20) so panels overlay toggle icons */
+  z-index: 25;
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  transition: transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-  will-change: transform;
-}
-#left-panel.collapsed {
-  transform: translateX(-100%);
   overflow: hidden;
 }
 
@@ -897,7 +885,6 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   position: relative;
   overflow: hidden;
   background: var(--fd-bg);
-  --left-panel-width: 320px;
   --props-width: 0px;
   display: flex;
   flex-direction: column;
@@ -905,6 +892,9 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   -webkit-user-select: none;    /* prevent text selection during drag */
   user-select: none;
 }
+/* ── Panel collapse via data-attrs on <html> (set synchronously from <head>) ── */
+[data-lp="closed"] { --left-panel-width: 0px !important; }
+[data-rp="closed"] { --right-panel-width: 0px !important; }
 
 /* ── Canvas Toolbar (Apple HIG frosted bar) ── */
 /* ── Legacy toolbar removed — replaced by .chrome-pill system ── */
@@ -1175,18 +1165,20 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 .fullscreen-mode .canvas-chrome { display: none !important; }
 
 /* ── Canvas content area below toolbar ── */
+/* ── CSS Grid: left-panel | canvas | right-panel ── */
 #canvas-content {
   flex: 1;
   position: relative;
   overflow: hidden;
+  display: grid;
+  grid-template-columns: var(--left-panel-width, 280px) 1fr var(--right-panel-width, 320px);
+  grid-template-rows: 1fr;
 }
 #fd-canvas {
-  position: absolute;
-  left: var(--left-panel-width, 280px);
-  top: 0;
-  right: var(--right-panel-width, 320px);
-  bottom: 0;
-  width: calc(100% - var(--left-panel-width, 280px) - var(--right-panel-width, 320px));
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  width: 100%;
   height: 100%;
   display: block;
 }
@@ -1421,7 +1413,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 
 /* ─── Floating Toolbar (frosted glass pill) ─── */
 #floating-toolbar {
-  position: absolute;
+  position: fixed; /* always fixed — never participates in grid */
   z-index: 25;
   display: flex;
   align-items: center;
@@ -1436,18 +1428,27 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
-  /* No base transition — transitions added dynamically by JS during snap */
 }
-/* ── Snap positions (flex-direction only — JS handles coordinates) ── */
-.toolbar-docked-top,
-.toolbar-docked-bottom {
-  position: fixed;
+/* ── Toolbar position via data-attrs on <html> — correct from frame 0 ── */
+[data-toolbar="top"] #floating-toolbar,
+.toolbar-docked-top {
   flex-direction: row;
+  top: 10px; left: 50%; transform: translateX(-50%);
 }
-.toolbar-docked-left,
-.toolbar-docked-right {
-  position: fixed;
+[data-toolbar="bottom"] #floating-toolbar,
+.toolbar-docked-bottom {
+  flex-direction: row;
+  bottom: 10px; left: 50%; transform: translateX(-50%);
+}
+[data-toolbar="left"] #floating-toolbar,
+.toolbar-docked-left {
   flex-direction: column;
+  left: 10px; top: 50%; transform: translateY(-50%);
+}
+[data-toolbar="right"] #floating-toolbar,
+.toolbar-docked-right {
+  flex-direction: column;
+  right: 10px; top: 50%; transform: translateY(-50%);
 }
 /* Free-floating (during drag) */
 #floating-toolbar.toolbar-dragging {
@@ -2130,6 +2131,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   transition: right 0.25s ease, opacity 0.2s ease, box-shadow 0.2s ease, width 0.2s ease, height 0.2s ease, bottom 0.2s ease;
 }
 /* Shift minimap up when toolbar is docked at bottom */
+[data-toolbar="bottom"] #minimap-container,
 .toolbar-docked-bottom ~ #minimap-container {
   bottom: 64px;
 }
@@ -2829,15 +2831,18 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   #hero h1 { font-size: 2rem; }
   .hero-sub { font-size: 1rem; }
 
-  /* ── Canvas fills full width — panels start hidden ── */
+  /* ── Canvas fills full width — panels are overlay, not grid columns ── */
+  #canvas-content {
+    grid-template-columns: 1fr !important;
+  }
   #canvas-wrapper {
-    --left-panel-width: 0px !important;
-    --right-panel-width: 0px !important;
     --props-width: 0px;
   }
 
   /* ── Left panel: off-screen by default, overlay when open ── */
   #left-panel {
+    position: absolute; /* Override grid on mobile — overlay pattern */
+    left: 0; top: 0; bottom: 0;
     width: 280px !important;
     max-width: 80vw;
     transform: translateX(-100%);
@@ -2845,11 +2850,11 @@ a.rp-settings-item:visited { color: var(--fd-text); }
     box-shadow: none;
     transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
   }
-  #left-panel:not(.collapsed) {
+  [data-lp="open"] #left-panel {
     transform: translateX(0);
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
   }
-  #left-panel.collapsed {
+  [data-lp="closed"] #left-panel {
     transform: translateX(-100%);
     box-shadow: none;
     pointer-events: none;
@@ -2857,6 +2862,8 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 
   /* ── Right panel: off-screen by default, overlay when open ── */
   #right-panel {
+    position: absolute; /* Override grid on mobile — overlay pattern */
+    right: 0; top: 0; bottom: 0;
     width: 320px !important;
     max-width: 85vw;
     transform: translateX(100%);
@@ -2864,11 +2871,11 @@ a.rp-settings-item:visited { color: var(--fd-text); }
     box-shadow: none;
     transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
   }
-  #right-panel:not(.collapsed) {
+  [data-rp="open"] #right-panel {
     transform: translateX(0);
     box-shadow: -4px 0 24px rgba(0, 0, 0, 0.25);
   }
-  #right-panel.collapsed {
+  [data-rp="closed"] #right-panel {
     transform: translateX(100%);
     box-shadow: none;
     pointer-events: none;
@@ -3870,6 +3877,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   white-space: nowrap;
 }
 
+/* Adaptive sidebar icons — driven by data-attrs on <html>, correct from frame 0 */
 /* ─── Panel Tab Toggle Buttons (sidebar icons inside panel headers) ─── */
 /* By default, panel header toggles match chrome-btn style */
 .lp-tab-toggle,

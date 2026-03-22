@@ -360,7 +360,7 @@ function getLayersPanelWidth() {
 /** Get current right panel width (dynamic for resize). */
 function getRightPanelWidth() {
   const panel = document.getElementById('right-panel');
-  return (panel && !panel.classList.contains('collapsed')) ? panel.offsetWidth : 0;
+  return (panel && document.documentElement.dataset.rp !== 'closed') ? panel.offsetWidth : 0;
 }
 
 
@@ -648,29 +648,25 @@ function switchRightTab(tabId) {
  * --right-panel-width controls canvas positioning (left/right offsets).
  * --right-panel-actual-width controls minimap offset. */
 function updateRightPanelWidth(expanded) {
-  const wrapper = document.getElementById('canvas-wrapper');
-  if (!wrapper) return;
-  wrapper.style.setProperty('--right-panel-width', expanded ? '320px' : '0px');
-  wrapper.style.setProperty('--right-panel-actual-width', expanded ? '320px' : '0px');
+  document.documentElement.style.setProperty('--right-panel-width', expanded ? '320px' : '0px');
 }
 
 /** Toggle left panel collapsed/expanded. */
 function toggleLeftPanel() {
   const panel = document.getElementById('left-panel');
-  const wrapper = document.getElementById('canvas-wrapper');
-  if (!panel || !wrapper) return;
-  const isCollapsed = panel.classList.toggle('collapsed');
-  const content = document.getElementById('canvas-content');
+  if (!panel) return;
+  const h = document.documentElement;
+  const isCollapsed = h.dataset.lp === 'open'; // toggling: open → closed
+  h.dataset.lp = isCollapsed ? 'closed' : 'open';
   if (isCollapsed) {
-    wrapper.style.setProperty('--left-panel-width', '0px');
-    content?.classList.remove('lp-open');
+    h.style.setProperty('--left-panel-width', '0px');
   } else {
     const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
     const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 320;
-    wrapper.style.setProperty('--left-panel-width', restoreW + 'px');
-    content?.classList.add('lp-open');
+    h.style.setProperty('--left-panel-width', restoreW + 'px');
     switchLeftTab(activeLeftTab);
   }
+  localStorage.setItem('fd-left-collapsed', isCollapsed ? '1' : '');
   requestAnimationFrame(() => {
     window.dispatchEvent(new Event('resize'));
     resizeCanvas();
@@ -681,10 +677,10 @@ function toggleLeftPanel() {
 function toggleRightPanel() {
   const panel = document.getElementById('right-panel');
   if (!panel) return;
-  const isCollapsed = panel.classList.toggle('collapsed');
+  const h = document.documentElement;
+  const isCollapsed = h.dataset.rp === 'open'; // toggling: open → closed
+  h.dataset.rp = isCollapsed ? 'closed' : 'open';
   updateRightPanelWidth(!isCollapsed);
-  const content = document.getElementById('canvas-content');
-  content?.classList.toggle('rp-open', !isCollapsed);
   localStorage.setItem('fd-right-collapsed', isCollapsed ? '1' : '');
   requestAnimationFrame(() => {
     window.dispatchEvent(new Event('resize'));
@@ -706,9 +702,8 @@ function initLeftPanel() {
   });
   // Set default tab
   switchLeftTab(activeLeftTab);
-  // Sync adaptive sidebar toggle visibility
-  const content = document.getElementById('canvas-content');
-  if (!panel.classList.contains('collapsed')) content?.classList.add('lp-open');
+  // Sync panel state with data-attrs already set from <head> script
+  // No classList toggle needed — [data-lp] handles visibility
 }
 
 /** Initialize right panel: tab click handlers, default tab. */
@@ -723,18 +718,17 @@ function initRightPanel() {
       switchRightTab(tabId);
     });
   });
-  // Restore collapsed state
-  if (localStorage.getItem('fd-right-collapsed') === '1') {
-    panel.classList.add('collapsed');
+  // Panel collapsed state handled by data-attrs set from <head> script
+  // Just ensure CSS vars are correct
+  if (document.documentElement.dataset.rp === 'closed') {
     updateRightPanelWidth(false);
   } else {
     updateRightPanelWidth(true);
   }
   // Set default tab
   switchRightTab(activeRightTab);
-  // Sync adaptive sidebar toggle visibility
-  const content = document.getElementById('canvas-content');
-  if (!panel.classList.contains('collapsed')) content?.classList.add('rp-open');
+  // Sync panel state with data-attrs already set from <head> script
+  // No classList toggle needed — [data-rp] handles visibility
 }
 
 /** Initialize onboarding hints (shown once on first visit, canvas-only). */
@@ -3004,13 +2998,13 @@ function setupPanelResize(wrapper, resizeCanvas) {
   const savedLeftW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
 
   if (savedLeftW && savedLeftW >= MIN_WIDTH && savedLeftW <= MAX_WIDTH) {
-    wrapper.style.setProperty('--left-panel-width', savedLeftW + 'px');
+    document.documentElement.style.setProperty('--left-panel-width', savedLeftW + 'px');
   }
 
   /** Position layers resize handle at panel's right edge. */
   function positionLayersHandle() {
     if (!layersHandle || !leftPanel) return;
-    const w = leftPanel.classList.contains('collapsed') ? 0 : leftPanel.offsetWidth;
+    const w = document.documentElement.dataset.lp === 'closed' ? 0 : leftPanel.offsetWidth;
     layersHandle.style.left = w + 'px';
   }
 
@@ -3041,7 +3035,7 @@ function setupPanelResize(wrapper, resizeCanvas) {
     if (!dragging) return;
     const dx = e.clientX - startX;
     const newW = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startW + dx));
-    wrapper.style.setProperty('--left-panel-width', newW + 'px');
+    document.documentElement.style.setProperty('--left-panel-width', newW + 'px');
     positionLayersHandle();
     // Batch expensive canvas resize + render to once per display frame
     if (!resizeRafId) {
@@ -3075,15 +3069,16 @@ function setupPanelResize(wrapper, resizeCanvas) {
   layersHandle.addEventListener('dblclick', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const isCollapsed = leftPanel.classList.toggle('collapsed');
+    const isCollapsed = document.documentElement.dataset.lp === 'open';
+    document.documentElement.dataset.lp = isCollapsed ? 'closed' : 'open';
     if (isCollapsed) {
-      wrapper.style.setProperty('--left-panel-width', '0px');
-      localStorage.setItem('fd-layers-collapsed', '1');
+      document.documentElement.style.setProperty('--left-panel-width', '0px');
+      localStorage.setItem('fd-left-collapsed', '1');
     } else {
       const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
       const restoreW = (savedW >= MIN_WIDTH && savedW <= MAX_WIDTH) ? savedW : DEFAULT_LEFT_W;
-      wrapper.style.setProperty('--left-panel-width', restoreW + 'px');
-      localStorage.removeItem('fd-layers-collapsed');
+      document.documentElement.style.setProperty('--left-panel-width', restoreW + 'px');
+      localStorage.setItem('fd-left-collapsed', '');
     }
     requestAnimationFrame(() => {
       positionLayersHandle();
@@ -3228,21 +3223,20 @@ function toggleSpecsPanel() {
 
 /** Toggle Layers panel collapsed/expanded. */
 function toggleLayersPanel() {
-  const wrapper = document.getElementById('canvas-wrapper');
   const leftPanel = document.getElementById('left-panel');
-  if (!leftPanel || !wrapper) return;
-
-  const isCollapsed = leftPanel.classList.toggle('collapsed');
+  if (!leftPanel) return;
+  const h = document.documentElement;
+  const isCollapsed = h.dataset.lp === 'open'; // toggling: open → closed
+  h.dataset.lp = isCollapsed ? 'closed' : 'open';
   if (isCollapsed) {
-    wrapper.style.setProperty('--left-panel-width', '0px');
-    localStorage.setItem('fd-layers-collapsed', '1');
+    h.style.setProperty('--left-panel-width', '0px');
+    localStorage.setItem('fd-left-collapsed', '1');
   } else {
     const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
     const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 280;
-    wrapper.style.setProperty('--left-panel-width', restoreW + 'px');
-    localStorage.removeItem('fd-layers-collapsed');
+    h.style.setProperty('--left-panel-width', restoreW + 'px');
+    localStorage.setItem('fd-left-collapsed', '');
   }
-  // Sidebar pill visual state no longer needed (dropdown-based)
   // Hide resize handle when collapsed, show when expanded
   if (layersHandle) {
     layersHandle.style.display = isCollapsed ? 'none' : '';
@@ -5096,7 +5090,7 @@ async function initPlayground() {
       // On mobile, show/hide backdrop when left panel is open
       if (window.innerWidth <= 768 && mobileBackdropEl) {
         const lp = document.getElementById('left-panel');
-        const isOpen = lp && !lp.classList.contains('collapsed');
+        const isOpen = document.documentElement.dataset.lp === 'open';
         mobileBackdropEl.classList.toggle('visible', isOpen);
       }
     });
@@ -5105,7 +5099,7 @@ async function initPlayground() {
       // On mobile, show/hide backdrop when right panel is open
       if (window.innerWidth <= 768 && mobileBackdropEl) {
         const rp = document.getElementById('right-panel');
-        const isOpen = rp && !rp.classList.contains('collapsed');
+        const isOpen = document.documentElement.dataset.rp === 'open';
         mobileBackdropEl.classList.toggle('visible', isOpen);
       }
     });
@@ -5113,8 +5107,8 @@ async function initPlayground() {
     mobileBackdropEl?.addEventListener('click', () => {
       const lp = document.getElementById('left-panel');
       const rp = document.getElementById('right-panel');
-      if (lp && !lp.classList.contains('collapsed')) toggleLeftPanel();
-      if (rp && !rp.classList.contains('collapsed')) toggleRightPanel();
+      if (document.documentElement.dataset.lp === 'open') toggleLeftPanel();
+      if (document.documentElement.dataset.rp === 'open') toggleRightPanel();
       mobileBackdropEl.classList.remove('visible');
     });
 
@@ -5147,8 +5141,8 @@ async function initPlayground() {
         // Entering mobile — collapse both panels
         const lp = document.getElementById('left-panel');
         const rp = document.getElementById('right-panel');
-        if (lp && !lp.classList.contains('collapsed')) toggleLeftPanel();
-        if (rp && !rp.classList.contains('collapsed')) toggleRightPanel();
+        if (document.documentElement.dataset.lp === 'open') toggleLeftPanel();
+        if (document.documentElement.dataset.rp === 'open') toggleRightPanel();
         mobileBackdropEl?.classList.remove('visible');
       }
     });
@@ -6313,6 +6307,7 @@ async function initPlayground() {
         toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right', 'toolbar-dragging');
         toolbar.style.cssText = '';
         toolbar.classList.add(`toolbar-docked-${side}`);
+        document.documentElement.dataset.toolbar = side;
 
         // Measure toolbar after class is applied (so flex-direction is correct)
         const tbRect = toolbar.getBoundingClientRect();
