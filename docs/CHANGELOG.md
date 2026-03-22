@@ -17,6 +17,18 @@
 
 ## Completed Requirements
 
+### v0.11.240 — CSS Grid Layout + Data-Attr State Machine (R3.39, R6.19)
+
+**Zero-FOUC Architecture** — Refactored `#canvas-content` from absolute-positioned children to CSS Grid (`grid-template-columns: var(--left-panel-width) 1fr var(--right-panel-width)`). All layout state now driven by `data-*` attributes on `<html>` set synchronously from a `<head>` script before `<body>` is parsed. Eliminates toolbar flash at (0,0), panel collapse delay, and adaptive icon flicker.
+
+**Data-Attribute State Machine** — Panel state (`data-lp`, `data-rp`), toolbar dock side (`data-toolbar`), and toolbar minimized state (`data-toolbar-min`) are `<html>` attributes. CSS selectors like `[data-lp="closed"]` drive layout — no JS class toggles needed for initial render.
+
+**Toolbar CSS Default Coords** — `[data-toolbar="top"] #floating-toolbar` now includes full positioning rules (`top: 10px; left: 50%; transform: translateX(-50%)`), so toolbar renders at center-of-edge from frame 0. JS `applySnapPosition()` overrides with exact canvas-aware coords via inline styles.
+
+**fd-shell API** — Created `fd-shell/README.md` documenting the multi-platform data-attribute API for layout shell reuse across site, VS Code, and Tauri platforms.
+
+Files: `site/index.html`, `site/style.css`, `site/app.js`, `fd-shell/README.md`
+
 ### v0.11.239 — Canvas & Toolbar Bug Fixes (R3.39, R3.73, R6.5, R6.19)
 
 **DTC Shapes Visible** — Drag-to-create and insert menu shapes now use visible default fills (#F0F0F0 light / #2C2C2E dark) instead of transparent. Immediate `set_text()` + `renderCanvas()` forced after insertion.
