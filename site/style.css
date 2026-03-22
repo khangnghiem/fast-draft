@@ -3886,6 +3886,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 }
 
 /* ─── Panel Tab Toggle Buttons (sidebar icons inside panel headers) ─── */
+/* By default, panel header toggles match chrome-btn style */
 .lp-tab-toggle,
 .rp-tab-toggle {
   background: none;
@@ -3894,10 +3895,11 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   cursor: pointer;
   color: var(--fd-text-secondary);
   border-radius: 4px;
-  display: flex;
+  display: none; /* hidden by default — shown when panel is open */
   align-items: center;
   justify-content: center;
   transition: background 0.1s, color 0.1s;
+  flex-shrink: 0;
 }
 .lp-tab-toggle:hover,
 .rp-tab-toggle:hover {
@@ -3912,6 +3914,10 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   margin-left: auto;
 }
 
-/* Sidebar toggle buttons in panel headers — hidden (toggles stay in chrome) */
-.lp-tab-toggle,
-.rp-tab-toggle { display: none; }
+/* ─── Adaptive Chrome Toggle Visibility ─── */
+/* When left panel is open: hide chrome toggle, show panel header toggle */
+.lp-open #sidebar-toggle-btn { opacity: 0; pointer-events: none; }
+.lp-open .lp-tab-toggle { display: flex; }
+/* When right panel is open: hide chrome toggle, show panel header toggle */
+.rp-open #hamburger-toggle-btn { opacity: 0; pointer-events: none; }
+.rp-open .rp-tab-toggle { display: flex; }
