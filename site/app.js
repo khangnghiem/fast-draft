@@ -524,7 +524,7 @@ function switchLeftTab(tabId) {
   });
 }
 
-/** Switch the active tab in the right panel (Agent/Export/Settings). */
+/** Switch the active tab in the right panel (Agent/Search). */
 function switchRightTab(tabId) {
   const panel = document.getElementById('right-panel');
   if (!panel) return;
@@ -565,12 +565,15 @@ function toggleLeftPanel() {
   const wrapper = document.getElementById('canvas-wrapper');
   if (!panel || !wrapper) return;
   const isCollapsed = panel.classList.toggle('collapsed');
+  const content = document.getElementById('canvas-content');
   if (isCollapsed) {
     wrapper.style.setProperty('--left-panel-width', '0px');
+    content?.classList.remove('lp-open');
   } else {
     const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
     const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 320;
     wrapper.style.setProperty('--left-panel-width', restoreW + 'px');
+    content?.classList.add('lp-open');
     switchLeftTab(activeLeftTab);
   }
   requestAnimationFrame(() => {
@@ -585,6 +588,8 @@ function toggleRightPanel() {
   if (!panel) return;
   const isCollapsed = panel.classList.toggle('collapsed');
   updateRightPanelWidth(!isCollapsed);
+  const content = document.getElementById('canvas-content');
+  content?.classList.toggle('rp-open', !isCollapsed);
   localStorage.setItem('fd-right-collapsed', isCollapsed ? '1' : '');
   requestAnimationFrame(() => {
     window.dispatchEvent(new Event('resize'));
@@ -606,6 +611,9 @@ function initLeftPanel() {
   });
   // Set default tab
   switchLeftTab(activeLeftTab);
+  // Sync adaptive sidebar toggle visibility
+  const content = document.getElementById('canvas-content');
+  if (!panel.classList.contains('collapsed')) content?.classList.add('lp-open');
 }
 
 /** Initialize right panel: tab click handlers, default tab. */
@@ -629,6 +637,9 @@ function initRightPanel() {
   }
   // Set default tab
   switchRightTab(activeRightTab);
+  // Sync adaptive sidebar toggle visibility
+  const content = document.getElementById('canvas-content');
+  if (!panel.classList.contains('collapsed')) content?.classList.add('rp-open');
 }
 
 /** Initialize onboarding hints (shown once on first visit, canvas-only). */
@@ -658,30 +669,26 @@ function initOnboarding() {
 
 /** Wire settings panel buttons to existing action handlers. */
 function initSettingsPanel() {
-  // Mirror dropdown actions to settings panel items
-  const mirror = (rpId, smId) => {
-    const rpBtn = document.getElementById(rpId);
-    const smBtn = document.getElementById(smId);
-    if (rpBtn && smBtn) {
-      rpBtn.addEventListener('click', () => smBtn.click());
-    }
-  };
-  mirror('rp-renamify-btn', 'renamify-btn');
-  mirror('rp-design-review', 'sm-design-review');
-  mirror('rp-present', 'sm-present');
-  mirror('rp-sketchy-toggle', 'sm-sketchy-toggle');
-  mirror('rp-grid-toggle', 'sm-grid-toggle');
-  mirror('rp-motion-toggle', 'sm-motion-toggle');
-  mirror('rp-fullscreen-toggle', 'sm-fullscreen-toggle');
-  mirror('rp-shortcuts', 'sm-shortcuts');
-  // Settings gear also opens Settings tab
-  const gearBtn = document.getElementById('settings-gear-btn');
-  if (gearBtn) {
-    gearBtn.addEventListener('dblclick', (e) => {
-      e.preventDefault();
-      switchRightTab('settings');
-    });
-  }
+  // Settings gear dblclick no longer switches to settings tab (tab removed)
+  // Share dropdown toggle
+  const shareBtn = document.getElementById('share-btn-chrome');
+  const shareDropdown = document.getElementById('share-dropdown');
+  shareBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    shareDropdown?.classList.toggle('visible');
+    document.getElementById('settings-dropdown')?.classList.remove('visible');
+  });
+
+  // Wire lp-sidebar-toggle (in left panel header) to toggle left panel
+  document.getElementById('lp-sidebar-toggle')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleLeftPanel();
+  });
+  // Wire rp-sidebar-toggle (in right panel header) to toggle right panel
+  document.getElementById('rp-sidebar-toggle')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleRightPanel();
+  });
 }
 
 /** Toggle code panel — just switches to code tab. */
@@ -4861,7 +4868,7 @@ async function initPlayground() {
     document.getElementById('sm-fullscreen-toggle')?.addEventListener('click', toggleFullscreen);
 
     // Share button — open share modal with URL + QR code
-    document.getElementById('share-btn')?.addEventListener('click', () => {
+    document.getElementById('share-link-btn')?.addEventListener('click', () => {
       if (!editorView) return;
       const text = editorView.state.doc.toString();
       const compressed = LZString.compressToEncodedURIComponent(text);
@@ -5974,10 +5981,10 @@ async function initPlayground() {
     let dtcGhost = null;
     const DTC_DRAG_THRESHOLD = 5;
 
-    /** Default dimensions for each shape type */
+    /** Default dimensions for each shape type (arrow excluded — needs two anchors) */
     const DTC_SIZES = {
-      rect: [120, 80], ellipse: [100, 100], text: [80, 24],
-      frame: [200, 150], arrow: [120, 40], pen: [120, 80], lasso: [100, 100]
+      rect: [120, 80], ellipse: [80, 80], text: [80, 24],
+      frame: [200, 150], pen: [120, 80]
     };
 
     /** Insert a shape at the given scene coordinates via FD code injection */
@@ -5987,15 +5994,18 @@ async function initPlayground() {
       const [w, h] = DTC_SIZES[type] || [100, 80];
       const x = Math.round(sceneX);
       const y = Math.round(sceneY);
+      const isDark = document.body.classList.contains('dark-theme');
+      const defaultStroke = isDark ? '#CCCCCC' : '#333333';
       let fdBlock;
       if (type === 'text') {
         fdBlock = `\ntext @${id} "Text" {\n  x: ${x} y: ${y}\n  w: ${w} h: ${h}\n}\n`;
       } else if (type === 'arrow') {
-        fdBlock = `\nedge @${id} {\n  x: ${x} y: ${y}\n  w: ${w} h: ${h}\n  arrow: end\n  curve: smooth\n}\n`;
+        fdBlock = `\nedge @${id} {\n  x: ${x} y: ${y}\n  w: 120 h: 40\n  arrow: end\n  curve: smooth\n  stroke: ${defaultStroke} 2\n}\n`;
+      } else if (type === 'frame') {
+        fdBlock = `\nframe @${id} {\n  x: ${x} y: ${y}\n  w: ${w} h: ${h}\n  fill: #FFFFFF\n  stroke: ${defaultStroke} 1\n  corner: 8\n}\n`;
       } else {
-        const fill = smartDefaults.fill || '#007AFF';
         const corner = type === 'rect' ? `\n  corner: ${smartDefaults.cornerRadius || 8}` : '';
-        fdBlock = `\n${type} @${id} {\n  x: ${x} y: ${y}\n  w: ${w} h: ${h}\n  fill: ${fill}${corner}\n}\n`;
+        fdBlock = `\n${type} @${id} {\n  x: ${x} y: ${y}\n  w: ${w} h: ${h}\n  fill: transparent\n  stroke: ${defaultStroke} 1.5${corner}\n}\n`;
       }
       const currentText = editorView.state.doc.toString();
       editorView.dispatch({
@@ -6035,7 +6045,6 @@ async function initPlayground() {
       dtcGhost.style.height = h + 'px';
       if (tool === 'ellipse') dtcGhost.classList.add('dtc-ellipse');
       else if (tool === 'text') { dtcGhost.classList.add('dtc-text'); dtcGhost.textContent = 'T'; }
-      else if (tool === 'arrow') dtcGhost.classList.add('dtc-arrow');
       document.body.appendChild(dtcGhost);
       return dtcGhost;
     }
@@ -6052,7 +6061,7 @@ async function initPlayground() {
         updateToolbar(tool);
         canvas.style.cursor = tool === 'hand' ? 'grab' : (tool === 'select' || tool === 'eraser') ? '' : 'crosshair';
         // Track drag start for drag-to-create
-        if (tool !== 'hand' && tool !== 'select' && tool !== 'eraser' && tool !== 'lasso') {
+        if (tool !== 'hand' && tool !== 'select' && tool !== 'eraser' && tool !== 'lasso' && tool !== 'arrow') {
           dtcStartX = e.clientX;
           dtcStartY = e.clientY;
           dtcTool = tool;
@@ -6679,6 +6688,7 @@ async function initPlayground() {
       const inside = e.target.closest('.chrome-dropdown') || e.target.closest('.chrome-btn') || e.target.closest('.chrome-dropdown-container');
       if (!inside) {
         settingsDropdown?.classList.remove('visible');
+        document.getElementById('share-dropdown')?.classList.remove('visible');
         document.getElementById('sidebar-dropdown')?.classList.remove('visible');
       }
     });
@@ -6824,6 +6834,87 @@ async function initPlayground() {
       settingsDropdown?.classList.remove('visible');
       renderDirty = true;
       renderCanvas();
+    });
+
+    // ── Search Panel ─────────────────────────────────────────────
+    const searchInput = document.getElementById('search-input');
+    const searchResults = document.getElementById('search-results');
+    const searchCount = document.getElementById('search-count');
+
+    function performSearch(query) {
+      if (!searchResults) return;
+      if (!query || query.length < 2) {
+        searchResults.innerHTML = '<div class="search-empty">Search your document by node ID, text content, or style name.</div>';
+        if (searchCount) searchCount.textContent = '';
+        return;
+      }
+      const qLower = query.toLowerCase();
+      const text = editorView ? editorView.state.doc.toString() : '';
+      const lines = text.split('\n');
+      const results = [];
+
+      lines.forEach((line, i) => {
+        if (line.toLowerCase().includes(qLower)) {
+          // Extract @id if present
+          const idMatch = line.match(/@([\w-]+)/);
+          const trimmed = line.trim();
+          results.push({
+            lineNum: i + 1,
+            id: idMatch ? idMatch[1] : null,
+            context: trimmed.substring(0, 80),
+            offset: editorView ? editorView.state.doc.line(i + 1).from : 0
+          });
+        }
+      });
+
+      if (results.length === 0) {
+        searchResults.innerHTML = '<div class="search-empty">No matches found.</div>';
+        if (searchCount) searchCount.textContent = '0';
+        return;
+      }
+
+      if (searchCount) searchCount.textContent = results.length + ' found';
+      searchResults.innerHTML = results.map((r, idx) => `
+        <div class="search-result-item" data-offset="${r.offset}" data-line="${r.lineNum}" data-index="${idx}">
+          <span class="search-result-id">${r.id ? '@' + r.id : 'Line ' + r.lineNum}</span>
+          <span class="search-result-context">${escapeHtml(r.context)}</span>
+          <span class="search-result-line">L${r.lineNum}</span>
+        </div>
+      `).join('');
+
+      // Click handler for results
+      searchResults.querySelectorAll('.search-result-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const offset = parseInt(item.dataset.offset, 10);
+          const lineNum = parseInt(item.dataset.line, 10);
+          // Highlight in CodeMirror
+          if (editorView) {
+            const line = editorView.state.doc.line(lineNum);
+            editorView.dispatch({
+              selection: { anchor: line.from, head: line.to },
+              scrollIntoView: true
+            });
+          }
+          // Select node on canvas if @id exists
+          const id = item.querySelector('.search-result-id')?.textContent;
+          if (id && id.startsWith('@') && fdCanvas) {
+            try { fdCanvas.select_node(id.slice(1)); } catch (_) {}
+            renderDirty = true;
+            renderCanvas();
+          }
+          // Mark active
+          searchResults.querySelectorAll('.search-result-item').forEach(i => i.classList.remove('active'));
+          item.classList.add('active');
+        });
+      });
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    searchInput?.addEventListener('input', () => {
+      performSearch(searchInput.value);
     });
 
     // Undo/Redo buttons (in scroll toolbar)

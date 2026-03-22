@@ -501,7 +501,7 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-left: 0.5px solid var(--fd-border);
-  z-index: 15;
+  z-index: 25; /* Above chrome (z:20) so panels overlay toggle icons */
   font-size: 11px;
   color: var(--fd-text);
   transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -524,7 +524,7 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   max-width: 500px;
   background: var(--fd-surface);
   border-right: 0.5px solid var(--fd-border);
-  z-index: 15; /* Match #right-panel — above .canvas-loading (z:10) */
+  z-index: 25; /* Match #right-panel — above chrome (z:20) so panels overlay toggle icons */
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(24px) saturate(180%);
@@ -1487,10 +1487,11 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 }
 .toolbar-grip:hover { opacity: 1; }
 .toolbar-grip:active { cursor: grabbing; }
-/* ── Minimized state: only active tool + AI button ── */
+/* ── Minimized state: only active tool + insert + AI button ── */
 #floating-toolbar.toolbar-minimized .ft-tool-btn { display: none; }
 #floating-toolbar.toolbar-minimized .ft-tool-btn.active { display: flex; }
 #floating-toolbar.toolbar-minimized .ft-ai-touch { display: flex; }
+#floating-toolbar.toolbar-minimized .ft-insert-btn { display: flex; }
 #floating-toolbar.toolbar-minimized .ft-sep { display: none; }
 #floating-toolbar.toolbar-minimized .ft-undo,
 #floating-toolbar.toolbar-minimized .ft-redo { display: none; }
@@ -3794,3 +3795,125 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 .canvas-drop-zone.visible {
   display: flex;
 }
+
+/* ─── Search Pane ─── */
+.rp-pane[data-rpane="search"] {
+  display: none;
+  flex-direction: column;
+  height: 100%;
+}
+.rp-pane.active[data-rpane="search"] { display: flex; }
+.search-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+.search-empty {
+  color: var(--fd-text-secondary);
+  font-size: 11px;
+  text-align: center;
+  padding: 24px 12px;
+  opacity: 0.6;
+}
+.search-result-item {
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: background 0.1s;
+}
+.search-result-item:hover {
+  background: var(--fd-surface-hover, rgba(0,0,0,0.04));
+}
+.dark-theme .search-result-item:hover {
+  background: rgba(255,255,255,0.06);
+}
+.search-result-item.active {
+  background: var(--fd-accent);
+  color: #fff;
+}
+.search-result-id {
+  font-weight: 600;
+  font-family: 'Geist Mono', monospace;
+  color: var(--fd-accent);
+}
+.search-result-item.active .search-result-id { color: #fff; }
+.search-result-context {
+  opacity: 0.6;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.search-result-line {
+  opacity: 0.4;
+  font-size: 9px;
+  font-family: 'Geist Mono', monospace;
+}
+.search-input-area {
+  padding: 8px;
+  border-top: 0.5px solid var(--fd-border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.search-input {
+  flex: 1;
+  background: var(--fd-surface-alt, rgba(0,0,0,0.04));
+  border: 0.5px solid var(--fd-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-family: inherit;
+  color: var(--fd-text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-input:focus {
+  border-color: var(--fd-accent);
+}
+.dark-theme .search-input {
+  background: rgba(255,255,255,0.06);
+}
+.search-count {
+  font-size: 10px;
+  color: var(--fd-text-secondary);
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+/* ─── Panel Tab Toggle Buttons (sidebar icons inside panel headers) ─── */
+.lp-tab-toggle,
+.rp-tab-toggle {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--fd-text-secondary);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, color 0.1s;
+}
+.lp-tab-toggle:hover,
+.rp-tab-toggle:hover {
+  background: var(--fd-surface-hover, rgba(0,0,0,0.06));
+  color: var(--fd-text);
+}
+.dark-theme .lp-tab-toggle:hover,
+.dark-theme .rp-tab-toggle:hover {
+  background: rgba(255,255,255,0.1);
+}
+.rp-tab-toggle {
+  margin-left: auto;
+}
+
+/* ─── Adaptive Chrome Toggle Visibility ─── */
+/* When left panel is open, hide chrome-left sidebar toggle (JS adds .lp-open to #canvas-content) */
+.lp-open #sidebar-toggle-btn { display: none; }
+/* When right panel is open, hide chrome-right hamburger toggle (JS adds .rp-open to #canvas-content) */
+.rp-open #hamburger-toggle-btn { display: none; }

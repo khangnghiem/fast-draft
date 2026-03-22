@@ -17,6 +17,20 @@
 
 ## Completed Requirements
 
+### v0.11.236 — Chrome Redesign + DTC Fixes (R3.42c, R6.19, R6.20, R6.21)
+
+**DTC Bug Fixes** — ellipse size reduced from 100×100 to 80×80 (visual parity with rect), all shapes now default to transparent fill + theme-aware stroke (#333 light / #CCC dark) instead of blue fill, frame defaults to white fill. Arrow removed from drag-to-create (kept in insert menu only — arrows need two anchor points, not a bbox drop).
+
+**Insert Button Visible When Minimized** — `+` insert button now stays visible when the toolbar is double-click minimized (alongside active tool and AI button).
+
+**Chrome Redesign** — theme toggle moved from chrome-left into Settings dropdown (chrome-left is now sidebar toggle only). Export tab replaced with floating Share dropdown (↗) in chrome-right with Share Link, Copy PNG, Download SVG, Download HTML. Import CSS moved to Settings dropdown. Sign-in moved to Settings dropdown. Chrome-right order: Share → Settings → Right Panel toggle.
+
+**Right Panel: Agent + Search** — Export and Settings tabs removed from right panel. New Search tab with live text search: searches FD code for node IDs, text content, style names. Results show @id, context snippet, line number. Click a result to select the node on canvas and scroll to line in code editor.
+
+**Adaptive Sidebar Icons** — sidebar toggle buttons now appear in panel tab headers when panels are open (and hide from chrome). When panels collapse, chrome toggle icons reappear. Panel z-index raised to 25 (above chrome at 20) so panels properly overlay chrome when open.
+
+Files: `site/app.js`, `site/index.html`, `site/style.css`
+
 ### v0.11.235 — Drag-to-Create + Insert Menu (R3.42, R3.42b)
 
 **Drag-to-Create Re-implemented** — toolbar tool buttons now support drag-to-create: pointerdown on a draw tool button, drag onto the canvas, release to create a shape at the drop point. Ghost preview (dashed outline matching shape type) follows the cursor during drag. Fix: `e.preventDefault()` on toolbar button `pointerdown` blocks native SVG drag hijacking (root cause of 6 prior failures, documented in LESSONS.md).
