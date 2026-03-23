@@ -6331,7 +6331,7 @@ async function initPlayground() {
       let preferredSide = null;
 
       /** Position toolbar on an edge at (dropX, dropY), clamped within canvas */
-      function applySnapPosition(side, dropX, dropY, isAutoOverflow) {
+      function applySnapPosition(side, dropX, dropY, isAutoOverflow, grabOffsetX, grabOffsetY) {
         toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right', 'toolbar-dragging', 'toolbar-floating');
         toolbar.style.cssText = '';
         toolbar.style.visibility = 'visible'; // preserve — CSS default is hidden
@@ -6346,20 +6346,41 @@ async function initPlayground() {
         if ((side === 'top' || side === 'bottom') && tbRect.width > cr.width - 2 * SNAP_GAP) {
           if (!isAutoOverflow) preferredSide = side; // remember user's preferred side
           toolbar.classList.remove(`toolbar-docked-${side}`);
-          return applySnapPosition('left', null, dropY, true);
+          return applySnapPosition('left', null, dropY, true, grabOffsetX, grabOffsetY);
         }
 
         if (side === 'top' || side === 'bottom') {
-          // Horizontal — clamp left position within canvas
-          let left = (dropX != null) ? dropX - tbRect.width / 2 : cr.left + (cr.width - tbRect.width) / 2;
+          // Horizontal — use grab offset for free positioning along edge
+          let left;
+          if (dropX != null && grabOffsetX != null) {
+            // Scale grab offset proportionally if orientation changed
+            const dragTbWidth = grabOffsetX + (grabOffsetY != null ? grabOffsetY : 0);
+            const ratio = grabOffsetX / (dragTbWidth || tbRect.width || 1);
+            // Use a simpler approach: just subtract the raw grab offset
+            // since the toolbar stays horizontal, the X offset maps directly
+            left = dropX - grabOffsetX;
+          } else if (dropX != null) {
+            left = dropX - tbRect.width / 2;
+          } else {
+            left = cr.left + (cr.width - tbRect.width) / 2;
+          }
           left = Math.max(cr.left + SNAP_GAP, Math.min(left, cr.right - tbRect.width - SNAP_GAP));
           toolbar.style.position = 'fixed';
           toolbar.style.left = left + 'px';
           toolbar.style.top = side === 'top' ? (cr.top + SNAP_GAP) + 'px' : (cr.bottom - tbRect.height - SNAP_GAP) + 'px';
           toolbar.style.transform = 'none';
         } else {
-          // Vertical — clamp top position within canvas
-          let top = (dropY != null) ? dropY - tbRect.height / 2 : cr.top + (cr.height - tbRect.height) / 2;
+          // Vertical — use grab offset for free positioning along edge
+          let top;
+          if (dropY != null && grabOffsetY != null) {
+            // Use raw grab offset — if toolbar was already vertical, maps directly.
+            // If orientation changed (was horizontal), scale proportionally.
+            top = dropY - grabOffsetY;
+          } else if (dropY != null) {
+            top = dropY - tbRect.height / 2;
+          } else {
+            top = cr.top + (cr.height - tbRect.height) / 2;
+          }
           top = Math.max(cr.top + SNAP_GAP, Math.min(top, cr.bottom - tbRect.height - SNAP_GAP));
           toolbar.style.position = 'fixed';
           toolbar.style.top = top + 'px';
@@ -6622,7 +6643,9 @@ async function initPlayground() {
         }
 
         if (side) {
-          applySnapPosition(side, e.clientX, e.clientY);
+          const grabOffX = dragStartX - toolbarStartX;
+          const grabOffY = dragStartY - toolbarStartY;
+          applySnapPosition(side, e.clientX, e.clientY, false, grabOffX, grabOffY);
         } else {
           // No snap detected — let toolbar float freely on canvas
           applyFloatingPosition(e.clientX, e.clientY);
