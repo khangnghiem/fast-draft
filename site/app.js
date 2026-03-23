@@ -6455,7 +6455,7 @@ async function initPlayground() {
         return { side: 'bottom', x: null, y: null };
       }
 
-      function showSnapIndicator(side, pointerX, pointerY) {
+      function showSnapIndicator(side, pointerX, pointerY, grabOffsetX, grabOffsetY) {
         if (side) {
           // Measure toolbar to create a ghost silhouette
           const tbRect = toolbar.getBoundingClientRect();
@@ -6473,21 +6473,28 @@ async function initPlayground() {
           snapIndicator.style.display = 'block';
           snapIndicator.style.width = gw + 'px';
           snapIndicator.style.height = gh + 'px';
-          // Position the ghost at the snap destination — follow pointer along the sliding axis
+          // Preserve grab offset so shadow lines up with where the toolbar will land.
+          // For the sliding axis, use the grab offset ratio (how far along the toolbar
+          // the user grabbed). For orientation changes, scale the offset proportionally.
+          const grabRatioX = grabOffsetX / (tbRect.width || 1);
+          const grabRatioY = grabOffsetY / (tbRect.height || 1);
+          const offsetAlongW = grabRatioX * gw;
+          const offsetAlongH = grabRatioY * gh;
+          // Position the ghost at the snap destination — aligned to grab position
           if (side === 'top') {
-            const left = Math.max(cr.left + SNAP_GAP, Math.min(pointerX - gw / 2, cr.right - gw - SNAP_GAP));
+            const left = Math.max(cr.left + SNAP_GAP, Math.min(pointerX - offsetAlongW, cr.right - gw - SNAP_GAP));
             snapIndicator.style.left = left + 'px';
             snapIndicator.style.top = (cr.top + SNAP_GAP) + 'px';
           } else if (side === 'bottom') {
-            const left = Math.max(cr.left + SNAP_GAP, Math.min(pointerX - gw / 2, cr.right - gw - SNAP_GAP));
+            const left = Math.max(cr.left + SNAP_GAP, Math.min(pointerX - offsetAlongW, cr.right - gw - SNAP_GAP));
             snapIndicator.style.left = left + 'px';
             snapIndicator.style.top = (cr.bottom - gh - SNAP_GAP) + 'px';
           } else if (side === 'left') {
-            const top = Math.max(cr.top + SNAP_GAP, Math.min(pointerY - gh / 2, cr.bottom - gh - SNAP_GAP));
+            const top = Math.max(cr.top + SNAP_GAP, Math.min(pointerY - offsetAlongH, cr.bottom - gh - SNAP_GAP));
             snapIndicator.style.left = (cr.left + SNAP_GAP) + 'px';
             snapIndicator.style.top = top + 'px';
           } else if (side === 'right') {
-            const top = Math.max(cr.top + SNAP_GAP, Math.min(pointerY - gh / 2, cr.bottom - gh - SNAP_GAP));
+            const top = Math.max(cr.top + SNAP_GAP, Math.min(pointerY - offsetAlongH, cr.bottom - gh - SNAP_GAP));
             snapIndicator.style.left = (cr.right - gw - SNAP_GAP) + 'px';
             snapIndicator.style.top = top + 'px';
           }
@@ -6576,7 +6583,10 @@ async function initPlayground() {
         if (pointerHistory.length > 5) pointerHistory.shift();
 
         // Show snap indicator (canvas-aware) — follows pointer along edge
-        showSnapIndicator(getSnapSide(e.clientX, e.clientY), e.clientX, e.clientY);
+        // Pass grab offset so shadow lines up with toolbar, not centered on cursor
+        const grabOffX = dragStartX - toolbarStartX;
+        const grabOffY = dragStartY - toolbarStartY;
+        showSnapIndicator(getSnapSide(e.clientX, e.clientY), e.clientX, e.clientY, grabOffX, grabOffY);
       });
 
       // ── Drag end / snap ──
