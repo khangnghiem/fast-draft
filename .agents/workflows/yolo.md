@@ -59,19 +59,36 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
    >
    > Requires `gh auth refresh -h github.com -s codespace` (one-time setup).
 
-5. **Tauri desktop check** (excluded from workspace — run separately):
+5. **Bug-fix browser verification** (MANDATORY if fixing a UI interaction bug):
+
+   Use `browser_subagent` + `execute_browser_javascript` to reproduce the **exact user-reported behavior** with quantitative measurement BEFORE committing. Generic "page loads" checks do NOT count.
+
+   Template — measure element position before/after interaction:
+   ```javascript
+   const el = document.getElementById('target');
+   const before = el.getBoundingClientRect();
+   // ... trigger interaction (double-click, drag, resize, etc.) ...
+   const after = el.getBoundingClientRect();
+   // Compare: centerX, centerY, width, height, classes
+   ```
+
+   The test must **FAIL on old code** and **PASS on new code**. If you can't run locally, deploy first then verify on production — but never mark a UI bug as fixed without empirical browser measurement.
+
+   > **Skip only if** the change is purely Rust/logic with no visual/interaction impact.
+
+6. **Tauri desktop check** (excluded from workspace — run separately):
 
    ```bash
    cd fd-desktop/src-tauri && cargo check && cargo clippy -- -D warnings && cargo fmt -- --check
    ```
 
-6. **TypeScript tests** (if `fd-vscode/` changed):
+7. **TypeScript tests** (if `fd-vscode/` changed):
 
    ```bash
    cd fd-vscode && pnpm test
    ```
 
-7. **E2E smoke test** (if `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `fd-vscode/webview/` changed):
+8. **E2E smoke test** (if `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `fd-vscode/webview/` changed):
 
    Build WASM first if Rust crates changed:
 
@@ -86,7 +103,7 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
    > **Skip only if** the change is purely Rust internals with no canvas/UI impact.
    > For full UX testing (all 9 phases), run `/e2e` with full tier or via `/nonstop`.
 
-8. **Report** results to user. **STOP HERE.**
+9. **Report** results to user. **STOP HERE.**
 
 ---
 
@@ -94,28 +111,28 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 
 > Use this after `/yolo local` has passed.
 
-9. **Activate pre-push hook** (one-time per clone — blocks accidental pushes to `main`):
+10. **Activate pre-push hook** (one-time per clone — blocks accidental pushes to `main`):
 
    ```bash
    git config core.hooksPath .githooks
    ```
 
-10. **Check branch** (never commit to main):
+11. **Check branch** (never commit to main):
 
    ```bash
    git branch --show-current
    ```
 
-11. If on `main`, create a feature branch:
+12. If on `main`, create a feature branch:
 
 ```bash
 git checkout -b feat/<descriptive-name>
 ```
 
-12. **Bump Version** (if `fd-vscode/` was changed):
+13. **Bump Version** (if `fd-vscode/` was changed):
     - Bump the `version` field in `fd-vscode/package.json` appropriately (patch/minor/major).
 
-13. **Update docs** (MANDATORY — both files, every time):
+14. **Update docs** (MANDATORY — both files, every time):
     - `docs/CHANGELOG.md` — add entry under the current version section for each meaningful change
     - `docs/REQUIREMENTS.md` — for **every** CHANGELOG entry, check if it introduces, extends, or modifies a requirement:
       - New feature → add a new `R*.N` entry and update the Requirement Index
@@ -123,46 +140,46 @@ git checkout -b feat/<descriptive-name>
       - Bug fix on an existing requirement → no change needed (already documented)
       - Search the Requirement Index for overlap before adding new entries
 
-14. **Stage and commit**:
+15. **Stage and commit**:
 
     ```bash
     git add -A
     git commit -m "<type>(<scope>): <description>"
     ```
 
-15. **Push**:
+16. **Push**:
 
     ```bash
     git push -u origin HEAD
     ```
 
-16. **Create PR** using GitKraken MCP:
+17. **Create PR** using GitKraken MCP:
     - `provider`: github
     - `source_branch`: current branch
     - `target_branch`: main
     - Title in conventional format
     - Body summarizing changes + test results
 
-17. **Wait for CI** to pass:
+18. **Wait for CI** to pass:
 
     ```bash
     gh pr checks <PR_NUMBER> --watch --fail-fast
     ```
 
-18. **Merge PR** and clean up:
+19. **Merge PR** and clean up:
 
     ```bash
     gh pr merge <PR_NUMBER> --squash --delete-branch
     ```
 
-19. **Sync main**:
+20. **Sync main**:
 
     ```bash
     git checkout main
     git pull origin main
     ```
 
-20. **Verify site deploy** (if `site/`, `crates/fd-wasm/`, or `crates/fd-core/` changed):
+21. **Verify site deploy** (if `site/`, `crates/fd-wasm/`, or `crates/fd-core/` changed):
 
     Wait for the `pages.yml` deploy workflow to complete:
 
@@ -175,7 +192,7 @@ git checkout -b feat/<descriptive-name>
 
     > **Skip** if the change is docs-only, CI config, or VS Code extension-only.
 
-21. **Build & Publish VS Code extension** (if `fd-vscode/`, `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `tree-sitter-fd/` were changed):
+22. **Build & Publish VS Code extension** (if `fd-vscode/`, `crates/fd-wasm/`, `crates/fd-core/`, `crates/fd-editor/`, `crates/fd-render/`, or `tree-sitter-fd/` were changed):
 
     > ⚠️ **MANDATORY**: Read `.env` for `VSCE_PAT`, `VSX_PAT`, and `GEMINI_API_KEY` BEFORE publishing.
     > Never rely on interactive prompts — always pass tokens via flags.
@@ -205,10 +222,10 @@ git checkout -b feat/<descriptive-name>
     > Skip publish if the change is local-only or version wasn't bumped.
     > **NEVER** publish to only one registry — both Marketplace AND Open VSX are required.
 
-22. Report PR URL, merge status, deploy verification, and publish results to user.
+23. Report PR URL, merge status, deploy verification, and publish results to user.
 
 ---
 
 ## `/yolo` — Full Pipeline
 
-Runs **all steps 1–22** in sequence (local + deploy).
+Runs **all steps 1–23** in sequence (local + deploy).

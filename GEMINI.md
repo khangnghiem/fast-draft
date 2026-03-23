@@ -136,6 +136,14 @@ crates/
 > [!CAUTION]
 > **NEVER use npm for VS Code extension. Always use pnpm if possible, npm only as fallback.**
 
+### 🔄 DOM vs localStorage State
+
+> [!IMPORTANT]
+> **DOM = current visual state. localStorage = user intent.**
+> When preserving current position (minimize toggle, reclamp, resize), read from DOM (`classList`, `getBoundingClientRect()`).
+> When restoring user preference (page load, clear state), read from localStorage.
+> Runtime overrides (auto-overflow, reclamp, panel toggle) can silently diverge DOM from localStorage — never assume they match.
+
 ---
 
 ## TIER 2: CI/CD
