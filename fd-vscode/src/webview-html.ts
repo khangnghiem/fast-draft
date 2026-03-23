@@ -3101,7 +3101,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <label class="fab-label fab-text-only" for="fab-font-size">Size</label>
       <input type="number" id="fab-font-size" class="fab-input fab-text-only" min="8" max="200" step="1" value="16" title="Font size">
       <div class="fab-sep"></div>
-      <button class="fab-delete-btn" id="deleteSelectedBtn" title="Delete (⌫)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
+      <button class="fab-delete-btn" id="deleteSelectedBtn" aria-label="Delete selected node" title="Delete (⌫)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
 
     </div>
     <canvas id="fd-canvas" class="tool-select"></canvas>
@@ -3109,7 +3109,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div id="specs-panel" class="specs-panel hidden">
       <div class="specs-panel-header">
         <span class="specs-panel-title">📋 Specs</span>
-        <button class="specs-panel-close" id="specs-panel-close" title="Close">✕</button>
+        <button class="specs-panel-close" id="specs-panel-close" aria-label="Close specs panel" title="Close">✕</button>
       </div>
       <div class="specs-panel-body" id="specs-panel-body">
         <p class="specs-empty">No specs yet. Add a note via right-click → Add Spec.</p>
@@ -3122,8 +3122,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
           <span class="ai-chat-icon">✦</span> AI Agent
         </div>
         <div class="ai-chat-header-actions">
-          <button class="ai-chat-clear" id="ai-chat-clear" title="Clear chat">🗑</button>
-          <button class="ai-chat-close" id="ai-chat-close" title="Close">✕</button>
+          <button class="ai-chat-clear" id="ai-chat-clear" aria-label="Clear chat" title="Clear chat">🗑</button>
+          <button class="ai-chat-close" id="ai-chat-close" aria-label="Close chat panel" title="Close">✕</button>
         </div>
       </div>
       <div class="ai-chat-messages" id="ai-chat-messages">
@@ -3136,7 +3136,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <div class="ai-chat-context-badge hidden" id="ai-chat-context-badge"></div>
       <div class="ai-chat-input-area">
         <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Ask AI about your design..." rows="1" maxlength="500"></textarea>
-        <button class="ai-chat-send" id="ai-chat-send" title="Send">→</button>
+        <button class="ai-chat-send" id="ai-chat-send" aria-label="Send message" title="Send">→</button>
       </div>
     </div>
     <div id="dimension-tooltip"></div>
@@ -3159,7 +3159,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div id="library-panel"></div>
 
     <div class="panel-restore-strip props-restore" id="props-restore" title="Show properties panel"></div>
-    <div id="minimap-container"><canvas id="minimap-canvas"></canvas><div id="minimap-zoom-controls"><button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-reset-btn" title="Reset zoom (click)">100%</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button></div></div>
+    <div id="minimap-container"><canvas id="minimap-canvas"></canvas><div id="minimap-zoom-controls"><button class="bl-btn" id="zoom-out-btn" aria-label="Zoom out minimap" title="Zoom out">−</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-reset-btn" aria-label="Reset minimap zoom" title="Reset zoom (click)">100%</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-in-btn" aria-label="Zoom in minimap" title="Zoom in">+</button></div></div>
     <!-- Floating Bottom Toolbar (Scroll UX) -->
     <div id="floating-toolbar" class="scroll-toolbar horizontal unrolled">
       <div class="scroll-handle handle-start" title="Drag to move, click to roll">
