@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.249 — Fix Toolbar Grip Double-Click Jump & Orientation Switch (R3.39)
+
+**Deferred drag mode** — toolbar grip `pointerdown` no longer enters drag mode (removing docked classes and switching to fixed positioning). Drag mode now activates in `pointermove` only after exceeding the 5px threshold. Eliminates the visual flash/jump on click and double-click — toolbar stays perfectly still until actually dragged.
+
+**Preserve orientation on minimize** — double-click minimize now re-snaps to the saved side via `applySnapPosition(saved.side)` instead of `reclampToolbar()`. The old code could switch a vertical toolbar to horizontal via the `preferredSide` override (set when auto-overflow previously forced horizontal→vertical). Now the toolbar stays on its current edge when toggling minimized state.
+
+Files: `site/app.js`
+
 ### v0.11.248 — Collision-Based Minimap Positioning (R3.25, R6.18)
 
 **Smart minimap shift** — minimap no longer unconditionally shifts up 64px when toolbar is bottom-docked. New `adjustMinimapForToolbar()` uses AABB collision detection between toolbar and minimap bounding rects. Minimap sits at true bottom-right (`bottom: 12px`) when toolbar doesn't overlap, and shifts above toolbar + 8px gap only when actual overlap is detected. Called from `applySnapPosition()`, `reclampToolbar()`, and toolbar minimize/expand toggle.
