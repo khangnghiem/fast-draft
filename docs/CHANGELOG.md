@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.250 — Fix Toolbar Minimize Center Drift (R3.39)
+
+**Center-anchored minimize** — double-click minimize/expand now captures the toolbar's current visual center (`getBoundingClientRect`) BEFORE toggling the `toolbar-minimized` class, and passes that center as the drop coordinates to `applySnapPosition`. Previously, the saved drop coordinates were used, which computed `left = dropX - width/2` — when width changed on minimize, the toolbar shifted position. Now the toolbar's center stays perfectly anchored regardless of size change.
+
+**Synchronous reposition** — removed `requestAnimationFrame` wrapper from minimize toggle. The class toggle + reposition now executes in the same synchronous JS frame, eliminating the 1-frame flash where the toolbar briefly appears at the wrong size/position.
+
+Files: `site/app.js`
+
 ### v0.11.249 — Fix Toolbar Grip Double-Click Jump & Orientation Switch (R3.39)
 
 **Deferred drag mode** — toolbar grip `pointerdown` no longer enters drag mode (removing docked classes and switching to fixed positioning). Drag mode now activates in `pointermove` only after exceeding the 5px threshold. Eliminates the visual flash/jump on click and double-click — toolbar stays perfectly still until actually dragged.
