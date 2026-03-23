@@ -187,8 +187,11 @@ git checkout -b feat/<descriptive-name>
     sleep 30 && gh run list --workflow=pages.yml --limit 1 --json status,conclusion
     ```
 
-    If `conclusion` is `success`, run the `/e2e` **Site Deploy Verification** tier
-    to confirm https://fast-draft.com is serving the updated content.
+    If `conclusion` is `success`:
+
+    **a)** Run the `/e2e` **Site Deploy Verification** tier (generic 3-check: site loads, playground visible, WASM renders).
+
+    **b)** Run the `/e2e` **Production Feature Verification** tier — design 2–3 feature-specific tests for the change you just deployed. Use `execute_browser_javascript` on `fast-draft.com` to make quantitative DOM/state measurements. Generic "page loads" checks do NOT satisfy this step.
 
     > **Skip** if the change is docs-only, CI config, or VS Code extension-only.
 

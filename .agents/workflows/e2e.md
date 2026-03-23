@@ -140,6 +140,63 @@ Site Deploy: ✅ 3/3 — site loads, playground visible, WASM renders. Screensho
 
 ---
 
+## Tier: Production Feature Verification
+
+> Run **after Site Deploy Verification** to validate the **specific feature that changed**
+> works correctly on production. Unlike the deploy check (generic "does it load?"), this
+> tier runs targeted JS tests against the deployed code on [fast-draft.com](https://fast-draft.com).
+> **One browser subagent call.**
+
+### When to run
+
+- After **every** merge + deploy that touches `site/`, `crates/fd-wasm/`, or `crates/fd-core/`
+- Tests must be **specific to the change** — not generic page-load checks
+- Use `execute_browser_javascript` for quantitative DOM/state measurements
+
+### Browser subagent task (RecordingName: `prod_feature_verify`):
+
+Design the task based on what changed. Use this template:
+
+```
+FIRST ACTION: Resize browser viewport to 900×600.
+
+An existing tab for fast-draft.com may be open — reuse it via navigate_browser.
+Navigate to https://fast-draft.com and wait for WASM init (up to 5s).
+
+Run feature-specific tests via execute_browser_javascript:
+
+TEST 1: [Describe what the deployed code should contain or produce]
+// Use DOM queries, getBoundingClientRect(), getComputedStyle(), classList, etc.
+// Return JSON with quantitative measurements and PASS/FAIL verdict
+
+TEST 2: [Describe a state or interaction the feature enables]
+// Measure before/after if testing an interaction
+// Return JSON with measurements and PASS/FAIL verdict
+
+TEST 3: [Describe an edge case or regression guard]
+// Return JSON with measurements and PASS/FAIL verdict
+
+Take ONE screenshot at the end. Return JSON results for all tests and stop immediately.
+```
+
+### Examples of good feature-specific tests
+
+| Change | Test |
+|--------|------|
+| Snap threshold | Measure `getCanvasRect()` width, compute expected threshold, verify it's proportional |
+| Toolbar containment | Check toolbar `getBoundingClientRect()` is within canvas bounds |
+| Panel resize | Toggle panel, measure canvas width before/after, verify toolbar reclamps |
+| New CSS class | Query `classList.contains()` on the target element |
+| WASM API change | Call the API via `window.fdCanvas?.someMethod()` and verify output |
+
+### Reporting
+
+```
+Prod Feature: ✅ 3/3 — [one-line summary of what was verified]. Screenshot attached.
+```
+
+---
+
 ## Tier: Full
 
 > Run for major feature PRs or pre-release. Consolidated into **4 phases** to
