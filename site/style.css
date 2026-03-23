@@ -1465,6 +1465,12 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   position: fixed;
   z-index: 9999;
 }
+/* Free-floating (dropped on canvas, not docked to edge) */
+[data-toolbar="floating"] #floating-toolbar,
+#floating-toolbar.toolbar-floating {
+  flex-direction: row;
+  position: fixed;
+}
 /* ── Grip handles ── */
 .toolbar-grip {
   display: flex;
