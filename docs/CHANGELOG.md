@@ -17,6 +17,18 @@
 
 ## Completed Requirements
 
+### v0.11.251 — Toolbar Drag UX: Cursor-Following Shadow + Free-Float (R3.39)
+
+**Cursor-following snap shadow** — `showSnapIndicator()` now takes pointer coordinates and positions the ghost silhouette at the cursor's position along the sliding axis (clamped within canvas), instead of always centering on the edge. The ghost shows exactly where the toolbar will land.
+
+**Free-float on canvas** — toolbar no longer force-docks to the nearest edge on every drop. When dropped in the canvas interior (outside `SNAP_THRESHOLD` of any edge), it stays at the drop position with `toolbar-floating` class. Only snaps to edges when dragged near them or when a velocity throw is detected.
+
+**Overflow auto-dock** — floating toolbar auto-docks to the nearest edge on window resize or panel toggle if it overflows the canvas bounds. Otherwise, it stays put.
+
+**Minimize on floating** — double-click grip on a floating toolbar preserves its position (calls `applyFloatingPosition` instead of `applySnapPosition`).
+
+Files: `site/app.js`, `site/style.css`
+
 ### v0.11.250 — Fix Toolbar Minimize Center Drift & Side Switch (R3.39)
 
 **DOM-sourced dock side** — double-click minimize/expand now reads the toolbar's ACTUAL dock side from its CSS class (`toolbar-docked-left`, etc.) instead of from localStorage. The saved side in localStorage could be stale: e.g., default `'bottom'` when the toolbar is actually on `'left'` due to auto-overflow during initialization. This caused the toolbar to jump from left→bottom on double-click.
