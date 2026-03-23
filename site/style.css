@@ -1612,50 +1612,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   pointer-events: none;
 }
 
-/* ── Drag-to-Create Ghost ── */
-.dtc-ghost {
-  position: fixed;
-  z-index: 10000;
-  pointer-events: none;
-  border: 2px dashed var(--fd-accent, #3B82F6);
-  border-radius: 8px;
-  background: rgba(59, 130, 246, 0.06);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--fd-accent, #3B82F6);
-  font-size: 11px;
-  font-weight: 600;
-  font-family: var(--sans);
-  letter-spacing: -0.01em;
-  opacity: 0.85;
-  transition: width 0.1s ease, height 0.1s ease;
-}
-.dtc-ghost.dtc-ellipse {
-  border-radius: 50%;
-}
-.dtc-ghost.dtc-text {
-  border-radius: 4px;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--fd-text-secondary);
-  border-width: 1.5px;
-  border-style: dashed;
-}
-.dtc-ghost.dtc-arrow {
-  border: none;
-  background: none;
-}
-.dtc-ghost.dtc-arrow::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 10%;
-  right: 10%;
-  height: 2px;
-  background: var(--fd-accent, #3B82F6);
-  transform: rotate(-15deg);
-}
+/* dtc-ghost styles removed — preview is now rendered directly on the canvas */
 
 /* ── Insert Menu (+ button dropdown) ── */
 .insert-menu {

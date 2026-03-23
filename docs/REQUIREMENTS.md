@@ -85,7 +85,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.3** _(done)_: Rectangle, ellipse, text, group tools with keyboard shortcuts (V/R/O/P/T) → [spec](specs/drawing-tools.md)
 - **R3.4** _(done)_: Freehand pen/pencil tool — Catmull-Rom smoothing, pressure-sensitive stroke width (1.0–4.5px range via `pressure_to_stroke_width()`), default `#5E5CE6` stroke on creation → [spec](specs/drawing-tools.md)
 - **R3.5** _(planned)_: Path editing — node manipulation, curve handles, boolean operations
-- **R3.15** _(planned)_: Live preview — dashed outline ghost during drag-to-create; smooth curve during pen draw → [spec](specs/drawing-tools.md)
+- **R3.15** _(done)_: Live preview — canvas-projected WYSIWYG preview during drag-to-create renders the shape on the Canvas2D context in scene coordinates with actual default styles (fill, stroke, corner radius); zoom-aware; replaces DOM ghost → [spec](specs/drawing-tools.md)
 - **R3.19** _(done)_: Alt-draw-from-center — Alt/⌥ anchors start point as center (not top-left); works for RectTool and EllipseTool; combinable with Shift for square/circle from center
 - **R3.22** _(done)_: Pressure-sensitive stroke width — pen maps average pressure to stroke width on finalization (1.0–4.5px range); `SetStrokeWidth` mutation with undo/redo; 3 unit tests (light/heavy/default) → [spec](specs/drawing-tools.md)
 - **R3.23** _(planned)_: Freehand shape recognition — detect near-geometric shapes, offer "Snap to Shape" action → [spec](specs/drawing-tools.md)

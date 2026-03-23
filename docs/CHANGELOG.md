@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.257 — Canvas-Projected Drag-to-Create Preview (R3.15, R3.42)
+
+**WYSIWYG preview** — drag-to-create shapes are now rendered directly on the Canvas2D context in scene coordinates instead of as a floating DOM element. The preview uses the same default styles (fill, stroke, corner radius) as the final shape and is automatically zoom-aware — what you see during drag is exactly what you get on drop. Removed `.dtc-ghost` DOM element and 43 lines of associated CSS.
+
+Files: `site/app.js`, `site/style.css`
+
 ### v0.11.256 — Proportional Snap Threshold (R3.39)
 
 **Adaptive snap threshold** — `getSnapSide()` now uses a per-axis proportional threshold (15% of available space, clamped 20–60px) instead of a fixed 60px. On narrow canvases (both panels open, ~260px visible), the old 60px threshold covered 63% of the canvas width, making free-float nearly impossible. Now the threshold scales down to ~32px, leaving 70% of the canvas as free-float zone. Uses normalized ratio comparison so different axis thresholds are compared fairly.
