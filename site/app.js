@@ -423,6 +423,9 @@ function renderCanvas() {
   // 4. Render scene — skip_bg=true since we already filled above
   fdCanvas.render(ctx, performance.now(), true, true);
 
+  // 5. Draw drag-to-create preview shape (on-canvas, zoom-aware WYSIWYG)
+  drawDtcPreview(ctx);
+
   // ── iPad touch/pencil visual overlays ──────────────────────────────
   // Touch contact halo (finger tap feedback)
   if (touchHalo.active) {
@@ -540,6 +543,67 @@ function renderCanvas() {
     ctx.restore();
     renderDirty = true; // keep animating while eraser is active
   }
+}
+
+/** Draw the drag-to-create preview shape on the canvas in scene coordinates.
+ *  Since renderCanvas() already applies the zoom/pan transform, the shape
+ *  automatically appears at the correct screen size — true WYSIWYG. */
+function drawDtcPreview(canvasCtx) {
+  if (!dtcPreview) return;
+  const { type, sceneX, sceneY } = dtcPreview;
+  const [w, h] = DTC_SIZES[type] || [100, 80];
+  const x = sceneX - w / 2;
+  const y = sceneY - h / 2;
+
+  // Use actual default styles (same as insertShapeAt applies)
+  const isDarkNow = document.body.classList.contains('dark-theme');
+  const defaultFill = smartDefaults.fill || (isDarkNow ? '#2C2C2E' : '#F0F0F0');
+  const defaultStroke = smartDefaults.stroke || (isDarkNow ? '#CCCCCC' : '#333333');
+  const strokeWidth = (smartDefaults.strokeWidth || 1.5) / zoomLevel;
+  const cornerRadius = smartDefaults.cornerRadius || 8;
+
+  canvasCtx.save();
+  canvasCtx.globalAlpha = 0.6;
+
+  if (type === 'ellipse') {
+    canvasCtx.beginPath();
+    canvasCtx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+    canvasCtx.fillStyle = defaultFill;
+    canvasCtx.fill();
+    canvasCtx.strokeStyle = defaultStroke;
+    canvasCtx.lineWidth = strokeWidth;
+    canvasCtx.stroke();
+  } else if (type === 'text') {
+    const fontSize = 14 / zoomLevel;
+    canvasCtx.font = `${fontSize}px Inter, sans-serif`;
+    canvasCtx.fillStyle = isDarkNow ? '#FFFFFF' : '#1C1C1E';
+    canvasCtx.textAlign = 'left';
+    canvasCtx.textBaseline = 'middle';
+    canvasCtx.fillText('Text', x, y + h / 2);
+  } else {
+    // Rect / frame — rounded rect with fill and stroke
+    const r = type === 'frame' ? 8 : cornerRadius;
+    canvasCtx.beginPath();
+    if (canvasCtx.roundRect) {
+      canvasCtx.roundRect(x, y, w, h, r);
+    } else {
+      // Fallback for older browsers
+      canvasCtx.moveTo(x + r, y);
+      canvasCtx.arcTo(x + w, y, x + w, y + h, r);
+      canvasCtx.arcTo(x + w, y + h, x, y + h, r);
+      canvasCtx.arcTo(x, y + h, x, y, r);
+      canvasCtx.arcTo(x, y, x + w, y, r);
+      canvasCtx.closePath();
+    }
+    canvasCtx.fillStyle = type === 'frame' ? (isDarkNow ? '#2C2C2E' : '#FFFFFF') : defaultFill;
+    canvasCtx.fill();
+    canvasCtx.strokeStyle = defaultStroke;
+    canvasCtx.lineWidth = strokeWidth;
+    canvasCtx.stroke();
+  }
+
+  canvasCtx.restore();
+  renderDirty = true; // keep re-rendering during drag
 }
 
 /** Auto-center scene content in canvas viewport */
@@ -6046,7 +6110,6 @@ async function initPlayground() {
     let dtcActive = false;
     let dtcStartX = 0, dtcStartY = 0;
     let dtcTool = '';
-    let dtcGhost = null;
     const DTC_DRAG_THRESHOLD = 5;
 
     /** Default dimensions for each shape type (arrow excluded — needs two anchors) */
@@ -6054,6 +6117,9 @@ async function initPlayground() {
       rect: [120, 80], ellipse: [80, 80], text: [80, 24],
       frame: [200, 150], pen: [120, 80]
     };
+
+    /** Canvas-projected preview state — rendered on canvas, not DOM */
+    let dtcPreview = null; // { type: string, sceneX: number, sceneY: number }
 
     /** Insert a shape at the given scene coordinates via FD code injection */
     function insertShapeAt(type, sceneX, sceneY) {
@@ -6110,19 +6176,7 @@ async function initPlayground() {
       insertShapeAt(type, sceneX, sceneY);
     }
 
-    /** Create or show the drag ghost element */
-    function createDtcGhost(tool) {
-      if (dtcGhost) dtcGhost.remove();
-      dtcGhost = document.createElement('div');
-      dtcGhost.className = 'dtc-ghost';
-      const [w, h] = DTC_SIZES[tool] || [100, 80];
-      dtcGhost.style.width = w + 'px';
-      dtcGhost.style.height = h + 'px';
-      if (tool === 'ellipse') dtcGhost.classList.add('dtc-ellipse');
-      else if (tool === 'text') { dtcGhost.classList.add('dtc-text'); dtcGhost.textContent = 'T'; }
-      document.body.appendChild(dtcGhost);
-      return dtcGhost;
-    }
+    // createDtcGhost removed — preview now rendered on canvas via drawDtcPreview()
 
     document.querySelectorAll('.ft-tool-btn[data-tool]').forEach(btn => {
       // Click to select tool — then draw on canvas (Figma/Excalidraw style)
@@ -6172,11 +6226,14 @@ async function initPlayground() {
     // ── Drag-to-Create: pointermove + pointerup (document-level) ─────
     document.addEventListener('pointermove', (e) => {
       if (!dtcTool || dtcActive) {
-        // Already in drag mode — update ghost position
-        if (dtcActive && dtcGhost) {
-          const [w, h] = DTC_SIZES[dtcTool] || [100, 80];
-          dtcGhost.style.left = (e.clientX - w / 2) + 'px';
-          dtcGhost.style.top = (e.clientY - h / 2) + 'px';
+        // Already in drag mode — update canvas preview position
+        if (dtcActive) {
+          const canvasEl = document.getElementById('fd-canvas');
+          if (canvasEl) {
+            const { x, y } = screenToScene(e.clientX, e.clientY, canvasEl);
+            dtcPreview = { type: dtcTool, sceneX: x, sceneY: y };
+            renderDirty = true;
+          }
         }
         return;
       }
@@ -6185,10 +6242,12 @@ async function initPlayground() {
       const dy = e.clientY - dtcStartY;
       if (Math.sqrt(dx * dx + dy * dy) >= DTC_DRAG_THRESHOLD) {
         dtcActive = true;
-        createDtcGhost(dtcTool);
-        const [w, h] = DTC_SIZES[dtcTool] || [100, 80];
-        dtcGhost.style.left = (e.clientX - w / 2) + 'px';
-        dtcGhost.style.top = (e.clientY - h / 2) + 'px';
+        const canvasEl = document.getElementById('fd-canvas');
+        if (canvasEl) {
+          const { x, y } = screenToScene(e.clientX, e.clientY, canvasEl);
+          dtcPreview = { type: dtcTool, sceneX: x, sceneY: y };
+          renderDirty = true;
+        }
       }
     });
 
@@ -6197,8 +6256,8 @@ async function initPlayground() {
         dtcTool = ''; // Reset drag tracking
         return;
       }
-      // Remove ghost
-      if (dtcGhost) { dtcGhost.remove(); dtcGhost = null; }
+      // Clear canvas preview
+      dtcPreview = null;
       // Check if dropped over canvas
       const canvasEl = document.getElementById('fd-canvas');
       if (canvasEl) {
