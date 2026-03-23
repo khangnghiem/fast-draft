@@ -6317,14 +6317,28 @@ async function initPlayground() {
         return { left, top: cr.top, right, bottom: cr.bottom, width: right - left, height: cr.height };
       }
 
-      /** Detect which edge the pointer is near (relative to canvas, not window) */
-      function getSnapSide(x, y) {
+      /** Detect which edge the toolbar is near (based on toolbar rect, not cursor) */
+      function getSnapSide(pointerX, pointerY, grabOffX, grabOffY) {
         const cr = getCanvasRect();
-        if (y < cr.top + SNAP_THRESHOLD) return 'top';
-        if (y > cr.bottom - SNAP_THRESHOLD) return 'bottom';
-        if (x < cr.left + SNAP_THRESHOLD) return 'left';
-        if (x > cr.right - SNAP_THRESHOLD) return 'right';
-        return null;
+        const tbRect = toolbar.getBoundingClientRect();
+        // Project where the toolbar would be if dropped at this pointer position
+        const projLeft = pointerX - grabOffX;
+        const projTop = pointerY - grabOffY;
+        const projRight = projLeft + tbRect.width;
+        const projBottom = projTop + tbRect.height;
+        // Check distances from each toolbar edge to the corresponding canvas edge
+        const distTop = projTop - cr.top;
+        const distBottom = cr.bottom - projBottom;
+        const distLeft = projLeft - cr.left;
+        const distRight = cr.right - projRight;
+        // Find the closest edge within threshold (or overflowing)
+        let closest = null;
+        let minDist = SNAP_THRESHOLD;
+        if (distTop < minDist) { minDist = distTop; closest = 'top'; }
+        if (distBottom < minDist) { minDist = distBottom; closest = 'bottom'; }
+        if (distLeft < minDist) { minDist = distLeft; closest = 'left'; }
+        if (distRight < minDist) { minDist = distRight; closest = 'right'; }
+        return closest;
       }
 
       /** Track user's preferred side (for restoring after overflow) */
@@ -6607,7 +6621,7 @@ async function initPlayground() {
         // Pass grab offset so shadow lines up with toolbar, not centered on cursor
         const grabOffX = dragStartX - toolbarStartX;
         const grabOffY = dragStartY - toolbarStartY;
-        showSnapIndicator(getSnapSide(e.clientX, e.clientY), e.clientX, e.clientY, grabOffX, grabOffY);
+        showSnapIndicator(getSnapSide(e.clientX, e.clientY, grabOffX, grabOffY), e.clientX, e.clientY, grabOffX, grabOffY);
       });
 
       // ── Drag end / snap ──
@@ -6622,8 +6636,12 @@ async function initPlayground() {
         gripPointerDown = false;
         showSnapIndicator(null);
 
+        // Compute grab offset (used by both snap detection and snap positioning)
+        const grabOffX = dragStartX - toolbarStartX;
+        const grabOffY = dragStartY - toolbarStartY;
+
         // Check velocity for throw
-        let side = getSnapSide(e.clientX, e.clientY);
+        let side = getSnapSide(e.clientX, e.clientY, grabOffX, grabOffY);
         if (!side && pointerHistory.length >= 2) {
           const last = pointerHistory[pointerHistory.length - 1];
           const prev = pointerHistory[0];
@@ -6643,8 +6661,6 @@ async function initPlayground() {
         }
 
         if (side) {
-          const grabOffX = dragStartX - toolbarStartX;
-          const grabOffY = dragStartY - toolbarStartY;
           applySnapPosition(side, e.clientX, e.clientY, false, grabOffX, grabOffY);
         } else {
           // No snap detected — let toolbar float freely on canvas
