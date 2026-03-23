@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.247 — Fix Toolbar Disappearing on Window Resize (R3.39)
+
+**Visibility preserved through reclamp** — `applySnapPosition()` clears all inline styles via `cssText = ''` before repositioning the toolbar. This also cleared `visibility: visible` (set once at startup), causing the toolbar to revert to the CSS default `visibility: hidden`. Now re-sets `visibility: visible` immediately after the cssText reset. Reproducible by resizing the window narrow enough to trigger the horizontal→vertical auto-overflow switch.
+
+Files: `site/app.js`
+
 ### v0.11.246 — Remove Loading Overlay (R6.5)
 
 **Loading overlay removed** — Deleted the `#canvas-loading` skeleton animation overlay (shimmer shapes, progress bar, status text) that caused a brief dark-to-white flash on page load. WASM loads in <300ms on warm cache (service worker + preloads), making the overlay invisible on repeat visits and barely visible on first load. Net deletion of ~120 lines across HTML, CSS, and JS.
