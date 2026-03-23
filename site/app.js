@@ -1507,6 +1507,32 @@ function adjustMinimapForProps(visible) {
   if (mc) mc.style.right = visible ? '212px' : '12px';
 }
 
+/** Shift minimap bottom when toolbar actually overlaps it (collision-based). */
+function adjustMinimapForToolbar() {
+  const mc = document.getElementById('minimap-container');
+  const tb = document.getElementById('floating-toolbar');
+  if (!mc || !tb) return;
+  // If toolbar is hidden or minimized with no overlap risk, reset
+  if (tb.style.visibility === 'hidden' || tb.offsetParent === null) {
+    mc.style.bottom = '12px';
+    return;
+  }
+  const mr = mc.getBoundingClientRect();
+  const tr = tb.getBoundingClientRect();
+  // Check AABB overlap: toolbar rect intersects minimap rect
+  const overlaps = !(tr.right < mr.left || tr.left > mr.right ||
+                     tr.bottom < mr.top || tr.top > mr.bottom);
+  if (overlaps) {
+    // Shift minimap above toolbar with 8px gap
+    const canvas = document.getElementById('canvas-content') || document.getElementById('canvas-wrapper');
+    const cr = canvas ? canvas.getBoundingClientRect() : { bottom: window.innerHeight };
+    const gap = cr.bottom - tr.top + 8;
+    mc.style.bottom = Math.max(12, gap) + 'px';
+  } else {
+    mc.style.bottom = '12px';
+  }
+}
+
 /** Wire input handlers for the properties panel fields. */
 function setupPropsPanel() {
   const propChange = (key, el) => {
@@ -6323,6 +6349,9 @@ async function initPlayground() {
           preferredSide = null; // user explicitly chose this side
           localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side, x: dropX, y: dropY }));
         }
+
+        // Collision-based minimap shift (replaces blanket CSS bottom offset)
+        requestAnimationFrame(() => adjustMinimapForToolbar());
       }
 
       /** Re-clamp toolbar to canvas bounds (call on panel toggle / resize) */
@@ -6332,6 +6361,8 @@ async function initPlayground() {
         // If canvas widened and user preferred horizontal, try restoring preferred side
         const tryPreferred = preferredSide || (saved ? saved.side : 'bottom');
         if (saved) applySnapPosition(tryPreferred, saved.x, saved.y);
+        // Also re-check minimap collision
+        requestAnimationFrame(() => adjustMinimapForToolbar());
       }
       // Expose for panel toggle code to call
       window.__fdReclampToolbar = reclampToolbar;
@@ -6423,8 +6454,8 @@ async function initPlayground() {
           e.preventDefault();
           toolbar.classList.toggle('toolbar-minimized');
           localStorage.setItem('fd-toolbar-minimized', toolbar.classList.contains('toolbar-minimized') ? '1' : '0');
-          // Re-clamp after size change
-          requestAnimationFrame(() => reclampToolbar());
+          // Re-clamp after size change + re-check minimap collision
+          requestAnimationFrame(() => { reclampToolbar(); adjustMinimapForToolbar(); });
         });
       });
 
