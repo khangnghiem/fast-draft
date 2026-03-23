@@ -28,6 +28,8 @@ Engineering lessons discovered through building FD.
   codespace, cp, target, sync   → L304-318 (gh codespace cp Hangs)
   browser, subagent, context, spiral → L320-344 (Browser Subagent Context Spiral)
   native-drag, svg, preventDefault → L347-355 (Native Drag Hijacks SVG Pointerdown)
+  e2e, verify, bug-fix, behavior   → L496 (Verify Bug Fixes With Targeted Browser Measurement)
+  localStorage, stale, DOM, state  → L514 (localStorage ≠ Runtime Visual State)
   undo, batch, snapshot, resolve  → L358-375 (Snapshot Undo Clobbers Bounds)
   text, metrics, center, bounds   → L377-389 (Text Metrics Update Must Re-Center)
   spatial-index, hit-test, stale, move → L391-403 (Spatial Index Must Be Rebuilt After Bounds Mutation)
@@ -491,3 +493,45 @@ Browser subagents inherit the full parent conversation context. When context exc
 **Fix**: Use explicit end lines: `grid-column: 2 / 3; grid-row: 1 / 2`. This constrains the containing block to exactly the canvas grid area (column 2, row 1).
 
 **Rule**: **When using `position: absolute` on CSS Grid items, always use explicit grid range syntax (`start / end`).** Shorthand `grid-column: N` resolves to `N / auto`, which for absolute items means the containing block extends to the grid boundary. Use `grid-column: N / (N+1)` to constrain to a single column.
+
+---
+
+## Testing: Verify Bug Fixes With Targeted Browser Measurement
+
+**Date**: 2026-03-23
+**Context**: Toolbar grip double-click caused a position jump. Fix touched JS event handlers. "Verified" with cargo test (Rust-only) + generic site deploy check ("page loads, WASM renders"). Shipped 3 PRs (#784, #785, #786) because each fix only addressed one layer of the bug.
+
+**Root cause**: E2E verification tested the wrong thing. A generic "site loads" check cannot catch a behavioral bug like "element X shifts position on double-click." The actual bug required measuring `getBoundingClientRect()` before and after the interaction — a 5-line JS snippet that would have caught all 3 issues in one test.
+
+**Fix**: For any UI interaction bug fix, write a **targeted browser measurement** before deploying:
+```javascript
+// Template: measure element position before/after interaction
+const el = document.getElementById('target');
+const before = el.getBoundingClientRect();
+// ... trigger interaction ...
+const after = el.getBoundingClientRect();
+console.assert(Math.abs(before.centerX - after.centerX) < 2, 'Position shifted!');
+```
+Run this via `execute_browser_javascript` in the browser subagent BEFORE merging, not after deploy.
+
+**Lesson**: **Generic E2E ("page loads") is NOT verification of a specific bug fix.** For interaction bugs, the E2E test must reproduce the exact user-reported behavior with quantitative measurement. Code review ("this looks correct") is necessary but not sufficient — never ship a UI fix without empirical browser verification of the specific behavior.
+
+---
+
+## Editor: localStorage ≠ Runtime Visual State
+
+**Date**: 2026-03-23
+**Context**: Toolbar dblclick minimize handler read `parseToolbarPos().side` from localStorage to determine which side to re-snap to. But auto-overflow at init had silently moved the toolbar from `'bottom'` (localStorage default) to `'left'` (visual state). Result: double-clicking a left-docked toolbar moved it to the bottom.
+
+**Root cause**: localStorage stores the **user's last explicit choice**, but multiple runtime processes can override it: auto-overflow, window resize reclamp, panel toggle reclamp. These overrides update the DOM classes but do NOT always update localStorage. The gap between stored intent and visual reality grows over time.
+
+**Fix**: Read the ACTUAL state from the DOM:
+```javascript
+const currentSide = toolbar.classList.contains('toolbar-docked-left') ? 'left'
+  : toolbar.classList.contains('toolbar-docked-right') ? 'right'
+  : toolbar.classList.contains('toolbar-docked-top') ? 'top'
+  : 'bottom';
+```
+Never use `localStorage.getItem(...)` as the source of truth for current visual state.
+
+**Lesson**: **DOM is the source of truth for current visual state; localStorage is the source of truth for user intent.** When an action needs to preserve the current visual position (minimize, reclamp), read from the DOM. When an action needs to restore user preference (fresh page load, clear state), read from localStorage. Confusing the two causes state desync bugs that are invisible in code review.
