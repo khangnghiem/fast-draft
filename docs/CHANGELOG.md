@@ -17,11 +17,13 @@
 
 ## Completed Requirements
 
-### v0.11.250 — Fix Toolbar Minimize Center Drift (R3.39)
+### v0.11.250 — Fix Toolbar Minimize Center Drift & Side Switch (R3.39)
 
-**Center-anchored minimize** — double-click minimize/expand now captures the toolbar's current visual center (`getBoundingClientRect`) BEFORE toggling the `toolbar-minimized` class, and passes that center as the drop coordinates to `applySnapPosition`. Previously, the saved drop coordinates were used, which computed `left = dropX - width/2` — when width changed on minimize, the toolbar shifted position. Now the toolbar's center stays perfectly anchored regardless of size change.
+**DOM-sourced dock side** — double-click minimize/expand now reads the toolbar's ACTUAL dock side from its CSS class (`toolbar-docked-left`, etc.) instead of from localStorage. The saved side in localStorage could be stale: e.g., default `'bottom'` when the toolbar is actually on `'left'` due to auto-overflow during initialization. This caused the toolbar to jump from left→bottom on double-click.
 
-**Synchronous reposition** — removed `requestAnimationFrame` wrapper from minimize toggle. The class toggle + reposition now executes in the same synchronous JS frame, eliminating the 1-frame flash where the toolbar briefly appears at the wrong size/position.
+**Center-anchored minimize** — captures the toolbar's current visual center (`getBoundingClientRect`) BEFORE toggling the `toolbar-minimized` class, and passes that center as the drop coordinates to `applySnapPosition`. The function computes `left = dropX - width/2`, so when width changes on minimize, the center stays stable instead of the left edge.
+
+**Synchronous reposition** — removed `requestAnimationFrame` wrapper. Class toggle + reposition executes in the same synchronous JS frame, eliminating the 1-frame flash.
 
 Files: `site/app.js`
 
