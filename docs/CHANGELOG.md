@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.248 — Collision-Based Minimap Positioning (R3.25, R6.18)
+
+**Smart minimap shift** — minimap no longer unconditionally shifts up 64px when toolbar is bottom-docked. New `adjustMinimapForToolbar()` uses AABB collision detection between toolbar and minimap bounding rects. Minimap sits at true bottom-right (`bottom: 12px`) when toolbar doesn't overlap, and shifts above toolbar + 8px gap only when actual overlap is detected. Called from `applySnapPosition()`, `reclampToolbar()`, and toolbar minimize/expand toggle.
+
+**Blanket CSS rule removed** — deleted `[data-toolbar="bottom"] #minimap-container { bottom: 64px }` and `.toolbar-docked-bottom ~ #minimap-container` selectors. Positioning is now fully dynamic via JS.
+
+Files: `site/style.css`, `site/app.js`
+
 ### v0.11.247 — Fix Toolbar Disappearing on Window Resize (R3.39)
 
 **Visibility preserved through reclamp** — `applySnapPosition()` clears all inline styles via `cssText = ''` before repositioning the toolbar. This also cleared `visibility: visible` (set once at startup), causing the toolbar to revert to the CSS default `visibility: hidden`. Now re-sets `visibility: visible` immediately after the cssText reset. Reproducible by resizing the window narrow enough to trigger the horizontal→vertical auto-overflow switch.

@@ -2119,11 +2119,8 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   cursor: pointer;
   transition: right 0.25s ease, opacity 0.2s ease, box-shadow 0.2s ease, width 0.2s ease, height 0.2s ease, bottom 0.2s ease;
 }
-/* Shift minimap up when toolbar is docked at bottom */
-[data-toolbar="bottom"] #minimap-container,
-.toolbar-docked-bottom ~ #minimap-container {
-  bottom: 64px;
-}
+/* Minimap shift is now handled dynamically via JS collision detection
+   — see adjustMinimapForToolbar() in app.js */
 #minimap-container:hover { box-shadow: var(--fd-shadow-lg); }
 #minimap-canvas {
   display: block;
