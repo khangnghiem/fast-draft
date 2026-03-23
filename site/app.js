@@ -6442,18 +6442,23 @@ async function initPlayground() {
         grip.addEventListener('dblclick', (e) => {
           e.stopPropagation();
           e.preventDefault();
+          // Read the ACTUAL current side from the toolbar's CSS class, not localStorage.
+          // localStorage may be stale (e.g., default 'bottom' when toolbar is visually
+          // on 'left' due to auto-overflow or initialization).
+          const currentSide = toolbar.classList.contains('toolbar-docked-left') ? 'left'
+            : toolbar.classList.contains('toolbar-docked-right') ? 'right'
+            : toolbar.classList.contains('toolbar-docked-top') ? 'top'
+            : 'bottom';
           // Capture current center BEFORE size change — applySnapPosition uses
-          // dropX/Y to compute left = dropX - width/2. If we pass the saved
-          // drop coords, the position shifts when width changes on minimize.
-          // Using the CURRENT center keeps the toolbar visually anchored.
+          // dropX/Y to compute left = dropX - width/2. When width changes on
+          // minimize, position shifts. Using current center keeps it anchored.
           const tbRect = toolbar.getBoundingClientRect();
           const cx = tbRect.left + tbRect.width / 2;
           const cy = tbRect.top + tbRect.height / 2;
           toolbar.classList.toggle('toolbar-minimized');
           localStorage.setItem('fd-toolbar-minimized', toolbar.classList.contains('toolbar-minimized') ? '1' : '0');
-          // Re-snap synchronously (no rAF) to prevent 1-frame flash at wrong position
-          const saved = parseToolbarPos();
-          applySnapPosition(saved.side, cx, cy);
+          // Re-snap synchronously to current side with center anchor
+          applySnapPosition(currentSide, cx, cy);
           adjustMinimapForToolbar();
         });
       });
