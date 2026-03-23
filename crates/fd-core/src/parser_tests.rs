@@ -1361,6 +1361,16 @@ edge @flow @a -> @b "submit"
 }
 
 #[test]
+fn roundtrip_animations_showcase() {
+    let src = include_str!("../../../examples/animations.fd");
+    let graph = crate::parser::parse_document(src).unwrap();
+    let emitted = crate::emitter::emit_document(&graph);
+    let roundtrip = crate::parser::parse_document(&emitted).unwrap();
+    assert_eq!(graph.graph.node_count(), roundtrip.graph.node_count());
+    assert_eq!(graph.edges.len(), roundtrip.edges.len());
+}
+
+#[test]
 fn roundtrip_edge_header() {
     let src = r#"
 rect @a { w: 50 h: 50 }

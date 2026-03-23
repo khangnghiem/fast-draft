@@ -1,0 +1,55 @@
+style base {
+  w: 100 h: 100
+  fill: #F3F4F6
+  corner: 8
+}
+
+when pop {
+  scale: 1.1
+  ease: ease_out 150ms
+}
+
+rect @btn_hover {
+  use: base
+  text @_t1 "Hover me" {}
+  when :hover {
+    use: pop
+    fill: #3B82F6
+    ease: ease_in_out 200ms
+  }
+}
+
+rect @btn_press {
+  use: base
+  text @_t2 "Press me" {}
+  offset: @btn_hover 150, 0
+  when :press {
+    scale: 0.95
+    fill: #10B981
+    ease: spring 100ms
+  }
+}
+
+rect @btn_enter {
+  use: base
+  text @_t3 "Enter me" {}
+  offset: @btn_press 150, 0
+  when :enter {
+    opacity: 1
+    translate: 0, -20
+    ease: ease_out 800ms
+  }
+}
+
+rect @flow_start { w: 50 h: 50 fill: #111111 offset: @btn_hover 0, 150 }
+rect @flow_end { w: 50 h: 50 fill: #111111 offset: @btn_enter 0, 150 }
+
+edge @e_pulse @flow_start -> @flow_end {
+  flow: pulse 1000ms
+  stroke: #EF4444 3
+}
+
+edge @e_dash @flow_end -> @flow_start {
+  flow: dash 800ms
+  stroke: #8B5CF6 2
+}

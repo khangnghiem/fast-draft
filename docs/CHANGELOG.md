@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.258 — Animation Showcase Example
+- **What**: Added `examples/animations.fd` demonstrating the full suite of animation features (`:hover`, `:press`, `:enter`, templates, and edge flows).
+- **Requirement**: Completes documentation requirement for R1.5 and R1.12.
+
 ### v0.11.257 — Canvas-Projected Drag-to-Create Preview (R3.15, R3.42)
 
 **WYSIWYG preview** — drag-to-create shapes are now rendered directly on the Canvas2D context in scene coordinates instead of as a floating DOM element. The preview uses the same default styles (fill, stroke, corner radius) as the final shape and is automatically zoom-aware — what you see during drag is exactly what you get on drop. Removed `.dtc-ghost` DOM element and 43 lines of associated CSS.
