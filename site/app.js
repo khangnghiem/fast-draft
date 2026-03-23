@@ -6389,6 +6389,16 @@ async function initPlayground() {
         const tbRect = toolbar.getBoundingClientRect();
         const cr = getCanvasRect();
 
+        // If toolbar doesn't fit horizontally, auto-dock to nearest vertical edge
+        if (tbRect.width > cr.width - 2 * SNAP_GAP) {
+          const cx = dropX || (cr.left + cr.width / 2);
+          const cy = dropY || (cr.top + cr.height / 2);
+          const distLeft = Math.abs(cx - cr.left);
+          const distRight = Math.abs(cx - cr.right);
+          applySnapPosition(distLeft <= distRight ? 'left' : 'right', cx, cy);
+          return;
+        }
+
         // Clamp within canvas bounds
         let left = dropX - tbRect.width / 2;
         let top = dropY - tbRect.height / 2;
