@@ -6442,12 +6442,19 @@ async function initPlayground() {
         grip.addEventListener('dblclick', (e) => {
           e.stopPropagation();
           e.preventDefault();
+          // Capture current center BEFORE size change — applySnapPosition uses
+          // dropX/Y to compute left = dropX - width/2. If we pass the saved
+          // drop coords, the position shifts when width changes on minimize.
+          // Using the CURRENT center keeps the toolbar visually anchored.
+          const tbRect = toolbar.getBoundingClientRect();
+          const cx = tbRect.left + tbRect.width / 2;
+          const cy = tbRect.top + tbRect.height / 2;
           toolbar.classList.toggle('toolbar-minimized');
           localStorage.setItem('fd-toolbar-minimized', toolbar.classList.contains('toolbar-minimized') ? '1' : '0');
-          // Re-snap to CURRENT side — don't use reclampToolbar() which may switch
-          // from vertical to horizontal via preferredSide override
+          // Re-snap synchronously (no rAF) to prevent 1-frame flash at wrong position
           const saved = parseToolbarPos();
-          requestAnimationFrame(() => { applySnapPosition(saved.side, saved.x, saved.y); adjustMinimapForToolbar(); });
+          applySnapPosition(saved.side, cx, cy);
+          adjustMinimapForToolbar();
         });
       });
 
