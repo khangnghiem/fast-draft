@@ -6,3 +6,7 @@
 **Vulnerability:** Untrusted node IDs and file paths within the VS Code Webview HTML (`fd-vscode/src/webview-html.ts`) were concatenated into HTML strings directly without sanitization.
 **Learning:** Even internal toolings or simple UI renders built around native data files can be susceptible to XSS if inputs can be controlled (e.g., untrusted files). `replace(/</g, '&lt;').replace(/>/g, '&gt;')` manually is error-prone, insufficient, and easy to overlook when expanding functionality.
 **Prevention:** Apply a comprehensive `escapeHtml` function (handling `&`, `<`, `>`, `"`, `'`) consistently to all dynamic data interpolated into HTML templates and markdown conversions to prevent XSS. Avoid writing raw HTML concatenation when possible.
+## 2024-05-24 - Fix Overly Permissive CORS configuration
+**Vulnerability:** The AI Cloudflare Function was using an overly permissive `Access-Control-Allow-Origin: *` which allowed any domain to interact with the API, posing an SSRF and unauthorized usage risk.
+**Learning:** The API must support webviews using custom protocol prefixes (`vscode-webview://`) in addition to explicit domains (`https://fast-draft.com` and localhosts).
+**Prevention:** Implement a dynamic CORS header function (`getCorsHeaders`) that validates the `Origin` header against an explicit allowed domains list and does a prefix match for custom protocols, always returning `Vary: Origin`.
