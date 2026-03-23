@@ -6285,6 +6285,7 @@ async function initPlayground() {
       function applySnapPosition(side, dropX, dropY, isAutoOverflow) {
         toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right', 'toolbar-dragging');
         toolbar.style.cssText = '';
+        toolbar.style.visibility = 'visible'; // preserve — CSS default is hidden
         toolbar.classList.add(`toolbar-docked-${side}`);
         document.documentElement.dataset.toolbar = side;
 
