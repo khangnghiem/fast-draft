@@ -6528,10 +6528,15 @@ async function initPlayground() {
       toolbar.style.transition = 'none';
       const savedPos = parseToolbarPos();
       applySnapPosition(savedPos.side, savedPos.x, savedPos.y);
+      toolbar.style.visibility = 'visible'; // reveal after JS positioned it
       if (localStorage.getItem('fd-toolbar-minimized') === '1') {
         toolbar.classList.add('toolbar-minimized');
       }
-      requestAnimationFrame(() => { toolbar.style.transition = ''; });
+      // Double-rAF: re-enable transitions at the same frame as
+      // init-no-transition removal (line ~5210) to prevent leaking animations
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => { toolbar.style.transition = ''; });
+      });
 
       // ── Re-clamp on window resize ──
       window.addEventListener('resize', () => requestAnimationFrame(() => reclampToolbar()));

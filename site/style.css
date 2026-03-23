@@ -1419,6 +1419,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 #floating-toolbar {
   position: fixed; /* always fixed — never participates in grid */
   z-index: 30; /* above panels (z-index 25) */
+  visibility: hidden; /* hidden until JS applySnapPosition — prevents CSS→JS position jump */
   display: flex;
   align-items: center;
   gap: 2px;
@@ -1438,28 +1439,18 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 [data-toolbar="top"] #floating-toolbar,
 .toolbar-docked-top {
   flex-direction: row;
-  top: 10px;
-  left: calc(var(--left-panel-width, 320px) + (100vw - var(--left-panel-width, 320px) - var(--right-panel-width, 320px)) / 2);
-  transform: translateX(-50%);
 }
 [data-toolbar="bottom"] #floating-toolbar,
 .toolbar-docked-bottom {
   flex-direction: row;
-  bottom: 10px;
-  left: calc(var(--left-panel-width, 320px) + (100vw - var(--left-panel-width, 320px) - var(--right-panel-width, 320px)) / 2);
-  transform: translateX(-50%);
 }
 [data-toolbar="left"] #floating-toolbar,
 .toolbar-docked-left {
   flex-direction: column;
-  left: calc(var(--left-panel-width, 320px) + 10px);
-  top: 50%; transform: translateY(-50%);
 }
 [data-toolbar="right"] #floating-toolbar,
 .toolbar-docked-right {
   flex-direction: column;
-  right: calc(var(--right-panel-width, 320px) + 10px);
-  top: 50%; transform: translateY(-50%);
 }
 /* Swap separator dimensions for vertical toolbar */
 [data-toolbar="left"] #floating-toolbar .ft-sep,
