@@ -4549,7 +4549,6 @@ function setupApplePencilPro(canvas) {
 async function initPlayground() {
   const editorMount = document.getElementById('fd-editor');
   const canvas = document.getElementById('fd-canvas');
-  const loading = document.getElementById('canvas-loading');
   const wrapper = document.getElementById('canvas-wrapper');
 
   // ── (#1) Init panels BEFORE any await — pure DOM, no WASM needed ──────
@@ -4561,10 +4560,7 @@ async function initPlayground() {
   initOnboarding();
 
   try {
-    // Load WASM module with real progress tracking
-    const statusEl = document.getElementById('loading-status');
-    const progressBar = document.querySelector('.loading-progress-bar');
-    if (statusEl) statusEl.textContent = 'Loading engine…';
+    // Load WASM module
 
     // Timeout helper — prevents infinite hang if WASM fetch/init stalls
     const WASM_TIMEOUT_MS = 30000;
@@ -4596,30 +4592,14 @@ async function initPlayground() {
     // For progress UI, read Content-Length from headers to show an estimate.
     const contentLength = +wasmResponse.headers.get('Content-Length') || 0;
     if (contentLength > 0) {
-      // Show estimated progress (we can't stream-read AND pass to instantiateStreaming,
-      // so we animate the progress bar to ~90% over estimated download time)
-      if (progressBar) progressBar.style.width = '30%';
-      if (statusEl) statusEl.textContent = 'Loading engine…';
-      // Animate progress bar during streaming instantiation
-      let progressInterval = setInterval(() => {
-        const cur = parseFloat(progressBar?.style.width) || 30;
-        if (cur < 90 && progressBar) progressBar.style.width = Math.min(cur + 5, 90) + '%';
-      }, 200);
-
-      try {
-        await raceWithTimeout(
-          wasm.default(wasmResponse),
-          WASM_TIMEOUT_MS,
-          'WASM streaming instantiation'
-        );
-      } finally {
-        clearInterval(progressInterval);
-      }
+      await raceWithTimeout(
+        wasm.default(wasmResponse),
+        WASM_TIMEOUT_MS,
+        'WASM streaming instantiation'
+      );
     } else {
       // Fallback: no Content-Length (Cloudflare brotli/gzip strips it).
       // Still use streaming — pass Response directly.
-      if (statusEl) statusEl.textContent = 'Loading engine…';
-      if (progressBar) progressBar.style.width = '50%';
       await raceWithTimeout(
         wasm.default(wasmResponse),
         WASM_TIMEOUT_MS,
@@ -4627,8 +4607,6 @@ async function initPlayground() {
       );
     }
 
-    if (statusEl) statusEl.textContent = '✓ Ready';
-    if (progressBar) progressBar.style.width = '100%';
     console.log(`[FD] Runtime initialized via streaming (${Math.round(performance.now() - t0)}ms)`);
 
     // Size the canvas
@@ -4675,7 +4653,7 @@ async function initPlayground() {
     // Canvas theme — honor localStorage preference
     fdCanvas.set_theme(isDark);
     wrapper.classList.toggle('dark-canvas', isDark);
-    if (statusEl) statusEl.textContent = 'Parsing scene…';
+    console.log('[FD] Parsing scene…');
     // Deep link: load ?code= param if present, else use default
     const urlParams = new URLSearchParams(window.location.search);
     const codeParam = urlParams.get('code');
@@ -4687,7 +4665,6 @@ async function initPlayground() {
       } catch (_) { /* invalid code param, use default */ }
     }
     fdCanvas.set_text(initialFd);
-    if (statusEl) statusEl.textContent = '✓ Ready';
     console.log(`[FD] ✓ Ready (total ${Math.round(performance.now() - t0)}ms)`);
     // Hand tool is default on load — set grab cursor
     canvas.style.cursor = 'grab';
@@ -5200,8 +5177,7 @@ async function initPlayground() {
       uiDirty = false; // first render done
     }, 100);
 
-    // Hide loading overlay immediately — zero animations
-    loading.classList.add('hidden');
+
 
     // (#2) Double-rAF: wait TWO animation frames before enabling transitions.
     // Single rAF can fire in the same paint cycle as layout changes from panel init.
@@ -7333,7 +7309,10 @@ async function initPlayground() {
     const isTimeout = err.message && err.message.includes('timed out');
     const errDetail = err.message ? `<code style="font-size:12px;opacity:0.7;display:block;margin-bottom:12px">${err.message}</code>` : '';
     const retryBtn = `<button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary,#1a1a2e);color:var(--text-primary,#fff);cursor:pointer;font-size:14px">↻ Retry</button>`;
-    loading.innerHTML = `
+    // Create error overlay dynamically (loading overlay was removed to avoid flash)
+    const errOverlay = document.createElement('div');
+    errOverlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--fd-bg,#F5F5F7);z-index:10';
+    errOverlay.innerHTML = `
       <p style="color: var(--text-secondary); text-align: center; max-width: 360px;">
         <strong>${isTimeout ? 'Loading timed out' : 'Canvas couldn\u2019t start'}</strong><br><br>
         ${errDetail}
@@ -7344,6 +7323,7 @@ async function initPlayground() {
         ${retryBtn}
       </p>
     `;
+    document.getElementById('canvas-content')?.appendChild(errOverlay);
   }
 }
 
