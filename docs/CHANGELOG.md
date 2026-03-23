@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.254 — Free-Position Edge Snapping (R3.39)
+
+**Free-position snapping** — `applySnapPosition()` now uses the grab offset (where you clicked on the grip) instead of centering the toolbar on the cursor. This enables snapping to any position along an edge, not just a few fixed spots. Grab offsets are passed through the full drag end → snap chain. Reclamp/overflow calls (no offset) fall back to centering.
+
+Files: `site/app.js`
+
 ### v0.11.253 — Snap Shadow Grab-Offset Alignment (R3.39)
 
 **Grab-offset preservation** — `showSnapIndicator()` now uses the user's grab offset (where they clicked on the grip relative to the toolbar's edge) instead of centering the ghost on the cursor. The offset is scaled proportionally when orientation changes (horizontal→vertical or vice versa). The shadow now shows exactly where the toolbar will land, aligned with the drag position.
