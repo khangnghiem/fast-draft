@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.245 — Fix Toolbar Startup Jump (R3.39)
+
+**Single-source positioning** — Removed CSS `calc()` centering rules from all four `[data-toolbar="*"]` selectors. Toolbar now hidden via `visibility: hidden` until JS `applySnapPosition()` computes the correct pixel position, eliminating the CSS→JS position handoff that caused a visible rightward jump on page load.
+
+**Transition race fix** — Toolbar's inline `transition` re-enable now uses double `requestAnimationFrame` (matching the `init-no-transition` class removal timing), preventing a 1-frame window where transitions could leak during startup.
+
+Files: `site/style.css`, `site/app.js`
+
 ### v0.11.244 — Chrome Icon Positioning & Panel Layout (R3.39, R6.5)
 
 **Chrome icons in canvas grid column** — `#chrome-left` and `#chrome-right` now use `grid-column: 2; grid-row: 1` to position within the canvas grid area. Uses simple `left: 8px` / `right: 8px` instead of `calc(var(--panel-width) + 8px)`. Fixes icon position shift when panels toggle and clipping when both panels open.
