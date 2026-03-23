@@ -6281,6 +6281,7 @@ async function initPlayground() {
 
       // Track drag state
       let isDragging = false;
+      let gripPointerDown = false; // true between pointerdown and pointerup on grip
       let dragStartX = 0, dragStartY = 0;
       let toolbarStartX = 0, toolbarStartY = 0;
       const pointerHistory = [];
@@ -6424,27 +6425,16 @@ async function initPlayground() {
         grip.addEventListener('pointerdown', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          isDragging = true;
+          // Deferred drag: only record start position, don't enter drag mode yet.
+          // Drag mode activates in pointermove after exceeding GRIP_DRAG_THRESHOLD.
+          // This prevents visual jumps on click/double-click.
+          gripPointerDown = true;
           dragStartX = e.clientX;
           dragStartY = e.clientY;
           const rect = toolbar.getBoundingClientRect();
           toolbarStartX = rect.left;
           toolbarStartY = rect.top;
           pointerHistory.length = 0;
-
-          // FIX #1: Preserve flex-direction before removing docked classes
-          const currentDirection = getComputedStyle(toolbar).flexDirection;
-
-          // Switch to fixed positioning for free drag
-          toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right');
-          toolbar.classList.add('toolbar-dragging');
-          toolbar.style.left = toolbarStartX + 'px';
-          toolbar.style.top = toolbarStartY + 'px';
-          toolbar.style.transform = 'none';
-          toolbar.style.right = 'auto';
-          toolbar.style.bottom = 'auto';
-          toolbar.style.flexDirection = currentDirection; // preserve orientation during drag
-
           grip.setPointerCapture(e.pointerId);
         });
 
@@ -6454,13 +6444,33 @@ async function initPlayground() {
           e.preventDefault();
           toolbar.classList.toggle('toolbar-minimized');
           localStorage.setItem('fd-toolbar-minimized', toolbar.classList.contains('toolbar-minimized') ? '1' : '0');
-          // Re-clamp after size change + re-check minimap collision
-          requestAnimationFrame(() => { reclampToolbar(); adjustMinimapForToolbar(); });
+          // Re-snap to CURRENT side — don't use reclampToolbar() which may switch
+          // from vertical to horizontal via preferredSide override
+          const saved = parseToolbarPos();
+          requestAnimationFrame(() => { applySnapPosition(saved.side, saved.x, saved.y); adjustMinimapForToolbar(); });
         });
       });
 
       // ── Drag move ──
       document.addEventListener('pointermove', (e) => {
+        // Deferred drag start — enter drag mode only after exceeding threshold
+        if (gripPointerDown && !isDragging) {
+          const dx = e.clientX - dragStartX;
+          const dy = e.clientY - dragStartY;
+          if (Math.sqrt(dx * dx + dy * dy) >= GRIP_DRAG_THRESHOLD) {
+            isDragging = true;
+            const currentDirection = getComputedStyle(toolbar).flexDirection;
+            toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right');
+            toolbar.classList.add('toolbar-dragging');
+            toolbar.style.left = toolbarStartX + 'px';
+            toolbar.style.top = toolbarStartY + 'px';
+            toolbar.style.transform = 'none';
+            toolbar.style.right = 'auto';
+            toolbar.style.bottom = 'auto';
+            toolbar.style.flexDirection = currentDirection;
+          }
+          return;
+        }
         if (!isDragging) return;
         const dx = e.clientX - dragStartX;
         const dy = e.clientY - dragStartY;
@@ -6477,21 +6487,15 @@ async function initPlayground() {
 
       // ── Drag end / snap ──
       document.addEventListener('pointerup', (e) => {
-        if (!isDragging) return;
-        isDragging = false;
-        showSnapIndicator(null);
-
-        // If grip was only clicked (not dragged), restore original position without re-snapping
-        const totalDx = e.clientX - dragStartX;
-        const totalDy = e.clientY - dragStartY;
-        const totalDist = Math.sqrt(totalDx * totalDx + totalDy * totalDy);
-        if (totalDist < GRIP_DRAG_THRESHOLD) {
-          // Click only — restore from saved state, no jump
-          toolbar.classList.remove('toolbar-dragging');
-          const saved = parseToolbarPos();
-          applySnapPosition(saved.side, saved.x, saved.y);
+        // Grip click (no drag) — toolbar never left docked state, just clear flag
+        if (gripPointerDown && !isDragging) {
+          gripPointerDown = false;
           return;
         }
+        if (!isDragging) return;
+        isDragging = false;
+        gripPointerDown = false;
+        showSnapIndicator(null);
 
         // Check velocity for throw
         let side = getSnapSide(e.clientX, e.clientY);
