@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.246 — Remove Loading Overlay (R6.5)
+
+**Loading overlay removed** — Deleted the `#canvas-loading` skeleton animation overlay (shimmer shapes, progress bar, status text) that caused a brief dark-to-white flash on page load. WASM loads in <300ms on warm cache (service worker + preloads), making the overlay invisible on repeat visits and barely visible on first load. Net deletion of ~120 lines across HTML, CSS, and JS.
+
+**Error fallback preserved** — WASM load failures (timeout, network error) now create a dynamic error overlay on the fly instead of reusing the removed static element. Retry button and VS Code extension link retained.
+
+Files: `site/index.html`, `site/style.css`, `site/app.js`
+
 ### v0.11.245 — Fix Toolbar Startup Jump (R3.39)
 
 **Single-source positioning** — Removed CSS `calc()` centering rules from all four `[data-toolbar="*"]` selectors. Toolbar now hidden via `visibility: hidden` until JS `applySnapPosition()` computes the correct pixel position, eliminating the CSS→JS position handoff that caused a visible rightward jump on page load.
