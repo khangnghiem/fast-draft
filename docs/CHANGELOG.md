@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.256 — Proportional Snap Threshold (R3.39)
+
+**Adaptive snap threshold** — `getSnapSide()` now uses a per-axis proportional threshold (15% of available space, clamped 20–60px) instead of a fixed 60px. On narrow canvases (both panels open, ~260px visible), the old 60px threshold covered 63% of the canvas width, making free-float nearly impossible. Now the threshold scales down to ~32px, leaving 70% of the canvas as free-float zone. Uses normalized ratio comparison so different axis thresholds are compared fairly.
+
+Files: `site/app.js`
+
 ### v0.11.255 — Toolbar-Rect Snap Detection (R3.39)
 
 **Toolbar-rect-based snap** — `getSnapSide()` now projects the toolbar's bounding rect from cursor + grab offset and checks if any toolbar edge is within 60px of the corresponding canvas edge. Previously checked cursor position only, which meant snap behavior depended on where you grabbed the grip rather than where the toolbar actually is. Closest edge wins when multiple are within threshold.

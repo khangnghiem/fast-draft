@@ -6326,18 +6326,28 @@ async function initPlayground() {
         const projTop = pointerY - grabOffY;
         const projRight = projLeft + tbRect.width;
         const projBottom = projTop + tbRect.height;
+        // Per-axis adaptive threshold: 15% of available space, clamped 20–60px
+        // Prevents narrow canvases from having snap zones cover most of the area
+        const availW = cr.width - tbRect.width;
+        const availH = cr.height - tbRect.height;
+        const threshX = Math.max(20, Math.min(SNAP_THRESHOLD, availW * 0.15));
+        const threshY = Math.max(20, Math.min(SNAP_THRESHOLD, availH * 0.15));
         // Check distances from each toolbar edge to the corresponding canvas edge
         const distTop = projTop - cr.top;
         const distBottom = cr.bottom - projBottom;
         const distLeft = projLeft - cr.left;
         const distRight = cr.right - projRight;
-        // Find the closest edge within threshold (or overflowing)
+        // Find the closest edge within its axis threshold (or overflowing)
         let closest = null;
-        let minDist = SNAP_THRESHOLD;
-        if (distTop < minDist) { minDist = distTop; closest = 'top'; }
-        if (distBottom < minDist) { minDist = distBottom; closest = 'bottom'; }
-        if (distLeft < minDist) { minDist = distLeft; closest = 'left'; }
-        if (distRight < minDist) { minDist = distRight; closest = 'right'; }
+        let minRatio = 1; // normalized distance (dist/threshold), <1 means within snap zone
+        const ratioTop = distTop / threshY;
+        const ratioBottom = distBottom / threshY;
+        const ratioLeft = distLeft / threshX;
+        const ratioRight = distRight / threshX;
+        if (ratioTop < minRatio) { minRatio = ratioTop; closest = 'top'; }
+        if (ratioBottom < minRatio) { minRatio = ratioBottom; closest = 'bottom'; }
+        if (ratioLeft < minRatio) { minRatio = ratioLeft; closest = 'left'; }
+        if (ratioRight < minRatio) { minRatio = ratioRight; closest = 'right'; }
         return closest;
       }
 
