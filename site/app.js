@@ -670,6 +670,8 @@ function toggleLeftPanel() {
   requestAnimationFrame(() => {
     window.dispatchEvent(new Event('resize'));
     resizeCanvas();
+    // Re-clamp toolbar after grid recalculates (double-rAF for layout settle)
+    requestAnimationFrame(() => window.__fdReclampToolbar?.());
   });
 }
 
@@ -685,6 +687,8 @@ function toggleRightPanel() {
   requestAnimationFrame(() => {
     window.dispatchEvent(new Event('resize'));
     resizeCanvas();
+    // Re-clamp toolbar after grid recalculates (double-rAF for layout settle)
+    requestAnimationFrame(() => window.__fdReclampToolbar?.());
   });
 }
 
@@ -3087,6 +3091,8 @@ function setupPanelResize(wrapper, resizeCanvas) {
     renderCanvas();
     const w = leftPanel.offsetWidth;
     localStorage.setItem('fd-left-panel-width', String(w));
+    // Re-clamp toolbar to new canvas bounds after panel resize
+    requestAnimationFrame(() => window.__fdReclampToolbar?.());
   };
   layersHandle.addEventListener('pointerup', endDrag);
   layersHandle.addEventListener('pointercancel', endDrag);
@@ -6389,30 +6395,14 @@ async function initPlayground() {
         if (isDragging) return;
         const saved = parseToolbarPos();
         if (saved && saved.side === 'floating') {
-          // Re-clamp floating toolbar — if it overflows, auto-dock to nearest edge
-          const cr = getCanvasRect();
+          // Re-clamp floating toolbar within current canvas bounds.
+          // applyFloatingPosition already clamps to canvas rect, so this
+          // handles both "canvas shrank" and "toolbar overflows" cases.
+          // Use DOM center as the reference point (saved x/y may be stale).
           const tbRect = toolbar.getBoundingClientRect();
-          const overflowsLeft = tbRect.left < cr.left;
-          const overflowsRight = tbRect.right > cr.right;
-          const overflowsTop = tbRect.top < cr.top;
-          const overflowsBottom = tbRect.bottom > cr.bottom;
-          if (overflowsLeft || overflowsRight || overflowsTop || overflowsBottom) {
-            // Auto-dock to nearest edge
-            const cx = tbRect.left + tbRect.width / 2;
-            const cy = tbRect.top + tbRect.height / 2;
-            const distTop = Math.abs(cy - cr.top);
-            const distBottom = Math.abs(cy - cr.bottom);
-            const distLeft = Math.abs(cx - cr.left);
-            const distRight = Math.abs(cx - cr.right);
-            const minDist = Math.min(distTop, distBottom, distLeft, distRight);
-            let side = 'bottom';
-            if (minDist === distTop) side = 'top';
-            else if (minDist === distBottom) side = 'bottom';
-            else if (minDist === distLeft) side = 'left';
-            else side = 'right';
-            applySnapPosition(side, cx, cy);
-          }
-          // else: still fits, leave it alone
+          const cx = tbRect.left + tbRect.width / 2;
+          const cy = tbRect.top + tbRect.height / 2;
+          applyFloatingPosition(cx, cy);
         } else {
           // Docked — re-clamp as before
           const tryPreferred = preferredSide || (saved ? saved.side : 'bottom');
