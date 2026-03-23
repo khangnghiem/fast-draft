@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.255 — Toolbar-Rect Snap Detection (R3.39)
+
+**Toolbar-rect-based snap** — `getSnapSide()` now projects the toolbar's bounding rect from cursor + grab offset and checks if any toolbar edge is within 60px of the corresponding canvas edge. Previously checked cursor position only, which meant snap behavior depended on where you grabbed the grip rather than where the toolbar actually is. Closest edge wins when multiple are within threshold.
+
+Files: `site/app.js`
+
 ### v0.11.254 — Free-Position Edge Snapping (R3.39)
 
 **Free-position snapping** — `applySnapPosition()` now uses the grab offset (where you clicked on the grip) instead of centering the toolbar on the cursor. This enables snapping to any position along an edge, not just a few fixed spots. Grab offsets are passed through the full drag end → snap chain. Reclamp/overflow calls (no offset) fall back to centering.
