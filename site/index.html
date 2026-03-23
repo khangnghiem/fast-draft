@@ -75,7 +75,7 @@
       try { tbPos = JSON.parse(localStorage.getItem('fd-toolbar-pos')); } catch(e) {}
       if (!tbPos || !tbPos.side) {
         var raw = localStorage.getItem('fd-toolbar-pos');
-        tbPos = { side: (raw && ['top','bottom','left','right'].indexOf(raw) >= 0) ? raw : 'bottom' };
+        tbPos = { side: (raw && ['top','bottom','left','right','floating'].indexOf(raw) >= 0) ? raw : 'bottom' };
       }
       h.dataset.toolbar = tbPos.side;
 

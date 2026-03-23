@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.11.252 — Toolbar Canvas Containment (R3.39)
+
+**Canvas containment invariant** — toolbar must always remain fully within the visible canvas area. `reclampToolbar()` now fires on panel toggle (left, right) and panel resize drag end, using double-rAF to ensure CSS Grid has recalculated before reading canvas bounds.
+
+**Floating reclamp fix** — `reclampToolbar()` for floating toolbar now always re-clamps to the current canvas rect via `applyFloatingPosition()`, instead of only auto-docking on overflow. Prevents toolbar from staying at stale coordinates when panels open/close.
+
+**Head script migration** — `<head>` inline script now recognizes `'floating'` as a valid toolbar side for zero-FOUC initialization.
+
+Files: `site/app.js`, `site/index.html`
+
 ### v0.11.251 — Toolbar Drag UX: Cursor-Following Shadow + Free-Float (R3.39)
 
 **Cursor-following snap shadow** — `showSnapIndicator()` now takes pointer coordinates and positions the ghost silhouette at the cursor's position along the sliding axis (clamped within canvas), instead of always centering on the edge. The ghost shows exactly where the toolbar will land.
