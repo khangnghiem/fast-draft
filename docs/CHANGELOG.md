@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.253 — Snap Shadow Grab-Offset Alignment (R3.39)
+
+**Grab-offset preservation** — `showSnapIndicator()` now uses the user's grab offset (where they clicked on the grip relative to the toolbar's edge) instead of centering the ghost on the cursor. The offset is scaled proportionally when orientation changes (horizontal→vertical or vice versa). The shadow now shows exactly where the toolbar will land, aligned with the drag position.
+
+Files: `site/app.js`
+
 ### v0.11.252 — Toolbar Canvas Containment (R3.39)
 
 **Canvas containment invariant** — toolbar must always remain fully within the visible canvas area. `reclampToolbar()` now fires on panel toggle (left, right) and panel resize drag end, using double-rAF to ensure CSS Grid has recalculated before reading canvas bounds.
