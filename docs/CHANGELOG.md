@@ -21,6 +21,8 @@
 
 **Canvas containment invariant** — toolbar must always remain fully within the visible canvas area. `reclampToolbar()` now fires on panel toggle (left, right) and panel resize drag end, using double-rAF to ensure CSS Grid has recalculated before reading canvas bounds.
 
+**Visible canvas rect fix** — `getCanvasRect()` now computes the actual visible canvas area by narrowing the `#fd-canvas` element's bounding rect with the left and right panel edges. The canvas grid column extends behind panels (higher z-index overlay), so raw `getBoundingClientRect()` was including area hidden behind panels — allowing the toolbar to "snap" into the right panel zone.
+
 **Floating reclamp fix** — `reclampToolbar()` for floating toolbar now always re-clamps to the current canvas rect via `applyFloatingPosition()`, instead of only auto-docking on overflow. Prevents toolbar from staying at stale coordinates when panels open/close.
 
 **Head script migration** — `<head>` inline script now recognizes `'floating'` as a valid toolbar side for zero-FOUC initialization.
