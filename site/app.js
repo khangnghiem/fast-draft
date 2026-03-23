@@ -6295,10 +6295,26 @@ async function initPlayground() {
       const SNAP_GAP = 10;
       const GRIP_DRAG_THRESHOLD = 5; // minimum px before grip counts as drag
 
-      /** Get the visible canvas bounding rect (accounts for open panels) */
+      /** Get the visible canvas bounding rect (excludes area behind panels) */
       function getCanvasRect() {
         const c = document.getElementById('fd-canvas');
-        return c ? c.getBoundingClientRect() : { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth, height: window.innerHeight };
+        if (!c) return { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth, height: window.innerHeight };
+        const cr = c.getBoundingClientRect();
+        // The canvas grid column can extend behind panels (higher z-index).
+        // Narrow the rect to the actual visible area between panels.
+        const lp = document.getElementById('left-panel');
+        const rp = document.getElementById('right-panel');
+        let left = cr.left;
+        let right = cr.right;
+        if (lp) {
+          const lpRight = lp.getBoundingClientRect().right;
+          if (lpRight > left) left = lpRight;
+        }
+        if (rp) {
+          const rpLeft = rp.getBoundingClientRect().left;
+          if (rpLeft < right) right = rpLeft;
+        }
+        return { left, top: cr.top, right, bottom: cr.bottom, width: right - left, height: cr.height };
       }
 
       /** Detect which edge the pointer is near (relative to canvas, not window) */
