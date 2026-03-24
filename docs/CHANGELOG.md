@@ -17,11 +17,19 @@
 
 ## Completed Requirements
 
+### v0.11.266 — Grip-Anchored Minimize + Insert Button Icon (R3.39)
+
+**Grip stays stationary on minimize** — double-clicking the toolbar grip handle now keeps the grip visually pinned while the rest of the toolbar shrinks/expands toward it. Previous behavior centered on the toolbar's midpoint, which caused the grip to jump. Fix: captures `gripEl.getBoundingClientRect()` before toggle, computes delta after toggle, and offsets `toolbar.style.left/top` by the difference. Result clamped within canvas bounds.
+
+**Insert button SVG icon** — replaced the plain `+` text character with a Phosphor Light SVG plus icon (consistent with all other toolbar icons). Removed both `ft-sep` dividers that flanked the insert button — it now sits directly between tool buttons and the AI Touch button without separators.
+
+Files: `site/app.js`, `site/index.html`, `site/style.css`
+
 ### v0.11.265 — Auto-Rotate Floating Toolbar & Overflow Snap Fallback (R3.39)
 
 **Drag to center always auto-docked** — `applyFloatingPosition` checked if the toolbar width exceeded the canvas width, but the toolbar was still horizontal (~600px) from its docked orientation. In a narrow canvas (~500px with panels), it always exceeded → always auto-docked. Fix: force vertical orientation (`flexDirection: column`) when entering floating mode, so the ~44px wide vertical toolbar always fits.
 
-**Overflow snap went to wrong edge** — when the toolbar was dragged completely outside the canvas, `getSnapSide` returned null (all distances negative, all failed the `dist >= 0` guard). With `lastSnapSide` tracking, this meant no snap and the toolbar floated offscreen. Fix: when no edge qualifies (all distances negative), pick the edge with the least-negative distance (closest to visible).
+**Overflow snap went to wrong edge** — two bugs: (1) `getSnapSide` fallback used `b.dist - a.dist` sort which picked the *farthest* edge, not closest. Fixed to use `Math.abs(a.dist) - Math.abs(b.dist)` sort. (2) The fallback triggered even when toolbar was centered (all distances positive, beyond threshold). Added overflow guard: only triggers when at least one distance is negative (toolbar genuinely overflows canvas).
 
 Files: `site/app.js`
 
