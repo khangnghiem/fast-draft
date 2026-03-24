@@ -191,7 +191,7 @@ git checkout -b feat/<descriptive-name>
 
     **a)** Run the `/e2e` **Site Deploy Verification** tier (generic 3-check: site loads, playground visible, WASM renders).
 
-    **b)** Run the `/e2e` **Production Feature Verification** tier — design 2–3 feature-specific tests for the change you just deployed. Use `execute_browser_javascript` on `fast-draft.com` to make quantitative DOM/state measurements. Generic "page loads" checks do NOT satisfy this step.
+    **b)** Run the `/e2e` **Production Feature Verification** tier — **reuse the fast-draft.com tab** from step (a). Design 2–3 feature-specific tests for the change you just deployed. Use `execute_browser_javascript` on `fast-draft.com` to make quantitative DOM/state measurements. Generic "page loads" checks do NOT satisfy this step.
 
     > **Skip** if the change is docs-only, CI config, or VS Code extension-only.
 

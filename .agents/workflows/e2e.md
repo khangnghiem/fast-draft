@@ -89,6 +89,7 @@ description: E2E browser testing via GitHub Codespace (smoke + full tiers)
 
 ```
 FIRST ACTION: Resize browser viewport to 900×600.
+TAB REUSE: If a tab for the target hostname is already open, reuse it via navigate_browser. Do NOT call open_browser_url.
 
 On the open FD canvas editor, execute these 3 checks in sequence:
 
@@ -122,6 +123,7 @@ Take ONE screenshot at the end. Return PASS/FAIL for each check (1-3) and stop i
 
 ```
 FIRST ACTION: Resize browser viewport to 900×600.
+TAB REUSE: If a tab for fast-draft.com is already open, reuse it via navigate_browser. Do NOT call open_browser_url.
 
 Navigate to https://fast-draft.com and verify the site is live after deploy:
 

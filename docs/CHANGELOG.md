@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.262 — Browser Tab Reuse Enforcement (Docs/Workflows)
+
+**Workflow templates enforce tab reuse** — Added `TAB REUSE:` preamble to every browser subagent task template in `e2e.md` (Smoke, Site Deploy Verification). Previously only the Production Feature Verification template mentioned tab reuse. Added explicit "reuse the fast-draft.com tab from step (a)" to `yolo.md` step 21b. Added "Cross-subagent tab memory" bullet to `GEMINI.md` Browser Subagent section. Documented root cause and fix in `LESSONS.md`.
+
+Files: `.agents/workflows/e2e.md`, `.agents/workflows/yolo.md`, `GEMINI.md`, `docs/LESSONS.md`
+
 ### v0.11.261 — Fix Toolbar Snap Position & False-Snap (R3.39)
 
 **Shadow ≠ final position** — `applySnapPosition()` used raw `grabOffsetX/Y` to compute toolbar position, but `showSnapIndicator()` used proportional ratios (`grabOffset / toolbarWidth * ghostWidth`). When orientation changed (horizontal→vertical), the shadow showed one position but the toolbar landed elsewhere. Fix: both functions now use the same proportional ratio from drag-start toolbar dimensions (`dragStartTbWidth/Height`).

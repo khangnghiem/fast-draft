@@ -41,6 +41,7 @@ Engineering lessons discovered through building FD.
   import, cache-bust, immutable, module, stale → (Local ES Module Imports Need Cache-Busting Too)
   sidebar, toggle, chrome, adaptive, refactor → (Sidebar Toggle DOM Duplication Regression)
   grid-column, absolute, containing-block, shorthand → (CSS Grid: Shorthand grid-column on Absolute Items)
+  browser, subagent, tab, reuse, workflow, template → (Workflow Templates Are the Real Enforcement Point)
 -->
 
 
@@ -535,3 +536,18 @@ const currentSide = toolbar.classList.contains('toolbar-docked-left') ? 'left'
 Never use `localStorage.getItem(...)` as the source of truth for current visual state.
 
 **Lesson**: **DOM is the source of truth for current visual state; localStorage is the source of truth for user intent.** When an action needs to preserve the current visual position (minimize, reclamp), read from the DOM. When an action needs to restore user preference (fresh page load, clear state), read from localStorage. Confusing the two causes state desync bugs that are invisible in code review.
+
+---
+
+## Workflow Templates Are the Real Enforcement Point for Browser Tab Reuse
+
+**Date**: 2026-03-24
+**Context**: GEMINI.md had a "Browser Subagent (MANDATORY)" section requiring tab reuse via `navigate_browser`. Despite this rule, duplicate `fast-draft.com` tabs were opened repeatedly during `/yolo` and `/e2e` deploy verification.
+
+**Root cause**: Two compounding failures:
+1. **Subagents can't read GEMINI.md** — the browser subagent receives only the `Task` string as its prompt. GEMINI.md rules are visible to the outer agent but never reach the subagent. The rule tells the outer agent to construct the task carefully, but under heavy context the outer agent forgets.
+2. **Workflow templates didn't embed the rule** — `/e2e` and `/yolo` have verbatim task templates that the agent copies. Only the Production Feature Verification template mentioned tab reuse. The Smoke and Site Deploy Verification templates didn't — so the agent copy-pasted them and opened new tabs.
+
+**Fix**: (1) Added `TAB REUSE:` preamble to every browser subagent task template in `e2e.md`. (2) Added explicit "reuse the tab from step (a)" to `yolo.md` step 21b. (3) Added "Cross-subagent tab memory" bullet to GEMINI.md.
+
+**Rule**: **Any browser behavior rule must be embedded in the verbatim task text that gets sent to `browser_subagent`.** GEMINI.md rules are necessary for the outer agent but insufficient — the subagent only sees its `Task` string. Workflow templates with copy-paste task blocks are the real enforcement point.
