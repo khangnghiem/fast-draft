@@ -33,7 +33,7 @@ interface AiConfig {
   ollamaUrl: string;
 }
 
-interface RefineResult {
+export interface RefineResult {
   refinedText: string;
   error?: string;
   /** When true, the caller should offer an "Open Settings" action. */
