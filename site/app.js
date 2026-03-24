@@ -6418,6 +6418,17 @@ async function initPlayground() {
         if (distBottom >= 0 && ratioBottom < minRatio) { minRatio = ratioBottom; closest = 'bottom'; }
         if (distLeft >= 0 && ratioLeft < minRatio) { minRatio = ratioLeft; closest = 'left'; }
         if (distRight >= 0 && ratioRight < minRatio) { minRatio = ratioRight; closest = 'right'; }
+
+        // Overflow fallback: if toolbar is completely outside canvas (all distances negative),
+        // snap to the edge with the least-negative distance (closest to returning visible).
+        if (!closest) {
+          const edges = [
+            { side: 'top', dist: distTop }, { side: 'bottom', dist: distBottom },
+            { side: 'left', dist: distLeft }, { side: 'right', dist: distRight }
+          ];
+          edges.sort((a, b) => b.dist - a.dist); // most positive (least negative) first
+          closest = edges[0].side;
+        }
         return closest;
       }
 
@@ -6495,14 +6506,17 @@ async function initPlayground() {
         toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right', 'toolbar-dragging', 'toolbar-floating');
         toolbar.style.cssText = '';
         toolbar.style.visibility = 'visible';
-        // Keep whatever orientation was last (horizontal by default)
+        // Always go vertical when floating — horizontal toolbar is typically too wide
+        // for narrow canvases (panels open = ~500px visible), causing the old code to
+        // auto-dock instead of float. Vertical toolbar (~44px wide) always fits.
+        toolbar.style.flexDirection = 'column';
         toolbar.classList.add('toolbar-floating');
         document.documentElement.dataset.toolbar = 'floating';
 
-        const tbRect = toolbar.getBoundingClientRect();
+        let tbRect = toolbar.getBoundingClientRect();
         const cr = getCanvasRect();
 
-        // If toolbar doesn't fit horizontally, auto-dock to nearest vertical edge
+        // If toolbar STILL doesn't fit (extremely narrow canvas), auto-dock
         if (tbRect.width > cr.width - 2 * SNAP_GAP) {
           const cx = dropX || (cr.left + cr.width / 2);
           const cy = dropY || (cr.top + cr.height / 2);

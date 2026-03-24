@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.265 — Auto-Rotate Floating Toolbar & Overflow Snap Fallback (R3.39)
+
+**Drag to center always auto-docked** — `applyFloatingPosition` checked if the toolbar width exceeded the canvas width, but the toolbar was still horizontal (~600px) from its docked orientation. In a narrow canvas (~500px with panels), it always exceeded → always auto-docked. Fix: force vertical orientation (`flexDirection: column`) when entering floating mode, so the ~44px wide vertical toolbar always fits.
+
+**Overflow snap went to wrong edge** — when the toolbar was dragged completely outside the canvas, `getSnapSide` returned null (all distances negative, all failed the `dist >= 0` guard). With `lastSnapSide` tracking, this meant no snap and the toolbar floated offscreen. Fix: when no edge qualifies (all distances negative), pick the edge with the least-negative distance (closest to visible).
+
+Files: `site/app.js`
+
 ### v0.11.264 — Fix Rect Duplication on Toolbar Drag & Snap Threshold (R3.39, R3.42)
 
 **Rect duplication on toolbar drag** — clicking a tool button (e.g., Rect) set `dtcTool` via the button's `pointerdown` handler. If the user then dragged the toolbar grip instead of clicking the canvas, `dtcTool` was never cleared (grip's `stopPropagation` prevented `canvas.pointerdown` from firing). The document-level DTC `pointermove`/`pointerup` handlers then created a duplicate shape at the drop position. Fix: clear `dtcTool` and `dtcActive` in the grip `pointerdown` handler.
