@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.259 — Shrink Panel Default Width to 260px (R6.6)
+
+**Narrower panels** — both left and right panel defaults reduced from 320px to 260px, giving 120px more canvas space (60px per side). On a 1440px viewport, canvas ratio improves from 56% to 64%. Added `--fd-panel-default-width: 260px` CSS variable as single source of truth. Updated all hardcoded `320` references in grid fallback, `updateRightPanelWidth()`, `toggleLeftPanel()`, `toggleLayersPanel()`, `DEFAULT_LEFT_W`, and `<head>` initialization script. Users with saved custom widths retain their preference.
+
+Files: `site/style.css`, `site/app.js`, `site/index.html`
+
 ### v0.11.258 — Sidebar Toggle Icon Alignment (R6.19)
 
 **Pixel-matched sidebar toggles** — panel header toggle icons (`.lp-tab-toggle`, `.rp-tab-toggle`) now use identical dimensions to their canvas chrome counterparts (`#sidebar-toggle-btn`, `#hamburger-toggle-btn`): 16×16 SVG, 28×28 button, 6px padding, 8px border-radius, matching background/border/shadow. Previously the panel toggles used 14×14 SVGs in ~22×22 buttons with no background, causing a visible size/position jump on panel toggle.
