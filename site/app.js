@@ -548,7 +548,7 @@ function renderCanvas() {
 /** Default dimensions for each shape type (arrow excluded — needs two anchors).
  *  Module-scope so drawDtcPreview() can access them from renderCanvas(). */
 const DTC_SIZES = {
-  rect: [120, 80], ellipse: [80, 80], text: [80, 24],
+  rect: [120, 80], ellipse: [90, 90], text: [80, 24],
   frame: [200, 150], pen: [120, 80]
 };
 

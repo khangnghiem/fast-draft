@@ -23,7 +23,7 @@
 
 **Toolbar can't snap top/bottom** — `getSnapSide()` was orientation-locked: vertical toolbar → left/right only. Once auto-overflowed to vertical, it could never snap to top/bottom. Fix: replaced with distance-based evaluation that considers all 4 edges — closest axis wins, allowing vertical↔horizontal switching.
 
-**Ellipse too big** — WASM default ellipse click-creates was 100×100. Fix: reduced to 80×80 to match DTC dimensions and visual parity with rect (120×80). Updated `ellipse_tool_click_creates_centered` test.
+**Ellipse too big** — WASM default ellipse click-creates was 100×100. Fix: reduced to 90×90 to match visual parity with rect (120×80). Updated `ellipse_tool_click_creates_centered` test.
 
 Files: `site/app.js`, `crates/fd-editor/src/tools.rs`, `crates/fd-editor/src/tools_tests.rs`
 
