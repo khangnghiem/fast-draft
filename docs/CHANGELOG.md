@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.268 — Edge-Only Snap: Remove Floating Mode, Lock Toolbar Orientation (R3.39)
+
+**Major snap simplification** — removed free-floating toolbar mode and all threshold/overflow logic that caused persistent bugs across 5+ conversations. Toolbar now always snaps to edges with orientation locking: horizontal toolbar → top/bottom only, vertical toolbar → left/right only. `getSnapSide` reduced from 48 lines (threshold ratios, overflow fallback, edge filtering) to 12 lines (midpoint comparison). Deleted `applyFloatingPosition` (~40 lines), simplified `showSnapIndicator` (removed orientation swap), simplified `reclampToolbar` (removed floating branch). Net ~120 lines removed. Old `floating` localStorage state migrated to `bottom` on load.
+
+Files: `site/app.js`
+
 ### v0.11.267 — Overflow Snap Picks Overflowed Edge for Correct Shadow Orientation (R3.39)
 
 **Overflow snap picked wrong edge** — when dragging a vertical toolbar below canvas, the overflow fallback considered all edges by absolute distance. A side edge (left/right) often had a smaller absolute distance than the bottom edge, so the shadow showed vertical orientation instead of horizontal. Fix: `.filter(e => e.dist < 0)` ensures only overflowed edges are candidates. Dragging below → snaps bottom (horizontal shadow). Dragging past right → snaps right (vertical shadow).
