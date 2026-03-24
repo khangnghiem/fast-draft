@@ -6355,6 +6355,8 @@ async function initPlayground() {
       let gripPointerDown = false; // true between pointerdown and pointerup on grip
       let dragStartX = 0, dragStartY = 0;
       let toolbarStartX = 0, toolbarStartY = 0;
+      let dragStartTbWidth = 0, dragStartTbHeight = 0; // toolbar dims at drag start (before orientation change)
+      let lastSnapSide = null; // last snap side shown by indicator (null = no shadow visible)
       const pointerHistory = [];
       const SNAP_THRESHOLD = 60;
       const SNAP_GAP = 10;
@@ -6439,15 +6441,13 @@ async function initPlayground() {
         }
 
         if (side === 'top' || side === 'bottom') {
-          // Horizontal — use grab offset for free positioning along edge
+          // Horizontal — use proportional grab ratio (matches showSnapIndicator)
           let left;
           if (dropX != null && grabOffsetX != null) {
-            // Scale grab offset proportionally if orientation changed
-            const dragTbWidth = grabOffsetX + (grabOffsetY != null ? grabOffsetY : 0);
-            const ratio = grabOffsetX / (dragTbWidth || tbRect.width || 1);
-            // Use a simpler approach: just subtract the raw grab offset
-            // since the toolbar stays horizontal, the X offset maps directly
-            left = dropX - grabOffsetX;
+            // Proportional ratio: where user grabbed relative to drag-start toolbar width
+            const srcW = dragStartTbWidth || tbRect.width || 1;
+            const grabRatioX = grabOffsetX / srcW;
+            left = dropX - grabRatioX * tbRect.width;
           } else if (dropX != null) {
             left = dropX - tbRect.width / 2;
           } else {
@@ -6459,12 +6459,12 @@ async function initPlayground() {
           toolbar.style.top = side === 'top' ? (cr.top + SNAP_GAP) + 'px' : (cr.bottom - tbRect.height - SNAP_GAP) + 'px';
           toolbar.style.transform = 'none';
         } else {
-          // Vertical — use grab offset for free positioning along edge
+          // Vertical — use proportional grab ratio (matches showSnapIndicator)
           let top;
           if (dropY != null && grabOffsetY != null) {
-            // Use raw grab offset — if toolbar was already vertical, maps directly.
-            // If orientation changed (was horizontal), scale proportionally.
-            top = dropY - grabOffsetY;
+            const srcH = dragStartTbHeight || tbRect.height || 1;
+            const grabRatioY = grabOffsetY / srcH;
+            top = dropY - grabRatioY * tbRect.height;
           } else if (dropY != null) {
             top = dropY - tbRect.height / 2;
           } else {
@@ -6566,6 +6566,7 @@ async function initPlayground() {
       }
 
       function showSnapIndicator(side, pointerX, pointerY, grabOffsetX, grabOffsetY) {
+        lastSnapSide = side; // track for pointerup — null means no shadow visible
         if (side) {
           // Measure toolbar to create a ghost silhouette
           const tbRect = toolbar.getBoundingClientRect();
@@ -6584,10 +6585,11 @@ async function initPlayground() {
           snapIndicator.style.width = gw + 'px';
           snapIndicator.style.height = gh + 'px';
           // Preserve grab offset so shadow lines up with where the toolbar will land.
-          // For the sliding axis, use the grab offset ratio (how far along the toolbar
-          // the user grabbed). For orientation changes, scale the offset proportionally.
-          const grabRatioX = grabOffsetX / (tbRect.width || 1);
-          const grabRatioY = grabOffsetY / (tbRect.height || 1);
+          // Use drag-start dimensions for the ratio source (toolbar dims before orientation change).
+          const srcW = dragStartTbWidth || tbRect.width || 1;
+          const srcH = dragStartTbHeight || tbRect.height || 1;
+          const grabRatioX = grabOffsetX / srcW;
+          const grabRatioY = grabOffsetY / srcH;
           const offsetAlongW = grabRatioX * gw;
           const offsetAlongH = grabRatioY * gh;
           // Position the ghost at the snap destination — aligned to grab position
@@ -6627,6 +6629,9 @@ async function initPlayground() {
           const rect = toolbar.getBoundingClientRect();
           toolbarStartX = rect.left;
           toolbarStartY = rect.top;
+          dragStartTbWidth = rect.width;
+          dragStartTbHeight = rect.height;
+          lastSnapSide = null;
           pointerHistory.length = 0;
           grip.setPointerCapture(e.pointerId);
         });
@@ -6709,14 +6714,18 @@ async function initPlayground() {
         if (!isDragging) return;
         isDragging = false;
         gripPointerDown = false;
-        showSnapIndicator(null);
 
         // Compute grab offset (used by both snap detection and snap positioning)
         const grabOffX = dragStartX - toolbarStartX;
         const grabOffY = dragStartY - toolbarStartY;
 
-        // Check velocity for throw
-        let side = getSnapSide(e.clientX, e.clientY, grabOffX, grabOffY);
+        // Use the snap side that was visible as the shadow indicator.
+        // This ensures toolbar lands exactly where the shadow showed.
+        // Only fall back to getSnapSide for velocity throws (no shadow needed).
+        let side = lastSnapSide;
+        showSnapIndicator(null); // hide the indicator
+
+        // Velocity throw — only when no shadow was visible
         if (!side && pointerHistory.length >= 2) {
           const last = pointerHistory[pointerHistory.length - 1];
           const prev = pointerHistory[0];
@@ -6738,7 +6747,7 @@ async function initPlayground() {
         if (side) {
           applySnapPosition(side, e.clientX, e.clientY, false, grabOffX, grabOffY);
         } else {
-          // No snap detected — let toolbar float freely on canvas
+          // No snap shadow was visible and no throw — float freely
           applyFloatingPosition(e.clientX, e.clientY);
         }
       });
