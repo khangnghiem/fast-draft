@@ -5667,7 +5667,17 @@ async function initPlayground() {
         e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
       );
       const moveResult = JSON.parse(moveResultJson);
-      if (moveResult.changed) { renderDirty = true; uiDirty = true; canvasDragOccurred = true; }
+      if (moveResult.changed) {
+        renderDirty = true; uiDirty = true;
+        // Only track as a canvas drag (for post-drop reparent menu) when using
+        // Select or Hand tool. Draw tools (rect/ellipse/pen/text/frame/arrow)
+        // should NOT trigger the post-drop reparent context menu — their
+        // gestures are shape creation, not shape movement.
+        const activeTool = fdCanvas.get_tool_name();
+        if (activeTool === 'select' || activeTool === 'hand') {
+          canvasDragOccurred = true;
+        }
+      }
 
       // ── Canvas→Layers cross-drag: highlight layer items when pointer enters Layers panel ──
       if (canvasDragOccurred && activePointerId !== -1) {
