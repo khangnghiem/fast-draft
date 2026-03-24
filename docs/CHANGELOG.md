@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.258 — Sidebar Toggle Icon Alignment (R6.19)
+
+**Pixel-matched sidebar toggles** — panel header toggle icons (`.lp-tab-toggle`, `.rp-tab-toggle`) now use identical dimensions to their canvas chrome counterparts (`#sidebar-toggle-btn`, `#hamburger-toggle-btn`): 16×16 SVG, 28×28 button, 6px padding, 8px border-radius, matching background/border/shadow. Previously the panel toggles used 14×14 SVGs in ~22×22 buttons with no background, causing a visible size/position jump on panel toggle.
+
+Files: `site/index.html`, `site/style.css`
+
 ### v0.11.257 — Canvas-Projected Drag-to-Create Preview (R3.15, R3.42)
 
 **WYSIWYG preview** — drag-to-create shapes are now rendered directly on the Canvas2D context in scene coordinates instead of as a floating DOM element. The preview uses the same default styles (fill, stroke, corner radius) as the final shape and is automatically zoom-aware — what you see during drag is exactly what you get on drop. Removed `.dtc-ghost` DOM element and 43 lines of associated CSS.
