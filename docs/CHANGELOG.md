@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.264 — Fix Rect Duplication on Toolbar Drag & Snap Threshold (R3.39, R3.42)
+
+**Rect duplication on toolbar drag** — clicking a tool button (e.g., Rect) set `dtcTool` via the button's `pointerdown` handler. If the user then dragged the toolbar grip instead of clicking the canvas, `dtcTool` was never cleared (grip's `stopPropagation` prevented `canvas.pointerdown` from firing). The document-level DTC `pointermove`/`pointerup` handlers then created a duplicate shape at the drop position. Fix: clear `dtcTool` and `dtcActive` in the grip `pointerdown` handler.
+
+**Snap threshold too aggressive in constrained viewports** — the snap threshold formula used `Math.max(20, ...)` as a hard floor, meaning when the toolbar nearly filled the canvas axis (e.g., `availH=40px`), each side's 20px threshold consumed 100% of free space. Fix: removed the hard floor, threshold is now `Math.min(60, avail * 0.15)` — each side never exceeds 15% of free space, leaving ≥70% as free-float zone.
+
+Files: `site/app.js`
+
 ### v0.11.263 — Remove Velocity Throw to Fix False-Snap (R3.39)
 
 **Velocity throw caused false-snapping** — the velocity throw feature (speed > 500 px/s) bypassed the shadow-based snap gate introduced in v0.11.261. A normal drag gesture easily exceeds 500 px/s, so even when no snap shadow was visible (toolbar in canvas interior), the velocity throw would force-snap the toolbar to an edge. Fix: removed velocity throw entirely. Snap behavior is now 100% shadow-driven — if the snap shadow is visible when the user releases, snap there; otherwise float freely.

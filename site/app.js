@@ -6393,12 +6393,15 @@ async function initPlayground() {
         const projTop = pointerY - grabOffY;
         const projRight = projLeft + tbRect.width;
         const projBottom = projTop + tbRect.height;
-        // Per-axis adaptive threshold: 15% of available space, clamped 20–60px
-        // Prevents narrow canvases from having snap zones cover most of the area
-        const availW = cr.width - tbRect.width;
-        const availH = cr.height - tbRect.height;
-        const threshX = Math.max(20, Math.min(SNAP_THRESHOLD, availW * 0.15));
-        const threshY = Math.max(20, Math.min(SNAP_THRESHOLD, availH * 0.15));
+        // Per-axis adaptive threshold: 15% of available space, capped at 60px.
+        // NO hard minimum floor — when toolbar nearly fills the axis (e.g., availH=40px),
+        // each side's threshold must shrink proportionally (40 * 0.15 = 6px) so both
+        // sides combined never exceed 30% of free space. The old Math.max(20,...) floor
+        // consumed 100% of free space when availH < 40px.
+        const availW = Math.max(0, cr.width - tbRect.width);
+        const availH = Math.max(0, cr.height - tbRect.height);
+        const threshX = Math.min(SNAP_THRESHOLD, availW * 0.15);
+        const threshY = Math.min(SNAP_THRESHOLD, availH * 0.15);
         // Check distances from each toolbar edge to the corresponding canvas edge
         const distTop = projTop - cr.top;
         const distBottom = cr.bottom - projBottom;
@@ -6620,9 +6623,12 @@ async function initPlayground() {
         grip.addEventListener('pointerdown', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          // Deferred drag: only record start position, don't enter drag mode yet.
-          // Drag mode activates in pointermove after exceeding GRIP_DRAG_THRESHOLD.
-          // This prevents visual jumps on click/double-click.
+          // Clear DTC state — user is dragging toolbar, not creating a shape.
+          // Without this, stale dtcTool from a previous tool click causes
+          // the DTC pointermove/pointerup handlers to fire alongside toolbar drag,
+          // creating duplicate shapes at the drop position.
+          dtcTool = '';
+          dtcActive = false;
           gripPointerDown = true;
           dragStartX = e.clientX;
           dragStartY = e.clientY;
