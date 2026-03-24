@@ -545,6 +545,17 @@ function renderCanvas() {
   }
 }
 
+/** Default dimensions for each shape type (arrow excluded — needs two anchors).
+ *  Module-scope so drawDtcPreview() can access them from renderCanvas(). */
+const DTC_SIZES = {
+  rect: [120, 80], ellipse: [80, 80], text: [80, 24],
+  frame: [200, 150], pen: [120, 80]
+};
+
+/** Canvas-projected preview state — set by DTC pointermove, read by renderCanvas().
+ *  Module-scope so both initPlayground() handlers and drawDtcPreview() can share it. */
+let dtcPreview = null; // { type: string, sceneX: number, sceneY: number }
+
 /** Draw the drag-to-create preview shape on the canvas in scene coordinates.
  *  Since renderCanvas() already applies the zoom/pan transform, the shape
  *  automatically appears at the correct screen size — true WYSIWYG. */
@@ -6128,14 +6139,8 @@ async function initPlayground() {
     let dtcTool = '';
     const DTC_DRAG_THRESHOLD = 5;
 
-    /** Default dimensions for each shape type (arrow excluded — needs two anchors) */
-    const DTC_SIZES = {
-      rect: [120, 80], ellipse: [80, 80], text: [80, 24],
-      frame: [200, 150], pen: [120, 80]
-    };
-
-    /** Canvas-projected preview state — rendered on canvas, not DOM */
-    let dtcPreview = null; // { type: string, sceneX: number, sceneY: number }
+    // DTC_SIZES and dtcPreview are now at module scope (before drawDtcPreview)
+    // so the render function can access them.
 
     /** Insert a shape at the given scene coordinates via FD code injection */
     function insertShapeAt(type, sceneX, sceneY) {
@@ -6395,15 +6400,21 @@ async function initPlayground() {
       }
 
       /** Detect which edge the toolbar should snap to.
-       * Orientation-locked: horizontal toolbar → top|bottom, vertical → left|right.
-       * Always returns a side (never null) — no free-floating mode. */
+       * Evaluates all 4 edges by distance — no orientation locking.
+       * This allows vertical→horizontal or horizontal→vertical switching
+       * when dragging to a different axis (e.g., vertical-left → top). */
       function getSnapSide(pointerX, pointerY) {
         const cr = getCanvasRect();
-        const isVert = getComputedStyle(toolbar).flexDirection === 'column';
-        if (isVert) {
-          return (pointerX < cr.left + cr.width / 2) ? 'left' : 'right';
+        const midX = cr.left + cr.width / 2;
+        const midY = cr.top + cr.height / 2;
+        // Determine dominant axis: where is the pointer relative to canvas center
+        const offX = Math.abs(pointerX - midX) / (cr.width / 2);  // 0..1+
+        const offY = Math.abs(pointerY - midY) / (cr.height / 2); // 0..1+
+        if (offX > offY) {
+          // Closer to left/right edge than top/bottom
+          return (pointerX < midX) ? 'left' : 'right';
         } else {
-          return (pointerY < cr.top + cr.height / 2) ? 'top' : 'bottom';
+          return (pointerY < midY) ? 'top' : 'bottom';
         }
       }
 
