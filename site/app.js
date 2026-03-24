@@ -6384,53 +6384,17 @@ async function initPlayground() {
         return { left, top: cr.top, right, bottom: cr.bottom, width: right - left, height: cr.height };
       }
 
-      /** Detect which edge the toolbar is near (based on toolbar rect, not cursor) */
-      function getSnapSide(pointerX, pointerY, grabOffX, grabOffY) {
+      /** Detect which edge the toolbar should snap to.
+       * Orientation-locked: horizontal toolbar → top|bottom, vertical → left|right.
+       * Always returns a side (never null) — no free-floating mode. */
+      function getSnapSide(pointerX, pointerY) {
         const cr = getCanvasRect();
-        const tbRect = toolbar.getBoundingClientRect();
-        // Project where the toolbar would be if dropped at this pointer position
-        const projLeft = pointerX - grabOffX;
-        const projTop = pointerY - grabOffY;
-        const projRight = projLeft + tbRect.width;
-        const projBottom = projTop + tbRect.height;
-        // Per-axis adaptive threshold: 15% of available space, capped at 60px.
-        // NO hard minimum floor — when toolbar nearly fills the axis (e.g., availH=40px),
-        // each side's threshold must shrink proportionally (40 * 0.15 = 6px) so both
-        // sides combined never exceed 30% of free space. The old Math.max(20,...) floor
-        // consumed 100% of free space when availH < 40px.
-        const availW = Math.max(0, cr.width - tbRect.width);
-        const availH = Math.max(0, cr.height - tbRect.height);
-        const threshX = Math.min(SNAP_THRESHOLD, availW * 0.15);
-        const threshY = Math.min(SNAP_THRESHOLD, availH * 0.15);
-        // Check distances from each toolbar edge to the corresponding canvas edge
-        const distTop = projTop - cr.top;
-        const distBottom = cr.bottom - projBottom;
-        const distLeft = projLeft - cr.left;
-        const distRight = cr.right - projRight;
-        // Find the closest edge within its axis threshold (or overflowing)
-        let closest = null;
-        let minRatio = 1; // normalized distance (dist/threshold), <1 means within snap zone
-        const ratioTop = distTop / threshY;
-        const ratioBottom = distBottom / threshY;
-        const ratioLeft = distLeft / threshX;
-        const ratioRight = distRight / threshX;
-        if (distTop >= 0 && ratioTop < minRatio) { minRatio = ratioTop; closest = 'top'; }
-        if (distBottom >= 0 && ratioBottom < minRatio) { minRatio = ratioBottom; closest = 'bottom'; }
-        if (distLeft >= 0 && ratioLeft < minRatio) { minRatio = ratioLeft; closest = 'left'; }
-        if (distRight >= 0 && ratioRight < minRatio) { minRatio = ratioRight; closest = 'right'; }
-
-        // Overflow fallback: only consider edges the toolbar actually overflows past
-        // (negative distance). This ensures a vertical toolbar dragged below canvas
-        // snaps to bottom (horizontal shadow), not a side edge closer in absolute distance.
-        if (!closest && (distTop < 0 || distBottom < 0 || distLeft < 0 || distRight < 0)) {
-          const edges = [
-            { side: 'top', dist: distTop }, { side: 'bottom', dist: distBottom },
-            { side: 'left', dist: distLeft }, { side: 'right', dist: distRight }
-          ].filter(e => e.dist < 0); // only overflowed edges
-          edges.sort((a, b) => Math.abs(a.dist) - Math.abs(b.dist));
-          closest = edges[0].side;
+        const isVert = getComputedStyle(toolbar).flexDirection === 'column';
+        if (isVert) {
+          return (pointerX < cr.left + cr.width / 2) ? 'left' : 'right';
+        } else {
+          return (pointerY < cr.top + cr.height / 2) ? 'top' : 'bottom';
         }
-        return closest;
       }
 
       /** Track user's preferred side (for restoring after overflow) */
@@ -6502,67 +6466,14 @@ async function initPlayground() {
         requestAnimationFrame(() => adjustMinimapForToolbar());
       }
 
-      /** Position toolbar at a free-floating point on canvas, clamped within bounds */
-      function applyFloatingPosition(dropX, dropY) {
-        toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right', 'toolbar-dragging', 'toolbar-floating');
-        toolbar.style.cssText = '';
-        toolbar.style.visibility = 'visible';
-        // Always go vertical when floating — horizontal toolbar is typically too wide
-        // for narrow canvases (panels open = ~500px visible), causing the old code to
-        // auto-dock instead of float. Vertical toolbar (~44px wide) always fits.
-        toolbar.style.flexDirection = 'column';
-        toolbar.classList.add('toolbar-floating');
-        document.documentElement.dataset.toolbar = 'floating';
-
-        let tbRect = toolbar.getBoundingClientRect();
-        const cr = getCanvasRect();
-
-        // If toolbar STILL doesn't fit (extremely narrow canvas), auto-dock
-        if (tbRect.width > cr.width - 2 * SNAP_GAP) {
-          const cx = dropX || (cr.left + cr.width / 2);
-          const cy = dropY || (cr.top + cr.height / 2);
-          const distLeft = Math.abs(cx - cr.left);
-          const distRight = Math.abs(cx - cr.right);
-          applySnapPosition(distLeft <= distRight ? 'left' : 'right', cx, cy);
-          return;
-        }
-
-        // Clamp within canvas bounds
-        let left = dropX - tbRect.width / 2;
-        let top = dropY - tbRect.height / 2;
-        left = Math.max(cr.left + SNAP_GAP, Math.min(left, cr.right - tbRect.width - SNAP_GAP));
-        top = Math.max(cr.top + SNAP_GAP, Math.min(top, cr.bottom - tbRect.height - SNAP_GAP));
-
-        toolbar.style.position = 'fixed';
-        toolbar.style.left = left + 'px';
-        toolbar.style.top = top + 'px';
-        toolbar.style.transform = 'none';
-
-        preferredSide = null;
-        localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: 'floating', x: dropX, y: dropY }));
-
-        requestAnimationFrame(() => adjustMinimapForToolbar());
-      }
+      // applyFloatingPosition removed — toolbar always snaps to edges
 
       /** Re-clamp toolbar to canvas bounds (call on panel toggle / resize) */
       function reclampToolbar() {
         if (isDragging) return;
         const saved = parseToolbarPos();
-        if (saved && saved.side === 'floating') {
-          // Re-clamp floating toolbar within current canvas bounds.
-          // applyFloatingPosition already clamps to canvas rect, so this
-          // handles both "canvas shrank" and "toolbar overflows" cases.
-          // Use DOM center as the reference point (saved x/y may be stale).
-          const tbRect = toolbar.getBoundingClientRect();
-          const cx = tbRect.left + tbRect.width / 2;
-          const cy = tbRect.top + tbRect.height / 2;
-          applyFloatingPosition(cx, cy);
-        } else {
-          // Docked — re-clamp as before
-          const tryPreferred = preferredSide || (saved ? saved.side : 'bottom');
-          if (saved) applySnapPosition(tryPreferred, saved.x, saved.y);
-        }
-        // Also re-check minimap collision
+        const tryPreferred = preferredSide || (saved ? saved.side : 'bottom');
+        if (saved) applySnapPosition(tryPreferred, saved.x, saved.y);
         requestAnimationFrame(() => adjustMinimapForToolbar());
       }
       // Expose for panel toggle code to call
@@ -6577,55 +6488,36 @@ async function initPlayground() {
           if (obj && obj.side) return obj;
         } catch (_) {}
         // Migration: old format was just a string like 'top'
-        if (['top', 'bottom', 'left', 'right', 'floating'].includes(raw)) {
+        if (['top', 'bottom', 'left', 'right'].includes(raw)) {
           return { side: raw, x: null, y: null };
         }
         return { side: 'bottom', x: null, y: null };
       }
 
       function showSnapIndicator(side, pointerX, pointerY, grabOffsetX, grabOffsetY) {
-        lastSnapSide = side; // track for pointerup — null means no shadow visible
+        lastSnapSide = side; // track for pointerup
         if (side) {
-          // Measure toolbar to create a ghost silhouette
           const tbRect = toolbar.getBoundingClientRect();
           const cr = getCanvasRect();
-          const isVert = (side === 'left' || side === 'right');
-          // Ghost dimensions: swap if orientation will change
-          const currentIsVert = getComputedStyle(toolbar).flexDirection === 'column';
-          let gw = tbRect.width, gh = tbRect.height;
-          if (isVert !== currentIsVert) {
-            // Estimate: swap aspect ratio for ghost preview
-            gw = tbRect.height > 400 ? 44 : tbRect.height > 200 ? 40 : 38;
-            gh = tbRect.width > 400 ? tbRect.width : tbRect.height;
-            if (!isVert) { gw = tbRect.height > 400 ? tbRect.height : tbRect.width; gh = 44; }
-          }
+          // No orientation swap — toolbar keeps its current orientation.
+          // Horizontal toolbar only snaps top/bottom, vertical only left/right.
+          const gw = tbRect.width, gh = tbRect.height;
           snapIndicator.style.display = 'block';
           snapIndicator.style.width = gw + 'px';
           snapIndicator.style.height = gh + 'px';
-          // Preserve grab offset so shadow lines up with where the toolbar will land.
-          // Use drag-start dimensions for the ratio source (toolbar dims before orientation change).
           const srcW = dragStartTbWidth || tbRect.width || 1;
           const srcH = dragStartTbHeight || tbRect.height || 1;
-          const grabRatioX = grabOffsetX / srcW;
-          const grabRatioY = grabOffsetY / srcH;
+          const grabRatioX = (grabOffsetX || 0) / srcW;
+          const grabRatioY = (grabOffsetY || 0) / srcH;
           const offsetAlongW = grabRatioX * gw;
           const offsetAlongH = grabRatioY * gh;
-          // Position the ghost at the snap destination — aligned to grab position
-          if (side === 'top') {
+          if (side === 'top' || side === 'bottom') {
             const left = Math.max(cr.left + SNAP_GAP, Math.min(pointerX - offsetAlongW, cr.right - gw - SNAP_GAP));
             snapIndicator.style.left = left + 'px';
-            snapIndicator.style.top = (cr.top + SNAP_GAP) + 'px';
-          } else if (side === 'bottom') {
-            const left = Math.max(cr.left + SNAP_GAP, Math.min(pointerX - offsetAlongW, cr.right - gw - SNAP_GAP));
-            snapIndicator.style.left = left + 'px';
-            snapIndicator.style.top = (cr.bottom - gh - SNAP_GAP) + 'px';
-          } else if (side === 'left') {
+            snapIndicator.style.top = side === 'top' ? (cr.top + SNAP_GAP) + 'px' : (cr.bottom - gh - SNAP_GAP) + 'px';
+          } else {
             const top = Math.max(cr.top + SNAP_GAP, Math.min(pointerY - offsetAlongH, cr.bottom - gh - SNAP_GAP));
-            snapIndicator.style.left = (cr.left + SNAP_GAP) + 'px';
-            snapIndicator.style.top = top + 'px';
-          } else if (side === 'right') {
-            const top = Math.max(cr.top + SNAP_GAP, Math.min(pointerY - offsetAlongH, cr.bottom - gh - SNAP_GAP));
-            snapIndicator.style.left = (cr.right - gw - SNAP_GAP) + 'px';
+            snapIndicator.style.left = side === 'left' ? (cr.left + SNAP_GAP) + 'px' : (cr.right - gw - SNAP_GAP) + 'px';
             snapIndicator.style.top = top + 'px';
           }
         } else {
@@ -6685,19 +6577,13 @@ async function initPlayground() {
           toolbar.style.top = newTop + 'px';
           toolbar.style.transform = 'none';
           // Persist the new position
-          const isFloating = toolbar.classList.contains('toolbar-floating');
-          const currentSide = isFloating ? 'floating'
-            : toolbar.classList.contains('toolbar-docked-left') ? 'left'
+          const currentSide = toolbar.classList.contains('toolbar-docked-left') ? 'left'
             : toolbar.classList.contains('toolbar-docked-right') ? 'right'
             : toolbar.classList.contains('toolbar-docked-top') ? 'top'
             : 'bottom';
           const cx = newLeft + tbRect.width / 2;
           const cy = newTop + tbRect.height / 2;
-          if (currentSide !== 'floating') {
-            localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: currentSide, x: cx, y: cy }));
-          } else {
-            localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: 'floating', x: cx, y: cy }));
-          }
+          localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: currentSide, x: cx, y: cy }));
           adjustMinimapForToolbar();
         });
       });
@@ -6732,11 +6618,10 @@ async function initPlayground() {
         pointerHistory.push({ x: e.clientX, y: e.clientY, t: Date.now() });
         if (pointerHistory.length > 5) pointerHistory.shift();
 
-        // Show snap indicator (canvas-aware) — follows pointer along edge
-        // Pass grab offset so shadow lines up with toolbar, not centered on cursor
+        // Show snap indicator — always shows since getSnapSide always returns a side
         const grabOffX = dragStartX - toolbarStartX;
         const grabOffY = dragStartY - toolbarStartY;
-        showSnapIndicator(getSnapSide(e.clientX, e.clientY, grabOffX, grabOffY), e.clientX, e.clientY, grabOffX, grabOffY);
+        showSnapIndicator(getSnapSide(e.clientX, e.clientY), e.clientX, e.clientY, grabOffX, grabOffY);
       });
 
       // ── Drag end / snap ──
@@ -6750,30 +6635,22 @@ async function initPlayground() {
         isDragging = false;
         gripPointerDown = false;
 
-        // Compute grab offset (used by both snap detection and snap positioning)
+        // Compute grab offset for snap positioning
         const grabOffX = dragStartX - toolbarStartX;
         const grabOffY = dragStartY - toolbarStartY;
 
-        // Shadow-driven snap: if snap shadow was visible on last pointermove, snap there.
-        // No shadow = no snap — toolbar floats freely where dropped.
-        const side = lastSnapSide;
+        // Always snap to nearest orientation-locked edge (no floating mode)
+        const side = getSnapSide(e.clientX, e.clientY);
         showSnapIndicator(null); // hide the indicator
-
-        if (side) {
-          applySnapPosition(side, e.clientX, e.clientY, false, grabOffX, grabOffY);
-        } else {
-          applyFloatingPosition(e.clientX, e.clientY);
-        }
+        applySnapPosition(side, e.clientX, e.clientY, false, grabOffX, grabOffY);
       });
 
       // ── Restore saved state (suppress transition to avoid startup jump) ──
       toolbar.style.transition = 'none';
       const savedPos = parseToolbarPos();
-      if (savedPos.side === 'floating') {
-        applyFloatingPosition(savedPos.x, savedPos.y);
-      } else {
-        applySnapPosition(savedPos.side, savedPos.x, savedPos.y);
-      }
+      // Migrate any old 'floating' state to 'bottom'
+      const restoreSide = savedPos.side === 'floating' ? 'bottom' : savedPos.side;
+      applySnapPosition(restoreSide, savedPos.x, savedPos.y);
       toolbar.style.visibility = 'visible'; // reveal after JS positioned it
       if (localStorage.getItem('fd-toolbar-minimized') === '1') {
         toolbar.classList.add('toolbar-minimized');
