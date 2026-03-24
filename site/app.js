@@ -712,7 +712,7 @@ function switchRightTab(tabId) {
  * --right-panel-width controls canvas positioning (left/right offsets).
  * --right-panel-actual-width controls minimap offset. */
 function updateRightPanelWidth(expanded) {
-  document.documentElement.style.setProperty('--right-panel-width', expanded ? '320px' : '0px');
+  document.documentElement.style.setProperty('--right-panel-width', expanded ? '260px' : '0px');
 }
 
 /** Toggle left panel collapsed/expanded. */
@@ -726,7 +726,7 @@ function toggleLeftPanel() {
     h.style.setProperty('--left-panel-width', '0px');
   } else {
     const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
-    const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 320;
+    const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 260;
     h.style.setProperty('--left-panel-width', restoreW + 'px');
     switchLeftTab(activeLeftTab);
   }
@@ -3086,7 +3086,7 @@ function setupPanelResize(wrapper, resizeCanvas) {
 
   const MIN_WIDTH = 200;
   const MAX_WIDTH = 500;
-  const DEFAULT_LEFT_W = 320;
+  const DEFAULT_LEFT_W = 260;
 
   // Restore persisted widths
   const savedLeftW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
@@ -3329,7 +3329,7 @@ function toggleLayersPanel() {
     localStorage.setItem('fd-left-collapsed', '1');
   } else {
     const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
-    const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 320;
+    const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 260;
     h.style.setProperty('--left-panel-width', restoreW + 'px');
     localStorage.setItem('fd-left-collapsed', '');
   }

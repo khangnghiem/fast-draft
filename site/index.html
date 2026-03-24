@@ -59,16 +59,16 @@
       h.dataset.rp = rpC ? 'closed' : 'open';
 
       // ── Panel widths as CSS vars on <html> ──
-      var lpW = '320';
+      var lpW = '260';
       if (!lpC) {
         var saved = localStorage.getItem('fd-left-panel-width');
         if (saved) {
           var w = parseInt(saved, 10);
-          lpW = (w >= 200 && w <= 500) ? String(w) : '320';
+          lpW = (w >= 200 && w <= 500) ? String(w) : '260';
         }
       }
       h.style.setProperty('--left-panel-width', lpC ? '0px' : lpW + 'px');
-      h.style.setProperty('--right-panel-width', rpC ? '0px' : '320px');
+      h.style.setProperty('--right-panel-width', rpC ? '0px' : '260px');
 
       // ── Toolbar side ──
       var tbPos;

@@ -1,6 +1,8 @@
 /* ─── Canvas-specific Design Tokens (Apple HIG) ─── */
 /* Shared tokens (colors, fonts, etc.) are in shared.css */
 :root {
+  /* Panel default width — single source of truth */
+  --fd-panel-default-width: 260px;
   /* Canvas-specific tokens — Light (Apple HIG default) */
   --fd-bg: #F5F5F7;
   --fd-surface: rgba(255, 255, 255, 0.82);
@@ -1175,7 +1177,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-columns: var(--left-panel-width, 320px) minmax(200px, 1fr) var(--right-panel-width, 320px);
+  grid-template-columns: var(--left-panel-width, var(--fd-panel-default-width)) minmax(200px, 1fr) var(--right-panel-width, var(--fd-panel-default-width));
   grid-template-rows: 1fr;
 }
 #fd-canvas {
