@@ -29,7 +29,7 @@ Files: `site/app.js`, `site/index.html`, `site/style.css`
 
 **Drag to center always auto-docked** — `applyFloatingPosition` checked if the toolbar width exceeded the canvas width, but the toolbar was still horizontal (~600px) from its docked orientation. In a narrow canvas (~500px with panels), it always exceeded → always auto-docked. Fix: force vertical orientation (`flexDirection: column`) when entering floating mode, so the ~44px wide vertical toolbar always fits.
 
-**Overflow snap went to wrong edge** — two bugs: (1) `getSnapSide` fallback used `b.dist - a.dist` sort which picked the *farthest* edge, not closest. Fixed to use `Math.abs(a.dist) - Math.abs(b.dist)` sort. (2) The fallback triggered even when toolbar was centered (all distances positive, beyond threshold). Added overflow guard: only triggers when at least one distance is negative (toolbar genuinely overflows canvas).
+**Overflow snap went to wrong edge** — two bugs in `getSnapSide` fallback: (1) sort used `b.dist - a.dist` which picked the *farthest* edge (e.g., top when overflowing below). Fixed to `Math.abs(a.dist) - Math.abs(b.dist)` to pick closest edge. (2) Fallback fired even when toolbar was centered (all distances positive, beyond threshold), causing false snaps. Added overflow guard: only triggers when at least one distance is negative.
 
 Files: `site/app.js`
 
