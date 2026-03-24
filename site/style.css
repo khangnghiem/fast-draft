@@ -2069,7 +2069,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 /* ─── Minimap (Google Maps pill) ─── */
 #minimap-container {
   position: absolute;
-  right: 12px;
+  right: calc(var(--right-panel-width, 0px) + 12px);
   bottom: 12px;
   width: min(150px, 18vw);
   height: min(100px, 12vw);
