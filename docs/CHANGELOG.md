@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.269 — Fix Post-Drop Context Menu During Draw Gestures (R3.64)
+
+**Context menu fired during draw-tool gestures** — drawing a rectangle, ellipse, pen stroke, or any non-Select tool gesture triggered the post-drop reparent context menu ("Nest into @target") on pointer up. Root cause: `canvasDragOccurred` was set to `true` for any `pointermove` that produced `moveResult.changed`, including draw-tool gestures (not just Select-tool drags). The post-drop menu at pointerup checked `wasDragging` without considering which tool was active. Fix: guarded `canvasDragOccurred = true` to only set when the active tool is `select` or `hand`, so draw-tool gestures no longer trigger reparent menus, canvas→layers cross-drag highlights, or ghost labels.
+
+Files: `site/app.js`
+
 ### v0.11.268 — Edge-Only Snap: Remove Floating Mode, Lock Toolbar Orientation (R3.39)
 
 **Major snap simplification** — removed free-floating toolbar mode and all threshold/overflow logic that caused persistent bugs across 5+ conversations. Toolbar now always snaps to edges with orientation locking: horizontal toolbar → top/bottom only, vertical toolbar → left/right only. `getSnapSide` reduced from 48 lines (threshold ratios, overflow fallback, edge filtering) to 12 lines (midpoint comparison). Deleted `applyFloatingPosition` (~40 lines), simplified `showSnapIndicator` (removed orientation swap), simplified `reclampToolbar` (removed floating branch). Net ~120 lines removed. Old `floating` localStorage state migrated to `bottom` on load.
