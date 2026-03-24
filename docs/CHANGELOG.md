@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.261 — Fix Toolbar Snap Position & False-Snap (R3.39)
+
+**Shadow ≠ final position** — `applySnapPosition()` used raw `grabOffsetX/Y` to compute toolbar position, but `showSnapIndicator()` used proportional ratios (`grabOffset / toolbarWidth * ghostWidth`). When orientation changed (horizontal→vertical), the shadow showed one position but the toolbar landed elsewhere. Fix: both functions now use the same proportional ratio from drag-start toolbar dimensions (`dragStartTbWidth/Height`).
+
+**False-snap in canvas interior** — toolbar snapped to an edge even when dragged to the middle of the canvas (no shadow visible). Root cause: `pointerup` re-computed `getSnapSide()` independently, which could return a side even if the shadow had been hidden during the last `pointermove`. Fix: `pointerup` now uses `lastSnapSide` (the snap side from the most recent shadow indicator), ensuring no-shadow = no-snap. Velocity throws still work independently.
+
+Files: `site/app.js`
+
 ### v0.11.260 — Fix Toolbar Snap, Rect Duplication, Minimap Visibility (R3.39, R3.42, R3.25)
 
 **Toolbar false-snap** — `getSnapSide()` returned a snap edge even when toolbar was dragged away from all edges. Root cause: negative distance (toolbar past canvas edge) produced a ratio < 0, which always beat `minRatio = 1`. Fix: added `dist >= 0` guard to all four edge checks — only snap when genuinely approaching an edge.
