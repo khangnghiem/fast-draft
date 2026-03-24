@@ -13,7 +13,7 @@
  */
 // ── canvas-core/state.js ──
 // ─── canvas-core/state.js ─── Shared canvas state
-// Imported by both site/playground.js and fd-vscode/webview/src/main.js.
+// Imported by both site/app.js and fd-vscode/webview/src/main.js.
 //
 // This module holds the mutable state that drives the canvas lifecycle:
 // zoom, pan, dirty flags, grid, motion preferences, and tool defaults.
@@ -87,7 +87,7 @@ let reduceMotion = prefersReducedMotion.matches;
 
 /** Initialize motion preference listener. */
 function initMotionPreference() {
-  // Check localStorage override (site playground stores manual toggle)
+  // Check localStorage override (site app stores manual toggle)
   if (typeof localStorage !== 'undefined') {
     const manual = localStorage.getItem('fd-reduce-motion');
     if (manual === 'true') reduceMotion = true;
@@ -184,7 +184,7 @@ function showToast(message, durationMs = 1200, container = null) {
 }
 // ── canvas-core/render.js ──
 // ─── canvas-core/render.js ─── Shared render loop + tween engine
-// Imported by both site/playground.js and fd-vscode/webview/src/main.js.
+// Imported by both site/app.js and fd-vscode/webview/src/main.js.
 //
 // This module provides:
 // - Tween engine for CSS-like animations (hover/press transitions)
@@ -844,7 +844,7 @@ function buildShortcutHelpHtml() {
 }
 // ── canvas-core/inline-edit.js ──
 // ─── canvas-core/inline-edit.js ─── Shared inline text editor
-// Imported by both site/playground.js and fd-vscode/webview/src/inline-edit.js.
+// Imported by both site/app.js and fd-vscode/webview/src/inline-edit.js.
 //
 // Double-click text/shape → floating textarea for in-place editing.
 // Enter = commit, Escape = cancel, live-sync on every keystroke.
@@ -5134,14 +5134,14 @@ function parseLayerTree(source) {
       continue;
     }
 
-    // Edge
-    const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s*\{/);
+    // Edge — matches both header form (edge @name @from -> @to) and body form (edge @name {)
+    const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s+@(\w+)\s*->\s*@(\w+)/) ||
+                      trimmed.match(/^edge\s+@(\w+)\s*\{/);
     if (edgeMatch) {
       const node = { id: edgeMatch[1], kind: "edge", text: "", children: [] };
       if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
       else root.push(node);
-      braceDepth += openBraces - closeBraces;
-      stack.push({ node, depth: braceDepth });
+      if (trimmed.includes('{')) { braceDepth += openBraces - closeBraces; stack.push({ node, depth: braceDepth }); }
       continue;
     }
 
@@ -5468,7 +5468,7 @@ function closeLayerCtxMenu() {
   ctxMenu.close();
 }
 
-/** Searchable "Move Into" picker for the extension — mirrors playground.js implementation. */
+/** Searchable "Move Into" picker for the extension — mirrors app.js implementation. */
 function showSearchableParentPicker(nodeId, posX, posY) {
   if (!fdCanvas?.get_container_ids) return;
   let containers;
@@ -7158,24 +7158,25 @@ function zoomToFit() {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   let foundAny = false;
 
-  const nodeIdPattern = /@(\w+)/g;
-  let match;
-  const seenIds = new Set();
-  while ((match = nodeIdPattern.exec(text)) !== null) {
-    const id = match[1];
-    if (seenIds.has(id)) continue;
-    seenIds.add(id);
-    try {
-      const boundsJson = fdCanvas.get_node_bounds(id);
-      const b = JSON.parse(boundsJson);
-      if (b.width && b.width > 0) {
-        minX = Math.min(minX, b.x);
-        minY = Math.min(minY, b.y);
-        maxX = Math.max(maxX, b.x + b.width);
-        maxY = Math.max(maxY, b.y + b.height);
-        foundAny = true;
+  const matches = text.match(/@\w+/g);
+  if (matches) {
+    const seenIds = new Set();
+    for (let i = 0; i < matches.length; i++) {
+      const id = matches[i].slice(1);
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
+      const bStr = fdCanvas.get_node_bounds_json(id);
+      if (bStr && bStr !== "{}") {
+        const b = JSON.parse(bStr);
+        if (b.width && b.width > 0) {
+          minX = Math.min(minX, b.x);
+          minY = Math.min(minY, b.y);
+          maxX = Math.max(maxX, b.x + b.width);
+          maxY = Math.max(maxY, b.y + b.height);
+          foundAny = true;
+        }
       }
-    } catch (_) { /* skip */ }
+    }
   }
 
   if (!foundAny) {
@@ -8270,23 +8271,25 @@ function getSceneBoundsInner() {
 
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   let foundAny = false;
-  const nodeIdPattern = /@(\w+)/g;
-  let match;
-  const seenIds = new Set();
-  while ((match = nodeIdPattern.exec(text)) !== null) {
-    const id = match[1];
-    if (seenIds.has(id)) continue;
-    seenIds.add(id);
-    try {
-      const b = JSON.parse(fdCanvas.get_node_bounds(id));
-      if (b.width && b.width > 0) {
-        minX = Math.min(minX, b.x);
-        minY = Math.min(minY, b.y);
-        maxX = Math.max(maxX, b.x + b.width);
-        maxY = Math.max(maxY, b.y + b.height);
-        foundAny = true;
+  const matches = text.match(/@\w+/g);
+  if (matches) {
+    const seenIds = new Set();
+    for (let i = 0; i < matches.length; i++) {
+      const id = matches[i].slice(1);
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
+      const bStr = fdCanvas.get_node_bounds_json(id);
+      if (bStr && bStr !== "{}") {
+        const b = JSON.parse(bStr);
+        if (b.width && b.width > 0) {
+          minX = Math.min(minX, b.x);
+          minY = Math.min(minY, b.y);
+          maxX = Math.max(maxX, b.x + b.width);
+          maxY = Math.max(maxY, b.y + b.height);
+          foundAny = true;
+        }
       }
-    } catch (_) { /* skip */ }
+    }
   }
   return foundAny ? { minX, minY, maxX, maxY } : null;
 }
