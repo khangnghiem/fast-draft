@@ -942,9 +942,9 @@ impl Tool for EllipseTool {
                 self.drawing = false;
                 if !self.dragged {
                     if let Some(id) = self.current_id.take() {
-                        // Click without drag → default 100×100 centered at click point
-                        let w = 100.0_f32;
-                        let h = 100.0_f32;
+                        // Click without drag → default 80×80 centered at click point
+                        let w = 80.0_f32;
+                        let h = 80.0_f32;
                         vec![
                             GraphMutation::ResizeNode {
                                 id,

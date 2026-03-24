@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.11.270 — Fix DTC Preview, Toolbar Snap, Ellipse Size (R3.42, R3.39, R3.7)
+
+**DTC preview invisible** — drag-to-create preview shape was invisible because `dtcPreview` and `DTC_SIZES` were declared inside `initPlayground()` closure (L6138) while `drawDtcPreview()` at module scope (L551) couldn't access them. Fix: hoisted both to module scope.
+
+**Toolbar can't snap top/bottom** — `getSnapSide()` was orientation-locked: vertical toolbar → left/right only. Once auto-overflowed to vertical, it could never snap to top/bottom. Fix: replaced with distance-based evaluation that considers all 4 edges — closest axis wins, allowing vertical↔horizontal switching.
+
+**Ellipse too big** — WASM default ellipse click-creates was 100×100. Fix: reduced to 80×80 to match DTC dimensions and visual parity with rect (120×80). Updated `ellipse_tool_click_creates_centered` test.
+
+Files: `site/app.js`, `crates/fd-editor/src/tools.rs`, `crates/fd-editor/src/tools_tests.rs`
+
 ### v0.11.269 — Fix Post-Drop Context Menu During Draw Gestures (R3.64)
 
 **Context menu fired during draw-tool gestures** — drawing a rectangle, ellipse, pen stroke, or any non-Select tool gesture triggered the post-drop reparent context menu ("Nest into @target") on pointer up. Root cause: `canvasDragOccurred` was set to `true` for any `pointermove` that produced `moveResult.changed`, including draw-tool gestures (not just Select-tool drags). The post-drop menu at pointerup checked `wasDragging` without considering which tool was active. Fix: guarded `canvasDragOccurred = true` to only set when the active tool is `select` or `hand`, so draw-tool gestures no longer trigger reparent menus, canvas→layers cross-drag highlights, or ghost labels.
