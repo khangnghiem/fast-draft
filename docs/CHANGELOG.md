@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.11.260 — Fix Toolbar Snap, Rect Duplication, Minimap Visibility (R3.39, R3.42, R3.25)
+
+**Toolbar false-snap** — `getSnapSide()` returned a snap edge even when toolbar was dragged away from all edges. Root cause: negative distance (toolbar past canvas edge) produced a ratio < 0, which always beat `minRatio = 1`. Fix: added `dist >= 0` guard to all four edge checks — only snap when genuinely approaching an edge.
+
+**Rect duplication on draw/drag** — drawing a rect via click-draw-on-canvas created a duplicate because the Drag-to-Create (DTC) state (`dtcTool`) was never cleared when the user clicked the canvas directly. Both WASM `handle_pointer_up` and DTC `insertShapeAt` fired on the same gesture. Fix: clear `dtcTool` on canvas `pointerdown`.
+
+**Minimap hidden behind right panel** — after the CSS Grid refactor (v0.11.240), `#minimap-container`'s `right: 12px` was relative to the full grid container (all 3 columns), not the canvas column. When the right panel was open, the minimap sat behind it. Fix: `right: calc(var(--right-panel-width, 0px) + 12px)`.
+
+Files: `site/app.js`, `site/style.css`
+
 ### v0.11.259 — Shrink Panel Default Width to 260px (R6.6)
 
 **Narrower panels** — both left and right panel defaults reduced from 320px to 260px, giving 120px more canvas space (60px per side). On a 1440px viewport, canvas ratio improves from 56% to 64%. Added `--fd-panel-default-width: 260px` CSS variable as single source of truth. Updated all hardcoded `320` references in grid fallback, `updateRightPanelWidth()`, `toggleLeftPanel()`, `toggleLayersPanel()`, `DEFAULT_LEFT_W`, and `<head>` initialization script. Users with saved custom widths retain their preference.

@@ -5417,6 +5417,12 @@ async function initPlayground() {
       e.preventDefault(); // prevent browser scroll/zoom on touch
       canvasDragOccurred = false; // reset drag tracking
 
+      // Clear DTC state — the user clicked canvas directly, not dragging from toolbar.
+      // Without this, both the WASM draw tool AND the DTC pointerup handler fire,
+      // creating duplicate shapes (one from WASM + one from insertShapeAt).
+      dtcTool = '';
+      dtcActive = false;
+
       // Update pointer type for adaptive hit radii + handle rendering
       fdCanvas.set_pointer_type(pointerTypeToU8(e.pointerType));
 
@@ -6403,10 +6409,10 @@ async function initPlayground() {
         const ratioBottom = distBottom / threshY;
         const ratioLeft = distLeft / threshX;
         const ratioRight = distRight / threshX;
-        if (ratioTop < minRatio) { minRatio = ratioTop; closest = 'top'; }
-        if (ratioBottom < minRatio) { minRatio = ratioBottom; closest = 'bottom'; }
-        if (ratioLeft < minRatio) { minRatio = ratioLeft; closest = 'left'; }
-        if (ratioRight < minRatio) { minRatio = ratioRight; closest = 'right'; }
+        if (distTop >= 0 && ratioTop < minRatio) { minRatio = ratioTop; closest = 'top'; }
+        if (distBottom >= 0 && ratioBottom < minRatio) { minRatio = ratioBottom; closest = 'bottom'; }
+        if (distLeft >= 0 && ratioLeft < minRatio) { minRatio = ratioLeft; closest = 'left'; }
+        if (distRight >= 0 && ratioRight < minRatio) { minRatio = ratioRight; closest = 'right'; }
         return closest;
       }
 
