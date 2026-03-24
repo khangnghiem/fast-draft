@@ -6419,17 +6419,15 @@ async function initPlayground() {
         if (distLeft >= 0 && ratioLeft < minRatio) { minRatio = ratioLeft; closest = 'left'; }
         if (distRight >= 0 && ratioRight < minRatio) { minRatio = ratioRight; closest = 'right'; }
 
-        // Overflow fallback: when no edge is within the snap threshold zone AND the
-        // toolbar genuinely overflows the canvas (at least one distance is negative),
-        // snap to the edge with the smallest absolute distance.
-        // IMPORTANT: if all distances are positive (toolbar is centered, just beyond
-        // threshold), return null — the toolbar should float freely.
+        // Overflow fallback: only consider edges the toolbar actually overflows past
+        // (negative distance). This ensures a vertical toolbar dragged below canvas
+        // snaps to bottom (horizontal shadow), not a side edge closer in absolute distance.
         if (!closest && (distTop < 0 || distBottom < 0 || distLeft < 0 || distRight < 0)) {
           const edges = [
             { side: 'top', dist: distTop }, { side: 'bottom', dist: distBottom },
             { side: 'left', dist: distLeft }, { side: 'right', dist: distRight }
-          ];
-          edges.sort((a, b) => Math.abs(a.dist) - Math.abs(b.dist)); // smallest |dist| first
+          ].filter(e => e.dist < 0); // only overflowed edges
+          edges.sort((a, b) => Math.abs(a.dist) - Math.abs(b.dist));
           closest = edges[0].side;
         }
         return closest;

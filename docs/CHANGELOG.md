@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.267 — Overflow Snap Picks Overflowed Edge for Correct Shadow Orientation (R3.39)
+
+**Overflow snap picked wrong edge** — when dragging a vertical toolbar below canvas, the overflow fallback considered all edges by absolute distance. A side edge (left/right) often had a smaller absolute distance than the bottom edge, so the shadow showed vertical orientation instead of horizontal. Fix: `.filter(e => e.dist < 0)` ensures only overflowed edges are candidates. Dragging below → snaps bottom (horizontal shadow). Dragging past right → snaps right (vertical shadow).
+
+Files: `site/app.js`
+
 ### v0.11.266 — Grip-Anchored Minimize + Insert Button Icon (R3.39)
 
 **Grip stays stationary on minimize** — double-clicking the toolbar grip handle now keeps the grip visually pinned while the rest of the toolbar shrinks/expands toward it. Previous behavior centered on the toolbar's midpoint, which caused the grip to jump. Fix: captures `gripEl.getBoundingClientRect()` before toggle, computes delta after toggle, and offsets `toolbar.style.left/top` by the difference. Result clamped within canvas bounds.
