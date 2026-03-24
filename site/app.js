@@ -6419,14 +6419,17 @@ async function initPlayground() {
         if (distLeft >= 0 && ratioLeft < minRatio) { minRatio = ratioLeft; closest = 'left'; }
         if (distRight >= 0 && ratioRight < minRatio) { minRatio = ratioRight; closest = 'right'; }
 
-        // Overflow fallback: if toolbar is completely outside canvas (all distances negative),
-        // snap to the edge with the least-negative distance (closest to returning visible).
-        if (!closest) {
+        // Overflow fallback: when no edge is within the snap threshold zone AND the
+        // toolbar genuinely overflows the canvas (at least one distance is negative),
+        // snap to the edge with the smallest absolute distance.
+        // IMPORTANT: if all distances are positive (toolbar is centered, just beyond
+        // threshold), return null — the toolbar should float freely.
+        if (!closest && (distTop < 0 || distBottom < 0 || distLeft < 0 || distRight < 0)) {
           const edges = [
             { side: 'top', dist: distTop }, { side: 'bottom', dist: distBottom },
             { side: 'left', dist: distLeft }, { side: 'right', dist: distRight }
           ];
-          edges.sort((a, b) => b.dist - a.dist); // most positive (least negative) first
+          edges.sort((a, b) => Math.abs(a.dist) - Math.abs(b.dist)); // smallest |dist| first
           closest = edges[0].side;
         }
         return closest;
@@ -6660,28 +6663,42 @@ async function initPlayground() {
         grip.addEventListener('dblclick', (e) => {
           e.stopPropagation();
           e.preventDefault();
-          // Read the ACTUAL current side from the toolbar's CSS class, not localStorage.
-          // localStorage may be stale (e.g., default 'bottom' when toolbar is visually
-          // on 'left' due to auto-overflow or initialization).
+          // Grip-anchored minimize: the grip handle stays stationary while
+          // the toolbar shrinks/expands toward it. Capture the grip's screen
+          // position BEFORE the size change, toggle, then offset the toolbar
+          // so the grip lands back at the same spot.
+          const gripEl = e.currentTarget;
+          const gripBefore = gripEl.getBoundingClientRect();
+          toolbar.classList.toggle('toolbar-minimized');
+          localStorage.setItem('fd-toolbar-minimized', toolbar.classList.contains('toolbar-minimized') ? '1' : '0');
+          // After toggle, the grip may have shifted — compute delta and correct
+          const gripAfter = gripEl.getBoundingClientRect();
+          const tbRect = toolbar.getBoundingClientRect();
+          const deltaX = gripBefore.left - gripAfter.left;
+          const deltaY = gripBefore.top - gripAfter.top;
+          let newLeft = tbRect.left + deltaX;
+          let newTop = tbRect.top + deltaY;
+          // Clamp within canvas bounds to prevent overflow on expand
+          const cr = getCanvasRect();
+          const CLAMP_GAP = SNAP_GAP;
+          newLeft = Math.max(cr.left + CLAMP_GAP, Math.min(newLeft, cr.right - tbRect.width - CLAMP_GAP));
+          newTop = Math.max(cr.top + CLAMP_GAP, Math.min(newTop, cr.bottom - tbRect.height - CLAMP_GAP));
+          toolbar.style.left = newLeft + 'px';
+          toolbar.style.top = newTop + 'px';
+          toolbar.style.transform = 'none';
+          // Persist the new position
           const isFloating = toolbar.classList.contains('toolbar-floating');
           const currentSide = isFloating ? 'floating'
             : toolbar.classList.contains('toolbar-docked-left') ? 'left'
             : toolbar.classList.contains('toolbar-docked-right') ? 'right'
             : toolbar.classList.contains('toolbar-docked-top') ? 'top'
             : 'bottom';
-          // Capture current center BEFORE size change — applySnapPosition uses
-          // dropX/Y to compute left = dropX - width/2. When width changes on
-          // minimize, position shifts. Using current center keeps it anchored.
-          const tbRect = toolbar.getBoundingClientRect();
-          const cx = tbRect.left + tbRect.width / 2;
-          const cy = tbRect.top + tbRect.height / 2;
-          toolbar.classList.toggle('toolbar-minimized');
-          localStorage.setItem('fd-toolbar-minimized', toolbar.classList.contains('toolbar-minimized') ? '1' : '0');
-          // Re-position synchronously with center anchor
-          if (currentSide === 'floating') {
-            applyFloatingPosition(cx, cy);
+          const cx = newLeft + tbRect.width / 2;
+          const cy = newTop + tbRect.height / 2;
+          if (currentSide !== 'floating') {
+            localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: currentSide, x: cx, y: cy }));
           } else {
-            applySnapPosition(currentSide, cx, cy);
+            localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: 'floating', x: cx, y: cy }));
           }
           adjustMinimapForToolbar();
         });
