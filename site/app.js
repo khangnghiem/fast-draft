@@ -6719,35 +6719,14 @@ async function initPlayground() {
         const grabOffX = dragStartX - toolbarStartX;
         const grabOffY = dragStartY - toolbarStartY;
 
-        // Use the snap side that was visible as the shadow indicator.
-        // This ensures toolbar lands exactly where the shadow showed.
-        // Only fall back to getSnapSide for velocity throws (no shadow needed).
-        let side = lastSnapSide;
+        // Shadow-driven snap: if snap shadow was visible on last pointermove, snap there.
+        // No shadow = no snap — toolbar floats freely where dropped.
+        const side = lastSnapSide;
         showSnapIndicator(null); // hide the indicator
-
-        // Velocity throw — only when no shadow was visible
-        if (!side && pointerHistory.length >= 2) {
-          const last = pointerHistory[pointerHistory.length - 1];
-          const prev = pointerHistory[0];
-          const dt = (last.t - prev.t) / 1000;
-          if (dt > 0) {
-            const vx = (last.x - prev.x) / dt;
-            const vy = (last.y - prev.y) / dt;
-            const speed = Math.sqrt(vx * vx + vy * vy);
-            if (speed > 500) {
-              if (Math.abs(vx) > Math.abs(vy)) {
-                side = vx > 0 ? 'right' : 'left';
-              } else {
-                side = vy > 0 ? 'bottom' : 'top';
-              }
-            }
-          }
-        }
 
         if (side) {
           applySnapPosition(side, e.clientX, e.clientY, false, grabOffX, grabOffY);
         } else {
-          // No snap shadow was visible and no throw — float freely
           applyFloatingPosition(e.clientX, e.clientY);
         }
       });

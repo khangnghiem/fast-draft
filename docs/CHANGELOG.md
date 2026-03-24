@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.263 — Remove Velocity Throw to Fix False-Snap (R3.39)
+
+**Velocity throw caused false-snapping** — the velocity throw feature (speed > 500 px/s) bypassed the shadow-based snap gate introduced in v0.11.261. A normal drag gesture easily exceeds 500 px/s, so even when no snap shadow was visible (toolbar in canvas interior), the velocity throw would force-snap the toolbar to an edge. Fix: removed velocity throw entirely. Snap behavior is now 100% shadow-driven — if the snap shadow is visible when the user releases, snap there; otherwise float freely.
+
+Files: `site/app.js`
+
 ### v0.11.262 — Browser Tab Reuse Enforcement (Docs/Workflows)
 
 **Workflow templates enforce tab reuse** — Added `TAB REUSE:` preamble to every browser subagent task template in `e2e.md` (Smoke, Site Deploy Verification). Previously only the Production Feature Verification template mentioned tab reuse. Added explicit "reuse the fast-draft.com tab from step (a)" to `yolo.md` step 21b. Added "Cross-subagent tab memory" bullet to `GEMINI.md` Browser Subagent section. Documented root cause and fix in `LESSONS.md`.
