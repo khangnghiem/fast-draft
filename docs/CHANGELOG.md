@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.283 — Corner Snap Fix & Minimize Persistence (R3.39)
+
+1. **Absolute edge distance** — `getSnapSide` now uses pixel distance to nearest edge instead of proportional offset. Fixes corner bias on wide canvases.
+2. **Minimize preserved on drag** — `applyToolbarSnap` preserves user's minimize state. Only auto-minimizes on overflow, never auto-expands.
+
 ### v0.11.282 — Toolbar Snap System Overhaul (R3.39)
 
 **Fixed 8 bugs** by decomposing `applySnapPosition` into 3 focused functions and eliminating recursive side-effects:
