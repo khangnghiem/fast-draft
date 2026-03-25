@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.278 — Fix AI Toolbar Button Dimensions (R3.39)
+
+**Fixed AI button size** — Squeezed the `✦ AI` button label (`font-size: 10px; letter-spacing: -0.6px`, padding removed) to strictly fit inside the standard 32×32 tool button matrix. This enforces a consistent 38px minor dimension for the floating toolbar regardless of horizontal or vertical orientation, eliminating layout distortion when auto-overflowed or snapped to side edges.
+
+Files: `site/style.css`
+
 ### v0.11.277 — Toolbar Snap Shadow Orientation Fix (R3.39)
 
 - **FIX**: Toolbar snap shadow now correctly swaps its dimensions (width/height) when docking to an edge that forces a perpendicular orientation (e.g., dragging a horizontal toolbar to the left/right edges), ensuring the preview perfectly matches the final docked shape without any layout thrashing during the 60fps drag.
