@@ -54,12 +54,13 @@ Before proposing any new requirement, search the **Requirement Index** at the bo
 
 ### 🌐 Browser Subagent (MANDATORY)
 
-- **Reuse open tabs (CRITICAL)** — before calling `browser_subagent`, check the Browser State metadata for existing tabs matching the target hostname. If a matching tab exists:
+- **Chain subagents via `ReusedSubagentId` (CRITICAL)** — when calling `browser_subagent` and a **previous `browser_subagent` in this conversation** already opened a tab for the target hostname, you **MUST** set `ReusedSubagentId` to that previous subagent's ID. This carries forward open tabs automatically — no Page ID lookup needed. Only omit `ReusedSubagentId` on the very first `browser_subagent` call of the conversation.
+- **Reuse open tabs** — before calling `browser_subagent`, check the Browser State metadata for existing tabs matching the target hostname. If a matching tab exists:
   1. Pass the **Page ID** to the subagent in the Task description
   2. Instruct the subagent to use `navigate_browser` on that Page ID — **NEVER** `open_browser_url`
   3. Only use `open_browser_url` when **zero** tabs match the target hostname
   - **Template phrase** to include in every subagent Task: _"An existing tab for [hostname] is already open (Page ID: [ID]). Navigate within that tab using navigate_browser. Do NOT open a new tab."_
-- **Cross-subagent tab memory** — Browser State metadata may show "No browser pages open" between subagent calls, but the tab still exists. If a **previous `browser_subagent` in this conversation** already opened a tab for the target hostname, **assume it's still open** and instruct the next subagent to reuse it. Never rely solely on Browser State metadata — track tabs from conversation context.
+- **Cross-subagent tab memory** — Browser State metadata may show "No browser pages open" between subagent calls, but the tab still exists. If a previous subagent opened a tab, **set `ReusedSubagentId`** and instruct the next subagent to reuse it. Never rely solely on Browser State metadata — track tabs from conversation context.
 - **Includes Codespaces** — the same rule applies to GitHub Codespace tabs (`*.github.dev`). Never open a duplicate Codespace tab.
 - **Small viewport BEFORE subagent** — resize the browser window to **900×600** as the **first action** inside every `browser_subagent` task, before any other interaction. Recordings capture every frame at viewport resolution; 3008×1575 produces files ~25× larger than 900×600. Never rely on resizing only before screenshots — the recording is already bloated by then.
 - **RecordingName convention** — use `{tier}_{phase}` format: `smoke_canvas`, `full_draw_select`, `deploy_verify`. Descriptive names make it easy to audit and clean up large recordings.
