@@ -422,6 +422,11 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 /* ── Panel collapse via data-attrs on <html> (set synchronously from <head>) ── */
 [data-lp="closed"] { --left-panel-width: 0px !important; }
 [data-rp="closed"] { --right-panel-width: 0px !important; }
+/* Smooth panel collapse/expand (CSS custom property transitions via grid) */
+#left-panel, #right-panel {
+  transition: width 0.25s cubic-bezier(0.2, 0, 0, 1),
+              min-width 0.25s cubic-bezier(0.2, 0, 0, 1);
+}
 
 /* ── Canvas Toolbar (Apple HIG frosted bar) ── */
 /* ── Legacy toolbar removed — replaced by .chrome-pill system ── */

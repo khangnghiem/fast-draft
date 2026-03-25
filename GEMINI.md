@@ -141,10 +141,13 @@ crates/
 ### 🔄 DOM vs localStorage State
 
 > [!IMPORTANT]
+<<<<<<< Updated upstream
 > **DOM = current visual state. localStorage = user intent.**
 > When preserving current position (minimize toggle, reclamp, resize), read from DOM (`classList`, `getBoundingClientRect()`).
 > When restoring user preference (page load, clear state), read from localStorage.
 > Runtime overrides (auto-overflow, reclamp, panel toggle) can silently diverge DOM from localStorage — never assume they match.
+=======
+>>>>>>> Stashed changes
 > **Tab reuse is MANDATORY.** Before navigating anywhere, always `list_browser_pages` first.
 >
 > - If a tab with the same or similar URL exists → **switch to it** (do NOT open a new tab).
