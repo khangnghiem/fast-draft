@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.11.276 — Local Vendor Bundle: Eliminate esm.sh CDN Dependency (R6.5)
+
+**Site hangs on load due to esm.sh** — 9 `modulepreload` hints for CodeMirror packages on `esm.sh` CDN were hanging in a pending state, blocking the browser's `load` event and preventing the Code Editor from initializing. Root cause: esm.sh intermittent outages and cold-start build delays.
+
+**Fix: bundle CodeMirror + lz-string locally** — installed all 8 CodeMirror packages + lz-string via npm, created `site/vendor/cm-entry.js` re-exporting only the symbols used by `app.js`, and bundled with esbuild into a single `site/vendor/cm.min.js` (359KB minified, tree-shaken). Replaced 9 CDN imports in `app.js` with one local import. Removed 9 `modulepreload` hints from `index.html`. Rewrote `sw.js` to cache same-origin vendor assets instead of cross-origin CDN modules. Added esbuild build step to `pages.yml` CI workflow.
+
+**Result:** Zero external CDN dependency for core functionality. Site loads from Cloudflare Pages (same origin, 330+ edge PoPs) with 1 HTTP request vs ~40 previously. Immutable cache headers already cover `/*.js`.
+
+Files: `site/app.js`, `site/index.html`, `site/sw.js`, `site/vendor/cm-entry.js`, `site/vendor/cm.min.js`, `site/package.json`, `.github/workflows/pages.yml`
+
 ### v0.11.275 — Fix Ellipse Radius/Diameter Mismatch (R3.7)
 
 **Ellipse renders at 2X size** — previously, drawing an ellipse in the canvas resulted in a shape materially twice as large as the drag-to-create preview bounding box. Root cause: the parser treated the input `.fd` values for `w` and `h` directly as `rx` and `ry` (radii) when creating the `NodeKind::Ellipse` struct, and the emitter output those radii verbatim. Fix: Rust parser now treats input `w`/`h` as the diameter by dividing by `2.0` when assigning to `rx`/`ry`, and the emitter multiplies by `2.0` to restore the diameter on output. Tests updated to match new roundtrip logic.

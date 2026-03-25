@@ -33,6 +33,17 @@ jobs:
       - name: Build WASM
         run: wasm-pack build crates/fd-wasm --target web --out-dir ../../site/wasm
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build vendor bundle (CodeMirror + lz-string)
+        run: |
+          cd site
+          npm ci
+          npx esbuild vendor/cm-entry.js --bundle --format=esm --minify --outfile=vendor/cm.min.js
+
       - name: Create CF Pages project (idempotent)
         uses: cloudflare/wrangler-action@v3
         with:
