@@ -9,9 +9,44 @@
  * We ignore those params and always return the latest release info —
  * the updater compares versions client-side.
  */
+const ALLOWED_ORIGINS = [
+  'https://fast-draft.com',
+  'https://www.fast-draft.com',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+];
+
+function getCorsHeaders(request) {
+  const origin = request.headers.get('Origin') || '';
+
+  let allowedOrigin = null;
+  if (ALLOWED_ORIGINS.includes(origin) || origin.startsWith('vscode-webview://') || origin.startsWith('tauri://') || origin.startsWith('https://tauri.localhost')) {
+    allowedOrigin = origin;
+  }
+
+  const headers = {
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Vary': 'Origin',
+  };
+
+  if (allowedOrigin) {
+    headers['Access-Control-Allow-Origin'] = allowedOrigin;
+  }
+
+  return headers;
+}
+
 export async function onRequest(context) {
   const GITHUB_LATEST =
     "https://github.com/khangnghiem/fast-draft/releases/latest/download/latest.json";
+
+  // Handle CORS preflight options request
+  if (context.request.method === "OPTIONS") {
+    return new Response(null, { headers: getCorsHeaders(context.request) });
+  }
 
   try {
     const res = await fetch(GITHUB_LATEST, {
@@ -30,7 +65,7 @@ export async function onRequest(context) {
       headers: {
         "Content-Type": "application/json",
         "Cache-Control": "public, max-age=300", // 5 min browser cache
-        "Access-Control-Allow-Origin": "*",
+        ...getCorsHeaders(context.request),
       },
     });
   } catch {

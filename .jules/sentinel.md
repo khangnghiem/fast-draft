@@ -1,8 +1,4 @@
-## 2026-03-10 - Cross-Site Scripting (XSS) in Renamify Panel
-**Vulnerability:** Found an XSS vulnerability in `fd-vscode/src/webview-html.ts` where untrusted node IDs (`p.oldId` and `p.newId`) from the extension's `.fd` files were directly interpolated into `row.innerHTML` in the Renamify panel.
-**Learning:** Even though the source is internal extension files, untrusted input rendered directly as `innerHTML` causes an XSS injection risk.
-**Prevention:** Avoid `innerHTML` for dynamically generating DOM nodes. Always use safer DOM APIs like `document.createElement()` and `textContent` when rendering untrusted or user-controlled data.
-## 2024-05-18 - Missing Sanitization in Inline HTML Rendering Leads to XSS
-**Vulnerability:** Untrusted node IDs and file paths within the VS Code Webview HTML (`fd-vscode/src/webview-html.ts`) were concatenated into HTML strings directly without sanitization.
-**Learning:** Even internal toolings or simple UI renders built around native data files can be susceptible to XSS if inputs can be controlled (e.g., untrusted files). `replace(/</g, '&lt;').replace(/>/g, '&gt;')` manually is error-prone, insufficient, and easy to overlook when expanding functionality.
-**Prevention:** Apply a comprehensive `escapeHtml` function (handling `&`, `<`, `>`, `"`, `'`) consistently to all dynamic data interpolated into HTML templates and markdown conversions to prevent XSS. Avoid writing raw HTML concatenation when possible.
+## 2024-05-24 - Dynamic CORS Misconfiguration Vulnerability
+**Vulnerability:** The AI and update endpoints (`functions/api/ai.js` and `functions/api/update/[[path]].js`) were using `Access-Control-Allow-Origin: *`, which could expose AI services and limit-bypassing to unauthenticated third-party sites.
+**Learning:** Cloudflare Workers require explicit origin validation for multi-client apps (web, vscode extension, tauri desktop app). Returning an empty string `''` for unauthenticated origins is non-standard; the correct behavior is to omit the `Access-Control-Allow-Origin` header entirely.
+**Prevention:** Always implement an `ALLOWED_ORIGINS` whitelist for web URLs and explicit prefix checking for custom protocols (`vscode-webview://`, `tauri://`). When returning `CORS` headers, conditionally include `Access-Control-Allow-Origin` only if a validated origin matches.
