@@ -145,6 +145,11 @@ crates/
 > When preserving current position (minimize toggle, reclamp, resize), read from DOM (`classList`, `getBoundingClientRect()`).
 > When restoring user preference (page load, clear state), read from localStorage.
 > Runtime overrides (auto-overflow, reclamp, panel toggle) can silently diverge DOM from localStorage — never assume they match.
+> **Tab reuse is MANDATORY.** Before navigating anywhere, always `list_browser_pages` first.
+>
+> - If a tab with the same or similar URL exists → **switch to it** (do NOT open a new tab).
+> - **Codespace rule:** If any tab URL matches `*.github.dev` → that IS the codespace. Use it directly. **NEVER** navigate to `github.com/codespaces` to click "open" — this creates a duplicate tab.
+> - If the codespace tab is loading/restarting, **wait up to 30 seconds** (use `wait` or retry with delays) before concluding it's unavailable.
 
 ---
 
