@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.273 — Default Active Tabs via SessionStorage (R6.6)
+**Fresh start always defaults to Layers & Agent** — changed `activeLeftTab` and `activeRightTab` to use `sessionStorage` instead of `localStorage`. This ensures that every new browser tab or fresh session guarantees a clean slate (Layers & Agent tabs toggled on by default), while still preserving your context if you accidentally refresh the page mid-workflow.
+
+Files: `site/app.js`
+
 ### v0.11.272 — Panel Header Segmented Pill Redesign (R6.6)
 
 **Segmented control tabs** — left and right panel headers now use Apple HIG segmented control pill styling. Tab buttons wrapped in a `.lp-tab-group`/`.rp-tab-group` container with `--fd-segment-bg` tinted track and 8px border-radius. Active tab gets `--fd-segment-active` capsule highlight with `--fd-segment-shadow` depth. Inactive tabs are transparent with secondary text color.
