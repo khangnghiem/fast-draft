@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.280 — Insert Menu Ring Refinement (R3.39)
+
+**Refined Insert Button Ring** — Reduced the thickness and size of the circular ring around the `+` Insert Shape icon (`1px` width instead of `1.5px`, `18px` diameter instead of `20px`). This prevents the ring from looking too heavy and visually competing with the core drawing tools. 
+
+Files: `site/css/toolbar.css`
+
 ### v0.11.279 — Insert Menu Visual Distinction (R3.39)
 
 **Added Subtle Ring to Insert Button** — Enclosed the `+` (Insert Shape) icon in a delicate 1.5px outlined circular ring. This visually distinguishes it from the standard toggle tools (Select, Hand, Draw) by identifying it as a dropdown menu trigger, improving UX without disrupting the geometric line-art harmony of the 32×32 toolbar matrix.

@@ -266,11 +266,11 @@
 
 /* ── Insert button (SVG icon in toolbar) ── */
 .ft-insert-btn svg {
-  width: 20px;
-  height: 20px;
-  border: 1.5px solid currentColor;
+  width: 18px;
+  height: 18px;
+  border: 1px solid currentColor;
   border-radius: 50%;
-  padding: 2.5px;
+  padding: 2px;
   box-sizing: border-box;
 }
 .ft-insert-btn:hover {

@@ -1,73 +1,167 @@
 ---
-description: E2E browser testing via GitHub Codespace
+description: E2E browser testing via GitHub Codespace — systematic UX behavior checks
 ---
 
 # E2E Testing Workflow
 
-> Test via Codespace browser subagent. Smoke (1 call) or Full (4 phases).
-> Resize viewport to 900x600 as FIRST ACTION in ALL subagents.
+> Browser-based UX testing via Codespace. Each check: **action → expected result**.
 
 // turbo-all
 
-## Pre-flight
-1. Clean old recordings: `find ~/.gemini/antigravity/brain/ -name "*.webp" -mmin +60 -delete 2>/dev/null`
-2. Sync code: If Codespace is open and pushed, pull via SSH: `gh codespace ssh -c <codespace-name> -- 'cd /workspaces/fast-draft && git pull origin <branch>'`
-3. If not, start and sync: `gh codespace list`, `gh codespace start`, then SSH pull.
+---
 
-## Tier: Smoke (RecordingName: `smoke_canvas`)
-```
-FIRST ACTION: Resize browser to 900x600.
-TAB REUSE: Reuse existing tab via navigate_browser. Do NOT call open_browser_url.
+## Prerequisites
 
-Execute 3 checks on FD editor:
-1. CANVAS RENDER: Shapes visible.
-2. DRAW RECT: Press R, drag rect, tool switches to Select.
-3. BIDI SYNC: Add "rect @smoke { w: 80 h: 40 }" in code Editor -> appears on canvas.
-Take ONE screenshot. Return PASS/FAIL per check.
+1. Ensure a Codespace is available:
+
+   ```bash
+   gh codespace list
+   ```
+
+2. Open the Codespace via browser subagent:
+
+   ```
+   FIRST: list_browser_pages to check existing tabs.
+   - If ANY tab URL matches *.github.dev → switch to it. DO NOT open a new tab.
+   - If the tab is loading/restarting, wait up to 30 seconds before retrying.
+   - ONLY if no codespace tab exists: navigate to https://github.com/codespaces
+     and click on the available codespace for khangnghiem/fast-draft.
+   ```
+
+3. Keep max 2 editor panels open. Close extras.
+
+4. Open an `.fd` file (e.g., `examples/dark_theme.fd`) and activate Design View.
+
+---
+
+## Phase 1: Canvas Load & Render (3 checks)
+
+| #   | Action                               | Expected Result                              |
+| --- | ------------------------------------ | -------------------------------------------- |
+| 1.1 | Open `.fd` file → Toggle Design View | Canvas renders with shapes visible           |
+| 1.2 | Check Layers panel                   | Node tree with correct hierarchy             |
+| 1.3 | Check Toolbar                        | Shows Select, Rect, Ellipse, Pen, Text tools |
+
+> Screenshot the canvas after loading.
+
+---
+
+## Phase 2: Drawing Tools (6 checks)
+
+| #   | Action                              | Expected Result                                 |
+| --- | ----------------------------------- | ----------------------------------------------- |
+| 2.1 | Click Rect tool → drag on canvas    | Rectangle appears; tool switches back to Select |
+| 2.2 | Click Ellipse tool → drag on canvas | Ellipse appears; tool switches back to Select   |
+| 2.3 | Press P → draw freehand on canvas   | Smooth pen path appears                         |
+| 2.4 | Click Text tool → click on canvas   | Text node created; inline editor opens          |
+| 2.5 | Check Layers panel after drawing    | New nodes appear in layer tree                  |
+| 2.6 | Check code editor after drawing     | New FD code appears with @id, dimensions        |
+
+> Screenshot after each draw. Verify bidi sync.
+
+---
+
+## Phase 3: Selection & Manipulation (6 checks)
+
+| #   | Action                                     | Expected Result                            |
+| --- | ------------------------------------------ | ------------------------------------------ |
+| 3.1 | Click a node                               | Node shows selection handles (8 blue dots) |
+| 3.2 | Drag selected node                         | Node moves; code updates with new x/y      |
+| 3.3 | Select 2 nodes → right-click → Group       | Group wraps both; layers panel shows group |
+| 3.4 | Right-click group → Ungroup                | Group dissolved; children become top-level |
+| 3.5 | Right-click → Duplicate                    | Copy appears with new @id                  |
+| 3.6 | Right-click → Delete (or press Delete key) | Node removed from canvas AND code          |
+
+> Verify code editor updates after each action (bidi sync).
+
+---
+
+## Phase 4: Inline Editing (3 checks)
+
+| #   | Action                      | Expected Result                         |
+| --- | --------------------------- | --------------------------------------- |
+| 4.1 | Double-click a text node    | Inline textarea opens with current text |
+| 4.2 | Type new text → press Enter | Text updates on canvas AND in code      |
+| 4.3 | Double-click → press Escape | Edit cancelled; original text preserved |
+
+---
+
+## Phase 5: Navigation (6 checks)
+
+| #   | Action                              | Expected Result                     |
+| --- | ----------------------------------- | ----------------------------------- |
+| 5.1 | Hold Space → drag canvas            | Canvas pans smoothly                |
+| 5.2 | Ctrl/Cmd + scroll wheel             | Zoom in/out; zoom indicator updates |
+| 5.3 | Trackpad pinch                      | Smooth zoom at cursor               |
+| 5.4 | Click zoom indicator (e.g., "100%") | Resets to 100% zoom                 |
+| 5.5 | Press Ctrl/Cmd+0 (zoom-to-fit)      | All nodes fit in viewport           |
+| 5.6 | Press Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z | Undo/redo actions reverse           |
+
+---
+
+## Phase 6: Panels & UI (5 checks)
+
+| #   | Action                               | Expected Result                          |
+| --- | ------------------------------------ | ---------------------------------------- |
+| 6.1 | Click a layer item in Layers panel   | Corresponding node selects on canvas     |
+| 6.2 | Double-click layer name              | Inline rename field opens                |
+| 6.3 | Select node → check Properties panel | Shows fill, stroke, dimensions, position |
+| 6.4 | Change fill color in Properties      | Color updates on canvas immediately      |
+| 6.5 | Click 🌙 button                      | Dark/light theme switches                |
+
+---
+
+## Phase 7: Bidi Sync (3 checks)
+
+| #   | Action                                        | Expected Result                           |
+| --- | --------------------------------------------- | ----------------------------------------- |
+| 7.1 | Edit code → add `rect @test { w: 100 h: 50 }` | New rect appears on canvas                |
+| 7.2 | Delete a node on canvas                       | Code for that node disappears from editor |
+| 7.3 | Undo (Ctrl/Cmd+Z) after delete                | Node reappears on canvas AND in code      |
+
+> Most critical phase — bidi sync failures are the #1 UX blocker.
+
+---
+
+## Phase 8: Keyboard Shortcuts (6 checks)
+
+| #   | Action                         | Expected Result           |
+| --- | ------------------------------ | ------------------------- |
+| 8.1 | Press V                        | Switches to Select tool   |
+| 8.2 | Press R                        | Switches to Rect tool     |
+| 8.3 | Press E                        | Switches to Ellipse tool  |
+| 8.4 | Press T                        | Switches to Text tool     |
+| 8.5 | Select node → press Arrow keys | Node nudges 1px per press |
+| 8.6 | Press ?                        | Help overlay shows        |
+
+> Verify toolbar highlights match active tool.
+
+---
+
+## Reporting
+
+After all phases, report:
+
+```
+Phase 1: Canvas Load         ✅ 3/3
+Phase 2: Drawing Tools       ✅ 6/6
+Phase 3: Selection           ⚠️ 5/6 (3.4 group click fails)
+Phase 4: Inline Editing      ✅ 3/3
+Phase 5: Navigation          ✅ 6/6
+Phase 6: Panels & UI         ✅ 5/5
+Phase 7: Bidi Sync           ❌ 2/3 (7.3 undo doesn't restore)
+Phase 8: Keyboard Shortcuts  ✅ 6/6
 ```
 
-## Tier: Site Deploy Verify (RecordingName: `deploy_verify`)
-Check `gh run list --workflow=pages.yml` first.
-```
-FIRST ACTION: Resize to 900x600. TAB REUSE: Reuse fast-draft.com tab.
-Check https://fast-draft.com:
-1. Site loads.
-2. Playground visible.
-3. WASM renders shapes.
-Take ONE screenshot. Return PASS/FAIL.
-```
+For failures: screenshot, document expected vs actual, file as bug.
 
-## Tier: Prod Feature Verify (RecordingName: `prod_feature_verify`)
-Required after merge. MUST set `ReusedSubagentId` to deploy verify subagent.
-```
-FIRST ACTION: Resize to 900x600. Reuse fast-draft.com tab.
-Run feature-specific quantitative tests via execute_browser_javascript:
-- TEST 1, TEST 2, TEST 3 (Measure bounds, classes, transitions corresponding to feature).
-Take ONE screenshot. Return PASS/FAIL.
-```
+---
 
-## Tier: Full (4 Phases)
+## Cleanup
 
-Phase 1 (RecordingName: `full_canvas_draw`):
-```
-FIRST ACTION: Resize to 900x600.
-Checks: Load shapes, Layers panel, Toolbar. Draw Rect (R), Ellipse (O), Text (T). Verify in Layers and code editor. Screenshot.
-```
+After all phases complete:
 
-Phase 2 (RecordingName: `full_select_edit`):
-```
-FIRST ACTION: Resize to 900x600. TAB REUSE.
-Checks: Select, drag, duplicate (right-click), delete. Inline edit text (double-click), cancel edit (Esc). Screenshot.
-```
-
-Phase 3 (RecordingName: `full_nav_sync`):
-```
-FIRST ACTION: Resize to 900x600. TAB REUSE.
-Checks: Pan (Space), Zoom (Cmd+wheel), Z-to-fit (Cmd+0). Select layer item -> syncs to canvas. Change Properties fill -> syncs. Bidi sync from code addition/deletion. Screenshot.
-```
-
-Phase 4 (RecordingName: `full_keys_frames`):
-```
-FIRST ACTION: Resize to 900x600. TAB REUSE.
-Checks: Shortcuts (V, R, E, T, arrow nudges). Draw Frame (F), resize frame, drag child inside. Context menu "Make child". Screenshot.
+```bash
+git checkout main
+git pull origin main
 ```
