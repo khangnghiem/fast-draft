@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.11.274 — Minimap 60FPS Decoupling and Cached Bitmap (R6.5, R3.25)
+
+**60fps Viewport Rect** — decoupled the minimap's viewport indicator (the blue box) from the WASM scene render interval. The viewport now updates continuously at 60fps when panning the canvas, eliminating micro-stutters during navigation.
+
+**WASM Scene Caching** — the WASM scene overview is now rendered once to an `OffscreenCanvas` (or hidden fallback) when the document modifies (`sceneDirty`), and blitted via `drawImage` during the 60fps loop. Replaced `uiDirty` reliance for scene rendering with a dedicated `sceneDirty` flag to prevent WASM thrashing during pan/zoom.
+
+**Interaction Debouncing** — paused the heavy WASM minimap updates entirely while the user is actively dragging a node or using a continuous tool (`activePointerId !== -1`). It refreshes smoothly from the cache instantly upon `pointerup`.
+
+Files: `site/app.js`
+
 ### v0.11.273 — Default Active Tabs via SessionStorage (R6.6)
 **Fresh start always defaults to Layers & Agent** — changed `activeLeftTab` and `activeRightTab` to use `sessionStorage` instead of `localStorage`. This ensures that every new browser tab or fresh session guarantees a clean slate (Layers & Agent tabs toggled on by default), while still preserving your context if you accidentally refresh the page mid-workflow.
 
