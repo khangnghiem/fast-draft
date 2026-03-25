@@ -1030,6 +1030,22 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Insert a new node (used by JS Drag-to-Create from toolbar).
+     * Bypasses JS string construction to enforce WASM defaults.
+     * @param {string} kind_str
+     * @param {number} x
+     * @param {number} y
+     * @param {number} w
+     * @param {number} h
+     * @returns {boolean}
+     */
+    insert_node_at(kind_str, x, y, w, h) {
+        const ptr0 = passStringToWasm0(kind_str, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_insert_node_at(this.__wbg_ptr, ptr0, len0, x, y, w, h);
+        return ret !== 0;
+    }
+    /**
      * Check if a node is locked. Returns false if node not found.
      * @param {string} id
      * @returns {boolean}

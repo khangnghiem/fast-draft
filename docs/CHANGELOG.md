@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.279 — Insert Menu Visual Distinction (R3.39)
+
+**Added Subtle Ring to Insert Button** — Enclosed the `+` (Insert Shape) icon in a delicate 1.5px outlined circular ring. This visually distinguishes it from the standard toggle tools (Select, Hand, Draw) by identifying it as a dropdown menu trigger, improving UX without disrupting the geometric line-art harmony of the 32×32 toolbar matrix.
+
+Files: `site/css/toolbar.css`
+
 ### v0.11.279 — Frontend Modularization & Shape Parity (R3.42, R6.5)
 
 **WASM Shape Creation Parity** — Refactored Toolbar Drag-To-Create (DTC) to leverage a new `wasm.insert_node_at()` API instead of JS string injection. Permanently resolved the divergence between toolbar-dragged shape properties (`#F0F0F0`, stroke `1.5`) and cursor-drawn shape properties (`fill: none`, stroke `2.5`). The Engine is now the ultimate source of truth for AST defaults.

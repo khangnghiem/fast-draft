@@ -12,6 +12,7 @@ export const fdcanvas_get_tool_name: (a: number) => [number, number];
 export const fdcanvas_has_active_flows: (a: number) => number;
 export const fdcanvas_has_pending_text_change: (a: number) => number;
 export const fdcanvas_import_mermaid: (a: number, b: number, c: number) => number;
+export const fdcanvas_insert_node_at: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
 export const fdcanvas_new: (a: number, b: number) => number;
 export const fdcanvas_push_undo_snapshot: (a: number, b: number, c: number, d: number, e: number) => void;
 export const fdcanvas_redo: (a: number) => number;
