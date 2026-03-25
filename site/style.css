@@ -1531,13 +1531,11 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 }
 /* ── AI Touch button in toolbar ── */
 .ft-ai-touch {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
   white-space: nowrap;
-  width: auto;
-  padding: 0 10px;
+  letter-spacing: -0.6px;
   color: var(--fd-accent);
-  gap: 4px;
 }
 .ft-ai-touch:hover {
   background: rgba(42, 110, 240, 0.1);
