@@ -48,6 +48,9 @@ Before forming any opinions, invest time in genuine investigation:
 - Check if there are **established patterns, libraries, or tools** that address the topic — don't reinvent the wheel
 - Review **official documentation** for any technologies or APIs involved
 
+> [!TIP]
+> **Skip web research** if `$ARGUMENTS` is purely internal to this codebase (e.g., "toolbar layout", "panel sizing"). **Do research** when the topic involves external technologies, design patterns, industry practices, or unfamiliar territory.
+
 **Deep Think:**
 
 - Spend deliberate time reasoning about the problem from **first principles** — don't jump to the first solution that comes to mind
@@ -113,20 +116,29 @@ Use this format for each suggestion:
 - 🎯 Quick Wins with high impact go next
 - Cap at **8 suggestions max**
 
-### 7. Visualize (when helpful)
+### 7. Visualize (default ON)
 
-For suggestions involving **UI changes, architecture, or workflows**, generate a quick sketch to make the idea concrete:
+> [!IMPORTANT]
+> **Visuals are the default, not the exception.** Generate at least one image or diagram for every `/advise` call. A picture is worth a thousand tokens — users absorb visual suggestions 10× faster than text walls.
 
-| Suggestion type          | Visual to generate                           |
-| ------------------------ | -------------------------------------------- |
-| UI / layout change       | Mockup of the proposed interface             |
-| Architecture / data flow | Diagram showing components and relationships |
-| Workflow / process       | Flowchart of the proposed steps              |
-| Refactor / restructure   | Before/after comparison diagram              |
+**For each suggestion, decide which visual to generate:**
 
-**When to skip:** Pure config changes, dependency updates, or text-only fixes don't need visuals.
+| Suggestion type          | Visual tool                                                    |
+| ------------------------ | -------------------------------------------------------------- |
+| UI / layout change       | `generate_image` — mockup of the proposed interface            |
+| Architecture / data flow | `generate_image` or Mermaid — components and relationships     |
+| Workflow / process       | Mermaid diagram — flowchart of the proposed steps              |
+| Refactor / restructure   | `generate_image` — before/after comparison                     |
+| Performance / data       | Mermaid or table — benchmark comparisons, bottleneck highlight |
 
-Attach the visual directly below the relevant suggestion card. Keep sketches minimal — the goal is **clarity, not polish**.
+**Rules:**
+
+- **Always call `generate_image` at least once** — every `/advise` must produce at least 1 generated image (mockup, diagram, or sketch). Pick the suggestion with the highest visual impact.
+- Mermaid diagrams are **additional** — use them freely in the artifact for architecture, data flow, or process visuals, but they don't replace the mandatory `generate_image` call
+- Attach each visual **directly below its suggestion card** so the connection is obvious
+- Keep visuals minimal and focused — **clarity over polish**
+
+**Only skip `generate_image` when ALL suggestions are:** pure config changes, dependency version bumps, or single-line text fixes with no spatial or structural component.
 
 ### 8. Present and Wait
 

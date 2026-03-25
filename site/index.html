@@ -173,9 +173,11 @@
                   <button class="lp-tab-toggle" id="lp-sidebar-toggle" title="Toggle sidebar (\)">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="14" height="12" rx="2"/><line x1="6" y1="2" x2="6" y2="14"/></svg>
                   </button>
-                  <button class="lp-tab active" data-tab="layers" title="Layers">☰ Layers</button>
-                  <button class="lp-tab" data-tab="code" title="Code Editor">{ } Code</button>
-                  <button class="lp-tab" data-tab="inspect" title="Inspect">◧ Inspect</button>
+                  <div class="lp-tab-group">
+                    <button class="lp-tab active" data-tab="layers" title="Layers">☰ Layers</button>
+                    <button class="lp-tab" data-tab="code" title="Code Editor">{ } Code</button>
+                    <button class="lp-tab" data-tab="inspect" title="Inspect">◧ Inspect</button>
+                  </div>
                   <button class="mobile-panel-close" id="lp-mobile-close" aria-label="Close panel">✕</button>
                 </div>
                 <div class="lp-content">
@@ -302,8 +304,10 @@
             <!-- ─── Right Panel: Tabbed (Agent / Search) ─── -->
             <div id="right-panel">
               <div class="rp-tabs">
-                <button class="rp-tab active" data-rtab="agent" title="AI Agent">✦ Agent</button>
-                <button class="rp-tab" data-rtab="search" title="Search">🔍 Search</button>
+                <div class="rp-tab-group">
+                  <button class="rp-tab active" data-rtab="agent" title="AI Agent">✦ Agent</button>
+                  <button class="rp-tab" data-rtab="search" title="Search">🔍 Search</button>
+                </div>
                 <button class="mobile-panel-close" id="rp-mobile-close" aria-label="Close panel">✕</button>
                 <button class="rp-tab-toggle" id="rp-sidebar-toggle" title="Toggle right panel">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="14" height="12" rx="2"/><line x1="10" y1="2" x2="10" y2="14"/></svg>
