@@ -17,6 +17,18 @@
 
 ## Completed Requirements
 
+### v0.11.282 — Toolbar Snap System Overhaul (R3.39)
+
+**Fixed 8 bugs** by decomposing `applySnapPosition` into 3 focused functions and eliminating recursive side-effects:
+1. **No more infinite recursion** — `applyToolbarSnap` resolves overflow linearly, never recurses.
+2. **Pixel-perfect snap shadow** — DOM-measured minimized dimensions replace hardcoded 178px guess via `getMiniDims()`.
+3. **Auto-restore** — `reclampToolbar` now un-minimizes automatically when canvas has enough space.
+4. **Smart axis retention** — `getSnapSide` hysteresis bias (15%) prevents false axis flips near corners.
+5. **Panel transition removed** — instant panel collapse prevents stale `getCanvasRect` during CSS animation.
+6. **Init race fixed** — toolbar reclamps after layout settles via double-rAF, not during panel CSS load.
+7. **Removed `preferredSide` stale state** — reclamp reads from localStorage, not a stale variable.
+
+
 ### v0.11.281 — Hybrid Cascade Toolbar Overflow (R3.39)
 
 **Smart toolbar overflow recovery** — Replaced the old "force to vertical" overflow with a 4-step hybrid cascade on both horizontal AND vertical axes:

@@ -30,7 +30,7 @@ Before modifying ANY file:
 
 ### 🧠 Lessons Learned
 
-Before starting any task, run `head -n 50 docs/LESSONS.md` to read the keyword index. If a keyword matches your task, use `view_file` to read ONLY the specific line ranges indicated. Never read the entire file. After encountering a repeated mistake, run `/learn` to document it. Critical lessons get promoted to GEMINI.md rules.
+Before starting any task, scan `docs/LESSONS.md` for relevant pitfalls. After encountering a repeated mistake, run `/learn` to document it. Critical lessons get promoted to GEMINI.md rules.
 
 ### 📋 Requirement Deduplication
 
@@ -48,24 +48,6 @@ Before proposing any new requirement, search the **Requirement Index** at the bo
 > [!CAUTION]
 > **Direct pushes to `main` are blocked by a pre-push git hook** (`.githooks/pre-push`).
 > On a fresh clone, run: `git config core.hooksPath .githooks` to activate.
-
-> [!CAUTION]
-> **NEVER use `git push --force` or `git push --force-with-lease`.** If there are conflicts, resolve them with `git pull --rebase` or a merge commit. To clean up commit history, use squash merge on the PR.
-
-### 🌐 Browser Subagent (MANDATORY)
-
-- **Chain subagents via `ReusedSubagentId` (CRITICAL)** — when calling `browser_subagent` and a **previous `browser_subagent` in this conversation** already opened a tab for the target hostname, you **MUST** set `ReusedSubagentId` to that previous subagent's ID. This carries forward open tabs automatically — no Page ID lookup needed. Only omit `ReusedSubagentId` on the very first `browser_subagent` call of the conversation.
-- **Reuse open tabs** — before calling `browser_subagent`, check the Browser State metadata for existing tabs matching the target hostname. If a matching tab exists:
-  1. Pass the **Page ID** to the subagent in the Task description
-  2. Instruct the subagent to use `navigate_browser` on that Page ID — **NEVER** `open_browser_url`
-  3. Only use `open_browser_url` when **zero** tabs match the target hostname
-  - **Template phrase** to include in every subagent Task: _"An existing tab for [hostname] is already open (Page ID: [ID]). Navigate within that tab using navigate_browser. Do NOT open a new tab."_
-- **Cross-subagent tab memory** — Browser State metadata may show "No browser pages open" between subagent calls, but the tab still exists. If a previous subagent opened a tab, **set `ReusedSubagentId`** and instruct the next subagent to reuse it. Never rely solely on Browser State metadata — track tabs from conversation context.
-- **Includes Codespaces** — the same rule applies to GitHub Codespace tabs (`*.github.dev`). Never open a duplicate Codespace tab.
-- **Small viewport BEFORE subagent** — resize the browser window to **900×600** as the **first action** inside every `browser_subagent` task, before any other interaction. Recordings capture every frame at viewport resolution; 3008×1575 produces files ~25× larger than 900×600. Never rely on resizing only before screenshots — the recording is already bloated by then.
-- **RecordingName convention** — use `{tier}_{phase}` format: `smoke_canvas`, `full_draw_select`, `deploy_verify`. Descriptive names make it easy to audit and clean up large recordings.
-- **Minimize subagent duration** — keep subagent tasks focused and fast. Long idle time inside a subagent inflates recording size. Return immediately after the last action.
-- **Clean up old recordings** — before E2E runs, delete recordings older than 1 hour: `find ~/.gemini/antigravity/brain/ -name "*.webp" -mmin +60 -delete 2>/dev/null`.
 
 ---
 
@@ -120,7 +102,7 @@ crates/
 | **Semantic IDs**            | `@login_form` not `@rect_17` — intent over auto-generated names            |
 | **Constraints over coords** | `center_in: canvas` not `x: 400 y: 300` — relationships > pixels           |
 | **Accurate comments**       | `#` for context — wrong comments hurt more than no comments                |
-| **Style reuse**             | Define `style` blocks, reference with `use:` — consistency > ad-hoc        |
+| **Theme reuse**             | Define `theme` blocks, reference with `use:` — consistency > ad-hoc        |
 | **Spec for intent**         | `spec { ... }` metadata (status, priority, accept) — structured > freeform |
 | **Shorthand OK**            | `w:` / `h:` / `#FFF` are fine — unambiguous in context                     |
 
@@ -138,16 +120,9 @@ crates/
 > [!CAUTION]
 > **NEVER use npm for VS Code extension. Always use pnpm if possible, npm only as fallback.**
 
-### 🔄 DOM vs localStorage State
+### 🌐 Browser Subagent Rule
 
 > [!IMPORTANT]
-<<<<<<< Updated upstream
-> **DOM = current visual state. localStorage = user intent.**
-> When preserving current position (minimize toggle, reclamp, resize), read from DOM (`classList`, `getBoundingClientRect()`).
-> When restoring user preference (page load, clear state), read from localStorage.
-> Runtime overrides (auto-overflow, reclamp, panel toggle) can silently diverge DOM from localStorage — never assume they match.
-=======
->>>>>>> Stashed changes
 > **Tab reuse is MANDATORY.** Before navigating anywhere, always `list_browser_pages` first.
 >
 > - If a tab with the same or similar URL exists → **switch to it** (do NOT open a new tab).
@@ -158,32 +133,6 @@ crates/
 
 ## TIER 2: CI/CD
 
-### 🌐 Site & Domain
-
-| Fact | Value |
-| ---- | ----- |
-| **Live URL** | [https://fast-draft.com](https://fast-draft.com) |
-| **Hosting** | Cloudflare Pages (free, 330+ edge PoPs) |
-| **DNS** | Cloudflare — CNAME `@` → `fast-draft.pages.dev`, proxy **ON** |
-| **Source** | `site/` directory (index.html, style.css, app.js, wasm/) |
-| **Headers** | `site/_headers` — WASM cache (1yr immutable) + security headers |
-| **Deploy trigger** | Auto on push to `main` via `.github/workflows/pages.yml` |
-| **WASM build** | `wasm-pack build crates/fd-wasm --target web --out-dir ../../site/wasm` |
-| **Secrets** | `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` in GitHub repo secrets |
-
-### ⚙️ CI/CD Workflows
-
-| Workflow | Trigger | Purpose |
-| -------- | ------- | ------- |
-| `ci.yml` | push/PR to `main` | Rust check + test + clippy + fmt, WASM build, VS Code extension compile |
-| `pages.yml` | push to `main` | Build WASM → deploy to Cloudflare Pages |
-| `release.yml` | `v*` tag | CI gate → VS Code ext publish + fd-lsp binaries + Zed ext → GitHub Release |
-
-All workflows use `Swatinem/rust-cache@v2` with shared cache keys (`ci`, `wasm`).
-
-> [!CAUTION]
-> **Never delete or modify `site/_headers`.** It controls WASM caching and security response headers.
-
 ### Before Completing Any Task
 
 - [ ] `cargo check --workspace` passes
@@ -192,4 +141,3 @@ All workflows use `Swatinem/rust-cache@v2` with shared cache keys (`ci`, `wasm`)
 - [ ] `cargo fmt --all -- --check` passes
 - [ ] No panic paths in library code (no `unwrap()` on user input)
 - [ ] All dependent files updated across crates
-- [ ] If a **big new feature** was completed, add a phase/check to `/e2e` workflow to cover it
