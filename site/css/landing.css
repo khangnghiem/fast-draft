@@ -1,0 +1,706 @@
+/* ─── Floating Action Bar (frosted glass) ─── */
+#floating-action-bar {
+  position: absolute;
+  z-index: 900;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: rgba(30,30,30,0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2);
+  pointer-events: auto;
+  transform: translateX(-50%);
+  transition: opacity 0.15s ease, top 0.08s ease, left 0.08s ease;
+  font-size: 11px;
+  color: #ccc;
+  white-space: nowrap;
+}
+#floating-action-bar.visible { display: flex; }
+.fab-sep {
+  width: 1px;
+  height: 18px;
+  background: rgba(255,255,255,0.15);
+  margin: 0 2px;
+}
+.fab-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.2);
+  padding: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+.fab-color::-webkit-color-swatch-wrapper { padding: 0; }
+.fab-color::-webkit-color-swatch { border-radius: 50%; border: none; }
+.fab-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  opacity: 0.5;
+  letter-spacing: 0.5px;
+  margin-right: -2px;
+}
+.fab-input {
+  width: 38px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 4px;
+  color: #ddd;
+  font-size: 11px;
+  padding: 2px 4px;
+  text-align: center;
+}
+.fab-input:focus { border-color: var(--fd-accent); outline: none; }
+.fab-slider {
+  width: 50px;
+  height: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255,255,255,0.15);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.fab-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--fd-accent);
+  cursor: pointer;
+}
+.fab-delete-btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  color: #aaa;
+  cursor: pointer;
+  padding: 3px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.fab-delete-btn:hover {
+  background: rgba(255,59,48,0.15);
+  border-color: rgba(255,59,48,0.3);
+  color: #FF3B30;
+}
+
+/* ─── Skeleton Loader ─── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Keep skeleton shimmer as a subtle loading indicator */
+  .skeleton-shape {
+    animation: skeleton-shimmer 1.5s ease-in-out infinite !important;
+    opacity: 1;
+    transform: none;
+  }
+}
+/* Manual toggle — mirrors the media query above */
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+.reduce-motion .skeleton-shape {
+  animation: skeleton-shimmer 1.5s ease-in-out infinite !important;
+  opacity: 1;
+  transform: none;
+}
+
+/* ─── Features ─── */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+.feature-card {
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+.feature-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(108, 92, 231, 0.06), rgba(10, 132, 255, 0.06));
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.feature-card:hover::before {
+  opacity: 1;
+}
+.feature-card:hover {
+  border-color: #6C5CE7;
+  box-shadow: 0 0 30px rgba(108, 92, 231, 0.2), 0 8px 32px rgba(0, 0, 0, 0.3);
+  transform: translateY(-6px);
+}
+.feature-icon {
+  font-size: 2rem;
+  margin-bottom: 16px;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: inline-block;
+}
+.feature-card:hover .feature-icon {
+  transform: translateY(-4px) scale(1.15);
+}
+.feature-card h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.feature-card p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* ─── Modes ─── */
+.modes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+}
+.mode-card {
+  padding: 36px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  transition: all var(--transition);
+}
+.mode-card:hover {
+  border-color: #6C5CE7;
+  box-shadow: 0 0 30px rgba(108, 92, 231, 0.2), 0 8px 32px rgba(0, 0, 0, 0.3);
+  transform: translateY(-4px);
+}
+.mode-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 100px;
+  background: rgba(108, 92, 231, 0.15);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.mode-card h3 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.mode-card p {
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+.mode-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mode-list li {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding-left: 20px;
+  position: relative;
+}
+.mode-list li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ─── Benchmarks ─── */
+.benchmark-table-wrap { overflow-x: auto; }
+.benchmark-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+.benchmark-table th, .benchmark-table td {
+  padding: 14px 20px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.benchmark-table thead th {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.benchmark-table tbody tr { transition: background var(--transition); }
+.benchmark-table tbody tr:hover { background: var(--bg-card); }
+.ratio {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 100px;
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--success);
+  font-weight: 700;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+.ratio-avg {
+  font-size: 1rem;
+  background: rgba(108, 92, 231, 0.15);
+  color: var(--accent);
+}
+.benchmark-table tfoot td {
+  border-top: 2px solid var(--border);
+  font-weight: 700;
+}
+
+/* ─── Architecture ─── */
+.crate-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.crate-card {
+  padding: 24px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  transition: all var(--transition);
+}
+.crate-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-glow);
+}
+.crate-card h4 {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.crate-flow {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+.crate-card p {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* ─── Editor Table ─── */
+.editor-table-wrap { overflow-x: auto; }
+.editor-table {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  border-collapse: collapse;
+}
+.editor-table th, .editor-table td {
+  padding: 14px 20px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.editor-table th {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.editor-table td:first-child { text-align: left; font-weight: 500; }
+
+/* ─── Download Section ─── */
+.download-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  max-width: 900px;
+  margin: 0 auto 24px;
+}
+.download-card {
+  padding: 32px 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  text-align: center;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+.download-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(108, 92, 231, 0.06), rgba(10, 132, 255, 0.06));
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.download-card:hover::before { opacity: 1; }
+.download-card:hover {
+  border-color: #6C5CE7;
+  box-shadow: 0 0 30px rgba(108, 92, 231, 0.2), 0 8px 32px rgba(0, 0, 0, 0.3);
+  transform: translateY(-6px);
+}
+.download-card.dl-detected {
+  border-color: var(--accent);
+  box-shadow: 0 0 20px rgba(108, 92, 231, 0.15), 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+.download-card.dl-detected::after {
+  content: 'Recommended';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: linear-gradient(135deg, #6C5CE7, #0A84FF);
+  color: #fff;
+}
+.dl-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: inline-block;
+}
+.download-card:hover .dl-icon {
+  transform: translateY(-4px) scale(1.15);
+}
+.download-card h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.download-card p {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+}
+.dl-btn {
+  width: 100%;
+  justify-content: center;
+}
+.dl-size {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: var(--mono);
+}
+.dl-footer {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.dl-footer a {
+  color: var(--accent);
+  font-weight: 500;
+}
+.dl-footer a:hover { text-decoration: underline; }
+.dl-version {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: rgba(108, 92, 231, 0.15);
+  color: var(--accent);
+}
+.dl-version:empty { display: none; }
+
+@media (max-width: 768px) {
+  .download-cards { grid-template-columns: 1fr; max-width: 320px; }
+}
+
+/* ─── CTA ─── */
+.cta-container {
+  text-align: center;
+  max-width: 600px;
+}
+.cta-container h2 {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+}
+.cta-container p {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  margin-bottom: 32px;
+}
+
+/* ─── Footer ─── */
+/* Footer styles are in shared.css — .site-footer */
+
+/* ─── Animations ─── */
+.animate-in {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+.animate-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── Fullscreen Toggle (inside canvas) ─── */
+/* ─── Full Screen: native API overrides ─── */
+.fullscreen-mode .playground-toolbar { display: none !important; }
+.fullscreen-mode .chrome-dropdown-container { display: none !important; }
+.fullscreen-mode .playground-editor { display: none !important; }
+.fullscreen-mode .playground-split { grid-template-columns: 1fr; min-height: 100vh; border-radius: 0; border: none; box-shadow: none; }
+.fullscreen-mode .split-resize-handle { display: none; }
+.fullscreen-mode .playground-canvas { min-height: 500px; }
+.fullscreen-mode #floating-toolbar {
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 16px;
+}
+.fullscreen-mode #minimap-container { display: none !important; }
+.fullscreen-mode .chrome-pill { display: none !important; }
+.fullscreen-mode .app-playground { max-width: 100%; width: 100%; height: 100vh; margin: 0; }
+
+/* ─── Panel startup animation removed — panels always visible ─── */
+
+/* ─── Right Sidebar Toggle ─── */
+/* right-sidebar-toggle removed — replaced by #right-panel */
+
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  .nav-links {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    flex-direction: column;
+    background: rgba(13, 17, 23, 0.95);
+    backdrop-filter: blur(20px);
+    padding: 20px;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-links.open { display: flex; }
+  .mobile-menu-btn { display: flex; }
+
+  #hero {
+    padding: 72px 16px 32px;
+  }
+
+  .playground-split {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    position: relative;
+  }
+  .split-resize-handle { display: none; }
+
+  .features-grid { grid-template-columns: 1fr; }
+  .modes-grid { grid-template-columns: 1fr; }
+  .crate-grid { grid-template-columns: 1fr 1fr; }
+
+  #hero h1 { font-size: 2rem; }
+  .hero-sub { font-size: 1rem; }
+
+  /* ── Canvas fills full width — panels are overlay, not grid columns ── */
+  #canvas-content {
+    grid-template-columns: 1fr !important;
+  }
+  #canvas-wrapper {
+    --props-width: 0px;
+  }
+
+  /* ── Left panel: off-screen by default, overlay when open ── */
+  #left-panel {
+    position: absolute; /* Override grid on mobile — overlay pattern */
+    left: 0; top: 0; bottom: 0;
+    width: 280px !important;
+    max-width: 80vw;
+    transform: translateX(-100%);
+    z-index: 100;
+    box-shadow: none;
+    transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+  [data-lp="open"] #left-panel {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  }
+  [data-lp="closed"] #left-panel {
+    transform: translateX(-100%);
+    box-shadow: none;
+    pointer-events: none;
+  }
+
+  /* ── Right panel: off-screen by default, overlay when open ── */
+  #right-panel {
+    position: absolute; /* Override grid on mobile — overlay pattern */
+    right: 0; top: 0; bottom: 0;
+    width: 320px !important;
+    max-width: 85vw;
+    transform: translateX(100%);
+    z-index: 100;
+    box-shadow: none;
+    transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+  [data-rp="open"] #right-panel {
+    transform: translateX(0);
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.25);
+  }
+  [data-rp="closed"] #right-panel {
+    transform: translateX(100%);
+    box-shadow: none;
+    pointer-events: none;
+  }
+
+  /* ── Hide resize handles on mobile ── */
+  .panel-resize-handle.layers-handle { display: none !important; }
+  .panel-resize-handle.props-handle { display: none !important; }
+  .panel-restore-strip { display: none !important; }
+
+  /* ── #1: Touch-sized floating toolbar ── */
+  #floating-toolbar {
+    top: auto !important;
+    bottom: 12px !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    transform-origin: bottom center;
+    flex-direction: row !important;
+    max-width: calc(100vw - 24px);
+    /* #2: iOS momentum scrolling */
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    /* #2: Gradient fade scroll indicator on right edge */
+    -webkit-mask-image: linear-gradient(to right, black 0%, black 82%, transparent 100%);
+    mask-image: linear-gradient(to right, black 0%, black 82%, transparent 100%);
+    /* #5: Prevent double-tap zoom */
+    touch-action: manipulation;
+  }
+  /* Remove mask when scrolled to end (JS toggles this class) */
+  #floating-toolbar.scroll-end {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  /* Hide grip handles on mobile — no dragging */
+  #floating-toolbar .toolbar-grip { display: none; }
+  /* #1: Touch-sized tool buttons (40×40px target) */
+  #floating-toolbar .ft-tool-btn {
+    padding: 10px;
+    min-width: 40px;
+    min-height: 40px;
+    touch-action: manipulation;
+  }
+  #floating-toolbar .ft-tooltip { display: none; }
+  #floating-toolbar .ft-ai-touch {
+    font-size: 12px;
+    padding: 6px 10px;
+    min-height: 40px;
+    touch-action: manipulation;
+  }
+
+  /* ── #1: Touch-sized chrome buttons (36×36px target) ── */
+  .canvas-chrome-left {
+    left: 10px !important;
+    top: 10px;
+  }
+  .canvas-chrome-right {
+    right: 10px !important;
+    top: 10px;
+  }
+  .canvas-chrome-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+    touch-action: manipulation;
+  }
+
+  /* ── Hide non-essential UI on mobile ── */
+  #minimap-container { display: none !important; }
+  #floating-action-bar { display: none !important; }
+  #canvas-status { display: none !important; }
+  .onboarding-hints { display: none !important; }
+
+  /* ── Canvas should fill everything ── */
+  #fd-canvas {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+  }
+
+  /* ── #3: Mobile panel close button (✕) ── */
+  .mobile-panel-close {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-left: auto;
+    border: none;
+    background: transparent;
+    color: var(--fd-text-secondary, #888);
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 6px;
+    flex-shrink: 0;
+    touch-action: manipulation;
+  }
+  .mobile-panel-close:hover,
+  .mobile-panel-close:active {
+    background: rgba(128, 128, 128, 0.2);
+    color: var(--fd-text, #fff);
+  }
+
+  /* ── Mobile layers backdrop (click-to-dismiss overlay) ── */
+  #mobile-layers-backdrop {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 99;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    pointer-events: none;
+  }
+  #mobile-layers-backdrop.visible { display: block; pointer-events: auto; }
+
+  /* ── #5: Prevent double-tap zoom on panel tabs ── */
+  .lp-tab, .rp-tab {
+    touch-action: manipulation;
+  }
+}
+
+@media (max-width: 480px) {
+  .crate-grid { grid-template-columns: 1fr; }
+  .section { padding: 60px 16px; }
+}
+

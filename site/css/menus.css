@@ -1,0 +1,217 @@
+/* ─── Context Menu: AI Touch Submenu ─── */
+.ctx-ai-touch-wrap {
+  position: relative;
+}
+.ctx-ai-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  color: var(--fd-text-secondary);
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ctx-ai-trigger:hover {
+  background: var(--fd-accent);
+  color: var(--fd-accent-fg);
+}
+.ctx-ai-chevron {
+  font-size: 10px;
+  margin-left: auto;
+  padding-left: 12px;
+  opacity: 0.5;
+}
+.ctx-ai-submenu {
+  display: none;
+  padding: 8px;
+  border-top: 1px solid var(--fd-border);
+  animation: ctx-fade-in 0.12s ease-out;
+}
+.ctx-ai-touch-wrap.expanded .ctx-ai-submenu {
+  display: block;
+}
+.ctx-ai-prompt {
+  width: 100%;
+  min-width: 180px;
+  border: 1px solid var(--fd-border);
+  background: var(--fd-input-bg, rgba(0,0,0,0.04));
+  color: var(--fd-text);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+.ctx-ai-prompt:focus {
+  border-color: var(--fd-accent);
+}
+.ctx-ai-prompt::placeholder {
+  color: var(--fd-text-tertiary);
+  font-style: italic;
+}
+.ctx-ai-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+.ctx-ai-counter {
+  font-size: 10px;
+  color: var(--fd-text-tertiary);
+  font-family: var(--mono);
+}
+.ctx-ai-run {
+  border: none;
+  background: var(--fd-accent);
+  color: var(--fd-accent-fg, #fff);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.ctx-ai-run:hover {
+  filter: brightness(1.1);
+}
+.ctx-ai-run:active {
+  transform: scale(0.95);
+}
+
+/* ─── Unified Context Menu (dynamic) ─── */
+.ctx-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 180px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--fd-surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 0.5px solid var(--fd-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08);
+  font-size: 12px;
+  opacity: 0;
+  transform: scale(0.96) translateY(-4px);
+  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+}
+.ctx-menu.ctx-menu-visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+.ctx-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--fd-text);
+  white-space: nowrap;
+  transition: none;
+}
+.ctx-menu-item:hover,
+.ctx-menu-item.ctx-menu-active {
+  background: var(--fd-accent);
+  color: #fff;
+}
+.ctx-menu-item:hover .ctx-menu-shortcut,
+.ctx-menu-item.ctx-menu-active .ctx-menu-shortcut {
+  color: rgba(255,255,255,0.7);
+}
+.ctx-menu-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: default;
+}
+.ctx-menu-danger { color: #FF3B30; }
+.ctx-menu-danger:hover,
+.ctx-menu-danger.ctx-menu-active {
+  background: rgba(255,59,48,0.15);
+  color: #FF3B30;
+}
+.ctx-menu-icon {
+  font-size: 11px;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+.ctx-menu-label {
+  flex: 1;
+  min-width: 0;
+}
+.ctx-menu-shortcut {
+  font-size: 10px;
+  color: var(--fd-text-tertiary);
+  font-family: var(--mono);
+  margin-left: auto;
+  padding-left: 16px;
+  font-weight: 500;
+  opacity: 0.6;
+}
+.ctx-menu-sep {
+  height: 1px;
+  background: var(--fd-border);
+  margin: 3px 4px;
+}
+.ctx-menu-header {
+  padding: 5px 10px 3px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--fd-text-tertiary);
+  cursor: default;
+}
+.ctx-menu-custom {
+  padding: 4px 6px;
+}
+
+/* ─── Dimension Tooltip ─── */
+#dimension-tooltip {
+  display: none;
+  position: absolute;
+  z-index: 200;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--mono);
+  letter-spacing: -0.02em;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Reparent overlay removed — reparent via Layers drag-drop or post-drop context menu */
+
+/* ─── Modifier Cursors ─── */
+#fd-canvas.tool-select { cursor: default; }
+#fd-canvas.tool-rect,
+#fd-canvas.tool-ellipse { cursor: crosshair; }
+#fd-canvas.tool-pen { cursor: crosshair; }
+#fd-canvas.tool-text { cursor: text; }
+#fd-canvas.tool-eraser { cursor: crosshair; }
+#fd-canvas.tool-hand { cursor: grab; }
+#fd-canvas.tool-arrow { cursor: crosshair; }
+#fd-canvas.tool-frame { cursor: crosshair; }
+#fd-canvas.modifier-cmd { cursor: grab !important; }
+#fd-canvas.modifier-cmd-select { cursor: default !important; }
+#fd-canvas.modifier-alt { cursor: copy !important; }
+

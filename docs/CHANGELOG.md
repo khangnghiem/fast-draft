@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.279 — Frontend Modularization & Shape Parity (R3.42, R6.5)
+
+**WASM Shape Creation Parity** — Refactored Toolbar Drag-To-Create (DTC) to leverage a new `wasm.insert_node_at()` API instead of JS string injection. Permanently resolved the divergence between toolbar-dragged shape properties (`#F0F0F0`, stroke `1.5`) and cursor-drawn shape properties (`fill: none`, stroke `2.5`). The Engine is now the ultimate source of truth for AST defaults.
+**CSS Modularization** — Sliced the monolithic `3,700-line` style.css into 10 semantic `@import` segments to eliminate token waste for future AI context.
+**JS Syntax Extraction** — Decoupled the CodeMirror syntax language parser and Atom One Dark Theme into a standalone ES Module (`site/src/editor/syntax.js`).
+**YOLO Workflow** — Mandated `--quiet` flags across all cargo/wasm processes in `/yolo` script to mitigate verbose compilation noise token expenditure.
+
+Files: `crates/fd-wasm/src/lib.rs`, `site/app.js`, `site/style.css`, `site/src/style/*`, `site/src/editor/syntax.js`, `.agents/workflows/yolo.md`
+
 ### v0.11.278 — Fix AI Toolbar Button Dimensions (R3.39)
 
 **Fixed AI button size** — Squeezed the `✦ AI` button label (`font-size: 10px; letter-spacing: -0.6px`, padding removed) to strictly fit inside the standard 32×32 tool button matrix. This enforces a consistent 38px minor dimension for the floating toolbar regardless of horizontal or vertical orientation, eliminating layout distortion when auto-overflowed or snapped to side edges.

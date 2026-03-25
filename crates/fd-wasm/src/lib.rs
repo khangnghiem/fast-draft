@@ -305,6 +305,147 @@ impl FdCanvas {
         keyboard::tool_kind_to_name(self.active_tool).to_string()
     }
 
+    /// Insert a new node (used by JS Drag-to-Create from toolbar).
+    /// Bypasses JS string construction to enforce WASM defaults.
+    pub fn insert_node_at(&mut self, kind_str: &str, x: f32, y: f32, w: f32, h: f32) -> bool {
+        use fd_core::model::{
+            ArrowKind, Color, Constraint, CurveKind, Edge, EdgeAnchor, LayoutMode, Paint,
+            SceneNode, Stroke, StrokeCap, StrokeJoin,
+        };
+
+        if kind_str == "arrow" {
+            let edge_id = NodeId::with_prefix("edge");
+            let mut edge = Edge {
+                id: edge_id,
+                from: EdgeAnchor::Point(x, y),
+                to: EdgeAnchor::Point(x + w, y + h),
+                text_child: None,
+                props: Default::default(),
+                use_styles: Default::default(),
+                arrow: ArrowKind::End,
+                curve: CurveKind::Smooth,
+                spec: None,
+                animations: Default::default(),
+                flow: None,
+                label_offset: None,
+            };
+            edge.props.stroke = Some(Stroke {
+                paint: Paint::Solid(if self.dark_mode {
+                    Color::rgba(0.8, 0.8, 0.8, 1.0)
+                } else {
+                    Color::rgba(0.2, 0.2, 0.2, 1.0)
+                }),
+                width: 2.0,
+                cap: StrokeCap::Round,
+                join: StrokeJoin::Round,
+            });
+            let mutations = vec![GraphMutation::AddEdge {
+                edge: Box::new(edge),
+            }];
+            self.apply_mutations(mutations);
+            self.engine.flush_to_text();
+            return true;
+        }
+
+        let id = NodeId::with_prefix(kind_str);
+        let mut node = match kind_str {
+            "rect" | "pen" => {
+                let mut n = SceneNode::new(
+                    id,
+                    NodeKind::Rect {
+                        width: 0.0,
+                        height: 0.0,
+                    },
+                );
+                n.props.stroke = Some(Stroke {
+                    paint: Paint::Solid(if self.dark_mode {
+                        Color::rgba(0.8, 0.8, 0.8, 1.0)
+                    } else {
+                        Color::rgba(0.2, 0.2, 0.2, 1.0)
+                    }),
+                    width: 2.5,
+                    cap: StrokeCap::Round,
+                    join: StrokeJoin::Round,
+                });
+                n.props.corner_radius = Some(8.0);
+                n
+            }
+            "ellipse" => {
+                let mut n = SceneNode::new(id, NodeKind::Ellipse { rx: 0.0, ry: 0.0 });
+                n.props.stroke = Some(Stroke {
+                    paint: Paint::Solid(if self.dark_mode {
+                        Color::rgba(0.8, 0.8, 0.8, 1.0)
+                    } else {
+                        Color::rgba(0.2, 0.2, 0.2, 1.0)
+                    }),
+                    width: 2.5,
+                    cap: StrokeCap::Round,
+                    join: StrokeJoin::Round,
+                });
+                n
+            }
+            "frame" => {
+                let mut n = SceneNode::new(
+                    id,
+                    NodeKind::Frame {
+                        width: 0.0,
+                        height: 0.0,
+                        clip: false,
+                        layout: LayoutMode::default(),
+                    },
+                );
+                n.props.fill = Some(Paint::Solid(if self.dark_mode {
+                    Color::rgba(0.15, 0.15, 0.15, 1.0)
+                } else {
+                    Color::rgba(0.97, 0.97, 0.97, 1.0)
+                }));
+                n.props.stroke = Some(Stroke {
+                    paint: Paint::Solid(if self.dark_mode {
+                        Color::rgba(0.3, 0.3, 0.3, 1.0)
+                    } else {
+                        Color::rgba(0.7, 0.7, 0.7, 1.0)
+                    }),
+                    width: 1.0,
+                    cap: StrokeCap::Butt,
+                    join: StrokeJoin::Miter,
+                });
+                n
+            }
+            "text" => SceneNode::new(
+                id,
+                NodeKind::Text {
+                    content: "Text".to_string(),
+                    max_width: None,
+                },
+            ),
+            _ => SceneNode::new(
+                id,
+                NodeKind::Rect {
+                    width: 0.0,
+                    height: 0.0,
+                },
+            ), // Default fallback
+        };
+
+        node.constraints.push(Constraint::Position { x, y });
+
+        let mutations = vec![
+            GraphMutation::AddNode {
+                parent_id: NodeId::intern("root"),
+                node: Box::new(node),
+            },
+            GraphMutation::ResizeNode {
+                id,
+                width: w,
+                height: h,
+            },
+        ];
+
+        self.apply_mutations(mutations);
+        self.engine.flush_to_text();
+        true
+    }
+
     /// Undo the last action.
     pub fn undo(&mut self) -> bool {
         let result = self.commands.undo(&mut self.engine);

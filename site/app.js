@@ -53,154 +53,7 @@ import {
   buildShortcutHelpHtml as coreBuildShortcutHelpHtml,
 } from './canvas-core/shortcuts.js?v=0.11.5';
 
-// ─── FD Language Definition (StreamLanguage) ─────────────────────────────
-const fdLanguage = StreamLanguage.define({
-  token(stream) {
-    // Skip whitespace
-    if (stream.eatSpace()) return null;
-
-    // Comment: # to end of line
-    if (stream.match(/^#.*/)) return 'comment';
-
-    // String: "..."
-    if (stream.match(/^"[^"]*"/)) return 'string';
-
-    // Node keywords
-    if (stream.match(/^(group|frame|rect|ellipse|path|text|edge|image|import)\b/)) return 'keyword';
-
-    // Style/theme keyword
-    if (stream.match(/^(style|theme)\b/)) return 'keyword';
-
-    // Animation/spec keywords
-    if (stream.match(/^(when|spec)\b/)) return 'keyword';
-
-    // Property names followed by colon
-    if (stream.match(/^(w|h|x|y|fill|stroke|font|corner|opacity|shadow|bg|layout|use|center_in|offset|gap|pad|scale|rotate|translate|ease|duration|cols|from|to|src|alt|align|clip|arrow|curve|flow|place|d|label_offset|todo|done|tag|role|trait|intent|extends|visible|cursor)\s*:/)) {
-      return 'propertyName';
-    }
-
-    // Node ID: @word
-    if (stream.match(/^@\w+/)) return 'variableName.special';
-
-    // Hex color: #FFF or #FFFFFF or #FFFFFFAA
-    if (stream.match(/^#[0-9A-Fa-f]{3,8}\b/)) return 'color';
-
-    // Number (including decimals)
-    if (stream.match(/^\d+(\.\d+)?/)) return 'number';
-
-    // Layout/easing/animation value keywords
-    if (stream.match(/^(column|row|grid|free|spring|linear|ease_in|ease_out|ease_in_out|canvas|bold|italic|semibold|medium|light|thin|center|left|right|top|bottom|middle|cover|contain|none|start|end|both|smooth|straight|step|pulse|dash|todo|doing|done|blocked|low|high|critical)\b/)) {
-      return 'atom';
-    }
-
-    // Triggers
-    if (stream.match(/^:(hover|press|enter)\b/)) return 'meta';
-
-    // Braces
-    if (stream.eat('{') || stream.eat('}')) return 'brace';
-
-    // Consume any other character
-    stream.next();
-    return null;
-  },
-});
-
-// ─── Atom One Dark Theme for CodeMirror ──────────────────────────────────
-const fdHighlightStyle = HighlightStyle.define([
-  { tag: tags.keyword, color: '#C678DD' },           // purple
-  { tag: tags.comment, color: '#5C6370', fontStyle: 'italic' },
-  { tag: tags.string, color: '#98C379' },             // green
-  { tag: tags.propertyName, color: '#E06C75' },       // red
-  { tag: tags.variableName, color: '#E5C07B' },       // yellow/gold (node IDs)
-  { tag: tags.color, color: '#56B6C2' },              // cyan (hex colors)
-  { tag: tags.number, color: '#D19A66' },             // orange
-  { tag: tags.atom, color: '#56B6C2' },               // cyan (value keywords)
-  { tag: tags.meta, color: '#61AFEF' },               // blue (triggers)
-  { tag: tags.brace, color: '#ABB2BF' },              // gray
-]);
-
-const fdTheme = EditorView.theme({
-  '&': {
-    backgroundColor: '#1a1b26',
-    color: '#ABB2BF',
-    fontSize: '13px',
-    fontFamily: '"JetBrains Mono", "SF Mono", Menlo, Monaco, "Courier New", monospace',
-    height: '100%',
-  },
-  '.cm-content': {
-    padding: '12px 0',
-    caretColor: '#528bff',
-  },
-  '.cm-cursor': {
-    borderLeftColor: '#528bff',
-  },
-  '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': {
-    backgroundColor: '#3E4451 !important',
-  },
-  '.cm-activeLine': {
-    backgroundColor: '#2c313c40',
-  },
-  '.cm-activeLineGutter': {
-    backgroundColor: '#2c313c40',
-  },
-  '.cm-gutters': {
-    backgroundColor: '#1a1b26',
-    color: '#495162',
-    border: 'none',
-    borderRight: '1px solid #2c313c',
-  },
-  '.cm-lineNumbers .cm-gutterElement': {
-    padding: '0 8px 0 12px',
-    minWidth: '32px',
-  },
-  // Lint gutter
-  '.cm-lint-marker-error': {
-    content: '"●"',
-    color: '#E06C75',
-  },
-  // Autocomplete
-  '.cm-tooltip.cm-tooltip-autocomplete': {
-    backgroundColor: '#21252b',
-    border: '1px solid #3E4451',
-    borderRadius: '6px',
-    boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-  },
-  '.cm-tooltip-autocomplete ul li': {
-    padding: '4px 10px',
-    fontSize: '12px',
-  },
-  '.cm-tooltip-autocomplete ul li[aria-selected]': {
-    backgroundColor: '#2c313c',
-    color: '#ABB2BF',
-  },
-  // Hover tooltip
-  '.cm-tooltip-hover': {
-    backgroundColor: '#21252b',
-    border: '1px solid #3E4451',
-    borderRadius: '6px',
-    padding: '6px 10px',
-    fontSize: '12px',
-    lineHeight: '1.5',
-    maxWidth: '400px',
-    boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-  },
-  // Lint underlines
-  '.cm-lintRange-error': {
-    backgroundImage: 'none',
-    textDecoration: 'underline wavy #E06C75',
-    textDecorationSkipInk: 'none',
-  },
-  // Bracket matching
-  '.cm-matchingBracket': {
-    backgroundColor: '#515a6b40',
-    outline: '1px solid #515a6b',
-  },
-  // Scrollbar
-  '.cm-scroller': {
-    overflow: 'auto',
-  },
-}, { dark: true });
-
+import { fdLanguage, fdHighlightStyle, fdTheme } from './src/editor/syntax.js';
 /** Global CodeMirror EditorView */
 let editorView = null;
 /** Compartment for read-only state */
@@ -6199,38 +6052,22 @@ async function initPlayground() {
     /** Insert a shape at the given scene coordinates via FD code injection */
     function insertShapeAt(type, sceneX, sceneY) {
       if (!editorView) return;
-      const id = `${type}_${Date.now().toString(36)}`;
       const [w, h] = DTC_SIZES[type] || [100, 80];
       const x = Math.round(sceneX);
       const y = Math.round(sceneY);
-      const isDarkNow = document.body.classList.contains('dark-theme');
-      const defaultStroke = isDarkNow ? '#CCCCCC' : '#333333';
-      const defaultFill = isDarkNow ? '#2C2C2E' : '#F0F0F0';
-      let fdBlock;
-      if (type === 'text') {
-        fdBlock = `\ntext @${id} "Text" {\n  x: ${x} y: ${y}\n  w: ${w} h: ${h}\n}\n`;
-      } else if (type === 'arrow') {
-        fdBlock = `\nedge @${id} {\n  x: ${x} y: ${y}\n  w: 120 h: 40\n  arrow: end\n  curve: smooth\n  stroke: ${defaultStroke} 2\n}\n`;
-      } else if (type === 'frame') {
-        fdBlock = `\nframe @${id} {\n  x: ${x} y: ${y}\n  w: ${w} h: ${h}\n  fill: #FFFFFF\n  stroke: ${defaultStroke} 1\n  corner: 8\n}\n`;
-      } else {
-        const corner = type === 'rect' ? `\n  corner: ${smartDefaults.cornerRadius || 8}` : '';
-        fdBlock = `\n${type} @${id} {\n  x: ${x} y: ${y}\n  w: ${w} h: ${h}\n  fill: ${defaultFill}\n  stroke: ${defaultStroke} 1.5${corner}\n}\n`;
-      }
-      const currentText = editorView.state.doc.toString();
-      const newText = currentText + fdBlock;
-      editorView.dispatch({
-        changes: { from: currentText.length, to: currentText.length, insert: fdBlock },
-      });
-      // Force immediate sync to canvas so shapes appear right away
+
       if (fdCanvas) {
-        suppressSync = true;
-        fdCanvas.set_text(newText);
-        suppressSync = false;
-        fdCanvas.set_tool('select');
-        updateToolbar('select');
-        canvas.style.cursor = '';
+        const success = fdCanvas.insert_node_at(type, x, y, w, h);
+        if (success) {
+          // Sync the updated `.fd` text *from* WASM back to CodeMirror
+          syncCanvasToEditor();
+
+          fdCanvas.set_tool('select');
+          updateToolbar('select');
+          canvas.style.cursor = '';
+        }
       }
+
       showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} created`);
       renderDirty = true;
       uiDirty = true;

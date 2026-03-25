@@ -1,0 +1,277 @@
+/* ─── Floating Toolbar (frosted glass pill) ─── */
+#floating-toolbar {
+  position: fixed; /* always fixed — never participates in grid */
+  z-index: 30; /* above panels (z-index 25) */
+  visibility: hidden; /* hidden until JS applySnapPosition — prevents CSS→JS position jump */
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--fd-surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 0.5px solid var(--fd-border);
+  border-radius: 12px;
+  box-shadow: var(--fd-shadow-lg);
+  padding: 3px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+/* ── Toolbar position via data-attrs on <html> — canvas-relative from frame 0 ── */
+/* Canvas area = viewport minus both panels. Toolbar centers within canvas, not viewport. */
+[data-toolbar="top"] #floating-toolbar,
+.toolbar-docked-top {
+  flex-direction: row;
+}
+[data-toolbar="bottom"] #floating-toolbar,
+.toolbar-docked-bottom {
+  flex-direction: row;
+}
+[data-toolbar="left"] #floating-toolbar,
+.toolbar-docked-left {
+  flex-direction: column;
+}
+[data-toolbar="right"] #floating-toolbar,
+.toolbar-docked-right {
+  flex-direction: column;
+}
+/* Swap separator dimensions for vertical toolbar */
+[data-toolbar="left"] #floating-toolbar .ft-sep,
+[data-toolbar="right"] #floating-toolbar .ft-sep {
+  width: 20px;
+  height: 1px;
+  margin: 2px 0;
+}
+/* Free-floating (during drag) */
+#floating-toolbar.toolbar-dragging {
+  transition: none !important;
+  position: fixed;
+  z-index: 9999;
+}
+/* Free-floating (dropped on canvas, not docked to edge) */
+[data-toolbar="floating"] #floating-toolbar,
+#floating-toolbar.toolbar-floating {
+  flex-direction: row;
+  position: fixed;
+}
+/* ── Grip handles ── */
+.toolbar-grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  padding: 2px 4px;
+  color: var(--fd-text-tertiary);
+  font-size: 14px;
+  border-radius: 6px;
+  user-select: none;
+  letter-spacing: 2px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.toolbar-grip:hover { opacity: 1; }
+.toolbar-grip:active { cursor: grabbing; }
+/* ── Minimized state: only active tool + insert + AI button ── */
+#floating-toolbar.toolbar-minimized .ft-tool-btn { display: none; }
+#floating-toolbar.toolbar-minimized .ft-tool-btn.active { display: flex; }
+#floating-toolbar.toolbar-minimized .ft-ai-touch { display: flex; }
+#floating-toolbar.toolbar-minimized .ft-insert-btn { display: flex; }
+#floating-toolbar.toolbar-minimized .ft-sep { display: none; }
+#floating-toolbar.toolbar-minimized .ft-undo,
+#floating-toolbar.toolbar-minimized .ft-redo { display: none; }
+/* Show one separator between active tool and AI */
+#floating-toolbar.toolbar-minimized .ft-tool-btn.active + .ft-sep { display: block; }
+/* ── Snap indicator: ghost toolbar silhouette at destination ── */
+.toolbar-snap-indicator {
+  position: fixed;
+  z-index: 9998;
+  pointer-events: none;
+  border-radius: 12px;
+  background: var(--fd-surface);
+  border: 1px solid var(--fd-border);
+  box-shadow: var(--fd-shadow-lg);
+  opacity: 0.45;
+  transition: opacity 0.15s, top 0.1s ease, left 0.1s ease, right 0.1s ease, bottom 0.1s ease;
+}
+/* ── AI Touch button in toolbar ── */
+.ft-ai-touch {
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: -0.6px;
+  color: var(--fd-accent);
+}
+.ft-ai-touch:hover {
+  background: rgba(42, 110, 240, 0.1);
+  color: var(--fd-accent);
+}
+
+.ft-tool-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--fd-text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+.ft-tool-btn svg { width: 18px; height: 18px; flex-shrink: 0; pointer-events: none; -webkit-user-drag: none; user-drag: none; }
+.ft-tool-btn:hover { background: rgba(0,0,0,0.06); color: var(--fd-text); }
+.dark-canvas .ft-tool-btn:hover { background: rgba(255,255,255,0.1); }
+.ft-tool-btn:active { transform: scale(0.92); }
+.ft-tool-btn.active {
+  background: var(--fd-accent);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(42, 110, 240, 0.3);
+}
+.dark-canvas .ft-tool-btn.active { box-shadow: 0 2px 6px rgba(58, 130, 246, 0.4); }
+/* Space-hold pan indicator on Hand button */
+.ft-tool-btn.pan-active {
+  background: rgba(42, 110, 240, 0.15);
+  box-shadow: 0 0 0 2px rgba(42, 110, 240, 0.3);
+  animation: pan-pulse 1.5s ease-in-out infinite;
+}
+.dark-canvas .ft-tool-btn.pan-active {
+  background: rgba(58, 130, 246, 0.2);
+  box-shadow: 0 0 0 2px rgba(58, 130, 246, 0.35);
+}
+@keyframes pan-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(42, 110, 240, 0.3); }
+  50% { box-shadow: 0 0 0 4px rgba(42, 110, 240, 0.15); }
+}
+.ft-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  background: var(--fd-surface);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 0.5px solid var(--fd-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fd-text);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+  transition-delay: 0s;
+  z-index: 100;
+  letter-spacing: -0.01em;
+}
+.ft-tooltip .tt-shortcut {
+  color: var(--fd-text-tertiary);
+  margin-left: 4px;
+  font-family: var(--mono);
+}
+.ft-tool-btn:hover .ft-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0.4s;
+}
+.ft-tool-btn:active .ft-tooltip {
+  opacity: 0;
+  visibility: hidden;
+  transition-delay: 0s;
+}
+
+/* ─── Toolbar Theme Toggle + Separator ─── */
+/* (ft-sep moved to toolbar section above — deduplicated) */
+.ft-theme-icon {
+  font-size: 16px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* dtc-ghost styles removed — preview is now rendered directly on the canvas */
+
+/* ── Insert Menu (+ button dropdown) ── */
+.insert-menu {
+  position: absolute;
+  z-index: 200;
+  min-width: 160px;
+  padding: 4px;
+  background: var(--fd-surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 0.5px solid var(--fd-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08);
+  opacity: 0;
+  transform: scale(0.96) translateY(-4px);
+  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+  pointer-events: none;
+}
+.insert-menu.visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+.insert-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--fd-text);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  transition: none;
+}
+.insert-menu-item:hover {
+  background: var(--fd-accent);
+  color: #fff;
+}
+.insert-menu-item:hover .insert-menu-shortcut {
+  color: rgba(255,255,255,0.7);
+}
+.insert-menu-icon {
+  width: 16px;
+  text-align: center;
+  font-size: 13px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.insert-menu-shortcut {
+  font-size: 10px;
+  color: var(--fd-text-tertiary);
+  font-family: var(--mono);
+  margin-left: auto;
+  padding-left: 12px;
+  font-weight: 500;
+  opacity: 0.6;
+}
+.insert-menu-sep {
+  height: 1px;
+  background: var(--fd-border);
+  margin: 3px 4px;
+}
+
+/* ── Insert button (SVG icon in toolbar) ── */
+.ft-insert-btn:hover {
+  color: var(--fd-accent);
+  background: rgba(0,0,0,0.06);
+}
+.dark-canvas .ft-insert-btn:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+/* ── (Zoom pill removed — zoom is now in minimap controls) ── */
+
