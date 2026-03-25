@@ -118,6 +118,20 @@ function processSpecBlockMultiline(lines: string[], i: number, state: any) {
   const trimmed = lines[i].trim();
   let specDepth = (trimmed.match(/\{/g) || []).length;
   specDepth -= (trimmed.match(/\}/g) || []).length;
+
+  // Handle single-line blocks like `spec { "text" }`
+  if (specDepth === 0 && trimmed.includes("{") && trimmed.includes("}")) {
+    const innerContent = trimmed.substring(trimmed.indexOf("{") + 1, trimmed.lastIndexOf("}")).trim();
+    if (innerContent) {
+      const ann = parseAnn(innerContent);
+      if (ann) {
+        if (state.insideEdge) state.edgeAnnotations.push(ann);
+        else state.currentAnnotations.push(ann);
+      }
+    }
+    return;
+  }
+
   let j = i + 1;
   while (j < lines.length && specDepth > 0) {
     const specLine = lines[j].trim();

@@ -259,14 +259,11 @@ export class FdSpecViewPanel {
         if (trimmed.includes("{")) {
           let specDepth = (trimmed.match(/\{/g) || []).length;
           specDepth -= (trimmed.match(/\}/g) || []).length;
-          const lineIdx = lines.indexOf(line);
-          let j = lineIdx + 1;
-          while (j < lines.length && specDepth > 0) {
-            const specLine = lines[j].trim();
-            specDepth += (specLine.match(/\{/g) || []).length;
-            specDepth -= (specLine.match(/\}/g) || []).length;
-            if (specLine !== "}" && specLine.length > 0 && specDepth >= 0) {
-              const ann = this.parseAnnotation(specLine);
+
+          if (specDepth === 0 && trimmed.includes("{") && trimmed.includes("}")) {
+            const innerContent = trimmed.substring(trimmed.indexOf("{") + 1, trimmed.lastIndexOf("}")).trim();
+            if (innerContent) {
+              const ann = this.parseAnnotation(innerContent);
               if (ann) {
                 if (insideEdge && currentEdge) {
                   currentEdge.annotations.push(ann);
@@ -275,7 +272,25 @@ export class FdSpecViewPanel {
                 }
               }
             }
-            j++;
+          } else {
+            const lineIdx = lines.indexOf(line);
+            let j = lineIdx + 1;
+            while (j < lines.length && specDepth > 0) {
+              const specLine = lines[j].trim();
+              specDepth += (specLine.match(/\{/g) || []).length;
+              specDepth -= (specLine.match(/\}/g) || []).length;
+              if (specLine !== "}" && specLine.length > 0 && specDepth >= 0) {
+                const ann = this.parseAnnotation(specLine);
+                if (ann) {
+                  if (insideEdge && currentEdge) {
+                    currentEdge.annotations.push(ann);
+                  } else {
+                    pendingAnnotations.push(ann);
+                  }
+                }
+              }
+              j++;
+            }
           }
         }
         continue;
