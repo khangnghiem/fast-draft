@@ -3992,8 +3992,8 @@ function openInlineTextEditor(nodeId, currentValue, propKey = 'content') {
   let boundsJson;
   try { boundsJson = fdCanvas.get_node_bounds(nodeId); } catch (_) { return; }
   const b = JSON.parse(boundsJson);
-  const bw = b.width || 80;
-  const bh = b.height || 24;
+  const bw = b.w || b.width || 80;
+  const bh = b.h || b.height || 24;
 
   inlineEditorActive = true;
   if (fdCanvas.clear_pressed) fdCanvas.clear_pressed();
@@ -4007,9 +4007,13 @@ function openInlineTextEditor(nodeId, currentValue, propKey = 'content') {
   const fontWeight = props.fontWeight || 400;
   const lineHeight = Math.round((props.fontSize || 14) * 1.2 * zoomLevel);
 
-  // Convert scene-space to screen-space
-  const sx = (b.x || 0) * zoomLevel + panX;
-  const sy = (b.y || 0) * zoomLevel + panY;
+  // Convert scene-space to screen-space, accounting for canvas offset in grid
+  const canvasEl = document.getElementById('fd-canvas');
+  const contentEl = document.getElementById('canvas-content');
+  const canvasOfsX = canvasEl && contentEl ? canvasEl.getBoundingClientRect().left - contentEl.getBoundingClientRect().left : 0;
+  const canvasOfsY = canvasEl && contentEl ? canvasEl.getBoundingClientRect().top - contentEl.getBoundingClientRect().top : 0;
+  const sx = (b.x || 0) * zoomLevel + panX + canvasOfsX;
+  const sy = (b.y || 0) * zoomLevel + panY + canvasOfsY;
   const sw = Math.max(bw * zoomLevel, 80);
   const sh = Math.max(bh * zoomLevel, lineHeight + 4);
 
@@ -4027,8 +4031,16 @@ function openInlineTextEditor(nodeId, currentValue, propKey = 'content') {
     textColor = '#1C1C1E';
   }
 
-  const wrapper = document.getElementById('canvas-wrapper');
+  const wrapper = document.getElementById('canvas-content');
   const originalValue = currentValue;
+
+  // Temporarily clear canvas-rendered text to avoid dual rendering
+  // (the textarea overlay shows the text; no need for canvas to draw it too)
+  if (fdCanvas.set_node_prop) {
+    fdCanvas.select_by_id(nodeId);
+    fdCanvas.set_node_prop('content', '');
+    renderCanvas();
+  }
 
   // Create textarea
   const textarea = document.createElement('textarea');
@@ -4055,9 +4067,11 @@ function openInlineTextEditor(nodeId, currentValue, propKey = 'content') {
   const commitEdit = () => {
     if (!inlineEditorActive) return;
     const newValue = textarea.value.trim();
-    if (newValue !== originalValue && fdCanvas) {
+    // Always restore content (even if unchanged) since we cleared it on open
+    const finalValue = newValue || originalValue;
+    if (fdCanvas) {
       const textBefore = fdCanvas.get_text();
-      fdCanvas.set_node_prop(propKey, newValue);
+      fdCanvas.set_node_prop(propKey, finalValue);
       const textAfter = fdCanvas.get_text();
       if (textBefore !== textAfter) {
         fdCanvas.push_undo_snapshot(textBefore, textAfter);
@@ -4070,6 +4084,10 @@ function openInlineTextEditor(nodeId, currentValue, propKey = 'content') {
   };
 
   const cancelEdit = () => {
+    // Restore original text on cancel
+    if (fdCanvas) {
+      fdCanvas.set_node_prop(propKey, originalValue);
+    }
     cleanup();
   };
 

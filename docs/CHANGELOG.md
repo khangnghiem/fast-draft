@@ -17,6 +17,18 @@
 
 ## Completed Requirements
 
+### v0.11.271 — Fix Inline Text Editor Positioning (R3.3)
+
+**Textarea appeared offset to the left** — double-clicking a shape to edit text placed the `<textarea>` overlay at the wrong position. Three root causes identified and fixed:
+
+1. **Coordinate system mismatch** — textarea was positioned relative to `#canvas-wrapper` but coordinates were computed relative to the canvas element (which is in column 2 of a CSS grid, offset by the left panel width). Fix: position textarea in `#canvas-content` and add canvas element offset (`canvasEl.getBoundingClientRect().left - contentEl.getBoundingClientRect().left`).
+
+2. **BoundsInfo field name mismatch** — WASM `get_node_bounds()` returns `{x, y, w, h}` but JS read `b.width` / `b.height` (undefined → fallback to 80×24). Fix: read `b.w` / `b.h`.
+
+3. **Dual text rendering** — canvas continued drawing text under the textarea during editing. Fix: temporarily clear text content on open, restore on commit/cancel.
+
+Files: `site/app.js`
+
 ### v0.11.270 — Fix DTC Preview, Toolbar Snap, Ellipse Size (R3.42, R3.39, R3.7)
 
 **DTC preview invisible** — drag-to-create preview shape was invisible because `dtcPreview` and `DTC_SIZES` were declared inside `initPlayground()` closure (L6138) while `drawDtcPreview()` at module scope (L551) couldn't access them. Fix: hoisted both to module scope.
