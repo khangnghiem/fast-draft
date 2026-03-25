@@ -6315,28 +6315,18 @@ async function initPlayground() {
       }
 
       /** Detect which edge the toolbar should snap to.
-       * Uses hysteresis: biases toward current orientation to prevent jittery
-       * axis flips when dragging near corners. */
+       * Uses absolute pixel distance to the nearest edge — no aspect-ratio bias. */
       function getSnapSide(pointerX, pointerY) {
         const cr = getCanvasRect();
-        const midX = cr.left + cr.width / 2;
-        const midY = cr.top + cr.height / 2;
-        // Determine dominant axis: where is the pointer relative to canvas center
-        const offX = Math.abs(pointerX - midX) / (cr.width / 2);  // 0..1+
-        const offY = Math.abs(pointerY - midY) / (cr.height / 2); // 0..1+
-
-        // Hysteresis bias: prefer current orientation unless pointer strongly favors opposite
-        const currentSide = getCurrentDockedSide();
-        const currentIsHoriz = currentSide === 'top' || currentSide === 'bottom';
-        const HYSTERESIS = 0.15; // 15% bias toward current axis
-        const biasedOffX = currentIsHoriz ? offX - HYSTERESIS : offX + HYSTERESIS;
-        const biasedOffY = currentIsHoriz ? offY + HYSTERESIS : offY - HYSTERESIS;
-
-        if (biasedOffX > biasedOffY) {
-          return (pointerX < midX) ? 'left' : 'right';
-        } else {
-          return (pointerY < midY) ? 'top' : 'bottom';
-        }
+        const distLeft = pointerX - cr.left;
+        const distRight = cr.right - pointerX;
+        const distTop = pointerY - cr.top;
+        const distBottom = cr.bottom - pointerY;
+        const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+        if (minDist === distLeft) return 'left';
+        if (minDist === distRight) return 'right';
+        if (minDist === distTop) return 'top';
+        return 'bottom';
       }
 
       /** Read current docked side from DOM classes (source of truth) */
@@ -6422,17 +6412,19 @@ async function initPlayground() {
       }
 
       /** Orchestrator: snap toolbar to edge with overflow handling.
-       * NO recursion. Resolves overflow, minimizes if needed, then positions. */
+       * NO recursion. Preserves user's minimize state — only auto-minimizes on overflow. */
       function applyToolbarSnap(side, dropX, dropY, grabOffsetX, grabOffsetY) {
+        const wasMinimized = toolbar.classList.contains('toolbar-minimized');
         const isHoriz = side === 'top' || side === 'bottom';
         const { fits, fitsMinimized } = checkToolbarFit(side);
 
-        if (fits) {
-          // Fits expanded — ensure not minimized
-          toolbar.classList.remove('toolbar-minimized');
-          localStorage.setItem('fd-toolbar-minimized', '0');
+        if (wasMinimized) {
+          // User explicitly minimized — preserve state, just reposition
+          toolbar.classList.add('toolbar-minimized');
+        } else if (fits) {
+          // Fits expanded — keep expanded
         } else if (fitsMinimized) {
-          // Fits minimized on same edge — auto-minimize
+          // Overflows expanded — auto-minimize on same edge
           toolbar.classList.add('toolbar-minimized');
           localStorage.setItem('fd-toolbar-minimized', '1');
         } else {
