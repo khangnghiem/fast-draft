@@ -30,7 +30,7 @@ Before modifying ANY file:
 
 ### 🧠 Lessons Learned
 
-Before starting any task, scan `docs/LESSONS.md` for relevant pitfalls. After encountering a repeated mistake, run `/learn` to document it. Critical lessons get promoted to GEMINI.md rules.
+Before starting any task, run `head -n 50 docs/LESSONS.md` to read the keyword index. If a keyword matches your task, use `view_file` to read ONLY the specific line ranges indicated. Never read the entire file. After encountering a repeated mistake, run `/learn` to document it. Critical lessons get promoted to GEMINI.md rules.
 
 ### 📋 Requirement Deduplication
 

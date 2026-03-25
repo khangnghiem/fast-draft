@@ -778,8 +778,8 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
             height: height.unwrap_or(100.0),
         },
         "ellipse" => NodeKind::Ellipse {
-            rx: width.unwrap_or(50.0),
-            ry: height.unwrap_or(50.0),
+            rx: width.unwrap_or(100.0) / 2.0,
+            ry: height.unwrap_or(100.0) / 2.0,
         },
         "text" => NodeKind::Text {
             content: inline_text.unwrap_or_default(),

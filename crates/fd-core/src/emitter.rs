@@ -283,7 +283,13 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         }
         NodeKind::Ellipse { rx, ry } => {
             indent(out, depth + 1);
-            writeln!(out, "w: {} h: {}", format_num(*rx), format_num(*ry)).unwrap();
+            writeln!(
+                out,
+                "w: {} h: {}",
+                format_num(*rx * 2.0),
+                format_num(*ry * 2.0)
+            )
+            .unwrap();
         }
         NodeKind::Text {
             max_width: Some(w), ..
@@ -1321,7 +1327,13 @@ fn emit_dimensions_filtered(out: &mut String, kind: &NodeKind, depth: usize) {
         }
         NodeKind::Ellipse { rx, ry } => {
             indent(out, depth);
-            writeln!(out, "w: {} h: {}", format_num(*rx), format_num(*ry)).unwrap();
+            writeln!(
+                out,
+                "w: {} h: {}",
+                format_num(*rx * 2.0),
+                format_num(*ry * 2.0)
+            )
+            .unwrap();
         }
         NodeKind::Image { width, height, .. } => {
             indent(out, depth);

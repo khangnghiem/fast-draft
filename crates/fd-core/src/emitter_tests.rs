@@ -40,8 +40,8 @@ ellipse @dot {
     let node = graph2.get_by_id(NodeId::intern("dot")).unwrap();
     match &node.kind {
         NodeKind::Ellipse { rx, ry } => {
-            assert_eq!(*rx, 40.0);
-            assert_eq!(*ry, 40.0);
+            assert_eq!(*rx, 20.0);
+            assert_eq!(*ry, 20.0);
         }
         _ => panic!("expected Ellipse"),
     }

@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.275 — Fix Ellipse Radius/Diameter Mismatch (R3.7)
+
+**Ellipse renders at 2X size** — previously, drawing an ellipse in the canvas resulted in a shape materially twice as large as the drag-to-create preview bounding box. Root cause: the parser treated the input `.fd` values for `w` and `h` directly as `rx` and `ry` (radii) when creating the `NodeKind::Ellipse` struct, and the emitter output those radii verbatim. Fix: Rust parser now treats input `w`/`h` as the diameter by dividing by `2.0` when assigning to `rx`/`ry`, and the emitter multiplies by `2.0` to restore the diameter on output. Tests updated to match new roundtrip logic.
+
+Files: `crates/fd-core/src/parser.rs`, `crates/fd-core/src/emitter.rs`, `crates/fd-core/src/parser_tests.rs`, `crates/fd-core/src/emitter_tests.rs`
+
 ### v0.11.274 — Minimap 60FPS Decoupling and Cached Bitmap (R6.5, R3.25)
 
 **60fps Viewport Rect** — decoupled the minimap's viewport indicator (the blue box) from the WASM scene render interval. The viewport now updates continuously at 60fps when panning the canvas, eliminating micro-stutters during navigation.
