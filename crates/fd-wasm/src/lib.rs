@@ -305,6 +305,26 @@ impl FdCanvas {
         keyboard::tool_kind_to_name(self.active_tool).to_string()
     }
 
+    /// Get the CSS resize cursor for a given scene-space position.
+    /// Returns empty string if no resize handle is under the point.
+    pub fn get_resize_cursor_at(&self, x: f32, y: f32) -> String {
+        match self.hit_test_resize_handle(x, y) {
+            Some(ResizeHandle::TopLeft) | Some(ResizeHandle::BottomRight) => {
+                "nwse-resize".to_string()
+            }
+            Some(ResizeHandle::TopRight) | Some(ResizeHandle::BottomLeft) => {
+                "nesw-resize".to_string()
+            }
+            Some(ResizeHandle::TopCenter) | Some(ResizeHandle::BottomCenter) => {
+                "ns-resize".to_string()
+            }
+            Some(ResizeHandle::MiddleLeft) | Some(ResizeHandle::MiddleRight) => {
+                "ew-resize".to_string()
+            }
+            None => String::new(),
+        }
+    }
+
     /// Insert a new node (used by JS Drag-to-Create from toolbar).
     /// Bypasses JS string construction to enforce WASM defaults.
     pub fn insert_node_at(&mut self, kind_str: &str, x: f32, y: f32, w: f32, h: f32) -> bool {

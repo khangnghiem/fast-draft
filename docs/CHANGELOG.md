@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.284 — Resize Cursors + Inline Editor Dedup
+
+1. **Resize handle cursors** — Hovering over resize handles now shows appropriate CSS cursors (`nwse-resize`, `nesw-resize`, `ns-resize`, `ew-resize`). WASM `get_resize_cursor_at()` API added for consistency with JS `getResizeHandleCursor`.
+2. **Inline editor deduplicated** — Removed 200-line duplicate inline text editor from `app.js` (with `border: 2px solid #0A84FF` blue rect bug and ESC/blur race). Site now uses shared `canvas-core/inline-edit.js` module (same as VS Code extension) with proper `outline: 1px solid #4FC3F7`, clean ESC cancel, and dark/light theme support.
+3. **Default text** — Kept as `"Text"` (Figma standard) for immediate visual feedback.
+
 ### v0.11.283 — Corner Snap Fix & Minimize Persistence (R3.39)
 
 1. **Absolute edge distance** — `getSnapSide` now uses pixel distance to nearest edge instead of proportional offset. Fixes corner bias on wide canvases.
