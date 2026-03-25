@@ -305,6 +305,11 @@ export class FdCanvas {
      */
     import_mermaid(mermaid_text: string): boolean;
     /**
+     * Insert a new node (used by JS Drag-to-Create from toolbar).
+     * Bypasses JS string construction to enforce WASM defaults.
+     */
+    insert_node_at(kind_str: string, x: number, y: number, w: number, h: number): boolean;
+    /**
      * Check if a node is locked. Returns false if node not found.
      */
     is_node_locked(id: string): boolean;
@@ -465,6 +470,7 @@ export interface InitOutput {
     readonly fdcanvas_has_active_flows: (a: number) => number;
     readonly fdcanvas_has_pending_text_change: (a: number) => number;
     readonly fdcanvas_import_mermaid: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_insert_node_at: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly fdcanvas_new: (a: number, b: number) => number;
     readonly fdcanvas_push_undo_snapshot: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fdcanvas_redo: (a: number) => number;
