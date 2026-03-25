@@ -1,18 +1,18 @@
 // ─── FD Playground — WASM-powered interactive editor ───
 
-// ─── CodeMirror 6 Imports ────────────────────────────────────────────────
-import { EditorState, Compartment } from 'https://esm.sh/@codemirror/state@6';
+// ─── CodeMirror 6 + lz-string — local vendor bundle (no CDN) ─────────────
 import {
+  EditorState, Compartment,
   EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter,
-  drawSelection, tooltips, hoverTooltip
-} from 'https://esm.sh/@codemirror/view@6';
-import { StreamLanguage, HighlightStyle, syntaxHighlighting, bracketMatching } from 'https://esm.sh/@codemirror/language@6';
-import { tags } from 'https://esm.sh/@lezer/highlight@1';
-import { autocompletion, closeBrackets, closeBracketsKeymap } from 'https://esm.sh/@codemirror/autocomplete@6';
-import { linter, lintGutter } from 'https://esm.sh/@codemirror/lint@6';
-import { defaultKeymap, history, historyKeymap } from 'https://esm.sh/@codemirror/commands@6';
-import { highlightSelectionMatches } from 'https://esm.sh/@codemirror/search@6';
-import LZString from 'https://esm.sh/lz-string@1.5.0';
+  drawSelection, tooltips, hoverTooltip,
+  StreamLanguage, HighlightStyle, syntaxHighlighting, bracketMatching,
+  tags,
+  autocompletion, closeBrackets, closeBracketsKeymap,
+  linter, lintGutter,
+  defaultKeymap, history, historyKeymap,
+  highlightSelectionMatches,
+  LZString,
+} from './vendor/cm.min.js';
 import { initAiChat, clearChatHistory } from './ai-chat.js?v=0.11.5';
 import {
   screenToScene as coreScreenToScene,
