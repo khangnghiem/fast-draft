@@ -282,6 +282,8 @@ try {
 // Render dirty flag — only re-render when something changed
 let renderDirty = true;
 let uiDirty = true;
+let sceneDirty = true; // Tracks real document/WASM changes for minimap caching
+let minimapCacheCanvas = null; // Offscreen cache for minimap background
 
 // Multi-touch state (for two-finger pan and pinch-to-zoom)
 let activePointers = new Map(); // pointerId → {x, y}
@@ -1151,6 +1153,7 @@ function syncCanvasToEditor() {
       changes: { from: 0, to: currentText.length, insert: newText },
     });
   }
+  sceneDirty = true;
   suppressSync = false;
 }
 
@@ -2965,24 +2968,18 @@ function wireLayerKeyboardShortcuts(panel) {
 let minimapLastRender = 0;
 const MINIMAP_INTERVAL = 100; // ~10fps
 
-/** Render the minimap: actual WASM scene overview + viewport rect */
-function renderMinimap(canvas) {
-  const mc = document.getElementById('minimap-canvas');
-  if (!mc || !fdCanvas) return;
+function updateMinimapCache(mw, mh, dpr) {
+  if (!minimapCacheCanvas) {
+    minimapCacheCanvas = document.createElement('canvas');
+  }
+  if (minimapCacheCanvas.width !== mw * dpr) minimapCacheCanvas.width = mw * dpr;
+  if (minimapCacheCanvas.height !== mh * dpr) minimapCacheCanvas.height = mh * dpr;
+  const ctx = minimapCacheCanvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  const dpr = window.devicePixelRatio || 1;
-  const mw = 150, mh = 100;
-  mc.width = mw * dpr;
-  mc.height = mh * dpr;
+  ctx.fillStyle = isDark ? 'rgba(28,28,30,0.9)' : 'rgba(245,245,247,0.9)';
+  ctx.fillRect(0, 0, mw, mh);
 
-  const mctx = mc.getContext('2d');
-  mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  // Theme-aware background
-  mctx.fillStyle = isDark ? 'rgba(28,28,30,0.9)' : 'rgba(245,245,247,0.9)';
-  mctx.fillRect(0, 0, mw, mh);
-
-  // Use single WASM call instead of N×get_node_bounds()
   const sceneBoundsJson = fdCanvas.get_scene_bounds();
   if (!sceneBoundsJson) return;
   let sb;
@@ -2994,36 +2991,70 @@ function renderMinimap(canvas) {
   const ox = (mw - sb.w * scale) / 2;
   const oy = (mh - sb.h * scale) / 2;
 
-  // Render actual scene scaled into minimap via WASM (skip grid)
-  mctx.save();
-  mctx.translate(ox, oy);
-  mctx.scale(scale, scale);
-  mctx.translate(-sb.x, -sb.y);
-  fdCanvas.render(mctx, performance.now(), true, false);
-  mctx.restore();
+  ctx.save();
+  ctx.translate(ox, oy);
+  ctx.scale(scale, scale);
+  ctx.translate(-sb.x, -sb.y);
+  fdCanvas.render(ctx, performance.now(), true, false);
+  ctx.restore();
 
-  // Draw viewport rect
-  if (canvas) {
+  const mc = document.getElementById('minimap-canvas');
+  if (mc) {
+    mc._minimap = { sx: sb.x, sy: sb.y, sw: sb.w, sh: sb.h, scale, ox, oy };
+  }
+}
+
+/** Render the minimap: cached scene overview + 60fps viewport rect */
+function renderMinimap(canvas) {
+  const mc = document.getElementById('minimap-canvas');
+  if (!mc || !fdCanvas) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const mw = 150, mh = 100;
+  
+  if (mc.width !== mw * dpr) mc.width = mw * dpr;
+  if (mc.height !== mh * dpr) mc.height = mh * dpr;
+
+  // 1. Update WASM cache (debounced during active interactions)
+  if (sceneDirty && activePointerId === -1 && !inlineEditorActive) {
+    updateMinimapCache(mw, mh, dpr);
+    sceneDirty = false;
+  }
+
+  const mctx = mc.getContext('2d');
+  mctx.setTransform(1, 0, 0, 1, 0, 0);
+  mctx.clearRect(0, 0, mw * dpr, mh * dpr);
+
+  // 2. Draw cached scene
+  if (minimapCacheCanvas) {
+    mctx.drawImage(minimapCacheCanvas, 0, 0);
+  } else {
+    // Fallback if cache isn't ready
+    mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    mctx.fillStyle = isDark ? 'rgba(28,28,30,0.9)' : 'rgba(245,245,247,0.9)';
+    mctx.fillRect(0, 0, mw, mh);
+  }
+
+  // 3. Draw viewport rect
+  mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (canvas && mc._minimap) {
+    const sb = mc._minimap;
     const cr = canvas.getBoundingClientRect();
     const vx = -panX / zoomLevel;
     const vy = -panY / zoomLevel;
     const vw = cr.width / zoomLevel;
     const vh = cr.height / zoomLevel;
-    const vrx = ox + (vx - sb.x) * scale;
-    const vry = oy + (vy - sb.y) * scale;
-    const vrw = vw * scale;
-    const vrh = vh * scale;
+    const vrx = sb.ox + (vx - sb.sx) * sb.scale;
+    const vry = sb.oy + (vy - sb.sy) * sb.scale;
+    const vrw = vw * sb.scale;
+    const vrh = vh * sb.scale;
 
-    // Theme-aware viewport indicator
     mctx.strokeStyle = isDark ? 'rgba(10, 132, 255, 0.6)' : 'rgba(0, 122, 255, 0.5)';
     mctx.lineWidth = 1.5;
     mctx.strokeRect(vrx, vry, vrw, vrh);
     mctx.fillStyle = isDark ? 'rgba(10, 132, 255, 0.08)' : 'rgba(0, 122, 255, 0.06)';
     mctx.fillRect(vrx, vry, vrw, vrh);
   }
-
-  // Store scene info for click-to-pan (backward-compatible)
-  mc._minimap = { sx: sb.x, sy: sb.y, sw: sb.w, sh: sb.h, scale, ox, oy };
 }
 
 // ─── Specs Panel Resize ──────────────────────────────────────────────────
@@ -4903,10 +4934,10 @@ async function initPlayground() {
                   // Always repaint — visual-only changes (fill, stroke, opacity)
                   // don't trigger layout_changed but still need a re-render.
                   if (r.ok) {
-                    renderDirty = true; uiDirty = true;
+                    renderDirty = true; uiDirty = true; sceneDirty = true;
                   }
                 } catch (_) {
-                  renderDirty = true; uiDirty = true;
+                  renderDirty = true; uiDirty = true; sceneDirty = true;
                 }
               }
             }, 50);
@@ -5278,9 +5309,14 @@ async function initPlayground() {
         renderCanvas();
         renderDirty = false;
       }
-      // Minimap + Layers at ~10fps (only when something changed)
-      if (uiDirty && time - minimapLastRender > MINIMAP_INTERVAL) {
+      
+      // Viewport minimap updates continuously at 60fps when panning or changing
+      if (uiDirty) {
         renderMinimap(canvas);
+      }
+
+      // Layers + Props + Fab throttled to ~10fps
+      if (uiDirty && time - minimapLastRender > MINIMAP_INTERVAL) {
         refreshLayersPanel();
         updatePropertiesPanel();
         updateFab(canvas);
