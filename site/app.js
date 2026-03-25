@@ -52,6 +52,11 @@ import {
   ZOOM_STEP as CORE_ZOOM_STEP,
   buildShortcutHelpHtml as coreBuildShortcutHelpHtml,
 } from './canvas-core/shortcuts.js?v=0.11.5';
+import {
+  setupInlineEditor as coreSetupInlineEditor,
+  openInlineEditor as coreOpenInlineEditor,
+  inlineEditorActive as coreInlineEditorActive,
+} from './canvas-core/inline-edit.js?v=0.11.5';
 
 import { fdLanguage, fdHighlightStyle, fdTheme } from './src/editor/syntax.js';
 /** Global CodeMirror EditorView */
@@ -96,7 +101,9 @@ let fullscreenMode = false;
 const ZOOM_MIN = 0.1, ZOOM_MAX = 5;
 const ZOOM_WHEEL_FACTOR = 1.04; // Normalized zoom step (shared with VS Code)
 let isPanning = false;
-let inlineEditorActive = false;
+// inlineEditorActive is re-exported from canvas-core/inline-edit.js
+// We keep a getter for backward compatibility in this file.
+function isInlineEditing() { return coreInlineEditorActive; }
 
 // ── iPad touch/pencil visual feedback ────────────────────────────────
 /** Map PointerEvent.pointerType to WASM u8: 0=mouse, 1=touch, 2=pen */
@@ -2869,7 +2876,7 @@ function renderMinimap(canvas) {
   if (mc.height !== mh * dpr) mc.height = mh * dpr;
 
   // 1. Update WASM cache (debounced during active interactions)
-  if (sceneDirty && activePointerId === -1 && !inlineEditorActive) {
+  if (sceneDirty && activePointerId === -1 && !isInlineEditing()) {
     updateMinimapCache(mw, mh, dpr);
     sceneDirty = false;
   }
@@ -3804,202 +3811,23 @@ function nudgeSelected(arrowKey, step) {
 }
 
 /** ─── Inline Text Editor (double-click to edit) ───────────────────── */
+// Uses shared canvas-core/inline-edit.js module (same as VS Code extension).
+// The shared module handles: dark/light theme, contrast-aware text color,
+// shape-specific border radius, edge label editing, proper ESC/blur.
 function setupInlineEditor(canvas) {
-  canvas.addEventListener('dblclick', (e) => {
-    if (!fdCanvas || inlineEditorActive) return;
-    const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
-
-    const nodeId = fdCanvas.get_selected_id();
-
-    // Double-click empty space → create text node
-    if (!nodeId) {
-      if (fdCanvas.create_node_at) {
-        const created = fdCanvas.create_node_at('text', x, y);
-        if (created) {
-          renderCanvas();
-          syncCanvasToEditor();
-          refreshLayersPanel();
-          const newId = fdCanvas.get_selected_id();
-          if (newId) {
-            setTimeout(() => openInlineTextEditor(newId, ''), 50);
-          }
-        }
-      }
-      e.preventDefault();
-      return;
-    }
-
-    // Get node props
-    let props;
-    try {
-      const json = fdCanvas.get_selected_node_props();
-      props = JSON.parse(json);
-    } catch (_) { return; }
-    if (!props.id) return;
-
-    // Only edit text and shape nodes (rect/ellipse/frame)
-    const isText = props.kind === 'text';
-    const isShape = props.kind === 'rect' || props.kind === 'ellipse' || props.kind === 'frame';
-    if (!isText && !isShape) return;
-
-    if (isText) {
-      // Direct text node — edit its content
-      openInlineTextEditor(props.id, props.content || '', 'content');
-    } else {
-      // Shape node — drill into child text (Figma behavior)
-      const existingTextId = fdCanvas.get_text_child_id(props.id);
-      if (existingTextId) {
-        // Select the child text node and edit it
-        fdCanvas.select_by_id(existingTextId);
-        renderCanvas();
-        const childProps = JSON.parse(fdCanvas.get_selected_node_props());
-        openInlineTextEditor(existingTextId, childProps.content || '', 'content');
-      } else {
-        // Create a new text child inside the shape
-        const newTextId = fdCanvas.create_child_text(props.id, 'Text');
-        if (newTextId) {
-          renderCanvas();
-          syncCanvasToEditor();
-          refreshLayersPanel();
-          setTimeout(() => openInlineTextEditor(newTextId, 'Text', 'content'), 50);
-        }
-      }
-    }
-    e.preventDefault();
+  const container = document.getElementById('canvas-content');
+  coreSetupInlineEditor({
+    fdCanvas: () => fdCanvas,
+    canvasEl: canvas,
+    container,
+    renderFn: () => renderCanvas(),
+    syncFn: () => syncCanvasToEditor(),
+    updatePanelFn: () => { updatePropertiesPanel(); refreshLayersPanel(); },
+    getPanX: () => panX,
+    getPanY: () => panY,
+    getZoom: () => zoomLevel,
+    screenToScene,
   });
-}
-
-/** Open a floating textarea over the node for in-place text editing. */
-function openInlineTextEditor(nodeId, currentValue, propKey = 'content') {
-  if (inlineEditorActive || !fdCanvas) return;
-
-  let boundsJson;
-  try { boundsJson = fdCanvas.get_node_bounds(nodeId); } catch (_) { return; }
-  const b = JSON.parse(boundsJson);
-  const bw = b.w || b.width || 80;
-  const bh = b.h || b.height || 24;
-
-  inlineEditorActive = true;
-  if (fdCanvas.clear_pressed) fdCanvas.clear_pressed();
-  renderCanvas();
-
-  // Get font info from node props
-  let props;
-  try { props = JSON.parse(fdCanvas.get_selected_node_props()); } catch (_) { props = {}; }
-  const fontSize = Math.round((props.fontSize || 14) * zoomLevel);
-  const fontFamily = props.fontFamily || 'Inter, system-ui, sans-serif';
-  const fontWeight = props.fontWeight || 400;
-  const lineHeight = Math.round((props.fontSize || 14) * 1.2 * zoomLevel);
-
-  // Convert scene-space to screen-space, accounting for canvas offset in grid
-  const canvasEl = document.getElementById('fd-canvas');
-  const contentEl = document.getElementById('canvas-content');
-  const canvasOfsX = canvasEl && contentEl ? canvasEl.getBoundingClientRect().left - contentEl.getBoundingClientRect().left : 0;
-  const canvasOfsY = canvasEl && contentEl ? canvasEl.getBoundingClientRect().top - contentEl.getBoundingClientRect().top : 0;
-  const sx = (b.x || 0) * zoomLevel + panX + canvasOfsX;
-  const sy = (b.y || 0) * zoomLevel + panY + canvasOfsY;
-  const sw = Math.max(bw * zoomLevel, 80);
-  const sh = Math.max(bh * zoomLevel, lineHeight + 4);
-
-  // Determine colors
-  const isText = props.kind === 'text';
-  let bgColor, textColor;
-  if (isText) {
-    bgColor = 'transparent';
-    textColor = props.fill || '#1C1C1E';
-  } else if (props.fill && props.fill !== 'none') {
-    bgColor = props.fill;
-    textColor = '#FFFFFF';
-  } else {
-    bgColor = '#F5F5F7';
-    textColor = '#1C1C1E';
-  }
-
-  const wrapper = document.getElementById('canvas-content');
-  const originalValue = currentValue;
-
-  // Temporarily clear canvas-rendered text to avoid dual rendering
-  // (the textarea overlay shows the text; no need for canvas to draw it too)
-  if (fdCanvas.set_node_prop) {
-    fdCanvas.select_by_id(nodeId);
-    fdCanvas.set_node_prop('content', '');
-    renderCanvas();
-  }
-
-  // Create textarea
-  const textarea = document.createElement('textarea');
-  textarea.value = currentValue;
-  textarea.style.cssText = `
-    position: absolute; left: ${sx}px; top: ${sy}px;
-    width: ${sw}px; min-height: ${sh}px;
-    font-size: ${fontSize}px; font-family: ${fontFamily}; font-weight: ${fontWeight};
-    line-height: ${lineHeight}px;
-    color: ${textColor}; background: ${bgColor};
-    border: 2px solid #0A84FF; border-radius: 4px;
-    padding: 2px 4px; margin: 0; box-sizing: border-box;
-    resize: none; outline: none; overflow: hidden;
-    z-index: 10000; white-space: pre-wrap; word-wrap: break-word;
-  `;
-
-  // Auto-resize
-  const autoResize = () => {
-    textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
-  };
-  textarea.addEventListener('input', autoResize);
-
-  const commitEdit = () => {
-    if (!inlineEditorActive) return;
-    const newValue = textarea.value.trim();
-    // Always restore content (even if unchanged) since we cleared it on open
-    const finalValue = newValue || originalValue;
-    if (fdCanvas) {
-      const textBefore = fdCanvas.get_text();
-      fdCanvas.set_node_prop(propKey, finalValue);
-      const textAfter = fdCanvas.get_text();
-      if (textBefore !== textAfter) {
-        fdCanvas.push_undo_snapshot(textBefore, textAfter);
-      }
-      renderCanvas();
-      syncCanvasToEditor();
-      refreshLayersPanel();
-    }
-    cleanup();
-  };
-
-  const cancelEdit = () => {
-    // Restore original text on cancel
-    if (fdCanvas) {
-      fdCanvas.set_node_prop(propKey, originalValue);
-    }
-    cleanup();
-  };
-
-  const cleanup = () => {
-    inlineEditorActive = false;
-    textarea.remove();
-    renderCanvas();
-  };
-
-  textarea.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      commitEdit();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      cancelEdit();
-    }
-    e.stopPropagation(); // Prevent canvas shortcuts while editing
-  });
-
-  textarea.addEventListener('blur', () => {
-    setTimeout(commitEdit, 50);
-  });
-
-  wrapper.appendChild(textarea);
-  textarea.focus();
-  textarea.select();
-  autoResize();
 }
 
 // ── Touch Gesture System ──────────────────────────────────────────────────
@@ -5594,6 +5422,14 @@ async function initPlayground() {
         const activeTool = fdCanvas.get_tool_name();
         if (activeTool === 'select' || activeTool === 'hand') {
           canvasDragOccurred = true;
+        }
+      } else if (activePointerId === -1) {
+        // Hover (no button held): show resize cursor on handles
+        const activeTool = fdCanvas.get_tool_name();
+        if (activeTool === 'select') {
+          const cursor = coreGetResizeHandleCursor(fdCanvas, x, y);
+          if (cursor) { canvas.style.cursor = cursor; }
+          else { canvas.style.cursor = ''; }
         }
       }
 
