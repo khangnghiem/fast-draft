@@ -30,7 +30,31 @@ description: E2E browser testing via GitHub Codespace — systematic UX behavior
 
 3. Keep max 2 editor panels open. Close extras.
 
-4. Open an `.fd` file (e.g., `examples/dark_theme.fd`) and activate Design View.
+4. **Sync Codespace to `main`** before testing:
+
+   ```bash
+   gh cs ssh -c <CODESPACE_NAME> -- "cd /workspaces/fast-draft && git checkout main && git pull origin main"
+   ```
+
+5. Open an `.fd` file (e.g., `examples/dark_theme.fd`) and activate Design View.
+
+---
+
+## Phase 0: WASM Health Check (mandatory gate)
+
+> [!IMPORTANT]
+> This phase MUST pass before any other testing begins. A false-positive E2E pass where WASM never loaded is worse than no test at all.
+
+| #   | Action                                     | Expected Result                                      |
+| --- | ------------------------------------------ | ---------------------------------------------------- |
+| 0.1 | After Design View opens, wait up to 15s    | "Loading FD engine…" overlay disappears              |
+| 0.2 | Run JS: `document.getElementById('loading')` | Returns `null` or element with `display: none`       |
+| 0.3 | Run JS: `typeof window.__wasm_initialized` | Returns truthy (WASM init completed)                 |
+
+If 0.1 fails (loading hangs), **STOP ALL TESTING** and report:
+- Codespace branch: `git branch --show-current`
+- WASM file exists: `ls fd-vscode/webview/wasm/fd_wasm_bg.wasm`
+- Browser console errors
 
 ---
 
