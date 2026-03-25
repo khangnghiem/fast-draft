@@ -1,0 +1,138 @@
+/* ─── Canvas-specific Design Tokens (Apple HIG) ─── */
+/* Shared tokens (colors, fonts, etc.) are in shared.css */
+:root {
+  /* Panel default width — single source of truth */
+  --fd-panel-default-width: 260px;
+  /* Canvas-specific tokens — Light (Apple HIG default) */
+  --fd-bg: #F5F5F7;
+  --fd-surface: rgba(255, 255, 255, 0.82);
+  --fd-surface-solid: #FFFFFF;
+  --fd-surface-hover: rgba(0, 0, 0, 0.04);
+  --fd-surface-active: rgba(0, 0, 0, 0.06);
+  --fd-toolbar-bg: rgba(246, 246, 248, 0.72);
+  --fd-toolbar-border: rgba(0, 0, 0, 0.09);
+  --fd-border: rgba(0, 0, 0, 0.08);
+  --fd-text: #1D1D1F;
+  --fd-text-secondary: #86868B;
+  --fd-text-tertiary: #AEAEB2;
+  --fd-accent: #007AFF;
+  --fd-accent-fg: #FFFFFF;
+  --fd-accent-dim: rgba(0, 122, 255, 0.1);
+  --fd-accent-border: rgba(0, 122, 255, 0.35);
+  --fd-accent-hover: #0071EB;
+  --fd-segment-bg: rgba(142, 142, 147, 0.12);
+  --fd-segment-active: #FFFFFF;
+  --fd-segment-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 1px rgba(0, 0, 0, 0.04);
+  --fd-shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --fd-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --fd-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+  --fd-radius: 10px;
+  --fd-radius-sm: 7px;
+  --fd-key-border: rgba(0, 0, 0, 0.1);
+  --fd-key-bg: rgba(0, 0, 0, 0.03);
+  --fd-input-bg: rgba(142, 142, 147, 0.08);
+  --fd-input-border: rgba(0, 0, 0, 0.06);
+  --fd-input-focus: rgba(0, 122, 255, 0.3);
+  --fd-overlay-bg: rgba(0, 0, 0, 0.4);
+}
+/* Canvas dark theme override */
+.dark-canvas {
+  --fd-bg: #1C1C1E;
+  --fd-surface: rgba(44, 44, 46, 0.82);
+  --fd-surface-solid: #2C2C2E;
+  --fd-surface-hover: rgba(255, 255, 255, 0.06);
+  --fd-surface-active: rgba(255, 255, 255, 0.08);
+  --fd-toolbar-bg: rgba(28, 28, 30, 0.72);
+  --fd-toolbar-border: rgba(255, 255, 255, 0.06);
+  --fd-border: rgba(255, 255, 255, 0.06);
+  --fd-text: #F5F5F7;
+  --fd-text-secondary: #98989D;
+  --fd-text-tertiary: #636366;
+  --fd-accent: #0A84FF;
+  --fd-accent-dim: rgba(10, 132, 255, 0.15);
+  --fd-accent-border: rgba(10, 132, 255, 0.4);
+  --fd-accent-hover: #409CFF;
+  --fd-segment-bg: rgba(142, 142, 147, 0.16);
+  --fd-segment-active: rgba(99, 99, 102, 0.6);
+  --fd-segment-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 1px rgba(0, 0, 0, 0.1);
+  --fd-shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.15);
+  --fd-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --fd-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.35);
+  --fd-key-border: rgba(255, 255, 255, 0.1);
+  --fd-key-bg: rgba(255, 255, 255, 0.04);
+  --fd-input-bg: rgba(142, 142, 147, 0.12);
+  --fd-input-border: rgba(255, 255, 255, 0.06);
+  --fd-input-focus: rgba(10, 132, 255, 0.4);
+  --fd-overlay-bg: rgba(0, 0, 0, 0.6);
+}
+
+/* Reset, body, links, code, keyboard accessibility are in shared.css */
+code {
+  font-family: var(--mono);
+  background: var(--bg-card);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  color: var(--accent);
+}
+
+/* Nav styles are in shared.css — .site-nav */
+/* Home page uses .site-nav.nav-transparent for scroll-to-frosted effect */
+
+
+/* ─── Theme Pill Toggle ─── */
+.theme-pill {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  border: 1px solid var(--fd-border, rgba(255,255,255,0.06));
+  background: var(--fd-surface-solid, #2C2C2E);
+  border-radius: 14px;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+.theme-pill:hover {
+  border-color: var(--fd-accent, #0A84FF);
+  box-shadow: 0 0 12px rgba(10, 132, 255, 0.25);
+}
+.theme-pill-icon {
+  position: absolute;
+  font-size: 12px;
+  line-height: 1;
+  z-index: 1;
+  transition: opacity 0.3s ease;
+}
+.theme-pill-sun {
+  left: 6px;
+  opacity: 0.4;
+}
+.theme-pill-moon {
+  right: 6px;
+  opacity: 1;
+}
+.theme-pill-slider {
+  position: absolute;
+  right: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6C5CE7, #0A84FF);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+.theme-pill.is-light .theme-pill-slider {
+  transform: translateX(-24px);
+}
+.theme-pill.is-light .theme-pill-sun {
+  opacity: 1;
+}
+.theme-pill.is-light .theme-pill-moon {
+  opacity: 0.4;
+}
+
+/* Mobile menu styles are in shared.css */
+

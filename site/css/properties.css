@@ -1,0 +1,151 @@
+/* ─── Properties Panel ─── */
+/* Props styles now live inside #right-panel Design tab */
+.props-inner {
+  padding: 14px 12px;
+  min-width: 200px;
+}
+.props-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fd-text);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: -0.01em;
+}
+.props-title .kind-badge {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--fd-accent-dim);
+  color: var(--fd-accent);
+  font-weight: 600;
+}
+.props-section {
+  margin-bottom: 14px;
+}
+.props-section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--fd-text-secondary);
+  margin-bottom: 7px;
+  font-weight: 600;
+}
+.props-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 8px;
+}
+.pp-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pp-field span {
+  font-size: 10px;
+  color: var(--fd-text-tertiary);
+  width: 14px;
+  flex-shrink: 0;
+}
+.pp-field input {
+  width: 100%;
+  background: var(--fd-input-bg);
+  border: 1px solid var(--fd-input-border);
+  border-radius: 4px;
+  padding: 3px 6px;
+  color: var(--fd-text);
+  font-size: 11px;
+  font-family: var(--mono);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.pp-field input:focus {
+  border-color: var(--fd-accent);
+}
+.pp-field input[readonly] {
+  opacity: 0.5;
+  cursor: default;
+}
+.pp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.pp-row span {
+  font-size: 11px;
+  color: var(--fd-text-secondary);
+}
+.pp-row input[type="color"] {
+  width: 28px;
+  height: 22px;
+  border: 1px solid var(--fd-input-border);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.pp-row input[type="number"] {
+  width: 60px;
+  background: var(--fd-input-bg);
+  border: 1px solid var(--fd-input-border);
+  border-radius: 4px;
+  padding: 3px 6px;
+  color: var(--fd-text);
+  font-size: 11px;
+  font-family: var(--mono);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.pp-row input[type="number"]:focus {
+  border-color: var(--fd-accent);
+}
+.pp-opacity-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pp-opacity-wrap input[type="range"] {
+  width: 80px;
+  accent-color: var(--fd-accent);
+  height: 4px;
+}
+.pp-opacity-wrap span {
+  font-size: 10px;
+  color: var(--fd-text-tertiary);
+  width: 32px;
+  text-align: right;
+}
+.pp-actions {
+  display: flex;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 0.5px solid var(--fd-border);
+}
+.pp-action-btn {
+  flex: 1;
+  padding: 5px 0;
+  border: 1px solid var(--fd-border);
+  background: transparent;
+  color: var(--fd-text-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.15s ease;
+}
+.pp-action-btn:hover {
+  background: var(--fd-surface-hover);
+  color: var(--fd-text);
+}
+.pp-action-btn:active { transform: scale(0.95); }
+.pp-action-btn.pp-delete:hover {
+  background: rgba(255, 59, 48, 0.15);
+  color: #FF3B30;
+  border-color: rgba(255, 59, 48, 0.3);
+}
+
+/* Old ctx-menu styles removed — now using unified .ctx-menu from context-menu.js */

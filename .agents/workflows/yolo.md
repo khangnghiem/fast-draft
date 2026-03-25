@@ -20,12 +20,12 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
    - If NO `fd-vscode/` changed → Skip VSCA publish (22).
 
 2. **TDD (Tests)**: Write/update tests in `mod tests` for what changed.
-3. **Lint & Format**: `cargo clippy --workspace -- -D warnings` and `cargo fmt --all`
-4. **Test**: `cargo test --workspace` (Fallback to `gh cs ssh` if errors).
+3. **Lint & Format**: `cargo clippy --workspace --quiet -- -D warnings` and `cargo fmt --all`
+4. **Test**: `cargo test --workspace --quiet` (Fallback to `gh cs ssh` if errors).
 5. **UI Bug Verify**: Measure interaction fixes with `execute_browser_javascript` before committing.
-6. **Tauri**: `cd fd-desktop/src-tauri && cargo check && cargo clippy -- -D warnings && cargo fmt -- --check`
+6. **Tauri**: `cd fd-desktop/src-tauri && cargo check --quiet && cargo clippy --quiet -- -D warnings && cargo fmt -- --check`
 7. **TS tests**: `cd fd-vscode && pnpm test`
-8. **E2E Smoke**: Build WASM (`wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm`), then run `/e2e` Smoke tier.
+8. **E2E Smoke**: Build WASM (`wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm --quiet`), then run `/e2e` Smoke tier.
 9. **Report** and STOP for `/yolo local`.
 
 ## `/yolo deploy`

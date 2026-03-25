@@ -1,0 +1,79 @@
+/* ─── Minimap (Google Maps pill) ─── */
+#minimap-container {
+  position: absolute;
+  right: calc(var(--right-panel-width, 0px) + 12px);
+  bottom: 12px;
+  width: min(150px, 18vw);
+  height: min(100px, 12vw);
+  z-index: 20;
+  border-radius: var(--fd-radius);
+  overflow: hidden;
+  border: 0.5px solid var(--fd-border);
+  box-shadow: var(--fd-shadow-md);
+  background: var(--fd-surface);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  cursor: pointer;
+  transition: right 0.25s ease, opacity 0.2s ease, box-shadow 0.2s ease, width 0.2s ease, height 0.2s ease, bottom 0.2s ease;
+}
+/* Minimap shift is now handled dynamically via JS collision detection
+   — see adjustMinimapForToolbar() in app.js */
+#minimap-container:hover { box-shadow: var(--fd-shadow-lg); }
+#minimap-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+#minimap-zoom-controls {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  background: var(--fd-surface);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 0.5px solid var(--fd-border);
+  border-radius: 8px;
+  box-shadow: var(--fd-shadow-sm);
+  overflow: hidden;
+  z-index: 16;
+  pointer-events: auto;
+}
+#minimap-zoom-controls .bl-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--fd-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+#minimap-zoom-controls .bl-btn:hover {
+  background: var(--fd-surface-hover);
+  color: var(--fd-text);
+}
+#minimap-zoom-controls .bl-btn:active {
+  background: var(--fd-surface-active);
+  transform: scale(0.95);
+}
+#minimap-zoom-controls #zoom-reset-btn {
+  width: auto;
+  min-width: 40px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--mono);
+}
+#minimap-zoom-controls .bl-sep {
+  width: 0.5px;
+  height: 14px;
+  background: var(--fd-border);
+}
+
