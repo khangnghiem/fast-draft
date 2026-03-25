@@ -6574,9 +6574,15 @@ async function initPlayground() {
         if (side) {
           const tbRect = toolbar.getBoundingClientRect();
           const cr = getCanvasRect();
-          // No orientation swap — toolbar keeps its current orientation.
-          // Horizontal toolbar only snaps top/bottom, vertical only left/right.
-          const gw = tbRect.width, gh = tbRect.height;
+          // If the target snap edge enforces a different orientation than current, swap dimensions for the shadow
+          let gw = tbRect.width, gh = tbRect.height;
+          const isCurrentlyHorizontal = gw >= gh;
+          const isTargetHorizontal = side === 'top' || side === 'bottom';
+          if (isCurrentlyHorizontal !== isTargetHorizontal) {
+            gw = tbRect.height;
+            gh = tbRect.width;
+          }
+
           snapIndicator.style.display = 'block';
           snapIndicator.style.width = gw + 'px';
           snapIndicator.style.height = gh + 'px';
