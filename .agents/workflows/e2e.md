@@ -85,6 +85,9 @@ description: E2E browser testing via GitHub Codespace (smoke + full tiers)
 > These 3 checks cover the three failure modes that `cargo test` cannot catch:
 > canvas render, pointer→tool→mutation pipeline, and bidi sync.
 
+<!-- ASSERTION: If this is NOT the first browser_subagent call in this conversation,
+     you MUST set ReusedSubagentId to the previous subagent's ID. STOP and verify. -->
+
 ### Browser subagent task (RecordingName: `smoke_canvas`):
 
 ```
@@ -118,6 +121,9 @@ Take ONE screenshot at the end. Return PASS/FAIL for each check (1-3) and stop i
    ```
 
    If `conclusion` is not `success`, do NOT proceed — fix the deploy first.
+
+<!-- ASSERTION: If this is NOT the first browser_subagent call in this conversation,
+     you MUST set ReusedSubagentId to the previous subagent's ID. STOP and verify. -->
 
 ### Browser subagent task (RecordingName: `deploy_verify`):
 
@@ -154,6 +160,9 @@ Site Deploy: ✅ 3/3 — site loads, playground visible, WASM renders. Screensho
 - After **every** merge + deploy that touches `site/`, `crates/fd-wasm/`, or `crates/fd-core/`
 - Tests must be **specific to the change** — not generic page-load checks
 - Use `execute_browser_javascript` for quantitative DOM/state measurements
+
+<!-- ASSERTION: If this is NOT the first browser_subagent call in this conversation,
+     you MUST set ReusedSubagentId to the previous subagent's ID. STOP and verify. -->
 
 ### Browser subagent task (RecordingName: `prod_feature_verify`):
 
@@ -205,6 +214,7 @@ Prod Feature: ✅ 3/3 — [one-line summary of what was verified]. Screenshot at
 > minimize recording count and total file size.
 > Each phase = ONE browser subagent call with the verbatim task.
 > **Always resize viewport to 900×600 as the FIRST ACTION** in each phase.
+> **Always set `ReusedSubagentId`** to the previous subagent's ID for Phases 2–4.
 
 ### Phase 1 — Canvas & Drawing (RecordingName: `full_canvas_draw`)
 

@@ -189,9 +189,12 @@ git checkout -b feat/<descriptive-name>
 
     If `conclusion` is `success`:
 
+    <!-- ASSERTION: If this is NOT the first browser_subagent call in this conversation,
+         you MUST set ReusedSubagentId to the previous subagent's ID. STOP and verify. -->
+
     **a)** Run the `/e2e` **Site Deploy Verification** tier (generic 3-check: site loads, playground visible, WASM renders).
 
-    **b)** Run the `/e2e` **Production Feature Verification** tier — **reuse the fast-draft.com tab** from step (a). Design 2–3 feature-specific tests for the change you just deployed. Use `execute_browser_javascript` on `fast-draft.com` to make quantitative DOM/state measurements. Generic "page loads" checks do NOT satisfy this step.
+    **b)** Run the `/e2e` **Production Feature Verification** tier — **set `ReusedSubagentId` to the subagent ID from step (a)** to reuse the fast-draft.com tab. Design 2–3 feature-specific tests for the change you just deployed. Use `execute_browser_javascript` on `fast-draft.com` to make quantitative DOM/state measurements. Generic "page loads" checks do NOT satisfy this step.
 
     > **Skip** if the change is docs-only, CI config, or VS Code extension-only.
 
