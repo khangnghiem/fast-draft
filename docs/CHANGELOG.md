@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.277 — Toolbar Snap Shadow Orientation Fix (R3.39)
+
+- **FIX**: Toolbar snap shadow now correctly swaps its dimensions (width/height) when docking to an edge that forces a perpendicular orientation (e.g., dragging a horizontal toolbar to the left/right edges), ensuring the preview perfectly matches the final docked shape without any layout thrashing during the 60fps drag.
+
 ### v0.11.276 — Local Vendor Bundle: Eliminate esm.sh CDN Dependency (R6.5)
 
 **Site hangs on load due to esm.sh** — 9 `modulepreload` hints for CodeMirror packages on `esm.sh` CDN were hanging in a pending state, blocking the browser's `load` event and preventing the Code Editor from initializing. Root cause: esm.sh intermittent outages and cold-start build delays.
