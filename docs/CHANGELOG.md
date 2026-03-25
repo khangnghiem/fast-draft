@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.11.281 — Hybrid Cascade Toolbar Overflow (R3.39)
+
+**Smart toolbar overflow recovery** — Replaced the old "force to vertical" overflow with a 4-step hybrid cascade on both horizontal AND vertical axes:
+1. **Auto-minimize** on the user's preferred edge (preserves intent).
+2. **Snap shadow** now previews minimized-size when overflow is detected.
+3. **Expand cascade** (dbl-click grip): fit? → collapse nearest panel? → rotate to opposite axis? → soft block with toast.
+4. **Smoother panel transitions** — 250ms cubic-bezier CSS transition on collapse/expand.
+
+Files: `site/app.js`, `site/css/panels.css`
+
 ### v0.11.280 — Insert Menu Ring Refinement (R3.39)
 
 **Refined Insert Button Ring** — Reduced the thickness and size of the circular ring around the `+` Insert Shape icon (`1px` width instead of `1.5px`, `18px` diameter instead of `20px`). This prevents the ring from looking too heavy and visually competing with the core drawing tools. 

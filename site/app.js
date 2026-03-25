@@ -6324,11 +6324,26 @@ async function initPlayground() {
         const tbRect = toolbar.getBoundingClientRect();
         const cr = getCanvasRect();
 
-        // Auto-snap to vertical left if horizontal toolbar overflows canvas width
-        if ((side === 'top' || side === 'bottom') && tbRect.width > cr.width - 2 * SNAP_GAP) {
-          if (!isAutoOverflow) preferredSide = side; // remember user's preferred side
-          toolbar.classList.remove(`toolbar-docked-${side}`);
-          return applySnapPosition('left', null, dropY, true, grabOffsetX, grabOffsetY);
+        // Auto-minimize if toolbar overflows canvas in either orientation
+        const isHoriz = side === 'top' || side === 'bottom';
+        const overflows = isHoriz
+          ? tbRect.width > cr.width - 2 * SNAP_GAP
+          : tbRect.height > cr.height - 2 * SNAP_GAP;
+        if (overflows) {
+          if (!isAutoOverflow) preferredSide = side;
+          toolbar.classList.add('toolbar-minimized');
+          localStorage.setItem('fd-toolbar-minimized', '1');
+          // Re-measure after minimize and re-apply on same side
+          const miniRect = toolbar.getBoundingClientRect();
+          const stillOverflows = isHoriz
+            ? miniRect.width > cr.width - 2 * SNAP_GAP
+            : miniRect.height > cr.height - 2 * SNAP_GAP;
+          if (stillOverflows) {
+            // Even minimized doesn't fit — rotate to opposite orientation
+            const fallbackSide = isHoriz ? 'left' : 'top';
+            toolbar.classList.remove(`toolbar-docked-${side}`);
+            return applySnapPosition(fallbackSide, isHoriz ? null : dropX, isHoriz ? dropY : null, true, grabOffsetX, grabOffsetY);
+          }
         }
 
         if (side === 'top' || side === 'bottom') {
@@ -6420,6 +6435,19 @@ async function initPlayground() {
             gh = tbRect.width;
           }
 
+          // If the toolbar would overflow the target edge, show a minimized-size
+          // shadow to hint that auto-minimize will kick in on drop
+          const wouldOverflow = isTargetHorizontal
+            ? gw > cr.width - 2 * SNAP_GAP
+            : gh > cr.height - 2 * SNAP_GAP;
+          if (wouldOverflow && !toolbar.classList.contains('toolbar-minimized')) {
+            // Estimate minimized dimensions (grip + active tool + separator + insert + AI ≈ 5 buttons)
+            const MINI_MAJOR = 5 * 32 + 6 * 2 + 6; // ~178px
+            const MINI_MINOR = 32 + 6;              // ~38px
+            gw = isTargetHorizontal ? MINI_MAJOR : MINI_MINOR;
+            gh = isTargetHorizontal ? MINI_MINOR : MINI_MAJOR;
+          }
+
           snapIndicator.style.display = 'block';
           snapIndicator.style.width = gw + 'px';
           snapIndicator.style.height = gh + 'px';
@@ -6467,41 +6495,97 @@ async function initPlayground() {
           grip.setPointerCapture(e.pointerId);
         });
 
-        // ── Double-click to minimize/expand ──
+        // ── Double-click to minimize/expand (Hybrid Cascade) ──
         grip.addEventListener('dblclick', (e) => {
           e.stopPropagation();
           e.preventDefault();
-          // Grip-anchored minimize: the grip handle stays stationary while
-          // the toolbar shrinks/expands toward it. Capture the grip's screen
-          // position BEFORE the size change, toggle, then offset the toolbar
-          // so the grip lands back at the same spot.
           const gripEl = e.currentTarget;
           const gripBefore = gripEl.getBoundingClientRect();
-          toolbar.classList.toggle('toolbar-minimized');
+          const isMinimized = toolbar.classList.contains('toolbar-minimized');
+
+          if (isMinimized) {
+            // ── EXPAND: Hybrid Cascade ──
+            // Step 1: Try expanding on current edge
+            toolbar.classList.remove('toolbar-minimized');
+            const tbRect = toolbar.getBoundingClientRect();
+            const cr = getCanvasRect();
+            const currentSide = toolbar.classList.contains('toolbar-docked-left') ? 'left'
+              : toolbar.classList.contains('toolbar-docked-right') ? 'right'
+              : toolbar.classList.contains('toolbar-docked-top') ? 'top' : 'bottom';
+            const isHoriz = currentSide === 'top' || currentSide === 'bottom';
+            const fits = isHoriz
+              ? tbRect.width <= cr.width - 2 * SNAP_GAP
+              : tbRect.height <= cr.height - 2 * SNAP_GAP;
+
+            if (fits) {
+              // Great — it fits as-is
+            } else {
+              // Step 2: Would it fit if we collapsed the nearest panel?
+              const h = document.documentElement;
+              const lpOpen = h.dataset.lp === 'open';
+              const rpOpen = h.dataset.rp === 'open';
+              // Pick the panel closest to the current side
+              const collapseLeft = lpOpen && (currentSide === 'left' || currentSide === 'top' || currentSide === 'bottom');
+              const collapseRight = rpOpen && !collapseLeft;
+              const panelWidth = collapseLeft
+                ? (parseInt(h.style.getPropertyValue('--left-panel-width'), 10) || 260)
+                : collapseRight
+                  ? (parseInt(h.style.getPropertyValue('--right-panel-width'), 10) || 260)
+                  : 0;
+              const wouldFitAfterCollapse = isHoriz
+                ? tbRect.width <= (cr.width + panelWidth) - 2 * SNAP_GAP
+                : tbRect.height <= (cr.height + panelWidth) - 2 * SNAP_GAP;
+
+              if (wouldFitAfterCollapse && (collapseLeft || collapseRight)) {
+                // Collapse the panel to make room
+                if (collapseLeft) toggleLeftPanel();
+                else toggleRightPanel();
+              } else {
+                // Step 3: Would it fit in the opposite orientation?
+                const oppSide = isHoriz ? 'left' : 'top';
+                // Estimate: if we rotate, width↔height swap
+                const oppFits = isHoriz
+                  ? tbRect.width <= cr.height - 2 * SNAP_GAP  // width becomes height in vertical
+                  : tbRect.height <= cr.width - 2 * SNAP_GAP; // height becomes width in horizontal
+                if (oppFits) {
+                  // Rotate to opposite orientation
+                  toolbar.classList.remove('toolbar-minimized'); // ensure expanded
+                  localStorage.setItem('fd-toolbar-minimized', '0');
+                  applySnapPosition(oppSide, null, null);
+                  adjustMinimapForToolbar();
+                  return;
+                } else {
+                  // Step 4: Soft block — stay minimized, show toast
+                  toolbar.classList.add('toolbar-minimized');
+                  localStorage.setItem('fd-toolbar-minimized', '1');
+                  showToast('Close a panel or widen your window to expand');
+                  return;
+                }
+              }
+            }
+          } else {
+            // ── MINIMIZE ──
+            toolbar.classList.add('toolbar-minimized');
+          }
+
           localStorage.setItem('fd-toolbar-minimized', toolbar.classList.contains('toolbar-minimized') ? '1' : '0');
-          // After toggle, the grip may have shifted — compute delta and correct
+          // Grip-anchored positioning: keep grip stationary
           const gripAfter = gripEl.getBoundingClientRect();
-          const tbRect = toolbar.getBoundingClientRect();
+          const tbRect2 = toolbar.getBoundingClientRect();
           const deltaX = gripBefore.left - gripAfter.left;
           const deltaY = gripBefore.top - gripAfter.top;
-          let newLeft = tbRect.left + deltaX;
-          let newTop = tbRect.top + deltaY;
-          // Clamp within canvas bounds to prevent overflow on expand
-          const cr = getCanvasRect();
-          const CLAMP_GAP = SNAP_GAP;
-          newLeft = Math.max(cr.left + CLAMP_GAP, Math.min(newLeft, cr.right - tbRect.width - CLAMP_GAP));
-          newTop = Math.max(cr.top + CLAMP_GAP, Math.min(newTop, cr.bottom - tbRect.height - CLAMP_GAP));
+          let newLeft = tbRect2.left + deltaX;
+          let newTop = tbRect2.top + deltaY;
+          const cr2 = getCanvasRect();
+          newLeft = Math.max(cr2.left + SNAP_GAP, Math.min(newLeft, cr2.right - tbRect2.width - SNAP_GAP));
+          newTop = Math.max(cr2.top + SNAP_GAP, Math.min(newTop, cr2.bottom - tbRect2.height - SNAP_GAP));
           toolbar.style.left = newLeft + 'px';
           toolbar.style.top = newTop + 'px';
           toolbar.style.transform = 'none';
-          // Persist the new position
-          const currentSide = toolbar.classList.contains('toolbar-docked-left') ? 'left'
+          const finalSide = toolbar.classList.contains('toolbar-docked-left') ? 'left'
             : toolbar.classList.contains('toolbar-docked-right') ? 'right'
-            : toolbar.classList.contains('toolbar-docked-top') ? 'top'
-            : 'bottom';
-          const cx = newLeft + tbRect.width / 2;
-          const cy = newTop + tbRect.height / 2;
-          localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: currentSide, x: cx, y: cy }));
+            : toolbar.classList.contains('toolbar-docked-top') ? 'top' : 'bottom';
+          localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: finalSide, x: newLeft + tbRect2.width / 2, y: newTop + tbRect2.height / 2 }));
           adjustMinimapForToolbar();
         });
       });
