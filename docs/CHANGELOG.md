@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.272 — Panel Header Segmented Pill Redesign (R6.6)
+
+**Segmented control tabs** — left and right panel headers now use Apple HIG segmented control pill styling. Tab buttons wrapped in a `.lp-tab-group`/`.rp-tab-group` container with `--fd-segment-bg` tinted track and 8px border-radius. Active tab gets `--fd-segment-active` capsule highlight with `--fd-segment-shadow` depth. Inactive tabs are transparent with secondary text color.
+
+**Bottom separator** — both `.lp-tabs` and `.rp-tabs` now have `border-bottom: 0.5px solid var(--fd-border)` to visually separate the header from panel content.
+
+Files: `site/style.css`, `site/index.html`
+
 ### v0.11.271 — Fix Inline Text Editor Positioning (R3.3)
 
 **Textarea appeared offset to the left** — double-clicking a shape to edit text placed the `<textarea>` overlay at the wrong position. Three root causes identified and fixed:

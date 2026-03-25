@@ -612,13 +612,22 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   overflow: hidden;
 }
 
-/* Left panel tab bar (segmented control) */
+/* Left panel tab bar (segmented control pill) */
 .lp-tabs {
   display: flex;
   gap: 2px;
   padding: 6px 8px;
   background: var(--fd-surface);
   flex-shrink: 0;
+  border-bottom: 0.5px solid var(--fd-border);
+}
+.lp-tabs .lp-tab-group {
+  display: flex;
+  gap: 1px;
+  flex: 1;
+  background: var(--fd-segment-bg);
+  border-radius: 8px;
+  padding: 2px;
 }
 /* Hidden on desktop — shown via !important in mobile breakpoint */
 .mobile-panel-close { display: none; }
@@ -633,9 +642,9 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
   user-select: none;
-  padding: 5px 4px;
+  padding: 4px 4px;
   line-height: 1;
   position: relative;
   white-space: nowrap;
@@ -643,13 +652,12 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   text-align: center;
 }
 .lp-tab:hover {
-  background: var(--fd-surface-hover);
   color: var(--fd-text);
 }
 .lp-tab.active {
   color: var(--fd-text);
-  background: var(--fd-surface-hover, rgba(0,0,0,0.06));
-  box-shadow: 0 0.5px 1px rgba(0,0,0,0.08);
+  background: var(--fd-segment-active);
+  box-shadow: var(--fd-segment-shadow);
 }
 
 /* Left panel content */
@@ -693,27 +701,36 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
   flex-shrink: 0;
   padding: 6px 8px;
   background: var(--fd-surface);
+  border-bottom: 0.5px solid var(--fd-border);
+}
+.rp-tabs .rp-tab-group {
+  display: flex;
+  gap: 1px;
+  flex: 1;
+  background: var(--fd-segment-bg);
+  border-radius: 8px;
+  padding: 2px;
 }
 .rp-tab {
   background: none;
   border: none;
   border-radius: 6px;
-  padding: 5px 10px;
+  padding: 4px 10px;
   font-size: 11px;
   font-weight: 600;
   font-family: inherit;
   color: var(--fd-text-secondary);
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  transition: color 0.2s, background 0.2s, box-shadow 0.2s;
   white-space: nowrap;
   flex: 1;
   text-align: center;
 }
-.rp-tab:hover { color: var(--fd-text); background: var(--fd-surface-hover); }
+.rp-tab:hover { color: var(--fd-text); }
 .rp-tab.active {
   color: var(--fd-text);
-  background: var(--fd-surface-hover, rgba(0,0,0,0.06));
-  box-shadow: 0 0.5px 1px rgba(0,0,0,0.08);
+  background: var(--fd-segment-active);
+  box-shadow: var(--fd-segment-shadow);
 }
 .rp-content {
   flex: 1;
