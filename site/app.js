@@ -658,10 +658,10 @@ function fitToContent(canvas) {
 // ── Panel Tab Switching ──────────────────────────────────────────
 
 /** Active left panel tab id */
-let activeLeftTab = localStorage.getItem('fd-left-tab') || 'layers';
+let activeLeftTab = sessionStorage.getItem('fd-left-tab') || 'layers';
 
 /** Active right panel tab id */
-let activeRightTab = localStorage.getItem('fd-right-tab') || 'agent';
+let activeRightTab = sessionStorage.getItem('fd-right-tab') || 'agent';
 
 /** Switch the active tab in the left panel (Layers/Code/Inspect). */
 function switchLeftTab(tabId) {
@@ -678,7 +678,7 @@ function switchLeftTab(tabId) {
     p.classList.toggle('active', p.dataset.pane === tabId);
   });
   activeLeftTab = tabId;
-  localStorage.setItem('fd-left-tab', tabId);
+  sessionStorage.setItem('fd-left-tab', tabId);
   // Refresh editor size if switching to code
   if (tabId === 'code' && editorView) {
     requestAnimationFrame(() => editorView.requestMeasure());
@@ -712,7 +712,7 @@ function switchRightTab(tabId) {
     p.classList.toggle('active', p.dataset.rpane === tabId);
   });
   activeRightTab = tabId;
-  localStorage.setItem('fd-right-tab', tabId);
+  sessionStorage.setItem('fd-right-tab', tabId);
   requestAnimationFrame(() => {
     window.dispatchEvent(new Event('resize'));
     resizeCanvas();
