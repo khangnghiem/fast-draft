@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.288 — Responsive UI: Container Queries for Panel Header Tabs (R6.6)
+- **FEAT**: Implement CSS `@container` queries on `#left-panel` and `#right-panel` to gracefully degrade segmented pills.
+- **UI**: Wrap tab labels inside `<span class="tab-label">` and hide them (`display: none`) when the panel is resized below `220px`. The UI cleanly transitions to icon-only buttons centered via `flex`/`gap` to adopt professional tool patterns (like Xcode/VS Code) when screen real-estate is premium.
+
 ### v0.11.287 — Toolbar Ghost Clone Responsiveness (R3.39)
 
 1. **Snap indicator CSS transitions** — removed `transition: top 0.1s, left 0.1s` from `.toolbar-snap-indicator` to achieve instant tracking, eliminating the intentional 100ms visual lag during dragging.

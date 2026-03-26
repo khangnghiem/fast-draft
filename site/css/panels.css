@@ -34,6 +34,18 @@
   overflow: hidden;
 }
 
+/* Container queries for panel responsive tabs */
+#left-panel, #right-panel {
+  container-type: inline-size;
+  container-name: panel;
+}
+
+@container panel (max-width: 220px) {
+  .tab-label {
+    display: none;
+  }
+}
+
 /* Disable transitions during drag resize */
 .no-transition,
 .no-transition * {
@@ -140,6 +152,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   border: none;
   background: transparent;
   color: var(--fd-text-secondary);
@@ -228,7 +241,10 @@
   transition: color 0.2s, background 0.2s, box-shadow 0.2s;
   white-space: nowrap;
   flex: 1;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 .rp-tab:hover { color: var(--fd-text); }
 .rp-tab.active {
