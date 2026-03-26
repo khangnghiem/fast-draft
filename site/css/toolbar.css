@@ -47,6 +47,7 @@
   transition: none !important;
   position: fixed;
   z-index: 9999;
+  will-change: transform;
 }
 /* Free-floating (dropped on canvas, not docked to edge) */
 [data-toolbar="floating"] #floating-toolbar,
@@ -91,7 +92,8 @@
   border: 1px solid var(--fd-border);
   box-shadow: var(--fd-shadow-lg);
   opacity: 0.45;
-  transition: opacity 0.15s, top 0.1s ease, left 0.1s ease, right 0.1s ease, bottom 0.1s ease;
+  transition: opacity 0.15s;
+  will-change: transform, opacity;
 }
 /* ── AI Touch button in toolbar ── */
 .ft-ai-touch {
