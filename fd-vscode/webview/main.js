@@ -13,7 +13,7 @@
  */
 // ── canvas-core/state.js ──
 // ─── canvas-core/state.js ─── Shared canvas state
-// Imported by both site/playground.js and fd-vscode/webview/src/main.js.
+// Imported by both site/app.js and fd-vscode/webview/src/main.js.
 //
 // This module holds the mutable state that drives the canvas lifecycle:
 // zoom, pan, dirty flags, grid, motion preferences, and tool defaults.
@@ -87,7 +87,7 @@ let reduceMotion = prefersReducedMotion.matches;
 
 /** Initialize motion preference listener. */
 function initMotionPreference() {
-  // Check localStorage override (site playground stores manual toggle)
+  // Check localStorage override (site app stores manual toggle)
   if (typeof localStorage !== 'undefined') {
     const manual = localStorage.getItem('fd-reduce-motion');
     if (manual === 'true') reduceMotion = true;
@@ -184,7 +184,7 @@ function showToast(message, durationMs = 1200, container = null) {
 }
 // ── canvas-core/render.js ──
 // ─── canvas-core/render.js ─── Shared render loop + tween engine
-// Imported by both site/playground.js and fd-vscode/webview/src/main.js.
+// Imported by both site/app.js and fd-vscode/webview/src/main.js.
 //
 // This module provides:
 // - Tween engine for CSS-like animations (hover/press transitions)
@@ -844,7 +844,7 @@ function buildShortcutHelpHtml() {
 }
 // ── canvas-core/inline-edit.js ──
 // ─── canvas-core/inline-edit.js ─── Shared inline text editor
-// Imported by both site/playground.js and fd-vscode/webview/src/inline-edit.js.
+// Imported by both site/app.js and fd-vscode/webview/src/inline-edit.js.
 //
 // Double-click text/shape → floating textarea for in-place editing.
 // Enter = commit, Escape = cancel, live-sync on every keystroke.
@@ -1005,8 +1005,13 @@ function openInlineEditor(opts) {
   const fontWeight = props.fontWeight || 400;
   const lineHeight = Math.round(rawFontSize * 1.2 * zoomLevel);
 
-  const sx = (b.x || 0) * zoomLevel + panX;
-  const sy = (b.y || 0) * zoomLevel + panY;
+  // Offset canvas-element origin within its overlay container
+  const canvasRect = canvasEl.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  const canvasOffsetX = canvasRect.left - containerRect.left;
+  const canvasOffsetY = canvasRect.top - containerRect.top;
+  const sx = (b.x || 0) * zoomLevel + panX + canvasOffsetX;
+  const sy = (b.y || 0) * zoomLevel + panY + canvasOffsetY;
   const sw = Math.max(bw * zoomLevel, 80);
   const sh = Math.max(bh * zoomLevel, lineHeight + 4);
 
@@ -1160,9 +1165,20 @@ function setupInlineEditor(opts) {
     if (!fdCanvas) return;
 
     const { x, y } = screenToScene(e.clientX, e.clientY, canvasEl);
-    const nodeId = fdCanvas.get_selected_id();
+    let nodeId = fdCanvas.get_selected_id();
 
-    // No selection → create new text node
+    // Fallback: hit-test at click coordinates in case selection was cleared
+    // between the two pointerdown events that precede a dblclick.
+    // This fixes double-click on ellipses (and rects) that were not yet selected.
+    if (!nodeId) {
+      const hitId = fdCanvas.hit_test_at(x, y);
+      if (hitId) {
+        fdCanvas.select_by_id(hitId);
+        nodeId = hitId;
+      }
+    }
+
+    // Still no selection after hit-test → create new text node at position
     if (!nodeId) {
       const created = fdCanvas.create_node_at("text", x, y);
       if (created) {
@@ -5134,14 +5150,14 @@ function parseLayerTree(source) {
       continue;
     }
 
-    // Edge
-    const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s*\{/);
+    // Edge — matches both header form (edge @name @from -> @to) and body form (edge @name {)
+    const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s+@(\w+)\s*->\s*@(\w+)/) ||
+                      trimmed.match(/^edge\s+@(\w+)\s*\{/);
     if (edgeMatch) {
       const node = { id: edgeMatch[1], kind: "edge", text: "", children: [] };
       if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
       else root.push(node);
-      braceDepth += openBraces - closeBraces;
-      stack.push({ node, depth: braceDepth });
+      if (trimmed.includes('{')) { braceDepth += openBraces - closeBraces; stack.push({ node, depth: braceDepth }); }
       continue;
     }
 
@@ -5468,7 +5484,7 @@ function closeLayerCtxMenu() {
   ctxMenu.close();
 }
 
-/** Searchable "Move Into" picker for the extension — mirrors playground.js implementation. */
+/** Searchable "Move Into" picker for the extension — mirrors app.js implementation. */
 function showSearchableParentPicker(nodeId, posX, posY) {
   if (!fdCanvas?.get_container_ids) return;
   let containers;
