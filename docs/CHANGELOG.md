@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.11.291 — Fix Panel Resize After Toggle + Right Panel Resizable (R6.6)
+
+1. **Left panel resize handle drift (Bug #1)** — After toggling the left panel hidden and back visible, the `#layers-resize` drag handle was stuck at `left: 0px` (buried behind the panel). Root cause: `toggleLeftPanel()` and `toggleLayersPanel()` set `--left-panel-width` but never called `positionLayersHandle()`. Fix: expose `positionLayersHandle` as `window.__fdPositionLayersHandle` from `setupPanelResize()` and call it inside the `requestAnimationFrame` of every toggle function.
+
+2. **Right panel unresizable (Bug #2)** — The right panel had no drag handle at all — no HTML element and no JS resize wiring. The CSS class `.panel-resize-handle.props-handle` already existed but was unused. Fix: added `<div id="right-resize" class="panel-resize-handle props-handle">` to `index.html` and wired full `pointerdown/pointermove/pointerup` drag logic in `setupPanelResize()` (180–500px range, localStorage persistence, double-click to reset to 260px).
+
+3. **Dead `layersHandle` reference (Bug #4)** — `toggleLayersPanel()` referenced `layersHandle` (a `const` scoped inside `setupPanelResize()`) — always `undefined` at that callsite, silently failing to show/hide the handle. Fix: replaced with `document.getElementById('layers-resize')` and delegated repositioning to `window.__fdPositionLayersHandle?.()`.
+
+Files: `site/app.js`, `site/index.html`, `site/css/panels.css`
+
 ### v0.11.290 — Smart Search: Fuzzy Mode with Segmented Control (R6.5)
 
 - **FEAT (R6.5)**: Replaced exact-only substring search with a **Smart mode** search (default) using `nucleo-matcher` for fuzzy scoring + exact-match boost (+1000 points). Exact substring hits always rank first; fuzzy matches surface typos and abbreviations below. Score threshold (30) suppresses noise.

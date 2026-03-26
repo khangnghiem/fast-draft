@@ -605,6 +605,7 @@ function toggleLeftPanel() {
   }
   localStorage.setItem('fd-left-collapsed', isCollapsed ? '1' : '');
   requestAnimationFrame(() => {
+    window.__fdPositionLayersHandle?.();  // keep resize handle at panel edge
     window.dispatchEvent(new Event('resize'));
     resizeCanvas();
     // Re-clamp toolbar after grid recalculates (double-rAF for layout settle)
@@ -622,6 +623,7 @@ function toggleRightPanel() {
   updateRightPanelWidth(!isCollapsed);
   localStorage.setItem('fd-right-collapsed', isCollapsed ? '1' : '');
   requestAnimationFrame(() => {
+    window.__fdPositionRightHandle?.();  // keep resize handle at panel edge
     window.dispatchEvent(new Event('resize'));
     resizeCanvas();
     // Re-clamp toolbar after grid recalculates (double-rAF for layout settle)
@@ -3007,6 +3009,8 @@ function setupPanelResize(wrapper, resizeCanvas) {
     const w = document.documentElement.dataset.lp === 'closed' ? 0 : leftPanel.offsetWidth;
     layersHandle.style.left = w + 'px';
   }
+  // Expose globally so toggleLeftPanel / toggleLayersPanel can call it after CSS var update
+  window.__fdPositionLayersHandle = positionLayersHandle;
 
   // Initial position
   requestAnimationFrame(() => {
@@ -3101,6 +3105,100 @@ function setupPanelResize(wrapper, resizeCanvas) {
     }
     requestAnimationFrame(() => {
       positionLayersHandle();
+      resizeCanvas();
+      renderCanvas();
+    });
+  });
+
+  // ── Right panel drag-to-resize ──────────────────────────────────────
+  const rightPanel = document.getElementById('right-panel');
+  const rightHandle = document.getElementById('right-resize');
+  const MIN_RIGHT_W = 180;
+  const MAX_RIGHT_W = 500;
+  const DEFAULT_RIGHT_W = 260;
+
+  // Restore persisted right panel width
+  const savedRightW = parseInt(localStorage.getItem('fd-right-panel-width'), 10);
+  if (savedRightW >= MIN_RIGHT_W && savedRightW <= MAX_RIGHT_W) {
+    document.documentElement.style.setProperty('--right-panel-width', savedRightW + 'px');
+  }
+
+  /** Position right resize handle at the panel's left edge. */
+  function positionRightHandle() {
+    if (!rightHandle || !rightPanel) return;
+    if (document.documentElement.dataset.rp === 'closed') {
+      rightHandle.style.right = '0px';
+    } else {
+      rightHandle.style.right = rightPanel.offsetWidth + 'px';
+    }
+  }
+  window.__fdPositionRightHandle = positionRightHandle;
+
+  requestAnimationFrame(() => {
+    positionRightHandle();
+  });
+
+  if (!rightHandle || !rightPanel) return;
+  let rightDragging = false;
+  let rightStartX = 0;
+  let rightStartW = 0;
+  let rightResizeRafId = null;
+
+  rightHandle.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    rightDragging = true;
+    rightStartX = e.clientX;
+    rightStartW = rightPanel.offsetWidth;
+    rightPanel.classList.add('no-transition');
+    rightHandle.classList.add('active');
+    rightHandle.setPointerCapture(e.pointerId);
+  });
+
+  rightHandle.addEventListener('pointermove', (e) => {
+    if (!rightDragging) return;
+    // Dragging left edge of right panel: moving left = wider, moving right = narrower
+    const dx = rightStartX - e.clientX;
+    const newW = Math.max(MIN_RIGHT_W, Math.min(MAX_RIGHT_W, rightStartW + dx));
+    document.documentElement.style.setProperty('--right-panel-width', newW + 'px');
+    positionRightHandle();
+    if (!rightResizeRafId) {
+      rightResizeRafId = requestAnimationFrame(() => {
+        resizeCanvas();
+        renderCanvas();
+        rightResizeRafId = null;
+      });
+    }
+  });
+
+  const endRightDrag = () => {
+    if (!rightDragging) return;
+    rightDragging = false;
+    rightPanel.classList.remove('no-transition');
+    rightHandle.classList.remove('active');
+    if (rightResizeRafId) {
+      cancelAnimationFrame(rightResizeRafId);
+      rightResizeRafId = null;
+    }
+    resizeCanvas();
+    renderCanvas();
+    if (document.documentElement.dataset.rp !== 'closed') {
+      const w = rightPanel.offsetWidth;
+      localStorage.setItem('fd-right-panel-width', String(w));
+    }
+    requestAnimationFrame(() => window.__fdReclampToolbar?.());
+  };
+  rightHandle.addEventListener('pointerup', endRightDrag);
+  rightHandle.addEventListener('pointercancel', endRightDrag);
+
+  // Double-click to reset right panel to default width
+  rightHandle.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    document.documentElement.style.setProperty('--right-panel-width', DEFAULT_RIGHT_W + 'px');
+    localStorage.setItem('fd-right-panel-width', String(DEFAULT_RIGHT_W));
+    requestAnimationFrame(() => {
+      positionRightHandle();
       resizeCanvas();
       renderCanvas();
     });
@@ -3256,16 +3354,13 @@ function toggleLayersPanel() {
     h.style.setProperty('--left-panel-width', restoreW + 'px');
     localStorage.setItem('fd-left-collapsed', '');
   }
-  // Hide resize handle when collapsed, show when expanded
-  if (layersHandle) {
-    layersHandle.style.display = isCollapsed ? 'none' : '';
-    if (!isCollapsed) {
-      requestAnimationFrame(() => {
-        layersHandle.style.left = layersPanel.offsetWidth + 'px';
-      });
-    }
+  // Reposition resize handle after collapse/expand
+  const lrHandle = document.getElementById('layers-resize');
+  if (lrHandle) {
+    lrHandle.style.display = isCollapsed ? 'none' : '';
   }
   requestAnimationFrame(() => {
+    window.__fdPositionLayersHandle?.();
     window.dispatchEvent(new Event('resize'));
     renderCanvas();
   });
