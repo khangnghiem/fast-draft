@@ -20,12 +20,12 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-mono/style.min.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" />
   <!-- Preload WASM for instant startup -->
-  <link rel="modulepreload" href="./wasm/fd_wasm.js?v=0.11.291" />
-  <link rel="preload" href="./wasm/fd_wasm_bg.wasm?v=0.11.291" as="fetch" crossorigin fetchpriority="high" />
+  <link rel="modulepreload" href="./wasm/fd_wasm.js?v=0.11.292" />
+  <link rel="preload" href="./wasm/fd_wasm_bg.wasm?v=0.11.292" as="fetch" crossorigin fetchpriority="high" />
   <!-- Preload local vendor bundle (CodeMirror + lz-string, no CDN) -->
   <link rel="modulepreload" href="./vendor/cm.min.js" />
-  <link rel="stylesheet" href="shared.css?v=0.11.291" />
-  <link rel="stylesheet" href="style.css?v=0.11.291" />
+  <link rel="stylesheet" href="shared.css?v=0.11.292" />
+  <link rel="stylesheet" href="style.css?v=0.11.292" />
 
   <!-- ── Layout State Machine ──
        Sets data-attrs + CSS vars on <html> SYNCHRONOUSLY before <body> parse.
@@ -44,7 +44,10 @@
 
       // ── Panel state ──
       var lpC = localStorage.getItem('fd-left-collapsed') === '1';
-      var rpC = localStorage.getItem('fd-right-collapsed') === '1';
+      // Right panel defaults to closed for clean first impression;
+      // explicit '0' in localStorage overrides (user chose to open)
+      var rpSaved = localStorage.getItem('fd-right-collapsed');
+      var rpC = rpSaved === null ? true : rpSaved === '1';
       // Auto-collapse panels on narrow viewports (mobile web)
       if (window.innerWidth <= 768) { lpC = true; rpC = true; }
       h.dataset.lp = lpC ? 'closed' : 'open';
@@ -410,8 +413,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="context-menu.js?v=0.11.291"></script>
-  <script type="module" src="app.js?v=0.11.291"></script>
+  <script src="context-menu.js?v=0.11.292"></script>
+  <script type="module" src="app.js?v=0.11.292"></script>
   <script>
     // Mobile menu toggle
     document.getElementById('mobile-menu-btn').addEventListener('click', function() {

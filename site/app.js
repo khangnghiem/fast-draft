@@ -2875,6 +2875,20 @@ function renderMinimap(canvas) {
   const mc = document.getElementById('minimap-canvas');
   if (!mc || !fdCanvas) return;
 
+  // Toggle has-content on minimap container to hide preview on empty canvas
+  const mmContainer = document.getElementById('minimap-container');
+  if (mmContainer) {
+    const boundsJson = fdCanvas.get_scene_bounds();
+    let hasNodes = false;
+    if (boundsJson) {
+      try {
+        const b = JSON.parse(boundsJson);
+        hasNodes = b.w > 0 && b.h > 0;
+      } catch (_) { /* ignore */ }
+    }
+    mmContainer.classList.toggle('has-content', hasNodes);
+  }
+
   const dpr = window.devicePixelRatio || 1;
   const mw = 150, mh = 100;
   
@@ -5154,6 +5168,28 @@ async function initPlayground() {
 
     // ── Panel Resize Setup ───────────────────────────────────────────
     setupPanelResize(wrapper, resizeCanvas);
+
+    // ── Canvas Chrome Auto-Fade ─────────────────────────────────────
+    // Fade export/settings buttons after 4s of idle — reclaim visual space
+    {
+      const chromeRight = document.getElementById('chrome-right');
+      if (chromeRight) {
+        let chromeIdleTimer = null;
+        const CHROME_IDLE_MS = 4000;
+        function startChromeIdle() {
+          clearTimeout(chromeIdleTimer);
+          chromeIdleTimer = setTimeout(() => {
+            chromeRight.classList.add('chrome-idle');
+          }, CHROME_IDLE_MS);
+        }
+        chromeRight.addEventListener('mouseenter', () => {
+          clearTimeout(chromeIdleTimer);
+          chromeRight.classList.remove('chrome-idle');
+        });
+        chromeRight.addEventListener('mouseleave', startChromeIdle);
+        startChromeIdle(); // start timer on load
+      }
+    }
 
     // (initLeftPanel moved earlier — before WASM init)
 
