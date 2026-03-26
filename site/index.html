@@ -25,7 +25,7 @@
   <!-- Preload local vendor bundle (CodeMirror + lz-string, no CDN) -->
   <link rel="modulepreload" href="./vendor/cm.min.js" />
   <link rel="stylesheet" href="shared.css?v=0.11.5" />
-  <link rel="stylesheet" href="style.css?v=0.11.5" />
+  <link rel="stylesheet" href="style.css?v=0.11.289" />
 
   <!-- ── Layout State Machine ──
        Sets data-attrs + CSS vars on <html> SYNCHRONOUSLY before <body> parse.
@@ -56,7 +56,7 @@
         var saved = localStorage.getItem('fd-left-panel-width');
         if (saved) {
           var w = parseInt(saved, 10);
-          lpW = (w >= 200 && w <= 500) ? String(w) : '260';
+          lpW = (w >= 120 && w <= 500) ? String(w) : '260';
         }
       }
       h.style.setProperty('--left-panel-width', lpC ? '0px' : lpW + 'px');
