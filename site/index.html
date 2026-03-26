@@ -332,8 +332,20 @@
                     <div class="search-empty">Search your document by node ID, text content, or style name.</div>
                   </div>
                   <div class="search-input-area">
-                    <input type="text" class="search-input" id="search-input" placeholder="Search nodes, text, styles…" autocomplete="off" spellcheck="false" />
-                    <span class="search-count" id="search-count"></span>
+                    <div class="search-controls">
+                      <div class="search-mode-segmented" id="search-mode-segmented">
+                        <button class="search-mode-seg" data-mode="exact" title="Exact substring match">Exact</button>
+                        <button class="search-mode-seg active" data-mode="smart" title="Smart: fuzzy + exact-first (default)">Smart</button>
+                        <button class="search-mode-seg" data-mode="regex" title="Regular Expression (Alt+R)">.*</button>
+                      </div>
+                      <label class="search-option" title="Zoom to fit matched node on click">
+                        <input type="checkbox" id="search-zoom-fit" checked> Zoom
+                      </label>
+                    </div>
+                    <div class="search-input-row">
+                      <input type="text" class="search-input" id="search-input" placeholder="Search nodes, text, styles…" autocomplete="off" spellcheck="false" />
+                      <span class="search-count" id="search-count"></span>
+                    </div>
                   </div>
                 </div>
               </div>
