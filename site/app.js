@@ -2300,13 +2300,17 @@ function clearLayerDragIndicators(panel) {
 }
 
 /** Determine the drop zone based on cursor Y position within the element.
- *  Returns 'above' (top 25%), 'below' (bottom 25%), or 'nest' (middle 50%). */
+ *  Containers (rect/ellipse/frame/group) get a wider nest zone (70%, 15% edges)
+ *  so reparent drops are easier to trigger. Non-containers use 50% (25% edges). */
 function getDropZone(e, el) {
   const rect = el.getBoundingClientRect();
   const y = e.clientY - rect.top;
   const h = rect.height;
-  if (y < h * 0.25) return 'above';
-  if (y > h * 0.75) return 'below';
+  const kind = el.getAttribute('data-node-kind');
+  const isContainer = ['rect','ellipse','frame','group'].includes(kind);
+  const edgePct = isContainer ? 0.15 : 0.25;
+  if (y < h * edgePct) return 'above';
+  if (y > h * (1 - edgePct)) return 'below';
   return 'nest';
 }
 

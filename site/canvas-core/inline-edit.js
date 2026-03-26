@@ -160,8 +160,13 @@ export function openInlineEditor(opts) {
   const fontWeight = props.fontWeight || 400;
   const lineHeight = Math.round(rawFontSize * 1.2 * zoomLevel);
 
-  const sx = (b.x || 0) * zoomLevel + panX;
-  const sy = (b.y || 0) * zoomLevel + panY;
+  // Offset canvas-element origin within its overlay container
+  const canvasRect = canvasEl.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  const canvasOffsetX = canvasRect.left - containerRect.left;
+  const canvasOffsetY = canvasRect.top - containerRect.top;
+  const sx = (b.x || 0) * zoomLevel + panX + canvasOffsetX;
+  const sy = (b.y || 0) * zoomLevel + panY + canvasOffsetY;
   const sw = Math.max(bw * zoomLevel, 80);
   const sh = Math.max(bh * zoomLevel, lineHeight + 4);
 
@@ -315,9 +320,20 @@ export function setupInlineEditor(opts) {
     if (!fdCanvas) return;
 
     const { x, y } = screenToScene(e.clientX, e.clientY, canvasEl);
-    const nodeId = fdCanvas.get_selected_id();
+    let nodeId = fdCanvas.get_selected_id();
 
-    // No selection → create new text node
+    // Fallback: hit-test at click coordinates in case selection was cleared
+    // between the two pointerdown events that precede a dblclick.
+    // This fixes double-click on ellipses (and rects) that were not yet selected.
+    if (!nodeId) {
+      const hitId = fdCanvas.hit_test_at(x, y);
+      if (hitId) {
+        fdCanvas.select_by_id(hitId);
+        nodeId = hitId;
+      }
+    }
+
+    // Still no selection after hit-test → create new text node at position
     if (!nodeId) {
       const created = fdCanvas.create_node_at("text", x, y);
       if (created) {

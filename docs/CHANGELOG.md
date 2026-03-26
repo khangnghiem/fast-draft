@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.11.286 — Fix Inline Editor Position, Ellipse Dblclick, Layers Reparent
+
+1. **Inline editor canvas offset** — `openInlineEditor` in `canvas-core/inline-edit.js` computed textarea position as `b.x * zoom + panX` which is canvas-relative but the textarea is positioned inside `#canvas-content`. When panels are open the canvas element is offset within that container. Fix: subtract `canvasEl.getBoundingClientRect()` from `container.getBoundingClientRect()` and add the delta to `sx`/`sy`.
+
+2. **Ellipse (and rect) double-click** — `dblclick` handler called `get_selected_id()` but the second `pointerdown` of the double-click sequence can clear selection before the `dblclick` event fires, returning empty. Fix: added hit-test fallback — if `get_selected_id()` is empty, `hit_test_at(x, y)` resolves the node under the cursor and selects it before opening the inline editor. Prevents fallthrough to freestanding text-node creation.
+
+3. **Layers reparent drop zone** — `getDropZone` used a symmetric 25%/50%/25% above/nest/below split. The 50% center band is too narrow when items are short. Fix: container nodes (`rect`, `ellipse`, `frame`, `group`) now use 15%/70%/15% so the nest zone covers most of the item height, making drag-on-top reparenting reliable.
+
+Files: `site/canvas-core/inline-edit.js`, `site/app.js`
+
 ### v0.11.285 — Mobile Sidebar Icon Fix
 
 1. **Left sidebar icon on right** — On mobile (≤768px), `grid-column: 2/3` from desktop CSS created an implicit second column in the 1-column grid, pushing `#chrome-left` to the right edge. Fixed by overriding `grid-column: 1 / -1` in the mobile media query.
