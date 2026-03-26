@@ -758,7 +758,10 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 .panel-resize-handle.layers-handle {
   right: -2px;
 }
-/* .props-handle position is set entirely by JS (style.right = rightPanel.offsetWidth + 'px') */
+/* Right panel handle: JS positions via style.right; left:auto prevents left:0 default */
+.panel-resize-handle.props-handle {
+  left: auto;
+}
 .panel-resize-handle.notes-handle {
   position: absolute;
   left: -2px;
