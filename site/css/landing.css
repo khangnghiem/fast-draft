@@ -630,10 +630,12 @@
 
   /* ── #1: Touch-sized chrome buttons (36×36px target) ── */
   .canvas-chrome-left {
+    grid-column: 1 / -1; /* Override desktop grid-column: 2/3 — on mobile's 1fr grid, column 2 pushes to implicit right edge */
     left: 10px !important;
     top: 10px;
   }
   .canvas-chrome-right {
+    grid-column: 1 / -1;
     right: 10px !important;
     top: 10px;
   }

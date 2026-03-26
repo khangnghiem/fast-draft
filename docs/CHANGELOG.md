@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.285 — Mobile Sidebar Icon Fix
+
+1. **Left sidebar icon on right** — On mobile (≤768px), `grid-column: 2/3` from desktop CSS created an implicit second column in the 1-column grid, pushing `#chrome-left` to the right edge. Fixed by overriding `grid-column: 1 / -1` in the mobile media query.
+
 ### v0.11.284 — Resize Cursors + Inline Editor Dedup
 
 1. **Resize handle cursors** — Hovering over resize handles now shows appropriate CSS cursors (`nwse-resize`, `nesw-resize`, `ns-resize`, `ew-resize`). WASM `get_resize_cursor_at()` API added for consistency with JS `getResizeHandleCursor`.
