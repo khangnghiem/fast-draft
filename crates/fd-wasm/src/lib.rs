@@ -791,3 +791,95 @@ fn console_error_panic_hook_setup() {
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tool_hit_resize_handle() {
+        let mut canvas = FdCanvas::new(800.0, 600.0);
+        canvas.set_text("rect @a { w: 100 h: 100 x: 10 y: 10 }");
+        canvas.set_tool("select");
+
+        // Select node @a
+        canvas.handle_pointer_down(50.0, 50.0, 1.0, false, false, false, false);
+        canvas.handle_pointer_up(50.0, 50.0, false, false, false, false);
+
+        assert_eq!(canvas.select_tool.selected, vec![NodeId::intern("a")]);
+
+        // Check handle hits. Corner handles should be within hit radius.
+        // Node @a is at x: 10, y: 10, w: 100, h: 100
+        // TopLeft is at (10, 10).
+        let handle = canvas.hit_test_resize_handle(10.0, 10.0);
+        assert_eq!(handle, Some(ResizeHandle::TopLeft));
+
+        let handle = canvas.hit_test_resize_handle(110.0, 10.0);
+        assert_eq!(handle, Some(ResizeHandle::TopRight));
+
+        let handle = canvas.hit_test_resize_handle(10.0, 110.0);
+        assert_eq!(handle, Some(ResizeHandle::BottomLeft));
+
+        let handle = canvas.hit_test_resize_handle(110.0, 110.0);
+        assert_eq!(handle, Some(ResizeHandle::BottomRight));
+
+        // Test midpoints
+        let handle = canvas.hit_test_resize_handle(60.0, 10.0);
+        assert_eq!(handle, Some(ResizeHandle::TopCenter));
+
+        let handle = canvas.hit_test_resize_handle(10.0, 60.0);
+        assert_eq!(handle, Some(ResizeHandle::MiddleLeft));
+
+        let handle = canvas.hit_test_resize_handle(110.0, 60.0);
+        assert_eq!(handle, Some(ResizeHandle::MiddleRight));
+
+        let handle = canvas.hit_test_resize_handle(60.0, 110.0);
+        assert_eq!(handle, Some(ResizeHandle::BottomCenter));
+
+        // Test miss
+        let handle = canvas.hit_test_resize_handle(50.0, 50.0);
+        assert_eq!(handle, None);
+
+        // Touch pointer type -> no midpoints
+        canvas.set_pointer_type(1);
+        let handle = canvas.hit_test_resize_handle(60.0, 10.0);
+        assert_eq!(handle, None); // TopCenter missed because touch
+        let handle = canvas.hit_test_resize_handle(10.0, 10.0);
+        assert_eq!(handle, Some(ResizeHandle::TopLeft)); // Corner still hit
+    }
+
+    #[test]
+    fn tool_hit_resize_handle_text() {
+        let mut canvas = FdCanvas::new(800.0, 600.0);
+        canvas.set_text("text @t { \"Hello\" max-w: 200 x: 10 y: 10 }");
+        canvas.set_tool("select");
+
+        // Let's force selection programmatically to avoid hit test issues with missing text sizes.
+        canvas.select_tool.selected = vec![NodeId::intern("t")];
+        // Manually trigger a layout to ensure it has some bounds
+        canvas.engine.resolve();
+
+        if let Some(id) = canvas.select_tool.first_selected() {
+            if let Some(idx) = canvas.engine.graph.index_of(id) {
+                let bounds = canvas.engine.current_bounds().get(&idx).unwrap();
+
+                // For a text node, it should only have MiddleLeft and MiddleRight handles
+                // Text width is likely some default value from text metrics shim
+                let bx = bounds.x;
+                let by = bounds.y;
+                let bw = bounds.width;
+                let bh = bounds.height;
+
+                let handle = canvas.hit_test_resize_handle(bx, by + bh / 2.0);
+                assert_eq!(handle, Some(ResizeHandle::MiddleLeft));
+
+                let handle = canvas.hit_test_resize_handle(bx + bw, by + bh / 2.0);
+                assert_eq!(handle, Some(ResizeHandle::MiddleRight));
+
+                // TopLeft should not exist on text nodes
+                let handle = canvas.hit_test_resize_handle(bx, by);
+                assert_eq!(handle, None);
+            }
+        }
+    }
+}
