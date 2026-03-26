@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.287 — Toolbar Ghost Clone Responsiveness (R3.39)
+
+1. **Snap indicator CSS transitions** — removed `transition: top 0.1s, left 0.1s` from `.toolbar-snap-indicator` to achieve instant tracking, eliminating the intentional 100ms visual lag during dragging.
+2. **Translate3d toolbar drag movement** — replaced CPU-bound layout properties (`style.left`/`style.top`) with GPU-accelerated `translate3d(dx, dy, 0)` for the toolbar during `pointermove`, skipping expensive Layout and Paint rendering steps altogether to hit 60fps locking. 
+3. **Cached layout reads** — cached exact canvas bounding rect and initial toolbar dimensions at drag start. Eliminates 4 synchronous `getBoundingClientRect()` layout thrashing calls per move frame inside `showSnapIndicator()`. 
+4. **GPU layers** — added `will-change: transform` hint to both toolbar and grab shadow during active drag phase to bypass coordinate calculation cold starts.
+
+Files: `site/css/toolbar.css`, `site/app.js`
+
 ### v0.11.286 — Fix Inline Editor Position, Ellipse Dblclick, Layers Reparent
 
 1. **Inline editor canvas offset** — `openInlineEditor` in `canvas-core/inline-edit.js` computed textarea position as `b.x * zoom + panX` which is canvas-relative but the textarea is positioned inside `#canvas-content`. When panels are open the canvas element is offset within that container. Fix: subtract `canvasEl.getBoundingClientRect()` from `container.getBoundingClientRect()` and add the delta to `sx`/`sy`.

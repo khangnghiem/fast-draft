@@ -6103,6 +6103,7 @@ async function initPlayground() {
       let toolbarStartX = 0, toolbarStartY = 0;
       let dragStartTbWidth = 0, dragStartTbHeight = 0; // toolbar dims at drag start (before orientation change)
       let lastSnapSide = null; // last snap side shown by indicator (null = no shadow visible)
+      let cachedDragCanvasRect = null; // cached canvas rect during drag (avoids per-frame layout reads)
       const pointerHistory = [];
       const SNAP_THRESHOLD = 60;
       const SNAP_GAP = 10;
@@ -6156,8 +6157,8 @@ async function initPlayground() {
 
       /** Detect which edge the toolbar should snap to.
        * Uses absolute pixel distance to the nearest edge — no aspect-ratio bias. */
-      function getSnapSide(pointerX, pointerY) {
-        const cr = getCanvasRect();
+      function getSnapSide(pointerX, pointerY, cr) {
+        cr = cr || getCanvasRect();
         const distLeft = pointerX - cr.left;
         const distRight = cr.right - pointerX;
         const distTop = pointerY - cr.top;
@@ -6328,11 +6329,11 @@ async function initPlayground() {
         return { side: 'bottom', x: null, y: null };
       }
 
-      function showSnapIndicator(side, pointerX, pointerY, grabOffsetX, grabOffsetY) {
+      function showSnapIndicator(side, pointerX, pointerY, grabOffsetX, grabOffsetY, cachedCr, cachedTbDims) {
         lastSnapSide = side; // track for pointerup
         if (side) {
-          const tbRect = toolbar.getBoundingClientRect();
-          const cr = getCanvasRect();
+          const tbRect = cachedTbDims || toolbar.getBoundingClientRect();
+          const cr = cachedCr || getCanvasRect();
           // If the target snap edge enforces a different orientation than current, swap dimensions for the shadow
           let gw = tbRect.width, gh = tbRect.height;
           const isCurrentlyHorizontal = gw >= gh;
@@ -6396,6 +6397,8 @@ async function initPlayground() {
           pointerHistory.length = 0;
           // Eagerly cache minimized dims on first drag
           getMiniDims();
+          // Cache canvas rect to avoid per-frame layout reads during drag
+          cachedDragCanvasRect = getCanvasRect();
           grip.setPointerCapture(e.pointerId);
         });
 
@@ -6495,7 +6498,7 @@ async function initPlayground() {
             toolbar.classList.add('toolbar-dragging');
             toolbar.style.left = toolbarStartX + 'px';
             toolbar.style.top = toolbarStartY + 'px';
-            toolbar.style.transform = 'none';
+            toolbar.style.transform = 'translate3d(0, 0, 0)';
             toolbar.style.right = 'auto';
             toolbar.style.bottom = 'auto';
             toolbar.style.flexDirection = currentDirection;
@@ -6505,8 +6508,7 @@ async function initPlayground() {
         if (!isDragging) return;
         const dx = e.clientX - dragStartX;
         const dy = e.clientY - dragStartY;
-        toolbar.style.left = (toolbarStartX + dx) + 'px';
-        toolbar.style.top = (toolbarStartY + dy) + 'px';
+        toolbar.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
 
         // Track velocity
         pointerHistory.push({ x: e.clientX, y: e.clientY, t: Date.now() });
@@ -6515,7 +6517,8 @@ async function initPlayground() {
         // Show snap indicator — always shows since getSnapSide always returns a side
         const grabOffX = dragStartX - toolbarStartX;
         const grabOffY = dragStartY - toolbarStartY;
-        showSnapIndicator(getSnapSide(e.clientX, e.clientY), e.clientX, e.clientY, grabOffX, grabOffY);
+        const cachedTbDims = { width: dragStartTbWidth, height: dragStartTbHeight };
+        showSnapIndicator(getSnapSide(e.clientX, e.clientY, cachedDragCanvasRect), e.clientX, e.clientY, grabOffX, grabOffY, cachedDragCanvasRect, cachedTbDims);
       });
 
       // ── Drag end / snap ──
@@ -6528,6 +6531,7 @@ async function initPlayground() {
         if (!isDragging) return;
         isDragging = false;
         gripPointerDown = false;
+        cachedDragCanvasRect = null;
 
         // Compute grab offset for snap positioning
         const grabOffX = dragStartX - toolbarStartX;
