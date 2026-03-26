@@ -599,7 +599,7 @@ function toggleLeftPanel() {
     h.style.setProperty('--left-panel-width', '0px');
   } else {
     const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
-    const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 260;
+    const restoreW = (savedW >= 120 && savedW <= 500) ? savedW : 260;
     h.style.setProperty('--left-panel-width', restoreW + 'px');
     switchLeftTab(activeLeftTab);
   }
@@ -2990,7 +2990,7 @@ function setupPanelResize(wrapper, resizeCanvas) {
   const leftPanel = document.getElementById('left-panel');
   const layersHandle = document.getElementById('layers-resize');
 
-  const MIN_WIDTH = 200;
+  const MIN_WIDTH = 120;
   const MAX_WIDTH = 500;
   const DEFAULT_LEFT_W = 260;
 
@@ -3034,8 +3034,23 @@ function setupPanelResize(wrapper, resizeCanvas) {
   layersHandle.addEventListener('pointermove', (e) => {
     if (!dragging) return;
     const dx = e.clientX - startX;
-    const newW = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startW + dx));
-    document.documentElement.style.setProperty('--left-panel-width', newW + 'px');
+    const rawWidth = startW + dx;
+    
+    if (rawWidth < 80) {
+      if (document.documentElement.dataset.lp !== 'closed') {
+        document.documentElement.dataset.lp = 'closed';
+        document.documentElement.style.setProperty('--left-panel-width', '0px');
+        localStorage.setItem('fd-left-collapsed', '1');
+      }
+    } else {
+      if (document.documentElement.dataset.lp === 'closed') {
+        document.documentElement.dataset.lp = 'open';
+        localStorage.setItem('fd-left-collapsed', '');
+      }
+      const newW = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, rawWidth));
+      document.documentElement.style.setProperty('--left-panel-width', newW + 'px');
+    }
+    
     positionLayersHandle();
     // Batch expensive canvas resize + render to once per display frame
     if (!resizeRafId) {
@@ -3059,8 +3074,10 @@ function setupPanelResize(wrapper, resizeCanvas) {
     }
     resizeCanvas();
     renderCanvas();
-    const w = leftPanel.offsetWidth;
-    localStorage.setItem('fd-left-panel-width', String(w));
+    if (document.documentElement.dataset.lp !== 'closed') {
+      const w = leftPanel.offsetWidth;
+      localStorage.setItem('fd-left-panel-width', String(w));
+    }
     // Re-clamp toolbar to new canvas bounds after panel resize
     requestAnimationFrame(() => window.__fdReclampToolbar?.());
   };
@@ -3235,7 +3252,7 @@ function toggleLayersPanel() {
     localStorage.setItem('fd-left-collapsed', '1');
   } else {
     const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
-    const restoreW = (savedW >= 200 && savedW <= 500) ? savedW : 260;
+    const restoreW = (savedW >= 120 && savedW <= 500) ? savedW : 260;
     h.style.setProperty('--left-panel-width', restoreW + 'px');
     localStorage.setItem('fd-left-collapsed', '');
   }

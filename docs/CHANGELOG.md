@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.289 — Snap-to-Collapse Panel UX & Cache Fix (R6.6)
+- **UX**: Implemented snap-to-collapse on the left panel (drag width `< 80px` automatically collapses the panel, dragging `> 80px` springs it open). Lowered `MIN_WIDTH` constraints to `120px` to naturally support the icon-only segmented pill modes.
+- **Fix (Ops)**: Appended `?v=0.11.289` directly to `@import` paths in `style.css` to bust Cloudflare's strict 4-hour edge cache for aggregated assets, ensuring production DOM receives corresponding flex/container-query styles.
+
 ### v0.11.288 — Responsive UI: Container Queries for Panel Header Tabs (R6.6)
 - **FEAT**: Implement CSS `@container` queries on `#left-panel` and `#right-panel` to gracefully degrade segmented pills.
 - **UI**: Wrap tab labels inside `<span class="tab-label">` and hide them (`display: none`) when the panel is resized below `220px`. The UI cleanly transitions to icon-only buttons centered via `flex`/`gap` to adopt professional tool patterns (like Xcode/VS Code) when screen real-estate is premium.
