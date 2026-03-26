@@ -16,9 +16,23 @@
   cursor: pointer;
   transition: right 0.25s ease, opacity 0.2s ease, box-shadow 0.2s ease, width 0.2s ease, height 0.2s ease, bottom 0.2s ease;
 }
+/* Hide minimap preview on empty canvas — only show when scene has nodes */
+#minimap-container:not(.has-content) {
+  width: auto;
+  height: auto;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  box-shadow: none;
+}
+#minimap-container:not(.has-content) #minimap-canvas {
+  display: none;
+}
 /* Minimap shift is now handled dynamically via JS collision detection
    — see adjustMinimapForToolbar() in app.js */
 #minimap-container:hover { box-shadow: var(--fd-shadow-lg); }
+#minimap-container:not(.has-content):hover { box-shadow: none; }
 #minimap-canvas {
   display: block;
   width: 100%;
@@ -40,6 +54,14 @@
   overflow: hidden;
   z-index: 16;
   pointer-events: auto;
+}
+/* When minimap has no content, zoom controls become the only visible element —
+   position them as a standalone pill instead of inside the minimap */
+#minimap-container:not(.has-content) #minimap-zoom-controls {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  transform: none;
 }
 #minimap-zoom-controls .bl-btn {
   display: flex;
@@ -77,3 +99,13 @@
   background: var(--fd-border);
 }
 
+/* ─── Canvas Chrome Auto-Fade ─── */
+.canvas-chrome-right {
+  transition: opacity 0.3s ease;
+}
+.canvas-chrome-right.chrome-idle {
+  opacity: 0.15;
+}
+.canvas-chrome-right.chrome-idle:hover {
+  opacity: 1;
+}
