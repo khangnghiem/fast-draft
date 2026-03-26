@@ -1,0 +1,77 @@
+# Edge types showcase
+# Demonstrates different edge styles: straight, smooth, step
+# Also demonstrates different arrows and flows
+
+# Nodes
+rect @node_a {
+  text @_t1 "Node A" {
+  }
+  w: 100 h: 60
+  x: 100 y: 100
+}
+
+rect @node_b {
+  text @_t2 "Node B" {
+  }
+  w: 100 h: 60
+  x: 400 y: 100
+}
+
+rect @node_c {
+  text @_t3 "Node C" {
+  }
+  w: 100 h: 60
+  x: 100 y: 300
+}
+
+rect @node_d {
+  text @_t4 "Node D" {
+  }
+  w: 100 h: 60
+  x: 400 y: 300
+}
+
+rect @node_e {
+  text @_t5 "Node E" {
+  }
+  w: 100 h: 60
+  x: 100 y: 500
+}
+
+rect @node_f {
+  text @_t6 "Node F" {
+  }
+  w: 100 h: 60
+  x: 400 y: 500
+}
+
+# Edges
+edge @edge_straight @node_a -> @node_b {
+  curve: straight
+  arrow: end
+  stroke: #333333 2
+  flow: pulse 1000ms
+}
+
+edge @edge_smooth @node_c -> @node_d {
+  curve: smooth
+  arrow: both
+  stroke: #333333 2
+  flow: dash 1000ms
+}
+
+edge @edge_step @node_e -> @node_f {
+  curve: step
+  arrow: start
+  stroke: #333333 2
+}
+
+# Free edge
+edge @free_edge {
+  from: 200 700
+  to: 400 750
+  curve: straight
+  arrow: end
+  stroke: #FF0000 4
+  flow: pulse 500ms
+}
