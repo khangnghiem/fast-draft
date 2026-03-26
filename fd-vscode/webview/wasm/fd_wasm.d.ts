@@ -185,6 +185,11 @@ export class FdCanvas {
      */
     get_parent_id(node_id: string): string;
     /**
+     * Get the CSS resize cursor for a given scene-space position.
+     * Returns empty string if no resize handle is under the point.
+     */
+    get_resize_cursor_at(x: number, y: number): string;
+    /**
      * Get the bounding box of all non-root nodes in the scene.
      */
     get_scene_bounds(): string;
@@ -422,6 +427,10 @@ export class FdCanvas {
      */
     set_tool(name: string): void;
     /**
+     * Suppress UI rendering (handles, guides) temporarily.
+     */
+    set_ui_suppressed(suppressed: boolean): void;
+    /**
      * Toggle the locked state of a node. Returns the new locked state.
      */
     toggle_node_locked(id: string): boolean;
@@ -463,6 +472,7 @@ export interface InitOutput {
     readonly fdcanvas_get_arrow_preview: (a: number) => [number, number];
     readonly fdcanvas_get_corners_only: (a: number) => number;
     readonly fdcanvas_get_handle_visual_size: (a: number) => number;
+    readonly fdcanvas_get_resize_cursor_at: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_sketchy_mode: (a: number) => number;
     readonly fdcanvas_get_text: (a: number) => [number, number];
     readonly fdcanvas_get_theme_json: (a: number) => [number, number];
@@ -480,6 +490,7 @@ export interface InitOutput {
     readonly fdcanvas_set_text: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_set_theme: (a: number, b: number) => void;
     readonly fdcanvas_set_tool: (a: number, b: number, c: number) => void;
+    readonly fdcanvas_set_ui_suppressed: (a: number, b: number) => void;
     readonly fdcanvas_undo: (a: number) => number;
     readonly fdcanvas_compute_score: (a: number) => [number, number];
     readonly fdcanvas_get_completions: (a: number, b: number, c: number) => [number, number];

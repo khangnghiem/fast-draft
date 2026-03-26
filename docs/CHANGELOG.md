@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.288 — Selection Persistence & Inline Edit UI Fix (R3.3)
+
+1. **Selection persists after resize** — hoisted `hit_test_resize_handle` logic to the top of `handle_pointer_down` sequence in `pointer.rs`. Previously, the visual highlight was cleared before the resize action was intercepted, causing shapes to visually drop their selection state upon drag release.
+2. **Inline edit UI suppression** — eliminated the conflicting "weird blue box" UI artifact during double-click text editing. Introduced a `ui_suppressed` flag in the WASM `FdCanvas` state, which is toggled by JS when the inline editor opens/closes. This suppresses rendering of WASM selection handles, marquees, and smart guides, relying solely on the clean CSS `textarea` overlay.
+
 ### v0.11.287 — Toolbar Ghost Clone Responsiveness (R3.39)
 
 1. **Snap indicator CSS transitions** — removed `transition: top 0.1s, left 0.1s` from `.toolbar-snap-indicator` to achieve instant tracking, eliminating the intentional 100ms visual lag during dragging.

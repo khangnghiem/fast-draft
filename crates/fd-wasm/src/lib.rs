@@ -80,6 +80,8 @@ pub struct FdCanvas {
     pub(crate) bounds_hash: u64,
     /// Current pointer device type — updated each pointer event from JS.
     pub(crate) pointer_type: PointerType,
+    /// Whether UI overlays (selection, guides) are suppressed (e.g., during inline editing).
+    pub(crate) ui_suppressed: bool,
 }
 
 // ─── Lifecycle & Core APIs ───────────────────────────────────────────────
@@ -128,6 +130,7 @@ impl FdCanvas {
             spatial_index: None,
             bounds_hash: 0,
             pointer_type: PointerType::Mouse,
+            ui_suppressed: false,
         }
     }
 
@@ -258,6 +261,11 @@ impl FdCanvas {
     /// Called from JS before each pointer event to adapt hit radii and handle sizes.
     pub fn set_pointer_type(&mut self, ptype: u8) {
         self.pointer_type = PointerType::from_u8(ptype);
+    }
+
+    /// Suppress UI rendering (handles, guides) temporarily.
+    pub fn set_ui_suppressed(&mut self, suppressed: bool) {
+        self.ui_suppressed = suppressed;
     }
 
     /// Resolve the effective tool for the current pointer event.

@@ -46,6 +46,22 @@ impl FdCanvas {
             meta,
         };
         let event = InputEvent::from_pointer_down(x, y, pressure, mods);
+
+        // Check for resize handle hit FIRST, before altering selection.
+        if self.active_tool == ToolKind::Select
+            && let Some(handle) = self.hit_test_resize_handle(x, y)
+            && let Some(id) = self.select_tool.first_selected()
+            && let Some(idx) = self.engine.graph.index_of(id)
+            && let Some(b) = self.engine.current_bounds().get(&idx)
+        {
+            self.pointer_down_pos = Some((x, y));
+            self.select_tool
+                .start_resize(handle, (b.x, b.y, b.width, b.height));
+            let mutations = self.select_tool.handle(&event, None);
+            self.apply_mutations(mutations);
+            return true;
+        }
+
         let raw_hit = self.hit_test(x, y);
 
         // Track pointer-down position for click-vs-drag detection
@@ -77,21 +93,6 @@ impl FdCanvas {
         // exclusively by handle_pointer_move (CSS-style behavior).
         // Click should only set pressed_id, not trigger :hover animations.
         let hovered_changed = false;
-
-        // Check for resize handle hit on currently selected node
-        if self.active_tool == ToolKind::Select
-            && let Some(handle) = self.hit_test_resize_handle(x, y)
-            && let Some(id) = self.select_tool.first_selected()
-            && let Some(idx) = self.engine.graph.index_of(id)
-            && let Some(b) = self.engine.current_bounds().get(&idx)
-        {
-            self.select_tool
-                .start_resize(handle, (b.x, b.y, b.width, b.height));
-            // Forward the event so PointerMove/Up flow works
-            let mutations = self.select_tool.handle(&event, hit);
-            self.apply_mutations(mutations);
-            return true;
-        }
 
         // Eraser: handle drag lifecycle + immediate delete on hit
         if self.active_tool == ToolKind::Eraser {

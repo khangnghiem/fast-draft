@@ -619,6 +619,25 @@ export class FdCanvas {
         }
     }
     /**
+     * Get the CSS resize cursor for a given scene-space position.
+     * Returns empty string if no resize handle is under the point.
+     * @param {number} x
+     * @param {number} y
+     * @returns {string}
+     */
+    get_resize_cursor_at(x, y) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_resize_cursor_at(this.__wbg_ptr, x, y);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Get the bounding box of all non-root nodes in the scene.
      * @returns {string}
      */
@@ -1329,6 +1348,13 @@ export class FdCanvas {
         const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         wasm.fdcanvas_set_tool(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
+     * Suppress UI rendering (handles, guides) temporarily.
+     * @param {boolean} suppressed
+     */
+    set_ui_suppressed(suppressed) {
+        wasm.fdcanvas_set_ui_suppressed(this.__wbg_ptr, suppressed);
     }
     /**
      * Toggle the locked state of a node. Returns the new locked state.

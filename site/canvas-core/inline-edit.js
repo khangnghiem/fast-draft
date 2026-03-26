@@ -150,6 +150,9 @@ export function openInlineEditor(opts) {
   // Read node props for styling
   fdCanvas.select_by_id(nodeId);
   fdCanvas.clear_pressed();
+  if (typeof fdCanvas.set_ui_suppressed === 'function') {
+    fdCanvas.set_ui_suppressed(true);
+  }
   renderFn();
   const propsJson = fdCanvas.get_selected_node_props();
   const props = JSON.parse(propsJson);
@@ -262,6 +265,9 @@ export function openInlineEditor(opts) {
     const newVal = textarea.value;
     if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
     if (!fdCanvas) return;
+    if (typeof fdCanvas.set_ui_suppressed === 'function') {
+      fdCanvas.set_ui_suppressed(false);
+    }
     if (newVal === originalValue) { renderFn(); return; }
     fdCanvas.select_by_id(nodeId);
     const changed = fdCanvas.set_node_prop(propKey, newVal);
@@ -278,6 +284,9 @@ export function openInlineEditor(opts) {
       inlineEditorActive = false;
       if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
       fdCanvas.select_by_id(nodeId);
+      if (typeof fdCanvas.set_ui_suppressed === 'function') {
+        fdCanvas.set_ui_suppressed(false);
+      }
       fdCanvas.set_node_prop(propKey, originalValue);
       renderFn();
       syncFn();

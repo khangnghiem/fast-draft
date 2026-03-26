@@ -18,15 +18,29 @@ impl FdCanvas {
         skip_grid: bool,
         skip_bg: bool,
     ) {
-        let selected_ids: Vec<String> = self
-            .select_tool
-            .visual_highlight
-            .iter()
-            .map(|id| id.as_str().to_string())
-            .collect();
+        let selected_ids: Vec<String> = if self.ui_suppressed {
+            Vec::new()
+        } else {
+            self.select_tool
+                .visual_highlight
+                .iter()
+                .map(|id| id.as_str().to_string())
+                .collect()
+        };
 
         // Compute smart alignment guides when dragging/resizing
-        let guides = self.compute_smart_guides();
+        let guides = if self.ui_suppressed {
+            Vec::new()
+        } else {
+            self.compute_smart_guides()
+        };
+
+        // Suppress marquee during inline edit
+        let marquee_rect = if self.ui_suppressed {
+            None
+        } else {
+            self.select_tool.marquee_rect
+        };
 
         render2d::render_scene(
             ctx,
@@ -36,7 +50,7 @@ impl FdCanvas {
             self.height,
             &selected_ids,
             &self.cached_theme,
-            self.select_tool.marquee_rect,
+            marquee_rect,
             time_ms,
             self.hovered_id.as_ref().map(|id| id.as_str()),
             self.pressed_id.as_ref().map(|id| id.as_str()),
