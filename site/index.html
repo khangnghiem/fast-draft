@@ -44,10 +44,7 @@
 
       // ── Panel state ──
       var lpC = localStorage.getItem('fd-left-collapsed') === '1';
-      // Right panel defaults to closed for clean first impression;
-      // explicit '0' in localStorage overrides (user chose to open)
-      var rpSaved = localStorage.getItem('fd-right-collapsed');
-      var rpC = rpSaved === null ? true : rpSaved === '1';
+      var rpC = localStorage.getItem('fd-right-collapsed') === '1';
       // Auto-collapse panels on narrow viewports (mobile web)
       if (window.innerWidth <= 768) { lpC = true; rpC = true; }
       h.dataset.lp = lpC ? 'closed' : 'open';
