@@ -28,6 +28,7 @@ web-sys = { workspace = true, features = [
 ] }
 js-sys = { workspace = true }
 log = { workspace = true }
+nucleo-matcher = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }

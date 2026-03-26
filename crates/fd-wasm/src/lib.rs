@@ -11,6 +11,7 @@ mod pointer;
 mod props;
 mod render2d;
 mod responses;
+mod search;
 mod selection;
 mod svg;
 

@@ -17,6 +17,16 @@
 
 ## Completed Requirements
 
+### v0.11.290 — Smart Search: Fuzzy Mode with Segmented Control (R6.5)
+
+- **FEAT (R6.5)**: Replaced exact-only substring search with a **Smart mode** search (default) using `nucleo-matcher` for fuzzy scoring + exact-match boost (+1000 points). Exact substring hits always rank first; fuzzy matches surface typos and abbreviations below. Score threshold (30) suppresses noise.
+- **UI**: Replaced the single `.*` regex button with a **3-segment control**: `Exact | Smart | Regex .*`. Smart is the active default, showcasing all modes in one discoverable component.
+- **UX**: `Alt+R` keyboard shortcut now cycles Smart ↔ Regex (previously toggled only regex on/off).
+- **WASM**: `search_nodes(query, mode)` now accepts `"smart"`, `"exact"`, or `"fuzzy"` as a mode parameter. Results include a `score` field for ranking. Modeled after VS Code command palette: fuzzy scoring + exact-substring boosting.
+- **Perf**: `nucleo-matcher` is 6× faster than skim, pure Rust, WASM-ready, ~20-30KB bundle overhead.
+
+Files: `Cargo.toml`, `crates/fd-wasm/Cargo.toml`, `crates/fd-wasm/src/search.rs`, `site/index.html`, `site/css/modals.css`, `site/app.js`
+
 ### v0.11.289 — Snap-to-Collapse Panel UX & Cache Fix (R6.6)
 - **UX**: Implemented snap-to-collapse on the left panel (drag width `< 80px` automatically collapses the panel, dragging `> 80px` springs it open). Lowered `MIN_WIDTH` constraints to `120px` to naturally support the icon-only segmented pill modes.
 - **Fix (Ops)**: Appended `?v=0.11.289` directly to `@import` paths in `style.css` to bust Cloudflare's strict 4-hour edge cache for aggregated assets, ensuring production DOM receives corresponding flex/container-query styles.

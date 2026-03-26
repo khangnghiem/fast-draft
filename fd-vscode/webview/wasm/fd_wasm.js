@@ -68,6 +68,12 @@ export class FdCanvas {
         wasm.fdcanvas_clear_pressed(this.__wbg_ptr);
     }
     /**
+     * Clear all search highlights.
+     */
+    clear_search_highlights() {
+        wasm.fdcanvas_clear_search_highlights(this.__wbg_ptr);
+    }
+    /**
      * Compute alignment guides for a hypothetical rect at (x, y, w, h).
      * @param {number} x
      * @param {number} y
@@ -616,6 +622,25 @@ export class FdCanvas {
             return getStringFromWasm0(ret[0], ret[1]);
         } finally {
             wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * Get the CSS resize cursor for a given scene-space position.
+     * Returns empty string if no resize handle is under the point.
+     * @param {number} x
+     * @param {number} y
+     * @returns {string}
+     */
+    get_resize_cursor_at(x, y) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_resize_cursor_at(this.__wbg_ptr, x, y);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
         }
     }
     /**
@@ -1197,6 +1222,35 @@ export class FdCanvas {
         wasm.fdcanvas_resize(this.__wbg_ptr, width, height);
     }
     /**
+     * Search the scene graph for nodes matching the query.
+     *
+     * `mode`: `"smart"` (default), `"exact"`, or `"fuzzy"`.
+     * - Smart = fuzzy scoring + exact-match boost (recommended default).
+     * - Exact = pure substring containment.
+     * - Fuzzy = pure nucleo scoring without exact boost.
+     *
+     * Returns a JSON array of `SearchResult` objects sorted by score.
+     * @param {string} query
+     * @param {string} mode
+     * @returns {string}
+     */
+    search_nodes(query, mode) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(query, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(mode, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_search_nodes(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+            deferred3_0 = ret[0];
+            deferred3_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    /**
      * Select a node by its ID (e.g. from text editor cursor).
      * Returns `true` if the node was found and selected.
      * @param {string} node_id
@@ -1272,6 +1326,18 @@ export class FdCanvas {
      */
     set_pointer_type(ptype) {
         wasm.fdcanvas_set_pointer_type(this.__wbg_ptr, ptype);
+    }
+    /**
+     * Set visual highlight on multiple nodes (for search result highlighting).
+     *
+     * Accepts a JSON array of node ID strings. Nodes in the highlight list
+     * render with a subtle glow on the canvas.
+     * @param {string} ids_json
+     */
+    set_search_highlights(ids_json) {
+        const ptr0 = passStringToWasm0(ids_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.fdcanvas_set_search_highlights(this.__wbg_ptr, ptr0, len0);
     }
     /**
      * Enable or disable sketchy (hand-drawn) rendering mode.
