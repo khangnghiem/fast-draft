@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.293 — Fix Inline Editor "Weird Box" Artifact (R3.3)
+
+1. **Native Blur Enforcement** — Resolved an issue where double-clicking a node to open the inline text editor, then clicking elsewhere on the canvas, would leave an empty, stuck `<textarea>` overlay (the "weird box"). Root cause: canvas interactions invoke `e.preventDefault()` (to stop panning/zooming), which suppressed the browser's native `blur` progression away from the editor, trapping it.
+2. **Explicit Capture Phase Blur** — Engineered a non-destructive countermeasure via `setupInlineEditor`. A `{ capture: true }` `pointerdown` event listener now evaluates the active document element and explicitly dispatches `.blur()` to the `textarea` *before* core scripts can intercept and cancel the event bubble. This safely queues the required `commit()` logic and guarantees accurate teardown without compromising overarching interaction safety barriers.
+
+Files: `site/canvas-core/inline-edit.js`
+
 ### v0.11.292 — Fix Canvas Interaction & Coordinate Misalignment (R3.39)
 
 1. **Path Bound Box Validation** — Fixed a core regression in `layout.rs` where `NodeKind::Path` was resolving to a hardcoded `100x100` bounding box payload. Path shapes now correctly resolve their `min_x/y` and `max_x/y` from internal spatial commands to emit mathematically accurate bounding envelopes, resolving ghost selections.

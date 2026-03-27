@@ -18,14 +18,15 @@ description: E2E browser testing via GitHub Codespace — systematic UX behavior
    gh codespace list
    ```
 
-2. Open the Codespace via browser subagent:
+2. Open the Browser via `browser_subagent`:
 
+   **MANDATORY:** You MUST retrieve the `ReusedSubagentId` from the previous turn and pass it to prevent spawning disjointed browser sessions.
+   Provide the following exact instruction in your `Task` prompt:
    ```
-   FIRST: list_browser_pages to check existing tabs.
-   - If ANY tab URL matches *.github.dev → switch to it. DO NOT open a new tab.
+   MANDATORY: Call list_browser_pages first to check existing tabs.
+   - If ANY tab URL matches *.github.dev, fast-draft.com, or localhost → use switch_page to switch to it. DO NOT open a new tab.
    - If the tab is loading/restarting, wait up to 30 seconds before retrying.
-   - ONLY if no codespace tab exists: navigate to https://github.com/codespaces
-     and click on the available codespace for khangnghiem/fast-draft.
+   - ONLY if no relevant tab exists: use open_url to navigate to the target (e.g. fast-draft.com or https://github.com/codespaces -> Khang's FD codespace).
    ```
 
 3. Keep max 2 editor panels open. Close extras.
