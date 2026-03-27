@@ -271,7 +271,7 @@
 }
 .search-input-area {
   padding: 8px;
-  border-top: 0.5px solid var(--fd-border);
+  border-bottom: 0.5px solid var(--fd-border);
   display: flex;
   flex-direction: column;
   gap: 6px;
