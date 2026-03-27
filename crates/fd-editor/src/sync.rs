@@ -273,6 +273,24 @@ impl SyncEngine {
                     );
                 }
             }
+            GraphMutation::SetConstraints { id, constraints } => {
+                if let Some(idx) = self.graph.index_of(id) {
+                    if let Some(node) = self.graph.graph.node_weight_mut(idx) {
+                        node.constraints = constraints.clone().into();
+                    }
+                    // Extract positioning info for immediate bounds update
+                    let abs_pos = constraints.iter().find_map(|c| match c {
+                        Constraint::Position { x, y } => Some((*x, *y)),
+                        _ => None,
+                    });
+                    if let Some((x, y)) = abs_pos
+                        && let Some(b) = self.bounds.get_mut(&idx)
+                    {
+                        b.x = x;
+                        b.y = y;
+                    }
+                }
+            }
             GraphMutation::AddNode { parent_id, node } => {
                 let parent_idx = self.graph.index_of(parent_id).unwrap_or(self.graph.root);
                 // Extract positioning info before moving node into graph
@@ -1082,6 +1100,11 @@ pub enum GraphMutation {
     SetStrokeWidth {
         id: NodeId,
         width: f32,
+    },
+    /// Set a node's constraints completely.
+    SetConstraints {
+        id: NodeId,
+        constraints: Vec<Constraint>,
     },
 }
 
