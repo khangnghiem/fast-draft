@@ -20,12 +20,12 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-mono/style.min.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" />
   <!-- Preload WASM for instant startup -->
-  <link rel="modulepreload" href="./wasm/fd_wasm.js?v=0.11.292" />
-  <link rel="preload" href="./wasm/fd_wasm_bg.wasm?v=0.11.292" as="fetch" crossorigin fetchpriority="high" />
+  <link rel="modulepreload" href="./wasm/fd_wasm.js?v=0.11.293" />
+  <link rel="preload" href="./wasm/fd_wasm_bg.wasm?v=0.11.293" as="fetch" crossorigin fetchpriority="high" />
   <!-- Preload local vendor bundle (CodeMirror + lz-string, no CDN) -->
   <link rel="modulepreload" href="./vendor/cm.min.js" />
-  <link rel="stylesheet" href="shared.css?v=0.11.292" />
-  <link rel="stylesheet" href="style.css?v=0.11.292" />
+  <link rel="stylesheet" href="shared.css?v=0.11.293" />
+  <link rel="stylesheet" href="style.css?v=0.11.293" />
 
   <!-- ── Layout State Machine ──
        Sets data-attrs + CSS vars on <html> SYNCHRONOUSLY before <body> parse.
@@ -331,10 +331,11 @@
                 </div>
                 <!-- Search Pane -->
                 <div class="rp-pane" data-rpane="search">
-                  <div class="search-results" id="search-results">
-                    <div class="search-empty">Search your document by node ID, text content, or style name.</div>
-                  </div>
                   <div class="search-input-area">
+                    <div class="search-input-row">
+                      <input type="text" class="search-input" id="search-input" placeholder="Search nodes, text, styles…" autocomplete="off" spellcheck="false" />
+                      <span class="search-count" id="search-count"></span>
+                    </div>
                     <div class="search-controls">
                       <div class="search-mode-segmented" id="search-mode-segmented">
                         <button class="search-mode-seg" data-mode="exact" title="Exact substring match">Exact</button>
@@ -345,10 +346,9 @@
                         <input type="checkbox" id="search-zoom-fit" checked> Zoom
                       </label>
                     </div>
-                    <div class="search-input-row">
-                      <input type="text" class="search-input" id="search-input" placeholder="Search nodes, text, styles…" autocomplete="off" spellcheck="false" />
-                      <span class="search-count" id="search-count"></span>
-                    </div>
+                  </div>
+                  <div class="search-results" id="search-results">
+                    <div class="search-empty">Search your document by node ID, text content, or style name.</div>
                   </div>
                 </div>
               </div>
@@ -410,8 +410,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="context-menu.js?v=0.11.292"></script>
-  <script type="module" src="app.js?v=0.11.292"></script>
+  <script src="context-menu.js?v=0.11.293"></script>
+  <script type="module" src="app.js?v=0.11.293"></script>
   <script>
     // Mobile menu toggle
     document.getElementById('mobile-menu-btn').addEventListener('click', function() {

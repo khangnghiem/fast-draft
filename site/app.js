@@ -13,14 +13,14 @@ import {
   highlightSelectionMatches,
   LZString,
 } from './vendor/cm.min.js';
-import { initAiChat, clearChatHistory } from './ai-chat.js?v=0.11.5';
+import { initAiChat, clearChatHistory } from './ai-chat.js?v=0.11.293';
 import {
   screenToScene as coreScreenToScene,
   pointerTypeToU8 as corePointerTypeToU8,
   showToast as coreShowToast,
   ZOOM_WHEEL_FACTOR as CORE_ZOOM_WHEEL_FACTOR,
   GRID_SPACING as CORE_GRID_SPACING,
-} from './canvas-core/state.js?v=0.11.5';
+} from './canvas-core/state.js?v=0.11.293';
 import {
   drawGrid as coreDrawGrid,
   fitToContent as coreFitToContent,
@@ -32,31 +32,36 @@ import {
   startTween,
   evalTweens,
   playDetachAnimation as corePlayDetachAnimation,
-} from './canvas-core/render.js?v=0.11.5';
+} from './canvas-core/render.js?v=0.11.293';
 import {
   extractNodeBlock as coreExtractNodeBlock,
   buildPasteIdMap,
   applyIdRenames,
   collectDeclaredIds,
-} from './canvas-core/clipboard.js?v=0.11.5';
+} from './canvas-core/clipboard.js?v=0.11.293';
 import {
   getResizeHandleCursor as coreGetResizeHandleCursor,
   pinchDistance as corePinchDistance,
   pinchCenter as corePinchCenter,
   nudgeSelected as coreNudgeSelected,
-} from './canvas-core/viewport.js?v=0.11.5';
+} from './canvas-core/viewport.js?v=0.11.293';
 import {
   TOOL_SHORTCUTS,
   TOOL_CYCLE,
   DOUBLE_PRESS_MS,
   ZOOM_STEP as CORE_ZOOM_STEP,
   buildShortcutHelpHtml as coreBuildShortcutHelpHtml,
-} from './canvas-core/shortcuts.js?v=0.11.5';
+} from './canvas-core/shortcuts.js?v=0.11.293';
 import {
   setupInlineEditor as coreSetupInlineEditor,
   openInlineEditor as coreOpenInlineEditor,
   inlineEditorActive as coreInlineEditorActive,
-} from './canvas-core/inline-edit.js?v=0.11.5';
+} from './canvas-core/inline-edit.js?v=0.11.293';
+import { setupTouchGestures as setupTouchGesturesModule, setupApplePencilPro as setupApplePencilProModule } from './touch.js?v=0.11.293';
+import { initSearchPanel } from './search.js?v=0.11.293';
+import { initPresentation } from './presentation.js?v=0.11.293';
+import { initTauri } from './tauri.js?v=0.11.293';
+import { initToolbar, drawDtcPreview } from './toolbar.js?v=0.11.293';
 
 import { fdLanguage, fdHighlightStyle, fdTheme } from './src/editor/syntax.js';
 /** Global CodeMirror EditorView */
@@ -286,7 +291,8 @@ function renderCanvas() {
   fdCanvas.render(ctx, performance.now(), true, true);
 
   // 5. Draw drag-to-create preview shape (on-canvas, zoom-aware WYSIWYG)
-  drawDtcPreview(ctx);
+  drawDtcPreview(ctx, dtcPreview, smartDefaults, zoomLevel);
+  if (dtcPreview) renderDirty = true; // keep re-rendering during drag
 
   // ── iPad touch/pencil visual overlays ──────────────────────────────
   // Touch contact halo (finger tap feedback)
@@ -409,75 +415,9 @@ function renderCanvas() {
 
 /** Default dimensions for each shape type (arrow excluded — needs two anchors).
  *  Module-scope so drawDtcPreview() can access them from renderCanvas(). */
-const DTC_SIZES = {
-  rect: [120, 80], ellipse: [90, 90], text: [80, 24],
-  frame: [200, 150], pen: [120, 80]
-};
-
 /** Canvas-projected preview state — set by DTC pointermove, read by renderCanvas().
- *  Module-scope so both initPlayground() handlers and drawDtcPreview() can share it. */
+ *  Module-scope so both initPlayground() handlers and toolbar module can share it. */
 let dtcPreview = null; // { type: string, sceneX: number, sceneY: number }
-
-/** Draw the drag-to-create preview shape on the canvas in scene coordinates.
- *  Since renderCanvas() already applies the zoom/pan transform, the shape
- *  automatically appears at the correct screen size — true WYSIWYG. */
-function drawDtcPreview(canvasCtx) {
-  if (!dtcPreview) return;
-  const { type, sceneX, sceneY } = dtcPreview;
-  const [w, h] = DTC_SIZES[type] || [100, 80];
-  const x = sceneX - w / 2;
-  const y = sceneY - h / 2;
-
-  // Use actual default styles (same as insertShapeAt applies)
-  const isDarkNow = document.body.classList.contains('dark-theme');
-  const defaultFill = smartDefaults.fill || (isDarkNow ? '#2C2C2E' : '#F0F0F0');
-  const defaultStroke = smartDefaults.stroke || (isDarkNow ? '#CCCCCC' : '#333333');
-  const strokeWidth = (smartDefaults.strokeWidth || 1.5) / zoomLevel;
-  const cornerRadius = smartDefaults.cornerRadius || 8;
-
-  canvasCtx.save();
-  canvasCtx.globalAlpha = 0.6;
-
-  if (type === 'ellipse') {
-    canvasCtx.beginPath();
-    canvasCtx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
-    canvasCtx.fillStyle = defaultFill;
-    canvasCtx.fill();
-    canvasCtx.strokeStyle = defaultStroke;
-    canvasCtx.lineWidth = strokeWidth;
-    canvasCtx.stroke();
-  } else if (type === 'text') {
-    const fontSize = 14 / zoomLevel;
-    canvasCtx.font = `${fontSize}px Inter, sans-serif`;
-    canvasCtx.fillStyle = isDarkNow ? '#FFFFFF' : '#1C1C1E';
-    canvasCtx.textAlign = 'left';
-    canvasCtx.textBaseline = 'middle';
-    canvasCtx.fillText('Text', x, y + h / 2);
-  } else {
-    // Rect / frame — rounded rect with fill and stroke
-    const r = type === 'frame' ? 8 : cornerRadius;
-    canvasCtx.beginPath();
-    if (canvasCtx.roundRect) {
-      canvasCtx.roundRect(x, y, w, h, r);
-    } else {
-      // Fallback for older browsers
-      canvasCtx.moveTo(x + r, y);
-      canvasCtx.arcTo(x + w, y, x + w, y + h, r);
-      canvasCtx.arcTo(x + w, y + h, x, y + h, r);
-      canvasCtx.arcTo(x, y + h, x, y, r);
-      canvasCtx.arcTo(x, y, x + w, y, r);
-      canvasCtx.closePath();
-    }
-    canvasCtx.fillStyle = type === 'frame' ? (isDarkNow ? '#2C2C2E' : '#FFFFFF') : defaultFill;
-    canvasCtx.fill();
-    canvasCtx.strokeStyle = defaultStroke;
-    canvasCtx.lineWidth = strokeWidth;
-    canvasCtx.stroke();
-  }
-
-  canvasCtx.restore();
-  renderDirty = true; // keep re-rendering during drag
-}
 
 /** Auto-center scene content in canvas viewport */
 function fitToContent(canvas) {
@@ -3960,558 +3900,7 @@ function setupInlineEditor(canvas) {
   });
 }
 
-// ── Touch Gesture System ──────────────────────────────────────────────────
-// Provides: pinch-to-zoom, two-finger pan with momentum inertia,
-// three-finger swipe/tap/pinch (undo/redo/copy/paste), four-finger swipe/tap
-// (zen mode, zoom-to-fit, zoom-to-selection, tool cycle),
-// long-press context menu, Apple Pencil palm rejection.
-//
-// Gesture hierarchy: 1-finger = object, 2-finger = viewport, 3-finger = edit, 4-finger = app.
-function setupTouchGestures(canvas, fdCanvasRef, markRenderDirty, markUiDirty) {
-  let activeTouches = new Map();
-  let lastPinchDist = 0;
-  let lastPinchCenter = { x: 0, y: 0 };
-  let longPressTimer = null;
-  let longPressPos = null;
-  let isGesturing = false;
-  let threeFingerStartX = 0;
-  let threeFingerHandled = false;
-  let pencilActive = false;
-
-  // Inertia state — weighted velocity for smooth momentum
-  const velocityHistory = []; // last 3 frames: [{vx, vy, t}]
-  let inertiaVx = 0;
-  let inertiaVy = 0;
-  let inertiaRaf = null;
-
-  // ── 3-finger tap/double-tap state (undo/redo) ──
-  let threeFingerTouchStart = 0;  // timestamp of 3-finger touchstart
-  let threeFingerStartPositions = []; // [{x,y}] at touchstart
-  let lastThreeFingerTapTime = 0;
-
-  // ── 3-finger pinch state (copy/paste) ──
-  let threeFingerStartArea = 0;   // bounding area of 3 touches at start
-  let threeFingerPinchHandled = false;
-
-  // ── 3-finger long-press state (edit menu) ──
-  let threeFingerLongPressTimer = null;
-
-  // ── 4-finger state ──
-  let fourFingerTouchStart = 0;
-  let fourFingerStartPositions = [];
-  let fourFingerHandled = false;
-
-  // Tool cycle order (matches toolbar visual order)
-  const TOOL_CYCLE = ['hand', 'select', 'rect', 'ellipse', 'pen', 'arrow', 'text', 'eraser'];
-
-  function pinchDistance(t1, t2) {
-    const dx = t1.clientX - t2.clientX;
-    const dy = t1.clientY - t2.clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-
-  function pinchCenter(t1, t2) {
-    return {
-      x: (t1.clientX + t2.clientX) / 2,
-      y: (t1.clientY + t2.clientY) / 2
-    };
-  }
-
-  function clearLongPress() {
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
-    }
-  }
-
-  function cancelInertia() {
-    if (inertiaRaf) {
-      cancelAnimationFrame(inertiaRaf);
-      inertiaRaf = null;
-    }
-    velocityHistory.length = 0;
-  }
-
-  function computeWeightedVelocity() {
-    if (velocityHistory.length === 0) return { vx: 0, vy: 0 };
-    // Weighted average: recent frames count more
-    let totalWeight = 0;
-    let vx = 0, vy = 0;
-    for (let i = 0; i < velocityHistory.length; i++) {
-      const weight = i + 1; // newer frames have higher index
-      vx += velocityHistory[i].vx * weight;
-      vy += velocityHistory[i].vy * weight;
-      totalWeight += weight;
-    }
-    return { vx: vx / totalWeight, vy: vy / totalWeight };
-  }
-
-  function applyInertia() {
-    const friction = 0.95; // Exponential decay (smoother than 0.92)
-    inertiaVx *= friction;
-    inertiaVy *= friction;
-    // Stop when below minimum threshold
-    if (Math.abs(inertiaVx) < 0.1 && Math.abs(inertiaVy) < 0.1) {
-      inertiaRaf = null;
-      return;
-    }
-    panX += inertiaVx;
-    panY += inertiaVy;
-    markRenderDirty();
-    markUiDirty();
-    inertiaRaf = requestAnimationFrame(applyInertia);
-  }
-
-  /** Zoom by a multiplier, anchored at a screen-space point. */
-  function touchZoomAtPoint(mx, my, factor) {
-    const oldZoom = zoomLevel;
-    zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomLevel * factor));
-    panX = mx - (mx - panX) * (zoomLevel / oldZoom);
-    panY = my - (my - panY) * (zoomLevel / oldZoom);
-    updateZoomIndicator();
-    markRenderDirty();
-    markUiDirty();
-  }
-
-  canvas.addEventListener('touchstart', (e) => {
-    for (const t of e.changedTouches) {
-      activeTouches.set(t.identifier, t);
-    }
-
-    const count = activeTouches.size;
-    cancelInertia();
-
-    // Palm rejection: if Apple Pencil is active and a finger appears, ignore fingers
-    if (pencilActive && count > 0) {
-      const hasPencil = [...e.touches].some(t => t.touchType === 'stylus');
-      if (!hasPencil) {
-        e.preventDefault();
-        return;
-      }
-    }
-
-    // Detect Apple Pencil
-    for (const t of e.changedTouches) {
-      if (t.touchType === 'stylus') {
-        pencilActive = true;
-      }
-    }
-
-    if (count === 1) {
-      // Single finger — start long-press timer for context menu
-      const t = [...activeTouches.values()][0];
-      longPressPos = { x: t.clientX, y: t.clientY };
-      longPressTimer = setTimeout(() => {
-        const fakeEvent = new MouseEvent('contextmenu', {
-          clientX: longPressPos.x,
-          clientY: longPressPos.y,
-          bubbles: true,
-        });
-        canvas.dispatchEvent(fakeEvent);
-        isGesturing = true;
-        longPressTimer = null;
-      }, 500);
-    } else {
-      clearLongPress();
-    }
-
-    if (count === 2) {
-      // Start pinch / two-finger pan
-      isGesturing = true;
-      const touches = [...activeTouches.values()];
-
-      // Smart disambiguation: reject if fingers too close
-      const dist = pinchDistance(touches[0], touches[1]);
-      if (dist < 30) {
-        return;
-      }
-
-      lastPinchDist = dist;
-      lastPinchCenter = pinchCenter(touches[0], touches[1]);
-      e.preventDefault();
-    }
-
-    if (count === 3) {
-      // Start three-finger gesture detection (swipe/tap/pinch/long-press)
-      isGesturing = true;
-      threeFingerHandled = false;
-      threeFingerPinchHandled = false;
-      const touches = [...activeTouches.values()];
-      threeFingerStartX = touches.reduce((s, t) => s + t.clientX, 0) / 3;
-      threeFingerTouchStart = performance.now();
-      threeFingerStartPositions = touches.map(t => ({ x: t.clientX, y: t.clientY }));
-
-      // Compute bounding area for pinch detection
-      const xs = touches.map(t => t.clientX);
-      const ys = touches.map(t => t.clientY);
-      threeFingerStartArea = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys));
-
-      // Start 3-finger long-press timer (500ms → edit menu)
-      if (threeFingerLongPressTimer) clearTimeout(threeFingerLongPressTimer);
-      threeFingerLongPressTimer = setTimeout(() => {
-        threeFingerLongPressTimer = null;
-        if (activeTouches.size === 3 && !threeFingerHandled && !threeFingerPinchHandled) {
-          threeFingerHandled = true;
-          showThreeFingerEditMenu(touches);
-        }
-      }, 500);
-
-      e.preventDefault();
-    }
-
-    if (count === 4) {
-      // Start four-finger gesture detection (tap/swipe)
-      isGesturing = true;
-      fourFingerHandled = false;
-      const touches = [...activeTouches.values()];
-      fourFingerTouchStart = performance.now();
-      fourFingerStartPositions = touches.map(t => ({ x: t.clientX, y: t.clientY }));
-      e.preventDefault();
-    }
-  }, { passive: false });
-
-  canvas.addEventListener('touchmove', (e) => {
-    for (const t of e.changedTouches) {
-      activeTouches.set(t.identifier, t);
-    }
-
-    const count = activeTouches.size;
-
-    // Cancel long-press if moved too far
-    if (count === 1 && longPressTimer && longPressPos) {
-      const t = [...activeTouches.values()][0];
-      const dx = t.clientX - longPressPos.x;
-      const dy = t.clientY - longPressPos.y;
-      if (dx * dx + dy * dy > 100) {
-        clearLongPress();
-      }
-    }
-
-    if (count === 2) {
-      const touches = [...activeTouches.values()];
-      const dist = pinchDistance(touches[0], touches[1]);
-      const center = pinchCenter(touches[0], touches[1]);
-
-      // Pinch-to-zoom
-      if (lastPinchDist > 0) {
-        const scale = dist / lastPinchDist;
-        const canvasRect = canvas.getBoundingClientRect();
-        const mx = center.x - canvasRect.left;
-        const my = center.y - canvasRect.top;
-        touchZoomAtPoint(mx, my, scale);
-      }
-
-      // Two-finger pan
-      const dx = center.x - lastPinchCenter.x;
-      const dy = center.y - lastPinchCenter.y;
-      panX += dx;
-      panY += dy;
-
-      // Track velocity for inertia (weighted 3-frame history)
-      const now = performance.now();
-      const dt = velocityHistory.length > 0
-        ? now - velocityHistory[velocityHistory.length - 1].t
-        : 16;
-      const normalizedDt = Math.max(dt, 1);
-      velocityHistory.push({ vx: dx * (16 / normalizedDt), vy: dy * (16 / normalizedDt), t: now });
-      if (velocityHistory.length > 3) velocityHistory.shift();
-
-      lastPinchDist = dist;
-      lastPinchCenter = center;
-      markRenderDirty();
-      markUiDirty();
-      e.preventDefault();
-    }
-
-    if (count === 3 && !threeFingerHandled) {
-      const touches = [...activeTouches.values()];
-      const avgX = touches.reduce((s, t) => s + t.clientX, 0) / 3;
-      const swipeDist = avgX - threeFingerStartX;
-
-      // Require significant horizontal swipe
-      if (Math.abs(swipeDist) > 50) {
-        threeFingerHandled = true;
-        if (threeFingerLongPressTimer) { clearTimeout(threeFingerLongPressTimer); threeFingerLongPressTimer = null; }
-        if (fdCanvasRef) {
-          if (swipeDist < 0) {
-            // Swipe left = undo
-            const changed = fdCanvasRef.handle_key('z', false, false, false, true);
-            if (changed) {
-              markRenderDirty();
-              markUiDirty();
-              syncCanvasToEditor();
-            }
-          } else {
-            // Swipe right = redo
-            const changed = fdCanvasRef.handle_key('z', false, true, false, true);
-            if (changed) {
-              markRenderDirty();
-              markUiDirty();
-              syncCanvasToEditor();
-            }
-          }
-        }
-        e.preventDefault();
-      }
-
-      // ── 3-finger pinch detection (copy / paste) ──
-      if (!threeFingerPinchHandled && threeFingerStartArea > 0) {
-        const xs = touches.map(t => t.clientX);
-        const ys = touches.map(t => t.clientY);
-        const currentArea = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys));
-        const ratio = currentArea / threeFingerStartArea;
-
-        if (ratio < 0.4) {
-          // Pinch-in → copy
-          threeFingerPinchHandled = true;
-          threeFingerHandled = true;
-          if (threeFingerLongPressTimer) { clearTimeout(threeFingerLongPressTimer); threeFingerLongPressTimer = null; }
-          copySelectedAsFd();
-          showToast('Copied');
-          e.preventDefault();
-        } else if (ratio > 2.5) {
-          // Pinch-out → paste
-          threeFingerPinchHandled = true;
-          threeFingerHandled = true;
-          if (threeFingerLongPressTimer) { clearTimeout(threeFingerLongPressTimer); threeFingerLongPressTimer = null; }
-          pasteFromClipboard();
-          e.preventDefault();
-        }
-      }
-    }
-
-    // ── 4-finger swipe detection ──
-    if (count === 4 && !fourFingerHandled) {
-      const touches = [...activeTouches.values()];
-      const avgX = touches.reduce((s, t) => s + t.clientX, 0) / 4;
-      const avgY = touches.reduce((s, t) => s + t.clientY, 0) / 4;
-      const startAvgX = fourFingerStartPositions.reduce((s, p) => s + p.x, 0) / 4;
-      const startAvgY = fourFingerStartPositions.reduce((s, p) => s + p.y, 0) / 4;
-      const dx = avgX - startAvgX;
-      const dy = avgY - startAvgY;
-
-      const SWIPE_THRESHOLD = 50;
-
-      if (Math.abs(dy) > SWIPE_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
-        fourFingerHandled = true;
-        if (dy < 0) {
-          // Swipe up → zoom-to-fit
-          fitToContent(canvas);
-          markRenderDirty();
-          markUiDirty();
-        } else {
-          // Swipe down → zoom-to-selection (or reset to 100% if none)
-          if (fdCanvasRef) {
-            const selectedId = fdCanvasRef.get_selected_id();
-            if (selectedId) {
-              try {
-                const b = JSON.parse(fdCanvasRef.get_node_bounds(selectedId));
-                if (b.width > 0 && b.height > 0) {
-                  const cr = canvas.getBoundingClientRect();
-                  const pad = 60;
-                  const zoom = Math.min(cr.width / (b.width + pad), cr.height / (b.height + pad), ZOOM_MAX);
-                  zoomLevel = Math.max(zoom, ZOOM_MIN);
-                  panX = cr.width / 2 - (b.x + b.width / 2) * zoomLevel;
-                  panY = cr.height / 2 - (b.y + b.height / 2) * zoomLevel;
-                  updateZoomIndicator();
-                  markRenderDirty();
-                  markUiDirty();
-                }
-              } catch (_) {}
-            } else {
-              // No selection → reset to 100%
-              const cr = canvas.getBoundingClientRect();
-              zoomLevel = 1.0;
-              panX = cr.width / 2;
-              panY = cr.height / 2;
-              updateZoomIndicator();
-              markRenderDirty();
-              markUiDirty();
-            }
-          }
-        }
-        e.preventDefault();
-      } else if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
-        // Horizontal swipe → cycle tool
-        fourFingerHandled = true;
-        if (fdCanvasRef) {
-          const currentTool = fdCanvasRef.get_tool_name();
-          const currentIdx = TOOL_CYCLE.indexOf(currentTool);
-          const dir = dx > 0 ? 1 : -1;
-          const nextIdx = (currentIdx + dir + TOOL_CYCLE.length) % TOOL_CYCLE.length;
-          const nextTool = TOOL_CYCLE[nextIdx];
-          fdCanvasRef.set_tool(nextTool);
-          updateToolbar(nextTool);
-          canvas.style.cursor = (nextTool === 'select' || nextTool === 'eraser' || nextTool === 'hand') ? '' : 'crosshair';
-          if (nextTool === 'hand') canvas.style.cursor = 'grab';
-          showToast(nextTool.charAt(0).toUpperCase() + nextTool.slice(1));
-        }
-        e.preventDefault();
-      }
-    }
-  }, { passive: false });
-
-  canvas.addEventListener('touchend', (e) => {
-    const prevCount = activeTouches.size;
-    for (const t of e.changedTouches) {
-      activeTouches.delete(t.identifier);
-    }
-
-    clearLongPress();
-    if (threeFingerLongPressTimer) { clearTimeout(threeFingerLongPressTimer); threeFingerLongPressTimer = null; }
-
-    // Check if pencil lifted
-    for (const t of e.changedTouches) {
-      if (t.touchType === 'stylus') {
-        pencilActive = false;
-      }
-    }
-
-    // ── 3-finger tap / double-tap detection (undo / redo) ──
-    if (prevCount === 3 && activeTouches.size === 0 && !threeFingerHandled && !threeFingerPinchHandled) {
-      const elapsed = performance.now() - threeFingerTouchStart;
-      if (elapsed < 200) {
-        // Check total movement — must be <15px to count as tap
-        const maxMove = threeFingerStartPositions.reduce((max, p, i) => {
-          const endT = e.changedTouches[i];
-          if (!endT) return max;
-          const dist = Math.hypot(endT.clientX - p.x, endT.clientY - p.y);
-          return Math.max(max, dist);
-        }, 0);
-
-        if (maxMove < 15) {
-          const now = performance.now();
-          if (now - lastThreeFingerTapTime < 400) {
-            // Double-tap → undo
-            lastThreeFingerTapTime = 0;
-            if (fdCanvasRef) {
-              const changed = fdCanvasRef.handle_key('z', false, false, false, true);
-              if (changed) {
-                markRenderDirty();
-                markUiDirty();
-                syncCanvasToEditor();
-              }
-            }
-          } else {
-            // Single tap → record time for double-tap detection (no action)
-            lastThreeFingerTapTime = now;
-          }
-        }
-      }
-    }
-
-    // ── 4-finger tap detection (zen mode toggle) ──
-    if (prevCount === 4 && activeTouches.size === 0 && !fourFingerHandled) {
-      const elapsed = performance.now() - fourFingerTouchStart;
-      if (elapsed < 250) {
-        // Check total movement — must be <20px to count as tap
-        const maxMove = fourFingerStartPositions.reduce((max, p, i) => {
-          const endT = e.changedTouches[i];
-          if (!endT) return max;
-          const dist = Math.hypot(endT.clientX - p.x, endT.clientY - p.y);
-          return Math.max(max, dist);
-        }, 0);
-
-        if (maxMove < 20) {
-          // Toggle fullscreen mode
-          toggleFullscreen();
-        }
-      }
-    }
-
-    // Start inertia if two-finger gesture just ended
-    if (activeTouches.size === 0 && isGesturing) {
-      isGesturing = false;
-      lastPinchDist = 0;
-      const { vx, vy } = computeWeightedVelocity();
-      inertiaVx = vx;
-      inertiaVy = vy;
-      if (!reduceMotion && (Math.abs(inertiaVx) > 0.5 || Math.abs(inertiaVy) > 0.5)) {
-        inertiaRaf = requestAnimationFrame(applyInertia);
-      }
-    }
-  });
-
-  canvas.addEventListener('touchcancel', (e) => {
-    for (const t of e.changedTouches) {
-      activeTouches.delete(t.identifier);
-    }
-    clearLongPress();
-    if (threeFingerLongPressTimer) { clearTimeout(threeFingerLongPressTimer); threeFingerLongPressTimer = null; }
-    isGesturing = false;
-    pencilActive = false;
-    cancelInertia();
-  });
-
-  // ── 3-finger long-press edit menu ──
-  function showThreeFingerEditMenu(touches) {
-    // Position at the centroid of the 3 touches
-    const cx = touches.reduce((s, t) => s + t.clientX, 0) / 3;
-    const cy = touches.reduce((s, t) => s + t.clientY, 0) / 3;
-
-    // Remove existing menu if present
-    const existing = document.getElementById('three-finger-edit-menu');
-    if (existing) existing.remove();
-
-    const menu = document.createElement('div');
-    menu.id = 'three-finger-edit-menu';
-    menu.style.cssText = `
-      position: fixed; left: ${cx}px; top: ${cy - 50}px; transform: translateX(-50%);
-      display: flex; gap: 2px; padding: 6px 8px;
-      background: rgba(30,30,30,0.92); backdrop-filter: blur(12px);
-      border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-      z-index: 10001; font-size: 13px; color: #fff; user-select: none;
-    `;
-
-    const actions = [
-      { label: 'Undo', fn: () => { if (!fdCanvasRef) return; const c = fdCanvasRef.handle_key('z', false, false, false, true); if (c) { markRenderDirty(); markUiDirty(); syncCanvasToEditor(); } } },
-      { label: 'Redo', fn: () => { if (!fdCanvasRef) return; const c = fdCanvasRef.handle_key('z', false, true, false, true); if (c) { markRenderDirty(); markUiDirty(); syncCanvasToEditor(); } } },
-      { label: 'Cut', fn: () => cutSelectedAsFd() },
-      { label: 'Copy', fn: () => { copySelectedAsFd(); showToast('Copied'); } },
-      { label: 'Paste', fn: () => pasteFromClipboard() },
-    ];
-
-    for (const action of actions) {
-      const btn = document.createElement('button');
-      btn.textContent = action.label;
-      btn.style.cssText = `
-        border: none; background: transparent; color: #fff; padding: 6px 12px;
-        cursor: pointer; border-radius: 6px; font-size: 13px; font-weight: 500;
-      `;
-      btn.addEventListener('pointerenter', () => { btn.style.background = 'rgba(255,255,255,0.15)'; });
-      btn.addEventListener('pointerleave', () => { btn.style.background = 'transparent'; });
-      btn.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        action.fn();
-        menu.remove();
-      });
-      menu.appendChild(btn);
-    }
-
-    document.body.appendChild(menu);
-    // Auto-dismiss after 3s or on any touch/click elsewhere
-    const dismiss = () => { menu.remove(); document.removeEventListener('pointerdown', dismiss); };
-    setTimeout(dismiss, 3000);
-    setTimeout(() => document.addEventListener('pointerdown', dismiss), 100);
-  }
-}
-
-// ── Apple Pencil Pro Squeeze Detection ────────────────────────────────────
-// On iPad Safari, Apple Pencil Pro squeeze fires as a button=5 pointer event.
-// Modifier combos: plain=toggle last two tools, Shift=Pen, Ctrl=Select,
-// Alt=Rect, Ctrl+Shift=Ellipse.
-function setupApplePencilPro(canvas) {
-  canvas.addEventListener('pointerdown', (e) => {
-    if (e.pointerType === 'pen' && e.button === 5 && fdCanvas) {
-      const newTool = fdCanvas.handle_stylus_squeeze(
-        e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
-      );
-      updateToolbar(newTool);
-      canvas.style.cursor = (newTool === 'select' || newTool === 'eraser') ? '' : 'crosshair';
-      if (newTool === 'hand') canvas.style.cursor = 'grab';
-    }
-  });
-}
+// ── Touch Gesture System + Apple Pencil Pro → extracted to touch.js ───────
 
 async function initPlayground() {
   const editorMount = document.getElementById('fd-editor');
@@ -4542,9 +3931,9 @@ async function initPlayground() {
     console.log('[FD] Fetching WASM module + binary…');
 
     // Start JS module import and WASM fetch in parallel
-    const wasmFetchUrl = './wasm/fd_wasm_bg.wasm?v=0.11.5';
+    const wasmFetchUrl = './wasm/fd_wasm_bg.wasm?v=0.11.293';
     const [wasm, wasmResponse] = await raceWithTimeout(Promise.all([
-      import('./wasm/fd_wasm.js?v=0.11.5'),
+      import('./wasm/fd_wasm.js?v=0.11.293'),
       fetch(wasmFetchUrl),
     ]), WASM_TIMEOUT_MS, 'WASM fetch');
 
@@ -4848,7 +4237,7 @@ async function initPlayground() {
         if (!dot || !fdCanvas) return;
         const color = dot.dataset.color;
         fdCanvas.set_property('fill', color);
-        requestCanvas();
+        renderDirty = true; renderCanvas();
         updateQCP();
       });
       // Right-click dot → apply stroke
@@ -4857,13 +4246,13 @@ async function initPlayground() {
         if (!dot || !fdCanvas) return;
         e.preventDefault();
         fdCanvas.set_property('strokeColor', dot.dataset.color);
-        requestCanvas();
+        renderDirty = true; renderCanvas();
       });
       // Custom color
       document.getElementById('qcp-custom-input')?.addEventListener('input', (e) => {
         if (!fdCanvas) return;
         fdCanvas.set_property('fill', e.target.value);
-        requestCanvas();
+        renderDirty = true; renderCanvas();
         updateQCP();
       });
 
@@ -4917,101 +4306,21 @@ async function initPlayground() {
       });
     }
 
-    // ── Presentation Mode ─────────────────────────────────────────────
-    const presOverlay = document.getElementById('presentation-overlay');
-    const presCounter = document.getElementById('presentation-counter');
-    let presentation = { active: false, frames: [], index: 0 };
-
-    function collectFrames() {
-      if (!fdCanvas) return [];
-      const text = editorView ? editorView.state.doc.toString() : '';
-      const frames = [];
-      // Find all frame nodes from the scene graph
-      const nodesJson = fdCanvas.get_all_nodes_json?.();
-      if (nodesJson) {
-        try {
-          const nodes = JSON.parse(nodesJson);
-          for (const n of nodes) {
-            if (n.kind === 'frame' || n.kind === 'Frame') {
-              frames.push({ id: n.id, x: n.x || 0, y: n.y || 0, w: n.w || 400, h: n.h || 300 });
-            }
-          }
-        } catch (_) {}
-      }
-      // Sort top-left to bottom-right
-      frames.sort((a, b) => (a.y - b.y) || (a.x - b.x));
-      return frames;
-    }
-
-    function startPresentation() {
-      const frames = collectFrames();
-      if (frames.length === 0) {
-        showToast('No frames found — create frames first (F key)');
-        return;
-      }
-      presentation = { active: true, frames, index: 0 };
-      presOverlay.classList.remove('hidden');
-      zoomToFrame(frames[0]);
-      updatePresCounter();
-      // Hide all chrome
-      document.querySelectorAll('.chrome-pill, .scroll-toolbar, #floating-action-bar, .quick-color-picker, #right-panel, #minimap-container')
-        .forEach(el => el.style.display = 'none');
-    }
-
-    function stopPresentation() {
-      presentation.active = false;
-      presOverlay.classList.add('hidden');
-      // Restore chrome
-      document.querySelectorAll('.chrome-pill, .scroll-toolbar, #minimap-container')
-        .forEach(el => el.style.display = '');
-      document.getElementById('floating-action-bar').style.display = '';
-      document.getElementById('right-panel').style.display = '';
-    }
-
-    function zoomToFrame(frame) {
-      const canvasRect = canvas.getBoundingClientRect();
-      const cw = canvasRect.width;
-      const ch = canvasRect.height;
-      const zoom = Math.min(cw / frame.w, ch / frame.h) * 0.9;
-      zoomLevel = zoom;
-      panX = (cw / 2) - (frame.x + frame.w / 2) * zoom;
-      panY = (ch / 2) - (frame.y + frame.h / 2) * zoom;
-      requestCanvas();
-    }
-
-    function updatePresCounter() {
-      if (presCounter) {
-        presCounter.textContent = `${presentation.index + 1} / ${presentation.frames.length}`;
-      }
-    }
-
-    document.getElementById('sm-present')?.addEventListener('click', startPresentation);
-    document.getElementById('presentation-exit')?.addEventListener('click', stopPresentation);
-    window.addEventListener('keydown', (e) => {
-      if (!presentation.active) return;
-      if (e.key === 'Escape') { stopPresentation(); e.preventDefault(); return; }
-      if (e.key === 'ArrowRight' || e.key === ' ') {
-        if (presentation.index < presentation.frames.length - 1) {
-          presentation.index++;
-          zoomToFrame(presentation.frames[presentation.index]);
-          updatePresCounter();
-        }
-        e.preventDefault();
-      }
-      if (e.key === 'ArrowLeft') {
-        if (presentation.index > 0) {
-          presentation.index--;
-          zoomToFrame(presentation.frames[presentation.index]);
-          updatePresCounter();
-        }
-        e.preventDefault();
-      }
+    // ── Presentation Mode → extracted to presentation.js ──────────────
+    initPresentation({
+      canvas,
+      getFdCanvas: () => fdCanvas,
+      getEditorView: () => editorView,
+      showToast,
+      toggleFullscreen,
+      getZoomLevel: () => zoomLevel,
+      setZoomLevel: (z) => { zoomLevel = z; },
+      setPanX: (x) => { panX = x; },
+      setPanY: (y) => { panY = y; },
+      markRenderDirty: () => { renderDirty = true; },
+      renderCanvas: () => renderCanvas(),
+      urlParams,
     });
-
-    // Auto-fullscreen from URL param
-    if (urlParams.has('fullscreen')) {
-      setTimeout(toggleFullscreen, 300);
-    }
 
     // ── Panels already initialized before WASM (see top of initPlayground) ──
 
@@ -6022,10 +5331,33 @@ async function initPlayground() {
     }, { passive: false });
 
     // ── Touch Gestures (inertia, 3-finger undo/redo, long-press, pencil) ──
-    setupTouchGestures(canvas, fdCanvas, () => renderDirty = true, () => uiDirty = true);
+    const touchApi = {
+      getFdCanvas: () => fdCanvas,
+      markRenderDirty: () => renderDirty = true,
+      markUiDirty: () => uiDirty = true,
+      syncCanvasToEditor,
+      showToast,
+      copySelectedAsFd,
+      cutSelectedAsFd,
+      pasteFromClipboard,
+      updateToolbar,
+      updateZoomIndicator,
+      toggleFullscreen,
+      fitToContent: (c) => fitToContent(c),
+      getZoomLevel: () => zoomLevel,
+      setZoomLevel: (z) => { zoomLevel = z; },
+      getPanX: () => panX,
+      getPanY: () => panY,
+      setPanX: (x) => { panX = x; },
+      setPanY: (y) => { panY = y; },
+      getZoomMin: () => ZOOM_MIN,
+      getZoomMax: () => ZOOM_MAX,
+      getReduceMotion: () => reduceMotion,
+    };
+    setupTouchGesturesModule(canvas, touchApi);
 
     // ── Apple Pencil Pro squeeze detection ──
-    setupApplePencilPro(canvas);
+    setupApplePencilProModule(canvas, { getFdCanvas: () => fdCanvas, updateToolbar });
 
     // ── Tool Toolbar (floating) ────────────────────────────────────
     // ── Drag-to-Create state ──
@@ -7230,230 +6562,21 @@ async function initPlayground() {
       renderCanvas();
     });
 
-    // ── Search Panel ─────────────────────────────────────────────
-    const searchInput = document.getElementById('search-input');
-    const searchResults = document.getElementById('search-results');
-    const searchCount = document.getElementById('search-count');
-    const searchZoomFit = document.getElementById('search-zoom-fit');
-    const searchModeSegmented = document.getElementById('search-mode-segmented');
-    let searchMode = 'smart'; // 'exact' | 'smart' | 'regex'
-
-    // Segmented control click handler
-    searchModeSegmented?.querySelectorAll('.search-mode-seg').forEach(btn => {
-      btn.addEventListener('click', () => {
-        searchModeSegmented.querySelectorAll('.search-mode-seg').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        searchMode = btn.dataset.mode;
-        performSearch(searchInput?.value || '');
-      });
-    });
-
-    // Alt+R keyboard shortcut for regex toggle
-    searchInput?.addEventListener('keydown', (e) => {
-      if (e.altKey && e.key === 'r') {
-        e.preventDefault();
-        // Cycle: if already regex → smart, otherwise → regex
-        const newMode = searchMode === 'regex' ? 'smart' : 'regex';
-        searchMode = newMode;
-        searchModeSegmented?.querySelectorAll('.search-mode-seg').forEach(b => {
-          b.classList.toggle('active', b.dataset.mode === newMode);
-        });
-        performSearch(searchInput.value);
-      }
-    });
-
-    function performSearch(query) {
-      if (!searchResults) return;
-      // Remove previous regex error
-      const prevErr = searchResults.parentElement?.querySelector('.search-regex-error');
-      if (prevErr) prevErr.remove();
-      searchInput?.classList.remove('regex-error');
-
-      if (!query || query.length < 2) {
-        searchResults.innerHTML = '<div class="search-empty">Search your document by node ID, text content, or style name.</div>';
-        if (searchCount) searchCount.textContent = '';
-        // Clear canvas highlights
-        if (fdCanvas?.clear_search_highlights) {
-          try { fdCanvas.clear_search_highlights(); } catch (_) {}
-          renderDirty = true;
-          renderCanvas();
-        }
-        return;
-      }
-
-      // Validate regex if in regex mode
-      let regex = null;
-      if (searchMode === 'regex') {
-        try {
-          regex = new RegExp(query, 'gi');
-        } catch (err) {
-          searchInput?.classList.add('regex-error');
-          const errDiv = document.createElement('div');
-          errDiv.className = 'search-regex-error';
-          errDiv.textContent = err.message;
-          searchResults.parentElement?.insertBefore(errDiv, searchResults.parentElement.firstChild);
-          searchResults.innerHTML = '<div class="search-empty">Invalid regex pattern.</div>';
-          if (searchCount) searchCount.textContent = '0';
-          return;
-        }
-      }
-
-      let results = [];
-
-      // Use WASM search for exact and smart modes
-      if (fdCanvas?.search_nodes && searchMode !== 'regex') {
-        try {
-          const wasmResults = JSON.parse(fdCanvas.search_nodes(query, searchMode));
-          results = wasmResults.map(r => ({
-            id: r.id,
-            kind: r.kind,
-            context: r.context,
-            hasBounds: r.hasBounds,
-            bounds: r.bounds,
-            score: r.score,
-            source: 'wasm'
-          }));
-        } catch (_) {}
-      }
-
-      // Fallback to text-line scan for regex mode (or when WASM unavailable)
-      if (results.length === 0 || searchMode === 'regex') {
-        results = [];
-        const text = editorView ? editorView.state.doc.toString() : '';
-        const lines = text.split('\n');
-        lines.forEach((line, i) => {
-          const match = searchMode === 'regex'
-            ? regex.test(line)
-            : line.toLowerCase().includes(query.toLowerCase());
-          // Reset regex lastIndex for global flag
-          if (regex) regex.lastIndex = 0;
-          if (match) {
-            const idMatch = line.match(/@([\w-]+)/);
-            const trimmed = line.trim();
-            results.push({
-              lineNum: i + 1,
-              id: idMatch ? idMatch[1] : null,
-              kind: null,
-              context: trimmed.substring(0, 80),
-              hasBounds: false,
-              bounds: null,
-              score: null,
-              offset: editorView ? editorView.state.doc.line(i + 1).from : 0,
-              source: 'text'
-            });
-          }
-        });
-      }
-
-      if (results.length === 0) {
-        searchResults.innerHTML = '<div class="search-empty">No matches found.</div>';
-        if (searchCount) searchCount.textContent = '0';
-        // Clear canvas highlights
-        if (fdCanvas?.clear_search_highlights) {
-          try { fdCanvas.clear_search_highlights(); } catch (_) {}
-          renderDirty = true;
-          renderCanvas();
-        }
-        return;
-      }
-
-      if (searchCount) searchCount.textContent = results.length + ' found';
-
-      // Highlight all matching nodes on canvas
-      if (fdCanvas?.set_search_highlights) {
-        const ids = results.filter(r => r.id).map(r => r.id);
-        try {
-          fdCanvas.set_search_highlights(JSON.stringify(ids));
-          renderDirty = true;
-          renderCanvas();
-        } catch (_) {}
-      }
-
-      // Render results
-      const kindIcons = {
-        rect: '▢', ellipse: '○', text: 'T', group: '⊞', frame: '⊟',
-        path: '✎', image: '🖼', edge: '↗', style: '🎨', generic: '◇'
-      };
-
-      searchResults.innerHTML = results.map((r, idx) => {
-        const icon = r.kind ? (kindIcons[r.kind] || '•') : '•';
-        const kindBadge = r.kind ? `<span class="search-result-kind">${escapeHtml(r.kind)}</span>` : '';
-        const idDisplay = r.id ? '@' + r.id : (r.lineNum ? 'Line ' + r.lineNum : '—');
-        const contextDisplay = r.context ? escapeHtml(r.context) : '';
-        const lineDisplay = r.lineNum ? `L${r.lineNum}` : '';
-        const boundsAttr = r.bounds ? `data-bounds="${r.bounds.join(',')}"` : '';
-        const idAttr = r.id ? `data-id="${escapeHtml(r.id)}"` : '';
-        const offsetAttr = r.offset !== undefined ? `data-offset="${r.offset}"` : '';
-        const lineAttr = r.lineNum ? `data-line="${r.lineNum}"` : '';
-
-        return `
-          <div class="search-result-item" data-index="${idx}" ${idAttr} ${boundsAttr} ${offsetAttr} ${lineAttr}>
-            <div style="display:flex;align-items:center;gap:6px">
-              <span style="font-size:12px;opacity:0.5;width:14px;text-align:center;flex-shrink:0">${icon}</span>
-              <span class="search-result-id">${escapeHtml(idDisplay)}</span>
-              ${kindBadge}
-            </div>
-            <span class="search-result-context">${contextDisplay}</span>
-            ${lineDisplay ? `<span class="search-result-line">${lineDisplay}</span>` : ''}
-          </div>
-        `;
-      }).join('');
-
-      // Click handler for results
-      searchResults.querySelectorAll('.search-result-item').forEach(item => {
-        item.addEventListener('click', () => {
-          // Scroll to line in CodeMirror
-          const lineNum = parseInt(item.dataset.line, 10);
-          if (editorView && lineNum) {
-            const line = editorView.state.doc.line(lineNum);
-            editorView.dispatch({
-              selection: { anchor: line.from, head: line.to },
-              scrollIntoView: true
-            });
-          }
-
-          // Select node on canvas
-          const nodeId = item.dataset.id;
-          if (nodeId && fdCanvas) {
-            try { fdCanvas.select_by_id(nodeId); } catch (_) {}
-
-            // Zoom-to-fit if enabled and bounds available
-            if (searchZoomFit?.checked && item.dataset.bounds) {
-              const [bx, by, bw, bh] = item.dataset.bounds.split(',').map(Number);
-              if (bw > 0 && bh > 0) {
-                const pad = 0.2;
-                const cw = canvas.clientWidth;
-                const ch = canvas.clientHeight;
-                if (cw > 0 && ch > 0) {
-                  const scaleX = cw * (1 - 2 * pad) / bw;
-                  const scaleY = ch * (1 - 2 * pad) / bh;
-                  zoomLevel = Math.min(scaleX, scaleY, 3.0);
-                  zoomLevel = Math.max(zoomLevel, 0.1);
-                  panX = cw / 2 - (bx + bw / 2) * zoomLevel;
-                  panY = ch / 2 - (by + bh / 2) * zoomLevel;
-                  updateZoomIndicator();
-                }
-              }
-            }
-
-            renderDirty = true;
-            uiDirty = true;
-            renderCanvas();
-          }
-
-          // Mark active
-          searchResults.querySelectorAll('.search-result-item').forEach(i => i.classList.remove('active'));
-          item.classList.add('active');
-        });
-      });
-    }
-
-    function escapeHtml(str) {
-      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-
-    searchInput?.addEventListener('input', () => {
-      performSearch(searchInput.value);
+    // ── Search Panel → extracted to search.js ────────────────────────
+    initSearchPanel({
+      canvas,
+      getFdCanvas: () => fdCanvas,
+      getEditorView: () => editorView,
+      renderCanvas: () => renderCanvas(),
+      getZoomLevel: () => zoomLevel,
+      setZoomLevel: (z) => { zoomLevel = z; },
+      getPanX: () => panX,
+      getPanY: () => panY,
+      setPanX: (x) => { panX = x; },
+      setPanY: (y) => { panY = y; },
+      updateZoomIndicator,
+      setRenderDirty: (v) => { renderDirty = v; },
+      setUiDirty: (v) => { uiDirty = v; },
     });
 
     // Undo/Redo buttons (in scroll toolbar)
@@ -7474,176 +6597,11 @@ async function initPlayground() {
       }
     });
 
-    // ── Tauri Desktop Integration ──────────────────────────────────────
-    // Detect Tauri runtime and wire native file I/O shortcuts.
-    // On web (non-Tauri), this entire block is skipped.
-    const isTauri = !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
-    if (isTauri) {
-      let currentFilePath = null;
-
-      /** Update window title to show the current file name. */
-      function updateTitle(filePath) {
-        if (filePath) {
-          const name = filePath.split('/').pop().split('\\').pop();
-          document.title = `${name} — Fast Draft`;
-        } else {
-          document.title = 'Fast Draft';
-        }
-      }
-
-      /** Open a .fd file via native file dialog. */
-      async function tauriOpen() {
-        try {
-          const { invoke } = window.__TAURI_INTERNALS__ || window.__TAURI__;
-          // Open file dialog via IPC
-          const { open } = await import('https://unpkg.com/@tauri-apps/plugin-dialog@2/dist-js/index.mjs');
-          const result = await open({
-            multiple: false,
-            filters: [{ name: 'Fast Draft', extensions: ['fd'] }],
-          });
-          if (!result) return; // user cancelled
-          const path = typeof result === 'string' ? result : result.path;
-          const content = await invoke('open_file', { path });
-          await invoke('add_recent_file', { path });
-          currentFilePath = path;
-          updateTitle(path);
-          // Load content into editor + canvas
-          if (editorView) {
-            editorView.dispatch({
-              changes: { from: 0, to: editorView.state.doc.length, insert: content },
-            });
-          }
-          showToast('Opened: ' + path.split('/').pop().split('\\').pop());
-        } catch (e) {
-          console.error('Tauri open failed:', e);
-          showToast('Failed to open file');
-        }
-      }
-
-      /** Save to current file (or prompt Save As). */
-      async function tauriSave() {
-        if (!currentFilePath) return tauriSaveAs();
-        try {
-          const { invoke } = window.__TAURI_INTERNALS__ || window.__TAURI__;
-          const content = editorView ? editorView.state.doc.toString() : '';
-          await invoke('save_file', { path: currentFilePath, content });
-          showToast('Saved');
-        } catch (e) {
-          console.error('Tauri save failed:', e);
-          showToast('Failed to save');
-        }
-      }
-
-      /** Save As — prompt for new file path. */
-      async function tauriSaveAs() {
-        try {
-          const { invoke } = window.__TAURI_INTERNALS__ || window.__TAURI__;
-          const { save } = await import('https://unpkg.com/@tauri-apps/plugin-dialog@2/dist-js/index.mjs');
-          const path = await save({
-            filters: [{ name: 'Fast Draft', extensions: ['fd'] }],
-          });
-          if (!path) return; // user cancelled
-          const content = editorView ? editorView.state.doc.toString() : '';
-          await invoke('save_file', { path, content });
-          await invoke('add_recent_file', { path });
-          currentFilePath = path;
-          updateTitle(path);
-          showToast('Saved: ' + path.split('/').pop().split('\\').pop());
-        } catch (e) {
-          console.error('Tauri save-as failed:', e);
-          showToast('Failed to save');
-        }
-      }
-
-      // Wire ⌘O, ⌘S, ⌘⇧S
-      document.addEventListener('keydown', (e) => {
-        const mod = e.metaKey || e.ctrlKey;
-        if (!mod) return;
-
-        if (e.key === 'o' && !e.shiftKey) {
-          e.preventDefault();
-          tauriOpen();
-        } else if (e.key === 's' && !e.shiftKey) {
-          e.preventDefault();
-          tauriSave();
-        } else if (e.key === 's' && e.shiftKey) {
-          e.preventDefault();
-          tauriSaveAs();
-        }
-      });
-
-      // Check if launched with a file argument
-      (async () => {
-        try {
-          const { invoke } = window.__TAURI_INTERNALS__ || window.__TAURI__;
-          const path = await invoke('get_current_file');
-          if (path) {
-            currentFilePath = path;
-            updateTitle(path);
-          }
-        } catch (_) { /* no file on launch */ }
-      })();
-
-      // ── Auto-update check ──────────────────────────────────────────
-      // Check for updates 10s after launch (non-blocking).
-      // Shows a toast if a new version is available.
-      setTimeout(async () => {
-        try {
-          const { check } = await import('https://unpkg.com/@tauri-apps/plugin-updater@2/dist-js/index.mjs');
-          const update = await check();
-          if (update) {
-            console.log(`[FD] Update available: v${update.version}`);
-            // Show persistent toast with update action
-            const toast = document.createElement('div');
-            toast.className = 'fd-update-toast';
-            toast.innerHTML = `
-              <span>Fast Draft v${update.version} available</span>
-              <button id="fd-update-btn">Update Now</button>
-              <button id="fd-update-dismiss" style="background:none;border:none;color:inherit;cursor:pointer;font-size:16px;padding:4px;">✕</button>
-            `;
-            document.body.appendChild(toast);
-            // Trigger animation
-            requestAnimationFrame(() => toast.classList.add('visible'));
-
-            document.getElementById('fd-update-dismiss')?.addEventListener('click', () => {
-              toast.classList.remove('visible');
-              setTimeout(() => toast.remove(), 300);
-            });
-
-            document.getElementById('fd-update-btn')?.addEventListener('click', async () => {
-              const btn = document.getElementById('fd-update-btn');
-              btn.textContent = 'Downloading…';
-              btn.disabled = true;
-              try {
-                await update.downloadAndInstall((progress) => {
-                  if (progress?.event === 'Started' && progress.data?.contentLength) {
-                    btn.textContent = 'Downloading… 0%';
-                  } else if (progress?.event === 'Progress') {
-                    // Progress updates
-                  } else if (progress?.event === 'Finished') {
-                    btn.textContent = 'Restarting…';
-                  }
-                });
-                // Restart the app after update
-                const { relaunch } = await import('https://unpkg.com/@tauri-apps/plugin-process@2/dist-js/index.mjs');
-                await relaunch();
-              } catch (err) {
-                console.error('[FD] Update failed:', err);
-                btn.textContent = 'Update Failed';
-                showToast('Update failed — try again later');
-              }
-            });
-          } else {
-            console.log('[FD] App is up to date');
-          }
-        } catch (err) {
-          // Silently ignore update check failures (network error, no release, etc.)
-          console.debug('[FD] Update check skipped:', err.message || err);
-        }
-      }, 10000);
-
-      console.log('[FD] Tauri desktop mode — ⌘O/⌘S/⌘⇧S enabled');
-    }
+    // ── Tauri Desktop Integration → extracted to tauri.js ──────────────
+    initTauri({
+      getEditorView: () => editorView,
+      showToast,
+    });
 
   } catch (err) {
     console.error('[FD] Failed to load WASM:', err);
