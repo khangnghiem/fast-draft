@@ -358,7 +358,7 @@ export function initToolbar(api) {
     }
 
     /** Pure positioning: place toolbar on edge, clamped within canvas. No overflow logic. */
-    function positionToolbar(side, dropX, dropY, grabOffsetX, grabOffsetY) {
+    function positionToolbar(side, dropX, dropY, grabOffsetX, grabOffsetY, rx, ry) {
       toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right', 'toolbar-dragging', 'toolbar-floating');
       toolbar.style.cssText = '';
       toolbar.style.visibility = 'visible';
@@ -368,14 +368,19 @@ export function initToolbar(api) {
       const tbRect = toolbar.getBoundingClientRect();
       const cr = getCanvasRect();
 
+      let effDropX = dropX;
+      let effDropY = dropY;
+      if (rx != null && cr.width > 0) effDropX = cr.left + (cr.width * rx);
+      if (ry != null && cr.height > 0) effDropY = cr.top + (cr.height * ry);
+
       if (side === 'top' || side === 'bottom') {
         let left;
-        if (dropX != null && grabOffsetX != null) {
+        if (effDropX != null && grabOffsetX != null) {
           const srcW = dragStartTbWidth || tbRect.width || 1;
           const grabRatioX = grabOffsetX / srcW;
-          left = dropX - grabRatioX * tbRect.width;
-        } else if (dropX != null) {
-          left = dropX - tbRect.width / 2;
+          left = effDropX - grabRatioX * tbRect.width;
+        } else if (effDropX != null) {
+          left = effDropX - tbRect.width / 2;
         } else {
           left = cr.left + (cr.width - tbRect.width) / 2;
         }
@@ -386,12 +391,12 @@ export function initToolbar(api) {
         toolbar.style.transform = 'none';
       } else {
         let top;
-        if (dropY != null && grabOffsetY != null) {
+        if (effDropY != null && grabOffsetY != null) {
           const srcH = dragStartTbHeight || tbRect.height || 1;
           const grabRatioY = grabOffsetY / srcH;
-          top = dropY - grabRatioY * tbRect.height;
-        } else if (dropY != null) {
-          top = dropY - tbRect.height / 2;
+          top = effDropY - grabRatioY * tbRect.height;
+        } else if (effDropY != null) {
+          top = effDropY - tbRect.height / 2;
         } else {
           top = cr.top + (cr.height - tbRect.height) / 2;
         }
@@ -410,6 +415,10 @@ export function initToolbar(api) {
       const isHoriz = side === 'top' || side === 'bottom';
       const { fits, fitsMinimized } = checkToolbarFit(side);
 
+      const cr = getCanvasRect();
+      const rx = (dropX != null && cr.width > 0) ? Math.max(0, Math.min(1, (dropX - cr.left) / cr.width)) : null;
+      const ry = (dropY != null && cr.height > 0) ? Math.max(0, Math.min(1, (dropY - cr.top) / cr.height)) : null;
+
       if (wasMinimized) {
         // User explicitly minimized — preserve state, just reposition
         toolbar.classList.add('toolbar-minimized');
@@ -426,8 +435,14 @@ export function initToolbar(api) {
         if (oppFitsMini) {
           toolbar.classList.add('toolbar-minimized');
           localStorage.setItem('fd-toolbar-minimized', '1');
-          positionToolbar(oppSide, isHoriz ? null : dropX, isHoriz ? dropY : null, grabOffsetX, grabOffsetY);
-          localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: oppSide, x: dropX, y: dropY }));
+          
+          const oppDropX = isHoriz ? null : dropX;
+          const oppDropY = isHoriz ? dropY : null;
+          const oppRx = isHoriz ? null : rx;
+          const oppRy = isHoriz ? ry : null;
+
+          positionToolbar(oppSide, oppDropX, oppDropY, grabOffsetX, grabOffsetY, oppRx, oppRy);
+          localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: oppSide, x: oppDropX, y: oppDropY, rx: oppRx, ry: oppRy }));
           requestAnimationFrame(() => api.adjustMinimapForToolbar());
           return;
         }
@@ -436,8 +451,8 @@ export function initToolbar(api) {
         localStorage.setItem('fd-toolbar-minimized', '1');
       }
 
-      positionToolbar(side, dropX, dropY, grabOffsetX, grabOffsetY);
-      localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side, x: dropX, y: dropY }));
+      positionToolbar(side, dropX, dropY, grabOffsetX, grabOffsetY, rx, ry);
+      localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side, x: dropX, y: dropY, rx, ry }));
       requestAnimationFrame(() => api.adjustMinimapForToolbar());
     }
 
@@ -457,7 +472,7 @@ export function initToolbar(api) {
         }
       }
 
-      positionToolbar(side, saved?.x, saved?.y);
+      positionToolbar(side, saved?.x, saved?.y, null, null, saved?.rx, saved?.ry);
       requestAnimationFrame(() => api.adjustMinimapForToolbar());
     }
     // Expose for panel toggle code to call
@@ -466,16 +481,16 @@ export function initToolbar(api) {
     /** Parse saved toolbar position with migration from old string format */
     function parseToolbarPos() {
       const raw = localStorage.getItem('fd-toolbar-pos');
-      if (!raw) return { side: 'bottom', x: null, y: null };
+      if (!raw) return { side: 'bottom', x: null, y: null, rx: null, ry: null };
       try {
         const obj = JSON.parse(raw);
         if (obj && obj.side) return obj;
       } catch (_) {}
       // Migration: old format was just a string like 'top'
       if (['top', 'bottom', 'left', 'right'].includes(raw)) {
-        return { side: raw, x: null, y: null };
+        return { side: raw, x: null, y: null, rx: null, ry: null };
       }
-      return { side: 'bottom', x: null, y: null };
+      return { side: 'bottom', x: null, y: null, rx: null, ry: null };
     }
 
     function showSnapIndicator(side, pointerX, pointerY, grabOffsetX, grabOffsetY, cachedCr, cachedTbDims) {
@@ -597,8 +612,8 @@ export function initToolbar(api) {
               if (oppFits) {
                 toolbar.classList.remove('toolbar-minimized');
                 localStorage.setItem('fd-toolbar-minimized', '0');
-                positionToolbar(oppSide, null, null);
-                localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: oppSide, x: null, y: null }));
+                positionToolbar(oppSide, null, null, null, null, null, null);
+                localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: oppSide, x: null, y: null, rx: null, ry: null }));
                 api.adjustMinimapForToolbar();
                 return;
               } else {
@@ -629,7 +644,11 @@ export function initToolbar(api) {
         toolbar.style.top = newTop + 'px';
         toolbar.style.transform = 'none';
         const finalSide = getCurrentDockedSide();
-        localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: finalSide, x: newLeft + tbRect2.width / 2, y: newTop + tbRect2.height / 2 }));
+        const dropX = newLeft + tbRect2.width / 2;
+        const dropY = newTop + tbRect2.height / 2;
+        const rx = cr2.width > 0 ? Math.max(0, Math.min(1, (dropX - cr2.left) / cr2.width)) : null;
+        const ry = cr2.height > 0 ? Math.max(0, Math.min(1, (dropY - cr2.top) / cr2.height)) : null;
+        localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: finalSide, x: dropX, y: dropY, rx, ry }));
         api.adjustMinimapForToolbar();
       });
     });
@@ -698,7 +717,7 @@ export function initToolbar(api) {
     // Migrate any old 'floating' state to 'bottom'
     const restoreSide = savedPos.side === 'floating' ? 'bottom' : savedPos.side;
     // Use positionToolbar (no overflow logic) — let reclamp handle it after layout settles
-    positionToolbar(restoreSide, savedPos.x, savedPos.y);
+    positionToolbar(restoreSide, savedPos.x, savedPos.y, null, null, savedPos.rx, savedPos.ry);
     toolbar.style.visibility = 'visible'; // reveal after JS positioned it
     if (localStorage.getItem('fd-toolbar-minimized') === '1') {
       toolbar.classList.add('toolbar-minimized');
