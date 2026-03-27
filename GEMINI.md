@@ -126,9 +126,10 @@ crates/
 > **Tab reuse is MANDATORY.** Before navigating anywhere, always `list_browser_pages` first.
 >
 > - **Subagent Tool Rule:** To actually reuse an existing tab/context across different agent turns, you MUST provide the `ReusedSubagentId` parameter when calling `browser_subagent` (using the ID from the previous browser recording). If you omit `ReusedSubagentId`, a completely fresh, duplicate browser session is spun up.
+> - **Anti-Duplication Prompting:** When formulating the `Task` string for the subagent, you MUST explicitly instruct it: `"MANDATORY: Call list_browser_pages. If the target URL (e.g. fast-draft.com, localhost) is open, use switch_page. DO NOT use open_url or navigate unless it is missing."`
 > - If a tab with the same or similar URL exists → **switch to it** (do NOT open a new tab).
-> - **Codespace rule:** If any tab URL matches `*.github.dev` → that IS the codespace. Use it directly. **NEVER** navigate to `github.com/codespaces` to click "open" — this creates a duplicate tab.
-> - If the codespace tab is loading/restarting, **wait up to 30 seconds** (use `wait` or retry with delays) before concluding it's unavailable.
+> - **Codespace / Live Site rule:** If any tab URL matches `*.github.dev`, `fast-draft.com`, or `localhost` → use it directly. **NEVER** navigate to an intermediate launcher (like `github.com/codespaces`) to click "open" if the environment is already open — this creates a duplicate tab.
+> - If a codespace or live preview tab is loading/restarting, **wait up to 30 seconds** (use `wait` or retry with delays) before concluding it's unavailable.
 
 ---
 

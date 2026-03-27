@@ -315,6 +315,15 @@ export function setupInlineEditor(opts) {
     getPanX, getPanY, getZoom, screenToScene,
   } = opts;
 
+  // Fix "weird box" bug: Web/VSCode pointerdown handlers often call e.preventDefault()
+  // to prevent scrolling or zooming, which stops the browser from naturally firing
+  // the blur event on the textarea. We must force blur in the capture phase.
+  canvasEl.addEventListener("pointerdown", () => {
+    if (inlineEditorActive && document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
+      document.activeElement.blur();
+    }
+  }, { capture: true });
+
   canvasEl.addEventListener("dblclick", (e) => {
     const fdCanvas = typeof opts.fdCanvas === 'function' ? opts.fdCanvas() : opts.fdCanvas;
     if (!fdCanvas) return;
