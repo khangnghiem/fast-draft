@@ -125,6 +125,7 @@ crates/
 > [!IMPORTANT]
 > **Tab reuse is MANDATORY.** Before navigating anywhere, always `list_browser_pages` first.
 >
+> - **Subagent Tool Rule:** To actually reuse an existing tab/context across different agent turns, you MUST provide the `ReusedSubagentId` parameter when calling `browser_subagent` (using the ID from the previous browser recording). If you omit `ReusedSubagentId`, a completely fresh, duplicate browser session is spun up.
 > - If a tab with the same or similar URL exists → **switch to it** (do NOT open a new tab).
 > - **Codespace rule:** If any tab URL matches `*.github.dev` → that IS the codespace. Use it directly. **NEVER** navigate to `github.com/codespaces` to click "open" — this creates a duplicate tab.
 > - If the codespace tab is loading/restarting, **wait up to 30 seconds** (use `wait` or retry with delays) before concluding it's unavailable.
