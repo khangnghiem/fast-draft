@@ -1,0 +1,82 @@
+# ─── Constraints & Layout Showcase ───
+
+# 1. center_in constraint
+rect @centered_box {
+  spec "Demonstrates centering a node within a target (canvas in this case)"
+  w: 200 h: 100
+  fill: #6C5CE7
+  corner: 12
+  center_in: canvas
+  text @label1 "center_in: canvas" {
+     fill: #FFFFFF
+     font: "Inter" bold 14
+     center_in: @centered_box
+  }
+}
+
+# 2. offset constraint
+rect @offset_box {
+  spec "Demonstrates offsetting relative to another node"
+  w: 200 h: 100
+  fill: #00B894
+  corner: 12
+  offset: @centered_box 0, 120
+  text @label2 "offset: @centered_box 0, 120" {
+     fill: #FFFFFF
+     font: "Inter" bold 12
+     center_in: @offset_box
+  }
+}
+
+# 3. fill_parent and layout: row
+frame @row_container {
+  spec "Demonstrates row layout and fill_parent constraint"
+  layout: row gap=10 pad=20
+  offset: @offset_box 0, 120
+  w: 400 h: 100
+  stroke: #D1D5DB 2
+
+  rect @child1 {
+     fill_parent: 10
+     fill: #FF6B6B
+     w: 100 h: 50
+     text @l3 "fill_parent" { center_in: @child1 }
+  }
+  rect @child2 {
+     fill: #FFE66D
+     w: 100 h: 50
+     text @l4 "fixed size" { center_in: @child2 }
+  }
+}
+
+# 4. layout: column
+frame @col_container {
+  spec "Demonstrates column layout"
+  layout: column gap=10 pad=10
+  offset: @row_container 0, 120
+  w: 200 h: 200
+  stroke: #D1D5DB 2
+
+  rect @c_child1 {
+     fill: #A29BFE
+     w: 160 h: 40
+  }
+  rect @c_child2 {
+     fill: #74B9FF
+     w: 160 h: 40
+  }
+}
+
+# 5. layout: grid
+frame @grid_container {
+  spec "Demonstrates grid layout"
+  layout: grid cols=2 gap=10 pad=10
+  offset: @col_container 220, 0
+  w: 200 h: 200
+  stroke: #D1D5DB 2
+
+  rect @g1 { w: 80 h: 80 fill: #E8E8EC }
+  rect @g2 { w: 80 h: 80 fill: #E8E8EC }
+  rect @g3 { w: 80 h: 80 fill: #E8E8EC }
+  rect @g4 { w: 80 h: 80 fill: #E8E8EC }
+}
