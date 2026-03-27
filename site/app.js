@@ -3057,21 +3057,12 @@ function setupPanelResize(wrapper, resizeCanvas) {
   layersHandle.addEventListener('pointerup', endDrag);
   layersHandle.addEventListener('pointercancel', endDrag);
 
-  // Double-click to collapse
+  // Double-click to reset left panel to default width
   layersHandle.addEventListener('dblclick', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const isCollapsed = document.documentElement.dataset.lp === 'open';
-    document.documentElement.dataset.lp = isCollapsed ? 'closed' : 'open';
-    if (isCollapsed) {
-      document.documentElement.style.setProperty('--left-panel-width', '0px');
-      localStorage.setItem('fd-left-collapsed', '1');
-    } else {
-      const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
-      const restoreW = (savedW >= MIN_WIDTH && savedW <= MAX_WIDTH) ? savedW : DEFAULT_LEFT_W;
-      document.documentElement.style.setProperty('--left-panel-width', restoreW + 'px');
-      localStorage.setItem('fd-left-collapsed', '');
-    }
+    document.documentElement.style.setProperty('--left-panel-width', DEFAULT_LEFT_W + 'px');
+    localStorage.setItem('fd-left-panel-width', String(DEFAULT_LEFT_W));
     requestAnimationFrame(() => {
       positionLayersHandle();
       resizeCanvas();
