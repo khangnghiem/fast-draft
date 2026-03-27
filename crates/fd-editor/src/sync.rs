@@ -550,6 +550,16 @@ impl SyncEngine {
             GraphMutation::RemoveEdge { id } => {
                 self.graph.edges.retain(|e| e.id != id);
             }
+            GraphMutation::UpdateEdge { id, from, to } => {
+                if let Some(edge) = self.graph.edges.iter_mut().find(|e| e.id == id) {
+                    if let Some(f) = from {
+                        edge.from = f;
+                    }
+                    if let Some(t) = to {
+                        edge.to = t;
+                    }
+                }
+            }
         }
 
         self.text_dirty = true;
@@ -1095,6 +1105,12 @@ pub enum GraphMutation {
     /// Remove an edge by its ID.
     RemoveEdge {
         id: NodeId,
+    },
+    /// Update an edge's anchors.
+    UpdateEdge {
+        id: NodeId,
+        from: Option<EdgeAnchor>,
+        to: Option<EdgeAnchor>,
     },
     /// Update a node's stroke width (e.g. from pen pressure).
     SetStrokeWidth {

@@ -4943,7 +4943,13 @@ async function initPlayground() {
     document.getElementById('zoom-in-btn').addEventListener('click', () => applyZoomCenter(zoomLevel * 1.25));
     document.getElementById('zoom-out-btn').addEventListener('click', () => applyZoomCenter(zoomLevel / 1.25));
     document.getElementById('zoom-reset-btn').addEventListener('click', () => {
-      fitToContent(canvas);
+      // Smart Toggle: If already at 100%, fit to content. Otherwise, jump to 100%.
+      if (Math.abs(zoomLevel - 1.0) < 0.01) {
+        fitToContent(canvas);
+      } else {
+        applyZoomCenter(1.0);
+        return; // applyZoomCenter already calls renderCanvas/renderMinimap
+      }
       renderCanvas();
       renderMinimap(canvas);
     });

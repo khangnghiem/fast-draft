@@ -53,6 +53,8 @@ pub enum ResizeHandle {
     BottomLeft,
     BottomCenter,
     BottomRight,
+    EdgeStart,
+    EdgeEnd,
 }
 
 // ─── Select Tool ─────────────────────────────────────────────────────────
@@ -129,6 +131,7 @@ impl SelectTool {
             ResizeHandle::BottomLeft => (x + w, y),
             ResizeHandle::BottomCenter => (x + w / 2.0, y),
             ResizeHandle::BottomRight => (x, y),
+            ResizeHandle::EdgeStart | ResizeHandle::EdgeEnd => (0.0, 0.0),
         };
     }
 
@@ -210,6 +213,18 @@ impl Tool for SelectTool {
                 if let Some(handle) = self.resize_handle
                     && let Some(id) = self.first_selected()
                 {
+                    if matches!(handle, ResizeHandle::EdgeStart | ResizeHandle::EdgeEnd) {
+                        use fd_core::model::EdgeAnchor;
+                        let mx = *x;
+                        let my = *y;
+                        let (from, to) = match handle {
+                            ResizeHandle::EdgeStart => (Some(EdgeAnchor::Point(mx, my)), None),
+                            ResizeHandle::EdgeEnd => (None, Some(EdgeAnchor::Point(mx, my))),
+                            _ => (None, None),
+                        };
+                        return vec![crate::sync::GraphMutation::UpdateEdge { id, from, to }];
+                    }
+
                     let (ax, ay) = self.resize_anchor;
                     let mut mx = *x;
                     let mut my = *y;
@@ -247,6 +262,7 @@ impl Tool for SelectTool {
                         ResizeHandle::TopCenter | ResizeHandle::BottomCenter => {
                             (self.resize_origin.0, self.resize_origin.2)
                         }
+                        ResizeHandle::EdgeStart | ResizeHandle::EdgeEnd => unreachable!(),
                     };
                     let (new_y, new_h) = match handle {
                         ResizeHandle::TopLeft
@@ -264,6 +280,7 @@ impl Tool for SelectTool {
                         ResizeHandle::MiddleLeft | ResizeHandle::MiddleRight => {
                             (self.resize_origin.1, self.resize_origin.3)
                         }
+                        ResizeHandle::EdgeStart | ResizeHandle::EdgeEnd => unreachable!(),
                     };
 
                     // Min size

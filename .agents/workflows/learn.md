@@ -38,7 +38,7 @@ Determine what went wrong and why it keeps happening:
 // turbo
 
 ```bash
-grep -i "$ARGUMENTS" docs/LESSONS.md
+rg -i "$ARGUMENTS" docs/LESSONS.md
 ```
 
 If a similar lesson exists, **extend it** with the new context instead of adding a duplicate.

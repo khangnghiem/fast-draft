@@ -13,7 +13,7 @@ description: Continuous autonomous agent — work until all tasks are done, then
 
 ## Phase 1: Scan (lightweight discovery)
 
-> **Context budget: minimal.** Use outlines and greps, not full file reads.
+> **Context budget: minimal.** Use outlines and rg, not full file reads.
 
 1. **Sync with origin**:
 
@@ -34,7 +34,7 @@ description: Continuous autonomous agent — work until all tasks are done, then
 4. **Grep LESSONS.md** for keywords related to your work area — do NOT read the full file:
 
    ```bash
-   grep -n "keyword1\|keyword2" docs/LESSONS.md | head -10
+   rg -n "keyword1|keyword2" docs/LESSONS.md | head -10
    ```
 
 5. Build a prioritized task list in `task.md`. Rank by:

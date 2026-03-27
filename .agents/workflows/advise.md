@@ -29,7 +29,7 @@ Then run:
 
 ```bash
 git log --oneline -20 2>/dev/null
-grep -rn "TODO\|FIXME\|HACK\|XXX" . --exclude-dir='.git' --exclude-dir='node_modules' --exclude-dir='target' 2>/dev/null | head -30
+rg -n "TODO|FIXME|HACK|XXX" . -g '!.git' -g '!node_modules' -g '!target' 2>/dev/null | head -30
 ```
 
 ### 2. Deep Research & Deep Think

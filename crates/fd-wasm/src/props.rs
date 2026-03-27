@@ -544,6 +544,40 @@ impl FdCanvas {
         "{}".to_string()
     }
 
+    /// Get edge endpoints as JSON. Returns {"startX":x,"startY":y,"endX":x,"endY":y}
+    pub fn get_edge_endpoints(&self, edge_id: &str) -> String {
+        let id = NodeId::intern(edge_id);
+        if let Some(edge) = self.engine.graph.edges.iter().find(|e| e.id == id) {
+            let start = match &edge.from {
+                EdgeAnchor::Node(nid) => self
+                    .engine
+                    .graph
+                    .index_of(*nid)
+                    .and_then(|idx| self.engine.bounds.get(&idx))
+                    .map(|b| (b.x + b.width / 2.0, b.y + b.height / 2.0)),
+                EdgeAnchor::Point(x, y) => Some((*x, *y)),
+            };
+            let end = match &edge.to {
+                EdgeAnchor::Node(nid) => self
+                    .engine
+                    .graph
+                    .index_of(*nid)
+                    .and_then(|idx| self.engine.bounds.get(&idx))
+                    .map(|b| (b.x + b.width / 2.0, b.y + b.height / 2.0)),
+                EdgeAnchor::Point(x, y) => Some((*x, *y)),
+            };
+            if let (Some((sx, sy)), Some((ex, ey))) = (start, end) {
+                let mut props = serde_json::Map::new();
+                props.insert("startX".into(), serde_json::json!(sx));
+                props.insert("startY".into(), serde_json::json!(sy));
+                props.insert("endX".into(), serde_json::json!(ex));
+                props.insert("endY".into(), serde_json::json!(ey));
+                return serde_json::Value::Object(props).to_string();
+            }
+        }
+        "{}".to_string()
+    }
+
     /// Get the resolved bounds of a node by its `@id` as JSON.
     pub fn get_node_bounds_json(&self, id_str: &str) -> String {
         let id = NodeId::intern(id_str);
