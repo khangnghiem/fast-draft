@@ -1,8 +1,4 @@
-## 2026-03-10 - Cross-Site Scripting (XSS) in Renamify Panel
-**Vulnerability:** Found an XSS vulnerability in `fd-vscode/src/webview-html.ts` where untrusted node IDs (`p.oldId` and `p.newId`) from the extension's `.fd` files were directly interpolated into `row.innerHTML` in the Renamify panel.
-**Learning:** Even though the source is internal extension files, untrusted input rendered directly as `innerHTML` causes an XSS injection risk.
-**Prevention:** Avoid `innerHTML` for dynamically generating DOM nodes. Always use safer DOM APIs like `document.createElement()` and `textContent` when rendering untrusted or user-controlled data.
-## 2024-05-18 - Missing Sanitization in Inline HTML Rendering Leads to XSS
-**Vulnerability:** Untrusted node IDs and file paths within the VS Code Webview HTML (`fd-vscode/src/webview-html.ts`) were concatenated into HTML strings directly without sanitization.
-**Learning:** Even internal toolings or simple UI renders built around native data files can be susceptible to XSS if inputs can be controlled (e.g., untrusted files). `replace(/</g, '&lt;').replace(/>/g, '&gt;')` manually is error-prone, insufficient, and easy to overlook when expanding functionality.
-**Prevention:** Apply a comprehensive `escapeHtml` function (handling `&`, `<`, `>`, `"`, `'`) consistently to all dynamic data interpolated into HTML templates and markdown conversions to prevent XSS. Avoid writing raw HTML concatenation when possible.
+## 2026-03-27 - Dynamic CORS in Cloudflare Functions
+**Vulnerability:** Overly permissive wildcard CORS policy (`Access-Control-Allow-Origin: *`) on the AI API endpoint, allowing any website to consume the API rate limit and potentially execute unauthorized actions on behalf of the user.
+**Learning:** Cloudflare Pages Functions serve multiple client environments (web, VS Code webview, Tauri app) which require different origins. Hardcoding a wildcard was a quick workaround for cross-environment access. The `Origin` header must be dynamically validated using exact matching for web domains and prefix matching for custom protocols (e.g. `vscode-webview://`, `tauri://`), while ensuring `Vary: Origin` is set for proper edge caching.
+**Prevention:** Implement a central `getCorsHeaders(request)` function that validates the `Origin` against a strict whitelist of known environments before appending the `Access-Control-Allow-Origin` header. Avoid wildcards on authenticated or rate-limited endpoints.
