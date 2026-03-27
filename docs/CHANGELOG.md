@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.294 — Complete Fix for Inline Editor "Weird Box" Artifact (R3.3)
+
+1. **Global Capture Enforcement** — Expanded the previous fix (v0.11.293) for the `<textarea>` artifact bug. Prevents UI panels (like Toolbar, Layers) from blocking the `blur` event by escalating the `pointerdown` listener from the canvas to the `window`. Checks `e.target` to safely exclude arbitrary un-committed clicks *inside* the textarea itself.
+
+Files: `site/canvas-core/inline-edit.js`
+
 ### v0.11.293 — Fix Inline Editor "Weird Box" Artifact (R3.3)
 
 1. **Native Blur Enforcement** — Resolved an issue where double-clicking a node to open the inline text editor, then clicking elsewhere on the canvas, would leave an empty, stuck `<textarea>` overlay (the "weird box"). Root cause: canvas interactions invoke `e.preventDefault()` (to stop panning/zooming), which suppressed the browser's native `blur` progression away from the editor, trapping it.
