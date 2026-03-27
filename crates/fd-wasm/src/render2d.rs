@@ -64,6 +64,7 @@ pub fn render_scene(
     skip_bg: bool,
     handle_size: f64,
     corners_only: bool,
+    suppressed_text_id: Option<&str>,
 ) {
     // Clear canvas — skip when JS caller already filled background
     // in identity space (avoids gaps from zoom/pan transform).
@@ -104,6 +105,7 @@ pub fn render_scene(
         hover_start_ms,
         handle_size,
         corners_only,
+        suppressed_text_id,
     );
 
     // Draw smart guides (alignment lines)
@@ -166,6 +168,7 @@ pub fn render_export(
             0.0,
             7.0,   // Default mouse handle size for export
             false, // Never corners-only for export
+            None,  // Never suppress text on export
         );
     }
 
@@ -187,6 +190,7 @@ fn render_node(
     hover_start_ms: f64,
     handle_size: f64,
     corners_only: bool,
+    suppressed_text_id: Option<&str>,
 ) {
     let node = &graph.graph[idx];
     let node_bounds = match bounds.get(&idx) {
@@ -272,22 +276,24 @@ fn render_node(
             }
         }
         NodeKind::Text { content, max_width } => {
-            // Check if text is inside a shape (Rect/Ellipse) for alignment defaults
-            let parent_is_shape = graph.parent(idx).is_some_and(|pid| {
-                let pk = &graph.graph[pid].kind;
-                matches!(
-                    pk,
-                    NodeKind::Rect { .. } | NodeKind::Ellipse { .. } | NodeKind::Frame { .. }
-                )
-            });
-            draw_text(
-                ctx,
-                node_bounds,
-                content,
-                &style,
-                parent_is_shape,
-                *max_width,
-            );
+            if Some(node.id.as_str()) != suppressed_text_id {
+                // Check if text is inside a shape (Rect/Ellipse) for alignment defaults
+                let parent_is_shape = graph.parent(idx).is_some_and(|pid| {
+                    let pk = &graph.graph[pid].kind;
+                    matches!(
+                        pk,
+                        NodeKind::Rect { .. } | NodeKind::Ellipse { .. } | NodeKind::Frame { .. }
+                    )
+                });
+                draw_text(
+                    ctx,
+                    node_bounds,
+                    content,
+                    &style,
+                    parent_is_shape,
+                    *max_width,
+                );
+            }
         }
         NodeKind::Group => {
             // Draw group background if fill/bg/shadow/stroke is explicitly set
@@ -380,6 +386,7 @@ fn render_node(
             hover_start_ms,
             handle_size,
             corners_only,
+            suppressed_text_id,
         );
     }
 

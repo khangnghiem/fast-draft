@@ -47,6 +47,7 @@ impl FdCanvas {
             skip_bg,
             self.pointer_type.handle_visual_size() as f64,
             self.pointer_type.corners_only(),
+            self.suppressed_text_id.as_deref(),
         );
     }
 
