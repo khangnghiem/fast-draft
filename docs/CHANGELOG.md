@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.292 — Fix Canvas Interaction & Coordinate Misalignment (R3.39)
+
+1. **Path Bound Box Validation** — Fixed a core regression in `layout.rs` where `NodeKind::Path` was resolving to a hardcoded `100x100` bounding box payload. Path shapes now correctly resolve their `min_x/y` and `max_x/y` from internal spatial commands to emit mathematically accurate bounding envelopes, resolving ghost selections.
+2. **Pen Tool Offset Synchronization** — Refactored `PenTool` to shift all visual points towards a local `(0,0)` origin relative to their true position constraint. `PointerUp` now calculates geometric shifting metrics and explicitly emits a `GraphMutation::SetConstraints(Position(start_x + min_x, start_y + min_y))` graph event, so layout positioning maps back to screen space reliably when users drag paths or selection handles.
+3. **Graph Mutation Architecture Extension** — Upgraded `SyncEngine` graph handling by scaffolding the `GraphMutation::SetConstraints` variant. The undo/redo command stack (via `compute_inverse`) and interaction modules were upgraded to bidirectionally handle internal constraint injection tracking without desyncing the editor loop.
+
+Files: `crates/fd-core/src/layout.rs`, `crates/fd-editor/src/tools.rs`, `crates/fd-editor/src/sync.rs`, `crates/fd-editor/src/commands.rs`, `crates/fd-editor/src/tools_tests.rs`
+
 ### v0.11.291 — Fix Panel Resize After Toggle + Right Panel Resizable (R6.6)
 
 1. **Left panel resize handle drift (Bug #1)** — After toggling the left panel hidden and back visible, the `#layers-resize` drag handle was stuck at `left: 0px` (buried behind the panel). Root cause: `toggleLeftPanel()` and `toggleLayersPanel()` set `--left-panel-width` but never called `positionLayersHandle()`. Fix: expose `positionLayersHandle` as `window.__fdPositionLayersHandle` from `setupPanelResize()` and call it inside the `requestAnimationFrame` of every toggle function.

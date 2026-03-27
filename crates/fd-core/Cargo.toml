@@ -21,5 +21,6 @@ winnow = { workspace = true }
 log = { workspace = true }
 
 [dev-dependencies]
+clap = "4.6.0"
 pretty_assertions = { workspace = true }
 proptest = "1"

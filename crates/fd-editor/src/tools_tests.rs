@@ -1726,7 +1726,7 @@ fn tool_pen_basic_draw() {
             assert!(node.id.as_str().starts_with("path_"));
             if let NodeKind::Path { commands } = &node.kind {
                 assert_eq!(commands.len(), 1);
-                assert!(matches!(commands[0], PathCmd::MoveTo(10.0, 20.0)));
+                assert!(matches!(commands[0], PathCmd::MoveTo(0.0, 0.0)));
             } else {
                 panic!("Expected Path node");
             }
@@ -1750,8 +1750,8 @@ fn tool_pen_basic_draw() {
         GraphMutation::UpdatePath { id, commands } => {
             assert_eq!(*id, path_id);
             assert_eq!(commands.len(), 2);
-            assert!(matches!(commands[0], PathCmd::MoveTo(10.0, 20.0)));
-            assert!(matches!(commands[1], PathCmd::LineTo(15.0, 25.0)));
+            assert!(matches!(commands[0], PathCmd::MoveTo(0.0, 0.0)));
+            assert!(matches!(commands[1], PathCmd::LineTo(5.0, 5.0)));
         }
         _ => panic!("Expected UpdatePath"),
     }
@@ -1777,19 +1777,19 @@ fn tool_pen_basic_draw() {
         None,
     );
     assert!(!tool.is_drawing());
-    assert_eq!(muts.len(), 2); // UpdatePath + SetStrokeWidth
+    assert_eq!(muts.len(), 3); // UpdatePath + SetStrokeWidth + SetConstraints
     match &muts[0] {
         GraphMutation::UpdatePath { id, commands } => {
             assert_eq!(*id, path_id);
             assert_eq!(commands.len(), 3); // MoveTo, CubicTo, CubicTo
-            assert!(matches!(commands[0], PathCmd::MoveTo(10.0, 20.0)));
+            assert!(matches!(commands[0], PathCmd::MoveTo(0.0, 0.0)));
             assert!(matches!(
                 commands[1],
-                PathCmd::CubicTo(_, _, _, _, 15.0, 25.0)
+                PathCmd::CubicTo(_, _, _, _, 5.0, 5.0)
             ));
             assert!(matches!(
                 commands[2],
-                PathCmd::CubicTo(_, _, _, _, 20.0, 30.0)
+                PathCmd::CubicTo(_, _, _, _, 10.0, 10.0)
             ));
         }
         _ => panic!("Expected UpdatePath"),
@@ -1914,7 +1914,7 @@ fn tool_pen_subsampling() {
         None,
     );
 
-    assert_eq!(muts.len(), 2); // UpdatePath + SetStrokeWidth
+    assert_eq!(muts.len(), 3); // UpdatePath + SetStrokeWidth + SetConstraints
     match &muts[0] {
         GraphMutation::UpdatePath { commands, .. } => {
             // Should be subsampled to max 64 points
@@ -1963,7 +1963,7 @@ fn pen_tool_light_pressure_thin_stroke() {
         },
         None,
     );
-    assert_eq!(muts.len(), 2);
+    assert_eq!(muts.len(), 3);
     match &muts[1] {
         GraphMutation::SetStrokeWidth { width, .. } => {
             // avg pressure ≈ 0.117 → width ≈ 1.0 + 3.5 * 0.117 ≈ 1.41
@@ -2015,7 +2015,7 @@ fn pen_tool_heavy_pressure_thick_stroke() {
         },
         None,
     );
-    assert_eq!(muts.len(), 2);
+    assert_eq!(muts.len(), 3);
     match &muts[1] {
         GraphMutation::SetStrokeWidth { width, .. } => {
             // avg pressure ≈ 0.9 → width ≈ 1.0 + 3.5 * 0.9 ≈ 4.15
@@ -2059,7 +2059,7 @@ fn pen_tool_default_pressure_medium_stroke() {
         },
         None,
     );
-    assert_eq!(muts.len(), 2);
+    assert_eq!(muts.len(), 3);
     match &muts[1] {
         GraphMutation::SetStrokeWidth { width, .. } => {
             // pressure=0.5 → width = 1.0 + 3.5 * 0.5 = 2.75

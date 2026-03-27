@@ -381,6 +381,17 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
                 width: old_width,
             }
         }
+        GraphMutation::SetConstraints { id, constraints: _ } => {
+            let old_constraints = engine
+                .graph
+                .get_by_id(*id)
+                .map(|n| n.constraints.clone().into_vec())
+                .unwrap_or_default();
+            GraphMutation::SetConstraints {
+                id: *id,
+                constraints: old_constraints,
+            }
+        }
     }
 }
 

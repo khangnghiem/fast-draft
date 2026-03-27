@@ -592,6 +592,8 @@ pub struct PenTool {
     current_id: Option<NodeId>,
     /// Parent node for new path nodes (default: root).
     parent_id: NodeId,
+    start_x: f32,
+    start_y: f32,
 }
 
 impl Default for PenTool {
@@ -607,6 +609,8 @@ impl PenTool {
             points: Vec::new(),
             current_id: None,
             parent_id: NodeId::intern("root"),
+            start_x: 0.0,
+            start_y: 0.0,
         }
     }
 
@@ -639,14 +643,17 @@ impl Tool for PenTool {
             InputEvent::PointerDown { x, y, pressure, .. } => {
                 self.drawing = true;
                 self.points.clear();
-                self.points.push((*x, *y, *pressure));
+                self.start_x = *x;
+                self.start_y = *y;
+                self.points.push((0.0, 0.0, *pressure));
                 let id = NodeId::with_prefix("path");
                 self.current_id = Some(id);
 
                 let path = NodeKind::Path {
-                    commands: vec![PathCmd::MoveTo(*x, *y)],
+                    commands: vec![PathCmd::MoveTo(0.0, 0.0)],
                 };
                 let mut node = SceneNode::new(id, path);
+                node.constraints.push(Constraint::Position { x: *x, y: *y });
                 // Default stroke for pen — will be updated on PointerUp with pressure
                 node.props.stroke = Some(Stroke {
                     paint: Paint::Solid(Color::rgba(0.37, 0.36, 0.90, 1.0)),
@@ -663,7 +670,8 @@ impl Tool for PenTool {
                 if self.drawing
                     && let Some(id) = self.current_id
                 {
-                    self.points.push((*x, *y, *pressure));
+                    self.points
+                        .push((*x - self.start_x, *y - self.start_y, *pressure));
                     // Emit a live LineTo so the path is visible during drawing.
                     // On PointerUp, these are replaced with smooth bezier curves.
                     let cmds = raw_points_to_lineto(&self.points);
@@ -674,9 +682,25 @@ impl Tool for PenTool {
             InputEvent::PointerUp { .. } => {
                 self.drawing = false;
                 if let Some(id) = self.current_id.take() {
-                    // Compute stroke width from average pressure (1.0–4.5px range)
                     let stroke_width = pressure_to_stroke_width(&self.points);
-                    // Smooth the raw pointer samples into Catmull-Rom cubic bezier curves.
+
+                    let mut min_x = f32::MAX;
+                    let mut min_y = f32::MAX;
+                    for p in &self.points {
+                        min_x = min_x.min(p.0);
+                        min_y = min_y.min(p.1);
+                    }
+
+                    if min_x != f32::MAX {
+                        for p in &mut self.points {
+                            p.0 -= min_x;
+                            p.1 -= min_y;
+                        }
+                    } else {
+                        min_x = 0.0;
+                        min_y = 0.0;
+                    }
+
                     let cmds = points_to_smooth_bezier(&self.points);
                     self.points.clear();
                     return vec![
@@ -684,6 +708,13 @@ impl Tool for PenTool {
                         GraphMutation::SetStrokeWidth {
                             id,
                             width: stroke_width,
+                        },
+                        GraphMutation::SetConstraints {
+                            id,
+                            constraints: vec![Constraint::Position {
+                                x: self.start_x + min_x,
+                                y: self.start_y + min_y,
+                            }],
                         },
                     ];
                 }

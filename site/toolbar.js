@@ -733,6 +733,13 @@ export function initToolbar(api) {
     // ── Re-clamp on window resize ──
     window.addEventListener('resize', () => requestAnimationFrame(() => reclampToolbar()));
   }
+
+  return {
+    cancelDtc: () => {
+      dtcTool = '';
+      dtcActive = false;
+    }
+  };
 }
 
 /** Default dimensions for each shape type (arrow excluded — needs two anchors).

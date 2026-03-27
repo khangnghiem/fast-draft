@@ -513,7 +513,43 @@ fn intrinsic_size(node: &SceneNode) -> (f32, f32) {
         }
         NodeKind::Group => (0.0, 0.0), // Auto-sized: computed after children resolve
         NodeKind::Frame { width, height, .. } => (*width, *height),
-        NodeKind::Path { .. } => (100.0, 100.0), // Computed from path bounds
+        NodeKind::Path { commands, .. } => {
+            let mut min_x = f32::MAX;
+            let mut min_y = f32::MAX;
+            let mut max_x = f32::MIN;
+            let mut max_y = f32::MIN;
+            if commands.is_empty() {
+                return (100.0, 100.0);
+            }
+            for cmd in commands {
+                match *cmd {
+                    PathCmd::MoveTo(x, y) | PathCmd::LineTo(x, y) => {
+                        min_x = min_x.min(x);
+                        min_y = min_y.min(y);
+                        max_x = max_x.max(x);
+                        max_y = max_y.max(y);
+                    }
+                    PathCmd::QuadTo(cx, cy, ex, ey) => {
+                        min_x = min_x.min(cx).min(ex);
+                        min_y = min_y.min(cy).min(ey);
+                        max_x = max_x.max(cx).max(ex);
+                        max_y = max_y.max(cy).max(ey);
+                    }
+                    PathCmd::CubicTo(c1x, c1y, c2x, c2y, ex, ey) => {
+                        min_x = min_x.min(c1x).min(c2x).min(ex);
+                        min_y = min_y.min(c1y).min(c2y).min(ey);
+                        max_x = max_x.max(c1x).max(c2x).max(ex);
+                        max_y = max_y.max(c1y).max(c2y).max(ey);
+                    }
+                    PathCmd::Close => {}
+                }
+            }
+            if min_x == f32::MAX {
+                (100.0, 100.0)
+            } else {
+                ((max_x - min_x).max(2.0), (max_y - min_y).max(2.0))
+            }
+        }
         NodeKind::Image { width, height, .. } => (*width, *height),
         NodeKind::Generic => (120.0, 40.0), // Placeholder label box
         NodeKind::Root => (0.0, 0.0),
