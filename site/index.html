@@ -53,14 +53,23 @@
       // ── Panel widths as CSS vars on <html> ──
       var lpW = '260';
       if (!lpC) {
-        var saved = localStorage.getItem('fd-left-panel-width');
-        if (saved) {
-          var w = parseInt(saved, 10);
-          lpW = (w >= 120 && w <= 500) ? String(w) : '260';
+        var savedL = localStorage.getItem('fd-left-panel-width');
+        if (savedL) {
+          var wL = parseInt(savedL, 10);
+          lpW = (wL >= 120 && wL <= 500) ? String(wL) : '260';
+        }
+      }
+      
+      var rpW = '260';
+      if (!rpC) {
+        var savedR = localStorage.getItem('fd-right-panel-width');
+        if (savedR) {
+          var wR = parseInt(savedR, 10);
+          rpW = (wR >= 120 && wR <= 500) ? String(wR) : '260';
         }
       }
       h.style.setProperty('--left-panel-width', lpC ? '0px' : lpW + 'px');
-      h.style.setProperty('--right-panel-width', rpC ? '0px' : '260px');
+      h.style.setProperty('--right-panel-width', rpC ? '0px' : rpW + 'px');
 
       // ── Toolbar side ──
       var tbPos;
