@@ -81,6 +81,8 @@ pub struct FdCanvas {
     pub(crate) bounds_hash: u64,
     /// Current pointer device type — updated each pointer event from JS.
     pub(crate) pointer_type: PointerType,
+    /// Currently edited text node ID to suppress from Vello rendering (prevents ghosting)
+    pub(crate) suppressed_text_id: Option<String>,
 }
 
 // ─── Lifecycle & Core APIs ───────────────────────────────────────────────
@@ -129,6 +131,7 @@ impl FdCanvas {
             spatial_index: None,
             bounds_hash: 0,
             pointer_type: PointerType::Mouse,
+            suppressed_text_id: None,
         }
     }
 
@@ -259,6 +262,11 @@ impl FdCanvas {
     /// Called from JS before each pointer event to adapt hit radii and handle sizes.
     pub fn set_pointer_type(&mut self, ptype: u8) {
         self.pointer_type = PointerType::from_u8(ptype);
+    }
+
+    /// Suppress rendering of a specific text node during inline WYSIWYG editing.
+    pub fn set_suppressed_text_node(&mut self, id: Option<String>) {
+        self.suppressed_text_id = id;
     }
 
     /// Resolve the effective tool for the current pointer event.

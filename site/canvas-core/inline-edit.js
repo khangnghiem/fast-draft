@@ -142,10 +142,12 @@ export function openInlineEditor(opts) {
 
   const boundsJson = fdCanvas.get_node_bounds(nodeId);
   const b = JSON.parse(boundsJson);
-  const bw = b.width || 80;
   const bh = b.height || 24;
 
   inlineEditorActive = true;
+  if (fdCanvas.set_suppressed_text_node) {
+    fdCanvas.set_suppressed_text_node(nodeId);
+  }
 
   // Read node props for styling
   fdCanvas.select_by_id(nodeId);
@@ -259,6 +261,9 @@ export function openInlineEditor(opts) {
   const commit = () => {
     if (!inlineEditorActive) return;
     inlineEditorActive = false;
+    if (fdCanvas && fdCanvas.set_suppressed_text_node) {
+      fdCanvas.set_suppressed_text_node();
+    }
     const newVal = textarea.value;
     if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
     if (!fdCanvas) return;
@@ -276,6 +281,9 @@ export function openInlineEditor(opts) {
   textarea.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       inlineEditorActive = false;
+      if (fdCanvas && fdCanvas.set_suppressed_text_node) {
+        fdCanvas.set_suppressed_text_node();
+      }
       if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
       fdCanvas.select_by_id(nodeId);
       fdCanvas.set_node_prop(propKey, originalValue);

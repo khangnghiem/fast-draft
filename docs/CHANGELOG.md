@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.295 — Resolve Inline Editor Ghosting and Keyboard Shortcut Hijacking (R3.3)
+
+1. **WASM Text Rendering Suppression** — Added `suppressed_text_id` property to the Rust `FdCanvas` struct. This explicitly tells the WASM engine to skip rendering the `draw_text` command for nodes actively being edited via the DOM `<textarea>`, completely eliminating the overlapping "ghosting" visual artifact.
+2. **Robust Keyboard Shortcut Bypass** — The global `keydown` tool shortcuts interceptor in `site/app.js` was ignoring the inline editor overlay lifecycle. Re-engineered `isEditingInput` to strictly pull the live `coreInlineEditorActive` exported boolean from `site/canvas-core/inline-edit.js`. This prevents active typing (e.g., "t", "v", "h", "Space") from triggering random tool mode switches.
+
+Files: `crates/fd-wasm/src/render2d.rs`, `site/app.js`, `site/canvas-core/inline-edit.js`, `crates/fd-wasm/src/lib.rs`
+
 ### v0.11.294 — Complete Fix for Inline Editor "Weird Box" Artifact (R3.3)
 
 1. **Global Capture Enforcement** — Expanded the previous fix (v0.11.293) for the `<textarea>` artifact bug. Prevents UI panels (like Toolbar, Layers) from blocking the `blur` event by escalating the `pointerdown` listener from the canvas to the `window`. Checks `e.target` to safely exclude arbitrary un-committed clicks *inside* the textarea itself.

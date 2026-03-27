@@ -4648,10 +4648,11 @@ async function initPlayground() {
     // ── Keyboard Shortcuts ────────────────────────────────────────────
     document.addEventListener('keydown', (e) => {
       if (!fdCanvas) return;
-      const editorFocused = editorView?.hasFocus ?? false;
+      const isInputFocused = document.activeElement && ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+      const isEditingInput = (editorView?.hasFocus ?? false) || isInputFocused || coreInlineEditorActive;
 
       // Space → pan mode
-      if (e.code === 'Space' && !e.repeat && !editorFocused) {
+      if (e.code === 'Space' && !e.repeat && !isEditingInput) {
         isPanning = true;
         canvas.style.cursor = 'grab';
         // Highlight Hand button in toolbar
@@ -4684,7 +4685,7 @@ async function initPlayground() {
       }
 
       // Grid toggle (G key)
-      if (!editorFocused && e.key.toLowerCase() === 'g' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (!isEditingInput && e.key.toLowerCase() === 'g' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         gridEnabled = !gridEnabled;
         renderCanvas();
         e.preventDefault();
@@ -4692,7 +4693,7 @@ async function initPlayground() {
       }
 
       // Reduce Motion toggle (Shift+M)
-      if (!editorFocused && e.key === 'M' && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (!isEditingInput && e.key === 'M' && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const manual = localStorage.getItem('fd-reduce-motion') === 'true';
         localStorage.setItem('fd-reduce-motion', manual ? 'false' : 'true');
         reduceMotion = !manual || prefersReducedMotion.matches;
@@ -4703,7 +4704,7 @@ async function initPlayground() {
       }
 
       // Tool shortcuts (only when canvas focused)
-      if (!editorFocused && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (!isEditingInput && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const toolMap = { v:'select', r:'rect', o:'ellipse', t:'text', a:'arrow', p:'pen', e:'eraser', f:'frame', h:'hand' };
         const tool = toolMap[e.key.toLowerCase()];
         if (tool) {
@@ -4733,7 +4734,7 @@ async function initPlayground() {
       }
 
       // ── Arrow-key nudge (Figma/Sketch standard) ──
-      if (!editorFocused && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+      if (!isEditingInput && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
         const selectedId = fdCanvas.get_selected_id();
         if (selectedId && !e.metaKey && !e.ctrlKey && !e.altKey) {
           e.preventDefault();
@@ -4744,7 +4745,7 @@ async function initPlayground() {
       }
 
       // Delete (only when canvas focused)
-      if (!editorFocused && (e.key === 'Delete' || e.key === 'Backspace')) {
+      if (!isEditingInput && (e.key === 'Delete' || e.key === 'Backspace')) {
         const r = JSON.parse(fdCanvas.handle_key(e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey));
         if (r.changed) {
           renderCanvas();
