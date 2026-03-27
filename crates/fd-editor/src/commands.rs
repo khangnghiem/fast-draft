@@ -370,6 +370,24 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
                 GraphMutation::RemoveEdge { id: *id }
             }
         }
+        GraphMutation::UpdateEdge { id, from: _, to: _ } => {
+            // Capture the old edge anchors before applying the mutation
+            let (old_from, old_to) = engine
+                .graph
+                .edges
+                .iter()
+                .find(|e| e.id == *id)
+                .map(|e| (e.from.clone(), e.to.clone()))
+                .unwrap_or((
+                    fd_core::model::EdgeAnchor::Point(0.0, 0.0),
+                    fd_core::model::EdgeAnchor::Point(0.0, 0.0),
+                ));
+            GraphMutation::UpdateEdge {
+                id: *id,
+                from: Some(old_from),
+                to: Some(old_to),
+            }
+        }
         GraphMutation::SetStrokeWidth { id, width: _ } => {
             let old_width = engine
                 .graph

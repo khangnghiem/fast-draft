@@ -21,7 +21,7 @@ description: Create a Pull Request and merge feature branch into main
 3. Ensure code compiles with no warnings:
 
    ```bash
-   cargo check --workspace 2>&1 | grep -E "warning|error" | head -20
+   cargo check --workspace 2>&1 | rg -e "warning|error" | head -20
    ```
 
 4. Check current branch — must NOT be `main`:

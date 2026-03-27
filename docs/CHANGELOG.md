@@ -3,7 +3,7 @@
 > Tracks requirement completion status across the entire FD project.
 > For VS Code extension release notes, see [`fd-vscode/CHANGELOG.md`](../fd-vscode/CHANGELOG.md).
 
-<!-- KEYWORD INDEX — grep to find relevant sections:
+<!-- KEYWORD INDEX — rg to find relevant sections:
   Current v0.11.x (recent, individual entries)    → L8-431
   Epoch v0.9.x (eraser, text fixes)               → L433-449
   Epoch v0.8.70-99 (canvas UX, toolbar, groups)    → L451-497

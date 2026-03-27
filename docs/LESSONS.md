@@ -2,7 +2,7 @@
 
 Engineering lessons discovered through building FD.
 
-<!-- KEYWORD INDEX — grep these keywords to find relevant sections:
+<!-- KEYWORD INDEX — rg these keywords to find relevant sections:
   resize, bounds, ownership     → L7-23   (Resize Fight: Bounds Ownership Chain)
   e2e, unit-test, canvas-bug    → L26-33  (Unit Tests Can't Catch Canvas Interaction Bugs)
   reparent, drag, context-menu  → L36-43  (Auto-Reparent on Drag Is Fragile)

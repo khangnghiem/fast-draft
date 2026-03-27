@@ -322,6 +322,7 @@ impl FdCanvas {
             Some(ResizeHandle::MiddleLeft) | Some(ResizeHandle::MiddleRight) => {
                 "ew-resize".to_string()
             }
+            Some(ResizeHandle::EdgeStart) | Some(ResizeHandle::EdgeEnd) => "crosshair".to_string(),
             None => String::new(),
         }
     }
@@ -645,6 +646,45 @@ impl FdCanvas {
     /// Check if the pointer hits a resize handle for the currently selected node.
     pub(crate) fn hit_test_resize_handle(&self, x: f32, y: f32) -> Option<ResizeHandle> {
         let id = self.select_tool.first_selected()?;
+        let radius = self.pointer_type.handle_hit_radius();
+
+        // Check if it's an edge
+        if let Some(edge) = self.engine.graph.edges.iter().find(|e| e.id == id) {
+            let start = match &edge.from {
+                fd_core::model::EdgeAnchor::Node(nid) => self
+                    .engine
+                    .graph
+                    .index_of(*nid)
+                    .and_then(|idx| self.engine.bounds.get(&idx))
+                    .map(|b| (b.x + b.width / 2.0, b.y + b.height / 2.0)),
+                fd_core::model::EdgeAnchor::Point(x, y) => Some((*x, *y)),
+            };
+            let end = match &edge.to {
+                fd_core::model::EdgeAnchor::Node(nid) => self
+                    .engine
+                    .graph
+                    .index_of(*nid)
+                    .and_then(|idx| self.engine.bounds.get(&idx))
+                    .map(|b| (b.x + b.width / 2.0, b.y + b.height / 2.0)),
+                fd_core::model::EdgeAnchor::Point(x, y) => Some((*x, *y)),
+            };
+            if let Some((sx, sy)) = start {
+                let dx = x - sx;
+                let dy = y - sy;
+                if dx * dx + dy * dy <= radius * radius {
+                    return Some(ResizeHandle::EdgeStart);
+                }
+            }
+            if let Some((ex, ey)) = end {
+                let dx = x - ex;
+                let dy = y - ey;
+                if dx * dx + dy * dy <= radius * radius {
+                    return Some(ResizeHandle::EdgeEnd);
+                }
+            }
+            return None;
+        }
+
         let idx = self.engine.graph.index_of(id)?;
 
         if matches!(self.engine.graph.graph[idx].kind, NodeKind::Group) {
@@ -658,7 +698,6 @@ impl FdCanvas {
         let by = b.y;
         let bw = b.width;
         let bh = b.height;
-        let radius = self.pointer_type.handle_hit_radius();
 
         if is_text {
             let handles = [

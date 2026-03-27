@@ -13,18 +13,36 @@ export function getResizeHandleCursor(fdCanvas, x, y, hitRadius = 8) {
   if (!fdCanvas) return '';
   const selectedId = fdCanvas.get_selected_id();
   if (!selectedId) return '';
+  
+  const r = Math.max(hitRadius, 12); // Padded hit radius
+
+  // Try parsing regular bounds
   let b;
   try {
     b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
-  } catch (_) { return ''; }
-  if (b.x === undefined) return '';
+  } catch (_) {}
+
+  // Edge Anchor check
+  if (!b || b.x === undefined) {
+    let edge;
+    try { edge = JSON.parse(fdCanvas.get_edge_endpoints(selectedId)); } catch (_) {}
+    if (edge && edge.startX !== undefined) {
+      const handles = [
+        { hx: edge.startX, hy: edge.startY, cursor: 'crosshair' },
+        { hx: edge.endX, hy: edge.endY, cursor: 'crosshair' }
+      ];
+      for (const { hx, hy, cursor } of handles) {
+        const dx = x - hx, dy = y - hy;
+        if (dx * dx + dy * dy <= r * r) return cursor;
+      }
+    }
+    return '';
+  }
 
   // Check if selected node is text (horizontal-only resize)
   const propsJson = fdCanvas.get_selected_node_props();
   let isText = false;
   try { isText = JSON.parse(propsJson).kind === 'text'; } catch (_) {}
-
-  const r = hitRadius;
 
   if (isText) {
     const handles = [

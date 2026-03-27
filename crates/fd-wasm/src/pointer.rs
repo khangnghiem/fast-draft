@@ -78,19 +78,28 @@ impl FdCanvas {
         // Click should only set pressed_id, not trigger :hover animations.
         let hovered_changed = false;
 
-        // Check for resize handle hit on currently selected node
+        // Check for resize handle hit on currently selected node or edge
         if self.active_tool == ToolKind::Select
             && let Some(handle) = self.hit_test_resize_handle(x, y)
             && let Some(id) = self.select_tool.first_selected()
-            && let Some(idx) = self.engine.graph.index_of(id)
-            && let Some(b) = self.engine.current_bounds().get(&idx)
         {
-            self.select_tool
-                .start_resize(handle, (b.x, b.y, b.width, b.height));
-            // Forward the event so PointerMove/Up flow works
-            let mutations = self.select_tool.handle(&event, hit);
-            self.apply_mutations(mutations);
-            return true;
+            if matches!(
+                handle,
+                fd_editor::tools::ResizeHandle::EdgeStart | fd_editor::tools::ResizeHandle::EdgeEnd
+            ) {
+                self.select_tool.start_resize(handle, (0.0, 0.0, 0.0, 0.0));
+                let mutations = self.select_tool.handle(&event, hit);
+                self.apply_mutations(mutations);
+                return true;
+            } else if let Some(idx) = self.engine.graph.index_of(id)
+                && let Some(b) = self.engine.current_bounds().get(&idx)
+            {
+                self.select_tool
+                    .start_resize(handle, (b.x, b.y, b.width, b.height));
+                let mutations = self.select_tool.handle(&event, hit);
+                self.apply_mutations(mutations);
+                return true;
+            }
         }
 
         // Eraser: handle drag lifecycle + immediate delete on hit
