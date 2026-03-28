@@ -1034,7 +1034,7 @@ function openInlineEditor(opts) {
   const rawFontSize = props.fontSize || 14;
   // Sub-pixel precision — do NOT round. Matches Canvas2D `{weight} {size}px {family}`.
   const fontSize = rawFontSize * zoomLevel;
-  const fontFamily = props.fontFamily || "Inter";
+  const fontFamily = props.fontFamily ? `"${props.fontFamily}", system-ui, sans-serif` : "Inter, system-ui, sans-serif";
   const fontWeight = props.fontWeight || 400;
   const lineHeight = rawFontSize * 1.2 * zoomLevel;
 
@@ -1094,14 +1094,14 @@ function openInlineEditor(opts) {
   const originalValue = currentValue;
 
   // Vertical padding
-  const topOffset = 2;
+  const topOffset = 2 * zoomLevel;
   let padTop = 0, padBottom = 0;
   if (vAlign === "top") {
     padTop = topOffset;
   } else if (vAlign === "middle") {
     const lines = (currentValue.match(/\n/g) || []).length + 1;
     const textHeight = lineHeight * lines;
-    padTop = Math.max(0, Math.round((sh - textHeight) / 2));
+    padTop = Math.max(0, (sh - textHeight) / 2);
     padBottom = padTop;
   } else if (vAlign === "bottom") {
     padBottom = topOffset;
@@ -7022,9 +7022,9 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   // matches how Canvas2D's draw_text() computes line_height = size * 1.2.
   const rawFontSize = props.fontSize || 14;
   const fontSize = rawFontSize * zoomLevel;
-  // Use exact font family from WASM renderer — no fallback chain added
-  // to ensure pixel-perfect match with Canvas2D rendering
-  const fontFamily = props.fontFamily || "Inter";
+  // Use exact font family from WASM renderer — add fallback chain
+  // to prevent browser defaulting to Times New Roman on font-load failure.
+  const fontFamily = props.fontFamily ? `"${props.fontFamily}", system-ui, sans-serif` : "Inter, system-ui, sans-serif";
   const fontWeight = props.fontWeight || 400;
   const lineHeight = rawFontSize * 1.2 * zoomLevel;
 
@@ -7068,12 +7068,12 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   const originalValue = currentValue;
 
   // Vertical padding: match Canvas2D text_baseline positioning exactly.
-  // draw_text() uses a fixed 2.0px offset in scene-space (not zoom-scaled).
+  // draw_text() uses a fixed 2.0px offset in scene-space.
   //   top    → text_baseline="top",    y = b.y + 2.0
   //   middle → text_baseline="middle", y = b.y + h/2
   //   bottom → text_baseline="bottom", y = b.y + h - 2.0
-  // Use constant 2px offset regardless of zoom (renderer uses scene-space pixels).
-  const topOffset = 2;
+  // Scale the 2px offset by zoom since the renderer offsets in scene-space pixels.
+  const topOffset = 2 * zoomLevel;
   let padTop = 0;
   let padBottom = 0;
   if (vAlign === "top") {
@@ -7082,7 +7082,7 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   // CSS vertical centering via equal top/bottom padding
     const lines = (currentValue.match(/\n/g) || []).length + 1;
     const textHeight = lineHeight * lines;
-    padTop = Math.max(0, Math.round((sh - textHeight) / 2));
+    padTop = Math.max(0, (sh - textHeight) / 2);
     padBottom = padTop;
   } else if (vAlign === "bottom") {
     padBottom = topOffset;
