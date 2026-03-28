@@ -14,14 +14,14 @@ import {
   highlightSelectionMatches,
   LZString,
 } from './vendor/cm.min.js';
-import { initAiChat, clearChatHistory } from './ai-chat.js?v=0.11.295';
+import { initAiChat, clearChatHistory } from './ai-chat.js?v=0.11.296';
 import {
   screenToScene as coreScreenToScene,
   pointerTypeToU8 as corePointerTypeToU8,
   showToast as coreShowToast,
   ZOOM_WHEEL_FACTOR as CORE_ZOOM_WHEEL_FACTOR,
   GRID_SPACING as CORE_GRID_SPACING,
-} from './canvas-core/state.js?v=0.11.295';
+} from './canvas-core/state.js?v=0.11.296';
 import {
   drawGrid as coreDrawGrid,
   fitToContent as coreFitToContent,
@@ -33,36 +33,36 @@ import {
   startTween,
   evalTweens,
   playDetachAnimation as corePlayDetachAnimation,
-} from './canvas-core/render.js?v=0.11.295';
+} from './canvas-core/render.js?v=0.11.296';
 import {
   extractNodeBlock as coreExtractNodeBlock,
   buildPasteIdMap,
   applyIdRenames,
   collectDeclaredIds,
-} from './canvas-core/clipboard.js?v=0.11.295';
+} from './canvas-core/clipboard.js?v=0.11.296';
 import {
   getResizeHandleCursor as coreGetResizeHandleCursor,
   pinchDistance as corePinchDistance,
   pinchCenter as corePinchCenter,
   nudgeSelected as coreNudgeSelected,
-} from './canvas-core/viewport.js?v=0.11.295';
+} from './canvas-core/viewport.js?v=0.11.296';
 import {
   TOOL_SHORTCUTS,
   TOOL_CYCLE,
   DOUBLE_PRESS_MS,
   ZOOM_STEP as CORE_ZOOM_STEP,
   buildShortcutHelpHtml as coreBuildShortcutHelpHtml,
-} from './canvas-core/shortcuts.js?v=0.11.295';
+} from './canvas-core/shortcuts.js?v=0.11.296';
 import {
   setupInlineEditor as coreSetupInlineEditor,
   openInlineEditor as coreOpenInlineEditor,
   inlineEditorActive as coreInlineEditorActive,
-} from './canvas-core/inline-edit.js?v=0.11.295';
-import { setupTouchGestures as setupTouchGesturesModule, setupApplePencilPro as setupApplePencilProModule } from './touch.js?v=0.11.295';
-import { initSearchPanel } from './search.js?v=0.11.295';
-import { initPresentation } from './presentation.js?v=0.11.295';
-import { initTauri } from './tauri.js?v=0.11.295';
-import { initToolbar, drawDtcPreview } from './toolbar.js?v=0.11.295';
+} from './canvas-core/inline-edit.js?v=0.11.296';
+import { setupTouchGestures as setupTouchGesturesModule, setupApplePencilPro as setupApplePencilProModule } from './touch.js?v=0.11.296';
+import { initSearchPanel } from './search.js?v=0.11.296';
+import { initPresentation } from './presentation.js?v=0.11.296';
+import { initTauri } from './tauri.js?v=0.11.296';
+import { initToolbar, drawDtcPreview } from './toolbar.js?v=0.11.296';
 
 import { fdLanguage, fdHighlightStyle, fdTheme } from './src/editor/syntax.js';
 /** Global CodeMirror EditorView */
@@ -3146,9 +3146,9 @@ async function initPlayground() {
     console.log('[FD] Fetching WASM module + binary…');
 
     // Start JS module import and WASM fetch in parallel
-    const wasmFetchUrl = './wasm/fd_wasm_bg.wasm?v=0.11.295';
+    const wasmFetchUrl = './wasm/fd_wasm_bg.wasm?v=0.11.296';
     const [wasm, wasmResponse] = await raceWithTimeout(Promise.all([
-      import('./wasm/fd_wasm.js?v=0.11.295'),
+      import('./wasm/fd_wasm.js?v=0.11.296'),
       fetch(wasmFetchUrl),
     ]), WASM_TIMEOUT_MS, 'WASM fetch');
 
