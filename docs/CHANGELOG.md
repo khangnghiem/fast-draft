@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.296 — Increase Default Shape Sizes (R3.7, R3.42)
+
+1. **Rect default size** — Click-to-place rect increased from 120×80 to **144×96** (20% larger). The ellipse's default width was made narrower than the rect's to better reflect visual hierarchy.
+2. **Ellipse default size** — Click-to-place ellipse increased from 90×90 to **128×128** (20% larger). Remains a circle by default for immediate visual parity with common design tools.
+3. **Tests updated** — `tools_tests.rs` assertions for `rect_tool_click_creates_centered`, `ellipse_tool_click_creates_centered`, and `rect_tool_drag_back_to_start_is_click` updated to reflect new default dimensions.
+
+Files: `crates/fd-editor/src/tools.rs`, `crates/fd-editor/src/tools_tests.rs`
+
 ### v0.11.295 — Resolve Inline Editor Ghosting and Keyboard Shortcut Hijacking (R3.3)
 
 1. **WASM Text Rendering Suppression** — Added `suppressed_text_id` property to the Rust `FdCanvas` struct. This explicitly tells the WASM engine to skip rendering the `draw_text` command for nodes actively being edited via the DOM `<textarea>`, completely eliminating the overlapping "ghosting" visual artifact.

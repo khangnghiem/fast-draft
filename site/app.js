@@ -3939,6 +3939,25 @@ async function initPlayground() {
         }
       }
 
+      // ⌘+drag on drawing tools → pan (consistent with Select tool behavior)
+      // Hand tool has its own ⌘ handler above (temp Select).
+      // Select tool handles ⌘ in WASM (pan via marquee bypass).
+      // All other tools: ⌘ = pan, matching industry standard (Figma/Sketch).
+      {
+        const toolName = fdCanvas.get_tool_name();
+        const isDrawTool = toolName !== 'hand' && toolName !== 'select'
+          && toolName !== 'lasso' && toolName !== 'eraser';
+        const isCmdHeld = e.metaKey || (e.ctrlKey && !e.metaKey);
+        if (isDrawTool && isCmdHeld && !e.altKey) {
+          panDragging = true;
+          panStartX = e.clientX - panX;
+          panStartY = e.clientY - panY;
+          canvas.style.cursor = 'grabbing';
+          activePointerId = e.pointerId;
+          return;
+        }
+      }
+
       // Hide FAB during draw gestures (not during move — FAB tracks via render loop)
       if (fdCanvas.get_tool_name() !== 'select') {
         document.getElementById('floating-action-bar')?.classList.remove('visible');

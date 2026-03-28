@@ -484,6 +484,25 @@ export class FdCanvas {
         }
     }
     /**
+     * Get edge endpoints as JSON. Returns {"startX":x,"startY":y,"endX":x,"endY":y}
+     * @param {string} edge_id
+     * @returns {string}
+     */
+    get_edge_endpoints(edge_id) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(edge_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_get_edge_endpoints(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * Get the visual handle size for the current pointer type (for JS rendering).
      * @returns {number}
      */
@@ -1359,6 +1378,15 @@ export class FdCanvas {
         const len1 = WASM_VECTOR_LEN;
         const ret = wasm.fdcanvas_set_spec(this.__wbg_ptr, ptr0, len0, ptr1, len1);
         return ret !== 0;
+    }
+    /**
+     * Suppress rendering of a specific text node during inline WYSIWYG editing.
+     * @param {string | null} [id]
+     */
+    set_suppressed_text_node(id) {
+        var ptr0 = isLikeNone(id) ? 0 : passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len0 = WASM_VECTOR_LEN;
+        wasm.fdcanvas_set_suppressed_text_node(this.__wbg_ptr, ptr0, len0);
     }
     /**
      * Set the FD source text, re-parsing into the scene graph.
