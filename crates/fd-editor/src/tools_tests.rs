@@ -499,7 +499,7 @@ fn ellipse_tool_click_creates_centered() {
         None,
     );
 
-    // Release immediately (no drag) → should create 140×140 centered
+    // Release immediately (no drag) → should create 128×128 centered
     let mutations = tool.handle(
         &InputEvent::PointerUp {
             x: 300.0,
@@ -511,15 +511,15 @@ fn ellipse_tool_click_creates_centered() {
     assert_eq!(mutations.len(), 2, "click should emit Resize + Move");
     match &mutations[0] {
         GraphMutation::ResizeNode { width, height, .. } => {
-            assert!((width - 140.0).abs() < 0.01, "w={width}");
-            assert!((height - 140.0).abs() < 0.01, "h={height}");
+            assert!((width - 128.0).abs() < 0.01, "w={width}");
+            assert!((height - 128.0).abs() < 0.01, "h={height}");
         }
         _ => panic!("expected ResizeNode first"),
     }
     match &mutations[1] {
         GraphMutation::MoveNode { dx, dy, .. } => {
-            assert!((dx - (-70.0)).abs() < 0.01, "dx={dx}");
-            assert!((dy - (-70.0)).abs() < 0.01, "dy={dy}");
+            assert!((dx - (-64.0)).abs() < 0.01, "dx={dx}");
+            assert!((dy - (-64.0)).abs() < 0.01, "dy={dy}");
         }
         _ => panic!("expected MoveNode second"),
     }

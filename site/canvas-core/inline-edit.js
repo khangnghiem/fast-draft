@@ -219,8 +219,8 @@ export function openInlineEditor(opts) {
     borderRadius = `${cr}px`;
   } else if (isTextNode) borderRadius = "0";
 
-  const outlineStyle = isTextNode ? "1px solid #4FC3F7" : "2px solid #4FC3F7";
-  const boxShadow = isTextNode ? "none" : "0 2px 8px rgba(0,0,0,0.12)";
+  const outlineStyle = "none";
+  const boxShadow = "none";
 
   const textarea = document.createElement("textarea");
   textarea.value = currentValue;
@@ -449,12 +449,12 @@ export function setupInlineEditor(opts) {
           panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
         });
       } else {
-        const newTextId = fdCanvas.create_child_text(props.id, "Text");
+        const newTextId = fdCanvas.create_child_text(props.id, "");
         if (newTextId) {
           renderFn();
           syncFn();
           setTimeout(() => openInlineEditor({
-            nodeId: newTextId, propKey: "content", currentValue: "Text",
+            nodeId: newTextId, propKey: "content", currentValue: "",
             fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
             panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
           }), 50);
