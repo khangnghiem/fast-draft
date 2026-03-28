@@ -345,19 +345,19 @@ function renderCanvas() {
     // Tool-specific ghost preview during hover
     const hoverTool = fdCanvas ? fdCanvas.get_tool_name() : '';
     if (hoverTool === 'rect' || hoverTool === 'frame') {
-      // Show 120×80 ghost outline centered at hover
+      // Show 144×96 ghost outline centered at hover
       ctx.setLineDash([4 / zoomLevel, 4 / zoomLevel]);
       ctx.strokeStyle = 'rgba(79, 195, 247, 0.4)';
       ctx.lineWidth = 1.5 / zoomLevel;
-      ctx.strokeRect(px - 60, py - 40, 120, 80);
+      ctx.strokeRect(px - 144 / 2, py - 96 / 2, 144, 96);
       ctx.setLineDash([]);
     } else if (hoverTool === 'ellipse') {
-      // Show 100×100 ghost circle centered at hover
+      // Show 128×128 ghost circle centered at hover
       ctx.setLineDash([4 / zoomLevel, 4 / zoomLevel]);
       ctx.strokeStyle = 'rgba(79, 195, 247, 0.4)';
       ctx.lineWidth = 1.5 / zoomLevel;
       ctx.beginPath();
-      ctx.ellipse(px, py, 50, 50, 0, 0, Math.PI * 2);
+      ctx.ellipse(px, py, 64, 64, 0, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
     } else if (pencilHover.nodeId) {
