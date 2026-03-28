@@ -122,7 +122,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.17** _(done)_: Smart guides — alignment snapping with visual guide lines; Ctrl/⌘ to disable
 - **R3.18** _(done)_: Dimension tooltip — floating `W × H` badge during draw/resize; `(X, Y)` during move
 - **R3.27** _(done)_: Layer rename — double-click layer name for inline rename; renames `@id` document-wide → [spec](specs/inline-editing.md)
-- **R3.28** _(done)_: Inline text editing — double-click text to edit, double-click shape to drill into child text (creates one if absent, Figma behavior); Enter confirms, Esc reverts; live sync → [spec](specs/inline-editing.md)
+- **R3.28** _(done)_: Inline text editing — double-click text to edit, double-click shape to drill into child text (creates one if absent, Figma behavior); Enter confirms, Esc reverts; sub-pixel perfect WYSIWYG overlay with canvas text node suppression (no blue box flash); live sync → [spec](specs/inline-editing.md)
 - **R3.29** _(done)_: Animation drop — drag node onto another to assign animations via picker → [spec](specs/animation-system.md)
 
 #### R3e: Export & Media

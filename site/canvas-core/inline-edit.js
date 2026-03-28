@@ -171,7 +171,7 @@ export function openInlineEditor(opts) {
   const rawFontSize = props.fontSize || 14;
   // Sub-pixel precision — do NOT round. Matches Canvas2D `{weight} {size}px {family}`.
   const fontSize = rawFontSize * zoomLevel;
-  const fontFamily = props.fontFamily || "Inter";
+  const fontFamily = props.fontFamily ? `"${props.fontFamily}", system-ui, sans-serif` : "Inter, system-ui, sans-serif";
   const fontWeight = props.fontWeight || 400;
   const lineHeight = rawFontSize * 1.2 * zoomLevel;
 
@@ -231,14 +231,14 @@ export function openInlineEditor(opts) {
   const originalValue = currentValue;
 
   // Vertical padding
-  const topOffset = 2;
+  const topOffset = 2 * zoomLevel;
   let padTop = 0, padBottom = 0;
   if (vAlign === "top") {
     padTop = topOffset;
   } else if (vAlign === "middle") {
     const lines = (currentValue.match(/\n/g) || []).length + 1;
     const textHeight = lineHeight * lines;
-    padTop = Math.max(0, Math.round((sh - textHeight) / 2));
+    padTop = Math.max(0, (sh - textHeight) / 2);
     padBottom = padTop;
   } else if (vAlign === "bottom") {
     padBottom = topOffset;

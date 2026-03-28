@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.298 — Seamless WYSIWYG Inline Text Editing & Theme Synchronization (R3.28)
+
+1. **Sub-pixel perfect WYSIWYG** — Removed integer `Math.round()` from `fontSize` and `lineHeight` calculations inside the inline editor. The editor overlay now maps with floating-point precision directly matching the Canvas2D bounds, eliminating sub-pixel textual jumping and layout jitter during transitions. Standardized font injection to raw CSS shorthand for exact baseline matching.
+2. **Universal Blue Box Suppression** — Re-ordered the render loop for double-click transitions. Before invoking `renderFn()` across all editor entry paths (standalone text, shape-bound text, and new text creation), `set_suppressed_text_node()` is fired synchronously. This completely eliminates the brief blue selection box "flash" previously visible before the HTML textarea claimed focus.
+3. **Theme-Aware Text Rendering** — Refactored WASM text color resolution. `resolve_fill_color` natively uses `CanvasTheme` structure to emit `#1C1C1E` (Light) or `#E0E0E0` (Dark) instead of hardcoding fallback hexes, guaranteeing the WASM renderer and HTML overlay completely sync without visual jumps on theme toggles.
+
+Files: `crates/fd-wasm/src/render2d.rs`, `crates/fd-wasm/src/props.rs`, `site/canvas-core/inline-edit.js`, `fd-vscode/webview/src/inline-edit.js`
+
 ### v0.11.297 — Inline Text Color Preservation & Deselect-on-Commit (R3.3)
 
 1. **Text color preservation** — Inline editor now mirrors the exact text color from the WASM renderer. Previously, text nodes using the renderer's default fill (`#CCCCCC`) appeared black (`#1C1C1E`) in the textarea because `get_selected_node_props()` omitted the `fill` key when `style.fill` was `None`. Fix: always emit the resolved fill color for text nodes, including the `#CCCCCC` default and gradient first-stop approximations.
