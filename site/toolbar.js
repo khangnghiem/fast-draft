@@ -745,7 +745,7 @@ export function initToolbar(api) {
 /** Default dimensions for each shape type (arrow excluded — needs two anchors).
  *  Module-scope so drawDtcPreview() can access them from renderCanvas(). */
 export const DTC_SIZES = {
-  rect: [120, 80], ellipse: [90, 90], text: [80, 24],
+  rect: [144, 96], ellipse: [128, 128], text: [80, 24],
   frame: [200, 150], pen: [120, 80]
 };
 
