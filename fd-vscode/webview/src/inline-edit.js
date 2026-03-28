@@ -21,10 +21,13 @@ function setupInlineEditor() {
     if (!nodeId) {
       const created = fdCanvas.create_node_at("text", x, y);
       if (created) {
+        const newId = fdCanvas.get_selected_id();
+        if (newId && fdCanvas.set_suppressed_text_node) {
+          fdCanvas.set_suppressed_text_node(newId);
+        }
         render();
         syncTextToExtension();
         // Open inline editor on the newly created text node
-        const newId = fdCanvas.get_selected_id();
         if (newId) {
           setTimeout(() => openInlineEditor(newId, "content", ""), 50);
         }
@@ -71,6 +74,9 @@ function setupInlineEditor() {
             fdCanvas.push_undo_snapshot(textBefore, newSource);
             render();
             syncTextToExtension();
+            if (fdCanvas.set_suppressed_text_node) {
+              fdCanvas.set_suppressed_text_node(textId);
+            }
             fdCanvas.select_by_id(textId);
             render();
             setTimeout(() => openInlineEditor(textId, "content", "Label"), 50);
@@ -92,6 +98,9 @@ function setupInlineEditor() {
       // Shape node — drill into child text (Figma behavior)
       const existingTextId = fdCanvas.get_text_child_id(props.id);
       if (existingTextId) {
+        if (fdCanvas.set_suppressed_text_node) {
+          fdCanvas.set_suppressed_text_node(existingTextId);
+        }
         // Select the child text node and edit it
         fdCanvas.select_by_id(existingTextId);
         render();
@@ -102,6 +111,9 @@ function setupInlineEditor() {
         // Create a new text child inside the shape
         const newTextId = fdCanvas.create_child_text(props.id, "Text");
         if (newTextId) {
+          if (fdCanvas.set_suppressed_text_node) {
+            fdCanvas.set_suppressed_text_node(newTextId);
+          }
           render();
           syncTextToExtension();
           setTimeout(() => openInlineEditor(newTextId, "content", "Text"), 50);
@@ -261,6 +273,10 @@ function openInlineEditor(nodeId, propKey, currentValue) {
 
   inlineEditorActive = true;
 
+  if (fdCanvas.set_suppressed_text_node) {
+    fdCanvas.set_suppressed_text_node(nodeId);
+  }
+
   const container = document.getElementById("canvas-container");
 
   // Read node fill color for background matching
@@ -276,12 +292,12 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   // Compute lineHeight from unscaled font size first, then scale — this
   // matches how Canvas2D's draw_text() computes line_height = size * 1.2.
   const rawFontSize = props.fontSize || 14;
-  const fontSize = Math.round(rawFontSize * zoomLevel);
+  const fontSize = rawFontSize * zoomLevel;
   // Use exact font family from WASM renderer — no fallback chain added
   // to ensure pixel-perfect match with Canvas2D rendering
   const fontFamily = props.fontFamily || "Inter";
   const fontWeight = props.fontWeight || 400;
-  const lineHeight = Math.round(rawFontSize * 1.2 * zoomLevel);
+  const lineHeight = rawFontSize * 1.2 * zoomLevel;
 
   // Convert scene-space bounds to screen-space
   const sx = (b.x || 0) * zoomLevel + panX;
@@ -380,7 +396,7 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     `width:${sw}px`,
     `height:${sh}px`,
     `padding:${padTop}px ${padRight}px ${padBottom}px ${padLeft}px`,
-    `font:${fontWeight} ${fontSize}px ${fontFamily}`,
+    `font:${fontWeight} ${fontSize}px/${lineHeight}px ${fontFamily}`,
     `border:none`,
     `outline:${outlineStyle}`,
     `outline-offset:-1px`,
@@ -390,7 +406,6 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     `resize:none`,
     `z-index:100`,
     `box-shadow:${boxShadow}`,
-    `line-height:${lineHeight}px`,
     `overflow:hidden`,
     `text-align:${hAlign}`,
     `box-sizing:border-box`,

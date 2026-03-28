@@ -18,6 +18,7 @@ pub struct CanvasTheme {
     pub placeholder_border: String,
     pub placeholder_bg: String,
     pub placeholder_text: String,
+    pub text_primary: String,
 }
 
 impl CanvasTheme {
@@ -29,6 +30,7 @@ impl CanvasTheme {
             placeholder_border: contract.placeholder_border.clone(),
             placeholder_bg: contract.placeholder_bg.clone(),
             placeholder_text: contract.placeholder_text.clone(),
+            text_primary: contract.text_primary.clone(),
         }
     }
 
@@ -292,6 +294,7 @@ fn render_node(
                     &style,
                     parent_is_shape,
                     *max_width,
+                    theme,
                 );
             }
         }
@@ -498,6 +501,7 @@ fn draw_text(
     style: &Properties,
     in_shape: bool,
     max_width: Option<f32>,
+    theme: &CanvasTheme,
 ) {
     ctx.save();
     apply_opacity(ctx, style);
@@ -509,7 +513,7 @@ fn draw_text(
 
     ctx.set_font(&format!("{weight} {size}px {family}"));
 
-    let fill_color = resolve_fill_color(style);
+    let fill_color = resolve_fill_color(style, theme);
     ctx.set_fill_style_str(&fill_color);
 
     // Apply horizontal alignment
@@ -1260,10 +1264,10 @@ fn clear_shadow(ctx: &CanvasRenderingContext2d) {
     ctx.set_shadow_color("transparent");
 }
 
-fn resolve_fill_color(style: &Properties) -> String {
+fn resolve_fill_color(style: &Properties, theme: &CanvasTheme) -> String {
     match &style.fill {
         Some(paint) => resolve_paint_color(paint),
-        None => "#CCCCCC".to_string(),
+        None => theme.text_primary.clone(),
     }
 }
 
@@ -1574,13 +1578,15 @@ mod tests {
             })),
             ..Properties::default()
         };
-        assert_eq!(resolve_fill_color(&style), "#FF0000");
+        let t = CanvasTheme::light();
+        assert_eq!(resolve_fill_color(&style, &t), "#FF0000");
     }
 
     #[test]
     fn fill_color_none_returns_default() {
         let style = Properties::default();
-        assert_eq!(resolve_fill_color(&style), "#CCCCCC");
+        let t = CanvasTheme::light();
+        assert_eq!(resolve_fill_color(&style, &t), t.text_primary);
     }
 
     #[test]
@@ -1600,7 +1606,8 @@ mod tests {
             }),
             ..Properties::default()
         };
-        assert_eq!(resolve_fill_color(&style), "#00FF00");
+        let t = CanvasTheme::light();
+        assert_eq!(resolve_fill_color(&style, &t), "#00FF00");
     }
 
     // ─── resolve_paint_color ─────────────────────────────────────────────
