@@ -551,3 +551,12 @@ Never use `localStorage.getItem(...)` as the source of truth for current visual 
 **Fix**: (1) Added `TAB REUSE:` preamble to every browser subagent task template in `e2e.md`. (2) Added explicit "reuse the tab from step (a)" to `yolo.md` step 21b. (3) Added "Cross-subagent tab memory" bullet to GEMINI.md.
 
 **Rule**: **Any browser behavior rule must be embedded in the verbatim task text that gets sent to `browser_subagent`.** GEMINI.md rules are necessary for the outer agent but insufficient — the subagent only sees its `Task` string. Workflow templates with copy-paste task blocks are the real enforcement point.
+
+## AI Agents: Context Window "Multimodal Stacking" Token Burn
+**Date**: 2026-03-28
+**Context**: Reusing the same conversation window to implement 3 or 4 features rapidly burned through >60% of Google AI Ultra quota in 30 minutes.
+**Root cause**: Every invocation of the `browser_subagent` saves a WebP video artifact into the conversation. Because artifacts persist across all subsequent turns within the same conversation, the LLM processes *every previous video, frame-by-frame* on every new task. Four fast `/yolo` PRs equal four 2MB WebP videos evaluated simultaneously on the fifth prompt.
+**Fix**: 
+1. Always start a fresh conversation after completing and merging a feature. The "One Feature Per Conversation" rule is critical for maintaining lightweight contexts.
+2. Shorten browser subagent interactions. Instead of running full 5-minute `/e2e` suites for every CLI adjustment, use quick 2-second "snapshot" verifications.
+**Lesson**: **Lengthy multimodal assets (like WebP subagent recordings) stack exponentially.** You pay the token cost of a video not once when it is recorded, but *every singl**Root cause**: Every invocations short and scoped.

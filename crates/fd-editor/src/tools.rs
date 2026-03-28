@@ -10,7 +10,7 @@
 //! | **Shift** | Axis-constrain drag | Square constraint | — |
 //! | **Alt** | Duplicate on drag start | Draw from center | — |
 //!
-//! Click-without-drag creates a shape with default size (144×96 rect, 128×128 ellipse).
+//! Click-without-drag creates a shape with default size (162×100 rect, 140×140 ellipse).
 
 use crate::input::InputEvent;
 use crate::sync::GraphMutation;
@@ -572,9 +572,9 @@ impl Tool for RectTool {
                 self.drawing = false;
                 if !self.dragged {
                     if let Some(id) = self.current_id.take() {
-                        // Click without drag → default 144×96 centered at click point
-                        let w = 144.0_f32;
-                        let h = 96.0_f32;
+                        // Click without drag → default 162×100 centered at click point
+                        let w = 162.0_f32;
+                        let h = 100.0_f32;
                         vec![
                             GraphMutation::ResizeNode {
                                 id,
@@ -990,9 +990,9 @@ impl Tool for EllipseTool {
                 self.drawing = false;
                 if !self.dragged {
                     if let Some(id) = self.current_id.take() {
-                        // Click without drag → default 128×128 centered at click point
-                        let w = 128.0_f32;
-                        let h = 128.0_f32;
+                        // Click without drag → default 140×140 centered at click point
+                        let w = 140.0_f32;
+                        let h = 140.0_f32;
                         vec![
                             GraphMutation::ResizeNode {
                                 id,

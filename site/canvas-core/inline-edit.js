@@ -142,7 +142,8 @@ export function openInlineEditor(opts) {
 
   const boundsJson = fdCanvas.get_node_bounds(nodeId);
   const b = JSON.parse(boundsJson);
-  const bh = b.height || 24;
+  const bw = b.w || 80;
+  const bh = b.h || 24;
 
   inlineEditorActive = true;
   if (fdCanvas.set_suppressed_text_node) {
