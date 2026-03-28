@@ -3836,6 +3836,10 @@ async function initPlayground() {
     // ── Pointer Events ────────────────────────────────────────────────
     canvas.addEventListener('pointerdown', (e) => {
       if (!fdCanvas) return;
+      // Skip canvas interaction if inline editor is still active —
+      // the blur→commit cycle will handle cleanup. This prevents
+      // the dismissing click from also selecting/creating nodes.
+      if (isInlineEditing()) return;
       e.preventDefault(); // prevent browser scroll/zoom on touch
       canvasDragOccurred = false; // reset drag tracking
 

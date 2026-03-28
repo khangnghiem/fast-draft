@@ -96,9 +96,30 @@ impl FdCanvas {
             }
         }
 
-        // Fill
-        if let Some(Paint::Solid(c)) = &style.fill {
-            props.insert("fill".into(), serde_json::Value::String(c.to_hex()));
+        // Fill — for text nodes, always emit the resolved color (including
+        // the renderer's default #CCCCCC) so the inline editor can match.
+        match &style.fill {
+            Some(Paint::Solid(c)) => {
+                props.insert("fill".into(), serde_json::Value::String(c.to_hex()));
+            }
+            Some(Paint::LinearGradient { stops, .. }) | Some(Paint::RadialGradient { stops }) => {
+                // Emit first gradient stop as a solid approximation
+                if let Some(stop) = stops.first() {
+                    props.insert(
+                        "fill".into(),
+                        serde_json::Value::String(stop.color.to_hex()),
+                    );
+                }
+            }
+            None => {
+                if matches!(&node.kind, NodeKind::Text { .. }) {
+                    // Mirror render2d::resolve_fill_color default for text
+                    props.insert(
+                        "fill".into(),
+                        serde_json::Value::String("#CCCCCC".to_string()),
+                    );
+                }
+            }
         }
 
         // Stroke
