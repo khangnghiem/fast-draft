@@ -1,7 +1,7 @@
 // Service Worker for Fast Draft — caches WASM + vendor JS for instant loading.
 // Strategy: stale-while-revalidate for WASM & vendor assets, network-first for everything else.
 
-const CACHE_NAME = 'fd-v0.11.6';
+const CACHE_NAME = 'fd-v0.11.7';
 const WASM_ASSETS = [
   '/wasm/fd_wasm.js',
   '/wasm/fd_wasm_bg.wasm',
@@ -17,7 +17,7 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[SW] Pre-caching WASM + vendor assets');
       return cache.addAll([
-        ...WASM_ASSETS.map(u => u + '?v=0.11.6'),
+        ...WASM_ASSETS.map(u => u + '?v=0.11.295'),
         ...VENDOR_ASSETS,
       ]);
     })

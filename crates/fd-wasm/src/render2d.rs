@@ -394,7 +394,10 @@ fn render_node(
 
     // Selection overlay (drawn after children so it's on top)
     // Groups don't get resize handles — only dashed border (drawn in Group branch above)
-    if is_selected && !matches!(&node.kind, NodeKind::Group) {
+    if is_selected
+        && !matches!(&node.kind, NodeKind::Group)
+        && Some(node.id.as_str()) != suppressed_text_id
+    {
         draw_selection_handles(ctx, node_bounds, &node.kind, handle_size, corners_only);
     }
 
