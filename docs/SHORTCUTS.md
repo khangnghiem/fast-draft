@@ -76,7 +76,7 @@
 | `G`               | Toggle grid overlay               |
 | `⇧M`              | Toggle Reduce Motion              |
 | `Space` (hold)    | Pan / hand tool                   |
-| `⌘` (hold)        | Temporary hand tool (Select mode) |
+| `⌘` (hold)        | Pan (drawing/select); Select (hand) |
 | `Alt` (hold)      | Copy cursor preview               |
 | `Ctrl` (hold)     | Eraser cursor preview             |
 | Pinch             | Trackpad zoom                     |
@@ -117,7 +117,7 @@ Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** 
 | Modifier       | On Object                                       | On Empty Space                   |
 | -------------- | ----------------------------------------------- | -------------------------------- |
 | None           | Draw new shape                                  | Draw new shape                   |
-| `⌘`            | **Move object** (temp Select)                   | **Marquee select** (temp Select) |
+| `⌘`            | **Pan**                                         | **Pan**                          |
 | `Alt`          | **Clone + drag**                                | Draw new shape                   |
 | `Shift`        | Constrain (square/axis) — see per-tool table    | Constrain                        |
 | `Shift+Alt`    | Square/circle from center                       | Square/circle from center        |

@@ -156,6 +156,10 @@ export class FdCanvas {
      */
     get_diagnostics(): string;
     /**
+     * Get edge endpoints as JSON. Returns {"startX":x,"startY":y,"endX":x,"endY":y}
+     */
+    get_edge_endpoints(edge_id: string): string;
+    /**
      * Get the visual handle size for the current pointer type (for JS rendering).
      */
     get_handle_visual_size(): number;
@@ -436,6 +440,10 @@ export class FdCanvas {
      */
     set_spec(node_id: string, content: string): boolean;
     /**
+     * Suppress rendering of a specific text node during inline WYSIWYG editing.
+     */
+    set_suppressed_text_node(id?: string | null): void;
+    /**
      * Set the FD source text, re-parsing into the scene graph.
      * Returns a JSON string: `{"ok":true,"layout_changed":bool}`
      */
@@ -505,6 +513,7 @@ export interface InitOutput {
     readonly fdcanvas_resize: (a: number, b: number, c: number) => void;
     readonly fdcanvas_set_pointer_type: (a: number, b: number) => void;
     readonly fdcanvas_set_sketchy_mode: (a: number, b: number) => void;
+    readonly fdcanvas_set_suppressed_text_node: (a: number, b: number, c: number) => void;
     readonly fdcanvas_set_text: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_set_theme: (a: number, b: number) => void;
     readonly fdcanvas_set_tool: (a: number, b: number, c: number) => void;
@@ -532,6 +541,10 @@ export interface InitOutput {
     readonly fdcanvas_set_search_highlights: (a: number, b: number, c: number) => void;
     readonly fdcanvas_toggle_select_by_id: (a: number, b: number, c: number) => number;
     readonly fdcanvas_ungroup_selected: (a: number) => number;
+    readonly fdcanvas_cancel_drag: (a: number) => number;
+    readonly fdcanvas_handle_pointer_down: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
+    readonly fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
+    readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly fdcanvas_handle_key: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly fdcanvas_handle_stylus_squeeze: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_compute_guides_for_rect: (a: number, b: number, c: number, d: number, e: number) => [number, number];
@@ -545,6 +558,7 @@ export interface InitOutput {
     readonly fdcanvas_finalize_bounds: (a: number) => number;
     readonly fdcanvas_find_edge_for_text: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_container_ids: (a: number) => [number, number];
+    readonly fdcanvas_get_edge_endpoints: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_node_bounds: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_node_bounds_json: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_node_kind: (a: number, b: number, c: number) => [number, number];
@@ -580,10 +594,6 @@ export interface InitOutput {
     readonly fdcanvas_render: (a: number, b: any, c: number, d: number, e: number) => void;
     readonly fdcanvas_render_export: (a: number, b: any, c: number, d: number) => void;
     readonly fdcanvas_set_spec: (a: number, b: number, c: number, d: number, e: number) => number;
-    readonly fdcanvas_cancel_drag: (a: number) => number;
-    readonly fdcanvas_handle_pointer_down: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
-    readonly fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
-    readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;
