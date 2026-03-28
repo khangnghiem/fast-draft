@@ -113,7 +113,7 @@
 
             <!-- ─── Top-Left Canvas Chrome ─── -->
             <div id="chrome-left" class="canvas-chrome canvas-chrome-left">
-              <button class="canvas-chrome-btn" id="sidebar-toggle-btn" title="Toggle sidebar (\)">
+              <button class="canvas-chrome-btn" id="sidebar-toggle-btn" title="Toggle sidebar (\)" aria-label="Toggle sidebar">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="14" height="12" rx="2"/><line x1="6" y1="2" x2="6" y2="14"/></svg>
               </button>
             </div>
@@ -122,7 +122,7 @@
             <div id="chrome-right" class="canvas-chrome canvas-chrome-right">
               <!-- Share dropdown -->
               <div class="chrome-dropdown-container" id="share-dropdown-container">
-                <button class="canvas-chrome-btn" id="share-btn-chrome" title="Share & Export">
+                <button class="canvas-chrome-btn" id="share-btn-chrome" title="Share & Export" aria-label="Share & Export">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2v8"/><path d="M4 6l4-4 4 4"/><path d="M13 10v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3"/></svg>
                 </button>
                 <div class="chrome-dropdown chrome-dropdown-right" id="share-dropdown">
@@ -134,7 +134,7 @@
               </div>
               <!-- Settings dropdown -->
               <div class="chrome-dropdown-container" id="settings-dropdown-container">
-                <button class="canvas-chrome-btn" id="settings-gear-btn" title="Settings">
+                <button class="canvas-chrome-btn" id="settings-gear-btn" title="Settings" aria-label="Settings">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.86 1.58a.5.5 0 0 1 .5-.42h1.28a.5.5 0 0 1 .5.42l.18 1.29a5.5 5.5 0 0 1 1.32.76l1.22-.4a.5.5 0 0 1 .6.22l.64 1.1a.5.5 0 0 1-.1.63l-1.04.89a5.5 5.5 0 0 1 0 1.53l1.04.89a.5.5 0 0 1 .1.63l-.64 1.1a.5.5 0 0 1-.6.22l-1.22-.4a5.5 5.5 0 0 1-1.32.76l-.18 1.29a.5.5 0 0 1-.5.42H7.36a.5.5 0 0 1-.5-.42l-.18-1.29a5.5 5.5 0 0 1-1.32-.76l-1.22.4a.5.5 0 0 1-.6-.22l-.64-1.1a.5.5 0 0 1 .1-.63l1.04-.89a5.5 5.5 0 0 1 0-1.53l-1.04-.89a.5.5 0 0 1-.1-.63l.64-1.1a.5.5 0 0 1 .6-.22l1.22.4a5.5 5.5 0 0 1 1.32-.76l.18-1.29Z"/><circle cx="8" cy="8" r="2.5"/></svg>
                 </button>
                 <div class="chrome-dropdown chrome-dropdown-right" id="settings-dropdown">
@@ -162,7 +162,7 @@
                   <a class="chrome-dropdown-item" href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener"><span class="cd-icon">🐙</span><span class="cd-label">GitHub</span></a>
                 </div>
               </div>
-              <button class="canvas-chrome-btn" id="hamburger-toggle-btn" title="Toggle right panel">
+              <button class="canvas-chrome-btn" id="hamburger-toggle-btn" title="Toggle right panel" aria-label="Toggle right panel">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="14" height="12" rx="2"/><line x1="10" y1="2" x2="10" y2="14"/></svg>
               </button>
             </div>
@@ -287,17 +287,17 @@
               <input type="range" id="fab-opacity" aria-label="Opacity" class="fab-slider" min="0" max="1" step="0.05" value="1" title="Opacity">
               <span id="fab-opacity-val" style="font-size:10px;min-width:24px">100%</span>
               <div class="fab-sep"></div>
-              <button class="fab-delete-btn" id="fab-delete" title="Delete (⌫)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
+              <button class="fab-delete-btn" id="fab-delete" title="Delete (⌫)" aria-label="Delete"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
             </div>
             <!-- Minimap (Google Maps pill) -->
             <div id="minimap-container">
               <canvas id="minimap-canvas"></canvas>
               <div id="minimap-zoom-controls">
-                <button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button>
+                <button class="bl-btn" id="zoom-out-btn" title="Zoom out" aria-label="Zoom out">−</button>
                 <div class="bl-sep"></div>
-                <button class="bl-btn" id="zoom-reset-btn" title="Toggle 100% / Fit to Content">100%</button>
+                <button class="bl-btn" id="zoom-reset-btn" title="Toggle 100% / Fit to Content" aria-label="Reset zoom">100%</button>
                 <div class="bl-sep"></div>
-                <button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button>
+                <button class="bl-btn" id="zoom-in-btn" title="Zoom in" aria-label="Zoom in">+</button>
               </div>
             </div>
             <div id="dimension-tooltip"></div>
@@ -382,15 +382,15 @@
 
   <!-- Quick Color Picker -->
   <div id="quick-color-picker" class="quick-color-picker">
-    <button class="qcp-dot" data-color="#1D1D1F" style="background:#1D1D1F" title="Black"></button>
-    <button class="qcp-dot" data-color="#E06C75" style="background:#E06C75" title="Red"></button>
-    <button class="qcp-dot" data-color="#6C5CE7" style="background:#6C5CE7" title="Purple"></button>
-    <button class="qcp-dot" data-color="#00B894" style="background:#00B894" title="Green"></button>
-    <button class="qcp-dot" data-color="#3B82F6" style="background:#3B82F6" title="Blue"></button>
-    <button class="qcp-dot" data-color="#FF6B6B" style="background:#FF6B6B" title="Coral"></button>
-    <button class="qcp-dot" data-color="#FFE66D" style="background:#FFE66D" title="Yellow"></button>
-    <button class="qcp-dot" data-color="#F5F5F7" style="background:#F5F5F7;border:1px solid rgba(0,0,0,0.15)" title="White"></button>
-    <button class="qcp-custom" id="qcp-custom-btn" title="Custom color">
+    <button class="qcp-dot" data-color="#1D1D1F" style="background:#1D1D1F" title="Black" aria-label="Color Black"></button>
+    <button class="qcp-dot" data-color="#E06C75" style="background:#E06C75" title="Red" aria-label="Color Red"></button>
+    <button class="qcp-dot" data-color="#6C5CE7" style="background:#6C5CE7" title="Purple" aria-label="Color Purple"></button>
+    <button class="qcp-dot" data-color="#00B894" style="background:#00B894" title="Green" aria-label="Color Green"></button>
+    <button class="qcp-dot" data-color="#3B82F6" style="background:#3B82F6" title="Blue" aria-label="Color Blue"></button>
+    <button class="qcp-dot" data-color="#FF6B6B" style="background:#FF6B6B" title="Coral" aria-label="Color Coral"></button>
+    <button class="qcp-dot" data-color="#FFE66D" style="background:#FFE66D" title="Yellow" aria-label="Color Yellow"></button>
+    <button class="qcp-dot" data-color="#F5F5F7" style="background:#F5F5F7;border:1px solid rgba(0,0,0,0.15)" title="White" aria-label="Color White"></button>
+    <button class="qcp-custom" id="qcp-custom-btn" title="Custom color" aria-label="Custom color">
       <input type="color" id="qcp-custom-input" value="#007AFF">
       +
     </button>
