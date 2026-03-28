@@ -1102,15 +1102,22 @@ function openInlineEditor(opts) {
     const newVal = textarea.value;
     if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
     if (!fdCanvas) return;
-    if (newVal === originalValue) { renderFn(); return; }
+    if (newVal === originalValue) {
+      // No change — deselect and return to neutral canvas state
+      fdCanvas.select_by_id("");
+      renderFn();
+      return;
+    }
     fdCanvas.select_by_id(nodeId);
     const changed = fdCanvas.set_node_prop(propKey, newVal);
     if (changed) {
       if (propKey === "content") measureAndUpdateTextBounds(fdCanvas, canvasEl, nodeId);
-      renderFn();
       syncFn();
       if (updatePanelFn) updatePanelFn();
     }
+    // Editing complete — deselect to return canvas to neutral state
+    fdCanvas.select_by_id("");
+    renderFn();
   };
 
   textarea.addEventListener("keydown", (e) => {
@@ -1119,6 +1126,8 @@ function openInlineEditor(opts) {
       if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
       fdCanvas.select_by_id(nodeId);
       fdCanvas.set_node_prop(propKey, originalValue);
+      // Cancel complete — deselect to return canvas to neutral state
+      fdCanvas.select_by_id("");
       renderFn();
       syncFn();
       e.stopPropagation();
@@ -1130,7 +1139,7 @@ function openInlineEditor(opts) {
     }
   });
 
-  textarea.addEventListener("blur", () => { setTimeout(commit, 150); });
+  textarea.addEventListener("blur", () => { setTimeout(commit, 0); });
 }
 
 /**
@@ -7034,6 +7043,8 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     if (!fdCanvas) return;
     // Skip mutation if value unchanged — avoids SetStyle flattening inherited styles
     if (newVal === originalValue) {
+      // No change — deselect and return to neutral canvas state
+      fdCanvas.select_by_id("");
       render();
       return;
     }
@@ -7045,10 +7056,12 @@ function openInlineEditor(nodeId, propKey, currentValue) {
       if (propKey === "content") {
         measureAndUpdateTextBounds(nodeId);
       }
-      render();
       syncTextToExtension();
       updatePropertiesPanel();
     }
+    // Editing complete — deselect to return canvas to neutral state
+    fdCanvas.select_by_id("");
+    render();
   };
 
   textarea.addEventListener("keydown", (e) => {
@@ -7059,6 +7072,8 @@ function openInlineEditor(nodeId, propKey, currentValue) {
       // Restore original text in the node
       fdCanvas.select_by_id(nodeId);
       fdCanvas.set_node_prop(propKey, originalValue);
+      // Cancel complete — deselect to return canvas to neutral state
+      fdCanvas.select_by_id("");
       render();
       syncTextToExtension();
       e.stopPropagation();
@@ -7071,9 +7086,9 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     }
   });
 
-  // Delay blur→commit to avoid premature removal from focus-stealing
+  // Delay blur→commit to microtask to avoid premature removal from focus-stealing
   textarea.addEventListener("blur", () => {
-    setTimeout(commit, 150);
+    setTimeout(commit, 0);
   });
 }
 

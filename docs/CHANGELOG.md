@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.297 — Inline Text Color Preservation & Deselect-on-Commit (R3.3)
+
+1. **Text color preservation** — Inline editor now mirrors the exact text color from the WASM renderer. Previously, text nodes using the renderer's default fill (`#CCCCCC`) appeared black (`#1C1C1E`) in the textarea because `get_selected_node_props()` omitted the `fill` key when `style.fill` was `None`. Fix: always emit the resolved fill color for text nodes, including the `#CCCCCC` default and gradient first-stop approximations.
+2. **Deselect on commit** — After finishing inline text editing (blur, Enter, or Escape), `select_by_id("")` is called to clear selection and return the canvas to a neutral state. Matches Figma/Excalidraw behavior where completing an edit deselects the node.
+3. **Blur race condition** — Reduced `setTimeout(commit, 150)` to `setTimeout(commit, 0)` (microtask). Added `isInlineEditing()` guard to canvas `pointerdown` handler to prevent the dismissing click from triggering unintended canvas interactions.
+
+Files: `crates/fd-wasm/src/props.rs`, `site/canvas-core/inline-edit.js`, `site/app.js`, `fd-vscode/webview/main.js`, `zed-extensions/.../main.js`
+
 ### v0.11.296 — Increase Default Shape Sizes (R3.7, R3.42)
 
 1. **Rect default size** — Click-to-place rect increased from 120×80 to **144×96** (20% larger). The ellipse's default width was made narrower than the rect's to better reflect visual hierarchy.
