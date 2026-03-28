@@ -154,22 +154,26 @@ export function openInlineEditor(opts) {
   const bh = b.h || 24;
 
   inlineEditorActive = true;
+
+  // Suppress text rendering AND set selection BEFORE any render — prevents
+  // the blue selection box from flashing for a single frame.
   if (fdCanvas.set_suppressed_text_node) {
     fdCanvas.set_suppressed_text_node(nodeId);
   }
-
-  // Read node props for styling
   fdCanvas.select_by_id(nodeId);
   fdCanvas.clear_pressed();
   renderFn();
+
+  // Read node props for styling
   const propsJson = fdCanvas.get_selected_node_props();
   const props = JSON.parse(propsJson);
 
   const rawFontSize = props.fontSize || 14;
-  const fontSize = Math.round(rawFontSize * zoomLevel);
+  // Sub-pixel precision — do NOT round. Matches Canvas2D `{weight} {size}px {family}`.
+  const fontSize = rawFontSize * zoomLevel;
   const fontFamily = props.fontFamily || "Inter";
   const fontWeight = props.fontWeight || 400;
-  const lineHeight = Math.round(rawFontSize * 1.2 * zoomLevel);
+  const lineHeight = rawFontSize * 1.2 * zoomLevel;
 
   // Offset canvas-element origin within its overlay container
   const canvasRect = canvasEl.getBoundingClientRect();
@@ -180,7 +184,8 @@ export function openInlineEditor(opts) {
   const scaledH = bh * zoomLevel;
   const sw = Math.max(scaledW, 80);
   const sh = Math.max(scaledH, lineHeight + 4);
-  // Center the textarea if it's wider/taller than the scaled node bounds
+  // Sub-pixel positioning — match Canvas2D coordinate space exactly.
+  // Do NOT round to integer px; CSS handles sub-pixel fine.
   const sx = (b.x || 0) * zoomLevel + panX + canvasOffsetX - (sw - scaledW) / 2;
   const sy = (b.y || 0) * zoomLevel + panY + canvasOffsetY - (sh - scaledH) / 2;
 
@@ -261,19 +266,19 @@ export function openInlineEditor(opts) {
     `left:${sx}px`, `top:${sy}px`,
     `width:${sw}px`, `height:${sh}px`,
     `padding:${padTop}px 0 ${padBottom}px 0`,
-    `font:${fontWeight} ${fontSize}px ${fontFamily}`,
+    `font:${fontWeight} ${fontSize}px/${lineHeight}px ${fontFamily}`,
     `border:none`,
     `outline:${outlineStyle}`, `outline-offset:-1px`,
     `border-radius:${borderRadius}`,
     `background:${bgColor}`, `color:${textColor}`,
     `resize:none`, `z-index:100`,
     `box-shadow:${boxShadow}`,
-    `line-height:${lineHeight}px`,
     `overflow:hidden`, `text-align:${hAlign}`,
     `box-sizing:border-box`,
     `-webkit-text-size-adjust:100%`,
     `word-wrap:break-word`, `white-space:pre-wrap`,
     `overflow-wrap:break-word`,
+    `letter-spacing:0px`,
   ].join(";");
 
   container.appendChild(textarea);
@@ -402,9 +407,13 @@ export function setupInlineEditor(opts) {
     if (!nodeId) {
       const created = fdCanvas.create_node_at("text", x, y);
       if (created) {
+        const newId = fdCanvas.get_selected_id();
+        // Suppress before render to prevent blue box flash
+        if (newId && fdCanvas.set_suppressed_text_node) {
+          fdCanvas.set_suppressed_text_node(newId);
+        }
         renderFn();
         syncFn();
-        const newId = fdCanvas.get_selected_id();
         if (newId) {
           setTimeout(() => openInlineEditor({
             nodeId: newId, propKey: "content", currentValue: "",
@@ -453,8 +462,11 @@ export function setupInlineEditor(opts) {
             fdCanvas.push_undo_snapshot(textBefore, newSource);
             renderFn();
             syncFn();
+            // Suppress before selecting + rendering to prevent blue box flash
+            if (fdCanvas.set_suppressed_text_node) {
+              fdCanvas.set_suppressed_text_node(textId);
+            }
             fdCanvas.select_by_id(textId);
-            renderFn();
             setTimeout(() => openInlineEditor({
               nodeId: textId, propKey: "content", currentValue: "Label",
               fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
@@ -480,8 +492,11 @@ export function setupInlineEditor(opts) {
     } else {
       const existingTextId = fdCanvas.get_text_child_id(props.id);
       if (existingTextId) {
+        // Suppress text node before selecting + rendering to prevent blue box flash
+        if (fdCanvas.set_suppressed_text_node) {
+          fdCanvas.set_suppressed_text_node(existingTextId);
+        }
         fdCanvas.select_by_id(existingTextId);
-        renderFn();
         const childPropsJson = fdCanvas.get_selected_node_props();
         const childProps = JSON.parse(childPropsJson);
         openInlineEditor({
@@ -493,6 +508,10 @@ export function setupInlineEditor(opts) {
       } else {
         const newTextId = fdCanvas.create_child_text(props.id, "");
         if (newTextId) {
+          // Suppress before render to prevent blue box flash
+          if (fdCanvas.set_suppressed_text_node) {
+            fdCanvas.set_suppressed_text_node(newTextId);
+          }
           renderFn();
           syncFn();
           setTimeout(() => openInlineEditor({

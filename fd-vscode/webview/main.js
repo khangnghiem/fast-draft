@@ -13,7 +13,7 @@
  */
 // ── canvas-core/state.js ──
 // ─── canvas-core/state.js ─── Shared canvas state
-// Imported by both site/playground.js and fd-vscode/webview/src/main.js.
+// Imported by both site/app.js and fd-vscode/webview/src/main.js.
 //
 // This module holds the mutable state that drives the canvas lifecycle:
 // zoom, pan, dirty flags, grid, motion preferences, and tool defaults.
@@ -87,7 +87,7 @@ let reduceMotion = prefersReducedMotion.matches;
 
 /** Initialize motion preference listener. */
 function initMotionPreference() {
-  // Check localStorage override (site playground stores manual toggle)
+  // Check localStorage override (site app stores manual toggle)
   if (typeof localStorage !== 'undefined') {
     const manual = localStorage.getItem('fd-reduce-motion');
     if (manual === 'true') reduceMotion = true;
@@ -184,7 +184,7 @@ function showToast(message, durationMs = 1200, container = null) {
 }
 // ── canvas-core/render.js ──
 // ─── canvas-core/render.js ─── Shared render loop + tween engine
-// Imported by both site/playground.js and fd-vscode/webview/src/main.js.
+// Imported by both site/app.js and fd-vscode/webview/src/main.js.
 //
 // This module provides:
 // - Tween engine for CSS-like animations (hover/press transitions)
@@ -601,18 +601,36 @@ function getResizeHandleCursor(fdCanvas, x, y, hitRadius = 8) {
   if (!fdCanvas) return '';
   const selectedId = fdCanvas.get_selected_id();
   if (!selectedId) return '';
+  
+  const r = Math.max(hitRadius, 12); // Padded hit radius
+
+  // Try parsing regular bounds
   let b;
   try {
     b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
-  } catch (_) { return ''; }
-  if (b.x === undefined) return '';
+  } catch (_) {}
+
+  // Edge Anchor check
+  if (!b || b.x === undefined) {
+    let edge;
+    try { edge = JSON.parse(fdCanvas.get_edge_endpoints(selectedId)); } catch (_) {}
+    if (edge && edge.startX !== undefined) {
+      const handles = [
+        { hx: edge.startX, hy: edge.startY, cursor: 'crosshair' },
+        { hx: edge.endX, hy: edge.endY, cursor: 'crosshair' }
+      ];
+      for (const { hx, hy, cursor } of handles) {
+        const dx = x - hx, dy = y - hy;
+        if (dx * dx + dy * dy <= r * r) return cursor;
+      }
+    }
+    return '';
+  }
 
   // Check if selected node is text (horizontal-only resize)
   const propsJson = fdCanvas.get_selected_node_props();
   let isText = false;
   try { isText = JSON.parse(propsJson).kind === 'text'; } catch (_) {}
-
-  const r = hitRadius;
 
   if (isText) {
     const handles = [
@@ -844,7 +862,7 @@ function buildShortcutHelpHtml() {
 }
 // ── canvas-core/inline-edit.js ──
 // ─── canvas-core/inline-edit.js ─── Shared inline text editor
-// Imported by both site/playground.js and fd-vscode/webview/src/inline-edit.js.
+// Imported by both site/app.js and fd-vscode/webview/src/inline-edit.js.
 //
 // Double-click text/shape → floating textarea for in-place editing.
 // Enter = commit, Escape = cancel, live-sync on every keystroke.
@@ -971,6 +989,7 @@ function measureAllTextNodes(fdCanvas, canvasEl, renderFn) {
  * @param {number} opts.panX         — current pan X
  * @param {number} opts.panY         — current pan Y
  * @param {number} opts.zoomLevel    — current zoom
+ * @param {string} [opts.parentShapeId] — parent shape ID for text-in-shape editing
  */
 function openInlineEditor(opts) {
   if (inlineEditorActive) return;
@@ -980,43 +999,86 @@ function openInlineEditor(opts) {
     fdCanvas, canvasEl, container,
     renderFn, syncFn, updatePanelFn,
     panX, panY, zoomLevel,
+    parentShapeId,
   } = opts;
 
   // Force-measure text bounds BEFORE reading them
   measureAndUpdateTextBounds(fdCanvas, canvasEl, nodeId);
 
-  const boundsJson = fdCanvas.get_node_bounds(nodeId);
+  // For text-in-shape: use parent shape bounds for textarea overlay
+  // so the editor perfectly covers the shape, not the tiny text child.
+  let posId = nodeId;
+  if (parentShapeId) {
+    posId = parentShapeId;
+  }
+  const boundsJson = fdCanvas.get_node_bounds(posId);
   const b = JSON.parse(boundsJson);
-  const bw = b.width || 80;
-  const bh = b.height || 24;
+  const bw = b.w || 80;
+  const bh = b.h || 24;
 
   inlineEditorActive = true;
 
-  // Read node props for styling
+  // Suppress text rendering AND set selection BEFORE any render — prevents
+  // the blue selection box from flashing for a single frame.
+  if (fdCanvas.set_suppressed_text_node) {
+    fdCanvas.set_suppressed_text_node(nodeId);
+  }
   fdCanvas.select_by_id(nodeId);
   fdCanvas.clear_pressed();
   renderFn();
+
+  // Read node props for styling
   const propsJson = fdCanvas.get_selected_node_props();
   const props = JSON.parse(propsJson);
 
   const rawFontSize = props.fontSize || 14;
-  const fontSize = Math.round(rawFontSize * zoomLevel);
+  // Sub-pixel precision — do NOT round. Matches Canvas2D `{weight} {size}px {family}`.
+  const fontSize = rawFontSize * zoomLevel;
   const fontFamily = props.fontFamily || "Inter";
   const fontWeight = props.fontWeight || 400;
-  const lineHeight = Math.round(rawFontSize * 1.2 * zoomLevel);
+  const lineHeight = rawFontSize * 1.2 * zoomLevel;
 
-  const sx = (b.x || 0) * zoomLevel + panX;
-  const sy = (b.y || 0) * zoomLevel + panY;
-  const sw = Math.max(bw * zoomLevel, 80);
-  const sh = Math.max(bh * zoomLevel, lineHeight + 4);
+  // Offset canvas-element origin within its overlay container
+  const canvasRect = canvasEl.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  const canvasOffsetX = canvasRect.left - containerRect.left;
+  const canvasOffsetY = canvasRect.top - containerRect.top;
+  const scaledW = bw * zoomLevel;
+  const scaledH = bh * zoomLevel;
+  const sw = Math.max(scaledW, 80);
+  const sh = Math.max(scaledH, lineHeight + 4);
+  // Sub-pixel positioning — match Canvas2D coordinate space exactly.
+  // Do NOT round to integer px; CSS handles sub-pixel fine.
+  const sx = (b.x || 0) * zoomLevel + panX + canvasOffsetX - (sw - scaledW) / 2;
+  const sy = (b.y || 0) * zoomLevel + panY + canvasOffsetY - (sh - scaledH) / 2;
 
-  // Colors
+  // Colors & shape styling
   const isDark = document.body.classList.contains("dark-theme") ||
                  document.body.classList.contains("vscode-dark");
   const isTextNode = props.kind === "text";
+  const isInShape = !!parentShapeId;
   let bgColor, textColor;
 
-  if (isTextNode) {
+  // Read parent shape props for styling when editing text-in-shape
+  let shapeProps = null;
+  if (isInShape) {
+    fdCanvas.select_by_id(parentShapeId);
+    const spJson = fdCanvas.get_selected_node_props();
+    shapeProps = JSON.parse(spJson);
+    // Re-select the text node so mutations target the right node
+    fdCanvas.select_by_id(nodeId);
+  }
+
+  if (isInShape && shapeProps) {
+    // Use parent shape's fill for WYSIWYG overlay
+    if (shapeProps.fill && shapeProps.fill !== "none") {
+      bgColor = shapeProps.fill;
+      textColor = hexLuminance(shapeProps.fill) < 0.4 ? "#FFFFFF" : "#1C1C1E";
+    } else {
+      bgColor = "transparent";
+      textColor = props.fill || (isDark ? "#E0E0E0" : "#1C1C1E");
+    }
+  } else if (isTextNode) {
     bgColor = "transparent";
     textColor = props.fill || (isDark ? "#E0E0E0" : "#1C1C1E");
   } else if (props.fill) {
@@ -1027,8 +1089,8 @@ function openInlineEditor(opts) {
     textColor = isDark ? "#E0E0E0" : "#1C1C1E";
   }
 
-  const hAlign = props.textAlign || (isTextNode ? "left" : "center");
-  const vAlign = props.textVAlign || "top";
+  const hAlign = props.textAlign || (isTextNode && !isInShape ? "left" : "center");
+  const vAlign = props.textVAlign || (isInShape ? "middle" : "top");
   const originalValue = currentValue;
 
   // Vertical padding
@@ -1048,16 +1110,17 @@ function openInlineEditor(opts) {
     padTop = Math.max(0, sh - textHeight - padBottom);
   }
 
-  // Border radius
+  // Border radius — use parent shape's kind when editing text-in-shape
+  const shapeKind = isInShape && shapeProps ? shapeProps.kind : props.kind;
   let borderRadius = "8px";
-  if (props.kind === "ellipse") borderRadius = "50%";
-  else if (props.kind === "rect" || props.kind === "frame") {
-    const cr = props.cornerRadius !== undefined ? Math.round(props.cornerRadius * zoomLevel) : 0;
-    borderRadius = `${cr}px`;
-  } else if (isTextNode) borderRadius = "0";
+  if (shapeKind === "ellipse") borderRadius = "50%";
+  else if (shapeKind === "rect" || shapeKind === "frame") {
+    const cr = (isInShape && shapeProps ? shapeProps.cornerRadius : props.cornerRadius);
+    borderRadius = cr !== undefined ? `${Math.round(cr * zoomLevel)}px` : "0";
+  } else if (isTextNode && !isInShape) borderRadius = "0";
 
-  const outlineStyle = isTextNode ? "1px solid #4FC3F7" : "2px solid #4FC3F7";
-  const boxShadow = isTextNode ? "none" : "0 2px 8px rgba(0,0,0,0.12)";
+  const outlineStyle = "none";
+  const boxShadow = "none";
 
   const textarea = document.createElement("textarea");
   textarea.value = currentValue;
@@ -1066,19 +1129,19 @@ function openInlineEditor(opts) {
     `left:${sx}px`, `top:${sy}px`,
     `width:${sw}px`, `height:${sh}px`,
     `padding:${padTop}px 0 ${padBottom}px 0`,
-    `font:${fontWeight} ${fontSize}px ${fontFamily}`,
+    `font:${fontWeight} ${fontSize}px/${lineHeight}px ${fontFamily}`,
     `border:none`,
     `outline:${outlineStyle}`, `outline-offset:-1px`,
     `border-radius:${borderRadius}`,
     `background:${bgColor}`, `color:${textColor}`,
     `resize:none`, `z-index:100`,
     `box-shadow:${boxShadow}`,
-    `line-height:${lineHeight}px`,
     `overflow:hidden`, `text-align:${hAlign}`,
     `box-sizing:border-box`,
     `-webkit-text-size-adjust:100%`,
     `word-wrap:break-word`, `white-space:pre-wrap`,
     `overflow-wrap:break-word`,
+    `letter-spacing:0px`,
   ].join(";");
 
   container.appendChild(textarea);
@@ -1099,6 +1162,9 @@ function openInlineEditor(opts) {
   const commit = () => {
     if (!inlineEditorActive) return;
     inlineEditorActive = false;
+    if (fdCanvas && fdCanvas.set_suppressed_text_node) {
+      fdCanvas.set_suppressed_text_node();
+    }
     const newVal = textarea.value;
     if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
     if (!fdCanvas) return;
@@ -1123,6 +1189,9 @@ function openInlineEditor(opts) {
   textarea.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       inlineEditorActive = false;
+      if (fdCanvas && fdCanvas.set_suppressed_text_node) {
+        fdCanvas.set_suppressed_text_node();
+      }
       if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
       fdCanvas.select_by_id(nodeId);
       fdCanvas.set_node_prop(propKey, originalValue);
@@ -1164,20 +1233,50 @@ function setupInlineEditor(opts) {
     getPanX, getPanY, getZoom, screenToScene,
   } = opts;
 
+  // Fix "weird box" bug: Web/VSCode UI elements outside the canvas often call e.preventDefault()
+  // on pointerdown to stop scrolling, which blocks the browser's native blur on the textarea.
+  // We attach a capture listener to `window` to intercept clicks *everywhere* in the app.
+  if (!window.__fd_inline_editor_capture_installed) {
+    window.addEventListener("pointerdown", (e) => {
+      if (inlineEditorActive && document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
+        // Only force blur if the user clicked OUTSIDE the textarea itself
+        if (e.target !== document.activeElement) {
+          document.activeElement.blur();
+        }
+      }
+    }, { capture: true });
+    window.__fd_inline_editor_capture_installed = true;
+  }
+
   canvasEl.addEventListener("dblclick", (e) => {
     const fdCanvas = typeof opts.fdCanvas === 'function' ? opts.fdCanvas() : opts.fdCanvas;
     if (!fdCanvas) return;
 
     const { x, y } = screenToScene(e.clientX, e.clientY, canvasEl);
-    const nodeId = fdCanvas.get_selected_id();
+    let nodeId = fdCanvas.get_selected_id();
 
-    // No selection → create new text node
+    // Fallback: hit-test at click coordinates in case selection was cleared
+    // between the two pointerdown events that precede a dblclick.
+    // This fixes double-click on ellipses (and rects) that were not yet selected.
+    if (!nodeId) {
+      const hitId = fdCanvas.hit_test_at(x, y);
+      if (hitId) {
+        fdCanvas.select_by_id(hitId);
+        nodeId = hitId;
+      }
+    }
+
+    // Still no selection after hit-test → create new text node at position
     if (!nodeId) {
       const created = fdCanvas.create_node_at("text", x, y);
       if (created) {
+        const newId = fdCanvas.get_selected_id();
+        // Suppress before render to prevent blue box flash
+        if (newId && fdCanvas.set_suppressed_text_node) {
+          fdCanvas.set_suppressed_text_node(newId);
+        }
         renderFn();
         syncFn();
-        const newId = fdCanvas.get_selected_id();
         if (newId) {
           setTimeout(() => openInlineEditor({
             nodeId: newId, propKey: "content", currentValue: "",
@@ -1226,8 +1325,11 @@ function setupInlineEditor(opts) {
             fdCanvas.push_undo_snapshot(textBefore, newSource);
             renderFn();
             syncFn();
+            // Suppress before selecting + rendering to prevent blue box flash
+            if (fdCanvas.set_suppressed_text_node) {
+              fdCanvas.set_suppressed_text_node(textId);
+            }
             fdCanvas.select_by_id(textId);
-            renderFn();
             setTimeout(() => openInlineEditor({
               nodeId: textId, propKey: "content", currentValue: "Label",
               fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
@@ -1253,24 +1355,33 @@ function setupInlineEditor(opts) {
     } else {
       const existingTextId = fdCanvas.get_text_child_id(props.id);
       if (existingTextId) {
+        // Suppress text node before selecting + rendering to prevent blue box flash
+        if (fdCanvas.set_suppressed_text_node) {
+          fdCanvas.set_suppressed_text_node(existingTextId);
+        }
         fdCanvas.select_by_id(existingTextId);
-        renderFn();
         const childPropsJson = fdCanvas.get_selected_node_props();
         const childProps = JSON.parse(childPropsJson);
         openInlineEditor({
           nodeId: existingTextId, propKey: "content", currentValue: childProps.content || "",
           fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
           panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
+          parentShapeId: props.id,
         });
       } else {
-        const newTextId = fdCanvas.create_child_text(props.id, "Text");
+        const newTextId = fdCanvas.create_child_text(props.id, "");
         if (newTextId) {
+          // Suppress before render to prevent blue box flash
+          if (fdCanvas.set_suppressed_text_node) {
+            fdCanvas.set_suppressed_text_node(newTextId);
+          }
           renderFn();
           syncFn();
           setTimeout(() => openInlineEditor({
-            nodeId: newTextId, propKey: "content", currentValue: "Text",
+            nodeId: newTextId, propKey: "content", currentValue: "",
             fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
             panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
+            parentShapeId: props.id,
           }), 50);
         }
       }
@@ -5143,14 +5254,14 @@ function parseLayerTree(source) {
       continue;
     }
 
-    // Edge
-    const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s*\{/);
+    // Edge — matches both header form (edge @name @from -> @to) and body form (edge @name {)
+    const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s+@(\w+)\s*->\s*@(\w+)/) ||
+                      trimmed.match(/^edge\s+@(\w+)\s*\{/);
     if (edgeMatch) {
       const node = { id: edgeMatch[1], kind: "edge", text: "", children: [] };
       if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
       else root.push(node);
-      braceDepth += openBraces - closeBraces;
-      stack.push({ node, depth: braceDepth });
+      if (trimmed.includes('{')) { braceDepth += openBraces - closeBraces; stack.push({ node, depth: braceDepth }); }
       continue;
     }
 
@@ -5477,7 +5588,7 @@ function closeLayerCtxMenu() {
   ctxMenu.close();
 }
 
-/** Searchable "Move Into" picker for the extension — mirrors playground.js implementation. */
+/** Searchable "Move Into" picker for the extension — mirrors app.js implementation. */
 function showSearchableParentPicker(nodeId, posX, posY) {
   if (!fdCanvas?.get_container_ids) return;
   let containers;
@@ -6639,10 +6750,13 @@ function setupInlineEditor() {
     if (!nodeId) {
       const created = fdCanvas.create_node_at("text", x, y);
       if (created) {
+        const newId = fdCanvas.get_selected_id();
+        if (newId && fdCanvas.set_suppressed_text_node) {
+          fdCanvas.set_suppressed_text_node(newId);
+        }
         render();
         syncTextToExtension();
         // Open inline editor on the newly created text node
-        const newId = fdCanvas.get_selected_id();
         if (newId) {
           setTimeout(() => openInlineEditor(newId, "content", ""), 50);
         }
@@ -6689,6 +6803,9 @@ function setupInlineEditor() {
             fdCanvas.push_undo_snapshot(textBefore, newSource);
             render();
             syncTextToExtension();
+            if (fdCanvas.set_suppressed_text_node) {
+              fdCanvas.set_suppressed_text_node(textId);
+            }
             fdCanvas.select_by_id(textId);
             render();
             setTimeout(() => openInlineEditor(textId, "content", "Label"), 50);
@@ -6710,6 +6827,9 @@ function setupInlineEditor() {
       // Shape node — drill into child text (Figma behavior)
       const existingTextId = fdCanvas.get_text_child_id(props.id);
       if (existingTextId) {
+        if (fdCanvas.set_suppressed_text_node) {
+          fdCanvas.set_suppressed_text_node(existingTextId);
+        }
         // Select the child text node and edit it
         fdCanvas.select_by_id(existingTextId);
         render();
@@ -6720,6 +6840,9 @@ function setupInlineEditor() {
         // Create a new text child inside the shape
         const newTextId = fdCanvas.create_child_text(props.id, "Text");
         if (newTextId) {
+          if (fdCanvas.set_suppressed_text_node) {
+            fdCanvas.set_suppressed_text_node(newTextId);
+          }
           render();
           syncTextToExtension();
           setTimeout(() => openInlineEditor(newTextId, "content", "Text"), 50);
@@ -6879,6 +7002,10 @@ function openInlineEditor(nodeId, propKey, currentValue) {
 
   inlineEditorActive = true;
 
+  if (fdCanvas.set_suppressed_text_node) {
+    fdCanvas.set_suppressed_text_node(nodeId);
+  }
+
   const container = document.getElementById("canvas-container");
 
   // Read node fill color for background matching
@@ -6894,12 +7021,12 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   // Compute lineHeight from unscaled font size first, then scale — this
   // matches how Canvas2D's draw_text() computes line_height = size * 1.2.
   const rawFontSize = props.fontSize || 14;
-  const fontSize = Math.round(rawFontSize * zoomLevel);
+  const fontSize = rawFontSize * zoomLevel;
   // Use exact font family from WASM renderer — no fallback chain added
   // to ensure pixel-perfect match with Canvas2D rendering
   const fontFamily = props.fontFamily || "Inter";
   const fontWeight = props.fontWeight || 400;
-  const lineHeight = Math.round(rawFontSize * 1.2 * zoomLevel);
+  const lineHeight = rawFontSize * 1.2 * zoomLevel;
 
   // Convert scene-space bounds to screen-space
   const sx = (b.x || 0) * zoomLevel + panX;
@@ -6998,7 +7125,7 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     `width:${sw}px`,
     `height:${sh}px`,
     `padding:${padTop}px ${padRight}px ${padBottom}px ${padLeft}px`,
-    `font:${fontWeight} ${fontSize}px ${fontFamily}`,
+    `font:${fontWeight} ${fontSize}px/${lineHeight}px ${fontFamily}`,
     `border:none`,
     `outline:${outlineStyle}`,
     `outline-offset:-1px`,
@@ -7008,7 +7135,6 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     `resize:none`,
     `z-index:100`,
     `box-shadow:${boxShadow}`,
-    `line-height:${lineHeight}px`,
     `overflow:hidden`,
     `text-align:${hAlign}`,
     `box-sizing:border-box`,
@@ -7043,8 +7169,6 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     if (!fdCanvas) return;
     // Skip mutation if value unchanged — avoids SetStyle flattening inherited styles
     if (newVal === originalValue) {
-      // No change — deselect and return to neutral canvas state
-      fdCanvas.select_by_id("");
       render();
       return;
     }
@@ -7056,12 +7180,10 @@ function openInlineEditor(nodeId, propKey, currentValue) {
       if (propKey === "content") {
         measureAndUpdateTextBounds(nodeId);
       }
+      render();
       syncTextToExtension();
       updatePropertiesPanel();
     }
-    // Editing complete — deselect to return canvas to neutral state
-    fdCanvas.select_by_id("");
-    render();
   };
 
   textarea.addEventListener("keydown", (e) => {
@@ -7072,8 +7194,6 @@ function openInlineEditor(nodeId, propKey, currentValue) {
       // Restore original text in the node
       fdCanvas.select_by_id(nodeId);
       fdCanvas.set_node_prop(propKey, originalValue);
-      // Cancel complete — deselect to return canvas to neutral state
-      fdCanvas.select_by_id("");
       render();
       syncTextToExtension();
       e.stopPropagation();
@@ -7086,9 +7206,9 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     }
   });
 
-  // Delay blur→commit to microtask to avoid premature removal from focus-stealing
+  // Delay blur→commit to avoid premature removal from focus-stealing
   textarea.addEventListener("blur", () => {
-    setTimeout(commit, 0);
+    setTimeout(commit, 150);
   });
 }
 

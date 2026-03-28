@@ -114,9 +114,14 @@ impl FdCanvas {
             None => {
                 if matches!(&node.kind, NodeKind::Text { .. }) {
                     // Mirror render2d::resolve_fill_color default for text
+                    let default_color = if self.dark_mode {
+                        "#E0E0E0" // Dark mode text default
+                    } else {
+                        "#1C1C1E" // Light mode text default
+                    };
                     props.insert(
                         "fill".into(),
-                        serde_json::Value::String("#CCCCCC".to_string()),
+                        serde_json::Value::String(default_color.to_string()),
                     );
                 }
             }
