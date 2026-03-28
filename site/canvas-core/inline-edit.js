@@ -126,6 +126,7 @@ export function measureAllTextNodes(fdCanvas, canvasEl, renderFn) {
  * @param {number} opts.panX         — current pan X
  * @param {number} opts.panY         — current pan Y
  * @param {number} opts.zoomLevel    — current zoom
+ * @param {string} [opts.parentShapeId] — parent shape ID for text-in-shape editing
  */
 export function openInlineEditor(opts) {
   if (inlineEditorActive) return;
@@ -135,12 +136,19 @@ export function openInlineEditor(opts) {
     fdCanvas, canvasEl, container,
     renderFn, syncFn, updatePanelFn,
     panX, panY, zoomLevel,
+    parentShapeId,
   } = opts;
 
   // Force-measure text bounds BEFORE reading them
   measureAndUpdateTextBounds(fdCanvas, canvasEl, nodeId);
 
-  const boundsJson = fdCanvas.get_node_bounds(nodeId);
+  // For text-in-shape: use parent shape bounds for textarea overlay
+  // so the editor perfectly covers the shape, not the tiny text child.
+  let posId = nodeId;
+  if (parentShapeId) {
+    posId = parentShapeId;
+  }
+  const boundsJson = fdCanvas.get_node_bounds(posId);
   const b = JSON.parse(boundsJson);
   const bw = b.w || 80;
   const bh = b.h || 24;
@@ -168,18 +176,41 @@ export function openInlineEditor(opts) {
   const containerRect = container.getBoundingClientRect();
   const canvasOffsetX = canvasRect.left - containerRect.left;
   const canvasOffsetY = canvasRect.top - containerRect.top;
-  const sx = (b.x || 0) * zoomLevel + panX + canvasOffsetX;
-  const sy = (b.y || 0) * zoomLevel + panY + canvasOffsetY;
-  const sw = Math.max(bw * zoomLevel, 80);
-  const sh = Math.max(bh * zoomLevel, lineHeight + 4);
+  const scaledW = bw * zoomLevel;
+  const scaledH = bh * zoomLevel;
+  const sw = Math.max(scaledW, 80);
+  const sh = Math.max(scaledH, lineHeight + 4);
+  // Center the textarea if it's wider/taller than the scaled node bounds
+  const sx = (b.x || 0) * zoomLevel + panX + canvasOffsetX - (sw - scaledW) / 2;
+  const sy = (b.y || 0) * zoomLevel + panY + canvasOffsetY - (sh - scaledH) / 2;
 
-  // Colors
+  // Colors & shape styling
   const isDark = document.body.classList.contains("dark-theme") ||
                  document.body.classList.contains("vscode-dark");
   const isTextNode = props.kind === "text";
+  const isInShape = !!parentShapeId;
   let bgColor, textColor;
 
-  if (isTextNode) {
+  // Read parent shape props for styling when editing text-in-shape
+  let shapeProps = null;
+  if (isInShape) {
+    fdCanvas.select_by_id(parentShapeId);
+    const spJson = fdCanvas.get_selected_node_props();
+    shapeProps = JSON.parse(spJson);
+    // Re-select the text node so mutations target the right node
+    fdCanvas.select_by_id(nodeId);
+  }
+
+  if (isInShape && shapeProps) {
+    // Use parent shape's fill for WYSIWYG overlay
+    if (shapeProps.fill && shapeProps.fill !== "none") {
+      bgColor = shapeProps.fill;
+      textColor = hexLuminance(shapeProps.fill) < 0.4 ? "#FFFFFF" : "#1C1C1E";
+    } else {
+      bgColor = "transparent";
+      textColor = props.fill || (isDark ? "#E0E0E0" : "#1C1C1E");
+    }
+  } else if (isTextNode) {
     bgColor = "transparent";
     textColor = props.fill || (isDark ? "#E0E0E0" : "#1C1C1E");
   } else if (props.fill) {
@@ -190,8 +221,8 @@ export function openInlineEditor(opts) {
     textColor = isDark ? "#E0E0E0" : "#1C1C1E";
   }
 
-  const hAlign = props.textAlign || (isTextNode ? "left" : "center");
-  const vAlign = props.textVAlign || "top";
+  const hAlign = props.textAlign || (isTextNode && !isInShape ? "left" : "center");
+  const vAlign = props.textVAlign || (isInShape ? "middle" : "top");
   const originalValue = currentValue;
 
   // Vertical padding
@@ -211,13 +242,14 @@ export function openInlineEditor(opts) {
     padTop = Math.max(0, sh - textHeight - padBottom);
   }
 
-  // Border radius
+  // Border radius — use parent shape's kind when editing text-in-shape
+  const shapeKind = isInShape && shapeProps ? shapeProps.kind : props.kind;
   let borderRadius = "8px";
-  if (props.kind === "ellipse") borderRadius = "50%";
-  else if (props.kind === "rect" || props.kind === "frame") {
-    const cr = props.cornerRadius !== undefined ? Math.round(props.cornerRadius * zoomLevel) : 0;
-    borderRadius = `${cr}px`;
-  } else if (isTextNode) borderRadius = "0";
+  if (shapeKind === "ellipse") borderRadius = "50%";
+  else if (shapeKind === "rect" || shapeKind === "frame") {
+    const cr = (isInShape && shapeProps ? shapeProps.cornerRadius : props.cornerRadius);
+    borderRadius = cr !== undefined ? `${Math.round(cr * zoomLevel)}px` : "0";
+  } else if (isTextNode && !isInShape) borderRadius = "0";
 
   const outlineStyle = "none";
   const boxShadow = "none";
@@ -447,6 +479,7 @@ export function setupInlineEditor(opts) {
           nodeId: existingTextId, propKey: "content", currentValue: childProps.content || "",
           fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
           panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
+          parentShapeId: props.id,
         });
       } else {
         const newTextId = fdCanvas.create_child_text(props.id, "");
@@ -457,6 +490,7 @@ export function setupInlineEditor(opts) {
             nodeId: newTextId, propKey: "content", currentValue: "",
             fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
             panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
+            parentShapeId: props.id,
           }), 50);
         }
       }

@@ -17,7 +17,7 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[SW] Pre-caching WASM + vendor assets');
       return cache.addAll([
-        ...WASM_ASSETS.map(u => u + '?v=0.11.295'),
+        ...WASM_ASSETS.map(u => u + '?v=0.11.296'),
         ...VENDOR_ASSETS,
       ]);
     })
