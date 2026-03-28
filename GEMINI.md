@@ -122,14 +122,13 @@ crates/
 
 ### 🌐 Browser Subagent Rule
 
-> [!IMPORTANT]
-> **Tab reuse is MANDATORY.** Before navigating anywhere, always `list_browser_pages` first.
+> [!CAUTION]
+> **Tab reuse is STRICTLY MANDATORY.** Duplicate tabs and long sessions cause exponential token burn because every subagent session generates a WebP video that context-stacks.
 >
-> - **Subagent Tool Rule:** To actually reuse an existing tab/context across different agent turns, you MUST provide the `ReusedSubagentId` parameter when calling `browser_subagent` (using the ID from the previous browser recording). If you omit `ReusedSubagentId`, a completely fresh, duplicate browser session is spun up.
-> - **Anti-Duplication Prompting:** When formulating the `Task` string for the subagent, you MUST explicitly instruct it: `"MANDATORY: Call list_browser_pages. If the target URL (e.g. fast-draft.com, localhost) is open, use switch_page. DO NOT use open_url or navigate unless it is missing."`
-> - If a tab with the same or similar URL exists → **switch to it** (do NOT open a new tab).
-> - **Codespace / Live Site rule:** If any tab URL matches `*.github.dev`, `fast-draft.com`, or `localhost` → use it directly. **NEVER** navigate to an intermediate launcher (like `github.com/codespaces`) to click "open" if the environment is already open — this creates a duplicate tab.
-> - If a codespace or live preview tab is loading/restarting, **wait up to 30 seconds** (use `wait` or retry with delays) before concluding it's unavailable.
+> - **Subagent Tool Protocol:** You MUST pass the `ReusedSubagentId` parameter (from the previous subagent turn) to maintain the same browser instance. Omissions spin up fresh instances, flooding the context with duplicate videos.
+> - **Strict Avoidance Prompting:** Start every subagent `Task` with: `"CRITICAL: Call list_browser_pages immediately. If the target URL (*.github.dev, localhost, fast-draft.com) exists, use switch_page. NEVER use open_url or navigate unless it is absolutely missing. Close stray or redundant tabs."`
+> - **Wait, Don't Reload:** If a tab is currently loading, use `wait` for up to 30 seconds rather than opening a new tab.
+> - **Speed is Token-Critical:** For simple UI verifications, keep subagent interactions incredibly short (load, verify, exit). "Screenshots are good enough" — a 2-second video consumes vastly fewer tokens than a 2-minute E2E run.
 
 ---
 

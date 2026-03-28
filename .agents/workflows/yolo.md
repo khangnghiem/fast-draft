@@ -25,7 +25,7 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 5. **UI Bug Verify**: Measure interaction fixes with `execute_browser_javascript` before committing.
 6. **Tauri**: `cd fd-desktop/src-tauri && cargo check --quiet && cargo clippy --quiet -- -D warnings && cargo fmt -- --check`
 7. **TS tests**: `cd fd-vscode && pnpm test`
-8. **E2E Smoke**: Build WASM (`wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm --quiet`), then run `/e2e` Smoke tier.
+8. **E2E Smoke (Quick Snapshot)**: Build WASM (`wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm --quiet`). Use `browser_subagent` to simply load the local site, verify it renders, and exit immediately. DO NOT run full `/e2e` interaction testing here to save token quota (short videos act like screenshots).
 9. **Report** and STOP for `/yolo local`.
 
 ## `/yolo deploy`
@@ -42,7 +42,6 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 19. **Merge**: `gh pr merge <PR_NUM> --squash --delete-branch`
 20. **Sync**: `git checkout main && git pull origin main`
 21. **Site Verify**: Wait for `pages.yml` deploy (`gh run list`).
-    - a) Run `/e2e` Site Deploy task.
-    - b) Run `/e2e` Prod Feature task (Set `ReusedSubagentId` to reuse tab).
+    Use `browser_subagent` to navigate to the live site, verify the new feature visually (quick snapshot), and exit immediately. DO NOT execute full `/e2e` interaction testing to minimize WebP video length and token consumption.
 22. **Publish VS Code**: Rebuild WASM, compile TS (`pnpm run compile`), publish to `vsce` and `ovsx` using `.env` tokens.
 23. **Report** completion.
