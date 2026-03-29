@@ -620,6 +620,42 @@ fn draw_text(
         let _ = ctx.fill_text(content, x, y);
     }
 
+    // Stroke pass — draw text outline if stroke is set
+    if let Some(ref stroke) = style.stroke {
+        let stroke_color = resolve_paint_color(&stroke.paint);
+        ctx.set_stroke_style_str(&stroke_color);
+        ctx.set_line_width(stroke.width as f64);
+        if let Some(_ww) = wrap_width {
+            // Multi-line stroke
+            ctx.set_text_baseline("top");
+            let adj_y = match valign {
+                TextVAlign::Top => b.y as f64 + 2.0,
+                TextVAlign::Middle => b.y as f64 + (b.height as f64 - total_text_height) / 2.0,
+                TextVAlign::Bottom => b.y as f64 + b.height as f64 - total_text_height - 2.0,
+            };
+            for (i, line) in lines.iter().enumerate() {
+                let _ = ctx.stroke_text(line, x, adj_y + i as f64 * line_height);
+            }
+        } else if num_lines > 1 {
+            ctx.set_text_baseline("top");
+            let adj_y = match valign {
+                TextVAlign::Top => b.y as f64 + 2.0,
+                TextVAlign::Middle => b.y as f64 + (b.height as f64 - total_text_height) / 2.0,
+                TextVAlign::Bottom => b.y as f64 + b.height as f64 - total_text_height - 2.0,
+            };
+            for (i, line) in lines.iter().enumerate() {
+                let _ = ctx.stroke_text(line, x, adj_y + i as f64 * line_height);
+            }
+        } else {
+            let y = match valign {
+                TextVAlign::Top => b.y as f64 + 2.0,
+                TextVAlign::Middle => b.y as f64 + b.height as f64 / 2.0,
+                TextVAlign::Bottom => b.y as f64 + b.height as f64 - 2.0,
+            };
+            let _ = ctx.stroke_text(content, x, y);
+        }
+    }
+
     ctx.restore();
 }
 

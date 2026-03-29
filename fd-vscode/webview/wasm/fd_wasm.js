@@ -1709,6 +1709,9 @@ function __wbg_get_imports() {
         __wbg_strokeRect_4da24de25ed7fbaf: function(arg0, arg1, arg2, arg3, arg4) {
             arg0.strokeRect(arg1, arg2, arg3, arg4);
         },
+        __wbg_strokeText_477071174dda8ce7: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+            arg0.strokeText(getStringFromWasm0(arg1, arg2), arg3, arg4);
+        }, arguments); },
         __wbg_stroke_240ea7f2407d73c0: function(arg0) {
             arg0.stroke();
         },

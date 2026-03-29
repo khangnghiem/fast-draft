@@ -2,7 +2,7 @@
   "name": "fast-draft",
   "displayName": "Fast Draft",
   "description": "Design Specs as Code",
-  "version": "0.10.140",
+  "version": "0.10.141",
   "publisher": "KhangNghiem",
   "license": "MIT",
   "icon": "icon.png",
@@ -35,7 +35,9 @@
       "fd-mcp": {
         "type": "stdio",
         "command": "node",
-        "args": ["${extensionLocation}/../fd-mcp/dist/server.js"]
+        "args": [
+          "${extensionLocation}/../fd-mcp/dist/server.js"
+        ]
       }
     },
     "languages": [
@@ -218,15 +220,42 @@
         "title": "FD: ✦ Renamify — Batch AI Rename",
         "icon": "$(replace-all)"
       },
-      { "command": "fd.tool.select", "title": "FD: Select Tool" },
-      { "command": "fd.tool.hand", "title": "FD: Hand Tool" },
-      { "command": "fd.tool.rect", "title": "FD: Rectangle Tool" },
-      { "command": "fd.tool.ellipse", "title": "FD: Ellipse Tool" },
-      { "command": "fd.tool.pen", "title": "FD: Pen Tool" },
-      { "command": "fd.tool.arrow", "title": "FD: Arrow Tool" },
-      { "command": "fd.tool.text", "title": "FD: Text Tool" },
-      { "command": "fd.tool.frame", "title": "FD: Frame Tool" },
-      { "command": "fd.tool.eraser", "title": "FD: Eraser Tool" }
+      {
+        "command": "fd.tool.select",
+        "title": "FD: Select Tool"
+      },
+      {
+        "command": "fd.tool.hand",
+        "title": "FD: Hand Tool"
+      },
+      {
+        "command": "fd.tool.rect",
+        "title": "FD: Rectangle Tool"
+      },
+      {
+        "command": "fd.tool.ellipse",
+        "title": "FD: Ellipse Tool"
+      },
+      {
+        "command": "fd.tool.pen",
+        "title": "FD: Pen Tool"
+      },
+      {
+        "command": "fd.tool.arrow",
+        "title": "FD: Arrow Tool"
+      },
+      {
+        "command": "fd.tool.text",
+        "title": "FD: Text Tool"
+      },
+      {
+        "command": "fd.tool.frame",
+        "title": "FD: Frame Tool"
+      },
+      {
+        "command": "fd.tool.eraser",
+        "title": "FD: Eraser Tool"
+      }
     ],
     "menus": {
       "editor/title": [
@@ -268,15 +297,51 @@
         "command": "-editor.unfold",
         "when": "activeCustomEditorId == 'fd.canvas'"
       },
-      { "key": "v", "command": "fd.tool.select", "when": "activeCustomEditorId == 'fd.canvas'" },
-      { "key": "h", "command": "fd.tool.hand", "when": "activeCustomEditorId == 'fd.canvas'" },
-      { "key": "r", "command": "fd.tool.rect", "when": "activeCustomEditorId == 'fd.canvas'" },
-      { "key": "o", "command": "fd.tool.ellipse", "when": "activeCustomEditorId == 'fd.canvas'" },
-      { "key": "p", "command": "fd.tool.pen", "when": "activeCustomEditorId == 'fd.canvas'" },
-      { "key": "a", "command": "fd.tool.arrow", "when": "activeCustomEditorId == 'fd.canvas'" },
-      { "key": "t", "command": "fd.tool.text", "when": "activeCustomEditorId == 'fd.canvas'" },
-      { "key": "f", "command": "fd.tool.frame", "when": "activeCustomEditorId == 'fd.canvas'" },
-      { "key": "e", "command": "fd.tool.eraser", "when": "activeCustomEditorId == 'fd.canvas'" }
+      {
+        "key": "v",
+        "command": "fd.tool.select",
+        "when": "activeCustomEditorId == 'fd.canvas'"
+      },
+      {
+        "key": "h",
+        "command": "fd.tool.hand",
+        "when": "activeCustomEditorId == 'fd.canvas'"
+      },
+      {
+        "key": "r",
+        "command": "fd.tool.rect",
+        "when": "activeCustomEditorId == 'fd.canvas'"
+      },
+      {
+        "key": "o",
+        "command": "fd.tool.ellipse",
+        "when": "activeCustomEditorId == 'fd.canvas'"
+      },
+      {
+        "key": "p",
+        "command": "fd.tool.pen",
+        "when": "activeCustomEditorId == 'fd.canvas'"
+      },
+      {
+        "key": "a",
+        "command": "fd.tool.arrow",
+        "when": "activeCustomEditorId == 'fd.canvas'"
+      },
+      {
+        "key": "t",
+        "command": "fd.tool.text",
+        "when": "activeCustomEditorId == 'fd.canvas'"
+      },
+      {
+        "key": "f",
+        "command": "fd.tool.frame",
+        "when": "activeCustomEditorId == 'fd.canvas'"
+      },
+      {
+        "key": "e",
+        "command": "fd.tool.eraser",
+        "when": "activeCustomEditorId == 'fd.canvas'"
+      }
     ]
   },
   "scripts": {

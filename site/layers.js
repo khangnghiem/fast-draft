@@ -409,6 +409,14 @@ export function initLayersPanel(api) {
           api.syncCanvasToEditor();
           api.updatePropertiesPanel();
           refreshLayersPanel();
+          // Flash the moved item to confirm the operation
+          requestAnimationFrame(() => {
+            const movedEl = panel.querySelector(`.layer-item[data-node-id="${draggedId}"]`);
+            if (movedEl) {
+              movedEl.classList.add('just-moved');
+              movedEl.addEventListener('animationend', () => movedEl.classList.remove('just-moved'), { once: true });
+            }
+          });
         }
         draggedId = null;
       });
