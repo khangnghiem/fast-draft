@@ -327,6 +327,12 @@ export function initLayersPanel(api) {
         e.dataTransfer.setData('text/plain', draggedId);
       });
   
+      // ── dragenter ── (Crucial for Safari/macOS to allow drop)
+      item.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+
       // ── dragover ── (determines drop zone indicator)
       item.addEventListener('dragover', (e) => {
         e.preventDefault();
