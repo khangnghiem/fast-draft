@@ -860,6 +860,10 @@ impl SceneGraph {
             }
         }
         self.graph.add_edge(new_parent, child, ());
+        // Append to the new parent's sorted_child_order to ensure it's visible.
+        if let Some(order) = self.sorted_child_order.get_mut(&new_parent) {
+            order.push(child);
+        }
     }
 
     /// Get children of a node in document (insertion) order.
