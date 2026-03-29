@@ -959,6 +959,7 @@ function updateZoomIndicator() {
 }
 
 /** Sync canvas text back to CodeMirror with echo suppression */
+let _saveTimer = null;
 function syncCanvasToEditor() {
   if (!fdCanvas || !editorView) return;
   suppressSync = true;
@@ -973,6 +974,11 @@ function syncCanvasToEditor() {
       changes: { from: 0, to: currentText.length, insert: newText },
     });
   }
+  // Persist to localStorage (debounced to avoid thrashing during drags)
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    try { localStorage.setItem('fd-document', newText); } catch (_) {}
+  }, 500);
   sceneDirty = true;
   suppressSync = false;
 }
@@ -3238,7 +3244,7 @@ async function initPlayground() {
     fdCanvas.set_theme(isDark);
     wrapper.classList.toggle('dark-canvas', isDark);
     console.log('[FD] Parsing scene…');
-    // Deep link: load ?code= param if present, else use default
+    // Deep link: load ?code= param if present, else restore from localStorage
     const urlParams = new URLSearchParams(window.location.search);
     const codeParam = urlParams.get('code');
     let initialFd = DEFAULT_FD;
@@ -3247,6 +3253,12 @@ async function initPlayground() {
         const decoded = LZString.decompressFromEncodedURIComponent(codeParam);
         if (decoded && decoded.trim().length > 0) initialFd = decoded;
       } catch (_) { /* invalid code param, use default */ }
+    } else {
+      // Restore last session from localStorage
+      try {
+        const saved = localStorage.getItem('fd-document');
+        if (saved && saved.trim().length > 0) initialFd = saved;
+      } catch (_) { /* localStorage unavailable */ }
     }
     fdCanvas.set_text(initialFd);
     console.log(`[FD] ✓ Ready (total ${Math.round(performance.now() - t0)}ms)`);
@@ -3367,6 +3379,11 @@ async function initPlayground() {
                 } catch (_) {
                   renderDirty = true; uiDirty = true; sceneDirty = true;
                 }
+                // Persist to localStorage
+                clearTimeout(_saveTimer);
+                _saveTimer = setTimeout(() => {
+                  try { localStorage.setItem('fd-document', text); } catch (_) {}
+                }, 500);
               }
             }, 50);
           }),
@@ -5233,3 +5250,14 @@ if (document.readyState === 'loading') {
 } else {
   initPlayground();
 }
+
+// Flush current document to localStorage on page unload (catches mid-debounce refreshes)
+window.addEventListener('beforeunload', () => {
+  if (!fdCanvas) return;
+  try {
+    const text = fdCanvas.get_text();
+    if (text && text.trim().length > 0) {
+      localStorage.setItem('fd-document', text);
+    }
+  } catch (_) {}
+});
