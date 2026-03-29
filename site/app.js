@@ -1,4 +1,4 @@
-import { initLayersPanel } from './layers.js';
+import { initLayersPanel } from './layers.js?v=0.11.296';
 // ─── FD Playground — WASM-powered interactive editor ───
 
 // ─── CodeMirror 6 + lz-string — local vendor bundle (no CDN) ─────────────
