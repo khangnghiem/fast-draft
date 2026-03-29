@@ -1373,25 +1373,34 @@ function updatePropertiesPanel() {
 
   // Fill color
   const fillEl = document.getElementById('pp-fill');
-  if (fillEl && props.fill) {
-    let hex = props.fill;
-    if (hex.length === 4) hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
-    fillEl.value = hex.substring(0, 7);
+  if (fillEl) {
+    if (props.fill) {
+      let hex = props.fill;
+      if (hex.length === 4) hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+      fillEl.value = hex.substring(0, 7);
+    } else {
+      fillEl.value = props.kind === 'text' ? '#ffffff' : '#000000'; // Fallback text is white (or theme)
+    }
   }
 
   // Stroke
   const strokeEl = document.getElementById('pp-stroke');
-  if (strokeEl && props.strokeColor) {
-    let hex = props.strokeColor;
-    if (hex.length === 4) hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
-    strokeEl.value = hex.substring(0, 7);
+  if (strokeEl) {
+    if (props.strokeColor) {
+      let hex = props.strokeColor;
+      if (hex.length === 4) hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+      strokeEl.value = hex.substring(0, 7);
+    } else {
+      strokeEl.value = '#000000';
+    }
   }
-  setVal('pp-stroke-w', props.strokeWidth);
-  setVal('pp-corner', props.cornerRadius);
+  setVal('pp-stroke-w', props.strokeWidth !== undefined ? props.strokeWidth : 0);
+  setVal('pp-corner', props.cornerRadius !== undefined ? props.cornerRadius : 0);
 
-  // Hide Corner for text nodes (corner_radius has no visual effect on text)
+  // Hide Corner for text nodes (corner_radius has no visual effect on text boxes themselves)
   const cornerRow = document.getElementById('pp-corner')?.closest('.pp-row');
   if (cornerRow) cornerRow.style.display = props.kind === 'text' ? 'none' : '';
+
 
   // Opacity
   const opSlider = document.getElementById('pp-opacity');
