@@ -939,20 +939,33 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   background: transparent !important;
 }
 .layer-item.drag-over-nest {
-  outline: 2px solid var(--fd-accent);
+  outline: 2.5px solid var(--fd-accent);
   outline-offset: -2px;
-  background: rgba(0, 122, 255, 0.08) !important;
+  background: rgba(0, 122, 255, 0.12) !important;
   border-radius: 4px;
+  animation: layer-nest-pulse 0.8s ease-in-out infinite alternate;
+}
+@keyframes layer-nest-pulse {
+  from { background: rgba(0, 122, 255, 0.08); }
+  to   { background: rgba(0, 122, 255, 0.16); }
 }
 .layer-item.drag-over-above {
-  box-shadow: inset 0 2px 0 0 var(--fd-accent);
+  box-shadow: inset 0 2.5px 0 0 var(--fd-accent);
 }
 .layer-item.drag-over-below {
-  box-shadow: inset 0 -2px 0 0 var(--fd-accent);
+  box-shadow: inset 0 -2.5px 0 0 var(--fd-accent);
 }
 .layers-body.drag-over-root {
-  background: rgba(0, 122, 255, 0.04);
-  outline: 1px dashed var(--fd-accent);
+  background: rgba(0, 122, 255, 0.06);
+  outline: 1.5px dashed var(--fd-accent);
   outline-offset: -2px;
+}
+/* Flash animation for a layer item that was just reparented */
+.layer-item.just-moved {
+  animation: layer-flash 0.5s ease-out;
+}
+@keyframes layer-flash {
+  0%   { background: rgba(0, 122, 255, 0.3); }
+  100% { background: transparent; }
 }
 

@@ -1389,6 +1389,10 @@ function updatePropertiesPanel() {
   setVal('pp-stroke-w', props.strokeWidth);
   setVal('pp-corner', props.cornerRadius);
 
+  // Hide Corner for text nodes (corner_radius has no visual effect on text)
+  const cornerRow = document.getElementById('pp-corner')?.closest('.pp-row');
+  if (cornerRow) cornerRow.style.display = props.kind === 'text' ? 'none' : '';
+
   // Opacity
   const opSlider = document.getElementById('pp-opacity');
   const opVal = document.getElementById('pp-opacity-val');
@@ -4636,7 +4640,7 @@ async function initPlayground() {
     });
     document.getElementById('fab-stroke')?.addEventListener('input', (e) => {
       if (!fdCanvas) return;
-      fdCanvas.set_node_prop('stroke', e.target.value);
+      fdCanvas.set_node_prop('strokeColor', e.target.value);
       smartDefaults.stroke = e.target.value;
       try { localStorage.setItem('fd-smart-defaults', JSON.stringify(smartDefaults)); } catch (_) {}
       renderCanvas();
