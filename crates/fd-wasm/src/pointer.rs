@@ -422,6 +422,14 @@ impl FdCanvas {
             self.eraser_tool.clear();
         }
 
+        // Capture dragging state before SelectTool::handle clears it
+        let was_dragging = self.select_tool.dragging;
+        let dragged_ids = if was_dragging {
+            self.select_tool.selected.clone()
+        } else {
+            Vec::new()
+        };
+
         let effective = self.effective_tool();
         self.rect_tool.frame_mode = effective == ToolKind::Frame;
         let mutations = match effective {
@@ -458,7 +466,18 @@ impl FdCanvas {
                 vec![]
             }
         };
-        let changed = self.apply_mutations(mutations);
+        let mut changed = self.apply_mutations(mutations);
+
+        // #1 Canvas 'Drag to Detach' Mechanism
+        // If we just finished a drag with the Select tool, evaluate if any selected nodes
+        // have visually escaped their parent containers and should be structurally detached.
+        if was_dragging && effective == ToolKind::Select {
+            for id in dragged_ids {
+                if self.engine.evaluate_drop(id) {
+                    changed = true;
+                }
+            }
+        }
 
         // Compute tool_switched early — needed for flush and visual_changed.
         // A draw tool (Rect/Ellipse/Pen/Text/Arrow/Frame) completing its

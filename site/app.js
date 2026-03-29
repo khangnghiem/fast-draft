@@ -4466,6 +4466,8 @@ async function initPlayground() {
       if (result.changed || result.toolSwitched) {
         renderDirty = true; uiDirty = true;
         syncCanvasToEditor();
+        updatePropertiesPanel();
+        refreshLayersPanel();
       }
 
       // Apply smart defaults to newly created shapes
