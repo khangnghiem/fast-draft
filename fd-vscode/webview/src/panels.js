@@ -859,17 +859,25 @@ function wireLayerDragDrop(panel) {
       } else {
         const targetIndex = getSiblingIndex(panel, targetId);
         const insertIndex = zone === 'above' ? targetIndex : targetIndex + 1;
-        const targetParent = item.parentElement?.getAttribute?.('data-parent-id');
+        const targetParent = item.parentElement?.getAttribute?.('data-parent-id') || null;
         const dragItem = panel.querySelector(`.layer-item[data-node-id="${draggedId}"]`);
-        const dragParent = dragItem?.parentElement?.getAttribute?.('data-parent-id');
-        if (targetParent && dragParent && targetParent === dragParent) {
+        const dragParent = dragItem?.parentElement?.getAttribute?.('data-parent-id') || null;
+
+        if (targetParent === dragParent) {
+          // Same parent (including both being root) — pure reorder
           changed = fdCanvas.reorder_child(draggedId, insertIndex);
         } else if (targetParent) {
+          // Different parent — reparent into target's parent, then reorder
           changed = fdCanvas.reparent_into(draggedId, targetParent);
-          if (changed) fdCanvas.reorder_child(draggedId, insertIndex);
+          if (changed) {
+            fdCanvas.reorder_child(draggedId, insertIndex);
+          }
         } else {
+          // Target is at root level — reparent to root, then reorder
           changed = fdCanvas.reparent_into(draggedId, 'root');
-          if (changed) fdCanvas.reorder_child(draggedId, insertIndex);
+          // 'changed' might be false if already at root, but reorder still needs to happen
+          fdCanvas.reorder_child(draggedId, insertIndex);
+          changed = true; // We triggered a mutation
         }
       }
       if (changed) {
