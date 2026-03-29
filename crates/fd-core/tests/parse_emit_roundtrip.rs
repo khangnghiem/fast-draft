@@ -58,6 +58,12 @@ fn assert_node_kind_preserved(input: &str, node_name: &str) {
 // ─── Fixture-based tests ─────────────────────────────────────────────────
 
 #[test]
+fn roundtrip_constraint_system_example() {
+    let input = include_str!("../../../examples/constraint_system.fd");
+    assert_roundtrip_preserves(input);
+}
+
+#[test]
 fn roundtrip_login_form_fixture() {
     let input = include_str!("fixtures/login_form.fd");
     assert_roundtrip_preserves(input);

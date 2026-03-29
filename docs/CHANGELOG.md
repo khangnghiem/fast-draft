@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.300 — Added Constraint System Showcase Example
+
+1. **New .fd Example** — Created `examples/constraint_system.fd` demonstrating the FD constraint system, including `center_in`, `offset`, and `fill_parent` layout constraints. Included `crates/fd-core/tests/parse_emit_roundtrip.rs` test coverage.
+
 ### v0.11.299 — Fixed Canvas Cursor Drift (R3.29)
 
 1. **Synchronous Canvas Resize on Focus** — Addressed a bug where the canvas cursor position would drift out of sync when switching focus between apps or monitors. Fast Draft now forces an immediate synchronous execution of `resizeCanvasWithFit()` upon the `window`'s `focus` event. This guarantees the pixel ratio and canvas CSS bounding client rect are perfectly synchronized down to the WASM layout backing store *before* evaluating the user's initial mouse clicks upon returning.

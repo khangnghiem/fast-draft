@@ -1,0 +1,40 @@
+# Constraint System Showcase
+# Demonstrates how layout is constraint-based, preferring relationships over raw positions.
+
+# 1. center_in with offset
+text @title "Constraint System Showcase" {
+  font: "Inter" 700 24
+  center_in: canvas
+  offset: @canvas 0, -200
+}
+
+# 2. offset from another node
+rect @box_a {
+  w: 100 h: 100
+  fill: #FF0000
+  center_in: canvas
+  offset: @title 0, 100
+}
+
+# 3. fill_parent
+frame @container {
+  w: 300 h: 300
+  fill: #EEEEEE
+  center_in: canvas
+
+  rect @fill_box {
+    fill: #00FF00
+    fill_parent: 20
+  }
+}
+
+# 4. group layout mode (row) with offset
+group @row_group {
+  layout: row gap=10 pad=0
+  center_in: canvas
+  offset: @container 0, 200
+
+  rect @r1 { w: 50 h: 50 fill: #0000FF }
+  rect @r2 { w: 50 h: 50 fill: #0000FF }
+  rect @r3 { w: 50 h: 50 fill: #0000FF }
+}
