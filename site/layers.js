@@ -379,10 +379,11 @@ export function initLayersPanel(api) {
           // Check if same parent — if so, reorder; otherwise reparent first
           const targetItem = panel.querySelector(`.layer-item[data-node-id="${targetId}"]`);
           const dragItem = panel.querySelector(`.layer-item[data-node-id="${draggedId}"]`);
-          const targetParent = targetItem?.parentElement?.getAttribute?.('data-parent-id');
-          const dragParent = dragItem?.parentElement?.getAttribute?.('data-parent-id');
-          if (targetParent && dragParent && targetParent === dragParent) {
-            // Same parent — pure reorder
+          const targetParent = targetItem?.parentElement?.getAttribute?.('data-parent-id') || null;
+          const dragParent = dragItem?.parentElement?.getAttribute?.('data-parent-id') || null;
+
+          if (targetParent === dragParent) {
+            // Same parent (including both being root) — pure reorder
             changed = api.getFdCanvas().reorder_child(draggedId, insertIndex);
           } else if (targetParent) {
             // Different parent — reparent into target's parent, then reorder
@@ -393,9 +394,9 @@ export function initLayersPanel(api) {
           } else {
             // Target is at root level — reparent to root, then reorder
             changed = api.getFdCanvas().reparent_into(draggedId, 'root');
-            if (changed) {
-              api.getFdCanvas().reorder_child(draggedId, insertIndex);
-            }
+            // 'changed' might be false if already at root, but reorder still needs to happen
+            api.getFdCanvas().reorder_child(draggedId, insertIndex);
+            changed = true; // We triggered a mutation
           }
         }
   

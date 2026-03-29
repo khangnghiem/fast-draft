@@ -156,6 +156,9 @@ pub trait DrawBackend {
     /// Fill text at position (x, y).
     fn fill_text(&self, text: &str, x: f64, y: f64);
 
+    /// Stroke text at position (x, y).
+    fn stroke_text(&self, text: &str, x: f64, y: f64);
+
     /// Measure text width and height.
     fn measure_text(&self, text: &str) -> TextMetrics;
 
