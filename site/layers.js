@@ -330,12 +330,14 @@ export function initLayersPanel(api) {
       // ── dragenter ── (Crucial for Safari/macOS to allow drop)
       item.addEventListener('dragenter', (e) => {
         e.preventDefault();
+        e.stopPropagation(); // prevent canvasWrapper from overriding dropEffect
         e.dataTransfer.dropEffect = 'move';
       });
 
       // ── dragover ── (determines drop zone indicator)
       item.addEventListener('dragover', (e) => {
         e.preventDefault();
+        e.stopPropagation(); // prevent canvasWrapper from overriding dropEffect
         e.dataTransfer.dropEffect = 'move';
         const targetId = item.getAttribute('data-node-id');
         if (!draggedId || targetId === draggedId) return;
@@ -443,6 +445,7 @@ export function initLayersPanel(api) {
         // Only highlight if dropping on empty space (not on a layer-item)
         if (e.target.closest('.layer-item')) return;
         e.preventDefault();
+        e.stopPropagation(); // prevent canvasWrapper from overriding dropEffect
         e.dataTransfer.dropEffect = 'move';
         clearLayerDragIndicators(panel);
         layersBody.classList.add('drag-over-root');
@@ -455,6 +458,7 @@ export function initLayersPanel(api) {
       layersBody.addEventListener('drop', (e) => {
         if (e.target.closest('.layer-item')) return; // handled by item drop
         e.preventDefault();
+        e.stopPropagation(); // prevent canvasWrapper from processing this drop
         layersBody.classList.remove('drag-over-root');
         if (!draggedId || !api.getFdCanvas()) return;
   

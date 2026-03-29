@@ -3520,7 +3520,10 @@ async function initPlayground() {
       });
       canvasWrapper.addEventListener('dragover', (e) => {
         e.preventDefault();
-        e.dataTransfer.dropEffect = 'copy';
+        // Only set 'copy' for external file drops — not internal layer DnD (which uses 'move')
+        if (e.dataTransfer?.types?.includes('Files')) {
+          e.dataTransfer.dropEffect = 'copy';
+        }
       });
       canvasWrapper.addEventListener('dragleave', (e) => {
         e.preventDefault();
