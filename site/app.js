@@ -1902,56 +1902,6 @@ function setupContextMenu() {
   // Right-click on canvas
   canvas.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    if (!fdCanvas) return;
-
-    const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
-    const hitId = fdCanvas.hit_test_at(x, y);
-
-    if (hitId) {
-      // ── Node context menu ──
-      const currentIds = JSON.parse(fdCanvas.get_selected_ids());
-      if (!currentIds.includes(hitId)) {
-        fdCanvas.select_by_id(hitId);
-      }
-      renderCanvas();
-      updateFab(canvas);
-      updatePropertiesPanel();
-
-      const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
-      ctxMenu.open({
-        items: buildNodeMenuItems(hitId, selectedIds),
-        x: e.clientX,
-        y: e.clientY,
-        onAction: doNodeAction,
-      });
-    } else if (fdCanvas.hit_test_edge_at) {
-      // ── Edge right-click ──
-      const edgeHit = fdCanvas.hit_test_edge_at(x, y);
-      if (edgeHit) {
-        fdCanvas.select_by_id(edgeHit);
-        renderCanvas();
-        updatePropertiesPanel();
-        showToast(`Selected edge @${edgeHit}`);
-      } else {
-        // ── Empty space context menu ──
-        contextMenuClickPos = { x, y };
-        ctxMenu.open({
-          items: buildCanvasMenuItems(),
-          x: e.clientX,
-          y: e.clientY,
-          onAction: doCanvasAction,
-        });
-      }
-    } else {
-      // ── Empty space context menu ──
-      contextMenuClickPos = { x, y };
-      ctxMenu.open({
-        items: buildCanvasMenuItems(),
-        x: e.clientX,
-        y: e.clientY,
-        onAction: doCanvasAction,
-      });
-    }
   });
 
   // Escape layered dismissal (non-menu uses)
@@ -3928,8 +3878,8 @@ async function initPlayground() {
 
       const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
 
-      // Middle-click or Space+click → always pan
-      if (e.button === 1 || isPanning) {
+      // Middle-click, Right-click, or Space+click → always pan
+      if (e.button === 1 || e.button === 2 || isPanning) {
         panDragging = true;
         panStartX = e.clientX - panX;
         panStartY = e.clientY - panY;
@@ -5255,6 +5205,17 @@ if (document.readyState === 'loading') {
 }
 
 // Flush current document to localStorage on page unload (catches mid-debounce refreshes)
+window.addEventListener('focus', () => {
+  // macOS / Browser quirk: When regaining focus, devicePixelRatio or layout 
+  // bounds might have shifted while the app was backgrounded. Force a sync 
+  // immediately to prevent coordinate drift on the first click.
+  if (typeof window.__fdResizeCanvasWithFit === 'function') {
+    window.__fdResizeCanvasWithFit();
+  } else {
+    window.dispatchEvent(new Event('resize'));
+  }
+});
+
 window.addEventListener('beforeunload', () => {
   if (!fdCanvas) return;
   try {

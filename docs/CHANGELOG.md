@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.299 — Fixed Canvas Cursor Drift (R3.29)
+
+1. **Synchronous Canvas Resize on Focus** — Addressed a bug where the canvas cursor position would drift out of sync when switching focus between apps or monitors. Fast Draft now forces an immediate synchronous execution of `resizeCanvasWithFit()` upon the `window`'s `focus` event. This guarantees the pixel ratio and canvas CSS bounding client rect are perfectly synchronized down to the WASM layout backing store *before* evaluating the user's initial mouse clicks upon returning.
+
+Files: `site/app.js`
+
 ### v0.11.298 — Seamless WYSIWYG Inline Text Editing & Theme Synchronization (R3.28)
 
 1. **Sub-pixel perfect WYSIWYG** — Removed integer `Math.round()` from `fontSize` and `lineHeight` calculations inside the inline editor. The editor overlay now maps with floating-point precision directly matching the Canvas2D bounds, eliminating sub-pixel textual jumping and layout jitter during transitions. Standardized font injection to raw CSS shorthand for exact baseline matching.
