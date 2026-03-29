@@ -863,6 +863,15 @@ impl SceneGraph {
         // Append to the new parent's sorted_child_order to ensure it's visible.
         if let Some(order) = self.sorted_child_order.get_mut(&new_parent) {
             order.push(child);
+        } else {
+            // If the parent was created dynamically (not parsed from text) and has no
+            // sorted_child_order yet, we must initialize it so the emitter sees the child.
+            let mut order: Vec<NodeIndex> = self
+                .graph
+                .neighbors_directed(new_parent, petgraph::Direction::Outgoing)
+                .collect();
+            order.sort();
+            self.sorted_child_order.insert(new_parent, order);
         }
     }
 

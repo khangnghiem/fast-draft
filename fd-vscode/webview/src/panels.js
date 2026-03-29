@@ -786,14 +786,18 @@ function clearLayerDragIndicators(panel) {
   });
 }
 
-/** Determine drop zone: 'above' (top 25%), 'below' (bottom 25%), 'nest' (middle 50%). */
+/** Determine drop zone dynamically based on container type. */
 function getDropZone(e, el) {
   const rect = el.getBoundingClientRect();
   const y = e.clientY - rect.top;
   const h = rect.height;
-  if (y < h * 0.25) return 'above';
-  if (y > h * 0.75) return 'below';
-  return 'nest';
+  const kind = el.getAttribute('data-node-kind');
+  const isContainer = ['rect','ellipse','frame','group'].includes(kind);
+  const edgePct = isContainer ? 0.15 : 0.5;
+
+  if (y < h * edgePct) return 'above';
+  if (y > h * (1 - edgePct)) return 'below';
+  return isContainer ? 'nest' : 'below';
 }
 
 /** Get sibling index of a node in the DOM. */
@@ -817,6 +821,11 @@ function wireLayerDragDrop(panel) {
       item.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', draggedId);
+    });
+
+    item.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
     });
 
     item.addEventListener('dragover', (e) => {
