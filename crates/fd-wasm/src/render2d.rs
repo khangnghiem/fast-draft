@@ -112,6 +112,9 @@ pub fn render_scene(
         suppressed_text_id,
     );
 
+    // Draw selection handles for edges (arrows) on top of everything
+    draw_edge_selection_handles(ctx, graph, bounds, selected_ids, handle_size, corners_only);
+
     // Draw smart guides (alignment lines)
     draw_smart_guides(ctx, smart_guides);
 
@@ -922,6 +925,52 @@ fn draw_generic_placeholder(
     ctx.restore();
 }
 
+// Unify handle drawing primitive for both Node corners and Edge endpoints
+fn draw_handle(
+    ctx: &CanvasRenderingContext2d,
+    hx: f64,
+    hy: f64,
+    handle_size: f64,
+    corners_only: bool,
+) {
+    let half = handle_size / 2.0;
+    if corners_only {
+        // Touch: larger round handles for finger targets
+        let r = handle_size / 2.0;
+        ctx.begin_path();
+        let _ = ctx.arc(hx + half, hy + half, r, 0.0, std::f64::consts::TAU);
+        ctx.fill();
+        ctx.stroke();
+    } else {
+        // Mouse/Pen: standard square handles - for consistency we make them circles to match Figma/Miro
+        // Oh wait, standard was a square in fd, but let's keep the existing behaviour for nodes
+        // Wait, the recommendation was simply extracting it.
+        ctx.fill_rect(hx, hy, handle_size, handle_size);
+        ctx.stroke_rect(hx, hy, handle_size, handle_size);
+    }
+}
+
+// Special rounded handle for edges (often shown as circles in drawing apps)
+fn draw_edge_handle(
+    ctx: &CanvasRenderingContext2d,
+    hx: f64,
+    hy: f64,
+    handle_size: f64,
+    corners_only: bool,
+) {
+    let half = handle_size / 2.0;
+    // For edges (arrows), we always use a rounded handle for better UI
+    let r = if corners_only {
+        handle_size / 2.0
+    } else {
+        handle_size / 2.0 - 0.5
+    };
+    ctx.begin_path();
+    let _ = ctx.arc(hx + half, hy + half, r, 0.0, std::f64::consts::TAU);
+    ctx.fill();
+    ctx.stroke();
+}
+
 fn draw_selection_handles(
     ctx: &CanvasRenderingContext2d,
     b: &ResolvedBounds,
@@ -944,21 +993,6 @@ fn draw_selection_handles(
     ctx.set_stroke_style_str("#4FC3F7");
     ctx.set_line_width(1.5);
 
-    let draw_handle = |ctx: &CanvasRenderingContext2d, hx: f64, hy: f64| {
-        if corners_only {
-            // Touch: larger round handles for finger targets
-            let r = handle_size / 2.0;
-            ctx.begin_path();
-            let _ = ctx.arc(hx + half, hy + half, r, 0.0, std::f64::consts::TAU);
-            ctx.fill();
-            ctx.stroke();
-        } else {
-            // Mouse/Pen: standard square handles
-            ctx.fill_rect(hx, hy, handle_size, handle_size);
-            ctx.stroke_rect(hx, hy, handle_size, handle_size);
-        }
-    };
-
     if is_text {
         // Text nodes: only horizontal resize handles (MiddleLeft + MiddleRight)
         let handles = [
@@ -966,7 +1000,7 @@ fn draw_selection_handles(
             (x + w - half, y + h / 2.0 - half), // MiddleRight
         ];
         for (hx, hy) in handles {
-            draw_handle(ctx, hx, hy);
+            draw_handle(ctx, hx, hy, handle_size, corners_only);
         }
     } else {
         // Corner handles (always shown)
@@ -977,7 +1011,7 @@ fn draw_selection_handles(
             (x + w - half, y + h - half), // BottomRight
         ];
         for (hx, hy) in corners {
-            draw_handle(ctx, hx, hy);
+            draw_handle(ctx, hx, hy, handle_size, corners_only);
         }
 
         // Midpoint handles (skipped for touch — too close to corners for fingers)
@@ -989,10 +1023,93 @@ fn draw_selection_handles(
                 (x + w - half, y + h / 2.0 - half), // MiddleRight
             ];
             for (hx, hy) in midpoints {
-                draw_handle(ctx, hx, hy);
+                draw_handle(ctx, hx, hy, handle_size, corners_only);
             }
         }
     }
+}
+
+fn draw_edge_selection_handles(
+    ctx: &CanvasRenderingContext2d,
+    graph: &SceneGraph,
+    bounds: &HashMap<NodeIndex, ResolvedBounds>,
+    selected_ids: &[String],
+    handle_size: f64,
+    corners_only: bool,
+) {
+    use fd_core::model::EdgeAnchor;
+
+    ctx.save();
+    let half = handle_size / 2.0;
+
+    for edge in &graph.edges {
+        // Only draw handles for strictly selected edges
+        if !selected_ids.iter().any(|s| s == edge.id.as_str()) {
+            continue;
+        }
+
+        // Resolve endpoints
+        let (x1, y1) = match &edge.from {
+            EdgeAnchor::Node(id) => {
+                if let Some(idx) = graph.index_of(*id)
+                    && let Some(b) = bounds.get(&idx)
+                {
+                    b.center()
+                } else {
+                    continue;
+                }
+            }
+            EdgeAnchor::Point(x, y) => (*x, *y),
+        };
+
+        let (x2, y2) = match &edge.to {
+            EdgeAnchor::Node(id) => {
+                if let Some(idx) = graph.index_of(*id)
+                    && let Some(b) = bounds.get(&idx)
+                {
+                    b.center()
+                } else {
+                    continue;
+                }
+            }
+            EdgeAnchor::Point(x, y) => (*x, *y),
+        };
+
+        // If the anchor is a Node, we fill it solid blue to indicate it is "snapped"
+        // If it is a Point, we fill it white with blue stroke to indicate it is "free"
+        ctx.set_line_width(1.5);
+        ctx.set_stroke_style_str("#4FC3F7");
+
+        // Start handle
+        if matches!(edge.from, EdgeAnchor::Node(_)) {
+            ctx.set_fill_style_str("#4FC3F7"); // Snapped (solid)
+        } else {
+            ctx.set_fill_style_str("#FFFFFF"); // Free (hollow)
+        }
+        draw_edge_handle(
+            ctx,
+            x1 as f64 - half,
+            y1 as f64 - half,
+            handle_size,
+            corners_only,
+        );
+
+        // End handle
+        if matches!(edge.to, EdgeAnchor::Node(_)) {
+            ctx.set_fill_style_str("#4FC3F7"); // Snapped (solid)
+        } else {
+            ctx.set_fill_style_str("#FFFFFF"); // Free (hollow)
+        }
+        draw_edge_handle(
+            ctx,
+            x2 as f64 - half,
+            y2 as f64 - half,
+            handle_size,
+            corners_only,
+        );
+    }
+
+    ctx.restore();
 }
 
 fn draw_grid(ctx: &CanvasRenderingContext2d, width: f64, height: f64, theme: &CanvasTheme) {
