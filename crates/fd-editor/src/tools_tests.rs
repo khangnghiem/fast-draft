@@ -2533,3 +2533,239 @@ fn lasso_tool_fewer_than_3_points_never_contains() {
     let empty_tool = LassoTool::new();
     assert!(!empty_tool.contains_point(0.0, 0.0));
 }
+
+#[test]
+fn tool_resize_top_left() {
+    let mut tool = SelectTool::new();
+    let target = NodeId::intern("box1");
+
+    tool.selected = vec![target];
+    tool.start_resize(
+        crate::tools::ResizeHandle::TopLeft,
+        (100.0, 100.0, 50.0, 50.0),
+    );
+
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 90.0,
+            y: 80.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        Some(target),
+    );
+
+    assert_eq!(mutations.len(), 2);
+    // ResizeNode
+    match &mutations[0] {
+        GraphMutation::ResizeNode { id, width, height } => {
+            assert_eq!(*id, target);
+            assert_eq!(*width, 60.0);
+            assert_eq!(*height, 70.0);
+        }
+        _ => panic!("Expected ResizeNode mutation"),
+    }
+    // MoveNode
+    match &mutations[1] {
+        GraphMutation::MoveNode { id, dx, dy } => {
+            assert_eq!(*id, target);
+            assert_eq!(*dx, -10.0);
+            assert_eq!(*dy, -20.0);
+        }
+        _ => panic!("Expected MoveNode mutation"),
+    }
+}
+
+#[test]
+fn tool_resize_top_left_shift() {
+    let mut tool = SelectTool::new();
+    let target = NodeId::intern("box1");
+
+    tool.selected = vec![target];
+    tool.start_resize(
+        crate::tools::ResizeHandle::TopLeft,
+        (100.0, 100.0, 50.0, 50.0),
+    );
+
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 90.0, // dx = -10
+            y: 80.0, // dy = -20
+            pressure: 1.0,
+            modifiers: Modifiers {
+                shift: true,
+                ..Default::default()
+            },
+        },
+        Some(target),
+    );
+
+    assert_eq!(mutations.len(), 2);
+    // ResizeNode
+    match &mutations[0] {
+        GraphMutation::ResizeNode { id, width, height } => {
+            assert_eq!(*id, target);
+            // aspect ratio is 1:1, so we take max of abs(dx), abs(dy)
+            // max(10, 20) = 20
+            // so width becomes 50 + 20 = 70
+            // height becomes 50 + 20 = 70
+            assert_eq!(*width, 70.0);
+            assert_eq!(*height, 70.0);
+        }
+        _ => panic!("Expected ResizeNode mutation"),
+    }
+    // MoveNode
+    match &mutations[1] {
+        GraphMutation::MoveNode { id, dx, dy } => {
+            assert_eq!(*id, target);
+            // dx becomes -20, dy becomes -20
+            assert_eq!(*dx, -20.0);
+            assert_eq!(*dy, -20.0);
+        }
+        _ => panic!("Expected MoveNode mutation"),
+    }
+}
+
+#[test]
+fn tool_resize_top_left_shift_aspect_ratio() {
+    let mut tool = SelectTool::new();
+    let target = NodeId::intern("box1");
+
+    tool.selected = vec![target];
+    // Start with a non-1:1 aspect ratio: width=100, height=50
+    tool.start_resize(
+        crate::tools::ResizeHandle::TopLeft,
+        (100.0, 100.0, 100.0, 50.0),
+    );
+
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 80.0, // dx = -20
+            y: 90.0, // dy = -10
+            pressure: 1.0,
+            modifiers: Modifiers {
+                shift: true,
+                ..Default::default()
+            },
+        },
+        Some(target),
+    );
+
+    assert_eq!(mutations.len(), 2);
+    match &mutations[0] {
+        GraphMutation::ResizeNode { id, width, height } => {
+            assert_eq!(*id, target);
+            // new width/height should preserve 2:1 ratio
+            // max dx=20, dy=10.
+            // if we scaled width by 20, new_w = 120. new_h = 60.
+            // so dx=-20, dy=-10 (TopLeft means negative movement increases size)
+            assert_eq!(*width, 120.0);
+            assert_eq!(*height, 60.0);
+        }
+        _ => panic!("Expected ResizeNode mutation"),
+    }
+}
+
+#[test]
+fn tool_resize_bottom_right() {
+    let mut tool = SelectTool::new();
+    let target = NodeId::intern("box1");
+
+    tool.selected = vec![target];
+    tool.start_resize(
+        crate::tools::ResizeHandle::BottomRight,
+        (100.0, 100.0, 50.0, 50.0),
+    );
+
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 160.0, // dx = 10
+            y: 170.0, // dy = 20
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        Some(target),
+    );
+
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::ResizeNode { id, width, height } => {
+            assert_eq!(*id, target);
+            assert_eq!(*width, 60.0);
+            assert_eq!(*height, 70.0);
+        }
+        _ => panic!("Expected ResizeNode mutation"),
+    }
+}
+
+#[test]
+fn tool_resize_edge_start_end() {
+    let mut tool = SelectTool::new();
+    let target = NodeId::intern("edge1");
+
+    tool.selected = vec![target];
+
+    // Testing EdgeStart
+    tool.start_resize(
+        crate::tools::ResizeHandle::EdgeStart,
+        (100.0, 100.0, 50.0, 50.0),
+    );
+
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 10.0,
+            y: 20.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        Some(target),
+    );
+
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::UpdateEdge { id, from, .. } => {
+            assert_eq!(*id, target);
+            let anchor = from.as_ref().unwrap();
+            match anchor {
+                EdgeAnchor::Point(x, y) => {
+                    assert_eq!(*x, 10.0);
+                    assert_eq!(*y, 20.0);
+                }
+                _ => panic!("Expected Point anchor"),
+            }
+        }
+        _ => panic!("Expected UpdateEdge mutation"),
+    }
+
+    // Testing EdgeEnd
+    tool.start_resize(
+        crate::tools::ResizeHandle::EdgeEnd,
+        (100.0, 100.0, 50.0, 50.0),
+    );
+
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 30.0,
+            y: 40.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        Some(target),
+    );
+
+    assert_eq!(mutations.len(), 1);
+    match &mutations[0] {
+        GraphMutation::UpdateEdge { id, to, .. } => {
+            assert_eq!(*id, target);
+            let anchor = to.as_ref().unwrap();
+            match anchor {
+                EdgeAnchor::Point(x, y) => {
+                    assert_eq!(*x, 30.0);
+                    assert_eq!(*y, 40.0);
+                }
+                _ => panic!("Expected Point anchor"),
+            }
+        }
+        _ => panic!("Expected UpdateEdge mutation"),
+    }
+}
