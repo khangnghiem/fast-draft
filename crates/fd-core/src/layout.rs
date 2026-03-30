@@ -55,6 +55,12 @@ pub fn resolve_layout(
     // This ensures free-layout groups correctly contain children with Position constraints.
     recompute_group_auto_sizes(graph, graph.root, &mut bounds);
 
+    // Position edge text children at the edge midpoint.
+    // The renderer draws these labels at the midpoint of the edge endpoints,
+    // but the layout engine was unaware — leaving their bounds at default (0,0).
+    // This pass ensures hit-test and spatial-index see them at the correct position.
+    resolve_edge_text_children(graph, &mut bounds);
+
     bounds
 }
 
@@ -640,6 +646,71 @@ fn apply_constraint(
 
             shift_subtree(graph, node_idx, dx, dy, bounds);
         }
+    }
+}
+
+/// Resolve one edge anchor to a scene-space (x, y) position.
+fn resolve_edge_anchor(
+    anchor: &EdgeAnchor,
+    graph: &SceneGraph,
+    bounds: &HashMap<NodeIndex, ResolvedBounds>,
+) -> Option<(f32, f32)> {
+    match anchor {
+        EdgeAnchor::Node(id) => {
+            let idx = graph.index_of(*id)?;
+            let b = bounds.get(&idx)?;
+            Some(b.center())
+        }
+        EdgeAnchor::Point(x, y) => Some((*x, *y)),
+    }
+}
+
+/// Position edge text children at the midpoint of their parent edge.
+///
+/// Edge text children live in the graph as root-level nodes but are rendered
+/// at the edge midpoint. Without this pass, their bounds stay at the default
+/// layout position (parent origin) and hit-testing can't find them where
+/// they're visually drawn.
+fn resolve_edge_text_children(graph: &SceneGraph, bounds: &mut HashMap<NodeIndex, ResolvedBounds>) {
+    for edge in &graph.edges {
+        let Some(text_id) = edge.text_child else {
+            continue;
+        };
+        let Some(text_idx) = graph.index_of(text_id) else {
+            continue;
+        };
+
+        // Resolve edge endpoints
+        let Some((x1, y1)) = resolve_edge_anchor(&edge.from, graph, bounds) else {
+            continue;
+        };
+        let Some((x2, y2)) = resolve_edge_anchor(&edge.to, graph, bounds) else {
+            continue;
+        };
+
+        // Midpoint + optional label offset
+        let (ox, oy) = edge.label_offset.unwrap_or((0.0, 0.0));
+        let mx = (x1 + x2) / 2.0 + ox;
+        let my = (y1 + y2) / 2.0 + oy;
+
+        // Get existing text bounds (width/height were measured by JS or heuristic)
+        let text_b = bounds.get(&text_idx).copied().unwrap_or(ResolvedBounds {
+            x: 0.0,
+            y: 0.0,
+            width: 40.0,
+            height: 18.0,
+        });
+
+        // Center the text bounds on the midpoint
+        bounds.insert(
+            text_idx,
+            ResolvedBounds {
+                x: mx - text_b.width / 2.0,
+                y: my - text_b.height / 2.0 - 6.0, // -6 matches render2d baseline offset
+                width: text_b.width,
+                height: text_b.height,
+            },
+        );
     }
 }
 

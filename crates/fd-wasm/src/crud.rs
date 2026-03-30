@@ -218,6 +218,71 @@ impl FdCanvas {
         String::new()
     }
 
+    /// Get the text child ID of an edge. Returns empty string if none.
+    pub fn get_edge_text_child_id(&self, edge_id: &str) -> String {
+        let id = NodeId::intern(edge_id);
+        for edge in &self.engine.graph.edges {
+            if edge.id == id {
+                return edge
+                    .text_child
+                    .map(|tc| tc.as_str().to_string())
+                    .unwrap_or_default();
+            }
+        }
+        String::new()
+    }
+
+    /// Create a text child node for an edge. Returns the new text node ID.
+    /// If the edge already has a text child, returns its existing ID.
+    pub fn create_edge_text_child(&mut self, edge_id: &str, content: &str) -> String {
+        let eid = NodeId::intern(edge_id);
+
+        // Check if the edge already has a text child
+        for edge in &self.engine.graph.edges {
+            if edge.id == eid {
+                if let Some(tc) = edge.text_child {
+                    // Already has a text child — return it
+                    return tc.as_str().to_string();
+                }
+                break;
+            }
+        }
+
+        // Create the text child node
+        let text_id = NodeId::with_prefix("label");
+        let text_content = if content.is_empty() {
+            "Label".to_string()
+        } else {
+            content.to_string()
+        };
+        let text_node = SceneNode::new(
+            text_id,
+            NodeKind::Text {
+                content: text_content,
+                max_width: None,
+            },
+        );
+
+        // Add the text node to the graph as a child of root
+        let root = self.engine.graph.root;
+        self.engine.graph.add_node(root, text_node);
+
+        // Set the edge's text_child reference
+        for edge in &mut self.engine.graph.edges {
+            if edge.id == eid {
+                edge.text_child = Some(text_id);
+                break;
+            }
+        }
+
+        // Re-resolve layout (positions the text at edge midpoint) and sync
+        self.engine.resolve();
+        self.engine.flush_to_text();
+        self.rebuild_spatial_index();
+
+        text_id.as_str().to_string()
+    }
+
     /// Detach a text child from its parent edge.
     pub fn detach_text_from_edge(&mut self, text_id: &str) -> String {
         let id = NodeId::intern(text_id);

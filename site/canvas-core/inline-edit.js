@@ -433,46 +433,39 @@ export function setupInlineEditor(opts) {
     // Edge → edit/create label
     if (props.kind === "edge") {
       const edgeId = props.id;
-      const source = fdCanvas.get_text();
-      const edgeBlockRe = new RegExp(`edge\\s+@${edgeId}\\s*\\{([^}]*(?:\\{[^}]*\\}[^}]*)*)\\}`, 's');
-      const edgeMatch = source.match(edgeBlockRe);
-      if (edgeMatch) {
-        const textChildRe = /text\s+@(\w+)\s+"([^"]*)"/;
-        const textMatch = edgeMatch[1].match(textChildRe);
-        if (textMatch) {
-          fdCanvas.select_by_id(textMatch[1]);
+
+      // Use WASM API to check for existing text child (idempotent, no duplicates)
+      const existingTextId = fdCanvas.get_edge_text_child_id(edgeId);
+      if (existingTextId) {
+        // Edit existing label
+        fdCanvas.select_by_id(existingTextId);
+        const childPropsJson = fdCanvas.get_selected_node_props();
+        const childProps = JSON.parse(childPropsJson);
+        renderFn();
+        openInlineEditor({
+          nodeId: existingTextId, propKey: "content", currentValue: childProps.content || "",
+          fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
+          panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
+        });
+      } else {
+        // Create new label via WASM (sets Edge.text_child, adds to graph, re-resolves layout)
+        const textBefore = fdCanvas.get_text();
+        const newTextId = fdCanvas.create_edge_text_child(edgeId, "Label");
+        if (newTextId) {
+          const textAfter = fdCanvas.get_text();
+          fdCanvas.push_undo_snapshot(textBefore, textAfter);
           renderFn();
-          openInlineEditor({
-            nodeId: textMatch[1], propKey: "content", currentValue: textMatch[2],
+          syncFn();
+          // Suppress before selecting + rendering to prevent blue box flash
+          if (fdCanvas.set_suppressed_text_node) {
+            fdCanvas.set_suppressed_text_node(newTextId);
+          }
+          fdCanvas.select_by_id(newTextId);
+          setTimeout(() => openInlineEditor({
+            nodeId: newTextId, propKey: "content", currentValue: "Label",
             fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
             panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
-          });
-        } else {
-          const textId = "label_" + edgeId;
-          const esc = edgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const re = new RegExp(`(edge\\s+@${esc}\\s*\\{)`);
-          const m2 = source.match(re);
-          if (m2) {
-            const insertPos = source.indexOf(m2[0]) + m2[0].length;
-            const newSource = source.slice(0, insertPos)
-              + `\n  text @${textId} "Label" {}`
-              + source.slice(insertPos);
-            const textBefore = source;
-            fdCanvas.set_text(newSource);
-            fdCanvas.push_undo_snapshot(textBefore, newSource);
-            renderFn();
-            syncFn();
-            // Suppress before selecting + rendering to prevent blue box flash
-            if (fdCanvas.set_suppressed_text_node) {
-              fdCanvas.set_suppressed_text_node(textId);
-            }
-            fdCanvas.select_by_id(textId);
-            setTimeout(() => openInlineEditor({
-              nodeId: textId, propKey: "content", currentValue: "Label",
-              fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
-              panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
-            }), 50);
-          }
+          }), 50);
         }
       }
       e.preventDefault();
