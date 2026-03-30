@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.302 — Arrowhead Polish & Edge Drag Optimization (R3.42)
+
+1. **Arrowhead Visual Polish** — The structural arrowhead drawing logic in `render2d.rs` was refined to retract the edge stroke path dynamically based on stroke width and tangent angle. This prevents the stroke's flat/round cap from bulging out past the tip of the geometric triangle arrowhead.
+2. **Edge Drag 60fps Optimization** — Bypassed synchronous constraint layout `resolve()` and exhaustive quadtree spatial index rebuilding during active Arrow dragging and Pen drawing. Discovered that `UpdateEdge` and `UpdatePath` were missing from the WASM `all_drag_ops` fast-path whitelist, causing complete O(N) layout recalculations every single mouse frame. Adding them to the exclusion array restored butter-smooth 60fps edge manipulation since edges do not project bounds into grid systems.
+
+Files: `crates/fd-wasm/src/render2d.rs`, `crates/fd-wasm/src/lib.rs`
+
 ### v0.11.301 — Arrow Tool Defaults & Edge Snapping (R3.42)
 
 1. **Default Arrow Styling** — The Arrow tool now automatically applies a default `stroke` (`#6B7080`) and `width` (`2.0`) to newly authored connections.

@@ -561,7 +561,10 @@ impl FdCanvas {
         let all_drag_ops = mutations.iter().all(|m| {
             matches!(
                 m,
-                GraphMutation::MoveNode { .. } | GraphMutation::ResizeNode { .. }
+                GraphMutation::MoveNode { .. }
+                    | GraphMutation::ResizeNode { .. }
+                    | GraphMutation::UpdateEdge { .. }
+                    | GraphMutation::UpdatePath { .. }
             )
         });
         let co_selected: Vec<fd_core::id::NodeId> = mutations

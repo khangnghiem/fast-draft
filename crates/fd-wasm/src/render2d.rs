@@ -1239,47 +1239,7 @@ fn draw_edges(
         ctx.set_stroke_style_str(&stroke_color);
         ctx.set_line_width(stroke_width);
 
-        ctx.begin_path();
-        match edge.curve {
-            CurveKind::Straight => {
-                if sketchy {
-                    sketchy_line(ctx, x1 as f64, y1 as f64, x2 as f64, y2 as f64);
-                } else {
-                    ctx.move_to(x1 as f64, y1 as f64);
-                    ctx.line_to(x2 as f64, y2 as f64);
-                }
-            }
-            CurveKind::Smooth => {
-                let mx = ((x1 + x2) / 2.0) as f64;
-                let my = ((y1 + y2) / 2.0) as f64;
-                let dx = (x2 - x1).abs();
-                let dy = (y2 - y1).abs();
-                let offset = (dx.max(dy) * 0.3) as f64;
-                ctx.move_to(x1 as f64, y1 as f64);
-                ctx.quadratic_curve_to(mx, my - offset, x2 as f64, y2 as f64);
-            }
-            CurveKind::Step => {
-                let mx = ((x1 + x2) / 2.0) as f64;
-                ctx.move_to(x1 as f64, y1 as f64);
-                ctx.line_to(mx, y1 as f64);
-                ctx.line_to(mx, y2 as f64);
-                ctx.line_to(x2 as f64, y2 as f64);
-            }
-        }
-        ctx.stroke();
-
-        // Selection highlight: draw a thicker stroke on top
-        let is_selected = selected_ids.iter().any(|s| s == edge.id.as_str());
-        if is_selected {
-            ctx.set_stroke_style_str("#4FC3F7");
-            ctx.set_line_width(stroke_width + 2.0);
-            ctx.stroke();
-            // Restore the original stroke for subsequent drawing
-            ctx.set_stroke_style_str(&stroke_color);
-            ctx.set_line_width(stroke_width);
-        }
-
-        // Arrowheads — use curve tangent direction, not center-to-center
+        // Arrowheads — compute tangent direction early to retract the stroke line
         let (end_from_x, end_from_y, start_from_x, start_from_y) = match edge.curve {
             CurveKind::Straight => (x1, y1, x2, y2),
             CurveKind::Smooth => {
@@ -1296,6 +1256,66 @@ fn draw_edges(
                 (mx, y2, mx, y1)
             }
         };
+
+        let mut draw_x1 = x1 as f64;
+        let mut draw_y1 = y1 as f64;
+        let mut draw_x2 = x2 as f64;
+        let mut draw_y2 = y2 as f64;
+
+        let retract = stroke_width * 0.8; // Retract slightly so cap hides behind arrow tip
+
+        if matches!(edge.arrow, ArrowKind::End | ArrowKind::Both) {
+            let angle = ((y2 - end_from_y) as f64).atan2((x2 - end_from_x) as f64);
+            draw_x2 -= retract * angle.cos();
+            draw_y2 -= retract * angle.sin();
+        }
+        if matches!(edge.arrow, ArrowKind::Start | ArrowKind::Both) {
+            let angle = ((y1 - start_from_y) as f64).atan2((x1 - start_from_x) as f64);
+            draw_x1 -= retract * angle.cos();
+            draw_y1 -= retract * angle.sin();
+        }
+
+        ctx.begin_path();
+        match edge.curve {
+            CurveKind::Straight => {
+                if sketchy {
+                    sketchy_line(ctx, draw_x1, draw_y1, draw_x2, draw_y2);
+                } else {
+                    ctx.move_to(draw_x1, draw_y1);
+                    ctx.line_to(draw_x2, draw_y2);
+                }
+            }
+            CurveKind::Smooth => {
+                // The bezier control point remains unchanged based on the original anchors
+                // to preserve the overall curve shape despite the stroke path being slightly shorter
+                let mx = ((x1 + x2) / 2.0) as f64;
+                let my = ((y1 + y2) / 2.0) as f64;
+                let dx = (x2 - x1).abs() as f64;
+                let dy = (y2 - y1).abs() as f64;
+                let offset = dx.max(dy) * 0.3;
+                ctx.move_to(draw_x1, draw_y1);
+                ctx.quadratic_curve_to(mx, my - offset, draw_x2, draw_y2);
+            }
+            CurveKind::Step => {
+                let mx = ((x1 + x2) / 2.0) as f64;
+                ctx.move_to(draw_x1, draw_y1);
+                ctx.line_to(mx, draw_y1);
+                ctx.line_to(mx, draw_y2);
+                ctx.line_to(draw_x2, draw_y2);
+            }
+        }
+        ctx.stroke();
+
+        // Selection highlight: draw a thicker stroke on top
+        let is_selected = selected_ids.iter().any(|s| s == edge.id.as_str());
+        if is_selected {
+            ctx.set_stroke_style_str("#4FC3F7");
+            ctx.set_line_width(stroke_width + 2.0);
+            ctx.stroke();
+            // Restore the original stroke for subsequent drawing
+            ctx.set_stroke_style_str(&stroke_color);
+            ctx.set_line_width(stroke_width);
+        }
         if matches!(edge.arrow, ArrowKind::End | ArrowKind::Both) {
             draw_arrowhead(
                 ctx,
