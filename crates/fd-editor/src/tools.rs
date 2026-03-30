@@ -40,7 +40,6 @@ pub trait Tool {
     fn handle(&mut self, event: &InputEvent, hit_node: Option<NodeId>) -> Vec<GraphMutation>;
 }
 
-
 // ─── Constants ───────────────────────────────────────────────────────────
 
 const DRAG_CANCEL_DIST_SQ: f32 = 25.0;
@@ -360,7 +359,9 @@ impl Tool for SelectTool {
                         };
 
                         // Only cancel deferred Shift deselect if we actually moved
-                        if dx.abs() > SHIFT_DESELECT_CANCEL_DIST || dy.abs() > SHIFT_DESELECT_CANCEL_DIST {
+                        if dx.abs() > SHIFT_DESELECT_CANCEL_DIST
+                            || dy.abs() > SHIFT_DESELECT_CANCEL_DIST
+                        {
                             self.shift_toggled_off = None;
                         }
 
