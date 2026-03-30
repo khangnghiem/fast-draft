@@ -67,6 +67,8 @@ pub fn render_scene(
     handle_size: f64,
     corners_only: bool,
     suppressed_text_id: Option<&str>,
+    show_all_labels: bool,
+    shift_held: bool,
 ) {
     // Clear canvas — skip when JS caller already filled background
     // in identity space (avoids gaps from zoom/pan transform).
@@ -112,6 +114,9 @@ pub fn render_scene(
 
     // Draw smart guides (alignment lines)
     draw_smart_guides(ctx, smart_guides);
+
+    // Draw node name badges (X-ray mode or hover)
+    draw_node_badges(ctx, graph, bounds, hovered_id, show_all_labels, shift_held);
 
     // Draw marquee selection rectangle (on top of everything)
     if let Some((rx, ry, rw, rh)) = marquee_rect {
@@ -705,6 +710,111 @@ fn pick_label_color(style: &Properties) -> String {
         }
         _ => "#1C1C1E".to_string(),
     }
+}
+
+// ─── Node name badges (X-ray overlay) ────────────────────────────────────
+
+/// Draw node name badges on the canvas.
+///
+/// When `show_all` is true (X-ray mode), draws a badge above every visible node.
+/// When `show_all` is false, draws a badge only for the hovered node.
+/// Node names are shown WITHOUT the `@` prefix.
+fn draw_node_badges(
+    ctx: &CanvasRenderingContext2d,
+    graph: &SceneGraph,
+    bounds: &HashMap<NodeIndex, ResolvedBounds>,
+    hovered_id: Option<&str>,
+    show_all: bool,
+    shift_held: bool,
+) {
+    if !show_all && hovered_id.is_none() {
+        return;
+    }
+
+    ctx.save();
+    ctx.set_font("500 10px Inter, system-ui, sans-serif");
+    ctx.set_text_align("left");
+    ctx.set_text_baseline("middle");
+
+    if show_all {
+        // X-ray mode: badge every visible node
+        draw_badges_recursive(ctx, graph, graph.root, bounds, hovered_id);
+    } else if let Some(hid) = hovered_id {
+        // Hover-only: badge just the hovered node, BUT only when Shift is held
+        if shift_held {
+            let nid = fd_core::id::NodeId::intern(hid);
+            if let Some(idx) = graph.index_of(nid) {
+                let node = &graph.graph[idx];
+                if !matches!(node.kind, NodeKind::Root)
+                    && let Some(b) = bounds.get(&idx)
+                {
+                    draw_single_badge(ctx, b, hid, true);
+                }
+            }
+        }
+    }
+
+    ctx.restore();
+}
+
+/// Recursively draw badges for all non-root nodes.
+fn draw_badges_recursive(
+    ctx: &CanvasRenderingContext2d,
+    graph: &SceneGraph,
+    idx: NodeIndex,
+    bounds: &HashMap<NodeIndex, ResolvedBounds>,
+    hovered_id: Option<&str>,
+) {
+    let node = &graph.graph[idx];
+    if !matches!(node.kind, NodeKind::Root)
+        && let Some(b) = bounds.get(&idx)
+        && b.width > 0.0
+        && b.height > 0.0
+    {
+        let is_hovered = Some(node.id.as_str()) == hovered_id;
+        draw_single_badge(ctx, b, node.id.as_str(), is_hovered);
+    }
+    for child_idx in graph.children(idx) {
+        draw_badges_recursive(ctx, graph, child_idx, bounds, hovered_id);
+    }
+}
+
+/// Draw a single frosted-glass name badge above a node's bounds.
+fn draw_single_badge(
+    ctx: &CanvasRenderingContext2d,
+    b: &ResolvedBounds,
+    name: &str,
+    highlighted: bool,
+) {
+    let text_metrics = match ctx.measure_text(name) {
+        Ok(m) => m,
+        Err(_) => return,
+    };
+    let text_w = text_metrics.width();
+    let pad_h = 4.0;
+    let pad_v = 3.0;
+    let badge_w = text_w + pad_h * 2.0;
+    let badge_h = 14.0;
+    let badge_x = b.x as f64;
+    let badge_y = b.y as f64 - badge_h - pad_v;
+    let radius = 3.0;
+
+    // Badge background
+    if highlighted {
+        ctx.set_fill_style_str("rgba(79, 195, 247, 0.85)");
+    } else {
+        ctx.set_fill_style_str("rgba(30, 30, 30, 0.72)");
+    }
+    rounded_rect_path(ctx, badge_x, badge_y, badge_w, badge_h, radius);
+    ctx.fill();
+
+    // Badge text
+    if highlighted {
+        ctx.set_fill_style_str("#1C1C1E");
+    } else {
+        ctx.set_fill_style_str("rgba(255, 255, 255, 0.92)");
+    }
+    let _ = ctx.fill_text(name, badge_x + pad_h, badge_y + badge_h / 2.0);
 }
 
 /// Draw a freehand path from its PathCmd commands.

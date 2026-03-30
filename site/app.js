@@ -92,6 +92,8 @@ let panDragging = false;
 let canvasDragOccurred = false; // tracks whether a real canvas drag happened (for post-drop menu)
 let zoomLevel = 1.0;
 let gridEnabled = false;
+let xrayLabels = false; // X-ray mode: show all node name badges (backtick toggle)
+let modShiftHeld = false; // Shift mode: single node hover
 const GRID_SPACING = 20;
 
 
@@ -291,7 +293,7 @@ function renderCanvas() {
   ctx.setTransform(dpr * zoomLevel, 0, 0, dpr * zoomLevel, panX * dpr, panY * dpr);
   drawGrid();
   // 4. Render scene — skip_bg=true since we already filled above
-  fdCanvas.render(ctx, performance.now(), true, true);
+  fdCanvas.render(ctx, performance.now(), true, true, xrayLabels, modShiftHeld);
 
   // 5. Draw drag-to-create preview shape (on-canvas, zoom-aware WYSIWYG)
   drawDtcPreview(ctx, dtcPreview, smartDefaults, zoomLevel);
@@ -2014,7 +2016,12 @@ function setupContextMenu() {
         renderDirty = true; uiDirty = true;
       }
     }
-    // Shift+F → toggle fullscreen
+    // Track Shift key for hover labels
+    if (e.key === 'Shift') {
+      modShiftHeld = true;
+      renderDirty = true;
+    }
+
     if (e.key === 'F' && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
       if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
         e.preventDefault();
@@ -2031,6 +2038,15 @@ function setupContextMenu() {
       if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
         e.preventDefault();
         toggleLayersPanel();
+      }
+    }
+    // ` (backtick) → toggle X-ray node labels (no modifiers, not in input)
+    if (e.key === '`' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        xrayLabels = !xrayLabels;
+        renderDirty = true;
+        showToast(xrayLabels ? 'X-ray labels ON' : 'X-ray labels OFF');
       }
     }
   });
@@ -2073,7 +2089,7 @@ function updateMinimapCache(mw, mh, dpr) {
   ctx.translate(ox, oy);
   ctx.scale(scale, scale);
   ctx.translate(-sb.x, -sb.y);
-  fdCanvas.render(ctx, performance.now(), true, false);
+  fdCanvas.render(ctx, performance.now(), true, false, false, false);
   ctx.restore();
 
   const mc = document.getElementById('minimap-canvas');
@@ -4990,7 +5006,11 @@ async function initPlayground() {
       }
       // Clear modifier cursors
       if (e.key === 'Meta') canvas.classList.remove('modifier-cmd', 'modifier-cmd-select');
-      if (e.key === 'Alt') canvas.classList.remove('modifier-alt');
+      // Release Shift key tracker
+      if (e.key === 'Shift') {
+        modShiftHeld = false;
+        renderDirty = true;
+      }
     });
 
     // ── Resize Observer ───────────────────────────────────────────────
@@ -5070,6 +5090,7 @@ async function initPlayground() {
     function updateSettingsToggles() {
       document.getElementById('sm-sketchy-toggle')?.classList.toggle('toggle-on', isSketchy);
       document.getElementById('sm-grid-toggle')?.classList.toggle('toggle-on', gridEnabled);
+      document.getElementById('sm-xray-toggle')?.classList.toggle('toggle-on', xrayLabels);
       document.getElementById('sm-motion-toggle')?.classList.toggle('toggle-on', reduceMotion);
     }
 
@@ -5104,6 +5125,11 @@ async function initPlayground() {
             break;
           case 'grid':
             gridEnabled = !gridEnabled;
+            renderDirty = true; uiDirty = true;
+            break;
+          case 'xray':
+            xrayLabels = !xrayLabels;
+            renderDirty = true; uiDirty = true;
             break;
           case 'reduce-motion': {
             const manual = localStorage.getItem('fd-reduce-motion') === 'true';

@@ -343,7 +343,7 @@ function exportToPng() {
 
   // Render scene centered in export canvas
   exportCtx.setTransform(dpr, 0, 0, dpr, (padding - minX) * dpr, (padding - minY) * dpr);
-  fdCanvas.render(exportCtx, performance.now(), true, true);
+  fdCanvas.render(exportCtx, performance.now(), true, true, false, false);
 
   // Send to extension for save dialog
   const dataUrl = exportCanvas.toDataURL("image/png");
