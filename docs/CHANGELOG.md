@@ -17,9 +17,10 @@
 
 ## Completed Requirements
 
-### v0.11.299 — Fixed Canvas Cursor Drift (R3.29)
+### v0.11.299 — Right-Click to Pan (R3.6)
 
-1. **Synchronous Canvas Resize on Focus** — Addressed a bug where the canvas cursor position would drift out of sync when switching focus between apps or monitors. Fast Draft now forces an immediate synchronous execution of `resizeCanvasWithFit()` upon the `window`'s `focus` event. This guarantees the pixel ratio and canvas CSS bounding client rect are perfectly synchronized down to the WASM layout backing store *before* evaluating the user's initial mouse clicks upon returning.
+1. **Right-click = Pan** — Right-clicking anywhere on the canvas now mimics the middle-mouse button and instantly triggers panning (the Hand tool), aligning with standard design tool interactions.
+2. **Context menu suppressed** — The native right-click context menu is now exclusively suppressed on the canvas to prevent overlap with panning, but remains fully functional in the Layers panel for critical node actions (Rename, Delete, Reparent, etc.).
 
 Files: `site/app.js`
 
