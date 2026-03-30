@@ -69,7 +69,7 @@ export function initLayersPanel(api) {
   }
   
   /** Render a layer tree node as HTML. */
-  function renderLayerNode(node, selectedIds, depth = 0) {
+  function renderLayerNode(node, selectedIds, depth = 0, dupMap = {}) {
     const icon = LAYER_ICONS[node.kind] || '•';
     const isSelected = selectedIds.has(node.id);
     const hasChildren = node.children.length > 0;
@@ -86,12 +86,15 @@ export function initLayersPanel(api) {
     html += chevron;
     html += `<span class="layer-icon">${icon}</span>`;
     html += `<span class="layer-name">${escHtml(node.id)}</span>`;
+    if (dupMap[node.id] > 1) {
+      html += `<span class="layer-warning" title="Duplicate layer name detected. This may cause glitches. Click 🪄 to auto-fix." style="font-size:10px; margin-left:4px;">⚠️</span>`;
+    }
     html += `<span class="layer-kind">${escHtml(node.kind)}</span>`;
     html += '</div>';
   
     if (hasChildren) {
       html += `<div class="layer-children" data-parent-id="${escHtml(node.id)}">`;
-      for (const child of node.children) html += renderLayerNode(child, selectedIds, depth + 1);
+      for (const child of node.children) html += renderLayerNode(child, selectedIds, depth + 1, dupMap);
       html += '</div>';
     }
     return html;
@@ -102,6 +105,22 @@ export function initLayersPanel(api) {
   
   /** Last clicked layer item ID — for ⇧+click range select */
   let lastClickedLayerId = '';
+
+  function findDuplicateIds(nodes) {
+    const counts = {};
+    function traverse(nodes) {
+      for (const n of nodes) {
+        counts[n.id] = (counts[n.id] || 0) + 1;
+        traverse(n.children);
+      }
+    }
+    traverse(nodes);
+    let dups = 0;
+    for (const key in counts) {
+      if (counts[key] > 1) dups += counts[key];
+    }
+    return { counts, dups };
+  }
   
   /** Flatten a layer tree into a visible-order array of IDs (respects collapsed state). */
   function flattenLayerTree(nodes, panel) {
@@ -714,15 +733,34 @@ export function initLayersPanel(api) {
     const countNodes = (nodes) => nodes.reduce((s, n) => s + 1 + countNodes(n.children), 0);
     const total = countNodes(tree);
   
+    const { counts: dupMap, dups: dupTotal } = findDuplicateIds(tree);
+
     let html = '<div class="layers-header" id="layers-header-toggle">';
     html += '<span class="layers-title">Layers</span>';
     html += `<span class="layers-count">${total}</span>`;
+    if (dupTotal > 0) {
+      html += `<button id="layers-dedup-btn" style="margin-left:auto; background:none; border:none; cursor:pointer;" title="Fix ${dupTotal} layers with duplicate IDs">🪄</button>`;
+    }
     html += '</div><div class="layers-body">';
-    for (const node of tree) html += renderLayerNode(node, selectedIds);
+    for (const node of tree) html += renderLayerNode(node, selectedIds, 0, dupMap);
     html += '</div>';
   
     panel.innerHTML = html;
   
+    const dedupBtn = panel.querySelector('#layers-dedup-btn');
+    if (dedupBtn) {
+      dedupBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (api.getFdCanvas().formatAndDedup && api.getFdCanvas().formatAndDedup()) {
+          api.renderCanvas();
+          api.syncCanvasToEditor();
+          api.updatePropertiesPanel();
+          refreshLayersPanel();
+          if (api.showToast) api.showToast("Cleaned up duplicate layer names");
+        }
+      });
+    }
+
     // Wire click-to-select with ⌘+click multi and ⇧+click range
     panel.querySelectorAll('.layer-item').forEach(item => {
       item.addEventListener('click', (e) => {

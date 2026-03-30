@@ -183,6 +183,23 @@ impl FdCanvas {
         self.engine.current_text().to_string()
     }
 
+    /// Format the document and actively rename any duplicate node IDs.
+    /// Returns true if the text changed (an undo snapshot is automatically pushed).
+    pub fn format_and_dedup(&mut self) -> bool {
+        let mut config = fd_core::format::FormatConfig::default();
+        config.dedup_ids = true;
+        
+        let old_text = self.engine.current_text().to_string();
+        if let Ok(new_text) = fd_core::format::format_document(&old_text, &config) {
+            if new_text != old_text {
+                self.push_undo_snapshot(&old_text, &new_text);
+                self.set_text(&new_text);
+                return true;
+            }
+        }
+        false
+    }
+
     /// Set the canvas theme.
     pub fn set_theme(&mut self, is_dark: bool) {
         self.dark_mode = is_dark;

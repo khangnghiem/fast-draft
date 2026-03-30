@@ -146,6 +146,48 @@ fn is_style_empty(style: &Properties) -> bool {
         && style.opacity.is_none()
         && style.shadow.is_none()
 }
+// ─── Dedup IDs ────────────────────────────────────────────────────────────
+
+/// Traverse the scene graph and rename any duplicate `NodeId`s by appending
+/// a numerical suffix (`_2`, `_3`, etc.) to ensure all node IDs are unique.
+pub fn dedup_ids(graph: &mut SceneGraph) {
+    let mut seen_ids = std::collections::HashSet::new();
+    let mut needs_reindex = false;
+
+    // Traverse nodes sequentially.
+    let indices: Vec<_> = graph.graph.node_indices().collect();
+    for idx in indices {
+        let node = &mut graph.graph[idx];
+        if node.id.as_str().starts_with('_') {
+            continue;
+        }
+
+        if !seen_ids.insert(node.id) {
+            needs_reindex = true;
+            let base = node.id.as_str();
+            let mut counter = 2;
+            let mut new_id;
+            loop {
+                new_id = NodeId::intern(&format!("{base}_{counter}"));
+                if !seen_ids.contains(&new_id) {
+                    break;
+                }
+                counter += 1;
+            }
+            seen_ids.insert(new_id);
+            node.id = new_id;
+        }
+    }
+
+    if needs_reindex {
+        graph.id_index.clear();
+        for idx in graph.graph.node_indices() {
+            let node = &graph.graph[idx];
+            graph.id_index.insert(node.id, idx);
+        }
+    }
+}
+
 
 // ─── Sort nodes by kind ───────────────────────────────────────────────────
 

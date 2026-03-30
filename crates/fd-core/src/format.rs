@@ -6,7 +6,7 @@
 
 use crate::emitter::emit_document;
 use crate::parser::parse_document;
-use crate::transform::{dedup_use_styles, sort_nodes};
+use crate::transform::{dedup_use_styles, sort_nodes, dedup_ids};
 
 // ─── Config ───────────────────────────────────────────────────────────────
 
@@ -27,6 +27,11 @@ pub struct FormatConfig {
     /// Reorder top-level nodes by kind: Group/Frame → Rect → Ellipse → Text →
     /// Path → Generic. Relative order within each kind is preserved. Default: **true**.
     pub sort_nodes: bool,
+
+    /// Traverse the scene graph and safely iterate duplicated IDs by appending
+    /// a suffix (`_2`, etc.) so the final document has completely unique IDs.
+    /// Default: **false**
+    pub dedup_ids: bool,
 }
 
 impl Default for FormatConfig {
@@ -35,6 +40,7 @@ impl Default for FormatConfig {
             dedup_use: true,
             hoist_styles: false,
             sort_nodes: true,
+            dedup_ids: false,
         }
     }
 }
@@ -60,6 +66,10 @@ pub fn format_document(text: &str, config: &FormatConfig) -> Result<String, Stri
 
     if config.sort_nodes {
         sort_nodes(&mut scene);
+    }
+
+    if config.dedup_ids {
+        dedup_ids(&mut scene);
     }
 
     Ok(emit_document(&scene))
@@ -181,5 +191,20 @@ group @container {
         let first = format_document(input, &config).expect("first format failed");
         let second = format_document(&first, &config).expect("second format failed");
         assert_eq!(first, second, "sort + format must be idempotent");
+    }
+
+    #[test]
+    fn format_document_dedups_ids() {
+        let input = r#"
+rect @box { w: 10 h: 10 }
+rect @box { w: 10 h: 10 }
+rect @box { w: 10 h: 10 }
+"#;
+        let mut config = FormatConfig::default();
+        config.dedup_ids = true;
+        let output = format_document(input, &config).expect("format failed");
+        assert!(output.contains("@box"));
+        assert!(output.contains("@box_2"));
+        assert!(output.contains("@box_3"));
     }
 }
