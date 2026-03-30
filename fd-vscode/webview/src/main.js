@@ -128,7 +128,7 @@ function render() {
   ctx.setTransform(z, 0, 0, z, panX * dpr, panY * dpr);
   // Draw grid below shapes
   if (gridEnabled) drawGrid();
-  fdCanvas.render(ctx, performance.now(), gridEnabled, true);
+  fdCanvas.render(ctx, performance.now(), gridEnabled, true, xrayLabels, modShiftHeld);
 
   // ── Arrow tool: draw live preview line during drag ──
   const arrowPreviewJson = fdCanvas.get_arrow_preview();

@@ -109,6 +109,17 @@ document.addEventListener("keydown", (e) => {
     }
   }
 
+  // ── X-ray labels toggle (backtick) ──
+  if (e.key === "`" && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+    if (document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+      e.preventDefault();
+      xrayLabels = !xrayLabels;
+      markDirty();
+      showToast(xrayLabels ? "X-ray labels ON" : "X-ray labels OFF");
+      return;
+    }
+  }
+
   // ── Library panel toggle shortcut ──
   if ((e.key === "l" || e.key === "L") && e.shiftKey) {
     if (!e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -384,7 +395,9 @@ document.addEventListener("keyup", (e) => {
   if (e.key === "Alt") modAltHeld = false;
   if (e.key === "Control") modCtrlHeld = false;
   if (e.key === "Meta") modMetaHeld = false;
-  if (e.key === "Shift") modShiftHeld = false;
+  if (e.key === "Shift") {
+    modShiftHeld = false;
+  }
 
   if (e.key === " " && isPanning) {
     isPanning = false;
@@ -613,6 +626,7 @@ function buildShortcutHelpHtml() {
         [`${cmd}1`, "Zoom to selection"],
         ["L", "Toggle Layers panel"],
         ["G", "Toggle grid overlay"],
+        ["`", "Toggle X-ray node labels"],
         ["Space (hold)", "Pan / hand tool"],
         [`${cmd} (hold)`, "Temp. hand tool"],
         ["Pinch", "Trackpad zoom"],

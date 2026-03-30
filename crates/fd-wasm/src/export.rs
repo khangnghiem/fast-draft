@@ -11,12 +11,15 @@ impl FdCanvas {
     ///
     /// * `skip_grid` — skip drawing the background grid dots.
     /// * `skip_bg` — skip filling the background color.
+    /// * `show_all_labels` — show node name badges on all nodes (X-ray mode).
     pub fn render(
         &self,
         ctx: &CanvasRenderingContext2d,
         time_ms: f64,
         skip_grid: bool,
         skip_bg: bool,
+        show_all_labels: bool,
+        shift_held: bool,
     ) {
         let selected_ids: Vec<String> = self
             .select_tool
@@ -48,6 +51,8 @@ impl FdCanvas {
             self.pointer_type.handle_visual_size() as f64,
             self.pointer_type.corners_only(),
             self.suppressed_text_id.as_deref(),
+            show_all_labels,
+            shift_held,
         );
     }
 

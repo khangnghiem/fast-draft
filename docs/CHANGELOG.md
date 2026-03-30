@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.300 — Bidirectional Selection Sync: Canvas ↔ Layers (R6.18)
+
+1. **Layers → Canvas Auto-Focus** — Clicking a layer now smartly pans and zooms the canvas to ensure the selected node is visible in the viewport. Ported `focusOnNode` capability from VS Code extension to the Web Playground (`site/app.js`), honoring the `reduceMotion` preference by disabling the bezier animation sweep.
+2. **Canvas → Layers Auto-Expand** — Clicking a deeply nested node on the canvas now correctly traverses up the Layers panel DOM, automatically removing the `.collapsed` state from all parent folder groups, expanding their chevrons, and successfully calling `.scrollIntoView()` on the `.selected` list item. This guarantees visibility in deep hierarchies and fixes the silent scroll failure. Applied identically to both `site/layers.js` and `fd-vscode/webview/src/panels.js`.
+
+Files: `site/app.js`, `site/layers.js`, `fd-vscode/webview/src/panels.js`
+
 ### v0.11.299 — Right-Click to Pan (R3.6)
 
 1. **Right-click = Pan** — Right-clicking anywhere on the canvas now mimics the middle-mouse button and instantly triggers panning (the Hand tool), aligning with standard design tool interactions.

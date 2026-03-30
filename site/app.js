@@ -92,6 +92,8 @@ let panDragging = false;
 let canvasDragOccurred = false; // tracks whether a real canvas drag happened (for post-drop menu)
 let zoomLevel = 1.0;
 let gridEnabled = false;
+let xrayLabels = false; // X-ray mode: show all node name badges (backtick toggle)
+let modShiftHeld = false; // Shift mode: single node hover
 const GRID_SPACING = 20;
 
 
@@ -291,7 +293,7 @@ function renderCanvas() {
   ctx.setTransform(dpr * zoomLevel, 0, 0, dpr * zoomLevel, panX * dpr, panY * dpr);
   drawGrid();
   // 4. Render scene — skip_bg=true since we already filled above
-  fdCanvas.render(ctx, performance.now(), true, true);
+  fdCanvas.render(ctx, performance.now(), true, true, xrayLabels, modShiftHeld);
 
   // 5. Draw drag-to-create preview shape (on-canvas, zoom-aware WYSIWYG)
   drawDtcPreview(ctx, dtcPreview, smartDefaults, zoomLevel);
@@ -956,6 +958,103 @@ function updateZoomIndicator() {
   if (el) el.textContent = pct;
   const rb = document.getElementById('zoom-reset-btn');
   if (rb) rb.textContent = pct;
+}
+
+// ─── Smart Focus on Node (Layer Click) ───────────────────────────────────────
+
+/** Active focus animation ID (for cancellation). */
+let focusAnimId = null;
+
+/**
+ * Smoothly pan (and optionally zoom) the viewport to focus on a node.
+ */
+function focusOnNode(nodeId) {
+  if (!fdCanvas) return;
+  let bounds;
+  try {
+    bounds = JSON.parse(fdCanvas.get_node_bounds(nodeId));
+    if (!bounds || (bounds.width <= 0 && bounds.height <= 0)) return;
+  } catch (_) { return; }
+
+  const container = document.getElementById("canvas-container") || document.getElementById("canvas-wrapper") || document.body;
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+  
+  const lp = document.getElementById("left-panel");
+  const lpRect = lp ? lp.getBoundingClientRect() : { width: 0 };
+  const effectivePanelW = lpRect.width;
+  const usableW = cw - effectivePanelW;
+
+  const nodeCX = bounds.x + bounds.width / 2;
+  const nodeCY = bounds.y + bounds.height / 2;
+
+  const vpCenterX = (effectivePanelW + usableW / 2 - panX) / zoomLevel;
+  const vpCenterY = (ch / 2 - panY) / zoomLevel;
+
+  let targetZoom = zoomLevel;
+  const screenW = bounds.width * zoomLevel;
+  const screenH = bounds.height * zoomLevel;
+  const maxScreenDim = Math.max(screenW, screenH);
+
+  const MIN_VISIBLE_PX = 20;
+  const FIT_PADDING_RATIO = 0.15;
+  const FIT_TARGET_RATIO = 0.10;
+
+  if (screenW < MIN_VISIBLE_PX && screenH < MIN_VISIBLE_PX) {
+    const maxDim = Math.max(bounds.width, bounds.height, 1);
+    targetZoom = (usableW * FIT_TARGET_RATIO) / maxDim;
+    targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, targetZoom));
+  } else if (maxScreenDim > Math.max(usableW, ch)) {
+    const padding = Math.min(usableW, ch) * FIT_PADDING_RATIO;
+    const fitZoom = Math.min(
+      (usableW - padding * 2) / Math.max(bounds.width, 1),
+      (ch - padding * 2) / Math.max(bounds.height, 1)
+    );
+    targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, fitZoom));
+  }
+
+  const thresholdX = usableW * 0.2 / zoomLevel;
+  const thresholdY = ch * 0.2 / zoomLevel;
+  const dx = Math.abs(nodeCX - vpCenterX);
+  const dy = Math.abs(nodeCY - vpCenterY);
+  const needsPan = dx > thresholdX || dy > thresholdY;
+  const needsZoom = Math.abs(targetZoom - zoomLevel) / zoomLevel > 0.05;
+
+  if (!needsPan && !needsZoom) return;
+
+  const finalTargetPanX = effectivePanelW + usableW / 2 - nodeCX * targetZoom;
+  const finalTargetPanY = ch / 2 - nodeCY * targetZoom;
+
+  const startPanX = panX;
+  const startPanY = panY;
+  const startZoom = zoomLevel;
+  const duration = 250;
+  const startTime = performance.now();
+
+  if (focusAnimId) cancelAnimationFrame(focusAnimId);
+
+  if (reduceMotion) {
+    panX = finalTargetPanX;
+    panY = finalTargetPanY;
+    zoomLevel = targetZoom;
+    renderCanvas();
+    updateZoomIndicator();
+    return;
+  }
+
+  function step(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - t, 3);
+    panX = startPanX + (finalTargetPanX - startPanX) * ease;
+    panY = startPanY + (finalTargetPanY - startPanY) * ease;
+    zoomLevel = startZoom + (targetZoom - startZoom) * ease;
+    renderCanvas();
+    updateZoomIndicator();
+    if (t < 1) { focusAnimId = requestAnimationFrame(step); } 
+    else { focusAnimId = null; }
+  }
+  focusAnimId = requestAnimationFrame(step);
 }
 
 /** Sync canvas text back to CodeMirror with echo suppression */
@@ -1917,7 +2016,12 @@ function setupContextMenu() {
         renderDirty = true; uiDirty = true;
       }
     }
-    // Shift+F → toggle fullscreen
+    // Track Shift key for hover labels
+    if (e.key === 'Shift') {
+      modShiftHeld = true;
+      renderDirty = true;
+    }
+
     if (e.key === 'F' && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
       if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
         e.preventDefault();
@@ -1934,6 +2038,15 @@ function setupContextMenu() {
       if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
         e.preventDefault();
         toggleLayersPanel();
+      }
+    }
+    // ` (backtick) → toggle X-ray node labels (no modifiers, not in input)
+    if (e.key === '`' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        xrayLabels = !xrayLabels;
+        renderDirty = true;
+        showToast(xrayLabels ? 'X-ray labels ON' : 'X-ray labels OFF');
       }
     }
   });
@@ -1976,7 +2089,7 @@ function updateMinimapCache(mw, mh, dpr) {
   ctx.translate(ox, oy);
   ctx.scale(scale, scale);
   ctx.translate(-sb.x, -sb.y);
-  fdCanvas.render(ctx, performance.now(), true, false);
+  fdCanvas.render(ctx, performance.now(), true, false, false, false);
   ctx.restore();
 
   const mc = document.getElementById('minimap-canvas');
@@ -4607,7 +4720,8 @@ async function initPlayground() {
       toggleLeftPanel: toggleLeftPanel,
       toggleRightPanel: toggleRightPanel,
       adjustMinimapForToolbar: adjustMinimapForToolbar,
-      screenToScene: screenToScene
+      screenToScene: screenToScene,
+      focusOnNode: focusOnNode
     });
 
     // ── Floating Action Bar ─────────────────────────────────────────
@@ -4892,7 +5006,11 @@ async function initPlayground() {
       }
       // Clear modifier cursors
       if (e.key === 'Meta') canvas.classList.remove('modifier-cmd', 'modifier-cmd-select');
-      if (e.key === 'Alt') canvas.classList.remove('modifier-alt');
+      // Release Shift key tracker
+      if (e.key === 'Shift') {
+        modShiftHeld = false;
+        renderDirty = true;
+      }
     });
 
     // ── Resize Observer ───────────────────────────────────────────────
@@ -4972,6 +5090,7 @@ async function initPlayground() {
     function updateSettingsToggles() {
       document.getElementById('sm-sketchy-toggle')?.classList.toggle('toggle-on', isSketchy);
       document.getElementById('sm-grid-toggle')?.classList.toggle('toggle-on', gridEnabled);
+      document.getElementById('sm-xray-toggle')?.classList.toggle('toggle-on', xrayLabels);
       document.getElementById('sm-motion-toggle')?.classList.toggle('toggle-on', reduceMotion);
     }
 
@@ -5006,6 +5125,11 @@ async function initPlayground() {
             break;
           case 'grid':
             gridEnabled = !gridEnabled;
+            renderDirty = true; uiDirty = true;
+            break;
+          case 'xray':
+            xrayLabels = !xrayLabels;
+            renderDirty = true; uiDirty = true;
             break;
           case 'reduce-motion': {
             const manual = localStorage.getItem('fd-reduce-motion') === 'true';
