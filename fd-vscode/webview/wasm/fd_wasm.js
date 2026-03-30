@@ -409,7 +409,7 @@ export class FdCanvas {
         }
     }
     /**
-     * Get the arrow tool's live preview line during drag.
+     * Get the arrow tool's live preview line or the select tool's snap target during drag.
      * @returns {string}
      */
     get_arrow_preview() {
@@ -1166,13 +1166,16 @@ export class FdCanvas {
      *
      * * `skip_grid` — skip drawing the background grid dots.
      * * `skip_bg` — skip filling the background color.
+     * * `show_all_labels` — show node name badges on all nodes (X-ray mode).
      * @param {CanvasRenderingContext2D} ctx
      * @param {number} time_ms
      * @param {boolean} skip_grid
      * @param {boolean} skip_bg
+     * @param {boolean} show_all_labels
+     * @param {boolean} shift_held
      */
-    render(ctx, time_ms, skip_grid, skip_bg) {
-        wasm.fdcanvas_render(this.__wbg_ptr, ctx, time_ms, skip_grid, skip_bg);
+    render(ctx, time_ms, skip_grid, skip_bg, show_all_labels, shift_held) {
+        wasm.fdcanvas_render(this.__wbg_ptr, ctx, time_ms, skip_grid, skip_bg, show_all_labels, shift_held);
     }
     /**
      * Render only the selected nodes (and their children) to the given context.

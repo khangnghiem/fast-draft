@@ -299,6 +299,61 @@ function renderCanvas() {
   drawDtcPreview(ctx, dtcPreview, smartDefaults, zoomLevel);
   if (dtcPreview) renderDirty = true; // keep re-rendering during drag
 
+  // ── Arrow tool: draw live preview line during drag ──
+  const arrowPreviewJson = fdCanvas.get_arrow_preview();
+  if (arrowPreviewJson) {
+    try {
+      const ap = JSON.parse(arrowPreviewJson);
+      ctx.save();
+      
+      if (ap.x1 !== undefined && ap.y1 !== undefined) {
+        ctx.strokeStyle = "#6B7080";
+        ctx.lineWidth = 1.5;
+        // Solid line (not dashed)
+        ctx.beginPath();
+        ctx.moveTo(ap.x1, ap.y1);
+        ctx.lineTo(ap.x2, ap.y2);
+        ctx.stroke();
+        // Arrowhead
+        const angle = Math.atan2(ap.y2 - ap.y1, ap.x2 - ap.x1);
+        const headLen = 10;
+        ctx.beginPath();
+        ctx.moveTo(ap.x2, ap.y2);
+        ctx.lineTo(
+          ap.x2 - headLen * Math.cos(angle - Math.PI / 6),
+          ap.y2 - headLen * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.moveTo(ap.x2, ap.y2);
+        ctx.lineTo(
+          ap.x2 - headLen * Math.cos(angle + Math.PI / 6),
+          ap.y2 - headLen * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.stroke();
+      }
+
+      // Highlight target node under cursor during arrow drag or edge repointing
+      if (ap.target_id) {
+        try {
+          const targetBoundsJson = fdCanvas.get_node_bounds(ap.target_id);
+          if (targetBoundsJson) {
+            const tb = JSON.parse(targetBoundsJson);
+            const pad = 4;
+            ctx.beginPath();
+            ctx.roundRect(tb.x - pad, tb.y - pad, tb.width + pad * 2, tb.height + pad * 2, 6);
+            ctx.strokeStyle = "#4FC3F7";
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = "#4FC3F7";
+            ctx.shadowBlur = 8;
+            ctx.stroke();
+          }
+        } catch (_) { /* ignore */ }
+      }
+
+      ctx.restore();
+      renderDirty = true; // Keep animating while actively dragging/snapping
+    } catch (_) { /* ignore parse errors */ }
+  }
+
   // ── iPad touch/pencil visual overlays ──────────────────────────────
   // Touch contact halo (finger tap feedback)
   if (touchHalo.active) {

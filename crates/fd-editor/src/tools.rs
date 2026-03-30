@@ -88,6 +88,8 @@ pub struct SelectTool {
     resize_anchor: (f32, f32),
     /// Original aspect ratio at resize start (w/h) for Shift+resize.
     resize_aspect: f32,
+    /// Target node currently hovered during edge handle drag (for snapping/ghosting).
+    pub target_node: Option<NodeId>,
 }
 
 impl Default for SelectTool {
@@ -111,6 +113,7 @@ impl SelectTool {
             resize_origin: (0.0, 0.0, 0.0, 0.0),
             resize_anchor: (0.0, 0.0),
             resize_aspect: 1.0,
+            target_node: None,
         }
     }
 
@@ -140,6 +143,11 @@ impl SelectTool {
         self.selected.first().copied()
     }
 
+    /// Get the target node currently hovered during edge handle drag (snap target).
+    pub fn preview_target(&self) -> Option<NodeId> {
+        self.target_node
+    }
+
     /// Normalize a drag rectangle from start + current positions.
     fn normalize_rect(x1: f32, y1: f32, x2: f32, y2: f32) -> (f32, f32, f32, f32) {
         let rx = x1.min(x2);
@@ -162,6 +170,7 @@ impl Tool for SelectTool {
             } => {
                 self.marquee_start = None;
                 self.marquee_rect = None;
+                self.target_node = None;
 
                 // If resize_handle is set (by FdCanvas), skip normal selection
                 if self.resize_handle.is_some() {
@@ -217,9 +226,19 @@ impl Tool for SelectTool {
                         use fd_core::model::EdgeAnchor;
                         let mx = *x;
                         let my = *y;
+
+                        // Prevent self-snapping to the edge itself
+                        let snap_id = hit_node.filter(|&n| n != id);
+                        self.target_node = snap_id;
+
+                        let anchor = match snap_id {
+                            Some(sn) => EdgeAnchor::Node(sn),
+                            None => EdgeAnchor::Point(mx, my),
+                        };
+
                         let (from, to) = match handle {
-                            ResizeHandle::EdgeStart => (Some(EdgeAnchor::Point(mx, my)), None),
-                            ResizeHandle::EdgeEnd => (None, Some(EdgeAnchor::Point(mx, my))),
+                            ResizeHandle::EdgeStart => (Some(anchor), None),
+                            ResizeHandle::EdgeEnd => (None, Some(anchor)),
                             _ => (None, None),
                         };
                         return vec![crate::sync::GraphMutation::UpdateEdge { id, from, to }];
@@ -359,6 +378,7 @@ impl Tool for SelectTool {
                 vec![]
             }
             InputEvent::PointerUp { .. } => {
+                self.target_node = None;
                 // Marquee end is handled by FdCanvas (it calls hit_test_rect)
                 // Deferred Shift+click deselect: if the user Shift+clicked
                 // an already-selected node but didn't drag, deselect it now.
@@ -1207,12 +1227,22 @@ impl Tool for ArrowTool {
                 }
 
                 let edge_id = NodeId::with_prefix("edge");
+                let mut props = Properties::default();
+                if let Some(color) = Color::from_hex("#6B7080") {
+                    props.stroke = Some(Stroke {
+                        paint: Paint::Solid(color),
+                        width: 2.0,
+                        cap: StrokeCap::Round,
+                        join: StrokeJoin::Round,
+                    });
+                }
+
                 let edge = Edge {
                     id: edge_id,
                     from: from_anchor,
                     to: to_anchor,
                     text_child: None,
-                    props: Properties::default(),
+                    props,
                     use_styles: Default::default(),
                     arrow: ArrowKind::End,
                     curve: CurveKind::Smooth,

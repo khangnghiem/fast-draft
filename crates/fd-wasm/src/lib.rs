@@ -289,23 +289,29 @@ impl FdCanvas {
         self.pointer_type.corners_only()
     }
 
-    /// Get the arrow tool's live preview line during drag.
+    /// Get the arrow tool's live preview line or the select tool's snap target during drag.
     pub fn get_arrow_preview(&self) -> String {
-        if self.active_tool != ToolKind::Arrow {
-            return String::new();
-        }
-        match self.arrow_tool.preview_line() {
-            Some((x1, y1, x2, y2)) => {
-                let target_part = match self.arrow_tool.preview_target() {
-                    Some(id) => format!(r#","target_id":"{}""#, id.as_str()),
-                    None => String::new(),
-                };
-                format!(
-                    r#"{{"x1":{},"y1":{},"x2":{},"y2":{}{}}}"#,
-                    x1, y1, x2, y2, target_part
-                )
+        if self.active_tool == ToolKind::Select {
+            match self.select_tool.preview_target() {
+                Some(id) => format!(r#"{{"target_id":"{}"}}"#, id.as_str()),
+                None => String::new(),
             }
-            None => String::new(),
+        } else if self.active_tool == ToolKind::Arrow {
+            match self.arrow_tool.preview_line() {
+                Some((x1, y1, x2, y2)) => {
+                    let target_part = match self.arrow_tool.preview_target() {
+                        Some(id) => format!(r#","target_id":"{}""#, id.as_str()),
+                        None => String::new(),
+                    };
+                    format!(
+                        r#"{{"x1":{},"y1":{},"x2":{},"y2":{}{}}}"#,
+                        x1, y1, x2, y2, target_part
+                    )
+                }
+                None => String::new(),
+            }
+        } else {
+            String::new()
         }
     }
 
