@@ -13,10 +13,28 @@
  */
 
 const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
+
+function getCorsHeaders(request) {
+  const origin = request.headers.get('Origin') || '';
+  const allowedExact = [
+    'https://fast-draft.com',
+    'http://localhost:1420',
+    'http://localhost:8080',
+    'http://localhost:11434'
+  ];
+  const allowedPrefixes = ['vscode-webview://', 'tauri://', 'https://tauri.localhost'];
+
+  const headers = { ...CORS_HEADERS, 'Vary': 'Origin' };
+
+  if (allowedExact.includes(origin) || allowedPrefixes.some(prefix => origin.startsWith(prefix))) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+
+  return headers;
+}
 
 const DEFAULT_DAILY_LIMIT = 20;
 const KV_TTL_SECONDS = 86400;
@@ -210,7 +228,7 @@ function computeScore(categories) {
 export async function onRequestPost(context) {
   const headers = {
     'Content-Type': 'application/json',
-    ...CORS_HEADERS,
+    ...getCorsHeaders(context.request),
   };
 
   try {
@@ -372,6 +390,6 @@ export async function onRequestPost(context) {
   }
 }
 
-export async function onRequestOptions() {
-  return new Response(null, { headers: CORS_HEADERS });
+export async function onRequestOptions(context) {
+  return new Response(null, { headers: getCorsHeaders(context.request) });
 }
