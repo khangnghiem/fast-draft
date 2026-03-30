@@ -799,12 +799,12 @@ export function initLayersPanel(api) {
     // ── Layer Context Menu (#3 "Move Into") ──
     wireLayerContextMenu(panel);
   
-    // ── Layers header click → toggle panel (Penpot-style) ──
+    // ── Layers header click ──
+    // Intentionally empty: The left sidebar button now handles toggling the panel.
     const layersHeaderEl = panel.querySelector('#layers-header-toggle');
     if (layersHeaderEl) {
       layersHeaderEl.addEventListener('click', (e) => {
         e.stopPropagation();
-        api.toggleLayersPanel();
       });
     }
   
