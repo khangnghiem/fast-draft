@@ -381,13 +381,29 @@ export function initLayersPanel(api) {
             ? api.getFdCanvas().reparent_into_centered(draggedId, targetId)
             : api.getFdCanvas().reparent_into(draggedId, targetId);
         } else {
-          // #2: Reorder — calculate target index
-          const targetIndex = getSiblingIndex(panel, targetId);
-          const insertIndex = zone === 'above' ? targetIndex : targetIndex + 1;
-          // Check if same parent — if so, reorder; otherwise reparent first
           const targetItem = panel.querySelector(`.layer-item[data-node-id="${targetId}"]`);
           const dragItem = panel.querySelector(`.layer-item[data-node-id="${draggedId}"]`);
-          const targetParent = targetItem?.parentElement?.getAttribute?.('data-parent-id') || null;
+          
+          let targetParent = targetItem?.parentElement?.getAttribute?.('data-parent-id') || null;
+          let activeTargetId = targetId;
+
+          // Drag-to-root (unindent): If user drags mouse horizontally left of the item text (approx 24px)
+          const rect = targetItem.getBoundingClientRect();
+          if (e.clientX - rect.left < 24 && targetParent) {
+            // Find the root-level ancestor
+            let currentParentId = targetParent;
+            while (currentParentId) {
+              const parentItem = panel.querySelector(`.layer-item[data-node-id="${currentParentId}"]`);
+              if (!parentItem) break;
+              activeTargetId = currentParentId;
+              currentParentId = parentItem.parentElement?.getAttribute?.('data-parent-id') || null;
+            }
+            targetParent = null; // Detaching to root
+          }
+
+          const targetIndex = getSiblingIndex(panel, activeTargetId);
+          // If we unnested, we logically drop it 'below' the entire group
+          const insertIndex = (zone === 'above' && targetId === activeTargetId) ? targetIndex : targetIndex + 1;
           const dragParent = dragItem?.parentElement?.getAttribute?.('data-parent-id') || null;
 
           if (targetParent === dragParent) {
@@ -562,11 +578,9 @@ export function initLayersPanel(api) {
             if (nameEl) nameEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
             return;
           } else if (action === 'cut') {
-            api.getFdCanvas().select_by_id(nodeId);
             api.copySelectedAsFd();
             changed = api.getFdCanvas().delete_selected();
           } else if (action === 'copy') {
-            api.getFdCanvas().select_by_id(nodeId);
             api.copySelectedAsFd();
             return;
           } else if (action === 'paste') {
@@ -576,11 +590,9 @@ export function initLayersPanel(api) {
             });
             return;
           } else if (action === 'copy-png') {
-            api.getFdCanvas().select_by_id(nodeId);
             if (typeof copySelectionAsPng === 'function') copySelectionAsPng();
             return;
           } else if (action === 'duplicate') {
-            api.getFdCanvas().select_by_id(nodeId);
             changed = api.getFdCanvas().duplicate_selected();
           } else if (action === 'group') {
             changed = api.getFdCanvas().group_selected();
@@ -633,7 +645,6 @@ export function initLayersPanel(api) {
           } else if (action === 'move-to-root') {
             changed = api.getFdCanvas().reparent_into(nodeId, 'root');
           } else if (action === 'delete') {
-            api.getFdCanvas().select_by_id(nodeId);
             changed = api.getFdCanvas().delete_selected();
           }
   
@@ -672,9 +683,22 @@ export function initLayersPanel(api) {
     // Selection-only change: just update highlights
     if (source === lastLayerText && selectedKey !== lastLayerSelectedId) {
       lastLayerSelectedId = selectedKey;
-      panel.querySelectorAll('.layer-item').forEach(el =>
-        el.classList.toggle('selected', selectedIds.has(el.getAttribute('data-node-id')))
-      );
+      panel.querySelectorAll('.layer-item').forEach(el => {
+        const isSelected = selectedIds.has(el.getAttribute('data-node-id'));
+        el.classList.toggle('selected', isSelected);
+        if (isSelected) {
+          let current = el.closest('.layer-children');
+          while (current) {
+            if (current.classList.contains('collapsed')) {
+              current.classList.remove('collapsed');
+              const parentId = current.getAttribute('data-parent-id');
+              const chevron = panel.querySelector(`.layer-chevron[data-toggle-id="${parentId}"]`);
+              if (chevron) chevron.classList.add('expanded');
+            }
+            current = current.parentElement?.closest('.layer-children');
+          }
+        }
+      });
       const sel = panel.querySelector('.layer-item.selected');
       if (sel) sel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       return;
@@ -746,6 +770,7 @@ export function initLayersPanel(api) {
         lastClickedLayerId = nodeId;
         api.getFdCanvas().select_by_id(nodeId);
         api.renderCanvas();
+        if (api.focusOnNode) api.focusOnNode(nodeId);
         lastLayerSelectedId = nodeId;
         panel.querySelectorAll('.layer-item').forEach(el =>
           el.classList.toggle('selected', el.getAttribute('data-node-id') === nodeId)
@@ -785,6 +810,22 @@ export function initLayersPanel(api) {
   
     // ── Keyboard shortcuts when layers panel is focused (#7) ──
     wireLayerKeyboardShortcuts(panel);
+
+    // ── Auto-expand parents of selected items and scroll into view ──
+    panel.querySelectorAll('.layer-item.selected').forEach(el => {
+      let current = el.closest('.layer-children');
+      while (current) {
+        if (current.classList.contains('collapsed')) {
+          current.classList.remove('collapsed');
+          const parentId = current.getAttribute('data-parent-id');
+          const chevron = panel.querySelector(`.layer-chevron[data-toggle-id="${parentId}"]`);
+          if (chevron) chevron.classList.add('expanded');
+        }
+        current = current.parentElement?.closest('.layer-children');
+      }
+    });
+    const sel = panel.querySelector('.layer-item.selected');
+    if (sel) sel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
   
   /** Wire keyboard shortcuts for layers panel — Delete, ⌘C/X/V/D */

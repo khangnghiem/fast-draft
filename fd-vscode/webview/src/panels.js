@@ -866,9 +866,26 @@ function wireLayerDragDrop(panel) {
           ? fdCanvas.reparent_into_centered(draggedId, targetId)
           : fdCanvas.reparent_into(draggedId, targetId);
       } else {
-        const targetIndex = getSiblingIndex(panel, targetId);
-        const insertIndex = zone === 'above' ? targetIndex : targetIndex + 1;
-        const targetParent = item.parentElement?.getAttribute?.('data-parent-id') || null;
+        let targetParent = item.parentElement?.getAttribute?.('data-parent-id') || null;
+        let activeTargetId = targetId;
+
+        // Drag-to-root (unindent): If user drags mouse horizontally left of the item text (approx 24px)
+        const rect = item.getBoundingClientRect();
+        if (e.clientX - rect.left < 24 && targetParent) {
+          // Find the root-level ancestor
+          let currentParentId = targetParent;
+          while (currentParentId) {
+            const parentItem = panel.querySelector(`.layer-item[data-node-id="${currentParentId}"]`);
+            if (!parentItem) break;
+            activeTargetId = currentParentId;
+            currentParentId = parentItem.parentElement?.getAttribute?.('data-parent-id') || null;
+          }
+          targetParent = null; // Detaching to root
+        }
+
+        const targetIndex = getSiblingIndex(panel, activeTargetId);
+        // If we unnested, we logically drop it 'below' the entire group
+        const insertIndex = (zone === 'above' && targetId === activeTargetId) ? targetIndex : targetIndex + 1;
         const dragItem = panel.querySelector(`.layer-item[data-node-id="${draggedId}"]`);
         const dragParent = dragItem?.parentElement?.getAttribute?.('data-parent-id') || null;
 
@@ -1027,11 +1044,9 @@ function wireLayerContextMenu(panel) {
           const textBefore = fdCanvas.get_text();
           let changed = false;
           if (action === 'cut') {
-            fdCanvas.select_by_id(nodeId);
             copySelectedAsFd();
             changed = fdCanvas.delete_selected();
           } else if (action === 'copy') {
-            fdCanvas.select_by_id(nodeId);
             copySelectedAsFd();
             return;
           } else if (action === 'paste') {
@@ -1040,11 +1055,9 @@ function wireLayerContextMenu(panel) {
             });
             return;
           } else if (action === 'copy-png') {
-            fdCanvas.select_by_id(nodeId);
             if (typeof copySelectionAsPng === 'function') copySelectionAsPng();
             return;
           } else if (action === 'duplicate') {
-            fdCanvas.select_by_id(nodeId);
             changed = fdCanvas.duplicate_selected();
           } else if (action === 'group') {
             changed = fdCanvas.group_selected();
@@ -1089,7 +1102,6 @@ function wireLayerContextMenu(panel) {
           } else if (action === 'move-to-root') {
             changed = fdCanvas.reparent_into(nodeId, 'root');
           } else if (action === 'delete') {
-            fdCanvas.select_by_id(nodeId);
             changed = fdCanvas.delete_selected();
           }
           if (changed) {
@@ -1147,9 +1159,22 @@ function refreshLayersPanel() {
   // Selection-only change: update highlight on existing DOM without full rebuild
   if (sceneGeneration === lastLayerGeneration && selectedKey !== lastLayerSelectedId) {
     lastLayerSelectedId = selectedKey;
-    panel.querySelectorAll(".layer-item").forEach(el =>
-      el.classList.toggle("selected", selectedIds.has(el.getAttribute("data-node-id")))
-    );
+    panel.querySelectorAll(".layer-item").forEach(el => {
+      const isSelected = selectedIds.has(el.getAttribute("data-node-id"));
+      el.classList.toggle("selected", isSelected);
+      if (isSelected) {
+        let current = el.closest(".layer-children");
+        while (current) {
+          if (current.classList.contains("collapsed")) {
+            current.classList.remove("collapsed");
+            const parentId = current.getAttribute("data-parent-id");
+            const chevron = panel.querySelector(`.layer-chevron[data-toggle-id="${parentId}"]`);
+            if (chevron) chevron.classList.add("expanded");
+          }
+          current = current.parentElement?.closest(".layer-children");
+        }
+      }
+    });
     // Scroll first selected item into view (Canvas/Code → Layers sync)
     const selectedEl = panel.querySelector('.layer-item.selected');
     if (selectedEl) selectedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -1343,6 +1368,22 @@ function refreshLayersPanel() {
 
   // ── Keyboard shortcuts when layers panel is focused (#7) ──
   wireLayerKeyboardShortcuts(panel);
+
+  // ── Auto-expand parents of selected items and scroll into view ──
+  panel.querySelectorAll('.layer-item.selected').forEach(el => {
+    let current = el.closest(".layer-children");
+    while (current) {
+      if (current.classList.contains("collapsed")) {
+        current.classList.remove("collapsed");
+        const parentId = current.getAttribute("data-parent-id");
+        const chevron = panel.querySelector(`.layer-chevron[data-toggle-id="${parentId}"]`);
+        if (chevron) chevron.classList.add("expanded");
+      }
+      current = current.parentElement?.closest(".layer-children");
+    }
+  });
+  const sel = panel.querySelector('.layer-item.selected');
+  if (sel) sel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 /** Wire keyboard shortcuts for layers panel — Delete, ⌘C/X/V/D (#5, #7) */
