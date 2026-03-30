@@ -350,8 +350,8 @@ impl FdCanvas {
                     rw,
                     rh,
                 );
-                if mods.shift {
-                    // Shift: add to existing selection
+                if mods.shift || mods.meta || mods.ctrl {
+                    // Shift/Cmd/Ctrl: add to existing selection
                     for raw_id in hits {
                         let id = self
                             .engine
