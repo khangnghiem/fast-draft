@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.303 — Edge Text Selection & Duplicate Label Fix (R3.43)
+
+- **Layout**: Added `resolve_edge_text_children()` pass in `fd-core/layout.rs` — positions edge text labels at the edge midpoint so the spatial index and hit-testing can find them where they're visually drawn
+- **WASM API**: Added `get_edge_text_child_id(edge_id)` and `create_edge_text_child(edge_id, content)` to `fd-wasm/crud.rs` — model-backed, idempotent edge label management
+- **JS fix**: Replaced fragile regex-based edge label creation in `inline-edit.js` with WASM API calls — eliminates duplicate text node bug on double-click
+- **Root cause (Bug 1)**: Edge text children were added to the graph at root level but the layout engine never positioned them at the edge midpoint; bounds remained at (0,0), making them invisible to hit-testing
+- **Root cause (Bug 2)**: The JS double-click handler used raw regex on FD source text to find/create labels, bypassing the WASM engine's `Edge.text_child` field, causing orphaned duplicates
+
 ### v0.11.302 — Arrowhead Polish & Edge Drag Optimization (R3.42)
 
 1. **Arrowhead Visual Polish** — The structural arrowhead drawing logic in `render2d.rs` was refined to retract the edge stroke path dynamically based on stroke width and tangent angle. This prevents the stroke's flat/round cap from bulging out past the tip of the geometric triangle arrowhead.

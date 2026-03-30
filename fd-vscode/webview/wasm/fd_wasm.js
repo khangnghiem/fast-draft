@@ -175,6 +175,29 @@ export class FdCanvas {
         }
     }
     /**
+     * Create a text child node for an edge. Returns the new text node ID.
+     * If the edge already has a text child, returns its existing ID.
+     * @param {string} edge_id
+     * @param {string} content
+     * @returns {string}
+     */
+    create_edge_text_child(edge_id, content) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(edge_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(content, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_create_edge_text_child(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+            deferred3_0 = ret[0];
+            deferred3_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    /**
      * Create a node at a specific position (for drag-and-drop).
      * @param {string} kind
      * @param {number} x
@@ -495,6 +518,25 @@ export class FdCanvas {
             const ptr0 = passStringToWasm0(edge_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
             const len0 = WASM_VECTOR_LEN;
             const ret = wasm.fdcanvas_get_edge_endpoints(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * Get the text child ID of an edge. Returns empty string if none.
+     * @param {string} edge_id
+     * @returns {string}
+     */
+    get_edge_text_child_id(edge_id) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(edge_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_get_edge_text_child_id(this.__wbg_ptr, ptr0, len0);
             deferred2_0 = ret[0];
             deferred2_1 = ret[1];
             return getStringFromWasm0(ret[0], ret[1]);
