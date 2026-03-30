@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.301 — Arrow Tool Defaults & Edge Snapping (R3.42)
+
+1. **Default Arrow Styling** — The Arrow tool now automatically applies a default `stroke` (`#6B7080`) and `width` (`2.0`) to newly authored connections.
+2. **Edge Repointing Node Snapping** — Modified `SelectTool` to dynamically detect hovered nodes (`hit_node`) during edge dragging and trigger `EdgeAnchor::Node(hit_node_id)` constraint snapping.
+3. **Target Snapshot Highlight (Ghost)** — The snap target now renders a glowing `#4FC3F7` padding ring proxy beneath the active snap target. Evaluated via `fdCanvas.get_arrow_preview()`.
+4. **Tool Shortcut Consistency** — Confirmed and documented `A` accurately triggers the Arrow tool across all environments.
+
+Files: `crates/fd-editor/src/tools.rs`, `crates/fd-wasm/src/lib.rs`, `site/app.js`, `fd-vscode/webview/src/main.js`
+
 ### v0.11.300 — Bidirectional Selection Sync: Canvas ↔ Layers (R6.18)
 
 1. **Layers → Canvas Auto-Focus** — Clicking a layer now smartly pans and zooms the canvas to ensure the selected node is visible in the viewport. Ported `focusOnNode` capability from VS Code extension to the Web Playground (`site/app.js`), honoring the `reduceMotion` preference by disabling the bezier animation sweep.

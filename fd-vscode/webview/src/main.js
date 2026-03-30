@@ -136,28 +136,31 @@ function render() {
     try {
       const ap = JSON.parse(arrowPreviewJson);
       ctx.save();
-      ctx.strokeStyle = "#6B7080";
-      ctx.lineWidth = 1.5;
-      // Solid line (not dashed)
-      ctx.beginPath();
-      ctx.moveTo(ap.x1, ap.y1);
-      ctx.lineTo(ap.x2, ap.y2);
-      ctx.stroke();
-      // Arrowhead
-      const angle = Math.atan2(ap.y2 - ap.y1, ap.x2 - ap.x1);
-      const headLen = 10;
-      ctx.beginPath();
-      ctx.moveTo(ap.x2, ap.y2);
-      ctx.lineTo(
-        ap.x2 - headLen * Math.cos(angle - Math.PI / 6),
-        ap.y2 - headLen * Math.sin(angle - Math.PI / 6)
-      );
-      ctx.moveTo(ap.x2, ap.y2);
-      ctx.lineTo(
-        ap.x2 - headLen * Math.cos(angle + Math.PI / 6),
-        ap.y2 - headLen * Math.sin(angle + Math.PI / 6)
-      );
-      ctx.stroke();
+      
+      if (ap.x1 !== undefined && ap.y1 !== undefined) {
+        ctx.strokeStyle = "#6B7080";
+        ctx.lineWidth = 1.5;
+        // Solid line (not dashed)
+        ctx.beginPath();
+        ctx.moveTo(ap.x1, ap.y1);
+        ctx.lineTo(ap.x2, ap.y2);
+        ctx.stroke();
+        // Arrowhead
+        const angle = Math.atan2(ap.y2 - ap.y1, ap.x2 - ap.x1);
+        const headLen = 10;
+        ctx.beginPath();
+        ctx.moveTo(ap.x2, ap.y2);
+        ctx.lineTo(
+          ap.x2 - headLen * Math.cos(angle - Math.PI / 6),
+          ap.y2 - headLen * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.moveTo(ap.x2, ap.y2);
+        ctx.lineTo(
+          ap.x2 - headLen * Math.cos(angle + Math.PI / 6),
+          ap.y2 - headLen * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.stroke();
+      }
 
       // ── Fix #3: Highlight target node under cursor during arrow drag ──
       if (ap.target_id) {
