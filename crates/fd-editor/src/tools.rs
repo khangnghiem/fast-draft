@@ -40,6 +40,17 @@ pub trait Tool {
     fn handle(&mut self, event: &InputEvent, hit_node: Option<NodeId>) -> Vec<GraphMutation>;
 }
 
+
+// ─── Constants ───────────────────────────────────────────────────────────
+
+const DRAG_CANCEL_DIST_SQ: f32 = 25.0;
+const ARROW_MIN_DRAG_DIST: f32 = 10.0;
+const PEN_SUBSAMPLE_DIST_SQ: f32 = 9.0;
+const SHIFT_DESELECT_CANCEL_DIST: f32 = 0.5;
+const DEFAULT_RECT_WIDTH: f32 = 162.0;
+const DEFAULT_RECT_HEIGHT: f32 = 100.0;
+const DEFAULT_ELLIPSE_SIZE: f32 = 128.0;
+
 // ─── Resize Handle Positions ─────────────────────────────────────────────
 
 /// Positions of the 8-point resize handles around a selected node.
@@ -349,7 +360,7 @@ impl Tool for SelectTool {
                         };
 
                         // Only cancel deferred Shift deselect if we actually moved
-                        if dx.abs() > 0.5 || dy.abs() > 0.5 {
+                        if dx.abs() > SHIFT_DESELECT_CANCEL_DIST || dy.abs() > SHIFT_DESELECT_CANCEL_DIST {
                             self.shift_toggled_off = None;
                         }
 
@@ -523,7 +534,7 @@ impl Tool for RectTool {
                     // Drag-back-to-cancel: if cursor returns within 5px of
                     // start, reset dragged so PointerUp produces click-to-place.
                     let dist_sq = (x - self.start_x).powi(2) + (y - self.start_y).powi(2);
-                    if dist_sq < 25.0 {
+                    if dist_sq < DRAG_CANCEL_DIST_SQ {
                         self.dragged = false;
                     }
 
@@ -593,8 +604,8 @@ impl Tool for RectTool {
                 if !self.dragged {
                     if let Some(id) = self.current_id.take() {
                         // Click without drag → default 162×100 centered at click point
-                        let w = 162.0_f32;
-                        let h = 100.0_f32;
+                        let w = DEFAULT_RECT_WIDTH;
+                        let h = DEFAULT_RECT_HEIGHT;
                         vec![
                             GraphMutation::ResizeNode {
                                 id,
@@ -941,7 +952,7 @@ impl Tool for EllipseTool {
                     // Drag-back-to-cancel: if cursor returns within 5px of
                     // start, reset dragged so PointerUp produces click-to-place.
                     let dist_sq = (x - self.start_x).powi(2) + (y - self.start_y).powi(2);
-                    if dist_sq < 25.0 {
+                    if dist_sq < DRAG_CANCEL_DIST_SQ {
                         self.dragged = false;
                     }
 
@@ -1011,8 +1022,8 @@ impl Tool for EllipseTool {
                 if !self.dragged {
                     if let Some(id) = self.current_id.take() {
                         // Click without drag → default 128×128 centered at click point
-                        let w = 128.0_f32;
-                        let h = 128.0_f32;
+                        let w = DEFAULT_ELLIPSE_SIZE;
+                        let h = DEFAULT_ELLIPSE_SIZE;
                         vec![
                             GraphMutation::ResizeNode {
                                 id,
@@ -1222,7 +1233,7 @@ impl Tool for ArrowTool {
                     _ => (0.0, 0.0),
                 });
                 let dist = ((x - sx).powi(2) + (y - sy).powi(2)).sqrt();
-                if dist < 10.0 {
+                if dist < ARROW_MIN_DRAG_DIST {
                     return vec![];
                 }
 
@@ -1401,7 +1412,7 @@ impl Tool for LassoTool {
                     // Subsample: skip if < 3px from last point
                     if let Some(&(lx, ly)) = self.polygon.last() {
                         let dist_sq = (x - lx).powi(2) + (y - ly).powi(2);
-                        if dist_sq >= 9.0 {
+                        if dist_sq >= PEN_SUBSAMPLE_DIST_SQ {
                             self.polygon.push((*x, *y));
                         }
                     }
