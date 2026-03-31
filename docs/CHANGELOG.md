@@ -21,6 +21,11 @@
 
 - **Layout Resolution Sync**: Fixed a visual desynchronization bug where the "Center in another node" context menu action successfully applied the `center_in:` constraint to the DSL but failed to visually move the node on the canvas. 
 - **WASM Lifecycle Harden**: Bundled the post-mutation flush lifecycle (`mark_dirty`, `resolve`, `flush_to_text`, `rebuild_spatial_index`) into a unified `sync_mutation_cycle()` method on `FdCanvas` to prevent future layout-staleness bugs across all coordinate CRUD operations.
+### v0.11.306 — Format Pipeline and Node ID Deduplication (R3.68)
+
+- **Format Pipeline Extension**: Refactored the 'Layers' header in the left sidebar into a unified **✦ Format** action button. Triggering this runs a complete `format_and_dedup` pass (structural cleanup, ID deduplication, style hoisting, semantic sorting).
+- **Node ID Deduplication**: Added a safe `dedup_node_ids` pass to the core AST transform pipeline. Detects duplicate `@id` bindings across the graph, iteratively suffixes collisions (`@box_2`), and safely updates all cross-references (Constraints, Arrow anchor links, etc.) without destroying layout integrity.
+- **Save-hook Integration**: The format pipeline is now attached to the `beforeunload` persistence hook, assuring documents are structurally sanitized before saving to local storage.
 
 
 ### v0.11.304 — VS Code Canvas Preview Side (R6.18)

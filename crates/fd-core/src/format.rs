@@ -6,7 +6,7 @@
 
 use crate::emitter::emit_document;
 use crate::parser::parse_document;
-use crate::transform::{dedup_use_styles, sort_nodes};
+use crate::transform::{dedup_node_ids, dedup_use_styles, sort_nodes};
 
 // ─── Config ───────────────────────────────────────────────────────────────
 
@@ -18,6 +18,9 @@ use crate::transform::{dedup_use_styles, sort_nodes};
 pub struct FormatConfig {
     /// Remove duplicate `use:` references on each node. Default: **true**.
     pub dedup_use: bool,
+
+    /// Rename duplicate node IDs with `_2`, `_3` suffixes. Default: **true**.
+    pub dedup_ids: bool,
 
     /// Promote repeated identical inline styles to top-level `style {}` blocks.
     /// This is *structurally destructive* (adds new style names, rewrites nodes),
@@ -33,6 +36,7 @@ impl Default for FormatConfig {
     fn default() -> Self {
         Self {
             dedup_use: true,
+            dedup_ids: true,
             hoist_styles: false,
             sort_nodes: true,
         }
@@ -49,6 +53,10 @@ impl Default for FormatConfig {
 /// Returns the parser error string if the input is not valid FD syntax.
 pub fn format_document(text: &str, config: &FormatConfig) -> Result<String, String> {
     let mut scene = parse_document(text)?;
+
+    if config.dedup_ids {
+        dedup_node_ids(&mut scene);
+    }
 
     if config.dedup_use {
         dedup_use_styles(&mut scene);

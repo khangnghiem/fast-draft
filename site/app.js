@@ -2095,6 +2095,34 @@ function setupContextMenu() {
         toggleLayersPanel();
       }
     }
+    // ⌥⇧F (Option+Shift+F) → Format document
+    if (e.key === 'F' && e.shiftKey && e.altKey && !e.metaKey && !e.ctrlKey) {
+      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        if (fdCanvas) {
+          const textBefore = fdCanvas.get_text();
+          const result = fdCanvas.format_with_options(true, true, false);
+          try {
+            const parsed = JSON.parse(result);
+            if (parsed.changed) {
+              const textAfter = fdCanvas.get_text();
+              fdCanvas.push_undo_snapshot(textBefore, textAfter);
+              renderCanvas();
+              syncCanvasToEditor();
+              updatePropertiesPanel();
+              refreshLayersPanel();
+              const delta = parsed.lines_before - parsed.lines_after;
+              const deltaStr = delta > 0 ? `, ${delta} lines trimmed` : '';
+              showToast(`✦ Formatted: ${parsed.summary}${deltaStr}`);
+            } else {
+              showToast('✓ Already formatted');
+            }
+          } catch (_) {
+            showToast('Format failed');
+          }
+        }
+      }
+    }
     // ` (backtick) → toggle X-ray node labels (no modifiers, not in input)
     if (e.key === '`' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
       if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
@@ -5398,6 +5426,7 @@ window.addEventListener('focus', () => {
 window.addEventListener('beforeunload', () => {
   if (!fdCanvas) return;
   try {
+    fdCanvas.format_and_dedup(); // format-on-save
     const text = fdCanvas.get_text();
     if (text && text.trim().length > 0) {
       localStorage.setItem('fd-document', text);

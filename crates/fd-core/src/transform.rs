@@ -4,7 +4,7 @@
 //! Passes are applied by `format_document` in `format.rs` based on `FormatConfig`.
 
 use crate::id::NodeId;
-use crate::model::{NodeKind, Paint, Properties, SceneGraph, SceneNode};
+use crate::model::{Constraint, EdgeAnchor, NodeKind, Paint, Properties, SceneGraph, SceneNode};
 use std::collections::HashMap;
 
 // ─── Dedup use-styles ─────────────────────────────────────────────────────
@@ -185,6 +185,120 @@ pub fn sort_nodes(graph: &mut SceneGraph) {
 
     // Store the sorted order for root's children
     graph.sorted_child_order.insert(root, children);
+}
+
+// ─── Dedup duplicate node IDs ─────────────────────────────────────────────
+
+/// Rename duplicate node IDs to ensure uniqueness across the graph.
+///
+/// Walks all nodes and edges. When a collision is found, appends `_2`, `_3`, etc.
+/// Also updates all references: `Constraint::Offset { from }`, `CenterIn`,
+/// `EdgeAnchor::Node`, and `edge.text_child`.
+///
+/// Returns the number of nodes renamed.
+pub fn dedup_node_ids(graph: &mut SceneGraph) -> usize {
+    use std::collections::HashSet;
+
+    let root_id = NodeId::intern("root");
+    let canvas_id = NodeId::intern("canvas");
+
+    // Phase 1: Collect all IDs and find duplicates. Build rename map.
+    let mut seen: HashSet<NodeId> = HashSet::new();
+    let mut rename_map: HashMap<(NodeId, petgraph::graph::NodeIndex), NodeId> = HashMap::new();
+    seen.insert(root_id);
+    seen.insert(canvas_id);
+
+    let indices: Vec<_> = graph.graph.node_indices().collect();
+    for &idx in &indices {
+        let id = graph.graph[idx].id;
+        if id == root_id {
+            continue;
+        }
+        if !seen.insert(id) {
+            // Collision! Find a unique suffix.
+            let stem = id
+                .as_str()
+                .trim_end_matches(|c: char| c.is_ascii_digit() || c == '_');
+            let stem = if stem.is_empty() { id.as_str() } else { stem };
+            let mut n = 2u32;
+            loop {
+                let candidate = NodeId::intern(&format!("{stem}_{n}"));
+                if !seen.contains(&candidate) && graph.get_by_id(candidate).is_none() {
+                    seen.insert(candidate);
+                    rename_map.insert((id, idx), candidate);
+                    break;
+                }
+                n += 1;
+                if n > 1000 {
+                    break; // safety valve
+                }
+            }
+        }
+    }
+
+    if rename_map.is_empty() {
+        return 0;
+    }
+
+    // Build a flat old→new map for reference updating (from the node-specific rename map)
+    let mut id_renames: HashMap<NodeId, NodeId> = HashMap::new();
+    let count = rename_map.len();
+
+    // Phase 2: Apply renames to nodes.
+    for (&(old_id, idx), &new_id) in &rename_map {
+        graph.graph[idx].id = new_id;
+        // Update id_index
+        graph.id_index.remove(&old_id);
+        graph.id_index.insert(new_id, idx);
+        id_renames.insert(old_id, new_id);
+    }
+
+    // Phase 3: Update all constraint references.
+    for &idx in &indices {
+        let node = &mut graph.graph[idx];
+        for constraint in node.constraints.iter_mut() {
+            match constraint {
+                Constraint::Offset { from, .. } => {
+                    if let Some(&new_id) = id_renames.get(from) {
+                        *from = new_id;
+                    }
+                }
+                Constraint::CenterIn(target) => {
+                    if let Some(&new_id) = id_renames.get(target) {
+                        *target = new_id;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    // Phase 4: Update edge references.
+    for edge in &mut graph.edges {
+        // Edge from/to
+        if let EdgeAnchor::Node(ref mut id) = edge.from
+            && let Some(&new_id) = id_renames.get(id)
+        {
+            *id = new_id;
+        }
+        if let EdgeAnchor::Node(ref mut id) = edge.to
+            && let Some(&new_id) = id_renames.get(id)
+        {
+            *id = new_id;
+        }
+        // Edge text_child
+        if let Some(ref mut child_id) = edge.text_child
+            && let Some(&new_id) = id_renames.get(child_id)
+        {
+            *child_id = new_id;
+        }
+        // Edge ID itself
+        if let Some(&new_id) = id_renames.get(&edge.id) {
+            edge.id = new_id;
+        }
+    }
+
+    count
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────
