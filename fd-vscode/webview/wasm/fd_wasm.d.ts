@@ -130,6 +130,16 @@ export class FdCanvas {
      */
     find_edge_for_text(text_id: string): string;
     /**
+     * Format the document using the default config (dedup + sort, no hoist).
+     * Returns `true` if the document was changed.
+     */
+    format_and_dedup(): boolean;
+    /**
+     * Format the document with granular options.
+     * Returns JSON: `{"changed":bool,"lines_before":N,"lines_after":N,"summary":"..."}`
+     */
+    format_with_options(dedup: boolean, sort: boolean, hoist: boolean): string;
+    /**
      * Get all specs across the entire document.
      */
     get_all_specs(): string;
@@ -160,6 +170,10 @@ export class FdCanvas {
      * Get parse diagnostics for the current document text.
      */
     get_diagnostics(): string;
+    /**
+     * Get parse diagnostics for arbitrary source text (used by live linter).
+     */
+    get_diagnostics_for_source(source: string): string;
     /**
      * Get edge endpoints as JSON. Returns {"startX":x,"startY":y,"endX":x,"endY":y}
      */
@@ -505,6 +519,8 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_fdcanvas_free: (a: number, b: number) => void;
+    readonly fdcanvas_format_and_dedup: (a: number) => number;
+    readonly fdcanvas_format_with_options: (a: number, b: number, c: number, d: number) => [number, number];
     readonly fdcanvas_get_arrow_preview: (a: number) => [number, number];
     readonly fdcanvas_get_corners_only: (a: number) => number;
     readonly fdcanvas_get_handle_visual_size: (a: number) => number;
@@ -531,6 +547,7 @@ export interface InitOutput {
     readonly fdcanvas_compute_score: (a: number) => [number, number];
     readonly fdcanvas_get_completions: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_diagnostics: (a: number) => [number, number];
+    readonly fdcanvas_get_diagnostics_for_source: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_hover: (a: number, b: number, c: number) => [number, number];
     readonly parse_to_json: (a: number, b: number) => [number, number];
     readonly validate: (a: number, b: number) => [number, number];

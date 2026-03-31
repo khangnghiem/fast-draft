@@ -12,9 +12,10 @@ export {
 } from '@codemirror/view';
 
 // @codemirror/language
-export { StreamLanguage, HighlightStyle, syntaxHighlighting, bracketMatching } from '@codemirror/language';
-
-// @lezer/highlight
+export {
+  StreamLanguage, HighlightStyle, syntaxHighlighting, bracketMatching,
+  foldGutter, foldNodeProp, foldInside, foldable, foldAll, unfoldAll, foldService
+} from '@codemirror/language';// @lezer/highlight
 export { tags } from '@lezer/highlight';
 
 // @codemirror/autocomplete

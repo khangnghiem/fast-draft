@@ -2,6 +2,8 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const __wbg_fdcanvas_free: (a: number, b: number) => void;
+export const fdcanvas_format_and_dedup: (a: number) => number;
+export const fdcanvas_format_with_options: (a: number, b: number, c: number, d: number) => [number, number];
 export const fdcanvas_get_arrow_preview: (a: number) => [number, number];
 export const fdcanvas_get_corners_only: (a: number) => number;
 export const fdcanvas_get_handle_visual_size: (a: number) => number;
@@ -28,6 +30,7 @@ export const fdcanvas_undo: (a: number) => number;
 export const fdcanvas_compute_score: (a: number) => [number, number];
 export const fdcanvas_get_completions: (a: number, b: number, c: number) => [number, number];
 export const fdcanvas_get_diagnostics: (a: number) => [number, number];
+export const fdcanvas_get_diagnostics_for_source: (a: number, b: number, c: number) => [number, number];
 export const fdcanvas_get_hover: (a: number, b: number, c: number) => [number, number];
 export const parse_to_json: (a: number, b: number) => [number, number];
 export const validate: (a: number, b: number) => [number, number];

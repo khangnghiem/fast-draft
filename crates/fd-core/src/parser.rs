@@ -85,31 +85,36 @@ pub fn parse_document(input: &str) -> Result<SceneGraph, String> {
             graph.edge_defaults = Some(defaults);
             pending_comments.clear();
         } else if rest.starts_with("edge ") {
-            let (edge, text_child_data) = parse_edge_block
-                .parse_next(&mut rest)
-                .map_err(|e| format!("line {line}: edge error — expected `edge @id {{ from: @a to: @b }}`, got `{ctx}…`: {e}"))?;
-            // Insert text child node into graph if label: created one
-            if let Some((text_id, content)) = text_child_data {
-                let text_node = crate::model::SceneNode {
-                    id: text_id,
-                    kind: crate::model::NodeKind::Text {
-                        content,
-                        max_width: None,
-                    },
-                    props: crate::model::Properties::default(),
-                    use_styles: Default::default(),
-                    constraints: Default::default(),
-                    spec: None,
-                    animations: Default::default(),
-                    comments: Vec::new(),
-                    place: None,
-                    locked: false,
-                };
-                let idx = graph.graph.add_node(text_node);
-                graph.graph.add_edge(graph.root, idx, ());
-                graph.id_index.insert(text_id, idx);
+            let parsed_edges = parse_edge_block.parse_next(&mut rest).map_err(|e| {
+                format!(
+                    "line {line}: edge error — expected `edge @id {{ ... }}`, got `{ctx}…`: {e}"
+                )
+            })?;
+
+            for (edge, text_child_data) in parsed_edges {
+                // Insert text child node into graph if label: created one
+                if let Some((text_id, content)) = text_child_data {
+                    let text_node = crate::model::SceneNode {
+                        id: text_id,
+                        kind: crate::model::NodeKind::Text {
+                            content,
+                            max_width: None,
+                        },
+                        props: crate::model::Properties::default(),
+                        use_styles: Default::default(),
+                        constraints: Default::default(),
+                        spec: None,
+                        animations: Default::default(),
+                        comments: Vec::new(),
+                        place: None,
+                        locked: false,
+                    };
+                    let idx = graph.graph.add_node(text_node);
+                    graph.graph.add_edge(graph.root, idx, ());
+                    graph.id_index.insert(text_id, idx);
+                }
+                graph.edges.push(edge);
             }
-            graph.edges.push(edge);
             pending_comments.clear();
         } else if rest.starts_with("when ") && !rest[5..].trim_start().starts_with(':') {
             // Top-level `when name { }` template (not `when :trigger`)
@@ -1616,7 +1621,8 @@ fn parse_edge_defaults_block(input: &mut &str) -> ModalResult<EdgeDefaults> {
 
 // ─── Edge block parser ─────────────────────────────────────────────────
 
-fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, String)>)> {
+#[allow(clippy::type_complexity)]
+fn parse_edge_block(input: &mut &str) -> ModalResult<Vec<(Edge, Option<(NodeId, String)>)>> {
     let _ = "edge".parse_next(input)?;
     let _ = space1.parse_next(input)?;
 
@@ -1629,11 +1635,11 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
 
     skip_space(input);
 
-    // ─── New header syntax: edge @name @from -> @to ["label"] [{...}] ───
+    // ─── New header syntax: edge @name @from -> @to1, @to2 ["label"] [{...}] ───
     // Disambiguate: if next char is '@' or a digit, first_id is the edge name
     // and this is the from-anchor. If next is '->' it's anonymous (first_id is from).
     // If next is '{', it's the old body-only form.
-    let (id, header_from, header_to, header_label) = if input.starts_with('@')
+    let (id, header_from, header_to_anchors, header_label) = if input.starts_with('@')
         || input.starts_with(|c: char| c.is_ascii_digit())
         || (input.starts_with('-') && input.len() > 1 && input.as_bytes()[1].is_ascii_digit())
     {
@@ -1642,7 +1648,21 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
         skip_space(input);
         let _ = "->".parse_next(input)?;
         skip_space(input);
-        let to_anchor = parse_edge_anchor(input)?;
+        let mut to_anchors = vec![parse_edge_anchor(input)?];
+        loop {
+            let saved = *input;
+            skip_space(input);
+            if input.starts_with(',') {
+                *input = &input[1..];
+                skip_space(input);
+                if let Ok(anchor) = parse_edge_anchor(input) {
+                    to_anchors.push(anchor);
+                    continue;
+                }
+            }
+            *input = saved;
+            break;
+        }
         skip_space(input);
         // Optional inline label
         let label = if input.starts_with('"') {
@@ -1654,13 +1674,27 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
         } else {
             None
         };
-        (first_id, Some(from_anchor), Some(to_anchor), label)
+        (first_id, Some(from_anchor), to_anchors, label)
     } else if input.starts_with("->") {
         // Anonymous edge: first_id is the from-node
         let from_anchor = EdgeAnchor::Node(first_id);
         let _ = "->".parse_next(input)?;
         skip_space(input);
-        let to_anchor = parse_edge_anchor(input)?;
+        let mut to_anchors = vec![parse_edge_anchor(input)?];
+        loop {
+            let saved = *input;
+            skip_space(input);
+            if input.starts_with(',') {
+                *input = &input[1..];
+                skip_space(input);
+                if let Ok(anchor) = parse_edge_anchor(input) {
+                    to_anchors.push(anchor);
+                    continue;
+                }
+            }
+            *input = saved;
+            break;
+        }
         skip_space(input);
         let label = if input.starts_with('"') {
             Some(
@@ -1674,12 +1708,12 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
         (
             NodeId::anonymous("edge"),
             Some(from_anchor),
-            Some(to_anchor),
+            to_anchors,
             label,
         )
     } else {
         // Old body form: edge @name { from: ... to: ... }
-        (first_id, None, None, None)
+        (first_id, None, Vec::new(), None)
     };
 
     skip_space(input);
@@ -1689,31 +1723,50 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
         // Consume optional separator
         skip_opt_separator(input);
         let from = header_from.unwrap_or(EdgeAnchor::Point(0.0, 0.0));
-        let to = header_to.unwrap_or(EdgeAnchor::Point(0.0, 0.0));
-        let (text_child, text_child_content) = if let Some(label) = header_label {
-            let label_id = NodeId::intern(&format!("_{}_label", id.as_str()));
-            (Some(label_id), Some((label_id, label)))
+        let to_list = if !header_to_anchors.is_empty() {
+            header_to_anchors
         } else {
-            (None, None)
+            vec![EdgeAnchor::Point(0.0, 0.0)]
         };
-        let style = Properties::default();
-        return Ok((
-            Edge {
-                id,
-                from,
-                to,
-                text_child,
-                props: style,
-                use_styles: Default::default(),
-                arrow: ArrowKind::None,
-                curve: CurveKind::Straight,
-                spec: None,
-                animations: Default::default(),
-                flow: None,
-                label_offset: None,
-            },
-            text_child_content,
-        ));
+
+        let mut results = Vec::new();
+        for (i, target) in to_list.into_iter().enumerate() {
+            let edge_id = if id.as_str().starts_with("_edge_") {
+                if i == 0 {
+                    id
+                } else {
+                    NodeId::anonymous("edge")
+                }
+            } else if i == 0 {
+                id
+            } else {
+                NodeId::intern(&format!("{}_{}", id.as_str(), i))
+            };
+            let (text_child, text_child_content) = if let Some(ref label) = header_label {
+                let label_id = NodeId::intern(&format!("_{}_label", edge_id.as_str()));
+                (Some(label_id), Some((label_id, label.clone())))
+            } else {
+                (None, None)
+            };
+            results.push((
+                Edge {
+                    id: edge_id,
+                    from: from.clone(),
+                    to: target,
+                    text_child,
+                    props: Properties::default(),
+                    use_styles: Default::default(),
+                    arrow: ArrowKind::None,
+                    curve: CurveKind::Straight,
+                    spec: None,
+                    animations: Default::default(),
+                    flow: None,
+                    label_offset: None,
+                },
+                text_child_content,
+            ));
+        }
+        return Ok(results);
     }
 
     let _ = '{'.parse_next(input)?;
@@ -1859,34 +1912,61 @@ fn parse_edge_block(input: &mut &str) -> ModalResult<(Edge, Option<(NodeId, Stri
 
     // Header-provided anchors take precedence over body from:/to:
     let final_from = header_from.or(from).unwrap_or(EdgeAnchor::Point(0.0, 0.0));
-    let final_to = header_to.or(to).unwrap_or(EdgeAnchor::Point(0.0, 0.0));
+    let final_to_list = if !header_to_anchors.is_empty() {
+        header_to_anchors
+    } else if let Some(t) = to {
+        vec![t]
+    } else {
+        vec![EdgeAnchor::Point(0.0, 0.0)]
+    };
 
-    // Header-provided label takes precedence
-    if text_child.is_none()
-        && let Some(ref label) = header_label
-    {
-        let label_id = NodeId::intern(&format!("_{}_label", id.as_str()));
-        text_child = Some(label_id);
-        text_child_content = Some((label_id, label.clone()));
+    let mut results = Vec::new();
+    for (i, target) in final_to_list.into_iter().enumerate() {
+        // compute edge id
+        let edge_id = if id.as_str().starts_with("_edge_") {
+            if i == 0 {
+                id
+            } else {
+                NodeId::anonymous("edge")
+            }
+        } else if i == 0 {
+            id
+        } else {
+            NodeId::intern(&format!("{}_{}", id.as_str(), i))
+        };
+
+        let mut current_text_child = text_child;
+        let mut current_text_child_content = text_child_content.clone();
+
+        // Header-provided label takes precedence
+        if current_text_child.is_none()
+            && let Some(ref label) = header_label
+        {
+            let label_id = NodeId::intern(&format!("_{}_label", edge_id.as_str()));
+            current_text_child = Some(label_id);
+            current_text_child_content = Some((label_id, label.clone()));
+        }
+
+        results.push((
+            Edge {
+                id: edge_id,
+                from: final_from.clone(),
+                to: target,
+                text_child: current_text_child,
+                props: style.clone(),
+                use_styles: use_styles.clone().into(),
+                arrow,
+                curve,
+                spec: spec.clone(),
+                animations: animations.clone().into(),
+                flow,
+                label_offset,
+            },
+            current_text_child_content,
+        ));
     }
 
-    Ok((
-        Edge {
-            id,
-            from: final_from,
-            to: final_to,
-            text_child,
-            props: style,
-            use_styles: use_styles.into(),
-            arrow,
-            curve,
-            spec,
-            animations: animations.into(),
-            flow,
-            label_offset,
-        },
-        text_child_content,
-    ))
+    Ok(results)
 }
 
 // ─── Constraint line parser ──────────────────────────────────────────────

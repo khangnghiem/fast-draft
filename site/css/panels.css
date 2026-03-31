@@ -813,6 +813,65 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   letter-spacing: 0.02em;
 }
 
+/* ─── Code Pane Linter & Fold Group ─── */
+.code-status-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.code-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  background: rgba(0,0,0,0.04);
+  color: var(--fd-text-secondary);
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+.dark-theme .code-status-pill {
+  background: rgba(255,255,255,0.06);
+}
+.code-status-pill:hover {
+  background: rgba(0,0,0,0.08);
+  color: var(--fd-text);
+}
+.dark-theme .code-status-pill:hover {
+  background: rgba(255,255,255,0.1);
+}
+.code-status-pill:active { transform: scale(0.97); }
+
+.code-status-pill.status-valid {
+  color: #00B894;
+  background: rgba(0,184,148,0.1);
+  border-color: rgba(0,184,148,0.2);
+}
+.code-status-pill.status-valid .linter-dot {
+  background: #00B894;
+  box-shadow: 0 0 6px rgba(0,184,148,0.4);
+}
+.code-status-pill.status-error {
+  color: #FF6B6B;
+  background: rgba(255,107,107,0.1);
+  border-color: rgba(255,107,107,0.2);
+}
+.code-status-pill.status-error .linter-dot {
+  background: #FF6B6B;
+  box-shadow: 0 0 6px rgba(255,107,107,0.4);
+}
+.linter-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--fd-text-tertiary);
+}
+
 /* ─── Layers & Code Action Bar ─── */
 .layers-action-bar,
 .pane-action-bar {

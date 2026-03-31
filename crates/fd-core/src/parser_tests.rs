@@ -1430,3 +1430,59 @@ edge @flow @a -> @b
         "should NOT have opening brace: {emitted}"
     );
 }
+
+#[test]
+fn parse_edge_multi_target() {
+    let src = r#"
+rect @a {}
+rect @b {}
+rect @c {}
+edge @flow @a -> @b, @c {
+  stroke: #FF0000 2
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    assert_eq!(graph.edges.len(), 2);
+
+    // First edge keeps the original alias if it's not internal _edge_
+    assert_eq!(graph.edges[0].id.as_str(), "flow");
+    assert_eq!(graph.edges[0].from, EdgeAnchor::Node(NodeId::intern("a")));
+    assert_eq!(graph.edges[0].to, EdgeAnchor::Node(NodeId::intern("b")));
+    assert_eq!(graph.edges[0].props.stroke.as_ref().unwrap().width, 2.0);
+
+    // Second edge gets a suffixed ID
+    assert_eq!(graph.edges[1].id.as_str(), "flow_1");
+    assert_eq!(graph.edges[1].from, EdgeAnchor::Node(NodeId::intern("a")));
+    assert_eq!(graph.edges[1].to, EdgeAnchor::Node(NodeId::intern("c")));
+    assert_eq!(graph.edges[1].props.stroke.as_ref().unwrap().width, 2.0);
+}
+
+#[test]
+fn parse_edge_multi_target_braceless() {
+    let src = r#"
+rect @a {}
+rect @b {}
+rect @c {}
+edge @flow @a -> @b, @c
+"#;
+    let graph = parse_document(src).unwrap();
+    assert_eq!(graph.edges.len(), 2);
+    assert_eq!(graph.edges[0].id.as_str(), "flow");
+    assert_eq!(graph.edges[1].to, EdgeAnchor::Node(NodeId::intern("c")));
+}
+
+#[test]
+fn parse_edge_multi_target_anonymous() {
+    let src = r#"
+rect @a {}
+rect @b {}
+rect @c {}
+edge @a -> @b, @c
+"#;
+    let graph = parse_document(src).unwrap();
+    assert_eq!(graph.edges.len(), 2);
+    assert!(graph.edges[0].id.as_str().starts_with("_edge_"));
+    assert!(graph.edges[1].id.as_str().starts_with("_edge_"));
+    assert_ne!(graph.edges[0].id, graph.edges[1].id);
+    assert_eq!(graph.edges[1].to, EdgeAnchor::Node(NodeId::intern("c")));
+}

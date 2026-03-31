@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.308 — Multi-Target Edge Shorthand (R3.43)
+
+- **Edge Fan-out Syntax**: Implemented and verified multi-target shorthand for graph edges (`edge @a -> @b, @c { ... }`). The parser safely expands this into multiple independent `Edge` structs during the AST parsing phase, removing the need for topology changes in the `SceneGraph` while dramatically reducing token overhead for AI agents writing graphs.
+- **Robust ID Generation**: Suffix generation automatically handles anonymous (`_edge_`) and specifically named edges (e.g., `@flow` becomes `@flow_1`, `@flow_2`).
+
 ### v0.11.305 — Canvas "Center In" Bug Fix (R3.39)
 
 - **Layout Resolution Sync**: Fixed a visual desynchronization bug where the "Center in another node" context menu action successfully applied the `center_in:` constraint to the DSL but failed to visually move the node on the canvas. 
