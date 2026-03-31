@@ -812,40 +812,48 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   letter-spacing: 0.02em;
 }
 
-/* ─── Format Pill Button ─── */
-.format-btn {
-  display: inline-flex;
+/* ─── Layers Action Bar ─── */
+.layers-action-bar {
+  display: flex;
   align-items: center;
+  gap: 2px;
+}
+.layer-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: 26px;
   gap: 4px;
-  padding: 4px 10px;
-  border: 0.5px solid var(--fd-border);
-  border-radius: 12px;
-  background: var(--fd-surface-hover);
+  border-radius: 6px;
+  border: none;
+  background: transparent;
   color: var(--fd-text-secondary);
-  font-size: 10px;
-  font-weight: 600;
   font-family: inherit;
-  letter-spacing: 0.02em;
+  font-size: 11px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-  line-height: 1;
+  padding: 0 8px;
+  transition: all 0.1s ease;
 }
-.format-btn:hover {
-  background: var(--fd-accent);
-  color: var(--fd-accent-fg, #fff);
-  border-color: var(--fd-accent);
-  transform: translateY(-0.5px);
-  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+.layer-action-btn:hover {
+  background: var(--fd-surface-hover, rgba(0,0,0,0.05));
+  color: var(--fd-text, #1C1C1E);
 }
-.format-btn:active {
-  transform: scale(0.96);
-  box-shadow: none;
+.layer-action-btn:active {
+  transform: scale(0.92);
+  background: var(--fd-divider, rgba(0,0,0,0.1));
 }
-.format-btn.success {
+.layer-action-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 1.5px;
+  fill: none;
+}
+.layer-action-btn.success {
   background: rgba(52, 199, 89, 0.15);
   color: #34C759;
-  border-color: rgba(52, 199, 89, 0.3);
   transition: all 0.2s ease;
 }
 .layers-body {

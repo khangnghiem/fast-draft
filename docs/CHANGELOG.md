@@ -21,6 +21,12 @@
 
 - **Layout Resolution Sync**: Fixed a visual desynchronization bug where the "Center in another node" context menu action successfully applied the `center_in:` constraint to the DSL but failed to visually move the node on the canvas. 
 - **WASM Lifecycle Harden**: Bundled the post-mutation flush lifecycle (`mark_dirty`, `resolve`, `flush_to_text`, `rebuild_spatial_index`) into a unified `sync_mutation_cycle()` method on `FdCanvas` to prevent future layout-staleness bugs across all coordinate CRUD operations.
+
+### v0.11.307 — Action Bar Redesign (R3.68 Addendum)
+
+- **UX**: Replaced the "✦ Format" text button with a minimalist "Ghost Icon Action Bar" across the user interface.
+- **Layers Count**: The header dynamically updates its selection count (`X / Y selected`) in real-time as users interact with the canvas via standard `fd-selection-changed` events.
+- **Code Editor Action Bar**: Elegantly segmented formatting operations directly into the `{ } Code` tab view via a floating action bar (`✨ Beautify` and `📋 Copy`). The `🪄 AI Touch` operation remains logically distinct on the Layers panel for manipulating components.
 ### v0.11.306 — Format Pipeline and Node ID Deduplication (R3.68)
 
 - **Format Pipeline Extension**: Refactored the 'Layers' header in the left sidebar into a unified **✦ Format** action button. Triggering this runs a complete `format_and_dedup` pass (structural cleanup, ID deduplication, style hoisting, semantic sorting).

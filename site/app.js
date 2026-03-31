@@ -662,6 +662,56 @@ function initLeftPanel() {
   switchLeftTab(activeLeftTab);
   // Sync panel state with data-attrs already set from <head> script
   // No classList toggle needed — [data-lp] handles visibility
+
+  const copyCodeBtn = document.getElementById('code-copy-btn');
+  if (copyCodeBtn) {
+    copyCodeBtn.addEventListener('click', () => {
+      if (window.api && window.api.cm) {
+        const sel = window.api.cm.getSelection();
+        const text = sel ? sel : window.api.cm.getValue();
+        navigator.clipboard.writeText(text).then(() => {
+          window.api.showToast("✓ Code copied to clipboard", 1500);
+          copyCodeBtn.classList.add('success');
+          setTimeout(() => copyCodeBtn.classList.remove('success'), 1500);
+        }).catch(() => {
+          window.api.showToast("Copy failed");
+        });
+      }
+    });
+  }
+
+  const formatCodeBtn = document.getElementById('code-format-btn');
+  if (formatCodeBtn) {
+    formatCodeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const canvas = window.api && window.api.getFdCanvas();
+      if (!canvas) return;
+      const textBefore = canvas.get_text();
+      const result = canvas.format_with_options(true, true, false);
+      try {
+        const parsed = JSON.parse(result);
+        if (parsed.changed) {
+          const textAfter = canvas.get_text();
+          canvas.push_undo_snapshot(textBefore, textAfter);
+          if (window.api.renderCanvas) window.api.renderCanvas();
+          if (window.api.syncCanvasToEditor) window.api.syncCanvasToEditor();
+          if (typeof updatePropertiesPanel === 'function') updatePropertiesPanel();
+          if (typeof refreshLayersPanel === 'function') refreshLayersPanel();
+          const delta = parsed.lines_before - parsed.lines_after;
+          const deltaStr = delta > 0 ? `, ${delta} lines trimmed` : '';
+          window.api.showToast(`✦ Formatted: ${parsed.summary}${deltaStr}`);
+          formatCodeBtn.classList.add('success');
+          setTimeout(() => formatCodeBtn.classList.remove('success'), 1500);
+        } else {
+          window.api.showToast('✓ Clean');
+          formatCodeBtn.classList.add('success');
+          setTimeout(() => formatCodeBtn.classList.remove('success'), 1500);
+        }
+      } catch (_) {
+        if (window.api) window.api.showToast('Format failed');
+      }
+    });
+  }
 }
 
 /** Initialize right panel: tab click handlers, default tab. */
