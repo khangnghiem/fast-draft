@@ -1,0 +1,169 @@
+# ─── Edge Types Showcase ───
+
+style node_style {
+  fill: #FFFFFF
+  stroke: #CBD5E1 1
+  corner: 8
+  font: "Inter" medium 14
+}
+
+# 1. Straight edge
+rect @straight_a {
+  text @straight_a_label "A" { place: center }
+  w: 60 h: 60
+  use: node_style
+  center_in: canvas
+  offset: @canvas -200, -150
+}
+
+rect @straight_b {
+  text @straight_b_label "B" { place: center }
+  w: 60 h: 60
+  use: node_style
+  offset: @straight_a 160, 0
+}
+
+# 2. Smooth edge
+rect @smooth_a {
+  text @smooth_a_label "C" { place: center }
+  w: 60 h: 60
+  use: node_style
+  offset: @straight_a 0, 100
+}
+
+rect @smooth_b {
+  text @smooth_b_label "D" { place: center }
+  w: 60 h: 60
+  use: node_style
+  offset: @smooth_a 160, 0
+}
+
+# 3. Step edge
+rect @step_a {
+  text @step_a_label "E" { place: center }
+  w: 60 h: 60
+  use: node_style
+  offset: @smooth_a 0, 100
+}
+
+rect @step_b {
+  text @step_b_label "F" { place: center }
+  w: 60 h: 60
+  use: node_style
+  offset: @step_a 160, 40
+}
+
+# 4. Arrows
+rect @arrow_start {
+  text @arrow_start_label "Start" { place: center }
+  w: 60 h: 40
+  use: node_style
+  offset: @straight_b 160, -40
+}
+
+rect @arrow_end {
+  text @arrow_end_label "End" { place: center }
+  w: 60 h: 40
+  use: node_style
+  offset: @arrow_start 160, 0
+}
+
+rect @arrow_both_start {
+  text @arrow_both_start_label "Both" { place: center }
+  w: 60 h: 40
+  use: node_style
+  offset: @arrow_start 0, 80
+}
+
+rect @arrow_both_end {
+  text @arrow_both_end_label "Both" { place: center }
+  w: 60 h: 40
+  use: node_style
+  offset: @arrow_both_start 160, 0
+}
+
+rect @arrow_none_start {
+  text @arrow_none_start_label "None" { place: center }
+  w: 60 h: 40
+  use: node_style
+  offset: @arrow_both_start 0, 80
+}
+
+rect @arrow_none_end {
+  text @arrow_none_end_label "None" { place: center }
+  w: 60 h: 40
+  use: node_style
+  offset: @arrow_none_start 160, 0
+}
+
+# 5. Flow animations
+rect @flow_a {
+  text @flow_a_label "Pulse" { place: center }
+  w: 80 h: 40
+  use: node_style
+  offset: @arrow_none_start 0, 100
+}
+
+rect @flow_b {
+  text @flow_b_label "Target" { place: center }
+  w: 80 h: 40
+  use: node_style
+  offset: @flow_a 160, 0
+}
+
+rect @flow_c {
+  text @flow_c_label "Dash" { place: center }
+  w: 80 h: 40
+  use: node_style
+  offset: @flow_a 0, 80
+}
+
+rect @flow_d {
+  text @flow_d_label "Target" { place: center }
+  w: 80 h: 40
+  use: node_style
+  offset: @flow_c 160, 0
+}
+
+# ─── Flows ───
+
+edge @edge_1 @straight_a -> @straight_b {
+  stroke: #3B82F6 2
+  arrow: end
+}
+
+edge @edge_2 @smooth_a -> @smooth_b {
+  stroke: #10B981 2
+  curve: smooth
+  arrow: end
+}
+
+edge @edge_3 @step_a -> @step_b {
+  stroke: #F59E0B 2
+  curve: step
+  arrow: end
+}
+
+edge @edge_arrow_1 @arrow_start -> @arrow_end {
+  stroke: #6366F1 2
+  arrow: start
+}
+
+edge @edge_arrow_2 @arrow_both_start -> @arrow_both_end {
+  stroke: #8B5CF6 2
+  arrow: both
+}
+
+edge @edge_arrow_3 @arrow_none_start -> @arrow_none_end {
+  stroke: #EC4899 2
+}
+
+edge @edge_flow_1 @flow_a -> @flow_b {
+  stroke: #06B6D4 2
+  flow: pulse 1000ms
+}
+
+edge @edge_flow_2 @flow_c -> @flow_d {
+  stroke: #EAB308 2
+  flow: dash 800ms
+}
