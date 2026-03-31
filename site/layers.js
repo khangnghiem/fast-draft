@@ -87,6 +87,7 @@ export function initLayersPanel(api) {
     html += `<span class="layer-icon">${icon}</span>`;
     html += `<span class="layer-name">${escHtml(node.id)}</span>`;
     html += `<span class="layer-kind">${escHtml(node.kind)}</span>`;
+    html += `<button class="layer-action-btn layer-delete-btn" aria-label="Delete" title="Delete Node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>`;
     html += '</div>';
   
     if (hasChildren) {
@@ -725,13 +726,15 @@ export function initLayersPanel(api) {
       ? `${selCount} / ${total} selected` 
       : `${total} node${total !== 1 ? 's' : ''}`;
 
-    let html = '<div class="layers-header" id="layers-header-toggle">';
+    let html = '<div class="layers-body">';
+    for (const node of tree) html += renderLayerNode(node, selectedIds);
+    html += '</div>';
+
+    html += '<div class="layers-header" id="layers-header-toggle">';
     html += `<span class="layers-count" data-total="${total}">${countText}</span>`;
     html += '<div class="layers-action-bar">';
     html += '<button class="layer-action-btn" id="ai-touch-btn" title="AI Touch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5 4 4"/><path d="M13 7 8.7 2.7a2.41 2.41 0 0 0-3.4 0L2.7 5.3a2.41 2.41 0 0 0 0 3.4L7 13"/><path d="m8 6 2-2"/><path d="m2 22 5.5-1.5L21.17 6.83a2.82 2.82 0 0 0-4-4L3.5 16.5Z"/><path d="m18 16 2-2"/><path d="m17 11 4.3 4.3c.94.94.94 2.46 0 3.4l-2.6 2.6c-.94.94-2.46.94-3.4 0L11 17"/></svg> AI Touch</button>';
-    html += '</div></div><div class="layers-body">';
-    for (const node of tree) html += renderLayerNode(node, selectedIds);
-    html += '</div>';
+    html += '</div></div>';
   
     panel.innerHTML = html;
   
@@ -810,6 +813,85 @@ export function initLayersPanel(api) {
   
     // ── Layer Context Menu (#3 "Move Into") ──
     wireLayerContextMenu(panel);
+
+    // ── Layer Delete Buttons ──
+    panel.querySelectorAll('.layer-delete-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const item = btn.closest('.layer-item');
+        if (!item || !api.getFdCanvas()) return;
+        const nodeId = item.getAttribute('data-node-id');
+        api.getFdCanvas().select_by_id(nodeId);
+        if (api.getFdCanvas().delete_selected()) {
+          api.markRenderDirty();
+          api.renderCanvas();
+          api.syncCanvasToEditor();
+          refreshLayersPanel();
+          api.updatePropertiesPanel();
+        }
+      });
+    });
+
+    // ── Inline Renaming ──
+    panel.querySelectorAll('.layer-name').forEach(nameEl => {
+      nameEl.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        const item = nameEl.closest('.layer-item');
+        if (!item || !api.getFdCanvas()) return;
+        
+        const oldId = item.getAttribute('data-node-id');
+        nameEl.contentEditable = true;
+        nameEl.focus();
+        
+        const range = document.createRange();
+        range.selectNodeContents(nameEl);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        const finishRename = () => {
+          nameEl.contentEditable = false;
+          let newId = nameEl.textContent.trim();
+          
+          if (!newId || newId === oldId) {
+            nameEl.textContent = oldId;
+            return;
+          }
+          if (!/^[a-zA-Z0-9_\-]+$/.test(newId)) {
+            api.showToast('Invalid ID name (use alphanumeric, dash, underscore)');
+            nameEl.textContent = oldId;
+            return;
+          }
+          if (api.getFdCanvas().has_node(newId)) {
+            api.showToast(`ID "@${newId}" already exists`);
+            nameEl.textContent = oldId;
+            return;
+          }
+          
+          const oldText = api.getFdCanvas().get_text();
+          const escapedOldId = oldId.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+          const regex = new RegExp(`@${escapedOldId}(?=[^a-zA-Z0-9_\\-]|$)`, 'g');
+          const newText = oldText.replace(regex, `@${newId}`);
+          
+          api.getFdCanvas().set_text(newText);
+          api.syncCanvasToEditor();
+          refreshLayersPanel();
+          api.updatePropertiesPanel();
+          api.showToast(`Renamed ${oldId} to ${newId}`);
+        };
+
+        nameEl.addEventListener('blur', finishRename, { once: true });
+        nameEl.addEventListener('keydown', (ke) => {
+          if (ke.key === 'Enter') {
+            ke.preventDefault();
+            nameEl.blur();
+          } else if (ke.key === 'Escape') {
+            nameEl.textContent = oldId;
+            nameEl.blur();
+          }
+        });
+      });
+    });
   
     // ── Layers Action Bar (AI Touch) ──
     const aiTouchBtn = panel.querySelector('#ai-touch-btn');

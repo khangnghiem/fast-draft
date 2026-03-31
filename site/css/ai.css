@@ -185,6 +185,10 @@
 .dark-theme .cm-editor .ai-diff-selected {
   animation: fd-highlight-flash-dark 1.2s ease-out forwards;
 }
+.cm-editor .ai-diff-dimmed {
+  opacity: 0.35;
+  transition: opacity 0.2s ease-in-out;
+}
 .cm-editor .ai-diff-changed {
   background: rgba(255, 149, 0, 0.12);
   border-left: 3px solid rgba(255, 149, 0, 0.6);

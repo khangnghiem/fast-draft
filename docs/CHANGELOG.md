@@ -17,6 +17,27 @@
 
 ## Completed Requirements
 
+### v0.11.310 — Cmd/Ctrl Drag to Move Children (R3.2)
+
+- **UX Behavior Change**: Dragging a parent node **without** modifier keys now moves ONLY the parent — children stay stationary. Hold **Cmd** (macOS) or **Ctrl** (Windows/Linux) while dragging to move all descendants recursively with the parent. This can be toggled mid-drag: start dragging normally, then press Cmd/Ctrl to engage children-follow mode.
+- **No Conflict with Multi-Select**: Cmd+click (without drag) still adds/removes nodes from multi-selection as before. The `with_children` flag activates only when `MoveNode` mutations are generated during `PointerMove` drag events.
+- **Engine**: Added `with_children: bool` field to `GraphMutation::MoveNode`. Descendant propagation in `SyncEngine::apply_mutation_with_co_selected` is now gated on this flag.
+- **Tests**: Added `sync_default_drag_parent_does_not_move_children` test verifying the new default behavior, and updated existing children-follow tests to use `with_children: true`.
+
+Files: `crates/fd-editor/src/sync.rs`, `crates/fd-editor/src/tools.rs`, `crates/fd-editor/src/commands.rs`, `crates/fd-editor/src/sync_tests.rs`, `crates/fd-editor/src/tools_tests.rs`, `crates/fd-wasm/src/keyboard.rs`
+
+### v0.11.309 — Layers Panel Stabilization & Parent-Child Drag Fixes (R3.2, R3.27, R3.69, R6.18)
+
+- **Parent-Child Drag Stabilization (R3.2)**: Fixed a layout desynchronization bug where child nodes drifted visually when their parent container was resized via corner grips. The `ResizeNode` mutation now propagates inverse `dx`/`dy` translation elements directly down to children utilizing `CenterIn`, ensuring stable internal coordinates.
+- **Layers Panel UX (R3.69)**: Added a persistent, hover-activated "Trash Bin" button inline with layer items for immediate deletion without opening context menus. Restored the native string-select cursor for standard row interaction instead of the pan hand.
+- **Inline Rename Strict Protection (R3.27)**: Double-clicking to rename layers now triggers a `has_node()` evaluation via the WASM bridge, strictly blocking node ID collisions. This directly resolves the "Phantom Deletion" bug where ambiguous IDs triggered the `Delete` key stroke to remove the wrong target.
+- **Bottom-Anchored Chrome (R6.18)**: Re-engineered CSS flex-box order to reliably pin both the `{"}"} Code` pane header and the Layer pane utility actions (`🪄 AI Touch`, selection count) to the bottom of the bounding element.
+
+### v0.11.308 — Multi-Target Edge Shorthand (R3.43)
+
+- **Edge Fan-out Syntax**: Implemented and verified multi-target shorthand for graph edges (`edge @a -> @b, @c { ... }`). The parser safely expands this into multiple independent `Edge` structs during the AST parsing phase, removing the need for topology changes in the `SceneGraph` while dramatically reducing token overhead for AI agents writing graphs.
+- **Robust ID Generation**: Suffix generation automatically handles anonymous (`_edge_`) and specifically named edges (e.g., `@flow` becomes `@flow_1`, `@flow_2`).
+
 ### v0.11.305 — Canvas "Center In" Bug Fix (R3.39)
 
 - **Layout Resolution Sync**: Fixed a visual desynchronization bug where the "Center in another node" context menu action successfully applied the `center_in:` constraint to the DSL but failed to visually move the node on the canvas. 

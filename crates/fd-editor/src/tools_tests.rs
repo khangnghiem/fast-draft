@@ -31,7 +31,7 @@ fn select_tool_drag() {
     );
     assert_eq!(mutations.len(), 1);
     match &mutations[0] {
-        GraphMutation::MoveNode { id, dx, dy } => {
+        GraphMutation::MoveNode { id, dx, dy, .. } => {
             assert_eq!(*id, target);
             assert!((dx - 10.0).abs() < 0.01);
             assert!((dy - 5.0).abs() < 0.01);
@@ -313,22 +313,23 @@ fn rect_tool_alt_draws_from_center() {
     );
     assert_eq!(
         mutations.len(),
-        2,
-        "Alt-draw should emit MoveNode + ResizeNode"
+        1,
+        "Alt-draw should emit ResizeNode with embedded dx/dy"
     );
     match &mutations[0] {
-        GraphMutation::MoveNode { dx, dy, .. } => {
+        GraphMutation::ResizeNode {
+            width,
+            height,
+            dx,
+            dy,
+            ..
+        } => {
             assert!((dx - (-50.0)).abs() < 0.01, "dx={dx}");
             assert!((dy - (-30.0)).abs() < 0.01, "dy={dy}");
-        }
-        _ => panic!("expected MoveNode first"),
-    }
-    match &mutations[1] {
-        GraphMutation::ResizeNode { width, height, .. } => {
             assert!((width - 100.0).abs() < 0.01, "w={width}");
             assert!((height - 60.0).abs() < 0.01, "h={height}");
         }
-        _ => panic!("expected ResizeNode second"),
+        _ => panic!("expected ResizeNode"),
     }
 }
 
@@ -361,11 +362,19 @@ fn ellipse_tool_alt_draws_from_center() {
     );
     assert_eq!(
         mutations.len(),
-        2,
-        "Alt-draw should emit MoveNode + ResizeNode"
+        1,
+        "Alt-draw should emit ResizeNode with embedded dx/dy"
     );
-    match &mutations[1] {
-        GraphMutation::ResizeNode { width, height, .. } => {
+    match &mutations[0] {
+        GraphMutation::ResizeNode {
+            width,
+            height,
+            dx,
+            dy,
+            ..
+        } => {
+            assert!((dx - (-50.0)).abs() < 0.01, "dx={dx}");
+            assert!((dy - (-40.0)).abs() < 0.01, "dy={dy}");
             assert!((width - 100.0).abs() < 0.01, "w={width}");
             assert!((height - 80.0).abs() < 0.01, "h={height}");
         }
@@ -467,20 +476,25 @@ fn rect_tool_click_creates_centered() {
         },
         None,
     );
-    assert_eq!(mutations.len(), 2, "click should emit Resize + Move");
+    assert_eq!(
+        mutations.len(),
+        1,
+        "click should emit single ResizeNode with dx/dy"
+    );
     match &mutations[0] {
-        GraphMutation::ResizeNode { width, height, .. } => {
+        GraphMutation::ResizeNode {
+            width,
+            height,
+            dx,
+            dy,
+            ..
+        } => {
             assert!((width - 162.0).abs() < 0.01, "w={width}");
             assert!((height - 100.0).abs() < 0.01, "h={height}");
-        }
-        _ => panic!("expected ResizeNode first"),
-    }
-    match &mutations[1] {
-        GraphMutation::MoveNode { dx, dy, .. } => {
             assert!((dx - (-81.0)).abs() < 0.01, "dx={dx}");
             assert!((dy - (-50.0)).abs() < 0.01, "dy={dy}");
         }
-        _ => panic!("expected MoveNode second"),
+        _ => panic!("expected ResizeNode"),
     }
 }
 
@@ -508,20 +522,25 @@ fn ellipse_tool_click_creates_centered() {
         },
         None,
     );
-    assert_eq!(mutations.len(), 2, "click should emit Resize + Move");
+    assert_eq!(
+        mutations.len(),
+        1,
+        "click should emit single ResizeNode with dx/dy"
+    );
     match &mutations[0] {
-        GraphMutation::ResizeNode { width, height, .. } => {
+        GraphMutation::ResizeNode {
+            width,
+            height,
+            dx,
+            dy,
+            ..
+        } => {
             assert!((width - 128.0).abs() < 0.01, "w={width}");
             assert!((height - 128.0).abs() < 0.01, "h={height}");
-        }
-        _ => panic!("expected ResizeNode first"),
-    }
-    match &mutations[1] {
-        GraphMutation::MoveNode { dx, dy, .. } => {
             assert!((dx - (-64.0)).abs() < 0.01, "dx={dx}");
             assert!((dy - (-64.0)).abs() < 0.01, "dy={dy}");
         }
-        _ => panic!("expected MoveNode second"),
+        _ => panic!("expected ResizeNode"),
     }
 }
 
@@ -834,22 +853,23 @@ fn rect_tool_draw_northwest_emits_move() {
     );
     assert_eq!(
         mutations.len(),
-        2,
-        "NW drag should emit MoveNode + ResizeNode"
+        1,
+        "NW drag should emit ResizeNode with embedded dx/dy"
     );
     match &mutations[0] {
-        GraphMutation::MoveNode { dx, dy, .. } => {
+        GraphMutation::ResizeNode {
+            width,
+            height,
+            dx,
+            dy,
+            ..
+        } => {
             assert!((dx - (-100.0)).abs() < 0.01, "dx={dx} should be -100");
             assert!((dy - (-80.0)).abs() < 0.01, "dy={dy} should be -80");
-        }
-        _ => panic!("expected MoveNode first"),
-    }
-    match &mutations[1] {
-        GraphMutation::ResizeNode { width, height, .. } => {
             assert!((width - 100.0).abs() < 0.01, "w={width}");
             assert!((height - 80.0).abs() < 0.01, "h={height}");
         }
-        _ => panic!("expected ResizeNode second"),
+        _ => panic!("expected ResizeNode"),
     }
 }
 
@@ -880,22 +900,23 @@ fn ellipse_tool_draw_northwest_emits_move() {
     );
     assert_eq!(
         mutations.len(),
-        2,
-        "NW drag should emit MoveNode + ResizeNode"
+        1,
+        "NW drag should emit ResizeNode with embedded dx/dy"
     );
     match &mutations[0] {
-        GraphMutation::MoveNode { dx, dy, .. } => {
+        GraphMutation::ResizeNode {
+            width,
+            height,
+            dx,
+            dy,
+            ..
+        } => {
             assert!((dx - (-100.0)).abs() < 0.01, "dx={dx} should be -100");
             assert!((dy - (-50.0)).abs() < 0.01, "dy={dy} should be -50");
-        }
-        _ => panic!("expected MoveNode first"),
-    }
-    match &mutations[1] {
-        GraphMutation::ResizeNode { width, height, .. } => {
             assert!((width - 100.0).abs() < 0.01, "w={width}");
             assert!((height - 50.0).abs() < 0.01, "h={height}");
         }
-        _ => panic!("expected ResizeNode second"),
+        _ => panic!("expected ResizeNode"),
     }
 }
 
@@ -1286,31 +1307,26 @@ fn rect_tool_shift_draw_northwest_correct_origin() {
         },
         None,
     );
-    // Should have MoveNode + ResizeNode
-    assert!(mutations.len() >= 1, "should have mutations");
-    let mut has_resize = false;
-    let mut has_move = false;
-    for m in &mutations {
-        match m {
-            GraphMutation::ResizeNode { width, height, .. } => {
-                assert!(
-                    (width - height).abs() < 0.01,
-                    "Should be square: w={width}, h={height}"
-                );
-                assert!((width - 50.0).abs() < 0.01, "side should be 50");
-                has_resize = true;
-            }
-            GraphMutation::MoveNode { dx, dy, .. } => {
-                // Origin should move from (200, 200) to (150, 150) = delta (-50, -50)
-                assert!((dx - (-50.0)).abs() < 0.01, "dx={dx} should be -50");
-                assert!((dy - (-50.0)).abs() < 0.01, "dy={dy} should be -50");
-                has_move = true;
-            }
-            _ => {}
+    // Should have ResizeNode with dx/dy
+    assert_eq!(mutations.len(), 1, "should have 1 mutation");
+    match &mutations[0] {
+        GraphMutation::ResizeNode {
+            width,
+            height,
+            dx,
+            dy,
+            ..
+        } => {
+            assert!(
+                (width - height).abs() < 0.01,
+                "Should be square: w={width}, h={height}"
+            );
+            assert!((width - 50.0).abs() < 0.01, "side should be 50");
+            assert!((dx - (-50.0)).abs() < 0.01, "dx={dx} should be -50");
+            assert!((dy - (-50.0)).abs() < 0.01, "dy={dy} should be -50");
         }
+        _ => panic!("expected ResizeNode"),
     }
-    assert!(has_resize, "should have ResizeNode");
-    assert!(has_move, "should have MoveNode for NW direction");
 }
 
 #[test]
@@ -1343,29 +1359,25 @@ fn ellipse_tool_shift_draw_northwest_correct_origin() {
         },
         None,
     );
-    assert!(mutations.len() >= 1, "should have mutations");
-    let mut has_resize = false;
-    let mut has_move = false;
-    for m in &mutations {
-        match m {
-            GraphMutation::ResizeNode { width, height, .. } => {
-                assert!(
-                    (width - height).abs() < 0.01,
-                    "Should be circle: w={width}, h={height}"
-                );
-                assert!((width - 60.0).abs() < 0.01, "side should be 60");
-                has_resize = true;
-            }
-            GraphMutation::MoveNode { dx, dy, .. } => {
-                assert!((dx - (-60.0)).abs() < 0.01, "dx={dx} should be -60");
-                assert!((dy - (-60.0)).abs() < 0.01, "dy={dy} should be -60");
-                has_move = true;
-            }
-            _ => {}
+    assert_eq!(mutations.len(), 1, "should have 1 mutation");
+    match &mutations[0] {
+        GraphMutation::ResizeNode {
+            width,
+            height,
+            dx,
+            dy,
+            ..
+        } => {
+            assert!(
+                (width - height).abs() < 0.01,
+                "Should be circle: w={width}, h={height}"
+            );
+            assert!((width - 60.0).abs() < 0.01, "side should be 60");
+            assert!((dx - (-60.0)).abs() < 0.01, "dx={dx} should be -60");
+            assert!((dy - (-60.0)).abs() < 0.01, "dy={dy} should be -60");
         }
+        _ => panic!("expected ResizeNode"),
     }
-    assert!(has_resize, "should have ResizeNode");
-    assert!(has_move, "should have MoveNode for NW direction");
 }
 
 /// Per-frame axis-snap has no dead-zone — every frame snaps independently.
@@ -2103,16 +2115,24 @@ fn rect_tool_shift_alt_square_from_center() {
     );
     assert_eq!(
         mutations.len(),
-        2,
-        "Shift+Alt should emit MoveNode + ResizeNode"
+        1,
+        "Shift+Alt should emit ResizeNode with embedded dx/dy"
     );
-    match &mutations[1] {
-        GraphMutation::ResizeNode { width, height, .. } => {
+    match &mutations[0] {
+        GraphMutation::ResizeNode {
+            width,
+            height,
+            dx,
+            dy,
+            ..
+        } => {
             assert!(
                 (width - height).abs() < 0.01,
                 "Should be square: w={width}, h={height}"
             );
             assert!((width - 100.0).abs() < 0.01, "w={width} expected 100");
+            assert!((dx - (-50.0)).abs() < 0.01, "dx={dx} expected -50");
+            assert!((dy - (-50.0)).abs() < 0.01, "dy={dy} expected -50");
         }
         _ => panic!("expected ResizeNode"),
     }
@@ -2206,11 +2226,19 @@ fn rect_tool_drag_back_to_start_is_click() {
         },
         None,
     );
-    assert_eq!(mutations.len(), 2, "Should produce click-to-place defaults");
+    assert_eq!(mutations.len(), 1, "Should produce click-to-place defaults");
     match &mutations[0] {
-        GraphMutation::ResizeNode { width, height, .. } => {
+        GraphMutation::ResizeNode {
+            width,
+            height,
+            dx,
+            dy,
+            ..
+        } => {
             assert!((width - 162.0).abs() < 0.01, "w={width}");
             assert!((height - 100.0).abs() < 0.01, "h={height}");
+            assert!((dx - (-81.0)).abs() < 0.01, "dx={dx}");
+            assert!((dy - (-50.0)).abs() < 0.01, "dy={dy}");
         }
         _ => panic!("expected ResizeNode"),
     }

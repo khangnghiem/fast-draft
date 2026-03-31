@@ -29,6 +29,8 @@ fn undo_restores_previous_state() {
     stack.execute(
         &mut engine,
         GraphMutation::ResizeNode {
+            dx: 0.0,
+            dy: 0.0,
             id: NodeId::intern("box"),
             width: 200.0,
             height: 100.0,
@@ -69,6 +71,8 @@ fn redo_reapplies_undone_action() {
     stack.execute(
         &mut engine,
         GraphMutation::ResizeNode {
+            dx: 0.0,
+            dy: 0.0,
             id: NodeId::intern("box"),
             width: 200.0,
             height: 100.0,
@@ -100,6 +104,8 @@ fn undo_multiple_operations_in_order() {
     stack.execute(
         &mut engine,
         GraphMutation::ResizeNode {
+            dx: 0.0,
+            dy: 0.0,
             id: NodeId::intern("box"),
             width: 200.0,
             height: 100.0,
@@ -111,6 +117,8 @@ fn undo_multiple_operations_in_order() {
     stack.execute(
         &mut engine,
         GraphMutation::ResizeNode {
+            dx: 0.0,
+            dy: 0.0,
             id: NodeId::intern("box"),
             width: 400.0,
             height: 200.0,
@@ -151,6 +159,8 @@ fn new_action_clears_redo_stack() {
     stack.execute(
         &mut engine,
         GraphMutation::ResizeNode {
+            dx: 0.0,
+            dy: 0.0,
             id: NodeId::intern("box"),
             width: 200.0,
             height: 100.0,
@@ -165,6 +175,8 @@ fn new_action_clears_redo_stack() {
     stack.execute(
         &mut engine,
         GraphMutation::ResizeNode {
+            dx: 0.0,
+            dy: 0.0,
             id: NodeId::intern("box"),
             width: 300.0,
             height: 150.0,
@@ -208,6 +220,8 @@ fn text_reflects_state_after_undo() {
     stack.execute(
         &mut engine,
         GraphMutation::ResizeNode {
+            dx: 0.0,
+            dy: 0.0,
             id: NodeId::intern("box"),
             width: 999.0,
             height: 888.0,

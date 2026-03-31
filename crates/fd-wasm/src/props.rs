@@ -450,6 +450,8 @@ impl FdCanvas {
                         id,
                         width: new_w,
                         height: new_h,
+                        dx: 0.0,
+                        dy: 0.0,
                     }
                 } else {
                     return false;

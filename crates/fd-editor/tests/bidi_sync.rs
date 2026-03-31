@@ -66,6 +66,8 @@ fn sync_resize_reflects_in_text() {
     let mut engine = SyncEngine::from_text(input, VIEWPORT).unwrap();
 
     engine.apply_mutation(GraphMutation::ResizeNode {
+        dx: 0.0,
+        dy: 0.0,
         id: NodeId::intern("box"),
         width: 250.0,
         height: 120.0,
@@ -102,6 +104,8 @@ fn bidi_roundtrip_resize_and_reparse() {
 
     // Canvas mutation: resize
     engine.apply_mutation(GraphMutation::ResizeNode {
+        dx: 0.0,
+        dy: 0.0,
         id: NodeId::intern("box"),
         width: 300.0,
         height: 150.0,

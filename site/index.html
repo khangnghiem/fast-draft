@@ -20,8 +20,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-mono/style.min.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" />
   <!-- Preload WASM for instant startup -->
-  <link rel="modulepreload" href="./wasm/fd_wasm.js?v=0.11.308" />
-  <link rel="preload" href="./wasm/fd_wasm_bg.wasm?v=0.11.308" as="fetch" crossorigin fetchpriority="high" />
+  <link rel="modulepreload" href="./wasm/fd_wasm.js?v=0.11.309" />
+  <link rel="preload" href="./wasm/fd_wasm_bg.wasm?v=0.11.309" as="fetch" crossorigin fetchpriority="high" />
   <!-- Preload local vendor bundle (CodeMirror + lz-string, no CDN) -->
   <link rel="modulepreload" href="./vendor/cm.min.js" />
   <link rel="stylesheet" href="shared.css?v=0.11.308" />
@@ -188,14 +188,21 @@
                   </div>
                   <!-- Code Pane -->
                   <div class="lp-pane" data-pane="code">
+                    <div id="fd-editor"></div>
                     <div class="pane-header">
-                      <span class="layers-count">Document</span>
+                      <div class="code-status-group">
+                        <button class="code-status-pill status-valid" id="linter-status-btn" title="No syntax errors">
+                          <span class="linter-dot"></span><span id="linter-status-text">Valid</span>
+                        </button>
+                        <button class="layer-action-btn" id="code-fold-btn" title="Toggle Collapse All">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                        </button>
+                      </div>
                       <div class="pane-action-bar">
                         <button class="layer-action-btn" id="code-format-btn" title="Beautify Document (⌥⇧F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.9 15.5-6.1-1.6a.5.5 0 0 1 0-.9l6.1-1.6c.3-.1.6-.3.6-.6l1.6-6.1a.5.5 0 0 1 .9 0l1.6 6.1c.1.3.3.6.6.6l6.1 1.6a.5.5 0 0 1 0 .9l-6.1 1.6c-.3.1-.6.3-.6.6l-1.6 6.1a.5.5 0 0 1-.9 0l-1.6-6.1a1.9 1.9 0 0 0-.6-.6z"/><path d="M19 4v4"/><path d="M21 6h-4"/><path d="M4 18v3"/><path d="M5.5 19.5h-3"/></svg> Beautify</button>
                         <button class="layer-action-btn" id="code-copy-btn" title="Copy code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg> Copy</button>
                       </div>
                     </div>
-                    <div id="fd-editor"></div>
                   </div>
                   <!-- Inspect Pane (Specs + Design Properties) -->
                   <div class="lp-pane" data-pane="inspect">

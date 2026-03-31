@@ -106,7 +106,12 @@ impl SyncEngine {
         co_selected: &[NodeId],
     ) {
         match mutation {
-            GraphMutation::MoveNode { id, dx, dy } => {
+            GraphMutation::MoveNode {
+                id,
+                dx,
+                dy,
+                with_children,
+            } => {
                 if let Some(idx) = self.graph.index_of(id) {
                     // Moving a child inside a managed layout (Column/Row/Grid)
                     // converts it to absolute positioning — the Position constraint
@@ -117,21 +122,22 @@ impl SyncEngine {
                         bounds.x += dx;
                         bounds.y += dy;
                     }
-                    // Propagate movement to all descendants' cached bounds
-                    // so children move together with their parent (e.g. group drag).
-                    // Skip descendants that are co-selected — they get their own
-                    // MoveNode mutation and would otherwise move 2×.
-                    let descendants = Self::collect_descendants(&self.graph, idx);
-                    for child_idx in descendants {
-                        if !co_selected.is_empty()
-                            && let Some(child_node) = self.graph.graph.node_weight(child_idx)
-                            && co_selected.contains(&child_node.id)
-                        {
-                            continue;
-                        }
-                        if let Some(child_bounds) = self.bounds.get_mut(&child_idx) {
-                            child_bounds.x += dx;
-                            child_bounds.y += dy;
+                    // Only propagate movement to descendants when with_children
+                    // is true (Cmd/Ctrl held during drag). Without the modifier,
+                    // only the selected node itself moves.
+                    if with_children {
+                        let descendants = Self::collect_descendants(&self.graph, idx);
+                        for child_idx in descendants {
+                            if !co_selected.is_empty()
+                                && let Some(child_node) = self.graph.graph.node_weight(child_idx)
+                                && co_selected.contains(&child_node.id)
+                            {
+                                continue;
+                            }
+                            if let Some(child_bounds) = self.bounds.get_mut(&child_idx) {
+                                child_bounds.x += dx;
+                                child_bounds.y += dy;
+                            }
                         }
                     }
                     // Pin moved node to Position constraint with parent-relative coords.
@@ -168,12 +174,31 @@ impl SyncEngine {
                     }
                 }
             }
-            GraphMutation::ResizeNode { id, width, height } => {
+            GraphMutation::ResizeNode {
+                id,
+                width,
+                height,
+                dx,
+                dy,
+            } => {
                 let rw = (width * 100.0).round() / 100.0;
                 let rh = (height * 100.0).round() / 100.0;
+                let rdx = (dx * 100.0).round() / 100.0;
+                let rdy = (dy * 100.0).round() / 100.0;
+
                 let is_text_node;
                 if let Some(node) = self.graph.get_by_id_mut(id) {
                     is_text_node = matches!(node.kind, NodeKind::Text { .. });
+
+                    if rdx.abs() > 0.001 || rdy.abs() > 0.001 {
+                        for c in &mut node.constraints {
+                            if let Constraint::Position { x, y } = c {
+                                *x = (*x + rdx * 100.0).round() / 100.0;
+                                *y = (*y + rdy * 100.0).round() / 100.0;
+                            }
+                        }
+                    }
+
                     match &mut node.kind {
                         NodeKind::Rect {
                             width: w,
@@ -219,6 +244,28 @@ impl SyncEngine {
                 {
                     bounds.width = rw;
                     bounds.height = rh;
+                    bounds.x += dx;
+                    bounds.y += dy;
+                }
+
+                // If parent's origin shifted, offset immediate children's Position constraints
+                // so they stay physically planted on the canvas at their current absolute coordinate.
+                if (rdx.abs() > 0.001 || rdy.abs() > 0.001)
+                    && !is_text_node
+                    && let Some(idx) = self.graph.index_of(id)
+                {
+                    let children = self.graph.children(idx);
+                    for child_idx in children {
+                        let child_id = self.graph.graph[child_idx].id;
+                        if let Some(child_node) = self.graph.get_by_id_mut(child_id) {
+                            for c in &mut child_node.constraints {
+                                if let Constraint::Position { x, y } = c {
+                                    *x = (*x - rdx * 100.0).round() / 100.0;
+                                    *y = (*y - rdy * 100.0).round() / 100.0;
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Propagate max_width to child text nodes when parent is resized
@@ -1049,11 +1096,16 @@ pub enum GraphMutation {
         id: NodeId,
         dx: f32,
         dy: f32,
+        /// When true, movement propagates to all descendant nodes
+        /// (Cmd/Ctrl held during drag). When false, only this node moves.
+        with_children: bool,
     },
     ResizeNode {
         id: NodeId,
         width: f32,
         height: f32,
+        dx: f32,
+        dy: f32,
     },
     AddNode {
         parent_id: NodeId,

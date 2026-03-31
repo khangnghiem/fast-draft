@@ -398,6 +398,35 @@ export class FdCanvas {
         }
     }
     /**
+     * Format the document using the default config (dedup + sort, no hoist).
+     * Returns `true` if the document was changed.
+     * @returns {boolean}
+     */
+    format_and_dedup() {
+        const ret = wasm.fdcanvas_format_and_dedup(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * Format the document with granular options.
+     * Returns JSON: `{"changed":bool,"lines_before":N,"lines_after":N,"summary":"..."}`
+     * @param {boolean} dedup
+     * @param {boolean} sort
+     * @param {boolean} hoist
+     * @returns {string}
+     */
+    format_with_options(dedup, sort, hoist) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_format_with_options(this.__wbg_ptr, dedup, sort, hoist);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Get all specs across the entire document.
      * @returns {string}
      */
@@ -504,6 +533,25 @@ export class FdCanvas {
             return getStringFromWasm0(ret[0], ret[1]);
         } finally {
             wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Get parse diagnostics for arbitrary source text (used by live linter).
+     * @param {string} source
+     * @returns {string}
+     */
+    get_diagnostics_for_source(source) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_get_diagnostics_for_source(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
         }
     }
     /**

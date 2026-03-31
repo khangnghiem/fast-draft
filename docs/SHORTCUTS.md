@@ -138,12 +138,18 @@ Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** 
 
 | Modifier           | On Object                                                 | On Empty Space |
 | ------------------ | --------------------------------------------------------- | -------------- |
-| None               | Move / select                                             | Marquee select |
+| None               | Move parent only (children stay)                          | Marquee select |
+| `⌘`/`Ctrl` + drag | **Move with children** — all descendants follow           | Pan            |
 | `Alt`              | **Clone + drag**                                          | Marquee select |
 | `Alt` (click only) | **Style picker** — copies fill/stroke/opacity as defaults | —              |
 | `Shift`            | Add to selection                                          | Add to marquee |
-| `⌘` (hold)         | Pan                                                       | Pan            |
+| `⌘` (click only)   | Add/remove from selection (Layers multi-select)           | —              |
 | `Space` (hold)     | Pan                                                       | Pan            |
+
+> **Note**: `⌘`/`Ctrl` behavior splits by interaction type:
+> - **Click** (no drag): Multi-select toggle — adds or removes node from selection.
+> - **Drag**: Children-follow — moves the dragged node and all its descendants recursively.
+> - **Mid-drag press**: Can be toggled during an active drag — start without modifier (parent only), then hold `⌘`/`Ctrl` to engage children-follow mode.
 
 ### When Hand Tool is active (H)
 

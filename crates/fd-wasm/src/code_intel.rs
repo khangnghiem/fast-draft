@@ -17,6 +17,11 @@ impl FdCanvas {
         get_diagnostics_for_text(&text)
     }
 
+    /// Get parse diagnostics for arbitrary source text (used by live linter).
+    pub fn get_diagnostics_for_source(&self, source: &str) -> String {
+        get_diagnostics_for_text(source)
+    }
+
     /// Get context-aware completions at the cursor position.
     pub fn get_completions(&self, line: u32, col: u32) -> String {
         let text = self.engine.text.clone();

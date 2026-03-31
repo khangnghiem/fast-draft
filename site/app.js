@@ -1,4 +1,5 @@
-import { initLayersPanel } from './layers.js?v=0.11.296';
+import { initLayersPanel } from './layers.js?v=0.11.309';
+import init, { FdCanvas } from './wasm/fd_wasm.js?v=0.11.309';
 // ─── FD Playground — WASM-powered interactive editor ───
 
 // ─── CodeMirror 6 + lz-string — local vendor bundle (no CDN) ─────────────
@@ -7,6 +8,7 @@ import {
   EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter,
   drawSelection, tooltips, hoverTooltip,
   StreamLanguage, HighlightStyle, syntaxHighlighting, bracketMatching,
+  foldGutter, foldAll, unfoldAll, foldService,
   tags,
   autocompletion, closeBrackets, closeBracketsKeymap,
   linter, lintGutter,
@@ -680,6 +682,26 @@ function initLeftPanel() {
     });
   }
 
+  let isFolded = false;
+  const foldCodeBtn = document.getElementById('code-fold-btn');
+  if (foldCodeBtn) {
+    foldCodeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!editorView) return;
+      if (isFolded) {
+        unfoldAll(editorView);
+        isFolded = false;
+        foldCodeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+        window.api.showToast("Unfolded");
+      } else {
+        foldAll(editorView);
+        isFolded = true;
+        foldCodeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>'; // same icon for toggle, could switch it to expand-arrows
+        window.api.showToast("Collapsed All");
+      }
+    });
+  }
+
   const formatCodeBtn = document.getElementById('code-format-btn');
   if (formatCodeBtn) {
     formatCodeBtn.addEventListener('click', (e) => {
@@ -1272,15 +1294,31 @@ function highlightSelectedBlocksInEditor(ids) {
   const ranges = findBlockRangesInText(text, ids);
   if (ranges.length === 0) return;
 
-  // Apply flash highlight decorations (CSS animation auto-fades)
   const { RangeSet, Decoration, StateField, EditorView: EV } = window.cmBundle || {};
   if (!Decoration) return; // CodeMirror not loaded
 
-  const marks = ranges.map(r => {
+  const marks = [];
+  const linesCount = editorView.state.doc.lines;
+  
+  // Apply line dimming to all lines outside the selected blocks
+  for (let i = 1; i <= linesCount; i++) {
+    const isSelected = ranges.some(r => (i - 1) >= r.startLine && (i - 1) <= r.endLine);
+    if (!isSelected) {
+      const linePos = editorView.state.doc.line(i).from;
+      marks.push(Decoration.line({ class: 'ai-diff-dimmed' }).range(linePos));
+    }
+  }
+
+  // Apply subtle highlight to the selected block itself
+  ranges.forEach(r => {
     const from = Math.max(0, Math.min(r.from, text.length));
     const to = Math.max(from, Math.min(r.to, text.length));
-    return Decoration.mark({ class: 'ai-diff-selected' }).range(from, to);
+    marks.push(Decoration.mark({ class: 'ai-diff-selected' }).range(from, to));
   });
+
+  // CodeMirror requires marks to be sorted by position
+  marks.sort((a, b) => a.from - b.from);
+
   if (marks.length === 0) return;
 
   const decoSet = RangeSet.of(marks, true);
@@ -1307,13 +1345,6 @@ function highlightSelectedBlocksInEditor(ids) {
   if (ranges.length > 0) {
     editorView.dispatch({ effects: EV.scrollIntoView(ranges[0].from, { y: 'center' }) });
   }
-
-  // Auto-clear stale decoration state after CSS animation finishes (1.2s + buffer)
-  clearTimeout(highlightClearTimer);
-  highlightClearTimer = setTimeout(() => {
-    clearCodeHighlights();
-    lastHighlightedIds = [];
-  }, 1400);
 }
 
 function clearCodeHighlights() {
@@ -3463,17 +3494,28 @@ async function initPlayground() {
 
     // ── Create CodeMirror Editor ──────────────────────────────────────
     const fdLinter = linter((view) => {
-      if (!fdCanvas) return [];
+      const linterBtn = document.getElementById('linter-status-btn');
+      const linterText = document.getElementById('linter-status-text');
+      
+      if (!fdCanvas) {
+        if (linterBtn && linterText) {
+          linterBtn.className = 'code-status-pill status-valid';
+          linterText.textContent = 'Valid';
+          linterBtn.onclick = null;
+        }
+        return [];
+      }
+      
       const text = view.state.doc.toString();
       try {
         // Use the WASM diagnostics API
-        const raw = fdCanvas.get_diagnostics();
+        const raw = fdCanvas.get_diagnostics_for_source(text);
         const diags = JSON.parse(raw);
-        return diags.map(d => {
-          const from = view.state.doc.line(d.line + 1).from + d.col;
+        const mapped = diags.map(d => {
+          const from = view.state.doc.line(Math.min(d.line + 1, view.state.doc.lines)).from + d.col;
           const to = Math.min(
-            view.state.doc.line(d.line + 1).from + d.endCol,
-            view.state.doc.line(d.line + 1).to
+            view.state.doc.line(Math.min(d.line + 1, view.state.doc.lines)).from + d.endCol,
+            view.state.doc.line(Math.min(d.line + 1, view.state.doc.lines)).to
           );
           return {
             from: Math.min(from, view.state.doc.length),
@@ -3482,7 +3524,34 @@ async function initPlayground() {
             message: d.message,
           };
         });
-      } catch { return []; }
+        
+        // Update the Code Pane Header Pill
+        if (linterBtn && linterText) {
+          if (mapped.length === 0) {
+            linterBtn.className = 'code-status-pill status-valid';
+            linterBtn.title = 'No syntax errors';
+            linterText.textContent = 'Valid';
+            linterBtn.onclick = null;
+          } else {
+            linterBtn.className = 'code-status-pill status-error';
+            linterBtn.title = 'Jump to first error';
+            linterText.textContent = `${mapped.length} Error${mapped.length > 1 ? 's' : ''}`;
+            linterBtn.onclick = () => {
+              if (editorView && mapped.length > 0) {
+                editorView.dispatch({
+                  selection: { anchor: mapped[0].from },
+                  scrollIntoView: true
+                });
+                editorView.focus();
+              }
+            };
+          }
+        }
+        return mapped;
+      } catch (err) {
+        console.error('linter map error:', err);
+        return [];
+      }
     }, { delay: 300 });
 
     const fdCompletionSource = (context) => {
@@ -3533,6 +3602,34 @@ async function initPlayground() {
       } catch { return null; }
     });
 
+    const fdFoldService = foldService.of((state, lineStart, lineEnd) => {
+      const startLine = state.doc.lineAt(lineStart);
+      const strippedStart = startLine.text.replace(/#.*/g, '').replace(/"[^"]*"/g, '""');
+      const openBrace = strippedStart.indexOf('{');
+      if (openBrace === -1) return null;
+
+      let depth = 0;
+      let from = -1;
+      for (let i = startLine.number; i <= state.doc.lines; i++) {
+        const line = state.doc.line(i);
+        const stripped = line.text.replace(/#.*/g, '').replace(/"[^"]*"/g, '""');
+        const startCol = (i === startLine.number) ? openBrace : 0;
+        
+        for (let c = startCol; c < stripped.length; c++) {
+          if (stripped[c] === '{') {
+            if (depth === 0) from = line.from + c + 1;
+            depth++;
+          } else if (stripped[c] === '}') {
+            depth--;
+            if (depth === 0 && from !== -1) {
+              return { from: from, to: line.from + c };
+            }
+          }
+        }
+      }
+      return null;
+    });
+
     editorView = new EditorView({
       state: EditorState.create({
         doc: initialFd,
@@ -3546,6 +3643,8 @@ async function initPlayground() {
           history(),
           highlightSelectionMatches(),
           fdLanguage,
+          fdFoldService,
+          foldGutter(),
           syntaxHighlighting(fdHighlightStyle),
           fdTheme,
           readOnlyCompartment.of(EditorState.readOnly.of(false)),
@@ -3559,6 +3658,53 @@ async function initPlayground() {
             ...historyKeymap,
           ]),
           EditorView.updateListener.of((update) => {
+            // ─── Code -> Canvas Implicit Cursor Sync ───
+            if (update.selectionSet && update.userEvent === 'select.pointer') {
+              const pos = update.state.selection.main.head;
+              const lineInfo = update.state.doc.lineAt(pos);
+              
+              clearTimeout(window._cursorSyncTimer);
+              window._cursorSyncTimer = setTimeout(() => {
+                if (!fdCanvas) return;
+                
+                // Scan backward up to 30 lines to find block header
+                const maxLines = Math.min(30, lineInfo.number);
+                let foundBlockHeader = null;
+                let foundId = null;
+                
+                for (let i = 0; i < maxLines; i++) {
+                  const checkLine = update.state.doc.line(lineInfo.number - i).text;
+                  const match = checkLine.match(/@([a-zA-Z_]\w*)\s*\{/);
+                  if (match) {
+                    foundBlockHeader = lineInfo.number - i;
+                    foundId = match[1];
+                    break;
+                  }
+                }
+                
+                if (foundId && foundBlockHeader) {
+                  // Verify we are still inside the block's braces
+                  let braceDepth = 1;
+                  for (let i = foundBlockHeader; i < lineInfo.number; i++) {
+                    const text = update.state.doc.line(i + 1).text;
+                    braceDepth += (text.match(/\{/g) || []).length;
+                    braceDepth -= (text.match(/\}/g) || []).length;
+                    if (braceDepth <= 0) break;
+                  }
+                  
+                  if (braceDepth > 0) {
+                    const currentSelected = fdCanvas.get_selected_id();
+                    if (currentSelected !== foundId) {
+                      fdCanvas.select_by_id(foundId);
+                      renderDirty = true; uiDirty = true; sceneDirty = true;
+                      renderCanvas();
+                      updatePropertiesPanel();
+                    }
+                  }
+                }
+              }, 100);
+            }
+
             if (!update.docChanged || suppressSync) return;
             clearTimeout(editorDebounceTimer);
             editorDebounceTimer = setTimeout(() => {
