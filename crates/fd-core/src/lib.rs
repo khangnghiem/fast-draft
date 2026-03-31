@@ -23,7 +23,7 @@ pub use lint::{LintDiagnostic, LintSeverity, lint_document};
 pub use mermaid::parse_mermaid;
 pub use model::*;
 pub use score::{ScoreReport, compute_score};
-pub use transform::{dedup_use_styles, hoist_styles, sort_nodes};
+pub use transform::{dedup_node_ids, dedup_use_styles, hoist_styles, sort_nodes};
 
 // Re-export petgraph types so downstream crates don't need a direct dependency
 pub use petgraph::graph::NodeIndex;

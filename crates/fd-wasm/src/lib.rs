@@ -516,6 +516,73 @@ impl FdCanvas {
         self.commands
             .push_snapshot(text_before.to_string(), text_after.to_string(), "paste");
     }
+
+    /// Format the document using the default config (dedup + sort, no hoist).
+    /// Returns `true` if the document was changed.
+    pub fn format_and_dedup(&mut self) -> bool {
+        let config = fd_core::FormatConfig::default();
+        self.run_format(&config)
+    }
+
+    /// Format the document with granular options.
+    /// Returns JSON: `{"changed":bool,"lines_before":N,"lines_after":N,"summary":"..."}`
+    pub fn format_with_options(&mut self, dedup: bool, sort: bool, hoist: bool) -> String {
+        let config = fd_core::FormatConfig {
+            dedup_use: dedup,
+            dedup_ids: true, // always dedup collision IDs
+            hoist_styles: hoist,
+            sort_nodes: sort,
+        };
+        let text_before = self.engine.current_text().to_string();
+        let lines_before = text_before.lines().count();
+        let changed = self.run_format(&config);
+        let text_after = self.engine.current_text().to_string();
+        let lines_after = text_after.lines().count();
+
+        // Build a human-readable summary
+        let summary = if changed {
+            let mut parts = Vec::new();
+            if sort {
+                parts.push("sorted");
+            }
+            if dedup {
+                parts.push("deduped");
+            }
+            if hoist {
+                parts.push("hoisted styles");
+            }
+            let delta = lines_before as i64 - lines_after as i64;
+            if delta > 0 {
+                parts.push("trimmed");
+            }
+            parts.join(", ")
+        } else {
+            "already clean".to_string()
+        };
+
+        format!(
+            r#"{{"changed":{},"lines_before":{},"lines_after":{},"summary":"{}"}}"#,
+            changed, lines_before, lines_after, summary
+        )
+    }
+}
+
+impl FdCanvas {
+    /// Internal: run format pipeline and update engine state.
+    fn run_format(&mut self, config: &fd_core::FormatConfig) -> bool {
+        let text_before = self.engine.current_text().to_string();
+        match fd_core::format_document(&text_before, config) {
+            Ok(formatted) if formatted != text_before => {
+                self.suppress_sync = true;
+                let _ = self.engine.set_text(&formatted);
+                self.engine.resolve();
+                self.suppress_sync = false;
+                self.rebuild_spatial_index();
+                true
+            }
+            _ => false,
+        }
+    }
 }
 
 // ─── Private helpers ─────────────────────────────────────────────────────

@@ -715,8 +715,8 @@ export function initLayersPanel(api) {
     const total = countNodes(tree);
   
     let html = '<div class="layers-header" id="layers-header-toggle">';
-    html += '<span class="layers-title">Layers</span>';
-    html += `<span class="layers-count">${total}</span>`;
+    html += `<span class="layers-count">${total} node${total !== 1 ? 's' : ''}</span>`;
+    html += '<button class="format-btn" id="format-btn" title="Format document (⌥⇧F)">✦ Format</button>';
     html += '</div><div class="layers-body">';
     for (const node of tree) html += renderLayerNode(node, selectedIds);
     html += '</div>';
@@ -799,12 +799,49 @@ export function initLayersPanel(api) {
     // ── Layer Context Menu (#3 "Move Into") ──
     wireLayerContextMenu(panel);
   
-    // ── Layers header click ──
-    // Intentionally empty: The left sidebar button now handles toggling the panel.
-    const layersHeaderEl = panel.querySelector('#layers-header-toggle');
-    if (layersHeaderEl) {
-      layersHeaderEl.addEventListener('click', (e) => {
+    // ── Format button (single-click: dedup + sort + reformat) ──
+    const formatBtn = panel.querySelector('#format-btn');
+    if (formatBtn) {
+      formatBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        const canvas = api.getFdCanvas();
+        if (!canvas) return;
+        const textBefore = canvas.get_text();
+        const result = canvas.format_with_options(true, true, false);
+        try {
+          const parsed = JSON.parse(result);
+          if (parsed.changed) {
+            const textAfter = canvas.get_text();
+            canvas.push_undo_snapshot(textBefore, textAfter);
+            api.renderCanvas();
+            api.syncCanvasToEditor();
+            api.updatePropertiesPanel();
+            refreshLayersPanel();
+            const delta = parsed.lines_before - parsed.lines_after;
+            const deltaStr = delta > 0 ? `, ${delta} lines trimmed` : '';
+            api.showToast(`✦ Formatted: ${parsed.summary}${deltaStr}`);
+            // Re-query after refreshLayersPanel since DOM was rebuilt
+            const btn = panel.querySelector('#format-btn');
+            if (btn) {
+              btn.textContent = '✓ Done';
+              btn.classList.add('success');
+              setTimeout(() => {
+                btn.textContent = '✦ Format';
+                btn.classList.remove('success');
+              }, 1500);
+            }
+          } else {
+            api.showToast('✓ Already formatted');
+            formatBtn.textContent = '✓ Clean';
+            formatBtn.classList.add('success');
+            setTimeout(() => {
+              formatBtn.textContent = '✦ Format';
+              formatBtn.classList.remove('success');
+            }, 1500);
+          }
+        } catch (_) {
+          api.showToast('Format failed');
+        }
       });
     }
   
