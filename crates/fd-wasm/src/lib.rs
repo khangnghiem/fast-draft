@@ -474,6 +474,8 @@ impl FdCanvas {
                 id,
                 width: w,
                 height: h,
+                        dx: 0.0,
+                        dy: 0.0,
             },
         ];
 

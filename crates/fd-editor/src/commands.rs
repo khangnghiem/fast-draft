@@ -249,6 +249,8 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
             id,
             width: _,
             height: _,
+            dx,
+            dy,
         } => {
             // Capture current size before mutation
             let (old_w, old_h) = engine
@@ -266,6 +268,8 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
                 id: *id,
                 width: old_w,
                 height: old_h,
+                dx: -*dx,
+                dy: -*dy,
             }
         }
         GraphMutation::RemoveNode { id } => {
@@ -838,7 +842,7 @@ rect @box {
         // Resize
         stack.execute(
             &mut engine,
-            GraphMutation::ResizeNode {
+            GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
                 id: NodeId::intern("box"),
                 width: 300.0,
                 height: 200.0,
@@ -888,7 +892,7 @@ rect @box {
         // Step 2: Resize
         stack.execute(
             &mut engine,
-            GraphMutation::ResizeNode {
+            GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
                 id: NodeId::intern("a"),
                 width: 200.0,
                 height: 100.0,

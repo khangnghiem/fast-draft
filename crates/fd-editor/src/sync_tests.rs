@@ -36,7 +36,7 @@ rect @box {
     let mut engine = SyncEngine::from_text(input, viewport).unwrap();
 
     // Resize via canvas
-    engine.apply_mutation(GraphMutation::ResizeNode {
+    engine.apply_mutation(GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
         id: NodeId::intern("box"),
         width: 200.0,
         height: 100.0,
@@ -64,7 +64,7 @@ rect @box {
     let mut engine = SyncEngine::from_text(input, viewport).unwrap();
 
     // 1. Canvas mutation
-    engine.apply_mutation(GraphMutation::ResizeNode {
+    engine.apply_mutation(GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
         id: NodeId::intern("box"),
         width: 300.0,
         height: 150.0,
@@ -1454,7 +1454,7 @@ frame @card {
     );
 
     // Resize the frame (make it shorter)
-    engine.apply_mutation(GraphMutation::ResizeNode {
+    engine.apply_mutation(GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
         id: card_id,
         width: 400.0,
         height: 300.0,
@@ -1511,7 +1511,7 @@ rect @btn {
     );
 
     // Resize the button wider
-    engine.apply_mutation(GraphMutation::ResizeNode {
+    engine.apply_mutation(GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
         id: btn_id,
         width: 600.0,
         height: 44.0,
@@ -1697,7 +1697,7 @@ text @label "Hello World" {
     }
 
     // Apply resize — should set max_width
-    engine.apply_mutation(GraphMutation::ResizeNode {
+    engine.apply_mutation(GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
         id: label_id,
         width: 150.0,
         height: 40.0,
@@ -1753,7 +1753,7 @@ rect @card {
     }
 
     // Resize the parent narrower
-    engine.apply_mutation(GraphMutation::ResizeNode {
+    engine.apply_mutation(GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
         id: card_id,
         width: 120.0,
         height: 200.0,
@@ -1802,7 +1802,7 @@ text @paragraph "This is a fairly long paragraph of text that needs to wrap to m
     let original_height = engine.bounds[&para_idx].height;
 
     // Resize to a narrow width — height should NOT change
-    engine.apply_mutation(GraphMutation::ResizeNode {
+    engine.apply_mutation(GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
         id: para_id,
         width: 100.0,
         height: 20.0, // Deliberately small — should be ignored for text
@@ -2718,4 +2718,654 @@ fn sync_full_user_flow_draw_edit_delete() {
     let text = engine.current_text();
     assert!(!text.contains("@card"));
     assert!(!text.contains("@label"));
+}
+
+// ─── Parent-Child Drag Audit Tests (#2, #6) ──────────────────────────────
+
+/// Regression: 3-level deep hierarchy with all nodes co-selected.
+/// Grandparent → Parent → Grandchild: each gets its own MoveNode.
+/// Without co_selected dedup, grandchild would move 3× (propagated from
+/// grandparent + parent + its own MoveNode).
+#[test]
+fn sync_multi_select_grandchild_no_triple_move() {
+    let input = r#"
+group @grandparent {
+  x: 10 y: 10
+
+  group @parent {
+    x: 20 y: 20
+
+    rect @grandchild { x: 30 y: 30 w: 40 h: 30 }
+  }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    let gp_id = NodeId::intern("grandparent");
+    let p_id = NodeId::intern("parent");
+    let gc_id = NodeId::intern("grandchild");
+    let gp_idx = engine.graph.index_of(gp_id).unwrap();
+    let p_idx = engine.graph.index_of(p_id).unwrap();
+    let gc_idx = engine.graph.index_of(gc_id).unwrap();
+
+    let gp_before = engine.bounds[&gp_idx];
+    let p_before = engine.bounds[&p_idx];
+    let gc_before = engine.bounds[&gc_idx];
+
+    let dx = 100.0_f32;
+    let dy = 50.0_f32;
+    let co_selected = vec![gp_id, p_id, gc_id];
+
+    // All three selected — simulate multi-select drag
+    engine.apply_mutation_with_co_selected(
+        GraphMutation::MoveNode {
+            id: gp_id,
+            dx,
+            dy,
+        },
+        &co_selected,
+    );
+    engine.apply_mutation_with_co_selected(
+        GraphMutation::MoveNode {
+            id: p_id,
+            dx,
+            dy,
+        },
+        &co_selected,
+    );
+    engine.apply_mutation_with_co_selected(
+        GraphMutation::MoveNode {
+            id: gc_id,
+            dx,
+            dy,
+        },
+        &co_selected,
+    );
+
+    // All should have moved by exactly (dx, dy) — NOT 2× or 3×
+    let gp_after = engine.bounds[&gp_idx];
+    assert!(
+        (gp_after.x - (gp_before.x + dx)).abs() < 0.01,
+        "grandparent x: expected {}, got {}",
+        gp_before.x + dx,
+        gp_after.x
+    );
+
+    let p_after = engine.bounds[&p_idx];
+    assert!(
+        (p_after.x - (p_before.x + dx)).abs() < 0.01,
+        "parent x: expected {} (1×), got {} — double-move bug!",
+        p_before.x + dx,
+        p_after.x
+    );
+
+    let gc_after = engine.bounds[&gc_idx];
+    assert!(
+        (gc_after.x - (gc_before.x + dx)).abs() < 0.01,
+        "grandchild x: expected {} (1×), got {} — triple-move bug!",
+        gc_before.x + dx,
+        gc_after.x
+    );
+    assert!(
+        (gc_after.y - (gc_before.y + dy)).abs() < 0.01,
+        "grandchild y: expected {} (1×), got {} — triple-move bug!",
+        gc_before.y + dy,
+        gc_after.y
+    );
+}
+
+/// Regression: selecting only grandparent (NOT co-selecting descendants)
+/// should still propagate dx/dy all the way down to grandchild.
+#[test]
+fn sync_single_select_grandparent_propagates_to_grandchild() {
+    let input = r#"
+group @grandparent {
+  x: 10 y: 10
+
+  group @parent {
+    x: 20 y: 20
+
+    rect @grandchild { x: 30 y: 30 w: 40 h: 30 }
+  }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    let gp_id = NodeId::intern("grandparent");
+    let p_id = NodeId::intern("parent");
+    let gc_id = NodeId::intern("grandchild");
+    let p_idx = engine.graph.index_of(p_id).unwrap();
+    let gc_idx = engine.graph.index_of(gc_id).unwrap();
+
+    let p_before = engine.bounds[&p_idx];
+    let gc_before = engine.bounds[&gc_idx];
+
+    let dx = 100.0_f32;
+    let dy = 50.0_f32;
+
+    // Only grandparent selected — descendants should follow automatically
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: gp_id,
+        dx,
+        dy,
+    });
+
+    let p_after = engine.bounds[&p_idx];
+    assert!(
+        (p_after.x - (p_before.x + dx)).abs() < 0.01,
+        "parent should follow grandparent: expected {}, got {}",
+        p_before.x + dx,
+        p_after.x
+    );
+
+    let gc_after = engine.bounds[&gc_idx];
+    assert!(
+        (gc_after.x - (gc_before.x + dx)).abs() < 0.01,
+        "grandchild should follow grandparent: expected {}, got {}",
+        gc_before.x + dx,
+        gc_after.x
+    );
+    assert!(
+        (gc_after.y - (gc_before.y + dy)).abs() < 0.01,
+        "grandchild y should follow grandparent: expected {}, got {}",
+        gc_before.y + dy,
+        gc_after.y
+    );
+}
+
+/// #6 — Frame with column layout: dragging the frame should move children,
+/// and resolve_layout() should NOT snap them back to their original positions.
+/// This tests the rubber-band risk identified in the audit.
+#[test]
+fn sync_frame_column_drag_children_stay_after_resolve() {
+    let input = r#"
+frame @card {
+  w: 200 h: 300
+  x: 50 y: 50
+  layout: column gap: 10 pad: 10
+
+  rect @header { w: 180 h: 40 }
+  rect @body { w: 180 h: 100 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    let frame_id = NodeId::intern("card");
+    let header_id = NodeId::intern("header");
+    let body_id = NodeId::intern("body");
+    let frame_idx = engine.graph.index_of(frame_id).unwrap();
+    let header_idx = engine.graph.index_of(header_id).unwrap();
+    let body_idx = engine.graph.index_of(body_id).unwrap();
+
+    let frame_before = engine.bounds[&frame_idx];
+    let header_before = engine.bounds[&header_idx];
+    let body_before = engine.bounds[&body_idx];
+
+    // Record relative positions (children relative to frame)
+    let header_rel_x = header_before.x - frame_before.x;
+    let header_rel_y = header_before.y - frame_before.y;
+    let body_rel_x = body_before.x - frame_before.x;
+    let body_rel_y = body_before.y - frame_before.y;
+
+    let dx = 200.0_f32;
+    let dy = 150.0_f32;
+
+    // Drag the frame (single select — no co_selected)
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: frame_id,
+        dx,
+        dy,
+    });
+
+    // Children should have moved with the frame
+    let header_after = engine.bounds[&header_idx];
+
+    assert!(
+        (header_after.x - (header_before.x + dx)).abs() < 0.01,
+        "header should follow frame drag: expected {}, got {}",
+        header_before.x + dx,
+        header_after.x
+    );
+
+    // NOW: resolve_layout() — this is the critical test.
+    // If children snap back to their column positions relative to the OLD frame
+    // position, it's a rubber-band bug.
+    engine.resolve();
+
+    let frame_resolved = engine.bounds[&frame_idx];
+    let header_resolved = engine.bounds[&header_idx];
+    let body_resolved = engine.bounds[&body_idx];
+
+    // Frame should be at its new position
+    assert!(
+        (frame_resolved.x - (frame_before.x + dx)).abs() < 1.0,
+        "frame x after resolve: expected ~{}, got {}",
+        frame_before.x + dx,
+        frame_resolved.x
+    );
+
+    // Children should maintain the same relative position to the frame
+    let header_rel_x_after = header_resolved.x - frame_resolved.x;
+    let header_rel_y_after = header_resolved.y - frame_resolved.y;
+    let body_rel_x_after = body_resolved.x - frame_resolved.x;
+    let body_rel_y_after = body_resolved.y - frame_resolved.y;
+
+    assert!(
+        (header_rel_x_after - header_rel_x).abs() < 1.0,
+        "header relative x should be preserved: was {}, now {}",
+        header_rel_x,
+        header_rel_x_after
+    );
+    assert!(
+        (header_rel_y_after - header_rel_y).abs() < 1.0,
+        "header relative y should be preserved: was {}, now {}",
+        header_rel_y,
+        header_rel_y_after
+    );
+    assert!(
+        (body_rel_x_after - body_rel_x).abs() < 1.0,
+        "body relative x should be preserved: was {}, now {}",
+        body_rel_x,
+        body_rel_x_after
+    );
+    assert!(
+        (body_rel_y_after - body_rel_y).abs() < 1.0,
+        "body relative y should be preserved: was {}, now {} — rubber-band bug!",
+        body_rel_y,
+        body_rel_y_after
+    );
+}
+
+// ─── /advise #1: Semantic Constraint Survival Tests ─────────────────────
+
+/// Validate: child with `center_in: @parent` survives parent drag + resolve().
+/// After dragging the parent by (dx, dy), the child should still be centered
+/// in the parent's NEW position — not its old one, and not at some random spot.
+#[test]
+fn sync_drag_parent_preserves_child_center_in() {
+    let input = r#"
+frame @card {
+  w: 200 h: 200
+  x: 50 y: 50
+
+  rect @badge {
+    w: 40 h: 40
+    center_in: @card
+  }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    let card_id = NodeId::intern("card");
+    let badge_id = NodeId::intern("badge");
+    let card_idx = engine.graph.index_of(card_id).unwrap();
+    let badge_idx = engine.graph.index_of(badge_id).unwrap();
+
+    // Before drag: badge should be centered in card
+    let card_before = engine.bounds[&card_idx];
+    let badge_before = engine.bounds[&badge_idx];
+    let card_cx_before = card_before.x + card_before.width / 2.0;
+    let badge_cx_before = badge_before.x + badge_before.width / 2.0;
+    assert!(
+        (badge_cx_before - card_cx_before).abs() < 1.0,
+        "badge should start centered in card: card_cx={}, badge_cx={}",
+        card_cx_before,
+        badge_cx_before
+    );
+
+    // Drag the parent frame
+    let dx = 200.0_f32;
+    let dy = 100.0_f32;
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: card_id,
+        dx,
+        dy,
+    });
+
+    // Verify the badge's constraint is STILL center_in (not replaced with Position)
+    let badge_node = engine.graph.get_by_id(badge_id).unwrap();
+    let has_center_in = badge_node
+        .constraints
+        .iter()
+        .any(|c| matches!(c, Constraint::CenterIn(_)));
+    assert!(
+        has_center_in,
+        "badge should STILL have center_in constraint after parent drag, got: {:?}",
+        badge_node.constraints
+    );
+
+    // Now resolve layout — the critical test
+    engine.resolve();
+
+    let card_after = engine.bounds[&card_idx];
+    let badge_after = engine.bounds[&badge_idx];
+    let card_cx_after = card_after.x + card_after.width / 2.0;
+    let card_cy_after = card_after.y + card_after.height / 2.0;
+    let badge_cx_after = badge_after.x + badge_after.width / 2.0;
+    let badge_cy_after = badge_after.y + badge_after.height / 2.0;
+
+    // Card should be at new position
+    assert!(
+        (card_after.x - (card_before.x + dx)).abs() < 1.0,
+        "card x after resolve: expected ~{}, got {}",
+        card_before.x + dx,
+        card_after.x
+    );
+
+    // Badge should be centered in card's NEW position
+    assert!(
+        (badge_cx_after - card_cx_after).abs() < 1.0,
+        "badge should be centered in card AFTER resolve: card_cx={}, badge_cx={} — constraint lost!",
+        card_cx_after,
+        badge_cx_after
+    );
+    assert!(
+        (badge_cy_after - card_cy_after).abs() < 1.0,
+        "badge should be centered in card AFTER resolve: card_cy={}, badge_cy={} — constraint lost!",
+        card_cy_after,
+        badge_cy_after
+    );
+}
+
+/// Validate: child with `fill_parent: { pad: 10 }` survives parent drag + resolve().
+#[test]
+fn sync_drag_parent_preserves_child_fill_parent() {
+    let input = r#"
+frame @panel {
+  w: 300 h: 200
+  x: 50 y: 50
+
+  rect @bg { fill_parent: 10 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    let panel_id = NodeId::intern("panel");
+    let bg_id = NodeId::intern("bg");
+    let panel_idx = engine.graph.index_of(panel_id).unwrap();
+    let bg_idx = engine.graph.index_of(bg_id).unwrap();
+
+    let panel_before = engine.bounds[&panel_idx];
+    let bg_before = engine.bounds[&bg_idx];
+
+    // Fill_parent with pad=10 means bg should be inset by 10px on each side
+    let expected_inset = 10.0_f32;
+    assert!(
+        (bg_before.width - (panel_before.width - 2.0 * expected_inset)).abs() < 1.0,
+        "bg width should be panel-20: expected {}, got {}",
+        panel_before.width - 20.0,
+        bg_before.width
+    );
+
+    // Drag the parent
+    let dx = 150.0_f32;
+    let dy = 75.0_f32;
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: panel_id,
+        dx,
+        dy,
+    });
+
+    // Verify fill_parent constraint is preserved
+    let bg_node = engine.graph.get_by_id(bg_id).unwrap();
+    let has_fill_parent = bg_node
+        .constraints
+        .iter()
+        .any(|c| matches!(c, Constraint::FillParent { .. }));
+    assert!(
+        has_fill_parent,
+        "bg should STILL have fill_parent constraint after parent drag, got: {:?}",
+        bg_node.constraints
+    );
+
+    // Resolve and verify fill is correct at new position
+    engine.resolve();
+
+    let panel_after = engine.bounds[&panel_idx];
+    let bg_after = engine.bounds[&bg_idx];
+
+    // bg should still be inset by 10px at the NEW parent position
+    assert!(
+        (bg_after.x - (panel_after.x + expected_inset)).abs() < 1.0,
+        "bg x should be panel.x+10 after resolve: expected {}, got {}",
+        panel_after.x + expected_inset,
+        bg_after.x
+    );
+    assert!(
+        (bg_after.width - (panel_after.width - 2.0 * expected_inset)).abs() < 1.0,
+        "bg width should be panel-20 after resolve: expected {}, got {}",
+        panel_after.width - 20.0,
+        bg_after.width
+    );
+}
+
+/// Validate: sibling with `offset: @anchor 100 0` re-resolves correctly
+/// when the anchor is dragged. After drag + resolve(), follower should be
+/// at offset 100,0 from anchor's NEW position.
+#[test]
+fn sync_drag_anchor_preserves_sibling_offset() {
+    let input = r#"
+rect @anchor { w: 80 h: 40 x: 50 y: 50 }
+rect @follower {
+  w: 80 h: 40
+  offset: @anchor 100 0
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    let anchor_id = NodeId::intern("anchor");
+    let follower_id = NodeId::intern("follower");
+    let anchor_idx = engine.graph.index_of(anchor_id).unwrap();
+    let follower_idx = engine.graph.index_of(follower_id).unwrap();
+
+    let anchor_before = engine.bounds[&anchor_idx];
+    let follower_before = engine.bounds[&follower_idx];
+
+    // Follower should be 100px to the right of anchor
+    let relative_dx_before = follower_before.x - anchor_before.x;
+    assert!(
+        (relative_dx_before - 100.0).abs() < 2.0,
+        "follower should start 100px right of anchor: relative_dx={}",
+        relative_dx_before
+    );
+
+    // Drag the anchor node
+    let dx = 200.0_f32;
+    let dy = 150.0_f32;
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: anchor_id,
+        dx,
+        dy,
+    });
+
+    // Verify offset constraint is preserved on follower (we didn't drag follower)
+    let follower_node = engine.graph.get_by_id(follower_id).unwrap();
+    let has_offset = follower_node
+        .constraints
+        .iter()
+        .any(|c| matches!(c, Constraint::Offset { .. }));
+    assert!(
+        has_offset,
+        "follower should STILL have offset constraint after anchor drag, got: {:?}",
+        follower_node.constraints
+    );
+
+    // Resolve and verify offset is correct at new position
+    engine.resolve();
+
+    let anchor_after = engine.bounds[&anchor_idx];
+    let follower_after = engine.bounds[&follower_idx];
+
+    // Anchor should be at new position
+    assert!(
+        (anchor_after.x - (anchor_before.x + dx)).abs() < 2.0,
+        "anchor should have moved by dx: expected ~{}, got {}",
+        anchor_before.x + dx,
+        anchor_after.x
+    );
+
+    // Follower should be at offset 100,0 from anchor's NEW position
+    let relative_dx_after = follower_after.x - anchor_after.x;
+    assert!(
+        (relative_dx_after - 100.0).abs() < 2.0,
+        "follower should be 100px right of anchor after resolve: relative_dx={} — offset constraint lost!",
+        relative_dx_after
+    );
+}
+
+
+// ─── /advise #2: Managed Layout Constraint Stripping Audit ──────────────
+
+/// Audit: dragging an individual CHILD inside a managed layout (column)
+/// should strip its semantic constraints and replace with Position.
+/// This is by-design (matches Figma's "Absolute Position" toggle), but
+/// we need to verify the behavior is clean and reversible via undo.
+#[test]
+fn sync_drag_child_in_managed_layout_strips_constraints() {
+    let input = r#"
+frame @panel {
+  w: 300 h: 400
+  x: 50 y: 50
+  layout: column gap: 10 pad: 10
+
+  rect @item_a { w: 280 h: 60 }
+  rect @item_b { w: 280 h: 60 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    let item_b_id = NodeId::intern("item_b");
+
+    // Drag child @item_b independently (not co-selected with parent)
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: item_b_id,
+        dx: 50.0,
+        dy: 50.0,
+    });
+
+    // After drag, item_b should now have a Position constraint
+    let item_b_node = engine.graph.get_by_id(item_b_id).unwrap();
+    let has_position = item_b_node
+        .constraints
+        .iter()
+        .any(|c| matches!(c, Constraint::Position { .. }));
+    assert!(
+        has_position,
+        "dragged child in managed layout should get Position constraint, got: {:?}",
+        item_b_node.constraints
+    );
+
+    // Verify it's the ONLY positioning constraint (no leftover center_in, etc.)
+    let pos_count = item_b_node
+        .constraints
+        .iter()
+        .filter(|c| {
+            matches!(
+                c,
+                Constraint::Position { .. }
+                    | Constraint::CenterIn(_)
+                    | Constraint::Offset { .. }
+                    | Constraint::FillParent { .. }
+            )
+        })
+        .count();
+    assert_eq!(
+        pos_count, 1,
+        "should have exactly 1 positioning constraint after drag, got {}",
+        pos_count
+    );
+}
+
+/// Audit: verify that text-snapshot undo restores the original state
+/// after dragging a child out of a managed layout.
+#[test]
+fn sync_drag_child_undo_restores_constraint() {
+    let input = r#"
+frame @panel {
+  w: 300 h: 400
+  x: 50 y: 50
+  layout: column gap: 10 pad: 10
+
+  rect @item { w: 280 h: 60 }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    // Save the initial text for undo comparison
+    engine.flush_to_text();
+    let original_text = engine.current_text().to_string();
+
+    // Drag the child
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: NodeId::intern("item"),
+        dx: 50.0,
+        dy: 50.0,
+    });
+    engine.flush_to_text();
+    let after_drag_text = engine.current_text().to_string();
+
+    // The text should have changed (Position constraint added)
+    assert_ne!(
+        original_text, after_drag_text,
+        "text should change after drag"
+    );
+    assert!(
+        after_drag_text.contains("x:") || after_drag_text.contains("y:"),
+        "dragged child should have position coordinates in text"
+    );
+
+    // "Undo" by restoring original text
+    engine.set_text(&original_text).unwrap();
+    let restored_text = engine.current_text().to_string();
+
+    // Verify it matches the original
+    assert_eq!(
+        original_text.trim(),
+        restored_text.trim(),
+        "undo should restore original text exactly"
+    );
+
+    // Verify no Position constraint on the child
+    let item_node = engine.graph.get_by_id(NodeId::intern("item")).unwrap();
+    let has_position = item_node
+        .constraints
+        .iter()
+        .any(|c| matches!(c, Constraint::Position { .. }));
+    assert!(
+        !has_position,
+        "after undo, item should NOT have Position constraint, got: {:?}",
+        item_node.constraints
+    );
 }

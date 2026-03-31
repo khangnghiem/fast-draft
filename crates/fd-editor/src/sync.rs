@@ -168,12 +168,25 @@ impl SyncEngine {
                     }
                 }
             }
-            GraphMutation::ResizeNode { id, width, height } => {
+            GraphMutation::ResizeNode { id, width, height, dx, dy } => {
                 let rw = (width * 100.0).round() / 100.0;
                 let rh = (height * 100.0).round() / 100.0;
+                let rdx = (dx * 100.0).round() / 100.0;
+                let rdy = (dy * 100.0).round() / 100.0;
+
                 let is_text_node;
                 if let Some(node) = self.graph.get_by_id_mut(id) {
                     is_text_node = matches!(node.kind, NodeKind::Text { .. });
+                    
+                    if rdx.abs() > 0.001 || rdy.abs() > 0.001 {
+                        for c in &mut node.constraints {
+                            if let Constraint::Position { x, y } = c {
+                                *x = (*x + rdx * 100.0).round() / 100.0;
+                                *y = (*y + rdy * 100.0).round() / 100.0;
+                            }
+                        }
+                    }
+
                     match &mut node.kind {
                         NodeKind::Rect {
                             width: w,
@@ -219,6 +232,27 @@ impl SyncEngine {
                 {
                     bounds.width = rw;
                     bounds.height = rh;
+                    bounds.x += dx;
+                    bounds.y += dy;
+                }
+
+                // If parent's origin shifted, offset immediate children's Position constraints
+                // so they stay physically planted on the canvas at their current absolute coordinate.
+                if (rdx.abs() > 0.001 || rdy.abs() > 0.001) && !is_text_node {
+                    if let Some(idx) = self.graph.index_of(id) {
+                        let children = self.graph.children(idx);
+                        for child_idx in children {
+                            let child_id = self.graph.graph[child_idx].id;
+                            if let Some(child_node) = self.graph.get_by_id_mut(child_id) {
+                                for c in &mut child_node.constraints {
+                                    if let Constraint::Position { x, y } = c {
+                                        *x = (*x - rdx * 100.0).round() / 100.0;
+                                        *y = (*y - rdy * 100.0).round() / 100.0;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Propagate max_width to child text nodes when parent is resized
@@ -1054,6 +1088,8 @@ pub enum GraphMutation {
         id: NodeId,
         width: f32,
         height: f32,
+        dx: f32,
+        dy: f32,
     },
     AddNode {
         parent_id: NodeId,

@@ -796,9 +796,9 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   align-items: center;
   justify-content: space-between;
   padding: 8px 10px;
-  border-bottom: 0.5px solid var(--fd-border);
+  border-top: 0.5px solid var(--fd-border);
   position: sticky;
-  top: 0;
+  bottom: 0;
   background: var(--fd-surface);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
@@ -1018,15 +1018,37 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   opacity: 0;
   transition: opacity 0.15s ease;
 }
+.layer-delete-btn {
+  opacity: 0;
+  pointer-events: none;
+  background: transparent;
+  color: var(--fd-text-tertiary);
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  margin-left: auto;  
+}
+.layer-item:hover .layer-delete-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+.layer-delete-btn:hover {
+  color: #ff3b30;
+  background: rgba(255, 59, 48, 0.1);
+}
+
 .layer-item:hover .layer-kind {
   opacity: 1;
+}
+.layer-item:hover:has(.layer-delete-btn:hover) .layer-kind {
+  opacity: 0; /* Hide kind when hovering delete, or just rely on layout */
 }
 .layer-children.collapsed {
   display: none;
 }
 
 /* ─── Layer Drag-and-Drop ─── */
-.layer-item[draggable="true"] { cursor: grab; }
+.layer-item[draggable="true"] { cursor: default; }
 .layer-item.dragging {
   opacity: 0.4;
   border: 1px dashed var(--fd-accent);
