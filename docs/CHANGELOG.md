@@ -26,7 +26,7 @@
 
 - **UX**: Replaced the "✦ Format" text button with a minimalist "Ghost Icon Action Bar" across the user interface.
 - **Layers Count**: The header dynamically updates its selection count (`X / Y selected`) in real-time as users interact with the canvas via standard `fd-selection-changed` events.
-- **Code Editor Action Bar**: Elegantly segmented formatting operations directly into the `{ } Code` tab view via a floating action bar (`✨ Beautify` and `📋 Copy`). The `🪄 AI Touch` operation remains logically distinct on the Layers panel for manipulating components.
+- **Code Editor Action Bar**: Elegantly segmented formatting operations directly into the `{ } Code` tab view using a sticky fixed header to preserve symmetry with the Layers tab, eliminating floating-overlay visual bugs. The `🪄 AI Touch` operation remains logically distinct on the Layers panel for manipulating components.
 ### v0.11.306 — Format Pipeline and Node ID Deduplication (R3.68)
 
 - **Format Pipeline Extension**: Refactored the 'Layers' header in the left sidebar into a unified **✦ Format** action button. Triggering this runs a complete `format_and_dedup` pass (structural cleanup, ID deduplication, style hoisting, semantic sorting).
