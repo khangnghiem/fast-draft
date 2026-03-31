@@ -1,7 +1,12 @@
 # Changelog
 
-## [0.10.0] — 2026-03-02
+## [0.10.145] — 2026-03-31
 
+### Changed
+
+- **Canvas Preview Side**: the FD Canvas preview now opens on the right side of the editor group (ViewColumn.Two) by default, preserving the text editor on the left side.
+
+## [0.10.0] — 2026-03-02
 ### Added
 
 - **Eraser tool** (`E`): Click to erase single nodes, drag to erase multiple. Red poof fade animation on deletion. Eraser toolbar button with custom circle-X cursor.

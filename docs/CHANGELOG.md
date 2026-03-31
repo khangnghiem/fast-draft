@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.304 — VS Code Canvas Preview Side (R6.18)
+
+- **Canvas Preview Column**: Modified `FdEditorProvider` in `fd-vscode/src/extension.ts` to open the FD Canvas preview in ViewColumn.Two (the right split) by default, instead of ViewColumn.One. The source code document is now preserved in ViewColumn.One, creating a standard Code (Left) | Visual (Right) side-by-side experience.
+
 ### v0.11.303 — Edge Text Selection & Duplicate Label Fix (R3.43)
 
 - **Layout**: Added `resolve_edge_text_children()` pass in `fd-core/layout.rs` — positions edge text labels at the edge midpoint so the spatial index and hit-testing can find them where they're visually drawn
