@@ -790,7 +790,8 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   right: 0;
   display: none;
 }
-.layers-header {
+.layers-header,
+.pane-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -812,8 +813,9 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   letter-spacing: 0.02em;
 }
 
-/* ─── Layers Action Bar ─── */
-.layers-action-bar {
+/* ─── Layers & Code Action Bar ─── */
+.layers-action-bar,
+.pane-action-bar {
   display: flex;
   align-items: center;
   gap: 2px;
