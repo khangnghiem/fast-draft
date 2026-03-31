@@ -36,7 +36,9 @@ rect @box {
     let mut engine = SyncEngine::from_text(input, viewport).unwrap();
 
     // Resize via canvas
-    engine.apply_mutation(GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        dx: 0.0,
+        dy: 0.0,
         id: NodeId::intern("box"),
         width: 200.0,
         height: 100.0,
@@ -64,7 +66,9 @@ rect @box {
     let mut engine = SyncEngine::from_text(input, viewport).unwrap();
 
     // 1. Canvas mutation
-    engine.apply_mutation(GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        dx: 0.0,
+        dy: 0.0,
         id: NodeId::intern("box"),
         width: 300.0,
         height: 150.0,
@@ -185,6 +189,7 @@ rect @box {
         id: box_id,
         dx: 10.0,
         dy: 5.0,
+        with_children: false,
     });
     // Re-resolve (as apply_mutations does for non-move batches)
     engine.resolve();
@@ -207,6 +212,7 @@ rect @box {
         id: box_id,
         dx: 10.0,
         dy: 5.0,
+        with_children: false,
     });
     engine.resolve();
     let b2 = engine.bounds[&idx];
@@ -228,6 +234,7 @@ rect @box {
         id: box_id,
         dx: -30.0,
         dy: -10.0,
+        with_children: false,
     });
     engine.resolve();
     let b3 = engine.bounds[&idx];
@@ -278,6 +285,7 @@ rect @box {
         id: box_id,
         dx: 50.0,
         dy: 30.0,
+        with_children: false,
     });
 
     // After move, CenterIn should be stripped and only Position remains
@@ -436,6 +444,7 @@ group @box {
         id: NodeId::intern("box"),
         dx: 100.0,
         dy: 50.0,
+        with_children: true,
     });
 
     // Group bounds should have shifted
@@ -515,6 +524,7 @@ group @container {
         id: b_id,
         dx: 500.0,
         dy: 400.0,
+        with_children: false,
     });
     engine.evaluate_drop(b_id);
 
@@ -557,6 +567,7 @@ group @container {
         id: b_id,
         dx: 50.0,
         dy: 0.0,
+        with_children: false,
     });
     engine.evaluate_drop(b_id);
 
@@ -603,6 +614,7 @@ rect @leaf { w: 40 h: 30 }
         id: leaf_id,
         dx: 600.0,
         dy: 500.0,
+        with_children: false,
     });
     engine.evaluate_drop(leaf_id);
 
@@ -642,6 +654,7 @@ group @container {
             id: b_id,
             dx: 10.0,
             dy: 10.0,
+            with_children: false,
         });
     }
     engine.evaluate_drop(b_id);
@@ -686,6 +699,7 @@ group @container {
         id: b_id,
         dx: 5.0,
         dy: 3.0,
+        with_children: false,
     });
 
     // @b should still be a child of @container
@@ -729,6 +743,7 @@ rect @card {
         id: label_id,
         dx: 500.0,
         dy: 400.0,
+        with_children: false,
     });
     engine.evaluate_drop(label_id);
 
@@ -773,6 +788,7 @@ rect @card {
         id: label_id,
         dx: 10.0,
         dy: 5.0,
+        with_children: false,
     });
     engine.evaluate_drop(label_id);
 
@@ -1016,6 +1032,7 @@ group @grp {
         id: grp_id,
         dx: 100.0,
         dy: 50.0,
+        with_children: true,
     });
 
     let a_after = engine.bounds[&engine.graph.index_of(a_id).unwrap()];
@@ -1063,6 +1080,7 @@ rect @leaf { w: 20 h: 20 x: 0 y: 0 }
         id: outer_id,
         dx: 200.0,
         dy: 100.0,
+        with_children: true,
     });
 
     let leaf_after = engine.bounds[&engine.graph.index_of(leaf_id).unwrap()];
@@ -1262,6 +1280,7 @@ group @solo_group {
         id: child_id,
         dx: 500.0,
         dy: 400.0,
+        with_children: false,
     });
     engine.evaluate_drop(child_id);
 
@@ -1303,6 +1322,7 @@ frame @solo_frame {
         id: child_id,
         dx: 500.0,
         dy: 400.0,
+        with_children: false,
     });
     engine.evaluate_drop(child_id);
 
@@ -1346,6 +1366,7 @@ group @outer_cascade {
         id: child_id,
         dx: 600.0,
         dy: 500.0,
+        with_children: false,
     });
     engine.evaluate_drop(child_id);
 
@@ -1389,6 +1410,7 @@ fn sync_move_managed_layout_child_converts_to_absolute() {
         id: title_id,
         dx: 100.0,
         dy: 50.0,
+        with_children: false,
     });
 
     // Bounds should update
@@ -1454,7 +1476,9 @@ frame @card {
     );
 
     // Resize the frame (make it shorter)
-    engine.apply_mutation(GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        dx: 0.0,
+        dy: 0.0,
         id: card_id,
         width: 400.0,
         height: 300.0,
@@ -1511,7 +1535,9 @@ rect @btn {
     );
 
     // Resize the button wider
-    engine.apply_mutation(GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        dx: 0.0,
+        dy: 0.0,
         id: btn_id,
         width: 600.0,
         height: 44.0,
@@ -1554,6 +1580,7 @@ frame @panel {
         id: panel_id,
         dx: 150.0,
         dy: 75.0,
+        with_children: true,
     });
 
     let panel_idx = engine.graph.index_of(panel_id).unwrap();
@@ -1637,6 +1664,7 @@ frame @form {
         id: form_id,
         dx: 200.0,
         dy: 100.0,
+        with_children: false,
     });
     engine.flush_to_text();
 
@@ -1697,7 +1725,9 @@ text @label "Hello World" {
     }
 
     // Apply resize — should set max_width
-    engine.apply_mutation(GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        dx: 0.0,
+        dy: 0.0,
         id: label_id,
         width: 150.0,
         height: 40.0,
@@ -1753,7 +1783,9 @@ rect @card {
     }
 
     // Resize the parent narrower
-    engine.apply_mutation(GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        dx: 0.0,
+        dy: 0.0,
         id: card_id,
         width: 120.0,
         height: 200.0,
@@ -1802,7 +1834,9 @@ text @paragraph "This is a fairly long paragraph of text that needs to wrap to m
     let original_height = engine.bounds[&para_idx].height;
 
     // Resize to a narrow width — height should NOT change
-    engine.apply_mutation(GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        dx: 0.0,
+        dy: 0.0,
         id: para_id,
         width: 100.0,
         height: 20.0, // Deliberately small — should be ignored for text
@@ -1995,6 +2029,7 @@ rect @card {
         id: card_id,
         dx: 500.0,
         dy: 300.0,
+        with_children: false,
     });
 
     // Clone should NOT have moved (independent position)
@@ -2259,6 +2294,7 @@ group @box {
         id: child_id,
         dx: 80.0,
         dy: 40.0,
+        with_children: false,
     });
 
     // Now check: near-detach should fire if overlap < 25%
@@ -2307,6 +2343,7 @@ group @parent {
             id: parent_id,
             dx,
             dy,
+            with_children: false,
         },
         &co_selected,
     );
@@ -2315,6 +2352,7 @@ group @parent {
             id: child_id,
             dx,
             dy,
+            with_children: false,
         },
         &co_selected,
     );
@@ -2382,6 +2420,7 @@ group @parent {
         id: parent_id,
         dx,
         dy,
+        with_children: true,
     });
 
     let parent_after = engine.bounds[&parent_idx];
@@ -2766,6 +2805,7 @@ group @grandparent {
             id: gp_id,
             dx,
             dy,
+            with_children: false,
         },
         &co_selected,
     );
@@ -2774,6 +2814,7 @@ group @grandparent {
             id: p_id,
             dx,
             dy,
+            with_children: false,
         },
         &co_selected,
     );
@@ -2782,6 +2823,7 @@ group @grandparent {
             id: gc_id,
             dx,
             dy,
+            with_children: false,
         },
         &co_selected,
     );
@@ -2818,8 +2860,79 @@ group @grandparent {
     );
 }
 
-/// Regression: selecting only grandparent (NOT co-selecting descendants)
-/// should still propagate dx/dy all the way down to grandchild.
+/// Default drag (no Cmd/Ctrl): dragging parent should NOT move children.
+/// Children stay stationary — only the parent's bounds move.
+#[test]
+fn sync_default_drag_parent_does_not_move_children() {
+    let input = r#"
+group @grandparent {
+  x: 10 y: 10
+
+  group @parent {
+    x: 20 y: 20
+
+    rect @grandchild { x: 30 y: 30 w: 40 h: 30 }
+  }
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+
+    let gp_id = NodeId::intern("grandparent");
+    let p_id = NodeId::intern("parent");
+    let gc_id = NodeId::intern("grandchild");
+    let gp_idx = engine.graph.index_of(gp_id).unwrap();
+    let p_idx = engine.graph.index_of(p_id).unwrap();
+    let gc_idx = engine.graph.index_of(gc_id).unwrap();
+
+    let gp_before = engine.bounds[&gp_idx];
+    let p_before = engine.bounds[&p_idx];
+    let gc_before = engine.bounds[&gc_idx];
+
+    let dx = 100.0_f32;
+    let dy = 50.0_f32;
+
+    // Drag WITHOUT Cmd/Ctrl — children should NOT follow
+    engine.apply_mutation(GraphMutation::MoveNode {
+        id: gp_id,
+        dx,
+        dy,
+        with_children: false,
+    });
+
+    // Grandparent should have moved
+    let gp_after = engine.bounds[&gp_idx];
+    assert!(
+        (gp_after.x - (gp_before.x + dx)).abs() < 0.01,
+        "grandparent should move: expected {}, got {}",
+        gp_before.x + dx,
+        gp_after.x
+    );
+
+    // Parent should NOT have moved (stayed stationary)
+    let p_after = engine.bounds[&p_idx];
+    assert!(
+        (p_after.x - p_before.x).abs() < 0.01,
+        "parent should NOT move without Cmd: expected {}, got {}",
+        p_before.x,
+        p_after.x
+    );
+
+    // Grandchild should NOT have moved
+    let gc_after = engine.bounds[&gc_idx];
+    assert!(
+        (gc_after.x - gc_before.x).abs() < 0.01,
+        "grandchild should NOT move without Cmd: expected {}, got {}",
+        gc_before.x,
+        gc_after.x
+    );
+}
+
+/// Regression: selecting only grandparent WITH Cmd/Ctrl held
+/// should propagate dx/dy all the way down to grandchild.
 #[test]
 fn sync_single_select_grandparent_propagates_to_grandchild() {
     let input = r#"
@@ -2851,11 +2964,12 @@ group @grandparent {
     let dx = 100.0_f32;
     let dy = 50.0_f32;
 
-    // Only grandparent selected — descendants should follow automatically
+    // Only grandparent selected + Cmd held — descendants should follow
     engine.apply_mutation(GraphMutation::MoveNode {
         id: gp_id,
         dx,
         dy,
+        with_children: true,
     });
 
     let p_after = engine.bounds[&p_idx];
@@ -2922,11 +3036,12 @@ frame @card {
     let dx = 200.0_f32;
     let dy = 150.0_f32;
 
-    // Drag the frame (single select — no co_selected)
+    // Drag the frame (Cmd held — children follow)
     engine.apply_mutation(GraphMutation::MoveNode {
         id: frame_id,
         dx,
         dy,
+        with_children: true,
     });
 
     // Children should have moved with the frame
@@ -3002,7 +3117,7 @@ frame @card {
 
   rect @badge {
     w: 40 h: 40
-    center_in: @card
+    center_in: card
   }
 }
 "#;
@@ -3032,10 +3147,12 @@ frame @card {
     // Drag the parent frame
     let dx = 200.0_f32;
     let dy = 100.0_f32;
+    // Drag the frame (with Cmd held — children follow)
     engine.apply_mutation(GraphMutation::MoveNode {
         id: card_id,
         dx,
         dy,
+        with_children: true,
     });
 
     // Verify the badge's constraint is STILL center_in (not replaced with Position)
@@ -3124,6 +3241,7 @@ frame @panel {
         id: panel_id,
         dx,
         dy,
+        with_children: false,
     });
 
     // Verify fill_parent constraint is preserved
@@ -3168,7 +3286,7 @@ fn sync_drag_anchor_preserves_sibling_offset() {
 rect @anchor { w: 80 h: 40 x: 50 y: 50 }
 rect @follower {
   w: 80 h: 40
-  offset: @anchor 100 0
+  offset: @anchor 100, 0
 }
 "#;
     let viewport = Viewport {
@@ -3200,6 +3318,7 @@ rect @follower {
         id: anchor_id,
         dx,
         dy,
+        with_children: false,
     });
 
     // Verify offset constraint is preserved on follower (we didn't drag follower)
@@ -3237,7 +3356,6 @@ rect @follower {
     );
 }
 
-
 // ─── /advise #2: Managed Layout Constraint Stripping Audit ──────────────
 
 /// Audit: dragging an individual CHILD inside a managed layout (column)
@@ -3269,6 +3387,7 @@ frame @panel {
         id: item_b_id,
         dx: 50.0,
         dy: 50.0,
+        with_children: false,
     });
 
     // After drag, item_b should now have a Position constraint
@@ -3332,6 +3451,7 @@ frame @panel {
         id: NodeId::intern("item"),
         dx: 50.0,
         dy: 50.0,
+        with_children: false,
     });
     engine.flush_to_text();
     let after_drag_text = engine.current_text().to_string();

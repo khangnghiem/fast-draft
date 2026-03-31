@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.309 — Layers Panel Stabilization & Parent-Child Drag Fixes (R3.2, R3.27, R3.69, R6.18)
+
+- **Parent-Child Drag Stabilization (R3.2)**: Fixed a layout desynchronization bug where child nodes drifted visually when their parent container was resized via corner grips. The `ResizeNode` mutation now propagates inverse `dx`/`dy` translation elements directly down to children utilizing `CenterIn`, ensuring stable internal coordinates.
+- **Layers Panel UX (R3.69)**: Added a persistent, hover-activated "Trash Bin" button inline with layer items for immediate deletion without opening context menus. Restored the native string-select cursor for standard row interaction instead of the pan hand.
+- **Inline Rename Strict Protection (R3.27)**: Double-clicking to rename layers now triggers a `has_node()` evaluation via the WASM bridge, strictly blocking node ID collisions. This directly resolves the "Phantom Deletion" bug where ambiguous IDs triggered the `Delete` key stroke to remove the wrong target.
+- **Bottom-Anchored Chrome (R6.18)**: Re-engineered CSS flex-box order to reliably pin both the `{"}"} Code` pane header and the Layer pane utility actions (`🪄 AI Touch`, selection count) to the bottom of the bounding element.
+
 ### v0.11.308 — Multi-Target Edge Shorthand (R3.43)
 
 - **Edge Fan-out Syntax**: Implemented and verified multi-target shorthand for graph edges (`edge @a -> @b, @c { ... }`). The parser safely expands this into multiple independent `Edge` structs during the AST parsing phase, removing the need for topology changes in the `SceneGraph` while dramatically reducing token overhead for AI agents writing graphs.

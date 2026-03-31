@@ -354,10 +354,18 @@ impl Tool for SelectTool {
                         self.last_x += dx;
                         self.last_y += dy;
 
+                        // Cmd/Ctrl during drag = move children too
+                        let with_children = modifiers.meta || modifiers.ctrl;
+
                         return self
                             .selected
                             .iter()
-                            .map(|id| GraphMutation::MoveNode { id: *id, dx, dy })
+                            .map(|id| GraphMutation::MoveNode {
+                                id: *id,
+                                dx,
+                                dy,
+                                with_children,
+                            })
                             .collect();
                     }
 
@@ -366,11 +374,19 @@ impl Tool for SelectTool {
                     self.last_x = *x;
                     self.last_y = *y;
 
+                    // Cmd/Ctrl during drag = move children too
+                    let with_children = modifiers.meta || modifiers.ctrl;
+
                     // Move all selected nodes
                     return self
                         .selected
                         .iter()
-                        .map(|id| GraphMutation::MoveNode { id: *id, dx, dy })
+                        .map(|id| GraphMutation::MoveNode {
+                            id: *id,
+                            dx,
+                            dy,
+                            with_children,
+                        })
                         .collect();
                 }
                 vec![]
@@ -545,15 +561,13 @@ impl Tool for RectTool {
                         let dy = new_cy - self.last_cy;
                         self.last_cx = new_cx;
                         self.last_cy = new_cy;
-                        return vec![
-                            GraphMutation::ResizeNode {
-                                id,
-                                width: w,
-                                height: h,
-                                dx,
-                                dy,
-                            },
-                        ];
+                        return vec![GraphMutation::ResizeNode {
+                            id,
+                            width: w,
+                            height: h,
+                            dx,
+                            dy,
+                        }];
                     }
 
                     // Reposition origin to top-left corner so drawing
@@ -592,15 +606,13 @@ impl Tool for RectTool {
                         // Click without drag → default 162×100 centered at click point
                         let w = 162.0_f32;
                         let h = 100.0_f32;
-                        vec![
-                            GraphMutation::ResizeNode {
-                                id,
-                                width: w,
-                                height: h,
-                                dx: -w / 2.0,
-                                dy: -h / 2.0,
-                            },
-                        ]
+                        vec![GraphMutation::ResizeNode {
+                            id,
+                            width: w,
+                            height: h,
+                            dx: -w / 2.0,
+                            dy: -h / 2.0,
+                        }]
                     } else {
                         vec![]
                     }
@@ -959,15 +971,13 @@ impl Tool for EllipseTool {
                         let dy = new_cy - self.last_cy;
                         self.last_cx = new_cx;
                         self.last_cy = new_cy;
-                        return vec![
-                            GraphMutation::ResizeNode {
-                                id,
-                                width: w,
-                                height: h,
-                                dx,
-                                dy,
-                            },
-                        ];
+                        return vec![GraphMutation::ResizeNode {
+                            id,
+                            width: w,
+                            height: h,
+                            dx,
+                            dy,
+                        }];
                     }
 
                     // Reposition origin to top-left corner so drawing
@@ -1006,15 +1016,13 @@ impl Tool for EllipseTool {
                         // Click without drag → default 128×128 centered at click point
                         let w = 128.0_f32;
                         let h = 128.0_f32;
-                        vec![
-                            GraphMutation::ResizeNode {
-                                id,
-                                width: w,
-                                height: h,
-                                dx: -w / 2.0,
-                                dy: -h / 2.0,
-                            },
-                        ]
+                        vec![GraphMutation::ResizeNode {
+                            id,
+                            width: w,
+                            height: h,
+                            dx: -w / 2.0,
+                            dy: -h / 2.0,
+                        }]
                     } else {
                         vec![]
                     }

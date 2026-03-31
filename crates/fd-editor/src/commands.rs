@@ -240,10 +240,16 @@ impl CommandStack {
 /// Compute the inverse mutation needed to undo `mutation`.
 fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutation {
     match mutation {
-        GraphMutation::MoveNode { id, dx, dy } => GraphMutation::MoveNode {
+        GraphMutation::MoveNode {
+            id,
+            dx,
+            dy,
+            with_children,
+        } => GraphMutation::MoveNode {
             id: *id,
             dx: -dx,
             dy: -dy,
+            with_children: *with_children,
         },
         GraphMutation::ResizeNode {
             id,
@@ -445,6 +451,7 @@ rect @box {
                 id: NodeId::intern("box"),
                 dx: 50.0,
                 dy: 30.0,
+                with_children: false,
             },
             "Move box",
         );
@@ -486,6 +493,7 @@ rect @box {
                 id: NodeId::intern("a"),
                 dx: 5.0,
                 dy: 0.0,
+                with_children: false,
             },
             "move",
         );
@@ -499,6 +507,7 @@ rect @box {
                 id: NodeId::intern("a"),
                 dx: 1.0,
                 dy: 0.0,
+                with_children: false,
             },
             "move2",
         );
@@ -522,6 +531,7 @@ rect @box {
                     id: NodeId::intern("a"),
                     dx: (i + 1) as f32,
                     dy: 0.0,
+                    with_children: false,
                 },
                 "move",
             );
@@ -654,6 +664,7 @@ rect @box {
                     id: NodeId::intern("box"),
                     dx: 10.0,
                     dy: 5.0,
+                    with_children: false,
                 },
                 "drag",
             );
@@ -697,6 +708,7 @@ rect @box {
                     id: NodeId::intern("box"),
                     dx: 10.0,
                     dy: 5.0,
+                    with_children: false,
                 },
                 "drag",
             );
@@ -842,7 +854,9 @@ rect @box {
         // Resize
         stack.execute(
             &mut engine,
-            GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
+            GraphMutation::ResizeNode {
+                dx: 0.0,
+                dy: 0.0,
                 id: NodeId::intern("box"),
                 width: 300.0,
                 height: 200.0,
@@ -885,6 +899,7 @@ rect @box {
                 id: NodeId::intern("a"),
                 dx: 50.0,
                 dy: 30.0,
+                with_children: false,
             },
             "move",
         );
@@ -892,7 +907,9 @@ rect @box {
         // Step 2: Resize
         stack.execute(
             &mut engine,
-            GraphMutation::ResizeNode { dx: 0.0, dy: 0.0,
+            GraphMutation::ResizeNode {
+                dx: 0.0,
+                dy: 0.0,
                 id: NodeId::intern("a"),
                 width: 200.0,
                 height: 100.0,
@@ -1041,6 +1058,7 @@ rect @box {
                     id: NodeId::intern("box"),
                     dx: 20.0,
                     dy: 10.0,
+                    with_children: false,
                 },
                 "drag",
             );
