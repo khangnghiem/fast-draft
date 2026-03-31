@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.310 — Cmd/Ctrl Drag to Move Children (R3.2)
+
+- **UX Behavior Change**: Dragging a parent node **without** modifier keys now moves ONLY the parent — children stay stationary. Hold **Cmd** (macOS) or **Ctrl** (Windows/Linux) while dragging to move all descendants recursively with the parent. This can be toggled mid-drag: start dragging normally, then press Cmd/Ctrl to engage children-follow mode.
+- **No Conflict with Multi-Select**: Cmd+click (without drag) still adds/removes nodes from multi-selection as before. The `with_children` flag activates only when `MoveNode` mutations are generated during `PointerMove` drag events.
+- **Engine**: Added `with_children: bool` field to `GraphMutation::MoveNode`. Descendant propagation in `SyncEngine::apply_mutation_with_co_selected` is now gated on this flag.
+- **Tests**: Added `sync_default_drag_parent_does_not_move_children` test verifying the new default behavior, and updated existing children-follow tests to use `with_children: true`.
+
+Files: `crates/fd-editor/src/sync.rs`, `crates/fd-editor/src/tools.rs`, `crates/fd-editor/src/commands.rs`, `crates/fd-editor/src/sync_tests.rs`, `crates/fd-editor/src/tools_tests.rs`, `crates/fd-wasm/src/keyboard.rs`
+
 ### v0.11.309 — Layers Panel Stabilization & Parent-Child Drag Fixes (R3.2, R3.27, R3.69, R6.18)
 
 - **Parent-Child Drag Stabilization (R3.2)**: Fixed a layout desynchronization bug where child nodes drifted visually when their parent container was resized via corner grips. The `ResizeNode` mutation now propagates inverse `dx`/`dy` translation elements directly down to children utilizing `CenterIn`, ensuring stable internal coordinates.
