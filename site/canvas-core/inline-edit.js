@@ -102,7 +102,7 @@ export function measureAllTextNodes(fdCanvas, canvasEl, renderFn) {
   const textIdRe = /text\s+@(\w+)\s+"/g;
   let match;
   let anyChanged = false;
-  while ((match = textIdRe.exec(text)) !== null) {
+  for (const match of text.matchAll(textIdRe)) {
     if (measureAndUpdateTextBounds(fdCanvas, canvasEl, match[1])) {
       anyChanged = true;
     }
@@ -148,7 +148,7 @@ export function openInlineEditor(opts) {
   if (parentShapeId) {
     posId = parentShapeId;
   }
-  const boundsJson = fdCanvas.get_node_bounds(posId);
+  const boundsJson = fdCanvas.get_node_bounds_json(posId);
   const b = JSON.parse(boundsJson);
   const bw = b.w || 80;
   const bh = b.h || 24;

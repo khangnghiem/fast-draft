@@ -86,12 +86,12 @@ function zoomToFit() {
   const nodeIdPattern = /@(\w+)/g;
   let match;
   const seenIds = new Set();
-  while ((match = nodeIdPattern.exec(text)) !== null) {
+  for (const match of text.matchAll(nodeIdPattern)) {
     const id = match[1];
     if (seenIds.has(id)) continue;
     seenIds.add(id);
     try {
-      const boundsJson = fdCanvas.get_node_bounds(id);
+      const boundsJson = fdCanvas.get_node_bounds_json(id);
       const b = JSON.parse(boundsJson);
       if (b.width && b.width > 0) {
         minX = Math.min(minX, b.x);
@@ -1009,14 +1009,14 @@ function setupFloatingToolbar() {
     let closest = null;
     let closestDist = 30; // 30px threshold
     let match;
-    while ((match = edgeRe.exec(source)) !== null) {
+    for (const match of source.matchAll(edgeRe)) {
       const edgeId = match[1];
       const fromId = match[2];
       const toId = match[3];
       let fromBounds, toBounds;
       try {
-        fromBounds = JSON.parse(fdCanvas.get_node_bounds(fromId));
-        toBounds = JSON.parse(fdCanvas.get_node_bounds(toId));
+        fromBounds = JSON.parse(fdCanvas.get_node_bounds_json(fromId));
+        toBounds = JSON.parse(fdCanvas.get_node_bounds_json(toId));
       } catch (_) { continue; }
       if (!fromBounds || !toBounds) continue;
       const fx = fromBounds.x + fromBounds.width / 2;
@@ -1088,7 +1088,10 @@ function setupFloatingToolbar() {
     }
     if (!nearestId) return null;
     let tb;
-    try { tb = JSON.parse(fdCanvas.get_node_bounds(nearestId)); } catch (_) { return null; }
+    const tb_json = fdCanvas.get_node_bounds_json(nearestId);
+    if (!tb_json || tb_json === "{}") return null;
+    tb = JSON.parse(tb_json);
+
     if (!tb || !tb.width) return null;
     const tRight = tb.x + tb.width;
     const tBottom = tb.y + tb.height;
@@ -1198,12 +1201,12 @@ function getSceneBoundsInner() {
   const nodeIdPattern = /@(\w+)/g;
   let match;
   const seenIds = new Set();
-  while ((match = nodeIdPattern.exec(text)) !== null) {
+  for (const match of text.matchAll(nodeIdPattern)) {
     const id = match[1];
     if (seenIds.has(id)) continue;
     seenIds.add(id);
     try {
-      const b = JSON.parse(fdCanvas.get_node_bounds(id));
+      const b = JSON.parse(fdCanvas.get_node_bounds_json(id));
       if (b.width && b.width > 0) {
         minX = Math.min(minX, b.x);
         minY = Math.min(minY, b.y);
@@ -1348,10 +1351,10 @@ let focusAnimId = null;
 function focusOnNode(nodeId) {
   if (!fdCanvas) return;
   let bounds;
-  try {
-    bounds = JSON.parse(fdCanvas.get_node_bounds(nodeId));
+  const bounds_json = fdCanvas.get_node_bounds_json(nodeId);
+  if (!bounds_json || bounds_json === "{}") return;
+  bounds = JSON.parse(bounds_json);
     if (!bounds || (bounds.width <= 0 && bounds.height <= 0)) return;
-  } catch (_) { return; }
 
   const container = document.getElementById("canvas-container");
   const cw = container.clientWidth;
@@ -1462,7 +1465,7 @@ function zoomToSelection() {
   if (!selectedId) return;
 
   try {
-    const b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
+    const b = JSON.parse(fdCanvas.get_node_bounds_json(selectedId));
     if (!b.width || b.width <= 0) return;
 
     const container = document.getElementById("canvas-container");

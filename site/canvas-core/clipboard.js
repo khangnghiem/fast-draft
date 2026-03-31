@@ -50,7 +50,7 @@ export function buildPasteIdMap(allIds, existingText) {
       maxN = 1;
       const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
       let match;
-      while ((match = re.exec(existingText)) !== null) {
+      for (const match of existingText.matchAll(re)) {
         maxN = Math.max(maxN, parseInt(match[1]));
       }
       if (new RegExp(`@${stem}\\b`).test(existingText)) {
@@ -90,7 +90,7 @@ export function collectDeclaredIds(text) {
   const idPattern = /@(\w+)\s*\{/g;
   const ids = new Set();
   let m;
-  while ((m = idPattern.exec(text)) !== null) {
+  for (const m of text.matchAll(idPattern)) {
     ids.add(m[1]);
   }
   return ids;

@@ -130,7 +130,7 @@ async function pasteFromClipboard() {
   const idPattern = /@(\w+)\s*\{/g;
   const allIds = new Set();
   let m;
-  while ((m = idPattern.exec(clipText)) !== null) {
+  for (const m of clipText.matchAll(idPattern)) {
     allIds.add(m[1]);
   }
   if (allIds.size === 0) return;
@@ -150,7 +150,7 @@ async function pasteFromClipboard() {
       maxN = 1;
       const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
       let match;
-      while ((match = re.exec(existingText)) !== null) {
+      for (const match of existingText.matchAll(re)) {
         maxN = Math.max(maxN, parseInt(match[1]));
       }
       if (new RegExp(`@${stem}\\b`).test(existingText)) {
@@ -171,7 +171,7 @@ async function pasteFromClipboard() {
   // Horizontal stagger
   let xOffset = pasteOffsetCount * 20;
   try {
-    const boundsJson = fdCanvas.get_node_bounds(rootId);
+    const boundsJson = fdCanvas.get_node_bounds_json(rootId);
     if (boundsJson) {
       const bounds = JSON.parse(boundsJson);
       if (bounds && bounds.width > 0) {
@@ -211,7 +211,7 @@ function selectAllNodes() {
   let match;
   const ids = [];
   const seen = new Set();
-  while ((match = nodeIdPattern.exec(text)) !== null) {
+  for (const match of text.matchAll(nodeIdPattern)) {
     if (!seen.has(match[1])) {
       ids.push(match[1]);
       seen.add(match[1]);

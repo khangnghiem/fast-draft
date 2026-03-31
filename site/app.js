@@ -215,9 +215,9 @@ function getAllNodeBounds() {
   const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
   const nodes = [];
   let m;
-  while ((m = idRegex.exec(text)) !== null) {
+  for (const m of text.matchAll(idRegex)) {
     try {
-      const bj = fdCanvas.get_node_bounds(m[1]);
+      const bj = fdCanvas.get_node_bounds_json(m[1]);
       if (!bj) continue;
       const b = JSON.parse(bj);
       if (b.width > 0 && b.height > 0) nodes.push({ id: m[1], ...b });
@@ -336,7 +336,7 @@ function renderCanvas() {
       // Highlight target node under cursor during arrow drag or edge repointing
       if (ap.target_id) {
         try {
-          const targetBoundsJson = fdCanvas.get_node_bounds(ap.target_id);
+          const targetBoundsJson = fdCanvas.get_node_bounds_json(ap.target_id);
           if (targetBoundsJson) {
             const tb = JSON.parse(targetBoundsJson);
             const pad = 4;
@@ -422,7 +422,7 @@ function renderCanvas() {
     } else if (pencilHover.nodeId) {
       // Hover node highlight (non-draw tools)
       try {
-        const bJson = fdCanvas.get_node_bounds(pencilHover.nodeId);
+        const bJson = fdCanvas.get_node_bounds_json(pencilHover.nodeId);
         if (bJson) {
           const hb = JSON.parse(bJson);
           ctx.setLineDash([4 / zoomLevel, 4 / zoomLevel]);
@@ -489,13 +489,11 @@ function fitToContent(canvas) {
     const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
     const nodes = [];
     let m;
-    while ((m = idRegex.exec(text)) !== null) {
-      try {
-        const bj = fdCanvas.get_node_bounds(m[1]);
-        if (!bj) continue;
-        const b = JSON.parse(bj);
-        if (b.width > 0 && b.height > 0) nodes.push(b);
-      } catch (_) { }
+    for (const m of text.matchAll(idRegex)) {
+      const bj = fdCanvas.get_node_bounds_json(m[1]);
+      if (!bj || bj === "{}") continue;
+      const b = JSON.parse(bj);
+      if (b.width > 0 && b.height > 0) nodes.push(b);
     }
     if (nodes.length === 0) return;
     let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
@@ -942,7 +940,7 @@ function parseCssToFdStyles(cssText) {
   const classRegex = /\.([a-zA-Z_-][\w-]*)\s*\{([^}]*)\}/g;
   let match;
 
-  while ((match = classRegex.exec(cssText)) !== null) {
+  for (const match of cssText.matchAll(classRegex)) {
     const rawName = match[1];
     const body = match[2];
     // Sanitize class name: replace hyphens with underscores, remove invalid chars
@@ -953,7 +951,7 @@ function parseCssToFdStyles(cssText) {
     // Parse individual CSS properties
     const propRegex = /([a-z-]+)\s*:\s*([^;]+)/gi;
     let pm;
-    while ((pm = propRegex.exec(body)) !== null) {
+    for (const pm of body.matchAll(propRegex)) {
       const prop = pm[1].trim().toLowerCase();
       const val = pm[2].trim();
 
@@ -1055,9 +1053,9 @@ function getSceneBounds() {
   let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
   let found = false;
   let m;
-  while ((m = idRegex.exec(text)) !== null) {
+  for (const m of text.matchAll(idRegex)) {
     try {
-      const bj = fdCanvas.get_node_bounds(m[1]);
+      const bj = fdCanvas.get_node_bounds_json(m[1]);
       if (!bj) continue;
       const b = JSON.parse(bj);
       if (b.width > 0 && b.height > 0) {
@@ -1098,10 +1096,10 @@ let focusAnimId = null;
 function focusOnNode(nodeId) {
   if (!fdCanvas) return;
   let bounds;
-  try {
-    bounds = JSON.parse(fdCanvas.get_node_bounds(nodeId));
+  const bounds_json = fdCanvas.get_node_bounds_json(nodeId);
+  if (!bounds_json || bounds_json === "{}") return;
+  bounds = JSON.parse(bounds_json);
     if (!bounds || (bounds.width <= 0 && bounds.height <= 0)) return;
-  } catch (_) { return; }
 
   const container = document.getElementById("canvas-container") || document.getElementById("canvas-wrapper") || document.body;
   const cw = container.clientWidth;
@@ -1222,7 +1220,7 @@ function updateFab(canvas) {
   if (rpDesignContent && rpDesignContent.style.display !== 'none') { fab.classList.remove('visible'); return; }
 
   try {
-    const boundsJson = fdCanvas.get_node_bounds(selectedId);
+    const boundsJson = fdCanvas.get_node_bounds_json(selectedId);
     if (!boundsJson) { fab.classList.remove('visible'); return; }
     const b = JSON.parse(boundsJson);
     if (!b.width) { fab.classList.remove('visible'); return; }
@@ -1893,7 +1891,7 @@ async function pasteFromClipboard() {
       // First time seeing this stem — scan existing text
       const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
       let match;
-      while ((match = re.exec(existingText)) !== null) {
+      for (const match of existingText.matchAll(re)) {
         maxN = Math.max(maxN, parseInt(match[1]));
       }
       if (new RegExp(`@${stem}\\b`).test(existingText)) maxN = Math.max(maxN, 1);
@@ -1911,7 +1909,7 @@ async function pasteFromClipboard() {
   // Horizontal offset
   let xOffset = pasteOffsetCount * 20;
   try {
-    const boundsJson = fdCanvas.get_node_bounds(rootId);
+    const boundsJson = fdCanvas.get_node_bounds_json(rootId);
     if (boundsJson) {
       const bounds = JSON.parse(boundsJson);
       if (bounds && bounds.width > 0) xOffset = (bounds.width + 20) * pasteOffsetCount;
@@ -3122,7 +3120,7 @@ function findAnonymousNodeIds(fdText) {
   const re = /(?:group|frame|rect|ellipse|path|text)\s+@(_(?:rect|ellipse|group|frame|path|text)_\d+)/g;
   const ids = [];
   let m;
-  while ((m = re.exec(fdText)) !== null) {
+  for (const m of fdText.matchAll(re)) {
     if (!ids.includes(m[1])) ids.push(m[1]);
   }
   return ids;
@@ -3277,7 +3275,7 @@ function findAllNodeIds(fdText) {
   const re = /(?:group|frame|rect|ellipse|path|text)\s+@(\w+)/g;
   const ids = [];
   let m;
-  while ((m = re.exec(fdText)) !== null) {
+  for (const m of fdText.matchAll(re)) {
     if (!ids.includes(m[1])) ids.push(m[1]);
   }
   return ids;
@@ -3295,7 +3293,7 @@ function nudgeSelected(arrowKey, step) {
   if (!selectedId) return;
 
   try {
-    const boundsJson = fdCanvas.get_node_bounds(selectedId);
+    const boundsJson = fdCanvas.get_node_bounds_json(selectedId);
     const b = JSON.parse(boundsJson);
     if (b.x === undefined) return;
 
@@ -3795,7 +3793,7 @@ async function initPlayground() {
         const selectedId = fdCanvas.get_selected_id();
         if (!selectedId) { qcp.classList.remove('visible'); return; }
         try {
-          const boundsJson = fdCanvas.get_node_bounds(selectedId);
+          const boundsJson = fdCanvas.get_node_bounds_json(selectedId);
           if (!boundsJson) { qcp.classList.remove('visible'); return; }
           const b = JSON.parse(boundsJson);
           if (!b.width) { qcp.classList.remove('visible'); return; }
@@ -4378,7 +4376,7 @@ async function initPlayground() {
           if (hitJson) {
             const hit = JSON.parse(hitJson);
             if (hit.id) {
-              const boundsJson = fdCanvas.get_node_bounds(hit.id);
+              const boundsJson = fdCanvas.get_node_bounds_json(hit.id);
               if (boundsJson) touchHalo.targetBounds = JSON.parse(boundsJson);
             }
           }

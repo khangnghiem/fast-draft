@@ -18,11 +18,11 @@ export function getResizeHandleCursor(fdCanvas, x, y, hitRadius = 8) {
 
   // Try parsing regular bounds
   let b;
-  try {
-    b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
-  } catch (_) {}
-
-  // Edge Anchor check
+  const b_json = fdCanvas.get_node_bounds_json(selectedId);
+  if (b_json && b_json !== "{}") {
+    b = JSON.parse(b_json);
+  }
+// Edge Anchor check
   if (!b || b.x === undefined) {
     let edge;
     try { edge = JSON.parse(fdCanvas.get_edge_endpoints(selectedId)); } catch (_) {}
@@ -111,7 +111,7 @@ export function nudgeSelected(fdCanvas, arrowKey, step) {
   if (!selectedId) return false;
 
   try {
-    const boundsJson = fdCanvas.get_node_bounds(selectedId);
+    const boundsJson = fdCanvas.get_node_bounds_json(selectedId);
     const b = JSON.parse(boundsJson);
     if (b.x === undefined) return false;
 

@@ -81,7 +81,7 @@ export function playDetachAnimation(fdCanvas, nodeId, canvas) {
   }
 
   try {
-    const boundsJson = fdCanvas.get_node_bounds(nodeId);
+    const boundsJson = fdCanvas.get_node_bounds_json(nodeId);
     if (!boundsJson) return;
     const b = JSON.parse(boundsJson);
     if (!b.width) return;
@@ -196,13 +196,11 @@ export function fitToContent(canvasEl, fdCanvas, onComplete) {
     const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
     const nodes = [];
     let m;
-    while ((m = idRegex.exec(text)) !== null) {
-      try {
-        const bj = fdCanvas.get_node_bounds(m[1]);
-        if (!bj) continue;
-        const b = JSON.parse(bj);
-        if (b.width > 0 && b.height > 0) nodes.push(b);
-      } catch (_) {}
+    for (const m of text.matchAll(idRegex)) {
+      const bj = fdCanvas.get_node_bounds_json(m[1]);
+      if (!bj || bj === "{}") continue;
+      const b = JSON.parse(bj);
+      if (b.width > 0 && b.height > 0) nodes.push(b);
     }
     if (nodes.length === 0) return;
 
@@ -242,9 +240,9 @@ export function getSceneBounds(fdCanvas) {
     let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
     let found = false;
     let m;
-    while ((m = idRegex.exec(text)) !== null) {
+    for (const m of text.matchAll(idRegex)) {
       try {
-        const bj = fdCanvas.get_node_bounds(m[1]);
+        const bj = fdCanvas.get_node_bounds_json(m[1]);
         if (!bj) continue;
         const b = JSON.parse(bj);
         if (b.width > 0 && b.height > 0) {

@@ -266,7 +266,7 @@ function playDetachAnimation(fdCanvas, nodeId, canvas) {
   }
 
   try {
-    const boundsJson = fdCanvas.get_node_bounds(nodeId);
+    const boundsJson = fdCanvas.get_node_bounds_json(nodeId);
     if (!boundsJson) return;
     const b = JSON.parse(boundsJson);
     if (!b.width) return;
@@ -381,13 +381,11 @@ function fitToContent(canvasEl, fdCanvas, onComplete) {
     const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
     const nodes = [];
     let m;
-    while ((m = idRegex.exec(text)) !== null) {
-      try {
-        const bj = fdCanvas.get_node_bounds(m[1]);
-        if (!bj) continue;
-        const b = JSON.parse(bj);
-        if (b.width > 0 && b.height > 0) nodes.push(b);
-      } catch (_) {}
+    for (const m of text.matchAll(idRegex)) {
+      const bj = fdCanvas.get_node_bounds_json(m[1]);
+      if (!bj || bj === "{}") continue;
+      const b = JSON.parse(bj);
+      if (b.width > 0 && b.height > 0) nodes.push(b);
     }
     if (nodes.length === 0) return;
 
@@ -427,9 +425,9 @@ function getSceneBounds(fdCanvas) {
     let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
     let found = false;
     let m;
-    while ((m = idRegex.exec(text)) !== null) {
+    for (const m of text.matchAll(idRegex)) {
       try {
-        const bj = fdCanvas.get_node_bounds(m[1]);
+        const bj = fdCanvas.get_node_bounds_json(m[1]);
         if (!bj) continue;
         const b = JSON.parse(bj);
         if (b.width > 0 && b.height > 0) {
@@ -540,7 +538,7 @@ function buildPasteIdMap(allIds, existingText) {
       maxN = 1;
       const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
       let match;
-      while ((match = re.exec(existingText)) !== null) {
+      for (const match of existingText.matchAll(re)) {
         maxN = Math.max(maxN, parseInt(match[1]));
       }
       if (new RegExp(`@${stem}\\b`).test(existingText)) {
@@ -580,7 +578,7 @@ function collectDeclaredIds(text) {
   const idPattern = /@(\w+)\s*\{/g;
   const ids = new Set();
   let m;
-  while ((m = idPattern.exec(text)) !== null) {
+  for (const m of text.matchAll(idPattern)) {
     ids.add(m[1]);
   }
   return ids;
@@ -606,11 +604,11 @@ function getResizeHandleCursor(fdCanvas, x, y, hitRadius = 8) {
 
   // Try parsing regular bounds
   let b;
-  try {
-    b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
-  } catch (_) {}
-
-  // Edge Anchor check
+  const b_json = fdCanvas.get_node_bounds_json(selectedId);
+  if (b_json && b_json !== "{}") {
+    b = JSON.parse(b_json);
+  }
+// Edge Anchor check
   if (!b || b.x === undefined) {
     let edge;
     try { edge = JSON.parse(fdCanvas.get_edge_endpoints(selectedId)); } catch (_) {}
@@ -699,7 +697,7 @@ function nudgeSelected(fdCanvas, arrowKey, step) {
   if (!selectedId) return false;
 
   try {
-    const boundsJson = fdCanvas.get_node_bounds(selectedId);
+    const boundsJson = fdCanvas.get_node_bounds_json(selectedId);
     const b = JSON.parse(boundsJson);
     if (b.x === undefined) return false;
 
@@ -965,7 +963,7 @@ function measureAllTextNodes(fdCanvas, canvasEl, renderFn) {
   const textIdRe = /text\s+@(\w+)\s+"/g;
   let match;
   let anyChanged = false;
-  while ((match = textIdRe.exec(text)) !== null) {
+  for (const match of text.matchAll(textIdRe)) {
     if (measureAndUpdateTextBounds(fdCanvas, canvasEl, match[1])) {
       anyChanged = true;
     }
@@ -1011,7 +1009,7 @@ function openInlineEditor(opts) {
   if (parentShapeId) {
     posId = parentShapeId;
   }
-  const boundsJson = fdCanvas.get_node_bounds(posId);
+  const boundsJson = fdCanvas.get_node_bounds_json(posId);
   const b = JSON.parse(boundsJson);
   const bw = b.w || 80;
   const bh = b.h || 24;
@@ -1296,46 +1294,39 @@ function setupInlineEditor(opts) {
     // Edge → edit/create label
     if (props.kind === "edge") {
       const edgeId = props.id;
-      const source = fdCanvas.get_text();
-      const edgeBlockRe = new RegExp(`edge\\s+@${edgeId}\\s*\\{([^}]*(?:\\{[^}]*\\}[^}]*)*)\\}`, 's');
-      const edgeMatch = source.match(edgeBlockRe);
-      if (edgeMatch) {
-        const textChildRe = /text\s+@(\w+)\s+"([^"]*)"/;
-        const textMatch = edgeMatch[1].match(textChildRe);
-        if (textMatch) {
-          fdCanvas.select_by_id(textMatch[1]);
+
+      // Use WASM API to check for existing text child (idempotent, no duplicates)
+      const existingTextId = fdCanvas.get_edge_text_child_id(edgeId);
+      if (existingTextId) {
+        // Edit existing label
+        fdCanvas.select_by_id(existingTextId);
+        const childPropsJson = fdCanvas.get_selected_node_props();
+        const childProps = JSON.parse(childPropsJson);
+        renderFn();
+        openInlineEditor({
+          nodeId: existingTextId, propKey: "content", currentValue: childProps.content || "",
+          fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
+          panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
+        });
+      } else {
+        // Create new label via WASM (sets Edge.text_child, adds to graph, re-resolves layout)
+        const textBefore = fdCanvas.get_text();
+        const newTextId = fdCanvas.create_edge_text_child(edgeId, "Label");
+        if (newTextId) {
+          const textAfter = fdCanvas.get_text();
+          fdCanvas.push_undo_snapshot(textBefore, textAfter);
           renderFn();
-          openInlineEditor({
-            nodeId: textMatch[1], propKey: "content", currentValue: textMatch[2],
+          syncFn();
+          // Suppress before selecting + rendering to prevent blue box flash
+          if (fdCanvas.set_suppressed_text_node) {
+            fdCanvas.set_suppressed_text_node(newTextId);
+          }
+          fdCanvas.select_by_id(newTextId);
+          setTimeout(() => openInlineEditor({
+            nodeId: newTextId, propKey: "content", currentValue: "Label",
             fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
             panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
-          });
-        } else {
-          const textId = "label_" + edgeId;
-          const esc = edgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const re = new RegExp(`(edge\\s+@${esc}\\s*\\{)`);
-          const m2 = source.match(re);
-          if (m2) {
-            const insertPos = source.indexOf(m2[0]) + m2[0].length;
-            const newSource = source.slice(0, insertPos)
-              + `\n  text @${textId} "Label" {}`
-              + source.slice(insertPos);
-            const textBefore = source;
-            fdCanvas.set_text(newSource);
-            fdCanvas.push_undo_snapshot(textBefore, newSource);
-            renderFn();
-            syncFn();
-            // Suppress before selecting + rendering to prevent blue box flash
-            if (fdCanvas.set_suppressed_text_node) {
-              fdCanvas.set_suppressed_text_node(textId);
-            }
-            fdCanvas.select_by_id(textId);
-            setTimeout(() => openInlineEditor({
-              nodeId: textId, propKey: "content", currentValue: "Label",
-              fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
-              panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
-            }), 50);
-          }
+          }), 50);
         }
       }
       e.preventDefault();
@@ -1476,7 +1467,6 @@ function bumpGeneration() {
 
 /** Grid overlay state */
 let gridEnabled = false;
-let xrayLabels = false; // X-ray mode: show all node name badges (backtick toggle)
 const GRID_BASE_SPACING = 20;
 
 // Reduce Motion — respect OS setting
@@ -1687,7 +1677,7 @@ function playDetachAnimation(nodeId) {
 
   // Create a temporary glow overlay on the canvas for the detached node
   try {
-    const boundsJson = fdCanvas.get_node_bounds(nodeId);
+    const boundsJson = fdCanvas.get_node_bounds_json(nodeId);
     if (!boundsJson) return;
     const b = JSON.parse(boundsJson);
     if (!b.width) return;
@@ -2297,7 +2287,7 @@ function setupPointerEvents() {
       try {
         const edgeId = fdCanvas.find_edge_for_text(draggedNodeId);
         if (edgeId) {
-          const edgeBounds = JSON.parse(fdCanvas.get_node_bounds(draggedNodeId));
+          const edgeBounds = JSON.parse(fdCanvas.get_node_bounds_json(draggedNodeId));
           const textCx = edgeBounds.x + edgeBounds.width / 2;
           const textCy = edgeBounds.y + edgeBounds.height / 2;
           // Compute edge midpoint from edge endpoints
@@ -2310,8 +2300,8 @@ function setupPointerEvents() {
             const toMatch = edgeMatch[0].match(/to:\s+@(\w+)/);
             if (fromMatch && toMatch) {
               try {
-                const fb = JSON.parse(fdCanvas.get_node_bounds(fromMatch[1]));
-                const tb = JSON.parse(fdCanvas.get_node_bounds(toMatch[1]));
+                const fb = JSON.parse(fdCanvas.get_node_bounds_json(fromMatch[1]));
+                const tb = JSON.parse(fdCanvas.get_node_bounds_json(toMatch[1]));
                 const mx = (fb.x + fb.width / 2 + tb.x + tb.width / 2) / 2;
                 const my = (fb.y + fb.height / 2 + tb.y + tb.height / 2) / 2;
                 const dist = Math.hypot(textCx - mx, textCy - my);
@@ -3327,7 +3317,7 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     const selId = fdCanvas?.get_selected_id();
     if (selId) {
-      const boundsJson = fdCanvas.get_node_bounds(selId);
+      const boundsJson = fdCanvas.get_node_bounds_json(selId);
       const b = JSON.parse(boundsJson);
       const cx = (b.x + b.width / 2 + panX) * currentZoom;
       const cy = (b.y + panY) * currentZoom;
@@ -3651,9 +3641,10 @@ function getResizeHandleCursor(x, y) {
   const selectedId = fdCanvas.get_selected_id();
   if (!selectedId) return "";
   let b;
-  try {
-    b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
-  } catch (_) { return ""; }
+  const b_json = fdCanvas.get_node_bounds_json(selectedId);
+  if (!b_json || b_json === "{}") return "";
+  b = JSON.parse(b_json);
+
   if (b.x === undefined) return "";
 
   // Check if selected node is text (horizontal-only resize)
@@ -3847,7 +3838,7 @@ function nudgeSelected(arrowKey, step) {
   if (!selectedId) return;
 
   try {
-    const boundsJson = fdCanvas.get_node_bounds(selectedId);
+    const boundsJson = fdCanvas.get_node_bounds_json(selectedId);
     const b = JSON.parse(boundsJson);
     if (b.x === undefined) return;
 
@@ -4056,7 +4047,7 @@ function updateFloatingBar() {
   // Get node bounds in scene space
   let bounds;
   try {
-    bounds = JSON.parse(fdCanvas.get_node_bounds(selectedId));
+    bounds = JSON.parse(fdCanvas.get_node_bounds_json(selectedId));
   } catch (_) {
     fab.classList.remove("visible");
     return;
@@ -7046,7 +7037,7 @@ function measureAllTextNodes() {
   const textIdRe = /text\s+@(\w+)\s+"/g;
   let match;
   let anyChanged = false;
-  while ((match = textIdRe.exec(text)) !== null) {
+  for (const match of text.matchAll(textIdRe)) {
     if (measureAndUpdateTextBounds(match[1])) {
       anyChanged = true;
     }
@@ -7067,7 +7058,7 @@ function openInlineEditor(nodeId, propKey, currentValue) {
   // This fixes both "double-click shape jump" and "editing vs non-editing mismatch".
   measureAndUpdateTextBounds(nodeId);
 
-  const boundsJson = fdCanvas.get_node_bounds(nodeId);
+  const boundsJson = fdCanvas.get_node_bounds_json(nodeId);
   const b = JSON.parse(boundsJson);
   // Use minimum size for zero-width nodes (e.g. new text nodes)
   const bw = b.width || 80;
@@ -7369,12 +7360,12 @@ function zoomToFit() {
   const nodeIdPattern = /@(\w+)/g;
   let match;
   const seenIds = new Set();
-  while ((match = nodeIdPattern.exec(text)) !== null) {
+  for (const match of text.matchAll(nodeIdPattern)) {
     const id = match[1];
     if (seenIds.has(id)) continue;
     seenIds.add(id);
     try {
-      const boundsJson = fdCanvas.get_node_bounds(id);
+      const boundsJson = fdCanvas.get_node_bounds_json(id);
       const b = JSON.parse(boundsJson);
       if (b.width && b.width > 0) {
         minX = Math.min(minX, b.x);
@@ -8292,14 +8283,14 @@ function setupFloatingToolbar() {
     let closest = null;
     let closestDist = 30; // 30px threshold
     let match;
-    while ((match = edgeRe.exec(source)) !== null) {
+    for (const match of source.matchAll(edgeRe)) {
       const edgeId = match[1];
       const fromId = match[2];
       const toId = match[3];
       let fromBounds, toBounds;
       try {
-        fromBounds = JSON.parse(fdCanvas.get_node_bounds(fromId));
-        toBounds = JSON.parse(fdCanvas.get_node_bounds(toId));
+        fromBounds = JSON.parse(fdCanvas.get_node_bounds_json(fromId));
+        toBounds = JSON.parse(fdCanvas.get_node_bounds_json(toId));
       } catch (_) { continue; }
       if (!fromBounds || !toBounds) continue;
       const fx = fromBounds.x + fromBounds.width / 2;
@@ -8371,7 +8362,10 @@ function setupFloatingToolbar() {
     }
     if (!nearestId) return null;
     let tb;
-    try { tb = JSON.parse(fdCanvas.get_node_bounds(nearestId)); } catch (_) { return null; }
+    const tb_json = fdCanvas.get_node_bounds_json(nearestId);
+    if (!tb_json || tb_json === "{}") return null;
+    tb = JSON.parse(tb_json);
+
     if (!tb || !tb.width) return null;
     const tRight = tb.x + tb.width;
     const tBottom = tb.y + tb.height;
@@ -8481,12 +8475,12 @@ function getSceneBoundsInner() {
   const nodeIdPattern = /@(\w+)/g;
   let match;
   const seenIds = new Set();
-  while ((match = nodeIdPattern.exec(text)) !== null) {
+  for (const match of text.matchAll(nodeIdPattern)) {
     const id = match[1];
     if (seenIds.has(id)) continue;
     seenIds.add(id);
     try {
-      const b = JSON.parse(fdCanvas.get_node_bounds(id));
+      const b = JSON.parse(fdCanvas.get_node_bounds_json(id));
       if (b.width && b.width > 0) {
         minX = Math.min(minX, b.x);
         minY = Math.min(minY, b.y);
@@ -8631,10 +8625,10 @@ let focusAnimId = null;
 function focusOnNode(nodeId) {
   if (!fdCanvas) return;
   let bounds;
-  try {
-    bounds = JSON.parse(fdCanvas.get_node_bounds(nodeId));
+  const bounds_json = fdCanvas.get_node_bounds_json(nodeId);
+  if (!bounds_json || bounds_json === "{}") return;
+  bounds = JSON.parse(bounds_json);
     if (!bounds || (bounds.width <= 0 && bounds.height <= 0)) return;
-  } catch (_) { return; }
 
   const container = document.getElementById("canvas-container");
   const cw = container.clientWidth;
@@ -8745,7 +8739,7 @@ function zoomToSelection() {
   if (!selectedId) return;
 
   try {
-    const b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
+    const b = JSON.parse(fdCanvas.get_node_bounds_json(selectedId));
     if (!b.width || b.width <= 0) return;
 
     const container = document.getElementById("canvas-container");
@@ -8982,7 +8976,7 @@ async function pasteFromClipboard() {
   const idPattern = /@(\w+)\s*\{/g;
   const allIds = new Set();
   let m;
-  while ((m = idPattern.exec(clipText)) !== null) {
+  for (const m of clipText.matchAll(idPattern)) {
     allIds.add(m[1]);
   }
   if (allIds.size === 0) return;
@@ -9002,7 +8996,7 @@ async function pasteFromClipboard() {
       maxN = 1;
       const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
       let match;
-      while ((match = re.exec(existingText)) !== null) {
+      for (const match of existingText.matchAll(re)) {
         maxN = Math.max(maxN, parseInt(match[1]));
       }
       if (new RegExp(`@${stem}\\b`).test(existingText)) {
@@ -9023,7 +9017,7 @@ async function pasteFromClipboard() {
   // Horizontal stagger
   let xOffset = pasteOffsetCount * 20;
   try {
-    const boundsJson = fdCanvas.get_node_bounds(rootId);
+    const boundsJson = fdCanvas.get_node_bounds_json(rootId);
     if (boundsJson) {
       const bounds = JSON.parse(boundsJson);
       if (bounds && bounds.width > 0) {
@@ -9063,7 +9057,7 @@ function selectAllNodes() {
   let match;
   const ids = [];
   const seen = new Set();
-  while ((match = nodeIdPattern.exec(text)) !== null) {
+  for (const match of text.matchAll(nodeIdPattern)) {
     if (!seen.has(match[1])) {
       ids.push(match[1]);
       seen.add(match[1]);
@@ -10328,33 +10322,36 @@ function render() {
     try {
       const ap = JSON.parse(arrowPreviewJson);
       ctx.save();
-      ctx.strokeStyle = "#6B7080";
-      ctx.lineWidth = 1.5;
-      // Solid line (not dashed)
-      ctx.beginPath();
-      ctx.moveTo(ap.x1, ap.y1);
-      ctx.lineTo(ap.x2, ap.y2);
-      ctx.stroke();
-      // Arrowhead
-      const angle = Math.atan2(ap.y2 - ap.y1, ap.x2 - ap.x1);
-      const headLen = 10;
-      ctx.beginPath();
-      ctx.moveTo(ap.x2, ap.y2);
-      ctx.lineTo(
-        ap.x2 - headLen * Math.cos(angle - Math.PI / 6),
-        ap.y2 - headLen * Math.sin(angle - Math.PI / 6)
-      );
-      ctx.moveTo(ap.x2, ap.y2);
-      ctx.lineTo(
-        ap.x2 - headLen * Math.cos(angle + Math.PI / 6),
-        ap.y2 - headLen * Math.sin(angle + Math.PI / 6)
-      );
-      ctx.stroke();
+
+      if (ap.x1 !== undefined && ap.y1 !== undefined) {
+        ctx.strokeStyle = "#6B7080";
+        ctx.lineWidth = 1.5;
+        // Solid line (not dashed)
+        ctx.beginPath();
+        ctx.moveTo(ap.x1, ap.y1);
+        ctx.lineTo(ap.x2, ap.y2);
+        ctx.stroke();
+        // Arrowhead
+        const angle = Math.atan2(ap.y2 - ap.y1, ap.x2 - ap.x1);
+        const headLen = 10;
+        ctx.beginPath();
+        ctx.moveTo(ap.x2, ap.y2);
+        ctx.lineTo(
+          ap.x2 - headLen * Math.cos(angle - Math.PI / 6),
+          ap.y2 - headLen * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.moveTo(ap.x2, ap.y2);
+        ctx.lineTo(
+          ap.x2 - headLen * Math.cos(angle + Math.PI / 6),
+          ap.y2 - headLen * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.stroke();
+      }
 
       // ── Fix #3: Highlight target node under cursor during arrow drag ──
       if (ap.target_id) {
         try {
-          const targetBoundsJson = fdCanvas.get_node_bounds(ap.target_id);
+          const targetBoundsJson = fdCanvas.get_node_bounds_json(ap.target_id);
           if (targetBoundsJson) {
             const tb = JSON.parse(targetBoundsJson);
             const pad = 4;
@@ -10391,7 +10388,7 @@ function render() {
 
     // Draw parent group glow
     try {
-      const parentBoundsJson = fdCanvas.get_node_bounds(parentId);
+      const parentBoundsJson = fdCanvas.get_node_bounds_json(parentId);
       if (parentBoundsJson) {
         const pb = JSON.parse(parentBoundsJson);
         const pad = 4;

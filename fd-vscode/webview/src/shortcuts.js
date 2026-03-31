@@ -166,7 +166,7 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     const selId = fdCanvas?.get_selected_id();
     if (selId) {
-      const boundsJson = fdCanvas.get_node_bounds(selId);
+      const boundsJson = fdCanvas.get_node_bounds_json(selId);
       const b = JSON.parse(boundsJson);
       const cx = (b.x + b.width / 2 + panX) * currentZoom;
       const cy = (b.y + panY) * currentZoom;
@@ -490,9 +490,10 @@ function getResizeHandleCursor(x, y) {
   const selectedId = fdCanvas.get_selected_id();
   if (!selectedId) return "";
   let b;
-  try {
-    b = JSON.parse(fdCanvas.get_node_bounds(selectedId));
-  } catch (_) { return ""; }
+  const b_json = fdCanvas.get_node_bounds_json(selectedId);
+  if (!b_json || b_json === "{}") return "";
+  b = JSON.parse(b_json);
+
   if (b.x === undefined) return "";
 
   // Check if selected node is text (horizontal-only resize)
@@ -686,7 +687,7 @@ function nudgeSelected(arrowKey, step) {
   if (!selectedId) return;
 
   try {
-    const boundsJson = fdCanvas.get_node_bounds(selectedId);
+    const boundsJson = fdCanvas.get_node_bounds_json(selectedId);
     const b = JSON.parse(boundsJson);
     if (b.x === undefined) return;
 

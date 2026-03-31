@@ -165,7 +165,7 @@ function render() {
       // ── Fix #3: Highlight target node under cursor during arrow drag ──
       if (ap.target_id) {
         try {
-          const targetBoundsJson = fdCanvas.get_node_bounds(ap.target_id);
+          const targetBoundsJson = fdCanvas.get_node_bounds_json(ap.target_id);
           if (targetBoundsJson) {
             const tb = JSON.parse(targetBoundsJson);
             const pad = 4;
@@ -202,7 +202,7 @@ function render() {
 
     // Draw parent group glow
     try {
-      const parentBoundsJson = fdCanvas.get_node_bounds(parentId);
+      const parentBoundsJson = fdCanvas.get_node_bounds_json(parentId);
       if (parentBoundsJson) {
         const pb = JSON.parse(parentBoundsJson);
         const pad = 4;

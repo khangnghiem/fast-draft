@@ -374,7 +374,7 @@ export function setupTouchGestures(canvas, api) {
             const selectedId = fdCanvasRef.get_selected_id();
             if (selectedId) {
               try {
-                const b = JSON.parse(fdCanvasRef.get_node_bounds(selectedId));
+                const b = JSON.parse(fdCanvasRef.get_node_bounds_json(selectedId));
                 if (b.width > 0 && b.height > 0) {
                   const cr = canvas.getBoundingClientRect();
                   const pad = 60;
