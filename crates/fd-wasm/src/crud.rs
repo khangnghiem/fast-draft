@@ -447,9 +447,7 @@ impl FdCanvas {
             }
         }
 
-        self.engine.mark_dirty();
-        self.engine.flush_to_text();
-        self.rebuild_spatial_index();
+        self.sync_mutation_cycle();
         true
     }
 
@@ -488,9 +486,7 @@ impl FdCanvas {
             node.constraints.push(Constraint::CenterIn(center_target));
         }
 
-        self.engine.mark_dirty();
-        self.engine.flush_to_text();
-        self.rebuild_spatial_index();
+        self.sync_mutation_cycle();
         true
     }
 
@@ -504,8 +500,7 @@ impl FdCanvas {
         };
         let changed = self.engine.graph.move_child_to_index(child_idx, index);
         if changed {
-            self.engine.mark_dirty();
-            self.engine.flush_to_text();
+            self.sync_mutation_cycle();
         }
         changed
     }
@@ -576,9 +571,7 @@ impl FdCanvas {
             let rx = (x * 100.0).round() / 100.0;
             let ry = (y * 100.0).round() / 100.0;
             node.constraints.push(Constraint::Position { x: rx, y: ry });
-            self.engine.mark_dirty();
-            self.engine.flush_to_text();
-            self.rebuild_spatial_index();
+            self.sync_mutation_cycle();
             true
         } else {
             false

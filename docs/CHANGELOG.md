@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.305 — Canvas "Center In" Bug Fix (R3.39)
+
+- **Layout Resolution Sync**: Fixed a visual desynchronization bug where the "Center in another node" context menu action successfully applied the `center_in:` constraint to the DSL but failed to visually move the node on the canvas. 
+- **WASM Lifecycle Harden**: Bundled the post-mutation flush lifecycle (`mark_dirty`, `resolve`, `flush_to_text`, `rebuild_spatial_index`) into a unified `sync_mutation_cycle()` method on `FdCanvas` to prevent future layout-staleness bugs across all coordinate CRUD operations.
+
+
 ### v0.11.304 — VS Code Canvas Preview Side (R6.18)
 
 - **Canvas Preview Column**: Modified `FdEditorProvider` in `fd-vscode/src/extension.ts` to open the FD Canvas preview in ViewColumn.Two (the right split) by default, instead of ViewColumn.One. The source code document is now preserved in ViewColumn.One, creating a standard Code (Left) | Visual (Right) side-by-side experience.

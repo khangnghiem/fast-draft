@@ -589,6 +589,15 @@ impl FdCanvas {
         true
     }
 
+    /// Bundles the standard post-mutation lifecycle to ensure layout is
+    /// resolved before spatial indices and UI receive the updated state.
+    pub(crate) fn sync_mutation_cycle(&mut self) {
+        self.engine.mark_dirty();
+        self.engine.resolve();
+        self.engine.flush_to_text();
+        self.rebuild_spatial_index();
+    }
+
     /// Immediately erase a single node from the scene graph.
     pub(crate) fn erase_node_immediately(&mut self, id: NodeId) {
         let Some(idx) = self.engine.graph.index_of(id) else {
