@@ -1124,7 +1124,7 @@ rect @box {
     assert!(dark_style.fill.is_some());
     // card should NOT be in extends (it has no parent)
     assert!(
-        graph.style_extends.get(&card_id).is_none(),
+        !graph.style_extends.contains_key(&card_id),
         "card should not have extends"
     );
 }
