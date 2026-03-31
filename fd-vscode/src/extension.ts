@@ -893,13 +893,13 @@ export function activate(context: vscode.ExtensionContext) {
           }
         }
 
-        // Canvas-first: canvas in column 1 (left), text editor in column 2 (right)
-        const canvasTargetColumn = vscode.ViewColumn.One;
+        // Code-first: text editor in column 1 (left), canvas in column 2 (right)
+        const canvasTargetColumn = vscode.ViewColumn.Two;
 
         let didOpen = false;
         if (canvasTab && canvasGroup) {
           if (canvasGroup.viewColumn !== canvasTargetColumn) {
-            // Canvas exists but not in column 1 — move it to column 1
+            // Canvas exists but not in column 2 — move it to column 2
             await vscode.commands.executeCommand(
               "vscode.openWith",
               editor.document.uri,
@@ -908,7 +908,7 @@ export function activate(context: vscode.ExtensionContext) {
             );
             didOpen = true;
           } else if (!canvasTab.isActive) {
-            // Canvas is in column 1 but hidden behind another tab — reveal it
+            // Canvas is in column 2 but hidden behind another tab — reveal it
             await vscode.commands.executeCommand(
               "vscode.openWith",
               editor.document.uri,
@@ -917,9 +917,9 @@ export function activate(context: vscode.ExtensionContext) {
             );
             didOpen = true;
           }
-          // else: canvas is already active in column 1 — nothing to do
+          // else: canvas is already active in column 2 — nothing to do
         } else {
-          // No canvas exists — open one in column 1 (left)
+          // No canvas exists — open one in column 2 (right)
           await vscode.commands.executeCommand(
             "vscode.openWith",
             editor.document.uri,
@@ -929,16 +929,16 @@ export function activate(context: vscode.ExtensionContext) {
           didOpen = true;
         }
 
-        // Move text editor to column 2 (right) if it's not already there
+        // Move text editor to column 1 (left) if it's not already there
         if (didOpen) {
           await new Promise((r) => setTimeout(r, 120));
           const textEditor = vscode.window.visibleTextEditors.find(
             (e) => e.document.uri.toString() === key
           );
-          if (textEditor && textEditor.viewColumn !== vscode.ViewColumn.Two) {
+          if (textEditor && textEditor.viewColumn !== vscode.ViewColumn.One) {
             await vscode.window.showTextDocument(
               textEditor.document,
-              vscode.ViewColumn.Two,
+              vscode.ViewColumn.One,
               false
             );
           } else if (textEditor) {
