@@ -1272,15 +1272,31 @@ function highlightSelectedBlocksInEditor(ids) {
   const ranges = findBlockRangesInText(text, ids);
   if (ranges.length === 0) return;
 
-  // Apply flash highlight decorations (CSS animation auto-fades)
   const { RangeSet, Decoration, StateField, EditorView: EV } = window.cmBundle || {};
   if (!Decoration) return; // CodeMirror not loaded
 
-  const marks = ranges.map(r => {
+  const marks = [];
+  const linesCount = editorView.state.doc.lines;
+  
+  // Apply line dimming to all lines outside the selected blocks
+  for (let i = 1; i <= linesCount; i++) {
+    const isSelected = ranges.some(r => (i - 1) >= r.startLine && (i - 1) <= r.endLine);
+    if (!isSelected) {
+      const linePos = editorView.state.doc.line(i).from;
+      marks.push(Decoration.line({ class: 'ai-diff-dimmed' }).range(linePos));
+    }
+  }
+
+  // Apply subtle highlight to the selected block itself
+  ranges.forEach(r => {
     const from = Math.max(0, Math.min(r.from, text.length));
     const to = Math.max(from, Math.min(r.to, text.length));
-    return Decoration.mark({ class: 'ai-diff-selected' }).range(from, to);
+    marks.push(Decoration.mark({ class: 'ai-diff-selected' }).range(from, to));
   });
+
+  // CodeMirror requires marks to be sorted by position
+  marks.sort((a, b) => a.from - b.from);
+
   if (marks.length === 0) return;
 
   const decoSet = RangeSet.of(marks, true);
@@ -1307,13 +1323,6 @@ function highlightSelectedBlocksInEditor(ids) {
   if (ranges.length > 0) {
     editorView.dispatch({ effects: EV.scrollIntoView(ranges[0].from, { y: 'center' }) });
   }
-
-  // Auto-clear stale decoration state after CSS animation finishes (1.2s + buffer)
-  clearTimeout(highlightClearTimer);
-  highlightClearTimer = setTimeout(() => {
-    clearCodeHighlights();
-    lastHighlightedIds = [];
-  }, 1400);
 }
 
 function clearCodeHighlights() {
@@ -3559,6 +3568,53 @@ async function initPlayground() {
             ...historyKeymap,
           ]),
           EditorView.updateListener.of((update) => {
+            // ─── Code -> Canvas Implicit Cursor Sync ───
+            if (update.selectionSet && update.userEvent === 'select.pointer') {
+              const pos = update.state.selection.main.head;
+              const lineInfo = update.state.doc.lineAt(pos);
+              
+              clearTimeout(window._cursorSyncTimer);
+              window._cursorSyncTimer = setTimeout(() => {
+                if (!fdCanvas) return;
+                
+                // Scan backward up to 30 lines to find block header
+                const maxLines = Math.min(30, lineInfo.number);
+                let foundBlockHeader = null;
+                let foundId = null;
+                
+                for (let i = 0; i < maxLines; i++) {
+                  const checkLine = update.state.doc.line(lineInfo.number - i).text;
+                  const match = checkLine.match(/@([a-zA-Z_]\w*)\s*\{/);
+                  if (match) {
+                    foundBlockHeader = lineInfo.number - i;
+                    foundId = match[1];
+                    break;
+                  }
+                }
+                
+                if (foundId && foundBlockHeader) {
+                  // Verify we are still inside the block's braces
+                  let braceDepth = 1;
+                  for (let i = foundBlockHeader; i < lineInfo.number; i++) {
+                    const text = update.state.doc.line(i + 1).text;
+                    braceDepth += (text.match(/\{/g) || []).length;
+                    braceDepth -= (text.match(/\}/g) || []).length;
+                    if (braceDepth <= 0) break;
+                  }
+                  
+                  if (braceDepth > 0) {
+                    const currentSelected = fdCanvas.get_selected_id();
+                    if (currentSelected !== foundId) {
+                      fdCanvas.select_by_id(foundId);
+                      renderDirty = true; uiDirty = true; sceneDirty = true;
+                      renderCanvas();
+                      updatePropertiesPanel();
+                    }
+                  }
+                }
+              }, 100);
+            }
+
             if (!update.docChanged || suppressSync) return;
             clearTimeout(editorDebounceTimer);
             editorDebounceTimer = setTimeout(() => {
