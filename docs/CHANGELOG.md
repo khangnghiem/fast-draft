@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.313 — Cmd/Ctrl Click Multi-Selection Fix
+
+- **Canvas Multi-Selection Fix**: Fixed a bug where holding Cmd or Ctrl while clicking a node on the canvas failed to add it to the existing selection. The `FdCanvas::handle_pointer_down` lifecycle in `fd-wasm` now correctly appends to the `visual_highlight` vector instead of outright replacing it when modifier keys (`shift`, `meta`, `ctrl`) are active, matching standard design tool behavior.
+- **Deselection Clean-up**: Added a `retain` filter in `handle_pointer_up` to prune unselected items from `visual_highlight` when the pointer interaction concludes, maintaining exact parity between mutated state and visual indicators.
+
 ### v0.11.312 — Context Menu Enhancements (R3.78)
 
 - **Context Menu Spec**: Created `docs/specs/context-menu.md` detailing the unified menu matrix (nodes, edges, empty space). Replaced verbose interaction descriptions in `REQUIREMENTS.md` with a direct link to the specification.
