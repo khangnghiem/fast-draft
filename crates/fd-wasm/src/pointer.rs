@@ -69,10 +69,10 @@ impl FdCanvas {
         };
 
         if shift || meta || ctrl {
-            if let Some(vh) = new_highlight {
-                if !self.select_tool.visual_highlight.contains(&vh) {
-                    self.select_tool.visual_highlight.push(vh);
-                }
+            if let Some(vh) = new_highlight
+                && !self.select_tool.visual_highlight.contains(&vh)
+            {
+                self.select_tool.visual_highlight.push(vh);
             }
         } else if let Some(hit_id) = hit {
             if !self.select_tool.selected.contains(&hit_id) {
