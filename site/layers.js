@@ -729,14 +729,12 @@ export function initLayersPanel(api) {
     let html = '<div class="layers-body">';
     for (const node of tree) html += renderLayerNode(node, selectedIds);
     html += '</div>';
-
-    html += '<div class="layers-header" id="layers-header-toggle">';
-    html += `<span class="layers-count" data-total="${total}">${countText}</span>`;
-    html += '<div class="layers-action-bar">';
-    html += '<button class="layer-action-btn" id="ai-touch-btn" title="AI Touch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5 4 4"/><path d="M13 7 8.7 2.7a2.41 2.41 0 0 0-3.4 0L2.7 5.3a2.41 2.41 0 0 0 0 3.4L7 13"/><path d="m8 6 2-2"/><path d="m2 22 5.5-1.5L21.17 6.83a2.82 2.82 0 0 0-4-4L3.5 16.5Z"/><path d="m18 16 2-2"/><path d="m17 11 4.3 4.3c.94.94.94 2.46 0 3.4l-2.6 2.6c-.94.94-2.46.94-3.4 0L11 17"/></svg> AI Touch</button>';
-    html += '</div></div>';
   
     panel.innerHTML = html;
+
+    // Update the static footer if it exists
+    const countEl = document.getElementById('layers-count-text');
+    if (countEl) countEl.textContent = countText;
   
     // Wire click-to-select with ⌘+click multi and ⇧+click range
     panel.querySelectorAll('.layer-item').forEach(item => {
@@ -894,14 +892,14 @@ export function initLayersPanel(api) {
     });
   
     // ── Layers Action Bar (AI Touch) ──
-    const aiTouchBtn = panel.querySelector('#ai-touch-btn');
+    const aiTouchBtn = document.getElementById('ai-touch-btn');
     if (aiTouchBtn) {
-      aiTouchBtn.addEventListener('click', (e) => {
+      aiTouchBtn.onclick = (e) => {
         e.stopPropagation();
         const renamifyBtn = document.getElementById('renamify-btn');
         if (renamifyBtn) renamifyBtn.click();
         else api.showToast('AI Touch invoked');
-      });
+      };
     }
 
 
