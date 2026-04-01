@@ -19,6 +19,7 @@
 
 ### v0.11.312 — Context Menu Enhancements (R3.78)
 
+- **Context Menu Spec**: Created `docs/specs/context-menu.md` detailing the unified menu matrix (nodes, edges, empty space). Replaced verbose interaction descriptions in `REQUIREMENTS.md` with a direct link to the specification.
 - **Scroll Persistence**: Fixed the bug where scrolling the canvas caused the context menu to disappear. The menu stays open during view adjustments.
 - **Empty Space Document Macros**: Right-clicking empty space in the Layers panel now reveals document-level operations (Format Document, Dedup Node IDs, Select All, Add Node).
 - **Smart Right-Click Pan**: Right-clicking on the canvas uses a distance+time gesture threshold. A short click opens the context menu (Node/Edge/Empty), but holding and dragging >5px instantly transitions to the Hand tool (pan mode).

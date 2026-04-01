@@ -100,7 +100,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.70** _(done)_: Hand tool modifier keys — Alt (Option) on Hand = temp Select + clone (duplicate on click/drag); Cmd (⌘) on Hand = temp Select for move/select/reparent; creates V↔H symmetry (Select+Cmd=pan, Hand+Cmd=select); tool-aware modifier cursor previews (Hand+Cmd shows pointer cursor, not grab); restores Hand tool on pointer-up
 - **R3.71** _(done)_: Arrow Shift+drag angle snap — holding Shift while drawing an arrow snaps the endpoint to the nearest 45° increment (0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°); complete Shift modifier documentation in SHORTCUTS.md with per-tool constraint table; Frame tool inherits Shift+square from RectTool
 - **R3.72** _(done)_: Center-in-parent reparent — opt-in mode for reparent operations via Alt+drop in Layers panel or "⊙ Center in @target" context menu item; strips positional constraints and adds `CenterIn(target)` constraint; default behavior (preserve visual position) unchanged; `reparent_into_centered()` WASM API
-- **R3.78** _(done)_: Context Menu Interactions — true unified context menu that stays open on canvas scroll; smart right-click gesture on canvas: short click opens context menu (node, edge, or empty space), drag > 5px automatically transitions to pan (Hand tool); edge context menus (cut/copy/delete/reverse/label); empty-space context menus in Layers panel for document-level macros (Format, Dedup, Select All).
+- **R3.78** _(done)_: Context Menu Interactions — unified, keyboard-navigable context menus across canvas and layers panel for nodes, edges, and document-level actions; smart right-click gesture with drag-to-pan fallback → [spec](specs/context-menu.md)
 
 #### R3c: Navigation & View
 
