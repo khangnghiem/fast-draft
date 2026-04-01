@@ -567,3 +567,12 @@ Never use `localStorage.getItem(...)` as the source of truth for current visual 
 **Root cause**: The `/yolo local` pipeline used `wasm-pack build ... --out-dir fd-vscode/webview/wasm`. It entirely skipped `site/wasm/`. The frontend `http://localhost:8080` served a stale layout engine with the old `(x + dx * 100)` shrinkage math.
 **Fix**: Updated `.agents/workflows/yolo.md` and `build.md` to append `&& cp -a fd-vscode/webview/wasm/. site/wasm/` after building.
 **Lesson**: **When your codebase has multiple client targets (web site vs VSCode extension), ensure your `yolo` and `build` scripts synchronize artifacts to ALL consumption paths.** Failing to ensure tests are running against current binaries causes agents to spend hours hallucinating logic flaws in perfectly correct mathematical systems.
+
+---
+
+## Editor: Math Precedence Flaws Destroy Coordinate Integrity 
+**Date**: 2026-04-02
+**Context**: Fixing the drawing offset bug where all inserted shapes dropped to the top-left root origin `(0,0)` instead of the cursor's coordinate location during pointer manipulations.
+**Root cause**: A subtle mathematical ordering flaw in `SyncEngine` (`crates/fd-editor/src/sync.rs`) during the translation evaluation. The precision clamping logic was written as `(*x + dx * 100.0).round() / 100.0`. Due to the standard Order of Operations (PEMDAS), `dx * 100.0` was executed first, leaving `*x` entirely unscaled prior to the `round() / 100.0`. This effectively performed a continuous division of the original coordinate by 100 rather than properly scaling the combined translation, driving all shapes logarithmically toward 0.
+**Fix**: Added strict grouping parentheses to protect the addition terms before the scaling multiplication: `((*x + dx) * 100.0).round() / 100.0`.
+**Lesson**: **Never trust implicit operator precedence when dealing with floating-point coordinate scaling.** Always wrap aggregate spatial terms in explicit parentheses `((A + B) * C)` before applying precision transformations. In canvas rendering, math precedence bugs don't throw compiler errors; they manifest as logical defects (wild geometric translations) that easily survive CI unit tests.

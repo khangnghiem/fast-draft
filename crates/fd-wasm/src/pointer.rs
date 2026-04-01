@@ -62,12 +62,29 @@ impl FdCanvas {
                 .effective_target(id, &self.select_tool.selected)
         });
 
-        // Visual highlight: show the clicked child, not the group
-        self.select_tool.visual_highlight = match (raw_hit, hit) {
-            (Some(raw), Some(eff)) if raw != eff => vec![raw],
-            (_, Some(eff)) => vec![eff],
-            _ => vec![],
+        let new_highlight = match (raw_hit, hit) {
+            (Some(raw), Some(eff)) if raw != eff => Some(raw),
+            (_, Some(eff)) => Some(eff),
+            _ => None,
         };
+
+        if shift || meta || ctrl {
+            if let Some(vh) = new_highlight {
+                if !self.select_tool.visual_highlight.contains(&vh) {
+                    self.select_tool.visual_highlight.push(vh);
+                }
+            }
+        } else if let Some(hit_id) = hit {
+            if !self.select_tool.selected.contains(&hit_id) {
+                // Click on unselected node: replace highlighting
+                self.select_tool.visual_highlight = new_highlight.into_iter().collect();
+            } else if self.select_tool.selected.len() == 1 {
+                // Click on single already-selected node (deep click)
+                self.select_tool.visual_highlight = new_highlight.into_iter().collect();
+            }
+        } else {
+            self.select_tool.visual_highlight.clear();
+        }
 
         let prev_pressed = self.pressed_id;
         self.pressed_id = hit;
@@ -516,6 +533,17 @@ impl FdCanvas {
             || hovered_changed
             || drill_changed
             || tool_switched;
+
+        // Cleanup deferred deselects from visual_highlight
+        self.select_tool.visual_highlight.retain(|vh| {
+            self.select_tool.selected.contains(vh)
+                || self.select_tool.selected.contains(
+                    &self
+                        .engine
+                        .graph
+                        .effective_target(*vh, &self.select_tool.selected),
+                )
+        });
 
         // Auto-switch back to Select after drawing gesture completes
         if tool_switched {
