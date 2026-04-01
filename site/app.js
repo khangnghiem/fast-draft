@@ -1408,6 +1408,116 @@ function showAiTouchDiff(originalText, refinedOutput, selectedIds) {
   return true;
 }
 
+/** ─── Agent Chat Diff Integration ─── */
+let agentDiffState = null;
+
+window.showAgentDiff = function(originalText, newText, changedIds) {
+  if (!editorView || !fdCanvas) return;
+  
+  // Push undo snapshot BEFORE we apply
+  fdCanvas.push_undo_snapshot(originalText, originalText);
+  
+  // Apply changes via CodeMirror to sync UI
+  editorView.dispatch({ changes: { from: 0, to: originalText.length, insert: newText } });
+  
+  // Highlighting: Find block ranges in the NEW text to highlight
+  const text = editorView.state.doc.toString();
+  const lines = text.split('\n');
+  const marks = [];
+
+  for (const id of changedIds) {
+    const range = findBlockWithRange(lines, id);
+    if (!range) continue;
+    let startPos = 0;
+    for (let i = 0; i < range.startLine; i++) startPos += lines[i].length + 1;
+    let endPos = startPos;
+    for (let i = range.startLine; i <= range.endLine; i++) endPos += lines[i].length + 1;
+    endPos = Math.min(endPos - 1, text.length);
+    marks.push({ from: Math.max(0, startPos), to: Math.max(startPos, endPos) });
+  }
+
+  if (marks.length === 0) {
+    fdCanvas.set_text(newText);
+    renderCanvas();
+    refreshLayersPanel();
+    updatePropertiesPanel();
+    return;
+  }
+  
+  agentDiffState = { originalText, marks };
+  
+  // Register field
+  initCodeMirrorEffects();
+  const { Decoration, RangeSet, StateField, EditorView: EV, StateEffect } = window.cmBundle || {};
+  if (!editorView._fdDiffField) {
+    const field = StateField.define({
+      create() { return Decoration.none; },
+      update(v, tr) {
+        for (const e of tr.effects) { if (e.is(setDiffEffect)) return e.value; }
+        return v.map(tr.changes);
+      },
+      provide: f => EV.decorations.from(f),
+    });
+    editorView._fdDiffField = field;
+    editorView.dispatch({ effects: StateEffect.appendConfig.of([field]) });
+  }
+
+  const markDecos = marks.map(m => Decoration.mark({ class: 'ai-diff-changed' }).range(m.from, m.to));
+  if (markDecos.length > 0) {
+    editorView.dispatch({ effects: [setDiffEffect.of(RangeSet.of(markDecos, true))] });
+    editorView.dispatch({ effects: EV.scrollIntoView(markDecos[0].from, { y: 'center' }) });
+  }
+  
+  // Render canvas visually to preview state
+  fdCanvas.set_text(newText);
+  renderCanvas();
+  refreshLayersPanel();
+  updatePropertiesPanel();
+
+  // Show toolbar
+  let toolbar = document.getElementById('ai-diff-toolbar');
+  if (!toolbar) {
+    toolbar = document.createElement('div');
+    toolbar.id = 'ai-diff-toolbar';
+    toolbar.className = 'ai-diff-toolbar';
+    document.body.appendChild(toolbar);
+  }
+  toolbar.innerHTML = `
+    <span class="ai-diff-label">✦ ${changedIds.length} block${changedIds.length > 1 ? 's' : ''} drafted</span>
+    <button class="ai-diff-accept" id="ai-diff-accept-btn">✓ Accept</button>
+    <button class="ai-diff-reject" id="ai-diff-reject-btn">✗ Reject</button>
+  `;
+  toolbar.classList.add('visible');
+
+  document.getElementById('ai-diff-accept-btn').onclick = () => {
+    if (editorView && editorView._fdDiffField) {
+      editorView.dispatch({ effects: [setDiffEffect.of(Decoration.none)] });
+    }
+    toolbar.classList.remove('visible');
+    agentDiffState = null;
+    showToast('✓ AI changes accepted');
+  };
+  
+  document.getElementById('ai-diff-reject-btn').onclick = () => {
+    if (agentDiffState && editorView) {
+      const { originalText } = agentDiffState;
+      editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: originalText } });
+      if (fdCanvas) {
+        fdCanvas.set_text(originalText);
+        renderCanvas();
+        refreshLayersPanel();
+        updatePropertiesPanel();
+      }
+    }
+    if (editorView && editorView._fdDiffField) {
+      editorView.dispatch({ effects: [setDiffEffect.of(Decoration.none)] });
+    }
+    toolbar.classList.remove('visible');
+    agentDiffState = null;
+    showToast('✗ AI changes reverted');
+  };
+}
+
 /** Render red/green diff decorations in CodeMirror. */
 function renderDiffDecorations(changes) {
   if (!editorView) return;
@@ -4318,22 +4428,18 @@ async function initPlayground() {
         }
       }
 
-      // ⌘+drag on drawing tools → pan (consistent with Select tool behavior)
-      // Hand tool has its own ⌘ handler above (temp Select).
-      // Select tool handles ⌘ in WASM (pan via marquee bypass).
-      // All other tools: ⌘ = pan, matching industry standard (Figma/Sketch).
+      // All other tools: ⌘ = temp select
       {
         const toolName = fdCanvas.get_tool_name();
-        const isDrawTool = toolName !== 'hand' && toolName !== 'select'
-          && toolName !== 'lasso' && toolName !== 'eraser';
+        const isOtherTool = toolName !== 'hand' && toolName !== 'select';
         const isCmdHeld = e.metaKey || (e.ctrlKey && !e.metaKey);
-        if (isDrawTool && isCmdHeld && !e.altKey) {
-          panDragging = true;
-          panStartX = e.clientX - panX;
-          panStartY = e.clientY - panY;
-          canvas.style.cursor = 'grabbing';
-          activePointerId = e.pointerId;
-          return;
+        if (isOtherTool && isCmdHeld && !e.altKey) {
+          handTempSelectActive = true;
+          handTempSelectOriginalTool = toolName;
+          handAltCloneActive = false;
+          fdCanvas.set_tool('select');
+          canvas.style.cursor = 'default';
+          // Fall through to normal pointer handling below
         }
       }
 
@@ -5067,11 +5173,7 @@ async function initPlayground() {
       // Alt → copy cursor on all tools
       if (e.key === 'Meta') {
         canvas.classList.remove('modifier-cmd', 'modifier-alt', 'modifier-cmd-select');
-        if (fdCanvas && fdCanvas.get_tool_name() === 'hand') {
-          canvas.classList.add('modifier-cmd-select'); // default cursor for select preview
-        } else {
-          canvas.classList.add('modifier-cmd'); // grab cursor for pan preview
-        }
+        canvas.classList.add('modifier-cmd-select'); // default cursor for select preview
       }
       if (e.key === 'Alt') {
         canvas.classList.remove('modifier-cmd', 'modifier-alt', 'modifier-cmd-select');
@@ -5285,6 +5387,7 @@ async function initPlayground() {
       }
       // Clear modifier cursors
       if (e.key === 'Meta') canvas.classList.remove('modifier-cmd', 'modifier-cmd-select');
+      if (e.key === 'Alt') canvas.classList.remove('modifier-alt');
       // Release Shift key tracker
       if (e.key === 'Shift') {
         modShiftHeld = false;
