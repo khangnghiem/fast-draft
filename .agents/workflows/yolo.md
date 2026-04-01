@@ -25,7 +25,7 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 5. **UI Bug Verify**: Measure interaction fixes with `execute_browser_javascript` before committing.
 6. **Tauri**: `cd fd-desktop/src-tauri && cargo check --quiet && cargo clippy --quiet -- -D warnings && cargo fmt -- --check`
 7. **TS tests**: `cd fd-vscode && pnpm test`
-8. **E2E Smoke (Quick Snapshot)**: Build WASM (`wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm --quiet`). Use `browser_subagent` to simply load the local site, verify it renders, and exit immediately. DO NOT run full `/e2e` interaction testing here to save token quota (short videos act like screenshots).
+8. **E2E Smoke (Quick Snapshot)**: Build WASM (`wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm --quiet && cp -a fd-vscode/webview/wasm/. site/wasm/`). Use `browser_subagent` to simply load the local site, verify it renders, and exit immediately. DO NOT run full `/e2e` interaction testing here to save token quota (short videos act like screenshots).
 9. **Report** and STOP for `/yolo local`.
 
 ## `/yolo deploy`

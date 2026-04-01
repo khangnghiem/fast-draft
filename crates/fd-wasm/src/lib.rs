@@ -94,6 +94,9 @@ impl FdCanvas {
     pub fn new(width: f64, height: f64) -> Self {
         console_error_panic_hook_setup();
 
+        // Seed the core ID generator to prevent multi-session ID collisions
+        fd_core::id::NodeId::seed_prefix_counter(js_sys::Date::now() as u64);
+
         let viewport = Viewport {
             width: width as f32,
             height: height as f32,
@@ -139,14 +142,14 @@ impl FdCanvas {
     /// Returns a JSON string: `{"ok":true,"layout_changed":bool}`
     pub fn set_text(&mut self, text: &str) -> String {
         if text == self.engine.current_text() {
-            return r#"{"ok":true,"layout_changed":false}"#.to_string();
+            return r#"{"ok":true,"layout_changed":false,"duplicate_ids":[]}"#.to_string();
         }
         self.suppress_sync = true;
         let result = self.engine.set_text(text);
         self.engine.resolve();
         self.suppress_sync = false;
         if result.is_err() {
-            return r#"{"ok":false,"layout_changed":false}"#.to_string();
+            return r#"{"ok":false,"layout_changed":false,"duplicate_ids":[]}"#.to_string();
         }
         let new_hash = self.compute_bounds_hash();
         let layout_changed = new_hash != self.bounds_hash;
@@ -154,8 +157,26 @@ impl FdCanvas {
         if layout_changed {
             self.rebuild_spatial_index();
         }
+        
+        // Scan for duplicate IDs to warn the user
+        let mut seen = std::collections::HashSet::new();
+        let mut duplicates = Vec::new();
+        for w in self.engine.graph.graph.node_weights() {
+            if !seen.insert(w.id) {
+                duplicates.push(w.id.as_str());
+            }
+        }
+        let duplicates_json = if duplicates.is_empty() {
+            "[]".to_string()
+        } else {
+            duplicates.sort();
+            duplicates.dedup();
+            let arr = duplicates.iter().map(|s| format!("\"{}\"", s)).collect::<Vec<_>>().join(",");
+            format!("[{}]", arr)
+        };
+
         let lc = if layout_changed { "true" } else { "false" };
-        format!(r#"{{"ok":true,"layout_changed":{lc}}}"#)
+        format!(r#"{{"ok":true,"layout_changed":{},"duplicate_ids":{}}}"#, lc, duplicates_json)
     }
 
     /// Import a Mermaid diagram, converting it to FD format.

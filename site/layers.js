@@ -670,6 +670,140 @@ export function initLayersPanel(api) {
       });
     });
   }
+
+  /** Wire right-click on the empty area of the Layers body — document-level operations. */
+  function wireLayerEmptySpaceContextMenu(panel) {
+    const layersBody = panel.querySelector('.layers-body');
+    if (!layersBody) return;
+
+    layersBody.addEventListener('contextmenu', (e) => {
+      // Only fire when clicking empty space (not on a layer item)
+      if (e.target.closest('.layer-item')) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const canvas = api.getFdCanvas();
+
+      const items = [
+        { type: 'action', icon: '📋', label: 'Paste', shortcut: '⌘V', action: 'paste' },
+        { type: 'separator' },
+        { type: 'action', icon: '▢', label: 'Add Rectangle', shortcut: 'R', action: 'add-rect' },
+        { type: 'action', icon: '○', label: 'Add Ellipse', shortcut: 'O', action: 'add-ellipse' },
+        { type: 'action', icon: 'T', label: 'Add Text', shortcut: 'T', action: 'add-text' },
+        { type: 'action', icon: '→', label: 'Add Edge', shortcut: 'A', action: 'add-edge' },
+        { type: 'separator' },
+        { type: 'action', icon: '✦', label: 'Format Document', shortcut: '⌥⇧F', action: 'format' },
+        { type: 'action', icon: '⚡', label: 'Dedup Node IDs', action: 'dedup' },
+        { type: 'separator' },
+        { type: 'action', icon: '⊡', label: 'Fit to Content', action: 'fit' },
+        { type: 'action', icon: '◻', label: 'Select All', shortcut: '⌘A', action: 'select-all' },
+      ];
+
+      const doEmptySpaceAction = (action) => {
+        if (!canvas) return;
+        const textBefore = canvas.get_text();
+        let changed = false;
+
+        if (action === 'paste') {
+          api.pasteFromClipboard().then(() => {
+            api.renderCanvas();
+            api.syncCanvasToEditor();
+            api.updatePropertiesPanel();
+            refreshLayersPanel();
+          });
+          return;
+        } else if (action === 'add-rect') {
+          canvas.set_tool('rect');
+          api.updateToolbar('rect');
+          const cvEl = document.getElementById('fd-canvas');
+          if (cvEl) cvEl.style.cursor = 'crosshair';
+          return;
+        } else if (action === 'add-ellipse') {
+          canvas.set_tool('ellipse');
+          api.updateToolbar('ellipse');
+          const cvEl = document.getElementById('fd-canvas');
+          if (cvEl) cvEl.style.cursor = 'crosshair';
+          return;
+        } else if (action === 'add-text') {
+          canvas.set_tool('text');
+          api.updateToolbar('text');
+          const cvEl = document.getElementById('fd-canvas');
+          if (cvEl) cvEl.style.cursor = 'crosshair';
+          return;
+        } else if (action === 'add-edge') {
+          canvas.set_tool('arrow');
+          api.updateToolbar('arrow');
+          return;
+        } else if (action === 'format') {
+          const result = canvas.format_with_options?.(true, true, false);
+          if (result) {
+            try {
+              const parsed = JSON.parse(result);
+              if (parsed.changed) {
+                const textAfter = canvas.get_text();
+                canvas.push_undo_snapshot(textBefore, textAfter);
+                changed = true;
+                const delta = parsed.lines_before - parsed.lines_after;
+                const deltaStr = delta > 0 ? `, ${delta} lines trimmed` : '';
+                api.showToast(`✦ Formatted: ${parsed.summary}${deltaStr}`);
+              } else {
+                api.showToast('✓ Already formatted');
+              }
+            } catch (_) { api.showToast('Format failed'); }
+          }
+        } else if (action === 'dedup') {
+          if (canvas.dedup_node_ids) {
+            canvas.dedup_node_ids();
+            changed = true;
+            api.showToast('✓ Deduped node IDs');
+          } else {
+            // Fallback: use format pipeline which includes dedup
+            canvas.format_with_options?.(false, false, true);
+            changed = true;
+          }
+        } else if (action === 'fit') {
+          const sb = canvas.get_scene_bounds?.();
+          if (sb) {
+            try {
+              const b = JSON.parse(sb);
+              if (b.w > 0 && b.h > 0) {
+                const cvEl = document.getElementById('fd-canvas');
+                if (cvEl) {
+                  const cr = cvEl.getBoundingClientRect();
+                  api.fitToContent?.(cr, b);
+                }
+              }
+            } catch (_) {}
+          }
+          return;
+        } else if (action === 'select-all') {
+          if (canvas.select_all) {
+            canvas.select_all();
+            api.markRenderDirty?.();
+            api.updatePropertiesPanel?.();
+            refreshLayersPanel();
+          }
+          return;
+        }
+
+        if (changed) {
+          const textAfter = canvas.get_text();
+          if (textBefore !== textAfter) canvas.push_undo_snapshot(textBefore, textAfter);
+          api.renderCanvas();
+          api.syncCanvasToEditor();
+          api.updatePropertiesPanel();
+          refreshLayersPanel();
+        }
+      };
+
+      api.ctxMenu.open({
+        items,
+        x: e.clientX,
+        y: e.clientY,
+        onAction: doEmptySpaceAction,
+      });
+    });
+  }
   
   /** Refresh the layers panel. */
   function refreshLayersPanel() {
@@ -811,6 +945,9 @@ export function initLayersPanel(api) {
   
     // ── Layer Context Menu (#3 "Move Into") ──
     wireLayerContextMenu(panel);
+
+    // ── Layer Empty-Space Context Menu ──
+    wireLayerEmptySpaceContextMenu(panel);
 
     // ── Layer Delete Buttons ──
     panel.querySelectorAll('.layer-delete-btn').forEach(btn => {

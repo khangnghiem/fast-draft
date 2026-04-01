@@ -30,12 +30,21 @@ impl NodeId {
 
     /// Generate a unique ID with a type prefix (e.g. `rect_1`, `ellipse_2`).
     pub fn with_prefix(prefix: &str) -> Self {
-        use std::sync::atomic::{AtomicU64, Ordering};
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        use std::sync::atomic::Ordering;
         let n = COUNTER.fetch_add(1, Ordering::Relaxed);
         Self::intern(&format!("{prefix}_{n}"))
     }
+
+    /// Seed the prefix counter to prevent ID collisions across sessions
+    /// when restoring data from external sources (like `localStorage`).
+    pub fn seed_prefix_counter(seed: u64) {
+        use std::sync::atomic::Ordering;
+        COUNTER.store(seed, Ordering::Relaxed);
+    }
 }
+
+/// Global counter for dynamically generated unique IDs across the entire SceneGraph.
+static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 impl fmt::Debug for NodeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

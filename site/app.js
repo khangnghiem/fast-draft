@@ -2052,6 +2052,16 @@ async function pasteFromClipboard() {
 let contextMenuClickPos = null; // scene-space {x, y} of right-click
 const ctxMenu = new ContextMenu();
 
+// ── Right-click gesture state ──
+// Short right-click (button down + up, no significant movement) → context menu.
+// Right-click + drag (button down + move > threshold) → temporary pan (Hand tool).
+const RIGHT_CLICK_DRAG_THRESHOLD = 5;    // px movement before committing to pan
+const RIGHT_CLICK_MENU_TIMEOUT_MS = 400; // max ms from down→up to count as "short click"
+let rightClickPending = false;           // right button is held, gesture not yet determined
+let rightClickStartClient = null;        // {x, y} in client coords when button went down
+let rightClickStartTime = 0;             // performance.now() at button-down
+let rightClickPointerId = -1;            // pointerId of the pending right-click
+
 function closeContextMenu() {
   ctxMenu.close();
 }
@@ -2244,7 +2254,119 @@ function setupContextMenu() {
     ];
   }
 
-  // Right-click on canvas
+  // ── Build edge context menu items ──
+  function buildEdgeMenuItems(edgeId) {
+    return [
+      { type: 'header', label: `Edge @${edgeId}` },
+      { type: 'action', icon: '📋', label: 'Copy', shortcut: '⌘C', action: 'copy' },
+      { type: 'action', icon: '✂', label: 'Cut', shortcut: '⌘X', action: 'cut' },
+      { type: 'action', icon: '⧉', label: 'Duplicate', shortcut: '⌘D', action: 'duplicate' },
+      { type: 'action', icon: '🗑', label: 'Delete Edge', shortcut: '⌫', action: 'delete', danger: true },
+      { type: 'separator' },
+      { type: 'action', icon: '↔', label: 'Reverse Direction', action: 'edge-reverse' },
+      { type: 'action', icon: '✏️', label: 'Edit Label', action: 'edge-edit-label' },
+      { type: 'separator' },
+      { type: 'action', icon: '📄', label: 'Copy as .fd', action: 'copy-fd' },
+    ];
+  }
+
+  // ── Edge action handler ──
+  const doEdgeAction = (action, el) => {
+    if (!fdCanvas) return;
+    const textBefore = fdCanvas.get_text();
+    let changed = false;
+    switch (action) {
+      case 'copy':     copySelectedAsFd(); break;
+      case 'cut':      cutSelectedAsFd(); changed = true; break;
+      case 'duplicate': changed = fdCanvas.duplicate_selected(); break;
+      case 'delete':   changed = fdCanvas.delete_selected(); break;
+      case 'copy-fd':
+        navigator.clipboard.writeText(fdCanvas.get_text()).catch(() => {});
+        break;
+      case 'edge-reverse': {
+        // Reverse from/to on the selected edge by rewriting its text anchor lines
+        const edgeId = fdCanvas.get_selected_id();
+        if (!edgeId) break;
+        const src = fdCanvas.get_text();
+        // Match: @from -> @to tokens on the edge header line
+        const re = new RegExp(`(edge\\s+@${edgeId}\\s+)@(\\w+)(\\s*->\\s*)@(\\w+)`);
+        const m = src.match(re);
+        if (m) {
+          const newSrc = src.replace(re, `$1@$4$3@$2`);
+          fdCanvas.set_text(newSrc);
+          changed = true;
+        }
+        break;
+      }
+      case 'edge-edit-label': {
+        // Trigger inline text editing on the edge's text child node
+        const edgeId = fdCanvas.get_selected_id();
+        if (!edgeId) break;
+        const childId = fdCanvas.get_edge_text_child_id?.(edgeId);
+        if (childId) {
+          fdCanvas.select_by_id(childId);
+          // Dispatch a synthetic dblclick on the canvas to open inline editor
+          const bounds = fdCanvas.get_node_bounds?.(childId);
+          if (bounds) {
+            try {
+              const b = JSON.parse(bounds);
+              const cx = b.x * zoomLevel + panX;
+              const cy = b.y * zoomLevel + panY;
+              canvas.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, clientX: cx, clientY: cy }));
+            } catch (_) {}
+          }
+        } else {
+          // Create a label and select it
+          const newChildId = fdCanvas.create_edge_text_child?.(edgeId, '');
+          if (newChildId) { changed = true; }
+        }
+        break;
+      }
+    }
+    if (changed) {
+      const textAfter = fdCanvas.get_text();
+      if (textBefore !== textAfter) fdCanvas.push_undo_snapshot(textBefore, textAfter);
+      renderCanvas();
+      syncCanvasToEditor();
+      updatePropertiesPanel();
+      refreshLayersPanel();
+    }
+  };
+
+  // ── Helper: open the right context menu based on hit-test ──
+  function openContextMenuAt(clientX, clientY) {
+    if (!fdCanvas) return;
+    const { x, y } = screenToScene(clientX, clientY, canvas);
+    contextMenuClickPos = { x, y };
+
+    // Hit-test the scene
+    let hitId = null;
+    try { hitId = fdCanvas.hit_test_at ? JSON.parse(fdCanvas.hit_test_at(x, y) || 'null')?.id : null; } catch (_) {}
+
+    if (hitId) {
+      // Determine if it's an edge or a shape node
+      const kind = fdCanvas.get_node_kind ? fdCanvas.get_node_kind(hitId) : '';
+      // Select it if not already selected
+      const selectedIds = JSON.parse(fdCanvas.get_selected_ids?.() || '[]');
+      if (!selectedIds.includes(hitId)) {
+        fdCanvas.select_by_id(hitId);
+        renderDirty = true;
+      }
+      const freshIds = JSON.parse(fdCanvas.get_selected_ids?.() || '[]');
+
+      if (kind === 'edge') {
+        ctxMenu.open({ items: buildEdgeMenuItems(hitId), x: clientX, y: clientY, onAction: doEdgeAction });
+      } else {
+        ctxMenu.open({ items: buildNodeMenuItems(hitId, freshIds), x: clientX, y: clientY, onAction: doNodeAction });
+      }
+    } else {
+      // Empty space
+      fdCanvas.select_by_id('');
+      ctxMenu.open({ items: buildCanvasMenuItems(), x: clientX, y: clientY, onAction: doCanvasAction });
+    }
+  }
+
+  // Suppress native browser context menu on canvas (we draw our own via pointerup)
   canvas.addEventListener('contextmenu', (e) => {
     e.preventDefault();
   });
@@ -3827,6 +3949,9 @@ async function initPlayground() {
                   // don't trigger layout_changed but still need a re-render.
                   if (r.ok) {
                     renderDirty = true; uiDirty = true; sceneDirty = true;
+                    if (r.duplicate_ids && r.duplicate_ids.length > 0) {
+                      showToast(`Warning: Duplicate IDs detected: ${r.duplicate_ids.join(', ')}`);
+                    }
                   }
                 } catch (_) {
                   renderDirty = true; uiDirty = true; sceneDirty = true;
@@ -4380,13 +4505,24 @@ async function initPlayground() {
 
       const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
 
-      // Middle-click, Right-click, or Space+click → always pan
-      if (e.button === 1 || e.button === 2 || isPanning) {
+      // Middle-click or Space+click → always pan immediately
+      if (e.button === 1 || isPanning) {
         panDragging = true;
         panStartX = e.clientX - panX;
         panStartY = e.clientY - panY;
         canvas.style.cursor = 'grabbing';
         activePointerId = e.pointerId;
+        return;
+      }
+
+      // Right-click → deferred gesture: short click = context menu, drag = pan
+      // (iPad users long-press, mouse users click-and-release quickly)
+      if (e.button === 2) {
+        rightClickPending = true;
+        rightClickStartClient = { x: e.clientX, y: e.clientY };
+        rightClickStartTime = performance.now();
+        rightClickPointerId = e.pointerId;
+        // Do NOT set activePointerId — right-click gesture is managed separately
         return;
       }
 
@@ -4528,6 +4664,22 @@ async function initPlayground() {
       // Only process our owned pointer or hover over canvas
       if (activePointerId !== -1 && e.pointerId !== activePointerId) return;
       if (activePointerId === -1 && e.target !== canvas) return;
+
+      // \u2500\u2500 Right-click gesture: commit to pan if moved beyond threshold \u2500\u2500
+      if (rightClickPending && e.pointerId === rightClickPointerId) {
+        const dx = e.clientX - rightClickStartClient.x;
+        const dy = e.clientY - rightClickStartClient.y;
+        if (Math.hypot(dx, dy) >= RIGHT_CLICK_DRAG_THRESHOLD) {
+          // Commit to pan mode
+          rightClickPending = false;
+          panDragging = true;
+          panStartX = rightClickStartClient.x - panX;
+          panStartY = rightClickStartClient.y - panY;
+          activePointerId = rightClickPointerId;
+          canvas.style.cursor = 'grabbing';
+        }
+        return; // Do not process as a normal move until gesture is decided
+      }
 
       // Pan drag
       if (panDragging) {
@@ -4711,6 +4863,27 @@ async function initPlayground() {
           activePointerId = -1;
         }
         return;
+      }
+
+      // \u2500\u2500 Right-click gesture resolution \u2500\u2500
+      // If rightClickPending is still true, the mouse didn't move enough to pan
+      // \u2192 open the context menu (short click).
+      if (rightClickPending && e.pointerId === rightClickPointerId) {
+        rightClickPending = false;
+        rightClickPointerId = -1;
+        // Restore cursor
+        canvas.style.cursor = (fdCanvas.get_tool_name() === 'hand') ? 'grab' : '';
+        // Only open menu if within the time window (guards against very-slow tap+hold)
+        const elapsed = performance.now() - rightClickStartTime;
+        if (elapsed <= RIGHT_CLICK_MENU_TIMEOUT_MS) {
+          openContextMenuAt(e.clientX, e.clientY);
+        }
+        return;
+      }
+      // Clean up a right-click that committed to pan (activePointerId was set by gesture)
+      if (e.button === 2 && rightClickPending) {
+        rightClickPending = false;
+        rightClickPointerId = -1;
       }
 
       if (activePointerId === -1) return;
@@ -5011,6 +5184,10 @@ async function initPlayground() {
         isTwoFingerGesture = false;
         twoFingerPending = false;
         clearTimeout(twoFingerTimer);
+      }
+      if (e.pointerId === rightClickPointerId) {
+        rightClickPending = false;
+        rightClickPointerId = -1;
       }
       if (e.pointerId === activePointerId) {
         activePointerId = -1;
