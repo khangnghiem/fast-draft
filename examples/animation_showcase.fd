@@ -1,0 +1,105 @@
+# Animation Showcase
+# Demonstrates hover, press, enter triggers, and edge flow animations
+
+# ─── Styles ───
+style box {
+  fill: #3B82F6
+  corner: 8
+}
+
+style label {
+  fill: #FFFFFF
+  font: "Inter" bold 16
+}
+
+# ─── Elements ───
+
+# 1. Hover animation
+rect @hover_box {
+  w: 200 h: 100
+  use: box
+  x: 100
+  y: 100
+
+  text @hover_txt "Hover Me" {
+    use: label
+  }
+
+  when :hover {
+    scale: 1.1
+    fill: #2563EB
+    ease: spring 300ms
+  }
+}
+
+# 2. Press animation
+rect @press_box {
+  w: 200 h: 100
+  use: box
+  fill: #10B981
+  x: 400
+  y: 100
+
+  text @press_txt "Press Me" {
+    use: label
+  }
+
+  when :press {
+    scale: 0.95
+    fill: #059669
+    ease: ease_out 150ms
+  }
+}
+
+# 3. Enter animation (viewport enter)
+rect @enter_box {
+  w: 200 h: 100
+  use: box
+  fill: #8B5CF6
+  x: 700
+  y: 100
+
+  text @enter_txt "Enters Viewport" {
+    use: label
+  }
+
+  opacity: 0.0
+  scale: 0.8
+
+  when :enter {
+    opacity: 1.0
+    scale: 1.0
+    ease: ease_out 500ms
+  }
+}
+
+# 4. Edge flow animation
+rect @node_a {
+  w: 80 h: 80
+  fill: #F59E0B
+  corner: 40
+  x: 200
+  y: 400
+}
+
+rect @node_b {
+  w: 80 h: 80
+  fill: #EF4444
+  corner: 40
+  x: 600
+  y: 400
+}
+
+edge @flow_edge @node_a -> @node_b {
+  stroke: #9CA3AF 2
+  arrow: end
+  curve: smooth
+  flow: pulse 1500ms
+}
+
+edge @dash_edge @node_b -> @node_a {
+  stroke: #9CA3AF 2
+  arrow: end
+  curve: step
+  flow: dash 2000ms
+}
