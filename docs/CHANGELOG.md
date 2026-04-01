@@ -17,6 +17,20 @@
 
 ## Completed Requirements
 
+### v0.11.312 — Context Menu Enhancements (R3.78)
+
+- **Scroll Persistence**: Fixed the bug where scrolling the canvas caused the context menu to disappear. The menu stays open during view adjustments.
+- **Empty Space Document Macros**: Right-clicking empty space in the Layers panel now reveals document-level operations (Format Document, Dedup Node IDs, Select All, Add Node).
+- **Smart Right-Click Pan**: Right-clicking on the canvas uses a distance+time gesture threshold. A short click opens the context menu (Node/Edge/Empty), but holding and dragging >5px instantly transitions to the Hand tool (pan mode).
+- **Edge Context Menu**: Edges now have full context menu support (Cut/Copy/Duplicate/Delete/Reverse/Label Edit).
+
+### v0.11.311 — Duplicate ID Warning System & Agent Panel Redesign (R3.27, R6.18)
+
+- **Duplicate ID Warnings (R3.27)**: Multi-layered feedback system to prevent model structural ambiguity explicitly flagged by the new `lint_duplicate_ids` rule.
+  - **Canvas Renderer**: Nodes sharing an identical `@id` now render with a high-contrast `#FF3B30` dashed red border and red selection handles.
+  - **Layers Panel**: Injects a `⚠️` warning badge inline for nodes that violate ID uniqueness.
+- **Agent Panel Redesign (R6.18)**: Modernized the AI Agent right-panel with session-based chat tabs (History/New), interactive zero-state hero pills, and Git-style contextual feedback.
+- **Coordinate Math Fix**: Fixed mathematical rounding desynchronization in `SyncEngine` for stable `ResizeNode` child propagation.
 ### v0.11.310 — Cmd/Ctrl Drag to Move Children (R3.2)
 
 - **UX Behavior Change**: Dragging a parent node **without** modifier keys now moves ONLY the parent — children stay stationary. Hold **Cmd** (macOS) or **Ctrl** (Windows/Linux) while dragging to move all descendants recursively with the parent. This can be toggled mid-drag: start dragging normally, then press Cmd/Ctrl to engage children-follow mode.

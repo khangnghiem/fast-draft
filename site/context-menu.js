@@ -59,7 +59,8 @@ class ContextMenu {
     // ── Dismiss listeners (all on AbortController signal) ──
     // Capture phase — bypasses any stopPropagation in the DOM tree
     document.addEventListener('pointerdown', this.#onPointerDown, { signal, capture: true });
-    document.addEventListener('scroll', () => this.close(), { signal, capture: true, passive: true });
+    // NOTE: No scroll listener — scroll (including mouse-wheel zoom on canvas) must NOT
+    // dismiss the menu. Dismiss paths: pointerdown-outside, Escape, blur, resize.
     window.addEventListener('blur', () => this.close(), { signal });
     window.addEventListener('resize', () => this.close(), { signal });
     // Keyboard: capture phase to intercept before canvas shortcuts

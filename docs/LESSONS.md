@@ -560,3 +560,10 @@ Never use `localStorage.getItem(...)` as the source of truth for current visual 
 1. Always start a fresh conversation after completing and merging a feature. The "One Feature Per Conversation" rule is critical for maintaining lightweight contexts.
 2. Shorten browser subagent interactions. Instead of running full 5-minute `/e2e` suites for every CLI adjustment, use quick 2-second "snapshot" verifications.
 **Lesson**: **Lengthy multimodal assets (like WebP subagent recordings) stack exponentially.** You pay the token cost of a video not once when it is recorded, but *every singl**Root cause**: Every invocations short and scoped.
+
+## Yolo Script: Stale Builds Will Cause Infinite Re-Debugging
+**Date**: 2026-04-01
+**Context**: Re-debugging the exact same canvas offset scaling bug because the user reported "BUG AGAIN: shape doesn't draw where the cursor draw" after the fix was deployed locally.
+**Root cause**: The `/yolo local` pipeline used `wasm-pack build ... --out-dir fd-vscode/webview/wasm`. It entirely skipped `site/wasm/`. The frontend `http://localhost:8080` served a stale layout engine with the old `(x + dx * 100)` shrinkage math.
+**Fix**: Updated `.agents/workflows/yolo.md` and `build.md` to append `&& cp -a fd-vscode/webview/wasm/. site/wasm/` after building.
+**Lesson**: **When your codebase has multiple client targets (web site vs VSCode extension), ensure your `yolo` and `build` scripts synchronize artifacts to ALL consumption paths.** Failing to ensure tests are running against current binaries causes agents to spend hours hallucinating logic flaws in perfectly correct mathematical systems.
