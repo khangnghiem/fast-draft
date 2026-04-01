@@ -1296,46 +1296,39 @@ function setupInlineEditor(opts) {
     // Edge → edit/create label
     if (props.kind === "edge") {
       const edgeId = props.id;
-      const source = fdCanvas.get_text();
-      const edgeBlockRe = new RegExp(`edge\\s+@${edgeId}\\s*\\{([^}]*(?:\\{[^}]*\\}[^}]*)*)\\}`, 's');
-      const edgeMatch = source.match(edgeBlockRe);
-      if (edgeMatch) {
-        const textChildRe = /text\s+@(\w+)\s+"([^"]*)"/;
-        const textMatch = edgeMatch[1].match(textChildRe);
-        if (textMatch) {
-          fdCanvas.select_by_id(textMatch[1]);
+
+      // Use WASM API to check for existing text child (idempotent, no duplicates)
+      const existingTextId = fdCanvas.get_edge_text_child_id(edgeId);
+      if (existingTextId) {
+        // Edit existing label
+        fdCanvas.select_by_id(existingTextId);
+        const childPropsJson = fdCanvas.get_selected_node_props();
+        const childProps = JSON.parse(childPropsJson);
+        renderFn();
+        openInlineEditor({
+          nodeId: existingTextId, propKey: "content", currentValue: childProps.content || "",
+          fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
+          panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
+        });
+      } else {
+        // Create new label via WASM (sets Edge.text_child, adds to graph, re-resolves layout)
+        const textBefore = fdCanvas.get_text();
+        const newTextId = fdCanvas.create_edge_text_child(edgeId, "Label");
+        if (newTextId) {
+          const textAfter = fdCanvas.get_text();
+          fdCanvas.push_undo_snapshot(textBefore, textAfter);
           renderFn();
-          openInlineEditor({
-            nodeId: textMatch[1], propKey: "content", currentValue: textMatch[2],
+          syncFn();
+          // Suppress before selecting + rendering to prevent blue box flash
+          if (fdCanvas.set_suppressed_text_node) {
+            fdCanvas.set_suppressed_text_node(newTextId);
+          }
+          fdCanvas.select_by_id(newTextId);
+          setTimeout(() => openInlineEditor({
+            nodeId: newTextId, propKey: "content", currentValue: "Label",
             fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
             panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
-          });
-        } else {
-          const textId = "label_" + edgeId;
-          const esc = edgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const re = new RegExp(`(edge\\s+@${esc}\\s*\\{)`);
-          const m2 = source.match(re);
-          if (m2) {
-            const insertPos = source.indexOf(m2[0]) + m2[0].length;
-            const newSource = source.slice(0, insertPos)
-              + `\n  text @${textId} "Label" {}`
-              + source.slice(insertPos);
-            const textBefore = source;
-            fdCanvas.set_text(newSource);
-            fdCanvas.push_undo_snapshot(textBefore, newSource);
-            renderFn();
-            syncFn();
-            // Suppress before selecting + rendering to prevent blue box flash
-            if (fdCanvas.set_suppressed_text_node) {
-              fdCanvas.set_suppressed_text_node(textId);
-            }
-            fdCanvas.select_by_id(textId);
-            setTimeout(() => openInlineEditor({
-              nodeId: textId, propKey: "content", currentValue: "Label",
-              fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
-              panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
-            }), 50);
-          }
+          }), 50);
         }
       }
       e.preventDefault();
@@ -1476,7 +1469,6 @@ function bumpGeneration() {
 
 /** Grid overlay state */
 let gridEnabled = false;
-let xrayLabels = false; // X-ray mode: show all node name badges (backtick toggle)
 const GRID_BASE_SPACING = 20;
 
 // Reduce Motion — respect OS setting
@@ -1798,6 +1790,11 @@ function setupPointerEvents() {
 
     // Skip if pointer originated inside the floating toolbar (DOM ancestry)
     if (e.target.closest && e.target.closest('#floating-toolbar')) return;
+
+    // Remove keyboard focus from CodeMirror or inputs so canvas shortcuts work
+    if (document.activeElement && document.activeElement !== canvas && document.activeElement !== document.body) {
+      document.activeElement.blur();
+    }
 
     clearModifierCursors(); // Modifier preview ends when interaction starts
     const rect = canvas.getBoundingClientRect();
@@ -10328,28 +10325,31 @@ function render() {
     try {
       const ap = JSON.parse(arrowPreviewJson);
       ctx.save();
-      ctx.strokeStyle = "#6B7080";
-      ctx.lineWidth = 1.5;
-      // Solid line (not dashed)
-      ctx.beginPath();
-      ctx.moveTo(ap.x1, ap.y1);
-      ctx.lineTo(ap.x2, ap.y2);
-      ctx.stroke();
-      // Arrowhead
-      const angle = Math.atan2(ap.y2 - ap.y1, ap.x2 - ap.x1);
-      const headLen = 10;
-      ctx.beginPath();
-      ctx.moveTo(ap.x2, ap.y2);
-      ctx.lineTo(
-        ap.x2 - headLen * Math.cos(angle - Math.PI / 6),
-        ap.y2 - headLen * Math.sin(angle - Math.PI / 6)
-      );
-      ctx.moveTo(ap.x2, ap.y2);
-      ctx.lineTo(
-        ap.x2 - headLen * Math.cos(angle + Math.PI / 6),
-        ap.y2 - headLen * Math.sin(angle + Math.PI / 6)
-      );
-      ctx.stroke();
+      
+      if (ap.x1 !== undefined && ap.y1 !== undefined) {
+        ctx.strokeStyle = "#6B7080";
+        ctx.lineWidth = 1.5;
+        // Solid line (not dashed)
+        ctx.beginPath();
+        ctx.moveTo(ap.x1, ap.y1);
+        ctx.lineTo(ap.x2, ap.y2);
+        ctx.stroke();
+        // Arrowhead
+        const angle = Math.atan2(ap.y2 - ap.y1, ap.x2 - ap.x1);
+        const headLen = 10;
+        ctx.beginPath();
+        ctx.moveTo(ap.x2, ap.y2);
+        ctx.lineTo(
+          ap.x2 - headLen * Math.cos(angle - Math.PI / 6),
+          ap.y2 - headLen * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.moveTo(ap.x2, ap.y2);
+        ctx.lineTo(
+          ap.x2 - headLen * Math.cos(angle + Math.PI / 6),
+          ap.y2 - headLen * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.stroke();
+      }
 
       // ── Fix #3: Highlight target node under cursor during arrow drag ──
       if (ap.target_id) {

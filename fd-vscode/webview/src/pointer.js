@@ -71,6 +71,11 @@ function setupPointerEvents() {
     // Skip if pointer originated inside the floating toolbar (DOM ancestry)
     if (e.target.closest && e.target.closest('#floating-toolbar')) return;
 
+    // Remove keyboard focus from CodeMirror or inputs so canvas shortcuts work
+    if (document.activeElement && document.activeElement !== canvas && document.activeElement !== document.body) {
+      document.activeElement.blur();
+    }
+
     clearModifierCursors(); // Modifier preview ends when interaction starts
     const rect = canvas.getBoundingClientRect();
     const rawX = e.clientX - rect.left;
