@@ -193,8 +193,8 @@ impl SyncEngine {
                     if rdx.abs() > 0.001 || rdy.abs() > 0.001 {
                         for c in &mut node.constraints {
                             if let Constraint::Position { x, y } = c {
-                                *x = (*x + rdx * 100.0).round() / 100.0;
-                                *y = (*y + rdy * 100.0).round() / 100.0;
+                                *x = ((*x + rdx) * 100.0).round() / 100.0;
+                                *y = ((*y + rdy) * 100.0).round() / 100.0;
                             }
                         }
                     }
@@ -260,8 +260,8 @@ impl SyncEngine {
                         if let Some(child_node) = self.graph.get_by_id_mut(child_id) {
                             for c in &mut child_node.constraints {
                                 if let Constraint::Position { x, y } = c {
-                                    *x = (*x - rdx * 100.0).round() / 100.0;
-                                    *y = (*y - rdy * 100.0).round() / 100.0;
+                                    *x = ((*x - rdx) * 100.0).round() / 100.0;
+                                    *y = ((*y - rdy) * 100.0).round() / 100.0;
                                 }
                             }
                         }
