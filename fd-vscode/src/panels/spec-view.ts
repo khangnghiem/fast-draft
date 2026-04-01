@@ -331,14 +331,26 @@ export class FdSpecViewPanel {
       const nodeMatch = trimmed.match(
         /^(group|rect|ellipse|path|text)\s+@(\w+)(?:\s+"[^"]*")?\s*\{?/
       );
-      if (nodeMatch) {
+      const nodeMatchWithSpec = trimmed.match(
+        /^(group|rect|ellipse|path|text)\s+@(\w+)\s+spec\s+"([^"]*)"\s*\{?/
+      );
+
+      if (nodeMatch || nodeMatchWithSpec) {
         // Flush previous node
         if (currentNodeId && pendingAnnotations.length > 0) {
           html += this.renderSpecNode(currentNodeId, currentNodeKind, pendingAnnotations);
           pendingAnnotations = [];
         }
-        currentNodeKind = nodeMatch[1];
-        currentNodeId = nodeMatch[2];
+
+        if (nodeMatchWithSpec) {
+          currentNodeKind = nodeMatchWithSpec[1];
+          currentNodeId = nodeMatchWithSpec[2];
+          pendingAnnotations.push({ type: "description", value: nodeMatchWithSpec[3] });
+        } else if (nodeMatch) {
+          currentNodeKind = nodeMatch[1];
+          currentNodeId = nodeMatch[2];
+        }
+
         insideNode = true;
         if (trimmed.endsWith("{")) {
           braceDepth += 1;
@@ -349,13 +361,22 @@ export class FdSpecViewPanel {
 
       // Generic node (@id { )
       const genericMatch = trimmed.match(/^@(\w+)\s*\{/);
-      if (genericMatch) {
+      const genericMatchWithSpec = trimmed.match(/^@(\w+)\s+spec\s+"([^"]*)"\s*\{/);
+
+      if (genericMatch || genericMatchWithSpec) {
         if (currentNodeId && pendingAnnotations.length > 0) {
           html += this.renderSpecNode(currentNodeId, currentNodeKind, pendingAnnotations);
           pendingAnnotations = [];
         }
         currentNodeKind = "spec";
-        currentNodeId = genericMatch[1];
+
+        if (genericMatchWithSpec) {
+          currentNodeId = genericMatchWithSpec[1];
+          pendingAnnotations.push({ type: "description", value: genericMatchWithSpec[2] });
+        } else if (genericMatch) {
+          currentNodeId = genericMatch[1];
+        }
+
         insideNode = true;
         braceDepth += 1;
         nodeStack.push({ indent: braceDepth, hasAnnotations: false });

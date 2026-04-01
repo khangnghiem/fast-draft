@@ -182,12 +182,20 @@ function processClosingBrace(trimmed: string, state: any): boolean {
 
 function processNodeDecl(trimmed: string, state: any, doFlush: (s: any) => void): boolean {
   const nodeMatch = trimmed.match(/^(group|rect|ellipse|path|text)\s+@(\w+)(?:\s+"[^"]*")?\s*\{?/);
-  if (!nodeMatch) return false;
+  const nodeMatchWithSpec = trimmed.match(/^(group|rect|ellipse|path|text)\s+@(\w+)\s+spec\s+"([^"]*)"\s*\{?/);
+
+  if (!nodeMatch && !nodeMatchWithSpec) return false;
 
   doFlush(state); // Flush PREVIOUS node before starting this new one
 
-  state.currentNodeKind = nodeMatch[1];
-  state.currentNodeId = nodeMatch[2];
+  if (nodeMatchWithSpec) {
+    state.currentNodeKind = nodeMatchWithSpec[1];
+    state.currentNodeId = nodeMatchWithSpec[2];
+    state.currentAnnotations.push({ type: "description", value: nodeMatchWithSpec[3] });
+  } else if (nodeMatch) {
+    state.currentNodeKind = nodeMatch[1];
+    state.currentNodeId = nodeMatch[2];
+  }
   if (trimmed.endsWith("{")) {
     state.braceDepth += 1;
     state.depthStack.push(state.braceDepth);
@@ -198,12 +206,20 @@ function processNodeDecl(trimmed: string, state: any, doFlush: (s: any) => void)
 
 function processGenericNode(trimmed: string, state: any, doFlush: (s: any) => void): boolean {
   const genericMatch = trimmed.match(/^@(\w+)\s*\{/);
-  if (!genericMatch) return false;
+  const genericMatchWithSpec = trimmed.match(/^@(\w+)\s+spec\s+"([^"]*)"\s*\{/);
+
+  if (!genericMatch && !genericMatchWithSpec) return false;
 
   doFlush(state); // Flush PREVIOUS node
 
   state.currentNodeKind = "spec";
-  state.currentNodeId = genericMatch[1];
+
+  if (genericMatchWithSpec) {
+    state.currentNodeId = genericMatchWithSpec[1];
+    state.currentAnnotations.push({ type: "description", value: genericMatchWithSpec[2] });
+  } else if (genericMatch) {
+    state.currentNodeId = genericMatch[1];
+  }
   state.braceDepth += 1;
   state.depthStack.push(state.braceDepth);
   state.headingLevel = 2 + state.depthStack.length - 1;
