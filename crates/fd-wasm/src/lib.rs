@@ -157,7 +157,7 @@ impl FdCanvas {
         if layout_changed {
             self.rebuild_spatial_index();
         }
-        
+
         // Scan for duplicate IDs to warn the user
         let mut seen = std::collections::HashSet::new();
         let mut duplicates = Vec::new();
@@ -171,12 +171,19 @@ impl FdCanvas {
         } else {
             duplicates.sort();
             duplicates.dedup();
-            let arr = duplicates.iter().map(|s| format!("\"{}\"", s)).collect::<Vec<_>>().join(",");
+            let arr = duplicates
+                .iter()
+                .map(|s| format!("\"{}\"", s))
+                .collect::<Vec<_>>()
+                .join(",");
             format!("[{}]", arr)
         };
 
         let lc = if layout_changed { "true" } else { "false" };
-        format!(r#"{{"ok":true,"layout_changed":{},"duplicate_ids":{}}}"#, lc, duplicates_json)
+        format!(
+            r#"{{"ok":true,"layout_changed":{},"duplicate_ids":{}}}"#,
+            lc, duplicates_json
+        )
     }
 
     /// Import a Mermaid diagram, converting it to FD format.
