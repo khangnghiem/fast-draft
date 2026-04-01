@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.313 — Fix Canvas Drawing Offset
+
+- **Coordinate Math Fix**: Fixed mathematical rounding desynchronization in `SyncEngine` for stable `ResizeNode` tracking. Previously, the logic incorrectly performed `(*x + dx * 100.0).round() / 100.0` which implicitly divided the original scene coordinates by 100 instead of correctly scaling it before rounding. This resulted in new shapes being perpetually dawn at the top-left root origin regardless of pointer interactions. The correct scaling algorithm `((*x + dx) * 100.0).round() / 100.0` was restored, enabling accurate geometric constraint parsing for the WASM controller.
+
 ### v0.11.312 — Context Menu Enhancements (R3.78)
 
 - **Scroll Persistence**: Fixed the bug where scrolling the canvas caused the context menu to disappear. The menu stays open during view adjustments.
@@ -30,7 +34,6 @@
   - **Canvas Renderer**: Nodes sharing an identical `@id` now render with a high-contrast `#FF3B30` dashed red border and red selection handles.
   - **Layers Panel**: Injects a `⚠️` warning badge inline for nodes that violate ID uniqueness.
 - **Agent Panel Redesign (R6.18)**: Modernized the AI Agent right-panel with session-based chat tabs (History/New), interactive zero-state hero pills, and Git-style contextual feedback.
-- **Coordinate Math Fix**: Fixed mathematical rounding desynchronization in `SyncEngine` for stable `ResizeNode` child propagation.
 ### v0.11.310 — Cmd/Ctrl Drag to Move Children (R3.2)
 
 - **UX Behavior Change**: Dragging a parent node **without** modifier keys now moves ONLY the parent — children stay stationary. Hold **Cmd** (macOS) or **Ctrl** (Windows/Linux) while dragging to move all descendants recursively with the parent. This can be toggled mid-drag: start dragging normally, then press Cmd/Ctrl to engage children-follow mode.
