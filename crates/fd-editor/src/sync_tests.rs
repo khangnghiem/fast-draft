@@ -3489,3 +3489,160 @@ frame @panel {
         item_node.constraints
     );
 }
+
+// ─── Regression: First Rect at Top-Left Corner Bug ──────────────────────
+
+/// Regression test for the recurring "first rect at top-left" bug.
+/// Drawing a rect at (300, 250) and dragging to (400, 350) must produce
+/// bounds near (300, 250), not at the canvas origin (0, 0).
+///
+/// Root cause: math precedence in ResizeNode position update
+/// (`*x + rdx * 100.0` instead of `(*x + rdx) * 100.0`).
+/// This test ensures the fix holds permanently.
+#[test]
+fn draw_rect_at_coordinate_preserves_position() {
+    use crate::input::{InputEvent, Modifiers};
+    use crate::tools::{RectTool, Tool};
+
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::new(viewport);
+    let mut rect = RectTool::new();
+
+    // PointerDown at (300, 250) — creates AddNode with Position(300, 250)
+    let add_mutations = rect.handle(
+        &InputEvent::PointerDown {
+            x: 300.0,
+            y: 250.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(add_mutations.len(), 1, "PointerDown should emit AddNode");
+    for m in add_mutations {
+        engine.apply_mutation(m);
+    }
+
+    // PointerMove to (400, 350) — creates ResizeNode with w=100, h=100
+    let resize_mutations = rect.handle(
+        &InputEvent::PointerMove {
+            x: 400.0,
+            y: 350.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(
+        resize_mutations.len(),
+        1,
+        "PointerMove should emit ResizeNode"
+    );
+    for m in resize_mutations {
+        engine.apply_mutation(m);
+    }
+
+    // Re-resolve layout to update bounds
+    engine.resolve();
+
+    // Assert: the rect bounds should be near (300, 250), NOT at (0, 0)
+    let id = rect.current_drawing_id().unwrap();
+    let idx = engine.graph.index_of(id).unwrap();
+    let b = &engine.bounds[&idx];
+    assert!(
+        b.x > 200.0,
+        "BUG: rect x={} should be near 300, not at origin (top-left corner bug)",
+        b.x
+    );
+    assert!(
+        b.y > 150.0,
+        "BUG: rect y={} should be near 250, not at origin (top-left corner bug)",
+        b.y
+    );
+    assert!((b.x - 300.0).abs() < 1.0, "rect x={} should be ≈300", b.x);
+    assert!((b.y - 250.0).abs() < 1.0, "rect y={} should be ≈250", b.y);
+    assert!(
+        (b.width - 100.0).abs() < 1.0,
+        "rect width={} should be ≈100",
+        b.width
+    );
+    assert!(
+        (b.height - 100.0).abs() < 1.0,
+        "rect height={} should be ≈100",
+        b.height
+    );
+}
+
+/// Regression test: click-to-place (no drag) should center the default-size
+/// rect around the click point, not at (0, 0).
+#[test]
+fn click_to_place_rect_preserves_position() {
+    use crate::input::{InputEvent, Modifiers};
+    use crate::tools::{RectTool, Tool};
+
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::new(viewport);
+    let mut rect = RectTool::new();
+
+    // PointerDown at (400, 300)
+    let add_mutations = rect.handle(
+        &InputEvent::PointerDown {
+            x: 400.0,
+            y: 300.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    for m in add_mutations {
+        engine.apply_mutation(m);
+    }
+
+    // PointerUp immediately (no drag) — click-to-place, 162×100 centered
+    let place_mutations = rect.handle(
+        &InputEvent::PointerUp {
+            x: 400.0,
+            y: 300.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(
+        place_mutations.len(),
+        1,
+        "click-to-place should emit ResizeNode"
+    );
+    for m in place_mutations {
+        engine.apply_mutation(m);
+    }
+
+    engine.resolve();
+
+    // Find the rect (it has an auto-generated ID)
+    // The click-to-place rect should be centered at (400, 300)
+    // So x ≈ 400 - 81 = 319, y ≈ 300 - 50 = 250
+    let nodes: Vec<_> = engine
+        .graph
+        .graph
+        .node_indices()
+        .filter(|idx| matches!(engine.graph.graph[*idx].kind, NodeKind::Rect { .. }))
+        .collect();
+    assert_eq!(nodes.len(), 1, "should have exactly one rect");
+    let b = &engine.bounds[&nodes[0]];
+    assert!(
+        b.x > 250.0,
+        "BUG: rect x={} should be near 319, not at origin (top-left corner bug)",
+        b.x
+    );
+    assert!(
+        b.y > 180.0,
+        "BUG: rect y={} should be near 250, not at origin (top-left corner bug)",
+        b.y
+    );
+}
