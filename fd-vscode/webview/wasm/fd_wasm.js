@@ -59,6 +59,21 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Center a node within a target container WITHOUT reparenting it.
+     * Used when the user selects "Center in @target" from the drop context menu.
+     * @param {string} child_id
+     * @param {string} target_id
+     * @returns {boolean}
+     */
+    center_node_in(child_id, target_id) {
+        const ptr0 = passStringToWasm0(child_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(target_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_center_node_in(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return ret !== 0;
+    }
+    /**
      * Clear the pressed interaction state.
      *
      * Called from JS when entering inline text editing to suppress

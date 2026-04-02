@@ -168,7 +168,14 @@ fn resolve_children(
     bounds: &mut HashMap<NodeIndex, ResolvedBounds>,
     viewport: Viewport,
 ) {
-    let parent_bounds = bounds[&parent_idx];
+    let parent_bounds = match bounds.get(&parent_idx) {
+        Some(b) => *b,
+        None => {
+            // Parent bounds are missing (likely intermediate layout mismatch or deleted node).
+            // Gracefully ignore its children instead of panicking, to prevent dragging/rendering freezes.
+            return;
+        }
+    };
     let parent_node = &graph.graph[parent_idx];
 
     let children: Vec<NodeIndex> = graph.children(parent_idx);

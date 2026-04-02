@@ -91,7 +91,8 @@ let activePointerId = -1;
 let panX = 0, panY = 0;
 let panStartX = 0, panStartY = 0;
 let panDragging = false;
-let canvasDragOccurred = false; // tracks whether a real canvas drag happened (for post-drop menu)
+let canvasDragOccurred = false; // tracks whether a real canvas drag happened
+let cmdDragNestTarget = null; // ID of the container highlighted during ⌘+drag
 let zoomLevel = 1.0;
 let gridEnabled = false;
 let xrayLabels = false; // X-ray mode: show all node name badges (backtick toggle)
@@ -4876,13 +4877,34 @@ async function initPlayground() {
       const moveResult = JSON.parse(moveResultJson);
       if (moveResult.changed) {
         renderDirty = true; uiDirty = true;
-        // Only track as a canvas drag (for post-drop reparent menu) when using
-        // Select or Hand tool. Draw tools (rect/ellipse/pen/text/frame/arrow)
-        // should NOT trigger the post-drop reparent context menu — their
-        // gestures are shape creation, not shape movement.
+        // Only track as a canvas drag when using Select or Hand tool.
         const activeTool = fdCanvas.get_tool_name();
         if (activeTool === 'select' || activeTool === 'hand') {
           canvasDragOccurred = true;
+
+          // ── ⌘+Drag nest highlight: detect container under cursor ──
+          if (e.metaKey && activePointerId !== -1 && activeTool === 'select') {
+            const selectedId = fdCanvas.get_selected_id();
+            if (selectedId && fdCanvas.hit_test_at_excluding) {
+              try {
+                const hitId = fdCanvas.hit_test_at_excluding(x, y, selectedId);
+                if (hitId && hitId !== selectedId) {
+                  const containerKinds = ['rect', 'ellipse', 'frame', 'group'];
+                  const hitKind = fdCanvas.get_node_kind ? fdCanvas.get_node_kind(hitId) : '';
+                  if (containerKinds.includes(hitKind)) {
+                    const parentId = fdCanvas.get_parent_id ? fdCanvas.get_parent_id(selectedId) : '';
+                    cmdDragNestTarget = (parentId !== hitId) ? hitId : null;
+                  } else {
+                    cmdDragNestTarget = null;
+                  }
+                } else {
+                  cmdDragNestTarget = null;
+                }
+              } catch (_) { cmdDragNestTarget = null; }
+            }
+          } else if (!e.metaKey) {
+            cmdDragNestTarget = null;
+          }
         }
       } else if (activePointerId === -1) {
         // Hover (no button held): show resize cursor on handles
@@ -5210,57 +5232,26 @@ async function initPlayground() {
         }
       }
 
-      // ── Post-drop reparent context menu ──
-      // After a move gesture on canvas (not dropped on Layers), check if node overlaps a container.
-      if (wasDragging && !canvasToLayersDone && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+      // ── ⌘+Drop nest+center: reparent into highlighted container ──
+      if (cmdDragNestTarget && wasDragging && !canvasToLayersDone && (e.metaKey || e.ctrlKey)) {
         const selectedId = fdCanvas.get_selected_id();
-        if (selectedId && fdCanvas.hit_test_at_excluding) {
-          try {
-            const hitId = fdCanvas.hit_test_at_excluding(x, y, selectedId);
-            if (hitId && hitId !== selectedId) {
-              // Only offer for containers (rect, ellipse, frame, group)
-              const containerKinds = ['rect', 'ellipse', 'frame', 'group'];
-              const hitKind = fdCanvas.get_node_kind ? fdCanvas.get_node_kind(hitId) : '';
-              if (containerKinds.includes(hitKind)) {
-                // Check the node isn't already a child of the target
-                const parentId = fdCanvas.get_parent_id ? fdCanvas.get_parent_id(selectedId) : '';
-                if (parentId !== hitId) {
-                  const textBefore = fdCanvas.get_text();
-                  ctxMenu.open({
-                    items: [
-                      { type: 'action', icon: '📦', label: `Nest into @${hitId}`, action: 'nest' },
-                      { type: 'action', icon: '⊙', label: `Center in @${hitId}`, action: 'center-nest' },
-                    ],
-                    x: e.clientX,
-                    y: e.clientY,
-                    onAction: (action) => {
-                      let changed = false;
-                      if (action === 'nest') {
-                        changed = fdCanvas.reparent_into(selectedId, hitId);
-                      } else if (action === 'center-nest') {
-                        changed = fdCanvas.reparent_into_centered
-                          ? fdCanvas.reparent_into_centered(selectedId, hitId)
-                          : fdCanvas.reparent_into(selectedId, hitId);
-                      }
-                      if (changed) {
-                        const textAfter = fdCanvas.get_text();
-                        if (textBefore !== textAfter) {
-                          fdCanvas.push_undo_snapshot(textBefore, textAfter);
-                        }
-                        renderDirty = true; uiDirty = true;
-                        syncCanvasToEditor();
-                        updatePropertiesPanel();
-                        refreshLayersPanel();
-                        showToast(`Nested into @${hitId}`);
-                      }
-                    },
-                  });
-                }
-              }
+        if (selectedId && fdCanvas.reparent_into_centered) {
+          const textBefore = fdCanvas.get_text();
+          const changed = fdCanvas.reparent_into_centered(selectedId, cmdDragNestTarget);
+          if (changed) {
+            const textAfter = fdCanvas.get_text();
+            if (textBefore !== textAfter) {
+              fdCanvas.push_undo_snapshot(textBefore, textAfter);
             }
-          } catch (_) { /* hit_test_at_excluding or get_node_kind may not exist */ }
+            renderDirty = true; uiDirty = true;
+            syncCanvasToEditor();
+            updatePropertiesPanel();
+            refreshLayersPanel();
+            showToast(`Nested + centered into @${cmdDragNestTarget}`);
+          }
         }
       }
+      cmdDragNestTarget = null;
 
       const resultJson = fdCanvas.handle_pointer_up(
         x, y, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey

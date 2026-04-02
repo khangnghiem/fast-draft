@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.319 — ⌘+Drag Nest+Center Gesture (R3.38, R3.64)
+
+- **REMOVED**: Post-drop context menu for reparenting — dragging a node onto a container no longer shows "Nest into @target" / "Center in @target" popup. ~50 lines of JS deleted (`showDropContextMenu`) from VSCode webview; ~50 lines from site `app.js`.
+- **NEW**: **⌘+Drag Nest+Center** — holding ⌘ (Mac) or Ctrl (Win/Linux) while dragging a node (including text) onto a different container (rect, ellipse, frame, group — excluding text targets) automatically reparents the dragged node as a child of the target and centers it within the container. All descendants maintain their relative positions to the dragged node. Uses existing `reparent_into_centered` WASM API.
+- **Progressive Disclosure**: ⌘+drag starts as "move with children" (existing R3.64 behavior). During drag, the engine detects containers under the cursor — when positioned over a valid target, a nest will occur on drop. Releasing on empty space keeps the standard move-with-children behavior. Toast confirms: "Nested + centered into @target".
+- **Text Target Guard**: Text nodes cannot be nest targets (only rect, ellipse, frame, group). Text nodes CAN be dragged into containers.
+
+Files: `fd-vscode/webview/src/pointer.js`, `fd-vscode/webview/main.js`, `site/app.js`
+
 ### v0.11.318 — Minimap Zoom Sync Fix (Bug Fix)
 
 - **UI Synchronization**: Fixed a bug where the minimap zoom indicator (`updateZoomIndicator()`) was not being invoked during the **Zoom Scrub** (`Cmd`/`Meta` + right-click drag) gesture. The minimap now correctly reflects real-time zoom modifications, providing synced UI feedback matching the Apple HIG standard.

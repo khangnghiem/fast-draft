@@ -139,7 +139,7 @@ Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** 
 | Modifier           | On Object                                                 | On Empty Space |
 | ------------------ | --------------------------------------------------------- | -------------- |
 | None               | Move parent only (children stay)                          | Marquee select |
-| `⌘`/`Ctrl` + drag | **Move with children** — all descendants follow           | Pan            |
+| `⌘`/`Ctrl` + drag | **Move with children** — drop on container = **nest + center** | Pan            |
 | `Alt`              | **Clone + drag**                                          | Marquee select |
 | `Alt` (click only) | **Style picker** — copies fill/stroke/opacity as defaults | —              |
 | `Shift`            | Add to selection                                          | Add to marquee |
@@ -150,7 +150,8 @@ Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** 
 
 > **Note**: `⌘`/`Ctrl` behavior splits by interaction type:
 > - **Click** (no drag): Multi-select toggle — adds or removes node from selection.
-> - **Drag**: Children-follow — moves the dragged node and all its descendants recursively.
+> - **Drag on empty/same parent**: Children-follow — moves the dragged node and all its descendants recursively.
+> - **Drag onto different container**: **Nest + Center** — reparents the node into the target container and centers it. Children maintain relative positions. Target must be rect/ellipse/frame/group (not text).
 > - **Mid-drag press**: Can be toggled during an active drag.
 > - **Deep Select (`⌘+Alt` Click)**: Ignores group boundaries, directly selecting the leaf shape under the cursor.
 > - **Clone with children (`⌘+Alt` Drag)**: Duplicates the selection and all its recursive descendants, dragging the clone.

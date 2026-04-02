@@ -490,6 +490,42 @@ impl FdCanvas {
         true
     }
 
+    /// Center a node within a target container WITHOUT reparenting it.
+    /// Used when the user selects "Center in @target" from the drop context menu.
+    pub fn center_node_in(&mut self, child_id: &str, target_id: &str) -> bool {
+        let child = NodeId::intern(child_id);
+        let target = NodeId::intern(target_id);
+
+        if child == target {
+            return false;
+        }
+
+        if let Some(node) = self.engine.graph.get_by_id_mut(child) {
+            // Strip all positional constraints
+            node.constraints.retain(|c| {
+                !matches!(
+                    c,
+                    Constraint::Position { .. }
+                        | Constraint::Offset { .. }
+                        | Constraint::CenterIn(_)
+                        | Constraint::FillParent { .. }
+                )
+            });
+            // Use "root" target → CenterIn(canvas), else CenterIn(target node)
+            let center_target = if target_id == "root" {
+                NodeId::intern("canvas")
+            } else {
+                target
+            };
+            node.constraints.push(Constraint::CenterIn(center_target));
+
+            self.sync_mutation_cycle();
+            true
+        } else {
+            false
+        }
+    }
+
     /// Reorder a child node to a specific z-order index within its parent.
     /// Used by layer panel drag-to-reorder.
     pub fn reorder_child(&mut self, child_id: &str, index: usize) -> bool {
