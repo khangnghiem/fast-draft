@@ -1,0 +1,100 @@
+106 prefersReducedMotion.addEventListener('change', (e) => {
+657     tab.addEventListener('click', (e) => {
+670     copyCodeBtn.addEventListener('click', () => {
+688     foldCodeBtn.addEventListener('click', (e) => {
+707     formatCodeBtn.addEventListener('click', (e) => {
+745     tab.addEventListener('click', (e) => {
+785   document.addEventListener('keydown', dismiss, { once: true });
+786   document.addEventListener('pointerdown', dismiss, { once: true });
+795   shareBtn?.addEventListener('click', (e) => {
+802   document.getElementById('lp-sidebar-toggle')?.addEventListener('click', (e) => {
+807   document.getElementById('rp-sidebar-toggle')?.addEventListener('click', (e) => {
+833 document.addEventListener('fullscreenchange', () => {
+839 document.addEventListener('webkitfullscreenchange', () => {
+1819     el.addEventListener('input', () => {
+1826   document.getElementById('pp-fill')?.addEventListener('input', function() { propChange('fill', this); });
+1829   document.getElementById('pp-stroke')?.addEventListener('input', function() { propChange('strokeColor', this); });
+1832   document.getElementById('pp-stroke-w')?.addEventListener('input', function() {
+1838   document.getElementById('pp-corner')?.addEventListener('input', function() {
+1847     opSlider.addEventListener('input', () => {
+1855   document.getElementById('pp-duplicate')?.addEventListener('click', () => {
+1862   document.getElementById('pp-delete')?.addEventListener('click', () => {
+1870     document.getElementById(id)?.addEventListener('focus', (e) => e.target.select());
+2468   canvas.addEventListener('contextmenu', (e) => {
+2473   document.addEventListener('keydown', (e) => {
+2549   canvas.addEventListener('pointerdown', () => ctxMenu.close());
+2684   handle.addEventListener('pointerdown', (e) => {
+2694   handle.addEventListener('pointermove', (e) => {
+2710   handle.addEventListener('pointerup', endDrag);
+2711   handle.addEventListener('pointercancel', endDrag);
+2714   handle.addEventListener('dblclick', (e) => {
+2763   layersHandle.addEventListener('pointerdown', (e) => {
+2774   layersHandle.addEventListener('pointermove', (e) => {
+2824   layersHandle.addEventListener('pointerup', endDrag);
+2825   layersHandle.addEventListener('pointercancel', endDrag);
+2828   layersHandle.addEventListener('dblclick', (e) => {
+2874   rightHandle.addEventListener('pointerdown', (e) => {
+2885   rightHandle.addEventListener('pointermove', (e) => {
+2918   rightHandle.addEventListener('pointerup', endRightDrag);
+2919   rightHandle.addEventListener('pointercancel', endRightDrag);
+2922   rightHandle.addEventListener('dblclick', (e) => {
+3005     el.addEventListener('click', () => {
+3016     cb.addEventListener('change', (e) => {
+4075     document.getElementById('sm-fullscreen-toggle')?.addEventListener('click', toggleFullscreen);
+4078     document.getElementById('share-link-btn')?.addEventListener('click', () => {
+4113     document.getElementById('share-modal-close')?.addEventListener('click', () => {
+4116     document.getElementById('share-modal')?.addEventListener('click', (e) => {
+4155       qcp.addEventListener('click', (e) => {
+4164       qcp.addEventListener('contextmenu', (e) => {
+4172       document.getElementById('qcp-custom-input')?.addEventListener('input', (e) => {
+4189       canvasWrapper.addEventListener('dragenter', (e) => {
+4196       canvasWrapper.addEventListener('dragover', (e) => {
+4203       canvasWrapper.addEventListener('dragleave', (e) => {
+4211       canvasWrapper.addEventListener('drop', (e) => {
+4264     document.getElementById('sidebar-toggle-btn')?.addEventListener('click', () => {
+4273     document.getElementById('hamburger-toggle-btn')?.addEventListener('click', () => {
+4283     mobileBackdropEl?.addEventListener('click', () => {
+4292     document.getElementById('lp-mobile-close')?.addEventListener('click', () => {
+4296     document.getElementById('rp-mobile-close')?.addEventListener('click', () => {
+4308       ftEl.addEventListener('scroll', updateScrollMask, { passive: true });
+4315     mobileMq.addEventListener('change', (e) => {
+4327     document.getElementById('ai-touch-btn')?.addEventListener('click', aiTouch);
+4328     document.getElementById('renamify-btn')?.addEventListener('click', renamify);
+4340     document.getElementById('ai-chat-clear')?.addEventListener('click', () => {
+4344     document.getElementById('specs-panel-close')?.addEventListener('click', toggleSpecsPanel);
+4417         chromeRight.addEventListener('mouseenter', () => {
+4421         chromeRight.addEventListener('mouseleave', startChromeIdle);
+4445     mobileLayersToggle?.addEventListener('click', toggleMobileLayersDrawer);
+4446     mobileLayersBackdrop?.addEventListener('click', closeMobileLayersDrawer);
+4467     mobileCodeToggle?.addEventListener('click', toggleMobileCodeEditor);
+4478     mobileQuery.addEventListener('change', updateMobileUI);
+4499     window.addEventListener('orientationchange', () => {
+4509     canvas.addEventListener('dragover', (e) => {
+4513     canvas.addEventListener('drop', (e) => {
+4545     canvas.addEventListener('pointerdown', (e) => {
+4732     document.addEventListener('pointermove', (e) => {
+4976     document.addEventListener('pointerup', (e) => {
+5331     document.addEventListener('pointercancel', (e) => {
+5360     canvas.addEventListener('wheel', (e) => {
+5440     document.getElementById('fab-fill')?.addEventListener('input', (e) => {
+5448     document.getElementById('fab-stroke')?.addEventListener('input', (e) => {
+5456     document.getElementById('fab-stroke-w')?.addEventListener('input', (e) => {
+5464     document.getElementById('fab-opacity')?.addEventListener('input', (e) => {
+5474     document.getElementById('fab-delete')?.addEventListener('click', () => {
+5483     document.addEventListener('keydown', (e) => {
+5708     document.addEventListener('keyup', (e) => {
+5753     minimapCanvas.addEventListener('pointerdown', (e) => {
+5758     minimapCanvas.addEventListener('pointermove', (e) => {
+5761     minimapCanvas.addEventListener('pointerup', () => { mmDragging = false; });
+5779     document.getElementById('zoom-in-btn').addEventListener('click', () => applyZoomCenter(zoomLevel * 1.25));
+5780     document.getElementById('zoom-out-btn').addEventListener('click', () => applyZoomCenter(zoomLevel / 1.25));
+5781     document.getElementById('zoom-reset-btn').addEventListener('click', () => {
+5807     settingsGearBtn?.addEventListener('click', (e) => {
+5815     document.addEventListener('pointerdown', (e) => {
+5826       btn.addEventListener('click', (e) => {
+5958     document.getElementById('sm-theme-toggle')?.addEventListener('click', (e) => {
+5987     document.getElementById('undo-btn')?.addEventListener('click', () => {
+5995     document.getElementById('redo-btn')?.addEventListener('click', () => {
+6035   document.addEventListener('DOMContentLoaded', initPlayground);
+6041 window.addEventListener('focus', () => {
+6052 window.addEventListener('beforeunload', () => {

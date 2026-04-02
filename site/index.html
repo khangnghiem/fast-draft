@@ -437,8 +437,8 @@
   <script type="module" src="app.js?v=0.11.296"></script>
   <script>
     // Mobile menu toggle
-    document.getElementById('mobile-menu-btn').addEventListener('click', function() {
-      document.querySelector('.nav-links').classList.toggle('open');
+    document.getElementById('mobile-menu-btn')?.addEventListener('click', function() {
+      document.querySelector('.nav-links')?.classList.toggle('open');
       this.classList.toggle('open');
     });
 
