@@ -1774,58 +1774,10 @@ function playDetachAnimation(nodeId) {
 
 // ─── Gesture Constants ──────────────────────────────────────────────────
 const ZOOM_WHEEL_FACTOR = 1.04;
-let canvasDragOccurred = false; // tracks whether a real canvas drag happened (for post-drop menu)
+let canvasDragOccurred = false; // tracks whether a real canvas drag happened
 
-// ─── Post-drop reparent context menu ────────────────────────────────────
-function showDropContextMenu(clientX, clientY, selectedId, hitId) {
-  closeContextMenu();
-  const menu = document.createElement('div');
-  menu.className = 'ctx-menu ctx-menu-visible';
-  menu.style.cssText = `position:fixed;left:${clientX}px;top:${clientY}px;z-index:200;
-    min-width:160px;padding:4px;background:var(--vscode-menu-background,#1e1e1e);
-    border:1px solid var(--vscode-menu-border,#454545);border-radius:8px;
-    box-shadow:0 8px 30px rgba(0,0,0,0.3);font-size:12px;`;
-
-  const items = [
-    { icon: '📦', label: `Nest into @${hitId}`, action: 'nest' },
-    { icon: '⊙', label: `Center in @${hitId}`, action: 'center' },
-  ];
-
-  for (const item of items) {
-    const el = document.createElement('div');
-    el.className = 'ctx-menu-item';
-    el.innerHTML = `<span class="ctx-menu-icon">${item.icon}</span><span class="ctx-menu-label">${item.label}</span>`;
-    el.addEventListener('click', () => {
-      menu.remove();
-      let changed = false;
-      if (item.action === 'nest') {
-        changed = fdCanvas.reparent_into(selectedId, hitId);
-      } else if (item.action === 'center') {
-        changed = fdCanvas.center_node_in
-          ? fdCanvas.center_node_in(selectedId, hitId)
-          : false;
-      }
-      if (changed) {
-        render();
-        syncTextToExtension();
-        updatePropertiesPanel();
-        showToast(`Nested into @${hitId}`);
-      }
-    });
-    menu.appendChild(el);
-  }
-
-  document.body.appendChild(menu);
-
-  // Auto-dismiss on click elsewhere
-  const dismiss = (e) => {
-    if (!menu.contains(e.target)) {
-      menu.remove();
-      document.removeEventListener('pointerdown', dismiss, true);
-    }
-  };
-  setTimeout(() => document.addEventListener('pointerdown', dismiss, true), 0);
-}
+// ─── ⌘+Drag Nest+Center state ──────────────────────────────────────────
+let cmdDragNestTarget = null; // ID of the container highlighted during ⌘+drag
 
 // ─── Pointer Events ──────────────────────────────────────────────────────
 
@@ -2003,7 +1955,37 @@ function setupPointerEvents() {
       e.metaKey
     ));
     const changed = moveResult.changed;
-    if (changed) { render(); canvasDragOccurred = true; }
+    if (changed) {
+      render(); canvasDragOccurred = true;
+
+      // ── ⌘+Drag nest highlight: show dashed border on target container ──
+      if (e.metaKey && pointerIsDown && currentToolAtPointerDown === 'select') {
+        const selectedId = fdCanvas.get_selected_id();
+        if (selectedId && fdCanvas.hit_test_at_excluding) {
+          try {
+            const hitId = fdCanvas.hit_test_at_excluding(x, y, selectedId);
+            if (hitId && hitId !== selectedId) {
+              const containerKinds = ['rect', 'ellipse', 'frame', 'group'];
+              const hitKind = fdCanvas.get_node_kind ? fdCanvas.get_node_kind(hitId) : '';
+              if (containerKinds.includes(hitKind)) {
+                const parentId = fdCanvas.get_parent_id ? fdCanvas.get_parent_id(selectedId) : '';
+                if (parentId !== hitId) {
+                  cmdDragNestTarget = hitId;
+                } else {
+                  cmdDragNestTarget = null;
+                }
+              } else {
+                cmdDragNestTarget = null;
+              }
+            } else {
+              cmdDragNestTarget = null;
+            }
+          } catch (_) { cmdDragNestTarget = null; }
+        }
+      } else if (!e.metaKey) {
+        cmdDragNestTarget = null;
+      }
+    }
 
     // ── Canvas→Layers cross-drag: highlight layer items when pointer enters Layers panel ──
     if (canvasDragOccurred && canvasPointerId !== -1) {
@@ -2227,7 +2209,7 @@ function setupPointerEvents() {
 
     // Animation drop on release removed (bug #4)
 
-    // ── Post-drop reparent context menu ──
+    // ── Post-drag cleanup ──
     const wasDragging = result.wasDragging && !result.wasResizing;
     canvasDragOccurred = false;
 
@@ -2302,24 +2284,26 @@ function setupPointerEvents() {
       }
     }
 
-    if (wasDragging && !canvasToLayersDone && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+    // ── ⌘+Drop nest+center: reparent into highlighted container ──
+    if (cmdDragNestTarget && wasDragging && !canvasToLayersDone && (e.metaKey || e.ctrlKey)) {
       const selectedId = fdCanvas.get_selected_id();
-      if (selectedId && fdCanvas.hit_test_at_excluding) {
-        try {
-          const hitId = fdCanvas.hit_test_at_excluding(x, y, selectedId);
-          if (hitId && hitId !== selectedId) {
-            const containerKinds = ['rect', 'ellipse', 'frame', 'group'];
-            const hitKind = fdCanvas.get_node_kind ? fdCanvas.get_node_kind(hitId) : '';
-            if (containerKinds.includes(hitKind)) {
-              const parentId = fdCanvas.get_parent_id ? fdCanvas.get_parent_id(selectedId) : '';
-              if (parentId !== hitId) {
-                showDropContextMenu(e.clientX, e.clientY, selectedId, hitId);
-              }
-            }
+      if (selectedId && fdCanvas.reparent_into_centered) {
+        const textBefore = fdCanvas.get_text();
+        const changed = fdCanvas.reparent_into_centered(selectedId, cmdDragNestTarget);
+        if (changed) {
+          const textAfter = fdCanvas.get_text();
+          if (textBefore !== textAfter) {
+            vscode.postMessage({ type: 'pushUndo', textBefore, textAfter });
           }
-        } catch (_) { /* hit_test_at_excluding or get_node_kind may not exist */ }
+          render();
+          syncTextToExtension();
+          updatePropertiesPanel();
+          refreshLayersPanel();
+          showToast(`Nested + centered into @${cmdDragNestTarget}`);
+        }
       }
     }
+    cmdDragNestTarget = null;
 
     // ── Detach snap feedback: scale pop + glow on group detach ──
     if (isDraggingNode && fdCanvas && draggedNodeId) {

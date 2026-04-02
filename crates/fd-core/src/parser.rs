@@ -2021,3 +2021,14 @@ fn parse_constraint_line(input: &mut &str) -> ModalResult<(NodeId, Constraint)> 
 #[cfg(test)]
 #[path = "parser_tests.rs"]
 mod tests;
+
+#[test]
+fn test_parse_root_panic() {
+    let fd = "rect @rect_1775150873564 {\n  x: 10\n  y: 20\n}\n";
+    let graph = parse_document(fd).unwrap();
+    println!("root index: {:?}", graph.root);
+    for idx in graph.graph.node_indices() {
+        let n = &graph.graph[idx];
+        println!("Index {:?} => id: {}, kind: {:?}", idx, n.id, n.kind);
+    }
+}

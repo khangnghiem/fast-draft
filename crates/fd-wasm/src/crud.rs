@@ -518,7 +518,7 @@ impl FdCanvas {
                 target
             };
             node.constraints.push(Constraint::CenterIn(center_target));
-            
+
             self.sync_mutation_cycle();
             true
         } else {
