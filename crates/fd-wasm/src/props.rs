@@ -664,12 +664,7 @@ impl FdCanvas {
         let ids = if let Some(ref index) = self.spatial_index {
             index.query_point_all(x, y)
         } else {
-            fd_render::hit::hit_test_all(
-                &self.engine.graph,
-                self.engine.current_bounds(),
-                x,
-                y,
-            )
+            fd_render::hit::hit_test_all(&self.engine.graph, self.engine.current_bounds(), x, y)
         };
 
         if ids.is_empty() {
