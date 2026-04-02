@@ -18,7 +18,7 @@ function showDropContextMenu(clientX, clientY, selectedId, hitId) {
 
   const items = [
     { icon: '📦', label: `Nest into @${hitId}`, action: 'nest' },
-    { icon: '⊙', label: `Center in @${hitId}`, action: 'center-nest' },
+    { icon: '⊙', label: `Center in @${hitId}`, action: 'center' },
   ];
 
   for (const item of items) {
@@ -30,10 +30,10 @@ function showDropContextMenu(clientX, clientY, selectedId, hitId) {
       let changed = false;
       if (item.action === 'nest') {
         changed = fdCanvas.reparent_into(selectedId, hitId);
-      } else if (item.action === 'center-nest') {
-        changed = fdCanvas.reparent_into_centered
-          ? fdCanvas.reparent_into_centered(selectedId, hitId)
-          : fdCanvas.reparent_into(selectedId, hitId);
+      } else if (item.action === 'center') {
+        changed = fdCanvas.center_node_in
+          ? fdCanvas.center_node_in(selectedId, hitId)
+          : false;
       }
       if (changed) {
         render();
@@ -458,7 +458,7 @@ function setupPointerEvents() {
     // Animation drop on release removed (bug #4)
 
     // ── Post-drop reparent context menu ──
-    const wasDragging = canvasDragOccurred;
+    const wasDragging = result.wasDragging && !result.wasResizing;
     canvasDragOccurred = false;
 
     // Clean up ghost label

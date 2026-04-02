@@ -34,6 +34,7 @@ export const fdcanvas_get_diagnostics_for_source: (a: number, b: number, c: numb
 export const fdcanvas_get_hover: (a: number, b: number, c: number) => [number, number];
 export const parse_to_json: (a: number, b: number) => [number, number];
 export const validate: (a: number, b: number) => [number, number];
+export const fdcanvas_center_node_in: (a: number, b: number, c: number, d: number, e: number) => number;
 export const fdcanvas_clear_search_highlights: (a: number) => void;
 export const fdcanvas_create_child_text: (a: number, b: number, c: number, d: number, e: number) => [number, number];
 export const fdcanvas_create_edge: (a: number, b: number, c: number, d: number, e: number) => [number, number];

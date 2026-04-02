@@ -452,6 +452,7 @@ impl FdCanvas {
 
         // Capture dragging state before SelectTool::handle clears it
         let was_dragging = self.select_tool.dragging;
+        let was_resizing = self.select_tool.resize_handle.is_some();
         let dragged_ids = if was_dragging {
             self.select_tool.selected.clone()
         } else {
@@ -566,8 +567,10 @@ impl FdCanvas {
             changed: visual_changed,
             tool_switched,
             tool: tool_name.to_string(),
+            was_dragging,
+            was_resizing,
         })
-        .unwrap_or_else(|_| r#"{"changed":false,"toolSwitched":false,"tool":"select"}"#.to_string())
+        .unwrap_or_else(|_| r#"{"changed":false,"toolSwitched":false,"tool":"select","wasDragging":false,"wasResizing":false}"#.to_string())
     }
 
     /// Cancel an in-progress drag gesture (Esc mid-drag).

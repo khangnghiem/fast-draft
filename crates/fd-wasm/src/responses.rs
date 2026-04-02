@@ -20,6 +20,10 @@ pub(crate) struct PointerUpResult {
     #[serde(rename = "toolSwitched")]
     pub tool_switched: bool,
     pub tool: String,
+    #[serde(rename = "wasDragging")]
+    pub was_dragging: bool,
+    #[serde(rename = "wasResizing")]
+    pub was_resizing: bool,
 }
 
 /// Result of `handle_key()`.

@@ -28,6 +28,11 @@ export class FdCanvas {
      */
     cancel_drag(): boolean;
     /**
+     * Center a node within a target container WITHOUT reparenting it.
+     * Used when the user selects "Center in @target" from the drop context menu.
+     */
+    center_node_in(child_id: string, target_id: string): boolean;
+    /**
      * Clear the pressed interaction state.
      *
      * Called from JS when entering inline text editing to suppress
@@ -557,6 +562,7 @@ export interface InitOutput {
     readonly fdcanvas_get_hover: (a: number, b: number, c: number) => [number, number];
     readonly parse_to_json: (a: number, b: number) => [number, number];
     readonly validate: (a: number, b: number) => [number, number];
+    readonly fdcanvas_center_node_in: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly fdcanvas_clear_search_highlights: (a: number) => void;
     readonly fdcanvas_create_child_text: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_create_edge: (a: number, b: number, c: number, d: number, e: number) => [number, number];
