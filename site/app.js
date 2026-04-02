@@ -4805,6 +4805,7 @@ async function initPlayground() {
         panX = cx - (cx - panX) * (newZoom / zoomLevel);
         panY = cy - (cy - panY) * (newZoom / zoomLevel);
         zoomLevel = newZoom;
+        updateZoomIndicator();
         canvas.style.cursor = delta > 0 ? 'zoom-in' : 'zoom-out';
         renderDirty = true; uiDirty = true;
         return;
