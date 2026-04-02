@@ -103,7 +103,7 @@ const GRID_SPACING = 20;
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 let reduceMotion = prefersReducedMotion.matches || localStorage.getItem('fd-reduce-motion') === 'true';
 if (reduceMotion) document.body.classList.add('reduce-motion');
-prefersReducedMotion.addEventListener('change', (e) => {
+prefersReducedMotion?.addEventListener?.('change', (e) => {
   reduceMotion = e.matches || localStorage.getItem('fd-reduce-motion') === 'true';
   document.body.classList.toggle('reduce-motion', reduceMotion);
 });
@@ -176,6 +176,9 @@ let lassoActive = false; // Currently drawing lasso
 // Eraser marquee state — draws rectangle, deletes enclosed nodes
 let eraserMarquee = null; // {startX, startY, endX, endY} scene-space
 let eraserActive = false; // Currently drawing eraser marquee
+
+let openContextMenuAt; // Forward declaration for right-click gesture
+let resizeCanvas = () => {}; // Forward declaration to prevent ReferenceError on early tab switch
 
 /** Test if a point {x,y} is inside a polygon defined by pts [{x,y},...] (ray-casting) */
 function pointInPolygon(px, py, pts) {
@@ -2432,7 +2435,7 @@ function setupContextMenu() {
   };
 
   // ── Helper: open the right context menu based on hit-test ──
-  function openContextMenuAt(clientX, clientY) {
+  openContextMenuAt = function(clientX, clientY) {
     if (!fdCanvas) return;
     const { x, y } = screenToScene(clientX, clientY, canvas);
     contextMenuClickPos = { x, y };
@@ -3757,7 +3760,7 @@ async function initPlayground() {
     console.log(`[FD] Runtime initialized via streaming (${Math.round(performance.now() - t0)}ms)`);
 
     // Size the canvas
-    const resizeCanvas = () => {
+    resizeCanvas = () => {
       const rect = wrapper.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
       const layersW = getLayersPanelWidth();

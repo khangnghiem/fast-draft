@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.317 — Restore Canvas Right-Click Context Menu (Bug Fix)
+
+- **Gesture Context Menu Resolution**: Fixed a major regression where right-clicking on the canvas (`pointerup` gesture) threw a silent `ReferenceError: openContextMenuAt is not defined` instead of opening the context menu. The target function was trapped inside the closure scope of `setupContextMenu`. Hoisted it to the module root.
+- **Early DOM Event Stabilization**: Resolved crash loops during headless E2E verification caused by startup race conditions. Fixed a `resizeCanvas` ReferenceError (called by early tab-switch events before WASM init was complete) by forward-declaring a top-level dummy function constraint, and utilized `?.` optional chaining to stabilize the mobile menu toggle listener (`Cannot read properties of null`) when UI panels restructure.
+
 ### v0.11.316 — Deep Select and Clone with Children (R3.2)
 
 - **Deep Select (⌘+Alt click)**: Added `⌘+Alt+Click` to bypass group selection and immediately select the deep leaf child under the cursor, replicating standard design tool direct-select interaction.
