@@ -92,10 +92,14 @@ impl FdCanvas {
     /// Create a new canvas controller with the given dimensions.
     #[wasm_bindgen(constructor)]
     pub fn new(width: f64, height: f64) -> Self {
+        #[cfg(target_arch = "wasm32")]
         console_error_panic_hook_setup();
 
         // Seed the core ID generator to prevent multi-session ID collisions
+        #[cfg(target_arch = "wasm32")]
         fd_core::id::NodeId::seed_prefix_counter(js_sys::Date::now() as u64);
+        #[cfg(not(target_arch = "wasm32"))]
+        fd_core::id::NodeId::seed_prefix_counter(0);
 
         let viewport = Viewport {
             width: width as f32,
@@ -940,6 +944,7 @@ impl FdCanvas {
 
 // ─── Panic hook for WASM debugging ───────────────────────────────────────
 
+#[cfg(target_arch = "wasm32")]
 fn console_error_panic_hook_setup() {
     #[cfg(target_arch = "wasm32")]
     {

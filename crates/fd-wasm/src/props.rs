@@ -972,3 +972,115 @@ impl FdCanvas {
         serde_json::to_string(&json_guides).unwrap_or_else(|_| "[]".to_string())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    // use super::*
+    use fd_core::{
+        id::NodeId,
+        model::{NodeKind, SceneNode},
+    };
+
+    #[test]
+    fn test_update_text_metrics_ignores_non_text() {
+        let mut canvas = crate::FdCanvas::new(800.0, 600.0);
+        let id = NodeId::intern("rect1");
+
+        // Add a non-text node
+        let node = SceneNode::new(
+            id,
+            NodeKind::Rect {
+                width: 100.0,
+                height: 100.0,
+            },
+        );
+        let idx = canvas.engine.graph.add_node(canvas.engine.graph.root, node);
+        canvas.engine.bounds.insert(
+            idx,
+            fd_core::model::ResolvedBounds {
+                x: 0.0,
+                y: 0.0,
+                width: 100.0,
+                height: 100.0,
+            },
+        );
+
+        let result = canvas.update_text_metrics("rect1", 50.0, 20.0);
+        assert!(!result, "Should return false for non-text nodes");
+    }
+
+    #[test]
+    fn test_update_text_metrics_ignores_missing_node() {
+        let mut canvas = crate::FdCanvas::new(800.0, 600.0);
+        let result = canvas.update_text_metrics("non_existent_node", 50.0, 20.0);
+        assert!(!result, "Should return false for non-existent nodes");
+    }
+
+    #[test]
+    fn test_update_text_metrics_normal_text() {
+        let mut canvas = crate::FdCanvas::new(800.0, 600.0);
+        let id = NodeId::intern("text1");
+
+        let node = SceneNode::new(
+            id,
+            NodeKind::Text {
+                content: "hello".to_string(),
+                max_width: None,
+            },
+        );
+        let idx = canvas.engine.graph.add_node(canvas.engine.graph.root, node);
+        canvas.engine.bounds.insert(
+            idx,
+            fd_core::model::ResolvedBounds {
+                x: 10.0,
+                y: 10.0,
+                width: 10.0,
+                height: 10.0,
+            },
+        );
+
+        let result = canvas.update_text_metrics("text1", 100.0, 20.0);
+        assert!(result, "Should return true on success");
+
+        let graph_node = &canvas.engine.bounds[&idx];
+        // Expect width = measured_width (100) + 2.0 * 2.0 padding = 104.0
+        // Expect height = measured_height (20) + 2.0 * 2.0 padding = 24.0
+        assert_eq!(graph_node.width, 104.0);
+        assert_eq!(graph_node.height, 24.0);
+    }
+
+    #[test]
+    fn test_update_text_metrics_with_max_width() {
+        let mut canvas = crate::FdCanvas::new(800.0, 600.0);
+        let id = NodeId::intern("text2");
+
+        let node = SceneNode::new(
+            id,
+            NodeKind::Text {
+                content: "hello world".to_string(),
+                max_width: Some(80.0), // Hardcoded max_width
+            },
+        );
+        let idx = canvas.engine.graph.add_node(canvas.engine.graph.root, node);
+        canvas.engine.bounds.insert(
+            idx,
+            fd_core::model::ResolvedBounds {
+                x: 10.0,
+                y: 10.0,
+                width: 100.0,
+                height: 10.0,
+            },
+        );
+
+        // Measured width might be larger, but max_width should cap/override width
+        let result = canvas.update_text_metrics("text2", 150.0, 40.0);
+        assert!(result, "Should return true on success");
+
+        let graph_node = &canvas.engine.bounds[&idx];
+
+        // Final width should be capped by max_width (80.0). Note: max_width acts as the exact final width if present
+        assert_eq!(graph_node.width, 80.0);
+        // Height should still be updated (measured 40.0 + 4.0 padding = 44.0)
+        assert_eq!(graph_node.height, 44.0);
+    }
+}
