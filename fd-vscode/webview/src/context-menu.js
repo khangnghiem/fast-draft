@@ -782,7 +782,7 @@ function setupContextMenu() {
     const y = ((e.clientY - rect.top) - panY) / zoomLevel;
 
     const selectedId = fdCanvas.get_selected_id();
-    fdCanvas.handle_pointer_down(x, y, 1.0);
+    fdCanvas.handle_pointer_down(x, y, 1.0, false, false, false, false);
     fdCanvas.handle_pointer_up(x, y, false, false, false, false);
     const hitId = fdCanvas.get_selected_id();
     render();

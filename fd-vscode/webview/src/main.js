@@ -4,6 +4,37 @@
 
 // ─── Initialization ──────────────────────────────────────────────────────
 
+window.addEventListener('error', (e) => {
+  if (e.message && (e.message.includes('arity') || e.message.includes('arguments') || e.message.includes('wasm') || e.message.includes('fdcanvas'))) {
+    showWasmErrorToast(e.message);
+  }
+});
+window.addEventListener('unhandledrejection', (e) => {
+  const msg = e.reason ? (e.reason.message || e.reason) : '';
+  if (String(msg).includes('arity') || String(msg).includes('arguments') || String(msg).includes('wasm') || String(msg).includes('fdcanvas')) {
+    showWasmErrorToast(String(msg));
+  }
+});
+
+function showWasmErrorToast(msg) {
+  let toast = document.getElementById('wasm-error-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'wasm-error-toast';
+    toast.style.cssText = `
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 9999; background: rgba(255, 59, 48, 0.15); color: #FF3B30;
+      border: 1px solid rgba(255, 59, 48, 0.3); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      padding: 12px 24px; border-radius: 8px; font-family: monospace;
+      font-size: 13px; box-shadow: 0 8px 32px rgba(255, 59, 48, 0.2);
+      display: flex; align-items: center; gap: 12px; pointer-events: none;
+    `;
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = `<span style="font-size: 18px">⚠️</span> <div><b>WASM Bridge Error</b><br/><span style="opacity:0.9">${msg}</span></div>`;
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 6000);
+}
+
 async function main() {
   canvas = document.getElementById("fd-canvas");
   const loading = document.getElementById("loading");
