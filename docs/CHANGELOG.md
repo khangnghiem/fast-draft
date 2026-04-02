@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.318 — Minimap Zoom Sync Fix (Bug Fix)
+
+- **UI Synchronization**: Fixed a bug where the minimap zoom indicator (`updateZoomIndicator()`) was not being invoked during the **Zoom Scrub** (`Cmd`/`Meta` + right-click drag) gesture. The minimap now correctly reflects real-time zoom modifications, providing synced UI feedback matching the Apple HIG standard.
+
 ### v0.11.317 — Restore Canvas Right-Click Context Menu (Bug Fix)
 
 - **Gesture Context Menu Resolution**: Fixed a major regression where right-clicking on the canvas (`pointerup` gesture) threw a silent `ReferenceError: openContextMenuAt is not defined` instead of opening the context menu. The target function was trapped inside the closure scope of `setupContextMenu`. Hoisted it to the module root.
