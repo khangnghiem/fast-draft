@@ -305,6 +305,18 @@ export function openInlineEditor(opts) {
     const newVal = textarea.value;
     if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
     if (!fdCanvas) return;
+
+    if (propKey === "content" && newVal.trim() === "") {
+      fdCanvas.select_by_id(nodeId);
+      const changed = fdCanvas.delete_selected();
+      if (changed) {
+        renderFn();
+        syncFn();
+        if (updatePanelFn) updatePanelFn();
+      }
+      return;
+    }
+
     if (newVal === originalValue) {
       // No change — deselect and return to neutral canvas state
       fdCanvas.select_by_id("");
@@ -330,12 +342,22 @@ export function openInlineEditor(opts) {
         fdCanvas.set_suppressed_text_node();
       }
       if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
-      fdCanvas.select_by_id(nodeId);
-      fdCanvas.set_node_prop(propKey, originalValue);
-      // Cancel complete — deselect to return canvas to neutral state
-      fdCanvas.select_by_id("");
-      renderFn();
-      syncFn();
+
+      if (propKey === "content" && originalValue.trim() === "") {
+        fdCanvas.select_by_id(nodeId);
+        if (fdCanvas.delete_selected()) {
+          renderFn();
+          syncFn();
+          if (updatePanelFn) updatePanelFn();
+        }
+      } else {
+        fdCanvas.select_by_id(nodeId);
+        fdCanvas.set_node_prop(propKey, originalValue);
+        // Cancel complete — deselect to return canvas to neutral state
+        fdCanvas.select_by_id("");
+        renderFn();
+        syncFn();
+      }
       e.stopPropagation();
       return;
     }
@@ -450,7 +472,7 @@ export function setupInlineEditor(opts) {
       } else {
         // Create new label via WASM (sets Edge.text_child, adds to graph, re-resolves layout)
         const textBefore = fdCanvas.get_text();
-        const newTextId = fdCanvas.create_edge_text_child(edgeId, "Label");
+        const newTextId = fdCanvas.create_edge_text_child(edgeId, "");
         if (newTextId) {
           const textAfter = fdCanvas.get_text();
           fdCanvas.push_undo_snapshot(textBefore, textAfter);
@@ -462,7 +484,7 @@ export function setupInlineEditor(opts) {
           }
           fdCanvas.select_by_id(newTextId);
           setTimeout(() => openInlineEditor({
-            nodeId: newTextId, propKey: "content", currentValue: "Label",
+            nodeId: newTextId, propKey: "content", currentValue: "",
             fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
             panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
           }), 50);

@@ -67,7 +67,7 @@ function setupInlineEditor() {
           if (m2) {
             const insertPos = source.indexOf(m2[0]) + m2[0].length;
             const newSource = source.slice(0, insertPos)
-              + `\n  text @${textId} "Label" {}`
+              + `\n  text @${textId} "" {}`
               + source.slice(insertPos);
             const textBefore = source;
             fdCanvas.set_text(newSource);
@@ -79,7 +79,7 @@ function setupInlineEditor() {
             }
             fdCanvas.select_by_id(textId);
             render();
-            setTimeout(() => openInlineEditor(textId, "content", "Label"), 50);
+            setTimeout(() => openInlineEditor(textId, "content", ""), 50);
           }
         }
       }
@@ -109,14 +109,14 @@ function setupInlineEditor() {
         openInlineEditor(existingTextId, "content", childProps.content || "");
       } else {
         // Create a new text child inside the shape
-        const newTextId = fdCanvas.create_child_text(props.id, "Text");
+        const newTextId = fdCanvas.create_child_text(props.id, "");
         if (newTextId) {
           if (fdCanvas.set_suppressed_text_node) {
             fdCanvas.set_suppressed_text_node(newTextId);
           }
           render();
           syncTextToExtension();
-          setTimeout(() => openInlineEditor(newTextId, "content", "Text"), 50);
+          setTimeout(() => openInlineEditor(newTextId, "content", ""), 50);
         }
       }
     }
@@ -438,6 +438,18 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     const newVal = textarea.value;
     if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
     if (!fdCanvas) return;
+
+    if (propKey === "content" && newVal.trim() === "") {
+      fdCanvas.select_by_id(nodeId);
+      const changed = fdCanvas.delete_selected();
+      if (changed) {
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+      }
+      return;
+    }
+
     // Skip mutation if value unchanged — avoids SetStyle flattening inherited styles
     if (newVal === originalValue) {
       render();
@@ -462,11 +474,21 @@ function openInlineEditor(nodeId, propKey, currentValue) {
       // Cancel: revert to original value
       inlineEditorActive = false;
       if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
-      // Restore original text in the node
-      fdCanvas.select_by_id(nodeId);
-      fdCanvas.set_node_prop(propKey, originalValue);
-      render();
-      syncTextToExtension();
+      
+      if (propKey === "content" && originalValue.trim() === "") {
+        fdCanvas.select_by_id(nodeId);
+        if (fdCanvas.delete_selected()) {
+          render();
+          syncTextToExtension();
+          updatePropertiesPanel();
+        }
+      } else {
+        // Restore original text in the node
+        fdCanvas.select_by_id(nodeId);
+        fdCanvas.set_node_prop(propKey, originalValue);
+        render();
+        syncTextToExtension();
+      }
       e.stopPropagation();
       return;
     }
