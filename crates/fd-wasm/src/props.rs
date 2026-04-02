@@ -657,6 +657,57 @@ impl FdCanvas {
         .unwrap_or_else(|_| String::new())
     }
 
+    /// Hit-test all nodes at scene-space coordinates. Returns a JSON array of
+    /// `[{id, kind, parent}]` ordered front-to-back (topmost first).
+    /// Used by the Layer Picker (⌘+Right-click) to list overlapping layers.
+    pub fn hit_test_all_at(&self, x: f32, y: f32) -> String {
+        let ids = if let Some(ref index) = self.spatial_index {
+            index.query_point_all(x, y)
+        } else {
+            fd_render::hit::hit_test_all(
+                &self.engine.graph,
+                self.engine.current_bounds(),
+                x,
+                y,
+            )
+        };
+
+        if ids.is_empty() {
+            return "[]".to_string();
+        }
+
+        let mut entries = Vec::with_capacity(ids.len());
+        for id in &ids {
+            if let Some(node) = self.engine.graph.get_by_id(*id) {
+                let kind = match &node.kind {
+                    NodeKind::Rect { .. } => "rect",
+                    NodeKind::Ellipse { .. } => "ellipse",
+                    NodeKind::Text { .. } => "text",
+                    NodeKind::Frame { .. } => "frame",
+                    NodeKind::Group => "group",
+                    NodeKind::Path { .. } => "path",
+                    NodeKind::Image { .. } => "image",
+                    NodeKind::Generic => "generic",
+                    NodeKind::Root => continue,
+                };
+                let parent = self.engine.parent_of(*id);
+                let parent_str = if parent.as_str() == "root" {
+                    ""
+                } else {
+                    parent.as_str()
+                };
+                entries.push(format!(
+                    r#"{{"id":"{}","kind":"{}","parent":"{}"}}"#,
+                    id.as_str(),
+                    kind,
+                    parent_str,
+                ));
+            }
+        }
+
+        format!("[{}]", entries.join(","))
+    }
+
     /// Hit-test at scene-space coordinates. Returns the topmost node ID, or empty string.
     pub fn hit_test_at(&self, x: f32, y: f32) -> String {
         self.hit_test(x, y)

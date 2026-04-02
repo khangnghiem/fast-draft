@@ -324,6 +324,12 @@ export class FdCanvas {
      */
     has_text_child(node_id: string): boolean;
     /**
+     * Hit-test all nodes at scene-space coordinates. Returns a JSON array of
+     * `[{id, kind, parent}]` ordered front-to-back (topmost first).
+     * Used by the Layer Picker (⌘+Right-click) to list overlapping layers.
+     */
+    hit_test_all_at(x: number, y: number): string;
+    /**
      * Hit-test at scene-space coordinates. Returns the topmost node ID, or empty string.
      */
     hit_test_at(x: number, y: number): string;
@@ -573,10 +579,20 @@ export interface InitOutput {
     readonly fdcanvas_search_nodes: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_set_node_position: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly fdcanvas_set_search_highlights: (a: number, b: number, c: number) => void;
-    readonly fdcanvas_cancel_drag: (a: number) => number;
-    readonly fdcanvas_handle_pointer_down: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
-    readonly fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
-    readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+    readonly fdcanvas_add_animation_to_node: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly fdcanvas_emit_selection_fd: (a: number) => [number, number];
+    readonly fdcanvas_export_excalidraw: (a: number) => [number, number];
+    readonly fdcanvas_export_html: (a: number) => [number, number];
+    readonly fdcanvas_export_svg: (a: number) => [number, number];
+    readonly fdcanvas_get_all_specs: (a: number) => [number, number];
+    readonly fdcanvas_get_node_animations_json: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_get_spec: (a: number, b: number, c: number) => [number, number];
+    readonly fdcanvas_handle_key: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+    readonly fdcanvas_handle_stylus_squeeze: (a: number, b: number, c: number, d: number, e: number) => [number, number];
+    readonly fdcanvas_remove_node_animations: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_render: (a: number, b: any, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly fdcanvas_render_export: (a: number, b: any, c: number, d: number) => void;
+    readonly fdcanvas_set_spec: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly fdcanvas_add_to_selection: (a: number, b: number, c: number) => number;
     readonly fdcanvas_clear_pressed: (a: number) => void;
     readonly fdcanvas_compute_guides_for_rect: (a: number, b: number, c: number, d: number, e: number) => [number, number];
@@ -596,6 +612,7 @@ export interface InitOutput {
     readonly fdcanvas_get_text_children: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_group_selected: (a: number) => number;
     readonly fdcanvas_has_text_child: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_hit_test_all_at: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_hit_test_at: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_hit_test_at_excluding: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_hit_test_edge_at: (a: number, b: number, c: number) => [number, number];
@@ -609,20 +626,10 @@ export interface InitOutput {
     readonly fdcanvas_toggle_select_by_id: (a: number, b: number, c: number) => number;
     readonly fdcanvas_ungroup_selected: (a: number) => number;
     readonly fdcanvas_update_text_metrics: (a: number, b: number, c: number, d: number, e: number) => number;
-    readonly fdcanvas_add_animation_to_node: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
-    readonly fdcanvas_emit_selection_fd: (a: number) => [number, number];
-    readonly fdcanvas_export_excalidraw: (a: number) => [number, number];
-    readonly fdcanvas_export_html: (a: number) => [number, number];
-    readonly fdcanvas_export_svg: (a: number) => [number, number];
-    readonly fdcanvas_get_all_specs: (a: number) => [number, number];
-    readonly fdcanvas_get_node_animations_json: (a: number, b: number, c: number) => [number, number];
-    readonly fdcanvas_get_spec: (a: number, b: number, c: number) => [number, number];
-    readonly fdcanvas_handle_key: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
-    readonly fdcanvas_handle_stylus_squeeze: (a: number, b: number, c: number, d: number, e: number) => [number, number];
-    readonly fdcanvas_remove_node_animations: (a: number, b: number, c: number) => number;
-    readonly fdcanvas_render: (a: number, b: any, c: number, d: number, e: number, f: number, g: number) => void;
-    readonly fdcanvas_render_export: (a: number, b: any, c: number, d: number) => void;
-    readonly fdcanvas_set_spec: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly fdcanvas_cancel_drag: (a: number) => number;
+    readonly fdcanvas_handle_pointer_down: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
+    readonly fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
+    readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

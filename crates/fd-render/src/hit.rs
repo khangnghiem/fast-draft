@@ -103,6 +103,22 @@ impl SpatialIndex {
         best.map(|(_, id)| id)
     }
 
+    /// Find ALL nodes containing (px, py), ordered by z-order descending
+    /// (topmost/front-most first). Used by the Layer Picker (⌘+Right-click).
+    pub fn query_point_all(&self, px: f32, py: f32) -> Vec<NodeId> {
+        let start = self.entries.partition_point(|e| e.x_min <= px);
+        let mut hits: Vec<(u32, NodeId)> = Vec::new();
+        for i in (0..start).rev() {
+            let e = &self.entries[i];
+            if e.x_max >= px && e.y_min <= py && e.y_max >= py {
+                hits.push((e.z_order, e.id));
+            }
+        }
+        // Sort by z_order descending (topmost first)
+        hits.sort_by(|a, b| b.0.cmp(&a.0));
+        hits.into_iter().map(|(_, id)| id).collect()
+    }
+
     /// Find all nodes intersecting the rectangle (rx, ry, rw, rh). O(log N + K).
     pub fn query_rect(&self, rx: f32, ry: f32, rw: f32, rh: f32) -> Vec<NodeId> {
         let rx2 = rx + rw;
@@ -134,6 +150,44 @@ pub fn hit_test(
 ) -> Option<NodeId> {
     // Walk children in reverse order (last painted = topmost)
     hit_test_node(graph, graph.root, bounds, px, py)
+}
+
+/// Find ALL nodes at position (px, py), ordered front-to-back (topmost first).
+/// Used by the Layer Picker (⌘+Right-click) to list all overlapping layers
+/// at a given point.
+pub fn hit_test_all(
+    graph: &SceneGraph,
+    bounds: &HashMap<NodeIndex, ResolvedBounds>,
+    px: f32,
+    py: f32,
+) -> Vec<NodeId> {
+    let mut result = Vec::new();
+    hit_test_all_node(graph, graph.root, bounds, px, py, &mut result);
+    // Reverse so topmost (last painted) comes first
+    result.reverse();
+    result
+}
+
+fn hit_test_all_node(
+    graph: &SceneGraph,
+    idx: NodeIndex,
+    bounds: &HashMap<NodeIndex, ResolvedBounds>,
+    px: f32,
+    py: f32,
+    out: &mut Vec<NodeId>,
+) {
+    let node = &graph.graph[idx];
+    // Check self (skip Root)
+    if !matches!(node.kind, NodeKind::Root)
+        && let Some(b) = bounds.get(&idx)
+        && b.contains(px, py)
+    {
+        out.push(node.id);
+    }
+    // Recurse into children
+    for &child_idx in graph.children(idx).iter() {
+        hit_test_all_node(graph, child_idx, bounds, px, py, out);
+    }
 }
 
 fn hit_test_node(
@@ -534,6 +588,111 @@ group @outer {
 
         let result = hit_test(&graph, &bounds, 700.0, 500.0);
         assert_eq!(result, None);
+    }
+
+    // ─── hit_test_all tests (Layer Picker) ─────────────────────────────
+
+    #[test]
+    fn hit_test_all_overlapping() {
+        // Two rects overlapping at (50, 50)
+        let input = r#"
+rect @bottom {
+  w: 200
+  h: 200
+  x: 0
+  y: 0
+}
+
+rect @top {
+  w: 100
+  h: 100
+  x: 25
+  y: 25
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let result = hit_test_all(&graph, &bounds, 50.0, 50.0);
+        // Both rects should be hit; @top (last painted) comes first
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], NodeId::intern("top"));
+        assert_eq!(result[1], NodeId::intern("bottom"));
+    }
+
+    #[test]
+    fn hit_test_all_nested() {
+        let input = r#"
+group @outer {
+  rect @child {
+    w: 100
+    h: 100
+  }
+}
+
+@outer -> absolute: 10, 10
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let child_idx = graph.index_of(NodeId::intern("child")).unwrap();
+        if let Some(b) = bounds.get(&child_idx) {
+            let cx = b.x + b.width / 2.0;
+            let cy = b.y + b.height / 2.0;
+            let result = hit_test_all(&graph, &bounds, cx, cy);
+            // Should hit: @child, @outer (group bounds contain the point too)
+            assert!(result.contains(&NodeId::intern("child")));
+            assert!(result.contains(&NodeId::intern("outer")));
+        }
+    }
+
+    #[test]
+    fn hit_test_all_miss() {
+        let input = r#"
+rect @a { w: 50 h: 50 x: 0 y: 0 }
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        let result = hit_test_all(&graph, &bounds, 500.0, 500.0);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn spatial_index_query_point_all_matches_hit_test_all() {
+        let input = r#"
+rect @bottom { w: 200 h: 200 x: 0 y: 0 }
+rect @top { w: 100 h: 100 x: 25 y: 25 }
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+        let index = SpatialIndex::build(&graph, &bounds);
+
+        let brute = hit_test_all(&graph, &bounds, 50.0, 50.0);
+        let indexed = index.query_point_all(50.0, 50.0);
+
+        let brute_set: std::collections::HashSet<_> = brute.into_iter().collect();
+        let indexed_set: std::collections::HashSet<_> = indexed.into_iter().collect();
+        assert_eq!(
+            brute_set, indexed_set,
+            "SpatialIndex query_point_all should match hit_test_all"
+        );
     }
 
     // ─── Edge hit-testing tests ──────────────────────────────────────

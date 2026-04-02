@@ -183,7 +183,10 @@ impl Tool for SelectTool {
                     // the deselect to PointerUp so Shift+drag can constrain
                     // the axis without losing this node from the selection.
                     self.shift_toggled_off = None;
-                    if modifiers.shift || modifiers.meta || modifiers.ctrl {
+                    let multi_select = modifiers.shift
+                        || (modifiers.meta && !modifiers.alt)
+                        || (modifiers.ctrl && !modifiers.alt);
+                    if multi_select {
                         if self.selected.contains(&hit_id) {
                             // Defer deselect — will fire on PointerUp if no drag
                             self.shift_toggled_off = Some(hit_id);

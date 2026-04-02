@@ -2055,15 +2055,113 @@ const ctxMenu = new ContextMenu();
 // ── Right-click gesture state ──
 // Short right-click (button down + up, no significant movement) → context menu.
 // Right-click + drag (button down + move > threshold) → temporary pan (Hand tool).
+// ⌘ + right-click (short) → Layer Picker / Quick Insert.
+// ⌘ + right-drag → Zoom Scrub.
 const RIGHT_CLICK_DRAG_THRESHOLD = 5;    // px movement before committing to pan
 const RIGHT_CLICK_MENU_TIMEOUT_MS = 400; // max ms from down→up to count as "short click"
 let rightClickPending = false;           // right button is held, gesture not yet determined
 let rightClickStartClient = null;        // {x, y} in client coords when button went down
 let rightClickStartTime = 0;             // performance.now() at button-down
 let rightClickPointerId = -1;            // pointerId of the pending right-click
+let rightClickCmdHeld = false;           // ⌘ was held when right-click started
+let zoomScrubActive = false;             // ⌘+right-drag zoom scrub is active
+let zoomScrubStartZoom = 1;              // zoom level when zoom scrub started
 
 function closeContextMenu() {
   ctxMenu.close();
+}
+
+// ── ⌘+Right-click: Layer Picker ──────────────────────────────────────────
+// Shows all overlapping layers at cursor, ordered front-to-back.
+// Clicking a layer selects it (drill-down through z-stack).
+function openLayerPickerAt(clientX, clientY) {
+  if (!fdCanvas || !fdCanvas.hit_test_all_at) return;
+  const canvas = document.getElementById('fd-canvas');
+  if (!canvas) return;
+  const { x, y } = screenToScene(clientX, clientY, canvas);
+
+  let layers;
+  try {
+    layers = JSON.parse(fdCanvas.hit_test_all_at(x, y));
+  } catch (_) { return; }
+  if (!layers || layers.length === 0) return;
+
+  const kindIcon = { rect: '▭', ellipse: '◯', text: 'T', frame: '⊞', group: '⊟', path: '✎', image: '🖼', generic: '◇' };
+  const items = [
+    { type: 'header', label: `${layers.length} layer${layers.length > 1 ? 's' : ''} at cursor` },
+  ];
+  for (const layer of layers) {
+    items.push({
+      type: 'action',
+      icon: kindIcon[layer.kind] || '◇',
+      label: `@${layer.id}`,
+      shortcut: layer.kind,
+      action: 'layer-pick',
+      data: { id: layer.id },
+    });
+  }
+
+  ctxMenu.open({
+    items,
+    x: clientX,
+    y: clientY,
+    onAction: (action, el) => {
+      if (action === 'layer-pick') {
+        const id = el.getAttribute('data-id');
+        if (id && fdCanvas.select_by_id) {
+          fdCanvas.select_by_id(id);
+          renderDirty = true; uiDirty = true;
+          renderCanvas();
+          refreshLayersPanel();
+          updatePropertiesPanel();
+        }
+      }
+    },
+  });
+}
+
+// ── ⌘+Right-click on empty: Quick Insert ─────────────────────────────────
+// Creates a new shape at the cursor position with a single gesture.
+function openQuickInsertAt(clientX, clientY) {
+  if (!fdCanvas) return;
+  const canvas = document.getElementById('fd-canvas');
+  if (!canvas) return;
+  const { x, y } = screenToScene(clientX, clientY, canvas);
+
+  const items = [
+    { type: 'header', label: 'Quick Insert' },
+    { type: 'action', icon: '▭', label: 'Rectangle', shortcut: 'R', action: 'insert-rect' },
+    { type: 'action', icon: '◯', label: 'Ellipse', shortcut: 'O', action: 'insert-ellipse' },
+    { type: 'action', icon: 'T', label: 'Text', shortcut: 'T', action: 'insert-text' },
+    { type: 'action', icon: '⊞', label: 'Frame', shortcut: 'F', action: 'insert-frame' },
+  ];
+
+  ctxMenu.open({
+    items,
+    x: clientX,
+    y: clientY,
+    onAction: (action) => {
+      const kindMap = {
+        'insert-rect': 'rect',
+        'insert-ellipse': 'ellipse',
+        'insert-text': 'text',
+        'insert-frame': 'frame',
+      };
+      const kind = kindMap[action];
+      if (!kind || !fdCanvas.insert_node_at) return;
+      const defaultW = kind === 'text' ? 80 : 120;
+      const defaultH = kind === 'text' ? 24 : 80;
+      // Center the default shape on the cursor
+      const textBefore = fdCanvas.get_text();
+      fdCanvas.insert_node_at(kind, x - defaultW / 2, y - defaultH / 2, defaultW, defaultH);
+      const textAfter = fdCanvas.get_text();
+      if (textBefore !== textAfter) syncEditorFromCanvas(textAfter);
+      renderDirty = true; uiDirty = true;
+      renderCanvas();
+      refreshLayersPanel();
+      showToast(`Inserted ${kind}`);
+    },
+  });
 }
 
 /** Wire context menu events and action handlers. */
@@ -4516,12 +4614,14 @@ async function initPlayground() {
       }
 
       // Right-click → deferred gesture: short click = context menu, drag = pan
+      // ⌘ + right-click → Layer Picker / Quick Insert (short) or Zoom Scrub (drag)
       // (iPad users long-press, mouse users click-and-release quickly)
       if (e.button === 2) {
         rightClickPending = true;
         rightClickStartClient = { x: e.clientX, y: e.clientY };
         rightClickStartTime = performance.now();
         rightClickPointerId = e.pointerId;
+        rightClickCmdHeld = e.metaKey || e.ctrlKey;
         // Do NOT set activePointerId — right-click gesture is managed separately
         return;
       }
@@ -4665,20 +4765,46 @@ async function initPlayground() {
       if (activePointerId !== -1 && e.pointerId !== activePointerId) return;
       if (activePointerId === -1 && e.target !== canvas) return;
 
-      // \u2500\u2500 Right-click gesture: commit to pan if moved beyond threshold \u2500\u2500
+      // \u2500\u2500 Right-click gesture: commit to pan or zoom scrub if moved beyond threshold \u2500\u2500
       if (rightClickPending && e.pointerId === rightClickPointerId) {
         const dx = e.clientX - rightClickStartClient.x;
         const dy = e.clientY - rightClickStartClient.y;
         if (Math.hypot(dx, dy) >= RIGHT_CLICK_DRAG_THRESHOLD) {
-          // Commit to pan mode
           rightClickPending = false;
-          panDragging = true;
-          panStartX = rightClickStartClient.x - panX;
-          panStartY = rightClickStartClient.y - panY;
-          activePointerId = rightClickPointerId;
-          canvas.style.cursor = 'grabbing';
+          if (rightClickCmdHeld) {
+            // ⌘ + right-drag → Zoom Scrub
+            zoomScrubActive = true;
+            zoomScrubStartZoom = zoomLevel;
+            activePointerId = rightClickPointerId;
+            canvas.style.cursor = 'zoom-in';
+          } else {
+            // Plain right-drag → Pan
+            panDragging = true;
+            panStartX = rightClickStartClient.x - panX;
+            panStartY = rightClickStartClient.y - panY;
+            activePointerId = rightClickPointerId;
+            canvas.style.cursor = 'grabbing';
+          }
         }
         return; // Do not process as a normal move until gesture is decided
+      }
+
+      // Zoom Scrub — ⌘+right-drag: horizontal+vertical movement controls zoom at anchor
+      if (zoomScrubActive) {
+        const dx = e.clientX - rightClickStartClient.x;
+        const dy = -(e.clientY - rightClickStartClient.y); // up = zoom in
+        const delta = (dx + dy) * 0.004; // sensitivity
+        const newZoom = Math.max(0.1, Math.min(10, zoomScrubStartZoom * (1 + delta)));
+        // Anchor zoom at the original click position
+        const canvasRect = canvas.getBoundingClientRect();
+        const cx = rightClickStartClient.x - canvasRect.left;
+        const cy = rightClickStartClient.y - canvasRect.top;
+        panX = cx - (cx - panX) * (newZoom / zoomLevel);
+        panY = cy - (cy - panY) * (newZoom / zoomLevel);
+        zoomLevel = newZoom;
+        canvas.style.cursor = delta > 0 ? 'zoom-in' : 'zoom-out';
+        renderDirty = true; uiDirty = true;
+        return;
       }
 
       // Pan drag
@@ -4866,24 +4992,48 @@ async function initPlayground() {
       }
 
       // \u2500\u2500 Right-click gesture resolution \u2500\u2500
-      // If rightClickPending is still true, the mouse didn't move enough to pan
-      // \u2192 open the context menu (short click).
+      // If rightClickPending is still true, the mouse didn't move enough to pan/zoom
+      // → open the context menu (short click) or Layer Picker / Quick Insert (⌘ held).
       if (rightClickPending && e.pointerId === rightClickPointerId) {
         rightClickPending = false;
         rightClickPointerId = -1;
+        const wasCmdHeld = rightClickCmdHeld;
+        rightClickCmdHeld = false;
         // Restore cursor
         canvas.style.cursor = (fdCanvas.get_tool_name() === 'hand') ? 'grab' : '';
         // Only open menu if within the time window (guards against very-slow tap+hold)
         const elapsed = performance.now() - rightClickStartTime;
         if (elapsed <= RIGHT_CLICK_MENU_TIMEOUT_MS) {
-          openContextMenuAt(e.clientX, e.clientY);
+          if (wasCmdHeld) {
+            // ⌘ + right-click: Layer Picker on node, Quick Insert on empty
+            const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
+            let hitId = null;
+            try { hitId = fdCanvas.hit_test_at ? fdCanvas.hit_test_at(x, y) : null; } catch (_) {}
+            if (hitId) {
+              openLayerPickerAt(e.clientX, e.clientY);
+            } else {
+              openQuickInsertAt(e.clientX, e.clientY);
+            }
+          } else {
+            openContextMenuAt(e.clientX, e.clientY);
+          }
         }
+        return;
+      }
+      // End zoom scrub gesture
+      if (zoomScrubActive && e.button === 2) {
+        zoomScrubActive = false;
+        rightClickCmdHeld = false;
+        activePointerId = -1;
+        canvas.style.cursor = (fdCanvas.get_tool_name() === 'hand') ? 'grab' : '';
+        renderDirty = true; uiDirty = true;
         return;
       }
       // Clean up a right-click that committed to pan (activePointerId was set by gesture)
       if (e.button === 2 && rightClickPending) {
         rightClickPending = false;
         rightClickPointerId = -1;
+        rightClickCmdHeld = false;
       }
 
       if (activePointerId === -1) return;

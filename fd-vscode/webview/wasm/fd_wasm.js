@@ -1095,6 +1095,26 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Hit-test all nodes at scene-space coordinates. Returns a JSON array of
+     * `[{id, kind, parent}]` ordered front-to-back (topmost first).
+     * Used by the Layer Picker (⌘+Right-click) to list overlapping layers.
+     * @param {number} x
+     * @param {number} y
+     * @returns {string}
+     */
+    hit_test_all_at(x, y) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_hit_test_all_at(this.__wbg_ptr, x, y);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Hit-test at scene-space coordinates. Returns the topmost node ID, or empty string.
      * @param {number} x
      * @param {number} y

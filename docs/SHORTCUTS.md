@@ -144,22 +144,29 @@ Gesture hierarchy: **1-finger** = object, **2-finger** = viewport, **3-finger** 
 | `Alt` (click only) | **Style picker** — copies fill/stroke/opacity as defaults | —              |
 | `Shift`            | Add to selection                                          | Add to marquee |
 | `⌘` (click only)   | Add/remove from selection (Layers multi-select)           | —              |
+| `⌘+Alt` (click)    | **Deep Select** — bypass group selection, select leaf node| —              |
+| `⌘+Alt` + drag     | **Clone with children** — duplicate node + descendants    | —              |
 | `Space` (hold)     | Pan                                                       | Pan            |
 
 > **Note**: `⌘`/`Ctrl` behavior splits by interaction type:
 > - **Click** (no drag): Multi-select toggle — adds or removes node from selection.
 > - **Drag**: Children-follow — moves the dragged node and all its descendants recursively.
-> - **Mid-drag press**: Can be toggled during an active drag — start without modifier (parent only), then hold `⌘`/`Ctrl` to engage children-follow mode.
+> - **Mid-drag press**: Can be toggled during an active drag.
+> - **Deep Select (`⌘+Alt` Click)**: Ignores group boundaries, directly selecting the leaf shape under the cursor.
+> - **Clone with children (`⌘+Alt` Drag)**: Duplicates the selection and all its recursive descendants, dragging the clone.
 
-### When Hand Tool is active (H)
+### Mouse & Trackpad Interactions
 
-| Modifier           | On Object                                      | On Empty Space |
-| ------------------ | ---------------------------------------------- | -------------- |
-| None               | Pan                                            | Pan            |
-| `Alt`              | **Clone + drag** (temp Select)                 | Pan            |
-| `⌘`                | **Move / select** (temp Select)                | Marquee select |
-| `Shift`            | — (no effect — pan is unconstrained)           | —              |
-| `Space` (hold)     | Pan                                            | Pan            |
+| Interaction            | Action                                | Notes                             |
+| ---------------------- | ------------------------------------- | --------------------------------- |
+| Left-click             | Select / Use Tool                     |                                   |
+| Right-click            | Context menu                          | Context-aware (Node vs Empty)     |
+| Right-drag             | Pan canvas                            | High-efficiency panning           |
+| `⌘` + Right-click     | Layer Picker / Quick Insert           | Document context menu             |
+| `⌘` + Right-drag      | Zoom Scrub                            | Move mouse up/down to zoom in/out |
+| Middle-click drag      | Pan canvas                            |                                   |
+| Scroll wheel           | Pan / Scroll                          | Vertical / Horizontal panning     |
+| Pinch                  | Zoom                                  | Trackpad / Touchscreen            |
 
 ---
 
