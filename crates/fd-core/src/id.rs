@@ -41,6 +41,32 @@ impl NodeId {
         use std::sync::atomic::Ordering;
         COUNTER.store(seed, Ordering::Relaxed);
     }
+
+    /// Seed the counter from the maximum `_N` suffix found across all node
+    /// IDs in a SceneGraph. Call after loading a saved document to produce
+    /// clean incremental names (`rect_4`, not `rect_1743620895000`).
+    pub fn seed_counter_from_graph(graph: &crate::model::SceneGraph) {
+        use std::sync::atomic::Ordering;
+        let mut max_n = 0u64;
+        for node in graph.graph.node_weights() {
+            let name = node.id.as_str();
+            if let Some((_prefix, suffix)) = name.rsplit_once('_') {
+                if let Ok(n) = suffix.parse::<u64>() {
+                    max_n = max_n.max(n);
+                }
+            }
+        }
+        // Also scan edge IDs
+        for edge in &graph.edges {
+            let name = edge.id.as_str();
+            if let Some((_prefix, suffix)) = name.rsplit_once('_') {
+                if let Ok(n) = suffix.parse::<u64>() {
+                    max_n = max_n.max(n);
+                }
+            }
+        }
+        COUNTER.store(max_n + 1, Ordering::Relaxed);
+    }
 }
 
 /// Global counter for dynamically generated unique IDs across the entire SceneGraph.

@@ -92,10 +92,10 @@ If 0.1 fails (loading hangs), **STOP ALL TESTING** and report:
 | --- | ------------------------------------------ | ------------------------------------------ |
 | 3.1 | Click a node                               | Node shows selection handles (8 blue dots) |
 | 3.2 | Drag selected node                         | Node moves; code updates with new x/y      |
-| 3.3 | Select 2 nodes → right-click → Group       | Group wraps both; layers panel shows group |
-| 3.4 | Right-click group → Ungroup                | Group dissolved; children become top-level |
-| 3.5 | Right-click → Duplicate                    | Copy appears with new @id                  |
-| 3.6 | Right-click → Delete (or press Delete key) | Node removed from canvas AND code          |
+| 3.3 | ⌘/Ctrl+Drag node onto a container          | Node nests & centers inside container      |
+| 3.4 | Select 2 nodes → right-click → Group       | Group wraps both; layers panel shows group |
+| 3.5 | Right-click group → Ungroup                | Group dissolved; children become top-level |
+| 3.6 | Press Delete key                           | Node removed from canvas AND code          |
 
 > Verify code editor updates after each action (bidi sync).
 
