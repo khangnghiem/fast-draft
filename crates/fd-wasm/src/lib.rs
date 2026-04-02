@@ -94,8 +94,9 @@ impl FdCanvas {
     pub fn new(width: f64, height: f64) -> Self {
         console_error_panic_hook_setup();
 
-        // Seed the core ID generator to prevent multi-session ID collisions
-        fd_core::id::NodeId::seed_prefix_counter(js_sys::Date::now() as u64);
+        // Seed the core ID generator with 0 — will be re-seeded via
+        // seed_counter_from_graph() after loading a saved document.
+        fd_core::id::NodeId::seed_prefix_counter(0);
 
         let viewport = Viewport {
             width: width as f32,
@@ -151,6 +152,10 @@ impl FdCanvas {
         if result.is_err() {
             return r#"{"ok":false,"layout_changed":false,"duplicate_ids":[]}"#.to_string();
         }
+
+        // Re-seed ID counter from graph to produce clean incremental
+        // names (rect_4, not rect_1743620895000) when creating new nodes.
+        fd_core::id::NodeId::seed_counter_from_graph(&self.engine.graph);
         let new_hash = self.compute_bounds_hash();
         let layout_changed = new_hash != self.bounds_hash;
         self.bounds_hash = new_hash;

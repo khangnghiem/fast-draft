@@ -41,6 +41,32 @@ impl NodeId {
         use std::sync::atomic::Ordering;
         COUNTER.store(seed, Ordering::Relaxed);
     }
+
+    /// Seed the counter from the maximum `_N` suffix found across all node
+    /// IDs in a SceneGraph. Call after loading a saved document to produce
+    /// clean incremental names (`rect_4`, not `rect_1743620895000`).
+    pub fn seed_counter_from_graph(graph: &crate::model::SceneGraph) {
+        use std::sync::atomic::Ordering;
+        let mut max_n = 0u64;
+        for node in graph.graph.node_weights() {
+            let name = node.id.as_str();
+            if let Some((_prefix, suffix)) = name.rsplit_once('_')
+                && let Ok(n) = suffix.parse::<u64>()
+            {
+                max_n = max_n.max(n);
+            }
+        }
+        // Also scan edge IDs
+        for edge in &graph.edges {
+            let name = edge.id.as_str();
+            if let Some((_prefix, suffix)) = name.rsplit_once('_')
+                && let Ok(n) = suffix.parse::<u64>()
+            {
+                max_n = max_n.max(n);
+            }
+        }
+        COUNTER.store(max_n + 1, Ordering::Relaxed);
+    }
 }
 
 /// Global counter for dynamically generated unique IDs across the entire SceneGraph.
@@ -88,5 +114,29 @@ mod tests {
         let a = NodeId::anonymous("rect");
         let b = NodeId::anonymous("rect");
         assert_ne!(a, b);
+    }
+
+    #[test]
+    fn seed_counter_from_graph_produces_incremental_ids() {
+        use crate::model::SceneGraph;
+        // Build a graph with nodes whose IDs have _N suffixes
+        let mut graph = SceneGraph::default();
+        let root = graph.root;
+        let n1 = crate::model::SceneNode::new(
+            NodeId::intern("rect_3"),
+            crate::model::NodeKind::Rect { width: 0.0, height: 0.0 },
+        );
+        let n2 = crate::model::SceneNode::new(
+            NodeId::intern("ellipse_7"),
+            crate::model::NodeKind::Ellipse { rx: 0.0, ry: 0.0 },
+        );
+        graph.add_node(root, n1);
+        graph.add_node(root, n2);
+
+        NodeId::seed_counter_from_graph(&graph);
+
+        // Counter should be at 8 (max=7, +1), so next with_prefix produces _8
+        let next = NodeId::with_prefix("rect");
+        assert_eq!(next.as_str(), "rect_8");
     }
 }

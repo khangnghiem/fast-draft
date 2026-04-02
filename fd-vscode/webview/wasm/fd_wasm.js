@@ -1746,10 +1746,6 @@ function __wbg_get_imports() {
             const ret = new Float64Array(arg0 >>> 0);
             return ret;
         },
-        __wbg_now_a3af9a2f4bbaa4d1: function() {
-            const ret = Date.now();
-            return ret;
-        },
         __wbg_now_ebffdf7e580f210d: function(arg0) {
             const ret = arg0.now();
             return ret;

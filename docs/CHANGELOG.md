@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.320 — UX Refinements: Naming, AI Hints, Chrome Fade
+
+- **Graph-aware ID counter** (R3.65): New nodes use clean incremental names (`rect_1`, `rect_2`) instead of timestamp-based suffixes (`rect_1743620895000`). Counter seeds from the max existing `_N` suffix in the graph to prevent session collisions.
+- **Rotating AI chat placeholder**: The Agent panel placeholder rotates through 7 design-specific examples on each focus (e.g. "A dark card with rounded corners", "Three buttons in a row").
+- **Softened chrome auto-fade**: Export/settings icon idle opacity changed from `0.15` to `0.4` for better discoverability. Added `@media (pointer: coarse)` override → `0.8` on touch devices. Idle timeout increased from 4s to 6s.
+
+**Files**: `crates/fd-core/src/id.rs`, `crates/fd-wasm/src/lib.rs`, `site/ai-chat.js`, `site/index.html`, `site/css/minimap.css`, `site/app.js`
+
 ### v0.11.319 — ⌘+Drag Nest+Center Gesture (R3.38, R3.64)
 
 - **REMOVED**: Post-drop context menu for reparenting — dragging a node onto a container no longer shows "Nest into @target" / "Center in @target" popup. ~50 lines of JS deleted (`showDropContextMenu`) from VSCode webview; ~50 lines from site `app.js`.

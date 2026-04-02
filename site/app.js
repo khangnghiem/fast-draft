@@ -4411,7 +4411,7 @@ async function initPlayground() {
       const chromeRight = document.getElementById('chrome-right');
       if (chromeRight) {
         let chromeIdleTimer = null;
-        const CHROME_IDLE_MS = 4000;
+        const CHROME_IDLE_MS = 6000;
         function startChromeIdle() {
           clearTimeout(chromeIdleTimer);
           chromeIdleTimer = setTimeout(() => {
