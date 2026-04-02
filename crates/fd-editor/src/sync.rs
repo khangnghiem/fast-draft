@@ -168,9 +168,8 @@ impl SyncEngine {
                                     | Constraint::FillParent { .. }
                             )
                         });
-                        let rx = (rel_x * 100.0).round() / 100.0;
-                        let ry = (rel_y * 100.0).round() / 100.0;
-                        node.constraints.push(Constraint::Position { x: rx, y: ry });
+                        node.constraints
+                            .push(Constraint::Position { x: rel_x, y: rel_y });
                     }
                 }
             }
@@ -181,10 +180,10 @@ impl SyncEngine {
                 dx,
                 dy,
             } => {
-                let rw = (width * 100.0).round() / 100.0;
-                let rh = (height * 100.0).round() / 100.0;
-                let rdx = (dx * 100.0).round() / 100.0;
-                let rdy = (dy * 100.0).round() / 100.0;
+                let rw = width;
+                let rh = height;
+                let rdx = dx;
+                let rdy = dy;
 
                 let is_text_node;
                 if let Some(node) = self.graph.get_by_id_mut(id) {
@@ -193,8 +192,8 @@ impl SyncEngine {
                     if rdx.abs() > 0.001 || rdy.abs() > 0.001 {
                         for c in &mut node.constraints {
                             if let Constraint::Position { x, y } = c {
-                                *x = (*x + rdx * 100.0).round() / 100.0;
-                                *y = (*y + rdy * 100.0).round() / 100.0;
+                                *x += rdx;
+                                *y += rdy;
                             }
                         }
                     }
@@ -260,8 +259,8 @@ impl SyncEngine {
                         if let Some(child_node) = self.graph.get_by_id_mut(child_id) {
                             for c in &mut child_node.constraints {
                                 if let Constraint::Position { x, y } = c {
-                                    *x = (*x - rdx * 100.0).round() / 100.0;
-                                    *y = (*y - rdy * 100.0).round() / 100.0;
+                                    *x -= rdx;
+                                    *y -= rdy;
                                 }
                             }
                         }
@@ -444,8 +443,8 @@ impl SyncEngine {
                     if let Some(idx) = self.graph.index_of(id)
                         && let Some(b) = self.bounds.get(&idx)
                     {
-                        let rx = ((b.x + 20.0) * 100.0).round() / 100.0;
-                        let ry = ((b.y + 20.0) * 100.0).round() / 100.0;
+                        let rx = b.x + 20.0;
+                        let ry = b.y + 20.0;
                         cloned
                             .constraints
                             .push(Constraint::Position { x: rx, y: ry });
@@ -1032,8 +1031,8 @@ pub fn detach_child_from_group(
         .get(&new_parent_idx)
         .map(|b| (b.x, b.y))
         .unwrap_or((0.0, 0.0));
-    let new_rel_x = ((child_b.x - new_parent_offset.0) * 100.0).round() / 100.0;
-    let new_rel_y = ((child_b.y - new_parent_offset.1) * 100.0).round() / 100.0;
+    let new_rel_x = child_b.x - new_parent_offset.0;
+    let new_rel_y = child_b.y - new_parent_offset.1;
 
     let child_id = graph.graph[child_idx].id;
     if let Some(node) = graph.get_by_id_mut(child_id) {

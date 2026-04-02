@@ -1458,12 +1458,19 @@ fn has_inline_styles(style: &Properties) -> bool {
         || style.rotate.is_some()
 }
 
-/// Format a float without trailing zeros for compact output.
+/// Format a number for .fd text output.
+///
+/// This is the **sole rounding boundary** in the coordinate pipeline.
+/// Internal computations use full `f32` precision; rounding happens
+/// only here, at serialization time. This eliminates the entire class
+/// of "scattered rounding" math-precedence bugs (see LESSONS.md §573).
 pub(crate) fn format_num(n: f32) -> String {
-    if n == n.floor() {
-        format!("{}", n as i32)
+    // Round to 2 decimal places (0.01 precision)
+    let rounded = (n * 100.0).round() / 100.0;
+    if rounded == rounded.floor() {
+        format!("{}", rounded as i32)
     } else {
-        format!("{n:.3}")
+        format!("{rounded:.2}")
             .trim_end_matches('0')
             .trim_end_matches('.')
             .to_string()

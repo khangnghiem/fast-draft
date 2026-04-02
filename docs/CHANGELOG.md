@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.314 — Canvas Drawing Offset Fix & Coordinate Pipeline Refactor
+
+- **Canvas Drawing Offset (Bug Fix)**: Permanently resolved the recurring bug where newly drawn shapes would incorrectly snap to the canvas origin (0,0) instead of the cursor drag position.
+- **Round-Once-On-Exit Architecture**: Refactored the `SyncEngine` coordinate mutation pipeline to completely eliminate "scattered rounding" (`(x * 100).round() / 100`). The engine now processes all positional updates using raw `f32` precision.
+- **Serialization Boundary Precision**: `emitter.rs` now acts as the sole rounding boundary in the system. The `format_num` helper was updated to emit text at 2 decimal places (`.2dp`), ensuring clean `.fd` files without polluting internal math precedence.
+- **Regression Guard**: Added strict e2e and unit tests (`draw_rect_at_coordinate_preserves_position`) simulating pointer drag lifecycle events to guarantee coordinate fidelity for all future mutations.
+
 ### v0.11.313 — Cmd/Ctrl Click Multi-Selection Fix
 
 - **Canvas Multi-Selection Fix**: Fixed a bug where holding Cmd or Ctrl while clicking a node on the canvas failed to add it to the existing selection. The `FdCanvas::handle_pointer_down` lifecycle in `fd-wasm` now correctly appends to the `visual_highlight` vector instead of outright replacing it when modifier keys (`shift`, `meta`, `ctrl`) are active, matching standard design tool behavior.
