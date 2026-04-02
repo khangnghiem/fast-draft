@@ -1,0 +1,97 @@
+style panel {
+  fill: #F8F9FA  # white
+  stroke: #E8E8EC 2
+  corner: 12
+}
+
+style box_accent {
+  fill: #6C5CE7  # blue
+  corner: 8
+}
+
+style text_label {
+  fill: #333333  # gray
+  font: "Inter" medium 14
+}
+
+rect @center_in_target {
+  spec "A target container for center_in"
+  w: 200 h: 160
+  use: panel
+  x: 50
+  y: 50
+}
+
+rect @center_in_demo {
+  spec "Node centered inside the target"
+  text @center_in_text "center_in: center_in_target" {
+    use: text_label
+    fill: #FFFFFF  # white
+  }
+  w: 160 h: 80
+  use: box_accent
+  center_in: center_in_target
+}
+
+rect @offset_reference {
+  spec "Reference node for offset constraint"
+  text @offset_ref_text "offset reference" {
+    use: text_label
+  }
+  w: 160 h: 80
+  use: panel
+  x: 350
+  y: 50
+}
+
+rect @offset_demo {
+  spec "Node positioned via offset"
+  text @offset_demo_text "offset: @offset_reference 20, 40" {
+    use: text_label
+    fill: #FFFFFF  # white
+  }
+  w: 260 h: 60
+  use: box_accent
+  offset: @offset_reference 20, 40
+}
+
+frame @fill_parent_container {
+  spec "Container for fill_parent constraint"
+  w: 200 h: 160
+  use: panel
+  x: 50
+  y: 250
+
+  rect @fill_parent_demo {
+    spec "Node filling its parent with padding"
+    text @fill_parent_text "fill_parent: 16" {
+      use: text_label
+      fill: #FFFFFF  # white
+    }
+    use: box_accent
+    fill_parent: 16
+  }
+}
+
+rect @position_demo {
+  spec "Absolute positioning constraint"
+  text @position_text "x: 350, y: 250" {
+    use: text_label
+    fill: #FFFFFF  # white
+  }
+  w: 200 h: 80
+  use: box_accent
+  x: 350
+  y: 250
+}
+
+rect @center_canvas_demo {
+  spec "Node centered in the canvas"
+  text @center_canvas_text "center_in: canvas" {
+    use: text_label
+    fill: #FFFFFF  # white
+  }
+  w: 200 h: 60
+  use: box_accent
+  center_in: canvas
+}
