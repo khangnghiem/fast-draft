@@ -54,6 +54,10 @@ impl FdCanvas {
         // Groups are transparent: effective_target always returns the leaf.
         // If the raw hit is already selected, keep it for drag.
         let hit = raw_hit.map(|id| {
+            if meta && alt {
+                // Deep Select: bypass group selection and select the leaf node directly
+                return id;
+            }
             if self.select_tool.selected.contains(&id) {
                 return id;
             }
@@ -69,19 +73,27 @@ impl FdCanvas {
         };
 
         if shift || meta || ctrl {
-            if let Some(vh) = new_highlight
-                && !self.select_tool.visual_highlight.contains(&vh)
+            // For Deep Select (meta + alt), we still want to select it.
+            // If shift is held, it appends. If just meta+alt, we replace selection unless shift is also held.
+            let multi_select = shift || (meta && !alt);
+            if multi_select {
+                if let Some(vh) = new_highlight
+                    && !self.select_tool.visual_highlight.contains(&vh)
+                {
+                    self.select_tool.visual_highlight.push(vh);
+                }
+            } else if let Some(hit_id) = hit
+                && (!self.select_tool.selected.contains(&hit_id)
+                    || self.select_tool.selected.len() == 1)
             {
-                self.select_tool.visual_highlight.push(vh);
-            }
-        } else if let Some(hit_id) = hit {
-            if !self.select_tool.selected.contains(&hit_id) {
-                // Click on unselected node: replace highlighting
-                self.select_tool.visual_highlight = new_highlight.into_iter().collect();
-            } else if self.select_tool.selected.len() == 1 {
-                // Click on single already-selected node (deep click)
                 self.select_tool.visual_highlight = new_highlight.into_iter().collect();
             }
+        } else if let Some(hit_id) = hit
+            && (!self.select_tool.selected.contains(&hit_id)
+                || self.select_tool.selected.len() == 1)
+        {
+            // Click on unselected node or single already-selected node: replace highlighting
+            self.select_tool.visual_highlight = new_highlight.into_iter().collect();
         } else {
             self.select_tool.visual_highlight.clear();
         }
@@ -154,7 +166,6 @@ impl FdCanvas {
         if self.active_tool == ToolKind::Select
             && alt
             && !ctrl
-            && !meta
             && hit.is_some()
             && !self.select_tool.selected.is_empty()
         {

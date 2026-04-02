@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.316 — Deep Select and Clone with Children (R3.2)
+
+- **Deep Select (⌘+Alt click)**: Added `⌘+Alt+Click` to bypass group selection and immediately select the deep leaf child under the cursor, replicating standard design tool direct-select interaction.
+- **Clone with Children (⌘+Alt drag)**: Added `⌘+Alt+Drag` to duplicate a selected node and all its recursive descendants, immediately picking up the new clone hierarchy for dragging.
+- **Disambiguation Logic**: Refined `SelectTool` pointer modifier evaluation so standard Multi-Select (`⌘`) does not conflict with Deep Select (`⌘+Alt`). Adjusted WASM raycasting (`hit_test_all_at` / `handle_pointer_down`) to short-circuit structural tree-walking when `meta && alt` is depressed.
+
 ### v0.11.315 — Empty Text Node Cleanup (Bug Fix)
 
 - **Empty Text Node Deletion**: Inline editing now automatically deletes the underlying text node if its content evaluates to an empty string on commit or cancel (Escape). This prevents "ghost" empty text nodes from accumulating when a user initiates a text edit (e.g., by double-clicking a shape) but decides not to type anything.
