@@ -1168,6 +1168,18 @@ function openInlineEditor(opts) {
     const newVal = textarea.value;
     if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
     if (!fdCanvas) return;
+
+    if (propKey === "content" && newVal.trim() === "") {
+      fdCanvas.select_by_id(nodeId);
+      const changed = fdCanvas.delete_selected();
+      if (changed) {
+        renderFn();
+        syncFn();
+        if (updatePanelFn) updatePanelFn();
+      }
+      return;
+    }
+
     if (newVal === originalValue) {
       // No change — deselect and return to neutral canvas state
       fdCanvas.select_by_id("");
@@ -1193,12 +1205,22 @@ function openInlineEditor(opts) {
         fdCanvas.set_suppressed_text_node();
       }
       if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
-      fdCanvas.select_by_id(nodeId);
-      fdCanvas.set_node_prop(propKey, originalValue);
-      // Cancel complete — deselect to return canvas to neutral state
-      fdCanvas.select_by_id("");
-      renderFn();
-      syncFn();
+
+      if (propKey === "content" && originalValue.trim() === "") {
+        fdCanvas.select_by_id(nodeId);
+        if (fdCanvas.delete_selected()) {
+          renderFn();
+          syncFn();
+          if (updatePanelFn) updatePanelFn();
+        }
+      } else {
+        fdCanvas.select_by_id(nodeId);
+        fdCanvas.set_node_prop(propKey, originalValue);
+        // Cancel complete — deselect to return canvas to neutral state
+        fdCanvas.select_by_id("");
+        renderFn();
+        syncFn();
+      }
       e.stopPropagation();
       return;
     }
@@ -1296,46 +1318,39 @@ function setupInlineEditor(opts) {
     // Edge → edit/create label
     if (props.kind === "edge") {
       const edgeId = props.id;
-      const source = fdCanvas.get_text();
-      const edgeBlockRe = new RegExp(`edge\\s+@${edgeId}\\s*\\{([^}]*(?:\\{[^}]*\\}[^}]*)*)\\}`, 's');
-      const edgeMatch = source.match(edgeBlockRe);
-      if (edgeMatch) {
-        const textChildRe = /text\s+@(\w+)\s+"([^"]*)"/;
-        const textMatch = edgeMatch[1].match(textChildRe);
-        if (textMatch) {
-          fdCanvas.select_by_id(textMatch[1]);
+
+      // Use WASM API to check for existing text child (idempotent, no duplicates)
+      const existingTextId = fdCanvas.get_edge_text_child_id(edgeId);
+      if (existingTextId) {
+        // Edit existing label
+        fdCanvas.select_by_id(existingTextId);
+        const childPropsJson = fdCanvas.get_selected_node_props();
+        const childProps = JSON.parse(childPropsJson);
+        renderFn();
+        openInlineEditor({
+          nodeId: existingTextId, propKey: "content", currentValue: childProps.content || "",
+          fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
+          panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
+        });
+      } else {
+        // Create new label via WASM (sets Edge.text_child, adds to graph, re-resolves layout)
+        const textBefore = fdCanvas.get_text();
+        const newTextId = fdCanvas.create_edge_text_child(edgeId, "");
+        if (newTextId) {
+          const textAfter = fdCanvas.get_text();
+          fdCanvas.push_undo_snapshot(textBefore, textAfter);
           renderFn();
-          openInlineEditor({
-            nodeId: textMatch[1], propKey: "content", currentValue: textMatch[2],
+          syncFn();
+          // Suppress before selecting + rendering to prevent blue box flash
+          if (fdCanvas.set_suppressed_text_node) {
+            fdCanvas.set_suppressed_text_node(newTextId);
+          }
+          fdCanvas.select_by_id(newTextId);
+          setTimeout(() => openInlineEditor({
+            nodeId: newTextId, propKey: "content", currentValue: "",
             fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
             panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
-          });
-        } else {
-          const textId = "label_" + edgeId;
-          const esc = edgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const re = new RegExp(`(edge\\s+@${esc}\\s*\\{)`);
-          const m2 = source.match(re);
-          if (m2) {
-            const insertPos = source.indexOf(m2[0]) + m2[0].length;
-            const newSource = source.slice(0, insertPos)
-              + `\n  text @${textId} "Label" {}`
-              + source.slice(insertPos);
-            const textBefore = source;
-            fdCanvas.set_text(newSource);
-            fdCanvas.push_undo_snapshot(textBefore, newSource);
-            renderFn();
-            syncFn();
-            // Suppress before selecting + rendering to prevent blue box flash
-            if (fdCanvas.set_suppressed_text_node) {
-              fdCanvas.set_suppressed_text_node(textId);
-            }
-            fdCanvas.select_by_id(textId);
-            setTimeout(() => openInlineEditor({
-              nodeId: textId, propKey: "content", currentValue: "Label",
-              fdCanvas, canvasEl, container, renderFn, syncFn, updatePanelFn,
-              panX: getPanX(), panY: getPanY(), zoomLevel: getZoom(),
-            }), 50);
-          }
+          }), 50);
         }
       }
       e.preventDefault();
@@ -1476,7 +1491,6 @@ function bumpGeneration() {
 
 /** Grid overlay state */
 let gridEnabled = false;
-let xrayLabels = false; // X-ray mode: show all node name badges (backtick toggle)
 const GRID_BASE_SPACING = 20;
 
 // Reduce Motion — respect OS setting
@@ -6869,7 +6883,7 @@ function setupInlineEditor() {
           if (m2) {
             const insertPos = source.indexOf(m2[0]) + m2[0].length;
             const newSource = source.slice(0, insertPos)
-              + `\n  text @${textId} "Label" {}`
+              + `\n  text @${textId} "" {}`
               + source.slice(insertPos);
             const textBefore = source;
             fdCanvas.set_text(newSource);
@@ -6881,7 +6895,7 @@ function setupInlineEditor() {
             }
             fdCanvas.select_by_id(textId);
             render();
-            setTimeout(() => openInlineEditor(textId, "content", "Label"), 50);
+            setTimeout(() => openInlineEditor(textId, "content", ""), 50);
           }
         }
       }
@@ -6911,14 +6925,14 @@ function setupInlineEditor() {
         openInlineEditor(existingTextId, "content", childProps.content || "");
       } else {
         // Create a new text child inside the shape
-        const newTextId = fdCanvas.create_child_text(props.id, "Text");
+        const newTextId = fdCanvas.create_child_text(props.id, "");
         if (newTextId) {
           if (fdCanvas.set_suppressed_text_node) {
             fdCanvas.set_suppressed_text_node(newTextId);
           }
           render();
           syncTextToExtension();
-          setTimeout(() => openInlineEditor(newTextId, "content", "Text"), 50);
+          setTimeout(() => openInlineEditor(newTextId, "content", ""), 50);
         }
       }
     }
@@ -7240,6 +7254,18 @@ function openInlineEditor(nodeId, propKey, currentValue) {
     const newVal = textarea.value;
     if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
     if (!fdCanvas) return;
+
+    if (propKey === "content" && newVal.trim() === "") {
+      fdCanvas.select_by_id(nodeId);
+      const changed = fdCanvas.delete_selected();
+      if (changed) {
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+      }
+      return;
+    }
+
     // Skip mutation if value unchanged — avoids SetStyle flattening inherited styles
     if (newVal === originalValue) {
       render();
@@ -7264,11 +7290,21 @@ function openInlineEditor(nodeId, propKey, currentValue) {
       // Cancel: revert to original value
       inlineEditorActive = false;
       if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
-      // Restore original text in the node
-      fdCanvas.select_by_id(nodeId);
-      fdCanvas.set_node_prop(propKey, originalValue);
-      render();
-      syncTextToExtension();
+      
+      if (propKey === "content" && originalValue.trim() === "") {
+        fdCanvas.select_by_id(nodeId);
+        if (fdCanvas.delete_selected()) {
+          render();
+          syncTextToExtension();
+          updatePropertiesPanel();
+        }
+      } else {
+        // Restore original text in the node
+        fdCanvas.select_by_id(nodeId);
+        fdCanvas.set_node_prop(propKey, originalValue);
+        render();
+        syncTextToExtension();
+      }
       e.stopPropagation();
       return;
     }
@@ -10328,28 +10364,31 @@ function render() {
     try {
       const ap = JSON.parse(arrowPreviewJson);
       ctx.save();
-      ctx.strokeStyle = "#6B7080";
-      ctx.lineWidth = 1.5;
-      // Solid line (not dashed)
-      ctx.beginPath();
-      ctx.moveTo(ap.x1, ap.y1);
-      ctx.lineTo(ap.x2, ap.y2);
-      ctx.stroke();
-      // Arrowhead
-      const angle = Math.atan2(ap.y2 - ap.y1, ap.x2 - ap.x1);
-      const headLen = 10;
-      ctx.beginPath();
-      ctx.moveTo(ap.x2, ap.y2);
-      ctx.lineTo(
-        ap.x2 - headLen * Math.cos(angle - Math.PI / 6),
-        ap.y2 - headLen * Math.sin(angle - Math.PI / 6)
-      );
-      ctx.moveTo(ap.x2, ap.y2);
-      ctx.lineTo(
-        ap.x2 - headLen * Math.cos(angle + Math.PI / 6),
-        ap.y2 - headLen * Math.sin(angle + Math.PI / 6)
-      );
-      ctx.stroke();
+      
+      if (ap.x1 !== undefined && ap.y1 !== undefined) {
+        ctx.strokeStyle = "#6B7080";
+        ctx.lineWidth = 1.5;
+        // Solid line (not dashed)
+        ctx.beginPath();
+        ctx.moveTo(ap.x1, ap.y1);
+        ctx.lineTo(ap.x2, ap.y2);
+        ctx.stroke();
+        // Arrowhead
+        const angle = Math.atan2(ap.y2 - ap.y1, ap.x2 - ap.x1);
+        const headLen = 10;
+        ctx.beginPath();
+        ctx.moveTo(ap.x2, ap.y2);
+        ctx.lineTo(
+          ap.x2 - headLen * Math.cos(angle - Math.PI / 6),
+          ap.y2 - headLen * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.moveTo(ap.x2, ap.y2);
+        ctx.lineTo(
+          ap.x2 - headLen * Math.cos(angle + Math.PI / 6),
+          ap.y2 - headLen * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.stroke();
+      }
 
       // ── Fix #3: Highlight target node under cursor during arrow drag ──
       if (ap.target_id) {

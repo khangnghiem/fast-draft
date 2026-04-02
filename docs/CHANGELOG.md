@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.315 — Empty Text Node Cleanup (Bug Fix)
+
+- **Empty Text Node Deletion**: Inline editing now automatically deletes the underlying text node if its content evaluates to an empty string on commit or cancel (Escape). This prevents "ghost" empty text nodes from accumulating when a user initiates a text edit (e.g., by double-clicking a shape) but decides not to type anything.
+- **Initial Shape Text**: Changed the default placeholder text for freshly spawned shape text children and edge labels from `"Text"`/`"Label"` to an empty string `""`. This leverages the new deletion logic so that dismissing the editor immediately removes the unedited node, closely mirroring standard design tools like Figma.
+
 ### v0.11.314 — Canvas Drawing Offset Fix & Coordinate Pipeline Refactor
 
 - **Canvas Drawing Offset (Bug Fix)**: Permanently resolved the recurring bug where newly drawn shapes would incorrectly snap to the canvas origin (0,0) instead of the cursor drag position.
