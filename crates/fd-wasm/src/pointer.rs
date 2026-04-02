@@ -82,21 +82,18 @@ impl FdCanvas {
                 {
                     self.select_tool.visual_highlight.push(vh);
                 }
-            } else if let Some(hit_id) = hit {
-                if !self.select_tool.selected.contains(&hit_id) {
-                    self.select_tool.visual_highlight = new_highlight.into_iter().collect();
-                } else if self.select_tool.selected.len() == 1 {
-                    self.select_tool.visual_highlight = new_highlight.into_iter().collect();
-                }
-            }
-        } else if let Some(hit_id) = hit {
-            if !self.select_tool.selected.contains(&hit_id) {
-                // Click on unselected node: replace highlighting
-                self.select_tool.visual_highlight = new_highlight.into_iter().collect();
-            } else if self.select_tool.selected.len() == 1 {
-                // Click on single already-selected node (deep click)
+            } else if let Some(hit_id) = hit
+                && (!self.select_tool.selected.contains(&hit_id)
+                    || self.select_tool.selected.len() == 1)
+            {
                 self.select_tool.visual_highlight = new_highlight.into_iter().collect();
             }
+        } else if let Some(hit_id) = hit
+            && (!self.select_tool.selected.contains(&hit_id)
+                || self.select_tool.selected.len() == 1)
+        {
+            // Click on unselected node or single already-selected node: replace highlighting
+            self.select_tool.visual_highlight = new_highlight.into_iter().collect();
         } else {
             self.select_tool.visual_highlight.clear();
         }
