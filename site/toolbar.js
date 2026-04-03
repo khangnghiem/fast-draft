@@ -180,63 +180,7 @@ export function initToolbar(api) {
     dtcTool = '';
   });
 
-  // ── Insert Menu (+  button) ───────────────────────────────────────
-  const insertBtn = document.getElementById('insert-btn');
-  const insertMenu = document.getElementById('insert-menu');
-  if (insertBtn && insertMenu) {
-    insertBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isOpen = insertMenu.classList.contains('visible');
-      if (isOpen) {
-        insertMenu.classList.remove('visible');
-      } else {
-        // Position menu relative to button, adapting to toolbar edge
-        const btnRect = insertBtn.getBoundingClientRect();
-        const toolbarEl = document.getElementById('floating-toolbar');
-        const toolbarRect = toolbarEl ? toolbarEl.getBoundingClientRect() : btnRect;
-        // Reset positioning
-        insertMenu.style.left = '';
-        insertMenu.style.right = '';
-        insertMenu.style.top = '';
-        insertMenu.style.bottom = '';
-        if (toolbarEl?.classList.contains('toolbar-docked-bottom')) {
-          // Open above when toolbar at bottom
-          insertMenu.style.left = (btnRect.left - toolbarRect.left) + 'px';
-          insertMenu.style.bottom = (toolbarRect.bottom - btnRect.top + 4) + 'px';
-        } else if (toolbarEl?.classList.contains('toolbar-docked-left')) {
-          // Open to the right when toolbar at left
-          insertMenu.style.left = (toolbarRect.right - toolbarRect.left + 4) + 'px';
-          insertMenu.style.top = (btnRect.top - toolbarRect.top) + 'px';
-        } else if (toolbarEl?.classList.contains('toolbar-docked-right')) {
-          // Open to the left when toolbar at right
-          insertMenu.style.right = (toolbarRect.right - toolbarRect.left + 4) + 'px';
-          insertMenu.style.top = (btnRect.top - toolbarRect.top) + 'px';
-        } else {
-          // Default: open below (toolbar at top or floating)
-          insertMenu.style.left = (btnRect.left - toolbarRect.left) + 'px';
-          insertMenu.style.top = (btnRect.bottom - toolbarRect.top + 4) + 'px';
-        }
-        insertMenu.classList.add('visible');
-      }
-    });
 
-    // Menu item click → insert shape at center
-    insertMenu.querySelectorAll('.insert-menu-item[data-insert]').forEach(item => {
-      item.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const type = item.dataset.insert;
-        insertShapeAtCenter(type);
-        insertMenu.classList.remove('visible');
-      });
-    });
-
-    // Close menu on outside click
-    document.addEventListener('pointerdown', (e) => {
-      if (!insertMenu.contains(e.target) && e.target !== insertBtn) {
-        insertMenu.classList.remove('visible');
-      }
-    });
-  }
 
   // ── Toolbar: Drag-to-snap + Minimize ──────────────────────────────────
   const toolbar = document.getElementById('floating-toolbar');
@@ -566,11 +510,8 @@ export function initToolbar(api) {
         grip.setPointerCapture(e.pointerId);
       });
 
-      // ── Double-click to minimize/expand (Hybrid Cascade) ──
-      grip.addEventListener('dblclick', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const gripEl = e.currentTarget;
+      // ── Shared minimize/expand cascade (reused by dblclick + swipe) ──
+      function toggleMinimize(gripEl) {
         const gripBefore = gripEl.getBoundingClientRect();
         const isMinimized = toolbar.classList.contains('toolbar-minimized');
 
@@ -650,8 +591,60 @@ export function initToolbar(api) {
         const ry = cr2.height > 0 ? Math.max(0, Math.min(1, (dropY - cr2.top) / cr2.height)) : null;
         localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: finalSide, x: dropX, y: dropY, rx, ry }));
         api.adjustMinimapForToolbar();
+      }
+
+      // ── Double-click to minimize/expand (desktop) ──
+      grip.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        toggleMinimize(e.currentTarget);
       });
+
+      // ── Touch tap (mobile) + swipe (all platforms) ──
+      // We use the touch API directly for maximum cross-device fidelity.
+      // - Single tap on mobile (pointer.type === 'touch') → toggle (no dblclick needed)
+      // - Short flick along minor axis (>30px minor, <80px major) → toggle on all platforms
+      let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+      const SWIPE_MINOR_THRESHOLD = 30; // min displacement along collapse axis (px)
+      const SWIPE_MAJOR_MAX = 80;       // max displacement along drag axis (px, so we don't confuse w/ reposition)
+      const TAP_MAX_DURATION = 350;      // ms: longer than 350ms = drag attempt, not tap
+
+      grip.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
+      }, { passive: true });
+
+      grip.addEventListener('touchend', (e) => {
+        if (e.changedTouches.length !== 1) return;
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        const dy = e.changedTouches[0].clientY - touchStartY;
+        const totalDisplacement = Math.sqrt(dx * dx + dy * dy);
+        const elapsed = Date.now() - touchStartTime;
+
+        // ── Short tap: single tap on touch = toggle (mobile primary UX) ──
+        if (totalDisplacement < 12 && elapsed < TAP_MAX_DURATION) {
+          e.preventDefault();
+          toggleMinimize(grip);
+          return;
+        }
+
+        // ── Swipe gesture: collapse axis detection ──
+        // Horizontal toolbar (top/bottom): swipe vertically to dismiss
+        // Vertical toolbar (left/right): swipe horizontally to dismiss
+        const currentSide = getCurrentDockedSide();
+        const isHorizontalToolbar = currentSide === 'top' || currentSide === 'bottom';
+        const minorDelta = isHorizontalToolbar ? Math.abs(dy) : Math.abs(dx);
+        const majorDelta = isHorizontalToolbar ? Math.abs(dx) : Math.abs(dy);
+
+        if (minorDelta >= SWIPE_MINOR_THRESHOLD && majorDelta <= SWIPE_MAJOR_MAX && elapsed < TAP_MAX_DURATION) {
+          e.preventDefault();
+          toggleMinimize(grip);
+        }
+      }, { passive: false });
     });
+
 
     // ── Drag move ──
     document.addEventListener('pointermove', (e) => {
