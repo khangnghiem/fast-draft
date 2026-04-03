@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.324 — Fix Canvas Zoom Drift on App Switch (Bug Fix)
+
+- **Canvas Viewport Stability**: Fixed a critical coordinate pipeline bug on macOS where switching applications (⌘+Tab) while the trackpad retained inertia caused phantom `wheel` events to silently corrupt the canvas `zoomLevel` and pan offsets in the background.
+- **Focus Suppression Window**: Implemented a targeted 150ms suppression window inside the `focus` handler to block buffered trackpad momentum events from firing instantly upon tab refocus. The `wheel` handler proactively drops these stale events, preserving accurate zoom state and eliminating the "45-degree southeast" drawing offset experienced when reviving a backgrounded editor.
+
 ### v0.11.323 — AI Agent Panel Complete Apple HIG Redesign (R6.18)
 
 - **UX Polish:** Completely refactored the AI Agent panel UI to replicate modern, premium design aesthetics (specifically Apple HIG and Cursor).

@@ -5459,6 +5459,12 @@ async function initPlayground() {
     }
 
     canvas.addEventListener('wheel', (e) => {
+      // Ignore phantom trackpad momentum events that fire during app focus transitions
+      if (window.__fdSuppressWheel) {
+        e.preventDefault();
+        return;
+      }
+
       if (e.ctrlKey || e.metaKey) {
         // Pinch-to-zoom on trackpad or Ctrl+scroll: always preventDefault
         e.preventDefault();
@@ -6156,6 +6162,14 @@ if (document.readyState === 'loading') {
 }
 
 window.addEventListener('focus', () => {
+  // Suppress phantom macOS trackpad inertia events immediately upon focus
+  // to prevent wild canvas zoom/pan jumps from buffered background events
+  window.__fdSuppressWheel = true;
+  clearTimeout(window.__fdSuppressWheelTimer);
+  window.__fdSuppressWheelTimer = setTimeout(() => {
+    window.__fdSuppressWheel = false;
+  }, 150);
+
   // macOS / Browser quirk: When regaining focus, devicePixelRatio or layout 
   // bounds might have shifted while the app was backgrounded. Force a sync 
   // immediately to prevent coordinate drift on the first click.
