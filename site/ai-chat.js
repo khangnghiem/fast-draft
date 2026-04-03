@@ -64,8 +64,8 @@ export function clearChatHistory() {
           <path d="M5 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" opacity="0.6"/>
         </svg>
       </div>
-      <div class="ai-chat-welcome-text">Design Assistant</div>
-      <div class="ai-chat-welcome-subtext">Ask about your layout, colors, or structure</div>
+      <div class="ai-chat-welcome-text">Design Agent</div>
+      <div class="ai-chat-welcome-subtext">Select components, describe changes</div>
       <div class="ai-chat-chips" id="ai-chat-chips"></div>
     </div>`;
     updateChips();
@@ -129,21 +129,21 @@ export function updateContextBadge() {
 // ─── Quick-Action Chips ─────────────────────────────────
 
 const CHIPS_NONE = [
-  { label: '🎨 Improve colors', msg: 'Improve the color palette to be more harmonious and modern' },
-  { label: '📐 Add header', msg: 'Add a header section to the design' },
-  { label: '✦ Review design', msg: 'Review my design and suggest improvements' },
+  { label: 'Suggest Variants', msg: 'Suggest layout or color variants for this design' },
+  { label: 'Edit Style', msg: 'Improve the color palette to be more harmonious and modern' },
+  { label: 'Align Objects', msg: 'Align and arrange the layout cleanly' },
 ];
 
 const CHIPS_SINGLE = [
-  { label: '🎨 Restyle', msg: 'Improve the styling of this node — better colors, corner radius, shadow' },
-  { label: '📝 Rename', msg: 'Suggest a better semantic name for this node' },
-  { label: '✨ Add hover', msg: 'Add a subtle hover animation to this node' },
+  { label: 'Suggest Variants', msg: 'Suggest variations for this component' },
+  { label: 'Edit Style', msg: 'Improve the styling of this node' },
+  { label: 'Rename Node', msg: 'Suggest a better semantic name for this node' },
 ];
 
 const CHIPS_MULTI = [
-  { label: '📦 Group these', msg: 'Group these selected nodes into a frame with proper layout' },
-  { label: '📐 Align layout', msg: 'Align and arrange these nodes in a clean layout' },
-  { label: '🔗 Add edges', msg: 'Add connecting edges between these nodes' },
+  { label: 'Group Nodes', msg: 'Group these selected nodes into a frame with proper layout' },
+  { label: 'Align Objects', msg: 'Align and arrange these nodes in a clean layout' },
+  { label: 'Add Edges', msg: 'Add connecting edges between these nodes' },
 ];
 
 function updateChips() {

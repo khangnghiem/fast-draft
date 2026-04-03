@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.325 — Context Engineering UI Foundation (R4.26)
+
+- **Agent Panel Redesign:** Refactored the AI chat panel to match early context engineering vision. Renamed to "Design Agent", shrunk zero-state hero icon, constrained text to single lines. 
+- **Model Selector UI:** Added a pill-shaped model selector (Llama 8B / 70B) directly inside an elevated, premium input container inspired by Cursor/Windsurf.
+- **Emoji-less Quick Actions:** Replaced emoji-heavy chips with cleaner string labels (`Suggest Variants`, `Edit Style`, `Align Objects`).
+- **Context Engineering Specs:** Documented the full PydanticAI-based context engineering pipeline, Pydantic Graph knowledge base, and streaming SSE responses into `REQUIREMENTS.md` as R4.26.
+
 ### v0.11.324 — Fix Canvas Zoom Drift on App Switch (Bug Fix)
 
 - **Canvas Viewport Stability**: Fixed a critical coordinate pipeline bug on macOS where switching applications (⌘+Tab) while the trackpad retained inertia caused phantom `wheel` events to silently corrupt the canvas `zoomLevel` and pan offsets in the background.
