@@ -98,6 +98,7 @@ function parseAnn(line: string): Annotation | null {
 
 function processSpecBlock(lines: string[], i: number, state: any): boolean {
   const trimmed = lines[i].trim();
+
   if (!(trimmed.startsWith("spec ") || trimmed.startsWith("spec{"))) return false;
 
   const inlineMatch = trimmed.match(/^spec\s+"([^"]*)"/);
@@ -181,13 +182,19 @@ function processClosingBrace(trimmed: string, state: any): boolean {
 }
 
 function processNodeDecl(trimmed: string, state: any, doFlush: (s: any) => void): boolean {
-  const nodeMatch = trimmed.match(/^(group|rect|ellipse|path|text)\s+@(\w+)(?:\s+"[^"]*")?\s*\{?/);
+  const nodeMatch = trimmed.match(/^(group|rect|ellipse|path|text)\s+@(\w+)/);
   if (!nodeMatch) return false;
 
   doFlush(state); // Flush PREVIOUS node before starting this new one
 
   state.currentNodeKind = nodeMatch[1];
   state.currentNodeId = nodeMatch[2];
+
+  const inlineSpec = trimmed.match(/\bspec\s+"([^"]*)"/);
+  if (inlineSpec) {
+    state.currentAnnotations.push({ type: "description", value: inlineSpec[1] });
+  }
+
   if (trimmed.endsWith("{")) {
     state.braceDepth += 1;
     state.depthStack.push(state.braceDepth);
@@ -197,16 +204,26 @@ function processNodeDecl(trimmed: string, state: any, doFlush: (s: any) => void)
 }
 
 function processGenericNode(trimmed: string, state: any, doFlush: (s: any) => void): boolean {
-  const genericMatch = trimmed.match(/^@(\w+)\s*\{/);
+  const genericMatch = trimmed.match(/^@(\w+)/);
   if (!genericMatch) return false;
 
+  // We should not mistake other things like properties that start with @,
+  // but a line starting with @ is a generic node.
   doFlush(state); // Flush PREVIOUS node
 
   state.currentNodeKind = "spec";
   state.currentNodeId = genericMatch[1];
-  state.braceDepth += 1;
-  state.depthStack.push(state.braceDepth);
-  state.headingLevel = 2 + state.depthStack.length - 1;
+
+  const inlineSpec = trimmed.match(/\bspec\s+"([^"]*)"/);
+  if (inlineSpec) {
+    state.currentAnnotations.push({ type: "description", value: inlineSpec[1] });
+  }
+
+  if (trimmed.endsWith("{")) {
+    state.braceDepth += 1;
+    state.depthStack.push(state.braceDepth);
+    state.headingLevel = 2 + state.depthStack.length - 1;
+  }
   return true;
 }
 
