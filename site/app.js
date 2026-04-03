@@ -143,6 +143,92 @@ let handAltCloneActive = false;
 let handPanClientStartX = null;  // Track click vs drag for deselect
 let handPanClientStartY = null;
 
+/** Canvas Tips Manager (Context-Triggered + Passive) */
+const CanvasTips = {
+  active: localStorage.getItem('fd-show-tips') !== 'false',
+  seenCount: parseInt(localStorage.getItem('fd-context-tips-count') || '0', 10),
+  contextSeen: new Set(),
+  passiveInterval: null,
+  passiveIndex: 0,
+  paused: false,
+  passiveTips: [
+    "⌘+Drag to nest into a container",
+    "Alt+Drag to clone a shape",
+    "Space to pan the canvas",
+    "Double-press a tool key (e.g. R R) to lock it",
+    "⌘+Alt+Click for deep select",
+    "Alt+Click to pick a style",
+    "Shift+Drag for square/circle",
+    "Right-drag to pan",
+    "⌘+Right-drag to zoom scrub",
+    "Press ? for all shortcuts"
+  ],
+
+  init() {
+    if (!this.active) return;
+    this.startPassive();
+  },
+
+  showContextTip(id, text) {
+    if (!this.active || this.contextSeen.has(id)) return;
+    this.contextSeen.add(id);
+    
+    this.seenCount++;
+    localStorage.setItem('fd-context-tips-count', this.seenCount);
+    if (this.seenCount >= 5) {
+      this.active = false;
+      localStorage.setItem('fd-show-tips', 'false');
+      const toggle = document.getElementById('sm-tips-toggle');
+      if (toggle) toggle.classList.remove('toggle-on');
+      if (window.api && window.api.showToast) {
+        window.api.showToast("Tips disabled — you're a pro! Re-enable in Settings.");
+      }
+      this.hide();
+      return;
+    }
+
+    this.display(text, true);
+  },
+
+  display(text, isContext = false) {
+    if (!this.active) return;
+    const el = document.getElementById('canvas-tips');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.add('visible');
+    
+    if (this.hideTimeout) clearTimeout(this.hideTimeout);
+    this.hideTimeout = setTimeout(() => {
+      this.hide();
+    }, isContext ? 4000 : 3000);
+  },
+
+  hide() {
+    const el = document.getElementById('canvas-tips');
+    if (el) el.classList.remove('visible');
+  },
+
+  startPassive() {
+    if (!this.active || this.passiveInterval) return;
+    this.passiveInterval = setInterval(() => {
+      if (!this.paused && document.visibilityState === 'visible') {
+        const text = this.passiveTips[this.passiveIndex % this.passiveTips.length];
+        this.passiveIndex++;
+        this.display(text, false);
+      }
+    }, 12000);
+  },
+
+  pause() {
+    this.paused = true;
+    this.hide();
+  },
+
+  resume() {
+    this.paused = false;
+  }
+};
+
 // Smart defaults — per-tool style memory (persistent via localStorage)
 let smartDefaults = { fill: null, stroke: '#333333', strokeWidth: 2.5, opacity: 1, cornerRadius: 8 };
 try {
@@ -771,6 +857,7 @@ function initOnboarding() {
   const hints = document.getElementById('onboarding-hints');
   if (!hints) return;
   // Show hints after a brief delay for WASM init
+  // Show hints after a brief delay for WASM init
   setTimeout(() => {
     hints.style.display = '';
   }, 1200);
@@ -782,6 +869,7 @@ function initOnboarding() {
     localStorage.setItem('fd-onboarded', '1');
     document.removeEventListener('keydown', dismiss);
     document.removeEventListener('pointerdown', dismiss);
+    CanvasTips.init(); // Start passive tips AFTER initial onboarding is dismissed
   };
   // Auto-dismiss after 8s
   setTimeout(dismiss, 8000);
@@ -3708,7 +3796,11 @@ async function initPlayground() {
   initLeftPanel();
   initRightPanel();
   initSettingsPanel();
-  initOnboarding();
+  if (localStorage.getItem('fd-onboarded')) {
+    CanvasTips.init();
+  } else {
+    initOnboarding();
+  }
 
   try {
     // Load WASM module
@@ -3801,6 +3893,7 @@ async function initPlayground() {
     const rect = wrapper.getBoundingClientRect();
     const canvasW = rect.width - getLayersPanelWidth();
     fdCanvas = new wasm.FdCanvas(canvasW, rect.height);
+    window.fdCanvas = fdCanvas; // Expose for E2E testing
     // Canvas theme — honor localStorage preference
     fdCanvas.set_theme(isDark);
     wrapper.classList.toggle('dark-canvas', isDark);
@@ -4498,6 +4591,7 @@ async function initPlayground() {
     // Patch: ResizeObserver will use the enhanced version
     // (the resizeObserver is set up later, but we store the enhanced fn)
     window.__fdResizeCanvasWithFit = resizeCanvasWithFit;
+    window.__fdResizeCanvas = originalResizeCanvas;
 
     // ── #5: FitToContent on orientation change ───────────────────────
     window.addEventListener('orientationchange', () => {
@@ -4708,10 +4802,15 @@ async function initPlayground() {
         return;
       }
 
+      if (e.pointerType !== 'touch') {
+        CanvasTips.pause();
+      }
+
       const changed = fdCanvas.handle_pointer_down(
         x, y, e.pressure || 1.0,
         e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
       );
+      canvas.setPointerCapture(e.pointerId);
       activePointerId = e.pointerId;
       if (changed) { renderDirty = true; uiDirty = true; }
 
@@ -4733,7 +4832,7 @@ async function initPlayground() {
       }
     });
 
-    document.addEventListener('pointermove', (e) => {
+    canvas.addEventListener('pointermove', (e) => {
       if (!fdCanvas) return;
 
       // Update tracked pointer position
@@ -4999,7 +5098,7 @@ async function initPlayground() {
       }
     });
 
-    document.addEventListener('pointerup', (e) => {
+    canvas.addEventListener('pointerup', (e) => {
       if (!fdCanvas) return;
 
       // Clean up tracked pointer
@@ -5251,6 +5350,13 @@ async function initPlayground() {
           }
         }
       }
+      
+      if (cmdDragNestTarget) {
+         if (!handAltCloneActive) {
+            CanvasTips.showContextTip('alt_clone', 'Alt+Drag to clone a shape');
+         }
+      }
+
       cmdDragNestTarget = null;
 
       const resultJson = fdCanvas.handle_pointer_up(
@@ -5323,7 +5429,7 @@ async function initPlayground() {
     });
 
     // Clean up on pointer cancel (mobile: app switch, incoming call, etc.)
-    document.addEventListener('pointercancel', (e) => {
+    canvas.addEventListener('pointercancel', (e) => {
       activePointers.delete(e.pointerId);
       if ((isTwoFingerGesture || twoFingerPending) && activePointers.size < 2) {
         isTwoFingerGesture = false;
@@ -5796,6 +5902,7 @@ async function initPlayground() {
       document.getElementById('sm-grid-toggle')?.classList.toggle('toggle-on', gridEnabled);
       document.getElementById('sm-xray-toggle')?.classList.toggle('toggle-on', xrayLabels);
       document.getElementById('sm-motion-toggle')?.classList.toggle('toggle-on', reduceMotion);
+      document.getElementById('sm-tips-toggle')?.classList.toggle('toggle-on', CanvasTips.active);
     }
 
     // Settings gear dropdown (unified menu)
@@ -5841,6 +5948,22 @@ async function initPlayground() {
             reduceMotion = !manual || prefersReducedMotion.matches;
             document.body.classList.toggle('reduce-motion', !manual);
             showToast(reduceMotion ? 'Reduce Motion: ON' : 'Reduce Motion: OFF');
+            break;
+          }
+          case 'show-tips': {
+            CanvasTips.active = !CanvasTips.active;
+            localStorage.setItem('fd-show-tips', CanvasTips.active ? 'true' : 'false');
+            if (CanvasTips.active) {
+               CanvasTips.startPassive();
+               showToast('Canvas Tips: ON');
+            } else {
+               CanvasTips.hide();
+               if (CanvasTips.passiveInterval) {
+                 clearInterval(CanvasTips.passiveInterval);
+                 CanvasTips.passiveInterval = null;
+               }
+               showToast('Canvas Tips: OFF');
+            }
             break;
           }
           case 'fit': {
@@ -6032,16 +6155,40 @@ if (document.readyState === 'loading') {
   initPlayground();
 }
 
-// Flush current document to localStorage on page unload (catches mid-debounce refreshes)
 window.addEventListener('focus', () => {
   // macOS / Browser quirk: When regaining focus, devicePixelRatio or layout 
   // bounds might have shifted while the app was backgrounded. Force a sync 
   // immediately to prevent coordinate drift on the first click.
-  if (typeof window.__fdResizeCanvasWithFit === 'function') {
+  if (typeof window.__fdResizeCanvas === 'function') {
+    window.__fdResizeCanvas();
+  } else if (typeof window.__fdResizeCanvasWithFit === 'function') {
     window.__fdResizeCanvasWithFit();
   } else {
     window.dispatchEvent(new Event('resize'));
   }
+});
+
+window.addEventListener('blur', () => {
+  // Clear interaction state to prevent stuck modifier keys, stale drag/zoom
+  // anchors, and ghost touches when returning to the tab.
+  activePointers.clear();
+  panDragging = false;
+  isPanning = false;
+  activePointerId = -1;
+  lassoActive = false;
+  eraserActive = false;
+  twoFingerPending = false;
+  touchHalo.active = false;
+  pencilHover.active = false;
+  modShiftHeld = false;
+  cmdDragNestTarget = null;
+  handAltCloneActive = false;
+  handTempSelectActive = false;
+  const canvasEl = document.getElementById('fd-canvas');
+  if (canvasEl) {
+    canvasEl.classList.remove('modifier-cmd', 'modifier-alt', 'modifier-cmd-select');
+  }
+  renderDirty = true;
 });
 
 window.addEventListener('beforeunload', () => {
@@ -6054,3 +6201,6 @@ window.addEventListener('beforeunload', () => {
     }
   } catch (_) {}
 });
+
+// Export CanvasTips globally for cross-module usage
+window.CanvasTips = CanvasTips;

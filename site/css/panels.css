@@ -727,6 +727,32 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   display: block;
 }
 
+/* ── Canvas Tips (Ghost Banner) ── */
+.canvas-tips {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  opacity: 0;
+  color: var(--fd-text-secondary, #86868B);
+  font-size: 11px;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  z-index: 10;
+  transition: opacity 1s ease-in-out, transform 0.5s easeOutQuint;
+  text-align: center;
+  white-space: nowrap;
+  user-select: none;
+  grid-column: 2; /* constrain to the canvas grid column */
+  grid-row: 1;
+}
+.canvas-tips.visible {
+  opacity: 0.25; /* ghostly appearance */
+}
+.dark-theme .canvas-tips.visible {
+  opacity: 0.35;
+}
+
 /* Layers panel is now inside #left-panel — no absolute positioning needed */
 #layers-panel::-webkit-scrollbar { width: 6px; }
 #layers-panel::-webkit-scrollbar-track { background: transparent; }

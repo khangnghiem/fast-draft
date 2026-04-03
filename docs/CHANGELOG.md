@@ -2839,3 +2839,4 @@ Core editing infrastructure: inline text editing (double-click, Esc cancel, live
 </details>
 
 > Requirement status and test coverage are now tracked inline in [REQUIREMENTS.md](REQUIREMENTS.md).
+- **FIX**: Implemented Pointer Capture API on canvas to resolve ghost touch and zoom drift issues caused by window blur/focus events

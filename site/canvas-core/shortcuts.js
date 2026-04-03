@@ -95,7 +95,9 @@ export function buildShortcutHelpHtml() {
       title: 'Modifiers (while dragging)',
       shortcuts: [
         ['Shift', 'Constrain axis / square'],
+        [`${cmd}Drag`, 'Nest into container', true],
         ['Alt+drag', 'Duplicate while moving'],
+        [`${cmd}⌥Click`, 'Deep select child', true],
         ['Double-click', 'Edit text / create text'],
         ['Dbl-click tool', 'Lock tool (🔒)'],
       ],
@@ -120,8 +122,12 @@ export function buildShortcutHelpHtml() {
 
   for (const section of sections) {
     html += `<div class="help-section"><h4>${section.title}</h4><dl>`;
-    for (const [key, desc] of section.shortcuts) {
-      html += `<div class="help-row"><dt><kbd>${key}</kbd></dt><dd>${desc}</dd></div>`;
+    for (const item of section.shortcuts) {
+      const key = item[0];
+      const desc = item[1];
+      const isNew = item[2];
+      const badgeHtml = isNew ? `<span class="help-badge-new">New!</span>` : '';
+      html += `<div class="help-row"><dt><kbd>${key}</kbd></dt><dd>${desc}${badgeHtml}</dd></div>`;
     }
     html += `</dl></div>`;
   }
