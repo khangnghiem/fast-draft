@@ -55,23 +55,54 @@
   flex-direction: row;
   position: fixed;
 }
-/* ── Grip handles ── */
+/* ── Grip handle (iOS-style pill) ── */
 .toolbar-grip {
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: grab;
-  padding: 2px 4px;
-  color: var(--fd-text-tertiary);
-  font-size: 14px;
+  /* Horizontal: tall-enough click target, narrow */
+  padding: 4px 8px;
   border-radius: 6px;
   user-select: none;
-  letter-spacing: 2px;
-  opacity: 0.5;
-  transition: opacity 0.15s;
+  touch-action: none;
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
 }
 .toolbar-grip:hover { opacity: 1; }
-.toolbar-grip:active { cursor: grabbing; }
+.toolbar-grip:active { cursor: grabbing; opacity: 1; }
+
+/* The actual pill bar — pure CSS, no icon font needed */
+.toolbar-pill-bar {
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  background: currentColor;
+  color: var(--fd-text-tertiary);
+  transition: width 0.2s ease, height 0.2s ease, border-radius 0.2s ease;
+}
+
+/* Vertical toolbars: pill rotates to vertical bar */
+.toolbar-docked-left .toolbar-pill-bar,
+.toolbar-docked-right .toolbar-pill-bar {
+  width: 4px;
+  height: 32px;
+}
+[data-toolbar="left"] #floating-toolbar .toolbar-pill-bar,
+[data-toolbar="right"] #floating-toolbar .toolbar-pill-bar {
+  width: 4px;
+  height: 32px;
+}
+
+/* Remove old rotate(90deg) rotation — pill adapts via dimensions instead */
+[data-toolbar="left"] .toolbar-grip,
+[data-toolbar="right"] .toolbar-grip,
+.toolbar-docked-left .toolbar-grip,
+.toolbar-docked-right .toolbar-grip {
+  transform: none;
+  padding: 8px 4px;
+}
 /* ── Minimized state with smooth pull animation ── */
 #floating-toolbar .ft-tool-btn {
   max-width: 32px;

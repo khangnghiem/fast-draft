@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.332 — Unified Pill Handle & Multi-Gesture Minimize
+
+- **Pill Handle**: Replaced the 6-dot Unicode `⡀` grip with a pure CSS `<div class="toolbar-pill-bar">` element across all platforms. The pill is 32×4px horizontally and automatically becomes 4×32px when the toolbar docks vertically, matching Apple HIG grabber conventions.
+- **Swipe Gesture (All Platforms)**: Added `touchstart`/`touchend` listeners to the grip. A short flick along the toolbar’s minor axis (>30px perpendicular, <80px parallel, <350ms) triggers the existing Hybrid Cascade minimize/expand logic.
+- **Mobile Single-Tap**: On touch devices, a single tap (<12px displacement, <350ms) on the pill toggles minimize state — no double-tap required.
+- **Mobile Pill Visibility**: Removed `display: none` on mobile; the pill is now absolutely positioned centered above the toolbar row with a 6px 12px touch target.
+- **Platform Gesture Matrix**: Desktop = double-click + short-drag; iPadOS = double-tap + swipe + full drag; iOS = single-tap + swipe (no drag).
+
 ### v0.11.331 — Mobile Grid Blocker & Toolbar UX Refinement
 
 - **Mobile Canvas Grid Fix**: Fixed the persistent "invisible blocker" issue on mobile web where the canvas was forced into a second column, leaving a dead zone on the left. The fix ensures `#canvas-content > *` spans `grid-column: 1 / -1` via CSS grid overrides.
