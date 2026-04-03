@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.328 — Fix Mobile Safari AFK Canvas Vignette (Bug Fix)
+
+- **AFK Marquee Clear**: Solved a bug where switching tabs or letting the screen sleep on mobile Safari (triggering a `blur` event) would cause a giant blue vignette / shadow to permanently lock over the canvas when returning. Root cause: The WASM rendering engine's internal interaction state (like the selection marquee `marquee_start`) was not properly cancelled when the JS event loop cleared its pointers.
+- **Cancellation Propagation**: Added explicit invocation of `fdCanvas.cancel_drag();` directly inside `app.js`'s global `window.addEventListener('blur', ...)` hook. This guarantees that any incomplete WASM tool dragging (marquee, pen, arrow) is instantly aborted, preventing sticky ghost visuals.
+
 ### v0.11.327 — Fix Mobile Safari Ghost Shadow (Bug Fix)
 
 - **Mobile Canvas Shadow Fix**: Eliminated a persistent GPU compositing ghost shadow that blocked the canvas on mobile Safari when side panels were collapsed. Root cause: `backdrop-filter: blur(24px)` on `#left-panel` and `#right-panel` created WebKit GPU layers that weren't properly invalidated when panels slid off-screen via `transform: translateX()`.

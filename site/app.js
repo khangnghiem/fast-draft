@@ -6202,6 +6202,9 @@ window.addEventListener('blur', () => {
   if (canvasEl) {
     canvasEl.classList.remove('modifier-cmd', 'modifier-alt', 'modifier-cmd-select');
   }
+  if (typeof fdCanvas !== 'undefined' && fdCanvas && fdCanvas.cancel_drag) {
+    fdCanvas.cancel_drag();
+  }
   renderDirty = true;
 });
 
