@@ -3119,7 +3119,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div id="ai-chat-panel" class="ai-chat-panel hidden">
       <div class="ai-chat-header">
         <div class="ai-chat-title">
-          <span class="ai-chat-icon">✦</span> AI Agent
+          <span class="ai-chat-icon">✦</span> Design Agent
         </div>
         <div class="ai-chat-header-actions">
           <button class="ai-chat-clear" id="ai-chat-clear" title="Clear chat">🗑</button>
@@ -3134,19 +3134,28 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
               <path d="M5 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" opacity="0.6"/>
             </svg>
           </div>
-          <div class="ai-chat-welcome-text">Design Assistant</div>
-          <div class="ai-chat-welcome-subtext">Ask about your layout, colors, or structure</div>
+          <div class="ai-chat-welcome-text">Design Agent</div>
+          <div class="ai-chat-welcome-subtext">Select components, describe changes</div>
           <div class="ai-chat-chips" id="ai-chat-chips"></div>
         </div>
       </div>
       <div class="ai-chat-input-area">
         <div class="ai-chat-input-container">
           <div class="ai-chat-context-badge hidden" id="ai-chat-context-badge">
+            <span class="context-pin">📌</span>
             <span id="ai-chat-context-text"></span>
             <button id="ai-chat-context-clear" title="Clear context">×</button>
           </div>
-          <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Describe what you'd like to change..." rows="1" maxlength="500"></textarea>
-          <button class="ai-chat-send" id="ai-chat-send" title="Send">→</button>
+          <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Describe your design changes..." rows="1" maxlength="500"></textarea>
+          <div class="ai-chat-input-footer">
+            <div class="ai-model-selector">
+              <select id="ai-model-select" class="ai-model-dropdown">
+                <option value="llama-8b" selected>Llama 8B</option>
+                <option value="llama-70b">Llama 70B</option>
+              </select>
+            </div>
+            <button class="ai-chat-send" id="ai-chat-send" title="Send">→</button>
+          </div>
         </div>
       </div>
     </div>

@@ -101,7 +101,7 @@ If 1.1 hangs, **STOP ALL TESTING** and report errors.
 
 > Validate Bidi-Sync visually.
 
-### Phase 2: Navigation & Panels (7 checks)
+### Phase 2: Navigation & Panels (8 checks)
 | #   | Action                              | Expected Result                     |
 | --- | ----------------------------------- | ----------------------------------- |
 | 2.1 | Hold Space → drag canvas            | Canvas pans smoothly                |
@@ -110,7 +110,8 @@ If 1.1 hangs, **STOP ALL TESTING** and report errors.
 | 2.4 | Click a layer item in Layers panel  | Corresponding node selects on canvas|
 | 2.5 | Double-click layer name             | Inline rename field opens           |
 | 2.6 | Change fill color in Properties     | Color updates on canvas immediately |
-| 2.7 | Press ?                             | Help overlay shows                  |
+| 2.7 | Click '✦ Agent' toolbar button      | Agent panel slides out with 'Design Agent' title |
+| 2.8 | Press ?                             | Help overlay shows                  |
 
 ---
 
