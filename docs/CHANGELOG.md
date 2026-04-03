@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.320 — Agent Panel UI Simplification (R6.18)
+
+- **UX Polish:** Decluttered the AI Chat welcome state in both the playground and VS Code webview. Replaced the verbose onboarding paragraphs with a minimalist `<h2>How can I help?</h2>` header. Context-aware AI suggestions are now exclusively provided by the existing dynamic Quick-Action chips, significantly reducing vertical UI noise and aligning with modern AI chat UX standards.
+
 ### v0.11.319 — ⌘+Drag Nest+Center Gesture (R3.38, R3.64)
 
 - **REMOVED**: Post-drop context menu for reparenting — dragging a node onto a container no longer shows "Nest into @target" / "Center in @target" popup. ~50 lines of JS deleted (`showDropContextMenu`) from VSCode webview; ~50 lines from site `app.js`.
