@@ -124,7 +124,10 @@ mod tests {
         let root = graph.root;
         let n1 = crate::model::SceneNode::new(
             NodeId::intern("rect_3"),
-            crate::model::NodeKind::Rect { width: 0.0, height: 0.0 },
+            crate::model::NodeKind::Rect {
+                width: 0.0,
+                height: 0.0,
+            },
         );
         let n2 = crate::model::SceneNode::new(
             NodeId::intern("ellipse_7"),
