@@ -3128,8 +3128,19 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       </div>
       <div class="ai-chat-messages" id="ai-chat-messages">
         <div class="ai-chat-welcome">
-          <p>Ask me about your design. I can modify nodes, suggest improvements, or answer questions.</p>
-          <p class="ai-chat-hint">Try: "Make the colors warmer" or "Add a header section"</p>
+          <div class="ai-chat-welcome-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#ai-sparkle-grad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <defs>
+                <linearGradient id="ai-sparkle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#6C5CE7" />
+                  <stop offset="100%" stop-color="#0A84FF" />
+                </linearGradient>
+              </defs>
+              <path d="M12 2l2.4 7.6 7.6 2.4-7.6 2.4-2.4 7.6-2.4-7.6-7.6-2.4 7.6-2.4 2.4-7.6z"/>
+              <path d="M5 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" opacity="0.6"/>
+            </svg>
+          </div>
+          <div class="ai-chat-welcome-text">How can I help with your design?</div>
         </div>
       </div>
       <div class="ai-chat-chips" id="ai-chat-chips"></div>
