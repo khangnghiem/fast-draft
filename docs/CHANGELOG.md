@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.322 — Apple HIG Sparkle Hero Fix (R6.18)
+
+- **Bugfix (UI):** Solved an issue where the Apple HIG Sparkle Hero layout was missing in local and production environments because CSS sub-imports (`@import`) were locked to an older cache string (`v=0.11.308`), bypassing the global Github Action cache buster for sub-stylesheets. Force-bumped the static cache strings to synchronize variables and `ai.css` loading. Added the new Lucide-style star SVG directly into the DOM to work seamlessly with the gradient box.
+
 ### v0.11.321 — Apple HIG Sparkle Hero Zero-State (R6.18)
 
 - **UX Polish:** Completely redesigned the AI Agent empty state. Replaced the unstyled text header inherited from prior token optimizations with a custom Apple HIG "Sparkle Hero" interface. Reduced the heavy default margins/padding and introduced an SVG sparkle icon with a gradient fill, paired with a subtle, intentional 14px "How can I help with your design?" prompt to bridge the gap gracefully into the Quick-Action chips.
