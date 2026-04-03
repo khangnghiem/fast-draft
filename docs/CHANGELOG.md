@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.321 — Apple HIG Sparkle Hero Zero-State (R6.18)
+
+- **UX Polish:** Completely redesigned the AI Agent empty state. Replaced the unstyled text header inherited from prior token optimizations with a custom Apple HIG "Sparkle Hero" interface. Reduced the heavy default margins/padding and introduced an SVG sparkle icon with a gradient fill, paired with a subtle, intentional 14px "How can I help with your design?" prompt to bridge the gap gracefully into the Quick-Action chips.
+
 ### v0.11.320 — Agent Panel UI Simplification (R6.18)
 
 - **UX Polish:** Decluttered the AI Chat welcome state in both the playground and VS Code webview. Replaced the verbose onboarding paragraphs with a minimalist `<h2>How can I help?</h2>` header. Context-aware AI suggestions are now exclusively provided by the existing dynamic Quick-Action chips, significantly reducing vertical UI noise and aligning with modern AI chat UX standards.

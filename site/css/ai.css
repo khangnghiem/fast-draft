@@ -409,11 +409,28 @@
   gap: 10px;
 }
 .ai-chat-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px 16px 12px;
   text-align: center;
-  padding: 32px 16px;
-  color: var(--fd-text-secondary, #86868B);
-  font-size: 12px;
-  line-height: 1.6;
+}
+.ai-chat-welcome-icon svg {
+  width: 26px;
+  height: 26px;
+  filter: drop-shadow(0 2px 8px rgba(108, 92, 231, 0.3));
+}
+.ai-chat-welcome-text {
+  color: var(--fd-text, #1D1D1F);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.dark-canvas .ai-chat-welcome-text,
+.dark-theme .ai-chat-welcome-text {
+  color: #F5F5F7;
 }
 .ai-chat-hint {
   font-style: italic;
