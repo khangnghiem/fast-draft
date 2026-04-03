@@ -821,7 +821,9 @@ function buildShortcutHelpHtml() {
       title: 'Modifiers (while dragging)',
       shortcuts: [
         ['Shift', 'Constrain axis / square'],
+        [`${cmd}Drag`, 'Nest into container', true],
         ['Alt+drag', 'Duplicate while moving'],
+        [`${cmd}⌥Click`, 'Deep select child', true],
         ['Double-click', 'Edit text / create text'],
         ['Dbl-click tool', 'Lock tool (🔒)'],
       ],
@@ -846,8 +848,12 @@ function buildShortcutHelpHtml() {
 
   for (const section of sections) {
     html += `<div class="help-section"><h4>${section.title}</h4><dl>`;
-    for (const [key, desc] of section.shortcuts) {
-      html += `<div class="help-row"><dt><kbd>${key}</kbd></dt><dd>${desc}</dd></div>`;
+    for (const item of section.shortcuts) {
+      const key = item[0];
+      const desc = item[1];
+      const isNew = item[2];
+      const badgeHtml = isNew ? `<span class="help-badge-new">New!</span>` : '';
+      html += `<div class="help-row"><dt><kbd>${key}</kbd></dt><dd>${desc}${badgeHtml}</dd></div>`;
     }
     html += `</dl></div>`;
   }
@@ -10227,7 +10233,7 @@ function clearChat() {
   chatHistory.length = 0;
   const messages = document.getElementById('ai-chat-messages');
   if (messages) {
-    messages.innerHTML = '<div class="ai-chat-welcome"><p>Ask me about your design. I can modify nodes, suggest improvements, or answer questions.</p><p class="ai-chat-hint">Try: "Make the colors warmer" or "Add a header section"</p></div>';
+    messages.innerHTML = '<div class="ai-chat-welcome"><h2>How can I help?</h2></div>';
   }
 }
 

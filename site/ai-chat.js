@@ -57,7 +57,7 @@ export function clearChatHistory() {
   chatHistory.length = 0;
   const messages = getChatMessages();
   if (messages) {
-    messages.innerHTML = '<div class="ai-chat-welcome"><p>Ask me about your design. I can modify nodes, suggest improvements, or answer questions.</p><p class="ai-chat-hint">Try: "Make the colors warmer" or "Add a header section"</p></div>';
+    messages.innerHTML = '<div class="ai-chat-welcome"><h2>How can I help?</h2></div>';
   }
 }
 
