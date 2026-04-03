@@ -539,6 +539,15 @@
     --props-width: 0px;
   }
 
+  /* ── Fix: Kill backdrop-filter on mobile — panels are opaque overlays,
+       blur is invisible but creates GPU ghost layer on Safari iOS ── */
+  #left-panel,
+  #right-panel {
+    background: var(--fd-bg, #1C1C1E); /* fully opaque — no blur needed */
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
   /* ── Left panel: off-screen by default, overlay when open ── */
   #left-panel {
     position: absolute; /* Override grid on mobile — overlay pattern */
@@ -548,16 +557,21 @@
     transform: translateX(-100%);
     z-index: 100;
     box-shadow: none;
-    transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+    transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1),
+                visibility 0s 0.25s; /* delay hide until slide-out finishes */
   }
   [data-lp="open"] #left-panel {
     transform: translateX(0);
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+    visibility: visible;
+    transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1),
+                visibility 0s 0s; /* show immediately */
   }
   [data-lp="closed"] #left-panel {
     transform: translateX(-100%);
     box-shadow: none;
     pointer-events: none;
+    visibility: hidden; /* force WebKit to release GPU compositing layer */
   }
 
   /* ── Right panel: off-screen by default, overlay when open ── */
@@ -569,16 +583,21 @@
     transform: translateX(100%);
     z-index: 100;
     box-shadow: none;
-    transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+    transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1),
+                visibility 0s 0.25s; /* delay hide until slide-out finishes */
   }
   [data-rp="open"] #right-panel {
     transform: translateX(0);
     box-shadow: -4px 0 24px rgba(0, 0, 0, 0.25);
+    visibility: visible;
+    transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1),
+                visibility 0s 0s; /* show immediately */
   }
   [data-rp="closed"] #right-panel {
     transform: translateX(100%);
     box-shadow: none;
     pointer-events: none;
+    visibility: hidden; /* force WebKit to release GPU compositing layer */
   }
 
   /* ── Hide resize handles on mobile ── */
@@ -688,9 +707,9 @@
     position: absolute;
     inset: 0;
     z-index: 99;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
+    background: rgba(0, 0, 0, 0.5); /* slightly darker to compensate for no blur */
+    backdrop-filter: none; /* avoid GPU ghost layer on Safari iOS */
+    -webkit-backdrop-filter: none;
     pointer-events: none;
   }
   #mobile-layers-backdrop.visible { display: block; pointer-events: auto; }

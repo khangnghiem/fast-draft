@@ -17,6 +17,18 @@
 
 ## Completed Requirements
 
+### v0.11.327 — Fix Mobile Safari Ghost Shadow (Bug Fix)
+
+- **Mobile Canvas Shadow Fix**: Eliminated a persistent GPU compositing ghost shadow that blocked the canvas on mobile Safari when side panels were collapsed. Root cause: `backdrop-filter: blur(24px)` on `#left-panel` and `#right-panel` created WebKit GPU layers that weren't properly invalidated when panels slid off-screen via `transform: translateX()`.
+- **Opaque Mobile Panels**: Replaced semi-transparent `var(--fd-surface)` + blur with fully opaque `var(--fd-bg)` background on mobile. Panels are full-height overlays on mobile so translucency was invisible — removing it eliminates GPU compositing cost.
+- **Visibility Hidden on Close**: Added `visibility: hidden` to closed panels with proper transition timing (`0s delay` on open, `0.25s delay` on close matching slide-out duration). Forces WebKit to fully release the GPU compositing layer.
+- **Backdrop Blur Removal**: Removed `backdrop-filter: blur(2px)` from `#mobile-layers-backdrop` overlay, replaced with slightly darker opaque background.
+
+### v0.11.326 — Sync Agent Panel to VS Code & E2E Validation (R4.26)
+
+- **VS Code Extension Sync:** Backported the "Design Agent" renaming, elevated model selector UI (`Llama 8B/70B`), and emoji-less semantic chip logic (`Suggest Variants`, `Edit Style`, etc.) to the `fd-vscode` webview container.
+- **E2E Workflow Update:** Added test criteria to Phase 2 of `e2e.md` to formally verify the Design Agent slide-out behavior and title rendering.
+
 ### v0.11.325 — Context Engineering UI Foundation (R4.26)
 
 - **Agent Panel Redesign:** Refactored the AI chat panel to match early context engineering vision. Renamed to "Design Agent", shrunk zero-state hero icon, constrained text to single lines. 
