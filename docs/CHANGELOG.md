@@ -17,6 +17,15 @@
 
 ## Completed Requirements
 
+### v0.11.323 — AI Agent Panel Complete Apple HIG Redesign (R6.18)
+
+- **UX Polish:** Completely refactored the AI Agent panel UI to replicate modern, premium design aesthetics (specifically Apple HIG and Cursor).
+- **Centered Zero-State Hero:** Moved the Quick-Action chips inside the vertically-centered "Welcome" hero wrapper, featuring an enlarged 56x56 icon, unified padding, and refined text hierarchy.
+- **Elevated Input Container:** Restructured the input area into an elevated, squircle container pattern (`.ai-chat-input-container`).
+- **Inline Send & Context:** Moved the "Send" button inline inside the new input container. Relocated the "Context Badge" to be an inline, dismissable tag above the textarea.
+- **Header Clean-up:** Relocated the "Clear Context" button into the chat header replacing visual clutter.
+- **Smarter JS State Handling:** Adjusted the `ai-chat.js` logic to recreate the Quick-Action chips dynamically within the welcome state after "Clear Chat" is manually triggered.
+
 ### v0.11.322 — Apple HIG Sparkle Hero Fix (R6.18)
 
 - **Bugfix (UI):** Solved an issue where the Apple HIG Sparkle Hero layout was missing in local and production environments because CSS sub-imports (`@import`) were locked to an older cache string (`v=0.11.308`), bypassing the global Github Action cache buster for sub-stylesheets. Force-bumped the static cache strings to synchronize variables and `ai.css` loading. Added the new Lucide-style star SVG directly into the DOM to work seamlessly with the gradient box.
