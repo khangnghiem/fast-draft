@@ -6182,7 +6182,7 @@ window.addEventListener('focus', () => {
   }
 });
 
-window.addEventListener('blur', () => {
+function clearInteractionState() {
   // Clear interaction state to prevent stuck modifier keys, stale drag/zoom
   // anchors, and ghost touches when returning to the tab.
   activePointers.clear();
@@ -6206,6 +6206,15 @@ window.addEventListener('blur', () => {
     fdCanvas.cancel_drag();
   }
   renderDirty = true;
+}
+
+window.addEventListener('blur', clearInteractionState);
+
+// iOS Safari uses visibilitychange instead of blur when swiping to the home screen
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    clearInteractionState();
+  }
 });
 
 window.addEventListener('beforeunload', () => {

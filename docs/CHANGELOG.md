@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.329 — Fix Mobile Safari Canvas Artifact (Bug Fix)
+
+- **Mobile Safari Canvas Artifact**: Bound `fdCanvas.cancel_drag()` to `visibilitychange` instead of just `blur`. This permanently fixes the "stale marquee / blue vignette" shadow bug where swiping up on iOS to background the app would hijack `pointerup` and swallow `blur`, leaving the blue selection box stuck indefinitely when returning to the app.
+
 ### v0.11.328 — Fix Mobile Safari AFK Canvas Vignette (Bug Fix)
 
 - **AFK Marquee Clear**: Solved a bug where switching tabs or letting the screen sleep on mobile Safari (triggering a `blur` event) would cause a giant blue vignette / shadow to permanently lock over the canvas when returning. Root cause: The WASM rendering engine's internal interaction state (like the selection marquee `marquee_start`) was not properly cancelled when the JS event loop cleared its pointers.
