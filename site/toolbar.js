@@ -180,63 +180,7 @@ export function initToolbar(api) {
     dtcTool = '';
   });
 
-  // ── Insert Menu (+  button) ───────────────────────────────────────
-  const insertBtn = document.getElementById('insert-btn');
-  const insertMenu = document.getElementById('insert-menu');
-  if (insertBtn && insertMenu) {
-    insertBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isOpen = insertMenu.classList.contains('visible');
-      if (isOpen) {
-        insertMenu.classList.remove('visible');
-      } else {
-        // Position menu relative to button, adapting to toolbar edge
-        const btnRect = insertBtn.getBoundingClientRect();
-        const toolbarEl = document.getElementById('floating-toolbar');
-        const toolbarRect = toolbarEl ? toolbarEl.getBoundingClientRect() : btnRect;
-        // Reset positioning
-        insertMenu.style.left = '';
-        insertMenu.style.right = '';
-        insertMenu.style.top = '';
-        insertMenu.style.bottom = '';
-        if (toolbarEl?.classList.contains('toolbar-docked-bottom')) {
-          // Open above when toolbar at bottom
-          insertMenu.style.left = (btnRect.left - toolbarRect.left) + 'px';
-          insertMenu.style.bottom = (toolbarRect.bottom - btnRect.top + 4) + 'px';
-        } else if (toolbarEl?.classList.contains('toolbar-docked-left')) {
-          // Open to the right when toolbar at left
-          insertMenu.style.left = (toolbarRect.right - toolbarRect.left + 4) + 'px';
-          insertMenu.style.top = (btnRect.top - toolbarRect.top) + 'px';
-        } else if (toolbarEl?.classList.contains('toolbar-docked-right')) {
-          // Open to the left when toolbar at right
-          insertMenu.style.right = (toolbarRect.right - toolbarRect.left + 4) + 'px';
-          insertMenu.style.top = (btnRect.top - toolbarRect.top) + 'px';
-        } else {
-          // Default: open below (toolbar at top or floating)
-          insertMenu.style.left = (btnRect.left - toolbarRect.left) + 'px';
-          insertMenu.style.top = (btnRect.bottom - toolbarRect.top + 4) + 'px';
-        }
-        insertMenu.classList.add('visible');
-      }
-    });
 
-    // Menu item click → insert shape at center
-    insertMenu.querySelectorAll('.insert-menu-item[data-insert]').forEach(item => {
-      item.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const type = item.dataset.insert;
-        insertShapeAtCenter(type);
-        insertMenu.classList.remove('visible');
-      });
-    });
-
-    // Close menu on outside click
-    document.addEventListener('pointerdown', (e) => {
-      if (!insertMenu.contains(e.target) && e.target !== insertBtn) {
-        insertMenu.classList.remove('visible');
-      }
-    });
-  }
 
   // ── Toolbar: Drag-to-snap + Minimize ──────────────────────────────────
   const toolbar = document.getElementById('floating-toolbar');

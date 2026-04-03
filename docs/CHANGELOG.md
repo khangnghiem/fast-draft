@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.331 — Mobile Grid Blocker & Toolbar UX Refinement
+
+- **Mobile Canvas Grid Fix**: Fixed the persistent "invisible blocker" issue on mobile web where the canvas was forced into a second column, leaving a dead zone on the left. The fix ensures `#canvas-content > *` spans `grid-column: 1 / -1` via CSS grid overrides.
+- **Toolbar Refinement**: Removed the redundant "Insert" dropdown menu from the floating toolbar. Refactored the minimization animation using `max-width` transitions for a premium "pulling" effect.
+- **Toolbar Grip Rotation**: Added a 90-degree CSS `transform: rotate(90deg)` to the 6-dot grip handle when the toolbar is docked to vertical edges.
+
 ### v0.11.329 — Fix Mobile Safari Canvas Artifact (Bug Fix)
 
 - **Mobile Safari Canvas Artifact**: Bound `fdCanvas.cancel_drag()` to `visibilitychange` instead of just `blur`. This permanently fixes the "stale marquee / blue vignette" shadow bug where swiping up on iOS to background the app would hijack `pointerup` and swallow `blur`, leaving the blue selection box stuck indefinitely when returning to the app.

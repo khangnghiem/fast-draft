@@ -535,6 +535,9 @@
   #canvas-content {
     grid-template-columns: 1fr !important;
   }
+  #canvas-content > * {
+    grid-column: 1 / -1 !important;
+  }
   #canvas-wrapper {
     --props-width: 0px;
   }

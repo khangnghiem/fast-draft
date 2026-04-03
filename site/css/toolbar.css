@@ -72,16 +72,39 @@
 }
 .toolbar-grip:hover { opacity: 1; }
 .toolbar-grip:active { cursor: grabbing; }
-/* ── Minimized state: only active tool + insert + AI button ── */
-#floating-toolbar.toolbar-minimized .ft-tool-btn { display: none; }
-#floating-toolbar.toolbar-minimized .ft-tool-btn.active { display: flex; }
-#floating-toolbar.toolbar-minimized .ft-ai-touch { display: flex; }
-#floating-toolbar.toolbar-minimized .ft-insert-btn { display: flex; }
+/* ── Minimized state with smooth pull animation ── */
+#floating-toolbar .ft-tool-btn {
+  max-width: 32px;
+  overflow: hidden;
+  transition: all 0.2s ease, max-width 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.15s ease, padding 0.25s ease, margin 0.25s ease;
+}
+#floating-toolbar .ft-ai-touch {
+  max-width: 100px; /* enough to fit AI button */
+}
+#floating-toolbar.toolbar-minimized .ft-tool-btn {
+  max-width: 0;
+  opacity: 0;
+  padding: 0;
+  margin: 0;
+  pointer-events: none;
+  border: none;
+}
+#floating-toolbar.toolbar-minimized .ft-tool-btn.active,
+#floating-toolbar.toolbar-minimized .ft-ai-touch {
+  max-width: 100px;
+  opacity: 1;
+  pointer-events: auto;
+  padding: 0 4px; /* Default ft-tool-btn padding fallback if any */
+}
 #floating-toolbar.toolbar-minimized .ft-sep { display: none; }
-#floating-toolbar.toolbar-minimized .ft-undo,
-#floating-toolbar.toolbar-minimized .ft-redo { display: none; }
 /* Show one separator between active tool and AI */
 #floating-toolbar.toolbar-minimized .ft-tool-btn.active + .ft-sep { display: block; }
+
+/* Flip grip handle when docking vertically */
+[data-toolbar="left"] .toolbar-grip,
+[data-toolbar="right"] .toolbar-grip {
+  transform: rotate(90deg);
+}
 /* ── Snap indicator: ghost toolbar silhouette at destination ── */
 .toolbar-snap-indicator {
   position: fixed;
@@ -197,91 +220,6 @@
 
 /* dtc-ghost styles removed — preview is now rendered directly on the canvas */
 
-/* ── Insert Menu (+ button dropdown) ── */
-.insert-menu {
-  position: absolute;
-  z-index: 200;
-  min-width: 160px;
-  padding: 4px;
-  background: var(--fd-surface);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 0.5px solid var(--fd-border);
-  border-radius: 10px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08);
-  opacity: 0;
-  transform: scale(0.96) translateY(-4px);
-  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
-  pointer-events: none;
-}
-.insert-menu.visible {
-  opacity: 1;
-  transform: scale(1) translateY(0);
-  pointer-events: auto;
-}
-.insert-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: var(--fd-text);
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  border: none;
-  background: none;
-  width: 100%;
-  text-align: left;
-  font-family: inherit;
-  transition: none;
-}
-.insert-menu-item:hover {
-  background: var(--fd-accent);
-  color: #fff;
-}
-.insert-menu-item:hover .insert-menu-shortcut {
-  color: rgba(255,255,255,0.7);
-}
-.insert-menu-icon {
-  width: 16px;
-  text-align: center;
-  font-size: 13px;
-  flex-shrink: 0;
-  opacity: 0.7;
-}
-.insert-menu-shortcut {
-  font-size: 10px;
-  color: var(--fd-text-tertiary);
-  font-family: var(--mono);
-  margin-left: auto;
-  padding-left: 12px;
-  font-weight: 500;
-  opacity: 0.6;
-}
-.insert-menu-sep {
-  height: 1px;
-  background: var(--fd-border);
-  margin: 3px 4px;
-}
-
-/* ── Insert button (SVG icon in toolbar) ── */
-.ft-insert-btn svg {
-  width: 18px;
-  height: 18px;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  padding: 2px;
-  box-sizing: border-box;
-}
-.ft-insert-btn:hover {
-  color: var(--fd-accent);
-  background: rgba(0,0,0,0.06);
-}
-.dark-canvas .ft-insert-btn:hover {
-  background: rgba(255,255,255,0.1);
-}
 
 /* ── (Zoom pill removed — zoom is now in minimap controls) ── */
 
