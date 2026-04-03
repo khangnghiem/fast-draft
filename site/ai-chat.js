@@ -57,15 +57,18 @@ export function clearChatHistory() {
   chatHistory.length = 0;
   const messages = getChatMessages();
   if (messages) {
-    messages.innerHTML = `<div class="ai-chat-welcome">
+    messages.innerHTML = `<div class="ai-chat-welcome" id="ai-chat-welcome">
       <div class="ai-chat-welcome-icon">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none">
           <path d="M12 2l2.4 7.6 7.6 2.4-7.6 2.4-2.4 7.6-2.4-7.6-7.6-2.4 7.6-2.4 2.4-7.6z"/>
           <path d="M5 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" opacity="0.6"/>
         </svg>
       </div>
-      <div class="ai-chat-welcome-text">How can I help with your design?</div>
+      <div class="ai-chat-welcome-text">Design Assistant</div>
+      <div class="ai-chat-welcome-subtext">Ask about your layout, colors, or structure</div>
+      <div class="ai-chat-chips" id="ai-chat-chips"></div>
     </div>`;
+    updateChips();
   }
 }
 
@@ -105,20 +108,21 @@ function getSelectionContext() {
 /**
  * Update the context badge above the input to show what's selected.
  */
-function updateContextBadge() {
+export function updateContextBadge() {
   const badge = getContextBadge();
+  const textEl = document.getElementById('ai-chat-context-text');
   if (!badge) return;
 
   const { ids } = getSelectionContext();
   if (ids.length === 0) {
     badge.classList.add('hidden');
-    badge.textContent = '';
+    if (textEl) textEl.textContent = '';
   } else if (ids.length === 1) {
     badge.classList.remove('hidden');
-    badge.textContent = `📌 @${ids[0]}`;
+    if (textEl) textEl.textContent = `📌 @${ids[0]}`;
   } else {
     badge.classList.remove('hidden');
-    badge.textContent = `📌 ${ids.length} nodes selected`;
+    if (textEl) textEl.textContent = `📌 ${ids.length} selected`;
   }
 }
 
@@ -371,13 +375,18 @@ async function sendMessage(getEditorContent, setEditorContent) {
 
   // Build display message (show context if any)
   let displayMsg = text;
-  if (selIds.length > 0) {
+  // If user included a specific @id in their text, don't prepend context ids
+  if (selIds.length > 0 && !text.includes('@')) {
     displayMsg = `[📌 ${selIds.map(id => '@' + id).join(', ')}] ${text}`;
   }
+  const displayLine = addMessage('user', displayMsg, getEditorContent, setEditorContent);
+
+  // Re-hide welcome chips
+  const welcome = document.getElementById('ai-chat-welcome');
+  if (welcome) welcome.style.display = 'none';
 
   // Add user message
   chatHistory.push({ role: 'user', content: text });
-  addMessage('user', displayMsg);
 
   // Show thinking indicator
   const thinkingDiv = addMessage('thinking', '');
@@ -542,6 +551,28 @@ export function initAiChat(getEditorContent, setEditorContent, getCanvas) {
     input.addEventListener('focus', () => {
       updateContextBadge();
       updateChips();
+    });
+  }
+
+  const clearCtxBtn = document.getElementById('ai-chat-context-clear');
+  if (clearCtxBtn) {
+    clearCtxBtn.addEventListener('click', () => {
+      if (_getCanvas) {
+        try {
+          const canvas = _getCanvas();
+          if (canvas.clear_selection) canvas.clear_selection();
+        } catch (_) {}
+      }
+      updateContextBadge();
+      updateChips();
+    });
+  }
+
+  // Clear chat button located in the panel/tabs
+  const clearChatBtn = document.getElementById('ai-chat-clear');
+  if (clearChatBtn) {
+    clearChatBtn.addEventListener('click', () => {
+      clearChatHistory();
     });
   }
 

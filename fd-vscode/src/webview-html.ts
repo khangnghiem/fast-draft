@@ -3127,21 +3127,27 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
         </div>
       </div>
       <div class="ai-chat-messages" id="ai-chat-messages">
-        <div class="ai-chat-welcome">
+        <div class="ai-chat-welcome" id="ai-chat-welcome">
           <div class="ai-chat-welcome-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none">
               <path d="M12 2l2.4 7.6 7.6 2.4-7.6 2.4-2.4 7.6-2.4-7.6-7.6-2.4 7.6-2.4 2.4-7.6z"/>
               <path d="M5 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" opacity="0.6"/>
             </svg>
           </div>
-          <div class="ai-chat-welcome-text">How can I help with your design?</div>
+          <div class="ai-chat-welcome-text">Design Assistant</div>
+          <div class="ai-chat-welcome-subtext">Ask about your layout, colors, or structure</div>
+          <div class="ai-chat-chips" id="ai-chat-chips"></div>
         </div>
       </div>
-      <div class="ai-chat-chips" id="ai-chat-chips"></div>
-      <div class="ai-chat-context-badge hidden" id="ai-chat-context-badge"></div>
       <div class="ai-chat-input-area">
-        <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Ask AI about your design..." rows="1" maxlength="500"></textarea>
-        <button class="ai-chat-send" id="ai-chat-send" title="Send">→</button>
+        <div class="ai-chat-input-container">
+          <div class="ai-chat-context-badge hidden" id="ai-chat-context-badge">
+            <span id="ai-chat-context-text"></span>
+            <button id="ai-chat-context-clear" title="Clear context">×</button>
+          </div>
+          <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Describe what you'd like to change..." rows="1" maxlength="500"></textarea>
+          <button class="ai-chat-send" id="ai-chat-send" title="Send">→</button>
+        </div>
       </div>
     </div>
     <div id="dimension-tooltip"></div>

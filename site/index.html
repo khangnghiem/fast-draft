@@ -328,6 +328,7 @@
                   <button class="rp-tab active" data-rtab="agent" title="AI Agent"><span class="tab-icon">✦</span><span class="tab-label">Agent</span></button>
                   <button class="rp-tab" data-rtab="search" title="Search"><span class="tab-icon">🔍</span><span class="tab-label">Search</span></button>
                 </div>
+                <button class="ai-chat-clear" id="ai-chat-clear" title="Clear chat" style="font-size:12px;background:none;border:none;cursor:pointer;padding:4px;opacity:0.5;margin-left:auto;margin-right:4px;">🗑</button>
                 <button class="mobile-panel-close" id="rp-mobile-close" aria-label="Close panel">✕</button>
                 <button class="rp-tab-toggle" id="rp-sidebar-toggle" title="Toggle right panel">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="14" height="12" rx="2"/><line x1="10" y1="2" x2="10" y2="14"/></svg>
@@ -337,26 +338,31 @@
                 <!-- Agent Pane -->
                 <div class="rp-pane active" data-rpane="agent">
                   <div class="ai-chat-messages" id="ai-chat-messages">
-                    <div class="ai-chat-welcome">
+                    <div class="ai-chat-welcome" id="ai-chat-welcome">
                       <div class="ai-chat-welcome-icon">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                           <path d="M12 2l2.4 7.6 7.6 2.4-7.6 2.4-2.4 7.6-2.4-7.6-7.6-2.4 7.6-2.4 2.4-7.6z"/>
                           <path d="M5 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" opacity="0.6"/>
                         </svg>
                       </div>
-                      <div class="ai-chat-welcome-text">How can I help with your design?</div>
+                      <div class="ai-chat-welcome-text">Design Assistant</div>
+                      <div class="ai-chat-welcome-subtext">Ask about your layout, colors, or structure</div>
+                      <div class="ai-chat-chips" id="ai-chat-chips">
+                        <button class="ai-chat-chip" disabled>🎨 Improve colors</button>
+                        <button class="ai-chat-chip" disabled>📐 Add header</button>
+                        <button class="ai-chat-chip" disabled>✦ Review design</button>
+                      </div>
                     </div>
                   </div>
-                  <div class="ai-chat-chips" id="ai-chat-chips">
-                    <button class="ai-chat-chip" disabled>🎨 Improve colors</button>
-                    <button class="ai-chat-chip" disabled>📐 Add header</button>
-                    <button class="ai-chat-chip" disabled>✦ Review design</button>
-                  </div>
-                  <div class="ai-chat-context-badge hidden" id="ai-chat-context-badge"></div>
                   <div class="ai-chat-input-area">
-                    <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Ask AI about your design..." rows="1" maxlength="500"></textarea>
-                    <button class="ai-chat-send" id="ai-chat-send" title="Send">→</button>
-                    <button class="ai-chat-clear" id="ai-chat-clear" title="Clear chat" style="font-size:12px;background:none;border:none;cursor:pointer;padding:4px;opacity:0.5">🗑</button>
+                    <div class="ai-chat-input-container">
+                      <div class="ai-chat-context-badge hidden" id="ai-chat-context-badge">
+                        <span id="ai-chat-context-text"></span>
+                        <button id="ai-chat-context-clear" title="Clear context">×</button>
+                      </div>
+                      <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Describe what you'd like to change..." rows="1" maxlength="500"></textarea>
+                      <button class="ai-chat-send" id="ai-chat-send" title="Send">→</button>
+                    </div>
                   </div>
                 </div>
                 <!-- Search Pane -->

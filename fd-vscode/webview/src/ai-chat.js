@@ -52,19 +52,21 @@ function getSelectionContext() {
   return { ids, fdCode };
 }
 
-function updateChatContextBadge() {
-  const badge = document.getElementById('ai-chat-context-badge');
+export function updateContextBadge() {
+  const badge = getContextBadge();
+  const textEl = document.getElementById('ai-chat-context-text');
   if (!badge) return;
+
   const { ids } = getSelectionContext();
   if (ids.length === 0) {
     badge.classList.add('hidden');
-    badge.textContent = '';
+    if (textEl) textEl.textContent = '';
   } else if (ids.length === 1) {
     badge.classList.remove('hidden');
-    badge.textContent = `📌 @${ids[0]}`;
+    if (textEl) textEl.textContent = `📌 @${ids[0]}`;
   } else {
     badge.classList.remove('hidden');
-    badge.textContent = `📌 ${ids.length} nodes selected`;
+    if (textEl) textEl.textContent = `📌 ${ids.length} selected`;
   }
 }
 
@@ -241,13 +243,20 @@ async function sendChatMessage() {
   input.style.height = 'auto';
 
   const { ids: selIds, fdCode: selFd } = getSelectionContext();
+  // Build display message (show context if any)
   let displayMsg = text;
-  if (selIds.length > 0) {
+  // If user included a specific @id in their text, don't prepend context ids
+  if (selIds.length > 0 && !text.includes('@')) {
     displayMsg = `[📌 ${selIds.map(id => '@' + id).join(', ')}] ${text}`;
   }
+  const displayLine = addMessage('user', displayMsg, getEditorContent, setEditorContent);
 
+  // Re-hide welcome chips
+  const welcome = document.getElementById('ai-chat-welcome');
+  if (welcome) welcome.style.display = 'none';
+
+  // Add user message
   chatHistory.push({ role: 'user', content: text });
-  addChatMessage('user', displayMsg);
   const thinkingDiv = addChatMessage('thinking', '');
 
   try {
@@ -371,19 +380,22 @@ function toggleChatPanel() {
   }
 }
 
-function clearChat() {
+export function clearChatHistory() {
   chatHistory.length = 0;
-  const messages = document.getElementById('ai-chat-messages');
+  const messages = getChatMessages();
   if (messages) {
-    messages.innerHTML = `<div class="ai-chat-welcome">
+    messages.innerHTML = `<div class="ai-chat-welcome" id="ai-chat-welcome">
       <div class="ai-chat-welcome-icon">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none">
           <path d="M12 2l2.4 7.6 7.6 2.4-7.6 2.4-2.4 7.6-2.4-7.6-7.6-2.4 7.6-2.4 2.4-7.6z"/>
           <path d="M5 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" opacity="0.6"/>
         </svg>
       </div>
-      <div class="ai-chat-welcome-text">How can I help with your design?</div>
+      <div class="ai-chat-welcome-text">Design Assistant</div>
+      <div class="ai-chat-welcome-subtext">Ask about your layout, colors, or structure</div>
+      <div class="ai-chat-chips" id="ai-chat-chips"></div>
     </div>`;
+    updateChatChips();
   }
 }
 
@@ -394,7 +406,6 @@ function setupAiChat() {
   document.getElementById('ai-chat-close')?.addEventListener('click', () => {
     document.getElementById('ai-chat-panel')?.classList.add('hidden');
   });
-  document.getElementById('ai-chat-clear')?.addEventListener('click', clearChat);
   document.getElementById('ai-chat-send')?.addEventListener('click', sendChatMessage);
 
   const input = document.getElementById('ai-chat-input');
@@ -405,13 +416,34 @@ function setupAiChat() {
         sendChatMessage();
       }
     });
-    input.addEventListener('input', () => {
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 80) + 'px';
-    });
+    input.addEventListener('input', () => autoResize(input));
+
+    // Update context badge on focus (selection may have changed)
     input.addEventListener('focus', () => {
-      updateChatContextBadge();
+      updateContextBadge();
       updateChatChips();
+    });
+  }
+
+  const clearCtxBtn = document.getElementById('ai-chat-context-clear');
+  if (clearCtxBtn) {
+    clearCtxBtn.addEventListener('click', () => {
+      // webview canvas selection clear
+      try {
+        if (typeof fdCanvas !== 'undefined' && fdCanvas.clear_selection) {
+          fdCanvas.clear_selection();
+        }
+      } catch (_) {}
+      updateContextBadge();
+      updateChatChips();
+    });
+  }
+
+  // Clear chat button located in the panel/tabs
+  const clearChatBtn = document.getElementById('ai-chat-clear');
+  if (clearChatBtn) {
+    clearChatBtn.addEventListener('click', () => {
+      clearChatHistory();
     });
   }
 
@@ -419,10 +451,12 @@ function setupAiChat() {
   document.addEventListener('fd-selection-changed', () => {
     const panel = document.getElementById('ai-chat-panel');
     if (panel && !panel.classList.contains('hidden')) {
-      updateChatContextBadge();
+      updateContextBadge();
       updateChatChips();
     }
   });
 
   updateChatChips();
 }
+
+export { setupAiChat };
