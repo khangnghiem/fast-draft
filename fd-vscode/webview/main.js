@@ -10235,13 +10235,7 @@ function clearChat() {
   if (messages) {
     messages.innerHTML = `<div class="ai-chat-welcome">
       <div class="ai-chat-welcome-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#ai-sparkle-grad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <defs>
-            <linearGradient id="ai-sparkle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#6C5CE7" />
-              <stop offset="100%" stop-color="#0A84FF" />
-            </linearGradient>
-          </defs>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none">
           <path d="M12 2l2.4 7.6 7.6 2.4-7.6 2.4-2.4 7.6-2.4-7.6-7.6-2.4 7.6-2.4 2.4-7.6z"/>
           <path d="M5 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" opacity="0.6"/>
         </svg>
