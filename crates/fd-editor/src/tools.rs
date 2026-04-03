@@ -167,249 +167,263 @@ impl Tool for SelectTool {
         match event {
             InputEvent::PointerDown {
                 x, y, modifiers, ..
-            } => {
-                self.marquee_start = None;
-                self.marquee_rect = None;
-                self.target_node = None;
-
-                // If resize_handle is set (by FdCanvas), skip normal selection
-                if self.resize_handle.is_some() {
-                    return vec![];
-                }
-
-                if let Some(hit_id) = hit_node {
-                    // Shift+click: toggle node in/out of selection.
-                    // If clicking an already-selected node with Shift, DEFER
-                    // the deselect to PointerUp so Shift+drag can constrain
-                    // the axis without losing this node from the selection.
-                    self.shift_toggled_off = None;
-                    let multi_select = modifiers.shift
-                        || (modifiers.meta && !modifiers.alt)
-                        || (modifiers.ctrl && !modifiers.alt);
-                    if multi_select {
-                        if self.selected.contains(&hit_id) {
-                            // Defer deselect — will fire on PointerUp if no drag
-                            self.shift_toggled_off = Some(hit_id);
-                        } else {
-                            self.selected.push(hit_id);
-                        }
-                    } else if !self.selected.contains(&hit_id) {
-                        // Click on unselected node: replace selection
-                        self.selected = vec![hit_id];
-                    }
-                    // If clicking on already-selected node, keep selection (for drag)
-
-                    self.dragging = true;
-                    self.last_x = *x;
-                    self.last_y = *y;
-
-                    // Alt+click duplication is handled by FdCanvas (not here)
-                    // so that selection can transfer to the clone properly.
-
-                    vec![]
-                } else {
-                    // Click on empty space: start marquee
-                    if !(modifiers.shift || modifiers.meta || modifiers.ctrl) {
-                        self.selected.clear();
-                    }
-                    self.dragging = false;
-                    self.marquee_start = Some((*x, *y));
-                    self.marquee_rect = Some((*x, *y, 0.0, 0.0));
-                    vec![]
-                }
-            }
+            } => self.handle_pointer_down(*x, *y, modifiers, hit_node),
             InputEvent::PointerMove {
                 x, y, modifiers, ..
-            } => {
-                // Resize drag
-                if let Some(handle) = self.resize_handle
-                    && let Some(id) = self.first_selected()
-                {
-                    if matches!(handle, ResizeHandle::EdgeStart | ResizeHandle::EdgeEnd) {
-                        use fd_core::model::EdgeAnchor;
-                        let mx = *x;
-                        let my = *y;
-
-                        // Prevent self-snapping to the edge itself
-                        let snap_id = hit_node.filter(|&n| n != id);
-                        self.target_node = snap_id;
-
-                        let anchor = match snap_id {
-                            Some(sn) => EdgeAnchor::Node(sn),
-                            None => EdgeAnchor::Point(mx, my),
-                        };
-
-                        let (from, to) = match handle {
-                            ResizeHandle::EdgeStart => (Some(anchor), None),
-                            ResizeHandle::EdgeEnd => (None, Some(anchor)),
-                            _ => (None, None),
-                        };
-                        return vec![crate::sync::GraphMutation::UpdateEdge { id, from, to }];
-                    }
-
-                    let (ax, ay) = self.resize_anchor;
-                    let mut mx = *x;
-                    let mut my = *y;
-
-                    // Shift: preserve original aspect ratio
-                    if modifiers.shift {
-                        let aspect = self.resize_aspect;
-                        let dw = (mx - ax).abs();
-                        let dh = (my - ay).abs();
-                        if dw / aspect.max(0.001) >= dh {
-                            // Width-dominant: compute height from aspect
-                            let new_h = dw / aspect.max(0.001);
-                            my = if my > ay { ay + new_h } else { ay - new_h };
-                        } else {
-                            // Height-dominant: compute width from aspect
-                            let new_w = dh * aspect;
-                            mx = if mx > ax { ax + new_w } else { ax - new_w };
-                        }
-                    }
-
-                    // Compute new bounds from anchor + cursor
-                    let (new_x, new_w) = match handle {
-                        ResizeHandle::TopLeft
-                        | ResizeHandle::MiddleLeft
-                        | ResizeHandle::BottomLeft => {
-                            let nx = mx.min(ax);
-                            (nx, (mx - ax).abs())
-                        }
-                        ResizeHandle::TopRight
-                        | ResizeHandle::MiddleRight
-                        | ResizeHandle::BottomRight => {
-                            let nx = mx.min(ax);
-                            (nx, (mx - ax).abs())
-                        }
-                        ResizeHandle::TopCenter | ResizeHandle::BottomCenter => {
-                            (self.resize_origin.0, self.resize_origin.2)
-                        }
-                        ResizeHandle::EdgeStart | ResizeHandle::EdgeEnd => unreachable!(),
-                    };
-                    let (new_y, new_h) = match handle {
-                        ResizeHandle::TopLeft
-                        | ResizeHandle::TopCenter
-                        | ResizeHandle::TopRight => {
-                            let ny = my.min(ay);
-                            (ny, (my - ay).abs())
-                        }
-                        ResizeHandle::BottomLeft
-                        | ResizeHandle::BottomCenter
-                        | ResizeHandle::BottomRight => {
-                            let ny = my.min(ay);
-                            (ny, (my - ay).abs())
-                        }
-                        ResizeHandle::MiddleLeft | ResizeHandle::MiddleRight => {
-                            (self.resize_origin.1, self.resize_origin.3)
-                        }
-                        ResizeHandle::EdgeStart | ResizeHandle::EdgeEnd => unreachable!(),
-                    };
-
-                    // Min size
-                    let final_w = new_w.max(4.0);
-                    let final_h = new_h.max(4.0);
-
-                    // Compute position delta from original
-                    let dx = new_x - self.resize_origin.0;
-                    let dy = new_y - self.resize_origin.1;
-                    self.resize_origin = (new_x, new_y, final_w, final_h);
-
-                    return vec![GraphMutation::ResizeNode {
-                        id,
-                        width: final_w,
-                        height: final_h,
-                        dx,
-                        dy,
-                    }];
-                }
-
-                // Marquee drag
-                if let Some((sx, sy)) = self.marquee_start {
-                    self.marquee_rect = Some(Self::normalize_rect(sx, sy, *x, *y));
-                    // Return empty — no graph mutation, but FdCanvas will re-render
-                    return vec![];
-                }
-
-                // Node drag
-                if self.dragging && !self.selected.is_empty() {
-                    // Alt mid-drag duplication is handled by FdCanvas (not here)
-                    // so that selection can transfer to the clone properly.
-
-                    // Shift: per-frame axis-snap — project movement onto the
-                    // dominant axis (H or V). Allows switching axes mid-drag
-                    // by changing direction. No diagonal movement.
-                    if modifiers.shift {
-                        let dx = x - self.last_x;
-                        let dy = y - self.last_y;
-
-                        // Snap to dominant axis
-                        let (dx, dy) = if dx.abs() >= dy.abs() {
-                            (dx, 0.0)
-                        } else {
-                            (0.0, dy)
-                        };
-
-                        // Only cancel deferred Shift deselect if we actually moved
-                        if dx.abs() > 0.5 || dy.abs() > 0.5 {
-                            self.shift_toggled_off = None;
-                        }
-
-                        self.last_x += dx;
-                        self.last_y += dy;
-
-                        // Cmd/Ctrl during drag = move children too
-                        let with_children = modifiers.meta || modifiers.ctrl;
-
-                        return self
-                            .selected
-                            .iter()
-                            .map(|id| GraphMutation::MoveNode {
-                                id: *id,
-                                dx,
-                                dy,
-                                with_children,
-                            })
-                            .collect();
-                    }
-
-                    let dx = x - self.last_x;
-                    let dy = y - self.last_y;
-                    self.last_x = *x;
-                    self.last_y = *y;
-
-                    // Cmd/Ctrl during drag = move children too
-                    let with_children = modifiers.meta || modifiers.ctrl;
-
-                    // Move all selected nodes
-                    return self
-                        .selected
-                        .iter()
-                        .map(|id| GraphMutation::MoveNode {
-                            id: *id,
-                            dx,
-                            dy,
-                            with_children,
-                        })
-                        .collect();
-                }
-                vec![]
-            }
-            InputEvent::PointerUp { .. } => {
-                self.target_node = None;
-                // Marquee end is handled by FdCanvas (it calls hit_test_rect)
-                // Deferred Shift+click deselect: if the user Shift+clicked
-                // an already-selected node but didn't drag, deselect it now.
-                if let Some(toggle_id) = self.shift_toggled_off.take()
-                    && let Some(pos) = self.selected.iter().position(|id| *id == toggle_id)
-                {
-                    self.selected.remove(pos);
-                }
-                self.dragging = false;
-                self.resize_handle = None;
-                vec![]
-            }
+            } => self.handle_pointer_move(*x, *y, modifiers, hit_node),
+            InputEvent::PointerUp { .. } => self.handle_pointer_up(),
             _ => vec![],
         }
+    }
+}
+
+impl SelectTool {
+    fn handle_pointer_down(
+        &mut self,
+        x: f32,
+        y: f32,
+        modifiers: &crate::input::Modifiers,
+        hit_node: Option<NodeId>,
+    ) -> Vec<GraphMutation> {
+        self.marquee_start = None;
+        self.marquee_rect = None;
+        self.target_node = None;
+
+        // If resize_handle is set (by FdCanvas), skip normal selection
+        if self.resize_handle.is_some() {
+            return vec![];
+        }
+
+        if let Some(hit_id) = hit_node {
+            // Shift+click: toggle node in/out of selection.
+            // If clicking an already-selected node with Shift, DEFER
+            // the deselect to PointerUp so Shift+drag can constrain
+            // the axis without losing this node from the selection.
+            self.shift_toggled_off = None;
+            let multi_select = modifiers.shift
+                || (modifiers.meta && !modifiers.alt)
+                || (modifiers.ctrl && !modifiers.alt);
+            if multi_select {
+                if self.selected.contains(&hit_id) {
+                    // Defer deselect — will fire on PointerUp if no drag
+                    self.shift_toggled_off = Some(hit_id);
+                } else {
+                    self.selected.push(hit_id);
+                }
+            } else if !self.selected.contains(&hit_id) {
+                // Click on unselected node: replace selection
+                self.selected = vec![hit_id];
+            }
+            // If clicking on already-selected node, keep selection (for drag)
+
+            self.dragging = true;
+            self.last_x = x;
+            self.last_y = y;
+
+            // Alt+click duplication is handled by FdCanvas (not here)
+            // so that selection can transfer to the clone properly.
+
+            vec![]
+        } else {
+            // Click on empty space: start marquee
+            if !(modifiers.shift || modifiers.meta || modifiers.ctrl) {
+                self.selected.clear();
+            }
+            self.dragging = false;
+            self.marquee_start = Some((x, y));
+            self.marquee_rect = Some((x, y, 0.0, 0.0));
+            vec![]
+        }
+    }
+
+    fn handle_pointer_move(
+        &mut self,
+        x: f32,
+        y: f32,
+        modifiers: &crate::input::Modifiers,
+        hit_node: Option<NodeId>,
+    ) -> Vec<GraphMutation> {
+        // Resize drag
+        if let Some(handle) = self.resize_handle
+            && let Some(id) = self.first_selected()
+        {
+            if matches!(handle, ResizeHandle::EdgeStart | ResizeHandle::EdgeEnd) {
+                use fd_core::model::EdgeAnchor;
+                let mx = x;
+                let my = y;
+
+                // Prevent self-snapping to the edge itself
+                let snap_id = hit_node.filter(|&n| n != id);
+                self.target_node = snap_id;
+
+                let anchor = match snap_id {
+                    Some(sn) => EdgeAnchor::Node(sn),
+                    None => EdgeAnchor::Point(mx, my),
+                };
+
+                let (from, to) = match handle {
+                    ResizeHandle::EdgeStart => (Some(anchor), None),
+                    ResizeHandle::EdgeEnd => (None, Some(anchor)),
+                    _ => (None, None),
+                };
+                return vec![crate::sync::GraphMutation::UpdateEdge { id, from, to }];
+            }
+
+            let (ax, ay) = self.resize_anchor;
+            let mut mx = x;
+            let mut my = y;
+
+            // Shift: preserve original aspect ratio
+            if modifiers.shift {
+                let aspect = self.resize_aspect;
+                let dw = (mx - ax).abs();
+                let dh = (my - ay).abs();
+                if dw / aspect.max(0.001) >= dh {
+                    // Width-dominant: compute height from aspect
+                    let new_h = dw / aspect.max(0.001);
+                    my = if my > ay { ay + new_h } else { ay - new_h };
+                } else {
+                    // Height-dominant: compute width from aspect
+                    let new_w = dh * aspect;
+                    mx = if mx > ax { ax + new_w } else { ax - new_w };
+                }
+            }
+
+            // Compute new bounds from anchor + cursor
+            let (new_x, new_w) = match handle {
+                ResizeHandle::TopLeft | ResizeHandle::MiddleLeft | ResizeHandle::BottomLeft => {
+                    let nx = mx.min(ax);
+                    (nx, (mx - ax).abs())
+                }
+                ResizeHandle::TopRight | ResizeHandle::MiddleRight | ResizeHandle::BottomRight => {
+                    let nx = mx.min(ax);
+                    (nx, (mx - ax).abs())
+                }
+                ResizeHandle::TopCenter | ResizeHandle::BottomCenter => {
+                    (self.resize_origin.0, self.resize_origin.2)
+                }
+                ResizeHandle::EdgeStart | ResizeHandle::EdgeEnd => unreachable!(),
+            };
+            let (new_y, new_h) = match handle {
+                ResizeHandle::TopLeft | ResizeHandle::TopCenter | ResizeHandle::TopRight => {
+                    let ny = my.min(ay);
+                    (ny, (my - ay).abs())
+                }
+                ResizeHandle::BottomLeft
+                | ResizeHandle::BottomCenter
+                | ResizeHandle::BottomRight => {
+                    let ny = my.min(ay);
+                    (ny, (my - ay).abs())
+                }
+                ResizeHandle::MiddleLeft | ResizeHandle::MiddleRight => {
+                    (self.resize_origin.1, self.resize_origin.3)
+                }
+                ResizeHandle::EdgeStart | ResizeHandle::EdgeEnd => unreachable!(),
+            };
+
+            // Min size
+            let final_w = new_w.max(4.0);
+            let final_h = new_h.max(4.0);
+
+            // Compute position delta from original
+            let dx = new_x - self.resize_origin.0;
+            let dy = new_y - self.resize_origin.1;
+            self.resize_origin = (new_x, new_y, final_w, final_h);
+
+            return vec![GraphMutation::ResizeNode {
+                id,
+                width: final_w,
+                height: final_h,
+                dx,
+                dy,
+            }];
+        }
+
+        // Marquee drag
+        if let Some((sx, sy)) = self.marquee_start {
+            self.marquee_rect = Some(Self::normalize_rect(sx, sy, x, y));
+            // Return empty — no graph mutation, but FdCanvas will re-render
+            return vec![];
+        }
+
+        // Node drag
+        if self.dragging && !self.selected.is_empty() {
+            // Alt mid-drag duplication is handled by FdCanvas (not here)
+            // so that selection can transfer to the clone properly.
+
+            // Shift: per-frame axis-snap — project movement onto the
+            // dominant axis (H or V). Allows switching axes mid-drag
+            // by changing direction. No diagonal movement.
+            if modifiers.shift {
+                let dx = x - self.last_x;
+                let dy = y - self.last_y;
+
+                // Snap to dominant axis
+                let (dx, dy) = if dx.abs() >= dy.abs() {
+                    (dx, 0.0)
+                } else {
+                    (0.0, dy)
+                };
+
+                // Only cancel deferred Shift deselect if we actually moved
+                if dx.abs() > 0.5 || dy.abs() > 0.5 {
+                    self.shift_toggled_off = None;
+                }
+
+                self.last_x += dx;
+                self.last_y += dy;
+
+                // Cmd/Ctrl during drag = move children too
+                let with_children = modifiers.meta || modifiers.ctrl;
+
+                return self
+                    .selected
+                    .iter()
+                    .map(|id| GraphMutation::MoveNode {
+                        id: *id,
+                        dx,
+                        dy,
+                        with_children,
+                    })
+                    .collect();
+            }
+
+            let dx = x - self.last_x;
+            let dy = y - self.last_y;
+            self.last_x = x;
+            self.last_y = y;
+
+            // Cmd/Ctrl during drag = move children too
+            let with_children = modifiers.meta || modifiers.ctrl;
+
+            // Move all selected nodes
+            return self
+                .selected
+                .iter()
+                .map(|id| GraphMutation::MoveNode {
+                    id: *id,
+                    dx,
+                    dy,
+                    with_children,
+                })
+                .collect();
+        }
+        vec![]
+    }
+
+    fn handle_pointer_up(&mut self) -> Vec<GraphMutation> {
+        self.target_node = None;
+        // Marquee end is handled by FdCanvas (it calls hit_test_rect)
+        // Deferred Shift+click deselect: if the user Shift+clicked
+        // an already-selected node but didn't drag, deselect it now.
+        if let Some(toggle_id) = self.shift_toggled_off.take()
+            && let Some(pos) = self.selected.iter().position(|id| *id == toggle_id)
+        {
+            self.selected.remove(pos);
+        }
+        self.dragging = false;
+        self.resize_handle = None;
+        vec![]
     }
 }
 
