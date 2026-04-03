@@ -3058,12 +3058,12 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     </div>
     <span class="tb-spacer"></span>
     <div class="tb-zone tb-right">
-      <button class="tool-btn" id="specs-toggle-btn" title="Specs Panel">📝</button>
+      <button class="tool-btn" id="specs-toggle-btn" title="Specs Panel" aria-label="Specs Panel">📝</button>
       <span class="fs-hide" id="status">Loading WASM…</span>
-      <button class="tool-btn" id="fullscreen-toggle-btn" title="Full Screen (⇧F)">⛶</button>
+      <button class="tool-btn" id="fullscreen-toggle-btn" title="Full Screen (⇧F)" aria-label="Full Screen">⛶</button>
       <!-- Settings Hamburger ☰ -->
       <div class="settings-dropdown-container fs-hide" id="settings-dropdown-container">
-      <button class="tool-btn" id="settings-menu-btn" title="Settings & tools">☰</button>
+      <button class="tool-btn" id="settings-menu-btn" title="Settings & tools" aria-label="Settings and tools">☰</button>
       <div class="settings-menu" id="settings-menu">
         <button class="settings-menu-item" id="sm-grid-toggle"><span class="sm-icon">⊞</span><span class="sm-label">Grid</span><span class="sm-shortcut">G</span></button>
         <button class="settings-menu-item" id="sm-note-badge-toggle"><span class="sm-icon">◇</span><span class="sm-label">Note Badges</span></button>
@@ -3101,7 +3101,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
       <label class="fab-label fab-text-only" for="fab-font-size">Size</label>
       <input type="number" id="fab-font-size" class="fab-input fab-text-only" min="8" max="200" step="1" value="16" title="Font size">
       <div class="fab-sep"></div>
-      <button class="fab-delete-btn" id="deleteSelectedBtn" title="Delete (⌫)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
+      <button class="fab-delete-btn" id="deleteSelectedBtn" title="Delete (⌫)" aria-label="Delete"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
 
     </div>
     <canvas id="fd-canvas" class="tool-select"></canvas>
@@ -3109,7 +3109,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div id="specs-panel" class="specs-panel hidden">
       <div class="specs-panel-header">
         <span class="specs-panel-title">📋 Specs</span>
-        <button class="specs-panel-close" id="specs-panel-close" title="Close">✕</button>
+        <button class="specs-panel-close" id="specs-panel-close" title="Close" aria-label="Close specs panel">✕</button>
       </div>
       <div class="specs-panel-body" id="specs-panel-body">
         <p class="specs-empty">No specs yet. Add a note via right-click → Add Spec.</p>
@@ -3122,8 +3122,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
           <span class="ai-chat-icon">✦</span> Design Agent
         </div>
         <div class="ai-chat-header-actions">
-          <button class="ai-chat-clear" id="ai-chat-clear" title="Clear chat">🗑</button>
-          <button class="ai-chat-close" id="ai-chat-close" title="Close">✕</button>
+          <button class="ai-chat-clear" id="ai-chat-clear" title="Clear chat" aria-label="Clear chat">🗑</button>
+          <button class="ai-chat-close" id="ai-chat-close" title="Close" aria-label="Close AI chat">✕</button>
         </div>
       </div>
       <div class="ai-chat-messages" id="ai-chat-messages">
@@ -3144,7 +3144,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
           <div class="ai-chat-context-badge hidden" id="ai-chat-context-badge">
             <span class="context-pin">📌</span>
             <span id="ai-chat-context-text"></span>
-            <button id="ai-chat-context-clear" title="Clear context">×</button>
+            <button id="ai-chat-context-clear" title="Clear context" aria-label="Clear context">×</button>
           </div>
           <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Describe your design changes..." rows="1" maxlength="500"></textarea>
           <div class="ai-chat-input-footer">
@@ -3154,7 +3154,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
                 <option value="llama-70b">Llama 70B</option>
               </select>
             </div>
-            <button class="ai-chat-send" id="ai-chat-send" title="Send">→</button>
+            <button class="ai-chat-send" id="ai-chat-send" title="Send" aria-label="Send">→</button>
           </div>
         </div>
       </div>
@@ -3179,7 +3179,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div id="library-panel"></div>
 
     <div class="panel-restore-strip props-restore" id="props-restore" title="Show properties panel"></div>
-    <div id="minimap-container"><canvas id="minimap-canvas"></canvas><div id="minimap-zoom-controls"><button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-reset-btn" title="Reset zoom (click)">100%</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button></div></div>
+    <div id="minimap-container"><canvas id="minimap-canvas"></canvas><div id="minimap-zoom-controls"><button class="bl-btn" id="zoom-out-btn" title="Zoom out" aria-label="Zoom out">−</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-reset-btn" title="Reset zoom (click)">100%</button><div class="bl-sep"></div><button class="bl-btn" id="zoom-in-btn" title="Zoom in" aria-label="Zoom in">+</button></div></div>
     <!-- Floating Bottom Toolbar (Scroll UX) -->
     <div id="floating-toolbar" class="scroll-toolbar horizontal unrolled">
       <div class="scroll-handle handle-start" title="Drag to move, click to roll">
