@@ -396,22 +396,21 @@ impl Tool for SelectTool {
             InputEvent::PointerUp { x, y, .. } => {
                 // Determine if we need a final snap mutation for edge drag
                 let mut mutations = vec![];
-                if let Some(handle) = self.resize_handle {
-                    if matches!(handle, ResizeHandle::EdgeStart | ResizeHandle::EdgeEnd) {
-                        if let Some(id) = self.first_selected() {
-                            use fd_core::model::EdgeAnchor;
-                            let anchor = match self.target_node {
-                                Some(sn) => EdgeAnchor::Node(sn),
-                                None => EdgeAnchor::Point(*x, *y),
-                            };
-                            let (from, to) = match handle {
-                                ResizeHandle::EdgeStart => (Some(anchor), None),
-                                ResizeHandle::EdgeEnd => (None, Some(anchor)),
-                                _ => (None, None),
-                            };
-                            mutations.push(crate::sync::GraphMutation::UpdateEdge { id, from, to });
-                        }
-                    }
+                if let Some(handle) = self.resize_handle
+                    && matches!(handle, ResizeHandle::EdgeStart | ResizeHandle::EdgeEnd)
+                    && let Some(id) = self.first_selected()
+                {
+                    use fd_core::model::EdgeAnchor;
+                    let anchor = match self.target_node {
+                        Some(sn) => EdgeAnchor::Node(sn),
+                        None => EdgeAnchor::Point(*x, *y),
+                    };
+                    let (from, to) = match handle {
+                        ResizeHandle::EdgeStart => (Some(anchor), None),
+                        ResizeHandle::EdgeEnd => (None, Some(anchor)),
+                        _ => (None, None),
+                    };
+                    mutations.push(crate::sync::GraphMutation::UpdateEdge { id, from, to });
                 }
 
                 self.target_node = None;
