@@ -123,6 +123,7 @@ Tier 1: Smoke         ✅ Pass
 Tier 2: JS Assertions ✅ Pass
 ```
 For failures: screenshot, document expected vs actual, file as bug.
+If failures seem related to the backend or AI generation, check Modal server logs using `modal app logs <app-name>` before reporting.
 
 ---
 

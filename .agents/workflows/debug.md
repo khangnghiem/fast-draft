@@ -52,3 +52,17 @@ description: Systematic debugging methodology for problem investigation
    ```
 
    > **Note**: Requires `gh auth refresh -h github.com -s codespace` (one-time setup). List available codespaces with `gh cs list`.
+
+9. **Backend Debugging via Modal** (if the issue involves a deployed Modal server):
+
+   To check backend logs for integration debugging:
+   
+   ```bash
+   # View recent logs from the Modal app (replace <app-name> with the actual deployment name)
+   modal app logs <app-name>
+   
+   # Or tail logs continuously during testing
+   modal app logs -f <app-name>
+   ```
+   
+   > **Note**: Requires `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` to be set in your `.env` or environment.

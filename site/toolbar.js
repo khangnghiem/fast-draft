@@ -386,7 +386,13 @@ export function initToolbar(api) {
           const oppRy = isHoriz ? ry : null;
 
           positionToolbar(oppSide, oppDropX, oppDropY, grabOffsetX, grabOffsetY, oppRx, oppRy);
-          localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: oppSide, x: oppDropX, y: oppDropY, rx: oppRx, ry: oppRy }));
+          const oppTb = toolbar.getBoundingClientRect();
+          const oppCr = getCanvasRect();
+          const oppCx = oppTb.left + oppTb.width / 2;
+          const oppCy = oppTb.top + oppTb.height / 2;
+          const oppActRx = oppCr.width > 0 ? Math.max(0, Math.min(1, (oppCx - oppCr.left) / oppCr.width)) : null;
+          const oppActRy = oppCr.height > 0 ? Math.max(0, Math.min(1, (oppCy - oppCr.top) / oppCr.height)) : null;
+          localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: oppSide, x: oppCx, y: oppCy, rx: oppActRx, ry: oppActRy }));
           requestAnimationFrame(() => api.adjustMinimapForToolbar());
           return;
         }
@@ -396,7 +402,13 @@ export function initToolbar(api) {
       }
 
       positionToolbar(side, dropX, dropY, grabOffsetX, grabOffsetY, rx, ry);
-      localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side, x: dropX, y: dropY, rx, ry }));
+      const finalTb = toolbar.getBoundingClientRect();
+      const finalCr = getCanvasRect();
+      const cx = finalTb.left + finalTb.width / 2;
+      const cy = finalTb.top + finalTb.height / 2;
+      const actRx = finalCr.width > 0 ? Math.max(0, Math.min(1, (cx - finalCr.left) / finalCr.width)) : null;
+      const actRy = finalCr.height > 0 ? Math.max(0, Math.min(1, (cy - finalCr.top) / finalCr.height)) : null;
+      localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side, x: cx, y: cy, rx: actRx, ry: actRy }));
       requestAnimationFrame(() => api.adjustMinimapForToolbar());
     }
 

@@ -55,3 +55,5 @@ Execute browser_subagents to exhaustively test the following interaction domains
 ## Reporting
 At the end, report total bugs fixed, severity (🔴 Major, 🟡 Minor), and root causes.
 Commit and push a PR.
+
+> **Tip**: If test failures involve backend integration or AI generation timeouts, check the Modal logs in your terminal via `modal app logs <app-name>` or locally using `modal shell`.
