@@ -17,6 +17,12 @@
 
 ## Completed Requirements
 
+### v0.11.337 — Context Menu Interaction Refinement
+
+- **Multi-Selection Preservation**: Right-clicking on an already selected node within a multi-selection block no longer zeroes out the selection state before rendering the context menu. This guarantees the "Group" action remains active and correctly clusters items.
+- **Empty Canvas Menu**: Users can now right-click directly on the empty canvas substrate to spawn a quick-action "Document Actions" menu bridging standard shortcuts (Add Rect, Paste, Select All, Unlock All Objects).
+- **Escape Hatch API (`fd_canvas::unlock_all`)**: Extended the WASM API with an `unlock_all` method to release locked layers quickly without spelunking through the UI tree.
+
 ### v0.11.336 — Layer Locking and Shortcut Parity
 
 - **Selection Locking (`Cmd+Shift+L`)**: Implemented a core locking mechanism for the Fast Draft canvas. Users can now press `Cmd+Shift+L` to toggle the locked state of their current selection. The lock state is universally preserved within the `.fd` file data model.
