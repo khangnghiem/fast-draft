@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.335 — Context Menu Text Selection Fix (UI Polish)
+
+- **Text Selection Prevention**: Added `user-select: none` to the `.ctx-menu` container in `site/css/menus.css`. This prevents the browser from highlighting text within the context menu when users double-click or drag over menu items, ensuring compliance with Apple HIG native-app interaction standards.
+
 ### v0.11.334 — Default Tool Startup Optimization (R3.6)
 
 - **Default Tool Select**: Optimized the Time-To-First-Design (TTFD) by defaulting to the Select tool on app startup instead of the Hand tool. Altered the core WASM initialization (`crates/fd-wasm/src/lib.rs`) alongside the UI configuration (`site/index.html` and `fd-vscode/src/webview-html.ts`) for parity across web and VS Code. Navigation remains fully accessible via Spacebar/Middle-click/Right-click panning.

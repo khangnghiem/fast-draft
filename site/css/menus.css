@@ -105,6 +105,8 @@
   opacity: 0;
   transform: scale(0.96) translateY(-4px);
   transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .ctx-menu.ctx-menu-visible {
   opacity: 1;
