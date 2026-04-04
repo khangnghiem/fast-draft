@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.340 — Toolbar Responsiveness & Minimization Polish
+
+- **Phantom Shift Elimination**: Redesigned `getCanvasRect()` to return full viewport width instead of artificially narrowing the canvas mathematical boundary. This prevents the "phantom shift" bug where the floating toolbar repositioned horizontally whenever side panels opened or closed, effectively decoupling toolbar placement from non-colliding components.
+- **Physical Collision-Based Minimize**: Built a dynamic `isIntersectingWithPanels()` bounding box collision check into the `checkToolbarFit` routine. The floating toolbar now automatically compresses to a minimized compact state *only* when an expanding panel overlay physically overlaps its domain, granting non-intrusive continuity.
+- **Zero-Gap Minimized State**: Corrected Flexbox gap rendering layout issues by removing `gap: 2px` during the `.toolbar-minimized` class, preventing hidden components with `width: 0` from artificially consuming padding space. Fixed horizontal layout artifacts to create a hyper-compact pill form housing the active tool and the ✨ AI Spark toggle.
+- **2D Axis Collapse (Vertical Fix)**: Squashed ghost vertical toolbar spacing when docked to the left/right window edges by adding `max-height: 0` suppression inside the `.toolbar-minimized .ft-tool-btn` CSS block, synchronizing minimization bounds across both axes.
+- **Smooth Layout Transitions**: Instated `cubic-bezier(0.4, 0, 0.2, 1)` easing for floating toolbar `transform`, `width`, and positional adjustments, elevating UX with buttery transition choreography synchronized independently of the major overlay sidebars.
+ 
 ### v0.11.339 — Premium Panel Slide Animation (UX Polish)
 
 - **Desktop Overlay Promotion**: Converted `#left-panel` and `#right-panel` from CSS Grid column members to `position: absolute` overlays. Panels slide in/out via `transform: translateX()` transitions (300ms `cubic-bezier(0.4, 0.0, 0.2, 1)`), eliminating canvas buffer clears and layout thrashing during toggling.

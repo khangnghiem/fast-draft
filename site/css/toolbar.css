@@ -55,6 +55,11 @@
   flex-direction: row;
   position: fixed;
 }
+/* ── Smooth position and minimize transitions ── */
+#floating-toolbar:not(.toolbar-dragging) {
+  transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1), top 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+              gap 0.3s ease, padding 0.3s ease, margin 0.3s ease, max-width 0.3s ease, max-height 0.3s ease, transform 0.3s ease;
+}
 /* ── Grip handle (6-dot dots) ── */
 .toolbar-grip {
   display: flex;
@@ -94,24 +99,31 @@
 #floating-toolbar .ft-ai-touch {
   max-width: 100px; /* enough to fit AI button */
 }
+#floating-toolbar.toolbar-minimized {
+  gap: 0;
+}
 #floating-toolbar.toolbar-minimized .ft-tool-btn {
   max-width: 0;
+  max-height: 0;
   opacity: 0;
   padding: 0;
   margin: 0;
-  pointer-events: none;
   border: none;
 }
 #floating-toolbar.toolbar-minimized .ft-tool-btn.active,
 #floating-toolbar.toolbar-minimized .ft-ai-touch {
   max-width: 100px;
+  max-height: 32px;
   opacity: 1;
   pointer-events: auto;
-  padding: 0 4px; /* Default ft-tool-btn padding fallback if any */
+  padding: 0 6px;
 }
 #floating-toolbar.toolbar-minimized .ft-sep { display: none; }
 /* Show one separator between active tool and AI */
-#floating-toolbar.toolbar-minimized .ft-tool-btn.active + .ft-sep { display: block; }
+#floating-toolbar.toolbar-minimized .ft-tool-btn.active + .ft-sep {
+  display: block; 
+  margin: 0 4px;
+}
 
 
 /* ── Snap indicator: ghost toolbar silhouette at destination ── */

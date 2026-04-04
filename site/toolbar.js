@@ -228,26 +228,13 @@ export function initToolbar(api) {
       return cachedMiniDims;
     }
 
-    /** Get the visible canvas bounding rect (excludes area behind panels) */
+    /** Get the visible canvas bounding rect (full width since panels are overlays) */
     function getCanvasRect() {
       const c = document.getElementById('fd-canvas');
       if (!c) return { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth, height: window.innerHeight };
       const cr = c.getBoundingClientRect();
-      // The canvas grid column can extend behind panels (higher z-index).
-      // Narrow the rect to the actual visible area between panels.
-      const lp = document.getElementById('left-panel');
-      const rp = document.getElementById('right-panel');
-      let left = cr.left;
-      let right = cr.right;
-      if (lp) {
-        const lpRight = lp.getBoundingClientRect().right;
-        if (lpRight > left) left = lpRight;
-      }
-      if (rp) {
-        const rpLeft = rp.getBoundingClientRect().left;
-        if (rpLeft < right) right = rpLeft;
-      }
-      return { left, top: cr.top, right, bottom: cr.bottom, width: right - left, height: cr.height };
+      // Panels are position:absolute overlays, so they do not constrict the grid area.
+      return { left: cr.left, top: cr.top, right: cr.right, bottom: cr.bottom, width: cr.width, height: cr.height };
     }
 
     /** Detect which edge the toolbar should snap to.
@@ -275,8 +262,7 @@ export function initToolbar(api) {
 
     // ── Decomposed snap functions (Fix #1: no recursion, no side-effects in query) ──
 
-    /** Pure query: check if toolbar fits on given side.
-     * Returns { fits, fitsMinimized } without mutating DOM. */
+    /** Pure query: check if toolbar fits on given side, and doesn't intersect open panels. */
     function checkToolbarFit(side) {
       const cr = getCanvasRect();
       const isHoriz = side === 'top' || side === 'bottom';
@@ -286,9 +272,33 @@ export function initToolbar(api) {
       toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right');
       toolbar.classList.add(`toolbar-docked-${side}`);
       const tbRect = toolbar.getBoundingClientRect();
-      const fits = isHoriz
+      
+      let fits = isHoriz
         ? tbRect.width <= cr.width - 2 * SNAP_GAP
         : tbRect.height <= cr.height - 2 * SNAP_GAP;
+
+      // Ensure toolbar doesn't physically intersect open panels
+      const isIntersectingWithPanels = (rect) => {
+        const lp = document.getElementById('left-panel');
+        const rp = document.getElementById('right-panel');
+        const h = document.documentElement;
+        let intersects = false;
+        // 8px buffer
+        const pad = 8;
+        if (h.dataset.lp === 'open' && lp) {
+           const lpr = lp.getBoundingClientRect();
+           if (!(rect.left > lpr.right + pad || rect.right < lpr.left - pad || rect.top > lpr.bottom + pad || rect.bottom < lpr.top - pad)) intersects = true;
+        }
+        if (h.dataset.rp === 'open' && rp) {
+           const rpr = rp.getBoundingClientRect();
+           if (!(rect.left > rpr.right + pad || rect.right < rpr.left - pad || rect.top > rpr.bottom + pad || rect.bottom < rpr.top - pad)) intersects = true;
+        }
+        return intersects;
+      };
+
+      if (fits && isIntersectingWithPanels(tbRect)) {
+        fits = false; // It physically touches an open panel, minimize it
+      }
 
       // Check minimized fit using cached dims
       const mini = getMiniDims();
