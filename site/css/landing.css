@@ -611,7 +611,7 @@
   /* ── #1: Touch-sized floating toolbar ── */
   #floating-toolbar {
     top: auto !important;
-    bottom: 16px !important;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
     left: 50% !important;
     right: auto !important;
     transform: translateX(-50%) !important;

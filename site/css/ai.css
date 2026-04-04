@@ -567,6 +567,7 @@
 }
 .ai-chat-input-area {
   padding: 10px 16px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom, 10px));
   border-top: 1px solid var(--fd-border, rgba(0, 0, 0, 0.08));
   flex-shrink: 0;
 }
