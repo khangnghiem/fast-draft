@@ -82,7 +82,7 @@
 | Pinch             | Trackpad zoom                     |
 | Middle-click drag | Pan                               |
 | Two-finger pan    | Touch pan with inertia            |
-| Long-press (500ms)| Context menu (touch)              |
+| Long-press (500ms)| Context menu (touch, Select/Eraser only) |
 
 ### Multi-Finger Touch Gestures (iPadOS-style)
 
