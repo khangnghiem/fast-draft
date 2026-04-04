@@ -2765,27 +2765,21 @@ function setupPanelResize(wrapper, resizeCanvas) {
     
     if (rawWidth < 80) {
       if (document.documentElement.dataset.lp !== 'closed') {
-        document.documentElement.dataset.lp = 'closed';
-        document.documentElement.style.setProperty('--left-panel-width', '0px');
-        localStorage.setItem('fd-left-collapsed', '1');
+        endDrag();
+        toggleLeftPanel();
       }
     } else {
-      if (document.documentElement.dataset.lp === 'closed') {
-        document.documentElement.dataset.lp = 'open';
-        localStorage.setItem('fd-left-collapsed', '');
-      }
       const newW = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, rawWidth));
       document.documentElement.style.setProperty('--left-panel-width', newW + 'px');
-    }
-    
-    positionLayersHandle();
-    // Batch expensive canvas resize + render to once per display frame
-    if (!resizeRafId) {
-      resizeRafId = requestAnimationFrame(() => {
-        resizeCanvas();
-        renderCanvas();
-        resizeRafId = null;
-      });
+      positionLayersHandle();
+      // Batch expensive canvas resize + render to once per display frame
+      if (!resizeRafId) {
+        resizeRafId = requestAnimationFrame(() => {
+          resizeCanvas();
+          renderCanvas();
+          resizeRafId = null;
+        });
+      }
     }
   });
 
@@ -2873,15 +2867,24 @@ function setupPanelResize(wrapper, resizeCanvas) {
     if (!rightDragging) return;
     // Dragging left edge of right panel: moving left = wider, moving right = narrower
     const dx = rightStartX - e.clientX;
-    const newW = Math.max(MIN_RIGHT_W, Math.min(MAX_RIGHT_W, rightStartW + dx));
-    document.documentElement.style.setProperty('--right-panel-width', newW + 'px');
-    positionRightHandle();
-    if (!rightResizeRafId) {
-      rightResizeRafId = requestAnimationFrame(() => {
-        resizeCanvas();
-        renderCanvas();
-        rightResizeRafId = null;
-      });
+    const rawWidth = rightStartW + dx;
+    
+    if (rawWidth < 80) {
+      if (document.documentElement.dataset.rp !== 'closed') {
+        endRightDrag();
+        toggleRightPanel();
+      }
+    } else {
+      const newW = Math.max(MIN_RIGHT_W, Math.min(MAX_RIGHT_W, rawWidth));
+      document.documentElement.style.setProperty('--right-panel-width', newW + 'px');
+      positionRightHandle();
+      if (!rightResizeRafId) {
+        rightResizeRafId = requestAnimationFrame(() => {
+          resizeCanvas();
+          renderCanvas();
+          rightResizeRafId = null;
+        });
+      }
     }
   });
 

@@ -148,16 +148,18 @@ html, body {
   gap: 4px;
 }
 .canvas-chrome-left {
-  grid-column: 2 / 3;
-  grid-row: 1 / 2;
   top: 8px;
   left: 8px;
+  transform: translateX(var(--left-panel-width, 0px));
+  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  will-change: transform;
 }
 .canvas-chrome-right {
-  grid-column: 2 / 3;
-  grid-row: 1 / 2;
   top: 8px;
   right: 8px;
+  transform: translateX(calc(var(--right-panel-width, 0px) * -1));
+  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  will-change: transform;
   z-index: 26; /* above panels (z-index: 25) so settings gear is always visible */
 }
 .canvas-chrome-btn {
@@ -357,3 +359,10 @@ a.chrome-dropdown-item:visited { color: var(--fd-text); }
 .editor-dot.design { background: var(--success, #34d399); }
 
 /* ── Unified Right Panel ── */
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-chrome-left,
+  .canvas-chrome-right {
+    transition-duration: 0ms !important;
+  }
+}
