@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.338 — Fix Toolbar Vertical Jump (Bug Fix)
+
+- **Geometric Center Persistence**: Fixed the bug where the floating toolbar shifted vertically upward when opening/closing side panels. The layout engine now saves and restores the true, resulting geometric center bounding box of the toolbar (calculated via `getBoundingClientRect()`) rather than persisting raw vertical pointer drop coordinates, assuring visual stability during surrounding CSS grid layout adjustments.
+
 ### v0.11.337 — Context Menu Interaction Refinement
 
 - **Multi-Selection Preservation**: Right-clicking on an already selected node within a multi-selection block no longer zeroes out the selection state before rendering the context menu. This guarantees the "Group" action remains active and correctly clusters items.
