@@ -1,0 +1,135 @@
+# ─── Styles ───
+
+style btn_text {
+  fill: #ffffff
+  font: "Inter" medium 14
+}
+
+style btn_base {
+  w: 160
+  h: 48
+  corner: 8
+  opacity: 1.0
+  scale: 1.0
+}
+
+# ─── Animation Templates ───
+
+when pop_in {
+  scale: 1.05
+  ease: spring 300ms
+}
+
+when fade_down {
+  opacity: 0.8
+  scale: 0.95
+  ease: ease_out 150ms
+}
+
+# ─── Nodes ───
+
+frame @canvas {
+  layout: column gap=32 pad=40
+  fill: #fafafa
+
+  text @title "Animations Showcase" {
+    font: "Inter" bold 24
+    fill: #111827
+  }
+
+  # 1. Hover Animation
+  rect @hover_btn {
+    spec {
+      role: "Button"
+      description: "Scales up and changes color on hover"
+    }
+    use: btn_base
+    fill: #3b82f6
+
+    text @_text_1 "Hover me" {
+      use: btn_text
+    }
+
+    when :hover {
+      scale: 1.05
+      fill: #2563eb
+      ease: ease_out 200ms
+    }
+  }
+
+  # 2. Press Animation
+  rect @press_btn {
+    spec {
+      role: "Button"
+      description: "Scales down and reduces opacity when clicked"
+    }
+    use: btn_base
+    fill: #10b981
+
+    text @_text_2 "Press me" {
+      use: btn_text
+    }
+
+    when :press {
+      use: fade_down
+    }
+  }
+
+  # 3. Enter Animation
+  rect @enter_btn {
+    spec {
+      role: "Card"
+      description: "Animates in when entering the viewport"
+    }
+    use: btn_base
+    fill: #8b5cf6
+
+    text @_text_3 "Enter reveal" {
+      use: btn_text
+    }
+
+    when :enter {
+      use: pop_in
+      delay: 500ms
+    }
+  }
+
+  # 4. Edge Flows
+  frame @flow_container {
+    layout: row gap=60 pad=20
+
+    ellipse @node_a {
+      w: 48
+      h: 48
+      fill: #ef4444
+    }
+
+    ellipse @node_b {
+      w: 48
+      h: 48
+      fill: #f59e0b
+    }
+
+    ellipse @node_c {
+      w: 48
+      h: 48
+      fill: #14b8a6
+    }
+  }
+}
+
+# ─── Flows ───
+
+edge @flow_pulse @node_a -> @node_b {
+  stroke: #d1d5db 2
+  arrow: end
+  curve: smooth
+  flow: pulse 1500ms
+}
+
+edge @flow_dash @node_b -> @node_c {
+  stroke: #d1d5db 2
+  arrow: end
+  curve: step
+  flow: dash 1000ms
+}

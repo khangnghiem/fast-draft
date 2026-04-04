@@ -306,3 +306,9 @@ fn roundtrip_path_drawing_example() {
     let input = include_str!("../../../examples/path_drawing.fd");
     assert_roundtrip_preserves(input);
 }
+
+#[test]
+fn roundtrip_animations_showcase_example() {
+    let input = include_str!("../../../examples/animations_showcase.fd");
+    assert_roundtrip_preserves(input);
+}
