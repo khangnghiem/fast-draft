@@ -771,6 +771,22 @@ impl FdCanvas {
         }
     }
 
+    /// Unlock all locked nodes in the graph. Returns true if any nodes were unlocked.
+    pub fn unlock_all(&mut self) -> bool {
+        let mut changed = false;
+        // Since we need to mutate multiple nodes, we iterate over the actual graph elements
+        for node in self.engine.graph.graph.node_weights_mut() {
+            if node.locked {
+                node.locked = false;
+                changed = true;
+            }
+        }
+        if changed {
+            self.engine.flush_to_text();
+        }
+        changed
+    }
+
     /// Update a text node's resolved bounds using JS-measured dimensions.
     pub fn update_text_metrics(
         &mut self,

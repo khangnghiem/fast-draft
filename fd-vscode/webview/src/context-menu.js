@@ -767,6 +767,57 @@ function doNodeAction(action, el) {
     fdCanvas.select_by_id(contextMenuNodeId);
     const changed = fdCanvas.delete_selected();
     if (changed) { render(); syncTextToExtension(); }
+  if (action === 'unlock-all') {
+    if (fdCanvas.unlock_all) {
+      fdCanvas.unlock_all();
+      render();
+      syncTextToExtension();
+    }
+    return;
+  }
+}
+
+/** Build context menu items when right-clicking empty space */
+function buildDocumentMenuItems() {
+  const items = [];
+  
+  items.push({ action: 'paste', label: 'Paste', icon: '📋', shortcut: '⌘V' });
+  items.push({ action: 'select-all', label: 'Select All', icon: '⊞', shortcut: '⌘A' });
+  items.push({ type: 'separator' });
+
+  items.push({ action: 'add-rectangle', label: 'Add Rectangle', icon: '◻', shortcut: 'R' });
+  items.push({ action: 'add-text', label: 'Add Text', icon: 'T', shortcut: 'T' });
+  items.push({ type: 'separator' });
+  
+  items.push({ action: 'unlock-all', label: 'Unlock All Objects', icon: '🔓' });
+  
+  return items;
+}
+
+function doDocumentAction(action, e) {
+  if (!fdCanvas) return;
+  
+  if (action === 'paste') { pasteFromClipboard(); return; }
+  if (action === 'select-all') {
+    const changedJson = fdCanvas.handle_key("a", false, true, false, true);
+    const result = JSON.parse(changedJson);
+    if (result.changed) { render(); syncTextToExtension(); }
+    return;
+  }
+  if (action === 'add-rectangle') {
+    changeTool("rect");
+    return;
+  }
+  if (action === 'add-text') {
+    changeTool("text");
+    return;
+  }
+  if (action === 'unlock-all') {
+    if (fdCanvas.unlock_all) {
+      fdCanvas.unlock_all();
+      render();
+      syncTextToExtension();
+    }
     return;
   }
 }
@@ -781,13 +832,27 @@ function setupContextMenu() {
     const x = ((e.clientX - rect.left) - panX) / zoomLevel;
     const y = ((e.clientY - rect.top) - panY) / zoomLevel;
 
-    const selectedId = fdCanvas.get_selected_id();
-    fdCanvas.handle_pointer_down(x, y, 1.0, false, false, false, false);
-    fdCanvas.handle_pointer_up(x, y, false, false, false, false);
-    const hitId = fdCanvas.get_selected_id();
-    render();
+    const hitId = fdCanvas.hit_test_at ? fdCanvas.hit_test_at(x, y) : "";
+    let selectedIds = JSON.parse(fdCanvas.get_selected_ids());
 
-    if (!hitId) {
+    if (hitId) {
+      // If we clicked on an unselected node, swap the selection strictly to it
+      if (!selectedIds.includes(hitId)) {
+        fdCanvas.handle_pointer_down(x, y, 1.0, false, false, false, false);
+        fdCanvas.handle_pointer_up(x, y, false, false, false, false);
+        selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      }
+      render();
+      contextMenuNodeId = hitId;
+      const items = buildNodeMenuItems(hitId, selectedIds);
+      ctxMenu.open({
+        items,
+        x: e.clientX,
+        y: e.clientY,
+        onAction: (action, row) => doNodeAction(action, row),
+      });
+    } else {
+      // It's empty space. Check for edge hits first...
       if (fdCanvas.hit_test_edge_at) {
         const edgeHit = fdCanvas.hit_test_edge_at(x, y);
         if (edgeHit) {
@@ -797,20 +862,16 @@ function setupContextMenu() {
           return;
         }
       }
-      ctxMenu.close();
-      return;
+      
+      // Empty Canvas Menu
+      const items = buildDocumentMenuItems();
+      ctxMenu.open({
+        items,
+        x: e.clientX,
+        y: e.clientY,
+        onAction: (action, row) => doDocumentAction(action, e),
+      });
     }
-
-    contextMenuNodeId = hitId;
-    const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
-    const items = buildNodeMenuItems(hitId, selectedIds);
-
-    ctxMenu.open({
-      items,
-      x: e.clientX,
-      y: e.clientY,
-      onAction: (action, row) => doNodeAction(action, row),
-    });
   });
 
   // ── Layers panel: ⋮ button → open context menu ──

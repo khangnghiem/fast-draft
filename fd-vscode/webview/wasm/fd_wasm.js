@@ -1593,6 +1593,14 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Unlock all locked nodes in the graph. Returns true if any nodes were unlocked.
+     * @returns {boolean}
+     */
+    unlock_all() {
+        const ret = wasm.fdcanvas_unlock_all(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Update a text node's resolved bounds using JS-measured dimensions.
      * @param {string} node_id
      * @param {number} measured_width

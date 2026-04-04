@@ -2386,6 +2386,16 @@ function setupContextMenu() {
         }
         break;
       }
+      case 'unlock-all':
+        if (fdCanvas.unlock_all) {
+          fdCanvas.unlock_all();
+          renderDirty = true; uiDirty = true;
+          renderCanvas();
+          syncCanvasToEditor();
+          updatePropertiesPanel();
+          refreshLayersPanel();
+        }
+        break;
     }
   };
 
@@ -2441,6 +2451,8 @@ function setupContextMenu() {
       { type: 'action', icon: 'T', label: 'Add Text', shortcut: 'T', action: 'add-text' },
       { type: 'separator' },
       { type: 'action', icon: '⊡', label: 'Fit to Content', action: 'fit' },
+      { type: 'separator' },
+      { type: 'action', icon: '🔓', label: 'Unlock All Objects', action: 'unlock-all' },
     ];
   }
 
@@ -2536,7 +2548,8 @@ function setupContextMenu() {
 
     // Hit-test the scene
     let hitId = null;
-    try { hitId = fdCanvas.hit_test_at ? JSON.parse(fdCanvas.hit_test_at(x, y) || 'null')?.id : null; } catch (_) {}
+    try { hitId = fdCanvas.hit_test_at ? fdCanvas.hit_test_at(x, y) : null; } catch (_) {}
+    if (!hitId) hitId = null;
 
     if (hitId) {
       // Determine if it's an edge or a shape node
