@@ -591,6 +591,15 @@ export function initToolbar(api) {
         const ry = cr2.height > 0 ? Math.max(0, Math.min(1, (dropY - cr2.top) / cr2.height)) : null;
         localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: finalSide, x: dropX, y: dropY, rx, ry }));
         api.adjustMinimapForToolbar();
+
+        // #5: Haptic feedback — 10ms pulse on minimize/expand (silently ignored on desktop)
+        if (navigator.vibrate) navigator.vibrate(10);
+
+        // #6: Sync aria-expanded state for screen readers
+        const isNowMinimized = toolbar.classList.contains('toolbar-minimized');
+        toolbar.querySelectorAll('.toolbar-grip').forEach(g =>
+          g.setAttribute('aria-expanded', isNowMinimized ? 'false' : 'true')
+        );
       }
 
       // ── Double-click to minimize/expand (desktop) ──
@@ -598,6 +607,15 @@ export function initToolbar(api) {
         e.stopPropagation();
         e.preventDefault();
         toggleMinimize(e.currentTarget);
+      });
+
+      // ── Keyboard: Enter/Space → toggle (accessibility #6) ──
+      grip.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleMinimize(grip);
+        }
       });
 
       // ── Touch tap (mobile) + swipe (all platforms) ──
@@ -714,6 +732,7 @@ export function initToolbar(api) {
     toolbar.style.visibility = 'visible'; // reveal after JS positioned it
     if (localStorage.getItem('fd-toolbar-minimized') === '1') {
       toolbar.classList.add('toolbar-minimized');
+      toolbar.querySelectorAll('.toolbar-grip').forEach(g => g.setAttribute('aria-expanded', 'false'));
     }
     // Double-rAF: re-enable transitions and reclamp after layout settles (Fix #8)
     requestAnimationFrame(() => {
