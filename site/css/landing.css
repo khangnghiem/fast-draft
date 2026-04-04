@@ -618,8 +618,7 @@
     transform-origin: bottom center;
     flex-direction: row !important;
     max-width: calc(100vw - 24px);
-    position: fixed;           /* keep fixed so pill absolute works */
-    padding-top: 18px;         /* make room for the floating pill above */
+    position: fixed;
     /* #2: iOS momentum scrolling */
     overflow-x: auto;
     overflow-y: hidden;
@@ -635,21 +634,11 @@
     -webkit-mask-image: none;
     mask-image: none;
   }
-  /* Pill handle on mobile: visible, centered, tap-to-toggle — NO dragging */
+  /* Pill handle on mobile: same position as desktop (universal centered) */
+  /* Override cursor from 'grab' → 'pointer' since mobile has no drag */
   #floating-toolbar .toolbar-grip {
-    display: flex;
-    order: -1;          /* pill always first (before tools in DOM flow) */
-    position: absolute;
-    top: -14px;         /* float above the toolbar bar */
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 6px 12px;  /* generous touch target */
-    cursor: pointer;    /* tap gesture, not grab */
+    cursor: pointer;
     touch-action: manipulation;
-  }
-  #floating-toolbar .toolbar-pill-bar {
-    width: 36px;
-    height: 5px;        /* slightly thicker for visibility */
   }
   /* #1: Touch-sized tool buttons (40×40px target) */
   #floating-toolbar .ft-tool-btn {

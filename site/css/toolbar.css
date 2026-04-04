@@ -13,6 +13,8 @@
   border-radius: 12px;
   box-shadow: var(--fd-shadow-lg);
   padding: 3px;
+  /* Universal pill clearance: pill floats 14px above capsule, needs headroom */
+  padding-top: 20px;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
@@ -55,53 +57,37 @@
   flex-direction: row;
   position: fixed;
 }
-/* ── Grip handle (iOS-style pill) ── */
+/* ── Grip handle: universal centered pill above capsule (all platforms) ─── */
+/* Matches Apple HIG "Liquid Glass" floating palette / iPadOS Stage Manager grabber */
 .toolbar-grip {
+  position: absolute;
+  top: 0;               /* sits at the very top of the toolbar */
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: grab;
-  /* Horizontal: tall-enough click target, narrow */
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 6px 14px;    /* generous touch target, invisible hit area */
+  border-radius: 8px;
   user-select: none;
-  touch-action: none;
-  flex-shrink: 0;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
+  touch-action: manipulation; /* allow tap; prevent browser scroll interference */
+  z-index: 1;           /* stays above tool buttons */
 }
-.toolbar-grip:hover { opacity: 1; }
-.toolbar-grip:active { cursor: grabbing; opacity: 1; }
+.toolbar-grip:hover .toolbar-pill-bar  { width: 42px; opacity: 0.85; }
+.toolbar-grip:active { cursor: grabbing; }
+.toolbar-grip:active .toolbar-pill-bar { opacity: 1; }
 
-/* The actual pill bar — pure CSS, no icon font needed */
+/* The actual pill bar — Liquid Glass material: translucent, grow-on-hover */
 .toolbar-pill-bar {
-  width: 32px;
-  height: 4px;
-  border-radius: 2px;
-  background: currentColor;
-  color: var(--fd-text-tertiary);
-  transition: width 0.2s ease, height 0.2s ease, border-radius 0.2s ease;
-}
-
-/* Vertical toolbars: pill rotates to vertical bar */
-.toolbar-docked-left .toolbar-pill-bar,
-.toolbar-docked-right .toolbar-pill-bar {
-  width: 4px;
-  height: 32px;
-}
-[data-toolbar="left"] #floating-toolbar .toolbar-pill-bar,
-[data-toolbar="right"] #floating-toolbar .toolbar-pill-bar {
-  width: 4px;
-  height: 32px;
-}
-
-/* Remove old rotate(90deg) rotation — pill adapts via dimensions instead */
-[data-toolbar="left"] .toolbar-grip,
-[data-toolbar="right"] .toolbar-grip,
-.toolbar-docked-left .toolbar-grip,
-.toolbar-docked-right .toolbar-grip {
-  transform: none;
-  padding: 8px 4px;
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--fd-text-tertiary);
+  opacity: 0.5;
+  /* Grow animation: pill expands 3px each side on hover */
+  transition: width 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+  pointer-events: none; /* don't steal events from the grip container */
 }
 /* ── Minimized state with smooth pull animation ── */
 #floating-toolbar .ft-tool-btn {
@@ -131,11 +117,8 @@
 /* Show one separator between active tool and AI */
 #floating-toolbar.toolbar-minimized .ft-tool-btn.active + .ft-sep { display: block; }
 
-/* Flip grip handle when docking vertically */
-[data-toolbar="left"] .toolbar-grip,
-[data-toolbar="right"] .toolbar-grip {
-  transform: rotate(90deg);
-}
+/* Vertical toolbars: pill stays horizontal (Apple HIG — grabber orientation is always horizontal) */
+/* No dimension swap needed — pill is position:absolute above the capsule, not in the flex flow */
 /* ── Snap indicator: ghost toolbar silhouette at destination ── */
 .toolbar-snap-indicator {
   position: fixed;
@@ -177,7 +160,7 @@
   position: relative;
   flex-shrink: 0;
 }
-.ft-tool-btn svg { width: 18px; height: 18px; flex-shrink: 0; pointer-events: none; -webkit-user-drag: none; user-drag: none; }
+.ft-tool-btn svg { width: 18px; height: 18px; flex-shrink: 0; pointer-events: none; -webkit-user-drag: none; }
 .ft-tool-btn:hover { background: rgba(0,0,0,0.06); color: var(--fd-text); }
 .dark-canvas .ft-tool-btn:hover { background: rgba(255,255,255,0.1); }
 .ft-tool-btn:active { transform: scale(0.92); }

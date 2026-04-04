@@ -20,12 +20,12 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-mono/style.min.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" />
   <!-- Preload WASM for instant startup -->
-  <link rel="modulepreload" href="./wasm/fd_wasm.js?v=0.11.332" />
-  <link rel="preload" href="./wasm/fd_wasm_bg.wasm?v=0.11.332" as="fetch" crossorigin fetchpriority="high" />
+  <link rel="modulepreload" href="./wasm/fd_wasm.js?v=0.11.333" />
+  <link rel="preload" href="./wasm/fd_wasm_bg.wasm?v=0.11.333" as="fetch" crossorigin fetchpriority="high" />
   <!-- Preload local vendor bundle (CodeMirror + lz-string, no CDN) -->
   <link rel="modulepreload" href="./vendor/cm.min.js" />
-  <link rel="stylesheet" href="shared.css?v=0.11.332" />
-  <link rel="stylesheet" href="style.css?v=0.11.332" />
+  <link rel="stylesheet" href="shared.css?v=0.11.333" />
+  <link rel="stylesheet" href="style.css?v=0.11.333" />
 
   <!-- ── Layout State Machine ──
        Sets data-attrs + CSS vars on <html> SYNCHRONOUSLY before <body> parse.
@@ -265,7 +265,12 @@
 
             <!-- ─── Floating Toolbar (frosted glass, draggable, snaps to edges) ─── -->
             <div id="floating-toolbar" class="toolbar-pill">
-              <div class="toolbar-grip grip-start" title="Tap to minimize · Drag to move" aria-label="Toolbar handle"><div class="toolbar-pill-bar"></div></div>
+              <div class="toolbar-grip grip-start"
+                   role="button"
+                   tabindex="0"
+                   aria-label="Toggle toolbar"
+                   aria-expanded="true"
+                   title="Tap to minimize · Drag to move"><div class="toolbar-pill-bar"></div></div>
               <button class="ft-tool-btn ft-undo" id="undo-btn" title="Undo (⌘Z)"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M232,200a6,6,0,0,1-12,0,84.09,84.09,0,0,0-84-84H62.49l37.75,37.76a6,6,0,1,1-8.48,8.48l-48-48a6,6,0,0,1,0-8.48l48-48a6,6,0,0,1,8.48,8.48L62.49,104H136A96.11,96.11,0,0,1,232,200Z"/></svg><span class="ft-tooltip">Undo<span class="tt-shortcut">⌘Z</span></span></button>
               <button class="ft-tool-btn ft-redo" id="redo-btn" title="Redo (⌘⇧Z)"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M232,112a6,6,0,0,1-1.76,4.24l-48,48a6,6,0,0,1-8.48-8.48L211.51,118H120a84.09,84.09,0,0,0-84,84,6,6,0,0,1-12,0A96.11,96.11,0,0,1,120,106h91.51L173.76,68.24a6,6,0,0,1,8.48-8.48l48,48A6,6,0,0,1,232,112Z"/></svg><span class="ft-tooltip">Redo<span class="tt-shortcut">⌘⇧Z</span></span></button>
               <div class="ft-sep"></div>
@@ -447,8 +452,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="context-menu.js?v=0.11.332"></script>
-  <script type="module" src="app.js?v=0.11.332"></script>
+  <script src="context-menu.js?v=0.11.333"></script>
+  <script type="module" src="app.js?v=0.11.333"></script>
   <script>
     // Mobile menu toggle
     document.getElementById('mobile-menu-btn')?.addEventListener('click', function() {
