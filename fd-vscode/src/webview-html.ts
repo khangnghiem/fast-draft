@@ -3146,7 +3146,14 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
             <span id="ai-chat-context-text"></span>
             <button id="ai-chat-context-clear" title="Clear context">×</button>
           </div>
-          <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Describe your design changes..." rows="1" maxlength="500"></textarea>
+          <div class="ai-chat-input-main-row">
+            <button class="ai-chat-upload-btn" id="ai-chat-upload" title="Add context (Docs, Images, Camera)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+            </button>
+            <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Describe your design changes..." rows="1" maxlength="500"></textarea>
+          </div>
           <div class="ai-chat-input-footer">
             <div class="ai-model-selector">
               <select id="ai-model-select" class="ai-model-dropdown">
