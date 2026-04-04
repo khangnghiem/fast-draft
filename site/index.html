@@ -306,17 +306,17 @@
               <input type="range" id="fab-opacity" aria-label="Opacity" class="fab-slider" min="0" max="1" step="0.05" value="1" title="Opacity">
               <span id="fab-opacity-val" style="font-size:10px;min-width:24px">100%</span>
               <div class="fab-sep"></div>
-              <button class="fab-delete-btn" id="fab-delete" title="Delete (⌫)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
+              <button class="fab-delete-btn" id="fab-delete" title="Delete (⌫)" aria-label="Delete (⌫)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
             </div>
             <!-- Minimap (Google Maps pill) -->
             <div id="minimap-container">
               <canvas id="minimap-canvas"></canvas>
               <div id="minimap-zoom-controls">
-                <button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button>
+                <button class="bl-btn" id="zoom-out-btn" title="Zoom out" aria-label="Zoom out">−</button>
                 <div class="bl-sep"></div>
-                <button class="bl-btn" id="zoom-reset-btn" title="Toggle 100% / Fit to Content">100%</button>
+                <button class="bl-btn" id="zoom-reset-btn" title="Toggle 100% / Fit to Content" aria-label="Toggle 100% / Fit to Content">100%</button>
                 <div class="bl-sep"></div>
-                <button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button>
+                <button class="bl-btn" id="zoom-in-btn" title="Zoom in" aria-label="Zoom in">+</button>
               </div>
             </div>
             <div id="dimension-tooltip"></div>
@@ -362,7 +362,7 @@
                       <div class="ai-chat-context-badge hidden" id="ai-chat-context-badge">
                         <span class="context-pin">📌</span>
                         <span id="ai-chat-context-text"></span>
-                        <button id="ai-chat-context-clear" title="Clear context">×</button>
+                        <button id="ai-chat-context-clear" title="Clear context" aria-label="Clear context">×</button>
                       </div>
                       <div class="ai-chat-input-main-row">
                         <button class="ai-chat-upload-btn" id="ai-chat-upload" title="Add context (Docs, Images, Camera)">
@@ -447,7 +447,7 @@
     <div class="share-card" style="width: 480px; max-width: 90vw;">
       <div class="share-header">
         <span class="share-title">📦 Import Module</span>
-        <button class="share-close" id="import-modal-close">✕</button>
+        <button class="share-close" id="import-modal-close" aria-label="Close import modal">✕</button>
       </div>
       <p class="share-hint" style="text-align: left; margin: 0 0 12px 0;">Paste Fast Draft code below. It will be safely wrapped in a group and namespaced.</p>
       <textarea id="import-textarea" class="share-url" style="height: 200px; resize: vertical; font-family: monospace; white-space: pre; margin-bottom: 12px;" placeholder="rect @my_component { ... }"></textarea>
@@ -463,7 +463,7 @@
     <div class="share-card">
       <div class="share-header">
         <span class="share-title">🔗 Share this design</span>
-        <button class="share-close" id="share-modal-close">✕</button>
+        <button class="share-close" id="share-modal-close" aria-label="Close share modal">✕</button>
       </div>
       <div class="share-url-row">
         <input type="text" id="share-url-input" class="share-url" readonly>
@@ -477,7 +477,7 @@
   <!-- Presentation Mode -->
   <div id="presentation-overlay" class="presentation-overlay hidden">
     <div class="presentation-counter" id="presentation-counter">1 / 1</div>
-    <button class="presentation-exit" id="presentation-exit" title="Exit (Esc)">✕ Exit</button>
+    <button class="presentation-exit" id="presentation-exit" title="Exit (Esc)" aria-label="Exit presentation">✕ Exit</button>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
