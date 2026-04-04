@@ -1,5 +1,6 @@
 import { initLayersPanel } from './layers.js?v=0.11.309';
 import init, { FdCanvas } from './wasm/fd_wasm.js?v=0.11.309';
+import { buildUnifiedNodeMenu, buildUnifiedCanvasMenu, buildUnifiedEdgeMenu } from './canvas-core/menu-registry.js?v=0.11.334';
 // ─── FD Playground — WASM-powered interactive editor ───
 
 // ─── CodeMirror 6 + lz-string — local vendor bundle (no CDN) ─────────────
@@ -2143,6 +2144,7 @@ async function pasteFromClipboard() {
 /** ─── Context Menu (Unified) ──────────────────────────────────────── */
 let contextMenuClickPos = null; // scene-space {x, y} of right-click
 const ctxMenu = new ContextMenu();
+window.contextMenu = ctxMenu;
 
 // ── Right-click gesture state ──
 // Short right-click (button down + up, no significant movement) → context menu.
@@ -2215,7 +2217,6 @@ function openLayerPickerAt(clientX, clientY) {
 // ── ⌘+Right-click on empty: Quick Insert ─────────────────────────────────
 // Creates a new shape at the cursor position with a single gesture.
 function openQuickInsertAt(clientX, clientY) {
-  if (!fdCanvas) return;
   const canvas = document.getElementById('fd-canvas');
   if (!canvas) return;
   const { x, y } = screenToScene(clientX, clientY, canvas);
@@ -2261,277 +2262,135 @@ function setupContextMenu() {
   const canvas = document.getElementById('fd-canvas');
   if (!canvas) return;
 
-  // ── Node action handler (shared by canvas and layer menus) ──
+  // ── Node action handler ──
   const doNodeAction = (action, el) => {
-    if (!fdCanvas) return;
-    let changed = false;
+    if (!fdCanvas || !contextMenuNodeId) return;
+    const selectedIdsStr = fdCanvas.get_selected_ids();
+    let selectedIds = selectedIdsStr ? JSON.parse(selectedIdsStr) : [];
+    if (!selectedIds.includes(contextMenuNodeId)) {
+      fdCanvas.select_by_id(contextMenuNodeId);
+    }
     const textBefore = fdCanvas.get_text();
-    switch (action) {
-      case 'copy':
-        copySelectedAsFd();
-        break;
-      case 'cut':
-        cutSelectedAsFd();
-        changed = true;
-        break;
-      case 'duplicate':
-        changed = fdCanvas.duplicate_selected();
+    let changed = false;
+
+    // Normalizing action strings
+    switch(action) {
+      case 'add-spec':
+      case 'add-note':
+        openAnnotationCard(contextMenuNodeId, parseInt(el?.style?.left || 0), parseInt(el?.style?.top || 0));
+        return;
+      case 'copy':  copySelectedAsFd(); break;
+      case 'cut':   cutSelectedAsFd(); changed = true; break;
+      case 'duplicate': 
+        changed = fdCanvas.duplicate_selected(); 
         break;
       case 'delete':
+        fdCanvas.select_by_id(contextMenuNodeId);
         changed = fdCanvas.delete_selected();
         break;
-      case 'bring-forward': {
-        const r = JSON.parse(fdCanvas.handle_key(']', false, false, false, true));
-        changed = r.changed;
+      case 'bring-front':
+      case 'bring-forward':
+        if (fdCanvas.handle_key) {
+          const res = JSON.parse(fdCanvas.handle_key("]", false, true, false, true));
+          if (res.changed) changed = true;
+        }
         break;
-      }
-      case 'send-backward': {
-        const r = JSON.parse(fdCanvas.handle_key('[', false, false, false, true));
-        changed = r.changed;
+      case 'send-back':
+      case 'send-backward':
+        if (fdCanvas.handle_key) {
+          const res = JSON.parse(fdCanvas.handle_key("[", false, true, false, true));
+          if (res.changed) changed = true;
+        }
         break;
-      }
       case 'group':
         changed = fdCanvas.group_selected();
         break;
       case 'ungroup':
         changed = fdCanvas.ungroup_selected();
         break;
-      case 'copy-fd':
-        navigator.clipboard.writeText(fdCanvas.get_text()).catch(() => {});
-        break;
-      case 'add-note': {
-        const noteId = fdCanvas.get_selected_id();
-        if (!noteId) break;
-        const noteText = prompt('Add a note:');
-        if (!noteText) break;
-        const src = fdCanvas.get_text();
-        const nodeRe = new RegExp(`(@${noteId.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\s*(?:"[^"]*"\\s*)?\\{)`);
-        const m = src.match(nodeRe);
-        if (m) {
-          const insertPos = m.index + m[0].length;
-          const newSrc = src.slice(0, insertPos) + `\n  note "${noteText}"` + src.slice(insertPos);
-          fdCanvas.set_text(newSrc);
-          changed = true;
-        }
-        break;
-      }
-      case 'lock':
-        if (fdCanvas.toggle_node_locked) {
-          fdCanvas.toggle_node_locked(fdCanvas.get_selected_id());
-          changed = true;
-        }
-        break;
       case 'rename': {
-        const selId = fdCanvas.get_selected_id();
-        if (!selId) break;
-        const newId = prompt(`Rename @${selId} to:`, selId);
-        if (!newId || newId === selId || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(newId)) break;
-        const text = fdCanvas.get_text();
-        const esc = selId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const re = new RegExp(`@${esc}\\b`, 'g');
-        fdCanvas.set_text(text.replace(re, `@${newId}`));
+        const oldId = contextMenuNodeId;
+        const newId = prompt(`Rename @${oldId} to:`, oldId);
+        if (!newId || newId === oldId || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(newId)) return;
+        const src = fdCanvas.get_text();
+        const esc = oldId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const re = new RegExp(`@${esc}\\b`, "g");
+        fdCanvas.set_text(src.replace(re, `@${newId}`));
         changed = true;
         break;
       }
+      case 'lock':
+      case 'toggle-lock':
+        if (fdCanvas.toggle_node_locked) {
+          fdCanvas.toggle_node_locked(contextMenuNodeId);
+          render();
+          pushHistoryState(textBefore, fdCanvas.get_text());
+        }
+        return;
+      case 'copy-png':
+      case 'copy-fd':
+        if (action === 'copy-png' && typeof copySelectionAsPng === 'function') {
+          copySelectionAsPng();
+        } else {
+          navigator.clipboard.writeText(fdCanvas.get_text()).catch(() => {});
+        }
+        break;
+      case 'frame':
+        if (fdCanvas.handle_key) {
+          const res = JSON.parse(fdCanvas.handle_key("f", false, false, false, true));
+          if (res.changed) changed = true;
+        }
+        break;
+      case 'select-children':
+        if (fdCanvas.select_children) {
+          if (fdCanvas.select_children(contextMenuNodeId)) render();
+        }
+        return;
+      case 'move-to-root':
+        if (fdCanvas.move_selection_to_root) {
+          changed = fdCanvas.move_selection_to_root();
+        }
+        break;
+      case 'ai-touch':
+        return;
     }
+
     if (changed) {
-      const textAfter = fdCanvas.get_text();
-      if (textBefore !== textAfter) {
-        fdCanvas.push_undo_snapshot(textBefore, textAfter);
-      }
-      renderCanvas();
-      syncCanvasToEditor();
-      updatePropertiesPanel();
-      refreshLayersPanel();
+      render();
+      pushHistoryState(textBefore, fdCanvas.get_text());
     }
   };
 
-  // ── Canvas empty-space action handler ──
-  const doCanvasAction = (action) => {
-    if (!fdCanvas) return;
-    switch (action) {
-      case 'paste':
-        pasteFromClipboard();
-        break;
-      case 'add-rect':
-        fdCanvas.set_tool('rect');
-        updateToolbar('rect');
-        canvas.style.cursor = 'crosshair';
-        break;
-      case 'add-ellipse':
-        fdCanvas.set_tool('ellipse');
-        updateToolbar('ellipse');
-        canvas.style.cursor = 'crosshair';
-        break;
-      case 'add-text':
-        fdCanvas.set_tool('text');
-        updateToolbar('text');
-        canvas.style.cursor = 'crosshair';
-        break;
-      case 'fit': {
-        const sb = fdCanvas.get_scene_bounds();
-        if (sb) {
-          try {
-            const b = JSON.parse(sb);
-            if (b.w > 0 && b.h > 0) {
-              const cr = canvas.getBoundingClientRect();
-              const zoom = Math.min(cr.width / (b.w + 60), cr.height / (b.h + 60), 2);
-              zoomLevel = zoom;
-              panX = cr.width / 2 - (b.x + b.w / 2) * zoom;
-              panY = cr.height / 2 - (b.y + b.h / 2) * zoom;
-              renderCanvas();
-              updateZoomIndicator();
-            }
-          } catch (_) {}
-        }
-        break;
-      }
-      case 'unlock-all':
-        if (fdCanvas.unlock_all) {
-          fdCanvas.unlock_all();
-          renderDirty = true; uiDirty = true;
-          renderCanvas();
-          syncCanvasToEditor();
-          updatePropertiesPanel();
-          refreshLayersPanel();
-        }
-        break;
-    }
-  };
-
-  // ── Build node context menu items ──
-  function buildNodeMenuItems(hitId, selectedIds) {
-    const selCount = selectedIds.length;
-    const isMulti = selCount > 1;
-    const isLocked = fdCanvas.is_node_locked ? fdCanvas.is_node_locked(hitId) : false;
-
-    const items = [];
-
-    // Selection badge (header)
-    if (isMulti) {
-      items.push({ type: 'header', label: `${selCount} objects selected` });
-    }
-
-    // Clipboard
-    items.push({ type: 'action', icon: '📋', label: isMulti ? `Copy ${selCount} items` : 'Copy', shortcut: '⌘C', action: 'copy' });
-    items.push({ type: 'action', icon: '✂', label: isMulti ? `Cut ${selCount} items` : 'Cut', shortcut: '⌘X', action: 'cut' });
-    items.push({ type: 'action', icon: '⧉', label: isMulti ? `Duplicate ${selCount} items` : 'Duplicate', shortcut: '⌘D', action: 'duplicate' });
-    items.push({ type: 'action', icon: '🗑', label: isMulti ? `Delete ${selCount} items` : 'Delete', shortcut: '⌫', action: 'delete', danger: true });
-    items.push({ type: 'separator' });
-
-    // Z-order
-    items.push({ type: 'action', icon: '↑', label: 'Bring Forward', action: 'bring-forward' });
-    items.push({ type: 'action', icon: '↓', label: 'Send Backward', action: 'send-backward' });
-    items.push({ type: 'separator' });
-
-    // Structure
-    items.push({ type: 'action', icon: '⊞', label: 'Group', action: 'group' });
-    items.push({ type: 'action', icon: '⊟', label: 'Ungroup', action: 'ungroup' });
-
-    if (!isMulti) {
-      items.push({ type: 'separator' });
-      items.push({ type: 'action', icon: '✏️', label: 'Rename', action: 'rename' });
-      items.push({ type: 'action', icon: isLocked ? '🔓' : '🔒', label: isLocked ? 'Unlock' : 'Lock', action: 'lock' });
-      items.push({ type: 'separator' });
-      items.push({ type: 'action', icon: '📄', label: 'Copy as .fd', action: 'copy-fd' });
-      items.push({ type: 'separator' });
-      items.push({ type: 'action', icon: '📝', label: 'Add Note', action: 'add-note' });
-    }
-
-    return items;
-  }
-
-  // ── Build canvas empty-space menu items ──
-  function buildCanvasMenuItems() {
-    return [
-      { type: 'action', icon: '📋', label: 'Paste', shortcut: '⌘V', action: 'paste' },
-      { type: 'separator' },
-      { type: 'action', icon: '▢', label: 'Add Rectangle', shortcut: 'R', action: 'add-rect' },
-      { type: 'action', icon: '○', label: 'Add Ellipse', shortcut: 'O', action: 'add-ellipse' },
-      { type: 'action', icon: 'T', label: 'Add Text', shortcut: 'T', action: 'add-text' },
-      { type: 'separator' },
-      { type: 'action', icon: '⊡', label: 'Fit to Content', action: 'fit' },
-      { type: 'separator' },
-      { type: 'action', icon: '🔓', label: 'Unlock All Objects', action: 'unlock-all' },
-    ];
-  }
-
-  // ── Build edge context menu items ──
-  function buildEdgeMenuItems(edgeId) {
-    return [
-      { type: 'header', label: `Edge @${edgeId}` },
-      { type: 'action', icon: '📋', label: 'Copy', shortcut: '⌘C', action: 'copy' },
-      { type: 'action', icon: '✂', label: 'Cut', shortcut: '⌘X', action: 'cut' },
-      { type: 'action', icon: '⧉', label: 'Duplicate', shortcut: '⌘D', action: 'duplicate' },
-      { type: 'action', icon: '🗑', label: 'Delete Edge', shortcut: '⌫', action: 'delete', danger: true },
-      { type: 'separator' },
-      { type: 'action', icon: '↔', label: 'Reverse Direction', action: 'edge-reverse' },
-      { type: 'action', icon: '✏️', label: 'Edit Label', action: 'edge-edit-label' },
-      { type: 'separator' },
-      { type: 'action', icon: '📄', label: 'Copy as .fd', action: 'copy-fd' },
-    ];
-  }
-
-  // ── Edge action handler ──
-  const doEdgeAction = (action, el) => {
+  // ── Document empty-space action handler ──
+  const doDocumentAction = (action, e) => {
     if (!fdCanvas) return;
     const textBefore = fdCanvas.get_text();
     let changed = false;
-    switch (action) {
-      case 'copy':     copySelectedAsFd(); break;
-      case 'cut':      cutSelectedAsFd(); changed = true; break;
-      case 'duplicate': changed = fdCanvas.duplicate_selected(); break;
-      case 'delete':   changed = fdCanvas.delete_selected(); break;
-      case 'copy-fd':
-        navigator.clipboard.writeText(fdCanvas.get_text()).catch(() => {});
+
+    switch(action) {
+      case 'paste': pasteFromClipboard(); return; // handles its own history
+      case 'select-all':
+        if (fdCanvas.handle_key) {
+          const res = JSON.parse(fdCanvas.handle_key("a", false, true, false, true));
+          if (res.changed) { render(); return; } // just selection
+        }
         break;
-      case 'edge-reverse': {
-        // Reverse from/to on the selected edge by rewriting its text anchor lines
-        const edgeId = fdCanvas.get_selected_id();
-        if (!edgeId) break;
-        const src = fdCanvas.get_text();
-        // Match: @from -> @to tokens on the edge header line
-        const re = new RegExp(`(edge\\s+@${edgeId}\\s+)@(\\w+)(\\s*->\\s*)@(\\w+)`);
-        const m = src.match(re);
-        if (m) {
-          const newSrc = src.replace(re, `$1@$4$3@$2`);
-          fdCanvas.set_text(newSrc);
+      case 'add-node':
+      case 'add-rect':    changeTool('rect'); return;
+      case 'add-ellipse': changeTool('ellipse'); return;
+      case 'add-text':    changeTool('text'); return;
+      case 'fit':         coreFitToContent(); return;
+      case 'unlock-all':
+        if (fdCanvas.unlock_all) {
+          fdCanvas.unlock_all();
           changed = true;
         }
         break;
-      }
-      case 'edge-edit-label': {
-        // Trigger inline text editing on the edge's text child node
-        const edgeId = fdCanvas.get_selected_id();
-        if (!edgeId) break;
-        const childId = fdCanvas.get_edge_text_child_id?.(edgeId);
-        if (childId) {
-          fdCanvas.select_by_id(childId);
-          // Dispatch a synthetic dblclick on the canvas to open inline editor
-          const bounds = fdCanvas.get_node_bounds?.(childId);
-          if (bounds) {
-            try {
-              const b = JSON.parse(bounds);
-              const cx = b.x * zoomLevel + panX;
-              const cy = b.y * zoomLevel + panY;
-              canvas.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, clientX: cx, clientY: cy }));
-            } catch (_) {}
-          }
-        } else {
-          // Create a label and select it
-          const newChildId = fdCanvas.create_edge_text_child?.(edgeId, '');
-          if (newChildId) { changed = true; }
-        }
-        break;
-      }
     }
+    
     if (changed) {
-      const textAfter = fdCanvas.get_text();
-      if (textBefore !== textAfter) fdCanvas.push_undo_snapshot(textBefore, textAfter);
-      renderCanvas();
-      syncCanvasToEditor();
-      updatePropertiesPanel();
-      refreshLayersPanel();
+      render();
+      pushHistoryState(textBefore, fdCanvas.get_text());
     }
   };
 
@@ -2541,36 +2400,30 @@ function setupContextMenu() {
     const { x, y } = screenToScene(clientX, clientY, canvas);
     contextMenuClickPos = { x, y };
 
-    const offsetY = isTouch ? -60 : 0;
-    const offsetX = isTouch ? 20 : 0;
-    const menuX = clientX + offsetX;
-    const menuY = clientY + offsetY;
-
     // Hit-test the scene
     let hitId = null;
     try { hitId = fdCanvas.hit_test_at ? fdCanvas.hit_test_at(x, y) : null; } catch (_) {}
     if (!hitId) hitId = null;
 
     if (hitId) {
-      // Determine if it's an edge or a shape node
-      const kind = fdCanvas.get_node_kind ? fdCanvas.get_node_kind(hitId) : '';
-      // Select it if not already selected
-      const selectedIds = JSON.parse(fdCanvas.get_selected_ids?.() || '[]');
-      if (!selectedIds.includes(hitId)) {
-        fdCanvas.select_by_id(hitId);
-        renderDirty = true;
-      }
-      const freshIds = JSON.parse(fdCanvas.get_selected_ids?.() || '[]');
+        const selectedIdsStr = fdCanvas.get_selected_ids();
+        const selectedIds = selectedIdsStr ? JSON.parse(selectedIdsStr) : [];
+        const isContainer = fdCanvas.is_container ? fdCanvas.is_container(hitId) : false;
+        const hasChildren = fdCanvas.has_children ? fdCanvas.has_children(hitId) : false;
+        const isLocked = fdCanvas.is_node_locked ? fdCanvas.is_node_locked(hitId) : false;
+        const canGroup = selectedIds.length >= 2 && (!hitId || !fdCanvas.is_node_locked(hitId));
+        let canUngroup = false;
+        const source = fdCanvas.get_text();
+        for (const id of selectedIds) {
+          if (new RegExp(`(?:^|\\n)\\s*group\\s+@${id}\\b`).test(source)) { canUngroup = true; break; }
+        }
 
-      if (kind === 'edge') {
-        ctxMenu.open({ items: buildEdgeMenuItems(hitId), x: menuX, y: menuY, isTouch, onAction: doEdgeAction });
-      } else {
-        ctxMenu.open({ items: buildNodeMenuItems(hitId, freshIds), x: menuX, y: menuY, isTouch, onAction: doNodeAction });
-      }
+        const items = buildUnifiedNodeMenu(hitId, selectedIds, isContainer, hasChildren, isLocked, canGroup, canUngroup, source);
+        ctxMenu.open({ items, x: clientX, y: clientY, onAction: (action, row) => doNodeAction(action, row) });
     } else {
       // Empty space
       fdCanvas.select_by_id('');
-      ctxMenu.open({ items: buildCanvasMenuItems(), x: menuX, y: menuY, isTouch, onAction: doCanvasAction });
+      ctxMenu.open({ items: buildUnifiedCanvasMenu(), x: clientX, y: clientY, isTouch, onAction: doDocumentAction });
     }
   }
   window.openContextMenuAt = openContextMenuAt;

@@ -36,6 +36,7 @@ const CANVAS_CORE_ORDER = [
   'viewport.js',
   'shortcuts.js',
   'inline-edit.js',
+  'menu-registry.js',
 ];
 
 // Extension-specific modules — loaded AFTER canvas-core
