@@ -17,6 +17,13 @@
 
 ## Completed Requirements
 
+### v0.11.333 — Premium Touch Context Menu (R3.6)
+
+- **Touch Collision Guard**: Modified the touch-and-hold (long-press) logic to only trigger when the active tool is 'Select' or 'Eraser', completely resolving the gesture collision with the Hand tool panning on mobile.
+- **Hold Ring Animation**: Injected a 500ms CSS `.touch-hold-ring` radial pulse animation that triggers upon `touchstart` to provide immediate Apple HIG-compliant visual feedback during the long-press gesture.
+- **Anti-Occlusion Positioning**: Refactored the context menu initialization (`openContextMenuAt`) to offset the actual spawn target dynamically (`-60px` Y, `+20px` X) for touch screens, overcoming physical finger occlusion.
+- **Touch Target Scaling**: Context menu items now dynamically adopt larger 44px minimum touch targets and hide keyboard shortcuts when spawned via touch events (`isTouch` flag).
+
 ### v0.11.332 — Unified Pill Handle & Multi-Gesture Minimize
 
 - **Pill Handle**: Replaced the 6-dot Unicode `⡀` grip with a pure CSS `<div class="toolbar-pill-bar">` element across all platforms. The pill is 32×4px horizontally and automatically becomes 4×32px when the toolbar docks vertically, matching Apple HIG grabber conventions.

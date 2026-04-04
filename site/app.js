@@ -2524,10 +2524,15 @@ function setupContextMenu() {
   };
 
   // ── Helper: open the right context menu based on hit-test ──
-  openContextMenuAt = function(clientX, clientY) {
+  openContextMenuAt = function(clientX, clientY, isTouch = false) {
     if (!fdCanvas) return;
     const { x, y } = screenToScene(clientX, clientY, canvas);
     contextMenuClickPos = { x, y };
+
+    const offsetY = isTouch ? -60 : 0;
+    const offsetX = isTouch ? 20 : 0;
+    const menuX = clientX + offsetX;
+    const menuY = clientY + offsetY;
 
     // Hit-test the scene
     let hitId = null;
@@ -2545,16 +2550,17 @@ function setupContextMenu() {
       const freshIds = JSON.parse(fdCanvas.get_selected_ids?.() || '[]');
 
       if (kind === 'edge') {
-        ctxMenu.open({ items: buildEdgeMenuItems(hitId), x: clientX, y: clientY, onAction: doEdgeAction });
+        ctxMenu.open({ items: buildEdgeMenuItems(hitId), x: menuX, y: menuY, isTouch, onAction: doEdgeAction });
       } else {
-        ctxMenu.open({ items: buildNodeMenuItems(hitId, freshIds), x: clientX, y: clientY, onAction: doNodeAction });
+        ctxMenu.open({ items: buildNodeMenuItems(hitId, freshIds), x: menuX, y: menuY, isTouch, onAction: doNodeAction });
       }
     } else {
       // Empty space
       fdCanvas.select_by_id('');
-      ctxMenu.open({ items: buildCanvasMenuItems(), x: clientX, y: clientY, onAction: doCanvasAction });
+      ctxMenu.open({ items: buildCanvasMenuItems(), x: menuX, y: menuY, isTouch, onAction: doCanvasAction });
     }
   }
+  window.openContextMenuAt = openContextMenuAt;
 
   // Suppress native browser context menu on canvas (we draw our own via pointerup)
   canvas.addEventListener('contextmenu', (e) => {
