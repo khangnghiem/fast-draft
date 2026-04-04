@@ -95,7 +95,14 @@ impl FdCanvas {
         console_error_panic_hook_setup();
 
         // Seed the core ID generator to prevent multi-session ID collisions
-        fd_core::id::NodeId::seed_prefix_counter(js_sys::Date::now() as u64);
+        #[cfg(target_arch = "wasm32")]
+        {
+            fd_core::id::NodeId::seed_prefix_counter(js_sys::Date::now() as u64);
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            fd_core::id::NodeId::seed_prefix_counter(12345);
+        }
 
         let viewport = Viewport {
             width: width as f32,

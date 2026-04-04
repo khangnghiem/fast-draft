@@ -988,3 +988,50 @@ impl FdCanvas {
         serde_json::to_string(&json_guides).unwrap_or_else(|_| "[]".to_string())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use fd_core::id::NodeId;
+    use fd_core::model::{NodeKind, ResolvedBounds, SceneNode};
+
+    #[test]
+    fn test_update_text_metrics() {
+        let mut canvas = crate::FdCanvas::new(800.0, 600.0);
+        let text_id = NodeId::intern("test_text");
+
+        let node = SceneNode::new(
+            text_id,
+            NodeKind::Text {
+                content: "Hello".to_string(),
+                max_width: None,
+            },
+        );
+
+        let root = canvas.engine.graph.root;
+        canvas.engine.graph.add_node(root, node);
+
+        let idx = canvas.engine.graph.index_of(text_id).unwrap();
+        canvas.engine.bounds.insert(
+            idx,
+            ResolvedBounds {
+                x: 0.0,
+                y: 0.0,
+                width: 10.0,
+                height: 10.0,
+            },
+        );
+
+        // 100 wide, 20 high measured. Padding is 2.
+        // Expected final: 104 wide, 24 high.
+        let changed = canvas.update_text_metrics("test_text", 100.0, 20.0);
+        assert!(changed);
+
+        let bounds = canvas.engine.bounds.get(&idx).unwrap();
+        assert_eq!(bounds.width, 104.0);
+        assert_eq!(bounds.height, 24.0);
+
+        // Calling again with same metrics shouldn't change
+        let changed_again = canvas.update_text_metrics("test_text", 100.0, 20.0);
+        assert!(!changed_again);
+    }
+}
