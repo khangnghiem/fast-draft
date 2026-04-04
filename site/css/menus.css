@@ -121,6 +121,35 @@
   white-space: nowrap;
   transition: none;
 }
+.ctx-menu.touch-origin .ctx-menu-item {
+  padding: 10px 14px;
+  font-size: 14px;
+  gap: 10px;
+}
+.ctx-menu.touch-origin .ctx-menu-icon {
+  font-size: 16px;
+  width: 22px;
+}
+.ctx-menu.touch-origin .ctx-menu-shortcut {
+  display: none;
+}
+
+.touch-hold-ring {
+  position: fixed;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--fd-accent);
+  opacity: 0.5;
+  animation: hold-pulse 500ms ease-out forwards;
+  pointer-events: none;
+  z-index: 199;
+}
+@keyframes hold-pulse {
+  0%   { transform: scale(0.5); opacity: 0; }
+  30%  { opacity: 0.4; }
+  100% { transform: scale(1.2); opacity: 0; border-width: 1px; }
+}
 .ctx-menu-item:hover,
 .ctx-menu-item.ctx-menu-active {
   background: var(--fd-accent);

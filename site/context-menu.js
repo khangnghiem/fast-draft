@@ -29,9 +29,9 @@ class ContextMenu {
 
   /**
    * Open a context menu. Closes any existing menu first (singleton).
-   * @param {{ items: Array, x: number, y: number, onAction: Function }} opts
+   * @param {{ items: Array, x: number, y: number, onAction: Function, isTouch?: boolean }} opts
    */
-  open({ items, x, y, onAction }) {
+  open({ items, x, y, onAction, isTouch = false }) {
     this.close(); // Singleton: always close previous first
 
     this.#onAction = onAction;
@@ -40,7 +40,7 @@ class ContextMenu {
 
     // Build DOM
     const el = document.createElement('div');
-    el.className = 'ctx-menu';
+    el.className = 'ctx-menu' + (isTouch ? ' touch-origin' : '');
     el.setAttribute('role', 'menu');
     el.setAttribute('aria-label', 'Context menu');
     this.#el = el;

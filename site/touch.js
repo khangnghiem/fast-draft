@@ -33,14 +33,17 @@
  */
 export function setupTouchGestures(canvas, api) {
   let activeTouches = new Map();
-  let lastPinchDist = 0;
-  let lastPinchCenter = { x: 0, y: 0 };
+  let threeFingerStartX = 0;
   let longPressTimer = null;
   let longPressPos = null;
-  let isGesturing = false;
-  let threeFingerStartX = 0;
-  let threeFingerHandled = false;
+  let longPressRingEl = null;
+  let justFinishedPinch = false;
+  let pinchGraceTimer = null;
   let pencilActive = false;
+  let lastPinchDist = 0;
+  let lastPinchCenter = { x: 0, y: 0 };
+  let isGesturing = false;
+  let threeFingerHandled = false;
 
   // Inertia state — weighted velocity for smooth momentum
   const velocityHistory = []; // last 3 frames: [{vx, vy, t}]
@@ -85,6 +88,10 @@ export function setupTouchGestures(canvas, api) {
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       longPressTimer = null;
+    }
+    if (longPressRingEl) {
+      longPressRingEl.remove();
+      longPressRingEl = null;
     }
   }
 
@@ -164,20 +171,41 @@ export function setupTouchGestures(canvas, api) {
       }
     }
 
-    if (count === 1) {
+    if (count === 1 && !justFinishedPinch) {
       // Single finger — start long-press timer for context menu
-      const t = [...activeTouches.values()][0];
-      longPressPos = { x: t.clientX, y: t.clientY };
-      longPressTimer = setTimeout(() => {
-        const fakeEvent = new MouseEvent('contextmenu', {
-          clientX: longPressPos.x,
-          clientY: longPressPos.y,
-          bubbles: true,
-        });
-        canvas.dispatchEvent(fakeEvent);
-        isGesturing = true;
-        longPressTimer = null;
-      }, 500);
+      const fdCanvas = api.getFdCanvas();
+      const tool = fdCanvas?.get_tool_name?.() || 'select';
+      if (tool === 'select' || tool === 'eraser') {
+        const t = [...activeTouches.values()][0];
+        longPressPos = { x: t.clientX, y: t.clientY };
+        
+        const ring = document.createElement('div');
+        ring.className = 'touch-hold-ring';
+        ring.style.left = (longPressPos.x - 22) + 'px';
+        ring.style.top = (longPressPos.y - 22) + 'px';
+        document.body.appendChild(ring);
+        longPressRingEl = ring;
+        
+        longPressTimer = setTimeout(() => {
+          if (longPressRingEl) {
+            longPressRingEl.remove();
+            longPressRingEl = null;
+          }
+          if (typeof window.openContextMenuAt === 'function') {
+            window.openContextMenuAt(longPressPos.x, longPressPos.y, true);
+          } else {
+            const fakeEvent = new MouseEvent('contextmenu', {
+              clientX: longPressPos.x,
+              clientY: longPressPos.y,
+              bubbles: true,
+            });
+            fakeEvent.isTouch = true;
+            canvas.dispatchEvent(fakeEvent);
+          }
+          isGesturing = true;
+          longPressTimer = null;
+        }, 500);
+      }
     } else {
       clearLongPress();
     }
@@ -424,6 +452,12 @@ export function setupTouchGestures(canvas, api) {
     const prevCount = activeTouches.size;
     for (const t of e.changedTouches) {
       activeTouches.delete(t.identifier);
+    }
+
+    if (prevCount >= 2 && activeTouches.size === 1) {
+      justFinishedPinch = true;
+      if (pinchGraceTimer) clearTimeout(pinchGraceTimer);
+      pinchGraceTimer = setTimeout(() => { justFinishedPinch = false; }, 300);
     }
 
     clearLongPress();
