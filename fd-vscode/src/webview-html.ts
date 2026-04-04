@@ -3169,17 +3169,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     <div id="dimension-tooltip"></div>
     <div id="spec-overlay"></div>
     <div id="spec-hover-tooltip"></div>
-    <div id="edge-context-menu">
-      <div class="ecm-row"><span class="ecm-label">Arrow</span><select class="ecm-select" id="ecm-arrow"><option value="end">End →</option><option value="start">← Start</option><option value="both">← Both →</option><option value="none">None</option></select></div>
-      <div class="ecm-row"><span class="ecm-label">Curve</span><select class="ecm-select" id="ecm-curve"><option value="smooth">Smooth</option><option value="straight">Straight</option><option value="step">Step</option></select></div>
-      <hr class="ecm-sep">
-      <div class="ecm-row"><span class="ecm-label">Stroke</span><input type="color" class="ecm-color" id="ecm-stroke-color" value="#999999"><input type="number" class="ecm-input" id="ecm-stroke-width" value="1" min="0.5" max="10" step="0.5"></div>
-      <hr class="ecm-sep">
-      <div class="ecm-row"><span class="ecm-label">Flow</span><select class="ecm-select" id="ecm-flow"><option value="none">None</option><option value="pulse">Pulse</option><option value="dash">Dash</option></select><input type="number" class="ecm-input" id="ecm-flow-dur" value="800" min="100" max="5000" step="100" style="display:none"></div>
-      <hr class="ecm-sep">
-      <div class="ecm-row ecm-action" id="ecm-reverse"><span class="ecm-label">⇆ Reverse Direction</span></div>
-      <div class="ecm-row ecm-action" id="ecm-delete" style="color: var(--fd-destructive, #e55);"><span class="ecm-label">⊖ Delete Edge</span></div>
-    </div>
+
     <div id="center-snap-guides"></div>
     <div id="layers-panel"></div>
     <div class="panel-resize-handle layers-handle" id="layers-resize"></div>

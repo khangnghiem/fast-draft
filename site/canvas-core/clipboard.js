@@ -95,3 +95,71 @@ export function collectDeclaredIds(text) {
   }
   return ids;
 }
+
+/**
+ * Transforms pasted FD text for importing as a component/module.
+ * Implements Smart Detection + Namespace prefixing.
+ *
+ * @param {string} text - The raw FD text to import
+ * @param {string} namespace - The prefix namespace (e.g. "buttons")
+ * @returns {string} The transformed FD text ready to be inserted
+ */
+export function buildImportText(text, namespace) {
+  if (!text || !text.trim()) return '';
+  const lines = text.split('\n');
+
+  // Regex to detect top-level node definitions
+  // Matches "rect @id {...}" or "group @id {" etc, ignoring whitespace at start
+  const topLevelPattern = /^\s*(group|frame|rect|ellipse|path|text|edge|style)\s+@(\w+)/;
+  
+  let rootBlocksCount = 0;
+  for (const line of lines) {
+    // Only count lines that represent root-level blocks (not indented)
+    // Actually, simple heuristic: just count occurrences of node starts without heavy indentation
+    if (topLevelPattern.test(line)) {
+      if (!line.match(/^\s{2,}/)) { // A true root node shouldn't have indent >= 2 spaces
+        rootBlocksCount++;
+      }
+    }
+  }
+
+  // 1. Rename all @ids to @namespace.id
+  let processedText = text;
+  
+  // Find all declared IDs to rename properly
+  const allIdsPattern = /@(\w+)/g;
+  const allIds = new Set();
+  let match;
+  while ((match = allIdsPattern.exec(text)) !== null) {
+    // Ignore if already namespaced like @ns.id or reserved
+    if (match[1] !== 'canvas') {
+      allIds.add(match[1]);
+    }
+  }
+  
+  for (const id of allIds) {
+    // Basic regex replace with word boundaries. Allows dot notation.
+    processedText = processedText.replace(new RegExp(`@${id}\\b`, 'g'), `@${namespace}.${id}`);
+  }
+
+  // 2. Wrap if needed (Smart Detection)
+  let finalText = processedText.trim();
+  
+  if (rootBlocksCount === 0) {
+    return text; // No valid FD blocks found, just return original to let parser handle/error
+  }
+  
+  if (rootBlocksCount === 1) {
+    // #3 Smart Detection: Single root -> flat structure, no wrapper
+    // The namespace prefix already applied above.
+  } else {
+    // Multi-root -> #1 Group Wrap
+    // Wrap the entire processed text in a group labeled @import_namespace
+    
+    // Indent the original text for clean formatting
+    const indented = finalText.split('\n').map(l => l ? '  ' + l : l).join('\n');
+    finalText = `group @import_${namespace} {\n${indented}\n}`;
+  }
+
+  return finalText;
+}

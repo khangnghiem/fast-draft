@@ -201,6 +201,42 @@
   display: flex;
 }
 
+#layers-panel {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.1) transparent;
+}
+
+.lp-layers-footer {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-top: 0.5px solid var(--fd-border);
+  background: var(--fd-surface);
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.import-btn {
+  width: 100%;
+  justify-content: center;
+  font-weight: 500;
+  color: var(--fd-text-secondary);
+  background: var(--fd-segment-bg);
+  border: 0.5px solid var(--fd-border);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+}
+
+.import-btn:hover {
+  color: var(--fd-text);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+
 /* Code editor inside left panel */
 .lp-pane[data-pane="code"] #fd-editor {
   flex: 1;
@@ -1043,6 +1079,14 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   flex-shrink: 0;
   opacity: 0;
   transition: opacity 0.15s ease;
+}
+.layer-lock {
+  flex-shrink: 0;
+  font-size: 10px;
+  margin-left: auto;
+  padding-right: 4px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
 }
 .layer-delete-btn {
   opacity: 0;

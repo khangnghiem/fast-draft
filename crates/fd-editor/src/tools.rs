@@ -234,10 +234,9 @@ impl Tool for SelectTool {
                         let snap_id = hit_node.filter(|&n| n != id);
                         self.target_node = snap_id;
 
-                        let anchor = match snap_id {
-                            Some(sn) => EdgeAnchor::Node(sn),
-                            None => EdgeAnchor::Point(mx, my),
-                        };
+                        // ALWAYS track the cursor exactly during edge drag.
+                        // We will finalize the snap to Node(sn) in PointerUp.
+                        let anchor = EdgeAnchor::Point(mx, my);
 
                         let (from, to) = match handle {
                             ResizeHandle::EdgeStart => (Some(anchor), None),
@@ -394,7 +393,26 @@ impl Tool for SelectTool {
                 }
                 vec![]
             }
-            InputEvent::PointerUp { .. } => {
+            InputEvent::PointerUp { x, y, .. } => {
+                // Determine if we need a final snap mutation for edge drag
+                let mut mutations = vec![];
+                if let Some(handle) = self.resize_handle
+                    && matches!(handle, ResizeHandle::EdgeStart | ResizeHandle::EdgeEnd)
+                    && let Some(id) = self.first_selected()
+                {
+                    use fd_core::model::EdgeAnchor;
+                    let anchor = match self.target_node {
+                        Some(sn) => EdgeAnchor::Node(sn),
+                        None => EdgeAnchor::Point(*x, *y),
+                    };
+                    let (from, to) = match handle {
+                        ResizeHandle::EdgeStart => (Some(anchor), None),
+                        ResizeHandle::EdgeEnd => (None, Some(anchor)),
+                        _ => (None, None),
+                    };
+                    mutations.push(crate::sync::GraphMutation::UpdateEdge { id, from, to });
+                }
+
                 self.target_node = None;
                 // Marquee end is handled by FdCanvas (it calls hit_test_rect)
                 // Deferred Shift+click deselect: if the user Shift+clicked
@@ -406,7 +424,7 @@ impl Tool for SelectTool {
                 }
                 self.dragging = false;
                 self.resize_handle = None;
-                vec![]
+                mutations
             }
             _ => vec![],
         }

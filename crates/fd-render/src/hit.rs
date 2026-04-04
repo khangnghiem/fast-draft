@@ -58,6 +58,9 @@ impl SpatialIndex {
         z: &mut u32,
     ) {
         let node = &graph.graph[idx];
+        if node.locked {
+            return;
+        }
         if !matches!(node.kind, NodeKind::Root)
             && let Some(b) = bounds.get(&idx)
             && b.width > 0.0
@@ -177,6 +180,9 @@ fn hit_test_all_node(
     out: &mut Vec<NodeId>,
 ) {
     let node = &graph.graph[idx];
+    if node.locked {
+        return;
+    }
     // Check self (skip Root)
     if !matches!(node.kind, NodeKind::Root)
         && let Some(b) = bounds.get(&idx)
@@ -197,6 +203,11 @@ fn hit_test_node(
     px: f32,
     py: f32,
 ) -> Option<NodeId> {
+    let node = &graph.graph[idx];
+    if node.locked {
+        return None;
+    }
+
     let children = graph.children(idx);
 
     // Check children in reverse (topmost first)
@@ -241,6 +252,11 @@ fn hit_test_node_excluding(
     py: f32,
     excluded: &std::collections::HashSet<NodeIndex>,
 ) -> Option<NodeId> {
+    let node = &graph.graph[idx];
+    if node.locked {
+        return None;
+    }
+
     let children = graph.children(idx);
 
     for &child_idx in children.iter().rev() {
@@ -293,6 +309,9 @@ fn collect_intersecting(
     out: &mut Vec<NodeId>,
 ) {
     let node = &graph.graph[idx];
+    if node.locked {
+        return;
+    }
 
     if !matches!(node.kind, NodeKind::Root)
         && let Some(b) = bounds.get(&idx)

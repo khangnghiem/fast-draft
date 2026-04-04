@@ -46,6 +46,7 @@
 | `⌘C`                   | Copy                     |
 | `⌘X`                   | Cut                      |
 | `⌘V`                   | Paste                    |
+| `⌘⇧L`                  | Lock Selection           |
 
 ---
 

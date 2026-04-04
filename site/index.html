@@ -187,6 +187,12 @@
                   <!-- Layers Pane -->
                   <div class="lp-pane active" data-pane="layers">
                     <div id="layers-panel"></div>
+                    <div class="lp-layers-footer">
+                      <button id="lp-import-btn" class="layer-action-btn import-btn" title="Import code/components (⌘⇧I)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Import
+                      </button>
+                    </div>
                   </div>
                   <!-- Code Pane -->
                   <div class="lp-pane" data-pane="code">
@@ -434,6 +440,22 @@
       <input type="color" id="qcp-custom-input" value="#007AFF">
       +
     </button>
+  </div>
+
+  <!-- Import Modal -->
+  <div id="import-modal" class="share-modal">
+    <div class="share-card" style="width: 480px; max-width: 90vw;">
+      <div class="share-header">
+        <span class="share-title">📦 Import Module</span>
+        <button class="share-close" id="import-modal-close">✕</button>
+      </div>
+      <p class="share-hint" style="text-align: left; margin: 0 0 12px 0;">Paste Fast Draft code below. It will be safely wrapped in a group and namespaced.</p>
+      <textarea id="import-textarea" class="share-url" style="height: 200px; resize: vertical; font-family: monospace; white-space: pre; margin-bottom: 12px;" placeholder="rect @my_component { ... }"></textarea>
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button class="share-copy-btn" id="import-cancel-btn" style="background: transparent; color: var(--fd-text); border: 1px solid var(--fd-border);">Cancel</button>
+        <button class="share-copy-btn" id="import-submit-btn">Auto-Wrap & Import</button>
+      </div>
+    </div>
   </div>
 
   <!-- Share Modal -->

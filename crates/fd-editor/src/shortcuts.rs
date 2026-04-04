@@ -61,6 +61,7 @@ pub enum ShortcutAction {
     // ── Hierarchy ──
     Group,
     Ungroup,
+    LockSelection,
 
     // ── Style ──
     /// Copy selected node's style to clipboard (⌥⌘C).
@@ -112,6 +113,7 @@ impl ShortcutMap {
         if cmd && shift {
             return match key {
                 "z" | "Z" => Some(ShortcutAction::Redo),
+                "l" | "L" => Some(ShortcutAction::LockSelection),
                 "[" => Some(ShortcutAction::SendToBack),
                 "]" => Some(ShortcutAction::BringToFront),
                 "?" => Some(ShortcutAction::ShowHelp),

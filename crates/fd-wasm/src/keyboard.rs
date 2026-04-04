@@ -236,6 +236,7 @@ impl FdCanvas {
             | ShortcutAction::PanStart
             | ShortcutAction::PanEnd
             | ShortcutAction::ShowHelp
+            | ShortcutAction::LockSelection
             | ShortcutAction::ExportExcalidraw => (false, false),
 
             // Style clipboard
@@ -320,6 +321,7 @@ pub(crate) fn action_to_name(action: ShortcutAction) -> &'static str {
         ShortcutAction::ShowHelp => "showHelp",
         ShortcutAction::CopyStyle => "copyStyle",
         ShortcutAction::PasteStyle => "pasteStyle",
+        ShortcutAction::LockSelection => "lockSelection",
         ShortcutAction::ExportExcalidraw => "exportExcalidraw",
     }
 }

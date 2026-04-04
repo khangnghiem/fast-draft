@@ -1,6 +1,8 @@
 // ── Layers Panel ──────────────────────────────────────────────────────────
 // Handles layer tree rendering, hierarchical drag-and-drop, and context menus.
 
+import { buildUnifiedNodeMenu } from './canvas-core/menu-registry.js?v=0.11.334';
+
 export function initLayersPanel(api) {
   /** ─── Layers Panel ────────────────────────────────────────────────────── */
   const LAYER_ICONS = {
@@ -85,8 +87,12 @@ export function initLayersPanel(api) {
     html += `<span class="layer-indent">${indent}</span>`;
     html += chevron;
     html += `<span class="layer-icon">${icon}</span>`;
+    const isLocked = api.getFdCanvas() && api.getFdCanvas().is_node_locked && api.getFdCanvas().is_node_locked(node.id);
     html += `<span class="layer-name">${escHtml(node.id)}</span>`;
     html += `<span class="layer-kind">${escHtml(node.kind)}</span>`;
+    if (isLocked) {
+      html += `<span class="layer-lock" title="Locked">🔒</span>`;
+    }
     html += `<button class="layer-action-btn layer-delete-btn" aria-label="Delete" title="Delete Node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>`;
     html += '</div>';
   
@@ -527,47 +533,8 @@ export function initLayersPanel(api) {
         }
         const isLocked = api.getFdCanvas().is_node_locked ? api.getFdCanvas().is_node_locked(nodeId) : false;
   
-        // Build items array
-        const items = [];
-  
-        // Rename
-        items.push({ type: 'action', icon: '✏️', label: 'Rename', action: 'rename' });
-        items.push({ type: 'separator' });
-  
-        // Clipboard
-        items.push({ type: 'action', icon: '✂', label: 'Cut', shortcut: '⌘X', action: 'cut' });
-        items.push({ type: 'action', icon: '⎘', label: 'Copy', shortcut: '⌘C', action: 'copy' });
-        items.push({ type: 'action', icon: '📋', label: 'Paste', shortcut: '⌘V', action: 'paste' });
-        items.push({ type: 'action', icon: '🖼', label: 'Copy as PNG', shortcut: '⌘⇧C', action: 'copy-png' });
-        items.push({ type: 'separator' });
-  
-        // Structure
-        items.push({ type: 'action', icon: '⊕', label: 'Duplicate', shortcut: '⌘D', action: 'duplicate' });
-        items.push({ type: 'action', icon: '◻', label: 'Group', shortcut: '⌘G', action: 'group', disabled: !canGroup });
-        items.push({ type: 'action', icon: '◫', label: 'Ungroup', shortcut: '⇧⌘G', action: 'ungroup', disabled: !canUngroup });
-        items.push({ type: 'action', icon: '⊞', label: 'Frame Selection', action: 'frame' });
-        items.push({ type: 'separator' });
-  
-        // Z-order
-        items.push({ type: 'action', icon: '↑', label: 'Bring to Front', shortcut: '⌘⇧]', action: 'bring-front' });
-        items.push({ type: 'action', icon: '↓', label: 'Send to Back', shortcut: '⌘⇧[', action: 'send-back' });
-  
-        // Lock
-        items.push({ type: 'action', icon: isLocked ? '🔓' : '🔒', label: isLocked ? 'Unlock' : 'Lock', action: 'lock' });
-  
-        // Select Children (containers only)
-        if (isContainer && hasChildren) {
-          items.push({ type: 'action', icon: '📂', label: 'Select Children', action: 'select-children' });
-        }
-        items.push({ type: 'separator' });
-  
-        // Move Into — opens searchable picker
-        items.push({ type: 'action', icon: '📦', label: 'Move Into…', action: 'move-into-search' });
-        items.push({ type: 'action', icon: '↑', label: 'Move to Root', action: 'move-to-root' });
-        items.push({ type: 'separator' });
-  
-        // Delete
-        items.push({ type: 'action', icon: '✕', label: 'Delete', shortcut: '⌫', action: 'delete', danger: true });
+        // Build items array using the registry
+        const items = buildUnifiedNodeMenu(nodeId, selectedIds, isContainer, hasChildren, isLocked, canGroup, canUngroup, source);
   
         // Action handler for layer-specific actions
         const doLayerAction = (action, el) => {
@@ -581,7 +548,7 @@ export function initLayersPanel(api) {
           } else if (action === 'cut') {
             api.copySelectedAsFd();
             changed = api.getFdCanvas().delete_selected();
-          } else if (action === 'copy') {
+          } else if (action === 'copy' || action === 'copy-fd') {
             api.copySelectedAsFd();
             return;
           } else if (action === 'paste') {
@@ -611,7 +578,7 @@ export function initLayersPanel(api) {
             const resultJson = api.getFdCanvas().handle_key('[', false, true, false, true);
             const result = JSON.parse(resultJson);
             changed = result.changed;
-          } else if (action === 'lock') {
+          } else if (action === 'toggle-lock') {
             if (api.getFdCanvas().toggle_node_locked) {
               api.getFdCanvas().toggle_node_locked(nodeId);
               changed = true;

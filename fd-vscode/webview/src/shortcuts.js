@@ -319,6 +319,26 @@ document.addEventListener("keydown", (e) => {
       render();
       syncTextToExtension();
       break;
+    case "lockSelection":
+      if (fdCanvas && fdCanvas.get_selected_ids) {
+        const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+        let graphChanged = false;
+        for (const id of selectedIds) {
+          if (fdCanvas.toggle_node_locked) {
+            fdCanvas.toggle_node_locked(id);
+            graphChanged = true;
+          }
+        }
+        if (graphChanged) {
+          bumpGeneration();
+          render();
+          syncTextToExtension();
+          updatePropertiesPanel();
+          updateFloatingBar();
+          if (typeof refreshLayersPanel === "function") refreshLayersPanel();
+        }
+      }
+      break;
     case "showHelp":
       toggleShortcutHelp();
       break;
