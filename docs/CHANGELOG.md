@@ -17,6 +17,9 @@
 
 ## Completed Requirements
 
+### v0.11.341 — Sidebar Toggle Fade Transition Polish
+- **UI:** Replaced `display: none` with opacity/visibility transitions for the canvas-chrome sidebar toggles (`#sidebar-toggle-btn`, `#hamburger-toggle-btn`) to prevent visual popping when swapped with the in-panel toggle buttons.
+
 ### v0.11.340 — Toolbar Responsiveness & Minimization Polish
 
 - **Phantom Shift Elimination**: Redesigned `getCanvasRect()` to return full viewport width instead of artificially narrowing the canvas mathematical boundary. This prevents the "phantom shift" bug where the floating toolbar repositioned horizontally whenever side panels opened or closed, effectively decoupling toolbar placement from non-colliding components.
