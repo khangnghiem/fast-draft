@@ -21,9 +21,11 @@
 
 - **Desktop Overlay Promotion**: Converted `#left-panel` and `#right-panel` from CSS Grid column members to `position: absolute` overlays. Panels slide in/out via `transform: translateX()` transitions (300ms `cubic-bezier(0.4, 0.0, 0.2, 1)`), eliminating canvas buffer clears and layout thrashing during toggling.
 - **Stable Full-Width Canvas**: `#canvas-content` reduced to a single `1fr` grid column. The canvas is now always full-width; panels overlay it as floating surfaces rather than shrinking the available area.
+- **Dynamic Chrome Positioning**: Refactored `.canvas-chrome-left` and `.canvas-chrome-right` to use absolute positioning with `transform: translateX()`, dynamically tracking panel widths. This ensures setting/export icons seamlessly shift out of the way when the right panel opens, and toggle buttons remain visible and correctly positioned when panels are closed.
+- **Auto-Collapse Edge Guard**: Dragging panel resize handles (`#layers-resize`, `#right-resize`) below 80px now automatically collapses the panel, releases the pointer capture, and smoothly slides the panel out of view via CSS `transitionend` synchrony.
 - **Transitionend Side-Effect Deferral**: Layout-dependent callbacks (`resizeCanvas`, `reclampToolbar`, `positionLayersHandle`) moved to `transitionend` event listeners inside `toggleLeftPanel()` / `toggleRightPanel()`, preventing synchronous layout recalculations mid-animation.
-- **Collision Mitigation**: CSS variables `--left-panel-width` / `--right-panel-width` retained as "offset hints" for secondary UI (minimap, FAB, onboarding hints). Resize handles (`#layers-resize`, `#right-resize`) set to `pointer-events: none` during transitions to prevent interaction collisions.
-- **Accessibility**: `prefers-reduced-motion` media queries reduce all panel transitions to `0ms` duration, ensuring compliance with OS accessibility settings.
+- **Collision Mitigation**: CSS variables `--left-panel-width` / `--right-panel-width` retained as "offset hints" for secondary UI (minimap, FAB, onboarding hints). Resize handles set to `pointer-events: none` during transitions to prevent interaction collisions.
+- **Accessibility**: `prefers-reduced-motion` media queries reduce all panel and chrome transitions to `0ms` duration, ensuring compliance with OS accessibility settings.
 
 ### v0.11.338 — Fix Toolbar Vertical Jump (Bug Fix)
 
