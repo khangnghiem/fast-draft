@@ -195,11 +195,12 @@ export function fitToContent(canvasEl, fdCanvas, onComplete) {
     const text = fdCanvas.get_text();
     const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
     const nodes = [];
-    let m;
-    while ((m = idRegex.exec(text)) !== null) {
+    // Bolt Optimization: replaced stateful exec with matchAll, and use get_node_bounds_json
+    // to avoid the WASM error boundary that get_node_bounds has when nodes aren't found.
+    for (const m of text.matchAll(idRegex)) {
       try {
-        const bj = fdCanvas.get_node_bounds(m[1]);
-        if (!bj) continue;
+        const bj = fdCanvas.get_node_bounds_json(m[1]);
+        if (!bj || bj === "{}" || bj.length <= 2) continue;
         const b = JSON.parse(bj);
         if (b.width > 0 && b.height > 0) nodes.push(b);
       } catch (_) {}
@@ -241,11 +242,12 @@ export function getSceneBounds(fdCanvas) {
     const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
     let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
     let found = false;
-    let m;
-    while ((m = idRegex.exec(text)) !== null) {
+    // Bolt Optimization: replaced stateful exec with matchAll, and use get_node_bounds_json
+    // to avoid the WASM error boundary that get_node_bounds has when nodes aren't found.
+    for (const m of text.matchAll(idRegex)) {
       try {
-        const bj = fdCanvas.get_node_bounds(m[1]);
-        if (!bj) continue;
+        const bj = fdCanvas.get_node_bounds_json(m[1]);
+        if (!bj || bj === "{}" || bj.length <= 2) continue;
         const b = JSON.parse(bj);
         if (b.width > 0 && b.height > 0) {
           sx = Math.min(sx, b.x);
