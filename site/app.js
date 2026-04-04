@@ -871,8 +871,8 @@ function initOnboarding() {
     document.removeEventListener('pointerdown', dismiss);
     CanvasTips.init(); // Start passive tips AFTER initial onboarding is dismissed
   };
-  // Auto-dismiss after 8s
-  setTimeout(dismiss, 8000);
+  // Auto-dismiss after 15s
+  setTimeout(dismiss, 15000);
   // Or dismiss on any user interaction
   document.addEventListener('keydown', dismiss, { once: true });
   document.addEventListener('pointerdown', dismiss, { once: true });

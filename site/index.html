@@ -358,7 +358,14 @@
                         <span id="ai-chat-context-text"></span>
                         <button id="ai-chat-context-clear" title="Clear context">×</button>
                       </div>
-                      <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Describe your design changes..." rows="1" maxlength="500"></textarea>
+                      <div class="ai-chat-input-main-row">
+                        <button class="ai-chat-upload-btn" id="ai-chat-upload" title="Add context (Docs, Images, Camera)">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 5v14M5 12h14"/>
+                          </svg>
+                        </button>
+                        <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Describe your design changes..." rows="1" maxlength="500"></textarea>
+                      </div>
                       <div class="ai-chat-input-footer">
                         <div class="ai-model-selector">
                           <select id="ai-model-select" class="ai-model-dropdown">
@@ -403,7 +410,7 @@
               <div class="onboarding-note" style="top:70px;left:50%;transform:translateX(-50%)">← drag handles to move toolbar →</div>
               <div class="onboarding-note" style="top:50%;left:50%;transform:translate(-50%,-50%)">pick a tool, then click canvas to draw ✏️</div>
               <div class="onboarding-note" style="top:60%;left:50%;transform:translate(-50%,-50%);font-size:14px">or drag a tool onto the canvas</div>
-              <div class="onboarding-note" style="bottom:50px;right:20px">your minimap ↓</div>
+              <div class="onboarding-note" style="bottom: 130px; right: calc(var(--right-panel-width, 0px) + 24px)">your minimap & zoom controls ↓</div>
               <div class="onboarding-note onboarding-welcome" style="top:35%;left:50%;transform:translate(-50%,-50%)">👋 welcome to fast draft!</div>
             </div>
             </div><!-- /canvas-content -->
