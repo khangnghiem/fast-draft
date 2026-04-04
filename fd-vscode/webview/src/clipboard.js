@@ -220,10 +220,13 @@ function selectAllNodes() {
 
   if (ids.length === 0) return;
 
-  // Select the first node (multi-select would need WASM API support)
-  // Select the first node
+// Select all nodes
   if (ids.length > 0) {
-    fdCanvas.select_by_id(ids[0]);
+    if (typeof fdCanvas.select_multiple_by_ids === "function") {
+      fdCanvas.select_multiple_by_ids(JSON.stringify(ids));
+    } else {
+      fdCanvas.select_by_id(ids[0]);
+    }
     render();
     updatePropertiesPanel();
   }

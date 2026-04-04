@@ -386,8 +386,12 @@ function renderLayerNode(node, selectedIds, depth = 0) {
   html += `<span class="layer-indent">${indent}</span>`;
   html += chevron;
   html += `<span class="layer-icon">${icon}</span>`;
+  const isLocked = fdCanvas && fdCanvas.is_node_locked && fdCanvas.is_node_locked(node.id);
   html += `<span class="layer-name">${escapeHtml(node.id)}${textPreview}</span>`;
   html += `<span class="layer-kind">${escapeHtml(node.kind)}</span>`;
+  if (isLocked) {
+    html += `<span class="layer-lock" title="Locked">🔒</span>`;
+  }
   html += `<span class="layer-actions" data-actions-id="${escapeAttr(node.id)}" title="More actions">⋮</span>`;
   html += `<span class="layer-eye" data-eye-id="${escapeAttr(node.id)}" title="Toggle visibility">👁</span>`;
   html += `</div>`;
@@ -1474,6 +1478,107 @@ function wireLayerKeyboardShortcuts(panel) {
       e.preventDefault();
       e.stopPropagation();
       selectAllNodes();
+      refreshLayersPanel();
+      return;
+    }
+
+    // Enter → Rename
+    if (key === 'enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      const sel = panel.querySelector('.layer-item.selected .layer-name');
+      if (sel) {
+        // Trigger the dblclick handler that sets up inline rename
+        sel.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      }
+      return;
+    }
+
+    // Space → Toggle Visibility
+    if (key === ' ' || key === 'spacebar') {
+      e.preventDefault();
+      e.stopPropagation();
+      const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      for (const id of selectedIds) {
+        toggleNodeVisibility(id);
+      }
+      return;
+    }
+
+    // ⌘G → Group / ⌘⇧G → Ungroup
+    if (meta && key === 'g') {
+      e.preventDefault();
+      e.stopPropagation();
+      const changed = e.shiftKey ? fdCanvas.ungroup_selected() : fdCanvas.group_selected();
+      if (changed) {
+        bumpGeneration();
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+        updateFloatingBar();
+        refreshLayersPanel();
+      }
+      return;
+    }
+
+    // ⌘⇧L → Lock Selection
+    if (meta && e.shiftKey && key === 'l') {
+      e.preventDefault();
+      e.stopPropagation();
+      const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      let changed = false;
+      for (const id of selectedIds) {
+        if (fdCanvas.toggle_node_locked) {
+          fdCanvas.toggle_node_locked(id);
+          changed = true;
+        }
+      }
+      if (changed) {
+        bumpGeneration();
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+        updateFloatingBar();
+        refreshLayersPanel();
+      }
+      return;
+    }
+
+    // Up / Down arrow navigation
+    if (key === 'arrowup' || key === 'arrowdown') {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const tree = parseLayerTree(fdCanvas.get_text());
+      const flatIds = flattenLayerTree(tree, panel);
+      if (flatIds.length === 0) return;
+
+      const currentSelectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      let focusId = lastLayerSelectedId;
+      if (currentSelectedIds.length > 0 && !flatIds.includes(focusId)) {
+        focusId = currentSelectedIds[0];
+      }
+
+      let idx = flatIds.indexOf(focusId);
+      if (idx === -1) idx = 0;
+
+      const newIdx = key === 'arrowup' ? Math.max(0, idx - 1) : Math.min(flatIds.length - 1, idx + 1);
+      const targetId = flatIds[newIdx];
+
+      if (e.shiftKey) {
+        // Extend selection
+        const newSelectedIds = new Set(currentSelectedIds);
+        newSelectedIds.add(targetId);
+        fdCanvas.select_multiple_by_ids(JSON.stringify([...newSelectedIds]));
+      } else {
+        // Single selection
+        fdCanvas.select_by_id(targetId);
+      }
+
+      lastLayerSelectedId = targetId;
+      render();
+      updatePropertiesPanel();
+      updateFloatingBar();
       refreshLayersPanel();
       return;
     }

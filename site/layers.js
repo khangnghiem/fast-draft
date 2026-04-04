@@ -85,8 +85,12 @@ export function initLayersPanel(api) {
     html += `<span class="layer-indent">${indent}</span>`;
     html += chevron;
     html += `<span class="layer-icon">${icon}</span>`;
+    const isLocked = api.getFdCanvas() && api.getFdCanvas().is_node_locked && api.getFdCanvas().is_node_locked(node.id);
     html += `<span class="layer-name">${escHtml(node.id)}</span>`;
     html += `<span class="layer-kind">${escHtml(node.kind)}</span>`;
+    if (isLocked) {
+      html += `<span class="layer-lock" title="Locked">🔒</span>`;
+    }
     html += `<button class="layer-action-btn layer-delete-btn" aria-label="Delete" title="Delete Node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>`;
     html += '</div>';
   

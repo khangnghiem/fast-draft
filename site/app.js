@@ -4222,6 +4222,56 @@ async function initPlayground() {
       }
     });
 
+    // ── Import Modal ──────────────────────────────────────────────────
+    document.getElementById('lp-import-btn')?.addEventListener('click', () => {
+      const modal = document.getElementById('import-modal');
+      const textarea = document.getElementById('import-textarea');
+      if (modal && textarea) {
+        textarea.value = '';
+        modal.classList.add('visible');
+        setTimeout(() => textarea.focus(), 100);
+      }
+    });
+
+    const closeImportModal = () => {
+      document.getElementById('import-modal')?.classList.remove('visible');
+    };
+
+    document.getElementById('import-modal-close')?.addEventListener('click', closeImportModal);
+    document.getElementById('import-cancel-btn')?.addEventListener('click', closeImportModal);
+    document.getElementById('import-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'import-modal') closeImportModal();
+    });
+
+    document.getElementById('import-submit-btn')?.addEventListener('click', async () => {
+      const textarea = document.getElementById('import-textarea');
+      if (!textarea || !textarea.value.trim() || !fdCanvas) return;
+
+      const rawText = textarea.value;
+      
+      // Dynamic import to avoid loading errors if not globally available
+      const clipMod = await import('./canvas-core/clipboard.js');
+      const namespace = 'import_' + Math.random().toString(36).substring(2, 6);
+      
+      const transformedText = clipMod.buildImportText(rawText, namespace);
+      if (!transformedText) {
+        closeImportModal();
+        return;
+      }
+
+      const textBefore = fdCanvas.get_text();
+      const updatedText = textBefore.trimEnd() + '\n\n' + transformedText + '\n';
+      fdCanvas.set_text(updatedText);
+      fdCanvas.push_undo_snapshot(textBefore, updatedText);
+
+      renderCanvas();
+      syncCanvasToEditor();
+      updatePropertiesPanel();
+      if (typeof refreshLayersPanel === 'function') refreshLayersPanel();
+      closeImportModal();
+    });
+
+
     // ── Quick Color Picker ────────────────────────────────────────────
     const qcp = document.getElementById('quick-color-picker');
     if (qcp) {
@@ -5782,6 +5832,24 @@ async function initPlayground() {
           const r = JSON.parse(fdCanvas.handle_key(e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey));
 
           // Handle export actions returned from WASM
+          if (r.action === 'lockSelection') {
+            e.preventDefault();
+            if (fdCanvas && fdCanvas.get_selected_ids && fdCanvas.toggle_node_locked) {
+              const ids = JSON.parse(fdCanvas.get_selected_ids());
+              if (ids.length > 0) {
+                for (const id of ids) {
+                  fdCanvas.toggle_node_locked(id);
+                }
+                renderDirty = true; uiDirty = true;
+                syncCanvasToEditor();
+                updatePropertiesPanel();
+                refreshLayersPanel();
+                showToast(`Locked/Unlocked ${ids.length} item(s)`);
+              }
+            }
+            return;
+          }
+
           if (r.action === 'exportExcalidraw') {
             e.preventDefault();
             try {

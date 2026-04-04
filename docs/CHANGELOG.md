@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.336 — Layer Locking and Shortcut Parity
+
+- **Selection Locking (`Cmd+Shift+L`)**: Implemented a core locking mechanism for the Fast Draft canvas. Users can now press `Cmd+Shift+L` to toggle the locked state of their current selection. The lock state is universally preserved within the `.fd` file data model.
+- **Visual Feedback**: The Layers panel dynamic `<li class="layer-item">` component has been upgraded to conditionally inject a subtle lock icon (`.layer-lock`) aligned to the right side of locked nodes.
+
 ### v0.11.335 — Context Menu Text Selection Fix (UI Polish)
 
 - **Text Selection Prevention**: Added `user-select: none` to the `.ctx-menu` container in `site/css/menus.css`. This prevents the browser from highlighting text within the context menu when users double-click or drag over menu items, ensuring compliance with Apple HIG native-app interaction standards.

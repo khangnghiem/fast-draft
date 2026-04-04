@@ -585,6 +585,74 @@ function collectDeclaredIds(text) {
   }
   return ids;
 }
+
+/**
+ * Transforms pasted FD text for importing as a component/module.
+ * Implements Smart Detection + Namespace prefixing.
+ *
+ * @param {string} text - The raw FD text to import
+ * @param {string} namespace - The prefix namespace (e.g. "buttons")
+ * @returns {string} The transformed FD text ready to be inserted
+ */
+function buildImportText(text, namespace) {
+  if (!text || !text.trim()) return '';
+  const lines = text.split('\n');
+
+  // Regex to detect top-level node definitions
+  // Matches "rect @id {...}" or "group @id {" etc, ignoring whitespace at start
+  const topLevelPattern = /^\s*(group|frame|rect|ellipse|path|text|edge|style)\s+@(\w+)/;
+  
+  let rootBlocksCount = 0;
+  for (const line of lines) {
+    // Only count lines that represent root-level blocks (not indented)
+    // Actually, simple heuristic: just count occurrences of node starts without heavy indentation
+    if (topLevelPattern.test(line)) {
+      if (!line.match(/^\s{2,}/)) { // A true root node shouldn't have indent >= 2 spaces
+        rootBlocksCount++;
+      }
+    }
+  }
+
+  // 1. Rename all @ids to @namespace.id
+  let processedText = text;
+  
+  // Find all declared IDs to rename properly
+  const allIdsPattern = /@(\w+)/g;
+  const allIds = new Set();
+  let match;
+  while ((match = allIdsPattern.exec(text)) !== null) {
+    // Ignore if already namespaced like @ns.id or reserved
+    if (match[1] !== 'canvas') {
+      allIds.add(match[1]);
+    }
+  }
+  
+  for (const id of allIds) {
+    // Basic regex replace with word boundaries. Allows dot notation.
+    processedText = processedText.replace(new RegExp(`@${id}\\b`, 'g'), `@${namespace}.${id}`);
+  }
+
+  // 2. Wrap if needed (Smart Detection)
+  let finalText = processedText.trim();
+  
+  if (rootBlocksCount === 0) {
+    return text; // No valid FD blocks found, just return original to let parser handle/error
+  }
+  
+  if (rootBlocksCount === 1) {
+    // #3 Smart Detection: Single root -> flat structure, no wrapper
+    // The namespace prefix already applied above.
+  } else {
+    // Multi-root -> #1 Group Wrap
+    // Wrap the entire processed text in a group labeled @import_namespace
+    
+    // Indent the original text for clean formatting
+    const indented = finalText.split('\n').map(l => l ? '  ' + l : l).join('\n');
+    finalText = `group @import_${namespace} {\n${indented}\n}`;
+  }
+
+  return finalText;
+}
 // ── canvas-core/viewport.js ──
 // ─── canvas-core/viewport.js ─── Shared viewport geometry
 // Pure math and geometry — no DOM or platform dependencies.
@@ -6470,6 +6538,84 @@ function wireLayerKeyboardShortcuts(panel) {
       refreshLayersPanel();
       return;
     }
+
+    // Enter → Rename
+    if (key === 'enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      const sel = panel.querySelector('.layer-item.selected .layer-name');
+      if (sel) {
+        // Trigger the dblclick handler that sets up inline rename
+        sel.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      }
+      return;
+    }
+
+    // Space → Toggle Visibility
+    if (key === ' ' || key === 'spacebar') {
+      e.preventDefault();
+      e.stopPropagation();
+      const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      for (const id of selectedIds) {
+        toggleNodeVisibility(id);
+      }
+      return;
+    }
+
+    // ⌘G → Group / ⌘⇧G → Ungroup
+    if (meta && key === 'g') {
+      e.preventDefault();
+      e.stopPropagation();
+      const changed = e.shiftKey ? fdCanvas.ungroup_selected() : fdCanvas.group_selected();
+      if (changed) {
+        bumpGeneration();
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+        updateFloatingBar();
+        refreshLayersPanel();
+      }
+      return;
+    }
+
+    // Up / Down arrow navigation
+    if (key === 'arrowup' || key === 'arrowdown') {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const tree = parseLayerTree(fdCanvas.get_text());
+      const flatIds = flattenLayerTree(tree, panel);
+      if (flatIds.length === 0) return;
+
+      const currentSelectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      let focusId = lastLayerSelectedId;
+      if (currentSelectedIds.length > 0 && !flatIds.includes(focusId)) {
+        focusId = currentSelectedIds[0];
+      }
+
+      let idx = flatIds.indexOf(focusId);
+      if (idx === -1) idx = 0;
+
+      const newIdx = key === 'arrowup' ? Math.max(0, idx - 1) : Math.min(flatIds.length - 1, idx + 1);
+      const targetId = flatIds[newIdx];
+
+      if (e.shiftKey) {
+        // Extend selection
+        const newSelectedIds = new Set(currentSelectedIds);
+        newSelectedIds.add(targetId);
+        fdCanvas.select_multiple_by_ids(JSON.stringify([...newSelectedIds]));
+      } else {
+        // Single selection
+        fdCanvas.select_by_id(targetId);
+      }
+
+      lastLayerSelectedId = targetId;
+      render();
+      updatePropertiesPanel();
+      updateFloatingBar();
+      refreshLayersPanel();
+      return;
+    }
   });
 }
 
@@ -9154,10 +9300,13 @@ function selectAllNodes() {
 
   if (ids.length === 0) return;
 
-  // Select the first node (multi-select would need WASM API support)
-  // Select the first node
+// Select all nodes
   if (ids.length > 0) {
-    fdCanvas.select_by_id(ids[0]);
+    if (typeof fdCanvas.select_multiple_by_ids === "function") {
+      fdCanvas.select_multiple_by_ids(JSON.stringify(ids));
+    } else {
+      fdCanvas.select_by_id(ids[0]);
+    }
     render();
     updatePropertiesPanel();
   }
