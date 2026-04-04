@@ -317,15 +317,17 @@ function getAllNodeBounds() {
   return nodes;
 }
 
-/** Get current layers panel width (dynamic for resize). */
+/** Get current layers panel width.
+ * Panels are now absolute overlays — canvas is always full-width, so this returns 0.
+ * Kept for call-site compatibility. */
 function getLayersPanelWidth() {
-  const panel = document.getElementById('layers-panel');
-  return panel ? panel.offsetWidth : 0;
+  return 0;
 }
-/** Get current right panel width (dynamic for resize). */
+/** Get current right panel width.
+ * Panels are now absolute overlays — canvas is always full-width, so this returns 0.
+ * Kept for call-site compatibility. */
 function getRightPanelWidth() {
-  const panel = document.getElementById('right-panel');
-  return (panel && document.documentElement.dataset.rp !== 'closed') ? panel.offsetWidth : 0;
+  return 0;
 }
 
 
@@ -703,6 +705,7 @@ function toggleLeftPanel() {
   const h = document.documentElement;
   const isCollapsed = h.dataset.lp === 'open'; // toggling: open → closed
   h.dataset.lp = isCollapsed ? 'closed' : 'open';
+  // Update CSS var offset hints (for minimap, onboarding-hints tracking)
   if (isCollapsed) {
     h.style.setProperty('--left-panel-width', '0px');
   } else {
@@ -712,12 +715,22 @@ function toggleLeftPanel() {
     switchLeftTab(activeLeftTab);
   }
   localStorage.setItem('fd-left-collapsed', isCollapsed ? '1' : '');
-  requestAnimationFrame(() => {
-    window.__fdPositionLayersHandle?.();  // keep resize handle at panel edge
+
+  // Disable resize handle and re-position post-slide (prevents ghost handle)
+  const layersHandle = document.getElementById('layers-resize');
+  if (layersHandle) layersHandle.style.pointerEvents = 'none';
+
+  // All layout-dependent side-effects fire at transitionend — not mid-animation
+  panel.addEventListener('transitionend', function onEnd(e) {
+    if (e.propertyName !== 'transform') return; // only act on the slide
+    panel.removeEventListener('transitionend', onEnd);
+    if (layersHandle) {
+      layersHandle.style.pointerEvents = '';
+      window.__fdPositionLayersHandle?.(); // re-clamp handle at panel edge
+    }
     window.dispatchEvent(new Event('resize'));
-    resizeCanvas();
-    // Re-clamp toolbar after grid recalculates (double-rAF for layout settle)
-    requestAnimationFrame(() => window.__fdReclampToolbar?.());
+    resizeCanvas(); // called once, with stable geometry
+    window.__fdReclampToolbar?.(); // re-snap toolbar after panel settled
   });
 }
 
@@ -730,12 +743,22 @@ function toggleRightPanel() {
   h.dataset.rp = isCollapsed ? 'closed' : 'open';
   updateRightPanelWidth(!isCollapsed);
   localStorage.setItem('fd-right-collapsed', isCollapsed ? '1' : '');
-  requestAnimationFrame(() => {
-    window.__fdPositionRightHandle?.();  // keep resize handle at panel edge
+
+  // Disable resize handle and re-position post-slide (prevents ghost handle)
+  const rightHandle = document.getElementById('right-resize');
+  if (rightHandle) rightHandle.style.pointerEvents = 'none';
+
+  // All layout-dependent side-effects fire at transitionend — not mid-animation
+  panel.addEventListener('transitionend', function onEnd(e) {
+    if (e.propertyName !== 'transform') return;
+    panel.removeEventListener('transitionend', onEnd);
+    if (rightHandle) {
+      rightHandle.style.pointerEvents = '';
+      window.__fdPositionRightHandle?.();
+    }
     window.dispatchEvent(new Event('resize'));
     resizeCanvas();
-    // Re-clamp toolbar after grid recalculates (double-rAF for layout settle)
-    requestAnimationFrame(() => window.__fdReclampToolbar?.());
+    window.__fdReclampToolbar?.();
   });
 }
 

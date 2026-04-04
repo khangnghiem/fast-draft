@@ -1,7 +1,50 @@
-/* ─── Right Panel (CSS Grid column 3) ─── */
+/* ─── Left Panel: Overlay (slides over canvas) ─── */
+#left-panel {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: var(--left-panel-width, 260px);
+  min-width: 0;
+  max-width: 500px;
+  background: var(--fd-surface);
+  border-right: 0.5px solid var(--fd-border);
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  overflow: hidden;
+  /* Slide transition — GPU-composited, never triggers canvas resize */
+  transform: translateX(0);
+  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1),
+              box-shadow 0.25s ease,
+              visibility 0s 0s;
+  will-change: transform;
+}
+[data-lp="closed"] #left-panel {
+  transform: translateX(-100%);
+  box-shadow: none;
+  pointer-events: none;
+  visibility: hidden; /* release GPU compositing layer when fully hidden */
+  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1),
+              box-shadow 0.25s ease,
+              visibility 0s 0.25s; /* delay hide until slide-out finishes */
+}
+[data-lp="open"] #left-panel {
+  transform: translateX(0);
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.12);
+  visibility: visible;
+  pointer-events: auto;
+  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1),
+              box-shadow 0.25s ease,
+              visibility 0s 0s;
+}
+
+/* ─── Right Panel: Overlay (slides over canvas) ─── */
 #right-panel {
-  grid-column: 3;
-  grid-row: 1;
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: var(--right-panel-width, 260px);
+  min-width: 0;
   display: flex;
   flex-direction: column;
   background: var(--fd-surface);
@@ -12,26 +55,31 @@
   font-size: 11px;
   color: var(--fd-text);
   overflow: hidden;
-  min-width: 0; /* allow grid to shrink to 0 */
+  /* Slide transition — GPU-composited, never triggers canvas resize */
+  transform: translateX(0);
+  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1),
+              box-shadow 0.25s ease,
+              visibility 0s 0s;
+  will-change: transform;
 }
 [data-rp="closed"] #right-panel {
   border-left: none;
+  transform: translateX(100%);
+  box-shadow: none;
+  pointer-events: none;
+  visibility: hidden;
+  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1),
+              box-shadow 0.25s ease,
+              visibility 0s 0.25s;
 }
-
-/* ─── Left Panel: Layers + Tabbed Content (CSS Grid column 1) ─── */
-#left-panel {
-  grid-column: 1;
-  grid-row: 1;
-  min-width: 0; /* allow grid to shrink to 0 */
-  max-width: 500px;
-  background: var(--fd-surface);
-  border-right: 0.5px solid var(--fd-border);
-  z-index: 25;
-  display: flex;
-  flex-direction: column;
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  overflow: hidden;
+[data-rp="open"] #right-panel {
+  transform: translateX(0);
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.12);
+  visibility: visible;
+  pointer-events: auto;
+  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1),
+              box-shadow 0.25s ease,
+              visibility 0s 0s;
 }
 
 /* Container queries for panel responsive tabs */
@@ -471,10 +519,17 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   -webkit-user-select: none;    /* prevent text selection during drag */
   user-select: none;
 }
-/* ── Panel collapse via data-attrs on <html> (set synchronously from <head>) ── */
+/* ── Panel CSS vars are now "offset hints" for auxiliary elements (minimap, onboarding) ──
+   They no longer drive the grid — panels are overlays. JS sets them on toggle for smooth
+   tracking of minimap, onboarding-hints, etc. ── */
 [data-lp="closed"] { --left-panel-width: 0px !important; }
 [data-rp="closed"] { --right-panel-width: 0px !important; }
-/* Panel collapse is instant (no transition) to prevent stale getCanvasRect readings */
+/* Reduced-motion: instant toggle (no slide animation) */
+@media (prefers-reduced-motion: reduce) {
+  #left-panel, #right-panel {
+    transition: none !important;
+  }
+}
 
 /* ── Canvas Toolbar (Apple HIG frosted bar) ── */
 /* ── Legacy toolbar removed — replaced by .chrome-pill system ── */
@@ -744,18 +799,17 @@ a.rp-settings-item:visited { color: var(--fd-text); }
 /* ── Fullscreen mode: hide chrome ── */
 .fullscreen-mode .canvas-chrome { display: none !important; }
 
-/* ── Canvas content area below toolbar ── */
-/* ── CSS Grid: left-panel | canvas | right-panel ── */
+/* ── Canvas content area: panels are overlays, canvas is always full-width ── */
 #canvas-content {
   flex: 1;
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-columns: var(--left-panel-width, var(--fd-panel-default-width)) minmax(200px, 1fr) var(--right-panel-width, var(--fd-panel-default-width));
+  grid-template-columns: 1fr; /* panels overlay — canvas spans full width */
   grid-template-rows: 1fr;
 }
 #fd-canvas {
-  grid-column: 2;
+  grid-column: 1;
   grid-row: 1;
   position: relative;
   width: 100%;
@@ -779,7 +833,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   text-align: center;
   white-space: nowrap;
   user-select: none;
-  grid-column: 2; /* constrain to the canvas grid column */
+  grid-column: 1; /* constrain to the canvas grid column */
   grid-row: 1;
 }
 .canvas-tips.visible {

@@ -17,6 +17,14 @@
 
 ## Completed Requirements
 
+### v0.11.339 — Premium Panel Slide Animation (UX Polish)
+
+- **Desktop Overlay Promotion**: Converted `#left-panel` and `#right-panel` from CSS Grid column members to `position: absolute` overlays. Panels slide in/out via `transform: translateX()` transitions (300ms `cubic-bezier(0.4, 0.0, 0.2, 1)`), eliminating canvas buffer clears and layout thrashing during toggling.
+- **Stable Full-Width Canvas**: `#canvas-content` reduced to a single `1fr` grid column. The canvas is now always full-width; panels overlay it as floating surfaces rather than shrinking the available area.
+- **Transitionend Side-Effect Deferral**: Layout-dependent callbacks (`resizeCanvas`, `reclampToolbar`, `positionLayersHandle`) moved to `transitionend` event listeners inside `toggleLeftPanel()` / `toggleRightPanel()`, preventing synchronous layout recalculations mid-animation.
+- **Collision Mitigation**: CSS variables `--left-panel-width` / `--right-panel-width` retained as "offset hints" for secondary UI (minimap, FAB, onboarding hints). Resize handles (`#layers-resize`, `#right-resize`) set to `pointer-events: none` during transitions to prevent interaction collisions.
+- **Accessibility**: `prefers-reduced-motion` media queries reduce all panel transitions to `0ms` duration, ensuring compliance with OS accessibility settings.
+
 ### v0.11.338 — Fix Toolbar Vertical Jump (Bug Fix)
 
 - **Geometric Center Persistence**: Fixed the bug where the floating toolbar shifted vertically upward when opening/closing side panels. The layout engine now saves and restores the true, resulting geometric center bounding box of the toolbar (calculated via `getBoundingClientRect()`) rather than persisting raw vertical pointer drop coordinates, assuring visual stability during surrounding CSS grid layout adjustments.
