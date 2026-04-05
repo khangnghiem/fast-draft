@@ -299,20 +299,24 @@ export function initToolbar(api) {
            if (!(rect.left > elRect.right + pad || rect.right < elRect.left - pad || rect.top > elRect.bottom + pad || rect.bottom < elRect.top - pad)) intersects = true;
         };
         
-        if (h.dataset.lp === 'open' && lp) checkIntersect(lp.getBoundingClientRect());
-        if (h.dataset.rp === 'open' && rp) checkIntersect(rp.getBoundingClientRect());
-        
-        // Also check minimap collision if visible
-        const minimap = document.getElementById('minimap-container');
-        if (minimap && getComputedStyle(minimap).display !== 'none') checkIntersect(minimap.getBoundingClientRect());
-
-        // Also check chrome-right collision (export/settings)
-        const chromeRight = document.getElementById('chrome-right');
-        if (chromeRight && getComputedStyle(chromeRight).display !== 'none') checkIntersect(chromeRight.getBoundingClientRect());
-
-        // Also check chrome-left collision (hamburger)
-        const chromeLeft = document.querySelector('.canvas-chrome-left');
-        if (chromeLeft && getComputedStyle(chromeLeft).display !== 'none') checkIntersect(chromeLeft.getBoundingClientRect());
+        // Edge-specific collision:
+        if (side === 'left') {
+           if (h.dataset.lp === 'open' && lp) checkIntersect(lp.getBoundingClientRect());
+        } else if (side === 'right') {
+           if (h.dataset.rp === 'open' && rp) checkIntersect(rp.getBoundingClientRect());
+           const chromeRight = document.getElementById('chrome-right');
+           if (chromeRight && getComputedStyle(chromeRight).display !== 'none') checkIntersect(chromeRight.getBoundingClientRect());
+           const minimap = document.getElementById('minimap-container');
+           if (minimap && getComputedStyle(minimap).display !== 'none') checkIntersect(minimap.getBoundingClientRect());
+        } else if (side === 'top') {
+           const chromeRight = document.getElementById('chrome-right');
+           if (chromeRight && getComputedStyle(chromeRight).display !== 'none') checkIntersect(chromeRight.getBoundingClientRect());
+           const chromeLeft = document.querySelector('.canvas-chrome-left');
+           if (chromeLeft && getComputedStyle(chromeLeft).display !== 'none') checkIntersect(chromeLeft.getBoundingClientRect());
+        } else if (side === 'bottom') {
+           const minimap = document.getElementById('minimap-container');
+           if (minimap && getComputedStyle(minimap).display !== 'none') checkIntersect(minimap.getBoundingClientRect());
+        }
 
         return intersects;
       };
@@ -423,12 +427,13 @@ export function initToolbar(api) {
         toolbar.style.removeProperty('--tb-offset-ry');
       }
       
-      // Cleanup old hardcoded styles so they don't override CSS
+      // Clear explicit position styles to let CSS take over using the rx/ry variables
       toolbar.style.left = '';
       toolbar.style.top = '';
       toolbar.style.right = '';
       toolbar.style.bottom = '';
       toolbar.style.transform = '';
+      toolbar.style.flexDirection = ''; // Fix 3: Clear any inline flex-direction from drag state
       // Visibility is handled globally
     }
 
