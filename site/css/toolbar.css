@@ -22,18 +22,30 @@
 [data-toolbar="top"] #floating-toolbar,
 .toolbar-docked-top {
   flex-direction: row;
+  left: calc(var(--left-panel-width, 0px) + var(--tb-offset-rx, 0.5) * (100vw - var(--left-panel-width, 0px) - var(--right-panel-width, 0px)));
+  transform: translateX(-50%);
+  top: max(calc(var(--chrome-top-height, 44px) + 8px), var(--tb-offset-y, 12px));
 }
 [data-toolbar="bottom"] #floating-toolbar,
 .toolbar-docked-bottom {
   flex-direction: row;
+  left: calc(var(--left-panel-width, 0px) + var(--tb-offset-rx, 0.5) * (100vw - var(--left-panel-width, 0px) - var(--right-panel-width, 0px)));
+  transform: translateX(-50%);
+  bottom: var(--tb-offset-y, 12px);
 }
 [data-toolbar="left"] #floating-toolbar,
 .toolbar-docked-left {
   flex-direction: column;
+  left: calc(var(--left-panel-width, 0px) + 12px);
+  top: calc(var(--chrome-top-height, 44px) + var(--tb-offset-ry, 0.5) * (100vh - var(--chrome-top-height, 44px)));
+  transform: translateY(-50%);
 }
 [data-toolbar="right"] #floating-toolbar,
 .toolbar-docked-right {
   flex-direction: column;
+  right: calc(var(--right-panel-width, 0px) + 12px);
+  top: calc(var(--chrome-top-height, 44px) + var(--tb-offset-ry, 0.5) * (100vh - var(--chrome-top-height, 44px)));
+  transform: translateY(-50%);
 }
 /* Swap separator dimensions for vertical toolbar */
 [data-toolbar="left"] #floating-toolbar .ft-sep,
@@ -57,8 +69,13 @@
 }
 /* ── Smooth position and minimize transitions ── */
 #floating-toolbar:not(.toolbar-dragging) {
-  transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1), top 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-              gap 0.3s ease, padding 0.3s ease, margin 0.3s ease, max-width 0.3s ease, max-height 0.3s ease, transform 0.3s ease;
+  transition: left 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), 
+              right 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), 
+              top 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), 
+              bottom 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), 
+              margin-left 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), 
+              gap 0.3s ease, padding 0.3s ease, margin 0.3s ease, 
+              max-width 0.3s ease, max-height 0.3s ease, transform 0.3s ease;
 }
 /* ── Grip handle (6-dot dots) ── */
 .toolbar-grip {

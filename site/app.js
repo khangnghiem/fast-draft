@@ -721,8 +721,14 @@ function toggleLeftPanel() {
   if (layersHandle) layersHandle.style.pointerEvents = 'none';
 
   // All layout-dependent side-effects fire at transitionend — not mid-animation
-  panel.addEventListener('transitionend', function onEnd(e) {
+  const safeTimeout = setTimeout(() => {
+    panel.removeEventListener('transitionend', onEnd);
+    onEnd({ propertyName: 'transform' }); // force execution if transitionend drops
+  }, 350);
+
+  function onEnd(e) {
     if (e.propertyName !== 'transform') return; // only act on the slide
+    clearTimeout(safeTimeout);
     panel.removeEventListener('transitionend', onEnd);
     if (layersHandle) {
       layersHandle.style.pointerEvents = '';
@@ -731,7 +737,9 @@ function toggleLeftPanel() {
     window.dispatchEvent(new Event('resize'));
     resizeCanvas(); // called once, with stable geometry
     window.__fdReclampToolbar?.(); // re-snap toolbar after panel settled
-  });
+  }
+  
+  panel.addEventListener('transitionend', onEnd);
 }
 
 /** Toggle right panel collapsed/expanded. */
@@ -749,8 +757,14 @@ function toggleRightPanel() {
   if (rightHandle) rightHandle.style.pointerEvents = 'none';
 
   // All layout-dependent side-effects fire at transitionend — not mid-animation
-  panel.addEventListener('transitionend', function onEnd(e) {
+  const safeTimeout = setTimeout(() => {
+    panel.removeEventListener('transitionend', onEnd);
+    onEnd({ propertyName: 'transform' }); // force execution if transitionend drops
+  }, 350);
+
+  function onEnd(e) {
     if (e.propertyName !== 'transform') return;
+    clearTimeout(safeTimeout);
     panel.removeEventListener('transitionend', onEnd);
     if (rightHandle) {
       rightHandle.style.pointerEvents = '';
@@ -759,7 +773,9 @@ function toggleRightPanel() {
     window.dispatchEvent(new Event('resize'));
     resizeCanvas();
     window.__fdReclampToolbar?.();
-  });
+  }
+
+  panel.addEventListener('transitionend', onEnd);
 }
 
 /** Initialize left panel: tab click handlers, default tab. */
@@ -2777,6 +2793,7 @@ function setupPanelResize(wrapper, resizeCanvas) {
         resizeRafId = requestAnimationFrame(() => {
           resizeCanvas();
           renderCanvas();
+          window.__fdReclampToolbar?.();
           resizeRafId = null;
         });
       }
@@ -2882,6 +2899,7 @@ function setupPanelResize(wrapper, resizeCanvas) {
         rightResizeRafId = requestAnimationFrame(() => {
           resizeCanvas();
           renderCanvas();
+          window.__fdReclampToolbar?.();
           rightResizeRafId = null;
         });
       }
