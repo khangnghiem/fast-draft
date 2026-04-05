@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.343 — Stateless Toolbar Layout & Snap Mathematics (Bug Fix)
+- **Math-Driven Dimensions:** Replaced DOM layout-thrashing class toggles in the collision check with a mathematical `getExpandedDims()` simulation. This resolves bugs where inline drag styles falsely convinced the UI that the vertical toolbar fit perfectly in a small vertical gap (because it measured its 39px collapsed width instead).
+- **Sub-Viewport Auto-Minimization**: Enforced strict `window.innerHeight` and viewport tracking calculations to rigorously apply `.toolbar-minimized` when attempting to release the toolbar onto an edge layout smaller than its expanded dimensions ~460px height.
+
 ### v0.11.342 — Floating Toolbar Geometric Ratio Tracking (Bug Fix)
 - **Ratio-Based Positioning**: Replaced pixel-based absolute coordinates with proportional CSS ratios (`--tb-offset-rx` / `--tb-offset-ry`) spanning `0` to `1.0`. The left coordinate calculation now uses `calc(var(--left-panel-width) + var(--tb-offset-rx) * (100vw - lpW - rpW))` to ensure the toolbar scales perfectly within the safe dynamic space.
 - **Minimap & Chrome Avoidance**: Implemented strict clamping geometry so dragging the toolbar prevents the mathematical bounds from breaching the 280px minimum Minimap reserve or traversing under the Top Right Chrome Icons.
