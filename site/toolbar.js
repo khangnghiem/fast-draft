@@ -922,13 +922,8 @@ export function initToolbar(api) {
       
       // PLAY: animate to final snapped position
       requestAnimationFrame(() => {
-        toolbar.style.transition = 'left 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), right 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), top 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), bottom 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1)';
+        toolbar.style.transition = ''; // clears inline so CSS takes over
         toolbar.style.transform = ''; // clears inline so CSS takes over
-        
-        // Clean up inline transition after it finishes so original css rules apply
-        setTimeout(() => {
-           if (!isDragging) toolbar.style.transition = '';
-        }, 300);
       });
     });
 
