@@ -286,7 +286,7 @@ export function initToolbar(api) {
         ? tbRect.width <= cr.width - 2 * SNAP_GAP
         : tbRect.height <= cr.height - 2 * SNAP_GAP;
 
-      // Ensure toolbar doesn't physically intersect open panels
+      // Ensure toolbar doesn't physically intersect open panels or chrome icons
       const isIntersectingWithPanels = (rect) => {
         const lp = document.getElementById('left-panel');
         const rp = document.getElementById('right-panel');
@@ -294,14 +294,26 @@ export function initToolbar(api) {
         let intersects = false;
         // 8px buffer
         const pad = 8;
-        if (h.dataset.lp === 'open' && lp) {
-           const lpr = lp.getBoundingClientRect();
-           if (!(rect.left > lpr.right + pad || rect.right < lpr.left - pad || rect.top > lpr.bottom + pad || rect.bottom < lpr.top - pad)) intersects = true;
-        }
-        if (h.dataset.rp === 'open' && rp) {
-           const rpr = rp.getBoundingClientRect();
-           if (!(rect.left > rpr.right + pad || rect.right < rpr.left - pad || rect.top > rpr.bottom + pad || rect.bottom < rpr.top - pad)) intersects = true;
-        }
+        
+        const checkIntersect = (elRect) => {
+           if (!(rect.left > elRect.right + pad || rect.right < elRect.left - pad || rect.top > elRect.bottom + pad || rect.bottom < elRect.top - pad)) intersects = true;
+        };
+        
+        if (h.dataset.lp === 'open' && lp) checkIntersect(lp.getBoundingClientRect());
+        if (h.dataset.rp === 'open' && rp) checkIntersect(rp.getBoundingClientRect());
+        
+        // Also check minimap collision if visible
+        const minimap = document.getElementById('minimap-container');
+        if (minimap && getComputedStyle(minimap).display !== 'none') checkIntersect(minimap.getBoundingClientRect());
+
+        // Also check chrome-right collision (export/settings)
+        const chromeRight = document.getElementById('chrome-right');
+        if (chromeRight && getComputedStyle(chromeRight).display !== 'none') checkIntersect(chromeRight.getBoundingClientRect());
+
+        // Also check chrome-left collision (hamburger)
+        const chromeLeft = document.querySelector('.canvas-chrome-left');
+        if (chromeLeft && getComputedStyle(chromeLeft).display !== 'none') checkIntersect(chromeLeft.getBoundingClientRect());
+
         return intersects;
       };
 
@@ -391,8 +403,9 @@ export function initToolbar(api) {
           let minRy = 0; let maxRy = 1;
           if (cr.height > 0) {
             const halfH = tbRect.height / 2;
-            minRy = halfH / cr.height;
-            maxRy = (cr.height - halfH) / cr.height;
+            const padY = 12; // 12px padding from top/bottom
+            minRy = (halfH + padY) / cr.height;
+            maxRy = (cr.height - halfH - padY) / cr.height;
             
             // Top layer chrome icons avoidance (e.g. Export / Settings top right)
             if (side === 'right') {
@@ -652,8 +665,11 @@ export function initToolbar(api) {
               if (oppFits) {
                 toolbar.classList.remove('toolbar-minimized');
                 localStorage.setItem('fd-toolbar-minimized', '0');
-                positionToolbar(oppSide, null, null, null, null, null, null);
-                localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: oppSide, x: null, y: null, rx: null, ry: null }));
+                positionToolbar(oppSide, null, null, null, null, null);
+                const oppRatio = (oppSide === 'top' || oppSide === 'bottom') 
+                   ? parseFloat(toolbar.style.getPropertyValue('--tb-offset-rx') || '0.5')
+                   : parseFloat(toolbar.style.getPropertyValue('--tb-offset-ry') || '0.5');
+                localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: oppSide, edgeOffset: oppRatio }));
                 api.adjustMinimapForToolbar();
                 return;
               } else {
@@ -675,27 +691,24 @@ export function initToolbar(api) {
         }
         localStorage.setItem('fd-toolbar-minimized', toolbar.classList.contains('toolbar-minimized') ? '1' : '0');
 
-        // Grip-anchored positioning is simplified with CSS tracking, but we still need to calculate offset relative to center
-
-        const gripAfter = gripEl.getBoundingClientRect();
+        // Let positionToolbar calculate the ratio based on the approximate target center point
         const tbRect2 = toolbar.getBoundingClientRect();
         const deltaX = gripBefore.left - gripAfter.left;
         const deltaY = gripBefore.top - gripAfter.top;
-        let newLeft = tbRect2.left + deltaX;
-        let newTop = tbRect2.top + deltaY;
-        const cr2 = getCanvasRect();
-        newLeft = Math.max(cr2.left + SNAP_GAP, Math.min(newLeft, cr2.right - tbRect2.width - SNAP_GAP));
-        newTop = Math.max(cr2.top + SNAP_GAP, Math.min(newTop, cr2.bottom - tbRect2.height - SNAP_GAP));
-        toolbar.style.left = newLeft + 'px';
-        toolbar.style.top = newTop + 'px';
-        toolbar.style.transform = 'none';
+        const dropX = tbRect2.left + deltaX + tbRect2.width / 2;
+        const dropY = tbRect2.top + deltaY + tbRect2.height / 2;
+        
         const finalSide = getCurrentDockedSide();
-        const dropX = newLeft + tbRect2.width / 2;
-        const dropY = newTop + tbRect2.height / 2;
-        const rx = cr2.width > 0 ? Math.max(0, Math.min(1, (dropX - cr2.left) / cr2.width)) : null;
-        const ry = cr2.height > 0 ? Math.max(0, Math.min(1, (dropY - cr2.top) / cr2.height)) : null;
-        localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: finalSide, x: dropX, y: dropY, rx, ry }));
+        positionToolbar(finalSide, dropX, dropY, null, null, null);
+        const ratio = (finalSide === 'top' || finalSide === 'bottom') 
+           ? parseFloat(toolbar.style.getPropertyValue('--tb-offset-rx') || '0.5')
+           : parseFloat(toolbar.style.getPropertyValue('--tb-offset-ry') || '0.5');
+        localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: finalSide, edgeOffset: ratio }));
         api.adjustMinimapForToolbar();
+
+        if (!toolbar.classList.contains('toolbar-minimized')) {
+           requestAnimationFrame(() => reclampToolbar());
+        }
 
         // #5: Haptic feedback — 10ms pulse on minimize/expand (silently ignored on desktop)
         if (navigator.vibrate) navigator.vibrate(10);
@@ -833,7 +846,7 @@ export function initToolbar(api) {
     // Migrate any old 'floating' state to 'bottom'
     const restoreSide = savedPos.side === 'floating' ? 'bottom' : savedPos.side;
     // Use positionToolbar (no overflow logic) — let reclamp handle it after layout settles
-    positionToolbar(restoreSide, savedPos.x, savedPos.y, null, null, savedPos.rx, savedPos.ry);
+    positionToolbar(restoreSide, null, null, null, null, savedPos.edgeOffset);
     toolbar.style.visibility = 'visible'; // reveal after JS positioned it
     if (localStorage.getItem('fd-toolbar-minimized') === '1') {
       toolbar.classList.add('toolbar-minimized');

@@ -24,27 +24,27 @@
   flex-direction: row;
   left: calc(var(--left-panel-width, 0px) + var(--tb-offset-rx, 0.5) * (100vw - var(--left-panel-width, 0px) - var(--right-panel-width, 0px)));
   transform: translateX(-50%);
-  top: max(calc(var(--chrome-top-height, 44px) + 8px), var(--tb-offset-y, 12px));
+  top: max(env(safe-area-inset-top, 0px) + 12px, 12px);
 }
 [data-toolbar="bottom"] #floating-toolbar,
 .toolbar-docked-bottom {
   flex-direction: row;
   left: calc(var(--left-panel-width, 0px) + var(--tb-offset-rx, 0.5) * (100vw - var(--left-panel-width, 0px) - var(--right-panel-width, 0px)));
   transform: translateX(-50%);
-  bottom: var(--tb-offset-y, 12px);
+  bottom: max(env(safe-area-inset-bottom, 0px) + 12px, 12px);
 }
 [data-toolbar="left"] #floating-toolbar,
 .toolbar-docked-left {
   flex-direction: column;
   left: calc(var(--left-panel-width, 0px) + 12px);
-  top: calc(var(--chrome-top-height, 44px) + var(--tb-offset-ry, 0.5) * (100vh - var(--chrome-top-height, 44px)));
+  top: calc(var(--tb-offset-ry, 0.5) * 100vh);
   transform: translateY(-50%);
 }
 [data-toolbar="right"] #floating-toolbar,
 .toolbar-docked-right {
   flex-direction: column;
   right: calc(var(--right-panel-width, 0px) + 12px);
-  top: calc(var(--chrome-top-height, 44px) + var(--tb-offset-ry, 0.5) * (100vh - var(--chrome-top-height, 44px)));
+  top: calc(var(--tb-offset-ry, 0.5) * 100vh);
   transform: translateY(-50%);
 }
 /* Swap separator dimensions for vertical toolbar */
