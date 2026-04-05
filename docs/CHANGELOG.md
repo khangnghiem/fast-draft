@@ -17,6 +17,11 @@
 
 ## Completed Requirements
 
+### v0.11.344 — Floating Toolbar FLIP Animation & DOM Exclusion (Bug Fix)
+- **FLIP Animation Strategy:** Implemented a First-Last-Invert-Play (FLIP) animation when dropping the floating toolbar. It captures the pre-snap geometric offset and transitions using GPU-accelerated `transform: translate`, eliminating the visual "teleporting" regression.
+- **DOM-Aware Area Exclusion:** Replaced hardcoded collision pixel-padding with dynamic `getBoundingClientRect()` lookups for `#chrome-left`, `#chrome-right`, and `#minimap-container`. Minimization and layout offsets now adapt accurately to sidebar display states, keeping the toolbar visible and clear from HUD collisions.
+
+
 ### v0.11.343 — Stateless Toolbar Layout & Snap Mathematics (Bug Fix)
 - **Math-Driven Dimensions:** Replaced DOM layout-thrashing class toggles in the collision check with a mathematical `getExpandedDims()` simulation. This resolves bugs where inline drag styles falsely convinced the UI that the vertical toolbar fit perfectly in a small vertical gap (because it measured its 39px collapsed width instead).
 - **Sub-Viewport Auto-Minimization**: Enforced strict `window.innerHeight` and viewport tracking calculations to rigorously apply `.toolbar-minimized` when attempting to release the toolbar onto an edge layout smaller than its expanded dimensions ~460px height.
