@@ -1239,6 +1239,7 @@ function renderMinimap() {
   // Clear
   minimapCtx.save();
   minimapCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  minimapCtx.clearRect(0, 0, mw * dpr, mh * dpr);
   const isDark = document.body.classList.contains("dark-theme");
   minimapCtx.fillStyle = isDark ? "rgba(28,28,30,0.9)" : "rgba(245,245,247,0.9)";
   minimapCtx.fillRect(0, 0, mw, mh);
@@ -1270,7 +1271,7 @@ function renderMinimap() {
   minimapCtx.translate(offsetX, offsetY);
   minimapCtx.scale(scale, scale);
   minimapCtx.translate(-bounds.minX, -bounds.minY);
-  fdCanvas.render(minimapCtx, performance.now(), true, false, false, false);
+  fdCanvas.render(minimapCtx, performance.now(), true, true, false, false);
   minimapCtx.restore();
 
   // Cache the scene image (without viewport rect) for smooth overlay

@@ -1,6 +1,7 @@
 # FD Changelog
 
 > Tracks requirement completion status across the entire FD project.
+- **FIX**: Resolved minimap unresponsiveness and ghosting artifacts by removing volatile pointer locks, clearing cache buffers before redraw, and explicitly decoupling minimap bounds from main canvas dimensions.
 > For VS Code extension release notes, see [`fd-vscode/CHANGELOG.md`](../fd-vscode/CHANGELOG.md).
 
 <!-- KEYWORD INDEX — rg to find relevant sections:
