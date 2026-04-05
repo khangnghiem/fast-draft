@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.345 — Toolbar Layout Thrashing Fix & FLIP Batching (Bug Fix)
+- **Eliminated Layout Thrashing:** Cached `getExclusionRects()` outputs locally during the `pointerdown` phase for the drag duration. This resolves extreme 60+ FPS lockups on MacOS where interleaved `getBoundingClientRect()` checks inside the mouse move loop caused violent synchronous repaints.
+- **Batched Flip Frame Control:** Fixed the FLIP CSS transition skip bug by applying a forced layout step (`toolbar.offsetHeight`) inside the `requestAnimationFrame`. This guarantees the browser initializes the physical visual baseline before the smooth transform transition is launched.
+
 ### v0.11.344 — Floating Toolbar FLIP Animation & DOM Exclusion (Bug Fix)
 - **FLIP Animation Strategy:** Implemented a First-Last-Invert-Play (FLIP) animation when dropping the floating toolbar. It captures the pre-snap geometric offset and transitions using GPU-accelerated `transform: translate`, eliminating the visual "teleporting" regression.
 - **DOM-Aware Area Exclusion:** Replaced hardcoded collision pixel-padding with dynamic `getBoundingClientRect()` lookups for `#chrome-left`, `#chrome-right`, and `#minimap-container`. Minimization and layout offsets now adapt accurately to sidebar display states, keeping the toolbar visible and clear from HUD collisions.
