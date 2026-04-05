@@ -610,11 +610,11 @@
 
   /* ── #1: Touch-sized floating toolbar ── */
   #floating-toolbar {
-    top: auto !important;
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
-    left: 50% !important;
-    right: auto !important;
-    transform: translateX(-50%) !important;
+    top: auto;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
     transform-origin: bottom center;
     flex-direction: row !important;
     max-width: calc(100vw - 24px);
