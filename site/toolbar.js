@@ -342,6 +342,14 @@ export function initToolbar(api) {
       toolbar.classList.add(`toolbar-docked-${side}`);
       document.documentElement.dataset.toolbar = side;
 
+      // Clear explicit styles letting CSS define dimensions before measuring
+      toolbar.style.left = '';
+      toolbar.style.top = '';
+      toolbar.style.right = '';
+      toolbar.style.bottom = '';
+      toolbar.style.transform = '';
+      toolbar.style.flexDirection = ''; // Clear inline flex-direction to allow CSS orientation
+      
       if (dropX != null || dropY != null || ratio != null) {
         const tbRect = toolbar.getBoundingClientRect();
         const cr = getCanvasRect();
@@ -426,14 +434,6 @@ export function initToolbar(api) {
         toolbar.style.removeProperty('--tb-offset-rx');
         toolbar.style.removeProperty('--tb-offset-ry');
       }
-      
-      // Clear explicit position styles to let CSS take over using the rx/ry variables
-      toolbar.style.left = '';
-      toolbar.style.top = '';
-      toolbar.style.right = '';
-      toolbar.style.bottom = '';
-      toolbar.style.transform = '';
-      toolbar.style.flexDirection = ''; // Fix 3: Clear any inline flex-direction from drag state
       // Visibility is handled globally
     }
 
