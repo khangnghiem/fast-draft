@@ -1,6 +1,7 @@
 # FD Changelog
 
 > Tracks requirement completion status across the entire FD project.
+- **FEAT (AI):** Wired the design agent model selector dropdown directly to the Cloudflare Pages Function backend, expanding free limits with new model aliases (Llama 3B, Gemma 12B, Qwen Coder). Updated agent spec to document the Edge Computing Phase 1 architecture.
 - **FIX**: Resolved minimap unresponsiveness and ghosting artifacts by removing volatile pointer locks, clearing cache buffers before redraw, and explicitly decoupling minimap bounds from main canvas dimensions.
 > For VS Code extension release notes, see [`fd-vscode/CHANGELOG.md`](../fd-vscode/CHANGELOG.md).
 
