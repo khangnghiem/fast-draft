@@ -405,6 +405,7 @@ async function sendMessage(getEditorContent, setEditorContent) {
         selection: selFd ? selFd.slice(0, 4000) : undefined,
         selection_ids: selIds.length > 0 ? selIds : undefined,
         stream: true,
+        model_hint: document.getElementById('ai-model-select')?.value || undefined,
       }),
     });
 
