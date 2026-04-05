@@ -200,7 +200,6 @@ export function initToolbar(api) {
     let lastSnapSide = null; // last snap side shown by indicator (null = no shadow visible)
     let cachedDragCanvasRect = null; // cached canvas rect during drag (avoids per-frame layout reads)
     let cachedDragExclusions = null; // cached exclusion rects during drag (avoids layout thrashing)
-    const pointerHistory = [];
     const SNAP_THRESHOLD = 60;
     const SNAP_GAP = 10;
     const GRIP_DRAG_THRESHOLD = 5; // minimum px before grip counts as drag
@@ -302,8 +301,8 @@ export function initToolbar(api) {
     // ── Decomposed snap functions (Fix #1: no recursion, no side-effects in query) ──
 
     /** Pure mathematical query: check if toolbar fits on given side, and doesn't overlap exclusion zones. */
-    function checkToolbarFit(side) {
-      const cr = getCanvasRect();
+    function checkToolbarFit(side, cachedCr) {
+      const cr = cachedCr || getCanvasRect();
       const isHoriz = side === 'top' || side === 'bottom';
 
       // 1. Get mathematical expanded dimensions based on side
@@ -597,7 +596,7 @@ export function initToolbar(api) {
     function showSnapIndicator(side, pointerX, pointerY, grabOffsetX, grabOffsetY, cachedCr, cachedTbDims) {
       lastSnapSide = side; // track for pointerup
       if (side) {
-        const { fits, tbRect, cr } = checkToolbarFit(side);
+        const { fits, tbRect, cr } = checkToolbarFit(side, cachedCr);
         const isTargetHorizontal = side === 'top' || side === 'bottom';
         let gw = tbRect.width;
         let gh = tbRect.height;
@@ -675,7 +674,6 @@ export function initToolbar(api) {
         dragStartTbWidth = rect.width;
         dragStartTbHeight = rect.height;
         lastSnapSide = null;
-        pointerHistory.length = 0;
         // Eagerly cache minimized dims on first drag
         getMiniDims();
         // Cache canvas rect to avoid per-frame layout reads during drag
@@ -869,10 +867,6 @@ export function initToolbar(api) {
       const dy = e.clientY - dragStartY;
       toolbar.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
 
-      // Track velocity
-      pointerHistory.push({ x: e.clientX, y: e.clientY, t: Date.now() });
-      if (pointerHistory.length > 5) pointerHistory.shift();
-
       // Show snap indicator — always shows since getSnapSide always returns a side
       const grabOffX = dragStartX - toolbarStartX;
       const grabOffY = dragStartY - toolbarStartY;
@@ -901,39 +895,15 @@ export function initToolbar(api) {
       const side = getSnapSide(e.clientX, e.clientY);
       showSnapIndicator(null); // hide the indicator
       
-      // FIRST: capture current visual position
-      const firstRect = toolbar.getBoundingClientRect();
+      // ALWAYS clear inline transform/transition after drag to avoid staleness
+      toolbar.style.transition = '';
+      toolbar.style.transform = '';
       
-      // LAST: apply snap — changes CSS classes + intrinsic position
+      // Apply snap — changes CSS classes + intrinsic position instantly
       applyToolbarSnap(side, e.clientX, e.clientY, grabOffX, grabOffY);
-      
-      const lastRect = toolbar.getBoundingClientRect();
-      
-      // INVERT: offset toolbar back to visual start position
-      const dx = firstRect.left - lastRect.left;
-      const dy = firstRect.top - lastRect.top;
-      
-      toolbar.style.transition = 'none';
-      const baseTransform = (side === 'top' || side === 'bottom') ? 'translateX(-50%)' : 'translateY(-50%)';
-      toolbar.style.transform = `${baseTransform} translate(${dx}px, ${dy}px)`;
-      
-      // FORCE SYNCHRONOUS LAYOUT: flush the 'none' transition to prevent batching
-      toolbar.offsetHeight;
-      
-      // PLAY: animate to final snapped position
-      requestAnimationFrame(() => {
-        toolbar.style.transition = 'left 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), right 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), top 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), bottom 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1)';
-        toolbar.style.transform = ''; // clears inline so CSS takes over
-        
-        // Clean up inline transition after it finishes so original css rules apply
-        setTimeout(() => {
-           if (!isDragging) toolbar.style.transition = '';
-        }, 300);
-      });
     });
 
-    // ── Restore saved state (suppress transition to avoid startup jump) ──
-    toolbar.style.transition = 'none';
+    // ── Restore saved state ──
     const savedPos = parseToolbarPos();
     // Migrate any old 'floating' state to 'bottom'
     const restoreSide = savedPos.side === 'floating' ? 'bottom' : savedPos.side;
@@ -944,13 +914,8 @@ export function initToolbar(api) {
       toolbar.classList.add('toolbar-minimized');
       toolbar.querySelectorAll('.toolbar-grip').forEach(g => g.setAttribute('aria-expanded', 'false'));
     }
-    // Double-rAF: re-enable transitions and reclamp after layout settles (Fix #8)
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        toolbar.style.transition = '';
-        reclampToolbar(); // now panels are settled, safe to check overflow
-      });
-    });
+    // rAF: reclamp after layout settles (Fix #8)
+    requestAnimationFrame(() => reclampToolbar());
 
     // ── Re-clamp on window resize ──
     window.addEventListener('resize', () => requestAnimationFrame(() => reclampToolbar()));

@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.346 — Toolbar Refactor & Performance Optimization (Bug Fix)
+- **Eliminated Layout Thrashing:** Patched `showSnapIndicator` to use the cached canvas rectangle instead of triggering a synchronous layout `getBoundingClientRect` on every pointer move frame during drag.
+- **Removed Dead Code & Stale State:** Stripped the `pointerHistory` write-only array tracker and removed the legacy `transition = 'none'` startup toggle ceremony that was compensating for non-existent positional transitions.
+
 ### v0.11.345 — Toolbar Layout Thrashing Fix & FLIP Batching (Bug Fix)
 - **Eliminated Layout Thrashing:** Cached `getExclusionRects()` outputs locally during the `pointerdown` phase for the drag duration. This resolves extreme 60+ FPS lockups on MacOS where interleaved `getBoundingClientRect()` checks inside the mouse move loop caused violent synchronous repaints.
 - **Batched Flip Frame Control:** Fixed the FLIP CSS transition skip bug by applying a forced layout step (`toolbar.offsetHeight`) inside the `requestAnimationFrame`. This guarantees the browser initializes the physical visual baseline before the smooth transform transition is launched.
