@@ -2568,6 +2568,7 @@ function updateMinimapCache(mw, mh, dpr) {
   const ctx = minimapCacheCanvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+  ctx.clearRect(0, 0, mw * dpr, mh * dpr);
   ctx.fillStyle = isDark ? 'rgba(28,28,30,0.9)' : 'rgba(245,245,247,0.9)';
   ctx.fillRect(0, 0, mw, mh);
 
@@ -2586,7 +2587,7 @@ function updateMinimapCache(mw, mh, dpr) {
   ctx.translate(ox, oy);
   ctx.scale(scale, scale);
   ctx.translate(-sb.x, -sb.y);
-  fdCanvas.render(ctx, performance.now(), true, false, false, false);
+  fdCanvas.render(ctx, performance.now(), true, true, false, false);
   ctx.restore();
 
   const mc = document.getElementById('minimap-canvas');
@@ -2621,7 +2622,7 @@ function renderMinimap(canvas) {
   if (mc.height !== mh * dpr) mc.height = mh * dpr;
 
   // 1. Update WASM cache (debounced during active interactions)
-  if (sceneDirty && activePointerId === -1 && !isInlineEditing()) {
+  if (sceneDirty && !isInlineEditing()) {
     updateMinimapCache(mw, mh, dpr);
     sceneDirty = false;
   }
