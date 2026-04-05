@@ -17,6 +17,10 @@
 
 ## Completed Requirements
 
+### v0.11.342 — Floating Toolbar Geometric Ratio Tracking (Bug Fix)
+- **Ratio-Based Positioning**: Replaced pixel-based absolute coordinates with proportional CSS ratios (`--tb-offset-rx` / `--tb-offset-ry`) spanning `0` to `1.0`. The left coordinate calculation now uses `calc(var(--left-panel-width) + var(--tb-offset-rx) * (100vw - lpW - rpW))` to ensure the toolbar scales perfectly within the safe dynamic space.
+- **Minimap & Chrome Avoidance**: Implemented strict clamping geometry so dragging the toolbar prevents the mathematical bounds from breaching the 280px minimum Minimap reserve or traversing under the Top Right Chrome Icons.
+
 ### v0.11.341 — Sidebar Toggle Fade Transition Polish
 - **UI:** Replaced `display: none` with opacity/visibility transitions for the canvas-chrome sidebar toggles (`#sidebar-toggle-btn`, `#hamburger-toggle-btn`) to prevent visual popping when swapped with the in-panel toggle buttons.
 

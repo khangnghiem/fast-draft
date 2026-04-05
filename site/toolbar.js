@@ -228,13 +228,22 @@ export function initToolbar(api) {
       return cachedMiniDims;
     }
 
-    /** Get the visible canvas bounding rect (full width since panels are overlays) */
+    /** Get the visible canvas bounding rect (excludes area behind open panels) */
     function getCanvasRect() {
       const c = document.getElementById('fd-canvas');
       if (!c) return { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth, height: window.innerHeight };
       const cr = c.getBoundingClientRect();
-      // Panels are position:absolute overlays, so they do not constrict the grid area.
-      return { left: cr.left, top: cr.top, right: cr.right, bottom: cr.bottom, width: cr.width, height: cr.height };
+      const h = document.documentElement;
+      let left = cr.left, right = cr.right;
+      if (h.dataset.lp === 'open') {
+        const lp = document.getElementById('left-panel');
+        if (lp) left = Math.max(left, lp.getBoundingClientRect().right);
+      }
+      if (h.dataset.rp === 'open') {
+        const rp = document.getElementById('right-panel');
+        if (rp) right = Math.min(right, rp.getBoundingClientRect().left);
+      }
+      return { left, top: cr.top, right, bottom: cr.bottom, width: right - left, height: cr.height };
     }
 
     /** Detect which edge the toolbar should snap to.
@@ -311,55 +320,103 @@ export function initToolbar(api) {
       return { fits, fitsMinimized, tbRect, cr };
     }
 
-    /** Pure positioning: place toolbar on edge, clamped within canvas. No overflow logic. */
-    function positionToolbar(side, dropX, dropY, grabOffsetX, grabOffsetY, rx, ry) {
+    /** Pure positioning: set CSS variables for toolbar offsets, letting CSS rule calculate relative center */
+    function positionToolbar(side, dropX, dropY, grabOffsetX, grabOffsetY, ratio) {
       toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right', 'toolbar-dragging', 'toolbar-floating');
-      toolbar.style.cssText = '';
-      toolbar.style.visibility = 'visible';
       toolbar.classList.add(`toolbar-docked-${side}`);
       document.documentElement.dataset.toolbar = side;
 
-      const tbRect = toolbar.getBoundingClientRect();
-      const cr = getCanvasRect();
+      if (dropX != null || dropY != null || ratio != null) {
+        const tbRect = toolbar.getBoundingClientRect();
+        const cr = getCanvasRect();
 
-      let effDropX = dropX;
-      let effDropY = dropY;
-      if (rx != null && cr.width > 0) effDropX = cr.left + (cr.width * rx);
-      if (ry != null && cr.height > 0) effDropY = cr.top + (cr.height * ry);
+        if (side === 'top' || side === 'bottom') {
+          let rx;
+          if (ratio != null && ratio <= 1 && ratio >= 0) {
+            rx = ratio; // Migrate or use exact ratio
+          } else {
+            let left;
+            if (dropX != null && grabOffsetX != null) {
+              const srcW = dragStartTbWidth || tbRect.width || 1;
+              left = dropX - (grabOffsetX / srcW) * tbRect.width;
+            } else if (dropX != null) {
+              left = dropX - tbRect.width / 2;
+            } else {
+              // Legacy absolute edgeOffset handling or undefined fallback
+              left = cr.left + (ratio || (cr.width / 2)) - tbRect.width / 2;
+            }
+            let offset_x = left + tbRect.width / 2 - cr.left;
+            rx = cr.width > 0 ? offset_x / cr.width : 0.5;
+          }
 
-      if (side === 'top' || side === 'bottom') {
-        let left;
-        if (effDropX != null && grabOffsetX != null) {
-          const srcW = dragStartTbWidth || tbRect.width || 1;
-          const grabRatioX = grabOffsetX / srcW;
-          left = effDropX - grabRatioX * tbRect.width;
-        } else if (effDropX != null) {
-          left = effDropX - tbRect.width / 2;
+          // Bounds Constraint Avoidance
+          let minRx = 0; let maxRx = 1;
+          if (cr.width > 0) {
+            const halfW = tbRect.width / 2;
+            minRx = halfW / cr.width;
+            maxRx = (cr.width - halfW) / cr.width;
+            
+            // Minimap bottom right zone avoidance mapping
+            if (side === 'bottom') {
+              const minimapReserveX = 280; // approximate width of minimap
+              if (cr.width > minimapReserveX) {
+                const availableCrW = cr.width - minimapReserveX;
+                maxRx = Math.min(maxRx, (availableCrW - halfW) / cr.width);
+              }
+            }
+          }
+          rx = Math.max(minRx, Math.min(maxRx, rx));
+          
+          toolbar.style.setProperty('--tb-offset-rx', rx.toString());
+          toolbar.style.removeProperty('--tb-offset-ry');
         } else {
-          left = cr.left + (cr.width - tbRect.width) / 2;
+          let ry;
+          if (ratio != null && ratio <= 1 && ratio >= 0) {
+            ry = ratio;
+          } else {
+            let top;
+            if (dropY != null && grabOffsetY != null) {
+              const srcH = dragStartTbHeight || tbRect.height || 1;
+              top = dropY - (grabOffsetY / srcH) * tbRect.height;
+            } else if (dropY != null) {
+              top = dropY - tbRect.height / 2;
+            } else {
+              top = cr.top + (ratio || (cr.height / 2)) - tbRect.height / 2;
+            }
+            let offset_y = top + tbRect.height / 2 - cr.top;
+            ry = cr.height > 0 ? offset_y / cr.height : 0.5;
+          }
+
+          // Bounds Constraint Avoidance
+          let minRy = 0; let maxRy = 1;
+          if (cr.height > 0) {
+            const halfH = tbRect.height / 2;
+            minRy = halfH / cr.height;
+            maxRy = (cr.height - halfH) / cr.height;
+            
+            // Top layer chrome icons avoidance (e.g. Export / Settings top right)
+            if (side === 'right') {
+              const topChromeReserveY = 60;
+              minRy = Math.max(minRy, (topChromeReserveY + halfH) / cr.height);
+            }
+          }
+          ry = Math.max(minRy, Math.min(maxRy, ry));
+
+          toolbar.style.setProperty('--tb-offset-ry', ry.toString());
+          toolbar.style.removeProperty('--tb-offset-rx');
         }
-        left = Math.max(cr.left + SNAP_GAP, Math.min(left, cr.right - tbRect.width - SNAP_GAP));
-        toolbar.style.position = 'fixed';
-        toolbar.style.left = left + 'px';
-        toolbar.style.top = side === 'top' ? (cr.top + SNAP_GAP) + 'px' : (cr.bottom - tbRect.height - SNAP_GAP) + 'px';
-        toolbar.style.transform = 'none';
       } else {
-        let top;
-        if (effDropY != null && grabOffsetY != null) {
-          const srcH = dragStartTbHeight || tbRect.height || 1;
-          const grabRatioY = grabOffsetY / srcH;
-          top = effDropY - grabRatioY * tbRect.height;
-        } else if (effDropY != null) {
-          top = effDropY - tbRect.height / 2;
-        } else {
-          top = cr.top + (cr.height - tbRect.height) / 2;
-        }
-        top = Math.max(cr.top + SNAP_GAP, Math.min(top, cr.bottom - tbRect.height - SNAP_GAP));
-        toolbar.style.position = 'fixed';
-        toolbar.style.top = top + 'px';
-        toolbar.style.left = side === 'left' ? (cr.left + SNAP_GAP) + 'px' : (cr.right - tbRect.width - SNAP_GAP) + 'px';
-        toolbar.style.transform = 'none';
+        toolbar.style.removeProperty('--tb-offset-rx');
+        toolbar.style.removeProperty('--tb-offset-ry');
       }
+      
+      // Cleanup old hardcoded styles so they don't override CSS
+      toolbar.style.left = '';
+      toolbar.style.top = '';
+      toolbar.style.right = '';
+      toolbar.style.bottom = '';
+      toolbar.style.transform = '';
+      // Visibility is handled globally
     }
 
     /** Orchestrator: snap toolbar to edge with overflow handling.
@@ -368,10 +425,6 @@ export function initToolbar(api) {
       const wasMinimized = toolbar.classList.contains('toolbar-minimized');
       const isHoriz = side === 'top' || side === 'bottom';
       const { fits, fitsMinimized } = checkToolbarFit(side);
-
-      const cr = getCanvasRect();
-      const rx = (dropX != null && cr.width > 0) ? Math.max(0, Math.min(1, (dropX - cr.left) / cr.width)) : null;
-      const ry = (dropY != null && cr.height > 0) ? Math.max(0, Math.min(1, (dropY - cr.top) / cr.height)) : null;
 
       if (wasMinimized) {
         // User explicitly minimized — preserve state, just reposition
@@ -392,17 +445,12 @@ export function initToolbar(api) {
           
           const oppDropX = isHoriz ? null : dropX;
           const oppDropY = isHoriz ? dropY : null;
-          const oppRx = isHoriz ? null : rx;
-          const oppRy = isHoriz ? ry : null;
 
-          positionToolbar(oppSide, oppDropX, oppDropY, grabOffsetX, grabOffsetY, oppRx, oppRy);
-          const oppTb = toolbar.getBoundingClientRect();
-          const oppCr = getCanvasRect();
-          const oppCx = oppTb.left + oppTb.width / 2;
-          const oppCy = oppTb.top + oppTb.height / 2;
-          const oppActRx = oppCr.width > 0 ? Math.max(0, Math.min(1, (oppCx - oppCr.left) / oppCr.width)) : null;
-          const oppActRy = oppCr.height > 0 ? Math.max(0, Math.min(1, (oppCy - oppCr.top) / oppCr.height)) : null;
-          localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: oppSide, x: oppCx, y: oppCy, rx: oppActRx, ry: oppActRy }));
+          positionToolbar(oppSide, oppDropX, oppDropY, grabOffsetX, grabOffsetY, null);
+          const oppRatio = (oppSide === 'top' || oppSide === 'bottom') 
+             ? parseFloat(toolbar.style.getPropertyValue('--tb-offset-rx') || '0.5')
+             : parseFloat(toolbar.style.getPropertyValue('--tb-offset-ry') || '0.5');
+          localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side: oppSide, edgeOffset: oppRatio }));
           requestAnimationFrame(() => api.adjustMinimapForToolbar());
           return;
         }
@@ -411,34 +459,52 @@ export function initToolbar(api) {
         localStorage.setItem('fd-toolbar-minimized', '1');
       }
 
-      positionToolbar(side, dropX, dropY, grabOffsetX, grabOffsetY, rx, ry);
-      const finalTb = toolbar.getBoundingClientRect();
-      const finalCr = getCanvasRect();
-      const cx = finalTb.left + finalTb.width / 2;
-      const cy = finalTb.top + finalTb.height / 2;
-      const actRx = finalCr.width > 0 ? Math.max(0, Math.min(1, (cx - finalCr.left) / finalCr.width)) : null;
-      const actRy = finalCr.height > 0 ? Math.max(0, Math.min(1, (cy - finalCr.top) / finalCr.height)) : null;
-      localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side, x: cx, y: cy, rx: actRx, ry: actRy }));
+      positionToolbar(side, dropX, dropY, grabOffsetX, grabOffsetY, null);
+      const ratio = (side === 'top' || side === 'bottom') 
+         ? parseFloat(toolbar.style.getPropertyValue('--tb-offset-rx') || '0.5')
+         : parseFloat(toolbar.style.getPropertyValue('--tb-offset-ry') || '0.5');
+      localStorage.setItem('fd-toolbar-pos', JSON.stringify({ side, edgeOffset: ratio }));
       requestAnimationFrame(() => api.adjustMinimapForToolbar());
     }
 
     /** Re-clamp toolbar to canvas bounds (call on panel toggle / resize).
-     * Fix #4: auto-restore if toolbar is minimized but now fits expanded. */
+     * Auto-minimizes if squeezed, auto-restores with hysteresis if space frees up. */
     function reclampToolbar() {
       if (isDragging) return;
       const saved = parseToolbarPos();
       const side = saved ? saved.side : 'bottom';
 
-      // Auto-restore: if minimized, check if expanded toolbar now fits
-      if (toolbar.classList.contains('toolbar-minimized')) {
-        const { fits } = checkToolbarFit(side);
-        if (fits) {
+      const isMinimized = toolbar.classList.contains('toolbar-minimized');
+      const isUserMinimized = localStorage.getItem('fd-toolbar-user-minimized') === '1';
+      
+      const { fits } = checkToolbarFit(side);
+
+      if (!isMinimized && !fits) {
+        // Space shrunk, auto-minimize
+        toolbar.classList.add('toolbar-minimized');
+        localStorage.setItem('fd-toolbar-minimized', '1');
+      } else if (isMinimized && !isUserMinimized) {
+        // Auto-restore only if user didn't explicitly minimize, and we have comfortable room
+        const cr = getCanvasRect();
+        const tbRect = toolbar.getBoundingClientRect();
+        // Measure expanded width - temporarily remove class
+        toolbar.classList.remove('toolbar-minimized');
+        const expandedTb = toolbar.getBoundingClientRect();
+        toolbar.classList.add('toolbar-minimized'); // Restore class until we decide
+        
+        const isHoriz = side === 'top' || side === 'bottom';
+        // Add 40px hysteresis buffer
+        const RESTORE_THRESHOLD = 40;
+        const available = isHoriz ? cr.width : cr.height;
+        const needed = isHoriz ? expandedTb.width : expandedTb.height;
+
+        if (available >= needed + 2 * SNAP_GAP + RESTORE_THRESHOLD) {
           toolbar.classList.remove('toolbar-minimized');
           localStorage.setItem('fd-toolbar-minimized', '0');
         }
       }
 
-      positionToolbar(side, saved?.x, saved?.y, null, null, saved?.rx, saved?.ry);
+      positionToolbar(side, null, null, null, null, saved?.edgeOffset);
       requestAnimationFrame(() => api.adjustMinimapForToolbar());
     }
     // Expose for panel toggle code to call
@@ -447,16 +513,27 @@ export function initToolbar(api) {
     /** Parse saved toolbar position with migration from old string format */
     function parseToolbarPos() {
       const raw = localStorage.getItem('fd-toolbar-pos');
-      if (!raw) return { side: 'bottom', x: null, y: null, rx: null, ry: null };
+      if (!raw) return { side: 'bottom', edgeOffset: null };
       try {
         const obj = JSON.parse(raw);
-        if (obj && obj.side) return obj;
+        if (obj && obj.side) {
+          // Migrate old rx/ry to edgeOffset if needed based on current canvas rect
+          if (obj.edgeOffset === undefined && (obj.rx !== undefined || obj.ry !== undefined)) {
+             const cr = getCanvasRect();
+             if ((obj.side === 'top' || obj.side === 'bottom') && obj.rx != null) {
+                obj.edgeOffset = cr.width * obj.rx;
+             } else if ((obj.side === 'left' || obj.side === 'right') && obj.ry != null) {
+                obj.edgeOffset = cr.height * obj.ry;
+             }
+          }
+          return { side: obj.side, edgeOffset: obj.edgeOffset };
+        }
       } catch (_) {}
       // Migration: old format was just a string like 'top'
       if (['top', 'bottom', 'left', 'right'].includes(raw)) {
-        return { side: raw, x: null, y: null, rx: null, ry: null };
+        return { side: raw, edgeOffset: null };
       }
-      return { side: 'bottom', x: null, y: null, rx: null, ry: null };
+      return { side: 'bottom', edgeOffset: null };
     }
 
     function showSnapIndicator(side, pointerX, pointerY, grabOffsetX, grabOffsetY, cachedCr, cachedTbDims) {
@@ -590,10 +667,16 @@ export function initToolbar(api) {
         } else {
           // ── MINIMIZE ──
           toolbar.classList.add('toolbar-minimized');
+          localStorage.setItem('fd-toolbar-user-minimized', '1');
         }
 
+        if (!toolbar.classList.contains('toolbar-minimized')) {
+           localStorage.removeItem('fd-toolbar-user-minimized');
+        }
         localStorage.setItem('fd-toolbar-minimized', toolbar.classList.contains('toolbar-minimized') ? '1' : '0');
-        // Grip-anchored positioning: keep grip stationary
+
+        // Grip-anchored positioning is simplified with CSS tracking, but we still need to calculate offset relative to center
+
         const gripAfter = gripEl.getBoundingClientRect();
         const tbRect2 = toolbar.getBoundingClientRect();
         const deltaX = gripBefore.left - gripAfter.left;
