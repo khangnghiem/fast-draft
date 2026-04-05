@@ -136,11 +136,6 @@
   padding: 0 6px;
 }
 #floating-toolbar.toolbar-minimized .ft-sep { display: none; }
-/* Show one separator between active tool and AI */
-#floating-toolbar.toolbar-minimized .ft-tool-btn.active + .ft-sep {
-  display: block; 
-  margin: 0 4px;
-}
 
 
 /* ── Snap indicator: ghost toolbar silhouette at destination ── */
