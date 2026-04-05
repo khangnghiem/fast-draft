@@ -275,6 +275,28 @@ export function initToolbar(api) {
       return 'bottom';
     }
 
+    /** Get all canvas chrome elements that toolbar must not overlap */
+    function getExclusionRects() {
+      const ids = [
+        'chrome-left',           // sidebar toggle group
+        'chrome-right',          // export + settings + hamburger
+        'minimap-container',     // minimap widget
+      ];
+      return ids.map(id => document.getElementById(id))
+        .filter(el => el && el.offsetParent !== null && typeof el.getBoundingClientRect === 'function')
+        .map(el => el.getBoundingClientRect());
+    }
+
+    /** Check if a proposed toolbar rect overlaps any exclusion zone */
+    function overlapsExclusion(tbRect, exclusions, gap = 8) {
+      return exclusions.some(ex => !(
+        tbRect.right + gap < ex.left ||
+        tbRect.left - gap > ex.right ||
+        tbRect.bottom + gap < ex.top ||
+        tbRect.top - gap > ex.bottom
+      ));
+    }
+
     // ── Decomposed snap functions (Fix #1: no recursion, no side-effects in query) ──
 
     /** Pure mathematical query: check if toolbar fits on given side, and doesn't overlap exclusion zones. */
@@ -297,12 +319,32 @@ export function initToolbar(api) {
         if (tbRect.height > cr.height - 2 * SNAP_GAP) fits = false;
       }
 
-      // 3. Mathematical intersection checking against safe exclusion zones (approximated sizes)
+      // 3. Mathematical intersection checking against safe exclusion zones
       if (fits) {
-        if (side === 'left' && tbRect.height > cr.height - 70) fits = false; // Left Chrome (60px)
-        if (side === 'right' && tbRect.height > cr.height - 270) fits = false; // Right Chrome (60) + Minimap (200)
-        if (side === 'top' && tbRect.width > cr.width - 200) fits = false; // Left Chrome + Right Chrome
-        if (side === 'bottom' && tbRect.width > cr.width - 220) fits = false; // Minimap
+        const exclusions = getExclusionRects();
+        let reserveTop = 0, reserveBottom = 0, reserveLeft = 0, reserveRight = 0;
+        
+        exclusions.forEach(ex => {
+          // If the exclusion is near the target edge, we consider it reserving space
+          const isNearTop = ex.top < cr.top + 100;
+          const isNearBottom = ex.bottom > cr.bottom - 100;
+          const isNearLeft = ex.left < cr.left + 100;
+          const isNearRight = ex.right > cr.right - 100;
+          
+          if (side === 'left' || side === 'right') {
+             if (isNearTop) reserveTop = Math.max(reserveTop, ex.bottom - cr.top);
+             if (isNearBottom) reserveBottom = Math.max(reserveBottom, cr.bottom - ex.top);
+          }
+          if (side === 'top' || side === 'bottom') {
+             if (isNearLeft) reserveLeft = Math.max(reserveLeft, ex.right - cr.left);
+             if (isNearRight) reserveRight = Math.max(reserveRight, cr.right - ex.left);
+          }
+        });
+
+        if (side === 'left' && tbRect.height > cr.height - reserveTop - reserveBottom - 2 * SNAP_GAP) fits = false;
+        if (side === 'right' && tbRect.height > cr.height - reserveTop - reserveBottom - 2 * SNAP_GAP) fits = false;
+        if (side === 'top' && tbRect.width > cr.width - reserveLeft - reserveRight - 2 * SNAP_GAP) fits = false;
+        if (side === 'bottom' && tbRect.width > cr.width - reserveLeft - reserveRight - 2 * SNAP_GAP) fits = false;
       }
 
       // Check minimized fit using cached dims similarly
@@ -355,17 +397,25 @@ export function initToolbar(api) {
           let minRx = 0; let maxRx = 1;
           if (cr.width > 0) {
             const halfW = tbRect.width / 2;
-            minRx = halfW / cr.width;
-            maxRx = (cr.width - halfW) / cr.width;
+            const padX = SNAP_GAP;
+            minRx = (halfW + padX) / cr.width;
+            maxRx = (cr.width - halfW - padX) / cr.width;
             
-            // Minimap bottom right zone avoidance mapping
-            if (side === 'bottom') {
-              const minimapReserveX = 280; // approximate width of minimap
-              if (cr.width > minimapReserveX) {
-                const availableCrW = cr.width - minimapReserveX;
-                maxRx = Math.min(maxRx, (availableCrW - halfW) / cr.width);
+            // Dynamic exclusions constraint
+            const exclusions = getExclusionRects();
+            exclusions.forEach(ex => {
+              const tbTop = side === 'top' ? cr.top : cr.bottom - tbRect.height;
+              const tbBottom = tbTop + tbRect.height;
+              const gap = 8;
+              const overlapsY = !(tbBottom + gap < ex.top || tbTop - gap > ex.bottom);
+              if (overlapsY) {
+                if (ex.left < cr.left + cr.width/2) {
+                   minRx = Math.max(minRx, (ex.right - cr.left + halfW + gap) / cr.width);
+                } else {
+                   maxRx = Math.min(maxRx, (ex.left - cr.left - halfW - gap) / cr.width);
+                }
               }
-            }
+            });
           }
           rx = Math.max(minRx, Math.min(maxRx, rx));
           
@@ -393,15 +443,25 @@ export function initToolbar(api) {
           let minRy = 0; let maxRy = 1;
           if (cr.height > 0) {
             const halfH = tbRect.height / 2;
-            const padY = 12; // 12px padding from top/bottom
+            const padY = SNAP_GAP; // padding from top/bottom
             minRy = (halfH + padY) / cr.height;
             maxRy = (cr.height - halfH - padY) / cr.height;
             
-            // Top layer chrome icons avoidance (e.g. Export / Settings top right)
-            if (side === 'right') {
-              const topChromeReserveY = 60;
-              minRy = Math.max(minRy, (topChromeReserveY + halfH) / cr.height);
-            }
+            // Dynamic exclusions constraint
+            const exclusions = getExclusionRects();
+            exclusions.forEach(ex => {
+              const tbLeft = side === 'left' ? cr.left : cr.right - tbRect.width;
+              const tbRight = tbLeft + tbRect.width;
+              const gap = 8;
+              const overlapsX = !(tbRight + gap < ex.left || tbLeft - gap > ex.right);
+              if (overlapsX) {
+                if (ex.top < cr.top + cr.height/2) {
+                   minRy = Math.max(minRy, (ex.bottom - cr.top + halfH + gap) / cr.height);
+                } else {
+                   maxRy = Math.min(maxRy, (ex.top - cr.top - halfH - gap) / cr.height);
+                }
+              }
+            });
           }
           ry = Math.max(minRy, Math.min(maxRy, ry));
 
@@ -556,12 +616,38 @@ export function initToolbar(api) {
         const grabRatioY = (grabOffsetY || 0) / srcH;
         const offsetAlongW = grabRatioX * gw;
         const offsetAlongH = grabRatioY * gh;
+        const exclusions = getExclusionRects();
+        
         if (side === 'top' || side === 'bottom') {
-          const left = Math.max(cr.left + SNAP_GAP, Math.min(pointerX - offsetAlongW, cr.right - gw - SNAP_GAP));
+          let left = Math.max(cr.left + SNAP_GAP, Math.min(pointerX - offsetAlongW, cr.right - gw - SNAP_GAP));
+          const tbTop = side === 'top' ? cr.top : cr.bottom - gh;
+          const tbBottom = tbTop + gh;
+          exclusions.forEach(ex => {
+            const gap = 8;
+            if (!(tbBottom + gap < ex.top || tbTop - gap > ex.bottom)) {
+              if (ex.left < cr.left + cr.width/2) {
+                 left = Math.max(left, ex.right + gap);
+              } else {
+                 left = Math.min(left, ex.left - gw - gap);
+              }
+            }
+          });
           snapIndicator.style.left = left + 'px';
           snapIndicator.style.top = side === 'top' ? (cr.top + SNAP_GAP) + 'px' : (cr.bottom - gh - SNAP_GAP) + 'px';
         } else {
-          const top = Math.max(cr.top + SNAP_GAP, Math.min(pointerY - offsetAlongH, cr.bottom - gh - SNAP_GAP));
+          let top = Math.max(cr.top + SNAP_GAP, Math.min(pointerY - offsetAlongH, cr.bottom - gh - SNAP_GAP));
+          const tbLeft = side === 'left' ? cr.left : cr.right - gw;
+          const tbRight = tbLeft + gw;
+          exclusions.forEach(ex => {
+            const gap = 8;
+            if (!(tbRight + gap < ex.left || tbLeft - gap > ex.right)) {
+              if (ex.top < cr.top + cr.height/2) {
+                 top = Math.max(top, ex.bottom + gap);
+              } else {
+                 top = Math.min(top, ex.top - gh - gap);
+              }
+            }
+          });
           snapIndicator.style.left = side === 'left' ? (cr.left + SNAP_GAP) + 'px' : (cr.right - gw - SNAP_GAP) + 'px';
           snapIndicator.style.top = top + 'px';
         }
@@ -810,7 +896,33 @@ export function initToolbar(api) {
       // Always snap to nearest orientation-locked edge (no floating mode)
       const side = getSnapSide(e.clientX, e.clientY);
       showSnapIndicator(null); // hide the indicator
+      
+      // FIRST: capture current visual position
+      const firstRect = toolbar.getBoundingClientRect();
+      
+      // LAST: apply snap — changes CSS classes + intrinsic position
       applyToolbarSnap(side, e.clientX, e.clientY, grabOffX, grabOffY);
+      
+      const lastRect = toolbar.getBoundingClientRect();
+      
+      // INVERT: offset toolbar back to visual start position
+      const dx = firstRect.left - lastRect.left;
+      const dy = firstRect.top - lastRect.top;
+      
+      toolbar.style.transition = 'none';
+      const baseTransform = (side === 'top' || side === 'bottom') ? 'translateX(-50%)' : 'translateY(-50%)';
+      toolbar.style.transform = `${baseTransform} translate(${dx}px, ${dy}px)`;
+      
+      // PLAY: animate to final snapped position
+      requestAnimationFrame(() => {
+        toolbar.style.transition = 'left 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), right 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), top 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), bottom 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1)';
+        toolbar.style.transform = ''; // clears inline so CSS takes over
+        
+        // Clean up inline transition after it finishes so original css rules apply
+        setTimeout(() => {
+           if (!isDragging) toolbar.style.transition = '';
+        }, 300);
+      });
     });
 
     // ── Restore saved state (suppress transition to avoid startup jump) ──
