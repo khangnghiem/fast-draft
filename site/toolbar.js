@@ -204,28 +204,34 @@ export function initToolbar(api) {
     const SNAP_GAP = 10;
     const GRIP_DRAG_THRESHOLD = 5; // minimum px before grip counts as drag
 
-    // ── Cached minimized dimensions (measured from DOM on first drag) ──
-    let cachedMiniDims = null; // { w, h } — horizontal minimized dimensions
+    // ── Cached logical dimensions (independent of orientation) ──
+    let cachedMiniDims = null; // { major, minor }
+    let cachedExpandedMajor = 0;
+    let cachedExpandedMinor = 0;
 
-    /** Measure the real minimized toolbar dimensions by brief off-screen clone */
+    /** Measure the real minimized toolbar dimensions mathematically safely */
     function getMiniDims() {
       if (cachedMiniDims) return cachedMiniDims;
-      // Temporarily apply minimized class, measure, and restore
       const wasMinimized = toolbar.classList.contains('toolbar-minimized');
-      const wasDocked = toolbar.className.match(/toolbar-docked-(\w+)/)?.[1];
-      // Ensure horizontal orientation for measurement
-      toolbar.classList.remove('toolbar-docked-left', 'toolbar-docked-right');
-      if (!toolbar.classList.contains('toolbar-docked-top') && !toolbar.classList.contains('toolbar-docked-bottom')) {
-        toolbar.classList.add('toolbar-docked-bottom');
-      }
-      toolbar.classList.add('toolbar-minimized');
-      const rect = toolbar.getBoundingClientRect();
-      cachedMiniDims = { w: rect.width, h: rect.height };
-      // Restore original state
+      if (!wasMinimized) toolbar.classList.add('toolbar-minimized');
+      const w = toolbar.offsetWidth;
+      const h = toolbar.offsetHeight;
+      cachedMiniDims = { major: Math.max(w, h), minor: Math.min(w, h) };
       if (!wasMinimized) toolbar.classList.remove('toolbar-minimized');
-      toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom');
-      if (wasDocked) toolbar.classList.add(`toolbar-docked-${wasDocked}`);
       return cachedMiniDims;
+    }
+
+    /** Ensure we know the expanded dims without dirtying DOM during drag */
+    function getExpandedDims() {
+      if (cachedExpandedMajor) return { major: cachedExpandedMajor, minor: cachedExpandedMinor };
+      const wasMinimized = toolbar.classList.contains('toolbar-minimized');
+      if (wasMinimized) toolbar.classList.remove('toolbar-minimized');
+      const w = toolbar.offsetWidth;
+      const h = toolbar.offsetHeight;
+      cachedExpandedMajor = Math.max(w, h);
+      cachedExpandedMinor = Math.min(w, h);
+      if (wasMinimized) toolbar.classList.add('toolbar-minimized');
+      return { major: cachedExpandedMajor, minor: cachedExpandedMinor };
     }
 
     /** Get the visible canvas bounding rect (excludes area behind open panels) */
@@ -271,67 +277,39 @@ export function initToolbar(api) {
 
     // ── Decomposed snap functions (Fix #1: no recursion, no side-effects in query) ──
 
-    /** Pure query: check if toolbar fits on given side, and doesn't intersect open panels. */
+    /** Pure mathematical query: check if toolbar fits on given side, and doesn't overlap exclusion zones. */
     function checkToolbarFit(side) {
       const cr = getCanvasRect();
       const isHoriz = side === 'top' || side === 'bottom';
 
-      // Check expanded fit
-      toolbar.classList.remove('toolbar-minimized');
-      toolbar.classList.remove('toolbar-docked-top', 'toolbar-docked-bottom', 'toolbar-docked-left', 'toolbar-docked-right');
-      toolbar.classList.add(`toolbar-docked-${side}`);
-      const tbRect = toolbar.getBoundingClientRect();
-      
-      let fits = isHoriz
-        ? tbRect.width <= cr.width - 2 * SNAP_GAP
-        : tbRect.height <= cr.height - 2 * SNAP_GAP;
-
-      // Ensure toolbar doesn't physically intersect open panels or chrome icons
-      const isIntersectingWithPanels = (rect) => {
-        const lp = document.getElementById('left-panel');
-        const rp = document.getElementById('right-panel');
-        const h = document.documentElement;
-        let intersects = false;
-        // 8px buffer
-        const pad = 8;
-        
-        const checkIntersect = (elRect) => {
-           if (!(rect.left > elRect.right + pad || rect.right < elRect.left - pad || rect.top > elRect.bottom + pad || rect.bottom < elRect.top - pad)) intersects = true;
-        };
-        
-        // Edge-specific collision:
-        if (side === 'left') {
-           if (h.dataset.lp === 'open' && lp) checkIntersect(lp.getBoundingClientRect());
-        } else if (side === 'right') {
-           if (h.dataset.rp === 'open' && rp) checkIntersect(rp.getBoundingClientRect());
-           const chromeRight = document.getElementById('chrome-right');
-           if (chromeRight && getComputedStyle(chromeRight).display !== 'none') checkIntersect(chromeRight.getBoundingClientRect());
-           const minimap = document.getElementById('minimap-container');
-           if (minimap && getComputedStyle(minimap).display !== 'none') checkIntersect(minimap.getBoundingClientRect());
-        } else if (side === 'top') {
-           const chromeRight = document.getElementById('chrome-right');
-           if (chromeRight && getComputedStyle(chromeRight).display !== 'none') checkIntersect(chromeRight.getBoundingClientRect());
-           const chromeLeft = document.querySelector('.canvas-chrome-left');
-           if (chromeLeft && getComputedStyle(chromeLeft).display !== 'none') checkIntersect(chromeLeft.getBoundingClientRect());
-        } else if (side === 'bottom') {
-           const minimap = document.getElementById('minimap-container');
-           if (minimap && getComputedStyle(minimap).display !== 'none') checkIntersect(minimap.getBoundingClientRect());
-        }
-
-        return intersects;
+      // 1. Get mathematical expanded dimensions based on side
+      const exp = getExpandedDims();
+      const tbRect = {
+        width: isHoriz ? exp.major : exp.minor,
+        height: isHoriz ? exp.minor : exp.major,
       };
-
-      if (fits && isIntersectingWithPanels(tbRect)) {
-        fits = false; // It physically touches an open panel, minimize it
+      
+      // 2. Strict physical viewport bounds checking
+      let fits = true;
+      if (isHoriz) {
+        if (tbRect.width > cr.width - 2 * SNAP_GAP) fits = false;
+      } else {
+        if (tbRect.height > cr.height - 2 * SNAP_GAP) fits = false;
       }
 
-      // Check minimized fit using cached dims
+      // 3. Mathematical intersection checking against safe exclusion zones (approximated sizes)
+      if (fits) {
+        if (side === 'left' && tbRect.height > cr.height - 70) fits = false; // Left Chrome (60px)
+        if (side === 'right' && tbRect.height > cr.height - 270) fits = false; // Right Chrome (60) + Minimap (200)
+        if (side === 'top' && tbRect.width > cr.width - 200) fits = false; // Left Chrome + Right Chrome
+        if (side === 'bottom' && tbRect.width > cr.width - 220) fits = false; // Minimap
+      }
+
+      // Check minimized fit using cached dims similarly
       const mini = getMiniDims();
-      // Mini dims are always horizontal; swap for vertical
-      const miniMajor = isHoriz ? mini.w : mini.h;
       const fitsMinimized = isHoriz
-        ? miniMajor <= cr.width - 2 * SNAP_GAP
-        : miniMajor <= cr.height - 2 * SNAP_GAP;
+        ? mini.major <= cr.width - 2 * SNAP_GAP
+        : mini.major <= cr.height - 2 * SNAP_GAP;
 
       return { fits, fitsMinimized, tbRect, cr };
     }
@@ -557,33 +535,23 @@ export function initToolbar(api) {
     function showSnapIndicator(side, pointerX, pointerY, grabOffsetX, grabOffsetY, cachedCr, cachedTbDims) {
       lastSnapSide = side; // track for pointerup
       if (side) {
-        const tbRect = cachedTbDims || toolbar.getBoundingClientRect();
-        const cr = cachedCr || getCanvasRect();
-        // If the target snap edge enforces a different orientation than current, swap dimensions for the shadow
-        let gw = tbRect.width, gh = tbRect.height;
-        const isCurrentlyHorizontal = gw >= gh;
+        const { fits, tbRect, cr } = checkToolbarFit(side);
         const isTargetHorizontal = side === 'top' || side === 'bottom';
-        if (isCurrentlyHorizontal !== isTargetHorizontal) {
-          gw = tbRect.height;
-          gh = tbRect.width;
-        }
+        let gw = tbRect.width;
+        let gh = tbRect.height;
 
-        // Fix #2: Use DOM-measured minimized dimensions instead of hardcoded guesses
-        const wouldOverflow = isTargetHorizontal
-          ? gw > cr.width - 2 * SNAP_GAP
-          : gh > cr.height - 2 * SNAP_GAP;
-        if (wouldOverflow && !toolbar.classList.contains('toolbar-minimized')) {
+        if (!fits && !toolbar.classList.contains('toolbar-minimized')) {
           const mini = getMiniDims();
-          // mini is horizontal (w=major, h=minor)
-          gw = isTargetHorizontal ? mini.w : mini.h;
-          gh = isTargetHorizontal ? mini.h : mini.w;
+          gw = isTargetHorizontal ? mini.major : mini.minor;
+          gh = isTargetHorizontal ? mini.minor : mini.major;
         }
 
         snapIndicator.style.display = 'block';
         snapIndicator.style.width = gw + 'px';
         snapIndicator.style.height = gh + 'px';
-        const srcW = dragStartTbWidth || tbRect.width || 1;
-        const srcH = dragStartTbHeight || tbRect.height || 1;
+        const exp = getExpandedDims();
+        const srcW = dragStartTbWidth || exp.major || 1;
+        const srcH = dragStartTbHeight || exp.minor || 1;
         const grabRatioX = (grabOffsetX || 0) / srcW;
         const grabRatioY = (grabOffsetY || 0) / srcH;
         const offsetAlongW = grabRatioX * gw;
