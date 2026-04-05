@@ -199,6 +199,7 @@ export function initToolbar(api) {
     let dragStartTbWidth = 0, dragStartTbHeight = 0; // toolbar dims at drag start (before orientation change)
     let lastSnapSide = null; // last snap side shown by indicator (null = no shadow visible)
     let cachedDragCanvasRect = null; // cached canvas rect during drag (avoids per-frame layout reads)
+    let cachedDragExclusions = null; // cached exclusion rects during drag (avoids layout thrashing)
     const pointerHistory = [];
     const SNAP_THRESHOLD = 60;
     const SNAP_GAP = 10;
@@ -276,7 +277,8 @@ export function initToolbar(api) {
     }
 
     /** Get all canvas chrome elements that toolbar must not overlap */
-    function getExclusionRects() {
+    function getExclusionRects(force = false) {
+      if (!force && cachedDragExclusions) return cachedDragExclusions;
       const ids = [
         'chrome-left',           // sidebar toggle group
         'chrome-right',          // export + settings + hamburger
@@ -678,6 +680,7 @@ export function initToolbar(api) {
         getMiniDims();
         // Cache canvas rect to avoid per-frame layout reads during drag
         cachedDragCanvasRect = getCanvasRect();
+        cachedDragExclusions = getExclusionRects(true);
         grip.setPointerCapture(e.pointerId);
       });
 
@@ -888,6 +891,7 @@ export function initToolbar(api) {
       isDragging = false;
       gripPointerDown = false;
       cachedDragCanvasRect = null;
+      cachedDragExclusions = null;
 
       // Compute grab offset for snap positioning
       const grabOffX = dragStartX - toolbarStartX;
@@ -912,6 +916,9 @@ export function initToolbar(api) {
       toolbar.style.transition = 'none';
       const baseTransform = (side === 'top' || side === 'bottom') ? 'translateX(-50%)' : 'translateY(-50%)';
       toolbar.style.transform = `${baseTransform} translate(${dx}px, ${dy}px)`;
+      
+      // FORCE SYNCHRONOUS LAYOUT: flush the 'none' transition to prevent batching
+      toolbar.offsetHeight;
       
       // PLAY: animate to final snapped position
       requestAnimationFrame(() => {
