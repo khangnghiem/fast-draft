@@ -17,9 +17,9 @@
 
 ## Completed Requirements
 
-### v0.11.346 — Toolbar Snap Physics & FLIP Refactor (R3.39)
-- **Overshoot Physics:** Upgraded the toolbar CSS transition to `cubic-bezier(0.34, 1.56, 0.64, 1)` with a 280ms duration. This creates a physics-based, Apple HIG-style damped spring effect that slightly overshoots the target edge before settling directly into its magnetic snap position.
-- **FLIP Transition Cleanup:** Removed the hardcoded FLIP transition string (`toolbar.style.transition`) and the `setTimeout()` race condition in `toolbar.js`. The JavaScript now simply clears the inline transition during the playback phase, allowing the CSS stylesheet to correctly govern the physics animation, ensuring perfect sync between layout bounds and visual motion.
+### v0.11.346 — Toolbar Refactor & Performance Optimization (Bug Fix)
+- **Eliminated Layout Thrashing:** Patched `showSnapIndicator` to use the cached canvas rectangle instead of triggering a synchronous layout `getBoundingClientRect` on every pointer move frame during drag.
+- **Removed Dead Code & Stale State:** Stripped the `pointerHistory` write-only array tracker and removed the legacy `transition = 'none'` startup toggle ceremony that was compensating for non-existent positional transitions.
 
 ### v0.11.345 — Toolbar Layout Thrashing Fix & FLIP Batching (Bug Fix)
 - **Eliminated Layout Thrashing:** Cached `getExclusionRects()` outputs locally during the `pointerdown` phase for the drag duration. This resolves extreme 60+ FPS lockups on MacOS where interleaved `getBoundingClientRect()` checks inside the mouse move loop caused violent synchronous repaints.

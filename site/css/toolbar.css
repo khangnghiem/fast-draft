@@ -69,13 +69,8 @@
 }
 /* ── Smooth position and minimize transitions ── */
 #floating-toolbar:not(.toolbar-dragging) {
-  transition: left 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), 
-              right 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), 
-              top 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), 
-              bottom 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), 
-              margin-left 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), 
-              gap 0.3s ease, padding 0.3s ease, margin 0.3s ease, 
-              max-width 0.3s ease, max-height 0.3s ease, transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: gap 0.3s ease, padding 0.3s ease, margin 0.3s ease, 
+              max-width 0.3s ease, max-height 0.3s ease;
 }
 /* ── Grip handle (6-dot dots) ── */
 .toolbar-grip {
