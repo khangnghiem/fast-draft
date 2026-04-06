@@ -728,3 +728,20 @@
   50% { opacity: 0; }
 }
 
+.ai-rate-limit-text {
+  font-size: 10px;
+  color: var(--fd-text-secondary, #86868B);
+  margin-left: auto;
+  margin-right: 8px;
+  transition: color 0.3s ease;
+}
+.ai-rate-limit-text.warning {
+  color: #FF9500;
+  animation: ai-rate-limit-pulse 2s infinite;
+}
+@keyframes ai-rate-limit-pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
