@@ -543,17 +543,15 @@ export function initToolbar(api) {
       } else if (isMinimized && !isUserMinimized) {
         // Auto-restore only if user didn't explicitly minimize, and we have comfortable room
         const cr = getCanvasRect();
-        const tbRect = toolbar.getBoundingClientRect();
-        // Measure expanded width - temporarily remove class
-        toolbar.classList.remove('toolbar-minimized');
-        const expandedTb = toolbar.getBoundingClientRect();
-        toolbar.classList.add('toolbar-minimized'); // Restore class until we decide
-        
         const isHoriz = side === 'top' || side === 'bottom';
+        
+        // Use cached expanded dimensions instead of layout thrashing
+        const expDims = getExpandedDims();
+        const needed = isHoriz ? expDims.major : expDims.minor;
+        const available = isHoriz ? cr.width : cr.height;
+        
         // Add 40px hysteresis buffer
         const RESTORE_THRESHOLD = 40;
-        const available = isHoriz ? cr.width : cr.height;
-        const needed = isHoriz ? expandedTb.width : expandedTb.height;
 
         if (available >= needed + 2 * SNAP_GAP + RESTORE_THRESHOLD) {
           toolbar.classList.remove('toolbar-minimized');
