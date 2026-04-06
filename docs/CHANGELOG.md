@@ -19,6 +19,9 @@
 ## Completed Requirements
 - **DOCS:** Updated `ARCHITECTURE.md` to document the new `emit_filtered` AI context engineering APIs and the Adaptive Prefix Seeding ID generation strategy.
 
+### v0.11.348 — Canvas UI Polish & AFK Auto-Fade Removal
+- **AFK Fading Removed**: Stripped the 4-second JS timeout logic (`CHROME_IDLE_MS`) and `.chrome-idle` CSS classes. The top-right canvas navigation controls (Export/Settings) now remain reliably visible at all times, preventing usability friction.
+- **Smooth Layout Transitions**: Resolved a persistent ~40px empty gap between the settings gear and the right panel edge. The toggle button (`#hamburger-toggle-btn`) now smoothly animates its `width`, `padding`, `border-width`, and `margin` down to exactly `0px` in sync with its opacity fade when the panel is open, elegantly sliding adjacent icons to preserve the premium HIG layout structure.
 ### v0.11.347 — Context Engineering Pipeline & Layered Context (R4.19, R4.26)
 - **Layered Document Context**: Upgraded the AI Agent chat context builder to explicitly supply segmented \`styles\` (via \`ReadMode::Design\`) and \`structure\` (via \`ReadMode::Structure\`) blocks to the system prompt, slashing raw token consumption by ~50-80% compared to full-document dumps.
 - **Adaptive Context Windowing**: Backend now detects injected JSON format from the JS client, rendering independent \`## Design System\` and \`## Document Structure\` markdown headers dynamically to focus the AI's structural and styling awareness.

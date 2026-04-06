@@ -80,13 +80,3 @@
   background: var(--fd-border);
 }
 
-/* ─── Canvas Chrome Auto-Fade ─── */
-.canvas-chrome-right {
-  transition: opacity 0.3s ease;
-}
-.canvas-chrome-right.chrome-idle {
-  opacity: 0.15;
-}
-.canvas-chrome-right.chrome-idle:hover {
-  opacity: 1;
-}
