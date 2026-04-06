@@ -751,6 +751,7 @@ export function initToolbar(api) {
 
         // Let positionToolbar calculate the ratio based on the approximate target center point
         const tbRect2 = toolbar.getBoundingClientRect();
+        const gripAfter = gripEl.getBoundingClientRect();
         const deltaX = gripBefore.left - gripAfter.left;
         const deltaY = gripBefore.top - gripAfter.top;
         const dropX = tbRect2.left + deltaX + tbRect2.width / 2;
