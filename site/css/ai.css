@@ -701,6 +701,17 @@
   cursor: not-allowed;
   filter: grayscale(0.3);
 }
+.ai-chat-send.stop-mode {
+  background: rgba(255, 59, 48, 0.1);
+  color: #FF3B30;
+  border-radius: 8px;
+  font-size: 12px;
+  filter: none;
+}
+.ai-chat-send.stop-mode:hover {
+  background: rgba(255, 59, 48, 0.2);
+  filter: none;
+}
 
 @media (max-width: 768px) {
   .ai-chat-panel { width: 100%; max-width: 100%; }

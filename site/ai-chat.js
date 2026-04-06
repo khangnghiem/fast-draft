@@ -15,6 +15,7 @@
 
 const chatHistory = [];
 let isSending = false;
+let currentAbortController = null;
 const AI_ENDPOINT = '/api/ai';
 
 /** @type {Function|null} Getter for FdCanvas reference */
@@ -307,6 +308,46 @@ function extractNodeBlock(source, nodeId) {
 
 // ─── Message Addition ───────────────────────────────────
 
+function wireApplySkipButtons(container, getEditorContent, setEditorContent) {
+  container.querySelectorAll('.fd-apply-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const fdCode = decodeURIComponent(btn.dataset.fd);
+      const actionDiv = btn.closest('.fd-block-action');
+      smartApplyFdCode(fdCode, getEditorContent, setEditorContent);
+      if (actionDiv) {
+        actionDiv.innerHTML = '<span style="color:#34C759;font-size:10px;font-weight:600">✓ Applied</span>';
+      }
+    });
+  });
+
+  container.querySelectorAll('.fd-reject-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const actionDiv = btn.closest('.fd-block-action');
+      if (actionDiv) {
+        actionDiv.innerHTML = '<span style="color:#86868B;font-size:10px;font-style:italic">Skipped</span>';
+      }
+    });
+  });
+}
+
+function updateRateLimitUI(remaining, limit) {
+  let rateEl = document.getElementById('ai-rate-limit');
+  if (!rateEl) {
+    rateEl = document.createElement('div');
+    rateEl.id = 'ai-rate-limit';
+    rateEl.style.fontSize = '10px';
+    rateEl.style.color = 'var(--fd-text-secondary, #86868B)';
+    rateEl.style.marginLeft = 'auto';
+    rateEl.style.marginRight = '8px';
+    const footer = document.querySelector('.ai-chat-input-footer');
+    const sendBtn = getChatSend();
+    if (footer && sendBtn) {
+      footer.insertBefore(rateEl, sendBtn);
+    }
+  }
+  rateEl.textContent = `${remaining}/${limit} remaining`;
+}
+
 function addMessage(role, content, getEditorContent, setEditorContent) {
   const messages = getChatMessages();
   if (!messages) return;
@@ -324,27 +365,7 @@ function addMessage(role, content, getEditorContent, setEditorContent) {
     div.textContent = '✦ Thinking…';
   } else {
     div.innerHTML = renderAssistantMessage(content, getEditorContent, setEditorContent);
-
-    // Wire up accept/reject buttons with smart replace
-    div.querySelectorAll('.fd-apply-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const fdCode = decodeURIComponent(btn.dataset.fd);
-        const actionDiv = btn.closest('.fd-block-action');
-        smartApplyFdCode(fdCode, getEditorContent, setEditorContent);
-        if (actionDiv) {
-          actionDiv.innerHTML = '<span style="color:#34C759;font-size:10px;font-weight:600">✓ Applied</span>';
-        }
-      });
-    });
-
-    div.querySelectorAll('.fd-reject-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const actionDiv = btn.closest('.fd-block-action');
-        if (actionDiv) {
-          actionDiv.innerHTML = '<span style="color:#86868B;font-size:10px;font-style:italic">Skipped</span>';
-        }
-      });
-    });
+    wireApplySkipButtons(div, getEditorContent, setEditorContent);
   }
 
   messages.appendChild(div);
@@ -366,7 +387,12 @@ async function sendMessage(getEditorContent, setEditorContent) {
   if (!text) return;
 
   isSending = true;
-  if (sendBtn) sendBtn.disabled = true;
+  currentAbortController = new AbortController();
+  if (sendBtn) {
+    sendBtn.innerHTML = '■';
+    sendBtn.title = 'Stop Generating';
+    sendBtn.classList.add('stop-mode');
+  }
   input.value = '';
   input.style.height = 'auto';
 
@@ -397,6 +423,7 @@ async function sendMessage(getEditorContent, setEditorContent) {
 
     const response = await fetch(AI_ENDPOINT, {
       method: 'POST',
+      signal: currentAbortController.signal,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         mode: 'chat',
@@ -417,6 +444,10 @@ async function sendMessage(getEditorContent, setEditorContent) {
     // Remove thinking indicator
     if (thinkingDiv) thinkingDiv.remove();
 
+    const limit = response.headers.get('x-ratelimit-limit');
+    const remaining = response.headers.get('x-ratelimit-remaining');
+    if (limit && remaining) updateRateLimitUI(remaining, limit);
+
     const contentType = response.headers.get('content-type') || '';
 
     if (contentType.includes('text/event-stream') && response.body) {
@@ -434,29 +465,42 @@ async function sendMessage(getEditorContent, setEditorContent) {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let lastRender = 0;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
 
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const payload = line.slice(6).trim();
-          if (payload === '[DONE]') continue;
-          try {
-            const parsed = JSON.parse(payload);
-            const token = parsed.response || '';
-            if (token) {
-              accumulated += token;
-              // Live preview: render as escaped text (fast, no layout thrash)
-              div.textContent = accumulated;
-              messages.scrollTop = messages.scrollHeight;
-            }
-          } catch (_) {}
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const payload = line.slice(6).trim();
+            if (payload === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(payload);
+              const token = parsed.response || '';
+              if (token) {
+                accumulated += token;
+                const now = Date.now();
+                if (now - lastRender > 100) {
+                  div.innerHTML = renderAssistantMessage(accumulated + ' █', getEditorContent, setEditorContent);
+                  wireApplySkipButtons(div, getEditorContent, setEditorContent);
+                  messages.scrollTop = messages.scrollHeight;
+                  lastRender = now;
+                }
+              }
+            } catch (_) {}
+          }
+        }
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          accumulated += '\n\n*(Stopped)*';
+        } else {
+          throw e;
         }
       }
 
@@ -464,36 +508,29 @@ async function sendMessage(getEditorContent, setEditorContent) {
       const finalContent = accumulated || 'No response received.';
       chatHistory.push({ role: 'assistant', content: finalContent });
       div.innerHTML = renderAssistantMessage(finalContent, getEditorContent, setEditorContent);
-
-      // Wire apply/reject buttons
-      div.querySelectorAll('.fd-apply-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const fdCode = decodeURIComponent(btn.dataset.fd);
-          const actionDiv = btn.closest('.fd-block-action');
-          smartApplyFdCode(fdCode, getEditorContent, setEditorContent);
-          if (actionDiv) actionDiv.innerHTML = '<span style="color:#34C759;font-size:10px;font-weight:600">✓ Applied</span>';
-        });
-      });
-      div.querySelectorAll('.fd-reject-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const actionDiv = btn.closest('.fd-block-action');
-          if (actionDiv) actionDiv.innerHTML = '<span style="color:#86868B;font-size:10px;font-style:italic">Skipped</span>';
-        });
-      });
+      wireApplySkipButtons(div, getEditorContent, setEditorContent);
       messages.scrollTop = messages.scrollHeight;
     } else {
       // ─── Fallback: full JSON response ──────────────
       const data = await response.json();
+      if (data.limit && data.remaining) updateRateLimitUI(data.remaining, data.limit);
       const assistantContent = data.result || 'No response received.';
       chatHistory.push({ role: 'assistant', content: assistantContent });
       addMessage('assistant', assistantContent, getEditorContent, setEditorContent);
     }
   } catch (err) {
     if (thinkingDiv) thinkingDiv.remove();
-    addMessage('assistant', `⚠️ Error: ${err.message}`, getEditorContent, setEditorContent);
+    if (err.name !== 'AbortError') {
+      addMessage('assistant', `⚠️ Error: ${err.message}`, getEditorContent, setEditorContent);
+    }
   } finally {
     isSending = false;
-    if (sendBtn) sendBtn.disabled = false;
+    currentAbortController = null;
+    if (sendBtn) {
+      sendBtn.innerHTML = '→';
+      sendBtn.title = 'Send';
+      sendBtn.classList.remove('stop-mode');
+    }
     input.focus();
   }
 }
@@ -534,7 +571,20 @@ export function initAiChat(getEditorContent, setEditorContent, getCanvas) {
 
   if (sendBtn) {
     sendBtn.addEventListener('click', () => {
-      sendMessage(getEditorContent, setEditorContent);
+      if (isSending && currentAbortController) {
+        currentAbortController.abort();
+      } else {
+        sendMessage(getEditorContent, setEditorContent);
+      }
+    });
+  }
+
+  const modelSelect = document.getElementById('ai-model-select');
+  if (modelSelect) {
+    const saved = localStorage.getItem('fd-ai-model');
+    if (saved) modelSelect.value = saved;
+    modelSelect.addEventListener('change', (e) => {
+      localStorage.setItem('fd-ai-model', e.target.value);
     });
   }
 
