@@ -39,6 +39,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R1.20** _(done)_: Edge anchors — `EdgeAnchor` enum (`@node_id` or `x y` coords) for flexible edge endpoints; `text_child: Option<NodeId>` for styled text labels; `create_edge_at()` WASM API; edge-to-edge validation
 - **R1.21** _(done)_: Free frame padding — `pad: <N>` property on Free-layout frames insets the content area; children default to padded origin, text centering and `place:` use padded bounds; also accepts `padding:` alias
 - **R1.22** _(done)_: Style inheritance — `extends: <parent>` inside `style` blocks; child style inherits all parent properties, child properties override; max depth 8 prevents cycles; works with `use:` resolution and edge styles
+- **R1.24** _(done)_: Sequential auto-generated IDs — auto-generated IDs use short suffixes (`@rect_1`, `@path_2`) instead of 13-digit timestamps; uses Parse Tree Max Counter seeding after every document parse to prevent collisions while preserving token efficiency.
 - **R1.23** _(planned)_: Component template instantiation — `use: @node_id` to clone a node subtree as a component instance; enables true component reuse beyond flat style application; deferred for post-v1
 
 ### R2: Bidirectional Sync
@@ -314,7 +315,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | theme               | R3.13                                                                                   |
 | view mode           | R3.14, R4.11                                                                            |
 | pressure / pencil   | R3.4, R3.10, R3.22                                                                      |
-| ai / refinement     | R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17, R4.20, R4.21, R4.22, R4.23, R4.24, R4.25, R4.26 |
+| ai / refinement     | R1.24, R4.7, R4.8, R4.9, R4.10, R4.12, R4.13, R4.14, R4.15, R4.16, R4.17, R4.20, R4.21, R4.22, R4.23, R4.24, R4.25, R4.26 |
 | rate-limit          | R4.22                                                                                   |
 | edge                | R1.10, R1.11, R1.12, R4.6, R5.7, R5.8                                                   |
 | import              | R1.14, R1.18                                                                            |
