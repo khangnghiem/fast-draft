@@ -181,7 +181,8 @@ function escapeHtml(text) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /**
@@ -335,17 +336,22 @@ function updateRateLimitUI(remaining, limit) {
   if (!rateEl) {
     rateEl = document.createElement('div');
     rateEl.id = 'ai-rate-limit';
-    rateEl.style.fontSize = '10px';
-    rateEl.style.color = 'var(--fd-text-secondary, #86868B)';
-    rateEl.style.marginLeft = 'auto';
-    rateEl.style.marginRight = '8px';
+    rateEl.className = 'ai-rate-limit-text';
     const footer = document.querySelector('.ai-chat-input-footer');
     const sendBtn = getChatSend();
     if (footer && sendBtn) {
       footer.insertBefore(rateEl, sendBtn);
     }
   }
+  
+  const rem = parseInt(remaining, 10);
   rateEl.textContent = `${remaining}/${limit} remaining`;
+  
+  if (!isNaN(rem) && rem <= 3) {
+    rateEl.classList.add('warning');
+  } else {
+    rateEl.classList.remove('warning');
+  }
 }
 
 function addMessage(role, content, getEditorContent, setEditorContent) {
@@ -465,7 +471,14 @@ async function sendMessage(getEditorContent, setEditorContent) {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      let lastRender = 0;
+      let renderPending = false;
+
+      const performRender = () => {
+        const unsafeHTML = renderAssistantMessage(accumulated, getEditorContent, setEditorContent) + '<span class="ai-cursor">█</span>';
+        div.innerHTML = window.DOMPurify ? DOMPurify.sanitize(unsafeHTML, { ADD_ATTR: ['data-fd', 'data-bid'] }) : unsafeHTML;
+        messages.scrollTop = messages.scrollHeight;
+        renderPending = false;
+      };
 
       try {
         while (true) {
@@ -485,11 +498,9 @@ async function sendMessage(getEditorContent, setEditorContent) {
               const token = parsed.response || '';
               if (token) {
                 accumulated += token;
-                const now = Date.now();
-                if (now - lastRender > 100) {
-                  div.innerHTML = renderAssistantMessage(accumulated, getEditorContent, setEditorContent) + '<span class="ai-cursor">█</span>';
-                  messages.scrollTop = messages.scrollHeight;
-                  lastRender = now;
+                if (!renderPending) {
+                  renderPending = true;
+                  requestAnimationFrame(performRender);
                 }
               }
             } catch (_) {}
@@ -506,7 +517,8 @@ async function sendMessage(getEditorContent, setEditorContent) {
       // Finalize: re-render with full markdown + Apply/Skip buttons
       const finalContent = accumulated || 'No response received.';
       chatHistory.push({ role: 'assistant', content: finalContent });
-      div.innerHTML = renderAssistantMessage(finalContent, getEditorContent, setEditorContent);
+      const finalUnsafeHTML = renderAssistantMessage(finalContent, getEditorContent, setEditorContent);
+      div.innerHTML = window.DOMPurify ? DOMPurify.sanitize(finalUnsafeHTML, { ADD_ATTR: ['data-fd', 'data-bid'] }) : finalUnsafeHTML;
       wireApplySkipButtons(div, getEditorContent, setEditorContent);
       messages.scrollTop = messages.scrollHeight;
     } else {
@@ -581,10 +593,12 @@ export function initAiChat(getEditorContent, setEditorContent, getCanvas) {
   const modelSelect = document.getElementById('ai-model-select');
   if (modelSelect) {
     const saved = localStorage.getItem('fd-ai-model');
-    if (saved && [...modelSelect.options].some(o => o.value === saved)) {
-      modelSelect.value = saved;
-    } else {
-      localStorage.removeItem('fd-ai-model');
+    if (saved) {
+      if ([...modelSelect.options].some(o => o.value === saved)) {
+        modelSelect.value = saved;
+      } else {
+        localStorage.removeItem('fd-ai-model');
+      }
     }
     modelSelect.addEventListener('change', (e) => {
       localStorage.setItem('fd-ai-model', e.target.value);
