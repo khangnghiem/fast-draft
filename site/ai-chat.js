@@ -370,7 +370,8 @@ function addMessage(role, content, getEditorContent, setEditorContent) {
   } else if (role === 'thinking') {
     div.textContent = '✦ Thinking…';
   } else {
-    div.innerHTML = renderAssistantMessage(content, getEditorContent, setEditorContent);
+    const unsafeHTML = renderAssistantMessage(content, getEditorContent, setEditorContent);
+    div.innerHTML = window.DOMPurify ? DOMPurify.sanitize(unsafeHTML, { ADD_ATTR: ['data-fd', 'data-bid'] }) : unsafeHTML;
     wireApplySkipButtons(div, getEditorContent, setEditorContent);
   }
 

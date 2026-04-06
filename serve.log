@@ -1,29 +1,40 @@
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/http/server.py", line 1320, in <module>
-    test(
-    ~~~~^
-        HandlerClass=handler_class,
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<3 lines>...
-        protocol=args.protocol,
-        ^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/http/server.py", line 1267, in test
-    with ServerClass(addr, HandlerClass) as httpd:
-         ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
-  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/socketserver.py", line 457, in __init__
-    self.server_bind()
-    ~~~~~~~~~~~~~~~~^^
-  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/http/server.py", line 1314, in server_bind
-    return super().server_bind()
-           ~~~~~~~~~~~~~~~~~~~^^
-  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/http/server.py", line 136, in server_bind
-    socketserver.TCPServer.server_bind(self)
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
-  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/socketserver.py", line 473, in server_bind
-    self.socket.bind(self.server_address)
-    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
-OSError: [Errno 48] Address already in use
+::1 - - [06/Apr/2026 22:18:54] "GET / HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:54] "GET /wasm/fd_wasm.js?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:54] "GET /wasm/fd_wasm_bg.wasm?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:54] "GET /shared.css?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:54] "GET /style.css?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:54] "GET /vendor/cm.min.js HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:54] "GET /context-menu.js?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:54] "GET /app.js?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /css/variables.css?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /css/layout.css?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /css/panels.css?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /css/toolbar.css?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /css/properties.css?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /css/menus.css?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /css/minimap.css?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /css/landing.css?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /css/ai.css?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /css/modals.css?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /sw.js HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /wasm/fd_wasm.js?v=0.11.296 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /wasm/fd_wasm_bg.wasm?v=0.11.296 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /layers.js?v=0.11.309 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /wasm/fd_wasm.js?v=0.11.309 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /canvas-core/menu-registry.js?v=0.11.334 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /canvas-core/state.js?v=0.11.296 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /canvas-core/render.js?v=0.11.296 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /ai-chat.js?v=0.11.296 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /canvas-core/clipboard.js?v=0.11.296 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /canvas-core/shortcuts.js?v=0.11.296 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /canvas-core/viewport.js?v=0.11.296 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /canvas-core/inline-edit.js?v=0.11.296 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /touch.js?v=0.11.296 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /presentation.js?v=0.11.296 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /tauri.js?v=0.11.296 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /search.js?v=0.11.296 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /src/editor/syntax.js HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /canvas-core/state.js HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] "GET /toolbar.js?v=0.11.296 HTTP/1.1" 200 -
+::1 - - [06/Apr/2026 22:18:55] code 404, message File not found
+::1 - - [06/Apr/2026 22:18:55] "GET /favicon.ico HTTP/1.1" 404 -
