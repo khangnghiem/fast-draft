@@ -16,8 +16,13 @@
   eraser, delete, swipe             → search v0.9.x epoch
   group, drill-down, selection      → search v0.8.70-99 epoch
 -->
-
 ## Completed Requirements
+
+### v0.11.347 — Context Engineering Pipeline & Layered Context (R4.19, R4.26)
+- **Layered Document Context**: Upgraded the AI Agent chat context builder to explicitly supply segmented \`styles\` (via \`ReadMode::Design\`) and \`structure\` (via \`ReadMode::Structure\`) blocks to the system prompt, slashing raw token consumption by ~50-80% compared to full-document dumps.
+- **Adaptive Context Windowing**: Backend now detects injected JSON format from the JS client, rendering independent \`## Design System\` and \`## Document Structure\` markdown headers dynamically to focus the AI's structural and styling awareness.
+- **WASM Binding Export**: Exposed \`emit_filtered(mode_str)\` onto the Rust \`FdCanvas\` WASM ABI. This bridges the frontend to the native \`ReadMode\` enumeration, actively skipping properties (like XY coordinates) irrelevant to the semantic prompt payload.
+- **FD-Aware System Prompt**: Infused "Mutation Patterns" and restrictive rules directly into the AI system message. Instructed generation boundaries (`NEVER output absolute x/y`, `ALWAYS preserve existing use: style references`) to strictly minimize layout constraint breakage when modifying code elements.
 
 ### v0.11.346 — Toolbar Refactor & Performance Optimization (Bug Fix)
 - **Eliminated Layout Thrashing:** Patched `showSnapIndicator` to use the cached canvas rectangle instead of triggering a synchronous layout `getBoundingClientRect` on every pointer move frame during drag.
