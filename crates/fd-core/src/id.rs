@@ -41,6 +41,35 @@ impl NodeId {
         use std::sync::atomic::Ordering;
         COUNTER.store(seed, Ordering::Relaxed);
     }
+
+    /// Scan all node and edge IDs in a graph, extract trailing `_N` suffixes,
+    /// and seed the global counter to `max(N) + 1` to prevent collisions.
+    pub fn seed_from_graph(graph: &crate::model::SceneGraph) {
+        let mut max_suffix: u64 = 0;
+
+        // Scan node IDs (stored in the DAG)
+        for idx in graph.graph.node_indices() {
+            if let Some(n) = extract_suffix(graph.graph[idx].id.as_str()) {
+                max_suffix = max_suffix.max(n);
+            }
+        }
+
+        // Scan edge IDs (stored in Vec<Edge>)
+        for edge in &graph.edges {
+            if let Some(n) = extract_suffix(edge.id.as_str()) {
+                max_suffix = max_suffix.max(n);
+            }
+        }
+
+        Self::seed_prefix_counter(max_suffix + 1);
+    }
+}
+
+/// Extract trailing integer suffix after the last `_`.
+/// e.g. `rect_5` → Some(5), `_rect_3` → Some(3), `login_form` → None
+fn extract_suffix(id: &str) -> Option<u64> {
+    let (_, suffix) = id.rsplit_once('_')?;
+    suffix.parse::<u64>().ok()
 }
 
 /// Global counter for dynamically generated unique IDs across the entire SceneGraph.
@@ -88,5 +117,27 @@ mod tests {
         let a = NodeId::anonymous("rect");
         let b = NodeId::anonymous("rect");
         assert_ne!(a, b);
+    }
+
+    #[test]
+    fn extract_suffix_cases() {
+        assert_eq!(extract_suffix("rect_5"), Some(5));
+        assert_eq!(extract_suffix("_rect_3"), Some(3));
+        assert_eq!(extract_suffix("edge_12"), Some(12));
+        assert_eq!(extract_suffix("login_form"), None);
+        assert_eq!(extract_suffix("root"), None);
+        assert_eq!(extract_suffix(""), None);
+    }
+
+    #[test]
+    fn seed_from_graph_picks_max_suffix() {
+        let graph = crate::parser::parse_document(
+            "rect @rect_3 { w: 100 h: 50 }\nrect @rect_7 { w: 80 h: 40 }",
+        )
+        .unwrap();
+        NodeId::seed_from_graph(&graph);
+        let next = NodeId::with_prefix("rect");
+        let suffix: u64 = next.as_str().rsplit_once('_').unwrap().1.parse().unwrap();
+        assert!(suffix >= 8, "expected suffix >= 8, got {suffix}");
     }
 }
