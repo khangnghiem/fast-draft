@@ -177,4 +177,21 @@ impl FdCanvas {
 
         out
     }
+
+    /// Emit the document filtered by ReadMode (e.g. "Structure", "Design")
+    /// Uses R4.19 filtered views to reduce tokens for AI context.
+    pub fn emit_filtered(&self, mode_str: &str) -> String {
+        let mode = match mode_str {
+            "Structure" => fd_core::emitter::ReadMode::Structure,
+            "Design" => fd_core::emitter::ReadMode::Design,
+            "Layout" => fd_core::emitter::ReadMode::Layout,
+            "Visual" => fd_core::emitter::ReadMode::Visual,
+            "Edges" => fd_core::emitter::ReadMode::Edges,
+            "When" => fd_core::emitter::ReadMode::When,
+            "Spec" => fd_core::emitter::ReadMode::Spec,
+            "Diff" => fd_core::emitter::ReadMode::Diff,
+            _ => fd_core::emitter::ReadMode::Full,
+        };
+        fd_core::emitter::emit_filtered(&self.engine.graph, mode)
+    }
 }

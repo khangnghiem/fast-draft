@@ -274,6 +274,26 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Emit the document filtered by ReadMode (e.g. "Structure", "Design")
+     * Uses R4.19 filtered views to reduce tokens for AI context.
+     * @param {string} mode_str
+     * @returns {string}
+     */
+    emit_filtered(mode_str) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(mode_str, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_emit_filtered(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * Emit FD text for only the currently selected nodes.
      *
      * Returns valid FD text containing just the selected node blocks

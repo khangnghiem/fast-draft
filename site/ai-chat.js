@@ -426,7 +426,18 @@ async function sendMessage(getEditorContent, setEditorContent) {
 
   try {
     // Get current document context
-    const docContent = getEditorContent ? getEditorContent() : '';
+    const canvas = _getCanvas ? _getCanvas() : null;
+    let docContent;
+    if (canvas && typeof canvas.emit_filtered === 'function') {
+      const styles = canvas.emit_filtered('Design') || '';
+      const structure = canvas.emit_filtered('Structure') || '';
+      docContent = {
+        styles: styles.slice(0, 2000),
+        structure: structure.slice(0, 3000)
+      };
+    } else {
+      docContent = getEditorContent ? getEditorContent().slice(0, 8000) : '';
+    }
 
     const response = await fetch(AI_ENDPOINT, {
       method: 'POST',
@@ -435,7 +446,7 @@ async function sendMessage(getEditorContent, setEditorContent) {
       body: JSON.stringify({
         mode: 'chat',
         messages: chatHistory,
-        context: docContent.slice(0, 8000),
+        context: docContent,
         selection: selFd ? selFd.slice(0, 4000) : undefined,
         selection_ids: selIds.length > 0 ? selIds : undefined,
         stream: true,

@@ -130,12 +130,27 @@ function getModelConfig(mode, env) {
         model: fastModel,
         system: `You are an expert UI designer and coding assistant working with the FD (Fast Draft) design format. You help users create, modify, and improve their designs through natural conversation.
 
-When the user asks you to modify their design:
-1. Return the COMPLETE modified FD blocks (only the ones you changed)
-2. Wrap each modified block in a \`\`\`fd code fence
-3. Brief explanation before each block
-
 When answering questions, be concise and helpful. Always reference node @ids when discussing specific elements.
+
+## Mutation Patterns (prefer minimal changes)
+- "Make modern": add corner:12-16, shadow:(0,2,16,#00000010), adjust fill to palette
+- "Make bigger": change w/h, DO NOT change x/y if constrained
+- "Center this": use center_in:@parent, DON'T use absolute coords
+- "Group these": wrap in frame @name { layout: column gap=8 }
+- "Add animation": add when :hover { ... ease: ease_out 150ms }
+
+## Rules for Modifications
+- NEVER output absolute x/y coords if the node uses center_in or offset constraints
+- ALWAYS preserve existing use: style references — override specific props only
+- When modifying a child, include the parent frame if layout changes
+- Prefer style blocks for repeated visual patterns
+
+## Output Format
+Return ONLY the modified node blocks. Use the same @id.
+DO NOT include unmodified nodes. DO NOT add explanation before the code.
+Wrap each modified block in a \`\`\`fd code fence.
+Provide a brief explanation before each block.
+
 ${FD_SYNTAX_GUIDE}`,
         maxTokens: 4096,
         temp: 0.4,
@@ -268,8 +283,17 @@ export async function onRequestPost(context) {
     if (config.isChat) {
       // Chat mode: include document context in system prompt + conversation history
       let systemPrompt = config.system;
-      if (docContext && typeof docContext === 'string') {
-        systemPrompt += `\n\n## Current Document\n\`\`\`fd\n${docContext.slice(0, 8000)}\n\`\`\``;
+      if (docContext) {
+        if (typeof docContext === 'string') {
+          systemPrompt += `\n\n## Current Document\n\`\`\`fd\n${docContext.slice(0, 8000)}\n\`\`\``;
+        } else if (typeof docContext === 'object') {
+          if (docContext.styles && docContext.styles.trim()) {
+            systemPrompt += `\n\n## Design System (Styles)\n\`\`\`fd\n${docContext.styles}\n\`\`\``;
+          }
+          if (docContext.structure && docContext.structure.trim()) {
+            systemPrompt += `\n\n## Document Structure\n\`\`\`fd\n${docContext.structure}\n\`\`\``;
+          }
+        }
       }
       // Inject selection context so AI knows what the user is looking at
       if (selection && typeof selection === 'string' && selection.trim()) {
