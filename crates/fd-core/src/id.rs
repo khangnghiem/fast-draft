@@ -65,11 +65,17 @@ impl NodeId {
     }
 }
 
+/// Suffixes above this threshold are legacy timestamp-based IDs
+/// (e.g. `rect_1740921495123`) and should not seed the counter.
+const MAX_SEQUENTIAL_SUFFIX: u64 = 100_000;
+
 /// Extract trailing integer suffix after the last `_`.
-/// e.g. `rect_5` → Some(5), `_rect_3` → Some(3), `login_form` → None
+/// Returns `None` for non-numeric suffixes AND for legacy timestamp IDs.
+/// e.g. `rect_5` → Some(5), `_rect_3` → Some(3), `rect_174092` → None
 fn extract_suffix(id: &str) -> Option<u64> {
     let (_, suffix) = id.rsplit_once('_')?;
-    suffix.parse::<u64>().ok()
+    let n = suffix.parse::<u64>().ok()?;
+    (n <= MAX_SEQUENTIAL_SUFFIX).then_some(n)
 }
 
 /// Global counter for dynamically generated unique IDs across the entire SceneGraph.
@@ -127,6 +133,9 @@ mod tests {
         assert_eq!(extract_suffix("login_form"), None);
         assert_eq!(extract_suffix("root"), None);
         assert_eq!(extract_suffix(""), None);
+        // Legacy timestamp IDs must be ignored
+        assert_eq!(extract_suffix("rect_1740921495123"), None);
+        assert_eq!(extract_suffix("_rect_1775072121659"), None);
     }
 
     #[test]
@@ -139,5 +148,19 @@ mod tests {
         let next = NodeId::with_prefix("rect");
         let suffix: u64 = next.as_str().rsplit_once('_').unwrap().1.parse().unwrap();
         assert!(suffix >= 8, "expected suffix >= 8, got {suffix}");
+    }
+
+    #[test]
+    fn seed_from_graph_ignores_legacy_timestamps() {
+        let graph = crate::parser::parse_document(
+            "rect @rect_1740921495123 { w: 100 h: 50 }\nrect @rect_5 { w: 80 h: 40 }",
+        )
+        .unwrap();
+        NodeId::seed_from_graph(&graph);
+        let next = NodeId::with_prefix("rect");
+        let suffix: u64 = next.as_str().rsplit_once('_').unwrap().1.parse().unwrap();
+        // Should seed from rect_5 (the only sequential ID), not from the timestamp
+        assert!(suffix >= 6, "expected suffix >= 6, got {suffix}");
+        assert!(suffix < 1000, "suffix should be small, got {suffix}");
     }
 }
