@@ -487,8 +487,7 @@ async function sendMessage(getEditorContent, setEditorContent) {
                 accumulated += token;
                 const now = Date.now();
                 if (now - lastRender > 100) {
-                  div.innerHTML = renderAssistantMessage(accumulated + ' █', getEditorContent, setEditorContent);
-                  wireApplySkipButtons(div, getEditorContent, setEditorContent);
+                  div.innerHTML = renderAssistantMessage(accumulated, getEditorContent, setEditorContent) + '<span class="ai-cursor">█</span>';
                   messages.scrollTop = messages.scrollHeight;
                   lastRender = now;
                 }
@@ -582,7 +581,11 @@ export function initAiChat(getEditorContent, setEditorContent, getCanvas) {
   const modelSelect = document.getElementById('ai-model-select');
   if (modelSelect) {
     const saved = localStorage.getItem('fd-ai-model');
-    if (saved) modelSelect.value = saved;
+    if (saved && [...modelSelect.options].some(o => o.value === saved)) {
+      modelSelect.value = saved;
+    } else {
+      localStorage.removeItem('fd-ai-model');
+    }
     modelSelect.addEventListener('change', (e) => {
       localStorage.setItem('fd-ai-model', e.target.value);
     });
@@ -592,7 +595,11 @@ export function initAiChat(getEditorContent, setEditorContent, getCanvas) {
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        sendMessage(getEditorContent, setEditorContent);
+        if (isSending && currentAbortController) {
+          currentAbortController.abort();
+        } else {
+          sendMessage(getEditorContent, setEditorContent);
+        }
       }
     });
 
