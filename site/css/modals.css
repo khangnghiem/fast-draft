@@ -447,17 +447,29 @@
  * when the corresponding panel is open (icons would be redundant). */
 [data-lp="open"] #sidebar-toggle-btn { 
   opacity: 0;
+  width: 0;
+  padding: 0;
+  border-width: 0;
+  margin-right: -4px;
   visibility: hidden;
   pointer-events: none;
 }
 #sidebar-toggle-btn {
-  transition: opacity 0.2s ease, visibility 0.2s ease, background 0.15s, color 0.15s, box-shadow 0.15s;
+  width: 28px;
+  overflow: hidden;
+  transition: opacity 0.2s ease, width 0.2s ease, padding 0.2s ease, margin 0.2s ease, border-width 0.2s ease, visibility 0.2s ease, background 0.15s, color 0.15s, box-shadow 0.15s;
 }
 [data-rp="open"] #hamburger-toggle-btn { 
   opacity: 0;
+  width: 0;
+  padding: 0;
+  border-width: 0;
+  margin-left: -4px;
   visibility: hidden;
   pointer-events: none;
 }
 #hamburger-toggle-btn {
-  transition: opacity 0.2s ease, visibility 0.2s ease, background 0.15s, color 0.15s, box-shadow 0.15s;
+  width: 28px;
+  overflow: hidden;
+  transition: opacity 0.2s ease, width 0.2s ease, padding 0.2s ease, margin 0.2s ease, border-width 0.2s ease, visibility 0.2s ease, background 0.15s, color 0.15s, box-shadow 0.15s;
 }
