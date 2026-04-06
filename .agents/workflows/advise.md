@@ -108,9 +108,11 @@ Before generating suggestions, answer these questions internally:
 - Keep visuals minimal and focused — **clarity over polish**.
 - **Skip `generate_image` ONLY when ALL suggestions are:** pure config changes, version bumps, or text fixes.
 
-### 8. Present and Wait
+### 8. Create Artifact and Present
 
-Start with a summary table, then list detail cards (Step 5) with visuals (Step 7). Close with:
+- **Create a Markdown Artifact:** Save the full structured advice, detailed cards (Step 5), and visuals (Step 7) into a new artifact file (e.g., `advice_summary.md`).
+- **Keep Response Concise:** Do not output the detailed text walls in the chat response.
+- In the chat response, present only the summary table, point the user to the generated artifact for details, and close with:
 
 > **💡 My recommendation:** **#N, #N** — [1-sentence reason tied to bottleneck].
 
