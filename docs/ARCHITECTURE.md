@@ -111,7 +111,7 @@ The **single source of truth** — holds the authoritative `SceneGraph` and keep
 WASM-facing controller. All webview interaction goes through this struct:
 
 - Holds `SyncEngine` + `CommandStack` + active `Tool`
-- Exposes `handle_pointer_*`, `handle_key`, `render`, `set_text`, `get_text`
+- Exposes `handle_pointer_*`, `handle_key`, `render`, `set_text`, `get_text`, `emit_filtered` (for structured AI context), `emit_selection_fd`
 - Returns JSON for complex results (`get_selected_ids`, pointer-up tool-switch info)
 
 ### `CommandStack` ([commands.rs](../crates/fd-editor/src/commands.rs))
@@ -160,7 +160,7 @@ Currently the webview uses a **Canvas2D software renderer** (`render2d.rs`). The
 
 ## String Interning
 
-All `NodeId` values are interned via the `lasso` crate ([id.rs](../crates/fd-core/src/id.rs)). Comparison is O(1) pointer equality. The interner is thread-local.
+All `NodeId` values are interned via the `lasso` crate ([id.rs](../crates/fd-core/src/id.rs)). Comparison is O(1) pointer equality. The interner is thread-local. Auto-generated identifiers use **Adaptive Prefix Seeding** (e.g., `rect_1`, `rect_2`) based on the parse tree max counter to maintain concise, AI-friendly semantic models.
 
 ## Layout Solver
 

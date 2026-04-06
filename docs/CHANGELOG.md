@@ -17,6 +17,7 @@
   group, drill-down, selection      → search v0.8.70-99 epoch
 -->
 ## Completed Requirements
+- **DOCS:** Updated `ARCHITECTURE.md` to document the new `emit_filtered` AI context engineering APIs and the Adaptive Prefix Seeding ID generation strategy.
 
 ### v0.11.347 — Context Engineering Pipeline & Layered Context (R4.19, R4.26)
 - **Layered Document Context**: Upgraded the AI Agent chat context builder to explicitly supply segmented \`styles\` (via \`ReadMode::Design\`) and \`structure\` (via \`ReadMode::Structure\`) blocks to the system prompt, slashing raw token consumption by ~50-80% compared to full-document dumps.
