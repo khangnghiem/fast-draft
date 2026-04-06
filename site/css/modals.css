@@ -446,13 +446,14 @@
  * Canvas chrome toggles (#sidebar-toggle-btn, #hamburger-toggle-btn) are hidden
  * when the corresponding panel is open (icons would be redundant). */
 [data-lp="open"] #sidebar-toggle-btn { 
-  opacity: 0;
-  width: 0;
-  padding: 0;
-  border-width: 0;
-  margin-right: -4px;
-  visibility: hidden;
-  pointer-events: none;
+  opacity: 0 !important;
+  width: 0 !important;
+  padding: 0 !important;
+  border-width: 0 !important;
+  margin-right: -4px !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
 }
 #sidebar-toggle-btn {
   width: 28px;
@@ -460,13 +461,14 @@
   transition: opacity 0.2s ease, width 0.2s ease, padding 0.2s ease, margin 0.2s ease, border-width 0.2s ease, visibility 0.2s ease, background 0.15s, color 0.15s, box-shadow 0.15s;
 }
 [data-rp="open"] #hamburger-toggle-btn { 
-  opacity: 0;
-  width: 0;
-  padding: 0;
-  border-width: 0;
-  margin-left: -4px;
-  visibility: hidden;
-  pointer-events: none;
+  opacity: 0 !important;
+  width: 0 !important;
+  padding: 0 !important;
+  border-width: 0 !important;
+  margin-left: -4px !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
 }
 #hamburger-toggle-btn {
   width: 28px;
