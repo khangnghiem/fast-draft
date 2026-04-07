@@ -213,11 +213,23 @@ export function initToolbar(api) {
     function getMiniDims() {
       if (cachedMiniDims) return cachedMiniDims;
       const wasMinimized = toolbar.classList.contains('toolbar-minimized');
-      if (!wasMinimized) toolbar.classList.add('toolbar-minimized');
+      
+      let origTransition = '';
+      if (!wasMinimized) {
+        origTransition = toolbar.style.transition;
+        toolbar.style.transition = 'none';
+        toolbar.classList.add('toolbar-minimized');
+      }
+      
       const w = toolbar.offsetWidth;
       const h = toolbar.offsetHeight;
       cachedMiniDims = { major: Math.max(w, h), minor: Math.min(w, h) };
-      if (!wasMinimized) toolbar.classList.remove('toolbar-minimized');
+      
+      if (!wasMinimized) {
+        toolbar.classList.remove('toolbar-minimized');
+        toolbar.offsetHeight; // force reflow
+        toolbar.style.transition = origTransition;
+      }
       return cachedMiniDims;
     }
 
@@ -225,12 +237,24 @@ export function initToolbar(api) {
     function getExpandedDims() {
       if (cachedExpandedMajor) return { major: cachedExpandedMajor, minor: cachedExpandedMinor };
       const wasMinimized = toolbar.classList.contains('toolbar-minimized');
-      if (wasMinimized) toolbar.classList.remove('toolbar-minimized');
+      
+      let origTransition = '';
+      if (wasMinimized) {
+        origTransition = toolbar.style.transition;
+        toolbar.style.transition = 'none'; // Prevent animating the dimension test
+        toolbar.classList.remove('toolbar-minimized');
+      }
+      
       const w = toolbar.offsetWidth;
       const h = toolbar.offsetHeight;
       cachedExpandedMajor = Math.max(w, h);
       cachedExpandedMinor = Math.min(w, h);
-      if (wasMinimized) toolbar.classList.add('toolbar-minimized');
+      
+      if (wasMinimized) {
+        toolbar.classList.add('toolbar-minimized');
+        toolbar.offsetHeight; // Force reflow before restoring transition
+        toolbar.style.transition = origTransition;
+      }
       return { major: cachedExpandedMajor, minor: cachedExpandedMinor };
     }
 
@@ -333,12 +357,14 @@ export function initToolbar(api) {
           const isNearRight = ex.right > cr.right - 100;
           
           if (side === 'left' || side === 'right') {
-             if (isNearTop) reserveTop = Math.max(reserveTop, ex.bottom - cr.top);
-             if (isNearBottom) reserveBottom = Math.max(reserveBottom, cr.bottom - ex.top);
+             const nearEdge = (side === 'left' ? isNearLeft : isNearRight);
+             if (isNearTop && nearEdge) reserveTop = Math.max(reserveTop, ex.bottom - cr.top);
+             if (isNearBottom && nearEdge) reserveBottom = Math.max(reserveBottom, cr.bottom - ex.top);
           }
           if (side === 'top' || side === 'bottom') {
-             if (isNearLeft) reserveLeft = Math.max(reserveLeft, ex.right - cr.left);
-             if (isNearRight) reserveRight = Math.max(reserveRight, cr.right - ex.left);
+             const nearEdge = (side === 'top' ? isNearTop : isNearBottom);
+             if (isNearLeft && nearEdge) reserveLeft = Math.max(reserveLeft, ex.right - cr.left);
+             if (isNearRight && nearEdge) reserveRight = Math.max(reserveRight, cr.right - ex.left);
           }
         });
 
@@ -599,7 +625,8 @@ export function initToolbar(api) {
         let gw = tbRect.width;
         let gh = tbRect.height;
 
-        if (!fits && !toolbar.classList.contains('toolbar-minimized')) {
+        const willBeMinimized = toolbar.classList.contains('toolbar-minimized') || !fits;
+        if (willBeMinimized) {
           const mini = getMiniDims();
           gw = isTargetHorizontal ? mini.major : mini.minor;
           gh = isTargetHorizontal ? mini.minor : mini.major;
@@ -707,10 +734,13 @@ export function initToolbar(api) {
                 ? (parseInt(h.style.getPropertyValue('--right-panel-width'), 10) || 260)
                 : 0;
             const cr = getCanvasRect();
-            const expandedRect = toolbar.getBoundingClientRect();
+            
+            const exp = getExpandedDims();
+            const expW = isHoriz ? exp.major : exp.minor;
+            const expH = isHoriz ? exp.minor : exp.major;
             const wouldFitAfterCollapse = isHoriz
-              ? expandedRect.width <= (cr.width + panelWidth) - 2 * SNAP_GAP
-              : expandedRect.height <= (cr.height + panelWidth) - 2 * SNAP_GAP;
+              ? expW <= (cr.width + panelWidth) - 2 * SNAP_GAP
+              : expH <= (cr.height + panelWidth) - 2 * SNAP_GAP;
 
             if (wouldFitAfterCollapse && (collapseLeft || collapseRight)) {
               toolbar.classList.remove('toolbar-minimized');

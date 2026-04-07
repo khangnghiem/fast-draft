@@ -17,6 +17,11 @@
   group, drill-down, selection      → search v0.8.70-99 epoch
 -->
 ## Completed Requirements
+
+### v0.11.349 — Fix Canvas Pointer Capture Stuck Pan (Bug Fix)
+- **Global Pointer Capture**: Fixed a critical interaction bug where right-clicking, middle-clicking, or using various drawing tools would leave the canvas stuck in a panning or dragging state if the cursor was released outside the browser window. Added explicit `canvas.setPointerCapture` inside all gesture branch early-returns.
+- **Fail-safe Interaction Reset**: Upgraded the global `clearInteractionState` fallback to explicitly clean up right-click deferred panning markers (`rightClickPending`, `zoomScrubActive`). Added a `pointerleave` and `pointerenter` listener pair to forcibly clear dangling drag flags if the operating system cancels mouse events with `buttons === 0`.
+
 - **DOCS:** Updated `ARCHITECTURE.md` to document the new `emit_filtered` AI context engineering APIs and the Adaptive Prefix Seeding ID generation strategy.
 
 ### v0.11.348 — Canvas UI Polish & AFK Auto-Fade Removal
