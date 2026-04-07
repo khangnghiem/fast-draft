@@ -855,7 +855,7 @@ a.rp-settings-item:visited { color: var(--fd-text); }
   bottom: 0;
   width: 4px;
   cursor: col-resize;
-  z-index: 20;
+  z-index: 23;
   background: transparent;
   transition: background 0.15s ease;
 }
