@@ -4664,6 +4664,7 @@ async function initPlayground() {
         panStartY = e.clientY - panY;
         canvas.style.cursor = 'grabbing';
         activePointerId = e.pointerId;
+        canvas.setPointerCapture(e.pointerId);
         return;
       }
 
@@ -4677,6 +4678,7 @@ async function initPlayground() {
         rightClickPointerId = e.pointerId;
         rightClickCmdHeld = e.metaKey || e.ctrlKey;
         // Do NOT set activePointerId — right-click gesture is managed separately
+        canvas.setPointerCapture(e.pointerId);
         return;
       }
 
@@ -4714,6 +4716,7 @@ async function initPlayground() {
           handPanClientStartY = e.clientY;
           canvas.style.cursor = 'grabbing';
           activePointerId = e.pointerId;
+          canvas.setPointerCapture(e.pointerId);
           return;
         }
       }
@@ -4746,6 +4749,7 @@ async function initPlayground() {
         activePointerId = e.pointerId;
         canvas.style.cursor = 'crosshair';
         renderDirty = true;
+        canvas.setPointerCapture(e.pointerId);
         return;
       }
       // ── JS-only Eraser marquee ──
@@ -4755,6 +4759,7 @@ async function initPlayground() {
         activePointerId = e.pointerId;
         canvas.style.cursor = 'crosshair';
         renderDirty = true;
+        canvas.setPointerCapture(e.pointerId);
         return;
       }
 
@@ -5400,6 +5405,20 @@ async function initPlayground() {
         activePointerId = -1;
         panDragging = false;
         canvas.style.cursor = '';
+      }
+    });
+
+    canvas.addEventListener('pointerleave', (e) => {
+      // If pointer leaves (or OS cancels) with no buttons held, the release was missed
+      if (e.buttons === 0 && (panDragging || rightClickPending || zoomScrubActive)) {
+        clearInteractionState();
+      }
+    });
+
+    canvas.addEventListener('pointerenter', (e) => {
+      // If pointer re-enters with no buttons held, forcibly clear stuck drags
+      if (e.buttons === 0 && (panDragging || rightClickPending || zoomScrubActive)) {
+        clearInteractionState();
       }
     });
 
@@ -6163,6 +6182,10 @@ function clearInteractionState() {
   panDragging = false;
   isPanning = false;
   activePointerId = -1;
+  rightClickPending = false;
+  rightClickPointerId = -1;
+  rightClickCmdHeld = false;
+  zoomScrubActive = false;
   lassoActive = false;
   eraserActive = false;
   twoFingerPending = false;
