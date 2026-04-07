@@ -7,6 +7,16 @@ use crate::model::*;
 use petgraph::graph::NodeIndex;
 use std::fmt::Write;
 
+/// Return the emit suffix for a `LayoutAlign` value.
+/// Default (`Start`) emits nothing to keep output token-lean.
+fn align_suffix(align: &LayoutAlign) -> &'static str {
+    match align {
+        LayoutAlign::Start => "",
+        LayoutAlign::Center => " align=center",
+        LayoutAlign::End => " align=end",
+        LayoutAlign::Stretch => " align=stretch",
+    }
+}
 /// Emit a `SceneGraph` as an FD text document.
 #[must_use]
 pub fn emit_document(graph: &SceneGraph) -> String {
@@ -211,7 +221,11 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         NodeKind::Path { .. } => write!(out, "path @{}", node.id.as_str()).unwrap(),
         NodeKind::Image { .. } => write!(out, "image @{}", node.id.as_str()).unwrap(),
         NodeKind::Text { content, .. } => {
-            write!(out, "text @{} \"{}\"", node.id.as_str(), content).unwrap();
+            if content.contains('\n') || content.contains('"') {
+                write!(out, "text @{} \"\"\"{}\"\"\"", node.id.as_str(), content).unwrap();
+            } else {
+                write!(out, "text @{} \"{}\"", node.id.as_str(), content).unwrap();
+            }
         }
     }
 
@@ -238,33 +252,41 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
                     writeln!(out, "pad: {}", format_num(*pad)).unwrap();
                 }
             }
-            LayoutMode::Column { gap, pad } => {
+            LayoutMode::Column { gap, pad, align } => {
                 indent(out, depth + 1);
                 writeln!(
                     out,
-                    "layout: column gap={} pad={}",
+                    "layout: column gap={} pad={}{}",
                     format_num(*gap),
-                    format_num(*pad)
+                    format_num(*pad),
+                    align_suffix(align)
                 )
                 .unwrap();
             }
-            LayoutMode::Row { gap, pad } => {
+            LayoutMode::Row { gap, pad, align } => {
                 indent(out, depth + 1);
                 writeln!(
                     out,
-                    "layout: row gap={} pad={}",
+                    "layout: row gap={} pad={}{}",
                     format_num(*gap),
-                    format_num(*pad)
+                    format_num(*pad),
+                    align_suffix(align)
                 )
                 .unwrap();
             }
-            LayoutMode::Grid { cols, gap, pad } => {
+            LayoutMode::Grid {
+                cols,
+                gap,
+                pad,
+                align,
+            } => {
                 indent(out, depth + 1);
                 writeln!(
                     out,
-                    "layout: grid cols={cols} gap={} pad={}",
+                    "layout: grid cols={cols} gap={} pad={}{}",
                     format_num(*gap),
-                    format_num(*pad)
+                    format_num(*pad),
+                    align_suffix(align)
                 )
                 .unwrap();
             }
@@ -1187,7 +1209,11 @@ fn emit_node_filtered(
         NodeKind::Path { .. } => write!(out, "path @{}", node.id.as_str()).unwrap(),
         NodeKind::Image { .. } => write!(out, "image @{}", node.id.as_str()).unwrap(),
         NodeKind::Text { content, .. } => {
-            write!(out, "text @{} \"{}\"", node.id.as_str(), content).unwrap();
+            if content.contains('\n') || content.contains('"') {
+                write!(out, "text @{} \"\"\"{}\"\"\"", node.id.as_str(), content).unwrap();
+            } else {
+                write!(out, "text @{} \"{}\"", node.id.as_str(), content).unwrap();
+            }
         }
     }
 
@@ -1285,33 +1311,41 @@ fn emit_layout_mode_filtered(out: &mut String, kind: &NodeKind, depth: usize) {
                 writeln!(out, "pad: {}", format_num(*pad)).unwrap();
             }
         }
-        LayoutMode::Column { gap, pad } => {
+        LayoutMode::Column { gap, pad, align } => {
             indent(out, depth);
             writeln!(
                 out,
-                "layout: column gap={} pad={}",
+                "layout: column gap={} pad={}{}",
                 format_num(*gap),
-                format_num(*pad)
+                format_num(*pad),
+                align_suffix(align)
             )
             .unwrap();
         }
-        LayoutMode::Row { gap, pad } => {
+        LayoutMode::Row { gap, pad, align } => {
             indent(out, depth);
             writeln!(
                 out,
-                "layout: row gap={} pad={}",
+                "layout: row gap={} pad={}{}",
                 format_num(*gap),
-                format_num(*pad)
+                format_num(*pad),
+                align_suffix(align)
             )
             .unwrap();
         }
-        LayoutMode::Grid { cols, gap, pad } => {
+        LayoutMode::Grid {
+            cols,
+            gap,
+            pad,
+            align,
+        } => {
             indent(out, depth);
             writeln!(
                 out,
-                "layout: grid cols={cols} gap={} pad={}",
+                "layout: grid cols={cols} gap={} pad={}{}",
                 format_num(*gap),
-                format_num(*pad)
+                format_num(*pad),
+                align_suffix(align)
             )
             .unwrap();
         }

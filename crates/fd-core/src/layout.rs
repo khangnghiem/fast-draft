@@ -191,7 +191,7 @@ fn resolve_children(
     };
 
     match layout {
-        LayoutMode::Column { gap, pad } => {
+        LayoutMode::Column { gap, pad, align } => {
             let content_width = parent_bounds.width - 2.0 * pad;
             // Filter: children with Position constraints are absolutely positioned
             // within the frame — they don't participate in the column flow.
@@ -209,8 +209,10 @@ fn resolve_children(
             for &child_idx in &flow_children {
                 let child_node = &graph.graph[child_idx];
                 let child_size = intrinsic_size(child_node);
-                // Stretch text nodes to fill column width (like CSS align-items: stretch)
-                let w = if matches!(child_node.kind, NodeKind::Text { .. }) {
+                // Stretch text nodes or all nodes if align=stretch
+                let w = if matches!(align, crate::model::LayoutAlign::Stretch)
+                    || matches!(child_node.kind, NodeKind::Text { .. })
+                {
                     content_width.max(child_size.0)
                 } else {
                     child_size.0
@@ -243,7 +245,18 @@ fn resolve_children(
             let mut y = parent_bounds.y + pad;
             for &child_idx in &flow_children {
                 let resolved = bounds[&child_idx];
-                let dx = (parent_bounds.x + pad) - resolved.x;
+                let target_x = match align {
+                    crate::model::LayoutAlign::Start | crate::model::LayoutAlign::Stretch => {
+                        parent_bounds.x + pad
+                    }
+                    crate::model::LayoutAlign::Center => {
+                        parent_bounds.x + pad + (content_width - resolved.width) / 2.0
+                    }
+                    crate::model::LayoutAlign::End => {
+                        parent_bounds.x + pad + content_width - resolved.width
+                    }
+                };
+                let dx = target_x - resolved.x;
                 let dy = y - resolved.y;
                 if dx.abs() > 0.001 || dy.abs() > 0.001 {
                     shift_subtree(graph, child_idx, dx, dy, bounds);
@@ -251,7 +264,8 @@ fn resolve_children(
                 y += bounds[&child_idx].height + gap;
             }
         }
-        LayoutMode::Row { gap, pad } => {
+        LayoutMode::Row { gap, pad, align } => {
+            let content_height = parent_bounds.height - 2.0 * pad;
             // Filter: absolutely-positioned children skip the row flow
             let flow_children: Vec<NodeIndex> = children
                 .iter()
@@ -265,14 +279,23 @@ fn resolve_children(
                 .collect();
             // Pass 1: initialize flow children
             for &child_idx in &flow_children {
-                let child_size = intrinsic_size(&graph.graph[child_idx]);
+                let child_node = &graph.graph[child_idx];
+                let child_size = intrinsic_size(child_node);
+                // Stretch text nodes or all nodes if align=stretch
+                let h = if matches!(align, crate::model::LayoutAlign::Stretch)
+                    || matches!(child_node.kind, NodeKind::Text { .. })
+                {
+                    content_height.max(child_size.1)
+                } else {
+                    child_size.1
+                };
                 bounds.insert(
                     child_idx,
                     ResolvedBounds {
                         x: parent_bounds.x + pad,
                         y: parent_bounds.y + pad,
                         width: child_size.0,
-                        height: child_size.1,
+                        height: h,
                     },
                 );
                 resolve_children(graph, child_idx, bounds, viewport);
@@ -294,15 +317,31 @@ fn resolve_children(
             let mut x = parent_bounds.x + pad;
             for &child_idx in &flow_children {
                 let resolved = bounds[&child_idx];
+                let target_y = match align {
+                    crate::model::LayoutAlign::Start | crate::model::LayoutAlign::Stretch => {
+                        parent_bounds.y + pad
+                    }
+                    crate::model::LayoutAlign::Center => {
+                        parent_bounds.y + pad + (content_height - resolved.height) / 2.0
+                    }
+                    crate::model::LayoutAlign::End => {
+                        parent_bounds.y + pad + content_height - resolved.height
+                    }
+                };
                 let dx = x - resolved.x;
-                let dy = (parent_bounds.y + pad) - resolved.y;
+                let dy = target_y - resolved.y;
                 if dx.abs() > 0.001 || dy.abs() > 0.001 {
                     shift_subtree(graph, child_idx, dx, dy, bounds);
                 }
                 x += bounds[&child_idx].width + gap;
             }
         }
-        LayoutMode::Grid { cols, gap, pad } => {
+        LayoutMode::Grid {
+            cols,
+            gap,
+            pad,
+            align,
+        } => {
             // Filter: absolutely-positioned children skip the grid flow
             let flow_children: Vec<NodeIndex> = children
                 .iter()
@@ -314,15 +353,30 @@ fn resolve_children(
                         .any(|c| matches!(c, Constraint::Position { .. }))
                 })
                 .collect();
+
+            // Grid cell width is based on parent width divided by cols, minus gaps
+            let total_gap_w = gap * (cols.saturating_sub(1) as f32);
+            let cell_width =
+                ((parent_bounds.width - 2.0 * pad - total_gap_w) / cols as f32).max(0.0);
+
             // Pass 1: initialize flow children
             for &child_idx in &flow_children {
-                let child_size = intrinsic_size(&graph.graph[child_idx]);
+                let child_node = &graph.graph[child_idx];
+                let child_size = intrinsic_size(child_node);
+                // Stretch nodes width to cell_width if align=stretch, else natural
+                let w = if matches!(align, crate::model::LayoutAlign::Stretch)
+                    || matches!(child_node.kind, NodeKind::Text { .. })
+                {
+                    cell_width.max(child_size.0)
+                } else {
+                    child_size.0
+                };
                 bounds.insert(
                     child_idx,
                     ResolvedBounds {
                         x: parent_bounds.x + pad,
                         y: parent_bounds.y + pad,
-                        width: child_size.0,
+                        width: w,
                         height: child_size.1,
                     },
                 );
@@ -349,7 +403,15 @@ fn resolve_children(
 
             for &child_idx in &flow_children {
                 let resolved = bounds[&child_idx];
-                let dx = x - resolved.x;
+
+                // Align within the cell width
+                let target_x = match align {
+                    crate::model::LayoutAlign::Start | crate::model::LayoutAlign::Stretch => x,
+                    crate::model::LayoutAlign::Center => x + (cell_width - resolved.width) / 2.0,
+                    crate::model::LayoutAlign::End => x + cell_width - resolved.width,
+                };
+
+                let dx = target_x - resolved.x;
                 let dy = y - resolved.y;
                 if dx.abs() > 0.001 || dy.abs() > 0.001 {
                     shift_subtree(graph, child_idx, dx, dy, bounds);
@@ -364,7 +426,7 @@ fn resolve_children(
                     y += row_height + gap;
                     row_height = 0.0;
                 } else {
-                    x += resolved.width + gap;
+                    x += cell_width + gap;
                 }
             }
         }

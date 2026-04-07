@@ -1486,3 +1486,179 @@ edge @a -> @b, @c
     assert_ne!(graph.edges[0].id, graph.edges[1].id);
     assert_eq!(graph.edges[1].to, EdgeAnchor::Node(NodeId::intern("c")));
 }
+
+#[test]
+fn test_grid_layout_frame() {
+    let src = r#"
+frame @f {
+  layout: grid cols=3 gap=8 pad=12
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let node = graph.get_by_id(crate::id::NodeId::intern("f")).unwrap();
+    match &node.kind {
+        NodeKind::Frame { layout, .. } => match layout {
+            crate::model::LayoutMode::Grid { cols, gap, pad, .. } => {
+                assert_eq!(*cols, 3);
+                assert_eq!(*gap, 8.0);
+                assert_eq!(*pad, 12.0);
+            }
+            _ => panic!("expected Grid"),
+        },
+        _ => panic!("expected Frame"),
+    }
+}
+
+#[test]
+fn roundtrip_grid_cols() {
+    let src = r#"
+frame @f {
+  w: 600 h: 400
+  layout: grid cols=4 gap=10 pad=8
+  rect @a { w: 50 h: 50 }
+  rect @b { w: 50 h: 50 }
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let emitted = crate::emitter::emit_document(&graph);
+    assert!(
+        emitted.contains("cols=4"),
+        "emitted should preserve cols=4, got: {emitted}"
+    );
+
+    let reparsed = parse_document(&emitted).unwrap();
+    let node = reparsed.get_by_id(crate::id::NodeId::intern("f")).unwrap();
+    match &node.kind {
+        NodeKind::Frame { layout, .. } => match layout {
+            crate::model::LayoutMode::Grid { cols, .. } => {
+                assert_eq!(*cols, 4, "cols=4 must survive roundtrip");
+            }
+            _ => panic!("expected Grid after roundtrip"),
+        },
+        _ => panic!("expected Frame after roundtrip"),
+    }
+}
+
+#[test]
+fn test_layout_cross_align() {
+    let src = r#"
+frame @f {
+  layout: column gap=10 pad=10 align=center
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let node = graph.get_by_id(crate::id::NodeId::intern("f")).unwrap();
+    match &node.kind {
+        NodeKind::Frame { layout, .. } => match layout {
+            crate::model::LayoutMode::Column { align, .. } => {
+                assert_eq!(*align, crate::model::LayoutAlign::Center);
+            }
+            _ => panic!("expected Column"),
+        },
+        _ => panic!("expected Frame"),
+    }
+}
+
+#[test]
+fn roundtrip_layout_align() {
+    let src = r#"
+frame @panel {
+  w: 400 h: 300
+  layout: row gap=12 pad=16 align=end
+  rect @child { w: 80 h: 40 }
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let emitted = crate::emitter::emit_document(&graph);
+    assert!(
+        emitted.contains("align=end"),
+        "emitted should contain align=end, got: {emitted}"
+    );
+
+    let reparsed = parse_document(&emitted).unwrap();
+    let node = reparsed
+        .get_by_id(crate::id::NodeId::intern("panel"))
+        .unwrap();
+    match &node.kind {
+        NodeKind::Frame { layout, .. } => match layout {
+            crate::model::LayoutMode::Row { align, .. } => {
+                assert_eq!(
+                    *align,
+                    crate::model::LayoutAlign::End,
+                    "align=end must survive roundtrip"
+                );
+            }
+            _ => panic!("expected Row after roundtrip"),
+        },
+        _ => panic!("expected Frame after roundtrip"),
+    }
+}
+
+#[test]
+fn roundtrip_layout_align_default_omitted() {
+    // align=start is the default — should NOT appear in emitted output
+    let src = r#"
+frame @f {
+  w: 200 h: 100
+  layout: column gap=8 pad=10
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let emitted = crate::emitter::emit_document(&graph);
+    assert!(
+        !emitted.contains("align="),
+        "default align=start should not be emitted, got: {emitted}"
+    );
+}
+
+#[test]
+fn test_multiline_text() {
+    let src = r#"
+text @multiline """Line 1
+Line 2
+"Quoted"
+Line 4""" {
+  font: "Inter" 400 16
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let node = graph
+        .get_by_id(crate::id::NodeId::intern("multiline"))
+        .unwrap();
+    match &node.kind {
+        NodeKind::Text { content, .. } => {
+            assert!(content.contains("Line 1\nLine 2"));
+            assert!(content.contains("\"Quoted\""));
+        }
+        _ => panic!("expected Text"),
+    }
+}
+
+#[test]
+fn roundtrip_multiline_text() {
+    let src = r#"
+text @ml """Hello
+"World"
+Third line""" {
+  font: "Inter" 400 14
+}
+"#;
+    let graph = parse_document(src).unwrap();
+    let emitted = crate::emitter::emit_document(&graph);
+    assert!(
+        emitted.contains("\"\"\""),
+        "multiline text should emit triple quotes, got: {emitted}"
+    );
+
+    let reparsed = parse_document(&emitted).unwrap();
+    let node = reparsed.get_by_id(crate::id::NodeId::intern("ml")).unwrap();
+    match &node.kind {
+        NodeKind::Text { content, .. } => {
+            assert!(
+                content.contains("Hello\n\"World\"\nThird line"),
+                "multiline content must survive roundtrip, got: {content}"
+            );
+        }
+        _ => panic!("expected Text after roundtrip"),
+    }
+}

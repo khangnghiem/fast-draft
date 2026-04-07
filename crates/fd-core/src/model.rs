@@ -574,6 +574,16 @@ pub struct FlowAnim {
     pub duration_ms: u32,
 }
 
+/// Cross-axis alignment for layouts.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
+pub enum LayoutAlign {
+    #[default]
+    Start,
+    Center,
+    End,
+    Stretch,
+}
+
 /// Group layout mode (for children arrangement).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LayoutMode {
@@ -581,11 +591,24 @@ pub enum LayoutMode {
     /// Optional padding insets the content area (default 0).
     Free { pad: f32 },
     /// Column (vertical stack).
-    Column { gap: f32, pad: f32 },
+    Column {
+        gap: f32,
+        pad: f32,
+        align: LayoutAlign,
+    },
     /// Row (horizontal stack).
-    Row { gap: f32, pad: f32 },
+    Row {
+        gap: f32,
+        pad: f32,
+        align: LayoutAlign,
+    },
     /// Grid layout.
-    Grid { cols: u32, gap: f32, pad: f32 },
+    Grid {
+        cols: u32,
+        gap: f32,
+        pad: f32,
+        align: LayoutAlign,
+    },
 }
 
 impl Default for LayoutMode {
