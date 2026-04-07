@@ -18,6 +18,10 @@
 -->
 ## Completed Requirements
 
+### v0.11.350 — Layers Panel Drop-to-Root Improvement (UX Polish)
+- **Empty Space Drop Zone (Bug Fix)**: Expanded the CSS hit area of `.layers-body` (using `flex: 1`), ensuring users can reliably drop child layers beneath existing items in the Layers panel to explicitly un-nest them to the document root level.
+- **Un-nest Visual Feedback**: Added an instant visual flash animation (`.just-moved`) to confirm when a layer is successfully reparented, matching the standard visual cadence of nested drag operations.
+
 ### v0.11.349 — Fix Canvas Pointer Capture Stuck Pan (Bug Fix)
 - **Global Pointer Capture**: Fixed a critical interaction bug where right-clicking, middle-clicking, or using various drawing tools would leave the canvas stuck in a panning or dragging state if the cursor was released outside the browser window. Added explicit `canvas.setPointerCapture` inside all gesture branch early-returns.
 - **Fail-safe Interaction Reset**: Upgraded the global `clearInteractionState` fallback to explicitly clean up right-click deferred panning markers (`rightClickPending`, `zoomScrubActive`). Added a `pointerleave` and `pointerenter` listener pair to forcibly clear dangling drag flags if the operating system cancels mouse events with `buttons === 0`.

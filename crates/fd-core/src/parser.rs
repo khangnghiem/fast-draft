@@ -331,7 +331,19 @@ fn parse_number(input: &mut &str) -> ModalResult<f32> {
 }
 
 fn parse_quoted_string<'a>(input: &mut &'a str) -> ModalResult<&'a str> {
-    delimited('"', take_till(0.., '"'), '"').parse_next(input)
+    if input.starts_with("\"\"\"") {
+        let _ = "\"\"\"".parse_next(input)?;
+        let original = *input;
+        if let Some(pos) = original.find("\"\"\"") {
+            let res = &original[..pos];
+            *input = &original[pos + 3..];
+            Ok(res)
+        } else {
+            Err(winnow::error::ErrMode::Backtrack(ContextError::new()))
+        }
+    } else {
+        delimited('"', take_till(0.., '"'), '"').parse_next(input)
+    }
 }
 
 fn skip_opt_separator(input: &mut &str) {
@@ -1118,6 +1130,8 @@ fn parse_node_property(
             skip_space(input);
             let mut gap = 0.0f32;
             let mut pad = 0.0f32;
+            let mut cols = 2u32;
+            let mut align = LayoutAlign::Start;
             loop {
                 skip_space(input);
                 if input.starts_with("gap=") {
@@ -1128,15 +1142,29 @@ fn parse_node_property(
                     pad = parse_number.parse_next(input)?;
                 } else if input.starts_with("cols=") {
                     let _ = "cols=".parse_next(input)?;
-                    let _ = parse_number.parse_next(input)?;
+                    cols = parse_number.parse_next(input)? as u32;
+                } else if input.starts_with("align=") {
+                    let _ = "align=".parse_next(input)?;
+                    let a_val = parse_identifier.parse_next(input)?;
+                    align = match a_val {
+                        "center" => LayoutAlign::Center,
+                        "end" => LayoutAlign::End,
+                        "stretch" => LayoutAlign::Stretch,
+                        _ => LayoutAlign::Start,
+                    };
                 } else {
                     break;
                 }
             }
             *layout = match mode_str {
-                "column" => LayoutMode::Column { gap, pad },
-                "row" => LayoutMode::Row { gap, pad },
-                "grid" => LayoutMode::Grid { cols: 2, gap, pad },
+                "column" => LayoutMode::Column { gap, pad, align },
+                "row" => LayoutMode::Row { gap, pad, align },
+                "grid" => LayoutMode::Grid {
+                    cols,
+                    gap,
+                    pad,
+                    align,
+                },
                 _ => LayoutMode::Free { pad: 0.0 },
             };
         }

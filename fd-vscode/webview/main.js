@@ -1506,6 +1506,61 @@ function setupInlineEditor(opts) {
     e.preventDefault();
   });
 }
+// ── canvas-core/menu-registry.js ──
+function buildUnifiedNodeMenu(nodeId, selectedIds, isContainer, hasChildren, isLocked, canGroup, canUngroup, sceneText) {
+  const isMultiple = selectedIds.length > 1;
+  const isSingle = !isMultiple;
+  
+  return [
+    { type: 'header', label: isMultiple ? `${selectedIds.length} Nodes Selected` : `Node: ${nodeId}` },
+    { type: 'action', icon: '⧉', label: 'Duplicate', shortcut: '⌘D', action: 'duplicate', disabled: false },
+    { type: 'action', icon: '📷', label: 'Copy as PNG', shortcut: '⌘⇧E', action: 'copy-png', disabled: false },
+    { type: 'action', icon: '📄', label: 'Copy FD Code', action: 'copy-fd', disabled: false },
+    { type: 'separator' },
+    { type: 'action', icon: '↑', label: 'Bring to Front', shortcut: '⌘⇧]', action: 'bring-front', disabled: false },
+    { type: 'action', icon: '↓', label: 'Send to Back', shortcut: '⌘⇧[', action: 'send-back', disabled: false },
+    { type: 'separator' },
+    { type: 'action', icon: '⚏', label: 'Group', shortcut: '⌘G', action: 'group', disabled: !canGroup },
+    { type: 'action', icon: '⬚', label: 'Frame Selection', shortcut: '⌘⌥G', action: 'frame', disabled: !isMultiple && !isContainer },
+    { type: 'action', icon: '☷', label: 'Ungroup', shortcut: '⌘⇧G', action: 'ungroup', disabled: !canUngroup },
+    { type: 'separator' },
+    { type: 'action', icon: '↳', label: 'Move Into...', action: 'move-into-search', disabled: false },
+    { type: 'action', icon: '↰', label: 'Move to Root', action: 'move-to-root', disabled: false },
+    { type: 'action', icon: '⬚', label: 'Select Children', action: 'select-children', disabled: !hasChildren },
+    { type: 'separator' },
+    { type: 'action', icon: isLocked ? '🔓' : '🔒', label: isLocked ? 'Unlock' : 'Lock', shortcut: '⌘L', action: 'toggle-lock', disabled: false },
+    { type: 'action', icon: '✏️', label: 'Rename', shortcut: '↵', action: 'rename', disabled: isMultiple },
+    { type: 'action', icon: '💬', label: 'Add Spec/Note', action: 'add-spec', disabled: false },
+    { type: 'action', icon: '✦', label: 'AI Touch', shortcut: '⌘I', action: 'ai-touch', disabled: false },
+    { type: 'separator' },
+    { type: 'action', icon: '🗑', label: 'Delete', shortcut: '⌫', action: 'delete', danger: true, disabled: false }
+  ];
+}
+
+function buildUnifiedEdgeMenu(edgeId) {
+  return [
+    { type: 'header', label: `Edge @${edgeId}` },
+    { type: 'action', icon: '📋', label: 'Copy', shortcut: '⌘C', action: 'copy', disabled: false },
+    { type: 'action', icon: '✂', label: 'Cut', shortcut: '⌘X', action: 'cut', disabled: false },
+    { type: 'action', icon: '⧉', label: 'Duplicate', shortcut: '⌘D', action: 'duplicate', disabled: false },
+    { type: 'action', icon: '🗑', label: 'Delete Edge', shortcut: '⌫', action: 'delete', danger: true, disabled: false },
+    { type: 'separator' },
+    { type: 'action', icon: '↔', label: 'Reverse Direction', action: 'edge-reverse', disabled: false },
+    { type: 'action', icon: '✏️', label: 'Edit Label', action: 'edge-edit-label', disabled: false },
+    { type: 'separator' },
+    { type: 'action', icon: '📄', label: 'Copy as .fd', action: 'copy-fd', disabled: false }
+  ];
+}
+
+function buildUnifiedCanvasMenu() {
+  return [
+    { type: 'action', icon: '📋', label: 'Paste', action: 'paste', shortcut: '⌘V', disabled: false },
+    { type: 'action', icon: '▣', label: 'Select All', action: 'select-all', shortcut: '⌘A', disabled: false },
+    { type: 'separator' },
+    { type: 'action', icon: '➕', label: 'Add Node Here', action: 'add-node', disabled: false },
+    { type: 'action', icon: '🔓', label: 'Unlock All', action: 'unlock-all', disabled: false } // We'll re-enable logic!
+  ];
+}
 /**
  * FD Webview — WASM loader + message bridge.
  *
@@ -3580,6 +3635,26 @@ document.addEventListener("keydown", (e) => {
       render();
       syncTextToExtension();
       break;
+    case "lockSelection":
+      if (fdCanvas && fdCanvas.get_selected_ids) {
+        const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+        let graphChanged = false;
+        for (const id of selectedIds) {
+          if (fdCanvas.toggle_node_locked) {
+            fdCanvas.toggle_node_locked(id);
+            graphChanged = true;
+          }
+        }
+        if (graphChanged) {
+          bumpGeneration();
+          render();
+          syncTextToExtension();
+          updatePropertiesPanel();
+          updateFloatingBar();
+          if (typeof refreshLayersPanel === "function") refreshLayersPanel();
+        }
+      }
+      break;
     case "showHelp":
       toggleShortcutHelp();
       break;
@@ -4538,123 +4613,79 @@ function removeNodeSpec(nodeId) {
 // ─── Context Menu (Right-Click) ─────────────────────────────────────────
 
 /** Build context menu items for when a node is right-clicked */
-function buildNodeMenuItems(hitId, selectedIds) {
-  const isSingle = selectedIds.length <= 1;
-  const canGroup = selectedIds.length >= 2;
-  const source = fdCanvas.get_text();
-  let canUngroup = false;
-  for (const id of selectedIds) {
-    if (new RegExp(`(?:^|\\n)\\s*group\\s+@${id}\\b`).test(source)) { canUngroup = true; break; }
-  }
-  const isLocked = fdCanvas.is_node_locked ? fdCanvas.is_node_locked(hitId) : false;
-  const hasSpec = nodeHasSpec(hitId);
-
-  const items = [];
-
-  // AI Touch submenu (VS Code specific — uses custom render)
-  items.push({
-    action: 'ai-touch', label: 'AI Touch', icon: '✦', shortcut: '▸',
-    type: 'custom',
-    render: (wrap) => {
-      wrap.className = 'menu-item-wrap ctx-ai-touch-wrap';
-      wrap.id = 'ctx-ai-touch-wrap-dyn';
-      wrap.innerHTML = `
-        <div class="ctx-menu-item" role="menuitem" data-action="ai-touch">
-          <span class="ctx-menu-icon">✦</span>
-          <span class="ctx-menu-label">AI Touch</span>
-          <span class="ctx-menu-shortcut">▸</span>
-        </div>
-        <div class="ctx-ai-submenu" id="ctx-ai-submenu-dyn">
-          <textarea class="ctx-ai-prompt" id="ctx-ai-prompt-dyn" placeholder="e.g. Make it Apple HIG style" maxlength="200" rows="2"></textarea>
-          <div class="ctx-ai-footer">
-            <span class="ctx-ai-counter" id="ctx-ai-counter-dyn">0/200</span>
-            <button class="ctx-ai-run" id="ctx-ai-run-dyn">Run ✦</button>
-          </div>
-        </div>
-      `;
-      // Wire AI Touch toggle
-      const trigger = wrap.querySelector('[data-action="ai-touch"]');
-      trigger?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        wrap.classList.toggle('expanded');
-        const promptEl = wrap.querySelector('#ctx-ai-prompt-dyn');
-        const counterEl = wrap.querySelector('#ctx-ai-counter-dyn');
-        if (promptEl) {
-          const saved = localStorage.getItem('fd-ai-prompt') || '';
-          promptEl.value = saved;
-          if (counterEl) counterEl.textContent = saved.length + '/200';
-          setTimeout(() => promptEl.focus(), 50);
-        }
-      });
-      // Wire prompt input
-      const promptEl = wrap.querySelector('#ctx-ai-prompt-dyn');
-      const counterEl = wrap.querySelector('#ctx-ai-counter-dyn');
-      const runBtn = wrap.querySelector('#ctx-ai-run-dyn');
-      if (promptEl) {
-        promptEl.addEventListener('input', () => {
-          if (counterEl) counterEl.textContent = promptEl.value.length + '/200';
-          localStorage.setItem('fd-ai-prompt', promptEl.value);
-        });
-        promptEl.addEventListener('click', (e) => e.stopPropagation());
-        promptEl.addEventListener('mousedown', (e) => e.stopPropagation());
-        promptEl.addEventListener('keydown', (e) => {
-          e.stopPropagation();
-          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            ctxMenu.close();
-            const ids = hitId ? [hitId] : [];
-            if (typeof vscode !== 'undefined') {
-              vscode.postMessage({ type: 'aiTouch', nodeIds: ids, userFocus: localStorage.getItem('fd-ai-prompt') || undefined });
+function upgradeUnifiedMenu(items, hitId) {
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item.action === 'ai-touch') {
+      items[i] = {
+        action: 'ai-touch', label: 'AI Touch', icon: '✦', shortcut: '▸',
+        type: 'custom',
+        render: (wrap) => {
+          wrap.className = 'menu-item-wrap ctx-ai-touch-wrap';
+          wrap.id = 'ctx-ai-touch-wrap-dyn';
+          wrap.innerHTML = `
+            <div class="ctx-menu-item" role="menuitem" data-action="ai-touch">
+              <span class="ctx-menu-icon">✦</span>
+              <span class="ctx-menu-label">AI Touch</span>
+              <span class="ctx-menu-shortcut">▸</span>
+            </div>
+            <div class="ctx-ai-submenu" id="ctx-ai-submenu-dyn">
+              <textarea class="ctx-ai-prompt" id="ctx-ai-prompt-dyn" placeholder="e.g. Make it Apple HIG style" maxlength="200" rows="2"></textarea>
+              <div class="ctx-ai-footer">
+                <span class="ctx-ai-counter" id="ctx-ai-counter-dyn">0/200</span>
+                <button class="ctx-ai-run" id="ctx-ai-run-dyn">Run ✦</button>
+              </div>
+            </div>
+          `;
+          const trigger = wrap.querySelector('[data-action="ai-touch"]');
+          trigger?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            wrap.classList.toggle('expanded');
+            const promptEl = wrap.querySelector('#ctx-ai-prompt-dyn');
+            const counterEl = wrap.querySelector('#ctx-ai-counter-dyn');
+            if (promptEl) {
+              const saved = localStorage.getItem('fd-ai-prompt') || '';
+              promptEl.value = saved;
+              if (counterEl) counterEl.textContent = saved.length + '/200';
+              setTimeout(() => promptEl.focus(), 50);
             }
+          });
+          const promptEl = wrap.querySelector('#ctx-ai-prompt-dyn');
+          const counterEl = wrap.querySelector('#ctx-ai-counter-dyn');
+          const runBtn = wrap.querySelector('#ctx-ai-run-dyn');
+          if (promptEl) {
+            promptEl.addEventListener('input', () => {
+              if (counterEl) counterEl.textContent = promptEl.value.length + '/200';
+              localStorage.setItem('fd-ai-prompt', promptEl.value);
+            });
+            promptEl.addEventListener('click', (e) => e.stopPropagation());
+            promptEl.addEventListener('mousedown', (e) => e.stopPropagation());
+            promptEl.addEventListener('keydown', (e) => {
+              e.stopPropagation();
+              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                ctxMenu.close();
+                const ids = hitId ? [hitId] : [];
+                if (typeof vscode !== 'undefined') {
+                  vscode.postMessage({ type: 'aiTouch', nodeIds: ids, userFocus: localStorage.getItem('fd-ai-prompt') || undefined });
+                }
+              }
+            });
           }
-        });
-      }
-      if (runBtn) {
-        runBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          ctxMenu.close();
-          const ids = hitId ? [hitId] : [];
-          if (typeof vscode !== 'undefined') {
-            vscode.postMessage({ type: 'aiTouch', nodeIds: ids, userFocus: localStorage.getItem('fd-ai-prompt') || undefined });
+          if (runBtn) {
+            runBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              ctxMenu.close();
+              const ids = hitId ? [hitId] : [];
+              if (typeof vscode !== 'undefined') {
+                vscode.postMessage({ type: 'aiTouch', nodeIds: ids, userFocus: localStorage.getItem('fd-ai-prompt') || undefined });
+              }
+            });
           }
-        });
-      }
+        }
+      };
     }
-  });
-
-  // Notes
-  if (!hasSpec) items.push({ action: 'add-annotation', label: 'Add Spec', icon: '◇' });
-  if (hasSpec) items.push({ action: 'view-specs', label: 'Specs Panel', icon: '📝', shortcut: '⌘⇧N' });
-
-  // Rename
-  items.push({ action: 'rename', label: 'Rename', icon: '✏️' });
-  items.push({ type: 'separator' });
-
-  // Clipboard
-  items.push({ action: 'cut', label: 'Cut', icon: '✂', shortcut: '⌘X' });
-  items.push({ action: 'copy', label: 'Copy', icon: '⎘', shortcut: '⌘C' });
-  items.push({ action: 'paste', label: 'Paste', icon: '📋', shortcut: '⌘V' });
-  items.push({ action: 'copy-png', label: 'Copy as PNG', icon: '🖼', shortcut: '⌘⇧C' });
-  items.push({ type: 'separator' });
-
-  // Structure
-  items.push({ action: 'duplicate', label: 'Duplicate', icon: '⊕', shortcut: '⌘D' });
-  items.push({ action: 'group', label: 'Group', icon: '◻', shortcut: '⌘G', disabled: !canGroup });
-  items.push({ action: 'ungroup', label: 'Ungroup', icon: '◫', shortcut: '⇧⌘G', disabled: !canUngroup });
-  items.push({ action: 'frame', label: 'Frame Selection', icon: '⊞' });
-  items.push({ type: 'separator' });
-
-  // Z-order
-  items.push({ action: 'bring-front', label: 'Bring to Front', icon: '↑', shortcut: '⌘⇧]' });
-  items.push({ action: 'send-back', label: 'Send to Back', icon: '↓', shortcut: '⌘⇧[' });
-
-  // Lock
-  items.push({ action: 'lock', label: isLocked ? 'Unlock' : 'Lock', icon: isLocked ? '🔓' : '🔒' });
-  items.push({ type: 'separator' });
-
-  // Delete
-  items.push({ action: 'delete', label: 'Delete', icon: '⊖', shortcut: '⌫', danger: true });
-
+  }
   return items;
 }
 
@@ -4732,7 +4763,13 @@ function doNodeAction(action, el) {
     if (result.changed) { bumpGeneration(); render(); syncTextToExtension(); }
     return;
   }
-  if (action === 'lock') {
+  if (action === 'delete') {
+    fdCanvas.select_by_id(contextMenuNodeId);
+    const changed = fdCanvas.delete_selected();
+    if (changed) { render(); syncTextToExtension(); }
+    return;
+  }
+  if (action === 'unlock-all' || action === 'toggle-lock') {
     if (fdCanvas.toggle_node_locked) {
       fdCanvas.toggle_node_locked(contextMenuNodeId);
       render();
@@ -4740,10 +4777,52 @@ function doNodeAction(action, el) {
     }
     return;
   }
-  if (action === 'delete') {
-    fdCanvas.select_by_id(contextMenuNodeId);
-    const changed = fdCanvas.delete_selected();
-    if (changed) { render(); syncTextToExtension(); }
+  
+  if (action === 'copy-fd') { copySelectedAsFd(); return; }
+  
+  // Handled layer interactions (stubbed for canvas unless implemented over bridge)
+  if (action === 'move-to-root') {
+    if (fdCanvas.move_selection_to_root) {
+      const changed = fdCanvas.move_selection_to_root();
+      if (changed) { render(); syncTextToExtension(); }
+    }
+    return;
+  }
+  if (action === 'select-children') {
+    if (fdCanvas.select_children) {
+      if (fdCanvas.select_children(contextMenuNodeId)) render();
+    }
+    return;
+  }
+  if (action === 'move-into-search') { return; }
+}
+
+
+
+function doDocumentAction(action, e) {
+  if (!fdCanvas) return;
+  
+  if (action === 'paste') { pasteFromClipboard(); return; }
+  if (action === 'select-all') {
+    const changedJson = fdCanvas.handle_key("a", false, true, false, true);
+    const result = JSON.parse(changedJson);
+    if (result.changed) { render(); syncTextToExtension(); }
+    return;
+  }
+  if (action === 'add-rectangle') {
+    changeTool("rect");
+    return;
+  }
+  if (action === 'add-text') {
+    changeTool("text");
+    return;
+  }
+  if (action === 'unlock-all') {
+    if (fdCanvas.unlock_all) {
+      fdCanvas.unlock_all();
+      render();
+      syncTextToExtension();
+    }
     return;
   }
 }
@@ -4758,13 +4837,42 @@ function setupContextMenu() {
     const x = ((e.clientX - rect.left) - panX) / zoomLevel;
     const y = ((e.clientY - rect.top) - panY) / zoomLevel;
 
-    const selectedId = fdCanvas.get_selected_id();
-    fdCanvas.handle_pointer_down(x, y, 1.0, false, false, false, false);
-    fdCanvas.handle_pointer_up(x, y, false, false, false, false);
-    const hitId = fdCanvas.get_selected_id();
-    render();
+    const hitId = fdCanvas.hit_test_at ? fdCanvas.hit_test_at(x, y) : "";
+    let selectedIds = JSON.parse(fdCanvas.get_selected_ids());
 
-    if (!hitId) {
+    if (hitId) {
+      // If we clicked on an unselected node, swap the selection strictly to it
+      if (!selectedIds.includes(hitId)) {
+        fdCanvas.handle_pointer_down(x, y, 1.0, false, false, false, false);
+        fdCanvas.handle_pointer_up(x, y, false, false, false, false);
+        selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      }
+      render();
+      contextMenuNodeId = hitId;
+      
+      const isContainer = fdCanvas.is_container ? fdCanvas.is_container(hitId) : false;
+      const hasChildren = fdCanvas.has_children ? fdCanvas.has_children(hitId) : false;
+      const isLocked = fdCanvas.is_node_locked ? fdCanvas.is_node_locked(hitId) : false;
+      const canGroup = selectedIds.length >= 2 && (!hitId || !fdCanvas.is_node_locked(hitId));
+      let canUngroup = false;
+      const source = fdCanvas.get_text();
+      for (const id of selectedIds) {
+        if (new RegExp(`(?:^|\\n)\\s*group\\s+@${id}\\b`).test(source)) { canUngroup = true; break; }
+      }
+      
+      // Get registry items
+      let rawItems = buildUnifiedNodeMenu(hitId, selectedIds, isContainer, hasChildren, isLocked, canGroup, canUngroup, source);
+      // Upgrade ai-touch to custom widget
+      const items = upgradeUnifiedMenu(rawItems, hitId);
+
+      ctxMenu.open({
+        items,
+        x: e.clientX,
+        y: e.clientY,
+        onAction: (action, row) => doNodeAction(action, row),
+      });
+    } else {
+      // It's empty space. Check for edge hits first...
       if (fdCanvas.hit_test_edge_at) {
         const edgeHit = fdCanvas.hit_test_edge_at(x, y);
         if (edgeHit) {
@@ -4774,20 +4882,16 @@ function setupContextMenu() {
           return;
         }
       }
-      ctxMenu.close();
-      return;
+      
+      // Empty Canvas Menu
+      const items = buildUnifiedCanvasMenu();
+      ctxMenu.open({
+        items,
+        x: e.clientX,
+        y: e.clientY,
+        onAction: (action, row) => doDocumentAction(action, e),
+      });
     }
-
-    contextMenuNodeId = hitId;
-    const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
-    const items = buildNodeMenuItems(hitId, selectedIds);
-
-    ctxMenu.open({
-      items,
-      x: e.clientX,
-      y: e.clientY,
-      onAction: (action, row) => doNodeAction(action, row),
-    });
   });
 
   // ── Layers panel: ⋮ button → open context menu ──
@@ -4803,7 +4907,20 @@ function setupContextMenu() {
       render();
       contextMenuNodeId = nodeId;
       const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
-      const items = buildNodeMenuItems(nodeId, selectedIds);
+
+      const isContainer = fdCanvas.is_container ? fdCanvas.is_container(nodeId) : false;
+      const hasChildren = fdCanvas.has_children ? fdCanvas.has_children(nodeId) : false;
+      const isLocked = fdCanvas.is_node_locked ? fdCanvas.is_node_locked(nodeId) : false;
+      const canGroup = selectedIds.length >= 2 && (!nodeId || !fdCanvas.is_node_locked(nodeId));
+      let canUngroup = false;
+      const source = fdCanvas.get_text();
+      for (const id of selectedIds) {
+        if (new RegExp(`(?:^|\\n)\\s*group\\s+@${id}\\b`).test(source)) { canUngroup = true; break; }
+      }
+      
+      let rawItems = buildUnifiedNodeMenu(nodeId, selectedIds, isContainer, hasChildren, isLocked, canGroup, canUngroup, source);
+      const items = upgradeUnifiedMenu(rawItems, nodeId);
+
       ctxMenu.open({
         items,
         x: e.clientX,
@@ -4825,138 +4942,149 @@ function closeContextMenu() {
 let ecmEdgeId = null;
 
 function showEdgeContextMenu(edgeId, screenX, screenY) {
-  const menu = document.getElementById("edge-context-menu");
-  if (!menu) return;
-  ecmEdgeId = edgeId;
-  document.getElementById("ecm-arrow").value = "end";
-  document.getElementById("ecm-curve").value = "smooth";
-  document.getElementById("ecm-stroke-color").value = "#999999";
-  document.getElementById("ecm-stroke-width").value = "1";
-  document.getElementById("ecm-flow").value = "none";
-  document.getElementById("ecm-flow-dur").style.display = "none";
-  menu.style.left = (screenX + 12) + "px";
-  menu.style.top = (screenY - 60) + "px";
-  menu.classList.add("visible");
-  setTimeout(() => {
-    document.addEventListener("pointerdown", ecmClickOutside, true);
-    document.addEventListener("keydown", ecmEscHandler, true);
-  }, 50);
-}
+  fdCanvas.select_by_id(edgeId);
+  render();
 
-function closeEdgeContextMenu() {
-  const menu = document.getElementById("edge-context-menu");
-  if (menu) menu.classList.remove("visible");
-  ecmEdgeId = null;
-  document.removeEventListener("pointerdown", ecmClickOutside, true);
-  document.removeEventListener("keydown", ecmEscHandler, true);
-}
-
-function ecmClickOutside(e) {
-  const menu = document.getElementById("edge-context-menu");
-  if (menu && !menu.contains(e.target)) closeEdgeContextMenu();
-}
-
-function ecmEscHandler(e) {
-  if (e.key === "Escape") { closeEdgeContextMenu(); e.preventDefault(); }
-}
-
-function setupEdgeContextMenu() {
-  const arrowSel = document.getElementById("ecm-arrow");
-  const curveSel = document.getElementById("ecm-curve");
-  const strokeColor = document.getElementById("ecm-stroke-color");
-  const strokeWidth = document.getElementById("ecm-stroke-width");
-  const flowSel = document.getElementById("ecm-flow");
-  const flowDur = document.getElementById("ecm-flow-dur");
-  if (!arrowSel) return;
-
-  function applyEdgeChange() {
-    if (!fdCanvas || !ecmEdgeId) return;
+  const getEdgeBlock = () => {
     const text = fdCanvas.get_text();
-    const esc = ecmEdgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const re = new RegExp(`(edge\\s+@${esc}\\s*\\{[^}]*?)\\}`, "s");
+    const esc = edgeId.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
+    const re = new RegExp(`(edge\\\\s+@${esc}\\\\s*\\\\{[^}]*?)\\\\}`, "s");
     const m = text.match(re);
-    if (!m) return;
-    let block = m[1];
-    // Arrow
-    block = block.replace(/arrow:\s*\S+/, `arrow: ${arrowSel.value}`);
-    if (!block.includes("arrow:")) block += `\n  arrow: ${arrowSel.value}`;
-    // Curve
-    block = block.replace(/curve:\s*\S+/, `curve: ${curveSel.value}`);
-    if (!block.includes("curve:")) block += `\n  curve: ${curveSel.value}`;
-    // Stroke
-    const sw = strokeWidth.value || "1";
-    const sc = strokeColor.value || "#999";
-    block = block.replace(/stroke:\s*#?\w+\s*[\d.]*/, `stroke: ${sc} ${sw}`);
-    if (!block.includes("stroke:")) block += `\n  stroke: ${sc} ${sw}`;
-    // Flow
-    if (flowSel.value !== "none") {
-      const dur = flowDur.value || "800";
-      const flowLine = `flow: ${flowSel.value} ${dur}ms`;
-      if (block.includes("flow:")) {
-        block = block.replace(/flow:\s*\S+\s*\d*m?s?/, flowLine);
-      } else {
-        block += `\n  ${flowLine}`;
-      }
-    } else {
-      block = block.replace(/\n\s*flow:\s*\S+\s*\d*m?s?/, "");
-    }
-    const newText = text.replace(re, block + "\n}");
-    fdCanvas.set_text(newText);
-    bumpGeneration();
-    render();
-    syncTextToExtension();
-  }
+    return m ? m[1] : "";
+  };
 
-  arrowSel.addEventListener("change", applyEdgeChange);
-  curveSel.addEventListener("change", applyEdgeChange);
-  strokeColor.addEventListener("input", applyEdgeChange);
-  strokeWidth.addEventListener("change", applyEdgeChange);
-  flowSel.addEventListener("change", () => {
-    flowDur.style.display = flowSel.value !== "none" ? "" : "none";
-    applyEdgeChange();
+  const block = getEdgeBlock();
+  const arrowMatch = block.match(/arrow:\\s*(\\S+)/);
+  const curveMatch = block.match(/curve:\\s*(\\S+)/);
+  const strokeMatch = block.match(/stroke:\\s*(#[\\w]+)\\s*([\\d.]+)?/);
+  const flowMatch = block.match(/flow:\\s*(\\S+)(?:\\s+(\\d+)ms?)?/);
+
+  const curArrow = arrowMatch ? arrowMatch[1] : "end";
+  const curCurve = curveMatch ? curveMatch[1] : "smooth";
+  const curStrokeColor = strokeMatch ? strokeMatch[1] : "#999999";
+  const curStrokeWidth = (strokeMatch && strokeMatch[2]) ? strokeMatch[2] : "1";
+  const curFlow = flowMatch ? flowMatch[1] : "none";
+  const curFlowDur = (flowMatch && flowMatch[2]) ? flowMatch[2] : "800";
+
+  let items = buildUnifiedEdgeMenu(edgeId);
+
+  // Append context-menu form as a unified custom block
+  items.push({
+    type: 'custom',
+    action: 'edge-properties',
+    render: (wrap) => {
+      wrap.className = 'menu-item-wrap ctx-edge-props-wrap';
+      wrap.innerHTML = `
+        <div class="ctx-edge-form" style="padding: 12px; font-size: 13px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+            <label style="color:var(--ts-workspace-foreground, #ccc);">Arrow</label>
+            <select id="dyn-ecm-arrow" style="background:var(--ts-workspace-background); color:var(--ts-workspace-foreground); border:1px solid var(--fd-border);">
+              <option value="end" ${curArrow === 'end' ? 'selected' : ''}>End →</option>
+              <option value="start" ${curArrow === 'start' ? 'selected' : ''}>← Start</option>
+              <option value="both" ${curArrow === 'both' ? 'selected' : ''}>← Both →</option>
+              <option value="none" ${curArrow === 'none' ? 'selected' : ''}>None</option>
+            </select>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+            <label style="color:var(--ts-workspace-foreground, #ccc);">Curve</label>
+            <select id="dyn-ecm-curve" style="background:var(--ts-workspace-background); color:var(--ts-workspace-foreground); border:1px solid var(--fd-border);">
+              <option value="smooth" ${curCurve === 'smooth' ? 'selected' : ''}>Smooth</option>
+              <option value="straight" ${curCurve === 'straight' ? 'selected' : ''}>Straight</option>
+              <option value="step" ${curCurve === 'step' ? 'selected' : ''}>Step</option>
+            </select>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+            <label style="color:var(--ts-workspace-foreground, #ccc);">Stroke</label>
+            <div>
+              <input type="color" id="dyn-ecm-stroke-color" value="${curStrokeColor}" style="width:24px; vertical-align:middle; cursor:pointer;" />
+              <input type="number" id="dyn-ecm-stroke-width" value="${curStrokeWidth}" min="0.5" max="10" step="0.5" style="width:40px; background:var(--ts-workspace-background); color:var(--ts-workspace-foreground); border:1px solid var(--fd-border);" />
+            </div>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <label style="color:var(--ts-workspace-foreground, #ccc);">Flow</label>
+            <div>
+              <select id="dyn-ecm-flow" style="background:var(--ts-workspace-background); color:var(--ts-workspace-foreground); border:1px solid var(--fd-border);">
+                <option value="none" ${curFlow === 'none' ? 'selected' : ''}>None</option>
+                <option value="pulse" ${curFlow === 'pulse' ? 'selected' : ''}>Pulse</option>
+                <option value="dash" ${curFlow === 'dash' ? 'selected' : ''}>Dash</option>
+              </select>
+              <input type="number" id="dyn-ecm-flow-dur" value="${curFlowDur}" min="100" max="5000" step="100" style="width:50px; background:var(--ts-workspace-background); color:var(--ts-workspace-foreground); border:1px solid var(--fd-border); ${curFlow === 'none' ? 'display:none;' : ''}" />
+            </div>
+          </div>
+        </div>
+      `;
+
+      const arrowSel = wrap.querySelector('#dyn-ecm-arrow');
+      const curveSel = wrap.querySelector('#dyn-ecm-curve');
+      const strokeColor = wrap.querySelector('#dyn-ecm-stroke-color');
+      const strokeWidth = wrap.querySelector('#dyn-ecm-stroke-width');
+      const flowSel = wrap.querySelector('#dyn-ecm-flow');
+      const flowDur = wrap.querySelector('#dyn-ecm-flow-dur');
+
+      const applyEdgeChange = () => {
+        if (!fdCanvas) return;
+        const text = fdCanvas.get_text();
+        const esc = edgeId.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
+        const re = new RegExp(`(edge\\\\s+@${esc}\\\\s*\\\\{[^}]*?)\\\\}`, "s");
+        const m = text.match(re);
+        if (!m) return;
+        let block = m[1];
+        
+        block = block.replace(/arrow:\\s*\\S+/, `arrow: ${arrowSel.value}`);
+        if (!block.includes("arrow:")) block += `\\n  arrow: ${arrowSel.value}`;
+        
+        block = block.replace(/curve:\\s*\\S+/, `curve: ${curveSel.value}`);
+        if (!block.includes("curve:")) block += `\\n  curve: ${curveSel.value}`;
+        
+        const sw = strokeWidth.value || "1";
+        const sc = strokeColor.value || "#999";
+        block = block.replace(/stroke:\\s*#?\\w+\\s*[\\d.]*/, `stroke: ${sc} ${sw}`);
+        if (!block.includes("stroke:")) block += `\\n  stroke: ${sc} ${sw}`;
+        
+        if (flowSel.value !== "none") {
+          const dur = flowDur.value || "800";
+          const flowLine = `flow: ${flowSel.value} ${dur}ms`;
+          if (block.includes("flow:")) {
+            block = block.replace(/flow:\\s*\\S+\\s*\\d*m?s?/, flowLine);
+          } else {
+            block += `\\n  ${flowLine}`;
+          }
+        } else {
+          block = block.replace(/\\n\\s*flow:\\s*\\S+\\s*\\d*m?s?/, "");
+        }
+        
+        const newText = text.replace(re, block + "\\n}");
+        fdCanvas.set_text(newText);
+        bumpGeneration();
+        render();
+        syncTextToExtension();
+      };
+
+      arrowSel.addEventListener("change", applyEdgeChange);
+      curveSel.addEventListener("change", applyEdgeChange);
+      strokeColor.addEventListener("input", applyEdgeChange);
+      strokeWidth.addEventListener("change", applyEdgeChange);
+      flowSel.addEventListener("change", () => {
+        flowDur.style.display = flowSel.value !== "none" ? "" : "none";
+        applyEdgeChange();
+      });
+      flowDur.addEventListener("change", applyEdgeChange);
+      
+      // Prevent click propagation from form controls
+      wrap.addEventListener("click", e => e.stopPropagation());
+      wrap.addEventListener("pointerdown", e => e.stopPropagation());
+      wrap.addEventListener("mousedown", e => e.stopPropagation());
+    }
   });
-  flowDur.addEventListener("change", applyEdgeChange);
 
-  // Delete edge
-  document.getElementById("ecm-delete")?.addEventListener("click", () => {
-    if (!fdCanvas || !ecmEdgeId) { closeEdgeContextMenu(); return; }
-    // Select the edge and delete it
-    fdCanvas.select_by_id(ecmEdgeId);
-    const changed = fdCanvas.delete_selected();
-    if (changed) {
-      bumpGeneration();
-      render();
-      syncTextToExtension();
-    }
-    closeEdgeContextMenu();
-  });
-
-  // Reverse edge direction (swap from: and to:)
-  document.getElementById("ecm-reverse")?.addEventListener("click", () => {
-    if (!fdCanvas || !ecmEdgeId) { closeEdgeContextMenu(); return; }
-    const text = fdCanvas.get_text();
-    const esc = ecmEdgeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const re = new RegExp(`(edge\\s+@${esc}\\s*\\{[^}]*?)\\}`, "s");
-    const m = text.match(re);
-    if (!m) { closeEdgeContextMenu(); return; }
-    let block = m[1];
-    // Extract from: and to: values
-    const fromMatch = block.match(/from:\s*(.+)/);
-    const toMatch = block.match(/to:\s*(.+)/);
-    if (fromMatch && toMatch) {
-      const fromVal = fromMatch[1].trim();
-      const toVal = toMatch[1].trim();
-      block = block.replace(/from:\s*.+/, `from: ${toVal}`);
-      block = block.replace(/to:\s*.+/, `to: ${fromVal}`);
-      const newText = text.replace(re, block + "\n}");
-      fdCanvas.set_text(newText);
-      bumpGeneration();
-      render();
-      syncTextToExtension();
-    }
-    closeEdgeContextMenu();
+  ctxMenu.open({
+    items,
+    x: screenX,
+    y: screenY,
+    onAction: (action) => doNodeAction(action, null)
   });
 }
+
 
 /** Draw a dot grid behind shapes. Grid adapts to zoom level. */
 function drawGrid() {
@@ -5447,8 +5575,12 @@ function renderLayerNode(node, selectedIds, depth = 0) {
   html += `<span class="layer-indent">${indent}</span>`;
   html += chevron;
   html += `<span class="layer-icon">${icon}</span>`;
+  const isLocked = fdCanvas && fdCanvas.is_node_locked && fdCanvas.is_node_locked(node.id);
   html += `<span class="layer-name">${escapeHtml(node.id)}${textPreview}</span>`;
   html += `<span class="layer-kind">${escapeHtml(node.kind)}</span>`;
+  if (isLocked) {
+    html += `<span class="layer-lock" title="Locked">🔒</span>`;
+  }
   html += `<span class="layer-actions" data-actions-id="${escapeAttr(node.id)}" title="More actions">⋮</span>`;
   html += `<span class="layer-eye" data-eye-id="${escapeAttr(node.id)}" title="Toggle visibility">👁</span>`;
   html += `</div>`;
@@ -6016,6 +6148,14 @@ function wireLayerDragDrop(panel) {
         syncTextToExtension();
         updatePropertiesPanel();
         refreshLayersPanel();
+        // Flash the moved item to confirm the operation
+        requestAnimationFrame(() => {
+          const movedEl = panel.querySelector(`.layer-item[data-node-id="${draggedId}"]`);
+          if (movedEl) {
+            movedEl.classList.add('just-moved');
+            movedEl.addEventListener('animationend', () => movedEl.classList.remove('just-moved'), { once: true });
+          }
+        });
       }
       draggedId = null;
     });
@@ -6567,6 +6707,29 @@ function wireLayerKeyboardShortcuts(panel) {
       e.preventDefault();
       e.stopPropagation();
       const changed = e.shiftKey ? fdCanvas.ungroup_selected() : fdCanvas.group_selected();
+      if (changed) {
+        bumpGeneration();
+        render();
+        syncTextToExtension();
+        updatePropertiesPanel();
+        updateFloatingBar();
+        refreshLayersPanel();
+      }
+      return;
+    }
+
+    // ⌘⇧L → Lock Selection
+    if (meta && e.shiftKey && key === 'l') {
+      e.preventDefault();
+      e.stopPropagation();
+      const selectedIds = JSON.parse(fdCanvas.get_selected_ids());
+      let changed = false;
+      for (const id of selectedIds) {
+        if (fdCanvas.toggle_node_locked) {
+          fdCanvas.toggle_node_locked(id);
+          changed = true;
+        }
+      }
       if (changed) {
         bumpGeneration();
         render();
@@ -8750,6 +8913,7 @@ function renderMinimap() {
   // Clear
   minimapCtx.save();
   minimapCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  minimapCtx.clearRect(0, 0, mw * dpr, mh * dpr);
   const isDark = document.body.classList.contains("dark-theme");
   minimapCtx.fillStyle = isDark ? "rgba(28,28,30,0.9)" : "rgba(245,245,247,0.9)";
   minimapCtx.fillRect(0, 0, mw, mh);
@@ -8781,7 +8945,7 @@ function renderMinimap() {
   minimapCtx.translate(offsetX, offsetY);
   minimapCtx.scale(scale, scale);
   minimapCtx.translate(-bounds.minX, -bounds.minY);
-  fdCanvas.render(minimapCtx, performance.now(), true, false, false, false);
+  fdCanvas.render(minimapCtx, performance.now(), true, true, false, false);
   minimapCtx.restore();
 
   // Cache the scene image (without viewport rect) for smooth overlay
