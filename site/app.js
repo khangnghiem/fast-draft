@@ -5409,14 +5409,16 @@ async function initPlayground() {
     });
 
     canvas.addEventListener('pointerleave', (e) => {
-      // If pointer leaves (or OS cancels) with no buttons held, the release was missed
+      // Fallback: if pointer capture was lost (e.g. browser bug, OS gesture intercept)
+      // and pointer exits with no buttons held, clean up.
       if (e.buttons === 0 && (panDragging || rightClickPending || zoomScrubActive)) {
         clearInteractionState();
       }
     });
 
     canvas.addEventListener('pointerenter', (e) => {
-      // If pointer re-enters with no buttons held, forcibly clear stuck drags
+      // Fallback: if pointer re-enters with no buttons held, the release was missed
+      // outside the window while capture was inactive.
       if (e.buttons === 0 && (panDragging || rightClickPending || zoomScrubActive)) {
         clearInteractionState();
       }
@@ -6198,6 +6200,12 @@ function clearInteractionState() {
   const canvasEl = document.getElementById('fd-canvas');
   if (canvasEl) {
     canvasEl.classList.remove('modifier-cmd', 'modifier-alt', 'modifier-cmd-select');
+    // Reset cursor to match the now-idle tool state
+    if (typeof fdCanvas !== 'undefined' && fdCanvas && fdCanvas.get_tool_name) {
+      canvasEl.style.cursor = fdCanvas.get_tool_name() === 'hand' ? 'grab' : '';
+    } else {
+      canvasEl.style.cursor = '';
+    }
   }
   if (typeof fdCanvas !== 'undefined' && fdCanvas && fdCanvas.cancel_drag) {
     fdCanvas.cancel_drag();
