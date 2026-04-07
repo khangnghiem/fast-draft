@@ -1,7 +1,7 @@
 /* ─── Floating Toolbar (frosted glass, draggable, snaps to edges) ─── */
 #floating-toolbar {
   position: fixed; /* always fixed — never participates in grid */
-  z-index: 20; /* below panels (z-index 25) so it slides under when squeezed */
+  z-index: 22; /* below panels (z-index 25) so it slides under when squeezed */
   visibility: hidden; /* hidden until JS applySnapPosition — prevents CSS→JS position jump */
   display: flex;
   align-items: center;

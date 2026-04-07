@@ -2786,7 +2786,12 @@ function setupPanelResize(wrapper, resizeCanvas) {
         toggleLeftPanel();
       }
     } else {
-      const newW = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, rawWidth));
+      const MIN_CANVAS_W = 200;
+      const rp = document.getElementById('right-panel');
+      const curRightW = document.documentElement.dataset.rp === 'open' && rp ? rp.offsetWidth : 0;
+      const maxAllowedLeftW = window.innerWidth - curRightW - MIN_CANVAS_W;
+      
+      const newW = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, maxAllowedLeftW, rawWidth));
       document.documentElement.style.setProperty('--left-panel-width', newW + 'px');
       positionLayersHandle();
       // Batch expensive canvas resize + render to once per display frame
@@ -2893,7 +2898,12 @@ function setupPanelResize(wrapper, resizeCanvas) {
         toggleRightPanel();
       }
     } else {
-      const newW = Math.max(MIN_RIGHT_W, Math.min(MAX_RIGHT_W, rawWidth));
+      const MIN_CANVAS_W = 200;
+      const lp = document.getElementById('left-panel');
+      const curLeftW = document.documentElement.dataset.lp === 'open' && lp ? lp.offsetWidth : 0;
+      const maxAllowedRightW = window.innerWidth - curLeftW - MIN_CANVAS_W;
+
+      const newW = Math.max(MIN_RIGHT_W, Math.min(MAX_RIGHT_W, maxAllowedRightW, rawWidth));
       document.documentElement.style.setProperty('--right-panel-width', newW + 'px');
       positionRightHandle();
       if (!rightResizeRafId) {
