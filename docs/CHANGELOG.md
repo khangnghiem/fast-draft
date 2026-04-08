@@ -18,6 +18,11 @@
 -->
 ## Completed Requirements
 
+### v0.11.353 — AI Proxy Fallback & High-End Routing (R4.9, R4.26)
+- **OpenRouter Fallback Integration**: Added an intelligent fallback mechanism to `functions/api/ai.js` that automatically routes requests to OpenRouter (configured via `OPENROUTER_API_KEY`) if the native Cloudflare Workers AI tier limits are exceeded or if CF throws an error.
+- **High-End Model Routing for Design Reviews**: Specifically routed the "Review" task (`mode === 'review'`) to exclusively utilize `anthropic/claude-3.5-sonnet` via OpenRouter to inject state-of-the-art LLM capabilities where complex reasoning heuristics are demanded, while keeping fast UI manipulation tasks running freely on Cloudflare's Edge.
+- **Stream Format Interoperability**: Implemented a real-time `TransformStream` layer inside the serverless proxy that elegantly converts OpenAI-formatted SSE chunks into Cloudflare's expected data layout, maintaining 100% downstream frontend compatibility without frontend client code changes.
+
 ### v0.11.352 — Semantic Shortcut Enhancements (Mnemonic Driven UX)
 - **Perfect Semantic Mapping**: Overhauled the canvas keyboard shortcuts to achieve 100% semantic consistency. Every single drafting tool is now mapped exactly to its first letter: **R**ectangle, **E**llipse, **P**en, **A**rrow, **T**ext, and **F**rame.
 - **Eraser Reassigned**: Shifted the swipe-to-delete Eraser shortcut to <kbd>X</kbd> (previously E) to accommodate the new Ellipse mapping. This provides a highly memorable "cross-out" mnemonic for destructive actions.

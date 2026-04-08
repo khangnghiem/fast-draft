@@ -221,7 +221,82 @@ function computeScore(categories) {
   return Math.round(total / categories.length);
 }
 
-// ─── Request Handler ─────────────────────────────────────────────────────
+// ─── OpenRouter Integration ──────────────────────────────────────────────
+
+async function runWithOpenRouter(env, model, messages, maxTokens, temp, stream) {
+  let orModel = model;
+  if (model.includes('llama-3.3-70b')) orModel = 'meta-llama/llama-3.3-70b-instruct';
+  else if (model.includes('gemma-3-12b')) orModel = 'google/gemma-3-12b-it';
+  else if (model.includes('llama-3.1-8b')) orModel = 'meta-llama/llama-3.1-8b-instruct';
+  else if (model === 'claude-3.5-sonnet') orModel = 'anthropic/claude-3.5-sonnet';
+  else if (!model.includes('/')) orModel = model; 
+  else orModel = 'meta-llama/llama-3.1-8b-instruct'; // safe default
+  
+  const payload = {
+    model: orModel,
+    messages,
+    max_tokens: maxTokens,
+    temperature: temp,
+    stream: !!stream
+  };
+  
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${env.OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://fast-draft.com',
+      'X-Title': 'Fast-Draft AI Gateway'
+    },
+    body: JSON.stringify(payload)
+  });
+  
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`OpenRouter API error: ${response.status} ${errText}`);
+  }
+  
+  if (stream) {
+    return response.body.pipeThrough(openRouterToCFStream());
+  } else {
+    const data = await response.json();
+    return { response: data.choices[0].message.content };
+  }
+}
+
+function openRouterToCFStream() {
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  return new TransformStream({
+    transform(chunk, controller) {
+      buffer += decoder.decode(chunk, { stream: true });
+      let lines = buffer.split('\n');
+      buffer = lines.pop() || ''; 
+
+      for (let line of lines) {
+        if (line.startsWith('data: ')) {
+          const payload = line.slice(6).trim();
+          if (payload === '[DONE]') {
+             controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+             continue;
+          }
+          try {
+             const data = JSON.parse(payload);
+             const content = data.choices?.[0]?.delta?.content;
+             if (content) {
+                const cfPayload = JSON.stringify({ response: content });
+                controller.enqueue(encoder.encode(`data: ${cfPayload}\n\n`));
+             }
+          } catch(e) {}
+        }
+      }
+    }
+  });
+}
+
+// ─── Request Handler ──────────────────────────────────────────────
 
 export async function onRequestPost(context) {
   const headers = {
@@ -316,17 +391,40 @@ export async function onRequestPost(context) {
       ];
     }
 
-    // ─── Streaming mode for chat ───────────────────────────────
+    // ─── Routing Logic (OpenRouter vs CF Edge) ─────────────────
     const wantsStream = config.isChat && body.stream === true;
 
+    let shouldUseOpenRouter = false;
+    let actualModel = config.model;
+
+    if (mode === 'review' && context.env.OPENROUTER_API_KEY) {
+      shouldUseOpenRouter = true;
+      actualModel = 'claude-3.5-sonnet'; // High-End Routing
+      config.model = 'anthropic/claude-3.5-sonnet'; 
+    }
+
     if (wantsStream) {
-      // Use Cloudflare Workers AI streaming — returns a ReadableStream of SSE
-      const stream = await context.env.AI.run(config.model, {
-        messages: aiMessages,
-        max_tokens: config.maxTokens,
-        temperature: config.temp,
-        stream: true,
-      });
+      let stream;
+      if (shouldUseOpenRouter) {
+        stream = await runWithOpenRouter(context.env, actualModel, aiMessages, config.maxTokens, config.temp, true);
+      } else {
+        try {
+          stream = await context.env.AI.run(config.model, {
+            messages: aiMessages,
+            max_tokens: config.maxTokens,
+            temperature: config.temp,
+            stream: true,
+          });
+        } catch (e) {
+          if (context.env.OPENROUTER_API_KEY) {
+            console.log("Workers AI failed err:", e.message, "— falling back to OpenRouter");
+            stream = await runWithOpenRouter(context.env, config.model, aiMessages, config.maxTokens, config.temp, true);
+            config.model = 'openrouter-fallback';
+          } else {
+            throw e;
+          }
+        }
+      }
 
       return new Response(stream, {
         headers: {
@@ -339,11 +437,26 @@ export async function onRequestPost(context) {
     }
 
     // ─── Non-streaming (full JSON response) ──────────────────
-    const result = await context.env.AI.run(config.model, {
-      messages: aiMessages,
-      max_tokens: config.maxTokens,
-      temperature: config.temp,
-    });
+    let result;
+    if (shouldUseOpenRouter) {
+      result = await runWithOpenRouter(context.env, actualModel, aiMessages, config.maxTokens, config.temp, false);
+    } else {
+      try {
+        result = await context.env.AI.run(config.model, {
+          messages: aiMessages,
+          max_tokens: config.maxTokens,
+          temperature: config.temp,
+        });
+      } catch (e) {
+        if (context.env.OPENROUTER_API_KEY) {
+          console.log("Workers AI failed err:", e.message, "— falling back to OpenRouter");
+          result = await runWithOpenRouter(context.env, config.model, aiMessages, config.maxTokens, config.temp, false);
+          config.model = 'openrouter-fallback';
+        } else {
+          throw e;
+        }
+      }
+    }
 
     let responseBody;
 
