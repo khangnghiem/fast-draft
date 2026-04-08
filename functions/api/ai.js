@@ -308,8 +308,9 @@ async function runAI(env, config, aiMessages, stream, shouldUseOpenRouter, actua
   } catch (e) {
     if (env.OPENROUTER_API_KEY) {
       console.log('Workers AI failed err:', e.message, '— falling back to OpenRouter');
+      const result = await runWithOpenRouter(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
       config.model = 'openrouter-fallback';
-      return runWithOpenRouter(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
+      return result;
     }
     throw e;
   }
