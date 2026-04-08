@@ -37,11 +37,11 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 14. **Docs**: Update `CHANGELOG.md` and `REQUIREMENTS.md`.
 15. **Commit**: `git add -A && git commit -m "..."`
 16. **Push**: `git push -u origin HEAD`
-17. **PR**: `export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH" && gh pr create --fill`
-18. **Wait CI**: `export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH" && gh pr checks $(git branch --show-current) --watch --fail-fast`
-19. **Merge**: `export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH" && gh pr merge $(git branch --show-current) --squash --delete-branch`
+17. **PR**: `gh pr create --fill`
+18. **Wait CI**: `gh pr checks $(git branch --show-current) --watch --fail-fast`
+19. **Merge**: `gh pr merge $(git branch --show-current) --squash --delete-branch`
 20. **Sync**: `git checkout main && git pull origin main`
-21. **Site Verify**: Wait for `pages.yml` deploy (`export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH" && gh run watch $(gh run list --workflow=pages.yml -L 1 --json databaseId -q ".[0].databaseId")`).
+21. **Site Verify**: Wait for `pages.yml` deploy (`gh run watch $(gh run list --workflow=pages.yml -L 1 --json databaseId -q ".[0].databaseId")`).
     Use `browser_subagent` to navigate to the live site and execute Tier 2 JS Assertions from `/e2e`.
 22. **Publish VS Code**: `cd fd-vscode && pnpm install && pnpm run compile && source ../.env && npx vsce publish --no-dependencies -p $VSCE_PAT && npx ovsx publish --no-dependencies -p $OVSX_PAT`
 23. **Report** completion.

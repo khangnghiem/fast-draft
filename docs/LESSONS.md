@@ -576,3 +576,13 @@ Never use `localStorage.getItem(...)` as the source of truth for current visual 
 **Root cause**: A subtle mathematical ordering flaw in `SyncEngine` (`crates/fd-editor/src/sync.rs`) during the translation evaluation. The precision clamping logic was written as `(*x + dx * 100.0).round() / 100.0`. Due to the standard Order of Operations (PEMDAS), `dx * 100.0` was executed first, leaving `*x` entirely unscaled prior to the `round() / 100.0`. This effectively performed a continuous division of the original coordinate by 100 rather than properly scaling the combined translation, driving all shapes logarithmically toward 0.
 **Fix**: Added strict grouping parentheses to protect the addition terms before the scaling multiplication: `((*x + dx) * 100.0).round() / 100.0`.
 **Lesson**: **Never trust implicit operator precedence when dealing with floating-point coordinate scaling.** Always wrap aggregate spatial terms in explicit parentheses `((A + B) * C)` before applying precision transformations. In canvas rendering, math precedence bugs don't throw compiler errors; they manifest as logical defects (wild geometric translations) that easily survive CI unit tests.
+
+---
+
+## Shell: Agent Terminals Need ~/.zshenv, Not ~/.zshrc
+
+**Date**: 2026-04-08
+**Context**: `gh` and `pnpm` commands returned `command not found` in agent terminal sessions despite being installed via Homebrew on the host machine. The workaround was prepending `export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"` to every command in workflow templates.
+**Root cause**: Agent tools execute commands as non-interactive, non-login shells (`zsh -c "..."`). Zsh only sources `~/.zshenv` for these shells — `~/.zprofile` (login-only) and `~/.zshrc` (interactive-only) are skipped. Homebrew's PATH additions (`/opt/homebrew/bin`, `/usr/local/bin`) were in `~/.zshrc` (line 83, 86), so they were invisible to agent shells.
+**Fix**: Moved `export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:$PATH"` to `~/.zshenv`. Removed all `export PATH=...` workarounds from workflow templates (`yolo.md`, `e2e.md`).
+**Rule**: **PATH modifications for tools needed by non-interactive processes (CI agents, cron, IDE terminals) MUST go in `~/.zshenv`.** The zsh sourcing order is: `zshenv` (all) → `zprofile` (login) → `zshrc` (interactive) → `zlogin` (login). Only `zshenv` is universal. Never work around missing PATH with inline exports in workflow scripts — fix the shell configuration at the source.
