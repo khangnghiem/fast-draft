@@ -1003,18 +1003,7 @@ export function initLayersPanel(api) {
       });
     });
   
-    // ── Layers Action Bar (AI Touch) ──
-    const aiTouchBtn = document.getElementById('ai-touch-btn');
-    if (aiTouchBtn) {
-      aiTouchBtn.onclick = (e) => {
-        e.stopPropagation();
-        if (typeof window.aiTouch === 'function') {
-          window.aiTouch();
-        } else {
-          api.showToast('AI Touch invoked');
-        }
-      };
-    }
+
 
 
     // ── Keyboard shortcuts when layers panel is focused (#7) ──
