@@ -1,6 +1,6 @@
 /**
  * Cloudflare Pages Function — Single AI endpoint for FD web editor.
- * Handles all AI modes: refine, renamify, review.
+ * Handles all AI modes: refine, review, chat.
  *
  * Bindings required:
  *   - AI (Workers AI)
@@ -8,7 +8,7 @@
  *
  * Environment variables:
  *   - AI_DAILY_LIMIT: max calls/day/IP (default: 20)
- *   - AI_MODEL_FAST: model for refine/renamify (default: gemma-3-12b-it)
+ *   - AI_MODEL_FAST: model for refine/chat (default: gemma-3-12b-it)
  *   - AI_MODEL_QUALITY: model for review (default: gemma-3-12b-it)
  */
 
