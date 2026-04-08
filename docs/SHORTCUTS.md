@@ -12,12 +12,12 @@
 | `V`   | Select / Move         | Default tool                          |
 | `H`   | Hand (pan)            | Pan canvas with click+drag            |
 | `R`   | Rectangle             |                                       |
-| `O`   | Ellipse               |                                       |
+| `E` / `O` | Ellipse           |                                       |
 | `P`   | Pen (freehand)        |                                       |
 | `A`   | Arrow / Connector     | Click-drag between nodes              |
 | `T`   | Text                  | Click to create, double-click to edit |
 | `F`   | Frame                 | Container for grouping visually       |
-| `E`   | Eraser                | Swipe-to-delete; stays active         |
+| `X`   | Eraser                | Swipe-to-delete; stays active         |
 | `Tab` | Toggle last two tools | Screenbrush-style                     |
 
 ### Tool Locking (Sticky Mode)

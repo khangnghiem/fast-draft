@@ -18,6 +18,11 @@
 -->
 ## Completed Requirements
 
+### v0.11.352 — Semantic Shortcut Enhancements (Mnemonic Driven UX)
+- **Perfect Semantic Mapping**: Overhauled the canvas keyboard shortcuts to achieve 100% semantic consistency. Every single drafting tool is now mapped exactly to its first letter: **R**ectangle, **E**llipse, **P**en, **A**rrow, **T**ext, and **F**rame.
+- **Eraser Reassigned**: Shifted the swipe-to-delete Eraser shortcut to <kbd>X</kbd> (previously E) to accommodate the new Ellipse mapping. This provides a highly memorable "cross-out" mnemonic for destructive actions.
+- **Muscle Memory Preservation**: Simultaneously retained the <kbd>O</kbd> mapping for Ellipse to ensure arriving Figma, Sketch, and Excalidraw designers maintain unbroken muscle memory habits. Mapped both `E` and `O` uniformly.
+
 ### v0.11.351 — Semantic Icon System Implementation
 - **NodeKind::Icon Expansion**: Added the `NodeKind::Icon` semantic node type to `fd-core`, supporting syntax like `icon @my_icon { icon: lucide.search }` for drawing explicitly named icons.
 - **WASM Path2D Rendering**: Upgraded `fd-wasm`'s `render2d.rs` to render semantic paths efficiently via `web_sys::Path2d`, defaulting to 24x24 scalable bounds and replacing unsupported `currentColor` references with explicit hex `#000000` to prevent Canvas2D breakage.
