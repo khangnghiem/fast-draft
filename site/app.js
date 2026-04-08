@@ -3779,6 +3779,12 @@ async function initPlayground() {
 
     console.log(`[FD] Runtime initialized via streaming (${Math.round(performance.now() - t0)}ms)`);
 
+    // Register semantic icon pack
+    if (window.lucideIcons && wasm.register_icon_library) {
+      wasm.register_icon_library("lucide", JSON.stringify(window.lucideIcons));
+      console.log(`[FD] Lucide icons registered`);
+    }
+
     // Size the canvas
     resizeCanvas = () => {
       const rect = wrapper.getBoundingClientRect();

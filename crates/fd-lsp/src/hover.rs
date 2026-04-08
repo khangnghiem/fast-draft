@@ -93,6 +93,10 @@ fn hover_node_id(id: &str, graph: Option<&SceneGraph>) -> Option<Hover> {
             let desc = format!("**Image** — {}×{} src=\"{}\"", width, height, src);
             return Some(make_hover(&desc));
         }
+        fd_core::NodeKind::Icon { library, name } => {
+            let desc = format!("**Icon** — `{}.{}`", library, name);
+            return Some(make_hover(&desc));
+        }
         fd_core::NodeKind::Text { content, .. } => {
             let desc = format!("**Text** — \"{}\"", content);
             return Some(make_hover(&desc));
@@ -126,6 +130,9 @@ fn hover_keyword(word: &str) -> Option<Hover> {
         }
         "image" => {
             "**image** — Embedded image node.\n\nProperties: `src:` `w:` `h:` `fit:` (`cover`|`contain`|`fill`|`none`)"
+        }
+        "icon" => {
+            "**icon** — Semantic icon node.\n\nReferences an external icon library (e.g., Lucide).\nProperties: `icon: library.name` `w:` `h:` `stroke:` `fill:`\nExample: `icon @search { icon: lucide.search }`"
         }
         "style" | "theme" => {
             "**style** — Reusable style definition.\n\nDefine once, apply to nodes with `use: style_name`.\n(Legacy keyword `theme` also accepted.)"

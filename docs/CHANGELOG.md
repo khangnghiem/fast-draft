@@ -18,6 +18,13 @@
 -->
 ## Completed Requirements
 
+### v0.11.351 — Semantic Icon System Implementation
+- **NodeKind::Icon Expansion**: Added the `NodeKind::Icon` semantic node type to `fd-core`, supporting syntax like `icon @my_icon { icon: lucide.search }` for drawing explicitly named icons.
+- **WASM Path2D Rendering**: Upgraded `fd-wasm`'s `render2d.rs` to render semantic paths efficiently via `web_sys::Path2d`, defaulting to 24x24 scalable bounds and replacing unsupported `currentColor` references with explicit hex `#000000` to prevent Canvas2D breakage.
+- **Dynamic Icon Registration**: Engineered a dynamic WASM registry (`register_icon_library`) ensuring the Rust baseline remains lightweight, receiving icon payload dictionaries directly from the JS presentation bridge during stream-loading.
+- **Automated Lucide Extraction**: Created an internal `scripts/build-icons.mjs` asset pipeline that directly maps the `lucide` NPM package primitives into flat, 0-overhead SVG strings (`icons.js`). Successfully bundled 1,933 icons for instantaneous WASM consumption.
+- **LSP Support & Resilience**: `icon` keywords are fully integrated into the editor hover docs and strict compiler round-trip tests to guarantee model integrity.
+
 ### v0.11.350 — Layers Panel Drop-to-Root Improvement (UX Polish)
 - **Empty Space Drop Zone (Bug Fix)**: Expanded the CSS hit area of `.layers-body` (using `flex: 1`), ensuring users can reliably drop child layers beneath existing items in the Layers panel to explicitly un-nest them to the document root level.
 - **Un-nest Visual Feedback**: Added an instant visual flash animation (`.just-moved`) to confirm when a layer is successfully reparented, matching the standard visual cadence of nested drag operations.

@@ -300,6 +300,30 @@ fn render_node_svg(
                 b.x, b.y, b.width, b.height, fill, stroke, stroke_width, src_str
             ));
         }
+        NodeKind::Icon { library, name } => {
+            let mut path_str = None;
+            crate::ICON_REGISTRY.with(|registry| {
+                if let Some(lib) = registry.borrow().get(library)
+                    && let Some(path) = lib.get(name)
+                {
+                    path_str = Some(path.clone());
+                }
+            });
+            if let Some(d) = path_str {
+                let scale_x = b.width / 24.0;
+                let scale_y = b.height / 24.0;
+                let sw = stroke_width / ((scale_x + scale_y) / 2.0);
+                out.push_str(&format!(
+                    "  <path d=\"{}\" transform=\"translate({}, {}) scale({}, {})\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{}\" />\n",
+                    d, b.x, b.y, scale_x, scale_y, fill, stroke, sw
+                ));
+            } else {
+                out.push_str(&format!(
+                    "  <rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"#ffcccc\" stroke=\"#ff0000\" stroke-width=\"1\" data-icon=\"{}.{}\" />\n",
+                    b.x, b.y, b.width, b.height, library, name
+                ));
+            }
+        }
         NodeKind::Group | NodeKind::Root | NodeKind::Generic => {
             // Groups are purely organizational — no visual output
         }

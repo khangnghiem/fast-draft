@@ -253,8 +253,9 @@ fn collect_elements(
                 corner_radius,
             });
         }
-        NodeKind::Group | NodeKind::Root | NodeKind::Generic => {
+        NodeKind::Group | NodeKind::Root | NodeKind::Generic | NodeKind::Icon { .. } => {
             // Groups are organizational — emit children only
+            // Icons are not natively supported in Excalidraw, emit as empty for now
         }
     }
 

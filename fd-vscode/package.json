@@ -361,5 +361,8 @@
     "ovsx": "^0.10.9",
     "typescript": "^5.5.0",
     "vitest": "^2.1.9"
+  },
+  "dependencies": {
+    "lucide": "^1.7.0"
   }
 }

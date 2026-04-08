@@ -1662,3 +1662,65 @@ Third line""" {
         _ => panic!("expected Text after roundtrip"),
     }
 }
+
+#[test]
+fn parse_icon() {
+    let src = r#"
+icon @search {
+  icon: lucide.search
+  w: 24 h: 24
+}
+"#;
+    let graph = parse_document(src).expect("icon should parse");
+    let node = graph.get_by_id(NodeId::intern("search")).unwrap();
+    match &node.kind {
+        NodeKind::Icon { library, name } => {
+            assert_eq!(library, "lucide");
+            assert_eq!(name, "search");
+        }
+        other => panic!("expected Icon, got {other:?}"),
+    }
+}
+
+#[test]
+fn roundtrip_icon() {
+    let src = r#"
+icon @heart {
+  icon: lucide.heart
+  stroke: #FF0000 2
+}
+"#;
+    let graph = parse_document(src).expect("parse failed");
+    let emitted = crate::emitter::emit_document(&graph);
+    assert!(emitted.contains("icon @heart"), "emitted: {emitted}");
+    assert!(emitted.contains("icon: lucide.heart"), "emitted: {emitted}");
+
+    let reparsed = parse_document(&emitted).expect("re-parse failed");
+    let node = reparsed.get_by_id(NodeId::intern("heart")).unwrap();
+    match &node.kind {
+        NodeKind::Icon { library, name } => {
+            assert_eq!(library, "lucide");
+            assert_eq!(name, "heart");
+        }
+        other => panic!("expected Icon after roundtrip, got {other:?}"),
+    }
+    assert!(node.props.stroke.is_some());
+}
+
+#[test]
+fn parse_icon_no_dot_defaults_empty_library() {
+    // Edge case: `icon: search` without library prefix
+    let src = r#"icon @s { icon: search }"#;
+    let graph = parse_document(src).expect("parse failed");
+    let node = graph.get_by_id(NodeId::intern("s")).unwrap();
+    match &node.kind {
+        NodeKind::Icon { library, name } => {
+            assert!(
+                library.is_empty(),
+                "library should be empty when no dot: {library}"
+            );
+            assert_eq!(name, "search");
+        }
+        other => panic!("expected Icon, got {other:?}"),
+    }
+}

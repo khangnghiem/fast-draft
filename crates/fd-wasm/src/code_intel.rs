@@ -427,6 +427,7 @@ fn collect_node_tree(graph: &fd_core::SceneGraph, idx: fd_core::NodeIndex) -> se
         fd_core::NodeKind::Path { .. } => "path",
         fd_core::NodeKind::Image { .. } => "image",
         fd_core::NodeKind::Text { .. } => "text",
+        fd_core::NodeKind::Icon { .. } => "icon",
     };
     let children: Vec<serde_json::Value> = graph
         .children(idx)

@@ -958,3 +958,28 @@ fn console_error_panic_hook_setup() {
         });
     }
 }
+
+// ─── Semantic Icon Registry ──────────────────────────────────────────────
+
+use std::cell::RefCell;
+use std::collections::HashMap;
+
+thread_local! {
+    /// Registry of icon libraries. Key is library name (e.g., "lucide"), value is map of name -> SVG path string.
+    pub(crate) static ICON_REGISTRY: RefCell<HashMap<String, HashMap<String, String>>> = RefCell::new(HashMap::new());
+}
+
+/// Register a JSON map of icons for a specific library.
+/// The JSON must be an object where keys are icon names and values are SVG path data strings (`d:` property).
+#[wasm_bindgen]
+pub fn register_icon_library(library: &str, icons_json: &str) -> bool {
+    let Ok(icons) = serde_json::from_str::<HashMap<String, String>>(icons_json) else {
+        return false;
+    };
+
+    ICON_REGISTRY.with(|registry| {
+        registry.borrow_mut().insert(library.to_string(), icons);
+    });
+
+    true
+}

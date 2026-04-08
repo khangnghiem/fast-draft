@@ -163,6 +163,7 @@ fn starts_with_node_keyword(s: &str) -> bool {
         || s.starts_with("ellipse")
         || s.starts_with("path")
         || s.starts_with("image")
+        || s.starts_with("icon")
         || s.starts_with("text")
 }
 
@@ -689,6 +690,7 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
             "ellipse".value("ellipse"),
             "path".value("path"),
             "image".value("image"),
+            "icon".value("icon"),
             "text".value("text"),
         ))
         .parse_next(input)?
@@ -732,6 +734,8 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
     let mut path_commands: Vec<PathCmd> = Vec::new();
     let mut image_src: Option<String> = None;
     let mut image_fit = ImageFit::default();
+    let mut icon_library = String::new();
+    let mut icon_name = String::new();
 
     skip_ws_and_comments(input);
 
@@ -774,6 +778,8 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
                 &mut path_commands,
                 &mut image_src,
                 &mut image_fit,
+                &mut icon_library,
+                &mut icon_name,
             )?;
         }
         // Collect comments between items; they'll be attached to the *next* child node
@@ -811,6 +817,10 @@ fn parse_node(input: &mut &str) -> ModalResult<ParsedNode> {
             height: height.unwrap_or(100.0),
             fit: image_fit,
         },
+        "icon" => NodeKind::Icon {
+            library: icon_library,
+            name: icon_name,
+        },
         "generic" => NodeKind::Generic,
         _ => unreachable!(),
     };
@@ -845,6 +855,7 @@ fn starts_with_child_node(input: &str) -> bool {
         ("path", 4),
         ("image", 5),
         ("text", 4),
+        ("icon", 4),
     ];
     for &(keyword, len) in keywords {
         if input.starts_with(keyword) {
@@ -958,6 +969,8 @@ fn parse_node_property(
     path_commands: &mut Vec<PathCmd>,
     image_src: &mut Option<String>,
     image_fit: &mut ImageFit,
+    icon_library: &mut String,
+    icon_name: &mut String,
 ) -> ModalResult<()> {
     let prop_name = parse_identifier.parse_next(input)?;
     skip_space(input);
@@ -1097,6 +1110,16 @@ fn parse_node_property(
                     blur,
                     color,
                 });
+            }
+        }
+        "icon" => {
+            // icon: lucide.search
+            let string_val = parse_identifier.parse_next(input)?;
+            if let Some((lib, name)) = string_val.split_once('.') {
+                *icon_library = lib.to_string();
+                *icon_name = name.to_string();
+            } else {
+                *icon_name = string_val.to_string();
             }
         }
         // label: is deprecated — falls through to unknown-property skip below
