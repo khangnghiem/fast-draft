@@ -5625,7 +5625,7 @@ async function initPlayground() {
 
       // Tool shortcuts (only when canvas focused)
       if (!isEditingInput && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        const toolMap = { v:'select', r:'rect', o:'ellipse', t:'text', a:'arrow', p:'pen', e:'eraser', f:'frame', h:'hand' };
+        const toolMap = { v:'select', r:'rect', o:'ellipse', e:'ellipse', x:'eraser', t:'text', a:'arrow', p:'pen', f:'frame', h:'hand' };
         const tool = toolMap[e.key.toLowerCase()];
         if (tool) {
           const now = performance.now();

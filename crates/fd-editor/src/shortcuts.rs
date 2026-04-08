@@ -156,11 +156,12 @@ impl ShortcutMap {
             "v" | "V" => Some(ShortcutAction::ToolSelect),
             "r" | "R" => Some(ShortcutAction::ToolRect),
             "o" | "O" => Some(ShortcutAction::ToolEllipse),
+            "e" | "E" => Some(ShortcutAction::ToolEllipse),
+            "x" | "X" => Some(ShortcutAction::ToolEraser),
             "p" | "P" => Some(ShortcutAction::ToolPen),
             "t" | "T" => Some(ShortcutAction::ToolText),
             "a" | "A" => Some(ShortcutAction::ToolArrow),
             "f" | "F" => Some(ShortcutAction::ToolFrame),
-            "e" | "E" => Some(ShortcutAction::ToolEraser),
             "l" | "L" => Some(ShortcutAction::ToolLasso),
             "h" | "H" => Some(ShortcutAction::ToolHand),
             "0" => Some(ShortcutAction::ZoomReset),
@@ -210,6 +211,10 @@ mod tests {
         );
         assert_eq!(
             ShortcutMap::resolve("e", false, false, false, false),
+            Some(ShortcutAction::ToolEllipse)
+        );
+        assert_eq!(
+            ShortcutMap::resolve("x", false, false, false, false),
             Some(ShortcutAction::ToolEraser)
         );
         assert_eq!(

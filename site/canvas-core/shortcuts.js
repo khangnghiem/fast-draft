@@ -5,11 +5,12 @@
 export const TOOL_SHORTCUTS = {
   r: 'rect',
   o: 'ellipse',
+  e: 'ellipse',
+  x: 'eraser',
   p: 'pen',
   a: 'arrow',
   t: 'text',
   f: 'frame',
-  e: 'eraser',
 };
 
 /** Tool cycle order (matches toolbar visual order). */
@@ -37,12 +38,12 @@ export function buildShortcutHelpHtml() {
       shortcuts: [
         ['V', 'Select / Move'],
         ['R', 'Rectangle'],
-        ['O', 'Ellipse'],
+        ['E / O', 'Ellipse'],
         ['P', 'Pen (freehand)'],
         ['A', 'Arrow'],
         ['T', 'Text'],
         ['F', 'Frame'],
-        ['E', 'Eraser'],
+        ['X', 'Eraser'],
         ['Tab', 'Toggle last two tools'],
         ['R R', 'Lock tool (stays active)'],
         ['Escape', 'Unlock tool / Deselect'],
