@@ -43,5 +43,5 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 20. **Sync**: `git checkout main && git pull origin main`
 21. **Site Verify**: Wait for `pages.yml` deploy (`gh run watch $(gh run list --workflow=pages.yml -L 1 --json databaseId -q ".[0].databaseId")`).
     Use `browser_subagent` to navigate to the live site and execute Tier 2 JS Assertions from `/e2e`.
-22. **Publish VS Code**: `cd fd-vscode && pnpm install && pnpm run compile && source ../.env && npx vsce publish --no-dependencies -p $VSCE_PAT && npx ovsx publish --no-dependencies -p $OVSX_PAT`
+22. **Publish VS Code**: `cd fd-vscode && pnpm install && pnpm run compile && source ../.env && npx vsce publish --no-dependencies -p $VSCE_PAT && OVSX_PAT=$VSX_PAT npx ovsx publish --no-dependencies`
 23. **Report** completion.

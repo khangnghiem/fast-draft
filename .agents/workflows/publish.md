@@ -68,7 +68,7 @@ cd fd-vscode && pnpm vsce publish
 ```
 
 ```bash
-cd fd-vscode && pnpm ovsx publish -p <VSX_PAT from .env>
+cd fd-vscode && OVSX_PAT=$VSX_PAT pnpm ovsx publish --no-dependencies
 ```
 
 > **NEVER** publish to only one registry — both Marketplace AND Open VSX are required.
