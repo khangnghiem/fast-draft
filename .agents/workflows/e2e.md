@@ -86,7 +86,7 @@ If 1.1 hangs, **STOP ALL TESTING** and report errors.
 
 1. **Sync Codespace to `main`** before testing:
    ```bash
-   export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH" && gh cs ssh -c <CODESPACE_NAME> -- "cd /workspaces/fast-draft && git checkout main && git pull origin main"
+   gh cs ssh -c <CODESPACE_NAME> -- "cd /workspaces/fast-draft && git checkout main && git pull origin main"
    ```
 
 ### Phase 1: Drawing & Manipulation (6 checks)
@@ -131,7 +131,6 @@ If failures seem related to the backend or AI generation, check Modal server log
 
 After taking action on a Codespace (Tier 3):
 ```bash
-export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 gh cs ssh -c <CODESPACE_NAME> -- "git checkout main && git pull origin main"
 gh codespace stop -c <CODESPACE_NAME>
 ```
