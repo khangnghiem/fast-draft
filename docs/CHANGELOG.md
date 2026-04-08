@@ -18,6 +18,9 @@
 -->
 ## Completed Requirements
 
+### v0.11.354 — Unified AI Touch Pipeline (R4.9, R4.26)
+- **Zero-Config Selection Magic**: Merged the standalone `Renamify` feature directly into the primary `AI Touch` execution pipeline via a fast synchronous pre-flight heuristic step. Anonymous nodes (e.g. `@_rect_0`) are now instantly upgraded to semantic IDs (e.g. `@hero_card`) before any network generation is performed.
+- **Aggressive Surface Area Cleanup**: Eliminated the entire `fd.renamify` workflow globally. Dropped the `renamify-panel` UI and command from the `fd-vscode` custom editor, scrubbed all legacy UI ties in `site/layers.js` and `index.html`, and removed the dedicated endpoint switch-case from the Cloudflare worker. Massive technical debt reduction and visual minimalization achieved globally.
 ### v0.11.353 — AI Proxy Fallback & High-End Routing (R4.9, R4.26)
 - **OpenRouter Fallback Integration**: Added an intelligent fallback mechanism to `functions/api/ai.js` that automatically routes requests to OpenRouter (configured via `OPENROUTER_API_KEY`) if the native Cloudflare Workers AI tier limits are exceeded or if CF throws an error.
 - **High-End Model Routing for Design Reviews**: Specifically routed the "Review" task (`mode === 'review'`) to exclusively utilize `anthropic/claude-3.5-sonnet` via OpenRouter to inject state-of-the-art LLM capabilities where complex reasoning heuristics are demanded, while keeping fast UI manipulation tasks running freely on Cloudflare's Edge.

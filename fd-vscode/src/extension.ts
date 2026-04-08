@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { exportSpecMarkdown } from "./exportSpec";
 import { refineSelectedNodes, findAnonNodeIds } from "./ai-touch";
-import { callRenamifyAi, applyGlobalRenames, RenameProposal } from "./ai-renamify";
+
 import {
   parseAnnotation as fdParseAnnotation,
   computeSpecFoldRanges,
@@ -17,7 +17,7 @@ import { FdTreePreviewPanel } from "./panels/tree-preview";
 import { FdSpecViewPanel } from "./panels/spec-view";
 import { FdDocumentSymbolProvider } from "./document-symbol";
 import { FdReadOnlyProvider, FD_READONLY_SCHEME, VIEW_MODE_LABELS, FdViewMode } from "./panels/readonly-provider";
-import { getNonce, HTML_TEMPLATE, VIEW_TYPE_CANVAS, COMMAND_AI_TOUCH, COMMAND_AI_TOUCH_ALL, COMMAND_EXPORT_SPEC, COMMAND_OPEN_CANVAS, COMMAND_SHOW_PREVIEW, COMMAND_SHOW_SPEC_VIEW, COMMAND_TOGGLE_VIEW_MODE, COMMAND_OPEN_READONLY_VIEW, COMMAND_CHANGE_VIEW_MODE, COMMAND_RENAMIFY, COMMAND_REFACTOR } from "./webview-html";
+import { getNonce, HTML_TEMPLATE, VIEW_TYPE_CANVAS, COMMAND_AI_TOUCH, COMMAND_AI_TOUCH_ALL, COMMAND_EXPORT_SPEC, COMMAND_OPEN_CANVAS, COMMAND_SHOW_PREVIEW, COMMAND_SHOW_SPEC_VIEW, COMMAND_TOGGLE_VIEW_MODE, COMMAND_OPEN_READONLY_VIEW, COMMAND_CHANGE_VIEW_MODE } from "./webview-html";
 
 /**
  * FD Custom Editor Provider.
@@ -167,15 +167,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
           await this.handleAiRefine(document, webviewPanel, nodeIds, message.userFocus);
           break;
         }
-        case "renamify": {
-          await this.handleRenamify(document, webviewPanel);
-          break;
-        }
-        case "renamifyAccepted": {
-          const renames = (message as any).renames as RenameProposal[] ?? [];
-          await this.handleRenamifyAccepted(document, webviewPanel, renames);
-          break;
-        }
+
         case "viewModeChanged": {
           const rawMode = (message as { type: string; mode?: string }).mode;
           const mode: "design" | "specs" = rawMode === "specs" ? "specs" : "design";
@@ -492,67 +484,7 @@ class FdEditorProvider implements vscode.CustomTextEditorProvider {
     return null;
   }
 
-  // ─── Renamify Handler ─────────────────────────────────────────────────
 
-  private async handleRenamify(
-    document: vscode.TextDocument,
-    webviewPanel: vscode.WebviewPanel
-  ): Promise<void> {
-    webviewPanel.webview.postMessage({ type: "renamifyStarted" });
-
-    const result = await callRenamifyAi(document.getText());
-
-    if (result.error) {
-      const action = result.needsSettings ? "Open Settings" : undefined;
-      const chosen = await vscode.window.showWarningMessage(
-        `Renamify: ${result.error}`,
-        ...(action ? [action] : [])
-      );
-      if (chosen === "Open Settings") {
-        vscode.commands.executeCommand("workbench.action.openSettings", "fd.ai");
-      }
-      webviewPanel.webview.postMessage({
-        type: "renamifyComplete",
-        error: result.error,
-      });
-      return;
-    }
-
-    webviewPanel.webview.postMessage({
-      type: "renamifyProposals",
-      proposals: result.proposals,
-    });
-  }
-
-  private async handleRenamifyAccepted(
-    document: vscode.TextDocument,
-    webviewPanel: vscode.WebviewPanel,
-    renames: RenameProposal[]
-  ): Promise<void> {
-    if (renames.length === 0) {
-      webviewPanel.webview.postMessage({ type: "renamifyComplete" });
-      return;
-    }
-
-    // Re-validate against current document text (may have changed)
-    const currentText = document.getText();
-    const renamed = applyGlobalRenames(currentText, renames);
-
-    const lastLine = document.lineCount - 1;
-    const lastLineRange = document.lineAt(lastLine).range;
-    const fullRange = new vscode.Range(
-      0, 0, lastLine, lastLineRange.end.character
-    );
-
-    const edit = new vscode.WorkspaceEdit();
-    edit.replace(document.uri, fullRange, renamed);
-    await vscode.workspace.applyEdit(edit);
-
-    webviewPanel.webview.postMessage({ type: "renamifyComplete" });
-    vscode.window.showInformationMessage(
-      `✦ Renamify: ${renames.length} node(s) renamed.`
-    );
-  }
 
   private getHtmlForWebview(
     webview: vscode.Webview,
@@ -1254,31 +1186,6 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Register Renamify command (batch AI rename via command palette)
-  context.subscriptions.push(
-    vscode.commands.registerCommand(COMMAND_RENAMIFY, () => {
-      if (FdEditorProvider.activePanel) {
-        FdEditorProvider.activePanel.webview.postMessage({ type: "triggerRenamify" });
-      } else {
-        vscode.window.showInformationMessage(
-          "Open the FD Canvas editor first to use Renamify."
-        );
-      }
-    })
-  );
-
-  // Register Refactor command (unified cleanup: rename + style hoist + round)
-  context.subscriptions.push(
-    vscode.commands.registerCommand(COMMAND_REFACTOR, () => {
-      if (FdEditorProvider.activePanel) {
-        FdEditorProvider.activePanel.webview.postMessage({ type: "triggerRefactor" });
-      } else {
-        vscode.window.showInformationMessage(
-          "Open the FD Canvas editor first to use Refactor."
-        );
-      }
-    })
-  );
 
   // ─── Format Document Provider (Option+Shift+F) ──────────────────────
   // Spawns `fd-lsp --format` as a one-shot formatter: reads FD text from

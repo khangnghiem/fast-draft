@@ -156,13 +156,7 @@ ${FD_SYNTAX_GUIDE}`,
         temp: 0.4,
         isChat: true,
       };
-    case 'renamify':
-      return {
-        model: fastModel,
-        system: `You are a UI naming expert. Return ONLY a valid JSON object mapping old node IDs to new semantic names. No markdown, no explanation.${FD_SYNTAX_GUIDE}`,
-        maxTokens: 4096,
-        temp: 0.3,
-      };
+
     case 'refine':
       return {
         model: fastModel,
@@ -260,7 +254,9 @@ async function runWithOpenRouter(env, model, messages, maxTokens, temp, stream) 
     return response.body.pipeThrough(openRouterToCFStream());
   } else {
     const data = await response.json();
-    return { response: data.choices[0].message.content };
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error('OpenRouter returned empty response');
+    return { response: content };
   }
 }
 
@@ -294,6 +290,29 @@ function openRouterToCFStream() {
       }
     }
   });
+}
+
+// ─── Unified AI Runner (CF Edge → OpenRouter fallback) ──────────────────
+
+async function runAI(env, config, aiMessages, stream, shouldUseOpenRouter, actualModel) {
+  if (shouldUseOpenRouter) {
+    return runWithOpenRouter(env, actualModel, aiMessages, config.maxTokens, config.temp, stream);
+  }
+  try {
+    return await env.AI.run(config.model, {
+      messages: aiMessages,
+      max_tokens: config.maxTokens,
+      temperature: config.temp,
+      stream,
+    });
+  } catch (e) {
+    if (env.OPENROUTER_API_KEY) {
+      console.log('Workers AI failed err:', e.message, '— falling back to OpenRouter');
+      config.model = 'openrouter-fallback';
+      return runWithOpenRouter(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
+    }
+    throw e;
+  }
 }
 
 // ─── Request Handler ──────────────────────────────────────────────
@@ -404,27 +423,7 @@ export async function onRequestPost(context) {
     }
 
     if (wantsStream) {
-      let stream;
-      if (shouldUseOpenRouter) {
-        stream = await runWithOpenRouter(context.env, actualModel, aiMessages, config.maxTokens, config.temp, true);
-      } else {
-        try {
-          stream = await context.env.AI.run(config.model, {
-            messages: aiMessages,
-            max_tokens: config.maxTokens,
-            temperature: config.temp,
-            stream: true,
-          });
-        } catch (e) {
-          if (context.env.OPENROUTER_API_KEY) {
-            console.log("Workers AI failed err:", e.message, "— falling back to OpenRouter");
-            stream = await runWithOpenRouter(context.env, config.model, aiMessages, config.maxTokens, config.temp, true);
-            config.model = 'openrouter-fallback';
-          } else {
-            throw e;
-          }
-        }
-      }
+      const stream = await runAI(context.env, config, aiMessages, true, shouldUseOpenRouter, actualModel);
 
       return new Response(stream, {
         headers: {
@@ -437,26 +436,7 @@ export async function onRequestPost(context) {
     }
 
     // ─── Non-streaming (full JSON response) ──────────────────
-    let result;
-    if (shouldUseOpenRouter) {
-      result = await runWithOpenRouter(context.env, actualModel, aiMessages, config.maxTokens, config.temp, false);
-    } else {
-      try {
-        result = await context.env.AI.run(config.model, {
-          messages: aiMessages,
-          max_tokens: config.maxTokens,
-          temperature: config.temp,
-        });
-      } catch (e) {
-        if (context.env.OPENROUTER_API_KEY) {
-          console.log("Workers AI failed err:", e.message, "— falling back to OpenRouter");
-          result = await runWithOpenRouter(context.env, config.model, aiMessages, config.maxTokens, config.temp, false);
-          config.model = 'openrouter-fallback';
-        } else {
-          throw e;
-        }
-      }
-    }
+    const result = await runAI(context.env, config, aiMessages, false, shouldUseOpenRouter, actualModel);
 
     let responseBody;
 
