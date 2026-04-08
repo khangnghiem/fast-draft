@@ -21,11 +21,11 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 
 2. **TDD (Tests)**: Write/update tests in `mod tests` for what changed.
 3. **Lint & Format**: `cargo clippy --workspace --quiet -- -D warnings` and `cargo fmt --all`
-4. **Test**: `cargo test --workspace --quiet` (Fallback to `gh cs ssh` if errors).
-5. **UI Bug Verify**: Measure interaction fixes with `execute_browser_javascript` before committing.
+4. **Test**: `cargo test --workspace --quiet`
+5. **UI Bug Verify**: Measure interaction fixes visually or via `execute_browser_javascript` before committing.
 6. **Tauri**: `cd fd-desktop/src-tauri && cargo check --quiet && cargo clippy --quiet -- -D warnings && cargo fmt -- --check`
-7. **TS tests**: `cd fd-vscode && pnpm test`
-8. **Tier 1 E2E Smoke**: Build WASM (`wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm --quiet && cp -a fd-vscode/webview/wasm/. site/wasm/`). Use `browser_subagent` to load the local site and execute the Tier 1 Smoke checks from `/e2e`. DO NOT run higher tiers to save token quota.
+7. **TS tests**: `cd fd-vscode && pnpm install && pnpm test`
+8. **Tier 1 E2E Smoke**: Build WASM (`wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm --quiet && cp -a ../../fd-vscode/webview/wasm/. site/wasm/`). Use `browser_subagent` to load the local site and execute the Tier 1 checks from `/e2e`.
 9. **Report** and STOP for `/yolo local`.
 
 ## `/yolo deploy`
@@ -37,11 +37,11 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 14. **Docs**: Update `CHANGELOG.md` and `REQUIREMENTS.md`.
 15. **Commit**: `git add -A && git commit -m "..."`
 16. **Push**: `git push -u origin HEAD`
-17. **PR**: Use GitKraken MCP.
-18. **Wait CI**: `gh pr checks <PR_NUM> --watch --fail-fast`
-19. **Merge**: `gh pr merge <PR_NUM> --squash --delete-branch`
+17. **PR**: `export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH" && gh pr create --fill`
+18. **Wait CI**: `export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH" && gh pr checks $(git branch --show-current) --watch --fail-fast`
+19. **Merge**: `export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH" && gh pr merge $(git branch --show-current) --squash --delete-branch`
 20. **Sync**: `git checkout main && git pull origin main`
-21. **Site Verify**: Wait for `pages.yml` deploy (`gh run list`).
-    Use `browser_subagent` to navigate to the live site and execute the Tier 2 JS Assertions snippet from `/e2e`. Verify the new feature visually (quick snapshot) and exit immediately. DO NOT execute Tier 3 Full Visual testing.
-22. **Publish VS Code**: Rebuild WASM, compile TS (`pnpm run compile`), publish to `vsce` and `ovsx` using `.env` tokens.
+21. **Site Verify**: Wait for `pages.yml` deploy (`export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH" && gh run watch $(gh run list --workflow=pages.yml -L 1 --json databaseId -q ".[0].databaseId")`).
+    Use `browser_subagent` to navigate to the live site and execute Tier 2 JS Assertions from `/e2e`.
+22. **Publish VS Code**: `cd fd-vscode && pnpm install && pnpm run compile && source ../.env && npx vsce publish --no-dependencies -p $VSCE_PAT && npx ovsx publish --no-dependencies -p $OVSX_PAT`
 23. **Report** completion.
