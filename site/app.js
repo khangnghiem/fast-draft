@@ -3149,7 +3149,24 @@ async function aiTouch() {
     : '✦ Refining entire design…';
 
   try {
-    const fdText = fdCanvas.get_text();
+    let fdText = fdCanvas.get_text();
+
+    // ─── Phase 0: Pre-flight Heuristic Rename ───
+    const anonIds = findAnonymousNodeIds(fdText);
+    if (anonIds.length > 0) {
+      const proposals = heuristicRename(fdText, anonIds);
+      if (proposals.length > 0) {
+        for (const { oldId, newId } of proposals) {
+          const pattern = new RegExp(`@${oldId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g');
+          fdText = fdText.replace(pattern, `@${newId}`);
+        }
+        // Update selection IDs so the LLM targets the new semantic names
+        selectedIds = selectedIds.map(id => {
+          const match = proposals.find(p => p.oldId === id);
+          return match ? match.newId : id;
+        });
+      }
+    }
 
     // Build prompt — either scoped or full-doc
     const prompt = hasSelection
@@ -3416,55 +3433,6 @@ function findBlockWithRange(lines, id) {
   return null;
 }
 
-/** ─── Renamify — Heuristic + AI Rename ───────────────────────────────── */
-async function renamify() {
-  if (!fdCanvas) { showToast('Canvas not ready'); return; }
-
-  const btn = document.getElementById('renamify-btn');
-  btn?.classList.add('loading');
-  const statusEl = document.getElementById('canvas-status');
-  if (statusEl) statusEl.textContent = 'Renaming…';
-
-  try {
-    const fdText = fdCanvas.get_text();
-    const anonIds = findAnonymousNodeIds(fdText);
-
-    if (anonIds.length === 0) {
-      showToast('No anonymous IDs found — all nodes already named!');
-      return;
-    }
-
-    // Use heuristic rename (no API needed, works immediately)
-    const proposals = heuristicRename(fdText, anonIds);
-
-    if (proposals.length === 0) {
-      showToast('Could not generate better names');
-      return;
-    }
-
-    // Apply renames
-    let result = fdText;
-    for (const { oldId, newId } of proposals) {
-      const pattern = new RegExp(`@${oldId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g');
-      result = result.replace(pattern, `@${newId}`);
-    }
-
-    // Update CodeMirror and canvas
-    if (editorView) {
-      const cur = editorView.state.doc.toString();
-      editorView.dispatch({ changes: { from: 0, to: cur.length, insert: result } });
-    }
-    fdCanvas.set_text(result);
-    renderCanvas();
-    showToast(`✦ Renamed ${proposals.length} node${proposals.length > 1 ? 's' : ''}`);
-  } catch (err) {
-    console.warn('Renamify error:', err);
-    showToast('Rename failed — try again');
-  } finally {
-    btn?.classList.remove('loading');
-    if (statusEl) statusEl.textContent = 'Ready';
-  }
-}
 
 /** Find auto-generated node IDs like @_rect_0, @_text_3 */
 function findAnonymousNodeIds(fdText) {
@@ -4405,7 +4373,7 @@ async function initPlayground() {
 
     // ── Toolbar buttons ──────────────────────────────────────────────
     document.getElementById('ai-touch-btn')?.addEventListener('click', aiTouch);
-    document.getElementById('renamify-btn')?.addEventListener('click', renamify);
+
 
     // ── AI Chat panel ────────────────────────────────────────────────
     initAiChat(

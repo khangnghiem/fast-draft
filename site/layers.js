@@ -1008,9 +1008,11 @@ export function initLayersPanel(api) {
     if (aiTouchBtn) {
       aiTouchBtn.onclick = (e) => {
         e.stopPropagation();
-        const renamifyBtn = document.getElementById('renamify-btn');
-        if (renamifyBtn) renamifyBtn.click();
-        else api.showToast('AI Touch invoked');
+        if (typeof window.aiTouch === 'function') {
+          window.aiTouch();
+        } else {
+          api.showToast('AI Touch invoked');
+        }
       };
     }
 
