@@ -54,6 +54,7 @@ const MODULE_ORDER = [
   'clipboard.js',   // Extension-specific clipboard (postMessage bridge)
   'drag-drop.js',
   'ai-chat.js',
+  'icons.js',       // Generated lucide paths
   'main.js',
 ];
 

@@ -25,6 +25,7 @@ web-sys = { workspace = true, features = [
     "Performance",
     "Window",
     "console",
+    "Path2d",
 ] }
 js-sys = { workspace = true }
 log = { workspace = true }

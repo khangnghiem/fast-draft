@@ -256,14 +256,16 @@ fn collect_html_elements(
                 svg_content: Some(svg),
             }
         }
-        NodeKind::Group | NodeKind::Root | NodeKind::Generic => HtmlElement {
-            tag: "div",
-            css_class: class_name.clone(),
-            inline_style: inline_styles.join("; "),
-            content: String::new(),
-            children: Vec::new(),
-            svg_content: None,
-        },
+        NodeKind::Group | NodeKind::Root | NodeKind::Generic | NodeKind::Icon { .. } => {
+            HtmlElement {
+                tag: "div",
+                css_class: class_name.clone(),
+                inline_style: inline_styles.join("; "),
+                content: String::new(),
+                children: Vec::new(),
+                svg_content: None,
+            }
+        }
     };
 
     // Recurse into children

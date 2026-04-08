@@ -665,6 +665,9 @@ pub enum NodeKind {
         content: String,
         max_width: Option<f32>,
     },
+
+    /// Semantic icon node resolved via external registry (e.g., Lucide).
+    Icon { library: String, name: String },
 }
 
 impl NodeKind {
@@ -680,6 +683,7 @@ impl NodeKind {
             Self::Path { .. } => "path",
             Self::Image { .. } => "image",
             Self::Text { .. } => "text",
+            Self::Icon { .. } => "icon",
         }
     }
 }

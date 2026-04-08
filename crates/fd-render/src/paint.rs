@@ -67,6 +67,12 @@ fn paint_node(
             paint_rect(scene, nb, &style);
         }
 
+        NodeKind::Icon { .. } => {
+            // Icon rendering in Vello deferred (used mostly in HTML/Canvas export for now).
+            // Draw a placeholder rect with the icon's style (stroke/fill).
+            paint_rect(scene, nb, &style);
+        }
+
         NodeKind::Frame { .. } => {
             // Frames always render their background (like a visible container)
             paint_rect(scene, nb, &style);

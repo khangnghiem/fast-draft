@@ -56,6 +56,9 @@ impl FdCanvas {
                     props.insert("maxWidth".into(), serde_json::json!(mw));
                 }
             }
+            NodeKind::Icon { .. } => {
+                props.insert("kind".into(), "icon".into());
+            }
             NodeKind::Group => {
                 props.insert("kind".into(), "group".into());
             }
@@ -684,6 +687,7 @@ impl FdCanvas {
                     NodeKind::Image { .. } => "image",
                     NodeKind::Generic => "generic",
                     NodeKind::Root => continue,
+                    NodeKind::Icon { .. } => "icon",
                 };
                 let parent = self.engine.parent_of(*id);
                 let parent_str = if parent.as_str() == "root" {

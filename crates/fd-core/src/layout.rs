@@ -627,6 +627,7 @@ fn intrinsic_size(node: &SceneNode) -> (f32, f32) {
         }
         NodeKind::Image { width, height, .. } => (*width, *height),
         NodeKind::Generic => (120.0, 40.0), // Placeholder label box
+        NodeKind::Icon { .. } => (24.0, 24.0), // Default icon size
         NodeKind::Root => (0.0, 0.0),
     }
 }

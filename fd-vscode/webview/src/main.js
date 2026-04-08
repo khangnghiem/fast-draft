@@ -50,6 +50,11 @@ async function main() {
     // Initialize WASM — pass explicit binary URL for webview compatibility
     await init(window.wasmBinaryUrl || undefined);
 
+    // Register semantic icon pack if built
+    if (window.lucideIcons && wasmModule.register_icon_library) {
+      wasmModule.register_icon_library("lucide", JSON.stringify(window.lucideIcons));
+    }
+
     // Set up canvas
     const container = document.getElementById("canvas-container");
     const dpr = window.devicePixelRatio || 1;

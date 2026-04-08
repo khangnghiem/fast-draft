@@ -1657,6 +1657,22 @@ export function parse_to_json(source) {
 }
 
 /**
+ * Register a JSON map of icons for a specific library.
+ * The JSON must be an object where keys are icon names and values are SVG path data strings (`d:` property).
+ * @param {string} library
+ * @param {string} icons_json
+ * @returns {boolean}
+ */
+export function register_icon_library(library, icons_json) {
+    const ptr0 = passStringToWasm0(library, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(icons_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.register_icon_library(ptr0, len0, ptr1, len1);
+    return ret !== 0;
+}
+
+/**
  * Validate FD source text.
  * @param {string} source
  * @returns {string}
@@ -1738,6 +1754,9 @@ function __wbg_get_imports() {
         __wbg_fill_1eb35c386c8676aa: function(arg0) {
             arg0.fill();
         },
+        __wbg_fill_6f22ceed79b2a0fa: function(arg0, arg1) {
+            arg0.fill(arg1);
+        },
         __wbg_globalAlpha_b7066dce190ba988: function(arg0) {
             const ret = arg0.globalAlpha;
             return ret;
@@ -1774,6 +1793,10 @@ function __wbg_get_imports() {
             const ret = new Float64Array(arg0 >>> 0);
             return ret;
         },
+        __wbg_new_with_path_string_507d0c4f9ef70125: function() { return handleError(function (arg0, arg1) {
+            const ret = new Path2D(getStringFromWasm0(arg0, arg1));
+            return ret;
+        }, arguments); },
         __wbg_now_ebffdf7e580f210d: function(arg0) {
             const ret = arg0.now();
             return ret;
@@ -1870,6 +1893,9 @@ function __wbg_get_imports() {
         }, arguments); },
         __wbg_stroke_240ea7f2407d73c0: function(arg0) {
             arg0.stroke();
+        },
+        __wbg_stroke_f260a9f47e0f2017: function(arg0, arg1) {
+            arg0.stroke(arg1);
         },
         __wbg_translate_3aa10730376a8c06: function() { return handleError(function (arg0, arg1, arg2) {
             arg0.translate(arg1, arg2);

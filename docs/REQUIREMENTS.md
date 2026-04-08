@@ -137,6 +137,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.56** _(done)_: Export to HTML+CSS+JS — `export_html(graph)` generates standalone responsive HTML page; shapes → `<div>`, text → `<p>`, constraints → flexbox, animations → CSS transitions
 - **R3.57** _(planned)_: Fine pen tools — `taper_start`, `taper_end`, `smoothing` properties on pen strokes; variable stroke width rendering; settings in properties panel
 - **R3.58** _(planned)_: Animation timeline — visual keyframe panel showing `when` blocks as timeline tracks; drag endpoints to adjust duration; scrub to preview animation state
+- **R3.80** _(done)_: Semantic Icons — integrated support for 1,933+ Lucide icons via native `NodeKind::Icon` modeling in the `fd-core` AST and `render2d`. Registered efficiently from the JS client using pure SVGO pathways bypassing DOM bloat. `icon` keyword enables semantic shorthand: `icon @search_icon { icon: lucide.search }`.
 
 ### R4: AI Editing (Text)
 
@@ -348,6 +349,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | snap / auto-edge | R3.43 |
 | text consume | R3.44 |
 | default styles | R3.42 |
+| semantic icons | R3.80 |
 | auto-expand | R3.45 |
 | text sizing | R3.46, R3.36 |
 | child containment | R3.47 |

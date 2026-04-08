@@ -220,6 +220,7 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
         NodeKind::Ellipse { .. } => write!(out, "ellipse @{}", node.id.as_str()).unwrap(),
         NodeKind::Path { .. } => write!(out, "path @{}", node.id.as_str()).unwrap(),
         NodeKind::Image { .. } => write!(out, "image @{}", node.id.as_str()).unwrap(),
+        NodeKind::Icon { .. } => write!(out, "icon @{}", node.id.as_str()).unwrap(),
         NodeKind::Text { content, .. } => {
             if content.contains('\n') || content.contains('"') {
                 write!(out, "text @{} \"\"\"{}\"\"\"", node.id.as_str(), content).unwrap();
@@ -417,6 +418,10 @@ fn emit_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, depth: usize)
     }
     if let Some(ref font) = node.props.font {
         emit_font_prop(out, font, depth + 1);
+    }
+    if let NodeKind::Icon { library, name } = &node.kind {
+        indent(out, depth + 1);
+        writeln!(out, "icon: {library}.{name}").unwrap();
     }
     if let Some(opacity) = node.props.opacity {
         indent(out, depth + 1);
@@ -1047,6 +1052,8 @@ fn generate_auto_comment(node: &SceneNode, graph: &SceneGraph, idx: NodeIndex) -
         NodeKind::Root => None,
         // Text nodes are self-documenting via inline "content" — skip auto-comment
         NodeKind::Text { .. } => None,
+        NodeKind::Path { commands } => Some(format!("pen drawing ({} vertices)", commands.len())),
+        NodeKind::Icon { library, name } => Some(format!("{library} icon: {name}")),
         NodeKind::Group => {
             let count = graph.children(idx).len();
             if count > 0 {
@@ -1208,6 +1215,7 @@ fn emit_node_filtered(
         NodeKind::Ellipse { .. } => write!(out, "ellipse @{}", node.id.as_str()).unwrap(),
         NodeKind::Path { .. } => write!(out, "path @{}", node.id.as_str()).unwrap(),
         NodeKind::Image { .. } => write!(out, "image @{}", node.id.as_str()).unwrap(),
+        NodeKind::Icon { .. } => write!(out, "icon @{}", node.id.as_str()).unwrap(),
         NodeKind::Text { content, .. } => {
             if content.contains('\n') || content.contains('"') {
                 write!(out, "text @{} \"\"\"{}\"\"\"", node.id.as_str(), content).unwrap();
@@ -1264,6 +1272,10 @@ fn emit_node_filtered(
         }
         if let Some(ref font) = node.props.font {
             emit_font_prop(out, font, depth + 1);
+        }
+        if let NodeKind::Icon { library, name } = &node.kind {
+            indent(out, depth + 1);
+            writeln!(out, "icon: {library}.{name}").unwrap();
         }
         if let Some(opacity) = node.props.opacity {
             indent(out, depth + 1);
@@ -1449,6 +1461,7 @@ fn emit_spec_node(out: &mut String, graph: &SceneGraph, idx: NodeIndex, heading_
         NodeKind::Ellipse { .. } => "ellipse",
         NodeKind::Path { .. } => "path",
         NodeKind::Image { .. } => "image",
+        NodeKind::Icon { .. } => "icon",
         NodeKind::Text { .. } => "text",
     };
     writeln!(out, "{hashes} @{} `{kind_label}`\n", node.id.as_str()).unwrap();

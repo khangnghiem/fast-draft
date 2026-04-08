@@ -369,6 +369,9 @@ fn render_node(
                 ctx.restore();
             }
         }
+        NodeKind::Icon { library, name } => {
+            draw_icon(ctx, node_bounds, library, name, &style);
+        }
         NodeKind::Frame { .. } => {
             draw_rect(ctx, node_bounds, &style, is_selected);
         }
@@ -1762,6 +1765,63 @@ fn draw_ellipse_sketchy(
         ctx.begin_path();
         let _ = ctx.ellipse(cx, cy, rx + 1.0, ry + 1.0, 0.0, 0.0, std::f64::consts::TAU);
         ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+/// Draw a semantic icon from the external registry.
+fn draw_icon(
+    ctx: &CanvasRenderingContext2d,
+    b: &ResolvedBounds,
+    library: &str,
+    name: &str,
+    style: &Properties,
+) {
+    let mut path_str = None;
+    crate::ICON_REGISTRY.with(|registry| {
+        if let Some(lib) = registry.borrow().get(library)
+            && let Some(path) = lib.get(name)
+        {
+            path_str = Some(path.clone());
+        }
+    });
+
+    let Some(d) = path_str else {
+        // Fallback: draw placeholder box
+        ctx.set_fill_style_str(&resolve_paint_color(&fd_core::model::Paint::Solid(
+            fd_core::model::Color::rgba(1.0, 0.4, 0.4, 0.5),
+        )));
+        ctx.fill_rect(b.x as f64, b.y as f64, b.width as f64, b.height as f64);
+        return;
+    };
+
+    let Some(path2d) = web_sys::Path2d::new_with_path_string(&d).ok() else {
+        return;
+    };
+
+    ctx.save();
+
+    // Scale the icon which is typically 24x24 to the node's bounds
+    let scale_x = b.width as f64 / 24.0;
+    let scale_y = b.height as f64 / 24.0;
+    ctx.translate(b.x as f64, b.y as f64).unwrap_or(());
+    ctx.scale(scale_x, scale_y).unwrap_or(());
+
+    if let Some(ref fill) = style.fill {
+        ctx.set_fill_style_str(&resolve_paint_color(fill));
+        ctx.fill_with_path_2d(&path2d);
+    }
+
+    // Icons often use stroke, so default to stroke if no stroke or fill is defined
+    if let Some(ref stroke) = style.stroke {
+        ctx.set_stroke_style_str(&resolve_paint_color(&stroke.paint));
+        ctx.set_line_width(stroke.width as f64 / ((scale_x + scale_y) / 2.0));
+        ctx.stroke_with_path(&path2d);
+    } else if style.fill.is_none() {
+        ctx.set_stroke_style_str("#000000"); // Default black when no fill/stroke defined
+        ctx.set_line_width(2.0 / ((scale_x + scale_y) / 2.0));
+        ctx.stroke_with_path(&path2d);
     }
 
     ctx.restore();
