@@ -487,7 +487,8 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
 
     /* ── Layers Panel (Figma / Sketch sidebar) ── */
     #layers-panel {
-      display: block;
+      display: flex;
+      flex-direction: column;
       position: absolute;
       left: 0;
       top: 0;
@@ -668,6 +669,9 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
     }
     .layers-body {
       padding: 4px 0;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
     }
     .layer-item {
       display: flex;
