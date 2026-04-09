@@ -448,12 +448,15 @@ impl FdCanvas {
             let ry = sy.min(cy);
             let rw = (sx - cx).abs();
             let rh = (sy - cy).abs();
-            
+
             if rw > 2.0 && rh > 2.0 {
                 let hits = fd_render::hit::hit_test_rect_contained(
                     &self.engine.graph,
                     self.engine.current_bounds(),
-                    rx, ry, rw, rh
+                    rx,
+                    ry,
+                    rw,
+                    rh,
                 );
                 for hit_id in hits {
                     self.erase_node_immediately(hit_id);

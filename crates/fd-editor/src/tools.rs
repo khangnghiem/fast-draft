@@ -1361,7 +1361,9 @@ impl Tool for EraserTool {
     /// The tool is a thin state tracker for drag lifecycle and marquee coords.
     fn handle(&mut self, event: &InputEvent, _hit_node: Option<NodeId>) -> Vec<GraphMutation> {
         match event {
-            InputEvent::PointerDown { x, y, modifiers, .. } => {
+            InputEvent::PointerDown {
+                x, y, modifiers, ..
+            } => {
                 self.erased_ids.clear();
                 self.dragging = true;
                 if modifiers.shift {
