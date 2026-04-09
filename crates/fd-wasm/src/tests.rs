@@ -124,4 +124,39 @@ mod tests {
         assert_eq!(canvas.hit_test_resize_handle(300.0, 200.0), None);
         assert_eq!(canvas.hit_test_resize_handle(200.0, 150.0), None);
     }
+
+    #[test]
+    fn test_eraser_rebuilds_spatial_index() {
+        let mut canvas = setup_canvas(NodeKind::Rect {
+            width: 200.0,
+            height: 100.0,
+        });
+
+        let id = NodeId::intern("test_node");
+        assert_eq!(
+            canvas.engine.graph.index_of(id).is_some(),
+            true,
+            "Node should exist initially"
+        );
+
+        // Build the spatial index initially
+        canvas.rebuild_spatial_index();
+        let hit = canvas.hit_test(150.0, 150.0);
+        assert_eq!(hit, Some(id), "Spatial index should find the node");
+
+        // Erase the node immediately (this should trigger self.rebuild_spatial_index internally)
+        canvas.erase_node_immediately(id);
+
+        // Verify it was removed from the scene graph
+        assert_eq!(
+            canvas.engine.graph.index_of(id).is_some(),
+            false,
+            "Node should be removed from graph"
+        );
+
+        // Now test the spatial index again at the same location. It should be empty (None).
+        // If rebuild_spatial_index was skipped, it would still return Some(id).
+        let hit_after = canvas.hit_test(150.0, 150.0);
+        assert_eq!(hit_after, None, "Ghost bounding box should be gone");
+    }
 }

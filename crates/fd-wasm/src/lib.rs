@@ -734,6 +734,8 @@ impl FdCanvas {
         if let Some(p_idx) = parent_idx {
             self.cascade_empty_groups(p_idx);
         }
+
+        self.rebuild_spatial_index();
     }
 
     fn cascade_empty_groups(&mut self, start_idx: fd_core::NodeIndex) {
