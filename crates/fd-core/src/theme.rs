@@ -60,6 +60,8 @@ pub struct ThemeContract {
 
 impl ThemeContract {
     /// Light theme — Apple HIG-inspired warm white.
+    ///
+    /// Returns a new instance configured with standard light mode colors.
     pub fn light() -> Self {
         Self {
             canvas_bg: "#F5F5F7".into(),
@@ -81,6 +83,8 @@ impl ThemeContract {
     }
 
     /// Dark theme — macOS Catppuccin Mocha-inspired.
+    ///
+    /// Returns a new instance configured with standard dark mode colors.
     pub fn dark() -> Self {
         Self {
             canvas_bg: "#1C1C1E".into(),
@@ -102,6 +106,8 @@ impl ThemeContract {
     }
 
     /// Serialize to JSON for JavaScript consumption.
+    ///
+    /// Serializes the `ThemeContract` instance to a JSON string representation.
     pub fn to_json(&self) -> String {
         serde_json::to_string(self).unwrap_or_else(|_| "{}".into())
     }

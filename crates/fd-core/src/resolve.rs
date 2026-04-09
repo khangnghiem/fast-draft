@@ -54,6 +54,9 @@ enum ImportState {
 /// - Circular import detected
 /// - File not found / load error
 /// - Node/style ID conflicts
+///
+/// Recursively iterates over all import declarations in the main graph, parsing
+/// external dependencies using the given `ImportLoader` and appending their items.
 pub fn resolve_imports(graph: &mut SceneGraph, loader: &dyn ImportLoader) -> Result<(), String> {
     let imports = graph.imports.clone();
     let mut state: HashMap<String, ImportState> = HashMap::new();
