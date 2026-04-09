@@ -4,7 +4,9 @@
   "identifier": "com.fast-draft.desktop",
   "build": {
     "frontendDist": "../../site",
-    "devUrl": "http://localhost:1420"
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "cd ../site && npx -y serve -l 1420 -s --no-clipboard --no-port-switching &",
+    "beforeBuildCommand": ""
   },
   "app": {
     "windows": [
@@ -13,7 +15,11 @@
         "width": 1280,
         "height": 800,
         "minWidth": 800,
-        "minHeight": 600
+        "minHeight": 600,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "decorations": true,
+        "transparent": false
       }
     ],
     "security": {
