@@ -4726,15 +4726,9 @@ async function initPlayground() {
         canvas.setPointerCapture(e.pointerId);
         return;
       }
-      // ── JS-only Eraser marquee ──
+      // ── WASM Eraser hook ──
       if (currentTool === 'eraser') {
-        eraserMarquee = { startX: x, startY: y, endX: x, endY: y };
-        eraserActive = true;
-        activePointerId = e.pointerId;
         canvas.style.cursor = 'crosshair';
-        renderDirty = true;
-        canvas.setPointerCapture(e.pointerId);
-        return;
       }
 
       if (e.pointerType !== 'touch') {
@@ -4867,14 +4861,7 @@ async function initPlayground() {
         return;
       }
 
-      // ── Eraser marquee pointermove — update rectangle ──
-      if (eraserActive && activePointerId !== -1) {
-        const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
-        eraserMarquee.endX = x;
-        eraserMarquee.endY = y;
-        renderDirty = true;
-        return;
-      }
+      // (Eraser marquee update removed — relying on WASM bounds)
 
       // Apple Pencil hover preview — detect pen hovering above screen
       // iPadOS 16.1+ sends pointermove with pointerType='pen', buttons=0, pressure=0
@@ -4911,6 +4898,22 @@ async function initPlayground() {
       const moveResult = JSON.parse(moveResultJson);
       if (moveResult.changed) {
         renderDirty = true; uiDirty = true;
+        
+        // Sync WASM eraser marquee bounds for rendering
+        if (fdCanvas.get_tool_name() === 'eraser') {
+          if (moveResult.bounds) {
+            eraserActive = true;
+            eraserMarquee = {
+              startX: moveResult.bounds.x,
+              startY: moveResult.bounds.y,
+              endX: moveResult.bounds.x + moveResult.bounds.w,
+              endY: moveResult.bounds.y + moveResult.bounds.h
+            };
+          } else {
+            eraserActive = false;
+            eraserMarquee = null;
+          }
+        }
         // Only track as a canvas drag when using Select or Hand tool.
         const activeTool = fdCanvas.get_tool_name();
         if (activeTool === 'select' || activeTool === 'hand') {
@@ -5132,46 +5135,11 @@ async function initPlayground() {
         return;
       }
 
-      // ── Eraser marquee pointerup — delete enclosed nodes ──
-      if (eraserActive) {
+      // ── Eraser marquee cleanup ──
+      if (fdCanvas.get_tool_name() === 'eraser') {
         eraserActive = false;
-        if (eraserMarquee) {
-          const allNodes = getAllNodeBounds();
-          const enclosedIds = [];
-          for (const node of allNodes) {
-            if (rectInsideRect(node, eraserMarquee)) {
-              enclosedIds.push(node.id);
-            }
-          }
-          if (enclosedIds.length > 0 && editorView) {
-            const textBefore = fdCanvas.get_text();
-            // Remove each enclosed node's FD block from the text
-            let text = textBefore;
-            for (const id of enclosedIds) {
-              // Match the full block: type @id ... { ... }
-              const blockRegex = new RegExp(`\\n?(?:rect|ellipse|text|frame|group|edge|path|image)\\s+@${id}\\s+(?:"[^"]*"\\s*)?\\{[^}]*\\}\\s*`, 'g');
-              text = text.replace(blockRegex, '\n');
-            }
-            text = text.replace(/\n{3,}/g, '\n\n').trim() + '\n';
-            editorView.dispatch({
-              changes: { from: 0, to: editorView.state.doc.length, insert: text },
-            });
-            suppressSync = true;
-            fdCanvas.set_text(text);
-            suppressSync = false;
-            if (textBefore !== text) {
-              fdCanvas.push_undo_snapshot(textBefore, text);
-            }
-            showToast(`Erased ${enclosedIds.length} node${enclosedIds.length > 1 ? 's' : ''}`);
-            renderDirty = true; uiDirty = true;
-            renderCanvas();
-            refreshLayersPanel();
-          } else {
-            showToast('No nodes in eraser area');
-          }
-        }
         eraserMarquee = null;
-        return;
+        renderDirty = true;
       }
 
       // End pan drag
