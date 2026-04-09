@@ -17,6 +17,12 @@ use crate::sync::GraphMutation;
 use fd_core::id::NodeId;
 use fd_core::model::*;
 
+const MIN_NODE_SIZE: f32 = 4.0;
+const DEFAULT_CORNER_RADIUS: f32 = 8.0;
+const DRAG_CANCEL_SQUARED_DIST: f32 = 25.0; // 5px squared
+const MIN_EDGE_DRAG_DIST: f32 = 10.0;
+const SUBSAMPLE_SQUARED_DIST: f32 = 9.0; // 3px squared
+
 /// The active tool determines how input events are interpreted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolKind {
@@ -305,8 +311,8 @@ impl Tool for SelectTool {
                     };
 
                     // Min size
-                    let final_w = new_w.max(4.0);
-                    let final_h = new_h.max(4.0);
+                    let final_w = new_w.max(MIN_NODE_SIZE);
+                    let final_h = new_h.max(MIN_NODE_SIZE);
 
                     // Compute position delta from original
                     let dx = new_x - self.resize_origin.0;
@@ -540,7 +546,7 @@ impl Tool for RectTool {
                         cap: StrokeCap::Round,
                         join: StrokeJoin::Round,
                     });
-                    node.props.corner_radius = Some(8.0);
+                    node.props.corner_radius = Some(DEFAULT_CORNER_RADIUS);
                 }
                 vec![GraphMutation::AddNode {
                     parent_id: NodeId::intern("root"),
@@ -558,7 +564,7 @@ impl Tool for RectTool {
                     // Drag-back-to-cancel: if cursor returns within 5px of
                     // start, reset dragged so PointerUp produces click-to-place.
                     let dist_sq = (x - self.start_x).powi(2) + (y - self.start_y).powi(2);
-                    if dist_sq < 25.0 {
+                    if dist_sq < DRAG_CANCEL_SQUARED_DIST {
                         self.dragged = false;
                     }
 
@@ -968,7 +974,7 @@ impl Tool for EllipseTool {
                     // Drag-back-to-cancel: if cursor returns within 5px of
                     // start, reset dragged so PointerUp produces click-to-place.
                     let dist_sq = (x - self.start_x).powi(2) + (y - self.start_y).powi(2);
-                    if dist_sq < 25.0 {
+                    if dist_sq < DRAG_CANCEL_SQUARED_DIST {
                         self.dragged = false;
                     }
 
@@ -1241,7 +1247,7 @@ impl Tool for ArrowTool {
                     _ => (0.0, 0.0),
                 });
                 let dist = ((x - sx).powi(2) + (y - sy).powi(2)).sqrt();
-                if dist < 10.0 {
+                if dist < MIN_EDGE_DRAG_DIST {
                     return vec![];
                 }
 
@@ -1420,7 +1426,7 @@ impl Tool for LassoTool {
                     // Subsample: skip if < 3px from last point
                     if let Some(&(lx, ly)) = self.polygon.last() {
                         let dist_sq = (x - lx).powi(2) + (y - ly).powi(2);
-                        if dist_sq >= 9.0 {
+                        if dist_sq >= SUBSAMPLE_SQUARED_DIST {
                             self.polygon.push((*x, *y));
                         }
                     }
