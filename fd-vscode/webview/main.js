@@ -7773,24 +7773,25 @@ function zoomToFit() {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   let foundAny = false;
 
-  const nodeIdPattern = /@(\w+)/g;
-  let match;
-  const seenIds = new Set();
-  while ((match = nodeIdPattern.exec(text)) !== null) {
-    const id = match[1];
-    if (seenIds.has(id)) continue;
-    seenIds.add(id);
-    try {
-      const boundsJson = fdCanvas.get_node_bounds(id);
-      const b = JSON.parse(boundsJson);
-      if (b.width && b.width > 0) {
-        minX = Math.min(minX, b.x);
-        minY = Math.min(minY, b.y);
-        maxX = Math.max(maxX, b.x + b.width);
-        maxY = Math.max(maxY, b.y + b.height);
-        foundAny = true;
+  const matches = text.match(/@\w+/g);
+  if (matches) {
+    const seenIds = new Set();
+    for (let i = 0; i < matches.length; i++) {
+      const id = matches[i].slice(1);
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
+      const bStr = fdCanvas.get_node_bounds_json(id);
+      if (bStr && bStr !== "{}") {
+        const b = JSON.parse(bStr);
+        if (b.width && b.width > 0) {
+          minX = Math.min(minX, b.x);
+          minY = Math.min(minY, b.y);
+          maxX = Math.max(maxX, b.x + b.width);
+          maxY = Math.max(maxY, b.y + b.height);
+          foundAny = true;
+        }
       }
-    } catch (_) { /* skip */ }
+    }
   }
 
   if (!foundAny) {
@@ -8885,23 +8886,25 @@ function getSceneBoundsInner() {
 
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   let foundAny = false;
-  const nodeIdPattern = /@(\w+)/g;
-  let match;
-  const seenIds = new Set();
-  while ((match = nodeIdPattern.exec(text)) !== null) {
-    const id = match[1];
-    if (seenIds.has(id)) continue;
-    seenIds.add(id);
-    try {
-      const b = JSON.parse(fdCanvas.get_node_bounds(id));
-      if (b.width && b.width > 0) {
-        minX = Math.min(minX, b.x);
-        minY = Math.min(minY, b.y);
-        maxX = Math.max(maxX, b.x + b.width);
-        maxY = Math.max(maxY, b.y + b.height);
-        foundAny = true;
+  const matches = text.match(/@\w+/g);
+  if (matches) {
+    const seenIds = new Set();
+    for (let i = 0; i < matches.length; i++) {
+      const id = matches[i].slice(1);
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
+      const bStr = fdCanvas.get_node_bounds_json(id);
+      if (bStr && bStr !== "{}") {
+        const b = JSON.parse(bStr);
+        if (b.width && b.width > 0) {
+          minX = Math.min(minX, b.x);
+          minY = Math.min(minY, b.y);
+          maxX = Math.max(maxX, b.x + b.width);
+          maxY = Math.max(maxY, b.y + b.height);
+          foundAny = true;
+        }
       }
-    } catch (_) { /* skip */ }
+    }
   }
   return foundAny ? { minX, minY, maxX, maxY } : null;
 }
