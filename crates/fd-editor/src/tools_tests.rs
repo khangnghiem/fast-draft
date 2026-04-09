@@ -1565,6 +1565,112 @@ fn select_tool_shift_drag_multi_select_moves_all() {
     }
 }
 
+/// Regression: CMD+drag (non-Shift path) must cancel deferred Shift deselect.
+/// This was the exact bug scenario — Shift+click toggled a node off, then
+/// CMD+drag moved the selection but shift_toggled_off lingered, causing
+/// PointerUp to incorrectly deselect the node.
+#[test]
+fn select_tool_cmd_drag_cancels_shift_toggled_off() {
+    let mut tool = SelectTool::new();
+    let a = NodeId::intern("cmd_a");
+    let b = NodeId::intern("cmd_b");
+    let shift = Modifiers {
+        shift: true,
+        ..Modifiers::NONE
+    };
+    let cmd = Modifiers {
+        meta: true,
+        ..Modifiers::NONE
+    };
+
+    // Select A normally
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 50.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: Modifiers::NONE,
+        },
+        Some(a),
+    );
+    tool.handle(
+        &InputEvent::PointerUp {
+            x: 50.0,
+            y: 50.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+    assert_eq!(tool.selected, vec![a]);
+
+    // Shift+click B to add it
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 150.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        Some(b),
+    );
+    tool.handle(
+        &InputEvent::PointerUp {
+            x: 150.0,
+            y: 50.0,
+            modifiers: shift,
+        },
+        None,
+    );
+    assert_eq!(tool.selected.len(), 2);
+
+    // Shift+click A again — sets deferred deselect (shift_toggled_off = Some(a))
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 50.0,
+            y: 50.0,
+            pressure: 1.0,
+            modifiers: shift,
+        },
+        Some(a),
+    );
+    assert!(
+        tool.shift_toggled_off.is_some(),
+        "shift_toggled_off should be armed"
+    );
+
+    // CMD+drag (non-Shift path!) — must clear shift_toggled_off
+    let mutations = tool.handle(
+        &InputEvent::PointerMove {
+            x: 70.0,
+            y: 55.0,
+            pressure: 1.0,
+            modifiers: cmd,
+        },
+        None,
+    );
+    assert_eq!(mutations.len(), 2, "both nodes should move");
+    assert!(
+        tool.shift_toggled_off.is_none(),
+        "CMD+drag must cancel deferred deselect"
+    );
+
+    // PointerUp — A must NOT be deselected
+    tool.handle(
+        &InputEvent::PointerUp {
+            x: 70.0,
+            y: 55.0,
+            modifiers: cmd,
+        },
+        None,
+    );
+    assert_eq!(
+        tool.selected.len(),
+        2,
+        "A should remain selected after CMD+drag: {:?}",
+        tool.selected
+    );
+}
+
 /// Regression: Shift+click without drag should still deselect.
 #[test]
 fn select_tool_shift_click_deselects_on_pointerup() {

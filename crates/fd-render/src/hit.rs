@@ -325,6 +325,51 @@ fn collect_intersecting(
     }
 }
 
+/// Find all non-root nodes whose bounds are completely contained within the given rectangle.
+/// Used for Marquee Eraser bulk deletion.
+pub fn hit_test_rect_contained(
+    graph: &SceneGraph,
+    bounds: &HashMap<NodeIndex, ResolvedBounds>,
+    rx: f32,
+    ry: f32,
+    rw: f32,
+    rh: f32,
+) -> Vec<NodeId> {
+    let mut result = Vec::new();
+    collect_contained(graph, graph.root, bounds, rx, ry, rw, rh, &mut result);
+    result
+}
+
+#[allow(clippy::too_many_arguments)]
+fn collect_contained(
+    graph: &SceneGraph,
+    idx: NodeIndex,
+    bounds: &HashMap<NodeIndex, ResolvedBounds>,
+    rx: f32,
+    ry: f32,
+    rw: f32,
+    rh: f32,
+    out: &mut Vec<NodeId>,
+) {
+    let node = &graph.graph[idx];
+    if node.locked {
+        return;
+    }
+
+    if !matches!(node.kind, NodeKind::Root)
+        && let Some(b) = bounds.get(&idx)
+    {
+        // Must be fully inside the rect
+        if b.x >= rx && b.x + b.width <= rx + rw && b.y >= ry && b.y + b.height <= ry + rh {
+            out.push(node.id);
+        }
+    }
+
+    for child_idx in graph.children(idx) {
+        collect_contained(graph, child_idx, bounds, rx, ry, rw, rh, out);
+    }
+}
+
 // ─── Edge hit-testing ────────────────────────────────────────────────────
 
 /// Hit radius for edge selection (scene-space pixels).

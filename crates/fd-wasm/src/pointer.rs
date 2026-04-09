@@ -218,8 +218,27 @@ impl FdCanvas {
                 .unwrap_or(0.0);
         }
 
-        // Eraser: delete nodes on drag-over
+        // Eraser: delete nodes on drag-over (or update marquee)
         if self.active_tool == ToolKind::Eraser && self.eraser_tool.dragging {
+            self.eraser_tool.handle(&event, hit);
+
+            if let Some((sx, sy, cx, cy)) = self.eraser_tool.marquee {
+                let rx = sx.min(cx);
+                let ry = sy.min(cy);
+                let rw = (sx - cx).abs();
+                let rh = (sy - cy).abs();
+                return serde_json::to_string(&PointerMoveResult {
+                    changed: true,
+                    bounds: Some(BoundsInfo {
+                        x: rx,
+                        y: ry,
+                        w: rw,
+                        h: rh,
+                    }),
+                })
+                .unwrap_or_else(|_| r#"{"changed":true}"#.to_string());
+            }
+
             if let Some(hit_id) = raw_hit
                 && !self.eraser_tool.erased_ids.contains(&hit_id)
             {
@@ -423,6 +442,32 @@ impl FdCanvas {
             false
         };
 
+        // Finalize Marquee Eraser selection before handling pointer-up
+        let eraser_marquee_changed = if let Some((sx, sy, cx, cy)) = self.eraser_tool.marquee {
+            let rx = sx.min(cx);
+            let ry = sy.min(cy);
+            let rw = (sx - cx).abs();
+            let rh = (sy - cy).abs();
+
+            if rw > 2.0 && rh > 2.0 {
+                let hits = fd_render::hit::hit_test_rect_contained(
+                    &self.engine.graph,
+                    self.engine.current_bounds(),
+                    rx,
+                    ry,
+                    rw,
+                    rh,
+                );
+                for hit_id in hits {
+                    self.erase_node_immediately(hit_id);
+                }
+            }
+            self.eraser_tool.marquee = None;
+            true
+        } else {
+            false
+        };
+
         let event = InputEvent::from_pointer_up(x, y, mods);
 
         let prev_pressed = self.pressed_id;
@@ -541,6 +586,7 @@ impl FdCanvas {
 
         let visual_changed = changed
             || marquee_changed
+            || eraser_marquee_changed
             || pressed_changed
             || hovered_changed
             || drill_changed
