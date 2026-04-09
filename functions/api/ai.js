@@ -12,12 +12,28 @@
  *   - AI_MODEL_QUALITY: model for review (default: gemma-3-12b-it)
  */
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
+const DEFAULT_CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Expose-Headers': 'X-RateLimit-Limit, X-RateLimit-Remaining',
 };
+
+function getCorsHeaders(request) {
+  const origin = request.headers.get('Origin');
+  let allowedOrigin = 'https://fast-draft.com'; // Default safe origin
+
+  if (origin) {
+    if (origin === 'https://fast-draft.com' || origin.startsWith('vscode-webview://')) {
+      allowedOrigin = origin;
+    }
+  }
+
+  return {
+    ...DEFAULT_CORS_HEADERS,
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Vary': 'Origin',
+  };
+}
 
 const DEFAULT_DAILY_LIMIT = 20;
 const KV_TTL_SECONDS = 86400;
@@ -321,7 +337,7 @@ async function runAI(env, config, aiMessages, stream, shouldUseOpenRouter, actua
 export async function onRequestPost(context) {
   const headers = {
     'Content-Type': 'application/json',
-    ...CORS_HEADERS,
+    ...getCorsHeaders(context.request),
   };
 
   try {
@@ -491,6 +507,6 @@ export async function onRequestPost(context) {
   }
 }
 
-export async function onRequestOptions() {
-  return new Response(null, { headers: CORS_HEADERS });
+export async function onRequestOptions(context) {
+  return new Response(null, { headers: getCorsHeaders(context.request) });
 }
