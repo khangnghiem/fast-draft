@@ -40,7 +40,7 @@ impl FdLanguageServer {
         let graph = fd_core::parser::parse_document(&text).ok();
 
         {
-            let mut docs = self.documents.lock().unwrap();
+            let mut docs = self.documents.lock().expect("documents mutex poisoned");
             docs.insert(uri.clone(), DocumentState { text, graph });
         }
 
@@ -98,7 +98,7 @@ impl LanguageServer for FdLanguageServer {
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
         let uri = params.text_document.uri;
-        let mut docs = self.documents.lock().unwrap();
+        let mut docs = self.documents.lock().expect("documents mutex poisoned");
         docs.remove(&uri);
     }
 
@@ -106,7 +106,7 @@ impl LanguageServer for FdLanguageServer {
         let uri = &params.text_document_position.text_document.uri;
         let pos = params.text_document_position.position;
 
-        let docs = self.documents.lock().unwrap();
+        let docs = self.documents.lock().expect("documents mutex poisoned");
         let items = if let Some(doc) = docs.get(uri) {
             completion::compute_completions(&doc.text, pos)
         } else {
@@ -120,7 +120,7 @@ impl LanguageServer for FdLanguageServer {
         let uri = &params.text_document_position_params.text_document.uri;
         let pos = params.text_document_position_params.position;
 
-        let docs = self.documents.lock().unwrap();
+        let docs = self.documents.lock().expect("documents mutex poisoned");
         if let Some(doc) = docs.get(uri) {
             Ok(hover::compute_hover(&doc.text, pos, doc.graph.as_ref()))
         } else {
@@ -135,7 +135,7 @@ impl LanguageServer for FdLanguageServer {
         let uri = &params.text_document_position_params.text_document.uri;
         let pos = params.text_document_position_params.position;
 
-        let docs = self.documents.lock().unwrap();
+        let docs = self.documents.lock().expect("documents mutex poisoned");
         let doc = match docs.get(uri) {
             Some(d) => d,
             None => return Ok(None),
@@ -185,7 +185,7 @@ impl LanguageServer for FdLanguageServer {
     ) -> Result<Option<DocumentSymbolResponse>> {
         let uri = &params.text_document.uri;
 
-        let docs = self.documents.lock().unwrap();
+        let docs = self.documents.lock().expect("documents mutex poisoned");
         if let Some(doc) = docs.get(uri) {
             let syms = symbols::compute_symbols(&doc.text, doc.graph.as_ref());
             Ok(Some(DocumentSymbolResponse::Flat(syms)))

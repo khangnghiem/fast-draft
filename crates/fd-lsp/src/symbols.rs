@@ -21,7 +21,7 @@ pub fn compute_symbols(text: &str, graph: Option<&SceneGraph>) -> Vec<SymbolInfo
                 name: format!("style {}", name),
                 kind: SymbolKind::CLASS,
                 location: Location {
-                    uri: Url::parse("file:///dummy").unwrap(),
+                    uri: Url::parse("file:///dummy").expect("failed to parse dummy URL"),
                     range: Range {
                         start: Position::new(i as u32, 0),
                         end: Position::new(i as u32, line.len() as u32),
@@ -58,7 +58,7 @@ pub fn compute_symbols(text: &str, graph: Option<&SceneGraph>) -> Vec<SymbolInfo
                         _ => SymbolKind::OBJECT,
                     },
                     location: Location {
-                        uri: Url::parse("file:///dummy").unwrap(),
+                        uri: Url::parse("file:///dummy").expect("failed to parse dummy URL"),
                         range: Range {
                             start: Position::new(*line_num as u32, 0),
                             end: Position::new(*line_num as u32, line.len() as u32),
