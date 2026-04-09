@@ -2561,3 +2561,148 @@ fn lasso_tool_fewer_than_3_points_never_contains() {
     let empty_tool = LassoTool::new();
     assert!(!empty_tool.contains_point(0.0, 0.0));
 }
+
+#[test]
+fn tool_pen_catmull_rom_smoothing() {
+    let mut tool = PenTool::new();
+
+    // Need at least 4 points to exercise Catmull-Rom logic properly,
+    // although subsampling handles fewer points too, drawing 4 explicit
+    // distinct points makes the spline generation robust.
+
+    // Down
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 0.0,
+            y: 0.0,
+            pressure: 0.5,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Move 1
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 10.0,
+            y: 5.0,
+            pressure: 0.5,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Move 2
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 20.0,
+            y: 15.0,
+            pressure: 0.5,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Up
+    let muts = tool.handle(
+        &InputEvent::PointerUp {
+            x: 30.0,
+            y: 10.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Verify the results
+    assert_eq!(muts.len(), 2, "Expected UpdatePath and SetStrokeWidth");
+
+    match &muts[0] {
+        GraphMutation::UpdatePath { commands, .. } => {
+            // Path should start with a MoveTo
+            assert!(
+                matches!(commands.first(), Some(PathCmd::MoveTo(_, _))),
+                "Path should start with MoveTo"
+            );
+
+            // Because of Catmull-Rom logic in `points_to_smooth_bezier`, there should be
+            // multiple CubicTo commands generated between the subsampled points.
+            let has_cubic = commands
+                .iter()
+                .any(|cmd| matches!(cmd, PathCmd::CubicTo(_, _, _, _, _, _)));
+            assert!(
+                has_cubic,
+                "Path should contain CubicTo commands for Catmull-Rom smoothing"
+            );
+        }
+        _ => panic!("Expected UpdatePath as first mutation"),
+    }
+}
+
+#[test]
+fn tool_pen_pressure_data_capture() {
+    let mut tool = PenTool::new();
+
+    // Start with light pressure
+    tool.handle(
+        &InputEvent::PointerDown {
+            x: 0.0,
+            y: 0.0,
+            pressure: 0.2, // Light
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Move with heavy pressure
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 10.0,
+            y: 10.0,
+            pressure: 0.9, // Heavy
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // Move with medium pressure
+    tool.handle(
+        &InputEvent::PointerMove {
+            x: 20.0,
+            y: 20.0,
+            pressure: 0.5, // Medium
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    // End with light pressure
+    // Note: PointerUp doesn't have pressure, but the pointer logic averages the Down/Move points
+    let muts = tool.handle(
+        &InputEvent::PointerUp {
+            x: 30.0,
+            y: 30.0,
+            modifiers: Modifiers::NONE,
+        },
+        None,
+    );
+
+    assert_eq!(muts.len(), 2);
+
+    match &muts[1] {
+        GraphMutation::SetStrokeWidth { width, .. } => {
+            // Only 3 points added with pressure data (Down, Move, Move)
+            // Average pressure: (0.2 + 0.9 + 0.5) / 3 = 1.6 / 3 = 0.5333...
+            // Mapping logic in `pressure_to_stroke_width`: 1.0 + avg_pressure * 3.5
+            // 1.0 + 0.5333 * 3.5 = 1.0 + 1.8666... = 2.8666...
+            let expected_width = 1.0 + (1.6 / 3.0) * 3.5;
+            let diff = (*width - expected_width).abs();
+            assert!(
+                diff < 0.01,
+                "Expected stroke width ~{}, got {}",
+                expected_width,
+                width
+            );
+        }
+        _ => panic!("Expected SetStrokeWidth as second mutation"),
+    }
+}
