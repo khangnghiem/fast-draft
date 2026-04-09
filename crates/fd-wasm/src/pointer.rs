@@ -583,6 +583,7 @@ impl FdCanvas {
 
         let visual_changed = changed
             || marquee_changed
+            || eraser_marquee_changed
             || pressed_changed
             || hovered_changed
             || drill_changed
