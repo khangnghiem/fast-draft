@@ -18,6 +18,13 @@
 -->
 ## Completed Requirements
 
+### v0.11.359 — Tauri Desktop App Launch (R6.20)
+- **Native macOS Desktop App**: Launched the Fast Draft desktop application using Tauri v2. The app wraps the existing `site/` web playground in a native macOS WebView, providing native file I/O (⌘O/⌘S/⌘⇧S), auto-update infrastructure, and a polished overlay title bar with traffic light padding.
+- **Dev Server Integration**: Configured `beforeDevCommand` to automatically spin up a local static server (`npx serve`) on port 1420, enabling seamless `tauri dev` workflow.
+- **Desktop CSS Layer**: Added `css/desktop.css` with macOS-specific drag regions (`-webkit-app-region: drag/no-drag`), traffic light padding (72px left offset for chrome buttons), and desktop-only element visibility toggles.
+- **Plugin Stack**: Registered `tauri-plugin-process` for relaunch-after-update flow, completing the plugin chain: dialog + fs + shell + updater + process.
+- **Tauri Detection**: Auto-applies `tauri-desktop` CSS class to `<body>` when running inside the Tauri webview, enabling non-destructive desktop styling without affecting the web version.
+
 ### v0.11.358 — Eraser Marquee Frontend Bug Fix
 - **Native Event Pass-Through**: Cleaned out stale JS-only frontend proxy code that blindly intercepted down/move/up events when the Eraser tool was active. Pointer events now flow cleanly through to `fdCanvas.handle_pointer_*` for robust modifier (`Shift`) analysis.
 - **Robust Graph Batch Deletions**: Eliminated brittle RegExp manipulation that attempted to parse text on gesture release. Bulk deletion safely delegates to dynamic WASM boundary interactions utilizing real spatial-index layout intersections, preventing parsing failure on multiline subtrees or properties.

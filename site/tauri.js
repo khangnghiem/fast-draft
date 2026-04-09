@@ -14,6 +14,9 @@ export function initTauri(api) {
   const isTauri = !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
   if (!isTauri) return;
 
+  // Add desktop class for CSS targeting (drag regions, traffic light padding)
+  document.body.classList.add('tauri-desktop');
+
   let currentFilePath = null;
 
   /** Update window title to show the current file name. */
