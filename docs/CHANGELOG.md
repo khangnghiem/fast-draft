@@ -18,6 +18,15 @@
 -->
 ## Completed Requirements
 
+### v0.11.358 — Eraser Marquee Frontend Bug Fix
+- **Native Event Pass-Through**: Cleaned out stale JS-only frontend proxy code that blindly intercepted down/move/up events when the Eraser tool was active. Pointer events now flow cleanly through to `fdCanvas.handle_pointer_*` for robust modifier (`Shift`) analysis.
+- **Robust Graph Batch Deletions**: Eliminated brittle RegExp manipulation that attempted to parse text on gesture release. Bulk deletion safely delegates to dynamic WASM boundary interactions utilizing real spatial-index layout intersections, preventing parsing failure on multiline subtrees or properties.
+
+### v0.11.357 — Dark Theme Toolbar Contrast Fix (Bug Fix)
+- **Semantic Icon Contrast**: Introduced a new semantic CSS variable `--fd-icon` defined uniquely for `#2C2C2E` backgrounds. The explicit `#D1D1D6` mapping overcomes the perceptual volume failure where 1px thin SVG paths disappeared despite passing WCAG 5:1 numerical ratio.
+- **Dynamic Fallbacks**: Updated `.ft-tool-btn` to default safely back to standard styling (`color: var(--fd-icon, var(--fd-text-secondary))`) ensuring perfect backward compatibility across the native Light Mode.
+- **Visual Stability**: Ensured seamless SVG fill alignment so toolbar action tools maintain parity with structural UI chrome without mutating stroke widths.
+
 ### v0.11.356 — Marquee Eraser (R3.81)
 - **Area-Based Deletion**: Implemented the Marquee Eraser. Holding `Shift` while dragging with the Eraser tool (`X`) now spawns a red-dashed selection box.
 - **Background Protection**: Engine hit-testing utilizes strict `fully contained` bounding box geometry checks (`hit_test_rect_contained`), eliminating the danger of accidentally clipping and destroying large background frames or layer substrates during rapid clearing.

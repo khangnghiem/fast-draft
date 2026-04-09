@@ -167,7 +167,7 @@
   height: 32px;
   border: none;
   background: transparent;
-  color: var(--fd-text-secondary);
+  color: var(--fd-icon, var(--fd-text-secondary));
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
