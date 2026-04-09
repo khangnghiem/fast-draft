@@ -983,3 +983,4 @@ pub fn register_icon_library(library: &str, icons_json: &str) -> bool {
 
     true
 }
+mod tests;
