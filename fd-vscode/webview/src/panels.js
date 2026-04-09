@@ -800,6 +800,14 @@ function refreshLayersPanel() {
 
 // ─── Spec View Parser (client-side) ──────────────────────────────────────
 
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function parseSpecAnnotation(line) {
   const trimmed = line.trim();
   if (!trimmed || trimmed === "}") return null;

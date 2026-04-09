@@ -325,6 +325,10 @@ function addAcceptRow(value) {
   list.appendChild(item);
 }
 
+function escapeAttr(s) {
+  return s.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 /**
  * Check if a node has a spec annotation block.
  * Uses parseAnnotatedNodes to detect matching spec data.
