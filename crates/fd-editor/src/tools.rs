@@ -379,6 +379,12 @@ impl Tool for SelectTool {
 
                     let dx = x - self.last_x;
                     let dy = y - self.last_y;
+
+                    // Cancel deferred deselect on any actual drag movement
+                    if dx.abs() > 0.5 || dy.abs() > 0.5 {
+                        self.shift_toggled_off = None;
+                    }
+
                     self.last_x = *x;
                     self.last_y = *y;
 

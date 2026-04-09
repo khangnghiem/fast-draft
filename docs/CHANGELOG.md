@@ -18,7 +18,10 @@
 -->
 ## Completed Requirements
 
-### v0.11.354 — Unified AI Touch Pipeline (R4.9, R4.26)
+### v0.11.355 — Fix CMD+Drag Deselection and Eraser Ghosting (Bug Fix)
+- **Selection Deselection Fix**: Fixed a bug where holding Cmd or Ctrl while dragging a node or multi-selection would inadvertently zero-out the deferred shift selection state (`shift_toggled_off`), causing the node under the cursor to deselect unintentionally upon releasing the pointer. Dragging actual distance now securely cancels any latent deferred deselect actions.
+- **Eraser Ghost Indexing Fix**: `erase_node_immediately` now invokes an implicit `rebuild_spatial_index` at the end of its lifecycle coordinate mutation chain, neutralizing ghost bounding boxes. The Eraser tool can now reliably drag through multiple overlapping components sequentially without its raycasts being blocked by stale, already-erased geometry.
+
 - **Zero-Config Selection Magic**: Merged the standalone `Renamify` feature directly into the primary `AI Touch` execution pipeline via a fast synchronous pre-flight heuristic step. Anonymous nodes (e.g. `@_rect_0`) are now instantly upgraded to semantic IDs (e.g. `@hero_card`) before any network generation is performed.
 - **Aggressive Surface Area Cleanup**: Eliminated the entire `fd.renamify` workflow globally. Dropped the `renamify-panel` UI and command from the `fd-vscode` custom editor, scrubbed all legacy UI ties in `site/layers.js` and `index.html`, and removed the dedicated endpoint switch-case from the Cloudflare worker. Massive technical debt reduction and visual minimalization achieved globally.
 ### v0.11.353 — AI Proxy Fallback & High-End Routing (R4.9, R4.26)
