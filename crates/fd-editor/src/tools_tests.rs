@@ -2614,7 +2614,11 @@ fn tool_pen_catmull_rom_smoothing() {
     );
 
     // Verify the results
-    assert_eq!(muts.len(), 2, "Expected UpdatePath and SetStrokeWidth");
+    assert_eq!(
+        muts.len(),
+        3,
+        "Expected UpdatePath, SetStrokeWidth, and SetConstraints"
+    );
 
     match &muts[0] {
         GraphMutation::UpdatePath { commands, .. } => {
@@ -2686,7 +2690,7 @@ fn tool_pen_pressure_data_capture() {
         None,
     );
 
-    assert_eq!(muts.len(), 2);
+    assert_eq!(muts.len(), 3);
 
     match &muts[1] {
         GraphMutation::SetStrokeWidth { width, .. } => {
