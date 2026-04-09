@@ -18,6 +18,10 @@
 -->
 ## Completed Requirements
 
+### v0.11.356 — Marquee Eraser (R3.81)
+- **Area-Based Deletion**: Implemented the Marquee Eraser. Holding `Shift` while dragging with the Eraser tool (`X`) now spawns a red-dashed selection box.
+- **Background Protection**: Engine hit-testing utilizes strict `fully contained` bounding box geometry checks (`hit_test_rect_contained`), eliminating the danger of accidentally clipping and destroying large background frames or layer substrates during rapid clearing.
+
 ### v0.11.355 — Fix CMD+Drag Deselection and Eraser Ghosting (Bug Fix)
 - **Selection Deselection Fix**: Fixed a bug where holding Cmd or Ctrl while dragging a node or multi-selection would inadvertently zero-out the deferred shift selection state (`shift_toggled_off`), causing the node under the cursor to deselect unintentionally upon releasing the pointer. Dragging actual distance now securely cancels any latent deferred deselect actions.
 - **Eraser Ghost Indexing Fix**: `erase_node_immediately` now invokes an implicit `rebuild_spatial_index` at the end of its lifecycle coordinate mutation chain, neutralizing ghost bounding boxes. The Eraser tool can now reliably drag through multiple overlapping components sequentially without its raycasts being blocked by stale, already-erased geometry.

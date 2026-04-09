@@ -133,9 +133,8 @@ mod tests {
         });
 
         let id = NodeId::intern("test_node");
-        assert_eq!(
+        assert!(
             canvas.engine.graph.index_of(id).is_some(),
-            true,
             "Node should exist initially"
         );
 
@@ -148,9 +147,8 @@ mod tests {
         canvas.erase_node_immediately(id);
 
         // Verify it was removed from the scene graph
-        assert_eq!(
-            canvas.engine.graph.index_of(id).is_some(),
-            false,
+        assert!(
+            canvas.engine.graph.index_of(id).is_none(),
             "Node should be removed from graph"
         );
 

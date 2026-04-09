@@ -76,6 +76,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.46** _(done)_: Text intrinsic sizing — text node bounds auto-fit to content via Canvas2D `measureText()` bridge; JS measures → WASM `update_text_metrics()` → parent expansion via `finalize_bounds()`; wired into inline editor commit flow; parent resize propagates `max_width` to child text (permanent); `intrinsic_size` heuristic accounts for `max_width` wrap; post-resize JS remeasurement for accurate wrapped height; managed-layout guard prevents `update_text_metrics` from shrinking column/row/grid-stretched text width
 - **R3.47** _(done)_: Child containment constraint — child nodes cannot be fully outside their parent; dragging a child completely outside detaches it and reparents to nearest ancestor (enforced by `handle_child_group_relationship` in Rust)
 - **R3.48** _(done)_: Eraser tool — swipe-to-delete tool with immediate visual feedback; `EraserTool` thin state tracker (drag lifecycle + erased IDs for undo grouping); FdCanvas manages actual node removal with group-aware detach (reparent child to root before RemoveNode) + cascade-delete empty Group/Frame containers up the ancestor chain
+- **R3.81** _(done)_: Marquee Eraser — Shift+Drag with the Eraser tool draws a red-dashed Marquee selection. On pointer release, all geometric elements whose bounding boxes are 100% contained within the Marquee are batch-deleted in a single undo step. Protects background layers by strictly enforcing "fully contained" over generic "intersecting".
 - **R3.54** _(done)_: Alt+drag clone — Alt+click duplicates node in-place (single source of truth in WASM `SelectTool::handle`); Alt pressed mid-drag clones-and-drags (Figma behavior); `alt_duplicated` flag prevents re-duplication; 3px movement threshold defers duplication to prevent accidental clones on Alt keypress; ghost preview shows original positions during clone-drag; clones get independent `Position` from resolved bounds (no inherited positioning constraints — fixes selection coupling and drag inversion); incremental naming (`foo` → `foo_2` → `foo_3`) via `next_clone_name()` graph scan
 - **R3.59** _(done)_: Clipboard — ⌘C copies selected node(s) (multi-select supported); ⌘V pastes with +20px cumulative offset (not stacked on top); ⌘X cuts (copy + delete); paste is undoable via `push_undo_snapshot` WASM API
 - **R3.60** _(done)_: Alt+drag multi-select — Alt+click/drag duplicates ALL selected nodes (batch clone with ID remapping); deep-copies Group/Frame subtrees; remaps internal constraint references (Offset, CenterIn); duplicates edges where both endpoints are selected
@@ -353,9 +354,9 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | auto-expand | R3.45 |
 | text sizing | R3.46, R3.36 |
 | child containment | R3.47 |
+| eraser / delete | R3.48, R3.81 |
 | edge label | R1.10, R1.19, R1.20 |
 | edge anchor | R1.20 |
-| eraser / delete | R3.48 |
 | excalidraw export | R3.55 |
 | html export | R3.56 |
 | fine pen / taper | R3.57, R3.4, R3.22 |

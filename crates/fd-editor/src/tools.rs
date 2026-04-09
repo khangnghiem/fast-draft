@@ -1325,6 +1325,8 @@ pub struct EraserTool {
     pub erased_ids: Vec<NodeId>,
     /// Whether a drag gesture is active.
     pub dragging: bool,
+    /// Active Marquee Eraser bounds: (start_x, start_y, current_x, current_y).
+    pub marquee: Option<(f32, f32, f32, f32)>,
 }
 
 impl Default for EraserTool {
@@ -1338,6 +1340,7 @@ impl EraserTool {
         Self {
             erased_ids: Vec::new(),
             dragging: false,
+            marquee: None,
         }
     }
 
@@ -1355,16 +1358,27 @@ impl Tool for EraserTool {
 
     /// Returns empty mutations — FdCanvas manages the delete flow directly
     /// (needs access to the graph for group-aware detach).
-    /// The tool is a thin state tracker for drag lifecycle.
+    /// The tool is a thin state tracker for drag lifecycle and marquee coords.
     fn handle(&mut self, event: &InputEvent, _hit_node: Option<NodeId>) -> Vec<GraphMutation> {
         match event {
-            InputEvent::PointerDown { .. } => {
+            InputEvent::PointerDown { x, y, modifiers, .. } => {
                 self.erased_ids.clear();
                 self.dragging = true;
+                if modifiers.shift {
+                    self.marquee = Some((*x, *y, *x, *y));
+                } else {
+                    self.marquee = None;
+                }
                 vec![]
             }
-            InputEvent::PointerMove { .. } => vec![],
+            InputEvent::PointerMove { x, y, .. } => {
+                if let Some((sx, sy, _, _)) = self.marquee {
+                    self.marquee = Some((sx, sy, *x, *y));
+                }
+                vec![]
+            }
             InputEvent::PointerUp { .. } => {
+                // Marquee is cleared by `pointer.rs` after layout evaluation
                 self.dragging = false;
                 vec![]
             }
