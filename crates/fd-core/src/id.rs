@@ -37,9 +37,10 @@ impl NodeId {
 
     /// Seed the prefix counter to prevent ID collisions across sessions
     /// when restoring data from external sources (like `localStorage`).
+    /// Uses `fetch_max` so the counter can only increase, never regress.
     pub fn seed_prefix_counter(seed: u64) {
         use std::sync::atomic::Ordering;
-        COUNTER.store(seed, Ordering::Relaxed);
+        COUNTER.fetch_max(seed, Ordering::Relaxed);
     }
 
     /// Scan all node and edge IDs in a graph, extract trailing `_N` suffixes,
@@ -145,9 +146,9 @@ mod tests {
         )
         .unwrap();
         NodeId::seed_from_graph(&graph);
-        let next = NodeId::with_prefix("rect");
-        let suffix: u64 = next.as_str().rsplit_once('_').unwrap().1.parse().unwrap();
-        assert!(suffix >= 8, "expected suffix >= 8, got {suffix}");
+        // Read counter directly — with_prefix races with parallel tests sharing the global counter
+        let counter_val = COUNTER.load(std::sync::atomic::Ordering::Relaxed);
+        assert!(counter_val >= 8, "expected counter >= 8, got {counter_val}");
     }
 
     #[test]
