@@ -66,13 +66,20 @@ impl SpatialIndex {
             && b.width > 0.0
             && b.height > 0.0
         {
+            // Text nodes get a z-order boost so they are always prioritized
+            // over overlapping shape siblings in point queries.
+            let boost = if matches!(node.kind, NodeKind::Text { .. }) {
+                10_000
+            } else {
+                0
+            };
             out.push(SpatialEntry {
                 x_min: b.x,
                 x_max: b.x + b.width,
                 y_min: b.y,
                 y_max: b.y + b.height,
                 id: node.id,
-                z_order: *z,
+                z_order: *z + boost,
             });
             *z += 1;
         }
@@ -210,9 +217,26 @@ fn hit_test_node(
 
     let children = graph.children(idx);
 
-    // Check children in reverse (topmost first)
+    // Two-pass hit test: text nodes get priority over shapes at the same level.
+    // This ensures clicking on a text that visually overlaps a sibling shape
+    // always selects the text, regardless of document order.
+
+    // Pass 1: Check only Text children (reverse order = topmost first)
     for &child_idx in children.iter().rev() {
-        if let Some(hit) = hit_test_node(graph, child_idx, bounds, px, py) {
+        let child = &graph.graph[child_idx];
+        if matches!(child.kind, NodeKind::Text { .. })
+            && let Some(hit) = hit_test_node(graph, child_idx, bounds, px, py)
+        {
+            return Some(hit);
+        }
+    }
+
+    // Pass 2: Check non-Text children (reverse order = topmost first)
+    for &child_idx in children.iter().rev() {
+        let child = &graph.graph[child_idx];
+        if !matches!(child.kind, NodeKind::Text { .. })
+            && let Some(hit) = hit_test_node(graph, child_idx, bounds, px, py)
+        {
             return Some(hit);
         }
     }
@@ -757,6 +781,75 @@ rect @top { w: 100 h: 100 x: 25 y: 25 }
             brute_set, indexed_set,
             "SpatialIndex query_point_all should match hit_test_all"
         );
+    }
+
+    // ─── Text priority hit-testing tests ─────────────────────────────
+
+    #[test]
+    fn hit_test_text_priority_over_shape_sibling() {
+        // Text node is declared BEFORE rect (lower document order) but
+        // should still win hit-test because text always takes priority
+        // over overlapping shape siblings.
+        let input = r#"
+text @label "Hello" {
+  x: 50
+  y: 50
+}
+
+rect @bg {
+  w: 200
+  h: 200
+  x: 0
+  y: 0
+}
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+
+        // Click at (50, 50) where both nodes overlap — text should win
+        let label_idx = graph.index_of(NodeId::intern("label")).unwrap();
+        if let Some(lb) = bounds.get(&label_idx) {
+            let cx = lb.x + lb.width / 2.0;
+            let cy = lb.y + lb.height / 2.0;
+            let result = hit_test(&graph, &bounds, cx, cy);
+            assert_eq!(
+                result,
+                Some(NodeId::intern("label")),
+                "Text node should be prioritized over shape sibling"
+            );
+        }
+    }
+
+    #[test]
+    fn spatial_index_text_priority() {
+        // Same scenario but using the SpatialIndex fast path
+        let input = r#"
+text @label "Hello" { x: 50 y: 50 }
+rect @bg { w: 200 h: 200 x: 0 y: 0 }
+"#;
+        let graph = parse_document(input).unwrap();
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let bounds = resolve_layout(&graph, viewport);
+        let index = SpatialIndex::build(&graph, &bounds);
+
+        let label_idx = graph.index_of(NodeId::intern("label")).unwrap();
+        if let Some(lb) = bounds.get(&label_idx) {
+            let cx = lb.x + lb.width / 2.0;
+            let cy = lb.y + lb.height / 2.0;
+            let result = index.query_point(cx, cy);
+            assert_eq!(
+                result,
+                Some(NodeId::intern("label")),
+                "SpatialIndex should prioritize text over shape"
+            );
+        }
     }
 
     // ─── Edge hit-testing tests ──────────────────────────────────────

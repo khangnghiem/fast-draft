@@ -83,7 +83,8 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.61** _(done)_: Esc-to-cancel drag — pressing Esc during a node drag (move/resize/draw) restores the node to its pre-drag position via `abandon_batch()` text snapshot rollback; pressing Esc during toolbar drag-to-create cancels the ghost preview; no undo entry created for cancelled gestures
 - **R3.82** _(done)_: Straight edge default — all new edges (ArrowTool, toolbar DTC, `create_edge()`, `insert_node_at()`) default to `CurveKind::Straight` instead of `Smooth`; existing edges retain their original curve kind
 - **R3.83** _(done)_: Type-to-create text — FigJam-style text entry; pressing a printable key while a shape/edge is selected opens inline editor with the triggering character pre-filled; creates centered text child (shape) or edge label (edge) if none exists; edits existing text if present; `initialChar` support in `openInlineEditor`
-- **R3.84** _(done)_: Center-snap with dashed highlight — dragging a text node within 5px of a shape/edge center shows a dashed orange `#FF9500` highlight with crosshair; on release, applies `CenterIn` constraint via `center_node_in()` without reparenting; new `get_center_snap()` WASM API returns JSON snap target info
+- **R3.84** _(done)_: Center-snap with dashed highlight — dragging a text node within 20px of a shape/edge center shows a dashed orange `#FF9500` highlight with crosshair; on release, applies `CenterIn` constraint via `center_node_in()` without reparenting; new `get_center_snap()` WASM API returns JSON snap target info
+- **R3.85** _(done)_: Text-priority hit-test — text nodes always win over overlapping shape siblings in hit-testing regardless of document order; two-pass approach in `hit_test_node()` checks text children first, then non-text; `SpatialIndex` gives text nodes a z-order boost (+10,000) for consistent fast-path results
 
 #### R3b: Drawing Tools
 
@@ -397,6 +398,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | straight-edge       | R3.82                                                                                   |
 | type-to-create      | R3.83, R3.28                                                                            |
 | center-snap         | R3.84, R3.37                                                                            |
+| text-priority       | R3.85                                                                                   |
 
 ---
 

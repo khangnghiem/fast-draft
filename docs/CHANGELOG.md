@@ -18,7 +18,14 @@
 -->
 ## Completed Requirements
 
-### v0.11.361 — Type-to-Create Text & Center-Snap (R3.82, R3.83, R3.84)
+### v0.11.362 — Text Priority, Center-Snap Fix, Toolbar Fix (R3.84, R3.85)
+- **Text Priority Hit-Test (R3.85)**: Two-pass hit test + SpatialIndex z-order boost: text nodes always win over overlapping shape siblings regardless of document order. Ensures clicking on a text within a shape's bounding box selects the text, not the underlying shape. 2 regression tests.
+- **Center-Snap Threshold (R3.84 fix)**: Increased snap threshold from 5px → 20px scene-space for a much more forgiving snap experience when dragging text nodes near shape/edge centers.
+- **Toolbar Visibility**: The toolbar was stuck in `toolbar-minimized` state due to persisted localStorage. Clearing `fd-toolbar-minimized` and `fd-toolbar-user-minimized` restores full toolbar. No code change needed — existing reclamp logic already handles auto-restore.
+
+Files: `crates/fd-render/src/hit.rs`, `crates/fd-wasm/src/lib.rs`
+
+
 - **Straight Edge Default (R3.82)**: Changed the default `CurveKind` for all newly created edges from `Smooth` to `Straight` across `create_edge()`, `create_edge_at()`, `ArrowTool::commit()`, and `insert_node_at()`. Existing edges retain their original curve kind. Straight edges are rendered and hit-tested identically — no renderer changes needed.
 - **Type-to-Create (R3.83)**: FigJam-style text entry on selected nodes/edges. When a shape (rect/ellipse/frame), edge, or text node is selected and the user presses a printable character key (non-shortcut, non-modifier), the inline editor opens immediately. For shapes: creates a centered text child (or edits existing one). For edges: creates/edits an edge label. The triggering character appears as the first character in the editor (`initialChar` support in `openInlineEditor`).
 - **Center-Snap with Dashed Highlight (R3.84)**: When dragging a text node, if its center comes within 5px of any shape or edge midpoint center, a dashed orange highlight (`#FF9500`) appears around the snap target with a small crosshair at the center. On release, `center_node_in()` applies a `CenterIn` constraint — the text node is NOT reparented (stays at its current level in the graph). New WASM API: `get_center_snap()` returns JSON snap target info.
