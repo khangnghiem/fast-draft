@@ -979,7 +979,7 @@ impl FdCanvas {
         let s_cx = sb.x + sb.width / 2.0;
         let s_cy = sb.y + sb.height / 2.0;
 
-        let snap_threshold = 5.0_f32;
+        let snap_threshold = 20.0_f32;
         let mut best_dist = f32::MAX;
         let mut best_result = String::new();
 
