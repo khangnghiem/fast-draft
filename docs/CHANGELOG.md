@@ -18,6 +18,15 @@
 -->
 ## Completed Requirements
 
+### v0.11.360 — Desktop Installer & Production Bundle (R6.20)
+- **macOS `.app` Bundle**: Production build generates a signed `Fast Draft.app` (19MB) via `npm run build` in `fd-desktop/`. Includes proper `Info.plist` with developer-tools category, copyright, and minimum macOS 10.15.
+- **File Association (`.fd`)**: Double-clicking any `.fd` file in Finder opens it directly in Fast Draft. Registered via `CFBundleDocumentTypes` with "Editor" role.
+- **App Icons**: Generated premium RGBA app icons at all required sizes (16–1024px) for macOS `.icns`, Windows `.ico`, and Tauri PNGs. Dark navy squircle with a white pen and blue spark accent.
+- **DMG Layout**: Configured macOS DMG window dimensions (660×400) with precise app/Applications folder icon positions for a professional drag-to-install experience.
+- **Cross-Platform Installers**: Full Windows NSIS installer config (with SHA-256 timestamping), Linux AppImage with media framework bundling, and `.deb` package with webkit dependency.
+- **Clean Dist Pipeline**: Added `prebuild.sh` that rsyncs `site/` → `dist/` excluding `node_modules`, resolving Tauri v2's strict frontendDist validation without modifying the web deploy directory.
+- **Security Permissions**: Added `process:allow-restart` and `process:allow-exit` to Tauri capabilities for reliable post-update app relaunch.
+
 ### v0.11.359 — Tauri Desktop App Launch (R6.20)
 - **Native macOS Desktop App**: Launched the Fast Draft desktop application using Tauri v2. The app wraps the existing `site/` web playground in a native macOS WebView, providing native file I/O (⌘O/⌘S/⌘⇧S), auto-update infrastructure, and a polished overlay title bar with traffic light padding.
 - **Dev Server Integration**: Configured `beforeDevCommand` to automatically spin up a local static server (`npx serve`) on port 1420, enabling seamless `tauri dev` workflow.
