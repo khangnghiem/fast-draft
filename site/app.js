@@ -94,6 +94,7 @@ let panStartX = 0, panStartY = 0;
 let panDragging = false;
 let canvasDragOccurred = false; // tracks whether a real canvas drag happened
 let cmdDragNestTarget = null; // ID of the container highlighted during ⌘+drag
+let activeCenterSnap = null;  // Center-snap target during text node drag {target_id, x, y, bx, by, bw, bh}
 let zoomLevel = 1.0;
 let gridEnabled = false;
 let xrayLabels = false; // X-ray mode: show all node name badges (backtick toggle)
@@ -389,6 +390,25 @@ function renderCanvas() {
   drawGrid();
   // 4. Render scene — skip_bg=true since we already filled above
   fdCanvas.render(ctx, performance.now(), true, true, xrayLabels, modShiftHeld);
+
+  // 4.5. Draw center-snap dashed highlight (text node center → shape/edge center)
+  if (activeCenterSnap) {
+    ctx.save();
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = '#FF9500'; // Apple orange — distinct from selection blue (#4FC3F7)
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(activeCenterSnap.bx, activeCenterSnap.by, activeCenterSnap.bw, activeCenterSnap.bh);
+    // Crosshair at snap center
+    const scx = activeCenterSnap.x, scy = activeCenterSnap.y;
+    ctx.setLineDash([3, 3]);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(scx - 8, scy); ctx.lineTo(scx + 8, scy);
+    ctx.moveTo(scx, scy - 8); ctx.lineTo(scx, scy + 8);
+    ctx.stroke();
+    ctx.restore();
+    renderDirty = true; // keep re-rendering while snap is active
+  }
 
   // 5. Draw drag-to-create preview shape (on-canvas, zoom-aware WYSIWYG)
   drawDtcPreview(ctx, dtcPreview, smartDefaults, zoomLevel);
@@ -4942,6 +4962,14 @@ async function initPlayground() {
           } else if (!e.metaKey) {
             cmdDragNestTarget = null;
           }
+
+          // ── Center-snap: detect text node center near shape/edge center ──
+          if (!e.metaKey && fdCanvas.get_center_snap) {
+            try {
+              const snapJson = fdCanvas.get_center_snap();
+              activeCenterSnap = snapJson ? JSON.parse(snapJson) : null;
+            } catch (_) { activeCenterSnap = null; }
+          }
         }
       } else if (activePointerId === -1) {
         // Hover (no button held): show resize cursor on handles
@@ -5261,6 +5289,27 @@ async function initPlayground() {
       }
 
       cmdDragNestTarget = null;
+
+      // ── Center-snap apply: snap text node to shape/edge center on release ──
+      if (activeCenterSnap && wasDragging) {
+        const selectedId = fdCanvas.get_selected_id();
+        if (selectedId && fdCanvas.center_node_in) {
+          const textBefore = fdCanvas.get_text();
+          const changed = fdCanvas.center_node_in(selectedId, activeCenterSnap.target_id);
+          if (changed) {
+            const textAfter = fdCanvas.get_text();
+            if (textBefore !== textAfter) {
+              fdCanvas.push_undo_snapshot(textBefore, textAfter);
+            }
+            renderDirty = true; uiDirty = true;
+            syncCanvasToEditor();
+            updatePropertiesPanel();
+            refreshLayersPanel();
+            showToast(`Centered in @${activeCenterSnap.target_id}`);
+          }
+        }
+      }
+      activeCenterSnap = null;
 
       const resultJson = fdCanvas.handle_pointer_up(
         x, y, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
@@ -5597,6 +5646,98 @@ async function initPlayground() {
           const step = e.shiftKey ? 10 : 1;
           nudgeSelected(e.key, step);
           return;
+        }
+      }
+
+      // ── Type-to-create: FigJam-style text entry on selected node/edge ──
+      // When Select tool is active and a shape/edge is selected, pressing a
+      // printable character opens the inline editor (creating text if needed).
+      if (!isEditingInput && !e.metaKey && !e.ctrlKey && !e.altKey
+          && e.key.length === 1 && !e.repeat) {
+        // Skip keys handled above as tool shortcuts
+        const toolKeys = new Set(['v','r','o','e','x','t','a','p','f','h','l','g','0']);
+        if (!toolKeys.has(e.key.toLowerCase())) {
+          const selectedId = fdCanvas.get_selected_id();
+          if (selectedId) {
+            const kind = fdCanvas.get_node_kind ? fdCanvas.get_node_kind(selectedId) : '';
+            const isShape = kind === 'rect' || kind === 'ellipse' || kind === 'frame';
+            const isEdge = kind === 'edge';
+            const isText = kind === 'text';
+
+            if (isShape || isEdge || isText) {
+              e.preventDefault();
+              const container = document.getElementById('inline-overlay') || canvas.parentNode;
+
+              if (isText) {
+                // Edit existing text node directly
+                const propsJson = fdCanvas.get_selected_node_props();
+                const props = JSON.parse(propsJson);
+                coreOpenInlineEditor({
+                  nodeId: selectedId, propKey: 'content',
+                  currentValue: props.content || '',
+                  initialChar: e.key,
+                  fdCanvas, canvasEl: canvas, container,
+                  renderFn: renderCanvas, syncFn: syncCanvasToEditor, updatePanelFn: updatePropertiesPanel,
+                  panX, panY, zoomLevel,
+                });
+              } else if (isShape) {
+                const existingTextId = fdCanvas.get_text_child_id(selectedId);
+                if (existingTextId) {
+                  // Edit existing centered text child
+                  fdCanvas.select_by_id(existingTextId);
+                  const childPropsJson = fdCanvas.get_selected_node_props();
+                  const childProps = JSON.parse(childPropsJson);
+                  coreOpenInlineEditor({
+                    nodeId: existingTextId, propKey: 'content',
+                    currentValue: childProps.content || '',
+                    initialChar: e.key,
+                    fdCanvas, canvasEl: canvas, container,
+                    renderFn: renderCanvas, syncFn: syncCanvasToEditor, updatePanelFn: updatePropertiesPanel,
+                    panX, panY, zoomLevel,
+                    parentShapeId: selectedId,
+                  });
+                } else {
+                  // Lazy-create text child in shape
+                  coreOpenInlineEditor({
+                    nodeId: null, propKey: 'content', currentValue: '',
+                    initialChar: e.key,
+                    createCtx: { type: 'child', parentShapeId: selectedId },
+                    fdCanvas, canvasEl: canvas, container,
+                    renderFn: renderCanvas, syncFn: syncCanvasToEditor, updatePanelFn: updatePropertiesPanel,
+                    panX, panY, zoomLevel,
+                    parentShapeId: selectedId,
+                  });
+                }
+              } else if (isEdge) {
+                const existingTextId = fdCanvas.get_edge_text_child_id(selectedId);
+                if (existingTextId) {
+                  // Edit existing edge label
+                  fdCanvas.select_by_id(existingTextId);
+                  const childPropsJson = fdCanvas.get_selected_node_props();
+                  const childProps = JSON.parse(childPropsJson);
+                  coreOpenInlineEditor({
+                    nodeId: existingTextId, propKey: 'content',
+                    currentValue: childProps.content || '',
+                    initialChar: e.key,
+                    fdCanvas, canvasEl: canvas, container,
+                    renderFn: renderCanvas, syncFn: syncCanvasToEditor, updatePanelFn: updatePropertiesPanel,
+                    panX, panY, zoomLevel,
+                  });
+                } else {
+                  // Lazy-create edge label
+                  coreOpenInlineEditor({
+                    nodeId: null, propKey: 'content', currentValue: '',
+                    initialChar: e.key,
+                    createCtx: { type: 'edge', edgeId: selectedId },
+                    fdCanvas, canvasEl: canvas, container,
+                    renderFn: renderCanvas, syncFn: syncCanvasToEditor, updatePanelFn: updatePropertiesPanel,
+                    panX, panY, zoomLevel,
+                  });
+                }
+              }
+              return;
+            }
+          }
         }
       }
 

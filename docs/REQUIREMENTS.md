@@ -81,6 +81,9 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.59** _(done)_: Clipboard — ⌘C copies selected node(s) (multi-select supported); ⌘V pastes with +20px cumulative offset (not stacked on top); ⌘X cuts (copy + delete); paste is undoable via `push_undo_snapshot` WASM API
 - **R3.60** _(done)_: Alt+drag multi-select — Alt+click/drag duplicates ALL selected nodes (batch clone with ID remapping); deep-copies Group/Frame subtrees; remaps internal constraint references (Offset, CenterIn); duplicates edges where both endpoints are selected
 - **R3.61** _(done)_: Esc-to-cancel drag — pressing Esc during a node drag (move/resize/draw) restores the node to its pre-drag position via `abandon_batch()` text snapshot rollback; pressing Esc during toolbar drag-to-create cancels the ghost preview; no undo entry created for cancelled gestures
+- **R3.82** _(done)_: Straight edge default — all new edges (ArrowTool, toolbar DTC, `create_edge()`, `insert_node_at()`) default to `CurveKind::Straight` instead of `Smooth`; existing edges retain their original curve kind
+- **R3.83** _(done)_: Type-to-create text — FigJam-style text entry; pressing a printable key while a shape/edge is selected opens inline editor with the triggering character pre-filled; creates centered text child (shape) or edge label (edge) if none exists; edits existing text if present; `initialChar` support in `openInlineEditor`
+- **R3.84** _(done)_: Center-snap with dashed highlight — dragging a text node within 5px of a shape/edge center shows a dashed orange `#FF9500` highlight with crosshair; on release, applies `CenterIn` constraint via `center_node_in()` without reparenting; new `get_center_snap()` WASM API returns JSON snap target info
 
 #### R3b: Drawing Tools
 
@@ -391,6 +394,9 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | image-drop          | R3.77                                                                                   |
 | context-menu-ix     | R3.78                                                                                   |
 | instant-start       | R6.17                                                                                   |
+| straight-edge       | R3.82                                                                                   |
+| type-to-create      | R3.83, R3.28                                                                            |
+| center-snap         | R3.84, R3.37                                                                            |
 
 ---
 

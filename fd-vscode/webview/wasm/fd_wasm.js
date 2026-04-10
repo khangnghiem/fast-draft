@@ -512,6 +512,24 @@ export class FdCanvas {
         }
     }
     /**
+     * Get center-snap target info during text node drag.
+     * Returns JSON `{"target_id":"...","x":N,"y":N,"bx":N,"by":N,"bw":N,"bh":N}`
+     * or empty string if no snap target nearby.
+     * @returns {string}
+     */
+    get_center_snap() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_get_center_snap(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Get context-aware completions at the cursor position.
      * @param {number} line
      * @param {number} col

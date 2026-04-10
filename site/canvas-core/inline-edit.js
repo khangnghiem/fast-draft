@@ -138,6 +138,7 @@ export function openInlineEditor(opts) {
     renderFn, syncFn, updatePanelFn,
     panX, panY, zoomLevel,
     parentShapeId, createCtx,
+    initialChar,
   } = opts;
 
   if (nodeId) {
@@ -307,7 +308,13 @@ export function openInlineEditor(opts) {
 
   container.appendChild(textarea);
   textarea.focus();
-  textarea.select();
+  if (initialChar) {
+    // Type-to-create: pre-fill with the triggering character, cursor at end
+    textarea.value = initialChar;
+    textarea.setSelectionRange(initialChar.length, initialChar.length);
+  } else {
+    textarea.select();
+  }
 
   let lastSyncedValue = currentValue;
   textarea.addEventListener("input", () => {
