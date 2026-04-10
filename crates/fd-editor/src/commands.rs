@@ -420,6 +420,7 @@ fn compute_inverse(engine: &SyncEngine, mutation: &GraphMutation) -> GraphMutati
                 constraints: old_constraints,
             }
         }
+        GraphMutation::ReverseEdge { id } => GraphMutation::ReverseEdge { id: *id },
     }
 }
 
@@ -1085,5 +1086,75 @@ rect @box {
 
         // No undo entry should have been created
         assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn undo_redo_reverse_edge() {
+        let input = "edge @e @a -> @b\n";
+        let viewport = Viewport {
+            width: 800.0,
+            height: 600.0,
+        };
+        let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+        let mut stack = CommandStack::new(100);
+
+        // Verify initial direction
+        {
+            let edge = engine
+                .graph
+                .edges
+                .iter()
+                .find(|e| e.id == NodeId::intern("e"))
+                .unwrap();
+            assert_eq!(edge.from.node_id().unwrap(), NodeId::intern("a"));
+            assert_eq!(edge.to.node_id().unwrap(), NodeId::intern("b"));
+        }
+
+        // Apply ReverseEdge
+        stack.execute(
+            &mut engine,
+            GraphMutation::ReverseEdge {
+                id: NodeId::intern("e"),
+            },
+            "reverse edge",
+        );
+
+        // Verify reversed direction
+        {
+            let edge = engine
+                .graph
+                .edges
+                .iter()
+                .find(|e| e.id == NodeId::intern("e"))
+                .unwrap();
+            assert_eq!(edge.from.node_id().unwrap(), NodeId::intern("b"));
+            assert_eq!(edge.to.node_id().unwrap(), NodeId::intern("a"));
+        }
+
+        // Undo
+        stack.undo(&mut engine);
+        {
+            let edge = engine
+                .graph
+                .edges
+                .iter()
+                .find(|e| e.id == NodeId::intern("e"))
+                .unwrap();
+            assert_eq!(edge.from.node_id().unwrap(), NodeId::intern("a"));
+            assert_eq!(edge.to.node_id().unwrap(), NodeId::intern("b"));
+        }
+
+        // Redo
+        stack.redo(&mut engine);
+        {
+            let edge = engine
+                .graph
+                .edges
+                .iter()
+                .find(|e| e.id == NodeId::intern("e"))
+                .unwrap();
+            assert_eq!(edge.from.node_id().unwrap(), NodeId::intern("b"));
+            assert_eq!(edge.to.node_id().unwrap(), NodeId::intern("a"));
+        }
     }
 }

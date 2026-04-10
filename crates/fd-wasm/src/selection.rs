@@ -483,6 +483,32 @@ impl FdCanvas {
         changed
     }
 
+    /// Reverses the direction of all currently selected edges. Returns true if reversed.
+    pub fn reverse_selected_edges(&mut self) -> bool {
+        if self.select_tool.selected.is_empty() {
+            return false;
+        }
+
+        let mutations: Vec<GraphMutation> = self
+            .select_tool
+            .selected
+            .iter()
+            .copied()
+            .filter(|id| self.engine.graph.edges.iter().any(|e| e.id == *id))
+            .map(|id| GraphMutation::ReverseEdge { id })
+            .collect();
+
+        if mutations.is_empty() {
+            return false;
+        }
+
+        let changed = self.apply_mutations(mutations);
+        if changed {
+            self.engine.flush_to_text();
+        }
+        changed
+    }
+
     /// Get the union bounding box of all currently selected nodes (including children).
     /// Returns `[x, y, width, height]` array, or `None` if selection is empty.
     pub fn get_selection_bounds(&self) -> Option<js_sys::Float64Array> {

@@ -85,7 +85,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R3.83** _(done)_: Type-to-create text — FigJam-style text entry; pressing a printable key while a shape/edge is selected opens inline editor with the triggering character pre-filled; creates centered text child (shape) or edge label (edge) if none exists; edits existing text if present; `initialChar` support in `openInlineEditor`
 - **R3.84** _(done)_: Center-snap with dashed highlight — dragging a text node within 20px of a shape/edge center shows a dashed orange `#FF9500` highlight with crosshair; on release, applies `CenterIn` constraint via `center_node_in()` without reparenting; new `get_center_snap()` WASM API returns JSON snap target info
 - **R3.85** _(done)_: Text-priority hit-test — text nodes always win over overlapping shape siblings in hit-testing regardless of document order; two-pass approach in `hit_test_node()` checks text children first, then non-text; `SpatialIndex` gives text nodes a z-order boost (+10,000) for consistent fast-path results
-
+- **R3.86** _(done)_: Edge Flip / Mirroring — reverse edge direction via `Shift+X` or context menu action; WASM `ReverseEdge` mutation securely swaps underlying AST topology while preserving style configurations and Undo lifecycle state
 #### R3b: Drawing Tools
 
 - **R3.3** _(done)_: Rectangle, ellipse, text, group tools with keyboard shortcuts (V/R/O/P/T) → [spec](specs/drawing-tools.md)
