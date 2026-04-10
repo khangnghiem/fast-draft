@@ -160,7 +160,7 @@ impl FdCanvas {
             props: fd_core::model::Properties::default(),
             use_styles: Default::default(),
             arrow: ArrowKind::End,
-            curve: CurveKind::Smooth,
+            curve: CurveKind::Straight,
             spec: None,
             animations: Default::default(),
             flow: None,

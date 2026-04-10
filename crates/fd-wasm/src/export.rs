@@ -56,6 +56,13 @@ impl FdCanvas {
         );
     }
 
+    /// Get center-snap target info during text node drag.
+    /// Returns JSON `{"target_id":"...","x":N,"y":N,"bx":N,"by":N,"bw":N,"bh":N}`
+    /// or empty string if no snap target nearby.
+    pub fn get_center_snap(&self) -> String {
+        self.compute_center_snap()
+    }
+
     /// Render only the selected nodes (and their children) to the given context.
     pub fn render_export(&self, ctx: &CanvasRenderingContext2d, offset_x: f64, offset_y: f64) {
         if self.select_tool.selected.is_empty() {

@@ -1276,7 +1276,7 @@ impl Tool for ArrowTool {
                     props,
                     use_styles: Default::default(),
                     arrow: ArrowKind::End,
-                    curve: CurveKind::Smooth,
+                    curve: CurveKind::Straight,
                     spec: None,
                     animations: Default::default(),
                     flow: None,

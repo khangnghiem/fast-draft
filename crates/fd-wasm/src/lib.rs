@@ -392,7 +392,7 @@ impl FdCanvas {
                 props: Default::default(),
                 use_styles: Default::default(),
                 arrow: ArrowKind::End,
-                curve: CurveKind::Smooth,
+                curve: CurveKind::Straight,
                 spec: None,
                 animations: Default::default(),
                 flow: None,
@@ -942,6 +942,130 @@ impl FdCanvas {
         }
 
         guides
+    }
+
+    /// Compute center-snap target when dragging a text node near a shape/edge center.
+    /// Returns JSON with the snap target info, or empty string if no snap.
+    pub(crate) fn compute_center_snap(&self) -> String {
+        use fd_core::model::{EdgeAnchor, NodeKind};
+
+        // Only activate when dragging with select tool
+        let is_dragging = self.active_tool == ToolKind::Select && self.pressed_id.is_some();
+        if !is_dragging {
+            return String::new();
+        }
+
+        let selected_id = match self.select_tool.first_selected() {
+            Some(id) => id,
+            None => return String::new(),
+        };
+
+        // Only snap text nodes
+        let selected_idx = match self.engine.graph.index_of(selected_id) {
+            Some(idx) => idx,
+            None => return String::new(),
+        };
+        if !matches!(
+            self.engine.graph.graph[selected_idx].kind,
+            NodeKind::Text { .. }
+        ) {
+            return String::new();
+        }
+
+        let sb = match self.engine.current_bounds().get(&selected_idx) {
+            Some(b) => b,
+            None => return String::new(),
+        };
+        let s_cx = sb.x + sb.width / 2.0;
+        let s_cy = sb.y + sb.height / 2.0;
+
+        let snap_threshold = 5.0_f32;
+        let mut best_dist = f32::MAX;
+        let mut best_result = String::new();
+
+        // Check node centers (shapes only)
+        for (&idx, b) in self.engine.current_bounds() {
+            if idx == selected_idx || idx == self.engine.graph.root {
+                continue;
+            }
+            let node = &self.engine.graph.graph[idx];
+            let is_shape = matches!(
+                node.kind,
+                NodeKind::Rect { .. } | NodeKind::Ellipse { .. } | NodeKind::Frame { .. }
+            );
+            if !is_shape {
+                continue;
+            }
+
+            let o_cx = b.x + b.width / 2.0;
+            let o_cy = b.y + b.height / 2.0;
+            let dx = s_cx - o_cx;
+            let dy = s_cy - o_cy;
+            let dist = (dx * dx + dy * dy).sqrt();
+
+            if dist < snap_threshold && dist < best_dist {
+                best_dist = dist;
+                best_result = format!(
+                    r#"{{"target_id":"{}","x":{},"y":{},"bx":{},"by":{},"bw":{},"bh":{}}}"#,
+                    node.id.as_str(),
+                    o_cx,
+                    o_cy,
+                    b.x,
+                    b.y,
+                    b.width,
+                    b.height
+                );
+            }
+        }
+
+        // Check edge midpoints
+        for edge in &self.engine.graph.edges {
+            let start = match &edge.from {
+                EdgeAnchor::Node(nid) => self
+                    .engine
+                    .graph
+                    .index_of(*nid)
+                    .and_then(|idx| self.engine.bounds.get(&idx))
+                    .map(|b| (b.x + b.width / 2.0, b.y + b.height / 2.0)),
+                EdgeAnchor::Point(x, y) => Some((*x, *y)),
+            };
+            let end = match &edge.to {
+                EdgeAnchor::Node(nid) => self
+                    .engine
+                    .graph
+                    .index_of(*nid)
+                    .and_then(|idx| self.engine.bounds.get(&idx))
+                    .map(|b| (b.x + b.width / 2.0, b.y + b.height / 2.0)),
+                EdgeAnchor::Point(x, y) => Some((*x, *y)),
+            };
+
+            if let (Some((x1, y1)), Some((x2, y2))) = (start, end) {
+                let mid_x = (x1 + x2) / 2.0;
+                let mid_y = (y1 + y2) / 2.0;
+                let dx = s_cx - mid_x;
+                let dy = s_cy - mid_y;
+                let dist = (dx * dx + dy * dy).sqrt();
+
+                if dist < snap_threshold && dist < best_dist {
+                    best_dist = dist;
+                    // For edges, bounds are a small rect around the midpoint
+                    let edge_len = ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt();
+                    let hw = (edge_len / 2.0).min(40.0);
+                    best_result = format!(
+                        r#"{{"target_id":"{}","x":{},"y":{},"bx":{},"by":{},"bw":{},"bh":{},"edge":true}}"#,
+                        edge.id.as_str(),
+                        mid_x,
+                        mid_y,
+                        mid_x - hw,
+                        mid_y - 15.0,
+                        hw * 2.0,
+                        30.0
+                    );
+                }
+            }
+        }
+
+        best_result
     }
 }
 
