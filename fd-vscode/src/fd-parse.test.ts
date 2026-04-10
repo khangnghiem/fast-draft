@@ -428,10 +428,20 @@ describe("escapeHtml", () => {
     expect(escapeHtml('"hello"')).toBe("&quot;hello&quot;");
   });
 
+  it("escapes single quotes", () => {
+    expect(escapeHtml("'hello'")).toBe("&#39;hello&#39;");
+  });
+
   it("escapes all special chars together", () => {
-    expect(escapeHtml('<a href="x">&')).toBe(
-      "&lt;a href=&quot;x&quot;&gt;&amp;"
+    expect(escapeHtml('<a href="x">&\'')).toBe(
+      "&lt;a href=&quot;x&quot;&gt;&amp;&#39;"
     );
+  });
+
+  it("handles non-string inputs safely", () => {
+    expect(escapeHtml(123 as any)).toBe("123");
+    expect(escapeHtml(null as any)).toBe("null");
+    expect(escapeHtml(undefined as any)).toBe("undefined");
   });
 });
 

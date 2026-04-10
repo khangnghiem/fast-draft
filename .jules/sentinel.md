@@ -10,3 +10,7 @@
 **Vulnerability:** The Cloudflare Pages Function at `functions/api/ai.js` had an overly permissive CORS configuration (`Access-Control-Allow-Origin: *`), potentially allowing external sites to make cross-origin requests.
 **Learning:** Hardcoded wildcard `*` CORS configurations expose APIs to misuse from unauthorized domains. Because the API needs to be accessible from both the web playground (`https://fast-draft.com`) and the VS Code extension webviews (`vscode-webview://`), a dynamic CORS handler is required.
 **Prevention:** Avoid `*` in CORS origins. Implement dynamic CORS validation that checks the incoming `Origin` header against an explicitly defined whitelist (or prefix list, like `vscode-webview://`). Always include `Vary: Origin` in the response when returning dynamically set `Access-Control-Allow-Origin` headers.
+## 2024-05-18 - XSS Fixes in `escapeHtml` implementations
+**Vulnerability:** Weak `escapeHtml` functions failing to escape single quotes, alongside vulnerable DOM-based `div.innerHTML` approaches in the browser environment, allowing potential attribute-based Cross-Site Scripting (XSS).
+**Learning:** `div.textContent` serialization is not inherently safe for contexts involving HTML attributes, as it fails to properly escape quotes in a unified manner across all browsers. Uncast text parameters can also trigger type exceptions if passed values like `null`.
+**Prevention:** Unify all `escapeHtml` utilities to use an explicit `String(text)` cast and explicitly run `.replace` on `&`, `<`, `>`, `"`, and `'`.
