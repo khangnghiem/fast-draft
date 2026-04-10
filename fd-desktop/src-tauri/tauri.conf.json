@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "identifier": "com.fast-draft.desktop",
   "build": {
-    "frontendDist": "../../site",
+    "frontendDist": "dist",
     "devUrl": "http://localhost:1420",
     "beforeDevCommand": "cd ../site && npx -y serve -l 1420 -s --no-clipboard --no-port-switching &",
-    "beforeBuildCommand": ""
+    "beforeBuildCommand": "bash src-tauri/scripts/prebuild.sh"
   },
   "app": {
     "windows": [
@@ -36,8 +36,49 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "category": "DeveloperTool",
+    "shortDescription": "Design as Code — AI-native visual editor",
+    "longDescription": "Fast Draft is an AI-native design tool that bridges code and canvas. Write .fd markup to create visual designs, or draw on the canvas and get clean code back. Features include a constraint-based layout engine, bidirectional sync, and an AI design agent.",
+    "copyright": "© 2026 Khang Nghiêm",
+    "fileAssociations": [
+      {
+        "ext": ["fd"],
+        "mimeType": "text/plain",
+        "description": "Fast Draft Document",
+        "role": "Editor"
+      }
+    ],
     "macOS": {
-      "minimumSystemVersion": "10.15"
+      "minimumSystemVersion": "10.15",
+      "dmg": {
+        "appPosition": { "x": 180, "y": 170 },
+        "applicationFolderPosition": { "x": 480, "y": 170 },
+        "windowSize": { "width": 660, "height": 400 }
+      },
+      "signingIdentity": null,
+      "entitlements": null,
+      "frameworks": []
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "nsis": {
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico",
+        "headerImage": null,
+        "sidebarImage": null
+      }
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": true
+      },
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0"],
+        "section": "graphics",
+        "priority": "optional"
+      }
     },
     "createUpdaterArtifacts": true
   },
