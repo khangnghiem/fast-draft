@@ -191,7 +191,7 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 ### R6: Platform Targets
 
 - **R6.1** _(done)_: VS Code / Cursor IDE custom editor extension (published)
-- **R6.2** _(done)_: Desktop app via Tauri v2 (macOS, Windows, Linux) — wraps shared `site/` web playground in native window; native file dialogs (⌘O/⌘S/⌘⇧S), recent files list; WASM rendering via Canvas2D in Tauri WebView; `fd-desktop/` crate with 5 IPC commands; `desktop.yml` CI workflow for cross-platform builds
+- **R6.2** _(done)_: Desktop app via Tauri v2 (macOS, Windows, Linux) — wraps shared `site/` web playground in native window; native file dialogs (⌘O/⌘S/⌘⇧S), recent files list; WASM rendering via Canvas2D in Tauri WebView; `fd-desktop/` crate with 5 IPC commands; `desktop.yml` CI workflow for cross-platform builds; native installer configuration (.app, .dmg, NSIS, AppImage) with icons, offline-first direct `invoke()` IPC features (dialog, process, updater), and `.fd` file associations
 - **R6.3** _(planned)_: iOS app — Swift + Rust via UniFFI; `CoreGraphicsBackend` for rendering; full Apple Pencil Pro support (squeeze R3.10, barrel roll, pressure, tilt, hover via `UIPencilInteraction` + `UITouch`); `InputEvent` mapping in ~50 lines of Swift; prerequisite: R5.9
 - **R6.4** _(future)_: Web app (standalone browser app)
 - **R6.5** _(done)_: Cloudflare Pages landing site at [fast-draft.com](https://fast-draft.com) with live WASM playground, custom domain, and auto-deploy via GitHub Actions (`pages.yml`) → Cloudflare Pages
@@ -288,8 +288,9 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 | R1.20       | `roundtrip_edge_point_anchors`, `roundtrip_edge_mixed_anchors`, `parse_edge_omitted_anchors_default`                                                                                                                                                               | ✅ 3 tests                     |
 | R3.48       | `eraser_tool_lifecycle`, `eraser_tool_clear_resets_state`, `eraser_tool_pointerdown_clears_previous_ids`, `erase_child_preserves_group`, `erase_last_child_leaves_empty_group`, `erase_nested_cascade`                                                             | ✅ 6 tests                     |
 | R5.1–R5.8   | `hit::tests::*`, `resolve::tests::*`, `render2d::tests::*`                                                                                                                                                                                                         | ✅ 3 hit + 6 layout + 3 render |
+| R6.2        | `commands_tests::*`                                                                                                                                                                                                                                                | ✅ 12 tests                    |
 
-**Total**: 186 Rust tests + 188 TypeScript tests = **374 tests**
+**Total**: 198 Rust tests + 188 TypeScript tests = **386 tests**
 
 ## Requirement Index
 
