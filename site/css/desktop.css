@@ -1,10 +1,6 @@
 /* ─── Desktop (Tauri) Overrides ─── */
 /* Applied only when running inside Tauri webview */
 
-/* Title bar overlay: add drag region + traffic light padding */
-.tauri-desktop #canvas-content {
-  /* macOS traffic lights sit ~52px from top-left */
-}
 
 /* Make the top area draggable (window chrome) */
 .tauri-desktop .canvas-chrome-left,
