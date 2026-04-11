@@ -18,6 +18,9 @@
 -->
 ## Completed Requirements
 
+### v0.11.369 — Fix: Node Selection on Creation
+- **Bug Fixes**: Resolved a critical layout engine regression where newly drawn shapes (`Text`, `Rect`, `Ellipse`) were not automatically appended to the active selection state in `crates/fd-wasm/src/pointer.rs`. This correctly restored `Text` node immediate inline-editing out-of-the-box and guarantees that Smart Defaults (Fill, Stroke) naturally bind to new nodes without extra clicks.
+
 ### v0.11.368 — Fix: Automated Cache Busting (CDN)
 - **Code Health Fixes**: Created the `scripts/bump-version.mjs` script to automatically synchronize cache-busting query strings in `site/index.html` with the master version defined in `fd-vscode/package.json`. This completely resolves the stale CDN cache issue where Web Playground users did not immediately receive new features or layout logic due to Cloudflare's aggressive TTL edge cache. The YOLO workflow has been natively wired to trigger this deployment step prior to merge.
 
