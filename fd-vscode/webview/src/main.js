@@ -101,7 +101,18 @@ async function main() {
     setupAnnotationCard();
     setupContextMenu();
     setupPropertiesPanel();
-    setupInlineEditor();
+    setupInlineEditor({
+      canvasEl: canvas,
+      container,
+      renderFn: render,
+      syncFn: syncTextToExtension,
+      updatePanelFn: updatePropertiesPanel,
+      getPanX: () => panX,
+      getPanY: () => panY,
+      getZoom: () => zoomLevel,
+      screenToScene: screenToScene,
+      fdCanvas: () => fdCanvas
+    });
     setupAlignGrid();
     setupPropsActions();
     setupDragAndDrop();

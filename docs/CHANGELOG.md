@@ -18,6 +18,9 @@
 -->
 ## Completed Requirements
 
+### v0.11.367 — Architecture: Eradicate inline-edit.js Duplication (R3)
+- **Code Health Fixes**: Completely eradicated the duplicated `fd-vscode/webview/src/inline-edit.js` file, resolving the technical debt of build-script shadowing. The VS Code webview now securely imports and utilizes the unified, single-source-of-truth `site/canvas-core/inline-edit.js` module perfectly via explicit `opts` payload dispatch during webview initialization.
+
 ### v0.11.366 — Hotfix: Webview API Signature Drift (R3)
 - **Code Health Fixes**: Synchronized the `openInlineEditor` function signature inside the VS Code webview module (`inline-edit.js`) to natively correctly accept the unified `opts` object. This resolves an object-passing crash when auto-triggering the inline editor via the `Text` tool inside the IDE.
 
