@@ -373,6 +373,7 @@ function setupPointerEvents() {
     const x = ((e.clientX - rect.left) - panX) / zoomLevel;
     const y = ((e.clientY - rect.top) - panY) / zoomLevel;
     const isAltUp = e.altKey || modAltHeld;
+    const prevToolName = fdCanvas.get_tool_name();
     const resultJson = fdCanvas.handle_pointer_up(
       x,
       y,
@@ -385,6 +386,24 @@ function setupPointerEvents() {
     if (result.changed) {
       render();
       syncTextToExtension();
+    }
+
+    // ── Text tool: auto-open inline editor ──
+    if (result.toolSwitched && prevToolName === 'text') {
+      const newId = fdCanvas.get_selected_id();
+      if (newId) {
+        const container = document.getElementById('inline-overlay') || canvas.parentNode;
+        setTimeout(() => {
+          openInlineEditor({
+            nodeId: newId, propKey: 'content',
+            currentValue: 'Text',
+            fdCanvas, canvasEl: canvas, container,
+            renderFn: render, syncFn: syncTextToExtension,
+            updatePanelFn: updatePropertiesPanel,
+            panX, panY, zoomLevel,
+          });
+        }, 50);
+      }
     }
     // Auto-switch toolbar/cursor when tool changes (e.g. after drawing)
     if (result.toolSwitched) {

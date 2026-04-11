@@ -5316,6 +5316,8 @@ async function initPlayground() {
       }
       activeCenterSnap = null;
 
+      const prevToolName = fdCanvas.get_tool_name();
+
       const resultJson = fdCanvas.handle_pointer_up(
         x, y, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
       );
@@ -5340,6 +5342,24 @@ async function initPlayground() {
             renderDirty = true;
             syncCanvasToEditor();
           } catch (_) { /* prop not settable */ }
+        }
+      }
+
+      // Text tool: auto-open inline editor after node creation
+      if (result.toolSwitched && prevToolName === 'text') {
+        const newId = fdCanvas.get_selected_id();
+        if (newId) {
+          const container = document.getElementById('inline-overlay') || canvas.parentNode;
+          setTimeout(() => {
+            coreOpenInlineEditor({
+              nodeId: newId, propKey: 'content',
+              currentValue: 'Text',
+              fdCanvas, canvasEl: canvas, container,
+              renderFn: renderCanvas, syncFn: syncCanvasToEditor,
+              updatePanelFn: updatePropertiesPanel,
+              panX, panY, zoomLevel,
+            });
+          }, 50);
         }
       }
 
