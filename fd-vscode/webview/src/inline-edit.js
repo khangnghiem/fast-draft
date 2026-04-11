@@ -217,7 +217,17 @@ function measureAllTextNodes() {
 /**
  * Show a floating textarea over the node for in-place text editing.
  */
-function openInlineEditor(nodeId, propKey, currentValue, parentShapeId, createCtx) {
+function openInlineEditor(nodeIdOrOpts, propKey, currentValue, parentShapeId, createCtx) {
+  let nodeId = nodeIdOrOpts;
+  if (arguments.length === 1 && typeof nodeIdOrOpts === 'object' && nodeIdOrOpts !== null) {
+    const opts = nodeIdOrOpts;
+    nodeId = opts.nodeId;
+    propKey = opts.propKey;
+    currentValue = opts.currentValue;
+    parentShapeId = opts.parentShapeId;
+    createCtx = opts.createCtx;
+  }
+
   if (inlineEditorActive) return;
 
   if (nodeId) {

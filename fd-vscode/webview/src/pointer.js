@@ -392,16 +392,8 @@ function setupPointerEvents() {
     if (result.toolSwitched && prevToolName === 'text') {
       const newId = fdCanvas.get_selected_id();
       if (newId) {
-        const container = document.getElementById('inline-overlay') || canvas.parentNode;
         setTimeout(() => {
-          openInlineEditor({
-            nodeId: newId, propKey: 'content',
-            currentValue: 'Text',
-            fdCanvas, canvasEl: canvas, container,
-            renderFn: render, syncFn: syncTextToExtension,
-            updatePanelFn: updatePropertiesPanel,
-            panX, panY, zoomLevel,
-          });
+          openInlineEditor(newId, "content", "Text");
         }, 50);
       }
     }
