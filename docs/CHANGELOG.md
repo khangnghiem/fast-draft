@@ -18,6 +18,9 @@
 -->
 ## Completed Requirements
 
+### v0.11.365 — Inline Text Creation (R3.3)
+- **Inline Text Creation**: Refined the `Text` tool interactions across both the Web Playground and VS Code extension. Clicking the canvas with the Text tool now immediately focuses and opens the WYSIWYG inline editor with the default text `"Text"` highlighted, matching the expected interaction cadence of professional design tools (FigJam/Miro).
+
 ### v0.11.364 — UI Polish & Bugfixes (R3)
 - **Code Health Fixes**: Suppressed center-snapping visual noise during text node resizing (`get_center_snap` guard), corrected a ⌘+Drag reparent selection mismatch where `hit_test_node_excluding` missed text-priority elevation over siblings, added `expect()` to tests to fail loudly on layout omissions, and injected structural nesting hint (`Hold ⌘`) directly into the canvas Toast notification.
 
