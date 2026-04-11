@@ -392,8 +392,16 @@ function setupPointerEvents() {
     if (result.toolSwitched && prevToolName === 'text') {
       const newId = fdCanvas.get_selected_id();
       if (newId) {
+        const container = document.getElementById('canvas-container') || canvas.parentNode;
         setTimeout(() => {
-          openInlineEditor(newId, "content", "Text");
+          openInlineEditor({
+            nodeId: newId, propKey: 'content',
+            currentValue: 'Text',
+            fdCanvas, canvasEl: canvas, container,
+            renderFn: render, syncFn: syncTextToExtension,
+            updatePanelFn: updatePropertiesPanel,
+            panX, panY, zoomLevel,
+          });
         }, 50);
       }
     }

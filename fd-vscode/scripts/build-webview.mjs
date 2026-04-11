@@ -49,7 +49,6 @@ const MODULE_ORDER = [
   'shortcuts.js',   // Extension-specific shortcut handlers
   'context-menu.js',
   'panels.js',
-  'inline-edit.js',
   'navigation.js',
   'clipboard.js',   // Extension-specific clipboard (postMessage bridge)
   'drag-drop.js',
