@@ -1863,7 +1863,101 @@ text @paragraph "This is a fairly long paragraph of text that needs to wrap to m
     }
 }
 
-// ─── Multi-Delete Reproduction Tests ────────────────────────────────────
+#[test]
+fn sync_resize_text_anchors_origin_on_left_handle_drag() {
+    // Dragging the LEFT resize handle of a text node should shift bounds.x
+    // by the dx delta (the left edge moves, the right edge stays anchored).
+    // This is the regression test for v0.11.370 — previously bounds.x was
+    // never updated for text nodes, causing visual desync (symmetrical drift).
+    let input = r#"
+text @note "Design as Code" {
+  font: "Inter" 400 16
+  x: 200
+  y: 100
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let note_id = NodeId::intern("note");
+    let note_idx = engine.graph.index_of(note_id).unwrap();
+
+    let x_before = engine.bounds[&note_idx].x;
+
+    // Simulate dragging the left handle 30px to the left:
+    // dx = -30 (origin shifts left), width grows by 30
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        id: note_id,
+        width: engine.bounds[&note_idx].width + 30.0,
+        height: 22.0,
+        dx: -30.0,
+        dy: 0.0,
+    });
+
+    let bounds_after = engine.bounds[&note_idx];
+
+    // bounds.x should have shifted left by 30px
+    assert!(
+        (bounds_after.x - (x_before - 30.0)).abs() < 0.01,
+        "text bounds.x should shift by dx: expected {}, got {}",
+        x_before - 30.0,
+        bounds_after.x
+    );
+
+    // max_width should be set to the new width
+    match &engine.graph.graph[note_idx].kind {
+        NodeKind::Text { max_width, .. } => {
+            assert!(max_width.is_some(), "max_width should be set after resize");
+        }
+        _ => panic!("expected Text"),
+    }
+}
+
+#[test]
+fn sync_resize_text_right_handle_keeps_origin() {
+    // Dragging the RIGHT handle should NOT shift bounds.x (dx = 0).
+    // The right edge moves, the left edge (origin) stays anchored.
+    let input = r#"
+text @note "Hello" {
+  font: "Inter" 400 14
+  x: 100
+  y: 50
+}
+"#;
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let mut engine = SyncEngine::from_text(input, viewport).unwrap();
+    let note_id = NodeId::intern("note");
+    let note_idx = engine.graph.index_of(note_id).unwrap();
+
+    let x_before = engine.bounds[&note_idx].x;
+
+    // Right handle drag: dx = 0, width changes
+    engine.apply_mutation(GraphMutation::ResizeNode {
+        id: note_id,
+        width: 200.0,
+        height: 20.0,
+        dx: 0.0,
+        dy: 0.0,
+    });
+
+    let bounds_after = engine.bounds[&note_idx];
+    assert!(
+        (bounds_after.x - x_before).abs() < 0.01,
+        "text bounds.x should NOT shift for right-handle drag: expected {}, got {}",
+        x_before,
+        bounds_after.x
+    );
+    assert!(
+        (bounds_after.width - 200.0).abs() < 0.01,
+        "width should be 200: got {}",
+        bounds_after.width
+    );
+}
 
 #[test]
 fn sync_delete_multiple_siblings() {
