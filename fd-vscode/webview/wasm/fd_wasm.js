@@ -1407,6 +1407,14 @@ export class FdCanvas {
         wasm.fdcanvas_resize(this.__wbg_ptr, width, height);
     }
     /**
+     * Reverses the direction of all currently selected edges. Returns true if reversed.
+     * @returns {boolean}
+     */
+    reverse_selected_edges() {
+        const ret = wasm.fdcanvas_reverse_selected_edges(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Search the scene graph for nodes matching the query.
      *
      * `mode`: `"smart"` (default), `"exact"`, or `"fuzzy"`.

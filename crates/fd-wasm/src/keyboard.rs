@@ -149,6 +149,7 @@ impl FdCanvas {
             ShortcutAction::Duplicate => (self.duplicate_selected(), false),
             ShortcutAction::Group => (self.group_selected(), false),
             ShortcutAction::Ungroup => (self.ungroup_selected(), false),
+            ShortcutAction::ReverseEdge => (self.reverse_selected_edges(), false),
             // Screenbrush: ⌘Delete = clear selected
             ShortcutAction::ClearAll => (self.delete_selected(), false),
             ShortcutAction::Deselect => {
@@ -303,6 +304,7 @@ pub(crate) fn action_to_name(action: ShortcutAction) -> &'static str {
         ShortcutAction::Duplicate => "duplicate",
         ShortcutAction::Group => "group",
         ShortcutAction::Ungroup => "ungroup",
+        ShortcutAction::ReverseEdge => "reverseEdge",
         ShortcutAction::Copy => "copy",
         ShortcutAction::Cut => "cut",
         ShortcutAction::Paste => "paste",

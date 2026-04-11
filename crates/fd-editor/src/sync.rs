@@ -606,6 +606,11 @@ impl SyncEngine {
                     }
                 }
             }
+            GraphMutation::ReverseEdge { id } => {
+                if let Some(edge) = self.graph.edges.iter_mut().find(|e| e.id == id) {
+                    std::mem::swap(&mut edge.from, &mut edge.to);
+                }
+            }
         }
 
         self.text_dirty = true;
@@ -1172,6 +1177,10 @@ pub enum GraphMutation {
     SetConstraints {
         id: NodeId,
         constraints: Vec<Constraint>,
+    },
+    /// Reverses the direction of an edge by swapping from/to anchors.
+    ReverseEdge {
+        id: NodeId,
     },
 }
 

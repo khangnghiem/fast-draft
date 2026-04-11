@@ -2367,6 +2367,11 @@ function setupContextMenu() {
       case 'ungroup':
         changed = fdCanvas.ungroup_selected();
         break;
+      case 'edge-reverse':
+        if (fdCanvas.reverse_selected_edges) {
+          changed = fdCanvas.reverse_selected_edges();
+        }
+        break;
       case 'rename': {
         const oldId = contextMenuNodeId;
         const newId = prompt(`Rename @${oldId} to:`, oldId);

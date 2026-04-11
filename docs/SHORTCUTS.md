@@ -43,6 +43,7 @@
 | `⌘A`                   | Select all               |
 | `⌘G`                   | Group selected           |
 | `⌘⇧G`                  | Ungroup                  |
+| `⇧X`                   | Reverse edge direction   |
 | `⌘C`                   | Copy                     |
 | `⌘X`                   | Cut                      |
 | `⌘V`                   | Paste                    |

@@ -18,6 +18,9 @@
 -->
 ## Completed Requirements
 
+### v0.11.363 — Edge Mirror/Flip (R3.86)
+- **Edge Direction Flip (R3.86)**: The `Shift+X` globally mapped keyboard shortcut or the "Reverse Direction" Context Menu action instantly flips the flow of any selected edge. The WASM backend's new `ReverseEdge` mutation perfectly preserves styling details, constraints, and arrow endpoints while securely swapping the underlying topological AST nodes inside an Undo-safe lifecycle.
+
 ### v0.11.362 — Text Priority, Center-Snap Fix, Toolbar Fix (R3.84, R3.85)
 - **Text Priority Hit-Test (R3.85)**: Two-pass hit test + SpatialIndex z-order boost: text nodes always win over overlapping shape siblings regardless of document order. Ensures clicking on a text within a shape's bounding box selects the text, not the underlying shape. 2 regression tests.
 - **Center-Snap Threshold (R3.84 fix)**: Increased snap threshold from 5px → 20px scene-space for a much more forgiving snap experience when dragging text nodes near shape/edge centers.

@@ -4787,6 +4787,11 @@ function doNodeAction(action, el) {
     if (result.changed) { bumpGeneration(); render(); syncTextToExtension(); }
     return;
   }
+  if (action === 'edge-reverse') {
+    const changed = fdCanvas.reverse_selected_edges();
+    if (changed) { render(); syncTextToExtension(); }
+    return;
+  }
   if (action === 'delete') {
     fdCanvas.select_by_id(contextMenuNodeId);
     const changed = fdCanvas.delete_selected();

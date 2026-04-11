@@ -63,6 +63,9 @@ pub enum ShortcutAction {
     Ungroup,
     LockSelection,
 
+    // ── Edge ──
+    ReverseEdge,
+
     // ── Style ──
     /// Copy selected node's style to clipboard (⌥⌘C).
     CopyStyle,
@@ -147,6 +150,7 @@ impl ShortcutMap {
         if shift {
             return match key {
                 "?" => Some(ShortcutAction::ShowHelp),
+                "x" | "X" => Some(ShortcutAction::ReverseEdge),
                 _ => None,
             };
         }
