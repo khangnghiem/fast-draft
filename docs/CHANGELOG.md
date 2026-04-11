@@ -18,6 +18,9 @@
 -->
 ## Completed Requirements
 
+### v0.11.366 — Hotfix: Webview API Signature Drift (R3)
+- **Code Health Fixes**: Synchronized the `openInlineEditor` function signature inside the VS Code webview module (`inline-edit.js`) to natively correctly accept the unified `opts` object. This resolves an object-passing crash when auto-triggering the inline editor via the `Text` tool inside the IDE.
+
 ### v0.11.365 — Inline Text Creation (R3.3)
 - **Inline Text Creation**: Refined the `Text` tool interactions across both the Web Playground and VS Code extension. Clicking the canvas with the Text tool now immediately focuses and opens the WYSIWYG inline editor with the default text `"Text"` highlighted, matching the expected interaction cadence of professional design tools (FigJam/Miro).
 
