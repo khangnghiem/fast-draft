@@ -283,11 +283,27 @@ fn hit_test_node_excluding(
 
     let children = graph.children(idx);
 
+    // Two-pass: text children first, then non-text (mirrors hit_test_node)
     for &child_idx in children.iter().rev() {
         if excluded.contains(&child_idx) {
             continue;
         }
-        if let Some(hit) = hit_test_node_excluding(graph, child_idx, bounds, px, py, excluded) {
+        let child = &graph.graph[child_idx];
+        if matches!(child.kind, NodeKind::Text { .. })
+            && let Some(hit) = hit_test_node_excluding(graph, child_idx, bounds, px, py, excluded)
+        {
+            return Some(hit);
+        }
+    }
+
+    for &child_idx in children.iter().rev() {
+        if excluded.contains(&child_idx) {
+            continue;
+        }
+        let child = &graph.graph[child_idx];
+        if !matches!(child.kind, NodeKind::Text { .. })
+            && let Some(hit) = hit_test_node_excluding(graph, child_idx, bounds, px, py, excluded)
+        {
             return Some(hit);
         }
     }
@@ -812,16 +828,15 @@ rect @bg {
 
         // Click at (50, 50) where both nodes overlap — text should win
         let label_idx = graph.index_of(NodeId::intern("label")).unwrap();
-        if let Some(lb) = bounds.get(&label_idx) {
-            let cx = lb.x + lb.width / 2.0;
-            let cy = lb.y + lb.height / 2.0;
-            let result = hit_test(&graph, &bounds, cx, cy);
-            assert_eq!(
-                result,
-                Some(NodeId::intern("label")),
-                "Text node should be prioritized over shape sibling"
-            );
-        }
+        let lb = bounds.get(&label_idx).expect("label bounds must exist");
+        let cx = lb.x + lb.width / 2.0;
+        let cy = lb.y + lb.height / 2.0;
+        let result = hit_test(&graph, &bounds, cx, cy);
+        assert_eq!(
+            result,
+            Some(NodeId::intern("label")),
+            "Text node should be prioritized over shape sibling"
+        );
     }
 
     #[test]
@@ -840,16 +855,15 @@ rect @bg { w: 200 h: 200 x: 0 y: 0 }
         let index = SpatialIndex::build(&graph, &bounds);
 
         let label_idx = graph.index_of(NodeId::intern("label")).unwrap();
-        if let Some(lb) = bounds.get(&label_idx) {
-            let cx = lb.x + lb.width / 2.0;
-            let cy = lb.y + lb.height / 2.0;
-            let result = index.query_point(cx, cy);
-            assert_eq!(
-                result,
-                Some(NodeId::intern("label")),
-                "SpatialIndex should prioritize text over shape"
-            );
-        }
+        let lb = bounds.get(&label_idx).expect("label bounds must exist");
+        let cx = lb.x + lb.width / 2.0;
+        let cy = lb.y + lb.height / 2.0;
+        let result = index.query_point(cx, cy);
+        assert_eq!(
+            result,
+            Some(NodeId::intern("label")),
+            "SpatialIndex should prioritize text over shape"
+        );
     }
 
     // ─── Edge hit-testing tests ──────────────────────────────────────

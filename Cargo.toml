@@ -5,7 +5,7 @@ members = [
     "crates/fd-render",
     "crates/fd-editor",
     "crates/fd-wasm",
-    "crates/fd-lsp",
+    "crates/fd-lsp", "crates/fdraft",
 ]
 exclude = [
     "editors/zed",
@@ -61,3 +61,6 @@ ropey = "1.6"
 
 # Testing
 pretty_assertions = "1.4"
+
+# CLI
+clap = { version = "4.5.20", features = ["derive"] }

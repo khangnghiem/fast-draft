@@ -949,9 +949,9 @@ impl FdCanvas {
     pub(crate) fn compute_center_snap(&self) -> String {
         use fd_core::model::{EdgeAnchor, NodeKind};
 
-        // Only activate when dragging with select tool
+        // Only activate when dragging (not resizing) with select tool
         let is_dragging = self.active_tool == ToolKind::Select && self.pressed_id.is_some();
-        if !is_dragging {
+        if !is_dragging || self.select_tool.resize_handle.is_some() {
             return String::new();
         }
 
