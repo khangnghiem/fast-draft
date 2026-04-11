@@ -18,6 +18,9 @@
 -->
 ## Completed Requirements
 
+### v0.11.368 — Fix: Automated Cache Busting (CDN)
+- **Code Health Fixes**: Created the `scripts/bump-version.mjs` script to automatically synchronize cache-busting query strings in `site/index.html` with the master version defined in `fd-vscode/package.json`. This completely resolves the stale CDN cache issue where Web Playground users did not immediately receive new features or layout logic due to Cloudflare's aggressive TTL edge cache. The YOLO workflow has been natively wired to trigger this deployment step prior to merge.
+
 ### v0.11.367 — Architecture: Eradicate inline-edit.js Duplication (R3)
 - **Code Health Fixes**: Completely eradicated the duplicated `fd-vscode/webview/src/inline-edit.js` file, resolving the technical debt of build-script shadowing. The VS Code webview now securely imports and utilizes the unified, single-source-of-truth `site/canvas-core/inline-edit.js` module perfectly via explicit `opts` payload dispatch during webview initialization.
 

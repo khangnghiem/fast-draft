@@ -33,7 +33,7 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 10. **Pre-push**: `git config core.hooksPath .githooks`
 11. **Check branch**: `git branch --show-current` (never commit to main)
 12. **Branch**: `git checkout -b feat/<name>`
-13. **Version bump**: In `fd-vscode/package.json` if needed.
+13. **Version bump**: In `fd-vscode/package.json` if needed, then run `node scripts/bump-version.mjs` to sync it to `site/index.html`.
 14. **Docs**: Update `CHANGELOG.md` and `REQUIREMENTS.md`.
 15. **Commit**: `git add -A && git commit -m "..."`
 16. **Push**: `git push -u origin HEAD`
