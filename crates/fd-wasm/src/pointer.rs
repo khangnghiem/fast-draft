@@ -158,7 +158,20 @@ impl FdCanvas {
                 vec![]
             }
         };
+        let mut added_ids = Vec::new();
+        for m in &mutations {
+            match m {
+                fd_editor::sync::GraphMutation::AddNode { node, .. } => added_ids.push(node.id),
+                fd_editor::sync::GraphMutation::AddEdge { edge } => added_ids.push(edge.id),
+                _ => {}
+            }
+        }
         let changed = self.apply_mutations(mutations);
+        if !added_ids.is_empty() {
+            self.select_tool.selected.clear();
+            self.select_tool.visual_highlight.clear();
+            self.select_tool.selected.extend(added_ids);
+        }
 
         // Alt+click on select tool: record position for deferred duplication.
         // Actual clone happens in handle_pointer_move after ≥3px of movement
@@ -540,7 +553,20 @@ impl FdCanvas {
                 vec![]
             }
         };
+        let mut added_ids = Vec::new();
+        for m in &mutations {
+            match m {
+                fd_editor::sync::GraphMutation::AddNode { node, .. } => added_ids.push(node.id),
+                fd_editor::sync::GraphMutation::AddEdge { edge } => added_ids.push(edge.id),
+                _ => {}
+            }
+        }
         let mut changed = self.apply_mutations(mutations);
+        if !added_ids.is_empty() {
+            self.select_tool.selected.clear();
+            self.select_tool.visual_highlight.clear();
+            self.select_tool.selected.extend(added_ids);
+        }
 
         // #1 Canvas 'Drag to Detach' Mechanism
         // If we just finished a drag with the Select tool, evaluate if any selected nodes
