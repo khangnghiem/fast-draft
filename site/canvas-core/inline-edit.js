@@ -208,16 +208,23 @@ export function openInlineEditor(opts) {
   const scaledH = bh * zoomLevel;
   const sw = Math.max(scaledW, 80);
   const sh = Math.max(scaledH, lineHeight + 4);
+
+  // Determine node context BEFORE coordinate math
+  const isTextNode = props.kind === "text";
+  const isInShape = !!parentShapeId || (createCtx && createCtx.type === "child");
+
+  // Text nodes: anchor at top-left — matches Canvas2D draw_text baseline.
+  // Shapes (text-in-shape): center the editor over the shape bounds.
+  const centerX = (isTextNode && !isInShape) ? 0 : (sw - scaledW) / 2;
+  const centerY = (isTextNode && !isInShape) ? 0 : (sh - scaledH) / 2;
   // Sub-pixel positioning — match Canvas2D coordinate space exactly.
   // Do NOT round to integer px; CSS handles sub-pixel fine.
-  const sx = (b.x || 0) * zoomLevel + panX + canvasOffsetX - (sw - scaledW) / 2;
-  const sy = (b.y || 0) * zoomLevel + panY + canvasOffsetY - (sh - scaledH) / 2;
+  const sx = (b.x || 0) * zoomLevel + panX + canvasOffsetX - centerX;
+  const sy = (b.y || 0) * zoomLevel + panY + canvasOffsetY - centerY;
 
   // Colors & shape styling
   const isDark = document.body.classList.contains("dark-theme") ||
                  document.body.classList.contains("vscode-dark");
-  const isTextNode = props.kind === "text";
-  const isInShape = !!parentShapeId || (createCtx && createCtx.type === "child");
   let bgColor, textColor;
 
   // Read parent shape props for styling when editing text-in-shape

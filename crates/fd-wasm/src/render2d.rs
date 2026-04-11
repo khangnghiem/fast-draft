@@ -518,9 +518,9 @@ fn draw_text(
     apply_opacity(ctx, style);
 
     let font_spec = style.font.as_ref();
-    let family = font_spec.map_or("Inter, sans-serif", |f| f.family.as_str());
-    let size = font_spec.map_or(14.0, |f| f.size);
-    let weight = font_spec.map_or(400, |f| f.weight);
+    let family = font_spec.map_or(DEFAULT_FONT_FAMILY_CSS, |f| f.family.as_str());
+    let size = font_spec.map_or(DEFAULT_FONT_SIZE, |f| f.size);
+    let weight = font_spec.map_or(DEFAULT_FONT_WEIGHT, |f| f.weight);
 
     ctx.set_font(&format!("{weight} {size}px {family}"));
 
@@ -682,7 +682,7 @@ fn draw_shape_label(
     apply_opacity(ctx, style);
 
     let font_spec = style.font.as_ref();
-    let family = font_spec.map_or("Inter, sans-serif", |f| f.family.as_str());
+    let family = font_spec.map_or(DEFAULT_FONT_FAMILY_CSS, |f| f.family.as_str());
     let size = font_spec.map_or(13.0, |f| f.size);
     let weight = font_spec.map_or(500, |f| f.weight);
 
