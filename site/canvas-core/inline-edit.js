@@ -128,8 +128,9 @@ export function measureAllTextNodes(fdCanvas, canvasEl, renderFn) {
  * @param {number} opts.zoomLevel    — current zoom
  * @param {string} [opts.parentShapeId] — parent shape ID for text-in-shape editing
  */
-export function openInlineEditor(opts) {
+export async function openInlineEditor(opts) {
   if (inlineEditorActive) return;
+  inlineEditorActive = true;
 
   let { nodeId } = opts;
   const {
@@ -142,6 +143,7 @@ export function openInlineEditor(opts) {
   } = opts;
 
   if (nodeId) {
+    if (document.fonts) await document.fonts.ready;
     // Force-measure text bounds BEFORE reading them
     measureAndUpdateTextBounds(fdCanvas, canvasEl, nodeId);
   }
@@ -163,8 +165,6 @@ export function openInlineEditor(opts) {
   }
   const bw = b.w || 80;
   const bh = b.h || 24;
-
-  inlineEditorActive = true;
 
   // Suppress text rendering AND set selection BEFORE any render — prevents
   // the blue selection box from flashing for a single frame.

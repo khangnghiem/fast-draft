@@ -18,6 +18,9 @@
 -->
 ## Completed Requirements
 
+### v0.11.372 — Fix: Inline Editor Font Readiness
+- **Bug Fix**: Gated the inline editor initialization behind `document.fonts.ready` to ensure the correct web font (Inter) is fully loaded before calculating text node bounding boxes on cold start. This eliminates a subtle visual drift caused by initial measurements using fallback fonts.
+
 ### v0.11.371 — Fix: Inline Text Editor Position & Font Consistency
 - **Bug Fix**: Fixed a visual regression where the inline text editor appeared at an incorrect offset from the actual text node position when creating new text nodes via the Text tool. The root cause was an unconditional centering adjustment (`- (sw - scaledW) / 2`) that shifted the overlay when min-width exceeded actual text width. Standalone text nodes now anchor at top-left (matching Canvas2D `draw_text` baseline); text-in-shape retains centered positioning.
 - **Bug Fix**: The `get_node_props` WASM API now always emits font fallback values (`fontFamily`, `fontSize`, `fontWeight`) even when `style.font` is `None`, ensuring the inline editor uses identical defaults as the canvas renderer (`Inter, sans-serif`, 14px, 400).
