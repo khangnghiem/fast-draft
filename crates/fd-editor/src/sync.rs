@@ -227,6 +227,7 @@ impl SyncEngine {
                                 && let Some(b) = self.bounds.get_mut(&idx)
                             {
                                 b.width = rw;
+                                b.x += dx;
                             }
                         }
                         _ => {}

@@ -18,6 +18,9 @@
 -->
 ## Completed Requirements
 
+### v0.11.370 — Fix: Text Node Resize Origin
+- **Bug Fix**: Fixed a visual desynchronization issue where text nodes symmetrically resized from their center during horizontal wrapping drag operations. The `SyncEngine` now correctly updates the text node's origin (`bounds.x`) matching the movement on the resize handle. This anchors the text node strictly to the stationary edge, replicating professional design tool text container behavior (Auto-Height Fixed-Width wrapping) and aligning visual representation with the `max_width` constraints.
+
 ### v0.11.369 — Fix: Node Selection on Creation
 - **Bug Fixes**: Resolved a critical layout engine regression where newly drawn shapes (`Text`, `Rect`, `Ellipse`) were not automatically appended to the active selection state in `crates/fd-wasm/src/pointer.rs`. This correctly restored `Text` node immediate inline-editing out-of-the-box and guarantees that Smart Defaults (Fill, Stroke) naturally bind to new nodes without extra clicks.
 
