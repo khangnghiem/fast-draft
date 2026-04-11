@@ -18,6 +18,12 @@
 -->
 ## Completed Requirements
 
+### v0.11.371 — Fix: Inline Text Editor Position & Font Consistency
+- **Bug Fix**: Fixed a visual regression where the inline text editor appeared at an incorrect offset from the actual text node position when creating new text nodes via the Text tool. The root cause was an unconditional centering adjustment (`- (sw - scaledW) / 2`) that shifted the overlay when min-width exceeded actual text width. Standalone text nodes now anchor at top-left (matching Canvas2D `draw_text` baseline); text-in-shape retains centered positioning.
+- **Bug Fix**: The `get_node_props` WASM API now always emits font fallback values (`fontFamily`, `fontSize`, `fontWeight`) even when `style.font` is `None`, ensuring the inline editor uses identical defaults as the canvas renderer (`Inter, sans-serif`, 14px, 400).
+- **Refactor**: Extracted font defaults into named constants (`DEFAULT_FONT_FAMILY`, `DEFAULT_FONT_FAMILY_CSS`, `DEFAULT_FONT_SIZE`, `DEFAULT_FONT_WEIGHT`) in `fd-core/src/model.rs`. The renderer (`render2d.rs`), both props APIs (`get_node_props`, `get_selected_node_props`), and `FontSpec::default()` now all consume these shared constants — eliminating desync risk.
+- **Test**: Added `font_spec_default_uses_shared_constants` regression test to ensure `FontSpec::default()` stays aligned with the declared constants.
+
 ### v0.11.370 — Fix: Text Node Resize Origin
 - **Bug Fix**: Fixed a visual desynchronization issue where text nodes symmetrically resized from their center during horizontal wrapping drag operations. The `SyncEngine` now correctly updates the text node's origin (`bounds.x`) matching the movement on the resize handle. This anchors the text node strictly to the stationary edge, replicating professional design tool text container behavior (Auto-Height Fixed-Width wrapping) and aligning visual representation with the `max_width` constraints.
 

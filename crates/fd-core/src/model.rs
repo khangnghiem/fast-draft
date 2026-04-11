@@ -184,6 +184,19 @@ impl Default for Stroke {
 
 // ─── Font / Text ─────────────────────────────────────────────────────────
 
+/// Default font family used when no explicit font is set.
+/// Shared across renderer, props API, and inline editor.
+pub const DEFAULT_FONT_FAMILY: &str = "Inter";
+
+/// Default font family string with system fallbacks for CSS `font` shorthand.
+pub const DEFAULT_FONT_FAMILY_CSS: &str = "Inter, sans-serif";
+
+/// Default font size (px) for text nodes without an explicit font spec.
+pub const DEFAULT_FONT_SIZE: f32 = 14.0;
+
+/// Default font weight for text nodes without an explicit font spec.
+pub const DEFAULT_FONT_WEIGHT: u16 = 400;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FontSpec {
     pub family: String,
@@ -194,9 +207,9 @@ pub struct FontSpec {
 impl Default for FontSpec {
     fn default() -> Self {
         Self {
-            family: "Inter".into(),
-            weight: 400,
-            size: 14.0,
+            family: DEFAULT_FONT_FAMILY.into(),
+            weight: DEFAULT_FONT_WEIGHT,
+            size: DEFAULT_FONT_SIZE,
         }
     }
 }
@@ -2068,6 +2081,23 @@ mod tests {
         assert_eq!(
             count, 1,
             "@b should appear exactly once in emitted text, found {count} times:\n{emitted}"
+        );
+    }
+
+    #[test]
+    fn font_spec_default_uses_shared_constants() {
+        let fs = FontSpec::default();
+        assert_eq!(fs.family, DEFAULT_FONT_FAMILY, "family must match constant");
+        assert!(
+            (fs.size - DEFAULT_FONT_SIZE).abs() < f32::EPSILON,
+            "size must match constant"
+        );
+        assert_eq!(fs.weight, DEFAULT_FONT_WEIGHT, "weight must match constant");
+
+        // Verify the CSS fallback string starts with the base family
+        assert!(
+            DEFAULT_FONT_FAMILY_CSS.starts_with(DEFAULT_FONT_FAMILY),
+            "CSS family string must start with base family"
         );
     }
 }

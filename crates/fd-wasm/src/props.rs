@@ -160,10 +160,18 @@ impl FdCanvas {
         let font_family = style
             .font
             .as_ref()
-            .map_or("Inter", |f| f.family.as_str())
+            .map_or(fd_core::model::DEFAULT_FONT_FAMILY_CSS, |f| {
+                f.family.as_str()
+            })
             .to_string();
-        let font_size = style.font.as_ref().map_or(14.0, |f| f.size);
-        let font_weight = style.font.as_ref().map_or(400, |f| f.weight);
+        let font_size = style
+            .font
+            .as_ref()
+            .map_or(fd_core::model::DEFAULT_FONT_SIZE, |f| f.size);
+        let font_weight = style
+            .font
+            .as_ref()
+            .map_or(fd_core::model::DEFAULT_FONT_WEIGHT, |f| f.weight);
         props.insert("fontFamily".into(), serde_json::Value::String(font_family));
         props.insert("fontSize".into(), serde_json::json!(font_size));
         props.insert("fontWeight".into(), serde_json::json!(font_weight));
@@ -311,6 +319,20 @@ impl FdCanvas {
             );
             props.insert("fontSize".into(), serde_json::json!(font.size));
             props.insert("fontWeight".into(), serde_json::json!(font.weight));
+        } else {
+            // Always emit renderer defaults so JS inline editor matches canvas text
+            props.insert(
+                "fontFamily".into(),
+                serde_json::Value::String(fd_core::model::DEFAULT_FONT_FAMILY_CSS.to_string()),
+            );
+            props.insert(
+                "fontSize".into(),
+                serde_json::json!(fd_core::model::DEFAULT_FONT_SIZE),
+            );
+            props.insert(
+                "fontWeight".into(),
+                serde_json::json!(fd_core::model::DEFAULT_FONT_WEIGHT),
+            );
         }
 
         serde_json::Value::Object(props).to_string()
