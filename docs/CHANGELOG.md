@@ -18,6 +18,9 @@
 -->
 ## Completed Requirements
 
+### v0.11.364 — UI Polish & Bugfixes (R3)
+- **Code Health Fixes**: Suppressed center-snapping visual noise during text node resizing (`get_center_snap` guard), corrected a ⌘+Drag reparent selection mismatch where `hit_test_node_excluding` missed text-priority elevation over siblings, added `expect()` to tests to fail loudly on layout omissions, and injected structural nesting hint (`Hold ⌘`) directly into the canvas Toast notification.
+
 ### v0.11.363 — Edge Mirror/Flip (R3.86)
 - **Edge Direction Flip (R3.86)**: The `Shift+X` globally mapped keyboard shortcut or the "Reverse Direction" Context Menu action instantly flips the flow of any selected edge. The WASM backend's new `ReverseEdge` mutation perfectly preserves styling details, constraints, and arrow endpoints while securely swapping the underlying topological AST nodes inside an Undo-safe lifecycle.
 

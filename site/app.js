@@ -5310,7 +5310,7 @@ async function initPlayground() {
             syncCanvasToEditor();
             updatePropertiesPanel();
             refreshLayersPanel();
-            showToast(`Centered in @${activeCenterSnap.target_id}`);
+            showToast(`Centered in @${activeCenterSnap.target_id}. Tip: Hold ⌘ while dragging to nest.`);
           }
         }
       }

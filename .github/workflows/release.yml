@@ -69,21 +69,34 @@ jobs:
         with:
           shared-key: lsp-${{ matrix.target }}
 
-      - name: Build fd-lsp
-        run: cargo build --release -p fd-lsp --target ${{ matrix.target }}
+      - name: Build binaries
+        run: cargo build --release -p fd-lsp -p fdraft --target ${{ matrix.target }}
 
-      - name: Package binary
+      - name: Package fd-lsp
         run: |
           STEM="fd-lsp-${{ matrix.target }}"
           mkdir -p "$STEM"
           cp "target/${{ matrix.target }}/release/fd-lsp" "$STEM/"
           tar -czf "$STEM.tar.gz" "$STEM"
 
-      - name: Upload artifact
+      - name: Package fdraft
+        run: |
+          STEM="fdraft-${{ matrix.target }}"
+          mkdir -p "$STEM"
+          cp "target/${{ matrix.target }}/release/fdraft" "$STEM/"
+          tar -czf "$STEM.tar.gz" "$STEM"
+
+      - name: Upload fd-lsp artifact
         uses: actions/upload-artifact@v4
         with:
           name: fd-lsp-${{ matrix.target }}
           path: fd-lsp-${{ matrix.target }}.tar.gz
+
+      - name: Upload fdraft artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fdraft-${{ matrix.target }}
+          path: fdraft-${{ matrix.target }}.tar.gz
 
   # ── Build desktop app (4 targets) ───────────────────────────────
   desktop:
@@ -255,6 +268,9 @@ jobs:
             fd-lsp-aarch64-apple-darwin/fd-lsp-aarch64-apple-darwin.tar.gz
             fd-lsp-x86_64-apple-darwin/fd-lsp-x86_64-apple-darwin.tar.gz
             fd-lsp-x86_64-unknown-linux-gnu/fd-lsp-x86_64-unknown-linux-gnu.tar.gz
+            fdraft-aarch64-apple-darwin/fdraft-aarch64-apple-darwin.tar.gz
+            fdraft-x86_64-apple-darwin/fdraft-x86_64-apple-darwin.tar.gz
+            fdraft-x86_64-unknown-linux-gnu/fdraft-x86_64-unknown-linux-gnu.tar.gz
             fast-draft-desktop-aarch64-apple-darwin/**/*
             fast-draft-desktop-x86_64-apple-darwin/**/*
             fast-draft-desktop-x86_64-unknown-linux-gnu/**/*
