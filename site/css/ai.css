@@ -647,35 +647,20 @@
   margin-top: 2px;
   padding: 0 2px 2px 4px;
 }
-.ai-model-dropdown {
-  appearance: none;
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid transparent;
-  border-radius: 12px;
-  padding: 4px 20px 4px 8px;
-  font-size: 10px;
+.ai-model-badge {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(108, 92, 231, 0.15);
+  color: #8F84EE;
   font-weight: 500;
-  color: var(--fd-text-secondary, #86868B);
-  cursor: pointer;
-  outline: none;
-  transition: all 0.15s ease;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2386868B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 6px center;
-  background-size: 10px;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.2px;
 }
-.ai-model-dropdown:hover {
-  background-color: rgba(0, 0, 0, 0.08);
-  color: var(--fd-text, #1D1D1F);
-}
-.dark-canvas .ai-model-dropdown,
-.dark-theme .ai-model-dropdown {
-  background-color: rgba(255, 255, 255, 0.06);
-}
-.dark-canvas .ai-model-dropdown:hover,
-.dark-theme .ai-model-dropdown:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #F5F5F7;
+.dark-canvas .ai-model-badge,
+.dark-theme .ai-model-badge {
+  background: rgba(108, 92, 231, 0.2);
+  color: #A29BFE;
 }
 .ai-chat-send {
   position: static;
