@@ -291,6 +291,9 @@ export async function openInlineEditor(opts) {
   const outlineStyle = "none";
   const boxShadow = "none";
 
+  const isAutoWidth = isTextNode && !isInShape && !props.maxWidth;
+  const whiteSpace = isAutoWidth ? 'pre' : 'pre-wrap';
+
   const textarea = document.createElement("textarea");
   textarea.value = currentValue;
   textarea.style.cssText = [
@@ -308,7 +311,7 @@ export async function openInlineEditor(opts) {
     `overflow:hidden`, `text-align:${hAlign}`,
     `box-sizing:border-box`,
     `-webkit-text-size-adjust:100%`,
-    `word-wrap:break-word`, `white-space:pre-wrap`,
+    `word-wrap:break-word`, `white-space:${whiteSpace}`,
     `overflow-wrap:break-word`,
     `letter-spacing:0px`,
   ].join(";");
@@ -357,6 +360,16 @@ export async function openInlineEditor(opts) {
       fdCanvas.set_node_prop(propKey, val);
       renderFn();
       syncFn();
+
+      if (isAutoWidth) {
+        const boundsJson = fdCanvas.get_node_bounds(nodeId);
+        if (boundsJson) {
+          const newB = JSON.parse(boundsJson);
+          const newScaledW = newB.w * zoomLevel;
+          const newSw = Math.max(newScaledW, 80);
+          textarea.style.width = `${newSw}px`;
+        }
+      }
     }
 
     // Auto-expand height to fit wrapped content

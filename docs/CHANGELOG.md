@@ -18,6 +18,9 @@
 -->
 ## Completed Requirements
 
+### v0.11.374 — Fix: Inline Editor Sub-Pixel Wrapping
+- **Bug Fix**: Fixed an issue where the inline `textarea` editor occasionally rendered one more line of text than the WASM canvas engine on "Auto-Width" text nodes. This was caused by CSS `white-space: pre-wrap` triggering a premature line break due to sub-pixel font measurement discrepancies between the HTML DOM and Canvas2D context. Auto-Width text now uses `white-space: pre` and dynamically syncs its horizontal bounds directly from the WASM layout engine on every keystroke.
+
 ### v0.11.373 — Fix: Inline Editor Auto-Expanding Height
 - **Bug Fix**: The inline text editor (`textarea`) now auto-expands its height to fit wrapped text content. Previously, the textarea was fixed to its initial height (typically 24px) regardless of how much text was typed or wrapped, causing overflow text to be completely hidden. The fix uses the standard `scrollHeight` sync pattern on both initial open and every `input` event.
 
