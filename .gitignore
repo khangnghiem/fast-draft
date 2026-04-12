@@ -37,3 +37,4 @@ site/wasm/
 # Environment secrets
 .env
 serve.log
+.wrangler

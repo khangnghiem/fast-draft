@@ -18,6 +18,8 @@
 -->
 ## Completed Requirements
 
+- **FEAT (AI)**: Migrated all ChatGPT and Refine logic to the Gemma 4 26B A4B model infrastructure. Replaced the user-facing model selection dropdown with a locked '✦ Gemma 4' badge to standardize costs and output quality, and wired the Cloudflare failover to default to the OpenRouter Gemma 4 model gracefully.
+
 ### v0.11.375 — Fix: True WASM Dimension Sync for Inline Editor
 - **Bug Fix**: Completely removed HTML `scrollHeight` dependencies from the inline editor, moving to standard full-sync with the WASM engine. Previously, `scrollHeight` combined with sub-pixel rendering differences caused phantom height jumps and extra lines on Auto-Height nodes (`pre-wrap`). The inline editor now fetches and applies its dimensions directly via `get_node_bounds()` on every keystroke, guaranteeing absolute parity with Canvas layout.
 

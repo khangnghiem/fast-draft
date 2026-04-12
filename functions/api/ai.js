@@ -40,8 +40,8 @@ const KV_TTL_SECONDS = 86400;
 
 // ─── Default Models (override via env vars) ──────────────────────────────
 
-const DEFAULT_MODEL_FAST = '@cf/google/gemma-3-12b-it';
-const DEFAULT_MODEL_QUALITY = '@cf/google/gemma-3-12b-it';
+const DEFAULT_MODEL_FAST = '@cf/google/gemma-4-26b-a4b-it';
+const DEFAULT_MODEL_QUALITY = '@cf/google/gemma-4-26b-a4b-it';
 
 // ─── Model Aliases (for admin URL param override) ────────────────────────
 
@@ -55,6 +55,7 @@ const MODEL_ALIASES = {
   'llama-scout':    '@cf/meta/llama-4-scout-17b-16e-instruct',
   // Google Gemma
   'gemma-12b':      '@cf/google/gemma-3-12b-it',
+  'gemma-4':        '@cf/google/gemma-4-26b-a4b-it',
   // Qwen
   'qwen-coder':     '@cf/qwen/qwen2.5-coder-32b-instruct',
   'qwen-30b':       '@cf/qwen/qwen3-30b-a3b-fp8',
@@ -235,12 +236,12 @@ function computeScore(categories) {
 
 async function runWithOpenRouter(env, model, messages, maxTokens, temp, stream) {
   let orModel = model;
-  if (model.includes('llama-3.3-70b')) orModel = 'meta-llama/llama-3.3-70b-instruct';
+  if (model.includes('gemma-4-26b')) orModel = 'google/gemma-4-26b-a4b-it';
   else if (model.includes('gemma-3-12b')) orModel = 'google/gemma-3-12b-it';
+  else if (model.includes('llama-3.3-70b')) orModel = 'meta-llama/llama-3.3-70b-instruct';
   else if (model.includes('llama-3.1-8b')) orModel = 'meta-llama/llama-3.1-8b-instruct';
-  else if (model === 'claude-3.5-sonnet') orModel = 'anthropic/claude-3.5-sonnet';
   else if (!model.includes('/')) orModel = model; 
-  else orModel = 'meta-llama/llama-3.1-8b-instruct'; // safe default
+  else orModel = 'google/gemma-4-26b-a4b-it'; // safe default
   
   const payload = {
     model: orModel,
@@ -432,12 +433,6 @@ export async function onRequestPost(context) {
 
     let shouldUseOpenRouter = false;
     let actualModel = config.model;
-
-    if (mode === 'review' && context.env.OPENROUTER_API_KEY) {
-      shouldUseOpenRouter = true;
-      actualModel = 'claude-3.5-sonnet'; // High-End Routing
-      config.model = 'anthropic/claude-3.5-sonnet'; 
-    }
 
     if (wantsStream) {
       const stream = await runAI(context.env, config, aiMessages, true, shouldUseOpenRouter, actualModel);

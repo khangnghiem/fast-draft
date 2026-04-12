@@ -450,7 +450,7 @@ async function sendMessage(getEditorContent, setEditorContent) {
         selection: selFd ? selFd.slice(0, 4000) : undefined,
         selection_ids: selIds.length > 0 ? selIds : undefined,
         stream: true,
-        model_hint: document.getElementById('ai-model-select')?.value || undefined,
+        model_hint: new URLSearchParams(window.location.search).get('ai_model') || undefined,
       }),
     });
 
@@ -602,20 +602,7 @@ export function initAiChat(getEditorContent, setEditorContent, getCanvas) {
     });
   }
 
-  const modelSelect = document.getElementById('ai-model-select');
-  if (modelSelect) {
-    const saved = localStorage.getItem('fd-ai-model');
-    if (saved) {
-      if ([...modelSelect.options].some(o => o.value === saved)) {
-        modelSelect.value = saved;
-      } else {
-        localStorage.removeItem('fd-ai-model');
-      }
-    }
-    modelSelect.addEventListener('change', (e) => {
-      localStorage.setItem('fd-ai-model', e.target.value);
-    });
-  }
+  // Model selector removed (locked to Gemma 4)
 
   if (input) {
     input.addEventListener('keydown', (e) => {
