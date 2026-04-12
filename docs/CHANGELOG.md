@@ -18,6 +18,9 @@
 -->
 ## Completed Requirements
 
+### v0.11.373 — Fix: Inline Editor Auto-Expanding Height
+- **Bug Fix**: The inline text editor (`textarea`) now auto-expands its height to fit wrapped text content. Previously, the textarea was fixed to its initial height (typically 24px) regardless of how much text was typed or wrapped, causing overflow text to be completely hidden. The fix uses the standard `scrollHeight` sync pattern on both initial open and every `input` event.
+
 ### v0.11.372 — Fix: Inline Editor Font Readiness
 - **Bug Fix**: Gated the inline editor initialization behind `document.fonts.ready` to ensure the correct web font (Inter) is fully loaded before calculating text node bounding boxes on cold start. This eliminates a subtle visual drift caused by initial measurements using fallback fonts.
 

@@ -323,6 +323,10 @@ export async function openInlineEditor(opts) {
     textarea.select();
   }
 
+  // Auto-expand height to fit wrapped content on initial open
+  textarea.style.height = 'auto';
+  textarea.style.height = `${textarea.scrollHeight}px`;
+
   let lastSyncedValue = currentValue;
   textarea.addEventListener("input", () => {
     const val = textarea.value;
@@ -354,6 +358,10 @@ export async function openInlineEditor(opts) {
       renderFn();
       syncFn();
     }
+
+    // Auto-expand height to fit wrapped content
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
   });
 
   const commit = () => {
