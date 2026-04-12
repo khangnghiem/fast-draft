@@ -60,6 +60,8 @@ import {
   setupInlineEditor as coreSetupInlineEditor,
   openInlineEditor as coreOpenInlineEditor,
   inlineEditorActive as coreInlineEditorActive,
+  measureAndUpdateTextBounds,
+  measureAllTextNodes,
 } from './canvas-core/inline-edit.js?v=0.11.296';
 import { setupTouchGestures as setupTouchGesturesModule, setupApplePencilPro as setupApplePencilProModule } from './touch.js?v=0.11.296';
 import { initSearchPanel } from './search.js?v=0.11.296';
@@ -1336,6 +1338,21 @@ function focusOnNode(nodeId) {
   focusAnimId = requestAnimationFrame(step);
 }
 
+/** Retrieve text bounding box for selected nodes dynamically */
+function syncSelectedTextMetrics() {
+  if (!fdCanvas) return false;
+  try {
+    const ids = JSON.parse(fdCanvas.get_selected_ids());
+    let changed = false;
+    for (const id of ids) {
+      if (measureAndUpdateTextBounds(fdCanvas, document.getElementById('fd-canvas'), id)) {
+        changed = true;
+      }
+    }
+    return changed;
+  } catch (_) { return false; }
+}
+
 /** Sync canvas text back to CodeMirror with echo suppression */
 let _saveTimer = null;
 function syncCanvasToEditor() {
@@ -1959,7 +1976,12 @@ function setupPropsPanel() {
     const changed = (fdCanvas.set_multi_node_prop && JSON.parse(fdCanvas.get_selected_ids()).length > 1)
       ? fdCanvas.set_multi_node_prop(key, el.value)
       : fdCanvas.set_node_prop(key, el.value);
-    if (changed) { renderCanvas(); syncCanvasToEditor(); }
+    if (changed) { 
+      // If font/size/text related, it might need remeasurement
+      syncSelectedTextMetrics();
+      renderCanvas(); 
+      syncCanvasToEditor(); 
+    }
   };
 
   // W/H inputs (debounced)
@@ -3841,6 +3863,7 @@ async function initPlayground() {
       } catch (_) { /* localStorage unavailable */ }
     }
     fdCanvas.set_text(initialFd);
+    measureAllTextNodes(fdCanvas, document.getElementById('fd-canvas'));
     console.log(`[FD] ✓ Ready (total ${Math.round(performance.now() - t0)}ms)`);
     // Hand tool is default on load — set grab cursor
     canvas.style.cursor = 'grab';
@@ -4064,6 +4087,7 @@ async function initPlayground() {
               if (fdCanvas) {
                 const text = update.state.doc.toString();
                 const resultJson = fdCanvas.set_text(text);
+                measureAllTextNodes(fdCanvas, document.getElementById('fd-canvas'));
                 try {
                   const r = JSON.parse(resultJson);
                   // Always repaint — visual-only changes (fill, stroke, opacity)
@@ -4922,6 +4946,7 @@ async function initPlayground() {
       );
       const moveResult = JSON.parse(moveResultJson);
       if (moveResult.changed) {
+        syncSelectedTextMetrics();
         renderDirty = true; uiDirty = true;
         
         // Sync WASM eraser marquee bounds for rendering
