@@ -3221,11 +3221,20 @@ async function aiTouch() {
       : `Improve this FD design — enhance layout, alignment, colors, spacing, and visual hierarchy. Return the COMPLETE improved FD code:\n\n${fdText}`;
     const modelHint = getAiModelHint();
     const userFocus = localStorage.getItem('fd-ai-prompt') || undefined;
-    const resp = await fetch('/api/ai', {
+    let resp = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, mode: 'refine', model_hint: modelHint, user_focus: userFocus }),
     });
+
+    if (resp.status >= 500) {
+      console.warn("AI Touch failed. Retrying with force_fallback...");
+      resp = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, mode: 'refine', model_hint: modelHint, user_focus: userFocus, force_fallback: true }),
+      });
+    }
 
     if (resp.status === 429) {
       const data = await resp.json();
@@ -3233,6 +3242,13 @@ async function aiTouch() {
       return;
     }
     if (!resp.ok) throw new Error(`AI API error: ${resp.status}`);
+
+    const limit = resp.headers.get('x-ratelimit-limit');
+    const remaining = resp.headers.get('x-ratelimit-remaining');
+    if (limit && remaining && typeof window.updateRateLimitUI === 'function') {
+      window.updateRateLimitUI(remaining, limit);
+    }
+    
     const data = await resp.json();
 
     let refined = data.result || '';

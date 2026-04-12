@@ -353,6 +353,7 @@ function updateRateLimitUI(remaining, limit) {
     rateEl.classList.remove('warning');
   }
 }
+window.updateRateLimitUI = updateRateLimitUI;
 
 function addMessage(role, content, getEditorContent, setEditorContent) {
   const messages = getChatMessages();

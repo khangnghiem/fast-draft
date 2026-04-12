@@ -114,6 +114,54 @@ edge @build_to_test { from: @stage_build to: @stage_test stroke: #6B7080 1.5 flo
 Rules: IDs=semantic snake_case. Colors=harmonious palettes. DRY=use style blocks. Constraints>coords.
 `;
 
+// ─── Prompts ─────────────────────────────────────────────────────────────
+
+const SYSTEM_CHAT = `You are an expert UI designer and coding assistant working with the FD (Fast Draft) design format. You help users create, modify, and improve their designs through natural conversation.
+
+When answering questions, be concise and helpful. Always reference node @ids when discussing specific elements.
+
+## Mutation Patterns (prefer minimal changes)
+- "Make modern": add corner:12-16, shadow:(0,2,16,#00000010), adjust fill to palette
+- "Make bigger": change w/h, DO NOT change x/y if constrained
+- "Center this": use center_in:@parent, DON'T use absolute coords
+- "Group these": wrap in frame @name { layout: column gap=8 }
+- "Add animation": add when :hover { ... ease: ease_out 150ms }
+
+## Rules for Modifications
+- NEVER output absolute x/y coords if the node uses center_in or offset constraints
+- ALWAYS preserve existing use: style references — override specific props only
+- When modifying a child, include the parent frame if layout changes
+- Prefer style blocks for repeated visual patterns
+
+## Output Format
+Return ONLY the modified node blocks. Use the same @id.
+DO NOT include unmodified nodes. DO NOT add explanation before the code.
+Wrap each modified block in a \`\`\`fd code fence.
+Provide a brief explanation before each block.
+
+\${FD_SYNTAX_GUIDE}`;
+
+const SYSTEM_REFINE = `You are an expert UI designer working with the FD (Fast Draft) format. Return ONLY valid FD text with improved styling and semantic naming. No markdown fences, no explanations.\n\${FD_SYNTAX_GUIDE}`;
+
+const SYSTEM_REVIEW = `You are a professional design auditor for FD (Fast Draft) documents. Analyze the given FD text and return a JSON object with this exact structure:
+{
+  "categories": [
+    {"name": "Naming", "icon": "📝", "findings": [{"severity": "error"|"warning"|"info", "message": "...", "suggestion": "..."}]},
+    {"name": "Colors & Visuals", "icon": "🎨", "findings": [...]},
+    {"name": "Structure & Layout", "icon": "📐", "findings": [...]}
+  ]
+}
+
+Example input:
+rect @_rect_0 { w: 200 h: 120 fill: #FF0000 corner: 0 }
+
+Example output:
+{"categories":[{"name":"Naming","icon":"📝","findings":[{"severity":"error","message":"Anonymous ID @_rect_0 — should be semantic","suggestion":"Rename to @hero_card or @action_btn based on purpose"}]},{"name":"Colors & Visuals","icon":"🎨","findings":[{"severity":"warning","message":"Raw red #FF0000 — not from a design palette","suggestion":"Use harmonious color like #6C5CE7 or #EF4444"},{"severity":"warning","message":"No corner radius — looks harsh","suggestion":"Add corner: 12 for modern feel"}]},{"name":"Structure & Layout","icon":"📐","findings":[{"severity":"info","message":"No shadow or hover state","suggestion":"Add shadow: (0,2,16,#00000010) and when :hover for interactivity"}]}]}
+
+Return ONLY valid JSON. No markdown fences, no explanations. Empty findings array if perfect.`;
+
+const SYSTEM_DEFAULT = `You are an expert UI designer. Return ONLY valid FD text.\n\${FD_SYNTAX_GUIDE}`;
+
 // ─── Rate Limiting ───────────────────────────────────────────────────────
 
 async function checkRateLimit(context) {
@@ -143,73 +191,13 @@ function getModelConfig(mode, env) {
 
   switch (mode) {
     case 'chat':
-      return {
-        model: fastModel,
-        system: `You are an expert UI designer and coding assistant working with the FD (Fast Draft) design format. You help users create, modify, and improve their designs through natural conversation.
-
-When answering questions, be concise and helpful. Always reference node @ids when discussing specific elements.
-
-## Mutation Patterns (prefer minimal changes)
-- "Make modern": add corner:12-16, shadow:(0,2,16,#00000010), adjust fill to palette
-- "Make bigger": change w/h, DO NOT change x/y if constrained
-- "Center this": use center_in:@parent, DON'T use absolute coords
-- "Group these": wrap in frame @name { layout: column gap=8 }
-- "Add animation": add when :hover { ... ease: ease_out 150ms }
-
-## Rules for Modifications
-- NEVER output absolute x/y coords if the node uses center_in or offset constraints
-- ALWAYS preserve existing use: style references — override specific props only
-- When modifying a child, include the parent frame if layout changes
-- Prefer style blocks for repeated visual patterns
-
-## Output Format
-Return ONLY the modified node blocks. Use the same @id.
-DO NOT include unmodified nodes. DO NOT add explanation before the code.
-Wrap each modified block in a \`\`\`fd code fence.
-Provide a brief explanation before each block.
-
-${FD_SYNTAX_GUIDE}`,
-        maxTokens: 4096,
-        temp: 0.4,
-        isChat: true,
-      };
-
+      return { model: fastModel, system: SYSTEM_CHAT, maxTokens: 4096, temp: 0.4, isChat: true };
     case 'refine':
-      return {
-        model: fastModel,
-        system: `You are an expert UI designer working with the FD (Fast Draft) format. Return ONLY valid FD text with improved styling and semantic naming. No markdown fences, no explanations.${FD_SYNTAX_GUIDE}`,
-        maxTokens: 4096,
-        temp: 0.4,
-      };
+      return { model: fastModel, system: SYSTEM_REFINE, maxTokens: 4096, temp: 0.4 };
     case 'review':
-      return {
-        model: qualityModel,
-        system: `You are a professional design auditor for FD (Fast Draft) documents. Analyze the given FD text and return a JSON object with this exact structure:
-{
-  "categories": [
-    {"name": "Naming", "icon": "📝", "findings": [{"severity": "error"|"warning"|"info", "message": "...", "suggestion": "..."}]},
-    {"name": "Colors & Visuals", "icon": "🎨", "findings": [...]},
-    {"name": "Structure & Layout", "icon": "📐", "findings": [...]}
-  ]
-}
-
-Example input:
-rect @_rect_0 { w: 200 h: 120 fill: #FF0000 corner: 0 }
-
-Example output:
-{"categories":[{"name":"Naming","icon":"📝","findings":[{"severity":"error","message":"Anonymous ID @_rect_0 — should be semantic","suggestion":"Rename to @hero_card or @action_btn based on purpose"}]},{"name":"Colors & Visuals","icon":"🎨","findings":[{"severity":"warning","message":"Raw red #FF0000 — not from a design palette","suggestion":"Use harmonious color like #6C5CE7 or #EF4444"},{"severity":"warning","message":"No corner radius — looks harsh","suggestion":"Add corner: 12 for modern feel"}]},{"name":"Structure & Layout","icon":"📐","findings":[{"severity":"info","message":"No shadow or hover state","suggestion":"Add shadow: (0,2,16,#00000010) and when :hover for interactivity"}]}]}
-
-Return ONLY valid JSON. No markdown fences, no explanations. Empty findings array if perfect.`,
-        maxTokens: 4096,
-        temp: 0.2,
-      };
+      return { model: qualityModel, system: SYSTEM_REVIEW, maxTokens: 4096, temp: 0.2 };
     default:
-      return {
-        model: fastModel,
-        system: `You are an expert UI designer. Return ONLY valid FD text.${FD_SYNTAX_GUIDE}`,
-        maxTokens: 4096,
-        temp: 0.3,
-      };
+      return { model: fastModel, system: SYSTEM_DEFAULT, maxTokens: 4096, temp: 0.3 };
   }
 }
 
@@ -323,12 +311,14 @@ async function runAI(env, config, aiMessages, stream, shouldUseOpenRouter, actua
       stream,
     });
   } catch (e) {
-    if (env.OPENROUTER_API_KEY) {
-      console.log('Workers AI failed err:', e.message, '— falling back to OpenRouter');
+    const isQuotaError = e.message && (e.message.includes('429') || e.message.includes('limit') || e.message.includes('quota'));
+    if (env.OPENROUTER_API_KEY && isQuotaError) {
+      console.log(JSON.stringify({ event: 'ai_fallback', from: 'workers_ai', to: 'openrouter', reason: e.message, model: config.model }));
       const result = await runWithOpenRouter(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
       config.model = 'openrouter-fallback';
       return result;
     }
+    console.warn(JSON.stringify({ event: 'ai_error_terminal', provider: 'workers_ai', reason: e.message, model: config.model }));
     throw e;
   }
 }
@@ -357,7 +347,7 @@ export async function onRequestPost(context) {
     }
 
     const body = await context.request.json();
-    const { prompt, mode, model_hint, user_focus, messages, context: docContext, selection, selection_ids } = body;
+    const { prompt, mode, model_hint, user_focus, messages, context: docContext, selection, selection_ids, force_fallback } = body;
 
     // Chat mode requires messages array; other modes require prompt
     if (mode === 'chat') {
@@ -433,6 +423,11 @@ export async function onRequestPost(context) {
 
     let shouldUseOpenRouter = false;
     let actualModel = config.model;
+
+    if (force_fallback && context.env.OPENROUTER_API_KEY) {
+      shouldUseOpenRouter = true;
+      console.log(JSON.stringify({ event: 'ai_fallback_forced', from: 'client', to: 'openrouter', model: actualModel }));
+    }
 
     if (wantsStream) {
       const stream = await runAI(context.env, config, aiMessages, true, shouldUseOpenRouter, actualModel);
