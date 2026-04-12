@@ -206,7 +206,7 @@ export async function openInlineEditor(opts) {
   const canvasOffsetY = canvasRect.top - containerRect.top;
   const scaledW = bw * zoomLevel;
   const scaledH = bh * zoomLevel;
-  const sw = Math.max(scaledW, 80);
+  const sw = Math.max(scaledW, 80) + 2;
   const sh = Math.max(scaledH, lineHeight + 4);
 
   // Determine node context BEFORE coordinate math
@@ -326,10 +326,6 @@ export async function openInlineEditor(opts) {
     textarea.select();
   }
 
-  // Auto-expand height to fit wrapped content on initial open
-  textarea.style.height = 'auto';
-  textarea.style.height = `${textarea.scrollHeight}px`;
-
   let lastSyncedValue = currentValue;
   textarea.addEventListener("input", () => {
     const val = textarea.value;
@@ -358,23 +354,21 @@ export async function openInlineEditor(opts) {
     if (nodeId) {
       fdCanvas.select_by_id(nodeId);
       fdCanvas.set_node_prop(propKey, val);
+      measureAndUpdateTextBounds(fdCanvas, canvasEl, nodeId);
       renderFn();
       syncFn();
 
-      if (isAutoWidth) {
-        const boundsJson = fdCanvas.get_node_bounds(nodeId);
-        if (boundsJson) {
-          const newB = JSON.parse(boundsJson);
-          const newScaledW = newB.w * zoomLevel;
-          const newSw = Math.max(newScaledW, 80);
-          textarea.style.width = `${newSw}px`;
-        }
+      const boundsJson = fdCanvas.get_node_bounds(nodeId);
+      if (boundsJson) {
+        const newB = JSON.parse(boundsJson);
+        const newScaledW = newB.w * zoomLevel;
+        const newScaledH = newB.h * zoomLevel;
+        const newSw = Math.max(newScaledW, 80) + 2;
+        const newSh = Math.max(newScaledH, lineHeight + 4);
+        textarea.style.width = `${newSw}px`;
+        textarea.style.height = `${newSh}px`;
       }
     }
-
-    // Auto-expand height to fit wrapped content
-    textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight}px`;
   });
 
   const commit = () => {

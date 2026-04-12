@@ -18,6 +18,9 @@
 -->
 ## Completed Requirements
 
+### v0.11.375 — Fix: True WASM Dimension Sync for Inline Editor
+- **Bug Fix**: Completely removed HTML `scrollHeight` dependencies from the inline editor, moving to standard full-sync with the WASM engine. Previously, `scrollHeight` combined with sub-pixel rendering differences caused phantom height jumps and extra lines on Auto-Height nodes (`pre-wrap`). The inline editor now fetches and applies its dimensions directly via `get_node_bounds()` on every keystroke, guaranteeing absolute parity with Canvas layout.
+
 ### v0.11.374 — Fix: Inline Editor Sub-Pixel Wrapping
 - **Bug Fix**: Fixed an issue where the inline `textarea` editor occasionally rendered one more line of text than the WASM canvas engine on "Auto-Width" text nodes. This was caused by CSS `white-space: pre-wrap` triggering a premature line break due to sub-pixel font measurement discrepancies between the HTML DOM and Canvas2D context. Auto-Width text now uses `white-space: pre` and dynamically syncs its horizontal bounds directly from the WASM layout engine on every keystroke.
 
