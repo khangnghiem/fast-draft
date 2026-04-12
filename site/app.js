@@ -3863,6 +3863,7 @@ async function initPlayground() {
       } catch (_) { /* localStorage unavailable */ }
     }
     fdCanvas.set_text(initialFd);
+    if (document.fonts) await document.fonts.ready;
     measureAllTextNodes(fdCanvas, document.getElementById('fd-canvas'));
     console.log(`[FD] ✓ Ready (total ${Math.round(performance.now() - t0)}ms)`);
     // Hand tool is default on load — set grab cursor
