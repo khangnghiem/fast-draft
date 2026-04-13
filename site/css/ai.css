@@ -502,6 +502,9 @@
   border-left: 3px solid #6C5CE7;
   color: var(--fd-text, #1D1D1F);
   border-radius: 4px 12px 12px 12px;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
 }
 .dark-canvas .ai-chat-msg.assistant,
 .dark-theme .ai-chat-msg.assistant {

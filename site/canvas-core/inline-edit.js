@@ -288,8 +288,14 @@ export async function openInlineEditor(opts) {
     borderRadius = cr !== undefined ? `${Math.round(cr * zoomLevel)}px` : "0";
   } else if (isTextNode && !isInShape) borderRadius = "0";
 
-  const outlineStyle = "none";
-  const boxShadow = "none";
+  // Subtle edit-mode affordance (Figma-inspired blue ring)
+  const isTransparentBg = bgColor === 'transparent';
+  const outlineStyle = isTransparentBg
+    ? '1.5px solid rgba(0, 122, 255, 0.35)'
+    : '1.5px solid rgba(0, 122, 255, 0.2)';
+  const boxShadow = isTransparentBg
+    ? '0 0 0 3px rgba(0, 122, 255, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06)'
+    : '0 0 0 3px rgba(0, 122, 255, 0.06)';
 
   const isAutoWidth = isTextNode && !isInShape && !props.maxWidth;
   const whiteSpace = isAutoWidth ? 'pre' : 'pre-wrap';
@@ -303,7 +309,7 @@ export async function openInlineEditor(opts) {
     `padding:${padTop}px 0 ${padBottom}px 0`,
     `font:${fontWeight} ${fontSize}px/${lineHeight}px ${fontFamily}`,
     `border:none`,
-    `outline:${outlineStyle}`, `outline-offset:-1px`,
+    `outline:${outlineStyle}`, `outline-offset:1px`,
     `border-radius:${borderRadius}`,
     `background:${bgColor}`, `color:${textColor}`,
     `resize:none`, `z-index:100`,
