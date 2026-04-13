@@ -35,7 +35,7 @@ function getCorsHeaders(request) {
   };
 }
 
-const DEFAULT_DAILY_LIMIT = 20;
+const DEFAULT_DAILY_LIMIT = 500; // Temporary bump for E2E testing
 const KV_TTL_SECONDS = 86400;
 
 // ─── Default Models (override via env vars) ──────────────────────────────
