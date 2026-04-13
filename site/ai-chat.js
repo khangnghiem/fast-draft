@@ -331,29 +331,21 @@ function wireApplySkipButtons(container, getEditorContent, setEditorContent) {
   });
 }
 
-function updateRateLimitUI(remaining, limit) {
-  let rateEl = document.getElementById('ai-rate-limit');
-  if (!rateEl) {
-    rateEl = document.createElement('div');
-    rateEl.id = 'ai-rate-limit';
-    rateEl.className = 'ai-rate-limit-text';
-    const footer = document.querySelector('.ai-chat-input-footer');
-    const sendBtn = getChatSend();
-    if (footer && sendBtn) {
-      footer.insertBefore(rateEl, sendBtn);
-    }
-  }
-  
+export function updateRateLimitUI(remaining, limit) {
+  const rateEl = document.getElementById('ai-rate-limit-text');
+  if (!rateEl) return;
   const rem = parseInt(remaining, 10);
-  rateEl.textContent = `${remaining}/${limit} remaining`;
-  
+  if (isNaN(rem) || rem < 0) {
+    rateEl.textContent = '';
+    return;
+  }
+  rateEl.textContent = `${rem}/${limit}`;
   if (!isNaN(rem) && rem <= 3) {
     rateEl.classList.add('warning');
   } else {
     rateEl.classList.remove('warning');
   }
 }
-window.updateRateLimitUI = updateRateLimitUI;
 
 function addMessage(role, content, getEditorContent, setEditorContent) {
   const messages = getChatMessages();

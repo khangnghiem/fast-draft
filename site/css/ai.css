@@ -730,3 +730,9 @@
   100% { opacity: 1; }
 }
 
+
+.ai-model-selector {
+  display: flex;
+  align-items: center;
+}
+

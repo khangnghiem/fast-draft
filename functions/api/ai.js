@@ -8,8 +8,8 @@
  *
  * Environment variables:
  *   - AI_DAILY_LIMIT: max calls/day/IP (default: 20)
- *   - AI_MODEL_FAST: model for refine/chat (default: gemma-3-12b-it)
- *   - AI_MODEL_QUALITY: model for review (default: gemma-3-12b-it)
+ *   - AI_MODEL_FAST: model for refine/chat (default: gemma-4-26b-a4b-it)
+ *   - AI_MODEL_QUALITY: model for review (default: gemma-4-26b-a4b-it)
  */
 
 const DEFAULT_CORS_HEADERS = {
@@ -116,6 +116,7 @@ Rules: IDs=semantic snake_case. Colors=harmonious palettes. DRY=use style blocks
 
 // ─── Prompts ─────────────────────────────────────────────────────────────
 
+// NOTE: \${FD_SYNTAX_GUIDE} inside the strings below are literal `${...}` text, not interpolated.
 const SYSTEM_CHAT = `You are an expert UI designer and coding assistant working with the FD (Fast Draft) design format. You help users create, modify, and improve their designs through natural conversation.
 
 When answering questions, be concise and helpful. Always reference node @ids when discussing specific elements.
@@ -228,7 +229,7 @@ async function runWithOpenRouter(env, model, messages, maxTokens, temp, stream) 
   else if (model.includes('gemma-3-12b')) orModel = 'google/gemma-3-12b-it';
   else if (model.includes('llama-3.3-70b')) orModel = 'meta-llama/llama-3.3-70b-instruct';
   else if (model.includes('llama-3.1-8b')) orModel = 'meta-llama/llama-3.1-8b-instruct';
-  else if (!model.includes('/')) orModel = model; 
+  else if (!model.startsWith('@cf/')) orModel = model; 
   else orModel = 'google/gemma-4-26b-a4b-it'; // safe default
   
   const payload = {
@@ -290,7 +291,9 @@ function openRouterToCFStream() {
                 const cfPayload = JSON.stringify({ response: content });
                 controller.enqueue(encoder.encode(`data: ${cfPayload}\n\n`));
              }
-          } catch(e) {}
+          } catch(e) {
+             console.warn('stream chunk parse error:', e.message);
+          }
         }
       }
     }
@@ -311,7 +314,7 @@ async function runAI(env, config, aiMessages, stream, shouldUseOpenRouter, actua
       stream,
     });
   } catch (e) {
-    const isQuotaError = e.message && (e.message.includes('429') || e.message.includes('limit') || e.message.includes('quota'));
+    const isQuotaError = e.message && (e.message.includes('429') || e.message.includes('rate limit') || e.message.includes('quota'));
     if (env.OPENROUTER_API_KEY && isQuotaError) {
       console.log(JSON.stringify({ event: 'ai_fallback', from: 'workers_ai', to: 'openrouter', reason: e.message, model: config.model }));
       const result = await runWithOpenRouter(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
