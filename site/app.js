@@ -3243,10 +3243,10 @@ async function aiTouch() {
     }
     if (!resp.ok) throw new Error(`AI API error: ${resp.status}`);
 
-    const limit = resp.headers.get('x-ratelimit-limit');
-    const remaining = resp.headers.get('x-ratelimit-remaining');
-    if (limit && remaining && typeof window.updateRateLimitUI === 'function') {
-      window.updateRateLimitUI(remaining, limit);
+    const headerLimit = resp.headers.get('x-ratelimit-limit');
+    const headerRemaining = resp.headers.get('x-ratelimit-remaining');
+    if (headerLimit && headerRemaining && typeof window.updateRateLimitUI === 'function') {
+      window.updateRateLimitUI(headerRemaining, headerLimit);
     }
     
     const data = await resp.json();
