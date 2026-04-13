@@ -55,6 +55,8 @@
   font-size: 11px;
   color: var(--fd-text);
   overflow: hidden;
+  user-select: text;
+  -webkit-user-select: text;
   /* Slide transition — GPU-composited, never triggers canvas resize */
   transform: translateX(0);
   transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1),

@@ -500,7 +500,7 @@ async function sendMessage(getEditorContent, setEditorContent) {
             if (payload === '[DONE]') continue;
             try {
               const parsed = JSON.parse(payload);
-              const token = parsed.response || '';
+              const token = (parsed.response != null) ? parsed.response : '';
               if (token) {
                 accumulated += token;
                 if (!renderPending) {
@@ -508,7 +508,9 @@ async function sendMessage(getEditorContent, setEditorContent) {
                   requestAnimationFrame(performRender);
                 }
               }
-            } catch (_) {}
+            } catch (e) {
+              console.warn('[FD AI] SSE chunk parse error:', e.message, 'payload:', payload);
+            }
           }
         }
       } catch (e) {
@@ -519,8 +521,44 @@ async function sendMessage(getEditorContent, setEditorContent) {
         }
       }
 
+      // ─── Auto-retry on empty response (max 2 attempts) ─────────
+      if (!accumulated && !currentAbortController?.signal?.aborted) {
+        const maxRetries = 2;
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          console.warn(`[FD AI] Empty stream response — retry ${attempt}/${maxRetries}`);
+          try {
+            const retryResp = await fetch(AI_ENDPOINT, {
+              method: 'POST',
+              signal: currentAbortController?.signal,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                mode: 'chat',
+                messages: chatHistory,
+                context: docContent,
+                selection: selFd ? selFd.slice(0, 4000) : undefined,
+                selection_ids: selIds.length > 0 ? selIds : undefined,
+                stream: false,
+                model_hint: new URLSearchParams(window.location.search).get('ai_model') || undefined,
+              }),
+            });
+            if (retryResp.ok) {
+              const retryData = await retryResp.json();
+              if (retryData.result) {
+                accumulated = retryData.result;
+                if (retryData.limit && retryData.remaining) {
+                  updateRateLimitUI(retryData.remaining, retryData.limit);
+                }
+                break;
+              }
+            }
+          } catch (retryErr) {
+            console.warn(`[FD AI] Retry ${attempt} failed:`, retryErr.message);
+          }
+        }
+      }
+
       // Finalize: re-render with full markdown + Apply/Skip buttons
-      const finalContent = accumulated || 'No response received.';
+      const finalContent = accumulated || '⚠️ The AI returned an empty response. This may be a temporary issue — try again or simplify your prompt.';
       chatHistory.push({ role: 'assistant', content: finalContent });
       const finalUnsafeHTML = renderAssistantMessage(finalContent, getEditorContent, setEditorContent);
       div.innerHTML = window.DOMPurify ? DOMPurify.sanitize(finalUnsafeHTML, { ADD_ATTR: ['data-fd', 'data-bid'] }) : finalUnsafeHTML;
@@ -530,7 +568,7 @@ async function sendMessage(getEditorContent, setEditorContent) {
       // ─── Fallback: full JSON response ──────────────
       const data = await response.json();
       if (data.limit && data.remaining) updateRateLimitUI(data.remaining, data.limit);
-      const assistantContent = data.result || 'No response received.';
+      const assistantContent = data.result || '⚠️ The AI returned an empty response. This may be a temporary issue — try again or simplify your prompt.';
       chatHistory.push({ role: 'assistant', content: assistantContent });
       addMessage('assistant', assistantContent, getEditorContent, setEditorContent);
     }
