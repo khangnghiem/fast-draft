@@ -9,6 +9,9 @@ permissions:
   contents: read
   deployments: write
 
+env:
+  npm_config_yes: "true"
+
 concurrency:
   group: pages
   cancel-in-progress: true
