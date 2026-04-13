@@ -17,7 +17,7 @@ import {
   highlightSelectionMatches,
   LZString,
 } from './vendor/cm.min.js';
-import { initAiChat, clearChatHistory } from './ai-chat.js?v=0.11.296';
+import { initAiChat, clearChatHistory, updateRateLimitUI } from './ai-chat.js?v=0.11.296';
 import {
   screenToScene as coreScreenToScene,
   pointerTypeToU8 as corePointerTypeToU8,
@@ -3245,8 +3245,8 @@ async function aiTouch() {
 
     const headerLimit = resp.headers.get('x-ratelimit-limit');
     const headerRemaining = resp.headers.get('x-ratelimit-remaining');
-    if (headerLimit && headerRemaining && typeof window.updateRateLimitUI === 'function') {
-      window.updateRateLimitUI(headerRemaining, headerLimit);
+    if (headerLimit && headerRemaining) {
+      updateRateLimitUI(headerRemaining, headerLimit);
     }
     
     const data = await resp.json();
