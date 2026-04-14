@@ -75,89 +75,150 @@ const MODEL_ALIASES = {
   'glm-flash':      '@cf/zai-org/glm-4.7-flash',
 };
 
-// ─── FD Syntax Guide (compressed + golden example) ──────────────────────
+// ─── FD Syntax Guide (comprehensive + golden examples) ──────────────────
 
 const FD_SYNTAX_GUIDE = `
-## FD Syntax (compressed)
+## FD Syntax Reference
 
-Nodes: rect|ellipse|text|frame|group|path|image @id { props }
-Props: fill:#HEX stroke:#HEX_N corner:N opacity:0-1 font:"F" Npx bold|semibold
-Layout: layout: column|row gap=N pad=N, place: center|top_left
-Constraints: center_in: @parent, offset: @ref dx dy
-Style: style name { ... } → use: name
-Edge: edge @id { from: @a to: @b arrow: end curve: smooth }
-Note: note { "text" tag: x done: "y" }
-Hover: when :hover { fill: #HEX ease: ease_out 150ms }
+### Nodes
+Types: rect | ellipse | text | frame | group | path | image | edge
+Declaration: type @semantic_id { properties }
 
-## Golden Example (from a well-designed FD document)
+### Text Nodes (CRITICAL — follow exactly)
+text @label { text: "Hello World" font: "Inter" bold 18 fill: #1A1A2E }
+- The text CONTENT goes inside the \`text:\` property, NOT after the @id.
+- WRONG: text @label "Hello" { }
+- RIGHT: text @label { text: "Hello" }
 
-style card { fill: #FFFFFF corner: 14 }
-style brand { fill: #6C5CE7 corner: 12 }
-style heading { fill: #1A1A2E font: "Inter" bold 22 }
-style body { fill: #6B7280 font: "Inter" regular 14 }
+### Properties
+fill: #HEX        stroke: #HEX N    corner: N        opacity: 0-1
+w: N              h: N              shadow: (0,2,16,#00000010)
+font: "Family" weight Npx           (weight = bold|semibold|regular)
 
-rect @hero_card {
-  w: 220 h: 120
-  use: card
-  shadow: (0,2,16,#00000010)
-  when :hover { scale: 1 ease: spring 200ms }
-}
+### Layout (PREFER over absolute positioning)
+layout: column gap=N pad=N     layout: row gap=N pad=N
+- Children inside a frame with layout are auto-arranged.
+- ALWAYS use layout frames to group related elements.
+- AVOID absolute x/y coordinates. Let the layout engine handle positioning.
 
-frame @sidebar {
-  layout: column gap=8 pad=16
-  fill: #2D2B55 corner: 0
-  rect @nav_dashboard { w: 180 h: 40 fill: #5A4BD1 corner: 8 }
-}
+### Constraints
+center_in: @parent    place: center | top_left    offset: @ref dx dy
 
-edge @build_to_test { from: @stage_build to: @stage_test stroke: #6B7080 1.5 flow: pulse 800ms }
+### Styles (DRY — define once, reuse)
+style card_style { fill: #FFFFFF corner: 14 shadow: (0,2,12,#00000008) }
+Then: rect @card { use: card_style w: 200 h: 120 }
 
-Rules: IDs=semantic snake_case. Colors=harmonious palettes. DRY=use style blocks. Constraints>coords.
+### Edges (for diagrams/flows)
+edge @id { from: @node1 to: @node2 arrow: end stroke: #666 1.5 }
+
+### Hover Animation
+when :hover { fill: #HEX ease: ease_out 150ms }
+when :hover { scale: 1.02 ease: spring 200ms }
 `;
 
 // ─── Prompts ─────────────────────────────────────────────────────────────
 
-const SYSTEM_CHAT = `You are an expert UI designer and coding assistant working with the FD (Fast Draft) design format. You help users create, modify, and improve their designs through natural conversation.
+const SYSTEM_CHAT = `You are an expert visual designer working with the FD (Fast Draft) design format. Create beautiful, well-structured designs.
 
-When answering questions, be concise and helpful. Always reference node @ids when discussing specific elements.
+## CRITICAL RULES (must follow)
 
-## Mutation Patterns (prefer minimal changes)
-- "Make modern": add corner:12-16, shadow:(0,2,16,#00000010), adjust fill to palette
-- "Make bigger": change w/h, DO NOT change x/y if constrained
-- "Center this": use center_in:@parent, DON'T use absolute coords
-- "Group these": wrap in frame @name { layout: column gap=8 }
-- "Add animation": add when :hover { ... ease: ease_out 150ms }
+1. **Text Content**: Use \`text @id { text: "content" }\` — NEVER \`text @id "content" { }\`
+2. **Layout First**: ALWAYS wrap related elements in a \`frame\` with \`layout: column\` or \`layout: row\`. NO loose top-level nodes with absolute x/y.
+3. **Unique IDs**: ALL @ids MUST be globally unique. Prefix with context: @login_title, @login_email, @login_btn.
+4. **Nesting**: Children MUST be inside parent braces. Never declare children as separate top-level blocks.
+5. **Dimensions**: Give every frame/rect explicit w: and h: values.
+6. **Colors**: Use curated palettes, not raw primary colors. No #FF0000 or #0000FF.
+7. **Style Blocks**: Define reusable styles for repeated patterns.
 
-## Rules for Modifications
-- NEVER output absolute x/y coords if the node uses center_in or offset constraints
-- ALWAYS preserve existing use: style references — override specific props only
-- When modifying a child, include the parent frame if layout changes
-- Prefer style blocks for repeated visual patterns
-
-## Handling Abstract Concepts
-- If the user requests abstract concepts that are not traditional UI elements (e.g., "system architecture", "database schema", "web backend"), design a flow chart or diagram using FD primitives (rect, text, frame, edge).
-- Always map these concepts visually with connected nodes and clear labeling.
-- CRITICAL: Use strictly valid FD edge syntax: 'edge @unique_id { from: @node1 to: @node2 }'. NEVER omit the '@id' or the curly braces '{}'. Provide semantic IDs.
-- NEVER refuse to output: always try your best to build a visual diagram.
-
-## Critical Validity Rules
-- ALL @ids MUST be globally unique across the entire document. NEVER reuse an @id, even inside different frames.
-  BAD:  frame @a { text @title {...} }  frame @b { text @title {...} }
-  GOOD: frame @a { text @a_title {...} } frame @b { text @b_title {...} }
-- Children MUST be physically nested inside parent braces. Do NOT declare a parent frame then put children as separate top-level blocks.
-- For architecture/flow diagrams: edges connect BETWEEN components (e.g., @frontend -> @backend), NOT between siblings inside the same frame.
-- Every frame/group should have w: and h: dimensions, or be nested inside a parent that provides layout.
-- NEVER output orphaned/disconnected nodes. Every node should be part of the hierarchy or connected via edges.
+## Design Quality Standards
+- Use corner: 12-16 for modern rounded corners
+- Add shadow: (0,2,16,#00000010) for depth and elevation
+- Use harmonious color palettes (blues: #3B82F6/#1E40AF, purples: #6C5CE7/#5A4BD1, greens: #10B981/#059669)
+- Text hierarchy: title 24px bold, subtitle 16px semibold, body 14px regular, caption 12px
+- Add hover animations for interactive elements
+- Consistent padding (pad=16 or pad=24) and gaps (gap=8 or gap=12)
 
 ## Output Format
-Return ONLY the modified or new node blocks. Use semantic snake_case @ids.
-DO NOT include unmodified nodes. DO NOT add explanation before the code.
-Wrap each modified block in a \`\`\`fd code fence.
-Provide a brief explanation after the code blocks.
+- Wrap all FD code in \\\`\\\`\\\`fd code fences
+- Return ONLY the new/modified nodes — DO NOT repeat unmodified nodes
+- Provide a brief explanation AFTER the code block
+- For new designs, wrap everything in a root frame with layout
 
 ` + FD_SYNTAX_GUIDE + `
 
-## Golden Example (Architecture Diagram)
+## Golden Examples
 
+### Login Form
+\\\`\\\`\\\`fd
+style input_field { fill: #F3F4F6 corner: 8 }
+
+frame @login_form {
+  w: 340 h: 400
+  fill: #FFFFFF corner: 16
+  shadow: (0,4,24,#00000012)
+  layout: column gap=16 pad=32
+
+  text @login_title { text: "Welcome Back" font: "Inter" bold 28 fill: #1A1A2E }
+  text @login_subtitle { text: "Sign in to your account" font: "Inter" regular 14 fill: #9CA3AF }
+
+  frame @login_fields {
+    w: 280 h: 120
+    layout: column gap=12
+    rect @email_field { w: 280 h: 48 use: input_field }
+    text @email_label { text: "Email" font: "Inter" regular 13 fill: #6B7280 }
+    rect @password_field { w: 280 h: 48 use: input_field }
+    text @password_label { text: "Password" font: "Inter" regular 13 fill: #6B7280 }
+  }
+
+  rect @login_btn {
+    w: 280 h: 48
+    fill: #6C5CE7 corner: 10
+    when :hover { fill: #5A4BD1 ease: ease_out 150ms }
+  }
+  text @login_btn_text { text: "Sign In" font: "Inter" semibold 16 fill: #FFFFFF }
+}
+\\\`\\\`\\\`
+
+### Dashboard with Stat Cards
+\\\`\\\`\\\`fd
+style stat_card { fill: #FFFFFF corner: 14 shadow: (0,2,12,#00000008) }
+
+frame @dashboard {
+  w: 700 h: 200
+  layout: row gap=20 pad=24
+  fill: #F8FAFC corner: 16
+
+  frame @card_revenue {
+    w: 200 h: 140
+    use: stat_card
+    layout: column gap=4 pad=20
+    text @rev_label { text: "Revenue" font: "Inter" regular 13 fill: #6B7280 }
+    text @rev_value { text: "$24,500" font: "Inter" bold 28 fill: #1A1A2E }
+    text @rev_change { text: "+12.5%" font: "Inter" semibold 14 fill: #10B981 }
+  }
+
+  frame @card_users {
+    w: 200 h: 140
+    use: stat_card
+    layout: column gap=4 pad=20
+    text @users_label { text: "Users" font: "Inter" regular 13 fill: #6B7280 }
+    text @users_value { text: "1,240" font: "Inter" bold 28 fill: #1A1A2E }
+    text @users_change { text: "+8.2%" font: "Inter" semibold 14 fill: #10B981 }
+  }
+
+  frame @card_orders {
+    w: 200 h: 140
+    use: stat_card
+    layout: column gap=4 pad=20
+    text @orders_label { text: "Orders" font: "Inter" regular 13 fill: #6B7280 }
+    text @orders_value { text: "356" font: "Inter" bold 28 fill: #1A1A2E }
+    text @orders_change { text: "-2.1%" font: "Inter" semibold 14 fill: #EF4444 }
+  }
+}
+\\\`\\\`\\\`
+
+### Architecture Diagram
+\\\`\\\`\\\`fd
 frame @system {
   w: 800 h: 400
   layout: row gap=32 pad=24
@@ -167,29 +228,41 @@ frame @system {
     w: 200 h: 300
     fill: #E8F4FD corner: 12
     layout: column gap=8 pad=16
-    text @fe_title { text: "Frontend" font: bold 20 fill: #1A73E8 }
-    rect @fe_card { w: 170 h: 60 fill: #FFFFFF corner: 8 }
+    text @fe_title { text: "Frontend" font: "Inter" bold 20 fill: #1A73E8 }
+    rect @fe_react { w: 170 h: 44 fill: #FFFFFF corner: 8 }
+    text @fe_react_label { text: "React App" font: "Inter" regular 13 fill: #374151 }
   }
 
   frame @backend_box {
     w: 200 h: 300
     fill: #FFF3E0 corner: 12
     layout: column gap=8 pad=16
-    text @be_title { text: "Backend" font: bold 20 fill: #E65100 }
-    rect @be_card { w: 170 h: 60 fill: #FFFFFF corner: 8 }
+    text @be_title { text: "Backend" font: "Inter" bold 20 fill: #E65100 }
+    rect @be_api { w: 170 h: 44 fill: #FFFFFF corner: 8 }
+    text @be_api_label { text: "REST API" font: "Inter" regular 13 fill: #374151 }
   }
 
   frame @db_box {
     w: 200 h: 300
     fill: #E8F5E9 corner: 12
     layout: column gap=8 pad=16
-    text @db_title { text: "Database" font: bold 20 fill: #2E7D32 }
-    rect @db_card { w: 170 h: 60 fill: #FFFFFF corner: 8 }
+    text @db_title { text: "Database" font: "Inter" bold 20 fill: #2E7D32 }
+    rect @db_pg { w: 170 h: 44 fill: #FFFFFF corner: 8 }
+    text @db_pg_label { text: "PostgreSQL" font: "Inter" regular 13 fill: #374151 }
   }
 }
 
-edge @fe_to_be { from: @frontend_box to: @backend_box arrow: end stroke: #666 1.5 }
-edge @be_to_db { from: @backend_box to: @db_box arrow: end stroke: #666 1.5 }`;
+edge @fe_to_be { from: @frontend_box to: @backend_box arrow: end stroke: #94A3B8 1.5 }
+edge @be_to_db { from: @backend_box to: @db_box arrow: end stroke: #94A3B8 1.5 }
+\\\`\\\`\\\`
+
+## Handling Abstract Concepts
+If the user requests non-UI concepts (architecture, workflows, databases), create visual diagrams using rect/text/frame/edge. NEVER refuse — always produce a visual mapping.
+
+## Modification Rules
+- NEVER output absolute x/y coords if the node uses center_in or offset constraints
+- ALWAYS preserve existing use: style references — override specific props only
+- When modifying a child, include the parent frame if layout changes`;
 
 const SYSTEM_REFINE = `You are an expert UI designer working with the FD (Fast Draft) format. Return ONLY valid FD text with improved styling and semantic naming. No markdown fences, no explanations.\n` + FD_SYNTAX_GUIDE;
 
@@ -216,7 +289,8 @@ const SYSTEM_DEFAULT = `You are an expert UI designer. Return ONLY valid FD text
 
 async function checkRateLimit(context) {
   const kv = context.env.RATE_LIMIT;
-  if (!kv || context.env.DISABLE_RATE_LIMIT) return { allowed: true, remaining: -1, limit: -1 };
+  // Check for actual KV binding (has .get method), not just a truthy env var string
+  if (!kv || typeof kv.get !== 'function' || context.env.DISABLE_RATE_LIMIT) return { allowed: true, remaining: -1, limit: -1 };
 
   const ip = context.request.headers.get('CF-Connecting-IP') || 'unknown';
   const today = new Date().toISOString().slice(0, 10);
@@ -476,41 +550,47 @@ async function runAI(env, { config, aiMessages, stream, shouldUseOpenRouter, ove
     return runWithOllamaCloud(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
   }
 
-  // Tier 1: Cloudflare Workers AI
-  try {
-    return await env.AI.run(config.model, {
-      messages: aiMessages,
-      max_tokens: config.maxTokens,
-      temperature: config.temp,
-      stream,
-    });
-  } catch (e) {
-    const isQuotaError = e.message && (/\b429\b/i.test(e.message) || /\b(rate limit|quota)\b/i.test(e.message));
-    const isTransientError = e.message && (e.message.includes('502') || e.message.includes('503'));
-    
-    // Distinguish between true quota failures vs transient cluster/network failures
-    if (isQuotaError || (isTransientError && !forceOllama)) {
-      // Tier 2: Ollama Cloud
-      if (env.OLLAMA_API_KEY) {
-        console.log(JSON.stringify({ event: 'ai_fallback', from: 'workers_ai', to: 'ollama_cloud', reason: e.message, model: config.model }));
-        try {
-          return await runWithOllamaCloud(env, overrideModel || config.model, aiMessages, config.maxTokens, config.temp, stream);
-        } catch (ollamaErr) {
-          console.warn(JSON.stringify({ event: 'ai_fallback_failed', provider: 'ollama_cloud', reason: ollamaErr.message }));
-        }
+  // Tier 1: Cloudflare Workers AI (skip if binding not available)
+  const hasWorkersAI = env.AI && typeof env.AI.run === 'function';
+  if (hasWorkersAI) {
+    try {
+      return await env.AI.run(config.model, {
+        messages: aiMessages,
+        max_tokens: config.maxTokens,
+        temperature: config.temp,
+        stream,
+      });
+    } catch (e) {
+      const isQuotaError = e.message && (/\b429\b/i.test(e.message) || /\b(rate limit|quota)\b/i.test(e.message));
+      const isTransientError = e.message && (e.message.includes('502') || e.message.includes('503'));
+      
+      // Only fall through to fallbacks for recoverable errors
+      if (!isQuotaError && !isTransientError) {
+        console.warn(JSON.stringify({ event: 'ai_error_terminal', provider: 'workers_ai', reason: e.message, model: config.model }));
+        throw e;
       }
-
-      // Tier 3: OpenRouter
-      if (env.OPENROUTER_API_KEY) {
-        console.log(JSON.stringify({ event: 'ai_fallback', from: 'workers_ai/ollama', to: 'openrouter', model: config.model }));
-        return await runWithOpenRouter(env, overrideModel || config.model, aiMessages, config.maxTokens, config.temp, stream);
-      }
+      console.log(JSON.stringify({ event: 'ai_fallback', from: 'workers_ai', reason: e.message, model: config.model }));
     }
-
-    // Terminal error or no fallbacks available
-    console.warn(JSON.stringify({ event: 'ai_error_terminal', provider: 'workers_ai', reason: e.message, model: config.model }));
-    throw e;
+  } else {
+    console.log(JSON.stringify({ event: 'ai_skip_workers', reason: 'no_binding', model: config.model }));
   }
+
+  // Tier 2: Ollama Cloud
+  if (env.OLLAMA_API_KEY) {
+    try {
+      return await runWithOllamaCloud(env, overrideModel || config.model, aiMessages, config.maxTokens, config.temp, stream);
+    } catch (ollamaErr) {
+      console.warn(JSON.stringify({ event: 'ai_fallback_failed', provider: 'ollama_cloud', reason: ollamaErr.message }));
+    }
+  }
+
+  // Tier 3: OpenRouter
+  if (env.OPENROUTER_API_KEY) {
+    console.log(JSON.stringify({ event: 'ai_fallback', from: 'ollama', to: 'openrouter', model: config.model }));
+    return await runWithOpenRouter(env, overrideModel || config.model, aiMessages, config.maxTokens, config.temp, stream);
+  }
+
+  throw new Error('All AI providers exhausted — no response available');
 }
 
 // ─── Request Handler ──────────────────────────────────────────────
@@ -552,9 +632,13 @@ export async function onRequestPost(context) {
       });
     }
 
-    if (!context.env.AI) {
+    // Allow operation if we have Workers AI OR any fallback provider
+    const hasAI = !!context.env.AI && typeof context.env.AI.run === 'function';
+    const hasOllama = !!context.env.OLLAMA_API_KEY;
+    const hasOpenRouter = !!context.env.OPENROUTER_API_KEY;
+    if (!hasAI && !hasOllama && !hasOpenRouter) {
       return new Response(JSON.stringify({
-        error: 'Workers AI binding not configured.',
+        error: 'No AI provider configured. Need Workers AI binding, OLLAMA_API_KEY, or OPENROUTER_API_KEY.',
       }), { status: 503, headers });
     }
 
