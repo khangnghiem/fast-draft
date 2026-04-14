@@ -134,8 +134,8 @@ crates/
 
 ## TIER 2: CI/CD
 
-### Backend Debugging (Modal)
-- Use the Modal CLI (`modal app logs <app-name>` or `modal env`) for retrieving and reading logs whenever debugging backend tests or AI generation that occurs via serverless endpoints. Appropriate Modal tokens are provisioned in `.env`.
+### Backend Debugging
+- Use `npx wrangler pages dev` or Cloudflare dashboard logic to retrieve logs for `functions/api/ai.js`.
 
 ### Before Completing Any Task
 
