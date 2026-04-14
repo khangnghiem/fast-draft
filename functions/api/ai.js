@@ -40,8 +40,8 @@ const KV_TTL_SECONDS = 86400;
 
 // ─── Default Models (override via env vars) ──────────────────────────────
 
-const DEFAULT_MODEL_FAST = '@cf/google/gemma-4-26b-a4b-it';
-const DEFAULT_MODEL_QUALITY = '@cf/google/gemma-4-26b-a4b-it';
+const DEFAULT_MODEL_FAST = '@cf/meta/llama-3.1-8b-instruct';
+const DEFAULT_MODEL_QUALITY = '@cf/meta/llama-3.1-8b-instruct';
 
 // ─── Model Aliases (for admin URL param override) ────────────────────────
 
@@ -416,7 +416,7 @@ export async function onRequestPost(context) {
     const wantsStream = config.isChat && body.stream === true;
 
     let shouldUseOpenRouter = false;
-    let actualModel = config.model;
+    let actualModel = model_hint || config.model;
 
     if (force_fallback && context.env.OPENROUTER_API_KEY) {
       shouldUseOpenRouter = true;
