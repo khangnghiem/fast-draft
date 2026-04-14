@@ -116,7 +116,6 @@ Rules: IDs=semantic snake_case. Colors=harmonious palettes. DRY=use style blocks
 
 // ─── Prompts ─────────────────────────────────────────────────────────────
 
-// NOTE: \${FD_SYNTAX_GUIDE} inside the strings below are literal `${...}` text, not interpolated.
 const SYSTEM_CHAT = `You are an expert UI designer and coding assistant working with the FD (Fast Draft) design format. You help users create, modify, and improve their designs through natural conversation.
 
 When answering questions, be concise and helpful. Always reference node @ids when discussing specific elements.
@@ -155,7 +154,7 @@ DO NOT include unmodified nodes. DO NOT add explanation before the code.
 Wrap each modified block in a \`\`\`fd code fence.
 Provide a brief explanation after the code blocks.
 
-\${FD_SYNTAX_GUIDE}
+` + FD_SYNTAX_GUIDE + `
 
 ## Golden Example (Architecture Diagram)
 
@@ -192,7 +191,7 @@ frame @system {
 edge @fe_to_be { from: @frontend_box to: @backend_box arrow: end stroke: #666 1.5 }
 edge @be_to_db { from: @backend_box to: @db_box arrow: end stroke: #666 1.5 }`;
 
-const SYSTEM_REFINE = `You are an expert UI designer working with the FD (Fast Draft) format. Return ONLY valid FD text with improved styling and semantic naming. No markdown fences, no explanations.\n\${FD_SYNTAX_GUIDE}`;
+const SYSTEM_REFINE = `You are an expert UI designer working with the FD (Fast Draft) format. Return ONLY valid FD text with improved styling and semantic naming. No markdown fences, no explanations.\n` + FD_SYNTAX_GUIDE;
 
 const SYSTEM_REVIEW = `You are a professional design auditor for FD (Fast Draft) documents. Analyze the given FD text and return a JSON object with this exact structure:
 {
@@ -211,13 +210,16 @@ Example output:
 
 Return ONLY valid JSON. No markdown fences, no explanations. Empty findings array if perfect.`;
 
-const SYSTEM_DEFAULT = `You are an expert UI designer. Return ONLY valid FD text.\n\${FD_SYNTAX_GUIDE}`;
+const SYSTEM_DEFAULT = `You are an expert UI designer. Return ONLY valid FD text.\n` + FD_SYNTAX_GUIDE;
 
 // ─── Rate Limiting ───────────────────────────────────────────────────────
 
 async function checkRateLimit(context) {
-  // CRITICAL E2E FIX: Bypass KV completely to unblock the browser subagent
-  return { allowed: true, remaining: 5000, limit: 5000 };
+  if (context.env.DISABLE_RATE_LIMIT) return { allowed: true, remaining: 5000, limit: 5000 };
+
+  const ip = context.req.headers.get('CF-Connecting-IP') || 'unknown';
+  const { success, limit, remaining } = await context.env.AI_RATE_LIMITER.limit({ key: ip });
+  return { allowed: success, remaining, limit };
 }
 
 // ─── Model + Prompt Selection ────────────────────────────────────────────
@@ -472,14 +474,16 @@ async function runAI(env, { config, aiMessages, stream, shouldUseOpenRouter, ove
       stream,
     });
   } catch (e) {
-    const isQuotaError = e.message && (/\b429\b/i.test(e.message) || /\b(rate limit|quota)\b/i.test(e.message) || e.message.includes('502') || e.message.includes('503'));
+    const isQuotaError = e.message && (/\b429\b/i.test(e.message) || /\b(rate limit|quota)\b/i.test(e.message));
+    const isTransientError = e.message && (e.message.includes('502') || e.message.includes('503'));
     
-    if (isQuotaError) {
+    // Distinguish between true quota failures vs transient cluster/network failures
+    if (isQuotaError || (isTransientError && !forceOllama)) {
       // Tier 2: Ollama Cloud
       if (env.OLLAMA_API_KEY) {
         console.log(JSON.stringify({ event: 'ai_fallback', from: 'workers_ai', to: 'ollama_cloud', reason: e.message, model: config.model }));
         try {
-          return await runWithOllamaCloud(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
+          return await runWithOllamaCloud(env, overrideModel || config.model, aiMessages, config.maxTokens, config.temp, stream);
         } catch (ollamaErr) {
           console.warn(JSON.stringify({ event: 'ai_fallback_failed', provider: 'ollama_cloud', reason: ollamaErr.message }));
         }
@@ -488,7 +492,7 @@ async function runAI(env, { config, aiMessages, stream, shouldUseOpenRouter, ove
       // Tier 3: OpenRouter
       if (env.OPENROUTER_API_KEY) {
         console.log(JSON.stringify({ event: 'ai_fallback', from: 'workers_ai/ollama', to: 'openrouter', model: config.model }));
-        return await runWithOpenRouter(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
+        return await runWithOpenRouter(env, overrideModel || config.model, aiMessages, config.maxTokens, config.temp, stream);
       }
     }
 
