@@ -205,8 +205,9 @@ async function callOllama(
 ): Promise<string> {
   const isCloud = baseUrl.includes("ollama.com");
   const url = isCloud ? "https://ollama.com/api/chat" : `${baseUrl}/api/chat`;
+  const temperature = 0.3;
 
-  const body = { model, messages: [{ role: "user", content: prompt }], stream: false, options: { temperature: 0.3 } };
+  const body = { model, messages: [{ role: "user", content: prompt }], stream: false, options: { temperature } };
 
   const headers: Record<string, string> = {};
   if (apiKey) {
@@ -225,7 +226,7 @@ async function callOllama(
     );
   }
 
-  const text = isCloud ? data?.message?.content : data?.response;
+  const text = data?.message?.content;
   if (!text) {
     throw new Error("Ollama returned empty response");
   }
