@@ -235,7 +235,7 @@ function getFallbackModels(model) {
   } else if (model.includes('qwen2.5-coder')) {
     ollamaModel = 'qwen2.5-coder:32b'; orModel = 'qwen/qwen-2.5-coder-32b-instruct';
   } else if (model.includes('deepseek-r1')) {
-    ollamaModel = 'deepseek-v3.1:671b-cloud'; orModel = 'deepseek/deepseek-r1-distill-qwen-32b';
+    ollamaModel = 'deepseek-r1:32b'; orModel = 'deepseek/deepseek-r1-distill-qwen-32b';
   } else {
     ollamaModel = 'llama3.1:8b';
     orModel = !model.startsWith('@cf/') ? model : 'google/gemma-4-26b-a4b-it';
@@ -250,7 +250,7 @@ async function runWithOllamaCloud(env, model, messages, maxTokens, temp, stream)
   const [ollamaModel] = getFallbackModels(model);
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   let response;
   try {
@@ -270,7 +270,7 @@ async function runWithOllamaCloud(env, model, messages, maxTokens, temp, stream)
     });
   } catch (error) {
     if (error.name === 'AbortError') {
-      throw new Error(`Ollama Cloud timeout (>15s)`);
+      throw new Error(`Ollama Cloud timeout (>30s)`);
     }
     throw error;
   } finally {
@@ -303,7 +303,7 @@ function ollamaCloudToCFStream() {
         if (content) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ response: content })}\n\n`));
         }
-        if (data.done && !content) {
+        if (data.done) {
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));
         }
       } catch (e) {
@@ -371,30 +371,38 @@ function openRouterToCFStream() {
   const decoder = new TextDecoder();
   let buffer = '';
 
+  const processLines = (lines, controller) => {
+    for (let line of lines) {
+      if (line.startsWith('data: ')) {
+        const payload = line.slice(6).trim();
+        if (payload === '[DONE]') {
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            continue;
+        }
+        try {
+            const data = JSON.parse(payload);
+            const content = data.choices?.[0]?.delta?.content;
+            if (content) {
+              const cfPayload = JSON.stringify({ response: content });
+              controller.enqueue(encoder.encode(`data: ${cfPayload}\n\n`));
+            }
+        } catch(e) {
+            console.warn('stream chunk parse error:', e.message);
+        }
+      }
+    }
+  };
+
   return new TransformStream({
     transform(chunk, controller) {
       buffer += decoder.decode(chunk, { stream: true });
       let lines = buffer.split('\n');
       buffer = lines.pop() || ''; 
-
-      for (let line of lines) {
-        if (line.startsWith('data: ')) {
-          const payload = line.slice(6).trim();
-          if (payload === '[DONE]') {
-             controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-             continue;
-          }
-          try {
-             const data = JSON.parse(payload);
-             const content = data.choices?.[0]?.delta?.content;
-             if (content) {
-                const cfPayload = JSON.stringify({ response: content });
-                controller.enqueue(encoder.encode(`data: ${cfPayload}\n\n`));
-             }
-          } catch(e) {
-             console.warn('stream chunk parse error:', e.message);
-          }
-        }
+      processLines(lines, controller);
+    },
+    flush(controller) {
+      if (buffer.trim()) {
+        processLines([buffer], controller);
       }
     }
   });
@@ -402,7 +410,7 @@ function openRouterToCFStream() {
 
 // ─── Unified AI Runner (3-Tier Fallback) ─────────────────────────────────
 
-async function runAI(env, config, aiMessages, stream, shouldUseOpenRouter, overrideModel, forceOllama) {
+async function runAI(env, { config, aiMessages, stream, shouldUseOpenRouter, overrideModel, forceOllama }) {
   // Manual override bypasses tiers entirely
   if (shouldUseOpenRouter && env.OPENROUTER_API_KEY && !forceOllama) {
     return runWithOpenRouter(env, overrideModel, aiMessages, config.maxTokens, config.temp, stream);
@@ -420,16 +428,14 @@ async function runAI(env, config, aiMessages, stream, shouldUseOpenRouter, overr
       stream,
     });
   } catch (e) {
-    const isQuotaError = e.message && (e.message.includes('429') || e.message.includes('rate limit') || e.message.includes('quota'));
+    const isQuotaError = e.message && (/\b429\b/i.test(e.message) || /\b(rate limit|quota)\b/i.test(e.message) || e.message.includes('502') || e.message.includes('503'));
     
     if (isQuotaError) {
       // Tier 2: Ollama Cloud
       if (env.OLLAMA_API_KEY) {
         console.log(JSON.stringify({ event: 'ai_fallback', from: 'workers_ai', to: 'ollama_cloud', reason: e.message, model: config.model }));
         try {
-          const result = await runWithOllamaCloud(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
-          config.model = 'ollama-cloud-fallback';
-          return result;
+          return await runWithOllamaCloud(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
         } catch (ollamaErr) {
           console.warn(JSON.stringify({ event: 'ai_fallback_failed', provider: 'ollama_cloud', reason: ollamaErr.message }));
         }
@@ -438,9 +444,7 @@ async function runAI(env, config, aiMessages, stream, shouldUseOpenRouter, overr
       // Tier 3: OpenRouter
       if (env.OPENROUTER_API_KEY) {
         console.log(JSON.stringify({ event: 'ai_fallback', from: 'workers_ai/ollama', to: 'openrouter', model: config.model }));
-        const result = await runWithOpenRouter(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
-        config.model = 'openrouter-fallback';
-        return result;
+        return await runWithOpenRouter(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
       }
     }
 
@@ -557,7 +561,7 @@ export async function onRequestPost(context) {
     }
 
     if (wantsStream) {
-      const stream = await runAI(context.env, config, aiMessages, true, shouldUseOpenRouter, actualModel, force_ollama);
+      const stream = await runAI(context.env, { config, aiMessages, stream: true, shouldUseOpenRouter, overrideModel: actualModel, forceOllama: force_ollama });
 
       return new Response(stream, {
         headers: {
@@ -570,7 +574,7 @@ export async function onRequestPost(context) {
     }
 
     // ─── Non-streaming (full JSON response) ──────────────────
-    const result = await runAI(context.env, config, aiMessages, false, shouldUseOpenRouter, actualModel, force_ollama);
+    const result = await runAI(context.env, { config, aiMessages, stream: false, shouldUseOpenRouter, overrideModel: actualModel, forceOllama: force_ollama });
 
     let responseBody;
 
