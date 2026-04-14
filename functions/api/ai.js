@@ -213,16 +213,102 @@ function computeScore(categories) {
   return Math.round(total / categories.length);
 }
 
-// ─── OpenRouter Integration ──────────────────────────────────────────────
+// ─── Fallback Models Mapping ─────────────────────────────────────────────
+
+function getFallbackModels(model) {
+  // Returns [OllamaModel, OpenRouterModel]
+  let ollamaModel = model;
+  let orModel = model;
+
+  if (model.includes('llama-3.1-8b')) {
+    ollamaModel = 'llama3.1:8b-cloud'; orModel = 'meta-llama/llama-3.1-8b-instruct';
+  } else if (model.includes('llama-3.2-1b')) {
+    ollamaModel = 'llama3.2:1b-cloud'; orModel = 'meta-llama/llama-3.2-1b-instruct';
+  } else if (model.includes('llama-3.2-3b')) {
+    ollamaModel = 'llama3.2:3b-cloud'; orModel = 'meta-llama/llama-3.2-3b-instruct';
+  } else if (model.includes('llama-3.3-70b')) {
+    ollamaModel = 'llama3.3:70b-cloud'; orModel = 'meta-llama/llama-3.3-70b-instruct';
+  } else if (model.includes('gemma-4')) {
+    ollamaModel = 'gemma4:26b-cloud'; orModel = 'google/gemma-4-26b-a4b-it';
+  } else if (model.includes('gemma-3')) {
+    ollamaModel = 'gemma2:9b-cloud'; orModel = 'google/gemma-3-12b-it';
+  } else if (model.includes('qwen2.5-coder')) {
+    ollamaModel = 'qwen2.5-coder:32b-cloud'; orModel = 'qwen/qwen-2.5-coder-32b-instruct';
+  } else if (model.includes('deepseek-r1')) {
+    ollamaModel = 'deepseek-r1:32b-cloud'; orModel = 'deepseek/deepseek-r1-distill-qwen-32b';
+  } else {
+    ollamaModel = 'llama3.1:8b-cloud';
+    orModel = !model.startsWith('@cf/') ? model : 'google/gemma-4-26b-a4b-it';
+  }
+
+  return [ollamaModel, orModel];
+}
+
+// ─── Ollama Cloud Integration (Tier 2) ───────────────────────────────────
+
+async function runWithOllamaCloud(env, model, messages, maxTokens, temp, stream) {
+  const [ollamaModel] = getFallbackModels(model);
+
+  const response = await fetch('https://ollama.com/api/chat', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${env.OLLAMA_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: ollamaModel,
+      messages,
+      stream: !!stream,
+      options: { temperature: temp, num_predict: maxTokens },
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Ollama Cloud error: ${response.status} ${errText}`);
+  }
+
+  if (stream) {
+    return response.body.pipeThrough(ollamaCloudToCFStream());
+  }
+  const data = await response.json();
+  return { response: data.message?.content || '' };
+}
+
+function ollamaCloudToCFStream() {
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  return new TransformStream({
+    transform(chunk, controller) {
+      buffer += decoder.decode(chunk, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const data = JSON.parse(line);
+          const content = data.message?.content;
+          if (content) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ response: content })}\n\n`));
+          }
+          if (data.done) {
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          }
+        } catch (e) {
+          console.warn('Ollama stream parse error:', e.message);
+        }
+      }
+    }
+  });
+}
+
+// ─── OpenRouter Integration (Tier 3) ─────────────────────────────────────
 
 async function runWithOpenRouter(env, model, messages, maxTokens, temp, stream) {
-  let orModel = model;
-  if (model.includes('gemma-4-26b')) orModel = 'google/gemma-4-26b-a4b-it';
-  else if (model.includes('gemma-3-12b')) orModel = 'google/gemma-3-12b-it';
-  else if (model.includes('llama-3.3-70b')) orModel = 'meta-llama/llama-3.3-70b-instruct';
-  else if (model.includes('llama-3.1-8b')) orModel = 'meta-llama/llama-3.1-8b-instruct';
-  else if (!model.startsWith('@cf/')) orModel = model; 
-  else orModel = 'google/gemma-4-26b-a4b-it'; // safe default
+  const [, orModel] = getFallbackModels(model);
   
   const payload = {
     model: orModel,
@@ -292,12 +378,15 @@ function openRouterToCFStream() {
   });
 }
 
-// ─── Unified AI Runner (CF Edge → OpenRouter fallback) ──────────────────
+// ─── Unified AI Runner (3-Tier Fallback) ─────────────────────────────────
 
 async function runAI(env, config, aiMessages, stream, shouldUseOpenRouter, actualModel) {
-  if (shouldUseOpenRouter) {
+  // Manual override bypasses tiers entirely
+  if (shouldUseOpenRouter && env.OPENROUTER_API_KEY) {
     return runWithOpenRouter(env, actualModel, aiMessages, config.maxTokens, config.temp, stream);
   }
+
+  // Tier 1: Cloudflare Workers AI
   try {
     return await env.AI.run(config.model, {
       messages: aiMessages,
@@ -307,12 +396,30 @@ async function runAI(env, config, aiMessages, stream, shouldUseOpenRouter, actua
     });
   } catch (e) {
     const isQuotaError = e.message && (e.message.includes('429') || e.message.includes('rate limit') || e.message.includes('quota'));
-    if (env.OPENROUTER_API_KEY && isQuotaError) {
-      console.log(JSON.stringify({ event: 'ai_fallback', from: 'workers_ai', to: 'openrouter', reason: e.message, model: config.model }));
-      const result = await runWithOpenRouter(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
-      config.model = 'openrouter-fallback';
-      return result;
+    
+    if (isQuotaError) {
+      // Tier 2: Ollama Cloud
+      if (env.OLLAMA_API_KEY) {
+        console.log(JSON.stringify({ event: 'ai_fallback', from: 'workers_ai', to: 'ollama_cloud', reason: e.message, model: config.model }));
+        try {
+          const result = await runWithOllamaCloud(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
+          config.model = 'ollama-cloud-fallback';
+          return result;
+        } catch (ollamaErr) {
+          console.warn(JSON.stringify({ event: 'ai_fallback_failed', provider: 'ollama_cloud', reason: ollamaErr.message }));
+        }
+      }
+
+      // Tier 3: OpenRouter
+      if (env.OPENROUTER_API_KEY) {
+        console.log(JSON.stringify({ event: 'ai_fallback', from: 'workers_ai/ollama', to: 'openrouter', model: config.model }));
+        const result = await runWithOpenRouter(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
+        config.model = 'openrouter-fallback';
+        return result;
+      }
     }
+
+    // Terminal error or no fallbacks available
     console.warn(JSON.stringify({ event: 'ai_error_terminal', provider: 'workers_ai', reason: e.message, model: config.model }));
     throw e;
   }

@@ -52,7 +52,7 @@ export function getAiConfig(): AiConfig {
     gemini: config.get<string>("geminiApiKey") ?? "",
     openai: config.get<string>("openaiApiKey") ?? "",
     anthropic: config.get<string>("anthropicApiKey") ?? "",
-    ollama: "", // No key needed
+    ollama: config.get<string>("ollamaApiKey") ?? "",
     openrouter: config.get<string>("openrouterApiKey") ?? "",
   };
 
@@ -199,35 +199,40 @@ async function callAnthropic(
 
 async function callOllama(
   prompt: string,
+  apiKey: string,
   model: string,
   baseUrl: string
 ): Promise<string> {
-  const url = `${baseUrl}/api/generate`;
+  const isCloud = baseUrl.includes("ollama.com") || !!apiKey;
+  const url = isCloud ? "https://ollama.com/api/chat" : `${baseUrl}/api/generate`;
 
-  const body = {
-    model,
-    prompt,
-    stream: false,
-    options: { temperature: 0.3 },
-  };
+  const body = isCloud
+    ? { model, messages: [{ role: "user", content: prompt }], stream: false, options: { temperature: 0.3 } }
+    : { model, prompt, stream: false, options: { temperature: 0.3 } };
+
+  const headers: Record<string, string> = {};
+  if (apiKey) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
+  }
 
   let data;
   try {
-    data = await callAiApi(url, body, {});
+    data = await callAiApi(url, body, headers);
   } catch (error) {
     if (error instanceof Error && error.message.includes("API error")) {
         throw error;
     }
     throw new Error(
-      `Could not connect to Ollama at ${baseUrl}. Make sure Ollama is running.`
+      `Could not connect to Ollama at ${isCloud ? "ollama.com" : baseUrl}. Make sure Ollama is running.`
     );
   }
 
-  if (!data?.response) {
+  const text = isCloud ? data?.message?.content : data?.response;
+  if (!text) {
     throw new Error("Ollama returned empty response");
   }
 
-  return data.response.trim();
+  return text.trim();
 }
 
 async function callOpenRouter(
@@ -320,7 +325,7 @@ export async function refineSelectedNodes(
         break;
 
       case "ollama":
-        refined = await callOllama(prompt, config.model, config.ollamaUrl);
+        refined = await callOllama(prompt, config.apiKey, config.model, config.ollamaUrl);
         break;
 
       case "openrouter":
