@@ -18,7 +18,12 @@
 -->
 - **FEAT (AI)**: Migrated all ChatGPT and Refine logic to the Gemma 4 26B A4B model infrastructure. Replaced the user-facing model selection dropdown with a locked '✦ Gemma 4' badge to standardize costs and output quality, and wired the Cloudflare failover to default to the OpenRouter Gemma 4 model gracefully.
 
-### v0.11.376 — AI Infrastructure Hardening (R4.9, R4.26)
+### v0.11.378 — AI 3-Tier Fallback Integration (R4.26)
+- **3-Tier Architecture**: Expanded the serverless fallback chain from a binary format (CF Workers AI → OpenRouter) to a robust 3-tier system: `(1) CF Workers AI → (2) Ollama Cloud → (3) OpenRouter`.
+- **NDJSON Stream Transformer**: Added native `ollamaCloudToCFStream` edge parser to seamlessly translate Ollama's unbuffered Server-Sent Events architecture directly into the frontend's expected CF stream payload format.
+- **VS Code Extensibility**: The VS Code extension now independently reads `fd.ai.ollamaApiKey` to accurately branch logic between local Ollama instances (unauthenticated) and authenticated Ollama Cloud inference tasks.
+
+### v0.11.376 — AI Infrastructure Hardening (R4.9)
 - **Quota-Aware Fallback**: Intelligent error handling in `functions/api/ai.js`. Now specifically tests exactly for `429` (Cloudflare quota triggers) or `status >= 500` before aggressively flipping to the fallback OpenRouter model, saving API credits during transient errors.
 - **Client-Side Resilience**: Introduced the `force_fallback=true` trigger payload. When the initial Workers AI invocation throws a 500-level error, the frontend `aiTouch()` client instantly retries with the payload, elegantly forcing the serverless backend to rely on the OpenRouter fallback.
 - **Telemetry Observability**: Added verbose JSON-structured logging via `console.info` around the `ai_fallback` routing paths for seamless performance analysis within the Cloudflare dashboard.  

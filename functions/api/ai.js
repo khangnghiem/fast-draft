@@ -221,23 +221,23 @@ function getFallbackModels(model) {
   let orModel = model;
 
   if (model.includes('llama-3.1-8b')) {
-    ollamaModel = 'llama3.1:8b-cloud'; orModel = 'meta-llama/llama-3.1-8b-instruct';
+    ollamaModel = 'llama3.1:8b'; orModel = 'meta-llama/llama-3.1-8b-instruct';
   } else if (model.includes('llama-3.2-1b')) {
-    ollamaModel = 'llama3.2:1b-cloud'; orModel = 'meta-llama/llama-3.2-1b-instruct';
+    ollamaModel = 'llama3.2:1b'; orModel = 'meta-llama/llama-3.2-1b-instruct';
   } else if (model.includes('llama-3.2-3b')) {
-    ollamaModel = 'llama3.2:3b-cloud'; orModel = 'meta-llama/llama-3.2-3b-instruct';
+    ollamaModel = 'llama3.2:3b'; orModel = 'meta-llama/llama-3.2-3b-instruct';
   } else if (model.includes('llama-3.3-70b')) {
-    ollamaModel = 'llama3.3:70b-cloud'; orModel = 'meta-llama/llama-3.3-70b-instruct';
+    ollamaModel = 'llama3.3:70b'; orModel = 'meta-llama/llama-3.3-70b-instruct';
   } else if (model.includes('gemma-4')) {
-    ollamaModel = 'gemma4:26b-cloud'; orModel = 'google/gemma-4-26b-a4b-it';
+    ollamaModel = 'gemma4:26b'; orModel = 'google/gemma-4-26b-a4b-it';
   } else if (model.includes('gemma-3')) {
-    ollamaModel = 'gemma2:9b-cloud'; orModel = 'google/gemma-3-12b-it';
+    ollamaModel = 'gemma2:9b'; orModel = 'google/gemma-3-12b-it';
   } else if (model.includes('qwen2.5-coder')) {
-    ollamaModel = 'qwen2.5-coder:32b-cloud'; orModel = 'qwen/qwen-2.5-coder-32b-instruct';
+    ollamaModel = 'qwen2.5-coder:32b'; orModel = 'qwen/qwen-2.5-coder-32b-instruct';
   } else if (model.includes('deepseek-r1')) {
-    ollamaModel = 'deepseek-r1:32b-cloud'; orModel = 'deepseek/deepseek-r1-distill-qwen-32b';
+    ollamaModel = 'deepseek-v3.1:671b-cloud'; orModel = 'deepseek/deepseek-r1-distill-qwen-32b';
   } else {
-    ollamaModel = 'llama3.1:8b-cloud';
+    ollamaModel = 'llama3.1:8b';
     orModel = !model.startsWith('@cf/') ? model : 'google/gemma-4-26b-a4b-it';
   }
 
@@ -249,19 +249,33 @@ function getFallbackModels(model) {
 async function runWithOllamaCloud(env, model, messages, maxTokens, temp, stream) {
   const [ollamaModel] = getFallbackModels(model);
 
-  const response = await fetch('https://ollama.com/api/chat', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${env.OLLAMA_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: ollamaModel,
-      messages,
-      stream: !!stream,
-      options: { temperature: temp, num_predict: maxTokens },
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+  let response;
+  try {
+    response = await fetch('https://ollama.com/api/chat', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.OLLAMA_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: ollamaModel,
+        messages,
+        stream: !!stream,
+        options: { temperature: temp, num_predict: maxTokens },
+      }),
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error(`Ollama Cloud timeout (>15s)`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     const errText = await response.text();
@@ -280,26 +294,34 @@ function ollamaCloudToCFStream() {
   const decoder = new TextDecoder();
   let buffer = '';
 
+  const processLines = (lines, controller) => {
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const data = JSON.parse(line);
+        const content = data.message?.content;
+        if (content) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ response: content })}\n\n`));
+        }
+        if (data.done && !content) {
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        }
+      } catch (e) {
+        console.warn('Ollama stream parse error:', e.message);
+      }
+    }
+  };
+
   return new TransformStream({
     transform(chunk, controller) {
       buffer += decoder.decode(chunk, { stream: true });
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          const data = JSON.parse(line);
-          const content = data.message?.content;
-          if (content) {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ response: content })}\n\n`));
-          }
-          if (data.done) {
-            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-          }
-        } catch (e) {
-          console.warn('Ollama stream parse error:', e.message);
-        }
+      processLines(lines, controller);
+    },
+    flush(controller) {
+      if (buffer.trim()) {
+        processLines([buffer], controller);
       }
     }
   });
@@ -380,10 +402,13 @@ function openRouterToCFStream() {
 
 // ─── Unified AI Runner (3-Tier Fallback) ─────────────────────────────────
 
-async function runAI(env, config, aiMessages, stream, shouldUseOpenRouter, actualModel) {
+async function runAI(env, config, aiMessages, stream, shouldUseOpenRouter, overrideModel, forceOllama) {
   // Manual override bypasses tiers entirely
-  if (shouldUseOpenRouter && env.OPENROUTER_API_KEY) {
-    return runWithOpenRouter(env, actualModel, aiMessages, config.maxTokens, config.temp, stream);
+  if (shouldUseOpenRouter && env.OPENROUTER_API_KEY && !forceOllama) {
+    return runWithOpenRouter(env, overrideModel, aiMessages, config.maxTokens, config.temp, stream);
+  }
+  if (forceOllama && env.OLLAMA_API_KEY) {
+    return runWithOllamaCloud(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
   }
 
   // Tier 1: Cloudflare Workers AI
@@ -449,7 +474,7 @@ export async function onRequestPost(context) {
     }
 
     const body = await context.request.json();
-    const { prompt, mode, model_hint, user_focus, messages, context: docContext, selection, selection_ids, force_fallback } = body;
+    const { prompt, mode, model_hint, user_focus, messages, context: docContext, selection, selection_ids, force_fallback, force_ollama } = body;
 
     // Chat mode requires messages array; other modes require prompt
     if (mode === 'chat') {
@@ -532,7 +557,7 @@ export async function onRequestPost(context) {
     }
 
     if (wantsStream) {
-      const stream = await runAI(context.env, config, aiMessages, true, shouldUseOpenRouter, actualModel);
+      const stream = await runAI(context.env, config, aiMessages, true, shouldUseOpenRouter, actualModel, force_ollama);
 
       return new Response(stream, {
         headers: {
@@ -545,7 +570,7 @@ export async function onRequestPost(context) {
     }
 
     // ─── Non-streaming (full JSON response) ──────────────────
-    const result = await runAI(context.env, config, aiMessages, false, shouldUseOpenRouter, actualModel);
+    const result = await runAI(context.env, config, aiMessages, false, shouldUseOpenRouter, actualModel, force_ollama);
 
     let responseBody;
 

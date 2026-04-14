@@ -203,12 +203,10 @@ async function callOllama(
   model: string,
   baseUrl: string
 ): Promise<string> {
-  const isCloud = baseUrl.includes("ollama.com") || !!apiKey;
-  const url = isCloud ? "https://ollama.com/api/chat" : `${baseUrl}/api/generate`;
+  const isCloud = baseUrl.includes("ollama.com");
+  const url = isCloud ? "https://ollama.com/api/chat" : `${baseUrl}/api/chat`;
 
-  const body = isCloud
-    ? { model, messages: [{ role: "user", content: prompt }], stream: false, options: { temperature: 0.3 } }
-    : { model, prompt, stream: false, options: { temperature: 0.3 } };
+  const body = { model, messages: [{ role: "user", content: prompt }], stream: false, options: { temperature: 0.3 } };
 
   const headers: Record<string, string> = {};
   if (apiKey) {

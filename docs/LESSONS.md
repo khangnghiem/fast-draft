@@ -45,6 +45,16 @@ Engineering lessons discovered through building FD.
 -->
 
 
+## AI API: Validate Model Names Against Actual Provider
+
+**Date**: 2026-04-14
+**Context**: Trying to route fallback requests to Ollama Cloud using invented names like `llama3.1:8b-cloud` and `gemma4:26b-cloud`.
+**Root cause**: LLMs guessing generic naming conventions (e.g., suffixing `:cloud`). Ollama Cloud only provisions the `:cloud` variants for massive 100B+ models that cannot run locally (like `deepseek-v3.1:671b-cloud`). Attempting to call non-existent cloud variants resulted in a silent 404 block for the middleware.
+**Fix**: Do not append fabricated suffixes. Check the actual supported model list and use standard names (e.g., `llama3.1:8b`) which fallback cleanly on the cloud.
+**Lesson**: **Never assume provider model names follow a predictable pattern.** Always validate exact strings against provider API docs prior to hardcoding routes, otherwise entire fallback tiers will 404 in production.
+
+---
+
 ## Resize Fight: Bounds Ownership Chain (SyncEngine ↔ Layout Engine ↔ JS)
 
 **Date**: 2026-03-04
