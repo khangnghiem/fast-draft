@@ -190,19 +190,50 @@ function escapeHtml(text) {
  * per-block accept/reject buttons for FD code blocks.
  * Smart replace: finds matching @id in document and replaces in-place.
  */
+/**
+ * Detect if an FD code block represents a complete, self-contained design
+ * (i.e. a top-level frame/group with children, or multiple top-level nodes).
+ */
+function isCompleteDesign(fdCode) {
+  // Count top-level node declarations (with @id)
+  const nodeBlocks = [...fdCode.matchAll(/^(?:rect|ellipse|text|frame|group|path|image|edge)\s+@/gm)];
+  // Count top-level style blocks (without @id — style uses plain names)
+  const styleBlocks = [...fdCode.matchAll(/^style\s+\w+\s*\{/gm)];
+  const totalTopLevel = nodeBlocks.length + styleBlocks.length;
+  if (totalTopLevel >= 3) return true;
+  // Single top-level frame/group with children → complete design
+  const frameMatch = fdCode.match(/^(?:frame|group)\s+@\w+\s*\{/m);
+  if (frameMatch) {
+    // Check if it has nested children (indented node declarations)
+    const hasChildren = /^\s+(?:rect|ellipse|text|frame|group|path|image)\s+@/m.test(fdCode);
+    if (hasChildren) return true;
+  }
+  return false;
+}
+
 function renderAssistantMessage(content, getEditorContent, setEditorContent) {
-  const parts = content.split(/(```fd\n[\s\S]*?```)/g);
+  // Match ```fd code fences (case insensitive, optional space)
+  const parts = content.split(/(```(?:fd|FD)\s*\n[\s\S]*?```)/g);
   let html = '';
   let blockIndex = 0;
 
   for (const part of parts) {
-    const fdMatch = part.match(/```fd\n([\s\S]*?)```/);
+    const fdMatch = part.match(/```(?:fd|FD)\s*\n([\s\S]*?)```/);
     if (fdMatch) {
       const fdCode = fdMatch[1].trim();
       const bid = `fd-block-${Date.now()}-${blockIndex++}`;
+      const encoded = encodeURIComponent(fdCode);
+      const complete = isCompleteDesign(fdCode);
       html += `<pre><code>${escapeHtml(fdCode)}</code></pre>`;
       html += `<div class="fd-block-action" data-bid="${bid}">`;
-      html += `<button class="fd-apply-btn" data-fd="${encodeURIComponent(fdCode)}" data-bid="${bid}">✓ Apply</button>`;
+      if (complete) {
+        // For complete designs: offer both Replace (primary) and Merge
+        html += `<button class="fd-replace-btn" data-fd="${encoded}" data-bid="${bid}">⟳ Replace Canvas</button>`;
+        html += `<button class="fd-apply-btn fd-secondary" data-fd="${encoded}" data-bid="${bid}">+ Merge</button>`;
+      } else {
+        // For partial modifications: offer Apply (smart merge)
+        html += `<button class="fd-apply-btn" data-fd="${encoded}" data-bid="${bid}">✓ Apply</button>`;
+      }
       html += `<button class="fd-reject-btn" data-bid="${bid}">✕ Skip</button>`;
       html += '</div>';
     } else {
@@ -222,17 +253,22 @@ function renderAssistantMessage(content, getEditorContent, setEditorContent) {
  * the matching node block in the document in-place.
  * Falls back to append if no matching node is found.
  */
+/**
+ * Smart Merge: find matching @ids in the document and replace in-place.
+ * New nodes (no matching @id) are appended at the end.
+ */
 function smartApplyFdCode(fdCode, getEditorContent, setEditorContent) {
   if (!getEditorContent || !setEditorContent) return;
 
   const current = getEditorContent();
 
   // Extract node @ids from the incoming FD code
-  const nodeIdMatches = [...fdCode.matchAll(/^(?:rect|ellipse|text|frame|group|path|image|edge)\s+@(\w+)/gm)];
+  const nodeIdMatches = [...fdCode.matchAll(/^(?:rect|ellipse|text|frame|group|path|image|edge|style)\s+@(\w+)/gm)];
 
   if (nodeIdMatches.length === 0) {
     // No recognizable node — append
     setEditorContent(current.trimEnd() + '\n\n' + fdCode + '\n');
+    notifyCanvasSync();
     return;
   }
 
@@ -264,6 +300,58 @@ function smartApplyFdCode(fdCode, getEditorContent, setEditorContent) {
   }
 
   setEditorContent(result);
+  notifyCanvasSync();
+}
+
+/**
+ * Replace All: clear the entire document and set it to the new FD code.
+ * Used for complete fresh designs from the AI.
+ */
+function replaceAllFdCode(fdCode, getEditorContent, setEditorContent) {
+  if (!setEditorContent) return;
+  // Preserve style blocks from the current document (if any match new code's use: refs)
+  const current = getEditorContent ? getEditorContent() : '';
+  const existingStyles = extractStyleBlocks(current);
+  const newStyles = extractStyleBlocks(fdCode);
+  
+  // Merge style blocks: keep existing styles that aren't redefined in new code
+  let mergedStyles = '';
+  for (const [name, block] of Object.entries(existingStyles)) {
+    if (!newStyles[name]) {
+      mergedStyles += block + '\n';
+    }
+  }
+  
+  const finalCode = (mergedStyles + '\n' + fdCode).trim() + '\n';
+  setEditorContent(finalCode);
+  notifyCanvasSync();
+}
+
+/**
+ * Extract named style blocks from FD text.
+ * Returns { styleName: fullBlockText }
+ */
+function extractStyleBlocks(source) {
+  const styles = {};
+  const regex = /^style\s+(\w+)\s*\{[^}]*\}/gm;
+  let match;
+  while ((match = regex.exec(source)) !== null) {
+    styles[match[1]] = match[0];
+  }
+  return styles;
+}
+
+/**
+ * Notify the main app that the document was changed by AI apply.
+ * This ensures WASM re-parses and the canvas re-renders.
+ */
+function notifyCanvasSync() {
+  // The setEditorContent dispatches a CodeMirror transaction,
+  // which triggers the updateListener → fdCanvas.set_text().
+  // We dispatch a secondary event for any additional sync needed.
+  requestAnimationFrame(() => {
+    document.dispatchEvent(new CustomEvent('fd-ai-applied'));
+  });
 }
 
 /**
@@ -320,6 +408,20 @@ function extractNodeBlock(source, nodeId) {
 // ─── Message Addition ───────────────────────────────────
 
 function wireApplySkipButtons(container, getEditorContent, setEditorContent) {
+  // "Replace Canvas" button — replaces entire document with AI output
+  container.querySelectorAll('.fd-replace-btn:not([data-wired])').forEach(btn => {
+    btn.setAttribute('data-wired', 'true');
+    btn.addEventListener('click', () => {
+      const fdCode = decodeURIComponent(btn.dataset.fd);
+      const actionDiv = btn.closest('.fd-block-action');
+      replaceAllFdCode(fdCode, getEditorContent, setEditorContent);
+      if (actionDiv) {
+        actionDiv.innerHTML = '<span style="color:#007AFF;font-size:10px;font-weight:600">⟳ Replaced canvas</span>';
+      }
+    });
+  });
+
+  // "Apply" / "Merge" button — smart merge into existing document
   container.querySelectorAll('.fd-apply-btn:not([data-wired])').forEach(btn => {
     btn.setAttribute('data-wired', 'true');
     btn.addEventListener('click', () => {
@@ -327,7 +429,7 @@ function wireApplySkipButtons(container, getEditorContent, setEditorContent) {
       const actionDiv = btn.closest('.fd-block-action');
       smartApplyFdCode(fdCode, getEditorContent, setEditorContent);
       if (actionDiv) {
-        actionDiv.innerHTML = '<span style="color:#34C759;font-size:10px;font-weight:600">✓ Applied</span>';
+        actionDiv.innerHTML = '<span style="color:#34C759;font-size:10px;font-weight:600">✓ Merged</span>';
       }
     });
   });

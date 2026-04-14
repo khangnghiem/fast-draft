@@ -549,6 +549,27 @@
   transition: filter 0.15s ease;
 }
 .ai-chat-msg.assistant .fd-apply-btn:hover { filter: brightness(1.1); }
+.ai-chat-msg.assistant .fd-apply-btn.fd-secondary {
+  background: rgba(52, 199, 89, 0.12);
+  color: #34C759;
+  font-weight: 500;
+}
+.ai-chat-msg.assistant .fd-apply-btn.fd-secondary:hover {
+  background: rgba(52, 199, 89, 0.2);
+  filter: none;
+}
+.ai-chat-msg.assistant .fd-replace-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #007AFF, #0A84FF);
+  color: #fff;
+  transition: filter 0.15s ease;
+}
+.ai-chat-msg.assistant .fd-replace-btn:hover { filter: brightness(1.1); }
 .ai-chat-msg.assistant .fd-reject-btn {
   border: none;
   border-radius: 6px;

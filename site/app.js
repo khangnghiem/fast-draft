@@ -4390,6 +4390,21 @@ async function initPlayground() {
       },
       () => fdCanvas
     );
+    // Listen for AI apply events → ensure full canvas sync + re-render
+    document.addEventListener('fd-ai-applied', () => {
+      if (!fdCanvas) return;
+      // Wait for CodeMirror dispatch to trigger the updateListener → set_text
+      setTimeout(() => {
+        measureAllTextNodes(fdCanvas, canvas);
+        renderDirty = true; uiDirty = true; sceneDirty = true;
+        renderCanvas();
+        refreshLayersPanel();
+        updatePropertiesPanel();
+        // Auto-fit content to show the new design
+        fitToContent(canvas);
+        renderCanvas();
+      }, 120);
+    });
     // Clear chat button
     document.getElementById('ai-chat-clear')?.addEventListener('click', () => {
       clearChatHistory();

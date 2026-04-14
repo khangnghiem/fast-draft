@@ -3,6 +3,11 @@
 > Tracks requirement completion status across the entire FD project.
 
 ## [Unreleased]
+- **FEAT (AI)**: Overhauled AI Agent system prompts for dramatically higher-quality FD code generation. Prompts now include comprehensive syntax reference with explicit text node syntax, layout-first design rules, design quality standards, and 3 golden examples (Login Form, Dashboard, Architecture Diagram).
+- **FEAT (AI)**: Dual-action Apply mechanism — AI-generated complete designs now show "⟳ Replace Canvas" (blue, replaces all content) and "+ Merge" (green, appends to existing). Detection via `isCompleteDesign()` heuristic counting node + style blocks.
+- **FIX (AI)**: 3-tier fallback now gracefully skips Workers AI when binding is unavailable, going directly to Ollama Cloud or OpenRouter. Previously, missing AI binding caused hard 503 errors blocking all local dev.
+- **FIX (AI)**: Rate limiting now checks for actual KV binding method (`typeof kv.get === 'function'`) instead of just truthiness, preventing `kv.get is not a function` crashes in local wrangler dev.
+- **FIX (AI)**: `fd-ai-applied` custom event wired to trigger full canvas sync (text measurement, re-render, layers refresh, auto-fit-to-content) after AI code is applied to the editor.
 - **FEAT (Canvas):** Implemented markdown extraction for `paste_fd` WASM pipe, allowing users to copy AI-generated code blocks and paste them directly onto the canvas.
 - Migrated clipboard paste (Cmd+V) and select all (Cmd+A) to robust WASM-native logic with collision-free batch ID renaming.
 - Fixed multiple bugs in WASM edge handling and text node constraints.
