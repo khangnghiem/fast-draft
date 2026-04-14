@@ -2142,6 +2142,13 @@ async function pasteFromClipboard() {
     const resultJson = fdCanvas.paste_fd(clipText, dx, dy);
     const res = JSON.parse(resultJson);
     if (res.ok) {
+      if (res.tier === 1) {
+        showToast(`✓ Pasted ${res.count} node${res.count > 1 ? 's' : ''}`);
+      } else if (res.tier === 2) {
+        showToast("⚠ Empty document — created as text");
+      } else if (res.tier === 3) {
+        showToast("⚠ Not valid FD syntax — created as text node");
+      }
       renderCanvas();
       syncCanvasToEditor();
       updatePropertiesPanel();

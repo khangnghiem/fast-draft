@@ -2,6 +2,8 @@
 
 - Migrated clipboard paste (Cmd+V) and select all (Cmd+A) to robust WASM-native logic with collision-free batch ID renaming.
 - Fixed multiple bugs in WASM edge handling and text node constraints.
+- **FEAT (Canvas):** Implemented markdown extraction for `paste_fd` WASM pipe, allowing users to copy AI-generated code blocks containing ` ```fd ` fences and paste them directly onto the canvas to construct editable scenes.
+- **UX:** Added explicit UI toast feedback on paste parsing outcomes (Tier 1 valid layout vs Tier 3 text component fallback) to instantly clarify structural failures.
 
 # FD Changelog
 
