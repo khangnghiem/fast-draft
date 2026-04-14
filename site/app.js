@@ -2047,6 +2047,7 @@ function setupPropsPanel() {
 
 /** ─── Clipboard (Copy / Paste / Cut) ────────────────────────────────── */
 let fdClipboard = '';
+let fdClipboardIsInternal = false;
 let pasteOffsetCount = 0;
 
 /** Extract the .fd text block for a single node by its ID. */
@@ -2080,6 +2081,7 @@ function copySelectedAsFd() {
     const selFd = fdCanvas.emit_selection_fd();
     if (selFd && selFd.trim()) {
       fdClipboard = selFd;
+      fdClipboardIsInternal = true;
       pasteOffsetCount = 0;
       if (navigator.clipboard) {
         navigator.clipboard.writeText(fdClipboard).catch(() => {});
@@ -2116,14 +2118,16 @@ function cutSelectedAsFd() {
 async function pasteFromClipboard() {
   if (!fdCanvas) return;
 
-  // Check if system clipboard has different content (external paste)
   let clipText = fdClipboard;
+  let isInternal = fdClipboardIsInternal;
   try {
     if (navigator.clipboard) {
       const sysText = await navigator.clipboard.readText();
       if (sysText && sysText !== fdClipboard) {
         clipText = sysText;
         fdClipboard = sysText;
+        fdClipboardIsInternal = false;
+        isInternal = false;
       }
     }
   } catch (_) { /* permission denied — use internal */ }
@@ -2143,7 +2147,7 @@ async function pasteFromClipboard() {
     const res = JSON.parse(resultJson);
     if (res.ok) {
       if (res.tier === 1) {
-        showToast(`✓ Pasted ${res.count} node${res.count > 1 ? 's' : ''}`);
+        if (!isInternal) showToast(`✓ Pasted ${res.count} node${res.count > 1 ? 's' : ''}`);
       } else if (res.tier === 2) {
         showToast("⚠ Empty document — created as text");
       } else if (res.tier === 3) {
