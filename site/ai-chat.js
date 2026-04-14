@@ -238,23 +238,28 @@ function smartApplyFdCode(fdCode, getEditorContent, setEditorContent) {
 
   let result = current;
   let anyReplaced = false;
+  let newNodesCode = '';
 
   for (const match of nodeIdMatches) {
     const nodeId = match[1];
     // Find the existing block for this @id in the document
     const blockRange = findNodeBlock(result, nodeId);
-    if (blockRange) {
-      // Extract the NEW block for this node from the AI's output
-      const newBlock = extractNodeBlock(fdCode, nodeId);
-      if (newBlock) {
-        result = result.slice(0, blockRange.start) + newBlock + result.slice(blockRange.end);
-        anyReplaced = true;
-      }
+    const newBlock = extractNodeBlock(fdCode, nodeId);
+    
+    if (blockRange && newBlock) {
+      // Replace existing node
+      result = result.slice(0, blockRange.start) + newBlock + result.slice(blockRange.end);
+      anyReplaced = true;
+    } else if (newBlock) {
+      // Accumulate new nodes to append later
+      newNodesCode += newBlock + '\n';
     }
   }
 
-  if (!anyReplaced) {
-    // None of the nodes exist yet — append all
+  if (newNodesCode.trim()) {
+    result = result.trimEnd() + '\n\n' + newNodesCode.trimEnd() + '\n';
+  } else if (!anyReplaced) {
+    // Failsafe: if nothing matched at all, just append
     result = result.trimEnd() + '\n\n' + fdCode + '\n';
   }
 
@@ -293,7 +298,12 @@ function findNodeBlock(source, nodeId) {
     i++;
   }
 
-  // No braces found — single-line node
+  // If braces were found but never closed, consume to the end
+  if (foundOpen && depth > 0) {
+    return { start, end: source.length };
+  }
+
+  // No braces found at all — single-line node
   const lineEnd = source.indexOf('\n', start);
   return { start, end: lineEnd === -1 ? source.length : lineEnd + 1 };
 }
@@ -481,6 +491,7 @@ async function sendMessage(getEditorContent, setEditorContent) {
       const performRender = () => {
         const unsafeHTML = renderAssistantMessage(accumulated, getEditorContent, setEditorContent) + '<span class="ai-cursor">█</span>';
         div.innerHTML = window.DOMPurify ? DOMPurify.sanitize(unsafeHTML, { ADD_ATTR: ['data-fd', 'data-bid'] }) : unsafeHTML;
+        wireApplySkipButtons(div, getEditorContent, setEditorContent);
         messages.scrollTop = messages.scrollHeight;
         renderPending = false;
       };
