@@ -30,8 +30,6 @@ fn arb_fd_document() -> impl Strategy<Value = String> {
         .prop_map(|(kind, id, w, h, color)| {
             if kind == "text" {
                 format!("text @{id} \"hello\" {{\n  w: {w} h: {h}\n  fill: {color}\n}}\n")
-            } else if kind == "ellipse" {
-                format!("{kind} @{id} {{\n  w: {w} h: {h}\n  fill: {color}\n}}\n")
             } else {
                 format!("{kind} @{id} {{\n  w: {w} h: {h}\n  fill: {color}\n}}\n")
             }
@@ -51,7 +49,7 @@ proptest! {
         if let Ok(graph1) = parse_document(&input) {
             let emitted = emit_document(&graph1);
             let graph2 = parse_document(&emitted)
-                .expect(&format!("Reparse failed.\nInput:\n{input}\nEmitted:\n{emitted}"));
+                .unwrap_or_else(|_| panic!("Reparse failed.\nInput:\n{input}\nEmitted:\n{emitted}"));
 
             // Invariant: node count preserved
             prop_assert_eq!(

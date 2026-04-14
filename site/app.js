@@ -2047,7 +2047,6 @@ function setupPropsPanel() {
 
 /** ─── Clipboard (Copy / Paste / Cut) ────────────────────────────────── */
 let fdClipboard = '';
-let fdClipboardIsInternal = false;
 let pasteOffsetCount = 0;
 
 /** Extract the .fd text block for a single node by its ID. */
@@ -2081,7 +2080,6 @@ function copySelectedAsFd() {
     const selFd = fdCanvas.emit_selection_fd();
     if (selFd && selFd.trim()) {
       fdClipboard = selFd;
-      fdClipboardIsInternal = true;
       pasteOffsetCount = 0;
       if (navigator.clipboard) {
         navigator.clipboard.writeText(fdClipboard).catch(() => {});
@@ -2114,112 +2112,44 @@ function cutSelectedAsFd() {
   }
 }
 
-/** Paste node(s) — delegates to WASM duplicate for internal clipboard,
- *  falls back to text-based paste for external system clipboard content. */
+/** Paste node(s) — delegates to WASM paste_fd. */
 async function pasteFromClipboard() {
   if (!fdCanvas) return;
 
   // Check if system clipboard has different content (external paste)
-  let useExternal = false;
+  let clipText = fdClipboard;
   try {
     if (navigator.clipboard) {
       const sysText = await navigator.clipboard.readText();
-      if (sysText && sysText.includes('@') && sysText !== fdClipboard) {
-        useExternal = true;
+      if (sysText && sysText !== fdClipboard) {
+        clipText = sysText;
         fdClipboard = sysText;
-        fdClipboardIsInternal = false;
       }
     }
   } catch (_) { /* permission denied — use internal */ }
 
-  // Internal clipboard: delegate to WASM duplicate_selected() for correct
-  // naming, constraint remapping, edge duplication, and position handling.
-  if (fdClipboardIsInternal && fdClipboard) {
-    fdCanvas.push_undo_snapshot(fdCanvas.get_text(), fdCanvas.get_text());
-    const changed = fdCanvas.duplicate_selected();
-    if (changed) {
+  if (!clipText || !clipText.trim()) return;
+
+  pasteOffsetCount++;
+  const dx = pasteOffsetCount * 20;
+  const dy = pasteOffsetCount * 20;
+
+  // Push undo snapshot before starting an action
+  const originalText = fdCanvas.get_text();
+  fdCanvas.push_undo_snapshot(originalText, originalText);
+
+  try {
+    const resultJson = fdCanvas.paste_fd(clipText, dx, dy);
+    const res = JSON.parse(resultJson);
+    if (res.ok) {
       renderCanvas();
       syncCanvasToEditor();
       updatePropertiesPanel();
       refreshLayersPanel();
     }
-    return;
+  } catch (e) {
+    console.warn("Paste failed:", e);
   }
-
-  // External clipboard: text-based paste with regex ID renaming
-  const clipText = fdClipboard;
-  if (!clipText || !clipText.trim()) return;
-
-  pasteOffsetCount++;
-
-  // Collect all @id declarations
-  const idPattern = /@(\w+)\s*\{/g;
-  const allIds = new Set();
-  let m;
-  while ((m = idPattern.exec(clipText)) !== null) allIds.add(m[1]);
-  const idPattern2 = /@(\w+)\s+"[^"]*"\s*\{/g;
-  while ((m = idPattern2.exec(clipText)) !== null) allIds.add(m[1]);
-  const idPattern3 = /(?:rect|ellipse|text|group|frame|path|edge)\s+@(\w+)/g;
-  while ((m = idPattern3.exec(clipText)) !== null) allIds.add(m[1]);
-  if (allIds.size === 0) return;
-
-  // Rename IDs to avoid conflicts — use batch-aware naming
-  const existingText = fdCanvas.get_text();
-  let pasteText = clipText;
-  const rootId = [...allIds][0];
-  const idMap = new Map();
-  let batchMaxCache = new Map(); // stem → current max N (batch-aware)
-
-  for (const oldId of allIds) {
-    const stem = oldId.replace(/_(?:\d+|cp\d+)$/, '');
-    let maxN = batchMaxCache.get(stem) || 0;
-    if (maxN === 0) {
-      // First time seeing this stem — scan existing text
-      const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
-      let match;
-      while ((match = re.exec(existingText)) !== null) {
-        maxN = Math.max(maxN, parseInt(match[1]));
-      }
-      if (new RegExp(`@${stem}\\b`).test(existingText)) maxN = Math.max(maxN, 1);
-    }
-    const newN = maxN + 1;
-    batchMaxCache.set(stem, newN); // Increment for next node with same stem
-    idMap.set(oldId, stem + '_' + newN);
-  }
-
-  for (const [oldId, newId] of idMap) {
-    pasteText = pasteText.replace(new RegExp(`@${oldId}\\b`, 'g'), `@${newId}`);
-  }
-  const newRootId = idMap.get(rootId) || rootId;
-
-  // Horizontal offset
-  let xOffset = pasteOffsetCount * 20;
-  try {
-    const boundsJson = fdCanvas.get_node_bounds(rootId);
-    if (boundsJson) {
-      const bounds = JSON.parse(boundsJson);
-      if (bounds && bounds.width > 0) xOffset = (bounds.width + 20) * pasteOffsetCount;
-    }
-  } catch (_) {}
-
-  pasteText = pasteText.replace(/\b(x:\s*)(-?\d+(?:\.\d+)?)/g, (_m, prefix, val) => {
-    return prefix + (parseFloat(val) + xOffset);
-  });
-
-  // Undo support
-  const textBefore = fdCanvas.get_text();
-  const updatedText = textBefore.trimEnd() + '\n\n' + pasteText + '\n';
-  fdCanvas.set_text(updatedText);
-  fdCanvas.push_undo_snapshot(textBefore, updatedText);
-
-  renderCanvas();
-  syncCanvasToEditor();
-
-  // Select the newly pasted root node
-  fdCanvas.select_by_id(newRootId);
-  renderCanvas();
-  updatePropertiesPanel();
-  refreshLayersPanel();
 }
 
 /** ─── Context Menu (Unified) ──────────────────────────────────────── */

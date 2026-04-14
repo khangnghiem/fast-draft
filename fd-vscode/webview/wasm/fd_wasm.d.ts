@@ -380,6 +380,11 @@ export class FdCanvas {
      */
     parent_of(node_id: string): string;
     /**
+     * Parse FD text and insert as new nodes with unique IDs.
+     * Returns JSON: {"ok": true, "count": N, "tier": 1|2|3, "ids": [...]}
+     */
+    paste_fd(text: string, dx: number, dy: number): string;
+    /**
      * Push a text snapshot for undo support.
      */
     push_undo_snapshot(text_before: string, text_after: string): void;
@@ -443,6 +448,12 @@ export class FdCanvas {
      * Returns a JSON array of `SearchResult` objects sorted by score.
      */
     search_nodes(query: string, mode: string): string;
+    /**
+     * Select all nodes and edges in the graph.
+     * Replaces the current selection.
+     * Returns the number of items selected.
+     */
+    select_all(): number;
     /**
      * Select a node by its ID (e.g. from text editor cursor).
      * Returns `true` if the node was found and selected.
@@ -588,25 +599,7 @@ export interface InitOutput {
     readonly fdcanvas_get_hover: (a: number, b: number, c: number) => [number, number];
     readonly parse_to_json: (a: number, b: number) => [number, number];
     readonly validate: (a: number, b: number) => [number, number];
-    readonly fdcanvas_add_to_selection: (a: number, b: number, c: number) => number;
-    readonly fdcanvas_clear_pressed: (a: number) => void;
-    readonly fdcanvas_delete_selected: (a: number) => number;
-    readonly fdcanvas_duplicate_selected: (a: number) => number;
-    readonly fdcanvas_duplicate_selected_at: (a: number, b: number, c: number) => number;
-    readonly fdcanvas_get_alt_drag_ghost: (a: number) => [number, number];
-    readonly fdcanvas_get_selected_id: (a: number) => [number, number];
-    readonly fdcanvas_get_selected_ids: (a: number) => [number, number];
-    readonly fdcanvas_get_selection_bounds: (a: number) => any;
-    readonly fdcanvas_group_selected: (a: number) => number;
-    readonly fdcanvas_handle_key: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
-    readonly fdcanvas_handle_stylus_squeeze: (a: number, b: number, c: number, d: number, e: number) => [number, number];
-    readonly fdcanvas_reverse_selected_edges: (a: number) => number;
-    readonly fdcanvas_select_by_id: (a: number, b: number, c: number) => number;
-    readonly fdcanvas_select_multiple_by_ids: (a: number, b: number, c: number) => number;
-    readonly fdcanvas_toggle_select_by_id: (a: number, b: number, c: number) => number;
-    readonly fdcanvas_ungroup_selected: (a: number) => number;
     readonly fdcanvas_add_animation_to_node: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
-    readonly fdcanvas_cancel_drag: (a: number) => number;
     readonly fdcanvas_compute_guides_for_rect: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly fdcanvas_emit_filtered: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_emit_selection_fd: (a: number) => [number, number];
@@ -624,9 +617,6 @@ export interface InitOutput {
     readonly fdcanvas_get_selected_node_props: (a: number) => [number, number];
     readonly fdcanvas_get_spec: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_get_text_children: (a: number, b: number, c: number) => [number, number];
-    readonly fdcanvas_handle_pointer_down: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
-    readonly fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
-    readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly fdcanvas_has_text_child: (a: number, b: number, c: number) => number;
     readonly fdcanvas_hit_test_all_at: (a: number, b: number, c: number) => [number, number];
     readonly fdcanvas_hit_test_at: (a: number, b: number, c: number) => [number, number];
@@ -643,6 +633,29 @@ export interface InitOutput {
     readonly fdcanvas_toggle_node_locked: (a: number, b: number, c: number) => number;
     readonly fdcanvas_unlock_all: (a: number) => number;
     readonly fdcanvas_update_text_metrics: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly fdcanvas_add_to_selection: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_cancel_drag: (a: number) => number;
+    readonly fdcanvas_clear_pressed: (a: number) => void;
+    readonly fdcanvas_delete_selected: (a: number) => number;
+    readonly fdcanvas_duplicate_selected: (a: number) => number;
+    readonly fdcanvas_duplicate_selected_at: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_get_alt_drag_ghost: (a: number) => [number, number];
+    readonly fdcanvas_get_selected_id: (a: number) => [number, number];
+    readonly fdcanvas_get_selected_ids: (a: number) => [number, number];
+    readonly fdcanvas_get_selection_bounds: (a: number) => any;
+    readonly fdcanvas_group_selected: (a: number) => number;
+    readonly fdcanvas_handle_key: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+    readonly fdcanvas_handle_pointer_down: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
+    readonly fdcanvas_handle_pointer_move: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
+    readonly fdcanvas_handle_pointer_up: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+    readonly fdcanvas_handle_stylus_squeeze: (a: number, b: number, c: number, d: number, e: number) => [number, number];
+    readonly fdcanvas_paste_fd: (a: number, b: number, c: number, d: number, e: number) => [number, number];
+    readonly fdcanvas_reverse_selected_edges: (a: number) => number;
+    readonly fdcanvas_select_all: (a: number) => number;
+    readonly fdcanvas_select_by_id: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_select_multiple_by_ids: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_toggle_select_by_id: (a: number, b: number, c: number) => number;
+    readonly fdcanvas_ungroup_selected: (a: number) => number;
     readonly fdcanvas_center_node_in: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly fdcanvas_clear_search_highlights: (a: number) => void;
     readonly fdcanvas_create_child_text: (a: number, b: number, c: number, d: number, e: number) => [number, number];

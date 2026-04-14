@@ -152,6 +152,10 @@ impl FdCanvas {
             ShortcutAction::ReverseEdge => (self.reverse_selected_edges(), false),
             // Screenbrush: ⌘Delete = clear selected
             ShortcutAction::ClearAll => (self.delete_selected(), false),
+            ShortcutAction::SelectAll => {
+                let count = self.select_all();
+                (count > 0, false)
+            }
             ShortcutAction::Deselect => {
                 self.select_tool.selected.clear();
                 self.select_tool.visual_highlight.clear();
@@ -226,8 +230,7 @@ impl FdCanvas {
 
             // Currently handled by JS (clipboard, zoom, help)
             // These return (false, false) so JS can handle them
-            ShortcutAction::SelectAll
-            | ShortcutAction::Copy
+            ShortcutAction::Copy
             | ShortcutAction::Cut
             | ShortcutAction::Paste
             | ShortcutAction::ZoomIn

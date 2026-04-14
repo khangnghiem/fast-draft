@@ -112,6 +112,34 @@ impl FdCanvas {
         count
     }
 
+    /// Select all nodes and edges in the graph.
+    /// Replaces the current selection.
+    /// Returns the number of items selected.
+    pub fn select_all(&mut self) -> u32 {
+        self.select_tool.selected.clear();
+        self.select_tool.visual_highlight.clear();
+        let mut count = 0u32;
+
+        // Add all nodes except root
+        let root_idx = self.engine.graph.root;
+        for idx in self.engine.graph.graph.node_indices() {
+            if idx != root_idx && !self.engine.graph.graph[idx].locked {
+                let id = self.engine.graph.graph[idx].id;
+                self.select_tool.selected.push(id);
+                self.select_tool.visual_highlight.push(id);
+                count += 1;
+            }
+        }
+
+        // Add all edges
+        for edge in &self.engine.graph.edges {
+            self.select_tool.selected.push(edge.id);
+            self.select_tool.visual_highlight.push(edge.id);
+            count += 1;
+        }
+        count
+    }
+
     /// Clear the pressed interaction state.
     ///
     /// Called from JS when entering inline text editing to suppress
@@ -573,5 +601,179 @@ impl FdCanvas {
         arr.set_index(2, (max_x - min_x) as f64);
         arr.set_index(3, (max_y - min_y) as f64);
         Some(arr)
+    }
+
+    /// Parse FD text and insert as new nodes with unique IDs.
+    /// Returns JSON: {"ok": true, "count": N, "tier": 1|2|3, "ids": [...]}
+    pub fn paste_fd(&mut self, text: &str, dx: f32, dy: f32) -> String {
+        use fd_core::model::{Constraint, NodeKind, SceneGraph, SceneNode};
+        use fd_core::parser::parse_document;
+        use fd_editor::sync::GraphMutation;
+        use std::collections::HashMap;
+
+        let mut tier = 1;
+        let temp_graph = match parse_document(text) {
+            Ok(g) => {
+                if g.graph.node_count() <= 1 {
+                    tier = 2; // Empty document, fallback to text node
+                    let mut fallback = SceneGraph::new();
+                    let node = SceneNode::new(
+                        fd_core::id::NodeId::anonymous("text"),
+                        NodeKind::Text {
+                            content: text.to_string(),
+                            max_width: None,
+                        },
+                    );
+                    fallback.add_node(fallback.root, node);
+                    fallback
+                } else {
+                    g
+                }
+            }
+            Err(_) => {
+                tier = 3;
+                let mut fallback = SceneGraph::new();
+                let node = SceneNode::new(
+                    fd_core::id::NodeId::anonymous("text"),
+                    NodeKind::Text {
+                        content: text.to_string(),
+                        max_width: None,
+                    },
+                );
+                fallback.add_node(fallback.root, node);
+                fallback
+            }
+        };
+
+        let mut id_map: HashMap<NodeId, NodeId> = HashMap::new();
+        let mut mutations = Vec::new();
+        let mut taken: Vec<NodeId> = Vec::new();
+        let root_idx = temp_graph.root;
+
+        let mut queue: Vec<_> = temp_graph.children(root_idx);
+        while !queue.is_empty() {
+            let orig_idx = queue.remove(0);
+            for child in temp_graph.children(orig_idx) {
+                queue.push(child);
+            }
+
+            let original = temp_graph.graph[orig_idx].clone();
+            let orig_id = original.id;
+
+            // Get parent ID in temp_graph
+            let mut parent_id = None;
+            if let Some(p_idx) = temp_graph.parent(orig_idx)
+                && p_idx != root_idx
+            {
+                let old_pid = temp_graph.graph[p_idx].id;
+                parent_id = id_map.get(&old_pid).copied();
+            }
+
+            let new_id = next_clone_name(&self.engine.graph, orig_id, &taken);
+            id_map.insert(orig_id, new_id);
+            taken.push(new_id);
+
+            let mut cloned = original;
+            cloned.id = new_id;
+
+            // Offset to match paste location (only for top-level)
+            if parent_id.is_none() {
+                for c in &mut cloned.constraints {
+                    if let Constraint::Position { x, y } = c {
+                        *x += dx;
+                        *y += dy;
+                    }
+                }
+            }
+
+            // Remap references in constraints
+            for c in &mut cloned.constraints {
+                match c {
+                    Constraint::Offset { from, .. } => {
+                        if let Some(&new_from) = id_map.get(from) {
+                            *from = new_from;
+                        }
+                    }
+                    Constraint::CenterIn(target) => {
+                        if let Some(&new_target) = id_map.get(target) {
+                            *target = new_target;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            mutations.push(GraphMutation::AddNode {
+                parent_id: parent_id.unwrap_or_else(|| fd_core::id::NodeId::intern("root")),
+                node: Box::new(cloned),
+            });
+        }
+
+        // Phase 2: Duplicate edges from temp_graph
+        for edge in &temp_graph.edges {
+            let new_from = match &edge.from {
+                fd_core::model::EdgeAnchor::Node(id) => id_map
+                    .get(id)
+                    .copied()
+                    .map(fd_core::model::EdgeAnchor::Node),
+                fd_core::model::EdgeAnchor::Point(x, y) => {
+                    Some(fd_core::model::EdgeAnchor::Point(*x + dx, *y + dy))
+                }
+            };
+            let new_to = match &edge.to {
+                fd_core::model::EdgeAnchor::Node(id) => id_map
+                    .get(id)
+                    .copied()
+                    .map(fd_core::model::EdgeAnchor::Node),
+                fd_core::model::EdgeAnchor::Point(x, y) => {
+                    Some(fd_core::model::EdgeAnchor::Point(*x + dx, *y + dy))
+                }
+            };
+
+            if let (Some(nf), Some(nt)) = (new_from, new_to) {
+                let mut new_edge = edge.clone();
+                new_edge.id = next_clone_name(&self.engine.graph, edge.id, &taken);
+                taken.push(new_edge.id);
+                new_edge.from = nf;
+                new_edge.to = nt;
+                new_edge.text_child = edge.text_child.and_then(|tc| id_map.get(&tc).copied());
+                mutations.push(GraphMutation::AddEdge {
+                    edge: Box::new(new_edge),
+                });
+            }
+        }
+
+        if mutations.is_empty() {
+            return r#"{"ok":false}"#.to_string();
+        }
+
+        // Apply mutations
+        self.commands.begin_batch(&mut self.engine);
+        let mut count = 0;
+        for mutation in mutations {
+            self.commands
+                .execute(&mut self.engine, mutation, "paste clipboard");
+            count += 1;
+        }
+        self.engine.resolve();
+        self.commands.end_batch(&mut self.engine);
+
+        // Select the newly pasted items
+        self.select_tool.selected.clear();
+        self.select_tool.visual_highlight.clear();
+        for &new_id in taken.iter() {
+            self.select_tool.selected.push(new_id);
+            self.select_tool.visual_highlight.push(new_id);
+        }
+
+        self.engine.flush_to_text();
+
+        let json = serde_json::json!({
+            "ok": true,
+            "count": count,
+            "tier": tier,
+            "ids": taken.iter().map(|id| id.as_str()).collect::<Vec<&str>>(),
+        });
+        json.to_string()
     }
 }

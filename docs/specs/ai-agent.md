@@ -22,10 +22,12 @@ The backend operates entirely on **Cloudflare Pages Functions** (`functions/api/
 - **Model Diversity:** Supports 18+ models including Llama 8B/70B, Gemma, Qwen, and DeepSeek.
 - **Direct SSE:** Transforms standard Workers AI streaming directly into frontend-consumable Server-Sent Events.
 
-### Phase 2: Agentic Orchestration (Future)
-An optional upgrade path migrates the intelligence layer to a **Serverless Python environment on Modal** powered by **PydanticAI**.
-- Introduces tools like `analyze_selection` and `search_knowledge_base`.
-- Utilizes Llama 70B via Groq/Together for high-speed, structured outputs.
+### Phase 2: 3-Tier Fallback (Current)
+A resilient fallback chain ensures AI availability when any single provider is down or rate-limited:
+- **Tier 1:** Cloudflare Workers AI (free Neurons allocation).
+- **Tier 2:** Ollama Cloud — triggered on 429/502/503 from Tier 1.
+- **Tier 3:** OpenRouter — final fallback with broad model coverage.
+- Client-side `force_fallback` and `force_ollama` flags allow manual tier override.
 
 ## 4. Streaming SSE & Frontend Integration
 

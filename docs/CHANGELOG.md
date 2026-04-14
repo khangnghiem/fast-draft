@@ -1,3 +1,8 @@
+## [Unreleased]
+
+- Migrated clipboard paste (Cmd+V) and select all (Cmd+A) to robust WASM-native logic with collision-free batch ID renaming.
+- Fixed multiple bugs in WASM edge handling and text node constraints.
+
 # FD Changelog
 
 > Tracks requirement completion status across the entire FD project.

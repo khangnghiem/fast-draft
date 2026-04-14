@@ -1294,6 +1294,28 @@ export class FdCanvas {
         }
     }
     /**
+     * Parse FD text and insert as new nodes with unique IDs.
+     * Returns JSON: {"ok": true, "count": N, "tier": 1|2|3, "ids": [...]}
+     * @param {string} text
+     * @param {number} dx
+     * @param {number} dy
+     * @returns {string}
+     */
+    paste_fd(text, dx, dy) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(text, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_paste_fd(this.__wbg_ptr, ptr0, len0, dx, dy);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * Push a text snapshot for undo support.
      * @param {string} text_before
      * @param {string} text_after
@@ -1442,6 +1464,16 @@ export class FdCanvas {
         } finally {
             wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
         }
+    }
+    /**
+     * Select all nodes and edges in the graph.
+     * Replaces the current selection.
+     * Returns the number of items selected.
+     * @returns {number}
+     */
+    select_all() {
+        const ret = wasm.fdcanvas_select_all(this.__wbg_ptr);
+        return ret >>> 0;
     }
     /**
      * Select a node by its ID (e.g. from text editor cursor).
