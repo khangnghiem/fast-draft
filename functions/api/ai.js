@@ -217,7 +217,7 @@ const SYSTEM_DEFAULT = `You are an expert UI designer. Return ONLY valid FD text
 async function checkRateLimit(context) {
   if (context.env.DISABLE_RATE_LIMIT) return { allowed: true, remaining: 5000, limit: 5000 };
 
-  const ip = context.req.headers.get('CF-Connecting-IP') || 'unknown';
+  const ip = context.request.headers.get('CF-Connecting-IP') || 'unknown';
   const { success, limit, remaining } = await context.env.AI_RATE_LIMITER.limit({ key: ip });
   return { allowed: success, remaining, limit };
 }
