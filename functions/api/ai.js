@@ -215,11 +215,22 @@ const SYSTEM_DEFAULT = `You are an expert UI designer. Return ONLY valid FD text
 // ─── Rate Limiting ───────────────────────────────────────────────────────
 
 async function checkRateLimit(context) {
-  if (context.env.DISABLE_RATE_LIMIT) return { allowed: true, remaining: 5000, limit: 5000 };
+  const kv = context.env.RATE_LIMIT;
+  if (!kv || context.env.DISABLE_RATE_LIMIT) return { allowed: true, remaining: -1, limit: -1 };
 
   const ip = context.request.headers.get('CF-Connecting-IP') || 'unknown';
-  const { success, limit, remaining } = await context.env.AI_RATE_LIMITER.limit({ key: ip });
-  return { allowed: success, remaining, limit };
+  const today = new Date().toISOString().slice(0, 10);
+  const key = `ai:${ip}:${today}`;
+  const limit = parseInt(context.env.AI_DAILY_LIMIT || "50", 10);
+
+  const current = parseInt(await kv.get(key) || '0', 10);
+
+  if (current >= limit) {
+    return { allowed: false, remaining: 0, limit };
+  }
+
+  await kv.put(key, String(current + 1), { expirationTtl: 86400 });
+  return { allowed: true, remaining: limit - (current + 1), limit };
 }
 
 // ─── Model + Prompt Selection ────────────────────────────────────────────
