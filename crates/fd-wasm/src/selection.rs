@@ -603,56 +603,15 @@ impl FdCanvas {
         Some(arr)
     }
 
-    fn strip_markdown_fences(text: &str) -> String {
-        let mut extracted_blocks = Vec::new();
-        let mut in_block = false;
-        let mut current_block = String::new();
-
-        for line in text.lines() {
-            let trimmed = line.trim();
-            if let Some(stripped) = trimmed.strip_prefix("```") {
-                if in_block {
-                    // Closing fence
-                    extracted_blocks.push(current_block.trim().to_string());
-                    current_block.clear();
-                    in_block = false;
-                } else {
-                    // Check if it's an accepted opening fence
-                    let lang = stripped.trim().to_lowercase();
-                    if lang.is_empty() || lang == "fd" || lang == "fastdraft" {
-                        in_block = true;
-                    }
-                }
-            } else if in_block {
-                current_block.push_str(line);
-                current_block.push('\n');
-            }
-        }
-
-        // If the string was unclosed, grab whatever was inside
-        if in_block && !current_block.trim().is_empty() {
-            extracted_blocks.push(current_block.trim().to_string());
-        }
-
-        if extracted_blocks.is_empty() {
-            // No matching blocks found, return the original text so tier 3 fallback works properly
-            // Note: we return the original so that a python block doesn't just return "" but returns "```python..."
-            return text.trim().to_string();
-        }
-
-        // Join all extracted blocks
-        extracted_blocks.join("\n")
-    }
-
     /// Parse FD text and insert as new nodes with unique IDs.
     /// Returns JSON: {"ok": true, "count": N, "tier": 1|2|3, "ids": [...]}
     pub fn paste_fd(&mut self, text: &str, dx: f32, dy: f32) -> String {
         use fd_core::model::{Constraint, NodeKind, SceneGraph, SceneNode};
         use fd_core::parser::parse_document;
         use fd_editor::sync::GraphMutation;
-        use std::collections::HashMap;
+        use std::collections::{HashMap, VecDeque};
 
-        let clean_text_bound = Self::strip_markdown_fences(text);
+        let clean_text_bound = strip_markdown_fences(text);
         let clean_text = clean_text_bound.as_str();
 
         let mut tier = 1;
@@ -694,11 +653,10 @@ impl FdCanvas {
         let mut taken: Vec<NodeId> = Vec::new();
         let root_idx = temp_graph.root;
 
-        let mut queue: Vec<_> = temp_graph.children(root_idx);
-        while !queue.is_empty() {
-            let orig_idx = queue.remove(0);
+        let mut queue: VecDeque<_> = temp_graph.children(root_idx).into_iter().collect();
+        while let Some(orig_idx) = queue.pop_front() {
             for child in temp_graph.children(orig_idx) {
-                queue.push(child);
+                queue.push_back(child);
             }
 
             let original = temp_graph.graph[orig_idx].clone();
@@ -722,11 +680,18 @@ impl FdCanvas {
 
             // Offset to match paste location (only for top-level)
             if parent_id.is_none() {
+                let mut has_position = false;
                 for c in &mut cloned.constraints {
                     if let Constraint::Position { x, y } = c {
                         *x += dx;
                         *y += dy;
+                        has_position = true;
                     }
+                }
+                if !has_position && (dx != 0.0 || dy != 0.0) {
+                    cloned
+                        .constraints
+                        .push(Constraint::Position { x: dx, y: dy });
                 }
             }
 
@@ -822,43 +787,90 @@ impl FdCanvas {
     }
 }
 
+/// Extracts FD code blocks from text.
+/// Strips leading/trailing blank lines within blocks by calling `.trim()` on the extracted text.
+fn strip_markdown_fences(text: &str) -> String {
+    let mut extracted_blocks = Vec::new();
+    let mut in_block = false;
+    let mut current_block = String::new();
+
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if let Some(stripped) = trimmed.strip_prefix("```") {
+            if in_block {
+                // Closing fence
+                extracted_blocks.push(current_block.trim().to_string());
+                current_block.clear();
+                in_block = false;
+            } else {
+                // Check if it's an accepted opening fence
+                let lang = stripped.trim().to_lowercase();
+                if lang.is_empty()
+                    || lang == "fd"
+                    || lang == "fastdraft"
+                    || lang == "fd-code"
+                    || lang == "text"
+                {
+                    in_block = true;
+                }
+            }
+        } else if in_block {
+            current_block.push_str(line);
+            current_block.push('\n');
+        }
+    }
+
+    // If the string was unclosed, grab whatever was inside
+    if in_block && !current_block.trim().is_empty() {
+        extracted_blocks.push(current_block.trim().to_string());
+    }
+
+    if extracted_blocks.is_empty() {
+        // No matching blocks found, return the original text so tier 3 fallback works properly
+        // Note: we return the original so that a python block doesn't just return "" but returns "```python..."
+        return text.trim().to_string();
+    }
+
+    // Join all extracted blocks
+    extracted_blocks.join("\n\n")
+}
+
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use super::*;
+    use fd_core::id::NodeId;
 
     #[test]
     fn test_strip_markdown_fences() {
         // Valid fd block
         assert_eq!(
-            FdCanvas::strip_markdown_fences("```fd\nrect @a {}\n```"),
+            strip_markdown_fences("```fd\nrect @a {}\n```"),
             "rect @a {}"
         );
         // Valid fastdraft block
         assert_eq!(
-            FdCanvas::strip_markdown_fences("```fastdraft\nrect @b {}\n```"),
+            strip_markdown_fences("```fastdraft\nrect @b {}\n```"),
             "rect @b {}"
         );
-        // Valid bare block
+        // Valid text/fd-code block
         assert_eq!(
-            FdCanvas::strip_markdown_fences("```\nrect @c {}\n```"),
-            "rect @c {}"
+            strip_markdown_fences("```text\nrect @c {}\n```\n```fd-code\nrect @d {}\n```"),
+            "rect @c {}\n\nrect @d {}"
         );
+        // Valid bare block
+        assert_eq!(strip_markdown_fences("```\nrect @e {}\n```"), "rect @e {}");
         // Python block - should not extract, returns original string
         assert_eq!(
-            FdCanvas::strip_markdown_fences("```python\nprint(1)\n```"),
+            strip_markdown_fences("```python\nprint(1)\n```"),
             "```python\nprint(1)\n```"
         );
-        // Multi block
+        // Multi block joined by double newline
         assert_eq!(
-            FdCanvas::strip_markdown_fences("text\n```fd\nrect @a\n```\nmore\n```\nrect @b\n```"),
-            "rect @a\nrect @b"
+            strip_markdown_fences("text\n```fd\nrect @a\n```\nmore\n```\nrect @b\n```"),
+            "rect @a\n\nrect @b"
         );
     }
-}
-
-#[cfg(test)]
-mod paste_tests {
-    use super::*;
 
     #[test]
     fn test_paste_fd_tier_evaluation() {
@@ -892,5 +904,31 @@ mod paste_tests {
             "Expected garbage to be Tier 2, got: {}",
             res
         );
+    }
+
+    #[test]
+    fn test_paste_fd_position_offset() {
+        let mut canvas = FdCanvas::new(800.0, 600.0);
+        let res = canvas.paste_fd("rect @a { x: 50.0 y: 50.0 }", 20.0, 30.0);
+        assert!(res.contains("\"ok\":true"));
+        // Evaluate the graph to find the newly cloned node
+        use serde_json::Value;
+        let v: Value = serde_json::from_str(&res).unwrap();
+        let new_id_str = v["ids"][0].as_str().unwrap();
+        let new_id = NodeId::intern(new_id_str);
+
+        let node_idx = canvas.engine.graph.index_of(new_id).unwrap();
+        let node = &canvas.engine.graph.graph[node_idx];
+
+        // Ensure offset was applied
+        let mut found_position = false;
+        for c in &node.constraints {
+            if let fd_core::model::Constraint::Position { x, y } = c {
+                assert_eq!(x, &70.0); // 50.0 + 20.0
+                assert_eq!(y, &80.0); // 50.0 + 30.0
+                found_position = true;
+            }
+        }
+        assert!(found_position);
     }
 }
