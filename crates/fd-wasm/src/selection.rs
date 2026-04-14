@@ -656,11 +656,11 @@ impl FdCanvas {
             
             // Get parent ID in temp_graph
             let mut parent_id = None;
-            if let Some(p_idx) = temp_graph.parent(orig_idx) {
-                if p_idx != root_idx {
-                    let old_pid = temp_graph.graph[p_idx].id;
-                    parent_id = id_map.get(&old_pid).copied();
-                }
+            if let Some(p_idx) = temp_graph.parent(orig_idx)
+                && p_idx != root_idx
+            {
+                let old_pid = temp_graph.graph[p_idx].id;
+                parent_id = id_map.get(&old_pid).copied();
             }
 
             let new_id = next_clone_name(&self.engine.graph, orig_id, &taken);
