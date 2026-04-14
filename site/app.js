@@ -2127,6 +2127,8 @@ async function pasteFromClipboard() {
         clipText = sysText;
         fdClipboard = sysText;
         fdClipboardIsInternal = false;
+        // Note: If user copies identical text externally, sysText === fdClipboard,
+        // so it won't enter this branch and isInternal stays true. This is a harmless edge case.
         isInternal = false;
       }
     }
@@ -2138,9 +2140,6 @@ async function pasteFromClipboard() {
   const dx = pasteOffsetCount * 20;
   const dy = pasteOffsetCount * 20;
 
-  // Push undo snapshot before starting an action
-  const originalText = fdCanvas.get_text();
-  fdCanvas.push_undo_snapshot(originalText, originalText);
 
   try {
     const resultJson = fdCanvas.paste_fd(clipText, dx, dy);
@@ -2151,7 +2150,7 @@ async function pasteFromClipboard() {
       } else if (res.tier === 2) {
         showToast("⚠ Empty document — created as text");
       } else if (res.tier === 3) {
-        showToast("⚠ Not valid FD syntax — created as text node");
+        showToast("ℹ Not valid FD syntax — created as text node");
       }
       renderCanvas();
       syncCanvasToEditor();
