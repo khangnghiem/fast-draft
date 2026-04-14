@@ -611,8 +611,17 @@ impl FdCanvas {
         use fd_editor::sync::GraphMutation;
         use std::collections::HashMap;
 
+        let mut clean_text = text.trim();
+        if clean_text.starts_with("```")
+            && let Some(start) = clean_text.find('\n')
+            && let Some(end) = clean_text.rfind("```")
+            && start < end
+        {
+            clean_text = clean_text[start..end].trim();
+        }
+
         let mut tier = 1;
-        let temp_graph = match parse_document(text) {
+        let temp_graph = match parse_document(clean_text) {
             Ok(g) => {
                 if g.graph.node_count() <= 1 {
                     tier = 2; // Empty document, fallback to text node
@@ -620,7 +629,7 @@ impl FdCanvas {
                     let node = SceneNode::new(
                         fd_core::id::NodeId::anonymous("text"),
                         NodeKind::Text {
-                            content: text.to_string(),
+                            content: clean_text.to_string(),
                             max_width: None,
                         },
                     );
@@ -636,7 +645,7 @@ impl FdCanvas {
                 let node = SceneNode::new(
                     fd_core::id::NodeId::anonymous("text"),
                     NodeKind::Text {
-                        content: text.to_string(),
+                        content: clean_text.to_string(),
                         max_width: None,
                     },
                 );
