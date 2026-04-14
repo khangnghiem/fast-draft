@@ -603,6 +603,47 @@ impl FdCanvas {
         Some(arr)
     }
 
+    fn strip_markdown_fences(text: &str) -> String {
+        let mut extracted_blocks = Vec::new();
+        let mut in_block = false;
+        let mut current_block = String::new();
+
+        for line in text.lines() {
+            let trimmed = line.trim();
+            if let Some(stripped) = trimmed.strip_prefix("```") {
+                if in_block {
+                    // Closing fence
+                    extracted_blocks.push(current_block.trim().to_string());
+                    current_block.clear();
+                    in_block = false;
+                } else {
+                    // Check if it's an accepted opening fence
+                    let lang = stripped.trim().to_lowercase();
+                    if lang.is_empty() || lang == "fd" || lang == "fastdraft" {
+                        in_block = true;
+                    }
+                }
+            } else if in_block {
+                current_block.push_str(line);
+                current_block.push('\n');
+            }
+        }
+
+        // If the string was unclosed, grab whatever was inside
+        if in_block && !current_block.trim().is_empty() {
+            extracted_blocks.push(current_block.trim().to_string());
+        }
+
+        if extracted_blocks.is_empty() {
+            // No matching blocks found, return the original text so tier 3 fallback works properly
+            // Note: we return the original so that a python block doesn't just return "" but returns "```python..."
+            return text.trim().to_string();
+        }
+
+        // Join all extracted blocks
+        extracted_blocks.join("\n")
+    }
+
     /// Parse FD text and insert as new nodes with unique IDs.
     /// Returns JSON: {"ok": true, "count": N, "tier": 1|2|3, "ids": [...]}
     pub fn paste_fd(&mut self, text: &str, dx: f32, dy: f32) -> String {
@@ -611,14 +652,8 @@ impl FdCanvas {
         use fd_editor::sync::GraphMutation;
         use std::collections::HashMap;
 
-        let mut clean_text = text.trim();
-        if clean_text.starts_with("```")
-            && let Some(start) = clean_text.find('\n')
-            && let Some(end) = clean_text.rfind("```")
-            && start < end
-        {
-            clean_text = clean_text[start..end].trim();
-        }
+        let clean_text_bound = Self::strip_markdown_fences(text);
+        let clean_text = clean_text_bound.as_str();
 
         let mut tier = 1;
         let temp_graph = match parse_document(clean_text) {
@@ -784,5 +819,78 @@ impl FdCanvas {
             "ids": taken.iter().map(|id| id.as_str()).collect::<Vec<&str>>(),
         });
         json.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_strip_markdown_fences() {
+        // Valid fd block
+        assert_eq!(
+            FdCanvas::strip_markdown_fences("```fd\nrect @a {}\n```"),
+            "rect @a {}"
+        );
+        // Valid fastdraft block
+        assert_eq!(
+            FdCanvas::strip_markdown_fences("```fastdraft\nrect @b {}\n```"),
+            "rect @b {}"
+        );
+        // Valid bare block
+        assert_eq!(
+            FdCanvas::strip_markdown_fences("```\nrect @c {}\n```"),
+            "rect @c {}"
+        );
+        // Python block - should not extract, returns original string
+        assert_eq!(
+            FdCanvas::strip_markdown_fences("```python\nprint(1)\n```"),
+            "```python\nprint(1)\n```"
+        );
+        // Multi block
+        assert_eq!(
+            FdCanvas::strip_markdown_fences("text\n```fd\nrect @a\n```\nmore\n```\nrect @b\n```"),
+            "rect @a\nrect @b"
+        );
+    }
+}
+
+#[cfg(test)]
+mod paste_tests {
+    use super::*;
+
+    #[test]
+    fn test_paste_fd_tier_evaluation() {
+        let mut canvas = FdCanvas::new(800.0, 600.0);
+
+        // 1. Valid markdown fd block -> Tier 1
+        let res = canvas.paste_fd("```fd\nrect @a { w: 10 h: 10 }\n```", 0.0, 0.0);
+        assert!(res.contains("\"tier\":1"), "Expected Tier 1, got: {}", res);
+        assert!(res.contains("\"count\":1"));
+
+        // 2. Python block -> should NOT strip, falls back to Tier 2
+        let res = canvas.paste_fd("```python\nprint(\"hi\")\n```", 0.0, 0.0);
+        assert!(
+            res.contains("\"tier\":2"),
+            "Expected Python block to be Tier 2, got: {}",
+            res
+        );
+
+        // 3. Bare valid code -> Tier 1
+        let res = canvas.paste_fd("rect @b { w: 20 h: 20 }", 0.0, 0.0);
+        assert!(
+            res.contains("\"tier\":1"),
+            "Expected bare code to be Tier 1, got: {}",
+            res
+        );
+
+        // 4. Garbage text -> Tier 2
+        let res = canvas.paste_fd("hello world", 0.0, 0.0);
+        assert!(
+            res.contains("\"tier\":2"),
+            "Expected garbage to be Tier 2, got: {}",
+            res
+        );
     }
 }
