@@ -2037,7 +2037,7 @@ mod tests {
         for seed in [0.0, 1.0, 100.0, -50.0, 999.99] {
             for idx in 0..20 {
                 let v = sketchy_jitter(seed, idx, 3.0);
-                assert!(v >= -3.0 && v <= 3.0, "jitter {} out of [-3, 3]", v);
+                assert!((-3.0..=3.0).contains(&v), "jitter {} out of [-3, 3]", v);
             }
         }
     }

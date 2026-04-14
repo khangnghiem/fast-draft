@@ -2402,7 +2402,7 @@ group @box {
 /// both by exactly the same delta. Before the fix, the child moved 2× because:
 /// 1. Parent's MoveNode propagated dx/dy to child bounds (descendant propagation)
 /// 2. Child's own MoveNode applied dx/dy again
-/// Fix: `apply_mutation_with_co_selected` skips propagation for co-selected nodes.
+///    Fix: `apply_mutation_with_co_selected` skips propagation for co-selected nodes.
 #[test]
 fn sync_multi_select_parent_child_no_double_move() {
     let input = r#"

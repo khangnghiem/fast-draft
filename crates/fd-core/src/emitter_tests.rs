@@ -2077,7 +2077,7 @@ fn emit_format_num_one_decimal() {
     assert_eq!(format_num(128.57), "128.57");
     assert_eq!(format_num(100.0), "100");
     assert_eq!(format_num(0.5), "0.5");
-    assert_eq!(format_num(3.14), "3.14");
+    assert_eq!(format_num(3.15), "3.15");
     assert_eq!(format_num(42.0), "42");
     assert_eq!(format_num(1.05), "1.05");
 }
