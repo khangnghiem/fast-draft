@@ -320,7 +320,8 @@ function extractNodeBlock(source, nodeId) {
 // ─── Message Addition ───────────────────────────────────
 
 function wireApplySkipButtons(container, getEditorContent, setEditorContent) {
-  container.querySelectorAll('.fd-apply-btn').forEach(btn => {
+  container.querySelectorAll('.fd-apply-btn:not([data-wired])').forEach(btn => {
+    btn.setAttribute('data-wired', 'true');
     btn.addEventListener('click', () => {
       const fdCode = decodeURIComponent(btn.dataset.fd);
       const actionDiv = btn.closest('.fd-block-action');
@@ -331,7 +332,8 @@ function wireApplySkipButtons(container, getEditorContent, setEditorContent) {
     });
   });
 
-  container.querySelectorAll('.fd-reject-btn').forEach(btn => {
+  container.querySelectorAll('.fd-reject-btn:not([data-wired])').forEach(btn => {
+    btn.setAttribute('data-wired', 'true');
     btn.addEventListener('click', () => {
       const actionDiv = btn.closest('.fd-block-action');
       if (actionDiv) {
