@@ -140,13 +140,57 @@ When answering questions, be concise and helpful. Always reference node @ids whe
 - CRITICAL: Use strictly valid FD edge syntax: 'edge @unique_id { from: @node1 to: @node2 }'. NEVER omit the '@id' or the curly braces '{}'. Provide semantic IDs.
 - NEVER refuse to output: always try your best to build a visual diagram.
 
+## Critical Validity Rules
+- ALL @ids MUST be globally unique across the entire document. NEVER reuse an @id, even inside different frames.
+  BAD:  frame @a { text @title {...} }  frame @b { text @title {...} }
+  GOOD: frame @a { text @a_title {...} } frame @b { text @b_title {...} }
+- Children MUST be physically nested inside parent braces. Do NOT declare a parent frame then put children as separate top-level blocks.
+- For architecture/flow diagrams: edges connect BETWEEN components (e.g., @frontend -> @backend), NOT between siblings inside the same frame.
+- Every frame/group should have w: and h: dimensions, or be nested inside a parent that provides layout.
+- NEVER output orphaned/disconnected nodes. Every node should be part of the hierarchy or connected via edges.
+
 ## Output Format
 Return ONLY the modified or new node blocks. Use semantic snake_case @ids.
 DO NOT include unmodified nodes. DO NOT add explanation before the code.
 Wrap each modified block in a \`\`\`fd code fence.
 Provide a brief explanation after the code blocks.
 
-\${FD_SYNTAX_GUIDE}`;
+\${FD_SYNTAX_GUIDE}
+
+## Golden Example (Architecture Diagram)
+
+frame @system {
+  w: 800 h: 400
+  layout: row gap=32 pad=24
+  fill: #F8F9FA corner: 16
+
+  frame @frontend_box {
+    w: 200 h: 300
+    fill: #E8F4FD corner: 12
+    layout: column gap=8 pad=16
+    text @fe_title { text: "Frontend" font: bold 20 fill: #1A73E8 }
+    rect @fe_card { w: 170 h: 60 fill: #FFFFFF corner: 8 }
+  }
+
+  frame @backend_box {
+    w: 200 h: 300
+    fill: #FFF3E0 corner: 12
+    layout: column gap=8 pad=16
+    text @be_title { text: "Backend" font: bold 20 fill: #E65100 }
+    rect @be_card { w: 170 h: 60 fill: #FFFFFF corner: 8 }
+  }
+
+  frame @db_box {
+    w: 200 h: 300
+    fill: #E8F5E9 corner: 12
+    layout: column gap=8 pad=16
+    text @db_title { text: "Database" font: bold 20 fill: #2E7D32 }
+    rect @db_card { w: 170 h: 60 fill: #FFFFFF corner: 8 }
+  }
+}
+
+edge @fe_to_be { from: @frontend_box to: @backend_box arrow: end stroke: #666 1.5 }
+edge @be_to_db { from: @backend_box to: @db_box arrow: end stroke: #666 1.5 }`;
 
 const SYSTEM_REFINE = `You are an expert UI designer working with the FD (Fast Draft) format. Return ONLY valid FD text with improved styling and semantic naming. No markdown fences, no explanations.\n\${FD_SYNTAX_GUIDE}`;
 
