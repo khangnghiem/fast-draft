@@ -119,7 +119,7 @@ impl FdCanvas {
         self.select_tool.selected.clear();
         self.select_tool.visual_highlight.clear();
         let mut count = 0u32;
-        
+
         // Add all nodes except root
         let root_idx = self.engine.graph.root;
         for idx in self.engine.graph.graph.node_indices() {
@@ -130,7 +130,7 @@ impl FdCanvas {
                 count += 1;
             }
         }
-        
+
         // Add all edges
         for edge in &self.engine.graph.edges {
             self.select_tool.selected.push(edge.id);
@@ -606,8 +606,8 @@ impl FdCanvas {
     /// Parse FD text and insert as new nodes with unique IDs.
     /// Returns JSON: {"ok": true, "count": N, "tier": 1|2|3, "ids": [...]}
     pub fn paste_fd(&mut self, text: &str, dx: f32, dy: f32) -> String {
+        use fd_core::model::{Constraint, NodeKind, SceneGraph, SceneNode};
         use fd_core::parser::parse_document;
-        use fd_core::model::{NodeKind, SceneGraph, SceneNode, Constraint};
         use fd_editor::sync::GraphMutation;
         use std::collections::HashMap;
 
@@ -617,10 +617,13 @@ impl FdCanvas {
                 if g.graph.node_count() <= 1 {
                     tier = 2; // Empty document, fallback to text node
                     let mut fallback = SceneGraph::new();
-                    let node = SceneNode::new(fd_core::id::NodeId::anonymous("text"), NodeKind::Text {
-                        content: text.to_string(),
-                        max_width: None,
-                    });
+                    let node = SceneNode::new(
+                        fd_core::id::NodeId::anonymous("text"),
+                        NodeKind::Text {
+                            content: text.to_string(),
+                            max_width: None,
+                        },
+                    );
                     fallback.add_node(fallback.root, node);
                     fallback
                 } else {
@@ -630,10 +633,13 @@ impl FdCanvas {
             Err(_) => {
                 tier = 3;
                 let mut fallback = SceneGraph::new();
-                let node = SceneNode::new(fd_core::id::NodeId::anonymous("text"), NodeKind::Text {
-                    content: text.to_string(),
-                    max_width: None,
-                });
+                let node = SceneNode::new(
+                    fd_core::id::NodeId::anonymous("text"),
+                    NodeKind::Text {
+                        content: text.to_string(),
+                        max_width: None,
+                    },
+                );
                 fallback.add_node(fallback.root, node);
                 fallback
             }
@@ -650,10 +656,10 @@ impl FdCanvas {
             for child in temp_graph.children(orig_idx) {
                 queue.push(child);
             }
-            
+
             let original = temp_graph.graph[orig_idx].clone();
             let orig_id = original.id;
-            
+
             // Get parent ID in temp_graph
             let mut parent_id = None;
             if let Some(p_idx) = temp_graph.parent(orig_idx)
@@ -679,7 +685,7 @@ impl FdCanvas {
                     }
                 }
             }
-            
+
             // Remap references in constraints
             for c in &mut cloned.constraints {
                 match c {
@@ -706,12 +712,22 @@ impl FdCanvas {
         // Phase 2: Duplicate edges from temp_graph
         for edge in &temp_graph.edges {
             let new_from = match &edge.from {
-                fd_core::model::EdgeAnchor::Node(id) => id_map.get(id).copied().map(fd_core::model::EdgeAnchor::Node),
-                fd_core::model::EdgeAnchor::Point(x, y) => Some(fd_core::model::EdgeAnchor::Point(*x + dx, *y + dy)),
+                fd_core::model::EdgeAnchor::Node(id) => id_map
+                    .get(id)
+                    .copied()
+                    .map(fd_core::model::EdgeAnchor::Node),
+                fd_core::model::EdgeAnchor::Point(x, y) => {
+                    Some(fd_core::model::EdgeAnchor::Point(*x + dx, *y + dy))
+                }
             };
             let new_to = match &edge.to {
-                fd_core::model::EdgeAnchor::Node(id) => id_map.get(id).copied().map(fd_core::model::EdgeAnchor::Node),
-                fd_core::model::EdgeAnchor::Point(x, y) => Some(fd_core::model::EdgeAnchor::Point(*x + dx, *y + dy)),
+                fd_core::model::EdgeAnchor::Node(id) => id_map
+                    .get(id)
+                    .copied()
+                    .map(fd_core::model::EdgeAnchor::Node),
+                fd_core::model::EdgeAnchor::Point(x, y) => {
+                    Some(fd_core::model::EdgeAnchor::Point(*x + dx, *y + dy))
+                }
             };
 
             if let (Some(nf), Some(nt)) = (new_from, new_to) {
@@ -721,7 +737,9 @@ impl FdCanvas {
                 new_edge.from = nf;
                 new_edge.to = nt;
                 new_edge.text_child = edge.text_child.and_then(|tc| id_map.get(&tc).copied());
-                mutations.push(GraphMutation::AddEdge { edge: Box::new(new_edge) });
+                mutations.push(GraphMutation::AddEdge {
+                    edge: Box::new(new_edge),
+                });
             }
         }
 
@@ -733,7 +751,8 @@ impl FdCanvas {
         self.commands.begin_batch(&mut self.engine);
         let mut count = 0;
         for mutation in mutations {
-            self.commands.execute(&mut self.engine, mutation, "paste clipboard");
+            self.commands
+                .execute(&mut self.engine, mutation, "paste clipboard");
             count += 1;
         }
         self.engine.resolve();
@@ -746,7 +765,7 @@ impl FdCanvas {
             self.select_tool.selected.push(new_id);
             self.select_tool.visual_highlight.push(new_id);
         }
-        
+
         self.engine.flush_to_text();
 
         let json = serde_json::json!({

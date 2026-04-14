@@ -23,15 +23,17 @@ fn main() {
             if let Ok(entries) = fs::read_dir(dir) {
                 for entry in entries.flatten() {
                     let sub = entry.path();
-                    if sub.is_dir() && let Ok(sub_entries) = fs::read_dir(&sub) {
-                            for sub_entry in sub_entries.flatten() {
-                                let path = sub_entry.path();
-                                if path.extension().is_some_and(|e| e == "fd") {
-                                    paths.push(path);
-                                }
+                    if sub.is_dir()
+                        && let Ok(sub_entries) = fs::read_dir(&sub)
+                    {
+                        for sub_entry in sub_entries.flatten() {
+                            let path = sub_entry.path();
+                            if path.extension().is_some_and(|e| e == "fd") {
+                                paths.push(path);
                             }
                         }
                     }
+                }
             }
         }
         paths
