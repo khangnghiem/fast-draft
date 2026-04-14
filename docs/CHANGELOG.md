@@ -1,13 +1,12 @@
-## [Unreleased]
-
-- Migrated clipboard paste (Cmd+V) and select all (Cmd+A) to robust WASM-native logic with collision-free batch ID renaming.
-- Fixed multiple bugs in WASM edge handling and text node constraints.
-- **FEAT (Canvas):** Implemented markdown extraction for `paste_fd` WASM pipe, allowing users to copy AI-generated code blocks containing ` ```fd ` fences and paste them directly onto the canvas to construct editable scenes.
-- **UX:** Added explicit UI toast feedback on paste parsing outcomes (Tier 1 valid layout vs Tier 3 text component fallback) to instantly clarify structural failures.
-
 # FD Changelog
 
 > Tracks requirement completion status across the entire FD project.
+
+## [Unreleased]
+- **FEAT (Canvas):** Implemented markdown extraction for `paste_fd` WASM pipe, allowing users to copy AI-generated code blocks and paste them directly onto the canvas.
+- Migrated clipboard paste (Cmd+V) and select all (Cmd+A) to robust WASM-native logic with collision-free batch ID renaming.
+- Fixed multiple bugs in WASM edge handling and text node constraints.
+- **UX:** Added explicit UI toast feedback on paste parsing outcomes (Tier 1 vs Tier 3 text component fallback) to instantly clarify structural failures.
 - **FEAT (AI):** Wired the design agent model selector dropdown directly to the Cloudflare Pages Function backend, expanding free limits with new model aliases (Llama 3B, Gemma 12B, Qwen Coder). Updated agent spec to document the Edge Computing Phase 1 architecture.
 - **FIX**: Resolved minimap unresponsiveness and ghosting artifacts by removing volatile pointer locks, clearing cache buffers before redraw, and explicitly decoupling minimap bounds from main canvas dimensions.
 > For VS Code extension release notes, see [`fd-vscode/CHANGELOG.md`](../fd-vscode/CHANGELOG.md).
