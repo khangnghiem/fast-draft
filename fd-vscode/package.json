@@ -129,6 +129,11 @@
           "default": "llama3.2",
           "description": "Ollama model to use (e.g. llama3.2, codellama, mistral, deepseek-r1)"
         },
+        "fd.ai.ollamaApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Ollama Cloud API key (leave empty for local Ollama)"
+        },
         "fd.ai.ollamaUrl": {
           "type": "string",
           "default": "http://localhost:11434",
