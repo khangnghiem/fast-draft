@@ -978,7 +978,7 @@ function measureAndUpdateTextBounds(fdCanvas, canvasEl, nodeId) {
   if (!text) return false;
 
   const fontSize = props.fontSize || 14;
-  const fontFamily = props.fontFamily || "Inter, system-ui, sans-serif";
+  const fontFamily = props.fontFamily || 'Inter, sans-serif';
   const fontWeight = props.fontWeight || 400;
   const maxWidth = props.maxWidth || null;
   const lineHeight = fontSize * 1.2;
@@ -1121,7 +1121,7 @@ function openInlineEditor(opts) {
     const propsJson = fdCanvas.get_selected_node_props();
     props = JSON.parse(propsJson);
   } else if (createCtx && createCtx.type === "canvas") {
-    props = { kind: "text", fontSize: 14, fontFamily: "Inter", fontWeight: 400 };
+    props = { kind: "text", fontSize: 14, fontFamily: "Inter, sans-serif", fontWeight: 400 };
   } else if (createCtx && createCtx.type === "child") {
     props = { kind: "text" };
   } else if (createCtx && createCtx.type === "edge") {
@@ -1133,7 +1133,7 @@ function openInlineEditor(opts) {
   const rawFontSize = props.fontSize || 14;
   // Sub-pixel precision — do NOT round. Matches Canvas2D `{weight} {size}px {family}`.
   const fontSize = rawFontSize * zoomLevel;
-  const fontFamily = props.fontFamily ? `"${props.fontFamily}", system-ui, sans-serif` : "Inter, system-ui, sans-serif";
+  const fontFamily = props.fontFamily || 'Inter, sans-serif';
   const fontWeight = props.fontWeight || 400;
   const lineHeight = rawFontSize * 1.2 * zoomLevel;
 
@@ -1229,7 +1229,8 @@ function openInlineEditor(opts) {
     `left:${sx}px`, `top:${sy}px`,
     `width:${sw}px`, `height:${sh}px`,
     `padding:${padTop}px 0 ${padBottom}px 0`,
-    `font:${fontWeight} ${fontSize}px/${lineHeight}px ${fontFamily}`,
+    `font:${fontWeight} ${fontSize}px ${fontFamily}`,
+    `line-height:${lineHeight}px`,
     `border:none`,
     `outline:${outlineStyle}`, `outline-offset:-1px`,
     `border-radius:${borderRadius}`,
