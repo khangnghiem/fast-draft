@@ -3,6 +3,12 @@
 > Tracks requirement completion status across the entire FD project.
 
 ## [Unreleased]
+
+### v0.11.382 — Fix Sticky Marquee & AI Architecture Quality
+- **FIX (Canvas)**: Hardened `pointercancel` handler to call `fdCanvas.cancel_drag()`, clearing WASM marquee/lasso/eraser state when the browser drops pointer capture (e.g., OS gesture intercept, app switch). Extended `pointerleave`/`pointerenter` fallbacks to detect any active WASM interaction (`activePointerId !== -1`), not just pan/zoom state.
+- **FIX (AI)**: Upgraded default AI model from `llama-3.1-8b-instruct` to `gemma-4-26b-a4b-it` (Gemma 4 26B). The 8B model was too small for reliable FD code generation, producing text nodes without `text:` property (blank nodes). The code comment already specified Gemma 4 as the intended default.
+- **FIX (AI)**: Strengthened CRITICAL RULE #1 in AI system prompt to explicitly forbid text nodes without `text:` property, preventing blank node generation.
+- **UX (AI)**: Replaced 'Align Objects' quick-action chip with '🏗️ Architecture' chip that pre-populates a detailed architecture diagram prompt with specific instructions for colored frames, text labels, and connecting edges.
 - **FEAT (AI)**: Overhauled AI Agent system prompts for dramatically higher-quality FD code generation. Prompts now include comprehensive syntax reference with explicit text node syntax, layout-first design rules, design quality standards, and 3 golden examples (Login Form, Dashboard, Architecture Diagram).
 - **FEAT (AI)**: Dual-action Apply mechanism — AI-generated complete designs now show "⟳ Replace Canvas" (blue, replaces all content) and "+ Merge" (green, appends to existing). Detection via `isCompleteDesign()` heuristic counting node + style blocks.
 - **FIX (AI)**: 3-tier fallback now gracefully skips Workers AI when binding is unavailable, going directly to Ollama Cloud or OpenRouter. Previously, missing AI binding caused hard 503 errors blocking all local dev.
