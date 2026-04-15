@@ -5417,14 +5417,21 @@ async function initPlayground() {
       if (e.pointerId === activePointerId) {
         activePointerId = -1;
         panDragging = false;
+        // Cancel any WASM drag/marquee state that would otherwise stick
+        if (fdCanvas && fdCanvas.cancel_drag) {
+          fdCanvas.cancel_drag();
+        }
+        lassoActive = false;
+        eraserActive = false;
         canvas.style.cursor = '';
+        renderDirty = true;
       }
     });
 
     canvas.addEventListener('pointerleave', (e) => {
       // Fallback: if pointer capture was lost (e.g. browser bug, OS gesture intercept)
-      // and pointer exits with no buttons held, clean up.
-      if (e.buttons === 0 && (panDragging || rightClickPending || zoomScrubActive)) {
+      // and pointer exits with no buttons held, clean up any active interaction.
+      if (e.buttons === 0 && (panDragging || rightClickPending || zoomScrubActive || activePointerId !== -1)) {
         clearInteractionState();
       }
     });
@@ -5432,7 +5439,7 @@ async function initPlayground() {
     canvas.addEventListener('pointerenter', (e) => {
       // Fallback: if pointer re-enters with no buttons held, the release was missed
       // outside the window while capture was inactive.
-      if (e.buttons === 0 && (panDragging || rightClickPending || zoomScrubActive)) {
+      if (e.buttons === 0 && (panDragging || rightClickPending || zoomScrubActive || activePointerId !== -1)) {
         clearInteractionState();
       }
     });

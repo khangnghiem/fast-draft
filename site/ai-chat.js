@@ -130,9 +130,9 @@ export function updateContextBadge() {
 // ─── Quick-Action Chips ─────────────────────────────────
 
 const CHIPS_NONE = [
+  { label: '🏗️ Architecture', msg: 'Create a web application architecture diagram with Frontend, Backend, API Gateway, and Database layers. Use colored frames for each layer with text labels, and connecting edges between layers.' },
   { label: 'Suggest Variants', msg: 'Suggest layout or color variants for this design' },
   { label: 'Edit Style', msg: 'Improve the color palette to be more harmonious and modern' },
-  { label: 'Align Objects', msg: 'Align and arrange the layout cleanly' },
 ];
 
 const CHIPS_SINGLE = [

@@ -40,8 +40,8 @@ const KV_TTL_SECONDS = 86400;
 
 // ─── Default Models (override via env vars) ──────────────────────────────
 
-const DEFAULT_MODEL_FAST = '@cf/meta/llama-3.1-8b-instruct';
-const DEFAULT_MODEL_QUALITY = '@cf/meta/llama-3.1-8b-instruct';
+const DEFAULT_MODEL_FAST = '@cf/google/gemma-4-26b-a4b-it';
+const DEFAULT_MODEL_QUALITY = '@cf/google/gemma-4-26b-a4b-it';
 
 // ─── Model Aliases (for admin URL param override) ────────────────────────
 
@@ -122,7 +122,7 @@ const SYSTEM_CHAT = `You are an expert visual designer working with the FD (Fast
 
 ## CRITICAL RULES (must follow)
 
-1. **Text Content**: Use \`text @id { text: "content" }\` — NEVER \`text @id "content" { }\`
+1. **Text Content**: EVERY text node MUST have a \`text: "..."\` property with non-empty content. Use \`text @id { text: "content" }\` — NEVER \`text @id "content" { }\` and NEVER \`text @id { font: ... }\` without text:.
 2. **Layout First**: ALWAYS wrap related elements in a \`frame\` with \`layout: column\` or \`layout: row\`. NO loose top-level nodes with absolute x/y.
 3. **Unique IDs**: ALL @ids MUST be globally unique. Prefix with context: @login_title, @login_email, @login_btn.
 4. **Nesting**: Children MUST be inside parent braces. Never declare children as separate top-level blocks.
