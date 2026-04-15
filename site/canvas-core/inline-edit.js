@@ -27,6 +27,16 @@ export function hexLuminance(hex) {
 }
 
 /**
+ * Build a CSS-ready font-family string from WASM props.
+ * The WASM backend returns a pre-formatted CSS string (e.g. "Inter, sans-serif").
+ * We pass it through verbatim — NO quoting, NO extra fallbacks.
+ * This must match render2d.rs:525: ctx.set_font(&format!("{weight} {size}px {family}"))
+ */
+export function buildFontFamily(propsFontFamily) {
+  return propsFontFamily || 'Inter, sans-serif';
+}
+
+/**
  * Measure a text node and update its WASM bounds.
  * Returns true if bounds changed.
  */
@@ -40,7 +50,7 @@ export function measureAndUpdateTextBounds(fdCanvas, canvasEl, nodeId) {
   if (!text) return false;
 
   const fontSize = props.fontSize || 14;
-  const fontFamily = props.fontFamily || "Inter, system-ui, sans-serif";
+  const fontFamily = buildFontFamily(props.fontFamily);
   const fontWeight = props.fontWeight || 400;
   const maxWidth = props.maxWidth || null;
   const lineHeight = fontSize * 1.2;
@@ -183,7 +193,7 @@ export async function openInlineEditor(opts) {
     const propsJson = fdCanvas.get_selected_node_props();
     props = JSON.parse(propsJson);
   } else if (createCtx && createCtx.type === "canvas") {
-    props = { kind: "text", fontSize: 14, fontFamily: "Inter", fontWeight: 400 };
+    props = { kind: "text", fontSize: 14, fontFamily: "Inter, sans-serif", fontWeight: 400 };
   } else if (createCtx && createCtx.type === "child") {
     props = { kind: "text" };
   } else if (createCtx && createCtx.type === "edge") {
@@ -195,14 +205,7 @@ export async function openInlineEditor(opts) {
   const rawFontSize = props.fontSize || 14;
   // Sub-pixel precision — do NOT round. Matches Canvas2D `{weight} {size}px {family}`.
   const fontSize = rawFontSize * zoomLevel;
-  const fontFamily = props.fontFamily
-    ? props.fontFamily.split(',').map(f => {
-        let trimmed = f.trim();
-        return /\s/.test(trimmed) && !trimmed.startsWith('"') && !trimmed.startsWith("'") 
-          ? `"${trimmed}"` 
-          : trimmed;
-      }).join(', ') + ', system-ui, sans-serif'
-    : 'Inter, system-ui, sans-serif';
+  const fontFamily = buildFontFamily(props.fontFamily);
   const fontWeight = props.fontWeight || 400;
   const lineHeight = rawFontSize * 1.2 * zoomLevel;
 
@@ -314,7 +317,8 @@ export async function openInlineEditor(opts) {
     `left:${sx}px`, `top:${sy}px`,
     `width:${sw}px`, `height:${sh}px`,
     `padding:${padTop}px 0 ${padBottom}px 0`,
-    `font:${fontWeight} ${fontSize}px/${lineHeight}px ${fontFamily}`,
+    `font:${fontWeight} ${fontSize}px ${fontFamily}`,
+    `line-height:${lineHeight}px`,
     `border:none`,
     `outline:${outlineStyle}`, `outline-offset:1px`,
     `border-radius:${borderRadius}`,

@@ -14,7 +14,7 @@
 - **UX:** Added explicit UI toast feedback on paste parsing outcomes (Tier 1 vs Tier 3 text component fallback) to instantly clarify structural failures.
 - **FEAT (AI):** Wired the design agent model selector dropdown directly to the Cloudflare Pages Function backend, expanding free limits with new model aliases (Llama 3B, Gemma 12B, Qwen Coder). Updated agent spec to document the Edge Computing Phase 1 architecture.
 - **FIX**: Resolved minimap unresponsiveness and ghosting artifacts by removing volatile pointer locks, clearing cache buffers before redraw, and explicitly decoupling minimap bounds from main canvas dimensions.
-- **FIX (Canvas)**: Hardened inline text editor CSS `font-family` serialization. Safely extracts, trims, and uniquely quotes individual font fallbacks containing whitespaces (e.g. `"Times New Roman"`) instead of illegally quoting the entire comma-separated CSS stack, fixing a critical text positioning regression.
+- **FIX (Canvas)**: Hardened inline text editor CSS `font-family` serialization to guarantee 100% parity with WASM Canvas2D fallback rules (e.g. `Inter, sans-serif`). Eliminated rogue `system-ui` injections and separated `line-height` from CSS font shorthand to resolve persistent baseline shifts. Integrated directly into VS Code Webview as well.
 > For VS Code extension release notes, see [`fd-vscode/CHANGELOG.md`](../fd-vscode/CHANGELOG.md).
 
 <!-- KEYWORD INDEX — rg to find relevant sections:
