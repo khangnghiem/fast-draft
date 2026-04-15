@@ -195,7 +195,14 @@ export async function openInlineEditor(opts) {
   const rawFontSize = props.fontSize || 14;
   // Sub-pixel precision — do NOT round. Matches Canvas2D `{weight} {size}px {family}`.
   const fontSize = rawFontSize * zoomLevel;
-  const fontFamily = props.fontFamily ? `"${props.fontFamily}", system-ui, sans-serif` : "Inter, system-ui, sans-serif";
+  const fontFamily = props.fontFamily
+    ? props.fontFamily.split(',').map(f => {
+        let trimmed = f.trim();
+        return /\\s/.test(trimmed) && !trimmed.startsWith('"') && !trimmed.startsWith("'") 
+          ? `"${trimmed}"` 
+          : trimmed;
+      }).join(', ') + ', system-ui, sans-serif'
+    : 'Inter, system-ui, sans-serif';
   const fontWeight = props.fontWeight || 400;
   const lineHeight = rawFontSize * 1.2 * zoomLevel;
 
