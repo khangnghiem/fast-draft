@@ -198,7 +198,7 @@ export async function openInlineEditor(opts) {
   const fontFamily = props.fontFamily
     ? props.fontFamily.split(',').map(f => {
         let trimmed = f.trim();
-        return /\\s/.test(trimmed) && !trimmed.startsWith('"') && !trimmed.startsWith("'") 
+        return /\s/.test(trimmed) && !trimmed.startsWith('"') && !trimmed.startsWith("'") 
           ? `"${trimmed}"` 
           : trimmed;
       }).join(', ') + ', system-ui, sans-serif'
