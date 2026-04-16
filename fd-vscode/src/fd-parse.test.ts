@@ -426,11 +426,12 @@ describe("escapeHtml", () => {
 
   it("escapes quotes", () => {
     expect(escapeHtml('"hello"')).toBe("&quot;hello&quot;");
+    expect(escapeHtml("'hello'")).toBe("&#39;hello&#39;");
   });
 
   it("escapes all special chars together", () => {
-    expect(escapeHtml('<a href="x">&')).toBe(
-      "&lt;a href=&quot;x&quot;&gt;&amp;"
+    expect(escapeHtml('<a href="x" data-y=\'z\'>&')).toBe(
+      "&lt;a href=&quot;x&quot; data-y=&#39;z&#39;&gt;&amp;"
     );
   });
 });
