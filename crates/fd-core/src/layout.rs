@@ -488,20 +488,22 @@ fn resolve_children(
 
                 // Priority 2: auto-center text children in shape parents
                 // (no explicit place: and no Position constraint)
-                // Uses padded bounds for centering area
+                // Uses padded bounds for centering area.
+                // Width constrained to content_w so text wraps within parent.
                 if parent_is_shape
                     && matches!(child_node.kind, NodeKind::Text { .. })
                     && !has_position
                     && let Some(child_b) = bounds.get(&child_idx).copied()
                 {
-                    let cx = content_x + (content_w - child_b.width) / 2.0;
+                    let constrained_w = content_w.min(child_b.width);
+                    let cx = content_x + (content_w - constrained_w) / 2.0;
                     let cy = content_y + (content_h - child_b.height) / 2.0;
                     bounds.insert(
                         child_idx,
                         ResolvedBounds {
                             x: cx,
                             y: cy,
-                            width: child_b.width,
+                            width: constrained_w,
                             height: child_b.height,
                         },
                     );

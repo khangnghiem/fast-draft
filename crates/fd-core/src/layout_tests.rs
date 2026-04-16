@@ -1107,3 +1107,54 @@ rect @btn {
         btn.width
     );
 }
+
+#[test]
+fn layout_text_in_rect_constrained_to_parent_width() {
+    let input = r#"
+rect @box {
+  w: 160 h: 120
+  text @long "This is a very long text string that would normally exceed the parent width as a single line because it has many words" {
+    font: "Inter" 400 14
+  }
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let bounds = resolve_layout(&graph, viewport);
+
+    let box_b = bounds[&graph.index_of(NodeId::intern("box")).unwrap()];
+    let long_b = bounds[&graph.index_of(NodeId::intern("long")).unwrap()];
+
+    assert!(
+        long_b.width <= box_b.width + 1.0,
+        "text width ({}) should be <= parent width ({}) — text must not overflow rect",
+        long_b.width,
+        box_b.width
+    );
+}
+
+#[test]
+fn layout_text_standalone_stays_unconstrained() {
+    let input = r#"
+text @free "This is a long standalone text that should not wrap because it has no parent shape" {
+  font: "Inter" 400 14
+}
+"#;
+    let graph = parse_document(input).unwrap();
+    let viewport = Viewport {
+        width: 800.0,
+        height: 600.0,
+    };
+    let bounds = resolve_layout(&graph, viewport);
+
+    let free_b = bounds[&graph.index_of(NodeId::intern("free")).unwrap()];
+
+    assert!(
+        free_b.width > 160.0,
+        "standalone text width ({}) should be > 160 — must not be artificially constrained",
+        free_b.width
+    );
+}
