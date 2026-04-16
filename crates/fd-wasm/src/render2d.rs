@@ -556,7 +556,10 @@ fn draw_text(
     ctx.set_text_baseline(text_baseline_str);
 
     let line_height = (size * 1.2) as f64;
-    let wrap_width = max_width.map(|w| w as f64);
+    let mut wrap_width = max_width.map(|w| w as f64);
+    if in_shape && wrap_width.is_none() {
+        wrap_width = Some(b.width as f64);
+    }
 
     // Build lines: split by existing newlines, then word-wrap within wrap_width
     let lines: Vec<String> = if let Some(ww) = wrap_width {
