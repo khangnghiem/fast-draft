@@ -3,6 +3,8 @@
 # Usage:  just smoke    — quick pre-commit gate
 #         just test     — full test suite
 #         just extended — full + proptest / nextest
+#         just wasm     — build WASM + copy to site/vscode
+#         just ci       — smoke + wasm + tauri + ts (full local CI gate)
 
 # Default: run smoke check
 default: smoke
@@ -44,3 +46,27 @@ fmt:
 fix:
     cargo fmt --all
     cargo clippy --workspace --fix --allow-dirty
+
+# ─── WASM Build ────────────────────────────────────────────────────
+wasm:
+    @echo "🔧 Building WASM…"
+    wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm --quiet
+    @echo "📦 Copying to site/wasm…"
+    cp -a fd-vscode/webview/wasm/. site/wasm/
+    @echo "✅ WASM built and copied"
+
+# ─── Full CI Gate (local) ──────────────────────────────────────────
+ci: smoke wasm tauri ts
+    @echo "🚀 Full CI gate passed — ready to deploy"
+
+# ─── Tauri Desktop Check ──────────────────────────────────────────
+tauri:
+    @echo "🖥️  Checking Tauri desktop…"
+    cd fd-desktop/src-tauri && cargo check --quiet && cargo clippy --quiet -- -D warnings && cargo fmt -- --check
+    @echo "✅ Tauri desktop passed"
+
+# ─── VS Code Extension TS Tests ──────────────────────────────────
+ts:
+    @echo "🧪 Running VS Code TS tests…"
+    cd fd-vscode && pnpm install && pnpm test
+    @echo "✅ TS tests passed"
