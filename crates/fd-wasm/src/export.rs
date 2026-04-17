@@ -63,18 +63,24 @@ impl FdCanvas {
         self.compute_center_snap()
     }
 
-    /// Render only the selected nodes (and their children) to the given context.
+    /// Render selected nodes (and their children) to the given context.
+    /// When nothing is selected, renders all top-level nodes (entire canvas).
     pub fn render_export(&self, ctx: &CanvasRenderingContext2d, offset_x: f64, offset_y: f64) {
-        if self.select_tool.selected.is_empty() {
-            return;
-        }
-
-        let selected_ids: Vec<String> = self
-            .select_tool
-            .selected
-            .iter()
-            .map(|id| id.as_str().to_string())
-            .collect();
+        let selected_ids: Vec<String> = if self.select_tool.selected.is_empty() {
+            // Nothing selected → export everything (collect all top-level node IDs)
+            self.engine
+                .graph
+                .children(self.engine.graph.root)
+                .into_iter()
+                .map(|idx| self.engine.graph.graph[idx].id.as_str().to_string())
+                .collect()
+        } else {
+            self.select_tool
+                .selected
+                .iter()
+                .map(|id| id.as_str().to_string())
+                .collect()
+        };
 
         render2d::render_export(
             ctx,
