@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+### v0.11.383 — Fix Export-All, Select-All & Copy Toast
+- **FIX (Canvas)**: `render_export()` no longer bails when selection is empty — it renders all top-level nodes (entire canvas), matching SVG/HTML/Excalidraw export behavior. Fixes broken "Copy as PNG" when nothing is selected.
+- **FIX (Canvas)**: ⌘A / Ctrl+A now calls `fdCanvas.select_all()` WASM API instead of a broken regex that only matched the first `@id`. All unlocked nodes + edges are now selected.
+- **UX (Canvas)**: `copySelectedAsFd()` (⌘C) now shows a toast notification ("✓ Copied as FD code") on both the multi-node and single-node clipboard paths.
+- **FIX (Cache)**: Bumped WASM import cache-buster from `0.11.309` → `0.11.383`.
+
 ### v0.11.382 — Fix Sticky Marquee & AI Architecture Quality
 - **FIX (Canvas)**: Hardened `pointercancel` handler to call `fdCanvas.cancel_drag()`, clearing WASM marquee/lasso/eraser state when the browser drops pointer capture (e.g., OS gesture intercept, app switch). Extended `pointerleave`/`pointerenter` fallbacks to detect any active WASM interaction (`activePointerId !== -1`), not just pan/zoom state.
 - **FIX (AI)**: Upgraded default AI model from `llama-3.1-8b-instruct` to `gemma-4-26b-a4b-it` (Gemma 4 26B). The 8B model was too small for reliable FD code generation, producing text nodes without `text:` property (blank nodes). The code comment already specified Gemma 4 as the intended default.

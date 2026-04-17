@@ -1,5 +1,5 @@
 import { initLayersPanel } from './layers.js?v=0.11.309';
-import init, { FdCanvas } from './wasm/fd_wasm.js?v=0.11.309';
+import init, { FdCanvas } from './wasm/fd_wasm.js?v=0.11.383';
 import { buildUnifiedNodeMenu, buildUnifiedCanvasMenu, buildUnifiedEdgeMenu } from './canvas-core/menu-registry.js?v=0.11.334';
 // ─── FD Playground — WASM-powered interactive editor ───
 
@@ -2086,6 +2086,7 @@ function copySelectedAsFd() {
       if (navigator.clipboard) {
         navigator.clipboard.writeText(fdClipboard).catch(() => {});
       }
+      showToast('✓ Copied as FD code');
       return;
     }
   } catch (_) {}
@@ -2101,6 +2102,7 @@ function copySelectedAsFd() {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(fdClipboard).catch(() => {});
   }
+  showToast('✓ Copied as FD code');
 }
 
 /** Cut the selected node — copy then delete. */
@@ -5806,11 +5808,9 @@ async function initPlayground() {
       // ── Select All (⌘A / Ctrl+A) ──
       if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'a') && !e.shiftKey && !editorFocused) {
         e.preventDefault();
-        // Select first visible node as a basic select-all
-        const text = fdCanvas.get_text();
-        const idRe = /@([a-zA-Z_][a-zA-Z0-9_]*)/;
-        const m = idRe.exec(text);
-        if (m) { fdCanvas.select_by_id(m[1]); renderDirty = true; uiDirty = true; }
+        const count = fdCanvas.select_all();
+        renderDirty = true; uiDirty = true;
+        if (count > 0) showToast(`Selected all (${count})`);
         return;
       }
 
