@@ -965,6 +965,16 @@ function hexLuminance(hex) {
 }
 
 /**
+ * Build a CSS-ready font-family string from WASM props.
+ * The WASM backend returns a pre-formatted CSS string (e.g. "Inter, sans-serif").
+ * We pass it through verbatim — NO quoting, NO extra fallbacks.
+ * This must match render2d.rs:525: ctx.set_font(&format!("{weight} {size}px {family}"))
+ */
+function buildFontFamily(propsFontFamily) {
+  return propsFontFamily || 'Inter, sans-serif';
+}
+
+/**
  * Measure a text node and update its WASM bounds.
  * Returns true if bounds changed.
  */
@@ -978,7 +988,7 @@ function measureAndUpdateTextBounds(fdCanvas, canvasEl, nodeId) {
   if (!text) return false;
 
   const fontSize = props.fontSize || 14;
-  const fontFamily = props.fontFamily || 'Inter, sans-serif';
+  const fontFamily = buildFontFamily(props.fontFamily);
   const fontWeight = props.fontWeight || 400;
   const maxWidth = props.maxWidth || null;
   const lineHeight = fontSize * 1.2;
@@ -1066,8 +1076,9 @@ function measureAllTextNodes(fdCanvas, canvasEl, renderFn) {
  * @param {number} opts.zoomLevel    — current zoom
  * @param {string} [opts.parentShapeId] — parent shape ID for text-in-shape editing
  */
-function openInlineEditor(opts) {
+async function openInlineEditor(opts) {
   if (inlineEditorActive) return;
+  inlineEditorActive = true;
 
   let { nodeId } = opts;
   const {
@@ -1080,6 +1091,7 @@ function openInlineEditor(opts) {
   } = opts;
 
   if (nodeId) {
+    if (document.fonts) await document.fonts.ready;
     // Force-measure text bounds BEFORE reading them
     measureAndUpdateTextBounds(fdCanvas, canvasEl, nodeId);
   }
@@ -1101,8 +1113,6 @@ function openInlineEditor(opts) {
   }
   const bw = b.w || 80;
   const bh = b.h || 24;
-
-  inlineEditorActive = true;
 
   // Suppress text rendering AND set selection BEFORE any render — prevents
   // the blue selection box from flashing for a single frame.
@@ -1133,7 +1143,7 @@ function openInlineEditor(opts) {
   const rawFontSize = props.fontSize || 14;
   // Sub-pixel precision — do NOT round. Matches Canvas2D `{weight} {size}px {family}`.
   const fontSize = rawFontSize * zoomLevel;
-  const fontFamily = props.fontFamily || 'Inter, sans-serif';
+  const fontFamily = buildFontFamily(props.fontFamily);
   const fontWeight = props.fontWeight || 400;
   const lineHeight = rawFontSize * 1.2 * zoomLevel;
 
@@ -1144,18 +1154,25 @@ function openInlineEditor(opts) {
   const canvasOffsetY = canvasRect.top - containerRect.top;
   const scaledW = bw * zoomLevel;
   const scaledH = bh * zoomLevel;
-  const sw = Math.max(scaledW, 80);
+  const sw = Math.max(scaledW, 80) + 2;
   const sh = Math.max(scaledH, lineHeight + 4);
+
+  // Determine node context BEFORE coordinate math
+  const isTextNode = props.kind === "text";
+  const isInShape = !!parentShapeId || (createCtx && createCtx.type === "child");
+
+  // Text nodes: anchor at top-left — matches Canvas2D draw_text baseline.
+  // Shapes (text-in-shape): center the editor over the shape bounds.
+  const centerX = (isTextNode && !isInShape) ? 0 : (sw - scaledW) / 2;
+  const centerY = (isTextNode && !isInShape) ? 0 : (sh - scaledH) / 2;
   // Sub-pixel positioning — match Canvas2D coordinate space exactly.
   // Do NOT round to integer px; CSS handles sub-pixel fine.
-  const sx = (b.x || 0) * zoomLevel + panX + canvasOffsetX - (sw - scaledW) / 2;
-  const sy = (b.y || 0) * zoomLevel + panY + canvasOffsetY - (sh - scaledH) / 2;
+  const sx = (b.x || 0) * zoomLevel + panX + canvasOffsetX - centerX;
+  const sy = (b.y || 0) * zoomLevel + panY + canvasOffsetY - centerY;
 
   // Colors & shape styling
   const isDark = document.body.classList.contains("dark-theme") ||
                  document.body.classList.contains("vscode-dark");
-  const isTextNode = props.kind === "text";
-  const isInShape = !!parentShapeId || (createCtx && createCtx.type === "child");
   let bgColor, textColor;
 
   // Read parent shape props for styling when editing text-in-shape
@@ -1219,8 +1236,17 @@ function openInlineEditor(opts) {
     borderRadius = cr !== undefined ? `${Math.round(cr * zoomLevel)}px` : "0";
   } else if (isTextNode && !isInShape) borderRadius = "0";
 
-  const outlineStyle = "none";
-  const boxShadow = "none";
+  // Subtle edit-mode affordance (Figma-inspired blue ring)
+  const isTransparentBg = bgColor === 'transparent';
+  const outlineStyle = isTransparentBg
+    ? '1.5px solid rgba(0, 122, 255, 0.35)'
+    : '1.5px solid rgba(0, 122, 255, 0.2)';
+  const boxShadow = isTransparentBg
+    ? '0 0 0 3px rgba(0, 122, 255, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06)'
+    : '0 0 0 3px rgba(0, 122, 255, 0.06)';
+
+  const isAutoWidth = isTextNode && !isInShape && !props.maxWidth;
+  const whiteSpace = isAutoWidth ? 'pre' : 'pre-wrap';
 
   const textarea = document.createElement("textarea");
   textarea.value = currentValue;
@@ -1232,7 +1258,7 @@ function openInlineEditor(opts) {
     `font:${fontWeight} ${fontSize}px ${fontFamily}`,
     `line-height:${lineHeight}px`,
     `border:none`,
-    `outline:${outlineStyle}`, `outline-offset:-1px`,
+    `outline:${outlineStyle}`, `outline-offset:1px`,
     `border-radius:${borderRadius}`,
     `background:${bgColor}`, `color:${textColor}`,
     `resize:none`, `z-index:100`,
@@ -1240,7 +1266,7 @@ function openInlineEditor(opts) {
     `overflow:hidden`, `text-align:${hAlign}`,
     `box-sizing:border-box`,
     `-webkit-text-size-adjust:100%`,
-    `word-wrap:break-word`, `white-space:pre-wrap`,
+    `word-wrap:break-word`, `white-space:${whiteSpace}`,
     `overflow-wrap:break-word`,
     `letter-spacing:0px`,
   ].join(";");
@@ -1283,8 +1309,20 @@ function openInlineEditor(opts) {
     if (nodeId) {
       fdCanvas.select_by_id(nodeId);
       fdCanvas.set_node_prop(propKey, val);
+      measureAndUpdateTextBounds(fdCanvas, canvasEl, nodeId);
       renderFn();
       syncFn();
+
+      const boundsJson = fdCanvas.get_node_bounds(nodeId);
+      if (boundsJson) {
+        const newB = JSON.parse(boundsJson);
+        const newScaledW = newB.w * zoomLevel;
+        const newScaledH = newB.h * zoomLevel;
+        const newSw = Math.max(newScaledW, 80) + 2;
+        const newSh = Math.max(newScaledH, lineHeight + 4);
+        textarea.style.width = `${newSw}px`;
+        textarea.style.height = `${newSh}px`;
+      }
     }
   });
 
@@ -8767,8 +8805,7 @@ function applyFullscreenMode(isFull) {
 /** Clipboard buffer for FD node text */
 let fdClipboard = "";
 
-/** Track whether clipboard content is from internal copy (vs. external paste). */
-let fdClipboardIsInternal = false;
+
 
 /** Cumulative paste offset — increments by 20 on each successive paste,
  *  resets when a new copy is made. */
@@ -8809,7 +8846,6 @@ function copySelectedAsFd() {
     const selFd = fdCanvas.emit_selection_fd();
     if (selFd && selFd.trim()) {
       fdClipboard = selFd;
-      fdClipboardIsInternal = true;
       pasteOffsetCount = 0;
       if (navigator.clipboard) {
         navigator.clipboard.writeText(fdClipboard).catch(() => { });
@@ -8831,7 +8867,6 @@ function copySelectedAsFd() {
   if (blocks.length === 0) return;
 
   fdClipboard = blocks.join("\n\n");
-  fdClipboardIsInternal = true;
   pasteOffsetCount = 0;
 
   if (navigator.clipboard) {
@@ -8850,148 +8885,55 @@ function cutSelectedAsFd() {
   }
 }
 
-/** Paste node(s) — delegates to WASM duplicate for internal clipboard,
- *  falls back to text-based paste for external system clipboard content. */
+/** Paste node(s) — delegates to WASM paste_fd. */
 async function pasteFromClipboard() {
   if (!fdCanvas) return;
 
   // Check if system clipboard has different content (external paste)
+  let clipText = fdClipboard;
   try {
     if (navigator.clipboard) {
       const sysText = await navigator.clipboard.readText();
-      if (sysText && sysText.includes("@") && sysText !== fdClipboard) {
+      if (sysText && sysText !== fdClipboard) {
+        clipText = sysText;
         fdClipboard = sysText;
-        fdClipboardIsInternal = false;
       }
     }
   } catch (_) { /* permission denied — use internal */ }
 
-  // Internal clipboard: delegate to WASM duplicate_selected() for correct
-  // naming, constraint remapping, edge duplication, and position handling.
-  if (fdClipboardIsInternal && fdClipboard) {
-    fdCanvas.push_undo_snapshot(fdCanvas.get_text(), fdCanvas.get_text());
-    const changed = fdCanvas.duplicate_selected();
-    if (changed) {
+  if (!clipText || !clipText.trim()) return;
+
+  pasteOffsetCount++;
+  const dx = pasteOffsetCount * 20;
+  const dy = pasteOffsetCount * 20;
+
+  // Push undo snapshot before starting an action
+  const originalText = fdCanvas.get_text();
+  fdCanvas.push_undo_snapshot(originalText, originalText);
+
+  try {
+    const resultJson = fdCanvas.paste_fd(clipText, dx, dy);
+    const res = JSON.parse(resultJson);
+    if (res.ok) {
       render();
       syncTextToExtension();
       updatePropertiesPanel();
       refreshLayersPanel();
     }
-    return;
+  } catch (e) {
+    console.warn("Paste failed:", e);
   }
-
-  // External clipboard: text-based paste with batch-aware ID renaming
-  const clipText = fdClipboard;
-  if (!clipText || !clipText.trim()) return;
-
-  pasteOffsetCount++;
-
-  // Collect all @id declarations in the pasted block
-  const idPattern = /@(\w+)\s*\{/g;
-  const allIds = new Set();
-  let m;
-  while ((m = idPattern.exec(clipText)) !== null) {
-    allIds.add(m[1]);
-  }
-  if (allIds.size === 0) return;
-
-  // Build renamed text: use batch-aware incremented _N naming
-  const existingText = fdCanvas.get_text();
-  let pasteText = clipText;
-  const rootId = [...allIds][0];
-  const idMap = new Map();
-  const batchMaxCache = new Map(); // stem → current max N (batch-aware)
-
-  for (const oldId of allIds) {
-    const stem = oldId.replace(/_(?:\d+|cp\d+)$/, '');
-    let maxN = batchMaxCache.get(stem) || 0;
-    if (maxN === 0) {
-      // First time seeing this stem — scan existing text
-      maxN = 1;
-      const re = new RegExp(`@${stem}_(\\d+)\\b`, 'g');
-      let match;
-      while ((match = re.exec(existingText)) !== null) {
-        maxN = Math.max(maxN, parseInt(match[1]));
-      }
-      if (new RegExp(`@${stem}\\b`).test(existingText)) {
-        maxN = Math.max(maxN, 1);
-      }
-    }
-    const newN = maxN + 1;
-    batchMaxCache.set(stem, newN);
-    idMap.set(oldId, stem + '_' + newN);
-  }
-
-  // Replace all @id references with new names using a single-pass regex
-  if (idMap.size > 0) {
-    const pattern = new RegExp(`@(${[...idMap.keys()].join('|')})\\b`, 'g');
-    pasteText = pasteText.replace(pattern, (match, oldId) => {
-      return `@${idMap.get(oldId)}`;
-    });
-  }
-  const newRootId = idMap.get(rootId) || rootId;
-
-  // Horizontal stagger
-  let xOffset = pasteOffsetCount * 20;
-  try {
-    const boundsJson = fdCanvas.get_node_bounds(rootId);
-    if (boundsJson) {
-      const bounds = JSON.parse(boundsJson);
-      if (bounds && bounds.width > 0) {
-        xOffset = (bounds.width + 20) * pasteOffsetCount;
-      }
-    }
-  } catch (_) {}
-
-  pasteText = pasteText.replace(/\b(x:\s*)(-?\d+(?:\.\d+)?)/g, (_match, prefix, val) => {
-    return prefix + (parseFloat(val) + xOffset);
-  });
-
-  // Undo support
-  const textBefore = fdCanvas.get_text();
-  const updatedText = textBefore.trimEnd() + '\n\n' + pasteText + '\n';
-  fdCanvas.set_text(updatedText);
-  fdCanvas.push_undo_snapshot(textBefore, updatedText);
-
-  render();
-  syncTextToExtension();
-
-  // Select the newly pasted root node
-  fdCanvas.select_by_id(newRootId);
-  render();
-  updatePropertiesPanel();
 }
 
 
 /** Select all nodes in the scene. */
 function selectAllNodes() {
   if (!fdCanvas) return;
-  const text = fdCanvas.get_text();
-  if (!text) return;
-
-  // Find all node IDs
-  const nodeIdPattern = /@(\w+)/g;
-  let match;
-  const ids = [];
-  const seen = new Set();
-  while ((match = nodeIdPattern.exec(text)) !== null) {
-    if (!seen.has(match[1])) {
-      ids.push(match[1]);
-      seen.add(match[1]);
-    }
-  }
-
-  if (ids.length === 0) return;
-
-// Select all nodes
-  if (ids.length > 0) {
-    if (typeof fdCanvas.select_multiple_by_ids === "function") {
-      fdCanvas.select_multiple_by_ids(JSON.stringify(ids));
-    } else {
-      fdCanvas.select_by_id(ids[0]);
-    }
+  const count = fdCanvas.select_all();
+  if (count > 0) {
     render();
     updatePropertiesPanel();
+    if (typeof refreshLayersPanel === 'function') refreshLayersPanel();
   }
 }
 
@@ -9789,7 +9731,12 @@ function updateChatChips() {
 // ─── Message Rendering ──────────────────────────────────
 
 function escapeHtmlChat(text) {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function renderAssistantHtml(content) {
