@@ -22,10 +22,14 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 2. **TDD (Tests)**: Write/update tests in `mod tests` for what changed.
 3. **Lint & Format**: `cargo clippy --workspace --quiet -- -D warnings` and `cargo fmt --all`
 4. **Test**: `cargo test --workspace --quiet`
-5. **UI Bug Verify**: Measure interaction fixes visually or via `execute_browser_javascript` before committing.
+5. **UI Bug Verify**: Measure interaction fixes visually before committing.
+   - Antigravity: use `execute_browser_javascript` to inspect DOM/WASM state
+   - OpenCode: write a Playwright script using `page.evaluate()` (see `tests/check_drag.mjs` for pattern)
 6. **Tauri**: `cd fd-desktop/src-tauri && cargo check --quiet && cargo clippy --quiet -- -D warnings && cargo fmt -- --check`
 7. **TS tests**: `cd fd-vscode && pnpm install && pnpm test`
-8. **Tier 1 E2E Smoke**: Build WASM (`wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm --quiet && cp -a ../../fd-vscode/webview/wasm/. site/wasm/`). Use `browser_subagent` to load the local site and execute the Tier 1 checks from `/e2e`.
+8. **Tier 1 E2E Smoke**: Build WASM (`wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm --quiet && cp -a ../../fd-vscode/webview/wasm/. site/wasm/`).
+   - Antigravity: use `browser_subagent` to load the local site and execute the Tier 1 checks from `/e2e`
+   - OpenCode: `npx serve site -l 8081 &` → run Playwright test script in `tests/` (e.g. `node tests/check_wasm.mjs`) → `kill %1`
 9. **Report** and STOP for `/yolo local`.
 
 ## `/yolo deploy`
@@ -42,6 +46,7 @@ description: Full pipeline - test, build, commit, PR, and merge in one shot
 19. **Merge**: `gh pr merge $(git branch --show-current) --squash --delete-branch`
 20. **Sync**: `git checkout main && git pull origin main`
 21. **Site Verify**: Wait for `pages.yml` deploy (`gh run watch $(gh run list --workflow=pages.yml -L 1 --json databaseId -q ".[0].databaseId")`).
-    Use `browser_subagent` to navigate to the live site and execute Tier 2 JS Assertions from `/e2e`.
-22. **Publish VS Code**: `cd fd-vscode && pnpm install && pnpm run compile && source ../.env && npx vsce publish --no-dependencies -p $VSCE_PAT && npx ovsx publish --no-dependencies -p $OVSX_PAT`
+   - Antigravity: use `browser_subagent` to navigate to the live site and execute Tier 2 JS Assertions from `/e2e`
+   - OpenCode: `npx serve site -l 8081 &` → run Playwright test script in `tests/` (e.g. `node tests/check_errors.mjs`) → `kill %1`
+22. **Publish VS Code**: `cd fd-vscode && pnpm install && pnpm run compile && source ../.env && npx vsce publish --no-dependencies -p $VSCE_PAT && npx ovsx publish --no-dependencies -p $VSX_PAT`
 23. **Report** completion.
