@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+### v0.11.384 — Fix Ollama Cloud API (Tier 2 Fallback)
+- **FIX (AI)**: Migrated Ollama Cloud from deprecated `/api/chat` to OpenAI-compatible `/v1/chat/completions` endpoint. Old endpoint returned `200` with empty body, causing "AI returned an empty response" errors.
+- **FIX (AI)**: Updated request format from Ollama-native (`options.temperature`, `options.num_predict`) to OpenAI-standard (`temperature`, `max_tokens`).
+- **FIX (AI)**: Rewrote `ollamaCloudToCFStream()` to parse OpenAI SSE format (`data: {"choices":[{"delta":{"content":"..."}}]}`) instead of Ollama NDJSON.
+- **FIX (AI)**: All Ollama model mappings now use `-cloud` suffix (e.g. `gemma4:31b-cloud`) required by Ollama Cloud API. Default fallback upgraded from `llama3.1:8b` to `gemma4:31b-cloud`.
+- **FIX (Workflow)**: Fixed `$OVSX_PAT` → `$VSX_PAT` in `yolo.md` to match `.env` variable name.
+
 ### v0.11.383 — Fix Export-All, Select-All & Copy Toast
 - **FIX (Canvas)**: `render_export()` no longer bails when selection is empty — it renders all top-level nodes (entire canvas), matching SVG/HTML/Excalidraw export behavior. Fixes broken "Copy as PNG" when nothing is selected.
 - **FIX (Canvas)**: ⌘A / Ctrl+A now calls `fdCanvas.select_all()` WASM API instead of a broken regex that only matched the first `@id`. All unlocked nodes + edges are now selected.
