@@ -1,0 +1,8 @@
+rect @box {
+  w: 200 h: 100
+  fill: #EEEEEE
+  text @label "Middle" {
+    font: "Inter" 14
+    textVAlign: middle
+  }
+}

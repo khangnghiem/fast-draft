@@ -1,0 +1,3 @@
+text @t3 "Styled" {
+  font: "Inter" bold 24
+}

@@ -1,0 +1,60 @@
+{
+  "active_plan": "/Users/khangnghiem/fast-draft/.sisyphus/plans/inline-edit-positioning.md",
+  "started_at": "2026-04-18T09:26:03.923Z",
+  "session_ids": [
+    "ses_26046f344ffeK0cU1nqwhQv5OR",
+    "ses_25feab6c7ffekE28cBFb94ZKwU",
+    "ses_25fea7b7dffeJ4UOcYTVH0Be6Y",
+    "ses_25fea3cc8ffesIn3eY5wKg5Y9x",
+    "ses_25fda9e5affeSlJJ2rmateMYK0",
+    "ses_25fda601bffeYown6Me8azAJlz"
+  ],
+  "session_origins": {
+    "ses_26046f344ffeK0cU1nqwhQv5OR": "direct",
+    "ses_25feab6c7ffekE28cBFb94ZKwU": "appended",
+    "ses_25fea7b7dffeJ4UOcYTVH0Be6Y": "appended",
+    "ses_25fea3cc8ffesIn3eY5wKg5Y9x": "appended",
+    "ses_25fda9e5affeSlJJ2rmateMYK0": "appended",
+    "ses_25fda601bffeYown6Me8azAJlz": "appended"
+  },
+  "plan_name": "inline-edit-positioning",
+  "agent": "atlas",
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "Audit All Coordinate Paths in inline-edit.js",
+      "session_id": "ses_2600d588affeS3qnwAGytPfAOB",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-04-18T09:37:15.467Z"
+    },
+    "todo:9": {
+      "task_key": "todo:9",
+      "task_label": "9",
+      "task_title": "Write E2E Tests for Standalone Text Positioning",
+      "session_id": "ses_2600756f1ffe9rb3UFKnCeQ6m7",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-04-18T10:12:47.363Z"
+    },
+    "todo:10": {
+      "task_key": "todo:10",
+      "task_label": "10",
+      "task_title": "Write E2E Tests for Text-in-Shape Positioning",
+      "session_id": "ses_25fea3cc8ffesIn3eY5wKg5Y9x",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-04-18T10:28:49.388Z"
+    },
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "**Plan Compliance Audit** — `oracle`",
+      "session_id": "ses_25fd78a0dffeytUbHBI44gEd3h",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-04-18T10:48:05.873Z"
+    }
+  }
+}

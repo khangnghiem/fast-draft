@@ -1,0 +1,5 @@
+text @t2 "World" {
+  x: 200
+  y: 150
+  font: "Inter" 14
+}

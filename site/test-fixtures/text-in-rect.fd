@@ -1,0 +1,7 @@
+rect @box {
+  w: 200 h: 80
+  fill: #EEEEEE
+  text @label "Inside" {
+    font: "Inter" 14
+  }
+}

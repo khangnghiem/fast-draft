@@ -1,0 +1,4 @@
+text @wrap "This is a narrow wrapped text example" {
+  w: 120
+  font: "Inter" 14
+}

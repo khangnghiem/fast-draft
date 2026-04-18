@@ -166,6 +166,9 @@ export async function openInlineEditor(opts) {
 
   let b;
   if (posId) {
+    // Guarantee layout is resolved before reading bounds — prevents stale x/y
+    // after drag or position mutations that don't trigger measureAndUpdateTextBounds.
+    fdCanvas.finalize_bounds();
     const boundsJson = fdCanvas.get_node_bounds(posId);
     b = JSON.parse(boundsJson);
   } else if (createCtx && createCtx.type === "canvas") {
@@ -272,7 +275,8 @@ export async function openInlineEditor(opts) {
   const vAlign = props.textVAlign || (isInShape ? "middle" : "top");
   const originalValue = currentValue;
 
-  // Vertical padding
+  // Vertical padding — computed against actual bounds height (scaledH), not
+  // the min-enforced textarea height (sh), so centering matches Canvas2D.
   const topOffset = 2 * zoomLevel;
   let padTop = 0, padBottom = 0;
   if (vAlign === "top") {
@@ -280,13 +284,13 @@ export async function openInlineEditor(opts) {
   } else if (vAlign === "middle") {
     const lines = (currentValue.match(/\n/g) || []).length + 1;
     const textHeight = lineHeight * lines;
-    padTop = Math.max(0, (sh - textHeight) / 2);
+    padTop = Math.max(0, (scaledH - textHeight) / 2);
     padBottom = padTop;
   } else if (vAlign === "bottom") {
     padBottom = topOffset;
     const lines = (currentValue.match(/\n/g) || []).length + 1;
     const textHeight = lineHeight * lines;
-    padTop = Math.max(0, sh - textHeight - padBottom);
+    padTop = Math.max(0, scaledH - textHeight - padBottom);
   }
 
   // Border radius — use parent shape's kind when editing text-in-shape
