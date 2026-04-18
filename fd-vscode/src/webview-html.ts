@@ -3258,7 +3258,7 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
           .replace(/</g, "&lt;")
           .replace(/>/g, "&gt;")
           .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#039;");
+          .replace(/'/g, "&#39;");
       }
 
       // Lightweight inline markdown → HTML converter (GFM subset)
