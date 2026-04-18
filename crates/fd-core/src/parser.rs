@@ -1404,6 +1404,71 @@ fn parse_place_value(input: &mut &str) -> ModalResult<(HPlace, VPlace)> {
 
 // ─── Animation block parser ─────────────────────────────────────────────
 
+struct AnimState {
+    props: AnimProperties,
+    duration_ms: u32,
+    easing: Easing,
+    delay_ms: Option<u32>,
+    use_template: Option<NodeId>,
+}
+
+fn parse_anim_property(input: &mut &str, state: &mut AnimState) -> ModalResult<()> {
+    let prop = parse_identifier.parse_next(input)?;
+    skip_space(input);
+    let _ = ':'.parse_next(input)?;
+    skip_space(input);
+
+    match prop {
+        "fill" => {
+            state.props.fill = Some(Paint::Solid(parse_hex_color.parse_next(input)?));
+        }
+        "opacity" => {
+            state.props.opacity = Some(parse_number.parse_next(input)?);
+        }
+        "scale" => {
+            state.props.scale = Some(parse_number.parse_next(input)?);
+        }
+        "rotate" => {
+            state.props.rotate = Some(parse_number.parse_next(input)?);
+        }
+        "ease" => {
+            let ease_name = parse_identifier.parse_next(input)?;
+            state.easing = match ease_name {
+                "linear" => Easing::Linear,
+                "ease_in" | "easeIn" => Easing::EaseIn,
+                "ease_out" | "easeOut" => Easing::EaseOut,
+                "ease_in_out" | "easeInOut" => Easing::EaseInOut,
+                "spring" => Easing::Spring,
+                _ => Easing::EaseInOut,
+            };
+            skip_space(input);
+            if let Ok(n) = parse_number.parse_next(input) {
+                state.duration_ms = n as u32;
+                if input.starts_with("ms") {
+                    *input = &input[2..];
+                }
+            }
+        }
+        "delay" => {
+            let n = parse_number.parse_next(input)?;
+            state.delay_ms = Some(n as u32);
+            if input.starts_with("ms") {
+                *input = &input[2..];
+            }
+        }
+        "use" => {
+            let name = parse_identifier.map(NodeId::intern).parse_next(input)?;
+            state.use_template = Some(name);
+        }
+        _ => {
+            let _ =
+                take_till::<_, _, ContextError>(0.., |c: char| c == '\n' || c == ';' || c == '}')
+                    .parse_next(input);
+        }
+    }
+    Ok(())
+}
+
 fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
     let _ = alt(("when", "anim")).parse_next(input)?;
     let _ = space1.parse_next(input)?;
@@ -1427,70 +1492,18 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
     skip_space(input);
     let _ = '{'.parse_next(input)?;
 
-    let mut props = AnimProperties::default();
-    let mut duration_ms = default_duration;
-    let mut easing = Easing::EaseInOut;
-    let mut delay_ms: Option<u32> = None;
-    let mut use_template: Option<NodeId> = None;
+    let mut state = AnimState {
+        props: AnimProperties::default(),
+        duration_ms: default_duration,
+        easing: Easing::EaseInOut,
+        delay_ms: None,
+        use_template: None,
+    };
 
     skip_ws_and_comments(input);
 
     while !input.starts_with('}') {
-        let prop = parse_identifier.parse_next(input)?;
-        skip_space(input);
-        let _ = ':'.parse_next(input)?;
-        skip_space(input);
-
-        match prop {
-            "fill" => {
-                props.fill = Some(Paint::Solid(parse_hex_color.parse_next(input)?));
-            }
-            "opacity" => {
-                props.opacity = Some(parse_number.parse_next(input)?);
-            }
-            "scale" => {
-                props.scale = Some(parse_number.parse_next(input)?);
-            }
-            "rotate" => {
-                props.rotate = Some(parse_number.parse_next(input)?);
-            }
-            "ease" => {
-                let ease_name = parse_identifier.parse_next(input)?;
-                easing = match ease_name {
-                    "linear" => Easing::Linear,
-                    "ease_in" | "easeIn" => Easing::EaseIn,
-                    "ease_out" | "easeOut" => Easing::EaseOut,
-                    "ease_in_out" | "easeInOut" => Easing::EaseInOut,
-                    "spring" => Easing::Spring,
-                    _ => Easing::EaseInOut,
-                };
-                skip_space(input);
-                if let Ok(n) = parse_number.parse_next(input) {
-                    duration_ms = n as u32;
-                    if input.starts_with("ms") {
-                        *input = &input[2..];
-                    }
-                }
-            }
-            "delay" => {
-                let n = parse_number.parse_next(input)?;
-                delay_ms = Some(n as u32);
-                if input.starts_with("ms") {
-                    *input = &input[2..];
-                }
-            }
-            "use" => {
-                let name = parse_identifier.map(NodeId::intern).parse_next(input)?;
-                use_template = Some(name);
-            }
-            _ => {
-                let _ = take_till::<_, _, ContextError>(0.., |c: char| {
-                    c == '\n' || c == ';' || c == '}'
-                })
-                .parse_next(input);
-            }
-        }
-
+        parse_anim_property(input, &mut state)?;
         skip_opt_separator(input);
         skip_ws_and_comments(input);
     }
@@ -1499,11 +1512,11 @@ fn parse_anim_block(input: &mut &str) -> ModalResult<AnimKeyframe> {
 
     Ok(AnimKeyframe {
         trigger,
-        duration_ms,
-        easing,
-        properties: props,
-        delay_ms,
-        use_template,
+        duration_ms: state.duration_ms,
+        easing: state.easing,
+        properties: state.props,
+        delay_ms: state.delay_ms,
+        use_template: state.use_template,
     })
 }
 
