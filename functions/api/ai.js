@@ -564,12 +564,26 @@ async function runAI(env, { config, aiMessages, stream, shouldUseOpenRouter, ove
   const hasWorkersAI = env.AI && typeof env.AI.run === 'function';
   if (hasWorkersAI) {
     try {
-      return await env.AI.run(config.model, {
+      const result = await env.AI.run(config.model, {
         messages: aiMessages,
         max_tokens: config.maxTokens,
         temperature: config.temp,
         stream,
       });
+
+      // For non-streaming: check if Workers AI returned empty content
+      // (happens under load or when model is warming up)
+      if (!stream) {
+        const content = result?.response || '';
+        if (!content.trim()) {
+          console.log(JSON.stringify({ event: 'ai_fallback', from: 'workers_ai', reason: 'empty_response', model: config.model }));
+          // Fall through to Ollama/OpenRouter
+        } else {
+          return result;
+        }
+      } else {
+        return result;
+      }
     } catch (e) {
       const isQuotaError = e.message && (/\b429\b/i.test(e.message) || /\b(rate limit|quota)\b/i.test(e.message));
       const isTransientError = e.message && (e.message.includes('502') || e.message.includes('503'));
