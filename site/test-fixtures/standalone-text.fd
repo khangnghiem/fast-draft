@@ -1,0 +1,3 @@
+text @t1 "Hello" {
+  font: "Inter" 14
+}
