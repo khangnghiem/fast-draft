@@ -10,3 +10,7 @@
 **Vulnerability:** The Cloudflare Pages Function at `functions/api/ai.js` had an overly permissive CORS configuration (`Access-Control-Allow-Origin: *`), potentially allowing external sites to make cross-origin requests.
 **Learning:** Hardcoded wildcard `*` CORS configurations expose APIs to misuse from unauthorized domains. Because the API needs to be accessible from both the web playground (`https://fast-draft.com`) and the VS Code extension webviews (`vscode-webview://`), a dynamic CORS handler is required.
 **Prevention:** Avoid `*` in CORS origins. Implement dynamic CORS validation that checks the incoming `Origin` header against an explicitly defined whitelist (or prefix list, like `vscode-webview://`). Always include `Vary: Origin` in the response when returning dynamically set `Access-Control-Allow-Origin` headers.
+## 2024-05-18 - [WASM Error Toast XSS]
+**Vulnerability:** Unescaped WASM error messages were directly inserted into the DOM via innerHTML in showWasmErrorToast.
+**Learning:** Even internal error paths can be vectors for XSS if user-controlled input (like invalid FD syntax triggering a WASM error) is reflected back without sanitization. In a system where multiple JS files are concatenated (e.g. fd-vscode/webview), global sanitization functions like escapeHtml must be defined early in the dependency chain (like state.js) so they are available to later modules.
+**Prevention:** Always sanitize any dynamic content before injecting it into innerHTML, even in error handlers, and ensure the sanitization function is defined in scope.
