@@ -117,10 +117,11 @@ impl FdCanvas {
             None => {
                 if matches!(&node.kind, NodeKind::Text { .. }) {
                     // Mirror render2d::resolve_fill_color default for text
+                    // Must match theme.text_primary exactly (fd-core/theme.rs)
                     let default_color = if self.dark_mode {
-                        "#E0E0E0" // Dark mode text default
+                        "#F5F5F7" // Dark mode text primary
                     } else {
-                        "#1C1C1E" // Light mode text default
+                        "#1D1D1F" // Light mode text primary
                     };
                     props.insert(
                         "fill".into(),
