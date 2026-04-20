@@ -1363,7 +1363,8 @@ export class FdCanvas {
         wasm.fdcanvas_render(this.__wbg_ptr, ctx, time_ms, skip_grid, skip_bg, show_all_labels, shift_held);
     }
     /**
-     * Render only the selected nodes (and their children) to the given context.
+     * Render selected nodes (and their children) to the given context.
+     * When nothing is selected, renders all top-level nodes (entire canvas).
      * @param {CanvasRenderingContext2D} ctx
      * @param {number} offset_x
      * @param {number} offset_y
