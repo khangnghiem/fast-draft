@@ -81,6 +81,7 @@ function stripModuleSyntax(content) {
     .replace(/^export (let|const|function|class|async function) /gm, '$1 ')
     .replace(/^export \{[^}]*\};\s*$/gm, '')
     .replace(/^import \{[^}]*\} from '[^']*';\s*$/gm, '')
+    .replace(/^import \*\s+as\s+[A-Za-z0-9_]+\s+from\s+'[^']+';\s*$/gm, '')
     .replace(/^export default /gm, '');
 }
 
