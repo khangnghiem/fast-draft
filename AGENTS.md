@@ -1,8 +1,4 @@
----
-trigger: always_on
----
-
-# GEMINI.md — Fast Draft Agent Surface
+# AGENTS.md — Fast Draft Agent Surface
 
 ---
 
@@ -14,9 +10,9 @@ trigger: always_on
 
 ## Host Adapter
 
-Target host: Gemini CLI consumers.
-Express the shared policy below with Gemini CLI conventions and wrappers.
-Keep policy meaning aligned with the OpenCode and Claude surfaces.
+Target host: OpenCode / AGENTS.md consumers.
+Use OpenCode-native tool names and wrappers when applying the shared policy below.
+Keep policy meaning aligned with the Claude and Gemini surfaces.
 
 ---
 

@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "render:agent-surfaces": "node scripts/agent-surfaces.mjs render",
+    "verify:agent-surfaces": "node scripts/agent-surfaces.mjs verify"
+  },
   "dependencies": {
     "playwright": "^1.58.2"
   }
