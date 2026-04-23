@@ -9746,7 +9746,7 @@ function updateChatChips() {
 // ─── Message Rendering ──────────────────────────────────
 
 function escapeHtmlChat(text) {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function renderAssistantHtml(content) {
