@@ -89,6 +89,9 @@ jobs:
       - name: Type check
         run: pnpm run lint
 
+      - name: Verify agent surfaces
+        run: pnpm run verify:agent-surfaces
+
   desktop:
     name: Desktop (Tauri check)
     runs-on: macos-latest
@@ -111,4 +114,3 @@ jobs:
 
       - name: Format check
         run: cd fd-desktop/src-tauri && cargo fmt -- --check
-
