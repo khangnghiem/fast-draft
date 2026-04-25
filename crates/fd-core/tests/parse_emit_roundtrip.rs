@@ -312,3 +312,9 @@ fn roundtrip_edge_types_example() {
     let input = include_str!("../../../examples/edge_types.fd");
     assert_roundtrip_preserves(input);
 }
+
+#[test]
+fn roundtrip_animation_example() {
+    let input = include_str!("../../../examples/animation.fd");
+    assert_roundtrip_preserves(input);
+}

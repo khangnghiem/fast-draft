@@ -1,0 +1,118 @@
+# Animation Showcase
+# Demonstrates hover, press, and enter animations, custom triggers,
+# reusable templates, and edge flow animations.
+
+# ─── Reusable Templates ───
+when bounce_up {
+  translate: 0 -20
+  ease: spring
+  duration: 400ms
+}
+
+when fade_in_scale {
+  opacity: 1
+  scale: 1.0
+  ease: ease_out
+  duration: 600ms
+}
+
+# ─── Nodes ───
+
+group @container {
+  layout: column gap=40 pad=40 align=center
+
+  # 1. Hover & Press example
+  rect @btn_interactive {
+    text @_t1 "Hover & Press Me" {
+      fill: #FFFFFF
+      font: "Inter" bold 16
+    }
+    w: 200 h: 60
+    fill: #3B82F6  # blue
+    corner: 8
+
+    when :hover {
+      scale: 1.05
+      fill: #2563EB # darker blue
+      duration: 200ms
+    }
+
+    when :press {
+      scale: 0.95
+      fill: #1D4ED8 # even darker blue
+      duration: 100ms
+    }
+  }
+
+  # 2. Enter animation example
+  rect @card_enter {
+    text @_t2 "Enters on scroll" {
+      fill: #374151
+      font: "Inter" medium 14
+    }
+    w: 200 h: 100
+    fill: #F3F4F6
+    corner: 12
+    stroke: #D1D5DB 1
+
+    # Initial state for enter animation
+    opacity: 0
+    scale: 0.8
+    translate: 0 50
+
+    when :enter {
+      use: fade_in_scale
+    }
+  }
+
+  # 3. Custom trigger & Template reuse
+  rect @bounce_box {
+    text @_t3 "Custom 'shake' trigger" {
+      fill: #FFFFFF
+      font: "Inter" medium 14
+    }
+    w: 200 h: 100
+    fill: #10B981 # green
+    corner: 12
+
+    when :shake {
+      use: bounce_up
+      rotate: 5
+    }
+  }
+
+  # 4. Nodes for Edge Flows
+  group @flow_container {
+    layout: row gap=100 pad=20 align=center
+
+    ellipse @node_source {
+      text @_t4 "Source" { fill: #fff }
+      w: 80 h: 80
+      fill: #8B5CF6 # purple
+    }
+
+    ellipse @node_target {
+      text @_t5 "Target" { fill: #fff }
+      w: 80 h: 80
+      fill: #EC4899 # pink
+    }
+  }
+}
+
+# ─── Edges with Flow Animations ───
+
+# Pulse flow
+edge @flow_pulse @node_source -> @node_target {
+  curve: smooth
+  arrow: end
+  stroke: #9CA3AF 2
+  flow: pulse 1000ms
+}
+
+# Dash flow
+edge @flow_dash @node_target -> @node_source {
+  curve: step
+  arrow: start
+  stroke: #9CA3AF 2
+  flow: dash 1500ms
+}
