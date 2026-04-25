@@ -38,6 +38,16 @@ Before proposing new requirement, search **Requirement Index** in `docs/REQUIREM
 - **PR required** — merges via PR; CI must pass
 - **Sync first** — `git fetch origin main` before creating branches
 
+#### Pre-push verification hook
+
+| Behavior | Details |
+| --- | --- |
+| Runs on | Every non-main branch push |
+| Skips on | `main` pushes (blocked separately) and tag pushes |
+| Checks | `cargo fmt --all -- --check` → `cargo check --workspace` → `cargo clippy --workspace -- -D warnings` → `cargo test --workspace` |
+| Bypass | `git push --no-verify` skips the hook; CI still enforces the checks |
+| Setup | `git config core.hooksPath .githooks` must be set for the hook to run |
+
 > [!CAUTION]
 > **NEVER stage or commit `.env`, `.env.*`, or files with secrets/tokens/API keys.**
 
@@ -132,6 +142,7 @@ crates/
 
 ### Backend Debugging
 - Use `npx wrangler pages dev` or Cloudflare dashboard to retrieve logs for `functions/api/ai.js`.
+- Agent stuck? See `docs/observability.md` and run `node scripts/observer-dump.mjs --stuck-only --format table`.
 
 ### Before Completing Any Task
 

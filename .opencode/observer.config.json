@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "logDir": ".opencode/telemetry",
+  "heartbeatIntervalMs": 30000,
+  "stuckThresholdMs": 120000,
+  "idleThresholdMs": 15000,
+  "permissionTimeoutMs": 60000,
+  "compactionTimeoutMs": 30000,
+  "repeatLoopWindowMs": 60000,
+  "repeatLoopThreshold": 3
+}

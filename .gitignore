@@ -38,3 +38,4 @@ site/wasm/
 .env
 serve.log
 .wrangler
+.opencode/telemetry/
