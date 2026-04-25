@@ -201,16 +201,13 @@ fn resolve_children(
             let content_width = parent_bounds.width - 2.0 * pad;
             // Filter: children with Position constraints are absolutely positioned
             // within the frame — they don't participate in the column flow.
-            let flow_children: Vec<NodeIndex> = children
-                .iter()
-                .copied()
-                .filter(|&ci| {
+            let (flow_children, abs_children): (Vec<NodeIndex>, Vec<NodeIndex>) =
+                children.iter().copied().partition(|&ci| {
                     !graph.graph[ci]
                         .constraints
                         .iter()
                         .any(|c| matches!(c, Constraint::Position { .. }))
-                })
-                .collect();
+                });
             // Pass 1: initialize flow children at parent origin + pad
             for &child_idx in &flow_children {
                 let child_node = &graph.graph[child_idx];
@@ -235,17 +232,15 @@ fn resolve_children(
                 resolve_children(graph, child_idx, bounds, viewport);
             }
             // Absolutely-positioned children: initialize from intrinsic_size
-            for &child_idx in &children {
-                if !flow_children.contains(&child_idx) {
-                    let child_size = intrinsic_size(&graph.graph[child_idx]);
-                    bounds.entry(child_idx).or_insert(ResolvedBounds {
-                        x: parent_bounds.x,
-                        y: parent_bounds.y,
-                        width: child_size.0,
-                        height: child_size.1,
-                    });
-                    resolve_children(graph, child_idx, bounds, viewport);
-                }
+            for &child_idx in &abs_children {
+                let child_size = intrinsic_size(&graph.graph[child_idx]);
+                bounds.entry(child_idx).or_insert(ResolvedBounds {
+                    x: parent_bounds.x,
+                    y: parent_bounds.y,
+                    width: child_size.0,
+                    height: child_size.1,
+                });
+                resolve_children(graph, child_idx, bounds, viewport);
             }
             // Pass 2: reposition flow children using resolved sizes
             let mut y = parent_bounds.y + pad;
@@ -273,16 +268,13 @@ fn resolve_children(
         LayoutMode::Row { gap, pad, align } => {
             let content_height = parent_bounds.height - 2.0 * pad;
             // Filter: absolutely-positioned children skip the row flow
-            let flow_children: Vec<NodeIndex> = children
-                .iter()
-                .copied()
-                .filter(|&ci| {
+            let (flow_children, abs_children): (Vec<NodeIndex>, Vec<NodeIndex>) =
+                children.iter().copied().partition(|&ci| {
                     !graph.graph[ci]
                         .constraints
                         .iter()
                         .any(|c| matches!(c, Constraint::Position { .. }))
-                })
-                .collect();
+                });
             // Pass 1: initialize flow children
             for &child_idx in &flow_children {
                 let child_node = &graph.graph[child_idx];
@@ -307,17 +299,15 @@ fn resolve_children(
                 resolve_children(graph, child_idx, bounds, viewport);
             }
             // Absolutely-positioned children
-            for &child_idx in &children {
-                if !flow_children.contains(&child_idx) {
-                    let child_size = intrinsic_size(&graph.graph[child_idx]);
-                    bounds.entry(child_idx).or_insert(ResolvedBounds {
-                        x: parent_bounds.x,
-                        y: parent_bounds.y,
-                        width: child_size.0,
-                        height: child_size.1,
-                    });
-                    resolve_children(graph, child_idx, bounds, viewport);
-                }
+            for &child_idx in &abs_children {
+                let child_size = intrinsic_size(&graph.graph[child_idx]);
+                bounds.entry(child_idx).or_insert(ResolvedBounds {
+                    x: parent_bounds.x,
+                    y: parent_bounds.y,
+                    width: child_size.0,
+                    height: child_size.1,
+                });
+                resolve_children(graph, child_idx, bounds, viewport);
             }
             // Pass 2: reposition flow children
             let mut x = parent_bounds.x + pad;
@@ -349,16 +339,13 @@ fn resolve_children(
             align,
         } => {
             // Filter: absolutely-positioned children skip the grid flow
-            let flow_children: Vec<NodeIndex> = children
-                .iter()
-                .copied()
-                .filter(|&ci| {
+            let (flow_children, abs_children): (Vec<NodeIndex>, Vec<NodeIndex>) =
+                children.iter().copied().partition(|&ci| {
                     !graph.graph[ci]
                         .constraints
                         .iter()
                         .any(|c| matches!(c, Constraint::Position { .. }))
-                })
-                .collect();
+                });
 
             // Grid cell width is based on parent width divided by cols, minus gaps
             let total_gap_w = gap * (cols.saturating_sub(1) as f32);
@@ -389,17 +376,15 @@ fn resolve_children(
                 resolve_children(graph, child_idx, bounds, viewport);
             }
             // Absolutely-positioned children
-            for &child_idx in &children {
-                if !flow_children.contains(&child_idx) {
-                    let child_size = intrinsic_size(&graph.graph[child_idx]);
-                    bounds.entry(child_idx).or_insert(ResolvedBounds {
-                        x: parent_bounds.x,
-                        y: parent_bounds.y,
-                        width: child_size.0,
-                        height: child_size.1,
-                    });
-                    resolve_children(graph, child_idx, bounds, viewport);
-                }
+            for &child_idx in &abs_children {
+                let child_size = intrinsic_size(&graph.graph[child_idx]);
+                bounds.entry(child_idx).or_insert(ResolvedBounds {
+                    x: parent_bounds.x,
+                    y: parent_bounds.y,
+                    width: child_size.0,
+                    height: child_size.1,
+                });
+                resolve_children(graph, child_idx, bounds, viewport);
             }
             // Pass 2: reposition flow children
             let mut x = parent_bounds.x + pad;
