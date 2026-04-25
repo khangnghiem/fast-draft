@@ -1,0 +1,9 @@
+{
+  "type": "module",
+  "scripts": {
+    "test:observer": "node --test plugins/agent-observer/test/*.test.mjs"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "1.14.17"
+  }
+}

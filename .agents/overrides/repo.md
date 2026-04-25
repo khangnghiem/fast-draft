@@ -103,6 +103,7 @@ When adding a new browser script, follow the existing `import { chromium } from 
 ### Backend debugging
 
 - Use `npx wrangler pages dev` or the Cloudflare dashboard to inspect logs for `functions/api/ai.js`.
+- Agent stuck? See `docs/observability.md` and run `node scripts/observer-dump.mjs --stuck-only --format table`.
 
 ### Docs and workflow map
 
