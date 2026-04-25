@@ -50,6 +50,12 @@ Before changing any file:
 - Before adding or rewriting a requirement, search `docs/REQUIREMENTS.md`, `docs/CHANGELOG.md`, and `docs/specs/` first.
 - If an existing requirement already covers the behavior, extend it instead of duplicating it.
 
+### Search tool hygiene
+
+- Prefer the host-native content-search tool when searching file contents.
+- When shell-based content search is necessary, use `rg` instead of `grep`.
+- Use shell `grep` only when `rg` is unavailable or a specific environment constraint requires it, and state the reason briefly.
+
 ### Branch, review, and secret safety
 
 - Never work directly on `main`.
