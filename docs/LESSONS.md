@@ -596,3 +596,17 @@ Never use `localStorage.getItem(...)` as the source of truth for current visual 
 **Root cause**: Agent tools execute commands as non-interactive, non-login shells (`zsh -c "..."`). Zsh only sources `~/.zshenv` for these shells — `~/.zprofile` (login-only) and `~/.zshrc` (interactive-only) are skipped. Homebrew's PATH additions (`/opt/homebrew/bin`, `/usr/local/bin`) were in `~/.zshrc` (line 83, 86), so they were invisible to agent shells.
 **Fix**: Moved `export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:$PATH"` to `~/.zshenv`. Removed all `export PATH=...` workarounds from workflow templates (`yolo.md`, `e2e.md`).
 **Rule**: **PATH modifications for tools needed by non-interactive processes (CI agents, cron, IDE terminals) MUST go in `~/.zshenv`.** The zsh sourcing order is: `zshenv` (all) → `zprofile` (login) → `zshrc` (interactive) → `zlogin` (login). Only `zshenv` is universal. Never work around missing PATH with inline exports in workflow scripts — fix the shell configuration at the source.
+
+---
+
+## Explorer Agents Need Search Budgets, Not More Search
+
+**Date**: 2026-04-26
+
+**Context**: Codebase exploration agents were getting stuck in repeated `grep`/`glob` loops while trying to discover broad systems.
+
+**Root cause**: The issue was not just tool choice. Open-ended prompts, missing search budgets, no convergence report, and no stuck-detection rules let agents keep reformulating similar queries instead of returning partial evidence.
+
+**Fix**: Add a bounded exploration contract: scoped prompt, `rg` or host-native content search for broad text, AST-aware search for code structure, small read budgets, mandatory stop conditions, and a structured report with confidence, evidence, gaps, and next queries. See the canonical `Codebase exploration contract` section in `.agents/shared/canonical.md`.
+
+**Rule**: **Exploration should produce an evidence map, not exhaustive certainty.** When an agent stops narrowing the candidate set, it should return a partial report instead of doing one more search.

@@ -52,6 +52,20 @@ Before changing any file:
 - When shell-based content search is necessary, use `rg` instead of `grep`.
 - Use shell `grep` only when `rg` is unavailable or a specific environment constraint requires it, and state the reason briefly.
 
+### Codebase exploration contract
+
+When delegating or performing broad codebase exploration, optimize for an evidence map rather than exhaustive discovery.
+
+- Start with a bounded prompt: scope, known target symbols or terms, search budget, file-read budget, and expected output format.
+- Default to at most 12 searches, 8 file reads, 4 search rounds, and 3 files opened per round; for explicitly large scopes use at most 18 searches, 12 file reads, 5 rounds, and 4 files per round.
+- Never exceed 24 searches, 16 file reads, or 6 rounds unless the user explicitly asks for deeper exploration.
+- A search round is one hypothesis → targeted search → rank files → read top files → evidence update cycle.
+- Search ladder: use file-pattern search once when the path family is unknown, use `rg` or the host-native content search for targeted text matches, use AST-aware search when available for structural matches, read only the highest-value files, then stop and summarize.
+- Stop early and return a partial report when two rounds add no useful evidence, queries become near-duplicates, candidate files do not narrow, results stay broad after discovery, or 75% of the search budget is gone with confidence below 0.5.
+- Treat useful negative searches as evidence; track queries already issued and do not keep reformulating the same query.
+- Do not spawn nested exploration agents unless the caller explicitly allows it; if allowed, use at most two child agents with disjoint scopes and smaller budgets.
+- Always return a structured report with status, confidence, scope assessment, budget used, primary findings with path evidence, files examined, searches performed, symbols found, unanswered questions, suggested next queries, stuck signals, and handoff notes.
+
 ### Branch, review, and secret safety
 
 - Never work directly on `main`.
