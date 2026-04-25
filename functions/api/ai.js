@@ -347,28 +347,29 @@ function computeScore(categories) {
 // ─── Fallback Models Mapping ─────────────────────────────────────────────
 
 function getFallbackModels(model) {
-  // Returns [OllamaModel, OpenRouterModel]
+  // Returns [OllamaCloudModel, OpenRouterModel]
+  // Ollama Cloud API requires '-cloud' suffix models
   let ollamaModel = model;
   let orModel = model;
 
   if (model.includes('llama-3.1-8b')) {
-    ollamaModel = 'llama3.1:8b'; orModel = 'meta-llama/llama-3.1-8b-instruct';
+    ollamaModel = 'llama3.1:8b-cloud'; orModel = 'meta-llama/llama-3.1-8b-instruct';
   } else if (model.includes('llama-3.2-1b')) {
-    ollamaModel = 'llama3.2:1b'; orModel = 'meta-llama/llama-3.2-1b-instruct';
+    ollamaModel = 'llama3.2:1b-cloud'; orModel = 'meta-llama/llama-3.2-1b-instruct';
   } else if (model.includes('llama-3.2-3b')) {
-    ollamaModel = 'llama3.2:3b'; orModel = 'meta-llama/llama-3.2-3b-instruct';
+    ollamaModel = 'llama3.2:3b-cloud'; orModel = 'meta-llama/llama-3.2-3b-instruct';
   } else if (model.includes('llama-3.3-70b')) {
-    ollamaModel = 'llama3.3:70b'; orModel = 'meta-llama/llama-3.3-70b-instruct';
+    ollamaModel = 'llama3.3:70b-cloud'; orModel = 'meta-llama/llama-3.3-70b-instruct';
   } else if (model.includes('gemma-4')) {
-    ollamaModel = 'gemma4:26b'; orModel = 'google/gemma-4-26b-a4b-it';
+    ollamaModel = 'gemma4:31b-cloud'; orModel = 'google/gemma-4-26b-a4b-it';
   } else if (model.includes('gemma-3')) {
-    ollamaModel = 'gemma2:9b'; orModel = 'google/gemma-3-12b-it';
+    ollamaModel = 'gemma3:12b-cloud'; orModel = 'google/gemma-3-12b-it';
   } else if (model.includes('qwen2.5-coder')) {
-    ollamaModel = 'qwen2.5-coder:32b'; orModel = 'qwen/qwen-2.5-coder-32b-instruct';
+    ollamaModel = 'qwen2.5-coder:32b-cloud'; orModel = 'qwen/qwen-2.5-coder-32b-instruct';
   } else if (model.includes('deepseek-r1')) {
-    ollamaModel = 'deepseek-r1:32b'; orModel = 'deepseek/deepseek-r1-distill-qwen-32b';
+    ollamaModel = 'deepseek-r1:32b-cloud'; orModel = 'deepseek/deepseek-r1-distill-qwen-32b';
   } else {
-    ollamaModel = 'llama3.1:8b';
+    ollamaModel = 'gemma4:31b-cloud';
     orModel = !model.startsWith('@cf/') ? model : 'google/gemma-4-26b-a4b-it';
   }
 
@@ -376,6 +377,7 @@ function getFallbackModels(model) {
 }
 
 // ─── Ollama Cloud Integration (Tier 2) ───────────────────────────────────
+// Uses the OpenAI-compatible /v1/chat/completions endpoint.
 
 async function runWithOllamaCloud(env, model, messages, maxTokens, temp, stream) {
   const [ollamaModel] = getFallbackModels(model);
@@ -385,7 +387,7 @@ async function runWithOllamaCloud(env, model, messages, maxTokens, temp, stream)
 
   let response;
   try {
-    response = await fetch('https://ollama.com/api/chat', {
+    response = await fetch('https://ollama.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${env.OLLAMA_API_KEY}`,
@@ -395,7 +397,8 @@ async function runWithOllamaCloud(env, model, messages, maxTokens, temp, stream)
         model: ollamaModel,
         messages,
         stream: !!stream,
-        options: { temperature: temp, num_predict: maxTokens },
+        temperature: temp,
+        max_tokens: maxTokens,
       }),
       signal: controller.signal
     });
@@ -414,31 +417,38 @@ async function runWithOllamaCloud(env, model, messages, maxTokens, temp, stream)
   }
 
   if (stream) {
+    // OpenAI-compatible SSE → CF Workers AI SSE
     return response.body.pipeThrough(ollamaCloudToCFStream());
   }
   const data = await response.json();
-  return { response: data.message?.content || '' };
+  const content = data.choices?.[0]?.message?.content || '';
+  return { response: content };
 }
 
 function ollamaCloudToCFStream() {
+  // Transforms OpenAI-compatible SSE (data: {"choices":[{"delta":{"content":"..."}}]})
+  // into CF Workers AI SSE format (data: {"response":"..."})
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   let buffer = '';
 
   const processLines = (lines, controller) => {
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      try {
-        const data = JSON.parse(line);
-        const content = data.message?.content;
-        if (content) {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ response: content })}\n\n`));
-        }
-        if (data.done) {
+    for (let line of lines) {
+      if (line.startsWith('data: ')) {
+        const payload = line.slice(6).trim();
+        if (payload === '[DONE]') {
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          continue;
         }
-      } catch (e) {
-        console.warn('Ollama stream parse error:', e.message);
+        try {
+          const data = JSON.parse(payload);
+          const content = data.choices?.[0]?.delta?.content;
+          if (content) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ response: content })}\n\n`));
+          }
+        } catch (e) {
+          console.warn('Ollama stream parse error:', e.message);
+        }
       }
     }
   };
@@ -554,12 +564,26 @@ async function runAI(env, { config, aiMessages, stream, shouldUseOpenRouter, ove
   const hasWorkersAI = env.AI && typeof env.AI.run === 'function';
   if (hasWorkersAI) {
     try {
-      return await env.AI.run(config.model, {
+      const result = await env.AI.run(config.model, {
         messages: aiMessages,
         max_tokens: config.maxTokens,
         temperature: config.temp,
         stream,
       });
+
+      // For non-streaming: check if Workers AI returned empty content
+      // (happens under load or when model is warming up)
+      if (!stream) {
+        const content = result?.response || '';
+        if (!content.trim()) {
+          console.log(JSON.stringify({ event: 'ai_fallback', from: 'workers_ai', reason: 'empty_response', model: config.model }));
+          // Fall through to Ollama/OpenRouter
+        } else {
+          return result;
+        }
+      } else {
+        return result;
+      }
     } catch (e) {
       const isQuotaError = e.message && (/\b429\b/i.test(e.message) || /\b(rate limit|quota)\b/i.test(e.message));
       const isTransientError = e.message && (e.message.includes('502') || e.message.includes('503'));

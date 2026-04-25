@@ -1,0 +1,7 @@
+ellipse @bubble {
+  w: 200 h: 120
+  fill: #EEEEEE
+  text @label "Inside" {
+    font: "Inter" 14
+  }
+}

@@ -347,7 +347,11 @@
   "scripts": {
     "test": "vitest run",
     "build:webview": "node scripts/build-webview.mjs",
-    "compile": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "compile": "pnpm run compile:extension && pnpm run compile:agent-surfaces",
+    "compile:extension": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "compile:agent-surfaces": "esbuild src/agent-surfaces-cli.ts --bundle --outfile=out/agent-surfaces-cli.js --format=cjs --platform=node --sourcemap",
+    "render:agent-surfaces": "pnpm run compile:agent-surfaces && node out/agent-surfaces-cli.js render",
+    "verify:agent-surfaces": "pnpm run compile:agent-surfaces && node out/agent-surfaces-cli.js verify",
     "watch": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
     "lint": "tsc --noEmit",
     "package": "vsce package --no-dependencies",

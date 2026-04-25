@@ -602,18 +602,8 @@ fn draw_text(
         TextAlign::Right => b.x as f64 + b.width as f64,
     };
 
-    // Calculate starting y based on vertical alignment
-    let _start_y = match valign {
-        TextVAlign::Top => b.y as f64 + 2.0,
-        TextVAlign::Middle => {
-            b.y as f64 + (b.height as f64 - total_text_height) / 2.0 + line_height / 2.0
-        }
-        TextVAlign::Bottom => {
-            b.y as f64 + b.height as f64 - total_text_height - 2.0 + line_height / 2.0
-        }
-    };
-
-    // Reset baseline for multi-line — use "top" and manually offset
+    // Single-line uses Canvas2D baseline (top/middle/bottom); multi-line uses baseline="top"
+    // with manual y-offset to center the text block within bounds.
     if num_lines > 1 || wrap_width.is_some() {
         ctx.set_text_baseline("top");
         let adj_y = match valign {

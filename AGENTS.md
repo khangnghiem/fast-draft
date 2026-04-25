@@ -1,4 +1,4 @@
-# CLAUDE.md — Fast Draft Agent Surface
+# AGENTS.md — Fast Draft Agent Surface
 
 ---
 
@@ -10,9 +10,9 @@
 
 ## Host Adapter
 
-Target host: Claude Code consumers.
-Express the shared policy below with Claude Code conventions and syntax.
-Keep policy meaning aligned with the OpenCode and Gemini surfaces.
+Target host: OpenCode / AGENTS.md consumers.
+Use OpenCode-native tool names and wrappers when applying the shared policy below.
+Keep policy meaning aligned with the Claude and Gemini surfaces.
 
 ---
 

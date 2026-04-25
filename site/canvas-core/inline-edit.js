@@ -166,6 +166,9 @@ export async function openInlineEditor(opts) {
 
   let b;
   if (posId) {
+    // Guarantee layout is resolved before reading bounds — prevents stale x/y
+    // after drag or position mutations that don't trigger measureAndUpdateTextBounds.
+    fdCanvas.finalize_bounds();
     const boundsJson = fdCanvas.get_node_bounds(posId);
     b = JSON.parse(boundsJson);
   } else if (createCtx && createCtx.type === "canvas") {
@@ -252,41 +255,53 @@ export async function openInlineEditor(opts) {
     // Use parent shape's fill for WYSIWYG overlay
     if (shapeProps.fill && shapeProps.fill !== "none") {
       bgColor = shapeProps.fill;
-      textColor = hexLuminance(shapeProps.fill) < 0.4 ? "#FFFFFF" : "#1C1C1E";
+      // Contrast text color on shape fill — match render2d luminance fallback
+      textColor = hexLuminance(shapeProps.fill) < 0.4 ? "#FFFFFF" : "#1D1D1F";
     } else {
       bgColor = "transparent";
-      textColor = props.fill || (isDark ? "#E0E0E0" : "#1C1C1E");
+      // Default text color must match theme.text_primary (#1D1D1F light, #F5F5F7 dark)
+      textColor = props.fill || (isDark ? "#F5F5F7" : "#1D1D1F");
     }
   } else if (isTextNode) {
     bgColor = "transparent";
-    textColor = props.fill || (isDark ? "#E0E0E0" : "#1C1C1E");
+    // Default text color must match theme.text_primary (#1D1D1F light, #F5F5F7 dark)
+    textColor = props.fill || (isDark ? "#F5F5F7" : "#1D1D1F");
   } else if (props.fill) {
     bgColor = props.fill;
-    textColor = hexLuminance(props.fill) < 0.4 ? "#FFFFFF" : "#1C1C1E";
+    textColor = hexLuminance(props.fill) < 0.4 ? "#FFFFFF" : "#1D1D1F";
   } else {
     bgColor = isDark ? "#2D2D44" : "#F5F5F7";
-    textColor = isDark ? "#E0E0E0" : "#1C1C1E";
+    textColor = isDark ? "#F5F5F7" : "#1D1D1F";
   }
 
   const hAlign = props.textAlign || (isTextNode && !isInShape ? "left" : "center");
   const vAlign = props.textVAlign || (isInShape ? "middle" : "top");
   const originalValue = currentValue;
 
-  // Vertical padding
+  // Vertical padding — computed against actual bounds height (scaledH), not
+  // the min-enforced textarea height (sh), so centering matches Canvas2D.
+  //
+  // CSS line-height > font-size creates half-leading that pushes the glyph
+  // down by (lineHeight - fontSize) / 2 from the line-box top. Canvas2D
+  // textBaseline="top" places the em-square top exactly at y, so the glyph
+  // starts at the same position as the line-box top minus the half-leading.
+  // We compensate by subtracting the half-leading from padTop so the
+  // textarea glyph aligns with the Canvas2D glyph.
   const topOffset = 2 * zoomLevel;
+  const halfLeading = (lineHeight - fontSize) / 2;
   let padTop = 0, padBottom = 0;
   if (vAlign === "top") {
-    padTop = topOffset;
+    padTop = topOffset - halfLeading;
   } else if (vAlign === "middle") {
     const lines = (currentValue.match(/\n/g) || []).length + 1;
     const textHeight = lineHeight * lines;
-    padTop = Math.max(0, (sh - textHeight) / 2);
+    padTop = Math.max(0, (scaledH - textHeight) / 2);
     padBottom = padTop;
   } else if (vAlign === "bottom") {
     padBottom = topOffset;
     const lines = (currentValue.match(/\n/g) || []).length + 1;
     const textHeight = lineHeight * lines;
-    padTop = Math.max(0, sh - textHeight - padBottom);
+    padTop = Math.max(0, scaledH - textHeight - padBottom);
   }
 
   // Border radius — use parent shape's kind when editing text-in-shape

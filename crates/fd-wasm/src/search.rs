@@ -149,7 +149,7 @@ impl FdCanvas {
         }
 
         // Sort by score descending (exact matches first, then fuzzy by quality)
-        results.sort_by_key(|result| std::cmp::Reverse(result.score));
+        results.sort_by_key(|r| std::cmp::Reverse(r.score));
 
         serde_json::to_string(&results).unwrap_or_else(|_| "[]".to_string())
     }

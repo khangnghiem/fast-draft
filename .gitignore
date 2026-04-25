@@ -39,3 +39,4 @@ site/wasm/
 serve.log
 .wrangler
 .opencode/telemetry/
+.worktrees/
