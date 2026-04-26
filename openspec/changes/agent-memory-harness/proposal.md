@@ -14,7 +14,7 @@ specs but offers no proposal/design/tasks separation, no archive history, and no
 to scaffold consistent change shapes. Multiple parallel changes would muddle a single
 specs directory.
 
-This change introduces a tool-agnostic, multi-machine, three-repo memory architecture
+This change introduces a tool-agnostic, multi-machine, two-repo memory architecture
 plus an OpenSpec-driven change lifecycle, so agents have durable memory and humans
 have explicit change tracking.
 

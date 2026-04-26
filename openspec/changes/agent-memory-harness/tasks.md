@@ -23,7 +23,7 @@
   - Verify: `gh repo view khangnghiem/agent-memory --json visibility -q .visibility` prints `PRIVATE`.
 - [ ] **1.2** Clone to `~/.config/agent-memory/`.
   - Command: `git clone git@github.com:khangnghiem/agent-memory.git ~/.config/agent-memory`.
-- [ ] **1.3** Initialize template directory structure per design Section 3.5:
+- [ ] **1.3** Initialize template directory structure per design Section 3 (L4 subsection):
   ```
   README.md preferences.md .gitignore
   lessons/ snippets/ web/ inbox/ templates/ schemas/

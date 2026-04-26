@@ -476,7 +476,7 @@ After editing either source, run `npm run render:agent-surfaces` to regenerate
 | R1 | Tool name collision (multiple memory plugins claiming `memory_*`) | M | M | Strict namespacing (`global.*` etc.); document in AGENTS.md; avoid generic memory plugins in production |
 | R2 | Index drift across machines (LanceDB, GitNexus caches diverge) | H | L | All indexes gitignored; canonical is markdown; rebuild from source on demand |
 | R3 | Secret leakage into memory files | M | H | Pre-commit hook scans for secret patterns; agents instructed via canonical to use env var names only |
-| R4 | GitNexus license trap (PolyForm Noncommercial) | L | M | Noted in `agent-memory/projects/khangnghiem__fast-draft.md`; license review required before monetization; swap to permissive code-intel tool if commercial use planned |
+| R4 | GitNexus license trap (PolyForm Noncommercial) | L | M | Noted in `agent-memory/projects/khangnghiem__fast-draft/README.md`; license review required before monetization; swap to permissive code-intel tool if commercial use planned |
 | R5 | Plugin abandonment (OpenSpec, GitNexus, LanceDB upstream changes) | M | M | Storage formats are simple and exportable; CLI is the source of truth and survives any plugin loss |
 | R6 | Prompt pollution (agents promote noise to global memory) | M | M | Promotion gate is PR review; `promote.*` opens drafts only |
 | R7 | YAML/TOML config drift (legacy `.opencode-memory.toml` or `.agentmemory.toml` files appear) | L | L | Spec mandates `.memory/config.yml` as the only valid config; verifier rejects legacy filenames |
@@ -491,7 +491,7 @@ After editing either source, run `npm run render:agent-surfaces` to regenerate
 ### From current state (no harness)
 
 1. Create `agent-memory` private GitHub repo. Initialize with template structure
-   (Section 3.5).
+   (Section 3, L4 subsection).
 2. Clone to `~/.config/agent-memory/` on each machine.
 3. Add shell alias `agentmem` in `~/.zshrc`.
 4. Implement `agentmem` CLI in `agent-memory/cli/` (TS).
