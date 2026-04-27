@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Agent Memory Harness — automation commands
+- **FEAT (Memory)**: Added `/memory-status` (read-only memory readiness) and `/memory-sync` (durable agent-memory sync only) OpenCode, Claude Code, and repo workflow command surfaces.
+- **DOCS (Memory)**: Codified automatic session-start memory retrieval and pre-plan canonical/project/global memory lookup while keeping project `/sync-push` separate from agent-memory pushes.
+
 ### Agent Memory Harness — full rollout (Phases 0–10)
 - **FEAT (Memory)**: Bootstrapped the [`agent-memory`](https://github.com/khangnghiem/agent-memory) global harness (CLI + MCP server) and wired Fast Draft as its first memory-aware project (`project_id: khangnghiem__fast-draft`).
 - **FEAT (Memory)**: Added `agentmem` CLI (`global / repo / sync / promote / web / lance` namespaces) and `agentmem-mcp` stdio wrapper exposing the same surface as `<namespace>__<tool>` MCP tools. Registered for OpenCode in `.opencode/mcp.json`.

@@ -230,14 +230,20 @@ If any step fails, see troubleshooting below.
 | When | What | How |
 |------|------|-----|
 | Session start | Pull latest memory | `agentmem sync pull --scope both` |
+| New feature/bug prompt | Retrieve relevant memory before planning | `agentmem repo search <keywords>` plus project/global lessons |
 | During work | Capture session notes | `agentmem repo write-scratch ...` |
 | During work | Look up past lessons | `agentmem global list-lessons` or via MCP |
 | Worth keeping | Promote to project memory | `agentmem promote scratch-to-project-global ...` |
 | Worth sharing | Promote to global lessons | `agentmem promote lesson-to-global ...` |
-| Session end | Push memory updates | `agentmem sync push --scope global` |
+| Inspect memory | Read-only status | `/memory-status` |
+| Session end | Push durable memory updates only | `/memory-sync` or `agentmem sync push --scope global` |
 
 `.scratch/` is local-only by design. If you change machines, anything you want
 to carry with you must already be promoted to `agent-memory/projects/<id>/`.
+
+Keep memory sync separate from project `/sync-push`: project pushes should not
+implicitly commit or push `~/.config/agent-memory`. Use `/memory-sync` when you
+want durable memory changes synchronized.
 
 ---
 

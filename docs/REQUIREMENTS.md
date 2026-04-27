@@ -436,6 +436,13 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 
 - [`.github/workflows/memory-scratch-guard.yml`](../.github/workflows/memory-scratch-guard.yml) rejects any PR that adds files under `.scratch/`.
 
+### R8.5 — Automatic retrieval and dedicated memory commands _(done)_
+
+- Agents automatically pull/read memory config at session start and consult canonical/project/global memory before planning new feature, bug, refactor, or investigation work.
+- `/memory-status` reports memory readiness without writes (OpenCode prompt in `.opencode/commands/`, Claude Code prompt in `.claude/commands/`, Claude skill in `.claude/skills/`).
+- `/memory-sync` synchronizes only `~/.config/agent-memory` (OpenCode prompt in `.opencode/commands/`, Claude Code prompt in `.claude/commands/`, Claude skill in `.claude/skills/`); project `/sync-push` remains project-scoped and never implicitly pushes memory.
+- Durable promotions require judgment/confirmation; raw `.scratch/` is never synced directly.
+
 ## Future Requirements (Deferred)
 
 ### R7.1 — Real-Time Collaboration

@@ -116,11 +116,14 @@ When delegating or performing broad codebase exploration, optimize for an eviden
 This repo is wired into the [agent-memory](https://github.com/khangnghiem/agent-memory) harness (`~/.config/agent-memory/`). When working in a project with `.memory/config.yml`, follow this contract.
 
 - **Read `.memory/config.yml` first.** It declares `project_id`, `canonical_doc_paths`, `scratch_dir`, and optional indices. Use the host's `agentmem repo read-config` (CLI) or `repo__read_config` (MCP) — never re-derive paths.
+- **Automate session-start memory retrieval.** On the first turn in an adopted repo, run `git -C ~/.config/agent-memory pull --ff-only` and `agentmem repo read-config` before planning. If the pull fails, report it and continue only with local memory unless the task requires fresh cross-machine context.
+- **Automate pre-plan memory lookup.** For every new feature, bug, refactor, or investigation prompt, extract 2–4 concrete search terms and query `agentmem repo search` plus relevant project/global lessons before proposing a plan. Keep this quiet unless the retrieved context changes the plan or reveals a warning.
 - **Retrieval order**: open files → canonical docs (via `repo.search`, scoped by `canonical_doc_paths`) → per-project subtree under `~/.config/agent-memory/projects/<project_id>/` → global lessons / snippets / web → external web (last resort, `web.capture`).
-- **Use `.scratch/` as ephemeral working memory.** It is gitignored. Write freely with `agentmem repo write-scratch <path>` (stdin = body). Promote to the per-project subtree with `agentmem promote scratch_to_project_global` when worth keeping; promote to canonical docs via draft PR with `agentmem promote scratch_to_canonical`.
+- **Use `.scratch/` as ephemeral working memory.** It is gitignored. Write freely and silently with `agentmem repo write-scratch <path>` (stdin = body) during planning/debugging. Promote to the per-project subtree with `agentmem promote scratch_to_project_global` when worth keeping; promote to canonical docs via draft PR with `agentmem promote scratch_to_canonical`.
+- **Promotion requires judgment.** Do not automatically promote scratch notes into durable project/global/canonical memory unless the user has explicitly requested that promotion. Propose a concise promotion when a lesson is durable.
 - **Never bypass the promotion contract.** Writes flow upward: `.scratch/` → per-project subtree → global. Cross-repo promotions go through draft PRs in the destination repo, never direct pushes to `main`.
 - **Secret hygiene is shared.** The harness pre-commit hook rejects `sk-*`, `ghp_*`, `xoxb-*`, `AKIA*`, and 32+ char base64 in credential context. Do not stage `.env` files or tokens in either repo.
-- **Sync model**: `git pull --ff-only` at session start in `~/.config/agent-memory`; `git push` at session end. No daemons.
+- **Sync model**: memory sync is separate from project `/sync-push`. Use `/memory-sync` for `~/.config/agent-memory` only. It inspects dirty state before pulling, may auto-push clean committed-ahead memory, may commit known durable promotion outputs after scanning exact paths and staged content, and must stop for unknown dirty files or non-fast-forward state. No daemons.
 
 If `.memory/config.yml` is absent, the repo has not adopted the harness — fall back to `docs/` and `openspec/` directly and do not invent paths.
 
@@ -259,6 +262,8 @@ When adding a new browser script, follow the existing `import { chromium } from 
 - **Per-project subtree**: `~/.config/agent-memory/projects/khangnghiem__fast-draft/` (lessons, sessions, drafts, transcripts, web, attachments, inbox).
 - **CLI**: `agentmem` alias → `~/.config/agent-memory/bin/agentmem`. MCP wrapper: `~/.config/agent-memory/bin/agentmem-mcp` (stdio).
 - **Lesson routing**: prefer the per-project `lessons/` for fast-draft-internal pitfalls (bounds ownership chain, pointer-event hijack, WASM build sync). Promote to global only when the pattern generalizes.
+- **Automatic retrieval**: at session start, pull agent-memory and read config; before planning any new feature/fix, search canonical docs and project/global lessons using task keywords.
+- **Memory commands**: OpenCode-native prompts live in `.opencode/commands/`; Claude Code prompts live in `.claude/commands/`, with matching Claude skills in `.claude/skills/`. `/memory-status` is read-only state inspection. `/memory-sync` syncs only `~/.config/agent-memory`; keep project `/sync-push` separate.
 - **First-time setup**: see [`MEMORY_INIT.md`](../../MEMORY_INIT.md) for the project-agnostic adoption guide. The `~/.config/agent-memory/projects/khangnghiem__fast-draft/README.md` documents fast-draft-specific quirks.
 - **CI guard**: `.github/workflows/memory-scratch-guard.yml` rejects PRs that add files under `.scratch/`.
 
@@ -266,3 +271,5 @@ When adding a new browser script, follow the existing `import { chromium } from 
 
 - `yolo <feature>` → follow `.agents/workflows/yolo.md`
 - `smoke` → run `just smoke`
+- `/memory-status` → inspect Fast Draft memory state without writes
+- `/memory-sync` → push durable agent-memory changes only; never project changes

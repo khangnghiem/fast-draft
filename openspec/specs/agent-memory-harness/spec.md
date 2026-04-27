@@ -58,6 +58,17 @@ soon as the question is answered:
 4. **Global lessons / snippets / web** via `global.search` or `global.list_lessons`.
 5. **External web** via `web.capture` (fallback only; cache to project or global per `web_capture_target`).
 
+### Automatic retrieval triggers
+
+- **Session start**: if `.memory/config.yml` exists, agents SHOULD run
+  `git -C ~/.config/agent-memory pull --ff-only` followed by
+  `agentmem repo read-config` before planning work.
+- **New feature / bug / refactor prompt**: agents SHOULD extract task keywords
+  and run canonical `repo.search` plus relevant project/global lesson lookups
+  before proposing a plan.
+- These retrievals may be silent; surface only findings that change the plan,
+  reveal a known pitfall, or require user action.
+
 ## Promotion contract
 
 Writes flow strictly upward, never sideways:
@@ -81,9 +92,23 @@ never direct pushes to `main`.
 
 ## Sync model
 
-- No daemons. `git pull --ff-only` at session start, `git push` at session end.
+- No daemons. `git pull --ff-only` at session start; memory pushes happen via
+  explicit memory sync, not project `/sync-push`.
 - The agent-memory repo lives on `main`; project-subtree commits land directly.
 - Fast-draft uses topic branches and PRs (no direct pushes to `main`).
+
+### Memory commands
+
+- `/memory-status` is read-only: parse `.memory/config.yml`, inspect
+  `~/.config/agent-memory` git status, summarize scratch/project/global memory,
+  and recommend next action.
+- `/memory-sync` operates only on `~/.config/agent-memory`: inspect dirty state
+  before pulling, commit known durable promotion outputs only after scanning exact
+  candidate paths and staged content with `scripts/check-secrets.sh`, pull
+  `--ff-only` from a clean worktree, push committed-ahead memory automatically,
+  and stop for unknown dirty files or non-fast-forward state.
+- Project `/sync-push` MUST remain project-scoped and MUST NOT implicitly push
+  memory.
 
 ## Verification
 
