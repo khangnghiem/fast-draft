@@ -10136,7 +10136,7 @@ function showWasmErrorToast(msg) {
     `;
     document.body.appendChild(toast);
   }
-  toast.innerHTML = `<span style="font-size: 18px">⚠️</span> <div><b>WASM Bridge Error</b><br/><span style="opacity:0.9">${msg}</span></div>`;
+  toast.innerHTML = `<span style="font-size: 18px">⚠️</span> <div><b>WASM Bridge Error</b><br/><span style="opacity:0.9">${escapeHtml(msg)}</span></div>`;
   setTimeout(() => { if (toast.parentNode) toast.remove(); }, 6000);
 }
 
