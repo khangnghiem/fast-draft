@@ -158,4 +158,179 @@ mod tests {
         let hit_after = canvas.hit_test(150.0, 150.0);
         assert_eq!(hit_after, None, "Ghost bounding box should be gone");
     }
+
+    #[test]
+    fn ai_preview_discard_restores_text_and_selection() {
+        let baseline = r##"rect @hero {
+  w: 120 h: 80
+  fill: #FF0000
+}"##;
+        let candidate = r##"rect @hero {
+  w: 120 h: 80
+  fill: #00FF00
+}"##;
+        let mut canvas = FdCanvas::new(800.0, 600.0);
+        assert!(canvas.set_text(baseline).contains(r#""ok":true"#));
+        assert!(canvas.select_by_id("hero"));
+
+        let begin = canvas.ai_begin_preview();
+        let baseline_id = serde_json::from_str::<serde_json::Value>(&begin).unwrap()["baselineId"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let apply = canvas.ai_apply_preview(&baseline_id, candidate);
+
+        assert!(apply.contains(r#""ok":true"#));
+        assert!(canvas.get_text().contains("#00FF00"));
+        assert!(canvas.ai_discard_preview(&baseline_id));
+        assert_eq!(canvas.get_text(), baseline);
+        assert_eq!(canvas.get_selected_ids(), r#"["hero"]"#);
+    }
+
+    #[test]
+    fn ai_preview_commit_is_one_undoable_snapshot() {
+        let baseline = r##"rect @hero {
+  w: 120 h: 80
+  fill: #FF0000
+}"##;
+        let candidate = r##"rect @hero {
+  w: 120 h: 80
+  fill: #00FF00
+}"##;
+        let mut canvas = FdCanvas::new(800.0, 600.0);
+        assert!(canvas.set_text(baseline).contains(r#""ok":true"#));
+
+        let begin = canvas.ai_begin_preview();
+        let baseline_id = serde_json::from_str::<serde_json::Value>(&begin).unwrap()["baselineId"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        assert!(
+            canvas
+                .ai_apply_preview(&baseline_id, candidate)
+                .contains(r#""ok":true"#)
+        );
+        assert!(
+            canvas
+                .ai_commit_preview(&baseline_id, "AI Touch")
+                .contains(r#""ok":true"#)
+        );
+
+        assert_eq!(canvas.get_text(), candidate);
+        assert!(canvas.undo());
+        assert_eq!(canvas.get_text(), baseline);
+        assert!(canvas.redo());
+        assert_eq!(canvas.get_text(), candidate);
+    }
+
+    #[test]
+    fn ai_preview_noop_candidate_returns_noop_and_keeps_baseline() {
+        let baseline = r##"rect @hero {
+  w: 120 h: 80
+  fill: #FF0000
+}"##;
+        let mut canvas = FdCanvas::new(800.0, 600.0);
+        assert!(canvas.set_text(baseline).contains(r#""ok":true"#));
+
+        let begin = canvas.ai_begin_preview();
+        let baseline_id = serde_json::from_str::<serde_json::Value>(&begin).unwrap()["baselineId"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let apply = canvas.ai_apply_preview(&baseline_id, &format!("\n{}\n", baseline));
+        let apply_json = serde_json::from_str::<serde_json::Value>(&apply).unwrap();
+        assert_eq!(apply_json["ok"], serde_json::Value::Bool(false));
+        assert_eq!(
+            apply_json["error"],
+            serde_json::Value::String("No changes from AI".to_string())
+        );
+        assert_eq!(apply_json["noop"], serde_json::Value::Bool(true));
+        assert_eq!(canvas.get_text(), baseline);
+
+        let commit = canvas.ai_commit_preview(&baseline_id, "AI Touch");
+        let commit_json = serde_json::from_str::<serde_json::Value>(&commit).unwrap();
+        assert_eq!(commit_json["ok"], serde_json::Value::Bool(false));
+        assert_eq!(
+            commit_json["error"],
+            serde_json::Value::String("No candidate preview to commit".to_string())
+        );
+    }
+
+    #[test]
+    fn ai_preview_parse_failure_does_not_reset_existing_candidate() {
+        let baseline = r##"rect @hero {
+  w: 120 h: 80
+  fill: #FF0000
+}"##;
+        let candidate = r##"rect @hero {
+  w: 120 h: 80
+  fill: #00FF00
+}"##;
+        let mut canvas = FdCanvas::new(800.0, 600.0);
+        assert!(canvas.set_text(baseline).contains(r#""ok":true"#));
+
+        let begin = canvas.ai_begin_preview();
+        let baseline_id = serde_json::from_str::<serde_json::Value>(&begin).unwrap()["baselineId"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let first_apply = canvas.ai_apply_preview(&baseline_id, candidate);
+        assert!(first_apply.contains(r#""ok":true"#));
+        assert_eq!(canvas.get_text(), candidate);
+
+        let second_apply = canvas.ai_apply_preview(&baseline_id, "rect @broken {");
+        assert!(second_apply.contains(r#""ok":false"#));
+        assert_eq!(canvas.get_text(), candidate);
+
+        let commit = canvas.ai_commit_preview(&baseline_id, "AI Touch");
+        assert!(commit.contains(r#""ok":true"#));
+        assert_eq!(canvas.get_text(), candidate);
+    }
+
+    #[test]
+    fn ai_preview_commit_requires_applied_candidate() {
+        let baseline = r##"rect @hero {
+  w: 120 h: 80
+  fill: #FF0000
+}"##;
+        let mut canvas = FdCanvas::new(800.0, 600.0);
+        assert!(canvas.set_text(baseline).contains(r#""ok":true"#));
+
+        let begin = canvas.ai_begin_preview();
+        let baseline_id = serde_json::from_str::<serde_json::Value>(&begin).unwrap()["baselineId"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let commit = canvas.ai_commit_preview(&baseline_id, "AI Touch");
+        let commit_json = serde_json::from_str::<serde_json::Value>(&commit).unwrap();
+        assert_eq!(commit_json["ok"], serde_json::Value::Bool(false));
+        assert_eq!(
+            commit_json["error"],
+            serde_json::Value::String("No candidate preview to commit".to_string())
+        );
+        assert_eq!(canvas.get_text(), baseline);
+    }
+
+    #[test]
+    fn ai_preview_invalid_candidate_leaves_baseline_active() {
+        let baseline = r##"rect @hero {
+  w: 120 h: 80
+  fill: #FF0000
+}"##;
+        let mut canvas = FdCanvas::new(800.0, 600.0);
+        assert!(canvas.set_text(baseline).contains(r#""ok":true"#));
+
+        let begin = canvas.ai_begin_preview();
+        let baseline_id = serde_json::from_str::<serde_json::Value>(&begin).unwrap()["baselineId"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let apply = canvas.ai_apply_preview(&baseline_id, "rect @broken {");
+
+        assert!(apply.contains(r#""ok":false"#));
+        assert_eq!(canvas.get_text(), baseline);
+    }
 }

@@ -254,6 +254,11 @@
 }
 .ai-diff-reject:hover { background: rgba(255, 59, 48, 0.2); }
 
+[data-ai-preview="active"] {
+  outline: 2px solid rgba(0,122,255,0.35);
+  outline-offset: -2px;
+}
+
 /* ─── AI Chat Panel (slide-in from right) ─── */
 .ai-chat-panel {
   position: absolute;
@@ -759,4 +764,3 @@
   display: flex;
   align-items: center;
 }
-

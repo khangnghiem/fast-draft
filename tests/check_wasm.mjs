@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import init, { FdCanvas } from './site/wasm/fd_wasm.js';
+import init, { FdCanvas } from '../site/wasm/fd_wasm.js';
 
 async function run() {
     const wasm = readFileSync('./site/wasm/fd_wasm_bg.wasm');

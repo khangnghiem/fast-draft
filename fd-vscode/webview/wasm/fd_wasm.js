@@ -47,6 +47,77 @@ export class FdCanvas {
         return ret !== 0;
     }
     /**
+     * Apply candidate FD text as a preview. Invalid FD leaves baseline active.
+     * @param {string} baseline_id
+     * @param {string} candidate_fd
+     * @returns {string}
+     */
+    ai_apply_preview(baseline_id, candidate_fd) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(baseline_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(candidate_fd, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_ai_apply_preview(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+            deferred3_0 = ret[0];
+            deferred3_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    /**
+     * Capture baseline text and selection for a non-undoable AI preview.
+     * @returns {string}
+     */
+    ai_begin_preview() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.fdcanvas_ai_begin_preview(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Commit preview text as one undoable text snapshot.
+     * @param {string} baseline_id
+     * @param {string} summary
+     * @returns {string}
+     */
+    ai_commit_preview(baseline_id, summary) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(baseline_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(summary, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ret = wasm.fdcanvas_ai_commit_preview(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+            deferred3_0 = ret[0];
+            deferred3_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    /**
+     * Discard an active AI preview and restore baseline text/selection.
+     * @param {string} baseline_id
+     * @returns {boolean}
+     */
+    ai_discard_preview(baseline_id) {
+        const ptr0 = passStringToWasm0(baseline_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fdcanvas_ai_discard_preview(this.__wbg_ptr, ptr0, len0);
+        return ret !== 0;
+    }
+    /**
      * Cancel an in-progress drag gesture (Esc mid-drag).
      *
      * Restores the scene to the pre-drag state by abandoning the batch
@@ -1856,6 +1927,10 @@ function __wbg_get_imports() {
             const ret = new Path2D(getStringFromWasm0(arg0, arg1));
             return ret;
         }, arguments); },
+        __wbg_now_a3af9a2f4bbaa4d1: function() {
+            const ret = Date.now();
+            return ret;
+        },
         __wbg_now_ebffdf7e580f210d: function(arg0) {
             const ret = arg0.now();
             return ret;
@@ -1870,6 +1945,10 @@ function __wbg_get_imports() {
         },
         __wbg_quadraticCurveTo_b39b7adc73767cc0: function(arg0, arg1, arg2, arg3, arg4) {
             arg0.quadraticCurveTo(arg1, arg2, arg3, arg4);
+        },
+        __wbg_random_912284dbf636f269: function() {
+            const ret = Math.random();
+            return ret;
         },
         __wbg_restore_0d233789d098ba64: function(arg0) {
             arg0.restore();
