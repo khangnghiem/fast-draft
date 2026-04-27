@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- **Export Spec**: now includes `frame` nodes, supports Unicode node IDs, and preserves inline node descriptions in generated Markdown.
+
 ## [0.10.145] — 2026-03-31
 
 ### Changed
