@@ -99,6 +99,11 @@ never direct pushes to `main`.
 
 ### Memory commands
 
+Global `/memory-status` and `/memory-sync` command templates live in
+`~/.config/agent-memory` and are installed into agent-specific global command
+directories with `agentmem commands install`. Adopted project repos document the
+policy, but do not need project-local command copies.
+
 - `/memory-status` is read-only: parse `.memory/config.yml`, inspect
   `~/.config/agent-memory` git status, summarize scratch/project/global memory,
   and recommend next action.

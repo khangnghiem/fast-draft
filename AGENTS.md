@@ -259,7 +259,7 @@ When adding a new browser script, follow the existing `import { chromium } from 
 - **CLI**: `agentmem` alias → `~/.config/agent-memory/bin/agentmem`. MCP wrapper: `~/.config/agent-memory/bin/agentmem-mcp` (stdio).
 - **Lesson routing**: prefer the per-project `lessons/` for fast-draft-internal pitfalls (bounds ownership chain, pointer-event hijack, WASM build sync). Promote to global only when the pattern generalizes.
 - **Automatic retrieval**: at session start, pull agent-memory and read config; before planning any new feature/fix, search canonical docs and project/global lessons using task keywords.
-- **Memory commands**: OpenCode-native prompts live in `.opencode/commands/`; Claude Code prompts live in `.claude/commands/`, with matching Claude skills in `.claude/skills/`. `/memory-status` is read-only state inspection. `/memory-sync` syncs only `~/.config/agent-memory`; keep project `/sync-push` separate.
+- **Memory commands**: `/memory-status` and `/memory-sync` are global commands installed from `~/.config/agent-memory` via `agentmem commands install`. They are not Fast Draft-local command files. `/memory-status` is read-only state inspection. `/memory-sync` syncs only `~/.config/agent-memory`; keep project `/sync-push` separate.
 - **First-time setup**: see [`MEMORY_INIT.md`](../../MEMORY_INIT.md) for the project-agnostic adoption guide. The `~/.config/agent-memory/projects/khangnghiem__fast-draft/README.md` documents fast-draft-specific quirks.
 - **CI guard**: `.github/workflows/memory-scratch-guard.yml` rejects PRs that add files under `.scratch/`.
 

@@ -235,6 +235,7 @@ If any step fails, see troubleshooting below.
 | During work | Look up past lessons | `agentmem global list-lessons` or via MCP |
 | Worth keeping | Promote to project memory | `agentmem promote scratch-to-project-global ...` |
 | Worth sharing | Promote to global lessons | `agentmem promote lesson-to-global ...` |
+| Install commands | Ensure global memory commands are present | `agentmem commands install` |
 | Inspect memory | Read-only status | `/memory-status` |
 | Session end | Push durable memory updates only | `/memory-sync` or `agentmem sync push --scope global` |
 
@@ -242,8 +243,9 @@ If any step fails, see troubleshooting below.
 to carry with you must already be promoted to `agent-memory/projects/<id>/`.
 
 Keep memory sync separate from project `/sync-push`: project pushes should not
-implicitly commit or push `~/.config/agent-memory`. Use `/memory-sync` when you
-want durable memory changes synchronized.
+implicitly commit or push `~/.config/agent-memory`. `/memory-sync` and
+`/memory-status` are global commands installed from `~/.config/agent-memory`;
+run `agentmem commands install` if your coding agent does not show them.
 
 ---
 
