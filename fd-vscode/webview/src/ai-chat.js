@@ -99,12 +99,7 @@ function updateChatChips() {
 // ─── Message Rendering ──────────────────────────────────
 
 function escapeHtmlChat(text) {
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function renderAssistantHtml(content) {

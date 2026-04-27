@@ -3251,12 +3251,9 @@ async function aiTouch() {
 
 /** Escape HTML for safe rendering. */
 function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 function buildRefinePrompt(fdText, selectedIds) {
