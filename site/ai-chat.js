@@ -177,7 +177,7 @@ function updateChips() {
 // ─── Message Rendering ──────────────────────────────────
 
 function escapeHtml(text) {
-  return String(text)
+  return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
