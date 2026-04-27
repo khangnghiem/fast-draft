@@ -295,7 +295,7 @@ document.addEventListener("keydown", (e) => {
       // Switching to a new tool via keyboard clears previous lock
       if (lockedTool && result.tool !== lockedTool) {
         lockedTool = null;
-        document.querySelectorAll(".tool-btn[data-tool]").forEach((b) => b.classList.remove("locked"));
+        document.querySelectorAll(".tool-btn[data-tool], .ft-tool-btn[data-tool]").forEach((b) => b.classList.remove("locked"));
       }
       updateToolbarActive(result.tool);
     }
@@ -737,4 +737,3 @@ function nudgeSelected(arrowKey, step) {
     }
   } catch (_) { /* skip */ }
 }
-

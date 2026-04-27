@@ -3720,7 +3720,7 @@ document.addEventListener("keydown", (e) => {
       // Switching to a new tool via keyboard clears previous lock
       if (lockedTool && result.tool !== lockedTool) {
         lockedTool = null;
-        document.querySelectorAll(".tool-btn[data-tool]").forEach((b) => b.classList.remove("locked"));
+        document.querySelectorAll(".tool-btn[data-tool], .ft-tool-btn[data-tool]").forEach((b) => b.classList.remove("locked"));
       }
       updateToolbarActive(result.tool);
     }
@@ -4162,7 +4162,6 @@ function nudgeSelected(arrowKey, step) {
     }
   } catch (_) { /* skip */ }
 }
-
 // ─── Annotation Card ───────────────────────────────────────────────────────
 
 // ─── Unified Context Menu Class ────────────────────────────────────────────
@@ -4355,7 +4354,7 @@ function updateFloatingBar() {
   const rect = canvas.getBoundingClientRect();
   const screenX = bounds.x * zoomLevel + panX + rect.left;
   const screenY = bounds.y * zoomLevel + panY + rect.top;
-  const screenW = bounds.w * zoomLevel;
+  const screenW = bounds.width * zoomLevel;
 
   // Position bar centered above node, 36px gap
   const barX = screenX + screenW / 2;
@@ -5295,7 +5294,6 @@ function setupSpecBadgeToggle() {
 
   btn.addEventListener("click", toggleSpecBadges);
 }
-
 // ─── Properties Panel ────────────────────────────────────────────────────
 
 let propsSuppressSync = false;

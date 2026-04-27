@@ -194,7 +194,7 @@ function updateFloatingBar() {
   const rect = canvas.getBoundingClientRect();
   const screenX = bounds.x * zoomLevel + panX + rect.left;
   const screenY = bounds.y * zoomLevel + panY + rect.top;
-  const screenW = bounds.w * zoomLevel;
+  const screenW = bounds.width * zoomLevel;
 
   // Position bar centered above node, 36px gap
   const barX = screenX + screenW / 2;
@@ -1134,4 +1134,3 @@ function setupSpecBadgeToggle() {
 
   btn.addEventListener("click", toggleSpecBadges);
 }
-
