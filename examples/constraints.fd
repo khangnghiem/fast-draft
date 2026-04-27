@@ -1,0 +1,66 @@
+# Constraint system showcase
+# Demonstrates every constraint type with a visual layout
+
+# The target node for relative constraints
+rect @target {
+  text @_t1 "Target Node" {
+    fill: #FFFFFF
+  }
+  x: 200 y: 200
+  w: 200 h: 100
+  fill: #3B82F6
+}
+
+# 1. center_in canvas
+rect @centered_canvas {
+  text @_t2 "center_in: canvas" {
+    fill: #FFFFFF
+  }
+  w: 160 h: 60
+  fill: #10B981
+  center_in: canvas
+}
+
+# 2. center_in node
+rect @centered_node {
+  text @_t3 "center_in: @target" {
+    fill: #FFFFFF
+  }
+  w: 120 h: 40
+  fill: #EF4444
+  center_in: target
+}
+
+# 3. offset from node
+rect @offset_node {
+  text @_t4 "offset: @target 0, -100" {
+    fill: #FFFFFF
+  }
+  w: 180 h: 60
+  fill: #F59E0B
+  offset: @target 0, -100
+}
+
+rect @offset_node_right {
+  text @_t5 "offset: @target 250, 0" {
+    fill: #FFFFFF
+  }
+  w: 180 h: 60
+  fill: #8B5CF6
+  offset: @target 250, 0
+}
+
+# 4. fill_parent
+frame @container {
+  w: 300 h: 200
+  x: 600 y: 200
+  fill: #E5E7EB
+
+  rect @filled_child {
+    text @_t6 "fill_parent: 20" {
+      fill: #FFFFFF
+    }
+    fill: #EC4899
+    fill_parent: 20
+  }
+}
