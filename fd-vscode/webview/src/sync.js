@@ -37,8 +37,10 @@ function syncSelection(id, source) {
     // Send all selected IDs for multi-select code highlighting
     try {
       const allIds = JSON.parse(fdCanvas.get_selected_ids());
-      if (allIds.length > 0) {
+      if (allIds.length > 1) {
         vscode.postMessage({ type: "nodesSelected", ids: allIds });
+      } else if (allIds.length === 1) {
+        vscode.postMessage({ type: "nodeSelected", id: allIds[0] });
       } else {
         vscode.postMessage({ type: "nodeSelected", id: id || "" });
       }
@@ -123,5 +125,4 @@ function syncTextToExtension() {
     text: text,
   });
 }
-
 

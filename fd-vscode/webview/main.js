@@ -3339,8 +3339,10 @@ function syncSelection(id, source) {
     // Send all selected IDs for multi-select code highlighting
     try {
       const allIds = JSON.parse(fdCanvas.get_selected_ids());
-      if (allIds.length > 0) {
+      if (allIds.length > 1) {
         vscode.postMessage({ type: "nodesSelected", ids: allIds });
+      } else if (allIds.length === 1) {
+        vscode.postMessage({ type: "nodeSelected", id: allIds[0] });
       } else {
         vscode.postMessage({ type: "nodeSelected", id: id || "" });
       }
@@ -3425,7 +3427,6 @@ function syncTextToExtension() {
     text: text,
   });
 }
-
 
 // ─── Keyboard shortcuts (delegated to WASM) ─────────────────────────────
 
@@ -4354,7 +4355,8 @@ function updateFloatingBar() {
   const rect = canvas.getBoundingClientRect();
   const screenX = bounds.x * zoomLevel + panX + rect.left;
   const screenY = bounds.y * zoomLevel + panY + rect.top;
-  const screenW = bounds.width * zoomLevel;
+  const boundsW = bounds.width ?? bounds.w;
+  const screenW = boundsW * zoomLevel;
 
   // Position bar centered above node, 36px gap
   const barX = screenX + screenW / 2;
@@ -9744,7 +9746,7 @@ function updateChatChips() {
 // ─── Message Rendering ──────────────────────────────────
 
 function escapeHtmlChat(text) {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
 function renderAssistantHtml(content) {
