@@ -439,8 +439,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 ### R8.5 — Automatic retrieval and dedicated memory commands _(done)_
 
 - Agents automatically pull/read memory config at session start and consult canonical/project/global memory before planning new feature, bug, refactor, or investigation work.
-- `/memory-status` reports memory readiness without writes (OpenCode prompt in `.opencode/commands/`, Claude Code prompt in `.claude/commands/`, Claude skill in `.claude/skills/`).
-- `/memory-sync` synchronizes only `~/.config/agent-memory` (OpenCode prompt in `.opencode/commands/`, Claude Code prompt in `.claude/commands/`, Claude skill in `.claude/skills/`); project `/sync-push` remains project-scoped and never implicitly pushes memory.
+- `/memory-status` reports memory readiness without writes; its global OpenCode/Claude command templates are sourced from `~/.config/agent-memory` and installed with `agentmem commands install`.
+- `/memory-sync` synchronizes only `~/.config/agent-memory`; its global OpenCode/Claude command templates are sourced from `~/.config/agent-memory` and installed with `agentmem commands install`. Project `/sync-push` remains project-scoped and never implicitly pushes memory.
 - Durable promotions require judgment/confirmation; raw `.scratch/` is never synced directly.
 
 ## Future Requirements (Deferred)

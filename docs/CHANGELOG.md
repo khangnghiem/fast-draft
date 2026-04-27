@@ -5,7 +5,7 @@
 ## [Unreleased]
 
 ### Agent Memory Harness — automation commands
-- **FEAT (Memory)**: Added `/memory-status` (read-only memory readiness) and `/memory-sync` (durable agent-memory sync only) OpenCode, Claude Code, and repo workflow command surfaces.
+- **FEAT (Memory)**: Added `/memory-status` (read-only memory readiness) and `/memory-sync` (durable agent-memory sync only) policy surfaces; global OpenCode/Claude command templates now live in `agent-memory` and install via `agentmem commands install`.
 - **DOCS (Memory)**: Codified automatic session-start memory retrieval and pre-plan canonical/project/global memory lookup while keeping project `/sync-push` separate from agent-memory pushes.
 
 ### Agent Memory Harness — full rollout (Phases 0–10)
