@@ -1,0 +1,15 @@
+schema: 1
+project_id: khangnghiem__fast-draft
+scratch_dir: .scratch
+canonical_doc_paths:
+  - AGENTS.md
+  - docs/ARCHITECTURE.md
+  - docs/REQUIREMENTS.md
+  - docs/LESSONS.md
+  - docs/SHORTCUTS.md
+  - docs/CHANGELOG.md
+  - docs/specs
+  - openspec
+openspec_dir: openspec
+web_capture_target: project
+agent_memory_path: ~/.config/agent-memory

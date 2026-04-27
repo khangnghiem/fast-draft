@@ -34,6 +34,9 @@ fd-canvas-ui/dist/
 # GitHub Pages WASM build output (built by CI)
 site/wasm/
 
+# Agent memory ephemeral scratch (.memory/config.yml IS committed)
+.scratch/
+
 # Environment secrets
 .env
 serve.log
