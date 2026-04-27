@@ -125,7 +125,7 @@ impl SpatialIndex {
             }
         }
         // Sort by z_order descending (topmost first)
-        hits.sort_by_key(|b| std::cmp::Reverse(b.0));
+        hits.sort_by(|a, b| b.0.cmp(&a.0));
         hits.into_iter().map(|(_, id)| id).collect()
     }
 
