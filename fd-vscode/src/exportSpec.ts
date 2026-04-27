@@ -1,5 +1,16 @@
 import * as vscode from "vscode";
 
+// One capture group. Keep this contract when composing regexes below.
+const ID_TOKEN = String.raw`([\p{L}\p{N}_]+)`;
+const EDGE_START_RE = new RegExp(String.raw`^edge\s+@${ID_TOKEN}\s*\{`, "u");
+const EDGE_FROM_RE = new RegExp(String.raw`^from:\s*@${ID_TOKEN}`, "u");
+const EDGE_TO_RE = new RegExp(String.raw`^to:\s*@${ID_TOKEN}`, "u");
+const KNOWN_NODE_RE = new RegExp(
+  String.raw`^(group|rect|ellipse|path|text|frame)\s+@${ID_TOKEN}(?=[\s,{]|$)(?:\s*,?\s+"([^"]*)")?\s*\{?`,
+  "u"
+);
+const GENERIC_NODE_RE = new RegExp(String.raw`^@${ID_TOKEN}\s*\{`, "u");
+
 export function exportSpecMarkdown(): void {
   const editor = vscode.window.activeTextEditor;
   if (!editor || editor.document.languageId !== "fd") {
@@ -135,7 +146,7 @@ function processSpecBlockMultiline(lines: string[], i: number, state: any) {
 }
 
 function processEdgeStart(trimmed: string, state: any): boolean {
-  const edgeMatch = trimmed.match(/^edge\s+@(\w+)\s*\{/);
+  const edgeMatch = trimmed.match(EDGE_START_RE);
   if (!edgeMatch) return false;
   state.insideEdge = true;
   state.edgeFrom = "";
@@ -148,8 +159,8 @@ function processEdgeStart(trimmed: string, state: any): boolean {
 
 function processEdgeBody(trimmed: string, state: any): boolean {
   if (!state.insideEdge) return false;
-  const fromMatch = trimmed.match(/^from:\s*@(\w+)/);
-  const toMatch = trimmed.match(/^to:\s*@(\w+)/);
+  const fromMatch = trimmed.match(EDGE_FROM_RE);
+  const toMatch = trimmed.match(EDGE_TO_RE);
   const labelMatch = trimmed.match(/^label:\s*"([^"]*)"/);
   if (fromMatch) state.edgeFrom = fromMatch[1];
   if (toMatch) state.edgeTo = toMatch[1];
@@ -181,7 +192,7 @@ function processClosingBrace(trimmed: string, state: any): boolean {
 }
 
 function processNodeDecl(trimmed: string, state: any, doFlush: (s: any) => void): boolean {
-  const nodeMatch = trimmed.match(/^(group|rect|ellipse|path|text|frame)\s+@([^\s\{]+)(?:\s+"([^"]*)")?\s*\{?/);
+  const nodeMatch = trimmed.match(KNOWN_NODE_RE);
   if (!nodeMatch) return false;
 
   doFlush(state); // Flush PREVIOUS node before starting this new one
@@ -200,7 +211,7 @@ function processNodeDecl(trimmed: string, state: any, doFlush: (s: any) => void)
 }
 
 function processGenericNode(trimmed: string, state: any, doFlush: (s: any) => void): boolean {
-  const genericMatch = trimmed.match(/^@(\w+)\s*\{/);
+  const genericMatch = trimmed.match(GENERIC_NODE_RE);
   if (!genericMatch) return false;
 
   doFlush(state); // Flush PREVIOUS node

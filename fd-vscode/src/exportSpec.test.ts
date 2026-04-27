@@ -51,6 +51,38 @@ rect @ボタン "a button" {
     expect(md).toContain("- **Tags:** ui");
   });
 
+  it("should trim trailing punctuation from known node IDs", () => {
+    const source = `
+rect @btn, "button with malformed id punctuation" {
+  spec "button spec"
+}`;
+    const md = buildSpecMarkdown(source, "test.fd");
+    expect(md).toContain("## @btn `rect`");
+    expect(md).not.toContain("## @btn, `rect`");
+  });
+
+  it("should handle unicode IDs for generic nodes", () => {
+    const source = `
+@ボタン {
+  spec "generic unicode"
+}`;
+    const md = buildSpecMarkdown(source, "test.fd");
+    expect(md).toContain("## @ボタン `spec`");
+    expect(md).toContain("> generic unicode");
+  });
+
+  it("should handle unicode IDs in edge refs", () => {
+    const source = `
+edge @流れ {
+  from: @開始
+  to: @終了
+  label: "進む"
+}`;
+    const md = buildSpecMarkdown(source, "test.fd");
+    expect(md).toContain("## Flows");
+    expect(md).toContain("- **@開始** → **@終了** — 進む");
+  });
+
   it("should parse multiple annotations", () => {
     const source = `
 rect @btn {

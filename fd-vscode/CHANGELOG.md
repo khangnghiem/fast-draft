@@ -4,7 +4,7 @@
 
 ### Changed
 
-- **Export Spec**: now includes `frame` nodes, supports Unicode node IDs, and preserves inline node descriptions in generated Markdown.
+- **Export Spec**: now includes `frame` nodes, supports Unicode IDs across known/generic node and edge parsing, preserves inline node descriptions in generated Markdown, and avoids trailing punctuation leakage in malformed known-node declarations (for example `@btn,` now exports as `@btn`).
 
 ## [0.10.145] — 2026-03-31
 
