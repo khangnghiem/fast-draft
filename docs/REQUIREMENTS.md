@@ -403,11 +403,33 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 
 ---
 
+## Agent Memory Harness
+
+> **Status:** done (Phases 0–10). **Spec:** [`openspec/specs/agent-memory-harness/spec.md`](../openspec/specs/agent-memory-harness/spec.md). **Init guide:** [`MEMORY_INIT.md`](../MEMORY_INIT.md).
+
+### R8.1 — Memory-aware repo configuration _(done)_
+
+- `.memory/config.yml` (committed) declares `project_id: khangnghiem__fast-draft`, canonical doc paths (`AGENTS.md`, `docs/{ARCHITECTURE,REQUIREMENTS,LESSONS,SHORTCUTS,CHANGELOG}.md`, `docs/specs/`, `openspec/`), `scratch_dir: .scratch`, and `web_capture_target: project`.
+- `.scratch/`, `.memory/cache/`, `.gitnexus/`, `.lancedb/` are gitignored — ephemeral or per-machine state never lands in `main`.
+
+### R8.2 — agentmem CLI + MCP discovery _(done)_
+
+- `agentmem` CLI (`~/.config/agent-memory/bin/agentmem`) exposes `global / repo / sync / promote / web / lance` namespaces.
+- `agentmem-mcp` stdio MCP wrapper exposes the same operations as `<namespace>__<tool>` tools, registered for OpenCode in [`.opencode/mcp.json`](../.opencode/mcp.json).
+
+### R8.3 — Promotion contract _(done)_
+
+- `.scratch/` → `~/.config/agent-memory/projects/khangnghiem__fast-draft/<bucket>/` via `agentmem promote scratch-to-project-global`.
+- Project lessons → global lessons via draft PR (`agentmem promote lesson-to-global`).
+- `.scratch/` → `docs/` via draft PR (`agentmem promote scratch-to-canonical`). All cross-repo promotions go through PRs in the destination repo.
+
+### R8.4 — CI guard _(done)_
+
+- [`.github/workflows/memory-scratch-guard.yml`](../.github/workflows/memory-scratch-guard.yml) rejects any PR that adds files under `.scratch/`.
+
 ## Future Requirements (Deferred)
 
 ### R7.1 — Real-Time Collaboration
-
-**Priority**: Low (multi-week project)
 **Inspired by**: Excalidraw live collaboration
 
 Requirements:

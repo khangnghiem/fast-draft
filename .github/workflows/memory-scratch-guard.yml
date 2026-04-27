@@ -1,0 +1,32 @@
+name: memory-scratch-guard
+
+# Reject PRs that add files under .scratch/. Per the agent memory harness
+# contract, .scratch/ is ephemeral working memory and must never be committed.
+# See: openspec/specs/agent-memory-harness/spec.md
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reject .scratch/ additions
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          offenders=$(git diff --name-only --diff-filter=A "$base...$head" | grep -E '^\.scratch/' || true)
+          if [ -n "$offenders" ]; then
+            echo "::error::PR adds files under .scratch/ which is gitignored ephemeral agent memory:"
+            echo "$offenders" | sed 's/^/  /'
+            echo ""
+            echo "Promote useful content to ~/.config/agent-memory/projects/khangnghiem__fast-draft/"
+            echo "via 'agentmem promote scratch_to_project_global', then drop the .scratch/ entries."
+            exit 1
+          fi
+          echo "OK: no .scratch/ additions in this PR."

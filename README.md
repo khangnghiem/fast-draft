@@ -181,6 +181,8 @@ rect @login_btn {
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for architecture, crate structure, build instructions, and development setup.
 
+For AI-agent contributors: this repo is wired into the [agent-memory](https://github.com/khangnghiem/agent-memory) harness. The committed [`.memory/config.yml`](.memory/config.yml) declares the project's canonical doc scope and per-project memory subtree; new machines and new agents follow the project-agnostic adoption checklist in [`MEMORY_INIT.md`](MEMORY_INIT.md).
+
 ## License
 
 MIT — see [LICENSE](LICENSE)

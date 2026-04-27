@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "agentmem": {
+      "command": "/Users/khangnghiem/.config/agent-memory/bin/agentmem-mcp"
+    }
+  }
+}

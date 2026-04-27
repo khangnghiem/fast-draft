@@ -114,6 +114,16 @@ When adding a new browser script, follow the existing `import { chromium } from 
 - `.agents/workflows/yolo.md` — full yolo pipeline (TDD → build → PR → merge → verify)
 - `.agents/workflows/` generally use dual-path format; look for `Antigravity:` and `OpenCode:` labels where present
 
+### Memory harness — Fast Draft specifics
+
+- **Project ID**: `khangnghiem__fast-draft`
+- **Config**: [`.memory/config.yml`](../../.memory/config.yml) (committed). Canonical scope = `AGENTS.md`, `docs/{ARCHITECTURE,REQUIREMENTS,LESSONS,SHORTCUTS,CHANGELOG}.md`, `docs/specs/`, `openspec/`. `web_capture_target: project`.
+- **Per-project subtree**: `~/.config/agent-memory/projects/khangnghiem__fast-draft/` (lessons, sessions, drafts, transcripts, web, attachments, inbox).
+- **CLI**: `agentmem` alias → `~/.config/agent-memory/bin/agentmem`. MCP wrapper: `~/.config/agent-memory/bin/agentmem-mcp` (stdio).
+- **Lesson routing**: prefer the per-project `lessons/` for fast-draft-internal pitfalls (bounds ownership chain, pointer-event hijack, WASM build sync). Promote to global only when the pattern generalizes.
+- **First-time setup**: see [`MEMORY_INIT.md`](../../MEMORY_INIT.md) for the project-agnostic adoption guide. The `~/.config/agent-memory/projects/khangnghiem__fast-draft/README.md` documents fast-draft-specific quirks.
+- **CI guard**: `.github/workflows/memory-scratch-guard.yml` rejects PRs that add files under `.scratch/`.
+
 ### User shortcuts
 
 - `yolo <feature>` → follow `.agents/workflows/yolo.md`
