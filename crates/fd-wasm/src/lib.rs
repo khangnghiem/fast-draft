@@ -2,6 +2,7 @@
 //!
 //! Compiled via `wasm-pack build --target web` and loaded in VS Code webview.
 
+mod ai_touch;
 mod code_intel;
 mod crud;
 mod export;
@@ -83,6 +84,8 @@ pub struct FdCanvas {
     pub(crate) pointer_type: PointerType,
     /// Currently edited text node ID to suppress from Vello rendering (prevents ghosting)
     pub(crate) suppressed_text_id: Option<String>,
+    /// Non-undoable AI preview state. Holds baseline text until accept/reject.
+    pub(crate) ai_preview: Option<ai_touch::AiPreviewState>,
 }
 
 // ─── Lifecycle & Core APIs ───────────────────────────────────────────────
@@ -136,6 +139,7 @@ impl FdCanvas {
             bounds_hash: 0,
             pointer_type: PointerType::Mouse,
             suppressed_text_id: None,
+            ai_preview: None,
         }
     }
 

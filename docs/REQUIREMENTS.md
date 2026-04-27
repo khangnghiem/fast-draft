@@ -181,6 +181,15 @@ FD (Fast Draft) is a file format and interactive canvas for drawing, design, and
 - **R4.26** _(done)_: **3-Tier AI Fallback Architecture** — (1) Cloudflare Workers AI (Free) → (2) Ollama Cloud (`OLLAMA_API_KEY`) → (3) OpenRouter. Stream parser (`ollamaCloudToCFStream`) standardizes Ollama's NDJSON into CF edge stream format. Cloud variants mapped strictly to active datacenter models (e.g., `deepseek-v3.1:671b-cloud`), avoiding fabricated model 404s. VS Code extension supports cloud/local detection via `fd.ai.ollamaApiKey`.
 - **R4.26** _(planned)_: **AI Design Agent with Context Engineering** — multi-turn conversational agent panel ("Design Agent") with selection-aware context injection. Context engineering pipeline: user prompt + selected component FD code + document context → PydanticAI agent orchestration → tool calls (FD structure analysis, knowledge base query via Pydantic Graph, web search) → enriched prompt → user-selected LLM model → streaming SSE response with per-block Apply/Skip. UI: model selector dropdown in input container (Llama 70B/8B default, user-provided OpenAI/Anthropic/Gemini API keys), context badge for selected nodes, elevated Cursor-style input container, tool execution progress visualization in chat thread, quick-action chips adaptive to selection state. Knowledge base via Pydantic Graph stores design patterns, user style preferences, FD syntax reference, and reusable component snippets. Backend: Python FastAPI with PydanticAI agents, structured SSE events for tool status + token streaming → [spec](specs/ai-agent.md)
 
+#### AI Touch lifecycle (R4.20 implementation guardrails)
+
+- Session states are strictly `idle → thinking → previewing → idle`.
+- Editor text is the source of truth; canvas preview is non-authoritative until accept.
+- Accept enforces drift guards: baseline text and preview candidate must still match before commit.
+- Accept creates exactly one undoable snapshot for the full AI Touch operation.
+- In `previewing`, keyboard shortcuts are active: `Enter` accepts, `Escape` rejects.
+- AI no-op outputs (candidate equals baseline after trim) must return a `noop` response and show a friendly prompt to retry with a different instruction.
+
 ### R5: Rendering
 
 - **R5.1** _(done)_: GPU-accelerated 2D rendering via Vello + wgpu (webview currently uses Canvas2D fallback)

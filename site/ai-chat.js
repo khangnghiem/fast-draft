@@ -257,19 +257,17 @@ function renderAssistantMessage(content, getEditorContent, setEditorContent) {
  * Smart Merge: find matching @ids in the document and replace in-place.
  * New nodes (no matching @id) are appended at the end.
  */
-function smartApplyFdCode(fdCode, getEditorContent, setEditorContent) {
-  if (!getEditorContent || !setEditorContent) return;
-
-  const current = getEditorContent();
+export function computeSmartMerge(current, fdCode) {
+  const cleanFdCode = String(fdCode || '').trim();
+  if (!String(current || '').trim()) return cleanFdCode ? `${cleanFdCode}\n` : '';
+  if (!cleanFdCode) return current;
 
   // Extract node @ids from the incoming FD code
-  const nodeIdMatches = [...fdCode.matchAll(/^(?:rect|ellipse|text|frame|group|path|image|edge|style)\s+@(\w+)/gm)];
+  const nodeIdMatches = [...cleanFdCode.matchAll(/^(?:rect|ellipse|text|frame|group|path|image|edge|style)\s+@(\w+)/gm)];
 
   if (nodeIdMatches.length === 0) {
     // No recognizable node — append
-    setEditorContent(current.trimEnd() + '\n\n' + fdCode + '\n');
-    notifyCanvasSync();
-    return;
+    return current.trimEnd() + '\n\n' + cleanFdCode + '\n';
   }
 
   let result = current;
@@ -280,7 +278,7 @@ function smartApplyFdCode(fdCode, getEditorContent, setEditorContent) {
     const nodeId = match[1];
     // Find the existing block for this @id in the document
     const blockRange = findNodeBlock(result, nodeId);
-    const newBlock = extractNodeBlock(fdCode, nodeId);
+    const newBlock = extractNodeBlock(cleanFdCode, nodeId);
     
     if (blockRange && newBlock) {
       // Replace existing node
@@ -296,10 +294,19 @@ function smartApplyFdCode(fdCode, getEditorContent, setEditorContent) {
     result = result.trimEnd() + '\n\n' + newNodesCode.trimEnd() + '\n';
   } else if (!anyReplaced) {
     // Failsafe: if nothing matched at all, just append
-    result = result.trimEnd() + '\n\n' + fdCode + '\n';
+    result = result.trimEnd() + '\n\n' + cleanFdCode + '\n';
   }
 
-  setEditorContent(result);
+  return result;
+}
+
+function smartApplyFdCode(fdCode, getEditorContent, setEditorContent) {
+  if (!getEditorContent || !setEditorContent) return;
+
+  const current = getEditorContent();
+  const merged = computeSmartMerge(current, fdCode);
+
+  setEditorContent(merged);
   notifyCanvasSync();
 }
 
@@ -352,6 +359,29 @@ function notifyCanvasSync() {
   requestAnimationFrame(() => {
     document.dispatchEvent(new CustomEvent('fd-ai-applied'));
   });
+}
+
+function previewFdWithAiTouch(fdCode, mode, actionDiv, getEditorContent, setEditorContent) {
+  const session = window.__aiTouchSession;
+  if (session && typeof session.previewFdCode === 'function') {
+    if (mode === 'merge') {
+      const current = getEditorContent ? getEditorContent() : '';
+      const merged = computeSmartMerge(current, fdCode);
+      return session.previewFdCode({
+        fdCode: merged,
+        mode: 'replace',
+        candidateText: merged,
+        actionDiv,
+      });
+    }
+    return session.previewFdCode({ fdCode, mode, actionDiv });
+  }
+  if (mode === 'replace') {
+    replaceAllFdCode(fdCode, getEditorContent, setEditorContent);
+  } else {
+    smartApplyFdCode(fdCode, getEditorContent, setEditorContent);
+  }
+  return true;
 }
 
 /**
@@ -414,9 +444,11 @@ function wireApplySkipButtons(container, getEditorContent, setEditorContent) {
     btn.addEventListener('click', () => {
       const fdCode = decodeURIComponent(btn.dataset.fd);
       const actionDiv = btn.closest('.fd-block-action');
-      replaceAllFdCode(fdCode, getEditorContent, setEditorContent);
+      const ok = previewFdWithAiTouch(fdCode, 'replace', actionDiv, getEditorContent, setEditorContent);
       if (actionDiv) {
-        actionDiv.innerHTML = '<span style="color:#007AFF;font-size:10px;font-weight:600">⟳ Replaced canvas</span>';
+        actionDiv.innerHTML = ok
+          ? '<span style="color:#007AFF;font-size:10px;font-weight:600">✦ Previewing — use canvas toolbar</span>'
+          : '<span style="color:#FF3B30;font-size:10px;font-weight:600">Preview failed</span>';
       }
     });
   });
@@ -427,9 +459,11 @@ function wireApplySkipButtons(container, getEditorContent, setEditorContent) {
     btn.addEventListener('click', () => {
       const fdCode = decodeURIComponent(btn.dataset.fd);
       const actionDiv = btn.closest('.fd-block-action');
-      smartApplyFdCode(fdCode, getEditorContent, setEditorContent);
+      const ok = previewFdWithAiTouch(fdCode, 'merge', actionDiv, getEditorContent, setEditorContent);
       if (actionDiv) {
-        actionDiv.innerHTML = '<span style="color:#34C759;font-size:10px;font-weight:600">✓ Merged</span>';
+        actionDiv.innerHTML = ok
+          ? '<span style="color:#34C759;font-size:10px;font-weight:600">✦ Previewing — use canvas toolbar</span>'
+          : '<span style="color:#FF3B30;font-size:10px;font-weight:600">Preview failed</span>';
       }
     });
   });

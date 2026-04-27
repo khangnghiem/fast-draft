@@ -1,5 +1,6 @@
 import { initLayersPanel } from './layers.js?v=0.11.309';
-import init, { FdCanvas } from './wasm/fd_wasm.js?v=0.11.383';
+import init, { FdCanvas } from './wasm/fd_wasm.js?v=0.11.385';
+import { AiTouchSession } from './canvas-core/ai-touch/session.js?v=0.11.385';
 import { buildUnifiedNodeMenu, buildUnifiedCanvasMenu, buildUnifiedEdgeMenu } from './canvas-core/menu-registry.js?v=0.11.334';
 // ─── FD Playground — WASM-powered interactive editor ───
 
@@ -17,7 +18,7 @@ import {
   highlightSelectionMatches,
   LZString,
 } from './vendor/cm.min.js';
-import { initAiChat, clearChatHistory, updateRateLimitUI } from './ai-chat.js?v=0.11.296';
+import { initAiChat, clearChatHistory, updateRateLimitUI } from './ai-chat.js?v=0.11.385';
 import {
   screenToScene as coreScreenToScene,
   pointerTypeToU8 as corePointerTypeToU8,
@@ -1525,294 +1526,19 @@ function clearCodeHighlights() {
 
 // StateEffect for highlight decorations — initialized lazily
 let setHighlightEffect;
-let setDiffEffect;
 function initCodeMirrorEffects() {
   if (setHighlightEffect) return;
   const { StateEffect } = window.cmBundle || {};
   if (!StateEffect) return;
   setHighlightEffect = StateEffect.define();
-  setDiffEffect = StateEffect.define();
 }
 
-/** ─── AI Touch Diff/Accept/Reject State ─────────────────────────────── */
-let aiDiffState = null; // { originalText, perBlockChanges: [{ id, oldBlock, newBlock, startLine, endLine }] }
+/** ─── AI Touch Preview Session ──────────────────────────────────────── */
+let aiTouchSession = null;
 
-/** Show inline diff for AI Touch results — accept/reject before applying. */
-function showAiTouchDiff(originalText, refinedOutput, selectedIds) {
-  if (!editorView) return false;
-
-  const origLines = originalText.split('\n');
-  const perBlockChanges = [];
-
-  for (const id of selectedIds) {
-    const origRange = findBlockWithRange(origLines, id);
-    if (!origRange) continue;
-    const oldBlock = origLines.slice(origRange.startLine, origRange.endLine + 1).join('\n');
-
-    // Find the corresponding block in AI output
-    const aiLines = refinedOutput.split('\n');
-    const newBlock = findBlockForId(aiLines, id);
-    if (!newBlock) continue;
-
-    // Check if AI renamed the ID
-    const oldIdMatch = oldBlock.match(/@(\w+)/);
-    const newIdMatch = newBlock.match(/@(\w+)/);
-    const renamedId = (oldIdMatch && newIdMatch && oldIdMatch[1] !== newIdMatch[1]) ? newIdMatch[1] : null;
-
-    if (oldBlock.trim() !== newBlock.trim()) {
-      perBlockChanges.push({ id, oldBlock, newBlock, startLine: origRange.startLine, endLine: origRange.endLine, renamedId });
-    }
-  }
-
-  if (perBlockChanges.length === 0) {
-    showToast('AI Touch: No changes detected');
-    return false;
-  }
-
-  aiDiffState = { originalText, perBlockChanges };
-
-  // Highlight changed blocks in the editor with diff colors
-  renderDiffDecorations(perBlockChanges);
-  showDiffToolbar(perBlockChanges.length);
-  return true;
-}
-
-/** ─── Agent Chat Diff Integration ─── */
-let agentDiffState = null;
-
-window.showAgentDiff = function(originalText, newText, changedIds) {
-  if (!editorView || !fdCanvas) return;
-  
-  // Push undo snapshot BEFORE we apply
-  fdCanvas.push_undo_snapshot(originalText, originalText);
-  
-  // Apply changes via CodeMirror to sync UI
-  editorView.dispatch({ changes: { from: 0, to: originalText.length, insert: newText } });
-  
-  // Highlighting: Find block ranges in the NEW text to highlight
-  const text = editorView.state.doc.toString();
-  const lines = text.split('\n');
-  const marks = [];
-
-  for (const id of changedIds) {
-    const range = findBlockWithRange(lines, id);
-    if (!range) continue;
-    let startPos = 0;
-    for (let i = 0; i < range.startLine; i++) startPos += lines[i].length + 1;
-    let endPos = startPos;
-    for (let i = range.startLine; i <= range.endLine; i++) endPos += lines[i].length + 1;
-    endPos = Math.min(endPos - 1, text.length);
-    marks.push({ from: Math.max(0, startPos), to: Math.max(startPos, endPos) });
-  }
-
-  if (marks.length === 0) {
-    fdCanvas.set_text(newText);
-    renderCanvas();
-    refreshLayersPanel();
-    updatePropertiesPanel();
-    return;
-  }
-  
-  agentDiffState = { originalText, marks };
-  
-  // Register field
-  initCodeMirrorEffects();
-  const { Decoration, RangeSet, StateField, EditorView: EV, StateEffect } = window.cmBundle || {};
-  if (!editorView._fdDiffField) {
-    const field = StateField.define({
-      create() { return Decoration.none; },
-      update(v, tr) {
-        for (const e of tr.effects) { if (e.is(setDiffEffect)) return e.value; }
-        return v.map(tr.changes);
-      },
-      provide: f => EV.decorations.from(f),
-    });
-    editorView._fdDiffField = field;
-    editorView.dispatch({ effects: StateEffect.appendConfig.of([field]) });
-  }
-
-  const markDecos = marks.map(m => Decoration.mark({ class: 'ai-diff-changed' }).range(m.from, m.to));
-  if (markDecos.length > 0) {
-    editorView.dispatch({ effects: [setDiffEffect.of(RangeSet.of(markDecos, true))] });
-    editorView.dispatch({ effects: EV.scrollIntoView(markDecos[0].from, { y: 'center' }) });
-  }
-  
-  // Render canvas visually to preview state
-  fdCanvas.set_text(newText);
-  renderCanvas();
-  refreshLayersPanel();
-  updatePropertiesPanel();
-
-  // Show toolbar
-  let toolbar = document.getElementById('ai-diff-toolbar');
-  if (!toolbar) {
-    toolbar = document.createElement('div');
-    toolbar.id = 'ai-diff-toolbar';
-    toolbar.className = 'ai-diff-toolbar';
-    document.body.appendChild(toolbar);
-  }
-  toolbar.innerHTML = `
-    <span class="ai-diff-label">✦ ${changedIds.length} block${changedIds.length > 1 ? 's' : ''} drafted</span>
-    <button class="ai-diff-accept" id="ai-diff-accept-btn">✓ Accept</button>
-    <button class="ai-diff-reject" id="ai-diff-reject-btn">✗ Reject</button>
-  `;
-  toolbar.classList.add('visible');
-
-  document.getElementById('ai-diff-accept-btn').onclick = () => {
-    if (editorView && editorView._fdDiffField) {
-      editorView.dispatch({ effects: [setDiffEffect.of(Decoration.none)] });
-    }
-    toolbar.classList.remove('visible');
-    agentDiffState = null;
-    showToast('✓ AI changes accepted');
-  };
-  
-  document.getElementById('ai-diff-reject-btn').onclick = () => {
-    if (agentDiffState && editorView) {
-      const { originalText } = agentDiffState;
-      editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: originalText } });
-      if (fdCanvas) {
-        fdCanvas.set_text(originalText);
-        renderCanvas();
-        refreshLayersPanel();
-        updatePropertiesPanel();
-      }
-    }
-    if (editorView && editorView._fdDiffField) {
-      editorView.dispatch({ effects: [setDiffEffect.of(Decoration.none)] });
-    }
-    toolbar.classList.remove('visible');
-    agentDiffState = null;
-    showToast('✗ AI changes reverted');
-  };
-}
-
-/** Render red/green diff decorations in CodeMirror. */
-function renderDiffDecorations(changes) {
-  if (!editorView) return;
-  initCodeMirrorEffects();
-  const { Decoration, RangeSet, StateField, EditorView: EV, StateEffect } = window.cmBundle || {};
-  if (!Decoration) return;
-
-  // Register diff field if not already done
-  if (!editorView._fdDiffField) {
-    const field = StateField.define({
-      create() { return Decoration.none; },
-      update(v, tr) {
-        for (const e of tr.effects) {
-          if (e.is(setDiffEffect)) return e.value;
-        }
-        return v.map(tr.changes);
-      },
-      provide: f => EV.decorations.from(f),
-    });
-    editorView._fdDiffField = field;
-    editorView.dispatch({ effects: StateEffect.appendConfig.of([field]) });
-  }
-
-  const text = editorView.state.doc.toString();
-  const marks = [];
-
-  for (const change of changes) {
-    // Highlight the original block range as "will be changed"
-    const lines = text.split('\n');
-    const range = findBlockWithRange(lines, change.id);
-    if (!range) continue;
-
-    let startPos = 0;
-    for (let i = 0; i < range.startLine; i++) startPos += lines[i].length + 1;
-    let endPos = startPos;
-    for (let i = range.startLine; i <= range.endLine; i++) endPos += lines[i].length + 1;
-    endPos = Math.min(endPos - 1, text.length);
-
-    marks.push(Decoration.mark({ class: 'ai-diff-changed' }).range(
-      Math.max(0, startPos), Math.max(startPos, endPos)
-    ));
-  }
-
-  if (marks.length > 0) {
-    editorView.dispatch({ effects: [setDiffEffect.of(RangeSet.of(marks, true))] });
-    // Scroll to first change
-    editorView.dispatch({ effects: EV.scrollIntoView(marks[0].from, { y: 'center' }) });
-  }
-}
-
-/** Show accept/reject toolbar for AI Touch diffs. */
-function showDiffToolbar(changeCount) {
-  let toolbar = document.getElementById('ai-diff-toolbar');
-  if (!toolbar) {
-    toolbar = document.createElement('div');
-    toolbar.id = 'ai-diff-toolbar';
-    toolbar.className = 'ai-diff-toolbar';
-    document.body.appendChild(toolbar);
-  }
-  toolbar.innerHTML = `
-    <span class="ai-diff-label">✦ ${changeCount} block${changeCount > 1 ? 's' : ''} changed</span>
-    <button class="ai-diff-accept" id="ai-diff-accept-btn">✓ Accept</button>
-    <button class="ai-diff-reject" id="ai-diff-reject-btn">✗ Reject</button>
-  `;
-  toolbar.classList.add('visible');
-
-  document.getElementById('ai-diff-accept-btn').onclick = () => acceptAiDiff();
-  document.getElementById('ai-diff-reject-btn').onclick = () => rejectAiDiff();
-}
-
-/** Accept AI Touch changes — apply per-block edits with granular undo. */
-function acceptAiDiff() {
-  if (!aiDiffState || !editorView || !fdCanvas) return;
-
-  const { originalText, perBlockChanges } = aiDiffState;
-  let currentText = originalText;
-
-  // Apply per-block changes (from bottom to top to preserve line numbers)
-  const sorted = [...perBlockChanges].sort((a, b) => b.startLine - a.startLine);
-
-  for (const change of sorted) {
-    const lines = currentText.split('\n');
-    const range = findBlockWithRange(lines, change.id);
-    if (!range) continue;
-
-    const before = lines.slice(0, range.startLine);
-    const after = lines.slice(range.endLine + 1);
-    currentText = [...before, change.newBlock, ...after].join('\n');
-  }
-
-  // Apply to CodeMirror as a single transaction (preserves undo atomically)
-  const cur = editorView.state.doc.toString();
-  editorView.dispatch({ changes: { from: 0, to: cur.length, insert: currentText } });
-
-  // Sync to WASM canvas
-  fdCanvas.set_text(currentText);
-  renderCanvas();
-  refreshLayersPanel();
-  updatePropertiesPanel();
-
-  // Cleanup
-  clearDiffState();
-  showToast(`✓ Accepted ${perBlockChanges.length} AI change${perBlockChanges.length > 1 ? 's' : ''}`);
-}
-
-/** Reject AI Touch changes — restore original text. */
-function rejectAiDiff() {
-  if (!aiDiffState) return;
-  clearDiffState();
-  showToast('✗ AI changes rejected');
-}
-
-/** Clean up diff state and decorations. */
-function clearDiffState() {
-  aiDiffState = null;
-  // Clear diff decorations
-  if (editorView && editorView._fdDiffField) {
-    const { Decoration } = window.cmBundle || {};
-    if (Decoration) {
-      editorView.dispatch({ effects: [setDiffEffect.of(Decoration.none)] });
-    }
-  }
-  // Hide toolbar
-  const toolbar = document.getElementById('ai-diff-toolbar');
-  if (toolbar) toolbar.classList.remove('visible');
-}
+window.showAgentDiff = function(_originalText, newText) {
+  return aiTouchSession?.previewCandidate(newText, { source: 'agent' }) || false;
+};
 
 /** ─── Properties Panel ──────────────────────────────────────────────── */
 let propsSuppressSync = false;
@@ -3115,111 +2841,29 @@ function getAiModelHint() {
 }
 
 async function aiTouch() {
-  if (!fdCanvas) { showToast('Canvas not ready'); return; }
-
-  // Gather selected IDs
-  let selectedIds = [];
-  try {
-    const idsJson = fdCanvas.get_selected_ids?.();
-    selectedIds = idsJson ? JSON.parse(idsJson) : [];
-  } catch (_) {}
-  if (selectedIds.length === 0) {
-    const single = fdCanvas.get_selected_id?.();
-    if (single) selectedIds = [single];
-  }
-
   const btn = document.getElementById('ai-touch-btn');
   const statusEl = document.getElementById('canvas-status');
-  const hasSelection = selectedIds.length > 0;
+
+  if (aiTouchSession?.state === 'thinking') {
+    aiTouchSession.cancel();
+    showToast('AI Touch cancelled');
+    btn?.classList.remove('loading');
+    if (statusEl) statusEl.textContent = 'Ready';
+    return;
+  }
+
+  if (aiTouchSession?.isBusy?.()) {
+    showToast('AI Touch preview active — accept or reject first');
+    return;
+  }
 
   btn?.classList.add('loading');
-  if (statusEl) statusEl.textContent = hasSelection
-    ? `✦ Refining ${selectedIds.length} element${selectedIds.length > 1 ? 's' : ''}…`
-    : '✦ Refining entire design…';
-
+  if (statusEl) statusEl.textContent = '✦ AI Touch thinking…';
   try {
-    let fdText = fdCanvas.get_text();
-
-    // ─── Phase 0: Pre-flight Heuristic Rename ───
-    const anonIds = findAnonymousNodeIds(fdText);
-    if (anonIds.length > 0) {
-      const proposals = heuristicRename(fdText, anonIds);
-      if (proposals.length > 0) {
-        for (const { oldId, newId } of proposals) {
-          const pattern = new RegExp(`@${oldId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g');
-          fdText = fdText.replace(pattern, `@${newId}`);
-        }
-        // Update selection IDs so the LLM targets the new semantic names
-        selectedIds = selectedIds.map(id => {
-          const match = proposals.find(p => p.oldId === id);
-          return match ? match.newId : id;
-        });
-      }
-    }
-
-    // Build prompt — either scoped or full-doc
-    const prompt = hasSelection
-      ? buildRefinePrompt(fdText, selectedIds)
-      : `Improve this FD design — enhance layout, alignment, colors, spacing, and visual hierarchy. Return the COMPLETE improved FD code:\n\n${fdText}`;
-    const modelHint = getAiModelHint();
-    const userFocus = localStorage.getItem('fd-ai-prompt') || undefined;
-    let resp = await fetch('/api/ai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, mode: 'refine', model_hint: modelHint, user_focus: userFocus }),
+    await aiTouchSession?.start({
+      modelHint: getAiModelHint() || 'auto',
+      userFocus: localStorage.getItem('fd-ai-prompt') || undefined,
     });
-
-    if (resp.status >= 500) {
-      console.warn("AI Touch failed. Retrying with force_fallback...");
-      resp = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, mode: 'refine', model_hint: modelHint, user_focus: userFocus, force_fallback: true }),
-      });
-    }
-
-    if (resp.status === 429) {
-      const data = await resp.json();
-      showToast(`Rate limit reached — ${data.limit}/day free. Try again tomorrow.`);
-      return;
-    }
-    if (!resp.ok) throw new Error(`AI API error: ${resp.status}`);
-
-    const headerLimit = resp.headers.get('x-ratelimit-limit');
-    const headerRemaining = resp.headers.get('x-ratelimit-remaining');
-    if (headerLimit && headerRemaining) {
-      updateRateLimitUI(headerRemaining, headerLimit);
-    }
-    
-    const data = await resp.json();
-
-    let refined = data.result || '';
-    refined = refined.replace(/^```(?:fd|text)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
-
-    if (!refined) {
-      showToast('AI returned empty output — try again');
-      return;
-    }
-
-    // Show inline diff for user review (Apply/Reject toolbar)
-    initCodeMirrorEffects();
-    const diffShown = showAiTouchDiff(fdText, refined, hasSelection ? selectedIds : null);
-    if (!diffShown) {
-      // Fallback: apply directly if diff UI fails
-      const result = hasSelection ? spliceModifiedBlocks(fdText, refined, selectedIds) : refined;
-      if (editorView) {
-        const cur = editorView.state.doc.toString();
-        editorView.dispatch({ changes: { from: 0, to: cur.length, insert: result } });
-      }
-      fdCanvas.set_text(result);
-      renderCanvas();
-    }
-
-    const remaining = data.remaining;
-    let msg = '✦ AI Touch — diff ready for review';
-    if (remaining != null && remaining <= 2) msg += ` (${remaining} calls left)`;
-    showToast(msg);
-
   } catch (err) {
     console.warn('AI Touch error:', err);
     showToast('AI unavailable — check /api/ai endpoint');
@@ -3237,6 +2881,20 @@ function escapeHtml(str) {
 }
 
 function buildRefinePrompt(fdText, selectedIds) {
+  if (!Array.isArray(selectedIds) || selectedIds.length === 0) {
+    return `You are an expert UI designer working with the FD (Fast Draft) format.
+
+Improve this complete FD design — enhance layout, alignment, colors, spacing, naming, and visual hierarchy.
+
+Rules:
+1. Return the COMPLETE improved FD code.
+2. Preserve valid FD syntax.
+3. Prefer semantic IDs, reusable styles, and managed layouts.
+4. No markdown fences, no explanations — just valid FD code.
+
+${fdText}`;
+  }
+
   const nodeList = selectedIds.filter(id => !id.includes('->')).map(id => `@${id}`);
   const edgeList = selectedIds.filter(id => id.includes('->'));
 
@@ -3371,51 +3029,6 @@ function extractBlock(lines, startIdx) {
     if (depth <= 0) break;
   }
   return result.join('\n');
-}
-
-/** Splice AI-modified blocks back into the original document.
- *  Finds each selected ID block in the original and replaces it with the AI version. */
-function spliceModifiedBlocks(originalFd, aiOutput, selectedIds) {
-  // If AI returned something that looks like a complete document, just use it
-  if (aiOutput.match(/^(#|style\s|group\s|frame\s|rect\s|ellipse\s|path\s|text\s)/m) &&
-      aiOutput.split('\n').length > 5 &&
-      aiOutput.match(/\b(rect|ellipse|text|group|path)\b/g)?.length >= 3) {
-    // Looks like a full document — might be AI ignoring instructions
-    // Still try to splice if possible, otherwise use as-is
-  }
-
-  let result = originalFd;
-  const aiLines = aiOutput.split('\n');
-
-  for (const id of selectedIds) {
-    // Find the block for this ID in the AI output
-    const aiBlock = findBlockForId(aiLines, id);
-    if (!aiBlock) continue;
-
-    // Find and replace the block in the original document
-    const origLines = result.split('\n');
-    const origBlock = findBlockWithRange(origLines, id);
-    if (!origBlock) continue;
-
-    const before = origLines.slice(0, origBlock.startLine);
-    const after = origLines.slice(origBlock.endLine + 1);
-    result = [...before, aiBlock, ...after].join('\n');
-  }
-
-  return result;
-}
-
-/** Find a block for a given ID in FD text lines. */
-function findBlockForId(lines, id) {
-  for (let i = 0; i < lines.length; i++) {
-    const trimmed = lines[i].trim();
-    const nodeMatch = trimmed.match(new RegExp(`^(group|frame|rect|ellipse|path|text)\\s+@(\\w*${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\w*)`));
-    const edgeMatch = trimmed.match(new RegExp(`@${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*->`));
-    if (nodeMatch || edgeMatch) {
-      return extractBlock(lines, i);
-    }
-  }
-  return null;
 }
 
 /** Find a block's line range for a given ID. */
@@ -4378,6 +3991,24 @@ async function initPlayground() {
         mobileBackdropEl?.classList.remove('visible');
       }
     });
+
+    aiTouchSession = new AiTouchSession({
+      getCanvas: () => fdCanvas,
+      getEditorText: () => editorView ? editorView.state.doc.toString() : '',
+      setEditorText: (text) => {
+        if (!editorView) return;
+        editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: text } });
+      },
+      renderCanvas: () => renderCanvas(),
+      fitToContent: (c) => fitToContent(c),
+      measureAllTextNodes: (canvasInstance, element) => measureAllTextNodes(canvasInstance, element),
+      refreshLayersPanel: () => refreshLayersPanel(),
+      updatePropertiesPanel: () => updatePropertiesPanel(),
+      showToast: (msg, timeout) => showToast(msg, timeout),
+      updateRateLimitUI,
+      buildPrompt: (fdText, selectedIds) => buildRefinePrompt(fdText, selectedIds),
+    });
+    window.__aiTouchSession = aiTouchSession;
 
     // ── Toolbar buttons ──────────────────────────────────────────────
     document.getElementById('ai-touch-btn')?.addEventListener('click', aiTouch);
@@ -5785,28 +5416,28 @@ async function initPlayground() {
       }
 
       // ── Copy (⌘C / Ctrl+C) ──
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c' && !e.shiftKey && !e.altKey && !editorFocused) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c' && !e.shiftKey && !e.altKey && !isEditingInput) {
         e.preventDefault();
         copySelectedAsFd();
         return;
       }
 
       // ── Cut (⌘X / Ctrl+X) ──
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'x' && !e.shiftKey && !e.altKey && !editorFocused) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'x' && !e.shiftKey && !e.altKey && !isEditingInput) {
         e.preventDefault();
         cutSelectedAsFd();
         return;
       }
 
       // ── Paste (⌘V / Ctrl+V) ──
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'v' && !e.shiftKey && !e.altKey && !editorFocused) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'v' && !e.shiftKey && !e.altKey && !isEditingInput) {
         e.preventDefault();
         pasteFromClipboard();
         return;
       }
 
       // ── Select All (⌘A / Ctrl+A) ──
-      if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'a') && !e.shiftKey && !editorFocused) {
+      if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'a') && !e.shiftKey && !isEditingInput) {
         e.preventDefault();
         const count = fdCanvas.select_all();
         renderDirty = true; uiDirty = true;
@@ -5834,7 +5465,7 @@ async function initPlayground() {
       }
 
       // ── Duplicate (⌘D / Ctrl+D) ──
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd' && !editorFocused) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd' && !isEditingInput) {
         e.preventDefault();
         if (fdCanvas) {
           const changed = fdCanvas.duplicate_selected();
@@ -5860,7 +5491,7 @@ async function initPlayground() {
       }
 
       // Forward remaining keys to WASM (when canvas focused)
-      if (!editorFocused) {
+      if (!isEditingInput) {
         try {
           const r = JSON.parse(fdCanvas.handle_key(e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey));
 
