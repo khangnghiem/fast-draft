@@ -181,13 +181,16 @@ function processClosingBrace(trimmed: string, state: any): boolean {
 }
 
 function processNodeDecl(trimmed: string, state: any, doFlush: (s: any) => void): boolean {
-  const nodeMatch = trimmed.match(/^(group|rect|ellipse|path|text)\s+@(\w+)(?:\s+"[^"]*")?\s*\{?/);
+  const nodeMatch = trimmed.match(/^(group|rect|ellipse|path|text|frame)\s+@([^\s\{]+)(?:\s+"([^"]*)")?\s*\{?/);
   if (!nodeMatch) return false;
 
   doFlush(state); // Flush PREVIOUS node before starting this new one
 
   state.currentNodeKind = nodeMatch[1];
   state.currentNodeId = nodeMatch[2];
+  if (nodeMatch[3]) {
+    state.currentAnnotations.push({ type: "description", value: nodeMatch[3] });
+  }
   if (trimmed.endsWith("{")) {
     state.braceDepth += 1;
     state.depthStack.push(state.braceDepth);
