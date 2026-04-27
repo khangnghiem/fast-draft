@@ -111,6 +111,19 @@ When delegating or performing broad codebase exploration, optimize for an eviden
 - Keep visual verification short and focused. Reuse an existing browser session or page when the host supports it.
 - If a browser rule must reach a secondary executor, place it directly in the verification instructions instead of relying only on a higher-level policy file.
 
+### Memory harness
+
+This repo is wired into the [agent-memory](https://github.com/khangnghiem/agent-memory) harness (`~/.config/agent-memory/`). When working in a project with `.memory/config.yml`, follow this contract.
+
+- **Read `.memory/config.yml` first.** It declares `project_id`, `canonical_doc_paths`, `scratch_dir`, and optional indices. Use the host's `agentmem repo read-config` (CLI) or `repo__read_config` (MCP) — never re-derive paths.
+- **Retrieval order**: open files → canonical docs (via `repo.search`, scoped by `canonical_doc_paths`) → per-project subtree under `~/.config/agent-memory/projects/<project_id>/` → global lessons / snippets / web → external web (last resort, `web.capture`).
+- **Use `.scratch/` as ephemeral working memory.** It is gitignored. Write freely with `agentmem repo write-scratch <path>` (stdin = body). Promote to the per-project subtree with `agentmem promote scratch_to_project_global` when worth keeping; promote to canonical docs via draft PR with `agentmem promote scratch_to_canonical`.
+- **Never bypass the promotion contract.** Writes flow upward: `.scratch/` → per-project subtree → global. Cross-repo promotions go through draft PRs in the destination repo, never direct pushes to `main`.
+- **Secret hygiene is shared.** The harness pre-commit hook rejects `sk-*`, `ghp_*`, `xoxb-*`, `AKIA*`, and 32+ char base64 in credential context. Do not stage `.env` files or tokens in either repo.
+- **Sync model**: `git pull --ff-only` at session start in `~/.config/agent-memory`; `git push` at session end. No daemons.
+
+If `.memory/config.yml` is absent, the repo has not adopted the harness — fall back to `docs/` and `openspec/` directly and do not invent paths.
+
 ### Completion checklist
 
 - Relevant build, test, lint, and format checks passed, or were skipped with a stated reason.
@@ -238,6 +251,16 @@ When adding a new browser script, follow the existing `import { chromium } from 
 - `docs/SHORTCUTS.md` — keyboard shortcuts; source of truth is `crates/fd-editor/src/shortcuts.rs`
 - `.agents/workflows/yolo.md` — full yolo pipeline (TDD → build → PR → merge → verify)
 - `.agents/workflows/` generally use dual-path format; look for `Antigravity:` and `OpenCode:` labels where present
+
+### Memory harness — Fast Draft specifics
+
+- **Project ID**: `khangnghiem__fast-draft`
+- **Config**: [`.memory/config.yml`](../../.memory/config.yml) (committed). Canonical scope = `AGENTS.md`, `docs/{ARCHITECTURE,REQUIREMENTS,LESSONS,SHORTCUTS,CHANGELOG}.md`, `docs/specs/`, `openspec/`. `web_capture_target: project`.
+- **Per-project subtree**: `~/.config/agent-memory/projects/khangnghiem__fast-draft/` (lessons, sessions, drafts, transcripts, web, attachments, inbox).
+- **CLI**: `agentmem` alias → `~/.config/agent-memory/bin/agentmem`. MCP wrapper: `~/.config/agent-memory/bin/agentmem-mcp` (stdio).
+- **Lesson routing**: prefer the per-project `lessons/` for fast-draft-internal pitfalls (bounds ownership chain, pointer-event hijack, WASM build sync). Promote to global only when the pattern generalizes.
+- **First-time setup**: see [`MEMORY_INIT.md`](../../MEMORY_INIT.md) for the project-agnostic adoption guide. The `~/.config/agent-memory/projects/khangnghiem__fast-draft/README.md` documents fast-draft-specific quirks.
+- **CI guard**: `.github/workflows/memory-scratch-guard.yml` rejects PRs that add files under `.scratch/`.
 
 ### User shortcuts
 

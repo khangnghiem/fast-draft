@@ -36,6 +36,9 @@ site/wasm/
 
 # Agent memory ephemeral scratch (.memory/config.yml IS committed)
 .scratch/
+.memory/cache/
+.gitnexus/
+.lancedb/
 
 # Environment secrets
 .env

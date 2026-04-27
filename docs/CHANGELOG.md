@@ -4,6 +4,15 @@
 
 ## [Unreleased]
 
+### Agent Memory Harness — full rollout (Phases 0–10)
+- **FEAT (Memory)**: Bootstrapped the [`agent-memory`](https://github.com/khangnghiem/agent-memory) global harness (CLI + MCP server) and wired Fast Draft as its first memory-aware project (`project_id: khangnghiem__fast-draft`).
+- **FEAT (Memory)**: Added `agentmem` CLI (`global / repo / sync / promote / web / lance` namespaces) and `agentmem-mcp` stdio wrapper exposing the same surface as `<namespace>__<tool>` MCP tools. Registered for OpenCode in `.opencode/mcp.json`.
+- **FEAT (Memory)**: `.memory/config.yml` declares canonical doc scope, `scratch_dir`, and per-project subtree path. `.scratch/`, `.memory/cache/`, `.gitnexus/`, `.lancedb/` gitignored.
+- **FEAT (Memory)**: OpenSpec capability spec at `openspec/specs/agent-memory-harness/spec.md` codifies retrieval order, promotion contract, secret hygiene, and verification matrix. `openspec/config.yaml` declares the directory-based lifecycle.
+- **FEAT (Memory)**: Agent surfaces — added "Memory harness" section to `.agents/shared/canonical.md` and Fast Draft specifics to `.agents/overrides/repo.md`. Regenerated `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`.
+- **FEAT (CI)**: `.github/workflows/memory-scratch-guard.yml` rejects PRs that add files under `.scratch/`.
+- **DOCS (Memory)**: Added R8.1–R8.4 to `docs/REQUIREMENTS.md` and root `README.md` pointer.
+
 ### v0.11.384 — Fix Ollama Cloud API (Tier 2 Fallback)
 - **FIX (AI)**: Migrated Ollama Cloud from deprecated `/api/chat` to OpenAI-compatible `/v1/chat/completions` endpoint. Old endpoint returned `200` with empty body, causing "AI returned an empty response" errors.
 - **FIX (AI)**: Updated request format from Ollama-native (`options.temperature`, `options.num_predict`) to OpenAI-standard (`temperature`, `max_tokens`).

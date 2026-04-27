@@ -1,0 +1,28 @@
+# OpenSpec configuration for fast-draft.
+#
+# OpenSpec lifecycle in this repo is directory-based (no installed CLI). Use the
+# layout here as the source of truth.
+#
+# Layout:
+#   openspec/changes/<slug>/{proposal,design,tasks}.md  - in-flight changes
+#   openspec/specs/<capability>/spec.md                 - durable capability spec
+#   openspec/changes/archive/<slug>/                    - archived (post-merge) changes
+#
+# Lifecycle:
+#   1. propose   - create openspec/changes/<slug>/{proposal,design,tasks}.md on a
+#                  topic branch.
+#   2. apply     - merge the change PR. Capability spec deltas land in
+#                  openspec/specs/<capability>/spec.md.
+#   3. archive   - move openspec/changes/<slug>/ -> openspec/changes/archive/<slug>/
+#                  in a follow-up commit; durable content lives in
+#                  openspec/specs/<capability>/spec.md and (optionally)
+#                  docs/specs/<feature>.md.
+#
+# Conventions:
+#   - One <slug> per topic branch; slugs are kebab-case.
+#   - <capability> is a stable noun (e.g., agent-memory-harness, scenegraph-core).
+#   - Archived changes are immutable history; never edit in place.
+schema: 1
+specs_dir: openspec/specs
+changes_dir: openspec/changes
+archive_dir: openspec/changes/archive
