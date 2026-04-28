@@ -40,6 +40,13 @@ site/wasm/
 .gitnexus/
 .lancedb/
 
+# Ephemeral local/debug artifacts
+tmp/
+*.pid
+__pycache__/
+*.py[cod]
+.opencode/events-*.jsonl
+
 # Environment secrets
 .env
 serve.log
