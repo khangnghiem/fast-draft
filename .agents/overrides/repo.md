@@ -36,6 +36,7 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 ### Git and secrets
 
 - Never push to `main`; use branch → PR → merge via `gh pr merge`.
+- Before branch or PR prep, run `git fetch origin main` so work starts from current `main`.
 - Branch prefixes: `feat/`, `fix/`, `refactor/`, `test/`, `docs/`.
 - Fresh clone hook setup: `git config core.hooksPath .githooks`.
 - Direct pushes to `main` are blocked by `.githooks/pre-push`.
@@ -65,6 +66,7 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 
 ### Testing and verification
 
+- Local pre-completion checklist when relevant: `cargo check --workspace`, `cargo test --workspace`, `cargo clippy --workspace -- -D warnings`, and `cargo fmt --all -- --check`.
 - Parser features: add `parse_<x>`, `emit_<x>`, and `roundtrip_<x>` coverage.
 - Canvas interaction regressions usually need browser E2E; unit tests miss much of the pointer → WASM → render path.
 - OpenCode browser flow: run `npx serve site -l 8081`, then `node tests/<script>.mjs`.
@@ -81,6 +83,7 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 - `docs/CHANGELOG.md` — recent requirement and behavior changes.
 - `docs/SHORTCUTS.md` — shortcut docs; source of truth is `crates/fd-editor/src/shortcuts.rs`.
 - `.agents/workflows/yolo.md` — full OpenCode yolo pipeline (TDD → build → PR → merge → verify).
+- Backend debugging: use `npx wrangler pages dev` or Cloudflare dashboard logs for `functions/api/ai.js`; for stuck agents see `docs/observability.md` and run `node scripts/observer-dump.mjs --stuck-only --format table`.
 
 ### Memory harness — Fast Draft specifics
 
@@ -95,5 +98,6 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 
 - `yolo <feature>` → follow `.agents/workflows/yolo.md`.
 - `smoke` → run `just smoke`.
+- Local caveman helpers: `/caveman`, `/caveman-help`, `/caveman-review`, `/caveman-commit`, `/caveman:compress <file>`.
 - `/memory-status` → inspect Fast Draft memory state without writes.
 - `/memory-sync` → push durable agent-memory changes only; never project changes.

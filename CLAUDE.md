@@ -23,6 +23,11 @@ Keep policy meaning aligned with the OpenCode and Gemini surfaces.
 - If the user writes in Vietnamese, reply in Vietnamese.
 - Keep code, identifiers, comments, and project artifacts in English unless explicitly asked otherwise.
 
+### Clean code expectations
+
+- Favor SRP, DRY, KISS, and YAGNI with semantic names and guard clauses.
+- Micro-style limits: keep functions around 30 lines or less when practical, prefer at most 3 parameters, and keep nesting to 2 levels; allow exceptions when readability or type constraints demand it.
+
 ### Change discipline
 
 - Before edits, identify affected crates, packages, modules, generated outputs, tests, and docs; update dependent surfaces together.
@@ -40,15 +45,18 @@ Keep policy meaning aligned with the OpenCode and Gemini surfaces.
 ### Rust and FD-specific rules
 
 - Parser-facing changes should normally add `parse_<x>`, `emit_<x>`, and `roundtrip_<x>` coverage.
-- Prefer explicit `Result` returns in parser/workspace code; avoid `unwrap()` on user-controlled library inputs.
+- Prefer explicit `Result` returns in parser/workspace code; parser code may use `Result<T, String>` when appropriate; avoid `unwrap()` on user-controlled library inputs.
+- Prefer borrowed `&str` over owned `String` for parser inputs/internal views when clear.
 - Keep platform-specific behavior isolated behind clear feature or target gates.
 - FD authoring: prefer semantic IDs, relational constraints over brittle coordinates, shared themes/styles, truthful `#` comments, and `spec { ... }` metadata when acceptance intent matters.
 
 ### Rendering and interaction quality
 
 - Treat visual bugs as model + layout + bounds + renderer problems; verify the layer that owns the state.
+- Keep renderer/platform-specific behavior behind clear target gates such as `#[cfg(target_arch = "wasm32")]`, and preserve `<16ms` layout/paint/sync budgets for interactive canvas paths where relevant.
 - Browser-level checks are expected for pointer, layout, resize, drag, hover, selection, and paint regressions.
 - Keep visual verification short and focused on the changed behavior.
+- Browser/agent protocol: reuse an existing browser agent/session when available and pass its reuse id; start by asking it to inspect the current page before acting, wait for user/app state instead of reloading unless requested, and keep UI checks narrowly scoped.
 
 ### Memory harness
 
@@ -105,6 +113,7 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 ### Git and secrets
 
 - Never push to `main`; use branch → PR → merge via `gh pr merge`.
+- Before branch or PR prep, run `git fetch origin main` so work starts from current `main`.
 - Branch prefixes: `feat/`, `fix/`, `refactor/`, `test/`, `docs/`.
 - Fresh clone hook setup: `git config core.hooksPath .githooks`.
 - Direct pushes to `main` are blocked by `.githooks/pre-push`.
@@ -134,6 +143,7 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 
 ### Testing and verification
 
+- Local pre-completion checklist when relevant: `cargo check --workspace`, `cargo test --workspace`, `cargo clippy --workspace -- -D warnings`, and `cargo fmt --all -- --check`.
 - Parser features: add `parse_<x>`, `emit_<x>`, and `roundtrip_<x>` coverage.
 - Canvas interaction regressions usually need browser E2E; unit tests miss much of the pointer → WASM → render path.
 - OpenCode browser flow: run `npx serve site -l 8081`, then `node tests/<script>.mjs`.
@@ -150,6 +160,7 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 - `docs/CHANGELOG.md` — recent requirement and behavior changes.
 - `docs/SHORTCUTS.md` — shortcut docs; source of truth is `crates/fd-editor/src/shortcuts.rs`.
 - `.agents/workflows/yolo.md` — full OpenCode yolo pipeline (TDD → build → PR → merge → verify).
+- Backend debugging: use `npx wrangler pages dev` or Cloudflare dashboard logs for `functions/api/ai.js`; for stuck agents see `docs/observability.md` and run `node scripts/observer-dump.mjs --stuck-only --format table`.
 
 ### Memory harness — Fast Draft specifics
 
@@ -164,5 +175,6 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 
 - `yolo <feature>` → follow `.agents/workflows/yolo.md`.
 - `smoke` → run `just smoke`.
+- Local caveman helpers: `/caveman`, `/caveman-help`, `/caveman-review`, `/caveman-commit`, `/caveman:compress <file>`.
 - `/memory-status` → inspect Fast Draft memory state without writes.
 - `/memory-sync` → push durable agent-memory changes only; never project changes.
