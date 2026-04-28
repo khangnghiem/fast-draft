@@ -3,6 +3,11 @@
 - If the user writes in Vietnamese, reply in Vietnamese.
 - Keep code, identifiers, comments, and project artifacts in English unless explicitly asked otherwise.
 
+### Clean code expectations
+
+- Favor SRP, DRY, KISS, and YAGNI with semantic names and guard clauses.
+- Micro-style limits: keep functions around 30 lines or less when practical, prefer at most 3 parameters, and keep nesting to 2 levels; allow exceptions when readability or type constraints demand it.
+
 ### Change discipline
 
 - Before edits, identify affected crates, packages, modules, generated outputs, tests, and docs; update dependent surfaces together.
@@ -20,15 +25,18 @@
 ### Rust and FD-specific rules
 
 - Parser-facing changes should normally add `parse_<x>`, `emit_<x>`, and `roundtrip_<x>` coverage.
-- Prefer explicit `Result` returns in parser/workspace code; avoid `unwrap()` on user-controlled library inputs.
+- Prefer explicit `Result` returns in parser/workspace code; parser code may use `Result<T, String>` when appropriate; avoid `unwrap()` on user-controlled library inputs.
+- Prefer borrowed `&str` over owned `String` for parser inputs/internal views when clear.
 - Keep platform-specific behavior isolated behind clear feature or target gates.
 - FD authoring: prefer semantic IDs, relational constraints over brittle coordinates, shared themes/styles, truthful `#` comments, and `spec { ... }` metadata when acceptance intent matters.
 
 ### Rendering and interaction quality
 
 - Treat visual bugs as model + layout + bounds + renderer problems; verify the layer that owns the state.
+- Keep renderer/platform-specific behavior behind clear target gates such as `#[cfg(target_arch = "wasm32")]`, and preserve `<16ms` layout/paint/sync budgets for interactive canvas paths where relevant.
 - Browser-level checks are expected for pointer, layout, resize, drag, hover, selection, and paint regressions.
 - Keep visual verification short and focused on the changed behavior.
+- Browser/agent protocol: reuse an existing browser agent/session when available and pass its reuse id; start by asking it to inspect the current page before acting, wait for user/app state instead of reloading unless requested, and keep UI checks narrowly scoped.
 
 ### Memory harness
 
