@@ -49,7 +49,7 @@ export interface SurfaceVerifyReport {
 const GENERATED_NOTICE = [
   "> [!CAUTION]",
   "> GENERATED FILE — DO NOT EDIT DIRECTLY.",
-  `> Edit \`${CANONICAL_SOURCE_PATH}\` and \`${REPO_OVERRIDE_PATH}\`, then rerun the renderer.`,
+  `> Edit \`${CANONICAL_SOURCE_PATH}\` and \`${REPO_OVERRIDE_PATH}\`, then run \`npm run render:agent-surfaces\`; verify with \`npm run verify:agent-surfaces\`.`,
 ].join("\n");
 
 const FORBIDDEN_CANONICAL_TERMS = [

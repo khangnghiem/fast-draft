@@ -4,7 +4,7 @@
 
 > [!CAUTION]
 > GENERATED FILE — DO NOT EDIT DIRECTLY.
-> Edit `.agents/shared/canonical.md` and `.agents/overrides/repo.md`, then rerun the renderer.
+> Edit `.agents/shared/canonical.md` and `.agents/overrides/repo.md`, then run `npm run render:agent-surfaces`; verify with `npm run verify:agent-surfaces`.
 
 ---
 
@@ -18,118 +18,50 @@ Keep policy meaning aligned with the Claude and Gemini surfaces.
 
 ## Shared Canonical Policy
 
-### Language and communication
+### Communication
 
 - If the user writes in Vietnamese, reply in Vietnamese.
-- Keep source code, identifiers, comments, and structured project artifacts in English unless the user explicitly asks otherwise.
+- Keep code, identifiers, comments, and project artifacts in English unless explicitly asked otherwise.
 
-### Clean code expectations
+### Change discipline
 
-- Favor SRP, DRY, KISS, and YAGNI.
-- Use semantic names that reveal intent.
-- Prefer small functions, limited argument lists, shallow nesting, and guard clauses.
-- Fix root causes instead of layering one-off patches.
-
-### Dependency-aware changes
-
-Before changing any file:
-
-1. Identify dependent crates, packages, modules, tests, and docs.
-2. Update all affected surfaces together.
-3. Never leave broken imports, trait bounds, types, or generated outputs behind.
-4. After cross-boundary changes, run the relevant validation for the impacted area.
-
-### Lessons and requirement hygiene
-
+- Before edits, identify affected crates, packages, modules, generated outputs, tests, and docs; update dependent surfaces together.
+- Use host-native file/content search first; use `rg` for shell content search.
 - Check `docs/LESSONS.md` for relevant pitfalls before implementation.
-- If you uncover a repeated pitfall, document it so the next change starts with the lesson.
-- Before adding or rewriting a requirement, search `docs/REQUIREMENTS.md`, `docs/CHANGELOG.md`, and `docs/specs/` first.
-- If an existing requirement already covers the behavior, extend it instead of duplicating it.
+- Before adding or rewriting requirements, inspect `docs/REQUIREMENTS.md`, `docs/CHANGELOG.md`, and `docs/specs/`; extend existing requirements instead of duplicating them.
+- Work on topic branches and reviewable PRs; never stage `.env`, tokens, credentials, or other secrets.
 
-### Search tool hygiene
+### Bounded exploration
 
-- Prefer the host-native content-search tool when searching file contents.
-- When shell-based content search is necessary, use `rg` instead of `grep`.
-- Use shell `grep` only when `rg` is unavailable or a specific environment constraint requires it, and state the reason briefly.
+- For broad discovery, set scope and budgets up front, search narrowly, read only high-value files, and stop when results stop narrowing.
+- Default budget: ≤12 searches, ≤8 reads, ≤4 rounds; ask before exceeding it.
+- Return evidence, confidence, files searched/read, gaps, and next queries instead of chasing exhaustive certainty.
 
-### Codebase exploration contract
-
-When delegating or performing broad codebase exploration, optimize for an evidence map rather than exhaustive discovery.
-
-- Start with a bounded prompt: scope, known target symbols or terms, search budget, file-read budget, and expected output format.
-- Default to at most 12 searches, 8 file reads, 4 search rounds, and 3 files opened per round; for explicitly large scopes use at most 18 searches, 12 file reads, 5 rounds, and 4 files per round.
-- Never exceed 24 searches, 16 file reads, or 6 rounds unless the user explicitly asks for deeper exploration.
-- A search round is one hypothesis → targeted search → rank files → read top files → evidence update cycle.
-- Search ladder: use file-pattern search once when the path family is unknown, use `rg` or the host-native content search for targeted text matches, use AST-aware search when available for structural matches, read only the highest-value files, then stop and summarize.
-- Stop early and return a partial report when two rounds add no useful evidence, queries become near-duplicates, candidate files do not narrow, results stay broad after discovery, or 75% of the search budget is gone with confidence below 0.5.
-- Treat useful negative searches as evidence; track queries already issued and do not keep reformulating the same query.
-- Do not spawn nested exploration agents unless the caller explicitly allows it; if allowed, use at most two child agents with disjoint scopes and smaller budgets.
-- Always return a structured report with status, confidence, scope assessment, budget used, primary findings with path evidence, files examined, searches performed, symbols found, unanswered questions, suggested next queries, stuck signals, and handoff notes.
-
-### Branch, review, and secret safety
-
-- Never work directly on `main`.
-- Use a topic branch and land changes through reviewable pull requests.
-- Sync from the latest `main` when branching or preparing a pull request.
-- Never stage or commit `.env` files, tokens, API keys, or other secrets.
-
-### Rust and workspace patterns
-
-| Pattern | Expectation |
-| --- | --- |
-| Error handling | Prefer explicit `Result` returns in parser and workspace code, and avoid `unwrap()` on user-controlled paths in library code. |
-| Ownership | Prefer borrowing over cloning when it keeps the code clear. |
-| Lifetimes | Let the compiler infer lifetimes unless explicit annotations improve correctness or readability. |
-| Generics | Use generics only when they add real leverage; prefer concrete types otherwise. |
-| Platform gates | Keep platform-specific behavior isolated behind clear feature or target gates. |
+### Rust and FD-specific rules
 
 - Parser-facing changes should normally add `parse_<x>`, `emit_<x>`, and `roundtrip_<x>` coverage.
-
-### FD authoring rules
-
-> [!IMPORTANT]
-> Code-oriented output should optimize for agent readability and correctness before token compression.
-
-| Rule | Guidance |
-| --- | --- |
-| Semantic IDs | Prefer intent-rich identifiers such as `@login_form` over opaque auto-numbered names. |
-| Constraints over coords | Prefer relational layout constraints over brittle pixel-only positioning when the design allows it. |
-| Accurate comments | Keep `#` comments truthful and useful; stale comments are worse than none. |
-| Theme reuse | Reuse shared theme or style definitions instead of repeating ad-hoc values. |
-| Structured intent | Use `spec { ... }` metadata when intent, status, or acceptance details matter. |
-| Clear shorthand | Short forms are fine when they stay unambiguous in context. |
+- Prefer explicit `Result` returns in parser/workspace code; avoid `unwrap()` on user-controlled library inputs.
+- Keep platform-specific behavior isolated behind clear feature or target gates.
+- FD authoring: prefer semantic IDs, relational constraints over brittle coordinates, shared themes/styles, truthful `#` comments, and `spec { ... }` metadata when acceptance intent matters.
 
 ### Rendering and interaction quality
 
-- Treat visual bugs as multi-layer problems: confirm model, layout, bounds, and renderer all agree.
-- Preserve responsive interaction and stable visual state across resize, drag, hover, and selection flows.
-- Prefer browser-level verification for pointer, layout, resize, drag, and paint regressions.
-- Keep visual verification short and focused. Reuse an existing browser session or page when the host supports it.
-- If a browser rule must reach a secondary executor, place it directly in the verification instructions instead of relying only on a higher-level policy file.
+- Treat visual bugs as model + layout + bounds + renderer problems; verify the layer that owns the state.
+- Browser-level checks are expected for pointer, layout, resize, drag, hover, selection, and paint regressions.
+- Keep visual verification short and focused on the changed behavior.
 
 ### Memory harness
 
-This repo is wired into the [agent-memory](https://github.com/khangnghiem/agent-memory) harness (`~/.config/agent-memory/`). When working in a project with `.memory/config.yml`, follow this contract.
+- If `.memory/config.yml` exists, start by running `git -C ~/.config/agent-memory pull --ff-only` and `agentmem repo read-config`; continue with local memory if the pull fails and fresh cross-machine context is not required.
+- For every new feature, bug, refactor, or investigation, search memory first with 2–4 concrete terms via `agentmem repo search` plus relevant project/global lessons.
+- Use `.scratch/` only for ephemeral notes; promote durable lessons through `agentmem promote`, never by bypassing the scratch → project/global → canonical flow.
+- `/memory-sync` is only for `~/.config/agent-memory`; keep it separate from project git operations.
+- Secret hygiene applies to both the project repo and memory repo.
 
-- **Read `.memory/config.yml` first.** It declares `project_id`, `canonical_doc_paths`, `scratch_dir`, and optional indices. Use the host's `agentmem repo read-config` (CLI) or `repo__read_config` (MCP) — never re-derive paths.
-- **Automate session-start memory retrieval.** On the first turn in an adopted repo, run `git -C ~/.config/agent-memory pull --ff-only` and `agentmem repo read-config` before planning. If the pull fails, report it and continue only with local memory unless the task requires fresh cross-machine context.
-- **Automate pre-plan memory lookup.** For every new feature, bug, refactor, or investigation prompt, extract 2–4 concrete search terms and query `agentmem repo search` plus relevant project/global lessons before proposing a plan. Keep this quiet unless the retrieved context changes the plan or reveals a warning.
-- **Retrieval order**: open files → canonical docs (via `repo.search`, scoped by `canonical_doc_paths`) → per-project subtree under `~/.config/agent-memory/projects/<project_id>/` → global lessons / snippets / web → external web (last resort, `web.capture`).
-- **Use `.scratch/` as ephemeral working memory.** It is gitignored. Write freely and silently with `agentmem repo write-scratch <path>` (stdin = body) during planning/debugging. Promote to the per-project subtree with `agentmem promote scratch_to_project_global` when worth keeping; promote to canonical docs via draft PR with `agentmem promote scratch_to_canonical`.
-- **Promotion requires judgment.** Do not automatically promote scratch notes into durable project/global/canonical memory unless the user has explicitly requested that promotion. Propose a concise promotion when a lesson is durable.
-- **Never bypass the promotion contract.** Writes flow upward: `.scratch/` → per-project subtree → global. Cross-repo promotions go through draft PRs in the destination repo, never direct pushes to `main`.
-- **Secret hygiene is shared.** The harness pre-commit hook rejects `sk-*`, `ghp_*`, `xoxb-*`, `AKIA*`, and 32+ char base64 in credential context. Do not stage `.env` files or tokens in either repo.
-- **Sync model**: memory sync is separate from project `/sync-push`. Use `/memory-sync` for `~/.config/agent-memory` only. It inspects dirty state before pulling, may auto-push clean committed-ahead memory, may commit known durable promotion outputs after scanning exact paths and staged content, and must stop for unknown dirty files or non-fast-forward state. No daemons.
+### Completion
 
-If `.memory/config.yml` is absent, the repo has not adopted the harness — fall back to `docs/` and `openspec/` directly and do not invent paths.
-
-### Completion checklist
-
-- Relevant build, test, lint, and format checks passed, or were skipped with a stated reason.
-- Tests were added or updated when behavior changed materially.
-- No broken cross-file dependencies remain.
-- No avoidable panic paths remain on user-controlled library inputs.
-- The completion report clearly states what changed and what was validated.
+- Run the relevant build, test, lint, format, or browser check for the touched area; state any skipped validation and why.
+- Report changed files, commands run, command results, and remaining risks.
 
 ---
 
@@ -146,49 +78,35 @@ If `.memory/config.yml` is absent, the repo has not adopted the harness — fall
 | Format check | `cargo fmt --all -- --check` |
 | Auto-fix fmt+lint | `just fix` |
 | Extended tests | `just extended` (nextest + proptest) |
-| Build WASM | `wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm --quiet && cp -a fd-vscode/webview/wasm/. site/wasm/` |
+| Local WASM sync | `wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm --quiet && cp -a fd-vscode/webview/wasm/. site/wasm/` |
 | VS Code TS | `cd fd-vscode && pnpm install && pnpm test` |
 | Tauri check | `cd fd-desktop/src-tauri && cargo check && cargo clippy -- -D warnings && cargo fmt -- --check` |
 | Version sync | `node scripts/bump-version.mjs` |
 
-> **No `just wasm` or `just ci` recipe exists.** WASM must be built manually with the command above. CI lives in `.github/workflows/ci.yml`.
+> **No `just wasm` or `just ci` recipe exists.** Build WASM manually. CI lives in `.github/workflows/ci.yml`.
 
-### Architecture snapshot
+### Workspace map
 
-**Rust crates** (workspace `Cargo.toml`):
+- Rust crates: `fd-core` (parser/emitter/layout/lint/format/score), `fd-editor` (SyncEngine/tools/undo/input), `fd-render` (DrawBackend/hit testing/Vello), `fd-wasm` (FdCanvas/Canvas2D/SVG/HTML export), `fd-lsp`, `fdraft` CLI.
+- Dependency flow: `fd-core → fd-editor → fd-wasm`, `fd-core → fd-render → fd-wasm`, `fd-core → fd-lsp`.
+- Frontend/tools: `site/` web playground (`app.js`, `canvas-core/`), `fd-vscode/` extension (`src/extension.ts`, `webview/`), `fd-desktop/` Tauri app, `fd-mcp/` TypeScript MCP server, `fd-shell/` stub, `crates/site/` wasm-pack output only.
 
-- `fd-core` — SceneGraph DAG (petgraph), parser (winnow), emitter, layout solver, lint, format, score
-- `fd-editor` — SyncEngine, tools, undo/redo, shortcuts, input
-- `fd-render` — DrawBackend trait, hit testing, Vello/wgpu paint (unused in WASM)
-- `fd-wasm` — WASM bridge (`FdCanvas`), Canvas2D renderer, SVG/HTML export
-- `fd-lsp` — Language Server (diagnostics, hover, completion, symbols)
-- `fdraft` — CLI binary
+### WASM build sync
 
-**Dependency flow**: `fd-core → fd-editor → fd-wasm`, `fd-core → fd-render → fd-wasm`, `fd-core → fd-lsp`
+- Local recommended flow builds `fd-vscode/webview/wasm` first, then copies to `site/wasm`; do not skip the copy or the site can serve stale WASM:
 
-**Frontend and tools**:
-
-- `site/` — web playground (vanilla JS, no framework); `app.js` is entry and `canvas-core/` is shared ES module code
-- `fd-vscode/` — VS Code extension (TypeScript); `src/extension.ts` is the host and `webview/` is the canvas UI
-- `fd-desktop/` — Tauri v2 app wrapping `site/`
-- `fd-mcp/` — MCP server (TypeScript) for AI agent integration
-- `fd-shell/` — stub only
-- `crates/site/` — wasm-pack output directory, not a Rust crate
-
-### WASM build sync rule
-
-Both output directories must stay in sync. **Never skip the copy step** or the site will serve stale WASM:
-
-```
+```sh
 wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm --quiet
 cp -a fd-vscode/webview/wasm/. site/wasm/
 ```
 
-### Git workflow specifics
+- CI workflows build directly to `site/wasm` (`wasm-pack build crates/fd-wasm --target web --out-dir ../../site/wasm`). Keep both output dirs in sync when changing local artifacts.
+
+### Git and secrets
 
 - Never push to `main`; use branch → PR → merge via `gh pr merge`.
-- Branch prefixes: `feat/`, `fix/`, `refactor/`, `test/`, `docs/`
-- Fresh clone hook setup: `git config core.hooksPath .githooks`
+- Branch prefixes: `feat/`, `fix/`, `refactor/`, `test/`, `docs/`.
+- Fresh clone hook setup: `git config core.hooksPath .githooks`.
 - Direct pushes to `main` are blocked by `.githooks/pre-push`.
 
 ### Package managers
@@ -204,11 +122,11 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 ### Key gotchas
 
 1. **`wasm-opt -O2` strips Canvas2D calls** — keep `-O1` in `crates/fd-wasm/Cargo.toml`.
-2. **Cache-bust all static assets** — every `import`, `modulepreload`, and `<script>` needs a `?v=` query string; CI replaces it with the git SHA on deploy.
+2. **Cache-bust all static assets** — every `import`, `modulepreload`, and `<script>` needs `?v=`; CI replaces it with the git SHA on deploy.
 3. **`target/` is huge** — never copy the whole project root out of a remote workspace.
-4. **Bounds ownership chain** — JS `measureText` → SyncEngine mutation → `resolve_subtree` → `resolve_layout`; never let a lower-authority source overwrite a higher one.
+4. **Bounds ownership chain** — JS `measureText` → SyncEngine mutation → `resolve_subtree` → `resolve_layout`; lower-authority sources must not overwrite higher-authority bounds.
 5. **Assigning `canvas.width` clears pixels** — repaint synchronously after resize.
-6. **Pointer-driven drag interactions on SVG or image content need `e.preventDefault()` on `pointerdown`** or the browser hijacks drag behavior.
+6. **SVG/image pointer drags need `e.preventDefault()` on `pointerdown`** or the browser hijacks dragging.
 7. **DOM is truth for current visual state; localStorage is truth for user intent** — do not swap them.
 8. **Rebuild the spatial index after bounds mutations** unless rendering is also skipped.
 9. **Hover state comes from pointer move** — do not set `hovered_id` on pointer down or up.
@@ -216,56 +134,35 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 
 ### Testing and verification
 
-- Rust parser features should get `parse_<x>`, `emit_<x>`, and `roundtrip_<x>` coverage.
-- Canvas interaction regressions usually need browser E2E; unit tests often miss the pointer → WASM → render path.
-- VS Code extension tests: `cd fd-vscode && pnpm test` (vitest)
+- Parser features: add `parse_<x>`, `emit_<x>`, and `roundtrip_<x>` coverage.
+- Canvas interaction regressions usually need browser E2E; unit tests miss much of the pointer → WASM → render path.
+- OpenCode browser flow: run `npx serve site -l 8081`, then `node tests/<script>.mjs`.
+- Existing browser scripts: `tests/check_errors.mjs`, `tests/check_drag.mjs`, `tests/check_wasm.mjs`.
+- New browser scripts should follow the existing Playwright `import { chromium } from 'playwright'` pattern; use `page.evaluate()` for assertions and `page.screenshot()` only when visual evidence matters.
+- VS Code extension tests: `cd fd-vscode && pnpm test` (vitest).
 - `fd-mcp` does not currently expose a test script.
 
-### E2E (browser) testing
+### Useful docs and workflows
 
-| Agent | Method |
-|-------|--------|
-| Antigravity | `browser_subagent` with tab reuse via `ReusedSubagentId` |
-| OpenCode | Playwright scripts in `tests/` — `npx serve site -l 8081` then `node tests/<script>.mjs` |
-
-**Existing browser scripts**: `tests/check_errors.mjs`, `tests/check_drag.mjs`, `tests/check_wasm.mjs`
-
-**Typical local browser flow**:
-
-1. `npx serve site -l 8081`
-2. `node tests/<script>.mjs`
-
-When adding a new browser script, follow the existing `import { chromium } from 'playwright'` pattern. Use `page.evaluate()` for assertions and `page.screenshot()` for visual checks.
-
-### Backend debugging
-
-- Use `npx wrangler pages dev` or the Cloudflare dashboard to inspect logs for `functions/api/ai.js`.
-- Agent stuck? See `docs/observability.md` and run `node scripts/observer-dump.mjs --stuck-only --format table`.
-
-### Docs and workflow map
-
-- `docs/LESSONS.md` — hard-won bug fixes and recurring pitfalls
-- `docs/ARCHITECTURE.md` — crate map, data flow, key types, rendering pipeline
-- `docs/REQUIREMENTS.md` — feature spec with status tags
-- `docs/SHORTCUTS.md` — keyboard shortcuts; source of truth is `crates/fd-editor/src/shortcuts.rs`
-- `.agents/workflows/yolo.md` — full yolo pipeline (TDD → build → PR → merge → verify)
-- `.agents/workflows/` generally use dual-path format; look for `Antigravity:` and `OpenCode:` labels where present
+- `docs/LESSONS.md` — recurring project pitfalls.
+- `docs/ARCHITECTURE.md` — crate map, data flow, key types, rendering pipeline.
+- `docs/REQUIREMENTS.md` — feature specs.
+- `docs/CHANGELOG.md` — recent requirement and behavior changes.
+- `docs/SHORTCUTS.md` — shortcut docs; source of truth is `crates/fd-editor/src/shortcuts.rs`.
+- `.agents/workflows/yolo.md` — full OpenCode yolo pipeline (TDD → build → PR → merge → verify).
 
 ### Memory harness — Fast Draft specifics
 
-- **Project ID**: `khangnghiem__fast-draft`
-- **Config**: [`.memory/config.yml`](../../.memory/config.yml) (committed). Canonical scope = `AGENTS.md`, `docs/{ARCHITECTURE,REQUIREMENTS,LESSONS,SHORTCUTS,CHANGELOG}.md`, `docs/specs/`, `openspec/`. `web_capture_target: project`.
-- **Per-project subtree**: `~/.config/agent-memory/projects/khangnghiem__fast-draft/` (lessons, sessions, drafts, transcripts, web, attachments, inbox).
-- **CLI**: `agentmem` alias → `~/.config/agent-memory/bin/agentmem`. MCP wrapper: `~/.config/agent-memory/bin/agentmem-mcp` (stdio).
-- **Lesson routing**: prefer the per-project `lessons/` for fast-draft-internal pitfalls (bounds ownership chain, pointer-event hijack, WASM build sync). Promote to global only when the pattern generalizes.
-- **Automatic retrieval**: at session start, pull agent-memory and read config; before planning any new feature/fix, search canonical docs and project/global lessons using task keywords.
-- **Memory commands**: `/memory-status` and `/memory-sync` are global commands installed from `~/.config/agent-memory` via `agentmem commands install`. They are not Fast Draft-local command files. `/memory-status` is read-only state inspection. `/memory-sync` syncs only `~/.config/agent-memory`; keep project `/sync-push` separate.
-- **First-time setup**: see [`MEMORY_INIT.md`](../../MEMORY_INIT.md) for the project-agnostic adoption guide. The `~/.config/agent-memory/projects/khangnghiem__fast-draft/README.md` documents fast-draft-specific quirks.
-- **CI guard**: `.github/workflows/memory-scratch-guard.yml` rejects PRs that add files under `.scratch/`.
+- Project ID: `khangnghiem__fast-draft`; config: `.memory/config.yml`; canonical scope includes `AGENTS.md`, key `docs/`, `docs/specs/`, and `openspec/`.
+- Per-project memory: `~/.config/agent-memory/projects/khangnghiem__fast-draft/`.
+- CLI: `agentmem` (`~/.config/agent-memory/bin/agentmem`); MCP wrapper: `~/.config/agent-memory/bin/agentmem-mcp`.
+- Route Fast Draft lessons (bounds ownership, pointer hijack, WASM sync) to the project lessons subtree unless they generalize.
+- `/memory-status` is read-only; `/memory-sync` syncs only `~/.config/agent-memory`, never project changes.
+- `.github/workflows/memory-scratch-guard.yml` rejects PRs that add files under `.scratch/`.
 
 ### User shortcuts
 
-- `yolo <feature>` → follow `.agents/workflows/yolo.md`
-- `smoke` → run `just smoke`
-- `/memory-status` → inspect Fast Draft memory state without writes
-- `/memory-sync` → push durable agent-memory changes only; never project changes
+- `yolo <feature>` → follow `.agents/workflows/yolo.md`.
+- `smoke` → run `just smoke`.
+- `/memory-status` → inspect Fast Draft memory state without writes.
+- `/memory-sync` → push durable agent-memory changes only; never project changes.

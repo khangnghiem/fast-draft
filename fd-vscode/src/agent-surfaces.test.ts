@@ -85,6 +85,8 @@ describe("agent surfaces", () => {
     expect(rendered).toContain("GENERATED FILE — DO NOT EDIT DIRECTLY.");
     expect(rendered).toContain(CANONICAL_SOURCE_PATH);
     expect(rendered).toContain(REPO_OVERRIDE_PATH);
+    expect(rendered).toContain("npm run render:agent-surfaces");
+    expect(rendered).toContain("npm run verify:agent-surfaces");
   });
 
   it("lints forbidden host tool names from canonical content", () => {
