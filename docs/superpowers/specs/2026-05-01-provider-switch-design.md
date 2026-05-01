@@ -98,11 +98,11 @@ oh-my-opencode-slim.json
 - librarian/explorer: `gpt-5-mini → gpt-5.4`
 
 **ollama-cloud:**
-- orchestrator: `deepseek-v4-pro → kimi-k2.6`
-- oracle: `deepseek-v4-pro → kimi-k2.6`
+- orchestrator: `deepseek-v4-pro → kimi-k2.6 → qwen3.5:397b`
+- oracle: `deepseek-v4-pro → kimi-k2.6 → qwen3.5:397b`
 - designer: `kimi-k2.6 → deepseek-v4-pro`
 - fixer: `deepseek-v4-pro → kimi-k2.6`
-- librarian/explorer: `glm-5.1`
+- librarian/explorer: `glm-5.1 → gemma4:31b`
 
 ---
 
