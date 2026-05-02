@@ -315,9 +315,16 @@ function showSpecTooltip(nodeId, clientX, clientY) {
     return;
   }
 
-  const descs = node.annotations.filter(a => a.type === "description");
-  const statuses = node.annotations.filter(a => a.type === "status");
-  const priorities = node.annotations.filter(a => a.type === "priority");
+  // ⚡ Bolt Optimization: Refactored multiple O(N) array methods into a single pass
+  // to prevent redundant iterations over node annotations.
+  const descs = [];
+  const statuses = [];
+  const priorities = [];
+  for (const a of node.annotations) {
+    if (a.type === "description") descs.push(a);
+    else if (a.type === "status") statuses.push(a);
+    else if (a.type === "priority") priorities.push(a);
+  }
 
   let html = `<div class="spec-tip-id">◇ @${escapeHtml(node.id)}</div>`;
   if (descs.length > 0) {
