@@ -1,5 +1,9 @@
 //! Completions: context-aware FD completions.
 
+use fd_core::completion::{
+    CompletionItemData, CompletionKind, compute_brace_depth, node_body_items, top_level_items,
+    value_completions_data,
+};
 use tower_lsp::lsp_types::*;
 
 /// Compute completions at the given cursor position.
@@ -20,291 +24,44 @@ pub fn compute_completions(text: &str, pos: Position) -> Vec<CompletionItem> {
         }
     }) {
         let prop = prop_part.split_whitespace().last().unwrap_or("");
-        return value_completions(prop);
+        return to_lsp_items(&value_completions_data(prop));
     }
 
     // Detect if we're inside a block or at top level
-    let depth = compute_brace_depth(text, pos);
+    let depth = compute_brace_depth(text, pos.line as usize, pos.character as usize);
 
     if depth == 0 {
-        top_level_completions()
+        to_lsp_items(&top_level_items())
     } else {
-        node_body_completions()
+        to_lsp_items(&node_body_items())
     }
 }
 
-/// Compute the brace nesting depth at the cursor position.
-fn compute_brace_depth(text: &str, pos: Position) -> usize {
-    let mut depth: i32 = 0;
-    for (i, line) in text.lines().enumerate() {
-        if i > pos.line as usize {
-            break;
-        }
-        let end = if i == pos.line as usize {
-            std::cmp::min(pos.character as usize, line.len())
-        } else {
-            line.len()
-        };
-        for ch in line[..end].chars() {
-            match ch {
-                '{' => depth += 1,
-                '}' => depth -= 1,
-                _ => {}
-            }
-        }
+fn map_kind(kind: CompletionKind) -> CompletionItemKind {
+    match kind {
+        CompletionKind::Keyword => CompletionItemKind::KEYWORD,
+        CompletionKind::Property => CompletionItemKind::PROPERTY,
+        CompletionKind::Value => CompletionItemKind::ENUM_MEMBER,
+        CompletionKind::Snippet => CompletionItemKind::SNIPPET,
+        CompletionKind::Reference => CompletionItemKind::REFERENCE,
     }
-    depth.max(0) as usize
 }
 
-/// Completions at the top level of an FD document.
-fn top_level_completions() -> Vec<CompletionItem> {
-    let keywords = [
-        (
-            "import",
-            "Import another .fd file",
-            "import \"${1:path.fd}\" as ${2:name}",
-        ),
-        (
-            "group",
-            "Group container for child nodes",
-            "group @${1:name} {\n  $0\n}",
-        ),
-        (
-            "rect",
-            "Rectangle shape",
-            "rect @${1:name} {\n  w: ${2:100} h: ${3:50}\n  fill: #${4:6C5CE7}\n}",
-        ),
-        (
-            "ellipse",
-            "Ellipse / circle shape",
-            "ellipse @${1:name} {\n  w: ${2:50} h: ${3:50}\n  fill: #${4:FF6B6B}\n}",
-        ),
-        (
-            "text",
-            "Text label",
-            "text @${1:name} \"${2:Hello}\" {\n  fill: #${3:333333}\n}",
-        ),
-        ("path", "Freeform path", "path @${1:name} {\n  $0\n}"),
-        (
-            "frame",
-            "Frame container with clip",
-            "frame @${1:name} {\n  w: ${2:300} h: ${3:200}\n  $0\n}",
-        ),
-        (
-            "style",
-            "Reusable style definition",
-            "style ${1:name} {\n  fill: #${2:6C5CE7}\n}",
-        ),
-        (
-            "edge",
-            "Edge / connection between nodes",
-            "edge @${1:name} {\n  from: @${2:source}\n  to: @${3:target}\n  arrow: end\n}",
-        ),
-    ];
-
-    keywords
-        .into_iter()
-        .map(|(label, detail, snippet)| CompletionItem {
-            label: label.to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some(detail.to_string()),
-            insert_text: Some(snippet.to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..Default::default()
-        })
-        .collect()
-}
-
-/// Completions inside a node body `{ ... }`.
-fn node_body_completions() -> Vec<CompletionItem> {
-    let props = [
-        ("w:", "Width", CompletionItemKind::PROPERTY),
-        ("h:", "Height", CompletionItemKind::PROPERTY),
-        ("fill:", "Fill color", CompletionItemKind::PROPERTY),
-        (
-            "stroke:",
-            "Stroke color and width",
-            CompletionItemKind::PROPERTY,
-        ),
-        ("corner:", "Corner radius", CompletionItemKind::PROPERTY),
-        (
-            "opacity:",
-            "Opacity (0.0–1.0)",
-            CompletionItemKind::PROPERTY,
-        ),
-        (
-            "font:",
-            "Font family, weight, size",
-            CompletionItemKind::PROPERTY,
-        ),
-        (
-            "bg:",
-            "Background with inline shadow/corner",
-            CompletionItemKind::PROPERTY,
-        ),
-        (
-            "use:",
-            "Reference a named style",
-            CompletionItemKind::REFERENCE,
-        ),
-        (
-            "layout:",
-            "Layout mode for children",
-            CompletionItemKind::PROPERTY,
-        ),
-        (
-            "shadow:",
-            "Drop shadow (ox,oy,blur,#color)",
-            CompletionItemKind::PROPERTY,
-        ),
-        (
-            "clip:",
-            "Clip children to bounds (frames)",
-            CompletionItemKind::PROPERTY,
-        ),
-        (
-            "x:",
-            "Horizontal position (parent-relative)",
-            CompletionItemKind::PROPERTY,
-        ),
-        (
-            "y:",
-            "Vertical position (parent-relative)",
-            CompletionItemKind::PROPERTY,
-        ),
-        (
-            "align:",
-            "Text alignment (left|center|right [top|middle|bottom])",
-            CompletionItemKind::PROPERTY,
-        ),
-    ];
-
-    let mut items: Vec<CompletionItem> = props
-        .into_iter()
-        .map(|(label, detail, kind)| CompletionItem {
-            label: label.to_string(),
-            kind: Some(kind),
-            detail: Some(detail.to_string()),
-            ..Default::default()
-        })
-        .collect();
-
-    // Child node snippets
-    let child_nodes = [
-        ("group", "Nested group"),
-        ("rect", "Nested rectangle"),
-        ("ellipse", "Nested ellipse"),
-        ("text", "Nested text"),
-        ("path", "Nested path"),
-        ("frame", "Nested frame"),
-    ];
-    for (label, detail) in child_nodes {
-        items.push(CompletionItem {
-            label: label.to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some(detail.to_string()),
-            ..Default::default()
-        });
-    }
-
-    // Animation block
-    items.push(CompletionItem {
-        label: "when".to_string(),
-        kind: Some(CompletionItemKind::SNIPPET),
-        detail: Some("Animation block".to_string()),
-        insert_text: Some("when :${1|hover,press,enter|} {\n  $0\n}".to_string()),
-        insert_text_format: Some(InsertTextFormat::SNIPPET),
-        ..Default::default()
-    });
-
-    // Spec block
-    items.push(CompletionItem {
-        label: "spec".to_string(),
-        kind: Some(CompletionItemKind::SNIPPET),
-        detail: Some("Structured annotation block".to_string()),
-        insert_text: Some("spec {\n  \"${1:description}\"\n}".to_string()),
-        insert_text_format: Some(InsertTextFormat::SNIPPET),
-        ..Default::default()
-    });
-
-    // Annotation shorthand
-    items.push(CompletionItem {
-        label: "##".to_string(),
-        kind: Some(CompletionItemKind::SNIPPET),
-        detail: Some("Annotation".to_string()),
-        insert_text: Some("## \"${1:description}\"".to_string()),
-        insert_text_format: Some(InsertTextFormat::SNIPPET),
-        ..Default::default()
-    });
-
+fn to_lsp_items(items: &[CompletionItemData]) -> Vec<CompletionItem> {
     items
-}
-
-/// Value completions after a property colon.
-fn value_completions(property: &str) -> Vec<CompletionItem> {
-    let values: &[(&str, &str)] = match property {
-        "layout" => &[
-            ("column", "Vertical stack layout"),
-            ("row", "Horizontal stack layout"),
-            ("grid", "Grid layout"),
-            ("free", "Free / absolute positioning"),
-        ],
-        "ease" => &[
-            ("linear", "Linear easing"),
-            ("ease_in", "Ease in"),
-            ("ease_out", "Ease out"),
-            ("ease_in_out", "Ease in-out"),
-            ("spring", "Spring physics"),
-        ],
-
-        "fill" | "background" | "color" => &[
-            ("#6C5CE7", "Purple"),
-            ("#FF6B6B", "Red-ish"),
-            ("#3B82F6", "Blue"),
-            ("#22C55E", "Green"),
-            ("#F59E0B", "Amber"),
-            ("#EC4899", "Pink"),
-            ("#333333", "Dark gray"),
-            ("#FFFFFF", "White"),
-            ("red", "Named: red"),
-            ("blue", "Named: blue"),
-            ("green", "Named: green"),
-            ("purple", "Named: purple"),
-            ("orange", "Named: orange"),
-            ("pink", "Named: pink"),
-            ("white", "Named: white"),
-            ("black", "Named: black"),
-        ],
-        "align" | "text_align" => &[
-            ("left", "Left-align text"),
-            ("center", "Center-align text"),
-            ("right", "Right-align text"),
-            ("left top", "Left + top"),
-            ("center middle", "Center + middle (default)"),
-            ("right bottom", "Right + bottom"),
-        ],
-        "clip" => &[("true", "Clip children to bounds")],
-        "arrow" => &[
-            ("none", "No arrowheads"),
-            ("start", "Arrow at start"),
-            ("end", "Arrow at end"),
-            ("both", "Arrows at both ends"),
-        ],
-        "curve" => &[
-            ("straight", "Straight line"),
-            ("smooth", "Smooth curve"),
-            ("step", "Step / orthogonal routing"),
-        ],
-        _ => return Vec::new(),
-    };
-
-    values
         .iter()
-        .map(|(label, detail)| CompletionItem {
-            label: label.to_string(),
-            kind: Some(CompletionItemKind::ENUM_MEMBER),
-            detail: Some(detail.to_string()),
-            ..Default::default()
+        .map(|item| {
+            let mut lsp_item = CompletionItem {
+                label: item.label.to_string(),
+                kind: Some(map_kind(item.kind)),
+                detail: Some(item.detail.to_string()),
+                ..Default::default()
+            };
+            if let Some(snippet) = item.snippet {
+                lsp_item.insert_text = Some(snippet.to_string());
+                lsp_item.insert_text_format = Some(InsertTextFormat::SNIPPET);
+            }
+            lsp_item
         })
         .collect()
 }
@@ -335,7 +92,7 @@ mod tests {
     #[test]
     fn brace_depth_computation() {
         let text = "rect @a {\n  group @b {\n    ";
-        assert_eq!(compute_brace_depth(text, Position::new(2, 4)), 2);
+        assert_eq!(compute_brace_depth(text, 2, 4), 2);
     }
 
     #[test]

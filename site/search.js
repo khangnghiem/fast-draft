@@ -176,29 +176,61 @@ export function initSearchPanel(api) {
       path: '✎', image: '🖼', edge: '↗', style: '🎨', generic: '◇'
     };
 
-    searchResults.innerHTML = results.map((r, idx) => {
+    searchResults.innerHTML = '';
+    results.forEach((r, idx) => {
       const icon = r.kind ? (kindIcons[r.kind] || '•') : '•';
-      const kindBadge = r.kind ? `<span class="search-result-kind">${escapeHtml(r.kind)}</span>` : '';
       const idDisplay = r.id ? '@' + r.id : (r.lineNum ? 'Line ' + r.lineNum : '—');
-      const contextDisplay = r.context ? escapeHtml(r.context) : '';
-      const lineDisplay = r.lineNum ? `L${r.lineNum}` : '';
-      const boundsAttr = r.bounds ? `data-bounds="${r.bounds.join(',')}"` : '';
-      const idAttr = r.id ? `data-id="${escapeHtml(r.id)}"` : '';
-      const offsetAttr = r.offset !== undefined ? `data-offset="${r.offset}"` : '';
-      const lineAttr = r.lineNum ? `data-line="${r.lineNum}"` : '';
 
-      return `
-        <div class="search-result-item" data-index="${idx}" ${idAttr} ${boundsAttr} ${offsetAttr} ${lineAttr}>
-          <div style="display:flex;align-items:center;gap:6px">
-            <span style="font-size:12px;opacity:0.5;width:14px;text-align:center;flex-shrink:0">${icon}</span>
-            <span class="search-result-id">${escapeHtml(idDisplay)}</span>
-            ${kindBadge}
-          </div>
-          <span class="search-result-context">${contextDisplay}</span>
-          ${lineDisplay ? `<span class="search-result-line">${lineDisplay}</span>` : ''}
-        </div>
-      `;
-    }).join('');
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'search-result-item';
+      itemDiv.dataset.index = idx;
+      if (r.id) itemDiv.dataset.id = r.id;
+      if (r.bounds) itemDiv.dataset.bounds = r.bounds.join(',');
+      if (r.offset !== undefined) itemDiv.dataset.offset = r.offset;
+      if (r.lineNum) itemDiv.dataset.line = r.lineNum;
+
+      const headerDiv = document.createElement('div');
+      headerDiv.style.display = 'flex';
+      headerDiv.style.alignItems = 'center';
+      headerDiv.style.gap = '6px';
+
+      const iconSpan = document.createElement('span');
+      iconSpan.style.fontSize = '12px';
+      iconSpan.style.opacity = '0.5';
+      iconSpan.style.width = '14px';
+      iconSpan.style.textAlign = 'center';
+      iconSpan.style.flexShrink = '0';
+      iconSpan.textContent = icon;
+      headerDiv.appendChild(iconSpan);
+
+      const idSpan = document.createElement('span');
+      idSpan.className = 'search-result-id';
+      idSpan.textContent = idDisplay;
+      headerDiv.appendChild(idSpan);
+
+      if (r.kind) {
+        const kindSpan = document.createElement('span');
+        kindSpan.className = 'search-result-kind';
+        kindSpan.textContent = r.kind;
+        headerDiv.appendChild(kindSpan);
+      }
+
+      itemDiv.appendChild(headerDiv);
+
+      const contextSpan = document.createElement('span');
+      contextSpan.className = 'search-result-context';
+      contextSpan.textContent = r.context || '';
+      itemDiv.appendChild(contextSpan);
+
+      if (r.lineNum) {
+        const lineSpan = document.createElement('span');
+        lineSpan.className = 'search-result-line';
+        lineSpan.textContent = `L${r.lineNum}`;
+        itemDiv.appendChild(lineSpan);
+      }
+
+      searchResults.appendChild(itemDiv);
+    });
 
     // Click handler for results
     searchResults.querySelectorAll('.search-result-item').forEach(item => {
