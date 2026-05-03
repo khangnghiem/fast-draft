@@ -491,11 +491,27 @@ function refreshSpecsSummary(panel) {
   html += `<div class="layers-body">`;
   for (const node of filtered) {
     const isSelected = node.id === selectedId;
-    const descriptions = node.annotations.filter(a => a.type === "description");
-    const statuses = node.annotations.filter(a => a.type === "status");
-    const priorities = node.annotations.filter(a => a.type === "priority");
-    const accepts = node.annotations.filter(a => a.type === "accept");
-    const tags = node.annotations.filter(a => a.type === "tag");
+    // ⚡ Bolt Optimization: Refactored multiple O(N) array methods into a single pass
+    // to prevent redundant iterations over node annotations.
+    const descriptions = [];
+    const statuses = [];
+    const priorities = [];
+    const accepts = [];
+    const tags = [];
+
+    for (const a of node.annotations) {
+      if (a.type === "description") {
+        descriptions.push(a);
+      } else if (a.type === "status") {
+        statuses.push(a);
+      } else if (a.type === "priority") {
+        priorities.push(a);
+      } else if (a.type === "accept") {
+        accepts.push(a);
+      } else if (a.type === "tag") {
+        tags.push(a);
+      }
+    }
 
     html += `<div class="spec-summary-card${isSelected ? ' selected' : ''}" data-spec-id="${escapeAttr(node.id)}">`;
     html += `<div class="spec-card-header">`;
@@ -588,11 +604,27 @@ function exportSpecReport(annotated) {
   md += `> Generated from FD canvas\n\n`;
 
   for (const node of annotated) {
-    const desc = node.annotations.find(a => a.type === "description");
-    const status = node.annotations.find(a => a.type === "status");
-    const priority = node.annotations.find(a => a.type === "priority");
-    const accepts = node.annotations.filter(a => a.type === "accept");
-    const tags = node.annotations.filter(a => a.type === "tag");
+    // ⚡ Bolt Optimization: Refactored multiple O(N) array methods into a single pass
+    // to prevent redundant iterations over node annotations.
+    let desc = undefined;
+    let status = undefined;
+    let priority = undefined;
+    const accepts = [];
+    const tags = [];
+
+    for (const a of node.annotations) {
+      if (a.type === "description" && !desc) {
+        desc = a;
+      } else if (a.type === "status" && !status) {
+        status = a;
+      } else if (a.type === "priority" && !priority) {
+        priority = a;
+      } else if (a.type === "accept") {
+        accepts.push(a);
+      } else if (a.type === "tag") {
+        tags.push(a);
+      }
+    }
 
     md += `## @${node.id}`;
     if (node.kind) md += ` (${node.kind})`;
