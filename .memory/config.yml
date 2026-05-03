@@ -5,7 +5,7 @@ canonical_doc_paths:
   - AGENTS.md
   - docs/ARCHITECTURE.md
   - docs/REQUIREMENTS.md
-  - docs/LESSONS.md
+  - memory/lessons.md
   - docs/SHORTCUTS.md
   - docs/CHANGELOG.md
   - docs/specs

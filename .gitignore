@@ -37,6 +37,8 @@ site/wasm/
 # Agent memory ephemeral scratch (.memory/config.yml IS committed)
 .scratch/
 .memory/cache/
+# OMEGA search index (never commit)
+.omega/
 .gitnexus/
 .lancedb/
 

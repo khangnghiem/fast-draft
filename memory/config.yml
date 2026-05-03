@@ -1,0 +1,17 @@
+# OMEGA Core configuration
+# https://omega.search.windows.net
+#
+# TODO: Install OMEGA CLI if not present:
+#   npm install -g @omega/cli    # or
+#   cargo install omega-cli
+#
+# Then initialize: omega init --config memory/config.yml
+
+schema: omega-v1
+project_id: khangnghiem__fast-draft
+source_of_truth: markdown
+index_path: .omega/
+embedding_model: all-MiniLM-L6-v2
+import_paths:
+  - memory/lessons.md
+  - memory/web/

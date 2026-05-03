@@ -162,11 +162,25 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 - `.agents/workflows/yolo.md` — full OpenCode yolo pipeline (TDD → build → PR → merge → verify).
 - Backend debugging: use `npx wrangler pages dev` or Cloudflare dashboard logs for `functions/api/ai.js`; for stuck agents see `docs/observability.md` and run `node scripts/observer-dump.mjs --stuck-only --format table`.
 
-### Memory harness — Fast Draft specifics
+### Memory Workflow — Fast Draft specifics
 
-- Project ID: `khangnghiem__fast-draft`; config: `.memory/config.yml`; canonical scope includes `AGENTS.md`, key `docs/`, `docs/specs/`, and `openspec/`.
+**Write path:**
+1. Agent writes lesson to `memory/lessons.md` (L2) or `~/.config/agent-memory/global/` (L4)
+2. `omega backup --format=markdown` exports OMEGA index to Markdown
+3. `git commit && git push` for cross-machine sync
+
+**Read path:**
+1. Session starts
+2. OMEGA imports Markdown files into SQLite index
+3. Agent queries OMEGA for semantic search
+
+**Migration:**
+- Run `./scripts/migrate-agentmem-to-omega.sh` once per machine
+- Archive old `agentmem` CLI after migration is verified
+
+**Project ID:** `khangnghiem__fast-draft`; config: `.memory/config.yml`; canonical scope includes `AGENTS.md`, key `docs/`, `docs/specs/`, and `openspec/`.
 - Per-project memory: `~/.config/agent-memory/projects/khangnghiem__fast-draft/`.
-- CLI: `agentmem` (`~/.config/agent-memory/bin/agentmem`); MCP wrapper: `~/.config/agent-memory/bin/agentmem-mcp`.
+- CLI: `omega` (replaces `agentmem`); see `memory/config.yml` for OMEGA configuration.
 - Route Fast Draft lessons (bounds ownership, pointer hijack, WASM sync) to the project lessons subtree unless they generalize.
 - `/memory-status` is read-only; `/memory-sync` syncs only `~/.config/agent-memory`, never project changes.
 - `.github/workflows/memory-scratch-guard.yml` rejects PRs that add files under `.scratch/`.
