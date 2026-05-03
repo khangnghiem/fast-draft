@@ -58,21 +58,13 @@ Keep policy meaning aligned with the Claude and Gemini surfaces.
 - Keep visual verification short and focused on the changed behavior.
 - Browser/agent protocol: reuse an existing browser agent/session when available and pass its reuse id; start by asking it to inspect the current page before acting, wait for user/app state instead of reloading unless requested, and keep UI checks narrowly scoped.
 
-### Memory Workflow
+### Memory harness
 
-**Write path:**
-1. Agent writes lesson to `memory/lessons.md` (L2) or `~/.config/agent-memory/global/` (L4)
-2. `omega backup --format=markdown` exports OMEGA index to Markdown
-3. `git commit && git push` for cross-machine sync
-
-**Read path:**
-1. Session starts
-2. OMEGA imports Markdown files into SQLite index
-3. Agent queries OMEGA for semantic search
-
-**Migration:**
-- Run `./scripts/migrate-agentmem-to-omega.sh` once per machine
-- Archive old `agentmem` CLI after migration is verified
+- If `.memory/config.yml` exists, start by running `git -C ~/.config/agent-memory pull --ff-only` and `agentmem repo read-config`; continue with local memory if the pull fails and fresh cross-machine context is not required.
+- For every new feature, bug, refactor, or investigation, search memory first with 2–4 concrete terms via `agentmem repo search` plus relevant project/global lessons.
+- Use `.scratch/` only for ephemeral notes; promote durable lessons through `agentmem promote`, never by bypassing the scratch → project/global → canonical flow.
+- `/memory-sync` is only for `~/.config/agent-memory`; keep it separate from project git operations.
+- Secret hygiene applies to both the project repo and memory repo.
 
 ### Completion
 
@@ -169,6 +161,29 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 - `docs/SHORTCUTS.md` — shortcut docs; source of truth is `crates/fd-editor/src/shortcuts.rs`.
 - `.agents/workflows/yolo.md` — full OpenCode yolo pipeline (TDD → build → PR → merge → verify).
 - Backend debugging: use `npx wrangler pages dev` or Cloudflare dashboard logs for `functions/api/ai.js`; for stuck agents see `docs/observability.md` and run `node scripts/observer-dump.mjs --stuck-only --format table`.
+
+### Memory Workflow — Fast Draft specifics
+
+**Write path:**
+1. Agent writes lesson to `memory/lessons.md` (L2) or `~/.config/agent-memory/global/` (L4)
+2. `omega backup --format=markdown` exports OMEGA index to Markdown
+3. `git commit && git push` for cross-machine sync
+
+**Read path:**
+1. Session starts
+2. OMEGA imports Markdown files into SQLite index
+3. Agent queries OMEGA for semantic search
+
+**Migration:**
+- Run `./scripts/migrate-agentmem-to-omega.sh` once per machine
+- Archive old `agentmem` CLI after migration is verified
+
+**Project ID:** `khangnghiem__fast-draft`; config: `.memory/config.yml`; canonical scope includes `AGENTS.md`, key `docs/`, `docs/specs/`, and `openspec/`.
+- Per-project memory: `~/.config/agent-memory/projects/khangnghiem__fast-draft/`.
+- CLI: `omega` (replaces `agentmem`); see `memory/config.yml` for OMEGA configuration.
+- Route Fast Draft lessons (bounds ownership, pointer hijack, WASM sync) to the project lessons subtree unless they generalize.
+- `/memory-status` is read-only; `/memory-sync` syncs only `~/.config/agent-memory`, never project changes.
+- `.github/workflows/memory-scratch-guard.yml` rejects PRs that add files under `.scratch/`.
 
 ### User shortcuts
 
