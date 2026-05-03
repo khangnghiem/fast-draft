@@ -8,3 +8,6 @@
 ## 2024-05-24 - [Avoid O(N^2) Vector Membership Checks in Layout]
 **Learning:** Using `!flow_children.contains(&child_idx)` within a loop over all children in `Column`, `Row`, and `Grid` layout algorithms (`crates/fd-core/src/layout.rs`) introduces an O(N^2) complexity.
 **Action:** Replace `Vec::contains()` in loops by doing a single pass over the collection to partition it into separate vectors (e.g., `flow_children` and `abs_children`) using `.push()`, eliminating the bottleneck while preserving order.
+## 2024-05-15 - Fast Draft Completion Optimization Retrospective
+**Learning:** In Rust string processing, optimizing `text.lines()` by eagerly collecting it into a `Vec<&str>` (`text.lines().collect()`) causes a significant performance and memory regression. The original lazy iteration `text.lines().nth(...)` is O(pos.line) and zero-allocation, whereas `.collect()` is O(Total Document Lines) and allocates memory.
+**Action:** Do not collect iterators prematurely. Always prefer using lazy iterator combinations (`nth`, `take`, `find`) in Rust to avoid unnecessary allocations, especially when parsing large text documents on every keystroke.
