@@ -1,8 +1,5 @@
 # Lessons Learned
 
-> **Deprecated:** Project lessons have moved to [`memory/lessons.md`](../memory/lessons.md).
-> This file is kept for historical reference but is no longer the canonical source.
-
 Engineering lessons discovered through building FD.
 
 <!-- KEYWORD INDEX — rg these keywords to find relevant sections:
