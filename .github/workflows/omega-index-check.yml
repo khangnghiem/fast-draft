@@ -1,0 +1,40 @@
+name: omega-index-check
+
+# Verify OMEGA semantic search index is fresh after memory changes.
+# OMEGA index lives in .omega/ (gitignored); memory/ Markdown files are the source of truth.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'memory/**'
+      - 'memory/config.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'memory/**'
+      - 'memory/config.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify memory config exists
+        run: |
+          set -euo pipefail
+          if [ ! -f memory/config.yml ]; then
+            echo "::error::memory/config.yml not found — cannot verify OMEGA index."
+            exit 1
+          fi
+          echo "OK: memory/config.yml exists."
+
+      - name: Check OMEGA index freshness
+        run: |
+          set -euo pipefail
+          # v1 placeholder: omega CLI is not yet available in CI.
+          # Replace this block with `omega verify` once the CLI is shipped.
+          echo "::warning::omega verify is not yet integrated in CI (v1 placeholder)."
+          echo "Run `omega verify` locally before pushing memory changes."
+          # TODO: integrate `omega verify` when omega CLI is available in CI
