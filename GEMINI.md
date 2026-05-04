@@ -40,6 +40,14 @@ Keep policy meaning aligned with the OpenCode and Claude surfaces.
 - Before adding or rewriting requirements, inspect `docs/REQUIREMENTS.md`, `docs/CHANGELOG.md`, and `docs/specs/`; extend existing requirements instead of duplicating them.
 - Work on topic branches and reviewable PRs; never stage `.env`, tokens, credentials, or other secrets.
 
+### Security
+
+- **Never commit secrets.** No API keys, tokens, passwords, credentials, or `.env` files. Reference env var names only.
+- **No personal usernames in public configs.** Use neutral project IDs like `fast-draft`, not `khangnghiem__fast-draft`. Use `$AGENT_MEMORY_PATH` env var, not hardcoded `~/.config/agent-memory/`.
+- **Scan before commit.** Before any PR, verify no secrets leaked via `scripts/check-secrets.sh` or manual review.
+- **No internal paths in public scripts.** Local system paths belong in env vars or private config, not committed code.
+- **Generated surfaces must be regenerated from source.** Never edit `AGENTS.md`, `CLAUDE.md`, or `GEMINI.md` directly. Update `.agents/shared/canonical.md` or `.agents/overrides/repo.md`, then run `pnpm run render:agent-surfaces`.
+
 ### Bounded exploration
 
 - For broad discovery, set scope and budgets up front, search narrowly, read only high-value files, and stop when results stop narrowing.
