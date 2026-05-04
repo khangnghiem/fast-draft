@@ -8,7 +8,7 @@
 # Then initialize: omega init --config memory/config.yml
 
 schema: omega-v1
-project_id: khangnghiem__fast-draft
+project_id: fast-draft
 source_of_truth: markdown
 index_path: .omega/
 embedding_model: all-MiniLM-L6-v2

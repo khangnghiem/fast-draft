@@ -101,8 +101,8 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 - Run `./scripts/migrate-agentmem-to-omega.sh` once per machine
 - Archive old `agentmem` CLI after migration is verified
 
-**Project ID:** `khangnghiem__fast-draft`; config: `.memory/config.yml`; canonical scope includes `AGENTS.md`, key `docs/`, `docs/specs/`, and `openspec/`.
-- Per-project memory: `~/.config/agent-memory/projects/khangnghiem__fast-draft/`.
+**Project ID:** `fast-draft`; config: `.memory/config.yml`; canonical scope includes `AGENTS.md`, key `docs/`, `docs/specs/`, and `openspec/`.
+- Per-project memory: `~/.config/agent-memory/projects/fast-draft/`.
 - CLI: `omega` (replaces `agentmem`); see `memory/config.yml` for OMEGA configuration.
 - Route Fast Draft lessons (bounds ownership, pointer hijack, WASM sync) to the project lessons subtree unless they generalize.
 - `/memory-status` is read-only; `/memory-sync` syncs only `~/.config/agent-memory`, never project changes.

@@ -7,8 +7,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-AGENTMEM_BASE="$HOME/.config/agent-memory"
-PROJECT_PATH="$AGENTMEM_BASE/projects/khangnghiem__fast-draft"
+AGENTMEM_BASE="${AGENT_MEMORY_PATH:-$HOME/.config/agent-memory}"
+PROJECT_PATH="$AGENTMEM_BASE/projects/fast-draft"
 GLOBAL_LESSONS="$AGENTMEM_BASE/lessons"
 OMEGA_MEMORY="$PROJECT_ROOT/memory"
 
@@ -96,7 +96,7 @@ echo ""
 echo "[3/4] Verifying OMEGA configuration..."
 if [ -f "$OMEGA_MEMORY/config.yml" ]; then
     echo "      OMEGA config found at: $OMEGA_MEMORY/config.yml"
-    echo "      Project ID: khangnghiem__fast-draft"
+    echo "      Project ID: fast-draft"
 else
     echo "      [WARN] OMEGA config not found at: $OMEGA_MEMORY/config.yml"
 fi
