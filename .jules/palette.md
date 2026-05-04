@@ -1,3 +1,3 @@
-## 2024-05-24 - Missing ARIA Labels on Spatial Controls
-**Learning:** The text alignment grid uses 9 identical `span` dots, relying purely on their visual 3x3 layout to convey meaning (e.g. top-left vs center). Screen readers announce them all as identical empty buttons.
-**Action:** Always add descriptive `aria-label` attributes (e.g. "Align Top Left") to controls where meaning is derived purely from visual positioning or layout.
+## 2024-05-02 - Icon-Only Button Accessibility
+**Learning:** Found a widespread pattern in `site/index.html` where numerous icon-only buttons (like modals closes, chat actions, floating bar controls) lacked `aria-label`s. This is a common accessibility gap in web apps relying heavily on SVG icons.
+**Action:** Always verify icon-only buttons (`<button><svg/></button>` or `<button>✕</button>`) have explicit `aria-label` attributes to ensure screen reader users understand their function.
