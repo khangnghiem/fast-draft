@@ -423,12 +423,12 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 
 ### R8.2 — agentmem CLI + MCP discovery _(done)_
 
-- `agentmem` CLI (`~/.config/agent-memory/bin/agentmem`) exposes `global / repo / sync / promote / web / lance` namespaces.
+- `agentmem` CLI (`~/.config/memory/bin/agentmem`) exposes `global / repo / sync / promote / web / lance` namespaces.
 - `agentmem-mcp` stdio MCP wrapper exposes the same operations as `<namespace>__<tool>` tools, registered for OpenCode in [`.opencode/mcp.json`](../.opencode/mcp.json).
 
 ### R8.3 — Promotion contract _(done)_
 
-- `.scratch/` → `~/.config/agent-memory/projects/khangnghiem__fast-draft/<bucket>/` via `agentmem promote scratch-to-project-global`.
+- `.scratch/` → `~/.config/memory/projects/khangnghiem__fast-draft/<bucket>/` via `agentmem promote scratch-to-project-global`.
 - Project lessons → global lessons via draft PR (`agentmem promote lesson-to-global`).
 - `.scratch/` → `docs/` via draft PR (`agentmem promote scratch-to-canonical`). All cross-repo promotions go through PRs in the destination repo.
 
@@ -439,8 +439,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 ### R8.5 — Automatic retrieval and dedicated memory commands _(done)_
 
 - Agents automatically pull/read memory config at session start and consult canonical/project/global memory before planning new feature, bug, refactor, or investigation work.
-- `/memory-status` reports memory readiness without writes; its global OpenCode/Claude command templates are sourced from `~/.config/agent-memory` and installed with `agentmem commands install`.
-- `/memory-sync` synchronizes only `~/.config/agent-memory`; its global OpenCode/Claude command templates are sourced from `~/.config/agent-memory` and installed with `agentmem commands install`. Project `/sync-push` remains project-scoped and never implicitly pushes memory.
+- `/memory-status` reports memory readiness without writes; its global OpenCode/Claude command templates are sourced from `~/.config/memory` and installed with `agentmem commands install`.
+- `/memory-sync` synchronizes only `~/.config/memory`; its global OpenCode/Claude command templates are sourced from `~/.config/memory` and installed with `agentmem commands install`. Project `/sync-push` remains project-scoped and never implicitly pushes memory.
 - Durable promotions require judgment/confirmation; raw `.scratch/` is never synced directly.
 
 ## Future Requirements (Deferred)

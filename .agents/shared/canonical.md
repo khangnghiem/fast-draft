@@ -19,7 +19,7 @@
 ### Security
 
 - **Never commit secrets.** No API keys, tokens, passwords, credentials, or `.env` files. Reference env var names only.
-- **No personal usernames in public configs.** Use neutral project IDs like `fast-draft`, not `khangnghiem__fast-draft`. Use `$AGENT_MEMORY_PATH` env var, not hardcoded `~/.config/agent-memory/`.
+- **No personal usernames in public configs.** Use neutral project IDs like `fast-draft`, not `khangnghiem__fast-draft`. Use `$AGENT_MEMORY_PATH` env var, not hardcoded `~/.config/memory/`.
 - **Scan before commit.** Before any PR, verify no secrets leaked via `scripts/check-secrets.sh` or manual review.
 - **No internal paths in public scripts.** Local system paths belong in env vars or private config, not committed code.
 - **Generated surfaces must be regenerated from source.** Never edit `AGENTS.md`, `CLAUDE.md`, or `GEMINI.md` directly. Update `.agents/shared/canonical.md` or `.agents/overrides/repo.md`, then run `pnpm run render:agent-surfaces`.
@@ -48,10 +48,10 @@
 
 ### Memory harness
 
-- If `.memory/config.yml` exists, start by running `git -C ~/.config/agent-memory pull --ff-only` and `agentmem repo read-config`; continue with local memory if the pull fails and fresh cross-machine context is not required.
+- If `.memory/config.yml` exists, start by running `git -C ~/.config/memory pull --ff-only` and `agentmem repo read-config`; continue with local memory if the pull fails and fresh cross-machine context is not required.
 - For every new feature, bug, refactor, or investigation, search memory first with 2–4 concrete terms via `agentmem repo search` plus relevant project/global lessons.
 - Use `.scratch/` only for ephemeral notes; promote durable lessons through `agentmem promote`, never by bypassing the scratch → project/global → canonical flow.
-- `/memory-sync` is only for `~/.config/agent-memory`; keep it separate from project git operations.
+- `/memory-sync` is only for `~/.config/memory`; keep it separate from project git operations.
 - Secret hygiene applies to both the project repo and memory repo.
 
 ### Completion

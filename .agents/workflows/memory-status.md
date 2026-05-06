@@ -15,7 +15,7 @@ $ARGUMENTS
    - Report `project_id`, `scratch_dir`, `canonical_doc_paths`, and resolved `projectSubtree`.
 
 2. **Check memory repository state**
-   - Run `git -C ~/.config/agent-memory status -sb`.
+   - Run `git -C ~/.config/memory status -sb`.
    - Report whether memory is clean, ahead/behind, or dirty.
    - Do not pull, commit, or push from this command unless the user explicitly upgrades to `/memory-sync`.
 
