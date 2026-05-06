@@ -12,4 +12,4 @@ canonical_doc_paths:
   - openspec
 openspec_dir: openspec
 web_capture_target: project
-agent_memory_path: ~/.config/agent-memory
+memory_path: ~/.config/memory

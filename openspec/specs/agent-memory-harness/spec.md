@@ -11,8 +11,8 @@ Give AI coding agents in this repo durable, multi-machine memory and a clean
 contract for routing reads and writes between:
 
 - the project repo (canonical docs, ephemeral `.scratch/`),
-- the global harness at `~/.config/agent-memory/` (cross-project lessons,
-  per-project subtree at `projects/khangnghiem__fast-draft/`).
+- the global harness at `~/.config/memory/` (cross-project lessons,
+   per-project subtree at `projects/khangnghiem__fast-draft/`).
 
 ## Components
 
@@ -20,19 +20,19 @@ contract for routing reads and writes between:
 
 | Path | Tracked? | Role |
 | --- | --- | --- |
-| `.memory/config.yml` | yes | Schema-v1 declaration: `project_id`, canonical doc paths, scratch dir, optional `lancedb_path` / `gitnexus_path`, `web_capture_target`, `agent_memory_path`. |
-| `.scratch/` | no (gitignored) | Ephemeral agent working memory. Promoted to the agent-memory subtree when worth keeping. |
+| `.memory/config.yml` | yes | Schema-v1 declaration: `project_id`, canonical doc paths, scratch dir, optional `lancedb_path` / `gitnexus_path`, `web_capture_target`, `memory_path`. |
+| `.scratch/` | no (gitignored) | Ephemeral agent working memory. Promoted to the memory subtree when worth keeping. |
 | `.memory/cache/`, `.gitnexus/`, `.lancedb/` | no (gitignored) | Per-machine indices; never committed. |
 
 ### 2. Global harness contract
 
-Lives at `~/.config/agent-memory/` (repo: `khangnghiem/agent-memory`).
+Lives at `~/.config/memory/` (repo: `khangnghiem/memory`).
 
 | Subtree | Role |
 | --- | --- |
 | `lessons/`, `snippets/`, `web/`, `inbox/` | Cross-project durable knowledge. |
 | `projects/khangnghiem__fast-draft/` | This repo's per-project subtree: `README.md`, `lessons/`, `sessions/`, `drafts/`, `transcripts/`, `web/`, `attachments/`, `inbox/`. |
-| `cli/` | `agentmem` CLI (TypeScript, run via tsx). |
+| `cli/` | `mem` CLI (TypeScript, run via tsx). |
 | `mcp-server/` | Stdio MCP wrapper exposing the CLI library as `<namespace>__<tool>` MCP tools. |
 | `scripts/check-secrets.sh` | Pre-commit secret scanner. |
 
@@ -43,7 +43,7 @@ Namespaced. Both the CLI and the MCP wrapper expose the same operations:
 - `global.*` — `read_lesson`, `list_lessons`, `read_snippet`, `read_preferences`, `write_preferences`, `write_draft`, `write_project_session`, `read_project_readme`, `search`.
 - `repo.*` — `read_config`, `read_canonical`, `read_scratch`, `write_scratch`, `search`, `openspec_status`, `openspec_propose`, `openspec_apply`, `openspec_archive`.
 - `sync.*` — `status`, `pull` (`--ff-only`), `push`, scoped `global` | `project` | `both`.
-- `promote.*` — `scratch_to_canonical` (opens draft PR), `scratch_to_project_global` (commits in agent-memory only), `lesson_to_global` (opens draft PR).
+- `promote.*` — `scratch_to_canonical` (opens draft PR), `scratch_to_project_global` (commits in memory only), `lesson_to_global` (opens draft PR).
 - `web.*` — `capture` via webfetch fallback (Tavily MCP deferred).
 - `lance.*` — stubs returning `{status: "NOT_ENABLED"}` until `lancedb_path` is set.
 
@@ -61,8 +61,8 @@ soon as the question is answered:
 ### Automatic retrieval triggers
 
 - **Session start**: if `.memory/config.yml` exists, agents SHOULD run
-  `git -C ~/.config/agent-memory pull --ff-only` followed by
-  `agentmem repo read-config` before planning work.
+  `git -C ~/.config/memory pull --ff-only` followed by
+  `mem repo read-config` before planning work.
 - **New feature / bug / refactor prompt**: agents SHOULD extract task keywords
   and run canonical `repo.search` plus relevant project/global lesson lookups
   before proposing a plan.
@@ -74,8 +74,8 @@ soon as the question is answered:
 Writes flow strictly upward, never sideways:
 
 ```
-.scratch/  ->  agent-memory/projects/<id>/<bucket>/   (promote.scratch_to_project_global)
-agent-memory/projects/<id>/lessons/<file>  ->  agent-memory/lessons/<file>   (promote.lesson_to_global, draft PR)
+.scratch/  ->  memory/projects/<id>/<bucket>/   (promote.scratch_to_project_global)
+memory/projects/<id>/lessons/<file>  ->  memory/lessons/<file>   (promote.lesson_to_global, draft PR)
 .scratch/<file>  ->  docs/<canonical>/<file>   (promote.scratch_to_canonical, draft PR)
 ```
 
@@ -84,7 +84,7 @@ never direct pushes to `main`.
 
 ## Secret hygiene
 
-- Pre-commit hook in `agent-memory` runs `scripts/check-secrets.sh` on staged
+- Pre-commit hook in `memory` runs `scripts/check-secrets.sh` on staged
   blobs and rejects on `sk-*`, `ghp_*`, `xoxb-*`, `AKIA*`, and 32+ char
   base64-in-credential-context.
 - Fast-draft adopts the same scanner via the `.githooks/pre-commit` chain.
@@ -94,20 +94,20 @@ never direct pushes to `main`.
 
 - No daemons. `git pull --ff-only` at session start; memory pushes happen via
   explicit memory sync, not project `/sync-push`.
-- The agent-memory repo lives on `main`; project-subtree commits land directly.
+- The memory repo lives on `main`; project-subtree commits land directly.
 - Fast-draft uses topic branches and PRs (no direct pushes to `main`).
 
 ### Memory commands
 
 Global `/memory-status` and `/memory-sync` command templates live in
-`~/.config/agent-memory` and are installed into agent-specific global command
-directories with `agentmem commands install`. Adopted project repos document the
+`~/.config/memory` and are installed into agent-specific global command
+directories with `mem commands install`. Adopted project repos document the
 policy, but do not need project-local command copies.
 
 - `/memory-status` is read-only: parse `.memory/config.yml`, inspect
-  `~/.config/agent-memory` git status, summarize scratch/project/global memory,
+  `~/.config/memory` git status, summarize scratch/project/global memory,
   and recommend next action.
-- `/memory-sync` operates only on `~/.config/agent-memory`: inspect dirty state
+- `/memory-sync` operates only on `~/.config/memory`: inspect dirty state
   before pulling, commit known durable promotion outputs only after scanning exact
   candidate paths and staged content with `scripts/check-secrets.sh`, pull
   `--ff-only` from a clean worktree, push committed-ahead memory automatically,
@@ -119,8 +119,8 @@ policy, but do not need project-local command copies.
 
 | Aspect | Verifier |
 | --- | --- |
-| Config parses | `agentmem repo read-config` exits 0 and prints resolved paths. |
-| Scratch round-trip | `agentmem repo write-scratch <p>` then `agentmem repo read-scratch <p>` returns body. |
-| Canonical search scope | `agentmem repo search <q>` only hits paths in `canonical_doc_paths`. |
-| MCP discovery | `agentmem-mcp` over stdio responds to `tools/list` with all `<ns>__<tool>` IDs. |
+| Config parses | `mem repo read-config` exits 0 and prints resolved paths. |
+| Scratch round-trip | `mem repo write-scratch <p>` then `mem repo read-scratch <p>` returns body. |
+| Canonical search scope | `mem repo search <q>` only hits paths in `canonical_doc_paths`. |
+| MCP discovery | `mem-mcp` over stdio responds to `tools/list` with all `<ns>__<tool>` IDs. |
 | `.scratch/` not staged | CI workflow `memory-scratch-guard` rejects PRs adding `.scratch/**`. |
