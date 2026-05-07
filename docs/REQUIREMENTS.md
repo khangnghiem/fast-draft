@@ -419,28 +419,28 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full crate map, dependency graph, dat
 ### R8.1 — Memory-aware repo configuration _(done)_
 
 - `.memory/config.yml` (committed) declares `project_id: khangnghiem__fast-draft`, canonical doc paths (`AGENTS.md`, `docs/{ARCHITECTURE,REQUIREMENTS,LESSONS,SHORTCUTS,CHANGELOG}.md`, `docs/specs/`, `openspec/`), `scratch_dir: .scratch`, and `web_capture_target: project`.
-- `.scratch/`, `.memory/cache/`, `.gitnexus/`, `.lancedb/` are gitignored — ephemeral or per-machine state never lands in `main`.
+- `.scratch/`, `.memory/*` (except `.memory/config.yml`), `.lancedb/` are gitignored — ephemeral or per-machine state never lands in `main`.
 
-### R8.2 — agentmem CLI + MCP discovery _(done)_
+### R8.2 — mem CLI + MCP discovery _(done)_
 
-- `agentmem` CLI (`~/.config/agent-memory/bin/agentmem`) exposes `global / repo / sync / promote / web / lance` namespaces.
-- `agentmem-mcp` stdio MCP wrapper exposes the same operations as `<namespace>__<tool>` tools, registered for OpenCode in [`.opencode/mcp.json`](../.opencode/mcp.json).
+- `mem` CLI (`~/.config/memory/bin/mem`) exposes `global / repo / sync / promote / web / lance` namespaces.
+- `mem-mcp` stdio MCP wrapper exposes the same operations as `<namespace>__<tool>` tools, registered for OpenCode in [`.opencode/mcp.json`](../.opencode/mcp.json).
 
 ### R8.3 — Promotion contract _(done)_
 
-- `.scratch/` → `~/.config/agent-memory/projects/khangnghiem__fast-draft/<bucket>/` via `agentmem promote scratch-to-project-global`.
-- Project lessons → global lessons via draft PR (`agentmem promote lesson-to-global`).
-- `.scratch/` → `docs/` via draft PR (`agentmem promote scratch-to-canonical`). All cross-repo promotions go through PRs in the destination repo.
+- `.scratch/` → `~/.config/memory/projects/khangnghiem__fast-draft/<bucket>/` via `mem promote scratch-to-project-global`.
+- Project lessons → global lessons via draft PR (`mem promote lesson-to-global`).
+- `.scratch/` → `docs/` via draft PR (`mem promote scratch-to-canonical`). All cross-repo promotions go through PRs in the destination repo.
 
 ### R8.4 — CI guard _(done)_
 
-- [`.github/workflows/memory-scratch-guard.yml`](../.github/workflows/memory-scratch-guard.yml) rejects any PR that adds files under `.scratch/`.
+- [`.github/workflows/memory-scratch-guard.yml`](../.github/workflows/memory-scratch-guard.yml) rejects any PR that adds files under `.scratch/` or `.memory/` (other than `.memory/config.yml`).
 
 ### R8.5 — Automatic retrieval and dedicated memory commands _(done)_
 
 - Agents automatically pull/read memory config at session start and consult canonical/project/global memory before planning new feature, bug, refactor, or investigation work.
-- `/memory-status` reports memory readiness without writes; its global OpenCode/Claude command templates are sourced from `~/.config/agent-memory` and installed with `agentmem commands install`.
-- `/memory-sync` synchronizes only `~/.config/agent-memory`; its global OpenCode/Claude command templates are sourced from `~/.config/agent-memory` and installed with `agentmem commands install`. Project `/sync-push` remains project-scoped and never implicitly pushes memory.
+- `/memory-status` reports memory readiness without writes; its global OpenCode/Claude command templates are sourced from `~/.config/memory` and installed with `mem commands install`.
+- `/memory-sync` synchronizes only `~/.config/memory`; its global OpenCode/Claude command templates are sourced from `~/.config/memory` and installed with `mem commands install`. Project `/sync-push` remains project-scoped and never implicitly pushes memory.
 - Durable promotions require judgment/confirmation; raw `.scratch/` is never synced directly.
 
 ## Future Requirements (Deferred)

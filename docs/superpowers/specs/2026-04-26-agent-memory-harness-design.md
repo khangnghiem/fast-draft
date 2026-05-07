@@ -24,11 +24,11 @@ audit) drove the locked architecture below.
 - **Project repo** (this repo, public): hosts canonical docs, OpenSpec changes,
   `.memory/config.yml`, and a gitignored `.scratch/` directory for local
   ephemeral notes.
-- **`agent-memory` repo** (private, cloned to `~/.config/agent-memory/`): hosts
+- **`memory` repo** (private, cloned to `~/.config/memory/`): hosts
   global content at root and per-project content under `projects/<owner>__<repo>/`.
 - **No third `<project>.notes` repo.** Rejected because Fast Draft is public so
   privacy via gitignore beats privacy via separate repo, and project-scoped
-  cross-machine content fits cleanly under `agent-memory/projects/<id>/`.
+  cross-machine content fits cleanly under `memory/projects/<id>/`.
 
 ### Layer cake
 
@@ -38,8 +38,8 @@ audit) drove the locked architecture below.
 | L1 project local scratch | `.scratch/` (gitignored, local-only) |
 | L2 project canonical | Project repo `docs/`, `openspec/`, `.memory/` |
 | L3 code intelligence | `.gitnexus/`, `.lancedb/`, `.memory/cache/` (gitignored) |
-| L4 global memory | `agent-memory` repo (global root + `projects/<id>/`) |
-| L5 web cache | `agent-memory/web/` or `agent-memory/projects/<id>/web/` |
+| L4 global memory | `memory` repo (global root + `projects/<id>/`) |
+| L5 web cache | `memory/web/` or `memory/projects/<id>/web/` |
 
 ### Storage and search
 
@@ -52,11 +52,11 @@ audit) drove the locked architecture below.
 
 ### Tooling
 
-- `agentmem` CLI vendored in `agent-memory/cli/` (TypeScript, run via
+- `mem` CLI vendored in `memory/cli/` (TypeScript, run via
   `npx tsx`). Source of truth.
-- MCP wrapper in `agent-memory/mcp-server/` imports CLI library functions
+- MCP wrapper in `memory/mcp-server/` imports CLI library functions
   directly.
-- Distribution: shell alias `agentmem` in `~/.zshrc`. No npm publish.
+- Distribution: shell alias `mem` in `~/.zshrc`. No npm publish.
 - Tool namespaces: `global.*`, `repo.*`, `sync.*`, `promote.*`, `web.*`,
   `lance.*`. No `spec.*` (OpenSpec ops fold under `repo.*`).
 
@@ -89,7 +89,7 @@ audit) drove the locked architecture below.
 
 - Secrets in `~/.zshrc.secrets` (gitignored, sourced from `~/.zshrc`).
 - Agents reference env var names only.
-- Pre-commit secret scanner in `agent-memory/scripts/check-secrets.sh`.
+- Pre-commit secret scanner in `memory/scripts/check-secrets.sh`.
 
 ## Priority order
 

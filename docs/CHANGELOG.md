@@ -4,13 +4,19 @@
 
 ## [Unreleased]
 
+### Agent Memory Harness — pre-multi-machine-sync hardening
+- **FIX (Memory)**: Removed vestigial `gitnexus_path` config field and `.gitnexus/` references across `MEMORY_INIT.md`, `.gitignore`, and current `openspec/specs/agent-memory-harness/spec.md`. GitNexus was never implemented and carries a PolyForm Noncommercial license risk we don't need. Archived openspec docs left as historical record.
+- **FIX (Memory)**: Hardened `.gitignore` from `.memory/cache/` to `.memory/*` with `!.memory/config.yml` allow-list, so any agent-created subdir under `.memory/` (lessons, sessions, etc.) is automatically ignored.
+- **FIX (CI)**: Expanded `.github/workflows/memory-scratch-guard.yml` to reject PRs adding files under `.memory/` (other than `.memory/config.yml`) in addition to the existing `.scratch/` guard.
+- **FIX (Memory)**: Updated `MEMORY_INIT.md` shell alias from stale `npx tsx ~/.config/memory/cli/index.ts` to canonical `$MEM_HOME/bin/mem` and pointed installers at `bash $MEM_HOME/scripts/install.sh` for one-shot bootstrap (npm install + pre-commit hook wiring).
+
 ### Agent Memory Harness — automation commands
-- **FEAT (Memory)**: Added `/memory-status` (read-only memory readiness) and `/memory-sync` (durable agent-memory sync only) policy surfaces; global OpenCode/Claude command templates now live in `agent-memory` and install via `agentmem commands install`.
-- **DOCS (Memory)**: Codified automatic session-start memory retrieval and pre-plan canonical/project/global memory lookup while keeping project `/sync-push` separate from agent-memory pushes.
+- **FEAT (Memory)**: Added `/memory-status` (read-only memory readiness) and `/memory-sync` (durable memory sync only) policy surfaces; global OpenCode/Claude command templates now live in `memory` and install via `mem commands install`.
+- **DOCS (Memory)**: Codified automatic session-start memory retrieval and pre-plan canonical/project/global memory lookup while keeping project `/sync-push` separate from memory pushes.
 
 ### Agent Memory Harness — full rollout (Phases 0–10)
-- **FEAT (Memory)**: Bootstrapped the [`agent-memory`](https://github.com/khangnghiem/agent-memory) global harness (CLI + MCP server) and wired Fast Draft as its first memory-aware project (`project_id: khangnghiem__fast-draft`).
-- **FEAT (Memory)**: Added `agentmem` CLI (`global / repo / sync / promote / web / lance` namespaces) and `agentmem-mcp` stdio wrapper exposing the same surface as `<namespace>__<tool>` MCP tools. Registered for OpenCode in `.opencode/mcp.json`.
+- **FEAT (Memory)**: Bootstrapped the [`memory`](https://github.com/khangnghiem/memory) global harness (CLI + MCP server) and wired Fast Draft as its first memory-aware project (`project_id: khangnghiem__fast-draft`).
+- **FEAT (Memory)**: Added `mem` CLI (`global / repo / sync / promote / web / lance` namespaces) and `mem-mcp` stdio wrapper exposing the same surface as `<namespace>__<tool>` MCP tools. Registered for OpenCode in `.opencode/mcp.json`.
 - **FEAT (Memory)**: `.memory/config.yml` declares canonical doc scope, `scratch_dir`, and per-project subtree path. `.scratch/`, `.memory/cache/`, `.gitnexus/`, `.lancedb/` gitignored.
 - **FEAT (Memory)**: OpenSpec capability spec at `openspec/specs/agent-memory-harness/spec.md` codifies retrieval order, promotion contract, secret hygiene, and verification matrix. `openspec/config.yaml` declares the directory-based lifecycle.
 - **FEAT (Memory)**: Agent surfaces — added "Memory harness" section to `.agents/shared/canonical.md` and Fast Draft specifics to `.agents/overrides/repo.md`. Regenerated `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`.

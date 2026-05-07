@@ -60,10 +60,10 @@ Keep policy meaning aligned with the OpenCode and Gemini surfaces.
 
 ### Memory harness
 
-- If `.memory/config.yml` exists, start by running `git -C ~/.config/agent-memory pull --ff-only` and `agentmem repo read-config`; continue with local memory if the pull fails and fresh cross-machine context is not required.
-- For every new feature, bug, refactor, or investigation, search memory first with 2–4 concrete terms via `agentmem repo search` plus relevant project/global lessons.
-- Use `.scratch/` only for ephemeral notes; promote durable lessons through `agentmem promote`, never by bypassing the scratch → project/global → canonical flow.
-- `/memory-sync` is only for `~/.config/agent-memory`; keep it separate from project git operations.
+- If `.memory/config.yml` exists, run `mem context bootstrap` at session start to pull the latest memory and receive a digest of relevant project lessons and canonical docs.
+- For every new feature, bug, refactor, or investigation, search memory first with 2–4 concrete terms via `mem repo search` plus relevant project/global lessons.
+- Use `.scratch/` only for ephemeral notes; promote durable lessons through `mem promote`, never by bypassing the scratch → project/global → canonical flow.
+- `/memory-sync` is only for `~/.config/memory`; keep it separate from project git operations.
 - Secret hygiene applies to both the project repo and memory repo.
 
 ### Completion
@@ -165,11 +165,11 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 ### Memory harness — Fast Draft specifics
 
 - Project ID: `khangnghiem__fast-draft`; config: `.memory/config.yml`; canonical scope includes `AGENTS.md`, key `docs/`, `docs/specs/`, and `openspec/`.
-- Per-project memory: `~/.config/agent-memory/projects/khangnghiem__fast-draft/`.
-- CLI: `agentmem` (`~/.config/agent-memory/bin/agentmem`); MCP wrapper: `~/.config/agent-memory/bin/agentmem-mcp`.
+- Per-project memory: `~/.config/memory/projects/khangnghiem__fast-draft/`.
+- CLI: `mem` (`~/.config/memory/bin/mem`); MCP wrapper: `~/.config/memory/bin/mem-mcp`.
 - Route Fast Draft lessons (bounds ownership, pointer hijack, WASM sync) to the project lessons subtree unless they generalize.
-- `/memory-status` is read-only; `/memory-sync` syncs only `~/.config/agent-memory`, never project changes.
-- `.github/workflows/memory-scratch-guard.yml` rejects PRs that add files under `.scratch/`.
+- `/memory-status` is read-only; `/memory-sync` syncs only `~/.config/memory`, never project changes.
+- `.github/workflows/memory-scratch-guard.yml` rejects PRs that add files under `.scratch/` or `.memory/` (other than `.memory/config.yml`).
 
 ### User shortcuts
 
@@ -177,4 +177,4 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 - `smoke` → run `just smoke`.
 - Local caveman helpers: `/caveman`, `/caveman-help`, `/caveman-review`, `/caveman-commit`, `/caveman:compress <file>`.
 - `/memory-status` → inspect Fast Draft memory state without writes.
-- `/memory-sync` → push durable agent-memory changes only; never project changes.
+- `/memory-sync` → push durable memory changes only; never project changes.

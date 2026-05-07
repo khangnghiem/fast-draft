@@ -20,9 +20,9 @@ contract for routing reads and writes between:
 
 | Path | Tracked? | Role |
 | --- | --- | --- |
-| `.memory/config.yml` | yes | Schema-v1 declaration: `project_id`, canonical doc paths, scratch dir, optional `lancedb_path` / `gitnexus_path`, `web_capture_target`, `memory_path`. |
+| `.memory/config.yml` | yes | Schema-v1 declaration: `project_id`, canonical doc paths, scratch dir, optional `lancedb_path`, `web_capture_target`, `memory_path`. |
 | `.scratch/` | no (gitignored) | Ephemeral agent working memory. Promoted to the memory subtree when worth keeping. |
-| `.memory/cache/`, `.gitnexus/`, `.lancedb/` | no (gitignored) | Per-machine indices; never committed. |
+| `.memory/cache/`, `.lancedb/` | no (gitignored) | Per-machine indices; never committed. |
 
 ### 2. Global harness contract
 
@@ -123,4 +123,4 @@ policy, but do not need project-local command copies.
 | Scratch round-trip | `mem repo write-scratch <p>` then `mem repo read-scratch <p>` returns body. |
 | Canonical search scope | `mem repo search <q>` only hits paths in `canonical_doc_paths`. |
 | MCP discovery | `mem-mcp` over stdio responds to `tools/list` with all `<ns>__<tool>` IDs. |
-| `.scratch/` not staged | CI workflow `memory-scratch-guard` rejects PRs adding `.scratch/**`. |
+| `.scratch/` / `.memory/` not staged | CI workflow `memory-scratch-guard` rejects PRs adding `.scratch/**` and `.memory/**` (except `.memory/config.yml`). |

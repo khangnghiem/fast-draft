@@ -88,11 +88,11 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 ### Memory harness — Fast Draft specifics
 
 - Project ID: `khangnghiem__fast-draft`; config: `.memory/config.yml`; canonical scope includes `AGENTS.md`, key `docs/`, `docs/specs/`, and `openspec/`.
-- Per-project memory: `~/.config/agent-memory/projects/khangnghiem__fast-draft/`.
-- CLI: `agentmem` (`~/.config/agent-memory/bin/agentmem`); MCP wrapper: `~/.config/agent-memory/bin/agentmem-mcp`.
+- Per-project memory: `~/.config/memory/projects/khangnghiem__fast-draft/`.
+- CLI: `mem` (`~/.config/memory/bin/mem`); MCP wrapper: `~/.config/memory/bin/mem-mcp`.
 - Route Fast Draft lessons (bounds ownership, pointer hijack, WASM sync) to the project lessons subtree unless they generalize.
-- `/memory-status` is read-only; `/memory-sync` syncs only `~/.config/agent-memory`, never project changes.
-- `.github/workflows/memory-scratch-guard.yml` rejects PRs that add files under `.scratch/`.
+- `/memory-status` is read-only; `/memory-sync` syncs only `~/.config/memory`, never project changes.
+- `.github/workflows/memory-scratch-guard.yml` rejects PRs that add files under `.scratch/` or `.memory/` (other than `.memory/config.yml`).
 
 ### User shortcuts
 
@@ -100,4 +100,4 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 - `smoke` → run `just smoke`.
 - Local caveman helpers: `/caveman`, `/caveman-help`, `/caveman-review`, `/caveman-commit`, `/caveman:compress <file>`.
 - `/memory-status` → inspect Fast Draft memory state without writes.
-- `/memory-sync` → push durable agent-memory changes only; never project changes.
+- `/memory-sync` → push durable memory changes only; never project changes.

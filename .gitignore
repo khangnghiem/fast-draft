@@ -34,10 +34,10 @@ fd-canvas-ui/dist/
 # GitHub Pages WASM build output (built by CI)
 site/wasm/
 
-# Agent memory ephemeral scratch (.memory/config.yml IS committed)
+# Agent memory harness — only .memory/config.yml is tracked.
 .scratch/
-.memory/cache/
-.gitnexus/
+.memory/*
+!.memory/config.yml
 .lancedb/
 
 # Ephemeral local/debug artifacts

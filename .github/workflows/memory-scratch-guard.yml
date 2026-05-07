@@ -1,7 +1,8 @@
 name: memory-scratch-guard
 
-# Reject PRs that add files under .scratch/. Per the agent memory harness
-# contract, .scratch/ is ephemeral working memory and must never be committed.
+# Reject PRs that add files under .scratch/ or under .memory/ (except for the
+# tracked .memory/config.yml). Per the agent memory harness contract, those
+# paths are ephemeral / local-only / personal and must never enter the OSS repo.
 # See: openspec/specs/agent-memory-harness/spec.md
 
 on:
@@ -15,18 +16,22 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Reject .scratch/ additions
+      - name: Reject .scratch/ and .memory/ additions
         run: |
           set -euo pipefail
           base="${{ github.event.pull_request.base.sha }}"
           head="${{ github.event.pull_request.head.sha }}"
-          offenders=$(git diff --name-only --diff-filter=A "$base...$head" | grep -E '^\.scratch/' || true)
+          added=$(git diff --name-only --diff-filter=A "$base...$head")
+          bad_scratch=$(printf '%s\n' "$added" | grep -E '^\.scratch/' || true)
+          bad_memory=$(printf '%s\n' "$added" | grep -E '^\.memory/' | grep -v '^\.memory/config\.yml$' || true)
+          offenders=$(printf '%s\n%s\n' "$bad_scratch" "$bad_memory" | grep -v '^$' || true)
           if [ -n "$offenders" ]; then
-            echo "::error::PR adds files under .scratch/ which is gitignored ephemeral agent memory:"
+            echo "::error::PR adds files under .scratch/ or .memory/ (other than .memory/config.yml):"
             echo "$offenders" | sed 's/^/  /'
             echo ""
-            echo "Promote useful content to ~/.config/agent-memory/projects/khangnghiem__fast-draft/"
-            echo "via 'agentmem promote scratch_to_project_global', then drop the .scratch/ entries."
+            echo "These paths are local-only / personal memory."
+            echo "Promote useful content to ~/.config/memory/projects/khangnghiem__fast-draft/"
+            echo "via 'mem promote scratch_to_project_global', then drop the entries."
             exit 1
           fi
-          echo "OK: no .scratch/ additions in this PR."
+          echo "OK: no .scratch/ or stray .memory/ additions in this PR."

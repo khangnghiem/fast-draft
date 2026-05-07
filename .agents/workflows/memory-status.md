@@ -1,5 +1,5 @@
 ---
-description: Read-only summary of project and agent-memory state
+description: Read-only summary of project and memory state
 ---
 
 # /memory-status - Memory State Summary
@@ -11,18 +11,18 @@ $ARGUMENTS
 // turbo-all
 
 1. **Read project config**
-   - Run `agentmem repo read-config` from the current project root.
+   - Run `mem repo read-config` from the current project root.
    - Report `project_id`, `scratch_dir`, `canonical_doc_paths`, and resolved `projectSubtree`.
 
 2. **Check memory repository state**
-   - Run `git -C ~/.config/agent-memory status -sb`.
+   - Run `git -C ~/.config/memory status -sb`.
    - Report whether memory is clean, ahead/behind, or dirty.
    - Do not pull, commit, or push from this command unless the user explicitly upgrades to `/memory-sync`.
 
 3. **Summarize useful counts**
    - Count project scratch files under `.scratch/` if present.
-   - List or count project lessons with `agentmem global list-lessons --project-id <project_id>`.
-   - List or count global lessons with `agentmem global list-lessons`.
+    - List or count project lessons with `mem global list-lessons --project-id <project_id>`.
+    - List or count global lessons with `mem global list-lessons`.
 
 4. **Report next action**
    - If clean: say memory is ready.

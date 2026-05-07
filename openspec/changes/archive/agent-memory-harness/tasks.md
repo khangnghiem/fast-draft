@@ -16,13 +16,13 @@
 - [ ] **0.3** Confirm `npx tsx` available.
   - Verify: `npx --yes tsx --version` succeeds.
 
-## Phase 1 — Global `agent-memory` Repo
+## Phase 1 — Global `memory` Repo
 
-- [ ] **1.1** Create private GitHub repo `agent-memory` under `khangnghiem`.
-  - Command: `gh repo create khangnghiem/agent-memory --private --description "Personal agent memory harness"`.
-  - Verify: `gh repo view khangnghiem/agent-memory --json visibility -q .visibility` prints `PRIVATE`.
-- [ ] **1.2** Clone to `~/.config/agent-memory/`.
-  - Command: `git clone git@github.com:khangnghiem/agent-memory.git ~/.config/agent-memory`.
+- [ ] **1.1** Create private GitHub repo `memory` under `khangnghiem`.
+  - Command: `gh repo create khangnghiem/memory --private --description "Personal memory harness"`.
+  - Verify: `gh repo view khangnghiem/memory --json visibility -q .visibility` prints `PRIVATE`.
+- [ ] **1.2** Clone to `~/.config/memory/`.
+  - Command: `git clone git@github.com:khangnghiem/memory.git ~/.config/memory`.
 - [ ] **1.3** Initialize template directory structure per design Section 3 (L4 subsection):
   ```
   README.md preferences.md .gitignore
@@ -31,32 +31,32 @@
   cli/index.ts mcp-server/index.ts scripts/check-secrets.sh
   package.json tsconfig.json
   ```
-  - Verify: `find ~/.config/agent-memory -maxdepth 2 -type d` lists all required dirs.
+  - Verify: `find ~/.config/memory -maxdepth 2 -type d` lists all required dirs.
 - [ ] **1.4** Add `.gitignore`: `node_modules/`, `*.log`, `.DS_Store`, any
   per-machine cache paths.
 - [ ] **1.5** First commit + push.
-  - Verify: `cd ~/.config/agent-memory && git log --oneline | head -1` shows initial commit.
+  - Verify: `cd ~/.config/memory && git log --oneline | head -1` shows initial commit.
 
 ## Phase 2 — Secrets Hygiene Foundation
 
 - [ ] **2.1** Confirm `~/.zshrc.secrets` exists and is sourced from `~/.zshrc`.
   Create if missing.
-- [ ] **2.2** Write `agent-memory/scripts/check-secrets.sh` per design Section 10.
+- [ ] **2.2** Write `memory/scripts/check-secrets.sh` per design Section 10.
   Patterns: `sk-*`, `ghp_*`, `xoxb-*`, `AKIA*`, generic 32+ base64 in
   credential context.
-  - Verify: `bash ~/.config/agent-memory/scripts/check-secrets.sh < <(echo "ghp_abc123...")` exits non-zero.
-- [ ] **2.3** Install pre-commit hook in `agent-memory` invoking
+  - Verify: `bash ~/.config/memory/scripts/check-secrets.sh < <(echo "ghp_abc123...")` exits non-zero.
+- [ ] **2.3** Install pre-commit hook in `memory` invoking
   `scripts/check-secrets.sh` over staged files.
   - Verify: attempt to commit a file containing `ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` is blocked.
 
-## Phase 3 — `agentmem` CLI
+## Phase 3 — `mem` CLI
 
-- [ ] **3.1** Initialize `package.json` and `tsconfig.json` in `agent-memory/`.
+- [ ] **3.1** Initialize `package.json` and `tsconfig.json` in `memory/`.
   Dependencies: `tsx`, `yaml`, `zod`, `simple-git`, `commander` (or `cac`).
 - [ ] **3.2** Implement `cli/lib/config.ts`: load + validate `.memory/config.yml`
   with Zod schema v1 from design Section 5.
   - Verify: unit test loads valid config; invalid config throws schema error.
-- [ ] **3.3** Implement `cli/lib/paths.ts`: resolve `agent_memory_path`,
+- [ ] **3.3** Implement `cli/lib/paths.ts`: resolve `memory_path`,
   `scratch_dir`, `lancedb_path`, `gitnexus_path` from config + env.
 - [ ] **3.4** Implement `cli/lib/global.ts`: `read_lesson`, `list_lessons`,
   `read_snippet`, `read_preferences`, `write_preferences`, `write_draft`,
@@ -68,18 +68,18 @@
   `push` per design 6 + 9. Scope: `global` | `project` | `both`.
 - [ ] **3.7** Implement `cli/lib/promote.ts`: `scratch_to_canonical`,
   `scratch_to_project_global`, `lesson_to_global`. All open draft PRs via `gh`
-  except `scratch_to_project_global` which commits in `agent-memory` only.
+  except `scratch_to_project_global` which commits in `memory` only.
 - [ ] **3.8** Implement `cli/lib/web.ts`: `capture` via webfetch fallback;
   Tavily MCP integration deferred.
 - [ ] **3.9** Implement `cli/lib/lance.ts`: stubs returning "not enabled" unless
   `lancedb_path` set.
 - [ ] **3.10** Implement `cli/index.ts`: command router for namespaces
   `global / repo / sync / promote / web / lance`.
-  - Verify: `npx tsx ~/.config/agent-memory/cli/index.ts repo read-config`
+  - Verify: `npx tsx ~/.config/memory/cli/index.ts repo read-config`
     in Fast Draft repo prints parsed config.
 - [ ] **3.11** Add shell alias to `~/.zshrc`:
-  `alias agentmem='npx tsx ~/.config/agent-memory/cli/index.ts'`.
-  - Verify: new shell, `agentmem --help` prints usage.
+  `alias mem='npx tsx ~/.config/memory/cli/index.ts'`.
+  - Verify: new shell, `mem --help` prints usage.
 
 ## Phase 4 — MCP Wrapper
 
@@ -87,7 +87,7 @@
 - [ ] **4.2** Implement `mcp-server/index.ts` importing CLI library functions
   and exposing them as MCP tools with namespaces from design Section 6.
   - Tool ID format: `<namespace>__<tool>` (e.g., `global__read_lesson`).
-- [ ] **4.3** JSON schemas for each tool live in `agent-memory/schemas/`.
+- [ ] **4.3** JSON schemas for each tool live in `memory/schemas/`.
   Wire via Zod `.zodToJsonSchema`.
 - [ ] **4.4** Smoke test: launch MCP via `npx tsx mcp-server/index.ts`, send
   `tools/list` over stdio, verify all tools enumerated.
@@ -107,10 +107,10 @@
   - Verify: `git check-ignore .scratch/foo` succeeds; `git check-ignore .memory/config.yml` fails.
 - [ ] **5.3** Create empty `.scratch/` with placeholder `.gitkeep` is NOT done —
   directory created on first write only.
-- [ ] **5.4** Create `agent-memory/projects/khangnghiem__fast-draft/` subtree:
+- [ ] **5.4** Create `memory/projects/khangnghiem__fast-draft/` subtree:
   `README.md` (license flags including GitNexus PolyForm note), `lessons/`,
   `sessions/`, `drafts/`, `transcripts/`, `web/`, `attachments/`. Commit + push
-  in `agent-memory`.
+  in `memory`.
 
 ## Phase 6 — OpenSpec Initialization
 
@@ -127,7 +127,7 @@
   `.agents/shared/canonical.md` per design Section 8 (read `.memory/config.yml`
   first, retrieval order, promotion via PR, secret hygiene).
 - [ ] **7.2** Add Fast Draft-specific paths to `.agents/overrides/repo.md`:
-  `~/.config/agent-memory/`, `.memory/config.yml`, MCP launch command,
+  `~/.config/memory/`, `.memory/config.yml`, MCP launch command,
   `project_id: khangnghiem__fast-draft`.
 - [ ] **7.3** Run `npm run render:agent-surfaces`. Commit regenerated
   `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`.
@@ -136,9 +136,9 @@
   ```json
   {
     "mcpServers": {
-      "agentmem": {
+      "mem": {
         "command": "npx",
-        "args": ["tsx", "/Users/khangnghiem/.config/agent-memory/mcp-server/index.ts"]
+        "args": ["tsx", "/Users/khangnghiem/.config/memory/mcp-server/index.ts"]
       }
     }
   }
@@ -159,9 +159,9 @@
 - [ ] **9.4** Agent calls `repo.write_scratch { path: "sessions/smoke-test.md", content: "...", mode: "replace" }`.
   - Verify: file exists at `.scratch/sessions/smoke-test.md`; not staged in git.
 - [ ] **9.5** Agent calls `promote.scratch_to_project_global { paths: ["sessions/smoke-test.md"] }`.
-  - Verify: file copied to `agent-memory/projects/khangnghiem__fast-draft/sessions/smoke-test.md`; commit present in `agent-memory` log.
+  - Verify: file copied to `memory/projects/khangnghiem__fast-draft/sessions/smoke-test.md`; commit present in `memory` log.
 - [ ] **9.6** Agent calls `sync.push { scope: "global" }`.
-  - Verify: `agent-memory` remote has new commit.
+  - Verify: `memory` remote has new commit.
 - [ ] **9.7** Agent calls `global.list_lessons { project_id: "khangnghiem__fast-draft" }`.
   - Verify: returns project lessons (empty list acceptable).
 
@@ -186,7 +186,7 @@
 
 | Criterion | Phase | Verified by |
 |----------|-------|-------------|
-| `agent-memory` repo with template structure | 1 | 1.3 |
+| `memory` repo with template structure | 1 | 1.3 |
 | CLI implements all tools | 3 | 3.10 |
 | MCP wrapper implements all tools | 4 | 4.4 |
 | `.memory/config.yml` valid schema v1 | 5 | 5.1 + 9.2 |

@@ -28,9 +28,9 @@
 - **Cloud memory services.** No Mem0 cloud, Zep cloud, Supermemory, Pinecone.
 - **Real-time sync daemons.** All sync is `git pull` at session start, `git push` at
   session end.
-- **Agent host parity beyond MCP and CLI.** We do not target proprietary memory
+- **  Agent host parity beyond MCP and CLI.** We do not target proprietary memory
   APIs of individual agents (e.g., Cursor `.cursorrules` auto-load, Claude Code
-  project files). AGENTS.md instructions and the `agentmem` CLI are the portable
+  project files). AGENTS.md instructions and the `mem` CLI are the portable
   contract.
 - **Knowledge graph / temporal memory.** Defer Graphiti / Zep until markdown +
   ripgrep + LanceDB demonstrably fall short.
@@ -57,8 +57,8 @@ When trade-offs collide:
 | L1 | Project local scratch | `.scratch/` in project repo (gitignored, local-only) | Local machine | L2 or L4 (selective, via PR or `global.write_project_*`) |
 | L2 | Project canonical | Project repo (`docs/`, `openspec/`, `.memory/config.yml`) | Project | L4 (cross-project lessons only) |
 | L3 | Code intelligence | `.gitnexus/`, `.lancedb/`, `.memory/cache/` (gitignored) | Local only | None — rebuildable |
-| L4 | Global memory | `agent-memory` repo, with global content at root and project-scoped content under `projects/<id>/` | Personal | None — terminal layer |
-| L5 | Web research cache | `agent-memory/web/` (global) or `agent-memory/projects/<id>/web/` (project) | Personal | None — captures only |
+| L4 | Global memory | `memory` repo, with global content at root and project-scoped content under `projects/<id>/` | Personal | None — terminal layer |
+| L5 | Web research cache | `memory/web/` (global) or `memory/projects/<id>/web/` (project) | Personal | None — captures only |
 
 ### L0 — Ephemeral Session Memory
 
@@ -85,7 +85,7 @@ need cross-machine sync.
 
 - **Why local-only and not synced**: most session notes are ephemeral context for
   the machine you were working on. Cross-machine continuity for project work
-  belongs in L4 (`agent-memory/projects/<id>/`) where it's explicit.
+  belongs in L4 (`memory/projects/<id>/`) where it's explicit.
 - **Why a directory in the project repo and not a separate repo**: avoids the
   privacy leak risk for public repos (Fast Draft is public — anything tracked is
   public; `.scratch/` is gitignored so nothing leaks), removes one repo's worth
@@ -122,20 +122,20 @@ Local, regenerable indexes. Always gitignored.
 - **ast-grep** — structural code search.
 - **GitNexus** — code graph (definitions, references, call chains, blast radius).
   Index in `.gitnexus/`. License: PolyForm Noncommercial 1.0.0; flagged in
-  `agent-memory/projects/khangnghiem__fast-draft/README.md` as "license review
+  `memory/projects/khangnghiem__fast-draft/README.md` as "license review
   required before monetization."
 - **LanceDB** (optional) — embedded vector + FTS for semantic retrieval. Index in
   `.memory/cache/lancedb/`. Apache 2.0. Used only when ripgrep + ast-grep + GitNexus
   prove insufficient.
 
-### L4 — Global Memory (`agent-memory`)
+### L4 — Global Memory (`memory`)
 
-Single private GitHub repo, cloned to `~/.config/agent-memory/`. Holds both
+Single private GitHub repo, cloned to `~/.config/memory/`. Holds both
 truly global content (reusable across projects) and project-scoped content that
 must survive across machines.
 
 ```
-~/.config/agent-memory/
+~/.config/memory/
   README.md
   preferences.md                       (durable user preferences)
   lessons/         YYYY-MM-DD-<slug>.md   (cross-project lessons)
@@ -153,7 +153,7 @@ must survive across machines.
       transcripts/                        (chat/meeting captures)
       web/          <source>/<slug>.md    (project-scoped web captures)
       attachments/                        (screenshots, diagrams, binaries)
-  cli/             index.ts               (agentmem CLI entry)
+  cli/             index.ts               (mem CLI entry)
   mcp-server/      index.ts               (MCP wrapper entry)
   scripts/         check-secrets.sh       (pre-commit secret scanner)
   package.json
@@ -176,9 +176,9 @@ must survive across machines.
 Web captures from Tavily MCP or manual snapshots. Routing:
 
 - **Global captures** (general references, language idioms, library docs) →
-  `~/.config/agent-memory/web/<source>/<slug>.md`.
+  `~/.config/memory/web/<source>/<slug>.md`.
 - **Project captures** (one-off research tied to a specific project) →
-  `~/.config/agent-memory/projects/<id>/web/<source>/<slug>.md`.
+  `~/.config/memory/projects/<id>/web/<source>/<slug>.md`.
 
 Routing decided by the `web.capture` tool's `target` argument
 (`"global" | "project" | "both"`), defaulted from `.memory/config.yml`'s
@@ -195,15 +195,15 @@ in this order. Stop at the first sufficient answer.
 2. **Project canonical**: `docs/REQUIREMENTS.md`, `docs/LESSONS.md`, `docs/specs/`,
    plus relevant `.agents/` content.
 3. **Project scratch (local)**: `.scratch/sessions/`, `.scratch/drafts/`.
-4. **Project content in global memory**: `agent-memory/projects/<id>/sessions/`,
-   `agent-memory/projects/<id>/lessons/`.
+4. **Project content in global memory**: `memory/projects/<id>/sessions/`,
+   `memory/projects/<id>/lessons/`.
 5. **Code search**: `ripgrep` for exact strings; `ast-grep` for structural patterns;
    `GitNexus` for code graph queries (definitions, references, blast radius).
-6. **Global memory**: `agent-memory/lessons/`, `agent-memory/snippets/`,
-   `agent-memory/projects/<id>/README.md`.
+6. **Global memory**: `memory/lessons/`, `memory/snippets/`,
+   `memory/projects/<id>/README.md`.
 7. **Semantic** (optional): LanceDB query over project + global if exact and
    structural search fail.
-8. **Web cache**: `agent-memory/projects/<id>/web/` then `agent-memory/web/`.
+8. **Web cache**: `memory/projects/<id>/web/` then `memory/web/`.
 9. **External fallback**: web search via Tavily, GitHub Code Search.
 
 ## 5. Configuration: `.memory/config.yml`
@@ -214,7 +214,7 @@ Committed to project repo root. Schema v1:
 schema: 1
 
 # Project identity. Used to namespace project content under
-# agent-memory/projects/<project_id>/.
+# memory/projects/<project_id>/.
 project_id: khangnghiem__fast-draft
 
 # Local scratch directory (gitignored, not synced).
@@ -239,9 +239,9 @@ openspec_dir: openspec
 # Web capture default routing: project | global | both.
 web_capture_target: project
 
-# Path to the global agent-memory clone on this machine. Defaults to
-# ~/.config/agent-memory if unset.
-agent_memory_path: ~/.config/agent-memory
+# Path to the global memory clone on this machine. Defaults to
+# ~/.config/memory if unset.
+memory_path: ~/.config/memory
 ```
 
 ### Discoverability
@@ -256,7 +256,7 @@ auto-loads `.memory/config.yml` as of 2026. We make it discoverable two ways:
 
 ## 6. Tool Surface
 
-`agentmem` CLI is the source of truth. The MCP server is a thin wrapper that
+`mem` CLI is the source of truth. The MCP server is a thin wrapper that
 imports the CLI's library functions and exposes them as MCP tools. One
 implementation, two surfaces.
 
@@ -264,7 +264,7 @@ implementation, two surfaces.
 
 | Namespace | Purpose |
 |-----------|---------|
-| `global.*` | Read/write `agent-memory` repo |
+| `global.*` | Read/write `memory` repo |
 | `repo.*`   | Read/write project repo + scratch + OpenSpec ops |
 | `sync.*`   | Git pull/push/status |
 | `promote.*` | Open draft PRs to promote scratch → canonical or project → global |
@@ -275,8 +275,8 @@ implementation, two surfaces.
 
 #### `global.*`
 
-Operates over `agent-memory/`. The project subtree
-(`agent-memory/projects/<id>/`) is addressed via the same tools using a
+Operates over `memory/`. The project subtree
+(`memory/projects/<id>/`) is addressed via the same tools using a
 `project_id` argument; when omitted, operations target the truly global root.
 
 | Tool | Args | Effect |
@@ -289,7 +289,7 @@ Operates over `agent-memory/`. The project subtree
 | `write_draft` | `{ path?, title?, content, project_id? }` | Writes to `inbox/` (or `projects/<id>/inbox/`) for later promotion |
 | `write_project_session` | `{ project_id, date?, content, mode? }` | Writes a cross-machine project session log to `projects/<id>/sessions/<date>.md` |
 | `read_project_readme` | `{ project_id }` | Returns the project subtree's `README.md` |
-| `search` | `{ query, regex?, pathGlobs?, project_id?, limit? }` | Ripgrep over `agent-memory/`; scoped to project subtree if `project_id` set |
+| `search` | `{ query, regex?, pathGlobs?, project_id?, limit? }` | Ripgrep over `memory/`; scoped to project subtree if `project_id` set |
 
 #### `repo.*`
 
@@ -320,8 +320,8 @@ Operates over `agent-memory/`. The project subtree
 | Tool | Args | Effect |
 |------|------|--------|
 | `scratch_to_canonical` | `{ paths, prDraft? }` | Copies `.scratch/` files to project `docs/` and opens draft PR |
-| `scratch_to_project_global` | `{ paths, project_id? }` | Copies `.scratch/` files into `agent-memory/projects/<id>/`; commits in agent-memory but does not push (caller invokes `sync.push`) |
-| `lesson_to_global` | `{ path, project_id?, tags?, overwrite? }` | Copies project-scoped lesson up to top-level `agent-memory/lessons/` (drops project tag) and opens draft PR in `agent-memory` |
+| `scratch_to_project_global` | `{ paths, project_id? }` | Copies `.scratch/` files into `memory/projects/<id>/`; commits in memory but does not push (caller invokes `sync.push`) |
+| `lesson_to_global` | `{ path, project_id?, tags?, overwrite? }` | Copies project-scoped lesson up to top-level `memory/lessons/` (drops project tag) and opens draft PR in `memory` |
 
 Promotion always opens a **draft PR**. Never merges. Human review remains the gate.
 
@@ -345,23 +345,23 @@ Promotion always opens a **draft PR**. Never merges. Human review remains the ga
 CLI mirrors the namespaces:
 
 ```bash
-agentmem global search "wgpu render pipeline"
-agentmem repo openspec status
-agentmem sync push --scope both
-agentmem promote scratch-to-canonical --paths sessions/2026-04-26.md
-agentmem web capture --url https://example.com --target project
+mem global search "wgpu render pipeline"
+mem repo openspec status
+mem sync push --scope both
+mem promote scratch-to-canonical --paths sessions/2026-04-26.md
+mem web capture --url https://example.com --target project
 ```
 
 ### Distribution
 
-- **Install**: clone `agent-memory` repo to `~/.config/agent-memory/`. Add shell
+- **Install**: clone `memory` repo to `~/.config/memory/`. Add shell
   alias to `~/.zshrc`:
   ```bash
-  alias agentmem='npx tsx ~/.config/agent-memory/cli/index.ts'
+  alias mem='npx tsx ~/.config/memory/cli/index.ts'
   ```
-- **Updates**: `git pull` in `agent-memory` repo. No npm publish step.
+- **Updates**: `git pull` in `memory` repo. No npm publish step.
 - **MCP registration**: per-project `.opencode/mcp.json` (or equivalent for other
-  hosts) points to `npx tsx ~/.config/agent-memory/mcp-server/index.ts`.
+  hosts) points to `npx tsx ~/.config/memory/mcp-server/index.ts`.
 
 ## 7. OpenSpec ↔ Superpowers Integration
 
@@ -411,7 +411,7 @@ adjacent `.annotations.json` or inline HTML comments — implementation detail).
 | Location | Content |
 |----------|---------|
 | `.agents/shared/canonical.md` | Generic Memory Harness section: read `.memory/config.yml` first, retrieval order, prefer scratch over canonical writes, promotion requires PR, secret hygiene rules |
-| `.agents/overrides/repo.md` | Fast Draft repo-specific paths and commands: `~/.config/agent-memory/` location, `.scratch/` gitignored scratch dir, MCP launch command, project_id `khangnghiem__fast-draft` |
+| `.agents/overrides/repo.md` | Fast Draft repo-specific paths and commands: `~/.config/memory/` location, `.scratch/` gitignored scratch dir, MCP launch command, project_id `khangnghiem__fast-draft` |
 
 After editing either source, run `npm run render:agent-surfaces` to regenerate
 `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`. Verifier runs in CI via
@@ -422,7 +422,7 @@ After editing either source, run `npm run render:agent-surfaces` to regenerate
 > **Memory Harness**
 >
 > Before working on any task, read `.memory/config.yml` (or call
-> `repo.read_config` via the agentmem MCP). Then consult sources in retrieval
+> `repo.read_config` via the mem MCP). Then consult sources in retrieval
 > order: OpenSpec active change → project canonical → project scratch → code
 > search → global memory → semantic → web cache → external fallback.
 >
@@ -435,7 +435,7 @@ After editing either source, run `npm run render:agent-surfaces` to regenerate
 ### Session start
 
 ```
-1. cd ~/.config/agent-memory && git pull --ff-only
+1. cd ~/.config/memory && git pull --ff-only
 2. cd <project>              && git pull --ff-only
 3. agent reads .memory/config.yml
 ```
@@ -443,7 +443,7 @@ After editing either source, run `npm run render:agent-surfaces` to regenerate
 ### Session end
 
 ```
-1. agent or human reviews uncommitted changes in agent-memory (project repo
+1. agent or human reviews uncommitted changes in memory (project repo
    commits/pushes happen via normal PR flow, not via sync.push)
 2. agent calls sync.push --scope global
 3. push fails fast if non-fast-forward; user resolves manually
@@ -465,9 +465,9 @@ After editing either source, run `npm run render:agent-surfaces` to regenerate
   a context that suggests credentials) into any memory layer.
 - **Allowed**: reference env var names only. E.g., write
   `Tavily API key in $TAVILY_API_KEY` — never the literal value.
-- **Enforcement**: pre-commit hook in the `agent-memory` repo
+- **Enforcement**: pre-commit hook in the `memory` repo
   scans staged content for secret patterns. Hook source vendored in
-  `agent-memory/scripts/check-secrets.sh`.
+  `memory/scripts/check-secrets.sh`.
 
 ## 11. Risk Register
 
@@ -476,7 +476,7 @@ After editing either source, run `npm run render:agent-surfaces` to regenerate
 | R1 | Tool name collision (multiple memory plugins claiming `memory_*`) | M | M | Strict namespacing (`global.*` etc.); document in AGENTS.md; avoid generic memory plugins in production |
 | R2 | Index drift across machines (LanceDB, GitNexus caches diverge) | H | L | All indexes gitignored; canonical is markdown; rebuild from source on demand |
 | R3 | Secret leakage into memory files | M | H | Pre-commit hook scans for secret patterns; agents instructed via canonical to use env var names only |
-| R4 | GitNexus license trap (PolyForm Noncommercial) | L | M | Noted in `agent-memory/projects/khangnghiem__fast-draft/README.md`; license review required before monetization; swap to permissive code-intel tool if commercial use planned |
+| R4 | GitNexus license trap (PolyForm Noncommercial) | L | M | Noted in `memory/projects/khangnghiem__fast-draft/README.md`; license review required before monetization; swap to permissive code-intel tool if commercial use planned |
 | R5 | Plugin abandonment (OpenSpec, GitNexus, LanceDB upstream changes) | M | M | Storage formats are simple and exportable; CLI is the source of truth and survives any plugin loss |
 | R6 | Prompt pollution (agents promote noise to global memory) | M | M | Promotion gate is PR review; `promote.*` opens drafts only |
 | R7 | YAML/TOML config drift (legacy `.opencode-memory.toml` or `.agentmemory.toml` files appear) | L | L | Spec mandates `.memory/config.yml` as the only valid config; verifier rejects legacy filenames |
@@ -490,12 +490,12 @@ After editing either source, run `npm run render:agent-surfaces` to regenerate
 
 ### From current state (no harness)
 
-1. Create `agent-memory` private GitHub repo. Initialize with template structure
+1. Create `memory` private GitHub repo. Initialize with template structure
    (Section 3, L4 subsection).
-2. Clone to `~/.config/agent-memory/` on each machine.
-3. Add shell alias `agentmem` in `~/.zshrc`.
-4. Implement `agentmem` CLI in `agent-memory/cli/` (TS).
-5. Implement MCP wrapper in `agent-memory/mcp-server/`.
+2. Clone to `~/.config/memory/` on each machine.
+3. Add shell alias `mem` in `~/.zshrc`.
+4. Implement `mem` CLI in `memory/cli/` (TS).
+5. Implement MCP wrapper in `memory/mcp-server/`.
 6. Add `.memory/config.yml` to Fast Draft repo root with `project_id:
    khangnghiem__fast-draft`.
 7. Add `.gitignore` entries for `.scratch/`, `.memory/cache/`, `.gitnexus/`,
@@ -509,16 +509,16 @@ After editing either source, run `npm run render:agent-surfaces` to regenerate
 12. Register MCP in `.opencode/mcp.json`.
 13. Smoke test: agent reads config, runs `repo.search`, writes a `.scratch/`
     note, promotes it via `promote.scratch_to_project_global` to
-    `agent-memory/projects/khangnghiem__fast-draft/`.
+    `memory/projects/khangnghiem__fast-draft/`.
 
 ### Future migrations
 
 - **Adding a new project**: add `.memory/config.yml` to project root with new
-  `project_id`. Create `agent-memory/projects/<new_id>/` subtree with template
+  `project_id`. Create `memory/projects/<new_id>/` subtree with template
   structure. No new repo to create.
-- **Adding a team member**: invite them to `agent-memory` repo; they clone to
-  their own `~/.config/agent-memory/`. Project content under
-  `agent-memory/projects/<id>/` is shared automatically. `.scratch/` remains
+- **Adding a team member**: invite them to `memory` repo; they clone to
+  their own `~/.config/memory/`. Project content under
+  `memory/projects/<id>/` is shared automatically. `.scratch/` remains
   local-only per machine and per developer.
 - **Swapping LanceDB for another vector DB**: rebuild index from markdown source;
   update `.memory/config.yml` `lancedb_path` key (or rename); update
@@ -533,7 +533,7 @@ After editing either source, run `npm run render:agent-surfaces` to regenerate
    inline HTML comments vs separate annotation tool repo). Defer to follow-up
    change.
 2. **Team-scale namespace** — when a second contributor joins, do we need
-   `team.*` MCP tools, or does shared `agent-memory` access suffice? Defer.
+   `team.*` MCP tools, or does shared `memory` access suffice? Defer.
 3. **Tavily MCP wiring** — is the existing Tavily MCP package sufficient, or do
    we need a thin `web.*` wrapper that handles routing to project vs global?
    Defer to first web capture session.
@@ -545,9 +545,9 @@ After editing either source, run `npm run render:agent-surfaces` to regenerate
 
 This change is complete when:
 
-- [ ] `agent-memory` repo exists with template structure including
+- [ ] `memory` repo exists with template structure including
       `projects/<id>/` subtree shape.
-- [ ] `agentmem` CLI implements all tools in Section 6.
+- [ ] `mem` CLI implements all tools in Section 6.
 - [ ] MCP wrapper implements all tools in Section 6.
 - [ ] `.memory/config.yml` exists at Fast Draft repo root with valid schema v1
       (includes `project_id`).
@@ -559,10 +559,10 @@ This change is complete when:
       `project_id`.
 - [ ] `AGENTS.md` regenerated and committed.
 - [ ] `npm run verify:agent-surfaces` passes.
-- [ ] Pre-commit secret-scanning hook installed in `agent-memory`.
+- [ ] Pre-commit secret-scanning hook installed in `memory`.
 - [ ] CI verifier rejects PRs that add files under `.scratch/`.
 - [ ] Smoke test passes: read config → search → write `.scratch/` → promote to
-      `agent-memory/projects/<id>/` via `promote.scratch_to_project_global`.
+      `memory/projects/<id>/` via `promote.scratch_to_project_global`.
 - [ ] `docs/REQUIREMENTS.md` includes a Memory Harness entry.
 - [ ] `docs/CHANGELOG.md` records the harness introduction.
 

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# pre-commit hook: scan staged files for secret-shaped strings
+# Delegates to ~/.config/memory/scripts/check-secrets.sh
+# Part of FD project git safety rules (see GEMINI.md / AGENTS.md)
+
+set -euo pipefail
+
+MEM_HOME="${MEM_HOME:-$HOME/.config/memory}"
+SCANNER="$MEM_HOME/scripts/check-secrets.sh"
+
+if [ ! -x "$SCANNER" ]; then
+  echo "⚠️  Secret scanner not found at $SCANNER"
+  echo "    Run: bash $MEM_HOME/scripts/install.sh"
+  exit 1
+fi
+
+# Run scanner in pre-commit mode (staged diff)
+exec bash "$SCANNER"
