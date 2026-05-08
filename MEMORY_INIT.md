@@ -246,6 +246,7 @@ If any step fails, see troubleshooting below.
 | Install commands | Ensure global memory commands are present | `mem commands install` |
 | Inspect memory | Read-only status | `/memory-status` |
 | Session end | Push durable memory updates only | `/memory-sync` or `mem sync push --scope global` |
+| Sync all configs | Push memory + other configs | `sync-all` (or `bash ~/.config/sync-all.sh`) |
 
 `.scratch/` is local-only by design. If you change machines, anything you want
 to carry with you must already be promoted to `memory/projects/<id>/`.
