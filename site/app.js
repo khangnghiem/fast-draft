@@ -2724,7 +2724,8 @@ function renderSpecsPanel() {
 
       if (typeof marked !== 'undefined') {
         const rendered = marked.parse(processedNote);
-        html += rendered;
+        // Security: Sanitize parsed Markdown to prevent DOM-based XSS
+        html += window.DOMPurify ? window.DOMPurify.sanitize(rendered) : rendered;
       } else {
         html += `<pre>${processedNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
       }
