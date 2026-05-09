@@ -24,7 +24,7 @@ audit) drove the locked architecture below.
 - **Project repo** (this repo, public): hosts canonical docs, OpenSpec changes,
   `.memory/config.yml`, and a gitignored `.scratch/` directory for local
   ephemeral notes.
-- **`agent-memory` repo** (private, cloned to `~/.config/agent-memory/`): hosts
+- **`agent-memory` repo** (private, cloned to `~/.config/memory/`): hosts
   global content at root and per-project content under `projects/<owner>__<repo>/`.
 - **No third `<project>.notes` repo.** Rejected because Fast Draft is public so
   privacy via gitignore beats privacy via separate repo, and project-scoped

@@ -11,7 +11,7 @@ Give AI coding agents in this repo durable, multi-machine memory and a clean
 contract for routing reads and writes between:
 
 - the project repo (canonical docs, ephemeral `.scratch/`),
-- the global harness at `~/.config/agent-memory/` (cross-project lessons,
+- the global harness at `~/.config/memory/` (cross-project lessons,
   per-project subtree at `projects/khangnghiem__fast-draft/`).
 
 ## Components
@@ -26,7 +26,7 @@ contract for routing reads and writes between:
 
 ### 2. Global harness contract
 
-Lives at `~/.config/agent-memory/` (repo: `khangnghiem/agent-memory`).
+Lives at `~/.config/memory/` (repo: `khangnghiem/agent-memory`).
 
 | Subtree | Role |
 | --- | --- |
@@ -61,7 +61,7 @@ soon as the question is answered:
 ### Automatic retrieval triggers
 
 - **Session start**: if `.memory/config.yml` exists, agents SHOULD run
-  `git -C ~/.config/agent-memory pull --ff-only` followed by
+  `git -C ~/.config/memory pull --ff-only` followed by
   `agentmem repo read-config` before planning work.
 - **New feature / bug / refactor prompt**: agents SHOULD extract task keywords
   and run canonical `repo.search` plus relevant project/global lesson lookups
@@ -100,14 +100,14 @@ never direct pushes to `main`.
 ### Memory commands
 
 Global `/memory-status` and `/memory-sync` command templates live in
-`~/.config/agent-memory` and are installed into agent-specific global command
+`~/.config/memory` and are installed into agent-specific global command
 directories with `agentmem commands install`. Adopted project repos document the
 policy, but do not need project-local command copies.
 
 - `/memory-status` is read-only: parse `.memory/config.yml`, inspect
-  `~/.config/agent-memory` git status, summarize scratch/project/global memory,
+  `~/.config/memory` git status, summarize scratch/project/global memory,
   and recommend next action.
-- `/memory-sync` operates only on `~/.config/agent-memory`: inspect dirty state
+- `/memory-sync` operates only on `~/.config/memory`: inspect dirty state
   before pulling, commit known durable promotion outputs only after scanning exact
   candidate paths and staged content with `scripts/check-secrets.sh`, pull
   `--ff-only` from a clean worktree, push committed-ahead memory automatically,

@@ -21,8 +21,8 @@
 - [ ] **1.1** Create private GitHub repo `agent-memory` under `khangnghiem`.
   - Command: `gh repo create khangnghiem/agent-memory --private --description "Personal agent memory harness"`.
   - Verify: `gh repo view khangnghiem/agent-memory --json visibility -q .visibility` prints `PRIVATE`.
-- [ ] **1.2** Clone to `~/.config/agent-memory/`.
-  - Command: `git clone git@github.com:khangnghiem/agent-memory.git ~/.config/agent-memory`.
+- [ ] **1.2** Clone to `~/.config/memory/`.
+  - Command: `git clone git@github.com:khangnghiem/agent-memory.git ~/.config/memory`.
 - [ ] **1.3** Initialize template directory structure per design Section 3 (L4 subsection):
   ```
   README.md preferences.md .gitignore
@@ -31,11 +31,11 @@
   cli/index.ts mcp-server/index.ts scripts/check-secrets.sh
   package.json tsconfig.json
   ```
-  - Verify: `find ~/.config/agent-memory -maxdepth 2 -type d` lists all required dirs.
+  - Verify: `find ~/.config/memory -maxdepth 2 -type d` lists all required dirs.
 - [ ] **1.4** Add `.gitignore`: `node_modules/`, `*.log`, `.DS_Store`, any
   per-machine cache paths.
 - [ ] **1.5** First commit + push.
-  - Verify: `cd ~/.config/agent-memory && git log --oneline | head -1` shows initial commit.
+  - Verify: `cd ~/.config/memory && git log --oneline | head -1` shows initial commit.
 
 ## Phase 2 — Secrets Hygiene Foundation
 
@@ -44,7 +44,7 @@
 - [ ] **2.2** Write `agent-memory/scripts/check-secrets.sh` per design Section 10.
   Patterns: `sk-*`, `ghp_*`, `xoxb-*`, `AKIA*`, generic 32+ base64 in
   credential context.
-  - Verify: `bash ~/.config/agent-memory/scripts/check-secrets.sh < <(echo "ghp_abc123...")` exits non-zero.
+  - Verify: `bash ~/.config/memory/scripts/check-secrets.sh < <(echo "ghp_abc123...")` exits non-zero.
 - [ ] **2.3** Install pre-commit hook in `agent-memory` invoking
   `scripts/check-secrets.sh` over staged files.
   - Verify: attempt to commit a file containing `ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` is blocked.
@@ -75,10 +75,10 @@
   `lancedb_path` set.
 - [ ] **3.10** Implement `cli/index.ts`: command router for namespaces
   `global / repo / sync / promote / web / lance`.
-  - Verify: `npx tsx ~/.config/agent-memory/cli/index.ts repo read-config`
+  - Verify: `npx tsx ~/.config/memory/cli/index.ts repo read-config`
     in Fast Draft repo prints parsed config.
 - [ ] **3.11** Add shell alias to `~/.zshrc`:
-  `alias agentmem='npx tsx ~/.config/agent-memory/cli/index.ts'`.
+  `alias agentmem='npx tsx ~/.config/memory/cli/index.ts'`.
   - Verify: new shell, `agentmem --help` prints usage.
 
 ## Phase 4 — MCP Wrapper
@@ -127,7 +127,7 @@
   `.agents/shared/canonical.md` per design Section 8 (read `.memory/config.yml`
   first, retrieval order, promotion via PR, secret hygiene).
 - [ ] **7.2** Add Fast Draft-specific paths to `.agents/overrides/repo.md`:
-  `~/.config/agent-memory/`, `.memory/config.yml`, MCP launch command,
+  `~/.config/memory/`, `.memory/config.yml`, MCP launch command,
   `project_id: khangnghiem__fast-draft`.
 - [ ] **7.3** Run `npm run render:agent-surfaces`. Commit regenerated
   `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`.

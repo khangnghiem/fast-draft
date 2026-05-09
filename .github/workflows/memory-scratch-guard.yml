@@ -25,7 +25,7 @@ jobs:
             echo "::error::PR adds files under .scratch/ which is gitignored ephemeral agent memory:"
             echo "$offenders" | sed 's/^/  /'
             echo ""
-            echo "Promote useful content to ~/.config/agent-memory/projects/khangnghiem__fast-draft/"
+            echo "Promote useful content to ~/.config/memory/projects/khangnghiem__fast-draft/"
             echo "via 'agentmem promote scratch_to_project_global', then drop the .scratch/ entries."
             exit 1
           fi

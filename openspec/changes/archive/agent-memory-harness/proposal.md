@@ -21,7 +21,7 @@ have explicit change tracking.
 ## What Changes
 
 1. **Two-repo memory model**
-   - `agent-memory` (new private repo, cloned to `~/.config/agent-memory/`) for all
+   - `agent-memory` (new private repo, cloned to `~/.config/memory/`) for all
      durable knowledge — both global (reusable across projects) and project-scoped
      (per-project sessions, drafts, web captures, lessons) under
      `agent-memory/projects/<owner>__<repo>/`.

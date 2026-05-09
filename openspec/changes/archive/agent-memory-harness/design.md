@@ -130,12 +130,12 @@ Local, regenerable indexes. Always gitignored.
 
 ### L4 — Global Memory (`agent-memory`)
 
-Single private GitHub repo, cloned to `~/.config/agent-memory/`. Holds both
+Single private GitHub repo, cloned to `~/.config/memory/`. Holds both
 truly global content (reusable across projects) and project-scoped content that
 must survive across machines.
 
 ```
-~/.config/agent-memory/
+~/.config/memory/
   README.md
   preferences.md                       (durable user preferences)
   lessons/         YYYY-MM-DD-<slug>.md   (cross-project lessons)
@@ -176,9 +176,9 @@ must survive across machines.
 Web captures from Tavily MCP or manual snapshots. Routing:
 
 - **Global captures** (general references, language idioms, library docs) →
-  `~/.config/agent-memory/web/<source>/<slug>.md`.
+  `~/.config/memory/web/<source>/<slug>.md`.
 - **Project captures** (one-off research tied to a specific project) →
-  `~/.config/agent-memory/projects/<id>/web/<source>/<slug>.md`.
+  `~/.config/memory/projects/<id>/web/<source>/<slug>.md`.
 
 Routing decided by the `web.capture` tool's `target` argument
 (`"global" | "project" | "both"`), defaulted from `.memory/config.yml`'s
@@ -240,8 +240,8 @@ openspec_dir: openspec
 web_capture_target: project
 
 # Path to the global agent-memory clone on this machine. Defaults to
-# ~/.config/agent-memory if unset.
-agent_memory_path: ~/.config/agent-memory
+# ~/.config/memory if unset.
+agent_memory_path: ~/.config/memory
 ```
 
 ### Discoverability
@@ -354,14 +354,14 @@ agentmem web capture --url https://example.com --target project
 
 ### Distribution
 
-- **Install**: clone `agent-memory` repo to `~/.config/agent-memory/`. Add shell
+- **Install**: clone `agent-memory` repo to `~/.config/memory/`. Add shell
   alias to `~/.zshrc`:
   ```bash
-  alias agentmem='npx tsx ~/.config/agent-memory/cli/index.ts'
+  alias agentmem='npx tsx ~/.config/memory/cli/index.ts'
   ```
 - **Updates**: `git pull` in `agent-memory` repo. No npm publish step.
 - **MCP registration**: per-project `.opencode/mcp.json` (or equivalent for other
-  hosts) points to `npx tsx ~/.config/agent-memory/mcp-server/index.ts`.
+  hosts) points to `npx tsx ~/.config/memory/mcp-server/index.ts`.
 
 ## 7. OpenSpec ↔ Superpowers Integration
 
@@ -411,7 +411,7 @@ adjacent `.annotations.json` or inline HTML comments — implementation detail).
 | Location | Content |
 |----------|---------|
 | `.agents/shared/canonical.md` | Generic Memory Harness section: read `.memory/config.yml` first, retrieval order, prefer scratch over canonical writes, promotion requires PR, secret hygiene rules |
-| `.agents/overrides/repo.md` | Fast Draft repo-specific paths and commands: `~/.config/agent-memory/` location, `.scratch/` gitignored scratch dir, MCP launch command, project_id `khangnghiem__fast-draft` |
+| `.agents/overrides/repo.md` | Fast Draft repo-specific paths and commands: `~/.config/memory/` location, `.scratch/` gitignored scratch dir, MCP launch command, project_id `khangnghiem__fast-draft` |
 
 After editing either source, run `npm run render:agent-surfaces` to regenerate
 `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`. Verifier runs in CI via
@@ -435,7 +435,7 @@ After editing either source, run `npm run render:agent-surfaces` to regenerate
 ### Session start
 
 ```
-1. cd ~/.config/agent-memory && git pull --ff-only
+1. cd ~/.config/memory && git pull --ff-only
 2. cd <project>              && git pull --ff-only
 3. agent reads .memory/config.yml
 ```
@@ -492,7 +492,7 @@ After editing either source, run `npm run render:agent-surfaces` to regenerate
 
 1. Create `agent-memory` private GitHub repo. Initialize with template structure
    (Section 3, L4 subsection).
-2. Clone to `~/.config/agent-memory/` on each machine.
+2. Clone to `~/.config/memory/` on each machine.
 3. Add shell alias `agentmem` in `~/.zshrc`.
 4. Implement `agentmem` CLI in `agent-memory/cli/` (TS).
 5. Implement MCP wrapper in `agent-memory/mcp-server/`.
@@ -517,7 +517,7 @@ After editing either source, run `npm run render:agent-surfaces` to regenerate
   `project_id`. Create `agent-memory/projects/<new_id>/` subtree with template
   structure. No new repo to create.
 - **Adding a team member**: invite them to `agent-memory` repo; they clone to
-  their own `~/.config/agent-memory/`. Project content under
+  their own `~/.config/memory/`. Project content under
   `agent-memory/projects/<id>/` is shared automatically. `.scratch/` remains
   local-only per machine and per developer.
 - **Swapping LanceDB for another vector DB**: rebuild index from markdown source;

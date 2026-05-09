@@ -13,13 +13,13 @@
 
 You only do this once per workstation. Skip if already done.
 
-1. **Global `agent-memory` repo** cloned to `~/.config/agent-memory/`.
+1. **Global `agent-memory` repo** cloned to `~/.config/memory/`.
    ```bash
-   gh repo clone <owner>/agent-memory ~/.config/agent-memory
+   gh repo clone <owner>/agent-memory ~/.config/memory
    ```
 2. **Shell alias** in `~/.zshrc`:
    ```bash
-   alias agentmem='npx tsx ~/.config/agent-memory/cli/index.ts'
+   alias agentmem='npx tsx ~/.config/memory/cli/index.ts'
    ```
 3. **Secrets file** `~/.zshrc.secrets` exists and is sourced from `~/.zshrc`.
 4. **`gh`, `git`, `npx`** available on PATH.
@@ -74,7 +74,7 @@ openspec_dir: openspec
 web_capture_target: project
 
 # Path to the global agent-memory clone on this machine.
-agent_memory_path: ~/.config/agent-memory
+agent_memory_path: ~/.config/memory
 ```
 
 ### Step 3 — `.gitignore` entries
@@ -103,13 +103,13 @@ git check-ignore .memory/config.yml
 ### Step 4 — Create the project subtree in global memory
 
 ```bash
-mkdir -p ~/.config/agent-memory/projects/<owner>__<repo>/{lessons,sessions,drafts,transcripts,web,attachments}
+mkdir -p ~/.config/memory/projects/<owner>__<repo>/{lessons,sessions,drafts,transcripts,web,attachments}
 ```
 
 Add a `README.md` for the project subtree:
 
 ```bash
-cat > ~/.config/agent-memory/projects/<owner>__<repo>/README.md <<'EOF'
+cat > ~/.config/memory/projects/<owner>__<repo>/README.md <<'EOF'
 # <owner>/<repo> — project memory
 
 ## License flags
@@ -126,7 +126,7 @@ EOF
 Commit and push in `agent-memory`:
 
 ```bash
-cd ~/.config/agent-memory
+cd ~/.config/memory
 git add projects/<owner>__<repo>/
 git commit -m "chore: add <owner>__<repo> project subtree"
 git push
@@ -154,10 +154,10 @@ If the project uses the same surface renderer as Fast Draft
    ```markdown
    ## Memory Harness — project specifics
 
-   - Global memory repo: `~/.config/agent-memory/`
+   - Global memory repo: `~/.config/memory/`
    - Project subtree: `agent-memory/projects/<owner>__<repo>/`
    - Project config: `.memory/config.yml`
-   - MCP launch: `npx tsx ~/.config/agent-memory/mcp-server/index.ts`
+   - MCP launch: `npx tsx ~/.config/memory/mcp-server/index.ts`
    - `project_id`: `<owner>__<repo>`
    ```
 3. Regenerate:
@@ -243,8 +243,8 @@ If any step fails, see troubleshooting below.
 to carry with you must already be promoted to `agent-memory/projects/<id>/`.
 
 Keep memory sync separate from project `/sync-push`: project pushes should not
-implicitly commit or push `~/.config/agent-memory`. `/memory-sync` and
-`/memory-status` are global commands installed from `~/.config/agent-memory`;
+implicitly commit or push `~/.config/memory`. `/memory-sync` and
+`/memory-status` are global commands installed from `~/.config/memory`;
 run `agentmem commands install` if your coding agent does not show them.
 
 ---
@@ -254,11 +254,11 @@ run `agentmem commands install` if your coding agent does not show them.
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | `repo.read_config` fails | `.memory/config.yml` missing or schema invalid | Recreate from Step 2 template |
-| `sync.pull` fails with non-fast-forward | Concurrent edits on another machine | Manual `git pull --rebase` in `~/.config/agent-memory/`, resolve, retry |
+| `sync.pull` fails with non-fast-forward | Concurrent edits on another machine | Manual `git pull --rebase` in `~/.config/memory/`, resolve, retry |
 | MCP tools not visible | Agent host not restarted | Restart agent host after editing `.opencode/mcp.json` |
 | `.scratch/` files showing in `git status` | Missing `.gitignore` entry | Re-do Step 3 |
 | Pre-commit secret scanner false positive | Pattern matched legit content | Whitelist via env var name reference instead of literal value |
-| `agent-memory` push rejected | Branch protection or unconfigured remote | `cd ~/.config/agent-memory && git remote -v && git push -u origin main` |
+| `agent-memory` push rejected | Branch protection or unconfigured remote | `cd ~/.config/memory && git remote -v && git push -u origin main` |
 
 ---
 
@@ -270,7 +270,7 @@ run `agentmem commands install` if your coding agent does not show them.
 - Do **not** hand-edit generated `AGENTS.md` if a renderer exists.
 - Do **not** put secrets in any memory layer. Reference env var names only.
 - Do **not** publish `agentmem` to npm. Distribution is via `git pull` in
-  `~/.config/agent-memory/`.
+  `~/.config/memory/`.
 
 ---
 
