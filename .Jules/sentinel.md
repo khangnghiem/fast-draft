@@ -1,0 +1,4 @@
+## 2024-05-10 - Fix DOM-based XSS in marked.js rendering
+**Vulnerability:** The output of `marked.parse(processedNote)` in `site/app.js` was being appended directly to `innerHTML` without sanitization. This allows XSS if a user creates a maliciously crafted markdown note containing JavaScript or HTML payloads.
+**Learning:** Even though marked.js is used to render markdown, it does not inherently sanitize its HTML output unless configured with specific sanitization libraries. The site's environment loads DOMPurify, which should always be used to wrap third-party rendering library outputs before DOM injection.
+**Prevention:** Always wrap dynamically rendered HTML (like markdown parsing output) with `DOMPurify.sanitize()` before passing it into `innerHTML`. Implement fallback behavior (e.g. `escapeHtml`) if the sanitizer is not loaded in the environment.
