@@ -2722,9 +2722,9 @@ function renderSpecsPanel() {
         (_, path) => `\n\n<div class="note-file-link" title="Open in VS Code to view">📎 ${path}</div>\n\n`
       );
 
-      if (typeof marked !== 'undefined') {
+      if (typeof marked !== 'undefined' && window.DOMPurify) {
         const rendered = marked.parse(processedNote);
-        html += rendered;
+        html += window.DOMPurify.sanitize(rendered);
       } else {
         html += `<pre>${processedNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
       }
