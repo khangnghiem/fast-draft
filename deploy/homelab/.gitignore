@@ -1,0 +1,16 @@
+# Homelab secrets
+**/.env
+
+# Logs
+**/logs/
+*.log
+
+# Local data (if any)
+**/data/
+
+# macOS
+.DS_Store
+
+# Temporary files
+*.tmp
+*.swp
