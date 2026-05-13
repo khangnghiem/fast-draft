@@ -4,6 +4,6 @@
     "test:observer": "node --test plugins/agent-observer/test/*.test.mjs"
   },
   "dependencies": {
-    "@opencode-ai/plugin": "1.14.32"
+    "@opencode-ai/plugin": "1.14.39"
   }
 }
