@@ -96,6 +96,8 @@ Keep policy meaning aligned with the OpenCode and Gemini surfaces.
 | Extended tests | `just extended` (nextest + proptest) |
 | Local WASM sync | `wasm-pack build crates/fd-wasm --target web --out-dir ../../fd-vscode/webview/wasm --quiet && cp -a fd-vscode/webview/wasm/. site/wasm/` |
 | VS Code TS | `cd fd-vscode && pnpm install && pnpm test` |
+| VS Code compile | `cd fd-vscode && pnpm run compile` |
+| VS Code typecheck | `cd fd-vscode && pnpm run lint` |
 | Tauri check | `cd fd-desktop/src-tauri && cargo check && cargo clippy -- -D warnings && cargo fmt -- --check` |
 | Version sync | `node scripts/bump-version.mjs` |
 
@@ -105,7 +107,7 @@ Keep policy meaning aligned with the OpenCode and Gemini surfaces.
 
 - Rust crates: `fd-core` (parser/emitter/layout/lint/format/score), `fd-editor` (SyncEngine/tools/undo/input), `fd-render` (DrawBackend/hit testing/Vello), `fd-wasm` (FdCanvas/Canvas2D/SVG/HTML export), `fd-lsp`, `fdraft` CLI.
 - Dependency flow: `fd-core → fd-editor → fd-wasm`, `fd-core → fd-render → fd-wasm`, `fd-core → fd-lsp`.
-- Frontend/tools: `site/` web playground (`app.js`, `canvas-core/`), `fd-vscode/` extension (`src/extension.ts`, `webview/`), `fd-desktop/` Tauri app, `fd-mcp/` TypeScript MCP server, `fd-shell/` stub, `crates/site/` wasm-pack output only.
+- Frontend/tools: `site/` web playground (`app.js`, `canvas-core/`), `fd-vscode/` extension (`src/extension.ts`, `webview/`), `fd-desktop/` Tauri app, `fd-mcp/` TypeScript MCP server, `fd-canvas-ui/` shared canvas UI module, `fd-shell/` stub, `crates/site/` wasm-pack output only.
 
 ### WASM build sync
 
@@ -117,6 +119,7 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 ```
 
 - CI workflows build directly to `site/wasm` (`wasm-pack build crates/fd-wasm --target web --out-dir ../../site/wasm`). Keep both output dirs in sync when changing local artifacts.
+- **Site vendor bundle** (CodeMirror + lz-string): `cd site && npx esbuild vendor/cm-entry.js --bundle --format=esm --minify --outfile=vendor/cm.min.js` — run this after `npm ci` if vendor deps change.
 
 ### Git and secrets
 
@@ -162,6 +165,7 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 
 ### Useful docs and workflows
 
+- `CONTRIBUTING.md` — architecture, crate structure, build instructions, dev setup.
 - `docs/LESSONS.md` — recurring project pitfalls.
 - `docs/ARCHITECTURE.md` — crate map, data flow, key types, rendering pipeline.
 - `docs/REQUIREMENTS.md` — feature specs.
