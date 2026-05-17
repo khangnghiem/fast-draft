@@ -512,7 +512,7 @@ function addMessage(role, content, getEditorContent, setEditorContent) {
     div.textContent = '✦ Thinking…';
   } else {
     const unsafeHTML = renderAssistantMessage(content, getEditorContent, setEditorContent);
-    div.innerHTML = window.DOMPurify ? DOMPurify.sanitize(unsafeHTML, { ADD_ATTR: ['data-fd', 'data-bid'] }) : unsafeHTML;
+    div.innerHTML = window.DOMPurify ? DOMPurify.sanitize(unsafeHTML, { ADD_ATTR: ['data-fd', 'data-bid'] }) : `<pre>${escapeHtml(content)}</pre>`;
     wireApplySkipButtons(div, getEditorContent, setEditorContent);
   }
 
@@ -628,7 +628,7 @@ async function sendMessage(getEditorContent, setEditorContent) {
 
       const performRender = () => {
         const unsafeHTML = renderAssistantMessage(accumulated, getEditorContent, setEditorContent) + '<span class="ai-cursor">█</span>';
-        div.innerHTML = window.DOMPurify ? DOMPurify.sanitize(unsafeHTML, { ADD_ATTR: ['data-fd', 'data-bid'] }) : unsafeHTML;
+        div.innerHTML = window.DOMPurify ? DOMPurify.sanitize(unsafeHTML, { ADD_ATTR: ['data-fd', 'data-bid'] }) : `<pre>${escapeHtml(accumulated)}</pre><span class="ai-cursor">█</span>`;
         wireApplySkipButtons(div, getEditorContent, setEditorContent);
         messages.scrollTop = messages.scrollHeight;
         renderPending = false;
@@ -711,7 +711,7 @@ async function sendMessage(getEditorContent, setEditorContent) {
       const finalContent = accumulated || '⚠️ The AI returned an empty response. This may be a temporary issue — try again or simplify your prompt.';
       chatHistory.push({ role: 'assistant', content: finalContent });
       const finalUnsafeHTML = renderAssistantMessage(finalContent, getEditorContent, setEditorContent);
-      div.innerHTML = window.DOMPurify ? DOMPurify.sanitize(finalUnsafeHTML, { ADD_ATTR: ['data-fd', 'data-bid'] }) : finalUnsafeHTML;
+      div.innerHTML = window.DOMPurify ? DOMPurify.sanitize(finalUnsafeHTML, { ADD_ATTR: ['data-fd', 'data-bid'] }) : `<pre>${escapeHtml(finalContent)}</pre>`;
       wireApplySkipButtons(div, getEditorContent, setEditorContent);
       messages.scrollTop = messages.scrollHeight;
     } else {
