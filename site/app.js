@@ -2724,9 +2724,9 @@ function renderSpecsPanel() {
 
       if (typeof marked !== 'undefined') {
         const rendered = marked.parse(processedNote);
-        html += rendered;
+        html += window.DOMPurify ? window.DOMPurify.sanitize(rendered) : `<pre>${escapeHtml(processedNote)}</pre>`;
       } else {
-        html += `<pre>${processedNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+        html += `<pre>${escapeHtml(processedNote)}</pre>`;
       }
     }
 

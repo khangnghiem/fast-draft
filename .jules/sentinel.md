@@ -14,3 +14,7 @@
 **Vulnerability:** Several `escapeHtml` implementations used DOM manipulation (`document.createElement('div').innerHTML`) or incomplete string replacement, failing to escape single and double quotes.
 **Learning:** Incomplete escaping allows XSS payloads to break out of HTML attributes (e.g., `<input value="${escapeHtml(userInput)}">`).
 **Prevention:** Always use `String(text)` cast combined with a comprehensive replace chain for `&`, `<`, `>`, `"`, and `'` (e.g., `&#039;`) in custom string escaping functions.
+## 2024-05-18 - XSS Vulnerability in Sanitization Fallbacks
+**Vulnerability:** In `site/ai-chat.js` and `site/app.js`, when `DOMPurify` was unavailable, the application fell back to rendering unescaped, raw HTML (via `unsafeHTML` or `marked.parse` output) directly into `innerHTML`.
+**Learning:** Fallback paths for security controls (like sanitizers) are critical points of failure. If a sanitizer fails to load, failing open (rendering unescaped content) introduces an XSS vector.
+**Prevention:** Always ensure fallback paths fail securely. If a required sanitizer is unavailable, fall back to escaping the raw content (e.g., using `escapeHtml`) and wrapping it in safe container tags (like `<pre>`) to prevent layout breakage and XSS.
