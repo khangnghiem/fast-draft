@@ -1,5 +1,9 @@
 {
   "dependencies": {
+<<<<<<< Updated upstream
     "@opencode-ai/plugin": "1.14.50"
+=======
+    "@opencode-ai/plugin": "1.14.40"
+>>>>>>> Stashed changes
   }
 }
