@@ -344,57 +344,22 @@ function computeScore(categories) {
   return Math.round(total / categories.length);
 }
 
-// ─── Fallback Models Mapping ─────────────────────────────────────────────
+// ─── MiniMax Integration (Tier 2) ────────────────────────────────────────
 
-function getFallbackModels(model) {
-  // Returns [OllamaCloudModel, OpenRouterModel]
-  // Ollama Cloud API requires '-cloud' suffix models
-  let ollamaModel = model;
-  let orModel = model;
-
-  if (model.includes('llama-3.1-8b')) {
-    ollamaModel = 'llama3.1:8b-cloud'; orModel = 'meta-llama/llama-3.1-8b-instruct';
-  } else if (model.includes('llama-3.2-1b')) {
-    ollamaModel = 'llama3.2:1b-cloud'; orModel = 'meta-llama/llama-3.2-1b-instruct';
-  } else if (model.includes('llama-3.2-3b')) {
-    ollamaModel = 'llama3.2:3b-cloud'; orModel = 'meta-llama/llama-3.2-3b-instruct';
-  } else if (model.includes('llama-3.3-70b')) {
-    ollamaModel = 'llama3.3:70b-cloud'; orModel = 'meta-llama/llama-3.3-70b-instruct';
-  } else if (model.includes('gemma-4')) {
-    ollamaModel = 'gemma4:31b-cloud'; orModel = 'google/gemma-4-26b-a4b-it';
-  } else if (model.includes('gemma-3')) {
-    ollamaModel = 'gemma3:12b-cloud'; orModel = 'google/gemma-3-12b-it';
-  } else if (model.includes('qwen2.5-coder')) {
-    ollamaModel = 'qwen2.5-coder:32b-cloud'; orModel = 'qwen/qwen-2.5-coder-32b-instruct';
-  } else if (model.includes('deepseek-r1')) {
-    ollamaModel = 'deepseek-r1:32b-cloud'; orModel = 'deepseek/deepseek-r1-distill-qwen-32b';
-  } else {
-    ollamaModel = 'gemma4:31b-cloud';
-    orModel = !model.startsWith('@cf/') ? model : 'google/gemma-4-26b-a4b-it';
-  }
-
-  return [ollamaModel, orModel];
-}
-
-// ─── Ollama Cloud Integration (Tier 2) ───────────────────────────────────
-// Uses the OpenAI-compatible /v1/chat/completions endpoint.
-
-async function runWithOllamaCloud(env, model, messages, maxTokens, temp, stream) {
-  const [ollamaModel] = getFallbackModels(model);
-
+async function runWithMiniMax(env, model, messages, maxTokens, temp, stream) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   let response;
   try {
-    response = await fetch('https://ollama.com/v1/chat/completions', {
+    response = await fetch('https://api.minimax.io/v1/text/chatcompletion_v2', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${env.OLLAMA_API_KEY}`,
+        'Authorization': `Bearer ${env.MINIMAX_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: ollamaModel,
+        model: model.startsWith('@cf/') ? 'MiniMax-M2.7' : model,
         messages,
         stream: !!stream,
         temperature: temp,
@@ -404,7 +369,7 @@ async function runWithOllamaCloud(env, model, messages, maxTokens, temp, stream)
     });
   } catch (error) {
     if (error.name === 'AbortError') {
-      throw new Error(`Ollama Cloud timeout (>30s)`);
+      throw new Error(`MiniMax timeout (>30s)`);
     }
     throw error;
   } finally {
@@ -413,21 +378,18 @@ async function runWithOllamaCloud(env, model, messages, maxTokens, temp, stream)
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`Ollama Cloud error: ${response.status} ${errText}`);
+    throw new Error(`MiniMax error: ${response.status} ${errText}`);
   }
 
   if (stream) {
-    // OpenAI-compatible SSE → CF Workers AI SSE
-    return response.body.pipeThrough(ollamaCloudToCFStream());
+    return response.body.pipeThrough(miniMaxToCFStream());
   }
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content || '';
   return { response: content };
 }
 
-function ollamaCloudToCFStream() {
-  // Transforms OpenAI-compatible SSE (data: {"choices":[{"delta":{"content":"..."}}]})
-  // into CF Workers AI SSE format (data: {"response":"..."})
+function miniMaxToCFStream() {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -447,7 +409,7 @@ function ollamaCloudToCFStream() {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ response: content })}\n\n`));
           }
         } catch (e) {
-          console.warn('Ollama stream parse error:', e.message);
+          console.warn('MiniMax stream parse error:', e.message);
         }
       }
     }
@@ -468,10 +430,21 @@ function ollamaCloudToCFStream() {
   });
 }
 
+// ─── OpenRouter Model Mapping ─────────────────────────────────────────────
+
+function cfToOpenRouterModel(model) {
+  // Map CF model format (@cf/provider/model) to OpenRouter format (provider/model)
+  if (model.startsWith('@cf/')) {
+    return model.slice(4); // Remove '@cf/' prefix
+  }
+  // For aliases like 'gemma-4', look up in MODEL_ALIASES first
+  return model;
+}
+
 // ─── OpenRouter Integration (Tier 3) ─────────────────────────────────────
 
 async function runWithOpenRouter(env, model, messages, maxTokens, temp, stream) {
-  const [, orModel] = getFallbackModels(model);
+  const orModel = cfToOpenRouterModel(model);
   
   const payload = {
     model: orModel,
@@ -551,13 +524,10 @@ function openRouterToCFStream() {
 
 // ─── Unified AI Runner (3-Tier Fallback) ─────────────────────────────────
 
-async function runAI(env, { config, aiMessages, stream, shouldUseOpenRouter, overrideModel, forceOllama }) {
+async function runAI(env, { config, aiMessages, stream, shouldUseOpenRouter, overrideModel }) {
   // Manual override bypasses tiers entirely
-  if (shouldUseOpenRouter && env.OPENROUTER_API_KEY && !forceOllama) {
+  if (shouldUseOpenRouter && env.OPENROUTER_API_KEY) {
     return runWithOpenRouter(env, overrideModel, aiMessages, config.maxTokens, config.temp, stream);
-  }
-  if (forceOllama && env.OLLAMA_API_KEY) {
-    return runWithOllamaCloud(env, config.model, aiMessages, config.maxTokens, config.temp, stream);
   }
 
   // Tier 1: Cloudflare Workers AI (skip if binding not available)
@@ -577,7 +547,7 @@ async function runAI(env, { config, aiMessages, stream, shouldUseOpenRouter, ove
         const content = result?.response || '';
         if (!content.trim()) {
           console.log(JSON.stringify({ event: 'ai_fallback', from: 'workers_ai', reason: 'empty_response', model: config.model }));
-          // Fall through to Ollama/OpenRouter
+          // Fall through to MiniMax/OpenRouter
         } else {
           return result;
         }
@@ -599,18 +569,18 @@ async function runAI(env, { config, aiMessages, stream, shouldUseOpenRouter, ove
     console.log(JSON.stringify({ event: 'ai_skip_workers', reason: 'no_binding', model: config.model }));
   }
 
-  // Tier 2: Ollama Cloud
-  if (env.OLLAMA_API_KEY) {
+  // Tier 2: MiniMax
+  if (env.MINIMAX_API_KEY) {
     try {
-      return await runWithOllamaCloud(env, overrideModel || config.model, aiMessages, config.maxTokens, config.temp, stream);
-    } catch (ollamaErr) {
-      console.warn(JSON.stringify({ event: 'ai_fallback_failed', provider: 'ollama_cloud', reason: ollamaErr.message }));
+      return await runWithMiniMax(env, overrideModel || config.model, aiMessages, config.maxTokens, config.temp, stream);
+    } catch (miniMaxErr) {
+      console.warn(JSON.stringify({ event: 'ai_fallback_failed', provider: 'minimax', reason: miniMaxErr.message }));
     }
   }
 
   // Tier 3: OpenRouter
   if (env.OPENROUTER_API_KEY) {
-    console.log(JSON.stringify({ event: 'ai_fallback', from: 'ollama', to: 'openrouter', model: config.model }));
+    console.log(JSON.stringify({ event: 'ai_fallback', from: 'minimax', to: 'openrouter', model: config.model }));
     return await runWithOpenRouter(env, overrideModel || config.model, aiMessages, config.maxTokens, config.temp, stream);
   }
 
@@ -641,7 +611,7 @@ export async function onRequestPost(context) {
     }
 
     const body = await context.request.json();
-    const { prompt, mode, model_hint, user_focus, messages, context: docContext, selection, selection_ids, force_fallback, force_ollama } = body;
+    const { prompt, mode, model_hint, user_focus, messages, context: docContext, selection, selection_ids, force_fallback } = body;
 
     // Chat mode requires messages array; other modes require prompt
     if (mode === 'chat') {
@@ -658,11 +628,11 @@ export async function onRequestPost(context) {
 
     // Allow operation if we have Workers AI OR any fallback provider
     const hasAI = !!context.env.AI && typeof context.env.AI.run === 'function';
-    const hasOllama = !!context.env.OLLAMA_API_KEY;
+    const hasMiniMax = !!context.env.MINIMAX_API_KEY;
     const hasOpenRouter = !!context.env.OPENROUTER_API_KEY;
-    if (!hasAI && !hasOllama && !hasOpenRouter) {
+    if (!hasAI && !hasMiniMax && !hasOpenRouter) {
       return new Response(JSON.stringify({
-        error: 'No AI provider configured. Need Workers AI binding, OLLAMA_API_KEY, or OPENROUTER_API_KEY.',
+        error: 'No AI provider configured. Need Workers AI binding, MINIMAX_API_KEY, or OPENROUTER_API_KEY.',
       }), { status: 503, headers });
     }
 
@@ -728,7 +698,7 @@ export async function onRequestPost(context) {
     }
 
     if (wantsStream) {
-      const stream = await runAI(context.env, { config, aiMessages, stream: true, shouldUseOpenRouter, overrideModel: actualModel, forceOllama: force_ollama });
+      const stream = await runAI(context.env, { config, aiMessages, stream: true, shouldUseOpenRouter, overrideModel: actualModel });
 
       return new Response(stream, {
         headers: {
@@ -741,7 +711,7 @@ export async function onRequestPost(context) {
     }
 
     // ─── Non-streaming (full JSON response) ──────────────────
-    const result = await runAI(context.env, { config, aiMessages, stream: false, shouldUseOpenRouter, overrideModel: actualModel, forceOllama: force_ollama });
+    const result = await runAI(context.env, { config, aiMessages, stream: false, shouldUseOpenRouter, overrideModel: actualModel });
 
     let responseBody;
 
