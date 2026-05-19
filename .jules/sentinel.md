@@ -14,3 +14,7 @@
 **Vulnerability:** Several `escapeHtml` implementations used DOM manipulation (`document.createElement('div').innerHTML`) or incomplete string replacement, failing to escape single and double quotes.
 **Learning:** Incomplete escaping allows XSS payloads to break out of HTML attributes (e.g., `<input value="${escapeHtml(userInput)}">`).
 **Prevention:** Always use `String(text)` cast combined with a comprehensive replace chain for `&`, `<`, `>`, `"`, and `'` (e.g., `&#039;`) in custom string escaping functions.
+## 2024-05-18 - Missing DOMPurify Fallback Causes XSS Vulnerability
+**Vulnerability:** Found a Cross-Site Scripting (XSS) vulnerability in `site/ai-chat.js`. When rendering the assistant's HTML response, the code fell back to unsafely assigning raw user/AI input directly to `innerHTML` via `unsafeHTML` if `window.DOMPurify` was unavailable.
+**Learning:** Depending entirely on a third-party library for security without a safe fallback leaves an application exposed if the library fails to load (e.g. adblocker, network failure).
+**Prevention:** When implementing conditional sanitization (e.g., `window.DOMPurify ? sanitize(...) : fallback`), ensure the fallback path fails securely by using safe DOM properties like `.textContent` or escaping HTML characters to prevent XSS vulnerabilities if the sanitizer fails to load.
