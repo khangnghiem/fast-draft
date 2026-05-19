@@ -21,6 +21,14 @@ const MIN_NODE_SIZE: f32 = 4.0;
 const DEFAULT_CORNER_RADIUS: f32 = 8.0;
 const DRAG_CANCEL_SQUARED_DIST: f32 = 25.0; // 5px squared
 const MIN_EDGE_DRAG_DIST: f32 = 10.0;
+const DEFAULT_RECT_WIDTH: f32 = 162.0;
+const DEFAULT_RECT_HEIGHT: f32 = 100.0;
+const DEFAULT_ELLIPSE_SIZE: f32 = 128.0;
+const DEFAULT_STROKE_WIDTH: f32 = 2.5;
+const MIN_PEN_STROKE_WIDTH: f32 = 1.0;
+const MAX_PEN_STROKE_WIDTH: f32 = 4.5;
+const POINTER_MOVE_THRESHOLD: f32 = 0.5;
+
 const SUBSAMPLE_SQUARED_DIST: f32 = 9.0; // 3px squared
 
 /// The active tool determines how input events are interpreted.
@@ -355,7 +363,7 @@ impl Tool for SelectTool {
                         };
 
                         // Only cancel deferred Shift deselect if we actually moved
-                        if dx.abs() > 0.5 || dy.abs() > 0.5 {
+                        if dx.abs() > POINTER_MOVE_THRESHOLD || dy.abs() > POINTER_MOVE_THRESHOLD {
                             self.shift_toggled_off = None;
                         }
 
@@ -381,7 +389,7 @@ impl Tool for SelectTool {
                     let dy = y - self.last_y;
 
                     // Cancel deferred deselect on any actual drag movement
-                    if dx.abs() > 0.5 || dy.abs() > 0.5 {
+                    if dx.abs() > POINTER_MOVE_THRESHOLD || dy.abs() > POINTER_MOVE_THRESHOLD {
                         self.shift_toggled_off = None;
                     }
 
@@ -548,7 +556,7 @@ impl Tool for RectTool {
                     // Rect defaults: transparent fill + dark stroke
                     node.props.stroke = Some(Stroke {
                         paint: Paint::Solid(Color::rgba(0.2, 0.2, 0.2, 1.0)),
-                        width: 2.5,
+                        width: DEFAULT_STROKE_WIDTH,
                         cap: StrokeCap::Round,
                         join: StrokeJoin::Round,
                     });
@@ -637,8 +645,8 @@ impl Tool for RectTool {
                 if !self.dragged {
                     if let Some(id) = self.current_id.take() {
                         // Click without drag → default 162×100 centered at click point
-                        let w = 162.0_f32;
-                        let h = 100.0_f32;
+                        let w = DEFAULT_RECT_WIDTH;
+                        let h = DEFAULT_RECT_HEIGHT;
                         vec![GraphMutation::ResizeNode {
                             id,
                             width: w,
@@ -733,7 +741,7 @@ impl Tool for PenTool {
                 // Default stroke for pen — will be updated on PointerUp with pressure
                 node.props.stroke = Some(Stroke {
                     paint: Paint::Solid(Color::rgba(0.37, 0.36, 0.90, 1.0)),
-                    width: 2.5,
+                    width: DEFAULT_STROKE_WIDTH,
                     cap: StrokeCap::Round,
                     join: StrokeJoin::Round,
                 });
@@ -808,12 +816,12 @@ impl Tool for PenTool {
 /// Light pressure (≤0.3) → thin (1.0px), heavy pressure (≥0.9) → thick (4.5px).
 fn pressure_to_stroke_width(points: &[(f32, f32, f32)]) -> f32 {
     if points.is_empty() {
-        return 2.5;
+        return DEFAULT_STROKE_WIDTH;
     }
     let avg_pressure: f32 = points.iter().map(|p| p.2).sum::<f32>() / points.len() as f32;
     // Map pressure [0.0, 1.0] → stroke width [1.0, 4.5]
-    let min_width = 1.0_f32;
-    let max_width = 4.5_f32;
+    let min_width = MIN_PEN_STROKE_WIDTH;
+    let max_width = MAX_PEN_STROKE_WIDTH;
     min_width + (max_width - min_width) * avg_pressure.clamp(0.0, 1.0)
 }
 
@@ -960,7 +968,7 @@ impl Tool for EllipseTool {
                 // Transparent fill + dark stroke (matching create_node_at defaults)
                 node.props.stroke = Some(Stroke {
                     paint: Paint::Solid(Color::rgba(0.2, 0.2, 0.2, 1.0)),
-                    width: 2.5,
+                    width: DEFAULT_STROKE_WIDTH,
                     cap: StrokeCap::Round,
                     join: StrokeJoin::Round,
                 });
@@ -1047,8 +1055,8 @@ impl Tool for EllipseTool {
                 if !self.dragged {
                     if let Some(id) = self.current_id.take() {
                         // Click without drag → default 128×128 centered at click point
-                        let w = 128.0_f32;
-                        let h = 128.0_f32;
+                        let w = DEFAULT_ELLIPSE_SIZE;
+                        let h = DEFAULT_ELLIPSE_SIZE;
                         vec![GraphMutation::ResizeNode {
                             id,
                             width: w,
