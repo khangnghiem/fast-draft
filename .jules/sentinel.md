@@ -14,3 +14,7 @@
 **Vulnerability:** Several `escapeHtml` implementations used DOM manipulation (`document.createElement('div').innerHTML`) or incomplete string replacement, failing to escape single and double quotes.
 **Learning:** Incomplete escaping allows XSS payloads to break out of HTML attributes (e.g., `<input value="${escapeHtml(userInput)}">`).
 **Prevention:** Always use `String(text)` cast combined with a comprehensive replace chain for `&`, `<`, `>`, `"`, and `'` (e.g., `&#039;`) in custom string escaping functions.
+## 2024-05-20 - Insecure Conditional Sanitization Fallback
+**Vulnerability:** A conditional sanitization check (`window.DOMPurify ? DOMPurify.sanitize(...) : unsafeHTML`) defaulted to rendering raw, untrusted HTML via `.innerHTML` when the `DOMPurify` library failed to load, introducing a fallback XSS vulnerability.
+**Learning:** Fallback paths in conditional sanitization must fail securely. Directly assigning `unsafeHTML` to `.innerHTML` invalidates the security guarantee intended by the condition.
+**Prevention:** Always ensure the fallback path for sanitization relies on safe DOM assignments (like `.textContent`) or securely escapes all HTML special characters (`&`, `<`, `>`, `"`, `'`) and wraps the result in protective tags (like `<pre>`) if rendering as HTML string is absolutely required.
