@@ -18,19 +18,17 @@ const CONFIG_SECTION = "fd.ai";
 const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
-const DEFAULT_OLLAMA_MODEL = "llama3.2";
-const DEFAULT_OLLAMA_URL = "http://localhost:11434";
 const DEFAULT_OPENROUTER_MODEL = "google/gemini-2.0-flash-exp:free";
+const DEFAULT_MINIMAX_MODEL = "MiniMax-M2.7";
 
 // ─── Types ───────────────────────────────────────────────────────────────
 
-type Provider = "gemini" | "openai" | "anthropic" | "ollama" | "openrouter";
+type Provider = "gemini" | "openai" | "anthropic" | "minimax" | "openrouter";
 
 interface AiConfig {
   provider: Provider;
   apiKey: string;
   model: string;
-  ollamaUrl: string;
 }
 
 interface RefineResult {
@@ -52,7 +50,7 @@ export function getAiConfig(): AiConfig {
     gemini: config.get<string>("geminiApiKey") ?? "",
     openai: config.get<string>("openaiApiKey") ?? "",
     anthropic: config.get<string>("anthropicApiKey") ?? "",
-    ollama: config.get<string>("ollamaApiKey") ?? "",
+    minimax: config.get<string>("minimaxApiKey") ?? "",
     openrouter: config.get<string>("openrouterApiKey") ?? "",
   };
 
@@ -60,7 +58,7 @@ export function getAiConfig(): AiConfig {
     gemini: config.get<string>("geminiModel") ?? DEFAULT_GEMINI_MODEL,
     openai: config.get<string>("openaiModel") ?? DEFAULT_OPENAI_MODEL,
     anthropic: config.get<string>("anthropicModel") ?? DEFAULT_ANTHROPIC_MODEL,
-    ollama: config.get<string>("ollamaModel") ?? DEFAULT_OLLAMA_MODEL,
+    minimax: config.get<string>("minimaxModel") ?? DEFAULT_MINIMAX_MODEL,
     openrouter: config.get<string>("openrouterModel") ?? DEFAULT_OPENROUTER_MODEL,
   };
 
@@ -68,7 +66,6 @@ export function getAiConfig(): AiConfig {
     provider,
     apiKey: keyMap[provider],
     model: modelMap[provider],
-    ollamaUrl: config.get<string>("ollamaUrl") ?? DEFAULT_OLLAMA_URL,
   };
 }
 
@@ -197,38 +194,27 @@ async function callAnthropic(
   return text.trim();
 }
 
-async function callOllama(
+async function callMiniMax(
   prompt: string,
   apiKey: string,
-  model: string,
-  baseUrl: string
+  model: string
 ): Promise<string> {
-  const isCloud = baseUrl.includes("ollama.com");
-  const url = isCloud ? "https://ollama.com/api/chat" : `${baseUrl}/api/chat`;
-  const temperature = 0.3;
+  const url = "https://api.minimax.io/v1/text/chatcompletion_v2";
 
-  const body = { model, messages: [{ role: "user", content: prompt }], stream: false, options: { temperature } };
+  const body = {
+    model,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.3,
+    max_tokens: 8192,
+  };
 
-  const headers: Record<string, string> = {};
-  if (apiKey) {
-    headers["Authorization"] = `Bearer ${apiKey}`;
-  }
+  const data = await callAiApi(url, body, {
+    Authorization: `Bearer ${apiKey}`,
+  });
 
-  let data;
-  try {
-    data = await callAiApi(url, body, headers);
-  } catch (error) {
-    if (error instanceof Error && error.message.includes("API error")) {
-        throw error;
-    }
-    throw new Error(
-      `Could not connect to Ollama at ${isCloud ? "ollama.com" : baseUrl}. Make sure Ollama is running.`
-    );
-  }
-
-  const text = data?.message?.content;
+  const text = data.choices?.[0]?.message?.content;
   if (!text) {
-    throw new Error("Ollama returned empty response");
+    throw new Error("MiniMax returned empty response");
   }
 
   return text.trim();
@@ -292,7 +278,7 @@ export async function refineSelectedNodes(
           return {
             refinedText: fdText,
             error:
-              "Gemini API key not configured. Get a FREE key at aistudio.google.com and set 'fd.ai.geminiApiKey' in Settings. (You can also switch to OpenAI, Anthropic, Ollama, or OpenRouter.)",
+              "Gemini API key not configured. Get a FREE key at aistudio.google.com and set 'fd.ai.geminiApiKey' in Settings. (You can also switch to OpenAI, Anthropic, MiniMax, or OpenRouter.)",
             needsSettings: true,
           };
         }
@@ -304,7 +290,7 @@ export async function refineSelectedNodes(
           return {
             refinedText: fdText,
             error:
-              "OpenAI API key not configured. Set 'fd.ai.openaiApiKey' in Settings. (You can also switch to Gemini, Anthropic, Ollama, or OpenRouter.)",
+              "OpenAI API key not configured. Set 'fd.ai.openaiApiKey' in Settings. (You can also switch to Gemini, Anthropic, MiniMax, or OpenRouter.)",
             needsSettings: true,
           };
         }
@@ -316,15 +302,23 @@ export async function refineSelectedNodes(
           return {
             refinedText: fdText,
             error:
-              "Anthropic API key not configured. Set 'fd.ai.anthropicApiKey' in Settings. (You can also switch to Gemini, OpenAI, Ollama, or OpenRouter.)",
+              "Anthropic API key not configured. Set 'fd.ai.anthropicApiKey' in Settings. (You can also switch to Gemini, OpenAI, MiniMax, or OpenRouter.)",
             needsSettings: true,
           };
         }
         refined = await callAnthropic(prompt, config.apiKey, config.model);
         break;
 
-      case "ollama":
-        refined = await callOllama(prompt, config.apiKey, config.model, config.ollamaUrl);
+      case "minimax":
+        if (!config.apiKey) {
+          return {
+            refinedText: fdText,
+            error:
+              "MiniMax API key not configured. Set 'fd.ai.minimaxApiKey' in Settings. (You can also switch to Gemini, OpenAI, Anthropic, or OpenRouter.)",
+            needsSettings: true,
+          };
+        }
+        refined = await callMiniMax(prompt, config.apiKey, config.model);
         break;
 
       case "openrouter":
@@ -332,7 +326,7 @@ export async function refineSelectedNodes(
           return {
             refinedText: fdText,
             error:
-              "OpenRouter API key not configured. Get one at openrouter.ai and set 'fd.ai.openrouterApiKey' in Settings. (You can also switch to Gemini, OpenAI, Anthropic, or Ollama.)",
+              "OpenRouter API key not configured. Get one at openrouter.ai and set 'fd.ai.openrouterApiKey' in Settings. (You can also switch to Gemini, OpenAI, Anthropic, or MiniMax.)",
             needsSettings: true,
           };
         }

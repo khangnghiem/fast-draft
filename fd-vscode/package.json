@@ -82,14 +82,14 @@
             "gemini",
             "openai",
             "anthropic",
-            "ollama",
+            "minimax",
             "openrouter"
           ],
           "enumDescriptions": [
             "Google Gemini (free tier available at aistudio.google.com)",
             "OpenAI (GPT-4o, GPT-4o-mini, etc.)",
             "Anthropic (Claude 3.5 Sonnet, Haiku, etc.)",
-            "Ollama (Local, completely free, no API key needed)",
+            "MiniMax (MiniMax-M2.7, MiniMax-M2.5)",
             "OpenRouter (Multi-model gateway — access 100+ models with one key)"
           ],
           "description": "AI provider for the Refine feature"
@@ -124,20 +124,15 @@
           "default": "claude-sonnet-4-20250514",
           "description": "Anthropic model to use (e.g. claude-sonnet-4-20250514, claude-3-5-haiku-20241022)"
         },
-        "fd.ai.ollamaModel": {
-          "type": "string",
-          "default": "llama3.2",
-          "description": "Ollama model to use (e.g. llama3.2, codellama, mistral, deepseek-r1)"
-        },
-        "fd.ai.ollamaApiKey": {
+        "fd.ai.minimaxApiKey": {
           "type": "string",
           "default": "",
-          "description": "Ollama Cloud API key (leave empty for local Ollama)"
+          "description": "MiniMax API key"
         },
-        "fd.ai.ollamaUrl": {
+        "fd.ai.minimaxModel": {
           "type": "string",
-          "default": "http://localhost:11434",
-          "description": "Ollama server URL"
+          "default": "MiniMax-M2.7",
+          "description": "MiniMax model to use (e.g. MiniMax-M2.7, MiniMax-M2.5)"
         },
         "fd.ai.openrouterApiKey": {
           "type": "string",

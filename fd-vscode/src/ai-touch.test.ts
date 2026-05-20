@@ -27,8 +27,8 @@ describe("ai-touch refineSelectedNodes", () => {
         openaiModel: "gpt-4o",
         anthropicApiKey: "fake-anthropic-key",
         anthropicModel: "claude-3-5-sonnet-20240620",
-        ollamaUrl: "http://localhost:11434",
-        ollamaModel: "llama3",
+        minimaxApiKey: "fake-minimax-key",
+        minimaxModel: "MiniMax-M2.7",
         openrouterApiKey: "fake-openrouter-key",
         openrouterModel: "meta-llama/llama-3-8b-instruct",
       };
@@ -168,19 +168,19 @@ describe("ai-touch refineSelectedNodes", () => {
       expect(result.refinedText).toBe(goodResponse);
     });
 
-    it("should call Ollama successfully", async () => {
+    it("should call MiniMax successfully", async () => {
       (vscode.workspace.getConfiguration as any).mockReturnValue({
         get: (k: string) => {
-          if (k === "provider") return "ollama";
-          if (k === "ollamaUrl") return "http://local:11434";
-          return "llama3";
+          if (k === "provider") return "minimax";
+          if (k === "minimaxApiKey") return "test-key";
+          return "MiniMax-M2.7";
         }
       });
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          message: { content: goodResponse }
+          choices: [{ message: { content: goodResponse } }]
         })
       });
 
@@ -189,25 +189,20 @@ describe("ai-touch refineSelectedNodes", () => {
       expect(result.error).toBeUndefined();
       expect(result.refinedText).toBe(goodResponse);
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://local:11434/api/chat",
-        expect.anything()
+        "https://api.minimax.io/v1/text/chatcompletion_v2",
+        expect.objectContaining({
+          headers: expect.objectContaining({ "Authorization": "Bearer test-key" })
+        })
       );
     });
 
-    it("should handle Ollama connection error", async () => {
+    it("should require minimax api key", async () => {
       (vscode.workspace.getConfiguration as any).mockReturnValue({
-        get: (k: string) => {
-          if (k === "provider") return "ollama";
-          if (k === "ollamaUrl") return "http://local:11434";
-          return "llama3";
-        }
+        get: (k: string) => k === "provider" ? "minimax" : undefined
       });
-
-      mockFetch.mockRejectedValueOnce(new TypeError("fetch failed"));
-
-      const result = await refineSelectedNodes(fdDoc, ["foo"]);
-
-      expect(result.error).toContain("Could not connect to Ollama");
+      const result = await refineSelectedNodes("rect @foo {}", ["foo"]);
+      expect(result.needsSettings).toBe(true);
+      expect(result.error).toContain("MiniMax API key not configured");
     });
 
     it("should call OpenRouter successfully", async () => {

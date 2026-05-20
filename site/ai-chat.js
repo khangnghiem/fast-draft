@@ -687,8 +687,7 @@ async function sendMessage(getEditorContent, setEditorContent) {
                 selection: selFd ? selFd.slice(0, 4000) : undefined,
                 selection_ids: selIds.length > 0 ? selIds : undefined,
                 stream: false,
-                force_ollama: true, // Bypass Workers AI which returned empty
-                model_hint: new URLSearchParams(window.location.search).get('ai_model') || undefined,
+model_hint: new URLSearchParams(window.location.search).get('ai_model') || undefined,
               }),
             });
             if (retryResp.ok) {
