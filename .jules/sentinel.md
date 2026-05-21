@@ -14,3 +14,8 @@
 **Vulnerability:** Several `escapeHtml` implementations used DOM manipulation (`document.createElement('div').innerHTML`) or incomplete string replacement, failing to escape single and double quotes.
 **Learning:** Incomplete escaping allows XSS payloads to break out of HTML attributes (e.g., `<input value="${escapeHtml(userInput)}">`).
 **Prevention:** Always use `String(text)` cast combined with a comprehensive replace chain for `&`, `<`, `>`, `"`, and `'` (e.g., `&#039;`) in custom string escaping functions.
+
+## 2024-05-21 - Unsanitized Markdown in Notes Panel
+**Vulnerability:** XSS vulnerability found in the notes panel (`site/app.js`) where user-controlled `.fd` file content rendered as Markdown via `marked.parse` was injected directly into the DOM using `innerHTML` without sanitization.
+**Learning:** External markdown parsers like `marked` do not escape or sanitize HTML tags by default. This makes user-generated Markdown payloads containing malicious HTML/scripts highly dangerous.
+**Prevention:** Always use `window.DOMPurify.sanitize()` before injecting Markdown output into the DOM via `innerHTML`, especially for any content derived from user-controlled files.
