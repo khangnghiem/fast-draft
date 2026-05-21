@@ -2732,7 +2732,7 @@ function renderSpecsPanel() {
 
     html += `</div></div>`;
   }
-  body.innerHTML = html;
+  body.innerHTML = window.DOMPurify ? DOMPurify.sanitize(html) : html;
 
   // Click-to-select: clicking a group header selects the node on canvas
   body.querySelectorAll('.spec-group-header').forEach(el => {
