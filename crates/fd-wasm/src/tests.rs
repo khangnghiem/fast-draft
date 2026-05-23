@@ -127,6 +127,37 @@ mod tests {
     }
 
     #[test]
+    fn test_update_text_metrics_updates_bounds_and_spatial_index() {
+        let mut canvas = setup_canvas(NodeKind::Text {
+            content: "hello".to_string(),
+            max_width: None,
+        });
+
+        let id = NodeId::intern("test_node");
+        let idx = canvas.engine.graph.index_of(id).unwrap();
+
+        let changed = canvas.update_text_metrics("test_node", 150.0, 30.0);
+        assert!(changed, "Expected update_text_metrics to return true");
+
+        let new_bounds = canvas.engine.bounds.get(&idx).copied().unwrap();
+        assert_eq!(new_bounds.width, 150.0 + 4.0);
+        assert_eq!(new_bounds.height, 30.0 + 4.0);
+
+        let hit = canvas.hit_test(new_bounds.x + 154.0 / 2.0, new_bounds.y + 34.0 / 2.0);
+        assert_eq!(
+            hit,
+            Some(id),
+            "Spatial index should find the text node after bounds change"
+        );
+
+        let miss = canvas.hit_test(new_bounds.x + 180.0, new_bounds.y + 80.0);
+        assert_eq!(
+            miss, None,
+            "Old bounding box area should no longer register hit"
+        );
+    }
+
+    #[test]
     fn test_eraser_rebuilds_spatial_index() {
         let mut canvas = setup_canvas(NodeKind::Rect {
             width: 200.0,
