@@ -112,6 +112,5 @@ cp -a fd-vscode/webview/wasm/. site/wasm/
 
 - `yolo <feature>` → follow `.agents/workflows/yolo.md`.
 - `smoke` → run `just smoke`.
-- Local caveman helpers: `/caveman`, `/caveman-help`, `/caveman-review`, `/caveman-commit`, `/caveman:compress <file>`.
 - `/memory-status` → inspect Fast Draft memory state without writes.
 - `/memory-sync` → push durable agent-memory changes only; never project changes.

@@ -1,6 +1,6 @@
 ---
 name: sync-all
-description: Run the global config sync script at ~/.config/sync-all.sh to sync dotfiles, memory, opencode, caveman, and skills.
+description: Run the global config sync script at ~/.config/sync-all.sh to sync dotfiles, memory, opencode, and skills.
 ---
 
 # Sync All
@@ -25,7 +25,6 @@ The script syncs these domains:
 - **dotfiles** — git pull/push
 - **memory** — git pull/push via `~/.config/memory/sync.sh`
 - **opencode** — skipped if not a git repo
-- **caveman** — skipped if not a git repo  
 - **skills** — skipped if not a git repo
 
 ## Output
