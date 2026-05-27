@@ -40,6 +40,11 @@ fn paint_to_svg_color(p: &fd_core::model::Paint) -> String {
     }
 }
 
+/// Renders a given `SceneGraph` to an SVG string.
+///
+/// Converts the visible nodes (rectangles, ellipses, text, paths, icons, images)
+/// into their SVG equivalents based on their resolved styles and bounds. It
+/// also correctly handles grouping and nested translations.
 pub fn render_svg(
     graph: &SceneGraph,
     bounds: &HashMap<NodeIndex, ResolvedBounds>,

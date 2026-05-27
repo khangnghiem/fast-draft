@@ -1,22 +1,34 @@
 use std::cmp::min;
 
+/// Represents the type of a completion item, determining its icon and grouping.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompletionKind {
+    /// A top-level node definition keyword (e.g., `rect`, `ellipse`, `group`).
     Keyword,
+    /// A node body property (e.g., `fill:`, `stroke:`).
     Property,
+    /// A value for a property (e.g., `#6C5CE7`, `center`).
     Value,
+    /// A block structure snippet (e.g., `when :hover { ... }`).
     Snippet,
+    /// A reference to a style or another node (e.g., `use: ...`).
     Reference,
 }
 
+/// Data structure containing the static parts of an LSP completion item.
 #[derive(Debug, Clone)]
 pub struct CompletionItemData {
+    /// The label displayed in the completion menu.
     pub label: &'static str,
+    /// A short description shown alongside the label.
     pub detail: &'static str,
+    /// The kind of the completion item.
     pub kind: CompletionKind,
+    /// The snippet template, optionally containing `$0`, `$1`, etc.
     pub snippet: Option<&'static str>,
 }
 
+/// Returns completion items that are valid at the top level of a document.
 pub fn top_level_items() -> Vec<CompletionItemData> {
     vec![
         CompletionItemData {
@@ -78,6 +90,7 @@ pub fn top_level_items() -> Vec<CompletionItemData> {
     ]
 }
 
+/// Returns completion items that are valid inside the body of a node block.
 pub fn node_body_items() -> Vec<CompletionItemData> {
     vec![
         CompletionItemData {
@@ -227,6 +240,7 @@ pub fn node_body_items() -> Vec<CompletionItemData> {
     ]
 }
 
+/// Returns context-specific completion values based on the current property key.
 pub fn value_completions_data(property: &str) -> Vec<CompletionItemData> {
     let values: &[(&str, &str)] = match property {
         "layout" => &[
@@ -295,6 +309,7 @@ pub fn value_completions_data(property: &str) -> Vec<CompletionItemData> {
     items
 }
 
+/// Computes the nesting depth (number of unmatched open braces) at a given cursor position.
 pub fn compute_brace_depth(text: &str, line: usize, col: usize) -> usize {
     let mut depth: i32 = 0;
     for (i, ln) in text.lines().enumerate() {
