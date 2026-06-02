@@ -2724,7 +2724,7 @@ function renderSpecsPanel() {
 
       if (typeof marked !== 'undefined') {
         const rendered = marked.parse(processedNote);
-        html += rendered;
+        html += window.DOMPurify ? window.DOMPurify.sanitize(rendered, { ADD_ATTR: ['data-note-node', 'data-node'] }) : rendered;
       } else {
         html += `<pre>${processedNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
       }
