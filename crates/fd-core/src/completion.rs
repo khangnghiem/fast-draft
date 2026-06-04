@@ -1,5 +1,9 @@
 use std::cmp::min;
 
+/// The semantic type of a completion item.
+///
+/// This maps closely to the completion item kinds provided by LSP (Language Server Protocol)
+/// clients, helping the editor determine which icon or styling to apply to the suggestion.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompletionKind {
     Keyword,
@@ -9,6 +13,11 @@ pub enum CompletionKind {
     Reference,
 }
 
+/// The core data for an autocompletion suggestion.
+///
+/// This structure holds the plain text label, a descriptive detail,
+/// the semantic kind, and an optional snippet template that might include
+/// placeholder variables (e.g., `${1:name}`).
 #[derive(Debug, Clone)]
 pub struct CompletionItemData {
     pub label: &'static str,
@@ -17,6 +26,10 @@ pub struct CompletionItemData {
     pub snippet: Option<&'static str>,
 }
 
+/// Returns the standard completion items available at the document root level.
+///
+/// These include keywords to start major blocks (e.g., `rect`, `group`, `edge`, `style`)
+/// and global declarations like `import`.
 pub fn top_level_items() -> Vec<CompletionItemData> {
     vec![
         CompletionItemData {
@@ -78,6 +91,10 @@ pub fn top_level_items() -> Vec<CompletionItemData> {
     ]
 }
 
+/// Returns the standard completion items available inside a node's body block.
+///
+/// These include properties (e.g., `w:`, `fill:`), nested block keywords
+/// (e.g., `rect`, `text`), and animation triggers (`when`).
 pub fn node_body_items() -> Vec<CompletionItemData> {
     vec![
         CompletionItemData {
@@ -227,6 +244,10 @@ pub fn node_body_items() -> Vec<CompletionItemData> {
     ]
 }
 
+/// Returns context-aware completion values for a specific property.
+///
+/// For example, if the user is typing a value for `layout:`, this returns
+/// suggestions like `column`, `row`, `grid`, and `free`.
 pub fn value_completions_data(property: &str) -> Vec<CompletionItemData> {
     let values: &[(&str, &str)] = match property {
         "layout" => &[
@@ -295,6 +316,11 @@ pub fn value_completions_data(property: &str) -> Vec<CompletionItemData> {
     items
 }
 
+/// Computes the syntactic nesting depth at a specific cursor position in a document.
+///
+/// This counts unclosed opening braces (`{`) up to the given `line` and `col`
+/// (both zero-indexed) to determine whether the cursor is at the top level (depth 0)
+/// or inside a block (depth > 0). It ensures the depth never drops below zero.
 pub fn compute_brace_depth(text: &str, line: usize, col: usize) -> usize {
     let mut depth: i32 = 0;
     for (i, ln) in text.lines().enumerate() {
