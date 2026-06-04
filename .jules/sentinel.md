@@ -14,3 +14,7 @@
 **Vulnerability:** Several `escapeHtml` implementations used DOM manipulation (`document.createElement('div').innerHTML`) or incomplete string replacement, failing to escape single and double quotes.
 **Learning:** Incomplete escaping allows XSS payloads to break out of HTML attributes (e.g., `<input value="${escapeHtml(userInput)}">`).
 **Prevention:** Always use `String(text)` cast combined with a comprehensive replace chain for `&`, `<`, `>`, `"`, and `'` (e.g., `&#039;`) in custom string escaping functions.
+## 2026-05-09 - Secure Markdown Rendering Fallback
+**Vulnerability:** XSS vulnerability in `site/app.js` where user-controlled Markdown notes were directly injected via `innerHTML` after parsing with `marked`.
+**Learning:** When implementing conditional sanitization (e.g., `window.DOMPurify ? sanitize(...) : fallback`), the fallback path must fail securely. Simply passing the raw, unescaped string breaks Markdown rendering functionality (no newlines/formatting) and leaves the XSS vulnerability if the sanitizer dependency fails to load.
+**Prevention:** Ensure the fallback path gracefully escapes HTML characters (`<`, `>`) and wraps the text in appropriate container tags (like `<pre>`) to maintain layout stability and security when the primary sanitization library is missing.
