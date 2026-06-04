@@ -1,494 +1,1399 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fast Draft — Design as Code</title>
-  <meta name="description" content="Fast Draft is a file format and canvas for drawing, design, and animation — right inside your code editor. Draw it or code it? Both." />
-  <meta name="keywords" content="design tool, code editor, AI-friendly, WASM, canvas, VS Code, design as code" />
-  <meta property="og:title" content="Fast Draft — Design as Code" />
-  <meta property="og:description" content="A file format and canvas for drawing, design, and animation — right inside your code editor." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://fast-draft.com" />
-  <meta property="og:image" content="https://fast-draft.com/og-card.png" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Fast Draft — Design as Code" />
-  <meta name="twitter:description" content="A file format and canvas for drawing, design, and animation — right inside your code editor." />
-  <meta name="twitter:image" content="https://fast-draft.com/og-card.png" />
-  <link rel="canonical" href="https://fast-draft.com" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/style.min.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-mono/style.min.css" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" />
-  <!-- Preload WASM for instant startup -->
-  <link rel="modulepreload" href="./wasm/fd_wasm.js?v=0.11.385" />
-  <link rel="preload" href="./wasm/fd_wasm_bg.wasm?v=0.11.385" as="fetch" crossorigin fetchpriority="high" />
-  <!-- Security: DOMPurify for streaming AI Markdown -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
-  <!-- Preload local vendor bundle (CodeMirror + lz-string, no CDN) -->
-  <link rel="modulepreload" href="./vendor/cm.min.js" />
-  <script src="icons.js"></script>
-  <link rel="stylesheet" href="shared.css?v=0.11.385" />
-  <link rel="stylesheet" href="style.css?v=0.11.385" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fast Draft — Design as Code</title>
+    <meta
+      name="description"
+      content="Fast Draft is a file format and canvas for drawing, design, and animation — right inside your code editor. Draw it or code it? Both."
+    />
+    <meta
+      name="keywords"
+      content="design tool, code editor, AI-friendly, WASM, canvas, VS Code, design as code"
+    />
+    <meta property="og:title" content="Fast Draft — Design as Code" />
+    <meta
+      property="og:description"
+      content="A file format and canvas for drawing, design, and animation — right inside your code editor."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://fast-draft.com" />
+    <meta property="og:image" content="https://fast-draft.com/og-card.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Fast Draft — Design as Code" />
+    <meta
+      name="twitter:description"
+      content="A file format and canvas for drawing, design, and animation — right inside your code editor."
+    />
+    <meta name="twitter:image" content="https://fast-draft.com/og-card.png" />
+    <link rel="canonical" href="https://fast-draft.com" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/style.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-mono/style.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap"
+    />
+    <!-- Preload WASM for instant startup -->
+    <link rel="modulepreload" href="./wasm/fd_wasm.js?v=0.11.385" />
+    <link
+      rel="preload"
+      href="./wasm/fd_wasm_bg.wasm?v=0.11.385"
+      as="fetch"
+      crossorigin
+      fetchpriority="high"
+    />
+    <!-- Security: DOMPurify for streaming AI Markdown -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    <!-- Preload local vendor bundle (CodeMirror + lz-string, no CDN) -->
+    <link rel="modulepreload" href="./vendor/cm.min.js" />
+    <script src="icons.js"></script>
+    <link rel="stylesheet" href="shared.css?v=0.11.385" />
+    <link rel="stylesheet" href="style.css?v=0.11.385" />
 
-  <!-- ── Layout State Machine ──
+    <!-- ── Layout State Machine ──
        Sets data-attrs + CSS vars on <html> SYNCHRONOUSLY before <body> parse.
        CSS uses [data-lp], [data-rp], [data-toolbar] selectors for layout —
        zero FOUC because layout is correct from the very first frame. -->
-  <style>
-    .init-no-transition,
-    .init-no-transition * {
-      transition: none !important;
-    }
-  </style>
-  <script>
-    (function() {
-      var h = document.documentElement;
-      h.classList.add('init-no-transition');
+    <style>
+      .init-no-transition,
+      .init-no-transition * {
+        transition: none !important;
+      }
+    </style>
+    <script>
+      (function () {
+        var h = document.documentElement;
+        h.classList.add("init-no-transition");
 
-      // ── Panel state ──
-      var lpC = localStorage.getItem('fd-left-collapsed') === '1';
-      var rpC = localStorage.getItem('fd-right-collapsed') === '1';
-      // Auto-collapse panels on narrow viewports (mobile web)
-      if (window.innerWidth <= 768) { lpC = true; rpC = true; }
-      h.dataset.lp = lpC ? 'closed' : 'open';
-      h.dataset.rp = rpC ? 'closed' : 'open';
-
-      // ── Panel widths as CSS vars on <html> ──
-      var lpW = '260';
-      if (!lpC) {
-        var savedL = localStorage.getItem('fd-left-panel-width');
-        if (savedL) {
-          var wL = parseInt(savedL, 10);
-          lpW = (wL >= 120 && wL <= 500) ? String(wL) : '260';
+        // ── Panel state ──
+        var lpC = localStorage.getItem("fd-left-collapsed") === "1";
+        var rpC = localStorage.getItem("fd-right-collapsed") === "1";
+        // Auto-collapse panels on narrow viewports (mobile web)
+        if (window.innerWidth <= 768) {
+          lpC = true;
+          rpC = true;
         }
-      }
-      
-      var rpW = '260';
-      if (!rpC) {
-        var savedR = localStorage.getItem('fd-right-panel-width');
-        if (savedR) {
-          var wR = parseInt(savedR, 10);
-          rpW = (wR >= 120 && wR <= 500) ? String(wR) : '260';
+        h.dataset.lp = lpC ? "closed" : "open";
+        h.dataset.rp = rpC ? "closed" : "open";
+
+        // ── Panel widths as CSS vars on <html> ──
+        var lpW = "260";
+        if (!lpC) {
+          var savedL = localStorage.getItem("fd-left-panel-width");
+          if (savedL) {
+            var wL = parseInt(savedL, 10);
+            lpW = wL >= 120 && wL <= 500 ? String(wL) : "260";
+          }
         }
+
+        var rpW = "260";
+        if (!rpC) {
+          var savedR = localStorage.getItem("fd-right-panel-width");
+          if (savedR) {
+            var wR = parseInt(savedR, 10);
+            rpW = wR >= 120 && wR <= 500 ? String(wR) : "260";
+          }
+        }
+        h.style.setProperty("--left-panel-width", lpC ? "0px" : lpW + "px");
+        h.style.setProperty("--right-panel-width", rpC ? "0px" : rpW + "px");
+
+        // ── Toolbar side ──
+        var tbPos;
+        try {
+          tbPos = JSON.parse(localStorage.getItem("fd-toolbar-pos"));
+        } catch (e) {}
+        if (!tbPos || !tbPos.side) {
+          var raw = localStorage.getItem("fd-toolbar-pos");
+          tbPos = {
+            side:
+              raw &&
+              ["top", "bottom", "left", "right", "floating"].indexOf(raw) >= 0
+                ? raw
+                : "bottom",
+          };
+        }
+        h.dataset.toolbar = tbPos.side;
+
+        // ── Toolbar minimized ──
+        if (localStorage.getItem("fd-toolbar-minimized") === "1") {
+          h.dataset.toolbarMin = "1";
+        }
+      })();
+    </script>
+    <!-- Service Worker for instant WASM loading on repeat visits -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js").catch(function () {});
       }
-      h.style.setProperty('--left-panel-width', lpC ? '0px' : lpW + 'px');
-      h.style.setProperty('--right-panel-width', rpC ? '0px' : rpW + 'px');
+    </script>
+  </head>
+  <body>
+    <!-- ─── Full-Viewport Editor ─── -->
+    <main id="app">
+      <div class="app-playground">
+        <input
+          type="file"
+          id="css-file-input"
+          accept=".css"
+          style="display: none"
+        />
 
-      // ── Toolbar side ──
-      var tbPos;
-      try { tbPos = JSON.parse(localStorage.getItem('fd-toolbar-pos')); } catch(e) {}
-      if (!tbPos || !tbPos.side) {
-        var raw = localStorage.getItem('fd-toolbar-pos');
-        tbPos = { side: (raw && ['top','bottom','left','right','floating'].indexOf(raw) >= 0) ? raw : 'bottom' };
-      }
-      h.dataset.toolbar = tbPos.side;
+        <div id="playground-container" class="playground-split">
+          <div class="playground-canvas">
+            <div id="canvas-wrapper">
+              <div id="canvas-content">
+                <div id="mobile-layers-backdrop"></div>
+                <div id="canvas-tips" class="canvas-tips"></div>
 
-      // ── Toolbar minimized ──
-      if (localStorage.getItem('fd-toolbar-minimized') === '1') {
-        h.dataset.toolbarMin = '1';
-      }
-    })();
-  </script>
-  <!-- Service Worker for instant WASM loading on repeat visits -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(function() {});
-    }
-  </script>
-</head>
-<body>
-
-
-  <!-- ─── Full-Viewport Editor ─── -->
-  <main id="app">
-
-    <div class="app-playground">
-
-      <input type="file" id="css-file-input" accept=".css" style="display:none">
-
-      <div id="playground-container" class="playground-split">
-
-        <div class="playground-canvas">
-          <div id="canvas-wrapper">
-            <div id="canvas-content">
-
-            <div id="mobile-layers-backdrop"></div>
-            <div id="canvas-tips" class="canvas-tips"></div>
-
-            <!-- ─── Top-Left Canvas Chrome ─── -->
-            <div id="chrome-left" class="canvas-chrome canvas-chrome-left">
-              <button class="canvas-chrome-btn" id="sidebar-toggle-btn" title="Toggle sidebar (\)">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="14" height="12" rx="2"/><line x1="6" y1="2" x2="6" y2="14"/></svg>
-              </button>
-            </div>
-
-            <!-- ─── Top-Right Canvas Chrome ─── -->
-            <div id="chrome-right" class="canvas-chrome canvas-chrome-right">
-              <!-- Share dropdown -->
-              <div class="chrome-dropdown-container" id="share-dropdown-container">
-                <button class="canvas-chrome-btn" id="share-btn-chrome" title="Share & Export">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2v8"/><path d="M4 6l4-4 4 4"/><path d="M13 10v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3"/></svg>
-                </button>
-                <div class="chrome-dropdown chrome-dropdown-right" id="share-dropdown">
-                  <button class="chrome-dropdown-item" id="share-link-btn"><span class="cd-icon">🔗</span><span class="cd-label">Share Link</span></button>
-                  <button class="chrome-dropdown-item" id="sm-copy-png" data-setting="copy-png"><span class="cd-icon">📷</span><span class="cd-label">Copy as PNG</span><span class="cd-shortcut">⌘⇧E</span></button>
-                  <button class="chrome-dropdown-item" id="sm-export-svg" data-setting="export-svg"><span class="cd-icon">📄</span><span class="cd-label">Download SVG</span></button>
-                  <button class="chrome-dropdown-item" id="sm-export-html" data-setting="export-html"><span class="cd-icon">🌐</span><span class="cd-label">Download HTML</span></button>
-                </div>
-              </div>
-              <!-- Settings dropdown -->
-              <div class="chrome-dropdown-container" id="settings-dropdown-container">
-                <button class="canvas-chrome-btn" id="settings-gear-btn" title="Settings">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.86 1.58a.5.5 0 0 1 .5-.42h1.28a.5.5 0 0 1 .5.42l.18 1.29a5.5 5.5 0 0 1 1.32.76l1.22-.4a.5.5 0 0 1 .6.22l.64 1.1a.5.5 0 0 1-.1.63l-1.04.89a5.5 5.5 0 0 1 0 1.53l1.04.89a.5.5 0 0 1 .1.63l-.64 1.1a.5.5 0 0 1-.6.22l-1.22-.4a5.5 5.5 0 0 1-1.32.76l-.18 1.29a.5.5 0 0 1-.5.42H7.36a.5.5 0 0 1-.5-.42l-.18-1.29a5.5 5.5 0 0 1-1.32-.76l-1.22.4a.5.5 0 0 1-.6-.22l-.64-1.1a.5.5 0 0 1 .1-.63l1.04-.89a5.5 5.5 0 0 1 0-1.53l-1.04-.89a.5.5 0 0 1-.1-.63l.64-1.1a.5.5 0 0 1 .6-.22l1.22.4a5.5 5.5 0 0 1 1.32-.76l.18-1.29Z"/><circle cx="8" cy="8" r="2.5"/></svg>
-                </button>
-                <div class="chrome-dropdown chrome-dropdown-right" id="settings-dropdown">
-                  <button class="chrome-dropdown-item" id="sm-theme-toggle"><span class="cd-icon">☀️</span><span class="cd-label">Light / Dark</span><span class="cd-shortcut">D</span></button>
-                  <div class="chrome-dropdown-sep"></div>
-                  <button class="chrome-dropdown-item" id="sm-present"><span class="cd-icon">▶</span><span class="cd-label">Present</span></button>
-                  <div class="chrome-dropdown-sep"></div>
-                  <button class="chrome-dropdown-item" id="sm-sketchy-toggle" data-setting="sketchy"><span class="cd-icon">✏️</span><span class="cd-label">Sketchy</span></button>
-                  <button class="chrome-dropdown-item" id="sm-grid-toggle" data-setting="grid"><span class="cd-icon">⊞</span><span class="cd-label">Grid</span></button>
-                  <button class="chrome-dropdown-item" id="sm-motion-toggle" data-setting="reduce-motion"><span class="cd-icon">🚫</span><span class="cd-label">Reduce Motion</span></button>
-                  <button class="chrome-dropdown-item" id="sm-tips-toggle" data-setting="show-tips"><span class="cd-icon">💡</span><span class="cd-label">Show Canvas Tips</span></button>
-                  <div class="chrome-dropdown-sep"></div>
-                  <button class="chrome-dropdown-item" id="sm-import-css" data-setting="import-css"><span class="cd-icon">🎨</span><span class="cd-label">Import CSS</span></button>
-                  <div class="chrome-dropdown-sep"></div>
-                  <button class="chrome-dropdown-item" id="sm-fullscreen-toggle"><span class="cd-icon">⛶</span><span class="cd-label">Full Screen</span><span class="cd-shortcut">⇧F</span></button>
-                  <button class="chrome-dropdown-item" data-setting="fit"><span class="cd-icon">⊡</span><span class="cd-label">Fit to Content</span></button>
-                  <div class="chrome-dropdown-sep"></div>
-                  <button class="chrome-dropdown-item" id="sm-shortcuts"><span class="cd-icon">⌨️</span><span class="cd-label">Keyboard Shortcuts</span><span class="cd-shortcut">?</span></button>
-                  <div class="chrome-dropdown-sep"></div>
-                  <button class="chrome-dropdown-item" id="auth-btn"><span class="cd-icon">👤</span><span class="cd-label">Sign In</span></button>
-                  <a class="chrome-dropdown-item" href="/about/"><span class="cd-icon">ℹ️</span><span class="cd-label">About Fast Draft</span></a>
-                  <a class="chrome-dropdown-item" href="/docs/"><span class="cd-icon">📖</span><span class="cd-label">Documentation</span></a>
-                  <a class="chrome-dropdown-item" href="/download/"><span class="cd-icon">⬇️</span><span class="cd-label">Get Fast Draft</span></a>
-                  <a class="chrome-dropdown-item" href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener"><span class="cd-icon">🐙</span><span class="cd-label">GitHub</span></a>
-                </div>
-              </div>
-              <button class="canvas-chrome-btn" id="hamburger-toggle-btn" title="Toggle right panel">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="14" height="12" rx="2"/><line x1="10" y1="2" x2="10" y2="14"/></svg>
-              </button>
-            </div>
-
-            <!-- ─── Left Panel: Tabbed (Layers / Code / Inspect) ─── -->
-            <div id="left-panel">
-              <div id="lp-tabbed-section">
-                <div class="lp-tabs">
-                  <button class="lp-tab-toggle" id="lp-sidebar-toggle" title="Toggle sidebar (\)">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="14" height="12" rx="2"/><line x1="6" y1="2" x2="6" y2="14"/></svg>
+                <!-- ─── Top-Left Canvas Chrome ─── -->
+                <div id="chrome-left" class="canvas-chrome canvas-chrome-left">
+                  <button
+                    class="canvas-chrome-btn"
+                    id="sidebar-toggle-btn"
+                    title="Toggle sidebar (\)"
+                    aria-label="Toggle sidebar"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                    >
+                      <rect x="1" y="2" width="14" height="12" rx="2" />
+                      <line x1="6" y1="2" x2="6" y2="14" />
+                    </svg>
                   </button>
-                  <div class="lp-tab-group">
-                    <button class="lp-tab active" data-tab="layers" title="Layers"><span class="tab-icon">☰</span><span class="tab-label">Layers</span></button>
-                    <button class="lp-tab" data-tab="code" title="Code Editor"><span class="tab-icon">{ }</span><span class="tab-label">Code</span></button>
-                    <button class="lp-tab" data-tab="inspect" title="Inspect"><span class="tab-icon">◧</span><span class="tab-label">Inspect</span></button>
-                  </div>
-                  <button class="mobile-panel-close" id="lp-mobile-close" aria-label="Close panel">✕</button>
                 </div>
-                <div class="lp-content">
-                  <!-- Layers Pane -->
-                  <div class="lp-pane active" data-pane="layers">
-                    <div id="layers-panel"></div>
-                    <div class="lp-layers-footer">
-                      <button id="lp-import-btn" class="layer-action-btn import-btn" title="Import code/components (⌘⇧I)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        Import
+
+                <!-- ─── Top-Right Canvas Chrome ─── -->
+                <div
+                  id="chrome-right"
+                  class="canvas-chrome canvas-chrome-right"
+                >
+                  <!-- Share dropdown -->
+                  <div
+                    class="chrome-dropdown-container"
+                    id="share-dropdown-container"
+                  >
+                    <button
+                      class="canvas-chrome-btn"
+                      id="share-btn-chrome"
+                      title="Share & Export"
+                      aria-label="Share and Export"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                      >
+                        <path d="M8 2v8" />
+                        <path d="M4 6l4-4 4 4" />
+                        <path d="M13 10v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3" />
+                      </svg>
+                    </button>
+                    <div
+                      class="chrome-dropdown chrome-dropdown-right"
+                      id="share-dropdown"
+                    >
+                      <button class="chrome-dropdown-item" id="share-link-btn">
+                        <span class="cd-icon">🔗</span
+                        ><span class="cd-label">Share Link</span>
+                      </button>
+                      <button
+                        class="chrome-dropdown-item"
+                        id="sm-copy-png"
+                        data-setting="copy-png"
+                      >
+                        <span class="cd-icon">📷</span
+                        ><span class="cd-label">Copy as PNG</span
+                        ><span class="cd-shortcut">⌘⇧E</span>
+                      </button>
+                      <button
+                        class="chrome-dropdown-item"
+                        id="sm-export-svg"
+                        data-setting="export-svg"
+                      >
+                        <span class="cd-icon">📄</span
+                        ><span class="cd-label">Download SVG</span>
+                      </button>
+                      <button
+                        class="chrome-dropdown-item"
+                        id="sm-export-html"
+                        data-setting="export-html"
+                      >
+                        <span class="cd-icon">🌐</span
+                        ><span class="cd-label">Download HTML</span>
                       </button>
                     </div>
                   </div>
-                  <!-- Code Pane -->
-                  <div class="lp-pane" data-pane="code">
-                    <div id="fd-editor"></div>
-                    <div class="pane-header">
-                      <div class="code-status-group">
-                        <button class="code-status-pill status-valid" id="linter-status-btn" title="No syntax errors">
-                          <span class="linter-dot"></span><span id="linter-status-text">Valid</span>
-                        </button>
-                        <button class="layer-action-btn" id="code-fold-btn" title="Toggle Collapse All">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-                        </button>
-                      </div>
-                      <div class="pane-action-bar">
-                        <button class="layer-action-btn" id="code-format-btn" title="Beautify Document (⌥⇧F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.9 15.5-6.1-1.6a.5.5 0 0 1 0-.9l6.1-1.6c.3-.1.6-.3.6-.6l1.6-6.1a.5.5 0 0 1 .9 0l1.6 6.1c.1.3.3.6.6.6l6.1 1.6a.5.5 0 0 1 0 .9l-6.1 1.6c-.3.1-.6.3-.6.6l-1.6 6.1a.5.5 0 0 1-.9 0l-1.6-6.1a1.9 1.9 0 0 0-.6-.6z"/><path d="M19 4v4"/><path d="M21 6h-4"/><path d="M4 18v3"/><path d="M5.5 19.5h-3"/></svg> Beautify</button>
-                        <button class="layer-action-btn" id="code-copy-btn" title="Copy code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg> Copy</button>
-                      </div>
+                  <!-- Settings dropdown -->
+                  <div
+                    class="chrome-dropdown-container"
+                    id="settings-dropdown-container"
+                  >
+                    <button
+                      class="canvas-chrome-btn"
+                      id="settings-gear-btn"
+                      title="Settings"
+                      aria-label="Settings"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path
+                          d="M6.86 1.58a.5.5 0 0 1 .5-.42h1.28a.5.5 0 0 1 .5.42l.18 1.29a5.5 5.5 0 0 1 1.32.76l1.22-.4a.5.5 0 0 1 .6.22l.64 1.1a.5.5 0 0 1-.1.63l-1.04.89a5.5 5.5 0 0 1 0 1.53l1.04.89a.5.5 0 0 1 .1.63l-.64 1.1a.5.5 0 0 1-.6.22l-1.22-.4a5.5 5.5 0 0 1-1.32.76l-.18 1.29a.5.5 0 0 1-.5.42H7.36a.5.5 0 0 1-.5-.42l-.18-1.29a5.5 5.5 0 0 1-1.32-.76l-1.22.4a.5.5 0 0 1-.6-.22l-.64-1.1a.5.5 0 0 1 .1-.63l1.04-.89a5.5 5.5 0 0 1 0-1.53l-1.04-.89a.5.5 0 0 1-.1-.63l.64-1.1a.5.5 0 0 1 .6-.22l1.22.4a5.5 5.5 0 0 1 1.32-.76l.18-1.29Z"
+                        />
+                        <circle cx="8" cy="8" r="2.5" />
+                      </svg>
+                    </button>
+                    <div
+                      class="chrome-dropdown chrome-dropdown-right"
+                      id="settings-dropdown"
+                    >
+                      <button class="chrome-dropdown-item" id="sm-theme-toggle">
+                        <span class="cd-icon">☀️</span
+                        ><span class="cd-label">Light / Dark</span
+                        ><span class="cd-shortcut">D</span>
+                      </button>
+                      <div class="chrome-dropdown-sep"></div>
+                      <button class="chrome-dropdown-item" id="sm-present">
+                        <span class="cd-icon">▶</span
+                        ><span class="cd-label">Present</span>
+                      </button>
+                      <div class="chrome-dropdown-sep"></div>
+                      <button
+                        class="chrome-dropdown-item"
+                        id="sm-sketchy-toggle"
+                        data-setting="sketchy"
+                      >
+                        <span class="cd-icon">✏️</span
+                        ><span class="cd-label">Sketchy</span>
+                      </button>
+                      <button
+                        class="chrome-dropdown-item"
+                        id="sm-grid-toggle"
+                        data-setting="grid"
+                      >
+                        <span class="cd-icon">⊞</span
+                        ><span class="cd-label">Grid</span>
+                      </button>
+                      <button
+                        class="chrome-dropdown-item"
+                        id="sm-motion-toggle"
+                        data-setting="reduce-motion"
+                      >
+                        <span class="cd-icon">🚫</span
+                        ><span class="cd-label">Reduce Motion</span>
+                      </button>
+                      <button
+                        class="chrome-dropdown-item"
+                        id="sm-tips-toggle"
+                        data-setting="show-tips"
+                      >
+                        <span class="cd-icon">💡</span
+                        ><span class="cd-label">Show Canvas Tips</span>
+                      </button>
+                      <div class="chrome-dropdown-sep"></div>
+                      <button
+                        class="chrome-dropdown-item"
+                        id="sm-import-css"
+                        data-setting="import-css"
+                      >
+                        <span class="cd-icon">🎨</span
+                        ><span class="cd-label">Import CSS</span>
+                      </button>
+                      <div class="chrome-dropdown-sep"></div>
+                      <button
+                        class="chrome-dropdown-item"
+                        id="sm-fullscreen-toggle"
+                      >
+                        <span class="cd-icon">⛶</span
+                        ><span class="cd-label">Full Screen</span
+                        ><span class="cd-shortcut">⇧F</span>
+                      </button>
+                      <button class="chrome-dropdown-item" data-setting="fit">
+                        <span class="cd-icon">⊡</span
+                        ><span class="cd-label">Fit to Content</span>
+                      </button>
+                      <div class="chrome-dropdown-sep"></div>
+                      <button class="chrome-dropdown-item" id="sm-shortcuts">
+                        <span class="cd-icon">⌨️</span
+                        ><span class="cd-label">Keyboard Shortcuts</span
+                        ><span class="cd-shortcut">?</span>
+                      </button>
+                      <div class="chrome-dropdown-sep"></div>
+                      <button class="chrome-dropdown-item" id="auth-btn">
+                        <span class="cd-icon">👤</span
+                        ><span class="cd-label">Sign In</span>
+                      </button>
+                      <a class="chrome-dropdown-item" href="/about/"
+                        ><span class="cd-icon">ℹ️</span
+                        ><span class="cd-label">About Fast Draft</span></a
+                      >
+                      <a class="chrome-dropdown-item" href="/docs/"
+                        ><span class="cd-icon">📖</span
+                        ><span class="cd-label">Documentation</span></a
+                      >
+                      <a class="chrome-dropdown-item" href="/download/"
+                        ><span class="cd-icon">⬇️</span
+                        ><span class="cd-label">Get Fast Draft</span></a
+                      >
+                      <a
+                        class="chrome-dropdown-item"
+                        href="https://github.com/khangnghiem/fast-draft"
+                        target="_blank"
+                        rel="noopener"
+                        ><span class="cd-icon">🐙</span
+                        ><span class="cd-label">GitHub</span></a
+                      >
                     </div>
                   </div>
-                  <!-- Inspect Pane (Specs + Design Properties) -->
-                  <div class="lp-pane" data-pane="inspect">
-                    <!-- Specs section -->
-                    <div class="inspect-section">
-                      <div class="inspect-section-label">📋 Specs</div>
-                      <div class="specs-panel-body" id="specs-panel-body">
-                        <p class="notes-empty">No specs yet. Add via right-click → Add Note.</p>
+                  <button
+                    class="canvas-chrome-btn"
+                    id="hamburger-toggle-btn"
+                    title="Toggle right panel"
+                    aria-label="Toggle right panel"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                    >
+                      <rect x="1" y="2" width="14" height="12" rx="2" />
+                      <line x1="10" y1="2" x2="10" y2="14" />
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- ─── Left Panel: Tabbed (Layers / Code / Inspect) ─── -->
+                <div id="left-panel">
+                  <div id="lp-tabbed-section">
+                    <div class="lp-tabs">
+                      <button
+                        class="lp-tab-toggle"
+                        id="lp-sidebar-toggle"
+                        title="Toggle sidebar (\)"
+                        aria-label="Toggle sidebar"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 16 16"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                        >
+                          <rect x="1" y="2" width="14" height="12" rx="2" />
+                          <line x1="6" y1="2" x2="6" y2="14" />
+                        </svg>
+                      </button>
+                      <div class="lp-tab-group">
+                        <button
+                          class="lp-tab active"
+                          data-tab="layers"
+                          title="Layers"
+                        >
+                          <span class="tab-icon">☰</span
+                          ><span class="tab-label">Layers</span>
+                        </button>
+                        <button
+                          class="lp-tab"
+                          data-tab="code"
+                          title="Code Editor"
+                        >
+                          <span class="tab-icon">{ }</span
+                          ><span class="tab-label">Code</span>
+                        </button>
+                        <button
+                          class="lp-tab"
+                          data-tab="inspect"
+                          title="Inspect"
+                        >
+                          <span class="tab-icon">◧</span
+                          ><span class="tab-label">Inspect</span>
+                        </button>
                       </div>
+                      <button
+                        class="mobile-panel-close"
+                        id="lp-mobile-close"
+                        aria-label="Close panel"
+                      >
+                        ✕
+                      </button>
                     </div>
-                    <!-- Design Properties section -->
-                    <div class="inspect-section">
-                      <div class="inspect-section-label">◧ Properties</div>
-                      <div class="rp-design-empty" id="rp-design-empty">
-                        <div style="font-size:16px;opacity:0.3;margin-bottom:4px">◧</div>
-                        <div style="opacity:0.4;font-size:11px">Select a node to inspect</div>
-                      </div>
-                      <div class="props-inner" id="rp-design-content" style="display:none">
-                        <div class="props-title">
-                          <span id="pp-node-id">—</span>
-                          <span class="kind-badge" id="pp-kind"></span>
+                    <div class="lp-content">
+                      <!-- Layers Pane -->
+                      <div class="lp-pane active" data-pane="layers">
+                        <div id="layers-panel"></div>
+                        <div class="lp-layers-footer">
+                          <button
+                            id="lp-import-btn"
+                            class="layer-action-btn import-btn"
+                            title="Import code/components (⌘⇧I)"
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              style="
+                                width: 14px;
+                                height: 14px;
+                                margin-right: 6px;
+                              "
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline points="7 10 12 15 17 10" />
+                              <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            Import
+                          </button>
                         </div>
-                        <div class="props-section">
-                          <div class="props-section-label">Position &amp; Size</div>
-                          <div class="props-grid">
-                            <label class="pp-field"><span>X</span><input type="number" id="pp-x" readonly></label>
-                            <label class="pp-field"><span>Y</span><input type="number" id="pp-y" readonly></label>
-                            <label class="pp-field"><span>W</span><input type="number" id="pp-w" min="1"></label>
-                            <label class="pp-field"><span>H</span><input type="number" id="pp-h" min="1"></label>
+                      </div>
+                      <!-- Code Pane -->
+                      <div class="lp-pane" data-pane="code">
+                        <div id="fd-editor"></div>
+                        <div class="pane-header">
+                          <div class="code-status-group">
+                            <button
+                              class="code-status-pill status-valid"
+                              id="linter-status-btn"
+                              title="No syntax errors"
+                            >
+                              <span class="linter-dot"></span
+                              ><span id="linter-status-text">Valid</span>
+                            </button>
+                            <button
+                              class="layer-action-btn"
+                              id="code-fold-btn"
+                              title="Toggle Collapse All"
+                              aria-label="Toggle collapse all"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                style="width: 14px; height: 14px"
+                              >
+                                <polyline points="4 14 10 14 10 20" />
+                                <polyline points="20 10 14 10 14 4" />
+                                <line x1="14" y1="10" x2="21" y2="3" />
+                                <line x1="3" y1="21" x2="10" y2="14" />
+                              </svg>
+                            </button>
+                          </div>
+                          <div class="pane-action-bar">
+                            <button
+                              class="layer-action-btn"
+                              id="code-format-btn"
+                              title="Beautify Document (⌥⇧F)"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              >
+                                <path
+                                  d="m9.9 15.5-6.1-1.6a.5.5 0 0 1 0-.9l6.1-1.6c.3-.1.6-.3.6-.6l1.6-6.1a.5.5 0 0 1 .9 0l1.6 6.1c.1.3.3.6.6.6l6.1 1.6a.5.5 0 0 1 0 .9l-6.1 1.6c-.3.1-.6.3-.6.6l-1.6 6.1a.5.5 0 0 1-.9 0l-1.6-6.1a1.9 1.9 0 0 0-.6-.6z"
+                                />
+                                <path d="M19 4v4" />
+                                <path d="M21 6h-4" />
+                                <path d="M4 18v3" />
+                                <path d="M5.5 19.5h-3" />
+                              </svg>
+                              Beautify
+                            </button>
+                            <button
+                              class="layer-action-btn"
+                              id="code-copy-btn"
+                              title="Copy code"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              >
+                                <rect
+                                  width="14"
+                                  height="14"
+                                  x="8"
+                                  y="8"
+                                  rx="2"
+                                  ry="2"
+                                />
+                                <path
+                                  d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+                                />
+                              </svg>
+                              Copy
+                            </button>
                           </div>
                         </div>
-                        <div class="props-section" id="pp-appearance">
-                          <div class="props-section-label">Appearance</div>
-                          <label class="pp-row"><span>Fill</span><input type="color" id="pp-fill" value="#007AFF"></label>
-                          <label class="pp-row"><span>Stroke</span><input type="color" id="pp-stroke" value="#333333"></label>
-                          <label class="pp-row"><span>Stroke Width</span><input type="number" id="pp-stroke-w" min="0" step="0.5" value="0"></label>
-                          <label class="pp-row"><span>Corner</span><input type="number" id="pp-corner" min="0" value="0"></label>
-                          <label class="pp-row"><span>Opacity</span>
-                            <div class="pp-opacity-wrap">
-                              <input type="range" id="pp-opacity" min="0" max="1" step="0.01" value="1">
-                              <span id="pp-opacity-val">100%</span>
+                      </div>
+                      <!-- Inspect Pane (Specs + Design Properties) -->
+                      <div class="lp-pane" data-pane="inspect">
+                        <!-- Specs section -->
+                        <div class="inspect-section">
+                          <div class="inspect-section-label">📋 Specs</div>
+                          <div class="specs-panel-body" id="specs-panel-body">
+                            <p class="notes-empty">
+                              No specs yet. Add via right-click → Add Note.
+                            </p>
+                          </div>
+                        </div>
+                        <!-- Design Properties section -->
+                        <div class="inspect-section">
+                          <div class="inspect-section-label">◧ Properties</div>
+                          <div class="rp-design-empty" id="rp-design-empty">
+                            <div
+                              style="
+                                font-size: 16px;
+                                opacity: 0.3;
+                                margin-bottom: 4px;
+                              "
+                            >
+                              ◧
                             </div>
+                            <div style="opacity: 0.4; font-size: 11px">
+                              Select a node to inspect
+                            </div>
+                          </div>
+                          <div
+                            class="props-inner"
+                            id="rp-design-content"
+                            style="display: none"
+                          >
+                            <div class="props-title">
+                              <span id="pp-node-id">—</span>
+                              <span class="kind-badge" id="pp-kind"></span>
+                            </div>
+                            <div class="props-section">
+                              <div class="props-section-label">
+                                Position &amp; Size
+                              </div>
+                              <div class="props-grid">
+                                <label class="pp-field"
+                                  ><span>X</span
+                                  ><input type="number" id="pp-x" readonly
+                                /></label>
+                                <label class="pp-field"
+                                  ><span>Y</span
+                                  ><input type="number" id="pp-y" readonly
+                                /></label>
+                                <label class="pp-field"
+                                  ><span>W</span
+                                  ><input type="number" id="pp-w" min="1"
+                                /></label>
+                                <label class="pp-field"
+                                  ><span>H</span
+                                  ><input type="number" id="pp-h" min="1"
+                                /></label>
+                              </div>
+                            </div>
+                            <div class="props-section" id="pp-appearance">
+                              <div class="props-section-label">Appearance</div>
+                              <label class="pp-row"
+                                ><span>Fill</span
+                                ><input
+                                  type="color"
+                                  id="pp-fill"
+                                  value="#007AFF"
+                              /></label>
+                              <label class="pp-row"
+                                ><span>Stroke</span
+                                ><input
+                                  type="color"
+                                  id="pp-stroke"
+                                  value="#333333"
+                              /></label>
+                              <label class="pp-row"
+                                ><span>Stroke Width</span
+                                ><input
+                                  type="number"
+                                  id="pp-stroke-w"
+                                  min="0"
+                                  step="0.5"
+                                  value="0"
+                              /></label>
+                              <label class="pp-row"
+                                ><span>Corner</span
+                                ><input
+                                  type="number"
+                                  id="pp-corner"
+                                  min="0"
+                                  value="0"
+                              /></label>
+                              <label class="pp-row"
+                                ><span>Opacity</span>
+                                <div class="pp-opacity-wrap">
+                                  <input
+                                    type="range"
+                                    id="pp-opacity"
+                                    min="0"
+                                    max="1"
+                                    step="0.01"
+                                    value="1"
+                                  />
+                                  <span id="pp-opacity-val">100%</span>
+                                </div>
+                              </label>
+                            </div>
+                            <div class="props-section pp-actions">
+                              <button
+                                class="pp-action-btn"
+                                id="pp-duplicate"
+                                title="Duplicate"
+                              >
+                                ⧉ Duplicate
+                              </button>
+                              <button
+                                class="pp-action-btn pp-delete"
+                                id="pp-delete"
+                                title="Delete"
+                              >
+                                🗑 Delete
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  class="panel-resize-handle layers-handle"
+                  id="layers-resize"
+                ></div>
+                <canvas id="fd-canvas"></canvas>
+
+                <!-- ─── Floating Toolbar (frosted glass, draggable, snaps to edges) ─── -->
+                <div id="floating-toolbar" class="toolbar-pill">
+                  <div
+                    class="toolbar-grip grip-start"
+                    role="button"
+                    tabindex="0"
+                    aria-label="Toggle toolbar"
+                    aria-expanded="true"
+                    title="Tap to minimize · Drag to move"
+                  >
+                    ⠿
+                  </div>
+                  <button
+                    class="ft-tool-btn ft-undo"
+                    id="undo-btn"
+                    title="Undo (⌘Z)"
+                  >
+                    <svg viewBox="0 0 256 256" fill="currentColor">
+                      <path
+                        d="M232,200a6,6,0,0,1-12,0,84.09,84.09,0,0,0-84-84H62.49l37.75,37.76a6,6,0,1,1-8.48,8.48l-48-48a6,6,0,0,1,0-8.48l48-48a6,6,0,0,1,8.48,8.48L62.49,104H136A96.11,96.11,0,0,1,232,200Z"
+                      /></svg
+                    ><span class="ft-tooltip"
+                      >Undo<span class="tt-shortcut">⌘Z</span></span
+                    >
+                  </button>
+                  <button
+                    class="ft-tool-btn ft-redo"
+                    id="redo-btn"
+                    title="Redo (⌘⇧Z)"
+                  >
+                    <svg viewBox="0 0 256 256" fill="currentColor">
+                      <path
+                        d="M232,112a6,6,0,0,1-1.76,4.24l-48,48a6,6,0,0,1-8.48-8.48L211.51,118H120a84.09,84.09,0,0,0-84,84,6,6,0,0,1-12,0A96.11,96.11,0,0,1,120,106h91.51L173.76,68.24a6,6,0,0,1,8.48-8.48l48,48A6,6,0,0,1,232,112Z"
+                      /></svg
+                    ><span class="ft-tooltip"
+                      >Redo<span class="tt-shortcut">⌘⇧Z</span></span
+                    >
+                  </button>
+                  <div class="ft-sep"></div>
+                  <button class="ft-tool-btn" data-tool="hand">
+                    <svg viewBox="0 0 256 256" fill="currentColor">
+                      <path
+                        d="M188,50a25.8,25.8,0,0,0-14,4.11V44a26,26,0,0,0-51.41-5.51A26,26,0,0,0,82,60v71l-7.53-12.1a26,26,0,0,0-45.11,25.87C60.76,211,78.51,238,128,238a86.1,86.1,0,0,0,86-86V76A26,26,0,0,0,188,50Zm14,102a74.09,74.09,0,0,1-74,74c-21,0-34.51-5.05-46.75-17.45C67.81,195,55.54,172,40.1,139.43l-.23-.43a14,14,0,0,1,24.25-14l.1.17,18.68,30A6,6,0,0,0,94,152V60a14,14,0,0,1,28,0v60a6,6,0,0,0,12,0V44a14,14,0,0,1,28,0v76a6,6,0,0,0,12,0V76a14,14,0,0,1,28,0Z"
+                      /></svg
+                    ><span class="ft-tooltip"
+                      >Hand<span class="tt-shortcut">H</span></span
+                    >
+                  </button>
+                  <button class="ft-tool-btn active" data-tool="select">
+                    <svg viewBox="0 0 256 256" fill="currentColor">
+                      <path
+                        d="M166.59,134.1a1.91,1.91,0,0,1-.55-1.79,2,2,0,0,1,1.08-1.42l46.25-17.76.24-.1A14,14,0,0,0,212.38,87L52.29,34.7A13.95,13.95,0,0,0,34.7,52.29L87,212.38a13.82,13.82,0,0,0,12.6,9.6c.23,0,.46,0,.69,0A13.84,13.84,0,0,0,113,213.61a2.44,2.44,0,0,0,.1-.24l17.76-46.25a2,2,0,0,1,3.21-.53l51.31,51.31a14,14,0,0,0,19.8,0l12.69-12.69a14,14,0,0,0,0-19.8Zm42.82,62.63-12.68,12.68a2,2,0,0,1-2.83,0L142.59,158.1a14,14,0,0,0-22.74,4.32,2.44,2.44,0,0,0-.1.24L102,208.91a2,2,0,0,1-3.61-.26L46.11,48.57a1.87,1.87,0,0,1,.47-2A1.92,1.92,0,0,1,47.93,46a2.22,2.22,0,0,1,.64.1L208.65,98.38a2,2,0,0,1,.26,3.61l-46.25,17.76-.24.1a14,14,0,0,0-4.32,22.74h0l51.31,51.31A2,2,0,0,1,209.41,196.73Z"
+                      /></svg
+                    ><span class="ft-tooltip"
+                      >Select<span class="tt-shortcut">V</span></span
+                    >
+                  </button>
+                  <button class="ft-tool-btn" data-tool="rect">
+                    <svg viewBox="0 0 256 256" fill="currentColor">
+                      <path
+                        d="M216,42H40A14,14,0,0,0,26,56V200a14,14,0,0,0,14,14H216a14,14,0,0,0,14-14V56A14,14,0,0,0,216,42Zm2,158a2,2,0,0,1-2,2H40a2,2,0,0,1-2-2V56a2,2,0,0,1,2-2H216a2,2,0,0,1,2,2Z"
+                      /></svg
+                    ><span class="ft-tooltip"
+                      >Rectangle<span class="tt-shortcut">R</span></span
+                    >
+                  </button>
+                  <button class="ft-tool-btn" data-tool="ellipse">
+                    <svg viewBox="0 0 256 256" fill="currentColor">
+                      <path
+                        d="M128,26A102,102,0,1,0,230,128,102.12,102.12,0,0,0,128,26Zm0,192a90,90,0,1,1,90-90A90.1,90.1,0,0,1,128,218Z"
+                      /></svg
+                    ><span class="ft-tooltip"
+                      >Ellipse<span class="tt-shortcut">E / O</span></span
+                    >
+                  </button>
+                  <button class="ft-tool-btn" data-tool="pen">
+                    <svg viewBox="0 0 256 256" fill="currentColor">
+                      <path
+                        d="M225.9,74.78,181.21,30.09a14,14,0,0,0-19.8,0L38.1,153.41a13.94,13.94,0,0,0-4.1,9.9V208a14,14,0,0,0,14,14H92.69a13.94,13.94,0,0,0,9.9-4.1L225.9,94.58a14,14,0,0,0,0-19.8ZM94.1,209.41a2,2,0,0,1-1.41.59H48a2,2,0,0,1-2-2V163.31a2,2,0,0,1,.59-1.41L136,72.48,183.51,120ZM217.41,86.1,192,111.51,144.49,64,169.9,38.58a2,2,0,0,1,2.83,0l44.68,44.69a2,2,0,0,1,0,2.83Z"
+                      /></svg
+                    ><span class="ft-tooltip"
+                      >Pen<span class="tt-shortcut">P</span></span
+                    >
+                  </button>
+                  <button class="ft-tool-btn" data-tool="arrow">
+                    <svg viewBox="0 0 256 256" fill="currentColor">
+                      <path
+                        d="M198,64V168a6,6,0,0,1-12,0V78.48L68.24,196.24a6,6,0,0,1-8.48-8.48L177.52,70H88a6,6,0,0,1,0-12H192A6,6,0,0,1,198,64Z"
+                      /></svg
+                    ><span class="ft-tooltip"
+                      >Arrow<span class="tt-shortcut">A</span></span
+                    >
+                  </button>
+                  <button class="ft-tool-btn" data-tool="text">
+                    <svg viewBox="0 0 256 256" fill="currentColor">
+                      <path
+                        d="M206,56V88a6,6,0,0,1-12,0V62H134V194h26a6,6,0,0,1,0,12H96a6,6,0,0,1,0-12h26V62H62V88a6,6,0,0,1-12,0V56a6,6,0,0,1,6-6H200A6,6,0,0,1,206,56Z"
+                      /></svg
+                    ><span class="ft-tooltip"
+                      >Text<span class="tt-shortcut">T</span></span
+                    >
+                  </button>
+                  <button class="ft-tool-btn" data-tool="eraser">
+                    <svg viewBox="0 0 256 256" fill="currentColor">
+                      <path
+                        d="M223.57,81.81,182.19,40.43a22,22,0,0,0-31.12,0L32.43,159.07a22,22,0,0,0,0,31.11L62.5,220.24A6,6,0,0,0,66.74,222H216a6,6,0,0,0,0-12H126.49l97.08-97.08A22,22,0,0,0,223.57,81.81ZM109.51,210H69.22l-28.3-28.3a10,10,0,0,1,0-14.15L96,112.48,151.52,168ZM215.08,104.44,160,159.51,104.48,104l55.08-55.07a10,10,0,0,1,14.14,0l41.38,41.37A10,10,0,0,1,215.08,104.44Z"
+                      /></svg
+                    ><span class="ft-tooltip"
+                      >Eraser<span class="tt-shortcut">X</span></span
+                    >
+                  </button>
+                  <button class="ft-tool-btn" data-tool="lasso">
+                    <svg viewBox="0 0 256 256" fill="currentColor">
+                      <path
+                        d="M128,24A104,104,0,0,0,52.3,193.4c1.2,1.4,2.5,2.8,3.8,4.1a8,8,0,0,0,5.7,2.4,8.2,8.2,0,0,0,5.7-2.4,7.9,7.9,0,0,0,0-11.3c-.7-.7-1.3-1.5-2-2.2A88,88,0,1,1,216,128a87.6,87.6,0,0,1-22.3,58.5,8,8,0,0,0,.7,11.3,7.8,7.8,0,0,0,5.3,2,8,8,0,0,0,6-2.7A104,104,0,0,0,128,24Z"
+                      />
+                      <circle cx="128" cy="208" r="16" /></svg
+                    ><span class="ft-tooltip"
+                      >Lasso<span class="tt-shortcut">L</span></span
+                    >
+                  </button>
+
+                  <button
+                    class="ft-tool-btn ft-ai-touch"
+                    id="ai-touch-btn"
+                    title="AI Touch — refine + review selected"
+                  >
+                    ✦ AI<span class="ft-tooltip">AI Touch</span>
+                  </button>
+                </div>
+
+                <!-- Floating Action Bar (frosted glass) -->
+                <div id="floating-action-bar">
+                  <label class="fab-label" for="fab-fill">Fill</label>
+                  <input
+                    type="color"
+                    id="fab-fill"
+                    class="fab-color"
+                    value="#007AFF"
+                    title="Fill color"
+                  />
+                  <div class="fab-sep"></div>
+                  <label class="fab-label" for="fab-stroke">Stroke</label>
+                  <input
+                    type="color"
+                    id="fab-stroke"
+                    class="fab-color"
+                    value="#333333"
+                    title="Stroke color"
+                  />
+                  <input
+                    type="number"
+                    id="fab-stroke-w"
+                    aria-label="Stroke width"
+                    class="fab-input"
+                    min="0"
+                    max="20"
+                    step="1"
+                    value="1"
+                    title="Stroke width"
+                  />
+                  <div class="fab-sep"></div>
+                  <label class="fab-label" for="fab-opacity">Opacity</label>
+                  <input
+                    type="range"
+                    id="fab-opacity"
+                    aria-label="Opacity"
+                    class="fab-slider"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value="1"
+                    title="Opacity"
+                  />
+                  <span
+                    id="fab-opacity-val"
+                    style="font-size: 10px; min-width: 24px"
+                    >100%</span
+                  >
+                  <div class="fab-sep"></div>
+                  <button
+                    class="fab-delete-btn"
+                    id="fab-delete"
+                    title="Delete (⌫)"
+                    aria-label="Delete"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                    >
+                      <line x1="3" y1="3" x2="11" y2="11" />
+                      <line x1="11" y1="3" x2="3" y2="11" />
+                    </svg>
+                  </button>
+                </div>
+                <!-- Minimap (Google Maps pill) -->
+                <div id="minimap-container">
+                  <canvas id="minimap-canvas"></canvas>
+                  <div id="minimap-zoom-controls">
+                    <button
+                      class="bl-btn"
+                      id="zoom-out-btn"
+                      title="Zoom out"
+                      aria-label="Zoom out"
+                    >
+                      −
+                    </button>
+                    <div class="bl-sep"></div>
+                    <button
+                      class="bl-btn"
+                      id="zoom-reset-btn"
+                      title="Toggle 100% / Fit to Content"
+                      aria-label="Reset zoom"
+                    >
+                      100%
+                    </button>
+                    <div class="bl-sep"></div>
+                    <button
+                      class="bl-btn"
+                      id="zoom-in-btn"
+                      title="Zoom in"
+                      aria-label="Zoom in"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div id="dimension-tooltip"></div>
+
+                <!-- ─── Right Panel Resize Handle ─── -->
+                <div
+                  class="panel-resize-handle props-handle"
+                  id="right-resize"
+                ></div>
+
+                <!-- ─── Right Panel: Tabbed (Agent / Search) ─── -->
+                <div id="right-panel">
+                  <div class="rp-tabs">
+                    <div class="rp-tab-group">
+                      <button
+                        class="rp-tab active"
+                        data-rtab="agent"
+                        title="AI Agent"
+                      >
+                        <span class="tab-icon">✦</span
+                        ><span class="tab-label">Agent</span>
+                      </button>
+                      <button class="rp-tab" data-rtab="search" title="Search">
+                        <span class="tab-icon">🔍</span
+                        ><span class="tab-label">Search</span>
+                      </button>
+                    </div>
+                    <button
+                      class="ai-chat-clear"
+                      id="ai-chat-clear"
+                      title="Clear chat"
+                      aria-label="Clear chat"
+                      style="
+                        font-size: 12px;
+                        background: none;
+                        border: none;
+                        cursor: pointer;
+                        padding: 4px;
+                        opacity: 0.5;
+                        margin-left: auto;
+                        margin-right: 4px;
+                      "
+                    >
+                      🗑
+                    </button>
+                    <button
+                      class="mobile-panel-close"
+                      id="rp-mobile-close"
+                      aria-label="Close panel"
+                    >
+                      ✕
+                    </button>
+                    <button
+                      class="rp-tab-toggle"
+                      id="rp-sidebar-toggle"
+                      title="Toggle right panel"
+                      aria-label="Toggle right panel"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                      >
+                        <rect x="1" y="2" width="14" height="12" rx="2" />
+                        <line x1="10" y1="2" x2="10" y2="14" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="rp-content">
+                    <!-- Agent Pane -->
+                    <div class="rp-pane active" data-rpane="agent">
+                      <div class="ai-chat-messages" id="ai-chat-messages">
+                        <div class="ai-chat-welcome" id="ai-chat-welcome">
+                          <div class="ai-chat-welcome-icon">
+                            <svg
+                              width="24"
+                              height="24"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              stroke="none"
+                            >
+                              <path
+                                d="M12 2l2.4 7.6 7.6 2.4-7.6 2.4-2.4 7.6-2.4-7.6-7.6-2.4 7.6-2.4 2.4-7.6z"
+                              />
+                              <path
+                                d="M5 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z"
+                                opacity="0.6"
+                              />
+                            </svg>
+                          </div>
+                          <div class="ai-chat-welcome-text">Design Agent</div>
+                          <div class="ai-chat-welcome-subtext">
+                            Select components, describe changes
+                          </div>
+                          <div class="ai-chat-chips" id="ai-chat-chips">
+                            <button class="ai-chat-chip" disabled>
+                              Suggest Variants
+                            </button>
+                            <button class="ai-chat-chip" disabled>
+                              Edit Style
+                            </button>
+                            <button class="ai-chat-chip" disabled>
+                              Align Objects
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="ai-chat-input-area">
+                        <div class="ai-chat-input-container">
+                          <div
+                            class="ai-chat-context-badge hidden"
+                            id="ai-chat-context-badge"
+                          >
+                            <span class="context-pin">📌</span>
+                            <span id="ai-chat-context-text"></span>
+                            <button
+                              id="ai-chat-context-clear"
+                              title="Clear context"
+                              aria-label="Clear context"
+                            >
+                              ×
+                            </button>
+                          </div>
+                          <div class="ai-chat-input-main-row">
+                            <button
+                              class="ai-chat-upload-btn"
+                              id="ai-chat-upload"
+                              title="Add context (Docs, Images, Camera)"
+                              aria-label="Add context"
+                            >
+                              <svg
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              >
+                                <path d="M12 5v14M5 12h14" />
+                              </svg>
+                            </button>
+                            <textarea
+                              class="ai-chat-input"
+                              id="ai-chat-input"
+                              placeholder="Describe your design changes..."
+                              rows="1"
+                              maxlength="500"
+                            ></textarea>
+                          </div>
+                          <div class="ai-chat-input-footer">
+                            <div class="ai-model-selector">
+                              <span id="ai-model-badge" class="ai-model-badge"
+                                >✦ Gemma 4</span
+                              >
+                            </div>
+                            <span
+                              id="ai-rate-limit-text"
+                              class="ai-rate-limit-text"
+                            ></span>
+                            <button
+                              class="ai-chat-send"
+                              id="ai-chat-send"
+                              title="Send"
+                              aria-label="Send"
+                            >
+                              →
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Search Pane -->
+                    <div class="rp-pane" data-rpane="search">
+                      <div class="search-input-area">
+                        <div class="search-input-row">
+                          <input
+                            type="text"
+                            class="search-input"
+                            id="search-input"
+                            placeholder="Search nodes, text, styles…"
+                            autocomplete="off"
+                            spellcheck="false"
+                          />
+                          <span class="search-count" id="search-count"></span>
+                        </div>
+                        <div class="search-controls">
+                          <div
+                            class="search-mode-segmented"
+                            id="search-mode-segmented"
+                          >
+                            <button
+                              class="search-mode-seg"
+                              data-mode="exact"
+                              title="Exact substring match"
+                            >
+                              Exact
+                            </button>
+                            <button
+                              class="search-mode-seg active"
+                              data-mode="smart"
+                              title="Smart: fuzzy + exact-first (default)"
+                            >
+                              Smart
+                            </button>
+                            <button
+                              class="search-mode-seg"
+                              data-mode="regex"
+                              title="Regular Expression (Alt+R)"
+                            >
+                              .*
+                            </button>
+                          </div>
+                          <label
+                            class="search-option"
+                            title="Zoom to fit matched node on click"
+                          >
+                            <input
+                              type="checkbox"
+                              id="search-zoom-fit"
+                              checked
+                            />
+                            Zoom
                           </label>
                         </div>
-                        <div class="props-section pp-actions">
-                          <button class="pp-action-btn" id="pp-duplicate" title="Duplicate">⧉ Duplicate</button>
-                          <button class="pp-action-btn pp-delete" id="pp-delete" title="Delete">🗑 Delete</button>
+                      </div>
+                      <div class="search-results" id="search-results">
+                        <div class="search-empty">
+                          Search your document by node ID, text content, or
+                          style name.
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div class="panel-resize-handle layers-handle" id="layers-resize"></div>
-            <canvas id="fd-canvas"></canvas>
-
-            <!-- ─── Floating Toolbar (frosted glass, draggable, snaps to edges) ─── -->
-            <div id="floating-toolbar" class="toolbar-pill">
-              <div class="toolbar-grip grip-start"
-                   role="button"
-                   tabindex="0"
-                   aria-label="Toggle toolbar"
-                   aria-expanded="true"
-                   title="Tap to minimize · Drag to move">⠿</div>
-              <button class="ft-tool-btn ft-undo" id="undo-btn" title="Undo (⌘Z)"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M232,200a6,6,0,0,1-12,0,84.09,84.09,0,0,0-84-84H62.49l37.75,37.76a6,6,0,1,1-8.48,8.48l-48-48a6,6,0,0,1,0-8.48l48-48a6,6,0,0,1,8.48,8.48L62.49,104H136A96.11,96.11,0,0,1,232,200Z"/></svg><span class="ft-tooltip">Undo<span class="tt-shortcut">⌘Z</span></span></button>
-              <button class="ft-tool-btn ft-redo" id="redo-btn" title="Redo (⌘⇧Z)"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M232,112a6,6,0,0,1-1.76,4.24l-48,48a6,6,0,0,1-8.48-8.48L211.51,118H120a84.09,84.09,0,0,0-84,84,6,6,0,0,1-12,0A96.11,96.11,0,0,1,120,106h91.51L173.76,68.24a6,6,0,0,1,8.48-8.48l48,48A6,6,0,0,1,232,112Z"/></svg><span class="ft-tooltip">Redo<span class="tt-shortcut">⌘⇧Z</span></span></button>
-              <div class="ft-sep"></div>
-              <button class="ft-tool-btn" data-tool="hand"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M188,50a25.8,25.8,0,0,0-14,4.11V44a26,26,0,0,0-51.41-5.51A26,26,0,0,0,82,60v71l-7.53-12.1a26,26,0,0,0-45.11,25.87C60.76,211,78.51,238,128,238a86.1,86.1,0,0,0,86-86V76A26,26,0,0,0,188,50Zm14,102a74.09,74.09,0,0,1-74,74c-21,0-34.51-5.05-46.75-17.45C67.81,195,55.54,172,40.1,139.43l-.23-.43a14,14,0,0,1,24.25-14l.1.17,18.68,30A6,6,0,0,0,94,152V60a14,14,0,0,1,28,0v60a6,6,0,0,0,12,0V44a14,14,0,0,1,28,0v76a6,6,0,0,0,12,0V76a14,14,0,0,1,28,0Z"/></svg><span class="ft-tooltip">Hand<span class="tt-shortcut">H</span></span></button>
-              <button class="ft-tool-btn active" data-tool="select"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M166.59,134.1a1.91,1.91,0,0,1-.55-1.79,2,2,0,0,1,1.08-1.42l46.25-17.76.24-.1A14,14,0,0,0,212.38,87L52.29,34.7A13.95,13.95,0,0,0,34.7,52.29L87,212.38a13.82,13.82,0,0,0,12.6,9.6c.23,0,.46,0,.69,0A13.84,13.84,0,0,0,113,213.61a2.44,2.44,0,0,0,.1-.24l17.76-46.25a2,2,0,0,1,3.21-.53l51.31,51.31a14,14,0,0,0,19.8,0l12.69-12.69a14,14,0,0,0,0-19.8Zm42.82,62.63-12.68,12.68a2,2,0,0,1-2.83,0L142.59,158.1a14,14,0,0,0-22.74,4.32,2.44,2.44,0,0,0-.1.24L102,208.91a2,2,0,0,1-3.61-.26L46.11,48.57a1.87,1.87,0,0,1,.47-2A1.92,1.92,0,0,1,47.93,46a2.22,2.22,0,0,1,.64.1L208.65,98.38a2,2,0,0,1,.26,3.61l-46.25,17.76-.24.1a14,14,0,0,0-4.32,22.74h0l51.31,51.31A2,2,0,0,1,209.41,196.73Z"/></svg><span class="ft-tooltip">Select<span class="tt-shortcut">V</span></span></button>
-              <button class="ft-tool-btn" data-tool="rect"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M216,42H40A14,14,0,0,0,26,56V200a14,14,0,0,0,14,14H216a14,14,0,0,0,14-14V56A14,14,0,0,0,216,42Zm2,158a2,2,0,0,1-2,2H40a2,2,0,0,1-2-2V56a2,2,0,0,1,2-2H216a2,2,0,0,1,2,2Z"/></svg><span class="ft-tooltip">Rectangle<span class="tt-shortcut">R</span></span></button>
-              <button class="ft-tool-btn" data-tool="ellipse"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M128,26A102,102,0,1,0,230,128,102.12,102.12,0,0,0,128,26Zm0,192a90,90,0,1,1,90-90A90.1,90.1,0,0,1,128,218Z"/></svg><span class="ft-tooltip">Ellipse<span class="tt-shortcut">E / O</span></span></button>
-              <button class="ft-tool-btn" data-tool="pen"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M225.9,74.78,181.21,30.09a14,14,0,0,0-19.8,0L38.1,153.41a13.94,13.94,0,0,0-4.1,9.9V208a14,14,0,0,0,14,14H92.69a13.94,13.94,0,0,0,9.9-4.1L225.9,94.58a14,14,0,0,0,0-19.8ZM94.1,209.41a2,2,0,0,1-1.41.59H48a2,2,0,0,1-2-2V163.31a2,2,0,0,1,.59-1.41L136,72.48,183.51,120ZM217.41,86.1,192,111.51,144.49,64,169.9,38.58a2,2,0,0,1,2.83,0l44.68,44.69a2,2,0,0,1,0,2.83Z"/></svg><span class="ft-tooltip">Pen<span class="tt-shortcut">P</span></span></button>
-              <button class="ft-tool-btn" data-tool="arrow"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M198,64V168a6,6,0,0,1-12,0V78.48L68.24,196.24a6,6,0,0,1-8.48-8.48L177.52,70H88a6,6,0,0,1,0-12H192A6,6,0,0,1,198,64Z"/></svg><span class="ft-tooltip">Arrow<span class="tt-shortcut">A</span></span></button>
-              <button class="ft-tool-btn" data-tool="text"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M206,56V88a6,6,0,0,1-12,0V62H134V194h26a6,6,0,0,1,0,12H96a6,6,0,0,1,0-12h26V62H62V88a6,6,0,0,1-12,0V56a6,6,0,0,1,6-6H200A6,6,0,0,1,206,56Z"/></svg><span class="ft-tooltip">Text<span class="tt-shortcut">T</span></span></button>
-              <button class="ft-tool-btn" data-tool="eraser"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M223.57,81.81,182.19,40.43a22,22,0,0,0-31.12,0L32.43,159.07a22,22,0,0,0,0,31.11L62.5,220.24A6,6,0,0,0,66.74,222H216a6,6,0,0,0,0-12H126.49l97.08-97.08A22,22,0,0,0,223.57,81.81ZM109.51,210H69.22l-28.3-28.3a10,10,0,0,1,0-14.15L96,112.48,151.52,168ZM215.08,104.44,160,159.51,104.48,104l55.08-55.07a10,10,0,0,1,14.14,0l41.38,41.37A10,10,0,0,1,215.08,104.44Z"/></svg><span class="ft-tooltip">Eraser<span class="tt-shortcut">X</span></span></button>
-              <button class="ft-tool-btn" data-tool="lasso"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,0,0,52.3,193.4c1.2,1.4,2.5,2.8,3.8,4.1a8,8,0,0,0,5.7,2.4,8.2,8.2,0,0,0,5.7-2.4,7.9,7.9,0,0,0,0-11.3c-.7-.7-1.3-1.5-2-2.2A88,88,0,1,1,216,128a87.6,87.6,0,0,1-22.3,58.5,8,8,0,0,0,.7,11.3,7.8,7.8,0,0,0,5.3,2,8,8,0,0,0,6-2.7A104,104,0,0,0,128,24Z"/><circle cx="128" cy="208" r="16"/></svg><span class="ft-tooltip">Lasso<span class="tt-shortcut">L</span></span></button>
-
-              <button class="ft-tool-btn ft-ai-touch" id="ai-touch-btn" title="AI Touch — refine + review selected">✦ AI<span class="ft-tooltip">AI Touch</span></button>
-            </div>
-
-            <!-- Floating Action Bar (frosted glass) -->
-            <div id="floating-action-bar">
-              <label class="fab-label" for="fab-fill">Fill</label>
-              <input type="color" id="fab-fill" class="fab-color" value="#007AFF" title="Fill color">
-              <div class="fab-sep"></div>
-              <label class="fab-label" for="fab-stroke">Stroke</label>
-              <input type="color" id="fab-stroke" class="fab-color" value="#333333" title="Stroke color">
-              <input type="number" id="fab-stroke-w" aria-label="Stroke width" class="fab-input" min="0" max="20" step="1" value="1" title="Stroke width">
-              <div class="fab-sep"></div>
-              <label class="fab-label" for="fab-opacity">Opacity</label>
-              <input type="range" id="fab-opacity" aria-label="Opacity" class="fab-slider" min="0" max="1" step="0.05" value="1" title="Opacity">
-              <span id="fab-opacity-val" style="font-size:10px;min-width:24px">100%</span>
-              <div class="fab-sep"></div>
-              <button class="fab-delete-btn" id="fab-delete" title="Delete (⌫)" aria-label="Delete"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
-            </div>
-            <!-- Minimap (Google Maps pill) -->
-            <div id="minimap-container">
-              <canvas id="minimap-canvas"></canvas>
-              <div id="minimap-zoom-controls">
-                <button class="bl-btn" id="zoom-out-btn" title="Zoom out">−</button>
-                <div class="bl-sep"></div>
-                <button class="bl-btn" id="zoom-reset-btn" title="Toggle 100% / Fit to Content">100%</button>
-                <div class="bl-sep"></div>
-                <button class="bl-btn" id="zoom-in-btn" title="Zoom in">+</button>
-              </div>
-            </div>
-            <div id="dimension-tooltip"></div>
-
-            <!-- ─── Right Panel Resize Handle ─── -->
-            <div class="panel-resize-handle props-handle" id="right-resize"></div>
-
-            <!-- ─── Right Panel: Tabbed (Agent / Search) ─── -->
-            <div id="right-panel">
-              <div class="rp-tabs">
-                <div class="rp-tab-group">
-                  <button class="rp-tab active" data-rtab="agent" title="AI Agent"><span class="tab-icon">✦</span><span class="tab-label">Agent</span></button>
-                  <button class="rp-tab" data-rtab="search" title="Search"><span class="tab-icon">🔍</span><span class="tab-label">Search</span></button>
+                <!-- Image drop zone overlay -->
+                <div id="canvas-drop-zone" class="canvas-drop-zone">
+                  Drop image here
                 </div>
-                <button class="ai-chat-clear" id="ai-chat-clear" title="Clear chat" aria-label="Clear chat" style="font-size:12px;background:none;border:none;cursor:pointer;padding:4px;opacity:0.5;margin-left:auto;margin-right:4px;">🗑</button>
-                <button class="mobile-panel-close" id="rp-mobile-close" aria-label="Close panel">✕</button>
-                <button class="rp-tab-toggle" id="rp-sidebar-toggle" title="Toggle right panel" aria-label="Toggle right panel">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="14" height="12" rx="2"/><line x1="10" y1="2" x2="10" y2="14"/></svg>
-                </button>
-              </div>
-              <div class="rp-content">
-                <!-- Agent Pane -->
-                <div class="rp-pane active" data-rpane="agent">
-                  <div class="ai-chat-messages" id="ai-chat-messages">
-                    <div class="ai-chat-welcome" id="ai-chat-welcome">
-                      <div class="ai-chat-welcome-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                          <path d="M12 2l2.4 7.6 7.6 2.4-7.6 2.4-2.4 7.6-2.4-7.6-7.6-2.4 7.6-2.4 2.4-7.6z"/>
-                          <path d="M5 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" opacity="0.6"/>
-                        </svg>
-                      </div>
-                      <div class="ai-chat-welcome-text">Design Agent</div>
-                      <div class="ai-chat-welcome-subtext">Select components, describe changes</div>
-                      <div class="ai-chat-chips" id="ai-chat-chips">
-                        <button class="ai-chat-chip" disabled>Suggest Variants</button>
-                        <button class="ai-chat-chip" disabled>Edit Style</button>
-                        <button class="ai-chat-chip" disabled>Align Objects</button>
-                      </div>
-                    </div>
+                <!-- ─── Onboarding Hints (canvas-only, handwritten, no overlay) ─── -->
+                <div
+                  id="onboarding-hints"
+                  class="onboarding-hints"
+                  style="display: none"
+                >
+                  <div
+                    class="onboarding-note"
+                    style="top: 70px; left: 50%; transform: translateX(-50%)"
+                  >
+                    ← drag handles to move toolbar →
                   </div>
-                  <div class="ai-chat-input-area">
-                    <div class="ai-chat-input-container">
-                      <div class="ai-chat-context-badge hidden" id="ai-chat-context-badge">
-                        <span class="context-pin">📌</span>
-                        <span id="ai-chat-context-text"></span>
-                        <button id="ai-chat-context-clear" title="Clear context" aria-label="Clear context">×</button>
-                      </div>
-                      <div class="ai-chat-input-main-row">
-                        <button class="ai-chat-upload-btn" id="ai-chat-upload" title="Add context (Docs, Images, Camera)" aria-label="Add context">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 5v14M5 12h14"/>
-                          </svg>
-                        </button>
-                        <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Describe your design changes..." rows="1" maxlength="500"></textarea>
-                      </div>
-                      <div class="ai-chat-input-footer">
-                        <div class="ai-model-selector">
-                          <span id="ai-model-badge" class="ai-model-badge">✦ Gemma 4</span>
-                        </div>
-                        <span id="ai-rate-limit-text" class="ai-rate-limit-text"></span>
-                        <button class="ai-chat-send" id="ai-chat-send" title="Send" aria-label="Send">→</button>
-                      </div>
-                    </div>
+                  <div
+                    class="onboarding-note"
+                    style="
+                      top: 50%;
+                      left: 50%;
+                      transform: translate(-50%, -50%);
+                    "
+                  >
+                    pick a tool, then click canvas to draw ✏️
                   </div>
-                </div>
-                <!-- Search Pane -->
-                <div class="rp-pane" data-rpane="search">
-                  <div class="search-input-area">
-                    <div class="search-input-row">
-                      <input type="text" class="search-input" id="search-input" placeholder="Search nodes, text, styles…" autocomplete="off" spellcheck="false" />
-                      <span class="search-count" id="search-count"></span>
-                    </div>
-                    <div class="search-controls">
-                      <div class="search-mode-segmented" id="search-mode-segmented">
-                        <button class="search-mode-seg" data-mode="exact" title="Exact substring match">Exact</button>
-                        <button class="search-mode-seg active" data-mode="smart" title="Smart: fuzzy + exact-first (default)">Smart</button>
-                        <button class="search-mode-seg" data-mode="regex" title="Regular Expression (Alt+R)">.*</button>
-                      </div>
-                      <label class="search-option" title="Zoom to fit matched node on click">
-                        <input type="checkbox" id="search-zoom-fit" checked> Zoom
-                      </label>
-                    </div>
+                  <div
+                    class="onboarding-note"
+                    style="
+                      top: 60%;
+                      left: 50%;
+                      transform: translate(-50%, -50%);
+                      font-size: 14px;
+                    "
+                  >
+                    or drag a tool onto the canvas
                   </div>
-                  <div class="search-results" id="search-results">
-                    <div class="search-empty">Search your document by node ID, text content, or style name.</div>
+                  <div
+                    class="onboarding-note"
+                    style="
+                      bottom: 130px;
+                      right: calc(var(--right-panel-width, 0px) + 24px);
+                    "
+                  >
+                    your minimap & zoom controls ↓
+                  </div>
+                  <div
+                    class="onboarding-note onboarding-welcome"
+                    style="
+                      top: 35%;
+                      left: 50%;
+                      transform: translate(-50%, -50%);
+                    "
+                  >
+                    👋 welcome to fast draft!
                   </div>
                 </div>
               </div>
+              <!-- /canvas-content -->
             </div>
+            <!-- /canvas-wrapper -->
+          </div>
+        </div>
+      </div>
+    </main>
 
-            <!-- Image drop zone overlay -->
-            <div id="canvas-drop-zone" class="canvas-drop-zone">Drop image here</div>
-            <!-- ─── Onboarding Hints (canvas-only, handwritten, no overlay) ─── -->
-            <div id="onboarding-hints" class="onboarding-hints" style="display:none">
-              <div class="onboarding-note" style="top:70px;left:50%;transform:translateX(-50%)">← drag handles to move toolbar →</div>
-              <div class="onboarding-note" style="top:50%;left:50%;transform:translate(-50%,-50%)">pick a tool, then click canvas to draw ✏️</div>
-              <div class="onboarding-note" style="top:60%;left:50%;transform:translate(-50%,-50%);font-size:14px">or drag a tool onto the canvas</div>
-              <div class="onboarding-note" style="bottom: 130px; right: calc(var(--right-panel-width, 0px) + 24px)">your minimap & zoom controls ↓</div>
-              <div class="onboarding-note onboarding-welcome" style="top:35%;left:50%;transform:translate(-50%,-50%)">👋 welcome to fast draft!</div>
-            </div>
-            </div><!-- /canvas-content -->
-          </div><!-- /canvas-wrapper -->
+    <!-- Quick Color Picker -->
+    <div id="quick-color-picker" class="quick-color-picker">
+      <button
+        class="qcp-dot"
+        data-color="#1D1D1F"
+        style="background: #1d1d1f"
+        title="Black"
+      ></button>
+      <button
+        class="qcp-dot"
+        data-color="#E06C75"
+        style="background: #e06c75"
+        title="Red"
+      ></button>
+      <button
+        class="qcp-dot"
+        data-color="#6C5CE7"
+        style="background: #6c5ce7"
+        title="Purple"
+      ></button>
+      <button
+        class="qcp-dot"
+        data-color="#00B894"
+        style="background: #00b894"
+        title="Green"
+      ></button>
+      <button
+        class="qcp-dot"
+        data-color="#3B82F6"
+        style="background: #3b82f6"
+        title="Blue"
+      ></button>
+      <button
+        class="qcp-dot"
+        data-color="#FF6B6B"
+        style="background: #ff6b6b"
+        title="Coral"
+      ></button>
+      <button
+        class="qcp-dot"
+        data-color="#FFE66D"
+        style="background: #ffe66d"
+        title="Yellow"
+      ></button>
+      <button
+        class="qcp-dot"
+        data-color="#F5F5F7"
+        style="background: #f5f5f7; border: 1px solid rgba(0, 0, 0, 0.15)"
+        title="White"
+      ></button>
+      <button class="qcp-custom" id="qcp-custom-btn" title="Custom color">
+        <input type="color" id="qcp-custom-input" value="#007AFF" />
+        +
+      </button>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="import-modal" class="share-modal">
+      <div class="share-card" style="width: 480px; max-width: 90vw">
+        <div class="share-header">
+          <span class="share-title">📦 Import Module</span>
+          <button
+            class="share-close"
+            id="import-modal-close"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+        <p class="share-hint" style="text-align: left; margin: 0 0 12px 0">
+          Paste Fast Draft code below. It will be safely wrapped in a group and
+          namespaced.
+        </p>
+        <textarea
+          id="import-textarea"
+          class="share-url"
+          style="
+            height: 200px;
+            resize: vertical;
+            font-family: monospace;
+            white-space: pre;
+            margin-bottom: 12px;
+          "
+          placeholder="rect @my_component { ... }"
+        ></textarea>
+        <div style="display: flex; gap: 8px; justify-content: flex-end">
+          <button
+            class="share-copy-btn"
+            id="import-cancel-btn"
+            style="
+              background: transparent;
+              color: var(--fd-text);
+              border: 1px solid var(--fd-border);
+            "
+          >
+            Cancel
+          </button>
+          <button class="share-copy-btn" id="import-submit-btn">
+            Auto-Wrap & Import
+          </button>
         </div>
       </div>
     </div>
-  </main>
 
-  <!-- Quick Color Picker -->
-  <div id="quick-color-picker" class="quick-color-picker">
-    <button class="qcp-dot" data-color="#1D1D1F" style="background:#1D1D1F" title="Black"></button>
-    <button class="qcp-dot" data-color="#E06C75" style="background:#E06C75" title="Red"></button>
-    <button class="qcp-dot" data-color="#6C5CE7" style="background:#6C5CE7" title="Purple"></button>
-    <button class="qcp-dot" data-color="#00B894" style="background:#00B894" title="Green"></button>
-    <button class="qcp-dot" data-color="#3B82F6" style="background:#3B82F6" title="Blue"></button>
-    <button class="qcp-dot" data-color="#FF6B6B" style="background:#FF6B6B" title="Coral"></button>
-    <button class="qcp-dot" data-color="#FFE66D" style="background:#FFE66D" title="Yellow"></button>
-    <button class="qcp-dot" data-color="#F5F5F7" style="background:#F5F5F7;border:1px solid rgba(0,0,0,0.15)" title="White"></button>
-    <button class="qcp-custom" id="qcp-custom-btn" title="Custom color">
-      <input type="color" id="qcp-custom-input" value="#007AFF">
-      +
-    </button>
-  </div>
-
-  <!-- Import Modal -->
-  <div id="import-modal" class="share-modal">
-    <div class="share-card" style="width: 480px; max-width: 90vw;">
-      <div class="share-header">
-        <span class="share-title">📦 Import Module</span>
-        <button class="share-close" id="import-modal-close" aria-label="Close">✕</button>
-      </div>
-      <p class="share-hint" style="text-align: left; margin: 0 0 12px 0;">Paste Fast Draft code below. It will be safely wrapped in a group and namespaced.</p>
-      <textarea id="import-textarea" class="share-url" style="height: 200px; resize: vertical; font-family: monospace; white-space: pre; margin-bottom: 12px;" placeholder="rect @my_component { ... }"></textarea>
-      <div style="display: flex; gap: 8px; justify-content: flex-end;">
-        <button class="share-copy-btn" id="import-cancel-btn" style="background: transparent; color: var(--fd-text); border: 1px solid var(--fd-border);">Cancel</button>
-        <button class="share-copy-btn" id="import-submit-btn">Auto-Wrap & Import</button>
+    <!-- Share Modal -->
+    <div id="share-modal" class="share-modal">
+      <div class="share-card">
+        <div class="share-header">
+          <span class="share-title">🔗 Share this design</span>
+          <button class="share-close" id="share-modal-close" aria-label="Close">
+            ✕
+          </button>
+        </div>
+        <div class="share-url-row">
+          <input type="text" id="share-url-input" class="share-url" readonly />
+          <button class="share-copy-btn" id="share-copy-btn">Copy</button>
+        </div>
+        <canvas
+          id="share-qr"
+          class="share-qr"
+          width="160"
+          height="160"
+        ></canvas>
+        <p class="share-hint">Anyone with this link can view your design</p>
       </div>
     </div>
-  </div>
 
-  <!-- Share Modal -->
-  <div id="share-modal" class="share-modal">
-    <div class="share-card">
-      <div class="share-header">
-        <span class="share-title">🔗 Share this design</span>
-        <button class="share-close" id="share-modal-close" aria-label="Close">✕</button>
-      </div>
-      <div class="share-url-row">
-        <input type="text" id="share-url-input" class="share-url" readonly>
-        <button class="share-copy-btn" id="share-copy-btn">Copy</button>
-      </div>
-      <canvas id="share-qr" class="share-qr" width="160" height="160"></canvas>
-      <p class="share-hint">Anyone with this link can view your design</p>
+    <!-- Presentation Mode -->
+    <div id="presentation-overlay" class="presentation-overlay hidden">
+      <div class="presentation-counter" id="presentation-counter">1 / 1</div>
+      <button
+        class="presentation-exit"
+        id="presentation-exit"
+        title="Exit (Esc)"
+        aria-label="Exit presentation"
+      >
+        ✕ Exit
+      </button>
     </div>
-  </div>
 
-  <!-- Presentation Mode -->
-  <div id="presentation-overlay" class="presentation-overlay hidden">
-    <div class="presentation-counter" id="presentation-counter">1 / 1</div>
-    <button class="presentation-exit" id="presentation-exit" title="Exit (Esc)" aria-label="Exit presentation">✕ Exit</button>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="context-menu.js?v=0.11.385"></script>
-  <script type="module" src="app.js?v=0.11.385"></script>
-  <script>
-    // Mobile menu toggle
-    document.getElementById('mobile-menu-btn')?.addEventListener('click', function() {
-      document.querySelector('.nav-links')?.classList.toggle('open');
-      this.classList.toggle('open');
-    });
-
-  </script>
-</body>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="context-menu.js?v=0.11.385"></script>
+    <script type="module" src="app.js?v=0.11.385"></script>
+    <script>
+      // Mobile menu toggle
+      document
+        .getElementById("mobile-menu-btn")
+        ?.addEventListener("click", function () {
+          document.querySelector(".nav-links")?.classList.toggle("open");
+          this.classList.toggle("open");
+        });
+    </script>
+  </body>
 </html>

@@ -1,3 +1,3 @@
-## 2024-05-02 - Icon-Only Button Accessibility
-**Learning:** Found a widespread pattern in `site/index.html` where numerous icon-only buttons (like modals closes, chat actions, floating bar controls) lacked `aria-label`s. This is a common accessibility gap in web apps relying heavily on SVG icons.
-**Action:** Always verify icon-only buttons (`<button><svg/></button>` or `<button>✕</button>`) have explicit `aria-label` attributes to ensure screen reader users understand their function.
+## 2026-05-16 - Add ARIA Labels to Icon-Only Buttons
+**Learning:** Adding ARIA labels to icon-only buttons improves accessibility for screen readers. Using `npx prettier --write` formatting across an entire file like `site/index.html` causes large irrelevant diffs, so it's better to stick to small, targeted diffs and format only the changed lines when possible.
+**Action:** Use targeted commands like `sed` and ensure no full-file formatting is committed that expands the diff beyond the <50 line constraint.
