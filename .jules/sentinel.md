@@ -14,3 +14,7 @@
 **Vulnerability:** Several `escapeHtml` implementations used DOM manipulation (`document.createElement('div').innerHTML`) or incomplete string replacement, failing to escape single and double quotes.
 **Learning:** Incomplete escaping allows XSS payloads to break out of HTML attributes (e.g., `<input value="${escapeHtml(userInput)}">`).
 **Prevention:** Always use `String(text)` cast combined with a comprehensive replace chain for `&`, `<`, `>`, `"`, and `'` (e.g., `&#039;`) in custom string escaping functions.
+## 2024-05-24 - Cross-Site Scripting (XSS) in Animation Picker
+**Vulnerability:** Found an XSS vulnerability in `fd-vscode/webview/src/drag-drop.js` where untrusted node animation properties (`anim.duration_ms` and custom `triggerName`) were directly interpolated into `row.innerHTML`.
+**Learning:** Even internal webview properties sourced from JSON that represent untrusted user content (such as `.fd` files) can trigger XSS if rendered via `innerHTML`.
+**Prevention:** Avoid `innerHTML` when interpolating any dynamic content sourced from user files. Always use safer DOM APIs like `document.createElement()` and `textContent` to construct elements dynamically.
