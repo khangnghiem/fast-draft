@@ -14,3 +14,7 @@
 **Vulnerability:** Several `escapeHtml` implementations used DOM manipulation (`document.createElement('div').innerHTML`) or incomplete string replacement, failing to escape single and double quotes.
 **Learning:** Incomplete escaping allows XSS payloads to break out of HTML attributes (e.g., `<input value="${escapeHtml(userInput)}">`).
 **Prevention:** Always use `String(text)` cast combined with a comprehensive replace chain for `&`, `<`, `>`, `"`, and `'` (e.g., `&#039;`) in custom string escaping functions.
+## 2026-03-10 - HTML Escaping with innerHTML and Structural Tags
+**Vulnerability:** In `site/app.js`, `innerHTML` was used with a regex HTML escaping fallback for rendering untrusted markdown elements when `DOMPurify` wasn't loaded globally.
+**Learning:** For rendering structural tags like `<div>` using `innerHTML`, an HTML escaping fallback breaks layout rendering by displaying raw HTML strings to the user, potentially causing cascading logical errors (like `querySelectorAll` failing to find target IDs).
+**Prevention:** Avoid using HTML string replacements as a fallback for structural layouts assigned to `innerHTML`. Instead, gracefully default back to the unescaped state if sanitization dependencies are missing, or avoid assigning structural tags dynamically to `innerHTML` completely in favor of native DOM elements.
