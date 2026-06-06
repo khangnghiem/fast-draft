@@ -1,22 +1,38 @@
 use std::cmp::min;
 
+/// Represents the type of a completion item.
+///
+/// This is used by Language Server Protocol implementations and editors
+/// to determine the appropriate icon and behavior for the completion item.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompletionKind {
+    /// A language keyword (e.g., `group`, `rect`, `import`).
     Keyword,
+    /// A property name (e.g., `w:`, `fill:`).
     Property,
+    /// A property value (e.g., `center`, `#FFFFFF`).
     Value,
+    /// A complex snippet containing multiple lines or variables (e.g., `when`).
     Snippet,
+    /// A reference to a defined identifier (e.g., a style reference).
     Reference,
 }
 
+/// Data structure containing details for a single completion suggestion.
 #[derive(Debug, Clone)]
 pub struct CompletionItemData {
+    /// The text to display in the completion menu.
     pub label: &'static str,
+    /// A brief description of the completion item.
     pub detail: &'static str,
+    /// The semantic kind of the completion item.
     pub kind: CompletionKind,
+    /// Optional snippet text to insert instead of the label.
+    /// Can contain snippet variables like `${1:placeholder}`.
     pub snippet: Option<&'static str>,
 }
 
+/// Returns a list of completion items that are valid at the top level of a document.
 pub fn top_level_items() -> Vec<CompletionItemData> {
     vec![
         CompletionItemData {
@@ -78,6 +94,7 @@ pub fn top_level_items() -> Vec<CompletionItemData> {
     ]
 }
 
+/// Returns a list of completion items valid within a node body block.
 pub fn node_body_items() -> Vec<CompletionItemData> {
     vec![
         CompletionItemData {
@@ -227,6 +244,10 @@ pub fn node_body_items() -> Vec<CompletionItemData> {
     ]
 }
 
+/// Returns a list of completion values for a given property name.
+///
+/// For example, passing `"align"` returns completion items for `"left"`,
+/// `"center"`, `"right"`, etc.
 pub fn value_completions_data(property: &str) -> Vec<CompletionItemData> {
     let values: &[(&str, &str)] = match property {
         "layout" => &[
@@ -295,6 +316,10 @@ pub fn value_completions_data(property: &str) -> Vec<CompletionItemData> {
     items
 }
 
+/// Computes the nested brace depth at a specific position in the text.
+///
+/// Used to determine the appropriate context for completions
+/// (e.g., whether the cursor is inside a block or at the top level).
 pub fn compute_brace_depth(text: &str, line: usize, col: usize) -> usize {
     let mut depth: i32 = 0;
     for (i, ln) in text.lines().enumerate() {
