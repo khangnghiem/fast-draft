@@ -42,6 +42,7 @@ pub struct CommandStack {
 }
 
 impl CommandStack {
+    /// Creates a new undo/redo history manager with the specified maximum depth.
     pub fn new(max_depth: usize) -> Self {
         Self {
             undo_stack: Vec::with_capacity(max_depth),
@@ -209,10 +210,12 @@ impl CommandStack {
         Some((desc, is_snapshot))
     }
 
+    /// Returns true if there are commands in the undo history that can be undone.
     pub fn can_undo(&self) -> bool {
         !self.undo_stack.is_empty()
     }
 
+    /// Returns true if there are commands in the redo history that can be redone.
     pub fn can_redo(&self) -> bool {
         !self.redo_stack.is_empty()
     }

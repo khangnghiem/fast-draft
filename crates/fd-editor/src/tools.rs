@@ -65,6 +65,7 @@ pub enum ResizeHandle {
 
 // ─── Select Tool ─────────────────────────────────────────────────────────
 
+/// The default selection tool, allowing users to select, move, and resize nodes.
 pub struct SelectTool {
     /// Currently selected node(s) — logical selection for operations.
     pub selected: Vec<NodeId>,
@@ -105,6 +106,7 @@ impl Default for SelectTool {
 }
 
 impl SelectTool {
+    /// Creates a new Selection tool instance.
     pub fn new() -> Self {
         Self {
             selected: Vec::new(),
@@ -445,6 +447,7 @@ impl Tool for SelectTool {
 
 // ─── Rect Tool ───────────────────────────────────────────────────────────
 
+/// Tool for drawing rectangular shapes on the canvas.
 pub struct RectTool {
     drawing: bool,
     dragged: bool,
@@ -466,6 +469,7 @@ impl Default for RectTool {
 }
 
 impl RectTool {
+    /// Creates a new Rectangle tool instance.
     pub fn new() -> Self {
         Self {
             drawing: false,
@@ -661,6 +665,7 @@ impl Tool for RectTool {
 
 // ─── Pen Tool (freehand) ─────────────────────────────────────────────────
 
+/// Tool for freehand drawing of paths and scribbles on the canvas.
 pub struct PenTool {
     drawing: bool,
     /// Points with pressure: (x, y, pressure 0.0–1.0).
@@ -679,6 +684,7 @@ impl Default for PenTool {
 }
 
 impl PenTool {
+    /// Creates a new Pen tool instance.
     pub fn new() -> Self {
         Self {
             drawing: false,
@@ -890,6 +896,7 @@ fn subsample_points(pts: &[(f32, f32, f32)], max_pts: usize) -> Vec<(f32, f32, f
 
 // ─── Ellipse Tool ────────────────────────────────────────────────────────
 
+/// Tool for drawing elliptical and circular shapes on the canvas.
 pub struct EllipseTool {
     drawing: bool,
     dragged: bool,
@@ -908,6 +915,7 @@ impl Default for EllipseTool {
 }
 
 impl EllipseTool {
+    /// Creates a new Ellipse tool instance.
     pub fn new() -> Self {
         Self {
             drawing: false,
@@ -1071,6 +1079,7 @@ impl Tool for EllipseTool {
 
 // ─── Text Tool ───────────────────────────────────────────────────────────
 
+/// Tool for inserting text labels onto the canvas.
 pub struct TextTool {
     placed: bool,
 }
@@ -1082,6 +1091,7 @@ impl Default for TextTool {
 }
 
 impl TextTool {
+    /// Creates a new Text tool instance.
     pub fn new() -> Self {
         Self { placed: false }
     }
@@ -1124,6 +1134,7 @@ impl Tool for TextTool {
 
 // ─── Arrow Tool (edge/connector) ─────────────────────────────────────────
 
+/// Tool for drawing connecting edges and arrows between nodes.
 pub struct ArrowTool {
     /// Start position of the drag (scene-space).
     pub start_pos: Option<(f32, f32)>,
@@ -1144,6 +1155,7 @@ impl Default for ArrowTool {
 }
 
 impl ArrowTool {
+    /// Creates a new Arrow tool instance.
     pub fn new() -> Self {
         Self {
             start_pos: None,
@@ -1336,6 +1348,7 @@ impl Default for EraserTool {
 }
 
 impl EraserTool {
+    /// Creates a new Eraser tool instance.
     pub fn new() -> Self {
         Self {
             erased_ids: Vec::new(),
@@ -1409,6 +1422,7 @@ impl Default for LassoTool {
 }
 
 impl LassoTool {
+    /// Creates a new Lasso tool instance.
     pub fn new() -> Self {
         Self {
             polygon: Vec::new(),

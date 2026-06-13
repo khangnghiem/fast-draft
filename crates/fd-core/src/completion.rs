@@ -1,5 +1,6 @@
 use std::cmp::min;
 
+/// Specifies the type of completion item for rendering different icons/styles.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompletionKind {
     Keyword,
@@ -9,6 +10,7 @@ pub enum CompletionKind {
     Reference,
 }
 
+/// Represents a single completion suggestion provided to the editor.
 #[derive(Debug, Clone)]
 pub struct CompletionItemData {
     pub label: &'static str,
@@ -17,6 +19,7 @@ pub struct CompletionItemData {
     pub snippet: Option<&'static str>,
 }
 
+/// Returns standard structural completions available at the top-level of a `.fd` file.
 pub fn top_level_items() -> Vec<CompletionItemData> {
     vec![
         CompletionItemData {
@@ -78,6 +81,7 @@ pub fn top_level_items() -> Vec<CompletionItemData> {
     ]
 }
 
+/// Returns standard completions available inside the body of a node (e.g., properties, nested nodes).
 pub fn node_body_items() -> Vec<CompletionItemData> {
     vec![
         CompletionItemData {
@@ -227,6 +231,7 @@ pub fn node_body_items() -> Vec<CompletionItemData> {
     ]
 }
 
+/// Provides completions for the value of a specific property (e.g., specific colors for `fill:`).
 pub fn value_completions_data(property: &str) -> Vec<CompletionItemData> {
     let values: &[(&str, &str)] = match property {
         "layout" => &[
@@ -295,6 +300,7 @@ pub fn value_completions_data(property: &str) -> Vec<CompletionItemData> {
     items
 }
 
+/// Computes the depth of nested curly braces `{}` up to a specific line and column.
 pub fn compute_brace_depth(text: &str, line: usize, col: usize) -> usize {
     let mut depth: i32 = 0;
     for (i, ln) in text.lines().enumerate() {

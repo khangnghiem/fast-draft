@@ -170,6 +170,7 @@ impl InputEvent {
         }
     }
 
+    /// Helper to construct a pointer move event.
     pub fn from_pointer_move(x: f32, y: f32, pressure: f32, modifiers: Modifiers) -> Self {
         Self::PointerMove {
             x,
@@ -179,6 +180,7 @@ impl InputEvent {
         }
     }
 
+    /// Helper to construct a pointer up event.
     pub fn from_pointer_up(x: f32, y: f32, modifiers: Modifiers) -> Self {
         Self::PointerUp { x, y, modifiers }
     }

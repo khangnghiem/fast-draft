@@ -149,6 +149,7 @@ pub enum Paint {
 
 // ─── Stroke ──────────────────────────────────────────────────────────────
 
+/// Represents the styling of a line or border, including color, width, and flow animations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Stroke {
     pub paint: Paint,
@@ -157,6 +158,7 @@ pub struct Stroke {
     pub join: StrokeJoin,
 }
 
+/// Determines the shape of the endpoints of a stroke (e.g., Round, Square).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StrokeCap {
     Butt,
@@ -164,6 +166,7 @@ pub enum StrokeCap {
     Square,
 }
 
+/// Determines the shape of the corners of a stroke (e.g., Miter, Round, Bevel).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StrokeJoin {
     Miter,
@@ -197,6 +200,7 @@ pub const DEFAULT_FONT_SIZE: f32 = 14.0;
 /// Default font weight for text nodes without an explicit font spec.
 pub const DEFAULT_FONT_WEIGHT: u16 = 400;
 
+/// Specifies the typography settings for a text element (family, size, weight, line height).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FontSpec {
     pub family: String,
@@ -251,6 +255,7 @@ pub enum ImageFit {
 
 // ─── Shadow ──────────────────────────────────────────────────────────────
 
+/// Describes a drop shadow effect applied to an element.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Shadow {
     pub offset_x: f32,
