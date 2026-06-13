@@ -40,6 +40,7 @@ fn paint_to_svg_color(p: &fd_core::model::Paint) -> String {
     }
 }
 
+/// Renders the scene graph to an SVG string.
 pub fn render_svg(
     graph: &SceneGraph,
     bounds: &HashMap<NodeIndex, ResolvedBounds>,

@@ -28,6 +28,7 @@ pub struct Canvas {
 }
 
 impl Canvas {
+    /// Creates a new Canvas engine instance configured for either rendering or hit testing.
     pub fn new(config: CanvasConfig) -> Self {
         Self { config }
     }
