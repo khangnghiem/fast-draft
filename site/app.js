@@ -1,31 +1,57 @@
-import { initLayersPanel } from './layers.js?v=0.11.309';
-import init, { FdCanvas } from './wasm/fd_wasm.js?v=0.11.385';
-import { AiTouchSession } from './canvas-core/ai-touch/session.js?v=0.11.385';
-import { buildUnifiedNodeMenu, buildUnifiedCanvasMenu, buildUnifiedEdgeMenu } from './canvas-core/menu-registry.js?v=0.11.334';
+import { initLayersPanel } from "./layers.js?v=0.11.309";
+import init, { FdCanvas } from "./wasm/fd_wasm.js?v=0.11.385";
+import { AiTouchSession } from "./canvas-core/ai-touch/session.js?v=0.11.385";
+import {
+  buildUnifiedNodeMenu,
+  buildUnifiedCanvasMenu,
+  buildUnifiedEdgeMenu,
+} from "./canvas-core/menu-registry.js?v=0.11.334";
 // ─── FD Playground — WASM-powered interactive editor ───
 
 // ─── CodeMirror 6 + lz-string — local vendor bundle (no CDN) ─────────────
 import {
-  EditorState, Compartment,
-  EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter,
-  drawSelection, tooltips, hoverTooltip,
-  StreamLanguage, HighlightStyle, syntaxHighlighting, bracketMatching,
-  foldGutter, foldAll, unfoldAll, foldService,
+  EditorState,
+  Compartment,
+  EditorView,
+  keymap,
+  lineNumbers,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  drawSelection,
+  tooltips,
+  hoverTooltip,
+  StreamLanguage,
+  HighlightStyle,
+  syntaxHighlighting,
+  bracketMatching,
+  foldGutter,
+  foldAll,
+  unfoldAll,
+  foldService,
   tags,
-  autocompletion, closeBrackets, closeBracketsKeymap,
-  linter, lintGutter,
-  defaultKeymap, history, historyKeymap,
+  autocompletion,
+  closeBrackets,
+  closeBracketsKeymap,
+  linter,
+  lintGutter,
+  defaultKeymap,
+  history,
+  historyKeymap,
   highlightSelectionMatches,
   LZString,
-} from './vendor/cm.min.js';
-import { initAiChat, clearChatHistory, updateRateLimitUI } from './ai-chat.js?v=0.11.385';
+} from "./vendor/cm.min.js";
+import {
+  initAiChat,
+  clearChatHistory,
+  updateRateLimitUI,
+} from "./ai-chat.js?v=0.11.385";
 import {
   screenToScene as coreScreenToScene,
   pointerTypeToU8 as corePointerTypeToU8,
   showToast as coreShowToast,
   ZOOM_WHEEL_FACTOR as CORE_ZOOM_WHEEL_FACTOR,
   GRID_SPACING as CORE_GRID_SPACING,
-} from './canvas-core/state.js?v=0.11.296';
+} from "./canvas-core/state.js?v=0.11.296";
 import {
   drawGrid as coreDrawGrid,
   fitToContent as coreFitToContent,
@@ -37,40 +63,43 @@ import {
   startTween,
   evalTweens,
   playDetachAnimation as corePlayDetachAnimation,
-} from './canvas-core/render.js?v=0.11.296';
+} from "./canvas-core/render.js?v=0.11.296";
 import {
   extractNodeBlock as coreExtractNodeBlock,
   buildPasteIdMap,
   applyIdRenames,
   collectDeclaredIds,
-} from './canvas-core/clipboard.js?v=0.11.296';
+} from "./canvas-core/clipboard.js?v=0.11.296";
 import {
   getResizeHandleCursor as coreGetResizeHandleCursor,
   pinchDistance as corePinchDistance,
   pinchCenter as corePinchCenter,
   nudgeSelected as coreNudgeSelected,
-} from './canvas-core/viewport.js?v=0.11.296';
+} from "./canvas-core/viewport.js?v=0.11.296";
 import {
   TOOL_SHORTCUTS,
   TOOL_CYCLE,
   DOUBLE_PRESS_MS,
   ZOOM_STEP as CORE_ZOOM_STEP,
   buildShortcutHelpHtml as coreBuildShortcutHelpHtml,
-} from './canvas-core/shortcuts.js?v=0.11.296';
+} from "./canvas-core/shortcuts.js?v=0.11.296";
 import {
   setupInlineEditor as coreSetupInlineEditor,
   openInlineEditor as coreOpenInlineEditor,
   inlineEditorActive as coreInlineEditorActive,
   measureAndUpdateTextBounds,
   measureAllTextNodes,
-} from './canvas-core/inline-edit.js?v=0.11.296';
-import { setupTouchGestures as setupTouchGesturesModule, setupApplePencilPro as setupApplePencilProModule } from './touch.js?v=0.11.296';
-import { initSearchPanel } from './search.js?v=0.11.296';
-import { initPresentation } from './presentation.js?v=0.11.296';
-import { initTauri } from './tauri.js?v=0.11.296';
-import { initToolbar, drawDtcPreview } from './toolbar.js?v=0.11.296';
+} from "./canvas-core/inline-edit.js?v=0.11.296";
+import {
+  setupTouchGestures as setupTouchGesturesModule,
+  setupApplePencilPro as setupApplePencilProModule,
+} from "./touch.js?v=0.11.296";
+import { initSearchPanel } from "./search.js?v=0.11.296";
+import { initPresentation } from "./presentation.js?v=0.11.296";
+import { initTauri } from "./tauri.js?v=0.11.296";
+import { initToolbar, drawDtcPreview } from "./toolbar.js?v=0.11.296";
 
-import { fdLanguage, fdHighlightStyle, fdTheme } from './src/editor/syntax.js';
+import { fdLanguage, fdHighlightStyle, fdTheme } from "./src/editor/syntax.js";
 /** Global CodeMirror EditorView */
 let editorView = null;
 /** Compartment for read-only state */
@@ -81,7 +110,7 @@ const DEFAULT_FD = ``;
 // ─── State ───────────────────────────────────────────────────────────────
 let fdCanvas = null;
 let ctx = null;
-let isDark = localStorage.getItem('fd-canvas-theme') === 'dark'; // Default light
+let isDark = localStorage.getItem("fd-canvas-theme") === "dark"; // Default light
 let isSketchy = false;
 let animFrameId = null;
 let suppressSync = false;
@@ -92,66 +121,90 @@ let editorDebounceTimer = null;
 let activePointerId = -1;
 
 // Zoom / Pan
-let panX = 0, panY = 0;
-let panStartX = 0, panStartY = 0;
+let panX = 0,
+  panY = 0;
+let panStartX = 0,
+  panStartY = 0;
 let panDragging = false;
 let canvasDragOccurred = false; // tracks whether a real canvas drag happened
 let cmdDragNestTarget = null; // ID of the container highlighted during ⌘+drag
-let activeCenterSnap = null;  // Center-snap target during text node drag {target_id, x, y, bx, by, bw, bh}
+let activeCenterSnap = null; // Center-snap target during text node drag {target_id, x, y, bx, by, bw, bh}
 let zoomLevel = 1.0;
 let gridEnabled = false;
 let xrayLabels = false; // X-ray mode: show all node name badges (backtick toggle)
 let modShiftHeld = false; // Shift mode: single node hover
 const GRID_SPACING = 20;
 
-
 // Reduce Motion — respect OS setting + manual toggle
-const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-let reduceMotion = prefersReducedMotion.matches || localStorage.getItem('fd-reduce-motion') === 'true';
-if (reduceMotion) document.body.classList.add('reduce-motion');
-prefersReducedMotion?.addEventListener?.('change', (e) => {
-  reduceMotion = e.matches || localStorage.getItem('fd-reduce-motion') === 'true';
-  document.body.classList.toggle('reduce-motion', reduceMotion);
+const prefersReducedMotion = window.matchMedia(
+  "(prefers-reduced-motion: reduce)",
+);
+let reduceMotion =
+  prefersReducedMotion.matches ||
+  localStorage.getItem("fd-reduce-motion") === "true";
+if (reduceMotion) document.body.classList.add("reduce-motion");
+prefersReducedMotion?.addEventListener?.("change", (e) => {
+  reduceMotion =
+    e.matches || localStorage.getItem("fd-reduce-motion") === "true";
+  document.body.classList.toggle("reduce-motion", reduceMotion);
 });
 let fullscreenMode = false;
-const ZOOM_MIN = 0.1, ZOOM_MAX = 5;
+const ZOOM_MIN = 0.1,
+  ZOOM_MAX = 5;
 const ZOOM_WHEEL_FACTOR = 1.04; // Normalized zoom step (shared with VS Code)
 let isPanning = false;
 // inlineEditorActive is re-exported from canvas-core/inline-edit.js
 // We keep a getter for backward compatibility in this file.
-function isInlineEditing() { return coreInlineEditorActive; }
+function isInlineEditing() {
+  return coreInlineEditorActive;
+}
 
 // ── iPad touch/pencil visual feedback ────────────────────────────────
 /** Map PointerEvent.pointerType to WASM u8: 0=mouse, 1=touch, 2=pen */
 function pointerTypeToU8(pointerType) {
-  if (pointerType === 'touch') return 1;
-  if (pointerType === 'pen') return 2;
+  if (pointerType === "touch") return 1;
+  if (pointerType === "pen") return 2;
   return 0;
 }
 
 // Touch contact halo — visual feedback for finger taps
-let touchHalo = { active: false, x: 0, y: 0, sceneX: 0, sceneY: 0, startTime: 0, targetBounds: null };
+let touchHalo = {
+  active: false,
+  x: 0,
+  y: 0,
+  sceneX: 0,
+  sceneY: 0,
+  startTime: 0,
+  targetBounds: null,
+};
 // Apple Pencil hover preview — crosshair + node highlight
-let pencilHover = { active: false, sceneX: 0, sceneY: 0, screenX: 0, screenY: 0, nodeId: null };
+let pencilHover = {
+  active: false,
+  sceneX: 0,
+  sceneY: 0,
+  screenX: 0,
+  screenY: 0,
+  nodeId: null,
+};
 
 // Tool locking (sticky mode) — double-press shortcut or double-click button
 let lockedTool = null;
 let lastToolKeyTime = 0;
-let lastToolKeyName = '';
+let lastToolKeyName = "";
 let lastToolBtnTime = 0;
-let lastToolBtnName = '';
+let lastToolBtnName = "";
 
 // Modifier drag state — Hand tool modifier bypass
 let handTempSelectActive = false;
 let handTempSelectOriginalTool = null;
 let handAltCloneActive = false;
-let handPanClientStartX = null;  // Track click vs drag for deselect
+let handPanClientStartX = null; // Track click vs drag for deselect
 let handPanClientStartY = null;
 
 /** Canvas Tips Manager (Context-Triggered + Passive) */
 const CanvasTips = {
-  active: localStorage.getItem('fd-show-tips') !== 'false',
-  seenCount: parseInt(localStorage.getItem('fd-context-tips-count') || '0', 10),
+  active: localStorage.getItem("fd-show-tips") !== "false",
+  seenCount: parseInt(localStorage.getItem("fd-context-tips-count") || "0", 10),
   contextSeen: new Set(),
   passiveInterval: null,
   passiveIndex: 0,
@@ -166,7 +219,7 @@ const CanvasTips = {
     "Shift+Drag for square/circle",
     "Right-drag to pan",
     "⌘+Right-drag to zoom scrub",
-    "Press ? for all shortcuts"
+    "Press ? for all shortcuts",
   ],
 
   init() {
@@ -177,16 +230,18 @@ const CanvasTips = {
   showContextTip(id, text) {
     if (!this.active || this.contextSeen.has(id)) return;
     this.contextSeen.add(id);
-    
+
     this.seenCount++;
-    localStorage.setItem('fd-context-tips-count', this.seenCount);
+    localStorage.setItem("fd-context-tips-count", this.seenCount);
     if (this.seenCount >= 5) {
       this.active = false;
-      localStorage.setItem('fd-show-tips', 'false');
-      const toggle = document.getElementById('sm-tips-toggle');
-      if (toggle) toggle.classList.remove('toggle-on');
+      localStorage.setItem("fd-show-tips", "false");
+      const toggle = document.getElementById("sm-tips-toggle");
+      if (toggle) toggle.classList.remove("toggle-on");
       if (window.api && window.api.showToast) {
-        window.api.showToast("Tips disabled — you're a pro! Re-enable in Settings.");
+        window.api.showToast(
+          "Tips disabled — you're a pro! Re-enable in Settings.",
+        );
       }
       this.hide();
       return;
@@ -197,27 +252,31 @@ const CanvasTips = {
 
   display(text, isContext = false) {
     if (!this.active) return;
-    const el = document.getElementById('canvas-tips');
+    const el = document.getElementById("canvas-tips");
     if (!el) return;
     el.textContent = text;
-    el.classList.add('visible');
-    
+    el.classList.add("visible");
+
     if (this.hideTimeout) clearTimeout(this.hideTimeout);
-    this.hideTimeout = setTimeout(() => {
-      this.hide();
-    }, isContext ? 4000 : 3000);
+    this.hideTimeout = setTimeout(
+      () => {
+        this.hide();
+      },
+      isContext ? 4000 : 3000,
+    );
   },
 
   hide() {
-    const el = document.getElementById('canvas-tips');
-    if (el) el.classList.remove('visible');
+    const el = document.getElementById("canvas-tips");
+    if (el) el.classList.remove("visible");
   },
 
   startPassive() {
     if (!this.active || this.passiveInterval) return;
     this.passiveInterval = setInterval(() => {
-      if (!this.paused && document.visibilityState === 'visible') {
-        const text = this.passiveTips[this.passiveIndex % this.passiveTips.length];
+      if (!this.paused && document.visibilityState === "visible") {
+        const text =
+          this.passiveTips[this.passiveIndex % this.passiveTips.length];
         this.passiveIndex++;
         this.display(text, false);
       }
@@ -231,13 +290,19 @@ const CanvasTips = {
 
   resume() {
     this.paused = false;
-  }
+  },
 };
 
 // Smart defaults — per-tool style memory (persistent via localStorage)
-let smartDefaults = { fill: null, stroke: '#333333', strokeWidth: 2.5, opacity: 1, cornerRadius: 8 };
+let smartDefaults = {
+  fill: null,
+  stroke: "#333333",
+  strokeWidth: 2.5,
+  opacity: 1,
+  cornerRadius: 8,
+};
 try {
-  const saved = localStorage.getItem('fd-smart-defaults');
+  const saved = localStorage.getItem("fd-smart-defaults");
   if (saved) smartDefaults = { ...smartDefaults, ...JSON.parse(saved) };
 } catch (_) {}
 
@@ -262,7 +327,7 @@ let twoFingerTimer = null; // Smart disambiguation: 50ms delay
 let twoFingerPending = false;
 
 // Lasso select state — draws freeform path, selects enclosed nodes
-let lassoPoints = [];    // Array of {x, y} scene-space points
+let lassoPoints = []; // Array of {x, y} scene-space points
 let lassoActive = false; // Currently drawing lasso
 
 // Eraser marquee state — draws rectangle, deletes enclosed nodes
@@ -276,9 +341,11 @@ let resizeCanvas = () => {}; // Forward declaration to prevent ReferenceError on
 function pointInPolygon(px, py, pts) {
   let inside = false;
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-    const xi = pts[i].x, yi = pts[i].y;
-    const xj = pts[j].x, yj = pts[j].y;
-    if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+    const xi = pts[i].x,
+      yi = pts[i].y;
+    const xj = pts[j].x,
+      yj = pts[j].y;
+    if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) {
       inside = !inside;
     }
   }
@@ -287,10 +354,12 @@ function pointInPolygon(px, py, pts) {
 
 /** Test if a rect {x,y,width,height} is fully inside a polygon */
 function rectInsidePolygon(b, pts) {
-  return pointInPolygon(b.x, b.y, pts) &&
-         pointInPolygon(b.x + b.width, b.y, pts) &&
-         pointInPolygon(b.x, b.y + b.height, pts) &&
-         pointInPolygon(b.x + b.width, b.y + b.height, pts);
+  return (
+    pointInPolygon(b.x, b.y, pts) &&
+    pointInPolygon(b.x + b.width, b.y, pts) &&
+    pointInPolygon(b.x, b.y + b.height, pts) &&
+    pointInPolygon(b.x + b.width, b.y + b.height, pts)
+  );
 }
 
 /** Test if a rect is fully inside another rect */
@@ -299,8 +368,12 @@ function rectInsideRect(inner, outer) {
   const oy1 = Math.min(outer.startY, outer.endY);
   const ox2 = Math.max(outer.startX, outer.endX);
   const oy2 = Math.max(outer.startY, outer.endY);
-  return inner.x >= ox1 && inner.y >= oy1 &&
-         (inner.x + inner.width) <= ox2 && (inner.y + inner.height) <= oy2;
+  return (
+    inner.x >= ox1 &&
+    inner.y >= oy1 &&
+    inner.x + inner.width <= ox2 &&
+    inner.y + inner.height <= oy2
+  );
 }
 
 /** Get all node IDs and bounds from the scene graph */
@@ -334,15 +407,14 @@ function getRightPanelWidth() {
   return 0;
 }
 
-
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
 /** Convert screen (client) coords to scene coords accounting for zoom+pan */
 function screenToScene(clientX, clientY, canvasEl) {
   const rect = canvasEl.getBoundingClientRect();
   return {
-    x: ((clientX - rect.left) - panX) / zoomLevel,
-    y: ((clientY - rect.top) - panY) / zoomLevel
+    x: (clientX - rect.left - panX) / zoomLevel,
+    y: (clientY - rect.top - panY) / zoomLevel,
   };
 }
 
@@ -361,7 +433,7 @@ function drawGrid() {
   const startY = Math.floor(top / GRID_SPACING) * GRID_SPACING;
 
   ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.strokeStyle = "rgba(255,255,255,0.04)";
   ctx.lineWidth = 0.5 / zoomLevel;
   ctx.beginPath();
   for (let x = startX; x <= right; x += GRID_SPACING) {
@@ -386,10 +458,17 @@ function renderCanvas() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   // 2. Fill background in DPR-scaled identity space (covers full canvas)
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = isDark ? '#1C1C1E' : '#F5F5F7';
+  ctx.fillStyle = isDark ? "#1C1C1E" : "#F5F5F7";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   // 3. Apply zoom/pan transform for scene rendering
-  ctx.setTransform(dpr * zoomLevel, 0, 0, dpr * zoomLevel, panX * dpr, panY * dpr);
+  ctx.setTransform(
+    dpr * zoomLevel,
+    0,
+    0,
+    dpr * zoomLevel,
+    panX * dpr,
+    panY * dpr,
+  );
   drawGrid();
   // 4. Render scene — skip_bg=true since we already filled above
   fdCanvas.render(ctx, performance.now(), true, true, xrayLabels, modShiftHeld);
@@ -398,16 +477,24 @@ function renderCanvas() {
   if (activeCenterSnap) {
     ctx.save();
     ctx.setLineDash([6, 4]);
-    ctx.strokeStyle = '#FF9500'; // Apple orange — distinct from selection blue (#4FC3F7)
+    ctx.strokeStyle = "#FF9500"; // Apple orange — distinct from selection blue (#4FC3F7)
     ctx.lineWidth = 1.5;
-    ctx.strokeRect(activeCenterSnap.bx, activeCenterSnap.by, activeCenterSnap.bw, activeCenterSnap.bh);
+    ctx.strokeRect(
+      activeCenterSnap.bx,
+      activeCenterSnap.by,
+      activeCenterSnap.bw,
+      activeCenterSnap.bh,
+    );
     // Crosshair at snap center
-    const scx = activeCenterSnap.x, scy = activeCenterSnap.y;
+    const scx = activeCenterSnap.x,
+      scy = activeCenterSnap.y;
     ctx.setLineDash([3, 3]);
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(scx - 8, scy); ctx.lineTo(scx + 8, scy);
-    ctx.moveTo(scx, scy - 8); ctx.lineTo(scx, scy + 8);
+    ctx.moveTo(scx - 8, scy);
+    ctx.lineTo(scx + 8, scy);
+    ctx.moveTo(scx, scy - 8);
+    ctx.lineTo(scx, scy + 8);
     ctx.stroke();
     ctx.restore();
     renderDirty = true; // keep re-rendering while snap is active
@@ -423,7 +510,7 @@ function renderCanvas() {
     try {
       const ap = JSON.parse(arrowPreviewJson);
       ctx.save();
-      
+
       if (ap.x1 !== undefined && ap.y1 !== undefined) {
         ctx.strokeStyle = "#6B7080";
         ctx.lineWidth = 1.5;
@@ -439,12 +526,12 @@ function renderCanvas() {
         ctx.moveTo(ap.x2, ap.y2);
         ctx.lineTo(
           ap.x2 - headLen * Math.cos(angle - Math.PI / 6),
-          ap.y2 - headLen * Math.sin(angle - Math.PI / 6)
+          ap.y2 - headLen * Math.sin(angle - Math.PI / 6),
         );
         ctx.moveTo(ap.x2, ap.y2);
         ctx.lineTo(
           ap.x2 - headLen * Math.cos(angle + Math.PI / 6),
-          ap.y2 - headLen * Math.sin(angle + Math.PI / 6)
+          ap.y2 - headLen * Math.sin(angle + Math.PI / 6),
         );
         ctx.stroke();
       }
@@ -457,19 +544,29 @@ function renderCanvas() {
             const tb = JSON.parse(targetBoundsJson);
             const pad = 4;
             ctx.beginPath();
-            ctx.roundRect(tb.x - pad, tb.y - pad, tb.width + pad * 2, tb.height + pad * 2, 6);
+            ctx.roundRect(
+              tb.x - pad,
+              tb.y - pad,
+              tb.width + pad * 2,
+              tb.height + pad * 2,
+              6,
+            );
             ctx.strokeStyle = "#4FC3F7";
             ctx.lineWidth = 2.5;
             ctx.shadowColor = "#4FC3F7";
             ctx.shadowBlur = 8;
             ctx.stroke();
           }
-        } catch (_) { /* ignore */ }
+        } catch (_) {
+          /* ignore */
+        }
       }
 
       ctx.restore();
       renderDirty = true; // Keep animating while actively dragging/snapping
-    } catch (_) { /* ignore parse errors */ }
+    } catch (_) {
+      /* ignore parse errors */
+    }
   }
 
   // ── iPad touch/pencil visual overlays ──────────────────────────────
@@ -505,31 +602,33 @@ function renderCanvas() {
     const py = pencilHover.sceneY;
     const cs = 6 / zoomLevel; // Crosshair size scales inversely with zoom
     const lw = 1.5 / zoomLevel;
-    ctx.strokeStyle = '#4FC3F7';
+    ctx.strokeStyle = "#4FC3F7";
     ctx.lineWidth = lw;
     // Crosshair lines
     ctx.beginPath();
-    ctx.moveTo(px - cs, py); ctx.lineTo(px + cs, py);
-    ctx.moveTo(px, py - cs); ctx.lineTo(px, py + cs);
+    ctx.moveTo(px - cs, py);
+    ctx.lineTo(px + cs, py);
+    ctx.moveTo(px, py - cs);
+    ctx.lineTo(px, py + cs);
     ctx.stroke();
     // Center dot
     ctx.beginPath();
     ctx.arc(px, py, 2 / zoomLevel, 0, Math.PI * 2);
-    ctx.fillStyle = '#4FC3F7';
+    ctx.fillStyle = "#4FC3F7";
     ctx.fill();
     // Tool-specific ghost preview during hover
-    const hoverTool = fdCanvas ? fdCanvas.get_tool_name() : '';
-    if (hoverTool === 'rect' || hoverTool === 'frame') {
+    const hoverTool = fdCanvas ? fdCanvas.get_tool_name() : "";
+    if (hoverTool === "rect" || hoverTool === "frame") {
       // Show 162×100 ghost outline centered at hover
       ctx.setLineDash([4 / zoomLevel, 4 / zoomLevel]);
-      ctx.strokeStyle = 'rgba(79, 195, 247, 0.4)';
+      ctx.strokeStyle = "rgba(79, 195, 247, 0.4)";
       ctx.lineWidth = 1.5 / zoomLevel;
       ctx.strokeRect(px - 162 / 2, py - 100 / 2, 162, 100);
       ctx.setLineDash([]);
-    } else if (hoverTool === 'ellipse') {
+    } else if (hoverTool === "ellipse") {
       // Show 128×128 ghost circle centered at hover
       ctx.setLineDash([4 / zoomLevel, 4 / zoomLevel]);
-      ctx.strokeStyle = 'rgba(79, 195, 247, 0.4)';
+      ctx.strokeStyle = "rgba(79, 195, 247, 0.4)";
       ctx.lineWidth = 1.5 / zoomLevel;
       ctx.beginPath();
       ctx.ellipse(px, py, 64, 64, 0, 0, Math.PI * 2);
@@ -542,12 +641,14 @@ function renderCanvas() {
         if (bJson) {
           const hb = JSON.parse(bJson);
           ctx.setLineDash([4 / zoomLevel, 4 / zoomLevel]);
-          ctx.strokeStyle = 'rgba(79, 195, 247, 0.6)';
+          ctx.strokeStyle = "rgba(79, 195, 247, 0.6)";
           ctx.lineWidth = 1 / zoomLevel;
           ctx.strokeRect(hb.x, hb.y, hb.width, hb.height);
           ctx.setLineDash([]);
         }
-      } catch (_) { /* node may not exist */ }
+      } catch (_) {
+        /* node may not exist */
+      }
     }
     ctx.restore();
   }
@@ -556,8 +657,8 @@ function renderCanvas() {
   if (lassoActive && lassoPoints.length > 1) {
     ctx.save();
     ctx.setLineDash([6 / zoomLevel, 4 / zoomLevel]);
-    ctx.strokeStyle = 'rgba(59, 130, 246, 0.7)';
-    ctx.fillStyle = 'rgba(59, 130, 246, 0.06)';
+    ctx.strokeStyle = "rgba(59, 130, 246, 0.7)";
+    ctx.fillStyle = "rgba(59, 130, 246, 0.06)";
     ctx.lineWidth = 1.5 / zoomLevel;
     ctx.beginPath();
     ctx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
@@ -580,8 +681,8 @@ function renderCanvas() {
     const ew = Math.abs(eraserMarquee.endX - eraserMarquee.startX);
     const eh = Math.abs(eraserMarquee.endY - eraserMarquee.startY);
     ctx.setLineDash([6 / zoomLevel, 4 / zoomLevel]);
-    ctx.strokeStyle = 'rgba(255, 59, 48, 0.7)';
-    ctx.fillStyle = 'rgba(255, 59, 48, 0.06)';
+    ctx.strokeStyle = "rgba(255, 59, 48, 0.7)";
+    ctx.fillStyle = "rgba(255, 59, 48, 0.06)";
     ctx.lineWidth = 1.5 / zoomLevel;
     ctx.fillRect(ex, ey, ew, eh);
     ctx.strokeRect(ex, ey, ew, eh);
@@ -611,10 +712,13 @@ function fitToContent(canvas) {
         if (!bj) continue;
         const b = JSON.parse(bj);
         if (b.width > 0 && b.height > 0) nodes.push(b);
-      } catch (_) { }
+      } catch (_) {}
     }
     if (nodes.length === 0) return;
-    let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
+    let sx = Infinity,
+      sy = Infinity,
+      sx2 = -Infinity,
+      sy2 = -Infinity;
     for (const n of nodes) {
       sx = Math.min(sx, n.x);
       sy = Math.min(sy, n.y);
@@ -622,88 +726,94 @@ function fitToContent(canvas) {
       sy2 = Math.max(sy2, n.y + n.height);
     }
     const pad = 40;
-    sx -= pad; sy -= pad; sx2 += pad; sy2 += pad;
-    const sw = sx2 - sx, sh = sy2 - sy;
-    const cw = canvas.clientWidth, ch = canvas.clientHeight;
+    sx -= pad;
+    sy -= pad;
+    sx2 += pad;
+    sy2 += pad;
+    const sw = sx2 - sx,
+      sh = sy2 - sy;
+    const cw = canvas.clientWidth,
+      ch = canvas.clientHeight;
     if (cw === 0 || ch === 0) return;
     zoomLevel = Math.min(cw / sw, ch / sh, ZOOM_MAX);
     zoomLevel = Math.max(zoomLevel, ZOOM_MIN);
     panX = (cw - sw * zoomLevel) / 2 - sx * zoomLevel;
     panY = (ch - sh * zoomLevel) / 2 - sy * zoomLevel;
     updateZoomIndicator();
-    renderDirty = true; uiDirty = true;
-  } catch (_) { }
+    renderDirty = true;
+    uiDirty = true;
+  } catch (_) {}
 }
 
 // ── Panel Tab Switching ──────────────────────────────────────────
 
 /** Active left panel tab id */
-let activeLeftTab = sessionStorage.getItem('fd-left-tab') || 'layers';
+let activeLeftTab = sessionStorage.getItem("fd-left-tab") || "layers";
 
 /** Active right panel tab id */
-let activeRightTab = sessionStorage.getItem('fd-right-tab') || 'agent';
+let activeRightTab = sessionStorage.getItem("fd-right-tab") || "agent";
 
 /** Switch the active tab in the left panel (Layers/Code/Inspect). */
 function switchLeftTab(tabId) {
-  const panel = document.getElementById('left-panel');
+  const panel = document.getElementById("left-panel");
   if (!panel) return;
   // Ensure panel is visible (but not on mobile — panels are overlays there)
   const h = document.documentElement;
-  if (window.innerWidth > 768 && h.dataset.lp === 'closed') {
-    h.dataset.lp = 'open';
-    localStorage.setItem('fd-left-collapsed', '');
-    const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
-    const restoreW = (savedW >= 120 && savedW <= 500) ? savedW : 260;
-    h.style.setProperty('--left-panel-width', restoreW + 'px');
+  if (window.innerWidth > 768 && h.dataset.lp === "closed") {
+    h.dataset.lp = "open";
+    localStorage.setItem("fd-left-collapsed", "");
+    const savedW = parseInt(localStorage.getItem("fd-left-panel-width"), 10);
+    const restoreW = savedW >= 120 && savedW <= 500 ? savedW : 260;
+    h.style.setProperty("--left-panel-width", restoreW + "px");
   }
   // Update tabs
-  panel.querySelectorAll('.lp-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.tab === tabId);
+  panel.querySelectorAll(".lp-tab").forEach((t) => {
+    t.classList.toggle("active", t.dataset.tab === tabId);
   });
   // Update panes
-  panel.querySelectorAll('.lp-pane').forEach(p => {
-    p.classList.toggle('active', p.dataset.pane === tabId);
+  panel.querySelectorAll(".lp-pane").forEach((p) => {
+    p.classList.toggle("active", p.dataset.pane === tabId);
   });
   activeLeftTab = tabId;
-  sessionStorage.setItem('fd-left-tab', tabId);
+  sessionStorage.setItem("fd-left-tab", tabId);
   // Refresh editor size if switching to code
-  if (tabId === 'code' && editorView) {
+  if (tabId === "code" && editorView) {
     requestAnimationFrame(() => editorView.requestMeasure());
   }
   // Render specs if switching to inspect (merged specs+design)
-  if (tabId === 'inspect' && typeof renderSpecsPanel === 'function') {
+  if (tabId === "inspect" && typeof renderSpecsPanel === "function") {
     renderSpecsPanel();
   }
   // Resize canvas
   requestAnimationFrame(() => {
-    window.dispatchEvent(new Event('resize'));
+    window.dispatchEvent(new Event("resize"));
     resizeCanvas();
   });
 }
 
 /** Switch the active tab in the right panel (Agent/Search). */
 function switchRightTab(tabId) {
-  const panel = document.getElementById('right-panel');
+  const panel = document.getElementById("right-panel");
   if (!panel) return;
   // Ensure panel is visible (but not on mobile — panels are overlays there)
   const h = document.documentElement;
-  if (window.innerWidth > 768 && h.dataset.rp === 'closed') {
-    h.dataset.rp = 'open';
-    localStorage.setItem('fd-right-collapsed', '');
+  if (window.innerWidth > 768 && h.dataset.rp === "closed") {
+    h.dataset.rp = "open";
+    localStorage.setItem("fd-right-collapsed", "");
     updateRightPanelWidth(true);
   }
   // Update tabs
-  panel.querySelectorAll('.rp-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.rtab === tabId);
+  panel.querySelectorAll(".rp-tab").forEach((t) => {
+    t.classList.toggle("active", t.dataset.rtab === tabId);
   });
   // Update panes
-  panel.querySelectorAll('.rp-pane').forEach(p => {
-    p.classList.toggle('active', p.dataset.rpane === tabId);
+  panel.querySelectorAll(".rp-pane").forEach((p) => {
+    p.classList.toggle("active", p.dataset.rpane === tabId);
   });
   activeRightTab = tabId;
-  sessionStorage.setItem('fd-right-tab', tabId);
+  sessionStorage.setItem("fd-right-tab", tabId);
   requestAnimationFrame(() => {
-    window.dispatchEvent(new Event('resize'));
+    window.dispatchEvent(new Event("resize"));
     resizeCanvas();
   });
 }
@@ -713,101 +823,104 @@ function switchRightTab(tabId) {
  * --right-panel-actual-width controls minimap offset. */
 function updateRightPanelWidth(expanded) {
   if (expanded) {
-    const savedW = parseInt(localStorage.getItem('fd-right-panel-width'), 10);
-    const restoreW = (savedW >= 120 && savedW <= 500) ? savedW : 260;
-    document.documentElement.style.setProperty('--right-panel-width', restoreW + 'px');
+    const savedW = parseInt(localStorage.getItem("fd-right-panel-width"), 10);
+    const restoreW = savedW >= 120 && savedW <= 500 ? savedW : 260;
+    document.documentElement.style.setProperty(
+      "--right-panel-width",
+      restoreW + "px",
+    );
   } else {
-    document.documentElement.style.setProperty('--right-panel-width', '0px');
+    document.documentElement.style.setProperty("--right-panel-width", "0px");
   }
 }
 
 /** Toggle left panel collapsed/expanded. */
 function toggleLeftPanel() {
-  const panel = document.getElementById('left-panel');
+  const panel = document.getElementById("left-panel");
   if (!panel) return;
   const h = document.documentElement;
-  const isCollapsed = h.dataset.lp === 'open'; // toggling: open → closed
-  h.dataset.lp = isCollapsed ? 'closed' : 'open';
+  const isCollapsed = h.dataset.lp === "open"; // toggling: open → closed
+  h.dataset.lp = isCollapsed ? "closed" : "open";
   // Update CSS var offset hints (for minimap, onboarding-hints tracking)
   if (isCollapsed) {
-    h.style.setProperty('--left-panel-width', '0px');
+    h.style.setProperty("--left-panel-width", "0px");
   } else {
-    const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
-    const restoreW = (savedW >= 120 && savedW <= 500) ? savedW : 260;
-    h.style.setProperty('--left-panel-width', restoreW + 'px');
+    const savedW = parseInt(localStorage.getItem("fd-left-panel-width"), 10);
+    const restoreW = savedW >= 120 && savedW <= 500 ? savedW : 260;
+    h.style.setProperty("--left-panel-width", restoreW + "px");
     switchLeftTab(activeLeftTab);
   }
-  localStorage.setItem('fd-left-collapsed', isCollapsed ? '1' : '');
+  localStorage.setItem("fd-left-collapsed", isCollapsed ? "1" : "");
 
   // Disable resize handle and re-position post-slide (prevents ghost handle)
-  const layersHandle = document.getElementById('layers-resize');
-  if (layersHandle) layersHandle.style.pointerEvents = 'none';
+  const layersHandle = document.getElementById("layers-resize");
+  if (layersHandle) layersHandle.style.pointerEvents = "none";
 
   // All layout-dependent side-effects fire at transitionend — not mid-animation
   const safeTimeout = setTimeout(() => {
-    panel.removeEventListener('transitionend', onEnd);
-    onEnd({ propertyName: 'transform' }); // force execution if transitionend drops
+    panel.removeEventListener("transitionend", onEnd);
+    onEnd({ propertyName: "transform" }); // force execution if transitionend drops
   }, 350);
 
   function onEnd(e) {
-    if (e.propertyName !== 'transform') return; // only act on the slide
+    if (e.propertyName !== "transform") return; // only act on the slide
     clearTimeout(safeTimeout);
-    panel.removeEventListener('transitionend', onEnd);
+    panel.removeEventListener("transitionend", onEnd);
     if (layersHandle) {
-      layersHandle.style.pointerEvents = '';
+      layersHandle.style.pointerEvents = "";
       window.__fdPositionLayersHandle?.(); // re-clamp handle at panel edge
     }
-    window.dispatchEvent(new Event('resize'));
+    window.dispatchEvent(new Event("resize"));
     resizeCanvas(); // called once, with stable geometry
     window.__fdReclampToolbar?.(); // re-snap toolbar after panel settled
   }
-  
-  panel.addEventListener('transitionend', onEnd);
+
+  panel.addEventListener("transitionend", onEnd);
 }
 
 /** Toggle right panel collapsed/expanded. */
 function toggleRightPanel() {
-  const panel = document.getElementById('right-panel');
+  const panel = document.getElementById("right-panel");
   if (!panel) return;
   const h = document.documentElement;
-  const isCollapsed = h.dataset.rp === 'open'; // toggling: open → closed
-  h.dataset.rp = isCollapsed ? 'closed' : 'open';
+  const isCollapsed = h.dataset.rp === "open"; // toggling: open → closed
+  h.dataset.rp = isCollapsed ? "closed" : "open";
   updateRightPanelWidth(!isCollapsed);
-  localStorage.setItem('fd-right-collapsed', isCollapsed ? '1' : '');
+  localStorage.setItem("fd-right-collapsed", isCollapsed ? "1" : "");
 
   // Disable resize handle and re-position post-slide (prevents ghost handle)
-  const rightHandle = document.getElementById('right-resize');
-  if (rightHandle) rightHandle.style.pointerEvents = 'none';
+  const rightHandle = document.getElementById("right-resize");
+  if (rightHandle) rightHandle.style.pointerEvents = "none";
 
   // All layout-dependent side-effects fire at transitionend — not mid-animation
   const safeTimeout = setTimeout(() => {
-    panel.removeEventListener('transitionend', onEnd);
-    onEnd({ propertyName: 'transform' }); // force execution if transitionend drops
+    panel.removeEventListener("transitionend", onEnd);
+    onEnd({ propertyName: "transform" }); // force execution if transitionend drops
   }, 350);
 
   function onEnd(e) {
-    if (e.propertyName !== 'transform') return;
+    if (e.propertyName !== "transform") return;
     clearTimeout(safeTimeout);
-    panel.removeEventListener('transitionend', onEnd);
+    panel.removeEventListener("transitionend", onEnd);
     if (rightHandle) {
-      rightHandle.style.pointerEvents = '';
+      rightHandle.style.pointerEvents = "";
       window.__fdPositionRightHandle?.();
     }
-    window.dispatchEvent(new Event('resize'));
+    window.dispatchEvent(new Event("resize"));
     resizeCanvas();
     window.__fdReclampToolbar?.();
   }
 
-  panel.addEventListener('transitionend', onEnd);
+  panel.addEventListener("transitionend", onEnd);
 }
 
 /** Initialize left panel: tab click handlers, default tab. */
 function initLeftPanel() {
-  const panel = document.getElementById('left-panel');
+  const panel = document.getElementById("left-panel");
   if (!panel) return;
   // Tab click handlers
-  panel.querySelectorAll('.lp-tab').forEach(tab => {
-    tab.addEventListener('click', (e) => {
+  panel.querySelectorAll(".lp-tab").forEach((tab) => {
+    tab.addEventListener("click", (e) => {
       e.stopPropagation();
       const tabId = tab.dataset.tab;
       switchLeftTab(tabId);
@@ -818,46 +931,51 @@ function initLeftPanel() {
   // Sync panel state with data-attrs already set from <head> script
   // No classList toggle needed — [data-lp] handles visibility
 
-  const copyCodeBtn = document.getElementById('code-copy-btn');
+  const copyCodeBtn = document.getElementById("code-copy-btn");
   if (copyCodeBtn) {
-    copyCodeBtn.addEventListener('click', () => {
+    copyCodeBtn.addEventListener("click", () => {
       if (window.api && window.api.cm) {
         const sel = window.api.cm.getSelection();
         const text = sel ? sel : window.api.cm.getValue();
-        navigator.clipboard.writeText(text).then(() => {
-          window.api.showToast("✓ Code copied to clipboard", 1500);
-          copyCodeBtn.classList.add('success');
-          setTimeout(() => copyCodeBtn.classList.remove('success'), 1500);
-        }).catch(() => {
-          window.api.showToast("Copy failed");
-        });
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            window.api.showToast("✓ Code copied to clipboard", 1500);
+            copyCodeBtn.classList.add("success");
+            setTimeout(() => copyCodeBtn.classList.remove("success"), 1500);
+          })
+          .catch(() => {
+            window.api.showToast("Copy failed");
+          });
       }
     });
   }
 
   let isFolded = false;
-  const foldCodeBtn = document.getElementById('code-fold-btn');
+  const foldCodeBtn = document.getElementById("code-fold-btn");
   if (foldCodeBtn) {
-    foldCodeBtn.addEventListener('click', (e) => {
+    foldCodeBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       if (!editorView) return;
       if (isFolded) {
         unfoldAll(editorView);
         isFolded = false;
-        foldCodeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+        foldCodeBtn.innerHTML =
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
         window.api.showToast("Unfolded");
       } else {
         foldAll(editorView);
         isFolded = true;
-        foldCodeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>'; // same icon for toggle, could switch it to expand-arrows
+        foldCodeBtn.innerHTML =
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>'; // same icon for toggle, could switch it to expand-arrows
         window.api.showToast("Collapsed All");
       }
     });
   }
 
-  const formatCodeBtn = document.getElementById('code-format-btn');
+  const formatCodeBtn = document.getElementById("code-format-btn");
   if (formatCodeBtn) {
-    formatCodeBtn.addEventListener('click', (e) => {
+    formatCodeBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       const canvas = window.api && window.api.getFdCanvas();
       if (!canvas) return;
@@ -870,20 +988,21 @@ function initLeftPanel() {
           canvas.push_undo_snapshot(textBefore, textAfter);
           if (window.api.renderCanvas) window.api.renderCanvas();
           if (window.api.syncCanvasToEditor) window.api.syncCanvasToEditor();
-          if (typeof updatePropertiesPanel === 'function') updatePropertiesPanel();
-          if (typeof refreshLayersPanel === 'function') refreshLayersPanel();
+          if (typeof updatePropertiesPanel === "function")
+            updatePropertiesPanel();
+          if (typeof refreshLayersPanel === "function") refreshLayersPanel();
           const delta = parsed.lines_before - parsed.lines_after;
-          const deltaStr = delta > 0 ? `, ${delta} lines trimmed` : '';
+          const deltaStr = delta > 0 ? `, ${delta} lines trimmed` : "";
           window.api.showToast(`✦ Formatted: ${parsed.summary}${deltaStr}`);
-          formatCodeBtn.classList.add('success');
-          setTimeout(() => formatCodeBtn.classList.remove('success'), 1500);
+          formatCodeBtn.classList.add("success");
+          setTimeout(() => formatCodeBtn.classList.remove("success"), 1500);
         } else {
-          window.api.showToast('✓ Clean');
-          formatCodeBtn.classList.add('success');
-          setTimeout(() => formatCodeBtn.classList.remove('success'), 1500);
+          window.api.showToast("✓ Clean");
+          formatCodeBtn.classList.add("success");
+          setTimeout(() => formatCodeBtn.classList.remove("success"), 1500);
         }
       } catch (_) {
-        if (window.api) window.api.showToast('Format failed');
+        if (window.api) window.api.showToast("Format failed");
       }
     });
   }
@@ -891,11 +1010,11 @@ function initLeftPanel() {
 
 /** Initialize right panel: tab click handlers, default tab. */
 function initRightPanel() {
-  const panel = document.getElementById('right-panel');
+  const panel = document.getElementById("right-panel");
   if (!panel) return;
   // Tab click handlers
-  panel.querySelectorAll('.rp-tab').forEach(tab => {
-    tab.addEventListener('click', (e) => {
+  panel.querySelectorAll(".rp-tab").forEach((tab) => {
+    tab.addEventListener("click", (e) => {
       e.stopPropagation();
       const tabId = tab.dataset.rtab;
       switchRightTab(tabId);
@@ -903,7 +1022,7 @@ function initRightPanel() {
   });
   // Panel collapsed state handled by data-attrs set from <head> script
   // Just ensure CSS vars are correct
-  if (document.documentElement.dataset.rp === 'closed') {
+  if (document.documentElement.dataset.rp === "closed") {
     updateRightPanelWidth(false);
   } else {
     updateRightPanelWidth(true);
@@ -916,58 +1035,64 @@ function initRightPanel() {
 
 /** Initialize onboarding hints (shown once on first visit, canvas-only). */
 function initOnboarding() {
-  if (localStorage.getItem('fd-onboarded')) return;
-  const hints = document.getElementById('onboarding-hints');
+  if (localStorage.getItem("fd-onboarded")) return;
+  const hints = document.getElementById("onboarding-hints");
   if (!hints) return;
   // Show hints after a brief delay for WASM init
   // Show hints after a brief delay for WASM init
   setTimeout(() => {
-    hints.style.display = '';
+    hints.style.display = "";
   }, 1200);
   // Fade out and dismiss after 8 seconds or on first click/key
   const dismiss = () => {
-    hints.style.transition = 'opacity 1s ease';
-    hints.style.opacity = '0';
-    setTimeout(() => { hints.style.display = 'none'; }, 1000);
-    localStorage.setItem('fd-onboarded', '1');
-    document.removeEventListener('keydown', dismiss);
-    document.removeEventListener('pointerdown', dismiss);
+    hints.style.transition = "opacity 1s ease";
+    hints.style.opacity = "0";
+    setTimeout(() => {
+      hints.style.display = "none";
+    }, 1000);
+    localStorage.setItem("fd-onboarded", "1");
+    document.removeEventListener("keydown", dismiss);
+    document.removeEventListener("pointerdown", dismiss);
     CanvasTips.init(); // Start passive tips AFTER initial onboarding is dismissed
   };
   // Auto-dismiss after 15s
   setTimeout(dismiss, 15000);
   // Or dismiss on any user interaction
-  document.addEventListener('keydown', dismiss, { once: true });
-  document.addEventListener('pointerdown', dismiss, { once: true });
+  document.addEventListener("keydown", dismiss, { once: true });
+  document.addEventListener("pointerdown", dismiss, { once: true });
 }
 
 /** Wire settings panel buttons to existing action handlers. */
 function initSettingsPanel() {
   // Settings gear dblclick no longer switches to settings tab (tab removed)
   // Share dropdown toggle
-  const shareBtn = document.getElementById('share-btn-chrome');
-  const shareDropdown = document.getElementById('share-dropdown');
-  shareBtn?.addEventListener('click', (e) => {
+  const shareBtn = document.getElementById("share-btn-chrome");
+  const shareDropdown = document.getElementById("share-dropdown");
+  shareBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
-    shareDropdown?.classList.toggle('visible');
-    document.getElementById('settings-dropdown')?.classList.remove('visible');
+    shareDropdown?.classList.toggle("visible");
+    document.getElementById("settings-dropdown")?.classList.remove("visible");
   });
 
   // Wire lp-sidebar-toggle (in left panel header) to toggle left panel
-  document.getElementById('lp-sidebar-toggle')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleLeftPanel();
-  });
+  document
+    .getElementById("lp-sidebar-toggle")
+    ?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleLeftPanel();
+    });
   // Wire rp-sidebar-toggle (in right panel header) to toggle right panel
-  document.getElementById('rp-sidebar-toggle')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleRightPanel();
-  });
+  document
+    .getElementById("rp-sidebar-toggle")
+    ?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleRightPanel();
+    });
 }
 
 /** Toggle code panel — just switches to code tab. */
 function toggleCodePanel() {
-  switchLeftTab('code');
+  switchLeftTab("code");
 }
 
 /** Collapse code panel (idempotent — no-op if already collapsed) */
@@ -985,28 +1110,28 @@ function toggleFullscreen() {
   }
 }
 // Sync fullscreenMode flag with native fullscreen state
-document.addEventListener('fullscreenchange', () => {
+document.addEventListener("fullscreenchange", () => {
   fullscreenMode = !!document.fullscreenElement;
-  document.body.classList.toggle('fullscreen-mode', fullscreenMode);
+  document.body.classList.toggle("fullscreen-mode", fullscreenMode);
   if (fullscreenMode) collapseCodePanel();
-  setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+  setTimeout(() => window.dispatchEvent(new Event("resize")), 50);
 });
-document.addEventListener('webkitfullscreenchange', () => {
+document.addEventListener("webkitfullscreenchange", () => {
   fullscreenMode = !!document.webkitFullscreenElement;
-  document.body.classList.toggle('fullscreen-mode', fullscreenMode);
+  document.body.classList.toggle("fullscreen-mode", fullscreenMode);
   if (fullscreenMode) collapseCodePanel();
-  setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+  setTimeout(() => window.dispatchEvent(new Event("resize")), 50);
 });
 
 /** Show a brief toast notification */
 function showToast(msg) {
-  const el = document.createElement('div');
-  el.className = 'fd-toast';
+  const el = document.createElement("div");
+  el.className = "fd-toast";
   el.textContent = msg;
   document.body.appendChild(el);
   setTimeout(() => {
-    el.style.opacity = '0';
-    el.style.transition = 'opacity 0.3s ease';
+    el.style.opacity = "0";
+    el.style.transition = "opacity 0.3s ease";
     setTimeout(() => el.remove(), 300);
   }, 1500);
 }
@@ -1014,19 +1139,19 @@ function showToast(msg) {
 /** Generate a simple QR code on a canvas element (no library needed). */
 function generateQR(canvasEl, text) {
   if (!canvasEl) return;
-  const ctx = canvasEl.getContext('2d');
+  const ctx = canvasEl.getContext("2d");
   const size = canvasEl.width;
   ctx.clearRect(0, 0, size, size);
 
   // Simple visual "QR-like" pattern (not scannable, but visually communicates sharing)
   // For production, import a proper QR library. This is a placeholder visual.
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, size, size);
 
   // Generate a hash-based pattern from the URL
   let hash = 0;
   for (let i = 0; i < text.length; i++) {
-    hash = ((hash << 5) - hash) + text.charCodeAt(i);
+    hash = (hash << 5) - hash + text.charCodeAt(i);
     hash |= 0;
   }
 
@@ -1035,16 +1160,26 @@ function generateQR(canvasEl, text) {
   const inner = size - margin * 2;
   const cols = Math.floor(inner / cellSize);
 
-  ctx.fillStyle = '#1D1D1F';
+  ctx.fillStyle = "#1D1D1F";
 
   // QR finder patterns (corners)
   const drawFinder = (x, y) => {
     const s = cellSize * 7;
     ctx.fillRect(x, y, s, s);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(x + cellSize, y + cellSize, s - cellSize * 2, s - cellSize * 2);
-    ctx.fillStyle = '#1D1D1F';
-    ctx.fillRect(x + cellSize * 2, y + cellSize * 2, s - cellSize * 4, s - cellSize * 4);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(
+      x + cellSize,
+      y + cellSize,
+      s - cellSize * 2,
+      s - cellSize * 2,
+    );
+    ctx.fillStyle = "#1D1D1F";
+    ctx.fillRect(
+      x + cellSize * 2,
+      y + cellSize * 2,
+      s - cellSize * 4,
+      s - cellSize * 4,
+    );
   };
 
   drawFinder(margin, margin);
@@ -1056,10 +1191,20 @@ function generateQR(canvasEl, text) {
   for (let row = 0; row < cols; row++) {
     for (let col = 0; col < cols; col++) {
       // Skip finder pattern areas
-      if ((row < 8 && col < 8) || (row < 8 && col >= cols - 8) || (row >= cols - 8 && col < 8)) continue;
+      if (
+        (row < 8 && col < 8) ||
+        (row < 8 && col >= cols - 8) ||
+        (row >= cols - 8 && col < 8)
+      )
+        continue;
       seed = (seed * 1103515245 + 12345) & 0x7fffffff;
       if (seed % 3 !== 0) continue;
-      ctx.fillRect(margin + col * cellSize, margin + row * cellSize, cellSize, cellSize);
+      ctx.fillRect(
+        margin + col * cellSize,
+        margin + row * cellSize,
+        cellSize,
+        cellSize,
+      );
     }
   }
 }
@@ -1081,11 +1226,14 @@ function insertImageFromDataURL(dataUrl, canvasX, canvasY) {
 
   const currentText = editorView.state.doc.toString();
   editorView.dispatch({
-    changes: { from: currentText.length, to: currentText.length, insert: rectBlock },
+    changes: {
+      from: currentText.length,
+      to: currentText.length,
+      insert: rectBlock,
+    },
   });
-  showToast('Image added as placeholder');
+  showToast("Image added as placeholder");
 }
-
 
 /**
  * Parse CSS text and convert class rules to FD style blocks.
@@ -1101,7 +1249,7 @@ function parseCssToFdStyles(cssText) {
     const rawName = match[1];
     const body = match[2];
     // Sanitize class name: replace hyphens with underscores, remove invalid chars
-    const name = rawName.replace(/-/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+    const name = rawName.replace(/-/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
     if (!name) continue;
 
     const props = [];
@@ -1113,20 +1261,20 @@ function parseCssToFdStyles(cssText) {
       const val = pm[2].trim();
 
       switch (prop) {
-        case 'background-color':
-        case 'background': {
+        case "background-color":
+        case "background": {
           // Only extract solid colors (hex, rgb, named)
           const hexMatch = val.match(/#[0-9a-fA-F]{3,8}/);
           if (hexMatch) props.push(`  fill: ${hexMatch[0]}`);
           else if (val.match(/^(rgb|rgba)\(/)) {
             const hex = rgbToHex(val);
             if (hex) props.push(`  fill: ${hex}`);
-          } else if (val.match(/^[a-zA-Z]+$/) && !val.includes('gradient')) {
+          } else if (val.match(/^[a-zA-Z]+$/) && !val.includes("gradient")) {
             props.push(`  fill: ${val}`);
           }
           break;
         }
-        case 'color': {
+        case "color": {
           const hexMatch = val.match(/#[0-9a-fA-F]{3,8}/);
           if (hexMatch) props.push(`  fill: ${hexMatch[0]}`);
           else if (val.match(/^(rgb|rgba)\(/)) {
@@ -1135,59 +1283,77 @@ function parseCssToFdStyles(cssText) {
           }
           break;
         }
-        case 'border-radius':
-        case 'rounded': {
+        case "border-radius":
+        case "rounded": {
           const px = parseInt(val);
           if (!isNaN(px) && px > 0) props.push(`  corner: ${px}`);
           break;
         }
-        case 'opacity': {
+        case "opacity": {
           const op = parseFloat(val);
           if (!isNaN(op) && op >= 0 && op < 1) props.push(`  opacity: ${op}`);
           break;
         }
-        case 'box-shadow': {
+        case "box-shadow": {
           // Extract simple shadow: offset-x offset-y blur-radius color
-          const shadowMatch = val.match(/([\d.]+)\w*\s+([\d.]+)\w*\s+([\d.]+)\w*\s+(.+)/);
+          const shadowMatch = val.match(
+            /([\d.]+)\w*\s+([\d.]+)\w*\s+([\d.]+)\w*\s+(.+)/,
+          );
           if (shadowMatch) {
             const [, sx, sy, blur, color] = shadowMatch;
             const hexC = color.match(/#[0-9a-fA-F]{3,8}/);
-            const c = hexC ? hexC[0] : '#00000020';
-            props.push(`  shadow: (${parseInt(sx)},${parseInt(sy)},${parseInt(blur)},${c})`);
+            const c = hexC ? hexC[0] : "#00000020";
+            props.push(
+              `  shadow: (${parseInt(sx)},${parseInt(sy)},${parseInt(blur)},${c})`,
+            );
           }
           break;
         }
-        case 'border': {
+        case "border": {
           // Extract border as stroke: "1px solid #color"
-          const borderMatch = val.match(/([\d.]+)\w*\s+\w+\s+(#[0-9a-fA-F]{3,8})/);
+          const borderMatch = val.match(
+            /([\d.]+)\w*\s+\w+\s+(#[0-9a-fA-F]{3,8})/,
+          );
           if (borderMatch) {
-            props.push(`  stroke: ${borderMatch[2]} ${parseInt(borderMatch[1])}`);
+            props.push(
+              `  stroke: ${borderMatch[2]} ${parseInt(borderMatch[1])}`,
+            );
           }
           break;
         }
-        case 'font-family': {
-          const family = val.replace(/['"]/g, '').split(',')[0].trim();
+        case "font-family": {
+          const family = val.replace(/['"]/g, "").split(",")[0].trim();
           if (family) props.push(`  font: "${family}"`);
           break;
         }
-        case 'font-size': {
+        case "font-size": {
           const fs = parseInt(val);
           if (!isNaN(fs) && fs > 0) props.push(`  font: ${fs}`);
           break;
         }
-        case 'font-weight': {
-          const weightMap = { '100': 'thin', '200': 'extralight', '300': 'light', '400': 'regular',
-            '500': 'medium', '600': 'semibold', '700': 'bold', '800': 'extrabold', '900': 'black',
-            'normal': 'regular', 'bold': 'bold' };
+        case "font-weight": {
+          const weightMap = {
+            100: "thin",
+            200: "extralight",
+            300: "light",
+            400: "regular",
+            500: "medium",
+            600: "semibold",
+            700: "bold",
+            800: "extrabold",
+            900: "black",
+            normal: "regular",
+            bold: "bold",
+          };
           const w = weightMap[val.toLowerCase()];
-          if (w && w !== 'regular') props.push(`  font: ${w}`);
+          if (w && w !== "regular") props.push(`  font: ${w}`);
           break;
         }
       }
     }
 
     if (props.length > 0) {
-      styles.push(`style ${name} {\n${props.join('\n')}\n}`);
+      styles.push(`style ${name} {\n${props.join("\n")}\n}`);
     }
   }
 
@@ -1199,7 +1365,7 @@ function rgbToHex(rgb) {
   const match = rgb.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
   if (!match) return null;
   const [, r, g, b] = match.map(Number);
-  return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+  return "#" + [r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("");
 }
 
 /** Compute full scene bounding box from all @id nodes */
@@ -1207,7 +1373,10 @@ function getSceneBounds() {
   if (!fdCanvas) return null;
   const text = fdCanvas.get_text();
   const idRegex = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
-  let sx = Infinity, sy = Infinity, sx2 = -Infinity, sy2 = -Infinity;
+  let sx = Infinity,
+    sy = Infinity,
+    sx2 = -Infinity,
+    sy2 = -Infinity;
   let found = false;
   let m;
   while ((m = idRegex.exec(text)) !== null) {
@@ -1216,29 +1385,38 @@ function getSceneBounds() {
       if (!bj) continue;
       const b = JSON.parse(bj);
       if (b.width > 0 && b.height > 0) {
-        sx = Math.min(sx, b.x); sy = Math.min(sy, b.y);
-        sx2 = Math.max(sx2, b.x + b.width); sy2 = Math.max(sy2, b.y + b.height);
+        sx = Math.min(sx, b.x);
+        sy = Math.min(sy, b.y);
+        sx2 = Math.max(sx2, b.x + b.width);
+        sy2 = Math.max(sy2, b.y + b.height);
         found = true;
       }
     } catch (_) {}
   }
   if (!found) return null;
   const pad = 20;
-  return { x: sx - pad, y: sy - pad, w: sx2 - sx + pad * 2, h: sy2 - sy + pad * 2 };
+  return {
+    x: sx - pad,
+    y: sy - pad,
+    w: sx2 - sx + pad * 2,
+    h: sy2 - sy + pad * 2,
+  };
 }
 /** Update toolbar active state */
 function updateToolbar(activeTool) {
-  document.querySelectorAll('.ft-tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
+  document
+    .querySelectorAll(".ft-tool-btn[data-tool]")
+    .forEach((b) => b.classList.remove("active"));
   const btn = document.querySelector(`.ft-tool-btn[data-tool="${activeTool}"]`);
-  if (btn) btn.classList.add('active');
+  if (btn) btn.classList.add("active");
 }
 
 /** Update zoom indicator text */
 function updateZoomIndicator() {
-  const pct = Math.round(zoomLevel * 100) + '%';
-  const el = document.getElementById('zoom-level');
+  const pct = Math.round(zoomLevel * 100) + "%";
+  const el = document.getElementById("zoom-level");
   if (el) el.textContent = pct;
-  const rb = document.getElementById('zoom-reset-btn');
+  const rb = document.getElementById("zoom-reset-btn");
   if (rb) rb.textContent = pct;
 }
 
@@ -1256,12 +1434,17 @@ function focusOnNode(nodeId) {
   try {
     bounds = JSON.parse(fdCanvas.get_node_bounds(nodeId));
     if (!bounds || (bounds.width <= 0 && bounds.height <= 0)) return;
-  } catch (_) { return; }
+  } catch (_) {
+    return;
+  }
 
-  const container = document.getElementById("canvas-container") || document.getElementById("canvas-wrapper") || document.body;
+  const container =
+    document.getElementById("canvas-container") ||
+    document.getElementById("canvas-wrapper") ||
+    document.body;
   const cw = container.clientWidth;
   const ch = container.clientHeight;
-  
+
   const lp = document.getElementById("left-panel");
   const lpRect = lp ? lp.getBoundingClientRect() : { width: 0 };
   const effectivePanelW = lpRect.width;
@@ -1280,7 +1463,7 @@ function focusOnNode(nodeId) {
 
   const MIN_VISIBLE_PX = 20;
   const FIT_PADDING_RATIO = 0.15;
-  const FIT_TARGET_RATIO = 0.10;
+  const FIT_TARGET_RATIO = 0.1;
 
   if (screenW < MIN_VISIBLE_PX && screenH < MIN_VISIBLE_PX) {
     const maxDim = Math.max(bounds.width, bounds.height, 1);
@@ -1290,13 +1473,13 @@ function focusOnNode(nodeId) {
     const padding = Math.min(usableW, ch) * FIT_PADDING_RATIO;
     const fitZoom = Math.min(
       (usableW - padding * 2) / Math.max(bounds.width, 1),
-      (ch - padding * 2) / Math.max(bounds.height, 1)
+      (ch - padding * 2) / Math.max(bounds.height, 1),
     );
     targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, fitZoom));
   }
 
-  const thresholdX = usableW * 0.2 / zoomLevel;
-  const thresholdY = ch * 0.2 / zoomLevel;
+  const thresholdX = (usableW * 0.2) / zoomLevel;
+  const thresholdY = (ch * 0.2) / zoomLevel;
   const dx = Math.abs(nodeCX - vpCenterX);
   const dy = Math.abs(nodeCY - vpCenterY);
   const needsPan = dx > thresholdX || dy > thresholdY;
@@ -1333,8 +1516,11 @@ function focusOnNode(nodeId) {
     zoomLevel = startZoom + (targetZoom - startZoom) * ease;
     renderCanvas();
     updateZoomIndicator();
-    if (t < 1) { focusAnimId = requestAnimationFrame(step); } 
-    else { focusAnimId = null; }
+    if (t < 1) {
+      focusAnimId = requestAnimationFrame(step);
+    } else {
+      focusAnimId = null;
+    }
   }
   focusAnimId = requestAnimationFrame(step);
 }
@@ -1346,12 +1532,20 @@ function syncSelectedTextMetrics() {
     const ids = JSON.parse(fdCanvas.get_selected_ids());
     let changed = false;
     for (const id of ids) {
-      if (measureAndUpdateTextBounds(fdCanvas, document.getElementById('fd-canvas'), id)) {
+      if (
+        measureAndUpdateTextBounds(
+          fdCanvas,
+          document.getElementById("fd-canvas"),
+          id,
+        )
+      ) {
         changed = true;
       }
     }
     return changed;
-  } catch (_) { return false; }
+  } catch (_) {
+    return false;
+  }
 }
 
 /** Sync canvas text back to CodeMirror with echo suppression */
@@ -1363,7 +1557,7 @@ function syncCanvasToEditor() {
   editorDebounceTimer = null;
   // Strip [auto] doc-comments — they're for AI agents, not human editing.
   const rawText = fdCanvas.get_text();
-  const newText = rawText.replace(/^# \[auto\] .*\n/gm, '');
+  const newText = rawText.replace(/^# \[auto\] .*\n/gm, "");
   const currentText = editorView.state.doc.toString();
   if (newText !== currentText) {
     editorView.dispatch({
@@ -1373,7 +1567,9 @@ function syncCanvasToEditor() {
   // Persist to localStorage (debounced to avoid thrashing during drags)
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
-    try { localStorage.setItem('fd-document', newText); } catch (_) {}
+    try {
+      localStorage.setItem("fd-document", newText);
+    } catch (_) {}
   }, 500);
   sceneDirty = true;
   suppressSync = false;
@@ -1381,44 +1577,64 @@ function syncCanvasToEditor() {
 
 /** Show/hide and position the floating action bar above the selected node */
 function updateFab(canvas) {
-  const fab = document.getElementById('floating-action-bar');
-  if (!fab || !fdCanvas) { fab?.classList.remove('visible'); return; }
+  const fab = document.getElementById("floating-action-bar");
+  if (!fab || !fdCanvas) {
+    fab?.classList.remove("visible");
+    return;
+  }
 
   const selectedId = fdCanvas.get_selected_id();
-  if (!selectedId) { fab.classList.remove('visible'); return; }
+  if (!selectedId) {
+    fab.classList.remove("visible");
+    return;
+  }
 
   // Hide FAB when Design tab is active in right panel (props visible there)
-  const rpDesignContent = document.getElementById('rp-design-content');
-  if (rpDesignContent && rpDesignContent.style.display !== 'none') { fab.classList.remove('visible'); return; }
+  const rpDesignContent = document.getElementById("rp-design-content");
+  if (rpDesignContent && rpDesignContent.style.display !== "none") {
+    fab.classList.remove("visible");
+    return;
+  }
 
   try {
     const boundsJson = fdCanvas.get_node_bounds(selectedId);
-    if (!boundsJson) { fab.classList.remove('visible'); return; }
+    if (!boundsJson) {
+      fab.classList.remove("visible");
+      return;
+    }
     const b = JSON.parse(boundsJson);
-    if (!b.width) { fab.classList.remove('visible'); return; }
+    if (!b.width) {
+      fab.classList.remove("visible");
+      return;
+    }
 
     // Position above node center (screen coords with zoom+pan)
     const screenX = b.x * zoomLevel + panX + (b.width * zoomLevel) / 2;
     const screenY = b.y * zoomLevel + panY - 14;
-    fab.style.left = screenX + 'px';
-    fab.style.top = screenY + 'px';
-    fab.classList.add('visible');
+    fab.style.left = screenX + "px";
+    fab.style.top = screenY + "px";
+    fab.classList.add("visible");
 
     // Read current props
     const propsJson = fdCanvas.get_selected_node_props();
     if (propsJson) {
       const props = JSON.parse(propsJson);
-      if (props.fill) document.getElementById('fab-fill').value = props.fill;
-      if (props.strokeColor) document.getElementById('fab-stroke').value = props.strokeColor;
-      const swEl = document.getElementById('fab-stroke-w');
-      if (swEl && props.strokeWidth !== undefined) swEl.value = Math.round(props.strokeWidth);
-      const opEl = document.getElementById('fab-opacity');
-      const opValEl = document.getElementById('fab-opacity-val');
-      if (opEl && props.opacity !== undefined) { opEl.value = props.opacity; }
-      if (opValEl) opValEl.textContent = Math.round((props.opacity ?? 1) * 100) + '%';
+      if (props.fill) document.getElementById("fab-fill").value = props.fill;
+      if (props.strokeColor)
+        document.getElementById("fab-stroke").value = props.strokeColor;
+      const swEl = document.getElementById("fab-stroke-w");
+      if (swEl && props.strokeWidth !== undefined)
+        swEl.value = Math.round(props.strokeWidth);
+      const opEl = document.getElementById("fab-opacity");
+      const opValEl = document.getElementById("fab-opacity-val");
+      if (opEl && props.opacity !== undefined) {
+        opEl.value = props.opacity;
+      }
+      if (opValEl)
+        opValEl.textContent = Math.round((props.opacity ?? 1) * 100) + "%";
     }
   } catch (_) {
-    fab.classList.remove('visible');
+    fab.classList.remove("visible");
   }
 }
 
@@ -1429,17 +1645,27 @@ let highlightClearTimer = null; // auto-clear after CSS animation
 
 /** Find block line ranges for given IDs in the FD text. */
 function findBlockRangesInText(text, ids) {
-  const lines = text.split('\n');
+  const lines = text.split("\n");
   const ranges = [];
   for (const id of ids) {
     const range = findBlockWithRange(lines, id);
     if (range) {
       // Convert line numbers to character offsets for CodeMirror
-      let startPos = 0, endPos = 0;
+      let startPos = 0,
+        endPos = 0;
       for (let i = 0; i < lines.length; i++) {
         if (i === range.startLine) startPos = endPos;
         endPos += lines[i].length + 1; // +1 for newline
-        if (i === range.endLine) { ranges.push({ id, startLine: range.startLine, endLine: range.endLine, from: startPos, to: endPos - 1 }); break; }
+        if (i === range.endLine) {
+          ranges.push({
+            id,
+            startLine: range.startLine,
+            endLine: range.endLine,
+            from: startPos,
+            to: endPos - 1,
+          });
+          break;
+        }
       }
     }
   }
@@ -1450,8 +1676,8 @@ function findBlockRangesInText(text, ids) {
 function highlightSelectedBlocksInEditor(ids) {
   if (!editorView) return;
   // Avoid redundant updates
-  const idsKey = ids.join(',');
-  if (idsKey === lastHighlightedIds.join(',')) return;
+  const idsKey = ids.join(",");
+  if (idsKey === lastHighlightedIds.join(",")) return;
   lastHighlightedIds = [...ids];
 
   // Clear existing highlights immediately
@@ -1464,26 +1690,33 @@ function highlightSelectedBlocksInEditor(ids) {
   const ranges = findBlockRangesInText(text, ids);
   if (ranges.length === 0) return;
 
-  const { RangeSet, Decoration, StateField, EditorView: EV } = window.cmBundle || {};
+  const {
+    RangeSet,
+    Decoration,
+    StateField,
+    EditorView: EV,
+  } = window.cmBundle || {};
   if (!Decoration) return; // CodeMirror not loaded
 
   const marks = [];
   const linesCount = editorView.state.doc.lines;
-  
+
   // Apply line dimming to all lines outside the selected blocks
   for (let i = 1; i <= linesCount; i++) {
-    const isSelected = ranges.some(r => (i - 1) >= r.startLine && (i - 1) <= r.endLine);
+    const isSelected = ranges.some(
+      (r) => i - 1 >= r.startLine && i - 1 <= r.endLine,
+    );
     if (!isSelected) {
       const linePos = editorView.state.doc.line(i).from;
-      marks.push(Decoration.line({ class: 'ai-diff-dimmed' }).range(linePos));
+      marks.push(Decoration.line({ class: "ai-diff-dimmed" }).range(linePos));
     }
   }
 
   // Apply subtle highlight to the selected block itself
-  ranges.forEach(r => {
+  ranges.forEach((r) => {
     const from = Math.max(0, Math.min(r.from, text.length));
     const to = Math.max(from, Math.min(r.to, text.length));
-    marks.push(Decoration.mark({ class: 'ai-diff-selected' }).range(from, to));
+    marks.push(Decoration.mark({ class: "ai-diff-selected" }).range(from, to));
   });
 
   // CodeMirror requires marks to be sorted by position
@@ -1495,14 +1728,16 @@ function highlightSelectedBlocksInEditor(ids) {
   // Use a compartment-free approach: dispatch via effects if available
   if (!editorView._fdHighlightField) {
     const field = StateField.define({
-      create() { return Decoration.none; },
+      create() {
+        return Decoration.none;
+      },
       update(v, tr) {
         for (const e of tr.effects) {
           if (e.is(setHighlightEffect)) return e.value;
         }
         return v.map(tr.changes);
       },
-      provide: f => EV.decorations.from(f),
+      provide: (f) => EV.decorations.from(f),
     });
     editorView._fdHighlightField = field;
     editorView._fdHighlightReconfig = editorView.dispatch({
@@ -1513,7 +1748,9 @@ function highlightSelectedBlocksInEditor(ids) {
 
   // Scroll to first highlighted block
   if (ranges.length > 0) {
-    editorView.dispatch({ effects: EV.scrollIntoView(ranges[0].from, { y: 'center' }) });
+    editorView.dispatch({
+      effects: EV.scrollIntoView(ranges[0].from, { y: "center" }),
+    });
   }
 }
 
@@ -1536,19 +1773,21 @@ function initCodeMirrorEffects() {
 /** ─── AI Touch Preview Session ──────────────────────────────────────── */
 let aiTouchSession = null;
 
-window.showAgentDiff = function(_originalText, newText) {
-  return aiTouchSession?.previewCandidate(newText, { source: 'agent' }) || false;
+window.showAgentDiff = function (_originalText, newText) {
+  return (
+    aiTouchSession?.previewCandidate(newText, { source: "agent" }) || false
+  );
 };
 
 /** ─── Properties Panel ──────────────────────────────────────────────── */
 let propsSuppressSync = false;
 
 function updatePropertiesPanel() {
-  const designContent = document.getElementById('rp-design-content');
-  const designEmpty = document.getElementById('rp-design-empty');
+  const designContent = document.getElementById("rp-design-content");
+  const designEmpty = document.getElementById("rp-design-empty");
   if (!designContent || !fdCanvas) {
-    if (designContent) designContent.style.display = 'none';
-    if (designEmpty) designEmpty.style.display = '';
+    if (designContent) designContent.style.display = "none";
+    if (designEmpty) designEmpty.style.display = "";
     return;
   }
 
@@ -1557,10 +1796,12 @@ function updatePropertiesPanel() {
   const isMulti = selectedIds.length > 1;
 
   // Notify AI Chat panel about selection changes
-  const selKey = selectedIds.join(',');
+  const selKey = selectedIds.join(",");
   if (selKey !== updatePropertiesPanel._lastSelKey) {
     updatePropertiesPanel._lastSelKey = selKey;
-    document.dispatchEvent(new CustomEvent('fd-selection-changed', { detail: { ids: selectedIds } }));
+    document.dispatchEvent(
+      new CustomEvent("fd-selection-changed", { detail: { ids: selectedIds } }),
+    );
   }
 
   // Highlight selected blocks in Code Mode (unless editor is focused)
@@ -1572,21 +1813,22 @@ function updatePropertiesPanel() {
   if (isMulti) {
     // Multi-selection: show count and appearance controls only
     propsSuppressSync = true;
-    designContent.style.display = '';
-    designEmpty.style.display = 'none';
+    designContent.style.display = "";
+    designEmpty.style.display = "none";
 
-    document.getElementById('pp-node-id').textContent = `${selectedIds.length} objects`;
-    document.getElementById('pp-kind').textContent = 'mixed';
+    document.getElementById("pp-node-id").textContent =
+      `${selectedIds.length} objects`;
+    document.getElementById("pp-kind").textContent = "mixed";
 
     // Hide position & size (not meaningful for mixed selection)
-    ['pp-x', 'pp-y', 'pp-w', 'pp-h'].forEach(id => {
+    ["pp-x", "pp-y", "pp-w", "pp-h"].forEach((id) => {
       const el = document.getElementById(id);
-      if (el) el.value = '—';
+      if (el) el.value = "—";
     });
 
     // Show appearance section for bulk editing
-    const appearance = document.getElementById('pp-appearance');
-    if (appearance) appearance.style.display = '';
+    const appearance = document.getElementById("pp-appearance");
+    if (appearance) appearance.style.display = "";
 
     propsSuppressSync = false;
     return;
@@ -1594,103 +1836,129 @@ function updatePropertiesPanel() {
 
   const json = fdCanvas.get_selected_node_props();
   let props;
-  try { props = JSON.parse(json); } catch (_) { designContent.style.display = 'none'; designEmpty.style.display = ''; return; }
+  try {
+    props = JSON.parse(json);
+  } catch (_) {
+    designContent.style.display = "none";
+    designEmpty.style.display = "";
+    return;
+  }
 
   if (!props.id) {
-    designContent.style.display = 'none';
-    designEmpty.style.display = '';
+    designContent.style.display = "none";
+    designEmpty.style.display = "";
     return;
   }
 
   propsSuppressSync = true;
-  designContent.style.display = '';
-  designEmpty.style.display = 'none';
+  designContent.style.display = "";
+  designEmpty.style.display = "none";
 
   // Header
-  document.getElementById('pp-node-id').textContent = `@${props.id}`;
-  document.getElementById('pp-kind').textContent = props.kind || '';
+  document.getElementById("pp-node-id").textContent = `@${props.id}`;
+  document.getElementById("pp-kind").textContent = props.kind || "";
 
   // Position & Size
-  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val !== undefined ? Math.round(val) : ''; };
-  setVal('pp-x', props.x);
-  setVal('pp-y', props.y);
-  setVal('pp-w', props.width);
-  setVal('pp-h', props.height);
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val !== undefined ? Math.round(val) : "";
+  };
+  setVal("pp-x", props.x);
+  setVal("pp-y", props.y);
+  setVal("pp-w", props.width);
+  setVal("pp-h", props.height);
 
   // Fill color
-  const fillEl = document.getElementById('pp-fill');
+  const fillEl = document.getElementById("pp-fill");
   if (fillEl) {
     if (props.fill) {
       let hex = props.fill;
-      if (hex.length === 4) hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+      if (hex.length === 4)
+        hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
       fillEl.value = hex.substring(0, 7);
     } else {
-      fillEl.value = props.kind === 'text' ? '#ffffff' : '#000000'; // Fallback text is white (or theme)
+      fillEl.value = props.kind === "text" ? "#ffffff" : "#000000"; // Fallback text is white (or theme)
     }
   }
 
   // Stroke
-  const strokeEl = document.getElementById('pp-stroke');
+  const strokeEl = document.getElementById("pp-stroke");
   if (strokeEl) {
     if (props.strokeColor) {
       let hex = props.strokeColor;
-      if (hex.length === 4) hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+      if (hex.length === 4)
+        hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
       strokeEl.value = hex.substring(0, 7);
     } else {
-      strokeEl.value = '#000000';
+      strokeEl.value = "#000000";
     }
   }
-  setVal('pp-stroke-w', props.strokeWidth !== undefined ? props.strokeWidth : 0);
-  setVal('pp-corner', props.cornerRadius !== undefined ? props.cornerRadius : 0);
+  setVal(
+    "pp-stroke-w",
+    props.strokeWidth !== undefined ? props.strokeWidth : 0,
+  );
+  setVal(
+    "pp-corner",
+    props.cornerRadius !== undefined ? props.cornerRadius : 0,
+  );
 
   // Hide Corner for text nodes (corner_radius has no visual effect on text boxes themselves)
-  const cornerRow = document.getElementById('pp-corner')?.closest('.pp-row');
-  if (cornerRow) cornerRow.style.display = props.kind === 'text' ? 'none' : '';
-
+  const cornerRow = document.getElementById("pp-corner")?.closest(".pp-row");
+  if (cornerRow) cornerRow.style.display = props.kind === "text" ? "none" : "";
 
   // Opacity
-  const opSlider = document.getElementById('pp-opacity');
-  const opVal = document.getElementById('pp-opacity-val');
+  const opSlider = document.getElementById("pp-opacity");
+  const opVal = document.getElementById("pp-opacity-val");
   const opacity = props.opacity !== undefined ? props.opacity : 1;
   if (opSlider) opSlider.value = opacity;
-  if (opVal) opVal.textContent = Math.round(opacity * 100) + '%';
+  if (opVal) opVal.textContent = Math.round(opacity * 100) + "%";
 
   // Hide appearance for groups
-  const appearance = document.getElementById('pp-appearance');
-  if (appearance) appearance.style.display = (props.kind === 'root' || props.kind === 'group') ? 'none' : '';
+  const appearance = document.getElementById("pp-appearance");
+  if (appearance)
+    appearance.style.display =
+      props.kind === "root" || props.kind === "group" ? "none" : "";
 
   propsSuppressSync = false;
 }
 
 /** Shift minimap when props panel is visible. */
 function adjustMinimapForProps(visible) {
-  const mc = document.getElementById('minimap-container');
-  if (mc) mc.style.right = visible ? '212px' : '12px';
+  const mc = document.getElementById("minimap-container");
+  if (mc) mc.style.right = visible ? "212px" : "12px";
 }
 
 /** Shift minimap bottom when toolbar actually overlaps it (collision-based). */
 function adjustMinimapForToolbar() {
-  const mc = document.getElementById('minimap-container');
-  const tb = document.getElementById('floating-toolbar');
+  const mc = document.getElementById("minimap-container");
+  const tb = document.getElementById("floating-toolbar");
   if (!mc || !tb) return;
   // If toolbar is hidden or minimized with no overlap risk, reset
-  if (tb.style.visibility === 'hidden' || tb.offsetParent === null) {
-    mc.style.bottom = '12px';
+  if (tb.style.visibility === "hidden" || tb.offsetParent === null) {
+    mc.style.bottom = "12px";
     return;
   }
   const mr = mc.getBoundingClientRect();
   const tr = tb.getBoundingClientRect();
   // Check AABB overlap: toolbar rect intersects minimap rect
-  const overlaps = !(tr.right < mr.left || tr.left > mr.right ||
-                     tr.bottom < mr.top || tr.top > mr.bottom);
+  const overlaps = !(
+    tr.right < mr.left ||
+    tr.left > mr.right ||
+    tr.bottom < mr.top ||
+    tr.top > mr.bottom
+  );
   if (overlaps) {
     // Shift minimap above toolbar with 8px gap
-    const canvas = document.getElementById('canvas-content') || document.getElementById('canvas-wrapper');
-    const cr = canvas ? canvas.getBoundingClientRect() : { bottom: window.innerHeight };
+    const canvas =
+      document.getElementById("canvas-content") ||
+      document.getElementById("canvas-wrapper");
+    const cr = canvas
+      ? canvas.getBoundingClientRect()
+      : { bottom: window.innerHeight };
     const gap = cr.bottom - tr.top + 8;
-    mc.style.bottom = Math.max(12, gap) + 'px';
+    mc.style.bottom = Math.max(12, gap) + "px";
   } else {
-    mc.style.bottom = '12px';
+    mc.style.bottom = "12px";
   }
 }
 
@@ -1699,104 +1967,129 @@ function setupPropsPanel() {
   const propChange = (key, el) => {
     if (propsSuppressSync || !fdCanvas) return;
     // #4: Use bulk editing when multiple nodes are selected
-    const changed = (fdCanvas.set_multi_node_prop && JSON.parse(fdCanvas.get_selected_ids()).length > 1)
-      ? fdCanvas.set_multi_node_prop(key, el.value)
-      : fdCanvas.set_node_prop(key, el.value);
-    if (changed) { 
+    const changed =
+      fdCanvas.set_multi_node_prop &&
+      JSON.parse(fdCanvas.get_selected_ids()).length > 1
+        ? fdCanvas.set_multi_node_prop(key, el.value)
+        : fdCanvas.set_node_prop(key, el.value);
+    if (changed) {
       // If font/size/text related, it might need remeasurement
       syncSelectedTextMetrics();
-      renderCanvas(); 
-      syncCanvasToEditor(); 
+      renderCanvas();
+      syncCanvasToEditor();
     }
   };
 
   // W/H inputs (debounced)
   let debounce = null;
-  ['pp-w', 'pp-h'].forEach(id => {
+  ["pp-w", "pp-h"].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
-    const key = id === 'pp-w' ? 'width' : 'height';
-    el.addEventListener('input', () => {
+    const key = id === "pp-w" ? "width" : "height";
+    el.addEventListener("input", () => {
       clearTimeout(debounce);
       debounce = setTimeout(() => propChange(key, el), 150);
     });
   });
 
   // Fill color
-  document.getElementById('pp-fill')?.addEventListener('input', function() { propChange('fill', this); });
-
-  // Stroke color
-  document.getElementById('pp-stroke')?.addEventListener('input', function() { propChange('strokeColor', this); });
-
-  // Stroke width
-  document.getElementById('pp-stroke-w')?.addEventListener('input', function() {
-    clearTimeout(debounce);
-    debounce = setTimeout(() => propChange('strokeWidth', this), 150);
+  document.getElementById("pp-fill")?.addEventListener("input", function () {
+    propChange("fill", this);
   });
 
+  // Stroke color
+  document.getElementById("pp-stroke")?.addEventListener("input", function () {
+    propChange("strokeColor", this);
+  });
+
+  // Stroke width
+  document
+    .getElementById("pp-stroke-w")
+    ?.addEventListener("input", function () {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => propChange("strokeWidth", this), 150);
+    });
+
   // Corner radius
-  document.getElementById('pp-corner')?.addEventListener('input', function() {
+  document.getElementById("pp-corner")?.addEventListener("input", function () {
     clearTimeout(debounce);
-    debounce = setTimeout(() => propChange('cornerRadius', this), 150);
+    debounce = setTimeout(() => propChange("cornerRadius", this), 150);
   });
 
   // Opacity slider
-  const opSlider = document.getElementById('pp-opacity');
-  const opVal = document.getElementById('pp-opacity-val');
+  const opSlider = document.getElementById("pp-opacity");
+  const opVal = document.getElementById("pp-opacity-val");
   if (opSlider) {
-    opSlider.addEventListener('input', () => {
-      if (opVal) opVal.textContent = Math.round(parseFloat(opSlider.value) * 100) + '%';
+    opSlider.addEventListener("input", () => {
+      if (opVal)
+        opVal.textContent = Math.round(parseFloat(opSlider.value) * 100) + "%";
       clearTimeout(debounce);
-      debounce = setTimeout(() => propChange('opacity', opSlider), 100);
+      debounce = setTimeout(() => propChange("opacity", opSlider), 100);
     });
   }
 
   // Duplicate
-  document.getElementById('pp-duplicate')?.addEventListener('click', () => {
+  document.getElementById("pp-duplicate")?.addEventListener("click", () => {
     if (!fdCanvas) return;
     const changed = fdCanvas.duplicate_selected();
-    if (changed) { renderCanvas(); syncCanvasToEditor(); updatePropertiesPanel(); }
+    if (changed) {
+      renderCanvas();
+      syncCanvasToEditor();
+      updatePropertiesPanel();
+    }
   });
 
   // Delete
-  document.getElementById('pp-delete')?.addEventListener('click', () => {
+  document.getElementById("pp-delete")?.addEventListener("click", () => {
     if (!fdCanvas) return;
     const changed = fdCanvas.delete_selected();
-    if (changed) { renderCanvas(); syncCanvasToEditor(); updatePropertiesPanel(); }
+    if (changed) {
+      renderCanvas();
+      syncCanvasToEditor();
+      updatePropertiesPanel();
+    }
   });
 
   // Select all text on focus for number inputs (easier editing)
-  ['pp-w', 'pp-h', 'pp-stroke-w', 'pp-corner'].forEach(id => {
-    document.getElementById(id)?.addEventListener('focus', (e) => e.target.select());
+  ["pp-w", "pp-h", "pp-stroke-w", "pp-corner"].forEach((id) => {
+    document
+      .getElementById(id)
+      ?.addEventListener("focus", (e) => e.target.select());
   });
 }
 
 /** ─── Clipboard (Copy / Paste / Cut) ────────────────────────────────── */
-let fdClipboard = '';
+let fdClipboard = "";
 let fdClipboardIsInternal = false;
 let pasteOffsetCount = 0;
 
 /** Extract the .fd text block for a single node by its ID. */
 function extractNodeBlock(text, nodeId) {
-  const lines = text.split('\n');
+  const lines = text.split("\n");
   const startPattern = new RegExp(`^\\s*(\\w+)\\s+@${nodeId}\\b`);
   let startIdx = -1;
   for (let i = 0; i < lines.length; i++) {
-    if (startPattern.test(lines[i])) { startIdx = i; break; }
+    if (startPattern.test(lines[i])) {
+      startIdx = i;
+      break;
+    }
   }
-  if (startIdx < 0) return '';
+  if (startIdx < 0) return "";
 
   // Walk down from the declaration line until indent <= start
   const startIndent = lines[startIdx].match(/^\s*/)[0].length;
   let endIdx = startIdx + 1;
   while (endIdx < lines.length) {
     const line = lines[endIdx];
-    if (line.trim().length === 0) { endIdx++; continue; }
+    if (line.trim().length === 0) {
+      endIdx++;
+      continue;
+    }
     const indent = line.match(/^\s*/)[0].length;
     if (indent <= startIndent) break;
     endIdx++;
   }
-  return lines.slice(startIdx, endIdx).join('\n');
+  return lines.slice(startIdx, endIdx).join("\n");
 }
 
 /** Copy the selected node's .fd block to internal + system clipboard. */
@@ -1812,7 +2105,7 @@ function copySelectedAsFd() {
       if (navigator.clipboard) {
         navigator.clipboard.writeText(fdClipboard).catch(() => {});
       }
-      showToast('✓ Copied as FD code');
+      showToast("✓ Copied as FD code");
       return;
     }
   } catch (_) {}
@@ -1828,7 +2121,7 @@ function copySelectedAsFd() {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(fdClipboard).catch(() => {});
   }
-  showToast('✓ Copied as FD code');
+  showToast("✓ Copied as FD code");
 }
 
 /** Cut the selected node — copy then delete. */
@@ -1860,7 +2153,9 @@ async function pasteFromClipboard() {
         isInternal = false;
       }
     }
-  } catch (_) { /* permission denied — use internal */ }
+  } catch (_) {
+    /* permission denied — use internal */
+  }
 
   if (!clipText || !clipText.trim()) return;
 
@@ -1868,13 +2163,13 @@ async function pasteFromClipboard() {
   const dx = pasteOffsetCount * 20;
   const dy = pasteOffsetCount * 20;
 
-
   try {
     const resultJson = fdCanvas.paste_fd(clipText, dx, dy);
     const res = JSON.parse(resultJson);
     if (res.ok) {
       if (res.tier === 1) {
-        if (!isInternal) showToast(`✓ Pasted ${res.count} node${res.count > 1 ? 's' : ''}`);
+        if (!isInternal)
+          showToast(`✓ Pasted ${res.count} node${res.count > 1 ? "s" : ""}`);
       } else if (res.tier === 2) {
         showToast("⚠ Empty document — created as text");
       } else if (res.tier === 3) {
@@ -1900,15 +2195,15 @@ window.contextMenu = ctxMenu;
 // Right-click + drag (button down + move > threshold) → temporary pan (Hand tool).
 // ⌘ + right-click (short) → Layer Picker / Quick Insert.
 // ⌘ + right-drag → Zoom Scrub.
-const RIGHT_CLICK_DRAG_THRESHOLD = 5;    // px movement before committing to pan
+const RIGHT_CLICK_DRAG_THRESHOLD = 5; // px movement before committing to pan
 const RIGHT_CLICK_MENU_TIMEOUT_MS = 400; // max ms from down→up to count as "short click"
-let rightClickPending = false;           // right button is held, gesture not yet determined
-let rightClickStartClient = null;        // {x, y} in client coords when button went down
-let rightClickStartTime = 0;             // performance.now() at button-down
-let rightClickPointerId = -1;            // pointerId of the pending right-click
-let rightClickCmdHeld = false;           // ⌘ was held when right-click started
-let zoomScrubActive = false;             // ⌘+right-drag zoom scrub is active
-let zoomScrubStartZoom = 1;              // zoom level when zoom scrub started
+let rightClickPending = false; // right button is held, gesture not yet determined
+let rightClickStartClient = null; // {x, y} in client coords when button went down
+let rightClickStartTime = 0; // performance.now() at button-down
+let rightClickPointerId = -1; // pointerId of the pending right-click
+let rightClickCmdHeld = false; // ⌘ was held when right-click started
+let zoomScrubActive = false; // ⌘+right-drag zoom scrub is active
+let zoomScrubStartZoom = 1; // zoom level when zoom scrub started
 
 function closeContextMenu() {
   ctxMenu.close();
@@ -1919,27 +2214,41 @@ function closeContextMenu() {
 // Clicking a layer selects it (drill-down through z-stack).
 function openLayerPickerAt(clientX, clientY) {
   if (!fdCanvas || !fdCanvas.hit_test_all_at) return;
-  const canvas = document.getElementById('fd-canvas');
+  const canvas = document.getElementById("fd-canvas");
   if (!canvas) return;
   const { x, y } = screenToScene(clientX, clientY, canvas);
 
   let layers;
   try {
     layers = JSON.parse(fdCanvas.hit_test_all_at(x, y));
-  } catch (_) { return; }
+  } catch (_) {
+    return;
+  }
   if (!layers || layers.length === 0) return;
 
-  const kindIcon = { rect: '▭', ellipse: '◯', text: 'T', frame: '⊞', group: '⊟', path: '✎', image: '🖼', generic: '◇' };
+  const kindIcon = {
+    rect: "▭",
+    ellipse: "◯",
+    text: "T",
+    frame: "⊞",
+    group: "⊟",
+    path: "✎",
+    image: "🖼",
+    generic: "◇",
+  };
   const items = [
-    { type: 'header', label: `${layers.length} layer${layers.length > 1 ? 's' : ''} at cursor` },
+    {
+      type: "header",
+      label: `${layers.length} layer${layers.length > 1 ? "s" : ""} at cursor`,
+    },
   ];
   for (const layer of layers) {
     items.push({
-      type: 'action',
-      icon: kindIcon[layer.kind] || '◇',
+      type: "action",
+      icon: kindIcon[layer.kind] || "◇",
       label: `@${layer.id}`,
       shortcut: layer.kind,
-      action: 'layer-pick',
+      action: "layer-pick",
       data: { id: layer.id },
     });
   }
@@ -1949,11 +2258,12 @@ function openLayerPickerAt(clientX, clientY) {
     x: clientX,
     y: clientY,
     onAction: (action, el) => {
-      if (action === 'layer-pick') {
-        const id = el.getAttribute('data-id');
+      if (action === "layer-pick") {
+        const id = el.getAttribute("data-id");
         if (id && fdCanvas.select_by_id) {
           fdCanvas.select_by_id(id);
-          renderDirty = true; uiDirty = true;
+          renderDirty = true;
+          uiDirty = true;
           renderCanvas();
           refreshLayersPanel();
           updatePropertiesPanel();
@@ -1966,16 +2276,40 @@ function openLayerPickerAt(clientX, clientY) {
 // ── ⌘+Right-click on empty: Quick Insert ─────────────────────────────────
 // Creates a new shape at the cursor position with a single gesture.
 function openQuickInsertAt(clientX, clientY) {
-  const canvas = document.getElementById('fd-canvas');
+  const canvas = document.getElementById("fd-canvas");
   if (!canvas) return;
   const { x, y } = screenToScene(clientX, clientY, canvas);
 
   const items = [
-    { type: 'header', label: 'Quick Insert' },
-    { type: 'action', icon: '▭', label: 'Rectangle', shortcut: 'R', action: 'insert-rect' },
-    { type: 'action', icon: '◯', label: 'Ellipse', shortcut: 'O', action: 'insert-ellipse' },
-    { type: 'action', icon: 'T', label: 'Text', shortcut: 'T', action: 'insert-text' },
-    { type: 'action', icon: '⊞', label: 'Frame', shortcut: 'F', action: 'insert-frame' },
+    { type: "header", label: "Quick Insert" },
+    {
+      type: "action",
+      icon: "▭",
+      label: "Rectangle",
+      shortcut: "R",
+      action: "insert-rect",
+    },
+    {
+      type: "action",
+      icon: "◯",
+      label: "Ellipse",
+      shortcut: "O",
+      action: "insert-ellipse",
+    },
+    {
+      type: "action",
+      icon: "T",
+      label: "Text",
+      shortcut: "T",
+      action: "insert-text",
+    },
+    {
+      type: "action",
+      icon: "⊞",
+      label: "Frame",
+      shortcut: "F",
+      action: "insert-frame",
+    },
   ];
 
   ctxMenu.open({
@@ -1984,21 +2318,28 @@ function openQuickInsertAt(clientX, clientY) {
     y: clientY,
     onAction: (action) => {
       const kindMap = {
-        'insert-rect': 'rect',
-        'insert-ellipse': 'ellipse',
-        'insert-text': 'text',
-        'insert-frame': 'frame',
+        "insert-rect": "rect",
+        "insert-ellipse": "ellipse",
+        "insert-text": "text",
+        "insert-frame": "frame",
       };
       const kind = kindMap[action];
       if (!kind || !fdCanvas.insert_node_at) return;
-      const defaultW = kind === 'text' ? 80 : 120;
-      const defaultH = kind === 'text' ? 24 : 80;
+      const defaultW = kind === "text" ? 80 : 120;
+      const defaultH = kind === "text" ? 24 : 80;
       // Center the default shape on the cursor
       const textBefore = fdCanvas.get_text();
-      fdCanvas.insert_node_at(kind, x - defaultW / 2, y - defaultH / 2, defaultW, defaultH);
+      fdCanvas.insert_node_at(
+        kind,
+        x - defaultW / 2,
+        y - defaultH / 2,
+        defaultW,
+        defaultH,
+      );
       const textAfter = fdCanvas.get_text();
       if (textBefore !== textAfter) syncEditorFromCanvas(textAfter);
-      renderDirty = true; uiDirty = true;
+      renderDirty = true;
+      uiDirty = true;
       renderCanvas();
       refreshLayersPanel();
       showToast(`Inserted ${kind}`);
@@ -2008,7 +2349,7 @@ function openQuickInsertAt(clientX, clientY) {
 
 /** Wire context menu events and action handlers. */
 function setupContextMenu() {
-  const canvas = document.getElementById('fd-canvas');
+  const canvas = document.getElementById("fd-canvas");
   if (!canvas) return;
 
   // ── Node action handler ──
@@ -2023,49 +2364,67 @@ function setupContextMenu() {
     let changed = false;
 
     // Normalizing action strings
-    switch(action) {
-      case 'add-spec':
-      case 'add-note':
-        openAnnotationCard(contextMenuNodeId, parseInt(el?.style?.left || 0), parseInt(el?.style?.top || 0));
+    switch (action) {
+      case "add-spec":
+      case "add-note":
+        openAnnotationCard(
+          contextMenuNodeId,
+          parseInt(el?.style?.left || 0),
+          parseInt(el?.style?.top || 0),
+        );
         return;
-      case 'copy':  copySelectedAsFd(); break;
-      case 'cut':   cutSelectedAsFd(); changed = true; break;
-      case 'duplicate': 
-        changed = fdCanvas.duplicate_selected(); 
+      case "copy":
+        copySelectedAsFd();
         break;
-      case 'delete':
+      case "cut":
+        cutSelectedAsFd();
+        changed = true;
+        break;
+      case "duplicate":
+        changed = fdCanvas.duplicate_selected();
+        break;
+      case "delete":
         fdCanvas.select_by_id(contextMenuNodeId);
         changed = fdCanvas.delete_selected();
         break;
-      case 'bring-front':
-      case 'bring-forward':
+      case "bring-front":
+      case "bring-forward":
         if (fdCanvas.handle_key) {
-          const res = JSON.parse(fdCanvas.handle_key("]", false, true, false, true));
+          const res = JSON.parse(
+            fdCanvas.handle_key("]", false, true, false, true),
+          );
           if (res.changed) changed = true;
         }
         break;
-      case 'send-back':
-      case 'send-backward':
+      case "send-back":
+      case "send-backward":
         if (fdCanvas.handle_key) {
-          const res = JSON.parse(fdCanvas.handle_key("[", false, true, false, true));
+          const res = JSON.parse(
+            fdCanvas.handle_key("[", false, true, false, true),
+          );
           if (res.changed) changed = true;
         }
         break;
-      case 'group':
+      case "group":
         changed = fdCanvas.group_selected();
         break;
-      case 'ungroup':
+      case "ungroup":
         changed = fdCanvas.ungroup_selected();
         break;
-      case 'edge-reverse':
+      case "edge-reverse":
         if (fdCanvas.reverse_selected_edges) {
           changed = fdCanvas.reverse_selected_edges();
         }
         break;
-      case 'rename': {
+      case "rename": {
         const oldId = contextMenuNodeId;
         const newId = prompt(`Rename @${oldId} to:`, oldId);
-        if (!newId || newId === oldId || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(newId)) return;
+        if (
+          !newId ||
+          newId === oldId ||
+          !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(newId)
+        )
+          return;
         const src = fdCanvas.get_text();
         const esc = oldId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const re = new RegExp(`@${esc}\\b`, "g");
@@ -2073,39 +2432,41 @@ function setupContextMenu() {
         changed = true;
         break;
       }
-      case 'lock':
-      case 'toggle-lock':
+      case "lock":
+      case "toggle-lock":
         if (fdCanvas.toggle_node_locked) {
           fdCanvas.toggle_node_locked(contextMenuNodeId);
           render();
           pushHistoryState(textBefore, fdCanvas.get_text());
         }
         return;
-      case 'copy-png':
-      case 'copy-fd':
-        if (action === 'copy-png' && typeof copySelectionAsPng === 'function') {
+      case "copy-png":
+      case "copy-fd":
+        if (action === "copy-png" && typeof copySelectionAsPng === "function") {
           copySelectionAsPng();
         } else {
           navigator.clipboard.writeText(fdCanvas.get_text()).catch(() => {});
         }
         break;
-      case 'frame':
+      case "frame":
         if (fdCanvas.handle_key) {
-          const res = JSON.parse(fdCanvas.handle_key("f", false, false, false, true));
+          const res = JSON.parse(
+            fdCanvas.handle_key("f", false, false, false, true),
+          );
           if (res.changed) changed = true;
         }
         break;
-      case 'select-children':
+      case "select-children":
         if (fdCanvas.select_children) {
           if (fdCanvas.select_children(contextMenuNodeId)) render();
         }
         return;
-      case 'move-to-root':
+      case "move-to-root":
         if (fdCanvas.move_selection_to_root) {
           changed = fdCanvas.move_selection_to_root();
         }
         break;
-      case 'ai-touch':
+      case "ai-touch":
         return;
     }
 
@@ -2121,27 +2482,42 @@ function setupContextMenu() {
     const textBefore = fdCanvas.get_text();
     let changed = false;
 
-    switch(action) {
-      case 'paste': pasteFromClipboard(); return; // handles its own history
-      case 'select-all':
+    switch (action) {
+      case "paste":
+        pasteFromClipboard();
+        return; // handles its own history
+      case "select-all":
         if (fdCanvas.handle_key) {
-          const res = JSON.parse(fdCanvas.handle_key("a", false, true, false, true));
-          if (res.changed) { render(); return; } // just selection
+          const res = JSON.parse(
+            fdCanvas.handle_key("a", false, true, false, true),
+          );
+          if (res.changed) {
+            render();
+            return;
+          } // just selection
         }
         break;
-      case 'add-node':
-      case 'add-rect':    changeTool('rect'); return;
-      case 'add-ellipse': changeTool('ellipse'); return;
-      case 'add-text':    changeTool('text'); return;
-      case 'fit':         coreFitToContent(); return;
-      case 'unlock-all':
+      case "add-node":
+      case "add-rect":
+        changeTool("rect");
+        return;
+      case "add-ellipse":
+        changeTool("ellipse");
+        return;
+      case "add-text":
+        changeTool("text");
+        return;
+      case "fit":
+        coreFitToContent();
+        return;
+      case "unlock-all":
         if (fdCanvas.unlock_all) {
           fdCanvas.unlock_all();
           changed = true;
         }
         break;
     }
-    
+
     if (changed) {
       render();
       pushHistoryState(textBefore, fdCanvas.get_text());
@@ -2149,84 +2525,134 @@ function setupContextMenu() {
   };
 
   // ── Helper: open the right context menu based on hit-test ──
-  openContextMenuAt = function(clientX, clientY, isTouch = false) {
+  openContextMenuAt = function (clientX, clientY, isTouch = false) {
     if (!fdCanvas) return;
     const { x, y } = screenToScene(clientX, clientY, canvas);
     contextMenuClickPos = { x, y };
 
     // Hit-test the scene
     let hitId = null;
-    try { hitId = fdCanvas.hit_test_at ? fdCanvas.hit_test_at(x, y) : null; } catch (_) {}
+    try {
+      hitId = fdCanvas.hit_test_at ? fdCanvas.hit_test_at(x, y) : null;
+    } catch (_) {}
     if (!hitId) hitId = null;
 
     if (hitId) {
-        const selectedIdsStr = fdCanvas.get_selected_ids();
-        const selectedIds = selectedIdsStr ? JSON.parse(selectedIdsStr) : [];
-        const isContainer = fdCanvas.is_container ? fdCanvas.is_container(hitId) : false;
-        const hasChildren = fdCanvas.has_children ? fdCanvas.has_children(hitId) : false;
-        const isLocked = fdCanvas.is_node_locked ? fdCanvas.is_node_locked(hitId) : false;
-        const canGroup = selectedIds.length >= 2 && (!hitId || !fdCanvas.is_node_locked(hitId));
-        let canUngroup = false;
-        const source = fdCanvas.get_text();
-        for (const id of selectedIds) {
-          if (new RegExp(`(?:^|\\n)\\s*group\\s+@${id}\\b`).test(source)) { canUngroup = true; break; }
+      const selectedIdsStr = fdCanvas.get_selected_ids();
+      const selectedIds = selectedIdsStr ? JSON.parse(selectedIdsStr) : [];
+      const isContainer = fdCanvas.is_container
+        ? fdCanvas.is_container(hitId)
+        : false;
+      const hasChildren = fdCanvas.has_children
+        ? fdCanvas.has_children(hitId)
+        : false;
+      const isLocked = fdCanvas.is_node_locked
+        ? fdCanvas.is_node_locked(hitId)
+        : false;
+      const canGroup =
+        selectedIds.length >= 2 && (!hitId || !fdCanvas.is_node_locked(hitId));
+      let canUngroup = false;
+      const source = fdCanvas.get_text();
+      for (const id of selectedIds) {
+        if (new RegExp(`(?:^|\\n)\\s*group\\s+@${id}\\b`).test(source)) {
+          canUngroup = true;
+          break;
         }
+      }
 
-        const items = buildUnifiedNodeMenu(hitId, selectedIds, isContainer, hasChildren, isLocked, canGroup, canUngroup, source);
-        ctxMenu.open({ items, x: clientX, y: clientY, onAction: (action, row) => doNodeAction(action, row) });
+      const items = buildUnifiedNodeMenu(
+        hitId,
+        selectedIds,
+        isContainer,
+        hasChildren,
+        isLocked,
+        canGroup,
+        canUngroup,
+        source,
+      );
+      ctxMenu.open({
+        items,
+        x: clientX,
+        y: clientY,
+        onAction: (action, row) => doNodeAction(action, row),
+      });
     } else {
       // Empty space
-      fdCanvas.select_by_id('');
-      ctxMenu.open({ items: buildUnifiedCanvasMenu(), x: clientX, y: clientY, isTouch, onAction: doDocumentAction });
+      fdCanvas.select_by_id("");
+      ctxMenu.open({
+        items: buildUnifiedCanvasMenu(),
+        x: clientX,
+        y: clientY,
+        isTouch,
+        onAction: doDocumentAction,
+      });
     }
-  }
+  };
   window.openContextMenuAt = openContextMenuAt;
 
   // Suppress native browser context menu on canvas (we draw our own via pointerup)
-  canvas.addEventListener('contextmenu', (e) => {
+  canvas.addEventListener("contextmenu", (e) => {
     e.preventDefault();
   });
 
   // Escape layered dismissal (non-menu uses)
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
       // Context menu Escape is handled by ContextMenu class (capture phase)
       // Only handle non-menu Escape here
       if (ctxMenu.isOpen) return; // already handled by ContextMenu
       if (document.fullscreenElement || document.webkitFullscreenElement) {
-        (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+        (document.exitFullscreen || document.webkitExitFullscreen).call(
+          document,
+        );
       } else if (fdCanvas && fdCanvas.get_selected_id()) {
-        fdCanvas.select_by_id('');
-        renderDirty = true; uiDirty = true;
+        fdCanvas.select_by_id("");
+        renderDirty = true;
+        uiDirty = true;
       }
     }
     // Track Shift key for hover labels
-    if (e.key === 'Shift') {
+    if (e.key === "Shift") {
       modShiftHeld = true;
       renderDirty = true;
     }
 
-    if (e.key === 'F' && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
-      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+    if (e.key === "F" && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
         e.preventDefault();
         toggleFullscreen();
       }
     }
     // ⌘⇧N (Ctrl+Shift+N) → toggle Specs panel
-    if (e.key === 'N' && e.shiftKey && (e.metaKey || e.ctrlKey)) {
+    if (e.key === "N" && e.shiftKey && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       toggleSpecsPanel();
     }
     // \ (backslash) → toggle Layers panel (no modifiers, not in input)
-    if (e.key === '\\' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+    if (
+      e.key === "\\" &&
+      !e.metaKey &&
+      !e.ctrlKey &&
+      !e.altKey &&
+      !e.shiftKey
+    ) {
+      if (
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
         e.preventDefault();
         toggleLayersPanel();
       }
     }
     // ⌥⇧F (Option+Shift+F) → Format document
-    if (e.key === 'F' && e.shiftKey && e.altKey && !e.metaKey && !e.ctrlKey) {
-      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+    if (e.key === "F" && e.shiftKey && e.altKey && !e.metaKey && !e.ctrlKey) {
+      if (
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
         e.preventDefault();
         if (fdCanvas) {
           const textBefore = fdCanvas.get_text();
@@ -2241,34 +2667,37 @@ function setupContextMenu() {
               updatePropertiesPanel();
               refreshLayersPanel();
               const delta = parsed.lines_before - parsed.lines_after;
-              const deltaStr = delta > 0 ? `, ${delta} lines trimmed` : '';
+              const deltaStr = delta > 0 ? `, ${delta} lines trimmed` : "";
               showToast(`✦ Formatted: ${parsed.summary}${deltaStr}`);
             } else {
-              showToast('✓ Already formatted');
+              showToast("✓ Already formatted");
             }
           } catch (_) {
-            showToast('Format failed');
+            showToast("Format failed");
           }
         }
       }
     }
     // ` (backtick) → toggle X-ray node labels (no modifiers, not in input)
-    if (e.key === '`' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+    if (e.key === "`" && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+      if (
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
         e.preventDefault();
         xrayLabels = !xrayLabels;
         renderDirty = true;
-        showToast(xrayLabels ? 'X-ray labels ON' : 'X-ray labels OFF');
+        showToast(xrayLabels ? "X-ray labels ON" : "X-ray labels OFF");
       }
     }
   });
   // Close context menu on canvas pointerdown (ContextMenu handles this via capture,
   // but this ensures the old pattern still works for any other menus)
-  canvas.addEventListener('pointerdown', () => ctxMenu.close());
+  canvas.addEventListener("pointerdown", () => ctxMenu.close());
 }
 
-    // Layers Panel logic extracted to site/layers.js
-    // refreshLayersPanel is assigned from initLayersPanel(api)
+// Layers Panel logic extracted to site/layers.js
+// refreshLayersPanel is assigned from initLayersPanel(api)
 
 /** ─── Minimap ─────────────────────────────────────────────────────────── */
 let minimapLastRender = 0;
@@ -2276,21 +2705,27 @@ const MINIMAP_INTERVAL = 100; // ~10fps
 
 function updateMinimapCache(mw, mh, dpr) {
   if (!minimapCacheCanvas) {
-    minimapCacheCanvas = document.createElement('canvas');
+    minimapCacheCanvas = document.createElement("canvas");
   }
-  if (minimapCacheCanvas.width !== mw * dpr) minimapCacheCanvas.width = mw * dpr;
-  if (minimapCacheCanvas.height !== mh * dpr) minimapCacheCanvas.height = mh * dpr;
-  const ctx = minimapCacheCanvas.getContext('2d');
+  if (minimapCacheCanvas.width !== mw * dpr)
+    minimapCacheCanvas.width = mw * dpr;
+  if (minimapCacheCanvas.height !== mh * dpr)
+    minimapCacheCanvas.height = mh * dpr;
+  const ctx = minimapCacheCanvas.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   ctx.clearRect(0, 0, mw * dpr, mh * dpr);
-  ctx.fillStyle = isDark ? 'rgba(28,28,30,0.9)' : 'rgba(245,245,247,0.9)';
+  ctx.fillStyle = isDark ? "rgba(28,28,30,0.9)" : "rgba(245,245,247,0.9)";
   ctx.fillRect(0, 0, mw, mh);
 
   const sceneBoundsJson = fdCanvas.get_scene_bounds();
   if (!sceneBoundsJson) return;
   let sb;
-  try { sb = JSON.parse(sceneBoundsJson); } catch (_) { return; }
+  try {
+    sb = JSON.parse(sceneBoundsJson);
+  } catch (_) {
+    return;
+  }
   if (!sb.w || sb.w <= 0 || !sb.h || sb.h <= 0) return;
 
   const pad = 20;
@@ -2305,7 +2740,7 @@ function updateMinimapCache(mw, mh, dpr) {
   fdCanvas.render(ctx, performance.now(), true, true, false, false);
   ctx.restore();
 
-  const mc = document.getElementById('minimap-canvas');
+  const mc = document.getElementById("minimap-canvas");
   if (mc) {
     mc._minimap = { sx: sb.x, sy: sb.y, sw: sb.w, sh: sb.h, scale, ox, oy };
   }
@@ -2313,11 +2748,11 @@ function updateMinimapCache(mw, mh, dpr) {
 
 /** Render the minimap: cached scene overview + 60fps viewport rect */
 function renderMinimap(canvas) {
-  const mc = document.getElementById('minimap-canvas');
+  const mc = document.getElementById("minimap-canvas");
   if (!mc || !fdCanvas) return;
 
   // Toggle has-content on minimap container to hide preview on empty canvas
-  const mmContainer = document.getElementById('minimap-container');
+  const mmContainer = document.getElementById("minimap-container");
   if (mmContainer) {
     const boundsJson = fdCanvas.get_scene_bounds();
     let hasNodes = false;
@@ -2325,14 +2760,17 @@ function renderMinimap(canvas) {
       try {
         const b = JSON.parse(boundsJson);
         hasNodes = b.w > 0 && b.h > 0;
-      } catch (_) { /* ignore */ }
+      } catch (_) {
+        /* ignore */
+      }
     }
-    mmContainer.classList.toggle('has-content', hasNodes);
+    mmContainer.classList.toggle("has-content", hasNodes);
   }
 
   const dpr = window.devicePixelRatio || 1;
-  const mw = 150, mh = 100;
-  
+  const mw = 150,
+    mh = 100;
+
   if (mc.width !== mw * dpr) mc.width = mw * dpr;
   if (mc.height !== mh * dpr) mc.height = mh * dpr;
 
@@ -2342,7 +2780,7 @@ function renderMinimap(canvas) {
     sceneDirty = false;
   }
 
-  const mctx = mc.getContext('2d');
+  const mctx = mc.getContext("2d");
   mctx.setTransform(1, 0, 0, 1, 0, 0);
   mctx.clearRect(0, 0, mw * dpr, mh * dpr);
 
@@ -2352,7 +2790,7 @@ function renderMinimap(canvas) {
   } else {
     // Fallback if cache isn't ready
     mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    mctx.fillStyle = isDark ? 'rgba(28,28,30,0.9)' : 'rgba(245,245,247,0.9)';
+    mctx.fillStyle = isDark ? "rgba(28,28,30,0.9)" : "rgba(245,245,247,0.9)";
     mctx.fillRect(0, 0, mw, mh);
   }
 
@@ -2370,10 +2808,14 @@ function renderMinimap(canvas) {
     const vrw = vw * sb.scale;
     const vrh = vh * sb.scale;
 
-    mctx.strokeStyle = isDark ? 'rgba(10, 132, 255, 0.6)' : 'rgba(0, 122, 255, 0.5)';
+    mctx.strokeStyle = isDark
+      ? "rgba(10, 132, 255, 0.6)"
+      : "rgba(0, 122, 255, 0.5)";
     mctx.lineWidth = 1.5;
     mctx.strokeRect(vrx, vry, vrw, vrh);
-    mctx.fillStyle = isDark ? 'rgba(10, 132, 255, 0.08)' : 'rgba(0, 122, 255, 0.06)';
+    mctx.fillStyle = isDark
+      ? "rgba(10, 132, 255, 0.08)"
+      : "rgba(0, 122, 255, 0.06)";
     mctx.fillRect(vrx, vry, vrw, vrh);
   }
 }
@@ -2382,8 +2824,8 @@ function renderMinimap(canvas) {
 
 /** Set up drag-to-resize for the Specs panel (left edge). */
 function setupSpecsResize() {
-  const panel = document.getElementById('specs-panel');
-  const handle = document.getElementById('notes-resize');
+  const panel = document.getElementById("specs-panel");
+  const handle = document.getElementById("notes-resize");
   if (!panel || !handle) return;
 
   const MIN_W = 180;
@@ -2391,49 +2833,49 @@ function setupSpecsResize() {
   const DEFAULT_W = 260;
 
   // Restore persisted width
-  const savedW = parseInt(localStorage.getItem('fd-specs-width'), 10);
+  const savedW = parseInt(localStorage.getItem("fd-specs-width"), 10);
   if (savedW >= MIN_W && savedW <= MAX_W) {
-    panel.style.setProperty('--specs-width', savedW + 'px');
+    panel.style.setProperty("--specs-width", savedW + "px");
   }
 
   let dragging = false;
   let startX = 0;
   let startW = 0;
 
-  handle.addEventListener('pointerdown', (e) => {
+  handle.addEventListener("pointerdown", (e) => {
     e.preventDefault();
     e.stopPropagation();
     dragging = true;
     startX = e.clientX;
     startW = panel.offsetWidth;
-    handle.classList.add('active');
+    handle.classList.add("active");
     handle.setPointerCapture(e.pointerId);
   });
 
-  handle.addEventListener('pointermove', (e) => {
+  handle.addEventListener("pointermove", (e) => {
     if (!dragging) return;
     // Dragging left edge: moving left = wider, moving right = narrower
     const dx = startX - e.clientX;
     const newW = Math.max(MIN_W, Math.min(MAX_W, startW + dx));
-    panel.style.setProperty('--specs-width', newW + 'px');
+    panel.style.setProperty("--specs-width", newW + "px");
   });
 
   const endDrag = () => {
     if (!dragging) return;
     dragging = false;
-    handle.classList.remove('active');
+    handle.classList.remove("active");
     // Persist width
     const w = panel.offsetWidth;
-    localStorage.setItem('fd-specs-width', String(w));
+    localStorage.setItem("fd-specs-width", String(w));
   };
-  handle.addEventListener('pointerup', endDrag);
-  handle.addEventListener('pointercancel', endDrag);
+  handle.addEventListener("pointerup", endDrag);
+  handle.addEventListener("pointercancel", endDrag);
 
   // Double-click to reset to default width
-  handle.addEventListener('dblclick', (e) => {
+  handle.addEventListener("dblclick", (e) => {
     e.preventDefault();
-    panel.style.setProperty('--specs-width', DEFAULT_W + 'px');
-    localStorage.setItem('fd-specs-width', String(DEFAULT_W));
+    panel.style.setProperty("--specs-width", DEFAULT_W + "px");
+    localStorage.setItem("fd-specs-width", String(DEFAULT_W));
   });
 }
 
@@ -2444,25 +2886,31 @@ let lastSplitResizeTime = 0; // kept for backward compat with any existing guard
 
 /** Set up drag-to-resize for left panel. */
 function setupPanelResize(wrapper, resizeCanvas) {
-  const leftPanel = document.getElementById('left-panel');
-  const layersHandle = document.getElementById('layers-resize');
+  const leftPanel = document.getElementById("left-panel");
+  const layersHandle = document.getElementById("layers-resize");
 
   const MIN_WIDTH = 120;
   const MAX_WIDTH = 500;
   const DEFAULT_LEFT_W = 260;
 
   // Restore persisted widths
-  const savedLeftW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
+  const savedLeftW = parseInt(localStorage.getItem("fd-left-panel-width"), 10);
 
   if (savedLeftW && savedLeftW >= MIN_WIDTH && savedLeftW <= MAX_WIDTH) {
-    document.documentElement.style.setProperty('--left-panel-width', savedLeftW + 'px');
+    document.documentElement.style.setProperty(
+      "--left-panel-width",
+      savedLeftW + "px",
+    );
   }
 
   /** Position layers resize handle at panel's right edge. */
   function positionLayersHandle() {
     if (!layersHandle || !leftPanel) return;
-    const w = document.documentElement.dataset.lp === 'closed' ? 0 : leftPanel.offsetWidth;
-    layersHandle.style.left = w + 'px';
+    const w =
+      document.documentElement.dataset.lp === "closed"
+        ? 0
+        : leftPanel.offsetWidth;
+    layersHandle.style.left = w + "px";
   }
   // Expose globally so toggleLeftPanel / toggleLayersPanel can call it after CSS var update
   window.__fdPositionLayersHandle = positionLayersHandle;
@@ -2479,35 +2927,44 @@ function setupPanelResize(wrapper, resizeCanvas) {
   let startW = 0;
   let resizeRafId = null;
 
-  layersHandle.addEventListener('pointerdown', (e) => {
+  layersHandle.addEventListener("pointerdown", (e) => {
     e.preventDefault();
     e.stopPropagation();
     dragging = true;
     startX = e.clientX;
     startW = leftPanel.offsetWidth;
-    leftPanel.classList.add('no-transition');
-    layersHandle.classList.add('active');
+    leftPanel.classList.add("no-transition");
+    layersHandle.classList.add("active");
     layersHandle.setPointerCapture(e.pointerId);
   });
 
-  layersHandle.addEventListener('pointermove', (e) => {
+  layersHandle.addEventListener("pointermove", (e) => {
     if (!dragging) return;
     const dx = e.clientX - startX;
     const rawWidth = startW + dx;
-    
+
     if (rawWidth < 80) {
-      if (document.documentElement.dataset.lp !== 'closed') {
+      if (document.documentElement.dataset.lp !== "closed") {
         endDrag();
         toggleLeftPanel();
       }
     } else {
       const MIN_CANVAS_W = 200;
-      const rp = document.getElementById('right-panel');
-      const curRightW = document.documentElement.dataset.rp === 'open' && rp ? rp.offsetWidth : 0;
+      const rp = document.getElementById("right-panel");
+      const curRightW =
+        document.documentElement.dataset.rp === "open" && rp
+          ? rp.offsetWidth
+          : 0;
       const maxAllowedLeftW = window.innerWidth - curRightW - MIN_CANVAS_W;
-      
-      const newW = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, maxAllowedLeftW, rawWidth));
-      document.documentElement.style.setProperty('--left-panel-width', newW + 'px');
+
+      const newW = Math.max(
+        MIN_WIDTH,
+        Math.min(MAX_WIDTH, maxAllowedLeftW, rawWidth),
+      );
+      document.documentElement.style.setProperty(
+        "--left-panel-width",
+        newW + "px",
+      );
       positionLayersHandle();
       // Batch expensive canvas resize + render to once per display frame
       if (!resizeRafId) {
@@ -2524,8 +2981,8 @@ function setupPanelResize(wrapper, resizeCanvas) {
   const endDrag = (e) => {
     if (!dragging) return;
     dragging = false;
-    leftPanel.classList.remove('no-transition');
-    layersHandle.classList.remove('active');
+    leftPanel.classList.remove("no-transition");
+    layersHandle.classList.remove("active");
     // Cancel any pending RAF and do a final sync resize
     if (resizeRafId) {
       cancelAnimationFrame(resizeRafId);
@@ -2533,22 +2990,25 @@ function setupPanelResize(wrapper, resizeCanvas) {
     }
     resizeCanvas();
     renderCanvas();
-    if (document.documentElement.dataset.lp !== 'closed') {
+    if (document.documentElement.dataset.lp !== "closed") {
       const w = leftPanel.offsetWidth;
-      localStorage.setItem('fd-left-panel-width', String(w));
+      localStorage.setItem("fd-left-panel-width", String(w));
     }
     // Re-clamp toolbar to new canvas bounds after panel resize
     requestAnimationFrame(() => window.__fdReclampToolbar?.());
   };
-  layersHandle.addEventListener('pointerup', endDrag);
-  layersHandle.addEventListener('pointercancel', endDrag);
+  layersHandle.addEventListener("pointerup", endDrag);
+  layersHandle.addEventListener("pointercancel", endDrag);
 
   // Double-click to reset left panel to default width
-  layersHandle.addEventListener('dblclick', (e) => {
+  layersHandle.addEventListener("dblclick", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    document.documentElement.style.setProperty('--left-panel-width', DEFAULT_LEFT_W + 'px');
-    localStorage.setItem('fd-left-panel-width', String(DEFAULT_LEFT_W));
+    document.documentElement.style.setProperty(
+      "--left-panel-width",
+      DEFAULT_LEFT_W + "px",
+    );
+    localStorage.setItem("fd-left-panel-width", String(DEFAULT_LEFT_W));
     requestAnimationFrame(() => {
       positionLayersHandle();
       resizeCanvas();
@@ -2557,25 +3017,31 @@ function setupPanelResize(wrapper, resizeCanvas) {
   });
 
   // ── Right panel drag-to-resize ──────────────────────────────────────
-  const rightPanel = document.getElementById('right-panel');
-  const rightHandle = document.getElementById('right-resize');
+  const rightPanel = document.getElementById("right-panel");
+  const rightHandle = document.getElementById("right-resize");
   const MIN_RIGHT_W = 180;
   const MAX_RIGHT_W = 500;
   const DEFAULT_RIGHT_W = 260;
 
   // Restore persisted right panel width
-  const savedRightW = parseInt(localStorage.getItem('fd-right-panel-width'), 10);
+  const savedRightW = parseInt(
+    localStorage.getItem("fd-right-panel-width"),
+    10,
+  );
   if (savedRightW >= MIN_RIGHT_W && savedRightW <= MAX_RIGHT_W) {
-    document.documentElement.style.setProperty('--right-panel-width', savedRightW + 'px');
+    document.documentElement.style.setProperty(
+      "--right-panel-width",
+      savedRightW + "px",
+    );
   }
 
   /** Position right resize handle at the panel's left edge. */
   function positionRightHandle() {
     if (!rightHandle || !rightPanel) return;
-    if (document.documentElement.dataset.rp === 'closed') {
-      rightHandle.style.right = '0px';
+    if (document.documentElement.dataset.rp === "closed") {
+      rightHandle.style.right = "0px";
     } else {
-      rightHandle.style.right = rightPanel.offsetWidth + 'px';
+      rightHandle.style.right = rightPanel.offsetWidth + "px";
     }
   }
   window.__fdPositionRightHandle = positionRightHandle;
@@ -2590,36 +3056,45 @@ function setupPanelResize(wrapper, resizeCanvas) {
   let rightStartW = 0;
   let rightResizeRafId = null;
 
-  rightHandle.addEventListener('pointerdown', (e) => {
+  rightHandle.addEventListener("pointerdown", (e) => {
     e.preventDefault();
     e.stopPropagation();
     rightDragging = true;
     rightStartX = e.clientX;
     rightStartW = rightPanel.offsetWidth;
-    rightPanel.classList.add('no-transition');
-    rightHandle.classList.add('active');
+    rightPanel.classList.add("no-transition");
+    rightHandle.classList.add("active");
     rightHandle.setPointerCapture(e.pointerId);
   });
 
-  rightHandle.addEventListener('pointermove', (e) => {
+  rightHandle.addEventListener("pointermove", (e) => {
     if (!rightDragging) return;
     // Dragging left edge of right panel: moving left = wider, moving right = narrower
     const dx = rightStartX - e.clientX;
     const rawWidth = rightStartW + dx;
-    
+
     if (rawWidth < 80) {
-      if (document.documentElement.dataset.rp !== 'closed') {
+      if (document.documentElement.dataset.rp !== "closed") {
         endRightDrag();
         toggleRightPanel();
       }
     } else {
       const MIN_CANVAS_W = 200;
-      const lp = document.getElementById('left-panel');
-      const curLeftW = document.documentElement.dataset.lp === 'open' && lp ? lp.offsetWidth : 0;
+      const lp = document.getElementById("left-panel");
+      const curLeftW =
+        document.documentElement.dataset.lp === "open" && lp
+          ? lp.offsetWidth
+          : 0;
       const maxAllowedRightW = window.innerWidth - curLeftW - MIN_CANVAS_W;
 
-      const newW = Math.max(MIN_RIGHT_W, Math.min(MAX_RIGHT_W, maxAllowedRightW, rawWidth));
-      document.documentElement.style.setProperty('--right-panel-width', newW + 'px');
+      const newW = Math.max(
+        MIN_RIGHT_W,
+        Math.min(MAX_RIGHT_W, maxAllowedRightW, rawWidth),
+      );
+      document.documentElement.style.setProperty(
+        "--right-panel-width",
+        newW + "px",
+      );
       positionRightHandle();
       if (!rightResizeRafId) {
         rightResizeRafId = requestAnimationFrame(() => {
@@ -2635,29 +3110,32 @@ function setupPanelResize(wrapper, resizeCanvas) {
   const endRightDrag = () => {
     if (!rightDragging) return;
     rightDragging = false;
-    rightPanel.classList.remove('no-transition');
-    rightHandle.classList.remove('active');
+    rightPanel.classList.remove("no-transition");
+    rightHandle.classList.remove("active");
     if (rightResizeRafId) {
       cancelAnimationFrame(rightResizeRafId);
       rightResizeRafId = null;
     }
     resizeCanvas();
     renderCanvas();
-    if (document.documentElement.dataset.rp !== 'closed') {
+    if (document.documentElement.dataset.rp !== "closed") {
       const w = rightPanel.offsetWidth;
-      localStorage.setItem('fd-right-panel-width', String(w));
+      localStorage.setItem("fd-right-panel-width", String(w));
     }
     requestAnimationFrame(() => window.__fdReclampToolbar?.());
   };
-  rightHandle.addEventListener('pointerup', endRightDrag);
-  rightHandle.addEventListener('pointercancel', endRightDrag);
+  rightHandle.addEventListener("pointerup", endRightDrag);
+  rightHandle.addEventListener("pointercancel", endRightDrag);
 
   // Double-click to reset right panel to default width
-  rightHandle.addEventListener('dblclick', (e) => {
+  rightHandle.addEventListener("dblclick", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    document.documentElement.style.setProperty('--right-panel-width', DEFAULT_RIGHT_W + 'px');
-    localStorage.setItem('fd-right-panel-width', String(DEFAULT_RIGHT_W));
+    document.documentElement.style.setProperty(
+      "--right-panel-width",
+      DEFAULT_RIGHT_W + "px",
+    );
+    localStorage.setItem("fd-right-panel-width", String(DEFAULT_RIGHT_W));
     requestAnimationFrame(() => {
       positionRightHandle();
       resizeCanvas();
@@ -2677,7 +3155,7 @@ let specsPanelOpen = false;
  * Interactive checkboxes: click to toggle [ ] ↔ [x] and write back.
  */
 function renderSpecsPanel() {
-  const body = document.getElementById('specs-panel-body');
+  const body = document.getElementById("specs-panel-body");
   if (!body || !fdCanvas) return;
 
   // Get all notes from WASM API
@@ -2690,19 +3168,20 @@ function renderSpecsPanel() {
   }
 
   if (notes.length === 0) {
-    body.innerHTML = '<p class="specs-empty">No notes yet. Add a note via right-click → Add Note.</p>';
+    body.innerHTML =
+      '<p class="specs-empty">No notes yet. Add a note via right-click → Add Note.</p>';
     return;
   }
 
   // Configure marked for safe rendering
-  if (typeof marked !== 'undefined') {
+  if (typeof marked !== "undefined") {
     marked.setOptions({
       breaks: true,
       gfm: true,
     });
   }
 
-  let html = '';
+  let html = "";
   for (const entry of notes) {
     const nodeId = entry.id;
     const rawNote = entry.note;
@@ -2719,14 +3198,19 @@ function renderSpecsPanel() {
       // Process @include directives within block notes
       let processedNote = rawNote.replace(
         /@include\("([^"]+\.md)"\)/g,
-        (_, path) => `\n\n<div class="note-file-link" title="Open in VS Code to view">📎 ${path}</div>\n\n`
+        (_, path) =>
+          `\n\n<div class="note-file-link" title="Open in VS Code to view">📎 ${path}</div>\n\n`,
       );
 
-      if (typeof marked !== 'undefined') {
+      if (typeof marked !== "undefined") {
         const rendered = marked.parse(processedNote);
-        html += rendered;
+        html += window.DOMPurify
+          ? window.DOMPurify.sanitize(rendered, {
+              ADD_ATTR: ["data-note-node", "data-node"],
+            })
+          : rendered;
       } else {
-        html += `<pre>${processedNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+        html += `<pre>${processedNote.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`;
       }
     }
 
@@ -2735,94 +3219,102 @@ function renderSpecsPanel() {
   body.innerHTML = html;
 
   // Click-to-select: clicking a group header selects the node on canvas
-  body.querySelectorAll('.spec-group-header').forEach(el => {
-    el.addEventListener('click', () => {
+  body.querySelectorAll(".spec-group-header").forEach((el) => {
+    el.addEventListener("click", () => {
       const nid = el.dataset.node;
-      if (nid && nid !== '_root' && fdCanvas) {
+      if (nid && nid !== "_root" && fdCanvas) {
         fdCanvas.select_by_id(nid);
       }
     });
   });
 
   // Interactive checkboxes: toggle [ ] ↔ [x] in the raw markdown
-  body.querySelectorAll('.spec-markdown input[type="checkbox"]').forEach(cb => {
-    cb.removeAttribute('disabled');
-    cb.addEventListener('change', (e) => {
-      const group = e.target.closest('.spec-group');
-      if (!group) return;
-      const nodeId = group.dataset.noteNode;
-      if (!nodeId || !fdCanvas) return;
+  body
+    .querySelectorAll('.spec-markdown input[type="checkbox"]')
+    .forEach((cb) => {
+      cb.removeAttribute("disabled");
+      cb.addEventListener("change", (e) => {
+        const group = e.target.closest(".spec-group");
+        if (!group) return;
+        const nodeId = group.dataset.noteNode;
+        if (!nodeId || !fdCanvas) return;
 
-      // Get current note, find the N-th checkbox, toggle it
-      const currentSpec = fdCanvas.get_spec(nodeId);
-      if (!currentSpec) return;
+        // Get current note, find the N-th checkbox, toggle it
+        const currentSpec = fdCanvas.get_spec(nodeId);
+        if (!currentSpec) return;
 
-      // Find checkbox index within this spec-group
-      const allCheckboxes = group.querySelectorAll('input[type="checkbox"]');
-      let cbIndex = 0;
-      for (let i = 0; i < allCheckboxes.length; i++) {
-        if (allCheckboxes[i] === e.target) { cbIndex = i; break; }
-      }
-
-      // Toggle the N-th checkbox pattern in the raw markdown
-      let checkboxCount = 0;
-      const updatedSpec = currentSpec.replace(/- \[([ xX])\]/g, (match, state) => {
-        if (checkboxCount === cbIndex) {
-          checkboxCount++;
-          return state.trim() ? '- [ ]' : '- [x]';
+        // Find checkbox index within this spec-group
+        const allCheckboxes = group.querySelectorAll('input[type="checkbox"]');
+        let cbIndex = 0;
+        for (let i = 0; i < allCheckboxes.length; i++) {
+          if (allCheckboxes[i] === e.target) {
+            cbIndex = i;
+            break;
+          }
         }
-        checkboxCount++;
-        return match;
+
+        // Toggle the N-th checkbox pattern in the raw markdown
+        let checkboxCount = 0;
+        const updatedSpec = currentSpec.replace(
+          /- \[([ xX])\]/g,
+          (match, state) => {
+            if (checkboxCount === cbIndex) {
+              checkboxCount++;
+              return state.trim() ? "- [ ]" : "- [x]";
+            }
+            checkboxCount++;
+            return match;
+          },
+        );
+
+        // Write back via WASM
+        fdCanvas.set_spec(nodeId, updatedSpec);
+
+        // Sync to code editor
+        if (typeof syncCanvasToEditor === "function") {
+          syncCanvasToEditor();
+        } else if (typeof editorView !== "undefined" && editorView) {
+          const newText = fdCanvas.get_text();
+          const currentText = editorView.state.doc.toString();
+          if (newText !== currentText) {
+            editorView.dispatch({
+              changes: { from: 0, to: currentText.length, insert: newText },
+            });
+          }
+        }
       });
-
-      // Write back via WASM
-      fdCanvas.set_spec(nodeId, updatedSpec);
-
-      // Sync to code editor
-      if (typeof syncCanvasToEditor === 'function') {
-        syncCanvasToEditor();
-      } else if (typeof editorView !== 'undefined' && editorView) {
-        const newText = fdCanvas.get_text();
-        const currentText = editorView.state.doc.toString();
-        if (newText !== currentText) {
-          editorView.dispatch({
-            changes: { from: 0, to: currentText.length, insert: newText }
-          });
-        }
-      }
     });
-  });
 }
 
 function toggleSpecsPanel() {
-  switchLeftTab('inspect');
-  if (typeof renderSpecsPanel === 'function') renderSpecsPanel();
+  switchLeftTab("inspect");
+  if (typeof renderSpecsPanel === "function") renderSpecsPanel();
 }
 
 /** Toggle Layers panel collapsed/expanded. */
 function toggleLayersPanel() {
-  const leftPanel = document.getElementById('left-panel');
+  const leftPanel = document.getElementById("left-panel");
   if (!leftPanel) return;
   const h = document.documentElement;
-  const isCollapsed = h.dataset.lp === 'open'; // toggling: open → closed
-  h.dataset.lp = isCollapsed ? 'closed' : 'open';
+  const isCollapsed = h.dataset.lp === "open"; // toggling: open → closed
+  h.dataset.lp = isCollapsed ? "closed" : "open";
   if (isCollapsed) {
-    h.style.setProperty('--left-panel-width', '0px');
-    localStorage.setItem('fd-left-collapsed', '1');
+    h.style.setProperty("--left-panel-width", "0px");
+    localStorage.setItem("fd-left-collapsed", "1");
   } else {
-    const savedW = parseInt(localStorage.getItem('fd-left-panel-width'), 10);
-    const restoreW = (savedW >= 120 && savedW <= 500) ? savedW : 260;
-    h.style.setProperty('--left-panel-width', restoreW + 'px');
-    localStorage.setItem('fd-left-collapsed', '');
+    const savedW = parseInt(localStorage.getItem("fd-left-panel-width"), 10);
+    const restoreW = savedW >= 120 && savedW <= 500 ? savedW : 260;
+    h.style.setProperty("--left-panel-width", restoreW + "px");
+    localStorage.setItem("fd-left-collapsed", "");
   }
   // Reposition resize handle after collapse/expand
-  const lrHandle = document.getElementById('layers-resize');
+  const lrHandle = document.getElementById("layers-resize");
   if (lrHandle) {
-    lrHandle.style.display = isCollapsed ? 'none' : '';
+    lrHandle.style.display = isCollapsed ? "none" : "";
   }
   requestAnimationFrame(() => {
     window.__fdPositionLayersHandle?.();
-    window.dispatchEvent(new Event('resize'));
+    window.dispatchEvent(new Event("resize"));
     renderCanvas();
   });
 }
@@ -2836,51 +3328,53 @@ function toggleLayersPanel() {
 function getAiModelHint() {
   try {
     const params = new URLSearchParams(window.location.search);
-    return params.get('ai_model') || undefined;
-  } catch (_) { return undefined; }
+    return params.get("ai_model") || undefined;
+  } catch (_) {
+    return undefined;
+  }
 }
 
 async function aiTouch() {
-  const btn = document.getElementById('ai-touch-btn');
-  const statusEl = document.getElementById('canvas-status');
+  const btn = document.getElementById("ai-touch-btn");
+  const statusEl = document.getElementById("canvas-status");
 
-  if (aiTouchSession?.state === 'thinking') {
+  if (aiTouchSession?.state === "thinking") {
     aiTouchSession.cancel();
-    showToast('AI Touch cancelled');
-    btn?.classList.remove('loading');
-    if (statusEl) statusEl.textContent = 'Ready';
+    showToast("AI Touch cancelled");
+    btn?.classList.remove("loading");
+    if (statusEl) statusEl.textContent = "Ready";
     return;
   }
 
   if (aiTouchSession?.isBusy?.()) {
-    showToast('AI Touch preview active — accept or reject first');
+    showToast("AI Touch preview active — accept or reject first");
     return;
   }
 
-  btn?.classList.add('loading');
-  if (statusEl) statusEl.textContent = '✦ AI Touch thinking…';
+  btn?.classList.add("loading");
+  if (statusEl) statusEl.textContent = "✦ AI Touch thinking…";
   try {
     await aiTouchSession?.start({
-      modelHint: getAiModelHint() || 'auto',
-      userFocus: localStorage.getItem('fd-ai-prompt') || undefined,
+      modelHint: getAiModelHint() || "auto",
+      userFocus: localStorage.getItem("fd-ai-prompt") || undefined,
     });
   } catch (err) {
-    console.warn('AI Touch error:', err);
-    showToast('AI unavailable — check /api/ai endpoint');
+    console.warn("AI Touch error:", err);
+    showToast("AI unavailable — check /api/ai endpoint");
   } finally {
-    btn?.classList.remove('loading');
-    if (statusEl) statusEl.textContent = 'Ready';
+    btn?.classList.remove("loading");
+    if (statusEl) statusEl.textContent = "Ready";
   }
 }
 
 /** Escape HTML for safe rendering. */
 function escapeHtml(str) {
   return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function buildRefinePrompt(fdText, selectedIds) {
@@ -2898,12 +3392,15 @@ Rules:
 ${fdText}`;
   }
 
-  const nodeList = selectedIds.filter(id => !id.includes('->')).map(id => `@${id}`);
-  const edgeList = selectedIds.filter(id => id.includes('->'));
+  const nodeList = selectedIds
+    .filter((id) => !id.includes("->"))
+    .map((id) => `@${id}`);
+  const edgeList = selectedIds.filter((id) => id.includes("->"));
 
-  let targetDesc = '';
-  if (nodeList.length > 0) targetDesc += `Nodes: ${nodeList.join(', ')}`;
-  if (edgeList.length > 0) targetDesc += `${targetDesc ? '\n' : ''}Edges: ${edgeList.join(', ')}`;
+  let targetDesc = "";
+  if (nodeList.length > 0) targetDesc += `Nodes: ${nodeList.join(", ")}`;
+  if (edgeList.length > 0)
+    targetDesc += `${targetDesc ? "\n" : ""}Edges: ${edgeList.join(", ")}`;
 
   // Extract the blocks using WASM emitter (accurate, no regex fragility)
   let selectedBlocks;
@@ -2992,7 +3489,7 @@ ${fdText}`;
 
 /** Extract FD text blocks for the given node/edge IDs. */
 function extractBlocksForIds(fdText, ids) {
-  const lines = fdText.split('\n');
+  const lines = fdText.split("\n");
   const blocks = [];
   const idSet = new Set(ids);
 
@@ -3000,7 +3497,9 @@ function extractBlocksForIds(fdText, ids) {
     const trimmed = lines[i].trim();
 
     // Match node definitions: group @id { or rect @id {
-    const nodeMatch = trimmed.match(/^(group|frame|rect|ellipse|path|text)\s+@(\w+)/);
+    const nodeMatch = trimmed.match(
+      /^(group|frame|rect|ellipse|path|text)\s+@(\w+)/,
+    );
     if (nodeMatch && idSet.has(nodeMatch[2])) {
       // Extract the full block (from this line to matching closing brace)
       const block = extractBlock(lines, i);
@@ -3016,13 +3515,16 @@ function extractBlocksForIds(fdText, ids) {
     }
   }
 
-  return blocks.join('\n\n') || ids.map(id => `# (block for @${id} not found)`).join('\n');
+  return (
+    blocks.join("\n\n") ||
+    ids.map((id) => `# (block for @${id} not found)`).join("\n")
+  );
 }
 
 /** Extract a block of FD text starting at lineIdx, matching braces. */
 function extractBlock(lines, startIdx) {
   const result = [lines[startIdx]];
-  if (!lines[startIdx].includes('{')) return lines[startIdx];
+  if (!lines[startIdx].includes("{")) return lines[startIdx];
 
   let depth = 0;
   for (let i = startIdx; i < lines.length; i++) {
@@ -3031,17 +3533,23 @@ function extractBlock(lines, startIdx) {
     depth -= (lines[i].match(/\}/g) || []).length;
     if (depth <= 0) break;
   }
-  return result.join('\n');
+  return result.join("\n");
 }
 
 /** Find a block's line range for a given ID. */
 function findBlockWithRange(lines, id) {
   for (let i = 0; i < lines.length; i++) {
     const trimmed = lines[i].trim();
-    const nodeMatch = trimmed.match(new RegExp(`^(group|frame|rect|ellipse|path|text)\\s+@${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`));
-    const edgeMatch = trimmed.match(new RegExp(`@${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*->`));
+    const nodeMatch = trimmed.match(
+      new RegExp(
+        `^(group|frame|rect|ellipse|path|text)\\s+@${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+      ),
+    );
+    const edgeMatch = trimmed.match(
+      new RegExp(`@${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*->`),
+    );
     if (nodeMatch || edgeMatch) {
-      if (!lines[i].includes('{')) return { startLine: i, endLine: i };
+      if (!lines[i].includes("{")) return { startLine: i, endLine: i };
       let depth = 0;
       for (let j = i; j < lines.length; j++) {
         depth += (lines[j].match(/\{/g) || []).length;
@@ -3054,10 +3562,10 @@ function findBlockWithRange(lines, id) {
   return null;
 }
 
-
 /** Find auto-generated node IDs like @_rect_0, @_text_3 */
 function findAnonymousNodeIds(fdText) {
-  const re = /(?:group|frame|rect|ellipse|path|text)\s+@(_(?:rect|ellipse|group|frame|path|text)_\d+)/g;
+  const re =
+    /(?:group|frame|rect|ellipse|path|text)\s+@(_(?:rect|ellipse|group|frame|path|text)_\d+)/g;
   const ids = [];
   let m;
   while ((m = re.exec(fdText)) !== null) {
@@ -3070,30 +3578,31 @@ function findAnonymousNodeIds(fdText) {
 function sanitizeToFdId(raw) {
   return raw
     .toLowerCase()
-    .replace(/[^a-z0-9_\s]/g, '')
-    .replace(/\s+/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_|_$/g, '')
+    .replace(/[^a-z0-9_\s]/g, "")
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "")
     .slice(0, 20);
 }
 
 /** Extract context for anonymous nodes from FD text. */
 function extractNodeContexts(fdText, anonIds) {
-  const lines = fdText.split('\n');
+  const lines = fdText.split("\n");
   const contexts = new Map();
   const parentStack = [];
   let braceDepth = 0;
   const depthAtPush = [];
   let currentNode = null;
 
-  const NODE_RE = /^\s*(group|frame|rect|ellipse|path|text)\s+@(\w+)(?:\s+"([^"]*)")?\s*\{?\s*$/;
+  const NODE_RE =
+    /^\s*(group|frame|rect|ellipse|path|text)\s+@(\w+)(?:\s+"([^"]*)")?\s*\{?\s*$/;
   const WIDTH_RE = /\bw:\s*(\d+(?:\.\d+)?)/;
   const HEIGHT_RE = /\bh:\s*(\d+(?:\.\d+)?)/;
   const CONTENT_RE = /\bcontent:\s*"([^"]*)"/;
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
+    if (!trimmed || trimmed.startsWith("#")) continue;
 
     const openBraces = (trimmed.match(/\{/g) || []).length;
     const closeBraces = (trimmed.match(/\}/g) || []).length;
@@ -3101,7 +3610,14 @@ function extractNodeContexts(fdText, anonIds) {
     const nodeMatch = trimmed.match(NODE_RE);
     if (nodeMatch) {
       const [, type, id, inlineText] = nodeMatch;
-      const ctx = { id, type, parentId: parentStack.length > 0 ? parentStack[parentStack.length - 1] : undefined };
+      const ctx = {
+        id,
+        type,
+        parentId:
+          parentStack.length > 0
+            ? parentStack[parentStack.length - 1]
+            : undefined,
+      };
       if (inlineText) ctx.textContent = inlineText;
 
       if (anonIds.has(id)) {
@@ -3109,7 +3625,7 @@ function extractNodeContexts(fdText, anonIds) {
         currentNode = ctx;
       }
 
-      if ((type === 'group' || type === 'frame') && trimmed.includes('{')) {
+      if ((type === "group" || type === "frame") && trimmed.includes("{")) {
         parentStack.push(id);
         depthAtPush.push(braceDepth + openBraces);
       }
@@ -3124,13 +3640,17 @@ function extractNodeContexts(fdText, anonIds) {
       const contentMatch = trimmed.match(CONTENT_RE);
       if (wMatch) currentNode.width = parseFloat(wMatch[1]);
       if (hMatch) currentNode.height = parseFloat(hMatch[1]);
-      if (contentMatch && !currentNode.textContent) currentNode.textContent = contentMatch[1];
+      if (contentMatch && !currentNode.textContent)
+        currentNode.textContent = contentMatch[1];
     }
 
     braceDepth += openBraces - closeBraces;
 
-    if (trimmed === '}') {
-      while (depthAtPush.length > 0 && depthAtPush[depthAtPush.length - 1] > braceDepth) {
+    if (trimmed === "}") {
+      while (
+        depthAtPush.length > 0 &&
+        depthAtPush[depthAtPush.length - 1] > braceDepth
+      ) {
         depthAtPush.pop();
         parentStack.pop();
       }
@@ -3149,15 +3669,15 @@ function generateHeuristicName(ctx) {
   if (ctx.textContent) {
     const cleaned = ctx.textContent
       .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/[^a-z0-9\s]/g, "")
       .trim()
       .split(/\s+/)
       .slice(0, 3)
-      .join('_');
+      .join("_");
     if (cleaned) {
       parts.push(cleaned);
-      parts.push(ctx.type !== 'text' ? ctx.type : 'label');
-      return sanitizeToFdId(parts.join('_'));
+      parts.push(ctx.type !== "text" ? ctx.type : "label");
+      return sanitizeToFdId(parts.join("_"));
     }
   }
 
@@ -3167,17 +3687,22 @@ function generateHeuristicName(ctx) {
   }
 
   // 3. Shape detection
-  if (ctx.type === 'ellipse' && ctx.width && ctx.height && ctx.width === ctx.height) {
-    parts.push('circle');
-  } else if (ctx.type === 'rect' && ctx.width && ctx.height) {
-    if (ctx.width > ctx.height * 3) parts.push('bar');
-    else if (ctx.height > ctx.width * 3) parts.push('column');
+  if (
+    ctx.type === "ellipse" &&
+    ctx.width &&
+    ctx.height &&
+    ctx.width === ctx.height
+  ) {
+    parts.push("circle");
+  } else if (ctx.type === "rect" && ctx.width && ctx.height) {
+    if (ctx.width > ctx.height * 3) parts.push("bar");
+    else if (ctx.height > ctx.width * 3) parts.push("column");
     else parts.push(ctx.type);
   } else {
     parts.push(ctx.type);
   }
 
-  return sanitizeToFdId(parts.join('_')) || ctx.type;
+  return sanitizeToFdId(parts.join("_")) || ctx.type;
 }
 
 /** Heuristic rename — generate semantic names without AI. */
@@ -3239,26 +3764,48 @@ function nudgeSelected(arrowKey, step) {
 
     const cx = b.x + b.width / 2;
     const cy = b.y + b.height / 2;
-    let dx = 0, dy = 0;
+    let dx = 0,
+      dy = 0;
 
     switch (arrowKey) {
-      case 'ArrowUp': dy = -step; break;
-      case 'ArrowDown': dy = step; break;
-      case 'ArrowLeft': dx = -step; break;
-      case 'ArrowRight': dx = step; break;
+      case "ArrowUp":
+        dy = -step;
+        break;
+      case "ArrowDown":
+        dy = step;
+        break;
+      case "ArrowLeft":
+        dx = -step;
+        break;
+      case "ArrowRight":
+        dx = step;
+        break;
     }
 
     // Use pointer sequence to move correctly through WASM
     fdCanvas.handle_pointer_down(cx, cy, 1.0, false, false, false, false);
-    fdCanvas.handle_pointer_move(cx + dx, cy + dy, 1.0, false, false, false, false);
-    const upResult = JSON.parse(fdCanvas.handle_pointer_up(cx + dx, cy + dy, false, false, false, false));
+    fdCanvas.handle_pointer_move(
+      cx + dx,
+      cy + dy,
+      1.0,
+      false,
+      false,
+      false,
+      false,
+    );
+    const upResult = JSON.parse(
+      fdCanvas.handle_pointer_up(cx + dx, cy + dy, false, false, false, false),
+    );
     if (upResult.changed) {
-      renderDirty = true; uiDirty = true;
+      renderDirty = true;
+      uiDirty = true;
       syncCanvasToEditor();
       updatePropertiesPanel();
       refreshLayersPanel();
     }
-  } catch (_) { /* skip */ }
+  } catch (_) {
+    /* skip */
+  }
 }
 
 /** ─── Inline Text Editor (double-click to edit) ───────────────────── */
@@ -3266,14 +3813,17 @@ function nudgeSelected(arrowKey, step) {
 // The shared module handles: dark/light theme, contrast-aware text color,
 // shape-specific border radius, edge label editing, proper ESC/blur.
 function setupInlineEditor(canvas) {
-  const container = document.getElementById('canvas-content');
+  const container = document.getElementById("canvas-content");
   coreSetupInlineEditor({
     fdCanvas: () => fdCanvas,
     canvasEl: canvas,
     container,
     renderFn: () => renderCanvas(),
     syncFn: () => syncCanvasToEditor(),
-    updatePanelFn: () => { updatePropertiesPanel(); refreshLayersPanel(); },
+    updatePanelFn: () => {
+      updatePropertiesPanel();
+      refreshLayersPanel();
+    },
     getPanX: () => panX,
     getPanY: () => panY,
     getZoom: () => zoomLevel,
@@ -3284,27 +3834,28 @@ function setupInlineEditor(canvas) {
 // ── Touch Gesture System + Apple Pencil Pro → extracted to touch.js ───────
 
 async function initPlayground() {
+  const layersApi = initLayersPanel({
+    getFdCanvas: () => fdCanvas,
+    markRenderDirty: () => {
+      renderDirty = true;
+    },
+    getRenderDirty: () => renderDirty,
+    ctxMenu: ctxMenu,
+    copySelectedAsFd: copySelectedAsFd,
+    cutSelectedAsFd: cutSelectedAsFd,
+    pasteFromClipboard: pasteFromClipboard,
+    renderCanvas: renderCanvas,
+    syncCanvasToEditor: syncCanvasToEditor,
+    updatePropertiesPanel: updatePropertiesPanel,
+    showToast: showToast,
+    toggleLayersPanel: toggleLayersPanel,
+    updateFab: updateFab,
+  });
+  refreshLayersPanel = layersApi.refreshLayersPanel;
 
-    const layersApi = initLayersPanel({
-      getFdCanvas: () => fdCanvas,
-      markRenderDirty: () => { renderDirty = true; },
-      getRenderDirty: () => renderDirty,
-      ctxMenu: ctxMenu,
-      copySelectedAsFd: copySelectedAsFd,
-      cutSelectedAsFd: cutSelectedAsFd,
-      pasteFromClipboard: pasteFromClipboard,
-      renderCanvas: renderCanvas,
-      syncCanvasToEditor: syncCanvasToEditor,
-      updatePropertiesPanel: updatePropertiesPanel,
-      showToast: showToast,
-      toggleLayersPanel: toggleLayersPanel,
-      updateFab: updateFab
-    });
-    refreshLayersPanel = layersApi.refreshLayersPanel;
-
-  const editorMount = document.getElementById('fd-editor');
-  const canvas = document.getElementById('fd-canvas');
-  const wrapper = document.getElementById('canvas-wrapper');
+  const editorMount = document.getElementById("fd-editor");
+  const canvas = document.getElementById("fd-canvas");
+  const wrapper = document.getElementById("canvas-wrapper");
 
   // ── (#1) Init panels BEFORE any await — pure DOM, no WASM needed ──────
   // This runs synchronously before the browser yields to fetch WASM,
@@ -3312,7 +3863,7 @@ async function initPlayground() {
   initLeftPanel();
   initRightPanel();
   initSettingsPanel();
-  if (localStorage.getItem('fd-onboarded')) {
+  if (localStorage.getItem("fd-onboarded")) {
     CanvasTips.init();
   } else {
     initOnboarding();
@@ -3323,25 +3874,40 @@ async function initPlayground() {
 
     // Timeout helper — prevents infinite hang if WASM fetch/init stalls
     const WASM_TIMEOUT_MS = 30000;
-    const raceWithTimeout = (promise, ms, label) => Promise.race([
-      promise,
-      new Promise((_, reject) => setTimeout(() => reject(new Error(
-        `${label} timed out after ${ms / 1000}s — check your network connection`
-      )), ms)),
-    ]);
+    const raceWithTimeout = (promise, ms, label) =>
+      Promise.race([
+        promise,
+        new Promise((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                new Error(
+                  `${label} timed out after ${ms / 1000}s — check your network connection`,
+                ),
+              ),
+            ms,
+          ),
+        ),
+      ]);
 
     const t0 = performance.now();
-    console.log('[FD] Fetching WASM module + binary…');
+    console.log("[FD] Fetching WASM module + binary…");
 
     // Start JS module import and WASM fetch in parallel
-    const wasmFetchUrl = './wasm/fd_wasm_bg.wasm?v=0.11.296';
-    const [wasm, wasmResponse] = await raceWithTimeout(Promise.all([
-      import('./wasm/fd_wasm.js?v=0.11.296'),
-      fetch(wasmFetchUrl),
-    ]), WASM_TIMEOUT_MS, 'WASM fetch');
+    const wasmFetchUrl = "./wasm/fd_wasm_bg.wasm?v=0.11.296";
+    const [wasm, wasmResponse] = await raceWithTimeout(
+      Promise.all([
+        import("./wasm/fd_wasm.js?v=0.11.296"),
+        fetch(wasmFetchUrl),
+      ]),
+      WASM_TIMEOUT_MS,
+      "WASM fetch",
+    );
 
     if (!wasmResponse.ok) {
-      throw new Error(`WASM fetch failed: HTTP ${wasmResponse.status} ${wasmResponse.statusText}`);
+      throw new Error(
+        `WASM fetch failed: HTTP ${wasmResponse.status} ${wasmResponse.statusText}`,
+      );
     }
     console.log(`[FD] WASM fetched (${Math.round(performance.now() - t0)}ms)`);
 
@@ -3349,12 +3915,12 @@ async function initPlayground() {
     // which calls WebAssembly.instantiateStreaming internally — the browser compiles
     // WASM while bytes are still arriving over the wire, saving 100-300ms.
     // For progress UI, read Content-Length from headers to show an estimate.
-    const contentLength = +wasmResponse.headers.get('Content-Length') || 0;
+    const contentLength = +wasmResponse.headers.get("Content-Length") || 0;
     if (contentLength > 0) {
       await raceWithTimeout(
         wasm.default(wasmResponse),
         WASM_TIMEOUT_MS,
-        'WASM streaming instantiation'
+        "WASM streaming instantiation",
       );
     } else {
       // Fallback: no Content-Length (Cloudflare brotli/gzip strips it).
@@ -3362,11 +3928,13 @@ async function initPlayground() {
       await raceWithTimeout(
         wasm.default(wasmResponse),
         WASM_TIMEOUT_MS,
-        'WASM streaming instantiation'
+        "WASM streaming instantiation",
       );
     }
 
-    console.log(`[FD] Runtime initialized via streaming (${Math.round(performance.now() - t0)}ms)`);
+    console.log(
+      `[FD] Runtime initialized via streaming (${Math.round(performance.now() - t0)}ms)`,
+    );
 
     // Register semantic icon pack
     if (window.lucideIcons && wasm.register_icon_library) {
@@ -3390,8 +3958,8 @@ async function initPlayground() {
       if (canvas.width !== newW || canvas.height !== newH) {
         canvas.width = newW;
         canvas.height = newH;
-        canvas.style.width = canvasWidth + 'px';
-        canvas.style.height = rect.height + 'px';
+        canvas.style.width = canvasWidth + "px";
+        canvas.style.height = rect.height + "px";
         bufferCleared = true;
         uiDirty = true;
         if (fdCanvas) {
@@ -3411,99 +3979,110 @@ async function initPlayground() {
     resizeCanvas();
 
     // Create the FdCanvas instance
-    console.log('[FD] Creating canvas…');
+    console.log("[FD] Creating canvas…");
     const rect = wrapper.getBoundingClientRect();
     const canvasW = rect.width - getLayersPanelWidth();
     fdCanvas = new wasm.FdCanvas(canvasW, rect.height);
     window.fdCanvas = fdCanvas; // Expose for E2E testing
     // Canvas theme — honor localStorage preference
     fdCanvas.set_theme(isDark);
-    wrapper.classList.toggle('dark-canvas', isDark);
-    console.log('[FD] Parsing scene…');
+    wrapper.classList.toggle("dark-canvas", isDark);
+    console.log("[FD] Parsing scene…");
     // Deep link: load ?code= param if present, else restore from localStorage
     const urlParams = new URLSearchParams(window.location.search);
-    const codeParam = urlParams.get('code');
+    const codeParam = urlParams.get("code");
     let initialFd = DEFAULT_FD;
     if (codeParam) {
       try {
         const decoded = LZString.decompressFromEncodedURIComponent(codeParam);
         if (decoded && decoded.trim().length > 0) initialFd = decoded;
-      } catch (_) { /* invalid code param, use default */ }
+      } catch (_) {
+        /* invalid code param, use default */
+      }
     } else {
       // Restore last session from localStorage
       try {
-        const saved = localStorage.getItem('fd-document');
+        const saved = localStorage.getItem("fd-document");
         if (saved && saved.trim().length > 0) initialFd = saved;
-      } catch (_) { /* localStorage unavailable */ }
+      } catch (_) {
+        /* localStorage unavailable */
+      }
     }
     fdCanvas.set_text(initialFd);
     if (document.fonts) await document.fonts.ready;
-    measureAllTextNodes(fdCanvas, document.getElementById('fd-canvas'));
+    measureAllTextNodes(fdCanvas, document.getElementById("fd-canvas"));
     console.log(`[FD] ✓ Ready (total ${Math.round(performance.now() - t0)}ms)`);
     // Hand tool is default on load — set grab cursor
-    canvas.style.cursor = 'grab';
+    canvas.style.cursor = "grab";
 
     // ── Create CodeMirror Editor ──────────────────────────────────────
-    const fdLinter = linter((view) => {
-      const linterBtn = document.getElementById('linter-status-btn');
-      const linterText = document.getElementById('linter-status-text');
-      
-      if (!fdCanvas) {
-        if (linterBtn && linterText) {
-          linterBtn.className = 'code-status-pill status-valid';
-          linterText.textContent = 'Valid';
-          linterBtn.onclick = null;
-        }
-        return [];
-      }
-      
-      const text = view.state.doc.toString();
-      try {
-        // Use the WASM diagnostics API
-        const raw = fdCanvas.get_diagnostics_for_source(text);
-        const diags = JSON.parse(raw);
-        const mapped = diags.map(d => {
-          const from = view.state.doc.line(Math.min(d.line + 1, view.state.doc.lines)).from + d.col;
-          const to = Math.min(
-            view.state.doc.line(Math.min(d.line + 1, view.state.doc.lines)).from + d.endCol,
-            view.state.doc.line(Math.min(d.line + 1, view.state.doc.lines)).to
-          );
-          return {
-            from: Math.min(from, view.state.doc.length),
-            to: Math.min(to, view.state.doc.length),
-            severity: 'error',
-            message: d.message,
-          };
-        });
-        
-        // Update the Code Pane Header Pill
-        if (linterBtn && linterText) {
-          if (mapped.length === 0) {
-            linterBtn.className = 'code-status-pill status-valid';
-            linterBtn.title = 'No syntax errors';
-            linterText.textContent = 'Valid';
+    const fdLinter = linter(
+      (view) => {
+        const linterBtn = document.getElementById("linter-status-btn");
+        const linterText = document.getElementById("linter-status-text");
+
+        if (!fdCanvas) {
+          if (linterBtn && linterText) {
+            linterBtn.className = "code-status-pill status-valid";
+            linterText.textContent = "Valid";
             linterBtn.onclick = null;
-          } else {
-            linterBtn.className = 'code-status-pill status-error';
-            linterBtn.title = 'Jump to first error';
-            linterText.textContent = `${mapped.length} Error${mapped.length > 1 ? 's' : ''}`;
-            linterBtn.onclick = () => {
-              if (editorView && mapped.length > 0) {
-                editorView.dispatch({
-                  selection: { anchor: mapped[0].from },
-                  scrollIntoView: true
-                });
-                editorView.focus();
-              }
-            };
           }
+          return [];
         }
-        return mapped;
-      } catch (err) {
-        console.error('linter map error:', err);
-        return [];
-      }
-    }, { delay: 300 });
+
+        const text = view.state.doc.toString();
+        try {
+          // Use the WASM diagnostics API
+          const raw = fdCanvas.get_diagnostics_for_source(text);
+          const diags = JSON.parse(raw);
+          const mapped = diags.map((d) => {
+            const from =
+              view.state.doc.line(Math.min(d.line + 1, view.state.doc.lines))
+                .from + d.col;
+            const to = Math.min(
+              view.state.doc.line(Math.min(d.line + 1, view.state.doc.lines))
+                .from + d.endCol,
+              view.state.doc.line(Math.min(d.line + 1, view.state.doc.lines))
+                .to,
+            );
+            return {
+              from: Math.min(from, view.state.doc.length),
+              to: Math.min(to, view.state.doc.length),
+              severity: "error",
+              message: d.message,
+            };
+          });
+
+          // Update the Code Pane Header Pill
+          if (linterBtn && linterText) {
+            if (mapped.length === 0) {
+              linterBtn.className = "code-status-pill status-valid";
+              linterBtn.title = "No syntax errors";
+              linterText.textContent = "Valid";
+              linterBtn.onclick = null;
+            } else {
+              linterBtn.className = "code-status-pill status-error";
+              linterBtn.title = "Jump to first error";
+              linterText.textContent = `${mapped.length} Error${mapped.length > 1 ? "s" : ""}`;
+              linterBtn.onclick = () => {
+                if (editorView && mapped.length > 0) {
+                  editorView.dispatch({
+                    selection: { anchor: mapped[0].from },
+                    scrollIntoView: true,
+                  });
+                  editorView.focus();
+                }
+              };
+            }
+          }
+          return mapped;
+        } catch (err) {
+          console.error("linter map error:", err);
+          return [];
+        }
+      },
+      { delay: 300 },
+    );
 
     const fdCompletionSource = (context) => {
       if (!fdCanvas) return null;
@@ -3520,14 +4099,20 @@ async function initPlayground() {
         const wordStart = context.pos - (wordMatch ? wordMatch[0].length : 0);
         return {
           from: wordStart,
-          options: items.map(item => ({
+          options: items.map((item) => ({
             label: item.label,
-            type: item.kind === 'keyword' ? 'keyword' :
-              item.kind === 'property' ? 'property' : 'enum',
+            type:
+              item.kind === "keyword"
+                ? "keyword"
+                : item.kind === "property"
+                  ? "property"
+                  : "enum",
             detail: item.detail,
           })),
         };
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     };
 
     const fdHoverTooltip = hoverTooltip((view, pos) => {
@@ -3544,33 +4129,39 @@ async function initPlayground() {
           pos,
           above: true,
           create() {
-            const dom = document.createElement('div');
-            dom.className = 'cm-tooltip-hover';
-            dom.textContent = info.content.replace(/\\n/g, '\n');
+            const dom = document.createElement("div");
+            dom.className = "cm-tooltip-hover";
+            dom.textContent = info.content.replace(/\\n/g, "\n");
             return { dom };
           },
         };
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     });
 
     const fdFoldService = foldService.of((state, lineStart, lineEnd) => {
       const startLine = state.doc.lineAt(lineStart);
-      const strippedStart = startLine.text.replace(/#.*/g, '').replace(/"[^"]*"/g, '""');
-      const openBrace = strippedStart.indexOf('{');
+      const strippedStart = startLine.text
+        .replace(/#.*/g, "")
+        .replace(/"[^"]*"/g, '""');
+      const openBrace = strippedStart.indexOf("{");
       if (openBrace === -1) return null;
 
       let depth = 0;
       let from = -1;
       for (let i = startLine.number; i <= state.doc.lines; i++) {
         const line = state.doc.line(i);
-        const stripped = line.text.replace(/#.*/g, '').replace(/"[^"]*"/g, '""');
-        const startCol = (i === startLine.number) ? openBrace : 0;
-        
+        const stripped = line.text
+          .replace(/#.*/g, "")
+          .replace(/"[^"]*"/g, '""');
+        const startCol = i === startLine.number ? openBrace : 0;
+
         for (let c = startCol; c < stripped.length; c++) {
-          if (stripped[c] === '{') {
+          if (stripped[c] === "{") {
             if (depth === 0) from = line.from + c + 1;
             depth++;
-          } else if (stripped[c] === '}') {
+          } else if (stripped[c] === "}") {
             depth--;
             if (depth === 0 && from !== -1) {
               return { from: from, to: line.from + c };
@@ -3610,21 +4201,23 @@ async function initPlayground() {
           ]),
           EditorView.updateListener.of((update) => {
             // ─── Code -> Canvas Implicit Cursor Sync ───
-            if (update.selectionSet && update.userEvent === 'select.pointer') {
+            if (update.selectionSet && update.userEvent === "select.pointer") {
               const pos = update.state.selection.main.head;
               const lineInfo = update.state.doc.lineAt(pos);
-              
+
               clearTimeout(window._cursorSyncTimer);
               window._cursorSyncTimer = setTimeout(() => {
                 if (!fdCanvas) return;
-                
+
                 // Scan backward up to 30 lines to find block header
                 const maxLines = Math.min(30, lineInfo.number);
                 let foundBlockHeader = null;
                 let foundId = null;
-                
+
                 for (let i = 0; i < maxLines; i++) {
-                  const checkLine = update.state.doc.line(lineInfo.number - i).text;
+                  const checkLine = update.state.doc.line(
+                    lineInfo.number - i,
+                  ).text;
                   const match = checkLine.match(/@([a-zA-Z_]\w*)\s*\{/);
                   if (match) {
                     foundBlockHeader = lineInfo.number - i;
@@ -3632,7 +4225,7 @@ async function initPlayground() {
                     break;
                   }
                 }
-                
+
                 if (foundId && foundBlockHeader) {
                   // Verify we are still inside the block's braces
                   let braceDepth = 1;
@@ -3642,12 +4235,14 @@ async function initPlayground() {
                     braceDepth -= (text.match(/\}/g) || []).length;
                     if (braceDepth <= 0) break;
                   }
-                  
+
                   if (braceDepth > 0) {
                     const currentSelected = fdCanvas.get_selected_id();
                     if (currentSelected !== foundId) {
                       fdCanvas.select_by_id(foundId);
-                      renderDirty = true; uiDirty = true; sceneDirty = true;
+                      renderDirty = true;
+                      uiDirty = true;
+                      sceneDirty = true;
                       renderCanvas();
                       updatePropertiesPanel();
                     }
@@ -3662,24 +4257,35 @@ async function initPlayground() {
               if (fdCanvas) {
                 const text = update.state.doc.toString();
                 const resultJson = fdCanvas.set_text(text);
-                measureAllTextNodes(fdCanvas, document.getElementById('fd-canvas'));
+                measureAllTextNodes(
+                  fdCanvas,
+                  document.getElementById("fd-canvas"),
+                );
                 try {
                   const r = JSON.parse(resultJson);
                   // Always repaint — visual-only changes (fill, stroke, opacity)
                   // don't trigger layout_changed but still need a re-render.
                   if (r.ok) {
-                    renderDirty = true; uiDirty = true; sceneDirty = true;
+                    renderDirty = true;
+                    uiDirty = true;
+                    sceneDirty = true;
                     if (r.duplicate_ids && r.duplicate_ids.length > 0) {
-                      showToast(`Warning: Duplicate IDs detected: ${r.duplicate_ids.join(', ')}`);
+                      showToast(
+                        `Warning: Duplicate IDs detected: ${r.duplicate_ids.join(", ")}`,
+                      );
                     }
                   }
                 } catch (_) {
-                  renderDirty = true; uiDirty = true; sceneDirty = true;
+                  renderDirty = true;
+                  uiDirty = true;
+                  sceneDirty = true;
                 }
                 // Persist to localStorage
                 clearTimeout(_saveTimer);
                 _saveTimer = setTimeout(() => {
-                  try { localStorage.setItem('fd-document', text); } catch (_) {}
+                  try {
+                    localStorage.setItem("fd-document", text);
+                  } catch (_) {}
                 }, 500);
               }
             }, 50);
@@ -3694,159 +4300,195 @@ async function initPlayground() {
     setupInlineEditor(canvas);
 
     // Full Screen toggle in settings dropdown
-    document.getElementById('sm-fullscreen-toggle')?.addEventListener('click', toggleFullscreen);
+    document
+      .getElementById("sm-fullscreen-toggle")
+      ?.addEventListener("click", toggleFullscreen);
 
     // Share button — open share modal with URL + QR code
-    document.getElementById('share-link-btn')?.addEventListener('click', () => {
+    document.getElementById("share-link-btn")?.addEventListener("click", () => {
       if (!editorView) return;
       const text = editorView.state.doc.toString();
       const compressed = LZString.compressToEncodedURIComponent(text);
       const url = new URL(window.location.href);
-      url.searchParams.set('code', compressed);
-      if (fullscreenMode) url.searchParams.set('fullscreen', '');
-      else url.searchParams.delete('fullscreen');
+      url.searchParams.set("code", compressed);
+      if (fullscreenMode) url.searchParams.set("fullscreen", "");
+      else url.searchParams.delete("fullscreen");
       const shareUrl = url.toString();
 
-      const modal = document.getElementById('share-modal');
-      const urlInput = document.getElementById('share-url-input');
-      const copyBtn = document.getElementById('share-copy-btn');
+      const modal = document.getElementById("share-modal");
+      const urlInput = document.getElementById("share-url-input");
+      const copyBtn = document.getElementById("share-copy-btn");
 
       urlInput.value = shareUrl;
-      modal.classList.add('visible');
+      modal.classList.add("visible");
 
       // Generate QR code on the canvas
-      generateQR(document.getElementById('share-qr'), shareUrl);
+      generateQR(document.getElementById("share-qr"), shareUrl);
 
       // Copy button
-      copyBtn.textContent = 'Copy';
-      copyBtn.classList.remove('copied');
+      copyBtn.textContent = "Copy";
+      copyBtn.classList.remove("copied");
       copyBtn.onclick = () => {
-        navigator.clipboard.writeText(shareUrl).then(() => {
-          copyBtn.textContent = '✓ Copied!';
-          copyBtn.classList.add('copied');
-          setTimeout(() => {
-            copyBtn.textContent = 'Copy';
-            copyBtn.classList.remove('copied');
-          }, 2000);
-        }).catch(() => prompt('Copy this link:', shareUrl));
+        navigator.clipboard
+          .writeText(shareUrl)
+          .then(() => {
+            copyBtn.textContent = "✓ Copied!";
+            copyBtn.classList.add("copied");
+            setTimeout(() => {
+              copyBtn.textContent = "Copy";
+              copyBtn.classList.remove("copied");
+            }, 2000);
+          })
+          .catch(() => prompt("Copy this link:", shareUrl));
       };
     });
     // Close share modal
-    document.getElementById('share-modal-close')?.addEventListener('click', () => {
-      document.getElementById('share-modal')?.classList.remove('visible');
-    });
-    document.getElementById('share-modal')?.addEventListener('click', (e) => {
-      if (e.target.id === 'share-modal') {
-        document.getElementById('share-modal').classList.remove('visible');
+    document
+      .getElementById("share-modal-close")
+      ?.addEventListener("click", () => {
+        document.getElementById("share-modal")?.classList.remove("visible");
+      });
+    document.getElementById("share-modal")?.addEventListener("click", (e) => {
+      if (e.target.id === "share-modal") {
+        document.getElementById("share-modal").classList.remove("visible");
       }
     });
 
     // ── Import Modal ──────────────────────────────────────────────────
-    document.getElementById('lp-import-btn')?.addEventListener('click', () => {
-      const modal = document.getElementById('import-modal');
-      const textarea = document.getElementById('import-textarea');
+    document.getElementById("lp-import-btn")?.addEventListener("click", () => {
+      const modal = document.getElementById("import-modal");
+      const textarea = document.getElementById("import-textarea");
       if (modal && textarea) {
-        textarea.value = '';
-        modal.classList.add('visible');
+        textarea.value = "";
+        modal.classList.add("visible");
         setTimeout(() => textarea.focus(), 100);
       }
     });
 
     const closeImportModal = () => {
-      document.getElementById('import-modal')?.classList.remove('visible');
+      document.getElementById("import-modal")?.classList.remove("visible");
     };
 
-    document.getElementById('import-modal-close')?.addEventListener('click', closeImportModal);
-    document.getElementById('import-cancel-btn')?.addEventListener('click', closeImportModal);
-    document.getElementById('import-modal')?.addEventListener('click', (e) => {
-      if (e.target.id === 'import-modal') closeImportModal();
+    document
+      .getElementById("import-modal-close")
+      ?.addEventListener("click", closeImportModal);
+    document
+      .getElementById("import-cancel-btn")
+      ?.addEventListener("click", closeImportModal);
+    document.getElementById("import-modal")?.addEventListener("click", (e) => {
+      if (e.target.id === "import-modal") closeImportModal();
     });
 
-    document.getElementById('import-submit-btn')?.addEventListener('click', async () => {
-      const textarea = document.getElementById('import-textarea');
-      if (!textarea || !textarea.value.trim() || !fdCanvas) return;
+    document
+      .getElementById("import-submit-btn")
+      ?.addEventListener("click", async () => {
+        const textarea = document.getElementById("import-textarea");
+        if (!textarea || !textarea.value.trim() || !fdCanvas) return;
 
-      const rawText = textarea.value;
-      
-      // Dynamic import to avoid loading errors if not globally available
-      const clipMod = await import('./canvas-core/clipboard.js');
-      const namespace = 'import_' + Math.random().toString(36).substring(2, 6);
-      
-      const transformedText = clipMod.buildImportText(rawText, namespace);
-      if (!transformedText) {
+        const rawText = textarea.value;
+
+        // Dynamic import to avoid loading errors if not globally available
+        const clipMod = await import("./canvas-core/clipboard.js");
+        const namespace =
+          "import_" + Math.random().toString(36).substring(2, 6);
+
+        const transformedText = clipMod.buildImportText(rawText, namespace);
+        if (!transformedText) {
+          closeImportModal();
+          return;
+        }
+
+        const textBefore = fdCanvas.get_text();
+        const updatedText =
+          textBefore.trimEnd() + "\n\n" + transformedText + "\n";
+        fdCanvas.set_text(updatedText);
+        fdCanvas.push_undo_snapshot(textBefore, updatedText);
+
+        renderCanvas();
+        syncCanvasToEditor();
+        updatePropertiesPanel();
+        if (typeof refreshLayersPanel === "function") refreshLayersPanel();
         closeImportModal();
-        return;
-      }
-
-      const textBefore = fdCanvas.get_text();
-      const updatedText = textBefore.trimEnd() + '\n\n' + transformedText + '\n';
-      fdCanvas.set_text(updatedText);
-      fdCanvas.push_undo_snapshot(textBefore, updatedText);
-
-      renderCanvas();
-      syncCanvasToEditor();
-      updatePropertiesPanel();
-      if (typeof refreshLayersPanel === 'function') refreshLayersPanel();
-      closeImportModal();
-    });
-
+      });
 
     // ── Quick Color Picker ────────────────────────────────────────────
-    const qcp = document.getElementById('quick-color-picker');
+    const qcp = document.getElementById("quick-color-picker");
     if (qcp) {
       // Show QCP when node is selected (alongside or instead of FAB)
       const updateQCP = () => {
-        if (!fdCanvas) { qcp.classList.remove('visible'); return; }
+        if (!fdCanvas) {
+          qcp.classList.remove("visible");
+          return;
+        }
         const selectedId = fdCanvas.get_selected_id();
-        if (!selectedId) { qcp.classList.remove('visible'); return; }
+        if (!selectedId) {
+          qcp.classList.remove("visible");
+          return;
+        }
         try {
           const boundsJson = fdCanvas.get_node_bounds(selectedId);
-          if (!boundsJson) { qcp.classList.remove('visible'); return; }
+          if (!boundsJson) {
+            qcp.classList.remove("visible");
+            return;
+          }
           const b = JSON.parse(boundsJson);
-          if (!b.width) { qcp.classList.remove('visible'); return; }
+          if (!b.width) {
+            qcp.classList.remove("visible");
+            return;
+          }
           const screenX = b.x * zoomLevel + panX + (b.width * zoomLevel) / 2;
           const screenY = b.y * zoomLevel + panY - 40;
           const canvasRect = canvas.getBoundingClientRect();
-          qcp.style.left = (canvasRect.left + screenX) + 'px';
-          qcp.style.top = (canvasRect.top + screenY) + 'px';
-          qcp.classList.add('visible');
+          qcp.style.left = canvasRect.left + screenX + "px";
+          qcp.style.top = canvasRect.top + screenY + "px";
+          qcp.classList.add("visible");
 
           // Highlight active color
           const propsJson = fdCanvas.get_selected_node_props();
           if (propsJson) {
             const props = JSON.parse(propsJson);
-            qcp.querySelectorAll('.qcp-dot').forEach(dot => {
-              dot.classList.toggle('active',
-                props.fill && dot.dataset.color.toLowerCase() === props.fill.toLowerCase());
+            qcp.querySelectorAll(".qcp-dot").forEach((dot) => {
+              dot.classList.toggle(
+                "active",
+                props.fill &&
+                  dot.dataset.color.toLowerCase() === props.fill.toLowerCase(),
+              );
             });
           }
-        } catch (_) { qcp.classList.remove('visible'); }
+        } catch (_) {
+          qcp.classList.remove("visible");
+        }
       };
 
       // Click dot → apply fill
-      qcp.addEventListener('click', (e) => {
-        const dot = e.target.closest('.qcp-dot');
+      qcp.addEventListener("click", (e) => {
+        const dot = e.target.closest(".qcp-dot");
         if (!dot || !fdCanvas) return;
         const color = dot.dataset.color;
-        fdCanvas.set_property('fill', color);
-        renderDirty = true; renderCanvas();
+        fdCanvas.set_property("fill", color);
+        renderDirty = true;
+        renderCanvas();
         updateQCP();
       });
       // Right-click dot → apply stroke
-      qcp.addEventListener('contextmenu', (e) => {
-        const dot = e.target.closest('.qcp-dot');
+      qcp.addEventListener("contextmenu", (e) => {
+        const dot = e.target.closest(".qcp-dot");
         if (!dot || !fdCanvas) return;
         e.preventDefault();
-        fdCanvas.set_property('strokeColor', dot.dataset.color);
-        renderDirty = true; renderCanvas();
+        fdCanvas.set_property("strokeColor", dot.dataset.color);
+        renderDirty = true;
+        renderCanvas();
       });
       // Custom color
-      document.getElementById('qcp-custom-input')?.addEventListener('input', (e) => {
-        if (!fdCanvas) return;
-        fdCanvas.set_property('fill', e.target.value);
-        renderDirty = true; renderCanvas();
-        updateQCP();
-      });
+      document
+        .getElementById("qcp-custom-input")
+        ?.addEventListener("input", (e) => {
+          if (!fdCanvas) return;
+          fdCanvas.set_property("fill", e.target.value);
+          renderDirty = true;
+          renderCanvas();
+          updateQCP();
+        });
 
       // Hook into render loop to update QCP position
       const origUpdateFab = updateFab;
@@ -3854,42 +4496,42 @@ async function initPlayground() {
     }
 
     // ── Image Drag-and-Drop ───────────────────────────────────────────
-    const canvasWrapper = document.getElementById('canvas-wrapper');
-    const dropZone = document.getElementById('canvas-drop-zone');
+    const canvasWrapper = document.getElementById("canvas-wrapper");
+    const dropZone = document.getElementById("canvas-drop-zone");
     if (canvasWrapper && dropZone) {
       let dragCounter = 0;
-      canvasWrapper.addEventListener('dragenter', (e) => {
+      canvasWrapper.addEventListener("dragenter", (e) => {
         e.preventDefault();
         dragCounter++;
-        if (e.dataTransfer?.types?.includes('Files')) {
-          dropZone.classList.add('visible');
+        if (e.dataTransfer?.types?.includes("Files")) {
+          dropZone.classList.add("visible");
         }
       });
-      canvasWrapper.addEventListener('dragover', (e) => {
+      canvasWrapper.addEventListener("dragover", (e) => {
         e.preventDefault();
         // Only set 'copy' for external file drops — not internal layer DnD (which uses 'move')
-        if (e.dataTransfer?.types?.includes('Files')) {
-          e.dataTransfer.dropEffect = 'copy';
+        if (e.dataTransfer?.types?.includes("Files")) {
+          e.dataTransfer.dropEffect = "copy";
         }
       });
-      canvasWrapper.addEventListener('dragleave', (e) => {
+      canvasWrapper.addEventListener("dragleave", (e) => {
         e.preventDefault();
         dragCounter--;
         if (dragCounter <= 0) {
           dragCounter = 0;
-          dropZone.classList.remove('visible');
+          dropZone.classList.remove("visible");
         }
       });
-      canvasWrapper.addEventListener('drop', (e) => {
+      canvasWrapper.addEventListener("drop", (e) => {
         e.preventDefault();
         dragCounter = 0;
-        dropZone.classList.remove('visible');
+        dropZone.classList.remove("visible");
         const files = e.dataTransfer?.files;
         if (!files || files.length === 0) return;
         for (const file of files) {
-          if (!file.type.startsWith('image/')) continue;
+          if (!file.type.startsWith("image/")) continue;
           if (file.size > 2 * 1024 * 1024) {
-            showToast('Image too large (max 2MB)');
+            showToast("Image too large (max 2MB)");
             continue;
           }
           const reader = new FileReader();
@@ -3909,10 +4551,18 @@ async function initPlayground() {
       showToast,
       toggleFullscreen,
       getZoomLevel: () => zoomLevel,
-      setZoomLevel: (z) => { zoomLevel = z; },
-      setPanX: (x) => { panX = x; },
-      setPanY: (y) => { panY = y; },
-      markRenderDirty: () => { renderDirty = true; },
+      setZoomLevel: (z) => {
+        zoomLevel = z;
+      },
+      setPanX: (x) => {
+        panX = x;
+      },
+      setPanY: (y) => {
+        panY = y;
+      },
+      markRenderDirty: () => {
+        renderDirty = true;
+      },
       renderCanvas: () => renderCanvas(),
       urlParams,
     });
@@ -3922,117 +4572,133 @@ async function initPlayground() {
     // ── Mobile: auto-collapse both panels for canvas-first experience ──
     const isMobileViewport = window.innerWidth <= 768;
     if (isMobileViewport) {
-      const lp = document.getElementById('left-panel');
-      const rp = document.getElementById('right-panel');
-      if (lp) lp.classList.add('collapsed');
-      if (rp) rp.classList.add('collapsed');
+      const lp = document.getElementById("left-panel");
+      const rp = document.getElementById("right-panel");
+      if (lp) lp.classList.add("collapsed");
+      if (rp) rp.classList.add("collapsed");
       // CSS handles --left/right-panel-width: 0px via !important
     }
 
     // Wire sidebar (top-left) and hamburger (top-right) chrome toggles
     // On mobile, also manage the backdrop overlay
-    const mobileBackdropEl = document.getElementById('mobile-layers-backdrop');
+    const mobileBackdropEl = document.getElementById("mobile-layers-backdrop");
 
-    document.getElementById('sidebar-toggle-btn')?.addEventListener('click', () => {
-      toggleLeftPanel();
-      // On mobile, show/hide backdrop when left panel is open
-      if (window.innerWidth <= 768 && mobileBackdropEl) {
-        const lp = document.getElementById('left-panel');
-        const isOpen = document.documentElement.dataset.lp === 'open';
-        mobileBackdropEl.classList.toggle('visible', isOpen);
-      }
-    });
-    document.getElementById('hamburger-toggle-btn')?.addEventListener('click', () => {
-      toggleRightPanel();
-      // On mobile, show/hide backdrop when right panel is open
-      if (window.innerWidth <= 768 && mobileBackdropEl) {
-        const rp = document.getElementById('right-panel');
-        const isOpen = document.documentElement.dataset.rp === 'open';
-        mobileBackdropEl.classList.toggle('visible', isOpen);
-      }
-    });
+    document
+      .getElementById("sidebar-toggle-btn")
+      ?.addEventListener("click", () => {
+        toggleLeftPanel();
+        // On mobile, show/hide backdrop when left panel is open
+        if (window.innerWidth <= 768 && mobileBackdropEl) {
+          const lp = document.getElementById("left-panel");
+          const isOpen = document.documentElement.dataset.lp === "open";
+          mobileBackdropEl.classList.toggle("visible", isOpen);
+        }
+      });
+    document
+      .getElementById("hamburger-toggle-btn")
+      ?.addEventListener("click", () => {
+        toggleRightPanel();
+        // On mobile, show/hide backdrop when right panel is open
+        if (window.innerWidth <= 768 && mobileBackdropEl) {
+          const rp = document.getElementById("right-panel");
+          const isOpen = document.documentElement.dataset.rp === "open";
+          mobileBackdropEl.classList.toggle("visible", isOpen);
+        }
+      });
     // Mobile backdrop click to collapse any open panel
-    mobileBackdropEl?.addEventListener('click', () => {
-      const lp = document.getElementById('left-panel');
-      const rp = document.getElementById('right-panel');
-      if (document.documentElement.dataset.lp === 'open') toggleLeftPanel();
-      if (document.documentElement.dataset.rp === 'open') toggleRightPanel();
-      mobileBackdropEl.classList.remove('visible');
+    mobileBackdropEl?.addEventListener("click", () => {
+      const lp = document.getElementById("left-panel");
+      const rp = document.getElementById("right-panel");
+      if (document.documentElement.dataset.lp === "open") toggleLeftPanel();
+      if (document.documentElement.dataset.rp === "open") toggleRightPanel();
+      mobileBackdropEl.classList.remove("visible");
     });
 
     // ── #3: Mobile panel close buttons (✕ inside tab bars) ──
-    document.getElementById('lp-mobile-close')?.addEventListener('click', () => {
-      toggleLeftPanel();
-      mobileBackdropEl?.classList.remove('visible');
-    });
-    document.getElementById('rp-mobile-close')?.addEventListener('click', () => {
-      toggleRightPanel();
-      mobileBackdropEl?.classList.remove('visible');
-    });
+    document
+      .getElementById("lp-mobile-close")
+      ?.addEventListener("click", () => {
+        toggleLeftPanel();
+        mobileBackdropEl?.classList.remove("visible");
+      });
+    document
+      .getElementById("rp-mobile-close")
+      ?.addEventListener("click", () => {
+        toggleRightPanel();
+        mobileBackdropEl?.classList.remove("visible");
+      });
 
     // ── #2: Toolbar scroll indicator — remove gradient when scrolled to end ──
-    const ftEl = document.getElementById('floating-toolbar');
+    const ftEl = document.getElementById("floating-toolbar");
     if (ftEl) {
       const updateScrollMask = () => {
-        const atEnd = ftEl.scrollLeft + ftEl.clientWidth >= ftEl.scrollWidth - 4;
-        ftEl.classList.toggle('scroll-end', atEnd);
+        const atEnd =
+          ftEl.scrollLeft + ftEl.clientWidth >= ftEl.scrollWidth - 4;
+        ftEl.classList.toggle("scroll-end", atEnd);
       };
-      ftEl.addEventListener('scroll', updateScrollMask, { passive: true });
+      ftEl.addEventListener("scroll", updateScrollMask, { passive: true });
       // Check initial state after layout
       requestAnimationFrame(updateScrollMask);
     }
 
     // ── #4: matchMedia observer — auto-collapse on viewport change ──
-    const mobileMq = window.matchMedia('(max-width: 768px)');
-    mobileMq.addEventListener('change', (e) => {
+    const mobileMq = window.matchMedia("(max-width: 768px)");
+    mobileMq.addEventListener("change", (e) => {
       if (e.matches) {
         // Entering mobile — collapse both panels
-        const lp = document.getElementById('left-panel');
-        const rp = document.getElementById('right-panel');
-        if (document.documentElement.dataset.lp === 'open') toggleLeftPanel();
-        if (document.documentElement.dataset.rp === 'open') toggleRightPanel();
-        mobileBackdropEl?.classList.remove('visible');
+        const lp = document.getElementById("left-panel");
+        const rp = document.getElementById("right-panel");
+        if (document.documentElement.dataset.lp === "open") toggleLeftPanel();
+        if (document.documentElement.dataset.rp === "open") toggleRightPanel();
+        mobileBackdropEl?.classList.remove("visible");
       }
     });
 
     aiTouchSession = new AiTouchSession({
       getCanvas: () => fdCanvas,
-      getEditorText: () => editorView ? editorView.state.doc.toString() : '',
+      getEditorText: () => (editorView ? editorView.state.doc.toString() : ""),
       setEditorText: (text) => {
         if (!editorView) return;
-        editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: text } });
+        editorView.dispatch({
+          changes: { from: 0, to: editorView.state.doc.length, insert: text },
+        });
       },
       renderCanvas: () => renderCanvas(),
       fitToContent: (c) => fitToContent(c),
-      measureAllTextNodes: (canvasInstance, element) => measureAllTextNodes(canvasInstance, element),
+      measureAllTextNodes: (canvasInstance, element) =>
+        measureAllTextNodes(canvasInstance, element),
       refreshLayersPanel: () => refreshLayersPanel(),
       updatePropertiesPanel: () => updatePropertiesPanel(),
       showToast: (msg, timeout) => showToast(msg, timeout),
       updateRateLimitUI,
-      buildPrompt: (fdText, selectedIds) => buildRefinePrompt(fdText, selectedIds),
+      buildPrompt: (fdText, selectedIds) =>
+        buildRefinePrompt(fdText, selectedIds),
     });
     window.__aiTouchSession = aiTouchSession;
 
     // ── Toolbar buttons ──────────────────────────────────────────────
-    document.getElementById('ai-touch-btn')?.addEventListener('click', aiTouch);
-
+    document.getElementById("ai-touch-btn")?.addEventListener("click", aiTouch);
 
     // ── AI Chat panel ────────────────────────────────────────────────
     initAiChat(
-      () => editorView ? editorView.state.doc.toString() : '',
+      () => (editorView ? editorView.state.doc.toString() : ""),
       (text) => {
         if (!editorView) return;
-        editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: text } });
+        editorView.dispatch({
+          changes: { from: 0, to: editorView.state.doc.length, insert: text },
+        });
       },
-      () => fdCanvas
+      () => fdCanvas,
     );
     // Listen for AI apply events → ensure full canvas sync + re-render
-    document.addEventListener('fd-ai-applied', () => {
+    document.addEventListener("fd-ai-applied", () => {
       if (!fdCanvas) return;
       // Wait for CodeMirror dispatch to trigger the updateListener → set_text
       setTimeout(() => {
         measureAllTextNodes(fdCanvas, canvas);
-        renderDirty = true; uiDirty = true; sceneDirty = true;
+        renderDirty = true;
+        uiDirty = true;
+        sceneDirty = true;
         renderCanvas();
         refreshLayersPanel();
         updatePropertiesPanel();
@@ -4042,14 +4708,16 @@ async function initPlayground() {
       }, 120);
     });
     // Clear chat button
-    document.getElementById('ai-chat-clear')?.addEventListener('click', () => {
+    document.getElementById("ai-chat-clear")?.addEventListener("click", () => {
       clearChatHistory();
     });
     // Specs toggle now handled by sidebar dropdown (sd-specs-toggle)
-    document.getElementById('specs-panel-close')?.addEventListener('click', toggleSpecsPanel);
+    document
+      .getElementById("specs-panel-close")
+      ?.addEventListener("click", toggleSpecsPanel);
 
     // Get canvas 2D context
-    ctx = canvas.getContext('2d');
+    ctx = canvas.getContext("2d");
 
     // Render loop — only repaint when dirty flag is set
     const renderLoop = (time) => {
@@ -4057,7 +4725,7 @@ async function initPlayground() {
         renderCanvas();
         renderDirty = false;
       }
-      
+
       // Viewport minimap updates continuously at 60fps when panning or changing
       if (uiDirty) {
         renderMinimap(canvas);
@@ -4086,48 +4754,45 @@ async function initPlayground() {
       uiDirty = false; // first render done
     }, 100);
 
-
-
     // (#2) Double-rAF: wait TWO animation frames before enabling transitions.
     // Single rAF can fire in the same paint cycle as layout changes from panel init.
     // Double-rAF guarantees the browser has painted one full frame with the final
     // layout before transitions are re-enabled — bulletproof against race conditions.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        document.documentElement.classList.remove('init-no-transition');
+        document.documentElement.classList.remove("init-no-transition");
       });
     });
 
     // ── Canvas Theme Toggle (moved to settings gear dropdown) ─────────
     // Theme toggle is now handled by sm-theme-toggle in the gear dropdown
 
-
-
     // ── Panel Resize Setup ───────────────────────────────────────────
     setupPanelResize(wrapper, resizeCanvas);
-
 
     // (initLeftPanel moved earlier — before WASM init)
 
     // ── Mobile Layers Drawer Toggle ──────────────────────────────────
-    const mobileLayersToggle = document.getElementById('mobile-layers-toggle');
-    const mobileLayersBackdrop = document.getElementById('mobile-layers-backdrop');
-    const layersPanelEl = document.getElementById('layers-panel');
+    const mobileLayersToggle = document.getElementById("mobile-layers-toggle");
+    const mobileLayersBackdrop = document.getElementById(
+      "mobile-layers-backdrop",
+    );
+    const layersPanelEl = document.getElementById("layers-panel");
 
     function toggleMobileLayersDrawer() {
       if (!layersPanelEl) return;
-      const isOpen = layersPanelEl.classList.toggle('mobile-open');
-      mobileLayersBackdrop?.classList.toggle('visible', isOpen);
-      mobileLayersToggle?.classList.toggle('active', isOpen);
+      const isOpen = layersPanelEl.classList.toggle("mobile-open");
+      mobileLayersBackdrop?.classList.toggle("visible", isOpen);
+      mobileLayersToggle?.classList.toggle("active", isOpen);
     }
     function closeMobileLayersDrawer() {
-      layersPanelEl?.classList.remove('mobile-open');
-      mobileLayersBackdrop?.classList.remove('visible');
-      mobileLayersToggle?.classList.remove('active');
+      layersPanelEl?.classList.remove("mobile-open");
+      mobileLayersBackdrop?.classList.remove("visible");
+      mobileLayersToggle?.classList.remove("active");
     }
 
-    mobileLayersToggle?.addEventListener('click', toggleMobileLayersDrawer);
-    mobileLayersBackdrop?.addEventListener('click', closeMobileLayersDrawer);
+    mobileLayersToggle?.addEventListener("click", toggleMobileLayersDrawer);
+    mobileLayersBackdrop?.addEventListener("click", closeMobileLayersDrawer);
 
     // ── (layers-collapse-btn removed — Layers is now a tab) ──
 
@@ -4139,19 +4804,19 @@ async function initPlayground() {
     // ── (Desktop editor-header toggle removed — code is now a right panel tab) ──
 
     // ── Mobile Code Editor Toggle (#4) ───────────────────────────────
-    const mobileCodeToggle = document.getElementById('mobile-code-toggle');
+    const mobileCodeToggle = document.getElementById("mobile-code-toggle");
 
     function toggleMobileCodeEditor() {
-      switchLeftTab('code');
+      switchLeftTab("code");
     }
     function closeMobileCodeEditor() {
       // No-op in new panel design
     }
 
-    mobileCodeToggle?.addEventListener('click', toggleMobileCodeEditor);
+    mobileCodeToggle?.addEventListener("click", toggleMobileCodeEditor);
 
     // Show close button only on mobile
-    const mobileQuery = window.matchMedia('(max-width: 768px)');
+    const mobileQuery = window.matchMedia("(max-width: 768px)");
     function updateMobileUI(e) {
       // mobileCodeClose removed — code is now a right panel tab
       if (!e.matches) {
@@ -4159,7 +4824,7 @@ async function initPlayground() {
         closeMobileCodeEditor();
       }
     }
-    mobileQuery.addEventListener('change', updateMobileUI);
+    mobileQuery.addEventListener("change", updateMobileUI);
     updateMobileUI(mobileQuery); // init
 
     // ── #1: Debounced fitToContent on resize ─────────────────────────
@@ -4169,7 +4834,7 @@ async function initPlayground() {
       originalResizeCanvas();
       clearTimeout(fitDebounceTimer);
       fitDebounceTimer = setTimeout(() => {
-        if (fdCanvas && window.matchMedia('(max-width: 768px)').matches) {
+        if (fdCanvas && window.matchMedia("(max-width: 768px)").matches) {
           fitToContent(canvas);
           renderCanvas();
         }
@@ -4181,7 +4846,7 @@ async function initPlayground() {
     window.__fdResizeCanvas = originalResizeCanvas;
 
     // ── #5: FitToContent on orientation change ───────────────────────
-    window.addEventListener('orientationchange', () => {
+    window.addEventListener("orientationchange", () => {
       setTimeout(() => {
         resizeCanvas();
         fitToContent(canvas);
@@ -4191,23 +4856,25 @@ async function initPlayground() {
 
     // ── Layers→Canvas cross-drag ────────────────────────────────────
     // Accept drops from the Layers panel: reparent to root + move to drop position
-    canvas.addEventListener('dragover', (e) => {
+    canvas.addEventListener("dragover", (e) => {
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
+      e.dataTransfer.dropEffect = "move";
     });
-    canvas.addEventListener('drop', (e) => {
+    canvas.addEventListener("drop", (e) => {
       e.preventDefault();
       if (!fdCanvas) return;
-      const nodeId = e.dataTransfer.getData('text/plain');
+      const nodeId = e.dataTransfer.getData("text/plain");
       if (!nodeId) return;
 
       const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
       const textBefore = fdCanvas.get_text();
 
       // Reparent to root if nested (this is a "take out of container" gesture)
-      const parentId = fdCanvas.get_parent_id ? fdCanvas.get_parent_id(nodeId) : '';
+      const parentId = fdCanvas.get_parent_id
+        ? fdCanvas.get_parent_id(nodeId)
+        : "";
       if (parentId) {
-        fdCanvas.reparent_into(nodeId, 'root');
+        fdCanvas.reparent_into(nodeId, "root");
       }
 
       // Move node to drop position
@@ -4219,7 +4886,8 @@ async function initPlayground() {
       if (textBefore !== textAfter) {
         fdCanvas.push_undo_snapshot(textBefore, textAfter);
       }
-      renderDirty = true; uiDirty = true;
+      renderDirty = true;
+      uiDirty = true;
       syncCanvasToEditor();
       updatePropertiesPanel();
       refreshLayersPanel();
@@ -4227,7 +4895,7 @@ async function initPlayground() {
     });
 
     // ── Pointer Events ────────────────────────────────────────────────
-    canvas.addEventListener('pointerdown', (e) => {
+    canvas.addEventListener("pointerdown", (e) => {
       if (!fdCanvas) return;
       // Skip canvas interaction if inline editor is still active —
       // the blur→commit cycle will handle cleanup. This prevents
@@ -4258,7 +4926,7 @@ async function initPlayground() {
 
         // Reject if fingers too close (< 30px, likely accidental palm graze)
         // or if one pointer is a stylus (pencil + palm)
-        if (dist < 30 || e.pointerType === 'pen') {
+        if (dist < 30 || e.pointerType === "pen") {
           return;
         }
 
@@ -4268,7 +4936,10 @@ async function initPlayground() {
           if (!twoFingerPending || activePointers.size !== 2) return;
           isTwoFingerGesture = true;
           const pts2 = [...activePointers.values()];
-          pinchStartDist = Math.hypot(pts2[1].x - pts2[0].x, pts2[1].y - pts2[0].y);
+          pinchStartDist = Math.hypot(
+            pts2[1].x - pts2[0].x,
+            pts2[1].y - pts2[0].y,
+          );
           pinchStartZoom = zoomLevel;
           pinchMidStartX = (pts2[0].x + pts2[1].x) / 2;
           pinchMidStartY = (pts2[0].y + pts2[1].y) / 2;
@@ -4293,7 +4964,7 @@ async function initPlayground() {
         panDragging = true;
         panStartX = e.clientX - panX;
         panStartY = e.clientY - panY;
-        canvas.style.cursor = 'grabbing';
+        canvas.style.cursor = "grabbing";
         activePointerId = e.pointerId;
         canvas.setPointerCapture(e.pointerId);
         return;
@@ -4315,27 +4986,31 @@ async function initPlayground() {
 
       // Hand tool: check modifier keys before defaulting to pan
       // Apple Pencil always falls through to Select (WASM) regardless of modifiers
-      if (fdCanvas.get_tool_name() === 'hand' && e.pointerType !== 'pen') {
-        canvas.classList.remove('modifier-cmd', 'modifier-alt', 'modifier-cmd-select');
+      if (fdCanvas.get_tool_name() === "hand" && e.pointerType !== "pen") {
+        canvas.classList.remove(
+          "modifier-cmd",
+          "modifier-alt",
+          "modifier-cmd-select",
+        );
         const isAltHand = e.altKey;
         const isCmdHand = e.metaKey && !e.ctrlKey;
 
         // Alt on Hand → temp Select for clone+drag (duplicate)
         if (isAltHand && !isCmdHand) {
           handTempSelectActive = true;
-          handTempSelectOriginalTool = 'hand';
+          handTempSelectOriginalTool = "hand";
           handAltCloneActive = true;
-          fdCanvas.set_tool('select');
-          canvas.style.cursor = 'copy';
+          fdCanvas.set_tool("select");
+          canvas.style.cursor = "copy";
           // Fall through to normal pointer handling below
         }
         // Cmd on Hand → temp Select for move/select/reparent
         else if (isCmdHand && !isAltHand) {
           handTempSelectActive = true;
-          handTempSelectOriginalTool = 'hand';
+          handTempSelectOriginalTool = "hand";
           handAltCloneActive = false;
-          fdCanvas.set_tool('select');
-          canvas.style.cursor = 'default';
+          fdCanvas.set_tool("select");
+          canvas.style.cursor = "default";
           // Fall through to normal pointer handling below
         }
         // No modifier → pan as usual
@@ -4345,7 +5020,7 @@ async function initPlayground() {
           panStartY = e.clientY - panY;
           handPanClientStartX = e.clientX;
           handPanClientStartY = e.clientY;
-          canvas.style.cursor = 'grabbing';
+          canvas.style.cursor = "grabbing";
           activePointerId = e.pointerId;
           canvas.setPointerCapture(e.pointerId);
           return;
@@ -4355,54 +5030,72 @@ async function initPlayground() {
       // All other tools: ⌘ = temp select
       {
         const toolName = fdCanvas.get_tool_name();
-        const isOtherTool = toolName !== 'hand' && toolName !== 'select';
+        const isOtherTool = toolName !== "hand" && toolName !== "select";
         const isCmdHeld = e.metaKey || (e.ctrlKey && !e.metaKey);
         if (isOtherTool && isCmdHeld && !e.altKey) {
           handTempSelectActive = true;
           handTempSelectOriginalTool = toolName;
           handAltCloneActive = false;
-          fdCanvas.set_tool('select');
-          canvas.style.cursor = 'default';
+          fdCanvas.set_tool("select");
+          canvas.style.cursor = "default";
           // Fall through to normal pointer handling below
         }
       }
 
       // Hide FAB during draw gestures (not during move — FAB tracks via render loop)
-      if (fdCanvas.get_tool_name() !== 'select') {
-        document.getElementById('floating-action-bar')?.classList.remove('visible');
+      if (fdCanvas.get_tool_name() !== "select") {
+        document
+          .getElementById("floating-action-bar")
+          ?.classList.remove("visible");
       }
 
       // ── JS-only Lasso select ──
       const currentTool = fdCanvas.get_tool_name();
-      if (currentTool === 'lasso') {
+      if (currentTool === "lasso") {
         lassoPoints = [{ x, y }];
         lassoActive = true;
         activePointerId = e.pointerId;
-        canvas.style.cursor = 'crosshair';
+        canvas.style.cursor = "crosshair";
         renderDirty = true;
         canvas.setPointerCapture(e.pointerId);
         return;
       }
       // ── WASM Eraser hook ──
-      if (currentTool === 'eraser') {
-        canvas.style.cursor = 'crosshair';
+      if (currentTool === "eraser") {
+        canvas.style.cursor = "crosshair";
       }
 
-      if (e.pointerType !== 'touch') {
+      if (e.pointerType !== "touch") {
         CanvasTips.pause();
       }
 
       const changed = fdCanvas.handle_pointer_down(
-        x, y, e.pressure || 1.0,
-        e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
+        x,
+        y,
+        e.pressure || 1.0,
+        e.shiftKey,
+        e.ctrlKey,
+        e.altKey,
+        e.metaKey,
       );
       canvas.setPointerCapture(e.pointerId);
       activePointerId = e.pointerId;
-      if (changed) { renderDirty = true; uiDirty = true; }
+      if (changed) {
+        renderDirty = true;
+        uiDirty = true;
+      }
 
       // Touch contact halo — visual feedback for finger taps (iPad)
-      if (e.pointerType === 'touch') {
-        touchHalo = { active: true, x: e.clientX, y: e.clientY, sceneX: x, sceneY: y, startTime: performance.now(), targetBounds: null };
+      if (e.pointerType === "touch") {
+        touchHalo = {
+          active: true,
+          x: e.clientX,
+          y: e.clientY,
+          sceneX: x,
+          sceneY: y,
+          startTime: performance.now(),
+          targetBounds: null,
+        };
         // Get target node bounds for highlight
         try {
           const hitJson = fdCanvas.hit_test_at(x, y);
@@ -4413,12 +5106,14 @@ async function initPlayground() {
               if (boundsJson) touchHalo.targetBounds = JSON.parse(boundsJson);
             }
           }
-        } catch (_) { /* hit_test_at may not exist yet */ }
+        } catch (_) {
+          /* hit_test_at may not exist yet */
+        }
         renderDirty = true;
       }
     });
 
-    canvas.addEventListener('pointermove', (e) => {
+    canvas.addEventListener("pointermove", (e) => {
       if (!fdCanvas) return;
 
       // Update tracked pointer position
@@ -4435,7 +5130,10 @@ async function initPlayground() {
 
         // Pinch zoom — anchor at current finger midpoint (not initial)
         const scale = dist / pinchStartDist;
-        const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, pinchStartZoom * scale));
+        const newZoom = Math.max(
+          ZOOM_MIN,
+          Math.min(ZOOM_MAX, pinchStartZoom * scale),
+        );
 
         // Zoom at current midpoint + pan follows finger movement
         const canvasRect = canvas.getBoundingClientRect();
@@ -4446,7 +5144,8 @@ async function initPlayground() {
         panY = cmy - (cmy - panY) * (newZoom / oldZoom);
         zoomLevel = newZoom;
         updateZoomIndicator();
-        renderDirty = true; uiDirty = true;
+        renderDirty = true;
+        uiDirty = true;
         return;
       }
 
@@ -4465,14 +5164,14 @@ async function initPlayground() {
             zoomScrubActive = true;
             zoomScrubStartZoom = zoomLevel;
             activePointerId = rightClickPointerId;
-            canvas.style.cursor = 'zoom-in';
+            canvas.style.cursor = "zoom-in";
           } else {
             // Plain right-drag → Pan
             panDragging = true;
             panStartX = rightClickStartClient.x - panX;
             panStartY = rightClickStartClient.y - panY;
             activePointerId = rightClickPointerId;
-            canvas.style.cursor = 'grabbing';
+            canvas.style.cursor = "grabbing";
           }
         }
         return; // Do not process as a normal move until gesture is decided
@@ -4483,7 +5182,10 @@ async function initPlayground() {
         const dx = e.clientX - rightClickStartClient.x;
         const dy = -(e.clientY - rightClickStartClient.y); // up = zoom in
         const delta = (dx + dy) * 0.004; // sensitivity
-        const newZoom = Math.max(0.1, Math.min(10, zoomScrubStartZoom * (1 + delta)));
+        const newZoom = Math.max(
+          0.1,
+          Math.min(10, zoomScrubStartZoom * (1 + delta)),
+        );
         // Anchor zoom at the original click position
         const canvasRect = canvas.getBoundingClientRect();
         const cx = rightClickStartClient.x - canvasRect.left;
@@ -4492,8 +5194,9 @@ async function initPlayground() {
         panY = cy - (cy - panY) * (newZoom / zoomLevel);
         zoomLevel = newZoom;
         updateZoomIndicator();
-        canvas.style.cursor = delta > 0 ? 'zoom-in' : 'zoom-out';
-        renderDirty = true; uiDirty = true;
+        canvas.style.cursor = delta > 0 ? "zoom-in" : "zoom-out";
+        renderDirty = true;
+        uiDirty = true;
         return;
       }
 
@@ -4501,7 +5204,8 @@ async function initPlayground() {
       if (panDragging) {
         panX = e.clientX - panStartX;
         panY = e.clientY - panStartY;
-        renderDirty = true; uiDirty = true;
+        renderDirty = true;
+        uiDirty = true;
         return;
       }
 
@@ -4522,7 +5226,11 @@ async function initPlayground() {
 
       // Apple Pencil hover preview — detect pen hovering above screen
       // iPadOS 16.1+ sends pointermove with pointerType='pen', buttons=0, pressure=0
-      if (e.pointerType === 'pen' && e.buttons === 0 && activePointerId === -1) {
+      if (
+        e.pointerType === "pen" &&
+        e.buttons === 0 &&
+        activePointerId === -1
+      ) {
         fdCanvas.set_pointer_type(2); // pen
         const { x: hx, y: hy } = screenToScene(e.clientX, e.clientY, canvas);
         pencilHover.active = true;
@@ -4531,41 +5239,49 @@ async function initPlayground() {
         pencilHover.screenX = e.clientX;
         pencilHover.screenY = e.clientY;
         // Visual mode indicator: pencil shows default cursor on Hand tool (select mode)
-        if (fdCanvas.get_tool_name() === 'hand') {
-          canvas.style.cursor = 'default';
+        if (fdCanvas.get_tool_name() === "hand") {
+          canvas.style.cursor = "default";
         }
         // Check what's under the pencil for hover highlight
         try {
           const hitJson = fdCanvas.hit_test_at(hx, hy);
           pencilHover.nodeId = hitJson ? JSON.parse(hitJson).id || null : null;
           // Hand+Pen over a node → show move cursor (indicates select behavior)
-          if (pencilHover.nodeId && fdCanvas.get_tool_name() === 'hand') {
-            canvas.style.cursor = 'move';
+          if (pencilHover.nodeId && fdCanvas.get_tool_name() === "hand") {
+            canvas.style.cursor = "move";
           }
-        } catch (_) { pencilHover.nodeId = null; }
+        } catch (_) {
+          pencilHover.nodeId = null;
+        }
         renderDirty = true;
         return;
       }
 
       const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
       const moveResultJson = fdCanvas.handle_pointer_move(
-        x, y, e.pressure || 1.0,
-        e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
+        x,
+        y,
+        e.pressure || 1.0,
+        e.shiftKey,
+        e.ctrlKey,
+        e.altKey,
+        e.metaKey,
       );
       const moveResult = JSON.parse(moveResultJson);
       if (moveResult.changed) {
         syncSelectedTextMetrics();
-        renderDirty = true; uiDirty = true;
-        
+        renderDirty = true;
+        uiDirty = true;
+
         // Sync WASM eraser marquee bounds for rendering
-        if (fdCanvas.get_tool_name() === 'eraser') {
+        if (fdCanvas.get_tool_name() === "eraser") {
           if (moveResult.bounds) {
             eraserActive = true;
             eraserMarquee = {
               startX: moveResult.bounds.x,
               startY: moveResult.bounds.y,
               endX: moveResult.bounds.x + moveResult.bounds.w,
-              endY: moveResult.bounds.y + moveResult.bounds.h
+              endY: moveResult.bounds.y + moveResult.bounds.h,
             };
           } else {
             eraserActive = false;
@@ -4574,28 +5290,34 @@ async function initPlayground() {
         }
         // Only track as a canvas drag when using Select or Hand tool.
         const activeTool = fdCanvas.get_tool_name();
-        if (activeTool === 'select' || activeTool === 'hand') {
+        if (activeTool === "select" || activeTool === "hand") {
           canvasDragOccurred = true;
 
           // ── ⌘+Drag nest highlight: detect container under cursor ──
-          if (e.metaKey && activePointerId !== -1 && activeTool === 'select') {
+          if (e.metaKey && activePointerId !== -1 && activeTool === "select") {
             const selectedId = fdCanvas.get_selected_id();
             if (selectedId && fdCanvas.hit_test_at_excluding) {
               try {
                 const hitId = fdCanvas.hit_test_at_excluding(x, y, selectedId);
                 if (hitId && hitId !== selectedId) {
-                  const containerKinds = ['rect', 'ellipse', 'frame', 'group'];
-                  const hitKind = fdCanvas.get_node_kind ? fdCanvas.get_node_kind(hitId) : '';
+                  const containerKinds = ["rect", "ellipse", "frame", "group"];
+                  const hitKind = fdCanvas.get_node_kind
+                    ? fdCanvas.get_node_kind(hitId)
+                    : "";
                   if (containerKinds.includes(hitKind)) {
-                    const parentId = fdCanvas.get_parent_id ? fdCanvas.get_parent_id(selectedId) : '';
-                    cmdDragNestTarget = (parentId !== hitId) ? hitId : null;
+                    const parentId = fdCanvas.get_parent_id
+                      ? fdCanvas.get_parent_id(selectedId)
+                      : "";
+                    cmdDragNestTarget = parentId !== hitId ? hitId : null;
                   } else {
                     cmdDragNestTarget = null;
                   }
                 } else {
                   cmdDragNestTarget = null;
                 }
-              } catch (_) { cmdDragNestTarget = null; }
+              } catch (_) {
+                cmdDragNestTarget = null;
+              }
             }
           } else if (!e.metaKey) {
             cmdDragNestTarget = null;
@@ -4606,16 +5328,21 @@ async function initPlayground() {
             try {
               const snapJson = fdCanvas.get_center_snap();
               activeCenterSnap = snapJson ? JSON.parse(snapJson) : null;
-            } catch (_) { activeCenterSnap = null; }
+            } catch (_) {
+              activeCenterSnap = null;
+            }
           }
         }
       } else if (activePointerId === -1) {
         // Hover (no button held): show resize cursor on handles
         const activeTool = fdCanvas.get_tool_name();
-        if (activeTool === 'select') {
+        if (activeTool === "select") {
           const cursor = coreGetResizeHandleCursor(fdCanvas, x, y);
-          if (cursor) { canvas.style.cursor = cursor; }
-          else { canvas.style.cursor = ''; }
+          if (cursor) {
+            canvas.style.cursor = cursor;
+          } else {
+            canvas.style.cursor = "";
+          }
         }
       }
 
@@ -4623,62 +5350,72 @@ async function initPlayground() {
       if (canvasDragOccurred && activePointerId !== -1) {
         const selectedId = fdCanvas.get_selected_id();
         if (selectedId) {
-          const layersPanel = document.getElementById('layers-panel');
+          const layersPanel = document.getElementById("layers-panel");
           const panelRect = layersPanel?.getBoundingClientRect();
-          const overLayers = panelRect && e.clientX >= panelRect.left && e.clientX <= panelRect.right
-            && e.clientY >= panelRect.top && e.clientY <= panelRect.bottom;
+          const overLayers =
+            panelRect &&
+            e.clientX >= panelRect.left &&
+            e.clientX <= panelRect.right &&
+            e.clientY >= panelRect.top &&
+            e.clientY <= panelRect.bottom;
 
           if (overLayers) {
             // Find layer item under cursor
             const elUnder = document.elementFromPoint(e.clientX, e.clientY);
-            const layerItem = elUnder?.closest('.layer-item');
+            const layerItem = elUnder?.closest(".layer-item");
 
             // Clear previous indicators
             if (layersPanel) clearLayerDragIndicators(layersPanel);
 
             if (layerItem) {
-              const targetId = layerItem.getAttribute('data-node-id');
+              const targetId = layerItem.getAttribute("data-node-id");
               if (targetId && targetId !== selectedId) {
                 const zone = getDropZone(e, layerItem);
-                const kind = layerItem.getAttribute('data-node-kind');
-                const isContainer = ['rect','ellipse','frame','group'].includes(kind);
-                if (zone === 'nest' && isContainer) {
-                  layerItem.classList.add('drag-over-nest');
-                } else if (zone === 'above') {
-                  layerItem.classList.add('drag-over-above');
+                const kind = layerItem.getAttribute("data-node-kind");
+                const isContainer = [
+                  "rect",
+                  "ellipse",
+                  "frame",
+                  "group",
+                ].includes(kind);
+                if (zone === "nest" && isContainer) {
+                  layerItem.classList.add("drag-over-nest");
+                } else if (zone === "above") {
+                  layerItem.classList.add("drag-over-above");
                 } else {
-                  layerItem.classList.add('drag-over-below');
+                  layerItem.classList.add("drag-over-below");
                 }
               }
-            } else if (elUnder?.closest('.layers-body')) {
+            } else if (elUnder?.closest(".layers-body")) {
               // Over empty space → drop-to-root indicator
-              const body = layersPanel.querySelector('.layers-body');
-              if (body) body.classList.add('drag-over-root');
+              const body = layersPanel.querySelector(".layers-body");
+              if (body) body.classList.add("drag-over-root");
             }
 
             // Show ghost label
-            let ghost = document.getElementById('canvas-drag-ghost');
+            let ghost = document.getElementById("canvas-drag-ghost");
             if (!ghost) {
-              ghost = document.createElement('div');
-              ghost.id = 'canvas-drag-ghost';
-              ghost.style.cssText = 'position:fixed;z-index:300;pointer-events:none;' +
-                'padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;' +
-                'font-family:var(--mono);color:var(--fd-accent,#007AFF);' +
-                'background:var(--fd-surface-solid,#1C1C1E);' +
-                'border:1px solid var(--fd-accent,#007AFF);' +
-                'box-shadow:0 4px 12px rgba(0,0,0,0.3);white-space:nowrap;';
+              ghost = document.createElement("div");
+              ghost.id = "canvas-drag-ghost";
+              ghost.style.cssText =
+                "position:fixed;z-index:300;pointer-events:none;" +
+                "padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;" +
+                "font-family:var(--mono);color:var(--fd-accent,#007AFF);" +
+                "background:var(--fd-surface-solid,#1C1C1E);" +
+                "border:1px solid var(--fd-accent,#007AFF);" +
+                "box-shadow:0 4px 12px rgba(0,0,0,0.3);white-space:nowrap;";
               document.body.appendChild(ghost);
             }
             ghost.textContent = `@${selectedId}`;
-            ghost.style.left = (e.clientX + 12) + 'px';
-            ghost.style.top = (e.clientY - 8) + 'px';
-            ghost.style.display = 'block';
+            ghost.style.left = e.clientX + 12 + "px";
+            ghost.style.top = e.clientY - 8 + "px";
+            ghost.style.display = "block";
           } else {
             // Pointer left the Layers panel — clean up
-            const layersPanel2 = document.getElementById('layers-panel');
+            const layersPanel2 = document.getElementById("layers-panel");
             if (layersPanel2) clearLayerDragIndicators(layersPanel2);
-            const ghost = document.getElementById('canvas-drag-ghost');
-            if (ghost) ghost.style.display = 'none';
+            const ghost = document.getElementById("canvas-drag-ghost");
+            if (ghost) ghost.style.display = "none";
           }
         }
       }
@@ -4687,22 +5424,24 @@ async function initPlayground() {
       if (activePointerId !== -1 && moveResult.bounds) {
         const b = moveResult.bounds;
         if (b.w > 0 && b.h > 0) {
-          const tip = document.getElementById('dimension-tooltip');
+          const tip = document.getElementById("dimension-tooltip");
           if (tip) {
             tip.textContent = `${Math.round(b.w)} × ${Math.round(b.h)}`;
             const sx = b.x * zoomLevel + panX + (b.w * zoomLevel) / 2;
             const sy = (b.y + b.h) * zoomLevel + panY + 16;
-            const wrapRect = document.getElementById('canvas-wrapper').getBoundingClientRect();
-            tip.style.left = (sx - wrapRect.left + canvas.offsetLeft) + 'px';
-            tip.style.top = sy + 'px';
-            tip.style.display = 'block';
-            tip.style.transform = 'translateX(-50%)';
+            const wrapRect = document
+              .getElementById("canvas-wrapper")
+              .getBoundingClientRect();
+            tip.style.left = sx - wrapRect.left + canvas.offsetLeft + "px";
+            tip.style.top = sy + "px";
+            tip.style.display = "block";
+            tip.style.transform = "translateX(-50%)";
           }
         }
       }
     });
 
-    canvas.addEventListener('pointerup', (e) => {
+    canvas.addEventListener("pointerup", (e) => {
       if (!fdCanvas) return;
 
       // Clean up tracked pointer
@@ -4729,7 +5468,7 @@ async function initPlayground() {
         const wasCmdHeld = rightClickCmdHeld;
         rightClickCmdHeld = false;
         // Restore cursor
-        canvas.style.cursor = (fdCanvas.get_tool_name() === 'hand') ? 'grab' : '';
+        canvas.style.cursor = fdCanvas.get_tool_name() === "hand" ? "grab" : "";
         // Only open menu if within the time window (guards against very-slow tap+hold)
         const elapsed = performance.now() - rightClickStartTime;
         if (elapsed <= RIGHT_CLICK_MENU_TIMEOUT_MS) {
@@ -4737,7 +5476,9 @@ async function initPlayground() {
             // ⌘ + right-click: Layer Picker on node, Quick Insert on empty
             const { x, y } = screenToScene(e.clientX, e.clientY, canvas);
             let hitId = null;
-            try { hitId = fdCanvas.hit_test_at ? fdCanvas.hit_test_at(x, y) : null; } catch (_) {}
+            try {
+              hitId = fdCanvas.hit_test_at ? fdCanvas.hit_test_at(x, y) : null;
+            } catch (_) {}
             if (hitId) {
               openLayerPickerAt(e.clientX, e.clientY);
             } else {
@@ -4754,8 +5495,9 @@ async function initPlayground() {
         zoomScrubActive = false;
         rightClickCmdHeld = false;
         activePointerId = -1;
-        canvas.style.cursor = (fdCanvas.get_tool_name() === 'hand') ? 'grab' : '';
-        renderDirty = true; uiDirty = true;
+        canvas.style.cursor = fdCanvas.get_tool_name() === "hand" ? "grab" : "";
+        renderDirty = true;
+        uiDirty = true;
         return;
       }
       // Clean up a right-click that committed to pan (activePointerId was set by gesture)
@@ -4782,27 +5524,30 @@ async function initPlayground() {
           }
           if (selectedIds.length > 0 && fdCanvas.select_multiple_by_ids) {
             fdCanvas.select_multiple_by_ids(JSON.stringify(selectedIds));
-            showToast(`Selected ${selectedIds.length} node${selectedIds.length > 1 ? 's' : ''}`);
+            showToast(
+              `Selected ${selectedIds.length} node${selectedIds.length > 1 ? "s" : ""}`,
+            );
           } else if (selectedIds.length === 1) {
             fdCanvas.select_by_id(selectedIds[0]);
-            showToast('Selected 1 node');
+            showToast("Selected 1 node");
           } else {
-            showToast('No nodes enclosed');
+            showToast("No nodes enclosed");
           }
-          renderDirty = true; uiDirty = true;
+          renderDirty = true;
+          uiDirty = true;
           renderCanvas();
           refreshLayersPanel();
         }
         lassoPoints = [];
         // Switch to select tool after lasso
-        fdCanvas.set_tool('select');
-        updateToolbar('select');
-        canvas.style.cursor = '';
+        fdCanvas.set_tool("select");
+        updateToolbar("select");
+        canvas.style.cursor = "";
         return;
       }
 
       // ── Eraser marquee cleanup ──
-      if (fdCanvas.get_tool_name() === 'eraser') {
+      if (fdCanvas.get_tool_name() === "eraser") {
         eraserActive = false;
         eraserMarquee = null;
         renderDirty = true;
@@ -4816,7 +5561,8 @@ async function initPlayground() {
         panDragging = false;
         handPanClientStartX = null;
         handPanClientStartY = null;
-        canvas.style.cursor = (isPanning || fdCanvas.get_tool_name() === 'hand') ? 'grab' : '';
+        canvas.style.cursor =
+          isPanning || fdCanvas.get_tool_name() === "hand" ? "grab" : "";
         return;
       }
 
@@ -4829,8 +5575,8 @@ async function initPlayground() {
       canvasDragOccurred = false;
 
       // Clean up ghost label
-      const ghost = document.getElementById('canvas-drag-ghost');
-      if (ghost) ghost.style.display = 'none';
+      const ghost = document.getElementById("canvas-drag-ghost");
+      if (ghost) ghost.style.display = "none";
 
       // ── Canvas→Layers cross-drop ──
       // If pointer is released over the Layers panel, reparent/reorder like Layers drag-drop.
@@ -4838,58 +5584,84 @@ async function initPlayground() {
       if (wasDragging) {
         const selectedId = fdCanvas.get_selected_id();
         if (selectedId) {
-          const layersPanel = document.getElementById('layers-panel');
+          const layersPanel = document.getElementById("layers-panel");
           const panelRect = layersPanel?.getBoundingClientRect();
-          const overLayers = panelRect && e.clientX >= panelRect.left && e.clientX <= panelRect.right
-            && e.clientY >= panelRect.top && e.clientY <= panelRect.bottom;
+          const overLayers =
+            panelRect &&
+            e.clientX >= panelRect.left &&
+            e.clientX <= panelRect.right &&
+            e.clientY >= panelRect.top &&
+            e.clientY <= panelRect.bottom;
 
           if (overLayers && layersPanel) {
             clearLayerDragIndicators(layersPanel);
             const elUnder = document.elementFromPoint(e.clientX, e.clientY);
-            const layerItem = elUnder?.closest('.layer-item');
+            const layerItem = elUnder?.closest(".layer-item");
             const textBefore = fdCanvas.get_text();
             let changed = false;
 
             if (layerItem) {
-              const targetId = layerItem.getAttribute('data-node-id');
+              const targetId = layerItem.getAttribute("data-node-id");
               if (targetId && targetId !== selectedId) {
                 const zone = getDropZone(e, layerItem);
-                const kind = layerItem.getAttribute('data-node-kind');
-                const isContainer = ['rect','ellipse','frame','group'].includes(kind);
+                const kind = layerItem.getAttribute("data-node-kind");
+                const isContainer = [
+                  "rect",
+                  "ellipse",
+                  "frame",
+                  "group",
+                ].includes(kind);
 
-                if (zone === 'nest' && isContainer) {
+                if (zone === "nest" && isContainer) {
                   changed = fdCanvas.reparent_into(selectedId, targetId);
                 } else {
                   // Reorder — same logic as wireLayerDragDrop
                   const targetIndex = getSiblingIndex(layersPanel, targetId);
-                  const insertIndex = zone === 'above' ? targetIndex : targetIndex + 1;
-                  const targetItem = layersPanel.querySelector(`.layer-item[data-node-id="${targetId}"]`);
-                  const dragItem = layersPanel.querySelector(`.layer-item[data-node-id="${selectedId}"]`);
-                  const targetParent = targetItem?.parentElement?.getAttribute?.('data-parent-id');
-                  const dragParent = dragItem?.parentElement?.getAttribute?.('data-parent-id');
-                  if (targetParent && dragParent && targetParent === dragParent) {
+                  const insertIndex =
+                    zone === "above" ? targetIndex : targetIndex + 1;
+                  const targetItem = layersPanel.querySelector(
+                    `.layer-item[data-node-id="${targetId}"]`,
+                  );
+                  const dragItem = layersPanel.querySelector(
+                    `.layer-item[data-node-id="${selectedId}"]`,
+                  );
+                  const targetParent =
+                    targetItem?.parentElement?.getAttribute?.("data-parent-id");
+                  const dragParent =
+                    dragItem?.parentElement?.getAttribute?.("data-parent-id");
+                  if (
+                    targetParent &&
+                    dragParent &&
+                    targetParent === dragParent
+                  ) {
                     changed = fdCanvas.reorder_child(selectedId, insertIndex);
                   } else if (targetParent) {
                     changed = fdCanvas.reparent_into(selectedId, targetParent);
-                    if (changed) fdCanvas.reorder_child(selectedId, insertIndex);
+                    if (changed)
+                      fdCanvas.reorder_child(selectedId, insertIndex);
                   } else {
-                    changed = fdCanvas.reparent_into(selectedId, 'root');
-                    if (changed) fdCanvas.reorder_child(selectedId, insertIndex);
+                    changed = fdCanvas.reparent_into(selectedId, "root");
+                    if (changed)
+                      fdCanvas.reorder_child(selectedId, insertIndex);
                   }
                 }
               }
-            } else if (elUnder?.closest('.layers-body')) {
+            } else if (elUnder?.closest(".layers-body")) {
               // Drop on empty space → move to root
-              const parentId = fdCanvas.get_parent_id ? fdCanvas.get_parent_id(selectedId) : '';
+              const parentId = fdCanvas.get_parent_id
+                ? fdCanvas.get_parent_id(selectedId)
+                : "";
               if (parentId) {
-                changed = fdCanvas.reparent_into(selectedId, 'root');
+                changed = fdCanvas.reparent_into(selectedId, "root");
               }
             }
 
             if (changed) {
               const textAfter = fdCanvas.get_text();
-              if (textBefore !== textAfter) fdCanvas.push_undo_snapshot(textBefore, textAfter);
-              renderDirty = true; uiDirty = true;
+              if (textBefore !== textAfter)
+                fdCanvas.push_undo_snapshot(textBefore, textAfter);
+              renderDirty = true;
+              uiDirty = true;
               syncCanvasToEditor();
               updatePropertiesPanel();
               refreshLayersPanel();
@@ -4901,17 +5673,26 @@ async function initPlayground() {
       }
 
       // ── ⌘+Drop nest+center: reparent into highlighted container ──
-      if (cmdDragNestTarget && wasDragging && !canvasToLayersDone && (e.metaKey || e.ctrlKey)) {
+      if (
+        cmdDragNestTarget &&
+        wasDragging &&
+        !canvasToLayersDone &&
+        (e.metaKey || e.ctrlKey)
+      ) {
         const selectedId = fdCanvas.get_selected_id();
         if (selectedId && fdCanvas.reparent_into_centered) {
           const textBefore = fdCanvas.get_text();
-          const changed = fdCanvas.reparent_into_centered(selectedId, cmdDragNestTarget);
+          const changed = fdCanvas.reparent_into_centered(
+            selectedId,
+            cmdDragNestTarget,
+          );
           if (changed) {
             const textAfter = fdCanvas.get_text();
             if (textBefore !== textAfter) {
               fdCanvas.push_undo_snapshot(textBefore, textAfter);
             }
-            renderDirty = true; uiDirty = true;
+            renderDirty = true;
+            uiDirty = true;
             syncCanvasToEditor();
             updatePropertiesPanel();
             refreshLayersPanel();
@@ -4919,11 +5700,11 @@ async function initPlayground() {
           }
         }
       }
-      
+
       if (cmdDragNestTarget) {
-         if (!handAltCloneActive) {
-            CanvasTips.showContextTip('alt_clone', 'Alt+Drag to clone a shape');
-         }
+        if (!handAltCloneActive) {
+          CanvasTips.showContextTip("alt_clone", "Alt+Drag to clone a shape");
+        }
       }
 
       cmdDragNestTarget = null;
@@ -4933,17 +5714,23 @@ async function initPlayground() {
         const selectedId = fdCanvas.get_selected_id();
         if (selectedId && fdCanvas.center_node_in) {
           const textBefore = fdCanvas.get_text();
-          const changed = fdCanvas.center_node_in(selectedId, activeCenterSnap.target_id);
+          const changed = fdCanvas.center_node_in(
+            selectedId,
+            activeCenterSnap.target_id,
+          );
           if (changed) {
             const textAfter = fdCanvas.get_text();
             if (textBefore !== textAfter) {
               fdCanvas.push_undo_snapshot(textBefore, textAfter);
             }
-            renderDirty = true; uiDirty = true;
+            renderDirty = true;
+            uiDirty = true;
             syncCanvasToEditor();
             updatePropertiesPanel();
             refreshLayersPanel();
-            showToast(`Centered in @${activeCenterSnap.target_id}. Tip: Hold ⌘ while dragging to nest.`);
+            showToast(
+              `Centered in @${activeCenterSnap.target_id}. Tip: Hold ⌘ while dragging to nest.`,
+            );
           }
         }
       }
@@ -4952,12 +5739,18 @@ async function initPlayground() {
       const prevToolName = fdCanvas.get_tool_name();
 
       const resultJson = fdCanvas.handle_pointer_up(
-        x, y, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey
+        x,
+        y,
+        e.shiftKey,
+        e.ctrlKey,
+        e.altKey,
+        e.metaKey,
       );
       const result = JSON.parse(resultJson);
 
       if (result.changed || result.toolSwitched) {
-        renderDirty = true; uiDirty = true;
+        renderDirty = true;
+        uiDirty = true;
         syncCanvasToEditor();
         updatePropertiesPanel();
         refreshLayersPanel();
@@ -4968,29 +5761,45 @@ async function initPlayground() {
         const newId = fdCanvas.get_selected_id();
         if (newId) {
           try {
-            if (smartDefaults.fill) fdCanvas.set_node_prop('fill', smartDefaults.fill);
-            if (smartDefaults.stroke) fdCanvas.set_node_prop('stroke', smartDefaults.stroke);
-            if (smartDefaults.strokeWidth) fdCanvas.set_node_prop('strokeWidth', String(smartDefaults.strokeWidth));
-            if (smartDefaults.opacity != null && smartDefaults.opacity < 1) fdCanvas.set_node_prop('opacity', String(smartDefaults.opacity));
+            if (smartDefaults.fill)
+              fdCanvas.set_node_prop("fill", smartDefaults.fill);
+            if (smartDefaults.stroke)
+              fdCanvas.set_node_prop("stroke", smartDefaults.stroke);
+            if (smartDefaults.strokeWidth)
+              fdCanvas.set_node_prop(
+                "strokeWidth",
+                String(smartDefaults.strokeWidth),
+              );
+            if (smartDefaults.opacity != null && smartDefaults.opacity < 1)
+              fdCanvas.set_node_prop("opacity", String(smartDefaults.opacity));
             renderDirty = true;
             syncCanvasToEditor();
-          } catch (_) { /* prop not settable */ }
+          } catch (_) {
+            /* prop not settable */
+          }
         }
       }
 
       // Text tool: auto-open inline editor after node creation
-      if (result.toolSwitched && prevToolName === 'text') {
+      if (result.toolSwitched && prevToolName === "text") {
         const newId = fdCanvas.get_selected_id();
         if (newId) {
-          const container = document.getElementById('inline-overlay') || canvas.parentNode;
+          const container =
+            document.getElementById("inline-overlay") || canvas.parentNode;
           setTimeout(() => {
             coreOpenInlineEditor({
-              nodeId: newId, propKey: 'content',
-              currentValue: 'Text',
-              fdCanvas, canvasEl: canvas, container,
-              renderFn: renderCanvas, syncFn: syncCanvasToEditor,
+              nodeId: newId,
+              propKey: "content",
+              currentValue: "Text",
+              fdCanvas,
+              canvasEl: canvas,
+              container,
+              renderFn: renderCanvas,
+              syncFn: syncCanvasToEditor,
               updatePanelFn: updatePropertiesPanel,
-              panX, panY, zoomLevel,
+              panX,
+              panY,
+              zoomLevel,
             });
           }, 50);
         }
@@ -5002,10 +5811,15 @@ async function initPlayground() {
         if (lockedTool) {
           fdCanvas.set_tool(lockedTool);
           updateToolbar(lockedTool);
-          canvas.style.cursor = lockedTool === 'hand' ? 'grab' : (lockedTool === 'select' || lockedTool === 'eraser') ? '' : 'crosshair';
+          canvas.style.cursor =
+            lockedTool === "hand"
+              ? "grab"
+              : lockedTool === "select" || lockedTool === "eraser"
+                ? ""
+                : "crosshair";
         } else {
           updateToolbar(result.tool);
-          canvas.style.cursor = '';
+          canvas.style.cursor = "";
         }
       }
 
@@ -5013,7 +5827,7 @@ async function initPlayground() {
       if (handTempSelectActive && handTempSelectOriginalTool) {
         fdCanvas.set_tool(handTempSelectOriginalTool);
         updateToolbar(handTempSelectOriginalTool);
-        canvas.style.cursor = 'grab';
+        canvas.style.cursor = "grab";
       }
       handTempSelectActive = false;
       handTempSelectOriginalTool = null;
@@ -5021,11 +5835,11 @@ async function initPlayground() {
 
       // Re-apply modifier cursors if modifier keys still held after pointer-up
       // (Hand tool: ⌘ → select cursor, Alt → copy cursor; other tools: ⌘ → grab)
-      if (fdCanvas.get_tool_name() === 'hand') {
+      if (fdCanvas.get_tool_name() === "hand") {
         if (e.metaKey && !e.altKey) {
-          canvas.classList.add('modifier-cmd-select');
+          canvas.classList.add("modifier-cmd-select");
         } else if (e.altKey && !e.metaKey) {
-          canvas.classList.add('modifier-alt');
+          canvas.classList.add("modifier-alt");
         }
       }
 
@@ -5034,12 +5848,12 @@ async function initPlayground() {
       updatePropertiesPanel();
 
       // Hide dimension tooltip
-      const tip = document.getElementById('dimension-tooltip');
-      if (tip) tip.style.display = 'none';
+      const tip = document.getElementById("dimension-tooltip");
+      if (tip) tip.style.display = "none";
     });
 
     // Clean up on pointer cancel (mobile: app switch, incoming call, etc.)
-    canvas.addEventListener('pointercancel', (e) => {
+    canvas.addEventListener("pointercancel", (e) => {
       activePointers.delete(e.pointerId);
       if ((isTwoFingerGesture || twoFingerPending) && activePointers.size < 2) {
         isTwoFingerGesture = false;
@@ -5059,23 +5873,35 @@ async function initPlayground() {
         }
         lassoActive = false;
         eraserActive = false;
-        canvas.style.cursor = '';
+        canvas.style.cursor = "";
         renderDirty = true;
       }
     });
 
-    canvas.addEventListener('pointerleave', (e) => {
+    canvas.addEventListener("pointerleave", (e) => {
       // Fallback: if pointer capture was lost (e.g. browser bug, OS gesture intercept)
       // and pointer exits with no buttons held, clean up any active interaction.
-      if (e.buttons === 0 && (panDragging || rightClickPending || zoomScrubActive || activePointerId !== -1)) {
+      if (
+        e.buttons === 0 &&
+        (panDragging ||
+          rightClickPending ||
+          zoomScrubActive ||
+          activePointerId !== -1)
+      ) {
         clearInteractionState();
       }
     });
 
-    canvas.addEventListener('pointerenter', (e) => {
+    canvas.addEventListener("pointerenter", (e) => {
       // Fallback: if pointer re-enters with no buttons held, the release was missed
       // outside the window while capture was inactive.
-      if (e.buttons === 0 && (panDragging || rightClickPending || zoomScrubActive || activePointerId !== -1)) {
+      if (
+        e.buttons === 0 &&
+        (panDragging ||
+          rightClickPending ||
+          zoomScrubActive ||
+          activePointerId !== -1)
+      ) {
         clearInteractionState();
       }
     });
@@ -5088,40 +5914,47 @@ async function initPlayground() {
       panX = mx - (mx - panX) * (zoomLevel / oldZoom);
       panY = my - (my - panY) * (zoomLevel / oldZoom);
       updateZoomIndicator();
-      renderDirty = true; uiDirty = true;
+      renderDirty = true;
+      uiDirty = true;
     }
 
-    canvas.addEventListener('wheel', (e) => {
-      // Ignore phantom trackpad momentum events that fire during app focus transitions
-      if (window.__fdSuppressWheel) {
-        e.preventDefault();
-        return;
-      }
+    canvas.addEventListener(
+      "wheel",
+      (e) => {
+        // Ignore phantom trackpad momentum events that fire during app focus transitions
+        if (window.__fdSuppressWheel) {
+          e.preventDefault();
+          return;
+        }
 
-      if (e.ctrlKey || e.metaKey) {
-        // Pinch-to-zoom on trackpad or Ctrl+scroll: always preventDefault
-        e.preventDefault();
-        const canvasRect = canvas.getBoundingClientRect();
-        const mx = e.clientX - canvasRect.left;
-        const my = e.clientY - canvasRect.top;
-        const factor = e.deltaY < 0 ? ZOOM_WHEEL_FACTOR : 1 / ZOOM_WHEEL_FACTOR;
-        zoomAtPoint(mx, my, factor);
-      } else {
-        // Two-finger scroll → pan
-        // Allow native macOS trackpad momentum events to flow through
-        // by not calling preventDefault() for non-zoom scroll
-        e.preventDefault();
-        panX -= e.deltaX;
-        panY -= e.deltaY;
-        renderDirty = true; uiDirty = true;
-      }
-    }, { passive: false });
+        if (e.ctrlKey || e.metaKey) {
+          // Pinch-to-zoom on trackpad or Ctrl+scroll: always preventDefault
+          e.preventDefault();
+          const canvasRect = canvas.getBoundingClientRect();
+          const mx = e.clientX - canvasRect.left;
+          const my = e.clientY - canvasRect.top;
+          const factor =
+            e.deltaY < 0 ? ZOOM_WHEEL_FACTOR : 1 / ZOOM_WHEEL_FACTOR;
+          zoomAtPoint(mx, my, factor);
+        } else {
+          // Two-finger scroll → pan
+          // Allow native macOS trackpad momentum events to flow through
+          // by not calling preventDefault() for non-zoom scroll
+          e.preventDefault();
+          panX -= e.deltaX;
+          panY -= e.deltaY;
+          renderDirty = true;
+          uiDirty = true;
+        }
+      },
+      { passive: false },
+    );
 
     // ── Touch Gestures (inertia, 3-finger undo/redo, long-press, pencil) ──
     const touchApi = {
       getFdCanvas: () => fdCanvas,
-      markRenderDirty: () => renderDirty = true,
-      markUiDirty: () => uiDirty = true,
+      markRenderDirty: () => (renderDirty = true),
+      markUiDirty: () => (uiDirty = true),
       syncCanvasToEditor,
       showToast,
       copySelectedAsFd,
@@ -5132,11 +5965,17 @@ async function initPlayground() {
       toggleFullscreen,
       fitToContent: (c) => fitToContent(c),
       getZoomLevel: () => zoomLevel,
-      setZoomLevel: (z) => { zoomLevel = z; },
+      setZoomLevel: (z) => {
+        zoomLevel = z;
+      },
       getPanX: () => panX,
       getPanY: () => panY,
-      setPanX: (x) => { panX = x; },
-      setPanY: (y) => { panY = y; },
+      setPanX: (x) => {
+        panX = x;
+      },
+      setPanY: (y) => {
+        panY = y;
+      },
       getZoomMin: () => ZOOM_MIN,
       getZoomMax: () => ZOOM_MAX,
       getReduceMotion: () => reduceMotion,
@@ -5144,7 +5983,10 @@ async function initPlayground() {
     setupTouchGesturesModule(canvas, touchApi);
 
     // ── Apple Pencil Pro squeeze detection ──
-    setupApplePencilProModule(canvas, { getFdCanvas: () => fdCanvas, updateToolbar });
+    setupApplePencilProModule(canvas, {
+      getFdCanvas: () => fdCanvas,
+      updateToolbar,
+    });
 
     // ── Tool Toolbar (floating) ────────────────────────────────────
     toolbarApi = initToolbar({
@@ -5156,14 +5998,26 @@ async function initPlayground() {
       getZoomLevel: () => zoomLevel,
       getSmartDefaults: () => smartDefaults,
       getLockedTool: () => lockedTool,
-      setLockedTool: (t) => { lockedTool = t; },
+      setLockedTool: (t) => {
+        lockedTool = t;
+      },
       getLastToolBtnTime: () => lastToolBtnTime,
-      setLastToolBtnTime: (t) => { lastToolBtnTime = t; },
+      setLastToolBtnTime: (t) => {
+        lastToolBtnTime = t;
+      },
       getLastToolBtnName: () => lastToolBtnName,
-      setLastToolBtnName: (n) => { lastToolBtnName = n; },
-      setDtcPreview: (p) => { dtcPreview = p; },
-      markRenderDirty: () => { renderDirty = true; },
-      markUiDirty: () => { uiDirty = true; },
+      setLastToolBtnName: (n) => {
+        lastToolBtnName = n;
+      },
+      setDtcPreview: (p) => {
+        dtcPreview = p;
+      },
+      markRenderDirty: () => {
+        renderDirty = true;
+      },
+      markUiDirty: () => {
+        uiDirty = true;
+      },
       renderCanvas: () => renderCanvas(),
       syncCanvasToEditor: syncCanvasToEditor,
       refreshLayersPanel: refreshLayersPanel,
@@ -5173,64 +6027,94 @@ async function initPlayground() {
       toggleRightPanel: toggleRightPanel,
       adjustMinimapForToolbar: adjustMinimapForToolbar,
       screenToScene: screenToScene,
-      focusOnNode: focusOnNode
+      focusOnNode: focusOnNode,
     });
 
     // ── Floating Action Bar ─────────────────────────────────────────
-    document.getElementById('fab-fill')?.addEventListener('input', (e) => {
+    document.getElementById("fab-fill")?.addEventListener("input", (e) => {
       if (!fdCanvas) return;
-      fdCanvas.set_node_prop('fill', e.target.value);
+      fdCanvas.set_node_prop("fill", e.target.value);
       smartDefaults.fill = e.target.value;
-      try { localStorage.setItem('fd-smart-defaults', JSON.stringify(smartDefaults)); } catch (_) {}
+      try {
+        localStorage.setItem(
+          "fd-smart-defaults",
+          JSON.stringify(smartDefaults),
+        );
+      } catch (_) {}
       renderCanvas();
       syncCanvasToEditor();
     });
-    document.getElementById('fab-stroke')?.addEventListener('input', (e) => {
+    document.getElementById("fab-stroke")?.addEventListener("input", (e) => {
       if (!fdCanvas) return;
-      fdCanvas.set_node_prop('strokeColor', e.target.value);
+      fdCanvas.set_node_prop("strokeColor", e.target.value);
       smartDefaults.stroke = e.target.value;
-      try { localStorage.setItem('fd-smart-defaults', JSON.stringify(smartDefaults)); } catch (_) {}
+      try {
+        localStorage.setItem(
+          "fd-smart-defaults",
+          JSON.stringify(smartDefaults),
+        );
+      } catch (_) {}
       renderCanvas();
       syncCanvasToEditor();
     });
-    document.getElementById('fab-stroke-w')?.addEventListener('input', (e) => {
+    document.getElementById("fab-stroke-w")?.addEventListener("input", (e) => {
       if (!fdCanvas) return;
-      fdCanvas.set_node_prop('strokeWidth', e.target.value);
+      fdCanvas.set_node_prop("strokeWidth", e.target.value);
       smartDefaults.strokeWidth = parseFloat(e.target.value) || 2.5;
-      try { localStorage.setItem('fd-smart-defaults', JSON.stringify(smartDefaults)); } catch (_) {}
+      try {
+        localStorage.setItem(
+          "fd-smart-defaults",
+          JSON.stringify(smartDefaults),
+        );
+      } catch (_) {}
       renderCanvas();
       syncCanvasToEditor();
     });
-    document.getElementById('fab-opacity')?.addEventListener('input', (e) => {
+    document.getElementById("fab-opacity")?.addEventListener("input", (e) => {
       if (!fdCanvas) return;
-      fdCanvas.set_node_prop('opacity', e.target.value);
+      fdCanvas.set_node_prop("opacity", e.target.value);
       smartDefaults.opacity = parseFloat(e.target.value);
-      try { localStorage.setItem('fd-smart-defaults', JSON.stringify(smartDefaults)); } catch (_) {}
-      const valEl = document.getElementById('fab-opacity-val');
-      if (valEl) valEl.textContent = Math.round(parseFloat(e.target.value) * 100) + '%';
+      try {
+        localStorage.setItem(
+          "fd-smart-defaults",
+          JSON.stringify(smartDefaults),
+        );
+      } catch (_) {}
+      const valEl = document.getElementById("fab-opacity-val");
+      if (valEl)
+        valEl.textContent = Math.round(parseFloat(e.target.value) * 100) + "%";
       renderCanvas();
       syncCanvasToEditor();
     });
-    document.getElementById('fab-delete')?.addEventListener('click', () => {
+    document.getElementById("fab-delete")?.addEventListener("click", () => {
       if (!fdCanvas) return;
-      fdCanvas.handle_key('Backspace', false, false, false, false);
+      fdCanvas.handle_key("Backspace", false, false, false, false);
       renderCanvas();
       syncCanvasToEditor();
-      document.getElementById('floating-action-bar')?.classList.remove('visible');
+      document
+        .getElementById("floating-action-bar")
+        ?.classList.remove("visible");
     });
 
     // ── Keyboard Shortcuts ────────────────────────────────────────────
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener("keydown", (e) => {
       if (!fdCanvas) return;
-      const isInputFocused = document.activeElement && ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
-      const isEditingInput = (editorView?.hasFocus ?? false) || isInputFocused || coreInlineEditorActive;
+      const isInputFocused =
+        document.activeElement &&
+        ["INPUT", "TEXTAREA"].includes(document.activeElement.tagName);
+      const isEditingInput =
+        (editorView?.hasFocus ?? false) ||
+        isInputFocused ||
+        coreInlineEditorActive;
 
       // Space → pan mode
-      if (e.code === 'Space' && !e.repeat && !isEditingInput) {
+      if (e.code === "Space" && !e.repeat && !isEditingInput) {
         isPanning = true;
-        canvas.style.cursor = 'grab';
+        canvas.style.cursor = "grab";
         // Highlight Hand button in toolbar
-        document.querySelector('.ft-tool-btn[data-tool="hand"]')?.classList.add('pan-active');
+        document
+          .querySelector('.ft-tool-btn[data-tool="hand"]')
+          ?.classList.add("pan-active");
         e.preventDefault();
         return;
       }
@@ -5238,24 +6122,43 @@ async function initPlayground() {
       // Tool-aware modifier cursors:
       // Hand+Cmd → default/pointer (select preview), other+Cmd → grab (pan preview)
       // Alt → copy cursor on all tools
-      if (e.key === 'Meta') {
-        canvas.classList.remove('modifier-cmd', 'modifier-alt', 'modifier-cmd-select');
-        canvas.classList.add('modifier-cmd-select'); // default cursor for select preview
+      if (e.key === "Meta") {
+        canvas.classList.remove(
+          "modifier-cmd",
+          "modifier-alt",
+          "modifier-cmd-select",
+        );
+        canvas.classList.add("modifier-cmd-select"); // default cursor for select preview
       }
-      if (e.key === 'Alt') {
-        canvas.classList.remove('modifier-cmd', 'modifier-alt', 'modifier-cmd-select');
-        canvas.classList.add('modifier-alt');
+      if (e.key === "Alt") {
+        canvas.classList.remove(
+          "modifier-cmd",
+          "modifier-alt",
+          "modifier-cmd-select",
+        );
+        canvas.classList.add("modifier-alt");
       }
       // Insert menu toggle (⌘/ or Ctrl+/)
-      if ((e.metaKey || e.ctrlKey) && e.key === '/' && !e.shiftKey && !e.altKey) {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key === "/" &&
+        !e.shiftKey &&
+        !e.altKey
+      ) {
         e.preventDefault();
-        const imBtn = document.getElementById('insert-btn');
+        const imBtn = document.getElementById("insert-btn");
         if (imBtn) imBtn.click();
         return;
       }
 
       // Grid toggle (G key)
-      if (!isEditingInput && e.key.toLowerCase() === 'g' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (
+        !isEditingInput &&
+        e.key.toLowerCase() === "g" &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey
+      ) {
         gridEnabled = !gridEnabled;
         renderCanvas();
         e.preventDefault();
@@ -5263,33 +6166,59 @@ async function initPlayground() {
       }
 
       // Reduce Motion toggle (Shift+M)
-      if (!isEditingInput && e.key === 'M' && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        const manual = localStorage.getItem('fd-reduce-motion') === 'true';
-        localStorage.setItem('fd-reduce-motion', manual ? 'false' : 'true');
+      if (
+        !isEditingInput &&
+        e.key === "M" &&
+        e.shiftKey &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey
+      ) {
+        const manual = localStorage.getItem("fd-reduce-motion") === "true";
+        localStorage.setItem("fd-reduce-motion", manual ? "false" : "true");
         reduceMotion = !manual || prefersReducedMotion.matches;
-        document.body.classList.toggle('reduce-motion', !manual);
-        showToast(reduceMotion ? 'Reduce Motion: ON' : 'Reduce Motion: OFF');
+        document.body.classList.toggle("reduce-motion", !manual);
+        showToast(reduceMotion ? "Reduce Motion: ON" : "Reduce Motion: OFF");
         e.preventDefault();
         return;
       }
 
       // Tool shortcuts (only when canvas focused)
       if (!isEditingInput && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        const toolMap = { v:'select', r:'rect', o:'ellipse', e:'ellipse', x:'eraser', t:'text', a:'arrow', p:'pen', f:'frame', h:'hand' };
+        const toolMap = {
+          v: "select",
+          r: "rect",
+          o: "ellipse",
+          e: "ellipse",
+          x: "eraser",
+          t: "text",
+          a: "arrow",
+          p: "pen",
+          f: "frame",
+          h: "hand",
+        };
         const tool = toolMap[e.key.toLowerCase()];
         if (tool) {
           const now = performance.now();
           // Double-press = lock tool (sticky mode)
           if (tool === lastToolKeyName && now - lastToolKeyTime < 300) {
             lockedTool = tool;
-            document.querySelector('.ft-tool-btn.tool-locked')?.classList.remove('tool-locked');
-            document.querySelector(`.ft-tool-btn[data-tool="${tool}"]`)?.classList.add('tool-locked');
-            showToast(`🔒 ${tool.charAt(0).toUpperCase() + tool.slice(1)} tool locked`);
+            document
+              .querySelector(".ft-tool-btn.tool-locked")
+              ?.classList.remove("tool-locked");
+            document
+              .querySelector(`.ft-tool-btn[data-tool="${tool}"]`)
+              ?.classList.add("tool-locked");
+            showToast(
+              `🔒 ${tool.charAt(0).toUpperCase() + tool.slice(1)} tool locked`,
+            );
             lastToolKeyTime = 0;
           } else {
             // Single press = select tool, unlock if different
-            if (lockedTool && (tool !== lockedTool || tool === 'select')) {
-              document.querySelector('.ft-tool-btn.tool-locked')?.classList.remove('tool-locked');
+            if (lockedTool && (tool !== lockedTool || tool === "select")) {
+              document
+                .querySelector(".ft-tool-btn.tool-locked")
+                ?.classList.remove("tool-locked");
               lockedTool = null;
             }
             lastToolKeyTime = now;
@@ -5297,14 +6226,22 @@ async function initPlayground() {
           }
           fdCanvas.set_tool(tool);
           updateToolbar(tool);
-          canvas.style.cursor = tool === 'hand' ? 'grab' : (tool === 'select' || tool === 'eraser') ? '' : 'crosshair';
+          canvas.style.cursor =
+            tool === "hand"
+              ? "grab"
+              : tool === "select" || tool === "eraser"
+                ? ""
+                : "crosshair";
           e.preventDefault();
           return;
         }
       }
 
       // ── Arrow-key nudge (Figma/Sketch standard) ──
-      if (!isEditingInput && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+      if (
+        !isEditingInput &&
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)
+      ) {
         const selectedId = fdCanvas.get_selected_id();
         if (selectedId && !e.metaKey && !e.ctrlKey && !e.altKey) {
           e.preventDefault();
@@ -5317,33 +6254,64 @@ async function initPlayground() {
       // ── Type-to-create: FigJam-style text entry on selected node/edge ──
       // When Select tool is active and a shape/edge is selected, pressing a
       // printable character opens the inline editor (creating text if needed).
-      if (!isEditingInput && !e.metaKey && !e.ctrlKey && !e.altKey
-          && e.key.length === 1 && !e.repeat) {
+      if (
+        !isEditingInput &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        e.key.length === 1 &&
+        !e.repeat
+      ) {
         // Skip keys handled above as tool shortcuts
-        const toolKeys = new Set(['v','r','o','e','x','t','a','p','f','h','l','g','0']);
+        const toolKeys = new Set([
+          "v",
+          "r",
+          "o",
+          "e",
+          "x",
+          "t",
+          "a",
+          "p",
+          "f",
+          "h",
+          "l",
+          "g",
+          "0",
+        ]);
         if (!toolKeys.has(e.key.toLowerCase())) {
           const selectedId = fdCanvas.get_selected_id();
           if (selectedId) {
-            const kind = fdCanvas.get_node_kind ? fdCanvas.get_node_kind(selectedId) : '';
-            const isShape = kind === 'rect' || kind === 'ellipse' || kind === 'frame';
-            const isEdge = kind === 'edge';
-            const isText = kind === 'text';
+            const kind = fdCanvas.get_node_kind
+              ? fdCanvas.get_node_kind(selectedId)
+              : "";
+            const isShape =
+              kind === "rect" || kind === "ellipse" || kind === "frame";
+            const isEdge = kind === "edge";
+            const isText = kind === "text";
 
             if (isShape || isEdge || isText) {
               e.preventDefault();
-              const container = document.getElementById('inline-overlay') || canvas.parentNode;
+              const container =
+                document.getElementById("inline-overlay") || canvas.parentNode;
 
               if (isText) {
                 // Edit existing text node directly
                 const propsJson = fdCanvas.get_selected_node_props();
                 const props = JSON.parse(propsJson);
                 coreOpenInlineEditor({
-                  nodeId: selectedId, propKey: 'content',
-                  currentValue: props.content || '',
+                  nodeId: selectedId,
+                  propKey: "content",
+                  currentValue: props.content || "",
                   initialChar: e.key,
-                  fdCanvas, canvasEl: canvas, container,
-                  renderFn: renderCanvas, syncFn: syncCanvasToEditor, updatePanelFn: updatePropertiesPanel,
-                  panX, panY, zoomLevel,
+                  fdCanvas,
+                  canvasEl: canvas,
+                  container,
+                  renderFn: renderCanvas,
+                  syncFn: syncCanvasToEditor,
+                  updatePanelFn: updatePropertiesPanel,
+                  panX,
+                  panY,
+                  zoomLevel,
                 });
               } else if (isShape) {
                 const existingTextId = fdCanvas.get_text_child_id(selectedId);
@@ -5353,50 +6321,81 @@ async function initPlayground() {
                   const childPropsJson = fdCanvas.get_selected_node_props();
                   const childProps = JSON.parse(childPropsJson);
                   coreOpenInlineEditor({
-                    nodeId: existingTextId, propKey: 'content',
-                    currentValue: childProps.content || '',
+                    nodeId: existingTextId,
+                    propKey: "content",
+                    currentValue: childProps.content || "",
                     initialChar: e.key,
-                    fdCanvas, canvasEl: canvas, container,
-                    renderFn: renderCanvas, syncFn: syncCanvasToEditor, updatePanelFn: updatePropertiesPanel,
-                    panX, panY, zoomLevel,
+                    fdCanvas,
+                    canvasEl: canvas,
+                    container,
+                    renderFn: renderCanvas,
+                    syncFn: syncCanvasToEditor,
+                    updatePanelFn: updatePropertiesPanel,
+                    panX,
+                    panY,
+                    zoomLevel,
                     parentShapeId: selectedId,
                   });
                 } else {
                   // Lazy-create text child in shape
                   coreOpenInlineEditor({
-                    nodeId: null, propKey: 'content', currentValue: '',
+                    nodeId: null,
+                    propKey: "content",
+                    currentValue: "",
                     initialChar: e.key,
-                    createCtx: { type: 'child', parentShapeId: selectedId },
-                    fdCanvas, canvasEl: canvas, container,
-                    renderFn: renderCanvas, syncFn: syncCanvasToEditor, updatePanelFn: updatePropertiesPanel,
-                    panX, panY, zoomLevel,
+                    createCtx: { type: "child", parentShapeId: selectedId },
+                    fdCanvas,
+                    canvasEl: canvas,
+                    container,
+                    renderFn: renderCanvas,
+                    syncFn: syncCanvasToEditor,
+                    updatePanelFn: updatePropertiesPanel,
+                    panX,
+                    panY,
+                    zoomLevel,
                     parentShapeId: selectedId,
                   });
                 }
               } else if (isEdge) {
-                const existingTextId = fdCanvas.get_edge_text_child_id(selectedId);
+                const existingTextId =
+                  fdCanvas.get_edge_text_child_id(selectedId);
                 if (existingTextId) {
                   // Edit existing edge label
                   fdCanvas.select_by_id(existingTextId);
                   const childPropsJson = fdCanvas.get_selected_node_props();
                   const childProps = JSON.parse(childPropsJson);
                   coreOpenInlineEditor({
-                    nodeId: existingTextId, propKey: 'content',
-                    currentValue: childProps.content || '',
+                    nodeId: existingTextId,
+                    propKey: "content",
+                    currentValue: childProps.content || "",
                     initialChar: e.key,
-                    fdCanvas, canvasEl: canvas, container,
-                    renderFn: renderCanvas, syncFn: syncCanvasToEditor, updatePanelFn: updatePropertiesPanel,
-                    panX, panY, zoomLevel,
+                    fdCanvas,
+                    canvasEl: canvas,
+                    container,
+                    renderFn: renderCanvas,
+                    syncFn: syncCanvasToEditor,
+                    updatePanelFn: updatePropertiesPanel,
+                    panX,
+                    panY,
+                    zoomLevel,
                   });
                 } else {
                   // Lazy-create edge label
                   coreOpenInlineEditor({
-                    nodeId: null, propKey: 'content', currentValue: '',
+                    nodeId: null,
+                    propKey: "content",
+                    currentValue: "",
                     initialChar: e.key,
-                    createCtx: { type: 'edge', edgeId: selectedId },
-                    fdCanvas, canvasEl: canvas, container,
-                    renderFn: renderCanvas, syncFn: syncCanvasToEditor, updatePanelFn: updatePropertiesPanel,
-                    panX, panY, zoomLevel,
+                    createCtx: { type: "edge", edgeId: selectedId },
+                    fdCanvas,
+                    canvasEl: canvas,
+                    container,
+                    renderFn: renderCanvas,
+                    syncFn: syncCanvasToEditor,
+                    updatePanelFn: updatePropertiesPanel,
+                    panX,
+                    panY,
+                    zoomLevel,
                   });
                 }
               }
@@ -5407,59 +6406,93 @@ async function initPlayground() {
       }
 
       // Delete (only when canvas focused)
-      if (!isEditingInput && (e.key === 'Delete' || e.key === 'Backspace')) {
-        const r = JSON.parse(fdCanvas.handle_key(e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey));
+      if (!isEditingInput && (e.key === "Delete" || e.key === "Backspace")) {
+        const r = JSON.parse(
+          fdCanvas.handle_key(
+            e.key,
+            e.ctrlKey,
+            e.shiftKey,
+            e.altKey,
+            e.metaKey,
+          ),
+        );
         if (r.changed) {
           renderCanvas();
           syncCanvasToEditor();
         }
-        document.getElementById('floating-action-bar')?.classList.remove('visible');
+        document
+          .getElementById("floating-action-bar")
+          ?.classList.remove("visible");
         e.preventDefault();
         return;
       }
 
       // ── Copy (⌘C / Ctrl+C) ──
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c' && !e.shiftKey && !e.altKey && !isEditingInput) {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key.toLowerCase() === "c" &&
+        !e.shiftKey &&
+        !e.altKey &&
+        !isEditingInput
+      ) {
         e.preventDefault();
         copySelectedAsFd();
         return;
       }
 
       // ── Cut (⌘X / Ctrl+X) ──
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'x' && !e.shiftKey && !e.altKey && !isEditingInput) {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key.toLowerCase() === "x" &&
+        !e.shiftKey &&
+        !e.altKey &&
+        !isEditingInput
+      ) {
         e.preventDefault();
         cutSelectedAsFd();
         return;
       }
 
       // ── Paste (⌘V / Ctrl+V) ──
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'v' && !e.shiftKey && !e.altKey && !isEditingInput) {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key.toLowerCase() === "v" &&
+        !e.shiftKey &&
+        !e.altKey &&
+        !isEditingInput
+      ) {
         e.preventDefault();
         pasteFromClipboard();
         return;
       }
 
       // ── Select All (⌘A / Ctrl+A) ──
-      if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'a') && !e.shiftKey && !isEditingInput) {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key.toLowerCase() === "a" &&
+        !e.shiftKey &&
+        !isEditingInput
+      ) {
         e.preventDefault();
         const count = fdCanvas.select_all();
-        renderDirty = true; uiDirty = true;
+        renderDirty = true;
+        uiDirty = true;
         if (count > 0) showToast(`Selected all (${count})`);
         return;
       }
 
       // ── Zoom shortcuts (⌘+/⌘-/⌘0) ──
-      if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "=" || e.key === "+")) {
         e.preventDefault();
         applyZoomCenter(zoomLevel * 1.25);
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === '-') {
+      if ((e.metaKey || e.ctrlKey) && e.key === "-") {
         e.preventDefault();
         applyZoomCenter(zoomLevel / 1.25);
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === '0') {
+      if ((e.metaKey || e.ctrlKey) && e.key === "0") {
         e.preventDefault();
         fitToContent(canvas);
         renderCanvas();
@@ -5468,7 +6501,11 @@ async function initPlayground() {
       }
 
       // ── Duplicate (⌘D / Ctrl+D) ──
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd' && !isEditingInput) {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key.toLowerCase() === "d" &&
+        !isEditingInput
+      ) {
         e.preventDefault();
         if (fdCanvas) {
           const changed = fdCanvas.duplicate_selected();
@@ -5483,7 +6520,7 @@ async function initPlayground() {
       }
 
       // Undo/Redo (always — override textarea undo)
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
         const changed = e.shiftKey ? fdCanvas.redo() : fdCanvas.undo();
         if (changed) {
@@ -5496,18 +6533,31 @@ async function initPlayground() {
       // Forward remaining keys to WASM (when canvas focused)
       if (!isEditingInput) {
         try {
-          const r = JSON.parse(fdCanvas.handle_key(e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey));
+          const r = JSON.parse(
+            fdCanvas.handle_key(
+              e.key,
+              e.ctrlKey,
+              e.shiftKey,
+              e.altKey,
+              e.metaKey,
+            ),
+          );
 
           // Handle export actions returned from WASM
-          if (r.action === 'lockSelection') {
+          if (r.action === "lockSelection") {
             e.preventDefault();
-            if (fdCanvas && fdCanvas.get_selected_ids && fdCanvas.toggle_node_locked) {
+            if (
+              fdCanvas &&
+              fdCanvas.get_selected_ids &&
+              fdCanvas.toggle_node_locked
+            ) {
               const ids = JSON.parse(fdCanvas.get_selected_ids());
               if (ids.length > 0) {
                 for (const id of ids) {
                   fdCanvas.toggle_node_locked(id);
                 }
-                renderDirty = true; uiDirty = true;
+                renderDirty = true;
+                uiDirty = true;
                 syncCanvasToEditor();
                 updatePropertiesPanel();
                 refreshLayersPanel();
@@ -5517,24 +6567,27 @@ async function initPlayground() {
             return;
           }
 
-          if (r.action === 'exportExcalidraw') {
+          if (r.action === "exportExcalidraw") {
             e.preventDefault();
             try {
               const json = fdCanvas.export_excalidraw();
-              navigator.clipboard.writeText(json).then(() => {
-                showToast('✦ Excalidraw JSON copied to clipboard');
-              }).catch(() => {
-                showToast('Failed to copy — check clipboard permissions');
-              });
+              navigator.clipboard
+                .writeText(json)
+                .then(() => {
+                  showToast("✦ Excalidraw JSON copied to clipboard");
+                })
+                .catch(() => {
+                  showToast("Failed to copy — check clipboard permissions");
+                });
             } catch (err) {
-              console.warn('Excalidraw export error:', err);
-              showToast('Export failed');
+              console.warn("Excalidraw export error:", err);
+              showToast("Export failed");
             }
             return;
           }
 
           // Handle zoomReset action (bare 0 key → 100%)
-          if (r.action === 'zoomReset') {
+          if (r.action === "zoomReset") {
             e.preventDefault();
             zoomLevel = 1.0;
             panX = 0;
@@ -5553,18 +6606,21 @@ async function initPlayground() {
       }
     });
 
-    document.addEventListener('keyup', (e) => {
-      if (e.code === 'Space') {
+    document.addEventListener("keyup", (e) => {
+      if (e.code === "Space") {
         isPanning = false;
-        if (!panDragging) canvas.style.cursor = '';
+        if (!panDragging) canvas.style.cursor = "";
         // Remove pan indicator from Hand button
-        document.querySelector('.ft-tool-btn[data-tool="hand"]')?.classList.remove('pan-active');
+        document
+          .querySelector('.ft-tool-btn[data-tool="hand"]')
+          ?.classList.remove("pan-active");
       }
       // Clear modifier cursors
-      if (e.key === 'Meta') canvas.classList.remove('modifier-cmd', 'modifier-cmd-select');
-      if (e.key === 'Alt') canvas.classList.remove('modifier-alt');
+      if (e.key === "Meta")
+        canvas.classList.remove("modifier-cmd", "modifier-cmd-select");
+      if (e.key === "Alt") canvas.classList.remove("modifier-alt");
       // Release Shift key tracker
-      if (e.key === 'Shift') {
+      if (e.key === "Shift") {
         modShiftHeld = false;
         renderDirty = true;
       }
@@ -5579,7 +6635,7 @@ async function initPlayground() {
     resizeObserver.observe(wrapper);
 
     // ── Minimap Click-to-Pan ───────────────────────────────────────────
-    const minimapCanvas = document.getElementById('minimap-canvas');
+    const minimapCanvas = document.getElementById("minimap-canvas");
     let mmDragging = false;
     const minimapPanTo = (e) => {
       const mc = minimapCanvas;
@@ -5598,15 +6654,17 @@ async function initPlayground() {
       renderCanvas();
       renderMinimap(canvas);
     };
-    minimapCanvas.addEventListener('pointerdown', (e) => {
+    minimapCanvas.addEventListener("pointerdown", (e) => {
       mmDragging = true;
       minimapCanvas.setPointerCapture(e.pointerId);
       minimapPanTo(e);
     });
-    minimapCanvas.addEventListener('pointermove', (e) => {
+    minimapCanvas.addEventListener("pointermove", (e) => {
       if (mmDragging) minimapPanTo(e);
     });
-    minimapCanvas.addEventListener('pointerup', () => { mmDragging = false; });
+    minimapCanvas.addEventListener("pointerup", () => {
+      mmDragging = false;
+    });
 
     // (Undo/Redo buttons removed — use keyboard shortcuts ⌘Z / ⇧⌘Z)
     // (Zoom pill removed — zoom is now in minimap pill)
@@ -5624,9 +6682,13 @@ async function initPlayground() {
       renderCanvas();
       renderMinimap(canvas);
     };
-    document.getElementById('zoom-in-btn').addEventListener('click', () => applyZoomCenter(zoomLevel * 1.25));
-    document.getElementById('zoom-out-btn').addEventListener('click', () => applyZoomCenter(zoomLevel / 1.25));
-    document.getElementById('zoom-reset-btn').addEventListener('click', () => {
+    document
+      .getElementById("zoom-in-btn")
+      .addEventListener("click", () => applyZoomCenter(zoomLevel * 1.25));
+    document
+      .getElementById("zoom-out-btn")
+      .addEventListener("click", () => applyZoomCenter(zoomLevel / 1.25));
+    document.getElementById("zoom-reset-btn").addEventListener("click", () => {
       // Smart Toggle: If already at 100%, fit to content. Otherwise, jump to 100%.
       if (Math.abs(zoomLevel - 1.0) < 0.01) {
         fitToContent(canvas);
@@ -5638,88 +6700,109 @@ async function initPlayground() {
       renderMinimap(canvas);
     });
 
-
-
     // ── Chrome Dropdowns (unified settings gear) ─────────────────────────
-    const settingsGearBtn = document.getElementById('settings-gear-btn');
-    const settingsDropdown = document.getElementById('settings-dropdown');
+    const settingsGearBtn = document.getElementById("settings-gear-btn");
+    const settingsDropdown = document.getElementById("settings-dropdown");
 
     function updateSettingsToggles() {
-      document.getElementById('sm-sketchy-toggle')?.classList.toggle('toggle-on', isSketchy);
-      document.getElementById('sm-grid-toggle')?.classList.toggle('toggle-on', gridEnabled);
-      document.getElementById('sm-xray-toggle')?.classList.toggle('toggle-on', xrayLabels);
-      document.getElementById('sm-motion-toggle')?.classList.toggle('toggle-on', reduceMotion);
-      document.getElementById('sm-tips-toggle')?.classList.toggle('toggle-on', CanvasTips.active);
+      document
+        .getElementById("sm-sketchy-toggle")
+        ?.classList.toggle("toggle-on", isSketchy);
+      document
+        .getElementById("sm-grid-toggle")
+        ?.classList.toggle("toggle-on", gridEnabled);
+      document
+        .getElementById("sm-xray-toggle")
+        ?.classList.toggle("toggle-on", xrayLabels);
+      document
+        .getElementById("sm-motion-toggle")
+        ?.classList.toggle("toggle-on", reduceMotion);
+      document
+        .getElementById("sm-tips-toggle")
+        ?.classList.toggle("toggle-on", CanvasTips.active);
     }
 
     // Settings gear dropdown (unified menu)
-    settingsGearBtn?.addEventListener('click', (e) => {
+    settingsGearBtn?.addEventListener("click", (e) => {
       e.stopPropagation();
       updateSettingsToggles();
-      settingsDropdown?.classList.toggle('visible');
-      document.getElementById('sidebar-dropdown')?.classList.remove('visible');
+      settingsDropdown?.classList.toggle("visible");
+      document.getElementById("sidebar-dropdown")?.classList.remove("visible");
     });
 
     // Close all dropdowns on click outside
-    document.addEventListener('pointerdown', (e) => {
-      const inside = e.target.closest('.chrome-dropdown') || e.target.closest('.chrome-btn') || e.target.closest('.chrome-dropdown-container');
+    document.addEventListener("pointerdown", (e) => {
+      const inside =
+        e.target.closest(".chrome-dropdown") ||
+        e.target.closest(".chrome-btn") ||
+        e.target.closest(".chrome-dropdown-container");
       if (!inside) {
-        settingsDropdown?.classList.remove('visible');
-        document.getElementById('share-dropdown')?.classList.remove('visible');
-        document.getElementById('sidebar-dropdown')?.classList.remove('visible');
+        settingsDropdown?.classList.remove("visible");
+        document.getElementById("share-dropdown")?.classList.remove("visible");
+        document
+          .getElementById("sidebar-dropdown")
+          ?.classList.remove("visible");
       }
     });
 
     // Handle chrome-dropdown-item clicks (settings + menu)
-    document.querySelectorAll('.chrome-dropdown-item').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    document.querySelectorAll(".chrome-dropdown-item").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
         e.stopPropagation();
-        const setting = btn.getAttribute('data-setting');
+        const setting = btn.getAttribute("data-setting");
         if (!setting) return; // Links handle themselves
         switch (setting) {
-          case 'sketchy':
+          case "sketchy":
             isSketchy = !isSketchy;
             if (fdCanvas) fdCanvas.set_sketchy_mode(isSketchy);
             break;
-          case 'grid':
+          case "grid":
             gridEnabled = !gridEnabled;
-            renderDirty = true; uiDirty = true;
+            renderDirty = true;
+            uiDirty = true;
             break;
-          case 'xray':
+          case "xray":
             xrayLabels = !xrayLabels;
-            renderDirty = true; uiDirty = true;
+            renderDirty = true;
+            uiDirty = true;
             break;
-          case 'reduce-motion': {
-            const manual = localStorage.getItem('fd-reduce-motion') === 'true';
-            localStorage.setItem('fd-reduce-motion', manual ? 'false' : 'true');
+          case "reduce-motion": {
+            const manual = localStorage.getItem("fd-reduce-motion") === "true";
+            localStorage.setItem("fd-reduce-motion", manual ? "false" : "true");
             reduceMotion = !manual || prefersReducedMotion.matches;
-            document.body.classList.toggle('reduce-motion', !manual);
-            showToast(reduceMotion ? 'Reduce Motion: ON' : 'Reduce Motion: OFF');
+            document.body.classList.toggle("reduce-motion", !manual);
+            showToast(
+              reduceMotion ? "Reduce Motion: ON" : "Reduce Motion: OFF",
+            );
             break;
           }
-          case 'show-tips': {
+          case "show-tips": {
             CanvasTips.active = !CanvasTips.active;
-            localStorage.setItem('fd-show-tips', CanvasTips.active ? 'true' : 'false');
+            localStorage.setItem(
+              "fd-show-tips",
+              CanvasTips.active ? "true" : "false",
+            );
             if (CanvasTips.active) {
-               CanvasTips.startPassive();
-               showToast('Canvas Tips: ON');
+              CanvasTips.startPassive();
+              showToast("Canvas Tips: ON");
             } else {
-               CanvasTips.hide();
-               if (CanvasTips.passiveInterval) {
-                 clearInterval(CanvasTips.passiveInterval);
-                 CanvasTips.passiveInterval = null;
-               }
-               showToast('Canvas Tips: OFF');
+              CanvasTips.hide();
+              if (CanvasTips.passiveInterval) {
+                clearInterval(CanvasTips.passiveInterval);
+                CanvasTips.passiveInterval = null;
+              }
+              showToast("Canvas Tips: OFF");
             }
             break;
           }
-          case 'fit': {
+          case "fit": {
             fitToContent(canvas);
-            settingsDropdown?.classList.remove('visible');
-            renderDirty = true; uiDirty = true;
+            settingsDropdown?.classList.remove("visible");
+            renderDirty = true;
+            uiDirty = true;
             return;
           }
-          case 'copy-png': {
+          case "copy-png": {
             if (!fdCanvas) break;
             const selBounds = fdCanvas.get_selection_bounds();
             let bx, by, bw, bh;
@@ -5727,66 +6810,81 @@ async function initPlayground() {
               [bx, by, bw, bh] = selBounds;
             } else {
               const sb = getSceneBounds();
-              if (!sb) { showToast('Nothing to export'); break; }
-              bx = sb.x; by = sb.y; bw = sb.w; bh = sb.h;
+              if (!sb) {
+                showToast("Nothing to export");
+                break;
+              }
+              bx = sb.x;
+              by = sb.y;
+              bw = sb.w;
+              bh = sb.h;
             }
             const dpr = window.devicePixelRatio || 1;
-            const offCanvas = document.createElement('canvas');
+            const offCanvas = document.createElement("canvas");
             offCanvas.width = Math.ceil(bw * dpr);
             offCanvas.height = Math.ceil(bh * dpr);
-            const offCtx = offCanvas.getContext('2d');
+            const offCtx = offCanvas.getContext("2d");
             offCtx.scale(dpr, dpr);
             fdCanvas.render_export(offCtx, -bx, -by);
             offCanvas.toBlob((blob) => {
-              if (!blob) { showToast('Export failed'); return; }
-              navigator.clipboard.write([
-                new ClipboardItem({ 'image/png': blob })
-              ]).then(() => showToast('Copied as PNG!'))
-                .catch(() => showToast('Clipboard blocked'));
-            }, 'image/png');
-            settingsMenu?.classList.remove('visible');
+              if (!blob) {
+                showToast("Export failed");
+                return;
+              }
+              navigator.clipboard
+                .write([new ClipboardItem({ "image/png": blob })])
+                .then(() => showToast("Copied as PNG!"))
+                .catch(() => showToast("Clipboard blocked"));
+            }, "image/png");
+            settingsMenu?.classList.remove("visible");
             return;
           }
-          case 'export-svg': {
+          case "export-svg": {
             if (!fdCanvas) break;
             const svgStr = fdCanvas.export_svg();
-            if (!svgStr) { showToast('Nothing to export'); break; }
-            const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+            if (!svgStr) {
+              showToast("Nothing to export");
+              break;
+            }
+            const blob = new Blob([svgStr], { type: "image/svg+xml" });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
+            const a = document.createElement("a");
             a.href = url;
-            a.download = 'fast-draft-export.svg';
+            a.download = "fast-draft-export.svg";
             a.click();
             URL.revokeObjectURL(url);
-            showToast('SVG downloaded!');
-            settingsMenu?.classList.remove('visible');
+            showToast("SVG downloaded!");
+            settingsMenu?.classList.remove("visible");
             return;
           }
-          case 'export-html': {
+          case "export-html": {
             if (!fdCanvas) break;
             try {
               const htmlStr = fdCanvas.export_html();
-              if (!htmlStr) { showToast('Nothing to export'); break; }
-              const blob = new Blob([htmlStr], { type: 'text/html' });
+              if (!htmlStr) {
+                showToast("Nothing to export");
+                break;
+              }
+              const blob = new Blob([htmlStr], { type: "text/html" });
               const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
+              const a = document.createElement("a");
               a.href = url;
-              a.download = 'fast-draft-export.html';
+              a.download = "fast-draft-export.html";
               a.click();
               URL.revokeObjectURL(url);
-              showToast('HTML page downloaded!');
+              showToast("HTML page downloaded!");
             } catch (err) {
-              console.warn('HTML export error:', err);
-              showToast('Export failed');
+              console.warn("HTML export error:", err);
+              showToast("Export failed");
             }
-            settingsMenu?.classList.remove('visible');
+            settingsMenu?.classList.remove("visible");
             return;
           }
-          case 'import-css': {
-            settingsMenu?.classList.remove('visible');
-            const fileInput = document.getElementById('css-file-input');
+          case "import-css": {
+            settingsMenu?.classList.remove("visible");
+            const fileInput = document.getElementById("css-file-input");
             if (!fileInput) break;
-            fileInput.value = '';
+            fileInput.value = "";
             fileInput.onchange = (ev) => {
               const file = ev.target.files?.[0];
               if (!file) return;
@@ -5795,24 +6893,30 @@ async function initPlayground() {
                 const cssText = re.target.result;
                 const fdStyles = parseCssToFdStyles(cssText);
                 if (fdStyles.length === 0) {
-                  showToast('No mappable CSS classes found');
+                  showToast("No mappable CSS classes found");
                   return;
                 }
-                const styleBlock = '# ─── Imported CSS Styles ───\n\n' + fdStyles.join('\n\n') + '\n\n';
+                const styleBlock =
+                  "# ─── Imported CSS Styles ───\n\n" +
+                  fdStyles.join("\n\n") +
+                  "\n\n";
                 if (editorView) {
                   const cur = editorView.state.doc.toString();
                   const newText = styleBlock + cur;
-                  editorView.dispatch({ changes: { from: 0, to: cur.length, insert: newText } });
+                  editorView.dispatch({
+                    changes: { from: 0, to: cur.length, insert: newText },
+                  });
                   if (fdCanvas) fdCanvas.set_text(newText);
                 }
-                showToast(`Imported ${fdStyles.length} style${fdStyles.length > 1 ? 's' : ''} from ${file.name}`);
+                showToast(
+                  `Imported ${fdStyles.length} style${fdStyles.length > 1 ? "s" : ""} from ${file.name}`,
+                );
               };
               reader.readAsText(file);
             };
             fileInput.click();
             return;
           }
-
         }
         updateSettingsToggles();
         renderCanvas();
@@ -5820,16 +6924,18 @@ async function initPlayground() {
     });
 
     // Theme toggle (in settings gear dropdown)
-    document.getElementById('sm-theme-toggle')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      isDark = !isDark;
-      if (fdCanvas) fdCanvas.set_theme(isDark);
-      wrapper.classList.toggle('dark-canvas', isDark);
-      localStorage.setItem('fd-canvas-theme', isDark ? 'dark' : 'light');
-      settingsDropdown?.classList.remove('visible');
-      renderDirty = true;
-      renderCanvas();
-    });
+    document
+      .getElementById("sm-theme-toggle")
+      ?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        isDark = !isDark;
+        if (fdCanvas) fdCanvas.set_theme(isDark);
+        wrapper.classList.toggle("dark-canvas", isDark);
+        localStorage.setItem("fd-canvas-theme", isDark ? "dark" : "light");
+        settingsDropdown?.classList.remove("visible");
+        renderDirty = true;
+        renderCanvas();
+      });
 
     // ── Search Panel → extracted to search.js ────────────────────────
     initSearchPanel({
@@ -5838,18 +6944,28 @@ async function initPlayground() {
       getEditorView: () => editorView,
       renderCanvas: () => renderCanvas(),
       getZoomLevel: () => zoomLevel,
-      setZoomLevel: (z) => { zoomLevel = z; },
+      setZoomLevel: (z) => {
+        zoomLevel = z;
+      },
       getPanX: () => panX,
       getPanY: () => panY,
-      setPanX: (x) => { panX = x; },
-      setPanY: (y) => { panY = y; },
+      setPanX: (x) => {
+        panX = x;
+      },
+      setPanY: (y) => {
+        panY = y;
+      },
       updateZoomIndicator,
-      setRenderDirty: (v) => { renderDirty = v; },
-      setUiDirty: (v) => { uiDirty = v; },
+      setRenderDirty: (v) => {
+        renderDirty = v;
+      },
+      setUiDirty: (v) => {
+        uiDirty = v;
+      },
     });
 
     // Undo/Redo buttons (in scroll toolbar)
-    document.getElementById('undo-btn')?.addEventListener('click', () => {
+    document.getElementById("undo-btn")?.addEventListener("click", () => {
       if (!fdCanvas) return;
       const changed = fdCanvas.undo();
       if (changed) {
@@ -5857,7 +6973,7 @@ async function initPlayground() {
         syncCanvasToEditor();
       }
     });
-    document.getElementById('redo-btn')?.addEventListener('click', () => {
+    document.getElementById("redo-btn")?.addEventListener("click", () => {
       if (!fdCanvas) return;
       const changed = fdCanvas.redo();
       if (changed) {
@@ -5871,38 +6987,40 @@ async function initPlayground() {
       getEditorView: () => editorView,
       showToast,
     });
-
   } catch (err) {
-    console.error('[FD] Failed to load WASM:', err);
-    const isTimeout = err.message && err.message.includes('timed out');
-    const errDetail = err.message ? `<code style="font-size:12px;opacity:0.7;display:block;margin-bottom:12px">${err.message}</code>` : '';
+    console.error("[FD] Failed to load WASM:", err);
+    const isTimeout = err.message && err.message.includes("timed out");
+    const errDetail = err.message
+      ? `<code style="font-size:12px;opacity:0.7;display:block;margin-bottom:12px">${err.message}</code>`
+      : "";
     const retryBtn = `<button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary,#1a1a2e);color:var(--text-primary,#fff);cursor:pointer;font-size:14px">↻ Retry</button>`;
     // Create error overlay dynamically (loading overlay was removed to avoid flash)
-    const errOverlay = document.createElement('div');
-    errOverlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--fd-bg,#F5F5F7);z-index:10';
+    const errOverlay = document.createElement("div");
+    errOverlay.style.cssText =
+      "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--fd-bg,#F5F5F7);z-index:10";
     errOverlay.innerHTML = `
       <p style="color: var(--text-secondary); text-align: center; max-width: 360px;">
-        <strong>${isTimeout ? 'Loading timed out' : 'Canvas couldn\u2019t start'}</strong><br><br>
+        <strong>${isTimeout ? "Loading timed out" : "Canvas couldn\u2019t start"}</strong><br><br>
         ${errDetail}
-        ${isTimeout ? 'This can happen on slow connections or behind corporate proxies.' : 'Try reloading the page.'}
+        ${isTimeout ? "This can happen on slow connections or behind corporate proxies." : "Try reloading the page."}
         If the issue persists, install the
         <a href="https://marketplace.visualstudio.com/items?itemName=khangnghiem.fast-draft" target="_blank">VS Code extension</a>
         for the full canvas experience.<br>
         ${retryBtn}
       </p>
     `;
-    document.getElementById('canvas-content')?.appendChild(errOverlay);
+    document.getElementById("canvas-content")?.appendChild(errOverlay);
   }
 }
 
 // Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initPlayground);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initPlayground);
 } else {
   initPlayground();
 }
 
-window.addEventListener('focus', () => {
+window.addEventListener("focus", () => {
   // Suppress phantom macOS trackpad inertia events immediately upon focus
   // to prevent wild canvas zoom/pan jumps from buffered background events
   window.__fdSuppressWheel = true;
@@ -5911,15 +7029,15 @@ window.addEventListener('focus', () => {
     window.__fdSuppressWheel = false;
   }, 150);
 
-  // macOS / Browser quirk: When regaining focus, devicePixelRatio or layout 
-  // bounds might have shifted while the app was backgrounded. Force a sync 
+  // macOS / Browser quirk: When regaining focus, devicePixelRatio or layout
+  // bounds might have shifted while the app was backgrounded. Force a sync
   // immediately to prevent coordinate drift on the first click.
-  if (typeof window.__fdResizeCanvas === 'function') {
+  if (typeof window.__fdResizeCanvas === "function") {
     window.__fdResizeCanvas();
-  } else if (typeof window.__fdResizeCanvasWithFit === 'function') {
+  } else if (typeof window.__fdResizeCanvasWithFit === "function") {
     window.__fdResizeCanvasWithFit();
   } else {
-    window.dispatchEvent(new Event('resize'));
+    window.dispatchEvent(new Event("resize"));
   }
 });
 
@@ -5943,38 +7061,42 @@ function clearInteractionState() {
   cmdDragNestTarget = null;
   handAltCloneActive = false;
   handTempSelectActive = false;
-  const canvasEl = document.getElementById('fd-canvas');
+  const canvasEl = document.getElementById("fd-canvas");
   if (canvasEl) {
-    canvasEl.classList.remove('modifier-cmd', 'modifier-alt', 'modifier-cmd-select');
+    canvasEl.classList.remove(
+      "modifier-cmd",
+      "modifier-alt",
+      "modifier-cmd-select",
+    );
     // Reset cursor to match the now-idle tool state
-    if (typeof fdCanvas !== 'undefined' && fdCanvas && fdCanvas.get_tool_name) {
-      canvasEl.style.cursor = fdCanvas.get_tool_name() === 'hand' ? 'grab' : '';
+    if (typeof fdCanvas !== "undefined" && fdCanvas && fdCanvas.get_tool_name) {
+      canvasEl.style.cursor = fdCanvas.get_tool_name() === "hand" ? "grab" : "";
     } else {
-      canvasEl.style.cursor = '';
+      canvasEl.style.cursor = "";
     }
   }
-  if (typeof fdCanvas !== 'undefined' && fdCanvas && fdCanvas.cancel_drag) {
+  if (typeof fdCanvas !== "undefined" && fdCanvas && fdCanvas.cancel_drag) {
     fdCanvas.cancel_drag();
   }
   renderDirty = true;
 }
 
-window.addEventListener('blur', clearInteractionState);
+window.addEventListener("blur", clearInteractionState);
 
 // iOS Safari uses visibilitychange instead of blur when swiping to the home screen
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
     clearInteractionState();
   }
 });
 
-window.addEventListener('beforeunload', () => {
+window.addEventListener("beforeunload", () => {
   if (!fdCanvas) return;
   try {
     fdCanvas.format_and_dedup(); // format-on-save
     const text = fdCanvas.get_text();
     if (text && text.trim().length > 0) {
-      localStorage.setItem('fd-document', text);
+      localStorage.setItem("fd-document", text);
     }
   } catch (_) {}
 });
