@@ -1,3 +1,8 @@
+## 2026-06-19 - XSS Vulnerability in Markdown Rendering in Specs Panel
+**Vulnerability:** Found an XSS vulnerability in `site/app.js` where untrusted markdown notes were rendered to HTML via `marked.parse` and directly appended to the DOM (`innerHTML`) without sanitization.
+**Learning:** Rendering markdown directly to HTML can execute script tags or other malicious payloads embedded within the markdown if the input is untrusted or user-controlled.
+**Prevention:** Always sanitize the resulting HTML from markdown parsers (e.g., using `DOMPurify.sanitize`) before inserting it into the DOM, taking care to preserve expected structural or functional attributes using `ADD_ATTR`.
+
 ## 2026-03-10 - Cross-Site Scripting (XSS) in Renamify Panel
 **Vulnerability:** Found an XSS vulnerability in `fd-vscode/src/webview-html.ts` where untrusted node IDs (`p.oldId` and `p.newId`) from the extension's `.fd` files were directly interpolated into `row.innerHTML` in the Renamify panel.
 **Learning:** Even though the source is internal extension files, untrusted input rendered directly as `innerHTML` causes an XSS injection risk.
