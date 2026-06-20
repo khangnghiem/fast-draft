@@ -14,3 +14,7 @@
 **Vulnerability:** Several `escapeHtml` implementations used DOM manipulation (`document.createElement('div').innerHTML`) or incomplete string replacement, failing to escape single and double quotes.
 **Learning:** Incomplete escaping allows XSS payloads to break out of HTML attributes (e.g., `<input value="${escapeHtml(userInput)}">`).
 **Prevention:** Always use `String(text)` cast combined with a comprehensive replace chain for `&`, `<`, `>`, `"`, and `'` (e.g., `&#039;`) in custom string escaping functions.
+## 2025-05-24 - [Fix XSS vulnerability in renderSpecsPanel]
+**Vulnerability:** XSS via innerHTML when rendering raw Markdown notes in the Specs Panel (`site/app.js`).
+**Learning:** `marked.parse()` generates raw HTML output and does not sanitize input natively. When assigning this HTML output to `innerHTML`, malicious input (like embedded `<script>` tags or inline event handlers) within the Markdown would execute in the victim's browser.
+**Prevention:** Always use `DOMPurify.sanitize()` when injecting dynamically generated HTML, specifically the output of a Markdown parser, into the DOM via `innerHTML`. Ensure `ADD_ATTR` is configured to allow necessary custom attributes, and provide a safe fallback or conditional check if the library is optionally loaded.
