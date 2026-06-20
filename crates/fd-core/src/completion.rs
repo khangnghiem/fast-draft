@@ -1,5 +1,6 @@
 use std::cmp::min;
 
+/// Represents the type/kind of an autocompletion item.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompletionKind {
     Keyword,
@@ -9,6 +10,7 @@ pub enum CompletionKind {
     Reference,
 }
 
+/// Data payload for a single autocompletion item.
 #[derive(Debug, Clone)]
 pub struct CompletionItemData {
     pub label: &'static str,
@@ -17,6 +19,7 @@ pub struct CompletionItemData {
     pub snippet: Option<&'static str>,
 }
 
+/// Returns the top-level completion items (e.g., node types, styles).
 pub fn top_level_items() -> Vec<CompletionItemData> {
     vec![
         CompletionItemData {
@@ -78,6 +81,7 @@ pub fn top_level_items() -> Vec<CompletionItemData> {
     ]
 }
 
+/// Returns completion items that are valid inside a node body (e.g., properties).
 pub fn node_body_items() -> Vec<CompletionItemData> {
     vec![
         CompletionItemData {
@@ -227,6 +231,7 @@ pub fn node_body_items() -> Vec<CompletionItemData> {
     ]
 }
 
+/// Returns available completion values for a specific property.
 pub fn value_completions_data(property: &str) -> Vec<CompletionItemData> {
     let values: &[(&str, &str)] = match property {
         "layout" => &[
@@ -295,6 +300,7 @@ pub fn value_completions_data(property: &str) -> Vec<CompletionItemData> {
     items
 }
 
+/// Computes the brace nesting depth at a given line and column.
 pub fn compute_brace_depth(text: &str, line: usize, col: usize) -> usize {
     let mut depth: i32 = 0;
     for (i, ln) in text.lines().enumerate() {
