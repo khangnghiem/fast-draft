@@ -412,11 +412,22 @@ export class FdSpecViewPanel {
     html += `<span class="kind-badge${isGeneric ? " spec" : ""}">${escapeHtml(kind || "spec")}</span>`;
     html += `</div>`;
 
-    const descriptions = annotations.filter((a) => a.type === "description");
-    const accepts = annotations.filter((a) => a.type === "accept");
-    const statuses = annotations.filter((a) => a.type === "status");
-    const priorities = annotations.filter((a) => a.type === "priority");
-    const tags = annotations.filter((a) => a.type === "tag");
+    // PERFORMANCE OPTIMIZATION:
+    // Single-pass iteration replaces five O(N) filter operations,
+    // reducing redundant iterations by ~80% for annotation parsing.
+    const descriptions: { type: string; value: string }[] = [];
+    const accepts: { type: string; value: string }[] = [];
+    const statuses: { type: string; value: string }[] = [];
+    const priorities: { type: string; value: string }[] = [];
+    const tags: { type: string; value: string }[] = [];
+
+    for (const a of annotations) {
+      if (a.type === "description") descriptions.push(a);
+      else if (a.type === "accept") accepts.push(a);
+      else if (a.type === "status") statuses.push(a);
+      else if (a.type === "priority") priorities.push(a);
+      else if (a.type === "tag") tags.push(a);
+    }
 
     for (const d of descriptions) {
       html += `<div class="description">${escapeHtml(d.value)}</div>`;
