@@ -1,0 +1,63 @@
+# Pen / Freehand Drawing Showcase
+# Demonstrates Catmull-Rom curves and multiple paths
+
+style title_text {
+  font: "Inter" bold 24
+  fill: #111827
+  align: center middle
+}
+
+style annotation_text {
+  font: "Inter" medium 14
+  fill: #6B7280
+  align: center middle
+}
+
+text @title "Pen Tool & Freehand Drawing" {
+  use: title_text
+  w: 400 h: 40
+}
+
+# Example 1: Catmull-Rom Curve
+# [auto] container (2 children)
+group @curve_example {
+  text @_curve_label "Smooth Catmull-Rom Curve" {
+    use: annotation_text
+    w: 200 h: 30
+  }
+
+  path @smooth_curve {
+    stroke: #3B82F6 4.0
+    d: M 0 100 C 50 20 150 20 200 100 C 250 180 350 180 400 100
+  }
+}
+
+# Example 2: Multiple Paths (Signature)
+# [auto] container (2 children)
+group @signature_example {
+  text @_sig_label "Multiple Disconnected Paths" {
+    use: annotation_text
+    w: 200 h: 30
+  }
+
+  path @signature {
+    stroke: #111827 3.0
+    d: M 50 20 C 80 20 80 80 50 100 C 20 100 20 60 20 60 M 120 20 L 120 100 M 120 20 C 180 20 180 100 120 100 M 200 60 C 220 20 250 20 260 60 C 270 100 220 100 240 50
+  }
+}
+
+# Example 3: Closed Shape
+# [auto] container (2 children)
+group @closed_shape {
+  text @_closed_label "Closed Freehand Shape" {
+    use: annotation_text
+    w: 200 h: 30
+  }
+
+  path @blob {
+    fill: #FCA5A5
+    stroke: #EF4444 4.0
+    opacity: 0.8
+    d: M 150 0 C 250 0 300 100 250 180 C 150 220 50 180 0 100 C -20 20 50 0 150 0 Z
+  }
+}
