@@ -1,3 +1,7 @@
+## 2026-06-25 - Prevent XSS Attribute Breakout in escHtml
+**Vulnerability:** The custom HTML escaping function `escHtml` in `site/layers.js` incorrectly omitted the single quote replacement entirely. This allowed for attribute breakout vulnerabilities when inserting untrusted input into single-quoted HTML attributes.
+**Learning:** All escape functions must include the single quote replacement to ensure completeness.
+**Prevention:** Consistently use `.replace(/'/g, '&#039;')` (or `&#39;`) alongside replacements for `&`, `<`, `>`, and `"` in all string escaping utilities designed to prevent XSS attribute breakout. Ensure inputs are cast to `String` first.
 ## 2026-03-10 - Cross-Site Scripting (XSS) in Renamify Panel
 **Vulnerability:** Found an XSS vulnerability in `fd-vscode/src/webview-html.ts` where untrusted node IDs (`p.oldId` and `p.newId`) from the extension's `.fd` files were directly interpolated into `row.innerHTML` in the Renamify panel.
 **Learning:** Even though the source is internal extension files, untrusted input rendered directly as `innerHTML` causes an XSS injection risk.
