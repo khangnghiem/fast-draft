@@ -10,7 +10,7 @@ export function initLayersPanel(api) {
     path: '〜', text: 'T', style: '◆', edge: '⟶', note: '◇', spec: '◇'
   };
   
-  function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
   
   /** Parse FD source into a hierarchical layer tree. */
   function parseLayerTree(source) {
