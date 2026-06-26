@@ -14,3 +14,8 @@
 **Vulnerability:** Several `escapeHtml` implementations used DOM manipulation (`document.createElement('div').innerHTML`) or incomplete string replacement, failing to escape single and double quotes.
 **Learning:** Incomplete escaping allows XSS payloads to break out of HTML attributes (e.g., `<input value="${escapeHtml(userInput)}">`).
 **Prevention:** Always use `String(text)` cast combined with a comprehensive replace chain for `&`, `<`, `>`, `"`, and `'` (e.g., `&#039;`) in custom string escaping functions.
+
+## 2025-06-26 - [Title] Fix attribute-based XSS by strictly escaping single quotes in custom HTML escape functions
+**Vulnerability:** Custom HTML escaping functions across the codebase (`escHtml` in `site/layers.js` and others) failed to cast input strings correctly and missed escaping single quotes (`'`). This left attributes vulnerable to XSS attacks (e.g. `data-node-id` getting a payload that breaks out using single quotes).
+**Learning:** Even simple string replacement functions designed for HTML escaping need to explicitly handle single quotes and securely cast inputs, as relying on missing character replacements creates XSS vectors within HTML attributes.
+**Prevention:** Always use `String(text)` in escape functions before replacing characters. Ensure that both double (`"`) and single quotes (`'`) are escaped; specifically, use `&#039;` for single quotes to ensure maximum browser compatibility.
