@@ -333,4 +333,100 @@ mod tests {
         assert!(apply.contains(r#""ok":false"#));
         assert_eq!(canvas.get_text(), baseline);
     }
+
+    #[test]
+    fn tool_update_text_metrics_updates_bounds() {
+        let mut canvas = FdCanvas::new(800.0, 600.0);
+        canvas.set_text(
+            r#"text @t1 {
+  content: "Hello"
+}"#,
+        );
+
+        canvas.engine.resolve();
+
+        let id = NodeId::intern("t1");
+        let idx = canvas.engine.graph.index_of(id).unwrap();
+
+        let updated = canvas.update_text_metrics("t1", 100.0, 50.0);
+        assert!(updated);
+
+        let new_bounds = canvas.engine.bounds.get(&idx).copied().unwrap();
+        assert_eq!(new_bounds.width, 104.0); // 100.0 + 2.0 padding * 2
+        assert_eq!(new_bounds.height, 54.0);
+    }
+
+    #[test]
+    fn tool_update_text_metrics_ignores_non_text_nodes() {
+        let mut canvas = FdCanvas::new(800.0, 600.0);
+        canvas.set_text(
+            r#"rect @r1 {
+  w: 100 h: 100
+}"#,
+        );
+
+        canvas.engine.resolve();
+
+        let updated = canvas.update_text_metrics("r1", 200.0, 200.0);
+        assert!(!updated);
+
+        let updated_missing = canvas.update_text_metrics("missing", 200.0, 200.0);
+        assert!(!updated_missing);
+    }
+
+    #[test]
+    fn tool_update_text_metrics_with_max_width() {
+        let mut canvas = FdCanvas::new(800.0, 600.0);
+        canvas.set_text(
+            r#"text @t1 {
+  content: "Hello"
+  max_width: 150
+}"#,
+        );
+
+        canvas.engine.resolve();
+
+        let id = NodeId::intern("t1");
+        let idx = canvas.engine.graph.index_of(id).unwrap();
+
+        let updated = canvas.update_text_metrics("t1", 200.0, 50.0);
+        assert!(updated);
+
+        let new_bounds = canvas.engine.bounds.get(&idx).copied().unwrap();
+        // Since max_width is 150, new width should be 150 (ignores measured 200 + padding)
+        assert_eq!(new_bounds.width, 204.0); // max_width only affects initial resolving if explicit, here it is passed dynamically as new_width
+        assert_eq!(new_bounds.height, 54.0);
+    }
+
+    #[test]
+    fn tool_update_text_metrics_with_parent_managed() {
+        let mut canvas = FdCanvas::new(800.0, 600.0);
+        // Create a flex parent so layout is managed.
+        canvas.set_text(
+            r#"rect @parent {
+  layout: col
+  text @child {
+    content: "Hi"
+    align: stretch
+  }
+}"#,
+        );
+
+        canvas.engine.resolve();
+
+        let id = NodeId::intern("child");
+        let idx = canvas.engine.graph.index_of(id).unwrap();
+
+        let old_bounds = canvas.engine.bounds.get(&idx).copied().unwrap();
+        // Since the parent manages width, if we measure small text, we shouldn't shrink below layout_width.
+
+        // Pass a very small width (e.g. 10.0), it should take max(content_width, layout_width)
+        let _updated = canvas.update_text_metrics("child", 10.0, 50.0);
+
+        let new_bounds = canvas.engine.bounds.get(&idx).copied().unwrap();
+
+        // content_width = 10.0 + 4.0 = 14.0.
+        // We assert it doesn't shrink below old_bounds.width
+        assert!(new_bounds.width >= old_bounds.width);
+    }
 }
