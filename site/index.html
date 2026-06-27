@@ -117,7 +117,7 @@
 
             <!-- ─── Top-Left Canvas Chrome ─── -->
             <div id="chrome-left" class="canvas-chrome canvas-chrome-left">
-              <button class="canvas-chrome-btn" id="sidebar-toggle-btn" title="Toggle sidebar (\)">
+              <button class="canvas-chrome-btn" id="sidebar-toggle-btn" title="Toggle sidebar (\)" aria-label="Toggle sidebar">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="14" height="12" rx="2"/><line x1="6" y1="2" x2="6" y2="14"/></svg>
               </button>
             </div>
@@ -126,7 +126,7 @@
             <div id="chrome-right" class="canvas-chrome canvas-chrome-right">
               <!-- Share dropdown -->
               <div class="chrome-dropdown-container" id="share-dropdown-container">
-                <button class="canvas-chrome-btn" id="share-btn-chrome" title="Share & Export">
+                <button class="canvas-chrome-btn" id="share-btn-chrome" title="Share & Export" aria-label="Share & Export">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2v8"/><path d="M4 6l4-4 4 4"/><path d="M13 10v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3"/></svg>
                 </button>
                 <div class="chrome-dropdown chrome-dropdown-right" id="share-dropdown">
@@ -138,7 +138,7 @@
               </div>
               <!-- Settings dropdown -->
               <div class="chrome-dropdown-container" id="settings-dropdown-container">
-                <button class="canvas-chrome-btn" id="settings-gear-btn" title="Settings">
+                <button class="canvas-chrome-btn" id="settings-gear-btn" title="Settings" aria-label="Settings">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.86 1.58a.5.5 0 0 1 .5-.42h1.28a.5.5 0 0 1 .5.42l.18 1.29a5.5 5.5 0 0 1 1.32.76l1.22-.4a.5.5 0 0 1 .6.22l.64 1.1a.5.5 0 0 1-.1.63l-1.04.89a5.5 5.5 0 0 1 0 1.53l1.04.89a.5.5 0 0 1 .1.63l-.64 1.1a.5.5 0 0 1-.6.22l-1.22-.4a5.5 5.5 0 0 1-1.32.76l-.18 1.29a.5.5 0 0 1-.5.42H7.36a.5.5 0 0 1-.5-.42l-.18-1.29a5.5 5.5 0 0 1-1.32-.76l-1.22.4a.5.5 0 0 1-.6-.22l-.64-1.1a.5.5 0 0 1 .1-.63l1.04-.89a5.5 5.5 0 0 1 0-1.53l-1.04-.89a.5.5 0 0 1-.1-.63l.64-1.1a.5.5 0 0 1 .6-.22l1.22.4a5.5 5.5 0 0 1 1.32-.76l.18-1.29Z"/><circle cx="8" cy="8" r="2.5"/></svg>
                 </button>
                 <div class="chrome-dropdown chrome-dropdown-right" id="settings-dropdown">
@@ -165,7 +165,7 @@
                   <a class="chrome-dropdown-item" href="https://github.com/khangnghiem/fast-draft" target="_blank" rel="noopener"><span class="cd-icon">🐙</span><span class="cd-label">GitHub</span></a>
                 </div>
               </div>
-              <button class="canvas-chrome-btn" id="hamburger-toggle-btn" title="Toggle right panel">
+              <button class="canvas-chrome-btn" id="hamburger-toggle-btn" title="Toggle right panel" aria-label="Toggle right panel">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="14" height="12" rx="2"/><line x1="10" y1="2" x2="10" y2="14"/></svg>
               </button>
             </div>
@@ -174,7 +174,7 @@
             <div id="left-panel">
               <div id="lp-tabbed-section">
                 <div class="lp-tabs">
-                  <button class="lp-tab-toggle" id="lp-sidebar-toggle" title="Toggle sidebar (\)">
+                  <button class="lp-tab-toggle" id="lp-sidebar-toggle" title="Toggle sidebar (\)" aria-label="Toggle sidebar">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="14" height="12" rx="2"/><line x1="6" y1="2" x2="6" y2="14"/></svg>
                   </button>
                   <div class="lp-tab-group">
@@ -189,7 +189,7 @@
                   <div class="lp-pane active" data-pane="layers">
                     <div id="layers-panel"></div>
                     <div class="lp-layers-footer">
-                      <button id="lp-import-btn" class="layer-action-btn import-btn" title="Import code/components (⌘⇧I)">
+                      <button id="lp-import-btn" class="layer-action-btn import-btn" title="Import code/components (⌘⇧I)" aria-label="Import code or components">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                         Import
                       </button>
@@ -203,7 +203,7 @@
                         <button class="code-status-pill status-valid" id="linter-status-btn" title="No syntax errors">
                           <span class="linter-dot"></span><span id="linter-status-text">Valid</span>
                         </button>
-                        <button class="layer-action-btn" id="code-fold-btn" title="Toggle Collapse All">
+                        <button class="layer-action-btn" id="code-fold-btn" title="Toggle Collapse All" aria-label="Toggle Collapse All">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
                         </button>
                       </div>
