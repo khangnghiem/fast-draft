@@ -2723,8 +2723,10 @@ function renderSpecsPanel() {
       );
 
       if (typeof marked !== 'undefined') {
+        // SECURITY: Conditionally sanitize raw markdown HTML to prevent XSS.
+        // Falls back to safe text escaping if DOMPurify isn't loaded.
         const rendered = marked.parse(processedNote);
-        html += rendered;
+        html += window.DOMPurify ? window.DOMPurify.sanitize(rendered, { ADD_ATTR: ['data-note-node', 'data-node'] }) : `<pre>${processedNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
       } else {
         html += `<pre>${processedNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
       }
