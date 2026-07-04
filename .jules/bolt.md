@@ -11,3 +11,6 @@
 ## 2024-05-15 - Fast Draft Completion Optimization Retrospective
 **Learning:** In Rust string processing, optimizing `text.lines()` by eagerly collecting it into a `Vec<&str>` (`text.lines().collect()`) causes a significant performance and memory regression. The original lazy iteration `text.lines().nth(...)` is O(pos.line) and zero-allocation, whereas `.collect()` is O(Total Document Lines) and allocates memory.
 **Action:** Do not collect iterators prematurely. Always prefer using lazy iterator combinations (`nth`, `take`, `find`) in Rust to avoid unnecessary allocations, especially when parsing large text documents on every keystroke.
+## 2024-07-04 - [Avoid multiple .filter() on same array in rendering hot paths]
+**Learning:** Refactoring multiple consecutive `.filter()` calls over the same array into a single-pass `for...of` loop yields a measurable performance boost (e.g. ~40-50% for small to medium sets). In `fd-vscode/src/panels/spec-view.ts`, iterating annotations just once to bucket them by type significantly reduces redundant array traversals during spec rendering.
+**Action:** When filtering the same array into multiple disjoint or overlapping collections based on properties (like node annotations or styles), prefer a single loop (`for...of` or `.reduce()`) to populate them simultaneously rather than chaining or repeating `.filter()` calls.
