@@ -40,6 +40,7 @@ fn paint_to_svg_color(p: &fd_core::model::Paint) -> String {
     }
 }
 
+/// Render svg.
 pub fn render_svg(
     graph: &SceneGraph,
     bounds: &HashMap<NodeIndex, ResolvedBounds>,
