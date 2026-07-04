@@ -1206,73 +1206,7 @@ fn parse_node_property(
             }
         }
         "d" => {
-            // Parse SVG-like path commands: M x y L x y C ... Z
-            loop {
-                skip_space(input);
-                let at_end = input.is_empty()
-                    || input.starts_with('\n')
-                    || input.starts_with(';')
-                    || input.starts_with('}');
-                if at_end {
-                    break;
-                }
-                let saved = *input;
-                if let Ok(cmd_char) = take_while::<_, _, ContextError>(1..=1, |c: char| {
-                    matches!(c, 'M' | 'L' | 'Q' | 'C' | 'Z')
-                })
-                .parse_next(input)
-                {
-                    skip_space(input);
-                    match cmd_char {
-                        "M" => {
-                            let x = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let y = parse_number.parse_next(input)?;
-                            path_commands.push(PathCmd::MoveTo(x, y));
-                        }
-                        "L" => {
-                            let x = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let y = parse_number.parse_next(input)?;
-                            path_commands.push(PathCmd::LineTo(x, y));
-                        }
-                        "Q" => {
-                            let cx = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let cy = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let ex = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let ey = parse_number.parse_next(input)?;
-                            path_commands.push(PathCmd::QuadTo(cx, cy, ex, ey));
-                        }
-                        "C" => {
-                            let c1x = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let c1y = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let c2x = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let c2y = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let ex = parse_number.parse_next(input)?;
-                            skip_space(input);
-                            let ey = parse_number.parse_next(input)?;
-                            path_commands.push(PathCmd::CubicTo(c1x, c1y, c2x, c2y, ex, ey));
-                        }
-                        "Z" => {
-                            path_commands.push(PathCmd::Close);
-                        }
-                        _ => {
-                            *input = saved;
-                            break;
-                        }
-                    }
-                } else {
-                    *input = saved;
-                    break;
-                }
-            }
+            parse_d_path(input, path_commands)?;
         }
         "src" => {
             *image_src = Some(
@@ -1299,6 +1233,79 @@ fn parse_node_property(
     }
 
     skip_opt_separator(input);
+    Ok(())
+}
+
+// ─── Path commands parser ────────────────────────────────────────────────
+
+fn parse_d_path(input: &mut &str, path_commands: &mut Vec<PathCmd>) -> ModalResult<()> {
+    // Parse SVG-like path commands: M x y L x y C ... Z
+    loop {
+        skip_space(input);
+        let at_end = input.is_empty()
+            || input.starts_with('\n')
+            || input.starts_with(';')
+            || input.starts_with('}');
+        if at_end {
+            break;
+        }
+        let saved = *input;
+        if let Ok(cmd_char) = take_while::<_, _, ContextError>(1..=1, |c: char| {
+            matches!(c, 'M' | 'L' | 'Q' | 'C' | 'Z')
+        })
+        .parse_next(input)
+        {
+            skip_space(input);
+            match cmd_char {
+                "M" => {
+                    let x = parse_number.parse_next(input)?;
+                    skip_space(input);
+                    let y = parse_number.parse_next(input)?;
+                    path_commands.push(PathCmd::MoveTo(x, y));
+                }
+                "L" => {
+                    let x = parse_number.parse_next(input)?;
+                    skip_space(input);
+                    let y = parse_number.parse_next(input)?;
+                    path_commands.push(PathCmd::LineTo(x, y));
+                }
+                "Q" => {
+                    let cx = parse_number.parse_next(input)?;
+                    skip_space(input);
+                    let cy = parse_number.parse_next(input)?;
+                    skip_space(input);
+                    let ex = parse_number.parse_next(input)?;
+                    skip_space(input);
+                    let ey = parse_number.parse_next(input)?;
+                    path_commands.push(PathCmd::QuadTo(cx, cy, ex, ey));
+                }
+                "C" => {
+                    let c1x = parse_number.parse_next(input)?;
+                    skip_space(input);
+                    let c1y = parse_number.parse_next(input)?;
+                    skip_space(input);
+                    let c2x = parse_number.parse_next(input)?;
+                    skip_space(input);
+                    let c2y = parse_number.parse_next(input)?;
+                    skip_space(input);
+                    let ex = parse_number.parse_next(input)?;
+                    skip_space(input);
+                    let ey = parse_number.parse_next(input)?;
+                    path_commands.push(PathCmd::CubicTo(c1x, c1y, c2x, c2y, ex, ey));
+                }
+                "Z" => {
+                    path_commands.push(PathCmd::Close);
+                }
+                _ => {
+                    *input = saved;
+                    break;
+                }
+            }
+        } else {
+            *input = saved;
+            break;
+        }
+    }
     Ok(())
 }
 
