@@ -14,3 +14,8 @@
 **Vulnerability:** Several `escapeHtml` implementations used DOM manipulation (`document.createElement('div').innerHTML`) or incomplete string replacement, failing to escape single and double quotes.
 **Learning:** Incomplete escaping allows XSS payloads to break out of HTML attributes (e.g., `<input value="${escapeHtml(userInput)}">`).
 **Prevention:** Always use `String(text)` cast combined with a comprehensive replace chain for `&`, `<`, `>`, `"`, and `'` (e.g., `&#039;`) in custom string escaping functions.
+
+## 2024-07-08 - XSS in Markdown Rendering
+**Vulnerability:** The Markdown rendering logic in `site/app.js` passed unsanitized output from `marked.parse()` directly into `innerHTML`, creating a high-severity XSS vulnerability if a user note contained malicious markdown.
+**Learning:** The fallback for DOMPurify must be securely escaped text rather than the raw `rendered` HTML. Reverting to the raw unsanitized HTML on missing dependencies is a strict "fail open" pattern that leaves the app exposed.
+**Prevention:** Always implement conditional sanitization that "fails closed" by gracefully degrading to safely escaped text if a sanitization library is unavailable.
