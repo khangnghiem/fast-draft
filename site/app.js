@@ -2724,7 +2724,8 @@ function renderSpecsPanel() {
 
       if (typeof marked !== 'undefined') {
         const rendered = marked.parse(processedNote);
-        html += rendered;
+        const fallback = `<pre>${processedNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+        html += window.DOMPurify ? window.DOMPurify.sanitize(rendered, { ADD_ATTR: ['data-note-node', 'data-node'] }) : fallback;
       } else {
         html += `<pre>${processedNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
       }
